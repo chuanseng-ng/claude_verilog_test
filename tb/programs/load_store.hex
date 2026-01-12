@@ -1,0 +1,42 @@
+// Load/Store test program
+// Tests memory operations via AXI4-Lite interface
+//
+// Program:
+//   ADDI x1, x0, 0x42     ; x1 = 0x42
+//   ADDI x2, x0, 0x100    ; x2 = 0x100 (base address)
+//   SW   x1, 0(x2)        ; MEM[0x100] = x1 (word store)
+//   LW   x3, 0(x2)        ; x3 = MEM[0x100] (word load)
+//   ADDI x4, x0, 0xAB     ; x4 = 0xAB
+//   SB   x4, 4(x2)        ; MEM[0x104] = x4[7:0] (byte store)
+//   LB   x5, 4(x2)        ; x5 = sign_ext(MEM[0x104]) (signed byte load)
+//   LBU  x6, 4(x2)        ; x6 = zero_ext(MEM[0x104]) (unsigned byte load)
+//   ADDI x7, x0, 0x1234   ; x7 = 0x1234 (truncated to 12-bit imm = 0x234)
+//   SH   x7, 8(x2)        ; MEM[0x108] = x7[15:0] (halfword store)
+//   LH   x8, 8(x2)        ; x8 = sign_ext(MEM[0x108]) (signed halfword load)
+//   LHU  x9, 8(x2)        ; x9 = zero_ext(MEM[0x108]) (unsigned halfword load)
+//   EBREAK                ; Halt CPU
+//
+// Expected results:
+//   x1 = 0x42
+//   x2 = 0x100
+//   x3 = 0x42 (loaded word)
+//   x4 = 0xAB
+//   x5 = 0xFFFFFFAB (sign-extended byte, 0xAB has MSB=1)
+//   x6 = 0x000000AB (zero-extended byte)
+//   x7 = 0x234 (12-bit immediate)
+//   x8 = 0x00000234 (sign-extended halfword)
+//   x9 = 0x00000234 (zero-extended halfword)
+
+04200093  // ADDI x1, x0, 0x42
+10000113  // ADDI x2, x0, 0x100
+00112023  // SW   x1, 0(x2)
+00012183  // LW   x3, 0(x2)
+0AB00213  // ADDI x4, x0, 0xAB
+00410223  // SB   x4, 4(x2)
+00410283  // LB   x5, 4(x2)
+00414303  // LBU  x6, 4(x2)
+23400393  // ADDI x7, x0, 0x234
+00711423  // SH   x7, 8(x2)
+00811403  // LH   x8, 8(x2)
+00815483  // LHU  x9, 8(x2)
+00100073  // EBREAK
