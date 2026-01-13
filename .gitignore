@@ -8,3 +8,4 @@ tmpclaude*
 
 # Verilator
 sim/obj_dir/
+*.vcd
