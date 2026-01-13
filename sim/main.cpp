@@ -1,4 +1,4 @@
-// Verilator main.cpp for RV32I CPU testbench
+// Verilator main.cpp for RV32I CPU testbench with --timing mode
 #include <verilated.h>
 #include <verilated_vcd_c.h>
 #include "Vtb_rv32i_cpu_top.h"
@@ -6,42 +6,40 @@
 #include <iostream>
 #include <memory>
 
-// Simulation time
-vluint64_t sim_time = 0;
-vluint64_t max_sim_time = 1000000;  // Maximum simulation time
-
 int main(int argc, char** argv) {
-    // Initialize Verilator
-    Verilated::commandArgs(argc, argv);
-    Verilated::traceEverOn(true);
+    // Set up context
+    const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
+    contextp->commandArgs(argc, argv);
+    contextp->traceEverOn(true);
 
-    // Create DUT instance
-    auto dut = std::make_unique<Vtb_rv32i_cpu_top>();
+    // Create DUT
+    const std::unique_ptr<Vtb_rv32i_cpu_top> dut{new Vtb_rv32i_cpu_top{contextp.get()}};
 
-    // Create VCD trace
-    auto trace = std::make_unique<VerilatedVcdC>();
-    dut->trace(trace.get(), 99);
-    trace->open("waveform.vcd");
+    // Set up VCD tracing
+    VerilatedVcdC* tfp = new VerilatedVcdC;
+    dut->trace(tfp, 99);
+    tfp->open("waveform.vcd");
 
     std::cout << "Starting RV32I CPU simulation..." << std::endl;
 
-    // Main simulation loop
-    while (!Verilated::gotFinish() && sim_time < max_sim_time) {
-        // Evaluate model
+    // Run simulation - timing scheduler handles clock generation from testbench
+    while (!contextp->gotFinish()) {
+        // Evaluate design
         dut->eval();
 
-        // Dump trace
-        trace->dump(sim_time);
+        // Dump waveform
+        tfp->dump(contextp->time());
 
-        // Advance time
-        sim_time++;
+        // Advance time to next event
+        contextp->timeInc(1);
     }
 
     // Cleanup
-    trace->close();
     dut->final();
+    tfp->close();
+    delete tfp;
 
-    std::cout << "Simulation completed at time " << sim_time << std::endl;
+    std::cout << "Simulation completed at time " << contextp->time() << std::endl;
 
     return 0;
 }
