@@ -34,21 +34,22 @@ module apb3_master
     end
 
     // APB Write Task
+    //task automatic apb_write(
     task automatic apb_write(
         input logic [11:0] addr,
         input logic [31:0] data
     );
         // Setup phase
         @(posedge clk);
-        paddr   <= addr;
-        pwdata  <= data;
-        pwrite  <= 1'b1;
-        psel    <= 1'b1;
-        penable <= 1'b0;
+        paddr   = addr;
+        pwdata  = data;
+        pwrite  = 1'b1;
+        psel    = 1'b1;
+        penable = 1'b0;
 
         // Access phase
         @(posedge clk);
-        penable <= 1'b1;
+        penable = 1'b1;
 
         // Wait for ready
         do begin
@@ -56,33 +57,34 @@ module apb3_master
         end while (!pready);
 
         // Capture error status
-        transfer_error <= pslverr;
-        transfer_done  <= 1'b1;
+        transfer_error = pslverr;
+        transfer_done  = 1'b1;
 
         // Return to idle
-        psel    <= 1'b0;
-        penable <= 1'b0;
-        pwrite  <= 1'b0;
+        psel    = 1'b0;
+        penable = 1'b0;
+        pwrite  = 1'b0;
 
         @(posedge clk);
-        transfer_done <= 1'b0;
+        transfer_done = 1'b0;
     endtask
 
     // APB Read Task
+    //task automatic apb_read(
     task automatic apb_read(
         input  logic [11:0] addr,
         output logic [31:0] data
     );
         // Setup phase
         @(posedge clk);
-        paddr   <= addr;
-        pwrite  <= 1'b0;
-        psel    <= 1'b1;
-        penable <= 1'b0;
+        paddr   = addr;
+        pwrite  = 1'b0;
+        psel    = 1'b1;
+        penable = 1'b0;
 
         // Access phase
         @(posedge clk);
-        penable <= 1'b1;
+        penable = 1'b1;
 
         // Wait for ready
         do begin
@@ -90,17 +92,17 @@ module apb3_master
         end while (!pready);
 
         // Capture data and error status
-        data           <= prdata;
-        read_data      <= prdata;
-        transfer_error <= pslverr;
-        transfer_done  <= 1'b1;
+        data           = prdata;
+        read_data      = prdata;
+        transfer_error = pslverr;
+        transfer_done  = 1'b1;
 
         // Return to idle
-        psel    <= 1'b0;
-        penable <= 1'b0;
+        psel    = 1'b0;
+        penable = 1'b0;
 
         @(posedge clk);
-        transfer_done <= 1'b0;
+        transfer_done = 1'b0;
     endtask
 
     // =========================================================================
@@ -154,10 +156,12 @@ module apb3_master
     endtask
 
     // Read current instruction
+    /* verilator lint_off UNDRIVEN */
     task automatic read_instr(output logic [31:0] instr);
         apb_read(DBG_INSTR_ADDR, instr);
         $display("[APB] Current instruction: 0x%08h", instr);
     endtask
+    /* verilator lint_on UNDRIVEN */
 
     // Read GPR
     task automatic read_gpr(input int reg_num, output logic [31:0] value);

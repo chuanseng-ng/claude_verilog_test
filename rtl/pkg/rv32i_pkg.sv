@@ -239,13 +239,13 @@ package rv32i_pkg;
     // Helper Functions
     // ============================================================================
 
-    // Sign extension
-    function automatic logic [XLEN-1:0] sign_extend;
-        input logic [XLEN-1:0] value;
-        input int              width;
-        begin
-            sign_extend = {{(XLEN-width){value[width-1]}}, value[width-1:0]};
-        end
-    endfunction
+    //// Sign extension
+    //function automatic logic [XLEN-1:0] sign_extend;
+    //    input logic [XLEN-1:0] value;
+    //    input int              width;
+    //    begin
+    //        sign_extend = {{(XLEN-width){value[width-1]}}, value[width-1:0]};
+    //    end
+    //endfunction
 
 endpackage
