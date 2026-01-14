@@ -46,6 +46,9 @@ module rv32i_control
     // Halt cause register
     halt_cause_e halt_cause_q, halt_cause_d;
 
+    // Single-step tracking - remembers step request until instruction completes
+    logic stepping_q, stepping_d;
+
     // Branch evaluation
     logic branch_taken;
     logic [2:0] funct3;
@@ -78,6 +81,7 @@ module rv32i_control
     always_comb begin
         state_d      = state_q;
         halt_cause_d = halt_cause_q;
+        stepping_d   = stepping_q;
         pc_we        = 1'b0;
         pc_sel_branch= 1'b0;
         pc_sel_jump  = 1'b0;
@@ -113,77 +117,105 @@ module rv32i_control
             end
 
             CPU_DECODE: begin
-                instr_valid = 1'b1;
-
-                // Check for EBREAK
-                if (is_ebreak) begin
+                // Check for halt request (can halt at any execution stage)
+                if (dbg_halt_req) begin
                     state_d = CPU_HALTED;
-                    halt_cause_d = HALT_EBREAK;
+                    halt_cause_d = HALT_REQUEST;
                 end else begin
-                    state_d = CPU_EXECUTE;
+                    instr_valid = 1'b1;
+
+                    // Check for EBREAK
+                    if (is_ebreak) begin
+                        state_d = CPU_HALTED;
+                        halt_cause_d = HALT_EBREAK;
+                    end else begin
+                        state_d = CPU_EXECUTE;
+                    end
                 end
             end
 
             CPU_EXECUTE: begin
-                instr_valid = 1'b1;
-
-                if (ctrl.mem_read || ctrl.mem_write) begin
-                    // Memory operation needed
-                    state_d = CPU_MEM_WAIT;
+                // Check for halt request (can halt at any execution stage)
+                if (dbg_halt_req) begin
+                    state_d = CPU_HALTED;
+                    halt_cause_d = HALT_REQUEST;
                 end else begin
-                    // No memory operation, go to writeback
-                    state_d = CPU_WRITEBACK;
+                    instr_valid = 1'b1;
+
+                    if (ctrl.mem_read || ctrl.mem_write) begin
+                        // Memory operation needed
+                        state_d = CPU_MEM_WAIT;
+                    end else begin
+                        // No memory operation, go to writeback
+                        state_d = CPU_WRITEBACK;
+                    end
                 end
             end
 
             CPU_MEM_WAIT: begin
-                instr_valid = 1'b1;
-                mem_req = 1'b1;
-                mem_we  = ctrl.mem_write;
-
-                if (mem_valid) begin
-                    state_d = CPU_WRITEBACK;
+                // Check for halt request (can halt at any execution stage)
+                if (dbg_halt_req) begin
+                    state_d = CPU_HALTED;
+                    halt_cause_d = HALT_REQUEST;
                 end else begin
-                    stall = 1'b1;
+                    instr_valid = 1'b1;
+                    mem_req = 1'b1;
+                    mem_we  = ctrl.mem_write;
+
+                    if (mem_valid) begin
+                        state_d = CPU_WRITEBACK;
+                    end else begin
+                        stall = 1'b1;
+                    end
                 end
             end
 
             CPU_WRITEBACK: begin
-                instr_valid = 1'b1;
-
-                // Update PC
-                pc_we = 1'b1;
-
-                if (ctrl.jump) begin
-                    pc_sel_jump = 1'b1;
-                end else if (ctrl.branch && branch_taken) begin
-                    pc_sel_branch = 1'b1;
-                end
-                // else: PC = PC + 4
-
-                // Check for single-step mode
-                if (dbg_step_req) begin
+                // Check for halt request (can halt at any execution stage)
+                if (dbg_halt_req) begin
                     state_d = CPU_HALTED;
-                    halt_cause_d = HALT_STEP;
+                    halt_cause_d = HALT_REQUEST;
+                    stepping_d = 1'b0;
                 end else begin
-                    state_d = CPU_FETCH;
+                    instr_valid = 1'b1;
+
+                    // Update PC
+                    pc_we = 1'b1;
+
+                    if (ctrl.jump) begin
+                        pc_sel_jump = 1'b1;
+                    end else if (ctrl.branch && branch_taken) begin
+                        pc_sel_branch = 1'b1;
+                    end
+                    // else: PC = PC + 4
+
+                    // Check for single-step mode (use stepping_q flag instead of pulse)
+                    if (stepping_q) begin
+                        state_d = CPU_HALTED;
+                        halt_cause_d = HALT_STEP;
+                        stepping_d = 1'b0;
+                    end else begin
+                        state_d = CPU_FETCH;
+                    end
                 end
             end
 
             CPU_HALTED: begin
                 halted = 1'b1;
+                stepping_d = 1'b0;  // Clear stepping flag when halted
 
                 if (dbg_resume_req) begin
                     state_d = CPU_FETCH;
                     halt_cause_d = HALT_NONE;
                 end else if (dbg_step_req) begin
                     state_d = CPU_STEP;
+                    stepping_d = 1'b1;  // Set stepping flag to remember we're stepping
                 end
             end
 
             CPU_STEP: begin
                 // Execute one instruction then halt
-                // Transition to fetch, step_req remains active
+                // stepping_q is already set, just transition to fetch
                 state_d = CPU_FETCH;
             end
 
@@ -198,9 +230,11 @@ module rv32i_control
         if (!rst_n) begin
             state_q      <= CPU_RESET;
             halt_cause_q <= HALT_NONE;
+            stepping_q   <= 1'b0;
         end else begin
             state_q      <= state_d;
             halt_cause_q <= halt_cause_d;
+            stepping_q   <= stepping_d;
         end
     end
 
