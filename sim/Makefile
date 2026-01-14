@@ -42,7 +42,7 @@ RTL_FILES = $(PKG_FILES) $(CORE_FILES) $(INTERFACE_FILES) $(DEBUG_FILES) $(TOP_F
 OBJ_DIR = obj_dir
 
 # Targets
-.PHONY: all clean sim test_alu test_regfile help
+.PHONY: all clean clean-claude clean-all sim test_alu test_regfile help
 
 all: sim
 
@@ -88,6 +88,16 @@ clean:
 	rm -f waveform.vcd
 	rm -f *.log
 
+# Clean Claude Code temporary files
+clean-claude:
+	rm -f ../tmpclaude-*
+	rm -f tmpclaude-*
+	@echo "Claude temporary files cleaned"
+
+# Clean everything (build artifacts + Claude temp files)
+clean-all: clean clean-claude
+	@echo "All artifacts cleaned"
+
 # Help
 help:
 	@echo "RV32I CPU Verilator Build System"
@@ -101,4 +111,6 @@ help:
 	@echo "  unit_tests   - Run all unit tests"
 	@echo "  waves        - Run simulation and open GTKWave"
 	@echo "  clean        - Remove build artifacts"
+	@echo "  clean-claude - Remove Claude Code temporary files"
+	@echo "  clean-all    - Remove all artifacts (build + Claude temp)"
 	@echo "  help         - Show this help message"
