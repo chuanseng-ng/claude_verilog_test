@@ -184,7 +184,8 @@ module axi4lite_master
     assign m_axi_rready = (state_q == AXI_R_WAIT);
 
     // Memory interface outputs
-    assign mem_rdata = rdata_q;
+    // Bypass rdata_q register when read is completing to avoid 1-cycle delay
+    assign mem_rdata = (state_q == AXI_R_WAIT && m_axi_rvalid) ? m_axi_rdata : rdata_q;
     assign mem_ready = (state_q == AXI_IDLE);
     assign mem_valid = (state_q == AXI_R_WAIT && m_axi_rvalid) ||
                        (state_q == AXI_B_WAIT && m_axi_bvalid);
