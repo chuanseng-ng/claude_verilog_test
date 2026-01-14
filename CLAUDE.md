@@ -54,6 +54,12 @@ make unit_tests      # All unit tests
 
 # Clean build artifacts
 make clean
+
+# Clean Claude Code temporary files
+make clean-claude
+
+# Clean everything (build + Claude temp files)
+make clean-all
 ```
 
 ### Git Commands
