@@ -11,3 +11,7 @@ tmpclaude*
 */sim/work_uvm/
 */sim/logs/
 *.vcd
+
+# Cocotb
+sim_build/
+__pycache__/
