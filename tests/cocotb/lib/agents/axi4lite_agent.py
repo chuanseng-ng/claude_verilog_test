@@ -126,7 +126,8 @@ class AXI4LiteSlaveDriver(BaseDriver):
                             continue
             self.log.info(f"Loaded {hex_file} into memory at 0x{base_addr:08x}")
         except FileNotFoundError:
-            self.log.error(f"File not found: {hex_file}")
+            self.log.exception(f"File not found: {hex_file}")
+            raise
 
     def write_byte(self, addr: int, data: int) -> None:
         """Write a byte to memory"""
@@ -200,9 +201,17 @@ class AXI4LiteSlaveDriver(BaseDriver):
                 self.dut.axi_bvalid.value = 1
                 self.dut.axi_bresp.value = 0  # OKAY
 
-                # Wait for bready
-                while not int(self.dut.axi_bready.value):
+                # Wait for bready with timeout
+                timeout_cycles = 1000
+                for cycle in range(timeout_cycles):
+                    if int(self.dut.axi_bready.value):
+                        break
                     await RisingEdge(self.clk)
+                else:
+                    self.log.error(f"AXI4-Lite write response timeout waiting for bready at addr=0x{addr:08x}")
+                    # Continue anyway to avoid hanging the driver
+                    self.dut.axi_bvalid.value = 0
+                    continue
 
                 await RisingEdge(self.clk)
                 self.dut.axi_bvalid.value = 0
@@ -234,9 +243,18 @@ class AXI4LiteSlaveDriver(BaseDriver):
                 self.dut.axi_rdata.value = data
                 self.dut.axi_rresp.value = 0  # OKAY
 
-                # Wait for rready
-                while not int(self.dut.axi_rready.value):
+                # Wait for rready with timeout
+                timeout_cycles = 1000
+                for cycle in range(timeout_cycles):
+                    if int(self.dut.axi_rready.value):
+                        break
                     await RisingEdge(self.clk)
+                else:
+                    self.log.error(f"AXI4-Lite read data timeout waiting for rready at addr=0x{addr:08x}")
+                    # Continue anyway to avoid hanging the driver
+                    self.dut.axi_rvalid.value = 0
+                    self.dut.axi_rdata.value = 0
+                    continue
 
                 await RisingEdge(self.clk)
                 self.dut.axi_rvalid.value = 0

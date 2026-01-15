@@ -8,7 +8,6 @@ Tests:
 """
 
 import cocotb
-from cocotb.triggers import Timer
 import sys
 import os
 
@@ -47,7 +46,7 @@ async def test_simple_add(dut):
         env.log.info("Test PASSED: simple_add completed")
     else:
         env.log.error("Test FAILED: simple_add timed out")
-        assert False, "Test timed out"
+        raise AssertionError("Test timed out")
 
     # Stop monitors
     env.stop_monitors()
@@ -80,7 +79,7 @@ async def test_load_store(dut):
         env.log.info("Test PASSED: load_store completed")
     else:
         env.log.error("Test FAILED: load_store timed out")
-        assert False, "Test timed out"
+        raise AssertionError("Test timed out")
 
     # Stop monitors
     env.stop_monitors()
@@ -113,7 +112,7 @@ async def test_branch(dut):
         env.log.info("Test PASSED: branch_test completed")
     else:
         env.log.error("Test FAILED: branch_test timed out")
-        assert False, "Test timed out"
+        raise AssertionError("Test timed out")
 
     # Stop monitors
     env.stop_monitors()

@@ -194,7 +194,7 @@ async def test_breakpoint(dut):
     env.log.info("Running CPU until breakpoint")
 
     # Wait for CPU to halt at breakpoint (with timeout)
-    for cycle in range(1000):
+    for _cycle in range(1000):
         await ClockCycles(env.clk, 1)
         status = await env.apb_agent.driver.get_cpu_status()
 
@@ -209,7 +209,7 @@ async def test_breakpoint(dut):
                 return
 
     env.log.error("Test FAILED: Breakpoint not hit within timeout")
-    assert False, "Breakpoint not hit"
+    raise AssertionError("Breakpoint not hit")
 
 
 @cocotb.test()

@@ -60,6 +60,9 @@ class APB3Transaction(BaseTransaction):
         txn.pwrite = self.pwrite
         txn.pwdata = self.pwdata
         txn.prdata = self.prdata
+        txn.psel = self.psel
+        txn.penable = self.penable
+        txn.pready = self.pready
         return txn
 
     def __str__(self) -> str:
@@ -83,7 +86,7 @@ class APB3MasterDriver(BaseDriver):
         self.dut.apb_pwrite.value = 0
         self.dut.apb_pwdata.value = 0
 
-    async def write(self, addr: int, data: int) -> None:
+    async def write(self, addr: int, data: int, timeout_cycles: int = 1000) -> None:
         """Perform an APB3 write transaction"""
         self.log.debug(f"APB3 Write: addr=0x{addr:03x} data=0x{data:08x}")
 
@@ -99,9 +102,14 @@ class APB3MasterDriver(BaseDriver):
         await RisingEdge(self.clk)
         self.dut.apb_penable.value = 1
 
-        # Wait for ready
-        while not int(self.dut.apb_pready.value):
+        # Wait for ready with timeout
+        for cycle in range(timeout_cycles):
+            if int(self.dut.apb_pready.value):
+                break
             await RisingEdge(self.clk)
+        else:
+            self.log.error(f"APB3 write timeout at addr=0x{addr:03x}")
+            raise TimeoutError(f"APB3 write timeout waiting for pready at addr=0x{addr:03x}")
 
         # End transaction
         await RisingEdge(self.clk)
@@ -109,7 +117,7 @@ class APB3MasterDriver(BaseDriver):
         self.dut.apb_penable.value = 0
         self.dut.apb_pwrite.value = 0
 
-    async def read(self, addr: int) -> int:
+    async def read(self, addr: int, timeout_cycles: int = 1000) -> int:
         """Perform an APB3 read transaction"""
         # Setup phase
         await RisingEdge(self.clk)
@@ -122,9 +130,14 @@ class APB3MasterDriver(BaseDriver):
         await RisingEdge(self.clk)
         self.dut.apb_penable.value = 1
 
-        # Wait for ready
-        while not int(self.dut.apb_pready.value):
+        # Wait for ready with timeout
+        for cycle in range(timeout_cycles):
+            if int(self.dut.apb_pready.value):
+                break
             await RisingEdge(self.clk)
+        else:
+            self.log.error(f"APB3 read timeout at addr=0x{addr:03x}")
+            raise TimeoutError(f"APB3 read timeout waiting for pready at addr=0x{addr:03x}")
 
         # Capture data
         data = int(self.dut.apb_prdata.value)
@@ -151,6 +164,7 @@ class APB3MasterDriver(BaseDriver):
             await RisingEdge(self.clk)
 
         self.log.error("CPU failed to halt")
+        raise TimeoutError(f"CPU failed to halt after 100 cycles (last status: 0x{status:08x})")
 
     async def resume_cpu(self) -> None:
         """Resume the CPU from halt"""
@@ -166,6 +180,7 @@ class APB3MasterDriver(BaseDriver):
             await RisingEdge(self.clk)
 
         self.log.error("CPU failed to resume")
+        raise TimeoutError(f"CPU failed to resume after 100 cycles (last status: 0x{status:08x})")
 
     async def step_cpu(self) -> None:
         """Execute a single instruction"""
@@ -316,3 +331,7 @@ class APB3Agent(BaseAgent):
     async def set_breakpoint(self, bp_num: int, addr: int, enable: bool = True) -> None:
         """Set breakpoint"""
         await self.driver.set_breakpoint(bp_num, addr, enable)
+
+    async def clear_breakpoint(self, bp_num: int) -> None:
+        """Clear breakpoint"""
+        await self.driver.clear_breakpoint(bp_num)

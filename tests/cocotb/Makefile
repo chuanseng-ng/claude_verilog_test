@@ -56,7 +56,6 @@ ifeq ($(SIM),verilator)
     COMPILE_ARGS += -Wno-WIDTHEXPAND
     COMPILE_ARGS += -Wno-CASEINCOMPLETE
     COMPILE_ARGS += --timing
-    EXTRA_ARGS += --trace --trace-fst
 endif
 
 # ModelSim/Questa settings
@@ -156,6 +155,10 @@ test_full_debug:
 regression:
 	$(MAKE) test_basic
 	$(MAKE) test_debug
+
+# Alias for regression (CI convention)
+.PHONY: test
+test: regression
 
 ##############################################################################
 # Utility targets

@@ -186,6 +186,8 @@ class RV32IEnvironment:
 
         if was_running:
             await self.apb_agent.halt_cpu()
+            # Re-read status after halting to get fresh halted state
+            status = await self.apb_agent.driver.get_cpu_status()
 
         # Get all state
         state = {

@@ -12,7 +12,7 @@ This directory contains Python-based verification using [cocotb](https://www.coc
 
 ## Directory Structure
 
-```
+```text
 tests/cocotb/
 ├── Makefile                    # Main build file with simulator support
 ├── requirements.txt            # Python dependencies
@@ -369,7 +369,7 @@ env.print_state(state)
 
 This cocotb framework **complements** the existing SystemVerilog testbenches:
 
-- **SystemVerilog Unit Tests** (`tb/tests/`): Low-level module testing
+- **SystemVerilog Unit Tests** (`sim/`): Low-level module testing with Verilator
 - **SystemVerilog UVM** (`tb/uvm/`): Comprehensive randomized testing
 - **CoCoTB** (`tests/cocotb/`): Directed tests, quick iteration, CI/CD
 

@@ -85,8 +85,8 @@ class BaseMonitor:
         for callback in self.callbacks:
             try:
                 callback(transaction)
-            except Exception as e:
-                self.log.error(f"Callback error: {e}")
+            except Exception:
+                self.log.exception("Callback error")
 
 
 class BaseAgent:
