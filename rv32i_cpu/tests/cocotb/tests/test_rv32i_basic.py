@@ -26,18 +26,22 @@ async def test_simple_add(dut):
     env = RV32IEnvironment(dut)
     env.build()
 
-    # Reset
+    # Find the hex file
+    hex_file = os.path.join(os.path.dirname(test_dir), '..', '..', 'tb', 'programs', 'simple_add.hex')
+
+    # Load program BEFORE releasing reset
+    env.log.info("Loading program: simple_add.hex")
+    env.load_program(hex_file, base_addr=0)
+
+    # Reset - this will start the CPU
     await env.reset(duration_ns=100)
 
     # Start monitors
     env.start_monitors()
 
-    # Find the hex file
-    hex_file = os.path.join(os.path.dirname(test_dir), '..', '..', 'tb', 'programs', 'simple_add.hex')
-
-    # Load and run program
+    # Wait for program completion
     env.log.info("Running simple_add test")
-    success = await env.run_program(hex_file, max_cycles=1000)
+    success = await env.wait_for_completion(max_cycles=1000)
 
     if success:
         # Dump final state
@@ -59,18 +63,22 @@ async def test_load_store(dut):
     env = RV32IEnvironment(dut)
     env.build()
 
-    # Reset
+    # Find the hex file
+    hex_file = os.path.join(os.path.dirname(test_dir), '..', '..', 'tb', 'programs', 'load_store.hex')
+
+    # Load program BEFORE releasing reset
+    env.log.info("Loading program: load_store.hex")
+    env.load_program(hex_file, base_addr=0)
+
+    # Reset - this will start the CPU
     await env.reset(duration_ns=100)
 
     # Start monitors
     env.start_monitors()
 
-    # Find the hex file
-    hex_file = os.path.join(os.path.dirname(test_dir), '..', '..', 'tb', 'programs', 'load_store.hex')
-
-    # Load and run program
+    # Wait for program completion
     env.log.info("Running load_store test")
-    success = await env.run_program(hex_file, max_cycles=2000)
+    success = await env.wait_for_completion(max_cycles=2000)
 
     if success:
         # Dump final state
@@ -92,18 +100,22 @@ async def test_branch(dut):
     env = RV32IEnvironment(dut)
     env.build()
 
-    # Reset
+    # Find the hex file
+    hex_file = os.path.join(os.path.dirname(test_dir), '..', '..', 'tb', 'programs', 'branch_test.hex')
+
+    # Load program BEFORE releasing reset
+    env.log.info("Loading program: branch_test.hex")
+    env.load_program(hex_file, base_addr=0)
+
+    # Reset - this will start the CPU
     await env.reset(duration_ns=100)
 
     # Start monitors
     env.start_monitors()
 
-    # Find the hex file
-    hex_file = os.path.join(os.path.dirname(test_dir), '..', '..', 'tb', 'programs', 'branch_test.hex')
-
-    # Load and run program
+    # Wait for program completion
     env.log.info("Running branch_test")
-    success = await env.run_program(hex_file, max_cycles=2000)
+    success = await env.wait_for_completion(max_cycles=2000)
 
     if success:
         # Dump final state

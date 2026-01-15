@@ -114,6 +114,14 @@ class RV32IEnvironment:
         for cycle in range(max_cycles):
             await RisingEdge(self.clk)
 
+            # Log initial state for debugging
+            if cycle == 0:
+                try:
+                    status = await self.apb_agent.driver.get_cpu_status()
+                    self.log.info(f"Initial CPU state: PC=0x{status['pc']:08x}, status=0x{status['status_reg']:08x}")
+                except Exception as e:
+                    self.log.warning(f"Could not read initial CPU status: {e}")
+
             if check_halted:
                 # Check if CPU is halted (could be due to EBREAK or breakpoint)
                 status = await self.apb_agent.driver.get_cpu_status()
@@ -122,6 +130,12 @@ class RV32IEnvironment:
                     return True
 
         self.log.warning(f"Timeout after {max_cycles} cycles")
+        # Log final state for debugging
+        try:
+            status = await self.apb_agent.driver.get_cpu_status()
+            self.log.info(f"Final CPU state: PC=0x{status['pc']:08x}, status=0x{status['status_reg']:08x}")
+        except Exception as e:
+            self.log.warning(f"Could not read final CPU status: {e}")
         return False
 
     async def run_program(self, hex_file: str, max_cycles: int = 10000,
@@ -138,7 +152,7 @@ class RV32IEnvironment:
         Returns:
             True if program completed, False if timeout
         """
-        # Load program
+        # Load program (can be done anytime, memory model is always accessible)
         self.load_program(hex_file, base_addr)
 
         # Wait for completion
