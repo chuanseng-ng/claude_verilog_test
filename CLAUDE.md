@@ -62,6 +62,40 @@ make clean-claude
 make clean-all
 ```
 
+### CoCoTB Python Tests
+
+Python-based directed tests with multi-simulator support:
+
+```bash
+# Navigate to cocotb tests
+cd tests/cocotb
+
+# Install Python dependencies (first time only)
+pip install -r requirements.txt
+
+# Run with Verilator (default, open-source)
+make test_basic           # Basic functionality tests
+make test_debug           # Debug interface tests
+make regression           # All tests
+
+# Run specific tests
+make test_simple_add      # ALU test
+make test_load_store      # Memory test
+make test_halt_resume     # Debug halt/resume
+make test_breakpoint      # Breakpoint test
+
+# Run with waveforms
+make test_basic WAVES=1
+make waves                # View waveforms in GTKWave
+
+# Run with different simulators
+make SIM=modelsim test_basic   # ModelSim/Questa
+make SIM=xsim test_basic       # Vivado Xsim
+
+# Clean
+make clean
+```
+
 ### Git Commands
 
 ```bash
@@ -148,6 +182,32 @@ Located in `tb/programs/`:
 - `simple_add.hex` - Basic ALU operations
 - `load_store.hex` - Memory load/store tests
 - `branch_test.hex` - All branch conditions
+
+## Verification Infrastructure
+
+This project has three complementary test approaches:
+
+### 1. SystemVerilog Unit Tests (`sim/`)
+- **Tool**: Verilator
+- **Purpose**: Fast iteration, module-level testing
+- **Run**: `cd sim && make unit_tests`
+
+### 2. SystemVerilog UVM (`tb/uvm/`)
+- **Tools**: VCS, Questa/ModelSim, Xcelium
+- **Purpose**: Comprehensive randomized verification
+- **Run**: `cd sim && make -f Makefile.uvm SIM=vcs regression`
+
+### 3. CoCoTB Python Tests (`tests/cocotb/`)
+- **Tools**: Verilator, ModelSim, Vivado Xsim
+- **Purpose**: Directed tests, quick development, CI/CD
+- **Run**: `cd tests/cocotb && make test_basic`
+- **Features**:
+  - UVM-like Python framework (drivers, monitors, agents)
+  - AXI4-Lite memory agent with hex file loading
+  - APB3 debug agent with full CPU control
+  - Easy simulator switching (SIM=verilator|modelsim|xsim)
+  - Waveform support for all simulators
+  - See `tests/cocotb/README.md` for full documentation
 
 ## Common Issues and Solutions
 

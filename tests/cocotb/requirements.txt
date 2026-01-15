@@ -1,0 +1,15 @@
+# CoCoTB and Verification Dependencies
+cocotb>=1.8.0
+cocotb-bus>=0.2.1
+pytest>=7.4.0
+pytest-xdist>=3.3.1
+
+# Coverage and reporting
+coverage>=7.3.0
+pytest-cov>=4.1.0
+
+# For waveform analysis (optional)
+cocotbext-axi>=0.1.24
+
+# Utilities
+pyyaml>=6.0

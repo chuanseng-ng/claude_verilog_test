@@ -38,19 +38,34 @@ A fully functional RV32I RISC-V microprocessor implemented in SystemVerilog, fea
 │   ├── tb_rv32i_cpu_top.sv       # Main testbench
 │   ├── axi4lite_mem.sv           # AXI4-Lite memory model
 │   ├── apb3_master.sv            # APB3 master BFM
-│   └── programs/                 # Test programs (.hex)
+│   ├── programs/                 # Test programs (.hex)
+│   └── uvm/                      # UVM verification framework
 ├── sim/                          # Simulation directory
-│   ├── Makefile                  # Build automation
+│   ├── Makefile                  # Verilator build automation
+│   ├── Makefile.uvm              # UVM simulation (VCS/Questa/Xcelium)
 │   └── main.cpp                  # Verilator main
+├── tests/                        # CoCoTB Python tests
+│   └── cocotb/                   # CoCoTB test suite
+│       ├── Makefile              # Multi-simulator support
+│       ├── lib/                  # Verification library
+│       └── tests/                # Test files
 └── CLAUDE.md                     # Claude Code instructions
 ```
 
 ## Requirements
 
+### Core Tools
 - **Verilator** (5.x recommended)
 - **GCC/G++** with C++17 support
 - **Make**
 - **WSL** (Windows Subsystem for Linux) if running on Windows
+
+### Optional (for CoCoTB tests)
+- **Python** 3.7+
+- **CoCoTB** (`pip install cocotb`)
+- Optional simulators:
+  - **ModelSim/Questa** (commercial)
+  - **Vivado Xsim** (Xilinx, free with WebPACK)
 
 ## Quick Start
 
@@ -82,19 +97,66 @@ make test_regfile    # Register file unit test
 make unit_tests      # All unit tests
 ```
 
-## Test Suite
+## Test Infrastructure
 
-The testbench includes comprehensive tests:
+This project includes three complementary verification approaches:
 
-| Test | Description |
-|------|-------------|
-| ALU Program | Basic arithmetic operations (ADD, ADDI) |
-| Load/Store | Memory load (LW) and store (SW) operations |
-| Branch | Branch instruction testing (BEQ) |
-| Debug Halt/Resume | Debug halt and resume functionality |
-| Debug Register Access | GPR read/write via debug interface |
-| Breakpoint | Hardware breakpoint functionality |
-| Single-Step | Single instruction stepping |
+### 1. SystemVerilog Unit Tests (`sim/`)
+
+Verilator-based tests for quick iteration:
+
+```bash
+cd sim
+make test_alu        # ALU unit test
+make test_regfile    # Register file unit test
+make unit_tests      # All unit tests
+```
+
+### 2. SystemVerilog UVM Testbench (`tb/uvm/`)
+
+Comprehensive UVM verification environment with commercial simulator support:
+
+```bash
+cd sim
+make -f Makefile.uvm SIM=vcs regression     # VCS
+make -f Makefile.uvm SIM=questa regression  # ModelSim/Questa
+make -f Makefile.uvm SIM=xcelium regression # Xcelium
+```
+
+### 3. CoCoTB Python Tests (`tests/cocotb/`)
+
+Python-based directed tests with multi-simulator support:
+
+```bash
+cd tests/cocotb
+pip install -r requirements.txt
+
+# Run with Verilator (open-source, fast)
+make test_basic
+make test_debug
+
+# Run with ModelSim/Questa
+make SIM=modelsim test_basic
+
+# Run with Vivado Xsim
+make SIM=xsim test_basic
+
+# Enable waveforms
+make test_basic WAVES=1
+```
+
+**CoCoTB Test Coverage:**
+- Basic ALU operations (simple_add.hex)
+- Load/Store operations (load_store.hex)
+- Branch operations (branch_test.hex)
+- Reset verification
+- Debug halt/resume
+- Single-step execution
+- Register access via debug interface
+- PC manipulation
+- Hardware breakpoints
+
+See [`tests/cocotb/README.md`](tests/cocotb/README.md) for detailed documentation.
 
 ## Debug Interface
 
