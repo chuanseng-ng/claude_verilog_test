@@ -80,11 +80,11 @@ class APB3MasterDriver(BaseDriver):
 
     async def reset(self) -> None:
         """Reset all APB signals"""
-        self.dut.apb_paddr.value = 0
-        self.dut.apb_psel.value = 0
-        self.dut.apb_penable.value = 0
-        self.dut.apb_pwrite.value = 0
-        self.dut.apb_pwdata.value = 0
+        self.dut.s_apb_paddr.value = 0
+        self.dut.s_apb_psel.value = 0
+        self.dut.s_apb_penable.value = 0
+        self.dut.s_apb_pwrite.value = 0
+        self.dut.s_apb_pwdata.value = 0
 
     async def write(self, addr: int, data: int, timeout_cycles: int = 1000) -> None:
         """Perform an APB3 write transaction"""
@@ -92,19 +92,19 @@ class APB3MasterDriver(BaseDriver):
 
         # Setup phase
         await RisingEdge(self.clk)
-        self.dut.apb_paddr.value = addr
-        self.dut.apb_pwrite.value = 1
-        self.dut.apb_pwdata.value = data
-        self.dut.apb_psel.value = 1
-        self.dut.apb_penable.value = 0
+        self.dut.s_apb_paddr.value = addr
+        self.dut.s_apb_pwrite.value = 1
+        self.dut.s_apb_pwdata.value = data
+        self.dut.s_apb_psel.value = 1
+        self.dut.s_apb_penable.value = 0
 
         # Access phase
         await RisingEdge(self.clk)
-        self.dut.apb_penable.value = 1
+        self.dut.s_apb_penable.value = 1
 
         # Wait for ready with timeout
         for _cycle in range(timeout_cycles):
-            if int(self.dut.apb_pready.value):
+            if int(self.dut.s_apb_pready.value):
                 break
             await RisingEdge(self.clk)
         else:
@@ -113,26 +113,26 @@ class APB3MasterDriver(BaseDriver):
 
         # End transaction
         await RisingEdge(self.clk)
-        self.dut.apb_psel.value = 0
-        self.dut.apb_penable.value = 0
-        self.dut.apb_pwrite.value = 0
+        self.dut.s_apb_psel.value = 0
+        self.dut.s_apb_penable.value = 0
+        self.dut.s_apb_pwrite.value = 0
 
     async def read(self, addr: int, timeout_cycles: int = 1000) -> int:
         """Perform an APB3 read transaction"""
         # Setup phase
         await RisingEdge(self.clk)
-        self.dut.apb_paddr.value = addr
-        self.dut.apb_pwrite.value = 0
-        self.dut.apb_psel.value = 1
-        self.dut.apb_penable.value = 0
+        self.dut.s_apb_paddr.value = addr
+        self.dut.s_apb_pwrite.value = 0
+        self.dut.s_apb_psel.value = 1
+        self.dut.s_apb_penable.value = 0
 
         # Access phase
         await RisingEdge(self.clk)
-        self.dut.apb_penable.value = 1
+        self.dut.s_apb_penable.value = 1
 
         # Wait for ready with timeout
         for _cycle in range(timeout_cycles):
-            if int(self.dut.apb_pready.value):
+            if int(self.dut.s_apb_pready.value):
                 break
             await RisingEdge(self.clk)
         else:
@@ -140,12 +140,12 @@ class APB3MasterDriver(BaseDriver):
             raise TimeoutError(f"APB3 read timeout waiting for pready at addr=0x{addr:03x}")
 
         # Capture data
-        data = int(self.dut.apb_prdata.value)
+        data = int(self.dut.s_apb_prdata.value)
 
         # End transaction
         await RisingEdge(self.clk)
-        self.dut.apb_psel.value = 0
-        self.dut.apb_penable.value = 0
+        self.dut.s_apb_psel.value = 0
+        self.dut.s_apb_penable.value = 0
 
         self.log.debug(f"APB3 Read: addr=0x{addr:03x} data=0x{data:08x}")
         return data
@@ -274,18 +274,18 @@ class APB3Monitor(BaseMonitor):
             await ReadOnly()
 
             # Detect transaction completion (psel && penable && pready)
-            if (int(self.dut.apb_psel.value) and
-                int(self.dut.apb_penable.value) and
-                int(self.dut.apb_pready.value)):
+            if (int(self.dut.s_apb_psel.value) and
+                int(self.dut.s_apb_penable.value) and
+                int(self.dut.s_apb_pready.value)):
 
                 txn = APB3Transaction()
-                txn.paddr = int(self.dut.apb_paddr.value)
-                txn.pwrite = bool(int(self.dut.apb_pwrite.value))
+                txn.paddr = int(self.dut.s_apb_paddr.value)
+                txn.pwrite = bool(int(self.dut.s_apb_pwrite.value))
 
                 if txn.pwrite:
-                    txn.pwdata = int(self.dut.apb_pwdata.value)
+                    txn.pwdata = int(self.dut.s_apb_pwdata.value)
                 else:
-                    txn.prdata = int(self.dut.apb_prdata.value)
+                    txn.prdata = int(self.dut.s_apb_prdata.value)
 
                 self.log.debug(str(txn))
                 self._notify_callbacks(txn)

@@ -97,14 +97,14 @@ class AXI4LiteSlaveDriver(BaseDriver):
 
     async def reset(self) -> None:
         """Reset all AXI signals"""
-        self.dut.axi_awready.value = 0
-        self.dut.axi_wready.value = 0
-        self.dut.axi_bvalid.value = 0
-        self.dut.axi_bresp.value = 0
-        self.dut.axi_arready.value = 0
-        self.dut.axi_rvalid.value = 0
-        self.dut.axi_rdata.value = 0
-        self.dut.axi_rresp.value = 0
+        self.dut.m_axi_awready.value = 0
+        self.dut.m_axi_wready.value = 0
+        self.dut.m_axi_bvalid.value = 0
+        self.dut.m_axi_bresp.value = 0
+        self.dut.m_axi_arready.value = 0
+        self.dut.m_axi_rvalid.value = 0
+        self.dut.m_axi_rdata.value = 0
+        self.dut.m_axi_rresp.value = 0
 
     def load_program(self, hex_file: str, base_addr: int = 0) -> None:
         """Load a hex file into memory"""
@@ -158,106 +158,106 @@ class AXI4LiteSlaveDriver(BaseDriver):
         while True:
             await RisingEdge(self.clk)
             # Accept write address
-            if int(self.dut.axi_awvalid.value) and int(self.dut.axi_awready.value):
-                self.pending_write_addr = int(self.dut.axi_awaddr.value)
+            if int(self.dut.m_axi_awvalid.value) and int(self.dut.m_axi_awready.value):
+                self.pending_write_addr = int(self.dut.m_axi_awaddr.value)
                 self.log.debug(f"Write address captured: 0x{self.pending_write_addr:08x}")
 
             # Set awready after latency
-            if int(self.dut.axi_awvalid.value) and not int(self.dut.axi_awready.value):
-                await Timer(self.write_latency, units='ns')
-                self.dut.axi_awready.value = 1
+            if int(self.dut.m_axi_awvalid.value) and not int(self.dut.m_axi_awready.value):
+                await Timer(self.write_latency, unit='ns')
+                self.dut.m_axi_awready.value = 1
             else:
-                self.dut.axi_awready.value = 0
+                self.dut.m_axi_awready.value = 0
 
     async def _write_data_channel(self) -> None:
         """Handle write data channel"""
         while True:
             await RisingEdge(self.clk)
             # Set wready after latency
-            if int(self.dut.axi_wvalid.value) and not int(self.dut.axi_wready.value):
-                await Timer(self.write_latency, units='ns')
-                self.dut.axi_wready.value = 1
+            if int(self.dut.m_axi_wvalid.value) and not int(self.dut.m_axi_wready.value):
+                await Timer(self.write_latency, unit='ns')
+                self.dut.m_axi_wready.value = 1
             else:
-                self.dut.axi_wready.value = 0
+                self.dut.m_axi_wready.value = 0
 
     async def _write_response_channel(self) -> None:
         """Handle write response channel"""
         while True:
             await RisingEdge(self.clk)
             # When both address and data are valid, perform write and send response
-            if (int(self.dut.axi_awvalid.value) and int(self.dut.axi_awready.value) and
-                int(self.dut.axi_wvalid.value) and int(self.dut.axi_wready.value)):
+            if (int(self.dut.m_axi_awvalid.value) and int(self.dut.m_axi_awready.value) and
+                int(self.dut.m_axi_wvalid.value) and int(self.dut.m_axi_wready.value)):
 
-                addr = int(self.dut.axi_awaddr.value)
-                data = int(self.dut.axi_wdata.value)
-                strb = int(self.dut.axi_wstrb.value)
+                addr = int(self.dut.m_axi_awaddr.value)
+                data = int(self.dut.m_axi_wdata.value)
+                strb = int(self.dut.m_axi_wstrb.value)
 
                 # Write to memory
                 self.write_word(addr, data, strb)
                 self.log.debug(f"Memory write: addr=0x{addr:08x} data=0x{data:08x} strb=0x{strb:x}")
 
                 # Send write response
-                self.dut.axi_bvalid.value = 1
-                self.dut.axi_bresp.value = 0  # OKAY
+                self.dut.m_axi_bvalid.value = 1
+                self.dut.m_axi_bresp.value = 0  # OKAY
 
                 # Wait for bready with timeout
                 timeout_cycles = 1000
                 for _cycle in range(timeout_cycles):
-                    if int(self.dut.axi_bready.value):
+                    if int(self.dut.m_axi_bready.value):
                         break
                     await RisingEdge(self.clk)
                 else:
                     self.log.error(f"AXI4-Lite write response timeout waiting for bready at addr=0x{addr:08x}")
                     # Continue anyway to avoid hanging the driver
-                    self.dut.axi_bvalid.value = 0
+                    self.dut.m_axi_bvalid.value = 0
                     continue
 
                 await RisingEdge(self.clk)
-                self.dut.axi_bvalid.value = 0
+                self.dut.m_axi_bvalid.value = 0
 
     async def _read_address_channel(self) -> None:
         """Handle read address channel"""
         while True:
             await RisingEdge(self.clk)
             # Set arready after latency
-            if int(self.dut.axi_arvalid.value) and not int(self.dut.axi_arready.value):
-                await Timer(self.read_latency, units='ns')
-                self.dut.axi_arready.value = 1
+            if int(self.dut.m_axi_arvalid.value) and not int(self.dut.m_axi_arready.value):
+                await Timer(self.read_latency, unit='ns')
+                self.dut.m_axi_arready.value = 1
             else:
-                self.dut.axi_arready.value = 0
+                self.dut.m_axi_arready.value = 0
 
     async def _read_data_channel(self) -> None:
         """Handle read data channel"""
         while True:
             await RisingEdge(self.clk)
             # When read address is valid, perform read and send data
-            if int(self.dut.axi_arvalid.value) and int(self.dut.axi_arready.value):
-                addr = int(self.dut.axi_araddr.value)
+            if int(self.dut.m_axi_arvalid.value) and int(self.dut.m_axi_arready.value):
+                addr = int(self.dut.m_axi_araddr.value)
                 data = self.read_word(addr)
 
                 self.log.debug(f"Memory read: addr=0x{addr:08x} data=0x{data:08x}")
 
                 # Send read data
-                self.dut.axi_rvalid.value = 1
-                self.dut.axi_rdata.value = data
-                self.dut.axi_rresp.value = 0  # OKAY
+                self.dut.m_axi_rvalid.value = 1
+                self.dut.m_axi_rdata.value = data
+                self.dut.m_axi_rresp.value = 0  # OKAY
 
                 # Wait for rready with timeout
                 timeout_cycles = 1000
                 for _cycle in range(timeout_cycles):
-                    if int(self.dut.axi_rready.value):
+                    if int(self.dut.m_axi_rready.value):
                         break
                     await RisingEdge(self.clk)
                 else:
                     self.log.error(f"AXI4-Lite read data timeout waiting for rready at addr=0x{addr:08x}")
                     # Continue anyway to avoid hanging the driver
-                    self.dut.axi_rvalid.value = 0
-                    self.dut.axi_rdata.value = 0
+                    self.dut.m_axi_rvalid.value = 0
+                    self.dut.m_axi_rdata.value = 0
                     continue
 
                 await RisingEdge(self.clk)
-                self.dut.axi_rvalid.value = 0
-                self.dut.axi_rdata.value = 0
+                self.dut.m_axi_rvalid.value = 0
+                self.dut.m_axi_rdata.value = 0
 
 
 class AXI4LiteMonitor(BaseMonitor):
@@ -273,42 +273,42 @@ class AXI4LiteMonitor(BaseMonitor):
             await ReadOnly()
 
             # Monitor write transactions
-            if int(self.dut.axi_awvalid.value) and int(self.dut.axi_awready.value):
+            if int(self.dut.m_axi_awvalid.value) and int(self.dut.m_axi_awready.value):
                 txn = AXI4LiteTransaction()
                 txn.is_write = True
-                txn.awaddr = int(self.dut.axi_awaddr.value)
+                txn.awaddr = int(self.dut.m_axi_awaddr.value)
 
                 # Wait for write data
                 timeout_cycles = 0
-                while not (int(self.dut.axi_wvalid.value) and int(self.dut.axi_wready.value)):
+                while not (int(self.dut.m_axi_wvalid.value) and int(self.dut.m_axi_wready.value)):
                     await RisingEdge(self.clk)
                     await ReadOnly()
                     timeout_cycles += 1
                     if timeout_cycles >= 1000:
                         raise TimeoutError(f"AXI4-Lite write data timeout after {timeout_cycles} cycles")
 
-                txn.wdata = int(self.dut.axi_wdata.value)
-                txn.wstrb = int(self.dut.axi_wstrb.value)
+                txn.wdata = int(self.dut.m_axi_wdata.value)
+                txn.wstrb = int(self.dut.m_axi_wstrb.value)
 
                 self.log.debug(str(txn))
                 self._notify_callbacks(txn)
 
             # Monitor read transactions
-            if int(self.dut.axi_arvalid.value) and int(self.dut.axi_arready.value):
+            if int(self.dut.m_axi_arvalid.value) and int(self.dut.m_axi_arready.value):
                 txn = AXI4LiteTransaction()
                 txn.is_read = True
-                txn.araddr = int(self.dut.axi_araddr.value)
+                txn.araddr = int(self.dut.m_axi_araddr.value)
 
                 # Wait for read data
                 timeout_cycles = 0
-                while not (int(self.dut.axi_rvalid.value) and int(self.dut.axi_rready.value)):
+                while not (int(self.dut.m_axi_rvalid.value) and int(self.dut.m_axi_rready.value)):
                     await RisingEdge(self.clk)
                     await ReadOnly()
                     timeout_cycles += 1
                     if timeout_cycles >= 1000:
                         raise TimeoutError(f"AXI4-Lite read data timeout after {timeout_cycles} cycles")
 
-                txn.rdata = int(self.dut.axi_rdata.value)
+                txn.rdata = int(self.dut.m_axi_rdata.value)
 
                 self.log.debug(str(txn))
                 self._notify_callbacks(txn)

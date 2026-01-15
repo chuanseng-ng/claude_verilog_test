@@ -33,7 +33,7 @@ async def test_halt_resume(dut):
     await env.reset(duration_ns=100)
 
     # Load a simple program
-    hex_file = os.path.join(os.path.dirname(test_dir), '..', 'tb', 'programs', 'simple_add.hex')
+    hex_file = os.path.join(os.path.dirname(test_dir), '..', '..', 'tb', 'programs', 'simple_add.hex')
     env.load_program(hex_file)
 
     # Let CPU run for a few cycles
@@ -71,7 +71,7 @@ async def test_single_step(dut):
     await env.reset(duration_ns=100)
 
     # Load a simple program
-    hex_file = os.path.join(os.path.dirname(test_dir), '..', 'tb', 'programs', 'simple_add.hex')
+    hex_file = os.path.join(os.path.dirname(test_dir), '..', '..', 'tb', 'programs', 'simple_add.hex')
     env.load_program(hex_file)
 
     # Halt the CPU
@@ -182,7 +182,7 @@ async def test_breakpoint(dut):
     await env.reset(duration_ns=100)
 
     # Load a program
-    hex_file = os.path.join(os.path.dirname(test_dir), '..', 'tb', 'programs', 'simple_add.hex')
+    hex_file = os.path.join(os.path.dirname(test_dir), '..', '..', 'tb', 'programs', 'simple_add.hex')
     env.load_program(hex_file)
 
     # Set a breakpoint at a specific address
@@ -223,7 +223,7 @@ async def test_full_debug_sequence(dut):
     await env.reset(duration_ns=100)
 
     # Load program
-    hex_file = os.path.join(os.path.dirname(test_dir), '..', 'tb', 'programs', 'simple_add.hex')
+    hex_file = os.path.join(os.path.dirname(test_dir), '..', '..', 'tb', 'programs', 'simple_add.hex')
     env.load_program(hex_file)
 
     # Let it run for a bit

@@ -33,7 +33,7 @@ async def test_simple_add(dut):
     env.start_monitors()
 
     # Find the hex file
-    hex_file = os.path.join(os.path.dirname(test_dir), '..', 'tb', 'programs', 'simple_add.hex')
+    hex_file = os.path.join(os.path.dirname(test_dir), '..', '..', 'tb', 'programs', 'simple_add.hex')
 
     # Load and run program
     env.log.info("Running simple_add test")
@@ -66,7 +66,7 @@ async def test_load_store(dut):
     env.start_monitors()
 
     # Find the hex file
-    hex_file = os.path.join(os.path.dirname(test_dir), '..', 'tb', 'programs', 'load_store.hex')
+    hex_file = os.path.join(os.path.dirname(test_dir), '..', '..', 'tb', 'programs', 'load_store.hex')
 
     # Load and run program
     env.log.info("Running load_store test")
@@ -99,7 +99,7 @@ async def test_branch(dut):
     env.start_monitors()
 
     # Find the hex file
-    hex_file = os.path.join(os.path.dirname(test_dir), '..', 'tb', 'programs', 'branch_test.hex')
+    hex_file = os.path.join(os.path.dirname(test_dir), '..', '..', 'tb', 'programs', 'branch_test.hex')
 
     # Load and run program
     env.log.info("Running branch_test")

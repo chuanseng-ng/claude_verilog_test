@@ -46,7 +46,7 @@ class RV32IEnvironment:
 
         # Create clock
         self.clk = self.dut.clk
-        cocotb.start_soon(Clock(self.clk, self.clk_period_ns, units="ns").start())
+        cocotb.start_soon(Clock(self.clk, self.clk_period_ns, unit="ns").start())
 
         # Create agents
         self.axi_agent = AXI4LiteAgent(
@@ -78,7 +78,7 @@ class RV32IEnvironment:
         await self.apb_agent.reset()
 
         # Wait for reset duration
-        await Timer(duration_ns, units="ns")
+        await Timer(duration_ns, unit="ns")
 
         # Deassert reset
         await RisingEdge(self.clk)
