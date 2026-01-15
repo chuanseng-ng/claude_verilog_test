@@ -7,5 +7,7 @@
 tmpclaude*
 
 # Verilator
-sim/obj_dir/
+*/sim/obj_dir/
+*/sim/work_uvm/
+*/sim/logs/
 *.vcd
