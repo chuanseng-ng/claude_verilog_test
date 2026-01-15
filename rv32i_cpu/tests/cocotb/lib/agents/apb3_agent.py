@@ -103,7 +103,7 @@ class APB3MasterDriver(BaseDriver):
         self.dut.apb_penable.value = 1
 
         # Wait for ready with timeout
-        for cycle in range(timeout_cycles):
+        for _cycle in range(timeout_cycles):
             if int(self.dut.apb_pready.value):
                 break
             await RisingEdge(self.clk)
@@ -131,7 +131,7 @@ class APB3MasterDriver(BaseDriver):
         self.dut.apb_penable.value = 1
 
         # Wait for ready with timeout
-        for cycle in range(timeout_cycles):
+        for _cycle in range(timeout_cycles):
             if int(self.dut.apb_pready.value):
                 break
             await RisingEdge(self.clk)

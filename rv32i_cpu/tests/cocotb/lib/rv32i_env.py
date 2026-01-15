@@ -11,7 +11,7 @@ Provides a complete test environment for the RV32I CPU with:
 import cocotb
 from cocotb.triggers import RisingEdge, Timer, ClockCycles
 from cocotb.clock import Clock
-from cocotb.log import SimLog
+import logging
 import sys
 import os
 
@@ -31,7 +31,7 @@ class RV32IEnvironment:
         self.dut = dut
         self.clk_period_ns = clk_period_ns
         self.mem_size = mem_size
-        self.log = SimLog("cocotb.rv32i_env")
+        self.log = logging.getLogger("cocotb.rv32i_env")
 
         # Clock will be started in build phase
         self.clk = None

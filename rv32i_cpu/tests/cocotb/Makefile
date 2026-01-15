@@ -102,53 +102,53 @@ all: test_basic
 # Run all basic tests
 .PHONY: test_basic
 test_basic:
-	$(MAKE) MODULE=tests.test_rv32i_basic
+	$(MAKE) sim MODULE=tests.test_rv32i_basic
 
 # Run all debug tests
 .PHONY: test_debug
 test_debug:
-	$(MAKE) MODULE=tests.test_rv32i_debug
+	$(MAKE) sim MODULE=tests.test_rv32i_debug
 
 # Run specific tests
 .PHONY: test_simple_add
 test_simple_add:
-	$(MAKE) MODULE=tests.test_rv32i_basic::test_simple_add
+	$(MAKE) sim MODULE=tests.test_rv32i_basic TESTCASE=test_simple_add
 
 .PHONY: test_load_store
 test_load_store:
-	$(MAKE) MODULE=tests.test_rv32i_basic::test_load_store
+	$(MAKE) sim MODULE=tests.test_rv32i_basic TESTCASE=test_load_store
 
 .PHONY: test_branch
 test_branch:
-	$(MAKE) MODULE=tests.test_rv32i_basic::test_branch
+	$(MAKE) sim MODULE=tests.test_rv32i_basic TESTCASE=test_branch
 
 .PHONY: test_reset
 test_reset:
-	$(MAKE) MODULE=tests.test_rv32i_basic::test_reset
+	$(MAKE) sim MODULE=tests.test_rv32i_basic TESTCASE=test_reset
 
 .PHONY: test_halt_resume
 test_halt_resume:
-	$(MAKE) MODULE=tests.test_rv32i_debug::test_halt_resume
+	$(MAKE) sim MODULE=tests.test_rv32i_debug TESTCASE=test_halt_resume
 
 .PHONY: test_single_step
 test_single_step:
-	$(MAKE) MODULE=tests.test_rv32i_debug::test_single_step
+	$(MAKE) sim MODULE=tests.test_rv32i_debug TESTCASE=test_single_step
 
 .PHONY: test_register_access
 test_register_access:
-	$(MAKE) MODULE=tests.test_rv32i_debug::test_register_access
+	$(MAKE) sim MODULE=tests.test_rv32i_debug TESTCASE=test_register_access
 
 .PHONY: test_pc_access
 test_pc_access:
-	$(MAKE) MODULE=tests.test_rv32i_debug::test_pc_access
+	$(MAKE) sim MODULE=tests.test_rv32i_debug TESTCASE=test_pc_access
 
 .PHONY: test_breakpoint
 test_breakpoint:
-	$(MAKE) MODULE=tests.test_rv32i_debug::test_breakpoint
+	$(MAKE) sim MODULE=tests.test_rv32i_debug TESTCASE=test_breakpoint
 
 .PHONY: test_full_debug
 test_full_debug:
-	$(MAKE) MODULE=tests.test_rv32i_debug::test_full_debug_sequence
+	$(MAKE) sim MODULE=tests.test_rv32i_debug TESTCASE=test_full_debug_sequence
 
 # Run all tests (regression)
 .PHONY: regression

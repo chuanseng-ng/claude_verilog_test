@@ -10,7 +10,6 @@ Provides a cocotb-based AXI4-Lite slave agent with:
 
 import cocotb
 from cocotb.triggers import RisingEdge, ReadOnly, Timer
-from cocotb.binary import BinaryValue
 from typing import Dict, Optional
 import sys
 import os
@@ -203,7 +202,7 @@ class AXI4LiteSlaveDriver(BaseDriver):
 
                 # Wait for bready with timeout
                 timeout_cycles = 1000
-                for cycle in range(timeout_cycles):
+                for _cycle in range(timeout_cycles):
                     if int(self.dut.axi_bready.value):
                         break
                     await RisingEdge(self.clk)
@@ -245,7 +244,7 @@ class AXI4LiteSlaveDriver(BaseDriver):
 
                 # Wait for rready with timeout
                 timeout_cycles = 1000
-                for cycle in range(timeout_cycles):
+                for _cycle in range(timeout_cycles):
                     if int(self.dut.axi_rready.value):
                         break
                     await RisingEdge(self.clk)
@@ -280,9 +279,13 @@ class AXI4LiteMonitor(BaseMonitor):
                 txn.awaddr = int(self.dut.axi_awaddr.value)
 
                 # Wait for write data
+                timeout_cycles = 0
                 while not (int(self.dut.axi_wvalid.value) and int(self.dut.axi_wready.value)):
                     await RisingEdge(self.clk)
                     await ReadOnly()
+                    timeout_cycles += 1
+                    if timeout_cycles >= 1000:
+                        raise TimeoutError(f"AXI4-Lite write data timeout after {timeout_cycles} cycles")
 
                 txn.wdata = int(self.dut.axi_wdata.value)
                 txn.wstrb = int(self.dut.axi_wstrb.value)
@@ -297,9 +300,13 @@ class AXI4LiteMonitor(BaseMonitor):
                 txn.araddr = int(self.dut.axi_araddr.value)
 
                 # Wait for read data
+                timeout_cycles = 0
                 while not (int(self.dut.axi_rvalid.value) and int(self.dut.axi_rready.value)):
                     await RisingEdge(self.clk)
                     await ReadOnly()
+                    timeout_cycles += 1
+                    if timeout_cycles >= 1000:
+                        raise TimeoutError(f"AXI4-Lite read data timeout after {timeout_cycles} cycles")
 
                 txn.rdata = int(self.dut.axi_rdata.value)
 

@@ -10,7 +10,7 @@ Provides base classes similar to UVM components:
 
 import cocotb
 from cocotb.triggers import RisingEdge, Event
-from cocotb.log import SimLog
+import logging
 from typing import Optional, Any, Callable, List
 import queue
 
@@ -38,7 +38,7 @@ class BaseDriver:
         self.dut = dut
         self.clk = clk
         self.name = name
-        self.log = SimLog(f"cocotb.{name}")
+        self.log = logging.getLogger(f"cocotb.{name}")
         self.busy = False
 
     async def reset(self) -> None:
@@ -57,7 +57,7 @@ class BaseMonitor:
         self.dut = dut
         self.clk = clk
         self.name = name
-        self.log = SimLog(f"cocotb.{name}")
+        self.log = logging.getLogger(f"cocotb.{name}")
         self.callbacks: List[Callable] = []
         self._mon_task = None
 
@@ -96,7 +96,7 @@ class BaseAgent:
         self.dut = dut
         self.clk = clk
         self.name = name
-        self.log = SimLog(f"cocotb.{name}")
+        self.log = logging.getLogger(f"cocotb.{name}")
         self.driver: Optional[BaseDriver] = None
         self.monitor: Optional[BaseMonitor] = None
 
@@ -123,7 +123,7 @@ class TransactionQueue:
         self.name = name
         self.queue = queue.Queue()
         self.put_event = Event()
-        self.log = SimLog(f"cocotb.{name}")
+        self.log = logging.getLogger(f"cocotb.{name}")
 
     def put(self, item: BaseTransaction) -> None:
         """Put an item in the queue"""
@@ -134,8 +134,16 @@ class TransactionQueue:
         """Get an item from the queue (async)"""
         while self.queue.empty():
             await self.put_event.wait()
+            # Only clear event after confirming queue is still empty
+            # to avoid losing wakeup signal in race condition
+            if self.queue.empty():
+                self.put_event.clear()
+
+        item = self.queue.get()
+        # Clear event only if queue becomes empty after get
+        if self.queue.empty():
             self.put_event.clear()
-        return self.queue.get()
+        return item
 
     def empty(self) -> bool:
         """Check if queue is empty"""
