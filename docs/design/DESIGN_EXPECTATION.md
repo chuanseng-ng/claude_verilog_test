@@ -13,7 +13,7 @@ Once that is done, use it as a foundation to develop a pipelined CPU
 
 - 5-stage pipeline
 - No speculation
-- Static hazad handling
+- Static hazard handling
 
 Develop the memory system and caches once the pipelined CPU design is completed
 

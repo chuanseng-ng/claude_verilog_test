@@ -17,7 +17,7 @@
 
 ### Key principles
 
-- Python is the golden refence
+- Python is the golden reference
 - Scoreboards decide truth
 - Randomized stress > Directed tests
 - Verification precedes optimization
@@ -28,7 +28,7 @@ Tools
 
 - cocotb — signal-level drivers, monitors, clocking
 - py-uvm — structure, sequences, scoreboards
-- Python reference models (ISA, memroy, GPU kernel)
+- Python reference models (ISA, memory, GPU kernel)
 
 Simulation targets
 
@@ -119,20 +119,13 @@ class CpuEnv(uvm_env):
 ### CPU scoreboard (Python golden model)
 
 ```python
-from pyuvm import *
-from agents.imem_agent import ImemAgent
-from agents.dmem_agent import DmemAgent
-from scoreboard.cpu_scoreboard import CpuScoreboard
-
-class CpuEnv(uvm_env):
+class CpuScoreboard(uvm_component):
     def build_phase(self):
-        self.imem = ImemAgent("imem", self)
-        self.dmem = DmemAgent("dmem", self)
-        self.scoreboard = CpuScoreboard("scoreboard", self)
+        self.ref = RiscVReferenceModel()
 
-    def connect_phase(self):
-        self.imem.ap.connect(self.scoreboard.imem_export)
-        self.dmem.ap.connect(self.scoreboard.dmem_export)
+    def write_commit(self, txn):
+        ref_state = self.ref.step(txn.insn)
+        assert txn.pc == ref_state.pc
 ```
 
 **Human MUST**

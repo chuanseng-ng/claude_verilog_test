@@ -37,7 +37,7 @@ Control
 Fetch → Decode → Execute → Memory → Writeback
 ```
 
-- Shared instruction per wrap
+- Shared instruction per warp
 - Per-lane register files
 - Mask register for divergence
 
