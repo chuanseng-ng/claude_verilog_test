@@ -109,21 +109,28 @@ class AXI4LiteSlaveDriver(BaseDriver):
     def load_program(self, hex_file: str, base_addr: int = 0) -> None:
         """Load a hex file into memory"""
         try:
+            word_count = 0
             with open(hex_file, 'r') as f:
                 addr = base_addr
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith('//'):
+                        # Remove inline comments (split on // and take first part)
+                        hex_data = line.split('//')[0].strip()
+                        if not hex_data:
+                            continue
                         # Parse hex data (assuming 32-bit words in hex format)
                         try:
-                            data = int(line, 16)
+                            data = int(hex_data, 16)
                             # Store as bytes in memory
                             for i in range(4):
                                 self.memory[addr + i] = (data >> (i * 8)) & 0xFF
+                            word_count += 1
                             addr += 4
                         except ValueError:
+                            self.log.warning(f"Failed to parse hex line: '{hex_data}'")
                             continue
-            self.log.info(f"Loaded {hex_file} into memory at 0x{base_addr:08x}")
+            self.log.info(f"Loaded {word_count} words from {hex_file} into memory at 0x{base_addr:08x}")
         except FileNotFoundError:
             self.log.exception(f"File not found: {hex_file}")
             raise

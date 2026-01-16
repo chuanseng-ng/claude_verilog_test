@@ -139,6 +139,9 @@ class APB3MasterDriver(BaseDriver):
             self.log.error(f"APB3 read timeout at addr=0x{addr:03x}")
             raise TimeoutError(f"APB3 read timeout waiting for pready at addr=0x{addr:03x}")
 
+        # Wait for combinational logic to settle before reading prdata
+        await ReadOnly()
+
         # Capture data
         data = int(self.dut.s_apb_prdata.value)
 
