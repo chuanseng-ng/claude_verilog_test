@@ -15,3 +15,6 @@ tmpclaude*
 # Cocotb
 sim_build/
 __pycache__/
+venv/
+*.log
+*.xml
