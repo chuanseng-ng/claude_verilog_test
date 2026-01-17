@@ -4,7 +4,7 @@ RV32I Minimal CPU Core
 
 Document status: Active (Phase-0)
 Target audience: RTL, verification, tooling
-Compliance refence: RISC-V International RV32I Base ISA (subset)
+Compliance reference: RISC-V International RV32I Base ISA (subset)
 
 ## Scope and non-goals
 
@@ -113,7 +113,7 @@ Any instructions SHALL be considered illegal if:
 - funct3/funct7 encoding is unsupported
 - Instruction belongs to an excluded extension
 - Memory access is misaligned
-- Instruction encdoing is reserved by the ISA
+- Instruction encoding is reserved by the ISA
 
 ## Reset Behavior
 
@@ -188,10 +188,10 @@ Traps SHALL be precise:
 
 ### Commit definition
 
-An insutrction is considered **committed** when:
+An instruction is considered **committed** when:
 
 - All architectural side effects are complete
-- PC is updated tot the next architectural value
+- PC is updated to the next architectural value
 - Register and/or memory updates are visible
 
 At most **one instruction SHALL commit per cycle**
@@ -261,7 +261,7 @@ The RTL SHALL be verified **only** against this reference model
 
 ### Determinism
 
-Given identical instruction streams and memroy contents:
+Given identical instruction streams and memory contents:
 
 - RTL behavior SHALL be deterministic
 - No random or X-dependent behavior is permitted

@@ -162,7 +162,7 @@ async def cpu_random_test(dut):
 
 - Kernel-level reference execution
 - End-of-kernel memory comparison
-- Option per-instruction tracing (debug mode)
+- Optional per-instruction tracing (debug mode)
 
 ## Assertions (SVA + Python)
 
@@ -197,7 +197,7 @@ async def cpu_random_test(dut):
 
 ### CPU
 
-- 100% RV32I opcode coverage (implemented sub-set)
+- 100% RV32I opcode coverage (implemented subset)
 - Passes >= 10k random instruction tests
 - Zero known failing seeds
 
