@@ -2,7 +2,7 @@
 
 Complete address space allocation for RV32I SoC
 
-Document status: Active
+Document status: Frozen
 Last updated: 2026-01-17
 
 ## Overview

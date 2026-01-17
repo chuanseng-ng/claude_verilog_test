@@ -2,7 +2,7 @@
 
 GPU-Lite SIMT Compute Engine
 
-Document status: Draft (Phase-4)
+Document status: Frozen (Phase-4)
 Target audience: RTL implementation, verification, GPU kernel developers
 Compliance reference: None (custom design)
 

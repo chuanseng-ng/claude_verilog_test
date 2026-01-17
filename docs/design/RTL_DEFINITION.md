@@ -2,7 +2,7 @@
 
 System-level interface specifications for all IPs
 
-Document status: Active
+Document status: Frozen
 Last updated: 2026-01-17
 
 ## Protocol Standards

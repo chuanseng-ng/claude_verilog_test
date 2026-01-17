@@ -2,7 +2,7 @@
 
 Phase-Aligned Verification Strategy with AI/Human Responsibilities
 
-Document status: Active
+Document status: Frozen
 Last updated: 2026-01-17
 
 ## Overview
@@ -538,7 +538,7 @@ class GPUScoreboard(uvm_component):
 
 ### Exit Criteria (Phase 5)
 
-- Boots firmware reliably (100/100 attempts)
+- Boots firmware reliably from ROM loaded with C code (100/100 attempts)
 - Sustains 1M+ cycle random tests, 0 failures
 - All peripherals functional
 - System-level assertions pass
@@ -550,6 +550,7 @@ class GPUScoreboard(uvm_component):
 ### Continuous Integration
 
 **On every commit**:
+
 - Run smoke tests (< 1 minute)
 - Run ISA tests (< 5 minutes)
 - Check for new lint warnings

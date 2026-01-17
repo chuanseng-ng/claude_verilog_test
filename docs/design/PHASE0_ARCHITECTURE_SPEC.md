@@ -2,7 +2,7 @@
 
 RV32I Minimal CPU Core
 
-Document status: Active (Phase-0)
+Document status: Frozen (Phase-0)
 Target audience: RTL, verification, tooling
 Compliance reference: RISC-V International RV32I Base ISA (subset)
 

@@ -2,7 +2,7 @@
 
 Python Golden Reference Models for CPU and GPU
 
-Document status: Active
+Document status: Frozen
 Last updated: 2026-01-17
 
 ## Overview
