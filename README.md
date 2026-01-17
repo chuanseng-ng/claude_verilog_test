@@ -64,7 +64,8 @@ This project incrementally builds a fully functional SoC through 6 phases:
 │   │   └── memory_model.py       # Memory system model
 │   ├── tests/                    # Unit tests for reference models
 │   │   ├── test_rv32i_model.py
-│   │   └── test_gpu_model.py
+│   │   ├── test_gpu_model.py
+│   │   └── test_memory_model.py
 │   └── cocotb/                   # cocotb testbenches (Phase 1+)
 ├── rtl/                          # RTL source files (Phase 1+)
 │   ├── cpu/                      # (empty - Phase 1)
