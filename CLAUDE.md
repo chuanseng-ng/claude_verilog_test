@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project
 
-**Current Phase**: Phase 0 (Specification)
+**Current Phase**: Phase 0 (Specification & Reference Models)
 
-**Status**: Specifications being finalized, no RTL implementation yet
+**Status**: All specifications complete, reference model implementation in progress
 
 **Target**: Build a complete SoC with CPU, GPU, caches, and peripherals through incremental phases
 
@@ -18,10 +18,11 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 
 ### Phase 0 (Current): Foundations
 
-- **Status**: In progress
+- **Status**: Specifications complete, reference model implementation in progress
 - **Goal**: Finalize all specifications and reference models
-- **Deliverables**: Architecture specs, Python reference models, test infrastructure
+- **Deliverables**: Architecture specs (✅ complete), Python reference models (🟡 in progress), test infrastructure (🟡 in progress)
 - **No RTL yet**
+- **Exit Criteria**: All 7 specifications approved, Python reference models tested and validated
 
 ### Phase 1 (Next): Minimal RV32I Core
 
@@ -33,10 +34,12 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 
 ### Phase 2-5: Future Phases
 
-- Phase 2: 5-stage pipeline + interrupts
-- Phase 3: I-cache + D-cache
-- Phase 4: GPU-lite SIMT compute engine
-- Phase 5: SoC integration with peripherals
+- **Phase 2**: 5-stage pipelined CPU + interrupt support (timer + external)
+- **Phase 3**: Memory system with I-cache + D-cache (write-back, no coherence)
+- **Phase 4**: GPU-lite SIMT compute engine (8-lane warps, single compute unit, no graphics)
+- **Phase 5**: SoC integration (CPU + GPU + DMA + UART + SPI + Timer + Boot ROM)
+
+**Note**: GPU in Phase 4 requires Phase 2+ CPU for interrupt support (kernel completion notifications)
 
 ## Key Documentation
 
@@ -325,13 +328,28 @@ Categories:
 
 See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 
-**Current priorities** (Phase 0):
+**Current priorities** (Phase 0 - Specifications Complete ✅):
 
-1. Implement CPU reference model (`tb/models/rv32i_model.py`)
-2. Write reference model unit tests
-3. Cross-validate vs RISC-V spike simulator
-4. Setup cocotb infrastructure
-5. Final specification review
+**Remaining Implementation Tasks**:
+
+1. **Python reference model implementation** (AI-assisted, human-verified)
+   - `tb/models/rv32i_model.py` - CPU instruction-accurate model
+   - `tb/models/gpu_kernel_model.py` - GPU SIMT execution model
+   - `tb/models/memory_model.py` - Shared memory model
+   - AI may assist with: Boilerplate code, simple instruction implementations
+   - Human must: Verify complex instructions, approve all logic, final review
+
+2. **cocotb test infrastructure setup** (AI-assisted)
+   - cocotb environment configuration
+   - Test harness scaffolding
+   - Driver templates for AXI4-Lite and APB3
+   - AI may assist with: Infrastructure scaffolding, boilerplate code
+   - Human must: Review and approve test strategy
+
+3. **Final specification review** (HUMAN-ONLY)
+   - Review all 7 specification documents
+   - Approve Phase 0 completion
+   - Authorize transition to Phase 1
 
 ## Questions?
 

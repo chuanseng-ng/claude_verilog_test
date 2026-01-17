@@ -1,52 +1,86 @@
-# RV32I RISC-V Microprocessor
+# RV32I RISC-V Microprocessor + GPU-Lite SoC
 
-A fully functional RV32I RISC-V microprocessor implemented in SystemVerilog, featuring AXI4-Lite memory interface and APB3 debug interface.
+Multi-phase project building a complete SoC with RV32I RISC-V CPU, GPU-lite compute engine, memory system, and peripherals.
 
-## Features
+## Project Vision
+
+This project incrementally builds a fully functional SoC through 6 phases:
+
+1. **Phase 0** (Current): Specification & Reference Models
+2. **Phase 1**: Minimal RV32I CPU (single-cycle)
+3. **Phase 2**: Pipelined CPU (5-stage + interrupts)
+4. **Phase 3**: Memory System (I-cache + D-cache)
+5. **Phase 4**: GPU-Lite Compute Engine (SIMT)
+6. **Phase 5**: SoC Integration (peripherals, boot ROM)
+
+## Current Status: Phase 0 (Specification Phase)
+
+**Completed**:
+- All architectural specifications finalized
+- Interface definitions (AXI4-Lite, APB3)
+- Memory map and register definitions
+- Verification strategy documented
+
+**In Progress**:
+- Python reference model implementation
+- cocotb test infrastructure setup
+
+**No RTL exists yet** - RTL implementation begins in Phase 1
+
+## Planned Features (Phase 1+)
 
 - **ISA**: Complete RISC-V RV32I base integer instruction set (37 instructions)
-- **Architecture**: Single-cycle execution with stalls for memory operations
+- **Architecture**: Single-cycle execution (Phase 1) → 5-stage pipeline (Phase 2)
 - **Memory Interface**: AXI4-Lite Master for instruction fetch and data access
 - **Debug Interface**: APB3 Slave with full debug capabilities
   - Halt/Resume/Single-step execution
   - Register file read/write access
   - Program counter manipulation
   - Hardware breakpoints (2 breakpoints)
-- **Simulation**: Verilator-based testbench with comprehensive test suite
+- **GPU-Lite**: SIMT compute engine with 8-lane warp execution (Phase 4)
+- **SoC**: DMA, UART, SPI, Timer, Boot ROM (Phase 5)
 
 ## Project Structure
 
 ```
-├── rtl/                          # RTL source files
-│   ├── rv32i_cpu_top.sv          # Top-level module
-│   ├── pkg/                      # Package definitions
-│   │   ├── rv32i_pkg.sv          # RISC-V types, opcodes
-│   │   └── axi4lite_pkg.sv       # AXI4-Lite types
-│   ├── core/                     # CPU core modules
-│   │   ├── rv32i_core.sv         # CPU core wrapper
-│   │   ├── rv32i_alu.sv          # Arithmetic Logic Unit
-│   │   ├── rv32i_regfile.sv      # 32x32-bit register file
-│   │   ├── rv32i_decode.sv       # Instruction decoder
-│   │   ├── rv32i_control.sv      # Control FSM
-│   │   └── rv32i_imm_gen.sv      # Immediate generator
-│   ├── interfaces/               # Bus interfaces
-│   │   ├── axi4lite_master.sv    # AXI4-Lite master
-│   │   └── apb3_slave.sv         # APB3 debug slave
-│   └── debug/
-│       └── rv32i_debug.sv        # Breakpoint controller
-├── tb/                           # Testbench files
-│   ├── tb_rv32i_cpu_top.sv       # Main testbench
-│   ├── axi4lite_mem.sv           # AXI4-Lite memory model
-│   ├── apb3_master.sv            # APB3 master BFM
-│   └── programs/                 # Test programs (.hex)
-├── sim/                          # Simulation directory
-│   ├── Makefile                  # Build automation
-│   └── main.cpp                  # Verilator main
+├── docs/                         # Specifications (Phase 0)
+│   ├── ROADMAP.md                # Project phases and plan
+│   ├── PHASE_STATUS.md           # Current phase status
+│   ├── design/
+│   │   ├── PHASE0_ARCHITECTURE_SPEC.md   # CPU architectural spec
+│   │   ├── PHASE1_ARCHITECTURE_SPEC.md   # CPU implementation spec (Phase 1)
+│   │   ├── PHASE4_GPU_ARCHITECTURE_SPEC.md # GPU architecture spec (Phase 4)
+│   │   ├── RTL_DEFINITION.md     # Interface signal definitions
+│   │   ├── MEMORY_MAP.md         # Address space and registers
+│   │   └── REFERENCE_MODEL_SPEC.md # Python reference model API
+│   └── verification/
+│       └── VERIFICATION_PLAN.md  # Verification strategy
+├── tb/                           # Testbench and reference models
+│   ├── models/                   # Python reference models (Phase 0)
+│   │   ├── rv32i_model.py        # CPU instruction-accurate model
+│   │   ├── gpu_kernel_model.py   # GPU SIMT execution model
+│   │   └── memory_model.py       # Memory system model
+│   ├── tests/                    # Unit tests for reference models
+│   │   ├── test_rv32i_model.py
+│   │   └── test_gpu_model.py
+│   └── cocotb/                   # cocotb testbenches (Phase 1+)
+├── rtl/                          # RTL source files (Phase 1+)
+│   ├── cpu/                      # (empty - Phase 1)
+│   ├── gpu/                      # (empty - Phase 4)
+│   ├── mem/                      # (empty - Phase 3)
+│   ├── periph/                   # (empty - Phase 5)
+│   └── soc/                      # (empty - Phase 5)
+├── sim/                          # Simulation scripts (Phase 1+)
 └── CLAUDE.md                     # Claude Code instructions
 ```
 
 ## Requirements
 
+### Phase 0 (Current)
+- **Python** 3.8+ with pytest
+- **cocotb** (for test infrastructure setup)
+
+### Phase 1+ (Future)
 - **Verilator** (5.x recommended)
 - **GCC/G++** with C++17 support
 - **Make**
@@ -54,51 +88,61 @@ A fully functional RV32I RISC-V microprocessor implemented in SystemVerilog, fea
 
 ## Quick Start
 
-### Build and Run (WSL/Linux)
+### Phase 0: Reference Model Testing (Current)
+
+```bash
+# Navigate to test directory
+cd tb/tests
+
+# Run reference model unit tests
+pytest test_rv32i_model.py -v
+
+# Run with coverage
+pytest --cov=tb.models --cov-report=html
+
+# Test memory model
+pytest test_memory_model.py -v
+```
+
+### Phase 1+: RTL Simulation (Future)
 
 ```bash
 # Navigate to simulation directory
 cd sim
 
-# Build the simulation
+# Build and run simulation
 make sim
-
-# Run all tests
 make run
 
-# View waveforms (generates waveform.vcd)
+# Run with waveforms
 make waves
+
+# Run cocotb tests
+make test
 
 # Clean build artifacts
 make clean
 ```
 
-### Run Unit Tests
+## Documentation
 
-```bash
-cd sim
-make test_alu        # ALU unit test
-make test_regfile    # Register file unit test
-make unit_tests      # All unit tests
-```
+Key documents in `docs/`:
 
-## Test Suite
+| Document | Purpose |
+|----------|---------|
+| `ROADMAP.md` | Project phases and overall plan |
+| `PHASE_STATUS.md` | Current phase status and next steps |
+| `design/PHASE0_ARCHITECTURE_SPEC.md` | CPU architectural requirements |
+| `design/PHASE1_ARCHITECTURE_SPEC.md` | CPU implementation specification (Phase 1) |
+| `design/PHASE4_GPU_ARCHITECTURE_SPEC.md` | GPU architecture specification (Phase 4) |
+| `design/RTL_DEFINITION.md` | Interface signal definitions |
+| `design/MEMORY_MAP.md` | Address space and register map |
+| `design/REFERENCE_MODEL_SPEC.md` | Python reference model API |
+| `verification/VERIFICATION_PLAN.md` | Verification strategy by phase |
 
-The testbench includes comprehensive tests:
+## Debug Interface (Phase 1+)
 
-| Test | Description |
-|------|-------------|
-| ALU Program | Basic arithmetic operations (ADD, ADDI) |
-| Load/Store | Memory load (LW) and store (SW) operations |
-| Branch | Branch instruction testing (BEQ) |
-| Debug Halt/Resume | Debug halt and resume functionality |
-| Debug Register Access | GPR read/write via debug interface |
-| Breakpoint | Hardware breakpoint functionality |
-| Single-Step | Single instruction stepping |
-
-## Debug Interface
-
-The APB3 debug interface provides the following registers:
+The planned APB3 debug interface will provide the following registers:
 
 | Address | Register | Description |
 |---------|----------|-------------|
@@ -112,19 +156,11 @@ The APB3 debug interface provides the following registers:
 | 0x108 | DBG_BP1_ADDR | Breakpoint 1 address |
 | 0x10C | DBG_BP1_CTRL | Breakpoint 1 control: [0]=enable |
 
-### Halt Causes
+See `docs/design/MEMORY_MAP.md` for complete register definitions.
 
-| Value | Cause |
-|-------|-------|
-| 0 | None |
-| 1 | Debug halt request |
-| 2 | Breakpoint hit |
-| 3 | Single-step complete |
-| 4 | EBREAK instruction |
+## Supported Instructions (Phase 1+)
 
-## Supported Instructions
-
-All RV32I base integer instructions are supported:
+The RV32I implementation will support all 37 base integer instructions:
 
 - **Integer Arithmetic**: ADD, ADDI, SUB, LUI, AUIPC
 - **Logical**: AND, ANDI, OR, ORI, XOR, XORI
@@ -134,6 +170,21 @@ All RV32I base integer instructions are supported:
 - **Jumps**: JAL, JALR
 - **Memory**: LB, LH, LW, LBU, LHU, SB, SH, SW
 - **System**: ECALL, EBREAK, FENCE
+
+See `docs/design/PHASE0_ARCHITECTURE_SPEC.md` for instruction semantics.
+
+## Project Phases
+
+For detailed phase descriptions and current status, see:
+- `docs/ROADMAP.md` - Complete project plan and phase descriptions
+- `docs/PHASE_STATUS.md` - Current phase status and next steps
+
+## Contributing
+
+This is a specification-driven project with clear phase boundaries. Contributions should:
+1. Follow the current phase's scope (currently Phase 0)
+2. Maintain consistency with specifications in `docs/`
+3. Include appropriate tests (pytest for Phase 0, cocotb for Phase 1+)
 
 ## License
 
