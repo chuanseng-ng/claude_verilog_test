@@ -16,12 +16,14 @@ This project incrementally builds a fully functional SoC through 6 phases:
 ## Current Status: Phase 0 (Specification Phase)
 
 **Completed**:
+
 - All architectural specifications finalized
 - Interface definitions (AXI4-Lite, APB3)
 - Memory map and register definitions
 - Verification strategy documented
 
 **In Progress**:
+
 - Python reference model implementation
 - cocotb test infrastructure setup
 
@@ -42,7 +44,7 @@ This project incrementally builds a fully functional SoC through 6 phases:
 
 ## Project Structure
 
-```
+```text
 ├── docs/                         # Specifications (Phase 0)
 │   ├── ROADMAP.md                # Project phases and plan
 │   ├── PHASE_STATUS.md           # Current phase status
@@ -77,10 +79,12 @@ This project incrementally builds a fully functional SoC through 6 phases:
 ## Requirements
 
 ### Phase 0 (Current)
+
 - **Python** 3.8+ with pytest
 - **cocotb** (for test infrastructure setup)
 
 ### Phase 1+ (Future)
+
 - **Verilator** (5.x recommended)
 - **GCC/G++** with C++17 support
 - **Make**
@@ -129,7 +133,7 @@ make clean
 Key documents in `docs/`:
 
 | Document | Purpose |
-|----------|---------|
+| :------- | :------ |
 | `ROADMAP.md` | Project phases and overall plan |
 | `PHASE_STATUS.md` | Current phase status and next steps |
 | `design/PHASE0_ARCHITECTURE_SPEC.md` | CPU architectural requirements |
@@ -145,7 +149,7 @@ Key documents in `docs/`:
 The planned APB3 debug interface will provide the following registers:
 
 | Address | Register | Description |
-|---------|----------|-------------|
+| :------ | :------- | :---------- |
 | 0x000 | DBG_CTRL | Control: [0]=halt, [1]=resume, [2]=step, [3]=reset |
 | 0x004 | DBG_STATUS | Status: [0]=halted, [1]=running, [7:4]=halt_cause |
 | 0x008 | DBG_PC | Program Counter |
@@ -176,12 +180,14 @@ See `docs/design/PHASE0_ARCHITECTURE_SPEC.md` for instruction semantics.
 ## Project Phases
 
 For detailed phase descriptions and current status, see:
+
 - `docs/ROADMAP.md` - Complete project plan and phase descriptions
 - `docs/PHASE_STATUS.md` - Current phase status and next steps
 
 ## Contributing
 
 This is a specification-driven project with clear phase boundaries. Contributions should:
+
 1. Follow the current phase's scope (currently Phase 0)
 2. Maintain consistency with specifications in `docs/`
 3. Include appropriate tests (pytest for Phase 0, cocotb for Phase 1+)
