@@ -21,14 +21,16 @@ how to verify it, and clear AI vs Human responsibilities for verification tasks.
 ### Verification Stack
 
 **Tools**:
+
 - **cocotb**: Signal-level drivers, monitors, clocking, resets
 - **pyuvm**: Structure, sequences, agents, scoreboards
 - **Python reference models**: Golden behavioral models (see REFERENCE_MODEL_SPEC.md)
 - **pytest**: Unit testing for reference models and testbench components
 
 **Simulation**:
+
 - **Verilator**: Fast, free, linting
-- **Questa/Xcelium**: Full featured (if available)
+- **Questa/Xcelium**: Full-featured (if available)
 
 ## Phase 0 Verification
 
@@ -44,7 +46,7 @@ how to verify it, and clear AI vs Human responsibilities for verification tasks.
 ### Deliverables
 
 | Deliverable | Description | AI/Human Responsibility |
-|:-----------:|:-----------:|:-----------------------:|
+| :---------: | :---------: | :---------------------: |
 | CPU reference model | RV32IModel class implementing all 37 instructions | **Human writes**, AI assists with boilerplate |
 | GPU reference model | GPUKernelModel class (skeleton only) | **Human designs**, AI assists |
 | Memory model | MemoryModel class for sparse memory | AI may generate, **Human reviews** |
@@ -54,6 +56,7 @@ how to verify it, and clear AI vs Human responsibilities for verification tasks.
 ### AI Responsibilities (Phase 0)
 
 AI MAY assist with:
+
 - Generating Python class boilerplate
 - Simple instruction implementations (ADD, SUB, AND, OR, etc.)
 - Memory model read/write functions
@@ -61,6 +64,7 @@ AI MAY assist with:
 - Test case scaffolding
 
 AI MUST NOT:
+
 - Decide instruction semantics (must follow spec exactly)
 - Design verification architecture
 - Define what "correct" means
@@ -68,6 +72,7 @@ AI MUST NOT:
 ### Human Responsibilities (Phase 0)
 
 Human MUST:
+
 - Write and verify all branch instruction implementations
 - Write and verify all load/store instructions
 - Implement sign extension correctly
@@ -87,7 +92,7 @@ Human MUST:
 ### Test Metrics (Phase 0)
 
 | Metric | Target |
-|:------:|:------:|
+| :----: | :----: |
 | Reference model instruction coverage | 37/37 (100%) |
 | Reference model unit test pass rate | 100% |
 | Cross-validation vs spike agreement | 100% |
@@ -108,7 +113,7 @@ Human MUST:
 
 ### Test Architecture
 
-```
+```text
 pyuvm Test
     └── pyuvm Environment
         ├── AXI4-Lite Agent (memory)
@@ -134,7 +139,7 @@ pyuvm Test
 **Purpose**: Verify basic functionality before random testing
 
 | Test Name | Description | AI/Human |
-|:---------:|:-----------:|:--------:|
+| :-------: | :---------: | :------: |
 | `test_reset` | Verify PC = 0x0000_0000, all regs = 0 | AI may write, **Human reviews** |
 | `test_simple_add` | Execute ADD, verify result | AI may write, **Human reviews** |
 | `test_branch_taken` | Execute BEQ with true condition | **Human writes** |
@@ -152,6 +157,7 @@ pyuvm Test
 **Purpose**: Test every instruction in isolation
 
 **Test generation**:
+
 ```python
 # Example: Test all arithmetic instructions
 @cocotb.test()
@@ -174,6 +180,7 @@ async def test_isa_arithmetic(dut):
 **Purpose**: Stress test with random legal instruction sequences
 
 **Strategy**:
+
 ```python
 class RandomInstructionSequence(uvm_sequence):
     def body(self):
@@ -183,6 +190,7 @@ class RandomInstructionSequence(uvm_sequence):
 ```
 
 **Constraints**:
+
 - Only generate legal RV32I instructions
 - Ensure memory addresses are in valid range
 - Avoid infinite loops (use instruction count limit)
@@ -198,7 +206,7 @@ class RandomInstructionSequence(uvm_sequence):
 **Purpose**: Verify AXI4-Lite master compliance
 
 | Test Name | Description | AI/Human |
-|:---------:|:-----------:|:--------:|
+| :-------: | :---------: | :------: |
 | `test_axi_read_basic` | Simple read transaction | AI may write |
 | `test_axi_write_basic` | Simple write transaction | AI may write |
 | `test_axi_backpressure` | Randomize READY signals | **Human writes** |
@@ -215,7 +223,7 @@ class RandomInstructionSequence(uvm_sequence):
 **Purpose**: Verify APB3 debug functionality
 
 | Test Name | Description | AI/Human |
-|:---------:|:-----------:|:--------:|
+| :-------: | :---------: | :------: |
 | `test_debug_halt` | Halt CPU via DBG_CTRL | **Human writes** |
 | `test_debug_resume` | Resume execution | **Human writes** |
 | `test_debug_single_step` | Execute one instruction | **Human writes** |
@@ -269,7 +277,7 @@ class CPUScoreboard(uvm_component):
 
 ### AI/Human Responsibilities (Phase 1)
 
-#### AI MAY assist with:
+#### AI MAY assist with
 
 - cocotb drivers for AXI4-Lite and APB3
 - Simple directed test generation
@@ -278,7 +286,7 @@ class CPUScoreboard(uvm_component):
 - Monitor transaction capture
 - Coverage collection setup
 
-#### Human MUST:
+#### Human MUST
 
 - Design scoreboard comparison algorithm
 - Implement complex test scenarios (debug, errors, back-pressure)
@@ -317,18 +325,22 @@ assert property (@(posedge clk) disable iff (!rst_n)
 ### Coverage
 
 **Instruction coverage**:
+
 - Track which instructions executed
 - Target: 100% of 37 RV32I instructions
 
 **State coverage**:
+
 - CPU states visited (FETCH, DECODE, EXECUTE, etc.)
 - Debug states (HALTED, RUNNING)
 
 **Edge coverage**:
+
 - Transitions between states
 - Halt while in different CPU states
 
 **Cross coverage**:
+
 - Instruction × CPU state
 - Memory access × alignment
 
@@ -339,7 +351,7 @@ assert property (@(posedge clk) disable iff (!rst_n)
 ### Exit Criteria (Phase 1)
 
 | Criterion | Target |
-|:---------:|:------:|
+| :-------: | :----: |
 | Instruction coverage | 37/37 (100%) |
 | Smoke tests | 100% pass |
 | Random instruction tests | 10,000+ instructions, 0 failures |
@@ -380,7 +392,7 @@ When failures occur:
 ### Test Additions
 
 | Test Category | Description | AI/Human |
-|:-------------:|:-----------:|:--------:|
+| :-----------: | :---------: | :------: |
 | Hazard tests | RAW, WAR, WAW dependencies | **Human designs**, AI generates variants |
 | Pipeline stress | Back-to-back dependent instructions | AI may generate, **Human reviews** |
 | Flush tests | Branch taken/not-taken sequences | **Human writes** |
@@ -425,6 +437,7 @@ assert property (@(posedge clk) disable iff (!rst_n)
 ### Reference Model Enhancement
 
 **Cache model**:
+
 ```python
 class CacheModel:
     def read(self, addr):
@@ -441,7 +454,7 @@ class CacheModel:
 ### Test Additions
 
 | Test Category | Description | AI/Human |
-|:-------------:|:-----------:|:--------:|
+| :-----------: | :---------: | :------: |
 | Cache hit tests | Repeated access to same address | AI may generate |
 | Cache miss tests | Access to uncached addresses | AI may generate |
 | Thrashing tests | Access pattern causing evictions | **Human designs** |
@@ -467,7 +480,7 @@ class CacheModel:
 ### Test Categories
 
 | Test Category | Description | AI/Human |
-|:-------------:|:-----------:|:--------:|
+| :-----------: | :---------: | :------: |
 | Vector kernels | Simple SIMT kernels (vec add, scalar mul) | AI may write, **Human reviews** |
 | Divergence tests | if/else with different paths | **Human writes** |
 | Memory coalescing | Verify coalesced vs serialized access | **Human writes** |
@@ -517,7 +530,7 @@ class GPUScoreboard(uvm_component):
 ### Test Additions
 
 | Test Category | Description | AI/Human |
-|:-------------:|:-----------:|:--------:|
+| :-----------: | :---------: | :------: |
 | Boot tests | Verify boot from ROM | **Human writes** |
 | Firmware tests | Run simple firmware | **Human provides firmware** |
 | Peripheral tests | UART TX/RX, SPI transfer | AI may write, **Human reviews** |
@@ -542,11 +555,13 @@ class GPUScoreboard(uvm_component):
 - Check for new lint warnings
 
 **Nightly**:
+
 - Run full random regression (10k+ instructions)
 - Run cache stress tests
 - Generate coverage reports
 
 **Weekly**:
+
 - Run extended random tests (100k+ instructions)
 - Cross-validate reference model vs spike
 
@@ -598,6 +613,7 @@ firefox sim/coverage/index.html
 ### AI Responsibilities (Across All Phases)
 
 AI MAY assist with:
+
 - ✅ cocotb driver boilerplate
 - ✅ Simple directed test generation
 - ✅ Random instruction generator frameworks
@@ -609,6 +625,7 @@ AI MAY assist with:
 ### Human Responsibilities (Across All Phases)
 
 Human MUST:
+
 - ❗ Design verification architecture
 - ❗ Implement reference models
 - ❗ Define "correctness" (scoreboard logic)

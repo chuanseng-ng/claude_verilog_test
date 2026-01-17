@@ -144,7 +144,7 @@ Last updated: 2026-01-17
    - ROADMAP.md (clarify interrupt phases)
    - CLAUDE.md (remove RTL references)
 3. Implement Python reference model
-4. Setup cocotb infrastructure
+4. Set up cocotb infrastructure
 
 ### Short-term (Phase 1 Start)
 
