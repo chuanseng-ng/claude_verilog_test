@@ -14,13 +14,18 @@ through full SoC integration (Phase 5).
 
 Total addressable space: 4 GB (0x0000_0000 to 0xFFFF_FFFF)
 
+## Minimum Address Region
+
+The minimum or smallest memory region should be 4 KB
+This restriction is due to Ubuntu's page size being 4 KB
+
 ### Global Memory Map (Phase 5 SoC)
 
 | Address Range              | Size    | Region              | Description                 |
 |:--------------------------:|:-------:|:-------------------:|:---------------------------:|
-| 0x0000_0000 - 0x0000_00FF  | 256 B   | Reset & Traps       | Reset vector, trap handlers |
-| 0x0000_0100 - 0x0000_0FFF  | 3.75 KB | Boot ROM            | Initial boot code           |
-| 0x0000_1000 - 0x0FFF_FFFF  | ~256 MB | Main Memory (RAM)   | Instruction and data        |
+| 0x0000_0000 - 0x0000_0FFF  | 4 KB    | Reset & Traps       | Reset vector, trap handlers |
+| 0x0000_1000 - 0x0000_1FFF  | 4 KB    | Boot ROM            | Initial boot code           |
+| 0x0000_2000 - 0x0FFF_FFFF  | ~256 MB | Main Memory (RAM)   | Instruction and data        |
 | 0x1000_0000 - 0x1FFF_FFFF  | 256 MB  | Reserved            | Future memory expansion     |
 | 0x2000_0000 - 0x2000_0FFF  | 4 KB    | CPU Debug (APB3)    | CPU debug registers         |
 | 0x2000_1000 - 0x2000_1FFF  | 4 KB    | GPU Control (APB3)  | GPU registers               |
@@ -41,9 +46,9 @@ In Phases 0-1, only the CPU exists. The AXI4-Lite master connects directly to a 
 
 | Address Range              | Size    | Description                 |
 |:--------------------------:|:-------:|:---------------------------:|
-| 0x0000_0000 - 0x0000_00FF  | 256 B   | Reset & trap vectors        |
-| 0x0000_0100 - 0x0000_FFFF  | ~64 KB  | Program memory              |
-| 0x0001_0000 - 0xFFFF_FFFF  | ~16 MB  | Data memory                 |
+| 0x0000_0000 - 0x0000_0FFF  | 4 KB    | Reset & trap vectors        |
+| 0x0000_1000 - 0x0000_FFFF  | 60 KB   | Program memory              |
+| 0x0001_0000 - 0xFFFF_FFFF  | ~4 GB   | Data memory                 |
 
 **APB3 debug interface** (CPU-local, 12-bit address):
 
