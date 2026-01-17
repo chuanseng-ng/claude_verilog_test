@@ -32,6 +32,7 @@
 ✅ Exit criteria
 
 - Written ISA + microarchitecture spec (10–15 pages max)
+  - Refer to PHASE0_ARCHITECTURE_SPEC.md
 - No RTL yet
 
 ### Phase 1 — Minimal RV32I core (AI sweet spot)
