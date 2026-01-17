@@ -4,18 +4,75 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-RV32I RISC-V microprocessor implemented in SystemVerilog with:
+Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project
+
+**Current Phase**: Phase 0 (Specification)
+
+**Status**: Specifications being finalized, no RTL implementation yet
+
+**Target**: Build a complete SoC with CPU, GPU, caches, and peripherals through incremental phases
+
+## Project Phases
+
+See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for current status.
+
+### Phase 0 (Current): Foundations
+
+- **Status**: In progress
+- **Goal**: Finalize all specifications and reference models
+- **Deliverables**: Architecture specs, Python reference models, test infrastructure
+- **No RTL yet**
+
+### Phase 1 (Next): Minimal RV32I Core
 
 - **ISA**: RISC-V RV32I (37 base integer instructions)
 - **Architecture**: Single-cycle (stalls on memory operations)
-- **Memory Interface**: AXI4-Lite Master
-- **Debug Interface**: APB3 Slave
+- **Memory Interface**: AXI4-Lite Master (unified instruction/data)
+- **Debug Interface**: APB3 Slave (halt/resume/step/breakpoints)
+- **No interrupts** (deferred to Phase 2)
+
+### Phase 2-5: Future Phases
+
+- Phase 2: 5-stage pipeline + interrupts
+- Phase 3: I-cache + D-cache
+- Phase 4: GPU-lite SIMT compute engine
+- Phase 5: SoC integration with peripherals
+
+## Key Documentation
+
+**Always refer to these specifications** (do not rely on non-existent RTL):
+
+| Document | Purpose |
+| :------- | :------ |
+| `docs/ROADMAP.md` | High-level project plan and phases |
+| `docs/PHASE_STATUS.md` | Current project status and next steps |
+| `docs/design/PHASE0_ARCHITECTURE_SPEC.md` | CPU architectural requirements (Phase 0) |
+| `docs/design/PHASE1_ARCHITECTURE_SPEC.md` | CPU implementation spec (Phase 1) |
+| `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md` | GPU architecture spec (Phase 4) |
+| `docs/design/RTL_DEFINITION.md` | Interface signal definitions |
+| `docs/design/MEMORY_MAP.md` | Address space and register map |
+| `docs/design/REFERENCE_MODEL_SPEC.md` | Python reference model API |
+| `docs/verification/VERIFICATION_PLAN.md` | Verification strategy by phase |
 
 ## Frequently Used Commands
 
-### WSL Commands (Windows Environment)
+### Phase 0 (Current): Reference Model and Tests
 
-When working on Windows, use WSL to run simulation commands:
+```bash
+# Run reference model unit tests
+cd tb/tests
+pytest test_rv32i_model.py -v
+
+# Run reference model with coverage
+pytest --cov=tb.models --cov-report=html
+
+# Test memory model
+pytest test_memory_model.py -v
+```
+
+### Phase 1+: Simulation Commands (When RTL exists)
+
+#### WSL Commands (Windows Environment)
 
 ```bash
 # Build and run simulation
@@ -28,38 +85,27 @@ wsl bash -c "cd /mnt/c/Users/waele/Documents/Github/claude_verilog_test/sim && m
 # Run with waveform generation
 wsl bash -c "cd /mnt/c/Users/waele/Documents/Github/claude_verilog_test/sim && make waves"
 
-# Run unit tests
-wsl bash -c "cd /mnt/c/Users/waele/Documents/Github/claude_verilog_test/sim && make unit_tests"
+# Run cocotb tests
+wsl bash -c "cd /mnt/c/Users/waele/Documents/Github/claude_verilog_test/sim && make test"
 ```
 
-### Native Linux/WSL Commands
+#### Native Linux/WSL Commands
 
 ```bash
 # Navigate to simulation directory
 cd sim
 
-# Build main testbench
-make sim
+# Build and run cocotb tests
+make test
 
-# Run simulation
-make run
+# Run specific test
+make test TEST=test_simple_add
 
-# Run with waveform viewing
+# Run with waveforms
 make waves
-
-# Run unit tests
-make test_alu        # ALU unit test
-make test_regfile    # Register file unit test
-make unit_tests      # All unit tests
 
 # Clean build artifacts
 make clean
-
-# Clean Claude Code temporary files
-make clean-claude
-
-# Clean everything (build + Claude temp files)
-make clean-all
 ```
 
 ### Git Commands
@@ -80,97 +126,213 @@ git commit -m "$(cat <<'EOF'
 
 Description here.
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 EOF
 )"
 ```
 
-## Architecture
+## Planned Architecture (Phase 1)
+
+**Note**: This architecture will be implemented in Phase 1. No RTL currently exists.
 
 ```text
 rtl/
-├── rv32i_cpu_top.sv          # Top-level (AXI + APB)
-├── pkg/
-│   ├── rv32i_pkg.sv          # RISC-V types, opcodes
-│   └── axi4lite_pkg.sv       # AXI4-Lite types
-├── core/
-│   ├── rv32i_core.sv         # CPU core wrapper
-│   ├── rv32i_alu.sv          # ALU (all RV32I ops)
-│   ├── rv32i_regfile.sv      # 32x32-bit registers
-│   ├── rv32i_decode.sv       # Instruction decoder
-│   ├── rv32i_control.sv      # Control FSM
-│   └── rv32i_imm_gen.sv      # Immediate generator
-├── interfaces/
-│   ├── axi4lite_master.sv    # AXI4-Lite master
-│   └── apb3_slave.sv         # APB3 debug slave
-└── debug/
-    └── rv32i_debug.sv        # Breakpoint controller
+└── cpu/
+    ├── rv32i_cpu_top.sv          # Top-level (AXI + APB)
+    └── core/
+        ├── rv32i_core.sv         # CPU core wrapper
+        ├── rv32i_control.sv      # Control FSM
+        ├── rv32i_decode.sv       # Instruction decoder
+        ├── rv32i_alu.sv          # ALU (all RV32I ops)
+        ├── rv32i_regfile.sv      # 32x32-bit registers
+        └── rv32i_imm_gen.sv      # Immediate generator
 ```
 
-## Key Files for Debugging
+See `docs/design/PHASE1_ARCHITECTURE_SPEC.md` for complete module specifications.
 
-| File | Purpose |
-|------|---------|
-| `rtl/core/rv32i_control.sv` | CPU state machine, halt/resume/step logic |
-| `rtl/interfaces/axi4lite_master.sv` | Memory interface timing |
-| `rtl/interfaces/apb3_slave.sv` | Debug register interface |
-| `tb/tb_rv32i_cpu_top.sv` | Main testbench with all tests |
-| `tb/apb3_master.sv` | Debug BFM tasks (halt_cpu, resume_cpu, etc.) |
+## Planned Debug Interface (APB3)
 
-## Debug Interface (APB3)
+**Note**: To be implemented in Phase 1. Specification ready in `docs/design/MEMORY_MAP.md`.
 
 | Address | Register | Description |
 | :-----: | :------: | :---------: |
 | 0x000 | DBG_CTRL | [0]=halt, [1]=resume, [2]=step, [3]=reset |
 | 0x004 | DBG_STATUS | [0]=halted, [1]=running, [7:4]=halt_cause |
-| 0x008 | DBG_PC | Program Counter |
-| 0x00C | DBG_INSTR | Current instruction |
-| 0x010-0x08C | DBG_GPR[0:31] | General purpose registers |
+| 0x008 | DBG_PC | Program Counter (RW when halted) |
+| 0x00C | DBG_INSTR | Current instruction (RO) |
+| 0x010-0x08C | DBG_GPR[0:31] | General purpose registers (RW when halted) |
 | 0x100 | DBG_BP0_ADDR | Breakpoint 0 address |
 | 0x104 | DBG_BP0_CTRL | [0]=enable |
 | 0x108 | DBG_BP1_ADDR | Breakpoint 1 address |
 | 0x10C | DBG_BP1_CTRL | [0]=enable |
 
-## Key Design Decisions
+Complete register map in `docs/design/MEMORY_MAP.md`.
 
-- Single-cycle core with AXI stalls for memory operations
-- Unified AXI bus for instruction fetch and data access
-- x0 register hardwired to zero in `rv32i_regfile.sv`
+## Key Design Decisions (From Specifications)
+
+**Phase 1 CPU**:
+
+- Single-cycle execution with AXI stalls for memory operations
+- Unified AXI4-Lite bus for instruction fetch and data access
+- x0 register hardwired to zero (per RV32I spec)
 - EBREAK instruction triggers CPU halt
 - Debug writes only allowed when CPU is halted
-- Debug halt request checked in all CPU execution states
-- Single-step uses `stepping_q` register to track step mode
+- Only illegal instruction traps supported (no interrupts in Phase 1)
+- Naturally aligned memory accesses only (misaligned = trap)
 
-## Test Programs
+**Phase 4 GPU**:
 
-Located in `tb/programs/`:
+- SIMT execution model (8 lanes per warp)
+- Single compute unit
+- Round-robin warp scheduling
+- One-level divergence handling
+- No cache coherence with CPU
+- Memory coalescing when possible
 
-- `simple_add.hex` - Basic ALU operations
-- `load_store.hex` - Memory load/store tests
-- `branch_test.hex` - All branch conditions
+## Reference Model (Python)
 
-## Common Issues and Solutions
+**Phase 0 deliverable**: Python reference models for CPU and GPU
 
-### Instruction Fetch Returns Wrong Data
-- Check `axi4lite_master.sv` - ensure `mem_rdata` bypasses register when `mem_valid` is high
-- Timing issue: registered data has 1-cycle delay
+**Location**: `tb/models/`
 
-### Debug Halt Not Working
-- Halt request must be checked in ALL CPU states (FETCH, DECODE, EXECUTE, MEM_WAIT, WRITEBACK)
-- Pulse-based requests can be missed if CPU is in wrong state
+**Key files**:
 
-### Single-Step Executes Multiple Instructions
-- Need `stepping_q` register to remember step mode through entire instruction execution
-- Check that stepping flag persists from CPU_STEP through CPU_WRITEBACK
+- `rv32i_model.py` - CPU instruction-accurate model
+- `gpu_kernel_model.py` - GPU SIMT execution model
+- `memory_model.py` - Shared memory model
+
+**Usage**:
+
+```python
+from tb.models.rv32i_model import RV32IModel
+
+cpu = RV32IModel()
+cpu.load_program({0x0000: 0x00000093})  # addi x1, x0, 0
+result = cpu.step(0x00000093)
+assert result['rd'] == 1
+```
+
+See `docs/design/REFERENCE_MODEL_SPEC.md` for complete API.
+
+## Verification Strategy
+
+**Phase 0 focus**:
+
+1. Implement Python reference models
+2. Unit test reference models (pytest)
+3. Cross-validate CPU model vs RISC-V spike simulator
+4. Setup cocotb infrastructure
+
+**Phase 1+ focus**:
+
+1. cocotb for interface drivers
+2. pyuvm for test sequences and scoreboards
+3. Compare RTL commits against reference model
+4. Random instruction testing (10k+ instructions)
+
+See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification plan.
+
+## Common Workflow
+
+### Phase 0 Workflow (Current)
+
+1. **Read specifications**: Always start with docs in `docs/design/`
+2. **Implement reference model**: Write Python models per `REFERENCE_MODEL_SPEC.md`
+3. **Test reference model**: Use pytest, cross-validate vs spike
+4. **Setup testbench**: Prepare cocotb infrastructure
+5. **Review**: Ensure specs are complete before proceeding to Phase 1
+
+### Phase 1+ Workflow (Future)
+
+1. **Write RTL**: Implement modules per Phase 1 spec
+2. **Lint**: Run Verilator lint checks
+3. **Write tests**: Create cocotb tests
+4. **Run tests**: Compare RTL vs reference model via scoreboard
+5. **Debug**: Use waveforms and logs to fix mismatches
+6. **Iterate**: Refine until all tests pass
+
+## Project Structure
+
+```text
+.
+├── docs/                     # All specifications
+│   ├── ROADMAP.md
+│   ├── PHASE_STATUS.md
+│   ├── design/
+│   │   ├── PHASE0_ARCHITECTURE_SPEC.md
+│   │   ├── PHASE1_ARCHITECTURE_SPEC.md
+│   │   ├── PHASE4_GPU_ARCHITECTURE_SPEC.md
+│   │   ├── RTL_DEFINITION.md
+│   │   ├── MEMORY_MAP.md
+│   │   └── REFERENCE_MODEL_SPEC.md
+│   └── verification/
+│       └── VERIFICATION_PLAN.md
+├── rtl/                      # RTL (empty - Phase 1+)
+│   ├── cpu/
+│   ├── gpu/
+│   ├── mem/
+│   ├── periph/
+│   └── soc/
+├── tb/                       # Testbench
+│   ├── models/               # Python reference models
+│   │   ├── rv32i_model.py
+│   │   ├── gpu_kernel_model.py
+│   │   └── memory_model.py
+│   ├── tests/                # Unit tests for models
+│   │   ├── test_rv32i_model.py
+│   │   └── test_gpu_model.py
+│   └── cocotb/               # cocotb testbenches (Phase 1+)
+├── sim/                      # Simulation scripts
+└── CLAUDE.md                 # This file
+```
+
+## AI/Human Boundaries
+
+### AI MAY assist with
+
+- Python boilerplate (class structure, imports)
+- Simple instruction implementations (after human verification)
+- cocotb driver scaffolding
+- Test case generation
+- Documentation formatting
+
+### Human MUST
+
+- Write and approve all specifications
+- Implement complex instructions (branches, loads, stores)
+- Design control FSMs
+- Define verification strategy
+- Review all AI-generated code
+- Make architectural decisions
+
+See each phase in `docs/verification/VERIFICATION_PLAN.md` for detailed AI/Human responsibilities.
 
 ## Commit Message Convention
 
 Use the format: `[Category] Brief description`
 
 Categories:
+
 - `[Fix]` - Bug fixes
 - `[Feature]` - New features
 - `[Code]` - Code changes/refactoring
 - `[Env]` - Environment/build changes
 - `[Doc]` - Documentation updates
 - `[Test]` - Test additions/changes
+- `[Spec]` - Specification updates
+
+## Next Steps
+
+See `docs/PHASE_STATUS.md` for current status and immediate next steps.
+
+**Current priorities** (Phase 0):
+
+1. Implement CPU reference model (`tb/models/rv32i_model.py`)
+2. Write reference model unit tests
+3. Cross-validate vs RISC-V spike simulator
+4. Setup cocotb infrastructure
+5. Final specification review
+
+## Questions?
+
+Refer to specifications in `docs/` - they are the source of truth.
