@@ -1,10 +1,14 @@
-# Architecture Spec
+# Phase 0 Architecture Specification
 
 RV32I Minimal CPU Core
 
 Document status: Active (Phase-0)
 Target audience: RTL, verification, tooling
 Compliance reference: RISC-V International RV32I Base ISA (subset)
+
+**Note**: This specification defines the architectural requirements. No RTL implementation
+is part of Phase 0. RTL implementation begins in Phase 1 (see PHASE1_ARCHITECTURE_SPEC.md).
+Phase 0 deliverables are: specifications, Python reference model, and test infrastructure.
 
 ## Scope and non-goals
 

@@ -42,6 +42,9 @@
   - In-order
   - No pipeline (or 2-stage max)
   - Blocking loads/stores
+  - **No interrupts** (deferred to Phase 2+)
+  - AXI4-Lite master (unified instruction/data bus)
+  - APB3 slave (debug interface with halt/resume/step/breakpoints)
 
 **RTL (SystemVerilog)**
 
@@ -52,10 +55,15 @@
   - Immediate generator
   - Simple LSU FSM
   - Clean SV interfaces
+  - AXI4-Lite master boilerplate
+  - APB3 slave register interface
 - Human MUST
   - Approve decoder truth tables
   - Validate instruction semantics
   - Review state machine completeness
+  - Design debug halt/resume logic
+  - Approve AXI transaction ordering
+  - Verify APB3 protocol compliance
 
 **Verification (Python-first)**
 
@@ -89,6 +97,9 @@
   - 5-stage pipeline
   - No speculation
   - Static hazard handling
+  - **Interrupt support added** (timer + external interrupts)
+  - Same AXI4-Lite and APB3 interfaces as Phase 1
+  - Additional interrupt input signals
 
 **RTL**
 
@@ -97,10 +108,14 @@
   - Forwarding mux logic
   - Boilerplate hazard detection
   - SVA assertions
+  - Interrupt input signal routing
 - Human MUST
   - Define hazard rules
   - Control stall/flush priority
   - Ensure architectural state correctness
+  - **Design interrupt handling logic**
+  - **Define interrupt priority and masking**
+  - Verify interrupt latency and precision
 
 **Verification**
 
@@ -162,9 +177,11 @@
 - No deadlocks
 - Correct under randomized latency
 
-### Phase 4 — “GPU-lite” compute engine (research-level)
+### Phase 4 — "GPU-lite" compute engine (research-level)
 
 🚨 This is not a CPU extension.
+
+**Prerequisites**: Phase 3 complete (pipelined CPU with caches and interrupts)
 
 **Scope (keep it sane)**
 
@@ -172,6 +189,7 @@
   - SIMD/SIMT lanes
   - No graphics
   - No preemption
+  - **GPU interrupt output** to notify CPU of kernel completion (requires Phase 2+ CPU)
 
 **RTL**
 
