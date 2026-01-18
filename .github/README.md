@@ -26,8 +26,14 @@ This directory contains GitHub-specific configuration files for CI/CD and projec
 ### For Contributors
 
 1. Install dev dependencies: `pip install -r requirements-dev.txt`
-2. Run QA checks locally before pushing (see `CI_SETUP.md`)
-3. (Optional) Install pre-commit hooks: `pip install pre-commit && pre-commit install`
+2. **Recommended**: Install pre-commit hooks (see `../QUICKSTART_PRECOMMIT.md`)
+
+   ```bash
+   pre-commit install
+   pre-commit install --hook-type pre-push
+   ```
+
+3. Run QA checks locally before pushing (see `CI_SETUP.md`)
 
 ## Workflow Status
 
