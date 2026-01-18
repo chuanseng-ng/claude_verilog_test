@@ -233,7 +233,7 @@ pip install pre-commit
 Install development dependencies:
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 ```
 
 ### Hooks are slow
@@ -257,7 +257,7 @@ If it's a project import, ensure the module is properly structured.
 
 - `.pre-commit-config.yaml` - Pre-commit hook configuration
 - `.pylintrc` - Pylint settings (fail threshold, disabled checks)
-- `requirements-dev.txt` - Development dependencies
+- `requirements.txt` - Development dependencies
 
 ## Comparison: Pre-commit vs CI
 

@@ -81,7 +81,7 @@ Two GitHub Actions workflows have been configured:
 ### Install Dependencies
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 ```
 
 ### Run QA Checks Locally
@@ -115,7 +115,7 @@ ruff check --fix tb/models tb/tests
 
 ## Dependencies
 
-All QA tools and testing dependencies are listed in `requirements-dev.txt`:
+All QA tools and testing dependencies are listed in `requirements.txt`:
 
 - `pytest` - Testing framework
 - `pytest-cov` - Coverage plugin
@@ -163,7 +163,7 @@ If a Python version is unavailable on GitHub runners:
 
 - `.github/workflows/qa-checks.yml` - Main QA workflow
 - `.github/workflows/tests.yml` - Fast test workflow
-- `requirements-dev.txt` - Development dependencies
+- `requirements.txt` - Development dependencies
 - `.github/BADGES.md` - Badge reference
 - `.github/CI_SETUP.md` - This file
 

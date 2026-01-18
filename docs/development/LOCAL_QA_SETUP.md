@@ -6,7 +6,7 @@ Complete guide to setting up quality assurance tools for local development.
 
 ```bash
 # 1. Install all dependencies
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 
 # 2. Install pre-commit hooks (recommended)
 pre-commit install
@@ -165,7 +165,7 @@ pytest tb/tests/ -v
 
 - `.pre-commit-config.yaml` - Pre-commit hook configuration
 - `.pylintrc` - Pylint settings
-- `requirements-dev.txt` - Development dependencies
+- `requirements.txt` - Development dependencies
 - `.github/workflows/qa-checks.yml` - CI workflow
 - `.github/workflows/tests.yml` - Test workflow
 
@@ -257,7 +257,7 @@ pylint tb/models/my_model.py
 Ensure same dependencies:
 
 ```bash
-pip install -r requirements-dev.txt --upgrade
+pip install -r requirements.txt --upgrade
 ```
 
 Check Python version:

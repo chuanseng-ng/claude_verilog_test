@@ -19,7 +19,7 @@
    - Acceptable disabled checks for instruction execution models
    - Fail threshold: 9.5/10
 
-3. **`requirements-dev.txt`** - Updated with pre-commit dependency
+3. **`requirements.txt`** - Updated with pre-commit dependency
 
 ### Documentation
 
@@ -47,7 +47,7 @@
 
 ```bash
 # 1. Install dependencies (includes pre-commit)
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 
 # 2. Install git hooks
 pre-commit install
@@ -302,7 +302,7 @@ See the documentation files listed above for:
 
 **Installation:**
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 pre-commit install
 pre-commit install --hook-type pre-push
 ```

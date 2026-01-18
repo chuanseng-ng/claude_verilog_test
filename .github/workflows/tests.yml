@@ -5,13 +5,13 @@ on:
     branches: [ "main" ]
     paths:
       - 'tb/**/*.py'
-      - 'requirements-dev.txt'
+      - 'requirements.txt'
       - '.github/workflows/tests.yml'
   pull_request:
     branches: [ "main" ]
     paths:
       - 'tb/**/*.py'
-      - 'requirements-dev.txt'
+      - 'requirements.txt'
   workflow_dispatch:
 
 jobs:

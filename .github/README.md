@@ -25,7 +25,7 @@ This directory contains GitHub-specific configuration files for CI/CD and projec
 
 ### For Contributors
 
-1. Install dev dependencies: `pip install -r requirements-dev.txt`
+1. Install dev dependencies: `pip install -r requirements.txt`
 2. **Recommended**: Install pre-commit hooks (see `../QUICKSTART_PRECOMMIT.md`)
 
    ```bash

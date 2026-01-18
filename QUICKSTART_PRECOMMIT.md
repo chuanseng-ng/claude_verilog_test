@@ -6,7 +6,7 @@ Automatically run QA checks before every commit to catch issues early!
 
 ```bash
 # 1. Install dependencies (includes pre-commit)
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 
 # 2. Install git hooks
 pre-commit install
@@ -175,7 +175,7 @@ pip install pre-commit
 ### "pylint: command not found"
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 ```
 
 ### Hooks are too slow
@@ -198,7 +198,7 @@ See `.github/PRE_COMMIT_SETUP.md` for complete documentation.
 **Install once:**
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 pre-commit install
 pre-commit install --hook-type pre-push
 ```

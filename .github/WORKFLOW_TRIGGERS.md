@@ -108,7 +108,7 @@ This setup ensures:
 The `tests.yml` workflow only runs when these files change:
 
 - `tb/**/*.py` - Any Python file in tb/ directory
-- `requirements-dev.txt` - Development dependencies
+- `requirements.txt` - Development dependencies
 - `.github/workflows/tests.yml` - The workflow itself
 
 This means:

@@ -174,7 +174,7 @@ Visual representation of the complete QA workflow from local development to CI.
 # Enable all three layers for maximum quality:
 
 # 1. Install pre-commit hooks (Layer 1 & 2)
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 pre-commit install
 pre-commit install --hook-type pre-push
 
