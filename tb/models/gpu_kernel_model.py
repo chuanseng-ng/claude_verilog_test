@@ -136,17 +136,19 @@ class GPUKernelModel:
     def _create_warp(self, block_id: tuple, warp_id: int, warp_global_id: int) -> dict:
         """Create a new warp state."""
         return {
-            'warp_id': warp_global_id,
-            'block_id': block_id,
-            'warp_in_block': warp_id,
-            'pc': self.kernel_addr,
-            'active_mask': 0xFF,  # All 8 lanes active initially
-            'done': False,
-            'regs': [[0] * 32 for _ in range(self.warp_size)],  # 8 lanes x 32 regs
-            'divergence_stack': []  # Stack for divergence: [(pc, mask), ...]
+            "warp_id": warp_global_id,
+            "block_id": block_id,
+            "warp_in_block": warp_id,
+            "pc": self.kernel_addr,
+            "active_mask": 0xFF,  # All 8 lanes active initially
+            "done": False,
+            "regs": [[0] * 32 for _ in range(self.warp_size)],  # 8 lanes x 32 regs
+            "divergence_stack": [],  # Stack for divergence: [(pc, mask), ...]
         }
 
-    def _compute_thread_id(self, block_id: tuple, warp_in_block: int, lane: int) -> tuple:
+    def _compute_thread_id(
+        self, block_id: tuple, warp_in_block: int, lane: int
+    ) -> tuple:
         """
         Compute thread ID (tid.x, tid.y, tid.z) for a lane.
 
@@ -195,7 +197,7 @@ class GPUKernelModel:
             # Schedule next warp (round-robin)
             warp = self._schedule_warp()
 
-            if warp is not None and not warp['done']:
+            if warp is not None and not warp["done"]:
                 # Execute one instruction for this warp
                 self._execute_warp_instruction(warp)
 
@@ -203,17 +205,19 @@ class GPUKernelModel:
 
             # Safety check to prevent infinite loops
             if self.cycle_count > 1000000:
-                raise RuntimeError("Kernel exceeded maximum cycle count (possible infinite loop)")
+                raise RuntimeError(
+                    "Kernel exceeded maximum cycle count (possible infinite loop)"
+                )
 
         return {
-            'cycles': self.cycle_count,
-            'memory': self.memory,
-            'completed_warps': self.completed_warps
+            "cycles": self.cycle_count,
+            "memory": self.memory,
+            "completed_warps": self.completed_warps,
         }
 
     def _all_warps_done(self) -> bool:
         """Check if all warps are done."""
-        return all(warp['done'] for warp in self.warps)
+        return all(warp["done"] for warp in self.warps)
 
     def _schedule_warp(self) -> Optional[dict]:
         """
@@ -230,7 +234,7 @@ class GPUKernelModel:
             warp = self.warps[self.current_warp_idx]
             self.current_warp_idx = (self.current_warp_idx + 1) % len(self.warps)
 
-            if not warp['done']:
+            if not warp["done"]:
                 return warp
 
         return None
@@ -243,10 +247,10 @@ class GPUKernelModel:
             warp: Warp state dictionary
         """
         # Fetch instruction
-        pc = warp['pc']
+        pc = warp["pc"]
         if pc not in self.kernel_instructions:
             # No instruction, treat as VRET
-            warp['done'] = True
+            warp["done"] = True
             self.completed_warps += 1
             return
 
@@ -263,7 +267,7 @@ class GPUKernelModel:
         # Execute based on opcode
         if opcode == self.OP_VRET:
             # Warp completed
-            warp['done'] = True
+            warp["done"] = True
             self.completed_warps += 1
             return
 
@@ -272,7 +276,9 @@ class GPUKernelModel:
 
         # Execute instruction type
         if opcode == self.OP_VADD or opcode == self.OP_VADDI:
-            next_pc = self._execute_alu(warp, insn, opcode, rd, rs1, rs2, funct3, funct7)
+            next_pc = self._execute_alu(
+                warp, insn, opcode, rd, rs1, rs2, funct3, funct7
+            )
         elif opcode == self.OP_VLD:
             next_pc = self._execute_load(warp, insn, rd, rs1, funct3)
         elif opcode == self.OP_VST:
@@ -290,10 +296,19 @@ class GPUKernelModel:
             # Unknown instruction, skip
             pass
 
-        warp['pc'] = next_pc
+        warp["pc"] = next_pc
 
-    def _execute_alu(self, warp: dict, insn: int, opcode: int, rd: int, rs1: int,
-                     rs2: int, funct3: int, funct7: int) -> int:
+    def _execute_alu(
+        self,
+        warp: dict,
+        insn: int,
+        opcode: int,
+        rd: int,
+        rs1: int,
+        rs2: int,
+        funct3: int,
+        funct7: int,
+    ) -> int:
         """Execute ALU instruction across all active lanes."""
         imm = None
         if opcode == self.OP_VADDI:
@@ -302,9 +317,9 @@ class GPUKernelModel:
             imm = self._sign_extend(imm, 12)
 
         for lane in range(self.warp_size):
-            if warp['active_mask'] & (1 << lane):
-                val1 = warp['regs'][lane][rs1]
-                val2 = warp['regs'][lane][rs2] if imm is None else imm
+            if warp["active_mask"] & (1 << lane):
+                val1 = warp["regs"][lane][rs1]
+                val2 = warp["regs"][lane][rs2] if imm is None else imm
 
                 # Perform operation based on funct3/funct7
                 if funct3 == self.FUNCT3_ADD:
@@ -340,31 +355,35 @@ class GPUKernelModel:
 
                 # Write result
                 if rd != 0:  # r0 hardwired to zero
-                    warp['regs'][lane][rd] = result
+                    warp["regs"][lane][rd] = result
 
-        return warp['pc'] + 4
+        return warp["pc"] + 4
 
-    def _execute_load(self, warp: dict, insn: int, rd: int, rs1: int, funct3: int) -> int:
+    def _execute_load(
+        self, warp: dict, insn: int, rd: int, rs1: int, funct3: int
+    ) -> int:
         """Execute load instruction (may be coalesced or serialized)."""
         imm = (insn >> 20) & 0xFFF
         imm = self._sign_extend(imm, 12)
 
         # Simplified: serialize all loads
         for lane in range(self.warp_size):
-            if warp['active_mask'] & (1 << lane):
-                addr = (warp['regs'][lane][rs1] + imm) & 0xFFFFFFFF
+            if warp["active_mask"] & (1 << lane):
+                addr = (warp["regs"][lane][rs1] + imm) & 0xFFFFFFFF
                 try:
                     data = self.memory.read(addr, 4)
                     if rd != 0:
-                        warp['regs'][lane][rd] = data
+                        warp["regs"][lane][rd] = data
                 except:
                     # Memory access failed, write 0
                     if rd != 0:
-                        warp['regs'][lane][rd] = 0
+                        warp["regs"][lane][rd] = 0
 
-        return warp['pc'] + 4
+        return warp["pc"] + 4
 
-    def _execute_store(self, warp: dict, insn: int, rs1: int, rs2: int, funct3: int) -> int:
+    def _execute_store(
+        self, warp: dict, insn: int, rs1: int, rs2: int, funct3: int
+    ) -> int:
         """Execute store instruction (may be coalesced or serialized)."""
         # Decode S-type immediate
         imm = (((insn >> 25) & 0x7F) << 5) | ((insn >> 7) & 0x1F)
@@ -372,25 +391,27 @@ class GPUKernelModel:
 
         # Simplified: serialize all stores
         for lane in range(self.warp_size):
-            if warp['active_mask'] & (1 << lane):
-                addr = (warp['regs'][lane][rs1] + imm) & 0xFFFFFFFF
-                data = warp['regs'][lane][rs2]
+            if warp["active_mask"] & (1 << lane):
+                addr = (warp["regs"][lane][rs1] + imm) & 0xFFFFFFFF
+                data = warp["regs"][lane][rs2]
                 try:
                     self.memory.write(addr, data, 4)
                 except:
                     # Memory access failed, ignore
                     pass
 
-        return warp['pc'] + 4
+        return warp["pc"] + 4
 
-    def _execute_branch(self, warp: dict, insn: int, rs1: int, rs2: int, funct3: int) -> int:
+    def _execute_branch(
+        self, warp: dict, insn: int, rs1: int, rs2: int, funct3: int
+    ) -> int:
         """Execute branch with divergence handling (one level)."""
         # Decode B-type immediate
         imm = (
-            ((insn >> 31) & 0x1) << 12 |
-            ((insn >> 7) & 0x1) << 11 |
-            ((insn >> 25) & 0x3F) << 5 |
-            ((insn >> 8) & 0xF) << 1
+            ((insn >> 31) & 0x1) << 12
+            | ((insn >> 7) & 0x1) << 11
+            | ((insn >> 25) & 0x3F) << 5
+            | ((insn >> 8) & 0xF) << 1
         )
         imm = self._sign_extend(imm, 13)
 
@@ -399,9 +420,9 @@ class GPUKernelModel:
         mask_not_taken = 0
 
         for lane in range(self.warp_size):
-            if warp['active_mask'] & (1 << lane):
-                val1 = warp['regs'][lane][rs1]
-                val2 = warp['regs'][lane][rs2]
+            if warp["active_mask"] & (1 << lane):
+                val1 = warp["regs"][lane][rs1]
+                val2 = warp["regs"][lane][rs2]
 
                 # Convert to signed
                 sval1 = val1 if val1 < 0x80000000 else val1 - 0x100000000
@@ -409,44 +430,44 @@ class GPUKernelModel:
 
                 branch_taken = False
                 if funct3 == self.FUNCT3_BEQ:
-                    branch_taken = (val1 == val2)
+                    branch_taken = val1 == val2
                 elif funct3 == self.FUNCT3_BNE:
-                    branch_taken = (val1 != val2)
+                    branch_taken = val1 != val2
                 elif funct3 == self.FUNCT3_BLT:
-                    branch_taken = (sval1 < sval2)
+                    branch_taken = sval1 < sval2
                 elif funct3 == self.FUNCT3_BGE:
-                    branch_taken = (sval1 >= sval2)
+                    branch_taken = sval1 >= sval2
 
                 if branch_taken:
-                    mask_taken |= (1 << lane)
+                    mask_taken |= 1 << lane
                 else:
-                    mask_not_taken |= (1 << lane)
+                    mask_not_taken |= 1 << lane
 
         # Handle divergence
         if mask_taken != 0 and mask_not_taken != 0:
             # Divergence: push not-taken path, execute taken path first
-            not_taken_pc = warp['pc'] + 4
-            warp['divergence_stack'].append((not_taken_pc, mask_not_taken))
-            warp['active_mask'] = mask_taken
-            return (warp['pc'] + imm) & 0xFFFFFFFF
+            not_taken_pc = warp["pc"] + 4
+            warp["divergence_stack"].append((not_taken_pc, mask_not_taken))
+            warp["active_mask"] = mask_taken
+            return (warp["pc"] + imm) & 0xFFFFFFFF
         elif mask_taken != 0:
             # All active lanes take branch
-            return (warp['pc'] + imm) & 0xFFFFFFFF
+            return (warp["pc"] + imm) & 0xFFFFFFFF
         else:
             # All active lanes don't take branch
-            return warp['pc'] + 4
+            return warp["pc"] + 4
 
     def _execute_jump(self, warp: dict, insn: int) -> int:
         """Execute unconditional jump."""
         # Decode J-type immediate
         imm = (
-            ((insn >> 31) & 0x1) << 20 |
-            ((insn >> 12) & 0xFF) << 12 |
-            ((insn >> 20) & 0x1) << 11 |
-            ((insn >> 21) & 0x3FF) << 1
+            ((insn >> 31) & 0x1) << 20
+            | ((insn >> 12) & 0xFF) << 12
+            | ((insn >> 20) & 0x1) << 11
+            | ((insn >> 21) & 0x3FF) << 1
         )
         imm = self._sign_extend(imm, 21)
-        return (warp['pc'] + imm) & 0xFFFFFFFF
+        return (warp["pc"] + imm) & 0xFFFFFFFF
 
     def _execute_mov_special(self, warp: dict, insn: int, rd: int, rs1: int) -> int:
         """Execute VMOV rd, tid.x/tid.y/tid.z/bid.x/bid.y/bid.z."""
@@ -454,11 +475,9 @@ class GPUKernelModel:
         special_reg = rs1
 
         for lane in range(self.warp_size):
-            if warp['active_mask'] & (1 << lane):
+            if warp["active_mask"] & (1 << lane):
                 tid = self._compute_thread_id(
-                    warp['block_id'],
-                    warp['warp_in_block'],
-                    lane
+                    warp["block_id"], warp["warp_in_block"], lane
                 )
 
                 if special_reg == self.SREG_TID_X:
@@ -468,18 +487,18 @@ class GPUKernelModel:
                 elif special_reg == self.SREG_TID_Z:
                     value = tid[2]
                 elif special_reg == self.SREG_BID_X:
-                    value = warp['block_id'][0]
+                    value = warp["block_id"][0]
                 elif special_reg == self.SREG_BID_Y:
-                    value = warp['block_id'][1]
+                    value = warp["block_id"][1]
                 elif special_reg == self.SREG_BID_Z:
-                    value = warp['block_id'][2]
+                    value = warp["block_id"][2]
                 else:
                     value = 0
 
                 if rd != 0:
-                    warp['regs'][lane][rd] = value
+                    warp["regs"][lane][rd] = value
 
-        return warp['pc'] + 4
+        return warp["pc"] + 4
 
     def _sign_extend(self, value: int, bits: int) -> int:
         """Sign extend a value from bits to 32 bits."""

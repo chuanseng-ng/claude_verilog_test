@@ -11,11 +11,13 @@ from .memory_model import MemoryModel, MisalignedAccessError
 
 class IllegalInstructionError(Exception):
     """Exception raised when encountering an illegal instruction."""
-    pass
+
+    pass  # pylint: disable=unnecessary-pass
 
 
 class TrapError(Exception):
     """Exception raised when a trap occurs."""
+
     def __init__(self, cause: int, message: str):
         self.cause = cause
         super().__init__(message)
@@ -90,16 +92,16 @@ class RV32IModel:
         """
         if self.halted:
             return {
-                'pc': self.pc,
-                'insn': 0,
-                'rd': None,
-                'rd_value': None,
-                'mem_addr': None,
-                'mem_data': None,
-                'mem_write': None,
-                'trap': False,
-                'trap_cause': 0,
-                'next_pc': self.pc
+                "pc": self.pc,
+                "insn": 0,
+                "rd": None,
+                "rd_value": None,
+                "mem_addr": None,
+                "mem_data": None,
+                "mem_write": None,
+                "trap": False,
+                "trap_cause": 0,
+                "next_pc": self.pc,
             }
 
         # Fetch instruction
@@ -109,16 +111,16 @@ class RV32IModel:
         insn = instruction
         old_pc = self.pc
         result = {
-            'pc': old_pc,
-            'insn': insn,
-            'rd': None,
-            'rd_value': None,
-            'mem_addr': None,
-            'mem_data': None,
-            'mem_write': None,
-            'trap': False,
-            'trap_cause': 0,
-            'next_pc': self.pc + 4
+            "pc": old_pc,
+            "insn": insn,
+            "rd": None,
+            "rd_value": None,
+            "mem_addr": None,
+            "mem_data": None,
+            "mem_write": None,
+            "trap": False,
+            "trap_cause": 0,
+            "next_pc": self.pc + 4,
         }
 
         try:
@@ -126,14 +128,14 @@ class RV32IModel:
             self._decode_and_execute(insn, result)
 
             # Update PC
-            self.pc = result['next_pc']
+            self.pc = result["next_pc"]
             self.cycle_count += 1
 
         except (IllegalInstructionError, MisalignedAccessError) as e:
             # Trap handling
-            result['trap'] = True
-            result['trap_cause'] = self.TRAP_ILLEGAL_INSTRUCTION
-            result['next_pc'] = self.trap_vector
+            result["trap"] = True
+            result["trap_cause"] = self.TRAP_ILLEGAL_INSTRUCTION
+            result["next_pc"] = self.trap_vector
             self.pc = self.trap_vector
             self.trap_pending = True
             self.trap_cause = self.TRAP_ILLEGAL_INSTRUCTION
@@ -188,17 +190,17 @@ class RV32IModel:
         rd = (insn >> 7) & 0x1F
         imm = insn & 0xFFFFF000
         self._write_reg(rd, imm)
-        result['rd'] = rd
-        result['rd_value'] = self.regs[rd]
+        result["rd"] = rd
+        result["rd_value"] = self.regs[rd]
 
     def _execute_auipc(self, insn: int, result: dict):
         """AUIPC: Add Upper Immediate to PC."""
         rd = (insn >> 7) & 0x1F
         imm = insn & 0xFFFFF000
-        value = (result['pc'] + imm) & 0xFFFFFFFF
+        value = (result["pc"] + imm) & 0xFFFFFFFF
         self._write_reg(rd, value)
-        result['rd'] = rd
-        result['rd_value'] = self.regs[rd]
+        result["rd"] = rd
+        result["rd_value"] = self.regs[rd]
 
     # J-type instructions
     def _execute_jal(self, insn: int, result: dict):
@@ -207,20 +209,20 @@ class RV32IModel:
 
         # Decode J-type immediate
         imm = (
-            ((insn >> 31) & 0x1) << 20 |  # imm[20]
-            ((insn >> 12) & 0xFF) << 12 |  # imm[19:12]
-            ((insn >> 20) & 0x1) << 11 |   # imm[11]
-            ((insn >> 21) & 0x3FF) << 1    # imm[10:1]
+            ((insn >> 31) & 0x1) << 20  # imm[20]
+            | ((insn >> 12) & 0xFF) << 12  # imm[19:12]
+            | ((insn >> 20) & 0x1) << 11  # imm[11]
+            | ((insn >> 21) & 0x3FF) << 1  # imm[10:1]
         )
         imm = self._sign_extend(imm, 21)
 
         # Save return address
-        self._write_reg(rd, (result['pc'] + 4) & 0xFFFFFFFF)
-        result['rd'] = rd
-        result['rd_value'] = self.regs[rd]
+        self._write_reg(rd, (result["pc"] + 4) & 0xFFFFFFFF)
+        result["rd"] = rd
+        result["rd_value"] = self.regs[rd]
 
         # Jump
-        result['next_pc'] = (result['pc'] + imm) & 0xFFFFFFFF
+        result["next_pc"] = (result["pc"] + imm) & 0xFFFFFFFF
 
     def _execute_jalr(self, insn: int, result: dict):
         """JALR: Jump and Link Register."""
@@ -233,12 +235,12 @@ class RV32IModel:
         target = (self.regs[rs1] + imm) & 0xFFFFFFFE
 
         # Save return address
-        self._write_reg(rd, (result['pc'] + 4) & 0xFFFFFFFF)
-        result['rd'] = rd
-        result['rd_value'] = self.regs[rd]
+        self._write_reg(rd, (result["pc"] + 4) & 0xFFFFFFFF)
+        result["rd"] = rd
+        result["rd_value"] = self.regs[rd]
 
         # Jump
-        result['next_pc'] = target
+        result["next_pc"] = target
 
     # B-type instructions
     def _execute_branch(self, insn: int, result: dict):
@@ -249,10 +251,10 @@ class RV32IModel:
 
         # Decode B-type immediate
         imm = (
-            ((insn >> 31) & 0x1) << 12 |   # imm[12]
-            ((insn >> 7) & 0x1) << 11 |    # imm[11]
-            ((insn >> 25) & 0x3F) << 5 |   # imm[10:5]
-            ((insn >> 8) & 0xF) << 1       # imm[4:1]
+            ((insn >> 31) & 0x1) << 12  # imm[12]
+            | ((insn >> 7) & 0x1) << 11  # imm[11]
+            | ((insn >> 25) & 0x3F) << 5  # imm[10:5]
+            | ((insn >> 8) & 0xF) << 1  # imm[4:1]
         )
         imm = self._sign_extend(imm, 13)
 
@@ -265,22 +267,22 @@ class RV32IModel:
 
         branch_taken = False
         if funct3 == 0b000:  # BEQ
-            branch_taken = (val1 == val2)
+            branch_taken = val1 == val2
         elif funct3 == 0b001:  # BNE
-            branch_taken = (val1 != val2)
+            branch_taken = val1 != val2
         elif funct3 == 0b100:  # BLT
-            branch_taken = (sval1 < sval2)
+            branch_taken = sval1 < sval2
         elif funct3 == 0b101:  # BGE
-            branch_taken = (sval1 >= sval2)
+            branch_taken = sval1 >= sval2
         elif funct3 == 0b110:  # BLTU
-            branch_taken = (val1 < val2)
+            branch_taken = val1 < val2
         elif funct3 == 0b111:  # BGEU
-            branch_taken = (val1 >= val2)
+            branch_taken = val1 >= val2
         else:
             raise IllegalInstructionError(f"Invalid branch funct3: 0x{funct3:x}")
 
         if branch_taken:
-            result['next_pc'] = (result['pc'] + imm) & 0xFFFFFFFF
+            result["next_pc"] = (result["pc"] + imm) & 0xFFFFFFFF
 
     # Load instructions
     def _execute_load(self, insn: int, result: dict):
@@ -292,8 +294,8 @@ class RV32IModel:
         imm = self._sign_extend(imm, 12)
 
         addr = (self.regs[rs1] + imm) & 0xFFFFFFFF
-        result['mem_addr'] = addr
-        result['mem_write'] = False
+        result["mem_addr"] = addr
+        result["mem_write"] = False
 
         if funct3 == 0b000:  # LB
             data = self.memory.read(addr, 1)
@@ -311,9 +313,9 @@ class RV32IModel:
             raise IllegalInstructionError(f"Invalid load funct3: 0x{funct3:x}")
 
         self._write_reg(rd, data)
-        result['rd'] = rd
-        result['rd_value'] = self.regs[rd]
-        result['mem_data'] = data
+        result["rd"] = rd
+        result["rd_value"] = self.regs[rd]
+        result["mem_data"] = data
 
     # Store instructions
     def _execute_store(self, insn: int, result: dict):
@@ -323,18 +325,15 @@ class RV32IModel:
         rs2 = (insn >> 20) & 0x1F
 
         # Decode S-type immediate
-        imm = (
-            ((insn >> 25) & 0x7F) << 5 |   # imm[11:5]
-            ((insn >> 7) & 0x1F)           # imm[4:0]
-        )
+        imm = ((insn >> 25) & 0x7F) << 5 | ((insn >> 7) & 0x1F)  # imm[11:5]  # imm[4:0]
         imm = self._sign_extend(imm, 12)
 
         addr = (self.regs[rs1] + imm) & 0xFFFFFFFF
         data = self.regs[rs2]
 
-        result['mem_addr'] = addr
-        result['mem_data'] = data
-        result['mem_write'] = True
+        result["mem_addr"] = addr
+        result["mem_data"] = data
+        result["mem_write"] = True
 
         if funct3 == 0b000:  # SB
             self.memory.write(addr, data & 0xFF, 1)
@@ -397,8 +396,8 @@ class RV32IModel:
                 raise IllegalInstructionError(f"Invalid op-imm funct3: 0x{funct3:x}")
 
         self._write_reg(rd, value)
-        result['rd'] = rd
-        result['rd_value'] = self.regs[rd]
+        result["rd"] = rd
+        result["rd_value"] = self.regs[rd]
 
     # R-type ALU instructions
     def _execute_op(self, insn: int, result: dict):
@@ -464,8 +463,8 @@ class RV32IModel:
             raise IllegalInstructionError(f"Invalid op funct3: 0x{funct3:x}")
 
         self._write_reg(rd, value)
-        result['rd'] = rd
-        result['rd_value'] = self.regs[rd]
+        result["rd"] = rd
+        result["rd_value"] = self.regs[rd]
 
     def get_state(self) -> dict:
         """
@@ -478,9 +477,9 @@ class RV32IModel:
                 - 'cycle_count': Number of instructions executed
         """
         return {
-            'pc': self.pc,
-            'regs': self.regs.copy(),
-            'cycle_count': self.cycle_count
+            "pc": self.pc,
+            "regs": self.regs.copy(),
+            "cycle_count": self.cycle_count,
         }
 
     def load_program(self, program: dict[int, int]):

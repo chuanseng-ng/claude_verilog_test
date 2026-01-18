@@ -8,6 +8,7 @@ Conforms to REFERENCE_MODEL_SPEC.md.
 
 class MisalignedAccessError(Exception):
     """Exception raised when accessing memory with incorrect alignment."""
+
     pass
 
 
@@ -60,7 +61,7 @@ class MemoryModel:
         value = 0
         for i in range(size):
             byte_val = self.mem.get(addr + i, 0)  # Default to 0 if not written
-            value |= (byte_val << (i * 8))
+            value |= byte_val << (i * 8)
 
         return value
 
