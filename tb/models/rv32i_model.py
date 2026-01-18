@@ -131,7 +131,7 @@ class RV32IModel:
             self.pc = result["next_pc"]
             self.cycle_count += 1
 
-        except (IllegalInstructionError, MisalignedAccessError) as e:
+        except (IllegalInstructionError, MisalignedAccessError):
             # Trap handling
             result["trap"] = True
             result["trap_cause"] = self.TRAP_ILLEGAL_INSTRUCTION
@@ -172,7 +172,7 @@ class RV32IModel:
     def _sign_extend(self, value: int, bits: int) -> int:
         """Sign extend a value from bits to 32 bits."""
         sign_bit = 1 << (bits - 1)
-        if value & sign_bit:
+        if value & sign_bit:  # pylint: disable=no-else-return
             # Negative: extend with 1s
             return value | (~((1 << bits) - 1) & 0xFFFFFFFF)
         else:

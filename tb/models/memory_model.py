@@ -9,7 +9,7 @@ Conforms to REFERENCE_MODEL_SPEC.md.
 class MisalignedAccessError(Exception):
     """Exception raised when accessing memory with incorrect alignment."""
 
-    pass
+    pass  # pylint: disable=unnecessary-pass
 
 
 class MemoryModel:
