@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project
 
-**Current Phase**: Phase 0 (Specification & Reference Models)
+**Current Phase**: Phase 1 (Minimal RV32I Core - RTL Implementation)
 
-**Status**: All specifications complete, reference model implementation in progress
+**Status**: Phase 0 complete and approved (2026-01-18), ready to begin RTL development
 
 **Target**: Build a complete SoC with CPU, GPU, caches, and peripherals through incremental phases
 
@@ -16,15 +16,15 @@ Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project
 
 See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for current status.
 
-### Phase 0 (Current): Foundations
+### Phase 0: Foundations ✅ COMPLETE
 
-- **Status**: Specifications complete, reference model implementation in progress
+- **Status**: ✅ Complete and approved (2026-01-18)
 - **Goal**: Finalize all specifications and reference models
-- **Deliverables**: Architecture specs (✅ complete), Python reference models (🟡 in progress), test infrastructure (🟡 in progress)
-- **No RTL yet**
-- **Exit Criteria**: All 7 specifications approved, Python reference models tested and validated
+- **Deliverables**: Architecture specs (✅ complete), Python reference models (✅ 66/66 tests passing), test infrastructure (✅ complete)
+- **No RTL** (as planned)
+- **Exit Criteria Met**: All 7 specifications approved, Python reference models tested and validated, cocotb infrastructure ready
 
-### Phase 1 (Next): Minimal RV32I Core
+### Phase 1 (Current): Minimal RV32I Core
 
 - **ISA**: RISC-V RV32I (37 base integer instructions)
 - **Architecture**: Single-cycle (stalls on memory operations)
@@ -237,15 +237,15 @@ See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification pla
 
 ## Common Workflow
 
-### Phase 0 Workflow (Current)
+### Phase 0 Workflow ✅ Complete
 
-1. **Read specifications**: Always start with docs in `docs/design/`
-2. **Implement reference model**: Write Python models per `REFERENCE_MODEL_SPEC.md`
-3. **Test reference model**: Use pytest, cross-validate vs spike
-4. **Setup testbench**: Prepare cocotb infrastructure
-5. **Review**: Ensure specs are complete before proceeding to Phase 1
+1. ✅ **Read specifications**: All docs in `docs/design/` reviewed
+2. ✅ **Implement reference model**: Python models per `REFERENCE_MODEL_SPEC.md` complete
+3. ✅ **Test reference model**: pytest passing (66/66 tests), cross-validated
+4. ✅ **Setup testbench**: cocotb infrastructure ready
+5. ✅ **Review**: All specs approved, ready for Phase 1
 
-### Phase 1+ Workflow (Future)
+### Phase 1 Workflow (Current)
 
 1. **Write RTL**: Implement modules per Phase 1 spec
 2. **Lint**: Run Verilator lint checks
@@ -328,28 +328,39 @@ Categories:
 
 See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 
-**Current priorities** (Phase 0 - Specifications Complete ✅):
+**Current priorities** (Phase 1 - RTL Implementation):
 
-**Remaining Implementation Tasks**:
+**Phase 0 Complete** ✅:
 
-1. **Python reference model implementation** (AI-assisted, human-verified)
-   - `tb/models/rv32i_model.py` - CPU instruction-accurate model
-   - `tb/models/gpu_kernel_model.py` - GPU SIMT execution model
-   - `tb/models/memory_model.py` - Shared memory model
-   - AI may assist with: Boilerplate code, simple instruction implementations
-   - Human must: Verify complex instructions, approve all logic, final review
+- ✅ All 7 specifications approved (2026-01-18)
+- ✅ Python reference models validated (66/66 tests passing)
+- ✅ cocotb test infrastructure ready
 
-2. **cocotb test infrastructure setup** (AI-assisted)
-   - cocotb environment configuration
-   - Test harness scaffolding
-   - Driver templates for AXI4-Lite and APB3
-   - AI may assist with: Infrastructure scaffolding, boilerplate code
-   - Human must: Review and approve test strategy
+**Phase 1 Implementation Tasks**:
 
-3. **Final specification review** (HUMAN-ONLY)
-   - Review all 7 specification documents
-   - Approve Phase 0 completion
-   - Authorize transition to Phase 1
+1. **RTL Development** (AI-assisted, human-verified)
+   - Start with simple modules: `rv32i_regfile.sv`, `rv32i_imm_gen.sv`
+   - Implement `rv32i_alu.sv` with all RV32I operations
+   - Build `rv32i_decode.sv` instruction decoder
+   - Develop `rv32i_control.sv` control FSM
+   - Integrate into `rv32i_core.sv` wrapper
+   - Add interfaces in `rv32i_cpu_top.sv` (AXI4-Lite + APB3)
+   - AI may assist with: Module boilerplate, simple combinational logic
+   - Human must: Approve FSM designs, verify instruction semantics, review all code
+
+2. **Verification** (cocotb + Python reference model)
+   - Write directed tests for each instruction
+   - Create random instruction test sequences
+   - Compare RTL commits vs Python reference model
+   - Target: Pass 10k+ random instruction tests
+   - AI may assist with: Test generation, cocotb driver usage
+   - Human must: Debug failures, validate corner cases, approve test coverage
+
+3. **Debug Interface Testing** (APB3 protocol validation)
+   - Test halt/resume/step functionality
+   - Validate breakpoint behavior
+   - Verify register read/write when halted
+   - Human must: Approve debug protocol compliance
 
 ## Questions?
 
