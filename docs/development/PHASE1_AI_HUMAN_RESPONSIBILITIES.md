@@ -28,7 +28,7 @@
 
 ### Module: rv32i_regfile.sv (Register File)
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - SystemVerilog module structure and ports
 - 32x32-bit register array declaration
@@ -36,14 +36,14 @@
 - Write-enable logic based on spec
 - x0 hardwiring logic (always 0)
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Change register count or width
 - Modify x0 behavior
 - Add pipeline stages
 - Change synchronous/asynchronous design choice
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Approve** read/write port count (2 read, 1 write per spec)
 - **Decide** synchronous vs. asynchronous reads
@@ -56,20 +56,20 @@
 
 ### Module: rv32i_imm_gen.sv (Immediate Generator)
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Module boilerplate
 - Implement all 6 immediate formats (I, S, B, U, J, R-type)
 - Sign-extension logic
 - Case statement for instruction decoding
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Change immediate formats from RV32I spec
 - Modify bit-field extraction
 - Optimize away "redundant" logic that's architecturally required
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Verify** all 6 formats match RISC-V spec exactly
 - **Check** sign-extension correctness (especially for negative values)
@@ -81,7 +81,7 @@
 
 ### Module: rv32i_alu.sv (Arithmetic Logic Unit)
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Module structure with all 10 RV32I ALU operations
 - Basic arithmetic: ADD, SUB
@@ -89,14 +89,14 @@
 - Shift operations: SLL, SRL, SRA (using Verilog shift operators)
 - Comparison operations: SLT, SLTU
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Add operations not in RV32I (e.g., MUL, DIV from M extension)
 - Change operation encoding
 - Optimize away operations that "seem unused"
 - Modify shift amount masking
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Approve** operation encodings (must match decoder)
 - **Verify** signed vs. unsigned operations (SLT vs. SLTU, SRA vs. SRL)
@@ -110,7 +110,7 @@
 
 ### Module: rv32i_decode.sv (Instruction Decoder)
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Opcode extraction (instruction[6:0])
 - Funct3/funct7 field extraction
@@ -119,14 +119,14 @@
 - ALU operation selection boilerplate
 - Generate control signal assignments based on spec
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Change instruction encoding
 - Add support for non-RV32I instructions
 - Modify illegal instruction detection
 - Change control signal definitions
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Design** control signal encoding scheme
 - **Approve** decoder truth table (all 37 instructions)
@@ -143,14 +143,14 @@
 
 ### Module: rv32i_control.sv (Control FSM)
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - FSM state enumeration structure
 - State register declaration
 - Next-state logic framework
 - AXI handshake signal wiring
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Design state machine topology
 - Define state transitions
@@ -158,7 +158,7 @@
 - Change stall/wait conditions
 - Modify debug state handling
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Design** complete state machine (states and transitions)
 - **Define** stall conditions for AXI transactions
@@ -177,21 +177,21 @@
 
 ### Module: rv32i_core.sv (Core Integration)
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Module instantiation boilerplate
 - Wire declarations for inter-module signals
 - Signal name matching between modules
 - Connecting datapath components
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Change module interconnection topology
 - Add pipeline registers
 - Modify datapath connections
 - Change signal widths
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Approve** module interconnection diagram
 - **Verify** all critical paths are correctly connected
@@ -206,21 +206,21 @@
 
 ### Module: axi4lite_master.sv (AXI4-Lite Master Interface)
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - AXI4-Lite channel signal declarations (per ARM spec)
 - Basic valid/ready handshake logic
 - Read/write transaction sequencing
 - Address/data/strobe assignment
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Violate AXI4-Lite protocol rules
 - Change transaction ordering
 - Add features not in AXI4-Lite spec (e.g., bursts, atomics)
 - Modify backpressure handling
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Approve** AXI transaction ordering (read-before-write, etc.)
 - **Verify** protocol compliance with ARM IHI 0022E specification
@@ -238,21 +238,21 @@
 
 ### Module: apb3_slave.sv (APB3 Debug Interface)
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - APB3 signal declarations (per ARM spec)
 - Address decoding for debug registers
 - Register read/write boilerplate
 - PSELx, PENABLE, PWRITE decoding
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Change register map (defined in MEMORY_MAP.md)
 - Modify APB3 protocol timing
 - Add write restrictions beyond spec
 - Change register reset values
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Approve** register map implementation
 - **Verify** APB3 protocol compliance (ARM IHI 0024C)
@@ -270,20 +270,20 @@
 
 ### Module: rv32i_debug.sv (Debug Controller)
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Breakpoint address comparators
 - Breakpoint enable logic structure
 - Halt request signal generation
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Design halt/resume priority logic
 - Change breakpoint count (2 per spec)
 - Modify halt cause encoding
 - Add debug features not in spec
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Design** halt/resume/step command sequencing
 - **Approve** halt cause encoding and priority
@@ -299,21 +299,21 @@
 
 ### Module: rv32i_cpu_top.sv (Top-Level Integration)
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Port declarations
 - Module instantiations (core, AXI master, APB slave, debug)
 - Wire connections between modules
 - Commit signal generation
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Change top-level interface (must match RTL_DEFINITION.md)
 - Add/remove modules
 - Modify clock/reset distribution
 - Change commit signal semantics
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Approve** final top-level architecture
 - **Verify** all interfaces match RTL_DEFINITION.md
@@ -331,7 +331,7 @@
 
 ### cocotb Infrastructure
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - cocotb test harness boilerplate
 - AXI4-Lite driver implementation (using existing BFM in `tb/cocotb/bfm/`)
@@ -341,14 +341,14 @@
 - Monitor implementation for signal capture
 - Scoreboard boilerplate (compare RTL vs. Python model)
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Change test strategy or approach
 - Skip protocol compliance checks
 - Modify Python reference model behavior
 - Change scoreboard comparison algorithm
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Design** overall test strategy
 - **Approve** scoreboard comparison logic
@@ -362,7 +362,7 @@
 
 ### Directed Tests
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Generate simple directed tests for each instruction
 - Create test templates
@@ -376,13 +376,13 @@
 - Simple branch taken/not-taken
 - Register file read/write
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Define corner cases to test
 - Decide test coverage strategy
 - Mark tests as "sufficient"
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Define** corner case scenarios to test:
   - Overflow/underflow in arithmetic
@@ -401,7 +401,7 @@
 
 ### Random Instruction Tests
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Random instruction generator framework
 - Constraints for legal instruction generation
@@ -409,13 +409,13 @@
 - Memory address management (avoid conflicts)
 - Test harness integration
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Relax constraints to "make tests pass"
 - Filter out failing instruction sequences
 - Modify Python reference model to match RTL bugs
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Define** randomization constraints
 - **Approve** instruction mix (weight certain instructions)
@@ -429,7 +429,7 @@
 
 ### Scoreboard (RTL vs. Python Reference Model)
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Capture RTL commit transactions
 - Call Python reference model with same inputs
@@ -437,13 +437,13 @@
 - Compare memory writes
 - Report mismatches
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Ignore mismatches
 - Add tolerance to comparisons
 - Modify reference model to match RTL
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Design** comparison algorithm
 - **Define** what signals to compare (PC, rd, rd_value, mem_addr, mem_data)
@@ -457,20 +457,20 @@
 
 ### Protocol Compliance Tests
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Generate AXI4-Lite protocol checkers (per ARM spec)
 - Generate APB3 protocol checkers (per ARM spec)
 - Implement protocol assertions
 - Create backpressure scenarios
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Skip protocol checks
 - Relax protocol requirements
 - Assume protocol compliance without testing
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Verify** all AXI4-Lite protocol rules are checked
 - **Verify** all APB3 protocol rules are checked
@@ -484,20 +484,20 @@
 
 ### Debug Interface Tests
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Basic halt/resume test sequences
 - Single-step test template
 - Register read/write tests (when halted)
 - Breakpoint enable/disable tests
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Define complex debug scenarios
 - Approve halt behavior during exceptions
 - Skip edge cases
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Define** debug test scenarios:
   - Halt during instruction fetch
@@ -517,7 +517,7 @@
 
 ## SystemVerilog Assertions (SVA)
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Generate assertion templates
 - Basic protocol assertions (valid/ready handshakes)
@@ -534,12 +534,12 @@ assert property (@(posedge clk)
     axi_arvalid && !axi_arready |=> axi_arvalid);
 ```
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Decide which properties to assert
 - Disable assertions that "fail too often"
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Define** critical properties to assert:
   - No double write to same register in one cycle
@@ -556,20 +556,20 @@ assert property (@(posedge clk)
 
 ## Coverage
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Generate instruction coverage bins (37 RV32I instructions)
 - Generate state coverage bins (FSM states)
 - Generate cross-coverage bins (instruction × state)
 - Collect and report coverage metrics
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Decide coverage goals
 - Declare coverage "sufficient" without hitting goals
 - Remove coverage bins to inflate percentages
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Define** coverage goals:
   - 100% instruction coverage (37/37)
@@ -587,20 +587,20 @@ assert property (@(posedge clk)
 
 ## Documentation
 
-#### ✅ AI MAY Assist With:
+#### ✅ AI MAY Assist With
 
 - Generate module header comments
 - Write signal descriptions
 - Create timing diagrams from specs
 - Format documentation markdown
 
-#### ⚠️ AI MUST NOT (Without Human Approval):
+#### ⚠️ AI MUST NOT (Without Human Approval)
 
 - Write architectural documentation
 - Define interfaces or protocols
 - Document design decisions without human input
 
-#### ✋ Human MUST:
+#### ✋ Human MUST
 
 - **Write** architectural design documents
 - **Document** critical design decisions and rationale
