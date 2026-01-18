@@ -17,3 +17,14 @@ sim_build/
 __pycache__/
 *.pyc
 *.pyo
+
+# Python testing and QA
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
