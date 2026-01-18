@@ -1,7 +1,7 @@
 # RV32I RISC-V Microprocessor + GPU-Lite SoC
 
-[![QA Checks](https://github.com/USERNAME/REPO/actions/workflows/qa-checks.yml/badge.svg)](https://github.com/USERNAME/REPO/actions/workflows/qa-checks.yml)
-[![Tests](https://github.com/USERNAME/REPO/actions/workflows/tests.yml/badge.svg)](https://github.com/USERNAME/REPO/actions/workflows/tests.yml)
+[![QA Checks](https://github.com/chuanseng-ng/claude_verilog_test/actions/workflows/qa-checks.yml/badge.svg)](https://github.com/chuanseng-ng/claude_verilog_test/actions/workflows/qa-checks.yml)
+[![Tests](https://github.com/chuanseng-ng/claude_verilog_test/actions/workflows/tests.yml/badge.svg)](https://github.com/chuanseng-ng/claude_verilog_test/actions/workflows/tests.yml)
 
 Multi-phase project building a complete SoC with RV32I RISC-V CPU, GPU-lite compute engine, memory system, and peripherals.
 
@@ -9,28 +9,29 @@ Multi-phase project building a complete SoC with RV32I RISC-V CPU, GPU-lite comp
 
 This project incrementally builds a fully functional SoC through 6 phases:
 
-1. **Phase 0** (Current): Specification & Reference Models
-2. **Phase 1**: Minimal RV32I CPU (single-cycle)
+1. **Phase 0**: Specification & Reference Models ✅ **COMPLETE**
+2. **Phase 1** (Current): Minimal RV32I CPU (single-cycle)
 3. **Phase 2**: Pipelined CPU (5-stage + interrupts)
 4. **Phase 3**: Memory System (I-cache + D-cache)
 5. **Phase 4**: GPU-Lite Compute Engine (SIMT)
 6. **Phase 5**: SoC Integration (peripherals, boot ROM)
 
-## Current Status: Phase 0 (Specification Phase)
+## Current Status: Phase 1 (RTL Implementation)
 
-**Completed**:
+**Phase 0 Complete** ✅ (Approved 2026-01-18):
 
-- All architectural specifications finalized
-- Interface definitions (AXI4-Lite, APB3)
-- Memory map and register definitions
-- Verification strategy documented
+- ✅ All 7 architectural specifications finalized and approved
+- ✅ Interface definitions (AXI4-Lite, APB3) complete
+- ✅ Memory map and register definitions complete
+- ✅ Verification strategy documented
+- ✅ Python reference models implemented and validated (66/66 tests passing)
+- ✅ cocotb test infrastructure ready
 
-**In Progress**:
+**Phase 1 Ready to Start**:
 
-- Python reference model implementation
-- cocotb test infrastructure setup
-
-**No RTL exists yet** - RTL implementation begins in Phase 1
+- RTL implementation authorized per PHASE1_ARCHITECTURE_SPEC.md
+- Reference models ready for RTL validation
+- Test infrastructure in place
 
 ## Planned Features (Phase 1+)
 
@@ -96,23 +97,25 @@ This project incrementally builds a fully functional SoC through 6 phases:
 
 ## Quick Start
 
-### Phase 0: Reference Model Testing (Current)
+### Phase 0: Reference Model Testing (Complete ✅)
 
 ```bash
 # Navigate to test directory
 cd tb/tests
 
-# Run reference model unit tests
-pytest test_rv32i_model.py -v
+# Run all reference model unit tests (66 tests)
+pytest -v
+
+# Run specific model tests
+pytest test_rv32i_model.py -v      # CPU model (33 tests)
+pytest test_gpu_model.py -v        # GPU model (12 tests)
+pytest test_memory_model.py -v     # Memory model (21 tests)
 
 # Run with coverage
 pytest --cov=tb.models --cov-report=html
-
-# Test memory model
-pytest test_memory_model.py -v
 ```
 
-### Phase 1+: RTL Simulation (Future)
+### Phase 1: RTL Simulation (Starting)
 
 ```bash
 # Navigate to simulation directory
