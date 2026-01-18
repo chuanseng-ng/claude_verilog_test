@@ -1,5 +1,8 @@
 # RV32I RISC-V Microprocessor + GPU-Lite SoC
 
+[![QA Checks](https://github.com/USERNAME/REPO/actions/workflows/qa-checks.yml/badge.svg)](https://github.com/USERNAME/REPO/actions/workflows/qa-checks.yml)
+[![Tests](https://github.com/USERNAME/REPO/actions/workflows/tests.yml/badge.svg)](https://github.com/USERNAME/REPO/actions/workflows/tests.yml)
+
 Multi-phase project building a complete SoC with RV32I RISC-V CPU, GPU-lite compute engine, memory system, and peripherals.
 
 ## Project Vision
