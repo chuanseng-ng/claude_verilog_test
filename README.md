@@ -195,7 +195,7 @@ For detailed phase descriptions and current status, see:
 
 This is a specification-driven project with clear phase boundaries. Contributions should:
 
-1. Follow the current phase's scope (currently Phase 0)
+1. Follow the current phase's scope (currently Phase 1)
 2. Maintain consistency with specifications in `docs/`
 3. Include appropriate tests (pytest for Phase 0, cocotb for Phase 1+)
 
