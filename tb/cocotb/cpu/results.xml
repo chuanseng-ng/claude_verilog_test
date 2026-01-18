@@ -1,8 +1,0 @@
-<testsuites name="results">
-  <testsuite name="all" package="all">
-    <property name="random_seed" value="1768702754" />
-    <testcase name="test_counter_basic" classname="test_example_counter" file="/mnt/c/Users/waele/Documents/Github/claude_verilog_test/tb/cocotb/cpu/test_example_counter.py" lineno="13" time="0.0019347667694091797" sim_time_ns="130.0" ratio_time="67191.56130622304" />
-    <testcase name="test_counter_disable" classname="test_example_counter" file="/mnt/c/Users/waele/Documents/Github/claude_verilog_test/tb/cocotb/cpu/test_example_counter.py" lineno="50" time="0.0008285045623779297" sim_time_ns="199.99999999999997" ratio_time="241398.79136690643" />
-    <testcase name="test_counter_reset" classname="test_example_counter" file="/mnt/c/Users/waele/Documents/Github/claude_verilog_test/tb/cocotb/cpu/test_example_counter.py" lineno="96" time="0.00057220458984375" sim_time_ns="140.0" ratio_time="244667.73333333334" />
-  </testsuite>
-</testsuites>

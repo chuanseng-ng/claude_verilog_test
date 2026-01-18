@@ -17,6 +17,7 @@ sim_build/
 __pycache__/
 *.pyc
 *.pyo
+*.xml
 
 # Python testing and QA
 .pytest_cache/
