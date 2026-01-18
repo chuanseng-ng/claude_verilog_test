@@ -4,14 +4,14 @@ Unit tests for MemoryModel.
 Tests the sparse memory implementation with alignment checking.
 """
 
-import pytest
 import sys
 from pathlib import Path
+import pytest
+
+from tb.models.memory_model import MemoryModel, MisalignedAccessError
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from tb.models.memory_model import MemoryModel, MisalignedAccessError
 
 
 class TestMemoryModel:
@@ -117,14 +117,14 @@ class TestMemoryModel:
         program = {
             0x0000: 0x00000093,  # addi x1, x0, 0
             0x0004: 0x00100113,  # addi x2, x0, 1
-            0x0008: 0x002081b3,  # add x3, x1, x2
+            0x0008: 0x002081B3,  # add x3, x1, x2
         }
 
         mem.load_program(program)
 
         assert mem.read(0x0000, 4) == 0x00000093
         assert mem.read(0x0004, 4) == 0x00100113
-        assert mem.read(0x0008, 4) == 0x002081b3
+        assert mem.read(0x0008, 4) == 0x002081B3
 
     def test_dump(self):
         """Test memory dump functionality."""
@@ -186,5 +186,5 @@ class TestMemoryModel:
         assert "4 bytes" in repr(mem)
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

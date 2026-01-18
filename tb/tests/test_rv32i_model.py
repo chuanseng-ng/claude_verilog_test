@@ -4,15 +4,14 @@ Unit tests for RV32IModel.
 Tests the RV32I CPU reference model instruction execution.
 """
 
-import pytest
 import sys
 from pathlib import Path
+import pytest
+
+from tb.models.rv32i_model import RV32IModel
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from tb.models.rv32i_model import RV32IModel, IllegalInstructionError
-from tb.models.memory_model import MisalignedAccessError
 
 
 class TestRV32IModel:
@@ -56,13 +55,13 @@ class TestRV32IModel:
         cpu.regs[2] = 20
 
         # ADD x3, x1, x2 (0x002081b3)
-        insn = 0x002081b3
+        insn = 0x002081B3
         result = cpu.step(insn)
 
         assert cpu.regs[3] == 30
-        assert result['rd'] == 3
-        assert result['rd_value'] == 30
-        assert result['next_pc'] == 4
+        assert result["rd"] == 3
+        assert result["rd_value"] == 30
+        assert result["next_pc"] == 4
 
     def test_sub_instruction(self):
         """Test SUB instruction."""
@@ -71,8 +70,8 @@ class TestRV32IModel:
         cpu.regs[2] = 10
 
         # SUB x3, x1, x2 (0x402081b3)
-        insn = 0x402081b3
-        result = cpu.step(insn)
+        insn = 0x402081B3
+        cpu.step(insn)
 
         assert cpu.regs[3] == 20
 
@@ -83,7 +82,7 @@ class TestRV32IModel:
 
         # ADDI x2, x1, 5 (0x00508113)
         insn = 0x00508113
-        result = cpu.step(insn)
+        cpu.step(insn)
 
         assert cpu.regs[2] == 15
 
@@ -93,8 +92,8 @@ class TestRV32IModel:
         cpu.regs[1] = 10
 
         # ADDI x2, x1, -5 (0xffb08113)
-        insn = 0xffb08113
-        result = cpu.step(insn)
+        insn = 0xFFB08113
+        cpu.step(insn)
 
         assert cpu.regs[2] == 5
 
@@ -106,8 +105,8 @@ class TestRV32IModel:
         cpu.regs[2] = 0b10101010
 
         # AND x3, x1, x2 (0x0020f1b3)
-        insn = 0x0020f1b3
-        result = cpu.step(insn)
+        insn = 0x0020F1B3
+        cpu.step(insn)
 
         assert cpu.regs[3] == 0b10001000
 
@@ -118,8 +117,8 @@ class TestRV32IModel:
         cpu.regs[2] = 0b10101010
 
         # OR x3, x1, x2 (0x0020e1b3)
-        insn = 0x0020e1b3
-        result = cpu.step(insn)
+        insn = 0x0020E1B3
+        cpu.step(insn)
 
         assert cpu.regs[3] == 0b11101110
 
@@ -130,8 +129,8 @@ class TestRV32IModel:
         cpu.regs[2] = 0b10101010
 
         # XOR x3, x1, x2 (0x0020c1b3)
-        insn = 0x0020c1b3
-        result = cpu.step(insn)
+        insn = 0x0020C1B3
+        cpu.step(insn)
 
         assert cpu.regs[3] == 0b01100110
 
@@ -143,8 +142,8 @@ class TestRV32IModel:
         cpu.regs[2] = 4
 
         # SLL x3, x1, x2 (0x002091b3)
-        insn = 0x002091b3
-        result = cpu.step(insn)
+        insn = 0x002091B3
+        cpu.step(insn)
 
         assert cpu.regs[3] == 0x00000010
 
@@ -155,8 +154,8 @@ class TestRV32IModel:
         cpu.regs[2] = 2
 
         # SRL x3, x1, x2 (0x0020d1b3)
-        insn = 0x0020d1b3
-        result = cpu.step(insn)
+        insn = 0x0020D1B3
+        cpu.step(insn)
 
         assert cpu.regs[3] == 0x00000004
 
@@ -167,8 +166,8 @@ class TestRV32IModel:
         cpu.regs[2] = 4
 
         # SRA x3, x1, x2 (0x4020d1b3)
-        insn = 0x4020d1b3
-        result = cpu.step(insn)
+        insn = 0x4020D1B3
+        cpu.step(insn)
 
         assert cpu.regs[3] == 0xF8000000  # Sign extended
 
@@ -180,8 +179,8 @@ class TestRV32IModel:
         cpu.regs[2] = 10
 
         # SLT x3, x1, x2 (0x0020a1b3)
-        insn = 0x0020a1b3
-        result = cpu.step(insn)
+        insn = 0x0020A1B3
+        cpu.step(insn)
 
         assert cpu.regs[3] == 1  # 5 < 10
 
@@ -192,8 +191,8 @@ class TestRV32IModel:
         cpu.regs[2] = 1
 
         # SLTU x3, x1, x2 (0x0020b1b3)
-        insn = 0x0020b1b3
-        result = cpu.step(insn)
+        insn = 0x0020B1B3
+        cpu.step(insn)
 
         assert cpu.regs[3] == 0  # 0xFFFFFFFF > 1 (unsigned)
 
@@ -203,8 +202,8 @@ class TestRV32IModel:
         cpu = RV32IModel()
 
         # LUI x1, 0x12345 (0x123450b7)
-        insn = 0x123450b7
-        result = cpu.step(insn)
+        insn = 0x123450B7
+        cpu.step(insn)
 
         assert cpu.regs[1] == 0x12345000
 
@@ -215,7 +214,7 @@ class TestRV32IModel:
 
         # AUIPC x1, 0x12345 (0x12345097)
         insn = 0x12345097
-        result = cpu.step(insn)
+        cpu.step(insn)
 
         assert cpu.regs[1] == 0x12345000 + 0x1000
 
@@ -230,7 +229,7 @@ class TestRV32IModel:
         insn = 0x00208463
         result = cpu.step(insn)
 
-        assert result['next_pc'] == 8  # Branch taken
+        assert result["next_pc"] == 8  # Branch taken
 
     def test_beq_not_taken(self):
         """Test BEQ branch not taken."""
@@ -242,7 +241,7 @@ class TestRV32IModel:
         insn = 0x00208463
         result = cpu.step(insn)
 
-        assert result['next_pc'] == 4  # Not taken
+        assert result["next_pc"] == 4  # Not taken
 
     def test_bne_taken(self):
         """Test BNE branch taken."""
@@ -254,7 +253,7 @@ class TestRV32IModel:
         insn = 0x00209463
         result = cpu.step(insn)
 
-        assert result['next_pc'] == 8  # Branch taken
+        assert result["next_pc"] == 8  # Branch taken
 
     def test_blt_taken(self):
         """Test BLT (branch less than) taken."""
@@ -263,10 +262,10 @@ class TestRV32IModel:
         cpu.regs[2] = 10
 
         # BLT x1, x2, 8 (0x0020c463)
-        insn = 0x0020c463
+        insn = 0x0020C463
         result = cpu.step(insn)
 
-        assert result['next_pc'] == 8  # Branch taken
+        assert result["next_pc"] == 8  # Branch taken
 
     # Jump Instructions
     def test_jal_instruction(self):
@@ -276,11 +275,11 @@ class TestRV32IModel:
 
         # JAL x1, 0x100 (offset = 0x100)
         # JAL encoding: imm[20|10:1|11|19:12] rd opcode
-        insn = 0x100000ef  # JAL x1, 0x100
+        insn = 0x100000EF  # JAL x1, 0x100
         result = cpu.step(insn)
 
         assert cpu.regs[1] == 0x1004  # Return address
-        assert result['next_pc'] == 0x1100  # PC + offset
+        assert result["next_pc"] == 0x1100  # PC + offset
 
     def test_jalr_instruction(self):
         """Test JALR (jump and link register) instruction."""
@@ -289,11 +288,11 @@ class TestRV32IModel:
         cpu.regs[2] = 0x2000
 
         # JALR x1, x2, 0x10 (0x010100e7)
-        insn = 0x010100e7
+        insn = 0x010100E7
         result = cpu.step(insn)
 
         assert cpu.regs[1] == 0x1004  # Return address
-        assert result['next_pc'] == 0x2010  # rs1 + imm (LSB cleared)
+        assert result["next_pc"] == 0x2010  # rs1 + imm (LSB cleared)
 
     # Load/Store Instructions
     def test_lw_instruction(self):
@@ -303,12 +302,12 @@ class TestRV32IModel:
         cpu.regs[1] = 0x1000
 
         # LW x2, 0(x1) (0x0000a103)
-        insn = 0x0000a103
+        insn = 0x0000A103
         result = cpu.step(insn)
 
         assert cpu.regs[2] == 0x12345678
-        assert result['mem_addr'] == 0x1000
-        assert result['mem_write'] == False
+        assert result["mem_addr"] == 0x1000
+        assert not result["mem_write"]
 
     def test_sw_instruction(self):
         """Test SW (store word) instruction."""
@@ -323,8 +322,8 @@ class TestRV32IModel:
         result = cpu.step(insn)
 
         assert cpu.memory.read(0x1000, 4) == 0xDEADBEEF
-        assert result['mem_addr'] == 0x1000
-        assert result['mem_write'] == True
+        assert result["mem_addr"] == 0x1000
+        assert result["mem_write"]
 
     def test_lb_instruction(self):
         """Test LB (load byte) instruction with sign extension."""
@@ -334,7 +333,7 @@ class TestRV32IModel:
 
         # LB x2, 0(x1) (0x00008103)
         insn = 0x00008103
-        result = cpu.step(insn)
+        cpu.step(insn)
 
         assert cpu.regs[2] == 0xFFFFFFFF  # Sign extended
 
@@ -345,8 +344,8 @@ class TestRV32IModel:
         cpu.regs[1] = 0x1000
 
         # LBU x2, 0(x1) (0x0000c103)
-        insn = 0x0000c103
-        result = cpu.step(insn)
+        insn = 0x0000C103
+        cpu.step(insn)
 
         assert cpu.regs[2] == 0x000000FF  # Zero extended
 
@@ -358,7 +357,7 @@ class TestRV32IModel:
         program = {
             0x0000: 0x00000093,  # addi x1, x0, 0
             0x0004: 0x00100113,  # addi x2, x0, 1
-            0x0008: 0x002081b3,  # add x3, x1, x2
+            0x0008: 0x002081B3,  # add x3, x1, x2
         }
 
         cpu.load_program(program)
@@ -383,9 +382,9 @@ class TestRV32IModel:
         cpu.cycle_count = 5
 
         state = cpu.get_state()
-        assert state['pc'] == 0x1000
-        assert state['regs'][1] == 42
-        assert state['cycle_count'] == 5
+        assert state["pc"] == 0x1000
+        assert state["regs"][1] == 42
+        assert state["cycle_count"] == 5
 
     def test_illegal_instruction(self):
         """Test illegal instruction triggers trap."""
@@ -395,8 +394,8 @@ class TestRV32IModel:
         insn = 0xFFFFFFFF
         result = cpu.step(insn)
 
-        assert result['trap'] == True
-        assert result['trap_cause'] == cpu.TRAP_ILLEGAL_INSTRUCTION
+        assert result["trap"]
+        assert result["trap_cause"] == cpu.TRAP_ILLEGAL_INSTRUCTION
         assert cpu.pc == cpu.trap_vector
 
     def test_misaligned_load(self):
@@ -405,11 +404,11 @@ class TestRV32IModel:
         cpu.regs[1] = 0x1001  # Misaligned address
 
         # LW x2, 0(x1) - should trap on misaligned access
-        insn = 0x0000a103
+        insn = 0x0000A103
         result = cpu.step(insn)
 
-        assert result['trap'] == True
+        assert result["trap"]
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

@@ -119,7 +119,6 @@ class GPUKernelModel:
         # Calculate total warps
         threads_per_block = block_dim[0] * block_dim[1] * block_dim[2]
         warps_per_block = (threads_per_block + self.warp_size - 1) // self.warp_size
-        total_blocks = grid_dim[0] * grid_dim[1] * grid_dim[2]
 
         # Initialize warps
         self.warps = []
@@ -146,7 +145,7 @@ class GPUKernelModel:
             "divergence_stack": [],  # Stack for divergence: [(pc, mask), ...]
         }
 
-    def _compute_thread_id(
+    def _compute_thread_id(  # pylint: disable=unused-argument
         self, block_id: tuple, warp_in_block: int, lane: int
     ) -> tuple:
         """
@@ -164,7 +163,7 @@ class GPUKernelModel:
         thread_in_block = warp_in_block * self.warp_size + lane
 
         # Convert to 3D thread ID
-        block_x, block_y, block_z = self.block_dim
+        block_x, block_y, _ = self.block_dim
         tid_x = thread_in_block % block_x
         tid_y = (thread_in_block // block_x) % block_y
         tid_z = thread_in_block // (block_x * block_y)
@@ -275,7 +274,7 @@ class GPUKernelModel:
         next_pc = pc + 4
 
         # Execute instruction type
-        if opcode == self.OP_VADD or opcode == self.OP_VADDI:
+        if opcode in (self.OP_VADD, self.OP_VADDI):
             next_pc = self._execute_alu(
                 warp, insn, opcode, rd, rs1, rs2, funct3, funct7
             )
@@ -359,7 +358,7 @@ class GPUKernelModel:
 
         return warp["pc"] + 4
 
-    def _execute_load(
+    def _execute_load(  # pylint: disable=unused-argument
         self, warp: dict, insn: int, rd: int, rs1: int, funct3: int
     ) -> int:
         """Execute load instruction (may be coalesced or serialized)."""
@@ -374,14 +373,14 @@ class GPUKernelModel:
                     data = self.memory.read(addr, 4)
                     if rd != 0:
                         warp["regs"][lane][rd] = data
-                except:
+                except Exception:  # pylint: disable=broad-except
                     # Memory access failed, write 0
                     if rd != 0:
                         warp["regs"][lane][rd] = 0
 
         return warp["pc"] + 4
 
-    def _execute_store(
+    def _execute_store(  # pylint: disable=unused-argument
         self, warp: dict, insn: int, rs1: int, rs2: int, funct3: int
     ) -> int:
         """Execute store instruction (may be coalesced or serialized)."""
@@ -396,7 +395,7 @@ class GPUKernelModel:
                 data = warp["regs"][lane][rs2]
                 try:
                     self.memory.write(addr, data, 4)
-                except:
+                except Exception:  # pylint: disable=broad-except
                     # Memory access failed, ignore
                     pass
 
@@ -450,12 +449,11 @@ class GPUKernelModel:
             warp["divergence_stack"].append((not_taken_pc, mask_not_taken))
             warp["active_mask"] = mask_taken
             return (warp["pc"] + imm) & 0xFFFFFFFF
-        elif mask_taken != 0:
+        if mask_taken != 0:
             # All active lanes take branch
             return (warp["pc"] + imm) & 0xFFFFFFFF
-        else:
-            # All active lanes don't take branch
-            return warp["pc"] + 4
+        # All active lanes don't take branch
+        return warp["pc"] + 4
 
     def _execute_jump(self, warp: dict, insn: int) -> int:
         """Execute unconditional jump."""
@@ -469,7 +467,9 @@ class GPUKernelModel:
         imm = self._sign_extend(imm, 21)
         return (warp["pc"] + imm) & 0xFFFFFFFF
 
-    def _execute_mov_special(self, warp: dict, insn: int, rd: int, rs1: int) -> int:
+    def _execute_mov_special(  # pylint: disable=unused-argument
+        self, warp: dict, insn: int, rd: int, rs1: int
+    ) -> int:
         """Execute VMOV rd, tid.x/tid.y/tid.z/bid.x/bid.y/bid.z."""
         # rs1 encodes which special register to read
         special_reg = rs1
@@ -505,8 +505,7 @@ class GPUKernelModel:
         sign_bit = 1 << (bits - 1)
         if value & sign_bit:
             return value | (~((1 << bits) - 1) & 0xFFFFFFFF)
-        else:
-            return value
+        return value
 
     def mem_read(self, addr: int, size: int = 4) -> int:
         """Read from GPU memory (convenience wrapper)."""
