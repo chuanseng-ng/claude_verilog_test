@@ -43,7 +43,7 @@ async def test_simple_add(dut):
     # Load simple program into memory
     # Program: ADD x3, x1, x2 (assuming x1=10, x2=20)
     program = {
-        0x0000: 0x002081b3,  # add x3, x1, x2
+        0x0000: 0x002081B3,  # add x3, x1, x2
     }
 
     # TODO: Load program into RTL memory via AXI interface
@@ -124,10 +124,10 @@ async def test_load_store(dut):
 
     # Load program
     program = {
-        0x0000: 0x100000b7,  # lui x1, 0x10000  (x1 = 0x10000000)
+        0x0000: 0x100000B7,  # lui x1, 0x10000  (x1 = 0x10000000)
         0x0004: 0x12300113,  # addi x2, x0, 0x123
-        0x0008: 0x0020a023,  # sw x2, 0(x1)     (store to memory)
-        0x000C: 0x0000a183,  # lw x3, 0(x1)     (load from memory)
+        0x0008: 0x0020A023,  # sw x2, 0(x1)     (store to memory)
+        0x000C: 0x0000A183,  # lw x3, 0(x1)     (load from memory)
     }
 
     # TODO: Load program and execute

@@ -30,7 +30,9 @@ async def test_counter_basic(dut):
     log.info("Reset complete")
 
     # Check initial value
-    assert dut.count.value == 0, f"Counter should be 0 after reset, got {dut.count.value}"
+    assert dut.count.value == 0, (
+        f"Counter should be 0 after reset, got {dut.count.value}"
+    )
     log.info(f"✓ Initial count = {dut.count.value}")
 
     # Enable counter
@@ -86,8 +88,9 @@ async def test_counter_disable(dut):
 
     for _ in range(10):
         await RisingEdge(dut.clk)
-        assert int(dut.count.value) == frozen_count, \
+        assert int(dut.count.value) == frozen_count, (
             f"Counter should stay at {frozen_count} when disabled"
+        )
 
     log.info(f"✓ Count held at {frozen_count} when disabled")
     log.info("TEST PASSED: Counter stops when disabled")
@@ -122,8 +125,9 @@ async def test_counter_reset(dut):
     await RisingEdge(dut.clk)
 
     # Check counter is back to 0
-    assert int(dut.count.value) == 0, \
+    assert int(dut.count.value) == 0, (
         f"Counter should be 0 after reset, got {dut.count.value}"
+    )
 
     log.info(f"✓ Count after reset: {dut.count.value}")
     log.info("TEST PASSED: Counter resets correctly")
