@@ -1,0 +1,437 @@
+// rv32i_core.sv
+// RV32I CPU Core Integration
+// Integrates all datapath and control components
+//
+// ⚠️ THIS IS A TEMPLATE - REQUIRES HUMAN REVIEW AND APPROVAL ⚠️
+//
+// Human must review and approve:
+// 1. Datapath connectivity
+// 2. Mux selection logic
+// 3. PC update logic
+// 4. Register file forwarding (if needed)
+// 5. Memory interface data routing
+
+module rv32i_core (
+  // Clock and reset
+  input  logic        clk,
+  input  logic        rst_n,
+
+  // AXI4-Lite memory interface (unified instruction/data)
+  // Read address channel
+  output logic [31:0] axi_araddr,
+  output logic        axi_arvalid,
+  input  logic        axi_arready,
+
+  // Read data channel
+  input  logic [31:0] axi_rdata,
+  input  logic [1:0]  axi_rresp,
+  input  logic        axi_rvalid,
+  output logic        axi_rready,
+
+  // Write address channel
+  output logic [31:0] axi_awaddr,
+  output logic        axi_awvalid,
+  input  logic        axi_awready,
+
+  // Write data channel
+  output logic [31:0] axi_wdata,
+  output logic [3:0]  axi_wstrb,
+  output logic        axi_wvalid,
+  input  logic        axi_wready,
+
+  // Write response channel
+  input  logic [1:0]  axi_bresp,
+  input  logic        axi_bvalid,
+  output logic        axi_bready,
+
+  // Debug interface
+  input  logic        dbg_halt_req,
+  input  logic        dbg_resume_req,
+  input  logic        dbg_step_req,
+  output logic        dbg_halted,
+
+  // Debug PC write (when halted)
+  input  logic        dbg_pc_wr_en,
+  input  logic [31:0] dbg_pc_wr_data,
+
+  // Debug register file access (when halted)
+  input  logic        dbg_reg_wr_en,
+  input  logic [4:0]  dbg_reg_wr_addr,
+  input  logic [31:0] dbg_reg_wr_data,
+  input  logic [4:0]  dbg_reg_rd_addr,
+  output logic [31:0] dbg_reg_rd_data,
+
+  // Commit interface (verification observability)
+  output logic        commit_valid,
+  output logic [31:0] commit_pc,
+  output logic [31:0] commit_insn,
+  output logic        trap_taken,
+  output logic [3:0]  trap_cause
+);
+
+  // ================================================================
+  // Internal Signals
+  // ================================================================
+
+  // Program Counter
+  logic [31:0] pc_reg, pc_next;
+  logic        pc_wr_en, pc_src;
+
+  // Instruction register
+  logic [31:0] instruction;
+
+  // Decoder outputs
+  logic [4:0]  rs1, rs2, rd;
+  logic [3:0]  alu_op;
+  logic        alu_src_a, alu_src_b;
+  logic [2:0]  imm_fmt;
+  logic        reg_wr_en;
+  logic        mem_rd, mem_wr;
+  logic [2:0]  mem_size;
+  logic        mem_unsigned;
+  logic        branch, jump, jalr;
+  logic [2:0]  branch_op;
+  logic        illegal_insn;
+
+  // Register file signals
+  logic [31:0] rs1_data, rs2_data;
+  logic [31:0] rd_data;
+  logic        regfile_wr_en;
+
+  // Immediate generator
+  logic [31:0] immediate;
+
+  // ALU signals
+  logic [31:0] alu_operand_a, alu_operand_b;
+  logic [31:0] alu_result;
+
+  // Branch comparator
+  logic        branch_taken;
+
+  // Memory interface
+  logic [31:0] mem_addr;
+  logic [31:0] mem_wdata;
+  logic [31:0] mem_rdata;
+
+  // Control signals
+  logic        instr_valid;
+  logic        commit_valid_int;
+  logic        trap_valid;
+  logic        data_access;  // Data access mode (vs instruction fetch)
+
+  // ================================================================
+  // Program Counter
+  // ================================================================
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      pc_reg <= 32'h0000_0000;  // Reset to address 0
+    end else if (dbg_pc_wr_en && dbg_halted) begin
+      // Debug PC write when halted
+      pc_reg <= dbg_pc_wr_data;
+    end else if (pc_wr_en) begin
+      pc_reg <= pc_next;
+    end
+  end
+
+  // PC update logic
+  always_comb begin
+    if (pc_src) begin
+      // Branch or jump taken
+      if (jump && jalr) begin
+        // JALR: PC = (rs1 + imm) & ~1
+        pc_next = (rs1_data + immediate) & 32'hFFFF_FFFE;
+      end else begin
+        // JAL or Branch: PC = PC + imm
+        pc_next = pc_reg + immediate;
+      end
+    end else begin
+      // Normal: PC = PC + 4
+      pc_next = pc_reg + 32'd4;
+    end
+  end
+
+  // AXI read address mux
+  // Select between instruction fetch (PC) and data access (mem_addr)
+  // - data_access=0 (FETCH state): araddr = PC (fetching instruction)
+  // - data_access=1 (MEM_WAIT state): araddr = mem_addr (loading data)
+  assign axi_araddr = data_access ? mem_addr : pc_reg;
+
+  // ================================================================
+  // Instruction Register
+  // ================================================================
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      instruction <= 32'h0000_0013;  // NOP (ADDI x0, x0, 0)
+    end else if (axi_rvalid && axi_rready) begin
+      instruction <= axi_rdata;
+    end
+  end
+
+  // ================================================================
+  // Module Instantiations
+  // ================================================================
+
+  // ----------------------------------------------------------------
+  // Instruction Decoder
+  // ----------------------------------------------------------------
+  rv32i_decode u_decode (
+    .instruction   (instruction),
+    .rs1           (rs1),
+    .rs2           (rs2),
+    .rd            (rd),
+    .alu_op        (alu_op),
+    .alu_src_a     (alu_src_a),
+    .alu_src_b     (alu_src_b),
+    .imm_fmt       (imm_fmt),
+    .reg_wr_en     (reg_wr_en),
+    .mem_rd        (mem_rd),
+    .mem_wr        (mem_wr),
+    .mem_size      (mem_size),
+    .mem_unsigned  (mem_unsigned),
+    .branch        (branch),
+    .branch_op     (branch_op),
+    .jump          (jump),
+    .jalr          (jalr),
+    .pc_src        (/* not used directly */),
+    .illegal       (illegal_insn)
+  );
+
+  // ----------------------------------------------------------------
+  // Immediate Generator
+  // ----------------------------------------------------------------
+  rv32i_imm_gen u_imm_gen (
+    .instruction   (instruction),
+    .imm_fmt       (imm_fmt),
+    .immediate     (immediate)
+  );
+
+  // ----------------------------------------------------------------
+  // Register File
+  // ----------------------------------------------------------------
+  rv32i_regfile u_regfile (
+    .clk           (clk),
+    .rst_n         (rst_n),
+    .wr_en         (regfile_wr_en),
+    .wr_addr       (rd),
+    .wr_data       (rd_data),
+    .rd_addr1      (rs1),
+    .rd_data1      (rs1_data),
+    .rd_addr2      (rs2),
+    .rd_data2      (rs2_data),
+    .dbg_wr_en     (dbg_reg_wr_en),
+    .dbg_wr_addr   (dbg_reg_wr_addr),
+    .dbg_wr_data   (dbg_reg_wr_data),
+    .dbg_rd_addr   (dbg_reg_rd_addr),
+    .dbg_rd_data   (dbg_reg_rd_data)
+  );
+
+  // ----------------------------------------------------------------
+  // ALU
+  // ----------------------------------------------------------------
+  rv32i_alu u_alu (
+    .operand_a     (alu_operand_a),
+    .operand_b     (alu_operand_b),
+    .alu_op        (alu_op),
+    .result        (alu_result)
+  );
+
+  // ----------------------------------------------------------------
+  // Branch Comparator
+  // ----------------------------------------------------------------
+  rv32i_branch_comp u_branch_comp (
+    .rs1_data      (rs1_data),
+    .rs2_data      (rs2_data),
+    .branch_op     (branch_op),
+    .branch_taken  (branch_taken)
+  );
+
+  // ----------------------------------------------------------------
+  // Control FSM
+  // ----------------------------------------------------------------
+  rv32i_control u_control (
+    .clk              (clk),
+    .rst_n            (rst_n),
+    .branch           (branch),
+    .jump             (jump),
+    .mem_rd           (mem_rd),
+    .mem_wr           (mem_wr),
+    .reg_wr_en        (reg_wr_en),
+    .illegal_insn     (illegal_insn),
+    .branch_taken     (branch_taken),
+    .axi_arready      (axi_arready),
+    .axi_rvalid       (axi_rvalid),
+    .axi_rresp        (axi_rresp),
+    .axi_awready      (axi_awready),
+    .axi_wready       (axi_wready),
+    .axi_bvalid       (axi_bvalid),
+    .axi_bresp        (axi_bresp),
+    .axi_arvalid      (axi_arvalid),
+    .axi_rready       (axi_rready),
+    .axi_awvalid      (axi_awvalid),
+    .axi_wvalid       (axi_wvalid),
+    .axi_bready       (axi_bready),
+    .dbg_halt_req     (dbg_halt_req),
+    .dbg_resume_req   (dbg_resume_req),
+    .dbg_step_req     (dbg_step_req),
+    .dbg_halted       (dbg_halted),
+    .pc_wr_en         (pc_wr_en),
+    .pc_src           (pc_src),
+    .instr_valid      (instr_valid),
+    .regfile_wr_en    (regfile_wr_en),
+    .commit_valid     (commit_valid_int),
+    .trap_valid       (trap_valid),
+    .trap_cause       (trap_cause),
+    .data_access      (data_access)
+  );
+
+  // ================================================================
+  // Datapath Multiplexers
+  // ================================================================
+
+  // ALU operand A mux
+  always_comb begin
+    if (alu_src_a) begin
+      alu_operand_a = pc_reg;  // For AUIPC
+    end else begin
+      alu_operand_a = rs1_data;
+    end
+  end
+
+  // ALU operand B mux
+  always_comb begin
+    if (alu_src_b) begin
+      alu_operand_b = immediate;
+    end else begin
+      alu_operand_b = rs2_data;
+    end
+  end
+
+  // Register file write data mux
+  always_comb begin
+    if (mem_rd) begin
+      // Load instruction
+      rd_data = mem_rdata;
+    end else if (jump) begin
+      // JAL/JALR: save PC+4
+      rd_data = pc_reg + 32'd4;
+    end else begin
+      // ALU result
+      rd_data = alu_result;
+    end
+  end
+
+  // ================================================================
+  // Memory Interface
+  // ================================================================
+
+  // Memory address (for loads/stores)
+  assign mem_addr = alu_result;  // Address = rs1 + immediate
+
+  // AXI write address
+  assign axi_awaddr = mem_addr;
+
+  // AXI write data
+  assign axi_wdata = rs2_data;  // Store data from rs2
+
+  // AXI write strobes (byte enable)
+  always_comb begin
+    case (mem_size)
+      3'b000: begin  // Byte
+        case (mem_addr[1:0])
+          2'b00: axi_wstrb = 4'b0001;
+          2'b01: axi_wstrb = 4'b0010;
+          2'b10: axi_wstrb = 4'b0100;
+          2'b11: axi_wstrb = 4'b1000;
+        endcase
+      end
+      3'b001: begin  // Halfword
+        case (mem_addr[1])
+          1'b0: axi_wstrb = 4'b0011;
+          1'b1: axi_wstrb = 4'b1100;
+        endcase
+      end
+      3'b010: begin  // Word
+        axi_wstrb = 4'b1111;
+      end
+      default: axi_wstrb = 4'b0000;
+    endcase
+  end
+
+  // Load data extraction and sign extension
+  always_comb begin
+    case (mem_size)
+      3'b000: begin  // Byte
+        case (mem_addr[1:0])
+          2'b00: mem_rdata = mem_unsigned ? {24'h0, axi_rdata[7:0]}   : {{24{axi_rdata[7]}},  axi_rdata[7:0]};
+          2'b01: mem_rdata = mem_unsigned ? {24'h0, axi_rdata[15:8]}  : {{24{axi_rdata[15]}}, axi_rdata[15:8]};
+          2'b10: mem_rdata = mem_unsigned ? {24'h0, axi_rdata[23:16]} : {{24{axi_rdata[23]}}, axi_rdata[23:16]};
+          2'b11: mem_rdata = mem_unsigned ? {24'h0, axi_rdata[31:24]} : {{24{axi_rdata[31]}}, axi_rdata[31:24]};
+        endcase
+      end
+      3'b001: begin  // Halfword
+        case (mem_addr[1])
+          1'b0: mem_rdata = mem_unsigned ? {16'h0, axi_rdata[15:0]}  : {{16{axi_rdata[15]}}, axi_rdata[15:0]};
+          1'b1: mem_rdata = mem_unsigned ? {16'h0, axi_rdata[31:16]} : {{16{axi_rdata[31]}}, axi_rdata[31:16]};
+        endcase
+      end
+      3'b010: begin  // Word
+        mem_rdata = axi_rdata;
+      end
+      default: mem_rdata = 32'h0;
+    endcase
+  end
+
+  // ================================================================
+  // Commit Interface (Verification)
+  // ================================================================
+
+  assign commit_valid = commit_valid_int;
+  assign commit_pc    = pc_reg;
+  assign commit_insn  = instruction;
+  assign trap_taken   = trap_valid;
+
+endmodule
+
+// ============================================================================
+// HUMAN REVIEW CHECKLIST
+// ============================================================================
+//
+// Please verify the following before approving this core integration:
+//
+// ✓ All modules are instantiated correctly:
+//   - rv32i_decode
+//   - rv32i_imm_gen
+//   - rv32i_regfile
+//   - rv32i_alu
+//   - rv32i_branch_comp
+//   - rv32i_control
+//
+// ✓ Datapath connectivity is correct:
+//   - PC update logic (PC+4, branch target, jump target)
+//   - ALU operand muxes (rs1/PC, rs2/imm)
+//   - Register file write data mux (ALU result, memory data, PC+4)
+//
+// ✓ Branch comparator integration:
+//   - Inputs: rs1_data, rs2_data from register file
+//   - Input: branch_op from decoder
+//   - Output: branch_taken to control FSM
+//
+// ✓ Memory interface is correct:
+//   - Load data extraction and sign extension
+//   - Store data byte enable (wstrb) generation
+//   - Address calculation (rs1 + immediate)
+//
+// ✓ Control flow is correct:
+//   - Instruction fetch from PC
+//   - Decode signals drive datapath
+//   - Execute generates results
+//   - Writeback updates register file
+//
+// ✓ Commit interface is correct:
+//   - commit_valid asserts when instruction completes
+//   - commit_pc, commit_insn for verification
+//   - trap_taken for exception tracking
+//
+// ============================================================================

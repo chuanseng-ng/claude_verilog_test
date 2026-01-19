@@ -25,7 +25,14 @@ module rv32i_regfile (
 
   // Read port 2
   input  logic [4:0]  rd_addr2,
-  output logic [31:0] rd_data2
+  output logic [31:0] rd_data2,
+
+  // Debug port (for APB3 access when halted)
+  input  logic        dbg_wr_en,
+  input  logic [4:0]  dbg_wr_addr,
+  input  logic [31:0] dbg_wr_data,
+  input  logic [4:0]  dbg_rd_addr,
+  output logic [31:0] dbg_rd_data
 );
 
   // Register file array
@@ -40,8 +47,11 @@ module rv32i_regfile (
         regs[i] <= 32'h0;
       end
     end else begin
-      // Write to register if enabled and not x0
-      if (wr_en && (wr_addr != 5'h0)) begin
+      // Debug write has priority (should only be active when halted)
+      if (dbg_wr_en && (dbg_wr_addr != 5'h0)) begin
+        regs[dbg_wr_addr] <= dbg_wr_data;
+      // Normal write to register if enabled and not x0
+      end else if (wr_en && (wr_addr != 5'h0)) begin
         regs[wr_addr] <= wr_data;
       end
     end
@@ -72,6 +82,16 @@ module rv32i_regfile (
       end else begin
         rd_data2 <= regs[rd_addr2];
       end
+    end
+  end
+
+  // Debug read port (combinational for APB read)
+  always_comb begin
+    // x0 always reads as zero
+    if (dbg_rd_addr == 5'h0) begin
+      dbg_rd_data = 32'h0;
+    end else begin
+      dbg_rd_data = regs[dbg_rd_addr];
     end
   end
 
