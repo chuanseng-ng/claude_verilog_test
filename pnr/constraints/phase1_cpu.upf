@@ -1,0 +1,79 @@
+#=============================================
+# Phase 1: Single-domain CPU (infrastructure only)
+# File: phase1_cpu.upf
+# Standard: IEEE 1801-2015 (UPF 3.0)
+#=============================================
+
+# Note: Phase 1 uses a single power domain with no power gating.
+# This UPF establishes the infrastructure for multi-domain power
+# management in Phase 2+.
+
+#---------------------------------------------
+# Power Domain Definition
+#---------------------------------------------
+
+# Create top-level power domain (includes entire design)
+create_power_domain PD_TOP -include_scope
+
+#---------------------------------------------
+# Supply Ports
+#---------------------------------------------
+
+# Primary supply ports
+create_supply_port VDD -direction in
+create_supply_port VSS -direction in
+
+#---------------------------------------------
+# Supply Networks
+#---------------------------------------------
+
+# Create supply nets for top domain
+create_supply_net VDD -domain PD_TOP
+create_supply_net VSS -domain PD_TOP -reuse
+
+# Connect supply ports to nets
+connect_supply_net VDD -ports {VDD}
+connect_supply_net VSS -ports {VSS}
+
+#---------------------------------------------
+# Supply Sets
+#---------------------------------------------
+
+# Define primary supply set (power + ground functions)
+create_supply_set SS_TOP \
+    -function {power VDD} \
+    -function {ground VSS}
+
+# Associate supply set with top domain
+associate_supply_set SS_TOP -handle PD_TOP
+
+#---------------------------------------------
+# Power State Table
+#---------------------------------------------
+
+# Define single power state (always on in Phase 1)
+add_power_state PD_TOP \
+    -state ON {-supply_expr {power == FULL_ON && ground == FULL_ON}}
+
+#---------------------------------------------
+# Design Top
+#---------------------------------------------
+
+# Set the top-level design module
+set_design_top rv32i_cpu_top
+
+#---------------------------------------------
+# Notes for Phase 2+
+#---------------------------------------------
+
+# In Phase 2, this UPF will be extended to include:
+# - PD_CORE domain (CPU core, can be gated)
+# - PD_DEBUG domain (debug interface, always-on)
+# - PD_AON domain (power control, always-on)
+# - Isolation strategies between domains
+# - Retention strategies for critical state
+# - Power state tables with multiple modes
+
+#---------------------------------------------
+# End of UPF
+#---------------------------------------------

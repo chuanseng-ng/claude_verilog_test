@@ -376,6 +376,181 @@ When failures occur:
 
 **Human must**: Root-cause failures, fix RTL or model
 
+### Physical Design Verification (NEW in Phase 1)
+
+**Status**: Integrated with RTL verification flow
+
+**Purpose**: Verify that the design is physically implementable and meets timing, power, and area targets.
+
+#### 6. Synthesis and Place & Route Verification
+
+**Flow Integration**:
+
+The OpenROAD back-end flow runs after RTL verification passes:
+
+```text
+RTL Verification (cocotb + pyuvm)
+    └── Pass smoke tests + ISA tests
+        └── Synthesis (Yosys)
+            └── Place & Route (OpenROAD)
+                └── Static Timing Analysis (OpenSTA)
+                    └── Power Analysis (OpenROAD)
+                        └── Gate-Level Simulation (Verilator + SDF)
+```
+
+**Test Categories**:
+
+| Test Category | Description | Tool | AI/Human |
+| :-----------: | :---------: | :--: | :------: |
+| Synthesis lint | Check for synthesis warnings | Yosys | AI may run, **Human reviews** |
+| Timing analysis | Check setup/hold violations | OpenSTA | **Human analyzes** |
+| Power analysis | Validate power budget | OpenROAD | **Human analyzes** |
+| DRC/LVS | Physical verification | KLayout | **Human reviews** |
+| Gate-level sim | Functional + timing verification | Verilator | **Human validates** |
+
+**AI may assist with**:
+
+- Running synthesis and P&R scripts automatically
+- Parsing timing/power/area reports
+- Generating gate-level simulation testbenches
+- Collecting metrics (WNS, TNS, power, area)
+
+**Human must**:
+
+- Analyze timing violations and determine root cause
+- Decide on timing constraint adjustments
+- Validate power analysis results
+- Debug gate-level simulation mismatches
+- Approve physical design sign-off
+
+#### 7. Gate-Level Simulation
+
+**Purpose**: Verify that the gate-level netlist matches RTL functionality and meets timing with back-annotated delays.
+
+**Setup**:
+
+```python
+# cocotb gate-level simulation
+import cocotb
+from cocotb_test.simulator import run
+
+def test_gate_level():
+    run(
+        verilog_sources=["pnr/results/rv32i_cpu_top.v"],  # Gate-level netlist
+        toplevel="rv32i_cpu_top",
+        module="tb_rv32i_cpu_top",
+        simulator="verilator",
+        compile_args=["--timing"],  # Enable timing checks
+        extra_env={
+            "SDF_FILE": "pnr/results/rv32i_cpu_top.sdf"  # Back-annotated delays
+        }
+    )
+```
+
+**Tests to Run**:
+
+- All Phase 1 smoke tests (from RTL verification)
+- Subset of random instruction tests (1,000+)
+- Timing-sensitive scenarios (back-to-back instructions, memory access)
+
+**Comparison**:
+
+- Gate-level commits must match RTL commits
+- Timing violations (setup/hold) = 0
+
+**AI may**: Run gate-level tests automatically
+
+**Human must**: Investigate any mismatches between RTL and gate-level
+
+#### 8. Power-Aware Simulation (UPF)
+
+**Purpose**: Verify power intent and isolation/retention strategies (Phase 2+ only, infrastructure in Phase 1).
+
+**Phase 1 Scope**:
+
+- Single power domain (no power gating)
+- UPF infrastructure setup
+- Supply net connectivity verification
+
+**Phase 2+ Scope**:
+
+- Multi-domain power gating
+- Isolation cell functionality
+- Retention cell functionality
+- Power state transitions
+
+**Test Approach (Phase 2+)**:
+
+```python
+@cocotb.test()
+async def test_power_down_core(dut):
+    """Test core power-down and isolation"""
+
+    # Run some instructions
+    await run_instructions(dut, count=100)
+
+    # Save state
+    pc_before = dut.i_rv32i_core.pc_reg.value
+
+    # Power down core domain
+    await power_ctrl.power_down_domain("PD_CORE")
+    await Timer(100, units='us')
+
+    # Check isolation (no X propagation)
+    assert dut.commit_valid.value != 'x', "Isolation failed!"
+
+    # Power up core domain
+    await power_ctrl.power_up_domain("PD_CORE")
+
+    # Check retention (state preserved)
+    pc_after = dut.i_rv32i_core.pc_reg.value
+    assert pc_before == pc_after, "Retention failed!"
+
+    # Resume execution
+    await run_instructions(dut, count=100)
+```
+
+**AI may**:
+
+- Generate UPF test sequences
+- Check for X propagation in waveforms
+- Compare state before/after power cycling
+
+**Human must**:
+
+- Design power state transition sequences
+- Validate isolation clamp values
+- Verify retention register behavior
+- Approve power-aware verification results
+
+### Physical Design Exit Criteria (Phase 1)
+
+| Criterion | Target | Tool |
+| :-------: | :----: | :--: |
+| Synthesis warnings (critical) | 0 | Yosys |
+| WNS (worst negative slack) | > 0 ns | OpenSTA |
+| TNS (total negative slack) | 0 ns | OpenSTA |
+| Setup violations (all corners) | 0 | OpenSTA |
+| Hold violations (all corners) | 0 | OpenSTA |
+| Clock skew | < 100 ps | OpenSTA |
+| Total power @ 100 MHz | < 10 mW | OpenROAD |
+| IR drop on power grid | < 5% | OpenROAD |
+| DRC violations | 0 | KLayout |
+| LVS errors | 0 | KLayout |
+| Gate-level sim vs RTL match | 100% | Verilator |
+| Gate-level timing violations | 0 | Verilator + SDF |
+
+**Documentation**:
+
+- Timing report summary (setup, hold, clock)
+- Power report summary (total, per-module, clock tree)
+- Area report summary (cell count, total area)
+- Physical design lessons learned
+
+**Sign-off**:
+
+Human must review all reports and approve physical design before declaring Phase 1 complete.
+
 ---
 
 ## Phase 2 Verification
