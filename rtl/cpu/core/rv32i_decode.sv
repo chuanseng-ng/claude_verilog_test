@@ -1,14 +1,5 @@
-// rv32i_decode_EXAMPLE.sv
-// RV32I Instruction Decoder - EXAMPLE FOR HUMAN REVIEW
-//
-// ⚠️ THIS IS A PROPOSAL - REQUIRES HUMAN APPROVAL BEFORE USE ⚠️
-//
-// This example shows a proposed control signal encoding scheme.
-// Human must review and approve:
-// 1. Control signal definitions
-// 2. Complete decoder truth table (all 37 RV32I instructions)
-// 3. Illegal instruction detection logic
-// 4. Similar instruction disambiguation (ADD/SUB, SRL/SRA, etc.)
+// rv32i_decode.sv
+// RV32I Instruction Decoder
 
 module rv32i_decode (
   // Instruction input

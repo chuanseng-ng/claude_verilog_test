@@ -7,7 +7,9 @@
 
 module rv32i_imm_gen (
   // Instruction input
-  input  logic [31:0] instruction,
+  /* verilator lint_off UNUSEDSIGNAL */
+  input  logic [31:0] instruction,  // Lower bits [6:0] are opcode, not used in immediate generation
+  /* verilator lint_on UNUSEDSIGNAL */
 
   // Immediate format selection
   input  logic [2:0]  imm_fmt,

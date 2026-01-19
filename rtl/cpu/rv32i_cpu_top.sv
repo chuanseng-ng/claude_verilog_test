@@ -1,15 +1,6 @@
 // rv32i_cpu_top.sv
 // RV32I CPU Top-Level Integration
 // Integrates CPU core with AXI4-Lite memory interface and APB3 debug interface
-//
-// ⚠️ THIS IS A TEMPLATE - REQUIRES HUMAN REVIEW AND APPROVAL ⚠️
-//
-// Human must review and approve:
-// 1. APB3 debug register map implementation
-// 2. Debug halt/resume logic
-// 3. Breakpoint logic
-// 4. Register read/write access control
-// 5. Interface protocol compliance
 
 module rv32i_cpu_top (
   // Clock and reset
@@ -95,8 +86,6 @@ module rv32i_cpu_top (
   // Debug register map (see MEMORY_MAP.md)
   logic [31:0] dbg_ctrl_reg;      // 0x000: Control register
   logic [31:0] dbg_status_reg;    // 0x004: Status register
-  logic [31:0] dbg_pc_reg;        // 0x008: PC register
-  logic [31:0] dbg_instr_reg;     // 0x00C: Instruction register
 
   // Breakpoint registers
   logic [31:0] dbg_bp0_addr;      // 0x100: Breakpoint 0 address
