@@ -30,3 +30,8 @@ htmlcov/
 *.egg-info/
 dist/
 build/
+
+bash.exe.stackdump
+
+# Python
+venv/
