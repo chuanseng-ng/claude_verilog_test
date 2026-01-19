@@ -5,6 +5,7 @@
 
 # Claude AI
 tmpclaude*
+.claude/
 
 # Verilator
 obj_dir/
