@@ -2,7 +2,8 @@
 # Uses Verilator by default
 #
 # NOTE: For simulation tests, run this Makefile in WSL:
-#   wsl bash -c "cd /mnt/c/Users/waele/Documents/Github/claude_verilog_test/sim && make test"
+#   From Windows: wsl bash -c "cd \$(wslpath '\$(pwd)') && make test"
+#   From WSL: make test
 #
 # For lint check, can run from Windows or WSL:
 #   make lint
@@ -19,7 +20,15 @@ SIM_DIR := $(PROJ_ROOT)/sim
 # DUT configuration
 DUT := rv32i_cpu_top
 TOPLEVEL := $(DUT)
-MODULE := tb.cocotb.cpu.test_smoke
+
+# Default test module (can be overridden on command line)
+MODULE ?= tb.cocotb.cpu.test_smoke
+
+# All available test modules
+TEST_MODULES := \
+	tb.cocotb.cpu.test_smoke \
+	tb.cocotb.cpu.test_cpu_basic \
+	tb.cocotb.cpu.test_c_programs
 
 # RTL source files
 VERILOG_SOURCES := \
@@ -67,20 +76,29 @@ help:
 	@echo "RV32I CPU Simulation Makefile"
 	@echo ""
 	@echo "Targets:"
-	@echo "  make test      - Run all cocotb tests (requires WSL)"
-	@echo "  make waves     - Open waveform viewer (gtkwave)"
-	@echo "  make lint      - Run Verilator lint check"
-	@echo "  make clean     - Clean simulation artifacts"
-	@echo "  make help      - Show this help"
+	@echo "  make test         - Run all cocotb tests (requires WSL)"
+	@echo "  make sim          - Run single test module (requires WSL)"
+	@echo "  make waves        - Open waveform viewer (gtkwave)"
+	@echo "  make lint         - Run Verilator lint check"
+	@echo "  make clean        - Clean simulation artifacts"
+	@echo "  make help         - Show this help"
 	@echo ""
 	@echo "Variables:"
-	@echo "  SIM=<simulator>    - Select simulator (verilator, questa, icarus)"
-	@echo "  MODULE=<module>    - Select test module"
+	@echo "  SIM=<simulator>       - Select simulator (verilator, questa, icarus)"
+	@echo "  MODULE=<module>       - Select specific test module for 'make sim'"
 	@echo ""
-	@echo "Examples:"
+	@echo "Available test modules:"
+	@echo "  $(TEST_MODULES)"
+	@echo ""
+	@echo "Examples (from WSL):"
 	@echo "  make lint"
-	@echo "  wsl bash -c \"cd /mnt/c/Users/waele/Documents/Github/claude_verilog_test/sim && make test\""
-	@echo "  wsl bash -c \"cd /mnt/c/Users/waele/Documents/Github/claude_verilog_test/sim && make test SIM=questa\""
+	@echo "  make test"
+	@echo "  make sim MODULE=tb.cocotb.cpu.test_smoke"
+	@echo "  make test SIM=questa"
+	@echo ""
+	@echo "Examples (from Windows - run from sim/ directory):"
+	@echo "  wsl bash -c \"cd \$$(wslpath '\$$(pwd)') && make test\""
+	@echo "  wsl bash -c \"cd \$$(wslpath '\$$(pwd)') && make sim MODULE=tb.cocotb.cpu.test_smoke\""
 	@echo ""
 	@echo "Note: Simulation tests must be run in WSL environment"
 
@@ -88,7 +106,7 @@ lint:
 	@echo "Running Verilator lint check..."
 	@verilator --lint-only -Wall \
 		--top-module $(DUT) \
-		$(VERILOG_SOURCES) 2>&1 || echo "Verilator not found. Run in WSL: wsl bash -c \"cd /mnt/c/Users/waele/Documents/Github/claude_verilog_test/sim && make lint\""
+		$(VERILOG_SOURCES) 2>&1 || echo "Verilator not found. Install with: sudo apt-get install verilator, or run from WSL"
 
 clean-basic:
 	@echo "Cleaning simulation artifacts..."
@@ -126,9 +144,29 @@ endif
 all: test
 
 test:
-	@echo "Running cocotb tests with $(SIM)..."
+	@echo "Running all cocotb tests with $(SIM)..."
 	@echo "Note: This should be run in WSL environment"
-	@$(MAKE) sim
+	@echo ""
+	@failed_tests=""; \
+	for module in $(TEST_MODULES); do \
+		echo "========================================"; \
+		echo "Running test: $$module"; \
+		echo "========================================"; \
+		if ! $(MAKE) sim MODULE=$$module; then \
+			failed_tests="$$failed_tests $$module"; \
+		fi; \
+		echo ""; \
+	done; \
+	if [ -n "$$failed_tests" ]; then \
+		echo "========================================"; \
+		echo "FAILED TESTS:$$failed_tests"; \
+		echo "========================================"; \
+		exit 1; \
+	else \
+		echo "========================================"; \
+		echo "ALL TESTS PASSED!"; \
+		echo "========================================"; \
+	fi
 
 waves:
 	@echo "Opening waveform viewer..."
