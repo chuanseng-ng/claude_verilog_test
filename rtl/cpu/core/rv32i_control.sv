@@ -253,8 +253,9 @@ module rv32i_control (
       // RESET
       // ------------------------------------------------------------
       RESET: begin
-        // PC will be initialized to 0x0000_0000
-        pc_wr_en = 1'b1;
+        // PC is already initialized to 0x0000_0000 by reset logic in rv32i_core.sv
+        // Do not update PC here (would increment it to 0x04)
+        pc_wr_en = 1'b0;
         pc_src   = 1'b0;
       end
 

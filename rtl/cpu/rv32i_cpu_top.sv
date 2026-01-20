@@ -180,7 +180,9 @@ module rv32i_cpu_top (
         default: begin
           if (apb_paddr >= 12'h010 && apb_paddr <= 12'h08C && apb_paddr[1:0] == 2'b00) begin
             // Calculate register number from address
-            dbg_reg_rd_addr = apb_paddr[6:2];  // (addr - 0x010) / 4 = addr[6:2] - 4 (but we can just use addr[6:2])
+            // 0x010 -> x0, 0x014 -> x1, etc.
+            // Formula: (addr - 0x010) / 4 = (addr[6:2] - 4)
+            dbg_reg_rd_addr = apb_paddr[6:2] - 5'd4;
             apb_prdata = dbg_reg_rd_data;
           end
           // Breakpoint 0 address (0x100)
@@ -254,7 +256,7 @@ module rv32i_cpu_top (
           default: begin
             if (apb_paddr >= 12'h010 && apb_paddr <= 12'h08C && apb_paddr[1:0] == 2'b00 && dbg_halted) begin
               dbg_reg_wr_en   <= 1'b1;
-              dbg_reg_wr_addr <= apb_paddr[6:2];
+              dbg_reg_wr_addr <= apb_paddr[6:2] - 5'd4;
               dbg_reg_wr_data <= apb_pwdata;
             end
           end
