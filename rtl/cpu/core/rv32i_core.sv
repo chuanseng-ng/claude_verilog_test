@@ -68,6 +68,13 @@ module rv32i_core (
   logic [31:0] pc_reg, pc_next;
   logic        pc_wr_en, pc_src;
 
+  // Instruction PC (PC of the instruction being executed)
+  // This is needed for JAL/JALR to save the correct return address
+  logic [31:0] pc_insn;
+
+  // Fetch address latch (to capture the address being fetched)
+  logic [31:0] fetch_addr;
+
   // Instruction register
   logic [31:0] instruction;
 
@@ -134,8 +141,9 @@ module rv32i_core (
         // JALR: PC = (rs1 + imm) & ~1
         pc_next = (rs1_data + immediate) & 32'hFFFF_FFFE;
       end else begin
-        // JAL or Branch: PC = PC + imm
-        pc_next = pc_reg + immediate;
+        // JAL or Branch: PC = instruction_PC + imm
+        // Use pc_insn (captured at fetch) instead of pc_reg
+        pc_next = pc_insn + immediate;
       end
     end else begin
       // Normal: PC = PC + 4
@@ -158,6 +166,37 @@ module rv32i_core (
       instruction <= 32'h0000_0013;  // NOP (ADDI x0, x0, 0)
     end else if (axi_rvalid && axi_rready) begin
       instruction <= axi_rdata;
+    end
+  end
+
+  // ================================================================
+  // Fetch Address Latch
+  // ================================================================
+  // Latch the address when starting an instruction fetch
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      fetch_addr <= 32'h0000_0000;
+    end else if (axi_arvalid && axi_arready && !data_access) begin
+      // Latch the fetch address when read starts
+      fetch_addr <= axi_araddr;
+    end
+  end
+
+  // ================================================================
+  // Instruction PC Register
+  // ================================================================
+  // Capture the PC when instruction fetch completes
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      pc_insn <= 32'h0000_0000;
+    end else if (axi_rvalid && axi_rready && !data_access) begin
+      // If both AR and R handshakes happen in same cycle, use axi_araddr directly
+      // Otherwise use the latched fetch_addr
+      if (axi_arvalid && axi_arready && !data_access) begin
+        pc_insn <= axi_araddr;
+      end else begin
+        pc_insn <= fetch_addr;
+      end
     end
   end
 
@@ -308,8 +347,8 @@ module rv32i_core (
       // Load instruction
       rd_data = mem_rdata;
     end else if (jump) begin
-      // JAL/JALR: save PC+4
-      rd_data = pc_reg + 32'd4;
+      // JAL/JALR: save PC+4 (use pc_insn which is the instruction's PC)
+      rd_data = pc_insn + 32'd4;
     end else begin
       // ALU result
       rd_data = alu_result;
