@@ -81,7 +81,6 @@ usage info:
 	@echo "Test modules available:"
 	@echo "  test_smoke       - Basic functionality tests"
 	@echo "  test_cpu_basic   - CPU instruction tests"
-	@echo "  test_c_programs  - Compiled C program tests"
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  - Verilator or Icarus Verilog installed"
