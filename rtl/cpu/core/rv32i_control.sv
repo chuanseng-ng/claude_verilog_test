@@ -71,6 +71,10 @@ module rv32i_control (
 
   state_t current_state, next_state;
 
+  // Simple flag: should we take a branch/jump?
+  // Set in EXECUTE, used in WRITEBACK
+  logic take_branch_jump;
+
   // ================================================================
   // State Register
   // ================================================================
@@ -80,6 +84,33 @@ module rv32i_control (
       current_state <= RESET;
     end else begin
       current_state <= next_state;
+    end
+  end
+
+  // ================================================================
+  // Branch/Jump Decision Flag
+  // ================================================================
+  // Simple approach: set a flag in EXECUTE if we should branch/jump
+  // Use it in WRITEBACK for PC update
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      take_branch_jump <= 1'b0;
+    end else begin
+      case (current_state)
+        EXECUTE: begin
+          // Set flag if we should take branch or jump
+          take_branch_jump <= (branch && branch_taken) || jump;
+        end
+        WRITEBACK: begin
+          // Clear flag after use
+          take_branch_jump <= 1'b0;
+        end
+        default: begin
+          // Hold value in other states (e.g., MEM_WAIT)
+          take_branch_jump <= take_branch_jump;
+        end
+      endcase
     end
   end
 
@@ -279,14 +310,9 @@ module rv32i_control (
       // EXECUTE
       // ------------------------------------------------------------
       EXECUTE: begin
-        // Branch/jump decision
-        if (branch && branch_taken) begin
-          pc_src = 1'b1;  // Branch target
-        end else if (jump) begin
-          pc_src = 1'b1;  // Jump target
-        end else begin
-          pc_src = 1'b0;  // PC+4
-        end
+        // Branch/jump decision is latched in pc_src_execute register
+        // and used in WRITEBACK state
+        // (no pc_src setting needed here)
       end
 
       // ------------------------------------------------------------
@@ -317,15 +343,9 @@ module rv32i_control (
         // Commit instruction
         commit_valid = 1'b1;
 
-        // Update PC
+        // Update PC using flag from EXECUTE state
         pc_wr_en = 1'b1;
-        if (branch && branch_taken) begin
-          pc_src = 1'b1;  // Branch target
-        end else if (jump) begin
-          pc_src = 1'b1;  // Jump target
-        end else begin
-          pc_src = 1'b0;  // PC+4
-        end
+        pc_src = take_branch_jump;  // 1 if branch/jump taken, 0 otherwise
       end
 
       // ------------------------------------------------------------
