@@ -164,7 +164,7 @@ module rv32i_core (
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       instruction <= 32'h0000_0013;  // NOP (ADDI x0, x0, 0)
-    end else if (axi_rvalid && axi_rready) begin
+    end else if (axi_rvalid && axi_rready && !data_access) begin
       instruction <= axi_rdata;
     end
   end
