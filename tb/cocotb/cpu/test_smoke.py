@@ -131,6 +131,7 @@ class SimpleAXIMemory:
     def __init__(self, dut):
         self.dut = dut
         self.mem = {}
+        self.read_count = 0
         cocotb.start_soon(self.axi_read_handler())
         cocotb.start_soon(self.axi_write_handler())
 
@@ -143,61 +144,35 @@ class SimpleAXIMemory:
         return self.mem.get(addr & 0xFFFFFFFC, 0)
 
     async def axi_read_handler(self):
-        """Handle AXI read transactions with proper handshaking.
+        """Handle AXI read transactions - simplified sequential version."""
+        while True:
+            await RisingEdge(self.dut.clk)
 
-        Uses concurrent address and data handling to avoid blocking.
-        """
-        pending_reads = Queue()
-        read_count = 0
-
-        async def address_channel():
-            """Handle address channel - accept addresses and queue them."""
-            nonlocal read_count
-            while True:
-                await RisingEdge(self.dut.clk)
-
-                # Accept address when arvalid is asserted
-                if self.dut.axi_arvalid.value == 1:
-                    self.dut.axi_arready.value = 1
-                    addr = int(self.dut.axi_araddr.value)
-                    read_count += 1
-                    if read_count <= 5:  # Log first 5 reads
-                        self.dut._log.info(f"AXI Read #{read_count}: addr=0x{addr:08x}")
-                    # Queue this read request
-                    await pending_reads.put((addr, read_count))
-                else:
-                    self.dut.axi_arready.value = 0
-
-        async def data_channel():
-            """Handle data channel - return data for queued addresses."""
-            while True:
-                # Wait for a pending read
-                addr, count = await pending_reads.get()
-
-                # Fetch data
+            if self.dut.axi_arvalid.value == 1:
+                # Accept address
+                self.dut.axi_arready.value = 1
+                addr = int(self.dut.axi_araddr.value)
                 data = self.read_word(addr)
-                if count <= 5:  # Log first 5 reads
-                    self.dut._log.info(f"AXI Read #{count}: data=0x{data:08x} (from 0x{addr:08x})")
+                self.read_count += 1
 
-                # Present data and wait for rready
+                if self.read_count <= 5:
+                    self.dut._log.info(f"AXI Read #{self.read_count}: addr=0x{addr:08x} data=0x{data:08x}")
+
+                # Provide data on next cycle
+                await RisingEdge(self.dut.clk)
+                self.dut.axi_arready.value = 0
                 self.dut.axi_rvalid.value = 1
                 self.dut.axi_rdata.value = data
                 self.dut.axi_rresp.value = 0
 
-                # Wait for handshake
-                while True:
+                # Wait for rready
+                while self.dut.axi_rready.value == 0:
                     await RisingEdge(self.dut.clk)
-                    if self.dut.axi_rready.value == 1:
-                        self.dut.axi_rvalid.value = 0
-                        break
 
-        # Run both channels concurrently
-        cocotb.start_soon(address_channel())
-        cocotb.start_soon(data_channel())
-
-        # Keep handler alive
-        while True:
-            await RisingEdge(self.dut.clk)
+                await RisingEdge(self.dut.clk)
+                self.dut.axi_rvalid.value = 0
+            else:
+                self.dut.axi_arready.value = 0
 
     async def axi_write_handler(self):
         """Handle AXI write transactions with proper handshaking."""
