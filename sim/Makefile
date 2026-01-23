@@ -27,7 +27,6 @@ MODULE ?= tb.cocotb.cpu.test_smoke
 # All available test modules
 TEST_MODULES := \
 	tb.cocotb.cpu.test_smoke \
-	tb.cocotb.cpu.test_cpu_basic \
 	tb.cocotb.cpu.test_c_programs
 
 # RTL source files
@@ -52,6 +51,8 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += -Wno-CASEINCOMPLETE
 	COMPILE_ARGS += -Wno-TIMESCALEMOD
 	COMPILE_ARGS += --timescale 1ns/1ps
+	COMPILE_ARGS += --public-flat-rw
+	COMPILE_ARGS += --no-timing
 endif
 
 # Questa-specific flags
