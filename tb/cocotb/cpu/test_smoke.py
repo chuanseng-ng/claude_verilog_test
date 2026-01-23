@@ -15,6 +15,7 @@ import asyncio
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from tb.models.rv32i_model import RV32IModel
+from tb.cocotb.common.scoreboard import CPUScoreboard
 
 
 async def reset_dut(dut):
@@ -128,16 +129,20 @@ class APBDebugInterface:
 class SimpleAXIMemory:
     """Simple AXI4-Lite memory model for testing."""
 
-    def __init__(self, dut):
+    def __init__(self, dut, ref_model=None):
         self.dut = dut
         self.mem = {}
         self.read_count = 0
+        self.ref_model = ref_model  # Optional reference model to keep in sync
         cocotb.start_soon(self.axi_read_handler())
         cocotb.start_soon(self.axi_write_handler())
 
     def write_word(self, addr, data):
         """Write 32-bit word to memory."""
         self.mem[addr & 0xFFFFFFFC] = data & 0xFFFFFFFF
+        # Also write to reference model memory if available
+        if self.ref_model is not None:
+            self.ref_model.memory.write(addr & 0xFFFFFFFC, data & 0xFFFFFFFF, 4)
 
     def read_word(self, addr):
         """Read 32-bit word from memory."""
@@ -232,8 +237,16 @@ async def test_fetch_nop(dut):
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
 
+    # Initialize reference model and scoreboard
+    ref_model = RV32IModel()
+    scoreboard = CPUScoreboard(ref_model, log=dut._log)
+
     # Initialize memory
-    mem = SimpleAXIMemory(dut)
+    mem = SimpleAXIMemory(dut, ref_model=ref_model)
+
+    # Start commit monitor with scoreboard
+    commit_count = [0]
+    cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=commit_count))
 
     # Load program: NOP at address 0
     # NOP = ADDI x0, x0, 0 = 0x00000013
@@ -247,22 +260,50 @@ async def test_fetch_nop(dut):
     # Wait for a few instructions to execute
     await ClockCycles(dut.clk, 100)
 
-    # Check that at least one instruction committed
-    # (This is a very basic check - just verify CPU is running)
+    dut._log.info(f"Total commits during test: {commit_count[0]}")
+
+    # Report scoreboard results
+    passed = scoreboard.report()
+    assert passed, "Scoreboard validation failed"
 
     dut._log.info("Fetch NOP test completed")
 
 
-async def monitor_commits(dut, count=[0]):
-    """Monitor instruction commits for debugging."""
+async def monitor_commits(dut, scoreboard=None, count=[0]):
+    """Monitor instruction commits and validate with scoreboard.
+
+    NOTE: Currently performs basic PC/instruction validation only.
+    Full register write validation requires additional RTL signals
+    (commit_rd, commit_rd_we, commit_rd_data) which will be added later.
+    """
     while True:
         await RisingEdge(dut.clk)
         if dut.commit_valid.value == 1:
             count[0] += 1
-            if count[0] <= 10:  # Log first 10 commits
-                pc = int(dut.commit_pc.value)
-                insn = int(dut.commit_insn.value)
+            pc = int(dut.commit_pc.value)
+            insn = int(dut.commit_insn.value)
+
+            # Log first 10 commits
+            if count[0] <= 10:
                 dut._log.info(f"Commit #{count[0]}: PC=0x{pc:08x}, insn=0x{insn:08x}")
+
+            # Validate against scoreboard if provided
+            if scoreboard is not None:
+                # For now, we only check PC and instruction matching
+                # Full validation (rd, rd_value, mem_addr, etc.) requires
+                # additional commit signals from RTL
+                rtl_commit = {
+                    'pc': pc,
+                    'insn': insn,
+                    'rd': None,
+                    'rd_value': None,
+                    'mem_addr': None,
+                    'mem_data': None,
+                    'mem_write': None
+                }
+
+                # Check against scoreboard (basic validation)
+                scoreboard.check_commit(rtl_commit)
 
 
 @cocotb.test()
@@ -274,13 +315,17 @@ async def test_simple_addi(dut):
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
 
+    # Initialize reference model and scoreboard
+    ref_model = RV32IModel()
+    scoreboard = CPUScoreboard(ref_model, log=dut._log)
+
     # Initialize memory and debug interface
-    mem = SimpleAXIMemory(dut)
+    mem = SimpleAXIMemory(dut, ref_model=ref_model)
     dbg = APBDebugInterface(dut)
 
-    # Start commit monitor
+    # Start commit monitor with scoreboard
     commit_count = [0]
-    cocotb.start_soon(monitor_commits(dut, commit_count))
+    cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=commit_count))
 
     # Load program
     # 0x000: ADDI x1, x0, 42  (x1 = 42)
@@ -322,6 +367,11 @@ async def test_simple_addi(dut):
     dut._log.info(f"✓ PC = 0x{pc_val:08x} (expected >= 0x08)")
 
     dut._log.info(f"Total commits during test: {commit_count[0]}")
+
+    # Report scoreboard results
+    passed = scoreboard.report()
+    assert passed, "Scoreboard validation failed"
+
     dut._log.info("Simple ADDI test passed")
 
 
@@ -334,9 +384,17 @@ async def test_branch_not_taken(dut):
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
 
+    # Initialize reference model and scoreboard
+    ref_model = RV32IModel()
+    scoreboard = CPUScoreboard(ref_model, log=dut._log)
+
     # Initialize memory and debug interface
-    mem = SimpleAXIMemory(dut)
+    mem = SimpleAXIMemory(dut, ref_model=ref_model)
     dbg = APBDebugInterface(dut)
+
+    # Start commit monitor with scoreboard
+    commit_count = [0]
+    cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=commit_count))
 
     # Load program
     # 0x000: ADDI x1, x0, 1   (x1 = 1)
@@ -379,6 +437,12 @@ async def test_branch_not_taken(dut):
     assert pc_val >= 0x0C, f"Expected PC >= 0x0C, got PC=0x{pc_val:08x}"
     dut._log.info(f"✓ PC = 0x{pc_val:08x} (expected >= 0x0C)")
 
+    dut._log.info(f"Total commits during test: {commit_count[0]}")
+
+    # Report scoreboard results
+    passed = scoreboard.report()
+    assert passed, "Scoreboard validation failed"
+
     dut._log.info("Branch not taken test passed")
 
 
@@ -391,9 +455,17 @@ async def test_branch_taken(dut):
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
 
+    # Initialize reference model and scoreboard
+    ref_model = RV32IModel()
+    scoreboard = CPUScoreboard(ref_model, log=dut._log)
+
     # Initialize memory and debug interface
-    mem = SimpleAXIMemory(dut)
+    mem = SimpleAXIMemory(dut, ref_model=ref_model)
     dbg = APBDebugInterface(dut)
+
+    # Start commit monitor with scoreboard
+    commit_count = [0]
+    cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=commit_count))
 
     # Load program
     # 0x000: ADDI x1, x0, 1   (x1 = 1)
@@ -443,6 +515,12 @@ async def test_branch_taken(dut):
     assert pc_val >= 0x10, f"Expected PC >= 0x10, got PC=0x{pc_val:08x}"
     dut._log.info(f"✓ PC = 0x{pc_val:08x} (expected >= 0x10)")
 
+    dut._log.info(f"Total commits during test: {commit_count[0]}")
+
+    # Report scoreboard results
+    passed = scoreboard.report()
+    assert passed, "Scoreboard validation failed"
+
     dut._log.info("Branch taken test passed")
 
 
@@ -455,9 +533,17 @@ async def test_jal(dut):
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
 
+    # Initialize reference model and scoreboard
+    ref_model = RV32IModel()
+    scoreboard = CPUScoreboard(ref_model, log=dut._log)
+
     # Initialize memory and debug interface
-    mem = SimpleAXIMemory(dut)
+    mem = SimpleAXIMemory(dut, ref_model=ref_model)
     dbg = APBDebugInterface(dut)
+
+    # Start commit monitor with scoreboard
+    commit_count = [0]
+    cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=commit_count))
 
     # Load program
     # 0x000: JAL x1, 12       (jump to 0x00C, save PC+4 to x1)
@@ -504,6 +590,12 @@ async def test_jal(dut):
     pc_val = await dbg.read_pc()
     assert pc_val >= 0x0C, f"Expected PC >= 0x0C, got PC=0x{pc_val:08x}"
     dut._log.info(f"✓ PC = 0x{pc_val:08x} (expected >= 0x0C)")
+
+    dut._log.info(f"Total commits during test: {commit_count[0]}")
+
+    # Report scoreboard results
+    passed = scoreboard.report()
+    assert passed, "Scoreboard validation failed"
 
     dut._log.info("JAL test passed")
 

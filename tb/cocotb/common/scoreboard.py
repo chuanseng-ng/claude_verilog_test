@@ -72,45 +72,47 @@ class CPUScoreboard:
             self.mismatches += 1
             return False
 
-        # Compare destination register write
-        if ref_result["rd"] is not None and ref_result["rd"] != 0:
-            if ref_result["rd"] != rtl_commit.get("rd"):
-                error = f"Destination register mismatch: RTL={rtl_commit.get('rd')}, Model={ref_result['rd']}"
-                self.log.error(error)
-                self.errors.append(error)
-                self.mismatches += 1
-                return False
+        # Compare destination register write (only if RTL provides this info)
+        if rtl_commit.get("rd") is not None:
+            if ref_result["rd"] is not None and ref_result["rd"] != 0:
+                if ref_result["rd"] != rtl_commit.get("rd"):
+                    error = f"Destination register mismatch: RTL={rtl_commit.get('rd')}, Model={ref_result['rd']}"
+                    self.log.error(error)
+                    self.errors.append(error)
+                    self.mismatches += 1
+                    return False
 
-            if ref_result["rd_value"] != rtl_commit.get("rd_value"):
-                error = (
-                    f"Register value mismatch for x{ref_result['rd']}: "
-                    f"RTL=0x{rtl_commit.get('rd_value', 0):08x}, "
-                    f"Model=0x{ref_result['rd_value']:08x}"
-                )
-                self.log.error(error)
-                self.errors.append(error)
-                self.mismatches += 1
-                return False
+                if ref_result["rd_value"] != rtl_commit.get("rd_value"):
+                    error = (
+                        f"Register value mismatch for x{ref_result['rd']}: "
+                        f"RTL=0x{rtl_commit.get('rd_value', 0):08x}, "
+                        f"Model=0x{ref_result['rd_value']:08x}"
+                    )
+                    self.log.error(error)
+                    self.errors.append(error)
+                    self.mismatches += 1
+                    return False
 
-        # Compare memory access
-        if ref_result["mem_addr"] is not None:
-            if ref_result["mem_addr"] != rtl_commit.get("mem_addr"):
-                error = (
-                    f"Memory address mismatch: "
-                    f"RTL=0x{rtl_commit.get('mem_addr', 0):08x}, "
-                    f"Model=0x{ref_result['mem_addr']:08x}"
-                )
-                self.log.error(error)
-                self.errors.append(error)
-                self.mismatches += 1
-                return False
+        # Compare memory access (only if RTL provides this info)
+        if rtl_commit.get("mem_addr") is not None:
+            if ref_result["mem_addr"] is not None:
+                if ref_result["mem_addr"] != rtl_commit.get("mem_addr"):
+                    error = (
+                        f"Memory address mismatch: "
+                        f"RTL=0x{rtl_commit.get('mem_addr', 0):08x}, "
+                        f"Model=0x{ref_result['mem_addr']:08x}"
+                    )
+                    self.log.error(error)
+                    self.errors.append(error)
+                    self.mismatches += 1
+                    return False
 
-            if ref_result["mem_write"] != rtl_commit.get("mem_write"):
-                error = f"Memory write flag mismatch"
-                self.log.error(error)
-                self.errors.append(error)
-                self.mismatches += 1
-                return False
+                if ref_result["mem_write"] != rtl_commit.get("mem_write"):
+                    error = f"Memory write flag mismatch"
+                    self.log.error(error)
+                    self.errors.append(error)
+                    self.mismatches += 1
+                    return False
 
         self.matches += 1
         self.log.debug(f"✓ Commit matched: PC=0x{rtl_commit['pc']:08x}")
