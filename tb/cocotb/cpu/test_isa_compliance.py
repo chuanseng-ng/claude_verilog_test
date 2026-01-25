@@ -1497,7 +1497,7 @@ async def test_isa_jal(dut):
     # Clear memory at address 0 (from first subtest)
     for addr in range(0, 0x100, 4):
         mem.write_word(addr, 0x00000013)  # Fill with NOPs
-    mem.write_word(0x00000100, 0xFF9FF0EF)  # JAL x2, -8 (jump to 0x100 - 8 = 0xF8)
+    mem.write_word(0x00000100, 0xFF9FF16F)  # JAL x2, -8 (jump to 0x100 - 8 = 0xF8)
     mem.write_word(0x00000104, 0x00000013)  # nop (should be skipped)
     mem.write_word(0x000000F8, 0x00000013)  # nop (jump target)
 
