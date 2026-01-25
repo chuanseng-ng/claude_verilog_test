@@ -126,7 +126,8 @@ Last updated: 2026-01-18
 - ✅ `tb/cocotb/common/scoreboard.py` - RTL vs reference model comparison (130+ lines)
 - ✅ `tb/cocotb/common/clock_reset.py` - Clock and reset utilities
 - ✅ `tb/cocotb/cpu/test_example_counter.py` - Example test (3/3 tests passing)
-- ✅ `tb/cocotb/cpu/test_cpu_basic.py` - CPU test templates
+- ✅ `tb/cocotb/cpu/test_smoke.py` - CPU smoke tests (6/6 tests passing)
+- ✅ `tb/cocotb/cpu/test_isa_compliance.py` - ISA compliance tests (33/37 passing)
 - ✅ Complete documentation (README.md, COCOTB_SETUP_SUMMARY.md)
 
 **Issues Resolved**:

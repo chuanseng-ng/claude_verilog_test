@@ -19,7 +19,8 @@ tb/cocotb/
 │   ├── clock_reset.py          # Clock and reset helpers
 │   └── scoreboard.py           # Reference model comparison
 ├── cpu/                        # CPU testbenches
-│   ├── test_cpu_basic.py       # Basic CPU tests (Phase 1+)
+│   ├── test_smoke.py           # Smoke tests (6 tests, Phase 1)
+│   ├── test_isa_compliance.py  # ISA compliance tests (37 tests, Phase 1)
 │   ├── test_example_counter.py # Example test (works now)
 │   ├── example_counter.sv      # Example RTL module
 │   ├── Makefile                # CPU test makefile (Phase 1+)
@@ -76,8 +77,11 @@ cd tb/cocotb/cpu
 # Run all tests
 make
 
-# Run specific test
-make MODULE=test_cpu_basic TESTCASE=test_simple_add
+# Run specific test module
+make MODULE=test_smoke
+
+# Run specific test within a module
+make MODULE=test_isa_compliance TESTCASE=test_isa_add
 
 # Generate waveforms
 make WAVES=1
@@ -422,8 +426,8 @@ export PYTHONPATH=$PYTHONPATH:/path/to/claude_verilog_test
 ## Next Steps
 
 1. ✅ **Phase 0 Complete**: Infrastructure ready
-2. **Phase 1 Start**: Implement CPU RTL
-3. **Write CPU tests**: Use templates in `test_cpu_basic.py`
+2. ✅ **Phase 1 RTL**: CPU RTL implemented (8/8 modules)
+3. ✅ **Phase 1 Tests**: Smoke tests (6/6 passing), ISA tests (33/37 passing)
 4. **Run verification**: Execute tests with `make`
 5. **Debug**: Use waveforms and scoreboard for debugging
 

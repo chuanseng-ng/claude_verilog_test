@@ -47,8 +47,8 @@ smoke:
 	$(MAKE) MODULE=test_smoke
 
 basic:
-	@echo "Running basic CPU tests..."
-	$(MAKE) MODULE=test_cpu_basic
+	@echo "Running basic CPU tests (smoke tests)..."
+	$(MAKE) MODULE=test_smoke
 
 all_tests: smoke basic
 
@@ -79,8 +79,8 @@ usage info:
 	@echo "  make SIM=icarus smoke   # Use Icarus Verilog"
 	@echo ""
 	@echo "Test modules available:"
-	@echo "  test_smoke       - Basic functionality tests"
-	@echo "  test_cpu_basic   - CPU instruction tests"
+	@echo "  test_smoke           - Basic functionality tests (6 smoke tests)"
+	@echo "  test_isa_compliance  - ISA compliance tests (37 RV32I instructions)"
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  - Verilator or Icarus Verilog installed"
