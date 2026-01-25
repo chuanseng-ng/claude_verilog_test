@@ -71,8 +71,11 @@ module rv32i_control (
 
   state_t current_state, next_state;
 
-  // Simple flag: should we take a branch/jump?
-  // Set in EXECUTE, used in WRITEBACK
+  // Branch/jump decision signals (registered to hold across state transitions)
+  // CRITICAL: Must register the decision in EXECUTE because decoder signals
+  // (branch, jump) are combinational and will change when the instruction
+  // register updates with the next instruction!
+  logic take_branch_jump_reg;
   logic take_branch_jump;
 
   // ================================================================
@@ -88,31 +91,43 @@ module rv32i_control (
   end
 
   // ================================================================
-  // Branch/Jump Decision Flag
+  // Branch/Jump Decision Flag (MUST be registered!)
   // ================================================================
-  // Simple approach: set a flag in EXECUTE if we should branch/jump
-  // Use it in WRITEBACK for PC update
+  // CRITICAL: We MUST register the branch/jump decision at the END of EXECUTE
+  // state because:
+  // 1. In EXECUTE state, decoder outputs are valid for current instruction
+  // 2. When we transition to WRITEBACK (or MEM_WAIT), the instruction register
+  //    latches the NEXT instruction, so decoder outputs change!
+  // 3. If we tried to use branch/jump signals combinationally in WRITEBACK,
+  //    they would reflect the NEXT instruction, not the one we're committing!
 
   always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      take_branch_jump <= 1'b0;
+      take_branch_jump_reg <= 1'b0;
     end else begin
       case (current_state)
         EXECUTE: begin
-          // Set flag if we should take branch or jump
-          take_branch_jump <= (branch && branch_taken) || jump;
+          // Register the decision at END of EXECUTE state
+          // This captures the decision for the CURRENT instruction before
+          // the instruction register updates
+          take_branch_jump_reg <= (branch && branch_taken) || jump;
         end
         WRITEBACK: begin
-          // Clear flag after use
-          take_branch_jump <= 1'b0;
+          // Clear after use
+          take_branch_jump_reg <= 1'b0;
         end
         default: begin
-          // Hold value in other states (e.g., MEM_WAIT)
-          take_branch_jump <= take_branch_jump;
+          // Hold value in other states (MEM_WAIT, etc.)
+          take_branch_jump_reg <= take_branch_jump_reg;
         end
       endcase
     end
   end
+
+  // Output: always use the REGISTERED decision
+  // This ensures we use the decision from the instruction being committed,
+  // not from whatever instruction happens to be in the instruction register
+  assign take_branch_jump = take_branch_jump_reg;
 
   // ================================================================
   // Next State Logic

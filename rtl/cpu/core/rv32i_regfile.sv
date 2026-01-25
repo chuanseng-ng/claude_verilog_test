@@ -1,11 +1,11 @@
 // rv32i_regfile.sv
 // RV32I Register File
-// 32x32-bit general purpose registers with synchronous reads
+// 32x32-bit general purpose registers with combinational reads
 //
 // Specification: PHASE0_ARCHITECTURE_SPEC.md, PHASE1_ARCHITECTURE_SPEC.md
 // - x0 hardwired to zero (per RV32I specification)
 // - x1-x31 initialized to zero on reset
-// - 2 read ports (synchronous)
+// - 2 read ports (combinational for zero-latency access)
 // - 1 write port
 // - Write-enable gating
 
@@ -57,31 +57,23 @@ module rv32i_regfile (
     end
   end
 
-  // Synchronous read port 1
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      rd_data1 <= 32'h0;
+  // Combinational read port 1
+  always_comb begin
+    // x0 always reads as zero
+    if (rd_addr1 == 5'h0) begin
+      rd_data1 = 32'h0;
     end else begin
-      // x0 always reads as zero
-      if (rd_addr1 == 5'h0) begin
-        rd_data1 <= 32'h0;
-      end else begin
-        rd_data1 <= regs[rd_addr1];
-      end
+      rd_data1 = regs[rd_addr1];
     end
   end
 
-  // Synchronous read port 2
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      rd_data2 <= 32'h0;
+  // Combinational read port 2
+  always_comb begin
+    // x0 always reads as zero
+    if (rd_addr2 == 5'h0) begin
+      rd_data2 = 32'h0;
     end else begin
-      // x0 always reads as zero
-      if (rd_addr2 == 5'h0) begin
-        rd_data2 <= 32'h0;
-      end else begin
-        rd_data2 <= regs[rd_addr2];
-      end
+      rd_data2 = regs[rd_addr2];
     end
   end
 

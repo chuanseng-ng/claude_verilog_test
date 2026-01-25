@@ -59,7 +59,15 @@ module rv32i_cpu_top (
   output logic [31:0] commit_pc,
   output logic [31:0] commit_insn,
   output logic        trap_taken,
-  output logic [3:0]  trap_cause
+  output logic [3:0]  trap_cause,
+
+  // Debug outputs for troubleshooting (added for phase 1 verification)
+  output logic [31:0] debug_rs1_data,
+  output logic [31:0] debug_rs2_data,
+  output logic        debug_branch_taken,
+  output logic        debug_take_branch_jump,
+  output logic        debug_pc_src,
+  output logic [3:0]  debug_state
 );
 
   // ================================================================
@@ -144,7 +152,15 @@ module rv32i_cpu_top (
     .commit_pc      (commit_pc),
     .commit_insn    (commit_insn),
     .trap_taken     (trap_taken),
-    .trap_cause     (trap_cause)
+    .trap_cause     (trap_cause),
+
+    // Debug outputs
+    .debug_rs1_data          (debug_rs1_data),
+    .debug_rs2_data          (debug_rs2_data),
+    .debug_branch_taken      (debug_branch_taken),
+    .debug_take_branch_jump  (debug_take_branch_jump),
+    .debug_pc_src            (debug_pc_src),
+    .debug_state             (debug_state)
   );
 
   // ================================================================

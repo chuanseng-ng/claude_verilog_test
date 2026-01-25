@@ -57,7 +57,15 @@ module rv32i_core (
   output logic [31:0] commit_pc,
   output logic [31:0] commit_insn,
   output logic        trap_taken,
-  output logic [3:0]  trap_cause
+  output logic [3:0]  trap_cause,
+
+  // Debug outputs for verification
+  output logic [31:0] debug_rs1_data,
+  output logic [31:0] debug_rs2_data,
+  output logic        debug_branch_taken,
+  output logic        debug_take_branch_jump,
+  output logic        debug_pc_src,
+  output logic [3:0]  debug_state
 );
 
   // ================================================================
@@ -109,6 +117,7 @@ module rv32i_core (
   // Memory interface
   logic [31:0] mem_addr;
   logic [31:0] mem_rdata;
+  logic [31:0] mem_rdata_raw;  // Raw data from AXI (to be latched)
 
   // Control signals
   /* verilator lint_off UNUSEDSIGNAL */
@@ -197,6 +206,22 @@ module rv32i_core (
       end else begin
         pc_insn <= fetch_addr;
       end
+    end
+  end
+
+  // ================================================================
+  // Memory Data Register (Latch AXI read data)
+  // ================================================================
+  // Latch the AXI read data when valid during MEM_WAIT state
+  // This is needed because axi_rdata is only valid during the read
+  // response cycle, but we need it later in WRITEBACK state
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      mem_rdata_raw <= 32'h0;
+    end else if (axi_rvalid && axi_rready && data_access) begin
+      // Latch read data when doing a data access (load)
+      mem_rdata_raw <= axi_rdata;
     end
   end
 
@@ -393,24 +418,25 @@ module rv32i_core (
   end
 
   // Load data extraction and sign extension
+  // Use mem_rdata_raw (latched AXI data) instead of axi_rdata directly
   always_comb begin
     case (mem_size)
       3'b000: begin  // Byte
         case (mem_addr[1:0])
-          2'b00: mem_rdata = mem_unsigned ? {24'h0, axi_rdata[7:0]}   : {{24{axi_rdata[7]}},  axi_rdata[7:0]};
-          2'b01: mem_rdata = mem_unsigned ? {24'h0, axi_rdata[15:8]}  : {{24{axi_rdata[15]}}, axi_rdata[15:8]};
-          2'b10: mem_rdata = mem_unsigned ? {24'h0, axi_rdata[23:16]} : {{24{axi_rdata[23]}}, axi_rdata[23:16]};
-          2'b11: mem_rdata = mem_unsigned ? {24'h0, axi_rdata[31:24]} : {{24{axi_rdata[31]}}, axi_rdata[31:24]};
+          2'b00: mem_rdata = mem_unsigned ? {24'h0, mem_rdata_raw[7:0]}   : {{24{mem_rdata_raw[7]}},  mem_rdata_raw[7:0]};
+          2'b01: mem_rdata = mem_unsigned ? {24'h0, mem_rdata_raw[15:8]}  : {{24{mem_rdata_raw[15]}}, mem_rdata_raw[15:8]};
+          2'b10: mem_rdata = mem_unsigned ? {24'h0, mem_rdata_raw[23:16]} : {{24{mem_rdata_raw[23]}}, mem_rdata_raw[23:16]};
+          2'b11: mem_rdata = mem_unsigned ? {24'h0, mem_rdata_raw[31:24]} : {{24{mem_rdata_raw[31]}}, mem_rdata_raw[31:24]};
         endcase
       end
       3'b001: begin  // Halfword
         case (mem_addr[1])
-          1'b0: mem_rdata = mem_unsigned ? {16'h0, axi_rdata[15:0]}  : {{16{axi_rdata[15]}}, axi_rdata[15:0]};
-          1'b1: mem_rdata = mem_unsigned ? {16'h0, axi_rdata[31:16]} : {{16{axi_rdata[31]}}, axi_rdata[31:16]};
+          1'b0: mem_rdata = mem_unsigned ? {16'h0, mem_rdata_raw[15:0]}  : {{16{mem_rdata_raw[15]}}, mem_rdata_raw[15:0]};
+          1'b1: mem_rdata = mem_unsigned ? {16'h0, mem_rdata_raw[31:16]} : {{16{mem_rdata_raw[31]}}, mem_rdata_raw[31:16]};
         endcase
       end
       3'b010: begin  // Word
-        mem_rdata = axi_rdata;
+        mem_rdata = mem_rdata_raw;
       end
       default: mem_rdata = 32'h0;
     endcase
@@ -424,6 +450,17 @@ module rv32i_core (
   assign commit_pc    = pc_reg;
   assign commit_insn  = instruction;
   assign trap_taken   = trap_valid;
+
+  // ================================================================
+  // Debug Outputs (Verification)
+  // ================================================================
+
+  assign debug_rs1_data          = rs1_data;
+  assign debug_rs2_data          = rs2_data;
+  assign debug_branch_taken      = branch_taken;
+  assign debug_take_branch_jump  = u_control.take_branch_jump_reg;
+  assign debug_pc_src            = pc_src;
+  assign debug_state             = u_control.current_state;
 
 endmodule
 
