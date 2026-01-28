@@ -35,7 +35,8 @@ module rv32i_decode (
 
   // Control signals
   output logic        pc_src,     // 0=PC+4, 1=branch/jump target
-  output logic        illegal     // Illegal instruction flag
+  output logic        illegal,    // Illegal instruction flag
+  output logic        ebreak      // EBREAK instruction (triggers CPU halt)
 );
 
   // Extract instruction fields
@@ -60,6 +61,7 @@ module rv32i_decode (
   localparam [6:0] OP_STORE  = 7'b0100011;
   localparam [6:0] OP_IMM    = 7'b0010011;  // ALU immediate operations
   localparam [6:0] OP_REG    = 7'b0110011;  // ALU register operations
+  localparam [6:0] OP_SYSTEM = 7'b1110011;  // SYSTEM instructions (EBREAK, ECALL)
 
   // Funct3 definitions for branches
   localparam [2:0] FUNCT3_BEQ  = 3'b000;
@@ -129,6 +131,7 @@ module rv32i_decode (
     jalr         = 1'b0;
     pc_src       = 1'b0;
     illegal      = 1'b0;
+    ebreak       = 1'b0;
 
     case (opcode)
       // ================================================================
@@ -403,6 +406,23 @@ module rv32i_decode (
             illegal = 1'b1;
           end
         endcase
+      end
+
+      // ================================================================
+      // SYSTEM - EBREAK instruction
+      // EBREAK: opcode=0b1110011, funct3=0, imm12=1
+      // Encoding: 0x00100073
+      // ================================================================
+      OP_SYSTEM: begin
+        if (funct3 == 3'b000 && instruction[31:20] == 12'h001) begin
+          // EBREAK - trigger CPU halt via debug interface
+          ebreak    = 1'b1;
+          illegal   = 1'b0;
+          // No register write, no memory access
+        end else begin
+          // Other SYSTEM instructions (ECALL, CSR ops) not supported in Phase 1
+          illegal = 1'b1;
+        end
       end
 
       // ================================================================

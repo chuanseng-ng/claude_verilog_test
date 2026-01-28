@@ -14,6 +14,7 @@ module rv32i_control (
   input  logic        mem_wr,          // Memory write
   input  logic        reg_wr_en,       // Register write enable
   input  logic        illegal_insn,    // Illegal instruction from decoder
+  input  logic        ebreak,          // EBREAK instruction (triggers halt)
 
   // Branch comparator
   input  logic        branch_taken,    // Branch condition result
@@ -184,8 +185,11 @@ module rv32i_control (
       // EXECUTE: Execute instruction
       // ------------------------------------------------------------
       EXECUTE: begin
+        // EBREAK halts the CPU
+        if (ebreak) begin
+          next_state = HALTED;
         // Memory operations need to wait for AXI
-        if (mem_rd || mem_wr) begin
+        end else if (mem_rd || mem_wr) begin
           next_state = MEM_WAIT;
         end else begin
           // Non-memory instructions go directly to writeback
