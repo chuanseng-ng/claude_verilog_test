@@ -82,9 +82,9 @@ async def run_single_seed(dut, seed, num_instructions):
     await dbg.apb_write(dbg.DBG_PC, gen.config.instr_mem_base)
     ref_model.pc = gen.config.instr_mem_base
 
-    # Start commit monitor
+    # Start commit monitor (store task handle for cleanup)
     commit_count = [0]
-    cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=commit_count))
+    monitor_task = cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=commit_count))
 
     # Resume CPU
     dut._log.info(f"Seed {seed}: Resuming CPU...")
@@ -103,10 +103,15 @@ async def run_single_seed(dut, seed, num_instructions):
             dut._log.info(f"Seed {seed}: CPU halted after {cycle} cycles")
             break
     else:
+        # Cancel monitor before raising exception
+        monitor_task.kill()
         raise RuntimeError(f"Seed {seed}: CPU did not halt (timeout after {timeout_cycles} cycles)")
 
     # Give scoreboard time to process final commits
     await ClockCycles(dut.clk, 5)
+
+    # Cancel monitor task to prevent orphaned tasks accumulating
+    monitor_task.kill()
 
     # Verify scoreboard
     dut._log.info(f"Seed {seed}: Verifying scoreboard ({commit_count[0]} commits)...")
