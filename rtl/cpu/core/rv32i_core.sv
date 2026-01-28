@@ -65,7 +65,8 @@ module rv32i_core (
   output logic        debug_branch_taken,
   output logic        debug_take_branch_jump,
   output logic        debug_pc_src,
-  output logic [3:0]  debug_state
+  output logic [3:0]  debug_state,
+  output logic        debug_ebreak         // EBREAK signal from decoder
 );
 
   // ================================================================
@@ -98,6 +99,7 @@ module rv32i_core (
   logic        branch, jump, jalr;
   logic [2:0]  branch_op;
   logic        illegal_insn;
+  logic        ebreak;
 
   // Register file signals
   logic [31:0] rs1_data, rs2_data;
@@ -252,7 +254,8 @@ module rv32i_core (
     .jump          (jump),
     .jalr          (jalr),
     .pc_src        (),  // Not used - pc_src computed in control FSM
-    .illegal       (illegal_insn)
+    .illegal       (illegal_insn),
+    .ebreak        (ebreak)
   );
   /* verilator lint_on PINCONNECTEMPTY */
 
@@ -317,6 +320,7 @@ module rv32i_core (
     .mem_wr           (mem_wr),
     .reg_wr_en        (reg_wr_en),
     .illegal_insn     (illegal_insn),
+    .ebreak           (ebreak),
     .branch_taken     (branch_taken),
     .axi_arready      (axi_arready),
     .axi_rvalid       (axi_rvalid),
@@ -461,6 +465,7 @@ module rv32i_core (
   assign debug_take_branch_jump  = u_control.take_branch_jump_reg;
   assign debug_pc_src            = pc_src;
   assign debug_state             = u_control.current_state;
+  assign debug_ebreak            = ebreak;
 
 endmodule
 

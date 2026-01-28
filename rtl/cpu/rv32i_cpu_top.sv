@@ -67,7 +67,8 @@ module rv32i_cpu_top (
   output logic        debug_branch_taken,
   output logic        debug_take_branch_jump,
   output logic        debug_pc_src,
-  output logic [3:0]  debug_state
+  output logic [3:0]  debug_state,
+  output logic        debug_ebreak
 );
 
   // ================================================================
@@ -102,6 +103,7 @@ module rv32i_cpu_top (
   logic [31:0] dbg_bp1_ctrl;      // 0x10C: Breakpoint 1 control
 
   logic        bp0_hit, bp1_hit;
+  logic        ebreak_halt;  // Set when halt caused by EBREAK instruction
 
   // ================================================================
   // CPU Core Instance
@@ -160,7 +162,8 @@ module rv32i_cpu_top (
     .debug_branch_taken      (debug_branch_taken),
     .debug_take_branch_jump  (debug_take_branch_jump),
     .debug_pc_src            (debug_pc_src),
-    .debug_state             (debug_state)
+    .debug_state             (debug_state),
+    .debug_ebreak            (debug_ebreak)
   );
 
   // ================================================================
@@ -298,7 +301,9 @@ module rv32i_cpu_top (
     dbg_status_reg[1] = !dbg_halted;     // Running status
 
     // Halt cause (bits [7:4])
-    if (bp0_hit) begin
+    if (ebreak_halt) begin
+      dbg_status_reg[7:4] = 4'b1000;     // EBREAK instruction
+    end else if (bp0_hit) begin
       dbg_status_reg[7:4] = 4'b0010;     // Breakpoint 0 hit
     end else if (bp1_hit) begin
       dbg_status_reg[7:4] = 4'b0011;     // Breakpoint 1 hit
@@ -318,6 +323,38 @@ module rv32i_cpu_top (
 
   // Breakpoint 1 detection
   assign bp1_hit = dbg_bp1_ctrl[0] && (commit_pc == dbg_bp1_addr);
+
+  // EBREAK halt detection
+  // Detect when EBREAK instruction causes halt
+  //
+  // Note: EBREAK transitions directly from EXECUTE→HALTED, skipping WRITEBACK.
+  // Therefore commit_valid is never asserted for EBREAK.
+  //
+  // Strategy: Use the debug_ebreak signal (from decoder) and register it
+  // when we transition to HALTED state.
+  logic ebreak_caused_halt;
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      ebreak_halt <= 1'b0;
+      ebreak_caused_halt <= 1'b0;
+    end else begin
+      // Latch debug_ebreak when CPU is executing (not halted)
+      // This captures whether the current instruction is EBREAK
+      if (!dbg_halted && debug_ebreak) begin
+        ebreak_caused_halt <= 1'b1;
+      end else if (dbg_halted) begin
+        // When halted, if we captured ebreak, set the flag
+        if (ebreak_caused_halt) begin
+          ebreak_halt <= 1'b1;
+        end
+      end else begin
+        // When running (not halted), clear both flags
+        ebreak_halt <= 1'b0;
+        ebreak_caused_halt <= 1'b0;
+      end
+    end
+  end
 
   // Breakpoint halt logic integrated above (dbg_halt_req triggers on bp0_hit || bp1_hit)
 
