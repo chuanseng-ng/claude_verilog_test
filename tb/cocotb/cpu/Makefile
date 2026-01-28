@@ -40,7 +40,7 @@ endif
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
 # Convenience targets for different test suites
-.PHONY: smoke basic all_tests usage info distclean
+.PHONY: smoke basic random isa ebreak all_tests usage info distclean
 
 smoke:
 	@echo "Running smoke tests..."
@@ -50,7 +50,19 @@ basic:
 	@echo "Running basic CPU tests (smoke tests)..."
 	$(MAKE) MODULE=test_smoke
 
-all_tests: smoke basic
+random:
+	@echo "Running random instruction tests (10,000 instructions)..."
+	$(MAKE) MODULE=test_random_instructions
+
+isa:
+	@echo "Running ISA compliance tests (37 RV32I instructions)..."
+	$(MAKE) MODULE=test_isa_compliance
+
+ebreak:
+	@echo "Running EBREAK halt test..."
+	$(MAKE) MODULE=test_ebreak
+
+all_tests: smoke isa random
 
 # Usage/help target (renamed from 'help' to avoid conflict with cocotb's help)
 usage info:
@@ -63,7 +75,10 @@ usage info:
 	@echo "  make              - Run default tests (smoke)"
 	@echo "  make smoke        - Run smoke tests (quick validation)"
 	@echo "  make basic        - Run basic CPU tests"
-	@echo "  make all_tests    - Run all test suites"
+	@echo "  make random       - Run random instruction tests (10,000 instructions)"
+	@echo "  make isa          - Run ISA compliance tests (37 RV32I instructions)"
+	@echo "  make ebreak       - Run EBREAK halt test"
+	@echo "  make all_tests    - Run all test suites (smoke + isa + random)"
 	@echo "  make clean        - Remove simulation artifacts"
 	@echo "  make distclean    - Deep clean (remove all generated files)"
 	@echo "  make usage        - Show this usage message"
@@ -75,12 +90,15 @@ usage info:
 	@echo ""
 	@echo "Examples:"
 	@echo "  make smoke              # Quick smoke test"
+	@echo "  make random             # Run 10,000 random instructions"
 	@echo "  make MODULE=test_smoke  # Explicitly specify module"
 	@echo "  make SIM=icarus smoke   # Use Icarus Verilog"
 	@echo ""
 	@echo "Test modules available:"
-	@echo "  test_smoke           - Basic functionality tests (6 smoke tests)"
-	@echo "  test_isa_compliance  - ISA compliance tests (37 RV32I instructions)"
+	@echo "  test_smoke                - Basic functionality tests (6 smoke tests)"
+	@echo "  test_isa_compliance       - ISA compliance tests (37 RV32I instructions)"
+	@echo "  test_random_instructions  - Random instruction tests (10,000 instructions)"
+	@echo "  test_ebreak               - EBREAK halt detection test"
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  - Verilator or Icarus Verilog installed"
