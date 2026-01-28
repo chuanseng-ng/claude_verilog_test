@@ -121,6 +121,11 @@ class APBDebugInterface:
         addr = self.DBG_GPR_BASE + (reg_num * 4)
         return await self.apb_read(addr)
 
+    async def write_gpr(self, reg_num, value):
+        """Write general purpose register x[reg_num]."""
+        addr = self.DBG_GPR_BASE + (reg_num * 4)
+        await self.apb_write(addr, value)
+
     async def read_pc(self):
         """Read program counter."""
         return await self.apb_read(self.DBG_PC)
