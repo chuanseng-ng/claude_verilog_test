@@ -74,6 +74,20 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 | Document | Purpose |
 | :------- | :------ |
 | `docs/verification/VERIFICATION_PLAN.md` | Verification strategy (RTL + physical design) |
+| `TODO_PHASE1_VERIFICATION.md` | Phase 1 verification progress tracking |
+| `docs/RANDOM_TESTS_STATUS.md` | Random instruction test results and guide |
+
+### RTL Fixes & Debugging
+
+| Document | Purpose |
+| :------- | :------ |
+| `fixes/FIXES_INDEX.md` | ⭐ **Central reference for all RTL bug fixes** |
+| `fixes/README.md` | Fixes directory guide and navigation |
+| `fixes/CRITICAL_FIXES.md` | Critical AXI protocol fixes (2026-01-19) |
+| `fixes/RTL_BUG_FIXES.md` | Branch/jump/memory fixes (2026-01-24) |
+| `CLEANUP_SUMMARY.md` | Documentation organization summary |
+
+**Note**: All RTL bugs discovered during development are documented in `fixes/` with full analysis, impact assessment, and validation. Start with `fixes/FIXES_INDEX.md` for quick reference.
 
 ## Frequently Used Commands
 
