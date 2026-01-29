@@ -276,9 +276,139 @@ async def test_isa_beq(dut):
 
 ---
 
-### Task 4: AXI4-Lite Protocol Tests (NOT STARTED)
+### Task 3.5: Random Test Enhancements (NOT STARTED - OPTIONAL)
 
-**Priority**: MEDIUM
+**Priority**: 🟡 OPTIONAL - Improves test coverage and infrastructure
+
+**Goal**: Enhance random instruction testing with additional coverage and infrastructure improvements
+
+**What to implement**:
+
+#### Potential Enhancements (from RANDOM_TESTS_STATUS.md)
+
+1. **Increase test coverage**:
+   - Current: 100 seeds × 100 instructions = 10,000 total
+   - Target: 1,000 seeds × 100 instructions = 100,000 total
+   - Or: 100 seeds × 1,000 instructions = 100,000 total
+   - Benefit: 10× increase in instruction coverage
+
+2. **Add stress tests**:
+   - Memory-intensive programs (many loads/stores)
+   - Deep branch nesting (nested if-else chains)
+   - Jump-heavy sequences (function call simulation)
+   - Register pressure tests (use all 31 registers)
+   - Benefit: Tests corner cases and complex scenarios
+
+3. **Performance benchmarks**:
+   - Measure IPC (instructions per cycle)
+   - Measure CPI (cycles per instruction) for each instruction type
+   - Track execution statistics
+   - Generate performance reports
+   - Benefit: Quantify CPU performance characteristics
+
+4. **Coverage analysis**:
+   - Track which instruction combinations are tested
+   - Track instruction pair frequencies (e.g., ADD→BEQ)
+   - Identify untested combinations
+   - Generate coverage reports
+   - Benefit: Ensure comprehensive instruction interaction testing
+
+5. **Directed random tests**:
+   - Bias toward specific instruction types (e.g., 50% branches)
+   - Create load/store focused test sequences
+   - Create ALU-intensive test sequences
+   - Configurable instruction distribution
+   - Benefit: Targeted testing of specific subsystems
+
+#### Test Infrastructure Improvements
+
+1. **Parallel execution**:
+   - Run multiple seeds in parallel using Python multiprocessing
+   - Reduce test time from ~95s to ~20s (assuming 5 parallel workers)
+   - File: `tb/cocotb/cpu/test_random_parallel.py`
+   - Benefit: Faster test execution
+
+2. **Test result database**:
+   - Track historical pass/fail rates per seed
+   - Store test results in SQLite database
+   - Generate trend reports
+   - File: `tb/common/test_database.py`
+   - Benefit: Track test stability over time
+
+3. **Automatic regression**:
+   - Integrate into CI/CD pipeline (GitHub Actions)
+   - Run on every commit to main branch
+   - Automatic failure notifications
+   - File: `.github/workflows/random_tests.yml`
+   - Benefit: Catch regressions immediately
+
+4. **Waveform capture**:
+   - Automatically save VCD for failing seeds
+   - Upload waveforms to artifacts
+   - Easy debugging of failures
+   - Modification to: `tb/cocotb/cpu/test_random_instructions.py`
+   - Benefit: Faster failure debugging
+
+#### Next Steps (from RANDOM_TESTS_STATUS.md)
+
+1. ✅ Integrate into CI/CD pipeline (optional)
+2. ✅ Add to regular regression suite (optional)
+3. ✅ Document in verification plan (optional)
+4. ⚠️ **Consider increasing to 100,000+ instructions** (recommended)
+
+#### Implementation Priority
+
+**High Priority** (Recommended):
+- Increase test coverage to 100,000 instructions (1 hour implementation)
+- Add waveform capture for failing seeds (30 mins)
+
+**Medium Priority** (Nice to have):
+- Directed random tests (2 hours)
+- Stress tests (2 hours)
+
+**Low Priority** (Optional enhancements):
+- Performance benchmarks (3 hours)
+- Coverage analysis (4 hours)
+- Parallel execution (2 hours)
+- Test result database (3 hours)
+- CI/CD integration (2 hours)
+
+#### Files to Create/Modify
+
+**New Files**:
+- `tb/generators/stress_test_gen.py` - Stress test generator
+- `tb/generators/directed_random_gen.py` - Directed random generator
+- `tb/cocotb/cpu/test_random_parallel.py` - Parallel test runner
+- `tb/common/test_database.py` - Result tracking database
+- `tb/common/coverage_tracker.py` - Instruction combination tracker
+- `.github/workflows/random_tests.yml` - CI/CD integration
+
+**Modified Files**:
+- `tb/cocotb/cpu/test_random_instructions.py` - Add waveform capture, increase seeds
+- `tb/generators/rv32i_instr_gen.py` - Add directed random support
+- `sim/Makefile` - Add targets for parallel/stress tests
+
+#### Success Criteria
+
+**Minimum** (Quick wins):
+- ✅ 100,000 instructions tested, 0 failures
+- ✅ Waveform capture on failures working
+
+**Full Implementation**:
+- ✅ All enhancements implemented
+- ✅ All infrastructure improvements working
+- ✅ CI/CD integrated
+- ✅ Performance reports generated
+
+**Estimated Effort**: 1-2 weeks (optional, not blocking Phase 1)
+
+**Note**: This task is **OPTIONAL** and not required for Phase 1 completion. Task 3 (10,000 instructions, 0 failures) already meets the Phase 1 exit criterion. These enhancements improve robustness but are not blocking.
+
+---
+
+### Task 4: AXI4-Lite Protocol Tests (NOT STARTED - NEXT PRIORITY)
+
+**Priority**: HIGH - Phase 1 Exit Criterion #5
 
 **Goal**: Validate AXI4-Lite master protocol compliance
 
@@ -510,6 +640,7 @@ async def test_isa_beq(dut):
 
 ### Week 2: Comprehensive Testing ✅ MOSTLY COMPLETE
 3. ✅ **Task 3** - Random instruction generator (COMPLETE - 2026-01-28, 10k+ instructions) 🎉
+3.5. ⏸️ **Task 3.5** - Random test enhancements (OPTIONAL - Not blocking Phase 1)
 4. ⏳ **Task 4** - AXI protocol tests **← START HERE**
 
 ### Week 3: Completion (CURRENT FOCUS)
@@ -518,12 +649,20 @@ async def test_isa_beq(dut):
 7. ⏳ **Task 7** - Documentation updates
 
 **Total Estimated Effort**: ~1 week remaining (4-6 sessions)
+**Optional Enhancements**: Task 3.5 (1-2 weeks, not blocking)
 
 ---
 
 ## 🚀 QUICK START FOR NEXT SESSION
 
-### ✅ Task 3 Complete! Now Starting Task 4: AXI4-Lite Protocol Tests
+### ✅ Task 3 Complete!
+
+**Recommended**: Start Task 4 (AXI4-Lite Protocol Tests) - Required for Phase 1
+**Optional**: Task 3.5 (Random Test Enhancements) - Improves coverage but not blocking
+
+---
+
+### Task 4: AXI4-Lite Protocol Tests (RECOMMENDED - START HERE)
 
 **Goal**: Validate AXI4-Lite master protocol compliance
 
@@ -574,9 +713,41 @@ async def test_isa_beq(dut):
 ### To Start Task 4 (AXI Protocol Tests):
 
 1. **Review AXI4-Lite protocol**: Check `docs/design/RTL_DEFINITION.md` for signal definitions
-2. **Create test file**: `tb/cocotb/cpu/test_axi_protocol.py`
-3. **Implement configurable memory model** with back-pressure and error injection
-4. **Write protocol compliance tests**
+2. **Read implementation plan**: `TASK4_AXI_PROTOCOL_TESTS_PLAN.md` (comprehensive guide)
+3. **Create test file**: `tb/cocotb/cpu/test_axi_protocol.py`
+4. **Implement configurable memory model** with back-pressure and error injection
+5. **Write protocol compliance tests**
+
+---
+
+### Task 3.5: Random Test Enhancements (OPTIONAL - NOT BLOCKING)
+
+**Status**: Optional enhancements to improve test coverage beyond Phase 1 requirements
+
+**Quick Wins** (Recommended if time permits):
+1. **Increase to 100,000 instructions** (1 hour):
+   ```python
+   # In test_random_instructions.py
+   NUM_SEEDS = 1000  # or 100 with 1000 instructions each
+   ```
+
+2. **Add waveform capture for failures** (30 mins):
+   ```python
+   # Save VCD when seed fails
+   if not passed:
+       dut._log.info(f"Saving waveform for seed {seed}")
+       # VCD capture logic
+   ```
+
+**Full Enhancements** (See Task 3.5 details above):
+- Stress tests (memory-intensive, deep branches)
+- Performance benchmarks (IPC, CPI measurement)
+- Coverage analysis (instruction pair tracking)
+- Directed random tests (biased instruction distribution)
+- Parallel execution
+- CI/CD integration
+
+**Note**: These are **OPTIONAL**. Task 3 (10,000 instructions) already meets Phase 1 exit criteria.
 
 ---
 
