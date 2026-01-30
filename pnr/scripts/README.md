@@ -11,9 +11,9 @@ This directory contains TCL scripts for each stage of the OpenROAD physical desi
 | 03_place.tcl | Placement | OpenROAD | Cell placement |
 | 04_cts.tcl | CTS | TritonCTS | Clock tree synthesis |
 | 05_route.tcl | Routing | TritonRoute | Wire routing |
-| 06_parasitics.tcl | Extraction | OpenRCX | RC extraction |
-| 07_sta.tcl | Timing | OpenSTA | Static timing analysis |
-| 08_power.tcl | Power | OpenROAD | Power analysis |
+| 06_sta.tcl | Timing | OpenSTA | Static timing analysis (post-route) |
+| 07_power.tcl | Power | OpenROAD | Power analysis |
+| 08_verify.tcl | Verification | KLayout | Physical verification (DRC/LVS) |
 
 ## Usage
 
