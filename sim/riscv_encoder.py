@@ -122,6 +122,74 @@ def AUIPC(rd, imm20):
     """AUIPC rd, imm20"""
     return encode_u_type(imm20, rd, 0b0010111)
 
+# Load instructions (I-type, opcode=0b0000011)
+def LB(rd, rs1, imm12):
+    """LB rd, imm12(rs1) - Load byte (sign-extended)"""
+    return encode_i_type(imm12, rs1, 0b000, rd, 0b0000011)
+
+def LH(rd, rs1, imm12):
+    """LH rd, imm12(rs1) - Load halfword (sign-extended)"""
+    return encode_i_type(imm12, rs1, 0b001, rd, 0b0000011)
+
+def LW(rd, rs1, imm12):
+    """LW rd, imm12(rs1) - Load word"""
+    return encode_i_type(imm12, rs1, 0b010, rd, 0b0000011)
+
+def LBU(rd, rs1, imm12):
+    """LBU rd, imm12(rs1) - Load byte unsigned"""
+    return encode_i_type(imm12, rs1, 0b100, rd, 0b0000011)
+
+def LHU(rd, rs1, imm12):
+    """LHU rd, imm12(rs1) - Load halfword unsigned"""
+    return encode_i_type(imm12, rs1, 0b101, rd, 0b0000011)
+
+# Store instructions (S-type, opcode=0b0100011)
+def SB(rs2, rs1, imm12):
+    """SB rs2, imm12(rs1) - Store byte"""
+    return encode_s_type(imm12, rs2, rs1, 0b000, 0b0100011)
+
+def SH(rs2, rs1, imm12):
+    """SH rs2, imm12(rs1) - Store halfword"""
+    return encode_s_type(imm12, rs2, rs1, 0b001, 0b0100011)
+
+def SW(rs2, rs1, imm12):
+    """SW rs2, imm12(rs1) - Store word"""
+    return encode_s_type(imm12, rs2, rs1, 0b010, 0b0100011)
+
+# Branch instructions (B-type, opcode=0b1100011)
+def BEQ(rs1, rs2, imm13):
+    """BEQ rs1, rs2, imm13 - Branch if equal"""
+    return encode_b_type(imm13, rs2, rs1, 0b000, 0b1100011)
+
+def BNE(rs1, rs2, imm13):
+    """BNE rs1, rs2, imm13 - Branch if not equal"""
+    return encode_b_type(imm13, rs2, rs1, 0b001, 0b1100011)
+
+def BLT(rs1, rs2, imm13):
+    """BLT rs1, rs2, imm13 - Branch if less than (signed)"""
+    return encode_b_type(imm13, rs2, rs1, 0b100, 0b1100011)
+
+def BGE(rs1, rs2, imm13):
+    """BGE rs1, rs2, imm13 - Branch if greater or equal (signed)"""
+    return encode_b_type(imm13, rs2, rs1, 0b101, 0b1100011)
+
+def BLTU(rs1, rs2, imm13):
+    """BLTU rs1, rs2, imm13 - Branch if less than (unsigned)"""
+    return encode_b_type(imm13, rs2, rs1, 0b110, 0b1100011)
+
+def BGEU(rs1, rs2, imm13):
+    """BGEU rs1, rs2, imm13 - Branch if greater or equal (unsigned)"""
+    return encode_b_type(imm13, rs2, rs1, 0b111, 0b1100011)
+
+# Jump instructions
+def JAL(rd, imm21):
+    """JAL rd, imm21 - Jump and link"""
+    return encode_j_type(imm21, rd, 0b1101111)
+
+def JALR(rd, rs1, imm12):
+    """JALR rd, rs1, imm12 - Jump and link register"""
+    return encode_i_type(imm12, rs1, 0b000, rd, 0b1100111)
+
 # Print test cases for verification
 if __name__ == "__main__":
     print("R-Type Instruction Encodings:")
