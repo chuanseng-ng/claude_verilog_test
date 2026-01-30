@@ -138,18 +138,25 @@ async def test_random_instructions_multi_seed(dut):
     # Configuration
     NUM_SEEDS = 100
     INSTRUCTIONS_PER_SEED = 100
+    SEED_MIN = 0
+    SEED_MAX = 1000000  # Match generator's default range
 
     # Track results
     passing_seeds = []
     failing_seeds = []
 
+    # Generate random seeds (unique within the range)
+    import random
+    random_seeds = random.sample(range(SEED_MIN, SEED_MAX), NUM_SEEDS)
+
     dut._log.info("="*70)
     dut._log.info(f"RANDOM INSTRUCTION TEST: {NUM_SEEDS} seeds × {INSTRUCTIONS_PER_SEED} instructions")
+    dut._log.info(f"Seed range: {SEED_MIN} to {SEED_MAX}")
     dut._log.info("="*70)
 
-    for seed in range(NUM_SEEDS):
+    for i, seed in enumerate(random_seeds):
         dut._log.info("="*70)
-        dut._log.info(f"Running seed {seed+1}/{NUM_SEEDS} (seed={seed})")
+        dut._log.info(f"Running seed {i+1}/{NUM_SEEDS} (seed={seed})")
         dut._log.info("="*70)
 
         try:
