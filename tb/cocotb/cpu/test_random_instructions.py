@@ -4,7 +4,7 @@ Executes 10,000+ random instructions with scoreboard validation.
 """
 
 import cocotb
-from cocotb.triggers import RisingEdge, ClockCycles, ReadOnly
+from cocotb.triggers import RisingEdge, ClockCycles
 from cocotb.clock import Clock
 import sys
 import os
@@ -23,7 +23,7 @@ from tb.cocotb.cpu.test_smoke import (
 )
 
 
-async def run_single_seed(dut, seed, num_instructions):
+async def run_single_seed(dut, seed, num_instructions, mem=None):
     """
     Run a single random instruction test with given seed.
 
@@ -41,6 +41,7 @@ async def run_single_seed(dut, seed, num_instructions):
         dut: Device under test
         seed: Random seed for reproducibility
         num_instructions: Number of instructions to generate
+        mem: Optional SimpleAXIMemory instance to reuse (avoids spawning duplicate handlers)
 
     Raises:
         RuntimeError: If timeout or scoreboard validation fails
@@ -56,8 +57,14 @@ async def run_single_seed(dut, seed, num_instructions):
     ref_model = RV32IModel()
     scoreboard = CPUScoreboard(ref_model, log=dut._log)
 
-    # Initialize memory (syncs with reference model)
-    mem = SimpleAXIMemory(dut, ref_model=ref_model)
+    # Initialize or reset memory (syncs with reference model)
+    if mem is None:
+        # Create new memory instance (first call or single-seed test)
+        mem = SimpleAXIMemory(dut, ref_model=ref_model)
+    else:
+        # Reuse existing memory, reset state for new seed
+        mem.mem.clear()  # Clear memory buffer
+        mem.ref_model = ref_model  # Update reference model
 
     # Load program into memory
     dut._log.info(f"Seed {seed}: Loading {len(program)} instructions into memory...")
@@ -154,14 +161,19 @@ async def test_random_instructions_multi_seed(dut):
     dut._log.info(f"Seed range: {SEED_MIN} to {SEED_MAX}")
     dut._log.info("="*70)
 
+    # Create single SimpleAXIMemory instance (reused across all seeds to avoid spawning duplicate handlers)
+    # Initial ref_model will be replaced per seed
+    initial_ref_model = RV32IModel()
+    shared_mem = SimpleAXIMemory(dut, ref_model=initial_ref_model)
+
     for i, seed in enumerate(random_seeds):
         dut._log.info("="*70)
         dut._log.info(f"Running seed {i+1}/{NUM_SEEDS} (seed={seed})")
         dut._log.info("="*70)
 
         try:
-            # Run single seed test
-            await run_single_seed(dut, seed, INSTRUCTIONS_PER_SEED)
+            # Run single seed test with shared memory instance
+            await run_single_seed(dut, seed, INSTRUCTIONS_PER_SEED, mem=shared_mem)
             passing_seeds.append(seed)
 
         except Exception as e:
@@ -186,8 +198,8 @@ async def test_random_instructions_multi_seed(dut):
         # Write failing seeds to file for regression
         failing_seeds_file = Path(__file__).parent.parent.parent.parent / "failing_seeds.txt"
         with open(failing_seeds_file, "w") as f:
-            f.write(f"# Failing seeds from random instruction test\n")
-            f.write(f"# Re-run with: RANDOM_SEED=<seed> make test TEST_MODULE=tb.cocotb.cpu.test_random_instructions TEST=test_random_instructions_single_seed\n\n")
+            f.write("# Failing seeds from random instruction test\n")
+            f.write("# Re-run with: RANDOM_SEED=<seed> make test TEST_MODULE=tb.cocotb.cpu.test_random_instructions TEST=test_random_instructions_single_seed\n\n")
             for seed, error in failing_seeds:
                 f.write(f"{seed}  # {error}\n")
 
