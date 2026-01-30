@@ -87,6 +87,12 @@ module rv32i_control (
   localparam [3:0] TRAP_STORE_MISALIGNED   = 4'b0110;  // Store address misaligned (RISC-V cause 6)
   logic [3:0] trap_cause_reg;
 
+  // AXI transaction issued flags (prevent retriggering transactions)
+  // These track whether each phase of an AXI transaction has been issued
+  logic ar_issued;  // Read address issued (arvalid && arready handshake completed)
+  logic aw_issued;  // Write address issued (awvalid && awready handshake completed)
+  logic w_issued;   // Write data issued (wvalid && wready handshake completed)
+
   // ================================================================
   // State Register
   // ================================================================
@@ -162,6 +168,53 @@ module rv32i_control (
         end else begin
           trap_cause_reg <= TRAP_ILLEGAL_INSN;  // Default to illegal instruction
         end
+      end
+    end
+  end
+
+  // ================================================================
+  // AXI Transaction Issued Flags
+  // ================================================================
+  // Track AXI handshake completion to prevent retriggering transactions
+  // Each flag is set when the handshake completes and cleared when leaving the state
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      ar_issued <= 1'b0;
+      aw_issued <= 1'b0;
+      w_issued  <= 1'b0;
+    end else begin
+      // Read address channel
+      if (current_state == FETCH || current_state == MEM_WAIT) begin
+        // Set flag when handshake completes
+        if (axi_arvalid && axi_arready) begin
+          ar_issued <= 1'b1;
+        end
+      end else begin
+        // Clear flag when leaving FETCH or MEM_WAIT state
+        ar_issued <= 1'b0;
+      end
+
+      // Write address channel
+      if (current_state == MEM_WAIT) begin
+        // Set flag when handshake completes
+        if (axi_awvalid && axi_awready) begin
+          aw_issued <= 1'b1;
+        end
+      end else begin
+        // Clear flag when leaving MEM_WAIT state
+        aw_issued <= 1'b0;
+      end
+
+      // Write data channel
+      if (current_state == MEM_WAIT) begin
+        // Set flag when handshake completes
+        if (axi_wvalid && axi_wready) begin
+          w_issued <= 1'b1;
+        end
+      end else begin
+        // Clear flag when leaving MEM_WAIT state
+        w_issued <= 1'b0;
       end
     end
   end
@@ -353,8 +406,9 @@ module rv32i_control (
       // ------------------------------------------------------------
       FETCH: begin
         // Initiate AXI read transaction for instruction fetch
-        axi_arvalid = 1'b1;
-        axi_rready  = 1'b1;  // Ready to accept read data
+        // Only assert arvalid if we haven't issued the read address yet
+        axi_arvalid = !ar_issued;
+        axi_rready  = 1'b1;  // Always ready to accept read data
       end
 
       // ------------------------------------------------------------
@@ -383,13 +437,15 @@ module rv32i_control (
         // (This should never be reached since we trap in EXECUTE for misaligned accesses)
         if (mem_rd && !misaligned_load) begin
           // Load: initiate read
-          axi_arvalid = 1'b1;
-          axi_rready  = 1'b1;
+          // Only assert arvalid if we haven't issued the read address yet
+          axi_arvalid = !ar_issued;
+          axi_rready  = 1'b1;  // Always ready to accept read data
         end else if (mem_wr && !misaligned_store) begin
           // Store: initiate write
-          axi_awvalid = 1'b1;
-          axi_wvalid  = 1'b1;
-          axi_bready  = 1'b1;
+          // Only assert awvalid/wvalid if we haven't issued them yet
+          axi_awvalid = !aw_issued;
+          axi_wvalid  = !w_issued;
+          axi_bready  = 1'b1;  // Always ready to accept write response
         end
       end
 
