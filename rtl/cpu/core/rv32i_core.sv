@@ -128,6 +128,8 @@ module rv32i_core (
   logic        commit_valid_int;
   logic        trap_valid;
   logic        data_access;  // Data access mode (vs instruction fetch)
+  logic        misaligned_load;   // Misaligned load detected
+  logic        misaligned_store;  // Misaligned store detected
 
   // ================================================================
   // Program Counter
@@ -321,6 +323,8 @@ module rv32i_core (
     .reg_wr_en        (reg_wr_en),
     .illegal_insn     (illegal_insn),
     .ebreak           (ebreak),
+    .misaligned_load  (misaligned_load),
+    .misaligned_store (misaligned_store),
     .branch_taken     (branch_taken),
     .axi_arready      (axi_arready),
     .axi_rvalid       (axi_rvalid),
@@ -444,6 +448,40 @@ module rv32i_core (
       end
       default: mem_rdata = 32'h0;
     endcase
+  end
+
+  // ================================================================
+  // Memory Alignment Checking
+  // ================================================================
+  // Check for misaligned memory accesses based on mem_size and mem_addr
+  // RISC-V requires natural alignment:
+  // - Byte (mem_size=000): No alignment requirement
+  // - Halfword (mem_size=001): addr[0] must be 0
+  // - Word (mem_size=010): addr[1:0] must be 00
+
+  always_comb begin
+    // Default: no misalignment
+    misaligned_load = 1'b0;
+    misaligned_store = 1'b0;
+
+    // Check alignment only for active memory operations
+    if (mem_rd) begin
+      case (mem_size)
+        3'b000: misaligned_load = 1'b0;  // Byte: always aligned
+        3'b001: misaligned_load = mem_addr[0];  // Halfword: addr[0] must be 0
+        3'b010: misaligned_load = |mem_addr[1:0];  // Word: addr[1:0] must be 00
+        default: misaligned_load = 1'b0;
+      endcase
+    end
+
+    if (mem_wr) begin
+      case (mem_size)
+        3'b000: misaligned_store = 1'b0;  // Byte: always aligned
+        3'b001: misaligned_store = mem_addr[0];  // Halfword: addr[0] must be 0
+        3'b010: misaligned_store = |mem_addr[1:0];  // Word: addr[1:0] must be 00
+        default: misaligned_store = 1'b0;
+      endcase
+    end
   end
 
   // ================================================================

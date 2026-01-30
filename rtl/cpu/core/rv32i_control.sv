@@ -15,6 +15,8 @@ module rv32i_control (
   input  logic        reg_wr_en,       // Register write enable
   input  logic        illegal_insn,    // Illegal instruction from decoder
   input  logic        ebreak,          // EBREAK instruction (triggers halt)
+  input  logic        misaligned_load, // Misaligned load address
+  input  logic        misaligned_store,// Misaligned store address
 
   // Branch comparator
   input  logic        branch_taken,    // Branch condition result
@@ -79,6 +81,12 @@ module rv32i_control (
   logic take_branch_jump_reg;
   logic take_branch_jump;
 
+  // Trap cause tracking (RISC-V standard encoding)
+  localparam [3:0] TRAP_ILLEGAL_INSN       = 4'b0010;  // Illegal instruction (RISC-V cause 2)
+  localparam [3:0] TRAP_LOAD_MISALIGNED    = 4'b0100;  // Load address misaligned (RISC-V cause 4)
+  localparam [3:0] TRAP_STORE_MISALIGNED   = 4'b0110;  // Store address misaligned (RISC-V cause 6)
+  logic [3:0] trap_cause_reg;
+
   // ================================================================
   // State Register
   // ================================================================
@@ -129,6 +137,34 @@ module rv32i_control (
   // This ensures we use the decision from the instruction being committed,
   // not from whatever instruction happens to be in the instruction register
   assign take_branch_jump = take_branch_jump_reg;
+
+  // ================================================================
+  // Trap Cause Register
+  // ================================================================
+  // Register trap cause when entering TRAP state to preserve it across cycles
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      trap_cause_reg <= 4'b0000;
+    end else begin
+      // Capture trap cause when entering TRAP state
+      if (next_state == TRAP && current_state != TRAP) begin
+        // Priority: misalignment > illegal instruction > AXI error
+        if (misaligned_load) begin
+          trap_cause_reg <= TRAP_LOAD_MISALIGNED;
+        end else if (misaligned_store) begin
+          trap_cause_reg <= TRAP_STORE_MISALIGNED;
+        end else if (illegal_insn) begin
+          trap_cause_reg <= TRAP_ILLEGAL_INSN;
+        end else if ((current_state == FETCH || current_state == MEM_WAIT) &&
+                     ((axi_rvalid && axi_rresp != 2'b00) || (axi_bvalid && axi_bresp != 2'b00))) begin
+          trap_cause_reg <= TRAP_ILLEGAL_INSN;  // AXI error -> treat as illegal instruction
+        end else begin
+          trap_cause_reg <= TRAP_ILLEGAL_INSN;  // Default to illegal instruction
+        end
+      end
+    end
+  end
 
   // ================================================================
   // Next State Logic
@@ -188,6 +224,9 @@ module rv32i_control (
         // EBREAK halts the CPU
         if (ebreak) begin
           next_state = HALTED;
+        // Check for misaligned memory access
+        end else if (misaligned_load || misaligned_store) begin
+          next_state = TRAP;
         // Memory operations need to wait for AXI
         end else if (mem_rd || mem_wr) begin
           next_state = MEM_WAIT;
@@ -340,11 +379,13 @@ module rv32i_control (
       MEM_WAIT: begin
         data_access = 1'b1;  // Data access mode (not instruction fetch)
 
-        if (mem_rd) begin
+        // Defensive: only issue AXI requests if access is properly aligned
+        // (This should never be reached since we trap in EXECUTE for misaligned accesses)
+        if (mem_rd && !misaligned_load) begin
           // Load: initiate read
           axi_arvalid = 1'b1;
           axi_rready  = 1'b1;
-        end else if (mem_wr) begin
+        end else if (mem_wr && !misaligned_store) begin
           // Store: initiate write
           axi_awvalid = 1'b1;
           axi_wvalid  = 1'b1;
@@ -372,7 +413,7 @@ module rv32i_control (
       // ------------------------------------------------------------
       TRAP: begin
         trap_valid = 1'b1;
-        trap_cause = 4'b0001;  // Illegal instruction
+        trap_cause = trap_cause_reg;  // Use registered trap cause
 
         // Update PC to trap vector (0x0000_0000 in Phase 1)
         pc_wr_en = 1'b1;
