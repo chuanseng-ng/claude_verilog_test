@@ -189,11 +189,13 @@ python -c "import sys; print(sys.path)"
 
 2. **Explore examples**:
    - Look at `test_example_counter.py` for basic cocotb structure
-   - Look at `test_cpu_basic.py` for CPU test templates
+   - Look at `test_smoke.py` for CPU smoke tests
+   - Look at `test_isa_compliance.py` for comprehensive ISA testing
 
-3. **Wait for Phase 1 RTL**:
-   - CPU tests will run once RTL is implemented
-   - Templates are ready in `test_cpu_basic.py`
+3. **Phase 1 RTL Complete**:
+   - CPU RTL implemented (8/8 modules)
+   - Smoke tests passing (6/6)
+   - ISA compliance tests (33/37 passing)
 
 4. **Read documentation**:
    - `tb/cocotb/README.md` - Complete cocotb infrastructure guide

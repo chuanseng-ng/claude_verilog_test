@@ -54,11 +54,22 @@ Last updated: 2026-01-18
 
 **Planned Deliverables**:
 
+**RTL & Verification**:
 - Single-cycle RV32I CPU core
 - AXI4-Lite master interface
 - APB3 slave debug interface
 - cocotb testbench
 - Python reference model integration
+
+**Physical Design (NEW)**:
+- OpenROAD synthesis and place & route flow
+- Timing constraints (SDC)
+- Power intent (UPF - single domain)
+- Gate-level netlist
+- Timing closure @ 100 MHz
+- Power analysis
+- DRC/LVS clean layout
+- Gate-level simulation with SDF
 
 **Target Start**: After Phase 0 completion
 
@@ -115,7 +126,8 @@ Last updated: 2026-01-18
 - ✅ `tb/cocotb/common/scoreboard.py` - RTL vs reference model comparison (130+ lines)
 - ✅ `tb/cocotb/common/clock_reset.py` - Clock and reset utilities
 - ✅ `tb/cocotb/cpu/test_example_counter.py` - Example test (3/3 tests passing)
-- ✅ `tb/cocotb/cpu/test_cpu_basic.py` - CPU test templates
+- ✅ `tb/cocotb/cpu/test_smoke.py` - CPU smoke tests (6/6 tests passing)
+- ✅ `tb/cocotb/cpu/test_isa_compliance.py` - ISA compliance tests (33/37 passing)
 - ✅ Complete documentation (README.md, COCOTB_SETUP_SUMMARY.md)
 
 **Issues Resolved**:
@@ -170,6 +182,14 @@ All previous specification issues have been resolved:
 
 **Phase 0 COMPLETE!** ✅ All specifications approved, reference models validated (66/66 tests), infrastructure ready.
 
+**OpenROAD Back-End Flow INTEGRATED!** ✅ Physical design infrastructure ready (2026-01-19):
+- OpenROAD flow specification complete
+- UPF power intent specification complete
+- SDC timing constraints specification complete
+- Directory structure created (pnr/)
+- Makefile and flow scripts ready
+- Ready to synthesize once RTL is implemented
+
 **Ready to begin Phase 1 RTL implementation**:
 
 1. **Begin RTL implementation** per PHASE1_ARCHITECTURE_SPEC.md
@@ -182,17 +202,39 @@ All previous specification issues have been resolved:
 
 ### Short-term (Phase 1 Execution)
 
+**RTL & Verification**:
 1. Develop cocotb tests for RTL modules as they're implemented
 2. Create directed instruction tests for RV32I subset
 3. Integrate RTL commits with Python reference model via scoreboard
 4. Run continuous validation against reference model
 
+**Physical Design (NEW)**:
+1. Run synthesis after each major RTL milestone
+2. Validate timing constraints and update SDC as needed
+3. Execute place & route flow
+4. Analyze timing, power, and area reports
+5. Iterate RTL based on physical design feedback
+6. Run gate-level simulation with back-annotated delays
+
 ### Medium-term (Phase 1 Completion)
 
-1. Complete RV32I instruction coverage
+**RTL Verification Exit Criteria**:
+1. Complete RV32I instruction coverage (37 instructions)
 2. Pass 10k+ random instruction tests
-3. Validate debug interface
-4. Document Phase 1 lessons learned
+3. Validate debug interface (halt/resume/step/breakpoints)
+4. All commits match Python reference model
+
+**Physical Design Exit Criteria (NEW)**:
+1. Synthesis: WNS > -0.5ns, zero critical warnings
+2. Place & Route: Zero DRC violations, routing converges
+3. Timing: WNS = 0, TNS = 0 (all corners)
+4. Power: IR drop < 5%, power within budget
+5. Physical verification: DRC = 0, LVS clean
+6. Gate-level simulation: 100% functional match with RTL
+
+**Documentation**:
+1. Document Phase 1 lessons learned (RTL + physical design)
+2. Capture timing/power/area metrics for Phase 2 planning
 
 ## Documentation Structure
 

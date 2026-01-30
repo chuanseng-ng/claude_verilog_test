@@ -1,0 +1,26 @@
+# Ignore intermediate build artifacts
+work/
+logs/
+reports/
+results/
+
+# But keep directory structure
+!work/.gitkeep
+!logs/.gitkeep
+!reports/.gitkeep
+!results/.gitkeep
+
+# Ignore specific file types
+*.log
+*.rpt
+*.def
+*.lef
+*.spef
+*.sdf
+*.v.gz
+*.gds
+*.oas
+
+# Keep template/example files
+!*.template
+!*_example.*

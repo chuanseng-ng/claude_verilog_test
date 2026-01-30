@@ -60,11 +60,13 @@ The complete cocotb verification infrastructure has been set up for the RV32I CP
 
 ### 3. Test Templates
 
-#### CPU Test Templates
+#### CPU Tests
 
-- **File**: `tb/cocotb/cpu/test_cpu_basic.py`
+- **File**: `tb/cocotb/cpu/test_smoke.py` - 6 smoke tests (all passing)
+- **File**: `tb/cocotb/cpu/test_isa_compliance.py` - 37 ISA compliance tests (33/37 passing)
 - **Contents**:
-  - `test_simple_add` - Basic arithmetic test
+  - Smoke tests: reset, fetch, ADDI, branch, JAL
+  - ISA tests: All 37 RV32I instructions
   - `test_branch_instruction` - Branch testing
   - `test_load_store` - Memory access testing
   - `test_random_instructions` - Random sequence with scoreboard
@@ -132,7 +134,8 @@ tb/cocotb/
 │   ├── clock_reset.py          # Clock/reset utilities
 │   └── scoreboard.py           # RTL vs model comparison
 ├── cpu/
-│   ├── test_cpu_basic.py       # CPU test templates (Phase 1+)
+│   ├── test_smoke.py           # CPU smoke tests (6/6 passing)
+│   ├── test_isa_compliance.py  # ISA compliance tests (33/37 passing)
 │   ├── test_example_counter.py # Working example test
 │   ├── example_counter.sv      # Example RTL module
 │   ├── Makefile                # CPU test makefile (Phase 1+)
@@ -268,10 +271,10 @@ Per PHASE0_ARCHITECTURE_SPEC.md and VERIFICATION_PLAN.md:
 
 Once Phase 1 CPU RTL is implemented:
 
-1. **Update Makefile**: Add actual RTL file paths
-2. **Run template tests**: Execute `test_cpu_basic.py` tests
-3. **Add more tests**: Expand test coverage
-4. **Debug with scoreboard**: Use mismatches to fix RTL bugs
+1. ✅ **Makefile Updated**: All RTL files added
+2. ✅ **Tests Running**: Smoke tests (6/6), ISA tests (33/37)
+3. **Debug Remaining**: Fix 4 failing ISA tests (JAL, SW, SH, SB)
+4. **Scoreboard Active**: All tests validate against reference model
 5. **Generate coverage**: Track instruction/scenario coverage
 
 ## Comparison: Before vs After

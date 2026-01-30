@@ -45,6 +45,8 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 
 **Always refer to these specifications** (do not rely on non-existent RTL):
 
+### Architecture & Design
+
 | Document | Purpose |
 | :------- | :------ |
 | `docs/ROADMAP.md` | High-level project plan and phases |
@@ -55,11 +57,41 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 | `docs/design/RTL_DEFINITION.md` | Interface signal definitions |
 | `docs/design/MEMORY_MAP.md` | Address space and register map |
 | `docs/design/REFERENCE_MODEL_SPEC.md` | Python reference model API |
-| `docs/verification/VERIFICATION_PLAN.md` | Verification strategy by phase |
+
+### Physical Design (NEW)
+
+| Document | Purpose |
+| :------- | :------ |
+| `docs/design/OPENROAD_FLOW_SPEC.md` | Complete OpenROAD flow documentation |
+| `docs/design/UPF_POWER_SPEC.md` | Power intent and UPF specification |
+| `docs/design/SDC_TIMING_SPEC.md` | Timing constraints and STA guidelines |
+| `pnr/README.md` | Physical design directory structure |
+| `pnr/constraints/phase1_cpu.sdc` | Phase 1 timing constraints |
+| `pnr/constraints/phase1_cpu.upf` | Phase 1 power intent |
+
+### Verification
+
+| Document | Purpose |
+| :------- | :------ |
+| `docs/verification/VERIFICATION_PLAN.md` | Verification strategy (RTL + physical design) |
+| `TODO_PHASE1_VERIFICATION.md` | Phase 1 verification progress tracking |
+| `docs/RANDOM_TESTS_STATUS.md` | Random instruction test results and guide |
+
+### RTL Fixes & Debugging
+
+| Document | Purpose |
+| :------- | :------ |
+| `fixes/FIXES_INDEX.md` | ⭐ **Central reference for all RTL bug fixes** |
+| `fixes/README.md` | Fixes directory guide and navigation |
+| `fixes/CRITICAL_FIXES.md` | Critical AXI protocol fixes (2026-01-19) |
+| `fixes/RTL_BUG_FIXES.md` | Branch/jump/memory fixes (2026-01-24) |
+| `CLEANUP_SUMMARY.md` | Documentation organization summary |
+
+**Note**: All RTL bugs discovered during development are documented in `fixes/` with full analysis, impact assessment, and validation. Start with `fixes/FIXES_INDEX.md` for quick reference.
 
 ## Frequently Used Commands
 
-### Phase 0 (Current): Reference Model and Tests
+### Phase 0 (Complete): Reference Model and Tests
 
 ```bash
 # Run reference model unit tests
@@ -71,6 +103,35 @@ pytest --cov=tb.models --cov-report=html
 
 # Test memory model
 pytest test_memory_model.py -v
+```
+
+### Phase 1: OpenROAD Back-End Flow (NEW)
+
+```bash
+# Navigate to physical design directory
+cd pnr
+
+# Run full flow (synthesis through power analysis)
+make all
+
+# Run individual stages
+make synth        # RTL synthesis
+make floorplan    # Floorplanning
+make place        # Placement
+make cts          # Clock tree synthesis
+make route        # Routing
+make parasitics   # RC extraction
+make sta          # Static timing analysis
+make power        # Power analysis
+
+# Generate reports
+make report_timing   # Show timing summary
+make report_power    # Show power summary
+make report_area     # Show area summary
+make report_summary  # Show all reports
+
+# Clean build artifacts
+make clean
 ```
 
 ### Phase 1+: Simulation Commands (When RTL exists)
@@ -267,7 +328,10 @@ See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification pla
 │   │   ├── PHASE4_GPU_ARCHITECTURE_SPEC.md
 │   │   ├── RTL_DEFINITION.md
 │   │   ├── MEMORY_MAP.md
-│   │   └── REFERENCE_MODEL_SPEC.md
+│   │   ├── REFERENCE_MODEL_SPEC.md
+│   │   ├── OPENROAD_FLOW_SPEC.md    # NEW: Physical design flow
+│   │   ├── UPF_POWER_SPEC.md        # NEW: Power intent
+│   │   └── SDC_TIMING_SPEC.md       # NEW: Timing constraints
 │   └── verification/
 │       └── VERIFICATION_PLAN.md
 ├── rtl/                      # RTL (empty - Phase 1+)
@@ -286,6 +350,14 @@ See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification pla
 │   │   └── test_gpu_model.py
 │   └── cocotb/               # cocotb testbenches (Phase 1+)
 ├── sim/                      # Simulation scripts
+├── pnr/                      # Physical design (NEW in Phase 1)
+│   ├── Makefile              # Flow automation
+│   ├── config/               # PDK configuration
+│   ├── constraints/          # SDC + UPF files
+│   ├── scripts/              # TCL flow scripts
+│   ├── logs/                 # Flow logs (gitignored)
+│   ├── reports/              # Reports (gitignored)
+│   └── results/              # Netlist, DEF, GDS (gitignored)
 └── CLAUDE.md                 # This file
 ```
 
@@ -328,13 +400,24 @@ Categories:
 
 See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 
-**Current priorities** (Phase 1 - RTL Implementation):
+**Current priorities** (Phase 1 - RTL Implementation + Physical Design):
 
 **Phase 0 Complete** ✅:
 
 - ✅ All 7 specifications approved (2026-01-18)
 - ✅ Python reference models validated (66/66 tests passing)
 - ✅ cocotb test infrastructure ready
+
+**OpenROAD Back-End Flow Integrated** ✅ (2026-01-19):
+
+- ✅ OpenROAD flow specification (OPENROAD_FLOW_SPEC.md)
+- ✅ UPF power intent specification (UPF_POWER_SPEC.md)
+- ✅ SDC timing constraints specification (SDC_TIMING_SPEC.md)
+- ✅ Physical design directory structure (pnr/)
+- ✅ Makefile and flow scripts ready
+- ✅ Phase 1 timing constraints (phase1_cpu.sdc)
+- ✅ Phase 1 power intent (phase1_cpu.upf)
+- ✅ Verification plan updated for physical design
 
 **Phase 1 Implementation Tasks**:
 
@@ -361,6 +444,17 @@ See `docs/PHASE_STATUS.md` for current status and immediate next steps.
    - Validate breakpoint behavior
    - Verify register read/write when halted
    - Human must: Approve debug protocol compliance
+
+4. **Physical Design Flow (NEW)** (OpenROAD back-end)
+   - Run synthesis after RTL smoke tests pass
+   - Execute place & route flow
+   - Perform static timing analysis (STA)
+   - Run power analysis
+   - Iterate RTL based on timing/power/area feedback
+   - Perform physical verification (DRC/LVS)
+   - Run gate-level simulation with SDF
+   - AI may assist with: Running flow scripts, parsing reports
+   - Human must: Analyze timing/power/area, debug violations, approve sign-off
 
 ## Questions?
 

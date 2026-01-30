@@ -1,10 +1,12 @@
 
 
 #Ignore vscode AI rules
-.github\instructions\codacy.instructions.md
+.github/instructions/codacy.instructions.md
+.codacy/
 
 # Claude AI
 tmpclaude*
+.claude/
 
 # Verilator
 obj_dir/
@@ -29,3 +31,8 @@ htmlcov/
 *.egg-info/
 dist/
 build/
+
+bash.exe.stackdump
+
+# Python
+venv/

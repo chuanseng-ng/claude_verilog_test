@@ -352,13 +352,110 @@ output logic [3:0]  trap_cause      // Encoded trap reason
 5. **AXI protocol**: Handshake, error response
 6. **Trap handling**: Illegal instruction detection
 
-### Exit criteria
+### RTL verification exit criteria
 
 - 100% RV32I instruction coverage (37 instructions)
 - Pass 10,000+ random instruction tests with zero failures
 - Pass all directed debug interface tests
 - Zero known failing test seeds
 - All commits match Python reference model
+
+## Physical design requirements (Phase 1)
+
+### OpenROAD back-end flow
+
+Phase 1 introduces physical design flow using OpenROAD to ensure silicon-readiness.
+
+**Target technology**: Sky130 (130nm) or ASAP7 (7nm predictive)
+**Target frequency**: 100 MHz (10ns period)
+
+### Flow stages
+
+1. **Synthesis** (Yosys): RTL → gate-level netlist
+2. **Floorplan** (OpenROAD): Die size, I/O placement, power grid
+3. **Placement** (OpenROAD): Cell placement with timing optimization
+4. **CTS** (TritonCTS): Clock tree synthesis
+5. **Routing** (TritonRoute): Detailed routing
+6. **Parasitic extraction** (OpenRCX): RC extraction
+7. **STA** (OpenSTA): Static timing analysis
+8. **Power analysis** (OpenROAD): Dynamic + leakage power
+9. **Physical verification** (KLayout): DRC/LVS
+10. **Gate-level simulation** (Verilator): Functional + timing verification with SDF
+
+### Timing constraints (SDC)
+
+- Clock: 100 MHz (10ns period)
+- Uncertainty: 0.5ns (5% pre-CTS)
+- Input delays: 2ns max, 0.5ns min (AXI4-Lite)
+- Output delays: 2ns max, 0.5ns min
+- False paths: reset, debug ↔ AXI, commit interface
+
+**File**: `pnr/constraints/phase1_cpu.sdc`
+
+### Power intent (UPF)
+
+Phase 1 uses single power domain (infrastructure only, no power gating).
+
+**File**: `pnr/constraints/phase1_cpu.upf`
+
+### Physical design exit criteria
+
+- **Synthesis**:
+  - Zero synthesis errors
+  - Zero critical warnings
+  - WNS > -0.5ns (post-synthesis)
+  - Area within 50k µm² target (Sky130) or 5k µm² (ASAP7)
+
+- **Place & Route**:
+  - Zero DRC violations
+  - Routing congestion < 80%
+  - Core utilization: 50-70%
+  - Clock skew < 100ps (post-CTS)
+
+- **Timing closure**:
+  - WNS = 0 (no setup violations)
+  - TNS = 0 (no hold violations)
+  - All corners passing (fast, slow, typical)
+
+- **Power**:
+  - Total power < 10mW @ 100 MHz (target)
+  - IR drop < 5% on power grid
+  - Clock tree power < 20% of total
+
+- **Physical verification**:
+  - DRC violations = 0
+  - LVS clean (layout matches netlist)
+
+- **Gate-level simulation**:
+  - 100% functional match with RTL simulation
+  - Zero timing violations with back-annotated delays (SDF)
+  - Pass 1,000+ random instruction tests at gate level
+
+### OpenROAD workflow
+
+```bash
+# Navigate to pnr directory
+cd pnr
+
+# Run full flow
+make all
+
+# Run individual stages
+make synth
+make place
+make route
+make sta
+
+# Generate reports
+make report_timing
+make report_power
+make report_area
+
+# Clean artifacts
+make clean
+```
+
+See `docs/design/OPENROAD_FLOW_SPEC.md` for complete flow documentation.
 
 ## Known limitations (Phase 1)
 
@@ -399,10 +496,30 @@ tb/
     ├── env.py                 # UVM environment
     ├── sequences/             # Test sequences
     └── scoreboard/            # Reference model comparison
+
+pnr/                           # Physical design (NEW in Phase 1)
+├── Makefile                   # Flow automation
+├── config/                    # PDK configuration
+├── constraints/
+│   ├── phase1_cpu.sdc         # Timing constraints
+│   └── phase1_cpu.upf         # Power intent
+├── scripts/
+│   ├── 01_synth.tcl           # Synthesis
+│   ├── 02_floorplan.tcl       # Floorplanning
+│   ├── 03_place.tcl           # Placement
+│   ├── 04_cts.tcl             # Clock tree synthesis
+│   ├── 05_route.tcl           # Routing
+│   ├── 06_parasitics.tcl      # Parasitic extraction
+│   ├── 07_sta.tcl             # Static timing analysis
+│   └── 08_power.tcl           # Power analysis
+├── logs/                      # Flow logs (gitignored)
+├── reports/                   # Timing/power/area reports (gitignored)
+└── results/                   # Final outputs: netlist, DEF, GDS (gitignored)
 ```
 
 ## References
 
+### Architecture & Verification
 - PHASE0_ARCHITECTURE_SPEC.md: Architectural requirements
 - RTL_DEFINITION.md: System-level interface definitions
 - MEMORY_MAP.md: Complete address map
@@ -411,3 +528,11 @@ tb/
 - RISC-V ISA Manual Volume I: RV32I Base Integer Instruction Set
 - AMBA AXI4-Lite Protocol Specification (ARM IHI 0022E)
 - AMBA APB3 Protocol Specification (ARM IHI 0024C)
+
+### Physical Design (NEW in Phase 1)
+- OPENROAD_FLOW_SPEC.md: Complete OpenROAD flow documentation
+- UPF_POWER_SPEC.md: Power intent and UPF specification
+- SDC_TIMING_SPEC.md: Timing constraints and STA guidelines
+- OpenROAD Documentation: https://openroad.readthedocs.io/
+- Sky130 PDK: https://skywater-pdk.readthedocs.io/
+- ASAP7 PDK: http://asap.asu.edu/asap/
