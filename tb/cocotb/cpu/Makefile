@@ -62,7 +62,46 @@ ebreak:
 	@echo "Running EBREAK halt test..."
 	$(MAKE) MODULE=test_ebreak
 
-all_tests: smoke isa random
+all_tests:
+	@echo "========================================="
+	@echo "Running All Test Suites"
+	@echo "========================================="
+	@failed=0; \
+	echo ""; \
+	echo "[1/3] Running smoke tests..."; \
+	if $(MAKE) smoke; then \
+		echo "✓ Smoke tests PASSED"; \
+	else \
+		echo "✗ Smoke tests FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "[2/3] Running ISA compliance tests..."; \
+	if $(MAKE) isa; then \
+		echo "✓ ISA tests PASSED"; \
+	else \
+		echo "✗ ISA tests FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "[3/3] Running random instruction tests..."; \
+	if $(MAKE) random; then \
+		echo "✓ Random tests PASSED"; \
+	else \
+		echo "✗ Random tests FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "========================================="; \
+	if [ $$failed -eq 0 ]; then \
+		echo "OVERALL RESULT: ✓ ALL TESTS PASSED"; \
+		echo "========================================="; \
+		exit 0; \
+	else \
+		echo "OVERALL RESULT: ✗ $$failed TEST SUITE(S) FAILED"; \
+		echo "========================================="; \
+		exit 1; \
+	fi
 
 # Usage/help target (renamed from 'help' to avoid conflict with cocotb's help)
 usage info:
