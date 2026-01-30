@@ -90,7 +90,8 @@ module rv32i_core (
   // Decoder outputs
   logic [4:0]  rs1, rs2, rd;
   logic [3:0]  alu_op;
-  logic        alu_src_a, alu_src_b;
+  logic [1:0]  alu_src_a;  // 00=rs1, 01=PC, 10=zero
+  logic        alu_src_b;
   logic [2:0]  imm_fmt;
   logic        reg_wr_en;
   logic        mem_rd, mem_wr;
@@ -363,12 +364,14 @@ module rv32i_core (
   // ================================================================
 
   // ALU operand A mux
+  // 2'b00 = rs1_data, 2'b01 = PC, 2'b10 = zero
   always_comb begin
-    if (alu_src_a) begin
-      alu_operand_a = pc_reg;  // For AUIPC
-    end else begin
-      alu_operand_a = rs1_data;
-    end
+    case (alu_src_a)
+      2'b00:   alu_operand_a = rs1_data;  // Default: rs1
+      2'b01:   alu_operand_a = pc_reg;    // For AUIPC
+      2'b10:   alu_operand_a = 32'h0;     // For LUI
+      default: alu_operand_a = rs1_data;  // Safe default
+    endcase
   end
 
   // ALU operand B mux

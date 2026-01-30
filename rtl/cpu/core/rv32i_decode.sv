@@ -12,7 +12,7 @@ module rv32i_decode (
 
   // ALU control
   output logic [3:0]  alu_op,     // ALU operation (using approved encoding)
-  output logic        alu_src_a,  // 0=rs1, 1=PC
+  output logic [1:0]  alu_src_a,  // ALU operand A select: 00=rs1, 01=PC, 10=zero
   output logic        alu_src_b,  // 0=rs2, 1=immediate
 
   // Immediate format
@@ -113,12 +113,17 @@ module rv32i_decode (
   localparam [2:0] FMT_J = 3'b100;
   localparam [2:0] FMT_R = 3'b101;
 
+  // ALU operand A source select encodings
+  localparam [1:0] SRC_A_RS1  = 2'b00;  // Select rs1_data
+  localparam [1:0] SRC_A_PC   = 2'b01;  // Select PC (for AUIPC)
+  localparam [1:0] SRC_A_ZERO = 2'b10;  // Select zero (for LUI)
+
   // Main decoder logic
   always_comb begin
     // Default values (prevents latches)
     alu_op       = ALU_ADD;
-    alu_src_a    = 1'b0;  // rs1
-    alu_src_b    = 1'b0;  // rs2
+    alu_src_a    = SRC_A_RS1;  // Default: rs1_data
+    alu_src_b    = 1'b0;       // Default: rs2
     imm_fmt      = FMT_I;
     reg_wr_en    = 1'b0;
     mem_rd       = 1'b0;
@@ -136,15 +141,14 @@ module rv32i_decode (
     case (opcode)
       // ================================================================
       // LUI - Load Upper Immediate
-      // rd = imm[31:12] << 12
+      // rd = imm[31:12] << 12 = 0 + U-immediate
       // ================================================================
       OP_LUI: begin
         imm_fmt   = FMT_U;
         reg_wr_en = 1'b1;
         alu_op    = ALU_ADD;
-        alu_src_a = 1'b0;  // Don't care (could use 0)
-        alu_src_b = 1'b1;  // Immediate
-        // Note: May need special handling to just pass immediate through
+        alu_src_a = SRC_A_ZERO;  // Select zero operand
+        alu_src_b = 1'b1;        // Select U-immediate
       end
 
       // ================================================================
@@ -155,8 +159,8 @@ module rv32i_decode (
         imm_fmt   = FMT_U;
         reg_wr_en = 1'b1;
         alu_op    = ALU_ADD;
-        alu_src_a = 1'b1;  // PC
-        alu_src_b = 1'b1;  // Immediate
+        alu_src_a = SRC_A_PC;  // Select PC
+        alu_src_b = 1'b1;      // Select U-immediate
       end
 
       // ================================================================
