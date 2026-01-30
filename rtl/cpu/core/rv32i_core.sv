@@ -131,6 +131,10 @@ module rv32i_core (
   logic        misaligned_load;   // Misaligned load detected
   logic        misaligned_store;  // Misaligned store detected
 
+  // Debug signals from control FSM
+  logic        ctrl_debug_take_branch_jump;
+  logic [3:0]  ctrl_debug_state;
+
   // ================================================================
   // Program Counter
   // ================================================================
@@ -314,42 +318,44 @@ module rv32i_core (
   // Control FSM
   // ----------------------------------------------------------------
   rv32i_control u_control (
-    .clk              (clk),
-    .rst_n            (rst_n),
-    .branch           (branch),
-    .jump             (jump),
-    .mem_rd           (mem_rd),
-    .mem_wr           (mem_wr),
-    .reg_wr_en        (reg_wr_en),
-    .illegal_insn     (illegal_insn),
-    .ebreak           (ebreak),
-    .misaligned_load  (misaligned_load),
-    .misaligned_store (misaligned_store),
-    .branch_taken     (branch_taken),
-    .axi_arready      (axi_arready),
-    .axi_rvalid       (axi_rvalid),
-    .axi_rresp        (axi_rresp),
-    .axi_awready      (axi_awready),
-    .axi_wready       (axi_wready),
-    .axi_bvalid       (axi_bvalid),
-    .axi_bresp        (axi_bresp),
-    .axi_arvalid      (axi_arvalid),
-    .axi_rready       (axi_rready),
-    .axi_awvalid      (axi_awvalid),
-    .axi_wvalid       (axi_wvalid),
-    .axi_bready       (axi_bready),
-    .dbg_halt_req     (dbg_halt_req),
-    .dbg_resume_req   (dbg_resume_req),
-    .dbg_step_req     (dbg_step_req),
-    .dbg_halted       (dbg_halted),
-    .pc_wr_en         (pc_wr_en),
-    .pc_src           (pc_src),
-    .instr_valid      (instr_valid),
-    .regfile_wr_en    (regfile_wr_en),
-    .commit_valid     (commit_valid_int),
-    .trap_valid       (trap_valid),
-    .trap_cause       (trap_cause),
-    .data_access      (data_access)
+    .clk                      (clk),
+    .rst_n                    (rst_n),
+    .branch                   (branch),
+    .jump                     (jump),
+    .mem_rd                   (mem_rd),
+    .mem_wr                   (mem_wr),
+    .reg_wr_en                (reg_wr_en),
+    .illegal_insn             (illegal_insn),
+    .ebreak                   (ebreak),
+    .misaligned_load          (misaligned_load),
+    .misaligned_store         (misaligned_store),
+    .branch_taken             (branch_taken),
+    .axi_arready              (axi_arready),
+    .axi_rvalid               (axi_rvalid),
+    .axi_rresp                (axi_rresp),
+    .axi_awready              (axi_awready),
+    .axi_wready               (axi_wready),
+    .axi_bvalid               (axi_bvalid),
+    .axi_bresp                (axi_bresp),
+    .axi_arvalid              (axi_arvalid),
+    .axi_rready               (axi_rready),
+    .axi_awvalid              (axi_awvalid),
+    .axi_wvalid               (axi_wvalid),
+    .axi_bready               (axi_bready),
+    .dbg_halt_req             (dbg_halt_req),
+    .dbg_resume_req           (dbg_resume_req),
+    .dbg_step_req             (dbg_step_req),
+    .dbg_halted               (dbg_halted),
+    .pc_wr_en                 (pc_wr_en),
+    .pc_src                   (pc_src),
+    .instr_valid              (instr_valid),
+    .regfile_wr_en            (regfile_wr_en),
+    .commit_valid             (commit_valid_int),
+    .trap_valid               (trap_valid),
+    .trap_cause               (trap_cause),
+    .data_access              (data_access),
+    .debug_take_branch_jump   (ctrl_debug_take_branch_jump),
+    .debug_state              (ctrl_debug_state)
   );
 
   // ================================================================
@@ -500,9 +506,9 @@ module rv32i_core (
   assign debug_rs1_data          = rs1_data;
   assign debug_rs2_data          = rs2_data;
   assign debug_branch_taken      = branch_taken;
-  assign debug_take_branch_jump  = u_control.take_branch_jump_reg;
+  assign debug_take_branch_jump  = ctrl_debug_take_branch_jump;
   assign debug_pc_src            = pc_src;
-  assign debug_state             = u_control.current_state;
+  assign debug_state             = ctrl_debug_state;
   assign debug_ebreak            = ebreak;
 
 endmodule

@@ -54,7 +54,11 @@ module rv32i_control (
   output logic        commit_valid,    // Instruction commit
   output logic        trap_valid,      // Trap taken
   output logic [3:0]  trap_cause,      // Trap cause encoding
-  output logic        data_access      // 1=data access (MEM_WAIT), 0=instruction fetch (FETCH)
+  output logic        data_access,     // 1=data access (MEM_WAIT), 0=instruction fetch (FETCH)
+
+  // Debug outputs (for verification observability)
+  output logic        debug_take_branch_jump,  // Branch/jump decision flag (registered)
+  output logic [3:0]  debug_state              // Current FSM state
 );
 
   // ================================================================
@@ -491,6 +495,14 @@ module rv32i_control (
       end
     endcase
   end
+
+  // ================================================================
+  // Debug Output Assignments
+  // ================================================================
+  // Expose internal signals for verification observability
+
+  assign debug_take_branch_jump = take_branch_jump_reg;
+  assign debug_state = current_state;
 
 endmodule
 
