@@ -57,22 +57,40 @@ RTL is human-reviewed and approved for use.
 | :------ | :-----: | :----: |
 | Control register (halt/resume/step) | 0x000 | ✅ |
 | Status register (halted/running/cause) | 0x004 | ✅ |
-| PC read/write (when halted) | 0x008 | ✅ |
+| PC read/write (when halted) | 0x008 | ⏳ Read only (write not implemented) |
 | Instruction register (read-only) | 0x00C | ✅ |
-| GPR[0:31] read/write (when halted) | 0x010-0x08C | ✅ |
-| Breakpoint 0 address/control | 0x100-0x104 | ✅ |
-| Breakpoint 1 address/control | 0x108-0x10C | ✅ |
+| GPR[0:31] read/write (when halted) | 0x010-0x08C | ❌ Not implemented |
+| Breakpoint 0 address/control | 0x100-0x104 | ⏳ Registers only (no halt logic) |
+| Breakpoint 1 address/control | 0x108-0x10C | ⏳ Registers only (no halt logic) |
 
 ### Debug Capabilities
 
 - ✅ Halt CPU execution via APB write
 - ✅ Resume CPU execution via APB write
 - ✅ Single-step execution (execute 1 instruction, return to halted)
-- ✅ 2 hardware breakpoints with auto-halt on hit
-- ✅ Read/write all 32 GPRs when halted
-- ✅ Read/write PC when halted
+- ⏳ 2 hardware breakpoints (registers implemented, auto-halt logic NOT implemented)
+- ❌ Read/write all 32 GPRs when halted (NOT implemented - requires APB3 integration)
+- ⏳ Read/write PC when halted (read implemented, write NOT implemented)
 - ✅ View current instruction
 - ✅ Read halted status and halt cause
+
+### Debug Features Pending Implementation
+
+The following debug features are documented but not yet fully implemented:
+
+1. **GPR Debug Access** (`0x010-0x08C`): APB3 register mappings exist but no connection to register file
+   - Requires: APB3-to-regfile integration in rv32i_cpu_top.sv
+   - Status: Register reads return 0, writes ignored
+
+2. **PC Write When Halted** (`0x008` write): PC read works but write path not connected
+   - Requires: PC write enable gated by halted state in rv32i_core.sv
+   - Status: PC register readable, writes have no effect
+
+3. **Breakpoint Halt Integration** (`0x100-0x10C`): Breakpoint registers exist but don't trigger halt
+   - Requires: Breakpoint comparator + halt signal generation in rv32i_cpu_top.sv
+   - Status: Can write breakpoint addresses, no halt occurs on match
+
+**Impact**: Core CPU functionality and basic debug (halt/resume/step) work correctly. Advanced debug features (GPR inspection, PC modification, breakpoints) require additional implementation.
 
 ## Critical Bugs Fixed ✅
 
@@ -228,7 +246,7 @@ make waves             # View waveforms
 ## Sign-off Checklist
 
 - ✅ All RTL modules implemented
-- ✅ All debug features implemented (GPR/PC access, breakpoints)
+- ⏳ Debug features partially implemented (GPR access, PC write, breakpoint halt logic pending)
 - ✅ All TODOs resolved
 - ✅ All warning headers removed
 - ✅ Verilator lint passing (no warnings)
