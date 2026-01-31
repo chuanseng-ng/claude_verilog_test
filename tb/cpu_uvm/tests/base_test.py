@@ -68,6 +68,7 @@ class BaseTest(uvm_test):
         This phase:
         1. Creates RV32I reference model
         2. Creates CPUEnvironment with DUT and ref model
+        3. Recursively builds all child components
         """
         super().build_phase()
         self.logger.info(f"Building {self.get_full_name()}")
@@ -82,6 +83,19 @@ class BaseTest(uvm_test):
             dut=self.dut,
             ref_model=self.ref_model
         )
+
+        # Build environment and all its child components
+        self.env.build_phase()
+
+        # Build agents
+        if self.env.axi_agent:
+            self.env.axi_agent.build_phase()
+        if self.env.apb_agent:
+            self.env.apb_agent.build_phase()
+        if self.env.commit_monitor:
+            self.env.commit_monitor.build_phase()
+        if self.env.scoreboard:
+            self.env.scoreboard.build_phase()
 
         self.logger.info("Test build complete")
 
@@ -219,6 +233,20 @@ async def run_uvm_test(dut, test_class, test_name="uvm_test"):
     test.build_phase()
     test.connect_phase()
     test.end_of_elaboration_phase()
+
+    # Start background tasks for all components
+    # AXI driver handlers
+    cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
+    cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
+
+    # Commit monitor
+    cocotb.start_soon(test.env.commit_monitor.run_phase())
+
+    # Scoreboard
+    cocotb.start_soon(test.env.scoreboard.run_phase())
+
+    # Give background tasks a chance to start
+    await ClockCycles(dut.clk, 2)
 
     # Reset DUT
     await test.reset_dut()

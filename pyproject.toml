@@ -31,6 +31,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["tb"]
 
+# Note: tb/cpu_uvm contains the pyuvm-based verification components
+# (renamed from tb/pyuvm to avoid conflict with the pyuvm package)
+
 [tool.ruff]
 line-length = 100
 target-version = "py38"

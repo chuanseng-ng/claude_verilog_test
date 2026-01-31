@@ -66,11 +66,11 @@ ebreak:
 # pyuvm test targets (Phase F+)
 smoke_uvm:
 	@echo "Running pyuvm smoke tests (4 tests)..."
-	$(MAKE) MODULE=test_smoke_uvm
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_smoke_uvm
 
 random_uvm:
 	@echo "Running pyuvm random instruction tests..."
-	$(MAKE) MODULE=test_random_uvm
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_random_uvm
 
 all_uvm:
 	@echo "========================================="
