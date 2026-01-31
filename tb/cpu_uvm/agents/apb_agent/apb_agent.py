@@ -47,7 +47,7 @@ class APBAgent(uvm_agent):
         super().__init__(name, parent)
         self.dut = dut
         self.sequencer = None  # Created in build_phase
-        self.driver = None     # Created in build_phase
+        self.driver = None  # Created in build_phase
 
     def build_phase(self):
         """UVM build phase - create sequencer and driver.
@@ -63,11 +63,7 @@ class APBAgent(uvm_agent):
         self.sequencer = uvm_sequencer("apb_sequencer", self)
 
         # Create APB debug driver
-        self.driver = APBDebugDriver(
-            "apb_driver",
-            self,
-            dut=self.dut
-        )
+        self.driver = APBDebugDriver("apb_driver", self, dut=self.dut)
 
         self.logger.info("APB agent build complete")
 
@@ -77,9 +73,6 @@ class APBAgent(uvm_agent):
         Connects the sequencer's seq_item_export to the driver's seq_item_port.
         This enables sequence items to flow from sequences through the sequencer
         to the driver.
-
-        Note: In Phase C, the driver is still command-driven (direct method calls).
-        Full sequence-based operation will be implemented in Phase D (Sequences).
         """
         super().connect_phase()
         self.logger.info("Connecting APB agent components")
