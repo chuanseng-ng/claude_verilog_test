@@ -41,6 +41,7 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 
 # Convenience targets for different test suites
 .PHONY: smoke basic random isa ebreak all_tests usage info distclean
+.PHONY: smoke_uvm random_uvm all_uvm
 
 smoke:
 	@echo "Running smoke tests..."
@@ -61,6 +62,48 @@ isa:
 ebreak:
 	@echo "Running EBREAK halt test..."
 	$(MAKE) MODULE=test_ebreak
+
+# pyuvm test targets (Phase F+)
+smoke_uvm:
+	@echo "Running pyuvm smoke tests (4 tests)..."
+	$(MAKE) MODULE=test_smoke_uvm
+
+random_uvm:
+	@echo "Running pyuvm random instruction tests..."
+	$(MAKE) MODULE=test_random_uvm
+
+all_uvm:
+	@echo "========================================="
+	@echo "Running All pyuvm Test Suites"
+	@echo "========================================="
+	@failed=0; \
+	echo ""; \
+	echo "[1/2] Running pyuvm smoke tests..."; \
+	if $(MAKE) smoke_uvm; then \
+		echo "✓ pyuvm smoke tests PASSED"; \
+	else \
+		echo "✗ pyuvm smoke tests FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "[2/2] Running pyuvm random tests..."; \
+	if $(MAKE) random_uvm; then \
+		echo "✓ pyuvm random tests PASSED"; \
+	else \
+		echo "✗ pyuvm random tests FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "========================================="; \
+	if [ $$failed -eq 0 ]; then \
+		echo "OVERALL RESULT: ✓ ALL PYUVM TESTS PASSED"; \
+		echo "========================================="; \
+		exit 0; \
+	else \
+		echo "OVERALL RESULT: ✗ $$failed PYUVM TEST SUITE(S) FAILED"; \
+		echo "========================================="; \
+		exit 1; \
+	fi
 
 all_tests:
 	@echo "========================================="
@@ -118,6 +161,13 @@ usage info:
 	@echo "  make isa          - Run ISA compliance tests (37 RV32I instructions)"
 	@echo "  make ebreak       - Run EBREAK halt test"
 	@echo "  make all_tests    - Run all test suites (smoke + isa + random)"
+	@echo ""
+	@echo "pyuvm targets (Phase F+):"
+	@echo "  make smoke_uvm    - Run pyuvm smoke tests (4 tests)"
+	@echo "  make random_uvm   - Run pyuvm random instruction tests"
+	@echo "  make all_uvm      - Run all pyuvm test suites (smoke + random)"
+	@echo ""
+	@echo "Utility targets:"
 	@echo "  make clean        - Remove simulation artifacts"
 	@echo "  make distclean    - Deep clean (remove all generated files)"
 	@echo "  make usage        - Show this usage message"
@@ -134,10 +184,14 @@ usage info:
 	@echo "  make SIM=icarus smoke   # Use Icarus Verilog"
 	@echo ""
 	@echo "Test modules available:"
-	@echo "  test_smoke                - Basic functionality tests (6 smoke tests)"
-	@echo "  test_isa_compliance       - ISA compliance tests (37 RV32I instructions)"
-	@echo "  test_random_instructions  - Random instruction tests (10,000 instructions)"
-	@echo "  test_ebreak               - EBREAK halt detection test"
+	@echo "  Legacy cocotb tests:"
+	@echo "    test_smoke                - Basic functionality tests (6 smoke tests)"
+	@echo "    test_isa_compliance       - ISA compliance tests (37 RV32I instructions)"
+	@echo "    test_random_instructions  - Random instruction tests (10,000 instructions)"
+	@echo "    test_ebreak               - EBREAK halt detection test"
+	@echo "  pyuvm tests (Phase F+):"
+	@echo "    test_smoke_uvm            - pyuvm smoke tests (4 tests)"
+	@echo "    test_random_uvm           - pyuvm random tests (multi-seed)"
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  - Verilator or Icarus Verilog installed"
