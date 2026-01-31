@@ -12,6 +12,7 @@ Features:
 
 import cocotb
 from cocotb.clock import Clock
+from cocotb.triggers import ClockCycles
 
 from .base_test import BaseTest
 from ..sequences.random_instr_sequence import RandomInstructionSequence
@@ -46,7 +47,11 @@ class RandomTest(BaseTest):
             seed=self.seed
         )
         seq.env = self.env
+
+        # Run sequence lifecycle: pre_body -> body -> post_body
+        await seq.pre_body()
         await seq.body()
+        await seq.post_body()
 
         # Wait for completion
         await self.wait_for_completion(timeout_cycles=self.num_instructions * 20)
@@ -70,6 +75,15 @@ async def test_random_single_uvm(dut):
     test.build_phase()
     test.connect_phase()
     test.end_of_elaboration_phase()
+
+    # Start background tasks for all components
+    cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
+    cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
+    cocotb.start_soon(test.env.commit_monitor.run_phase())
+    cocotb.start_soon(test.env.scoreboard.run_phase())
+
+    # Give background tasks a chance to start
+    await ClockCycles(dut.clk, 2)
 
     # Reset and run
     await test.reset_dut()
@@ -110,6 +124,15 @@ async def test_random_multi_seed_uvm(dut):
         test.build_phase()
         test.connect_phase()
         test.end_of_elaboration_phase()
+
+        # Start background tasks for all components
+        cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
+        cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
+        cocotb.start_soon(test.env.commit_monitor.run_phase())
+        cocotb.start_soon(test.env.scoreboard.run_phase())
+
+        # Give background tasks a chance to start
+        await ClockCycles(dut.clk, 2)
 
         # Reset and run
         await test.reset_dut()

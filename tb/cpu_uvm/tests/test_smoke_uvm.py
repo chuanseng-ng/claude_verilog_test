@@ -13,6 +13,7 @@ Features:
 
 import cocotb
 from cocotb.clock import Clock
+from cocotb.triggers import ClockCycles
 
 from .base_test import BaseTest
 from ..sequences.directed_sequences import (
@@ -147,6 +148,15 @@ async def test_addi_uvm(dut):
     test.connect_phase()
     test.end_of_elaboration_phase()
 
+    # Start background tasks for all components
+    cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
+    cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
+    cocotb.start_soon(test.env.commit_monitor.run_phase())
+    cocotb.start_soon(test.env.scoreboard.run_phase())
+
+    # Give background tasks a chance to start
+    await ClockCycles(dut.clk, 2)
+
     # Reset and run
     await test.reset_dut()
     await test.run_phase()
@@ -170,6 +180,15 @@ async def test_branch_taken_uvm(dut):
     test.build_phase()
     test.connect_phase()
     test.end_of_elaboration_phase()
+
+    # Start background tasks for all components
+    cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
+    cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
+    cocotb.start_soon(test.env.commit_monitor.run_phase())
+    cocotb.start_soon(test.env.scoreboard.run_phase())
+
+    # Give background tasks a chance to start
+    await ClockCycles(dut.clk, 2)
 
     # Reset and run
     await test.reset_dut()
@@ -195,6 +214,15 @@ async def test_branch_not_taken_uvm(dut):
     test.connect_phase()
     test.end_of_elaboration_phase()
 
+    # Start background tasks for all components
+    cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
+    cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
+    cocotb.start_soon(test.env.commit_monitor.run_phase())
+    cocotb.start_soon(test.env.scoreboard.run_phase())
+
+    # Give background tasks a chance to start
+    await ClockCycles(dut.clk, 2)
+
     # Reset and run
     await test.reset_dut()
     await test.run_phase()
@@ -218,6 +246,15 @@ async def test_jal_uvm(dut):
     test.build_phase()
     test.connect_phase()
     test.end_of_elaboration_phase()
+
+    # Start background tasks for all components
+    cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
+    cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
+    cocotb.start_soon(test.env.commit_monitor.run_phase())
+    cocotb.start_soon(test.env.scoreboard.run_phase())
+
+    # Give background tasks a chance to start
+    await ClockCycles(dut.clk, 2)
 
     # Reset and run
     await test.reset_dut()
