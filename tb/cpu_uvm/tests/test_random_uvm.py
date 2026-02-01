@@ -98,18 +98,16 @@ async def test_random_single_uvm(dut):
 async def test_random_multi_seed_uvm(dut):
     """Test multiple random seeds (pyuvm version).
 
-    Tests 10 different seeds with 100 instructions each.
-    This is a reduced version of the full 100-seed test for Phase E demonstration.
-    The full 100-seed test can be enabled in Phase F.
+    Tests 100 different seeds with 100 instructions each.
     """
-    dut._log.info("=== Test: Random Multi-Seed (10 seeds × 100 instr) (pyuvm) ===")
+    dut._log.info("=== Test: Random Multi-Seed (100 seeds × 100 instr) (pyuvm) ===")
 
     # Start clock
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
 
-    # Test multiple seeds (reduced to 10 for Phase E)
-    num_seeds = 10
+    # Test multiple seeds
+    num_seeds = 100
     num_instructions = 100
 
     for seed_idx in range(num_seeds):
