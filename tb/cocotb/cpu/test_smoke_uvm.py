@@ -9,8 +9,8 @@ discovered by cocotb when running from the tb/cocotb/cpu/ directory.
 import sys
 from pathlib import Path
 
-# Get project root (tb/cocotb/cpu -> ../../.. -> project root)
-project_root = Path(__file__).resolve().parent.parent.parent
+# Get project root (tb/cocotb/cpu -> ../../../.. -> project root)
+project_root = Path(__file__).resolve().parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 

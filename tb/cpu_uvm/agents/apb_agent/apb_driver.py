@@ -83,11 +83,16 @@ class APBDebugDriver(uvm_driver):
         APB Write Protocol:
         1. Assert psel + pwrite, set paddr + pwdata, penable=0
         2. Next cycle: Assert penable
-        3. Next cycle: De-assert psel + penable
+        3. Wait for pready high
+        4. Check pslverr for errors
+        5. De-assert psel + penable
 
         Args:
             addr: Register address
             data: 32-bit data to write
+
+        Raises:
+            RuntimeError: If APB slave returns error (pslverr) or timeout
         """
         await RisingEdge(self.dut.clk)
         self.dut.apb_psel.value = 1
@@ -98,6 +103,32 @@ class APBDebugDriver(uvm_driver):
 
         await RisingEdge(self.dut.clk)
         self.dut.apb_penable.value = 1
+
+        # Poll for pready with timeout
+        timeout_cycles = 100
+        for cycle in range(timeout_cycles):
+            await ReadOnly()
+            if int(self.dut.apb_pready.value) == 1:
+                # Check for slave error
+                if int(self.dut.apb_pslverr.value) == 1:
+                    self.dut.apb_psel.value = 0
+                    self.dut.apb_penable.value = 0
+                    self.dut.apb_pwrite.value = 0
+                    raise RuntimeError(
+                        f"APB write error (pslverr) at addr=0x{addr:08x}, data=0x{data:08x}"
+                    )
+                # Success - exit polling loop
+                break
+            await RisingEdge(self.dut.clk)
+        else:
+            # Timeout reached
+            self.dut.apb_psel.value = 0
+            self.dut.apb_penable.value = 0
+            self.dut.apb_pwrite.value = 0
+            raise RuntimeError(
+                f"APB write timeout waiting for pready at addr=0x{addr:08x} "
+                f"(waited {timeout_cycles} cycles)"
+            )
 
         await RisingEdge(self.dut.clk)
         self.dut.apb_psel.value = 0
@@ -110,14 +141,19 @@ class APBDebugDriver(uvm_driver):
         APB Read Protocol:
         1. Assert psel, clear pwrite, set paddr, penable=0
         2. Next cycle: Assert penable
-        3. Sample prdata at ReadOnly()
-        4. Next cycle: De-assert psel + penable
+        3. Wait for pready high
+        4. Sample prdata when pready is high
+        5. Check pslverr for errors
+        6. De-assert psel + penable
 
         Args:
             addr: Register address
 
         Returns:
             32-bit data value read from register
+
+        Raises:
+            RuntimeError: If APB slave returns error (pslverr) or timeout
         """
         await RisingEdge(self.dut.clk)
         self.dut.apb_psel.value = 1
@@ -128,8 +164,30 @@ class APBDebugDriver(uvm_driver):
         await RisingEdge(self.dut.clk)
         self.dut.apb_penable.value = 1
 
-        await ReadOnly()
-        data = int(self.dut.apb_prdata.value)
+        # Poll for pready with timeout
+        timeout_cycles = 100
+        data = 0
+        for cycle in range(timeout_cycles):
+            await ReadOnly()
+            if int(self.dut.apb_pready.value) == 1:
+                # Sample data when pready is high
+                data = int(self.dut.apb_prdata.value)
+                # Check for slave error
+                if int(self.dut.apb_pslverr.value) == 1:
+                    self.dut.apb_psel.value = 0
+                    self.dut.apb_penable.value = 0
+                    raise RuntimeError(f"APB read error (pslverr) at addr=0x{addr:08x}")
+                # Success - exit polling loop
+                break
+            await RisingEdge(self.dut.clk)
+        else:
+            # Timeout reached
+            self.dut.apb_psel.value = 0
+            self.dut.apb_penable.value = 0
+            raise RuntimeError(
+                f"APB read timeout waiting for pready at addr=0x{addr:08x} "
+                f"(waited {timeout_cycles} cycles)"
+            )
 
         await RisingEdge(self.dut.clk)
         self.dut.apb_psel.value = 0

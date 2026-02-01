@@ -31,6 +31,9 @@ class AXIMemoryDriver(uvm_driver):
         mem: Dictionary storing memory contents {addr: data}
     """
 
+    # AXI handshake timeout (cycles)
+    AXI_TIMEOUT_CYCLES = 1000
+
     def __init__(self, name, parent, dut, ref_model=None):
         """Initialize AXI memory driver.
 
@@ -116,7 +119,7 @@ class AXIMemoryDriver(uvm_driver):
         """
         self.mem.clear()
         if self.ref_model is not None:
-            self.ref_model.memory.mem.clear()
+            self.ref_model.memory.clear()
         self.logger.info("Memory reset complete")
 
     async def axi_read_handler(self):
@@ -145,8 +148,17 @@ class AXIMemoryDriver(uvm_driver):
                 self.dut.axi_rdata.value = data
                 self.dut.axi_rresp.value = 0  # OKAY response
 
-                # Wait for master to accept read data (rready)
+                # Wait for master to accept read data (rready) with timeout
+                timeout_count = 0
                 while self.dut.axi_rready.value == 0:
+                    timeout_count += 1
+                    if timeout_count >= self.AXI_TIMEOUT_CYCLES:
+                        self.dut.axi_rvalid.value = 0
+                        raise TimeoutError(
+                            f"AXI read data handshake timeout: master did not assert "
+                            f"axi_rready after {self.AXI_TIMEOUT_CYCLES} cycles "
+                            f"(addr=0x{addr:08x}, method=axi_read_handler)"
+                        )
                     await RisingEdge(self.dut.clk)
 
                 # De-assert rvalid on next cycle
@@ -215,8 +227,17 @@ class AXIMemoryDriver(uvm_driver):
                 self.dut.axi_bvalid.value = 1
                 self.dut.axi_bresp.value = 0  # OKAY response
 
-                # Wait for master to accept response (bready)
+                # Wait for master to accept response (bready) with timeout
+                timeout_count = 0
                 while self.dut.axi_bready.value == 0:
+                    timeout_count += 1
+                    if timeout_count >= self.AXI_TIMEOUT_CYCLES:
+                        self.dut.axi_bvalid.value = 0
+                        raise TimeoutError(
+                            f"AXI write response handshake timeout: master did not assert "
+                            f"axi_bready after {self.AXI_TIMEOUT_CYCLES} cycles "
+                            f"(addr=0x{addr:08x}, method=axi_write_handler)"
+                        )
                     await RisingEdge(self.dut.clk)
 
                 # De-assert bvalid on next cycle

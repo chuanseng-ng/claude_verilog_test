@@ -3,6 +3,16 @@ Example cocotb test to demonstrate infrastructure is working.
 
 This tests a simple counter module and serves as a sanity check
 that cocotb is properly installed and configured.
+
+NOTE: This test intentionally uses direct assertions instead of scoreboard-based
+RTL-vs-model comparison because:
+1. It's an infrastructure sanity check, not a verification test
+2. It tests a simple counter module, not the CPU DUT
+3. The test logic is trivial enough that direct assertions are clearer
+4. Adding a scoreboard would over-engineer a basic functionality check
+
+For CPU verification tests, use the pyuvm-based infrastructure with scoreboards
+(see tb/cpu_uvm/ and tb/cocotb/cpu/test_*_uvm.py).
 """
 
 import cocotb
