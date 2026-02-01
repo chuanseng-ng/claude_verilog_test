@@ -31,12 +31,14 @@ repos:
         name: ruff lint (auto-fix)
         args: [--fix, --exit-non-zero-on-fix]
         types_or: [python, pyi]
-        files: ^tb/(models|tests)/
+        files: ^(tb/(models|tests|cpu_uvm)|sim)/
+        exclude: ^tb/cocotb/cpu/legacy/
       # Run the formatter
       - id: ruff-format
         name: ruff format
         types_or: [python, pyi]
-        files: ^tb/(models|tests)/
+        files: ^(tb/(models|tests|cpu_uvm)|sim)/
+        exclude: ^tb/cocotb/cpu/legacy/
 
   # MyPy - Type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -44,7 +46,8 @@ repos:
     hooks:
       - id: mypy
         name: mypy type checking
-        files: ^tb/(models|tests)/
+        files: ^tb/(models|tests|cpu_uvm)/
+        exclude: ^tb/cocotb/(cpu/legacy|bfm|common)/
         additional_dependencies: [pytest]
         args: [--ignore-missing-imports]
 

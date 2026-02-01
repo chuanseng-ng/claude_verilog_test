@@ -14,8 +14,9 @@ Features:
 """
 
 from pyuvm import uvm_env
-from ..agents.axi_agent.axi_agent import AXIAgent
+
 from ..agents.apb_agent.apb_agent import APBAgent
+from ..agents.axi_agent.axi_agent import AXIAgent
 from ..monitors.commit_monitor import CommitMonitor
 from ..scoreboards.cpu_scoreboard import CPUScoreboard
 
@@ -88,34 +89,21 @@ class CPUEnvironment(uvm_env):
         self.logger.info(f"Building {self.get_full_name()}")
 
         # Create AXI memory agent (with reference model)
-        self.axi_agent = AXIAgent(
-            "axi_agent",
-            self,
-            dut=self.dut,
-            ref_model=self.ref_model
-        )
+        self.axi_agent = AXIAgent("axi_agent", self, dut=self.dut, ref_model=self.ref_model)
 
         # Create APB debug agent
-        self.apb_agent = APBAgent(
-            "apb_agent",
-            self,
-            dut=self.dut
-        )
+        self.apb_agent = APBAgent("apb_agent", self, dut=self.dut)
 
         # Create commit monitor
         self.commit_monitor = CommitMonitor(
             "commit_monitor",
             self,
             dut=self.dut,
-            log_first_n=10  # Log first 10 commits in detail
+            log_first_n=10,  # Log first 10 commits in detail
         )
 
         # Create CPU scoreboard
-        self.scoreboard = CPUScoreboard(
-            "cpu_scoreboard",
-            self,
-            ref_model=self.ref_model
-        )
+        self.scoreboard = CPUScoreboard("cpu_scoreboard", self, ref_model=self.ref_model)
 
         self.logger.info("CPU environment build complete")
 
@@ -133,9 +121,7 @@ class CPUEnvironment(uvm_env):
         self.logger.info("Connecting CPU environment components")
 
         # Connect monitor to scoreboard
-        self.commit_monitor.analysis_port.connect(
-            self.scoreboard.commit_fifo.analysis_export
-        )
+        self.commit_monitor.analysis_port.connect(self.scoreboard.commit_fifo.analysis_export)
 
         self.logger.info("CPU environment connect phase complete")
 

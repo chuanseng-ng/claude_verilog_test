@@ -53,9 +53,7 @@ class MemoryModel:
 
         # Check natural alignment
         if addr % size != 0:
-            raise MisalignedAccessError(
-                f"Address 0x{addr:08x} not aligned to {size}-byte boundary"
-            )
+            raise MisalignedAccessError(f"Address 0x{addr:08x} not aligned to {size}-byte boundary")
 
         # Read bytes from sparse memory (little-endian)
         value = 0
@@ -88,9 +86,7 @@ class MemoryModel:
 
         # Check natural alignment
         if addr % size != 0:
-            raise MisalignedAccessError(
-                f"Address 0x{addr:08x} not aligned to {size}-byte boundary"
-            )
+            raise MisalignedAccessError(f"Address 0x{addr:08x} not aligned to {size}-byte boundary")
 
         # Write bytes to sparse memory (little-endian)
         for i in range(size):
@@ -136,11 +132,7 @@ class MemoryModel:
             >>> mem.dump(0x1000, 0x1004)
             {4096: 120, 4097: 86, 4098: 52, 4099: 18}
         """
-        return {
-            addr: self.mem[addr]
-            for addr in range(start_addr, end_addr)
-            if addr in self.mem
-        }
+        return {addr: self.mem[addr] for addr in range(start_addr, end_addr) if addr in self.mem}
 
     def clear(self):
         """Clear all memory contents."""

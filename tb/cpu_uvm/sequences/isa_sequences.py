@@ -23,27 +23,56 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from cocotb.triggers import ClockCycles  # noqa: E402
-from tb.cpu_uvm.sequences.base_sequence import BaseSequence  # noqa: E402
+
 from sim.riscv_encoder import (  # noqa: E402
     # Arithmetic/Logical R-type
-    ADD, SUB, AND, OR, XOR, SLT, SLTU,
-    # Shift R-type
-    SLL, SRL, SRA,
+    ADD,
     # Arithmetic/Logical I-type (ADDI also used for register setup)
-    ADDI, SLTI, SLTIU, ANDI, ORI, XORI,
-    # Shift I-type
-    SLLI, SRLI, SRAI,
-    # Load instructions
-    LB, LBU, LH, LHU, LW,
-    # Upper immediate (for large value setup)
-    LUI, AUIPC,
-    # Store instructions
-    SB, SH, SW,
+    ADDI,
+    AND,
+    ANDI,
+    AUIPC,
     # Branch instructions
-    BEQ, BNE, BLT, BGE, BLTU, BGEU,
+    BEQ,
+    BGE,
+    BGEU,
+    BLT,
+    BLTU,
+    BNE,
     # Jump instructions
-    JAL, JALR,
+    JAL,
+    JALR,
+    # Load instructions
+    LB,
+    LBU,
+    LH,
+    LHU,
+    # Upper immediate (for large value setup)
+    LUI,
+    LW,
+    OR,
+    ORI,
+    # Store instructions
+    SB,
+    SH,
+    # Shift R-type
+    SLL,
+    # Shift I-type
+    SLLI,
+    SLT,
+    SLTI,
+    SLTIU,
+    SLTU,
+    SRA,
+    SRAI,
+    SRL,
+    SRLI,
+    SUB,
+    SW,
+    XOR,
+    XORI,
 )
+from tb.cpu_uvm.sequences.base_sequence import BaseSequence  # noqa: E402
 
 
 class ISASequenceBase(BaseSequence):
@@ -56,8 +85,16 @@ class ISASequenceBase(BaseSequence):
     - Execution and validation
     """
 
-    def __init__(self, name, env, instruction, setup_regs=None,
-                 expected_rd=None, expected_value=None, setup_memory=None):
+    def __init__(
+        self,
+        name,
+        env,
+        instruction,
+        setup_regs=None,
+        expected_rd=None,
+        expected_value=None,
+        setup_memory=None,
+    ):
         """
         Initialize ISA test sequence.
 
@@ -119,6 +156,7 @@ class ISASequenceBase(BaseSequence):
 
                 # LUI xN, upper
                 from sim.riscv_encoder import LUI
+
                 axi_driver.write_word(addr, LUI(reg_num, upper))
                 addr += 4
                 num_setup_instructions += 1
@@ -172,6 +210,7 @@ class ISASequenceBase(BaseSequence):
 # Priority 1: Load/Store Instructions (Memory Operations)
 # =============================================================================
 
+
 class LWSequence(ISASequenceBase):
     """Test LW (Load Word) instruction."""
 
@@ -192,11 +231,13 @@ class LWSequence(ISASequenceBase):
         setup_memory = {base_addr + offset: mem_value}
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
             expected_value=expected_value,
-            setup_memory=setup_memory
+            setup_memory=setup_memory,
         )
 
 
@@ -220,10 +261,7 @@ class SWSequence(ISASequenceBase):
         self.target_addr = base_addr + offset
         self.store_value = store_value
 
-        super().__init__(
-            name, env, instruction,
-            setup_regs=setup_regs
-        )
+        super().__init__(name, env, instruction, setup_regs=setup_regs)
 
     async def body(self):
         """Execute SW test and verify memory was written."""
@@ -250,11 +288,13 @@ class LBSequence(ISASequenceBase):
         setup_memory = {base_addr + offset: mem_value}
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
             expected_value=expected_value,
-            setup_memory=setup_memory
+            setup_memory=setup_memory,
         )
 
 
@@ -268,11 +308,13 @@ class LBUSequence(ISASequenceBase):
         setup_memory = {base_addr + offset: mem_value}
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
             expected_value=expected_value,
-            setup_memory=setup_memory
+            setup_memory=setup_memory,
         )
 
 
@@ -286,11 +328,13 @@ class LHSequence(ISASequenceBase):
         setup_memory = {base_addr + offset: mem_value}
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
             expected_value=expected_value,
-            setup_memory=setup_memory
+            setup_memory=setup_memory,
         )
 
 
@@ -304,11 +348,13 @@ class LHUSequence(ISASequenceBase):
         setup_memory = {base_addr + offset: mem_value}
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
             expected_value=expected_value,
-            setup_memory=setup_memory
+            setup_memory=setup_memory,
         )
 
 
@@ -323,10 +369,7 @@ class SBSequence(ISASequenceBase):
         self.target_addr = base_addr + offset
         self.store_value = store_value & 0xFF  # Only byte should be stored
 
-        super().__init__(
-            name, env, instruction,
-            setup_regs=setup_regs
-        )
+        super().__init__(name, env, instruction, setup_regs=setup_regs)
 
     async def body(self):
         """Execute SB test and verify byte was written."""
@@ -356,10 +399,7 @@ class SHSequence(ISASequenceBase):
         self.target_addr = base_addr + offset
         self.store_value = store_value & 0xFFFF  # Only halfword should be stored
 
-        super().__init__(
-            name, env, instruction,
-            setup_regs=setup_regs
-        )
+        super().__init__(name, env, instruction, setup_regs=setup_regs)
 
     async def body(self):
         """Execute SH test and verify halfword was written."""
@@ -382,6 +422,7 @@ class SHSequence(ISASequenceBase):
 # Priority 2: Arithmetic/Logical Instructions (R-type and I-type)
 # =============================================================================
 
+
 class ADDSequence(ISASequenceBase):
     """Test ADD (Add) instruction."""
 
@@ -397,10 +438,12 @@ class ADDSequence(ISASequenceBase):
             pass
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -417,10 +460,12 @@ class SUBSequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -437,10 +482,12 @@ class ANDSequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -457,10 +504,12 @@ class ORSequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -477,10 +526,12 @@ class XORSequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -497,10 +548,12 @@ class SLTSequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -517,10 +570,12 @@ class SLTUSequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -535,10 +590,12 @@ class ADDISequence(ISASequenceBase):
             setup_regs[rs1] = rs1_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -553,10 +610,12 @@ class SLTISequence(ISASequenceBase):
             setup_regs[rs1] = rs1_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -571,10 +630,12 @@ class SLTIUSequence(ISASequenceBase):
             setup_regs[rs1] = rs1_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -589,10 +650,12 @@ class ANDISequence(ISASequenceBase):
             setup_regs[rs1] = rs1_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -607,10 +670,12 @@ class ORISequence(ISASequenceBase):
             setup_regs[rs1] = rs1_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -625,16 +690,19 @@ class XORISequence(ISASequenceBase):
             setup_regs[rs1] = rs1_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
 # =============================================================================
 # Priority 3: Shift Instructions (R-type and I-type)
 # =============================================================================
+
 
 class SLLSequence(ISASequenceBase):
     """Test SLL (Shift Left Logical) instruction."""
@@ -649,10 +717,12 @@ class SLLSequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -667,10 +737,12 @@ class SLLISequence(ISASequenceBase):
             setup_regs[rs1] = rs1_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -687,10 +759,12 @@ class SRLSequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -705,10 +779,12 @@ class SRLISequence(ISASequenceBase):
             setup_regs[rs1] = rs1_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -725,10 +801,12 @@ class SRASequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -743,10 +821,12 @@ class SRAISequence(ISASequenceBase):
             setup_regs[rs1] = rs1_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -754,11 +834,21 @@ class SRAISequence(ISASequenceBase):
 # Priority 4: Branch Instructions (B-type)
 # =============================================================================
 
+
 class BEQSequence(ISASequenceBase):
     """Test BEQ (Branch if Equal) instruction."""
 
-    def __init__(self, name, env, rs1, rs2, rs1_val, rs2_val,
-                 branch_target_offset=8, expect_branch_taken=True):
+    def __init__(
+        self,
+        name,
+        env,
+        rs1,
+        rs2,
+        rs1_val,
+        rs2_val,
+        branch_target_offset=8,
+        expect_branch_taken=True,
+    ):
         """
         Test BEQ rs1, rs2, offset.
 
@@ -776,10 +866,12 @@ class BEQSequence(ISASequenceBase):
         # For branch instructions, we don't check rd, we check PC behavior
         # This will be validated by the scoreboard tracking execution flow
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=None,  # Branches don't write to rd
-            expected_value=None
+            expected_value=None,
         )
         self.expect_branch_taken = expect_branch_taken
 
@@ -787,8 +879,17 @@ class BEQSequence(ISASequenceBase):
 class BNESequence(ISASequenceBase):
     """Test BNE (Branch if Not Equal) instruction."""
 
-    def __init__(self, name, env, rs1, rs2, rs1_val, rs2_val,
-                 branch_target_offset=8, expect_branch_taken=True):
+    def __init__(
+        self,
+        name,
+        env,
+        rs1,
+        rs2,
+        rs1_val,
+        rs2_val,
+        branch_target_offset=8,
+        expect_branch_taken=True,
+    ):
         """Test BNE rs1, rs2, offset."""
         instruction = BNE(rs1, rs2, branch_target_offset)
         setup_regs = {}
@@ -798,10 +899,7 @@ class BNESequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
-            setup_regs=setup_regs,
-            expected_rd=None,
-            expected_value=None
+            name, env, instruction, setup_regs=setup_regs, expected_rd=None, expected_value=None
         )
         self.expect_branch_taken = expect_branch_taken
 
@@ -809,8 +907,17 @@ class BNESequence(ISASequenceBase):
 class BLTSequence(ISASequenceBase):
     """Test BLT (Branch if Less Than, signed) instruction."""
 
-    def __init__(self, name, env, rs1, rs2, rs1_val, rs2_val,
-                 branch_target_offset=8, expect_branch_taken=True):
+    def __init__(
+        self,
+        name,
+        env,
+        rs1,
+        rs2,
+        rs1_val,
+        rs2_val,
+        branch_target_offset=8,
+        expect_branch_taken=True,
+    ):
         """Test BLT rs1, rs2, offset (signed comparison)."""
         instruction = BLT(rs1, rs2, branch_target_offset)
         setup_regs = {}
@@ -820,10 +927,7 @@ class BLTSequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
-            setup_regs=setup_regs,
-            expected_rd=None,
-            expected_value=None
+            name, env, instruction, setup_regs=setup_regs, expected_rd=None, expected_value=None
         )
         self.expect_branch_taken = expect_branch_taken
 
@@ -831,8 +935,17 @@ class BLTSequence(ISASequenceBase):
 class BGESequence(ISASequenceBase):
     """Test BGE (Branch if Greater or Equal, signed) instruction."""
 
-    def __init__(self, name, env, rs1, rs2, rs1_val, rs2_val,
-                 branch_target_offset=8, expect_branch_taken=True):
+    def __init__(
+        self,
+        name,
+        env,
+        rs1,
+        rs2,
+        rs1_val,
+        rs2_val,
+        branch_target_offset=8,
+        expect_branch_taken=True,
+    ):
         """Test BGE rs1, rs2, offset (signed comparison)."""
         instruction = BGE(rs1, rs2, branch_target_offset)
         setup_regs = {}
@@ -842,10 +955,7 @@ class BGESequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
-            setup_regs=setup_regs,
-            expected_rd=None,
-            expected_value=None
+            name, env, instruction, setup_regs=setup_regs, expected_rd=None, expected_value=None
         )
         self.expect_branch_taken = expect_branch_taken
 
@@ -853,8 +963,17 @@ class BGESequence(ISASequenceBase):
 class BLTUSequence(ISASequenceBase):
     """Test BLTU (Branch if Less Than, unsigned) instruction."""
 
-    def __init__(self, name, env, rs1, rs2, rs1_val, rs2_val,
-                 branch_target_offset=8, expect_branch_taken=True):
+    def __init__(
+        self,
+        name,
+        env,
+        rs1,
+        rs2,
+        rs1_val,
+        rs2_val,
+        branch_target_offset=8,
+        expect_branch_taken=True,
+    ):
         """Test BLTU rs1, rs2, offset (unsigned comparison)."""
         instruction = BLTU(rs1, rs2, branch_target_offset)
         setup_regs = {}
@@ -864,10 +983,7 @@ class BLTUSequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
-            setup_regs=setup_regs,
-            expected_rd=None,
-            expected_value=None
+            name, env, instruction, setup_regs=setup_regs, expected_rd=None, expected_value=None
         )
         self.expect_branch_taken = expect_branch_taken
 
@@ -875,8 +991,17 @@ class BLTUSequence(ISASequenceBase):
 class BGEUSequence(ISASequenceBase):
     """Test BGEU (Branch if Greater or Equal, unsigned) instruction."""
 
-    def __init__(self, name, env, rs1, rs2, rs1_val, rs2_val,
-                 branch_target_offset=8, expect_branch_taken=True):
+    def __init__(
+        self,
+        name,
+        env,
+        rs1,
+        rs2,
+        rs1_val,
+        rs2_val,
+        branch_target_offset=8,
+        expect_branch_taken=True,
+    ):
         """Test BGEU rs1, rs2, offset (unsigned comparison)."""
         instruction = BGEU(rs1, rs2, branch_target_offset)
         setup_regs = {}
@@ -886,10 +1011,7 @@ class BGEUSequence(ISASequenceBase):
             setup_regs[rs2] = rs2_val
 
         super().__init__(
-            name, env, instruction,
-            setup_regs=setup_regs,
-            expected_rd=None,
-            expected_value=None
+            name, env, instruction, setup_regs=setup_regs, expected_rd=None, expected_value=None
         )
         self.expect_branch_taken = expect_branch_taken
 
@@ -897,6 +1019,7 @@ class BGEUSequence(ISASequenceBase):
 # =============================================================================
 # Priority 5: Jump Instructions (J-type and I-type)
 # =============================================================================
+
 
 class JALSequence(ISASequenceBase):
     """Test JAL (Jump and Link) instruction."""
@@ -914,10 +1037,12 @@ class JALSequence(ISASequenceBase):
         setup_regs = {}  # JAL doesn't need register setup
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_return_addr
+            expected_value=expected_return_addr,
         )
 
 
@@ -941,16 +1066,19 @@ class JALRSequence(ISASequenceBase):
             setup_regs[rs1] = rs1_val
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_return_addr
+            expected_value=expected_return_addr,
         )
 
 
 # =============================================================================
 # Priority 6: Upper Immediate Instructions (U-type)
 # =============================================================================
+
 
 class LUISequence(ISASequenceBase):
     """Test LUI (Load Upper Immediate) instruction."""
@@ -966,10 +1094,12 @@ class LUISequence(ISASequenceBase):
         setup_regs = {}  # LUI doesn't need register setup
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -991,10 +1121,12 @@ class AUIPCSequence(ISASequenceBase):
         setup_regs = {}  # AUIPC doesn't need register setup
 
         super().__init__(
-            name, env, instruction,
+            name,
+            env,
+            instruction,
             setup_regs=setup_regs,
             expected_rd=rd,
-            expected_value=expected_value
+            expected_value=expected_value,
         )
 
 
@@ -1004,67 +1136,67 @@ class AUIPCSequence(ISASequenceBase):
 
 # Priority 1: Load/Store instructions
 ISA_LOAD_STORE_SEQUENCES = {
-    'LW': LWSequence,
-    'SW': SWSequence,
-    'LB': LBSequence,
-    'LBU': LBUSequence,
-    'LH': LHSequence,
-    'LHU': LHUSequence,
-    'SB': SBSequence,
-    'SH': SHSequence,
+    "LW": LWSequence,
+    "SW": SWSequence,
+    "LB": LBSequence,
+    "LBU": LBUSequence,
+    "LH": LHSequence,
+    "LHU": LHUSequence,
+    "SB": SBSequence,
+    "SH": SHSequence,
 }
 
 # Priority 2: Arithmetic/Logical instructions
 ISA_ARITH_LOGIC_SEQUENCES = {
     # R-type arithmetic
-    'ADD': ADDSequence,
-    'SUB': SUBSequence,
-    'SLT': SLTSequence,
-    'SLTU': SLTUSequence,
+    "ADD": ADDSequence,
+    "SUB": SUBSequence,
+    "SLT": SLTSequence,
+    "SLTU": SLTUSequence,
     # R-type logical
-    'AND': ANDSequence,
-    'OR': ORSequence,
-    'XOR': XORSequence,
+    "AND": ANDSequence,
+    "OR": ORSequence,
+    "XOR": XORSequence,
     # I-type arithmetic
-    'ADDI': ADDISequence,
-    'SLTI': SLTISequence,
-    'SLTIU': SLTIUSequence,
+    "ADDI": ADDISequence,
+    "SLTI": SLTISequence,
+    "SLTIU": SLTIUSequence,
     # I-type logical
-    'ANDI': ANDISequence,
-    'ORI': ORISequence,
-    'XORI': XORISequence,
+    "ANDI": ANDISequence,
+    "ORI": ORISequence,
+    "XORI": XORISequence,
 }
 
 # Priority 3: Shift instructions
 ISA_SHIFT_SEQUENCES = {
     # R-type shifts
-    'SLL': SLLSequence,
-    'SRL': SRLSequence,
-    'SRA': SRASequence,
+    "SLL": SLLSequence,
+    "SRL": SRLSequence,
+    "SRA": SRASequence,
     # I-type shifts
-    'SLLI': SLLISequence,
-    'SRLI': SRLISequence,
-    'SRAI': SRAISequence,
+    "SLLI": SLLISequence,
+    "SRLI": SRLISequence,
+    "SRAI": SRAISequence,
 }
 
 # Priority 4: Branch instructions
 ISA_BRANCH_SEQUENCES = {
-    'BEQ': BEQSequence,
-    'BNE': BNESequence,
-    'BLT': BLTSequence,
-    'BGE': BGESequence,
-    'BLTU': BLTUSequence,
-    'BGEU': BGEUSequence,
+    "BEQ": BEQSequence,
+    "BNE": BNESequence,
+    "BLT": BLTSequence,
+    "BGE": BGESequence,
+    "BLTU": BLTUSequence,
+    "BGEU": BGEUSequence,
 }
 
 # Priority 5: Jump instructions
 ISA_JUMP_SEQUENCES = {
-    'JAL': JALSequence,
-    'JALR': JALRSequence,
+    "JAL": JALSequence,
+    "JALR": JALRSequence,
 }
 
 # Priority 6: Upper immediate instructions
 ISA_UPPER_IMM_SEQUENCES = {
-    'LUI': LUISequence,
-    'AUIPC': AUIPCSequence,
+    "LUI": LUISequence,
+    "AUIPC": AUIPCSequence,
 }

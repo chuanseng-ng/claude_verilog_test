@@ -14,8 +14,8 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 
-from .base_test import BaseTest
 from ..sequences.random_instr_sequence import RandomInstructionSequence
+from .base_test import BaseTest
 
 
 class RandomTest(BaseTest):
@@ -37,14 +37,13 @@ class RandomTest(BaseTest):
 
     async def run_phase(self):
         """Run random instruction test."""
-        self.logger.info(f"Running random test (seed={self.seed}, "
-                        f"instructions={self.num_instructions})")
+        self.logger.info(
+            f"Running random test (seed={self.seed}, instructions={self.num_instructions})"
+        )
 
         # Create and run sequence
         seq = RandomInstructionSequence(
-            f"random_seq_seed{self.seed}",
-            num_instructions=self.num_instructions,
-            seed=self.seed
+            f"random_seq_seed{self.seed}", num_instructions=self.num_instructions, seed=self.seed
         )
         seq.env = self.env
 
@@ -70,8 +69,7 @@ async def test_random_single_uvm(dut):
     cocotb.start_soon(clock.start())
 
     # Create and run test with fixed seed for reproducibility
-    test = RandomTest("random_test_single", None, dut,
-                     num_instructions=100, seed=42)
+    test = RandomTest("random_test_single", None, dut, num_instructions=100, seed=42)
     test.build_phase()
     test.connect_phase()
     test.end_of_elaboration_phase()
@@ -112,13 +110,14 @@ async def test_random_multi_seed_uvm(dut):
 
     for seed_idx in range(num_seeds):
         seed = 1000 + seed_idx  # Deterministic seed sequence
-        dut._log.info(f"\n{'='*60}")
+        dut._log.info(f"\n{'=' * 60}")
         dut._log.info(f"Seed {seed_idx + 1}/{num_seeds}: {seed}")
-        dut._log.info(f"{'='*60}\n")
+        dut._log.info(f"{'=' * 60}\n")
 
         # Create and run test
-        test = RandomTest(f"random_test_seed{seed}", None, dut,
-                         num_instructions=num_instructions, seed=seed)
+        test = RandomTest(
+            f"random_test_seed{seed}", None, dut, num_instructions=num_instructions, seed=seed
+        )
         test.build_phase()
         test.connect_phase()
         test.end_of_elaboration_phase()
@@ -144,6 +143,6 @@ async def test_random_multi_seed_uvm(dut):
 
         dut._log.info(f"✓ Seed {seed} passed ({test.env.scoreboard.matches} commits validated)\n")
 
-    dut._log.info(f"\n{'='*60}")
+    dut._log.info(f"\n{'=' * 60}")
     dut._log.info(f"All {num_seeds} seeds passed!")
-    dut._log.info(f"{'='*60}\n")
+    dut._log.info(f"{'=' * 60}\n")

@@ -12,40 +12,64 @@ Priority 3: Control flow instructions (TBD)
 Priority 4: Shift/Upper immediate instructions (TBD)
 """
 
+import sys
+from pathlib import Path
+
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
-import sys
-from pathlib import Path
 
 # Add project root to path
 project_root = Path(__file__).resolve().parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from tb.cpu_uvm.tests.base_test import BaseTest  # noqa: E402
 from tb.cpu_uvm.sequences.isa_sequences import (  # noqa: E402
-    # Priority 1: Load/Store
-    LWSequence, SWSequence,
-    LBSequence, LBUSequence,
-    LHSequence, LHUSequence,
-    SBSequence, SHSequence,
+    ADDISequence,
     # Priority 2: Arithmetic/Logical
-    ADDSequence, SUBSequence, ANDSequence, ORSequence, XORSequence,
-    SLTSequence, SLTUSequence,
-    ADDISequence, SLTISequence, SLTIUSequence,
-    ANDISequence, ORISequence, XORISequence,
-    # Priority 3: Shift
-    SLLSequence, SRLSequence, SRASequence,
-    SLLISequence, SRLISequence, SRAISequence,
+    ADDSequence,
+    ANDISequence,
+    ANDSequence,
+    AUIPCSequence,
     # Priority 4: Branch
-    BEQSequence, BNESequence, BLTSequence, BGESequence,
-    BLTUSequence, BGEUSequence,
+    BEQSequence,
+    BGESequence,
+    BGEUSequence,
+    BLTSequence,
+    BLTUSequence,
+    BNESequence,
+    JALRSequence,
     # Priority 5: Jump
-    JALSequence, JALRSequence,
+    JALSequence,
+    LBSequence,
+    LBUSequence,
+    LHSequence,
+    LHUSequence,
     # Priority 6: Upper Immediate
-    LUISequence, AUIPCSequence,
+    LUISequence,
+    # Priority 1: Load/Store
+    LWSequence,
+    ORISequence,
+    ORSequence,
+    SBSequence,
+    SHSequence,
+    SLLISequence,
+    # Priority 3: Shift
+    SLLSequence,
+    SLTISequence,
+    SLTIUSequence,
+    SLTSequence,
+    SLTUSequence,
+    SRAISequence,
+    SRASequence,
+    SRLISequence,
+    SRLSequence,
+    SUBSequence,
+    SWSequence,
+    XORISequence,
+    XORSequence,
 )
+from tb.cpu_uvm.tests.base_test import BaseTest  # noqa: E402
 
 
 async def run_isa_test(dut, sequence_class, sequence_args, test_name="isa_test"):
@@ -114,8 +138,9 @@ async def run_isa_test(dut, sequence_class, sequence_args, test_name="isa_test")
     test.env.scoreboard.report_phase()
 
     # Verify no mismatches
-    assert test.env.scoreboard.mismatches == 0, \
-        f"Scoreboard detected {test.env.scoreboard.mismatches} mismatches"
+    assert (
+        test.env.scoreboard.mismatches == 0
+    ), f"Scoreboard detected {test.env.scoreboard.mismatches} mismatches"
 
     dut._log.info(f"✓ {test_name} passed")
 
@@ -123,6 +148,7 @@ async def run_isa_test(dut, sequence_class, sequence_args, test_name="isa_test")
 # =============================================================================
 # Priority 1: Load/Store Instructions (Memory Operations)
 # =============================================================================
+
 
 @cocotb.test()
 async def test_isa_lw_basic_uvm(dut):
@@ -139,14 +165,14 @@ async def test_isa_lw_basic_uvm(dut):
         LWSequence,
         {
             "name": "lw_basic",
-            "rd": 5,               # Load into x5
-            "rs1": 1,              # Base address in x1
-            "offset": 0,           # Offset = 0
-            "base_addr": 0x1000,   # x1 = 0x1000
+            "rd": 5,  # Load into x5
+            "rs1": 1,  # Base address in x1
+            "offset": 0,  # Offset = 0
+            "base_addr": 0x1000,  # x1 = 0x1000
             "mem_value": 0xDEADBEEF,  # mem[0x1000] = 0xDEADBEEF
-            "expected_value": 0xDEADBEEF
+            "expected_value": 0xDEADBEEF,
         },
-        "test_isa_lw_basic"
+        "test_isa_lw_basic",
     )
 
 
@@ -170,9 +196,9 @@ async def test_isa_lw_offset_uvm(dut):
             "offset": 8,
             "base_addr": 0x2000,
             "mem_value": 0x12345678,
-            "expected_value": 0x12345678
+            "expected_value": 0x12345678,
         },
-        "test_isa_lw_offset"
+        "test_isa_lw_offset",
     )
 
 
@@ -191,13 +217,13 @@ async def test_isa_sw_basic_uvm(dut):
         SWSequence,
         {
             "name": "sw_basic",
-            "rs1": 1,              # Base address in x1
-            "rs2": 3,              # Source data in x3
-            "offset": 0,           # Offset = 0
-            "base_addr": 0x1000,   # x1 = 0x1000
-            "store_value": 0xCAFEBABE  # x3 = 0xCAFEBABE
+            "rs1": 1,  # Base address in x1
+            "rs2": 3,  # Source data in x3
+            "offset": 0,  # Offset = 0
+            "base_addr": 0x1000,  # x1 = 0x1000
+            "store_value": 0xCAFEBABE,  # x3 = 0xCAFEBABE
         },
-        "test_isa_sw_basic"
+        "test_isa_sw_basic",
     )
 
 
@@ -220,9 +246,9 @@ async def test_isa_sw_offset_uvm(dut):
             "rs2": 4,
             "offset": 12,
             "base_addr": 0x2000,
-            "store_value": 0xAAAAAAAA
+            "store_value": 0xAAAAAAAA,
         },
-        "test_isa_sw_offset"
+        "test_isa_sw_offset",
     )
 
 
@@ -246,9 +272,9 @@ async def test_isa_lb_positive_uvm(dut):
             "offset": 0,
             "base_addr": 0x1000,
             "mem_value": 0x0000007F,  # Byte = 0x7F (positive)
-            "expected_value": 0x0000007F
+            "expected_value": 0x0000007F,
         },
-        "test_isa_lb_positive"
+        "test_isa_lb_positive",
     )
 
 
@@ -272,9 +298,9 @@ async def test_isa_lb_negative_uvm(dut):
             "offset": 0,
             "base_addr": 0x1000,
             "mem_value": 0x000000FF,  # Byte = 0xFF (negative)
-            "expected_value": 0xFFFFFFFF  # Sign-extended
+            "expected_value": 0xFFFFFFFF,  # Sign-extended
         },
-        "test_isa_lb_negative"
+        "test_isa_lb_negative",
     )
 
 
@@ -298,9 +324,9 @@ async def test_isa_lbu_uvm(dut):
             "offset": 0,
             "base_addr": 0x1000,
             "mem_value": 0x000000FF,
-            "expected_value": 0x000000FF  # Zero-extended
+            "expected_value": 0x000000FF,  # Zero-extended
         },
-        "test_isa_lbu"
+        "test_isa_lbu",
     )
 
 
@@ -324,9 +350,9 @@ async def test_isa_lh_positive_uvm(dut):
             "offset": 0,
             "base_addr": 0x1000,
             "mem_value": 0x00007FFF,  # Halfword = 0x7FFF (positive)
-            "expected_value": 0x00007FFF
+            "expected_value": 0x00007FFF,
         },
-        "test_isa_lh_positive"
+        "test_isa_lh_positive",
     )
 
 
@@ -350,9 +376,9 @@ async def test_isa_lh_negative_uvm(dut):
             "offset": 0,
             "base_addr": 0x1000,
             "mem_value": 0x0000FFFF,  # Halfword = 0xFFFF (negative)
-            "expected_value": 0xFFFFFFFF  # Sign-extended
+            "expected_value": 0xFFFFFFFF,  # Sign-extended
         },
-        "test_isa_lh_negative"
+        "test_isa_lh_negative",
     )
 
 
@@ -376,9 +402,9 @@ async def test_isa_lhu_uvm(dut):
             "offset": 0,
             "base_addr": 0x1000,
             "mem_value": 0x0000FFFF,
-            "expected_value": 0x0000FFFF  # Zero-extended
+            "expected_value": 0x0000FFFF,  # Zero-extended
         },
-        "test_isa_lhu"
+        "test_isa_lhu",
     )
 
 
@@ -401,9 +427,9 @@ async def test_isa_sb_uvm(dut):
             "rs2": 3,
             "offset": 0,
             "base_addr": 0x1000,
-            "store_value": 0xDEADBEEF  # Only 0xEF should be stored
+            "store_value": 0xDEADBEEF,  # Only 0xEF should be stored
         },
-        "test_isa_sb"
+        "test_isa_sb",
     )
 
 
@@ -426,15 +452,16 @@ async def test_isa_sh_uvm(dut):
             "rs2": 3,
             "offset": 0,
             "base_addr": 0x1000,
-            "store_value": 0xDEADBEEF  # Only 0xBEEF should be stored
+            "store_value": 0xDEADBEEF,  # Only 0xBEEF should be stored
         },
-        "test_isa_sh"
+        "test_isa_sh",
     )
 
 
 # =============================================================================
 # Priority 2: Arithmetic/Logical Instructions
 # =============================================================================
+
 
 @cocotb.test()
 async def test_isa_add_basic_uvm(dut):
@@ -456,9 +483,9 @@ async def test_isa_add_basic_uvm(dut):
             "rs2": 2,
             "rs1_val": 10,
             "rs2_val": 20,
-            "expected_value": 30
+            "expected_value": 30,
         },
-        "test_isa_add_basic"
+        "test_isa_add_basic",
     )
 
 
@@ -482,9 +509,9 @@ async def test_isa_add_overflow_uvm(dut):
             "rs2": 2,
             "rs1_val": 0x7FFFFFFF,
             "rs2_val": 1,
-            "expected_value": 0x80000000
+            "expected_value": 0x80000000,
         },
-        "test_isa_add_overflow"
+        "test_isa_add_overflow",
     )
 
 
@@ -508,9 +535,9 @@ async def test_isa_sub_basic_uvm(dut):
             "rs2": 2,
             "rs1_val": 50,
             "rs2_val": 20,
-            "expected_value": 30
+            "expected_value": 30,
         },
-        "test_isa_sub_basic"
+        "test_isa_sub_basic",
     )
 
 
@@ -534,9 +561,9 @@ async def test_isa_sub_underflow_uvm(dut):
             "rs2": 2,
             "rs1_val": 0,
             "rs2_val": 1,
-            "expected_value": 0xFFFFFFFF
+            "expected_value": 0xFFFFFFFF,
         },
-        "test_isa_sub_underflow"
+        "test_isa_sub_underflow",
     )
 
 
@@ -560,9 +587,9 @@ async def test_isa_and_uvm(dut):
             "rs2": 2,
             "rs1_val": 0xFF00,
             "rs2_val": 0x0FF0,
-            "expected_value": 0x0F00
+            "expected_value": 0x0F00,
         },
-        "test_isa_and"
+        "test_isa_and",
     )
 
 
@@ -586,9 +613,9 @@ async def test_isa_or_uvm(dut):
             "rs2": 2,
             "rs1_val": 0xFF00,
             "rs2_val": 0x00FF,
-            "expected_value": 0xFFFF
+            "expected_value": 0xFFFF,
         },
-        "test_isa_or"
+        "test_isa_or",
     )
 
 
@@ -612,9 +639,9 @@ async def test_isa_xor_uvm(dut):
             "rs2": 2,
             "rs1_val": 0xFFFF,
             "rs2_val": 0x0F0F,
-            "expected_value": 0xF0F0
+            "expected_value": 0xF0F0,
         },
-        "test_isa_xor"
+        "test_isa_xor",
     )
 
 
@@ -638,9 +665,9 @@ async def test_isa_slt_true_uvm(dut):
             "rs2": 2,
             "rs1_val": 0xFFFFFFF6,  # -10 in two's complement
             "rs2_val": 20,
-            "expected_value": 1
+            "expected_value": 1,
         },
-        "test_isa_slt_true"
+        "test_isa_slt_true",
     )
 
 
@@ -664,9 +691,9 @@ async def test_isa_sltu_false_uvm(dut):
             "rs2": 2,
             "rs1_val": 0xFFFFFFF6,
             "rs2_val": 20,
-            "expected_value": 0
+            "expected_value": 0,
         },
-        "test_isa_sltu_false"
+        "test_isa_sltu_false",
     )
 
 
@@ -689,9 +716,9 @@ async def test_isa_addi_positive_uvm(dut):
             "rs1": 1,
             "imm": 100,
             "rs1_val": 50,
-            "expected_value": 150
+            "expected_value": 150,
         },
-        "test_isa_addi_positive"
+        "test_isa_addi_positive",
     )
 
 
@@ -708,15 +735,8 @@ async def test_isa_slti_true_uvm(dut):
     await run_isa_test(
         dut,
         SLTISequence,
-        {
-            "name": "slti_true",
-            "rd": 5,
-            "rs1": 1,
-            "imm": 100,
-            "rs1_val": 50,
-            "expected_value": 1
-        },
-        "test_isa_slti_true"
+        {"name": "slti_true", "rd": 5, "rs1": 1, "imm": 100, "rs1_val": 50, "expected_value": 1},
+        "test_isa_slti_true",
     )
 
 
@@ -733,15 +753,8 @@ async def test_isa_sltiu_false_uvm(dut):
     await run_isa_test(
         dut,
         SLTIUSequence,
-        {
-            "name": "sltiu_false",
-            "rd": 5,
-            "rs1": 1,
-            "imm": 50,
-            "rs1_val": 100,
-            "expected_value": 0
-        },
-        "test_isa_sltiu_false"
+        {"name": "sltiu_false", "rd": 5, "rs1": 1, "imm": 50, "rs1_val": 100, "expected_value": 0},
+        "test_isa_sltiu_false",
     )
 
 
@@ -764,9 +777,9 @@ async def test_isa_andi_uvm(dut):
             "rs1": 1,
             "imm": 0x0FF,
             "rs1_val": 0x1FF,
-            "expected_value": 0x0FF
+            "expected_value": 0x0FF,
         },
-        "test_isa_andi"
+        "test_isa_andi",
     )
 
 
@@ -789,9 +802,9 @@ async def test_isa_ori_uvm(dut):
             "rs1": 1,
             "imm": 0x0FF,
             "rs1_val": 0xF00,
-            "expected_value": 0xFFF
+            "expected_value": 0xFFF,
         },
-        "test_isa_ori"
+        "test_isa_ori",
     )
 
 
@@ -814,15 +827,16 @@ async def test_isa_xori_uvm(dut):
             "rs1": 1,
             "imm": 0xFFF,
             "rs1_val": 0xAAA,
-            "expected_value": 0xFFFFF555  # 0xAAA XOR 0xFFFFFFFF (sign-extended)
+            "expected_value": 0xFFFFF555,  # 0xAAA XOR 0xFFFFFFFF (sign-extended)
         },
-        "test_isa_xori"
+        "test_isa_xori",
     )
 
 
 # =============================================================================
 # Priority 3: Shift Instructions
 # =============================================================================
+
 
 @cocotb.test()
 async def test_isa_sll_basic_uvm(dut):
@@ -844,9 +858,9 @@ async def test_isa_sll_basic_uvm(dut):
             "rs2": 2,
             "rs1_val": 0x00000001,
             "rs2_val": 4,
-            "expected_value": 0x00000010
+            "expected_value": 0x00000010,
         },
-        "test_isa_sll_basic"
+        "test_isa_sll_basic",
     )
 
 
@@ -870,9 +884,9 @@ async def test_isa_sll_max_shift_uvm(dut):
             "rs2": 2,
             "rs1_val": 0x00000001,
             "rs2_val": 31,
-            "expected_value": 0x80000000
+            "expected_value": 0x80000000,
         },
-        "test_isa_sll_max"
+        "test_isa_sll_max",
     )
 
 
@@ -895,9 +909,9 @@ async def test_isa_slli_basic_uvm(dut):
             "rs1": 1,
             "shamt": 8,
             "rs1_val": 0x000000FF,
-            "expected_value": 0x0000FF00
+            "expected_value": 0x0000FF00,
         },
-        "test_isa_slli_basic"
+        "test_isa_slli_basic",
     )
 
 
@@ -921,9 +935,9 @@ async def test_isa_srl_basic_uvm(dut):
             "rs2": 2,
             "rs1_val": 0x80000000,
             "rs2_val": 4,
-            "expected_value": 0x08000000
+            "expected_value": 0x08000000,
         },
-        "test_isa_srl_basic"
+        "test_isa_srl_basic",
     )
 
 
@@ -946,9 +960,9 @@ async def test_isa_srli_basic_uvm(dut):
             "rs1": 1,
             "shamt": 8,
             "rs1_val": 0xFF000000,
-            "expected_value": 0x00FF0000
+            "expected_value": 0x00FF0000,
         },
-        "test_isa_srli_basic"
+        "test_isa_srli_basic",
     )
 
 
@@ -972,9 +986,9 @@ async def test_isa_sra_basic_uvm(dut):
             "rs2": 2,
             "rs1_val": 0x80000000,
             "rs2_val": 4,
-            "expected_value": 0xF8000000
+            "expected_value": 0xF8000000,
         },
-        "test_isa_sra_negative"
+        "test_isa_sra_negative",
     )
 
 
@@ -997,15 +1011,16 @@ async def test_isa_srai_basic_uvm(dut):
             "rs1": 1,
             "shamt": 8,
             "rs1_val": 0xFF000000,
-            "expected_value": 0xFFFF0000
+            "expected_value": 0xFFFF0000,
         },
-        "test_isa_srai_basic"
+        "test_isa_srai_basic",
     )
 
 
 # =============================================================================
 # Priority 4: Branch Instructions
 # =============================================================================
+
 
 @cocotb.test()
 async def test_isa_beq_taken_uvm(dut):
@@ -1027,9 +1042,9 @@ async def test_isa_beq_taken_uvm(dut):
             "rs1_val": 10,
             "rs2_val": 10,
             "branch_target_offset": 8,
-            "expect_branch_taken": True
+            "expect_branch_taken": True,
         },
-        "test_isa_beq_taken"
+        "test_isa_beq_taken",
     )
 
 
@@ -1053,9 +1068,9 @@ async def test_isa_beq_not_taken_uvm(dut):
             "rs1_val": 10,
             "rs2_val": 20,
             "branch_target_offset": 8,
-            "expect_branch_taken": False
+            "expect_branch_taken": False,
         },
-        "test_isa_beq_not_taken"
+        "test_isa_beq_not_taken",
     )
 
 
@@ -1079,9 +1094,9 @@ async def test_isa_bne_taken_uvm(dut):
             "rs1_val": 10,
             "rs2_val": 20,
             "branch_target_offset": 8,
-            "expect_branch_taken": True
+            "expect_branch_taken": True,
         },
-        "test_isa_bne_taken"
+        "test_isa_bne_taken",
     )
 
 
@@ -1105,9 +1120,9 @@ async def test_isa_bne_not_taken_uvm(dut):
             "rs1_val": 10,
             "rs2_val": 10,
             "branch_target_offset": 8,
-            "expect_branch_taken": False
+            "expect_branch_taken": False,
         },
-        "test_isa_bne_not_taken"
+        "test_isa_bne_not_taken",
     )
 
 
@@ -1131,9 +1146,9 @@ async def test_isa_blt_taken_uvm(dut):
             "rs1_val": 0xFFFFFFF6,  # -10 in two's complement
             "rs2_val": 20,
             "branch_target_offset": 8,
-            "expect_branch_taken": True
+            "expect_branch_taken": True,
         },
-        "test_isa_blt_taken"
+        "test_isa_blt_taken",
     )
 
 
@@ -1157,9 +1172,9 @@ async def test_isa_blt_not_taken_uvm(dut):
             "rs1_val": 20,
             "rs2_val": 10,
             "branch_target_offset": 8,
-            "expect_branch_taken": False
+            "expect_branch_taken": False,
         },
-        "test_isa_blt_not_taken"
+        "test_isa_blt_not_taken",
     )
 
 
@@ -1183,9 +1198,9 @@ async def test_isa_bge_taken_uvm(dut):
             "rs1_val": 20,
             "rs2_val": 10,
             "branch_target_offset": 8,
-            "expect_branch_taken": True
+            "expect_branch_taken": True,
         },
-        "test_isa_bge_taken"
+        "test_isa_bge_taken",
     )
 
 
@@ -1209,9 +1224,9 @@ async def test_isa_bge_not_taken_uvm(dut):
             "rs1_val": 0xFFFFFFF6,  # -10 in two's complement
             "rs2_val": 20,
             "branch_target_offset": 8,
-            "expect_branch_taken": False
+            "expect_branch_taken": False,
         },
-        "test_isa_bge_not_taken"
+        "test_isa_bge_not_taken",
     )
 
 
@@ -1235,9 +1250,9 @@ async def test_isa_bltu_taken_uvm(dut):
             "rs1_val": 10,
             "rs2_val": 20,
             "branch_target_offset": 8,
-            "expect_branch_taken": True
+            "expect_branch_taken": True,
         },
-        "test_isa_bltu_taken"
+        "test_isa_bltu_taken",
     )
 
 
@@ -1261,9 +1276,9 @@ async def test_isa_bltu_not_taken_uvm(dut):
             "rs1_val": 0xFFFFFFF6,
             "rs2_val": 20,
             "branch_target_offset": 8,
-            "expect_branch_taken": False
+            "expect_branch_taken": False,
         },
-        "test_isa_bltu_not_taken"
+        "test_isa_bltu_not_taken",
     )
 
 
@@ -1287,9 +1302,9 @@ async def test_isa_bgeu_taken_uvm(dut):
             "rs1_val": 0xFFFFFFF6,
             "rs2_val": 20,
             "branch_target_offset": 8,
-            "expect_branch_taken": True
+            "expect_branch_taken": True,
         },
-        "test_isa_bgeu_taken"
+        "test_isa_bgeu_taken",
     )
 
 
@@ -1313,15 +1328,16 @@ async def test_isa_bgeu_not_taken_uvm(dut):
             "rs1_val": 10,
             "rs2_val": 20,
             "branch_target_offset": 8,
-            "expect_branch_taken": False
+            "expect_branch_taken": False,
         },
-        "test_isa_bgeu_not_taken"
+        "test_isa_bgeu_not_taken",
     )
 
 
 # =============================================================================
 # Priority 5: Jump Instructions
 # =============================================================================
+
 
 @cocotb.test()
 async def test_isa_jal_basic_uvm(dut):
@@ -1340,9 +1356,9 @@ async def test_isa_jal_basic_uvm(dut):
             "name": "jal_basic",
             "rd": 1,
             "jump_offset": 16,
-            "expected_return_addr": 4  # PC of JAL (0x0000) + 4
+            "expected_return_addr": 4,  # PC of JAL (0x0000) + 4
         },
-        "test_isa_jal_basic"
+        "test_isa_jal_basic",
     )
 
 
@@ -1363,9 +1379,9 @@ async def test_isa_jal_backward_uvm(dut):
             "name": "jal_backward",
             "rd": 2,
             "jump_offset": -8,  # Negative offset (backward jump)
-            "expected_return_addr": 4  # Still PC+4
+            "expected_return_addr": 4,  # Still PC+4
         },
-        "test_isa_jal_backward"
+        "test_isa_jal_backward",
     )
 
 
@@ -1389,9 +1405,9 @@ async def test_isa_jalr_basic_uvm(dut):
             "rs1": 1,
             "offset": 8,
             "rs1_val": 0x1000,
-            "expected_return_addr": 8  # PC of JALR (0x0004 after LUI) + 4
+            "expected_return_addr": 8,  # PC of JALR (0x0004 after LUI) + 4
         },
-        "test_isa_jalr_basic"
+        "test_isa_jalr_basic",
     )
 
 
@@ -1415,15 +1431,16 @@ async def test_isa_jalr_zero_offset_uvm(dut):
             "rs1": 2,
             "offset": 0,
             "rs1_val": 0x2000,
-            "expected_return_addr": 8  # PC of JALR (0x0004 after LUI) + 4
+            "expected_return_addr": 8,  # PC of JALR (0x0004 after LUI) + 4
         },
-        "test_isa_jalr_zero"
+        "test_isa_jalr_zero",
     )
 
 
 # =============================================================================
 # Priority 6: Upper Immediate Instructions
 # =============================================================================
+
 
 @cocotb.test()
 async def test_isa_lui_basic_uvm(dut):
@@ -1438,13 +1455,8 @@ async def test_isa_lui_basic_uvm(dut):
     await run_isa_test(
         dut,
         LUISequence,
-        {
-            "name": "lui_basic",
-            "rd": 5,
-            "imm20": 0x12345,
-            "expected_value": 0x12345000
-        },
-        "test_isa_lui_basic"
+        {"name": "lui_basic", "rd": 5, "imm20": 0x12345, "expected_value": 0x12345000},
+        "test_isa_lui_basic",
     )
 
 
@@ -1461,13 +1473,8 @@ async def test_isa_lui_max_uvm(dut):
     await run_isa_test(
         dut,
         LUISequence,
-        {
-            "name": "lui_max",
-            "rd": 6,
-            "imm20": 0xFFFFF,
-            "expected_value": 0xFFFFF000
-        },
-        "test_isa_lui_max"
+        {"name": "lui_max", "rd": 6, "imm20": 0xFFFFF, "expected_value": 0xFFFFF000},
+        "test_isa_lui_max",
     )
 
 
@@ -1489,9 +1496,9 @@ async def test_isa_auipc_basic_uvm(dut):
             "rd": 7,
             "imm20": 0x1000,
             "pc_at_auipc": 0x0000,  # PC when AUIPC executes
-            "expected_value": 0x01000000  # 0x0000 + (0x1000 << 12)
+            "expected_value": 0x01000000,  # 0x0000 + (0x1000 << 12)
         },
-        "test_isa_auipc_basic"
+        "test_isa_auipc_basic",
     )
 
 
@@ -1514,9 +1521,9 @@ async def test_isa_auipc_nonzero_pc_uvm(dut):
             "rd": 8,
             "imm20": 0x100,
             "pc_at_auipc": 0x0000,  # Program starts at 0x0000
-            "expected_value": 0x00100000  # 0x0000 + (0x100 << 12)
+            "expected_value": 0x00100000,  # 0x0000 + (0x100 << 12)
         },
-        "test_isa_auipc_nonzero"
+        "test_isa_auipc_nonzero",
     )
 
 

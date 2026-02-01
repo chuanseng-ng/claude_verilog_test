@@ -6,6 +6,7 @@ Tests the sparse memory implementation with alignment checking.
 
 import sys
 from pathlib import Path
+
 import pytest
 
 from tb.models.memory_model import MemoryModel, MisalignedAccessError

@@ -5,7 +5,6 @@ Instruction-accurate model of RV32I CPU core per PHASE0_ARCHITECTURE_SPEC.md.
 Implements all 37 base integer instructions.
 """
 
-from typing import Optional
 from .memory_model import MemoryModel, MisalignedAccessError
 
 
@@ -67,7 +66,7 @@ class RV32IModel:
         self.halted = False
         self.cycle_count = 0
 
-    def step(self, instruction: Optional[int] = None) -> dict:
+    def step(self, instruction: int | None = None) -> dict:
         """
         Execute one instruction.
 

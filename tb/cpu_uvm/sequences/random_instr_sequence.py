@@ -18,6 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from tb.generators.rv32i_instr_gen import RV32IInstructionGenerator
+
 from .base_sequence import BaseSequence
 
 
@@ -79,20 +80,18 @@ class RandomInstructionSequence(BaseSequence):
 
         # Validate environment reference
         if self.env is None:
-            raise RuntimeError(
-                "RandomInstructionSequence requires env to be set before running"
-            )
+            raise RuntimeError("RandomInstructionSequence requires env to be set before running")
 
         # Create instruction generator
         self.generator = RV32IInstructionGenerator(seed=self.seed)
 
         # Log test info
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("Random Instruction Test")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(f"Seed: {self.generator.seed}")
         print(f"Instructions: {self.num_instructions}")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
     async def body(self):
         """Body phase - load program and execute.

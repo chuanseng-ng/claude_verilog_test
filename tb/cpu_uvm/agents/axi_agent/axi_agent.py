@@ -11,6 +11,7 @@ Features:
 """
 
 from pyuvm import uvm_agent
+
 from .axi_driver import AXIMemoryDriver
 
 
@@ -60,12 +61,7 @@ class AXIAgent(uvm_agent):
         self.logger.info(f"Building {self.get_full_name()}")
 
         # Create AXI memory driver
-        self.driver = AXIMemoryDriver(
-            "axi_driver",
-            self,
-            dut=self.dut,
-            ref_model=self.ref_model
-        )
+        self.driver = AXIMemoryDriver("axi_driver", self, dut=self.dut, ref_model=self.ref_model)
 
         self.logger.info("AXI agent build complete")
 

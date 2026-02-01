@@ -17,15 +17,15 @@ if str(project_root) not in sys.path:
 # Import all test functions from the cpu_uvm smoke tests module
 from tb.cpu_uvm.tests.test_smoke_uvm import (
     test_addi_uvm,
-    test_branch_taken_uvm,
     test_branch_not_taken_uvm,
+    test_branch_taken_uvm,
     test_jal_uvm,
 )
 
 # Re-export for cocotb discovery
 __all__ = [
-    'test_addi_uvm',
-    'test_branch_taken_uvm',
-    'test_branch_not_taken_uvm',
-    'test_jal_uvm',
+    "test_addi_uvm",
+    "test_branch_taken_uvm",
+    "test_branch_not_taken_uvm",
+    "test_jal_uvm",
 ]

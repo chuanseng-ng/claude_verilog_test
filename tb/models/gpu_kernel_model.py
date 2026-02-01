@@ -5,7 +5,6 @@ Instruction-accurate model of GPU SIMT execution per PHASE4_GPU_ARCHITECTURE_SPE
 Implements 8-lane warp execution with basic divergence handling.
 """
 
-from typing import Optional
 from .memory_model import MemoryModel
 
 
@@ -204,9 +203,7 @@ class GPUKernelModel:
 
             # Safety check to prevent infinite loops
             if self.cycle_count > 1000000:
-                raise RuntimeError(
-                    "Kernel exceeded maximum cycle count (possible infinite loop)"
-                )
+                raise RuntimeError("Kernel exceeded maximum cycle count (possible infinite loop)")
 
         return {
             "cycles": self.cycle_count,
@@ -218,7 +215,7 @@ class GPUKernelModel:
         """Check if all warps are done."""
         return all(warp["done"] for warp in self.warps)
 
-    def _schedule_warp(self) -> Optional[dict]:
+    def _schedule_warp(self) -> dict | None:
         """
         Schedule next warp using round-robin.
 
@@ -275,9 +272,7 @@ class GPUKernelModel:
 
         # Execute instruction type
         if opcode in (self.OP_VADD, self.OP_VADDI):
-            next_pc = self._execute_alu(
-                warp, insn, opcode, rd, rs1, rs2, funct3, funct7
-            )
+            next_pc = self._execute_alu(warp, insn, opcode, rd, rs1, rs2, funct3, funct7)
         elif opcode == self.OP_VLD:
             next_pc = self._execute_load(warp, insn, rd, rs1, funct3)
         elif opcode == self.OP_VST:
@@ -401,9 +396,7 @@ class GPUKernelModel:
 
         return warp["pc"] + 4
 
-    def _execute_branch(
-        self, warp: dict, insn: int, rs1: int, rs2: int, funct3: int
-    ) -> int:
+    def _execute_branch(self, warp: dict, insn: int, rs1: int, rs2: int, funct3: int) -> int:
         """Execute branch with divergence handling (one level)."""
         # Decode B-type immediate
         imm = (
@@ -476,9 +469,7 @@ class GPUKernelModel:
 
         for lane in range(self.warp_size):
             if warp["active_mask"] & (1 << lane):
-                tid = self._compute_thread_id(
-                    warp["block_id"], warp["warp_in_block"], lane
-                )
+                tid = self._compute_thread_id(warp["block_id"], warp["warp_in_block"], lane)
 
                 if special_reg == self.SREG_TID_X:
                     value = tid[0]

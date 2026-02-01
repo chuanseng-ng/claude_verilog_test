@@ -4,15 +4,18 @@ RISC-V RV32I instruction encoder utility.
 Generates correct 32-bit encodings for all RV32I instructions.
 """
 
+
 def encode_r_type(funct7, rs2, rs1, funct3, rd, opcode=0b0110011):
     """Encode R-type instruction: ADD, SUB, AND, OR, XOR, SLL, SRL, SRA, SLT, SLTU"""
     insn = (funct7 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
     return insn
 
+
 def encode_i_type(imm12, rs1, funct3, rd, opcode):
     """Encode I-type instruction: ADDI, SLTI, SLTIU, XORI, ORI, ANDI, loads, JALR"""
     insn = ((imm12 & 0xFFF) << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
     return insn
+
 
 def encode_s_type(imm12, rs2, rs1, funct3, opcode=0b0100011):
     """Encode S-type instruction: SB, SH, SW"""
@@ -21,20 +24,31 @@ def encode_s_type(imm12, rs2, rs1, funct3, opcode=0b0100011):
     insn = (imm_11_5 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (imm_4_0 << 7) | opcode
     return insn
 
+
 def encode_b_type(imm13, rs2, rs1, funct3, opcode=0b1100011):
     """Encode B-type instruction: BEQ, BNE, BLT, BGE, BLTU, BGEU"""
     imm_12 = (imm13 >> 12) & 0x1
     imm_10_5 = (imm13 >> 5) & 0x3F
     imm_4_1 = (imm13 >> 1) & 0xF
     imm_11 = (imm13 >> 11) & 0x1
-    insn = (imm_12 << 31) | (imm_10_5 << 25) | (rs2 << 20) | (rs1 << 15) | \
-           (funct3 << 12) | (imm_4_1 << 8) | (imm_11 << 7) | opcode
+    insn = (
+        (imm_12 << 31)
+        | (imm_10_5 << 25)
+        | (rs2 << 20)
+        | (rs1 << 15)
+        | (funct3 << 12)
+        | (imm_4_1 << 8)
+        | (imm_11 << 7)
+        | opcode
+    )
     return insn
+
 
 def encode_u_type(imm20, rd, opcode):
     """Encode U-type instruction: LUI, AUIPC"""
     insn = ((imm20 & 0xFFFFF) << 12) | (rd << 7) | opcode
     return insn
+
 
 def encode_j_type(imm21, rd, opcode=0b1101111):
     """Encode J-type instruction: JAL"""
@@ -42,158 +56,198 @@ def encode_j_type(imm21, rd, opcode=0b1101111):
     imm_10_1 = (imm21 >> 1) & 0x3FF
     imm_11 = (imm21 >> 11) & 0x1
     imm_19_12 = (imm21 >> 12) & 0xFF
-    insn = (imm_20 << 31) | (imm_19_12 << 12) | (imm_11 << 20) | (imm_10_1 << 21) | (rd << 7) | opcode
+    insn = (
+        (imm_20 << 31) | (imm_19_12 << 12) | (imm_11 << 20) | (imm_10_1 << 21) | (rd << 7) | opcode
+    )
     return insn
+
 
 # Specific instruction encoders
 def ADD(rd, rs1, rs2):
     return encode_r_type(0b0000000, rs2, rs1, 0b000, rd)
 
+
 def SUB(rd, rs1, rs2):
     return encode_r_type(0b0100000, rs2, rs1, 0b000, rd)
+
 
 def AND(rd, rs1, rs2):
     return encode_r_type(0b0000000, rs2, rs1, 0b111, rd)
 
+
 def OR(rd, rs1, rs2):
     return encode_r_type(0b0000000, rs2, rs1, 0b110, rd)
+
 
 def XOR(rd, rs1, rs2):
     return encode_r_type(0b0000000, rs2, rs1, 0b100, rd)
 
+
 def SLL(rd, rs1, rs2):
     return encode_r_type(0b0000000, rs2, rs1, 0b001, rd)
+
 
 def SRL(rd, rs1, rs2):
     return encode_r_type(0b0000000, rs2, rs1, 0b101, rd)
 
+
 def SRA(rd, rs1, rs2):
     return encode_r_type(0b0100000, rs2, rs1, 0b101, rd)
+
 
 def SLT(rd, rs1, rs2):
     return encode_r_type(0b0000000, rs2, rs1, 0b010, rd)
 
+
 def SLTU(rd, rs1, rs2):
     return encode_r_type(0b0000000, rs2, rs1, 0b011, rd)
+
 
 # I-type arithmetic instructions
 def ADDI(rd, rs1, imm12):
     """ADDI rd, rs1, imm12"""
     return encode_i_type(imm12, rs1, 0b000, rd, 0b0010011)
 
+
 def SLTI(rd, rs1, imm12):
     """SLTI rd, rs1, imm12"""
     return encode_i_type(imm12, rs1, 0b010, rd, 0b0010011)
+
 
 def SLTIU(rd, rs1, imm12):
     """SLTIU rd, rs1, imm12"""
     return encode_i_type(imm12, rs1, 0b011, rd, 0b0010011)
 
+
 def XORI(rd, rs1, imm12):
     """XORI rd, rs1, imm12"""
     return encode_i_type(imm12, rs1, 0b100, rd, 0b0010011)
+
 
 def ORI(rd, rs1, imm12):
     """ORI rd, rs1, imm12"""
     return encode_i_type(imm12, rs1, 0b110, rd, 0b0010011)
 
+
 def ANDI(rd, rs1, imm12):
     """ANDI rd, rs1, imm12"""
     return encode_i_type(imm12, rs1, 0b111, rd, 0b0010011)
+
 
 def SLLI(rd, rs1, shamt):
     """SLLI rd, rs1, shamt (shamt is 5-bit)"""
     return encode_i_type(shamt & 0x1F, rs1, 0b001, rd, 0b0010011)
 
+
 def SRLI(rd, rs1, shamt):
     """SRLI rd, rs1, shamt (shamt is 5-bit)"""
     return encode_i_type(shamt & 0x1F, rs1, 0b101, rd, 0b0010011)
 
+
 def SRAI(rd, rs1, shamt):
     """SRAI rd, rs1, shamt (shamt is 5-bit with bit[10]=1)"""
     return encode_i_type(0x400 | (shamt & 0x1F), rs1, 0b101, rd, 0b0010011)
+
 
 # Upper immediate instructions
 def LUI(rd, imm20):
     """LUI rd, imm20"""
     return encode_u_type(imm20, rd, 0b0110111)
 
+
 def AUIPC(rd, imm20):
     """AUIPC rd, imm20"""
     return encode_u_type(imm20, rd, 0b0010111)
+
 
 # Load instructions (I-type, opcode=0b0000011)
 def LB(rd, rs1, imm12):
     """LB rd, imm12(rs1) - Load byte (sign-extended)"""
     return encode_i_type(imm12, rs1, 0b000, rd, 0b0000011)
 
+
 def LH(rd, rs1, imm12):
     """LH rd, imm12(rs1) - Load halfword (sign-extended)"""
     return encode_i_type(imm12, rs1, 0b001, rd, 0b0000011)
+
 
 def LW(rd, rs1, imm12):
     """LW rd, imm12(rs1) - Load word"""
     return encode_i_type(imm12, rs1, 0b010, rd, 0b0000011)
 
+
 def LBU(rd, rs1, imm12):
     """LBU rd, imm12(rs1) - Load byte unsigned"""
     return encode_i_type(imm12, rs1, 0b100, rd, 0b0000011)
 
+
 def LHU(rd, rs1, imm12):
     """LHU rd, imm12(rs1) - Load halfword unsigned"""
     return encode_i_type(imm12, rs1, 0b101, rd, 0b0000011)
+
 
 # Store instructions (S-type, opcode=0b0100011)
 def SB(rs2, rs1, imm12):
     """SB rs2, imm12(rs1) - Store byte"""
     return encode_s_type(imm12, rs2, rs1, 0b000, 0b0100011)
 
+
 def SH(rs2, rs1, imm12):
     """SH rs2, imm12(rs1) - Store halfword"""
     return encode_s_type(imm12, rs2, rs1, 0b001, 0b0100011)
 
+
 def SW(rs2, rs1, imm12):
     """SW rs2, imm12(rs1) - Store word"""
     return encode_s_type(imm12, rs2, rs1, 0b010, 0b0100011)
+
 
 # Branch instructions (B-type, opcode=0b1100011)
 def BEQ(rs1, rs2, imm13):
     """BEQ rs1, rs2, imm13 - Branch if equal"""
     return encode_b_type(imm13, rs2, rs1, 0b000, 0b1100011)
 
+
 def BNE(rs1, rs2, imm13):
     """BNE rs1, rs2, imm13 - Branch if not equal"""
     return encode_b_type(imm13, rs2, rs1, 0b001, 0b1100011)
+
 
 def BLT(rs1, rs2, imm13):
     """BLT rs1, rs2, imm13 - Branch if less than (signed)"""
     return encode_b_type(imm13, rs2, rs1, 0b100, 0b1100011)
 
+
 def BGE(rs1, rs2, imm13):
     """BGE rs1, rs2, imm13 - Branch if greater or equal (signed)"""
     return encode_b_type(imm13, rs2, rs1, 0b101, 0b1100011)
+
 
 def BLTU(rs1, rs2, imm13):
     """BLTU rs1, rs2, imm13 - Branch if less than (unsigned)"""
     return encode_b_type(imm13, rs2, rs1, 0b110, 0b1100011)
 
+
 def BGEU(rs1, rs2, imm13):
     """BGEU rs1, rs2, imm13 - Branch if greater or equal (unsigned)"""
     return encode_b_type(imm13, rs2, rs1, 0b111, 0b1100011)
+
 
 # Jump instructions
 def JAL(rd, imm21):
     """JAL rd, imm21 - Jump and link"""
     return encode_j_type(imm21, rd, 0b1101111)
 
+
 def JALR(rd, rs1, imm12):
     """JALR rd, rs1, imm12 - Jump and link register"""
     return encode_i_type(imm12, rs1, 0b000, rd, 0b1100111)
 
+
 # Print test cases for verification
 if __name__ == "__main__":
     print("R-Type Instruction Encodings:")
-    print("="*60)
+    print("=" * 60)
 
     # ADD x6, x3, x4
     add_insn = ADD(6, 3, 4)
@@ -232,7 +286,7 @@ if __name__ == "__main__":
     print(f"SLTU x3, x1, x2 = 0x{sltu_insn:08x}")
 
     print("\nI-Type Arithmetic Instruction Encodings:")
-    print("="*60)
+    print("=" * 60)
 
     # ADDI x1, x0, 0
     addi_insn = ADDI(1, 0, 0)
@@ -275,7 +329,7 @@ if __name__ == "__main__":
     print(f"SRAI x2, x1, 4     = 0x{srai_insn:08x}")
 
     print("\nU-Type Instruction Encodings:")
-    print("="*60)
+    print("=" * 60)
 
     # LUI x1, 0x12345
     lui_insn = LUI(1, 0x12345)

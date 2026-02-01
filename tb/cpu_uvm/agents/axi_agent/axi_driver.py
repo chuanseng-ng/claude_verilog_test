@@ -206,7 +206,7 @@ class AXIMemoryDriver(uvm_driver):
                     else:
                         # Keep old byte from existing word
                         byte_val = (old_data >> (byte_idx * 8)) & 0xFF
-                    merged_data |= (byte_val << (byte_idx * 8))
+                    merged_data |= byte_val << (byte_idx * 8)
 
                 # Write merged word to memory (and sync with ref model)
                 self.write_word(addr, merged_data)

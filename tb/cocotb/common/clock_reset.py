@@ -4,7 +4,7 @@ Clock and reset utilities for cocotb testbenches.
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import RisingEdge
 
 
 async def setup_clock(dut, clock_period_ns: int = 10):
@@ -58,9 +58,7 @@ async def wait_cycles(dut, num_cycles: int):
         await RisingEdge(dut.clk)
 
 
-async def wait_for_signal(
-    dut, signal_name: str, value: int, timeout_cycles: int = 1000
-):
+async def wait_for_signal(dut, signal_name: str, value: int, timeout_cycles: int = 1000):
     """
     Wait for a signal to reach a specific value.
 

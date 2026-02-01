@@ -16,12 +16,12 @@ if str(project_root) not in sys.path:
 
 # Import all test functions from the cpu_uvm random tests module
 from tb.cpu_uvm.tests.test_random_uvm import (
-    test_random_single_uvm,
     test_random_multi_seed_uvm,
+    test_random_single_uvm,
 )
 
 # Re-export for cocotb discovery
 __all__ = [
-    'test_random_single_uvm',
-    'test_random_multi_seed_uvm',
+    "test_random_single_uvm",
+    "test_random_multi_seed_uvm",
 ]

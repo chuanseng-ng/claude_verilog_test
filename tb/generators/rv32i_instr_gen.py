@@ -21,14 +21,14 @@ class GeneratorConfig:
     instr_mem_base = 0x00000000
     instr_mem_size = 0x1000  # 4KB instruction memory
     data_mem_base = 0x00001000
-    data_mem_size = 0xF000   # 60KB data memory
+    data_mem_size = 0xF000  # 60KB data memory
 
     # Instruction weighting (Phase 1: only ALU + upper immediate)
     # Phase 2 adds loads/stores, Phase 3 adds branches/jumps
     instruction_classes = {
-        'r_type': 1.0,      # R-type ALU
-        'i_type_alu': 1.0,  # I-type arithmetic
-        'upper': 0.3,       # LUI/AUIPC
+        "r_type": 1.0,  # R-type ALU
+        "i_type_alu": 1.0,  # I-type arithmetic
+        "upper": 0.3,  # LUI/AUIPC
         # Phase 2+: 'load': 0.5, 'store': 0.5
         # Phase 3+: 'branch': 0.2, 'jump': 0.1
     }
@@ -135,11 +135,11 @@ class RV32IInstructionGenerator:
         instr_class = self.rng.choices(classes, weights=weights)[0]
 
         # Generate instruction based on class
-        if instr_class == 'r_type':
+        if instr_class == "r_type":
             return self._generate_r_type()
-        elif instr_class == 'i_type_alu':
+        elif instr_class == "i_type_alu":
             return self._generate_i_type_alu()
-        elif instr_class == 'upper':
+        elif instr_class == "upper":
             return self._generate_upper()
         else:
             raise ValueError(f"Unknown instruction class: {instr_class}")
@@ -167,10 +167,16 @@ class RV32IInstructionGenerator:
     def _generate_r_type(self):
         """Generate random R-type instruction."""
         opcodes = [
-            ('ADD', enc.ADD), ('SUB', enc.SUB),
-            ('AND', enc.AND), ('OR', enc.OR), ('XOR', enc.XOR),
-            ('SLT', enc.SLT), ('SLTU', enc.SLTU),
-            ('SLL', enc.SLL), ('SRL', enc.SRL), ('SRA', enc.SRA)
+            ("ADD", enc.ADD),
+            ("SUB", enc.SUB),
+            ("AND", enc.AND),
+            ("OR", enc.OR),
+            ("XOR", enc.XOR),
+            ("SLT", enc.SLT),
+            ("SLTU", enc.SLTU),
+            ("SLL", enc.SLL),
+            ("SRL", enc.SRL),
+            ("SRA", enc.SRA),
         ]
         name, encoder_func = self.rng.choice(opcodes)
 
@@ -183,15 +189,15 @@ class RV32IInstructionGenerator:
     def _generate_i_type_alu(self):
         """Generate random I-type arithmetic instruction."""
         opcodes = [
-            ('ADDI', enc.ADDI, self._random_imm12),
-            ('SLTI', enc.SLTI, self._random_imm12),
-            ('SLTIU', enc.SLTIU, self._random_imm12),
-            ('XORI', enc.XORI, self._random_imm12),
-            ('ORI', enc.ORI, self._random_imm12),
-            ('ANDI', enc.ANDI, self._random_imm12),
-            ('SLLI', enc.SLLI, self._random_shamt),
-            ('SRLI', enc.SRLI, self._random_shamt),
-            ('SRAI', enc.SRAI, self._random_shamt),
+            ("ADDI", enc.ADDI, self._random_imm12),
+            ("SLTI", enc.SLTI, self._random_imm12),
+            ("SLTIU", enc.SLTIU, self._random_imm12),
+            ("XORI", enc.XORI, self._random_imm12),
+            ("ORI", enc.ORI, self._random_imm12),
+            ("ANDI", enc.ANDI, self._random_imm12),
+            ("SLLI", enc.SLLI, self._random_shamt),
+            ("SRLI", enc.SRLI, self._random_shamt),
+            ("SRAI", enc.SRAI, self._random_shamt),
         ]
         name, encoder_func, imm_generator = self.rng.choice(opcodes)
 
@@ -204,8 +210,8 @@ class RV32IInstructionGenerator:
     def _generate_upper(self):
         """Generate random upper immediate instruction (LUI/AUIPC)."""
         opcodes = [
-            ('LUI', enc.LUI),
-            ('AUIPC', enc.AUIPC),
+            ("LUI", enc.LUI),
+            ("AUIPC", enc.AUIPC),
         ]
         name, encoder_func = self.rng.choice(opcodes)
 

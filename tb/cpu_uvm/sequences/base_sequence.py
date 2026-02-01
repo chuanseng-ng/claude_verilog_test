@@ -62,9 +62,7 @@ class BaseSequence(uvm_sequence):
         Raises:
             NotImplementedError: If child class doesn't override
         """
-        raise NotImplementedError(
-            f"{self.__class__.__name__} must implement body() method"
-        )
+        raise NotImplementedError(f"{self.__class__.__name__} must implement body() method")
 
     async def post_body(self):
         """Post-body phase - called after body().

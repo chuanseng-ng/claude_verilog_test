@@ -11,17 +11,19 @@ Features:
 - Common test utilities
 """
 
+import sys
+from pathlib import Path
+
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 from pyuvm import uvm_test
-import sys
-from pathlib import Path
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from tb.models.rv32i_model import RV32IModel
+
 from ..env.cpu_env import CPUEnvironment
 
 
@@ -77,12 +79,7 @@ class BaseTest(uvm_test):
         self.ref_model = RV32IModel()
 
         # Create CPU environment
-        self.env = CPUEnvironment(
-            "cpu_env",
-            self,
-            dut=self.dut,
-            ref_model=self.ref_model
-        )
+        self.env = CPUEnvironment("cpu_env", self, dut=self.dut, ref_model=self.ref_model)
 
         # Build environment and all its child components
         self.env.build_phase()
@@ -258,5 +255,6 @@ async def run_uvm_test(dut, test_class, test_name="uvm_test"):
     test.env.scoreboard.report_phase()
 
     # Check for scoreboard errors
-    assert test.env.scoreboard.mismatches == 0, \
-        f"Scoreboard validation failed: {test.env.scoreboard.mismatches} errors"
+    assert (
+        test.env.scoreboard.mismatches == 0
+    ), f"Scoreboard validation failed: {test.env.scoreboard.mismatches} errors"

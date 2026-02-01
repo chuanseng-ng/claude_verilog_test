@@ -15,13 +15,13 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 
-from .base_test import BaseTest
 from ..sequences.directed_sequences import (
-    SimpleADDISequence,
-    BranchTakenSequence,
     BranchNotTakenSequence,
-    JALSequence
+    BranchTakenSequence,
+    JALSequence,
+    SimpleADDISequence,
 )
+from .base_test import BaseTest
 
 
 class ADDITest(BaseTest):

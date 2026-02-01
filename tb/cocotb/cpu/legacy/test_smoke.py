@@ -166,7 +166,9 @@ class SimpleAXIMemory:
                 self.read_count += 1
 
                 if self.read_count <= 5:
-                    self.dut._log.info(f"AXI Read #{self.read_count}: addr=0x{addr:08x} data=0x{data:08x}")
+                    self.dut._log.info(
+                        f"AXI Read #{self.read_count}: addr=0x{addr:08x} data=0x{data:08x}"
+                    )
 
                 # Provide data on next cycle
                 await RisingEdge(self.dut.clk)
@@ -190,7 +192,11 @@ class SimpleAXIMemory:
             await RisingEdge(self.dut.clk)
 
             # Address and data phases (can be simultaneous)
-            if self.dut.axi_awvalid.value == 1 and self.dut.axi_wvalid.value == 1 and self.dut.axi_awready.value == 0:
+            if (
+                self.dut.axi_awvalid.value == 1
+                and self.dut.axi_wvalid.value == 1
+                and self.dut.axi_awready.value == 0
+            ):
                 self.dut.axi_awready.value = 1
                 self.dut.axi_wready.value = 1
                 addr = int(self.dut.axi_awaddr.value)
@@ -298,13 +304,13 @@ async def monitor_commits(dut, scoreboard=None, count=[0]):
                 # Full validation (rd, rd_value, mem_addr, etc.) requires
                 # additional commit signals from RTL
                 rtl_commit = {
-                    'pc': pc,
-                    'insn': insn,
-                    'rd': None,
-                    'rd_value': None,
-                    'mem_addr': None,
-                    'mem_data': None,
-                    'mem_write': None
+                    "pc": pc,
+                    "insn": insn,
+                    "rd": None,
+                    "rd_value": None,
+                    "mem_addr": None,
+                    "mem_data": None,
+                    "mem_write": None,
                 }
 
                 # Check against scoreboard (basic validation)
@@ -347,14 +353,18 @@ async def test_simple_addi(dut):
     await ClockCycles(dut.clk, 200)
 
     # Check if any instructions committed before halting
-    dut._log.info(f"Before halt - commit_valid: {dut.commit_valid.value}, commit_pc: 0x{int(dut.commit_pc.value):08x}")
+    dut._log.info(
+        f"Before halt - commit_valid: {dut.commit_valid.value}, commit_pc: 0x{int(dut.commit_pc.value):08x}"
+    )
 
     # Halt CPU and verify register values
     await dbg.halt_cpu()
 
     # Check status after halt
     status = await dbg.apb_read(dbg.DBG_STATUS)
-    dut._log.info(f"After halt - status: 0x{status:08x}, halted: {status & 0x1}, running: {(status >> 1) & 0x1}")
+    dut._log.info(
+        f"After halt - status: 0x{status:08x}, halted: {status & 0x1}, running: {(status >> 1) & 0x1}"
+    )
 
     # Check x1 = 42
     x1_val = await dbg.read_gpr(1)

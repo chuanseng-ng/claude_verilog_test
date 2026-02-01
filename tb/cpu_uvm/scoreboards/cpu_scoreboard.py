@@ -103,7 +103,10 @@ class CPUScoreboard(uvm_component):
 
         # Compare instruction
         if ref_result["insn"] != rtl_commit["insn"]:
-            error = f"Instruction mismatch: RTL=0x{rtl_commit['insn']:08x}, Model=0x{ref_result['insn']:08x}"
+            error = (
+                f"Instruction mismatch: RTL=0x{rtl_commit['insn']:08x}, "
+                f"Model=0x{ref_result['insn']:08x}"
+            )
             self.logger.error(error)
             self.errors.append(error)
             self.mismatches += 1
@@ -113,7 +116,10 @@ class CPUScoreboard(uvm_component):
         if rtl_commit.get("rd") is not None:
             if ref_result["rd"] is not None and ref_result["rd"] != 0:
                 if ref_result["rd"] != rtl_commit.get("rd"):
-                    error = f"Destination register mismatch: RTL={rtl_commit.get('rd')}, Model={ref_result['rd']}"
+                    error = (
+                        f"Destination register mismatch: "
+                        f"RTL={rtl_commit.get('rd')}, Model={ref_result['rd']}"
+                    )
                     self.logger.error(error)
                     self.errors.append(error)
                     self.mismatches += 1

@@ -57,9 +57,8 @@ class APBDebugSequenceItem(uvm_sequence_item):
         """String representation for logging."""
         if self.op == "WRITE_GPR":
             return f"APBDebugItem({self.op}, x{self.reg_num}=0x{self.data:08x})"
-        elif self.op == "READ_GPR":
+        if self.op == "READ_GPR":
             return f"APBDebugItem({self.op}, x{self.reg_num})"
-        elif self.op == "SET_BP":
+        if self.op == "SET_BP":
             return f"APBDebugItem({self.op}, bp{self.bp_num}=0x{self.addr:08x})"
-        else:
-            return f"APBDebugItem({self.op})"
+        return f"APBDebugItem({self.op})"

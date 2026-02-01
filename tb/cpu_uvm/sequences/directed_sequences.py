@@ -17,6 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from sim import riscv_encoder as enc
+
 from .base_sequence import BaseSequence
 
 
@@ -41,15 +42,15 @@ class SimpleADDISequence(BaseSequence):
 
     async def body(self):
         """Load and execute ADDI program."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Simple ADDI Test")
-        print("="*60)
+        print("=" * 60)
 
         # Build program
         program = [
-            (0x00000000, enc.ADDI(1, 0, 42)),   # x1 = 0 + 42 = 42
-            (0x00000004, enc.ADDI(2, 1, 8)),    # x2 = 42 + 8 = 50
-            (0x00000008, 0x00100073),           # EBREAK
+            (0x00000000, enc.ADDI(1, 0, 42)),  # x1 = 0 + 42 = 42
+            (0x00000004, enc.ADDI(2, 1, 8)),  # x2 = 42 + 8 = 50
+            (0x00000008, 0x00100073),  # EBREAK
         ]
 
         # Load program
@@ -90,18 +91,18 @@ class BranchNotTakenSequence(BaseSequence):
 
     async def body(self):
         """Load and execute branch not taken program."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Branch Not Taken Test")
-        print("="*60)
+        print("=" * 60)
 
         # Build program
         program = [
-            (0x00000000, enc.ADDI(1, 0, 10)),      # x1 = 10
-            (0x00000004, enc.ADDI(2, 0, 20)),      # x2 = 20
-            (0x00000008, enc.BEQ(1, 2, 8)),        # if x1 == x2: pc += 8 (NOT taken)
-            (0x0000000C, enc.ADDI(3, 0, 1)),       # x3 = 1 (executed)
-            (0x00000010, 0x00100073),              # EBREAK
-            (0x00000014, enc.ADDI(3, 0, 2)),       # x3 = 2 (NOT executed)
+            (0x00000000, enc.ADDI(1, 0, 10)),  # x1 = 10
+            (0x00000004, enc.ADDI(2, 0, 20)),  # x2 = 20
+            (0x00000008, enc.BEQ(1, 2, 8)),  # if x1 == x2: pc += 8 (NOT taken)
+            (0x0000000C, enc.ADDI(3, 0, 1)),  # x3 = 1 (executed)
+            (0x00000010, 0x00100073),  # EBREAK
+            (0x00000014, enc.ADDI(3, 0, 2)),  # x3 = 2 (NOT executed)
         ]
 
         # Load program
@@ -142,18 +143,18 @@ class BranchTakenSequence(BaseSequence):
 
     async def body(self):
         """Load and execute branch taken program."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Branch Taken Test")
-        print("="*60)
+        print("=" * 60)
 
         # Build program
         program = [
-            (0x00000000, enc.ADDI(1, 0, 10)),      # x1 = 10
-            (0x00000004, enc.ADDI(2, 0, 10)),      # x2 = 10
-            (0x00000008, enc.BEQ(1, 2, 8)),        # if x1 == x2: pc += 8 (TAKEN)
-            (0x0000000C, enc.ADDI(3, 0, 1)),       # x3 = 1 (NOT executed)
-            (0x00000010, enc.ADDI(3, 0, 2)),       # x3 = 2 (executed)
-            (0x00000014, 0x00100073),              # EBREAK
+            (0x00000000, enc.ADDI(1, 0, 10)),  # x1 = 10
+            (0x00000004, enc.ADDI(2, 0, 10)),  # x2 = 10
+            (0x00000008, enc.BEQ(1, 2, 8)),  # if x1 == x2: pc += 8 (TAKEN)
+            (0x0000000C, enc.ADDI(3, 0, 1)),  # x3 = 1 (NOT executed)
+            (0x00000010, enc.ADDI(3, 0, 2)),  # x3 = 2 (executed)
+            (0x00000014, 0x00100073),  # EBREAK
         ]
 
         # Load program
@@ -191,16 +192,16 @@ class JALSequence(BaseSequence):
 
     async def body(self):
         """Load and execute JAL program."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("JAL (Jump and Link) Test")
-        print("="*60)
+        print("=" * 60)
 
         # Build program
         program = [
-            (0x00000000, enc.JAL(1, 8)),           # jump +8, x1 = 0x4
-            (0x00000004, enc.ADDI(2, 0, 1)),       # x2 = 1 (NOT executed)
-            (0x00000008, enc.ADDI(2, 0, 2)),       # x2 = 2 (executed)
-            (0x0000000C, 0x00100073),              # EBREAK
+            (0x00000000, enc.JAL(1, 8)),  # jump +8, x1 = 0x4
+            (0x00000004, enc.ADDI(2, 0, 1)),  # x2 = 1 (NOT executed)
+            (0x00000008, enc.ADDI(2, 0, 2)),  # x2 = 2 (executed)
+            (0x0000000C, 0x00100073),  # EBREAK
         ]
 
         # Load program

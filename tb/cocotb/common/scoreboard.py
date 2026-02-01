@@ -5,11 +5,10 @@ Tracks committed instructions and compares RTL behavior against
 the Python reference model.
 """
 
-import cocotb
-from cocotb.triggers import RisingEdge
-from typing import Optional
 import sys
 from pathlib import Path
+
+import cocotb
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -66,7 +65,10 @@ class CPUScoreboard:
 
         # Compare instruction
         if ref_result["insn"] != rtl_commit["insn"]:
-            error = f"Instruction mismatch: RTL=0x{rtl_commit['insn']:08x}, Model=0x{ref_result['insn']:08x}"
+            error = (
+                f"Instruction mismatch: RTL=0x{rtl_commit['insn']:08x}, "
+                f"Model=0x{ref_result['insn']:08x}"
+            )
             self.log.error(error)
             self.errors.append(error)
             self.mismatches += 1
@@ -76,7 +78,10 @@ class CPUScoreboard:
         if rtl_commit.get("rd") is not None:
             if ref_result["rd"] is not None and ref_result["rd"] != 0:
                 if ref_result["rd"] != rtl_commit.get("rd"):
-                    error = f"Destination register mismatch: RTL={rtl_commit.get('rd')}, Model={ref_result['rd']}"
+                    error = (
+                        f"Destination register mismatch: "
+                        f"RTL={rtl_commit.get('rd')}, Model={ref_result['rd']}"
+                    )
                     self.log.error(error)
                     self.errors.append(error)
                     self.mismatches += 1
@@ -108,7 +113,7 @@ class CPUScoreboard:
                     return False
 
                 if ref_result["mem_write"] != rtl_commit.get("mem_write"):
-                    error = f"Memory write flag mismatch"
+                    error = "Memory write flag mismatch"
                     self.log.error(error)
                     self.errors.append(error)
                     self.mismatches += 1

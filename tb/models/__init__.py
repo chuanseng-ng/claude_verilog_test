@@ -5,9 +5,9 @@ This package contains Python reference models that serve as golden references
 for RTL verification.
 """
 
-from .memory_model import MemoryModel, MisalignedAccessError
-from .rv32i_model import RV32IModel, IllegalInstructionError, TrapError
 from .gpu_kernel_model import GPUKernelModel
+from .memory_model import MemoryModel, MisalignedAccessError
+from .rv32i_model import IllegalInstructionError, RV32IModel, TrapError
 
 __all__ = [
     "MemoryModel",

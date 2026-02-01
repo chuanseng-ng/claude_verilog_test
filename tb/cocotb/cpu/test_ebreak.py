@@ -16,18 +16,19 @@ NOTE: This test now imports from pyuvm infrastructure instead of
 using standalone helper classes. See legacy/ for original implementation.
 """
 
+import sys
+from pathlib import Path
+
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, ClockCycles
-from pathlib import Path
-import sys
+from cocotb.triggers import ClockCycles, RisingEdge
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 # Import from pyuvm infrastructure
-from tb.cpu_uvm.agents.axi_agent.axi_driver import AXIMemoryDriver
 from tb.cpu_uvm.agents.apb_agent.apb_driver import APBDebugDriver
+from tb.cpu_uvm.agents.axi_agent.axi_driver import AXIMemoryDriver
 
 
 async def reset_dut(dut):
@@ -153,9 +154,7 @@ async def test_ebreak_instruction(dut):
     if final_insn == ebreak_insn:
         dut._log.info("✓ EBREAK instruction was executed")
     else:
-        dut._log.warning(
-            f"✗ Expected EBREAK (0x{ebreak_insn:08x}), got 0x{final_insn:08x}"
-        )
+        dut._log.warning(f"✗ Expected EBREAK (0x{ebreak_insn:08x}), got 0x{final_insn:08x}")
 
     dut._log.info("=" * 80)
     dut._log.info("EBREAK TEST COMPLETE")

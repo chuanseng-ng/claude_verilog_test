@@ -10,8 +10,8 @@ Features:
 - Configurable logging verbosity
 """
 
-from cocotb.triggers import RisingEdge, ReadOnly
-from pyuvm import uvm_monitor, uvm_analysis_port
+from cocotb.triggers import ReadOnly, RisingEdge
+from pyuvm import uvm_analysis_port, uvm_monitor
 
 
 class CommitTransaction:
@@ -50,13 +50,13 @@ class CommitTransaction:
             Dictionary with commit information
         """
         return {
-            'pc': self.pc,
-            'insn': self.insn,
-            'rd': self.rd,
-            'rd_value': self.rd_value,
-            'mem_addr': self.mem_addr,
-            'mem_data': self.mem_data,
-            'mem_write': self.mem_write
+            "pc": self.pc,
+            "insn": self.insn,
+            "rd": self.rd,
+            "rd_value": self.rd_value,
+            "mem_addr": self.mem_addr,
+            "mem_data": self.mem_data,
+            "mem_write": self.mem_write,
         }
 
     def __str__(self):
@@ -128,7 +128,9 @@ class CommitMonitor(uvm_monitor):
                 if self.commit_count <= self.log_first_n:
                     self.logger.info(f"Commit #{self.commit_count}: {txn}")
                 elif self.commit_count == self.log_first_n + 1:
-                    self.logger.info(f"(suppressing detailed logs after {self.log_first_n} commits)")
+                    self.logger.info(
+                        f"(suppressing detailed logs after {self.log_first_n} commits)"
+                    )
 
                 # Broadcast to all connected scoreboards
                 self.analysis_port.write(txn)

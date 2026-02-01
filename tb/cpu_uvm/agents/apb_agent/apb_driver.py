@@ -12,7 +12,7 @@ Features:
 """
 
 import cocotb
-from cocotb.triggers import RisingEdge, ReadOnly
+from cocotb.triggers import ReadOnly, RisingEdge
 from pyuvm import uvm_driver
 
 
@@ -208,7 +208,7 @@ class APBDebugDriver(uvm_driver):
         Note: CPU must be halted for register writes to take effect.
               Writing to x0 has no effect (hardwired to zero).
         """
-        if not (0 <= reg_num <= 31):
+        if not 0 <= reg_num <= 31:
             raise ValueError(f"Invalid register number: {reg_num} (must be 0-31)")
 
         addr = self.DBG_GPR_BASE + (reg_num * 4)
@@ -226,7 +226,7 @@ class APBDebugDriver(uvm_driver):
 
         Note: CPU must be halted for stable register reads.
         """
-        if not (0 <= reg_num <= 31):
+        if not 0 <= reg_num <= 31:
             raise ValueError(f"Invalid register number: {reg_num} (must be 0-31)")
 
         addr = self.DBG_GPR_BASE + (reg_num * 4)
