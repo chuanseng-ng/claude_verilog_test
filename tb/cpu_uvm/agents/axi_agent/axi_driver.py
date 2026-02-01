@@ -63,6 +63,16 @@ class AXIMemoryDriver(uvm_driver):
         """
         self.logger.info("Starting AXI memory driver")
 
+        # Initialize AXI outputs to idle state (0) to avoid X-driven spurious handshakes
+        self.dut.axi_arready_i.value = 0
+        self.dut.axi_rvalid_i.value = 0
+        self.dut.axi_rdata_i.value = 0
+        self.dut.axi_rresp_i.value = 0
+        self.dut.axi_awready_i.value = 0
+        self.dut.axi_wready_i.value = 0
+        self.dut.axi_bvalid_i.value = 0
+        self.dut.axi_bresp_i.value = 0
+
         # Spawn background handlers for AXI protocol
         self._read_task = cocotb.start_soon(self.axi_read_handler())
         self._write_task = cocotb.start_soon(self.axi_write_handler())

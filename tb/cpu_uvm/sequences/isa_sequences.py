@@ -168,12 +168,43 @@ class ISASequenceBase(BaseSequence):
                     num_setup_instructions += 1
 
         # Load target instruction
+        test_instr_addr = addr
         axi_driver.write_word(addr, self.instruction)
         addr += 4
 
-        # Add EBREAK to halt CPU after test
+        # Add EBREAK to halt CPU after test (fall-through path)
         axi_driver.write_word(addr, 0x00100073)  # EBREAK
         addr += 4
+
+        # For branch/jump instructions, also place EBREAK at target to prevent
+        # fetching uninitialized memory if branch is taken
+        opcode = self.instruction & 0x7F
+        if opcode == 0b1100011:  # Branch instruction
+            # Extract branch offset (12-bit signed immediate)
+            imm_12 = (self.instruction >> 31) & 0x1
+            imm_10_5 = (self.instruction >> 25) & 0x3F
+            imm_4_1 = (self.instruction >> 8) & 0xF
+            imm_11 = (self.instruction >> 7) & 0x1
+            imm = (imm_12 << 12) | (imm_11 << 11) | (imm_10_5 << 5) | (imm_4_1 << 1)
+            # Sign extend
+            if imm & 0x1000:
+                imm |= 0xFFFFE000
+            target_addr = test_instr_addr + imm
+            axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at branch target
+        elif opcode == 0b1101111:  # JAL instruction
+            # Extract JAL offset (20-bit signed immediate)
+            imm_20 = (self.instruction >> 31) & 0x1
+            imm_10_1 = (self.instruction >> 21) & 0x3FF
+            imm_11 = (self.instruction >> 20) & 0x1
+            imm_19_12 = (self.instruction >> 12) & 0xFF
+            imm = (imm_20 << 20) | (imm_19_12 << 12) | (imm_11 << 11) | (imm_10_1 << 1)
+            # Sign extend
+            if imm & 0x100000:
+                imm |= 0xFFE00000
+            target_addr = test_instr_addr + imm
+            axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at JAL target
+        # Note: JALR target is computed at runtime, so we cannot pre-place EBREAK
+        # JALR tests should ensure the target register points to valid code
 
         # Set PC to start of program
         await apb_driver.write_pc(0x0000)
@@ -256,7 +287,12 @@ class SWSequence(ISASequenceBase):
             store_value: Value to load into rs2 (to be stored)
         """
         instruction = SW(rs2, rs1, offset)
-        setup_regs = {rs1: base_addr, rs2: store_value}
+        setup_regs = {}
+        # Only add registers to setup if they're not the zero register
+        if rs1 != 0 and rs1 != "x0":
+            setup_regs[rs1] = base_addr
+        if rs2 != 0 and rs2 != "x0":
+            setup_regs[rs2] = store_value
 
         self.target_addr = base_addr + offset
         self.store_value = store_value
@@ -284,8 +320,15 @@ class LBSequence(ISASequenceBase):
     def __init__(self, name, env, rd, rs1, offset, base_addr, mem_value, expected_value):
         """Test LB instruction."""
         instruction = LB(rd, rs1, offset)
-        setup_regs = {rs1: base_addr} if rs1 != 0 else {}
-        setup_memory = {base_addr + offset: mem_value}
+        setup_regs = {rs1: base_addr} if rs1 != 0 and rs1 != "x0" else {}
+
+        # Compute effective address and place mem_value in correct byte lane
+        addr = base_addr + offset
+        aligned_addr = addr & ~0x3
+        lane = addr & 0x3
+        # Create 32-bit word with mem_value in correct byte lane
+        word_value = (mem_value & 0xFF) << (lane * 8)
+        setup_memory = {aligned_addr: word_value}
 
         super().__init__(
             name,
@@ -304,8 +347,15 @@ class LBUSequence(ISASequenceBase):
     def __init__(self, name, env, rd, rs1, offset, base_addr, mem_value, expected_value):
         """Test LBU instruction."""
         instruction = LBU(rd, rs1, offset)
-        setup_regs = {rs1: base_addr} if rs1 != 0 else {}
-        setup_memory = {base_addr + offset: mem_value}
+        setup_regs = {rs1: base_addr} if rs1 != 0 and rs1 != "x0" else {}
+
+        # Compute effective address and place mem_value in correct byte lane
+        addr = base_addr + offset
+        aligned_addr = addr & ~0x3
+        lane = addr & 0x3
+        # Create 32-bit word with mem_value in correct byte lane
+        word_value = (mem_value & 0xFF) << (lane * 8)
+        setup_memory = {aligned_addr: word_value}
 
         super().__init__(
             name,
@@ -324,8 +374,15 @@ class LHSequence(ISASequenceBase):
     def __init__(self, name, env, rd, rs1, offset, base_addr, mem_value, expected_value):
         """Test LH instruction."""
         instruction = LH(rd, rs1, offset)
-        setup_regs = {rs1: base_addr} if rs1 != 0 else {}
-        setup_memory = {base_addr + offset: mem_value}
+        setup_regs = {rs1: base_addr} if rs1 != 0 and rs1 != "x0" else {}
+
+        # Compute effective address and place mem_value in correct halfword lane
+        addr = base_addr + offset
+        aligned_addr = addr & ~0x3
+        lane = (addr & 0x2) >> 1  # 0 for lower halfword, 1 for upper halfword
+        # Create 32-bit word with mem_value in correct halfword lane
+        word_value = (mem_value & 0xFFFF) << (lane * 16)
+        setup_memory = {aligned_addr: word_value}
 
         super().__init__(
             name,
@@ -344,8 +401,15 @@ class LHUSequence(ISASequenceBase):
     def __init__(self, name, env, rd, rs1, offset, base_addr, mem_value, expected_value):
         """Test LHU instruction."""
         instruction = LHU(rd, rs1, offset)
-        setup_regs = {rs1: base_addr} if rs1 != 0 else {}
-        setup_memory = {base_addr + offset: mem_value}
+        setup_regs = {rs1: base_addr} if rs1 != 0 and rs1 != "x0" else {}
+
+        # Compute effective address and place mem_value in correct halfword lane
+        addr = base_addr + offset
+        aligned_addr = addr & ~0x3
+        lane = (addr & 0x2) >> 1  # 0 for lower halfword, 1 for upper halfword
+        # Create 32-bit word with mem_value in correct halfword lane
+        word_value = (mem_value & 0xFFFF) << (lane * 16)
+        setup_memory = {aligned_addr: word_value}
 
         super().__init__(
             name,
@@ -364,7 +428,12 @@ class SBSequence(ISASequenceBase):
     def __init__(self, name, env, rs1, rs2, offset, base_addr, store_value):
         """Test SB instruction."""
         instruction = SB(rs2, rs1, offset)
-        setup_regs = {rs1: base_addr, rs2: store_value}
+        setup_regs = {}
+        # Only add registers to setup if they're not the zero register
+        if rs1 != 0 and rs1 != "x0":
+            setup_regs[rs1] = base_addr
+        if rs2 != 0 and rs2 != "x0":
+            setup_regs[rs2] = store_value
 
         self.target_addr = base_addr + offset
         self.store_value = store_value & 0xFF  # Only byte should be stored
@@ -394,7 +463,12 @@ class SHSequence(ISASequenceBase):
     def __init__(self, name, env, rs1, rs2, offset, base_addr, store_value):
         """Test SH instruction."""
         instruction = SH(rs2, rs1, offset)
-        setup_regs = {rs1: base_addr, rs2: store_value}
+        setup_regs = {}
+        # Only add registers to setup if they're not the zero register
+        if rs1 != 0 and rs1 != "x0":
+            setup_regs[rs1] = base_addr
+        if rs2 != 0 and rs2 != "x0":
+            setup_regs[rs2] = store_value
 
         self.target_addr = base_addr + offset
         self.store_value = store_value & 0xFFFF  # Only halfword should be stored
