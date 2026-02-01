@@ -223,7 +223,7 @@ module rv32i_decode (
         reg_wr_en = 1'b1;
         mem_rd    = 1'b1;
         alu_op    = ALU_ADD;
-        alu_src_a = 1'b0;  // rs1
+        alu_src_a = 2'b0;  // rs1
         alu_src_b = 1'b1;  // Immediate
 
         case (funct3)
@@ -261,7 +261,7 @@ module rv32i_decode (
         imm_fmt   = FMT_S;
         mem_wr    = 1'b1;
         alu_op    = ALU_ADD;
-        alu_src_a = 1'b0;  // rs1
+        alu_src_a = 2'b0;  // rs1
         alu_src_b = 1'b1;  // Immediate
 
         case (funct3)
@@ -287,7 +287,7 @@ module rv32i_decode (
       OP_IMM: begin
         imm_fmt   = FMT_I;
         reg_wr_en = 1'b1;
-        alu_src_a = 1'b0;  // rs1
+        alu_src_a = 2'b0;  // rs1
         alu_src_b = 1'b1;  // Immediate
 
         case (funct3)
@@ -340,7 +340,7 @@ module rv32i_decode (
       OP_REG: begin
         imm_fmt   = FMT_R;
         reg_wr_en = 1'b1;
-        alu_src_a = 1'b0;  // rs1
+        alu_src_a = 2'b0;  // rs1
         alu_src_b = 1'b0;  // rs2
 
         case (funct3)
