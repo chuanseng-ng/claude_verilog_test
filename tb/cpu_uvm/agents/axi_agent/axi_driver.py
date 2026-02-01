@@ -133,40 +133,40 @@ class AXIMemoryDriver(uvm_driver):
         5. Transaction completes
         """
         while True:
-            await RisingEdge(self.dut.clk)
+            await RisingEdge(self.dut.clk_i)
 
-            if self.dut.axi_arvalid.value == 1:
+            if self.dut.axi_arvalid_o.value == 1:
                 # Accept read request
-                self.dut.axi_arready.value = 1
-                addr = int(self.dut.axi_araddr.value)
+                self.dut.axi_arready_i.value = 1
+                addr = int(self.dut.axi_araddr_o.value)
                 data = self.read_word(addr)
 
                 # Next cycle: de-assert arready, assert rvalid with data
-                await RisingEdge(self.dut.clk)
-                self.dut.axi_arready.value = 0
-                self.dut.axi_rvalid.value = 1
-                self.dut.axi_rdata.value = data
-                self.dut.axi_rresp.value = 0  # OKAY response
+                await RisingEdge(self.dut.clk_i)
+                self.dut.axi_arready_i.value = 0
+                self.dut.axi_rvalid_i.value = 1
+                self.dut.axi_rdata_i.value = data
+                self.dut.axi_rresp_i.value = 0  # OKAY response
 
                 # Wait for master to accept read data (rready) with timeout
                 timeout_count = 0
-                while self.dut.axi_rready.value == 0:
+                while self.dut.axi_rready_o.value == 0:
                     timeout_count += 1
                     if timeout_count >= self.AXI_TIMEOUT_CYCLES:
-                        self.dut.axi_rvalid.value = 0
+                        self.dut.axi_rvalid_i.value = 0
                         raise TimeoutError(
                             f"AXI read data handshake timeout: master did not assert "
                             f"axi_rready after {self.AXI_TIMEOUT_CYCLES} cycles "
                             f"(addr=0x{addr:08x}, method=axi_read_handler)"
                         )
-                    await RisingEdge(self.dut.clk)
+                    await RisingEdge(self.dut.clk_i)
 
                 # De-assert rvalid on next cycle
-                await RisingEdge(self.dut.clk)
-                self.dut.axi_rvalid.value = 0
+                await RisingEdge(self.dut.clk_i)
+                self.dut.axi_rvalid_i.value = 0
             else:
                 # No read request - ensure arready is low
-                self.dut.axi_arready.value = 0
+                self.dut.axi_arready_i.value = 0
 
     async def axi_write_handler(self):
         """Handle AXI write transactions with byte-enable strobes.
@@ -189,22 +189,22 @@ class AXIMemoryDriver(uvm_driver):
         based on strobes, and write back the merged result.
         """
         while True:
-            await RisingEdge(self.dut.clk)
+            await RisingEdge(self.dut.clk_i)
 
             # Wait for both address and data phases (simplified AXI - both together)
-            if self.dut.axi_awvalid.value == 1 and self.dut.axi_wvalid.value == 1:
+            if self.dut.axi_awvalid_o.value == 1 and self.dut.axi_wvalid_o.value == 1:
                 # Accept write request
-                self.dut.axi_awready.value = 1
-                self.dut.axi_wready.value = 1
+                self.dut.axi_awready_i.value = 1
+                self.dut.axi_wready_i.value = 1
 
-                addr = int(self.dut.axi_awaddr.value)
-                new_data = int(self.dut.axi_wdata.value)
-                wstrb = int(self.dut.axi_wstrb.value)
+                addr = int(self.dut.axi_awaddr_o.value)
+                new_data = int(self.dut.axi_wdata_o.value)
+                wstrb = int(self.dut.axi_wstrb_o.value)
 
                 # Next cycle: de-assert ready signals
-                await RisingEdge(self.dut.clk)
-                self.dut.axi_awready.value = 0
-                self.dut.axi_wready.value = 0
+                await RisingEdge(self.dut.clk_i)
+                self.dut.axi_awready_i.value = 0
+                self.dut.axi_wready_i.value = 0
 
                 # Read existing word (for byte-masked writes)
                 old_data = self.read_word(addr)
@@ -224,22 +224,22 @@ class AXIMemoryDriver(uvm_driver):
                 self.write_word(addr, merged_data)
 
                 # Assert write response
-                self.dut.axi_bvalid.value = 1
-                self.dut.axi_bresp.value = 0  # OKAY response
+                self.dut.axi_bvalid_i.value = 1
+                self.dut.axi_bresp_i.value = 0  # OKAY response
 
                 # Wait for master to accept response (bready) with timeout
                 timeout_count = 0
-                while self.dut.axi_bready.value == 0:
+                while self.dut.axi_bready_o.value == 0:
                     timeout_count += 1
                     if timeout_count >= self.AXI_TIMEOUT_CYCLES:
-                        self.dut.axi_bvalid.value = 0
+                        self.dut.axi_bvalid_i.value = 0
                         raise TimeoutError(
                             f"AXI write response handshake timeout: master did not assert "
                             f"axi_bready after {self.AXI_TIMEOUT_CYCLES} cycles "
                             f"(addr=0x{addr:08x}, method=axi_write_handler)"
                         )
-                    await RisingEdge(self.dut.clk)
+                    await RisingEdge(self.dut.clk_i)
 
                 # De-assert bvalid on next cycle
-                await RisingEdge(self.dut.clk)
-                self.dut.axi_bvalid.value = 0
+                await RisingEdge(self.dut.clk_i)
+                self.dut.axi_bvalid_i.value = 0

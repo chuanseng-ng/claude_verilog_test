@@ -184,7 +184,7 @@ class ISASequenceBase(BaseSequence):
         # Wait for execution to complete (EBREAK will halt the CPU)
         num_instructions = num_setup_instructions + 1 + 1  # setup + test + EBREAK
         dut = self.env.axi_agent.driver.dut
-        await ClockCycles(dut.clk, num_instructions * 10)  # Give plenty of time
+        await ClockCycles(dut.clk_i, num_instructions * 10)  # Give plenty of time
 
         # Verify setup registers were loaded correctly
         for reg_num, expected_val in self.setup_regs.items():

@@ -94,46 +94,46 @@ class APBDebugDriver(uvm_driver):
         Raises:
             RuntimeError: If APB slave returns error (pslverr) or timeout
         """
-        await RisingEdge(self.dut.clk)
-        self.dut.apb_psel.value = 1
-        self.dut.apb_penable.value = 0
-        self.dut.apb_pwrite.value = 1
-        self.dut.apb_paddr.value = addr
-        self.dut.apb_pwdata.value = data
+        await RisingEdge(self.dut.clk_i)
+        self.dut.apb_psel_i.value = 1
+        self.dut.apb_penable_i.value = 0
+        self.dut.apb_pwrite_i.value = 1
+        self.dut.apb_paddr_i.value = addr
+        self.dut.apb_pwdata_i.value = data
 
-        await RisingEdge(self.dut.clk)
-        self.dut.apb_penable.value = 1
+        await RisingEdge(self.dut.clk_i)
+        self.dut.apb_penable_i.value = 1
 
         # Poll for pready with timeout
         timeout_cycles = 100
         for cycle in range(timeout_cycles):
             await ReadOnly()
-            if int(self.dut.apb_pready.value) == 1:
+            if int(self.dut.apb_pready_o.value) == 1:
                 # Check for slave error
-                if int(self.dut.apb_pslverr.value) == 1:
-                    self.dut.apb_psel.value = 0
-                    self.dut.apb_penable.value = 0
-                    self.dut.apb_pwrite.value = 0
+                if int(self.dut.apb_pslverr_o.value) == 1:
+                    self.dut.apb_psel_i.value = 0
+                    self.dut.apb_penable_i.value = 0
+                    self.dut.apb_pwrite_i.value = 0
                     raise RuntimeError(
                         f"APB write error (pslverr) at addr=0x{addr:08x}, data=0x{data:08x}"
                     )
                 # Success - exit polling loop
                 break
-            await RisingEdge(self.dut.clk)
+            await RisingEdge(self.dut.clk_i)
         else:
             # Timeout reached
-            self.dut.apb_psel.value = 0
-            self.dut.apb_penable.value = 0
-            self.dut.apb_pwrite.value = 0
+            self.dut.apb_psel_i.value = 0
+            self.dut.apb_penable_i.value = 0
+            self.dut.apb_pwrite_i.value = 0
             raise RuntimeError(
                 f"APB write timeout waiting for pready at addr=0x{addr:08x} "
                 f"(waited {timeout_cycles} cycles)"
             )
 
-        await RisingEdge(self.dut.clk)
-        self.dut.apb_psel.value = 0
-        self.dut.apb_penable.value = 0
-        self.dut.apb_pwrite.value = 0
+        await RisingEdge(self.dut.clk_i)
+        self.dut.apb_psel_i.value = 0
+        self.dut.apb_penable_i.value = 0
+        self.dut.apb_pwrite_i.value = 0
 
     async def apb_read(self, addr):
         """Read from APB debug register.
@@ -155,43 +155,43 @@ class APBDebugDriver(uvm_driver):
         Raises:
             RuntimeError: If APB slave returns error (pslverr) or timeout
         """
-        await RisingEdge(self.dut.clk)
-        self.dut.apb_psel.value = 1
-        self.dut.apb_penable.value = 0
-        self.dut.apb_pwrite.value = 0
-        self.dut.apb_paddr.value = addr
+        await RisingEdge(self.dut.clk_i)
+        self.dut.apb_psel_i.value = 1
+        self.dut.apb_penable_i.value = 0
+        self.dut.apb_pwrite_i.value = 0
+        self.dut.apb_paddr_i.value = addr
 
-        await RisingEdge(self.dut.clk)
-        self.dut.apb_penable.value = 1
+        await RisingEdge(self.dut.clk_i)
+        self.dut.apb_penable_i.value = 1
 
         # Poll for pready with timeout
         timeout_cycles = 100
         data = 0
         for cycle in range(timeout_cycles):
             await ReadOnly()
-            if int(self.dut.apb_pready.value) == 1:
+            if int(self.dut.apb_pready_o.value) == 1:
                 # Sample data when pready is high
-                data = int(self.dut.apb_prdata.value)
+                data = int(self.dut.apb_prdata_o.value)
                 # Check for slave error
-                if int(self.dut.apb_pslverr.value) == 1:
-                    self.dut.apb_psel.value = 0
-                    self.dut.apb_penable.value = 0
+                if int(self.dut.apb_pslverr_o.value) == 1:
+                    self.dut.apb_psel_i.value = 0
+                    self.dut.apb_penable_i.value = 0
                     raise RuntimeError(f"APB read error (pslverr) at addr=0x{addr:08x}")
                 # Success - exit polling loop
                 break
-            await RisingEdge(self.dut.clk)
+            await RisingEdge(self.dut.clk_i)
         else:
             # Timeout reached
-            self.dut.apb_psel.value = 0
-            self.dut.apb_penable.value = 0
+            self.dut.apb_psel_i.value = 0
+            self.dut.apb_penable_i.value = 0
             raise RuntimeError(
                 f"APB read timeout waiting for pready at addr=0x{addr:08x} "
                 f"(waited {timeout_cycles} cycles)"
             )
 
-        await RisingEdge(self.dut.clk)
-        self.dut.apb_psel.value = 0
-        self.dut.apb_penable.value = 0
+        await RisingEdge(self.dut.clk_i)
+        self.dut.apb_psel_i.value = 0
+        self.dut.apb_penable_i.value = 0
 
         return data
 
@@ -212,7 +212,7 @@ class APBDebugDriver(uvm_driver):
             if status & 0x1:
                 self.logger.info("CPU halted successfully")
                 return
-            await RisingEdge(self.dut.clk)
+            await RisingEdge(self.dut.clk_i)
 
         raise RuntimeError("CPU did not halt within timeout")
 
@@ -233,7 +233,7 @@ class APBDebugDriver(uvm_driver):
             if status & 0x2:
                 self.logger.info("CPU resumed successfully")
                 return
-            await RisingEdge(self.dut.clk)
+            await RisingEdge(self.dut.clk_i)
 
         raise RuntimeError("CPU did not resume within timeout")
 

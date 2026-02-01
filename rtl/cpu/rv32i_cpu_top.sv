@@ -4,71 +4,71 @@
 
 module rv32i_cpu_top (
   // Clock and reset
-  input  logic        clk,
-  input  logic        rst_n,
+  input  logic        clk_i,
+  input  logic        rst_n_i,
 
   // ================================================================
   // AXI4-Lite Master Interface (unified instruction/data)
   // ================================================================
 
   // Write address channel
-  output logic [31:0] axi_awaddr,
-  output logic        axi_awvalid,
-  input  logic        axi_awready,
+  output logic [31:0] axi_awaddr_o,
+  output logic        axi_awvalid_o,
+  input  logic        axi_awready_i,
 
   // Write data channel
-  output logic [31:0] axi_wdata,
-  output logic [3:0]  axi_wstrb,
-  output logic        axi_wvalid,
-  input  logic        axi_wready,
+  output logic [31:0] axi_wdata_o,
+  output logic [3:0]  axi_wstrb_o,
+  output logic        axi_wvalid_o,
+  input  logic        axi_wready_i,
 
   // Write response channel
-  input  logic [1:0]  axi_bresp,
-  input  logic        axi_bvalid,
-  output logic        axi_bready,
+  input  logic [1:0]  axi_bresp_i,
+  input  logic        axi_bvalid_i,
+  output logic        axi_bready_o,
 
   // Read address channel
-  output logic [31:0] axi_araddr,
-  output logic        axi_arvalid,
-  input  logic        axi_arready,
+  output logic [31:0] axi_araddr_o,
+  output logic        axi_arvalid_o,
+  input  logic        axi_arready_i,
 
   // Read data channel
-  input  logic [31:0] axi_rdata,
-  input  logic [1:0]  axi_rresp,
-  input  logic        axi_rvalid,
-  output logic        axi_rready,
+  input  logic [31:0] axi_rdata_i,
+  input  logic [1:0]  axi_rresp_i,
+  input  logic        axi_rvalid_i,
+  output logic        axi_rready_o,
 
   // ================================================================
   // APB3 Slave Interface (debug/control)
   // ================================================================
 
-  input  logic [11:0] apb_paddr,
-  input  logic        apb_psel,
-  input  logic        apb_penable,
-  input  logic        apb_pwrite,
-  input  logic [31:0] apb_pwdata,
-  output logic [31:0] apb_prdata,
-  output logic        apb_pready,
-  output logic        apb_pslverr,
+  input  logic [11:0] apb_paddr_i,
+  input  logic        apb_psel_i,
+  input  logic        apb_penable_i,
+  input  logic        apb_pwrite_i,
+  input  logic [31:0] apb_pwdata_i,
+  output logic [31:0] apb_prdata_o,
+  output logic        apb_pready_o,
+  output logic        apb_pslverr_o,
 
   // ================================================================
   // Commit Interface (verification observability)
   // ================================================================
 
-  output logic        commit_valid,
-  output logic [31:0] commit_pc,
-  output logic [31:0] commit_insn,
-  output logic        trap_taken,
-  output logic [3:0]  trap_cause,
+  output logic        commit_valid_o,
+  output logic [31:0] commit_pc_o,
+  output logic [31:0] commit_insn_o,
+  output logic        trap_taken_o,
+  output logic [3:0]  trap_cause_o,
 
   // Debug outputs for troubleshooting (added for phase 1 verification)
-  output logic [31:0] debug_rs1_data,
-  output logic [31:0] debug_rs2_data,
-  output logic        debug_branch_taken,
-  output logic        debug_take_branch_jump,
-  output logic        debug_pc_src,
-  output logic [3:0]  debug_state,
-  output logic        debug_ebreak
+  output logic [31:0] debug_rs1_data_o,
+  output logic [31:0] debug_rs2_data_o,
+  output logic        debug_branch_taken_o,
+  output logic        debug_take_branch_jump_o,
+  output logic        debug_pc_src_o,
+  output logic [3:0]  debug_state_o,
+  output logic        debug_ebreak_o
 );
 
   // ================================================================
@@ -110,27 +110,27 @@ module rv32i_cpu_top (
   // ================================================================
 
   rv32i_core u_core (
-    .clk            (clk),
-    .rst_n          (rst_n),
+    .clk            (clk_i),
+    .rst_n          (rst_n_i),
 
     // AXI4-Lite memory interface
-    .axi_araddr     (axi_araddr),
-    .axi_arvalid    (axi_arvalid),
-    .axi_arready    (axi_arready),
-    .axi_rdata      (axi_rdata),
-    .axi_rresp      (axi_rresp),
-    .axi_rvalid     (axi_rvalid),
-    .axi_rready     (axi_rready),
-    .axi_awaddr     (axi_awaddr),
-    .axi_awvalid    (axi_awvalid),
-    .axi_awready    (axi_awready),
-    .axi_wdata      (axi_wdata),
-    .axi_wstrb      (axi_wstrb),
-    .axi_wvalid     (axi_wvalid),
-    .axi_wready     (axi_wready),
-    .axi_bresp      (axi_bresp),
-    .axi_bvalid     (axi_bvalid),
-    .axi_bready     (axi_bready),
+    .axi_araddr     (axi_araddr_o),
+    .axi_arvalid    (axi_arvalid_o),
+    .axi_arready    (axi_arready_i),
+    .axi_rdata      (axi_rdata_i),
+    .axi_rresp      (axi_rresp_i),
+    .axi_rvalid     (axi_rvalid_i),
+    .axi_rready     (axi_rready_o),
+    .axi_awaddr     (axi_awaddr_o),
+    .axi_awvalid    (axi_awvalid_o),
+    .axi_awready    (axi_awready_i),
+    .axi_wdata      (axi_wdata_o),
+    .axi_wstrb      (axi_wstrb_o),
+    .axi_wvalid     (axi_wvalid_o),
+    .axi_wready     (axi_wready_i),
+    .axi_bresp      (axi_bresp_i),
+    .axi_bvalid     (axi_bvalid_i),
+    .axi_bready     (axi_bready_o),
 
     // Debug interface
     .dbg_halt_req   (dbg_halt_req),
@@ -150,20 +150,20 @@ module rv32i_cpu_top (
     .dbg_reg_rd_data  (dbg_reg_rd_data),
 
     // Commit interface
-    .commit_valid   (commit_valid),
-    .commit_pc      (commit_pc),
-    .commit_insn    (commit_insn),
-    .trap_taken     (trap_taken),
-    .trap_cause     (trap_cause),
+    .commit_valid   (commit_valid_o),
+    .commit_pc      (commit_pc_o),
+    .commit_insn    (commit_insn_o),
+    .trap_taken     (trap_taken_o),
+    .trap_cause     (trap_cause_o),
 
     // Debug outputs
-    .debug_rs1_data          (debug_rs1_data),
-    .debug_rs2_data          (debug_rs2_data),
-    .debug_branch_taken      (debug_branch_taken),
-    .debug_take_branch_jump  (debug_take_branch_jump),
-    .debug_pc_src            (debug_pc_src),
-    .debug_state             (debug_state),
-    .debug_ebreak            (debug_ebreak)
+    .debug_rs1_data          (debug_rs1_data_o),
+    .debug_rs2_data          (debug_rs2_data_o),
+    .debug_branch_taken      (debug_branch_taken_o),
+    .debug_take_branch_jump  (debug_take_branch_jump_o),
+    .debug_pc_src            (debug_pc_src_o),
+    .debug_state             (debug_state_o),
+    .debug_ebreak            (debug_ebreak_o)
   );
 
   // ================================================================
@@ -171,57 +171,57 @@ module rv32i_cpu_top (
   // ================================================================
 
   // APB is always ready (single-cycle access)
-  assign apb_pready  = 1'b1;
-  assign apb_pslverr = 1'b0;  // No errors in Phase 1
+  assign apb_pready_o  = 1'b1;
+  assign apb_pslverr_o = 1'b0;  // No errors in Phase 1
 
   // APB read logic
   always_comb begin
-    apb_prdata = 32'h0;
+    apb_prdata_o = 32'h0;
     dbg_reg_rd_addr = 5'h0;  // Default register address
 
-    if (apb_psel && !apb_pwrite) begin
-      case (apb_paddr)
+    if (apb_psel_i && !apb_pwrite_i) begin
+      case (apb_paddr_i)
         // Control register (0x000)
-        12'h000: apb_prdata = dbg_ctrl_reg;
+        12'h000: apb_prdata_o = dbg_ctrl_reg;
 
         // Status register (0x004)
-        12'h004: apb_prdata = dbg_status_reg;
+        12'h004: apb_prdata_o = dbg_status_reg;
 
         // PC register (0x008)
-        12'h008: apb_prdata = commit_pc;
+        12'h008: apb_prdata_o = commit_pc_o;
 
         // Current instruction (0x00C)
-        12'h00C: apb_prdata = commit_insn;
+        12'h00C: apb_prdata_o = commit_insn_o;
 
         // GPR[0:31] (0x010-0x08C)
         // Address format: 0x010 + (reg_num * 4)
         // Valid range: 0x010 (x0) to 0x08C (x31)
         default: begin
-          if (apb_paddr >= 12'h010 && apb_paddr <= 12'h08C && apb_paddr[1:0] == 2'b00) begin
+          if (apb_paddr_i >= 12'h010 && apb_paddr_i <= 12'h08C && apb_paddr_i[1:0] == 2'b00) begin
             // Calculate register number from address
             // 0x010 -> x0, 0x014 -> x1, etc.
             // Formula: (addr - 0x010) / 4 = (addr[6:2] - 4)
-            dbg_reg_rd_addr = apb_paddr[6:2] - 5'd4;
-            apb_prdata = dbg_reg_rd_data;
+            dbg_reg_rd_addr = apb_paddr_i[6:2] - 5'd4;
+            apb_prdata_o = dbg_reg_rd_data;
           end
           // Breakpoint 0 address (0x100)
-          else if (apb_paddr == 12'h100) begin
-            apb_prdata = dbg_bp0_addr;
+          else if (apb_paddr_i == 12'h100) begin
+            apb_prdata_o = dbg_bp0_addr;
           end
           // Breakpoint 0 control (0x104)
-          else if (apb_paddr == 12'h104) begin
-            apb_prdata = dbg_bp0_ctrl;
+          else if (apb_paddr_i == 12'h104) begin
+            apb_prdata_o = dbg_bp0_ctrl;
           end
           // Breakpoint 1 address (0x108)
-          else if (apb_paddr == 12'h108) begin
-            apb_prdata = dbg_bp1_addr;
+          else if (apb_paddr_i == 12'h108) begin
+            apb_prdata_o = dbg_bp1_addr;
           end
           // Breakpoint 1 control (0x10C)
-          else if (apb_paddr == 12'h10C) begin
-            apb_prdata = dbg_bp1_ctrl;
+          else if (apb_paddr_i == 12'h10C) begin
+            apb_prdata_o = dbg_bp1_ctrl;
           end
           else begin
-            apb_prdata = 32'h0;
+            apb_prdata_o = 32'h0;
           end
         end
       endcase
@@ -229,8 +229,8 @@ module rv32i_cpu_top (
   end
 
   // APB write logic
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
+  always_ff @(posedge clk_i or negedge rst_n_i) begin
+    if (!rst_n_i) begin
       dbg_ctrl_reg    <= 32'h0;
       dbg_bp0_addr    <= 32'h0;
       dbg_bp0_ctrl    <= 32'h0;
@@ -246,37 +246,37 @@ module rv32i_cpu_top (
       dbg_pc_wr_en  <= 1'b0;
       dbg_reg_wr_en <= 1'b0;
 
-      if (apb_psel && apb_penable && apb_pwrite) begin
-        case (apb_paddr)
+      if (apb_psel_i && apb_penable_i && apb_pwrite_i) begin
+        case (apb_paddr_i)
           // Control register (0x000)
-          12'h000: dbg_ctrl_reg <= apb_pwdata;
+          12'h000: dbg_ctrl_reg <= apb_pwdata_i;
 
           // PC register (0x008) - writable when halted
           12'h008: begin
             if (dbg_halted) begin
               dbg_pc_wr_en   <= 1'b1;
-              dbg_pc_wr_data <= apb_pwdata;
+              dbg_pc_wr_data <= apb_pwdata_i;
             end
           end
 
           // Breakpoint 0 address (0x100)
-          12'h100: dbg_bp0_addr <= apb_pwdata;
+          12'h100: dbg_bp0_addr <= apb_pwdata_i;
 
           // Breakpoint 0 control (0x104)
-          12'h104: dbg_bp0_ctrl <= apb_pwdata;
+          12'h104: dbg_bp0_ctrl <= apb_pwdata_i;
 
           // Breakpoint 1 address (0x108)
-          12'h108: dbg_bp1_addr <= apb_pwdata;
+          12'h108: dbg_bp1_addr <= apb_pwdata_i;
 
           // Breakpoint 1 control (0x10C)
-          12'h10C: dbg_bp1_ctrl <= apb_pwdata;
+          12'h10C: dbg_bp1_ctrl <= apb_pwdata_i;
 
           // GPR[0:31] write access (0x010-0x08C) - writable when halted
           default: begin
-            if (apb_paddr >= 12'h010 && apb_paddr <= 12'h08C && apb_paddr[1:0] == 2'b00 && dbg_halted) begin
+            if (apb_paddr_i >= 12'h010 && apb_paddr_i <= 12'h08C && apb_paddr_i[1:0] == 2'b00 && dbg_halted) begin
               dbg_reg_wr_en   <= 1'b1;
-              dbg_reg_wr_addr <= apb_paddr[6:2] - 5'd4;
-              dbg_reg_wr_data <= apb_pwdata;
+              dbg_reg_wr_addr <= apb_paddr_i[6:2] - 5'd4;
+              dbg_reg_wr_data <= apb_pwdata_i;
             end
           end
         endcase
@@ -319,10 +319,10 @@ module rv32i_cpu_top (
   // ================================================================
 
   // Breakpoint 0 detection
-  assign bp0_hit = dbg_bp0_ctrl[0] && (commit_pc == dbg_bp0_addr);
+  assign bp0_hit = dbg_bp0_ctrl[0] && (commit_pc_o == dbg_bp0_addr);
 
   // Breakpoint 1 detection
-  assign bp1_hit = dbg_bp1_ctrl[0] && (commit_pc == dbg_bp1_addr);
+  assign bp1_hit = dbg_bp1_ctrl[0] && (commit_pc_o == dbg_bp1_addr);
 
   // EBREAK halt detection
   // Detect when EBREAK instruction causes halt
@@ -334,14 +334,14 @@ module rv32i_cpu_top (
   // when we transition to HALTED state.
   logic ebreak_caused_halt;
 
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
+  always_ff @(posedge clk_i or negedge rst_n_i) begin
+    if (!rst_n_i) begin
       ebreak_halt <= 1'b0;
       ebreak_caused_halt <= 1'b0;
     end else begin
       // Latch debug_ebreak when CPU is executing (not halted)
       // This captures whether the current instruction is EBREAK
-      if (!dbg_halted && debug_ebreak) begin
+      if (!dbg_halted && debug_ebreak_o) begin
         ebreak_caused_halt <= 1'b1;
       end else if (dbg_halted) begin
         // When halted, if we captured ebreak, set the flag

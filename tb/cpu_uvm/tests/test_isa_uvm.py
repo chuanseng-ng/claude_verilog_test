@@ -93,7 +93,7 @@ async def run_isa_test(dut, sequence_class, sequence_args, test_name="isa_test")
         AssertionError: If scoreboard detects mismatches
     """
     # Start clock
-    clock = Clock(dut.clk, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, unit="ns")
     cocotb.start_soon(clock.start())
 
     # Create test
@@ -108,10 +108,10 @@ async def run_isa_test(dut, sequence_class, sequence_args, test_name="isa_test")
     # Reset and halt CPU FIRST, before starting any background tasks
     # This ensures the CPU is stopped before it can fetch garbage
     dut._log.info("Applying reset")
-    dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 5)
-    dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 2)
+    dut.rst_n_i.value = 0
+    await ClockCycles(dut.clk_i, 5)
+    dut.rst_n_i.value = 1
+    await ClockCycles(dut.clk_i, 2)
 
     # Immediately halt CPU after reset, before it can fetch
     apb_driver = test.env.apb_agent.driver
@@ -125,14 +125,14 @@ async def run_isa_test(dut, sequence_class, sequence_args, test_name="isa_test")
     cocotb.start_soon(test.env.scoreboard.run_phase())
 
     # Give background tasks a chance to start
-    await ClockCycles(dut.clk, 2)
+    await ClockCycles(dut.clk_i, 2)
 
     # Run the sequence - CPU is already halted, program will be loaded
     dut._log.info(f"Running sequence: {seq.get_name()}")
     await seq.body()
 
     # Small delay for any final commits
-    await ClockCycles(dut.clk, 5)
+    await ClockCycles(dut.clk_i, 5)
 
     # Report results
     test.env.scoreboard.report_phase()

@@ -68,7 +68,7 @@ class CommitMonitor(uvm_monitor):
     """UVM monitor for instruction commits.
 
     This monitor passively observes the commit interface from the RV32I CPU.
-    When commit_valid is asserted, it captures the PC and instruction word,
+    When commit_valid_o is asserted, it captures the PC and instruction word,
     creates a CommitTransaction object, and sends it to connected scoreboards
     via the analysis port.
 
@@ -102,21 +102,21 @@ class CommitMonitor(uvm_monitor):
     async def run_phase(self):
         """UVM run phase - monitor commit interface.
 
-        This method runs continuously, watching for commit_valid assertions.
+        This method runs continuously, watching for commit_valid_o assertions.
         When a commit occurs, it captures the transaction and broadcasts it
         to all connected scoreboards via the analysis port.
         """
         self.logger.info("Starting commit monitor")
 
         while True:
-            await RisingEdge(self.dut.clk)
+            await RisingEdge(self.dut.clk_i)
             await ReadOnly()  # Sample signals in ReadOnly region
 
             # Check if commit is valid
-            if self.dut.commit_valid.value == 1:
+            if self.dut.commit_valid_o.value == 1:
                 # Capture commit signals
-                pc = int(self.dut.commit_pc.value)
-                insn = int(self.dut.commit_insn.value)
+                pc = int(self.dut.commit_pc_o.value)
+                insn = int(self.dut.commit_insn_o.value)
 
                 # Create transaction object
                 txn = CommitTransaction(pc, insn)

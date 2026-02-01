@@ -105,42 +105,42 @@ class BaseTest(uvm_test):
         """
         self.logger.info("Test run phase (override in child class)")
         # Default: just wait for environment to initialize
-        await ClockCycles(self.dut.clk, 10)
+        await ClockCycles(self.dut.clk_i, 10)
 
     async def reset_dut(self):
         """Apply reset to DUT.
 
         Resets all DUT signals to known state:
-        - Assert rst_n = 0
+        - Assert rst_n_i = 0
         - Initialize AXI/APB signals
         - Wait 5 cycles
-        - Deassert rst_n = 1
+        - Deassert rst_n_i = 1
         - Wait 2 cycles
         """
         self.logger.info("Applying reset")
 
         # Assert reset and initialize signals
-        self.dut.rst_n.value = 0
-        self.dut.axi_arready.value = 0
-        self.dut.axi_rvalid.value = 0
-        self.dut.axi_rdata.value = 0
-        self.dut.axi_rresp.value = 0
-        self.dut.axi_awready.value = 0
-        self.dut.axi_wready.value = 0
-        self.dut.axi_bvalid.value = 0
-        self.dut.axi_bresp.value = 0
-        self.dut.apb_psel.value = 0
-        self.dut.apb_penable.value = 0
-        self.dut.apb_pwrite.value = 0
-        self.dut.apb_paddr.value = 0
-        self.dut.apb_pwdata.value = 0
+        self.dut.rst_n_i.value = 0
+        self.dut.axi_arready_i.value = 0
+        self.dut.axi_rvalid_i.value = 0
+        self.dut.axi_rdata_i.value = 0
+        self.dut.axi_rresp_i.value = 0
+        self.dut.axi_awready_i.value = 0
+        self.dut.axi_wready_i.value = 0
+        self.dut.axi_bvalid_i.value = 0
+        self.dut.axi_bresp_i.value = 0
+        self.dut.apb_psel_i.value = 0
+        self.dut.apb_penable_i.value = 0
+        self.dut.apb_pwrite_i.value = 0
+        self.dut.apb_paddr_i.value = 0
+        self.dut.apb_pwdata_i.value = 0
 
         # Hold reset
-        await ClockCycles(self.dut.clk, 5)
+        await ClockCycles(self.dut.clk_i, 5)
 
         # Release reset
-        self.dut.rst_n.value = 1
-        await ClockCycles(self.dut.clk, 2)
+        self.dut.rst_n_i.value = 1
+        await ClockCycles(self.dut.clk_i, 2)
 
         self.logger.info("Reset complete")
 
@@ -161,7 +161,7 @@ class BaseTest(uvm_test):
         apb_driver = self.env.apb_agent.driver
 
         for cycle in range(timeout_cycles):
-            await ClockCycles(self.dut.clk, 1)
+            await ClockCycles(self.dut.clk_i, 1)
 
             # Check if CPU is halted
             try:
@@ -193,7 +193,7 @@ class BaseTest(uvm_test):
             return False
 
         # Give scoreboard time to process final commits
-        await ClockCycles(self.dut.clk, 10)
+        await ClockCycles(self.dut.clk_i, 10)
 
         self.logger.info("Test completion detected")
         return True
@@ -220,7 +220,7 @@ async def run_uvm_test(dut, test_class, test_name="uvm_test"):
             await run_uvm_test(dut, MyTest, "my_test")
     """
     # Start clock
-    clock = Clock(dut.clk, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, unit="ns")
     cocotb.start_soon(clock.start())
 
     # Create and run test
@@ -243,7 +243,7 @@ async def run_uvm_test(dut, test_class, test_name="uvm_test"):
     cocotb.start_soon(test.env.scoreboard.run_phase())
 
     # Give background tasks a chance to start
-    await ClockCycles(dut.clk, 2)
+    await ClockCycles(dut.clk_i, 2)
 
     # Reset DUT
     await test.reset_dut()
