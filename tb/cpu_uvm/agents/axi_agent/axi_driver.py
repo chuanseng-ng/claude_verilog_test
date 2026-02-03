@@ -111,7 +111,7 @@ class AXIMemoryDriver(uvm_driver):
         if self.ref_model is not None:
             self.ref_model.memory.write(aligned_addr, masked_data, 4)
 
-    async def read_word(self, addr):
+    def read_word(self, addr):
         """Read 32-bit word from memory.
 
         Args:

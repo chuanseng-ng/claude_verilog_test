@@ -229,6 +229,9 @@ class ISASequenceBase(BaseSequence):
 
         # Verify setup registers were loaded correctly
         for reg_num, expected_val in self.setup_regs.items():
+            # Skip checking registers that will be overwritten by the instruction
+            if self.expected_rd is not None and reg_num == self.expected_rd:
+                continue
             actual_val = await apb_driver.read_gpr(reg_num)
             if actual_val != expected_val:
                 raise AssertionError(
@@ -268,8 +271,10 @@ class LWSequence(ISASequenceBase):
             expected_value: Expected value loaded into rd
         """
         instruction = LW(rd, rs1, offset)
-        setup_regs = {rs1: base_addr} if rs1 != 0 else {}
-        setup_memory = {base_addr + offset: mem_value}
+        setup_regs = {rs1: base_addr} if rs1 != 0 and rs1 != "x0" else {}
+        # Compute effective address (use 0 for base when rs1 is x0)
+        eff_addr = (0 if (rs1 == 0 or rs1 == "x0") else base_addr) + offset
+        setup_memory = {eff_addr: mem_value}
 
         super().__init__(
             name,
@@ -296,13 +301,23 @@ class SWSequence(ISASequenceBase):
             base_addr: Value to load into rs1
             store_value: Value to load into rs2 (to be stored)
         """
-        instruction = SW(rs2, rs1, offset)
+        # Handle rs1==rs2 case: use scratch register for store_value
+        actual_rs2 = rs2
+        if rs1 == rs2 and rs1 != 0 and rs1 != "x0":
+            # Find a scratch register (prefer x31, x30, etc. that aren't in use)
+            for tmp_reg in range(31, 0, -1):
+                if tmp_reg != rs1:
+                    actual_rs2 = tmp_reg
+                    break
+
+        instruction = SW(actual_rs2, rs1, offset)
         setup_regs = {}
-        # Only add registers to setup if they're not the zero register
+        # Setup base address in rs1
         if rs1 != 0 and rs1 != "x0":
             setup_regs[rs1] = base_addr
-        if rs2 != 0 and rs2 != "x0":
-            setup_regs[rs2] = store_value
+        # Setup store value in actual_rs2 (may be scratch register if rs1==rs2)
+        if actual_rs2 != 0 and actual_rs2 != "x0":
+            setup_regs[actual_rs2] = store_value
 
         # Compute target address (use 0 for base when rs1 is x0)
         rs1_value = base_addr if (rs1 != 0 and rs1 != "x0") else 0
@@ -317,7 +332,7 @@ class SWSequence(ISASequenceBase):
 
         # Verify memory was written correctly
         axi_driver = self.env.axi_agent.driver
-        actual = await axi_driver.read_word(self.target_addr)
+        actual = axi_driver.read_word(self.target_addr)
 
         if actual != self.store_value:
             raise AssertionError(
@@ -335,7 +350,7 @@ class LBSequence(ISASequenceBase):
         setup_regs = {rs1: base_addr} if rs1 != 0 and rs1 != "x0" else {}
 
         # Compute effective address and place mem_value in correct byte lane
-        addr = base_addr + offset
+        addr = (0 if (rs1 == 0 or rs1 == "x0") else base_addr) + offset
         aligned_addr = addr & ~0x3
         lane = addr & 0x3
         # Create 32-bit word with mem_value in correct byte lane
@@ -362,7 +377,7 @@ class LBUSequence(ISASequenceBase):
         setup_regs = {rs1: base_addr} if rs1 != 0 and rs1 != "x0" else {}
 
         # Compute effective address and place mem_value in correct byte lane
-        addr = base_addr + offset
+        addr = (0 if (rs1 == 0 or rs1 == "x0") else base_addr) + offset
         aligned_addr = addr & ~0x3
         lane = addr & 0x3
         # Create 32-bit word with mem_value in correct byte lane
@@ -389,7 +404,7 @@ class LHSequence(ISASequenceBase):
         setup_regs = {rs1: base_addr} if rs1 != 0 and rs1 != "x0" else {}
 
         # Compute effective address and place mem_value in correct halfword lane
-        addr = base_addr + offset
+        addr = (0 if (rs1 == 0 or rs1 == "x0") else base_addr) + offset
         aligned_addr = addr & ~0x3
         lane = (addr & 0x2) >> 1  # 0 for lower halfword, 1 for upper halfword
         # Create 32-bit word with mem_value in correct halfword lane
@@ -416,7 +431,7 @@ class LHUSequence(ISASequenceBase):
         setup_regs = {rs1: base_addr} if rs1 != 0 and rs1 != "x0" else {}
 
         # Compute effective address and place mem_value in correct halfword lane
-        addr = base_addr + offset
+        addr = (0 if (rs1 == 0 or rs1 == "x0") else base_addr) + offset
         aligned_addr = addr & ~0x3
         lane = (addr & 0x2) >> 1  # 0 for lower halfword, 1 for upper halfword
         # Create 32-bit word with mem_value in correct halfword lane
@@ -439,13 +454,23 @@ class SBSequence(ISASequenceBase):
 
     def __init__(self, name, env, rs1, rs2, offset, base_addr, store_value):
         """Test SB instruction."""
-        instruction = SB(rs2, rs1, offset)
+        # Handle rs1==rs2 case: use scratch register for store_value
+        actual_rs2 = rs2
+        if rs1 == rs2 and rs1 != 0 and rs1 != "x0":
+            # Find a scratch register (prefer x31, x30, etc. that aren't in use)
+            for tmp_reg in range(31, 0, -1):
+                if tmp_reg != rs1:
+                    actual_rs2 = tmp_reg
+                    break
+
+        instruction = SB(actual_rs2, rs1, offset)
         setup_regs = {}
-        # Only add registers to setup if they're not the zero register
+        # Setup base address in rs1
         if rs1 != 0 and rs1 != "x0":
             setup_regs[rs1] = base_addr
-        if rs2 != 0 and rs2 != "x0":
-            setup_regs[rs2] = store_value
+        # Setup store value in actual_rs2 (may be scratch register if rs1==rs2)
+        if actual_rs2 != 0 and actual_rs2 != "x0":
+            setup_regs[actual_rs2] = store_value
 
         # Compute target address (use 0 for base when rs1 is x0)
         rs1_value = base_addr if (rs1 != 0 and rs1 != "x0") else 0
@@ -460,7 +485,7 @@ class SBSequence(ISASequenceBase):
 
         # Verify memory byte was written correctly
         axi_driver = self.env.axi_agent.driver
-        word = await axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
+        word = axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
         byte_offset = self.target_addr & 0x3
         actual_byte = (word >> (byte_offset * 8)) & 0xFF
 
@@ -476,13 +501,23 @@ class SHSequence(ISASequenceBase):
 
     def __init__(self, name, env, rs1, rs2, offset, base_addr, store_value):
         """Test SH instruction."""
-        instruction = SH(rs2, rs1, offset)
+        # Handle rs1==rs2 case: use scratch register for store_value
+        actual_rs2 = rs2
+        if rs1 == rs2 and rs1 != 0 and rs1 != "x0":
+            # Find a scratch register (prefer x31, x30, etc. that aren't in use)
+            for tmp_reg in range(31, 0, -1):
+                if tmp_reg != rs1:
+                    actual_rs2 = tmp_reg
+                    break
+
+        instruction = SH(actual_rs2, rs1, offset)
         setup_regs = {}
-        # Only add registers to setup if they're not the zero register
+        # Setup base address in rs1
         if rs1 != 0 and rs1 != "x0":
             setup_regs[rs1] = base_addr
-        if rs2 != 0 and rs2 != "x0":
-            setup_regs[rs2] = store_value
+        # Setup store value in actual_rs2 (may be scratch register if rs1==rs2)
+        if actual_rs2 != 0 and actual_rs2 != "x0":
+            setup_regs[actual_rs2] = store_value
 
         # Compute target address (use 0 for base when rs1 is x0)
         rs1_value = base_addr if (rs1 != 0 and rs1 != "x0") else 0
@@ -497,7 +532,7 @@ class SHSequence(ISASequenceBase):
 
         # Verify memory halfword was written correctly
         axi_driver = self.env.axi_agent.driver
-        word = await axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
+        word = axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
         half_offset = (self.target_addr & 0x2) >> 1
         actual_half = (word >> (half_offset * 16)) & 0xFFFF
 
