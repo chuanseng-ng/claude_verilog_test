@@ -304,7 +304,9 @@ class SWSequence(ISASequenceBase):
         if rs2 != 0 and rs2 != "x0":
             setup_regs[rs2] = store_value
 
-        self.target_addr = base_addr + offset
+        # Compute target address (use 0 for base when rs1 is x0)
+        rs1_value = base_addr if (rs1 != 0 and rs1 != "x0") else 0
+        self.target_addr = rs1_value + offset
         self.store_value = store_value
 
         super().__init__(name, env, instruction, setup_regs=setup_regs)
@@ -315,7 +317,7 @@ class SWSequence(ISASequenceBase):
 
         # Verify memory was written correctly
         axi_driver = self.env.axi_agent.driver
-        actual = axi_driver.read_word(self.target_addr)
+        actual = await axi_driver.read_word(self.target_addr)
 
         if actual != self.store_value:
             raise AssertionError(
@@ -445,7 +447,9 @@ class SBSequence(ISASequenceBase):
         if rs2 != 0 and rs2 != "x0":
             setup_regs[rs2] = store_value
 
-        self.target_addr = base_addr + offset
+        # Compute target address (use 0 for base when rs1 is x0)
+        rs1_value = base_addr if (rs1 != 0 and rs1 != "x0") else 0
+        self.target_addr = rs1_value + offset
         self.store_value = store_value & 0xFF  # Only byte should be stored
 
         super().__init__(name, env, instruction, setup_regs=setup_regs)
@@ -456,7 +460,7 @@ class SBSequence(ISASequenceBase):
 
         # Verify memory byte was written correctly
         axi_driver = self.env.axi_agent.driver
-        word = axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
+        word = await axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
         byte_offset = self.target_addr & 0x3
         actual_byte = (word >> (byte_offset * 8)) & 0xFF
 
@@ -480,7 +484,9 @@ class SHSequence(ISASequenceBase):
         if rs2 != 0 and rs2 != "x0":
             setup_regs[rs2] = store_value
 
-        self.target_addr = base_addr + offset
+        # Compute target address (use 0 for base when rs1 is x0)
+        rs1_value = base_addr if (rs1 != 0 and rs1 != "x0") else 0
+        self.target_addr = rs1_value + offset
         self.store_value = store_value & 0xFFFF  # Only halfword should be stored
 
         super().__init__(name, env, instruction, setup_regs=setup_regs)
@@ -491,7 +497,7 @@ class SHSequence(ISASequenceBase):
 
         # Verify memory halfword was written correctly
         axi_driver = self.env.axi_agent.driver
-        word = axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
+        word = await axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
         half_offset = (self.target_addr & 0x2) >> 1
         actual_half = (word >> (half_offset * 16)) & 0xFFFF
 

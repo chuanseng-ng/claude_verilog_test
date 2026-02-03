@@ -111,7 +111,7 @@ class AXIMemoryDriver(uvm_driver):
         if self.ref_model is not None:
             self.ref_model.memory.write(aligned_addr, masked_data, 4)
 
-    def read_word(self, addr):
+    async def read_word(self, addr):
         """Read 32-bit word from memory.
 
         Args:
@@ -212,32 +212,28 @@ class AXIMemoryDriver(uvm_driver):
         while True:
             await RisingEdge(self.dut.clk_i)
 
-            # Latch AW channel independently
+            # Latch AW channel independently (pulse ready for one cycle)
             if self.dut.axi_awvalid_o.value == 1 and not aw_pending:
                 aw_addr = int(self.dut.axi_awaddr_o.value)
                 aw_pending = True
                 self.dut.axi_awready_i.value = 1
-            elif aw_pending:
-                # Hold awready until transaction completes
-                pass
             else:
+                # De-assert awready after accepting beat
                 self.dut.axi_awready_i.value = 0
 
-            # Latch W channel independently
+            # Latch W channel independently (pulse ready for one cycle)
             if self.dut.axi_wvalid_o.value == 1 and not w_pending:
                 w_data = int(self.dut.axi_wdata_o.value)
                 w_strb = int(self.dut.axi_wstrb_o.value)
                 w_pending = True
                 self.dut.axi_wready_i.value = 1
-            elif w_pending:
-                # Hold wready until transaction completes
-                pass
             else:
+                # De-assert wready after accepting beat
                 self.dut.axi_wready_i.value = 0
 
             # Process write when both AW and W received
             if aw_pending and w_pending:
-                # Next cycle: de-assert ready signals
+                # Next cycle: ensure ready signals are de-asserted
                 await RisingEdge(self.dut.clk_i)
                 self.dut.axi_awready_i.value = 0
                 self.dut.axi_wready_i.value = 0
