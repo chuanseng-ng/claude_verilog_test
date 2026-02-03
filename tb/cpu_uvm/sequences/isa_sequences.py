@@ -203,8 +203,18 @@ class ISASequenceBase(BaseSequence):
                 imm |= 0xFFE00000
             target_addr = test_instr_addr + imm
             axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at JAL target
-        # Note: JALR target is computed at runtime, so we cannot pre-place EBREAK
-        # JALR tests should ensure the target register points to valid code
+        elif opcode == 0b1100111:  # JALR instruction
+            # Extract JALR offset (12-bit signed immediate) and rs1
+            imm_11_0 = (self.instruction >> 20) & 0xFFF
+            rs1 = (self.instruction >> 15) & 0x1F
+            # Sign extend immediate
+            if imm_11_0 & 0x800:
+                imm_11_0 |= 0xFFFFF000
+            # Get rs1 value from setup_regs
+            rs1_val = self.setup_regs.get(rs1, 0)
+            # Compute JALR target: (rs1_val + offset) & ~1
+            target_addr = (rs1_val + imm_11_0) & 0xFFFFFFFE
+            axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at JALR target
 
         # Set PC to start of program
         await apb_driver.write_pc(0x0000)

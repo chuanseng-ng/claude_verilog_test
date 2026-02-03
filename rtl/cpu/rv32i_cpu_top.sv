@@ -249,7 +249,11 @@ module rv32i_cpu_top (
       if (apb_psel_i && apb_penable_i && apb_pwrite_i) begin
         case (apb_paddr_i)
           // Control register (0x000)
-          12'h000: dbg_ctrl_reg <= apb_pwdata_i;
+          12'h000: begin
+            if (dbg_halted) begin
+              dbg_ctrl_reg <= apb_pwdata_i;
+            end
+          end
 
           // PC register (0x008) - writable when halted
           12'h008: begin
@@ -260,16 +264,32 @@ module rv32i_cpu_top (
           end
 
           // Breakpoint 0 address (0x100)
-          12'h100: dbg_bp0_addr <= apb_pwdata_i;
+          12'h100: begin
+            if (dbg_halted) begin
+              dbg_bp0_addr <= apb_pwdata_i;
+            end
+          end
 
           // Breakpoint 0 control (0x104)
-          12'h104: dbg_bp0_ctrl <= apb_pwdata_i;
+          12'h104: begin
+            if (dbg_halted) begin
+              dbg_bp0_ctrl <= apb_pwdata_i;
+            end
+          end
 
           // Breakpoint 1 address (0x108)
-          12'h108: dbg_bp1_addr <= apb_pwdata_i;
+          12'h108: begin
+            if (dbg_halted) begin
+              dbg_bp1_addr <= apb_pwdata_i;
+            end
+          end
 
           // Breakpoint 1 control (0x10C)
-          12'h10C: dbg_bp1_ctrl <= apb_pwdata_i;
+          12'h10C: begin
+            if (dbg_halted) begin
+              dbg_bp1_ctrl <= apb_pwdata_i;
+            end
+          end
 
           // GPR[0:31] write access (0x010-0x08C) - writable when halted
           default: begin
@@ -319,10 +339,10 @@ module rv32i_cpu_top (
   // ================================================================
 
   // Breakpoint 0 detection
-  assign bp0_hit = dbg_bp0_ctrl[0] && (commit_pc_o == dbg_bp0_addr);
+  assign bp0_hit = dbg_bp0_ctrl[0] && (commit_pc_o == dbg_bp0_addr) && commit_valid_o;
 
   // Breakpoint 1 detection
-  assign bp1_hit = dbg_bp1_ctrl[0] && (commit_pc_o == dbg_bp1_addr);
+  assign bp1_hit = dbg_bp1_ctrl[0] && (commit_pc_o == dbg_bp1_addr) && commit_valid_o;
 
   // EBREAK halt detection
   // Detect when EBREAK instruction causes halt

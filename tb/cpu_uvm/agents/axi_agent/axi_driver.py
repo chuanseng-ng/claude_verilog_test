@@ -60,6 +60,7 @@ class AXIMemoryDriver(uvm_driver):
 
         This phase starts the background tasks for handling AXI read and write
         transactions. These tasks run concurrently and respond to DUT signals.
+        The phase waits for both tasks to complete before finishing.
         """
         self.logger.info("Starting AXI memory driver")
 
@@ -77,9 +78,10 @@ class AXIMemoryDriver(uvm_driver):
         self._read_task = cocotb.start_soon(self.axi_read_handler())
         self._write_task = cocotb.start_soon(self.axi_write_handler())
 
-        # Keep run_phase alive while handlers run
-        # The handlers will run until simulation ends
-        await cocotb.triggers.NullTrigger()
+        # Wait for both handlers to complete (keeps run_phase alive)
+        # Note: In practice, these tasks run forever until simulation ends,
+        # but we properly join them to ensure cleanup happens correctly
+        await cocotb.triggers.Combine(self._read_task.join(), self._write_task.join())
 
     async def final_phase(self):
         """UVM final phase - cleanup background tasks."""
@@ -181,13 +183,15 @@ class AXIMemoryDriver(uvm_driver):
     async def axi_write_handler(self):
         """Handle AXI write transactions with byte-enable strobes.
 
-        AXI Write Protocol:
-        1. Master asserts awvalid + awaddr AND wvalid + wdata + wstrb
-        2. Slave asserts awready + wready (1 cycle)
-        3. Slave processes write with byte strobes
-        4. Slave asserts bvalid + bresp (wait for bready)
-        5. Master asserts bready
-        6. Transaction completes
+        AXI Write Protocol (independent AW and W channels):
+        1. Master asserts awvalid + awaddr (address phase)
+        2. Master asserts wvalid + wdata + wstrb (data phase)
+        3. Slave latches AW when awready asserted
+        4. Slave latches W when wready asserted
+        5. When both AW and W received, slave processes write
+        6. Slave asserts bvalid + bresp (wait for bready)
+        7. Master asserts bready
+        8. Transaction completes
 
         Byte Strobes (axi_wstrb):
         - wstrb[0] -> byte 0 (bits 7:0)
@@ -198,40 +202,62 @@ class AXIMemoryDriver(uvm_driver):
         For partial word writes, we read the existing word, merge the bytes
         based on strobes, and write back the merged result.
         """
+        # Latched AW and W channel data
+        aw_pending = False
+        w_pending = False
+        aw_addr = 0
+        w_data = 0
+        w_strb = 0
+
         while True:
             await RisingEdge(self.dut.clk_i)
 
-            # Wait for both address and data phases (simplified AXI - both together)
-            if self.dut.axi_awvalid_o.value == 1 and self.dut.axi_wvalid_o.value == 1:
-                # Accept write request
+            # Latch AW channel independently
+            if self.dut.axi_awvalid_o.value == 1 and not aw_pending:
+                aw_addr = int(self.dut.axi_awaddr_o.value)
+                aw_pending = True
                 self.dut.axi_awready_i.value = 1
+            elif aw_pending:
+                # Hold awready until transaction completes
+                pass
+            else:
+                self.dut.axi_awready_i.value = 0
+
+            # Latch W channel independently
+            if self.dut.axi_wvalid_o.value == 1 and not w_pending:
+                w_data = int(self.dut.axi_wdata_o.value)
+                w_strb = int(self.dut.axi_wstrb_o.value)
+                w_pending = True
                 self.dut.axi_wready_i.value = 1
+            elif w_pending:
+                # Hold wready until transaction completes
+                pass
+            else:
+                self.dut.axi_wready_i.value = 0
 
-                addr = int(self.dut.axi_awaddr_o.value)
-                new_data = int(self.dut.axi_wdata_o.value)
-                wstrb = int(self.dut.axi_wstrb_o.value)
-
+            # Process write when both AW and W received
+            if aw_pending and w_pending:
                 # Next cycle: de-assert ready signals
                 await RisingEdge(self.dut.clk_i)
                 self.dut.axi_awready_i.value = 0
                 self.dut.axi_wready_i.value = 0
 
                 # Read existing word (for byte-masked writes)
-                old_data = self.read_word(addr)
+                old_data = self.read_word(aw_addr)
 
                 # Merge bytes based on write strobes
                 merged_data = 0
                 for byte_idx in range(4):
-                    if wstrb & (1 << byte_idx):
+                    if w_strb & (1 << byte_idx):
                         # Use new byte from wdata
-                        byte_val = (new_data >> (byte_idx * 8)) & 0xFF
+                        byte_val = (w_data >> (byte_idx * 8)) & 0xFF
                     else:
                         # Keep old byte from existing word
                         byte_val = (old_data >> (byte_idx * 8)) & 0xFF
                     merged_data |= byte_val << (byte_idx * 8)
 
                 # Write merged word to memory (and sync with ref model)
-                self.write_word(addr, merged_data)
+                self.write_word(aw_addr, merged_data)
 
                 # Assert write response
                 self.dut.axi_bvalid_i.value = 1
@@ -246,10 +272,14 @@ class AXIMemoryDriver(uvm_driver):
                         raise TimeoutError(
                             f"AXI write response handshake timeout: master did not assert "
                             f"axi_bready after {self.AXI_TIMEOUT_CYCLES} cycles "
-                            f"(addr=0x{addr:08x}, method=axi_write_handler)"
+                            f"(addr=0x{aw_addr:08x}, method=axi_write_handler)"
                         )
                     await RisingEdge(self.dut.clk_i)
 
                 # De-assert bvalid on next cycle
                 await RisingEdge(self.dut.clk_i)
                 self.dut.axi_bvalid_i.value = 0
+
+                # Clear pending flags
+                aw_pending = False
+                w_pending = False
