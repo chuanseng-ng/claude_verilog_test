@@ -189,8 +189,13 @@ class ISASequenceBase(BaseSequence):
             # Sign extend
             if imm & 0x1000:
                 imm |= 0xFFFFE000
-            target_addr = test_instr_addr + imm
-            axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at branch target
+            # Compute 32-bit target and align to instruction boundary
+            target_addr = (test_instr_addr + imm) & 0xFFFFFFFF
+            target_addr &= ~0x3
+            # Only place EBREAK at forward, aligned targets; negative offsets
+            # (imm_12 set) yield backward or wrapped targets, so skip those
+            if not imm_12 and target_addr > test_instr_addr and target_addr % 4 == 0:
+                axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at branch target
         elif opcode == 0b1101111:  # JAL instruction
             # Extract JAL offset (20-bit signed immediate)
             imm_20 = (self.instruction >> 31) & 0x1
@@ -201,8 +206,13 @@ class ISASequenceBase(BaseSequence):
             # Sign extend
             if imm & 0x100000:
                 imm |= 0xFFE00000
-            target_addr = test_instr_addr + imm
-            axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at JAL target
+            # Compute 32-bit target and align to instruction boundary
+            target_addr = (test_instr_addr + imm) & 0xFFFFFFFF
+            target_addr &= ~0x3
+            # Only place EBREAK at forward, aligned targets; negative offsets
+            # (imm_20 set) yield backward or wrapped targets, so skip those
+            if not imm_20 and target_addr > test_instr_addr and target_addr % 4 == 0:
+                axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at JAL target
         elif opcode == 0b1100111:  # JALR instruction
             # Extract JALR offset (12-bit signed immediate) and rs1
             imm_11_0 = (self.instruction >> 20) & 0xFFF
@@ -212,9 +222,14 @@ class ISASequenceBase(BaseSequence):
                 imm_11_0 |= 0xFFFFF000
             # Get rs1 value from setup_regs
             rs1_val = self.setup_regs.get(rs1, 0)
-            # Compute JALR target: (rs1_val + offset) & ~1
-            target_addr = (rs1_val + imm_11_0) & 0xFFFFFFFE
-            axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at JALR target
+            # Compute JALR target: (rs1_val + offset) & ~1 per spec, then align
+            # to 4-byte instruction boundary (subsumes the bit-0 clear)
+            target_addr = ((rs1_val + imm_11_0) & 0xFFFFFFFF) & 0xFFFFFFFE
+            target_addr &= ~0x3
+            # Only place EBREAK if target is forward of the test instruction
+            # and properly aligned; skip backward or wrapped targets
+            if target_addr > test_instr_addr and target_addr % 4 == 0:
+                axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at JALR target
 
         # Set PC to start of program
         await apb_driver.write_pc(0x0000)
