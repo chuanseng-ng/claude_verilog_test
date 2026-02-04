@@ -894,8 +894,10 @@ class SLLSequence(ISASequenceBase):
         setup_regs = {}
         if rs1 != 0:
             setup_regs[rs1] = rs1_val
-        if rs2 != 0:
+        if rs2 != 0 and rs2 != rs1:
             setup_regs[rs2] = rs2_val
+        elif rs2 != 0:  # rs2 == rs1, use rs1_val
+            pass
 
         super().__init__(
             name,
@@ -936,8 +938,10 @@ class SRLSequence(ISASequenceBase):
         setup_regs = {}
         if rs1 != 0:
             setup_regs[rs1] = rs1_val
-        if rs2 != 0:
+        if rs2 != 0 and rs2 != rs1:
             setup_regs[rs2] = rs2_val
+        elif rs2 != 0:  # rs2 == rs1, use rs1_val
+            pass
 
         super().__init__(
             name,
@@ -978,8 +982,10 @@ class SRASequence(ISASequenceBase):
         setup_regs = {}
         if rs1 != 0:
             setup_regs[rs1] = rs1_val
-        if rs2 != 0:
+        if rs2 != 0 and rs2 != rs1:
             setup_regs[rs2] = rs2_val
+        elif rs2 != 0:  # rs2 == rs1, use rs1_val
+            pass
 
         super().__init__(
             name,
