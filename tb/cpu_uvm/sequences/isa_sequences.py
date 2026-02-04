@@ -274,6 +274,12 @@ class LWSequence(ISASequenceBase):
         setup_regs = {rs1: base_addr} if rs1 != 0 and rs1 != "x0" else {}
         # Compute effective address (use 0 for base when rs1 is x0)
         eff_addr = (0 if (rs1 == 0 or rs1 == "x0") else base_addr) + offset
+
+        # Check word alignment (LW requires 4-byte alignment)
+        assert (
+            eff_addr % 4 == 0
+        ), f"LW effective address 0x{eff_addr:08x} is not word-aligned (must be multiple of 4)"
+
         setup_memory = {eff_addr: mem_value}
 
         super().__init__(
@@ -301,6 +307,12 @@ class SWSequence(ISASequenceBase):
             base_addr: Value to load into rs1
             store_value: Value to load into rs2 (to be stored)
         """
+        # Handle rs2==x0: hardware always stores 0 for x0
+        if rs2 == 0 or rs2 == "x0":
+            actual_store_value = 0
+        else:
+            actual_store_value = store_value
+
         # Handle rs1==rs2 case: use scratch register for store_value
         actual_rs2 = rs2
         if rs1 == rs2 and rs1 != 0 and rs1 != "x0":
@@ -316,13 +328,21 @@ class SWSequence(ISASequenceBase):
         if rs1 != 0 and rs1 != "x0":
             setup_regs[rs1] = base_addr
         # Setup store value in actual_rs2 (may be scratch register if rs1==rs2)
+        # x0 is never added to setup_regs (check handles it)
         if actual_rs2 != 0 and actual_rs2 != "x0":
-            setup_regs[actual_rs2] = store_value
+            setup_regs[actual_rs2] = actual_store_value
 
         # Compute target address (use 0 for base when rs1 is x0)
         rs1_value = base_addr if (rs1 != 0 and rs1 != "x0") else 0
         self.target_addr = rs1_value + offset
-        self.store_value = store_value
+
+        # Check word alignment (SW requires 4-byte alignment)
+        assert self.target_addr % 4 == 0, (
+            f"SW target address 0x{self.target_addr:08x} "
+            f"is not word-aligned (must be multiple of 4)"
+        )
+
+        self.store_value = actual_store_value
 
         super().__init__(name, env, instruction, setup_regs=setup_regs)
 
@@ -405,6 +425,12 @@ class LHSequence(ISASequenceBase):
 
         # Compute effective address and place mem_value in correct halfword lane
         addr = (0 if (rs1 == 0 or rs1 == "x0") else base_addr) + offset
+
+        # Check halfword alignment (LH requires 2-byte alignment)
+        assert (
+            addr % 2 == 0
+        ), f"LH effective address 0x{addr:08x} is not halfword-aligned (must be multiple of 2)"
+
         aligned_addr = addr & ~0x3
         lane = (addr & 0x2) >> 1  # 0 for lower halfword, 1 for upper halfword
         # Create 32-bit word with mem_value in correct halfword lane
@@ -432,6 +458,12 @@ class LHUSequence(ISASequenceBase):
 
         # Compute effective address and place mem_value in correct halfword lane
         addr = (0 if (rs1 == 0 or rs1 == "x0") else base_addr) + offset
+
+        # Check halfword alignment (LHU requires 2-byte alignment)
+        assert (
+            addr % 2 == 0
+        ), f"LHU effective address 0x{addr:08x} is not halfword-aligned (must be multiple of 2)"
+
         aligned_addr = addr & ~0x3
         lane = (addr & 0x2) >> 1  # 0 for lower halfword, 1 for upper halfword
         # Create 32-bit word with mem_value in correct halfword lane
@@ -454,6 +486,12 @@ class SBSequence(ISASequenceBase):
 
     def __init__(self, name, env, rs1, rs2, offset, base_addr, store_value):
         """Test SB instruction."""
+        # Handle rs2==x0: hardware always stores 0 for x0
+        if rs2 == 0 or rs2 == "x0":
+            actual_store_value = 0
+        else:
+            actual_store_value = store_value
+
         # Handle rs1==rs2 case: use scratch register for store_value
         actual_rs2 = rs2
         if rs1 == rs2 and rs1 != 0 and rs1 != "x0":
@@ -469,13 +507,16 @@ class SBSequence(ISASequenceBase):
         if rs1 != 0 and rs1 != "x0":
             setup_regs[rs1] = base_addr
         # Setup store value in actual_rs2 (may be scratch register if rs1==rs2)
+        # x0 is never added to setup_regs (check handles it)
         if actual_rs2 != 0 and actual_rs2 != "x0":
-            setup_regs[actual_rs2] = store_value
+            setup_regs[actual_rs2] = actual_store_value
 
         # Compute target address (use 0 for base when rs1 is x0)
         rs1_value = base_addr if (rs1 != 0 and rs1 != "x0") else 0
         self.target_addr = rs1_value + offset
-        self.store_value = store_value & 0xFF  # Only byte should be stored
+
+        # Apply byte masking to expected stored value
+        self.store_value = actual_store_value & 0xFF
 
         super().__init__(name, env, instruction, setup_regs=setup_regs)
 
@@ -501,6 +542,12 @@ class SHSequence(ISASequenceBase):
 
     def __init__(self, name, env, rs1, rs2, offset, base_addr, store_value):
         """Test SH instruction."""
+        # Handle rs2==x0: hardware always stores 0 for x0
+        if rs2 == 0 or rs2 == "x0":
+            actual_store_value = 0
+        else:
+            actual_store_value = store_value
+
         # Handle rs1==rs2 case: use scratch register for store_value
         actual_rs2 = rs2
         if rs1 == rs2 and rs1 != 0 and rs1 != "x0":
@@ -516,13 +563,22 @@ class SHSequence(ISASequenceBase):
         if rs1 != 0 and rs1 != "x0":
             setup_regs[rs1] = base_addr
         # Setup store value in actual_rs2 (may be scratch register if rs1==rs2)
+        # x0 is never added to setup_regs (check handles it)
         if actual_rs2 != 0 and actual_rs2 != "x0":
-            setup_regs[actual_rs2] = store_value
+            setup_regs[actual_rs2] = actual_store_value
 
         # Compute target address (use 0 for base when rs1 is x0)
         rs1_value = base_addr if (rs1 != 0 and rs1 != "x0") else 0
         self.target_addr = rs1_value + offset
-        self.store_value = store_value & 0xFFFF  # Only halfword should be stored
+
+        # Check halfword alignment (SH requires 2-byte alignment)
+        assert self.target_addr % 2 == 0, (
+            f"SH target address 0x{self.target_addr:08x} "
+            f"is not halfword-aligned (must be multiple of 2)"
+        )
+
+        # Apply halfword masking to expected stored value
+        self.store_value = actual_store_value & 0xFFFF
 
         super().__init__(name, env, instruction, setup_regs=setup_regs)
 
