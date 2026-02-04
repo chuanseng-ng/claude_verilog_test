@@ -1062,7 +1062,7 @@ class BEQSequence(ISASequenceBase):
         setup_regs = {}
         if rs1 != 0:
             setup_regs[rs1] = rs1_val
-        if rs2 != 0:
+        if rs2 != 0 and rs2 != rs1:
             setup_regs[rs2] = rs2_val
 
         # For branch instructions, we don't check rd, we check PC behavior
@@ -1097,7 +1097,7 @@ class BNESequence(ISASequenceBase):
         setup_regs = {}
         if rs1 != 0:
             setup_regs[rs1] = rs1_val
-        if rs2 != 0:
+        if rs2 != 0 and rs2 != rs1:
             setup_regs[rs2] = rs2_val
 
         super().__init__(
@@ -1125,7 +1125,7 @@ class BLTSequence(ISASequenceBase):
         setup_regs = {}
         if rs1 != 0:
             setup_regs[rs1] = rs1_val
-        if rs2 != 0:
+        if rs2 != 0 and rs2 != rs1:
             setup_regs[rs2] = rs2_val
 
         super().__init__(
@@ -1153,7 +1153,7 @@ class BGESequence(ISASequenceBase):
         setup_regs = {}
         if rs1 != 0:
             setup_regs[rs1] = rs1_val
-        if rs2 != 0:
+        if rs2 != 0 and rs2 != rs1:
             setup_regs[rs2] = rs2_val
 
         super().__init__(
@@ -1181,7 +1181,7 @@ class BLTUSequence(ISASequenceBase):
         setup_regs = {}
         if rs1 != 0:
             setup_regs[rs1] = rs1_val
-        if rs2 != 0:
+        if rs2 != 0 and rs2 != rs1:
             setup_regs[rs2] = rs2_val
 
         super().__init__(
@@ -1209,7 +1209,7 @@ class BGEUSequence(ISASequenceBase):
         setup_regs = {}
         if rs1 != 0:
             setup_regs[rs1] = rs1_val
-        if rs2 != 0:
+        if rs2 != 0 and rs2 != rs1:
             setup_regs[rs2] = rs2_val
 
         super().__init__(
