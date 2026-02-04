@@ -367,7 +367,7 @@ class SWSequence(ISASequenceBase):
 
         # Verify memory was written correctly
         axi_driver = self.env.axi_agent.driver
-        actual = axi_driver.read_word(self.target_addr)
+        actual = await axi_driver.read_word(self.target_addr)
 
         if actual != self.store_value:
             raise AssertionError(
@@ -541,7 +541,7 @@ class SBSequence(ISASequenceBase):
 
         # Verify memory byte was written correctly
         axi_driver = self.env.axi_agent.driver
-        word = axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
+        word = await axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
         byte_offset = self.target_addr & 0x3
         actual_byte = (word >> (byte_offset * 8)) & 0xFF
 
@@ -603,7 +603,7 @@ class SHSequence(ISASequenceBase):
 
         # Verify memory halfword was written correctly
         axi_driver = self.env.axi_agent.driver
-        word = axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
+        word = await axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
         half_offset = (self.target_addr & 0x2) >> 1
         actual_half = (word >> (half_offset * 16)) & 0xFFFF
 
