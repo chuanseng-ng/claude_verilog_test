@@ -18,9 +18,7 @@ from tb.cocotb.common.scoreboard import CPUScoreboard
 from tb.generators.rv32i_instr_gen import RV32IInstructionGenerator
 
 # Import infrastructure from test_smoke.py
-from tb.cocotb.cpu.test_smoke import (
-    reset_dut, APBDebugInterface, SimpleAXIMemory, monitor_commits
-)
+from tb.cocotb.cpu.test_smoke import reset_dut, APBDebugInterface, SimpleAXIMemory, monitor_commits
 
 
 async def run_single_seed(dut, seed, num_instructions, mem=None):
@@ -91,7 +89,9 @@ async def run_single_seed(dut, seed, num_instructions, mem=None):
 
     # Start commit monitor (store task handle for cleanup)
     commit_count = [0]
-    monitor_task = cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=commit_count))
+    monitor_task = cocotb.start_soon(
+        monitor_commits(dut, scoreboard=scoreboard, count=commit_count)
+    )
 
     # Resume CPU
     dut._log.info(f"Seed {seed}: Resuming CPU...")
@@ -154,12 +154,15 @@ async def test_random_instructions_multi_seed(dut):
 
     # Generate random seeds (unique within the range)
     import random
+
     random_seeds = random.sample(range(SEED_MIN, SEED_MAX), NUM_SEEDS)
 
-    dut._log.info("="*70)
-    dut._log.info(f"RANDOM INSTRUCTION TEST: {NUM_SEEDS} seeds × {INSTRUCTIONS_PER_SEED} instructions")
+    dut._log.info("=" * 70)
+    dut._log.info(
+        f"RANDOM INSTRUCTION TEST: {NUM_SEEDS} seeds × {INSTRUCTIONS_PER_SEED} instructions"
+    )
     dut._log.info(f"Seed range: {SEED_MIN} to {SEED_MAX}")
-    dut._log.info("="*70)
+    dut._log.info("=" * 70)
 
     # Create single SimpleAXIMemory instance (reused across all seeds to avoid spawning duplicate handlers)
     # Initial ref_model will be replaced per seed
@@ -167,9 +170,9 @@ async def test_random_instructions_multi_seed(dut):
     shared_mem = SimpleAXIMemory(dut, ref_model=initial_ref_model)
 
     for i, seed in enumerate(random_seeds):
-        dut._log.info("="*70)
-        dut._log.info(f"Running seed {i+1}/{NUM_SEEDS} (seed={seed})")
-        dut._log.info("="*70)
+        dut._log.info("=" * 70)
+        dut._log.info(f"Running seed {i + 1}/{NUM_SEEDS} (seed={seed})")
+        dut._log.info("=" * 70)
 
         try:
             # Run single seed test with shared memory instance
@@ -182,12 +185,16 @@ async def test_random_instructions_multi_seed(dut):
             # Continue to next seed (collect all failures)
 
     # Final report
-    dut._log.info("="*70)
+    dut._log.info("=" * 70)
     dut._log.info("RANDOM INSTRUCTION TEST SUMMARY")
-    dut._log.info("="*70)
+    dut._log.info("=" * 70)
     dut._log.info(f"Total seeds:     {NUM_SEEDS}")
-    dut._log.info(f"Passing seeds:   {len(passing_seeds)} ({100*len(passing_seeds)/NUM_SEEDS:.1f}%)")
-    dut._log.info(f"Failing seeds:   {len(failing_seeds)} ({100*len(failing_seeds)/NUM_SEEDS:.1f}%)")
+    dut._log.info(
+        f"Passing seeds:   {len(passing_seeds)} ({100 * len(passing_seeds) / NUM_SEEDS:.1f}%)"
+    )
+    dut._log.info(
+        f"Failing seeds:   {len(failing_seeds)} ({100 * len(failing_seeds) / NUM_SEEDS:.1f}%)"
+    )
     dut._log.info(f"Total instructions: {len(passing_seeds) * INSTRUCTIONS_PER_SEED}")
 
     if failing_seeds:
@@ -199,7 +206,9 @@ async def test_random_instructions_multi_seed(dut):
         failing_seeds_file = Path(__file__).parent.parent.parent.parent / "failing_seeds.txt"
         with open(failing_seeds_file, "w") as f:
             f.write("# Failing seeds from random instruction test\n")
-            f.write("# Re-run with: RANDOM_SEED=<seed> make test TEST_MODULE=tb.cocotb.cpu.test_random_instructions TEST=test_random_instructions_single_seed\n\n")
+            f.write(
+                "# Re-run with: RANDOM_SEED=<seed> make test TEST_MODULE=tb.cocotb.cpu.test_random_instructions TEST=test_random_instructions_single_seed\n\n"
+            )
             for seed, error in failing_seeds:
                 f.write(f"{seed}  # {error}\n")
 
@@ -227,9 +236,9 @@ async def test_random_instructions_single_seed(dut):
     SEED = int(os.environ.get("RANDOM_SEED", "42"))
     NUM_INSTRUCTIONS = int(os.environ.get("NUM_INSTRUCTIONS", "100"))
 
-    dut._log.info("="*70)
+    dut._log.info("=" * 70)
     dut._log.info(f"SINGLE SEED DEBUG TEST: seed={SEED}, instructions={NUM_INSTRUCTIONS}")
-    dut._log.info("="*70)
+    dut._log.info("=" * 70)
 
     await run_single_seed(dut, SEED, NUM_INSTRUCTIONS)
 

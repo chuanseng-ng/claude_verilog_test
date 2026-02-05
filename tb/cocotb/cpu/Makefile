@@ -22,7 +22,7 @@ VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_branch_comp.sv
 
 # Testbench settings (can override MODULE on command line)
 TOPLEVEL = rv32i_cpu_top
-MODULE ?= test_smoke
+MODULE ?= test_smoke_uvm
 
 # Verilator-specific flags
 ifeq ($(SIM), verilator)
@@ -41,6 +41,7 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 
 # Convenience targets for different test suites
 .PHONY: smoke basic random isa ebreak all_tests usage info distclean
+.PHONY: smoke_uvm random_uvm isa_uvm all_uvm
 
 smoke:
 	@echo "Running smoke tests..."
@@ -61,6 +62,60 @@ isa:
 ebreak:
 	@echo "Running EBREAK halt test..."
 	$(MAKE) MODULE=test_ebreak
+
+# pyuvm test targets (Phase F+)
+smoke_uvm:
+	@echo "Running pyuvm smoke tests (4 tests)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_smoke_uvm
+
+random_uvm:
+	@echo "Running pyuvm random instruction tests..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_random_uvm
+
+isa_uvm:
+	@echo "Running pyuvm ISA compliance tests (54 tests, 37 RV32I instructions)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_isa_uvm
+
+all_uvm:
+	@echo "========================================="
+	@echo "Running All pyuvm Test Suites"
+	@echo "========================================="
+	@failed=0; \
+	echo ""; \
+	echo "[1/3] Running pyuvm smoke tests..."; \
+	if $(MAKE) smoke_uvm; then \
+		echo "✓ pyuvm smoke tests PASSED"; \
+	else \
+		echo "✗ pyuvm smoke tests FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "[2/3] Running pyuvm ISA compliance tests..."; \
+	if $(MAKE) isa_uvm; then \
+		echo "✓ pyuvm ISA tests PASSED"; \
+	else \
+		echo "✗ pyuvm ISA tests FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "[3/3] Running pyuvm random tests..."; \
+	if $(MAKE) random_uvm; then \
+		echo "✓ pyuvm random tests PASSED"; \
+	else \
+		echo "✗ pyuvm random tests FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "========================================="; \
+	if [ $$failed -eq 0 ]; then \
+		echo "OVERALL RESULT: ✓ ALL PYUVM TESTS PASSED"; \
+		echo "========================================="; \
+		exit 0; \
+	else \
+		echo "OVERALL RESULT: ✗ $$failed PYUVM TEST SUITE(S) FAILED"; \
+		echo "========================================="; \
+		exit 1; \
+	fi
 
 all_tests:
 	@echo "========================================="
@@ -111,13 +166,23 @@ usage info:
 	@echo "           Run via 'make', not 'pytest'"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  make              - Run default tests (smoke)"
-	@echo "  make smoke        - Run smoke tests (quick validation)"
-	@echo "  make basic        - Run basic CPU tests"
-	@echo "  make random       - Run random instruction tests (10,000 instructions)"
-	@echo "  make isa          - Run ISA compliance tests (37 RV32I instructions)"
+	@echo "  make              - Run default tests (pyuvm smoke tests)"
+	@echo ""
+	@echo "Recommended pyuvm targets:"
+	@echo "  make smoke_uvm    - Run pyuvm smoke tests (4 tests)"
+	@echo "  make isa_uvm      - Run pyuvm ISA compliance tests (54 tests, 37 instructions)"
+	@echo "  make random_uvm   - Run pyuvm random instruction tests"
+	@echo "  make all_uvm      - Run all pyuvm test suites (smoke + ISA + random)"
+	@echo ""
+	@echo "Legacy targets (DEPRECATED - use pyuvm instead):"
+	@echo "  make smoke        - Run legacy smoke tests"
+	@echo "  make basic        - Run legacy basic CPU tests"
+	@echo "  make random       - Run legacy random tests (10,000 instructions)"
+	@echo "  make isa          - Run legacy ISA compliance tests (37 instructions)"
 	@echo "  make ebreak       - Run EBREAK halt test"
-	@echo "  make all_tests    - Run all test suites (smoke + isa + random)"
+	@echo "  make all_tests    - Run all legacy test suites"
+	@echo ""
+	@echo "Utility targets:"
 	@echo "  make clean        - Remove simulation artifacts"
 	@echo "  make distclean    - Deep clean (remove all generated files)"
 	@echo "  make usage        - Show this usage message"
@@ -134,10 +199,16 @@ usage info:
 	@echo "  make SIM=icarus smoke   # Use Icarus Verilog"
 	@echo ""
 	@echo "Test modules available:"
-	@echo "  test_smoke                - Basic functionality tests (6 smoke tests)"
-	@echo "  test_isa_compliance       - ISA compliance tests (37 RV32I instructions)"
-	@echo "  test_random_instructions  - Random instruction tests (10,000 instructions)"
-	@echo "  test_ebreak               - EBREAK halt detection test"
+	@echo "  pyuvm tests (RECOMMENDED):"
+	@echo "    test_smoke_uvm            - pyuvm smoke tests (4 tests)"
+	@echo "    test_isa_uvm              - pyuvm ISA compliance tests (54 tests, 37 instructions)"
+	@echo "    test_random_uvm           - pyuvm random tests (multi-seed)"
+	@echo "    test_ebreak               - EBREAK halt detection test"
+	@echo ""
+	@echo "  Legacy cocotb tests (DEPRECATED - in legacy/ directory):"
+	@echo "    legacy/test_smoke                - Basic functionality tests (6 tests)"
+	@echo "    legacy/test_isa_compliance       - ISA compliance tests (37 instructions)"
+	@echo "    legacy/test_random_instructions  - Random instruction tests (10,000 instr)"
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  - Verilator or Icarus Verilog installed"

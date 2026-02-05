@@ -6,6 +6,7 @@ Tests the RV32I CPU reference model instruction execution.
 
 import sys
 from pathlib import Path
+
 import pytest
 
 from tb.models.rv32i_model import RV32IModel

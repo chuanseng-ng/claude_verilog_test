@@ -26,17 +26,19 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.7.4
     hooks:
-      # Run the linter with auto-fix
+      # Run the linter (check only, no auto-fix)
       - id: ruff
-        name: ruff lint (auto-fix)
-        args: [--fix, --exit-non-zero-on-fix]
+        name: ruff lint (check)
         types_or: [python, pyi]
-        files: ^tb/(models|tests)/
-      # Run the formatter
+        files: ^(tb/(models|tests|cpu_uvm)|sim)/
+        exclude: ^tb/cocotb/cpu/legacy/
+      # Run the formatter (check only, no formatting)
       - id: ruff-format
-        name: ruff format
+        name: ruff format (check)
+        args: [--check]
         types_or: [python, pyi]
-        files: ^tb/(models|tests)/
+        files: ^(tb/(models|tests|cpu_uvm)|sim)/
+        exclude: ^tb/cocotb/cpu/legacy/
 
   # MyPy - Type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
@@ -44,7 +46,8 @@ repos:
     hooks:
       - id: mypy
         name: mypy type checking
-        files: ^tb/(models|tests)/
+        files: ^tb/(models|tests|cpu_uvm)/
+        exclude: ^tb/cocotb/(cpu/legacy|bfm|common)/
         additional_dependencies: [pytest]
         args: [--ignore-missing-imports]
 

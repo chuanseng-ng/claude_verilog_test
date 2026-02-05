@@ -4,7 +4,7 @@ Clock and reset utilities for cocotb testbenches.
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import RisingEdge
 
 
 async def setup_clock(dut, clock_period_ns: int = 10):
@@ -18,7 +18,7 @@ async def setup_clock(dut, clock_period_ns: int = 10):
     Returns:
         Clock coroutine
     """
-    clock = Clock(dut.clk, clock_period_ns, units="ns")
+    clock = Clock(dut.clk_i, clock_period_ns, units="ns")
     cocotb.start_soon(clock.start())
     return clock
 
@@ -27,23 +27,23 @@ async def reset_dut(dut, duration_cycles: int = 10):
     """
     Apply reset to DUT.
 
-    Assumes active-low reset signal named 'rst_n'.
+    Assumes active-low reset signal named 'rst_n_i'.
 
     Args:
         dut: Device under test
         duration_cycles: Number of clock cycles to hold reset (default 10)
     """
-    dut.rst_n.value = 0  # Assert reset (active-low)
+    dut.rst_n_i.value = 0  # Assert reset (active-low)
 
     # Wait for specified cycles
     for _ in range(duration_cycles):
-        await RisingEdge(dut.clk)
+        await RisingEdge(dut.clk_i)
 
-    dut.rst_n.value = 1  # Deassert reset
+    dut.rst_n_i.value = 1  # Deassert reset
 
     # Wait a few cycles after reset
     for _ in range(2):
-        await RisingEdge(dut.clk)
+        await RisingEdge(dut.clk_i)
 
 
 async def wait_cycles(dut, num_cycles: int):
@@ -55,12 +55,10 @@ async def wait_cycles(dut, num_cycles: int):
         num_cycles: Number of cycles to wait
     """
     for _ in range(num_cycles):
-        await RisingEdge(dut.clk)
+        await RisingEdge(dut.clk_i)
 
 
-async def wait_for_signal(
-    dut, signal_name: str, value: int, timeout_cycles: int = 1000
-):
+async def wait_for_signal(dut, signal_name: str, value: int, timeout_cycles: int = 1000):
     """
     Wait for a signal to reach a specific value.
 
@@ -77,7 +75,7 @@ async def wait_for_signal(
     cycles = 0
 
     while int(signal.value) != value:
-        await RisingEdge(dut.clk)
+        await RisingEdge(dut.clk_i)
         cycles += 1
 
         if cycles >= timeout_cycles:

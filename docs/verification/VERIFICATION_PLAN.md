@@ -815,6 +815,90 @@ Human MUST:
 
 ---
 
+## pyuvm Migration Status
+
+**Status**: ✅ COMPLETE (Phase G - 2026-01-31)
+
+### Migration Summary
+
+The RV32I CPU verification infrastructure has been successfully migrated from raw cocotb to pyuvm (Python UVM) following a systematic 7-phase approach (Phases A through G).
+
+**Completion Date**: 2026-01-31
+**Duration**: 2 days (2026-01-30 to 2026-01-31)
+**Total Code**: ~1,800 lines of pyuvm infrastructure + 18 component files
+
+### What Was Migrated
+
+| Component | Status | Location |
+|-----------|--------|----------|
+| **AXI Memory Driver** | ✅ Complete | `tb/cpu_uvm/agents/axi_agent/axi_driver.py` |
+| **APB Debug Driver** | ✅ Complete | `tb/cpu_uvm/agents/apb_agent/apb_driver.py` |
+| **Commit Monitor** | ✅ Complete | `tb/cpu_uvm/monitors/commit_monitor.py` |
+| **CPU Scoreboard** | ✅ Complete | `tb/cpu_uvm/scoreboards/cpu_scoreboard.py` |
+| **AXI Agent** | ✅ Complete | `tb/cpu_uvm/agents/axi_agent/axi_agent.py` |
+| **APB Agent** | ✅ Complete | `tb/cpu_uvm/agents/apb_agent/apb_agent.py` |
+| **CPU Environment** | ✅ Complete | `tb/cpu_uvm/env/cpu_env.py` |
+| **Base Sequence** | ✅ Complete | `tb/cpu_uvm/sequences/base_sequence.py` |
+| **Directed Sequences** | ✅ Complete | `tb/cpu_uvm/sequences/directed_sequences.py` |
+| **Random Sequence** | ✅ Complete | `tb/cpu_uvm/sequences/random_instr_sequence.py` |
+| **Base Test** | ✅ Complete | `tb/cpu_uvm/tests/base_test.py` |
+| **Smoke Tests** | ✅ Complete | `tb/cpu_uvm/tests/test_smoke_uvm.py` (4/4 PASSING) |
+| **Random Tests** | ✅ Complete | `tb/cpu_uvm/tests/test_random_uvm.py` (2/2 PASSING) |
+
+### Test Results
+
+**Smoke Tests** (4 tests):
+```
+make smoke_uvm
+** TESTS=4 PASS=4 FAIL=0 SKIP=0 **
+  - test_addi_uvm: PASS
+  - test_branch_taken_uvm: PASS
+  - test_branch_not_taken_uvm: PASS
+  - test_jal_uvm: PASS
+```
+
+**Random Tests** (2 tests):
+```
+make random_uvm
+** TESTS=2 PASS=2 FAIL=0 SKIP=0 **
+  - test_random_single_uvm: PASS (100 instructions, seed=42)
+  - test_random_multi_seed_uvm: PASS (10 seeds × 100 instructions)
+```
+
+### Legacy Tests Archived
+
+Original cocotb tests (2,749 lines) have been archived to `tb/cocotb/cpu/legacy/`:
+- `test_smoke.py` → Replaced by `test_smoke_uvm.py`
+- `test_random_instructions.py` → Replaced by `test_random_uvm.py`
+- `test_isa_compliance.py` → Migration planned for future phase
+
+All duplicate helper classes (`APBDebugInterface`, `SimpleAXIMemory`) have been removed from active tests.
+
+### Key Improvements
+
+1. **No Duplication**: Single APBDebugDriver replaces 3+ duplicated implementations
+2. **UVM Structure**: Proper test → environment → agent → driver hierarchy
+3. **Reusable Components**: All agents/drivers shared across tests
+4. **Reference Model Integration**: Automatic validation via CPUScoreboard
+5. **Maintainability**: Clean separation of concerns, no raw signal manipulation
+
+### Documentation
+
+Complete migration documentation available at:
+- **Migration Plan**: `docs/pyuvm_migration/MIGRATION_PLAN.md`
+- **Migration Status**: `docs/pyuvm_migration/MIGRATION_STATUS.md`
+- **Lessons Learned**: `docs/pyuvm_migration/LESSONS_LEARNED.md`
+- **pyuvm Infrastructure Guide**: `tb/cpu_uvm/README.md`
+- **Test Guide**: `tb/cocotb/cpu/README.md`
+
+### Next Steps
+
+1. Migrate ISA compliance tests (37 RV32I instructions) - Planned
+2. Add coverage collection - Planned
+3. Expand random test seed count (10 → 100) - Optional
+
+---
+
 ## References
 
 - PHASE0_ARCHITECTURE_SPEC.md: CPU architectural requirements

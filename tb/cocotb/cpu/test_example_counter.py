@@ -3,6 +3,16 @@ Example cocotb test to demonstrate infrastructure is working.
 
 This tests a simple counter module and serves as a sanity check
 that cocotb is properly installed and configured.
+
+NOTE: This test intentionally uses direct assertions instead of scoreboard-based
+RTL-vs-model comparison because:
+1. It's an infrastructure sanity check, not a verification test
+2. It tests a simple counter module, not the CPU DUT
+3. The test logic is trivial enough that direct assertions are clearer
+4. Adding a scoreboard would over-engineer a basic functionality check
+
+For CPU verification tests, use the pyuvm-based infrastructure with scoreboards
+(see tb/cpu_uvm/ and tb/cocotb/cpu/test_*_uvm.py).
 """
 
 import cocotb
@@ -30,9 +40,7 @@ async def test_counter_basic(dut):
     log.info("Reset complete")
 
     # Check initial value
-    assert dut.count.value == 0, (
-        f"Counter should be 0 after reset, got {dut.count.value}"
-    )
+    assert dut.count.value == 0, f"Counter should be 0 after reset, got {dut.count.value}"
     log.info(f"✓ Initial count = {dut.count.value}")
 
     # Enable counter
@@ -125,9 +133,7 @@ async def test_counter_reset(dut):
     await RisingEdge(dut.clk)
 
     # Check counter is back to 0
-    assert int(dut.count.value) == 0, (
-        f"Counter should be 0 after reset, got {dut.count.value}"
-    )
+    assert int(dut.count.value) == 0, f"Counter should be 0 after reset, got {dut.count.value}"
 
     log.info(f"✓ Count after reset: {dut.count.value}")
     log.info("TEST PASSED: Counter resets correctly")

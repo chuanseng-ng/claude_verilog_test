@@ -6,6 +6,7 @@ Tests the GPU SIMT execution model with warp scheduling and divergence.
 
 import sys
 from pathlib import Path
+
 import pytest
 
 from tb.models.gpu_kernel_model import GPUKernelModel

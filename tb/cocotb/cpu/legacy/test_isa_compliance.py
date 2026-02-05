@@ -290,7 +290,7 @@ class SimpleAXIMemory:
                     else:
                         # Keep old byte from existing word
                         byte_val = (old_data >> (byte_idx * 8)) & 0xFF
-                    merged_data |= (byte_val << (byte_idx * 8))
+                    merged_data |= byte_val << (byte_idx * 8)
 
                 # Write merged word to memory
                 self.write_word(addr, merged_data)
@@ -316,20 +316,29 @@ async def monitor_commits(dut, scoreboard=None, count=[0]):
 
             if scoreboard is not None:
                 rtl_commit = {
-                    'pc': pc,
-                    'insn': insn,
-                    'rd': None,
-                    'rd_value': None,
-                    'mem_addr': None,
-                    'mem_data': None,
-                    'mem_write': None
+                    "pc": pc,
+                    "insn": insn,
+                    "rd": None,
+                    "rd_value": None,
+                    "mem_addr": None,
+                    "mem_data": None,
+                    "mem_write": None,
                 }
                 scoreboard.check_commit(rtl_commit)
 
 
-async def run_single_instruction_test(dut, mem, dbg, ref_model, scoreboard, instruction,
-                                      setup_regs=None, expected_rd=None,
-                                      expected_value=None, test_name=""):
+async def run_single_instruction_test(
+    dut,
+    mem,
+    dbg,
+    ref_model,
+    scoreboard,
+    instruction,
+    setup_regs=None,
+    expected_rd=None,
+    expected_value=None,
+    test_name="",
+):
     """
     Helper function to run a single instruction test.
 
@@ -371,7 +380,9 @@ async def run_single_instruction_test(dut, mem, dbg, ref_model, scoreboard, inst
                 imm12 = signed_value & 0xFFF
                 addi_insn = 0x00000013 | (reg_num << 7) | (imm12 << 20)
                 mem.write_word(addr, addi_insn)
-                dut._log.debug(f"Loaded ADDI x{reg_num}, x0, {signed_value} at 0x{addr:08x}: insn=0x{addi_insn:08x}")
+                dut._log.debug(
+                    f"Loaded ADDI x{reg_num}, x0, {signed_value} at 0x{addr:08x}: insn=0x{addi_insn:08x}"
+                )
                 addr += 4
             else:
                 # Use LUI + ADDI for larger values
@@ -396,7 +407,9 @@ async def run_single_instruction_test(dut, mem, dbg, ref_model, scoreboard, inst
                 addi_insn = 0x00000013 | (reg_num << 7) | (reg_num << 15) | (imm12 << 20)
                 mem.write_word(addr, addi_insn)
                 signed_lower = lower if lower < 0x800 else lower - 0x1000
-                dut._log.debug(f"Loaded ADDI x{reg_num}, x{reg_num}, {signed_lower} at 0x{addr:08x}")
+                dut._log.debug(
+                    f"Loaded ADDI x{reg_num}, x{reg_num}, {signed_lower} at 0x{addr:08x}"
+                )
                 addr += 4
 
     # Load the target instruction to test
@@ -421,7 +434,9 @@ async def run_single_instruction_test(dut, mem, dbg, ref_model, scoreboard, inst
 
     # Check PC to see how far we got
     pc_after = await dbg.read_pc()
-    dut._log.info(f"PC after execution: 0x{pc_after:08x} (setup ended at 0x{test_insn_addr:08x}, target at 0x{test_insn_addr:08x})")
+    dut._log.info(
+        f"PC after execution: 0x{pc_after:08x} (setup ended at 0x{test_insn_addr:08x}, target at 0x{test_insn_addr:08x})"
+    )
 
     # Debug: Read all registers to see the pattern
     dut._log.debug("Register dump after execution:")
@@ -433,9 +448,13 @@ async def run_single_instruction_test(dut, mem, dbg, ref_model, scoreboard, inst
     if setup_regs:
         for reg_num, expected_val in setup_regs.items():
             actual_val = await dbg.read_gpr(reg_num)
-            dut._log.info(f"Setup reg x{reg_num}: expected=0x{expected_val:08x}, actual=0x{actual_val:08x}")
+            dut._log.info(
+                f"Setup reg x{reg_num}: expected=0x{expected_val:08x}, actual=0x{actual_val:08x}"
+            )
             if actual_val != expected_val:
-                dut._log.error(f"Setup register x{reg_num} NOT loaded correctly! This indicates a register write-back issue.")
+                dut._log.error(
+                    f"Setup register x{reg_num} NOT loaded correctly! This indicates a register write-back issue."
+                )
 
     # Check expected result if specified
     if expected_rd is not None and expected_value is not None:
@@ -450,6 +469,7 @@ async def run_single_instruction_test(dut, mem, dbg, ref_model, scoreboard, inst
 # ============================================================================
 # Arithmetic Instructions (R-type and I-type)
 # ============================================================================
+
 
 @cocotb.test()
 async def test_isa_add(dut):
@@ -474,12 +494,16 @@ async def test_isa_add(dut):
     # Binary:   0000000 00100 00011 000 00110 0110011
     dut._log.info("=== DIAGNOSTIC: Testing with x3, x4 instead of x1, x2 ===")
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x00418333,  # ADD x6, x3, x4 (FIXED encoding!)
         setup_regs={3: 10, 4: 20},
         expected_rd=6,
         expected_value=30,
-        test_name="DIAGNOSTIC: ADD x6, x3, x4 (10 + 20 = 30) - avoiding x1"
+        test_name="DIAGNOSTIC: ADD x6, x3, x4 (10 + 20 = 30) - avoiding x1",
     )
 
     # Now test the original case with x1, x2
@@ -489,22 +513,30 @@ async def test_isa_add(dut):
     # Binary:   0000000 00010 00001 000 00101 0110011 = 0x002082B3 ✓ CORRECT
     dut._log.info("=== Testing with x1, x2 (original issue) ===")
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x002082B3,  # ADD x5, x1, x2
         setup_regs={1: 10, 2: 20},
         expected_rd=5,
         expected_value=30,
-        test_name="ADD x5, x1, x2 (10 + 20 = 30)"
+        test_name="ADD x5, x1, x2 (10 + 20 = 30)",
     )
 
     # Test overflow: 0xFFFFFFFF + 1 = 0 (wraps around)
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x002082B3,  # ADD x5, x1, x2
         setup_regs={1: 0xFFFFFFFF, 2: 1},
         expected_rd=5,
         expected_value=0,
-        test_name="ADD overflow (0xFFFFFFFF + 1 = 0)"
+        test_name="ADD overflow (0xFFFFFFFF + 1 = 0)",
     )
 
     dut._log.info("ADD instruction test passed")
@@ -530,22 +562,30 @@ async def test_isa_sub(dut):
     # SUB x3, x1, x2 = 0x402081B3 (FIXED)
     # Encoding: funct7=0100000, rs2=x2, rs1=x1, funct3=000, rd=x3, opcode=0110011
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x402081B3,
         setup_regs={1: 50, 2: 20},
         expected_rd=3,
         expected_value=30,
-        test_name="SUB x3, x1, x2 (50 - 20 = 30)"
+        test_name="SUB x3, x1, x2 (50 - 20 = 30)",
     )
 
     # Test underflow: 0 - 1 = 0xFFFFFFFF
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x402081B3,  # SUB x3, x1, x2 (FIXED)
         setup_regs={1: 0, 2: 1},
         expected_rd=3,
         expected_value=0xFFFFFFFF,
-        test_name="SUB underflow (0 - 1 = 0xFFFFFFFF)"
+        test_name="SUB underflow (0 - 1 = 0xFFFFFFFF)",
     )
 
     dut._log.info("SUB instruction test passed")
@@ -570,23 +610,31 @@ async def test_isa_addi(dut):
     # Test: ADDI x1, x0, 42 -> x1=42
     # ADDI x1, x0, 42 = 0x02A00093
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x02A00093,
         setup_regs={},
         expected_rd=1,
         expected_value=42,
-        test_name="ADDI x1, x0, 42"
+        test_name="ADDI x1, x0, 42",
     )
 
     # Test negative immediate: ADDI x2, x1, -10 where x1=50 -> x2=40
     # ADDI x2, x1, -10 = 0xFF608113
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0xFF608113,
         setup_regs={1: 50},
         expected_rd=2,
         expected_value=40,
-        test_name="ADDI x2, x1, -10 (50 + -10 = 40)"
+        test_name="ADDI x2, x1, -10 (50 + -10 = 40)",
     )
 
     dut._log.info("ADDI instruction test passed")
@@ -595,6 +643,7 @@ async def test_isa_addi(dut):
 # ============================================================================
 # Logical Instructions
 # ============================================================================
+
 
 @cocotb.test()
 async def test_isa_and(dut):
@@ -617,12 +666,16 @@ async def test_isa_and(dut):
     # AND x12, x10, x11 = 0x00B57633
     # Encoding: funct7=0000000, rs2=x11(01011), rs1=x10(01010), funct3=111, rd=x12(01100), opcode=0110011
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x00B57633,
         setup_regs={10: 0xFF00FF00, 11: 0xF0F0F0F0},
         expected_rd=12,
         expected_value=0xF000F000,
-        test_name="AND x12, x10, x11 (avoiding x1 bug)"
+        test_name="AND x12, x10, x11 (avoiding x1 bug)",
     )
 
     dut._log.info("AND instruction test passed")
@@ -649,12 +702,16 @@ async def test_isa_or(dut):
     # OR x12, x10, x11 = 0x00B56633
     # Encoding: funct7=0000000, rs2=x11(01011), rs1=x10(01010), funct3=110, rd=x12(01100), opcode=0110011
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x00B56633,
         setup_regs={10: 0x0F0F0F0F, 11: 0xF0F0F0F0},
         expected_rd=12,
         expected_value=0xFFFFFFFF,
-        test_name="OR x12, x10, x11 (avoiding x1 bug)"
+        test_name="OR x12, x10, x11 (avoiding x1 bug)",
     )
 
     dut._log.info("OR instruction test passed")
@@ -681,12 +738,16 @@ async def test_isa_xor(dut):
     # XOR x12, x10, x11 = 0x00B54633
     # Encoding: funct7=0000000, rs2=x11(01011), rs1=x10(01010), funct3=100, rd=x12(01100), opcode=0110011
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x00B54633,
         setup_regs={10: 0xFFFFFFFF, 11: 0xAAAAAAAA},
         expected_rd=12,
         expected_value=0x55555555,
-        test_name="XOR x12, x10, x11 (avoiding x1 bug)"
+        test_name="XOR x12, x10, x11 (avoiding x1 bug)",
     )
 
     dut._log.info("XOR instruction test passed")
@@ -712,12 +773,16 @@ async def test_isa_andi(dut):
     # Using x10 (a0) instead of x1 to avoid known x1 RTL issue
     # ANDI x11, x10, 0x0F0 = 0x0F057593
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x0F057593,
         setup_regs={10: 0xFFFFFFFF},
         expected_rd=11,
         expected_value=0x0F0,
-        test_name="ANDI x11, x10, 0x0F0 (avoiding x1 bug)"
+        test_name="ANDI x11, x10, 0x0F0 (avoiding x1 bug)",
     )
 
     dut._log.info("ANDI instruction test passed")
@@ -742,12 +807,16 @@ async def test_isa_ori(dut):
     # Test: ORI x2, x1, 0x0FF where x1=0xF00 -> x2=0xFFF
     # ORI x2, x1, 0x0FF = 0x0FF0E113
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x0FF0E113,
         setup_regs={1: 0xF00},
         expected_rd=2,
         expected_value=0xFFF,
-        test_name="ORI x2, x1, 0x0FF"
+        test_name="ORI x2, x1, 0x0FF",
     )
 
     dut._log.info("ORI instruction test passed")
@@ -773,12 +842,16 @@ async def test_isa_xori(dut):
     # Using x10 (a0) instead of x1 to avoid known x1 RTL issue
     # XORI x11, x10, -1 = 0xFFF54593
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0xFFF54593,
         setup_regs={10: 0xAAAAAAAA},
         expected_rd=11,
         expected_value=0x55555555,
-        test_name="XORI x11, x10, -1 (bitwise NOT, avoiding x1 bug)"
+        test_name="XORI x11, x10, -1 (bitwise NOT, avoiding x1 bug)",
     )
 
     dut._log.info("XORI instruction test passed")
@@ -787,6 +860,7 @@ async def test_isa_xori(dut):
 # ============================================================================
 # Shift Instructions
 # ============================================================================
+
 
 @cocotb.test()
 async def test_isa_sll(dut):
@@ -807,12 +881,16 @@ async def test_isa_sll(dut):
     # Test: SLL x3, x1, x2 where x1=0x00000001, x2=4 -> x3=0x00000010
     # SLL x3, x1, x2 = 0x002091B3
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x002091B3,
         setup_regs={1: 0x00000001, 2: 4},
         expected_rd=3,
         expected_value=0x00000010,
-        test_name="SLL x3, x1, x2 (1 << 4 = 16)"
+        test_name="SLL x3, x1, x2 (1 << 4 = 16)",
     )
 
     dut._log.info("SLL instruction test passed")
@@ -839,12 +917,16 @@ async def test_isa_srl(dut):
     # SRL x12, x10, x11 = 0x00B55633
     # Encoding: funct7=0000000, rs2=x11(01011), rs1=x10(01010), funct3=101, rd=x12(01100), opcode=0110011
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x00B55633,
         setup_regs={10: 0x80000000, 11: 4},
         expected_rd=12,
         expected_value=0x08000000,
-        test_name="SRL x12, x10, x11 (logical shift right, avoiding x1 bug)"
+        test_name="SRL x12, x10, x11 (logical shift right, avoiding x1 bug)",
     )
 
     dut._log.info("SRL instruction test passed")
@@ -871,12 +953,16 @@ async def test_isa_sra(dut):
     # SRA x12, x10, x11 = 0x40B55633
     # Encoding: funct7=0100000, rs2=x11(01011), rs1=x10(01010), funct3=101, rd=x12(01100), opcode=0110011
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x40B55633,
         setup_regs={10: 0x80000000, 11: 4},
         expected_rd=12,
         expected_value=0xF8000000,
-        test_name="SRA x12, x10, x11 (arithmetic shift right, avoiding x1 bug)"
+        test_name="SRA x12, x10, x11 (arithmetic shift right, avoiding x1 bug)",
     )
 
     dut._log.info("SRA instruction test passed")
@@ -901,12 +987,16 @@ async def test_isa_slli(dut):
     # Test: SLLI x2, x1, 8 where x1=0x00000001 -> x2=0x00000100
     # SLLI x2, x1, 8 = 0x00809113
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x00809113,
         setup_regs={1: 0x00000001},
         expected_rd=2,
         expected_value=0x00000100,
-        test_name="SLLI x2, x1, 8"
+        test_name="SLLI x2, x1, 8",
     )
 
     dut._log.info("SLLI instruction test passed")
@@ -932,12 +1022,16 @@ async def test_isa_srli(dut):
     # Using x10 (a0) instead of x1 to avoid known x1 RTL issue
     # SRLI x11, x10, 8 = 0x00855593
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x00855593,
         setup_regs={10: 0xFF000000},
         expected_rd=11,
         expected_value=0x00FF0000,
-        test_name="SRLI x11, x10, 8 (avoiding x1 bug)"
+        test_name="SRLI x11, x10, 8 (avoiding x1 bug)",
     )
 
     dut._log.info("SRLI instruction test passed")
@@ -963,12 +1057,16 @@ async def test_isa_srai(dut):
     # Using x10 (a0) instead of x1 to avoid known x1 RTL issue
     # SRAI x11, x10, 8 = 0x40855593
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x40855593,
         setup_regs={10: 0xFF000000},
         expected_rd=11,
         expected_value=0xFFFF0000,
-        test_name="SRAI x11, x10, 8 (avoiding x1 bug)"
+        test_name="SRAI x11, x10, 8 (avoiding x1 bug)",
     )
 
     dut._log.info("SRAI instruction test passed")
@@ -977,6 +1075,7 @@ async def test_isa_srai(dut):
 # ============================================================================
 # Comparison Instructions
 # ============================================================================
+
 
 @cocotb.test()
 async def test_isa_slt(dut):
@@ -999,22 +1098,30 @@ async def test_isa_slt(dut):
     # SLT x12, x10, x11 = 0x00B52633
     # Encoding: funct7=0000000, rs2=x11(01011), rs1=x10(01010), funct3=010, rd=x12(01100), opcode=0110011
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x00B52633,
         setup_regs={10: 0xFFFFFFF6, 11: 10},  # x10=-10 as two's complement
         expected_rd=12,
         expected_value=1,
-        test_name="SLT x12, x10, x11 (-10 < 10 = 1, avoiding x1 bug)"
+        test_name="SLT x12, x10, x11 (-10 < 10 = 1, avoiding x1 bug)",
     )
 
     # Test: SLT x12, x10, x11 where x10=10, x11=-10 -> x12=0
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x00B52633,  # SLT x12, x10, x11
         setup_regs={10: 10, 11: 0xFFFFFFF6},  # x11=-10
         expected_rd=12,
         expected_value=0,
-        test_name="SLT x12, x10, x11 (10 < -10 = 0, avoiding x1 bug)"
+        test_name="SLT x12, x10, x11 (10 < -10 = 0, avoiding x1 bug)",
     )
 
     dut._log.info("SLT instruction test passed")
@@ -1041,23 +1148,31 @@ async def test_isa_sltu(dut):
     # SLTU x12, x10, x11 = 0x00B53633
     # Encoding: funct7=0000000, rs2=x11(01011), rs1=x10(01010), funct3=011, rd=x12(01100), opcode=0110011
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x00B53633,
         setup_regs={10: 10, 11: 20},
         expected_rd=12,
         expected_value=1,
-        test_name="SLTU x12, x10, x11 (10 < 20 = 1, avoiding x1 bug)"
+        test_name="SLTU x12, x10, x11 (10 < 20 = 1, avoiding x1 bug)",
     )
 
     # Test: SLTU with large unsigned values
     # x10=0xFFFFFFF6 (4294967286), x11=10 -> x12=0
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x00B53633,  # SLTU x12, x10, x11
         setup_regs={10: 0xFFFFFFF6, 11: 10},
         expected_rd=12,
         expected_value=0,
-        test_name="SLTU unsigned (0xFFFFFFF6 < 10 = 0, avoiding x1 bug)"
+        test_name="SLTU unsigned (0xFFFFFFF6 < 10 = 0, avoiding x1 bug)",
     )
 
     dut._log.info("SLTU instruction test passed")
@@ -1082,12 +1197,16 @@ async def test_isa_slti(dut):
     # Test: SLTI x2, x1, 100 where x1=50 -> x2=1
     # SLTI x2, x1, 100 = 0x0640A113
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x0640A113,
         setup_regs={1: 50},
         expected_rd=2,
         expected_value=1,
-        test_name="SLTI x2, x1, 100 (50 < 100 = 1)"
+        test_name="SLTI x2, x1, 100 (50 < 100 = 1)",
     )
 
     dut._log.info("SLTI instruction test passed")
@@ -1112,12 +1231,16 @@ async def test_isa_sltiu(dut):
     # Test: SLTIU x2, x1, 100 where x1=50 -> x2=1
     # SLTIU x2, x1, 100 = 0x0640B113
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x0640B113,
         setup_regs={1: 50},
         expected_rd=2,
         expected_value=1,
-        test_name="SLTIU x2, x1, 100 (50 < 100 = 1)"
+        test_name="SLTIU x2, x1, 100 (50 < 100 = 1)",
     )
 
     dut._log.info("SLTIU instruction test passed")
@@ -1126,6 +1249,7 @@ async def test_isa_sltiu(dut):
 # ============================================================================
 # Upper Immediate Instructions
 # ============================================================================
+
 
 @cocotb.test()
 async def test_isa_lui(dut):
@@ -1146,12 +1270,16 @@ async def test_isa_lui(dut):
     # Test: LUI x1, 0x12345 -> x1=0x12345000
     # LUI x1, 0x12345 = 0x123450B7
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x123450B7,
         setup_regs={},
         expected_rd=1,
         expected_value=0x12345000,
-        test_name="LUI x1, 0x12345"
+        test_name="LUI x1, 0x12345",
     )
 
     dut._log.info("LUI instruction test passed")
@@ -1176,12 +1304,16 @@ async def test_isa_auipc(dut):
     # Test: AUIPC x1, 0x1000 at PC=0 -> x1=0x01000000
     # AUIPC x1, 0x1000 = 0x01000097
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x01000097,
         setup_regs={},
         expected_rd=1,
         expected_value=0x01000000,
-        test_name="AUIPC x1, 0x1000 (PC=0)"
+        test_name="AUIPC x1, 0x1000 (PC=0)",
     )
 
     dut._log.info("AUIPC instruction test passed")
@@ -1190,6 +1322,7 @@ async def test_isa_auipc(dut):
 # ============================================================================
 # Branch Instructions
 # ============================================================================
+
 
 @cocotb.test()
 async def test_isa_beq(dut):
@@ -1534,6 +1667,7 @@ async def test_isa_bgeu(dut):
 # Jump Instructions
 # ============================================================================
 
+
 @cocotb.test()
 async def test_isa_jal(dut):
     """Test JAL instruction (J-type)."""
@@ -1552,12 +1686,16 @@ async def test_isa_jal(dut):
     # JAL x1, 12 = 0x00C000EF
     # run_single_instruction_test handles reset internally
     await run_single_instruction_test(
-        dut, mem, dbg, ref_model, scoreboard,
+        dut,
+        mem,
+        dbg,
+        ref_model,
+        scoreboard,
         instruction=0x00C000EF,
         setup_regs={},
         expected_rd=1,
         expected_value=0x00000004,  # Return address = PC + 4
-        test_name="JAL x1, 12"
+        test_name="JAL x1, 12",
     )
 
     # Test backward jump: JAL x2, -8 at PC=0x100
@@ -1633,6 +1771,7 @@ async def test_isa_jalr(dut):
 # ============================================================================
 # Load Instructions
 # ============================================================================
+
 
 @cocotb.test()
 async def test_isa_lw(dut):
@@ -1828,6 +1967,7 @@ async def test_isa_lbu(dut):
 # Store Instructions
 # ============================================================================
 
+
 @cocotb.test()
 async def test_isa_sw(dut):
     """Test SW instruction (S-type, store word)."""
@@ -1900,7 +2040,9 @@ async def test_isa_sh(dut):
     # Verify memory was written (only lower 16 bits)
     stored_value = mem.read_word(0x2000)
     expected = 0x0000BEEF  # Lower halfword stored, upper zeroed
-    assert (stored_value & 0xFFFF) == 0xBEEF, f"SH: Memory should contain 0xBEEF in lower halfword, got 0x{stored_value:08x}"
+    assert (stored_value & 0xFFFF) == 0xBEEF, (
+        f"SH: Memory should contain 0xBEEF in lower halfword, got 0x{stored_value:08x}"
+    )
     dut._log.info(f"✓ SH: stored halfword (0x{stored_value:08x} in memory)")
 
     dut._log.info("SH instruction test passed")
@@ -1939,7 +2081,9 @@ async def test_isa_sb(dut):
 
     # Verify memory was written (only lower 8 bits)
     stored_value = mem.read_word(0x2000)
-    assert (stored_value & 0xFF) == 0xEF, f"SB: Memory should contain 0xEF in lowest byte, got 0x{stored_value:08x}"
+    assert (stored_value & 0xFF) == 0xEF, (
+        f"SB: Memory should contain 0xEF in lowest byte, got 0x{stored_value:08x}"
+    )
     dut._log.info(f"✓ SB: stored byte (0x{stored_value:08x} in memory)")
 
     dut._log.info("SB instruction test passed")

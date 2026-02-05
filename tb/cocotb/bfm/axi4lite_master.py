@@ -5,10 +5,7 @@ Provides an AXI4-Lite master interface for testbenches.
 Used to initiate read/write transactions on the AXI4-Lite bus.
 """
 
-import cocotb
-from cocotb.triggers import RisingEdge, Timer
-from cocotb.types import LogicArray
-from typing import Optional
+from cocotb.triggers import RisingEdge
 
 
 class AXI4LiteMaster:

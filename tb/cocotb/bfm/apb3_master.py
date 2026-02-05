@@ -5,9 +5,7 @@ Provides an APB3 master interface for testbenches.
 Used for CPU debug interface access per MEMORY_MAP.md.
 """
 
-import cocotb
 from cocotb.triggers import RisingEdge
-from typing import Optional
 
 
 class APB3Master:

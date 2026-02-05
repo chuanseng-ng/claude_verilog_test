@@ -40,19 +40,19 @@ jobs:
       - name: Run ruff linter
         run: |
           echo "::group::Ruff Linter"
-          ruff check tb/models tb/tests
+          ruff check tb/models tb/tests --exclude legacy
           echo "::endgroup::"
 
       - name: Run mypy type checking
         run: |
           echo "::group::MyPy Type Checking"
-          mypy tb/models tb/tests
+          mypy tb/models tb/tests --exclude 'legacy'
           echo "::endgroup::"
 
       - name: Run pylint
         run: |
           echo "::group::Pylint"
-          pylint tb/models tb/tests
+          pylint tb/models tb/tests --ignore=legacy
           echo "::endgroup::"
 
       - name: Run pytest
