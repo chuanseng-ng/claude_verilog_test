@@ -247,20 +247,24 @@ class ISASequenceBase(BaseSequence):
             # Skip checking registers that will be overwritten by the instruction
             if self.expected_rd is not None and reg_num == self.expected_rd:
                 continue
+            # Normalize expected value to 32 bits before comparison
+            expected_val_masked = expected_val & 0xFFFFFFFF
             actual_val = await apb_driver.read_gpr(reg_num)
-            if actual_val != expected_val:
+            if actual_val != expected_val_masked:
                 raise AssertionError(
                     f"Setup register x{reg_num} mismatch: "
-                    f"expected=0x{expected_val:08x}, actual=0x{actual_val:08x}"
+                    f"expected=0x{expected_val_masked:08x}, actual=0x{actual_val:08x}"
                 )
 
         # Verify result if specified
         if self.expected_rd is not None and self.expected_value is not None:
+            # Normalize expected value to 32 bits before comparison
+            expected_value_masked = self.expected_value & 0xFFFFFFFF
             actual_value = await apb_driver.read_gpr(self.expected_rd)
-            if actual_value != self.expected_value:
+            if actual_value != expected_value_masked:
                 raise AssertionError(
                     f"Result x{self.expected_rd} mismatch: "
-                    f"expected=0x{self.expected_value:08x}, "
+                    f"expected=0x{expected_value_masked:08x}, "
                     f"actual=0x{actual_value:08x}"
                 )
 
@@ -327,6 +331,9 @@ class SWSequence(ISASequenceBase):
             actual_store_value = 0
         else:
             actual_store_value = store_value
+
+        # Normalize to 32 bits so negative or wider-than-32-bit inputs match readback
+        actual_store_value = actual_store_value & 0xFFFFFFFF
 
         # Handle rs1==rs2 case: use scratch register for store_value
         actual_rs2 = rs2
