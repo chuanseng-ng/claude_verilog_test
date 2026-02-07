@@ -348,15 +348,41 @@ async def test_axi_random_backpressure(dut):
 
     mem, _ref_model = await setup_test(dut, use_ref_model=True)
 
-    # TODO: Expand to 10,000+ instructions with scoreboard-style RTL vs reference model comparison
-    # Current limitation: This test only runs 50 ADDI instructions and verifies protocol compliance
-    # (no violations, correct statistics) but does NOT compare RTL register state against _ref_model.
-    # Future work should:
-    #   1. Increase num_instructions to >=10000
-    #   2. Step _ref_model alongside RTL execution
-    #   3. Compare register file state after each instruction completion
-    #   4. Implement transaction-level scoreboard to track in-flight reads/writes
-    # See: Phase 1 verification plan requirement for reference model validation
+    # TODO [DEFERRED - Requires CPU-level testbench]: Expand to 10,000+ instructions with
+    # scoreboard-style RTL vs reference model comparison
+    #
+    # CURRENT LIMITATION: This test only runs 50 ADDI instructions and verifies AXI protocol
+    # compliance (no violations, correct statistics) but does NOT compare RTL register state
+    # against _ref_model.
+    #
+    # WHY DEFERRED:
+    # 1. This test operates at the AXI protocol level and has NO visibility into CPU internal
+    #    state (register file, PC). Cannot read RTL register values to compare against model.
+    # 2. No mechanism to detect instruction completion boundaries (when to step _ref_model)
+    # 3. Proper scoreboard requires tracking:
+    #    - PC progression (to know which instruction executed)
+    #    - Register file state (to compare RTL vs model after each instruction)
+    #    - In-flight AXI transactions (to correlate bus activity with architectural state)
+    # 4. _ref_model is instantiated but unused because we lack observability points
+    #
+    # PROPER SOLUTION:
+    # - Implement in a CPU-level testbench (e.g., test_cpu_core.py) that has direct access to:
+    #   * dut.register_file (or equivalent internal signals)
+    #   * dut.pc_o (program counter)
+    #   * dut instruction completion strobes
+    # - Use pyuvm Scoreboard pattern with:
+    #   * Predictor: Steps _ref_model on each instruction completion
+    #   * Comparator: Asserts RTL regfile[x] == _ref_model.regs[x] for all modified registers
+    #   * Coverage: Track 10,000+ instructions with random back-pressure
+    #
+    # REFERENCE:
+    # - See docs/verification/VERIFICATION_PLAN.md Section 3.3 "Reference Model Validation"
+    # - See TODO_PHASE1_VERIFICATION.md Criterion #7 (Reference model comparison)
+    # - Related test: test_random_instructions.py already implements this pattern for
+    #   functional validation (100 seeds × 100 instructions = 10k+ coverage)
+    #
+    # WORKAROUND: For now, this test validates AXI protocol compliance under back-pressure.
+    # Functional correctness is covered by test_random_instructions.py with reference model.
 
     # Load test program: 50 ADDI instructions
     # Use registers x1-x31 in a loop to generate 50 instructions
