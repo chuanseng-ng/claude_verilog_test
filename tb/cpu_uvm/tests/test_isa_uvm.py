@@ -138,9 +138,9 @@ async def run_isa_test(dut, sequence_class, sequence_args, test_name="isa_test")
     test.env.scoreboard.report_phase()
 
     # Verify no mismatches
-    assert (
-        test.env.scoreboard.mismatches == 0
-    ), f"Scoreboard detected {test.env.scoreboard.mismatches} mismatches"
+    assert test.env.scoreboard.mismatches == 0, (
+        f"Scoreboard detected {test.env.scoreboard.mismatches} mismatches"
+    )
 
     dut._log.info(f"✓ {test_name} passed")
 

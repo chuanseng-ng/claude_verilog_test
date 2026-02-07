@@ -27,7 +27,8 @@ MODULE ?= tb.cocotb.cpu.test_smoke
 # All available test modules
 TEST_MODULES := \
 	tb.cocotb.cpu.test_smoke \
-	tb.cocotb.cpu.test_c_programs
+	tb.cocotb.cpu.test_c_programs \
+	tb.cocotb.cpu.test_axi_protocol
 
 # RTL source files
 VERILOG_SOURCES := \
@@ -176,6 +177,14 @@ waves:
 	else \
 		echo "No waveform file found. Run 'make test' first."; \
 	fi
+
+# Convenience target for AXI protocol tests only
+.PHONY: axi
+axi:
+	@echo "Running AXI protocol tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim MODULE=tb.cocotb.cpu.test_axi_protocol
 
 # Override clean to use our basic clean
 clean: clean-basic

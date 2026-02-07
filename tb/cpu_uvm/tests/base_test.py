@@ -255,6 +255,6 @@ async def run_uvm_test(dut, test_class, test_name="uvm_test"):
     test.env.scoreboard.report_phase()
 
     # Check for scoreboard errors
-    assert (
-        test.env.scoreboard.mismatches == 0
-    ), f"Scoreboard validation failed: {test.env.scoreboard.mismatches} errors"
+    assert test.env.scoreboard.mismatches == 0, (
+        f"Scoreboard validation failed: {test.env.scoreboard.mismatches} errors"
+    )
