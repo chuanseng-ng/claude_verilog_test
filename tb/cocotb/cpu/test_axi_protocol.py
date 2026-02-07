@@ -171,6 +171,10 @@ async def test_axi_arready_backpressure(dut):
             dut._log.info(f"arready asserted at cycle {cycle}")
 
             # Verify 5-cycle delay
+            if arvalid_start is None:
+                dut._log.error("arready asserted but arvalid_start was never recorded")
+                assert False, "arready asserted before arvalid was recorded"
+
             stall_cycles = arready_asserted - arvalid_start
             assert stall_cycles == 5, f"Expected 5-cycle arready delay, got {stall_cycles} cycles"
 
@@ -304,11 +308,14 @@ async def test_axi_bvalid_delay(dut):
             dut._log.info(f"bvalid asserted at cycle {cycle}")
 
             # Verify 5-cycle delay after awready
-            if awready_handshake is not None:
-                delay_cycles = bvalid_asserted - awready_handshake - 1
-                assert delay_cycles == 5, (
-                    f"Expected 5-cycle bvalid delay, got {delay_cycles} cycles"
-                )
+            if awready_handshake is None:
+                dut._log.error("bvalid asserted but awready_handshake was never recorded")
+                assert False, "bvalid asserted before awready handshake was recorded"
+
+            delay_cycles = bvalid_asserted - awready_handshake - 1
+            assert delay_cycles == 5, (
+                f"Expected 5-cycle bvalid delay, got {delay_cycles} cycles"
+            )
 
         cycle += 1
 
@@ -340,6 +347,16 @@ async def test_axi_random_backpressure(dut):
     dut._log.info("=== Test: AXI Random Back-Pressure ===")
 
     mem, _ref_model = await setup_test(dut, use_ref_model=True)
+
+    # TODO: Expand to 10,000+ instructions with scoreboard-style RTL vs reference model comparison
+    # Current limitation: This test only runs 50 ADDI instructions and verifies protocol compliance
+    # (no violations, correct statistics) but does NOT compare RTL register state against _ref_model.
+    # Future work should:
+    #   1. Increase num_instructions to >=10000
+    #   2. Step _ref_model alongside RTL execution
+    #   3. Compare register file state after each instruction completion
+    #   4. Implement transaction-level scoreboard to track in-flight reads/writes
+    # See: Phase 1 verification plan requirement for reference model validation
 
     # Load test program: 50 ADDI instructions
     # Use registers x1-x31 in a loop to generate 50 instructions
@@ -663,16 +680,17 @@ async def test_axi_no_outstanding(dut):
     while cycle < 200:
         await RisingEdge(dut.clk_i)
 
+        # Check for read completion FIRST to avoid false positives when
+        # R completion and new AR handshake occur on the same cycle
+        if dut.axi_rvalid_i.value == 1 and dut.axi_rready_o.value == 1:
+            read_active = False
+
         # Check for new read starting while previous active
         if dut.axi_arvalid_o.value == 1 and dut.axi_arready_i.value == 1:
             if read_active:
                 dut._log.error(f"New read started while previous read active at cycle {cycle}")
                 violation_detected = True
             read_active = True
-
-        # Check for read completion
-        if dut.axi_rvalid_i.value == 1 and dut.axi_rready_o.value == 1:
-            read_active = False
 
         cycle += 1
 
@@ -709,14 +727,19 @@ async def test_axi_wstrb_encoding(dut):
     # Monitor write strobes
     cycle = 0
     wstrb_values = []
+    current_aw_addr = None  # Capture AW handshake address
 
     while cycle < 200:
         await RisingEdge(dut.clk_i)
 
-        # Capture wstrb when write is accepted
+        # Capture AW handshake address when both awvalid and awready are asserted
+        if dut.axi_awvalid_o.value == 1 and dut.axi_awready_i.value == 1:
+            current_aw_addr = int(dut.axi_awaddr_o.value)
+
+        # Capture wstrb when write data is accepted (use captured AW address)
         if dut.axi_wvalid_o.value == 1 and dut.axi_wready_i.value == 1:
             wstrb = int(dut.axi_wstrb_o.value)
-            addr = int(dut.axi_awaddr_o.value)
+            addr = current_aw_addr if current_aw_addr is not None else 0
             wstrb_values.append((addr, wstrb))
             dut._log.info(f"Write at 0x{addr:08x} with wstrb=0b{wstrb:04b}")
 
