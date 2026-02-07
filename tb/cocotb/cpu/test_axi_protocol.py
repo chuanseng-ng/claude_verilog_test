@@ -473,14 +473,19 @@ async def test_axi_decerr_load(dut):
     # Run and monitor for trap
     cycle = 0
     error_detected = False
+    last_ar_addr = None  # Capture AR handshake address
     max_cycles = 500  # Increased timeout
 
     while cycle < max_cycles:
         await RisingEdge(dut.clk_i)
 
-        # Check for error response on read (skip instruction fetches)
+        # Capture AR handshake address when both arvalid and arready are asserted
+        if dut.axi_arvalid_o.value == 1 and dut.axi_arready_i.value == 1:
+            last_ar_addr = int(dut.axi_araddr_o.value)
+
+        # Check for error response on read (use captured address)
         if dut.axi_rvalid_i.value == 1 and dut.axi_rresp_i.value == 0b11:
-            addr = int(dut.axi_araddr_o.value) if dut.axi_arvalid_o.value == 1 else 0
+            addr = last_ar_addr if last_ar_addr is not None else 0
             dut._log.info(f"DECERR detected at cycle {cycle}, addr=0x{addr:08x}")
             error_detected = True
 
