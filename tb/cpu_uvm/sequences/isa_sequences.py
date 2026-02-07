@@ -155,8 +155,6 @@ class ISASequenceBase(BaseSequence):
                     upper = (upper + 1) & 0xFFFFF
 
                 # LUI xN, upper
-                from sim.riscv_encoder import LUI
-
                 await axi_driver.write_word(addr, LUI(reg_num, upper))
                 addr += 4
                 num_setup_instructions += 1
@@ -295,9 +293,9 @@ class LWSequence(ISASequenceBase):
         eff_addr = (0 if (rs1 == 0 or rs1 == "x0") else base_addr) + offset
 
         # Check word alignment (LW requires 4-byte alignment)
-        assert (
-            eff_addr % 4 == 0
-        ), f"LW effective address 0x{eff_addr:08x} is not word-aligned (must be multiple of 4)"
+        assert eff_addr % 4 == 0, (
+            f"LW effective address 0x{eff_addr:08x} is not word-aligned (must be multiple of 4)"
+        )
 
         setup_memory = {eff_addr: mem_value}
 
@@ -449,9 +447,9 @@ class LHSequence(ISASequenceBase):
         addr = (0 if (rs1 == 0 or rs1 == "x0") else base_addr) + offset
 
         # Check halfword alignment (LH requires 2-byte alignment)
-        assert (
-            addr % 2 == 0
-        ), f"LH effective address 0x{addr:08x} is not halfword-aligned (must be multiple of 2)"
+        assert addr % 2 == 0, (
+            f"LH effective address 0x{addr:08x} is not halfword-aligned (must be multiple of 2)"
+        )
 
         aligned_addr = addr & ~0x3
         lane = (addr & 0x2) >> 1  # 0 for lower halfword, 1 for upper halfword
@@ -482,9 +480,9 @@ class LHUSequence(ISASequenceBase):
         addr = (0 if (rs1 == 0 or rs1 == "x0") else base_addr) + offset
 
         # Check halfword alignment (LHU requires 2-byte alignment)
-        assert (
-            addr % 2 == 0
-        ), f"LHU effective address 0x{addr:08x} is not halfword-aligned (must be multiple of 2)"
+        assert addr % 2 == 0, (
+            f"LHU effective address 0x{addr:08x} is not halfword-aligned (must be multiple of 2)"
+        )
 
         aligned_addr = addr & ~0x3
         lane = (addr & 0x2) >> 1  # 0 for lower halfword, 1 for upper halfword
