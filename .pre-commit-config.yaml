@@ -24,7 +24,7 @@ repos:
 
   # Ruff - Fast Python linter and formatter
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.7.4
+    rev: v0.14.14
     hooks:
       # Run the linter (check only, no auto-fix)
       - id: ruff
@@ -57,18 +57,18 @@ repos:
       # Pylint - Code quality
       - id: pylint
         name: pylint (code quality)
-        entry: pylint
+        entry: uv run pylint
         language: system
         types: [python]
         files: ^tb/(models|tests)/
         args:
-          - --rcfile=.pylintrc
+          - --rcfile=pyproject.toml
           - --fail-under=9.5
 
       # Pytest - Run tests on push only (not on every commit)
       - id: pytest-check
         name: pytest (all tests)
-        entry: pytest
+        entry: uv run pytest
         language: system
         pass_filenames: false
         always_run: true
@@ -82,7 +82,7 @@ repos:
       # Quick smoke test on commit (only changed files)
       - id: pytest-quick
         name: pytest (quick check)
-        entry: bash -c 'pytest tb/tests/ -v --tb=short -x --lf 2>/dev/null || pytest tb/tests/ -v --tb=short -x -k "test_initialization"'
+        entry: bash -c 'uv run pytest tb/tests/ -v --tb=short -x --lf 2>/dev/null || uv run pytest tb/tests/ -v --tb=short -x -k "test_initialization"'
         language: system
         pass_filenames: false
         stages: [pre-commit]
