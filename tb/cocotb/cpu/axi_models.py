@@ -60,6 +60,8 @@ class ConfigurableAXIMemory:
             "max_bvalid_stall": 0,
             "total_arready_stalls": 0,
             "total_rvalid_stalls": 0,
+            "total_awready_stalls": 0,
+            "total_wready_stalls": 0,
             "total_bvalid_stalls": 0,
         }
 
@@ -205,8 +207,9 @@ class ConfigurableAXIMemory:
                         self.stats["max_rvalid_stall"] = self.next_read_rvalid_delay
 
                 # Check for error injection
-                if addr in self.error_map:
-                    error_type = self.error_map[addr]
+                aligned_addr = addr & 0xFFFFFFFC
+                if aligned_addr in self.error_map:
+                    error_type = self.error_map[aligned_addr]
                     if error_type == "SLVERR":
                         self.dut.axi_rresp_i.value = 0b10
                     else:  # DECERR
@@ -261,7 +264,7 @@ class ConfigurableAXIMemory:
             ):
                 addr = int(self.dut.axi_awaddr_o.value)
                 data = int(self.dut.axi_wdata_o.value)
-                int(self.dut.axi_wstrb_o.value)
+                wstrb = int(self.dut.axi_wstrb_o.value)
 
                 # Apply awready/wready delay (back-pressure)
                 delay_cycles = max(self.next_write_awready_delay, self.next_write_wready_delay)
@@ -308,7 +311,22 @@ class ConfigurableAXIMemory:
                 self.dut.axi_wready_i.value = 0
 
                 # Write to memory (respecting wstrb)
-                self.write_word(addr, data)
+                # Perform byte-strobe aware write
+                aligned_addr = addr & 0xFFFFFFFC
+                current_word = self.mem.get(aligned_addr, 0)
+
+                # Merge bytes based on wstrb mask
+                merged_word = current_word
+                for byte_idx in range(4):
+                    if wstrb & (1 << byte_idx):
+                        # Replace this byte with data from incoming word
+                        byte_val = (data >> (byte_idx * 8)) & 0xFF
+                        # Clear old byte and insert new byte
+                        byte_mask = 0xFF << (byte_idx * 8)
+                        merged_word = (merged_word & ~byte_mask) | (byte_val << (byte_idx * 8))
+
+                # Write merged word
+                self.write_word(aligned_addr, merged_word)
 
                 # Apply bvalid delay (response latency)
                 if self.next_write_bvalid_delay > 0:
@@ -321,8 +339,8 @@ class ConfigurableAXIMemory:
                         self.stats["max_bvalid_stall"] = self.next_write_bvalid_delay
 
                 # Check for error injection
-                if addr in self.error_map:
-                    error_type = self.error_map[addr]
+                if aligned_addr in self.error_map:
+                    error_type = self.error_map[aligned_addr]
                     if error_type == "SLVERR":
                         self.dut.axi_bresp_i.value = 0b10
                     else:  # DECERR

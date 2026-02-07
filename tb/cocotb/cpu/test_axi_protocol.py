@@ -96,17 +96,34 @@ async def wait_for_state(dut, state_name, max_cycles=100):
     Raises:
         TimeoutError: If state not reached within max_cycles
     """
-    # Note: This assumes state is exposed as string or enum
-    # Adjust based on actual RTL implementation
+    # TODO: Adapt state comparison based on RTL representation
+    # - If state is a string signal: compare str(dut.state.value) == state_name
+    # - If state is an enum: compare dut.state.value.binstr or integer value
+    # - If state uses parameters: compare against numeric constants
     cycles = 0
     while cycles < max_cycles:
         await RisingEdge(dut.clk_i)
         cycles += 1
 
         if hasattr(dut, "state"):
-            # Implementation depends on how state is exposed
-            # For now, we'll just wait the cycles
-            pass
+            # Try to get state value (handles different RTL representations)
+            try:
+                current_state = str(dut.state.value)
+                if current_state == state_name:
+                    return cycles
+            except (AttributeError, ValueError):
+                # If state.value doesn't work, try binstr or integer comparison
+                try:
+                    if hasattr(dut.state, "binstr"):
+                        current_state = dut.state.binstr
+                    else:
+                        current_state = int(dut.state.value)
+                    if str(current_state) == state_name:
+                        return cycles
+                except (AttributeError, ValueError):
+                    pass
+
+    raise TimeoutError(f"State did not reach '{state_name}' within {max_cycles} cycles")
 
 
 # =============================================================================
@@ -334,19 +351,22 @@ async def test_axi_random_backpressure(dut):
 
     cycle = 0
     read_count = 0
+    last_arvalid = 0
     max_cycles = 5000  # Allow plenty of time with delays (increased from 2000)
 
     while cycle < max_cycles and read_count < 50:
-        await RisingEdge(dut.clk_i)
-
-        # Inject random delay before each read
-        if dut.axi_arvalid_o.value == 1 and mem.next_read_arready_delay == 0:
+        # Detect rising edge of arvalid BEFORE clock edge to inject delay in time
+        current_arvalid = dut.axi_arvalid_o.value
+        if last_arvalid == 0 and current_arvalid == 1:
+            # arvalid rising edge detected - inject delay before memory handler sees it
             arready_delay = random.randint(0, 10)
             rvalid_delay = random.randint(0, 10)
             mem.inject_read_delay(arready_cycles=arready_delay, rvalid_cycles=rvalid_delay)
             dut._log.info(f"Read #{read_count}: arready={arready_delay}, rvalid={rvalid_delay}")
             read_count += 1
 
+        last_arvalid = current_arvalid
+        await RisingEdge(dut.clk_i)
         cycle += 1
 
     # Verify no protocol violations

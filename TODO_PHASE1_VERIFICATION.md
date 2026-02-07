@@ -483,7 +483,7 @@ cd sim && make test
 
 **Exit Criterion**: ✅ **MET** - All AXI protocol test infrastructure implemented
 
-**Note**: Tests are ready to run once RTL is available. Tests may reveal RTL bugs (e.g., missing error response handling), which is expected and part of verification process.
+**Note**: Tests have been implemented (11/11) and executed against RTL. During testing, RTL bugs were discovered (e.g., AXI protocol timing, branch/jump control flow, load data latching) and fixed—see `fixes/` for documentation.
 
 **Completion Date**: 2026-02-07
 **Actual Effort**: 1 session (infrastructure + all 11 tests)
@@ -659,7 +659,7 @@ cd sim && make test
 | 2 | Scoreboard mismatches | 0 | ✅ **MET** | 0 mismatches |
 | 3 | Instruction coverage | 37/37 (100%) | ✅ **MET** 🎉 | 37/37 all passing! |
 | 4 | Random instruction tests | 10,000+, 0 fail | ✅ **MET** 🎉 | 10,000 instructions, 0 failures |
-| 5 | AXI protocol tests | 100% pass | ✅ **MET** 🎉 | 11/11 tests implemented! |
+| 5 | AXI protocol tests | 100% pass | ⚠️ **Partial** | 11/11 tests in `tb/cocotb/cpu/test_axi_protocol.py`, not in CI (GitHub workflow runs `tb/tests/` only) |
 | 6 | Debug interface tests | 100% pass | ⚠️ **Partial** | Task 5 - NEXT |
 | 7 | Code coverage | >95% | ❌ **Not tracked** | Task 6 |
 | 8 | State coverage | 8/8 (100%) | ❌ **Not tracked** | Task 6 |
