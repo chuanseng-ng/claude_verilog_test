@@ -267,7 +267,9 @@ class ConfigurableAXIMemory:
                 wstrb = int(self.dut.axi_wstrb_o.value)
 
                 # Apply awready/wready delay (back-pressure)
-                delay_cycles = max(self.next_write_awready_delay, self.next_write_wready_delay)
+                aw_delay = self.next_write_awready_delay
+                w_delay = self.next_write_wready_delay
+                delay_cycles = max(aw_delay, w_delay)
                 if delay_cycles > 0:
                     for _ in range(delay_cycles):
                         # Protocol check: awaddr/wdata should remain stable
@@ -297,10 +299,13 @@ class ConfigurableAXIMemory:
 
                         await RisingEdge(self.dut.clk_i)
 
-                    # Update stall statistics
-                    self.stats["total_arready_stalls"] += delay_cycles
-                    if delay_cycles > self.stats["max_awready_stall"]:
-                        self.stats["max_awready_stall"] = delay_cycles
+                    # Update stall statistics (track per-channel independently)
+                    self.stats["total_awready_stalls"] += aw_delay
+                    self.stats["total_wready_stalls"] += w_delay
+                    if aw_delay > self.stats["max_awready_stall"]:
+                        self.stats["max_awready_stall"] = aw_delay
+                    if w_delay > self.stats["max_wready_stall"]:
+                        self.stats["max_wready_stall"] = w_delay
 
                 # Accept address and data
                 self.dut.axi_awready_i.value = 1

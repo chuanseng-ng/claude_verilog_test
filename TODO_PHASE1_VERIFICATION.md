@@ -665,8 +665,8 @@ cd sim && make test
 | 8 | State coverage | 8/8 (100%) | ❌ **Not tracked** | Task 6 |
 | 9 | Failing random seeds | 0 | ✅ **MET** 🎉 | 0 failing seeds (100/100 pass) |
 
-**Current**: ✅ **6/9 criteria met (67%)**
-**After debug interface tests complete**: 7/9 criteria met (78%)
+**Current**: ✅ **5/9 criteria met (56%)**
+**After debug interface tests complete**: 6/9 criteria met (67%)
 **Full Phase 1 completion**: 9/9 criteria met (100%)
 
 **Recent Progress** (2026-01-24 to 2026-02-07):

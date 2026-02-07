@@ -44,14 +44,14 @@ async def setup_test(dut, use_ref_model=False):
     clock = Clock(dut.clk_i, 10, unit="ns")
     cocotb.start_soon(clock.start())
 
+    # Reset DUT before starting handlers to avoid observing undefined signals
+    await reset_dut(dut)
+
     # Create reference model if needed
     ref_model = RV32IModel() if use_ref_model else None
 
-    # Create configurable memory
+    # Create configurable memory (handlers start after reset)
     mem = ConfigurableAXIMemory(dut, ref_model=ref_model, protocol_check=True)
-
-    # Reset DUT
-    await reset_dut(dut)
 
     return mem, ref_model
 
@@ -233,6 +233,10 @@ async def test_axi_rvalid_delay(dut):
             dut._log.info(f"rvalid asserted at cycle {cycle}")
 
             # Verify 10-cycle delay after arready
+            if arready_handshake is None:
+                dut._log.error("rvalid asserted but arready_handshake was never recorded")
+                assert False, "rvalid asserted before arready handshake was recorded"
+
             delay_cycles = rvalid_asserted - arready_handshake - 1
             assert delay_cycles == 10, f"Expected 10-cycle rvalid delay, got {delay_cycles} cycles"
 
@@ -718,10 +722,20 @@ async def test_axi_wstrb_encoding(dut):
     # At minimum, verify we got 3 writes
     assert len(wstrb_values) >= 3, f"Expected 3 writes, got {len(wstrb_values)}"
 
+    # Verify SB has single-byte strobe
+    sb_strobes = [wstrb for addr, wstrb in wstrb_values if addr == 0x100]
+    assert len(sb_strobes) > 0, "Expected at least one SB write at 0x100"
+    assert sb_strobes[0] == 0b0001, f"SB should have wstrb=0b0001, got 0b{sb_strobes[0]:04b}"
+
+    # Verify SH has half-word strobe
+    sh_strobes = [wstrb for addr, wstrb in wstrb_values if addr == 0x104]
+    assert len(sh_strobes) > 0, "Expected at least one SH write at 0x104"
+    assert sh_strobes[0] == 0b0011, f"SH should have wstrb=0b0011, got 0b{sh_strobes[0]:04b}"
+
     # Verify SW has full strobe
     sw_strobes = [wstrb for addr, wstrb in wstrb_values if addr == 0x108]
-    if sw_strobes:
-        assert sw_strobes[0] == 0b1111, f"SW should have wstrb=0b1111, got 0b{sw_strobes[0]:04b}"
+    assert len(sw_strobes) > 0, "Expected at least one SW write at 0x108"
+    assert sw_strobes[0] == 0b1111, f"SW should have wstrb=0b1111, got 0b{sw_strobes[0]:04b}"
 
     dut._log.info("Test passed: Write strobes correctly encoded")
 
