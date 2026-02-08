@@ -41,7 +41,8 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 
 # Convenience targets for different test suites
 .PHONY: smoke basic random isa ebreak all_tests usage info distclean
-.PHONY: smoke_uvm random_uvm isa_uvm all_uvm
+.PHONY: smoke_uvm random_uvm random_uvm_smoke random_uvm_waves isa_uvm all_uvm
+.PHONY: stress_uvm stress_uvm_smoke stress_alu stress_jump stress_shift stress_immediate
 
 smoke:
 	@echo "Running smoke tests..."
@@ -72,9 +73,42 @@ random_uvm:
 	@echo "Running pyuvm random instruction tests..."
 	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_random_uvm
 
+random_uvm_smoke:
+	@echo "Running pyuvm random instruction tests (SMOKE TEST: 10 seeds × 50 instructions)..."
+	export RANDOM_TEST_SMOKE=1 && export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_random_uvm
+
+random_uvm_waves:
+	@echo "Running pyuvm random instruction tests with waveform capture enabled..."
+	@echo "Note: Waveforms are saved automatically for failed seeds to results/waveforms/"
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_random_uvm
+
 isa_uvm:
 	@echo "Running pyuvm ISA compliance tests (54 tests, 37 RV32I instructions)..."
 	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_isa_uvm
+
+stress_uvm:
+	@echo "Running pyuvm stress tests (4 profiles: ALU, Jump, Shift, Immediate)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm
+
+stress_uvm_smoke:
+	@echo "Running pyuvm stress tests (SMOKE TEST: 10 seeds × 100 instr per profile)..."
+	export STRESS_TEST_SMOKE=1 && export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm
+
+stress_alu:
+	@echo "Running ALU-intensive stress test (90% ALU operations)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm::test_stress_alu_intensive
+
+stress_jump:
+	@echo "Running jump-heavy stress test (40% jump instructions)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm::test_stress_jump_heavy
+
+stress_shift:
+	@echo "Running shift-intensive stress test..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm::test_stress_shift_intensive
+
+stress_immediate:
+	@echo "Running immediate-heavy stress test..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm::test_stress_immediate_heavy
 
 all_uvm:
 	@echo "========================================="
@@ -169,10 +203,20 @@ usage info:
 	@echo "  make              - Run default tests (pyuvm smoke tests)"
 	@echo ""
 	@echo "Recommended pyuvm targets:"
-	@echo "  make smoke_uvm    - Run pyuvm smoke tests (4 tests)"
-	@echo "  make isa_uvm      - Run pyuvm ISA compliance tests (54 tests, 37 instructions)"
-	@echo "  make random_uvm   - Run pyuvm random instruction tests"
-	@echo "  make all_uvm      - Run all pyuvm test suites (smoke + ISA + random)"
+	@echo "  make smoke_uvm         - Run pyuvm smoke tests (4 tests)"
+	@echo "  make isa_uvm           - Run pyuvm ISA compliance tests (54 tests, 37 instructions)"
+	@echo "  make random_uvm        - Run pyuvm random instruction tests (default: 100 seeds × 100 instr)"
+	@echo "  make random_uvm_smoke  - Run pyuvm random smoke test (10 seeds × 50 instr, ~10s)"
+	@echo "  make random_uvm_waves  - Run pyuvm random tests with waveform capture enabled"
+	@echo "  make stress_uvm        - Run pyuvm stress tests (4 profiles: ALU/Jump/Shift/Immediate)"
+	@echo "  make stress_uvm_smoke  - Run pyuvm stress smoke test (10 seeds × 100 instr per profile)"
+	@echo "  make all_uvm           - Run all pyuvm test suites (smoke + ISA + random)"
+	@echo ""
+	@echo "Individual stress test profiles:"
+	@echo "  make stress_alu        - ALU-intensive test (90% ALU operations)"
+	@echo "  make stress_jump       - Jump-heavy test (40% jump instructions)"
+	@echo "  make stress_shift      - Shift-intensive test (heavy shift operations)"
+	@echo "  make stress_immediate  - Immediate-heavy test (tests immediate generation)"
 	@echo ""
 	@echo "Legacy targets (DEPRECATED - use pyuvm instead):"
 	@echo "  make smoke        - Run legacy smoke tests"
@@ -192,17 +236,34 @@ usage info:
 	@echo "  make MODULE=test_name   - Run specific test module"
 	@echo "  make SIM=icarus         - Use different simulator (verilator, icarus)"
 	@echo ""
+	@echo "Random test environment variables:"
+	@echo "  RANDOM_TEST_SEEDS=N     - Number of seeds (default: 100)"
+	@echo "  RANDOM_TEST_INSTRS=N    - Instructions per seed (default: 100)"
+	@echo "  RANDOM_TEST_SMOKE=1     - Use smoke test config (10 seeds × 50 instr)"
+	@echo ""
+	@echo "Stress test environment variables:"
+	@echo "  STRESS_TEST_SEEDS=N     - Number of seeds per profile (default: 100)"
+	@echo "  STRESS_TEST_INSTRS=N    - Instructions per seed (default: 500)"
+	@echo "  STRESS_TEST_SMOKE=1     - Use smoke test config (10 seeds × 100 instr)"
+	@echo ""
 	@echo "Examples:"
-	@echo "  make smoke              # Quick smoke test"
-	@echo "  make random             # Run 10,000 random instructions"
-	@echo "  make MODULE=test_smoke  # Explicitly specify module"
-	@echo "  make SIM=icarus smoke   # Use Icarus Verilog"
+	@echo "  make smoke_uvm                              # Quick smoke test (4 tests)"
+	@echo "  make random_uvm_smoke                       # Quick random test (10 seeds)"
+	@echo "  make random_uvm                             # Full random test (100 seeds)"
+	@echo "  RANDOM_TEST_SEEDS=1000 make random_uvm      # Extended test (1000 seeds)"
+	@echo "  make random_uvm_waves                       # Random test with waveform capture"
+	@echo "  make stress_uvm_smoke                       # Quick stress test (all profiles)"
+	@echo "  make stress_alu                             # ALU-intensive stress test"
+	@echo "  STRESS_TEST_SEEDS=200 make stress_jump      # Jump stress with 200 seeds"
+	@echo "  make MODULE=test_smoke_uvm                  # Explicitly specify module"
+	@echo "  make SIM=icarus smoke_uvm                   # Use Icarus Verilog"
 	@echo ""
 	@echo "Test modules available:"
 	@echo "  pyuvm tests (RECOMMENDED):"
 	@echo "    test_smoke_uvm            - pyuvm smoke tests (4 tests)"
 	@echo "    test_isa_uvm              - pyuvm ISA compliance tests (54 tests, 37 instructions)"
 	@echo "    test_random_uvm           - pyuvm random tests (multi-seed)"
+	@echo "    test_stress_uvm           - pyuvm stress tests (biased instruction distributions)"
 	@echo "    test_ebreak               - EBREAK halt detection test"
 	@echo ""
 	@echo "  Legacy cocotb tests (DEPRECATED - in legacy/ directory):"

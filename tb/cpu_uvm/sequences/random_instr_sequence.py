@@ -38,33 +38,39 @@ class RandomInstructionSequence(BaseSequence):
     Configuration:
     - num_instructions: Number of instructions to generate (default: 100)
     - seed: Random seed for reproducibility (default: random)
+    - config: Optional GeneratorConfig with custom instruction weights (default: None = balanced)
     - env: CPU environment reference (for accessing agents)
 
     Usage:
         seq = RandomInstructionSequence("random_test")
         seq.num_instructions = 1000
         seq.seed = 42
+        seq.config = custom_config  # Optional: custom instruction distribution
         seq.env = cpu_env
         await seq.body()
 
     Attributes:
         num_instructions: Number of instructions to generate
         seed: Random seed
+        config: Optional GeneratorConfig with custom instruction weights
         env: Reference to CPUEnvironment (for agent access)
         generator: RV32IInstructionGenerator instance
     """
 
-    def __init__(self, name, num_instructions=100, seed=None):
+    def __init__(self, name, num_instructions=100, seed=None, config=None):
         """Initialize random instruction sequence.
 
         Args:
             name: Sequence name
             num_instructions: Number of instructions to generate (default: 100)
             seed: Random seed for reproducibility (None = random)
+            config: Optional GeneratorConfig with custom instruction weights
+                    (default: None = balanced)
         """
         super().__init__(name)
         self.num_instructions = num_instructions
         self.seed = seed
+        self.config = config  # NEW: Store custom config
         self.env = None  # Set by test before running
         self.generator = None  # Created in pre_body
 
@@ -82,8 +88,8 @@ class RandomInstructionSequence(BaseSequence):
         if self.env is None:
             raise RuntimeError("RandomInstructionSequence requires env to be set before running")
 
-        # Create instruction generator
-        self.generator = RV32IInstructionGenerator(seed=self.seed)
+        # Create instruction generator with optional custom config
+        self.generator = RV32IInstructionGenerator(seed=self.seed, config=self.config)
 
         # Log test info
         print(f"\n{'=' * 60}")

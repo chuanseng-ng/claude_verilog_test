@@ -45,6 +45,86 @@ class GeneratorConfig:
     shamt_max = 31  # 5-bit shift amount
 
 
+class StressTestConfig:
+    """Configuration profiles for stress testing.
+
+    Provides predefined instruction distribution profiles for corner case testing.
+    Phase 1 constraint: Limited to ALU-only instructions (21/37 RV32I).
+
+    Usage:
+        config = GeneratorConfig()
+        config.instruction_classes = StressTestConfig.alu_intensive()
+        gen = RV32IInstructionGenerator(seed=42, config=config)
+    """
+
+    @staticmethod
+    def alu_intensive():
+        """90% ALU operations (register pressure test).
+
+        Tests heavy register usage and ALU datapath.
+        Useful for: Register file stress, ALU verification, bypass logic.
+
+        Returns:
+            Dict of instruction class weights (sum to 10.0 for easy percentage)
+        """
+        return {
+            "r_type": 5.0,  # 50% (ADD, SUB, AND, OR, XOR, SLT, SLTU, SLL, SRL, SRA)
+            "i_type_alu": 4.0,  # 40% (ADDI, SLTI, SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI)
+            "upper": 1.0,  # 10% (LUI, AUIPC)
+        }
+
+    @staticmethod
+    def jump_heavy():
+        """40% jump instructions (function call simulation).
+
+        Tests control flow changes and PC management.
+        Useful for: JAL/JALR verification, return address stack, branch prediction.
+
+        Note: Phase 1 only supports JAL/JALR (no branches yet).
+
+        Returns:
+            Dict of instruction class weights
+        """
+        return {
+            "jump": 4.0,  # 40% (JAL, JALR)
+            "r_type": 2.5,  # 25% R-type
+            "i_type_alu": 2.5,  # 25% I-type ALU
+            "upper": 1.0,  # 10% Upper immediate
+        }
+
+    @staticmethod
+    def shift_intensive():
+        """Heavy shift operations (corner case testing).
+
+        Tests shift unit with various shift amounts.
+        Useful for: Shift logic verification, barrel shifter stress.
+
+        Returns:
+            Dict of instruction class weights
+        """
+        return {
+            "i_type_alu": 6.0,  # 60% I-type ALU (weighted toward shifts internally)
+            "r_type": 3.0,  # 30% R-type (includes SLL, SRL, SRA)
+            "upper": 1.0,  # 10% Upper immediate
+        }
+
+    @staticmethod
+    def immediate_heavy():
+        """Heavy immediate value operations.
+
+        Tests immediate generation and sign extension logic.
+        Useful for: Immediate generator verification, constant propagation.
+
+        Returns:
+            Dict of instruction class weights
+        """
+        return {
+            "i_type_alu": 5.0,  # 50% I-type ALU
+            "upper": 4.0,  # 40% Upper immediate (LUI, AUIPC)
+            "r_type": 1.0,  # 10% R-type
+        }
+
+
 class RV32IInstructionGenerator:
     """
     Random instruction generator for RV32I.
@@ -141,6 +221,8 @@ class RV32IInstructionGenerator:
             return self._generate_i_type_alu()
         elif instr_class == "upper":
             return self._generate_upper()
+        elif instr_class == "jump":
+            return self._generate_jump()
         else:
             raise ValueError(f"Unknown instruction class: {instr_class}")
 
@@ -219,6 +301,43 @@ class RV32IInstructionGenerator:
         imm20 = self._random_imm20()
 
         return encoder_func(rd, imm20)
+
+    def _generate_jump(self):
+        """Generate random jump instruction (JAL/JALR).
+
+        Note: Jump offsets are constrained to stay within instruction memory bounds.
+        Phase 1: Simple offsets within +/- 4KB range.
+        """
+        opcodes = [
+            ("JAL", enc.JAL, self._random_jump_offset),
+            ("JALR", enc.JALR, self._random_imm12),
+        ]
+        name, encoder_func, imm_generator = self.rng.choice(opcodes)
+
+        rd = self._random_dest_reg()
+
+        if name == "JAL":
+            # JAL: rd, offset (PC-relative)
+            imm = imm_generator()
+            return encoder_func(rd, imm)
+        else:  # JALR
+            # JALR: rd, rs1, offset (register + offset)
+            rs1 = self._random_source_reg()
+            imm = imm_generator()
+            return encoder_func(rd, rs1, imm)
+
+    def _random_jump_offset(self):
+        """Generate random jump offset (20-bit signed, 2-byte aligned).
+
+        JAL immediate is 21 bits (sign-extended, bit 0 is always 0).
+        Range: -1MB to +1MB, but constrained to instruction memory.
+        """
+        # Keep jumps within +/- 1KB for Phase 1 testing
+        max_offset = 1024
+        offset = self.rng.randint(-max_offset, max_offset)
+        # Align to instruction boundary (4 bytes)
+        offset = (offset // 4) * 4
+        return offset
 
 
 # Test harness

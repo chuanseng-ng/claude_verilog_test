@@ -37,3 +37,6 @@ bash.exe.stackdump
 # Python
 venv/
 .venv/
+
+# Test results and artifacts
+results/
