@@ -246,14 +246,20 @@ module rv32i_cpu_top (
       dbg_pc_wr_en  <= 1'b0;
       dbg_reg_wr_en <= 1'b0;
 
+      // Auto-clear command bits (write-1-to-trigger semantics)
+      // Command bits [2:0] are self-clearing to prevent stuck re-halt/re-resume
+      dbg_ctrl_reg[2:0] <= 3'b000;
+
       if (apb_psel_i && apb_penable_i && apb_pwrite_i) begin
         case (apb_paddr_i)
-          // Control register (0x000) - always writable (must allow halt/resume commands)
+          // Control register (0x000) - EXCEPTION: Always writable even when not halted
+          // Rationale: Must allow halt/resume/step commands to be issued at any time
+          // Command bits [2:0] use write-1-to-trigger (self-clearing) semantics
           12'h000: begin
             dbg_ctrl_reg <= apb_pwdata_i;
           end
 
-          // PC register (0x008) - writable when halted
+          // PC register (0x008) - writable only when halted
           12'h008: begin
             if (dbg_halted) begin
               dbg_pc_wr_en   <= 1'b1;
@@ -261,14 +267,14 @@ module rv32i_cpu_top (
             end
           end
 
-          // Breakpoint 0 address (0x100)
+          // Breakpoint 0 address (0x100) - writable only when halted
           12'h100: begin
             if (dbg_halted) begin
               dbg_bp0_addr <= apb_pwdata_i;
             end
           end
 
-          // Breakpoint 0 control (0x104)
+          // Breakpoint 0 control (0x104) - writable only when halted
           12'h104: begin
             if (dbg_halted) begin
               dbg_bp0_ctrl <= apb_pwdata_i;

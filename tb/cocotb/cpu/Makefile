@@ -117,15 +117,15 @@ directed_random_uvm:
 
 directed_alu:
 	@echo "Running directed random ALU-focused test (70% ALU operations)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm::test_directed_alu_focused
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm TESTCASE=test_directed_alu_focused
 
 directed_immediate:
 	@echo "Running directed random immediate-heavy test (80% I-type + upper immediate)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm::test_directed_immediate_heavy
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm TESTCASE=test_directed_immediate_heavy
 
 directed_rtype:
 	@echo "Running directed random R-type dominant test (90% R-type)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm::test_directed_rtype_dominant
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm TESTCASE=test_directed_rtype_dominant
 
 all_uvm:
 	@echo "========================================="
