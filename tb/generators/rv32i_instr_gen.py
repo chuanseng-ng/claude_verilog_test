@@ -306,11 +306,11 @@ class RV32IInstructionGenerator:
         """Generate random jump instruction (JAL/JALR).
 
         Note: Jump offsets are constrained to stay within instruction memory bounds.
-        Phase 1: Simple offsets within +/- 4KB range.
+        Phase 1: JALR uses x0 as base (rs1=0) to ensure safe absolute addressing.
         """
         opcodes = [
             ("JAL", enc.JAL, self._random_jump_offset),
-            ("JALR", enc.JALR, self._random_imm12),
+            ("JALR", enc.JALR, self._random_jalr_offset),
         ]
         name, encoder_func, imm_generator = self.rng.choice(opcodes)
 
@@ -321,26 +321,75 @@ class RV32IInstructionGenerator:
             imm = imm_generator()
             return encoder_func(rd, imm)
         else:  # JALR
-            # JALR: rd, rs1, offset (register + offset)
-            rs1 = self._random_source_reg()
+            # JALR: rd, x0, offset (base address + offset)
+            # Use x0 as base to ensure JALR target = 0 + imm12 stays in instruction memory
+            rs1 = 0  # x0 (always 0) for safe absolute addressing
             imm = imm_generator()
             return encoder_func(rd, rs1, imm)
+
+    def _random_jalr_offset(self):
+        """Generate random JALR offset constrained to instruction memory.
+
+        Since JALR uses x0 (value=0) as base, offset directly specifies target address.
+        Target must be within [instr_mem_base, instr_mem_base + instr_mem_size - 4].
+
+        Returns:
+            12-bit signed immediate that results in valid instruction memory address
+        """
+        # JALR target = rs1 + imm12 = 0 + imm12 (since rs1=x0=0)
+        # Valid range: [instr_mem_base, instr_mem_base + instr_mem_size - 4]
+        min_target = self.config.instr_mem_base
+        max_target = self.config.instr_mem_base + self.config.instr_mem_size - 4
+
+        # Clamp to 12-bit signed immediate range [-2048, 2047]
+        min_imm = max(min_target, self.config.imm12_min)
+        max_imm = min(max_target, self.config.imm12_max)
+
+        # Generate random offset within valid range
+        offset = self.rng.randint(min_imm, max_imm)
+
+        # Align to 4-byte instruction boundary
+        offset = (offset // 4) * 4
+
+        return offset
 
     def _random_jump_offset(self):
         """Generate random jump offset (20-bit signed, 2-byte aligned).
 
         JAL immediate is 21 bits (sign-extended, bit 0 is always 0).
-        Range: -1MB to +1MB, but constrained to instruction memory.
+        Ensures target PC = current_addr + offset stays within instruction memory.
         Ensures offset is never 0 to avoid JAL self-loops.
         """
-        # Keep jumps within +/- 1KB for Phase 1 testing
-        max_offset = 1024
-        offset = self.rng.randint(-max_offset, max_offset)
+        # Calculate valid offset range to stay within instruction memory
+        min_target = self.config.instr_mem_base
+        max_target = self.config.instr_mem_base + self.config.instr_mem_size - 4
+
+        # Calculate offset range from current address
+        min_offset = min_target - self.current_addr
+        max_offset = max_target - self.current_addr
+
+        # Clamp to ±1KB for Phase 1 testing (avoid extremely large jumps)
+        test_max = 1024
+        min_offset = max(min_offset, -test_max)
+        max_offset = min(max_offset, test_max)
+
+        # Generate random offset
+        offset = self.rng.randint(min_offset, max_offset)
+
         # Align to instruction boundary (4 bytes)
         offset = (offset // 4) * 4
+
         # Ensure offset is non-zero to avoid self-loops
         if offset == 0:
-            offset = 4  # Jump forward one instruction
+            # Try to pick a non-zero offset that's still valid
+            if max_offset >= 4:
+                offset = 4  # Jump forward
+            elif min_offset <= -4:
+                offset = -4  # Jump backward
+            else:
+                # If we can't avoid zero (shouldn't happen with 4KB mem), use +4 anyway
+                offset = 4
+
         return offset
 
 
