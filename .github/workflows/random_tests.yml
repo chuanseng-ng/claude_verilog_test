@@ -52,7 +52,19 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y verilator gtkwave
+          sudo apt-get install -y git perl python3 make autoconf g++ flex bison ccache \
+            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlibc zlib1g \
+            zlib1g-dev gtkwave
+
+          # Install Verilator 5.036+ from source (Ubuntu's apt has 5.020)
+          cd /tmp
+          git clone https://github.com/verilator/verilator
+          cd verilator
+          git checkout v5.036
+          autoconf
+          ./configure
+          make -j$(nproc)
+          sudo make install
           verilator --version
 
       - name: Install Python dependencies
@@ -176,7 +188,7 @@ jobs:
 
             **Job Status:** ${jobStatus}
             **Commit:** ${context.sha.substring(0, 7)}
-            **Workflow:** [View Run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            **Workflow:** [View Run](https://github.com/${context.repo.owner}/${context.repo.name}/actions/runs/${context.runId})
 
             <details>
             <summary>Test Summary</summary>
@@ -228,7 +240,19 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y verilator gtkwave
+          sudo apt-get install -y git perl python3 make autoconf g++ flex bison ccache \
+            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlibc zlib1g \
+            zlib1g-dev gtkwave
+
+          # Install Verilator 5.036+ from source (Ubuntu's apt has 5.020)
+          cd /tmp
+          git clone https://github.com/verilator/verilator
+          cd verilator
+          git checkout v5.036
+          autoconf
+          ./configure
+          make -j$(nproc)
+          sudo make install
           verilator --version
 
       - name: Install Python dependencies
@@ -346,7 +370,19 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y verilator gtkwave
+          sudo apt-get install -y git perl python3 make autoconf g++ flex bison ccache \
+            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlibc zlib1g \
+            zlib1g-dev gtkwave
+
+          # Install Verilator 5.036+ from source (Ubuntu's apt has 5.020)
+          cd /tmp
+          git clone https://github.com/verilator/verilator
+          cd verilator
+          git checkout v5.036
+          autoconf
+          ./configure
+          make -j$(nproc)
+          sudo make install
           verilator --version
 
       - name: Install Python dependencies
@@ -519,7 +555,7 @@ jobs:
               body: `## Nightly Extended Test Suite Failed
 
               **Date:** ${new Date().toISOString()}
-              **Workflow Run:** [View Run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              **Workflow Run:** [View Run](https://github.com/${context.repo.owner}/${context.repo.name}/actions/runs/${context.runId})
               **Commit:** ${context.sha}
 
               ### Test Configuration
