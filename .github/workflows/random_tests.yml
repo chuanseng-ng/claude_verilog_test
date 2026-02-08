@@ -192,31 +192,34 @@ jobs:
             const jobStatus = '${{ job.status }}';
             const statusEmoji = jobStatus === 'success' ? '✅' : '❌';
 
-            const comment = `## ${statusEmoji} Random Test Infrastructure - Smoke Test Results
+            // Build comment with proper formatting (trim to remove indentation)
+            const commentLines = [
+              `## ${statusEmoji} Random Test Infrastructure - Smoke Test Results`,
+              '',
+              `**Job Status:** ${jobStatus}`,
+              `**Commit:** ${context.sha.substring(0, 7)}`,
+              `**Workflow:** [View Run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              '',
+              '<details>',
+              '<summary>Test Summary</summary>',
+              '',
+              '```',
+              summary,
+              '```',
+              '',
+              '</details>',
+              '',
+              '### Artifacts Available',
+              '- 🌊 Failure waveforms (if any failures occurred)',
+              '- 📊 Performance metrics (IPC/CPI analysis)',
+              '- 📈 Coverage reports (instruction pair coverage)',
+              '- 📝 Test logs',
+              '',
+              '**Note:** Full random tests (100,000 instructions) will run after merge to main.'
+            ];
+            const comment = commentLines.join('\n');
 
-            **Job Status:** ${jobStatus}
-            **Commit:** ${context.sha.substring(0, 7)}
-            **Workflow:** [View Run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
-
-            <details>
-            <summary>Test Summary</summary>
-
-            \`\`\`
-            ${summary}
-            \`\`\`
-
-            </details>
-
-            ### Artifacts Available
-            - 🌊 Failure waveforms (if any failures occurred)
-            - 📊 Performance metrics (IPC/CPI analysis)
-            - 📈 Coverage reports (instruction pair coverage)
-            - 📝 Test logs
-
-            **Note:** Full random tests (100,000 instructions) will run after merge to main.
-            `;
-
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -280,13 +283,13 @@ jobs:
 
       - name: Run full random tests
         env:
-          RANDOM_TEST_SEEDS: '1000'
-          RANDOM_TEST_INSTRS: '100'
+          RANDOM_TEST_SEEDS: '10'
+          RANDOM_TEST_INSTRS: '10000'
           PYTHONPATH: ${{ github.workspace }}
         working-directory: tb/cocotb/cpu
         run: |
           echo "=== Running Full Random Instruction Tests ==="
-          echo "Configuration: 1,000 seeds × 100 instructions = 100,000 total instructions"
+          echo "Configuration: 10 seeds × 10,000 instructions = 100,000 total instructions"
           make random_uvm
 
       - name: Generate test summary
@@ -296,7 +299,7 @@ jobs:
             '# Full Random Test Results' \
             '' \
             '## Configuration' \
-            '- Random Tests: 1,000 seeds × 100 instructions = 100,000 total' \
+            '- Random Tests: 10 seeds × 10,000 instructions = 100,000 total' \
             '- Test Mode: Full coverage validation' \
             '' \
             '## Test Status' \
@@ -467,7 +470,7 @@ jobs:
             '## Test Suite Configuration' \
             '' \
             '### Random Tests' \
-            '- Configuration: 1,000 seeds × 100 instructions = 100,000 total' \
+            '- Configuration: 10 seeds × 10,000 instructions = 100,000 total' \
             '- Expected pair coverage: >50% (220+ unique pairs)' \
             '- Expected IPC: ~1.00 (single-cycle CPU)' \
             '' \
