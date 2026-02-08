@@ -43,6 +43,7 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 .PHONY: smoke basic random isa ebreak all_tests usage info distclean
 .PHONY: smoke_uvm random_uvm random_uvm_smoke random_uvm_waves isa_uvm all_uvm
 .PHONY: stress_uvm stress_uvm_smoke stress_alu stress_jump stress_shift stress_immediate
+.PHONY: directed_random_uvm directed_alu directed_immediate directed_rtype
 
 smoke:
 	@echo "Running smoke tests..."
@@ -109,6 +110,22 @@ stress_shift:
 stress_immediate:
 	@echo "Running immediate-heavy stress test..."
 	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm::test_stress_immediate_heavy
+
+directed_random_uvm:
+	@echo "Running pyuvm directed random tests (3 scenarios: ALU-focused, immediate-heavy, R-type dominant)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm
+
+directed_alu:
+	@echo "Running directed random ALU-focused test (70% ALU operations)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm::test_directed_alu_focused
+
+directed_immediate:
+	@echo "Running directed random immediate-heavy test (80% I-type + upper immediate)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm::test_directed_immediate_heavy
+
+directed_rtype:
+	@echo "Running directed random R-type dominant test (90% R-type)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_directed_random_uvm::test_directed_rtype_dominant
 
 all_uvm:
 	@echo "========================================="
@@ -210,6 +227,7 @@ usage info:
 	@echo "  make random_uvm_waves  - Run pyuvm random tests with waveform capture enabled"
 	@echo "  make stress_uvm        - Run pyuvm stress tests (4 profiles: ALU/Jump/Shift/Immediate)"
 	@echo "  make stress_uvm_smoke  - Run pyuvm stress smoke test (10 seeds × 100 instr per profile)"
+	@echo "  make directed_random_uvm - Run pyuvm directed random tests (3 scenarios with custom distributions)"
 	@echo "  make all_uvm           - Run all pyuvm test suites (smoke + ISA + random)"
 	@echo ""
 	@echo "Individual stress test profiles:"
@@ -217,6 +235,11 @@ usage info:
 	@echo "  make stress_jump       - Jump-heavy test (40% jump instructions)"
 	@echo "  make stress_shift      - Shift-intensive test (heavy shift operations)"
 	@echo "  make stress_immediate  - Immediate-heavy test (tests immediate generation)"
+	@echo ""
+	@echo "Individual directed random test scenarios:"
+	@echo "  make directed_alu      - ALU-focused test (70% ALU operations, balanced coverage)"
+	@echo "  make directed_immediate - Immediate-heavy test (80% I-type + upper immediate)"
+	@echo "  make directed_rtype    - R-type dominant test (90% R-type instructions)"
 	@echo ""
 	@echo "Legacy targets (DEPRECATED - use pyuvm instead):"
 	@echo "  make smoke        - Run legacy smoke tests"
@@ -264,6 +287,7 @@ usage info:
 	@echo "    test_isa_uvm              - pyuvm ISA compliance tests (54 tests, 37 instructions)"
 	@echo "    test_random_uvm           - pyuvm random tests (multi-seed)"
 	@echo "    test_stress_uvm           - pyuvm stress tests (biased instruction distributions)"
+	@echo "    test_directed_random_uvm  - pyuvm directed random tests (custom distributions)"
 	@echo "    test_ebreak               - EBREAK halt detection test"
 	@echo ""
 	@echo "  Legacy cocotb tests (DEPRECATED - in legacy/ directory):"
