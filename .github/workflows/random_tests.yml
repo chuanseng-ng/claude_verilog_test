@@ -53,10 +53,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y git perl python3 make autoconf g++ flex bison ccache \
-            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlibc zlib1g \
-            zlib1g-dev gtkwave
+            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlib1g \
+            zlib1g-dev gtkwave help2man
 
           # Install Verilator 5.036+ from source (Ubuntu's apt has 5.020)
+          echo "Building Verilator 5.036 from source..."
           cd /tmp
           git clone https://github.com/verilator/verilator
           cd verilator
@@ -65,6 +66,7 @@ jobs:
           ./configure
           make -j$(nproc)
           sudo make install
+          echo "Verilator installation complete:"
           verilator --version
 
       - name: Install Python dependencies
@@ -241,10 +243,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y git perl python3 make autoconf g++ flex bison ccache \
-            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlibc zlib1g \
-            zlib1g-dev gtkwave
+            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlib1g \
+            zlib1g-dev gtkwave help2man
 
           # Install Verilator 5.036+ from source (Ubuntu's apt has 5.020)
+          echo "Building Verilator 5.036 from source..."
           cd /tmp
           git clone https://github.com/verilator/verilator
           cd verilator
@@ -253,6 +256,7 @@ jobs:
           ./configure
           make -j$(nproc)
           sudo make install
+          echo "Verilator installation complete:"
           verilator --version
 
       - name: Install Python dependencies
@@ -371,10 +375,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y git perl python3 make autoconf g++ flex bison ccache \
-            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlibc zlib1g \
-            zlib1g-dev gtkwave
+            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlib1g \
+            zlib1g-dev gtkwave help2man
 
           # Install Verilator 5.036+ from source (Ubuntu's apt has 5.020)
+          echo "Building Verilator 5.036 from source..."
           cd /tmp
           git clone https://github.com/verilator/verilator
           cd verilator
@@ -383,6 +388,7 @@ jobs:
           ./configure
           make -j$(nproc)
           sudo make install
+          echo "Verilator installation complete:"
           verilator --version
 
       - name: Install Python dependencies
