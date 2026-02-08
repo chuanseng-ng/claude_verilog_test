@@ -36,7 +36,12 @@ jobs:
   smoke-test:
     name: Smoke Tests (PR Fast Validation)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.test_mode == 'smoke')
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
 
     steps:
       - name: Checkout repository
@@ -214,7 +219,7 @@ jobs:
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
-              repo: context.repo.repo,
+              repo: context.repo.name,
               body: comment
             });
 
@@ -224,6 +229,7 @@ jobs:
   full-random-test:
     name: Full Random Tests (Main Branch)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && inputs.test_mode == 'full-random')
@@ -356,9 +362,13 @@ jobs:
   extended-test:
     name: Extended Tests (Nightly Full Suite)
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     if: |
       github.event_name == 'schedule' ||
       (github.event_name == 'workflow_dispatch' && inputs.test_mode == 'extended')
+    permissions:
+      contents: read
+      issues: write
 
     steps:
       - name: Checkout repository
@@ -558,7 +568,7 @@ jobs:
             const bodyText = `## Nightly Extended Test Suite Failed
 
               **Date:** ${new Date().toISOString()}
-              **Workflow Run:** [View Run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              **Workflow Run:** [View Run](https://github.com/${context.repo.owner}/${context.repo.name}/actions/runs/${context.runId})
               **Commit:** ${context.sha}
 
               ### Test Configuration
@@ -583,7 +593,7 @@ jobs:
 
             const issue = await github.rest.issues.create({
               owner: context.repo.owner,
-              repo: context.repo.repo,
+              repo: context.repo.name,
               title: `[CI] Nightly Extended Test Failure - ${new Date().toISOString().split('T')[0]}`,
               body: bodyText,
               labels: ['bug', 'ci-failure', 'verification']
@@ -597,6 +607,7 @@ jobs:
   summary-report:
     name: Generate Test Summary Report
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [smoke-test, full-random-test, extended-test]
     if: always()
 
