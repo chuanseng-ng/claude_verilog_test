@@ -196,7 +196,7 @@ jobs:
 
             **Job Status:** ${jobStatus}
             **Commit:** ${context.sha.substring(0, 7)}
-            **Workflow:** [View Run](https://github.com/${context.repo.owner}/${context.repo.name}/actions/runs/${context.runId})
+            **Workflow:** [View Run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
 
             <details>
             <summary>Test Summary</summary>
@@ -219,7 +219,7 @@ jobs:
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
-              repo: context.repo.name,
+              repo: context.repo.repo,
               body: comment
             });
 
@@ -568,7 +568,7 @@ jobs:
             const bodyText = `## Nightly Extended Test Suite Failed
 
               **Date:** ${new Date().toISOString()}
-              **Workflow Run:** [View Run](https://github.com/${context.repo.owner}/${context.repo.name}/actions/runs/${context.runId})
+              **Workflow Run:** [View Run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
               **Commit:** ${context.sha}
 
               ### Test Configuration
@@ -593,7 +593,7 @@ jobs:
 
             const issue = await github.rest.issues.create({
               owner: context.repo.owner,
-              repo: context.repo.name,
+              repo: context.repo.repo,
               title: `[CI] Nightly Extended Test Failure - ${new Date().toISOString().split('T')[0]}`,
               body: bodyText,
               labels: ['bug', 'ci-failure', 'verification']

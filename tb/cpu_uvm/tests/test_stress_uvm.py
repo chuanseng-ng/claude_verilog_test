@@ -40,6 +40,120 @@ from tb.generators.rv32i_instr_gen import (
 from .base_test import BaseTest
 
 
+async def _run_stress_profile(dut, profile_name, waveform_subdir, seed_base, stress_profile):
+    """Common helper for running stress test profiles.
+
+    Args:
+        dut: Device under test
+        profile_name: Display name for the test profile (e.g., "ALU-Intensive")
+        waveform_subdir: Subdirectory for waveforms (e.g., "stress_alu")
+        seed_base: Base seed offset (e.g., 2000, 3000, 4000, 5000)
+        stress_profile: StressTestConfig profile dictionary
+    """
+    # Configure test parameters from environment variables
+    if os.getenv("STRESS_TEST_SMOKE"):
+        num_seeds = 10
+        num_instructions = 100
+        total_instructions = num_seeds * num_instructions
+        dut._log.info(
+            f"=== Test: {profile_name} Stress SMOKE TEST "
+            f"(10 seeds × 100 instr = 1,000 total) (pyuvm) ==="
+        )
+    else:
+        num_seeds = int(os.getenv("STRESS_TEST_SEEDS", "100"))
+        num_instructions = int(os.getenv("STRESS_TEST_INSTRS", "500"))
+        total_instructions = num_seeds * num_instructions
+        dut._log.info(
+            f"=== Test: {profile_name} Stress ({num_seeds} seeds × "
+            f"{num_instructions} instr = {total_instructions:,} total) (pyuvm) ==="
+        )
+
+    # Create waveform directory
+    waveform_dir = f"results/waveforms/{waveform_subdir}"
+    os.makedirs(waveform_dir, exist_ok=True)
+
+    # Start clock
+    clock = Clock(dut.clk_i, 10, unit="ns")
+    cocotb.start_soon(clock.start())
+
+    # Log stress profile
+    dut._log.info(f"Stress profile: {stress_profile}")
+
+    # Track failures
+    failed_seeds = []
+
+    for seed_idx in range(num_seeds):
+        seed = seed_base + seed_idx
+        dut._log.info(f"\n{'=' * 60}")
+        dut._log.info(f"{profile_name} Seed {seed_idx + 1}/{num_seeds}: {seed}")
+        dut._log.info(f"{'=' * 60}\n")
+
+        # Create and run test
+        test = StressTest(
+            f"stress_{waveform_subdir}_seed{seed}",
+            None,
+            dut,
+            num_instructions=num_instructions,
+            seed=seed,
+            stress_profile=stress_profile,
+        )
+        test.build_phase()
+        test.connect_phase()
+        test.end_of_elaboration_phase()
+
+        # Start background tasks (track for cleanup)
+        bg_tasks = []
+        bg_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler()))
+        bg_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler()))
+        bg_tasks.append(cocotb.start_soon(test.env.commit_monitor.run_phase()))
+        bg_tasks.append(cocotb.start_soon(test.env.scoreboard.run_phase()))
+
+        await ClockCycles(dut.clk_i, 2)
+
+        # Reset and run
+        await test.reset_dut()
+        await test.run_phase()
+
+        # Terminate background tasks before moving to next seed
+        for task in bg_tasks:
+            task.kill()
+        await ClockCycles(dut.clk_i, 1)  # Let kills propagate
+
+        # Check results
+        if test.env.scoreboard.mismatches > 0:
+            dut._log.error(
+                f"{profile_name} Seed {seed} failed with {test.env.scoreboard.mismatches} errors"
+            )
+            test.env.scoreboard.report_phase()
+
+            # Save waveform
+            waveform_file = os.path.join(waveform_dir, f"seed_{seed}_failure.vcd")
+            if os.path.exists("dump.vcd"):
+                shutil.copy("dump.vcd", waveform_file)
+                dut._log.info(f"Waveform saved to {waveform_file}")
+
+            failed_seeds.append((seed, test.env.scoreboard.mismatches))
+        else:
+            dut._log.info(
+                f"✓ {profile_name} Seed {seed} passed "
+                f"({test.env.scoreboard.matches} commits validated)\n"
+            )
+
+    # Report results
+    dut._log.info(f"\n{'=' * 60}")
+    if failed_seeds:
+        dut._log.error(f"{profile_name}: {len(failed_seeds)} seed(s) failed out of {num_seeds}:")
+        for seed, mismatch_count in failed_seeds:
+            dut._log.error(f"  - Seed {seed}: {mismatch_count} mismatches")
+        dut._log.info(f"{'=' * 60}\n")
+        assert False, (
+            f"{profile_name}: {len(failed_seeds)} seed(s) failed (see waveforms in {waveform_dir})"
+        )
+    else:
+        dut._log.info(f"{profile_name}: All {num_seeds} seeds passed!")
+        dut._log.info(f"{'=' * 60}\n")
+
+
 class StressTest(BaseTest):
     """Test stress instruction sequences with biased distributions."""
 
@@ -116,103 +230,13 @@ async def test_stress_alu_intensive(dut):
 
     Configuration: 50% R-type + 40% I-type ALU + 10% Upper
     """
-    # Configure test parameters
-    if os.getenv("STRESS_TEST_SMOKE"):
-        num_seeds = 10
-        num_instructions = 100
-        total_instructions = num_seeds * num_instructions
-        dut._log.info(
-            "=== Test: ALU-Intensive Stress SMOKE TEST "
-            "(10 seeds × 100 instr = 1,000 total) (pyuvm) ==="
-        )
-    else:
-        num_seeds = int(os.getenv("STRESS_TEST_SEEDS", "100"))
-        num_instructions = int(os.getenv("STRESS_TEST_INSTRS", "500"))
-        total_instructions = num_seeds * num_instructions
-        dut._log.info(
-            f"=== Test: ALU-Intensive Stress ({num_seeds} seeds × "
-            f"{num_instructions} instr = {total_instructions:,} total) (pyuvm) ==="
-        )
-
-    # Create waveform directory
-    waveform_dir = "results/waveforms/stress_alu"
-    os.makedirs(waveform_dir, exist_ok=True)
-
-    # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
-    cocotb.start_soon(clock.start())
-
-    # Get stress profile
-    stress_profile = StressTestConfig.alu_intensive()
-    dut._log.info(f"Stress profile: {stress_profile}")
-
-    # Track failures
-    failed_seeds = []
-
-    for seed_idx in range(num_seeds):
-        seed = 2000 + seed_idx  # Different seed range than random tests
-        dut._log.info(f"\n{'=' * 60}")
-        dut._log.info(f"ALU-Intensive Seed {seed_idx + 1}/{num_seeds}: {seed}")
-        dut._log.info(f"{'=' * 60}\n")
-
-        # Create and run test
-        test = StressTest(
-            f"stress_alu_seed{seed}",
-            None,
-            dut,
-            num_instructions=num_instructions,
-            seed=seed,
-            stress_profile=stress_profile,
-        )
-        test.build_phase()
-        test.connect_phase()
-        test.end_of_elaboration_phase()
-
-        # Start background tasks
-        cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
-        cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
-        cocotb.start_soon(test.env.commit_monitor.run_phase())
-        cocotb.start_soon(test.env.scoreboard.run_phase())
-
-        await ClockCycles(dut.clk_i, 2)
-
-        # Reset and run
-        await test.reset_dut()
-        await test.run_phase()
-
-        # Check results
-        if test.env.scoreboard.mismatches > 0:
-            dut._log.error(
-                f"ALU-Intensive Seed {seed} failed with {test.env.scoreboard.mismatches} errors"
-            )
-            test.env.scoreboard.report_phase()
-
-            # Save waveform
-            waveform_file = os.path.join(waveform_dir, f"seed_{seed}_failure.vcd")
-            if os.path.exists("dump.vcd"):
-                shutil.copy("dump.vcd", waveform_file)
-                dut._log.info(f"Waveform saved to {waveform_file}")
-
-            failed_seeds.append((seed, test.env.scoreboard.mismatches))
-        else:
-            dut._log.info(
-                f"✓ ALU-Intensive Seed {seed} passed "
-                f"({test.env.scoreboard.matches} commits validated)\n"
-            )
-
-    # Report results
-    dut._log.info(f"\n{'=' * 60}")
-    if failed_seeds:
-        dut._log.error(f"ALU-Intensive: {len(failed_seeds)} seed(s) failed out of {num_seeds}:")
-        for seed, mismatch_count in failed_seeds:
-            dut._log.error(f"  - Seed {seed}: {mismatch_count} mismatches")
-        dut._log.info(f"{'=' * 60}\n")
-        assert False, (
-            f"ALU-Intensive: {len(failed_seeds)} seed(s) failed (see waveforms in {waveform_dir})"
-        )
-    else:
-        dut._log.info(f"ALU-Intensive: All {num_seeds} seeds passed!")
-        dut._log.info(f"{'=' * 60}\n")
+    await _run_stress_profile(
+        dut=dut,
+        profile_name="ALU-Intensive",
+        waveform_subdir="stress_alu",
+        seed_base=2000,
+        stress_profile=StressTestConfig.alu_intensive(),
+    )
 
 
 @cocotb.test()
@@ -227,103 +251,13 @@ async def test_stress_jump_heavy(dut):
 
     Configuration: 40% Jumps + 25% R-type + 25% I-type ALU + 10% Upper
     """
-    # Configure test parameters
-    if os.getenv("STRESS_TEST_SMOKE"):
-        num_seeds = 10
-        num_instructions = 100
-        total_instructions = num_seeds * num_instructions
-        dut._log.info(
-            "=== Test: Jump-Heavy Stress SMOKE TEST "
-            "(10 seeds × 100 instr = 1,000 total) (pyuvm) ==="
-        )
-    else:
-        num_seeds = int(os.getenv("STRESS_TEST_SEEDS", "100"))
-        num_instructions = int(os.getenv("STRESS_TEST_INSTRS", "500"))
-        total_instructions = num_seeds * num_instructions
-        dut._log.info(
-            f"=== Test: Jump-Heavy Stress ({num_seeds} seeds × "
-            f"{num_instructions} instr = {total_instructions:,} total) (pyuvm) ==="
-        )
-
-    # Create waveform directory
-    waveform_dir = "results/waveforms/stress_jump"
-    os.makedirs(waveform_dir, exist_ok=True)
-
-    # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
-    cocotb.start_soon(clock.start())
-
-    # Get stress profile
-    stress_profile = StressTestConfig.jump_heavy()
-    dut._log.info(f"Stress profile: {stress_profile}")
-
-    # Track failures
-    failed_seeds = []
-
-    for seed_idx in range(num_seeds):
-        seed = 3000 + seed_idx  # Different seed range
-        dut._log.info(f"\n{'=' * 60}")
-        dut._log.info(f"Jump-Heavy Seed {seed_idx + 1}/{num_seeds}: {seed}")
-        dut._log.info(f"{'=' * 60}\n")
-
-        # Create and run test
-        test = StressTest(
-            f"stress_jump_seed{seed}",
-            None,
-            dut,
-            num_instructions=num_instructions,
-            seed=seed,
-            stress_profile=stress_profile,
-        )
-        test.build_phase()
-        test.connect_phase()
-        test.end_of_elaboration_phase()
-
-        # Start background tasks
-        cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
-        cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
-        cocotb.start_soon(test.env.commit_monitor.run_phase())
-        cocotb.start_soon(test.env.scoreboard.run_phase())
-
-        await ClockCycles(dut.clk_i, 2)
-
-        # Reset and run
-        await test.reset_dut()
-        await test.run_phase()
-
-        # Check results
-        if test.env.scoreboard.mismatches > 0:
-            dut._log.error(
-                f"Jump-Heavy Seed {seed} failed with {test.env.scoreboard.mismatches} errors"
-            )
-            test.env.scoreboard.report_phase()
-
-            # Save waveform
-            waveform_file = os.path.join(waveform_dir, f"seed_{seed}_failure.vcd")
-            if os.path.exists("dump.vcd"):
-                shutil.copy("dump.vcd", waveform_file)
-                dut._log.info(f"Waveform saved to {waveform_file}")
-
-            failed_seeds.append((seed, test.env.scoreboard.mismatches))
-        else:
-            dut._log.info(
-                f"✓ Jump-Heavy Seed {seed} passed \
-                    ({test.env.scoreboard.matches} commits validated)\n"
-            )
-
-    # Report results
-    dut._log.info(f"\n{'=' * 60}")
-    if failed_seeds:
-        dut._log.error(f"Jump-Heavy: {len(failed_seeds)} seed(s) failed out of {num_seeds}:")
-        for seed, mismatch_count in failed_seeds:
-            dut._log.error(f"  - Seed {seed}: {mismatch_count} mismatches")
-        dut._log.info(f"{'=' * 60}\n")
-        assert False, (
-            f"Jump-Heavy: {len(failed_seeds)} seed(s) failed (see waveforms in {waveform_dir})"
-        )
-    else:
-        dut._log.info(f"Jump-Heavy: All {num_seeds} seeds passed!")
-        dut._log.info(f"{'=' * 60}\n")
+    await _run_stress_profile(
+        dut=dut,
+        profile_name="Jump-Heavy",
+        waveform_subdir="stress_jump",
+        seed_base=3000,
+        stress_profile=StressTestConfig.jump_heavy(),
+    )
 
 
 @cocotb.test()
@@ -338,103 +272,13 @@ async def test_stress_shift_intensive(dut):
 
     Configuration: 60% I-type ALU (shift-biased) + 30% R-type + 10% Upper
     """
-    # Configure test parameters
-    if os.getenv("STRESS_TEST_SMOKE"):
-        num_seeds = 10
-        num_instructions = 100
-        total_instructions = num_seeds * num_instructions
-        dut._log.info(
-            "=== Test: Shift-Intensive Stress SMOKE TEST "
-            "(10 seeds × 100 instr = 1,000 total) (pyuvm) ==="
-        )
-    else:
-        num_seeds = int(os.getenv("STRESS_TEST_SEEDS", "100"))
-        num_instructions = int(os.getenv("STRESS_TEST_INSTRS", "500"))
-        total_instructions = num_seeds * num_instructions
-        dut._log.info(
-            f"=== Test: Shift-Intensive Stress ({num_seeds} seeds × "
-            f"{num_instructions} instr = {total_instructions:,} total) (pyuvm) ==="
-        )
-
-    # Create waveform directory
-    waveform_dir = "results/waveforms/stress_shift"
-    os.makedirs(waveform_dir, exist_ok=True)
-
-    # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
-    cocotb.start_soon(clock.start())
-
-    # Get stress profile
-    stress_profile = StressTestConfig.shift_intensive()
-    dut._log.info(f"Stress profile: {stress_profile}")
-
-    # Track failures
-    failed_seeds = []
-
-    for seed_idx in range(num_seeds):
-        seed = 4000 + seed_idx  # Different seed range
-        dut._log.info(f"\n{'=' * 60}")
-        dut._log.info(f"Shift-Intensive Seed {seed_idx + 1}/{num_seeds}: {seed}")
-        dut._log.info(f"{'=' * 60}\n")
-
-        # Create and run test
-        test = StressTest(
-            f"stress_shift_seed{seed}",
-            None,
-            dut,
-            num_instructions=num_instructions,
-            seed=seed,
-            stress_profile=stress_profile,
-        )
-        test.build_phase()
-        test.connect_phase()
-        test.end_of_elaboration_phase()
-
-        # Start background tasks
-        cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
-        cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
-        cocotb.start_soon(test.env.commit_monitor.run_phase())
-        cocotb.start_soon(test.env.scoreboard.run_phase())
-
-        await ClockCycles(dut.clk_i, 2)
-
-        # Reset and run
-        await test.reset_dut()
-        await test.run_phase()
-
-        # Check results
-        if test.env.scoreboard.mismatches > 0:
-            dut._log.error(
-                f"Shift-Intensive Seed {seed} failed with {test.env.scoreboard.mismatches} errors"
-            )
-            test.env.scoreboard.report_phase()
-
-            # Save waveform
-            waveform_file = os.path.join(waveform_dir, f"seed_{seed}_failure.vcd")
-            if os.path.exists("dump.vcd"):
-                shutil.copy("dump.vcd", waveform_file)
-                dut._log.info(f"Waveform saved to {waveform_file}")
-
-            failed_seeds.append((seed, test.env.scoreboard.mismatches))
-        else:
-            dut._log.info(
-                f"✓ Shift-Intensive Seed {seed} passed \
-                    ({test.env.scoreboard.matches} commits validated)\n"
-            )
-
-    # Report results
-    dut._log.info(f"\n{'=' * 60}")
-    if failed_seeds:
-        dut._log.error(f"Shift-Intensive: {len(failed_seeds)} seed(s) failed out of {num_seeds}:")
-        for seed, mismatch_count in failed_seeds:
-            dut._log.error(f"  - Seed {seed}: {mismatch_count} mismatches")
-        dut._log.info(f"{'=' * 60}\n")
-        assert False, (
-            f"Shift-Intensive: {len(failed_seeds)} seed(s) failed (see waveforms in {waveform_dir})"
-        )
-    else:
-        dut._log.info(f"Shift-Intensive: All {num_seeds} seeds passed!")
-        dut._log.info(f"{'=' * 60}\n")
+    await _run_stress_profile(
+        dut=dut,
+        profile_name="Shift-Intensive",
+        waveform_subdir="stress_shift",
+        seed_base=4000,
+        stress_profile=StressTestConfig.shift_intensive(),
+    )
 
 
 @cocotb.test()
@@ -449,100 +293,10 @@ async def test_stress_immediate_heavy(dut):
 
     Configuration: 50% I-type ALU + 40% Upper + 10% R-type
     """
-    # Configure test parameters
-    if os.getenv("STRESS_TEST_SMOKE"):
-        num_seeds = 10
-        num_instructions = 100
-        total_instructions = num_seeds * num_instructions
-        dut._log.info(
-            "=== Test: Immediate-Heavy Stress SMOKE TEST "
-            "(10 seeds × 100 instr = 1,000 total) (pyuvm) ==="
-        )
-    else:
-        num_seeds = int(os.getenv("STRESS_TEST_SEEDS", "100"))
-        num_instructions = int(os.getenv("STRESS_TEST_INSTRS", "500"))
-        total_instructions = num_seeds * num_instructions
-        dut._log.info(
-            f"=== Test: Immediate-Heavy Stress ({num_seeds} seeds × "
-            f"{num_instructions} instr = {total_instructions:,} total) (pyuvm) ==="
-        )
-
-    # Create waveform directory
-    waveform_dir = "results/waveforms/stress_immediate"
-    os.makedirs(waveform_dir, exist_ok=True)
-
-    # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
-    cocotb.start_soon(clock.start())
-
-    # Get stress profile
-    stress_profile = StressTestConfig.immediate_heavy()
-    dut._log.info(f"Stress profile: {stress_profile}")
-
-    # Track failures
-    failed_seeds = []
-
-    for seed_idx in range(num_seeds):
-        seed = 5000 + seed_idx  # Different seed range
-        dut._log.info(f"\n{'=' * 60}")
-        dut._log.info(f"Immediate-Heavy Seed {seed_idx + 1}/{num_seeds}: {seed}")
-        dut._log.info(f"{'=' * 60}\n")
-
-        # Create and run test
-        test = StressTest(
-            f"stress_immediate_seed{seed}",
-            None,
-            dut,
-            num_instructions=num_instructions,
-            seed=seed,
-            stress_profile=stress_profile,
-        )
-        test.build_phase()
-        test.connect_phase()
-        test.end_of_elaboration_phase()
-
-        # Start background tasks
-        cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
-        cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
-        cocotb.start_soon(test.env.commit_monitor.run_phase())
-        cocotb.start_soon(test.env.scoreboard.run_phase())
-
-        await ClockCycles(dut.clk_i, 2)
-
-        # Reset and run
-        await test.reset_dut()
-        await test.run_phase()
-
-        # Check results
-        if test.env.scoreboard.mismatches > 0:
-            dut._log.error(
-                f"Immediate-Heavy Seed {seed} failed with {test.env.scoreboard.mismatches} errors"
-            )
-            test.env.scoreboard.report_phase()
-
-            # Save waveform
-            waveform_file = os.path.join(waveform_dir, f"seed_{seed}_failure.vcd")
-            if os.path.exists("dump.vcd"):
-                shutil.copy("dump.vcd", waveform_file)
-                dut._log.info(f"Waveform saved to {waveform_file}")
-
-            failed_seeds.append((seed, test.env.scoreboard.mismatches))
-        else:
-            dut._log.info(
-                f"✓ Immediate-Heavy Seed {seed} passed \
-                    ({test.env.scoreboard.matches} commits validated)\n"
-            )
-
-    # Report results
-    dut._log.info(f"\n{'=' * 60}")
-    if failed_seeds:
-        dut._log.error(f"Immediate-Heavy: {len(failed_seeds)} seed(s) failed out of {num_seeds}:")
-        for seed, mismatch_count in failed_seeds:
-            dut._log.error(f"  - Seed {seed}: {mismatch_count} mismatches")
-        dut._log.info(f"{'=' * 60}\n")
-        assert False, (
-            f"Immediate-Heavy: {len(failed_seeds)} seed(s) failed (see waveforms in {waveform_dir})"
-        )
-    else:
-        dut._log.info(f"Immediate-Heavy: All {num_seeds} seeds passed!")
-        dut._log.info(f"{'=' * 60}\n")
+    await _run_stress_profile(
+        dut=dut,
+        profile_name="Immediate-Heavy",
+        waveform_subdir="stress_immediate",
+        seed_base=5000,
+        stress_profile=StressTestConfig.immediate_heavy(),
+    )
