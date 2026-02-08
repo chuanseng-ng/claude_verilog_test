@@ -153,11 +153,11 @@ async def test_directed_alu_focused(dut):
         test.connect_phase()
         test.end_of_elaboration_phase()
 
-        # Start background tasks for all components
-        cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
-        cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
-        cocotb.start_soon(test.env.commit_monitor.run_phase())
-        cocotb.start_soon(test.env.scoreboard.run_phase())
+        # Start background tasks for all components (track for cleanup)
+        read_task = cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
+        write_task = cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
+        commit_task = cocotb.start_soon(test.env.commit_monitor.run_phase())
+        sb_task = cocotb.start_soon(test.env.scoreboard.run_phase())
 
         # Give background tasks a chance to start
         await ClockCycles(dut.clk_i, 2)
@@ -165,6 +165,12 @@ async def test_directed_alu_focused(dut):
         # Reset and run
         await test.reset_dut()
         await test.run_phase()
+
+        # Terminate background tasks before moving to next seed
+        read_task.kill()
+        write_task.kill()
+        commit_task.kill()
+        sb_task.kill()
 
         # Check results
         if test.env.scoreboard.mismatches > 0:
@@ -269,11 +275,11 @@ async def test_directed_immediate_heavy(dut):
         test.connect_phase()
         test.end_of_elaboration_phase()
 
-        # Start background tasks for all components
-        cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
-        cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
-        cocotb.start_soon(test.env.commit_monitor.run_phase())
-        cocotb.start_soon(test.env.scoreboard.run_phase())
+        # Start background tasks for all components (track for cleanup)
+        read_task = cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
+        write_task = cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
+        commit_task = cocotb.start_soon(test.env.commit_monitor.run_phase())
+        sb_task = cocotb.start_soon(test.env.scoreboard.run_phase())
 
         # Give background tasks a chance to start
         await ClockCycles(dut.clk_i, 2)
@@ -281,6 +287,12 @@ async def test_directed_immediate_heavy(dut):
         # Reset and run
         await test.reset_dut()
         await test.run_phase()
+
+        # Terminate background tasks before moving to next seed
+        read_task.kill()
+        write_task.kill()
+        commit_task.kill()
+        sb_task.kill()
 
         # Check results
         if test.env.scoreboard.mismatches > 0:
@@ -383,11 +395,11 @@ async def test_directed_rtype_dominant(dut):
         test.connect_phase()
         test.end_of_elaboration_phase()
 
-        # Start background tasks for all components
-        cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
-        cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
-        cocotb.start_soon(test.env.commit_monitor.run_phase())
-        cocotb.start_soon(test.env.scoreboard.run_phase())
+        # Start background tasks for all components (track for cleanup)
+        read_task = cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
+        write_task = cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
+        commit_task = cocotb.start_soon(test.env.commit_monitor.run_phase())
+        sb_task = cocotb.start_soon(test.env.scoreboard.run_phase())
 
         # Give background tasks a chance to start
         await ClockCycles(dut.clk_i, 2)
@@ -395,6 +407,12 @@ async def test_directed_rtype_dominant(dut):
         # Reset and run
         await test.reset_dut()
         await test.run_phase()
+
+        # Terminate background tasks before moving to next seed
+        read_task.kill()
+        write_task.kill()
+        commit_task.kill()
+        sb_task.kill()
 
         # Check results
         if test.env.scoreboard.mismatches > 0:

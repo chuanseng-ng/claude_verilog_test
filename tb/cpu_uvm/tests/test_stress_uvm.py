@@ -196,8 +196,8 @@ async def test_stress_alu_intensive(dut):
             failed_seeds.append((seed, test.env.scoreboard.mismatches))
         else:
             dut._log.info(
-                f"✓ ALU-Intensive Seed {seed} passed \
-                    ({test.env.scoreboard.matches} commits validated)\n"
+                f"✓ ALU-Intensive Seed {seed} passed "
+                f"({test.env.scoreboard.matches} commits validated)\n"
             )
 
     # Report results

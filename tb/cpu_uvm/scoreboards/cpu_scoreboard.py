@@ -266,7 +266,8 @@ class CPUScoreboard(uvm_component):
             elif funct3 == 0b111:
                 return "ANDI"
             elif funct3 == 0b001:
-                return "SLLI"
+                if funct7 == 0b0000000:
+                    return "SLLI"
             elif funct3 == 0b101:
                 if funct7 == 0b0000000:
                     return "SRLI"
@@ -323,30 +324,34 @@ class CPUScoreboard(uvm_component):
         self.logger.info("=" * 60)
 
         # Generate performance report
-        self.performance_tracker.generate_report("results/performance.csv")
+        try:
+            self.performance_tracker.generate_report("results/performance.csv")
 
-        # Log performance summary
-        ipc = self.performance_tracker.get_ipc()
-        cpi = self.performance_tracker.get_cpi()
-        perf_summary = self.performance_tracker.get_summary()
+            # Log performance summary
+            ipc = self.performance_tracker.get_ipc()
+            cpi = self.performance_tracker.get_cpi()
+            perf_summary = self.performance_tracker.get_summary()
 
-        self.logger.info("=" * 60)
-        self.logger.info("PERFORMANCE SUMMARY")
-        self.logger.info("=" * 60)
-        self.logger.info(f"Total Instructions: {self.performance_tracker.total_instructions:,}")
-        self.logger.info(f"Total Cycles: {self.performance_tracker.total_cycles:,}")
-        self.logger.info(f"IPC: {ipc:.2f}")
-        self.logger.info(f"CPI: {cpi:.2f}")
-        self.logger.info(f"Unique Instruction Types: {perf_summary['instruction_count']}")
+            self.logger.info("=" * 60)
+            self.logger.info("PERFORMANCE SUMMARY")
+            self.logger.info("=" * 60)
+            self.logger.info(f"Total Instructions: {self.performance_tracker.total_instructions:,}")
+            self.logger.info(f"Total Cycles: {self.performance_tracker.total_cycles:,}")
+            self.logger.info(f"IPC: {ipc:.2f}")
+            self.logger.info(f"CPI: {cpi:.2f}")
+            self.logger.info(f"Unique Instruction Types: {perf_summary['instruction_count']}")
 
-        if perf_summary["most_common"]:
-            mc = perf_summary["most_common"]
-            self.logger.info(
-                f"Most Common Instruction: {mc['type']} "
-                f"({mc['count']:,} times, {mc['percentage']:.1f}%)"
-            )
+            if perf_summary["most_common"]:
+                mc = perf_summary["most_common"]
+                self.logger.info(
+                    f"Most Common Instruction: {mc['type']} "
+                    f"({mc['count']:,} times, {mc['percentage']:.1f}%)"
+                )
 
-        self.logger.info("Performance report saved to: results/performance.csv")
+            self.logger.info("Performance report saved to: results/performance.csv")
+        except Exception as e:
+            self.logger.warning(f"Failed to generate performance report: {e}")
+
         self.logger.info("=" * 60)
 
         # Generate coverage report

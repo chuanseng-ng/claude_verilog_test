@@ -331,12 +331,16 @@ class RV32IInstructionGenerator:
 
         JAL immediate is 21 bits (sign-extended, bit 0 is always 0).
         Range: -1MB to +1MB, but constrained to instruction memory.
+        Ensures offset is never 0 to avoid JAL self-loops.
         """
         # Keep jumps within +/- 1KB for Phase 1 testing
         max_offset = 1024
         offset = self.rng.randint(-max_offset, max_offset)
         # Align to instruction boundary (4 bytes)
         offset = (offset // 4) * 4
+        # Ensure offset is non-zero to avoid self-loops
+        if offset == 0:
+            offset = 4  # Jump forward one instruction
         return offset
 
 

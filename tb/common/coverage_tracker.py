@@ -44,21 +44,29 @@ class InstructionPairCoverage:
     def get_coverage_percentage(self):
         """Calculate percentage of possible pairs covered.
 
-        For RV32I Phase 1: 21 instructions → 21×21 = 441 possible pairs
+        Dynamically computes the number of unique instruction types seen
+        to avoid >100% coverage when additional instruction types are present.
 
-        Phase 1 instruction count:
+        Phase 1 instruction count (baseline):
         - ALU: ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND (10)
         - ALU-I: ADDI, SLTI, SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI (9)
         - Upper: LUI, AUIPC (2)
-        Total: 21 instructions
+        Total: 21 instructions (441 possible pairs)
 
         Returns:
             Coverage percentage (0-100)
         """
-        num_instruction_types = 21  # Phase 1 ALU subset
+        # Extract all unique instruction types seen
+        all_types = set()
+        for insn_a, insn_b in self.pairs.keys():
+            all_types.add(insn_a)
+            all_types.add(insn_b)
+
+        # Compute maximum possible pairs based on actual types observed
+        num_instruction_types = len(all_types) if all_types else 21  # Fallback to 21
         max_pairs = num_instruction_types * num_instruction_types
         covered_pairs = len(self.pairs)
-        return 100.0 * covered_pairs / max_pairs
+        return 100.0 * covered_pairs / max_pairs if max_pairs > 0 else 0.0
 
     def get_uncovered_pairs(self, all_instruction_types):
         """Find pairs that have never been tested.
@@ -88,7 +96,9 @@ class InstructionPairCoverage:
             output_file: Path to output file (default: results/coverage_pairs.txt)
         """
         # Ensure output directory exists
-        os.makedirs(os.path.dirname(output_file), exist_ok=True)
+        output_dir = os.path.dirname(output_file)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
 
         with open(output_file, "w", encoding="utf-8") as f:
             f.write("Instruction Pair Coverage Report\n")

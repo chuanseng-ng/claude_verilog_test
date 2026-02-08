@@ -81,7 +81,7 @@ random_uvm_smoke:
 random_uvm_waves:
 	@echo "Running pyuvm random instruction tests with waveform capture enabled..."
 	@echo "Note: Waveforms are saved automatically for failed seeds to results/waveforms/"
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_random_uvm
+	export ENABLE_WAVEFORMS=1 && export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_random_uvm
 
 isa_uvm:
 	@echo "Running pyuvm ISA compliance tests (54 tests, 37 RV32I instructions)..."

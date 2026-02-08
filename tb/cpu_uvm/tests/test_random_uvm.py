@@ -169,10 +169,11 @@ async def test_random_multi_seed_uvm(dut):
             test.env.scoreboard.report_phase()
 
             # Save waveform for debugging
+            # Note: dump.vcd is a cumulative trace, not per-seed isolated
             waveform_file = os.path.join(waveform_dir, f"seed_{seed}_failure.vcd")
             if os.path.exists("dump.vcd"):
                 shutil.copy("dump.vcd", waveform_file)
-                dut._log.info(f"Waveform saved to {waveform_file}")
+                dut._log.info(f"Waveform (cumulative up to seed {seed}) saved to {waveform_file}")
             else:
                 dut._log.warning("No waveform file (dump.vcd) found to save")
 
