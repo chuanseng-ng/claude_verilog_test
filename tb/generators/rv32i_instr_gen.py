@@ -44,6 +44,90 @@ class GeneratorConfig:
     imm20_max = 0xFFFFF  # 20-bit unsigned
     shamt_max = 31  # 5-bit shift amount
 
+    # Instruction-level biases (for fine-tuned stress testing)
+    shift_bias = 1.0  # Multiplier for shift instruction weight in I-type ALU (default: no bias)
+
+
+class StressTestConfig:
+    """Configuration profiles for stress testing.
+
+    Provides predefined instruction distribution profiles for corner case testing.
+    Phase 1 constraint: Limited to ALU-only instructions (21/37 RV32I).
+
+    Usage:
+        config = GeneratorConfig()
+        config.instruction_classes = StressTestConfig.alu_intensive()
+        gen = RV32IInstructionGenerator(seed=42, config=config)
+    """
+
+    @staticmethod
+    def alu_intensive():
+        """90% ALU operations (register pressure test).
+
+        Tests heavy register usage and ALU datapath.
+        Useful for: Register file stress, ALU verification, bypass logic.
+
+        Returns:
+            Dict of instruction class weights (sum to 10.0 for easy percentage)
+        """
+        return {
+            "r_type": 5.0,  # 50% (ADD, SUB, AND, OR, XOR, SLT, SLTU, SLL, SRL, SRA)
+            "i_type_alu": 4.0,  # 40% (ADDI, SLTI, SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI)
+            "upper": 1.0,  # 10% (LUI, AUIPC)
+        }
+
+    @staticmethod
+    def jump_heavy():
+        """40% jump instructions (function call simulation).
+
+        Tests control flow changes and PC management.
+        Useful for: JAL/JALR verification, return address stack, branch prediction.
+
+        Note: Phase 1 only supports JAL/JALR (no branches yet).
+
+        Returns:
+            Dict of instruction class weights
+        """
+        return {
+            "jump": 4.0,  # 40% (JAL, JALR)
+            "r_type": 2.5,  # 25% R-type
+            "i_type_alu": 2.5,  # 25% I-type ALU
+            "upper": 1.0,  # 10% Upper immediate
+        }
+
+    @staticmethod
+    def shift_intensive():
+        """Heavy shift operations (corner case testing).
+
+        Tests shift unit with various shift amounts.
+        Useful for: Shift logic verification, barrel shifter stress.
+
+        Returns:
+            Dict of instruction class weights plus shift_bias config override
+        """
+        return {
+            "i_type_alu": 6.0,  # 60% I-type ALU (shift-biased via _shift_bias)
+            "r_type": 3.0,  # 30% R-type (includes SLL, SRL, SRA)
+            "upper": 1.0,  # 10% Upper immediate
+            "_shift_bias": 3.0,  # Bias I-type ALU generation toward shift ops (3x weight)
+        }
+
+    @staticmethod
+    def immediate_heavy():
+        """Heavy immediate value operations.
+
+        Tests immediate generation and sign extension logic.
+        Useful for: Immediate generator verification, constant propagation.
+
+        Returns:
+            Dict of instruction class weights
+        """
+        return {
+            "i_type_alu": 5.0,  # 50% I-type ALU
+            "upper": 4.0,  # 40% Upper immediate (LUI, AUIPC)
+            "r_type": 1.0,  # 10% R-type
+        }
+
 
 class RV32IInstructionGenerator:
     """
@@ -141,6 +225,8 @@ class RV32IInstructionGenerator:
             return self._generate_i_type_alu()
         elif instr_class == "upper":
             return self._generate_upper()
+        elif instr_class == "jump":
+            return self._generate_jump()
         else:
             raise ValueError(f"Unknown instruction class: {instr_class}")
 
@@ -187,19 +273,31 @@ class RV32IInstructionGenerator:
         return encoder_func(rd, rs1, rs2)
 
     def _generate_i_type_alu(self):
-        """Generate random I-type arithmetic instruction."""
-        opcodes = [
+        """Generate random I-type arithmetic instruction with optional shift bias."""
+        # Define shift and non-shift opcodes separately
+        shift_ops = [
+            ("SLLI", enc.SLLI, self._random_shamt),
+            ("SRLI", enc.SRLI, self._random_shamt),
+            ("SRAI", enc.SRAI, self._random_shamt),
+        ]
+        non_shift_ops = [
             ("ADDI", enc.ADDI, self._random_imm12),
             ("SLTI", enc.SLTI, self._random_imm12),
             ("SLTIU", enc.SLTIU, self._random_imm12),
             ("XORI", enc.XORI, self._random_imm12),
             ("ORI", enc.ORI, self._random_imm12),
             ("ANDI", enc.ANDI, self._random_imm12),
-            ("SLLI", enc.SLLI, self._random_shamt),
-            ("SRLI", enc.SRLI, self._random_shamt),
-            ("SRAI", enc.SRAI, self._random_shamt),
         ]
-        name, encoder_func, imm_generator = self.rng.choice(opcodes)
+
+        # Apply shift bias if configured (default 1.0 = no bias)
+        shift_bias = getattr(self.config, "shift_bias", 1.0)
+
+        # Create weighted opcode list
+        opcodes = shift_ops + non_shift_ops
+        weights = [shift_bias] * len(shift_ops) + [1.0] * len(non_shift_ops)
+
+        # Select opcode using weighted random choice
+        name, encoder_func, imm_generator = self.rng.choices(opcodes, weights=weights)[0]
 
         rd = self._random_dest_reg()
         rs1 = self._random_source_reg()
@@ -219,6 +317,96 @@ class RV32IInstructionGenerator:
         imm20 = self._random_imm20()
 
         return encoder_func(rd, imm20)
+
+    def _generate_jump(self):
+        """Generate random jump instruction (JAL/JALR).
+
+        Note: Jump offsets are constrained to stay within instruction memory bounds.
+        Phase 1: JALR uses x0 as base (rs1=0) to ensure safe absolute addressing.
+        """
+        opcodes = [
+            ("JAL", enc.JAL, self._random_jump_offset),
+            ("JALR", enc.JALR, self._random_jalr_offset),
+        ]
+        name, encoder_func, imm_generator = self.rng.choice(opcodes)
+
+        rd = self._random_dest_reg()
+
+        if name == "JAL":
+            # JAL: rd, offset (PC-relative)
+            imm = imm_generator()
+            return encoder_func(rd, imm)
+        else:  # JALR
+            # JALR: rd, x0, offset (base address + offset)
+            # Use x0 as base to ensure JALR target = 0 + imm12 stays in instruction memory
+            rs1 = 0  # x0 (always 0) for safe absolute addressing
+            imm = imm_generator()
+            return encoder_func(rd, rs1, imm)
+
+    def _random_jalr_offset(self):
+        """Generate random JALR offset constrained to instruction memory.
+
+        Since JALR uses x0 (value=0) as base, offset directly specifies target address.
+        Target must be within [instr_mem_base, instr_mem_base + instr_mem_size - 4].
+
+        Returns:
+            12-bit signed immediate that results in valid instruction memory address
+        """
+        # JALR target = rs1 + imm12 = 0 + imm12 (since rs1=x0=0)
+        # Valid range: [instr_mem_base, instr_mem_base + instr_mem_size - 4]
+        min_target = self.config.instr_mem_base
+        max_target = self.config.instr_mem_base + self.config.instr_mem_size - 4
+
+        # Clamp to 12-bit signed immediate range [-2048, 2047]
+        min_imm = max(min_target, self.config.imm12_min)
+        max_imm = min(max_target, self.config.imm12_max)
+
+        # Generate random offset within valid range
+        offset = self.rng.randint(min_imm, max_imm)
+
+        # Align to 4-byte instruction boundary
+        offset = (offset // 4) * 4
+
+        return offset
+
+    def _random_jump_offset(self):
+        """Generate random jump offset (20-bit signed, 2-byte aligned).
+
+        JAL immediate is 21 bits (sign-extended, bit 0 is always 0).
+        Ensures target PC = current_addr + offset stays within instruction memory.
+        Ensures offset is never 0 to avoid JAL self-loops.
+        """
+        # Calculate valid offset range to stay within instruction memory
+        min_target = self.config.instr_mem_base
+        max_target = self.config.instr_mem_base + self.config.instr_mem_size - 4
+
+        # Calculate offset range from current address
+        min_offset = min_target - self.current_addr
+        max_offset = max_target - self.current_addr
+
+        # Clamp to ±1KB for Phase 1 testing (avoid extremely large jumps)
+        test_max = 1024
+        min_offset = max(min_offset, -test_max)
+        max_offset = min(max_offset, test_max)
+
+        # Generate random offset
+        offset = self.rng.randint(min_offset, max_offset)
+
+        # Align to instruction boundary (4 bytes)
+        offset = (offset // 4) * 4
+
+        # Ensure offset is non-zero to avoid self-loops
+        if offset == 0:
+            # Try to pick a non-zero offset that's still valid
+            if max_offset >= 4:
+                offset = 4  # Jump forward
+            elif min_offset <= -4:
+                offset = -4  # Jump backward
+            else:
+                # If we can't avoid zero (shouldn't happen with 4KB mem), use +4 anyway
+                offset = 4
+
+        return offset
 
 
 # Test harness

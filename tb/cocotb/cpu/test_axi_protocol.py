@@ -313,9 +313,7 @@ async def test_axi_bvalid_delay(dut):
                 assert False, "bvalid asserted before awready handshake was recorded"
 
             delay_cycles = bvalid_asserted - awready_handshake - 1
-            assert delay_cycles == 5, (
-                f"Expected 5-cycle bvalid delay, got {delay_cycles} cycles"
-            )
+            assert delay_cycles == 5, f"Expected 5-cycle bvalid delay, got {delay_cycles} cycles"
 
         cycle += 1
 

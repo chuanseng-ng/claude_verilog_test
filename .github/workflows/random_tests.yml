@@ -1,0 +1,679 @@
+name: Random Test Infrastructure
+
+on:
+  # Push to main or phase-1 branches
+  push:
+    branches:
+      - main
+      - phase-1/**
+
+  # Pull requests to main
+  pull_request:
+    branches:
+      - main
+
+  # Daily nightly extended tests at midnight UTC
+  schedule:
+    - cron: '0 0 * * *'
+
+  # Allow manual workflow dispatch
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Test mode to run'
+        required: true
+        default: 'smoke'
+        type: choice
+        options:
+          - smoke
+          - full-random
+          - extended
+
+jobs:
+  # ============================================================================
+  # JOB 1: Smoke Tests (for PRs - fast validation ~2-3 minutes)
+  # ============================================================================
+  smoke-test:
+    name: Smoke Tests (PR Fast Validation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.test_mode == 'smoke')
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git perl python3 make autoconf g++ flex bison ccache \
+            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlib1g \
+            zlib1g-dev gtkwave help2man
+
+          # Install Verilator 5.036+ from source (Ubuntu's apt has 5.020)
+          echo "Building Verilator 5.036 from source..."
+          cd /tmp
+          git clone https://github.com/verilator/verilator
+          cd verilator
+          git checkout v5.036
+          autoconf
+          ./configure
+          make -j$(nproc)
+          sudo make install
+          echo "Verilator installation complete:"
+          verilator --version
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install cocotb cocotb-bus cocotbext-axi pyuvm pytest pytest-cov
+          pip list
+
+      - name: Create results directories
+        run: |
+          mkdir -p results/waveforms
+          mkdir -p results/coverage
+          mkdir -p results/performance
+
+      - name: Run smoke tests (Random)
+        env:
+          RANDOM_TEST_SMOKE: '1'
+          PYTHONPATH: ${{ github.workspace }}
+        working-directory: tb/cocotb/cpu
+        run: |
+          echo "=== Running Random Instruction Smoke Test ==="
+          echo "Configuration: 10 seeds × 50 instructions = 500 total instructions"
+          make random_uvm_smoke
+
+      - name: Run smoke tests (Stress)
+        env:
+          STRESS_TEST_SMOKE: '1'
+          PYTHONPATH: ${{ github.workspace }}
+        working-directory: tb/cocotb/cpu
+        run: |
+          echo "=== Running Stress Test Smoke Test ==="
+          echo "Configuration: 10 seeds × 100 instructions × 4 profiles = 4,000 total instructions"
+          make stress_uvm_smoke
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          printf '%s\n' \
+            '# Smoke Test Results' \
+            '' \
+            '## Configuration' \
+            '- Random Tests: 10 seeds × 50 instructions = 500 total' \
+            '- Stress Tests: 10 seeds × 100 instructions × 4 profiles = 4,000 total' \
+            '- Total Coverage: 4,500 instructions' \
+            '' \
+            '## Test Status' \
+            'Tests completed. Check logs for detailed results.' \
+            '' \
+            '## Artifacts' \
+            '- Waveforms saved for any failed seeds' \
+            '- Performance metrics available in CSV format' \
+            '- Coverage reports available in results/coverage/' \
+            '' \
+            '## Next Steps' \
+            '- Review any failures in the Actions logs' \
+            '- Check waveform artifacts for debugging' \
+            '- Full random tests run on merge to main' \
+            > results/test_summary.txt
+          cat results/test_summary.txt
+
+      - name: Upload test summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-summary
+          path: results/test_summary.txt
+          retention-days: 7
+
+      - name: Upload failure waveforms
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-waveforms
+          path: results/waveforms/*.vcd
+          retention-days: 14
+
+      - name: Upload performance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-performance
+          path: results/performance.csv
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-coverage
+          path: results/coverage_pairs.txt
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-logs
+          path: tb/cocotb/cpu/**/*.log
+          retention-days: 7
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let summary = '';
+
+            try {
+              summary = fs.readFileSync('results/test_summary.txt', 'utf8');
+            } catch (error) {
+              summary = 'Test summary not available. Check workflow logs for details.';
+            }
+
+            const jobStatus = '${{ job.status }}';
+            const statusEmoji = jobStatus === 'success' ? '✅' : '❌';
+
+            // Build comment with proper formatting (trim to remove indentation)
+            const commentLines = [
+              `## ${statusEmoji} Random Test Infrastructure - Smoke Test Results`,
+              '',
+              `**Job Status:** ${jobStatus}`,
+              `**Commit:** ${context.sha.substring(0, 7)}`,
+              `**Workflow:** [View Run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              '',
+              '<details>',
+              '<summary>Test Summary</summary>',
+              '',
+              '```',
+              summary,
+              '```',
+              '',
+              '</details>',
+              '',
+              '### Artifacts Available',
+              '- 🌊 Failure waveforms (if any failures occurred)',
+              '- 📊 Performance metrics (IPC/CPI analysis)',
+              '- 📈 Coverage reports (instruction pair coverage)',
+              '- 📝 Test logs',
+              '',
+              '**Note:** Full random tests (100,000 instructions) will run after merge to main.'
+            ];
+            const comment = commentLines.join('\n');
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # ============================================================================
+  # JOB 2: Full Random Tests (for main branch - ~15-20 minutes)
+  # ============================================================================
+  full-random-test:
+    name: Full Random Tests (Main Branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.test_mode == 'full-random')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git perl python3 make autoconf g++ flex bison ccache \
+            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlib1g \
+            zlib1g-dev gtkwave help2man
+
+          # Install Verilator 5.036+ from source (Ubuntu's apt has 5.020)
+          echo "Building Verilator 5.036 from source..."
+          cd /tmp
+          git clone https://github.com/verilator/verilator
+          cd verilator
+          git checkout v5.036
+          autoconf
+          ./configure
+          make -j$(nproc)
+          sudo make install
+          echo "Verilator installation complete:"
+          verilator --version
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install cocotb cocotb-bus cocotbext-axi pyuvm pytest pytest-cov
+          pip list
+
+      - name: Create results directories
+        run: |
+          mkdir -p results/waveforms
+          mkdir -p results/coverage
+          mkdir -p results/performance
+
+      - name: Run full random tests
+        env:
+          RANDOM_TEST_SEEDS: '10'
+          RANDOM_TEST_INSTRS: '10000'
+          PYTHONPATH: ${{ github.workspace }}
+        working-directory: tb/cocotb/cpu
+        run: |
+          echo "=== Running Full Random Instruction Tests ==="
+          echo "Configuration: 10 seeds × 10,000 instructions = 100,000 total instructions"
+          make random_uvm
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          printf '%s\n' \
+            '# Full Random Test Results' \
+            '' \
+            '## Configuration' \
+            '- Random Tests: 10 seeds × 10,000 instructions = 100,000 total' \
+            '- Test Mode: Full coverage validation' \
+            '' \
+            '## Test Status' \
+            'Tests completed. Check logs for detailed results.' \
+            '' \
+            '## Artifacts' \
+            '- Waveforms saved for any failed seeds' \
+            '- Performance metrics available in CSV format' \
+            '- Coverage reports available in results/coverage/' \
+            '' \
+            '## Coverage Goals (Phase 1)' \
+            '- Target: 100,000 random instructions' \
+            '- Expected pair coverage: >50% (220+ unique pairs)' \
+            '- Expected IPC: ~1.00 (single-cycle CPU)' \
+            > results/test_summary.txt
+          cat results/test_summary.txt
+
+      - name: Upload test summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-random-summary
+          path: results/test_summary.txt
+          retention-days: 30
+
+      - name: Upload failure waveforms
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-random-waveforms
+          path: results/waveforms/*.vcd
+          retention-days: 14
+
+      - name: Upload performance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-random-performance
+          path: results/performance.csv
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-random-coverage
+          path: results/coverage_pairs.txt
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-random-logs
+          path: tb/cocotb/cpu/**/*.log
+          retention-days: 7
+
+  # ============================================================================
+  # JOB 3: Extended Tests (nightly - full suite ~30-45 minutes)
+  # ============================================================================
+  extended-test:
+    name: Extended Tests (Nightly Full Suite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.test_mode == 'extended')
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git perl python3 make autoconf g++ flex bison ccache \
+            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlib1g \
+            zlib1g-dev gtkwave help2man
+
+          # Install Verilator 5.036+ from source (Ubuntu's apt has 5.020)
+          echo "Building Verilator 5.036 from source..."
+          cd /tmp
+          git clone https://github.com/verilator/verilator
+          cd verilator
+          git checkout v5.036
+          autoconf
+          ./configure
+          make -j$(nproc)
+          sudo make install
+          echo "Verilator installation complete:"
+          verilator --version
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install cocotb cocotb-bus cocotbext-axi pyuvm pytest pytest-cov
+          pip list
+
+      - name: Create results directories
+        run: |
+          mkdir -p results/waveforms
+          mkdir -p results/coverage
+          mkdir -p results/performance
+
+      - name: Run random tests (100k instructions)
+        env:
+          RANDOM_TEST_SEEDS: '10'
+          RANDOM_TEST_INSTRS: '10000'
+          PYTHONPATH: ${{ github.workspace }}
+        working-directory: tb/cocotb/cpu
+        run: |
+          echo "=== [1/2] Running Random Instruction Tests ==="
+          echo "Configuration: 10 seeds × 10,000 instructions = 100,000 total instructions"
+          make random_uvm
+
+      - name: Backup random test results
+        if: always()
+        run: |
+          # Move results to preserve them before next test
+          if [ -f "results/performance.csv" ]; then
+            cp results/performance.csv results/performance_random.csv
+          fi
+          if [ -f "results/coverage_pairs.txt" ]; then
+            cp results/coverage_pairs.txt results/coverage_random.txt
+          fi
+
+      - name: Run stress tests (200k instructions)
+        env:
+          STRESS_TEST_SEEDS: '100'
+          STRESS_TEST_INSTRS: '500'
+          PYTHONPATH: ${{ github.workspace }}
+        working-directory: tb/cocotb/cpu
+        run: |
+          echo "=== [2/2] Running Stress Tests (All Profiles) ==="
+          echo "Configuration: 100 seeds × 500 instructions × 4 profiles = 200,000 total instructions"
+          make stress_uvm
+
+      - name: Backup stress test results
+        if: always()
+        run: |
+          # Move results to preserve them
+          if [ -f "results/performance.csv" ]; then
+            cp results/performance.csv results/performance_stress.csv
+          fi
+          if [ -f "results/coverage_pairs.txt" ]; then
+            cp results/coverage_pairs.txt results/coverage_stress.txt
+          fi
+
+      - name: Generate comprehensive summary
+        if: always()
+        run: |
+          printf '%s\n' \
+            '# Extended Nightly Test Results' \
+            '' \
+            '## Test Suite Configuration' \
+            '' \
+            '### Random Tests' \
+            '- Configuration: 10 seeds × 10,000 instructions = 100,000 total' \
+            '- Expected pair coverage: >50% (220+ unique pairs)' \
+            '- Expected IPC: ~1.00 (single-cycle CPU)' \
+            '' \
+            '### Stress Tests' \
+            '- Configuration: 100 seeds × 500 instructions × 4 profiles = 200,000 total' \
+            '- Profiles tested:' \
+            '  - ALU-intensive (90% ALU operations)' \
+            '  - Jump-heavy (40% jump instructions)' \
+            '  - Shift-intensive (heavy shift operations)' \
+            '  - Immediate-heavy (immediate generation stress)' \
+            '- Expected pair coverage: >80% (350+ unique pairs)' \
+            '' \
+            '### Combined Coverage' \
+            '- Total instructions tested: 300,000' \
+            '- Expected combined pair coverage: >90% (400+ unique pairs)' \
+            '' \
+            '## Test Status' \
+            'All test suites completed. Check individual test logs for detailed results.' \
+            '' \
+            '## Artifacts Available' \
+            '- Individual performance reports (random + stress)' \
+            '- Individual coverage reports (random + stress)' \
+            '- Waveforms for any failed seeds' \
+            '- Complete test logs for debugging' \
+            '' \
+            '## Next Steps' \
+            '- Review coverage gaps and create targeted tests' \
+            '- Analyze performance metrics for anomalies' \
+            '- Investigate any failures with waveform debugging' \
+            > results/test_summary_extended.txt
+          cat results/test_summary_extended.txt
+
+      - name: Upload extended test summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-test-summary
+          path: results/test_summary_extended.txt
+          retention-days: 30
+
+      - name: Upload failure waveforms
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-test-waveforms
+          path: results/waveforms/*.vcd
+          retention-days: 14
+
+      - name: Upload random test performance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-performance-random
+          path: results/performance_random.csv
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload stress test performance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-performance-stress
+          path: results/performance_stress.csv
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload random test coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-coverage-random
+          path: results/coverage_random.txt
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload stress test coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-coverage-stress
+          path: results/coverage_stress.txt
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload all test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-test-logs
+          path: tb/cocotb/cpu/**/*.log
+          retention-days: 7
+
+      - name: Create GitHub issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Read test configuration from workflow environment
+            const randomSeeds = 10;      // From RANDOM_TEST_SEEDS env var
+            const randomInstrs = 10000;  // From RANDOM_TEST_INSTRS env var
+            const stressSeeds = 100;     // From STRESS_TEST_SEEDS env var
+            const stressInstrs = 500;    // From STRESS_TEST_INSTRS env var
+            const stressProfiles = 4;    // Number of stress profiles (ALU, Jump, Shift, Immediate)
+
+            // Compute totals
+            const randomTotal = randomSeeds * randomInstrs;
+            const stressTotal = stressSeeds * stressInstrs * stressProfiles;
+            const combinedTotal = randomTotal + stressTotal;
+
+            // Format numbers with commas
+            const fmt = (n) => n.toLocaleString();
+
+            const bodyText = `## Nightly Extended Test Suite Failed
+
+              **Date:** ${new Date().toISOString()}
+              **Workflow Run:** [View Run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+              **Commit:** ${context.sha}
+
+              ### Test Configuration
+              - Random Tests: ${fmt(randomSeeds)} seeds × ${fmt(randomInstrs)} instructions = ${fmt(randomTotal)} total
+              - Stress Tests: ${fmt(stressSeeds)} seeds × ${fmt(stressInstrs)} instructions × ${stressProfiles} profiles = ${fmt(stressTotal)} total
+              - Combined: ${fmt(combinedTotal)} instructions
+
+              ### Action Required
+              1. Check workflow logs for failure details
+              2. Download waveform artifacts for debugging
+              3. Review performance and coverage reports
+              4. Identify root cause and create fix
+
+              ### Artifacts Available
+              - Failure waveforms (VCD files)
+              - Performance reports (random + stress)
+              - Coverage reports (random + stress)
+              - Test logs
+
+              **Auto-generated by nightly CI workflow**
+            `.split('\n').map(line => line.replace(/^\s+/, '')).join('\n').trim();
+
+            const issueTitle = `[CI] Nightly Extended Test Failure - ${new Date().toISOString().split('T')[0]}`;
+            const desiredLabels = ['bug', 'ci-failure', 'verification'];
+
+            // Try to create issue with custom labels, fallback to no labels if they don't exist
+            try {
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issueTitle,
+                body: bodyText,
+                labels: desiredLabels
+              });
+              console.log(`Created issue #${issue.data.number} with labels: ${desiredLabels.join(', ')}`);
+            } catch (error) {
+              if (error.status === 422) {
+                // Labels don't exist, create issue without labels
+                console.log(`Labels not found (${error.message}), creating issue without custom labels`);
+                const issue = await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: issueTitle,
+                  body: bodyText
+                });
+                console.log(`Created issue #${issue.data.number} without labels`);
+              } else {
+                // Re-throw other errors
+                throw error;
+              }
+            }
+
+  # ============================================================================
+  # JOB 4: Test Summary Report (runs after all tests)
+  # ============================================================================
+  summary-report:
+    name: Generate Test Summary Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [smoke-test, full-random-test, extended-test]
+    if: always()
+
+    steps:
+      - name: Generate overall summary
+        run: |
+          echo "# Random Test Infrastructure CI/CD Summary" > summary.md
+          echo "" >> summary.md
+          echo "## Job Status" >> summary.md
+          echo "- Smoke Test: ${{ needs.smoke-test.result }}" >> summary.md
+          echo "- Full Random Test: ${{ needs.full-random-test.result }}" >> summary.md
+          echo "- Extended Test: ${{ needs.extended-test.result }}" >> summary.md
+          echo "" >> summary.md
+          echo "## Trigger" >> summary.md
+          echo "- Event: ${{ github.event_name }}" >> summary.md
+          echo "- Ref: ${{ github.ref }}" >> summary.md
+          echo "- Commit: ${{ github.sha }}" >> summary.md
+          echo "" >> summary.md
+          echo "## Test Coverage by Job" >> summary.md
+          echo "- **Smoke Test (PR)**: 4,500 instructions (500 random + 4,000 stress)" >> summary.md
+          echo "- **Full Random (main)**: 100,000 instructions" >> summary.md
+          echo "- **Extended (nightly)**: 300,000 instructions (100k random + 200k stress)" >> summary.md
+
+          cat summary.md
+
+      - name: Upload summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-summary-report
+          path: summary.md
+          retention-days: 30
