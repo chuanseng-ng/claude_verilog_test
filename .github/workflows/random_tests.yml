@@ -110,27 +110,27 @@ jobs:
       - name: Generate test summary
         if: always()
         run: |
-          cat > results/test_summary.txt << 'EOF'
-          # Smoke Test Results
-
-          ## Configuration
-          - Random Tests: 10 seeds × 50 instructions = 500 total
-          - Stress Tests: 10 seeds × 100 instructions × 4 profiles = 4,000 total
-          - Total Coverage: 4,500 instructions
-
-          ## Test Status
-          Tests completed. Check logs for detailed results.
-
-          ## Artifacts
-          - Waveforms saved for any failed seeds
-          - Performance metrics available in CSV format
-          - Coverage reports available in results/coverage/
-
-          ## Next Steps
-          - Review any failures in the Actions logs
-          - Check waveform artifacts for debugging
-          - Full random tests run on merge to main
-          EOF
+          printf '%s\n' \
+            '# Smoke Test Results' \
+            '' \
+            '## Configuration' \
+            '- Random Tests: 10 seeds × 50 instructions = 500 total' \
+            '- Stress Tests: 10 seeds × 100 instructions × 4 profiles = 4,000 total' \
+            '- Total Coverage: 4,500 instructions' \
+            '' \
+            '## Test Status' \
+            'Tests completed. Check logs for detailed results.' \
+            '' \
+            '## Artifacts' \
+            '- Waveforms saved for any failed seeds' \
+            '- Performance metrics available in CSV format' \
+            '- Coverage reports available in results/coverage/' \
+            '' \
+            '## Next Steps' \
+            '- Review any failures in the Actions logs' \
+            '- Check waveform artifacts for debugging' \
+            '- Full random tests run on merge to main' \
+            > results/test_summary.txt
           cat results/test_summary.txt
 
       - name: Upload test summary
@@ -292,26 +292,26 @@ jobs:
       - name: Generate test summary
         if: always()
         run: |
-          cat > results/test_summary.txt << 'EOF'
-          # Full Random Test Results
-
-          ## Configuration
-          - Random Tests: 1,000 seeds × 100 instructions = 100,000 total
-          - Test Mode: Full coverage validation
-
-          ## Test Status
-          Tests completed. Check logs for detailed results.
-
-          ## Artifacts
-          - Waveforms saved for any failed seeds
-          - Performance metrics available in CSV format
-          - Coverage reports available in results/coverage/
-
-          ## Coverage Goals (Phase 1)
-          - Target: 100,000 random instructions
-          - Expected pair coverage: >50% (220+ unique pairs)
-          - Expected IPC: ~1.00 (single-cycle CPU)
-          EOF
+          printf '%s\n' \
+            '# Full Random Test Results' \
+            '' \
+            '## Configuration' \
+            '- Random Tests: 1,000 seeds × 100 instructions = 100,000 total' \
+            '- Test Mode: Full coverage validation' \
+            '' \
+            '## Test Status' \
+            'Tests completed. Check logs for detailed results.' \
+            '' \
+            '## Artifacts' \
+            '- Waveforms saved for any failed seeds' \
+            '- Performance metrics available in CSV format' \
+            '- Coverage reports available in results/coverage/' \
+            '' \
+            '## Coverage Goals (Phase 1)' \
+            '- Target: 100,000 random instructions' \
+            '- Expected pair coverage: >50% (220+ unique pairs)' \
+            '- Expected IPC: ~1.00 (single-cycle CPU)' \
+            > results/test_summary.txt
           cat results/test_summary.txt
 
       - name: Upload test summary
@@ -461,43 +461,43 @@ jobs:
       - name: Generate comprehensive summary
         if: always()
         run: |
-          cat > results/test_summary_extended.txt << 'EOF'
-          # Extended Nightly Test Results
-
-          ## Test Suite Configuration
-
-          ### Random Tests
-          - Configuration: 1,000 seeds × 100 instructions = 100,000 total
-          - Expected pair coverage: >50% (220+ unique pairs)
-          - Expected IPC: ~1.00 (single-cycle CPU)
-
-          ### Stress Tests
-          - Configuration: 100 seeds × 500 instructions × 4 profiles = 200,000 total
-          - Profiles tested:
-            - ALU-intensive (90% ALU operations)
-            - Jump-heavy (40% jump instructions)
-            - Shift-intensive (heavy shift operations)
-            - Immediate-heavy (immediate generation stress)
-          - Expected pair coverage: >80% (350+ unique pairs)
-
-          ### Combined Coverage
-          - Total instructions tested: 300,000
-          - Expected combined pair coverage: >90% (400+ unique pairs)
-
-          ## Test Status
-          All test suites completed. Check individual test logs for detailed results.
-
-          ## Artifacts Available
-          - Individual performance reports (random + stress)
-          - Individual coverage reports (random + stress)
-          - Waveforms for any failed seeds
-          - Complete test logs for debugging
-
-          ## Next Steps
-          - Review coverage gaps and create targeted tests
-          - Analyze performance metrics for anomalies
-          - Investigate any failures with waveform debugging
-          EOF
+          printf '%s\n' \
+            '# Extended Nightly Test Results' \
+            '' \
+            '## Test Suite Configuration' \
+            '' \
+            '### Random Tests' \
+            '- Configuration: 1,000 seeds × 100 instructions = 100,000 total' \
+            '- Expected pair coverage: >50% (220+ unique pairs)' \
+            '- Expected IPC: ~1.00 (single-cycle CPU)' \
+            '' \
+            '### Stress Tests' \
+            '- Configuration: 100 seeds × 500 instructions × 4 profiles = 200,000 total' \
+            '- Profiles tested:' \
+            '  - ALU-intensive (90% ALU operations)' \
+            '  - Jump-heavy (40% jump instructions)' \
+            '  - Shift-intensive (heavy shift operations)' \
+            '  - Immediate-heavy (immediate generation stress)' \
+            '- Expected pair coverage: >80% (350+ unique pairs)' \
+            '' \
+            '### Combined Coverage' \
+            '- Total instructions tested: 300,000' \
+            '- Expected combined pair coverage: >90% (400+ unique pairs)' \
+            '' \
+            '## Test Status' \
+            'All test suites completed. Check individual test logs for detailed results.' \
+            '' \
+            '## Artifacts Available' \
+            '- Individual performance reports (random + stress)' \
+            '- Individual coverage reports (random + stress)' \
+            '- Waveforms for any failed seeds' \
+            '- Complete test logs for debugging' \
+            '' \
+            '## Next Steps' \
+            '- Review coverage gaps and create targeted tests' \
+            '- Analyze performance metrics for anomalies' \
+            '- Investigate any failures with waveform debugging' \
+            > results/test_summary_extended.txt
           cat results/test_summary_extended.txt
 
       - name: Upload extended test summary
