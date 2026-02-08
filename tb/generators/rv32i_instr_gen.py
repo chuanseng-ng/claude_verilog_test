@@ -44,6 +44,9 @@ class GeneratorConfig:
     imm20_max = 0xFFFFF  # 20-bit unsigned
     shamt_max = 31  # 5-bit shift amount
 
+    # Instruction-level biases (for fine-tuned stress testing)
+    shift_bias = 1.0  # Multiplier for shift instruction weight in I-type ALU (default: no bias)
+
 
 class StressTestConfig:
     """Configuration profiles for stress testing.
@@ -100,12 +103,13 @@ class StressTestConfig:
         Useful for: Shift logic verification, barrel shifter stress.
 
         Returns:
-            Dict of instruction class weights
+            Dict of instruction class weights plus shift_bias config override
         """
         return {
-            "i_type_alu": 6.0,  # 60% I-type ALU (weighted toward shifts internally)
+            "i_type_alu": 6.0,  # 60% I-type ALU (shift-biased via _shift_bias)
             "r_type": 3.0,  # 30% R-type (includes SLL, SRL, SRA)
             "upper": 1.0,  # 10% Upper immediate
+            "_shift_bias": 3.0,  # Bias I-type ALU generation toward shift ops (3x weight)
         }
 
     @staticmethod
@@ -269,19 +273,31 @@ class RV32IInstructionGenerator:
         return encoder_func(rd, rs1, rs2)
 
     def _generate_i_type_alu(self):
-        """Generate random I-type arithmetic instruction."""
-        opcodes = [
+        """Generate random I-type arithmetic instruction with optional shift bias."""
+        # Define shift and non-shift opcodes separately
+        shift_ops = [
+            ("SLLI", enc.SLLI, self._random_shamt),
+            ("SRLI", enc.SRLI, self._random_shamt),
+            ("SRAI", enc.SRAI, self._random_shamt),
+        ]
+        non_shift_ops = [
             ("ADDI", enc.ADDI, self._random_imm12),
             ("SLTI", enc.SLTI, self._random_imm12),
             ("SLTIU", enc.SLTIU, self._random_imm12),
             ("XORI", enc.XORI, self._random_imm12),
             ("ORI", enc.ORI, self._random_imm12),
             ("ANDI", enc.ANDI, self._random_imm12),
-            ("SLLI", enc.SLLI, self._random_shamt),
-            ("SRLI", enc.SRLI, self._random_shamt),
-            ("SRAI", enc.SRAI, self._random_shamt),
         ]
-        name, encoder_func, imm_generator = self.rng.choice(opcodes)
+
+        # Apply shift bias if configured (default 1.0 = no bias)
+        shift_bias = getattr(self.config, "shift_bias", 1.0)
+
+        # Create weighted opcode list
+        opcodes = shift_ops + non_shift_ops
+        weights = [shift_bias] * len(shift_ops) + [1.0] * len(non_shift_ops)
+
+        # Select opcode using weighted random choice
+        name, encoder_func, imm_generator = self.rng.choices(opcodes, weights=weights)[0]
 
         rd = self._random_dest_reg()
         rs1 = self._random_source_reg()

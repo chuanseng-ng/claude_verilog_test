@@ -228,6 +228,16 @@ module rv32i_cpu_top (
     end
   end
 
+  // Edge detection for dbg_halted (to auto-clear command bits)
+  logic dbg_halted_prev;
+  always_ff @(posedge clk_i or negedge rst_n_i) begin
+    if (!rst_n_i) begin
+      dbg_halted_prev <= 1'b0;
+    end else begin
+      dbg_halted_prev <= dbg_halted;
+    end
+  end
+
   // APB write logic
   always_ff @(posedge clk_i or negedge rst_n_i) begin
     if (!rst_n_i) begin
@@ -246,9 +256,16 @@ module rv32i_cpu_top (
       dbg_pc_wr_en  <= 1'b0;
       dbg_reg_wr_en <= 1'b0;
 
-      // Auto-clear command bits (write-1-to-trigger semantics)
-      // Command bits [2:0] are self-clearing to prevent stuck re-halt/re-resume
-      dbg_ctrl_reg[2:0] <= 3'b000;
+      // Auto-clear command bits based on CPU state transitions:
+      // - Clear halt bit when CPU enters HALTED state (dbg_halted 0->1)
+      // - Clear resume/step bits when CPU exits HALTED state (dbg_halted 1->0)
+      if (dbg_halted && !dbg_halted_prev) begin
+        // CPU just entered HALTED state - clear halt bit
+        dbg_ctrl_reg[0] <= 1'b0;
+      end else if (!dbg_halted && dbg_halted_prev) begin
+        // CPU just exited HALTED state - clear resume and step bits
+        dbg_ctrl_reg[2:1] <= 2'b00;
+      end
 
       if (apb_psel_i && apb_penable_i && apb_pwrite_i) begin
         case (apb_paddr_i)

@@ -68,8 +68,18 @@ async def _run_stress_profile(dut, profile_name, waveform_subdir, seed_base, str
             f"{num_instructions} instr = {total_instructions:,} total) (pyuvm) ==="
         )
 
-    # Create waveform directory
-    waveform_dir = f"results/waveforms/{waveform_subdir}"
+    # Determine repository root (absolute path for CI artifact collection)
+    # Check GITHUB_WORKSPACE first (CI environment), then compute from file location
+    repo_root = os.getenv("GITHUB_WORKSPACE")
+    if not repo_root:
+        # Compute repo root: this file is at tb/cpu_uvm/tests/test_stress_uvm.py
+        # So repo root is 4 levels up
+        repo_root = Path(__file__).parent.parent.parent.parent.resolve()
+    else:
+        repo_root = Path(repo_root)
+
+    # Create waveform directory (absolute path)
+    waveform_dir = repo_root / "results" / "waveforms" / waveform_subdir
     os.makedirs(waveform_dir, exist_ok=True)
 
     # Start clock
@@ -183,7 +193,15 @@ class StressTest(BaseTest):
         # Create custom generator config with stress profile
         config = GeneratorConfig()
         if self.stress_profile is not None:
-            config.instruction_classes = self.stress_profile
+            # Extract instruction class weights (filter out config overrides starting with _)
+            config.instruction_classes = {
+                k: v for k, v in self.stress_profile.items() if not k.startswith("_")
+            }
+
+            # Apply config overrides (special keys starting with _)
+            if "_shift_bias" in self.stress_profile:
+                config.shift_bias = self.stress_profile["_shift_bias"]
+                self.logger.info(f"Applying shift bias: {config.shift_bias}x")
 
         # Create instruction generator with custom config
         generator = RV32IInstructionGenerator(seed=self.seed, config=config)

@@ -97,19 +97,19 @@ stress_uvm_smoke:
 
 stress_alu:
 	@echo "Running ALU-intensive stress test (90% ALU operations)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm::test_stress_alu_intensive
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm TESTCASE=test_stress_alu_intensive
 
 stress_jump:
 	@echo "Running jump-heavy stress test (40% jump instructions)..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm::test_stress_jump_heavy
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm TESTCASE=test_stress_jump_heavy
 
 stress_shift:
 	@echo "Running shift-intensive stress test..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm::test_stress_shift_intensive
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm TESTCASE=test_stress_shift_intensive
 
 stress_immediate:
 	@echo "Running immediate-heavy stress test..."
-	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm::test_stress_immediate_heavy
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_stress_uvm TESTCASE=test_stress_immediate_heavy
 
 directed_random_uvm:
 	@echo "Running pyuvm directed random tests (3 scenarios: ALU-focused, immediate-heavy, R-type dominant)..."
