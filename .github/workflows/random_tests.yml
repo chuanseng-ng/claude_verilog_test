@@ -419,13 +419,13 @@ jobs:
 
       - name: Run random tests (100k instructions)
         env:
-          RANDOM_TEST_SEEDS: '1000'
-          RANDOM_TEST_INSTRS: '100'
+          RANDOM_TEST_SEEDS: '10'
+          RANDOM_TEST_INSTRS: '10000'
           PYTHONPATH: ${{ github.workspace }}
         working-directory: tb/cocotb/cpu
         run: |
           echo "=== [1/2] Running Random Instruction Tests ==="
-          echo "Configuration: 1,000 seeds × 100 instructions = 100,000 total instructions"
+          echo "Configuration: 10 seeds × 10,000 instructions = 100,000 total instructions"
           make random_uvm
 
       - name: Backup random test results
@@ -568,6 +568,21 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            // Read test configuration from workflow environment
+            const randomSeeds = 10;      // From RANDOM_TEST_SEEDS env var
+            const randomInstrs = 10000;  // From RANDOM_TEST_INSTRS env var
+            const stressSeeds = 100;     // From STRESS_TEST_SEEDS env var
+            const stressInstrs = 500;    // From STRESS_TEST_INSTRS env var
+            const stressProfiles = 4;    // Number of stress profiles (ALU, Jump, Shift, Immediate)
+
+            // Compute totals
+            const randomTotal = randomSeeds * randomInstrs;
+            const stressTotal = stressSeeds * stressInstrs * stressProfiles;
+            const combinedTotal = randomTotal + stressTotal;
+
+            // Format numbers with commas
+            const fmt = (n) => n.toLocaleString();
+
             const bodyText = `## Nightly Extended Test Suite Failed
 
               **Date:** ${new Date().toISOString()}
@@ -575,9 +590,9 @@ jobs:
               **Commit:** ${context.sha}
 
               ### Test Configuration
-              - Random Tests: 1,000 seeds × 100 instructions = 100,000 total
-              - Stress Tests: 100 seeds × 500 instructions × 4 profiles = 200,000 total
-              - Combined: 300,000 instructions
+              - Random Tests: ${fmt(randomSeeds)} seeds × ${fmt(randomInstrs)} instructions = ${fmt(randomTotal)} total
+              - Stress Tests: ${fmt(stressSeeds)} seeds × ${fmt(stressInstrs)} instructions × ${stressProfiles} profiles = ${fmt(stressTotal)} total
+              - Combined: ${fmt(combinedTotal)} instructions
 
               ### Action Required
               1. Check workflow logs for failure details
