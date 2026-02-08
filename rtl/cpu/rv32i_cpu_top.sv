@@ -248,11 +248,9 @@ module rv32i_cpu_top (
 
       if (apb_psel_i && apb_penable_i && apb_pwrite_i) begin
         case (apb_paddr_i)
-          // Control register (0x000)
+          // Control register (0x000) - always writable (must allow halt/resume commands)
           12'h000: begin
-            if (dbg_halted) begin
-              dbg_ctrl_reg <= apb_pwdata_i;
-            end
+            dbg_ctrl_reg <= apb_pwdata_i;
           end
 
           // PC register (0x008) - writable when halted
