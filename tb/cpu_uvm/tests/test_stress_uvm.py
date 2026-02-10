@@ -127,7 +127,9 @@ async def _run_stress_profile(dut, profile_name, waveform_subdir, seed_base, str
         # Terminate background tasks before moving to next seed
         for task in bg_tasks:
             task.kill()
-        await ClockCycles(dut.clk_i, 1)  # Let kills propagate
+        # Assert reset to stop CPU and prevent stale commits reaching next seed's monitor
+        dut.rst_n_i.value = 0
+        await ClockCycles(dut.clk_i, 2)  # Hold reset to flush in-flight commits
 
         # Check results
         if test.env.scoreboard.mismatches > 0:
