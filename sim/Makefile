@@ -28,7 +28,8 @@ MODULE ?= tb.cocotb.cpu.test_smoke
 TEST_MODULES := \
 	tb.cocotb.cpu.test_smoke \
 	tb.cocotb.cpu.test_c_programs \
-	tb.cocotb.cpu.test_axi_protocol
+	tb.cocotb.cpu.test_axi_protocol \
+	tb.cocotb.cpu.test_debug_if
 
 # RTL source files
 VERILOG_SOURCES := \
@@ -82,6 +83,8 @@ help:
 	@echo "  make sim          - Run single test module (requires WSL)"
 	@echo "  make waves        - Open waveform viewer (gtkwave)"
 	@echo "  make lint         - Run Verilator lint check"
+	@echo "  make axi          - Run AXI protocol tests only"
+	@echo "  make debug        - Run APB3 debug interface tests only"
 	@echo "  make clean        - Clean simulation artifacts"
 	@echo "  make help         - Show this help"
 	@echo ""
@@ -185,6 +188,14 @@ axi:
 	@echo "Note: This should be run in WSL environment"
 	@echo ""
 	$(MAKE) sim MODULE=tb.cocotb.cpu.test_axi_protocol
+
+# Convenience target for APB3 debug interface tests
+.PHONY: debug
+debug:
+	@echo "Running APB3 debug interface tests (single-step, BP0, BP1, GPR write, PC write)..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim MODULE=tb.cocotb.cpu.test_debug_if
 
 # Override clean to use our basic clean
 clean: clean-basic

@@ -97,6 +97,20 @@ module rv32i_control (
   logic aw_issued;  // Write address issued (awvalid && awready handshake completed)
   logic w_issued;   // Write data issued (wvalid && wready handshake completed)
 
+  // Single-step in-progress flag (Bug fix: step_in_progress)
+  // Set when the CPU leaves HALTED state due to a step request.
+  // Cleared when the CPU re-enters HALTED after completing one instruction.
+  // This carries the step intent through the pipeline even after dbg_step_req
+  // is cleared by the auto-clear logic in rv32i_cpu_top.sv.
+  logic step_in_progress;
+
+  // (Bug fix: stale AXI response after halt/resume — no extra flags needed)
+  // The fix is in the FETCH next-state logic: if rvalid=1 arrives while
+  // ar_issued=0 (our new AR hasn't been acknowledged yet), the rvalid carries
+  // data for the OLD (pre-halt) PC address and must be discarded.
+  // We accept the rvalid handshake (rready=1) to unblock the AXI slave driver
+  // but suppress the FETCH→DECODE transition.
+
   // ================================================================
   // State Register
   // ================================================================
@@ -147,6 +161,39 @@ module rv32i_control (
   // This ensures we use the decision from the instruction being committed,
   // not from whatever instruction happens to be in the instruction register
   assign take_branch_jump = take_branch_jump_reg;
+
+  // ================================================================
+  // Single-Step In-Progress Flag
+  // ================================================================
+  // Purpose: Carry the single-step intent through the pipeline.
+  //
+  // The auto-clear logic in rv32i_cpu_top.sv clears dbg_ctrl_reg[2]
+  // (and therefore dbg_step_req) on the HALTED→FETCH transition edge.
+  // This means dbg_step_req is 0 by the time the CPU reaches WRITEBACK.
+  // Without this flag the WRITEBACK→HALTED path would never be taken.
+  //
+  // Protocol:
+  //   - Set when current_state == HALTED and dbg_step_req is asserted
+  //     (i.e., the clock cycle where we leave HALTED via a step).
+  //   - Cleared when the CPU enters HALTED (completing the step).
+  //   - Also cleared on reset.
+
+  always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      step_in_progress <= 1'b0;
+    end else begin
+      if (current_state == HALTED && dbg_step_req) begin
+        // Leaving HALTED because of a step request - latch intent
+        step_in_progress <= 1'b1;
+      end else if (current_state != HALTED && next_state == HALTED) begin
+        // Re-entering HALTED (step complete, or halt request in writeback)
+        step_in_progress <= 1'b0;
+      end
+      // Otherwise hold value
+    end
+  end
+
+  // (No separate always_ff needed for Bug 3 fix — see FETCH next-state logic)
 
   // ================================================================
   // Trap Cause Register
@@ -246,8 +293,25 @@ module rv32i_control (
         // Wait for AXI read data phase to complete
         // Note: Address phase (arvalid/arready) and data phase (rvalid/rready)
         // are independent. rvalid can come many cycles after arready.
-        if (axi_rvalid && axi_rready) begin
-          // Data received, check for AXI error
+        //
+        // Bug fix (stale AXI response after halt/resume):
+        // ar_issued is cleared while in HALTED (the else branch of the
+        // ar_issued block runs when current_state != FETCH/MEM_WAIT).
+        // On HALTED→FETCH the CPU immediately issues a new AR (ar_issued=0,
+        // arvalid=1).  If a stale rvalid is still pending from an in-flight AR
+        // that was interrupted by the halt, the AXI slave holds rvalid=1.
+        // This rvalid arrives while ar_issued=0 (before the new AR handshake
+        // completes).  Detecting rvalid while ar_issued=0 identifies it as
+        // stale: accept the handshake (rready=1) to unblock the slave but do
+        // NOT transition to DECODE.  After the stale rvalid is drained,
+        // ar_issued becomes 1 (new AR handshake completes) and the subsequent
+        // fresh rvalid is accepted normally.
+        //
+        // Normal case (no stale): rvalid always arrives AFTER ar_issued=1
+        // (the AR handshake happens first).  So the gate ar_issued never
+        // spuriously blocks normal rvalid acceptance.
+        if (axi_rvalid && ar_issued) begin
+          // Data received for our current AR, check for AXI error
           if (axi_rresp != 2'b00) begin
             next_state = TRAP;  // AXI error -> illegal instruction trap
           end else begin
@@ -255,6 +319,7 @@ module rv32i_control (
           end
         end
         // Otherwise stay in FETCH state waiting for rvalid
+        // (includes the stale-drain case where rvalid=1 but ar_issued=0)
 
         // Debug halt request during fetch
         if (dbg_halt_req) begin
@@ -334,8 +399,12 @@ module rv32i_control (
           next_state = HALTED;
         end
 
-        // Single-step returns to halted after one instruction
-        if (dbg_step_req) begin
+        // Single-step returns to halted after one instruction.
+        // Use the registered step_in_progress flag instead of the live
+        // dbg_step_req signal: the auto-clear logic in rv32i_cpu_top.sv
+        // clears dbg_ctrl_reg[2] (dbg_step_req) on the HALTED->FETCH
+        // transition, so dbg_step_req is already 0 here in WRITEBACK.
+        if (step_in_progress) begin
           next_state = HALTED;
         end
       end
@@ -412,7 +481,10 @@ module rv32i_control (
         // Initiate AXI read transaction for instruction fetch
         // Only assert arvalid if we haven't issued the read address yet
         axi_arvalid = !ar_issued;
-        axi_rready  = 1'b1;  // Always ready to accept read data
+        // rready is always 1 in FETCH.  If a stale rvalid arrives (ar_issued=0),
+        // the handshake completes to unblock the AXI slave, but the next-state
+        // logic (which gates on ar_issued) prevents the CPU from advancing to DECODE.
+        axi_rready  = 1'b1;
       end
 
       // ------------------------------------------------------------
