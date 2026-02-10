@@ -105,6 +105,22 @@ module rv32i_cpu_top (
   logic        bp0_hit, bp1_hit;
   logic        ebreak_halt;  // Set when halt caused by EBREAK instruction
 
+  // Latched halt cause register (Bug fix: breakpoint halt_cause reads as 0)
+  // bp0_hit and bp1_hit are combinational signals that pulse for only the
+  // single WRITEBACK cycle in which commit_valid is asserted.  By the time
+  // the CPU transitions to HALTED and the test reads DBG_STATUS, those
+  // signals are 0, so halt_cause reads 0.
+  // Fix: capture the cause in a register when the event fires, and hold it
+  // until the CPU resumes (exits HALTED).
+  //
+  // Encoding matches MEMORY_MAP.md / DBG_STATUS bits [7:4]:
+  //   0x1 = debug halt request
+  //   0x2 = BP0 hit
+  //   0x3 = BP1 hit
+  //   0x4 = single-step complete
+  //   0x8 = EBREAK
+  logic [3:0]  halt_cause_lat;
+
   // ================================================================
   // CPU Core Instance
   // ================================================================
@@ -335,24 +351,111 @@ module rv32i_cpu_top (
   assign dbg_resume_req = dbg_ctrl_reg[1];
   assign dbg_step_req   = dbg_ctrl_reg[2];
 
-  // Status register
+  // ================================================================
+  // Halt Cause Latch
+  // ================================================================
+  // Capture the halt cause in a register so it is stable when DBG_STATUS
+  // is read after the CPU enters HALTED.
+  //
+  // Root problem: bp0_hit / bp1_hit are purely combinational and depend on
+  // commit_valid_o, which is a single-cycle pulse from the FSM WRITEBACK
+  // state.  By the time the CPU transitions to HALTED and the test reads
+  // DBG_STATUS, commit_valid_o = 0, so bp0_hit = 0, and halt_cause = 0.
+  //
+  // Fix: sample and hold the cause using commit_valid_o as the capture
+  // trigger.  commit_valid_o is 1 exactly during WRITEBACK — the same cycle
+  // bp0_hit / bp1_hit are valid.  We also cover the EBREAK case (already
+  // handled by ebreak_halt) and the FETCH-time halt_req case.
+  //
+  // Encoding (MEMORY_MAP.md DBG_STATUS bits [7:4]):
+  //   0x1 = debug halt request (plain halt, no other cause)
+  //   0x2 = BP0 hit
+  //   0x3 = BP1 hit
+  //   0x4 = single-step complete
+  //   0x8 = EBREAK instruction
+
+  always_ff @(posedge clk_i or negedge rst_n_i) begin
+    if (!rst_n_i) begin
+      halt_cause_lat <= 4'h0;
+    end else begin
+      // ==================================================================
+      // Priority (highest to lowest):
+      //
+      // 1. EBREAK halted-entry update (overrides everything)
+      // 2. WRITEBACK pulse capture: bp0_hit, bp1_hit  (happen the cycle
+      //    before HALTED entry, must not be cleared by resume logic)
+      // 3. Resume transition: clear latch, UNLESS we are stepping (step
+      //    cause must survive the resume clear)
+      // 4. HALTED entry: fallback for plain halt_req (no commit_valid)
+      //
+      // The step case must be handled carefully:
+      //   - dbg_ctrl_reg[2] is 1 while CPU is HALTED and step is pending
+      //   - auto-clear fires on the HALTED->FETCH edge (same cycle as
+      //     !dbg_halted && dbg_halted_prev)
+      //   - So when we detect the resume edge with dbg_ctrl_reg[2]=1,
+      //     we know this is a step resume and set cause=0x4 instead of
+      //     clearing to 0.  The cause will then be stable while the CPU
+      //     runs the stepped instruction and returns to HALTED.
+      // ==================================================================
+
+      if (dbg_halted && ebreak_halt) begin
+        // --- EBREAK: ebreak_halt becomes valid on the second HALTED cycle
+        //     (ebreak_caused_halt is set on the first HALTED cycle, then
+        //     ebreak_halt is set on the second).  Continuously update while
+        //     EBREAK is signalled so we don't miss the one-cycle-delayed set.
+        halt_cause_lat <= 4'h8;
+
+      end else if (dbg_halted && !dbg_halted_prev) begin
+        // --- CPU just entered HALTED ---
+        // ebreak_halt is not yet valid here (set on the NEXT cycle)
+        // so EBREAK is handled by the branch above.
+        if (halt_cause_lat == 4'h0) begin
+          // No commit_valid-time cause was latched (halt fired during FETCH
+          // not WRITEBACK, e.g. plain debug halt request)
+          halt_cause_lat <= 4'h1;
+        end
+        // else: bp0/bp1 cause already latched during WRITEBACK — keep it
+
+      end else if (!dbg_halted && dbg_halted_prev) begin
+        // --- CPU just exited HALTED (resume or step) ---
+        if (dbg_ctrl_reg[2]) begin
+          // Step resume: set cause to single-step so it is ready when the
+          // CPU returns to HALTED after executing one instruction.
+          // dbg_ctrl_reg[2] is still 1 at this clock edge; the auto-clear
+          // fires simultaneously (combinational), but the registered
+          // value used here still holds the pre-clear value.
+          halt_cause_lat <= 4'h4;
+        end else begin
+          // Plain resume: clear the cause
+          halt_cause_lat <= 4'h0;
+        end
+
+      end else if (commit_valid_o) begin
+        // --- WRITEBACK pulse: sample bp hits ---
+        // bp0_hit / bp1_hit are combinational and valid ONLY this cycle.
+        // Latch them immediately so the value is stable in HALTED.
+        if (bp0_hit) begin
+          halt_cause_lat <= 4'h2;
+        end else if (bp1_hit) begin
+          halt_cause_lat <= 4'h3;
+        end
+        // (No need to handle step or plain halt here; they are handled
+        //  at the resume edge and HALTED entry respectively)
+
+      end
+      // else: hold current value
+    end
+  end
+
+  // Status register - use halt_cause_lat for stable halt cause readback
   always_comb begin
     dbg_status_reg = 32'h0;
     dbg_status_reg[0] = dbg_halted;      // Halted status
     dbg_status_reg[1] = !dbg_halted;     // Running status
 
-    // Halt cause (bits [7:4])
-    if (ebreak_halt) begin
-      dbg_status_reg[7:4] = 4'b1000;     // EBREAK instruction
-    end else if (bp0_hit) begin
-      dbg_status_reg[7:4] = 4'b0010;     // Breakpoint 0 hit
-    end else if (bp1_hit) begin
-      dbg_status_reg[7:4] = 4'b0011;     // Breakpoint 1 hit
-    end else if (dbg_halt_req) begin
-      dbg_status_reg[7:4] = 4'b0001;     // Debug halt request
-    end else if (dbg_step_req) begin
-      dbg_status_reg[7:4] = 4'b0100;     // Single-step complete
-    end
+    // Halt cause (bits [7:4]) - sourced from registered latch so it is
+    // stable when the test reads DBG_STATUS after the CPU enters HALTED.
+    dbg_status_reg[7:4] = halt_cause_lat;
   end
 
   // ================================================================

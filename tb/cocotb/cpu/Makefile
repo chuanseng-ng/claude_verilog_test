@@ -40,7 +40,7 @@ endif
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
 # Convenience targets for different test suites
-.PHONY: smoke basic random isa ebreak all_tests usage info distclean
+.PHONY: smoke basic random isa ebreak debug all_tests usage info distclean
 .PHONY: smoke_uvm random_uvm random_uvm_smoke random_uvm_waves isa_uvm all_uvm
 .PHONY: stress_uvm stress_uvm_smoke stress_alu stress_jump stress_shift stress_immediate
 .PHONY: directed_random_uvm directed_alu directed_immediate directed_rtype
@@ -64,6 +64,10 @@ isa:
 ebreak:
 	@echo "Running EBREAK halt test..."
 	$(MAKE) MODULE=test_ebreak
+
+debug:
+	@echo "Running APB3 debug interface tests (5 tests: single-step, BP0, BP1, GPR write, PC write)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_debug_if
 
 # pyuvm test targets (Phase F+)
 smoke_uvm:
@@ -241,6 +245,9 @@ usage info:
 	@echo "  make directed_immediate - Immediate-heavy test (80% I-type + upper immediate)"
 	@echo "  make directed_rtype    - R-type dominant test (90% R-type instructions)"
 	@echo ""
+	@echo "Debug interface tests:"
+	@echo "  make debug        - Run APB3 debug interface tests (5 tests)"
+	@echo ""
 	@echo "Legacy targets (DEPRECATED - use pyuvm instead):"
 	@echo "  make smoke        - Run legacy smoke tests"
 	@echo "  make basic        - Run legacy basic CPU tests"
@@ -289,6 +296,7 @@ usage info:
 	@echo "    test_stress_uvm           - pyuvm stress tests (biased instruction distributions)"
 	@echo "    test_directed_random_uvm  - pyuvm directed random tests (custom distributions)"
 	@echo "    test_ebreak               - EBREAK halt detection test"
+	@echo "    test_debug_if             - APB3 debug interface tests (5 tests)"
 	@echo ""
 	@echo "  Legacy cocotb tests (DEPRECATED - in legacy/ directory):"
 	@echo "    legacy/test_smoke                - Basic functionality tests (6 tests)"
