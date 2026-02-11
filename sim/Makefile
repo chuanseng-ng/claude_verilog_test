@@ -29,7 +29,9 @@ TEST_MODULES := \
 	tb.cocotb.cpu.test_smoke \
 	tb.cocotb.cpu.test_c_programs \
 	tb.cocotb.cpu.test_axi_protocol \
-	tb.cocotb.cpu.test_debug_if
+	tb.cocotb.cpu.test_debug_if \
+	tb.cocotb.cpu.test_isa_uvm \
+	tb.cocotb.cpu.test_fault_injection
 
 # RTL source files
 VERILOG_SOURCES := \
@@ -165,6 +167,9 @@ test:
 		if ! $(MAKE) sim MODULE=$$module; then \
 			failed_tests="$$failed_tests $$module"; \
 		fi; \
+		slug=$$(echo $$module | tr '.' '_'); \
+		cp -f $(SIM_DIR)/coverage.dat \
+		       $(SIM_DIR)/coverage_$${slug}.dat 2>/dev/null || true; \
 		echo ""; \
 	done; \
 	if [ -n "$$failed_tests" ]; then \
@@ -208,10 +213,13 @@ coverage:
 	@echo "Running all tests with coverage instrumentation..."
 	@mkdir -p $(PROJ_ROOT)/reports
 	@$(MAKE) test COVERAGE=1
+	@echo "Merging coverage data from all test modules..."
+	@verilator_coverage --write $(SIM_DIR)/coverage_merged.dat \
+		$(wildcard $(SIM_DIR)/coverage_*.dat) 2>/dev/null || true
 	@echo "Generating Verilator coverage report..."
-	@verilator_coverage $(SIM_DIR)/coverage.dat \
+	@verilator_coverage $(SIM_DIR)/coverage_merged.dat \
 		--annotate $(PROJ_ROOT)/reports/coverage_annotated 2>/dev/null || \
-		echo "Note: verilator_coverage not available or no coverage.dat found"
+		echo "Note: verilator_coverage not available or no coverage data found"
 	@echo "Coverage report: reports/coverage_annotated/"
 
 # Override clean to use our basic clean
