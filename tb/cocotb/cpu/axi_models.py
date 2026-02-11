@@ -68,9 +68,14 @@ class ConfigurableAXIMemory:
         # Protocol violation tracking
         self.violations = []
 
-        # Start AXI handlers
-        cocotb.start_soon(self.axi_read_handler())
-        cocotb.start_soon(self.axi_write_handler())
+        # Start AXI handlers (keep handles so callers can cancel on teardown)
+        self._read_task = cocotb.start_soon(self.axi_read_handler())
+        self._write_task = cocotb.start_soon(self.axi_write_handler())
+
+    def stop(self):
+        """Cancel background handler tasks (call at end of each test)."""
+        self._read_task.cancel()
+        self._write_task.cancel()
 
     def inject_read_delay(self, arready_cycles=0, rvalid_cycles=0):
         """Inject delay for the NEXT read transaction.

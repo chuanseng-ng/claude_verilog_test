@@ -7,6 +7,7 @@ the Python reference model.
 
 import sys
 from pathlib import Path
+from typing import Optional
 
 import cocotb
 
@@ -14,6 +15,7 @@ import cocotb
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from tb.models.rv32i_model import RV32IModel
+from tb.cocotb.common.coverage import CoverageReport
 
 
 class CPUScoreboard:
@@ -23,16 +25,18 @@ class CPUScoreboard:
     Compares RTL commits against Python reference model execution.
     """
 
-    def __init__(self, ref_model: RV32IModel, log=None):
+    def __init__(self, ref_model: RV32IModel, log=None, coverage: Optional[CoverageReport] = None):
         """
         Initialize scoreboard.
 
         Args:
             ref_model: Python reference model instance
             log: Logger instance (optional, use dut._log)
+            coverage: Optional CoverageReport for instruction coverage tracking
         """
         self.ref_model = ref_model
         self.log = log if log else cocotb.log
+        self.coverage = coverage
 
         self.matches = 0
         self.mismatches = 0
@@ -54,6 +58,10 @@ class CPUScoreboard:
         """
         # Execute reference model
         ref_result = self.ref_model.step(rtl_commit["insn"])
+
+        # Record instruction coverage
+        if self.coverage:
+            self.coverage.instr_cov.record(rtl_commit["insn"])
 
         # Compare PC
         if ref_result["pc"] != rtl_commit["pc"]:

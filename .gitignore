@@ -40,3 +40,5 @@ venv/
 
 # Test results and artifacts
 results/
+reports/
+coverage.dat
