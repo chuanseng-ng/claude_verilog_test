@@ -16,6 +16,14 @@ from cocotb.triggers import ClockCycles, ReadOnly, RisingEdge
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
+from sim.riscv_encoder import (
+    ADD, AND, ANDI, AUIPC,
+    BEQ, BGE, BGEU, BLT, BLTU, BNE,
+    JAL, JALR,
+    LB, LBU, LH, LHU, LUI, LW,
+    ADDI, SLLI, SLTI, SLTIU, SLTU, SLT, SRA, SRAI, SRL, SRLI, SUB,
+    ORI, OR, SB, SH, SLL, SW, XOR, XORI,
+)
 from tb.cocotb.common.clock_reset import reset_dut, setup_clock
 from tb.cocotb.common.coverage import CoverageReport
 from tb.cocotb.common.scoreboard import CPUScoreboard
@@ -432,6 +440,108 @@ async def test_jal(dut):
 
 
 @cocotb.test()
+async def test_isa_coverage(dut):
+    """Exercise all 37 RV32I instructions and cover MEM_WAIT FSM state."""
+    dut._log.info("=== Test: ISA Coverage ===")
+    cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
+    _init_inputs(dut)
+
+    ref_model = RV32IModel()
+    scoreboard = CPUScoreboard(ref_model, log=dut._log, coverage=_cov_report)
+    mem = SimpleAXIMemory(dut, ref_model=ref_model)
+    dbg = APBDebugInterface(dut)
+    count = [0]
+    cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
+    cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
+
+    # Program layout (word index → address = index × 4):
+    #   [0]  0x000  LUI  x1, 1          x1 = 0x1000  (data memory base)
+    #   [1]  0x004  ADDI x2, x0, 16     x2 = 16
+    #   [2]  0x008  AUIPC x3, 0         x3 = 0x0008  (used later by JALR)
+    #   [3]  0x00C  ADDI x4, x0, 5      x4 = 5
+    #   [4]  0x010  ADDI x5, x0, -5     x5 = -5
+    #   [5]  0x014  SW  x2, 0(x1)       mem[0x1000] = 16  (MEM_WAIT)
+    #   [6]  0x018  SH  x2, 4(x1)       mem[0x1004] = 16  (MEM_WAIT)
+    #   [7]  0x01C  SB  x2, 8(x1)       mem[0x1008] = 16  (MEM_WAIT)
+    #   [8]  0x020  LW  x6, 0(x1)       x6 = 16           (MEM_WAIT)
+    #   [9]  0x024  LH  x7, 4(x1)       x7 = 16           (MEM_WAIT)
+    #  [10]  0x028  LB  x8, 8(x1)       x8 = 16           (MEM_WAIT)
+    #  [11]  0x02C  LHU x9, 4(x1)       x9 = 16           (MEM_WAIT)
+    #  [12]  0x030  LBU x10, 8(x1)      x10 = 16          (MEM_WAIT)
+    #  [13]  0x034  ADD  x11, x6, x4    x11 = 21
+    #  [14]  0x038  SUB  x11, x6, x4    x11 = 11
+    #  [15]  0x03C  SLL  x11, x4, x4    x11 = 160
+    #  [16]  0x040  SLT  x11, x4, x6    x11 = 1
+    #  [17]  0x044  SLTU x11, x4, x6    x11 = 1
+    #  [18]  0x048  XOR  x11, x4, x6    x11 = 21
+    #  [19]  0x04C  SRL  x11, x6, x4    x11 = 0
+    #  [20]  0x050  SRA  x11, x5, x4    x11 = -1
+    #  [21]  0x054  OR   x11, x4, x6    x11 = 21
+    #  [22]  0x058  AND  x11, x4, x6    x11 = 0
+    #  [23]  0x05C  SLTI  x11, x4, 10   x11 = 1
+    #  [24]  0x060  SLTIU x11, x4, 10   x11 = 1
+    #  [25]  0x064  XORI  x11, x4, 255  x11 = 250
+    #  [26]  0x068  ORI   x11, x4, 240  x11 = 245
+    #  [27]  0x06C  ANDI  x11, x4, 15   x11 = 5
+    #  [28]  0x070  SLLI  x11, x4, 2    x11 = 20
+    #  [29]  0x074  SRLI  x11, x6, 1    x11 = 8
+    #  [30]  0x078  SRAI  x11, x5, 1    x11 = -3
+    #  [31]  0x07C  BEQ  x6, x6, +8    taken → 0x084
+    #  [32]  0x080  NOP (skipped)
+    #  [33]  0x084  BNE  x4, x6, +8    taken → 0x08C
+    #  [34]  0x088  NOP (skipped)
+    #  [35]  0x08C  BLT  x4, x6, +8    taken → 0x094
+    #  [36]  0x090  NOP (skipped)
+    #  [37]  0x094  BGE  x6, x4, +8    taken → 0x09C
+    #  [38]  0x098  NOP (skipped)
+    #  [39]  0x09C  BLTU x4, x6, +8    taken → 0x0A4
+    #  [40]  0x0A0  NOP (skipped)
+    #  [41]  0x0A4  BGEU x6, x4, +8    taken → 0x0AC
+    #  [42]  0x0A8  NOP (skipped)
+    #  [43]  0x0AC  JAL  x0, +12       → 0x0B8
+    #  [44]  0x0B0  NOP (skipped)
+    #  [45]  0x0B4  NOP (skipped)
+    #  [46]  0x0B8  JALR x0, x3, 0xB4  → x3+0xB4 = 0x0008+0xB4 = 0x00BC
+    #  [47]  0x0BC  JAL  x0, 0          infinite loop (all 37 insns done)
+    NOP = ADDI(0, 0, 0)
+    program = [
+        LUI(1, 1),           ADDI(2, 0, 16),        AUIPC(3, 0),
+        ADDI(4, 0, 5),       ADDI(5, 0, -5),
+        SW(2, 1, 0),         SH(2, 1, 4),            SB(2, 1, 8),
+        LW(6, 1, 0),         LH(7, 1, 4),            LB(8, 1, 8),
+        LHU(9, 1, 4),        LBU(10, 1, 8),
+        ADD(11, 6, 4),       SUB(11, 6, 4),          SLL(11, 4, 4),
+        SLT(11, 4, 6),       SLTU(11, 4, 6),         XOR(11, 4, 6),
+        SRL(11, 6, 4),       SRA(11, 5, 4),          OR(11, 4, 6),
+        AND(11, 4, 6),
+        SLTI(11, 4, 10),     SLTIU(11, 4, 10),       XORI(11, 4, 0xFF),
+        ORI(11, 4, 0xF0),    ANDI(11, 4, 0x0F),      SLLI(11, 4, 2),
+        SRLI(11, 6, 1),      SRAI(11, 5, 1),
+        BEQ(6, 6, 8),        NOP,
+        BNE(4, 6, 8),        NOP,
+        BLT(4, 6, 8),        NOP,
+        BGE(6, 4, 8),        NOP,
+        BLTU(4, 6, 8),       NOP,
+        BGEU(6, 4, 8),       NOP,
+        JAL(0, 12),          NOP, NOP,
+        JALR(0, 3, 0xB4),
+        JAL(0, 0),           # infinite loop — all 37 instructions executed
+    ]
+    for i, insn in enumerate(program):
+        mem.write_word(i * 4, insn)
+
+    await reset_dut(dut)
+    await ClockCycles(dut.clk_i, 800)
+
+    await dbg.halt_cpu()
+
+    dut._log.info(f"Total commits: {count[0]}")
+    passed = scoreboard.report()
+    assert passed, "Scoreboard validation failed"
+    dut._log.info("ISA coverage test passed")
+
+
+@cocotb.test()
 async def test_coverage_report(dut):
     """Generate and log coverage report for all smoke tests."""
     dut._log.info("=== Coverage Report ===")
@@ -439,6 +549,6 @@ async def test_coverage_report(dut):
     report = _cov_report.generate(output_path="reports/coverage_summary.txt")
 
     for line in report.splitlines():
-        dut._log.info(line)
+        dut._log.info(line if line else " ")
 
     dut._log.info("Coverage report written to reports/coverage_summary.txt")
