@@ -41,4 +41,5 @@ venv/
 # Test results and artifacts
 results/
 reports/
-coverage.dat
+coverage*.dat
+coverage_tb_*.dat
