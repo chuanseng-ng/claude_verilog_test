@@ -653,3 +653,55 @@ async def test_debug_pc_write(dut):
     dut._log.info("=" * 70)
     dut._log.info("TEST PASSED: test_debug_pc_write")
     dut._log.info("=" * 70)
+
+
+# ===========================================================================
+# Test 6: APB Read DBG_CTRL and DBG_INSTR registers
+# ===========================================================================
+
+@cocotb.test()
+async def test_debug_reg_reads(dut):
+    """Read DBG_CTRL (0x000) and DBG_INSTR (0x00C) via APB to cover those
+    case arms in rv32i_cpu_top.sv.
+
+    Steps:
+      1. Halt the CPU.
+      2. Read DBG_CTRL (0x000) — should return the control register value
+         (halt bit was written, then auto-cleared; value may be 0 or 1).
+      3. Load an ADDI instruction, resume, let it execute, halt again.
+      4. Read DBG_INSTR (0x00C) — should return a non-zero instruction word.
+    """
+    dut._log.info("=" * 70)
+    dut._log.info("TEST: APB Read DBG_CTRL and DBG_INSTR")
+    dut._log.info("=" * 70)
+
+    axi_driver, apb_driver = await setup_test(dut)
+
+    # Load a simple program: ADDI x1, x0, 42 then EBREAK
+    axi_driver.write_word(0x0000, ADDI_X1_X0_1)
+    axi_driver.write_word(0x0004, EBREAK)
+
+    # Halt CPU
+    dut._log.info("Halting CPU to read DBG_CTRL...")
+    await apb_driver.halt_cpu()
+    await ClockCycles(dut.clk_i, 5)
+
+    # Read DBG_CTRL (0x000) — covers rv32i_cpu_top.sv line 201
+    ctrl_val = await apb_driver.apb_read(apb_driver.DBG_CTRL)
+    dut._log.info(f"  DBG_CTRL (0x000) = 0x{ctrl_val:08x}")
+
+    # Resume and wait for EBREAK halt so CPU is halted at the EBREAK instruction
+    dut._log.info("Resuming to run to EBREAK...")
+    await apb_driver.resume_cpu()
+    halted, status, halt_cause = await wait_for_halt(dut, apb_driver, max_cycles=200)
+    assert halted, f"CPU should halt at EBREAK within 200 cycles (status=0x{status:08x})"
+
+    # Read DBG_INSTR (0x00C) — should contain the committed instruction
+    # Covers rv32i_cpu_top.sv line 210
+    instr_val = await apb_driver.apb_read(apb_driver.DBG_INSTR)
+    dut._log.info(f"  DBG_INSTR (0x00C) = 0x{instr_val:08x}")
+    assert instr_val != 0, f"DBG_INSTR should be non-zero when halted, got 0x{instr_val:08x}"
+
+    dut._log.info("=" * 70)
+    dut._log.info("TEST PASSED: test_debug_reg_reads")
+    dut._log.info("=" * 70)

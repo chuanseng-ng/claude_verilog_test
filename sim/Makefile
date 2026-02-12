@@ -212,10 +212,11 @@ debug:
 coverage:
 	@echo "Running all tests with coverage instrumentation..."
 	@mkdir -p $(PROJ_ROOT)/reports
+	@rm -f $(SIM_DIR)/coverage_*.dat $(SIM_DIR)/coverage_merged.dat
 	@$(MAKE) test COVERAGE=1
 	@echo "Merging coverage data from all test modules..."
 	@verilator_coverage --write $(SIM_DIR)/coverage_merged.dat \
-		$(wildcard $(SIM_DIR)/coverage_*.dat) 2>/dev/null || true
+		$(SIM_DIR)/coverage_*.dat 2>/dev/null || true
 	@echo "Generating Verilator coverage report..."
 	@verilator_coverage $(SIM_DIR)/coverage_merged.dat \
 		--annotate $(PROJ_ROOT)/reports/coverage_annotated 2>/dev/null || \

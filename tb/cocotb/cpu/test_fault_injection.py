@@ -32,7 +32,7 @@ from cocotb.triggers import RisingEdge
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
-from sim.riscv_encoder import ADDI, JAL, LH, SW
+from sim.riscv_encoder import ADDI, JAL, LH, SB, SH, SW, encode_b_type, encode_i_type, encode_r_type, encode_s_type
 from tb.cocotb.common.clock_reset import reset_dut
 from tb.cocotb.cpu.axi_models import ConfigurableAXIMemory
 
@@ -311,4 +311,223 @@ async def test_axi_fetch_error_trap(dut):
     )
 
     dut._log.info("TEST PASSED: test_axi_fetch_error_trap")
+    dut._log.info("=" * 70)
+
+
+# ===========================================================================
+# Test 5: Decoder Illegal Sub-Opcode Paths
+# ===========================================================================
+
+# OP opcodes
+_OP_JALR   = 0b1100111
+_OP_BRANCH = 0b1100011
+_OP_LOAD   = 0b0000011
+_OP_STORE  = 0b0100011
+_OP_IMM    = 0b0010011
+_OP_REG    = 0b0110011
+_OP_SYSTEM = 0b1110011
+
+# One representative bad funct7 that is invalid for every OP_REG funct3
+# (it's neither 0b0000000 nor 0b0100000)
+_BAD_FUNCT7 = 0b0110000
+
+# Build the list of (description, encoding) pairs — one per decoder illegal branch.
+# Each encoding targets a specific `else/default: illegal = 1'b1;` line in rv32i_decode.sv.
+_DECODER_ILLEGAL_CASES = [
+    # JALR: only funct3=000 is valid
+    ("JALR funct3=001",
+     encode_i_type(0, 0, 0b001, 1, _OP_JALR)),
+
+    # BRANCH: funct3=010 and 011 are undefined (valid: 000,001,100,101,110,111)
+    ("BRANCH funct3=010",
+     encode_b_type(8, 0, 0, 0b010)),
+
+    # LOAD: funct3=011, 110, 111 are undefined (valid: 000,001,010,100,101)
+    ("LOAD funct3=011",
+     encode_i_type(0, 0, 0b011, 1, _OP_LOAD)),
+    ("LOAD funct3=110",
+     encode_i_type(0, 0, 0b110, 1, _OP_LOAD)),
+    ("LOAD funct3=111",
+     encode_i_type(0, 0, 0b111, 1, _OP_LOAD)),
+
+    # STORE: funct3=011..111 are undefined (valid: 000,001,010)
+    ("STORE funct3=011",
+     encode_s_type(0, 0, 0, 0b011)),
+
+    # OP_IMM SLLI (funct3=001): funct7 must be 0b0000000; anything else is illegal
+    ("OP_IMM SLLI bad funct7",
+     encode_i_type((0b0100000 << 5) | 0, 0, 0b001, 1, _OP_IMM)),
+
+    # OP_IMM SRLI/SRAI (funct3=101): funct7 must be 0b0000000 or 0b0100000
+    ("OP_IMM SRL/SRA bad funct7",
+     encode_i_type((_BAD_FUNCT7 << 5) | 0, 0, 0b101, 1, _OP_IMM)),
+
+    # OP_REG: bad funct7 for each funct3 (all 8 funct3 have exactly one or two valid funct7s)
+    ("OP_REG ADD_SUB bad funct7",
+     encode_r_type(_BAD_FUNCT7, 0, 0, 0b000, 1)),
+    ("OP_REG SLL bad funct7",
+     encode_r_type(_BAD_FUNCT7, 0, 0, 0b001, 1)),
+    ("OP_REG SLT bad funct7",
+     encode_r_type(_BAD_FUNCT7, 0, 0, 0b010, 1)),
+    ("OP_REG SLTU bad funct7",
+     encode_r_type(_BAD_FUNCT7, 0, 0, 0b011, 1)),
+    ("OP_REG XOR bad funct7",
+     encode_r_type(_BAD_FUNCT7, 0, 0, 0b100, 1)),
+    ("OP_REG SRL/SRA bad funct7",
+     encode_r_type(_BAD_FUNCT7, 0, 0, 0b101, 1)),
+    ("OP_REG OR bad funct7",
+     encode_r_type(_BAD_FUNCT7, 0, 0, 0b110, 1)),
+    ("OP_REG AND bad funct7",
+     encode_r_type(_BAD_FUNCT7, 0, 0, 0b111, 1)),
+
+    # OP_SYSTEM else: ECALL (imm12=0x000) is not supported in Phase 1
+    ("OP_SYSTEM ECALL (unsupported)",
+     0x00000073),  # ECALL: funct12=0x000 != 0x001 (EBREAK) → illegal
+]
+
+
+@cocotb.test()
+async def test_decoder_illegal_subcodes(dut):
+    """Cover every remaining decoder illegal branch via targeted bad encodings.
+
+    Each sub-test loads one carefully crafted instruction that targets a
+    specific `else/default: illegal = 1'b1;` path inside rv32i_decode.sv:
+
+      - JALR with invalid funct3
+      - BRANCH with invalid funct3 (2 or 3)
+      - LOAD with invalid funct3 (3, 6, 7)
+      - STORE with invalid funct3 (3+)
+      - OP_IMM SLLI with bad funct7
+      - OP_IMM SRLI/SRAI with bad funct7
+      - OP_REG: bad funct7 for each of the 8 funct3 values
+      - OP_SYSTEM ECALL (not implemented, illegal in Phase 1)
+
+    All paths must fire trap_taken_o=1 with trap_cause_o=2 (TRAP_ILLEGAL_INSN).
+    """
+    dut._log.info("=" * 70)
+    dut._log.info("TEST: Decoder Illegal Sub-Opcode Paths")
+    dut._log.info("=" * 70)
+
+    passed = 0
+    for desc, encoding in _DECODER_ILLEGAL_CASES:
+        dut._log.info(f"--- Sub-test: {desc} (0x{encoding:08x}) ---")
+
+        mem = await _setup_fault_test(dut)
+        mem.write_word(0x0000, encoding)
+        mem.write_word(0x0004, 0x00100073)  # EBREAK safety net
+
+        trap_taken, trap_cause = await _wait_for_trap(dut, max_cycles=100)
+
+        dut._log.info(f"  trap_taken_o={trap_taken}, trap_cause_o={trap_cause}")
+        assert trap_taken, (
+            f"[{desc}] trap_taken_o never went high "
+            f"(insn=0x{encoding:08x} should be illegal)"
+        )
+        assert trap_cause == TRAP_ILLEGAL_INSN, (
+            f"[{desc}] Expected trap_cause_o={TRAP_ILLEGAL_INSN}, got {trap_cause}"
+        )
+        passed += 1
+
+    dut._log.info(f"All {passed}/{len(_DECODER_ILLEGAL_CASES)} sub-tests passed")
+    dut._log.info("TEST PASSED: test_decoder_illegal_subcodes")
+    dut._log.info("=" * 70)
+
+
+# ===========================================================================
+# Test 6: Byte Store Alignment (all 4 byte-lane strobes)
+# ===========================================================================
+
+@cocotb.test()
+async def test_byte_store_alignment(dut):
+    """SB to non-zero-aligned addresses covers all 4 byte-lane write strobes.
+
+    Covers rv32i_core.sv AXI write-strobe case arms:
+      2'b00 → axi_wstrb=4'b0001  (already covered by other tests)
+      2'b01 → axi_wstrb=4'b0010  ← this test
+      2'b10 → axi_wstrb=4'b0100  ← this test
+      2'b11 → axi_wstrb=4'b1000  ← this test
+
+    SB has no alignment requirement, so all four byte offsets are valid.
+    Program stores 0x55 to base+1, base+2, base+3 then hits an illegal
+    instruction sentinel so _wait_for_trap detects completion.
+    If any SB traps unexpectedly the cause would be non-2 and the assertion
+    would fail immediately.
+    """
+    dut._log.info("=" * 70)
+    dut._log.info("TEST: Byte Store Alignment (SB to offsets 1/2/3)")
+    dut._log.info("=" * 70)
+
+    mem = await _setup_fault_test(dut)
+
+    # x1 = 0x100 (base address), x2 = 0x55 (data)
+    mem.write_word(0x0000, ADDI(1, 0, 0x100))  # ADDI x1, x0, 0x100
+    mem.write_word(0x0004, ADDI(2, 0, 0x55))   # ADDI x2, x0, 0x55
+    mem.write_word(0x0008, SB(2, 1, 1))        # SB x2, 1(x1)  → addr=0x101, [1:0]=01
+    mem.write_word(0x000C, SB(2, 1, 2))        # SB x2, 2(x1)  → addr=0x102, [1:0]=10
+    mem.write_word(0x0010, SB(2, 1, 3))        # SB x2, 3(x1)  → addr=0x103, [1:0]=11
+    mem.write_word(0x0014, 0xFFFFFFFF)         # illegal instruction → TRAP_ILLEGAL_INSN
+
+    dut._log.info("  0x0000: ADDI x1, x0, 0x100  (base addr)")
+    dut._log.info("  0x0004: ADDI x2, x0, 0x55   (data)")
+    dut._log.info("  0x0008: SB x2, 1(x1)   → wstrb=0010")
+    dut._log.info("  0x000C: SB x2, 2(x1)   → wstrb=0100")
+    dut._log.info("  0x0010: SB x2, 3(x1)   → wstrb=1000")
+    dut._log.info("  0x0014: 0xFFFFFFFF      (illegal sentinel)")
+
+    trap_taken, trap_cause = await _wait_for_trap(dut, max_cycles=500)
+
+    dut._log.info(f"Result: trap_taken_o={trap_taken}, trap_cause_o={trap_cause}")
+    assert trap_taken, \
+        "trap_taken_o never went high — CPU never reached illegal sentinel (SB may have stalled)"
+    assert trap_cause == TRAP_ILLEGAL_INSN, (
+        f"Expected trap_cause_o={TRAP_ILLEGAL_INSN} (TRAP_ILLEGAL_INSN from sentinel), "
+        f"got {trap_cause} — if cause=6 an SB unexpectedly triggered a misalignment trap"
+    )
+
+    dut._log.info("TEST PASSED: test_byte_store_alignment")
+    dut._log.info("=" * 70)
+
+
+# ===========================================================================
+# Test 7: Halfword Store Upper Alignment (addr[1]=1 → wstrb=1100)
+# ===========================================================================
+
+@cocotb.test()
+async def test_halfword_store_upper(dut):
+    """SH to address with bit[1]=1 covers the upper halfword write strobe.
+
+    Covers rv32i_core.sv AXI write-strobe case arm:
+      1'b1 → axi_wstrb=4'b1100  (halfword store to addr where mem_addr[1]=1)
+
+    SH only requires addr[0]=0 (2-byte alignment). Storing to base+2 gives
+    mem_addr[1:0]=10, which is valid (addr[0]=0) and exercises the upper lane.
+    """
+    dut._log.info("=" * 70)
+    dut._log.info("TEST: Halfword Store Upper (SH to addr+2 → wstrb=1100)")
+    dut._log.info("=" * 70)
+
+    mem = await _setup_fault_test(dut)
+
+    # x1 = 0x100 (base address), x2 = 0x34 (data)
+    mem.write_word(0x0000, ADDI(1, 0, 0x100))  # ADDI x1, x0, 0x100
+    mem.write_word(0x0004, ADDI(2, 0, 0x34))   # ADDI x2, x0, 0x34
+    mem.write_word(0x0008, SH(2, 1, 2))        # SH x2, 2(x1)  → addr=0x102, [1]=1 → wstrb=1100
+    mem.write_word(0x000C, 0xFFFFFFFF)         # illegal instruction → TRAP_ILLEGAL_INSN
+
+    dut._log.info("  0x0000: ADDI x1, x0, 0x100  (base addr)")
+    dut._log.info("  0x0004: ADDI x2, x0, 0x34   (data)")
+    dut._log.info("  0x0008: SH x2, 2(x1)   → addr=0x102, wstrb=1100")
+    dut._log.info("  0x000C: 0xFFFFFFFF      (illegal sentinel)")
+
+    trap_taken, trap_cause = await _wait_for_trap(dut, max_cycles=300)
+
+    dut._log.info(f"Result: trap_taken_o={trap_taken}, trap_cause_o={trap_cause}")
+    assert trap_taken, \
+        "trap_taken_o never went high — CPU never reached illegal sentinel (SH may have stalled)"
+    assert trap_cause == TRAP_ILLEGAL_INSN, (
+        f"Expected trap_cause_o={TRAP_ILLEGAL_INSN} (TRAP_ILLEGAL_INSN from sentinel), "
+        f"got {trap_cause} — if cause=6 the SH triggered an unexpected misalignment trap"
+    )
+
+    dut._log.info("TEST PASSED: test_halfword_store_upper")
     dut._log.info("=" * 70)
