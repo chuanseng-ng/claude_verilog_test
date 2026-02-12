@@ -677,7 +677,7 @@ async def test_debug_reg_reads(dut):
 
     axi_driver, apb_driver = await setup_test(dut)
 
-    # Load a simple program: ADDI x1, x0, 42 then EBREAK
+    # Load a simple program: ADDI x1, x0, 1 then EBREAK
     axi_driver.write_word(0x0000, ADDI_X1_X0_1)
     axi_driver.write_word(0x0004, EBREAK)
 
