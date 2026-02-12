@@ -64,9 +64,11 @@ module rv32i_branch_comp (
       end
 
       // Default: Branch not taken (for non-branch instructions)
+      /* verilator coverage_off */
       default: begin
         branch_taken = 1'b0;
       end
+      /* verilator coverage_on */
     endcase
   end
 

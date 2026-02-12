@@ -101,9 +101,11 @@ module rv32i_alu (
       end
 
       // Default case to avoid latches
+      /* verilator coverage_off */
       default: begin
         result = 32'h0;
       end
+      /* verilator coverage_on */
     endcase
   end
 

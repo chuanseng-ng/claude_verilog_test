@@ -75,9 +75,11 @@ module rv32i_imm_gen (
       end
 
       // Default case to avoid latches
+      /* verilator coverage_off */
       default: begin
         immediate = 32'h0;
       end
+      /* verilator coverage_on */
     endcase
   end
 
