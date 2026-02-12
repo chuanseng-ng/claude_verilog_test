@@ -7,7 +7,6 @@ Three coverage metrics for Phase 1 exit criteria:
   3. RTL code coverage     — collected by Verilator (opt-in via COVERAGE=1)
 """
 
-import os
 from pathlib import Path
 
 

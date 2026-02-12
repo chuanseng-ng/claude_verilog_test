@@ -13,7 +13,6 @@ Planned test categories:
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge
 
 from tb.cocotb.common.clock_reset import reset_dut, wait_cycles
 

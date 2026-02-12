@@ -24,7 +24,7 @@ from sim.riscv_encoder import (
     ADDI, SLLI, SLTI, SLTIU, SLTU, SLT, SRA, SRAI, SRL, SRLI, SUB,
     ORI, OR, SB, SH, SLL, SW, XOR, XORI,
 )
-from tb.cocotb.common.clock_reset import reset_dut, setup_clock
+from tb.cocotb.common.clock_reset import reset_dut
 from tb.cocotb.common.coverage import CoverageReport
 from tb.cocotb.common.scoreboard import CPUScoreboard
 from tb.models.rv32i_model import RV32IModel
@@ -203,14 +203,18 @@ async def monitor_commits(dut, scoreboard=None, count=None):
             if count[0] <= 10:
                 dut._log.info(f"Commit #{count[0]}: PC=0x{pc:08x}, insn=0x{insn:08x}")
             if scoreboard is not None:
+                reg_wr = int(dut.u_core.regfile_wr_en.value)
+                mem_wr = int(dut.u_core.mem_wr.value)
+                mem_rd = int(dut.u_core.mem_rd.value)
+                has_mem = bool(mem_wr or mem_rd)
                 rtl_commit = {
                     "pc": pc,
                     "insn": insn,
-                    "rd": None,
-                    "rd_value": None,
-                    "mem_addr": None,
+                    "rd": int(dut.u_core.rd.value) & 0x1F if reg_wr else None,
+                    "rd_value": int(dut.u_core.rd_data.value) & 0xFFFFFFFF if reg_wr else None,
+                    "mem_addr": int(dut.u_core.mem_addr.value) & 0xFFFFFFFF if has_mem else None,
                     "mem_data": None,
-                    "mem_write": None,
+                    "mem_write": bool(mem_wr) if has_mem else None,
                 }
                 scoreboard.check_commit(rtl_commit)
 
@@ -539,6 +543,68 @@ async def test_isa_coverage(dut):
     passed = scoreboard.report()
     assert passed, "Scoreboard validation failed"
     dut._log.info("ISA coverage test passed")
+
+
+@cocotb.test()
+async def test_random_10k_instructions(dut):
+    """Randomized test: execute 10k+ RV32I arithmetic instructions vs reference model.
+
+    Generates 10001 randomly chosen R-type and I-type arithmetic instructions
+    (no branches/jumps/memory) followed by a JAL-to-self infinite loop.
+    The RNG seed is fixed for reproducibility; change SEED to explore new sequences.
+    """
+    import random
+
+    SEED = 42
+    NUM_INSNS = 10001
+
+    dut._log.info(f"=== Test: Random 10k Instructions (seed={SEED}) ===")
+    random.seed(SEED)
+
+    cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
+    _init_inputs(dut)
+
+    ref_model = RV32IModel()
+    scoreboard = CPUScoreboard(ref_model, log=dut._log, coverage=_cov_report)
+    mem = SimpleAXIMemory(dut, ref_model=ref_model)
+    count = [0]
+    cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
+    cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
+
+    r_ops = [ADD, SUB, AND, OR, XOR, SLL, SRL, SRA, SLT, SLTU]
+    i_ops = [ADDI, ANDI, ORI, XORI, SLTI, SLTIU]
+    sh_ops = [SLLI, SRLI, SRAI]
+
+    program = []
+    for _ in range(NUM_INSNS):
+        rd = random.randint(1, 31)   # x1–x31 (never write x0)
+        rs1 = random.randint(0, 31)
+        choice = random.randint(0, 2)
+        if choice == 0:              # R-type
+            rs2 = random.randint(0, 31)
+            program.append(random.choice(r_ops)(rd, rs1, rs2))
+        elif choice == 1:            # I-type arithmetic
+            imm = random.randint(-2048, 2047)
+            program.append(random.choice(i_ops)(rd, rs1, imm))
+        else:                        # Shift immediate
+            shamt = random.randint(0, 31)
+            program.append(random.choice(sh_ops)(rd, rs1, shamt))
+
+    program.append(JAL(0, 0))       # infinite loop — all instructions done
+
+    for i, insn in enumerate(program):
+        mem.write_word(i * 4, insn)
+
+    await reset_dut(dut)
+    await ClockCycles(dut.clk_i, NUM_INSNS * 10 + 2000)
+
+    dut._log.info(f"Total commits: {count[0]}")
+    assert count[0] >= NUM_INSNS, (
+        f"Expected {NUM_INSNS}+ commits, got {count[0]} (seed={SEED})"
+    )
+    passed = scoreboard.report()
+    assert passed, f"Scoreboard validation failed (seed={SEED})"
+    dut._log.info(f"Random 10k instructions test passed (seed={SEED})")
 
 
 @cocotb.test()
