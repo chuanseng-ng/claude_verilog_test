@@ -29,7 +29,9 @@ TEST_MODULES := \
 	tb.cocotb.cpu.test_smoke \
 	tb.cocotb.cpu.test_c_programs \
 	tb.cocotb.cpu.test_axi_protocol \
-	tb.cocotb.cpu.test_debug_if
+	tb.cocotb.cpu.test_debug_if \
+	tb.cocotb.cpu.test_isa_uvm \
+	tb.cocotb.cpu.test_fault_injection
 
 # RTL source files
 VERILOG_SOURCES := \
@@ -55,6 +57,10 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += --timescale 1ns/1ps
 	COMPILE_ARGS += --public-flat-rw
 	COMPILE_ARGS += --no-timing
+ifdef COVERAGE
+	COMPILE_ARGS += --coverage
+	EXTRA_ARGS   += --coverage
+endif
 endif
 
 # Questa-specific flags
@@ -85,6 +91,7 @@ help:
 	@echo "  make lint         - Run Verilator lint check"
 	@echo "  make axi          - Run AXI protocol tests only"
 	@echo "  make debug        - Run APB3 debug interface tests only"
+	@echo "  make coverage     - Run all tests with Verilator coverage + generate reports"
 	@echo "  make clean        - Clean simulation artifacts"
 	@echo "  make help         - Show this help"
 	@echo ""
@@ -160,6 +167,9 @@ test:
 		if ! $(MAKE) sim MODULE=$$module; then \
 			failed_tests="$$failed_tests $$module"; \
 		fi; \
+		slug=$$(echo $$module | tr '.' '_'); \
+		cp -f $(SIM_DIR)/coverage.dat \
+		       $(SIM_DIR)/coverage_$${slug}.dat 2>/dev/null || true; \
 		echo ""; \
 	done; \
 	if [ -n "$$failed_tests" ]; then \
@@ -196,6 +206,22 @@ debug:
 	@echo "Note: This should be run in WSL environment"
 	@echo ""
 	$(MAKE) sim MODULE=tb.cocotb.cpu.test_debug_if
+
+# Run all tests with Verilator coverage instrumentation and generate reports
+.PHONY: coverage
+coverage:
+	@echo "Running all tests with coverage instrumentation..."
+	@mkdir -p $(PROJ_ROOT)/reports
+	@rm -f $(SIM_DIR)/coverage_*.dat $(SIM_DIR)/coverage_merged.dat
+	@$(MAKE) test COVERAGE=1
+	@echo "Merging coverage data from all test modules..."
+	@verilator_coverage --write $(SIM_DIR)/coverage_merged.dat \
+		$(SIM_DIR)/coverage_*.dat 2>/dev/null || true
+	@echo "Generating Verilator coverage report..."
+	@verilator_coverage $(SIM_DIR)/coverage_merged.dat \
+		--annotate $(PROJ_ROOT)/reports/coverage_annotated 2>/dev/null || \
+		echo "Note: verilator_coverage not available or no coverage data found"
+	@echo "Coverage report: reports/coverage_annotated/"
 
 # Override clean to use our basic clean
 clean: clean-basic

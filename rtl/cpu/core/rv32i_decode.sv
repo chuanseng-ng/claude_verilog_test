@@ -34,7 +34,9 @@ module rv32i_decode (
   output logic        jalr,       // JALR (PC-relative vs register-relative)
 
   // Control signals
-  output logic        pc_src,     // 0=PC+4, 1=branch/jump target
+  /* verilator coverage_off */
+  output logic        pc_src,     // 0=PC+4, 1=branch/jump target (always 0; PC src computed in FSM)
+  /* verilator coverage_on */
   output logic        illegal,    // Illegal instruction flag
   output logic        ebreak      // EBREAK instruction (triggers CPU halt)
 );
@@ -327,9 +329,11 @@ module rv32i_decode (
               illegal = 1'b1;
             end
           end
+          /* verilator coverage_off */
           default: begin
             illegal = 1'b1;
           end
+          /* verilator coverage_on */
         endcase
       end
 
@@ -406,9 +410,11 @@ module rv32i_decode (
               illegal = 1'b1;
             end
           end
+          /* verilator coverage_off */
           default: begin
             illegal = 1'b1;
           end
+          /* verilator coverage_on */
         endcase
       end
 

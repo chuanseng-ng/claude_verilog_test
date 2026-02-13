@@ -124,7 +124,7 @@ class ISASequenceBase(BaseSequence):
 
         # Initialize memory if needed (for load/store tests)
         for addr, value in self.setup_memory.items():
-            await axi_driver.write_word(addr, value)
+            axi_driver.write_word(addr, value)
 
         # Build test program
         addr = 0x0000
@@ -140,7 +140,7 @@ class ISASequenceBase(BaseSequence):
             if -2048 <= value < 2048:
                 # Single ADDI can handle this
                 instr = ADDI(reg_num, 0, value & 0xFFF)
-                await axi_driver.write_word(addr, instr)
+                axi_driver.write_word(addr, instr)
                 addr += 4
                 num_setup_instructions += 1
             else:
@@ -155,23 +155,23 @@ class ISASequenceBase(BaseSequence):
                     upper = (upper + 1) & 0xFFFFF
 
                 # LUI xN, upper
-                await axi_driver.write_word(addr, LUI(reg_num, upper))
+                axi_driver.write_word(addr, LUI(reg_num, upper))
                 addr += 4
                 num_setup_instructions += 1
 
                 # ADDI xN, xN, lower (sign-extended)
                 if lower != 0:
-                    await axi_driver.write_word(addr, ADDI(reg_num, reg_num, lower))
+                    axi_driver.write_word(addr, ADDI(reg_num, reg_num, lower))
                     addr += 4
                     num_setup_instructions += 1
 
         # Load target instruction
         test_instr_addr = addr
-        await axi_driver.write_word(addr, self.instruction)
+        axi_driver.write_word(addr, self.instruction)
         addr += 4
 
         # Add EBREAK to halt CPU after test (fall-through path)
-        await axi_driver.write_word(addr, 0x00100073)  # EBREAK
+        axi_driver.write_word(addr, 0x00100073)  # EBREAK
         addr += 4
 
         # For branch/jump instructions, also place EBREAK at target to prevent
@@ -193,7 +193,7 @@ class ISASequenceBase(BaseSequence):
             # Only place EBREAK at forward, aligned targets; negative offsets
             # (imm_12 set) yield backward or wrapped targets, so skip those
             if not imm_12 and target_addr > test_instr_addr and target_addr % 4 == 0:
-                await axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at branch target
+                axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at branch target
         elif opcode == 0b1101111:  # JAL instruction
             # Extract JAL offset (20-bit signed immediate)
             imm_20 = (self.instruction >> 31) & 0x1
@@ -210,7 +210,7 @@ class ISASequenceBase(BaseSequence):
             # Only place EBREAK at forward, aligned targets; negative offsets
             # (imm_20 set) yield backward or wrapped targets, so skip those
             if not imm_20 and target_addr > test_instr_addr and target_addr % 4 == 0:
-                await axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at JAL target
+                axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at JAL target
         elif opcode == 0b1100111:  # JALR instruction
             # Extract JALR offset (12-bit signed immediate) and rs1
             imm_11_0 = (self.instruction >> 20) & 0xFFF
@@ -227,7 +227,7 @@ class ISASequenceBase(BaseSequence):
             # Only place EBREAK if target is forward of the test instruction
             # and properly aligned; skip backward or wrapped targets
             if target_addr > test_instr_addr and target_addr % 4 == 0:
-                await axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at JALR target
+                axi_driver.write_word(target_addr, 0x00100073)  # EBREAK at JALR target
 
         # Set PC to start of program
         await apb_driver.write_pc(0x0000)
@@ -372,7 +372,7 @@ class SWSequence(ISASequenceBase):
 
         # Verify memory was written correctly
         axi_driver = self.env.axi_agent.driver
-        actual = await axi_driver.read_word(self.target_addr)
+        actual = axi_driver.read_word(self.target_addr)
 
         if actual != self.store_value:
             raise AssertionError(
@@ -546,7 +546,7 @@ class SBSequence(ISASequenceBase):
 
         # Verify memory byte was written correctly
         axi_driver = self.env.axi_agent.driver
-        word = await axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
+        word = axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
         byte_offset = self.target_addr & 0x3
         actual_byte = (word >> (byte_offset * 8)) & 0xFF
 
@@ -608,7 +608,7 @@ class SHSequence(ISASequenceBase):
 
         # Verify memory halfword was written correctly
         axi_driver = self.env.axi_agent.driver
-        word = await axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
+        word = axi_driver.read_word(self.target_addr & 0xFFFFFFFC)
         half_offset = (self.target_addr & 0x2) >> 1
         actual_half = (word >> (half_offset * 16)) & 0xFFFF
 

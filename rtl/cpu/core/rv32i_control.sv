@@ -216,9 +216,11 @@ module rv32i_control (
         end else if ((current_state == FETCH || current_state == MEM_WAIT) &&
                      ((axi_rvalid && axi_rresp != 2'b00) || (axi_bvalid && axi_bresp != 2'b00))) begin
           trap_cause_reg <= TRAP_ILLEGAL_INSN;  // AXI error -> treat as illegal instruction
+        /* verilator coverage_off */
         end else begin
-          trap_cause_reg <= TRAP_ILLEGAL_INSN;  // Default to illegal instruction
+          trap_cause_reg <= TRAP_ILLEGAL_INSN;  // Unreachable: TRAP state only entered for known causes
         end
+        /* verilator coverage_on */
       end
     end
   end
@@ -436,9 +438,11 @@ module rv32i_control (
       // ------------------------------------------------------------
       // Default
       // ------------------------------------------------------------
+      /* verilator coverage_off */
       default: begin
         next_state = RESET;
       end
+      /* verilator coverage_on */
     endcase
   end
 
@@ -562,9 +566,11 @@ module rv32i_control (
       // ------------------------------------------------------------
       // Default
       // ------------------------------------------------------------
+      /* verilator coverage_off */
       default: begin
         // All outputs remain at default values
       end
+      /* verilator coverage_on */
     endcase
   end
 

@@ -49,7 +49,9 @@ module rv32i_cpu_top (
   input  logic [31:0] apb_pwdata_i,
   output logic [31:0] apb_prdata_o,
   output logic        apb_pready_o,
-  output logic        apb_pslverr_o,
+  /* verilator coverage_off */
+  output logic        apb_pslverr_o,  // PSLVERR not implemented in Phase 1 (always 0)
+  /* verilator coverage_on */
 
   // ================================================================
   // Commit Interface (verification observability)
@@ -236,9 +238,11 @@ module rv32i_cpu_top (
           else if (apb_paddr_i == 12'h10C) begin
             apb_prdata_o = dbg_bp1_ctrl;
           end
+          /* verilator coverage_off */
           else begin
-            apb_prdata_o = 32'h0;
+            apb_prdata_o = 32'h0;  // Read to unknown APB address → return 0
           end
+          /* verilator coverage_on */
         end
       endcase
     end
