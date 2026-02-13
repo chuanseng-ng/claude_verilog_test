@@ -2,7 +2,7 @@
 
 RV32I Single-Cycle CPU with System Interfaces
 
-Document status: Frozen (Phase-1)
+Document status: Frozen (Phase-1) — Verified against RTL on 2026-02-13
 Target audience: RTL implementation, integration, verification
 Compliance reference: Phase 0 Architecture Specification
 

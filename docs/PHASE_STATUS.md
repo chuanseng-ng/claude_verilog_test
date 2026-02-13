@@ -228,7 +228,7 @@ All previous specification issues have been resolved:
 
 **Ready to begin Phase 2 planning**:
 
-1. **Review Phase 2 architecture** per PHASE1_ARCHITECTURE_SPEC.md and ROADMAP.md
+1. **Review Phase 2 architecture** per PHASE2_ARCHITECTURE_SPEC.md (to be written) and ROADMAP.md
    - 5-stage pipeline: IF, ID, EX, MEM, WB
    - Hazard detection and forwarding unit
    - Interrupt support (timer + external)
