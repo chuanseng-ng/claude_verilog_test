@@ -1,0 +1,39 @@
+# Makefile for example counter test
+# Use this to verify cocotb is working correctly
+
+# Simulator selection (default: verilator, backup: icarus)
+SIM ?= verilator
+TOPLEVEL_LANG ?= verilog
+
+# RTL source
+VERILOG_SOURCES = $(PWD)/example_counter.sv
+
+# Testbench settings
+TOPLEVEL = example_counter
+MODULE = test_example_counter
+
+# Simulation parameters
+COCOTB_RESOLVE_X ?= ZEROS
+
+# Verilator-specific flags
+ifeq ($(SIM), verilator)
+    EXTRA_ARGS += --trace --trace-structs
+    COMPILE_ARGS += -Wno-WIDTH -Wno-UNUSED -Wno-BLKSEQ
+    COMPILE_ARGS += --timescale 1ns/1ps
+endif
+
+# Icarus Verilog settings (backup option)
+ifeq ($(SIM), icarus)
+    COMPILE_ARGS += -g2012
+endif
+
+# Include cocotb makefiles
+include $(shell cocotb-config --makefiles)/Makefile.sim
+
+# Custom clean target to avoid conflicts with cocotb's clean
+distclean: clean
+	@rm -rf __pycache__ 2>/dev/null || true
+	@rm -f *.vcd *.fst dump.vcd 2>/dev/null || true
+	@echo "Deep clean complete"
+
+.PHONY: distclean

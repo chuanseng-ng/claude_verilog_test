@@ -1,0 +1,199 @@
+"""Random instruction tests for RV32I CPU using pyuvm.
+
+This module implements random instruction testing using the pyuvm framework.
+It uses the RandomInstructionSequence to generate and execute random programs.
+
+Features:
+- Single random test (100 instructions)
+- Multi-seed random testing (configurable via environment variables)
+- Seed-based reproducibility
+- Scoreboard validation
+- Automatic waveform capture on failures
+"""
+
+import os
+import shutil
+
+import cocotb
+from cocotb.clock import Clock
+from cocotb.triggers import ClockCycles
+
+from ..sequences.random_instr_sequence import RandomInstructionSequence
+from .base_test import BaseTest
+
+
+class RandomTest(BaseTest):
+    """Test random instruction sequences."""
+
+    def __init__(self, name, parent, dut, num_instructions=100, seed=None):
+        """Initialize random test.
+
+        Args:
+            name: Test name
+            parent: Parent component
+            dut: Device under test
+            num_instructions: Number of instructions to generate
+            seed: Random seed (None = random)
+        """
+        super().__init__(name, parent, dut)
+        self.num_instructions = num_instructions
+        self.seed = seed
+
+    async def run_phase(self):
+        """Run random instruction test."""
+        self.logger.info(
+            f"Running random test (seed={self.seed}, instructions={self.num_instructions})"
+        )
+
+        # Create and run sequence
+        seq = RandomInstructionSequence(
+            f"random_seq_seed{self.seed}", num_instructions=self.num_instructions, seed=self.seed
+        )
+        seq.env = self.env
+
+        # Run sequence lifecycle: pre_body -> body -> post_body
+        await seq.pre_body()
+        await seq.body()
+        await seq.post_body()
+
+        # Wait for completion
+        await self.wait_for_completion(timeout_cycles=self.num_instructions * 20)
+
+        self.logger.info("✓ Random test completed")
+
+
+# cocotb test wrappers
+@cocotb.test()
+async def test_random_single_uvm(dut):
+    """Test single random instruction sequence (pyuvm version)."""
+    dut._log.info("=== Test: Random Instructions (100) (pyuvm) ===")
+
+    # Start clock
+    clock = Clock(dut.clk_i, 10, unit="ns")
+    cocotb.start_soon(clock.start())
+
+    # Create and run test with fixed seed for reproducibility
+    test = RandomTest("random_test_single", None, dut, num_instructions=100, seed=42)
+    test.build_phase()
+    test.connect_phase()
+    test.end_of_elaboration_phase()
+
+    # Start background tasks for all components
+    cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
+    cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
+    cocotb.start_soon(test.env.commit_monitor.run_phase())
+    cocotb.start_soon(test.env.scoreboard.run_phase())
+
+    # Give background tasks a chance to start
+    await ClockCycles(dut.clk_i, 2)
+
+    # Reset and run
+    await test.reset_dut()
+    await test.run_phase()
+
+    # Report results
+    test.env.scoreboard.report_phase()
+    assert test.env.scoreboard.mismatches == 0, "Scoreboard validation failed"
+
+
+@cocotb.test()
+async def test_random_multi_seed_uvm(dut):
+    """Test multiple random seeds (pyuvm version).
+
+    Environment variables:
+    - RANDOM_TEST_SEEDS: Number of seeds (default: 1000)
+    - RANDOM_TEST_INSTRS: Instructions per seed (default: 100)
+    - RANDOM_TEST_SMOKE: If set, use smoke test config (10 seeds × 50 instructions)
+
+    Default configuration: 1000 seeds × 100 instructions = 100,000 total instructions
+    """
+    # Configure test parameters via environment variables
+    if os.getenv("RANDOM_TEST_SMOKE"):
+        num_seeds = 10
+        num_instructions = 50
+        total_instructions = num_seeds * num_instructions
+        dut._log.info(
+            "=== Test: Random Multi-Seed SMOKE TEST (10 seeds × 50 instr = 500 total) (pyuvm) ==="
+        )
+    else:
+        num_seeds = int(os.getenv("RANDOM_TEST_SEEDS", "1000"))  # Default: 1000 (was 100)
+        num_instructions = int(os.getenv("RANDOM_TEST_INSTRS", "100"))  # Default: 100
+        total_instructions = num_seeds * num_instructions
+        dut._log.info(
+            f"=== Test: Random Multi-Seed ({num_seeds} seeds × "
+            f"{num_instructions} instr = {total_instructions:,} total) (pyuvm) ==="
+        )
+
+    # Create waveform directory for failure captures
+    waveform_dir = "results/waveforms"
+    os.makedirs(waveform_dir, exist_ok=True)
+    dut._log.info(f"Waveform directory created: {waveform_dir}")
+
+    # Start clock
+    clock = Clock(dut.clk_i, 10, unit="ns")
+    cocotb.start_soon(clock.start())
+
+    # Track failures across all seeds
+    failed_seeds = []
+
+    for seed_idx in range(num_seeds):
+        seed = 1000 + seed_idx  # Deterministic seed sequence
+        dut._log.info(f"\n{'=' * 60}")
+        dut._log.info(f"Seed {seed_idx + 1}/{num_seeds}: {seed}")
+        dut._log.info(f"{'=' * 60}\n")
+
+        # Create and run test
+        test = RandomTest(
+            f"random_test_seed{seed}", None, dut, num_instructions=num_instructions, seed=seed
+        )
+        test.build_phase()
+        test.connect_phase()
+        test.end_of_elaboration_phase()
+
+        # Start background tasks for all components
+        cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
+        cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
+        cocotb.start_soon(test.env.commit_monitor.run_phase())
+        cocotb.start_soon(test.env.scoreboard.run_phase())
+
+        # Give background tasks a chance to start
+        await ClockCycles(dut.clk_i, 2)
+
+        # Reset and run
+        await test.reset_dut()
+        await test.run_phase()
+
+        # Check results
+        if test.env.scoreboard.mismatches > 0:
+            dut._log.error(f"Seed {seed} failed with {test.env.scoreboard.mismatches} errors")
+            test.env.scoreboard.report_phase()
+
+            # Save waveform for debugging
+            # Note: dump.vcd is a cumulative trace, not per-seed isolated
+            waveform_file = os.path.join(waveform_dir, f"seed_{seed}_failure.vcd")
+            if os.path.exists("dump.vcd"):
+                shutil.copy("dump.vcd", waveform_file)
+                dut._log.info(f"Waveform (cumulative up to seed {seed}) saved to {waveform_file}")
+            else:
+                dut._log.warning("No waveform file (dump.vcd) found to save")
+
+            # Track failure but continue testing other seeds
+            failed_seeds.append((seed, test.env.scoreboard.mismatches))
+        else:
+            dut._log.info(
+                f"✓ Seed {seed} passed ({test.env.scoreboard.matches} commits validated)\n"
+            )
+
+    # Report final results
+    dut._log.info(f"\n{'=' * 60}")
+    if failed_seeds:
+        dut._log.error(f"{len(failed_seeds)} seed(s) failed out of {num_seeds}:")
+        for seed, mismatch_count in failed_seeds:
+            dut._log.error(f"  - Seed {seed}: {mismatch_count} mismatches")
+        dut._log.info(f"{'=' * 60}\n")
+        assert False, (
+            f"{len(failed_seeds)} seed(s) failed validation (see waveforms in {waveform_dir})"
+        )
+    else:
+        dut._log.info(f"All {num_seeds} seeds passed!")
+        dut._log.info(f"{'=' * 60}\n")
