@@ -38,7 +38,13 @@ module rv32i_decode (
   output logic        pc_src,     // 0=PC+4, 1=branch/jump target (always 0; PC src computed in FSM)
   /* verilator coverage_on */
   output logic        illegal,    // Illegal instruction flag
-  output logic        ebreak      // EBREAK instruction (triggers CPU halt)
+  output logic        ebreak,     // EBREAK instruction (triggers CPU halt)
+
+  // CSR instruction outputs (Phase 2)
+  output logic        csr_access, // CSR read/write instruction
+  output logic [11:0] csr_addr,   // 12-bit CSR address (instr[31:20])
+  output logic [2:0]  csr_op,     // CSR operation (funct3: 001=RW, 010=RS, 011=RC, 101=RWI, 110=RSI, 111=RCI)
+  output logic        mret        // MRET instruction (return from machine-mode trap)
 );
 
   // Extract instruction fields
@@ -108,12 +114,13 @@ module rv32i_decode (
   localparam [3:0] ALU_AND  = 4'b1001;
 
   // Immediate format encodings
-  localparam [2:0] FMT_I = 3'b000;
-  localparam [2:0] FMT_S = 3'b001;
-  localparam [2:0] FMT_B = 3'b010;
-  localparam [2:0] FMT_U = 3'b011;
-  localparam [2:0] FMT_J = 3'b100;
-  localparam [2:0] FMT_R = 3'b101;
+  localparam [2:0] FMT_I       = 3'b000;
+  localparam [2:0] FMT_S       = 3'b001;
+  localparam [2:0] FMT_B       = 3'b010;
+  localparam [2:0] FMT_U       = 3'b011;
+  localparam [2:0] FMT_J       = 3'b100;
+  localparam [2:0] FMT_R       = 3'b101;
+  localparam [2:0] FMT_CSR_IMM = 3'b110;  // CSR immediate: zero-extend instr[19:15] (Phase 2)
 
   // ALU operand A source select encodings
   localparam [1:0] SRC_A_RS1  = 2'b00;  // Select rs1_data
@@ -139,6 +146,11 @@ module rv32i_decode (
     pc_src       = 1'b0;
     illegal      = 1'b0;
     ebreak       = 1'b0;
+    // CSR defaults (Phase 2)
+    csr_access   = 1'b0;
+    csr_addr     = 12'h0;
+    csr_op       = 3'b000;
+    mret         = 1'b0;
 
     case (opcode)
       // ================================================================
@@ -419,20 +431,53 @@ module rv32i_decode (
       end
 
       // ================================================================
-      // SYSTEM - EBREAK instruction
-      // EBREAK: opcode=0b1110011, funct3=0, imm12=1
-      // Encoding: 0x00100073
+      // SYSTEM - EBREAK, MRET, and CSR instructions (Phase 2)
       // ================================================================
       OP_SYSTEM: begin
-        if (funct3 == 3'b000 && instruction[31:20] == 12'h001) begin
-          // EBREAK - trigger CPU halt via debug interface
-          ebreak    = 1'b1;
-          illegal   = 1'b0;
-          // No register write, no memory access
-        end else begin
-          // Other SYSTEM instructions (ECALL, CSR ops) not supported in Phase 1
-          illegal = 1'b1;
-        end
+        case (funct3)
+          // funct3=000: EBREAK (0x00100073), MRET (0x30200073), ECALL (illegal)
+          3'b000: begin
+            if (instruction[31:20] == 12'h001) begin
+              // EBREAK: opcode=0b1110011, funct3=0, imm12=1 → trigger CPU halt
+              ebreak  = 1'b1;
+            end else if (instruction[31:20] == 12'h302) begin
+              // MRET: 0x30200073 → return from machine-mode trap
+              // Sets jump=1 so EX stage performs PC redirect to mepc
+              mret    = 1'b1;
+              jump    = 1'b1;
+            end else begin
+              // ECALL and other funct3=000 system instructions: illegal in Phase 2
+              illegal = 1'b1;
+            end
+          end
+
+          // funct3=001/010/011: CSR register variants (CSRRW, CSRRS, CSRRC)
+          3'b001, 3'b010, 3'b011: begin
+            csr_access = 1'b1;
+            csr_addr   = instruction[31:20];
+            csr_op     = funct3;
+            reg_wr_en  = 1'b1;
+            imm_fmt    = FMT_R;  // rs1 used directly; no immediate
+          end
+
+          // funct3=100: reserved/illegal
+          3'b100: begin
+            illegal = 1'b1;
+          end
+
+          // funct3=101/110/111: CSR immediate variants (CSRRWI, CSRRSI, CSRRCI)
+          3'b101, 3'b110, 3'b111: begin
+            csr_access = 1'b1;
+            csr_addr   = instruction[31:20];
+            csr_op     = funct3;
+            reg_wr_en  = 1'b1;
+            imm_fmt    = FMT_CSR_IMM;  // Zero-extend instr[19:15] (uimm[4:0])
+          end
+
+          /* verilator coverage_off */
+          default: illegal = 1'b1;
+          /* verilator coverage_on */
+        endcase
       end
 
       // ================================================================

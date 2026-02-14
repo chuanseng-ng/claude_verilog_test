@@ -49,9 +49,7 @@ module rv32i_cpu_top (
   input  logic [31:0] apb_pwdata_i,
   output logic [31:0] apb_prdata_o,
   output logic        apb_pready_o,
-  /* verilator coverage_off */
-  output logic        apb_pslverr_o,  // PSLVERR not implemented in Phase 1 (always 0)
-  /* verilator coverage_on */
+  output logic        apb_pslverr_o,  // Asserted on writes to read-only CSR debug registers
 
   // ================================================================
   // Commit Interface (verification observability)
@@ -70,7 +68,13 @@ module rv32i_cpu_top (
   output logic        debug_take_branch_jump_o,
   output logic        debug_pc_src_o,
   output logic [3:0]  debug_state_o,
-  output logic        debug_ebreak_o
+  output logic        debug_ebreak_o,
+
+  // ================================================================
+  // Interrupt Inputs (Phase 2)
+  // ================================================================
+  input  logic        ext_irq_i,       // External interrupt (M-mode MEIP)
+  input  logic        timer_irq_i      // Timer interrupt (M-mode MTIP)
 );
 
   // ================================================================
@@ -105,7 +109,15 @@ module rv32i_cpu_top (
   logic [31:0] dbg_bp1_ctrl;      // 0x10C: Breakpoint 1 control
 
   logic        bp0_hit, bp1_hit;
-  logic        ebreak_halt;  // Set when halt caused by EBREAK instruction
+  logic        ebreak_halt;  // Combinational: EBREAK retiring at WB this cycle
+
+  // CSR debug values exposed by the core (readable at APB 0x200-0x214)
+  logic [31:0] dbg_csr_mstatus;
+  logic [31:0] dbg_csr_mie;
+  logic [31:0] dbg_csr_mtvec;
+  logic [31:0] dbg_csr_mepc;
+  logic [31:0] dbg_csr_mcause;
+  logic [31:0] dbg_csr_mip;
 
   // Latched halt cause register (Bug fix: breakpoint halt_cause reads as 0)
   // bp0_hit and bp1_hit are combinational signals that pulse for only the
@@ -181,7 +193,19 @@ module rv32i_cpu_top (
     .debug_take_branch_jump  (debug_take_branch_jump_o),
     .debug_pc_src            (debug_pc_src_o),
     .debug_state             (debug_state_o),
-    .debug_ebreak            (debug_ebreak_o)
+    .debug_ebreak            (debug_ebreak_o),
+
+    // Interrupt inputs (Phase 2)
+    .ext_irq_i      (ext_irq_i),
+    .timer_irq_i    (timer_irq_i),
+
+    // CSR debug outputs (Phase 2)
+    .dbg_csr_mstatus_o (dbg_csr_mstatus),
+    .dbg_csr_mie_o     (dbg_csr_mie),
+    .dbg_csr_mtvec_o   (dbg_csr_mtvec),
+    .dbg_csr_mepc_o    (dbg_csr_mepc),
+    .dbg_csr_mcause_o  (dbg_csr_mcause),
+    .dbg_csr_mip_o     (dbg_csr_mip)
   );
 
   // ================================================================
@@ -190,7 +214,10 @@ module rv32i_cpu_top (
 
   // APB is always ready (single-cycle access)
   assign apb_pready_o  = 1'b1;
-  assign apb_pslverr_o = 1'b0;  // No errors in Phase 1
+  // CSR debug registers (0x200-0x214) are read-only — writes return PSLVERR
+  assign apb_pslverr_o = apb_psel_i && apb_penable_i && apb_pwrite_i &&
+                         (apb_paddr_i >= 12'h200) && (apb_paddr_i <= 12'h214) &&
+                         (apb_paddr_i[1:0] == 2'b00);
 
   // APB read logic
   always_comb begin
@@ -210,6 +237,14 @@ module rv32i_cpu_top (
 
         // Current instruction (0x00C)
         12'h00C: apb_prdata_o = commit_insn_o;
+
+        // CSR debug registers (read-only, Phase 2)
+        12'h200: apb_prdata_o = dbg_csr_mstatus;   // DBG_MSTATUS
+        12'h204: apb_prdata_o = dbg_csr_mie;       // DBG_MIE
+        12'h208: apb_prdata_o = dbg_csr_mtvec;     // DBG_MTVEC
+        12'h20C: apb_prdata_o = dbg_csr_mepc;      // DBG_MEPC
+        12'h210: apb_prdata_o = dbg_csr_mcause;    // DBG_MCAUSE
+        12'h214: apb_prdata_o = dbg_csr_mip;       // DBG_MIP
 
         // GPR[0:31] (0x010-0x08C)
         // Address format: 0x010 + (reg_num * 4)
@@ -385,67 +420,43 @@ module rv32i_cpu_top (
       // ==================================================================
       // Priority (highest to lowest):
       //
-      // 1. EBREAK halted-entry update (overrides everything)
-      // 2. WRITEBACK pulse capture: bp0_hit, bp1_hit  (happen the cycle
-      //    before HALTED entry, must not be cleared by resume logic)
-      // 3. Resume transition: clear latch, UNLESS we are stepping (step
-      //    cause must survive the resume clear)
-      // 4. HALTED entry: fallback for plain halt_req (no commit_valid)
-      //
-      // The step case must be handled carefully:
-      //   - dbg_ctrl_reg[2] is 1 while CPU is HALTED and step is pending
-      //   - auto-clear fires on the HALTED->FETCH edge (same cycle as
-      //     !dbg_halted && dbg_halted_prev)
-      //   - So when we detect the resume edge with dbg_ctrl_reg[2]=1,
-      //     we know this is a step resume and set cause=0x4 instead of
-      //     clearing to 0.  The cause will then be stable while the CPU
-      //     runs the stepped instruction and returns to HALTED.
+      // 1. EBREAK retires at WB (trap_taken_o && trap_cause_o==3)
+      //    — fires 1 cycle BEFORE dbg_halted goes high; latch cause now
+      // 2. BP hit during commit (commit_valid_o pulse)
+      // 3. CPU just exited HALTED → clear or set step cause
+      // 4. CPU just entered HALTED → fallback plain halt cause
       // ==================================================================
 
-      if (dbg_halted && ebreak_halt) begin
-        // --- EBREAK: ebreak_halt becomes valid on the second HALTED cycle
-        //     (ebreak_caused_halt is set on the first HALTED cycle, then
-        //     ebreak_halt is set on the second).  Continuously update while
-        //     EBREAK is signalled so we don't miss the one-cycle-delayed set.
+      if (ebreak_halt) begin
+        // EBREAK retiring at WB — pipeline still has it valid this cycle,
+        // dbg_halted will go high next cycle.  Latch now so the cause is
+        // stable when DBG_STATUS is read.
         halt_cause_lat <= 4'h8;
 
-      end else if (dbg_halted && !dbg_halted_prev) begin
-        // --- CPU just entered HALTED ---
-        // ebreak_halt is not yet valid here (set on the NEXT cycle)
-        // so EBREAK is handled by the branch above.
-        if (halt_cause_lat == 4'h0) begin
-          // No commit_valid-time cause was latched (halt fired during FETCH
-          // not WRITEBACK, e.g. plain debug halt request)
-          halt_cause_lat <= 4'h1;
-        end
-        // else: bp0/bp1 cause already latched during WRITEBACK — keep it
-
-      end else if (!dbg_halted && dbg_halted_prev) begin
-        // --- CPU just exited HALTED (resume or step) ---
-        if (dbg_ctrl_reg[2]) begin
-          // Step resume: set cause to single-step so it is ready when the
-          // CPU returns to HALTED after executing one instruction.
-          // dbg_ctrl_reg[2] is still 1 at this clock edge; the auto-clear
-          // fires simultaneously (combinational), but the registered
-          // value used here still holds the pre-clear value.
-          halt_cause_lat <= 4'h4;
-        end else begin
-          // Plain resume: clear the cause
-          halt_cause_lat <= 4'h0;
-        end
-
       end else if (commit_valid_o) begin
-        // --- WRITEBACK pulse: sample bp hits ---
-        // bp0_hit / bp1_hit are combinational and valid ONLY this cycle.
-        // Latch them immediately so the value is stable in HALTED.
+        // Normal retirement pulse: sample breakpoint hits
         if (bp0_hit) begin
           halt_cause_lat <= 4'h2;
         end else if (bp1_hit) begin
           halt_cause_lat <= 4'h3;
         end
-        // (No need to handle step or plain halt here; they are handled
-        //  at the resume edge and HALTED entry respectively)
 
+      end else if (!dbg_halted && dbg_halted_prev) begin
+        // CPU just exited HALTED (resume or step)
+        if (dbg_ctrl_reg[2]) begin
+          // Step: pre-load cause so it is ready when CPU returns to HALTED
+          halt_cause_lat <= 4'h4;
+        end else begin
+          halt_cause_lat <= 4'h0;
+        end
+
+      end else if (dbg_halted && !dbg_halted_prev) begin
+        // CPU just entered HALTED
+        if (halt_cause_lat == 4'h0) begin
+          // No earlier-latched cause (e.g. plain debug halt request)
+          halt_cause_lat <= 4'h1;
+        end
+        // else: BP or EBREAK cause already latched — keep it
       end
       // else: hold current value
     end
@@ -472,37 +483,10 @@ module rv32i_cpu_top (
   // Breakpoint 1 detection
   assign bp1_hit = dbg_bp1_ctrl[0] && (commit_pc_o == dbg_bp1_addr) && commit_valid_o;
 
-  // EBREAK halt detection
-  // Detect when EBREAK instruction causes halt
-  //
-  // Note: EBREAK transitions directly from EXECUTE→HALTED, skipping WRITEBACK.
-  // Therefore commit_valid is never asserted for EBREAK.
-  //
-  // Strategy: Use the debug_ebreak signal (from decoder) and register it
-  // when we transition to HALTED state.
-  logic ebreak_caused_halt;
-
-  always_ff @(posedge clk_i or negedge rst_n_i) begin
-    if (!rst_n_i) begin
-      ebreak_halt <= 1'b0;
-      ebreak_caused_halt <= 1'b0;
-    end else begin
-      // Latch debug_ebreak when CPU is executing (not halted)
-      // This captures whether the current instruction is EBREAK
-      if (!dbg_halted && debug_ebreak_o) begin
-        ebreak_caused_halt <= 1'b1;
-      end else if (dbg_halted) begin
-        // When halted, if we captured ebreak, set the flag
-        if (ebreak_caused_halt) begin
-          ebreak_halt <= 1'b1;
-        end
-      end else begin
-        // When running (not halted), clear both flags
-        ebreak_halt <= 1'b0;
-        ebreak_caused_halt <= 1'b0;
-      end
-    end
-  end
+  // EBREAK halt detection (Phase 2)
+  // In the pipeline, EBREAK flows to WB and retires as a trap (trap_cause=3).
+  // trap_taken_o fires one cycle before dbg_halted goes high (WB drains that cycle).
+  assign ebreak_halt = trap_taken_o && (trap_cause_o == 4'h3);
 
   // Breakpoint halt logic integrated above (dbg_halt_req triggers on bp0_hit || bp1_hit)
 

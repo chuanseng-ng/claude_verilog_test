@@ -19,12 +19,13 @@ module rv32i_imm_gen (
 );
 
   // Immediate format encodings
-  localparam [2:0] FMT_I = 3'b000;  // I-type (ALU-immediate, loads)
-  localparam [2:0] FMT_S = 3'b001;  // S-type (stores)
-  localparam [2:0] FMT_B = 3'b010;  // B-type (branches)
-  localparam [2:0] FMT_U = 3'b011;  // U-type (LUI, AUIPC)
-  localparam [2:0] FMT_J = 3'b100;  // J-type (JAL)
-  localparam [2:0] FMT_R = 3'b101;  // R-type (no immediate)
+  localparam [2:0] FMT_I       = 3'b000;  // I-type (ALU-immediate, loads)
+  localparam [2:0] FMT_S       = 3'b001;  // S-type (stores)
+  localparam [2:0] FMT_B       = 3'b010;  // B-type (branches)
+  localparam [2:0] FMT_U       = 3'b011;  // U-type (LUI, AUIPC)
+  localparam [2:0] FMT_J       = 3'b100;  // J-type (JAL)
+  localparam [2:0] FMT_R       = 3'b101;  // R-type (no immediate)
+  localparam [2:0] FMT_CSR_IMM = 3'b110;  // CSR-immediate: zero-extend instr[19:15] (Phase 2)
 
   // Combinational logic for immediate generation
   always_comb begin
@@ -72,6 +73,12 @@ module rv32i_imm_gen (
       // R-type: No immediate
       FMT_R: begin
         immediate = 32'h0;
+      end
+
+      // CSR-immediate: zero-extend 5-bit unsigned immediate from instr[19:15]
+      // Used by CSRRWI, CSRRSI, CSRRCI instructions
+      FMT_CSR_IMM: begin
+        immediate = {27'h0, instruction[19:15]};
       end
 
       // Default case to avoid latches

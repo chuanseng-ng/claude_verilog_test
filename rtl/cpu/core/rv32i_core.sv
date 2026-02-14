@@ -1,573 +1,528 @@
 // rv32i_core.sv
-// RV32I CPU Core Integration
-// Integrates all datapath and control components
+// RV32I CPU Core — 5-Stage Pipelined Implementation (Phase 2)
+//
+// Replaces the Phase 1 single-cycle FSM with a 5-stage in-order pipeline.
+// Module name rv32i_core is preserved for backward compatibility.
+//
+// New ports vs Phase 1: ext_irq_i, timer_irq_i
+// All Phase 1 ports preserved.
+
+import rv32i_pipeline_pkg::*;
 
 module rv32i_core (
-  // Clock and reset
-  input  logic        clk,
-  input  logic        rst_n,
+    input  logic        clk,
+    input  logic        rst_n,
 
-  // AXI4-Lite memory interface (unified instruction/data)
-  // Read address channel
-  output logic [31:0] axi_araddr,
-  output logic        axi_arvalid,
-  input  logic        axi_arready,
+    // ── AXI4-Lite master (unified instruction/data via arbiter) ──────────────
+    output logic [31:0] axi_araddr,
+    output logic        axi_arvalid,
+    input  logic        axi_arready,
+    input  logic [31:0] axi_rdata,
+    input  logic [1:0]  axi_rresp,
+    input  logic        axi_rvalid,
+    output logic        axi_rready,
+    output logic [31:0] axi_awaddr,
+    output logic        axi_awvalid,
+    input  logic        axi_awready,
+    output logic [31:0] axi_wdata,
+    output logic [3:0]  axi_wstrb,
+    output logic        axi_wvalid,
+    input  logic        axi_wready,
+    input  logic [1:0]  axi_bresp,
+    input  logic        axi_bvalid,
+    output logic        axi_bready,
 
-  // Read data channel
-  input  logic [31:0] axi_rdata,
-  input  logic [1:0]  axi_rresp,
-  input  logic        axi_rvalid,
-  output logic        axi_rready,
+    // ── Debug interface ───────────────────────────────────────────────────────
+    input  logic        dbg_halt_req,
+    input  logic        dbg_resume_req,
+    input  logic        dbg_step_req,
+    output logic        dbg_halted,
 
-  // Write address channel
-  output logic [31:0] axi_awaddr,
-  output logic        axi_awvalid,
-  input  logic        axi_awready,
+    input  logic        dbg_pc_wr_en,
+    input  logic [31:0] dbg_pc_wr_data,
 
-  // Write data channel
-  output logic [31:0] axi_wdata,
-  output logic [3:0]  axi_wstrb,
-  output logic        axi_wvalid,
-  input  logic        axi_wready,
+    input  logic        dbg_reg_wr_en,
+    input  logic [4:0]  dbg_reg_wr_addr,
+    input  logic [31:0] dbg_reg_wr_data,
+    input  logic [4:0]  dbg_reg_rd_addr,
+    output logic [31:0] dbg_reg_rd_data,
 
-  // Write response channel
-  input  logic [1:0]  axi_bresp,
-  input  logic        axi_bvalid,
-  output logic        axi_bready,
+    // ── Commit interface (verification observability) ─────────────────────────
+    output logic        commit_valid,
+    output logic [31:0] commit_pc,
+    output logic [31:0] commit_insn,
+    output logic        trap_taken,
+    output logic [3:0]  trap_cause,
 
-  // Debug interface
-  input  logic        dbg_halt_req,
-  input  logic        dbg_resume_req,
-  input  logic        dbg_step_req,
-  output logic        dbg_halted,
+    // ── Debug observability (Phase 1 compatibility) ───────────────────────────
+    output logic [31:0] debug_rs1_data,
+    output logic [31:0] debug_rs2_data,
+    output logic        debug_branch_taken,
+    output logic        debug_take_branch_jump,
+    output logic        debug_pc_src,
+    output logic [3:0]  debug_state,
+    output logic        debug_ebreak,
 
-  // Debug PC write (when halted)
-  input  logic        dbg_pc_wr_en,
-  input  logic [31:0] dbg_pc_wr_data,
+    // ── Interrupt inputs (Phase 2 new) ────────────────────────────────────────
+    input  logic        ext_irq_i,
+    input  logic        timer_irq_i,
 
-  // Debug register file access (when halted)
-  input  logic        dbg_reg_wr_en,
-  input  logic [4:0]  dbg_reg_wr_addr,
-  input  logic [31:0] dbg_reg_wr_data,
-  input  logic [4:0]  dbg_reg_rd_addr,
-  output logic [31:0] dbg_reg_rd_data,
-
-  // Commit interface (verification observability)
-  output logic        commit_valid,
-  output logic [31:0] commit_pc,
-  output logic [31:0] commit_insn,
-  output logic        trap_taken,
-  output logic [3:0]  trap_cause,
-
-  // Debug outputs for verification
-  output logic [31:0] debug_rs1_data,
-  output logic [31:0] debug_rs2_data,
-  output logic        debug_branch_taken,
-  output logic        debug_take_branch_jump,
-  output logic        debug_pc_src,
-  output logic [3:0]  debug_state,
-  output logic        debug_ebreak         // EBREAK signal from decoder
+    // ── CSR debug outputs (for APB debug register access at 0x200-0x214) ─────
+    output logic [31:0] dbg_csr_mstatus_o,
+    output logic [31:0] dbg_csr_mie_o,
+    output logic [31:0] dbg_csr_mtvec_o,
+    output logic [31:0] dbg_csr_mepc_o,
+    output logic [31:0] dbg_csr_mcause_o,
+    output logic [31:0] dbg_csr_mip_o
 );
 
-  // ================================================================
-  // Internal Signals
-  // ================================================================
+    // =========================================================================
+    // Pipeline registers
+    // =========================================================================
+    if_id_reg_t  if_id_reg;
+    id_ex_reg_t  id_ex_reg;
+    ex_mem_reg_t ex_mem_reg;
+    mem_wb_reg_t mem_wb_reg;
 
-  // Program Counter
-  logic [31:0] pc_reg, pc_next;
-  logic        pc_wr_en, pc_src;
+    // =========================================================================
+    // Hazard unit outputs
+    // =========================================================================
+    logic        stall_pc, stall_if_id, stall_id_ex, stall_ex_mem;
+    logic        flush_if_id, flush_id_ex;
+    logic [1:0]  fwd_a_sel, fwd_b_sel, fwd_store_sel;
 
-  // Instruction PC (PC of the instruction being executed)
-  // This is needed for JAL/JALR to save the correct return address
-  logic [31:0] pc_insn;
+    // =========================================================================
+    // Stall signals (from pipeline stages / arbiter)
+    // =========================================================================
+    logic if_axi_stall, mem_axi_stall;
 
-  // Fetch address latch (to capture the address being fetched)
-  logic [31:0] fetch_addr;
+    // =========================================================================
+    // PC redirect signals
+    // =========================================================================
+    logic        ex_pc_redirect;
+    logic [31:0] ex_pc_target;
+    logic        jal_redirect;
+    logic [31:0] jal_target;
 
-  // Instruction register
-  logic [31:0] instruction;
+    // =========================================================================
+    // Register file signals (core-level instantiation)
+    // =========================================================================
+    logic [4:0]  rf_rs1_addr, rf_rs2_addr;
+    logic [31:0] rf_rs1_data, rf_rs2_data;
+    logic        rf_wr_en;
+    logic [4:0]  rf_wr_addr;
+    logic [31:0] rf_wr_data;
 
-  // Decoder outputs
-  logic [4:0]  rs1, rs2, rd;
-  logic [3:0]  alu_op;
-  logic [1:0]  alu_src_a;  // 00=rs1, 01=PC, 10=zero
-  logic        alu_src_b;
-  logic [2:0]  imm_fmt;
-  logic        reg_wr_en;
-  logic        mem_rd, mem_wr;
-  logic [2:0]  mem_size;
-  logic        mem_unsigned;
-  logic        branch, jump, jalr;
-  logic [2:0]  branch_op;
-  logic        illegal_insn;
-  logic        ebreak;
+    // =========================================================================
+    // CSR file signals
+    // =========================================================================
+    logic        csr_wr_en;
+    logic        csr_rd_access;  // Pure decode (no !csr_illegal feedback) for csr_file.csr_access
+    logic [11:0] csr_addr_ex;
+    logic [2:0]  csr_op_ex;
+    logic [31:0] csr_wdata_ex;
+    logic [4:0]  csr_rs1_addr_ex;
+    logic [31:0] csr_rdata;
+    logic        csr_illegal;
+    logic [31:0] mtvec;
+    logic [31:0] mret_pc_val;
+    logic        mstatus_mie, mstatus_mie_eff, mie_mtie, mie_meie;
+    logic [31:0] mip;
+    logic        trap_entry;
+    logic [31:0] trap_pc_val, trap_cause_val;
+    logic        mret_ex;
 
-  // Register file signals
-  logic [31:0] rs1_data, rs2_data;
-  logic [31:0] rd_data;
-  logic        regfile_wr_en;
+    // =========================================================================
+    // Interrupt controller signals
+    // =========================================================================
+    logic        irq_valid;
+    logic [31:0] irq_cause;
+    logic        ext_irq_pending, timer_irq_pending;
 
-  // Immediate generator
-  logic [31:0] immediate;
+    // =========================================================================
+    // Forwarding unit outputs
+    // =========================================================================
+    logic [31:0] fwd_rs1, fwd_rs2, fwd_store;
 
-  // ALU signals
-  logic [31:0] alu_operand_a, alu_operand_b;
-  logic [31:0] alu_result;
+    // =========================================================================
+    // Debug signals
+    // =========================================================================
+    logic        dbg_halted_wb;     // from WB stage
+    logic        dbg_halted_if;     // from IF stage (fetch stopped)
+    logic        dbg_halt_combined; // combined halt request
+    logic        dbg_ebreak_from_ex;// EBREAK halt request from EX stage
 
-  // Branch comparator
-  logic        branch_taken;
+    // Combined halt: APB request, EBREAK, or single-step
+    assign dbg_halt_combined = dbg_halt_req || dbg_ebreak_from_ex;
+    assign dbg_halted        = dbg_halted_wb;
 
-  // Memory interface
-  logic [31:0] mem_addr;
-  logic [31:0] mem_rdata;
-  logic [31:0] mem_rdata_raw;  // Raw data from AXI (to be latched)
+    // =========================================================================
+    // AXI arbiter IF interface signals
+    // =========================================================================
+    logic [31:0] if_araddr;
+    logic        if_arvalid;
+    logic        if_arready;
+    logic [31:0] if_rdata;
+    logic [1:0]  if_rresp;
+    logic        if_rvalid;
+    logic        if_rready;
 
-  // Control signals
-  /* verilator lint_off UNUSEDSIGNAL */
-  logic        instr_valid;  // Generated by control FSM, reserved for future use
-  /* verilator lint_on UNUSEDSIGNAL */
-  logic        commit_valid_int;
-  logic        trap_valid;
-  logic        data_access;  // Data access mode (vs instruction fetch)
-  logic        misaligned_load;   // Misaligned load detected
-  logic        misaligned_store;  // Misaligned store detected
+    // =========================================================================
+    // AXI arbiter MEM interface signals
+    // =========================================================================
+    logic [31:0] mem_araddr;
+    logic        mem_arvalid;
+    logic        mem_arready;
+    logic [31:0] mem_rdata;
+    logic [1:0]  mem_rresp;
+    logic        mem_rvalid;
+    logic        mem_rready;
+    logic [31:0] mem_awaddr;
+    logic        mem_awvalid;
+    logic        mem_awready;
+    logic [31:0] mem_wdata;
+    logic [3:0]  mem_wstrb;
+    logic        mem_wvalid;
+    logic        mem_wready;
+    logic        mem_bvalid;
+    logic [1:0]  mem_bresp;
+    logic        mem_bready;
 
-  // Debug signals from control FSM
-  logic        ctrl_debug_take_branch_jump;
-  logic [3:0]  ctrl_debug_state;
+    // =========================================================================
+    // Hazard Unit
+    // =========================================================================
+    rv32i_hazard_unit u_hazard (
+        .id_ex_rs1_addr    (id_ex_reg.rs1_addr),
+        .id_ex_rs2_addr    (id_ex_reg.rs2_addr),
+        .id_ex_rd_addr     (id_ex_reg.rd_addr),
+        .id_ex_mem_rd      (id_ex_reg.mem_rd),
+        .id_ex_reg_wr_en   (id_ex_reg.reg_wr_en),
+        .ex_mem_rd_addr    (ex_mem_reg.rd_addr),
+        .ex_mem_reg_wr_en  (ex_mem_reg.reg_wr_en),
+        .ex_mem_mem_rd     (ex_mem_reg.mem_rd),
+        .mem_wb_rd_addr    (mem_wb_reg.rd_addr),
+        .mem_wb_reg_wr_en  (mem_wb_reg.reg_wr_en),
+        .if_id_rs1_addr    (if_id_reg.instruction[19:15]),
+        .if_id_rs2_addr    (if_id_reg.instruction[24:20]),
+        .if_axi_stall      (if_axi_stall),
+        .mem_axi_stall     (mem_axi_stall),
+        .ex_pc_redirect    (ex_pc_redirect),
+        .id_jal_taken      (jal_redirect),
+        .stall_pc          (stall_pc),
+        .stall_if_id       (stall_if_id),
+        .stall_id_ex       (stall_id_ex),
+        .stall_ex_mem      (stall_ex_mem),
+        .flush_if_id       (flush_if_id),
+        .flush_id_ex       (flush_id_ex),
+        .fwd_a_sel         (fwd_a_sel),
+        .fwd_b_sel         (fwd_b_sel),
+        .fwd_store_sel     (fwd_store_sel)
+    );
 
-  // ================================================================
-  // Program Counter
-  // ================================================================
+    // =========================================================================
+    // Forwarding Unit
+    // =========================================================================
+    rv32i_forwarding_unit u_fwd (
+        .fwd_a_sel          (fwd_a_sel),
+        .fwd_b_sel          (fwd_b_sel),
+        .fwd_store_sel      (fwd_store_sel),
+        .id_ex_rs1_data     (id_ex_reg.rs1_data),
+        .id_ex_rs2_data     (id_ex_reg.rs2_data),
+        .ex_mem_alu_result  (ex_mem_reg.alu_result),
+        .mem_wb_alu_result  (mem_wb_reg.alu_result),
+        .mem_wb_mem_rdata   (mem_wb_reg.mem_rdata),
+        .mem_wb_csr_rdata   (mem_wb_reg.csr_rdata),
+        .mem_wb_pc          (mem_wb_reg.pc),
+        .mem_wb_mem_rd      (mem_wb_reg.mem_rd),
+        .mem_wb_csr_access  (mem_wb_reg.csr_access),
+        .mem_wb_jump        (mem_wb_reg.jump),
+        .fwd_rs1            (fwd_rs1),
+        .fwd_rs2            (fwd_rs2),
+        .fwd_store          (fwd_store)
+    );
 
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      pc_reg <= 32'h0000_0000;  // Reset to address 0
-    end else if (dbg_pc_wr_en && dbg_halted) begin
-      // Debug PC write when halted
-      pc_reg <= dbg_pc_wr_data;
-    end else if (pc_wr_en) begin
-      pc_reg <= pc_next;
-    end
-  end
+    // =========================================================================
+    // CSR File
+    // =========================================================================
+    // csr_rd_access: pure decode signal (no !csr_illegal feedback) used to
+    // drive csr_file.csr_access, breaking the combinational loop:
+    //   csr_wr_en (uses !csr_illegal) → csr_file.csr_access → csr_illegal
+    assign csr_rd_access = id_ex_reg.csr_access && id_ex_reg.valid;
 
-  // PC update logic
-  always_comb begin
-    if (pc_src) begin
-      // Branch or jump taken
-      if (jump && jalr) begin
-        // JALR: PC = (rs1 + imm) & ~1
-        pc_next = (rs1_data + immediate) & 32'hFFFF_FFFE;
-      end else begin
-        // JAL or Branch: PC = instruction_PC + imm
-        // Use pc_insn (captured at fetch) instead of pc_reg
-        pc_next = pc_insn + immediate;
-      end
-    end else begin
-      // Normal: PC = PC + 4
-      pc_next = pc_reg + 32'd4;
-    end
-  end
+    rv32i_csr_file u_csr (
+        .clk              (clk),
+        .rst_n            (rst_n),
+        .csr_access       (csr_rd_access),
+        .csr_addr         (csr_addr_ex),
+        .csr_op           (csr_op_ex),
+        .csr_wdata        (csr_wdata_ex),
+        .rs1_addr         (csr_rs1_addr_ex),
+        .trap_entry       (trap_entry),
+        .trap_pc          (trap_pc_val),
+        .trap_cause       (trap_cause_val),
+        .mret             (mret_ex),
+        .ext_irq_i        (ext_irq_i),
+        .timer_irq_i      (timer_irq_i),
+        .csr_rdata        (csr_rdata),
+        .csr_illegal      (csr_illegal),
+        .mtvec_out        (mtvec),
+        .mret_pc          (mret_pc_val),
+        .mstatus_mie      (mstatus_mie),
+        .mstatus_mie_eff  (mstatus_mie_eff),
+        .mie_mtie         (mie_mtie),
+        .mie_meie         (mie_meie),
+        .mip              (mip),
+        .dbg_mstatus_o    (dbg_csr_mstatus_o),
+        .dbg_mie_o        (dbg_csr_mie_o),
+        .dbg_mcause_o     (dbg_csr_mcause_o)
+    );
 
-  // AXI read address mux
-  // Select between instruction fetch (PC) and data access (mem_addr)
-  // - data_access=0 (FETCH state): araddr = PC (fetching instruction)
-  // - data_access=1 (MEM_WAIT state): araddr = mem_addr (loading data)
-  assign axi_araddr = data_access ? mem_addr : pc_reg;
+    // =========================================================================
+    // Interrupt Controller
+    // =========================================================================
+    rv32i_interrupt_ctrl u_irq_ctrl (
+        .mstatus_mie       (mstatus_mie_eff),  // OQ-4: use effective MIE
+        .mie_mtie          (mie_mtie),
+        .mie_meie          (mie_meie),
+        .ext_irq_i         (ext_irq_i),
+        .timer_irq_i       (timer_irq_i),
+        .ext_irq_pending   (ext_irq_pending),
+        .timer_irq_pending (timer_irq_pending),
+        .irq_valid         (irq_valid),
+        .irq_cause         (irq_cause)
+    );
 
-  // ================================================================
-  // Instruction Register
-  // ================================================================
+    // =========================================================================
+    // AXI Arbiter
+    // =========================================================================
+    rv32i_axi_arbiter u_arbiter (
+        .clk              (clk),
+        .rst_n            (rst_n),
+        // IF side
+        .if_araddr_i      (if_araddr),
+        .if_arvalid_i     (if_arvalid),
+        .if_arready_o     (if_arready),
+        .if_rdata_o       (if_rdata),
+        .if_rresp_o       (if_rresp),
+        .if_rvalid_o      (if_rvalid),
+        .if_rready_i      (if_rready),
+        // MEM read
+        .mem_araddr_i     (mem_araddr),
+        .mem_arvalid_i    (mem_arvalid),
+        .mem_arready_o    (mem_arready),
+        .mem_rdata_o      (mem_rdata),
+        .mem_rresp_o      (mem_rresp),
+        .mem_rvalid_o     (mem_rvalid),
+        .mem_rready_i     (mem_rready),
+        // MEM write
+        .mem_awaddr_i     (mem_awaddr),
+        .mem_awvalid_i    (mem_awvalid),
+        .mem_awready_o    (mem_awready),
+        .mem_wdata_i      (mem_wdata),
+        .mem_wstrb_i      (mem_wstrb),
+        .mem_wvalid_i     (mem_wvalid),
+        .mem_wready_o     (mem_wready),
+        .mem_bready_i     (mem_bready),
+        .mem_bvalid_o     (mem_bvalid),
+        .mem_bresp_o      (mem_bresp),
+        // AXI master
+        .axi_araddr_o     (axi_araddr),
+        .axi_arvalid_o    (axi_arvalid),
+        .axi_arready_i    (axi_arready),
+        .axi_rdata_i      (axi_rdata),
+        .axi_rresp_i      (axi_rresp),
+        .axi_rvalid_i     (axi_rvalid),
+        .axi_rready_o     (axi_rready),
+        .axi_awaddr_o     (axi_awaddr),
+        .axi_awvalid_o    (axi_awvalid),
+        .axi_awready_i    (axi_awready),
+        .axi_wdata_o      (axi_wdata),
+        .axi_wstrb_o      (axi_wstrb),
+        .axi_wvalid_o     (axi_wvalid),
+        .axi_wready_i     (axi_wready),
+        .axi_bvalid_i     (axi_bvalid),
+        .axi_bresp_i      (axi_bresp),
+        .axi_bready_o     (axi_bready),
+        // Stall outputs — left open; IF and MEM stages drive if_axi_stall / mem_axi_stall
+        // directly from their own pending-transaction registers (single driver per net).
+        /* verilator lint_off PINCONNECTEMPTY */
+        .if_axi_stall_o   (),
+        .mem_axi_stall_o  ()
+        /* verilator lint_on PINCONNECTEMPTY */
+    );
 
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      instruction <= 32'h0000_0013;  // NOP (ADDI x0, x0, 0)
-    end else if (axi_rvalid && axi_rready && !data_access) begin
-      instruction <= axi_rdata;
-    end
-  end
+    // =========================================================================
+    // Register File (core level — read ports used by ID, write by WB)
+    // =========================================================================
+    rv32i_regfile u_regfile (
+        .clk         (clk),
+        .rst_n       (rst_n),
+        .wr_en       (rf_wr_en),
+        .wr_addr     (rf_wr_addr),
+        .wr_data     (rf_wr_data),
+        .rd_addr1    (rf_rs1_addr),
+        .rd_data1    (rf_rs1_data),
+        .rd_addr2    (rf_rs2_addr),
+        .rd_data2    (rf_rs2_data),
+        .dbg_wr_en   (dbg_reg_wr_en),
+        .dbg_wr_addr (dbg_reg_wr_addr),
+        .dbg_wr_data (dbg_reg_wr_data),
+        .dbg_rd_addr (dbg_reg_rd_addr),
+        .dbg_rd_data (dbg_reg_rd_data)
+    );
 
-  // ================================================================
-  // Fetch Address Latch
-  // ================================================================
-  // Latch the address when starting an instruction fetch
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      fetch_addr <= 32'h0000_0000;
-    end else if (axi_arvalid && axi_arready && !data_access) begin
-      // Latch the fetch address when read starts
-      fetch_addr <= axi_araddr;
-    end
-  end
+    // =========================================================================
+    // IF Stage
+    // =========================================================================
+    rv32i_pipeline_if u_if (
+        .clk              (clk),
+        .rst_n            (rst_n),
+        .stall_pc         (stall_pc),
+        .stall_if_id      (stall_if_id),
+        .flush_if_id      (flush_if_id),
+        .pc_redirect      (ex_pc_redirect),
+        .pc_target        (ex_pc_target),
+        .jal_redirect     (jal_redirect),
+        .jal_target       (jal_target),
+        .dbg_halt_req     (dbg_halt_combined),
+        .dbg_pc_wr_en     (dbg_pc_wr_en),
+        .dbg_pc_wr_data   (dbg_pc_wr_data),
+        .dbg_halted       (dbg_halted_if),
+        .if_araddr_o      (if_araddr),
+        .if_arvalid_o     (if_arvalid),
+        .if_arready_i     (if_arready),
+        .if_rdata_i       (if_rdata),
+        .if_rresp_i       (if_rresp),
+        .if_rvalid_i      (if_rvalid),
+        .if_rready_o      (if_rready),
+        .if_axi_stall_o   (if_axi_stall),
+        .if_id_reg_o      (if_id_reg),
+        /* verilator lint_off PINCONNECTEMPTY */
+        .pc_out           ()  // not used directly; accessible via DBG_PC in cpu_top
+        /* verilator lint_on PINCONNECTEMPTY */
+    );
 
-  // ================================================================
-  // Instruction PC Register
-  // ================================================================
-  // Capture the PC when instruction fetch completes
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      pc_insn <= 32'h0000_0000;
-    end else if (axi_rvalid && axi_rready && !data_access) begin
-      // If both AR and R handshakes happen in same cycle, use axi_araddr directly
-      // Otherwise use the latched fetch_addr
-      // The simultaneous-handshake branch is unreachable with our test memory
-      // (memory responds in ≥1 cycle so AR and R never complete in the same cycle)
-      /* verilator coverage_off */
-      if (axi_arvalid && axi_arready && !data_access) begin
-        pc_insn <= axi_araddr;
-      end else begin
-        pc_insn <= fetch_addr;
-      end
-      /* verilator coverage_on */
-    end
-  end
+    // =========================================================================
+    // ID Stage
+    // =========================================================================
+    rv32i_pipeline_id u_id (
+        .clk              (clk),
+        .rst_n            (rst_n),
+        .stall_id_ex      (stall_id_ex),
+        .flush_id_ex      (flush_id_ex),
+        .if_id_reg_i      (if_id_reg),
+        .rf_rs1_addr_o    (rf_rs1_addr),
+        .rf_rs1_data_i    (rf_rs1_data),
+        .rf_rs2_addr_o    (rf_rs2_addr),
+        .rf_rs2_data_i    (rf_rs2_data),
+        .jal_redirect_o   (jal_redirect),
+        .jal_target_o     (jal_target),
+        .id_ex_reg_o      (id_ex_reg)
+    );
 
-  // ================================================================
-  // Memory Data Register (Latch AXI read data)
-  // ================================================================
-  // Latch the AXI read data when valid during MEM_WAIT state
-  // This is needed because axi_rdata is only valid during the read
-  // response cycle, but we need it later in WRITEBACK state
+    // =========================================================================
+    // EX Stage
+    // =========================================================================
+    rv32i_pipeline_ex u_ex (
+        .clk              (clk),
+        .rst_n            (rst_n),
+        .stall_ex_mem     (stall_ex_mem),
+        .id_ex_reg_i      (id_ex_reg),
+        .fwd_rs1          (fwd_rs1),
+        .fwd_rs2          (fwd_rs2),
+        .fwd_store        (fwd_store),
+        .csr_rdata_i      (csr_rdata),
+        .csr_illegal_i    (csr_illegal),
+        .irq_valid_i      (irq_valid),
+        .irq_cause_i      (irq_cause),
+        .mtvec_i          (mtvec),
+        .mret_pc_i        (mret_pc_val),
+        .ex_pc_redirect_o (ex_pc_redirect),
+        .ex_pc_target_o   (ex_pc_target),
+        .csr_wr_en_o      (csr_wr_en),
+        .csr_wdata_o      (csr_wdata_ex),
+        .csr_addr_o       (csr_addr_ex),
+        .csr_op_o         (csr_op_ex),
+        .rs1_addr_o       (csr_rs1_addr_ex),
+        .trap_entry_o     (trap_entry),
+        .trap_pc_o        (trap_pc_val),
+        .trap_cause_o     (trap_cause_val),
+        .mret_o           (mret_ex),
+        .dbg_halt_req_o   (dbg_ebreak_from_ex),
+        .ex_mem_reg_o     (ex_mem_reg)
+    );
 
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      mem_rdata_raw <= 32'h0;
-    end else if (axi_rvalid && axi_rready && data_access) begin
-      // Latch read data when doing a data access (load)
-      mem_rdata_raw <= axi_rdata;
-    end
-  end
+    // =========================================================================
+    // MEM Stage
+    // =========================================================================
+    rv32i_pipeline_mem u_mem (
+        .clk              (clk),
+        .rst_n            (rst_n),
+        .ex_mem_reg_i     (ex_mem_reg),
+        .mem_araddr_o     (mem_araddr),
+        .mem_arvalid_o    (mem_arvalid),
+        .mem_arready_i    (mem_arready),
+        .mem_rdata_i      (mem_rdata),
+        .mem_rresp_i      (mem_rresp),
+        .mem_rvalid_i     (mem_rvalid),
+        .mem_rready_o     (mem_rready),
+        .mem_awaddr_o     (mem_awaddr),
+        .mem_awvalid_o    (mem_awvalid),
+        .mem_awready_i    (mem_awready),
+        .mem_wdata_o      (mem_wdata),
+        .mem_wstrb_o      (mem_wstrb),
+        .mem_wvalid_o     (mem_wvalid),
+        .mem_wready_i     (mem_wready),
+        .mem_bvalid_i     (mem_bvalid),
+        .mem_bresp_i      (mem_bresp),
+        .mem_bready_o     (mem_bready),
+        .mem_axi_stall_o  (mem_axi_stall),
+        .mem_wb_reg_o     (mem_wb_reg)
+    );
 
-  // ================================================================
-  // Module Instantiations
-  // ================================================================
+    // =========================================================================
+    // WB Stage
+    // =========================================================================
+    rv32i_pipeline_wb u_wb (
+        .clk              (clk),
+        .rst_n            (rst_n),
+        .mem_wb_reg_i     (mem_wb_reg),
+        .dbg_halt_req     (dbg_halt_combined),
+        .if_stage_idle    (dbg_halted_if),
+        .rf_wr_en_o       (rf_wr_en),
+        .rf_wr_addr_o     (rf_wr_addr),
+        .rf_wr_data_o     (rf_wr_data),
+        .dbg_halted       (dbg_halted_wb),
+        .commit_valid_o   (commit_valid),
+        .commit_pc_o      (commit_pc),
+        .commit_insn_o    (commit_insn),
+        .trap_taken_o     (trap_taken),
+        .trap_cause_o     (trap_cause)
+    );
 
-  // ----------------------------------------------------------------
-  // Instruction Decoder
-  // ----------------------------------------------------------------
-  /* verilator lint_off PINCONNECTEMPTY */
-  rv32i_decode u_decode (
-    .instruction   (instruction),
-    .rs1           (rs1),
-    .rs2           (rs2),
-    .rd            (rd),
-    .alu_op        (alu_op),
-    .alu_src_a     (alu_src_a),
-    .alu_src_b     (alu_src_b),
-    .imm_fmt       (imm_fmt),
-    .reg_wr_en     (reg_wr_en),
-    .mem_rd        (mem_rd),
-    .mem_wr        (mem_wr),
-    .mem_size      (mem_size),
-    .mem_unsigned  (mem_unsigned),
-    .branch        (branch),
-    .branch_op     (branch_op),
-    .jump          (jump),
-    .jalr          (jalr),
-    .pc_src        (),  // Not used - pc_src computed in control FSM
-    .illegal       (illegal_insn),
-    .ebreak        (ebreak)
-  );
-  /* verilator lint_on PINCONNECTEMPTY */
+    // =========================================================================
+    // Phase 1 debug compatibility outputs
+    // Most are not directly meaningful in a pipelined design; tie to safe values
+    // to preserve testbench compatibility.
+    // =========================================================================
+    assign debug_rs1_data         = 32'h0;
+    assign debug_rs2_data         = 32'h0;
+    assign debug_branch_taken     = 1'b0;
+    assign debug_take_branch_jump = ex_pc_redirect;
+    assign debug_pc_src           = ex_pc_redirect;
+    assign debug_state            = 4'h0;  // No FSM state in Phase 2
+    assign debug_ebreak           = dbg_ebreak_from_ex;
 
-  // ----------------------------------------------------------------
-  // Immediate Generator
-  // ----------------------------------------------------------------
-  rv32i_imm_gen u_imm_gen (
-    .instruction   (instruction),
-    .imm_fmt       (imm_fmt),
-    .immediate     (immediate)
-  );
+    // CSR debug output assignments (mtvec, mepc, mip from existing signals)
+    assign dbg_csr_mtvec_o = mtvec;
+    assign dbg_csr_mepc_o  = mret_pc_val;
+    assign dbg_csr_mip_o   = mip;
 
-  // ----------------------------------------------------------------
-  // Register File
-  // ----------------------------------------------------------------
-  rv32i_regfile u_regfile (
-    .clk           (clk),
-    .rst_n         (rst_n),
-    .wr_en         (regfile_wr_en),
-    .wr_addr       (rd),
-    .wr_data       (rd_data),
-    .rd_addr1      (rs1),
-    .rd_data1      (rs1_data),
-    .rd_addr2      (rs2),
-    .rd_data2      (rs2_data),
-    .dbg_wr_en     (dbg_reg_wr_en),
-    .dbg_wr_addr   (dbg_reg_wr_addr),
-    .dbg_wr_data   (dbg_reg_wr_data),
-    .dbg_rd_addr   (dbg_reg_rd_addr),
-    .dbg_rd_data   (dbg_reg_rd_data)
-  );
-
-  // ----------------------------------------------------------------
-  // ALU
-  // ----------------------------------------------------------------
-  rv32i_alu u_alu (
-    .operand_a     (alu_operand_a),
-    .operand_b     (alu_operand_b),
-    .alu_op        (alu_op),
-    .result        (alu_result)
-  );
-
-  // ----------------------------------------------------------------
-  // Branch Comparator
-  // ----------------------------------------------------------------
-  rv32i_branch_comp u_branch_comp (
-    .rs1_data      (rs1_data),
-    .rs2_data      (rs2_data),
-    .branch_op     (branch_op),
-    .branch_taken  (branch_taken)
-  );
-
-  // ----------------------------------------------------------------
-  // Control FSM
-  // ----------------------------------------------------------------
-  rv32i_control u_control (
-    .clk                      (clk),
-    .rst_n                    (rst_n),
-    .branch                   (branch),
-    .jump                     (jump),
-    .mem_rd                   (mem_rd),
-    .mem_wr                   (mem_wr),
-    .reg_wr_en                (reg_wr_en),
-    .illegal_insn             (illegal_insn),
-    .ebreak                   (ebreak),
-    .misaligned_load          (misaligned_load),
-    .misaligned_store         (misaligned_store),
-    .branch_taken             (branch_taken),
-    .axi_arready              (axi_arready),
-    .axi_rvalid               (axi_rvalid),
-    .axi_rresp                (axi_rresp),
-    .axi_awready              (axi_awready),
-    .axi_wready               (axi_wready),
-    .axi_bvalid               (axi_bvalid),
-    .axi_bresp                (axi_bresp),
-    .axi_arvalid              (axi_arvalid),
-    .axi_rready               (axi_rready),
-    .axi_awvalid              (axi_awvalid),
-    .axi_wvalid               (axi_wvalid),
-    .axi_bready               (axi_bready),
-    .dbg_halt_req             (dbg_halt_req),
-    .dbg_resume_req           (dbg_resume_req),
-    .dbg_step_req             (dbg_step_req),
-    .dbg_halted               (dbg_halted),
-    .pc_wr_en                 (pc_wr_en),
-    .pc_src                   (pc_src),
-    .instr_valid              (instr_valid),
-    .regfile_wr_en            (regfile_wr_en),
-    .commit_valid             (commit_valid_int),
-    .trap_valid               (trap_valid),
-    .trap_cause               (trap_cause),
-    .data_access              (data_access),
-    .debug_take_branch_jump   (ctrl_debug_take_branch_jump),
-    .debug_state              (ctrl_debug_state)
-  );
-
-  // ================================================================
-  // Datapath Multiplexers
-  // ================================================================
-
-  // ALU operand A mux
-  // 2'b00 = rs1_data, 2'b01 = PC, 2'b10 = zero
-  always_comb begin
-    case (alu_src_a)
-      2'b00:   alu_operand_a = rs1_data;  // Default: rs1
-      2'b01:   alu_operand_a = pc_reg;    // For AUIPC
-      2'b10:   alu_operand_a = 32'h0;     // For LUI
-      /* verilator coverage_off */
-      default: alu_operand_a = rs1_data;  // Safe default (2'b11 never generated)
-      /* verilator coverage_on */
-    endcase
-  end
-
-  // ALU operand B mux
-  always_comb begin
-    if (alu_src_b) begin
-      alu_operand_b = immediate;
-    end else begin
-      alu_operand_b = rs2_data;
-    end
-  end
-
-  // Register file write data mux
-  always_comb begin
-    if (mem_rd) begin
-      // Load instruction
-      rd_data = mem_rdata;
-    end else if (jump) begin
-      // JAL/JALR: save PC+4 (use pc_insn which is the instruction's PC)
-      rd_data = pc_insn + 32'd4;
-    end else begin
-      // ALU result
-      rd_data = alu_result;
-    end
-  end
-
-  // ================================================================
-  // Memory Interface
-  // ================================================================
-
-  // Memory address (for loads/stores)
-  assign mem_addr = alu_result;  // Address = rs1 + immediate
-
-  // AXI write address
-  assign axi_awaddr = mem_addr;
-
-  // AXI write data
-  assign axi_wdata = rs2_data;  // Store data from rs2
-
-  // AXI write strobes (byte enable)
-  always_comb begin
-    case (mem_size)
-      3'b000: begin  // Byte
-        case (mem_addr[1:0])
-          2'b00: axi_wstrb = 4'b0001;
-          2'b01: axi_wstrb = 4'b0010;
-          2'b10: axi_wstrb = 4'b0100;
-          2'b11: axi_wstrb = 4'b1000;
-        endcase
-      end
-      3'b001: begin  // Halfword
-        case (mem_addr[1])
-          1'b0: axi_wstrb = 4'b0011;
-          1'b1: axi_wstrb = 4'b1100;
-        endcase
-      end
-      3'b010: begin  // Word
-        axi_wstrb = 4'b1111;
-      end
-      /* verilator coverage_off */
-      default: axi_wstrb = 4'b0000;  // mem_size only takes 000/001/010 for valid instructions
-      /* verilator coverage_on */
-    endcase
-  end
-
-  // Load data extraction and sign extension
-  // Use mem_rdata_raw (latched AXI data) instead of axi_rdata directly
-  always_comb begin
-    case (mem_size)
-      3'b000: begin  // Byte
-        case (mem_addr[1:0])
-          2'b00: mem_rdata = mem_unsigned ? {24'h0, mem_rdata_raw[7:0]}   : {{24{mem_rdata_raw[7]}},  mem_rdata_raw[7:0]};
-          2'b01: mem_rdata = mem_unsigned ? {24'h0, mem_rdata_raw[15:8]}  : {{24{mem_rdata_raw[15]}}, mem_rdata_raw[15:8]};
-          2'b10: mem_rdata = mem_unsigned ? {24'h0, mem_rdata_raw[23:16]} : {{24{mem_rdata_raw[23]}}, mem_rdata_raw[23:16]};
-          2'b11: mem_rdata = mem_unsigned ? {24'h0, mem_rdata_raw[31:24]} : {{24{mem_rdata_raw[31]}}, mem_rdata_raw[31:24]};
-        endcase
-      end
-      3'b001: begin  // Halfword
-        case (mem_addr[1])
-          1'b0: mem_rdata = mem_unsigned ? {16'h0, mem_rdata_raw[15:0]}  : {{16{mem_rdata_raw[15]}}, mem_rdata_raw[15:0]};
-          1'b1: mem_rdata = mem_unsigned ? {16'h0, mem_rdata_raw[31:16]} : {{16{mem_rdata_raw[31]}}, mem_rdata_raw[31:16]};
-        endcase
-      end
-      3'b010: begin  // Word
-        mem_rdata = mem_rdata_raw;
-      end
-      /* verilator coverage_off */
-      default: mem_rdata = 32'h0;  // mem_size only takes 000/001/010 for valid instructions
-      /* verilator coverage_on */
-    endcase
-  end
-
-  // ================================================================
-  // Memory Alignment Checking
-  // ================================================================
-  // Check for misaligned memory accesses based on mem_size and mem_addr
-  // RISC-V requires natural alignment:
-  // - Byte (mem_size=000): No alignment requirement
-  // - Halfword (mem_size=001): addr[0] must be 0
-  // - Word (mem_size=010): addr[1:0] must be 00
-
-  always_comb begin
-    // Default: no misalignment
-    misaligned_load = 1'b0;
-    misaligned_store = 1'b0;
-
-    // Check alignment only for active memory operations
-    if (mem_rd) begin
-      case (mem_size)
-        3'b000: misaligned_load = 1'b0;  // Byte: always aligned
-        3'b001: misaligned_load = mem_addr[0];  // Halfword: addr[0] must be 0
-        3'b010: misaligned_load = |mem_addr[1:0];  // Word: addr[1:0] must be 00
-        /* verilator coverage_off */
-        default: misaligned_load = 1'b0;  // mem_size 011-111 never generated
-        /* verilator coverage_on */
-      endcase
-    end
-
-    if (mem_wr) begin
-      case (mem_size)
-        3'b000: misaligned_store = 1'b0;  // Byte: always aligned
-        3'b001: misaligned_store = mem_addr[0];  // Halfword: addr[0] must be 0
-        3'b010: misaligned_store = |mem_addr[1:0];  // Word: addr[1:0] must be 00
-        /* verilator coverage_off */
-        default: misaligned_store = 1'b0;  // mem_size 011-111 never generated
-        /* verilator coverage_on */
-      endcase
-    end
-  end
-
-  // ================================================================
-  // Commit Interface (Verification)
-  // ================================================================
-
-  assign commit_valid = commit_valid_int;
-  assign commit_pc    = pc_reg;
-  assign commit_insn  = instruction;
-  assign trap_taken   = trap_valid;
-
-  // ================================================================
-  // Debug Outputs (Verification)
-  // ================================================================
-
-  assign debug_rs1_data          = rs1_data;
-  assign debug_rs2_data          = rs2_data;
-  assign debug_branch_taken      = branch_taken;
-  assign debug_take_branch_jump  = ctrl_debug_take_branch_jump;
-  assign debug_pc_src            = pc_src;
-  assign debug_state             = ctrl_debug_state;
-  assign debug_ebreak            = ebreak;
+    // dbg_resume_req and dbg_step_req are consumed by the top-level APB logic;
+    // in the pipeline they just affect when halt_req is deasserted.
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic _unused_resume = dbg_resume_req;
+    logic _unused_step   = dbg_step_req;
+    /* verilator lint_on UNUSEDSIGNAL */
 
 endmodule
-
-// ============================================================================
-// HUMAN REVIEW CHECKLIST
-// ============================================================================
-//
-// Please verify the following before approving this core integration:
-//
-// ✓ All modules are instantiated correctly:
-//   - rv32i_decode
-//   - rv32i_imm_gen
-//   - rv32i_regfile
-//   - rv32i_alu
-//   - rv32i_branch_comp
-//   - rv32i_control
-//
-// ✓ Datapath connectivity is correct:
-//   - PC update logic (PC+4, branch target, jump target)
-//   - ALU operand muxes (rs1/PC, rs2/imm)
-//   - Register file write data mux (ALU result, memory data, PC+4)
-//
-// ✓ Branch comparator integration:
-//   - Inputs: rs1_data, rs2_data from register file
-//   - Input: branch_op from decoder
-//   - Output: branch_taken to control FSM
-//
-// ✓ Memory interface is correct:
-//   - Load data extraction and sign extension
-//   - Store data byte enable (wstrb) generation
-//   - Address calculation (rs1 + immediate)
-//
-// ✓ Control flow is correct:
-//   - Instruction fetch from PC
-//   - Decode signals drive datapath
-//   - Execute generates results
-//   - Writeback updates register file
-//
-// ✓ Commit interface is correct:
-//   - commit_valid asserts when instruction completes
-//   - commit_pc, commit_insn for verification
-//   - trap_taken for exception tracking
-//
-// ============================================================================

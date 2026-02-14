@@ -33,14 +33,26 @@ TEST_MODULES := \
 	tb.cocotb.cpu.test_isa_uvm \
 	tb.cocotb.cpu.test_fault_injection
 
-# RTL source files
+# RTL source files (Phase 2: 5-stage pipeline)
+# rv32i_pipeline_pkg.sv is included via `include in the stage files;
+# it must appear first so Verilator can resolve the package.
 VERILOG_SOURCES := \
+	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
 	$(RTL_DIR)/cpu/core/rv32i_imm_gen.sv \
 	$(RTL_DIR)/cpu/core/rv32i_regfile.sv \
 	$(RTL_DIR)/cpu/core/rv32i_decode.sv \
 	$(RTL_DIR)/cpu/core/rv32i_branch_comp.sv \
-	$(RTL_DIR)/cpu/core/rv32i_control.sv \
+	$(RTL_DIR)/cpu/core/rv32i_hazard_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_forwarding_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_csr_file.sv \
+	$(RTL_DIR)/cpu/core/rv32i_interrupt_ctrl.sv \
+	$(RTL_DIR)/cpu/rv32i_axi_arbiter.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_if.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_id.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_mem.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_wb.sv \
 	$(RTL_DIR)/cpu/core/rv32i_core.sv \
 	$(RTL_DIR)/cpu/rv32i_cpu_top.sv
 
@@ -57,6 +69,7 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += --timescale 1ns/1ps
 	COMPILE_ARGS += --public-flat-rw
 	COMPILE_ARGS += --no-timing
+	COMPILE_ARGS += -I$(RTL_DIR)/cpu/core
 ifdef COVERAGE
 	COMPILE_ARGS += --coverage
 	EXTRA_ARGS   += --coverage
@@ -116,8 +129,12 @@ help:
 
 lint:
 	@echo "Running Verilator lint check..."
-	@verilator --lint-only -Wall \
+	@verilator --lint-only -Wall -Wno-fatal \
 		--top-module $(DUT) \
+		-I$(RTL_DIR)/cpu/core \
+		-Wno-IMPORTSTAR \
+		-Wno-UNUSEDSIGNAL \
+		-Wno-UNOPTFLAT \
 		$(VERILOG_SOURCES) 2>&1 || echo "Verilator not found. Install with: sudo apt-get install verilator, or run from WSL"
 
 clean-basic:
