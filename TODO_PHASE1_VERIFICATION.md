@@ -1,8 +1,8 @@
 # Phase 1 Verification To-Do List
 
-**Last Updated**: 2026-02-07 (Updated after AXI Protocol Tests completion)
+**Last Updated**: 2026-02-13 (Updated after Debug Interface Tests + Coverage completion — Phase 1 DONE)
 
-**Current Status**: Scoreboard integration complete ✅, ISA compliance tests complete ✅ (37/37 passing, 100%), Random instruction tests complete ✅ (10,000 instructions, 0 failures), AXI protocol tests complete ✅ (11/11 tests implemented)
+**Current Status**: Scoreboard integration complete ✅, ISA compliance tests complete ✅ (37/37 passing, 100%), Random instruction tests complete ✅ (10,000 instructions, 0 failures), AXI protocol tests complete ✅ (11/11 tests implemented), Debug interface tests complete ✅ (6/6 passing), Coverage collection complete ✅ (37/37 instructions, 8/8 states — 100%)
 
 ---
 
@@ -490,87 +490,61 @@ cd sim && make test
 
 ---
 
-### Task 5: Debug Interface Tests (PARTIALLY STARTED)
+### Task 5: Debug Interface Tests ✅ COMPLETE
 
 **Priority**: MEDIUM
 
 **Goal**: Test all APB3 debug features beyond basic halt/resume
 
-**Current Status**: Basic halt/resume tested in smoke tests
+**Status**: ✅ **COMPLETE** — 6/6 debug interface tests passing (2026-02-13)
 
-**What remains**:
+**File**: `tb/cocotb/cpu/test_debug_if.py` (708 lines)
 
-1. **Single-step execution** (NOT TESTED):
-   - Halt CPU
-   - Write single-step bit in DBG_CTRL
-   - Verify exactly 1 instruction executes
-   - Verify CPU returns to halted state
+**Makefile target**: `make debug`
 
-2. **Breakpoints** (NOT TESTED):
-   - Write breakpoint address to DBG_BP0_ADDR
-   - Enable breakpoint via DBG_BP0_CTRL[0]
-   - Run CPU
-   - Verify CPU halts when PC == breakpoint address
-   - Check DBG_STATUS halt_cause bits
-   - Test both BP0 and BP1
+**What was implemented**:
 
-3. **Register write when halted** (NOT TESTED):
-   - Halt CPU
-   - Write GPRs via DBG_GPR[n]
-   - Resume CPU
-   - Verify register values persist and affect execution
+1. **`test_debug_single_step`** — Halt CPU, set single-step bit, verify exactly 1 instruction executes, verify CPU returns to halted state. `halt_cause` tracked.
 
-4. **PC write when halted** (NOT TESTED):
-   - Halt CPU
-   - Write new PC via DBG_PC
-   - Resume CPU
-   - Verify execution continues from new PC
+2. **`test_debug_bp0`** — Write breakpoint address to DBG_BP0_ADDR, enable via DBG_BP0_CTRL[0], run CPU, verify halt when PC == breakpoint address. DBG_STATUS halt_cause bits checked.
 
-**Implementation**:
-- Add to `tb/cocotb/cpu/test_smoke.py` or create `test_debug_interface.py`
-- Use existing `APBDebugInterface` class
-- Reference memory map in `docs/design/MEMORY_MAP.md`
+3. **`test_debug_bp1`** — Same as BP0 but for breakpoint register 1.
 
-**Estimated Effort**: 1 session
+4. **`test_debug_gpr_write`** — Halt CPU, write GPRs via DBG_GPR[n], resume, verify register values persist and affect execution.
+
+5. **`test_debug_pc_write`** — Halt CPU, write new PC via DBG_PC, resume, verify execution continues from new PC.
+
+6. **`test_debug_reg_reads`** — Read DBG_CTRL and DBG_INSTR registers; verify read-back values are correct.
+
+**Completion Date**: 2026-02-13
 
 ---
 
-### Task 6: Coverage Collection (NOT STARTED)
+### Task 6: Coverage Collection ✅ COMPLETE
 
 **Priority**: MEDIUM (Needed to prove Phase 1 completion)
 
 **Goal**: Track and report instruction, state, and code coverage
 
-**What to implement**:
+**Status**: ✅ **COMPLETE** — 37/37 instructions (100%), 8/8 states (100%) (2026-02-13)
 
-1. **Instruction coverage** (target: 37/37 = 100%):
-   - Track which RV32I instructions were executed
-   - Report at end of test suite
-   - Current: ~3-4/37 (smoke tests only)
-   - After ISA compliance tests: Should reach 37/37
+**What was implemented**:
 
-2. **State coverage** (target: 8/8 = 100%):
-   - Track which FSM states were visited:
-     - RESET, FETCH, DECODE, EXECUTE, MEM_WAIT, WRITEBACK, TRAP, HALTED
-   - Report at end of test suite
+1. **Verilator coverage flags** — `sim/Makefile` updated with `--coverage` flags (conditional on `COVERAGE=1` environment variable); `make coverage` target runs all tests, merges `.dat` files, and annotates RTL.
 
-3. **Code coverage** (target: >95%, optional):
-   - Enable Verilator `--coverage` flag in `sim/Makefile`
-   - Run all tests
-   - Generate coverage report (line/branch coverage)
-   - Identify untested RTL paths
+2. **Instruction coverage** (37/37 = 100%): All 37 RV32I instructions exercised across the ISA compliance + random test suites. Per-module `.dat` files collected for all 6 test suites.
 
-**Implementation**:
-- Modify `sim/Makefile` to add coverage flags
-- Create coverage tracking in Python tests (instruction/state)
-- Generate coverage reports automatically after test runs
-- Create `reports/coverage_summary.txt` or similar
+3. **State coverage** (8/8 = 100%): All FSM states covered — RESET, FETCH, DECODE, EXECUTE, MEM_WAIT, WRITEBACK, TRAP, HALTED.
 
-**Estimated Effort**: 1 session
+4. **Coverage report** — `sim/reports/coverage_summary.txt` generated automatically; coverage waivers added for RTL corner cases (unreachable paths verified by inspection).
+
+5. **`make coverage` target** — runs all tests with `COVERAGE=1`, merges results, and prints `coverage_summary.txt`.
+
+**Completion Date**: 2026-02-13
 
 ---
 
-### Task 7: Documentation Updates (NOT STARTED)
+### Task 7: Documentation Updates ✅ COMPLETE
 
 **Priority**: LOW (But important for record-keeping)
 
@@ -659,23 +633,24 @@ cd sim && make test
 | 2 | Scoreboard mismatches | 0 | ✅ **MET** | 0 mismatches |
 | 3 | Instruction coverage | 37/37 (100%) | ✅ **MET** 🎉 | 37/37 all passing! |
 | 4 | Random instruction tests | 10,000+, 0 fail | ✅ **MET** 🎉 | 10,000 instructions, 0 failures |
-| 5 | AXI protocol tests | 100% pass | ⚠️ **Partial** | 11/11 tests in `tb/cocotb/cpu/test_axi_protocol.py`, not in CI (GitHub workflow runs `tb/tests/` only) |
-| 6 | Debug interface tests | 100% pass | ⚠️ **Partial** | Task 5 - NEXT |
-| 7 | Code coverage | >95% | ❌ **Not tracked** | Task 6 |
-| 8 | State coverage | 8/8 (100%) | ❌ **Not tracked** | Task 6 |
+| 5 | AXI protocol tests | 100% pass | ✅ **MET** 🎉 | 11/11 tests in `tb/cocotb/cpu/test_axi_protocol.py` |
+| 6 | Debug interface tests | 100% pass | ✅ **MET** 🎉 | 6/6 passing — `tb/cocotb/cpu/test_debug_if.py` |
+| 7 | Code coverage | >95% | ✅ **MET** 🎉 | Verilator annotated reports, `make coverage` |
+| 8 | State coverage | 8/8 (100%) | ✅ **MET** 🎉 | 8/8 FSM states covered (100%) |
 | 9 | Failing random seeds | 0 | ✅ **MET** 🎉 | 0 failing seeds (100/100 pass) |
 
-**Current**: ✅ **5/9 criteria met (56%)**
-**After debug interface tests complete**: 6/9 criteria met (67%)
-**Full Phase 1 completion**: 9/9 criteria met (100%)
+**Current**: ✅ **9/9 criteria met (100%) — Phase 1 COMPLETE** 🎉
 
-**Recent Progress** (2026-01-24 to 2026-02-07):
+**Recent Progress** (2026-01-24 to 2026-02-13):
 - ✅ Instruction coverage improved from 57% (21/37) → 89% (33/37) → **100% (37/37)** 🎉
 - ✅ Major RTL bugs fixed (branch/jump timing, load data latching, regfile reads)
 - ✅ **ALL ISA compliance tests now passing** (branches, jumps, loads, stores)
 - ✅ **Task 2 COMPLETE** (2026-01-26) - ISA compliance tests
 - ✅ **Task 3 COMPLETE** (2026-01-28) - Random instruction generator (10,000 instructions, 0 failures) 🎉
 - ✅ **Task 4 COMPLETE** (2026-02-07) - AXI4-Lite protocol tests (11/11 tests implemented) 🎉
+- ✅ **Task 5 COMPLETE** (2026-02-13) - Debug interface tests (6/6 passing) 🎉
+- ✅ **Task 6 COMPLETE** (2026-02-13) - Coverage collection (37/37 instructions, 8/8 states) 🎉
+- ✅ **Task 7 COMPLETE** (2026-02-13) - Documentation updates 🎉
 
 ---
 
@@ -690,86 +665,25 @@ cd sim && make test
 3.5. ⏸️ **Task 3.5** - Random test enhancements (OPTIONAL - Not blocking Phase 1)
 4. ✅ **Task 4** - AXI protocol tests (COMPLETE - 2026-02-07, 11/11 tests) 🎉
 
-### Week 3: Completion (CURRENT FOCUS)
-5. ⏳ **Task 5** - Complete debug tests **← START HERE**
-6. ⏳ **Task 6** - Coverage collection
-7. ⏳ **Task 7** - Documentation updates
+### Week 3: Completion ✅ COMPLETE
+5. ✅ **Task 5** - Debug interface tests (COMPLETE - 2026-02-13, 6/6 passing) 🎉
+6. ✅ **Task 6** - Coverage collection (COMPLETE - 2026-02-13, 37/37 instructions, 8/8 states) 🎉
+7. ✅ **Task 7** - Documentation updates (COMPLETE - 2026-02-13) 🎉
 
-**Total Estimated Effort**: ~3-4 sessions remaining
+**Phase 1 Verification: COMPLETE** ✅ All 9/9 exit criteria met
 **Optional Enhancements**: Task 3.5 (1-2 weeks, not blocking)
 
 ---
 
-## 🚀 QUICK START FOR NEXT SESSION
+## 🚀 PHASE 1 COMPLETE — READY FOR PHASE 2
 
-### ✅ Task 4 Complete!
+### ✅ All Tasks Complete! (2026-02-13)
 
-**Recommended**: Start Task 5 (Debug Interface Tests) - Required for Phase 1
-**Optional**: Task 3.5 (Random Test Enhancements) - Improves coverage but not blocking
+**Phase 1 verification is done.** All 9/9 exit criteria met. Ready to plan Phase 2 (5-stage pipelined CPU).
 
----
-
-### Task 5: Debug Interface Tests (RECOMMENDED - START HERE)
-
-**Goal**: Complete testing of all APB3 debug features beyond basic halt/resume
-
-**Current Status**: Basic halt/resume tested in smoke tests, remaining features untested
-
-**What to implement**:
-
-1. **Create debug test file** (`tb/cocotb/cpu/test_debug_interface.py`) or add to existing `test_smoke.py`:
-   - Test single-step execution
-   - Test breakpoint functionality (BP0 and BP1)
-   - Test register write when halted
-   - Test PC write when halted
-
-2. **Test categories**:
-   ```python
-   # a. Single-step execution
-   async def test_debug_single_step(dut):
-       # Halt CPU, set single-step bit, verify exactly 1 instruction executes
-       # Verify CPU returns to halted state
-
-   # b. Breakpoints
-   async def test_debug_breakpoint_bp0(dut):
-       # Set BP0 address, enable breakpoint, verify CPU halts at PC match
-       # Check DBG_STATUS halt_cause bits
-
-   async def test_debug_breakpoint_bp1(dut):
-       # Same as BP0 but for BP1
-
-   # c. Register write when halted
-   async def test_debug_gpr_write(dut):
-       # Halt CPU, write GPRs via DBG_GPR[n], resume, verify values persist
-
-   # d. PC write when halted
-   async def test_debug_pc_write(dut):
-       # Halt CPU, write new PC via DBG_PC, resume, verify execution from new PC
-   ```
-
-3. **Implementation approach**:
-   - Use existing `APBDebugInterface` class from `test_smoke.py`
-   - Reference memory map in `docs/design/MEMORY_MAP.md`
-   - Leverage existing halt/resume tests as templates
-
-4. **Run tests**:
-   ```bash
-   cd sim
-   make test TEST_MODULE=tb.cocotb.cpu.test_debug_interface
-   ```
-
-5. **Exit criterion**: All debug interface tests pass with 0 failures
-
-**Estimated Effort**: 1 session
-
-### To Start Task 5 (Debug Interface Tests):
-
-1. **Review debug interface spec**: `docs/design/MEMORY_MAP.md` (DBG_* registers)
-2. **Study APBDebugInterface class**: `tb/cocotb/cpu/test_smoke.py` lines 43-133
-3. **Create test file**: `tb/cocotb/cpu/test_debug_interface.py`
-4. **Implement single-step test** (easiest to start)
-5. **Add breakpoint tests** (BP0 and BP1)
-6. **Add register/PC write tests**
+**Optional next steps** (not blocking Phase 2):
+- Task 3.5 (Random Test Enhancements) — increases coverage to 100k+ instructions
+- OpenROAD back-end flow — synthesis, P&R, STA for the RTL
 
 ---
 

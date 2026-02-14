@@ -2,8 +2,8 @@
 
 System-level interface specifications for all IPs
 
-Document status: Frozen
-Last updated: 2026-01-17
+Document status: Frozen — Verified against RTL on 2026-02-13
+Last updated: 2026-02-13
 
 ## Protocol Standards
 
