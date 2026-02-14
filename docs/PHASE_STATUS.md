@@ -93,9 +93,20 @@ Last updated: 2026-02-13
 
 ### Phase 2: Pipelined CPU
 
-**Status**: NOT STARTED
+**Status**: PLANNING APPROVED (2026-02-14) — RTL implementation ready to begin
 
-**Prerequisites**: Phase 1 exit criteria must be met
+**Prerequisites**: ✅ Phase 1 exit criteria met (2026-02-13)
+
+**Architecture Spec**: `docs/design/PHASE2_ARCHITECTURE_SPEC.md` — APPROVED, all 7 open questions resolved
+
+**Decisions locked (2026-02-14)**:
+- OQ-1: ✅ Modify in-place (Phase 1 archived to `micro_p/`)
+- OQ-2: ✅ External interrupt (MEIP) > Timer interrupt (MTIP)
+- OQ-3: ✅ EBREAK sets `mcause=3` + `mepc` + triggers debug halt
+- OQ-4: ✅ CSR write takes priority over same-cycle interrupt check in EX
+- OQ-5: ✅ Debug halt drains pipeline immediately (no wait for MRET)
+- OQ-6: ✅ In-flight AXI transaction completes; flushed responses discarded
+- OQ-7: ✅ Add pipeline stage first → ASAP7 second → relax frequency last resort
 
 ### Phase 3: Memory System & Caches
 
@@ -222,30 +233,41 @@ All previous specification issues have been resolved:
 
 ## Next Actions
 
-### Immediate — Phase 1 Complete, Transition to Phase 2
+### Immediate — Phase 2 Architecture Approval
 
-**Phase 1 COMPLETE!** ✅ All 9/9 verification exit criteria met (2026-02-13). RTL implementation (8/8 modules) and all test suites passing.
+**Phase 1 COMPLETE!** ✅ All 9/9 verification exit criteria met (2026-02-13). Phase 2 architecture specification written (2026-02-14).
 
-**Ready to begin Phase 2 planning**:
+**HUMAN ACTION REQUIRED** before Phase 2 RTL begins:
 
-1. **Review Phase 2 architecture** per PHASE2_ARCHITECTURE_SPEC.md (to be written) and ROADMAP.md
-   - 5-stage pipeline: IF, ID, EX, MEM, WB
-   - Hazard detection and forwarding unit
-   - Interrupt support (timer + external)
-   - Performance targets: ~1 IPC at 200 MHz
+1. **Review and approve** `docs/design/PHASE2_ARCHITECTURE_SPEC.md`
+   - 7 open questions require human decisions (Section 9 / OQ-1 through OQ-7)
+   - Key decisions: module naming strategy, interrupt priority, EBREAK behavior, frequency fallback
+   - Human must approve architecture before any Phase 2 RTL is written (per CLAUDE.md AI/Human boundary)
 
-2. **Optional Phase 1 follow-on work** (not blocking Phase 2):
-   - OpenROAD back-end flow: synthesis, P&R, STA for Phase 1 RTL
-   - Task 3.5: Increase random tests to 100,000+ instructions
-   - Gate-level simulation with back-annotated SDF delays
+2. **After approval**, the following can proceed in parallel:
+   - RTL Designer: Update `rv32i_decode.sv` for CSR instructions (Sub-task 3)
+   - Verification Engineer: Update Python reference model for CSR + interrupts (Sub-task 1)
 
-### Short-term (Phase 2 Planning)
+### Short-term (After Architecture Approval)
 
-1. Write `docs/design/PHASE2_ARCHITECTURE_SPEC.md`
-2. Define pipeline hazard handling strategy
-3. Design interrupt controller interface
-4. Update verification plan for pipelined execution model
-5. Plan Phase 2 test infrastructure (stall/forward coverage)
+Per PHASE2_ARCHITECTURE_SPEC.md Section 8 (Implementation Roadmap):
+
+1. Human approves PHASE2_ARCHITECTURE_SPEC.md (resolves OQ-1 through OQ-7)
+2. Verification Engineer: Update Python reference model (CSR + interrupt support)
+3. RTL Designer: Update rv32i_decode.sv + implement rv32i_csr_file.sv
+4. RTL Designer: Implement hazard_unit + forwarding_unit + axi_arbiter
+5. RTL Designer: Implement pipeline stage modules (IF/ID/EX/MEM/WB)
+6. RTL Designer: Integrate rv32i_core_v2.sv + rv32i_cpu_top_v2.sv
+7. Verification Engineer: Directed hazard tests + interrupt tests
+8. Verification Engineer: Random instruction regression (50k+ with interrupts)
+9. Backend Engineer: Synthesis + P&R at 200 MHz
+
+### Optional — Phase 1 Physical Design
+
+Not blocking Phase 2. Run when convenient:
+
+- OpenROAD back-end flow: synthesis, P&R, STA for Phase 1 RTL
+- Gate-level simulation with back-annotated SDF delays
 
 ### Optional: Physical Design Flow (Phase 1 RTL)
 
