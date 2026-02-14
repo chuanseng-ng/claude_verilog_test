@@ -271,13 +271,13 @@ docs/
 ├── PHASE_STATUS.md                   # This file - current status
 ├── design/
 │   ├── PHASE0_ARCHITECTURE_SPEC.md   # Phase 0 CPU specification
-│   ├── PHASE1_ARCHITECTURE_SPEC.md   # Phase 1 CPU specification (TBD)
+│   ├── PHASE1_ARCHITECTURE_SPEC.md   # Phase 1 CPU specification (verified 2026-02-13)
 │   ├── PHASE4_GPU_ARCHITECTURE_SPEC.md # Phase 4 GPU specification (TBD)
 │   ├── DESIGN_EXPECTATION.md         # High-level design goals
 │   ├── RTL_DEFINITION.md             # Interface definitions
 │   ├── GPU_MODEL.md                  # GPU execution model overview
-│   ├── MEMORY_MAP.md                 # Address space allocation (TBD)
-│   └── REFERENCE_MODEL_SPEC.md       # Python model specification (TBD)
+│   ├── MEMORY_MAP.md                 # Address space allocation (complete 2026-01-17)
+│   └── REFERENCE_MODEL_SPEC.md       # Python model specification (complete 2026-01-17)
 └── verification/
     └── VERIFICATION_PLAN.md          # Verification strategy
 ```
