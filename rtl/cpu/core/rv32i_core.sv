@@ -73,7 +73,10 @@ module rv32i_core (
     output logic [31:0] dbg_csr_mtvec_o,
     output logic [31:0] dbg_csr_mepc_o,
     output logic [31:0] dbg_csr_mcause_o,
-    output logic [31:0] dbg_csr_mip_o
+    output logic [31:0] dbg_csr_mip_o,
+
+    // ── IF stage PC (for DBG_PC register — correct value when halted) ─────────
+    output logic [31:0] pc_if_o
 );
 
     // =========================================================================
@@ -154,7 +157,13 @@ module rv32i_core (
 
     // Combined halt: APB request, EBREAK, or single-step
     assign dbg_halt_combined = dbg_halt_req || dbg_ebreak_from_ex;
-    assign dbg_halted        = dbg_halted_wb;
+    // The pipeline must be fully drained before signalling halt.
+    // Checking only !mem_wb_reg.valid is insufficient: if EX/MEM still holds a valid
+    // instruction it will arrive at WB the next cycle, dropping dbg_halted_wb to 0 and
+    // triggering the cpu_top auto-clear that permanently deasserts halt_req.
+    assign dbg_halted = dbg_halted_wb && !id_ex_reg.valid && !ex_mem_reg.valid;
+
+    logic [31:0] pc_if_out;   // IF-stage PC register (fetch address)
 
     // =========================================================================
     // AXI arbiter IF interface signals
@@ -385,6 +394,7 @@ module rv32i_core (
         .jal_redirect     (jal_redirect),
         .jal_target       (jal_target),
         .dbg_halt_req     (dbg_halt_combined),
+        .dbg_step_pending (dbg_step_req),      // step_pending_q from cpu_top
         .dbg_pc_wr_en     (dbg_pc_wr_en),
         .dbg_pc_wr_data   (dbg_pc_wr_data),
         .dbg_halted       (dbg_halted_if),
@@ -397,9 +407,7 @@ module rv32i_core (
         .if_rready_o      (if_rready),
         .if_axi_stall_o   (if_axi_stall),
         .if_id_reg_o      (if_id_reg),
-        /* verilator lint_off PINCONNECTEMPTY */
-        .pc_out           ()  // not used directly; accessible via DBG_PC in cpu_top
-        /* verilator lint_on PINCONNECTEMPTY */
+        .pc_out           (pc_if_out)
     );
 
     // =========================================================================
@@ -518,11 +526,13 @@ module rv32i_core (
     assign dbg_csr_mepc_o  = mret_pc_val;
     assign dbg_csr_mip_o   = mip;
 
-    // dbg_resume_req and dbg_step_req are consumed by the top-level APB logic;
-    // in the pipeline they just affect when halt_req is deasserted.
+    // IF-stage PC output (frozen during halt by rv32i_pipeline_if)
+    assign pc_if_o = pc_if_out;
+
+    // dbg_resume_req is consumed by top-level APB logic; not needed in the pipeline.
     /* verilator lint_off UNUSEDSIGNAL */
     logic _unused_resume = dbg_resume_req;
-    logic _unused_step   = dbg_step_req;
     /* verilator lint_on UNUSEDSIGNAL */
+    // dbg_step_req (= step_pending_q from cpu_top) is routed to IF as dbg_step_pending.
 
 endmodule

@@ -143,10 +143,14 @@ module rv32i_pipeline_mem (
                         && !ex_mem_reg_i.trap_valid
                         && (ex_mem_reg_i.mem_rd || ex_mem_reg_i.mem_wr);
 
-    // mem_axi_stall: high while a transaction is pending (no response yet)
-    assign mem_axi_stall_o = mem_pending_q && (
-        (mem_is_write_q  ? !(mem_bvalid_i && mem_bready_o) : !(mem_rvalid_i && mem_rready_o))
-    );
+    // mem_axi_stall: high as soon as a memory transaction is needed until the
+    // response arrives.  Using mem_pending_q alone was too late: pending_q is
+    // only set on the posedge *after* the AR/AW handshake, so in the cycle
+    // that arvalid && arready fires the stall was 0 and the hazard unit
+    // allowed EX/MEM to advance — discarding the load/store before rvalid/bvalid.
+    assign mem_axi_stall_o = need_mem_txn
+                           && !((ex_mem_reg_i.mem_rd && mem_rvalid_i && mem_rready_o)
+                              || (ex_mem_reg_i.mem_wr && mem_bvalid_i && mem_bready_o));
 
     // AXI outputs
     assign mem_araddr_o  = ex_mem_reg_i.alu_result;

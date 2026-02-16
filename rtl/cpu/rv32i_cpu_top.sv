@@ -86,6 +86,7 @@ module rv32i_cpu_top (
   logic        dbg_resume_req;
   logic        dbg_step_req;
   logic        dbg_halted;
+  logic [31:0] pc_if_from_core;  // IF-stage PC (frozen during halt)
 
   // Debug PC write
   logic        dbg_pc_wr_en;
@@ -118,6 +119,15 @@ module rv32i_cpu_top (
   logic [31:0] dbg_csr_mepc;
   logic [31:0] dbg_csr_mcause;
   logic [31:0] dbg_csr_mip;
+
+  // Persistent halt latch — keeps halt_req asserted after a one-cycle event
+  // (EBREAK in EX, breakpoint commit, or single-step completion) until the
+  // CPU is explicitly resumed by the test writing DBG_CTRL[1] or DBG_CTRL[2].
+  logic halt_latch_q;
+
+  // Single-step sequencer: armed when the CPU exits HALTED with step bit set;
+  // cleared (and halt re-asserted) when the first instruction commits.
+  logic step_pending_q;
 
   // Latched halt cause register (Bug fix: breakpoint halt_cause reads as 0)
   // bp0_hit and bp1_hit are combinational signals that pulse for only the
@@ -205,7 +215,8 @@ module rv32i_cpu_top (
     .dbg_csr_mtvec_o   (dbg_csr_mtvec),
     .dbg_csr_mepc_o    (dbg_csr_mepc),
     .dbg_csr_mcause_o  (dbg_csr_mcause),
-    .dbg_csr_mip_o     (dbg_csr_mip)
+    .dbg_csr_mip_o     (dbg_csr_mip),
+    .pc_if_o           (pc_if_from_core)
   );
 
   // ================================================================
@@ -232,11 +243,11 @@ module rv32i_cpu_top (
         // Status register (0x004)
         12'h004: apb_prdata_o = dbg_status_reg;
 
-        // PC register (0x008)
-        12'h008: apb_prdata_o = commit_pc_o;
+        // PC register (0x008) — IF-stage PC (correct when halted; frozen by pipeline_if)
+        12'h008: apb_prdata_o = pc_if_from_core;
 
-        // Current instruction (0x00C)
-        12'h00C: apb_prdata_o = commit_insn_o;
+        // Current instruction (0x00C) — last retired instruction (latched)
+        12'h00C: apb_prdata_o = last_commit_insn_q;
 
         // CSR debug registers (read-only, Phase 2)
         12'h200: apb_prdata_o = dbg_csr_mstatus;   // DBG_MSTATUS
@@ -285,11 +296,69 @@ module rv32i_cpu_top (
 
   // Edge detection for dbg_halted (to auto-clear command bits)
   logic dbg_halted_prev;
+  // DBG_INSTR latch: holds the last retired instruction (commit or trap) so
+  // the register reads non-zero when the CPU is halted and the pipeline is empty.
+  logic [31:0] last_commit_insn_q;
+
+  always_ff @(posedge clk_i or negedge rst_n_i) begin
+    if (!rst_n_i)
+      last_commit_insn_q <= 32'h0;
+    else if (commit_valid_o || trap_taken_o)
+      last_commit_insn_q <= commit_insn_o;
+  end
   always_ff @(posedge clk_i or negedge rst_n_i) begin
     if (!rst_n_i) begin
       dbg_halted_prev <= 1'b0;
     end else begin
       dbg_halted_prev <= dbg_halted;
+    end
+  end
+
+  // ================================================================
+  // Halt latch and single-step sequencer
+  // ================================================================
+  always_ff @(posedge clk_i or negedge rst_n_i) begin
+    if (!rst_n_i) begin
+      halt_latch_q  <= 1'b0;
+      step_pending_q <= 1'b0;
+    end else begin
+      // --- halt_latch_q ---
+      // Clear when the CPU exits HALTED (resume or beginning of a step).
+      if (!dbg_halted && dbg_halted_prev) begin
+        halt_latch_q <= 1'b0;
+      end
+      // Set on EBREAK reaching EX or breakpoint commit — these are one-cycle
+      // pulses; the latch ensures halt_req stays asserted while the pipeline drains.
+      if (debug_ebreak_o || bp0_hit || bp1_hit) begin
+        halt_latch_q <= 1'b1;
+      end
+      // Re-assert halt when the single-step instruction commits.
+      if (step_pending_q && commit_valid_o) begin
+        halt_latch_q <= 1'b1;
+      end
+
+      // Explicit APB clear: when the test writes resume (bit 1) or step (bit 2)
+      // to DBG_CTRL, clear halt_latch_q immediately so the CPU can exit HALTED.
+      // Without this, halt_latch_q=1 keeps dbg_halt_req=1, preventing the CPU
+      // from exiting HALTED even after bit 0 is cleared.  This fires LAST so
+      // it overrides any set above in the same always_ff block.
+      if (apb_psel_i && apb_penable_i && apb_pwrite_i && (apb_paddr_i == 12'h000)) begin
+        if (apb_pwdata_i[1] || apb_pwdata_i[2]) begin
+          halt_latch_q <= 1'b0;
+        end
+      end
+
+      // --- step_pending_q ---
+      // Arm when the CPU exits HALTED with the step bit set.
+      // Note: dbg_ctrl_reg[2] is read at its pre-edge value so the check
+      // correctly sees the step bit written by step_cpu() before auto-clear.
+      if (!dbg_halted && dbg_halted_prev && dbg_ctrl_reg[2]) begin
+        step_pending_q <= 1'b1;
+      end
+      // Disarm when the instruction commits (step complete).
+      if (step_pending_q && commit_valid_o) begin
+        step_pending_q <= 1'b0;
+      end
     end
   end
 
@@ -312,14 +381,15 @@ module rv32i_cpu_top (
       dbg_reg_wr_en <= 1'b0;
 
       // Auto-clear command bits based on CPU state transitions:
-      // - Clear halt bit when CPU enters HALTED state (dbg_halted 0->1)
-      // - Clear resume/step bits when CPU exits HALTED state (dbg_halted 1->0)
-      if (dbg_halted && !dbg_halted_prev) begin
-        // CPU just entered HALTED state - clear halt bit
-        dbg_ctrl_reg[0] <= 1'b0;
-      end else if (!dbg_halted && dbg_halted_prev) begin
-        // CPU just exited HALTED state - clear resume and step bits
-        dbg_ctrl_reg[2:1] <= 2'b00;
+      // - Keep halt bit (bit 0) asserted while halted so the CPU stays frozen
+      //   until explicitly resumed.  (Clearing it prematurely would cause
+      //   dbg_halted to fall before the next APB read can observe it.)
+      // - Clear all control bits when CPU exits HALTED state (dbg_halted 1->0),
+      //   which happens when the test writes DBG_CTRL[1]=1 (resume) or
+      //   DBG_CTRL[2]=1 (step), both of which write bit 0 = 0.
+      if (!dbg_halted && dbg_halted_prev) begin
+        // CPU just exited HALTED state - clear halt, resume and step bits
+        dbg_ctrl_reg[2:0] <= 3'b000;
       end
 
       if (apb_psel_i && apb_penable_i && apb_pwrite_i) begin
@@ -386,9 +456,13 @@ module rv32i_cpu_top (
 
   // Extract debug control signals from control register
   // Also trigger halt on breakpoint hits
-  assign dbg_halt_req   = dbg_ctrl_reg[0] || bp0_hit || bp1_hit;
+  // dbg_halt_req: asserted by APB halt bit, breakpoint hit (immediate pulse),
+  // or halt_latch_q (which holds the request stable until explicit resume).
+  assign dbg_halt_req   = dbg_ctrl_reg[0] || bp0_hit || bp1_hit || halt_latch_q;
   assign dbg_resume_req = dbg_ctrl_reg[1];
-  assign dbg_step_req   = dbg_ctrl_reg[2];
+  // dbg_step_req carries step_pending_q (not the raw ctrl bit) so the IF stage
+  // can limit fetches to exactly one when a single-step is in progress.
+  assign dbg_step_req   = step_pending_q;
 
   // ================================================================
   // Halt Cause Latch

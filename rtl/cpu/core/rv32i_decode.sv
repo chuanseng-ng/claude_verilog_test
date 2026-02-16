@@ -199,6 +199,7 @@ module rv32i_decode (
           reg_wr_en = 1'b1;
           jump      = 1'b1;
           jalr      = 1'b1;
+          alu_src_b = 1'b1;  // Target = (rs1 + imm) & ~1; use immediate not rs2
         end else begin
           illegal = 1'b1;  // Invalid funct3 for JALR
         end
