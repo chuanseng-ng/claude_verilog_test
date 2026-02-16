@@ -260,5 +260,27 @@ coverage:
 		echo "Note: verilator_coverage not available or no coverage data found"
 	@echo "Coverage report: reports/coverage_annotated/"
 
+# ============================================================================
+# Random / Stress UVM Targets (used by CI)
+# ============================================================================
+
+.PHONY: random_uvm random_uvm_smoke stress_uvm stress_uvm_smoke
+
+random_uvm:
+	@echo "Running pyuvm random instruction tests..."
+	$(MAKE) sim MODULE=tb.cocotb.cpu.test_random_uvm
+
+random_uvm_smoke:
+	@echo "Running pyuvm random instruction tests (SMOKE: 10 seeds × 50 instructions)..."
+	RANDOM_TEST_SMOKE=1 $(MAKE) sim MODULE=tb.cocotb.cpu.test_random_uvm
+
+stress_uvm:
+	@echo "Running pyuvm stress tests (4 profiles: ALU, Jump, Shift, Immediate)..."
+	$(MAKE) sim MODULE=tb.cocotb.cpu.test_stress_uvm
+
+stress_uvm_smoke:
+	@echo "Running pyuvm stress tests (SMOKE: 10 seeds × 100 instr per profile)..."
+	STRESS_TEST_SMOKE=1 $(MAKE) sim MODULE=tb.cocotb.cpu.test_stress_uvm
+
 # Override clean to use our basic clean
 clean: clean-basic
