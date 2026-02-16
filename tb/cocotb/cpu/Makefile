@@ -10,7 +10,8 @@
 SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
 
-# RTL source files
+# RTL source files (package must come first)
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_pipeline_pkg.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/rv32i_cpu_top.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_core.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_control.sv
