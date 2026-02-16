@@ -91,7 +91,7 @@ jobs:
         env:
           RANDOM_TEST_SMOKE: '1'
           PYTHONPATH: ${{ github.workspace }}
-        working-directory: tb/cocotb/cpu
+        working-directory: sim
         run: |
           echo "=== Running Random Instruction Smoke Test ==="
           echo "Configuration: 10 seeds × 50 instructions = 500 total instructions"
@@ -101,7 +101,7 @@ jobs:
         env:
           STRESS_TEST_SMOKE: '1'
           PYTHONPATH: ${{ github.workspace }}
-        working-directory: tb/cocotb/cpu
+        working-directory: sim
         run: |
           echo "=== Running Stress Test Smoke Test ==="
           echo "Configuration: 10 seeds × 100 instructions × 4 profiles = 4,000 total instructions"
@@ -172,7 +172,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: smoke-test-logs
-          path: tb/cocotb/cpu/**/*.log
+          path: sim/**/*.log
           retention-days: 7
 
       - name: Comment PR with results
@@ -286,7 +286,7 @@ jobs:
           RANDOM_TEST_SEEDS: '10'
           RANDOM_TEST_INSTRS: '10000'
           PYTHONPATH: ${{ github.workspace }}
-        working-directory: tb/cocotb/cpu
+        working-directory: sim
         run: |
           echo "=== Running Full Random Instruction Tests ==="
           echo "Configuration: 10 seeds × 10,000 instructions = 100,000 total instructions"
@@ -356,7 +356,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: full-random-logs
-          path: tb/cocotb/cpu/**/*.log
+          path: sim/**/*.log
           retention-days: 7
 
   # ============================================================================
@@ -422,7 +422,7 @@ jobs:
           RANDOM_TEST_SEEDS: '10'
           RANDOM_TEST_INSTRS: '10000'
           PYTHONPATH: ${{ github.workspace }}
-        working-directory: tb/cocotb/cpu
+        working-directory: sim
         run: |
           echo "=== [1/2] Running Random Instruction Tests ==="
           echo "Configuration: 10 seeds × 10,000 instructions = 100,000 total instructions"
@@ -444,7 +444,7 @@ jobs:
           STRESS_TEST_SEEDS: '100'
           STRESS_TEST_INSTRS: '500'
           PYTHONPATH: ${{ github.workspace }}
-        working-directory: tb/cocotb/cpu
+        working-directory: sim
         run: |
           echo "=== [2/2] Running Stress Tests (All Profiles) ==="
           echo "Configuration: 100 seeds × 500 instructions × 4 profiles = 200,000 total instructions"
@@ -560,7 +560,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: extended-test-logs
-          path: tb/cocotb/cpu/**/*.log
+          path: sim/**/*.log
           retention-days: 7
 
       - name: Create GitHub issue on failure
