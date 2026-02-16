@@ -1,0 +1,224 @@
+#=============================================
+# Phase 2: 5-stage Pipelined RV32I CPU
+# Multi-domain power management
+# File: phase2_cpu.upf
+# Standard: IEEE 1801-2015 (UPF 3.0)
+#
+# Power architecture:
+#
+#   PD_TOP   — always-on
+#              Scope: rv32i_cpu_top (all logic NOT inside u_core)
+#              Contains: APB3 debug registers, halt/resume latch,
+#                        breakpoint registers, status registers,
+#                        halt_cause latch, step sequencer
+#
+#   PD_CORE  — power-gateable
+#              Scope: rv32i_cpu_top.u_core (rv32i_core instance)
+#              Contains: 5-stage pipeline (IF, ID, EX, MEM, WB),
+#                        AXI arbiter, register file, CSR file,
+#                        forwarding/hazard units, interrupt controller
+#
+# Power modes:
+#   RUN   — PD_TOP=ON, PD_CORE=ON    (normal CPU execution)
+#   SLEEP — PD_TOP=ON, PD_CORE=OFF   (CPU halted, pipeline power-gated)
+#           Retention cells preserve CSR state (MTVEC, MIE, MSTATUS,
+#           MEPC) so interrupt delivery and resume are correct on wake.
+#
+# Control signal: dbg_halted (net at rv32i_cpu_top scope)
+#   Driven by u_core output, sampled by PD_TOP logic.
+#   PSW_CORE turns off VDD_CORE when dbg_halted=1, on when dbg_halted=0.
+#=============================================
+
+#---------------------------------------------
+# Design Top
+#---------------------------------------------
+
+set_design_top rv32i_cpu_top
+
+#---------------------------------------------
+# Supply Ports
+#---------------------------------------------
+
+# Always-on supply for PD_TOP and PD_CORE retention cells
+create_supply_port VDD -direction in
+
+# Switchable supply rail for PD_CORE (gated by PSW_CORE)
+create_supply_port VDD_CORE -direction in
+
+# Ground reference
+create_supply_port VSS -direction in
+
+#---------------------------------------------
+# Supply Networks
+#---------------------------------------------
+
+# Top-domain always-on rails
+create_supply_net VDD -domain PD_TOP
+create_supply_net VSS -domain PD_TOP
+
+# Switchable rail fed into PD_CORE; also visible in PD_TOP for the switch
+create_supply_net VDD_CORE -domain PD_TOP
+
+# Connect supply ports to nets
+connect_supply_net VDD      -ports {VDD}
+connect_supply_net VDD_CORE -ports {VDD_CORE}
+connect_supply_net VSS      -ports {VSS}
+
+#---------------------------------------------
+# Power Domain: PD_TOP (always-on)
+#---------------------------------------------
+
+# Primary domain — covers the entire rv32i_cpu_top scope.
+# PD_CORE is carved out as a sub-domain; the remaining top-level logic
+# (APB slave, halt latch, breakpoint registers, status registers) stays
+# in PD_TOP and is never power-gated.
+create_power_domain PD_TOP -include_scope
+
+# Supply set: always-on VDD/VSS
+create_supply_set SS_TOP \
+    -function {power  VDD} \
+    -function {ground VSS}
+
+associate_supply_set SS_TOP -handle PD_TOP
+
+#---------------------------------------------
+# Power Domain: PD_CORE (power-gateable)
+#---------------------------------------------
+
+# Sub-domain scoped to the rv32i_core instance.
+# When halted, the synthesizer/P&R tool can insert a power switch
+# to gate VDD_CORE, saving dynamic and leakage power on the entire
+# 5-stage pipeline while the CPU is stopped.
+create_power_domain PD_CORE \
+    -elements {u_core}
+
+# Supply set: uses the switchable VDD_CORE rail
+create_supply_set SS_CORE \
+    -function {power  VDD_CORE} \
+    -function {ground VSS}
+
+associate_supply_set SS_CORE -handle PD_CORE
+
+#---------------------------------------------
+# Power Switch: PSW_CORE
+#---------------------------------------------
+
+# Header switch (PMOS-type) that gates VDD into VDD_CORE.
+# ON  when cpu is running (dbg_halted=0)
+# OFF when cpu is halted  (dbg_halted=1)
+#
+# NOTE: The physical cell used for the switch depends on the target PDK.
+# For sky130 this is typically a chain of sky130_fd_sc_hd__lpflow_isobufsrc
+# or sky130_fd_sc_hd__lpflow_bleeder cells.  The tool resolves the actual
+# cell during power-aware placement.
+create_power_switch PSW_CORE \
+    -domain PD_CORE \
+    -output_supply_port {vout VDD_CORE} \
+    -input_supply_port  {vin  VDD}      \
+    -control_port       {ctrl dbg_halted} \
+    -on_state           {on_state  vin  {!ctrl}} \
+    -off_state          {off_state      {ctrl}}
+
+#---------------------------------------------
+# Isolation Strategy: PD_CORE outputs → PD_TOP
+#---------------------------------------------
+
+# When PD_CORE is off (SLEEP mode), all signals driven from u_core into
+# PD_TOP logic must be clamped to safe values to prevent X-propagation
+# and spurious APB reads.
+#
+# Clamp to 0:
+#   - commit_valid_o  → 0 (no spurious commits observed by testbench)
+#   - commit_pc_o     → 0
+#   - commit_insn_o   → 0
+#   - trap_taken_o    → 0 (no phantom traps)
+#   - trap_cause_o    → 0
+#   - debug_*_o       → 0 (no phantom debug events)
+#   - axi_arvalid_o   → 0 (no spurious AXI read requests)
+#   - axi_awvalid_o   → 0 (no spurious AXI write requests)
+#   - axi_wvalid_o    → 0
+#   - dbg_halted      → held high by isolation (CPU remains seen as halted)
+#
+# The isolation cells are inserted in the PD_TOP (parent) domain so they
+# are powered even when PD_CORE is off.
+set_isolation ISO_CORE_TO_TOP \
+    -domain PD_CORE \
+    -isolation_power_net  VDD \
+    -isolation_ground_net VSS \
+    -clamp_value          0   \
+    -applies_to           outputs \
+    -location             parent \
+    -isolation_signal     {dbg_halted} \
+    -isolation_sense      high
+
+#---------------------------------------------
+# Retention Strategy: PD_CORE CSR state
+#---------------------------------------------
+
+# When PD_CORE enters SLEEP, the following architectural state must be
+# preserved across the power-gate cycle to ensure correct CPU resume:
+#
+#   MTVEC   — interrupt/trap vector base address
+#   MSTATUS — machine status (global interrupt enable bit MIE)
+#   MIE     — per-source interrupt enable mask
+#   MEPC    — exception program counter (for MRET after ISR)
+#   MCAUSE  — latched by u_core for debug readback only; not strictly
+#             needed for correctness but cheap to retain
+#
+# The save/restore is triggered by dbg_halted (save on rising edge,
+# restore on falling edge), which is the power-gate control signal.
+# In practice, the PMU should issue save BEFORE the switch opens and
+# restore AFTER the switch closes; using the halt signal as a proxy is
+# a conservative first approximation.
+set_retention RET_CORE_CSR \
+    -domain          PD_CORE \
+    -retention_power_net  VDD \
+    -retention_ground_net VSS \
+    -save_signal     {dbg_halted 1} \
+    -restore_signal  {dbg_halted 0}
+
+# Optional: retain the entire u_core register state (pipeline registers +
+# register file) to enable transparent resume without re-fetching.
+# This maximises area overhead; comment out if deep-sleep power saving
+# justifies discarding pipeline state (requiring an IF-stage refill on wake).
+#
+# set_retention RET_CORE_FULL \
+#     -domain          PD_CORE \
+#     -elements        {u_core} \
+#     -retention_power_net  VDD \
+#     -retention_ground_net VSS \
+#     -save_signal     {dbg_halted 1} \
+#     -restore_signal  {dbg_halted 0}
+
+#---------------------------------------------
+# Power States per Domain
+#---------------------------------------------
+
+add_power_state PD_TOP \
+    -state ON \
+    -supply_expr {power == `{FULL_ON} && ground == `{FULL_ON}}
+
+add_power_state PD_CORE \
+    -state ON \
+    -supply_expr {power == `{FULL_ON} && ground == `{FULL_ON}}
+
+add_power_state PD_CORE \
+    -state SLEEP \
+    -supply_expr  {power == `{OFF} && ground == `{FULL_ON}} \
+    -logic_expr   {dbg_halted == 1}
+
+#---------------------------------------------
+# System-level Power State Table
+#---------------------------------------------
+
+# PST_MAIN: legal combinations of domain states.
+# Illegal: PD_CORE.ON while PD_TOP is off (PD_TOP is always-on).
+create_pst PST_MAIN \
+    -supplies {VDD VDD_CORE VSS}
+
+add_pst_state RUN   -pst PST_MAIN -state {VDD VDD_CORE VSS}
+add_pst_state SLEEP -pst PST_MAIN -state {VDD off       VSS}
+
+#---------------------------------------------
+# End of UPF
+#---------------------------------------------
