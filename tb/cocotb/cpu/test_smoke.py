@@ -17,12 +17,43 @@ from cocotb.triggers import ClockCycles, ReadOnly, RisingEdge
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from sim.riscv_encoder import (
-    ADD, AND, ANDI, AUIPC,
-    BEQ, BGE, BGEU, BLT, BLTU, BNE,
-    JAL, JALR,
-    LB, LBU, LH, LHU, LUI, LW,
-    ADDI, SLLI, SLTI, SLTIU, SLTU, SLT, SRA, SRAI, SRL, SRLI, SUB,
-    ORI, OR, SB, SH, SLL, SW, XOR, XORI,
+    ADD,
+    AND,
+    ANDI,
+    AUIPC,
+    BEQ,
+    BGE,
+    BGEU,
+    BLT,
+    BLTU,
+    BNE,
+    JAL,
+    JALR,
+    LB,
+    LBU,
+    LH,
+    LHU,
+    LUI,
+    LW,
+    ADDI,
+    SLLI,
+    SLTI,
+    SLTIU,
+    SLTU,
+    SLT,
+    SRA,
+    SRAI,
+    SRL,
+    SRLI,
+    SUB,
+    ORI,
+    OR,
+    SB,
+    SH,
+    SLL,
+    SW,
+    XOR,
+    XORI,
 )
 from tb.cocotb.common.clock_reset import reset_dut
 from tb.cocotb.common.coverage import CoverageReport
@@ -60,8 +91,13 @@ class SimpleAXIMemory:
         self.dut = dut
         self.mem = {}
         self.ref_model = ref_model
-        cocotb.start_soon(self._read_handler())
-        cocotb.start_soon(self._write_handler())
+        self._read_task = cocotb.start_soon(self._read_handler())
+        self._write_task = cocotb.start_soon(self._write_handler())
+
+    def stop(self):
+        """Cancel background handler tasks to prevent stale handlers across tests."""
+        self._read_task.cancel()
+        self._write_task.cancel()
 
     def write_word(self, addr, data):
         self.mem[addr & 0xFFFFFFFC] = data & 0xFFFFFFFF
@@ -74,10 +110,29 @@ class SimpleAXIMemory:
     async def _read_handler(self):
         while True:
             await RisingEdge(self.dut.clk_i)
+            # During reset: deassert all outputs and discard any in-flight state.
+            # The async reset holds arbiter in IDLE (FF can't transition to IF_READ),
+            # so any arready we asserted was never registered — clean up and restart.
+            if int(self.dut.rst_n_i.value) == 0:
+                self.dut.axi_arready_i.value = 0
+                self.dut.axi_rvalid_i.value = 0
+                continue
             if self.dut.axi_arvalid_o.value == 1:
-                self.dut.axi_arready_i.value = 1
+                # Wait 1 cycle for pipeline/arbiter to settle before reading
+                # address.  Prevents race where arbiter switches IF→MEM between
+                # the cycle we sample araddr and the cycle arready takes effect.
+                await RisingEdge(self.dut.clk_i)
+                if int(self.dut.rst_n_i.value) == 0:
+                    self.dut.axi_arready_i.value = 0
+                    self.dut.axi_rvalid_i.value = 0
+                    continue
+                if self.dut.axi_arvalid_o.value != 1:
+                    self.dut.axi_arready_i.value = 0
+                    continue
+
                 addr = int(self.dut.axi_araddr_o.value)
                 data = self.read_word(addr)
+                self.dut.axi_arready_i.value = 1
 
                 await RisingEdge(self.dut.clk_i)
                 self.dut.axi_arready_i.value = 0
@@ -85,17 +140,28 @@ class SimpleAXIMemory:
                 self.dut.axi_rdata_i.value = data
                 self.dut.axi_rresp_i.value = 0
 
+                # Wait for rready handshake; abort cleanly if reset fires mid-transaction.
                 while self.dut.axi_rready_o.value == 0:
+                    if int(self.dut.rst_n_i.value) == 0:
+                        self.dut.axi_rvalid_i.value = 0
+                        break
                     await RisingEdge(self.dut.clk_i)
-
-                await RisingEdge(self.dut.clk_i)
-                self.dut.axi_rvalid_i.value = 0
+                else:
+                    # Normal completion: hold rvalid for one cycle after handshake.
+                    await RisingEdge(self.dut.clk_i)
+                    self.dut.axi_rvalid_i.value = 0
             else:
                 self.dut.axi_arready_i.value = 0
 
     async def _write_handler(self):
         while True:
             await RisingEdge(self.dut.clk_i)
+            # During reset: deassert all outputs.
+            if int(self.dut.rst_n_i.value) == 0:
+                self.dut.axi_awready_i.value = 0
+                self.dut.axi_wready_i.value = 0
+                self.dut.axi_bvalid_i.value = 0
+                continue
             if (
                 self.dut.axi_awvalid_o.value == 1
                 and self.dut.axi_wvalid_o.value == 1
@@ -115,10 +181,13 @@ class SimpleAXIMemory:
                 self.dut.axi_bresp_i.value = 0
 
                 while self.dut.axi_bready_o.value == 0:
+                    if int(self.dut.rst_n_i.value) == 0:
+                        self.dut.axi_bvalid_i.value = 0
+                        break
                     await RisingEdge(self.dut.clk_i)
-
-                await RisingEdge(self.dut.clk_i)
-                self.dut.axi_bvalid_i.value = 0
+                else:
+                    await RisingEdge(self.dut.clk_i)
+                    self.dut.axi_bvalid_i.value = 0
 
 
 # ---------------------------------------------------------------------------
@@ -169,9 +238,10 @@ class APBDebugInterface:
         self.dut.apb_penable_i.value = 0
         return data
 
-    async def halt_cpu(self):
+    async def halt_cpu(self, timeout=100):
+        """Halt CPU and wait for pipeline to drain (Phase 2 needs ~15-20 cycles)."""
         await self._apb_write(self.DBG_CTRL, 0x1)
-        for _ in range(10):
+        for i in range(timeout):
             status = await self._apb_read(self.DBG_STATUS)
             if status & 0x1:
                 return
@@ -203,18 +273,17 @@ async def monitor_commits(dut, scoreboard=None, count=None):
             if count[0] <= 10:
                 dut._log.info(f"Commit #{count[0]}: PC=0x{pc:08x}, insn=0x{insn:08x}")
             if scoreboard is not None:
-                reg_wr = int(dut.u_core.regfile_wr_en.value)
-                mem_wr = int(dut.u_core.mem_wr.value)
-                mem_rd = int(dut.u_core.mem_rd.value)
-                has_mem = bool(mem_wr or mem_rd)
+                # Phase 2: use WB-stage register file write port signals
+                reg_wr = int(dut.u_core.rf_wr_en.value)
                 rtl_commit = {
                     "pc": pc,
                     "insn": insn,
-                    "rd": int(dut.u_core.rd.value) & 0x1F if reg_wr else None,
-                    "rd_value": int(dut.u_core.rd_data.value) & 0xFFFFFFFF if reg_wr else None,
-                    "mem_addr": int(dut.u_core.mem_addr.value) & 0xFFFFFFFF if has_mem else None,
+                    "rd": int(dut.u_core.rf_wr_addr.value) & 0x1F if reg_wr else None,
+                    "rd_value": int(dut.u_core.rf_wr_data.value) & 0xFFFFFFFF if reg_wr else None,
+                    # Memory address not directly observable at WB in Phase 2
+                    "mem_addr": None,
                     "mem_data": None,
-                    "mem_write": bool(mem_wr) if has_mem else None,
+                    "mem_write": None,
                 }
                 scoreboard.check_commit(rtl_commit)
 
@@ -238,6 +307,9 @@ def _init_inputs(dut):
     dut.apb_pwrite_i.value = 0
     dut.apb_paddr_i.value = 0
     dut.apb_pwdata_i.value = 0
+    # Phase 2: interrupt inputs (keep deasserted during Phase 1 regression)
+    dut.ext_irq_i.value = 0
+    dut.timer_irq_i.value = 0
 
 
 # ---------------------------------------------------------------------------
@@ -267,22 +339,27 @@ async def test_fetch_nop(dut):
     ref_model = RV32IModel()
     scoreboard = CPUScoreboard(ref_model, log=dut._log, coverage=_cov_report)
     mem = SimpleAXIMemory(dut, ref_model=ref_model)
-    count = [0]
-    cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
-    cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
+    try:
+        count = [0]
+        cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
+        cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
 
-    # NOP = ADDI x0, x0, 0
-    mem.write_word(0x00000000, 0x00000013)
-    mem.write_word(0x00000004, 0x00000013)
-    mem.write_word(0x00000008, 0x00000013)
+        # NOP = ADDI x0, x0, 0; then self-loop so the CPU doesn't run into unmapped
+        # memory (which returns 0x0 = illegal insn → trap → mtvec=0x0 → loop).
+        mem.write_word(0x00000000, 0x00000013)
+        mem.write_word(0x00000004, 0x00000013)
+        mem.write_word(0x00000008, 0x00000013)
+        mem.write_word(0x0000000C, JAL(0, 0))  # infinite self-loop
 
-    await reset_dut(dut)
-    await ClockCycles(dut.clk_i, 100)
+        await reset_dut(dut)
+        await ClockCycles(dut.clk_i, 100)
 
-    dut._log.info(f"Total commits: {count[0]}")
-    passed = scoreboard.report()
-    assert passed, "Scoreboard validation failed"
-    dut._log.info("Fetch NOP test passed")
+        dut._log.info(f"Total commits: {count[0]}")
+        passed = scoreboard.report()
+        assert passed, "Scoreboard validation failed"
+        dut._log.info("Fetch NOP test passed")
+    finally:
+        mem.stop()
 
 
 @cocotb.test()
@@ -295,38 +372,42 @@ async def test_simple_addi(dut):
     ref_model = RV32IModel()
     scoreboard = CPUScoreboard(ref_model, log=dut._log, coverage=_cov_report)
     mem = SimpleAXIMemory(dut, ref_model=ref_model)
-    dbg = APBDebugInterface(dut)
-    count = [0]
-    cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
-    cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
+    try:
+        dbg = APBDebugInterface(dut)
+        count = [0]
+        cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
+        cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
 
-    # addi x1, x0, 42  →  x1 = 42
-    # addi x2, x1, 8   →  x2 = 50
-    # nop loop
-    mem.write_word(0x00000000, 0x02A00093)
-    mem.write_word(0x00000004, 0x00808113)
-    mem.write_word(0x00000008, 0x00000013)
+        # addi x1, x0, 42  →  x1 = 42
+        # addi x2, x1, 8   →  x2 = 50
+        # nop, then self-loop
+        mem.write_word(0x00000000, 0x02A00093)
+        mem.write_word(0x00000004, 0x00808113)
+        mem.write_word(0x00000008, 0x00000013)
+        mem.write_word(0x0000000C, JAL(0, 0))  # infinite self-loop
 
-    await reset_dut(dut)
-    await ClockCycles(dut.clk_i, 200)
+        await reset_dut(dut)
+        await ClockCycles(dut.clk_i, 200)
 
-    await dbg.halt_cpu()
+        await dbg.halt_cpu()
 
-    x1_val = await dbg.read_gpr(1)
-    assert x1_val == 42, f"Expected x1=42, got {x1_val}"
-    dut._log.info(f"x1 = {x1_val} (expected 42)")
+        x1_val = await dbg.read_gpr(1)
+        assert x1_val == 42, f"Expected x1=42, got {x1_val}"
+        dut._log.info(f"x1 = {x1_val} (expected 42)")
 
-    x2_val = await dbg.read_gpr(2)
-    assert x2_val == 50, f"Expected x2=50, got {x2_val}"
-    dut._log.info(f"x2 = {x2_val} (expected 50)")
+        x2_val = await dbg.read_gpr(2)
+        assert x2_val == 50, f"Expected x2=50, got {x2_val}"
+        dut._log.info(f"x2 = {x2_val} (expected 50)")
 
-    pc_val = await dbg.read_pc()
-    assert pc_val >= 0x08, f"Expected PC >= 0x08, got 0x{pc_val:08x}"
-    dut._log.info(f"PC = 0x{pc_val:08x}")
+        pc_val = await dbg.read_pc()
+        assert pc_val >= 0x08, f"Expected PC >= 0x08, got 0x{pc_val:08x}"
+        dut._log.info(f"PC = 0x{pc_val:08x}")
 
-    passed = scoreboard.report()
-    assert passed, "Scoreboard validation failed"
-    dut._log.info("Simple ADDI test passed")
+        passed = scoreboard.report()
+        assert passed, "Scoreboard validation failed"
+        dut._log.info("Simple ADDI test passed")
+    finally:
+        mem.stop()
 
 
 @cocotb.test()
@@ -339,29 +420,33 @@ async def test_branch_not_taken(dut):
     ref_model = RV32IModel()
     scoreboard = CPUScoreboard(ref_model, log=dut._log, coverage=_cov_report)
     mem = SimpleAXIMemory(dut, ref_model=ref_model)
-    dbg = APBDebugInterface(dut)
-    count = [0]
-    cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
-    cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
+    try:
+        dbg = APBDebugInterface(dut)
+        count = [0]
+        cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
+        cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
 
-    mem.write_word(0x00000000, 0x00100093)  # addi x1, x0, 1
-    mem.write_word(0x00000004, 0x00200113)  # addi x2, x0, 2
-    mem.write_word(0x00000008, 0x00208663)  # beq x1, x2, 12  (not taken)
-    mem.write_word(0x0000000C, 0x00A00193)  # addi x3, x0, 10
-    mem.write_word(0x00000010, 0x00000013)  # nop
+        mem.write_word(0x00000000, 0x00100093)  # addi x1, x0, 1
+        mem.write_word(0x00000004, 0x00200113)  # addi x2, x0, 2
+        mem.write_word(0x00000008, 0x00208663)  # beq x1, x2, 12  (not taken → fall to 0xC)
+        mem.write_word(0x0000000C, 0x00A00193)  # addi x3, x0, 10
+        mem.write_word(0x00000010, 0x00000013)  # nop
+        mem.write_word(0x00000014, JAL(0, 0))  # infinite self-loop
 
-    await reset_dut(dut)
-    await ClockCycles(dut.clk_i, 300)
+        await reset_dut(dut)
+        await ClockCycles(dut.clk_i, 300)
 
-    await dbg.halt_cpu()
+        await dbg.halt_cpu()
 
-    x3_val = await dbg.read_gpr(3)
-    assert x3_val == 10, f"Expected x3=10 (branch not taken), got {x3_val}"
-    dut._log.info(f"x3 = {x3_val} (expected 10)")
+        x3_val = await dbg.read_gpr(3)
+        assert x3_val == 10, f"Expected x3=10 (branch not taken), got {x3_val}"
+        dut._log.info(f"x3 = {x3_val} (expected 10)")
 
-    passed = scoreboard.report()
-    assert passed, "Scoreboard validation failed"
-    dut._log.info("Branch not taken test passed")
+        passed = scoreboard.report()
+        assert passed, "Scoreboard validation failed"
+        dut._log.info("Branch not taken test passed")
+    finally:
+        mem.stop()
 
 
 @cocotb.test()
@@ -374,34 +459,38 @@ async def test_branch_taken(dut):
     ref_model = RV32IModel()
     scoreboard = CPUScoreboard(ref_model, log=dut._log, coverage=_cov_report)
     mem = SimpleAXIMemory(dut, ref_model=ref_model)
-    dbg = APBDebugInterface(dut)
-    count = [0]
-    cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
-    cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
+    try:
+        dbg = APBDebugInterface(dut)
+        count = [0]
+        cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
+        cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
 
-    mem.write_word(0x00000000, 0x00100093)  # addi x1, x0, 1
-    mem.write_word(0x00000004, 0x00100113)  # addi x2, x0, 1
-    mem.write_word(0x00000008, 0x00208463)  # beq x1, x2, 8   (taken → 0x010)
-    mem.write_word(0x0000000C, 0x06300193)  # addi x3, x0, 99 (skipped)
-    mem.write_word(0x00000010, 0x01400213)  # addi x4, x0, 20
-    mem.write_word(0x00000014, 0x00000013)  # nop
+        mem.write_word(0x00000000, 0x00100093)  # addi x1, x0, 1
+        mem.write_word(0x00000004, 0x00100113)  # addi x2, x0, 1
+        mem.write_word(0x00000008, 0x00208463)  # beq x1, x2, 8   (taken → 0x010)
+        mem.write_word(0x0000000C, 0x06300193)  # addi x3, x0, 99 (skipped)
+        mem.write_word(0x00000010, 0x01400213)  # addi x4, x0, 20
+        mem.write_word(0x00000014, 0x00000013)  # nop
+        mem.write_word(0x00000018, JAL(0, 0))  # infinite self-loop
 
-    await reset_dut(dut)
-    await ClockCycles(dut.clk_i, 300)
+        await reset_dut(dut)
+        await ClockCycles(dut.clk_i, 300)
 
-    await dbg.halt_cpu()
+        await dbg.halt_cpu()
 
-    x3_val = await dbg.read_gpr(3)
-    assert x3_val == 0, f"Expected x3=0 (branch taken, instruction skipped), got {x3_val}"
-    dut._log.info(f"x3 = {x3_val} (expected 0)")
+        x3_val = await dbg.read_gpr(3)
+        assert x3_val == 0, f"Expected x3=0 (branch taken, instruction skipped), got {x3_val}"
+        dut._log.info(f"x3 = {x3_val} (expected 0)")
 
-    x4_val = await dbg.read_gpr(4)
-    assert x4_val == 20, f"Expected x4=20 (branch target), got {x4_val}"
-    dut._log.info(f"x4 = {x4_val} (expected 20)")
+        x4_val = await dbg.read_gpr(4)
+        assert x4_val == 20, f"Expected x4=20 (branch target), got {x4_val}"
+        dut._log.info(f"x4 = {x4_val} (expected 20)")
 
-    passed = scoreboard.report()
-    assert passed, "Scoreboard validation failed"
-    dut._log.info("Branch taken test passed")
+        passed = scoreboard.report()
+        assert passed, "Scoreboard validation failed"
+        dut._log.info("Branch taken test passed")
+    finally:
+        mem.stop()
 
 
 @cocotb.test()
@@ -414,33 +503,37 @@ async def test_jal(dut):
     ref_model = RV32IModel()
     scoreboard = CPUScoreboard(ref_model, log=dut._log, coverage=_cov_report)
     mem = SimpleAXIMemory(dut, ref_model=ref_model)
-    dbg = APBDebugInterface(dut)
-    count = [0]
-    cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
-    cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
+    try:
+        dbg = APBDebugInterface(dut)
+        count = [0]
+        cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
+        cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
 
-    mem.write_word(0x00000000, 0x00C000EF)  # jal x1, 12
-    mem.write_word(0x00000004, 0x06300113)  # addi x2, x0, 99 (skipped)
-    mem.write_word(0x00000008, 0x05800193)  # addi x3, x0, 88 (skipped)
-    mem.write_word(0x0000000C, 0x01400213)  # addi x4, x0, 20
-    mem.write_word(0x00000010, 0x00000013)  # nop
+        mem.write_word(0x00000000, 0x00C000EF)  # jal x1, 12
+        mem.write_word(0x00000004, 0x06300113)  # addi x2, x0, 99 (skipped)
+        mem.write_word(0x00000008, 0x05800193)  # addi x3, x0, 88 (skipped)
+        mem.write_word(0x0000000C, 0x01400213)  # addi x4, x0, 20
+        mem.write_word(0x00000010, 0x00000013)  # nop
+        mem.write_word(0x00000014, JAL(0, 0))  # infinite self-loop
 
-    await reset_dut(dut)
-    await ClockCycles(dut.clk_i, 300)
+        await reset_dut(dut)
+        await ClockCycles(dut.clk_i, 300)
 
-    await dbg.halt_cpu()
+        await dbg.halt_cpu()
 
-    x1_val = await dbg.read_gpr(1)
-    assert x1_val == 0x4, f"Expected x1=0x4 (link), got 0x{x1_val:x}"
-    dut._log.info(f"x1 = 0x{x1_val:x} (expected 0x4)")
+        x1_val = await dbg.read_gpr(1)
+        assert x1_val == 0x4, f"Expected x1=0x4 (link), got 0x{x1_val:x}"
+        dut._log.info(f"x1 = 0x{x1_val:x} (expected 0x4)")
 
-    x4_val = await dbg.read_gpr(4)
-    assert x4_val == 20, f"Expected x4=20 (jump target), got {x4_val}"
-    dut._log.info(f"x4 = {x4_val} (expected 20)")
+        x4_val = await dbg.read_gpr(4)
+        assert x4_val == 20, f"Expected x4=20 (jump target), got {x4_val}"
+        dut._log.info(f"x4 = {x4_val} (expected 20)")
 
-    passed = scoreboard.report()
-    assert passed, "Scoreboard validation failed"
-    dut._log.info("JAL test passed")
+        passed = scoreboard.report()
+        assert passed, "Scoreboard validation failed"
+        dut._log.info("JAL test passed")
+    finally:
+        mem.stop()
 
 
 @cocotb.test()
@@ -509,27 +602,54 @@ async def test_isa_coverage(dut):
     #  [47]  0x0BC  JAL  x0, 0          infinite loop (all 37 insns done)
     NOP = ADDI(0, 0, 0)
     program = [
-        LUI(1, 1),           ADDI(2, 0, 16),        AUIPC(3, 0),
-        ADDI(4, 0, 5),       ADDI(5, 0, -5),
-        SW(2, 1, 0),         SH(2, 1, 4),            SB(2, 1, 8),
-        LW(6, 1, 0),         LH(7, 1, 4),            LB(8, 1, 8),
-        LHU(9, 1, 4),        LBU(10, 1, 8),
-        ADD(11, 6, 4),       SUB(11, 6, 4),          SLL(11, 4, 4),
-        SLT(11, 4, 6),       SLTU(11, 4, 6),         XOR(11, 4, 6),
-        SRL(11, 6, 4),       SRA(11, 5, 4),          OR(11, 4, 6),
+        LUI(1, 1),
+        ADDI(2, 0, 16),
+        AUIPC(3, 0),
+        ADDI(4, 0, 5),
+        ADDI(5, 0, -5),
+        SW(2, 1, 0),
+        SH(2, 1, 4),
+        SB(2, 1, 8),
+        LW(6, 1, 0),
+        LH(7, 1, 4),
+        LB(8, 1, 8),
+        LHU(9, 1, 4),
+        LBU(10, 1, 8),
+        ADD(11, 6, 4),
+        SUB(11, 6, 4),
+        SLL(11, 4, 4),
+        SLT(11, 4, 6),
+        SLTU(11, 4, 6),
+        XOR(11, 4, 6),
+        SRL(11, 6, 4),
+        SRA(11, 5, 4),
+        OR(11, 4, 6),
         AND(11, 4, 6),
-        SLTI(11, 4, 10),     SLTIU(11, 4, 10),       XORI(11, 4, 0xFF),
-        ORI(11, 4, 0xF0),    ANDI(11, 4, 0x0F),      SLLI(11, 4, 2),
-        SRLI(11, 6, 1),      SRAI(11, 5, 1),
-        BEQ(6, 6, 8),        NOP,
-        BNE(4, 6, 8),        NOP,
-        BLT(4, 6, 8),        NOP,
-        BGE(6, 4, 8),        NOP,
-        BLTU(4, 6, 8),       NOP,
-        BGEU(6, 4, 8),       NOP,
-        JAL(0, 12),          NOP, NOP,
+        SLTI(11, 4, 10),
+        SLTIU(11, 4, 10),
+        XORI(11, 4, 0xFF),
+        ORI(11, 4, 0xF0),
+        ANDI(11, 4, 0x0F),
+        SLLI(11, 4, 2),
+        SRLI(11, 6, 1),
+        SRAI(11, 5, 1),
+        BEQ(6, 6, 8),
+        NOP,
+        BNE(4, 6, 8),
+        NOP,
+        BLT(4, 6, 8),
+        NOP,
+        BGE(6, 4, 8),
+        NOP,
+        BLTU(4, 6, 8),
+        NOP,
+        BGEU(6, 4, 8),
+        NOP,
+        JAL(0, 12),
+        NOP,
+        NOP,
         JALR(0, 3, 0xB4),
-        JAL(0, 0),           # infinite loop — all 37 instructions executed
+        JAL(0, 0),  # infinite loop — all 37 instructions executed
     ]
     for i, insn in enumerate(program):
         mem.write_word(i * 4, insn)
@@ -541,6 +661,7 @@ async def test_isa_coverage(dut):
 
     dut._log.info(f"Total commits: {count[0]}")
     passed = scoreboard.report()
+    mem.stop()
     assert passed, "Scoreboard validation failed"
     dut._log.info("ISA coverage test passed")
 
@@ -577,20 +698,20 @@ async def test_random_10k_instructions(dut):
 
     program = []
     for _ in range(NUM_INSNS):
-        rd = random.randint(1, 31)   # x1–x31 (never write x0)
+        rd = random.randint(1, 31)  # x1–x31 (never write x0)
         rs1 = random.randint(0, 31)
         choice = random.randint(0, 2)
-        if choice == 0:              # R-type
+        if choice == 0:  # R-type
             rs2 = random.randint(0, 31)
             program.append(random.choice(r_ops)(rd, rs1, rs2))
-        elif choice == 1:            # I-type arithmetic
+        elif choice == 1:  # I-type arithmetic
             imm = random.randint(-2048, 2047)
             program.append(random.choice(i_ops)(rd, rs1, imm))
-        else:                        # Shift immediate
+        else:  # Shift immediate
             shamt = random.randint(0, 31)
             program.append(random.choice(sh_ops)(rd, rs1, shamt))
 
-    program.append(JAL(0, 0))       # infinite loop — all instructions done
+    program.append(JAL(0, 0))  # infinite loop — all instructions done
 
     for i, insn in enumerate(program):
         mem.write_word(i * 4, insn)
@@ -599,10 +720,9 @@ async def test_random_10k_instructions(dut):
     await ClockCycles(dut.clk_i, NUM_INSNS * 10 + 2000)
 
     dut._log.info(f"Total commits: {count[0]}")
-    assert count[0] >= NUM_INSNS, (
-        f"Expected {NUM_INSNS}+ commits, got {count[0]} (seed={SEED})"
-    )
+    assert count[0] >= NUM_INSNS, f"Expected {NUM_INSNS}+ commits, got {count[0]} (seed={SEED})"
     passed = scoreboard.report()
+    mem.stop()
     assert passed, f"Scoreboard validation failed (seed={SEED})"
     dut._log.info(f"Random 10k instructions test passed (seed={SEED})")
 

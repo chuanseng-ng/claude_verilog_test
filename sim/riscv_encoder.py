@@ -244,6 +244,82 @@ def JALR(rd, rs1, imm12):
     return encode_i_type(imm12, rs1, 0b000, rd, 0b1100111)
 
 
+# ============================================================================
+# CSR instructions (Zicsr extension — SYSTEM opcode = 0b1110011)
+# Format: [csr_addr(12), rs1/uimm5(5), funct3(3), rd(5), opcode(7)]
+# ============================================================================
+
+
+def CSRRW(rd, csr, rs1):
+    """CSRRW rd, csr, rs1 — Atomic CSR Read/Write"""
+    return ((csr & 0xFFF) << 20) | (rs1 << 15) | (0b001 << 12) | (rd << 7) | 0b1110011
+
+
+def CSRRS(rd, csr, rs1):
+    """CSRRS rd, csr, rs1 — Atomic CSR Read/Set"""
+    return ((csr & 0xFFF) << 20) | (rs1 << 15) | (0b010 << 12) | (rd << 7) | 0b1110011
+
+
+def CSRRC(rd, csr, rs1):
+    """CSRRC rd, csr, rs1 — Atomic CSR Read/Clear"""
+    return ((csr & 0xFFF) << 20) | (rs1 << 15) | (0b011 << 12) | (rd << 7) | 0b1110011
+
+
+def CSRRWI(rd, csr, uimm5):
+    """CSRRWI rd, csr, uimm5 — Atomic CSR Read/Write Immediate"""
+    return ((csr & 0xFFF) << 20) | ((uimm5 & 0x1F) << 15) | (0b101 << 12) | (rd << 7) | 0b1110011
+
+
+def CSRRSI(rd, csr, uimm5):
+    """CSRRSI rd, csr, uimm5 — Atomic CSR Read/Set Immediate"""
+    return ((csr & 0xFFF) << 20) | ((uimm5 & 0x1F) << 15) | (0b110 << 12) | (rd << 7) | 0b1110011
+
+
+def CSRRCI(rd, csr, uimm5):
+    """CSRRCI rd, csr, uimm5 — Atomic CSR Read/Clear Immediate"""
+    return ((csr & 0xFFF) << 20) | ((uimm5 & 0x1F) << 15) | (0b111 << 12) | (rd << 7) | 0b1110011
+
+
+def MRET():
+    """MRET — Machine-mode Exception Return"""
+    return 0x30200073
+
+
+def EBREAK():
+    """EBREAK — Environment Breakpoint"""
+    return 0x00100073
+
+
+def ECALL():
+    """ECALL — Environment Call"""
+    return 0x00000073
+
+
+# CSR address constants (M-mode)
+CSR_MSTATUS = 0x300  # Machine status register
+CSR_MIE = 0x304  # Machine interrupt-enable register
+CSR_MTVEC = 0x305  # Machine trap-handler base address
+CSR_MEPC = 0x341  # Machine exception program counter
+CSR_MCAUSE = 0x342  # Machine trap cause
+CSR_MIP = 0x344  # Machine interrupt pending
+CSR_MHARTID = 0xF14  # Hardware thread ID (read-only)
+
+# mstatus field bit positions
+MSTATUS_MIE = 0x00000008  # bit 3
+MSTATUS_MPIE = 0x00000080  # bit 7
+MSTATUS_MPP = 0x00001800  # bits 12:11
+
+# mie/mip field bit positions
+MIE_MSIE = 0x00000008  # bit 3  — machine software interrupt enable
+MIE_MTIE = 0x00000080  # bit 7  — machine timer interrupt enable
+MIE_MEIE = 0x00000800  # bit 11 — machine external interrupt enable
+
+# mcause values (interrupt bit set when bit 31 = 1)
+MCAUSE_IRQ_TIMER = 0x80000007  # timer interrupt (cause=7)
+MCAUSE_IRQ_EXTERNAL = 0x8000000B  # external interrupt (cause=11)
+MCAUSE_EXC_ILLEGAL = 0x00000002  # illegal instruction exception (cause=2)
+
+
 # Print test cases for verification
 if __name__ == "__main__":
     print("R-Type Instruction Encodings:")

@@ -31,7 +31,9 @@ TEST_MODULES := \
 	tb.cocotb.cpu.test_axi_protocol \
 	tb.cocotb.cpu.test_debug_if \
 	tb.cocotb.cpu.test_isa_uvm \
-	tb.cocotb.cpu.test_fault_injection
+	tb.cocotb.cpu.test_fault_injection \
+	tb.cocotb.cpu.test_pipeline_hazards \
+	tb.cocotb.cpu.test_interrupts
 
 # RTL source files (Phase 2: 5-stage pipeline)
 # rv32i_pipeline_pkg.sv is included via `include in the stage files;
@@ -104,6 +106,8 @@ help:
 	@echo "  make lint         - Run Verilator lint check"
 	@echo "  make axi          - Run AXI protocol tests only"
 	@echo "  make debug        - Run APB3 debug interface tests only"
+	@echo "  make hazards      - Run Phase 2 pipeline hazard tests only"
+	@echo "  make interrupts   - Run Phase 2 interrupt and CSR tests only"
 	@echo "  make coverage     - Run all tests with Verilator coverage + generate reports"
 	@echo "  make clean        - Clean simulation artifacts"
 	@echo "  make help         - Show this help"
@@ -223,6 +227,22 @@ debug:
 	@echo "Note: This should be run in WSL environment"
 	@echo ""
 	$(MAKE) sim MODULE=tb.cocotb.cpu.test_debug_if
+
+# Convenience target for Phase 2 pipeline hazard tests
+.PHONY: hazards
+hazards:
+	@echo "Running Phase 2 pipeline hazard tests (RAW forwarding, load-use, branches)..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim MODULE=tb.cocotb.cpu.test_pipeline_hazards
+
+# Convenience target for Phase 2 interrupt / CSR tests
+.PHONY: interrupts
+interrupts:
+	@echo "Running Phase 2 interrupt and CSR instruction tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim MODULE=tb.cocotb.cpu.test_interrupts
 
 # Run all tests with Verilator coverage instrumentation and generate reports
 .PHONY: coverage

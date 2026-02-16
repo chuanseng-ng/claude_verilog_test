@@ -143,15 +143,32 @@ class AXIMemoryDriver(uvm_driver):
         3. Slave asserts rvalid + rdata + rresp (wait for rready)
         4. Master asserts rready
         5. Transaction completes
+
+        Note: A 1-cycle stabilization delay is inserted between seeing arvalid
+        and asserting arready.  This prevents a race condition where the AXI
+        arbiter switches from an IF fetch to a MEM load between the cycle
+        Python samples araddr and the cycle arready takes effect in RTL.
         """
         while True:
             await RisingEdge(self.dut.clk_i)
 
             if self.dut.axi_arvalid_o.value == 1:
-                # Accept read request
-                self.dut.axi_arready_i.value = 1
+                # Wait 1 cycle for the pipeline/arbiter to settle.
+                # Without this delay, the arbiter can switch requestors
+                # (IF→MEM) between the cycle we read araddr and the cycle
+                # arready takes effect, causing the wrong data to be returned.
+                await RisingEdge(self.dut.clk_i)
+
+                # Re-check arvalid after stabilization
+                if self.dut.axi_arvalid_o.value != 1:
+                    self.dut.axi_arready_i.value = 0
+                    continue
+
+                # Accept read request (address is now stable)
                 addr = int(self.dut.axi_araddr_o.value)
                 data = self.read_word(addr)
+                self.dut.axi_arready_i.value = 1
+                self.logger.debug(f"AXI_READ: addr=0x{addr:08x} data=0x{data:08x}")
 
                 # Next cycle: de-assert arready, assert rvalid with data
                 await RisingEdge(self.dut.clk_i)
