@@ -94,7 +94,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 # Standalone Targets (work without cocotb)
 # ============================================================================
 
-.PHONY: help lint clean-basic
+.PHONY: help lint distclean
 
 help:
 	@echo "RV32I CPU Simulation Makefile"
@@ -109,7 +109,7 @@ help:
 	@echo "  make hazards      - Run Phase 2 pipeline hazard tests only"
 	@echo "  make interrupts   - Run Phase 2 interrupt and CSR tests only"
 	@echo "  make coverage     - Run all tests with Verilator coverage + generate reports"
-	@echo "  make clean        - Clean simulation artifacts"
+	@echo "  make distclean    - Clean simulation artifacts"
 	@echo "  make help         - Show this help"
 	@echo ""
 	@echo "Variables:"
@@ -140,15 +140,6 @@ lint:
 		-Wno-UNUSEDSIGNAL \
 		-Wno-UNOPTFLAT \
 		$(VERILOG_SOURCES) 2>&1 || echo "Verilator not found. Install with: sudo apt-get install verilator, or run from WSL"
-
-clean-basic:
-	@echo "Cleaning simulation artifacts..."
-	@rm -rf obj_dir 2>/dev/null || true
-	@rm -rf __pycache__ 2>/dev/null || true
-	@rm -rf sim_build 2>/dev/null || true
-	@rm -f dump.vcd 2>/dev/null || true
-	@rm -f results.xml 2>/dev/null || true
-	@rm -f *.log 2>/dev/null || true
 
 # ============================================================================
 # Cocotb Targets (require cocotb installation in WSL)
@@ -282,5 +273,12 @@ stress_uvm_smoke:
 	@echo "Running pyuvm stress tests (SMOKE: 10 seeds × 100 instr per profile)..."
 	STRESS_TEST_SMOKE=1 $(MAKE) sim MODULE=tb.cocotb.cpu.test_stress_uvm
 
-# Override clean to use our basic clean
-clean: clean-basic
+# Use distclean to avoid conflict with cocotb's clean
+distclean: clean
+	@echo "Cleaning simulation artifacts..."
+	@rm -rf obj_dir 2>/dev/null || true
+	@rm -rf __pycache__ 2>/dev/null || true
+	@rm -rf sim_build 2>/dev/null || true
+	@rm -f dump.vcd 2>/dev/null || true
+	@rm -f results.xml 2>/dev/null || true
+	@rm -f *.log 2>/dev/null || true
