@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - phase-1/**
 
   # Pull requests to main
   pull_request:
