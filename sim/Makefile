@@ -133,13 +133,14 @@ help:
 
 lint:
 	@echo "Running Verilator lint check..."
+	@command -v verilator >/dev/null 2>&1 || { echo "ERROR: Verilator not found. Install with: sudo apt-get install verilator, or run from WSL"; exit 1; }
 	@verilator --lint-only -Wall -Wno-fatal \
 		--top-module $(DUT) \
 		-I$(RTL_DIR)/cpu/core \
 		-Wno-IMPORTSTAR \
 		-Wno-UNUSEDSIGNAL \
 		-Wno-UNOPTFLAT \
-		$(VERILOG_SOURCES) 2>&1 || echo "Verilator not found. Install with: sudo apt-get install verilator, or run from WSL"
+		$(VERILOG_SOURCES) 2>&1
 
 # ============================================================================
 # Cocotb Targets (require cocotb installation in WSL)
@@ -274,8 +275,10 @@ stress_uvm_smoke:
 	STRESS_TEST_SMOKE=1 $(MAKE) sim MODULE=tb.cocotb.cpu.test_stress_uvm
 
 # Use distclean to avoid conflict with cocotb's clean
-distclean: clean
+# Note: 'clean' target is only defined when cocotb Makefile is included
+distclean:
 	@echo "Cleaning simulation artifacts..."
+	@$(MAKE) clean 2>/dev/null || true
 	@rm -rf obj_dir 2>/dev/null || true
 	@rm -rf __pycache__ 2>/dev/null || true
 	@rm -rf sim_build 2>/dev/null || true

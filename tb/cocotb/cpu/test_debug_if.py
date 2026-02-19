@@ -72,7 +72,7 @@ async def reset_dut(dut):
     NOTE: Do NOT use the reset_dut from test_ebreak.py - that file uses
     the old signal names without _i/_o suffixes and is incorrect.
 
-    Per MEMORY.md: Clear all AXI/APB signals BEFORE asserting reset.
+    Per MEMORY_MAP.md: Clear all AXI/APB signals BEFORE asserting reset.
     """
     # Initialize AXI slave inputs to safe idle values BEFORE reset
     dut.axi_arready_i.value = 0

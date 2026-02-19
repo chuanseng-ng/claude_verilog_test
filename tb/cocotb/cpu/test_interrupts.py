@@ -23,7 +23,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from sim.riscv_encoder import (
     ADDI,
-    LUI,
     JAL,
     EBREAK,
     CSRRW,
@@ -41,9 +40,9 @@ from sim.riscv_encoder import (
     MIE_MEIE,
     MCAUSE_IRQ_TIMER,
     MCAUSE_IRQ_EXTERNAL,
-    MCAUSE_EXC_ILLEGAL,
 )
 from tb.cocotb.common.clock_reset import reset_dut
+from tb.cocotb.cpu.axi_models import ConfigurableAXIMemory
 
 
 # ============================================================================
@@ -66,70 +65,6 @@ HANDLER_ADDR = 0x200
 
 # Undefined CSR address (not implemented in Phase 2)
 CSR_UNDEFINED = 0xBFF
-
-
-class SimpleAXIMemory:
-    """Minimal AXI4-Lite memory slave."""
-
-    def __init__(self, dut):
-        self.dut = dut
-        self.mem = {}
-        cocotb.start_soon(self._read_handler())
-        cocotb.start_soon(self._write_handler())
-
-    def write_word(self, addr, data):
-        self.mem[addr & 0xFFFFFFFC] = data & 0xFFFFFFFF
-
-    def read_word(self, addr):
-        return self.mem.get(addr & 0xFFFFFFFC, 0)
-
-    async def _read_handler(self):
-        while True:
-            await RisingEdge(self.dut.clk_i)
-            if self.dut.axi_arvalid_o.value == 1:
-                # Wait 1 cycle for pipeline/arbiter to settle (prevents
-                # IF→MEM requestor switch race condition)
-                await RisingEdge(self.dut.clk_i)
-                if self.dut.axi_arvalid_o.value != 1:
-                    self.dut.axi_arready_i.value = 0
-                    continue
-                addr = int(self.dut.axi_araddr_o.value)
-                data = self.read_word(addr)
-                self.dut.axi_arready_i.value = 1
-                await RisingEdge(self.dut.clk_i)
-                self.dut.axi_arready_i.value = 0
-                self.dut.axi_rvalid_i.value = 1
-                self.dut.axi_rdata_i.value = data
-                self.dut.axi_rresp_i.value = 0
-                while self.dut.axi_rready_o.value == 0:
-                    await RisingEdge(self.dut.clk_i)
-                await RisingEdge(self.dut.clk_i)
-                self.dut.axi_rvalid_i.value = 0
-            else:
-                self.dut.axi_arready_i.value = 0
-
-    async def _write_handler(self):
-        while True:
-            await RisingEdge(self.dut.clk_i)
-            if (
-                self.dut.axi_awvalid_o.value == 1
-                and self.dut.axi_wvalid_o.value == 1
-                and self.dut.axi_awready_i.value == 0
-            ):
-                self.dut.axi_awready_i.value = 1
-                self.dut.axi_wready_i.value = 1
-                addr = int(self.dut.axi_awaddr_o.value)
-                data = int(self.dut.axi_wdata_o.value)
-                await RisingEdge(self.dut.clk_i)
-                self.dut.axi_awready_i.value = 0
-                self.dut.axi_wready_i.value = 0
-                self.write_word(addr, data)
-                self.dut.axi_bvalid_i.value = 1
-                self.dut.axi_bresp_i.value = 0
-                while self.dut.axi_bready_o.value == 0:
-                    await RisingEdge(self.dut.clk_i)
-                await RisingEdge(self.dut.clk_i)
-                self.dut.axi_bvalid_i.value = 0
 
 
 class APBDebug:
@@ -230,7 +165,7 @@ async def _setup_test(dut):
     cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
     _init_inputs(dut)
     await reset_dut(dut)
-    mem = SimpleAXIMemory(dut)
+    mem = ConfigurableAXIMemory(dut, ref_model=None, protocol_check=False)
     dbg = APBDebug(dut)
     await RisingEdge(dut.clk_i)
     return mem, dbg
@@ -404,7 +339,7 @@ async def test_ext_irq_delivery(dut):
     dut._log.info("=== Test: External IRQ Delivery ===")
     mem, dbg = await _setup_test(dut)
 
-    wait_pc = _load_irq_setup_program(mem, enable_mtie=False, enable_meie=True)
+    _ = _load_irq_setup_program(mem, enable_mtie=False, enable_meie=True)
     # save_csrs=True: ISR saves mcause→x13 before EBREAK to avoid EBREAK
     # overwriting mcause (cause=3) before the test can read it.
     _load_irq_handler(
@@ -575,7 +510,7 @@ async def test_irq_latency(dut):
     dut._log.info("=== Test: IRQ Latency ===")
     mem, dbg = await _setup_test(dut)
 
-    wait_pc = _load_irq_setup_program(mem, enable_mtie=True)
+    _ = _load_irq_setup_program(mem, enable_mtie=True)
     _load_irq_handler(mem, flag_reg=10)
 
     commit_count = [0]
@@ -793,6 +728,11 @@ async def test_csr_illegal_address(dut):
     assert trap_cause_val[0] == 2, (
         f"Wrong trap cause: {trap_cause_val[0]}, expected 2 (illegal instruction)"
     )
+
+    # Verify that the subsequent ADDI instruction was squashed (x2 should still be 0)
+    x2 = await dbg.read_gpr(2)
+    assert x2 == 0, f"ADDI after illegal CSR should not have committed: x2={x2}, expected 0"
+
     dut._log.info("Illegal CSR address test PASSED")
 
 
@@ -808,7 +748,7 @@ async def test_csr_mstatus_mie_gate(dut):
 
     # Part 1: MIE=1 → interrupt SHOULD be taken
     # (reuse _load_irq_setup_program which enables MIE)
-    wait_pc = _load_irq_setup_program(mem, enable_mtie=True, enable_mie=True)
+    _ = _load_irq_setup_program(mem, enable_mtie=True, enable_mie=True)
     _load_irq_handler(mem, flag_reg=10, halt_after=True)
 
     commit_count = [0]
@@ -842,4 +782,47 @@ async def test_csr_mstatus_mie_gate(dut):
     x10 = await dbg.read_gpr(10)
     assert x10 == 1, f"Handler did not set flag: x10={x10}"
 
+    dut._log.info("MIE=1: interrupt taken correctly")
+
+    # Part 2: MIE=0 → interrupt should NOT be taken
+    dut._log.info("Part 2: Testing MIE=0 blocks IRQ")
+
+    # Clear MIE bit in mstatus via debug API
+    await dbg._write(DBG_MSTATUS, 0)
+
+    # Reset trap watcher counters for Part 2
+    trap_count[0] = 0
+    trap_seen_part2 = [False]
+
+    async def _watch_part2():
+        while True:
+            await RisingEdge(dut.clk_i)
+            if dut.trap_taken_o.value:
+                trap_seen_part2[0] = True
+
+    cocotb.start_soon(_watch_part2())
+
+    # Resume CPU execution
+    await dbg.resume()
+
+    # Wait a few cycles for resume to take effect
+    for _ in range(10):
+        await RisingEdge(dut.clk_i)
+
+    # Assert timer IRQ
+    dut.timer_irq_i.value = 1
+
+    # Wait for timeout period - IRQ should NOT be taken
+    for _ in range(100):
+        await RisingEdge(dut.clk_i)
+        if trap_seen_part2[0]:
+            break
+
+    # Clear timer IRQ
+    dut.timer_irq_i.value = 0
+
+    # Verify that NO trap was taken
+    assert not trap_seen_part2[0], "IRQ was taken despite MIE=0"
+
+    dut._log.info("MIE=0: interrupt correctly blocked")
     dut._log.info("mstatus.MIE gate test PASSED")

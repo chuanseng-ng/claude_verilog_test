@@ -371,11 +371,11 @@ _DECODER_ILLEGAL_CASES = [
     ("OP_REG SRL/SRA bad funct7", encode_r_type(_BAD_FUNCT7, 0, 0, 0b101, 1)),
     ("OP_REG OR bad funct7", encode_r_type(_BAD_FUNCT7, 0, 0, 0b110, 1)),
     ("OP_REG AND bad funct7", encode_r_type(_BAD_FUNCT7, 0, 0, 0b111, 1)),
-    # OP_SYSTEM else: ECALL (imm12=0x000) is not supported in Phase 1
+    # OP_SYSTEM else: ECALL (imm12=0x000) is not supported in Phase 2
     (
         "OP_SYSTEM ECALL (unsupported)",
         0x00000073,
-    ),  # ECALL: funct12=0x000 != 0x001 (EBREAK) → illegal
+    ),  # ECALL: funct12=0x000 != 0x001 (EBREAK) → illegal (Phase 2)
 ]
 
 

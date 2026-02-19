@@ -31,6 +31,7 @@ from sim.riscv_encoder import (
     EBREAK,
 )
 from tb.cocotb.common.clock_reset import reset_dut
+from tb.cocotb.cpu.axi_models import ConfigurableAXIMemory
 
 
 # ============================================================================
@@ -38,70 +39,6 @@ from tb.cocotb.common.clock_reset import reset_dut
 # ============================================================================
 
 NOP = ADDI(0, 0, 0)
-
-
-class SimpleAXIMemory:
-    """Minimal AXI4-Lite memory slave for hazard tests."""
-
-    def __init__(self, dut):
-        self.dut = dut
-        self.mem = {}
-        cocotb.start_soon(self._read_handler())
-        cocotb.start_soon(self._write_handler())
-
-    def write_word(self, addr, data):
-        self.mem[addr & 0xFFFFFFFC] = data & 0xFFFFFFFF
-
-    def read_word(self, addr):
-        return self.mem.get(addr & 0xFFFFFFFC, 0)
-
-    async def _read_handler(self):
-        while True:
-            await RisingEdge(self.dut.clk_i)
-            if self.dut.axi_arvalid_o.value == 1:
-                # Wait 1 cycle for pipeline/arbiter to settle (prevents
-                # IF→MEM requestor switch race condition)
-                await RisingEdge(self.dut.clk_i)
-                if self.dut.axi_arvalid_o.value != 1:
-                    self.dut.axi_arready_i.value = 0
-                    continue
-                addr = int(self.dut.axi_araddr_o.value)
-                data = self.read_word(addr)
-                self.dut.axi_arready_i.value = 1
-                await RisingEdge(self.dut.clk_i)
-                self.dut.axi_arready_i.value = 0
-                self.dut.axi_rvalid_i.value = 1
-                self.dut.axi_rdata_i.value = data
-                self.dut.axi_rresp_i.value = 0
-                while self.dut.axi_rready_o.value == 0:
-                    await RisingEdge(self.dut.clk_i)
-                await RisingEdge(self.dut.clk_i)
-                self.dut.axi_rvalid_i.value = 0
-            else:
-                self.dut.axi_arready_i.value = 0
-
-    async def _write_handler(self):
-        while True:
-            await RisingEdge(self.dut.clk_i)
-            if (
-                self.dut.axi_awvalid_o.value == 1
-                and self.dut.axi_wvalid_o.value == 1
-                and self.dut.axi_awready_i.value == 0
-            ):
-                self.dut.axi_awready_i.value = 1
-                self.dut.axi_wready_i.value = 1
-                addr = int(self.dut.axi_awaddr_o.value)
-                data = int(self.dut.axi_wdata_o.value)
-                await RisingEdge(self.dut.clk_i)
-                self.dut.axi_awready_i.value = 0
-                self.dut.axi_wready_i.value = 0
-                self.write_word(addr, data)
-                self.dut.axi_bvalid_i.value = 1
-                self.dut.axi_bresp_i.value = 0
-                while self.dut.axi_bready_o.value == 0:
-                    await RisingEdge(self.dut.clk_i)
-                await RisingEdge(self.dut.clk_i)
-                self.dut.axi_bvalid_i.value = 0
 
 
 class APBDebug:
@@ -198,7 +135,7 @@ async def _setup_test(dut):
     await reset_dut(dut)
 
     # Create memory handlers AFTER reset so they start with clean DUT state
-    mem = SimpleAXIMemory(dut)
+    mem = ConfigurableAXIMemory(dut, ref_model=None, protocol_check=False)
     dbg = APBDebug(dut)
 
     # Yield so handler tasks begin executing
