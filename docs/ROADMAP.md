@@ -214,7 +214,7 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 
 📉 AI contribution ~60%
 
-✅ Exit criteria (in progress)
+⏳ Exit criteria (NOT MET - in progress)
 
 - 🔄 Zero false commits (scoreboard validation)
 - 🔄 Pipeline hazard tests passing
