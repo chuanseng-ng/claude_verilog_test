@@ -115,11 +115,7 @@ class InstructionCoverage:
 
     def report(self) -> str:
         lines = [f"Instruction Coverage: {self.covered}/{_TOTAL_INSTRUCTIONS}"]
-        missing = [
-            name
-            for key, name in _RV32I_INSTRUCTIONS.items()
-            if key not in self._seen
-        ]
+        missing = [name for key, name in _RV32I_INSTRUCTIONS.items() if key not in self._seen]
         if missing:
             lines.append("  Missing instructions:")
             for name in sorted(missing):
@@ -167,9 +163,7 @@ class StateCoverage:
 
     def report(self) -> str:
         lines = [f"State Coverage: {self.covered}/{_TOTAL_STATES}"]
-        missing = [
-            name for val, name in STATE_NAMES.items() if val not in self._seen
-        ]
+        missing = [name for val, name in STATE_NAMES.items() if val not in self._seen]
         if missing:
             lines.append("  Missing states:")
             for name in sorted(missing):
@@ -196,14 +190,8 @@ class CoverageReport:
 
         Creates the parent directory automatically if it doesn't exist.
         """
-        instr_pct = (
-            self.instr_cov.covered / _TOTAL_INSTRUCTIONS * 100
-            if _TOTAL_INSTRUCTIONS
-            else 0
-        )
-        state_pct = (
-            self.state_cov.covered / _TOTAL_STATES * 100 if _TOTAL_STATES else 0
-        )
+        instr_pct = self.instr_cov.covered / _TOTAL_INSTRUCTIONS * 100 if _TOTAL_INSTRUCTIONS else 0
+        state_pct = self.state_cov.covered / _TOTAL_STATES * 100 if _TOTAL_STATES else 0
 
         instr_status = "PASS" if self.instr_cov.is_complete else "FAIL"
         state_status = "PASS" if self.state_cov.is_complete else "FAIL"

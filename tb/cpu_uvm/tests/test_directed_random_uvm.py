@@ -134,11 +134,25 @@ async def test_directed_alu_focused(dut):
     # Track failures across all seeds
     failed_seeds = []
 
+    # Track background tasks for cleanup between seeds
+    background_tasks = []
+
     for seed_idx in range(num_seeds):
         seed = 1000 + seed_idx  # Deterministic seed sequence
         dut._log.info(f"\n{'=' * 60}")
         dut._log.info(f"Seed {seed_idx + 1}/{num_seeds}: {seed}")
         dut._log.info(f"{'=' * 60}\n")
+
+        # Kill old background tasks from previous seed to prevent race conditions
+        if background_tasks:
+            dut._log.debug("Killing old background tasks from previous seed")
+            for task in background_tasks:
+                task.kill()
+            background_tasks.clear()
+
+            # CRITICAL: Immediately assert reset to stop CPU before starting new monitor
+            dut.rst_n_i.value = 0
+            await ClockCycles(dut.clk_i, 2)
 
         # Create and run test
         test = DirectedRandomTest(
@@ -153,24 +167,20 @@ async def test_directed_alu_focused(dut):
         test.connect_phase()
         test.end_of_elaboration_phase()
 
-        # Start background tasks for all components (track for cleanup)
-        read_task = cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
-        write_task = cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
-        commit_task = cocotb.start_soon(test.env.commit_monitor.run_phase())
-        sb_task = cocotb.start_soon(test.env.scoreboard.run_phase())
+        # Per MEMORY.md: Clear AXI signals BEFORE reset, then create handler tasks AFTER reset
+        await test.reset_dut()
+
+        # Start background tasks (AFTER reset) and track them for cleanup
+        background_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler()))
+        background_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler()))
+        background_tasks.append(cocotb.start_soon(test.env.commit_monitor.run_phase()))
+        background_tasks.append(cocotb.start_soon(test.env.scoreboard.run_phase()))
 
         # Give background tasks a chance to start
         await ClockCycles(dut.clk_i, 2)
 
-        # Reset and run
-        await test.reset_dut()
+        # Run test
         await test.run_phase()
-
-        # Terminate background tasks before moving to next seed
-        read_task.kill()
-        write_task.kill()
-        commit_task.kill()
-        sb_task.kill()
 
         # Check results
         if test.env.scoreboard.mismatches > 0:
@@ -256,11 +266,25 @@ async def test_directed_immediate_heavy(dut):
     # Track failures across all seeds
     failed_seeds = []
 
+    # Track background tasks for cleanup between seeds
+    background_tasks = []
+
     for seed_idx in range(num_seeds):
         seed = 2000 + seed_idx  # Different seed range from ALU-focused test
         dut._log.info(f"\n{'=' * 60}")
         dut._log.info(f"Seed {seed_idx + 1}/{num_seeds}: {seed}")
         dut._log.info(f"{'=' * 60}\n")
+
+        # Kill old background tasks from previous seed to prevent race conditions
+        if background_tasks:
+            dut._log.debug("Killing old background tasks from previous seed")
+            for task in background_tasks:
+                task.kill()
+            background_tasks.clear()
+
+            # CRITICAL: Immediately assert reset to stop CPU before starting new monitor
+            dut.rst_n_i.value = 0
+            await ClockCycles(dut.clk_i, 2)
 
         # Create and run test
         test = DirectedRandomTest(
@@ -275,24 +299,20 @@ async def test_directed_immediate_heavy(dut):
         test.connect_phase()
         test.end_of_elaboration_phase()
 
-        # Start background tasks for all components (track for cleanup)
-        read_task = cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
-        write_task = cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
-        commit_task = cocotb.start_soon(test.env.commit_monitor.run_phase())
-        sb_task = cocotb.start_soon(test.env.scoreboard.run_phase())
+        # Per MEMORY.md: Clear AXI signals BEFORE reset, then create handler tasks AFTER reset
+        await test.reset_dut()
+
+        # Start background tasks (AFTER reset) and track them for cleanup
+        background_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler()))
+        background_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler()))
+        background_tasks.append(cocotb.start_soon(test.env.commit_monitor.run_phase()))
+        background_tasks.append(cocotb.start_soon(test.env.scoreboard.run_phase()))
 
         # Give background tasks a chance to start
         await ClockCycles(dut.clk_i, 2)
 
-        # Reset and run
-        await test.reset_dut()
+        # Run test
         await test.run_phase()
-
-        # Terminate background tasks before moving to next seed
-        read_task.kill()
-        write_task.kill()
-        commit_task.kill()
-        sb_task.kill()
 
         # Check results
         if test.env.scoreboard.mismatches > 0:
@@ -376,11 +396,25 @@ async def test_directed_rtype_dominant(dut):
     # Track failures across all seeds
     failed_seeds = []
 
+    # Track background tasks for cleanup between seeds
+    background_tasks = []
+
     for seed_idx in range(num_seeds):
         seed = 3000 + seed_idx  # Different seed range
         dut._log.info(f"\n{'=' * 60}")
         dut._log.info(f"Seed {seed_idx + 1}/{num_seeds}: {seed}")
         dut._log.info(f"{'=' * 60}\n")
+
+        # Kill old background tasks from previous seed to prevent race conditions
+        if background_tasks:
+            dut._log.debug("Killing old background tasks from previous seed")
+            for task in background_tasks:
+                task.kill()
+            background_tasks.clear()
+
+            # CRITICAL: Immediately assert reset to stop CPU before starting new monitor
+            dut.rst_n_i.value = 0
+            await ClockCycles(dut.clk_i, 2)
 
         # Create and run test
         test = DirectedRandomTest(
@@ -395,24 +429,20 @@ async def test_directed_rtype_dominant(dut):
         test.connect_phase()
         test.end_of_elaboration_phase()
 
-        # Start background tasks for all components (track for cleanup)
-        read_task = cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
-        write_task = cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
-        commit_task = cocotb.start_soon(test.env.commit_monitor.run_phase())
-        sb_task = cocotb.start_soon(test.env.scoreboard.run_phase())
+        # Per MEMORY.md: Clear AXI signals BEFORE reset, then create handler tasks AFTER reset
+        await test.reset_dut()
+
+        # Start background tasks (AFTER reset) and track them for cleanup
+        background_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler()))
+        background_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler()))
+        background_tasks.append(cocotb.start_soon(test.env.commit_monitor.run_phase()))
+        background_tasks.append(cocotb.start_soon(test.env.scoreboard.run_phase()))
 
         # Give background tasks a chance to start
         await ClockCycles(dut.clk_i, 2)
 
-        # Reset and run
-        await test.reset_dut()
+        # Run test
         await test.run_phase()
-
-        # Terminate background tasks before moving to next seed
-        read_task.kill()
-        write_task.kill()
-        commit_task.kill()
-        sb_task.kill()
 
         # Check results
         if test.env.scoreboard.mismatches > 0:

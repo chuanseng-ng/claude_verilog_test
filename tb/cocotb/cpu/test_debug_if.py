@@ -43,14 +43,14 @@ _test_instance_counter = 0
 NOP = 0x00000013
 
 # ADDI encodings for various registers / immediates
-ADDI_X1_X0_1 = 0x00100093   # ADDI x1, x0, 1
-ADDI_X1_X0_2 = 0x00200093   # ADDI x1, x0, 2
-ADDI_X1_X0_3 = 0x00300093   # ADDI x1, x0, 3
+ADDI_X1_X0_1 = 0x00100093  # ADDI x1, x0, 1
+ADDI_X1_X0_2 = 0x00200093  # ADDI x1, x0, 2
+ADDI_X1_X0_3 = 0x00300093  # ADDI x1, x0, 3
 
-ADDI_X2_X0_2 = 0x00200113   # ADDI x2, x0, 2
+ADDI_X2_X0_2 = 0x00200113  # ADDI x2, x0, 2
 
-ADDI_X3_X0_3 = 0x00300193   # ADDI x3, x0, 3
-ADDI_X3_X1_0 = 0x00008193   # ADDI x3, x1, 0  (copies x1 to x3)
+ADDI_X3_X0_3 = 0x00300193  # ADDI x3, x0, 3
+ADDI_X3_X1_0 = 0x00008193  # ADDI x3, x1, 0  (copies x1 to x3)
 
 # ADDI x1, x0, 99  (imm=99=0x63, rd=1, rs1=0)
 # Encoding: 0x063 << 20 | 0 << 15 | 0 << 12 | 1 << 7 | 0x13
@@ -64,16 +64,17 @@ EBREAK = 0x00100073
 # Test Setup Helpers
 # ===========================================================================
 
+
 async def reset_dut(dut):
     """Apply reset to DUT using correct _i/_o signal names.
 
     The RTL top-level uses the _i/_o port suffix convention.
     NOTE: Do NOT use the reset_dut from test_ebreak.py - that file uses
     the old signal names without _i/_o suffixes and is incorrect.
-    """
-    dut.rst_n_i.value = 0
 
-    # Initialize AXI slave inputs to safe idle values
+    Per MEMORY_MAP.md: Clear all AXI/APB signals BEFORE asserting reset.
+    """
+    # Initialize AXI slave inputs to safe idle values BEFORE reset
     dut.axi_arready_i.value = 0
     dut.axi_rvalid_i.value = 0
     dut.axi_rdata_i.value = 0
@@ -83,13 +84,15 @@ async def reset_dut(dut):
     dut.axi_bvalid_i.value = 0
     dut.axi_bresp_i.value = 0
 
-    # Initialize APB master inputs to idle
+    # Initialize APB master inputs to idle BEFORE reset
     dut.apb_psel_i.value = 0
     dut.apb_penable_i.value = 0
     dut.apb_pwrite_i.value = 0
     dut.apb_paddr_i.value = 0
     dut.apb_pwdata_i.value = 0
 
+    # Now assert reset
+    dut.rst_n_i.value = 0
     await ClockCycles(dut.clk_i, 5)
     dut.rst_n_i.value = 1
     await ClockCycles(dut.clk_i, 2)
@@ -153,6 +156,7 @@ async def wait_for_halt(dut, apb_driver, max_cycles=200):
 # Test 1: Single-Step
 # ===========================================================================
 
+
 @cocotb.test()
 async def test_debug_single_step(dut):
     """Test single-step: each step executes exactly one instruction.
@@ -180,10 +184,10 @@ async def test_debug_single_step(dut):
 
     # Load program
     dut._log.info("Loading program...")
-    axi_driver.write_word(0x0000, ADDI_X1_X0_1)   # 0x0000: ADDI x1, x0, 1
-    axi_driver.write_word(0x0004, ADDI_X2_X0_2)   # 0x0004: ADDI x2, x0, 2
-    axi_driver.write_word(0x0008, ADDI_X3_X0_3)   # 0x0008: ADDI x3, x0, 3
-    axi_driver.write_word(0x000C, EBREAK)          # 0x000C: EBREAK
+    axi_driver.write_word(0x0000, ADDI_X1_X0_1)  # 0x0000: ADDI x1, x0, 1
+    axi_driver.write_word(0x0004, ADDI_X2_X0_2)  # 0x0004: ADDI x2, x0, 2
+    axi_driver.write_word(0x0008, ADDI_X3_X0_3)  # 0x0008: ADDI x3, x0, 3
+    axi_driver.write_word(0x000C, EBREAK)  # 0x000C: EBREAK
     dut._log.info(f"  0x0000: ADDI x1, x0, 1  (0x{ADDI_X1_X0_1:08x})")
     dut._log.info(f"  0x0004: ADDI x2, x0, 2  (0x{ADDI_X2_X0_2:08x})")
     dut._log.info(f"  0x0008: ADDI x3, x0, 3  (0x{ADDI_X3_X0_3:08x})")
@@ -220,11 +224,15 @@ async def test_debug_single_step(dut):
     pc_after = await apb_driver.read_pc()
     x1_val = await apb_driver.read_gpr(1)
 
-    dut._log.info(f"After step 1: status=0x{status:08x}, halt_cause=0x{halt_cause:x}, PC=0x{pc_after:08x}")
+    dut._log.info(
+        f"After step 1: status=0x{status:08x}, halt_cause=0x{halt_cause:x}, PC=0x{pc_after:08x}"
+    )
     dut._log.info(f"  x1 = 0x{x1_val:08x} (expected 0x00000001)")
 
     assert status & 0x1, "CPU must be halted after single-step"
-    assert pc_after == 0x0004, f"PC should be 0x0004 after stepping from 0x0000, got 0x{pc_after:08x}"
+    assert pc_after == 0x0004, (
+        f"PC should be 0x0004 after stepping from 0x0000, got 0x{pc_after:08x}"
+    )
     assert x1_val == 1, f"x1 should be 1 after ADDI x1, x0, 1, got {x1_val}"
 
     # Note on halt_cause: The RTL auto-clears dbg_ctrl_reg[2] (step bit) when
@@ -258,11 +266,15 @@ async def test_debug_single_step(dut):
     pc_after = await apb_driver.read_pc()
     x2_val = await apb_driver.read_gpr(2)
 
-    dut._log.info(f"After step 2: status=0x{status:08x}, halt_cause=0x{halt_cause:x}, PC=0x{pc_after:08x}")
+    dut._log.info(
+        f"After step 2: status=0x{status:08x}, halt_cause=0x{halt_cause:x}, PC=0x{pc_after:08x}"
+    )
     dut._log.info(f"  x2 = 0x{x2_val:08x} (expected 0x00000002)")
 
     assert status & 0x1, "CPU must be halted after second single-step"
-    assert pc_after == 0x0008, f"PC should be 0x0008 after stepping from 0x0004, got 0x{pc_after:08x}"
+    assert pc_after == 0x0008, (
+        f"PC should be 0x0008 after stepping from 0x0004, got 0x{pc_after:08x}"
+    )
     assert x2_val == 2, f"x2 should be 2 after ADDI x2, x0, 2, got {x2_val}"
 
     if halt_cause == 0x4:
@@ -281,6 +293,7 @@ async def test_debug_single_step(dut):
 # ===========================================================================
 # Test 2: Breakpoint 0
 # ===========================================================================
+
 
 @cocotb.test()
 async def test_debug_bp0(dut):
@@ -316,10 +329,10 @@ async def test_debug_bp0(dut):
 
     # Load program
     dut._log.info("Loading program...")
-    axi_driver.write_word(0x0000, NOP)              # 0x0000: NOP
-    axi_driver.write_word(0x0004, NOP)              # 0x0004: NOP
-    axi_driver.write_word(0x0008, ADDI_X1_X0_99)   # 0x0008: ADDI x1, x0, 99 (BP target)
-    axi_driver.write_word(0x000C, EBREAK)           # 0x000C: EBREAK
+    axi_driver.write_word(0x0000, NOP)  # 0x0000: NOP
+    axi_driver.write_word(0x0004, NOP)  # 0x0004: NOP
+    axi_driver.write_word(0x0008, ADDI_X1_X0_99)  # 0x0008: ADDI x1, x0, 99 (BP target)
+    axi_driver.write_word(0x000C, EBREAK)  # 0x000C: EBREAK
     dut._log.info(f"  0x0000: NOP                  (0x{NOP:08x})")
     dut._log.info(f"  0x0004: NOP                  (0x{NOP:08x})")
     dut._log.info(f"  0x0008: ADDI x1, x0, 99      (0x{ADDI_X1_X0_99:08x})  <- BP0 target")
@@ -356,14 +369,15 @@ async def test_debug_bp0(dut):
 
     pc_val = await apb_driver.read_pc()
     x1_val = await apb_driver.read_gpr(1)
-    dut._log.info(f"CPU halted: halted={halted}, status=0x{status:08x}, halt_cause=0x{halt_cause:x}")
+    dut._log.info(
+        f"CPU halted: halted={halted}, status=0x{status:08x}, halt_cause=0x{halt_cause:x}"
+    )
     dut._log.info(f"  PC = 0x{pc_val:08x}")
     dut._log.info(f"  x1 = 0x{x1_val:08x}")
 
     assert halted, f"CPU should have halted at BP0 within 200 cycles (status=0x{status:08x})"
     assert halt_cause == 0x2, (
-        f"halt_cause should be 0x2 (BP0 hit), got 0x{halt_cause:x}. "
-        f"Full status=0x{status:08x}"
+        f"halt_cause should be 0x2 (BP0 hit), got 0x{halt_cause:x}. Full status=0x{status:08x}"
     )
 
     dut._log.info("  halt_cause = 0x2 (BP0 hit) [EXPECTED]")
@@ -382,6 +396,7 @@ async def test_debug_bp0(dut):
 # ===========================================================================
 # Test 3: Breakpoint 1
 # ===========================================================================
+
 
 @cocotb.test()
 async def test_debug_bp1(dut):
@@ -417,10 +432,10 @@ async def test_debug_bp1(dut):
 
     # Load program (same as BP0 test)
     dut._log.info("Loading program...")
-    axi_driver.write_word(0x0000, NOP)              # 0x0000: NOP
-    axi_driver.write_word(0x0004, NOP)              # 0x0004: NOP
-    axi_driver.write_word(0x0008, ADDI_X1_X0_99)   # 0x0008: ADDI x1, x0, 99 (BP target)
-    axi_driver.write_word(0x000C, EBREAK)           # 0x000C: EBREAK
+    axi_driver.write_word(0x0000, NOP)  # 0x0000: NOP
+    axi_driver.write_word(0x0004, NOP)  # 0x0004: NOP
+    axi_driver.write_word(0x0008, ADDI_X1_X0_99)  # 0x0008: ADDI x1, x0, 99 (BP target)
+    axi_driver.write_word(0x000C, EBREAK)  # 0x000C: EBREAK
     dut._log.info(f"  0x0000: NOP                  (0x{NOP:08x})")
     dut._log.info(f"  0x0004: NOP                  (0x{NOP:08x})")
     dut._log.info(f"  0x0008: ADDI x1, x0, 99      (0x{ADDI_X1_X0_99:08x})  <- BP1 target")
@@ -457,14 +472,15 @@ async def test_debug_bp1(dut):
 
     pc_val = await apb_driver.read_pc()
     x1_val = await apb_driver.read_gpr(1)
-    dut._log.info(f"CPU halted: halted={halted}, status=0x{status:08x}, halt_cause=0x{halt_cause:x}")
+    dut._log.info(
+        f"CPU halted: halted={halted}, status=0x{status:08x}, halt_cause=0x{halt_cause:x}"
+    )
     dut._log.info(f"  PC = 0x{pc_val:08x}")
     dut._log.info(f"  x1 = 0x{x1_val:08x}")
 
     assert halted, f"CPU should have halted at BP1 within 200 cycles (status=0x{status:08x})"
     assert halt_cause == 0x3, (
-        f"halt_cause should be 0x3 (BP1 hit), got 0x{halt_cause:x}. "
-        f"Full status=0x{status:08x}"
+        f"halt_cause should be 0x3 (BP1 hit), got 0x{halt_cause:x}. Full status=0x{status:08x}"
     )
 
     dut._log.info("  halt_cause = 0x3 (BP1 hit) [EXPECTED]")
@@ -483,6 +499,7 @@ async def test_debug_bp1(dut):
 # ===========================================================================
 # Test 4: GPR Write Affects Execution
 # ===========================================================================
+
 
 @cocotb.test()
 async def test_debug_gpr_write(dut):
@@ -517,8 +534,8 @@ async def test_debug_gpr_write(dut):
 
     # Load program: copy x1 to x3, then EBREAK
     dut._log.info("Loading program...")
-    axi_driver.write_word(0x0000, ADDI_X3_X1_0)   # 0x0000: ADDI x3, x1, 0
-    axi_driver.write_word(0x0004, EBREAK)          # 0x0004: EBREAK
+    axi_driver.write_word(0x0000, ADDI_X3_X1_0)  # 0x0000: ADDI x3, x1, 0
+    axi_driver.write_word(0x0004, EBREAK)  # 0x0004: EBREAK
     dut._log.info(f"  0x0000: ADDI x3, x1, 0  (0x{ADDI_X3_X1_0:08x})  -> copies x1 to x3")
     dut._log.info(f"  0x0004: EBREAK          (0x{EBREAK:08x})")
 
@@ -537,7 +554,9 @@ async def test_debug_gpr_write(dut):
     # Verify x1 was written (readback while halted)
     x1_read = await apb_driver.read_gpr(1)
     dut._log.info(f"x1 readback while halted: 0x{x1_read:08x} (expected 0x{test_value:08x})")
-    assert x1_read == test_value, f"x1 readback failed: expected 0x{test_value:08x}, got 0x{x1_read:08x}"
+    assert x1_read == test_value, (
+        f"x1 readback failed: expected 0x{test_value:08x}, got 0x{x1_read:08x}"
+    )
 
     # Set PC to start of program
     dut._log.info("Setting PC = 0x0000")
@@ -553,7 +572,9 @@ async def test_debug_gpr_write(dut):
     x3_val = await apb_driver.read_gpr(3)
     x0_val = await apb_driver.read_gpr(0)
     pc_val = await apb_driver.read_pc()
-    dut._log.info(f"After EBREAK: halted={halted}, status=0x{status:08x}, halt_cause=0x{halt_cause:x}")
+    dut._log.info(
+        f"After EBREAK: halted={halted}, status=0x{status:08x}, halt_cause=0x{halt_cause:x}"
+    )
     dut._log.info(f"  PC = 0x{pc_val:08x}")
     dut._log.info(f"  x3 = 0x{x3_val:08x} (expected 0x{test_value:08x})")
     dut._log.info(f"  x0 = 0x{x0_val:08x} (expected 0x00000000)")
@@ -574,6 +595,7 @@ async def test_debug_gpr_write(dut):
 # ===========================================================================
 # Test 5: PC Write Redirects Execution
 # ===========================================================================
+
 
 @cocotb.test()
 async def test_debug_pc_write(dut):
@@ -605,10 +627,10 @@ async def test_debug_pc_write(dut):
 
     # Load program
     dut._log.info("Loading program...")
-    axi_driver.write_word(0x0000, ADDI_X1_X0_1)   # 0x0000: ADDI x1, x0, 1 (skip)
-    axi_driver.write_word(0x0004, ADDI_X1_X0_2)   # 0x0004: ADDI x1, x0, 2 (skip)
-    axi_driver.write_word(0x0008, ADDI_X1_X0_3)   # 0x0008: ADDI x1, x0, 3 (execute)
-    axi_driver.write_word(0x000C, EBREAK)          # 0x000C: EBREAK
+    axi_driver.write_word(0x0000, ADDI_X1_X0_1)  # 0x0000: ADDI x1, x0, 1 (skip)
+    axi_driver.write_word(0x0004, ADDI_X1_X0_2)  # 0x0004: ADDI x1, x0, 2 (skip)
+    axi_driver.write_word(0x0008, ADDI_X1_X0_3)  # 0x0008: ADDI x1, x0, 3 (execute)
+    axi_driver.write_word(0x000C, EBREAK)  # 0x000C: EBREAK
     dut._log.info(f"  0x0000: ADDI x1, x0, 1  (0x{ADDI_X1_X0_1:08x})  <- will be SKIPPED")
     dut._log.info(f"  0x0004: ADDI x1, x0, 2  (0x{ADDI_X1_X0_2:08x})  <- will be SKIPPED")
     dut._log.info(f"  0x0008: ADDI x1, x0, 3  (0x{ADDI_X1_X0_3:08x})  <- execution starts here")
@@ -639,7 +661,9 @@ async def test_debug_pc_write(dut):
 
     x1_val = await apb_driver.read_gpr(1)
     pc_val = await apb_driver.read_pc()
-    dut._log.info(f"After EBREAK: halted={halted}, status=0x{status:08x}, halt_cause=0x{halt_cause:x}")
+    dut._log.info(
+        f"After EBREAK: halted={halted}, status=0x{status:08x}, halt_cause=0x{halt_cause:x}"
+    )
     dut._log.info(f"  PC = 0x{pc_val:08x}")
     dut._log.info(f"  x1 = 0x{x1_val:08x} (expected 0x00000003)")
 
@@ -658,6 +682,7 @@ async def test_debug_pc_write(dut):
 # ===========================================================================
 # Test 6: APB Read DBG_CTRL and DBG_INSTR registers
 # ===========================================================================
+
 
 @cocotb.test()
 async def test_debug_reg_reads(dut):

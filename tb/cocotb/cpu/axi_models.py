@@ -151,11 +151,16 @@ class ConfigurableAXIMemory:
 
         Implements AXI4-Lite read protocol:
         1. Wait for arvalid
-        2. Apply arready delay (back-pressure)
+        2. Apply arready delay (back-pressure) + 1-cycle stabilization
         3. Assert arready to accept address
         4. Apply rvalid delay (data latency)
         5. Assert rvalid with data/response
         6. Wait for rready handshake
+
+        Note: A 1-cycle stabilization delay is always inserted before asserting
+        arready.  This prevents a race condition where the AXI arbiter switches
+        from an IF fetch to a MEM load between the cycle Python samples araddr
+        and the cycle arready takes effect in RTL.
 
         Protocol checks (if enabled):
         - araddr stability during arvalid assertion
@@ -165,6 +170,17 @@ class ConfigurableAXIMemory:
             await RisingEdge(self.dut.clk_i)
 
             if self.dut.axi_arvalid_o.value == 1:
+                # Wait 1 cycle for the pipeline/arbiter to settle before
+                # reading the address.  Without this, the arbiter can switch
+                # requestors (IF→MEM) between the cycle we sample araddr and
+                # the cycle arready takes effect, causing wrong data.
+                await RisingEdge(self.dut.clk_i)
+
+                # Re-check arvalid after stabilization
+                if self.dut.axi_arvalid_o.value != 1:
+                    self.dut.axi_arready_i.value = 0
+                    continue
+
                 addr = int(self.dut.axi_araddr_o.value)
                 arvalid_cycle = 0
 

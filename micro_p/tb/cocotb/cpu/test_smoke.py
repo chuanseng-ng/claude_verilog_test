@@ -17,12 +17,43 @@ from cocotb.triggers import ClockCycles, ReadOnly, RisingEdge
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from sim.riscv_encoder import (
-    ADD, AND, ANDI, AUIPC,
-    BEQ, BGE, BGEU, BLT, BLTU, BNE,
-    JAL, JALR,
-    LB, LBU, LH, LHU, LUI, LW,
-    ADDI, SLLI, SLTI, SLTIU, SLTU, SLT, SRA, SRAI, SRL, SRLI, SUB,
-    ORI, OR, SB, SH, SLL, SW, XOR, XORI,
+    ADD,
+    AND,
+    ANDI,
+    AUIPC,
+    BEQ,
+    BGE,
+    BGEU,
+    BLT,
+    BLTU,
+    BNE,
+    JAL,
+    JALR,
+    LB,
+    LBU,
+    LH,
+    LHU,
+    LUI,
+    LW,
+    ADDI,
+    SLLI,
+    SLTI,
+    SLTIU,
+    SLTU,
+    SLT,
+    SRA,
+    SRAI,
+    SRL,
+    SRLI,
+    SUB,
+    ORI,
+    OR,
+    SB,
+    SH,
+    SLL,
+    SW,
+    XOR,
+    XORI,
 )
 from tb.cocotb.common.clock_reset import reset_dut
 from tb.cocotb.common.coverage import CoverageReport
@@ -509,27 +540,54 @@ async def test_isa_coverage(dut):
     #  [47]  0x0BC  JAL  x0, 0          infinite loop (all 37 insns done)
     NOP = ADDI(0, 0, 0)
     program = [
-        LUI(1, 1),           ADDI(2, 0, 16),        AUIPC(3, 0),
-        ADDI(4, 0, 5),       ADDI(5, 0, -5),
-        SW(2, 1, 0),         SH(2, 1, 4),            SB(2, 1, 8),
-        LW(6, 1, 0),         LH(7, 1, 4),            LB(8, 1, 8),
-        LHU(9, 1, 4),        LBU(10, 1, 8),
-        ADD(11, 6, 4),       SUB(11, 6, 4),          SLL(11, 4, 4),
-        SLT(11, 4, 6),       SLTU(11, 4, 6),         XOR(11, 4, 6),
-        SRL(11, 6, 4),       SRA(11, 5, 4),          OR(11, 4, 6),
+        LUI(1, 1),
+        ADDI(2, 0, 16),
+        AUIPC(3, 0),
+        ADDI(4, 0, 5),
+        ADDI(5, 0, -5),
+        SW(2, 1, 0),
+        SH(2, 1, 4),
+        SB(2, 1, 8),
+        LW(6, 1, 0),
+        LH(7, 1, 4),
+        LB(8, 1, 8),
+        LHU(9, 1, 4),
+        LBU(10, 1, 8),
+        ADD(11, 6, 4),
+        SUB(11, 6, 4),
+        SLL(11, 4, 4),
+        SLT(11, 4, 6),
+        SLTU(11, 4, 6),
+        XOR(11, 4, 6),
+        SRL(11, 6, 4),
+        SRA(11, 5, 4),
+        OR(11, 4, 6),
         AND(11, 4, 6),
-        SLTI(11, 4, 10),     SLTIU(11, 4, 10),       XORI(11, 4, 0xFF),
-        ORI(11, 4, 0xF0),    ANDI(11, 4, 0x0F),      SLLI(11, 4, 2),
-        SRLI(11, 6, 1),      SRAI(11, 5, 1),
-        BEQ(6, 6, 8),        NOP,
-        BNE(4, 6, 8),        NOP,
-        BLT(4, 6, 8),        NOP,
-        BGE(6, 4, 8),        NOP,
-        BLTU(4, 6, 8),       NOP,
-        BGEU(6, 4, 8),       NOP,
-        JAL(0, 12),          NOP, NOP,
+        SLTI(11, 4, 10),
+        SLTIU(11, 4, 10),
+        XORI(11, 4, 0xFF),
+        ORI(11, 4, 0xF0),
+        ANDI(11, 4, 0x0F),
+        SLLI(11, 4, 2),
+        SRLI(11, 6, 1),
+        SRAI(11, 5, 1),
+        BEQ(6, 6, 8),
+        NOP,
+        BNE(4, 6, 8),
+        NOP,
+        BLT(4, 6, 8),
+        NOP,
+        BGE(6, 4, 8),
+        NOP,
+        BLTU(4, 6, 8),
+        NOP,
+        BGEU(6, 4, 8),
+        NOP,
+        JAL(0, 12),
+        NOP,
+        NOP,
         JALR(0, 3, 0xB4),
-        JAL(0, 0),           # infinite loop — all 37 instructions executed
+        JAL(0, 0),  # infinite loop — all 37 instructions executed
     ]
     for i, insn in enumerate(program):
         mem.write_word(i * 4, insn)
@@ -577,20 +635,20 @@ async def test_random_10k_instructions(dut):
 
     program = []
     for _ in range(NUM_INSNS):
-        rd = random.randint(1, 31)   # x1–x31 (never write x0)
+        rd = random.randint(1, 31)  # x1–x31 (never write x0)
         rs1 = random.randint(0, 31)
         choice = random.randint(0, 2)
-        if choice == 0:              # R-type
+        if choice == 0:  # R-type
             rs2 = random.randint(0, 31)
             program.append(random.choice(r_ops)(rd, rs1, rs2))
-        elif choice == 1:            # I-type arithmetic
+        elif choice == 1:  # I-type arithmetic
             imm = random.randint(-2048, 2047)
             program.append(random.choice(i_ops)(rd, rs1, imm))
-        else:                        # Shift immediate
+        else:  # Shift immediate
             shamt = random.randint(0, 31)
             program.append(random.choice(sh_ops)(rd, rs1, shamt))
 
-    program.append(JAL(0, 0))       # infinite loop — all instructions done
+    program.append(JAL(0, 0))  # infinite loop — all instructions done
 
     for i, insn in enumerate(program):
         mem.write_word(i * 4, insn)
@@ -599,9 +657,7 @@ async def test_random_10k_instructions(dut):
     await ClockCycles(dut.clk_i, NUM_INSNS * 10 + 2000)
 
     dut._log.info(f"Total commits: {count[0]}")
-    assert count[0] >= NUM_INSNS, (
-        f"Expected {NUM_INSNS}+ commits, got {count[0]} (seed={SEED})"
-    )
+    assert count[0] >= NUM_INSNS, f"Expected {NUM_INSNS}+ commits, got {count[0]} (seed={SEED})"
     passed = scoreboard.report()
     assert passed, f"Scoreboard validation failed (seed={SEED})"
     dut._log.info(f"Random 10k instructions test passed (seed={SEED})")

@@ -58,20 +58,28 @@ module rv32i_regfile (
   end
 
   // Combinational read port 1
+  // Write-before-read: if WB is writing the same register this cycle, forward the
+  // new value directly so the ID stage doesn't see a stale regfile entry.
+  // This covers the case where an instruction commits in WB at the same cycle
+  // that its consumer is decoded in ID (addi_x2 in WB, BEQ in ID).
+  // Without this, the MEM→EX forwarding path misses it because addi_x2 has
+  // already left MEM/WB by the time BEQ reaches EX.
   always_comb begin
-    // x0 always reads as zero
     if (rd_addr1 == 5'h0) begin
       rd_data1 = 32'h0;
+    end else if (wr_en && (wr_addr == rd_addr1)) begin
+      rd_data1 = wr_data;           // Forward WB write → ID read (same cycle)
     end else begin
       rd_data1 = regs[rd_addr1];
     end
   end
 
-  // Combinational read port 2
+  // Combinational read port 2 (same write-before-read logic)
   always_comb begin
-    // x0 always reads as zero
     if (rd_addr2 == 5'h0) begin
       rd_data2 = 32'h0;
+    end else if (wr_en && (wr_addr == rd_addr2)) begin
+      rd_data2 = wr_data;
     end else begin
       rd_data2 = regs[rd_addr2];
     end

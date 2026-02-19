@@ -32,13 +32,24 @@ from cocotb.triggers import RisingEdge
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
-from sim.riscv_encoder import ADDI, JAL, LH, SB, SH, SW, encode_b_type, encode_i_type, encode_r_type, encode_s_type
+from sim.riscv_encoder import (
+    ADDI,
+    JAL,
+    LH,
+    SB,
+    SH,
+    SW,
+    encode_b_type,
+    encode_i_type,
+    encode_r_type,
+    encode_s_type,
+)
 from tb.cocotb.common.clock_reset import reset_dut
 from tb.cocotb.cpu.axi_models import ConfigurableAXIMemory
 
 # Trap cause constants matching rv32i_control.sv localparams
-TRAP_ILLEGAL_INSN     = 2
-TRAP_LOAD_MISALIGNED  = 4
+TRAP_ILLEGAL_INSN = 2
+TRAP_LOAD_MISALIGNED = 4
 TRAP_STORE_MISALIGNED = 6
 
 # EBREAK encoding (funct12=0x001, rs1=0, funct3=0, rd=0, opcode=SYSTEM=0x73)
@@ -50,13 +61,14 @@ EBREAK = 0x00100073
 ILLEGAL_BAD_FUNCT7 = (0b0110000 << 25) | (1 << 7) | 0b0110011  # = 0x600000B3
 
 # Module-level references for stale-task cleanup between tests
-_prev_mem        = None
+_prev_mem = None
 _prev_clock_task = None
 
 
 # ===========================================================================
 # Shared helpers
 # ===========================================================================
+
 
 async def _setup_fault_test(dut):
     """Start clock, reset DUT, return a fresh ConfigurableAXIMemory.
@@ -119,6 +131,7 @@ async def _wait_for_trap(dut, max_cycles=200):
 # Test 1: Misaligned Load
 # ===========================================================================
 
+
 @cocotb.test()
 async def test_misaligned_load(dut):
     """LH to odd effective address triggers TRAP_LOAD_MISALIGNED (cause=4).
@@ -138,7 +151,7 @@ async def test_misaligned_load(dut):
     mem = await _setup_fault_test(dut)
 
     mem.write_word(0x0000, ADDI(1, 0, 1))  # ADDI x1, x0, 1  → x1 = 1
-    mem.write_word(0x0004, LH(2, 1, 0))   # LH  x2, 0(x1)   → EA = 1 (misaligned)
+    mem.write_word(0x0004, LH(2, 1, 0))  # LH  x2, 0(x1)   → EA = 1 (misaligned)
     mem.write_word(0x0008, EBREAK)
     dut._log.info("  0x0000: ADDI x1, x0, 1  (x1 = 1)")
     dut._log.info("  0x0004: LH x2, 0(x1)   (EA=1, misaligned)")
@@ -147,11 +160,11 @@ async def test_misaligned_load(dut):
     trap_taken, trap_cause = await _wait_for_trap(dut, max_cycles=200)
 
     dut._log.info(f"Result: trap_taken_o={trap_taken}, trap_cause_o={trap_cause}")
-    assert trap_taken, \
+    assert trap_taken, (
         "trap_taken_o never went high within 200 cycles (expected misaligned LH trap)"
+    )
     assert trap_cause == TRAP_LOAD_MISALIGNED, (
-        f"Expected trap_cause_o={TRAP_LOAD_MISALIGNED} (TRAP_LOAD_MISALIGNED), "
-        f"got {trap_cause}"
+        f"Expected trap_cause_o={TRAP_LOAD_MISALIGNED} (TRAP_LOAD_MISALIGNED), got {trap_cause}"
     )
 
     dut._log.info("TEST PASSED: test_misaligned_load")
@@ -161,6 +174,7 @@ async def test_misaligned_load(dut):
 # ===========================================================================
 # Test 2: Misaligned Store
 # ===========================================================================
+
 
 @cocotb.test()
 async def test_misaligned_store(dut):
@@ -181,7 +195,7 @@ async def test_misaligned_store(dut):
     mem = await _setup_fault_test(dut)
 
     mem.write_word(0x0000, ADDI(1, 0, 3))  # ADDI x1, x0, 3  → x1 = 3
-    mem.write_word(0x0004, SW(2, 1, 0))    # SW   x2, 0(x1)  → EA = 3 (misaligned)
+    mem.write_word(0x0004, SW(2, 1, 0))  # SW   x2, 0(x1)  → EA = 3 (misaligned)
     mem.write_word(0x0008, EBREAK)
     dut._log.info("  0x0000: ADDI x1, x0, 3  (x1 = 3)")
     dut._log.info("  0x0004: SW x2, 0(x1)   (EA=3, misaligned)")
@@ -190,11 +204,11 @@ async def test_misaligned_store(dut):
     trap_taken, trap_cause = await _wait_for_trap(dut, max_cycles=200)
 
     dut._log.info(f"Result: trap_taken_o={trap_taken}, trap_cause_o={trap_cause}")
-    assert trap_taken, \
+    assert trap_taken, (
         "trap_taken_o never went high within 200 cycles (expected misaligned SW trap)"
+    )
     assert trap_cause == TRAP_STORE_MISALIGNED, (
-        f"Expected trap_cause_o={TRAP_STORE_MISALIGNED} (TRAP_STORE_MISALIGNED), "
-        f"got {trap_cause}"
+        f"Expected trap_cause_o={TRAP_STORE_MISALIGNED} (TRAP_STORE_MISALIGNED), got {trap_cause}"
     )
 
     dut._log.info("TEST PASSED: test_misaligned_store")
@@ -204,6 +218,7 @@ async def test_misaligned_store(dut):
 # ===========================================================================
 # Test 3: Illegal Instruction
 # ===========================================================================
+
 
 @cocotb.test()
 async def test_illegal_instruction(dut):
@@ -233,11 +248,11 @@ async def test_illegal_instruction(dut):
     trap_taken, trap_cause = await _wait_for_trap(dut, max_cycles=200)
 
     dut._log.info(f"  trap_taken_o={trap_taken}, trap_cause_o={trap_cause}")
-    assert trap_taken, \
+    assert trap_taken, (
         "trap_taken_o never went high within 200 cycles (0xFFFFFFFF should be illegal)"
+    )
     assert trap_cause == TRAP_ILLEGAL_INSN, (
-        f"Expected trap_cause_o={TRAP_ILLEGAL_INSN} (TRAP_ILLEGAL_INSN), "
-        f"got {trap_cause}"
+        f"Expected trap_cause_o={TRAP_ILLEGAL_INSN} (TRAP_ILLEGAL_INSN), got {trap_cause}"
     )
     dut._log.info("  Sub-test 3a PASSED")
 
@@ -260,8 +275,7 @@ async def test_illegal_instruction(dut):
         f"(OP_REG funct7=0b0110000 should be illegal, insn=0x{ILLEGAL_BAD_FUNCT7:08x})"
     )
     assert trap_cause == TRAP_ILLEGAL_INSN, (
-        f"Expected trap_cause_o={TRAP_ILLEGAL_INSN} (TRAP_ILLEGAL_INSN), "
-        f"got {trap_cause}"
+        f"Expected trap_cause_o={TRAP_ILLEGAL_INSN} (TRAP_ILLEGAL_INSN), got {trap_cause}"
     )
     dut._log.info("  Sub-test 3b PASSED")
 
@@ -272,6 +286,7 @@ async def test_illegal_instruction(dut):
 # ===========================================================================
 # Test 4: AXI Fetch Error Trap
 # ===========================================================================
+
 
 @cocotb.test()
 async def test_axi_fetch_error_trap(dut):
@@ -303,8 +318,7 @@ async def test_axi_fetch_error_trap(dut):
     trap_taken, trap_cause = await _wait_for_trap(dut, max_cycles=200)
 
     dut._log.info(f"Result: trap_taken_o={trap_taken}, trap_cause_o={trap_cause}")
-    assert trap_taken, \
-        "trap_taken_o never went high within 200 cycles (expected AXI SLVERR trap)"
+    assert trap_taken, "trap_taken_o never went high within 200 cycles (expected AXI SLVERR trap)"
     assert trap_cause == TRAP_ILLEGAL_INSN, (
         f"Expected trap_cause_o={TRAP_ILLEGAL_INSN} (TRAP_ILLEGAL_INSN — AXI errors "
         f"use this code per rv32i_control.sv), got {trap_cause}"
@@ -319,12 +333,12 @@ async def test_axi_fetch_error_trap(dut):
 # ===========================================================================
 
 # OP opcodes
-_OP_JALR   = 0b1100111
+_OP_JALR = 0b1100111
 _OP_BRANCH = 0b1100011
-_OP_LOAD   = 0b0000011
-_OP_STORE  = 0b0100011
-_OP_IMM    = 0b0010011
-_OP_REG    = 0b0110011
+_OP_LOAD = 0b0000011
+_OP_STORE = 0b0100011
+_OP_IMM = 0b0010011
+_OP_REG = 0b0110011
 _OP_SYSTEM = 0b1110011
 
 # One representative bad funct7 that is invalid for every OP_REG funct3
@@ -335,54 +349,33 @@ _BAD_FUNCT7 = 0b0110000
 # Each encoding targets a specific `else/default: illegal = 1'b1;` line in rv32i_decode.sv.
 _DECODER_ILLEGAL_CASES = [
     # JALR: only funct3=000 is valid
-    ("JALR funct3=001",
-     encode_i_type(0, 0, 0b001, 1, _OP_JALR)),
-
+    ("JALR funct3=001", encode_i_type(0, 0, 0b001, 1, _OP_JALR)),
     # BRANCH: funct3=010 and 011 are undefined (valid: 000,001,100,101,110,111)
-    ("BRANCH funct3=010",
-     encode_b_type(8, 0, 0, 0b010)),
-
+    ("BRANCH funct3=010", encode_b_type(8, 0, 0, 0b010)),
     # LOAD: funct3=011, 110, 111 are undefined (valid: 000,001,010,100,101)
-    ("LOAD funct3=011",
-     encode_i_type(0, 0, 0b011, 1, _OP_LOAD)),
-    ("LOAD funct3=110",
-     encode_i_type(0, 0, 0b110, 1, _OP_LOAD)),
-    ("LOAD funct3=111",
-     encode_i_type(0, 0, 0b111, 1, _OP_LOAD)),
-
+    ("LOAD funct3=011", encode_i_type(0, 0, 0b011, 1, _OP_LOAD)),
+    ("LOAD funct3=110", encode_i_type(0, 0, 0b110, 1, _OP_LOAD)),
+    ("LOAD funct3=111", encode_i_type(0, 0, 0b111, 1, _OP_LOAD)),
     # STORE: funct3=011..111 are undefined (valid: 000,001,010)
-    ("STORE funct3=011",
-     encode_s_type(0, 0, 0, 0b011)),
-
+    ("STORE funct3=011", encode_s_type(0, 0, 0, 0b011)),
     # OP_IMM SLLI (funct3=001): funct7 must be 0b0000000; anything else is illegal
-    ("OP_IMM SLLI bad funct7",
-     encode_i_type((0b0100000 << 5) | 0, 0, 0b001, 1, _OP_IMM)),
-
+    ("OP_IMM SLLI bad funct7", encode_i_type((0b0100000 << 5) | 0, 0, 0b001, 1, _OP_IMM)),
     # OP_IMM SRLI/SRAI (funct3=101): funct7 must be 0b0000000 or 0b0100000
-    ("OP_IMM SRL/SRA bad funct7",
-     encode_i_type((_BAD_FUNCT7 << 5) | 0, 0, 0b101, 1, _OP_IMM)),
-
+    ("OP_IMM SRL/SRA bad funct7", encode_i_type((_BAD_FUNCT7 << 5) | 0, 0, 0b101, 1, _OP_IMM)),
     # OP_REG: bad funct7 for each funct3 (all 8 funct3 have exactly one or two valid funct7s)
-    ("OP_REG ADD_SUB bad funct7",
-     encode_r_type(_BAD_FUNCT7, 0, 0, 0b000, 1)),
-    ("OP_REG SLL bad funct7",
-     encode_r_type(_BAD_FUNCT7, 0, 0, 0b001, 1)),
-    ("OP_REG SLT bad funct7",
-     encode_r_type(_BAD_FUNCT7, 0, 0, 0b010, 1)),
-    ("OP_REG SLTU bad funct7",
-     encode_r_type(_BAD_FUNCT7, 0, 0, 0b011, 1)),
-    ("OP_REG XOR bad funct7",
-     encode_r_type(_BAD_FUNCT7, 0, 0, 0b100, 1)),
-    ("OP_REG SRL/SRA bad funct7",
-     encode_r_type(_BAD_FUNCT7, 0, 0, 0b101, 1)),
-    ("OP_REG OR bad funct7",
-     encode_r_type(_BAD_FUNCT7, 0, 0, 0b110, 1)),
-    ("OP_REG AND bad funct7",
-     encode_r_type(_BAD_FUNCT7, 0, 0, 0b111, 1)),
-
+    ("OP_REG ADD_SUB bad funct7", encode_r_type(_BAD_FUNCT7, 0, 0, 0b000, 1)),
+    ("OP_REG SLL bad funct7", encode_r_type(_BAD_FUNCT7, 0, 0, 0b001, 1)),
+    ("OP_REG SLT bad funct7", encode_r_type(_BAD_FUNCT7, 0, 0, 0b010, 1)),
+    ("OP_REG SLTU bad funct7", encode_r_type(_BAD_FUNCT7, 0, 0, 0b011, 1)),
+    ("OP_REG XOR bad funct7", encode_r_type(_BAD_FUNCT7, 0, 0, 0b100, 1)),
+    ("OP_REG SRL/SRA bad funct7", encode_r_type(_BAD_FUNCT7, 0, 0, 0b101, 1)),
+    ("OP_REG OR bad funct7", encode_r_type(_BAD_FUNCT7, 0, 0, 0b110, 1)),
+    ("OP_REG AND bad funct7", encode_r_type(_BAD_FUNCT7, 0, 0, 0b111, 1)),
     # OP_SYSTEM else: ECALL (imm12=0x000) is not supported in Phase 1
-    ("OP_SYSTEM ECALL (unsupported)",
-     0x00000073),  # ECALL: funct12=0x000 != 0x001 (EBREAK) → illegal
+    (
+        "OP_SYSTEM ECALL (unsupported)",
+        0x00000073,
+    ),  # ECALL: funct12=0x000 != 0x001 (EBREAK) → illegal
 ]
 
 
@@ -420,8 +413,7 @@ async def test_decoder_illegal_subcodes(dut):
 
         dut._log.info(f"  trap_taken_o={trap_taken}, trap_cause_o={trap_cause}")
         assert trap_taken, (
-            f"[{desc}] trap_taken_o never went high "
-            f"(insn=0x{encoding:08x} should be illegal)"
+            f"[{desc}] trap_taken_o never went high (insn=0x{encoding:08x} should be illegal)"
         )
         assert trap_cause == TRAP_ILLEGAL_INSN, (
             f"[{desc}] Expected trap_cause_o={TRAP_ILLEGAL_INSN}, got {trap_cause}"
@@ -436,6 +428,7 @@ async def test_decoder_illegal_subcodes(dut):
 # ===========================================================================
 # Test 6: Byte Store Alignment (all 4 byte-lane strobes)
 # ===========================================================================
+
 
 @cocotb.test()
 async def test_byte_store_alignment(dut):
@@ -461,11 +454,11 @@ async def test_byte_store_alignment(dut):
 
     # x1 = 0x100 (base address), x2 = 0x55 (data)
     mem.write_word(0x0000, ADDI(1, 0, 0x100))  # ADDI x1, x0, 0x100
-    mem.write_word(0x0004, ADDI(2, 0, 0x55))   # ADDI x2, x0, 0x55
-    mem.write_word(0x0008, SB(2, 1, 1))        # SB x2, 1(x1)  → addr=0x101, [1:0]=01
-    mem.write_word(0x000C, SB(2, 1, 2))        # SB x2, 2(x1)  → addr=0x102, [1:0]=10
-    mem.write_word(0x0010, SB(2, 1, 3))        # SB x2, 3(x1)  → addr=0x103, [1:0]=11
-    mem.write_word(0x0014, 0xFFFFFFFF)         # illegal instruction → TRAP_ILLEGAL_INSN
+    mem.write_word(0x0004, ADDI(2, 0, 0x55))  # ADDI x2, x0, 0x55
+    mem.write_word(0x0008, SB(2, 1, 1))  # SB x2, 1(x1)  → addr=0x101, [1:0]=01
+    mem.write_word(0x000C, SB(2, 1, 2))  # SB x2, 2(x1)  → addr=0x102, [1:0]=10
+    mem.write_word(0x0010, SB(2, 1, 3))  # SB x2, 3(x1)  → addr=0x103, [1:0]=11
+    mem.write_word(0x0014, 0xFFFFFFFF)  # illegal instruction → TRAP_ILLEGAL_INSN
 
     dut._log.info("  0x0000: ADDI x1, x0, 0x100  (base addr)")
     dut._log.info("  0x0004: ADDI x2, x0, 0x55   (data)")
@@ -477,8 +470,9 @@ async def test_byte_store_alignment(dut):
     trap_taken, trap_cause = await _wait_for_trap(dut, max_cycles=500)
 
     dut._log.info(f"Result: trap_taken_o={trap_taken}, trap_cause_o={trap_cause}")
-    assert trap_taken, \
+    assert trap_taken, (
         "trap_taken_o never went high — CPU never reached illegal sentinel (SB may have stalled)"
+    )
     assert trap_cause == TRAP_ILLEGAL_INSN, (
         f"Expected trap_cause_o={TRAP_ILLEGAL_INSN} (TRAP_ILLEGAL_INSN from sentinel), "
         f"got {trap_cause} — if cause=6 an SB unexpectedly triggered a misalignment trap"
@@ -491,6 +485,7 @@ async def test_byte_store_alignment(dut):
 # ===========================================================================
 # Test 7: Halfword Store Upper Alignment (addr[1]=1 → wstrb=1100)
 # ===========================================================================
+
 
 @cocotb.test()
 async def test_halfword_store_upper(dut):
@@ -510,9 +505,9 @@ async def test_halfword_store_upper(dut):
 
     # x1 = 0x100 (base address), x2 = 0x34 (data)
     mem.write_word(0x0000, ADDI(1, 0, 0x100))  # ADDI x1, x0, 0x100
-    mem.write_word(0x0004, ADDI(2, 0, 0x34))   # ADDI x2, x0, 0x34
-    mem.write_word(0x0008, SH(2, 1, 2))        # SH x2, 2(x1)  → addr=0x102, [1]=1 → wstrb=1100
-    mem.write_word(0x000C, 0xFFFFFFFF)         # illegal instruction → TRAP_ILLEGAL_INSN
+    mem.write_word(0x0004, ADDI(2, 0, 0x34))  # ADDI x2, x0, 0x34
+    mem.write_word(0x0008, SH(2, 1, 2))  # SH x2, 2(x1)  → addr=0x102, [1]=1 → wstrb=1100
+    mem.write_word(0x000C, 0xFFFFFFFF)  # illegal instruction → TRAP_ILLEGAL_INSN
 
     dut._log.info("  0x0000: ADDI x1, x0, 0x100  (base addr)")
     dut._log.info("  0x0004: ADDI x2, x0, 0x34   (data)")
@@ -522,8 +517,9 @@ async def test_halfword_store_upper(dut):
     trap_taken, trap_cause = await _wait_for_trap(dut, max_cycles=300)
 
     dut._log.info(f"Result: trap_taken_o={trap_taken}, trap_cause_o={trap_cause}")
-    assert trap_taken, \
+    assert trap_taken, (
         "trap_taken_o never went high — CPU never reached illegal sentinel (SH may have stalled)"
+    )
     assert trap_cause == TRAP_ILLEGAL_INSN, (
         f"Expected trap_cause_o={TRAP_ILLEGAL_INSN} (TRAP_ILLEGAL_INSN from sentinel), "
         f"got {trap_cause} — if cause=6 the SH triggered an unexpected misalignment trap"

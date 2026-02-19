@@ -31,16 +31,30 @@ TEST_MODULES := \
 	tb.cocotb.cpu.test_axi_protocol \
 	tb.cocotb.cpu.test_debug_if \
 	tb.cocotb.cpu.test_isa_uvm \
-	tb.cocotb.cpu.test_fault_injection
+	tb.cocotb.cpu.test_fault_injection \
+	tb.cocotb.cpu.test_pipeline_hazards \
+	tb.cocotb.cpu.test_interrupts
 
-# RTL source files
+# RTL source files (Phase 2: 5-stage pipeline)
+# rv32i_pipeline_pkg.sv is included via `include in the stage files;
+# it must appear first so Verilator can resolve the package.
 VERILOG_SOURCES := \
+	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
 	$(RTL_DIR)/cpu/core/rv32i_imm_gen.sv \
 	$(RTL_DIR)/cpu/core/rv32i_regfile.sv \
 	$(RTL_DIR)/cpu/core/rv32i_decode.sv \
 	$(RTL_DIR)/cpu/core/rv32i_branch_comp.sv \
-	$(RTL_DIR)/cpu/core/rv32i_control.sv \
+	$(RTL_DIR)/cpu/core/rv32i_hazard_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_forwarding_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_csr_file.sv \
+	$(RTL_DIR)/cpu/core/rv32i_interrupt_ctrl.sv \
+	$(RTL_DIR)/cpu/rv32i_axi_arbiter.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_if.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_id.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_mem.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_wb.sv \
 	$(RTL_DIR)/cpu/core/rv32i_core.sv \
 	$(RTL_DIR)/cpu/rv32i_cpu_top.sv
 
@@ -57,6 +71,7 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += --timescale 1ns/1ps
 	COMPILE_ARGS += --public-flat-rw
 	COMPILE_ARGS += --no-timing
+	COMPILE_ARGS += -I$(RTL_DIR)/cpu/core
 ifdef COVERAGE
 	COMPILE_ARGS += --coverage
 	EXTRA_ARGS   += --coverage
@@ -79,7 +94,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 # Standalone Targets (work without cocotb)
 # ============================================================================
 
-.PHONY: help lint clean-basic
+.PHONY: help lint distclean
 
 help:
 	@echo "RV32I CPU Simulation Makefile"
@@ -91,8 +106,10 @@ help:
 	@echo "  make lint         - Run Verilator lint check"
 	@echo "  make axi          - Run AXI protocol tests only"
 	@echo "  make debug        - Run APB3 debug interface tests only"
+	@echo "  make hazards      - Run Phase 2 pipeline hazard tests only"
+	@echo "  make interrupts   - Run Phase 2 interrupt and CSR tests only"
 	@echo "  make coverage     - Run all tests with Verilator coverage + generate reports"
-	@echo "  make clean        - Clean simulation artifacts"
+	@echo "  make distclean    - Clean simulation artifacts"
 	@echo "  make help         - Show this help"
 	@echo ""
 	@echo "Variables:"
@@ -116,18 +133,14 @@ help:
 
 lint:
 	@echo "Running Verilator lint check..."
-	@verilator --lint-only -Wall \
+	@command -v verilator >/dev/null 2>&1 || { echo "ERROR: Verilator not found. Install with: sudo apt-get install verilator, or run from WSL"; exit 1; }
+	@verilator --lint-only -Wall -Wno-fatal \
 		--top-module $(DUT) \
-		$(VERILOG_SOURCES) 2>&1 || echo "Verilator not found. Install with: sudo apt-get install verilator, or run from WSL"
-
-clean-basic:
-	@echo "Cleaning simulation artifacts..."
-	@rm -rf obj_dir 2>/dev/null || true
-	@rm -rf __pycache__ 2>/dev/null || true
-	@rm -rf sim_build 2>/dev/null || true
-	@rm -f dump.vcd 2>/dev/null || true
-	@rm -f results.xml 2>/dev/null || true
-	@rm -f *.log 2>/dev/null || true
+		-I$(RTL_DIR)/cpu/core \
+		-Wno-IMPORTSTAR \
+		-Wno-UNUSEDSIGNAL \
+		-Wno-UNOPTFLAT \
+		$(VERILOG_SOURCES) 2>&1
 
 # ============================================================================
 # Cocotb Targets (require cocotb installation in WSL)
@@ -207,6 +220,22 @@ debug:
 	@echo ""
 	$(MAKE) sim MODULE=tb.cocotb.cpu.test_debug_if
 
+# Convenience target for Phase 2 pipeline hazard tests
+.PHONY: hazards
+hazards:
+	@echo "Running Phase 2 pipeline hazard tests (RAW forwarding, load-use, branches)..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim MODULE=tb.cocotb.cpu.test_pipeline_hazards
+
+# Convenience target for Phase 2 interrupt / CSR tests
+.PHONY: interrupts
+interrupts:
+	@echo "Running Phase 2 interrupt and CSR instruction tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim MODULE=tb.cocotb.cpu.test_interrupts
+
 # Run all tests with Verilator coverage instrumentation and generate reports
 .PHONY: coverage
 coverage:
@@ -223,5 +252,36 @@ coverage:
 		echo "Note: verilator_coverage not available or no coverage data found"
 	@echo "Coverage report: reports/coverage_annotated/"
 
-# Override clean to use our basic clean
-clean: clean-basic
+# ============================================================================
+# Random / Stress UVM Targets (used by CI)
+# ============================================================================
+
+.PHONY: random_uvm random_uvm_smoke stress_uvm stress_uvm_smoke
+
+random_uvm:
+	@echo "Running pyuvm random instruction tests..."
+	$(MAKE) sim MODULE=tb.cocotb.cpu.test_random_uvm
+
+random_uvm_smoke:
+	@echo "Running pyuvm random instruction tests (SMOKE: 10 seeds × 50 instructions)..."
+	RANDOM_TEST_SMOKE=1 $(MAKE) sim MODULE=tb.cocotb.cpu.test_random_uvm
+
+stress_uvm:
+	@echo "Running pyuvm stress tests (4 profiles: ALU, Jump, Shift, Immediate)..."
+	$(MAKE) sim MODULE=tb.cocotb.cpu.test_stress_uvm
+
+stress_uvm_smoke:
+	@echo "Running pyuvm stress tests (SMOKE: 10 seeds × 100 instr per profile)..."
+	STRESS_TEST_SMOKE=1 $(MAKE) sim MODULE=tb.cocotb.cpu.test_stress_uvm
+
+# Use distclean to avoid conflict with cocotb's clean
+# Note: 'clean' target is only defined when cocotb Makefile is included
+distclean:
+	@echo "Cleaning simulation artifacts..."
+	@$(MAKE) clean 2>/dev/null || true
+	@rm -rf obj_dir 2>/dev/null || true
+	@rm -rf __pycache__ 2>/dev/null || true
+	@rm -rf sim_build 2>/dev/null || true
+	@rm -f dump.vcd 2>/dev/null || true
+	@rm -f results.xml 2>/dev/null || true
+	@rm -f *.log 2>/dev/null || true

@@ -203,7 +203,9 @@ async def test_axi_arready_backpressure(dut):
             stall_cycles = arready_asserted - arvalid_start
             # +1 offset: handler sets arready after the 5th delay edge; due to cocotb
             # coroutine scheduling order the test observes it on the following edge.
-            assert stall_cycles == 6, f"Expected 6-cycle stall (5-cycle delay + 1 scheduling offset), got {stall_cycles} cycles"
+            assert stall_cycles == 6, (
+                f"Expected 6-cycle stall (5-cycle delay + 1 scheduling offset), got {stall_cycles} cycles"
+            )
 
         cycle += 1
 

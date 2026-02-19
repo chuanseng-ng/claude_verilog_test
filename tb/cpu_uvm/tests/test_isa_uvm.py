@@ -105,20 +105,17 @@ async def run_isa_test(dut, sequence_class, sequence_args, test_name="isa_test")
     # Create sequence with the test's environment
     seq = sequence_class(**sequence_args, env=test.env)
 
-    # Reset and halt CPU FIRST, before starting any background tasks
-    # This ensures the CPU is stopped before it can fetch garbage
-    dut._log.info("Applying reset")
-    dut.rst_n_i.value = 0
-    await ClockCycles(dut.clk_i, 5)
-    dut.rst_n_i.value = 1
-    await ClockCycles(dut.clk_i, 2)
+    # Per MEMORY.md "Stale AXI Signals Between cocotb Tests":
+    # Clear AXI signals BEFORE reset, then create handler tasks AFTER reset
+    # Use reset_dut() which properly initializes all AXI/APB signals
+    await test.reset_dut()
 
-    # Immediately halt CPU after reset, before it can fetch
+    # Immediately halt CPU after reset, before it can fetch garbage
     apb_driver = test.env.apb_agent.driver
     await apb_driver.halt_cpu()
     dut._log.info("CPU halted immediately after reset")
 
-    # NOW start background tasks
+    # Start background tasks (AFTER reset and halt)
     cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
     cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
     cocotb.start_soon(test.env.commit_monitor.run_phase())
