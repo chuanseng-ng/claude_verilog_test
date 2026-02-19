@@ -71,10 +71,10 @@ async def reset_dut(dut):
     The RTL top-level uses the _i/_o port suffix convention.
     NOTE: Do NOT use the reset_dut from test_ebreak.py - that file uses
     the old signal names without _i/_o suffixes and is incorrect.
-    """
-    dut.rst_n_i.value = 0
 
-    # Initialize AXI slave inputs to safe idle values
+    Per MEMORY.md: Clear all AXI/APB signals BEFORE asserting reset.
+    """
+    # Initialize AXI slave inputs to safe idle values BEFORE reset
     dut.axi_arready_i.value = 0
     dut.axi_rvalid_i.value = 0
     dut.axi_rdata_i.value = 0
@@ -84,13 +84,15 @@ async def reset_dut(dut):
     dut.axi_bvalid_i.value = 0
     dut.axi_bresp_i.value = 0
 
-    # Initialize APB master inputs to idle
+    # Initialize APB master inputs to idle BEFORE reset
     dut.apb_psel_i.value = 0
     dut.apb_penable_i.value = 0
     dut.apb_pwrite_i.value = 0
     dut.apb_paddr_i.value = 0
     dut.apb_pwdata_i.value = 0
 
+    # Now assert reset
+    dut.rst_n_i.value = 0
     await ClockCycles(dut.clk_i, 5)
     dut.rst_n_i.value = 1
     await ClockCycles(dut.clk_i, 2)

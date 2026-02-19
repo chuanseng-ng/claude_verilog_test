@@ -148,7 +148,11 @@ async def test_addi_uvm(dut):
     test.connect_phase()
     test.end_of_elaboration_phase()
 
-    # Start background tasks for all components
+    # Per MEMORY.md "Stale AXI Signals Between cocotb Tests":
+    # Clear AXI signals BEFORE reset, then create handler tasks AFTER reset
+    await test.reset_dut()
+
+    # Start background tasks for all components (AFTER reset)
     cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
     cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
     cocotb.start_soon(test.env.commit_monitor.run_phase())
@@ -157,8 +161,7 @@ async def test_addi_uvm(dut):
     # Give background tasks a chance to start
     await ClockCycles(dut.clk_i, 2)
 
-    # Reset and run
-    await test.reset_dut()
+    # Run test
     await test.run_phase()
 
     # Report results
@@ -181,7 +184,11 @@ async def test_branch_taken_uvm(dut):
     test.connect_phase()
     test.end_of_elaboration_phase()
 
-    # Start background tasks for all components
+    # Per MEMORY.md "Stale AXI Signals Between cocotb Tests":
+    # Clear AXI signals BEFORE reset, then create handler tasks AFTER reset
+    await test.reset_dut()
+
+    # Start background tasks for all components (AFTER reset)
     cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
     cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
     cocotb.start_soon(test.env.commit_monitor.run_phase())
@@ -190,8 +197,7 @@ async def test_branch_taken_uvm(dut):
     # Give background tasks a chance to start
     await ClockCycles(dut.clk_i, 2)
 
-    # Reset and run
-    await test.reset_dut()
+    # Run test
     await test.run_phase()
 
     # Report results
@@ -214,7 +220,11 @@ async def test_branch_not_taken_uvm(dut):
     test.connect_phase()
     test.end_of_elaboration_phase()
 
-    # Start background tasks for all components
+    # Per MEMORY.md "Stale AXI Signals Between cocotb Tests":
+    # Clear AXI signals BEFORE reset, then create handler tasks AFTER reset
+    await test.reset_dut()
+
+    # Start background tasks for all components (AFTER reset)
     cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
     cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
     cocotb.start_soon(test.env.commit_monitor.run_phase())
@@ -223,8 +233,7 @@ async def test_branch_not_taken_uvm(dut):
     # Give background tasks a chance to start
     await ClockCycles(dut.clk_i, 2)
 
-    # Reset and run
-    await test.reset_dut()
+    # Run test
     await test.run_phase()
 
     # Report results
@@ -247,7 +256,11 @@ async def test_jal_uvm(dut):
     test.connect_phase()
     test.end_of_elaboration_phase()
 
-    # Start background tasks for all components
+    # Per MEMORY.md "Stale AXI Signals Between cocotb Tests":
+    # Clear AXI signals BEFORE reset, then create handler tasks AFTER reset
+    await test.reset_dut()
+
+    # Start background tasks for all components (AFTER reset)
     cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
     cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
     cocotb.start_soon(test.env.commit_monitor.run_phase())
@@ -256,8 +269,7 @@ async def test_jal_uvm(dut):
     # Give background tasks a chance to start
     await ClockCycles(dut.clk_i, 2)
 
-    # Reset and run
-    await test.reset_dut()
+    # Run test
     await test.run_phase()
 
     # Report results

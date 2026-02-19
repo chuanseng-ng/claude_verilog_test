@@ -92,11 +92,28 @@ async def _run_stress_profile(dut, profile_name, waveform_subdir, seed_base, str
     # Track failures
     failed_seeds = []
 
+    # Track background tasks for cleanup between seeds
+    background_tasks = []
+
     for seed_idx in range(num_seeds):
         seed = seed_base + seed_idx
         dut._log.info(f"\n{'=' * 60}")
         dut._log.info(f"{profile_name} Seed {seed_idx + 1}/{num_seeds}: {seed}")
         dut._log.info(f"{'=' * 60}\n")
+
+        # Kill old background tasks from previous seed to prevent race conditions
+        # Per MEMORY.md: stale RTL commits can reach new monitor if tasks aren't killed
+        if background_tasks:
+            dut._log.debug("Killing old background tasks from previous seed")
+            for task in background_tasks:
+                task.kill()
+            background_tasks.clear()
+
+            # CRITICAL: Immediately assert reset to stop CPU before starting new monitor
+            # Per MEMORY.md: If CPU is stuck in a loop (e.g., backward JAL), it will
+            # still commit during ClockCycles wait, reaching the new monitor
+            dut.rst_n_i.value = 0
+            await ClockCycles(dut.clk_i, 2)
 
         # Create and run test
         test = StressTest(
@@ -111,25 +128,21 @@ async def _run_stress_profile(dut, profile_name, waveform_subdir, seed_base, str
         test.connect_phase()
         test.end_of_elaboration_phase()
 
-        # Start background tasks (track for cleanup)
-        bg_tasks = []
-        bg_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler()))
-        bg_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler()))
-        bg_tasks.append(cocotb.start_soon(test.env.commit_monitor.run_phase()))
-        bg_tasks.append(cocotb.start_soon(test.env.scoreboard.run_phase()))
+        # Per MEMORY.md "Stale AXI Signals Between cocotb Tests":
+        # Clear AXI signals BEFORE reset, then create handler tasks AFTER reset
+        # to prevent stale signal values from previous test reaching the new test
+        await test.reset_dut()
+
+        # Start background tasks (AFTER reset) and track them for cleanup
+        background_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler()))
+        background_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler()))
+        background_tasks.append(cocotb.start_soon(test.env.commit_monitor.run_phase()))
+        background_tasks.append(cocotb.start_soon(test.env.scoreboard.run_phase()))
 
         await ClockCycles(dut.clk_i, 2)
 
-        # Reset and run
-        await test.reset_dut()
+        # Run test
         await test.run_phase()
-
-        # Terminate background tasks before moving to next seed
-        for task in bg_tasks:
-            task.kill()
-        # Assert reset to stop CPU and prevent stale commits reaching next seed's monitor
-        dut.rst_n_i.value = 0
-        await ClockCycles(dut.clk_i, 2)  # Hold reset to flush in-flight commits
 
         # Check results
         if test.env.scoreboard.mismatches > 0:

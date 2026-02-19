@@ -78,7 +78,11 @@ async def test_random_single_uvm(dut):
     test.connect_phase()
     test.end_of_elaboration_phase()
 
-    # Start background tasks for all components
+    # Per MEMORY.md "Stale AXI Signals Between cocotb Tests":
+    # Clear AXI signals BEFORE reset, then create handler tasks AFTER reset
+    await test.reset_dut()
+
+    # Start background tasks for all components (AFTER reset)
     cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
     cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
     cocotb.start_soon(test.env.commit_monitor.run_phase())
@@ -87,8 +91,7 @@ async def test_random_single_uvm(dut):
     # Give background tasks a chance to start
     await ClockCycles(dut.clk_i, 2)
 
-    # Reset and run
-    await test.reset_dut()
+    # Run test
     await test.run_phase()
 
     # Report results
@@ -136,11 +139,28 @@ async def test_random_multi_seed_uvm(dut):
     # Track failures across all seeds
     failed_seeds = []
 
+    # Track background tasks for cleanup between seeds
+    background_tasks = []
+
     for seed_idx in range(num_seeds):
         seed = 1000 + seed_idx  # Deterministic seed sequence
         dut._log.info(f"\n{'=' * 60}")
         dut._log.info(f"Seed {seed_idx + 1}/{num_seeds}: {seed}")
         dut._log.info(f"{'=' * 60}\n")
+
+        # Kill old background tasks from previous seed to prevent race conditions
+        # Per MEMORY.md: stale RTL commits can reach new monitor if tasks aren't killed
+        if background_tasks:
+            dut._log.debug("Killing old background tasks from previous seed")
+            for task in background_tasks:
+                task.kill()
+            background_tasks.clear()
+
+            # CRITICAL: Immediately assert reset to stop CPU before starting new monitor
+            # Per MEMORY.md: If CPU is stuck in a loop (e.g., backward JAL), it will
+            # still commit during ClockCycles wait, reaching the new monitor
+            dut.rst_n_i.value = 0
+            await ClockCycles(dut.clk_i, 2)
 
         # Create and run test
         test = RandomTest(
@@ -150,17 +170,21 @@ async def test_random_multi_seed_uvm(dut):
         test.connect_phase()
         test.end_of_elaboration_phase()
 
-        # Start background tasks for all components
-        cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler())
-        cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler())
-        cocotb.start_soon(test.env.commit_monitor.run_phase())
-        cocotb.start_soon(test.env.scoreboard.run_phase())
+        # Per MEMORY.md "Stale AXI Signals Between cocotb Tests":
+        # Clear AXI signals BEFORE reset, then create handler tasks AFTER reset
+        # to prevent stale signal values from previous test reaching the new test
+        await test.reset_dut()
+
+        # Start background tasks for all components and track them (AFTER reset)
+        background_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_read_handler()))
+        background_tasks.append(cocotb.start_soon(test.env.axi_agent.driver.axi_write_handler()))
+        background_tasks.append(cocotb.start_soon(test.env.commit_monitor.run_phase()))
+        background_tasks.append(cocotb.start_soon(test.env.scoreboard.run_phase()))
 
         # Give background tasks a chance to start
         await ClockCycles(dut.clk_i, 2)
 
-        # Reset and run
-        await test.reset_dut()
+        # Run test
         await test.run_phase()
 
         # Check results
