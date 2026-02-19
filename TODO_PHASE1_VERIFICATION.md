@@ -1,8 +1,12 @@
 # Phase 1 Verification To-Do List
 
-**Last Updated**: 2026-02-13 (Updated after Debug Interface Tests + Coverage completion — Phase 1 DONE)
+**Phase Status**: ✅ COMPLETE AND ARCHIVED (2026-02-13)
 
-**Current Status**: Scoreboard integration complete ✅, ISA compliance tests complete ✅ (37/37 passing, 100%), Random instruction tests complete ✅ (10,000 instructions, 0 failures), AXI protocol tests complete ✅ (11/11 tests implemented), Debug interface tests complete ✅ (6/6 passing), Coverage collection complete ✅ (37/37 instructions, 8/8 states — 100%)
+**Last Updated**: 2026-02-20 (Phase 1 archived to `micro_p/`, Phase 2 RTL complete)
+
+**Final Status**: All 9/9 Phase 1 verification exit criteria met. Scoreboard integration complete ✅, ISA compliance tests complete ✅ (37/37 passing, 100%), Random instruction tests complete ✅ (10,000 instructions, 0 failures), AXI protocol tests complete ✅ (11/11 tests implemented), Debug interface tests complete ✅ (6/6 passing), Coverage collection complete ✅ (37/37 instructions, 8/8 states — 100%)
+
+> **Note**: This document is archived Phase 1 reference. Phase 1 single-cycle CPU is complete and moved to `micro_p/`. Current work is Phase 2 (5-stage pipelined CPU).
 
 ---
 

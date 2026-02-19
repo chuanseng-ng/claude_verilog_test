@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project
 
-**Current Phase**: Phase 1 (Minimal RV32I Core - RTL Implementation)
+**Current Phase**: Phase 2 (Pipelined CPU - Verification)
 
-**Status**: Phase 0 complete and approved (2026-01-18), ready to begin RTL development
+**Status**: Phase 1 complete (2026-02-13), Phase 2 RTL complete (2026-02-16), verification in progress
 
 **Target**: Build a complete SoC with CPU, GPU, caches, and peripherals through incremental phases
 
@@ -24,13 +24,23 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 - **No RTL** (as planned)
 - **Exit Criteria Met**: All 7 specifications approved, Python reference models tested and validated, cocotb infrastructure ready
 
-### Phase 1 (Current): Minimal RV32I Core
+### Phase 1: Minimal RV32I Core ✅ COMPLETE
 
+- **Status**: ✅ Complete (2026-02-13)
 - **ISA**: RISC-V RV32I (37 base integer instructions)
 - **Architecture**: Single-cycle (stalls on memory operations)
 - **Memory Interface**: AXI4-Lite Master (unified instruction/data)
 - **Debug Interface**: APB3 Slave (halt/resume/step/breakpoints)
-- **No interrupts** (deferred to Phase 2)
+- **Verification**: 9/9 exit criteria met, archived to `micro_p/`
+
+### Phase 2 (Current): Pipelined CPU
+
+- **Status**: RTL complete (2026-02-16), verification in progress
+- **ISA**: RV32I + Zicsr (CSR instructions)
+- **Architecture**: 5-stage in-order pipeline (IF/ID/EX/MEM/WB)
+- **Interrupt Support**: M-mode (timer + external interrupts)
+- **Hazard Handling**: Detection, stalling, forwarding
+- **Target Frequency**: 200 MHz (2x Phase 1)
 
 ### Phase 2-5: Future Phases
 
@@ -52,7 +62,8 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 | `docs/ROADMAP.md` | High-level project plan and phases |
 | `docs/PHASE_STATUS.md` | Current project status and next steps |
 | `docs/design/PHASE0_ARCHITECTURE_SPEC.md` | CPU architectural requirements (Phase 0) |
-| `docs/design/PHASE1_ARCHITECTURE_SPEC.md` | CPU implementation spec (Phase 1) |
+| `docs/design/PHASE1_ARCHITECTURE_SPEC.md` | CPU implementation spec (Phase 1) - ✅ Complete |
+| `docs/design/PHASE2_ARCHITECTURE_SPEC.md` | Pipelined CPU spec (Phase 2) - ✅ Approved |
 | `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md` | GPU architecture spec (Phase 4) |
 | `docs/design/RTL_DEFINITION.md` | Interface signal definitions |
 | `docs/design/MEMORY_MAP.md` | Address space and register map |
@@ -306,14 +317,24 @@ See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification pla
 4. ✅ **Setup testbench**: cocotb infrastructure ready
 5. ✅ **Review**: All specs approved, ready for Phase 1
 
-### Phase 1 Workflow (Current)
+### Phase 1 Workflow ✅ Complete
 
-1. **Write RTL**: Implement modules per Phase 1 spec
-2. **Lint**: Run Verilator lint checks
-3. **Write tests**: Create cocotb tests
-4. **Run tests**: Compare RTL vs reference model via scoreboard
-5. **Debug**: Use waveforms and logs to fix mismatches
-6. **Iterate**: Refine until all tests pass
+1. ✅ **Write RTL**: All 8 modules implemented
+2. ✅ **Lint**: Verilator lint checks passing
+3. ✅ **Write tests**: Comprehensive cocotb test suite
+4. ✅ **Run tests**: All tests passing (9/9 exit criteria met)
+5. ✅ **Debug**: Major bugs fixed (branch/jump, load data, regfile)
+6. ✅ **Complete**: Phase 1 archived to `micro_p/`, ready for Phase 2
+
+### Phase 2 Workflow (Current)
+
+1. ✅ **Architecture approved**: All design decisions finalized
+2. ✅ **Write RTL**: All 14 pipeline modules implemented
+3. ✅ **Initial testing**: 115/115 regression tests passing
+4. 🔄 **Comprehensive verification**: Pipeline hazards, interrupts, CSR
+5. 🔄 **Performance validation**: IPC measurement, frequency checks
+6. 🔄 **Backend flow**: Synthesis, P&R, STA at 200 MHz
+7. ⏸️ **Sign-off**: Coverage analysis, final review
 
 ## Project Structure
 
@@ -400,7 +421,7 @@ Categories:
 
 See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 
-**Current priorities** (Phase 1 - RTL Implementation + Physical Design):
+**Current priorities** (Phase 2 - Verification + Physical Design):
 
 **Phase 0 Complete** ✅:
 
@@ -408,53 +429,47 @@ See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 - ✅ Python reference models validated (66/66 tests passing)
 - ✅ cocotb test infrastructure ready
 
-**OpenROAD Back-End Flow Integrated** ✅ (2026-01-19):
+**Phase 1 Complete** ✅ (2026-02-13):
 
-- ✅ OpenROAD flow specification (OPENROAD_FLOW_SPEC.md)
-- ✅ UPF power intent specification (UPF_POWER_SPEC.md)
-- ✅ SDC timing constraints specification (SDC_TIMING_SPEC.md)
-- ✅ Physical design directory structure (pnr/)
-- ✅ Makefile and flow scripts ready
-- ✅ Phase 1 timing constraints (phase1_cpu.sdc)
-- ✅ Phase 1 power intent (phase1_cpu.upf)
-- ✅ Verification plan updated for physical design
+- ✅ All 8 RTL modules implemented (~1,900 lines)
+- ✅ All 9/9 verification exit criteria met
+- ✅ ISA compliance: 37/37 instructions passing
+- ✅ Random testing: 10,000 instructions, 0 failures
+- ✅ AXI protocol tests: 11/11 passing
+- ✅ Debug interface tests: 6/6 passing
+- ✅ Coverage: 37/37 instructions, 8/8 FSM states
+- ✅ Archived to `micro_p/` directory
 
-**Phase 1 Implementation Tasks**:
+**Phase 2 RTL Complete** ✅ (2026-02-16):
 
-1. **RTL Development** (AI-assisted, human-verified)
-   - Start with simple modules: `rv32i_regfile.sv`, `rv32i_imm_gen.sv`
-   - Implement `rv32i_alu.sv` with all RV32I operations
-   - Build `rv32i_decode.sv` instruction decoder
-   - Develop `rv32i_control.sv` control FSM
-   - Integrate into `rv32i_core.sv` wrapper
-   - Add interfaces in `rv32i_cpu_top.sv` (AXI4-Lite + APB3)
-   - AI may assist with: Module boilerplate, simple combinational logic
-   - Human must: Approve FSM designs, verify instruction semantics, review all code
+- ✅ Architecture specification approved (2026-02-14)
+- ✅ All 14 pipeline modules implemented
+- ✅ Initial regression: 115/115 tests passing
+- ✅ Backend constraints ready (phase2_cpu.sdc, phase2_cpu.upf)
 
-2. **Verification** (cocotb + Python reference model)
-   - Write directed tests for each instruction
-   - Create random instruction test sequences
-   - Compare RTL commits vs Python reference model
-   - Target: Pass 10k+ random instruction tests
-   - AI may assist with: Test generation, cocotb driver usage
-   - Human must: Debug failures, validate corner cases, approve test coverage
+**Phase 2 Current Tasks**:
 
-3. **Debug Interface Testing** (APB3 protocol validation)
-   - Test halt/resume/step functionality
-   - Validate breakpoint behavior
-   - Verify register read/write when halted
-   - Human must: Approve debug protocol compliance
+1. **Comprehensive Verification** (in progress)
+   - 🔄 Pipeline hazard tests (RAW, WAR, WAW dependencies)
+   - 🔄 Interrupt and CSR instruction tests
+   - 🔄 Debug interface tests (pipeline drain verification)
+   - 🔄 Random instruction regression (target: 50k+ instructions)
+   - 🔄 AXI arbiter protocol tests (IF vs MEM priority)
+   - 🔄 Coverage collection (instruction, state, branch coverage)
 
-4. **Physical Design Flow (NEW)** (OpenROAD back-end)
-   - Run synthesis after RTL smoke tests pass
-   - Execute place & route flow
+2. **Performance Validation**
+   - 🔄 IPC (instructions per cycle) measurement
+   - 🔄 Frequency validation (target: 200 MHz)
+   - 🔄 Pipeline efficiency analysis
+   - 🔄 Interrupt latency measurement
+
+3. **Physical Design Flow** (Phase 2 constraints ready)
+   - Run synthesis with Phase 2 constraints
+   - Execute place & route at 200 MHz target
    - Perform static timing analysis (STA)
-   - Run power analysis
-   - Iterate RTL based on timing/power/area feedback
-   - Perform physical verification (DRC/LVS)
-   - Run gate-level simulation with SDF
-   - AI may assist with: Running flow scripts, parsing reports
-   - Human must: Analyze timing/power/area, debug violations, approve sign-off
+   - Run power analysis (with power gating)
+   - Validate timing closure
+   - Gate-level simulation with SDF back-annotation
 
 ## Questions?
 

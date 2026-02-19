@@ -1,7 +1,10 @@
 # Random Instruction Tests - Status Report
 
+**Phase**: Phase 1 (Single-cycle CPU - COMPLETE)
 **Date**: 2026-01-28
 **Status**: ✅ **FULLY FUNCTIONAL AND PASSING**
+
+> **Note**: This document describes Phase 1 random instruction testing. Phase 1 is now complete and archived to `micro_p/`. Phase 2 uses enhanced verification with pipeline-specific tests.
 
 ---
 
