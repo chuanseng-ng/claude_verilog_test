@@ -58,6 +58,10 @@ module rv32i_pipeline_mem (
     logic mem_pending_q;
     logic mem_is_write_q;      // 1=store in flight, 0=load in flight
 
+    // For stores: track AW and W acceptance independently
+    logic aw_done_q;           // AW channel accepted
+    logic w_done_q;            // W channel accepted
+
     // Latch EX/MEM data needed after response
     logic [31:0] mem_addr_q;
     logic [2:0]  mem_size_q;
@@ -158,10 +162,11 @@ module rv32i_pipeline_mem (
     assign mem_rready_o  = 1'b1;
 
     assign mem_awaddr_o  = ex_mem_reg_i.alu_result;
-    assign mem_awvalid_o = need_mem_txn && ex_mem_reg_i.mem_wr && !mem_pending_q;
+    assign mem_awvalid_o = need_mem_txn && ex_mem_reg_i.mem_wr && !mem_pending_q && !aw_done_q;
     assign mem_wdata_o   = wdata_aligned;
     assign mem_wstrb_o   = wstrb;
-    assign mem_wvalid_o  = need_mem_txn && ex_mem_reg_i.mem_wr && !mem_pending_q;
+    // mem_wvalid_o: assert until W handshake completes, independent of mem_pending_q
+    assign mem_wvalid_o  = need_mem_txn && ex_mem_reg_i.mem_wr && !w_done_q;
     assign mem_bready_o  = 1'b1;
 
     // =========================================================================
@@ -171,6 +176,8 @@ module rv32i_pipeline_mem (
         if (!rst_n) begin
             mem_pending_q   <= 1'b0;
             mem_is_write_q  <= 1'b0;
+            aw_done_q       <= 1'b0;
+            w_done_q        <= 1'b0;
             mem_addr_q      <= 32'h0;
             mem_size_q      <= 3'h0;
             mem_unsigned_q  <= 1'b0;
@@ -180,6 +187,8 @@ module rv32i_pipeline_mem (
                 if (ex_mem_reg_i.mem_rd && mem_arready_i) begin
                     mem_pending_q  <= 1'b1;
                     mem_is_write_q <= 1'b0;
+                    aw_done_q      <= 1'b0;
+                    w_done_q       <= 1'b0;
                     mem_addr_q     <= ex_mem_reg_i.alu_result;
                     mem_size_q     <= ex_mem_reg_i.mem_size;
                     mem_unsigned_q <= ex_mem_reg_i.mem_unsigned;
@@ -187,23 +196,38 @@ module rv32i_pipeline_mem (
                     // Both AW and W accepted in same cycle
                     mem_pending_q  <= 1'b1;
                     mem_is_write_q <= 1'b1;
+                    aw_done_q      <= 1'b1;
+                    w_done_q       <= 1'b1;
                     mem_addr_q     <= ex_mem_reg_i.alu_result;
                     mem_size_q     <= ex_mem_reg_i.mem_size;
                     mem_unsigned_q <= 1'b0;
                 end else if (ex_mem_reg_i.mem_wr && (mem_awready_i || mem_wready_i)) begin
-                    // Partial AW/W acceptance — arbiter handles the rest
+                    // Partial AW/W acceptance — track individually
                     mem_pending_q  <= 1'b1;
                     mem_is_write_q <= 1'b1;
+                    aw_done_q      <= mem_awready_i;
+                    w_done_q       <= mem_wready_i;
                     mem_addr_q     <= ex_mem_reg_i.alu_result;
                     mem_size_q     <= ex_mem_reg_i.mem_size;
                     mem_unsigned_q <= 1'b0;
                 end
             end else if (mem_pending_q) begin
+                // Track AW/W acceptance for writes in progress
+                if (mem_is_write_q) begin
+                    if (mem_awvalid_o && mem_awready_i) begin
+                        aw_done_q <= 1'b1;
+                    end
+                    if (mem_wvalid_o && mem_wready_i) begin
+                        w_done_q <= 1'b1;
+                    end
+                end
                 // Clear when response received
                 if (!mem_is_write_q && mem_rvalid_i && mem_rready_o) begin
                     mem_pending_q <= 1'b0;
                 end else if (mem_is_write_q && mem_bvalid_i && mem_bready_o) begin
                     mem_pending_q <= 1'b0;
+                    aw_done_q     <= 1'b0;
+                    w_done_q      <= 1'b0;
                 end
             end
         end

@@ -137,7 +137,7 @@ create_power_switch PSW_CORE \
 #   - axi_arvalid_o   → 0 (no spurious AXI read requests)
 #   - axi_awvalid_o   → 0 (no spurious AXI write requests)
 #   - axi_wvalid_o    → 0
-#   - dbg_halted      → held high by isolation (CPU remains seen as halted)
+#   - dbg_halted      → held high by separate isolation (see below)
 #
 # The isolation cells are inserted in the PD_TOP (parent) domain so they
 # are powered even when PD_CORE is off.
@@ -147,9 +147,23 @@ set_isolation ISO_CORE_TO_TOP \
     -isolation_ground_net VSS \
     -clamp_value          0   \
     -applies_to           outputs \
+    -exclude_elements     {dbg_halted} \
     -location             parent \
     -isolation_signal     {dbg_halted} \
     -isolation_sense      high
+
+# Separate isolation for dbg_halted: must be clamped to 1 (not 0) when
+# PD_CORE is off to keep PSW_CORE switch OFF and prevent spurious power-on.
+set_isolation ISO_DBG_HALTED \
+    -domain PD_CORE \
+    -isolation_power_net  VDD \
+    -isolation_ground_net VSS \
+    -clamp_value          1   \
+    -isolation_signal     {dbg_halted} \
+    -isolation_sense      high \
+    -elements             {dbg_halted} \
+    -applies_to           outputs \
+    -location             parent
 
 #---------------------------------------------
 # Retention Strategy: PD_CORE CSR state
@@ -159,7 +173,7 @@ set_isolation ISO_CORE_TO_TOP \
 # preserved across the power-gate cycle to ensure correct CPU resume:
 #
 #   MTVEC   — interrupt/trap vector base address
-#   MSTATUS — machine status (global interrupt enable bit MIE)
+#   MSTATUS — machine status (global interrupt enable bit MIE, MPIE for MRET)
 #   MIE     — per-source interrupt enable mask
 #   MEPC    — exception program counter (for MRET after ISR)
 #   MCAUSE  — latched by u_core for debug readback only; not strictly
@@ -172,6 +186,7 @@ set_isolation ISO_CORE_TO_TOP \
 # a conservative first approximation.
 set_retention RET_CORE_CSR \
     -domain          PD_CORE \
+    -elements        {u_core/u_csr/mtvec_q u_core/u_csr/mstatus_mie_q u_core/u_csr/mstatus_mpie_q u_core/u_csr/mie_q u_core/u_csr/mepc_q u_core/u_csr/mcause_q} \
     -retention_power_net  VDD \
     -retention_ground_net VSS \
     -save_signal     {dbg_halted 1} \

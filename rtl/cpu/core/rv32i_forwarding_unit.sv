@@ -21,6 +21,10 @@ module rv32i_forwarding_unit (
 
     // EX/MEM register data (for EX→EX forwarding)
     input  logic [31:0] ex_mem_alu_result, // ALU result forwarded from EX/MEM
+    input  logic [31:0] ex_mem_csr_rdata,  // CSR read data in EX/MEM
+    input  logic [31:0] ex_mem_pc,         // Instruction PC in EX/MEM (for PC+4)
+    input  logic        ex_mem_csr_access, // EX/MEM is a CSR → use csr_rdata
+    input  logic        ex_mem_jump,       // EX/MEM is a jump → use PC+4
 
     // MEM/WB register data (for MEM→EX forwarding)
     input  logic [31:0] mem_wb_alu_result, // ALU result in MEM/WB
@@ -36,6 +40,23 @@ module rv32i_forwarding_unit (
     output logic [31:0] fwd_rs2,           // Forwarded rs2 value (for ALU operand B)
     output logic [31:0] fwd_store          // Forwarded store data (rs2 as store write data)
 );
+
+    // =========================================================================
+    // EX/MEM write-back data selection
+    // Used as the EX→EX forwarding value.
+    // Note: loads don't have data available at EX/MEM boundary (fetched in MEM stage).
+    // =========================================================================
+    logic [31:0] ex_mem_rd_data;
+
+    always_comb begin
+        if (ex_mem_csr_access) begin
+            ex_mem_rd_data = ex_mem_csr_rdata;        // CSR read result
+        end else if (ex_mem_jump) begin
+            ex_mem_rd_data = ex_mem_pc + 32'd4;       // JAL/JALR return address
+        end else begin
+            ex_mem_rd_data = ex_mem_alu_result;       // Default: ALU result
+        end
+    end
 
     // =========================================================================
     // MEM/WB write-back data selection
@@ -60,7 +81,7 @@ module rv32i_forwarding_unit (
     // =========================================================================
     always_comb begin
         case (fwd_a_sel)
-            2'b01:   fwd_rs1 = ex_mem_alu_result;   // EX→EX
+            2'b01:   fwd_rs1 = ex_mem_rd_data;       // EX→EX
             2'b10:   fwd_rs1 = mem_wb_rd_data;       // MEM→EX
             default: fwd_rs1 = id_ex_rs1_data;       // No forwarding (2'b00 or unused)
         endcase
@@ -71,8 +92,8 @@ module rv32i_forwarding_unit (
     // =========================================================================
     always_comb begin
         case (fwd_b_sel)
-            2'b01:   fwd_rs2 = ex_mem_alu_result;
-            2'b10:   fwd_rs2 = mem_wb_rd_data;
+            2'b01:   fwd_rs2 = ex_mem_rd_data;       // EX→EX
+            2'b10:   fwd_rs2 = mem_wb_rd_data;       // MEM→EX
             default: fwd_rs2 = id_ex_rs2_data;
         endcase
     end
@@ -82,8 +103,8 @@ module rv32i_forwarding_unit (
     // =========================================================================
     always_comb begin
         case (fwd_store_sel)
-            2'b01:   fwd_store = ex_mem_alu_result;
-            2'b10:   fwd_store = mem_wb_rd_data;
+            2'b01:   fwd_store = ex_mem_rd_data;     // EX→EX
+            2'b10:   fwd_store = mem_wb_rd_data;     // MEM→EX
             default: fwd_store = id_ex_rs2_data;
         endcase
     end
