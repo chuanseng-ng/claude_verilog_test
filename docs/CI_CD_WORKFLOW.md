@@ -1,8 +1,12 @@
 # CI/CD Workflow Documentation
 
+**Phase**: Phase 1 (COMPLETE) - Archived reference
+
 ## Overview
 
-This document describes the GitHub Actions CI/CD workflow for the Task 3.5 random test infrastructure. The workflow provides tiered testing strategy with automatic validation, artifact capture, and reporting.
+This document describes the GitHub Actions CI/CD workflow for the Phase 1 random test infrastructure. The workflow provides tiered testing strategy with automatic validation, artifact capture, and reporting.
+
+> **Note**: This document describes Phase 1 CI/CD workflows. Phase 1 is now complete and archived to `micro_p/`. Phase 2 may use updated CI/CD workflows with pipeline-specific testing.
 
 **Workflow File**: `.github/workflows/random_tests.yml`
 

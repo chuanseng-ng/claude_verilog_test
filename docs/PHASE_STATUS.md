@@ -1,12 +1,14 @@
 # Project Phase Status
 
-Last updated: 2026-02-13
+Last updated: 2026-02-20
 
 ## Current Phase
 
-**Phase 1: Minimal RV32I Core** - ✅ VERIFICATION COMPLETE (2026-02-13)
+**Phase 2: Pipelined CPU** - ✅ RTL IMPLEMENTATION COMPLETE (2026-02-16)
 
-**Previous Phase**: Phase 0 (Foundations) - ✅ COMPLETE (2026-01-18)
+**Previous Phases**:
+- Phase 1 (Minimal RV32I Core) - ✅ COMPLETE (2026-02-13)
+- Phase 0 (Foundations) - ✅ COMPLETE (2026-01-18)
 
 ## Phase Progress
 
@@ -91,22 +93,53 @@ Last updated: 2026-02-13
 - 2026-02-07: Task 4 complete — AXI4-Lite protocol tests (11/11 implemented)
 - 2026-02-13: Tasks 5, 6, 7 complete — Debug interface (6/6), Coverage (100%), Docs
 
-### Phase 2: Pipelined CPU
+### Phase 2: Pipelined CPU ✅ RTL COMPLETE
 
-**Status**: PLANNING APPROVED (2026-02-14) — RTL implementation ready to begin
+**Status**: ✅ RTL IMPLEMENTATION COMPLETE (2026-02-16) — Verification in progress
 
 **Prerequisites**: ✅ Phase 1 exit criteria met (2026-02-13)
 
-**Architecture Spec**: `docs/design/PHASE2_ARCHITECTURE_SPEC.md` — APPROVED, all 7 open questions resolved
+**Architecture Spec**: `docs/design/PHASE2_ARCHITECTURE_SPEC.md` — APPROVED (2026-02-14), all 7 open questions resolved
 
-**Decisions locked (2026-02-14)**:
-- OQ-1: ✅ Modify in-place (Phase 1 archived to `micro_p/`)
+**RTL Modules** (14/14 complete):
+
+| Module | File | Status |
+|--------|------|--------|
+| CPU top-level (AXI4-Lite + APB3) | `rtl/cpu/rv32i_cpu_top.sv` | ✅ Complete |
+| CPU core wrapper | `rtl/cpu/core/rv32i_core.sv` | ✅ Complete |
+| IF pipeline stage | `rtl/cpu/core/pipeline/rv32i_pipeline_if.sv` | ✅ Complete |
+| ID pipeline stage | `rtl/cpu/core/pipeline/rv32i_pipeline_id.sv` | ✅ Complete |
+| EX pipeline stage | `rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv` | ✅ Complete |
+| MEM pipeline stage | `rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv` | ✅ Complete |
+| WB pipeline stage | `rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv` | ✅ Complete |
+| Pipeline package | `rtl/cpu/core/rv32i_pipeline_pkg.sv` | ✅ Complete |
+| Hazard unit | `rtl/cpu/core/rv32i_hazard_unit.sv` | ✅ Complete |
+| Forwarding unit | `rtl/cpu/core/rv32i_forwarding_unit.sv` | ✅ Complete |
+| CSR file | `rtl/cpu/core/rv32i_csr_file.sv` | ✅ Complete |
+| Interrupt controller | `rtl/cpu/core/rv32i_interrupt_ctrl.sv` | ✅ Complete |
+| AXI arbiter | `rtl/cpu/rv32i_axi_arbiter.sv` | ✅ Complete |
+| Decode (updated for CSR) | `rtl/cpu/core/rv32i_decode.sv` | ✅ Complete |
+
+**Reused Phase 1 Modules** (4/4):
+- ALU (`rv32i_alu.sv`)
+- Register file (`rv32i_regfile.sv`)
+- Immediate generator (`rv32i_imm_gen.sv`)
+- Branch comparator (`rv32i_branch_comp.sv`)
+
+**Architecture Decisions Implemented (2026-02-14)**:
+- OQ-1: ✅ Modified in-place (Phase 1 archived to `micro_p/`)
 - OQ-2: ✅ External interrupt (MEIP) > Timer interrupt (MTIP)
 - OQ-3: ✅ EBREAK sets `mcause=3` + `mepc` + triggers debug halt
 - OQ-4: ✅ CSR write takes priority over same-cycle interrupt check in EX
 - OQ-5: ✅ Debug halt drains pipeline immediately (no wait for MRET)
 - OQ-6: ✅ In-flight AXI transaction completes; flushed responses discarded
 - OQ-7: ✅ Add pipeline stage first → ASAP7 second → relax frequency last resort
+
+**Verification Progress**:
+- ✅ RTL implementation complete (2026-02-16)
+- ✅ Initial testing complete (115/115 regression tests passing)
+- 🔄 Comprehensive verification in progress
+- 🔄 Performance validation ongoing
 
 ### Phase 3: Memory System & Caches
 
@@ -128,6 +161,30 @@ Last updated: 2026-02-13
 
 ## Recent Project Changes
 
+### 2026-02-16: Phase 2 RTL Implementation COMPLETE 🎉
+
+**All 14 RTL modules implemented**:
+
+- ✅ 5-stage pipeline modules (IF, ID, EX, MEM, WB)
+- ✅ Hazard detection and forwarding units
+- ✅ CSR file and interrupt controller
+- ✅ AXI arbiter for IF/MEM priority
+- ✅ Phase 1 modules reused (ALU, regfile, imm_gen, branch_comp)
+- ✅ Initial regression: 115/115 tests passing
+- 🔄 Comprehensive verification in progress
+
+### 2026-02-14: Phase 2 Architecture Approved 🎉
+
+**Architecture specification finalized**:
+
+- ✅ All 7 open questions resolved
+- ✅ 5-stage pipeline design approved
+- ✅ Interrupt support (M-mode, timer + external)
+- ✅ CSR instructions (CSRRW/S/C/I variants)
+- ✅ Hazard handling strategy defined
+- ✅ Debug interface updated for pipeline drain
+- ✅ RTL implementation authorized
+
 ### 2026-02-13: Phase 1 Verification COMPLETE 🎉
 
 **All 9/9 exit criteria met**:
@@ -135,7 +192,7 @@ Last updated: 2026-02-13
 - ✅ Tasks 5, 6, 7 complete — debug interface tests (6/6), coverage (37/37 instructions, 8/8 states), documentation
 - ✅ Phase 1 RTL implementation confirmed complete (8/8 modules, ~1,900 lines)
 - ✅ All verification suites passing with 0 failures
-- ✅ Ready to plan Phase 2 (5-stage pipelined CPU)
+- ✅ Ready to begin Phase 2 (5-stage pipelined CPU)
 
 ### 2026-02-07: Task 4 Complete — AXI Protocol Tests 🎉
 
@@ -233,34 +290,37 @@ All previous specification issues have been resolved:
 
 ## Next Actions
 
-### Immediate — Phase 2 Architecture Approval
+### Immediate — Phase 2 Verification Completion
 
-**Phase 1 COMPLETE!** ✅ All 9/9 verification exit criteria met (2026-02-13). Phase 2 architecture specification written (2026-02-14).
+**Phase 2 RTL COMPLETE!** ✅ All RTL modules implemented (2026-02-16). Initial regression testing passed (115/115 tests).
 
-**HUMAN ACTION REQUIRED** before Phase 2 RTL begins:
+**Current Priority**: Complete comprehensive Phase 2 verification
 
-1. **Review and approve** `docs/design/PHASE2_ARCHITECTURE_SPEC.md`
-   - 7 open questions require human decisions (Section 9 / OQ-1 through OQ-7)
-   - Key decisions: module naming strategy, interrupt priority, EBREAK behavior, frequency fallback
-   - Human must approve architecture before any Phase 2 RTL is written (per CLAUDE.md AI/Human boundary)
+1. **Verification Tasks** (in progress):
+   - ✅ Basic smoke tests passing (115/115)
+   - 🔄 Pipeline hazard tests (RAW, WAR, WAW)
+   - 🔄 Interrupt and CSR tests
+   - 🔄 Debug interface tests (with pipeline drain)
+   - 🔄 Random instruction regression (target: 50k+ instructions)
+   - 🔄 AXI arbiter protocol tests
+   - 🔄 Coverage collection (instruction, state, branch)
 
-2. **After approval**, the following can proceed in parallel:
-   - RTL Designer: Update `rv32i_decode.sv` for CSR instructions (Sub-task 3)
-   - Verification Engineer: Update Python reference model for CSR + interrupts (Sub-task 1)
+2. **Backend Flow** (Phase 2 constraints ready):
+   - SDC constraints: `pnr/constraints/phase2_cpu.sdc`
+   - UPF power intent: `pnr/constraints/phase2_cpu.upf`
+   - Ready to run synthesis + P&R at 200 MHz target
 
-### Short-term (After Architecture Approval)
+### Short-term (Phase 2 Completion)
 
-Per PHASE2_ARCHITECTURE_SPEC.md Section 8 (Implementation Roadmap):
+Per Phase 2 verification plan:
 
-1. Human approves PHASE2_ARCHITECTURE_SPEC.md (resolves OQ-1 through OQ-7)
-2. Verification Engineer: Update Python reference model (CSR + interrupt support)
-3. RTL Designer: Update rv32i_decode.sv + implement rv32i_csr_file.sv
-4. RTL Designer: Implement hazard_unit + forwarding_unit + axi_arbiter
-5. RTL Designer: Implement pipeline stage modules (IF/ID/EX/MEM/WB)
-6. RTL Designer: Integrate rv32i_core_v2.sv + rv32i_cpu_top_v2.sv
-7. Verification Engineer: Directed hazard tests + interrupt tests
-8. Verification Engineer: Random instruction regression (50k+ with interrupts)
-9. Backend Engineer: Synthesis + P&R at 200 MHz
+1. ✅ RTL implementation complete (14/14 modules)
+2. ✅ Initial regression passing (115/115 tests)
+3. 🔄 Comprehensive verification suite execution
+4. 🔄 Performance validation (IPC measurement, frequency validation)
+5. 🔄 Coverage analysis (target: >95% code coverage)
+6. 🔄 Backend flow execution (synthesis, P&R, STA)
+7. ⏸️ Final sign-off and Phase 2 completion report
 
 ### Optional — Phase 1 Physical Design
 
