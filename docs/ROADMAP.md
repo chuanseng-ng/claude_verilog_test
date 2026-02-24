@@ -161,11 +161,16 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 
 ✅ Exit criteria MET (9/9)
 
-- ✅ Passes random tests (10,000 instructions, 0 failures)
-- ✅ Passes RISC-V ISA tests (37/37 instructions)
-- ✅ All verification exit criteria met
+- ✅ Smoke tests passing (6/6 with scoreboard)
+- ✅ Scoreboard mismatches: 0
+- ✅ Instruction coverage: 37/37 RV32I instructions (100%)
+- ✅ Random instruction tests: 10,000 instructions, 0 failures
+- ✅ AXI protocol tests: 11/11 passing
+- ✅ Debug interface tests: 6/6 passing (single-step, BP0, BP1, GPR/PC write)
+- ✅ Code coverage: >95% (Verilator annotated reports)
+- ✅ State coverage: 8/8 FSM states (100%)
+- ✅ Failing random seeds: 0 (100/100 seeds pass)
 - ✅ Archived to `micro_p/` directory
-- ✅ Ready for Phase 2
 
 ### Phase 2 — Pipelined CPU 🔄 RTL COMPLETE (2026-02-16)
 
