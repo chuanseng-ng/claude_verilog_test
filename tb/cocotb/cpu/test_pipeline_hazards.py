@@ -480,13 +480,15 @@ async def test_back_to_back_stores(dut):
     dut._log.info("=== Test: Back-to-Back Stores ===")
     mem, dbg = await _setup_test(dut)
 
+    DATA_ADDR = 0x1000
     program = [
         ADDI(1, 0, 11),  # x1 = 11
         ADDI(2, 0, 22),  # x2 = 22
-        SW(1, 0, 0),  # mem[0] = 11
-        SW(2, 0, 4),  # mem[4] = 22  (back-to-back store)
-        LW(3, 0, 0),  # x3 = mem[0] = 11
-        LW(4, 0, 4),  # x4 = mem[4] = 22
+        LUI(5, DATA_ADDR >> 12),  # x5 = 0x1000
+        SW(1, 5, 0),  # mem[0x1000] = 11
+        SW(2, 5, 4),  # mem[0x1004] = 22  (back-to-back store)
+        LW(3, 5, 0),  # x3 = mem[0x1000] = 11
+        LW(4, 5, 4),  # x4 = mem[0x1004] = 22
         EBREAK(),
     ]
     for i, insn in enumerate(program):
