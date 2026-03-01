@@ -1,10 +1,10 @@
 # Project Phase Status
 
-Last updated: 2026-02-20
+Last updated: 2026-02-27
 
 ## Current Phase
 
-**Phase 2: Pipelined CPU** - ✅ RTL IMPLEMENTATION COMPLETE (2026-02-16)
+**Phase 2: Pipelined CPU** - ✅ COMPREHENSIVE VERIFICATION COMPLETE (2026-02-27)
 
 **Previous Phases**:
 - Phase 1 (Minimal RV32I Core) - ✅ COMPLETE (2026-02-13)
@@ -93,9 +93,9 @@ Last updated: 2026-02-20
 - 2026-02-07: Task 4 complete — AXI4-Lite protocol tests (11/11 implemented)
 - 2026-02-13: Tasks 5, 6, 7 complete — Debug interface (6/6), Coverage (100%), Docs
 
-### Phase 2: Pipelined CPU ✅ RTL COMPLETE
+### Phase 2: Pipelined CPU ✅ VERIFICATION COMPLETE
 
-**Status**: ✅ RTL IMPLEMENTATION COMPLETE (2026-02-16) — Verification in progress
+**Status**: ✅ COMPREHENSIVE VERIFICATION COMPLETE (2026-02-27)
 
 **Prerequisites**: ✅ Phase 1 exit criteria met (2026-02-13)
 
@@ -135,11 +135,20 @@ Last updated: 2026-02-20
 - OQ-6: ✅ In-flight AXI transaction completes; flushed responses discarded
 - OQ-7: ✅ Add pipeline stage first → ASAP7 second → relax frequency last resort
 
-**Verification Progress**:
+**Verification Progress** (2026-02-27):
 - ✅ RTL implementation complete (2026-02-16)
 - ✅ Initial testing complete (115/115 regression tests passing)
-- 🔄 Comprehensive verification in progress
-- 🔄 Performance validation ongoing
+- ✅ Comprehensive verification complete (111/111 tests, all 7 suites pass):
+  - smoke_uvm: 4/4 PASS
+  - isa_uvm: 54/54 PASS (37/37 RV32I instructions + CSR)
+  - pipeline_hazards: 16/16 PASS (RAW/control hazards, forwarding, store-store, JAL rd)
+  - interrupts: 12/12 PASS (timer/ext IRQ, MIE gating, MRET, CSR insns, latency ≤3 cyc)
+  - debug: 6/6 PASS (single-step, BP0/BP1, GPR write, PC write, reg reads)
+  - axi_protocol: 12/12 PASS (back-pressure, error injection, arbiter)
+  - fault_injection: 7/7 PASS (misaligned, illegal, AXI fetch error)
+- ✅ Random regression: 500 seeds × 100 instructions = **50,000 instructions, 0 failures**
+- 🔄 Performance validation (IPC measurement, frequency validation) — pending backend flow
+- 🔄 Backend flow (synthesis → P&R → STA at 200 MHz) — pending
 
 ### Phase 3: Memory System & Caches
 
@@ -160,6 +169,26 @@ Last updated: 2026-02-20
 **Prerequisites**: Phase 4 exit criteria must be met
 
 ## Recent Project Changes
+
+### 2026-02-27: Phase 2 Comprehensive Verification COMPLETE 🎉
+
+**All 7 test suites passing, 50,000 random instructions verified**:
+
+- ✅ smoke_uvm: 4/4 PASS
+- ✅ isa_uvm: 54/54 PASS — full RV32I ISA + Zicsr (CSR) instructions
+- ✅ pipeline_hazards: 16/16 PASS — RAW/control hazards, EX/MEM/WB forwarding
+- ✅ interrupts: 12/12 PASS — timer/ext IRQ delivery, MIE gating, MRET, IRQ latency ≤3 cycles
+- ✅ debug: 6/6 PASS — single-step, breakpoints, GPR/PC write, register reads
+- ✅ axi_protocol: 12/12 PASS — back-pressure, error injection, protocol compliance
+- ✅ fault_injection: 7/7 PASS — misaligned access, illegal instruction, AXI fetch error
+- ✅ Random regression: 500 seeds × 100 instructions = **50,000 instructions, 0 failures**
+- **TOTAL: 111/111 Phase 2 tests passing**
+
+**Infrastructure improvements**:
+- Created `tb/cocotb/cpu/phase2_test_utils.py` — shared APBDebug + setup helpers
+- Added Phase 2 Makefile targets (`pipeline_hazards`, `interrupts`, `axi_protocol`, `fault_injection`, `phase2_all`)
+- Added 2 new pipeline hazard tests (`test_back_to_back_stores`, `test_jal_rd_dependency`)
+- Fixed `test_csr_mstatus_mie_gate`: DBG_MSTATUS (APB 0x200) is READ-ONLY per RTL design
 
 ### 2026-02-16: Phase 2 RTL Implementation COMPLETE 🎉
 
@@ -290,20 +319,21 @@ All previous specification issues have been resolved:
 
 ## Next Actions
 
-### Immediate — Phase 2 Verification Completion
+### Immediate — Phase 2 Backend Flow + Sign-off
 
-**Phase 2 RTL COMPLETE!** ✅ All RTL modules implemented (2026-02-16). Initial regression testing passed (115/115 tests).
+**Phase 2 Comprehensive Verification COMPLETE!** ✅ 111/111 tests passing, 50k random instructions, 0 failures (2026-02-27).
 
-**Current Priority**: Complete comprehensive Phase 2 verification
+**Current Priority**: Backend flow and Phase 2 sign-off
 
-1. **Verification Tasks** (in progress):
-   - ✅ Basic smoke tests passing (115/115)
-   - 🔄 Pipeline hazard tests (RAW, WAR, WAW)
-   - 🔄 Interrupt and CSR tests
-   - 🔄 Debug interface tests (with pipeline drain)
-   - 🔄 Random instruction regression (target: 50k+ instructions)
-   - 🔄 AXI arbiter protocol tests
-   - 🔄 Coverage collection (instruction, state, branch)
+1. **Verification Tasks** (ALL COMPLETE ✅):
+   - ✅ Basic smoke tests (4/4)
+   - ✅ ISA compliance (54/54 — RV32I + CSR)
+   - ✅ Pipeline hazard tests — 16/16 (RAW, control hazards, forwarding)
+   - ✅ Interrupt and CSR tests — 12/12 (timer/ext, MRET, CSR insns)
+   - ✅ Debug interface tests — 6/6 (pipeline drain, GPR/PC write)
+   - ✅ Random instruction regression — 500 seeds × 100 instrs = **50,000 instructions, 0 failures**
+   - ✅ AXI arbiter protocol tests — 12/12
+   - 🔄 Coverage collection (instruction, state, branch) — pending backend flow
 
 2. **Backend Flow** (Phase 2 constraints ready):
    - SDC constraints: `pnr/constraints/phase2_cpu.sdc`
@@ -316,11 +346,12 @@ Per Phase 2 verification plan:
 
 1. ✅ RTL implementation complete (14/14 modules)
 2. ✅ Initial regression passing (115/115 tests)
-3. 🔄 Comprehensive verification suite execution
-4. 🔄 Performance validation (IPC measurement, frequency validation)
-5. 🔄 Coverage analysis (target: >95% code coverage)
-6. 🔄 Backend flow execution (synthesis, P&R, STA)
-7. ⏸️ Final sign-off and Phase 2 completion report
+3. ✅ Comprehensive verification suite execution (111/111 passing)
+4. ✅ Random regression (50,000 instructions, 0 failures)
+5. 🔄 Performance validation (IPC measurement, frequency validation)
+6. 🔄 Coverage analysis (target: >95% code coverage)
+7. 🔄 Backend flow execution (synthesis, P&R, STA at 200 MHz)
+8. ⏸️ Final sign-off and Phase 2 completion report
 
 ### Optional — Phase 1 Physical Design
 

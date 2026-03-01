@@ -11,12 +11,12 @@ This project incrementally builds a fully functional SoC through 6 phases:
 
 1. **Phase 0**: Specification & Reference Models ✅ **COMPLETE** (2026-01-18)
 2. **Phase 1**: Minimal RV32I CPU (single-cycle) ✅ **COMPLETE** (2026-02-13)
-3. **Phase 2** (Current): Pipelined CPU (5-stage + interrupts) - RTL complete, verification in progress
+3. **Phase 2** (Current): Pipelined CPU (5-stage + interrupts) ✅ **VERIFICATION COMPLETE** (2026-02-27)
 4. **Phase 3**: Memory System (I-cache + D-cache)
 5. **Phase 4**: GPU-Lite Compute Engine (SIMT)
 6. **Phase 5**: SoC Integration (peripherals, boot ROM)
 
-## Current Status: Phase 2 (Verification)
+## Current Status: Phase 2 (Backend Flow)
 
 **Phase 0 Complete** ✅ (2026-01-18):
 
@@ -35,13 +35,14 @@ This project incrementally builds a fully functional SoC through 6 phases:
 - ✅ Full coverage: 37/37 instructions, 8/8 FSM states
 - ✅ Archived to `micro_p/` directory
 
-**Phase 2 RTL Complete** ✅ (2026-02-16):
+**Phase 2 Verification Complete** ✅ (2026-02-27):
 
 - ✅ Architecture approved (5-stage pipeline + interrupts + CSR)
 - ✅ All 14 RTL modules implemented
-- ✅ Initial regression: 115/115 tests passing
-- 🔄 Comprehensive verification in progress
-- 🔄 Performance validation ongoing
+- ✅ Comprehensive verification: 111/111 tests passing (all 7 suites)
+- ✅ Random regression: 50,000 instructions (500 seeds × 100), 0 failures
+- ✅ IRQ latency: ≤3 cycles from assertion to trap_taken
+- 🔄 Backend flow (synthesis → P&R → STA at 200 MHz)
 
 ## Implemented Features (Phase 1 ✅) & Current Features (Phase 2 🔄)
 
@@ -55,11 +56,11 @@ This project incrementally builds a fully functional SoC through 6 phases:
   - Program counter manipulation
   - Hardware breakpoints (2 breakpoints)
 
-**Phase 2 (Current)** 🔄:
+**Phase 2 (Current)** ✅:
 - **ISA**: RV32I + Zicsr (CSR instructions: CSRRW/S/C/I variants)
 - **Architecture**: 5-stage in-order pipeline (IF/ID/EX/MEM/WB)
 - **Interrupt Support**: RISC-V M-mode (timer + external interrupts)
-- **Hazard Handling**: Detection, stalling, forwarding
+- **Hazard Handling**: Detection, stalling, EX/MEM/WB forwarding
 - **Target Performance**: 1 IPC at 200 MHz (2x Phase 1 frequency)
 - **AXI Arbitration**: Priority arbiter for IF vs MEM requests
 - **Debug Interface**: Enhanced with pipeline drain support
@@ -149,21 +150,26 @@ pytest --cov=tb.models --cov-report=html
 
 Phase 1 single-cycle CPU has been completed and archived. All verification passed.
 
-### Phase 2: RTL Simulation (Current)
+### Phase 2: RTL Simulation (Current — Verification Complete)
 
 ```bash
-# Navigate to simulation directory
-cd sim
+# Navigate to cocotb test directory (WSL)
+cd tb/cocotb/cpu
 
-# Build and run simulation
-make sim
-make run
+# Run all Phase 2 test suites (111 tests)
+make phase2_all
 
-# Run with waveforms
-make waves
+# Run individual suites
+make smoke_uvm          # 4 smoke tests
+make isa_uvm            # 54 ISA compliance tests
+make pipeline_hazards   # 16 pipeline hazard tests
+make interrupts         # 12 interrupt/CSR tests
+make debug              # 6 debug interface tests
+make axi_protocol       # 12 AXI protocol tests
+make fault_injection    # 7 fault injection tests
 
-# Run cocotb tests
-make test
+# Run random regression (500 seeds × 100 instructions)
+RANDOM_TEST_SEEDS=500 RANDOM_TEST_INSTRS=100 make random_uvm
 
 # Clean build artifacts
 make clean
@@ -179,7 +185,7 @@ Key documents in `docs/`:
 | `PHASE_STATUS.md` | Current phase status and next steps |
 | `design/PHASE0_ARCHITECTURE_SPEC.md` | CPU architectural requirements |
 | `design/PHASE1_ARCHITECTURE_SPEC.md` | Phase 1 CPU spec (single-cycle) ✅ Complete |
-| `design/PHASE2_ARCHITECTURE_SPEC.md` | Phase 2 CPU spec (5-stage pipeline) ✅ RTL complete |
+| `design/PHASE2_ARCHITECTURE_SPEC.md` | Phase 2 CPU spec (5-stage pipeline) ✅ Verification complete |
 | `design/PHASE4_GPU_ARCHITECTURE_SPEC.md` | GPU architecture specification (Phase 4) |
 | `design/RTL_DEFINITION.md` | Interface signal definitions |
 | `design/MEMORY_MAP.md` | Address space and register map |
@@ -219,7 +225,7 @@ All 37 RV32I base integer instructions (verified and passing):
 - **Memory**: LB, LH, LW, LBU, LHU, SB, SH, SW
 - **System**: ECALL, EBREAK, FENCE
 
-### Phase 2 🔄 (Current - RV32I + Zicsr)
+### Phase 2 ✅ (Verification Complete - RV32I + Zicsr)
 
 All Phase 1 instructions PLUS:
 
@@ -243,7 +249,7 @@ For detailed phase descriptions and current status, see:
 
 This is a specification-driven project with clear phase boundaries. Contributions should:
 
-1. Follow the current phase's scope (currently Phase 1)
+1. Follow the current phase's scope (currently Phase 2)
 2. Maintain consistency with specifications in `docs/`
 3. Include appropriate tests (pytest for Phase 0, cocotb for Phase 1+)
 

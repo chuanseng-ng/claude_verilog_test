@@ -14,12 +14,25 @@ TOPLEVEL_LANG ?= verilog
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_pipeline_pkg.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/rv32i_cpu_top.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_core.sv
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_control.sv
+# rv32i_control.sv is Phase 1 only — rv32i_core.sv (Phase 2) does not instantiate it
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_decode.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_alu.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_regfile.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_imm_gen.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_branch_comp.sv
+# Phase 2: Pipeline stage modules (IF / ID / EX / MEM / WB)
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_if.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_id.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv
+# Phase 2: Hazard detection, forwarding, CSR, and interrupt control units
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_hazard_unit.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_forwarding_unit.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_csr_file.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_interrupt_ctrl.sv
+# Phase 2: AXI arbiter (IF vs MEM priority; lives in rtl/cpu/, not rtl/cpu/core/)
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/rv32i_axi_arbiter.sv
 
 # Testbench settings (can override MODULE on command line)
 TOPLEVEL = rv32i_cpu_top
@@ -28,7 +41,7 @@ MODULE ?= test_smoke_uvm
 # Verilator-specific flags
 ifeq ($(SIM), verilator)
     EXTRA_ARGS += --trace --trace-structs
-    COMPILE_ARGS += -Wno-WIDTH -Wno-UNUSED -Wno-BLKSEQ
+    COMPILE_ARGS += -Wno-WIDTH -Wno-UNUSED -Wno-BLKSEQ -Wno-UNOPTFLAT
     COMPILE_ARGS += -CFLAGS "-std=c++14"
 endif
 
@@ -45,6 +58,7 @@ include $(shell cocotb-config --makefiles)/Makefile.sim
 .PHONY: smoke_uvm random_uvm random_uvm_smoke random_uvm_waves isa_uvm all_uvm
 .PHONY: stress_uvm stress_uvm_smoke stress_alu stress_jump stress_shift stress_immediate
 .PHONY: directed_random_uvm directed_alu directed_immediate directed_rtype
+.PHONY: pipeline_hazards interrupts axi_protocol fault_injection phase2_all
 
 smoke:
 	@echo "Running smoke tests..."
@@ -69,6 +83,97 @@ ebreak:
 debug:
 	@echo "Running APB3 debug interface tests (5 tests: single-step, BP0, BP1, GPR write, PC write)..."
 	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_debug_if
+
+# ── Phase 2 Verification Targets ──────────────────────────────────────────────
+pipeline_hazards:
+	@echo "Running pipeline hazard tests (Groups 2-3: RAW, load-use, control hazards)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_pipeline_hazards
+
+interrupts:
+	@echo "Running interrupt and CSR tests (Groups 4-5: timer/ext IRQ, MRET, CSR insns)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_interrupts
+
+axi_protocol:
+	# Covers Phase 1 protocol regression AND Phase 2 arbiter (IF vs MEM) contention tests.
+	@echo "Running AXI protocol + arbiter tests (Phase 1 compliance + Phase 2 IF/MEM arbiter)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_axi_protocol
+
+fault_injection:
+	@echo "Running fault injection tests (misaligned access, illegal instruction traps)..."
+	export PYTHONPATH=$$PYTHONPATH:$(PWD)/../../.. && $(MAKE) MODULE=test_fault_injection
+
+phase2_all:
+	@echo "========================================="
+	@echo "Running Phase 2 Comprehensive Test Suite"
+	@echo "========================================="
+	@failed=0; \
+	echo ""; \
+	echo "[1/7] Running pyuvm smoke tests..."; \
+	if $(MAKE) smoke_uvm; then \
+		echo "✓ smoke_uvm PASSED"; \
+	else \
+		echo "✗ smoke_uvm FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "[2/7] Running ISA compliance tests..."; \
+	if $(MAKE) isa_uvm; then \
+		echo "✓ isa_uvm PASSED"; \
+	else \
+		echo "✗ isa_uvm FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "[3/7] Running pipeline hazard tests (Groups 2-3)..."; \
+	if $(MAKE) pipeline_hazards; then \
+		echo "✓ pipeline_hazards PASSED"; \
+	else \
+		echo "✗ pipeline_hazards FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "[4/7] Running interrupt and CSR tests (Groups 4-5)..."; \
+	if $(MAKE) interrupts; then \
+		echo "✓ interrupts PASSED"; \
+	else \
+		echo "✗ interrupts FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "[5/7] Running APB3 debug interface tests (Group 6)..."; \
+	if $(MAKE) debug; then \
+		echo "✓ debug PASSED"; \
+	else \
+		echo "✗ debug FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "[6/7] Running AXI protocol + arbiter tests (Group 7)..."; \
+	if $(MAKE) axi_protocol; then \
+		echo "✓ axi_protocol PASSED"; \
+	else \
+		echo "✗ axi_protocol FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "[7/7] Running fault injection tests..."; \
+	if $(MAKE) fault_injection; then \
+		echo "✓ fault_injection PASSED"; \
+	else \
+		echo "✗ fault_injection FAILED"; \
+		failed=$$((failed + 1)); \
+	fi; \
+	echo ""; \
+	echo "========================================="; \
+	if [ $$failed -eq 0 ]; then \
+		echo "OVERALL RESULT: ✓ ALL PHASE 2 SUITES PASSED"; \
+		echo "========================================="; \
+		exit 0; \
+	else \
+		echo "OVERALL RESULT: ✗ $$failed PHASE 2 SUITE(S) FAILED"; \
+		echo "========================================="; \
+		exit 1; \
+	fi
 
 # pyuvm test targets (Phase F+)
 smoke_uvm:
@@ -249,6 +354,13 @@ usage info:
 	@echo "Debug interface tests:"
 	@echo "  make debug        - Run APB3 debug interface tests (5 tests)"
 	@echo ""
+	@echo "Phase 2 comprehensive verification:"
+	@echo "  make pipeline_hazards  - Groups 2-3: data hazards + control hazards"
+	@echo "  make interrupts        - Groups 4-5: interrupts + CSR instructions"
+	@echo "  make axi_protocol      - Phase 1 regression + Phase 2 arbiter tests"
+	@echo "  make fault_injection   - Exception/trap path tests"
+	@echo "  make phase2_all        - All Phase 2 suites (smoke + ISA + hazards + IRQ + debug + AXI + faults)"
+	@echo ""
 	@echo "Legacy targets (DEPRECATED - use pyuvm instead):"
 	@echo "  make smoke        - Run legacy smoke tests"
 	@echo "  make basic        - Run legacy basic CPU tests"
@@ -298,6 +410,10 @@ usage info:
 	@echo "    test_directed_random_uvm  - pyuvm directed random tests (custom distributions)"
 	@echo "    test_ebreak               - EBREAK halt detection test"
 	@echo "    test_debug_if             - APB3 debug interface tests (5 tests)"
+	@echo "    test_pipeline_hazards     - Phase 2 data + control hazard tests"
+	@echo "    test_interrupts           - Phase 2 interrupt + CSR instruction tests"
+	@echo "    test_axi_protocol         - AXI protocol compliance + Phase 2 arbiter tests"
+	@echo "    test_fault_injection      - Phase 2 fault injection + exception tests"
 	@echo ""
 	@echo "  Legacy cocotb tests (DEPRECATED - in legacy/ directory):"
 	@echo "    legacy/test_smoke                - Basic functionality tests (6 tests)"

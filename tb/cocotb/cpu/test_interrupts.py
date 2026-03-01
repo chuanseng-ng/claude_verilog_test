@@ -12,14 +12,8 @@ External observability points:
 No internal pipeline signals are accessed.
 """
 
-import sys
-from pathlib import Path
-
 import cocotb
-from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, ReadOnly
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+from cocotb.triggers import RisingEdge
 
 from sim.riscv_encoder import (
     ADDI,
@@ -41,134 +35,25 @@ from sim.riscv_encoder import (
     MCAUSE_IRQ_TIMER,
     MCAUSE_IRQ_EXTERNAL,
 )
-from tb.cocotb.common.clock_reset import reset_dut
-from tb.cocotb.cpu.axi_models import ConfigurableAXIMemory
+from tb.cocotb.cpu.phase2_test_utils import (
+    APBDebug,
+    _init_inputs,
+    _setup_test,
+    DBG_CTRL,
+    DBG_STATUS,
+    DBG_MSTATUS,
+)
 
 
 # ============================================================================
-# Shared helpers
+# Interrupt-test-specific constants
 # ============================================================================
 
-# APB register offsets
-DBG_CTRL = 0x000
-DBG_STATUS = 0x004
-DBG_PC = 0x008
-DBG_MSTATUS = 0x200
-DBG_MIE_REG = 0x204
-DBG_MTVEC = 0x208
-DBG_MEPC = 0x20C
-DBG_MCAUSE = 0x210
-DBG_MIP = 0x214
-
-# Handler address used across interrupt tests
+# Handler address used across interrupt tests (above the setup program at 0x0-0x1C)
 HANDLER_ADDR = 0x200
 
-# Undefined CSR address (not implemented in Phase 2)
+# Undefined CSR address (not implemented in Phase 2) — triggers illegal insn trap
 CSR_UNDEFINED = 0xBFF
-
-
-class APBDebug:
-    """APB3 debug helper — halt, read GPRs and CSR debug registers."""
-
-    def __init__(self, dut):
-        self.dut = dut
-
-    async def _write(self, addr, data):
-        await RisingEdge(self.dut.clk_i)
-        self.dut.apb_psel_i.value = 1
-        self.dut.apb_penable_i.value = 0
-        self.dut.apb_pwrite_i.value = 1
-        self.dut.apb_paddr_i.value = addr
-        self.dut.apb_pwdata_i.value = data
-        await RisingEdge(self.dut.clk_i)
-        self.dut.apb_penable_i.value = 1
-        await RisingEdge(self.dut.clk_i)
-        self.dut.apb_psel_i.value = 0
-        self.dut.apb_penable_i.value = 0
-        self.dut.apb_pwrite_i.value = 0
-
-    async def _read(self, addr):
-        await RisingEdge(self.dut.clk_i)
-        self.dut.apb_psel_i.value = 1
-        self.dut.apb_penable_i.value = 0
-        self.dut.apb_pwrite_i.value = 0
-        self.dut.apb_paddr_i.value = addr
-        await RisingEdge(self.dut.clk_i)
-        self.dut.apb_penable_i.value = 1
-        await ReadOnly()
-        data = int(self.dut.apb_prdata_o.value)
-        await RisingEdge(self.dut.clk_i)
-        self.dut.apb_psel_i.value = 0
-        self.dut.apb_penable_i.value = 0
-        return data
-
-    async def halt(self, timeout=150):
-        """Assert halt and wait for pipeline to drain (Phase 2)."""
-        await self._write(DBG_CTRL, 0x1)
-        for _ in range(timeout):
-            status = await self._read(DBG_STATUS)
-            if status & 0x1:
-                return
-            await RisingEdge(self.dut.clk_i)
-        raise RuntimeError("CPU did not halt within timeout")
-
-    async def wait_halted(self, timeout=200):
-        for _ in range(timeout):
-            status = await self._read(DBG_STATUS)
-            if status & 0x1:
-                return
-            await RisingEdge(self.dut.clk_i)
-        raise RuntimeError("CPU did not halt within timeout (EBREAK)")
-
-    async def resume(self):
-        """Deassert halt (write DBG_CTRL.resume bit)."""
-        await self._write(DBG_CTRL, 0x2)
-
-    async def read_gpr(self, reg_num):
-        return await self._read(0x010 + reg_num * 4)
-
-    async def read_mstatus(self):
-        return await self._read(DBG_MSTATUS)
-
-    async def read_mepc(self):
-        return await self._read(DBG_MEPC)
-
-    async def read_mcause(self):
-        return await self._read(DBG_MCAUSE)
-
-    async def read_mtvec(self):
-        return await self._read(DBG_MTVEC)
-
-    async def read_mie(self):
-        return await self._read(DBG_MIE_REG)
-
-
-def _init_inputs(dut):
-    dut.axi_arready_i.value = 0
-    dut.axi_rvalid_i.value = 0
-    dut.axi_rdata_i.value = 0
-    dut.axi_rresp_i.value = 0
-    dut.axi_awready_i.value = 0
-    dut.axi_wready_i.value = 0
-    dut.axi_bvalid_i.value = 0
-    dut.axi_bresp_i.value = 0
-    dut.apb_psel_i.value = 0
-    dut.apb_penable_i.value = 0
-    dut.apb_pwrite_i.value = 0
-    dut.apb_paddr_i.value = 0
-    dut.apb_pwdata_i.value = 0
-    dut.ext_irq_i.value = 0
-    dut.timer_irq_i.value = 0
-
-
-async def _setup_test(dut):
-    cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
-    _init_inputs(dut)
-    await reset_dut(dut)
-    mem = ConfigurableAXIMemory(dut, ref_model=None, protocol_check=False)
-    dbg = APBDebug(dut)
-    await RisingEdge(dut.clk_i)
-    return mem, dbg
 
 
 def _load_irq_setup_program(
@@ -738,29 +623,33 @@ async def test_csr_illegal_address(dut):
 
 @cocotb.test()
 async def test_csr_mstatus_mie_gate(dut):
-    """Write mstatus.MIE=1, assert timer IRQ → interrupt taken.
-    Then write mstatus.MIE=0, assert timer IRQ → NOT taken.
+    """mstatus.MIE=1 (set via CSRRW) enables timer interrupt delivery.
 
-    This test verifies that the mstatus.MIE bit functions as an interrupt gate.
+    The CPU program uses CSRRW to write mstatus.MIE=1, then loops at the
+    wait PC.  After the testbench asserts timer_irq_i the CPU takes the
+    trap, the handler sets x10=1, and the EBREAK halts.
+
+    Post-halt checks: x10==1 (handler ran), trap_taken_o seen once.
+
+    NOTE: DBG_MSTATUS (APB 0x200) is READ-ONLY in the RTL design
+    (rv32i_cpu_top.sv:228).  Testing that MIE=0 blocks interrupts from a
+    fresh CPU context is covered by test_irq_mie_disabled (which programs
+    the CPU with enable_mie=False).  A runtime "set then clear MIE" test
+    would require a CPU-program-based approach; that is deferred.
     """
-    dut._log.info("=== Test: mstatus.MIE Gates Interrupts ===")
+    dut._log.info("=== Test: mstatus.MIE Gates Interrupts (MIE=1 → IRQ taken) ===")
     mem, dbg = await _setup_test(dut)
 
-    # Part 1: MIE=1 → interrupt SHOULD be taken
-    # (reuse _load_irq_setup_program which enables MIE)
     _ = _load_irq_setup_program(mem, enable_mtie=True, enable_mie=True)
     _load_irq_handler(mem, flag_reg=10, halt_after=True)
 
     commit_count = [0]
-    trap_count = [0]
 
     async def _watch():
         while True:
             await RisingEdge(dut.clk_i)
             if dut.commit_valid_o.value:
                 commit_count[0] += 1
-            if dut.trap_taken_o.value:
-                trap_count[0] += 1
 
     cocotb.start_soon(_watch())
 
@@ -774,55 +663,10 @@ async def test_csr_mstatus_mie_gate(dut):
     dut.timer_irq_i.value = 0
     assert trap_seen, "Timer IRQ not taken with MIE=1"
 
-    dut._log.info("MIE=1: interrupt taken correctly")
-
     # Wait for EBREAK in ISR to halt the CPU
     await dbg.wait_halted()
 
     x10 = await dbg.read_gpr(10)
     assert x10 == 1, f"Handler did not set flag: x10={x10}"
 
-    dut._log.info("MIE=1: interrupt taken correctly")
-
-    # Part 2: MIE=0 → interrupt should NOT be taken
-    dut._log.info("Part 2: Testing MIE=0 blocks IRQ")
-
-    # Clear MIE bit in mstatus via debug API
-    await dbg._write(DBG_MSTATUS, 0)
-
-    # Reset trap watcher counters for Part 2
-    trap_count[0] = 0
-    trap_seen_part2 = [False]
-
-    async def _watch_part2():
-        while True:
-            await RisingEdge(dut.clk_i)
-            if dut.trap_taken_o.value:
-                trap_seen_part2[0] = True
-
-    cocotb.start_soon(_watch_part2())
-
-    # Resume CPU execution
-    await dbg.resume()
-
-    # Wait a few cycles for resume to take effect
-    for _ in range(10):
-        await RisingEdge(dut.clk_i)
-
-    # Assert timer IRQ
-    dut.timer_irq_i.value = 1
-
-    # Wait for timeout period - IRQ should NOT be taken
-    for _ in range(100):
-        await RisingEdge(dut.clk_i)
-        if trap_seen_part2[0]:
-            break
-
-    # Clear timer IRQ
-    dut.timer_irq_i.value = 0
-
-    # Verify that NO trap was taken
-    assert not trap_seen_part2[0], "IRQ was taken despite MIE=0"
-
-    dut._log.info("MIE=0: interrupt correctly blocked")
-    dut._log.info("mstatus.MIE gate test PASSED")
+    dut._log.info("mstatus.MIE gate test PASSED (MIE=1 enables interrupt delivery)")

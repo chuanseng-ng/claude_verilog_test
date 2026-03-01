@@ -9,14 +9,7 @@ GPR values for correctness checking.  No internal pipeline signals are
 accessed.
 """
 
-import sys
-from pathlib import Path
-
 import cocotb
-from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, ReadOnly
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from sim.riscv_encoder import (
     ADD,
@@ -30,8 +23,7 @@ from sim.riscv_encoder import (
     BNE,
     EBREAK,
 )
-from tb.cocotb.common.clock_reset import reset_dut
-from tb.cocotb.cpu.axi_models import ConfigurableAXIMemory
+from tb.cocotb.cpu.phase2_test_utils import APBDebug, _init_inputs, _setup_test
 
 
 # ============================================================================
@@ -39,109 +31,6 @@ from tb.cocotb.cpu.axi_models import ConfigurableAXIMemory
 # ============================================================================
 
 NOP = ADDI(0, 0, 0)
-
-
-class APBDebug:
-    """APB3 debug helper — halt, read GPRs."""
-
-    DBG_CTRL = 0x000
-    DBG_STATUS = 0x004
-    DBG_PC = 0x008
-
-    def __init__(self, dut):
-        self.dut = dut
-
-    async def _write(self, addr, data):
-        await RisingEdge(self.dut.clk_i)
-        self.dut.apb_psel_i.value = 1
-        self.dut.apb_penable_i.value = 0
-        self.dut.apb_pwrite_i.value = 1
-        self.dut.apb_paddr_i.value = addr
-        self.dut.apb_pwdata_i.value = data
-        await RisingEdge(self.dut.clk_i)
-        self.dut.apb_penable_i.value = 1
-        await RisingEdge(self.dut.clk_i)
-        self.dut.apb_psel_i.value = 0
-        self.dut.apb_penable_i.value = 0
-        self.dut.apb_pwrite_i.value = 0
-
-    async def _read(self, addr):
-        await RisingEdge(self.dut.clk_i)
-        self.dut.apb_psel_i.value = 1
-        self.dut.apb_penable_i.value = 0
-        self.dut.apb_pwrite_i.value = 0
-        self.dut.apb_paddr_i.value = addr
-        await RisingEdge(self.dut.clk_i)
-        self.dut.apb_penable_i.value = 1
-        await ReadOnly()
-        data = int(self.dut.apb_prdata_o.value)
-        await RisingEdge(self.dut.clk_i)
-        self.dut.apb_psel_i.value = 0
-        self.dut.apb_penable_i.value = 0
-        return data
-
-    async def halt(self, timeout=100):
-        """Assert halt and wait for dbg_halted (pipeline drains in Phase 2)."""
-        await self._write(self.DBG_CTRL, 0x1)
-        for i in range(timeout):
-            status = await self._read(self.DBG_STATUS)
-            if status & 0x1:
-                return
-            await RisingEdge(self.dut.clk_i)
-        raise RuntimeError("CPU did not halt within timeout")
-
-    async def wait_halted(self, timeout=200):
-        """Wait for CPU to be halted (e.g. after EBREAK)."""
-        for _ in range(timeout):
-            status = await self._read(self.DBG_STATUS)
-            if status & 0x1:
-                return
-            await RisingEdge(self.dut.clk_i)
-        raise RuntimeError("CPU did not halt within timeout (EBREAK)")
-
-    async def read_gpr(self, reg_num):
-        """Read GPR via APB (0x010 + reg_num*4)."""
-        return await self._read(0x010 + reg_num * 4)
-
-
-def _init_inputs(dut):
-    dut.axi_arready_i.value = 0
-    dut.axi_rvalid_i.value = 0
-    dut.axi_rdata_i.value = 0
-    dut.axi_rresp_i.value = 0
-    dut.axi_awready_i.value = 0
-    dut.axi_wready_i.value = 0
-    dut.axi_bvalid_i.value = 0
-    dut.axi_bresp_i.value = 0
-    dut.apb_psel_i.value = 0
-    dut.apb_penable_i.value = 0
-    dut.apb_pwrite_i.value = 0
-    dut.apb_paddr_i.value = 0
-    dut.apb_pwdata_i.value = 0
-    dut.ext_irq_i.value = 0
-    dut.timer_irq_i.value = 0
-
-
-async def _setup_test(dut):
-    """Common test setup: clock, signal init, reset, AXI memory, debug.
-
-    Clears stale AXI signals, commits them to the simulator, resets the DUT,
-    then starts memory handlers.  Returns (mem, dbg) tuple.
-    """
-    cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
-    _init_inputs(dut)
-
-    # Reset DUT — signal clears take effect on the first clock edge inside reset
-    await reset_dut(dut)
-
-    # Create memory handlers AFTER reset so they start with clean DUT state
-    mem = ConfigurableAXIMemory(dut, ref_model=None, protocol_check=False)
-    dbg = APBDebug(dut)
-
-    # Yield so handler tasks begin executing
-    await RisingEdge(dut.clk_i)
-
-    return mem, dbg
 
 
 # ============================================================================
@@ -202,7 +91,13 @@ async def test_raw_mem_ex_forwarding(dut):
 
 @cocotb.test()
 async def test_raw_wb_regfile_path(dut):
-    """RAW with two-instruction gap: WB write completes before ID reads."""
+    """RAW with two-instruction gap: WB write completes before ID reads.
+
+    Note: with a 2-instruction gap, the WB write completes before ID reads.
+    The regfile read-before-write mechanism may cover for a broken WB→EX
+    forwarding path.  End-result verification is the test philosophy here
+    (no internal signal checks).
+    """
     dut._log.info("=== Test: RAW WB/Regfile Path ===")
     mem, dbg = await _setup_test(dut)
 
@@ -573,3 +468,70 @@ async def test_consecutive_branches(dut):
     assert x4 == 0, f"Branch 2 flush failed: x4={x4}, expected 0"
     assert x5 == 77, f"Final target failed: x5={x5}, expected 77"
     dut._log.info(f"x3={x3}, x4={x4}, x5={x5} — PASS")
+
+
+@cocotb.test()
+async def test_back_to_back_stores(dut):
+    """Back-to-back SW instructions complete without stall (Group 2, item 7).
+
+    SW x1, 0(x0); SW x2, 4(x0) — both stores must complete correctly.
+    Verify by loading the stored values back and checking results.
+    """
+    dut._log.info("=== Test: Back-to-Back Stores ===")
+    mem, dbg = await _setup_test(dut)
+
+    DATA_ADDR = 0x1000
+    program = [
+        ADDI(1, 0, 11),  # x1 = 11
+        ADDI(2, 0, 22),  # x2 = 22
+        LUI(5, DATA_ADDR >> 12),  # x5 = 0x1000
+        SW(1, 5, 0),  # mem[0x1000] = 11
+        SW(2, 5, 4),  # mem[0x1004] = 22  (back-to-back store)
+        LW(3, 5, 0),  # x3 = mem[0x1000] = 11
+        LW(4, 5, 4),  # x4 = mem[0x1004] = 22
+        EBREAK(),
+    ]
+    for i, insn in enumerate(program):
+        mem.write_word(i * 4, insn)
+
+    await dbg.wait_halted()
+
+    x3 = await dbg.read_gpr(3)
+    x4 = await dbg.read_gpr(4)
+    assert x3 == 11, f"First store lost: x3={x3}, expected 11"
+    assert x4 == 22, f"Second store lost: x4={x4}, expected 22"
+    dut._log.info(f"x3={x3}, x4={x4} — PASS")
+
+
+@cocotb.test()
+async def test_jal_rd_dependency(dut):
+    """JAL link register is available to the immediately following instruction (Group 3, item 7).
+
+    JAL x1, +8  writes return address (0x4) to x1.
+    ADDI x2, x1, 0  must read the forwarded x1 (not stale 0).
+    x2 must equal 0x4 (the JAL link address).
+    """
+    dut._log.info("=== Test: JAL rd Dependency ===")
+    mem, dbg = await _setup_test(dut)
+
+    # Layout:
+    #   0x00: JAL x1, +8   (x1 = 0x04, jump to 0x08)
+    #   0x04: ---           (flushed — in IF when JAL resolved)
+    #   0x08: ADDI x2, x1, 0   (x2 = x1 = 0x04; JAL rd forwarded)
+    #   0x0C: EBREAK
+    program = [
+        JAL(1, 8),  # 0x00 → 0x08; x1 = 0x04
+        NOP,  # 0x04 — flushed
+        ADDI(2, 1, 0),  # 0x08 — x2 = x1 = 0x04
+        EBREAK(),  # 0x0C
+    ]
+    for i, insn in enumerate(program):
+        mem.write_word(i * 4, insn)
+
+    await dbg.wait_halted()
+
+    x1 = await dbg.read_gpr(1)
+    x2 = await dbg.read_gpr(2)
+    assert x1 == 0x4, f"JAL link addr wrong: x1=0x{x1:x}, expected 0x4"
+    assert x2 == 0x4, f"JAL rd dependency failed: x2=0x{x2:x}, expected 0x4"
+    dut._log.info(f"x1=0x{x1:x}, x2=0x{x2:x} — PASS")
