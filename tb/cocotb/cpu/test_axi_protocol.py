@@ -170,6 +170,10 @@ async def wait_for_state(dut, state_name, max_cycles=100):
     raise TimeoutError(f"State did not reach '{state_name}' within {max_cycles} cycles")
 
 
+# ── Phase 1 AXI Protocol Regression ──────────────────────────────────────────
+# Tests below cover back-pressure, error responses, and protocol compliance
+# rules inherited from the Phase 1 AXI4-Lite master implementation.
+
 # =============================================================================
 # Category A: Back-Pressure Tests
 # =============================================================================
@@ -846,6 +850,11 @@ async def test_axi_wstrb_encoding(dut):
 
     dut._log.info("Test passed: Write strobes correctly encoded")
 
+
+# ── Phase 2 AXI Arbiter Tests ─────────────────────────────────────────────────
+# Tests below exercise the Phase 2 rv32i_axi_arbiter: simultaneous IF and MEM
+# requests, priority (MEM over IF), and correct address routing.
+# TODO: Add arbiter-specific tests (e.g. simultaneous IF+MEM, MEM priority).
 
 # =============================================================================
 # Test Summary
