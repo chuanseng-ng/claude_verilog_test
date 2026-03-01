@@ -185,7 +185,7 @@ Key documents in `docs/`:
 | `PHASE_STATUS.md` | Current phase status and next steps |
 | `design/PHASE0_ARCHITECTURE_SPEC.md` | CPU architectural requirements |
 | `design/PHASE1_ARCHITECTURE_SPEC.md` | Phase 1 CPU spec (single-cycle) ✅ Complete |
-| `design/PHASE2_ARCHITECTURE_SPEC.md` | Phase 2 CPU spec (5-stage pipeline) ✅ RTL complete |
+| `design/PHASE2_ARCHITECTURE_SPEC.md` | Phase 2 CPU spec (5-stage pipeline) ✅ Verification complete |
 | `design/PHASE4_GPU_ARCHITECTURE_SPEC.md` | GPU architecture specification (Phase 4) |
 | `design/RTL_DEFINITION.md` | Interface signal definitions |
 | `design/MEMORY_MAP.md` | Address space and register map |
