@@ -148,7 +148,7 @@ Last updated: 2026-02-27
   - fault_injection: 7/7 PASS (misaligned, illegal, AXI fetch error)
 - ✅ Random regression: 500 seeds × 100 instructions = **50,000 instructions, 0 failures**
 - 🔄 Performance validation (IPC measurement, frequency validation) — pending backend flow
-- 🔄 Backend flow (synthesis → P&R → STA at 200 MHz) — in progress
+- 🔄 Backend flow (synthesis → P&R → STA at 200 MHz) — pending
 
 ### Phase 3: Memory System & Caches
 
