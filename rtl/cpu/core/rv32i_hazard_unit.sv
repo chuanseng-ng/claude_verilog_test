@@ -138,9 +138,13 @@ module rv32i_hazard_unit (
             flush_id_ex  = 1'b1;
 
         end else if (if_cache_stall) begin
-            // Priority 5: I-cache miss — stall PC and IF/ID
+            // Priority 5: I-cache miss — stall PC only.
+            // DO NOT stall IF/ID: when stall_if_id=0 and ic_stall_i=1, the IF
+            // stage's else-branch naturally inserts a bubble, so the instruction
+            // already in IF/ID is issued once into ID and then replaced by NOPs
+            // until the miss resolves.  Holding IF/ID would re-issue the same
+            // instruction into ID every stall cycle, causing spurious commits.
             stall_pc     = 1'b1;
-            stall_if_id  = 1'b1;
         end
     end
 

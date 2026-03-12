@@ -94,10 +94,17 @@ module rv32i_pipeline_if (
         if (!rst_n) begin
             step_done_q <= 1'b0;
         end else begin
-            if (!dbg_step_pending) begin
-                step_done_q <= 1'b0; // Clear when not stepping
-            end else if (ic_valid_o && !ic_stall_i) begin
+            // Set takes priority over clear: if a fetch is accepted in the same
+            // clock cycle that step_pending_q transitions from 0→1 (i.e. the
+            // cycle immediately after the APB step write), we must mark the step
+            // fetch done before the next cycle evaluates ic_valid_o.  Without
+            // this priority, the clear branch fires when dbg_step_pending=0 at
+            // the transition cycle, nullifying the set and allowing a spurious
+            // second fetch in the following cycle (PC advances by 8 not 4).
+            if (ic_valid_o && !ic_stall_i) begin
                 step_done_q <= 1'b1; // Instruction received → step fetch done
+            end else if (!dbg_step_pending) begin
+                step_done_q <= 1'b0; // Clear when not stepping and no fetch this cycle
             end
         end
     end

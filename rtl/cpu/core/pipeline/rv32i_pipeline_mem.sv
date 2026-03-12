@@ -167,8 +167,12 @@ module rv32i_pipeline_mem (
                 mem_wb_reg_o.trap_cause  <= ex_mem_reg_i.trap_cause;
                 mem_wb_reg_o.valid       <= 1'b1;
             end
+        end else begin
+            // D-cache miss — insert bubble into WB so WB does not re-commit the
+            // previous instruction on every stall cycle (spurious commit_valid_o).
+            // The load/store instruction will enter MEM/WB on the cycle mem_done fires.
+            mem_wb_reg_o <= mem_wb_nop();
         end
-        // else: D-cache miss — hold current MEM/WB register
     end
 
 endmodule

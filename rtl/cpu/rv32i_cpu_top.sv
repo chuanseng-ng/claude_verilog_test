@@ -501,10 +501,14 @@ module rv32i_cpu_top (
       // 4. CPU just entered HALTED → fallback plain halt cause
       // ==================================================================
 
-      if (ebreak_halt) begin
+      if (ebreak_halt && (halt_cause_lat != 4'h2) && (halt_cause_lat != 4'h3)) begin
         // EBREAK retiring at WB — pipeline still has it valid this cycle,
         // dbg_halted will go high next cycle.  Latch now so the cause is
         // stable when DBG_STATUS is read.
+        // Guard: do not override a BP cause (0x2/0x3) that was latched in the
+        // same halt window.  With I-cache hits, the instruction immediately
+        // after the BP target (often EBREAK) can reach WB one cycle after the
+        // BP fires, which would spuriously overwrite the BP cause with 0x8.
         halt_cause_lat <= 4'h8;
 
       end else if (commit_valid_o) begin
