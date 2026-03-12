@@ -1,0 +1,291 @@
+#=============================================
+# Phase 3: RV32I CPU + L1 I-Cache + L1 D-Cache
+# Multi-domain power management
+# File: phase3_cache.upf
+# Standard: IEEE 1801-2015 (UPF 3.0)
+#
+# Extends phase2_cpu.upf by refining PD_CORE to add a
+# dedicated PD_CACHE sub-domain for the cache subsystem.
+#
+# Power domains:
+#
+#   PD_TOP   — always-on
+#              Scope: rv32i_cpu_top (APB debug, halt logic, breakpoints)
+#
+#   PD_CORE  — power-gateable (gated on dbg_halted)
+#              Scope: rv32i_cpu_top.u_core (pipeline stages, CSR file,
+#                     hazard/forwarding units, interrupt controller)
+#
+#   PD_CACHE — power-gateable (sub-domain of PD_CORE)
+#              Scope: rv32i_cpu_top.u_core.u_icache
+#                     rv32i_cpu_top.u_core.u_dcache
+#                     rv32i_cpu_top.u_core.u_cache_arb
+#              Contains: tag/data/valid/dirty SRAM arrays, FSM registers,
+#                        cache arbiter state
+#              Reason: Cache arrays are the largest contributor to leakage
+#                      in Phase 3.  Separate gating allows fine-grained power
+#                      control — e.g., power-gate caches during instruction
+#                      breakpoint halt without disturbing pipeline registers.
+#
+# Power modes:
+#   RUN        — PD_TOP=ON, PD_CORE=ON, PD_CACHE=ON
+#                Normal execution; caches serve requests.
+#   SLEEP      — PD_TOP=ON, PD_CORE=OFF, PD_CACHE=OFF
+#                Full sleep; pipeline + caches power-gated.
+#   CACHE_OFF  — PD_TOP=ON, PD_CORE=ON,  PD_CACHE=OFF
+#                Caches disabled; pipeline runs in bypass mode (future work:
+#                bypass logic in IF/MEM stages to connect directly to AXI).
+#                Currently the same as SLEEP for the cache domain.
+#
+# Control signals:
+#   dbg_halted      — gates PD_CORE (high = gate off)
+#   cache_powerdown — gates PD_CACHE independently (currently tied to
+#                     dbg_halted; a separate signal can be added when
+#                     CACHE_OFF mode is implemented).
+#=============================================
+
+#---------------------------------------------
+# Design Top
+#---------------------------------------------
+
+set_design_top rv32i_cpu_top
+
+#---------------------------------------------
+# Supply Ports
+#---------------------------------------------
+
+# Always-on supply for PD_TOP and all retention cells
+create_supply_port VDD -direction in
+
+# Switchable supply for PD_CORE (pipeline logic)
+create_supply_port VDD_CORE -direction in
+
+# Switchable supply for PD_CACHE (cache arrays)
+create_supply_port VDD_CACHE -direction in
+
+# Ground reference
+create_supply_port VSS -direction in
+
+#---------------------------------------------
+# Supply Networks
+#---------------------------------------------
+
+# Top-domain always-on rails
+create_supply_net VDD -domain PD_TOP
+create_supply_net VSS -domain PD_TOP
+
+# Switchable rails (both visible in PD_TOP for switch cell placement)
+create_supply_net VDD_CORE  -domain PD_TOP
+create_supply_net VDD_CACHE -domain PD_TOP
+
+# Connect supply ports to nets
+connect_supply_net VDD       -ports {VDD}
+connect_supply_net VDD_CORE  -ports {VDD_CORE}
+connect_supply_net VDD_CACHE -ports {VDD_CACHE}
+connect_supply_net VSS       -ports {VSS}
+
+#---------------------------------------------
+# Power Domain: PD_TOP (always-on)
+#---------------------------------------------
+
+create_power_domain PD_TOP -include_scope
+
+create_supply_set SS_TOP \
+    -function {power  VDD} \
+    -function {ground VSS}
+
+associate_supply_set SS_TOP -handle PD_TOP
+
+#---------------------------------------------
+# Power Domain: PD_CORE (power-gateable)
+#---------------------------------------------
+
+# Covers all of u_core except the cache sub-instances, which are carved
+# out into PD_CACHE below.
+create_power_domain PD_CORE \
+    -elements {u_core}
+
+create_supply_set SS_CORE \
+    -function {power  VDD_CORE} \
+    -function {ground VSS}
+
+associate_supply_set SS_CORE -handle PD_CORE
+
+#---------------------------------------------
+# Power Domain: PD_CACHE (power-gateable)
+#---------------------------------------------
+
+# Sub-domain of PD_CORE scoped to the three cache instances.
+create_power_domain PD_CACHE \
+    -elements {u_core/u_icache u_core/u_dcache u_core/u_cache_arb}
+
+create_supply_set SS_CACHE \
+    -function {power  VDD_CACHE} \
+    -function {ground VSS}
+
+associate_supply_set SS_CACHE -handle PD_CACHE
+
+#---------------------------------------------
+# Power Switch: PSW_CORE
+#---------------------------------------------
+
+# Header switch: gates VDD → VDD_CORE when CPU is running.
+create_power_switch PSW_CORE \
+    -domain PD_CORE \
+    -output_supply_port {vout VDD_CORE} \
+    -input_supply_port  {vin  VDD}      \
+    -control_port       {ctrl dbg_halted} \
+    -on_state           {on_state  vin  {!ctrl}} \
+    -off_state          {off_state      {ctrl}}
+
+#---------------------------------------------
+# Power Switch: PSW_CACHE
+#---------------------------------------------
+
+# Header switch: gates VDD_CORE → VDD_CACHE.
+# Cache can be independently gated even when the pipeline is on.
+# Control: dbg_halted (same as PSW_CORE for now; replace with
+# cache_powerdown when the CACHE_OFF mode is implemented).
+create_power_switch PSW_CACHE \
+    -domain PD_CACHE \
+    -output_supply_port {vout VDD_CACHE}  \
+    -input_supply_port  {vin  VDD_CORE}   \
+    -control_port       {ctrl dbg_halted} \
+    -on_state           {on_state  vin  {!ctrl}} \
+    -off_state          {off_state      {ctrl}}
+
+#---------------------------------------------
+# Isolation: PD_CORE → PD_TOP
+#---------------------------------------------
+
+# Clamp PD_CORE outputs to 0 when core is off.
+set_isolation ISO_CORE_TO_TOP \
+    -domain PD_CORE \
+    -isolation_power_net  VDD \
+    -isolation_ground_net VSS \
+    -clamp_value          0   \
+    -applies_to           outputs \
+    -exclude_elements     {dbg_halted} \
+    -location             parent \
+    -isolation_signal     {dbg_halted} \
+    -isolation_sense      high
+
+# dbg_halted must be clamped to 1 (not 0) when core is off.
+set_isolation ISO_DBG_HALTED \
+    -domain PD_CORE \
+    -isolation_power_net  VDD \
+    -isolation_ground_net VSS \
+    -clamp_value          1   \
+    -isolation_signal     {dbg_halted} \
+    -isolation_sense      high \
+    -elements             {dbg_halted} \
+    -applies_to           outputs \
+    -location             parent
+
+#---------------------------------------------
+# Isolation: PD_CACHE → PD_CORE
+#---------------------------------------------
+
+# When the cache is off, clamp cache → pipeline signals to safe values:
+#   ic_stall_o  → 0  (no spurious stalls seen by the IF stage)
+#   ic_rdata_o  → 0  (no X-injection on instruction data)
+#   dc_stall_o  → 0  (no spurious stalls seen by the MEM stage)
+#   dc_rdata_o  → 0
+set_isolation ISO_CACHE_TO_CORE \
+    -domain PD_CACHE \
+    -isolation_power_net  VDD_CORE \
+    -isolation_ground_net VSS \
+    -clamp_value          0   \
+    -applies_to           outputs \
+    -location             parent \
+    -isolation_signal     {dbg_halted} \
+    -isolation_sense      high
+
+#---------------------------------------------
+# Retention: PD_CORE CSR state
+#---------------------------------------------
+
+# Preserve architectural CSR state across SLEEP mode.
+set_retention RET_CORE_CSR \
+    -domain          PD_CORE \
+    -elements        {u_core/u_csr/mtvec_q
+                      u_core/u_csr/mstatus_mie_q
+                      u_core/u_csr/mstatus_mpie_q
+                      u_core/u_csr/mie_q
+                      u_core/u_csr/mepc_q
+                      u_core/u_csr/mcause_q} \
+    -retention_power_net  VDD \
+    -retention_ground_net VSS \
+    -save_signal     {dbg_halted 1} \
+    -restore_signal  {dbg_halted 0}
+
+#---------------------------------------------
+# Retention: PD_CACHE — tag and valid arrays
+#---------------------------------------------
+
+# Retain I-cache valid and tag arrays so that a power-gate cycle does not
+# require a cold-start refill of the entire cache on wake.
+# Dirty and data arrays do NOT need retention for correctness; the D-cache
+# FSM can re-fetch them from L2 on the first miss after wake.
+#
+# NOTE: Retention of 256×1 (valid) + 256×20 (tag) bits per cache = 5.25 Kib.
+# The sky130 SRAM macro for this is small; comment out if the retention cell
+# overhead exceeds the leakage savings.
+set_retention RET_ICACHE_META \
+    -domain          PD_CACHE \
+    -elements        {u_core/u_icache/valid_array
+                      u_core/u_icache/tag_array} \
+    -retention_power_net  VDD \
+    -retention_ground_net VSS \
+    -save_signal     {dbg_halted 1} \
+    -restore_signal  {dbg_halted 0}
+
+set_retention RET_DCACHE_META \
+    -domain          PD_CACHE \
+    -elements        {u_core/u_dcache/valid_array
+                      u_core/u_dcache/tag_array} \
+    -retention_power_net  VDD \
+    -retention_ground_net VSS \
+    -save_signal     {dbg_halted 1} \
+    -restore_signal  {dbg_halted 0}
+
+#---------------------------------------------
+# Power States per Domain
+#---------------------------------------------
+
+add_power_state PD_TOP \
+    -state ON \
+    -supply_expr {power == `{FULL_ON} && ground == `{FULL_ON}}
+
+add_power_state PD_CORE \
+    -state ON \
+    -supply_expr {power == `{FULL_ON} && ground == `{FULL_ON}}
+
+add_power_state PD_CORE \
+    -state SLEEP \
+    -supply_expr  {power == `{OFF} && ground == `{FULL_ON}} \
+    -logic_expr   {dbg_halted == 1}
+
+add_power_state PD_CACHE \
+    -state ON \
+    -supply_expr {power == `{FULL_ON} && ground == `{FULL_ON}}
+
+add_power_state PD_CACHE \
+    -state OFF \
+    -supply_expr  {power == `{OFF} && ground == `{FULL_ON}} \
+    -logic_expr   {dbg_halted == 1}
+
+#---------------------------------------------
+# System-level Power State Table
+#---------------------------------------------
+
+create_pst PST_MAIN \
+    -supplies {VDD VDD_CORE VDD_CACHE VSS}
+
+add_pst_state RUN       -pst PST_MAIN -state {VDD VDD_CORE VDD_CACHE VSS}
+add_pst_state SLEEP     -pst PST_MAIN -state {VDD off       off        VSS}
+add_pst_state CACHE_OFF -pst PST_MAIN -state {VDD VDD_CORE  off        VSS}
+
+#---------------------------------------------
+# End of UPF
+#---------------------------------------------
