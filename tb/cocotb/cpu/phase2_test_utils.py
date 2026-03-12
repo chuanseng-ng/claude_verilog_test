@@ -19,11 +19,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, ReadOnly
+from cocotb.triggers import ReadOnly, RisingEdge
 
 from tb.cocotb.common.clock_reset import reset_dut
 from tb.cocotb.cpu.axi_models import ConfigurableAXIMemory
-
 
 # ============================================================================
 # APB register offset constants (Phase 2)
@@ -127,8 +126,7 @@ class APBDebug:
                 return
             await RisingEdge(self.dut.clk_i)
         raise RuntimeError(
-            f"CPU did not halt within {timeout_cycles} cycles "
-            f"(last DBG_STATUS=0x{last_status:08x})"
+            f"CPU did not halt within {timeout_cycles} cycles (last DBG_STATUS=0x{last_status:08x})"
         )
 
     async def resume(self):
@@ -149,8 +147,7 @@ class APBDebug:
                 return
             await RisingEdge(self.dut.clk_i)
         raise RuntimeError(
-            f"CPU did not halt within {timeout_cycles} cycles "
-            f"(last DBG_STATUS=0x{last_status:08x})"
+            f"CPU did not halt within {timeout_cycles} cycles (last DBG_STATUS=0x{last_status:08x})"
         )
 
     # ------------------------------------------------------------------ #

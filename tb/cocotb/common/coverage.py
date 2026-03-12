@@ -9,7 +9,6 @@ Three coverage metrics for Phase 1 exit criteria:
 
 from pathlib import Path
 
-
 # ---------------------------------------------------------------------------
 # Instruction Coverage
 # ---------------------------------------------------------------------------
