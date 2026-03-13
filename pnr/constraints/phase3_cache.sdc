@@ -158,10 +158,12 @@ set_false_path -to [get_ports debug_pc_src_o]
 set_false_path -to [get_ports debug_state_o]
 set_false_path -to [get_ports debug_ebreak_o]
 
-# APB <-> AXI cross-domain
-set_false_path -from [get_ports apb_paddr_i] -to [get_ports axi_araddr_o]
-set_false_path -from [get_ports apb_paddr_i] -to [get_ports axi_awaddr_o]
-set_false_path -from [get_ports axi_rdata_i] -to [get_ports apb_prdata_o]
+# APB and AXI ports share the same clk_i clock domain — no false/cross-domain
+# path exceptions are needed here.  The STA tool resolves all timing through
+# the normal single-clock path analysis (group_path PIPELINE above).
+# If an asynchronous APB clock is introduced in a future phase, add:
+#   create_clock -name apb_clk -period <T> [get_ports apb_pclk_i]
+#   set_clock_groups -asynchronous -group {clk_i} -group {apb_clk}
 
 #---------------------------------------------
 # Multicycle Paths — Cache SRAM arrays
@@ -220,7 +222,10 @@ set_load 0.05 [all_outputs]
 # Area Constraint
 #---------------------------------------------
 
-# No explicit area cap; optimise for timing
+# set_max_area 0 does NOT mean "use zero area".  In standard SDC/Yosys
+# semantics a value of 0 means "unconstrained" — the tool is free to use
+# as much area as needed and will prioritise timing closure instead.
+# To add a hard area limit, replace 0 with the target cell-count or µm².
 set_max_area 0
 
 #---------------------------------------------

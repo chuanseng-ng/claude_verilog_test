@@ -144,13 +144,16 @@ create_power_switch PSW_CORE \
 
 # Header switch: gates VDD_CORE → VDD_CACHE.
 # Cache can be independently gated even when the pipeline is on.
-# Control: dbg_halted (same as PSW_CORE for now; replace with
-# cache_powerdown when the CACHE_OFF mode is implemented).
+# Control: cache_ctrl — a dedicated power-management signal separate from
+# dbg_halted (which controls PSW_CORE).  Using the same signal for both
+# switches would make it impossible to have PD_CACHE OFF while PD_CORE is ON.
+# cache_ctrl should be driven by a future cache power-management register;
+# tie it to 1'b0 (always-ON) until that register is implemented.
 create_power_switch PSW_CACHE \
     -domain PD_CACHE \
     -output_supply_port {vout VDD_CACHE}  \
     -input_supply_port  {vin  VDD_CORE}   \
-    -control_port       {ctrl dbg_halted} \
+    -control_port       {ctrl cache_ctrl} \
     -on_state           {on_state  vin  {!ctrl}} \
     -off_state          {off_state      {ctrl}}
 
