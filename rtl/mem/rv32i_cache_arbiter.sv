@@ -138,16 +138,11 @@ module rv32i_cache_arbiter (
                 dc_arready_o  = axi_arready_i;
             end
             GRANT_NONE: begin
-                // Forward during arbitration window (grant not yet registered)
-                if (dc_arvalid_i) begin
-                    axi_araddr_o  = dc_araddr_i;
-                    axi_arvalid_o = dc_arvalid_i;
-                    dc_arready_o  = axi_arready_i;
-                end else if (ic_arvalid_i) begin
-                    axi_araddr_o  = ic_araddr_i;
-                    axi_arvalid_o = ic_arvalid_i;
-                    ic_arready_o  = axi_arready_i;
-                end
+                // Do NOT forward AR beats during GRANT_NONE.
+                // The read-data routing (ic_rvalid_o / dc_rvalid_o) is gated
+                // on grant_q, so any AR that completes while grant_q==GRANT_NONE
+                // would produce rdata with no valid destination.  Wait one cycle
+                // for the FSM to register the grant before forwarding AR.
             end
             default: ;
         endcase

@@ -93,9 +93,15 @@ module rv32i_icache (
 
     // =========================================================================
     // Stall output
-    // Stall when: valid request AND (miss detected OR refill in progress)
+    // Stall when a refill is in progress (regardless of ic_valid_i) OR when a
+    // valid request hits a miss in IDLE.
+    //
+    // ic_valid_i must NOT gate the stall during CS_REFILL: if the pipeline
+    // de-asserts ic_valid_i mid-refill (e.g. due to a redirect), the stall must
+    // stay high until the AXI transaction completes, otherwise the arbiter sees
+    // an orphaned in-flight beat with no back-pressure.
     // =========================================================================
-    assign ic_stall_o = ic_valid_i && ((state_q != CS_IDLE) || !hit);
+    assign ic_stall_o = (state_q != CS_IDLE) || (ic_valid_i && !hit);
 
     // =========================================================================
     // Data output (combinational from cache arrays)
@@ -126,21 +132,32 @@ module rv32i_icache (
                 end
                 // -----------------------------------------------------------------
                 CS_REFILL: begin
-                    // Issue AR for current word
-                    if (!ar_pending_q) begin
-                        if (axi_arready_i) begin
-                            ar_pending_q <= 1'b1; // AR accepted
-                        end
+                    // If FENCE.I fires during a refill, abort cleanly:
+                    // reset FSM state so the cache arrays are invalidated by the
+                    // synchronous always_ff block below (rst_n || ic_invalidate_i).
+                    // Any in-flight AXI beat is drained by keeping axi_rready_o=1;
+                    // the refill_buf_q data is discarded (valid_array stays 0).
+                    if (ic_invalidate_i) begin
+                        state_q       <= CS_IDLE;
+                        ar_pending_q  <= 1'b0;
+                        refill_word_q <= 2'b00;
                     end else begin
-                        // Waiting for R response
-                        if (axi_rvalid_i) begin
-                            refill_buf_q[refill_word_q] <= axi_rdata_i;
-                            ar_pending_q <= 1'b0;
-                            if (refill_word_q == 2'd3) begin
-                                // All 4 words received — commit to cache and return to IDLE
-                                state_q <= CS_IDLE;
-                            end else begin
-                                refill_word_q <= refill_word_q + 1'b1;
+                        // Issue AR for current word
+                        if (!ar_pending_q) begin
+                            if (axi_arready_i) begin
+                                ar_pending_q <= 1'b1; // AR accepted
+                            end
+                        end else begin
+                            // Waiting for R response
+                            if (axi_rvalid_i) begin
+                                refill_buf_q[refill_word_q] <= axi_rdata_i;
+                                ar_pending_q <= 1'b0;
+                                if (refill_word_q == 2'd3) begin
+                                    // All 4 words received — commit to cache and return to IDLE
+                                    state_q <= CS_IDLE;
+                                end else begin
+                                    refill_word_q <= refill_word_q + 1'b1;
+                                end
                             end
                         end
                     end

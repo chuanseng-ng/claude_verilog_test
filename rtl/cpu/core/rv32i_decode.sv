@@ -490,15 +490,28 @@ module rv32i_decode (
       // FENCE  (funct3=000): memory ordering fence — treated as NOP
       //   (single CPU, no coherence issues)
       // FENCE.I (funct3=001): instruction-fetch fence — invalidate I-cache
+      //   Per ISA spec, a canonical FENCE.I encoding has rd=0, rs1=0, imm=0;
+      //   other encodings are reserved but currently treated as FENCE.I.
       // ================================================================
       OP_MISC_MEM: begin
         if (funct3 == 3'b001) begin
-          // FENCE.I: signal I-cache invalidation; acts as a serializing NOP
-          // EX stage will redirect PC to PC+4 (pipeline flush) and assert ic_invalidate
-          fence_i = 1'b1;
+          // FENCE.I: only accept canonical encoding (rd=0, rs1=0, imm=0).
+          // Other funct3=001 encodings are reserved; treat as illegal.
+          if (instruction[11:7] == 5'b0 &&   // rd == 0
+              instruction[19:15] == 5'b0 &&  // rs1 == 0
+              instruction[31:20] == 12'b0)   // imm == 0
+          begin
+            fence_i = 1'b1;
+          end else begin
+            illegal = 1'b1;
+          end
+        end else if (funct3 == 3'b000) begin
+          // FENCE (funct3=000): NOP in a single-CPU design (no coherence).
+          // No action; illegal remains 0.
+        end else begin
+          // Other funct3 encodings are reserved/illegal.
+          illegal = 1'b1;
         end
-        // FENCE (funct3=000) and other variants: treat as NOP (no action needed)
-        // illegal remains 0 (valid but no-op in single-CPU design)
       end
 
       // ================================================================

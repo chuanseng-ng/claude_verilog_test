@@ -194,7 +194,10 @@ module rv32i_core (
     logic        ic_axi_arvalid;
     logic        ic_axi_arready;
     logic [31:0] ic_axi_rdata;
-    logic [1:0]  ic_axi_rresp;
+    logic [1:0]  ic_axi_rresp;  // TODO(phase4): propagate RRESP[1] as instruction-fetch
+                                  // access fault (trap cause 1) into the pipeline MEM stage.
+                                  // Requires adding ic_error_o port to rv32i_icache and
+                                  // wiring it through rv32i_pipeline_if → rv32i_pipeline_mem.
     logic        ic_axi_rvalid;
     logic        ic_axi_rready;
 
@@ -205,7 +208,9 @@ module rv32i_core (
     logic        dc_axi_arvalid;
     logic        dc_axi_arready;
     logic [31:0] dc_axi_rdata;
-    logic [1:0]  dc_axi_rresp;
+    logic [1:0]  dc_axi_rresp;  // TODO(phase4): propagate RRESP[1] as load-access fault
+                                  // (trap cause 5) and BRESP[1] as store-access fault
+                                  // (trap cause 7) into the pipeline MEM stage.
     logic        dc_axi_rvalid;
     logic        dc_axi_rready;
 
@@ -217,7 +222,7 @@ module rv32i_core (
     logic        dc_axi_wvalid;
     logic        dc_axi_wready;
     logic        dc_axi_bvalid;
-    logic [1:0]  dc_axi_bresp;
+    logic [1:0]  dc_axi_bresp;  // See dc_axi_rresp note above.
     logic        dc_axi_bready;
 
     // =========================================================================
