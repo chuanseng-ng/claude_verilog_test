@@ -502,7 +502,7 @@ See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 
 3. **Verification** (follows RTL completion)
    - ⏸️ Unit tests: `tb/cocotb/mem/test_icache.py`, `test_dcache.py`
-   - ⏸️ Integration: `tb/cocotb/mem/test_cache_integration.py`
+   - ⏸️ Integration: `tb/cocotb/cpu/test_cache_integration.py`
    - ⏸️ Phase 2 regression (all 111 tests; FENCE.I now valid)
    - ⏸️ Random regression: 50,000+ instructions with caches
 

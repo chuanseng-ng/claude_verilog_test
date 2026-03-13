@@ -260,7 +260,7 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 
 - Python cache reference model (`tb/models/cache_model.py`)
 - Unit tests: `tb/cocotb/mem/test_icache.py`, `tb/cocotb/mem/test_dcache.py`
-- Integration: `tb/cocotb/mem/test_cache_integration.py`
+- Integration: `tb/cocotb/cpu/test_cache_integration.py`
 - Phase 2 regression (all 111 tests must pass; FENCE.I now valid)
 - Random regression: 50,000+ instructions with caches enabled, 0 failures
 - AI SHOULD
