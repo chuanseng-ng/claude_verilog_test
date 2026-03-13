@@ -179,7 +179,15 @@ class ISASequenceBase(BaseSequence):
         # D-cache eviction: force writeback of dirty store lines before EBREAK.
         # For each store target, issue a conflicting LW (same cache index, different
         # tag = target + 0x1000) so the D-cache evicts the dirty line to AXI memory.
-        # Uses x29 as scratch (safe: x29 is not a test operand in any store sequence).
+        #
+        # Scratch register: pick the lowest-numbered caller-saved register (x1-x31)
+        # that is NOT used by setup_regs, so we never clobber a test operand.
+        # x0 is excluded (hardwired zero); x1-x31 are searched in order.
+        used_regs = set(self.setup_regs.keys()) | {0}
+        scratch_reg = next(
+            (r for r in range(1, 32) if r not in used_regs),
+            29,  # fallback: should never be reached (need > 30 setup regs)
+        )
         num_eviction_instructions = 0
         for evict_target in self.eviction_addrs:
             evict_addr = (evict_target + 0x1000) & 0xFFFFFFFC  # word-aligned, +1 tag
@@ -187,17 +195,17 @@ class ISASequenceBase(BaseSequence):
             lower = evict_addr & 0xFFF
             if lower >= 0x800:  # ADDI sign-extends; compensate upper
                 upper = (upper + 1) & 0xFFFFF
-            # LUI x29, upper
-            axi_driver.write_word(addr, LUI(29, upper))
+            # LUI <scratch>, upper
+            axi_driver.write_word(addr, LUI(scratch_reg, upper))
             addr += 4
             num_eviction_instructions += 1
-            # ADDI x29, x29, lower (skip if lower==0)
+            # ADDI <scratch>, <scratch>, lower (skip if lower==0)
             if lower != 0:
-                axi_driver.write_word(addr, ADDI(29, 29, lower))
+                axi_driver.write_word(addr, ADDI(scratch_reg, scratch_reg, lower))
                 addr += 4
                 num_eviction_instructions += 1
-            # LW x0, 0(x29)  — conflicting load triggers D-cache dirty eviction
-            axi_driver.write_word(addr, LW(0, 29, 0))
+            # LW x0, 0(<scratch>)  — conflicting load triggers D-cache dirty eviction
+            axi_driver.write_word(addr, LW(0, scratch_reg, 0))
             addr += 4
             num_eviction_instructions += 1
 

@@ -228,10 +228,11 @@ class DirectMappedCache:
         """
         line = self._lines[index]
 
-        # Evict dirty occupant
-        if line.valid and line.dirty:
-            self._writeback(index)
+        # Evict existing occupant (clean or dirty)
+        if line.valid:
             self.evictions += 1
+            if line.dirty:
+                self._writeback(index)
 
         # Fill from backing store
         base_addr = (addr >> OFFSET_BITS) << OFFSET_BITS  # line-aligned byte addr

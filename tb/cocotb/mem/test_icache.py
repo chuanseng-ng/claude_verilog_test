@@ -63,9 +63,14 @@ class SimpleICacheAXIMem:
             if self.latency:
                 await ClockCycles(dut.clk, self.latency)
 
-            addr = int(dut.axi_araddr_o.value)
+            # Assert arready; sample address AFTER the handshake edge so we
+            # capture the address that the DUT actually registered (i.e. the
+            # value stable when both ARVALID and ARREADY are high together).
             dut.axi_arready_i.value = 1
             await RisingEdge(dut.clk)
+            # Both ARVALID and ARREADY were high on the previous edge — the
+            # address is now stable; sample it here.
+            addr = int(dut.axi_araddr_o.value)
             dut.axi_arready_i.value = 0
 
             # Send read data

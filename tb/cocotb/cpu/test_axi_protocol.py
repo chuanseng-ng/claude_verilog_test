@@ -862,7 +862,7 @@ async def test_axi_wstrb_encoding(dut):
     # On eviction, the D-cache writes back the full cache line as 4 AXI write
     # transactions (0x100, 0x104, 0x108, 0x10C), each with wstrb=0b1111.
     n = len(wstrb_values)
-    assert n >= 3, f"Expected at least 3 cache-line eviction writes, got {n}"
+    assert n >= 4, f"Expected all 4 cache-line eviction writes, got {n}"
 
     # All eviction writes use full-word strobe (cache writeback granularity)
     for addr, wstrb in wstrb_values:
@@ -870,9 +870,9 @@ async def test_axi_wstrb_encoding(dut):
             f"Expected wstrb=0b1111 (cache line eviction), got 0b{wstrb:04b} at 0x{addr:08x}"
         )
 
-    # Verify the evicted addresses are the expected cache line members
+    # Verify all 4 evicted addresses for the expected cache line (0x100..0x10C)
     evicted_addrs = {addr for addr, _ in wstrb_values}
-    for expected_addr in (0x100, 0x104, 0x108):
+    for expected_addr in (0x100, 0x104, 0x108, 0x10C):
         assert expected_addr in evicted_addrs, f"Expected eviction write at 0x{expected_addr:08x}"
 
     dut._log.info(

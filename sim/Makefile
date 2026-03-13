@@ -200,6 +200,13 @@ test:
 		       $(SIM_DIR)/coverage_$${slug}.dat 2>/dev/null || true; \
 		echo ""; \
 	done; \
+	echo "========================================"; \
+	echo "Running Phase 3 cache test suites..."; \
+	echo "========================================"; \
+	if ! $(MAKE) phase3_all; then \
+		failed_tests="$$failed_tests phase3_all"; \
+	fi; \
+	echo ""; \
 	if [ -n "$$failed_tests" ]; then \
 		echo "========================================"; \
 		echo "FAILED TESTS:$$failed_tests"; \
