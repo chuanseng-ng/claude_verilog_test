@@ -3,6 +3,8 @@ work/
 logs/
 reports/
 results/
+openlane/runs/
+librelane/runs/
 
 # But keep directory structure
 !work/.gitkeep

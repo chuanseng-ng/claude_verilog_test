@@ -46,3 +46,4 @@ coverage_tb_*.dat
 
 # PD-flow runs
 pnr/librelane/runs
+pnr/openlane/runs
