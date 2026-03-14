@@ -1,6 +1,8 @@
 #================================================================
 # OpenROAD Physical Design Flow - Makefile
-# Target: Phase 1 RV32I Single-Cycle CPU
+# Target: Phase 3 RV32I CPU + L1 I-Cache + L1 D-Cache
+# PDK: Sky130 HD (sky130_fd_sc_hd)
+# Frequency: 75 MHz (13.333 ns period)
 #================================================================
 
 #----------------------------------------------------------------
@@ -9,8 +11,8 @@
 
 # Design parameters
 export TOP_MODULE   ?= rv32i_cpu_top
-export CLOCK_PERIOD ?= 10.0
-export CLOCK_PORT   ?= clk
+export CLOCK_PERIOD ?= 13.333
+export CLOCK_PORT   ?= clk_i
 
 # PDK selection (sky130 or asap7)
 export PDK          ?= sky130
@@ -35,8 +37,8 @@ KLAYOUT     := klayout
 VERILATOR   := verilator
 
 # Constraint files
-SDC_FILE    := $(CONSTR_DIR)/phase1_cpu.sdc
-UPF_FILE    := $(CONSTR_DIR)/phase1_cpu.upf
+SDC_FILE    := $(CONSTR_DIR)/phase3_cache.sdc
+UPF_FILE    := $(CONSTR_DIR)/phase3_cache.upf
 
 # Output files
 NETLIST     := $(RESULTS_DIR)/$(TOP_MODULE).v
