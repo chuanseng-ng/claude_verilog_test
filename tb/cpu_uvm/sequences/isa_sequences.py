@@ -114,6 +114,12 @@ class ISASequenceBase(BaseSequence):
         self.expected_rd = expected_rd
         self.expected_value = expected_value
         self.setup_memory = setup_memory or {}
+        # D-cache eviction support: set in store subclasses to flush dirty lines
+        # before AXI memory readback.  Each entry is the store target address;
+        # a conflicting load (target + 0x1000, same cache index) is inserted into
+        # the test program to force writeback before the EBREAK.
+        self.eviction_addrs = []
+        self.num_extra_cycles = 0
 
     async def body(self):
         """Execute single-instruction test."""
@@ -169,6 +175,39 @@ class ISASequenceBase(BaseSequence):
         test_instr_addr = addr
         axi_driver.write_word(addr, self.instruction)
         addr += 4
+
+        # D-cache eviction: force writeback of dirty store lines before EBREAK.
+        # For each store target, issue a conflicting LW (same cache index, different
+        # tag = target + 0x1000) so the D-cache evicts the dirty line to AXI memory.
+        #
+        # Scratch register: pick the lowest-numbered caller-saved register (x1-x31)
+        # that is NOT used by setup_regs, so we never clobber a test operand.
+        # x0 is excluded (hardwired zero); x1-x31 are searched in order.
+        used_regs = set(self.setup_regs.keys()) | {0}
+        scratch_reg = next(
+            (r for r in range(1, 32) if r not in used_regs),
+            29,  # fallback: should never be reached (need > 30 setup regs)
+        )
+        num_eviction_instructions = 0
+        for evict_target in self.eviction_addrs:
+            evict_addr = (evict_target + 0x1000) & 0xFFFFFFFC  # word-aligned, +1 tag
+            upper = (evict_addr >> 12) & 0xFFFFF
+            lower = evict_addr & 0xFFF
+            if lower >= 0x800:  # ADDI sign-extends; compensate upper
+                upper = (upper + 1) & 0xFFFFF
+            # LUI <scratch>, upper
+            axi_driver.write_word(addr, LUI(scratch_reg, upper))
+            addr += 4
+            num_eviction_instructions += 1
+            # ADDI <scratch>, <scratch>, lower (skip if lower==0)
+            if lower != 0:
+                axi_driver.write_word(addr, ADDI(scratch_reg, scratch_reg, lower))
+                addr += 4
+                num_eviction_instructions += 1
+            # LW x0, 0(<scratch>)  — conflicting load triggers D-cache dirty eviction
+            axi_driver.write_word(addr, LW(0, scratch_reg, 0))
+            addr += 4
+            num_eviction_instructions += 1
 
         # Add EBREAK to halt CPU after test (fall-through path)
         axi_driver.write_word(addr, 0x00100073)  # EBREAK
@@ -236,9 +275,10 @@ class ISASequenceBase(BaseSequence):
         await apb_driver.resume_cpu()
 
         # Wait for execution to complete (EBREAK will halt the CPU)
-        num_instructions = num_setup_instructions + 1 + 1  # setup + test + EBREAK
+        # setup + test + eviction + EBREAK
+        num_instructions = num_setup_instructions + 1 + num_eviction_instructions + 1
         dut = self.env.axi_agent.driver.dut
-        await ClockCycles(dut.clk_i, num_instructions * 10)  # Give plenty of time
+        await ClockCycles(dut.clk_i, num_instructions * 10 + self.num_extra_cycles)
 
         # Verify setup registers were loaded correctly
         for reg_num, expected_val in self.setup_regs.items():
@@ -365,6 +405,9 @@ class SWSequence(ISASequenceBase):
         self.store_value = actual_store_value
 
         super().__init__(name, env, instruction, setup_regs=setup_regs)
+        # Evict the dirty D-cache line so AXI memory reflects the store before readback
+        self.eviction_addrs = [self.target_addr]
+        self.num_extra_cycles = 300
 
     async def body(self):
         """Execute SW test and verify memory was written."""
@@ -539,6 +582,9 @@ class SBSequence(ISASequenceBase):
         self.store_value = actual_store_value & 0xFF
 
         super().__init__(name, env, instruction, setup_regs=setup_regs)
+        # Evict the dirty D-cache line so AXI memory reflects the store before readback
+        self.eviction_addrs = [self.target_addr]
+        self.num_extra_cycles = 300
 
     async def body(self):
         """Execute SB test and verify byte was written."""
@@ -601,6 +647,9 @@ class SHSequence(ISASequenceBase):
         self.store_value = actual_store_value & 0xFFFF
 
         super().__init__(name, env, instruction, setup_regs=setup_regs)
+        # Evict the dirty D-cache line so AXI memory reflects the store before readback
+        self.eviction_addrs = [self.target_addr]
+        self.num_extra_cycles = 300
 
     async def body(self):
         """Execute SH test and verify halfword was written."""

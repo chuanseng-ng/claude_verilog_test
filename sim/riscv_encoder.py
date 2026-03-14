@@ -295,6 +295,14 @@ def ECALL():
     return 0x00000073
 
 
+def FENCE_I():
+    """FENCE.I — Instruction-fetch Fence (Zifencei extension)
+    Encoding: imm=0, rs1=0, funct3=001, rd=0, opcode=MISC-MEM (0b0001111)
+    Full encoding: 0x0000100F
+    """
+    return 0x0000100F
+
+
 # CSR address constants (M-mode)
 CSR_MSTATUS = 0x300  # Machine status register
 CSR_MIE = 0x304  # Machine interrupt-enable register

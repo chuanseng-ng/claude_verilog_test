@@ -228,7 +228,8 @@ async def test_axi_arready_backpressure(dut):
             # Exact count depends on when arvalid first fires relative to the
             # handler's RisingEdge await, so tolerate 6 or 7.
             assert 6 <= stall_cycles <= 7, (
-                f"Expected 6-7 cycle stall (5 delay + stabilization + scheduling), got {stall_cycles} cycles"
+                f"Expected 6-7 cycle stall (5 delay + stabilization + scheduling),"
+                f" got {stall_cycles} cycles"
             )
 
         cycle += 1
@@ -330,22 +331,32 @@ async def test_axi_bvalid_delay(dut):
     mem, _ = await setup_test(dut)
 
     # Load test program:
-    # 0x0000: LUI x1, 0x12345  # Load upper immediate
-    # 0x0004: SW x1, 0x100(x0) # Store word to address 0x100
+    # 0x0000: LUI x1, 0x12345       # Load upper immediate
+    # 0x0004: SW x1, 0x100(x0)      # Store word to 0x100 (write-back: stays in cache)
+    # 0x0008: LUI x29, 0x1          # x29 = 0x1000 (eviction address base)
+    # 0x000C: LW x0, 0x100(x29)     # Load from 0x1100 (conflicts with 0x100, evicts)
+    # 0x0010: EBREAK
+    # Phase 3: SW is write-back cached; we must trigger an eviction to see an AXI write.
+    # The conflicting LW at 0x1100 (same cache set, different tag) forces dirty writeback.
     mem.write_word(0x0000, LUI(1, 0x12345))
     mem.write_word(0x0004, SW(1, 0, 0x100))
+    mem.write_word(0x0008, LUI(29, 0x1))  # x29 = 0x1000
+    mem.write_word(0x000C, LW(0, 29, 0x100))  # load from 0x1100 → evicts dirty 0x100 line
+    mem.write_word(0x0010, 0x00100073)  # EBREAK
+    mem.write_word(0x1100, 0)  # pre-populate eviction target for D-cache refill
 
     # Inject 5-cycle bvalid delay BEFORE the SW can execute.
     # The delay persists until the next write transaction consumes it.
     mem.inject_write_delay(awready_cycles=0, wready_cycles=0, bvalid_cycles=5)
 
     # Monitor write transaction — use generous window for 5-stage pipeline
-    # with AXI stabilization delays (each fetch ~3 cycles, plus pipeline latency)
+    # with AXI stabilization delays and D-cache eviction latency (Phase 3:
+    # the write appears only after the conflicting LW triggers D-cache eviction)
     awready_handshake = None
     bvalid_asserted = None
     cycle = 0
 
-    while cycle < 200:
+    while cycle < 400:
         await RisingEdge(dut.clk_i)
 
         # Track awready handshake
@@ -617,19 +628,28 @@ async def test_axi_error_store(dut):
     mem, _ref_model = await setup_test(dut, use_ref_model=True)
 
     # Load test program:
-    # 0x0000: LUI x1, 0xBAD    # Load value to store
-    # 0x0004: SW x1, 0x200(x0) # Store to address with error
+    # 0x0000: LUI x1, 0xBAD        # Load value to store
+    # 0x0004: SW x1, 0x200(x0)     # Store to 0x200 (write-back D-cache: stays in cache)
+    # 0x0008: LUI x29, 0x1         # x29 = 0x1000
+    # 0x000C: LW x0, 0x200(x29)    # Load from 0x1200 (evicts dirty 0x200 line → AXI write)
+    # 0x0010: EBREAK
+    # Phase 3: SW is write-back cached; conflicting LW forces dirty eviction to AXI.
+    # The AXI write at 0x200 then receives SLVERR, which is what the test monitors.
     mem.write_word(0x0000, LUI(1, 0xBAD))
     mem.write_word(0x0004, SW(1, 0, 0x200))
+    mem.write_word(0x0008, LUI(29, 0x1))  # x29 = 0x1000
+    mem.write_word(0x000C, LW(0, 29, 0x200))  # load from 0x1200 → evicts dirty 0x200 line
+    mem.write_word(0x0010, 0x00100073)  # EBREAK
+    mem.write_word(0x1200, 0)  # pre-populate eviction target for D-cache refill
 
-    # Inject SLVERR at store address
+    # Inject SLVERR at store address — will be seen when D-cache evicts the dirty line
     mem.inject_error(0x0200, "SLVERR")
 
     # Run and monitor for trap
     cycle = 0
     error_detected = False
 
-    while cycle < 200:
+    while cycle < 400:
         await RisingEdge(dut.clk_i)
 
         # Check for error response on write
@@ -797,22 +817,31 @@ async def test_axi_wstrb_encoding(dut):
 
     mem, _ = await setup_test(dut)
 
-    # Test program:
-    # 0x0000: LUI x1, 0x1234     # Load value
-    # 0x0004: SB x1, 0x100(x0)   # Store byte (wstrb=0b0001)
-    # 0x0008: SH x1, 0x104(x0)   # Store halfword (wstrb=0b0011)
-    # 0x000C: SW x1, 0x108(x0)   # Store word (wstrb=0b1111)
+    # Test program (Phase 3: stores go to write-back D-cache, AXI writes happen on eviction):
+    # 0x0000: LUI x1, 0x1234       # Load value
+    # 0x0004: SB x1, 0x100(x0)     # Store byte to cache line [0x100..0x10F]
+    # 0x0008: SH x1, 0x104(x0)     # Store halfword — same cache line
+    # 0x000C: SW x1, 0x108(x0)     # Store word — same cache line
+    # 0x0010: LUI x29, 0x1         # x29 = 0x1000
+    # 0x0014: LW x0, 0x100(x29)    # Load from 0x1100 (evicts dirty line → 4 AXI writes, wstrb=0xF)
+    # 0x0018: EBREAK
+    # D-cache eviction: all stores accumulate in one cache line, evicted as 4 full-word
+    # AXI writes (wstrb=0b1111 each) at addresses 0x100, 0x104, 0x108, 0x10C.
     mem.write_word(0x0000, LUI(1, 0x1234))
     mem.write_word(0x0004, SB(1, 0, 0x100))
     mem.write_word(0x0008, SH(1, 0, 0x104))
     mem.write_word(0x000C, SW(1, 0, 0x108))
+    mem.write_word(0x0010, LUI(29, 0x1))  # x29 = 0x1000
+    mem.write_word(0x0014, LW(0, 29, 0x100))  # load from 0x1100 → evicts dirty line
+    mem.write_word(0x0018, 0x00100073)  # EBREAK
+    mem.write_word(0x1100, 0)  # pre-populate eviction target
 
     # Monitor write strobes
     cycle = 0
     wstrb_values = []
     current_aw_addr = None  # Capture AW handshake address
 
-    while cycle < 200:
+    while cycle < 400:
         await RisingEdge(dut.clk_i)
 
         # Capture AW handshake address when both awvalid and awready are asserted
@@ -828,27 +857,27 @@ async def test_axi_wstrb_encoding(dut):
 
         cycle += 1
 
-    # Verify strobe patterns
-    # Note: Exact patterns depend on address alignment and CPU implementation
-    # At minimum, verify we got 3 writes
-    assert len(wstrb_values) >= 3, f"Expected 3 writes, got {len(wstrb_values)}"
+    # Phase 3 D-cache write-back behavior:
+    # SB, SH, SW all write to the same 16-byte cache line [0x100..0x10F].
+    # On eviction, the D-cache writes back the full cache line as 4 AXI write
+    # transactions (0x100, 0x104, 0x108, 0x10C), each with wstrb=0b1111.
+    n = len(wstrb_values)
+    assert n >= 4, f"Expected all 4 cache-line eviction writes, got {n}"
 
-    # Verify SB has single-byte strobe
-    sb_strobes = [wstrb for addr, wstrb in wstrb_values if addr == 0x100]
-    assert len(sb_strobes) > 0, "Expected at least one SB write at 0x100"
-    assert sb_strobes[0] == 0b0001, f"SB should have wstrb=0b0001, got 0b{sb_strobes[0]:04b}"
+    # All eviction writes use full-word strobe (cache writeback granularity)
+    for addr, wstrb in wstrb_values:
+        assert wstrb == 0b1111, (
+            f"Expected wstrb=0b1111 (cache line eviction), got 0b{wstrb:04b} at 0x{addr:08x}"
+        )
 
-    # Verify SH has half-word strobe
-    sh_strobes = [wstrb for addr, wstrb in wstrb_values if addr == 0x104]
-    assert len(sh_strobes) > 0, "Expected at least one SH write at 0x104"
-    assert sh_strobes[0] == 0b0011, f"SH should have wstrb=0b0011, got 0b{sh_strobes[0]:04b}"
+    # Verify all 4 evicted addresses for the expected cache line (0x100..0x10C)
+    evicted_addrs = {addr for addr, _ in wstrb_values}
+    for expected_addr in (0x100, 0x104, 0x108, 0x10C):
+        assert expected_addr in evicted_addrs, f"Expected eviction write at 0x{expected_addr:08x}"
 
-    # Verify SW has full strobe
-    sw_strobes = [wstrb for addr, wstrb in wstrb_values if addr == 0x108]
-    assert len(sw_strobes) > 0, "Expected at least one SW write at 0x108"
-    assert sw_strobes[0] == 0b1111, f"SW should have wstrb=0b1111, got 0b{sw_strobes[0]:04b}"
-
-    dut._log.info("Test passed: Write strobes correctly encoded")
+    dut._log.info(
+        "Test passed: Write strobes correctly encoded (Phase 3: full-word cache eviction)"
+    )
 
 
 # ── Phase 2 AXI Arbiter Tests ─────────────────────────────────────────────────

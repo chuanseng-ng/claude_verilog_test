@@ -35,11 +35,11 @@ TEST_MODULES := \
 	tb.cocotb.cpu.test_pipeline_hazards \
 	tb.cocotb.cpu.test_interrupts
 
-# RTL source files (Phase 2: 5-stage pipeline)
-# rv32i_pipeline_pkg.sv is included via `include in the stage files;
-# it must appear first so Verilator can resolve the package.
+# RTL source files (Phase 3: 5-stage pipeline + I-cache + D-cache)
+# Packages must appear first so Verilator can resolve them.
 VERILOG_SOURCES := \
 	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
+	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
 	$(RTL_DIR)/cpu/core/rv32i_imm_gen.sv \
 	$(RTL_DIR)/cpu/core/rv32i_regfile.sv \
@@ -49,7 +49,9 @@ VERILOG_SOURCES := \
 	$(RTL_DIR)/cpu/core/rv32i_forwarding_unit.sv \
 	$(RTL_DIR)/cpu/core/rv32i_csr_file.sv \
 	$(RTL_DIR)/cpu/core/rv32i_interrupt_ctrl.sv \
-	$(RTL_DIR)/cpu/rv32i_axi_arbiter.sv \
+	$(RTL_DIR)/mem/rv32i_icache.sv \
+	$(RTL_DIR)/mem/rv32i_dcache.sv \
+	$(RTL_DIR)/mem/rv32i_cache_arbiter.sv \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_if.sv \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_id.sv \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex.sv \
@@ -57,6 +59,13 @@ VERILOG_SOURCES := \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_wb.sv \
 	$(RTL_DIR)/cpu/core/rv32i_core.sv \
 	$(RTL_DIR)/cpu/rv32i_cpu_top.sv
+
+# Cache-only sources (for cache unit tests with a single cache DUT)
+CACHE_SOURCES := \
+	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
+	$(RTL_DIR)/mem/rv32i_icache.sv \
+	$(RTL_DIR)/mem/rv32i_dcache.sv \
+	$(RTL_DIR)/mem/rv32i_cache_arbiter.sv
 
 # Simulator selection (default: verilator)
 SIM ?= verilator
@@ -72,6 +81,7 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += --public-flat-rw
 	COMPILE_ARGS += --no-timing
 	COMPILE_ARGS += -I$(RTL_DIR)/cpu/core
+	COMPILE_ARGS += -I$(RTL_DIR)/mem
 ifdef COVERAGE
 	COMPILE_ARGS += --coverage
 	EXTRA_ARGS   += --coverage
@@ -108,6 +118,10 @@ help:
 	@echo "  make debug        - Run APB3 debug interface tests only"
 	@echo "  make hazards      - Run Phase 2 pipeline hazard tests only"
 	@echo "  make interrupts   - Run Phase 2 interrupt and CSR tests only"
+	@echo "  make icache       - Run Phase 3 I-cache unit tests"
+	@echo "  make dcache       - Run Phase 3 D-cache unit tests"
+	@echo "  make cache_integration - Run Phase 3 CPU+cache integration tests"
+	@echo "  make phase3_all   - Run all Phase 3 cache tests"
 	@echo "  make coverage     - Run all tests with Verilator coverage + generate reports"
 	@echo "  make distclean    - Clean simulation artifacts"
 	@echo "  make help         - Show this help"
@@ -137,6 +151,7 @@ lint:
 	@verilator --lint-only -Wall -Wno-fatal \
 		--top-module $(DUT) \
 		-I$(RTL_DIR)/cpu/core \
+		-I$(RTL_DIR)/mem \
 		-Wno-IMPORTSTAR \
 		-Wno-UNUSEDSIGNAL \
 		-Wno-UNOPTFLAT \
@@ -185,6 +200,13 @@ test:
 		       $(SIM_DIR)/coverage_$${slug}.dat 2>/dev/null || true; \
 		echo ""; \
 	done; \
+	echo "========================================"; \
+	echo "Running Phase 3 cache test suites..."; \
+	echo "========================================"; \
+	if ! $(MAKE) phase3_all; then \
+		failed_tests="$$failed_tests phase3_all"; \
+	fi; \
+	echo ""; \
 	if [ -n "$$failed_tests" ]; then \
 		echo "========================================"; \
 		echo "FAILED TESTS:$$failed_tests"; \
@@ -273,6 +295,69 @@ stress_uvm:
 stress_uvm_smoke:
 	@echo "Running pyuvm stress tests (SMOKE: 10 seeds × 100 instr per profile)..."
 	STRESS_TEST_SMOKE=1 $(MAKE) sim MODULE=tb.cocotb.cpu.test_stress_uvm
+
+# ============================================================================
+# Phase 3 Cache Test Targets
+# ============================================================================
+
+# I-Cache unit tests (DUT = rv32i_icache)
+.PHONY: icache
+icache:
+	@echo "Running I-Cache unit tests (hit, miss, conflict, FENCE.I)..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.mem.test_icache \
+		TOPLEVEL=rv32i_icache \
+		VERILOG_SOURCES="$(CACHE_SOURCES)" \
+		SIM_BUILD=sim_build_icache
+
+# D-Cache unit tests (DUT = rv32i_dcache)
+.PHONY: dcache
+dcache:
+	@echo "Running D-Cache unit tests (read/write hit/miss, dirty eviction, strobes)..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.mem.test_dcache \
+		TOPLEVEL=rv32i_dcache \
+		VERILOG_SOURCES="$(CACHE_SOURCES)" \
+		SIM_BUILD=sim_build_dcache
+
+# CPU + cache integration tests (DUT = rv32i_cpu_top)
+.PHONY: cache_integration
+cache_integration:
+	@echo "Running CPU + cache integration tests (locality, FENCE.I, load-after-store)..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim MODULE=tb.cocotb.cpu.test_cache_integration
+
+# Run all Phase 3 tests
+.PHONY: phase3_all
+phase3_all:
+	@echo "Running all Phase 3 cache tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	@failed_tests=""; \
+	for target in icache dcache cache_integration; do \
+		echo "========================================"; \
+		echo "Running target: $$target"; \
+		echo "========================================"; \
+		if ! $(MAKE) $$target; then \
+			failed_tests="$$failed_tests $$target"; \
+		fi; \
+		echo ""; \
+	done; \
+	if [ -n "$$failed_tests" ]; then \
+		echo "========================================"; \
+		echo "FAILED PHASE 3 TARGETS:$$failed_tests"; \
+		echo "========================================"; \
+		exit 1; \
+	else \
+		echo "========================================"; \
+		echo "ALL PHASE 3 TESTS PASSED!"; \
+		echo "========================================"; \
+	fi
 
 # Use distclean to avoid conflict with cocotb's clean
 # Note: 'clean' target is only defined when cocotb Makefile is included

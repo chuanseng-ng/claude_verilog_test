@@ -48,6 +48,7 @@ package rv32i_pipeline_pkg;
         logic [2:0]  csr_op;       // CSR operation (funct3)
         logic        ebreak;       // EBREAK instruction
         logic        mret;         // MRET instruction
+        logic        fence_i;     // FENCE.I instruction (I-cache invalidate)
         logic        illegal;      // Illegal instruction
         logic        valid;        // Stage valid
     } id_ex_reg_t;

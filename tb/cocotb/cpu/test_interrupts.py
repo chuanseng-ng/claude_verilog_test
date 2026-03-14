@@ -17,33 +17,27 @@ from cocotb.triggers import RisingEdge
 
 from sim.riscv_encoder import (
     ADDI,
-    JAL,
-    EBREAK,
-    CSRRW,
-    CSRRS,
-    CSRRC,
-    CSRRWI,
-    MRET,
-    CSR_MSTATUS,
-    CSR_MIE,
-    CSR_MTVEC,
-    CSR_MEPC,
     CSR_MCAUSE,
-    MSTATUS_MIE,
-    MIE_MTIE,
-    MIE_MEIE,
-    MCAUSE_IRQ_TIMER,
+    CSR_MEPC,
+    CSR_MIE,
+    CSR_MSTATUS,
+    CSR_MTVEC,
+    CSRRC,
+    CSRRS,
+    CSRRW,
+    CSRRWI,
+    EBREAK,
+    JAL,
     MCAUSE_IRQ_EXTERNAL,
+    MCAUSE_IRQ_TIMER,
+    MIE_MEIE,
+    MIE_MTIE,
+    MRET,
+    MSTATUS_MIE,
 )
 from tb.cocotb.cpu.phase2_test_utils import (
-    APBDebug,
-    _init_inputs,
     _setup_test,
-    DBG_CTRL,
-    DBG_STATUS,
-    DBG_MSTATUS,
 )
-
 
 # ============================================================================
 # Interrupt-test-specific constants

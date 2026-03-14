@@ -7,15 +7,14 @@ the Python reference model.
 
 import sys
 from pathlib import Path
-from typing import Optional
 
 import cocotb
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from tb.models.rv32i_model import RV32IModel
 from tb.cocotb.common.coverage import CoverageReport
+from tb.models.rv32i_model import RV32IModel
 
 
 class CPUScoreboard:
@@ -25,7 +24,7 @@ class CPUScoreboard:
     Compares RTL commits against Python reference model execution.
     """
 
-    def __init__(self, ref_model: RV32IModel, log=None, coverage: Optional[CoverageReport] = None):
+    def __init__(self, ref_model: RV32IModel, log=None, coverage: CoverageReport | None = None):
         """
         Initialize scoreboard.
 

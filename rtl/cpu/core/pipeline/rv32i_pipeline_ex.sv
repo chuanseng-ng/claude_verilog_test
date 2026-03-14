@@ -63,6 +63,9 @@ module rv32i_pipeline_ex (
     // ── Debug halt request (EBREAK) ───────────────────────────────────────────
     output logic        dbg_halt_req_o, // EBREAK → request pipeline halt
 
+    // ── FENCE.I I-cache invalidation (Phase 3) ────────────────────────────────
+    output logic        fence_i_o,      // Pulse: invalidate I-cache this cycle
+
     // ── EX/MEM pipeline register output ──────────────────────────────────────
     output ex_mem_reg_t ex_mem_reg_o
 );
@@ -175,6 +178,7 @@ module rv32i_pipeline_ex (
         is_irq          = 1'b0;
         dbg_halt_req_o  = 1'b0;
         mret_o          = 1'b0;
+        fence_i_o       = 1'b0;
 
         if (!id_ex_reg_i.valid) begin
             // Bubble: nothing to do
@@ -214,6 +218,16 @@ module rv32i_pipeline_ex (
             trap_cause      = 32'h0000_0006;   // mcause=6: store address misaligned
             do_redirect     = 1'b1;
             redirect_target = mtvec_i;
+
+        end else if (id_ex_reg_i.fence_i) begin
+            // FENCE.I: flush pipeline (redirect to PC+4) and invalidate I-cache
+            // The redirect flushes speculatively fetched instructions.
+            // fence_i_o causes immediate I-cache invalidation this cycle.
+            // ic_valid_o=0 in IF this cycle (due to pc_redirect), so no stale
+            // instruction is captured from the invalidating cache.
+            do_redirect     = 1'b1;
+            redirect_target = id_ex_reg_i.pc + 32'd4;
+            fence_i_o       = 1'b1;
 
         end else if (id_ex_reg_i.mret) begin
             // MRET: restore PC from mepc, restore MIE

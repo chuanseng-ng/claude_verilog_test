@@ -1,19 +1,22 @@
 // rv32i_core.sv
-// RV32I CPU Core — 5-Stage Pipelined Implementation (Phase 2)
+// RV32I CPU Core — 5-Stage Pipelined Implementation (Phase 3)
 //
-// Replaces the Phase 1 single-cycle FSM with a 5-stage in-order pipeline.
-// Module name rv32i_core is preserved for backward compatibility.
-//
-// New ports vs Phase 1: ext_irq_i, timer_irq_i
-// All Phase 1 ports preserved.
+// Phase 3 changes vs Phase 2:
+//   - AXI arbiter replaced by I-cache + D-cache + cache arbiter
+//   - IF stage uses I-cache interface (ic_addr/valid/rdata/stall)
+//   - MEM stage uses D-cache interface (dc_addr/valid/we/wdata/wstrb/rdata/stall)
+//   - if_axi_stall / mem_axi_stall renamed to if_cache_stall / mem_cache_stall
+//   - FENCE.I: fence_i_o from EX stage wired to I-cache invalidate
+//   - External AXI4-Lite interface preserved (cpu_top unchanged)
 
 import rv32i_pipeline_pkg::*;
+import rv32i_cache_pkg::*;
 
 module rv32i_core (
     input  logic        clk,
     input  logic        rst_n,
 
-    // ── AXI4-Lite master (unified instruction/data via arbiter) ──────────────
+    // ── AXI4-Lite master (unified cache → memory) ────────────────────────────
     output logic [31:0] axi_araddr,
     output logic        axi_arvalid,
     input  logic        axi_arready,
@@ -47,7 +50,7 @@ module rv32i_core (
     input  logic [4:0]  dbg_reg_rd_addr,
     output logic [31:0] dbg_reg_rd_data,
 
-    // ── Commit interface (verification observability) ─────────────────────────
+    // ── Commit interface ──────────────────────────────────────────────────────
     output logic        commit_valid,
     output logic [31:0] commit_pc,
     output logic [31:0] commit_insn,
@@ -63,11 +66,11 @@ module rv32i_core (
     output logic [3:0]  debug_state,
     output logic        debug_ebreak,
 
-    // ── Interrupt inputs (Phase 2 new) ────────────────────────────────────────
+    // ── Interrupt inputs ──────────────────────────────────────────────────────
     input  logic        ext_irq_i,
     input  logic        timer_irq_i,
 
-    // ── CSR debug outputs (for APB debug register access at 0x200-0x214) ─────
+    // ── CSR debug outputs ─────────────────────────────────────────────────────
     output logic [31:0] dbg_csr_mstatus_o,
     output logic [31:0] dbg_csr_mie_o,
     output logic [31:0] dbg_csr_mtvec_o,
@@ -75,7 +78,7 @@ module rv32i_core (
     output logic [31:0] dbg_csr_mcause_o,
     output logic [31:0] dbg_csr_mip_o,
 
-    // ── IF stage PC (for DBG_PC register — correct value when halted) ─────────
+    // ── IF stage PC ───────────────────────────────────────────────────────────
     output logic [31:0] pc_if_o
 );
 
@@ -95,9 +98,9 @@ module rv32i_core (
     logic [1:0]  fwd_a_sel, fwd_b_sel, fwd_store_sel;
 
     // =========================================================================
-    // Stall signals (from pipeline stages / arbiter)
+    // Cache stall signals (Phase 3: renamed from axi_stall)
     // =========================================================================
-    logic if_axi_stall, mem_axi_stall;
+    logic if_cache_stall, mem_cache_stall;
 
     // =========================================================================
     // PC redirect signals
@@ -108,7 +111,7 @@ module rv32i_core (
     logic [31:0] jal_target;
 
     // =========================================================================
-    // Register file signals (core-level instantiation)
+    // Register file signals
     // =========================================================================
     logic [4:0]  rf_rs1_addr, rf_rs2_addr;
     logic [31:0] rf_rs1_data, rf_rs2_data;
@@ -120,7 +123,7 @@ module rv32i_core (
     // CSR file signals
     // =========================================================================
     logic        csr_wr_en;
-    logic        csr_rd_access;  // Pure decode (no !csr_illegal feedback) for csr_file.csr_access
+    logic        csr_rd_access;
     logic [11:0] csr_addr_ex;
     logic [2:0]  csr_op_ex;
     logic [31:0] csr_wdata_ex;
@@ -150,52 +153,77 @@ module rv32i_core (
     // =========================================================================
     // Debug signals
     // =========================================================================
-    logic        dbg_halted_wb;     // from WB stage
-    logic        dbg_halted_if;     // from IF stage (fetch stopped)
-    logic        dbg_halt_combined; // combined halt request
-    logic        dbg_ebreak_from_ex;// EBREAK halt request from EX stage
+    logic        dbg_halted_wb;
+    logic        dbg_halted_if;
+    logic        dbg_halt_combined;
+    logic        dbg_ebreak_from_ex;
 
-    // Combined halt: APB request, EBREAK, or single-step
     assign dbg_halt_combined = dbg_halt_req || dbg_ebreak_from_ex;
-    // The pipeline must be fully drained before signalling halt.
-    // Checking only !mem_wb_reg.valid is insufficient: if EX/MEM still holds a valid
-    // instruction it will arrive at WB the next cycle, dropping dbg_halted_wb to 0 and
-    // triggering the cpu_top auto-clear that permanently deasserts halt_req.
     assign dbg_halted = dbg_halted_wb && !id_ex_reg.valid && !ex_mem_reg.valid;
 
-    logic [31:0] pc_if_out;   // IF-stage PC register (fetch address)
+    logic [31:0] pc_if_out;
 
     // =========================================================================
-    // AXI arbiter IF interface signals
+    // FENCE.I invalidate signal (from EX stage → I-cache)
     // =========================================================================
-    logic [31:0] if_araddr;
-    logic        if_arvalid;
-    logic        if_arready;
-    logic [31:0] if_rdata;
-    logic [1:0]  if_rresp;
-    logic        if_rvalid;
-    logic        if_rready;
+    logic fence_i_pulse;
 
     // =========================================================================
-    // AXI arbiter MEM interface signals
+    // I-cache CPU-side interface
     // =========================================================================
-    logic [31:0] mem_araddr;
-    logic        mem_arvalid;
-    logic        mem_arready;
-    logic [31:0] mem_rdata;
-    logic [1:0]  mem_rresp;
-    logic        mem_rvalid;
-    logic        mem_rready;
-    logic [31:0] mem_awaddr;
-    logic        mem_awvalid;
-    logic        mem_awready;
-    logic [31:0] mem_wdata;
-    logic [3:0]  mem_wstrb;
-    logic        mem_wvalid;
-    logic        mem_wready;
-    logic        mem_bvalid;
-    logic [1:0]  mem_bresp;
-    logic        mem_bready;
+    logic [31:0] ic_addr;
+    logic        ic_valid;
+    logic [31:0] ic_rdata;
+    logic        ic_stall;
+
+    // =========================================================================
+    // D-cache CPU-side interface
+    // =========================================================================
+    logic [31:0] dc_addr;
+    logic        dc_valid;
+    logic        dc_we;
+    logic [31:0] dc_wdata;
+    logic [3:0]  dc_wstrb;
+    logic [31:0] dc_rdata;
+    logic        dc_stall;
+
+    // =========================================================================
+    // I-cache AXI side (to arbiter)
+    // =========================================================================
+    logic [31:0] ic_axi_araddr;
+    logic        ic_axi_arvalid;
+    logic        ic_axi_arready;
+    logic [31:0] ic_axi_rdata;
+    logic [1:0]  ic_axi_rresp;  // TODO(phase4): propagate RRESP[1] as instruction-fetch
+                                  // access fault (trap cause 1) into the pipeline MEM stage.
+                                  // Requires adding ic_error_o port to rv32i_icache and
+                                  // wiring it through rv32i_pipeline_if → rv32i_pipeline_mem.
+    logic        ic_axi_rvalid;
+    logic        ic_axi_rready;
+
+    // =========================================================================
+    // D-cache AXI side (to arbiter)
+    // =========================================================================
+    logic [31:0] dc_axi_araddr;
+    logic        dc_axi_arvalid;
+    logic        dc_axi_arready;
+    logic [31:0] dc_axi_rdata;
+    logic [1:0]  dc_axi_rresp;  // TODO(phase4): propagate RRESP[1] as load-access fault
+                                  // (trap cause 5) and BRESP[1] as store-access fault
+                                  // (trap cause 7) into the pipeline MEM stage.
+    logic        dc_axi_rvalid;
+    logic        dc_axi_rready;
+
+    logic [31:0] dc_axi_awaddr;
+    logic        dc_axi_awvalid;
+    logic        dc_axi_awready;
+    logic [31:0] dc_axi_wdata;
+    logic [3:0]  dc_axi_wstrb;
+    logic        dc_axi_wvalid;
+    logic        dc_axi_wready;
+    logic        dc_axi_bvalid;
+    logic [1:0]  dc_axi_bresp;  // See dc_axi_rresp note above.
+    logic        dc_axi_bready;
 
     // =========================================================================
     // Hazard Unit
@@ -213,8 +241,8 @@ module rv32i_core (
         .mem_wb_reg_wr_en  (mem_wb_reg.reg_wr_en),
         .if_id_rs1_addr    (if_id_reg.instruction[19:15]),
         .if_id_rs2_addr    (if_id_reg.instruction[24:20]),
-        .if_axi_stall      (if_axi_stall),
-        .mem_axi_stall     (mem_axi_stall),
+        .if_cache_stall    (if_cache_stall),
+        .mem_cache_stall   (mem_cache_stall),
         .ex_pc_redirect    (ex_pc_redirect),
         .id_jal_taken      (jal_redirect),
         .stall_pc          (stall_pc),
@@ -257,9 +285,6 @@ module rv32i_core (
     // =========================================================================
     // CSR File
     // =========================================================================
-    // csr_rd_access: pure decode signal (no !csr_illegal feedback) used to
-    // drive csr_file.csr_access, breaking the combinational loop:
-    //   csr_wr_en (uses !csr_illegal) → csr_file.csr_access → csr_illegal
     assign csr_rd_access = id_ex_reg.csr_access && id_ex_reg.valid;
 
     rv32i_csr_file u_csr (
@@ -294,7 +319,7 @@ module rv32i_core (
     // Interrupt Controller
     // =========================================================================
     rv32i_interrupt_ctrl u_irq_ctrl (
-        .mstatus_mie       (mstatus_mie_eff),  // OQ-4: use effective MIE
+        .mstatus_mie       (mstatus_mie_eff),
         .mie_mtie          (mie_mtie),
         .mie_meie          (mie_meie),
         .ext_irq_i         (ext_irq_i),
@@ -306,66 +331,7 @@ module rv32i_core (
     );
 
     // =========================================================================
-    // AXI Arbiter
-    // =========================================================================
-    rv32i_axi_arbiter u_arbiter (
-        .clk              (clk),
-        .rst_n            (rst_n),
-        // IF side
-        .if_araddr_i      (if_araddr),
-        .if_arvalid_i     (if_arvalid),
-        .if_arready_o     (if_arready),
-        .if_rdata_o       (if_rdata),
-        .if_rresp_o       (if_rresp),
-        .if_rvalid_o      (if_rvalid),
-        .if_rready_i      (if_rready),
-        // MEM read
-        .mem_araddr_i     (mem_araddr),
-        .mem_arvalid_i    (mem_arvalid),
-        .mem_arready_o    (mem_arready),
-        .mem_rdata_o      (mem_rdata),
-        .mem_rresp_o      (mem_rresp),
-        .mem_rvalid_o     (mem_rvalid),
-        .mem_rready_i     (mem_rready),
-        // MEM write
-        .mem_awaddr_i     (mem_awaddr),
-        .mem_awvalid_i    (mem_awvalid),
-        .mem_awready_o    (mem_awready),
-        .mem_wdata_i      (mem_wdata),
-        .mem_wstrb_i      (mem_wstrb),
-        .mem_wvalid_i     (mem_wvalid),
-        .mem_wready_o     (mem_wready),
-        .mem_bready_i     (mem_bready),
-        .mem_bvalid_o     (mem_bvalid),
-        .mem_bresp_o      (mem_bresp),
-        // AXI master
-        .axi_araddr_o     (axi_araddr),
-        .axi_arvalid_o    (axi_arvalid),
-        .axi_arready_i    (axi_arready),
-        .axi_rdata_i      (axi_rdata),
-        .axi_rresp_i      (axi_rresp),
-        .axi_rvalid_i     (axi_rvalid),
-        .axi_rready_o     (axi_rready),
-        .axi_awaddr_o     (axi_awaddr),
-        .axi_awvalid_o    (axi_awvalid),
-        .axi_awready_i    (axi_awready),
-        .axi_wdata_o      (axi_wdata),
-        .axi_wstrb_o      (axi_wstrb),
-        .axi_wvalid_o     (axi_wvalid),
-        .axi_wready_i     (axi_wready),
-        .axi_bvalid_i     (axi_bvalid),
-        .axi_bresp_i      (axi_bresp),
-        .axi_bready_o     (axi_bready),
-        // Stall outputs — left open; IF and MEM stages drive if_axi_stall / mem_axi_stall
-        // directly from their own pending-transaction registers (single driver per net).
-        /* verilator lint_off PINCONNECTEMPTY */
-        .if_axi_stall_o   (),
-        .mem_axi_stall_o  ()
-        /* verilator lint_on PINCONNECTEMPTY */
-    );
-
-    // =========================================================================
-    // Register File (core level — read ports used by ID, write by WB)
+    // Register File
     // =========================================================================
     rv32i_regfile u_regfile (
         .clk         (clk),
@@ -385,7 +351,7 @@ module rv32i_core (
     );
 
     // =========================================================================
-    // IF Stage
+    // IF Stage (Phase 3: cache interface)
     // =========================================================================
     rv32i_pipeline_if u_if (
         .clk              (clk),
@@ -398,18 +364,16 @@ module rv32i_core (
         .jal_redirect     (jal_redirect),
         .jal_target       (jal_target),
         .dbg_halt_req     (dbg_halt_combined),
-        .dbg_step_pending (dbg_step_req),      // step_pending_q from cpu_top
+        .dbg_step_pending (dbg_step_req),
         .dbg_pc_wr_en     (dbg_pc_wr_en),
         .dbg_pc_wr_data   (dbg_pc_wr_data),
         .dbg_halted       (dbg_halted_if),
-        .if_araddr_o      (if_araddr),
-        .if_arvalid_o     (if_arvalid),
-        .if_arready_i     (if_arready),
-        .if_rdata_i       (if_rdata),
-        .if_rresp_i       (if_rresp),
-        .if_rvalid_i      (if_rvalid),
-        .if_rready_o      (if_rready),
-        .if_axi_stall_o   (if_axi_stall),
+        // I-cache interface
+        .ic_addr_o        (ic_addr),
+        .ic_valid_o       (ic_valid),
+        .ic_rdata_i       (ic_rdata),
+        .ic_stall_i       (ic_stall),
+        .if_cache_stall_o (if_cache_stall),
         .if_id_reg_o      (if_id_reg),
         .pc_out           (pc_if_out)
     );
@@ -433,7 +397,7 @@ module rv32i_core (
     );
 
     // =========================================================================
-    // EX Stage
+    // EX Stage (Phase 3: fence_i_o added)
     // =========================================================================
     rv32i_pipeline_ex u_ex (
         .clk              (clk),
@@ -461,34 +425,26 @@ module rv32i_core (
         .trap_cause_o     (trap_cause_val),
         .mret_o           (mret_ex),
         .dbg_halt_req_o   (dbg_ebreak_from_ex),
+        .fence_i_o        (fence_i_pulse),
         .ex_mem_reg_o     (ex_mem_reg)
     );
 
     // =========================================================================
-    // MEM Stage
+    // MEM Stage (Phase 3: D-cache interface)
     // =========================================================================
     rv32i_pipeline_mem u_mem (
         .clk              (clk),
         .rst_n            (rst_n),
         .ex_mem_reg_i     (ex_mem_reg),
-        .mem_araddr_o     (mem_araddr),
-        .mem_arvalid_o    (mem_arvalid),
-        .mem_arready_i    (mem_arready),
-        .mem_rdata_i      (mem_rdata),
-        .mem_rresp_i      (mem_rresp),
-        .mem_rvalid_i     (mem_rvalid),
-        .mem_rready_o     (mem_rready),
-        .mem_awaddr_o     (mem_awaddr),
-        .mem_awvalid_o    (mem_awvalid),
-        .mem_awready_i    (mem_awready),
-        .mem_wdata_o      (mem_wdata),
-        .mem_wstrb_o      (mem_wstrb),
-        .mem_wvalid_o     (mem_wvalid),
-        .mem_wready_i     (mem_wready),
-        .mem_bvalid_i     (mem_bvalid),
-        .mem_bresp_i      (mem_bresp),
-        .mem_bready_o     (mem_bready),
-        .mem_axi_stall_o  (mem_axi_stall),
+        // D-cache interface
+        .dc_addr_o        (dc_addr),
+        .dc_valid_o       (dc_valid),
+        .dc_we_o          (dc_we),
+        .dc_wdata_o       (dc_wdata),
+        .dc_wstrb_o       (dc_wstrb),
+        .dc_rdata_i       (dc_rdata),
+        .dc_stall_i       (dc_stall),
+        .mem_cache_stall_o(mem_cache_stall),
         .mem_wb_reg_o     (mem_wb_reg)
     );
 
@@ -513,30 +469,134 @@ module rv32i_core (
     );
 
     // =========================================================================
+    // I-Cache (Phase 3)
+    // =========================================================================
+    rv32i_icache u_icache (
+        .clk              (clk),
+        .rst_n            (rst_n),
+        .ic_addr_i        (ic_addr),
+        .ic_valid_i       (ic_valid),
+        .ic_rdata_o       (ic_rdata),
+        .ic_stall_o       (ic_stall),
+        .ic_invalidate_i  (fence_i_pulse),
+        .axi_araddr_o     (ic_axi_araddr),
+        .axi_arvalid_o    (ic_axi_arvalid),
+        .axi_arready_i    (ic_axi_arready),
+        .axi_rdata_i      (ic_axi_rdata),
+        .axi_rresp_i      (ic_axi_rresp),
+        .axi_rvalid_i     (ic_axi_rvalid),
+        .axi_rready_o     (ic_axi_rready)
+    );
+
+    // =========================================================================
+    // D-Cache (Phase 3)
+    // =========================================================================
+    rv32i_dcache u_dcache (
+        .clk              (clk),
+        .rst_n            (rst_n),
+        .dc_addr_i        (dc_addr),
+        .dc_valid_i       (dc_valid),
+        .dc_we_i          (dc_we),
+        .dc_wdata_i       (dc_wdata),
+        .dc_wstrb_i       (dc_wstrb),
+        .dc_rdata_o       (dc_rdata),
+        .dc_stall_o       (dc_stall),
+        .axi_araddr_o     (dc_axi_araddr),
+        .axi_arvalid_o    (dc_axi_arvalid),
+        .axi_arready_i    (dc_axi_arready),
+        .axi_rdata_i      (dc_axi_rdata),
+        .axi_rresp_i      (dc_axi_rresp),
+        .axi_rvalid_i     (dc_axi_rvalid),
+        .axi_rready_o     (dc_axi_rready),
+        .axi_awaddr_o     (dc_axi_awaddr),
+        .axi_awvalid_o    (dc_axi_awvalid),
+        .axi_awready_i    (dc_axi_awready),
+        .axi_wdata_o      (dc_axi_wdata),
+        .axi_wstrb_o      (dc_axi_wstrb),
+        .axi_wvalid_o     (dc_axi_wvalid),
+        .axi_wready_i     (dc_axi_wready),
+        .axi_bvalid_i     (dc_axi_bvalid),
+        .axi_bresp_i      (dc_axi_bresp),
+        .axi_bready_o     (dc_axi_bready)
+    );
+
+    // =========================================================================
+    // Cache Arbiter (Phase 3): D$ priority over I$
+    // =========================================================================
+    rv32i_cache_arbiter u_cache_arb (
+        .clk              (clk),
+        .rst_n            (rst_n),
+        // I-cache read
+        .ic_araddr_i      (ic_axi_araddr),
+        .ic_arvalid_i     (ic_axi_arvalid),
+        .ic_arready_o     (ic_axi_arready),
+        .ic_rdata_o       (ic_axi_rdata),
+        .ic_rresp_o       (ic_axi_rresp),
+        .ic_rvalid_o      (ic_axi_rvalid),
+        .ic_rready_i      (ic_axi_rready),
+        // D-cache read (refill)
+        .dc_araddr_i      (dc_axi_araddr),
+        .dc_arvalid_i     (dc_axi_arvalid),
+        .dc_arready_o     (dc_axi_arready),
+        .dc_rdata_o       (dc_axi_rdata),
+        .dc_rresp_o       (dc_axi_rresp),
+        .dc_rvalid_o      (dc_axi_rvalid),
+        .dc_rready_i      (dc_axi_rready),
+        // D-cache write (writeback)
+        .dc_awaddr_i      (dc_axi_awaddr),
+        .dc_awvalid_i     (dc_axi_awvalid),
+        .dc_awready_o     (dc_axi_awready),
+        .dc_wdata_i       (dc_axi_wdata),
+        .dc_wstrb_i       (dc_axi_wstrb),
+        .dc_wvalid_i      (dc_axi_wvalid),
+        .dc_wready_o      (dc_axi_wready),
+        .dc_bvalid_o      (dc_axi_bvalid),
+        .dc_bresp_o       (dc_axi_bresp),
+        .dc_bready_i      (dc_axi_bready),
+        // AXI master (to external memory)
+        .axi_araddr_o     (axi_araddr),
+        .axi_arvalid_o    (axi_arvalid),
+        .axi_arready_i    (axi_arready),
+        .axi_rdata_i      (axi_rdata),
+        .axi_rresp_i      (axi_rresp),
+        .axi_rvalid_i     (axi_rvalid),
+        .axi_rready_o     (axi_rready),
+        .axi_awaddr_o     (axi_awaddr),
+        .axi_awvalid_o    (axi_awvalid),
+        .axi_awready_i    (axi_awready),
+        .axi_wdata_o      (axi_wdata),
+        .axi_wstrb_o      (axi_wstrb),
+        .axi_wvalid_o     (axi_wvalid),
+        .axi_wready_i     (axi_wready),
+        .axi_bvalid_i     (axi_bvalid),
+        .axi_bresp_i      (axi_bresp),
+        .axi_bready_o     (axi_bready)
+    );
+
+    // =========================================================================
     // Phase 1 debug compatibility outputs
-    // Most are not directly meaningful in a pipelined design; tie to safe values
-    // to preserve testbench compatibility.
     // =========================================================================
     assign debug_rs1_data         = 32'h0;
     assign debug_rs2_data         = 32'h0;
     assign debug_branch_taken     = 1'b0;
     assign debug_take_branch_jump = ex_pc_redirect;
     assign debug_pc_src           = ex_pc_redirect;
-    assign debug_state            = 4'h0;  // No FSM state in Phase 2
+    assign debug_state            = 4'h0;
     assign debug_ebreak           = dbg_ebreak_from_ex;
 
-    // CSR debug output assignments (mtvec, mepc, mip from existing signals)
+    // CSR debug output assignments
     assign dbg_csr_mtvec_o = mtvec;
     assign dbg_csr_mepc_o  = mret_pc_val;
     assign dbg_csr_mip_o   = mip;
 
-    // IF-stage PC output (frozen during halt by rv32i_pipeline_if)
+    // IF-stage PC output
     assign pc_if_o = pc_if_out;
 
-    // dbg_resume_req is consumed by top-level APB logic; not needed in the pipeline.
+    // Unused signals suppression
     /* verilator lint_off UNUSEDSIGNAL */
-    logic _unused_resume = dbg_resume_req;
+    logic _unused_resume    = dbg_resume_req;
+    logic _unused_irq_pend  = ext_irq_pending | timer_irq_pending;
+    logic _unused_csr_wr_en = csr_wr_en;
     /* verilator lint_on UNUSEDSIGNAL */
-    // dbg_step_req (= step_pending_q from cpu_top) is routed to IF as dbg_step_pending.
 
 endmodule

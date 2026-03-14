@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project
 
-**Current Phase**: Phase 2 (Pipelined CPU - Verification)
+**Current Phase**: Phase 3 (Memory System & Caches - RTL Implementation)
 
-**Status**: Phase 1 complete (2026-02-13), Phase 2 RTL complete (2026-02-16), verification in progress
+**Status**: Phase 2 complete (2026-03-08, 75 MHz on Sky130), Phase 3 RTL implementation in progress
 
 **Target**: Build a complete SoC with CPU, GPU, caches, and peripherals through incremental phases
 
@@ -33,19 +33,27 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 - **Debug Interface**: APB3 Slave (halt/resume/step/breakpoints)
 - **Verification**: 9/9 exit criteria met, archived to `micro_p/`
 
-### Phase 2 (Current): Pipelined CPU
+### Phase 2: Pipelined CPU ✅ COMPLETE
 
-- **Status**: RTL complete (2026-02-16), verification in progress
+- **Status**: ✅ Complete (2026-03-08) — 75 MHz on Sky130 130nm
 - **ISA**: RV32I + Zicsr (CSR instructions)
 - **Architecture**: 5-stage in-order pipeline (IF/ID/EX/MEM/WB)
 - **Interrupt Support**: M-mode (timer + external interrupts)
 - **Hazard Handling**: Detection, stalling, forwarding
-- **Target Frequency**: 200 MHz (2x Phase 1)
+- **Achieved Frequency**: 75 MHz on Sky130 130nm (200 MHz target not met due to PDK limitations)
+- **Verification**: 111/111 tests passing, 50,000 random instructions, 0 failures
 
-### Phase 2-5: Future Phases
+### Phase 3 (Current): Memory System & Caches
 
-- **Phase 2**: 5-stage pipelined CPU + interrupt support (timer + external)
-- **Phase 3**: Memory system with I-cache + D-cache (write-back, no coherence)
+- **Status**: 🔄 RTL implementation in progress (started 2026-03-08)
+- **Architecture**: L1 I-Cache (4 KB, direct-mapped) + L1 D-Cache (4 KB, direct-mapped, write-back)
+- **Cache Line**: 16 bytes (4 words); 256 sets; 4 AXI4-Lite transactions per refill
+- **FENCE.I**: Supported — invalidates I-cache in 1 cycle
+- **Target Frequency**: 75 MHz on Sky130 (realistic for SRAM-based cache)
+
+### Phase 3-5: Future Phases
+
+- **Phase 3**: Memory system with I-cache + D-cache (write-back, no coherence) ← CURRENT
 - **Phase 4**: GPU-lite SIMT compute engine (8-lane warps, single compute unit, no graphics)
 - **Phase 5**: SoC integration (CPU + GPU + DMA + UART + SPI + Timer + Boot ROM)
 
@@ -63,7 +71,8 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 | `docs/PHASE_STATUS.md` | Current project status and next steps |
 | `docs/design/PHASE0_ARCHITECTURE_SPEC.md` | CPU architectural requirements (Phase 0) |
 | `docs/design/PHASE1_ARCHITECTURE_SPEC.md` | CPU implementation spec (Phase 1) - ✅ Complete |
-| `docs/design/PHASE2_ARCHITECTURE_SPEC.md` | Pipelined CPU spec (Phase 2) - ✅ Approved |
+| `docs/design/PHASE2_ARCHITECTURE_SPEC.md` | Pipelined CPU spec (Phase 2) - ✅ Complete |
+| `docs/design/PHASE3_ARCHITECTURE_SPEC.md` | Cache architecture spec (Phase 3) - ✅ Approved |
 | `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md` | GPU architecture spec (Phase 4) |
 | `docs/design/RTL_DEFINITION.md` | Interface signal definitions |
 | `docs/design/MEMORY_MAP.md` | Address space and register map |
@@ -326,15 +335,26 @@ See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification pla
 5. ✅ **Debug**: Major bugs fixed (branch/jump, load data, regfile)
 6. ✅ **Complete**: Phase 1 archived to `micro_p/`, ready for Phase 2
 
-### Phase 2 Workflow (Current)
+### Phase 2 Workflow ✅ Complete
 
 1. ✅ **Architecture approved**: All design decisions finalized
 2. ✅ **Write RTL**: All 14 pipeline modules implemented
 3. ✅ **Initial testing**: 115/115 regression tests passing
-4. 🔄 **Comprehensive verification**: Pipeline hazards, interrupts, CSR
-5. 🔄 **Performance validation**: IPC measurement, frequency checks
-6. 🔄 **Backend flow**: Synthesis, P&R, STA at 200 MHz
-7. ⏸️ **Sign-off**: Coverage analysis, final review
+4. ✅ **Comprehensive verification**: 111/111 tests passing (all 7 suites)
+5. ✅ **Random regression**: 50,000 instructions, 0 failures
+6. ✅ **Backend flow**: 75 MHz achieved on Sky130 130nm
+7. ✅ **Sign-off**: Phase 2 complete (2026-03-08)
+
+### Phase 3 Workflow (Current)
+
+1. ✅ **Architecture approved**: All 6 design decisions finalized (2026-03-08)
+2. 🔄 **Write RTL**: Cache package, I-cache, D-cache, arbiter + modified pipeline stages
+3. ⏸️ **Unit tests**: I-cache unit tests, D-cache unit tests
+4. ⏸️ **Integration tests**: Full CPU + caches; FENCE.I correctness
+5. ⏸️ **Phase 2 regression**: All 111 tests must pass (FENCE.I now valid, not a trap)
+6. ⏸️ **Random regression**: 50,000+ instructions with caches enabled
+7. ⏸️ **Backend flow**: Synthesis + P&R + STA at 75 MHz (Sky130, SRAM macros)
+8. ⏸️ **Sign-off**: Coverage analysis, final review
 
 ## Project Structure
 
@@ -355,21 +375,41 @@ See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification pla
 │   │   └── SDC_TIMING_SPEC.md       # NEW: Timing constraints
 │   └── verification/
 │       └── VERIFICATION_PLAN.md
-├── rtl/                      # RTL (empty - Phase 1+)
+├── rtl/
 │   ├── cpu/
+│   │   ├── rv32i_cpu_top.sv           # Top-level (AXI4-Lite + APB3)
+│   │   ├── rv32i_axi_arbiter.sv       # Phase 2 arbiter (replaced by cache arbiter in Phase 3)
+│   │   └── core/
+│   │       ├── rv32i_core.sv          # Core wrapper (MODIFIED in Phase 3: adds caches)
+│   │       ├── rv32i_pipeline_pkg.sv  # Pipeline structs (MODIFIED: fence_i added)
+│   │       ├── rv32i_hazard_unit.sv   # Hazard unit (MODIFIED: renamed stall signals)
+│   │       ├── rv32i_decode.sv        # Decoder (MODIFIED: FENCE.I added)
+│   │       └── pipeline/
+│   │           ├── rv32i_pipeline_if.sv   # IF stage (MODIFIED: cache interface)
+│   │           ├── rv32i_pipeline_id.sv   # ID stage
+│   │           ├── rv32i_pipeline_ex.sv   # EX stage
+│   │           ├── rv32i_pipeline_mem.sv  # MEM stage (MODIFIED: cache + FENCE.I)
+│   │           └── rv32i_pipeline_wb.sv   # WB stage
+│   ├── mem/                           # NEW in Phase 3: cache RTL
+│   │   ├── rv32i_cache_pkg.sv         # Cache parameters and types
+│   │   ├── rv32i_icache.sv            # I-cache (4 KB, direct-mapped)
+│   │   ├── rv32i_dcache.sv            # D-cache (4 KB, write-back)
+│   │   └── rv32i_cache_arbiter.sv     # D$ priority AXI arbiter
 │   ├── gpu/
-│   ├── mem/
 │   ├── periph/
 │   └── soc/
 ├── tb/                       # Testbench
 │   ├── models/               # Python reference models
 │   │   ├── rv32i_model.py
+│   │   ├── cache_model.py             # NEW in Phase 3: DirectMappedCache
 │   │   ├── gpu_kernel_model.py
 │   │   └── memory_model.py
 │   ├── tests/                # Unit tests for models
 │   │   ├── test_rv32i_model.py
 │   │   └── test_gpu_model.py
-│   └── cocotb/               # cocotb testbenches (Phase 1+)
+│   └── cocotb/               # cocotb testbenches
+│       ├── cpu/              # CPU tests (Phase 1+)
+│       └── mem/              # Cache tests (Phase 3+)
 ├── sim/                      # Simulation scripts
 ├── pnr/                      # Physical design (NEW in Phase 1)
 │   ├── Makefile              # Flow automation
@@ -421,7 +461,7 @@ Categories:
 
 See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 
-**Current priorities** (Phase 2 - Verification + Physical Design):
+**Current priorities** (Phase 3 - Memory System & Caches):
 
 **Phase 0 Complete** ✅:
 
@@ -435,41 +475,40 @@ See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 - ✅ All 9/9 verification exit criteria met
 - ✅ ISA compliance: 37/37 instructions passing
 - ✅ Random testing: 10,000 instructions, 0 failures
-- ✅ AXI protocol tests: 11/11 passing
-- ✅ Debug interface tests: 6/6 passing
-- ✅ Coverage: 37/37 instructions, 8/8 FSM states
 - ✅ Archived to `micro_p/` directory
 
-**Phase 2 RTL Complete** ✅ (2026-02-16):
+**Phase 2 Complete** ✅ (2026-03-08):
 
 - ✅ Architecture specification approved (2026-02-14)
 - ✅ All 14 pipeline modules implemented
-- ✅ Initial regression: 115/115 tests passing
-- ✅ Backend constraints ready (phase2_cpu.sdc, phase2_cpu.upf)
+- ✅ Comprehensive verification: 111/111 tests passing
+- ✅ Random regression: 50,000 instructions, 0 failures
+- ✅ Backend: 75 MHz achieved on Sky130 130nm
+- ✅ Constraints: `pnr/constraints/phase2_cpu.sdc`, `pnr/constraints/phase2_cpu.upf`
 
-**Phase 2 Current Tasks**:
+**Phase 3 Current Tasks**:
 
-1. **Comprehensive Verification** (in progress)
-   - 🔄 Pipeline hazard tests (RAW, WAR, WAW dependencies)
-   - 🔄 Interrupt and CSR instruction tests
-   - 🔄 Debug interface tests (pipeline drain verification)
-   - 🔄 Random instruction regression (target: 50k+ instructions)
-   - 🔄 AXI arbiter protocol tests (IF vs MEM priority)
-   - 🔄 Coverage collection (instruction, state, branch coverage)
+1. **RTL Implementation** (in progress)
+   - 🔄 `rtl/mem/rv32i_cache_pkg.sv` — cache parameters and types
+   - 🔄 `rtl/mem/rv32i_icache.sv` — I-cache (4 KB, direct-mapped, FENCE.I)
+   - 🔄 `rtl/mem/rv32i_dcache.sv` — D-cache (4 KB, write-back + write-allocate)
+   - 🔄 `rtl/mem/rv32i_cache_arbiter.sv` — D$ priority AXI arbiter
+   - 🔄 Modified pipeline stages: `rv32i_pipeline_if.sv`, `rv32i_pipeline_mem.sv`
+   - 🔄 Modified support: `rv32i_decode.sv` (FENCE.I), `rv32i_hazard_unit.sv` (stall rename)
+   - 🔄 Modified core: `rv32i_core.sv` (cache instantiation)
 
-2. **Performance Validation**
-   - 🔄 IPC (instructions per cycle) measurement
-   - 🔄 Frequency validation (target: 200 MHz)
-   - 🔄 Pipeline efficiency analysis
-   - 🔄 Interrupt latency measurement
+2. **Reference Model** (parallel with RTL)
+   - 🔄 `tb/models/cache_model.py` — `DirectMappedCache` class
 
-3. **Physical Design Flow** (Phase 2 constraints ready)
-   - Run synthesis with Phase 2 constraints
-   - Execute place & route at 200 MHz target
-   - Perform static timing analysis (STA)
-   - Run power analysis (with power gating)
-   - Validate timing closure
-   - Gate-level simulation with SDF back-annotation
+3. **Verification** (follows RTL completion)
+   - ⏸️ Unit tests: `tb/cocotb/mem/test_icache.py`, `test_dcache.py`
+   - ⏸️ Integration: `tb/cocotb/cpu/test_cache_integration.py`
+   - ⏸️ Phase 2 regression (all 111 tests; FENCE.I now valid)
+   - ⏸️ Random regression: 50,000+ instructions with caches
+
+4. **Physical Design** (follows verification)
+   - ⏸️ Synthesis + P&R + STA at 75 MHz on Sky130
+   - ⏸️ `pnr/constraints/phase3_cache.sdc` and `phase3_cache.upf`
 
 ## Questions?
 

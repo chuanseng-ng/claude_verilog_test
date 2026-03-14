@@ -44,7 +44,8 @@ module rv32i_decode (
   output logic        csr_access, // CSR read/write instruction
   output logic [11:0] csr_addr,   // 12-bit CSR address (instr[31:20])
   output logic [2:0]  csr_op,     // CSR operation (funct3: 001=RW, 010=RS, 011=RC, 101=RWI, 110=RSI, 111=RCI)
-  output logic        mret        // MRET instruction (return from machine-mode trap)
+  output logic        mret,       // MRET instruction (return from machine-mode trap)
+  output logic        fence_i     // FENCE.I instruction (Phase 3: I-cache invalidate)
 );
 
   // Extract instruction fields
@@ -69,7 +70,8 @@ module rv32i_decode (
   localparam [6:0] OP_STORE  = 7'b0100011;
   localparam [6:0] OP_IMM    = 7'b0010011;  // ALU immediate operations
   localparam [6:0] OP_REG    = 7'b0110011;  // ALU register operations
-  localparam [6:0] OP_SYSTEM = 7'b1110011;  // SYSTEM instructions (EBREAK, ECALL)
+  localparam [6:0] OP_SYSTEM   = 7'b1110011;  // SYSTEM instructions (EBREAK, ECALL)
+  localparam [6:0] OP_MISC_MEM = 7'b0001111;  // FENCE / FENCE.I (Phase 3)
 
   // Funct3 definitions for branches
   localparam [2:0] FUNCT3_BEQ  = 3'b000;
@@ -151,6 +153,8 @@ module rv32i_decode (
     csr_addr     = 12'h0;
     csr_op       = 3'b000;
     mret         = 1'b0;
+    // FENCE.I default (Phase 3)
+    fence_i      = 1'b0;
 
     case (opcode)
       // ================================================================
@@ -479,6 +483,35 @@ module rv32i_decode (
           default: illegal = 1'b1;
           /* verilator coverage_on */
         endcase
+      end
+
+      // ================================================================
+      // OP_MISC_MEM - FENCE and FENCE.I (Phase 3)
+      // FENCE  (funct3=000): memory ordering fence — treated as NOP
+      //   (single CPU, no coherence issues)
+      // FENCE.I (funct3=001): instruction-fetch fence — invalidate I-cache
+      //   Per ISA spec, a canonical FENCE.I encoding has rd=0, rs1=0, imm=0;
+      //   other encodings are reserved but currently treated as FENCE.I.
+      // ================================================================
+      OP_MISC_MEM: begin
+        if (funct3 == 3'b001) begin
+          // FENCE.I: only accept canonical encoding (rd=0, rs1=0, imm=0).
+          // Other funct3=001 encodings are reserved; treat as illegal.
+          if (instruction[11:7] == 5'b0 &&   // rd == 0
+              instruction[19:15] == 5'b0 &&  // rs1 == 0
+              instruction[31:20] == 12'b0)   // imm == 0
+          begin
+            fence_i = 1'b1;
+          end else begin
+            illegal = 1'b1;
+          end
+        end else if (funct3 == 3'b000) begin
+          // FENCE (funct3=000): NOP in a single-CPU design (no coherence).
+          // No action; illegal remains 0.
+        end else begin
+          // Other funct3 encodings are reserved/illegal.
+          illegal = 1'b1;
+        end
       end
 
       // ================================================================

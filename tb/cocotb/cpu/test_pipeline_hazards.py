@@ -14,17 +14,16 @@ import cocotb
 from sim.riscv_encoder import (
     ADD,
     ADDI,
-    LUI,
-    LW,
-    SW,
-    JAL,
-    JALR,
     BEQ,
     BNE,
     EBREAK,
+    JAL,
+    JALR,
+    LUI,
+    LW,
+    SW,
 )
-from tb.cocotb.cpu.phase2_test_utils import APBDebug, _init_inputs, _setup_test
-
+from tb.cocotb.cpu.phase2_test_utils import _setup_test
 
 # ============================================================================
 # Shared helpers

@@ -56,6 +56,7 @@ module rv32i_pipeline_id (
     logic [11:0] csr_addr;
     logic [2:0]  csr_op;
     logic        mret;
+    logic        fence_i;
 
     logic [31:0] immediate;
 
@@ -87,7 +88,8 @@ module rv32i_pipeline_id (
         .csr_access   (csr_access),
         .csr_addr     (csr_addr),
         .csr_op       (csr_op),
-        .mret         (mret)
+        .mret         (mret),
+        .fence_i      (fence_i)
     );
     /* verilator lint_on PINCONNECTEMPTY */
 
@@ -153,6 +155,7 @@ module rv32i_pipeline_id (
                 id_ex_reg_o.csr_op      <= csr_op;
                 id_ex_reg_o.ebreak      <= ebreak;
                 id_ex_reg_o.mret        <= mret;
+                id_ex_reg_o.fence_i     <= fence_i;
                 id_ex_reg_o.illegal     <= illegal;
                 id_ex_reg_o.valid       <= 1'b1;
             end
