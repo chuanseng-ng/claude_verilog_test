@@ -4,6 +4,7 @@ logs/
 reports/
 results/
 openlane/runs/
+openlane1/runs/
 librelane/runs/
 
 # But keep directory structure
