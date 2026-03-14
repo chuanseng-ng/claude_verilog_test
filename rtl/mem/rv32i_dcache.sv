@@ -17,9 +17,9 @@
 //   - Write miss → refill line first → write to cached line
 //   - Dirty eviction → writeback old line first → refill new line
 
-import rv32i_cache_pkg::*;
 
-module rv32i_dcache (
+import rv32i_cache_pkg::*;
+module rv32i_dcache(
     input  logic        clk,
     input  logic        rst_n,
 
@@ -276,8 +276,8 @@ module rv32i_dcache (
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             for (int j = 0; j < N_SETS; j++) begin
-                valid_array[j] <= 1'b0;
-                dirty_array[j] <= 1'b0;
+                valid_array[j] = 1'b0;
+                dirty_array[j] = 1'b0;
             end
         end else if (refill_done) begin
             // Commit refilled line to cache

@@ -13,9 +13,9 @@
 //   - Skip memory access if a trap was taken in EX (trap_valid)
 //   - Load the MEM/WB pipeline register
 
-import rv32i_pipeline_pkg::*;
 
-module rv32i_pipeline_mem (
+import rv32i_pipeline_pkg::*;
+module rv32i_pipeline_mem(
     input  logic        clk,
     input  logic        rst_n,
 

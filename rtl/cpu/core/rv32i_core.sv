@@ -9,10 +9,10 @@
 //   - FENCE.I: fence_i_o from EX stage wired to I-cache invalidate
 //   - External AXI4-Lite interface preserved (cpu_top unchanged)
 
+
 import rv32i_pipeline_pkg::*;
 import rv32i_cache_pkg::*;
-
-module rv32i_core (
+module rv32i_core(
     input  logic        clk,
     input  logic        rst_n,
 

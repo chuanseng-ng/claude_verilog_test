@@ -11,9 +11,9 @@
 //   - Generate ex_pc_redirect and pc_target
 //   - Load EX/MEM pipeline register
 
-import rv32i_pipeline_pkg::*;
 
-module rv32i_pipeline_ex (
+import rv32i_pipeline_pkg::*;
+module rv32i_pipeline_ex(
     input  logic        clk,
     input  logic        rst_n,
 

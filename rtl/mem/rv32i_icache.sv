@@ -16,9 +16,9 @@
 //   - Assert ic_invalidate_i for 1 cycle to clear all valid bits
 //   - Next access to any address will miss and refill from memory
 
-import rv32i_cache_pkg::*;
 
-module rv32i_icache (
+import rv32i_cache_pkg::*;
+module rv32i_icache(
     input  logic        clk,
     input  logic        rst_n,
 
@@ -176,7 +176,7 @@ module rv32i_icache (
         if (!rst_n || ic_invalidate_i) begin
             // Reset or FENCE.I: invalidate all lines
             for (int j = 0; j < N_SETS; j++) begin
-                valid_array[j] <= 1'b0;
+                valid_array[j] = 1'b0;
             end
         end else if (refill_last_word) begin
             // Refill complete: commit line to cache

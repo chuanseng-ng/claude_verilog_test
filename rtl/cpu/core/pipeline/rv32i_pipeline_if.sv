@@ -13,9 +13,9 @@
 //   - Maintain the IF/ID pipeline register
 //   - Handle PC redirect (branch/jump/trap) and JAL early resolve
 
-import rv32i_pipeline_pkg::*;
 
-module rv32i_pipeline_if (
+import rv32i_pipeline_pkg::*;
+module rv32i_pipeline_if(
     input  logic        clk,
     input  logic        rst_n,
 

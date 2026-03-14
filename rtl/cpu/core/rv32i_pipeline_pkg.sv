@@ -105,19 +105,80 @@ package rv32i_pipeline_pkg;
     // Flush (NOP bubble) values
     // =========================================================================
     function automatic if_id_reg_t if_id_nop();
-        if_id_nop = '{pc: '0, instruction: 32'h0000_0013, valid: 1'b0};
+        if_id_nop.pc          = 32'h0;
+        if_id_nop.instruction = 32'h0000_0013; // ADDI x0,x0,0 — architectural NOP
+        if_id_nop.valid       = 1'b0;
     endfunction
 
     function automatic id_ex_reg_t id_ex_nop();
-        id_ex_nop = '{default: '0};
+        id_ex_nop.pc           = 32'h0;
+        id_ex_nop.instruction  = 32'h0;
+        id_ex_nop.rs1_data     = 32'h0;
+        id_ex_nop.rs2_data     = 32'h0;
+        id_ex_nop.immediate    = 32'h0;
+        id_ex_nop.rs1_addr     = 5'h0;
+        id_ex_nop.rs2_addr     = 5'h0;
+        id_ex_nop.rd_addr      = 5'h0;
+        id_ex_nop.alu_op       = 4'h0;
+        id_ex_nop.alu_src_a    = 2'h0;
+        id_ex_nop.alu_src_b    = 1'b0;
+        id_ex_nop.reg_wr_en    = 1'b0;
+        id_ex_nop.mem_rd       = 1'b0;
+        id_ex_nop.mem_wr       = 1'b0;
+        id_ex_nop.mem_size     = 3'h0;
+        id_ex_nop.mem_unsigned = 1'b0;
+        id_ex_nop.branch       = 1'b0;
+        id_ex_nop.branch_op    = 3'h0;
+        id_ex_nop.jump         = 1'b0;
+        id_ex_nop.jalr         = 1'b0;
+        id_ex_nop.csr_access   = 1'b0;
+        id_ex_nop.csr_addr     = 12'h0;
+        id_ex_nop.csr_op       = 3'h0;
+        id_ex_nop.ebreak       = 1'b0;
+        id_ex_nop.mret         = 1'b0;
+        id_ex_nop.fence_i      = 1'b0;
+        id_ex_nop.illegal      = 1'b0;
+        id_ex_nop.valid        = 1'b0;
     endfunction
 
     function automatic ex_mem_reg_t ex_mem_nop();
-        ex_mem_nop = '{default: '0};
+        ex_mem_nop.pc          = 32'h0;
+        ex_mem_nop.instruction = 32'h0;
+        ex_mem_nop.alu_result  = 32'h0;
+        ex_mem_nop.rs2_data    = 32'h0;
+        ex_mem_nop.csr_rdata   = 32'h0;
+        ex_mem_nop.rd_addr     = 5'h0;
+        ex_mem_nop.reg_wr_en   = 1'b0;
+        ex_mem_nop.mem_rd      = 1'b0;
+        ex_mem_nop.mem_wr      = 1'b0;
+        ex_mem_nop.mem_size    = 3'h0;
+        ex_mem_nop.mem_unsigned= 1'b0;
+        ex_mem_nop.csr_access  = 1'b0;
+        ex_mem_nop.csr_addr    = 12'h0;
+        ex_mem_nop.csr_wdata   = 32'h0;
+        ex_mem_nop.jump        = 1'b0;
+        ex_mem_nop.jalr        = 1'b0;
+        ex_mem_nop.pc_redirect = 1'b0;
+        ex_mem_nop.pc_target   = 32'h0;
+        ex_mem_nop.trap_valid  = 1'b0;
+        ex_mem_nop.trap_cause  = 32'h0;
+        ex_mem_nop.valid       = 1'b0;
     endfunction
 
     function automatic mem_wb_reg_t mem_wb_nop();
-        mem_wb_nop = '{default: '0};
+        mem_wb_nop.pc          = 32'h0;
+        mem_wb_nop.instruction = 32'h0;
+        mem_wb_nop.alu_result  = 32'h0;
+        mem_wb_nop.mem_rdata   = 32'h0;
+        mem_wb_nop.csr_rdata   = 32'h0;
+        mem_wb_nop.rd_addr     = 5'h0;
+        mem_wb_nop.reg_wr_en   = 1'b0;
+        mem_wb_nop.mem_rd      = 1'b0;
+        mem_wb_nop.csr_access  = 1'b0;
+        mem_wb_nop.jump        = 1'b0;
+        mem_wb_nop.trap_valid  = 1'b0;
+        mem_wb_nop.trap_cause  = 32'h0;
+        mem_wb_nop.valid       = 1'b0;
     endfunction
 
 endpackage

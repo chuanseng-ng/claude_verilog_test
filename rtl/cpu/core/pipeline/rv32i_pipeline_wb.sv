@@ -7,9 +7,9 @@
 //   - Assert commit_valid / trap_taken observability signals
 //   - Signal dbg_halted when pipeline is drained after halt request
 
-import rv32i_pipeline_pkg::*;
 
-module rv32i_pipeline_wb (
+import rv32i_pipeline_pkg::*;
+module rv32i_pipeline_wb(
     input  logic        clk,
     input  logic        rst_n,
 
