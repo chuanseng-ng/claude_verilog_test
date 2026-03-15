@@ -18,7 +18,6 @@
         "dir::../../rtl/cpu/core/rv32i_hazard_unit.sv",
         "dir::../../rtl/cpu/core/rv32i_interrupt_ctrl.sv",
         "dir::../../rtl/cpu/core/rv32i_csr_file.sv",
-        "dir::../../rtl/cpu/core/rv32i_control.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_id.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv",
@@ -73,7 +72,7 @@
     "USE_SYNLIG": true,
     "SYNLIG_DEFER": false,
 
-    "SYNTH_STRATEGY": "DELAY 1",
+    "SYNTH_STRATEGY": "AREA 0",
     "SYNTH_ABC_BUFFERING": true,
     "SYNTH_SIZING": true,
     "MAX_FANOUT_CONSTRAINT": 16,
