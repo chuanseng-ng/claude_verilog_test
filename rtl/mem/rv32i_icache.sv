@@ -46,7 +46,7 @@ module rv32i_icache(
     // Cache arrays (behavioral SRAM model — synthesized as SRAM macros)
     // =========================================================================
     logic [TAG_BITS-1:0]            tag_array  [0:N_SETS-1];
-    logic [LINE_WORDS-1:0][31:0]    data_array [0:N_SETS-1];
+    logic [31:0]                    data_array [0:N_SETS-1][0:LINE_WORDS-1];
     logic                           valid_array[0:N_SETS-1];
 
     // =========================================================================

@@ -61,7 +61,7 @@ module rv32i_dcache(
     // Cache arrays (behavioral SRAM model)
     // =========================================================================
     logic [TAG_BITS-1:0]            tag_array  [0:N_SETS-1];
-    logic [LINE_WORDS-1:0][31:0]    data_array [0:N_SETS-1];
+    logic [31:0]                    data_array [0:N_SETS-1][0:LINE_WORDS-1];
     logic                           valid_array[0:N_SETS-1];
     logic                           dirty_array[0:N_SETS-1];
 
@@ -247,7 +247,7 @@ module rv32i_dcache(
     assign merged_wdata[31:24] = dc_wstrb_i[3] ? dc_wdata_i[31:24] : data_array[addr_index][addr_word][31:24];
 
     // After refill: merge for a write-miss (write-allocate)
-    logic [LINE_WORDS-1:0][31:0] refill_with_write;
+    logic [31:0] refill_with_write [0:LINE_WORDS-1];
     logic [TAG_BITS-1:0]         miss_tag;
     logic [INDEX_BITS-1:0]       miss_index;
     logic [1:0]                  miss_word;
@@ -257,7 +257,7 @@ module rv32i_dcache(
     assign miss_word  = miss_addr_q[3:2];
 
     always_comb begin
-        refill_with_write = '0;
+        for (int w = 0; w < LINE_WORDS; w++) refill_with_write[w] = '0;
         for (int w = 0; w < LINE_WORDS; w++) begin
             if (w == int'(miss_word) && is_write_q) begin
                 // Apply byte strobe mask to the written word
