@@ -36,6 +36,29 @@ STA         := sta
 KLAYOUT     := klayout
 VERILATOR   := verilator
 
+#----------------------------------------------------------------
+# OpenLane 1 Docker configuration
+#----------------------------------------------------------------
+
+# Docker command — auto-detects snap install; override with DOCKER_CMD=sudo docker if needed
+DOCKER_CMD          ?= $(shell command -v docker 2>/dev/null || echo /snap/bin/docker)
+
+# OpenLane 1 image
+OPENLANE_IMAGE      ?= efabless/openlane:master
+
+# OpenLane 1 design directory (contains config.json in OL1 format)
+OPENLANE1_DIR       := openlane1
+
+# PDK root — mounted into the container at /root/.volare
+# volare installs PDKs here by default; override with PDK_ROOT=/other/path
+PDK_ROOT            ?= $(HOME)/.volare
+
+# PDK version pinned to OL1 1.1.1 default (bdc9412b)
+OL1_PDK_VERSION     ?= bdc9412b3e468c102d01b7cf6337be06ec6e9c9a
+
+# Absolute path to the project root (parent of pnr/)
+PROJECT_ROOT        := $(abspath ..)
+
 # Constraint files
 SDC_FILE    := $(CONSTR_DIR)/phase3_cache.sdc
 UPF_FILE    := $(CONSTR_DIR)/phase3_cache.upf
@@ -54,6 +77,7 @@ GDS_FILE    := $(RESULTS_DIR)/$(TOP_MODULE).gds
 .PHONY: all clean help
 .PHONY: synth floorplan place cts route parasitics sta power verify gls
 .PHONY: report_timing report_power report_area
+.PHONY: docker-pull docker-check docker-pdk docker-run docker-synth docker-results
 
 #----------------------------------------------------------------
 # Default Target
@@ -73,7 +97,15 @@ help:
 	@echo "OpenROAD Physical Design Flow - Available Targets"
 	@echo "=================================================="
 	@echo ""
-	@echo "Main Flow Targets:"
+	@echo "OpenLane 1 Docker Targets (recommended):"
+	@echo "  docker-pull    - Pull the OpenLane 1 Docker image"
+	@echo "  docker-check   - Verify Docker is ready"
+	@echo "  docker-pdk     - Download Sky130A PDK via volare (run once, ~1 GB)"
+	@echo "  docker-run     - Run full flow via OpenLane 1 Docker"
+	@echo "  docker-synth   - Run synthesis only via Docker"
+	@echo "  docker-results - Show metrics from latest Docker run"
+	@echo ""
+	@echo "Raw OpenROAD Flow Targets (requires tools on PATH):"
 	@echo "  all          - Run complete flow (synth through power)"
 	@echo "  synth        - Run RTL synthesis (Yosys)"
 	@echo "  floorplan    - Run floorplanning (OpenROAD)"
@@ -97,9 +129,13 @@ help:
 	@echo "  help         - Show this help message"
 	@echo ""
 	@echo "Configuration:"
-	@echo "  TOP_MODULE   = $(TOP_MODULE)"
-	@echo "  CLOCK_PERIOD = $(CLOCK_PERIOD) ns"
-	@echo "  PDK          = $(PDK)"
+	@echo "  TOP_MODULE      = $(TOP_MODULE)"
+	@echo "  CLOCK_PERIOD    = $(CLOCK_PERIOD) ns"
+	@echo "  PDK             = $(PDK)"
+	@echo "  OPENLANE_IMAGE  = $(OPENLANE_IMAGE)"
+	@echo "  OPENLANE1_DIR   = $(OPENLANE1_DIR)"
+	@echo "  PDK_ROOT        = $(PDK_ROOT)"
+	@echo "  DOCKER_CMD      = $(DOCKER_CMD)"
 	@echo ""
 
 #----------------------------------------------------------------
@@ -268,12 +304,117 @@ $(WORK_DIR):
 	@mkdir -p $(WORK_DIR)
 
 #----------------------------------------------------------------
+# OpenLane 1 Docker Targets
+#----------------------------------------------------------------
+
+# Pull the OpenLane 1 Docker image
+docker-pull:
+	@echo "=========================================="
+	@echo "Pulling OpenLane 1 Docker image"
+	@echo "  Image: $(OPENLANE_IMAGE)"
+	@echo "=========================================="
+	$(DOCKER_CMD) pull $(OPENLANE_IMAGE)
+	@echo "Pull complete."
+
+# Verify Docker is running and the image is available
+docker-check:
+	@$(DOCKER_CMD) info >/dev/null 2>&1 || \
+		(echo "ERROR: Docker daemon not running or not accessible."; \
+		 echo ""; \
+		 echo "  Fix socket permissions (snap Docker):"; \
+		 echo "    sudo chown root:docker /var/run/docker.sock"; \
+		 echo ""; \
+		 echo "  Or start the daemon:"; \
+		 echo "    sudo systemctl start docker"; \
+		 echo "    newgrp docker"; \
+		 exit 1)
+	@$(DOCKER_CMD) image inspect $(OPENLANE_IMAGE) >/dev/null 2>&1 || \
+		(echo "ERROR: Image $(OPENLANE_IMAGE) not found locally."; \
+		 echo "       Run: make docker-pull"; \
+		 exit 1)
+	@echo "Docker environment OK."
+	@echo "  Image    : $(OPENLANE_IMAGE)"
+	@echo "  Design   : $(OPENLANE1_DIR)"
+	@echo "  PDK_ROOT : $(PDK_ROOT)"
+	@echo "  Mount    : $(PROJECT_ROOT) -> /work"
+
+# Download Sky130A PDK into PDK_ROOT via volare (run once, ~1 GB)
+docker-pdk: docker-check
+	@echo "=========================================="
+	@echo "Downloading Sky130A PDK via volare"
+	@echo "  Version : $(OL1_PDK_VERSION)"
+	@echo "  Target  : $(PDK_ROOT)/sky130A"
+	@echo "=========================================="
+	@mkdir -p $(PDK_ROOT)
+	$(DOCKER_CMD) run --rm \
+		-v $(PDK_ROOT):/root/.volare \
+		$(OPENLANE_IMAGE) \
+		bash -c "volare enable --pdk sky130 $(OL1_PDK_VERSION)"
+	@echo "PDK download complete: $(PDK_ROOT)/sky130A"
+
+# Run the full OpenLane 1 flow via Docker
+docker-run: docker-check
+	@echo "=========================================="
+	@echo "Running OpenLane 1 flow (Docker)"
+	@echo "  Design   : $(OPENLANE1_DIR)/config.json"
+	@echo "  Image    : $(OPENLANE_IMAGE)"
+	@echo "  PDK_ROOT : $(PDK_ROOT)"
+	@echo "=========================================="
+	@if [ ! -d "$(PDK_ROOT)/sky130A" ]; then \
+		echo "WARNING: PDK not found at $(PDK_ROOT)/sky130A"; \
+		echo "         Run 'make docker-pdk' first to download it (~1 GB)."; \
+		exit 1; \
+	fi
+	$(DOCKER_CMD) run --rm \
+		-v $(PROJECT_ROOT):/work \
+		-v $(PDK_ROOT):/root/.volare \
+		$(OPENLANE_IMAGE) \
+		bash -c "PDK_ROOT=/root/.volare \
+		         flow.tcl \
+		         -design /work/pnr/$(OPENLANE1_DIR) \
+		         -run_path /work/pnr/$(OPENLANE1_DIR)/runs"
+	@echo "=========================================="
+	@echo "OpenLane 1 flow complete."
+	@echo "Results in: pnr/$(OPENLANE1_DIR)/runs/"
+	@echo "=========================================="
+	@$(MAKE) docker-results
+
+# Run synthesis only — OL1 1.1.1 removed -from/-to step selection;
+# this target runs the full flow but is kept as an alias for docker-run.
+docker-synth: docker-run
+
+# Show key metrics from the latest Docker flow run
+docker-results:
+	@LATEST=$$(ls -td $(OPENLANE1_DIR)/runs/RUN_* 2>/dev/null | head -1); \
+	if [ -z "$$LATEST" ]; then \
+		echo "No completed OpenLane runs found in pnr/$(OPENLANE1_DIR)/runs/"; \
+		exit 0; \
+	fi; \
+	echo "=========================================="; \
+	echo "Results from: $$LATEST"; \
+	echo "=========================================="; \
+	echo ""; \
+	echo "--- Area ---"; \
+	find $$LATEST -name "*area*" -name "*.rpt" | xargs grep -h "Design area\|Chip area" 2>/dev/null | head -5; \
+	echo ""; \
+	echo "--- Timing (WNS/TNS) ---"; \
+	find $$LATEST \( -name "*timing*" -o -name "*sta*" \) | xargs grep -h "wns\|tns\|slack" 2>/dev/null | grep -v "^#" | head -10; \
+	echo ""; \
+	echo "--- Power ---"; \
+	find $$LATEST -name "*power*" | xargs grep -h "Total\|Internal\|Switching\|Leakage" 2>/dev/null | head -8; \
+	echo ""; \
+	echo "--- Final summary ---"; \
+	find $$LATEST -name "final_summary*" | xargs cat 2>/dev/null | head -30; \
+	echo ""; \
+	echo "Full reports: $$LATEST/"
+
+#----------------------------------------------------------------
 # Clean Target
 #----------------------------------------------------------------
 
 clean:
 	@echo "Cleaning generated files..."
-	rm -rf $(WORK_DIR) $(LOGS_DIR) $(REPORTS_DIR) $(RESULTS_DIR)
+	rm -rf $(WORK_DIR) $(LOGS_DIR) $(REPORTS_DIR) $(RESULTS_DIR) openlane/runs openlane1/runs
 	@echo "Clean complete."
 
 #----------------------------------------------------------------
