@@ -34,7 +34,7 @@ export PDK_ROOT
 # Phony Targets
 #----------------------------------------------------------------
 
-.PHONY: all run synth clean results help check_env
+.PHONY: all run run-skip-lint synth clean results help check_env
 
 #----------------------------------------------------------------
 # Default Target
@@ -80,6 +80,26 @@ run: check_env
 	@echo "nix-shell: $(LIBRELANE_NIXDIR)"
 	@echo "=========================================="
 	$(NIX_RUN) "PDK_ROOT=$(PDK_ROOT) librelane $(CONFIG_FILE)"
+	@echo "=========================================="
+	@echo "LibreLane flow complete."
+	@echo "Results in: $(RUN_DIR)/"
+	@echo "=========================================="
+	@$(MAKE) results
+
+#----------------------------------------------------------------
+# Full Flow Run — skip Verilator lint (workaround for Yosys 0.46 native SV
+# frontend incompatibility with $unit-scope package imports)
+# Starts from the Yosys JSON header step, bypassing steps 01-04.
+#----------------------------------------------------------------
+
+run-skip-lint: check_env
+	@echo "=========================================="
+	@echo "Running LibreLane flow (skip lint) — $(DESIGN_NAME)"
+	@echo "Config : $(CONFIG_FILE)"
+	@echo "PDK_ROOT: $(PDK_ROOT)"
+	@echo "nix-shell: $(LIBRELANE_NIXDIR)"
+	@echo "=========================================="
+	$(NIX_RUN) "PDK_ROOT=$(PDK_ROOT) librelane $(CONFIG_FILE) --from yosys.JsonHeader"
 	@echo "=========================================="
 	@echo "LibreLane flow complete."
 	@echo "Results in: $(RUN_DIR)/"
