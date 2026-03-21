@@ -20,6 +20,10 @@ RUN_DIR := runs
 # Override with: make run LIBRELANE_NIXDIR=/other/path
 LIBRELANE_NIXDIR ?= $(HOME)/Downloads/Github/librelane
 
+# Number of parallel jobs — defaults to all available CPU cores.
+# Override with: make run JOBS=8
+JOBS ?= $(shell nproc)
+
 # Internal: run a command inside the LibreLane nix-shell.
 # Usage: $(NIX_RUN) "librelane <args>"
 NIX_RUN = cd $(LIBRELANE_NIXDIR) && nix-shell --run
@@ -79,7 +83,7 @@ run: check_env
 	@echo "PDK_ROOT: $(PDK_ROOT)"
 	@echo "nix-shell: $(LIBRELANE_NIXDIR)"
 	@echo "=========================================="
-	$(NIX_RUN) "PDK_ROOT=$(PDK_ROOT) librelane $(CONFIG_FILE)"
+	$(NIX_RUN) "PDK_ROOT=$(PDK_ROOT) librelane $(CONFIG_FILE) -j $(JOBS)"
 	@echo "=========================================="
 	@echo "LibreLane flow complete."
 	@echo "Results in: $(RUN_DIR)/"
@@ -99,7 +103,7 @@ run-skip-lint: check_env
 	@echo "PDK_ROOT: $(PDK_ROOT)"
 	@echo "nix-shell: $(LIBRELANE_NIXDIR)"
 	@echo "=========================================="
-	$(NIX_RUN) "PDK_ROOT=$(PDK_ROOT) librelane $(CONFIG_FILE) --from yosys.JsonHeader"
+	$(NIX_RUN) "PDK_ROOT=$(PDK_ROOT) librelane $(CONFIG_FILE) --from yosys.JsonHeader -j $(JOBS)"
 	@echo "=========================================="
 	@echo "LibreLane flow complete."
 	@echo "Results in: $(RUN_DIR)/"
@@ -118,7 +122,7 @@ synth: check_env
 	@echo "=========================================="
 	@echo "Running LibreLane synthesis only"
 	@echo "=========================================="
-	$(NIX_RUN) "PDK_ROOT=$(PDK_ROOT) librelane $(CONFIG_FILE) --last-step yosys.Synthesis"
+	$(NIX_RUN) "PDK_ROOT=$(PDK_ROOT) librelane $(CONFIG_FILE) --last-step yosys.Synthesis -j $(JOBS)"
 	@echo "Synthesis complete."
 	@$(MAKE) _report_synth
 
