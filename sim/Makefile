@@ -37,7 +37,11 @@ TEST_MODULES := \
 
 # RTL source files (Phase 3: 5-stage pipeline + I-cache + D-cache)
 # Packages must appear first so Verilator can resolve them.
+# The Sky130 SRAM simulation model must precede any RTL that instantiates it.
+SRAM_SIM_MODEL := $(SIM_DIR)/sky130_sram_1kbyte_1rw1r_32x256_8.sv
+
 VERILOG_SOURCES := \
+	$(SRAM_SIM_MODEL) \
 	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
@@ -62,6 +66,7 @@ VERILOG_SOURCES := \
 
 # Cache-only sources (for cache unit tests with a single cache DUT)
 CACHE_SOURCES := \
+	$(SRAM_SIM_MODEL) \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_icache.sv \
 	$(RTL_DIR)/mem/rv32i_dcache.sv \
@@ -82,6 +87,9 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += --no-timing
 	COMPILE_ARGS += -I$(RTL_DIR)/cpu/core
 	COMPILE_ARGS += -I$(RTL_DIR)/mem
+	# Override PYTHON3 so the nix-verilator's verilated.mk uses the system
+	# Python instead of the nix Python 3.11 (which conflicts with PYTHONHOME=/usr).
+	BUILD_ARGS += PYTHON3=$(shell which python3)
 ifdef COVERAGE
 	COMPILE_ARGS += --coverage
 	EXTRA_ARGS   += --coverage
