@@ -39,47 +39,6 @@ module rv32i_pipeline_mem(
 );
 
     // =========================================================================
-    // Byte-strobe generation (for stores)
-    // =========================================================================
-    logic [31:0] store_addr;
-    logic [2:0]  store_size;
-    logic [3:0]  wstrb;
-    logic [31:0] wdata_aligned;
-
-    assign store_addr = ex_mem_reg_i.alu_result;
-    assign store_size = ex_mem_reg_i.mem_size;
-
-    always_comb begin
-        wstrb         = 4'b1111;
-        wdata_aligned = ex_mem_reg_i.rs2_data;
-
-        case (store_size)
-            3'b000: begin  // Byte store
-                case (store_addr[1:0])
-                    2'b00: begin wstrb = 4'b0001; wdata_aligned = {24'h0, ex_mem_reg_i.rs2_data[7:0]}; end
-                    2'b01: begin wstrb = 4'b0010; wdata_aligned = {16'h0, ex_mem_reg_i.rs2_data[7:0], 8'h0}; end
-                    2'b10: begin wstrb = 4'b0100; wdata_aligned = {8'h0,  ex_mem_reg_i.rs2_data[7:0], 16'h0}; end
-                    2'b11: begin wstrb = 4'b1000; wdata_aligned = {ex_mem_reg_i.rs2_data[7:0], 24'h0}; end
-                endcase
-            end
-            3'b001: begin  // Halfword store
-                case (store_addr[1])
-                    1'b0: begin wstrb = 4'b0011; wdata_aligned = {16'h0, ex_mem_reg_i.rs2_data[15:0]}; end
-                    1'b1: begin wstrb = 4'b1100; wdata_aligned = {ex_mem_reg_i.rs2_data[15:0], 16'h0}; end
-                endcase
-            end
-            3'b010: begin  // Word store
-                wstrb         = 4'b1111;
-                wdata_aligned = ex_mem_reg_i.rs2_data;
-            end
-            default: begin
-                wstrb         = 4'b0000;
-                wdata_aligned = 32'h0;
-            end
-        endcase
-    end
-
-    // =========================================================================
     // Load data extraction and sign extension
     // =========================================================================
     logic [31:0] mem_rdata_extracted;
@@ -127,8 +86,8 @@ module rv32i_pipeline_mem(
     assign dc_addr_o  = ex_mem_reg_i.alu_result;
     assign dc_valid_o = need_mem_access;
     assign dc_we_o    = ex_mem_reg_i.mem_wr;
-    assign dc_wdata_o = wdata_aligned;
-    assign dc_wstrb_o = wstrb;
+    assign dc_wdata_o = ex_mem_reg_i.mem_wdata_aligned;
+    assign dc_wstrb_o = ex_mem_reg_i.mem_wstrb;
 
     // Stall: D-cache miss when a memory access is needed
     assign mem_cache_stall_o = need_mem_access && dc_stall_i;

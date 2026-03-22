@@ -4,7 +4,7 @@
     "STD_CELL_LIBRARY": "NangateOpenCellLibrary",
 
     "VERILOG_FILES": [
-        "/home/neuromorphic/Downloads/Github/OpenRAM/validate_freepdk45/output/sram_1rw_256x32_freepdk45.v",
+        "dir::sram_1rw_256x32_freepdk45_stub.v",
         "dir::../../rtl/cpu/core/rv32i_pipeline_pkg.sv",
         "dir::../../rtl/mem/rv32i_cache_pkg.sv",
         "dir::../../rtl/cpu/core/rv32i_alu.sv",
@@ -30,13 +30,14 @@
 
     "CLOCK_PORT": "clk_i",
     "CLOCK_NET":  "clk_i",
-    "CLOCK_PERIOD": 3.333,
+    "CLOCK_PERIOD": 2.5,
 
-    "DIE_AREA": "0 0 900 750",
-    "CORE_AREA": "10 10 890 740",
-    "FP_CORE_UTIL": 30,
+    "FP_SIZING": "absolute",
+    "DIE_AREA": "0 0 760 480",
+    "CORE_AREA": "10 10 750 470",
+    "FP_CORE_UTIL": 60,
     "FP_ASPECT_RATIO": 1,
-    "PL_TARGET_DENSITY_PCT": 25,
+    "PL_TARGET_DENSITY_PCT": 60,
     "FP_PDN_CFG": "dir::pdn.tcl",
     "FP_PDN_MULTILAYER": true,
     "FP_PDN_ENABLE_RAILS": false,
@@ -49,7 +50,8 @@
         "/home/neuromorphic/Downloads/Github/OpenRAM/validate_freepdk45/output/sram_1rw_256x32_freepdk45_TT_1p0V_25C.lib"
     ],
     "EXTRA_GDS_FILES": [
-        "/home/neuromorphic/Downloads/Github/OpenRAM/validate_freepdk45/output/sram_1rw_256x32_freepdk45.gds"
+        "/home/neuromorphic/Downloads/Github/OpenRAM/validate_freepdk45/output/sram_1rw_256x32_freepdk45.gds",
+        "dir::nangate45_generated_vias.gds"
     ],
 
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
@@ -64,23 +66,29 @@
         "CLKBUF_X3"
     ],
 
+    "LINTER_DEFINES": ["SYNTHESIS"],
+
     "USE_SYNLIG": true,
     "SYNLIG_DEFER": false,
 
-    "SYNTH_STRATEGY": "AREA 0",
+    "SYNTH_STRATEGY": "DELAY 3",
+    "SYNTH_SIZING": true,
+    "SYNTH_ABC_BUFFERING": true,
+    "SYNTH_CLOCKGATE_ENABLE": true,
     "DRT_THREADS": 4,
 
-    "RUN_DRT": false,
+    "RUN_DRT": true,
     "RUN_SPEF_EXTRACTION": false,
     "RUN_MCSTA": false,
     "RUN_IRDROP_REPORT": false,
-    "RUN_KLAYOUT_STREAMOUT": false,
-    "RUN_KLAYOUT_DRC": false,
+    "ERROR_ON_PDN_VIOLATIONS": false,
+    "RUN_KLAYOUT_STREAMOUT": true,
+    "RUN_KLAYOUT_DRC": true,
     "RUN_DISCONNECTED_PINS_CHECKER": false,
     "RUN_MAGIC_STREAMOUT": false,
     "RUN_MAGIC_WRITE_LEF": false,
     "RUN_MAGIC_DRC": false,
-    "RUN_KLAYOUT_XOR": false,
+    "RUN_KLAYOUT_XOR": true,
     "RUN_LVS": false,
 
     "FALLBACK_SDC_FILE": "dir::constraints/freepdk45.sdc",

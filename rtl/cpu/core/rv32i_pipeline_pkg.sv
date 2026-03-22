@@ -60,8 +60,9 @@ package rv32i_pipeline_pkg;
     typedef struct packed {
         logic [31:0] pc;           // Instruction PC
         logic [31:0] instruction;  // Instruction word (for commit_insn_o)
-        logic [31:0] alu_result;   // ALU output (address for loads/stores)
-        logic [31:0] rs2_data;     // Store data (after forwarding)
+        logic [31:0] alu_result;         // ALU output (address for loads/stores)
+        logic [31:0] mem_wdata_aligned;  // Store data, pre-aligned in EX stage
+        logic [3:0]  mem_wstrb;          // Store byte strobes, pre-computed in EX stage
         logic [31:0] csr_rdata;    // CSR read data (pre-write, for rd)
         logic [4:0]  rd_addr;      // Destination register
         logic        reg_wr_en;    // Register write enable
@@ -144,8 +145,9 @@ package rv32i_pipeline_pkg;
     function automatic ex_mem_reg_t ex_mem_nop();
         ex_mem_nop.pc          = 32'h0;
         ex_mem_nop.instruction = 32'h0;
-        ex_mem_nop.alu_result  = 32'h0;
-        ex_mem_nop.rs2_data    = 32'h0;
+        ex_mem_nop.alu_result        = 32'h0;
+        ex_mem_nop.mem_wdata_aligned = 32'h0;
+        ex_mem_nop.mem_wstrb         = 4'h0;
         ex_mem_nop.csr_rdata   = 32'h0;
         ex_mem_nop.rd_addr     = 5'h0;
         ex_mem_nop.reg_wr_en   = 1'b0;
