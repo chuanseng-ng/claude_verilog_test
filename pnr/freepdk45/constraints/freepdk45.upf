@@ -1,0 +1,144 @@
+###############################################################################
+# freepdk45.upf — Power intent for rv32i_cpu_top on FreePDK45 / nangate45
+# IEEE 1801-2015 (UPF 3.0)
+#
+# Adapted from phase3_cache.upf (Sky130):
+#  - Same 3-domain structure: PD_TOP, PD_CORE, PD_CACHE
+#  - Supply voltage: 1.8V → 1.1V (nangate45 nominal)
+#  - Power switch cell: nangate45 does not include a dedicated header switch;
+#    power gating is modelled but may be left as a no-op in the P&R flow
+#    (acceptable for a frequency-projection study without tape-out)
+###############################################################################
+
+###############################################################################
+# 1. Supply ports
+###############################################################################
+create_supply_port VDD  -direction in
+create_supply_port VSS  -direction in
+
+create_supply_net  VDD       -reuse
+create_supply_net  VDD_CORE
+create_supply_net  VDD_CACHE
+create_supply_net  VSS       -reuse
+
+connect_supply_net VDD      -ports VDD
+connect_supply_net VSS      -ports VSS
+
+###############################################################################
+# 2. Power domains
+###############################################################################
+
+# PD_TOP — always-on: APB debug interface, halt logic, breakpoints
+create_power_domain PD_TOP \
+    -include_scope \
+    -elements { \
+        u_core/u_csr \
+        u_dbg \
+    }
+
+set_domain_supply_net PD_TOP \
+    -primary_power_net VDD \
+    -primary_ground_net VSS
+
+# PD_CORE — power-gateable: pipeline stages, hazard, forwarding, interrupt ctrl
+create_power_domain PD_CORE \
+    -include_scope \
+    -elements { \
+        u_core \
+    }
+
+set_domain_supply_net PD_CORE \
+    -primary_power_net VDD_CORE \
+    -primary_ground_net VSS
+
+# PD_CACHE — sub-domain of PD_CORE: I-cache, D-cache, cache arbiter
+create_power_domain PD_CACHE \
+    -include_scope \
+    -elements { \
+        u_core/u_icache \
+        u_core/u_dcache \
+        u_core/u_cache_arbiter \
+    }
+
+set_domain_supply_net PD_CACHE \
+    -primary_power_net VDD_CACHE \
+    -primary_ground_net VSS
+
+###############################################################################
+# 3. Power supply network (VDD → VDD_CORE → VDD_CACHE)
+# nangate45 has no explicit header switch cell in the open library.
+# The supply connections are modelled; for a real flow a custom switch
+# or the default always-on net assignment should be used.
+###############################################################################
+
+# Model VDD_CORE as switched from VDD (gated when dbg_halted asserted)
+create_supply_net VDD_CORE_SW_IN
+create_power_switch PSW_CORE \
+    -domain PD_CORE \
+    -output_supply_port {vout VDD_CORE} \
+    -input_supply_port  {vin VDD} \
+    -control_port       {ctrl dbg_halted} \
+    -on_value  0 \
+    -off_value 1
+
+# Model VDD_CACHE as switched from VDD_CORE
+create_power_switch PSW_CACHE \
+    -domain PD_CACHE \
+    -output_supply_port {vout VDD_CACHE} \
+    -input_supply_port  {vin VDD_CORE} \
+    -control_port       {ctrl cache_ctrl} \
+    -on_value  0 \
+    -off_value 1
+
+###############################################################################
+# 4. Isolation strategies
+# Clamp outputs of PD_CORE to 0 when power-gated (except dbg_halted → 1)
+###############################################################################
+set_isolation ISO_CORE \
+    -domain PD_CORE \
+    -applies_to outputs \
+    -clamp_value 0 \
+    -isolation_signal dbg_halted \
+    -isolation_sense high
+
+set_isolation ISO_CACHE \
+    -domain PD_CACHE \
+    -applies_to outputs \
+    -clamp_value 0 \
+    -isolation_signal cache_ctrl \
+    -isolation_sense high
+
+###############################################################################
+# 5. Retention strategy
+# CSR state and cache metadata retained across power-gating events.
+# nangate45 has no open retention FF — modelled as a design intent annotation.
+###############################################################################
+set_retention RET_CSR \
+    -domain PD_CORE \
+    -retention_power_net VDD \
+    -retention_ground_net VSS \
+    -elements { \
+        u_core/u_csr/mtvec_q \
+        u_core/u_csr/mstatus_mie_q \
+        u_core/u_csr/mstatus_mpie_q \
+        u_core/u_csr/mie_q \
+        u_core/u_csr/mepc_q \
+        u_core/u_csr/mcause_q \
+    }
+
+set_retention RET_CACHE_META \
+    -domain PD_CACHE \
+    -retention_power_net VDD \
+    -retention_ground_net VSS \
+    -elements { \
+        u_core/u_icache/valid_array \
+        u_core/u_dcache/valid_array \
+        u_core/u_dcache/dirty_array \
+    }
+
+###############################################################################
+# 6. Nominal supply voltages (1.1V for nangate45)
+###############################################################################
+set_design_attributes \
+    -elements [current_design] \
+    -attribute UPF_SUPPLY_VOLTAGE_1p1V 1.1
