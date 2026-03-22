@@ -71,6 +71,24 @@ SDF_FILE    := $(RESULTS_DIR)/$(TOP_MODULE).sdf
 GDS_FILE    := $(RESULTS_DIR)/$(TOP_MODULE).gds
 
 #----------------------------------------------------------------
+# LibreLane configuration
+#----------------------------------------------------------------
+
+# LibreLane repo (nix-shell entry point)
+LIBRELANE_DIR       ?= $(HOME)/Downloads/Github/librelane
+
+# PDK root for manual-pdk flows (nangate45, asap7)
+MANUAL_PDK_ROOT     ?= $(HOME)/pdk
+
+# LibreLane config directories
+LIBRELANE_SKY130_DIR    := librelane
+LIBRELANE_NANGATE45_DIR := freepdk45
+LIBRELANE_ASAP7_DIR     := asap7
+
+# Number of threads for detailed routing
+DRT_THREADS         ?= 4
+
+#----------------------------------------------------------------
 # Phony Targets
 #----------------------------------------------------------------
 
@@ -78,6 +96,8 @@ GDS_FILE    := $(RESULTS_DIR)/$(TOP_MODULE).gds
 .PHONY: synth floorplan place cts route parasitics sta power verify gls
 .PHONY: report_timing report_power report_area
 .PHONY: docker-pull docker-check docker-pdk docker-run docker-synth docker-results
+.PHONY: librelane-sky130 librelane-nangate45 librelane-asap7
+.PHONY: librelane-sky130-results librelane-nangate45-results librelane-asap7-results
 
 #----------------------------------------------------------------
 # Default Target
@@ -97,7 +117,19 @@ help:
 	@echo "OpenROAD Physical Design Flow - Available Targets"
 	@echo "=================================================="
 	@echo ""
-	@echo "OpenLane 1 Docker Targets (recommended):"
+	@echo "LibreLane Targets (nix-shell, recommended):"
+	@echo "  librelane-sky130      - Run full LibreLane flow on Sky130 (pnr/librelane/)"
+	@echo "  librelane-nangate45   - Run full LibreLane flow on FreePDK45/nangate45 (pnr/freepdk45/)"
+	@echo "  librelane-asap7       - Run full LibreLane flow on ASAP7 (pnr/asap7/)"
+	@echo "  librelane-sky130-results    - Show metrics from latest Sky130 LibreLane run"
+	@echo "  librelane-nangate45-results - Show metrics from latest nangate45 LibreLane run"
+	@echo "  librelane-asap7-results     - Show metrics from latest ASAP7 LibreLane run"
+	@echo ""
+	@echo "  LIBRELANE_DIR     = $(LIBRELANE_DIR)"
+	@echo "  MANUAL_PDK_ROOT   = $(MANUAL_PDK_ROOT)"
+	@echo "  DRT_THREADS       = $(DRT_THREADS)"
+	@echo ""
+	@echo "OpenLane 1 Docker Targets:"
 	@echo "  docker-pull    - Pull the OpenLane 1 Docker image"
 	@echo "  docker-check   - Verify Docker is ready"
 	@echo "  docker-pdk     - Download Sky130A PDK via volare (run once, ~1 GB)"
@@ -409,12 +441,116 @@ docker-results:
 	echo "Full reports: $$LATEST/"
 
 #----------------------------------------------------------------
+# LibreLane Flow Targets
+# Runs LibreLane via nix-shell from LIBRELANE_DIR.
+# Sky130 uses the volare-managed PDK (no --manual-pdk).
+# nangate45 and ASAP7 use a manually structured PDK under MANUAL_PDK_ROOT.
+#----------------------------------------------------------------
+
+# Helper macro: pretty-print latest run directory for a given config dir
+define librelane_results
+	@LATEST=$$(ls -td $(1)/runs/RUN_* 2>/dev/null | head -1); \
+	if [ -z "$$LATEST" ]; then \
+		echo "No completed LibreLane runs found in pnr/$(1)/runs/"; \
+		exit 0; \
+	fi; \
+	echo "=========================================="; \
+	echo "Results from: $$LATEST"; \
+	echo "=========================================="; \
+	echo ""; \
+	echo "--- Area ---"; \
+	find $$LATEST -name "*.json" | xargs grep -h '"design_area"\|"wire_length"' 2>/dev/null | head -5; \
+	echo ""; \
+	echo "--- Timing (WNS/TNS) ---"; \
+	find $$LATEST \( -name "*timing*" -o -name "*sta*" \) -name "*.rpt" \
+		| xargs grep -h "wns\|tns\|slack" 2>/dev/null | grep -v "^#" | head -10; \
+	echo ""; \
+	echo "--- Power ---"; \
+	find $$LATEST -name "*power*" -name "*.rpt" \
+		| xargs grep -h "Total\|Internal\|Switching\|Leakage" 2>/dev/null | head -8; \
+	echo ""; \
+	echo "Full results: $$LATEST/"
+endef
+
+# Sky130: LibreLane uses volare PDK (PDK_ROOT auto-detected, no --manual-pdk)
+librelane-sky130:
+	@echo "=========================================="
+	@echo "Running LibreLane flow — Sky130 HD"
+	@echo "  Config : pnr/$(LIBRELANE_SKY130_DIR)/config.json"
+	@echo "  Tool   : $(LIBRELANE_DIR)"
+	@echo "=========================================="
+	@if [ ! -f "$(LIBRELANE_SKY130_DIR)/config.json" ]; then \
+		echo "ERROR: $(LIBRELANE_SKY130_DIR)/config.json not found."; exit 1; fi
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"python3 -m librelane \
+		 $(abspath $(LIBRELANE_SKY130_DIR))/config.json"
+
+librelane-sky130-results:
+	$(call librelane_results,$(LIBRELANE_SKY130_DIR))
+
+# nangate45 / FreePDK45: uses manually structured PDK under MANUAL_PDK_ROOT
+librelane-nangate45:
+	@echo "=========================================="
+	@echo "Running LibreLane flow — nangate45 / FreePDK45"
+	@echo "  Config   : pnr/$(LIBRELANE_NANGATE45_DIR)/config.json"
+	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
+	@echo "  Tool     : $(LIBRELANE_DIR)"
+	@echo "  Skipping : Odb.HeuristicDiodeInsertion OpenROAD.RepairAntennas"
+	@echo "=========================================="
+	@if [ ! -f "$(LIBRELANE_NANGATE45_DIR)/config.json" ]; then \
+		echo "ERROR: $(LIBRELANE_NANGATE45_DIR)/config.json not found."; exit 1; fi
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.XOR \
+		 --skip Checker.KLayoutDRC \
+		 --skip Checker.LVS \
+		 $(abspath $(LIBRELANE_NANGATE45_DIR))/config.json"
+
+librelane-nangate45-results:
+	$(call librelane_results,$(LIBRELANE_NANGATE45_DIR))
+
+# ASAP7: uses manually structured PDK under MANUAL_PDK_ROOT
+# Config directory pnr/asap7/ must exist with a valid config.json.
+librelane-asap7:
+	@echo "=========================================="
+	@echo "Running LibreLane flow — ASAP7"
+	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_DIR)/config.json"
+	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
+	@echo "  Tool     : $(LIBRELANE_DIR)"
+	@echo "=========================================="
+	@if [ ! -f "$(LIBRELANE_ASAP7_DIR)/config.json" ]; then \
+		echo "ERROR: $(LIBRELANE_ASAP7_DIR)/config.json not found."; \
+		echo "       Create pnr/asap7/ with a LibreLane config.json to use this target."; \
+		exit 1; fi
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 $(abspath $(LIBRELANE_ASAP7_DIR))/config.json"
+
+librelane-asap7-results:
+	$(call librelane_results,$(LIBRELANE_ASAP7_DIR))
+
+#----------------------------------------------------------------
 # Clean Target
 #----------------------------------------------------------------
 
 clean:
 	@echo "Cleaning generated files..."
-	rm -rf $(WORK_DIR) $(LOGS_DIR) $(REPORTS_DIR) $(RESULTS_DIR) openlane/runs openlane1/runs
+	rm -rf $(WORK_DIR) $(LOGS_DIR) $(REPORTS_DIR) $(RESULTS_DIR) \
+		openlane/runs openlane1/runs \
+		$(LIBRELANE_SKY130_DIR)/runs \
+		$(LIBRELANE_NANGATE45_DIR)/runs \
+		$(LIBRELANE_ASAP7_DIR)/runs
 	@echo "Clean complete."
 
 #----------------------------------------------------------------

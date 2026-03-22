@@ -1,0 +1,100 @@
+{
+    "DESIGN_NAME": "rv32i_cpu_top",
+    "PDK": "nangate45",
+    "STD_CELL_LIBRARY": "NangateOpenCellLibrary",
+
+    "VERILOG_FILES": [
+        "dir::sram_1rw_256x32_freepdk45_stub.v",
+        "dir::../../rtl/cpu/core/rv32i_pipeline_pkg.sv",
+        "dir::../../rtl/mem/rv32i_cache_pkg.sv",
+        "dir::../../rtl/cpu/core/rv32i_alu.sv",
+        "dir::../../rtl/cpu/core/rv32i_branch_comp.sv",
+        "dir::../../rtl/cpu/core/rv32i_imm_gen.sv",
+        "dir::../../rtl/cpu/core/rv32i_regfile.sv",
+        "dir::../../rtl/cpu/core/rv32i_decode.sv",
+        "dir::../../rtl/cpu/core/rv32i_forwarding_unit.sv",
+        "dir::../../rtl/cpu/core/rv32i_hazard_unit.sv",
+        "dir::../../rtl/cpu/core/rv32i_interrupt_ctrl.sv",
+        "dir::../../rtl/cpu/core/rv32i_csr_file.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_id.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv",
+        "dir::../../rtl/mem/rv32i_icache.sv",
+        "dir::../../rtl/mem/rv32i_dcache.sv",
+        "dir::../../rtl/mem/rv32i_cache_arbiter.sv",
+        "dir::../../rtl/cpu/core/rv32i_core.sv",
+        "dir::../../rtl/cpu/rv32i_cpu_top.sv"
+    ],
+
+    "CLOCK_PORT": "clk_i",
+    "CLOCK_NET":  "clk_i",
+    "CLOCK_PERIOD": 3.333,
+
+    "DIE_AREA": "0 0 900 750",
+    "CORE_AREA": "10 10 890 740",
+    "FP_CORE_UTIL": 30,
+    "FP_ASPECT_RATIO": 1,
+    "PL_TARGET_DENSITY_PCT": 25,
+    "FP_PDN_CFG": "dir::pdn.tcl",
+    "FP_PDN_MULTILAYER": true,
+    "FP_PDN_ENABLE_RAILS": false,
+    "PDN_CONNECT_MACROS_TO_GRID": false,
+
+    "EXTRA_LEFS": [
+        "/home/neuromorphic/Downloads/Github/OpenRAM/validate_freepdk45/output/sram_1rw_256x32_freepdk45.lef"
+    ],
+    "EXTRA_LIBS": [
+        "/home/neuromorphic/Downloads/Github/OpenRAM/validate_freepdk45/output/sram_1rw_256x32_freepdk45_TT_1p0V_25C.lib"
+    ],
+    "EXTRA_GDS_FILES": [
+        "/home/neuromorphic/Downloads/Github/OpenRAM/validate_freepdk45/output/sram_1rw_256x32_freepdk45.gds"
+    ],
+
+    "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
+
+    "PDN_MACRO_CONNECTIONS": [
+        ".*(u_tag_sram|u_data_sram) VDD VSS vdd gnd"
+    ],
+
+    "CTS_CLK_BUFFERS": [
+        "CLKBUF_X1",
+        "CLKBUF_X2",
+        "CLKBUF_X3"
+    ],
+
+    "USE_SYNLIG": true,
+    "SYNLIG_DEFER": false,
+
+    "SYNTH_STRATEGY": "AREA 0",
+    "DRT_THREADS": 4,
+
+    "RUN_DRT": false,
+    "RUN_SPEF_EXTRACTION": false,
+    "RUN_MCSTA": false,
+    "RUN_IRDROP_REPORT": false,
+    "RUN_KLAYOUT_STREAMOUT": false,
+    "RUN_KLAYOUT_DRC": false,
+    "RUN_DISCONNECTED_PINS_CHECKER": false,
+    "RUN_MAGIC_STREAMOUT": false,
+    "RUN_MAGIC_WRITE_LEF": false,
+    "RUN_MAGIC_DRC": false,
+    "RUN_KLAYOUT_XOR": false,
+    "RUN_LVS": false,
+
+    "FALLBACK_SDC_FILE": "dir::constraints/freepdk45.sdc",
+    "PNR_SDC_FILE":     "dir::constraints/freepdk45.sdc",
+    "SIGNOFF_SDC_FILE": "dir::constraints/freepdk45.sdc",
+
+    "LIB": {
+        "nom_tt_025C_1p0V": [
+            "/home/neuromorphic/pdk/nangate45/libs.ref/NangateOpenCellLibrary/lib/NangateOpenCellLibrary_typical.lib"
+        ]
+    },
+    "DEFAULT_CORNER": "nom_tt_025C_1p0V",
+    "STA_CORNERS": [
+        "nom_tt_025C_1p0V"
+    ],
+    "TIMING_VIOLATION_CORNERS": ["*tt*"]
+}
