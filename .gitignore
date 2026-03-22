@@ -48,4 +48,4 @@ coverage_tb_*.dat
 pnr/librelane/runs
 pnr/openlane/runs
 pnr/openlane1/runs
-pnr/freedpdk45/runs
+pnr/freepdk45/runs
