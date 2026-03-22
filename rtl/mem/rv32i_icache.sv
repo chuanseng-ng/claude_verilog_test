@@ -1,11 +1,17 @@
 // rv32i_icache.sv
-// Phase 3 — Instruction Cache (I$) with Sky130 SRAM macros
+// Phase 3 — Instruction Cache (I$)
 //
 // Configuration: 4 KB, direct-mapped, 16-byte lines, write-through (read-only)
 //
-// SRAM macros used:
-//   - 1× sky130_sram_1kbyte_1rw1r_32x256_8  (tag array,  bits [19:0] = 20-bit tag)
-//   - 4× sky130_sram_1kbyte_1rw1r_32x256_8  (data array, one per word column)
+// SRAM macros used (selected at compile time via `SRAM_SKY130 define):
+//   Default (FreePDK45):
+//     - 1× sram_1rw_256x32_freepdk45  (tag array,  bits [19:0] = 20-bit tag)
+//     - 4× sram_1rw_256x32_freepdk45  (data array, one per word column)
+//   `ifdef SRAM_SKY130 (Sky130):
+//     - 1× sky130_sram_1kbyte_1rw1r_32x256_8  (tag array)
+//     - 4× sky130_sram_1kbyte_1rw1r_32x256_8  (data array)
+//     wmask0=4'b1111 (full-word writes; byte masking done via R-M-W in cache logic)
+//     Port 1 (read-only) is tied off (csb1=1) — unused in this design.
 //
 // Valid bits are kept in a 256-bit register array to support 1-cycle FENCE.I
 // bulk-invalidation (the SRAM cannot do a bulk write).
@@ -64,31 +70,39 @@ module rv32i_icache (
     // Tag SRAM instance (1× 32×256, bits [TAG_BITS-1:0] = 20-bit tag)
     // =========================================================================
     logic        tag_csb0, tag_web0;
-    logic [3:0]  tag_wmask0;
     logic [7:0]  tag_addr0;
     logic [31:0] tag_din0, tag_dout0;
 
+`ifdef SRAM_SKY130
     sky130_sram_1kbyte_1rw1r_32x256_8 u_tag_sram (
         .clk0   (clk),
         .csb0   (tag_csb0),
         .web0   (tag_web0),
-        .wmask0 (tag_wmask0),
+        .wmask0 (4'b1111),
         .addr0  (tag_addr0),
         .din0   (tag_din0),
         .dout0  (tag_dout0),
-        // Port 1 unused
         .clk1   (clk),
         .csb1   (1'b1),
         .addr1  (8'b0),
         .dout1  ()
     );
+`else
+    sram_1rw_256x32_freepdk45 u_tag_sram (
+        .clk0   (clk),
+        .csb0   (tag_csb0),
+        .web0   (tag_web0),
+        .addr0  (tag_addr0),
+        .din0   (tag_din0),
+        .dout0  (tag_dout0)
+    );
+`endif
 
     // =========================================================================
     // Data SRAM instances (4× 32×256, one per word column in a cache line)
     // =========================================================================
     logic        data_csb0   [0:LINE_WORDS-1];
     logic        data_web0   [0:LINE_WORDS-1];
-    logic [3:0]  data_wmask0 [0:LINE_WORDS-1];
     logic [7:0]  data_addr0  [0:LINE_WORDS-1];
     logic [31:0] data_din0   [0:LINE_WORDS-1];
     logic [31:0] data_dout0  [0:LINE_WORDS-1];
@@ -96,20 +110,30 @@ module rv32i_icache (
     genvar gw;
     generate
         for (gw = 0; gw < LINE_WORDS; gw++) begin : gen_data_sram
+`ifdef SRAM_SKY130
             sky130_sram_1kbyte_1rw1r_32x256_8 u_data_sram (
                 .clk0   (clk),
                 .csb0   (data_csb0[gw]),
                 .web0   (data_web0[gw]),
-                .wmask0 (data_wmask0[gw]),
+                .wmask0 (4'b1111),
                 .addr0  (data_addr0[gw]),
                 .din0   (data_din0[gw]),
                 .dout0  (data_dout0[gw]),
-                // Port 1 unused
                 .clk1   (clk),
                 .csb1   (1'b1),
                 .addr1  (8'b0),
                 .dout1  ()
             );
+`else
+            sram_1rw_256x32_freepdk45 u_data_sram (
+                .clk0   (clk),
+                .csb0   (data_csb0[gw]),
+                .web0   (data_web0[gw]),
+                .addr0  (data_addr0[gw]),
+                .din0   (data_din0[gw]),
+                .dout0  (data_dout0[gw])
+            );
+`endif
         end
     endgenerate
 
@@ -194,7 +218,6 @@ module rv32i_icache (
     always_comb begin
         tag_csb0   = 1'b1;       // default: disabled
         tag_web0   = 1'b1;       // default: read mode
-        tag_wmask0 = 4'b1111;
         tag_addr0  = 8'b0;
         tag_din0   = 32'b0;
 
@@ -213,7 +236,6 @@ module rv32i_icache (
                 if (ar_pending_q && axi_rvalid_i && (refill_word_q == 2'd3)) begin
                     tag_csb0   = 1'b0;
                     tag_web0   = 1'b0;  // write
-                    tag_wmask0 = 4'b1111;
                     tag_addr0  = refill_line_addr_q[11:4];
                     tag_din0   = {12'b0, refill_line_addr_q[31:12]};  // tag in [19:0]
                 end
@@ -228,11 +250,10 @@ module rv32i_icache (
     // =========================================================================
     always_comb begin
         for (int w = 0; w < LINE_WORDS; w++) begin
-            data_csb0[w]   = 1'b1;
-            data_web0[w]   = 1'b1;
-            data_wmask0[w] = 4'b1111;
-            data_addr0[w]  = 8'b0;
-            data_din0[w]   = 32'b0;
+            data_csb0[w]  = 1'b1;
+            data_web0[w]  = 1'b1;
+            data_addr0[w] = 8'b0;
+            data_din0[w]  = 32'b0;
         end
 
         case (state_q)
@@ -250,10 +271,9 @@ module rv32i_icache (
             CS_REFILL: begin
                 // Write each word to its SRAM column as it arrives from AXI
                 if (ar_pending_q && axi_rvalid_i) begin
-                    data_csb0[refill_word_q]   = 1'b0;
-                    data_web0[refill_word_q]   = 1'b0;  // write
-                    data_wmask0[refill_word_q] = 4'b1111;
-                    data_addr0[refill_word_q]  = refill_line_addr_q[11:4];
+                    data_csb0[refill_word_q]  = 1'b0;
+                    data_web0[refill_word_q]  = 1'b0;  // write
+                    data_addr0[refill_word_q] = refill_line_addr_q[11:4];
                     data_din0[refill_word_q]   = axi_rdata_i;
                 end
             end

@@ -1,11 +1,17 @@
 // rv32i_dcache.sv
-// Phase 3 — Data Cache (D$) with Sky130 SRAM macros
+// Phase 3 — Data Cache (D$)
 //
 // Configuration: 4 KB, direct-mapped, 16-byte lines, write-back + write-allocate
 //
-// SRAM macros used:
-//   - 1× sky130_sram_1kbyte_1rw1r_32x256_8  (tag array,  bits [19:0] = 20-bit tag)
-//   - 4× sky130_sram_1kbyte_1rw1r_32x256_8  (data array, one per word column)
+// SRAM macros used (selected at compile time via `SRAM_SKY130 define):
+//   Default (FreePDK45):
+//     - 1× sram_1rw_256x32_freepdk45  (tag array,  bits [19:0] = 20-bit tag)
+//     - 4× sram_1rw_256x32_freepdk45  (data array, one per word column)
+//   `ifdef SRAM_SKY130 (Sky130):
+//     - 1× sky130_sram_1kbyte_1rw1r_32x256_8  (tag array)
+//     - 4× sky130_sram_1kbyte_1rw1r_32x256_8  (data array)
+//     wmask0=4'b1111 (full-word writes; byte masking done via R-M-W in cache logic)
+//     Port 1 (read-only) is tied off (csb1=1) — unused in this design.
 //
 // Valid bits  (256b) and dirty bits (256b) are kept as register arrays:
 //   - valid_array: needed for 1-cycle bulk reset and in-cycle hit detection
@@ -76,31 +82,39 @@ module rv32i_dcache (
     // Tag SRAM instance (1× 32×256, bits [TAG_BITS-1:0] = 20-bit tag)
     // =========================================================================
     logic        tag_csb0, tag_web0;
-    logic [3:0]  tag_wmask0;
     logic [7:0]  tag_addr0;
     logic [31:0] tag_din0, tag_dout0;
 
+`ifdef SRAM_SKY130
     sky130_sram_1kbyte_1rw1r_32x256_8 u_tag_sram (
         .clk0   (clk),
         .csb0   (tag_csb0),
         .web0   (tag_web0),
-        .wmask0 (tag_wmask0),
+        .wmask0 (4'b1111),
         .addr0  (tag_addr0),
         .din0   (tag_din0),
         .dout0  (tag_dout0),
-        // Port 1 unused
         .clk1   (clk),
         .csb1   (1'b1),
         .addr1  (8'b0),
         .dout1  ()
     );
+`else
+    sram_1rw_256x32_freepdk45 u_tag_sram (
+        .clk0   (clk),
+        .csb0   (tag_csb0),
+        .web0   (tag_web0),
+        .addr0  (tag_addr0),
+        .din0   (tag_din0),
+        .dout0  (tag_dout0)
+    );
+`endif
 
     // =========================================================================
     // Data SRAM instances (4× 32×256, one per word column)
     // =========================================================================
     logic        data_csb0   [0:LINE_WORDS-1];
     logic        data_web0   [0:LINE_WORDS-1];
-    logic [3:0]  data_wmask0 [0:LINE_WORDS-1];
     logic [7:0]  data_addr0  [0:LINE_WORDS-1];
     logic [31:0] data_din0   [0:LINE_WORDS-1];
     logic [31:0] data_dout0  [0:LINE_WORDS-1];
@@ -108,20 +122,30 @@ module rv32i_dcache (
     genvar gw;
     generate
         for (gw = 0; gw < LINE_WORDS; gw++) begin : gen_data_sram
+`ifdef SRAM_SKY130
             sky130_sram_1kbyte_1rw1r_32x256_8 u_data_sram (
                 .clk0   (clk),
                 .csb0   (data_csb0[gw]),
                 .web0   (data_web0[gw]),
-                .wmask0 (data_wmask0[gw]),
+                .wmask0 (4'b1111),
                 .addr0  (data_addr0[gw]),
                 .din0   (data_din0[gw]),
                 .dout0  (data_dout0[gw]),
-                // Port 1 unused
                 .clk1   (clk),
                 .csb1   (1'b1),
                 .addr1  (8'b0),
                 .dout1  ()
             );
+`else
+            sram_1rw_256x32_freepdk45 u_data_sram (
+                .clk0   (clk),
+                .csb0   (data_csb0[gw]),
+                .web0   (data_web0[gw]),
+                .addr0  (data_addr0[gw]),
+                .din0   (data_din0[gw]),
+                .dout0  (data_dout0[gw])
+            );
+`endif
         end
     endgenerate
 
@@ -247,6 +271,15 @@ module rv32i_dcache (
     assign axi_bready_o  = 1'b1;
 
     // =========================================================================
+    // Write-hit byte merge: merge cached data with CPU write data
+    // FreePDK45 SRAM has no byte write-mask; use pre-read data_dout_r + wstrb.
+    // =========================================================================
+    logic [31:0] merged_hit_word;
+    assign merged_hit_word[7:0]   = dc_wstrb_q[0] ? dc_wdata_q[7:0]   : data_dout_r[latch_word][7:0];
+    assign merged_hit_word[15:8]  = dc_wstrb_q[1] ? dc_wdata_q[15:8]  : data_dout_r[latch_word][15:8];
+    assign merged_hit_word[23:16] = dc_wstrb_q[2] ? dc_wdata_q[23:16] : data_dout_r[latch_word][23:16];
+    assign merged_hit_word[31:24] = dc_wstrb_q[3] ? dc_wdata_q[31:24] : data_dout_r[latch_word][31:24];
+
     // Write-miss byte merge: merge AXI refill data with CPU write data
     // Used when writing the miss word during CS_REFILL for a write-miss.
     // =========================================================================
@@ -260,11 +293,10 @@ module rv32i_dcache (
     // SRAM combinational control — Tag SRAM
     // =========================================================================
     always_comb begin
-        tag_csb0   = 1'b1;
-        tag_web0   = 1'b1;
-        tag_wmask0 = 4'b1111;
-        tag_addr0  = 8'b0;
-        tag_din0   = 32'b0;
+        tag_csb0  = 1'b1;
+        tag_web0  = 1'b1;
+        tag_addr0 = 8'b0;
+        tag_din0  = 32'b0;
 
         case (state_q)
             CS_IDLE: begin
@@ -285,10 +317,9 @@ module rv32i_dcache (
             CS_REFILL: begin
                 // Write tag when last word arrives
                 if (ar_pending_q && axi_rvalid_i && (axi_word_q == 2'd3)) begin
-                    tag_csb0   = 1'b0;
-                    tag_web0   = 1'b0;
-                    tag_wmask0 = 4'b1111;
-                    tag_addr0  = latch_index;
+                    tag_csb0  = 1'b0;
+                    tag_web0  = 1'b0;
+                    tag_addr0 = latch_index;
                     tag_din0   = {12'b0, latch_tag};   // new tag in [19:0]
                 end
             end
@@ -302,11 +333,10 @@ module rv32i_dcache (
     // =========================================================================
     always_comb begin
         for (int w = 0; w < LINE_WORDS; w++) begin
-            data_csb0[w]   = 1'b1;
-            data_web0[w]   = 1'b1;
-            data_wmask0[w] = 4'b1111;
-            data_addr0[w]  = 8'b0;
-            data_din0[w]   = 32'b0;
+            data_csb0[w]  = 1'b1;
+            data_web0[w]  = 1'b1;
+            data_addr0[w] = 8'b0;
+            data_din0[w]  = 32'b0;
         end
 
         case (state_q)
@@ -324,11 +354,10 @@ module rv32i_dcache (
             CS_TAG_CHECK: begin
                 // Write hit: byte-masked write to the specific word column
                 if (hit && dc_we_q) begin
-                    data_csb0[latch_word]   = 1'b0;
-                    data_web0[latch_word]   = 1'b0;   // write
-                    data_wmask0[latch_word] = dc_wstrb_q;
-                    data_addr0[latch_word]  = latch_index;
-                    data_din0[latch_word]   = dc_wdata_q;
+                    data_csb0[latch_word]  = 1'b0;
+                    data_web0[latch_word]  = 1'b0;   // write (full merged word, no wmask)
+                    data_addr0[latch_word] = latch_index;
+                    data_din0[latch_word]  = merged_hit_word;
                 end
             end
 
@@ -336,10 +365,9 @@ module rv32i_dcache (
                 // Write each arriving word to its SRAM column.
                 // For write-miss: merge CPU write bytes into the miss word.
                 if (ar_pending_q && axi_rvalid_i) begin
-                    data_csb0[axi_word_q]   = 1'b0;
-                    data_web0[axi_word_q]   = 1'b0;   // write
-                    data_wmask0[axi_word_q] = 4'b1111;
-                    data_addr0[axi_word_q]  = latch_index;
+                    data_csb0[axi_word_q]  = 1'b0;
+                    data_web0[axi_word_q]  = 1'b0;   // write
+                    data_addr0[axi_word_q] = latch_index;
                     data_din0[axi_word_q]   = (is_write_q && (axi_word_q == latch_word))
                                               ? merged_refill_word
                                               : axi_rdata_i;
