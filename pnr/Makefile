@@ -503,6 +503,7 @@ librelane-nangate45:
 		"python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
+		 --skip Checker.LintTimingConstructs \
 		 --skip Odb.HeuristicDiodeInsertion \
 		 --skip OpenROAD.RepairAntennas \
 		 --skip Odb.ReportDisconnectedPins \
@@ -510,8 +511,6 @@ librelane-nangate45:
 		 --skip Magic.SpiceExtraction \
 		 --skip Checker.IllegalOverlap \
 		 --skip Odb.CheckDesignAntennaProperties \
-		 --skip Checker.XOR \
-		 --skip Checker.KLayoutDRC \
 		 --skip Checker.LVS \
 		 $(abspath $(LIBRELANE_NANGATE45_DIR))/config.json"
 
