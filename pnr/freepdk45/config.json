@@ -4,7 +4,7 @@
     "STD_CELL_LIBRARY": "NangateOpenCellLibrary",
 
     "VERILOG_FILES": [
-        "dir::sram_1rw_256x32_freepdk45_stub.v",
+        "/home/neuromorphic/Downloads/Github/OpenRAM/validate_freepdk45/output/sram_1rw_256x32_freepdk45.v",
         "dir::../../rtl/cpu/core/rv32i_pipeline_pkg.sv",
         "dir::../../rtl/mem/rv32i_cache_pkg.sv",
         "dir::../../rtl/cpu/core/rv32i_alu.sv",
