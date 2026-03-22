@@ -37,8 +37,23 @@ TEST_MODULES := \
 
 # RTL source files (Phase 3: 5-stage pipeline + I-cache + D-cache)
 # Packages must appear first so Verilator can resolve them.
-# The Sky130 SRAM simulation model must precede any RTL that instantiates it.
-SRAM_SIM_MODEL := $(SIM_DIR)/sky130_sram_1kbyte_1rw1r_32x256_8.sv
+#
+# SRAM model selection — mirrors the `ifdef SRAM_SKY130 switch in cache RTL:
+#   SRAM_TARGET=freepdk45 (default): OpenRAM FreePDK45 model, no define needed
+#   SRAM_TARGET=sky130             : Sky130 behavioral model, adds +define+SRAM_SKY130
+#
+# Examples:
+#   make lint                          # FreePDK45 (default)
+#   make lint SRAM_TARGET=sky130       # Sky130
+#   make test SRAM_TARGET=sky130       # run full suite against sky130 SRAM
+SRAM_TARGET ?= freepdk45
+
+ifeq ($(SRAM_TARGET),sky130)
+    SRAM_SIM_MODEL := $(SIM_DIR)/sky130_sram_1kbyte_1rw1r_32x256_8.sv
+    COMPILE_ARGS   += +define+SRAM_SKY130
+else
+    SRAM_SIM_MODEL := $(SIM_DIR)/sram_1rw_256x32_freepdk45.v
+endif
 
 VERILOG_SOURCES := \
 	$(SRAM_SIM_MODEL) \
