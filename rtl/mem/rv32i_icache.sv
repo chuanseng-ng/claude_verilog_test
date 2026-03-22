@@ -175,12 +175,27 @@ module rv32i_icache (
     assign addr_index = ic_addr_i[11:4];
 
     // =========================================================================
+    // Address mismatch detection
+    // After a branch redirect, pc_q changes while the cache may still be
+    // processing the old (pre-redirect) address.  Detect this by comparing
+    // the live fetch address (ic_addr_i = pc_q) against the latched address
+    // (ic_addr_q) in the states that complete the previous SRAM lookup.
+    // When a mismatch is detected the in-flight result is discarded and the
+    // cache restarts for the new address.
+    // =========================================================================
+    logic addr_mismatch;
+    assign addr_mismatch = ic_valid_i
+                         && (ic_addr_i != ic_addr_q)
+                         && (state_q == CS_SRAM_LATCH || state_q == CS_TAG_CHECK);
+
+    // =========================================================================
     // Hit detection (combinational in CS_TAG_CHECK)
     // tag_dout0[TAG_BITS-1:0] is the SRAM output from the read issued in CS_IDLE
     // =========================================================================
     logic hit;
     assign hit = (state_q == CS_TAG_CHECK) &&
-                 valid_array[latch_index] &&
+                 !addr_mismatch            &&
+                 valid_array[latch_index]  &&
                  (tag_dout_r[TAG_BITS-1:0] == latch_tag);
 
     // =========================================================================
@@ -189,7 +204,7 @@ module rv32i_icache (
     assign ic_stall_o =
         (state_q == CS_IDLE       &&  ic_valid_i) ||   // Initiating SRAM read
         (state_q == CS_SRAM_LATCH)                ||   // Waiting for pipeline reg
-        (state_q == CS_TAG_CHECK  && !hit)         ||   // Miss detected
+        (state_q == CS_TAG_CHECK  && !hit)         ||   // Miss detected (or mismatch)
         (state_q == CS_REFILL);                         // Refill in progress
     // CS_TAG_CHECK + hit : stall=0, ic_rdata_o from tag_dout_r/data_dout_r
     // CS_DONE            : stall=0, ic_rdata_o from refill_buf_q
@@ -308,8 +323,8 @@ module rv32i_icache (
                 // -----------------------------------------------------------------
                 CS_SRAM_LATCH: begin
                     // tag_dout_r / data_dout_r captured in always_ff above.
-                    // Abort on FENCE.I (same as CS_IDLE FENCE.I guard).
-                    if (ic_invalidate_i)
+                    // Abort on FENCE.I or address mismatch (branch redirect).
+                    if (ic_invalidate_i || addr_mismatch)
                         state_q <= CS_IDLE;
                     else
                         state_q <= CS_TAG_CHECK;
@@ -317,7 +332,11 @@ module rv32i_icache (
 
                 // -----------------------------------------------------------------
                 CS_TAG_CHECK: begin
-                    if (hit) begin
+                    if (addr_mismatch) begin
+                        // Address changed mid-lookup (branch redirect) — discard
+                        // the in-flight result and restart for the new address.
+                        state_q <= CS_IDLE;
+                    end else if (hit) begin
                         // Hit — data available from SRAM dout this cycle.
                         // Return to IDLE; pipeline sees stall=0 this cycle.
                         state_q <= CS_IDLE;

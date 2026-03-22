@@ -220,7 +220,7 @@ async def run_uvm_test(dut, test_class, test_name="uvm_test"):
             await run_uvm_test(dut, MyTest, "my_test")
     """
     # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Create and run test

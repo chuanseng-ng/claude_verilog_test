@@ -112,7 +112,7 @@ async def setup_test(dut):
     _test_instance_counter += 1
     suffix = f"_{_test_instance_counter}"
 
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     await reset_dut(dut)

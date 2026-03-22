@@ -69,7 +69,7 @@ async def test_random_single_uvm(dut):
     dut._log.info("=== Test: Random Instructions (100) (pyuvm) ===")
 
     # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Create and run test with fixed seed for reproducibility
@@ -133,7 +133,7 @@ async def test_random_multi_seed_uvm(dut):
     dut._log.info(f"Waveform directory created: {waveform_dir}")
 
     # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Track failures across all seeds
