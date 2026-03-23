@@ -35,9 +35,9 @@
     "FP_SIZING": "absolute",
     "DIE_AREA": "0 0 760 480",
     "CORE_AREA": "10 10 750 470",
-    "FP_CORE_UTIL": 60,
+    "FP_CORE_UTIL": 50,
     "FP_ASPECT_RATIO": 1,
-    "PL_TARGET_DENSITY_PCT": 60,
+    "PL_TARGET_DENSITY_PCT": 50,
     "FP_PDN_CFG": "dir::pdn.tcl",
     "FP_PDN_MULTILAYER": true,
     "FP_PDN_ENABLE_RAILS": false,
@@ -47,7 +47,7 @@
         "/home/neuromorphic/Downloads/Github/OpenRAM/validate_freepdk45/output/sram_1rw_256x32_freepdk45.lef"
     ],
     "EXTRA_LIBS": [
-        "/home/neuromorphic/Downloads/Github/OpenRAM/validate_freepdk45/output/sram_1rw_256x32_freepdk45_TT_1p0V_25C.lib"
+        "dir::sram_1rw_256x32_freepdk45_TT_1p0V_25C_corrected.lib"
     ],
     "EXTRA_GDS_FILES": [
         "/home/neuromorphic/Downloads/Github/OpenRAM/validate_freepdk45/output/sram_1rw_256x32_freepdk45.gds",
@@ -71,10 +71,14 @@
     "USE_SYNLIG": true,
     "SYNLIG_DEFER": false,
 
-    "SYNTH_STRATEGY": "DELAY 3",
+    "SYNTH_STRATEGY": "DELAY 1",
     "SYNTH_SIZING": true,
     "SYNTH_ABC_BUFFERING": true,
-    "SYNTH_CLOCKGATE_ENABLE": true,
+    "USE_LIGHTER": true,
+    "LIGHTER_DFF_MAP": "dir::nangate45_ff_map.v",
+    "RUN_POST_GRT_DESIGN_REPAIR": true,
+    "GRT_DESIGN_REPAIR_MAX_SLEW_PCT": 20,
+    "GRT_DESIGN_REPAIR_MAX_CAP_PCT": 20,
     "DRT_THREADS": 4,
 
     "RUN_DRT": true,

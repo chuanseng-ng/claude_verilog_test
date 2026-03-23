@@ -115,7 +115,7 @@ set_false_path -through [get_pins -hierarchical *u_data_sram*/dout0*]
 ###############################################################################
 # 6. Environment
 ###############################################################################
-set_max_transition 0.08 [current_design]
+set_max_transition 0.17 [current_design]
 set_max_fanout     20   [current_design]
 
 set_driving_cell -lib_cell BUF_X1 -pin Z [all_inputs]
