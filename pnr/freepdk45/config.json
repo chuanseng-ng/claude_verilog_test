@@ -44,13 +44,13 @@
     "PDN_CONNECT_MACROS_TO_GRID": false,
 
     "EXTRA_LEFS": [
-        "/home/neuromorphic/Downloads/Github/OpenRAM/validate_freepdk45/output/sram_1rw_256x32_freepdk45.lef"
+        "dir::sram_1rw_256x32_freepdk45.lef"
     ],
     "EXTRA_LIBS": [
         "dir::sram_1rw_256x32_freepdk45_TT_1p0V_25C_corrected.lib"
     ],
     "EXTRA_GDS_FILES": [
-        "/home/neuromorphic/Downloads/Github/OpenRAM/validate_freepdk45/output/sram_1rw_256x32_freepdk45.gds",
+        "dir::sram_1rw_256x32_freepdk45.gds",
         "dir::nangate45_generated_vias.gds"
     ],
 

@@ -12,7 +12,8 @@ KLayout layer map (from nangate45.lyt, dbu=0.0001 um => 10000 units/um):
 All coordinates are in GDS database units (dbu = 0.0001 um).
 """
 
-import struct, datetime
+import struct, datetime, math
+from pathlib import Path
 
 # ── GDS2 low-level writer ────────────────────────────────────────────────────
 
@@ -24,7 +25,6 @@ def _i2(val):   return struct.pack(">h", val)
 def _i4(val):   return struct.pack(">i", val)
 def _r8(val):
     # IEEE 754 double → GDS real8
-    import math
     if val == 0: return b"\x00" * 8
     sign = 0 if val >= 0 else 1
     val = abs(val)
@@ -242,12 +242,12 @@ gds_bytes = gds_library("nangate45_generated_vias", cells_bytes,
                          dbu_user=1e-4,    # 1 unit = 0.0001 um (relative)
                          dbu_phys=1e-10)   # 1 unit = 0.1 nm
 
-output_path = "/home/neuromorphic/Downloads/Github/claude_verilog_test/pnr/freepdk45/nangate45_generated_vias.gds"
+output_path = Path(__file__).resolve().parent / "nangate45_generated_vias.gds"
 with open(output_path, "wb") as f:
     f.write(gds_bytes)
 
 print(f"Written {len(gds_bytes)} bytes to {output_path}")
-print(f"Cells generated: {3 + len(SINGLE_VIA_CELLS)}")
+print(f"Cells generated: {len(ARRAY_VIAS) + len(SINGLE_VIA_CELLS)}")
 for (name, *_) in ARRAY_VIAS:
     print(f"  VIA_{name}")
 for (name, _) in SINGLE_VIA_CELLS:

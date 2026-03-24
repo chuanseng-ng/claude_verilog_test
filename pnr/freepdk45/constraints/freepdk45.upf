@@ -32,7 +32,6 @@ connect_supply_net VSS      -ports VSS
 create_power_domain PD_TOP \
     -include_scope \
     -elements { \
-        u_core/u_csr \
         u_dbg \
     }
 
@@ -72,7 +71,6 @@ set_domain_supply_net PD_CACHE \
 ###############################################################################
 
 # Model VDD_CORE as switched from VDD (gated when dbg_halted asserted)
-create_supply_net VDD_CORE_SW_IN
 create_power_switch PSW_CORE \
     -domain PD_CORE \
     -output_supply_port {vout VDD_CORE} \
@@ -138,7 +136,7 @@ set_retention RET_CACHE_META \
 
 ###############################################################################
 # 6. Nominal supply voltages (1.1V for nangate45)
+# Declared via add_port_state on the primary supply port per UPF 3.0 §7.8.
 ###############################################################################
-set_design_attributes \
-    -elements [current_design] \
-    -attribute UPF_SUPPLY_VOLTAGE_1p1V 1.1
+add_port_state VDD -state {FULL_ON 1.1}
+add_port_state VSS -state {FULL_ON 0.0}

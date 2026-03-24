@@ -16,12 +16,16 @@ export PYTHONPATH := $(PWD)/../../..:$(PYTHONPATH)
 # Runtime library path: nix-built Vtop binary needs system libexpat, libz, libffi
 # when it dlopen's system Python (libpython3.10).  Only these three libs are added
 # (not the full system lib directory) to avoid glibc version conflicts.
+# Set USE_VERILATOR_EXTRALIBS=1 to enable; opt-in avoids failures on systems
+# where these paths don't exist or have different SONAME versions.
 _EXTRALIBS := /tmp/verilator_extralibs
 export LD_LIBRARY_PATH := $(_EXTRALIBS):$(LD_LIBRARY_PATH)
+ifneq ($(USE_VERILATOR_EXTRALIBS),)
 $(shell mkdir -p $(_EXTRALIBS) \
-  && ln -sf /usr/lib/x86_64-linux-gnu/libexpat.so.1.8.7 $(_EXTRALIBS)/libexpat.so.1 \
-  && ln -sf /lib/x86_64-linux-gnu/libz.so.1 $(_EXTRALIBS)/libz.so.1 \
-  && ln -sf /lib/x86_64-linux-gnu/libffi.so.8 $(_EXTRALIBS)/libffi.so.8)
+  && ([ -e /usr/lib/x86_64-linux-gnu/libexpat.so.1 ] && ln -sf /usr/lib/x86_64-linux-gnu/libexpat.so.1 $(_EXTRALIBS)/libexpat.so.1 || true) \
+  && ([ -e /lib/x86_64-linux-gnu/libz.so.1 ] && ln -sf /lib/x86_64-linux-gnu/libz.so.1 $(_EXTRALIBS)/libz.so.1 || true) \
+  && ([ -e /lib/x86_64-linux-gnu/libffi.so.8 ] && ln -sf /lib/x86_64-linux-gnu/libffi.so.8 $(_EXTRALIBS)/libffi.so.8 || true))
+endif
 
 # RTL source files (packages must come first)
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_pipeline_pkg.sv

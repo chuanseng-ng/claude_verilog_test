@@ -20,7 +20,7 @@
  *      Added table values are constant (SRAM access time dominated by internal
  *      logic, not output load, in this characterization).
  *
- *   3. din0 max_transition: not set -> 150 ps (pin-level); CONSTRAINT_TABLE index_2 extended 3->4 pts
+ *   4. din0 max_transition: not set -> 150 ps (pin-level); CONSTRAINT_TABLE index_2 extended 3->4 pts
  *      OpenROAD applies stdcell default (80 ps) to unspecified input pins, causing
  *      92 false slew violations on din0[31:0] (actual post-route slew 113-133 ps).
  *      150 ps matches addr0 correction and the NanGate45 default_max_transition.

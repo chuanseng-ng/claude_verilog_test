@@ -1,11 +1,9 @@
 #=============================================
 # Phase 3: RV32I CPU + L1 I-Cache + L1 D-Cache
-# Target: 50 MHz (20.00 ns period) — Sky130 130nm, SRAM-based caches
+# Target: 75 MHz (13.333 ns period) — Sky130 130nm, SRAM-based caches
 # File: phase3_cache.sdc
 #
 # Extends phase2_cpu.sdc with:
-#   - Relaxed clock target (50 MHz vs. 75 MHz previous target)
-#     to achieve timing closure on Sky130 with pipelined SRAM caches.
 #   - SRAM-to-logic multicycle paths (cache array read completes in 1 cycle
 #     but the behavioural model has no explicit setup within the same cycle;
 #     declare conservative 1-cycle constraint, tighten once SRAM macros are
@@ -24,8 +22,8 @@
 # Clock Definition
 #---------------------------------------------
 
-# Primary clock — 50 MHz = 20.00 ns period
-create_clock -name clk_i -period 20.000 [get_ports clk_i]
+# Primary clock — 75 MHz = 13.333 ns period
+create_clock -name clk_i -period 13.333 [get_ports clk_i]
 
 # Clock uncertainty — tightened to 0.3 ns (post-CTS; measured worst skew ~0.5 ns)
 set_clock_uncertainty 0.5 [get_clocks clk_i]
@@ -77,14 +75,11 @@ set_input_delay -clock clk_i -max 3.5 [get_ports apb_penable_i]
 set_input_delay -clock clk_i -max 3.5 [get_ports apb_pwrite_i]
 set_input_delay -clock clk_i -max 3.5 [get_ports apb_pwdata_i]
 
-# min delay raised from 1.0 to 1.5 ns on apb_pwdata_i and apb_paddr_i:
-# post-PnR showed ~0.12 ns hold violations on input-to-reg paths for these
-# ports; raising min tells the router they arrive later, giving hold margin.
-set_input_delay -clock clk_i -min 1.5 [get_ports apb_paddr_i]
+set_input_delay -clock clk_i -min 1.0 [get_ports apb_paddr_i]
 set_input_delay -clock clk_i -min 1.0 [get_ports apb_psel_i]
 set_input_delay -clock clk_i -min 1.0 [get_ports apb_penable_i]
 set_input_delay -clock clk_i -min 1.0 [get_ports apb_pwrite_i]
-set_input_delay -clock clk_i -min 1.5 [get_ports apb_pwdata_i]
+set_input_delay -clock clk_i -min 1.0 [get_ports apb_pwdata_i]
 
 #---------------------------------------------
 # Output Constraints — AXI4-Lite
@@ -147,7 +142,7 @@ set_output_delay -clock clk_i -min 1.0 [get_ports apb_pslverr_o]
 # The master samples PRDATA at T+1, so all paths ending at apb_prdata_o
 # (whether from input ports or internal pipeline FFs) have a 2-cycle budget.
 # Worst path pre-fix: mem_wb_reg → apb_prdata_o = ~14 ns at TT, ~25 ns at SS.
-# With 2-cycle budget: 40.000 ns — clears TT/FF and significantly reduces SS WNS.
+# With 2-cycle budget: 26.666 ns @ 75 MHz — clears TT/FF; reduces SS WNS.
 set_multicycle_path -setup 2 -to [get_ports apb_prdata_o]
 set_multicycle_path -hold  1 -to [get_ports apb_prdata_o]
 set_multicycle_path -setup 2 -from [get_ports apb_paddr_i]   -to [get_ports apb_pslverr_o]

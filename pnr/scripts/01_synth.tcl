@@ -139,11 +139,21 @@ fsm
 # Optimise after FSM extraction
 opt
 
-# Memory mapping: behavioural SRAM arrays → flip-flops.
-# Phase 3 caches use register-array style memories (no SRAM macros yet),
-# so Yosys maps them to FF arrays via memory_bram + techmap, or falls back
-# to plain FFs with memory_map.  Use memory_share to merge read ports where
-# possible, reducing cell count.
+# Read SRAM blackbox stubs before memory mapping so Yosys treats
+# instantiated SRAM macro instances as opaque rather than flattening to FFs.
+foreach stub_path {freepdk45/sram_1rw_256x32_freepdk45_stub.v \
+                   librelane/sky130_sram_1kbyte_1rw1r_32x256_8_stub.v} {
+    if {[file exists $stub_path]} {
+        read_verilog $stub_path
+        puts "Loaded SRAM blackbox stub: $stub_path"
+    }
+}
+
+# Memory mapping: map behavioural memories to technology cells.
+# SRAM macro instances (sky130_sram_1kbyte_1rw1r_32x256_8,
+# sram_1rw_256x32_freepdk45) are preserved as blackbox instances because
+# their stub modules were read above; only remaining inferred memories are
+# mapped to FFs by memory_map.
 memory -nomap
 memory_share
 memory_map

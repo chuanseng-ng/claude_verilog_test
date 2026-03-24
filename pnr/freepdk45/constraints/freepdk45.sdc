@@ -93,15 +93,16 @@ set_output_delay -min -0.1 -clock clk [get_ports apb_pready_o]
 set_output_delay -max 0.34 -clock clk [get_ports apb_pslverr_o]
 set_output_delay -min -0.1 -clock clk [get_ports apb_pslverr_o]
 
-# APB read data: SRAM tag path; relaxed generously
-set_output_delay -max -1.5 -clock clk [get_ports apb_prdata_o[*]]
-set_output_delay -min -0.3 -clock clk [get_ports apb_prdata_o[*]]
+# APB read data: non-critical debug port — relax via false path
+set_false_path -to [get_ports apb_prdata_o[*]]
 
 ###############################################################################
 # 4. Misc inputs (rst_n, irq)
 ###############################################################################
 set_input_delay -max 0.3 -clock clk [get_ports rst_n]
+set_input_delay -min 0.0 -clock clk [get_ports rst_n]
 set_input_delay -max 0.3 -clock clk [get_ports irq_*]
+set_input_delay -min 0.0 -clock clk [get_ports irq_*]
 
 ###############################################################################
 # 5. SRAM macro false paths

@@ -153,16 +153,17 @@ puts "================================================================"
 # Columns: internal, switching, leakage, total (in mW for this design)
 set PWR_RPT $REPORTS_DIR/power.rpt
 
-puts "" > $PWR_RPT
+set f [open $PWR_RPT "w"]
+puts $f ""
+puts $f "--- Total power (flat) ---"
+close $f
+report_power -file $PWR_RPT
 
-# Top-level total
-puts "--- Total power (flat) ---" >> $PWR_RPT
-report_power >> $PWR_RPT
-
-# Hierarchical breakdown — useful for identifying cache vs pipeline power split
-puts "" >> $PWR_RPT
-puts "--- Hierarchical power breakdown ---" >> $PWR_RPT
-report_power -hierarchy >> $PWR_RPT
+set f [open $PWR_RPT "a"]
+puts $f ""
+puts $f "--- Hierarchical power breakdown ---"
+close $f
+report_power -hierarchy -file $PWR_RPT
 
 # Also report to stdout
 report_power

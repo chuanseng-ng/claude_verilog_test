@@ -19,11 +19,11 @@ This directory contains the LibreLane (OpenLane 2) flow configuration for the Ph
 
 ### 1. LibreLane (nix-shell)
 
-LibreLane is available via the local nix-shell at `~/Downloads/Github/librelane`.
+LibreLane is available via the local nix-shell at `~/Downloads/GitHub/librelane`.
 Enter it with:
 
 ```bash
-cd ~/Downloads/Github/librelane
+cd ~/Downloads/GitHub/librelane
 nix-shell
 # librelane is now on PATH inside the shell
 librelane --version
@@ -41,7 +41,7 @@ To pre-install manually:
 
 ```bash
 # Inside the LibreLane nix-shell:
-cd ~/Downloads/Github/librelane && nix-shell --run \
+cd ~/Downloads/GitHub/librelane && nix-shell --run \
   "volare enable --pdk sky130 bdc9412b3e468c102d01b7cf6337be06ec6e9c9a"
 ```
 
@@ -113,7 +113,7 @@ make check_env
 
 Each run creates a timestamped directory under `runs/RUN_<timestamp>/`:
 
-```
+```text
 runs/RUN_<timestamp>/
 ├── final/
 │   ├── gds/rv32i_cpu_top.gds      # Final GDS (layout)
@@ -141,7 +141,7 @@ runs/RUN_<timestamp>/
 
 ## Troubleshooting
 
-**`librelane` not found**: The Makefile invokes LibreLane via `~/Downloads/Github/librelane/shell.nix`. If the repo is at a different path, override: `make run LIBRELANE_NIXDIR=/your/path`.
+**`librelane` not found**: The Makefile invokes LibreLane via `~/Downloads/GitHub/librelane/shell.nix`. If the repo is at a different path, override: `make run LIBRELANE_NIXDIR=/your/path`.
 
 **PDK not found**: Set `PDK_ROOT` to the directory containing the `sky130A` folder, e.g.:
 ```bash

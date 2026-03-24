@@ -111,7 +111,7 @@ if {$RCX_RULES ne ""} {
     puts "         Set SKY130_ROOT correctly or install sky130 OpenRCX rules."
     set_wire_rc -signal -layer met2
     set_wire_rc -clock  -layer met3
-    estimate_parasitics -global_routing
+    estimate_parasitics -detailed_routing
 }
 
 #----------------------------------------------------------------

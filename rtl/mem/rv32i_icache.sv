@@ -404,7 +404,7 @@ module rv32i_icache (
         if (!rst_n || ic_invalidate_i) begin
             // Reset or FENCE.I: invalidate all lines in one cycle
             for (int j = 0; j < N_SETS; j++)
-                valid_array[j] = 1'b0;
+                valid_array[j] <= 1'b0;
         end else if (state_q == CS_REFILL &&
                      ar_pending_q && axi_rvalid_i && (refill_word_q == 2'd3)) begin
             // Refill complete — mark line valid

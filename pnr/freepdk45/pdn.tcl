@@ -12,7 +12,7 @@ foreach vdd $::env(VDD_NETS) gnd $::env(GND_NETS) {
     if { $vdd != $::env(VDD_NET)} {
         lappend secondary $vdd
         set db_net [[ord::get_db_block] findNet $vdd]
-        if {$db_net == "NULL"} {
+        if {$db_net eq ""} {
             set net [odb::dbNet_create [ord::get_db_block] $vdd]
             $net setSpecial
             $net setSigType "POWER"
@@ -21,7 +21,7 @@ foreach vdd $::env(VDD_NETS) gnd $::env(GND_NETS) {
     if { $gnd != $::env(GND_NET)} {
         lappend secondary $gnd
         set db_net [[ord::get_db_block] findNet $gnd]
-        if {$db_net == "NULL"} {
+        if {$db_net eq ""} {
             set net [odb::dbNet_create [ord::get_db_block] $gnd]
             $net setSpecial
             $net setSigType "GROUND"
@@ -61,7 +61,7 @@ add_pdn_connect \
     -layers "$::env(FP_PDN_VERTICAL_LAYER) $::env(FP_PDN_HORIZONTAL_LAYER)"
 
 # Standard cell followpin rails (disabled via FP_PDN_ENABLE_RAILS=false)
-if { $::env(FP_PDN_ENABLE_RAILS) == 1 } {
+if { [info exists ::env(FP_PDN_ENABLE_RAILS)] && $::env(FP_PDN_ENABLE_RAILS) == 1 } {
     add_pdn_stripe \
         -grid stdcell_grid \
         -layer $::env(FP_PDN_RAIL_LAYER) \
@@ -75,7 +75,7 @@ if { $::env(FP_PDN_ENABLE_RAILS) == 1 } {
 }
 
 # Core ring (disabled by default)
-if { $::env(FP_PDN_CORE_RING) == 1 } {
+if { [info exists ::env(FP_PDN_CORE_RING)] && $::env(FP_PDN_CORE_RING) == 1 } {
     add_pdn_ring \
         -grid stdcell_grid \
         -layers "$::env(FP_PDN_VERTICAL_LAYER) $::env(FP_PDN_HORIZONTAL_LAYER)" \

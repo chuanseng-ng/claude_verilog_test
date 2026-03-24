@@ -117,7 +117,7 @@ puts "================================================================"
 initialize_floorplan \
     -die_area  "$DIE_AREA_LL_X $DIE_AREA_LL_Y $DIE_AREA_UR_X $DIE_AREA_UR_Y" \
     -core_area "$CORE_MARGIN $CORE_MARGIN [expr {$DIE_AREA_UR_X - $CORE_MARGIN}] [expr {$DIE_AREA_UR_Y - $CORE_MARGIN}]" \
-    -site      sky130_fd_sc_hd__nom
+    -site      FreePDK45_38x28_10R_NP_162NW_34O
 
 #----------------------------------------------------------------
 # Insert Tap Cells and End Caps
@@ -166,7 +166,7 @@ add_global_connection -net VSS -pin_pattern "^VGND$" -ground
 
 # Core power ring on met4 (horizontal) and met5 (vertical).
 # Ring width and spacing chosen to handle estimated ~5 mA peak current.
-set_voltage_domain -power VDD -ground VSS
+set_voltage_domain -name CORE -power VDD -ground VSS
 
 define_pdn_grid -name core_grid -voltage_domains {CORE}
 
@@ -192,10 +192,19 @@ add_pdn_stripe \
     -pitch 50.0 \
     -offset 10.0
 
-# Connect straps to standard-cell rails (met1)
+# Connect standard-cell rails (met1) up to straps via intermediate layers.
+# Continuous vertical connectivity: met1 → met2 → met3 → met4 → met5
 add_pdn_connect \
     -grid core_grid \
-    -layers {met1 met4}
+    -layers {met1 met2}
+
+add_pdn_connect \
+    -grid core_grid \
+    -layers {met2 met3}
+
+add_pdn_connect \
+    -grid core_grid \
+    -layers {met3 met4}
 
 add_pdn_connect \
     -grid core_grid \
