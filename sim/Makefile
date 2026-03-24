@@ -105,17 +105,21 @@ ifeq ($(SIM),verilator)
 	# Override PYTHON3 so the nix-verilator's verilated.mk uses the system
 	# Python instead of the nix Python 3.11 (which conflicts with PYTHONHOME=/usr).
 	BUILD_ARGS += PYTHON3=$(shell which python3)
-	# The nix ld.so can't find system libs (expat, zlib, etc.) when cocotb
-	# dlopen's libpython3.10.so.1.0 (not in its trusted dirs). Fix: create a
-	# compat dir with symlinks to only the required system libs, then scope
-	# LD_LIBRARY_PATH to the Vtop subprocess via `env` (make process unaffected).
+ifneq ($(wildcard /nix/store),)
+	# Nix environment only: the nix ld.so can't find system libs (expat, zlib,
+	# etc.) when cocotb dlopen's libpython3.10.so.1.0 (not in its trusted dirs).
+	# Fix: create a compat dir with symlinks to the required system libs and
+	# export LD_LIBRARY_PATH before exec'ing Vtop so all cocotb env vars
+	# (COCOTB_TEST_MODULES etc.) that the cocotb Makefile sets as shell-variable
+	# assignments are still visible to the simulator subprocess.
 	NIX_COMPAT_DIR := /tmp/cocotb_nix_compat
 	SIM_CMD_PREFIX := mkdir -p $(NIX_COMPAT_DIR) && \
 	  for _lib in libexpat.so.1 libz.so.1 libbz2.so.1.0 liblzma.so.5 libffi.so.8; do \
 	    _src=$$(ldconfig -p 2>/dev/null | grep "^	$$_lib " | awk '{print $$NF}' | head -1); \
 	    [ -n "$$_src" ] && ln -sf "$$_src" $(NIX_COMPAT_DIR)/$$_lib 2>/dev/null || true; \
-	  done; \
-	  env LD_LIBRARY_PATH=$(NIX_COMPAT_DIR):$${LD_LIBRARY_PATH}
+	  done && \
+	  export LD_LIBRARY_PATH=$(NIX_COMPAT_DIR):$${LD_LIBRARY_PATH} &&
+endif
 ifdef COVERAGE
 	COMPILE_ARGS += --coverage
 	EXTRA_ARGS   += --coverage
