@@ -70,9 +70,16 @@ read_lef $TECH_LEF
 read_lef $CELL_LEF
 read_liberty $LIB_TT
 
-# SRAM macro Liberty — required for accurate leakage and dynamic power of
+# SRAM macro LEF and Liberty — required for accurate leakage and dynamic power of
 # sky130_sram_1kbyte_1rw1r_32x256_8 instances (I-cache and D-cache).
+set SRAM_LEF "$SKY130_ROOT/libs.ref/sky130_sram_macros/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef"
 set SRAM_LIB "$SKY130_ROOT/libs.ref/sky130_sram_macros/lib/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib"
+if {[file exists $SRAM_LEF]} {
+    read_lef $SRAM_LEF
+    puts "Loaded SRAM LEF: $SRAM_LEF"
+} else {
+    puts "WARNING: SRAM LEF not found: $SRAM_LEF"
+}
 if {[file exists $SRAM_LIB]} {
     read_liberty $SRAM_LIB
     puts "Loaded SRAM Liberty: $SRAM_LIB"
@@ -163,17 +170,18 @@ puts "================================================================"
 # Columns: internal, switching, leakage, total (in mW for this design)
 set PWR_RPT $REPORTS_DIR/power.rpt
 
+# Initialise the report file with the flat-power section header, then append
+# each report so earlier content is never overwritten.
 set f [open $PWR_RPT "w"]
-puts $f ""
 puts $f "--- Total power (flat) ---"
 close $f
-report_power -file $PWR_RPT
+redirect -append -file $PWR_RPT { report_power }
 
 set f [open $PWR_RPT "a"]
 puts $f ""
 puts $f "--- Hierarchical power breakdown ---"
 close $f
-report_power -hierarchy -file $PWR_RPT
+redirect -append -file $PWR_RPT { report_power -hierarchy }
 
 # Also report to stdout
 report_power

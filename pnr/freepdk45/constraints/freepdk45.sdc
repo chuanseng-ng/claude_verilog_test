@@ -97,12 +97,14 @@ set_output_delay -min -0.1 -clock clk [get_ports apb_pslverr_o]
 set_false_path -to [get_ports apb_prdata_o[*]]
 
 ###############################################################################
-# 4. Misc inputs (rst_n, irq)
+# 4. Misc inputs (rst_n_i, irq)
 ###############################################################################
-set_input_delay -max 0.3 -clock clk [get_ports rst_n]
-set_input_delay -min 0.0 -clock clk [get_ports rst_n]
-set_input_delay -max 0.3 -clock clk [get_ports irq_*]
-set_input_delay -min 0.0 -clock clk [get_ports irq_*]
+set_input_delay -max 0.3 -clock clk [get_ports rst_n_i]
+set_input_delay -min 0.0 -clock clk [get_ports rst_n_i]
+set_input_delay -max 0.3 -clock clk [get_ports ext_irq_i]
+set_input_delay -min 0.0 -clock clk [get_ports ext_irq_i]
+set_input_delay -max 0.3 -clock clk [get_ports timer_irq_i]
+set_input_delay -min 0.0 -clock clk [get_ports timer_irq_i]
 
 ###############################################################################
 # 5. Environment
