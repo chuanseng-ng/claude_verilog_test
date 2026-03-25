@@ -52,3 +52,6 @@ pnr/freepdk45/runs
 
 # PDK paths
 pnr/librelane/rv32i_cpu_top
+
+# Verilog
+*.swp

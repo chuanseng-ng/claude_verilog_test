@@ -117,7 +117,7 @@ puts "================================================================"
 initialize_floorplan \
     -die_area  "$DIE_AREA_LL_X $DIE_AREA_LL_Y $DIE_AREA_UR_X $DIE_AREA_UR_Y" \
     -core_area "$CORE_MARGIN $CORE_MARGIN [expr {$DIE_AREA_UR_X - $CORE_MARGIN}] [expr {$DIE_AREA_UR_Y - $CORE_MARGIN}]" \
-    -site      FreePDK45_38x28_10R_NP_162NW_34O
+    -site      unithd
 
 #----------------------------------------------------------------
 # Insert Tap Cells and End Caps
@@ -129,9 +129,9 @@ puts "================================================================"
 
 # sky130_fd_sc_hd requires tap cells every ≤ 14.46 µm (31 pitches).
 # Use 15 µm max distance to stay well within the rule.
-tap_cell_insertion \
-    -endcap_cell sky130_fd_sc_hd__decap_3 \
-    -tapcell_cell sky130_fd_sc_hd__tapvpwrvgnd_1 \
+tapcell \
+    -tapcell_master sky130_fd_sc_hd__tapvpwrvgnd_1 \
+    -endcap_master  sky130_fd_sc_hd__decap_3 \
     -distance 15
 
 #----------------------------------------------------------------
@@ -192,8 +192,30 @@ add_pdn_stripe \
     -pitch 50.0 \
     -offset 10.0
 
-# Connect standard-cell rails (met1) up to straps via intermediate layers.
-# Continuous vertical connectivity: met1 → met2 → met3 → met4 → met5
+# met1 followpin rails — standard-cell VDD/VSS power rails
+# (provides the met1 geometry that the connects below land on)
+add_pdn_stripe \
+    -grid core_grid \
+    -layer met1 \
+    -width 0.48 \
+    -followpins
+
+# Intermediate straps: met2 (horizontal) and met3 (vertical)
+add_pdn_stripe \
+    -grid core_grid \
+    -layer met2 \
+    -width 0.48 \
+    -pitch 50.0 \
+    -offset 10.0
+
+add_pdn_stripe \
+    -grid core_grid \
+    -layer met3 \
+    -width 0.48 \
+    -pitch 50.0 \
+    -offset 10.0
+
+# Connect adjacent layer pairs: met1→met2→met3→met4→met5
 add_pdn_connect \
     -grid core_grid \
     -layers {met1 met2}

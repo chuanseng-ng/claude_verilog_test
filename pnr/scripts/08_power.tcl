@@ -70,6 +70,16 @@ read_lef $TECH_LEF
 read_lef $CELL_LEF
 read_liberty $LIB_TT
 
+# SRAM macro Liberty — required for accurate leakage and dynamic power of
+# sky130_sram_1kbyte_1rw1r_32x256_8 instances (I-cache and D-cache).
+set SRAM_LIB "$SKY130_ROOT/libs.ref/sky130_sram_macros/lib/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib"
+if {[file exists $SRAM_LIB]} {
+    read_liberty $SRAM_LIB
+    puts "Loaded SRAM Liberty: $SRAM_LIB"
+} else {
+    puts "WARNING: SRAM Liberty not found: $SRAM_LIB — SRAM leakage excluded from power report"
+}
+
 #----------------------------------------------------------------
 # Read Netlist and DEF
 #----------------------------------------------------------------

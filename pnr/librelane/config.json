@@ -41,15 +41,15 @@
     "FP_PDN_MULTILAYER": true,
 
     "FP_SIZING": "absolute",
-    "DIE_AREA": [0, 0, 3400, 2200],
-    "CORE_AREA": [20, 20, 3380, 2180],
+    "DIE_AREA": [0, 0, 3200, 1800],
+    "CORE_AREA": [20, 20, 3180, 1780],
 
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
 
     "FP_CORE_UTIL": 30,
     "FP_ASPECT_RATIO": 1,
 
-    "PL_TARGET_DENSITY_PCT": 15,
+    "PL_TARGET_DENSITY_PCT": 22,
     "PL_TIME_DRIVEN": true,
     "PL_ROUTABILITY_DRIVEN": true,
 
@@ -98,10 +98,10 @@
     "RUN_POST_GRT_RESIZER_TIMING": true,
     "RUN_POST_GRT_DESIGN_REPAIR": false,
     "MAX_TRANSITION_CONSTRAINT": 0.5,
-    "PL_RESIZER_HOLD_SLACK_MARGIN": 0.2,
-    "GRT_RESIZER_HOLD_SLACK_MARGIN": 0.1,
+    "PL_RESIZER_HOLD_SLACK_MARGIN": 0.30,
+    "GRT_RESIZER_HOLD_SLACK_MARGIN": 0.25,
 
-    "HOLD_VIOLATION_CORNERS": [""],
+    "HOLD_VIOLATION_CORNERS": ["nom_tt_025C_1v80"],
 
     "RUN_MAGIC_DRC": false,
     "RUN_KLAYOUT_DRC": false,
@@ -111,13 +111,13 @@
     "RUN_SPEF_EXTRACTION": true,
 
     "EXTRA_LEFS": [
-        "$PDK_ROOT/sky130A/libs.ref/sky130_sram_macros/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef"
+        "/home/neuromorphic/.volare/sky130A/libs.ref/sky130_sram_macros/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef"
     ],
     "EXTRA_LIBS": [
-        "$PDK_ROOT/sky130A/libs.ref/sky130_sram_macros/lib/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib"
+        "/home/neuromorphic/.volare/sky130A/libs.ref/sky130_sram_macros/lib/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib"
     ],
     "EXTRA_GDS_FILES": [
-        "$PDK_ROOT/sky130A/libs.ref/sky130_sram_macros/gds/sky130_sram_1kbyte_1rw1r_32x256_8.gds"
+        "/home/neuromorphic/.volare/sky130A/libs.ref/sky130_sram_macros/gds/sky130_sram_1kbyte_1rw1r_32x256_8.gds"
     ],
 
     "PDN_MACRO_CONNECTIONS": [

@@ -186,7 +186,8 @@ module rv32i_icache (
     logic addr_mismatch;
     assign addr_mismatch = ic_valid_i
                          && (ic_addr_i != ic_addr_q)
-                         && (state_q == CS_SRAM_LATCH || state_q == CS_TAG_CHECK);
+                         && (state_q == CS_SRAM_LATCH || state_q == CS_TAG_CHECK
+                             || state_q == CS_REFILL);
 
     // =========================================================================
     // Hit detection (combinational in CS_TAG_CHECK)
@@ -284,8 +285,9 @@ module rv32i_icache (
             end
 
             CS_REFILL: begin
-                // Write each word to its SRAM column as it arrives from AXI
-                if (ar_pending_q && axi_rvalid_i) begin
+                // Write each word to its SRAM column as it arrives from AXI.
+                // Suppress write for stale refills (address changed mid-flight).
+                if (ar_pending_q && axi_rvalid_i && !addr_mismatch) begin
                     data_csb0[refill_word_q]  = 1'b0;
                     data_web0[refill_word_q]  = 1'b0;  // write
                     data_addr0[refill_word_q] = refill_line_addr_q[11:4];
@@ -367,9 +369,9 @@ module rv32i_icache (
                                 refill_buf_q[refill_word_q] <= axi_rdata_i;
                                 ar_pending_q <= 1'b0;
                                 if (refill_word_q == 2'd3) begin
-                                    // All 4 words received — SRAM write issued combinationally
-                                    // above. valid_array updated in always_ff below.
-                                    state_q <= CS_DONE;
+                                    // All 4 words received.  Only commit the line if the
+                                    // address hasn't changed (stale-refill guard).
+                                    state_q <= addr_mismatch ? CS_IDLE : CS_DONE;
                                 end else begin
                                     refill_word_q <= refill_word_q + 1'b1;
                                 end
@@ -404,7 +406,7 @@ module rv32i_icache (
         if (!rst_n || ic_invalidate_i) begin
             // Reset or FENCE.I: invalidate all lines in one cycle
             for (int j = 0; j < N_SETS; j++)
-                valid_array[j] <= 1'b0;
+                valid_array[j] = 1'b0;
         end else if (state_q == CS_REFILL &&
                      ar_pending_q && axi_rvalid_i && (refill_word_q == 2'd3)) begin
             // Refill complete — mark line valid

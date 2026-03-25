@@ -220,7 +220,6 @@ async def run_uvm_test(dut, test_class, test_name="uvm_test"):
             await run_uvm_test(dut, MyTest, "my_test")
     """
     # Start clock
-    import cocotb
     from packaging.version import Version
     _cocotb_ver = Version(cocotb.__version__)
     _clk_unit_kwarg = "unit" if _cocotb_ver >= Version("2.0") else "units"

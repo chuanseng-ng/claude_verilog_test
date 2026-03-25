@@ -67,6 +67,18 @@ read_lef $TECH_LEF
 read_lef $CELL_LEF
 read_liberty $LIB_TT
 
+# SRAM macro LEF and Liberty (Sky130 SRAM macros)
+set SRAM_LEF "$SKY130_ROOT/libs.ref/sky130_sram_macros/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef"
+set SRAM_LIB "$SKY130_ROOT/libs.ref/sky130_sram_macros/lib/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib"
+foreach {var path} [list SRAM_LEF $SRAM_LEF SRAM_LIB $SRAM_LIB] {
+    if {[file exists $path]} {
+        if {[string match *LEF* $var]} { read_lef $path } else { read_liberty $path }
+        puts "Loaded SRAM file: $path"
+    } else {
+        puts "WARNING: SRAM file not found: $path"
+    }
+}
+
 #----------------------------------------------------------------
 # Read Netlist and Routed DEF
 #----------------------------------------------------------------

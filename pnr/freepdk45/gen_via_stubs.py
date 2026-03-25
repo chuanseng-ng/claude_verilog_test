@@ -17,12 +17,20 @@ from pathlib import Path
 
 # ── GDS2 low-level writer ────────────────────────────────────────────────────
 
-def _rec(rtype, dtype, data_bytes=b""):
+def _rec(rtype, data_bytes=b""):
+    """Pack a GDS2 record: 2-byte length, 2-byte record type, data."""
     length = 4 + len(data_bytes)
     return struct.pack(">HH", length, rtype) + data_bytes
 
-def _i2(val):   return struct.pack(">h", val)
-def _i4(val):   return struct.pack(">i", val)
+
+def _i2(val):
+    """Pack a signed 16-bit big-endian integer."""
+    return struct.pack(">h", val)
+
+
+def _i4(val):
+    """Pack a signed 32-bit big-endian integer."""
+    return struct.pack(">i", val)
 def _r8(val):
     # IEEE 754 double → GDS real8
     if val == 0: return b"\x00" * 8
@@ -67,31 +75,31 @@ def gds_box(layer, datatype, x0, y0, x1, y1):
     """A closed rectangular boundary on the given layer."""
     xy = b"".join(_i4(v) for v in [x0, y0, x1, y0, x1, y1, x0, y1, x0, y0])
     return (
-        _rec(BOUNDARY, 0)
-        + _rec(LAYER, 0, _i2(layer))
-        + _rec(DATATYPE, 0, _i2(datatype))
-        + _rec(XY, 0, xy)
-        + _rec(ENDEL, 0)
+        _rec(BOUNDARY)
+        + _rec(LAYER, _i2(layer))
+        + _rec(DATATYPE, _i2(datatype))
+        + _rec(XY, xy)
+        + _rec(ENDEL)
     )
 
 def gds_cell(name, geometry_bytes=b""):
     body = (
-        _rec(BGNSTR, 0, _timestamp())
-        + _rec(STRNAME, 0, _str_pad(name))
+        _rec(BGNSTR, _timestamp())
+        + _rec(STRNAME, _str_pad(name))
         + geometry_bytes
-        + _rec(ENDSTR, 0)
+        + _rec(ENDSTR)
     )
     return body
 
 def gds_library(name, cells_bytes, dbu_user=1e-6, dbu_phys=1e-10):
     """dbu_user = user unit in metres; dbu_phys = physical unit in metres."""
     header = (
-        _rec(HEADER, 0, _i2(600))
-        + _rec(BGNLIB, 0, _timestamp())
-        + _rec(LIBNAME, 0, _str_pad(name))
-        + _rec(UNITS, 0, _r8(dbu_user / dbu_phys) + _r8(dbu_phys))
+        _rec(HEADER, _i2(600))
+        + _rec(BGNLIB, _timestamp())
+        + _rec(LIBNAME, _str_pad(name))
+        + _rec(UNITS, _r8(dbu_user / dbu_phys) + _r8(dbu_phys))
     )
-    return header + cells_bytes + _rec(ENDLIB, 0)
+    return header + cells_bytes + _rec(ENDLIB)
 
 # ── NanGate45 layer numbers ──────────────────────────────────────────────────
 
@@ -219,36 +227,39 @@ SINGLE_VIA_CELLS = [
     ("VIA_via9_0",  "via9"),
 ]
 
-# ── Build GDS ────────────────────────────────────────────────────────────────
+def main():
+    """Build the GDS library and write it to the script's directory."""
+    cells_bytes = b""
 
-cells_bytes = b""
+    # Array via cells (from DEF VIAS section; prefixed with "VIA_" by KLayout)
+    for (name, cl, bl, tl, cw, ch, rows, cols, spx, spy, ebx, eby, etx, ety) in ARRAY_VIAS:
+        geom = via_array_geom(cl, bl, tl, cw, ch, rows, cols, spx, spy, ebx, eby, etx, ety)
+        cells_bytes += gds_cell("VIA_" + name, geom)
 
-# Array via cells (from DEF VIAS section; prefixed with "VIA_" by KLayout)
-for (name, cl, bl, tl, cw, ch, rows, cols, spx, spy, ebx, eby, etx, ety) in ARRAY_VIAS:
-    geom = via_array_geom(cl, bl, tl, cw, ch, rows, cols, spx, spy, ebx, eby, etx, ety)
-    cells_bytes += gds_cell("VIA_" + name, geom)
+    # Single-cut via cells
+    for (cell_name, via_key) in SINGLE_VIA_CELLS:
+        spec = SINGLE_VIA_SPECS[via_key]
+        cl, bl, tl, cw, ch, enc_x, enc_y = spec
+        geom = single_via_geom(cl, bl, tl, cw, ch, enc_x, enc_y)
+        cells_bytes += gds_cell(cell_name, geom)
 
-# Single-cut via cells
-for (cell_name, via_key) in SINGLE_VIA_CELLS:
-    spec = SINGLE_VIA_SPECS[via_key]
-    cl, bl, tl, cw, ch, enc_x, enc_y = spec
-    geom = single_via_geom(cl, bl, tl, cw, ch, enc_x, enc_y)
-    cells_bytes += gds_cell(cell_name, geom)
+    # dbu_user = 1e-4 → 1 unit = 0.0001 um (KLayout convention)
+    # dbu_phys = 1e-10 → 1 unit = 0.1 nm
+    gds_bytes = gds_library("nangate45_generated_vias", cells_bytes,
+                             dbu_user=1e-4,
+                             dbu_phys=1e-10)
 
-# dbu_user = 1e-6 (1 unit = 1 um * 1e-4 = 0.1 nm … actually:
-# KLayout dbu = 0.0001 um, so user unit = 0.0001e-6 m = 1e-10 m
-# physical dbu = 1e-10 m
-gds_bytes = gds_library("nangate45_generated_vias", cells_bytes,
-                         dbu_user=1e-4,    # 1 unit = 0.0001 um (relative)
-                         dbu_phys=1e-10)   # 1 unit = 0.1 nm
+    output_path = Path(__file__).resolve().parent / "nangate45_generated_vias.gds"
+    with open(output_path, "wb") as f:
+        f.write(gds_bytes)
 
-output_path = Path(__file__).resolve().parent / "nangate45_generated_vias.gds"
-with open(output_path, "wb") as f:
-    f.write(gds_bytes)
+    print(f"Written {len(gds_bytes)} bytes to {output_path}")
+    print(f"Cells generated: {len(ARRAY_VIAS) + len(SINGLE_VIA_CELLS)}")
+    for (name, *_) in ARRAY_VIAS:
+        print(f"  VIA_{name}")
+    for (name, _) in SINGLE_VIA_CELLS:
+        print(f"  {name}")
 
-print(f"Written {len(gds_bytes)} bytes to {output_path}")
-print(f"Cells generated: {len(ARRAY_VIAS) + len(SINGLE_VIA_CELLS)}")
-for (name, *_) in ARRAY_VIAS:
-    print(f"  VIA_{name}")
-for (name, _) in SINGLE_VIA_CELLS:
-    print(f"  {name}")
+
+if __name__ == "__main__":
+    main()

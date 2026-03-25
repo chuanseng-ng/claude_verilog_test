@@ -105,16 +105,7 @@ set_input_delay -max 0.3 -clock clk [get_ports irq_*]
 set_input_delay -min 0.0 -clock clk [get_ports irq_*]
 
 ###############################################################################
-# 5. SRAM macro false paths
-# OpenRAM SRAMs are synchronous with posedge-registered inputs; the tool
-# already sees the internal register at the macro boundary. Paths through the
-# SRAM model that are purely combinational inside the blackbox are excluded.
-###############################################################################
-set_false_path -through [get_pins -hierarchical *u_tag_sram/dout0*]
-set_false_path -through [get_pins -hierarchical *u_data_sram*/dout0*]
-
-###############################################################################
-# 6. Environment
+# 5. Environment
 ###############################################################################
 set_max_transition 0.17 [current_design]
 set_max_fanout     20   [current_design]

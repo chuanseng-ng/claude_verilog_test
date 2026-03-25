@@ -98,9 +98,31 @@ read_verilog -sv $RTL_DIR/cpu/core/pipeline/rv32i_pipeline_ex.sv
 read_verilog -sv $RTL_DIR/cpu/core/pipeline/rv32i_pipeline_mem.sv
 read_verilog -sv $RTL_DIR/cpu/core/pipeline/rv32i_pipeline_wb.sv
 
+# --- SRAM blackbox stubs (must precede cache RTL so hierarchy -check finds them) ---
+# For the Sky130 flow, also pass -DSRAM_SKY130 to select the Sky130 macro variant.
+if {[info exists ::env(PDK)] && ($::env(PDK) eq "sky130A" || $::env(PDK) eq "sky130")} {
+    set SRAM_DEFINE "-DSRAM_SKY130"
+    set SKY130_SRAM_STUB "librelane/sky130_sram_1kbyte_1rw1r_32x256_8_stub.v"
+    if {[file exists $SKY130_SRAM_STUB]} {
+        read_verilog $SKY130_SRAM_STUB
+        puts "Loaded Sky130 SRAM blackbox stub: $SKY130_SRAM_STUB"
+    } else {
+        puts "WARNING: Sky130 SRAM stub not found at $SKY130_SRAM_STUB"
+    }
+} else {
+    set SRAM_DEFINE ""
+    set FREEPDK45_STUB "freepdk45/sram_1rw_256x32_freepdk45_stub.v"
+    if {[file exists $FREEPDK45_STUB]} {
+        read_verilog $FREEPDK45_STUB
+        puts "Loaded FreePDK45 SRAM blackbox stub: $FREEPDK45_STUB"
+    } else {
+        puts "WARNING: FreePDK45 SRAM stub not found at $FREEPDK45_STUB"
+    }
+}
+
 # --- Cache subsystem (depend on cache_pkg) ---
-read_verilog -sv $RTL_DIR/mem/rv32i_icache.sv
-read_verilog -sv $RTL_DIR/mem/rv32i_dcache.sv
+read_verilog -sv {*}[split $SRAM_DEFINE] $RTL_DIR/mem/rv32i_icache.sv
+read_verilog -sv {*}[split $SRAM_DEFINE] $RTL_DIR/mem/rv32i_dcache.sv
 read_verilog -sv $RTL_DIR/mem/rv32i_cache_arbiter.sv
 
 # --- Core integrations ---
@@ -138,16 +160,6 @@ fsm
 
 # Optimise after FSM extraction
 opt
-
-# Read SRAM blackbox stubs before memory mapping so Yosys treats
-# instantiated SRAM macro instances as opaque rather than flattening to FFs.
-foreach stub_path {freepdk45/sram_1rw_256x32_freepdk45_stub.v \
-                   librelane/sky130_sram_1kbyte_1rw1r_32x256_8_stub.v} {
-    if {[file exists $stub_path]} {
-        read_verilog $stub_path
-        puts "Loaded SRAM blackbox stub: $stub_path"
-    }
-}
 
 # Memory mapping: map behavioural memories to technology cells.
 # SRAM macro instances (sky130_sram_1kbyte_1rw1r_32x256_8,

@@ -120,13 +120,7 @@ set_output_delay -clock clk_i -min 0.5 [get_ports axi_rready_o]
 # Output Constraints — APB3 Debug Interface
 #---------------------------------------------
 
-# apb_prdata_o: relaxed from -3.5 to -6.0 ns.  This is a debug read-data
-# port with no cycle-accurate latency requirement.  The SRAM tag output
-# (negedge-launched) → APB output path was the worst setup path (-5.24 ns
-# in TT corner) because -3.5 ns left only 2.66 ns of budget from negedge.
-# Relaxing to -6.0 gives a 5.33 ns budget which matches the half-period
-# window and eliminates these as the tightest violations.
-set_output_delay -clock clk_i -max 6.0 [get_ports apb_prdata_o]
+set_output_delay -clock clk_i -max 3.5 [get_ports apb_prdata_o]
 set_output_delay -clock clk_i -max 3.5 [get_ports apb_pready_o]
 set_output_delay -clock clk_i -max 3.5 [get_ports apb_pslverr_o]
 
@@ -137,14 +131,11 @@ set_output_delay -clock clk_i -min 1.0 [get_ports apb_pslverr_o]
 #---------------------------------------------
 # Multicycle Paths — APB3 Debug Interface
 #---------------------------------------------
-# APB protocol (AMBA APB2/3): PRDATA must be valid when PREADY=1, which is
-# asserted one clock after PADDR/PSEL are driven (SETUP → ACCESS phase).
-# The master samples PRDATA at T+1, so all paths ending at apb_prdata_o
-# (whether from input ports or internal pipeline FFs) have a 2-cycle budget.
-# Worst path pre-fix: mem_wb_reg → apb_prdata_o = ~14 ns at TT, ~25 ns at SS.
-# With 2-cycle budget: 26.666 ns @ 75 MHz — clears TT/FF; reduces SS WNS.
-set_multicycle_path -setup 2 -to [get_ports apb_prdata_o]
-set_multicycle_path -hold  1 -to [get_ports apb_prdata_o]
+# APB slave stretches the bus cycle via PREADY (SETUP→ACCESS takes 2 clocks).
+# Apply the multicycle exception to PREADY so the slave's internal latency is
+# modelled correctly; PRDATA is constrained at the normal 1-cycle rate.
+set_multicycle_path -setup 2 -to [get_ports apb_pready_o]
+set_multicycle_path -hold  1 -to [get_ports apb_pready_o]
 set_multicycle_path -setup 2 -from [get_ports apb_paddr_i]   -to [get_ports apb_pslverr_o]
 set_multicycle_path -hold  1 -from [get_ports apb_paddr_i]   -to [get_ports apb_pslverr_o]
 

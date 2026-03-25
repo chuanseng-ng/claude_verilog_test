@@ -457,8 +457,8 @@ module rv32i_dcache (
                     // W channel
                     if (!w_done_q && axi_wready_i)
                         w_done_q <= 1'b1;
-                    // B channel: advance word counter
-                    if (axi_bvalid_i) begin
+                    // B channel: advance word counter only on OKAY response
+                    if (axi_bvalid_i && (axi_bresp_i == 2'b00)) begin
                         aw_done_q <= 1'b0;
                         w_done_q  <= 1'b0;
                         if (axi_word_q == 2'd3) begin
@@ -467,6 +467,12 @@ module rv32i_dcache (
                         end else begin
                             axi_word_q <= axi_word_q + 1'b1;
                         end
+                    end else if (axi_bvalid_i && (axi_bresp_i != 2'b00)) begin
+                        // AXI error: abort writeback, return to IDLE
+                        state_q    <= CS_IDLE;
+                        aw_done_q  <= 1'b0;
+                        w_done_q   <= 1'b0;
+                        axi_word_q <= 2'b00;
                     end
                 end
 
@@ -476,7 +482,7 @@ module rv32i_dcache (
                         if (axi_arready_i)
                             ar_pending_q <= 1'b1;
                     end else begin
-                        if (axi_rvalid_i) begin
+                        if (axi_rvalid_i && (axi_rresp_i == 2'b00)) begin
                             refill_buf_q[axi_word_q] <= (is_write_q && (axi_word_q == latch_word))
                                                         ? merged_refill_word
                                                         : axi_rdata_i;
@@ -486,6 +492,11 @@ module rv32i_dcache (
                             end else begin
                                 axi_word_q <= axi_word_q + 1'b1;
                             end
+                        end else if (axi_rvalid_i && (axi_rresp_i != 2'b00)) begin
+                            // AXI error: discard bad data, return to IDLE
+                            state_q      <= CS_IDLE;
+                            ar_pending_q <= 1'b0;
+                            axi_word_q   <= 2'b00;
                         end
                     end
                 end
@@ -508,8 +519,8 @@ module rv32i_dcache (
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             for (int j = 0; j < N_SETS; j++) begin
-                valid_array[j] <= 1'b0;
-                dirty_array[j] <= 1'b0;
+                valid_array[j] = 1'b0;
+                dirty_array[j] = 1'b0;
             end
         end else begin
             // Write hit: set dirty
@@ -532,8 +543,7 @@ module rv32i_dcache (
 
     // Suppress unused warnings
     /* verilator lint_off UNUSEDSIGNAL */
-    logic _unused_rresp = |axi_rresp_i;
-    logic _unused_bresp = |axi_bresp_i;
+    // axi_rresp_i and axi_bresp_i are now used in FSM RESP checks above.
     /* verilator lint_on UNUSEDSIGNAL */
 
 endmodule
