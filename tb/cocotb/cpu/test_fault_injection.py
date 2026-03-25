@@ -95,7 +95,7 @@ async def _setup_fault_test(dut):
             pass
         _prev_clock_task = None
 
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     _prev_clock_task = cocotb.start_soon(clock.start())
 
     await reset_dut(dut)

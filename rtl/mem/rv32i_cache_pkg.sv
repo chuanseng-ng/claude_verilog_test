@@ -30,12 +30,15 @@ package rv32i_cache_pkg;
 
     // =========================================================================
     // Cache FSM state encoding
+    // Extended to 3 bits to accommodate synchronous-SRAM pipeline stages.
     // =========================================================================
-    typedef enum logic [1:0] {
-        CS_IDLE      = 2'b00,  // Idle: check hit/miss each cycle
-        CS_REFILL    = 2'b01,  // Refill: fetch words from AXI (both caches)
-        CS_WRITEBACK = 2'b10,  // Writeback: flush dirty line to AXI (D$ only)
-        CS_RESERVED  = 2'b11   // Unused
+    typedef enum logic [2:0] {
+        CS_IDLE       = 3'b000,  // Idle: issue SRAM read on new request
+        CS_SRAM_LATCH = 3'b101,  // Latch: capture negedge SRAM dout into pipeline regs
+        CS_TAG_CHECK  = 3'b001,  // Tag check: registered SRAM output valid, hit/miss
+        CS_REFILL     = 3'b010,  // Refill: fetch words from AXI and write to SRAM
+        CS_WRITEBACK  = 3'b011,  // Writeback: flush dirty line to AXI (D$ only)
+        CS_DONE       = 3'b100   // Done: output data from refill buffer, release stall
     } cache_state_t;
 
 endpackage

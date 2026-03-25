@@ -9,10 +9,10 @@
 //   - FENCE.I: fence_i_o from EX stage wired to I-cache invalidate
 //   - External AXI4-Lite interface preserved (cpu_top unchanged)
 
+
 import rv32i_pipeline_pkg::*;
 import rv32i_cache_pkg::*;
-
-module rv32i_core (
+module rv32i_core(
     input  logic        clk,
     input  logic        rst_n,
 
@@ -299,8 +299,8 @@ module rv32i_core (
         .trap_pc          (trap_pc_val),
         .trap_cause       (trap_cause_val),
         .mret             (mret_ex),
-        .ext_irq_i        (ext_irq_i),
-        .timer_irq_i      (timer_irq_i),
+        .ext_irq_i        (ext_irq_pending),
+        .timer_irq_i      (timer_irq_pending),
         .csr_rdata        (csr_rdata),
         .csr_illegal      (csr_illegal),
         .mtvec_out        (mtvec),
@@ -595,7 +595,6 @@ module rv32i_core (
     // Unused signals suppression
     /* verilator lint_off UNUSEDSIGNAL */
     logic _unused_resume    = dbg_resume_req;
-    logic _unused_irq_pend  = ext_irq_pending | timer_irq_pending;
     logic _unused_csr_wr_en = csr_wr_en;
     /* verilator lint_on UNUSEDSIGNAL */
 

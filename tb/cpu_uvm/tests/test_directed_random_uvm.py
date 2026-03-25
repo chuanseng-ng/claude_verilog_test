@@ -128,7 +128,7 @@ async def test_directed_alu_focused(dut):
     os.makedirs(waveform_dir, exist_ok=True)
 
     # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Track failures across all seeds
@@ -260,7 +260,7 @@ async def test_directed_immediate_heavy(dut):
     os.makedirs(waveform_dir, exist_ok=True)
 
     # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Track failures across all seeds
@@ -390,7 +390,7 @@ async def test_directed_rtype_dominant(dut):
     os.makedirs(waveform_dir, exist_ok=True)
 
     # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Track failures across all seeds

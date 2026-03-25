@@ -195,14 +195,16 @@ module rv32i_csr_file (
             default: do_write = 1'b0;
         endcase
 
-        if (!do_write) return cur;
-
-        case (op)
-            3'b001, 3'b101: return wdat;
-            3'b010, 3'b110: return cur | wdat;
-            3'b011, 3'b111: return cur & ~wdat;
-            default:        return cur;
-        endcase
+        if (!do_write) begin
+            apply_csr_op = cur;
+        end else begin
+            case (op)
+                3'b001, 3'b101: apply_csr_op = wdat;
+                3'b010, 3'b110: apply_csr_op = cur | wdat;
+                3'b011, 3'b111: apply_csr_op = cur & ~wdat;
+                default:        apply_csr_op = cur;
+            endcase
+        end
     endfunction
 
     // =========================================================================

@@ -69,7 +69,7 @@ async def setup_test(dut, use_ref_model=False):
             pass
         _prev_clock_task = None
 
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     _prev_clock_task = cocotb.start_soon(clock.start())
 
     # Clear all AXI input signals to safe defaults BEFORE reset.
@@ -920,6 +920,6 @@ async def test_axi_protocol_summary(dut):
     dut._log.info(" ")
 
     # Simple clock setup to satisfy cocotb
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
     await wait_cycles(dut, 1)

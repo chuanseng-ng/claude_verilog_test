@@ -93,7 +93,7 @@ async def run_isa_test(dut, sequence_class, sequence_args, test_name="isa_test")
         AssertionError: If scoreboard detects mismatches
     """
     # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Create test

@@ -26,7 +26,7 @@ async def test_counter_basic(dut):
     log = dut._log
 
     # Create a 10ns period clock (100MHz)
-    clock = Clock(dut.clk, 10, unit="ns")
+    clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Reset
@@ -63,7 +63,7 @@ async def test_counter_disable(dut):
     log = dut._log
 
     # Create clock
-    clock = Clock(dut.clk, 10, unit="ns")
+    clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Reset
@@ -110,7 +110,7 @@ async def test_counter_reset(dut):
     log = dut._log
 
     # Create clock
-    clock = Clock(dut.clk, 10, unit="ns")
+    clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Initial reset

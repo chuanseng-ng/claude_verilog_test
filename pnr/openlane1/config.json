@@ -1,0 +1,74 @@
+{
+    "DESIGN_NAME": "rv32i_cpu_top",
+
+    "VERILOG_FILES": [
+        "dir::../../rtl/cpu/core/rv32i_pipeline_pkg.sv",
+        "dir::../../rtl/mem/rv32i_cache_pkg.sv",
+        "dir::../../rtl/cpu/core/rv32i_alu.sv",
+        "dir::../../rtl/cpu/core/rv32i_branch_comp.sv",
+        "dir::../../rtl/cpu/core/rv32i_imm_gen.sv",
+        "dir::../../rtl/cpu/core/rv32i_regfile.sv",
+        "dir::../../rtl/cpu/core/rv32i_decode.sv",
+        "dir::../../rtl/cpu/core/rv32i_forwarding_unit.sv",
+        "dir::../../rtl/cpu/core/rv32i_hazard_unit.sv",
+        "dir::../../rtl/cpu/core/rv32i_interrupt_ctrl.sv",
+        "dir::../../rtl/cpu/core/rv32i_csr_file.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_id.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv",
+        "dir::../../rtl/mem/rv32i_icache.sv",
+        "dir::../../rtl/mem/rv32i_dcache.sv",
+        "dir::../../rtl/mem/rv32i_cache_arbiter.sv",
+        "dir::../../rtl/cpu/core/rv32i_core.sv",
+        "dir::../../rtl/cpu/rv32i_cpu_top.sv"
+    ],
+
+    "PDK": "sky130A",
+    "STD_CELL_LIBRARY": "sky130_fd_sc_hd",
+
+    "CLOCK_PORT": "clk_i",
+    "CLOCK_NET":  "clk_i",
+    "CLOCK_PERIOD": 13.333,
+
+    "FP_SIZING": "absolute",
+    "DIE_AREA": "0 0 370 370",
+    "CORE_AREA": "10 10 360 360",
+
+    "FP_CORE_UTIL": 45,
+    "FP_ASPECT_RATIO": 1,
+
+    "PL_TARGET_DENSITY": 0.55,
+    "PL_TIME_DRIVEN": 1,
+    "PL_ROUTABILITY_DRIVEN": 1,
+
+    "GRT_ADJUSTMENT": 0.3,
+    "RT_MAX_LAYER": "met4",
+
+    "FP_PDN_VPITCH": 50,
+    "FP_PDN_HPITCH": 50,
+    "FP_PDN_VWIDTH": 1.6,
+    "FP_PDN_HWIDTH": 1.6,
+    "FP_PDN_VOFFSET": 10,
+    "FP_PDN_HOFFSET": 10,
+
+    "CTS_CLK_BUFFER_LIST": "sky130_fd_sc_hd__clkbuf_2 sky130_fd_sc_hd__clkbuf_4 sky130_fd_sc_hd__clkbuf_8 sky130_fd_sc_hd__clkbuf_16",
+    "CTS_ROOT_BUFFER": "sky130_fd_sc_hd__clkbuf_16",
+
+    "SYNTH_STRATEGY": "AREA 0",
+    "SYNTH_MAX_FANOUT": 16,
+
+    "MAX_TRANSITION_CONSTRAINT": 0.5,
+
+    "RUN_ANTENNA_CHECKER": 1,
+
+    "RUN_MAGIC_DRC": 1,
+    "RUN_LVS": 1,
+
+    "RUN_SPEF_EXTRACTION": 1,
+
+    "BASE_SDC_FILE": "dir::../constraints/phase3_cache.sdc",
+
+    "EXTRA_EXCLUDED_CELLS": "sky130_fd_sc_hd__probe_p_8 sky130_fd_sc_hd__probec_p_8"
+}

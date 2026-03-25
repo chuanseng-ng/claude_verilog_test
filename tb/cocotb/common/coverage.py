@@ -1,10 +1,10 @@
 """
-Coverage tracking for Phase 1 RV32I CPU verification.
+Coverage tracking for Phase 3 RV32I pipelined CPU verification.
 
-Three coverage metrics for Phase 1 exit criteria:
-  1. Instruction coverage  — 37/37 RV32I base instructions executed
-  2. FSM state coverage    — 8/8 CPU states visited
-  3. RTL code coverage     — collected by Verilator (opt-in via COVERAGE=1)
+Three coverage metrics for Phase 3 exit criteria:
+  1. Instruction coverage   — 37/37 RV32I base instructions executed
+  2. Pipeline event coverage — 5 observable pipeline events seen
+  3. RTL code coverage      — collected by Verilator (opt-in via COVERAGE=1)
 """
 
 from pathlib import Path
@@ -125,30 +125,33 @@ class InstructionCoverage:
 
 
 # ---------------------------------------------------------------------------
-# State Coverage
+# Pipeline Event Coverage  (Phase 3 — replaces Phase 1 FSM state coverage)
 # ---------------------------------------------------------------------------
+# Observable events are encoded as integers sampled from top-level signals:
+#   0 = STALL          — pipeline stalled (commit_valid=0 outside reset)
+#   1 = COMMIT         — instruction retired at WB without redirect/trap
+#   2 = BRANCH_REDIRECT — branch/jump redirect (pipeline flush, ex_pc_redirect)
+#   3 = TRAP           — exception or interrupt taken (trap_taken_o)
+#   4 = EBREAK         — EBREAK instruction triggers debug halt
 
 STATE_NAMES = {
-    0: "RESET",
-    1: "FETCH",
-    2: "DECODE",
-    3: "EXECUTE",
-    4: "MEM_WAIT",
-    5: "WRITEBACK",
-    6: "TRAP",
-    7: "HALTED",
+    0: "STALL",
+    1: "COMMIT",
+    2: "BRANCH_REDIRECT",
+    3: "TRAP",
+    4: "EBREAK",
 }
-_TOTAL_STATES = len(STATE_NAMES)  # 8
+_TOTAL_STATES = len(STATE_NAMES)  # 5
 
 
 class StateCoverage:
-    """Tracks which of the 8 CPU FSM states have been visited."""
+    """Tracks which of the 5 Phase 3 pipeline events have been observed."""
 
     def __init__(self):
         self._seen: set = set()
 
     def record(self, state_val: int) -> None:
-        """Mark state_val as visited (silently ignore unknown values)."""
+        """Mark event state_val as observed (silently ignore unknown values)."""
         if state_val in STATE_NAMES:
             self._seen.add(state_val)
 
@@ -161,14 +164,14 @@ class StateCoverage:
         return self.covered == _TOTAL_STATES
 
     def report(self) -> str:
-        lines = [f"State Coverage: {self.covered}/{_TOTAL_STATES}"]
+        lines = [f"Pipeline Event Coverage: {self.covered}/{_TOTAL_STATES}"]
         missing = [name for val, name in STATE_NAMES.items() if val not in self._seen]
         if missing:
-            lines.append("  Missing states:")
+            lines.append("  Missing events:")
             for name in sorted(missing):
                 lines.append(f"    - {name}")
         else:
-            lines.append("  All 8 states covered.")
+            lines.append("  All 5 pipeline events covered.")
         return "\n".join(lines)
 
 
@@ -199,9 +202,9 @@ class CoverageReport:
             "=" * 48,
             "COVERAGE SUMMARY REPORT",
             "=" * 48,
-            f"Instruction Coverage: {self.instr_cov.covered}/{_TOTAL_INSTRUCTIONS}"
+            f"Instruction Coverage:     {self.instr_cov.covered}/{_TOTAL_INSTRUCTIONS}"
             f" ({instr_pct:.0f}%)  [{instr_status}]",
-            f"State Coverage:       {self.state_cov.covered}/{_TOTAL_STATES}"
+            f"Pipeline Event Coverage:  {self.state_cov.covered}/{_TOTAL_STATES}"
             f"   ({state_pct:.0f}%)  [{state_status}]",
             "=" * 48,
             "",

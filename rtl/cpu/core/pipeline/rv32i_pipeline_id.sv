@@ -7,9 +7,9 @@
 //   - Detect JAL in ID stage → generate jal_redirect + JAL target
 //   - Load the ID/EX pipeline register
 
-import rv32i_pipeline_pkg::*;
 
-module rv32i_pipeline_id (
+import rv32i_pipeline_pkg::*;
+module rv32i_pipeline_id(
     input  logic        clk,
     input  logic        rst_n,
 

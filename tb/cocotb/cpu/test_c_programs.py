@@ -24,7 +24,7 @@ async def test_c_programs_placeholder(dut):
     This test always passes and serves as a marker for future work.
     """
     # Start clock and reset
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
     await reset_dut(dut)
 

@@ -1,8 +1,8 @@
 """
-Smoke tests for RV32I CPU — Phase 1
+Smoke tests for RV32I CPU — Phase 3 (pipelined)
 
 Basic functionality tests to verify CPU is operational.
-Coverage metrics (instruction + FSM state) are collected across all tests
+Coverage metrics (instruction + pipeline events) are collected across all tests
 in this module and reported in the final test_coverage_report test.
 """
 
@@ -28,6 +28,7 @@ from sim.riscv_encoder import (
     BLT,
     BLTU,
     BNE,
+    EBREAK,
     JAL,
     JALR,
     LB,
@@ -73,10 +74,42 @@ _cov_report = CoverageReport()
 
 
 async def monitor_state(dut, state_cov):
-    """Sample debug_state_o every clock cycle and record in StateCoverage."""
+    """Sample Phase 3 pipeline events every clock cycle and record in StateCoverage.
+
+    Encoding (matches coverage.STATE_NAMES):
+      0 = STALL          — commit_valid low, CPU not in reset
+      1 = COMMIT         — instruction retired at WB
+      2 = BRANCH_REDIRECT — branch/jump redirect (pipeline flush)
+      3 = TRAP           — exception or interrupt taken
+      4 = EBREAK         — EBREAK instruction
+
+    Multiple events may be asserted in one cycle; all are recorded.
+    """
     while True:
         await RisingEdge(dut.clk_i)
-        state_cov.record(int(dut.debug_state_o.value))
+        try:
+            commit   = int(dut.commit_valid_o.value)
+            redirect = int(dut.debug_take_branch_jump_o.value)
+            trap     = int(dut.trap_taken_o.value)
+            ebreak   = int(dut.debug_ebreak_o.value)
+            rst_n    = int(dut.rst_n_i.value)
+        except ValueError:
+            # Signal has X/Z bits (unresolved); skip this cycle
+            continue
+
+        if not rst_n:
+            continue  # Skip reset cycles
+
+        if ebreak:
+            state_cov.record(4)  # EBREAK
+        if trap:
+            state_cov.record(3)  # TRAP
+        if redirect:
+            state_cov.record(2)  # BRANCH_REDIRECT
+        if commit:
+            state_cov.record(1)  # COMMIT
+        if not (commit or ebreak or trap):
+            state_cov.record(0)  # STALL
 
 
 # ---------------------------------------------------------------------------
@@ -538,7 +571,7 @@ async def test_jal(dut):
 
 @cocotb.test()
 async def test_isa_coverage(dut):
-    """Exercise all 37 RV32I instructions and cover MEM_WAIT FSM state."""
+    """Exercise all 37 RV32I instructions and cover cache-stall pipeline events."""
     dut._log.info("=== Test: ISA Coverage ===")
     cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
     _init_inputs(dut)
@@ -725,6 +758,60 @@ async def test_random_10k_instructions(dut):
     mem.stop()
     assert passed, f"Scoreboard validation failed (seed={SEED})"
     dut._log.info(f"Random 10k instructions test passed (seed={SEED})")
+
+
+@cocotb.test()
+async def test_ebreak_halt(dut):
+    """EBREAK instruction: covers EBREAK (EX) and TRAP (WB) pipeline events.
+
+    Pipeline trace for EBREAK at PC=0x0:
+      Cycle ~3 (EX):  debug_ebreak_o=1  -> EBREAK coverage bin
+      Cycle ~5 (WB):  trap_taken_o=1    -> TRAP coverage bin  (trap_valid propagates)
+    No scoreboard: trap instructions don't assert commit_valid_o.
+    """
+    dut._log.info("=== Test: EBREAK Halt ===")
+    cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
+    _init_inputs(dut)
+
+    mem = SimpleAXIMemory(dut)
+    cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
+
+    # EBREAK at reset vector; CPU halts after this — JAL is unreachable
+    mem.write_word(0x00000000, EBREAK())
+    mem.write_word(0x00000004, JAL(0, 0))
+
+    await reset_dut(dut)
+    # 60 cycles: I-cache miss refill ~15 cycles + 5 pipeline stages + margin
+    await ClockCycles(dut.clk_i, 60)
+
+    mem.stop()
+    dut._log.info("EBREAK halt test passed")
+
+
+@cocotb.test()
+async def test_illegal_insn_trap(dut):
+    """Illegal instruction causes trap_taken_o: explicit TRAP pipeline event test.
+
+    0xFFFFFFFF at reset vector decodes as illegal. EX redirects to mtvec=0x0,
+    CPU re-traps on same address forever (expected: mtvec default = 0x0).
+    TRAP event fires at WB ~cycle 5.  No scoreboard needed.
+    """
+    dut._log.info("=== Test: Illegal Instruction Trap ===")
+    cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
+    _init_inputs(dut)
+
+    mem = SimpleAXIMemory(dut)
+    cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
+
+    # Illegal instruction at reset vector; mtvec=0x0 → re-traps (expected)
+    mem.write_word(0x00000000, 0xFFFFFFFF)
+
+    await reset_dut(dut)
+    # 60 cycles: I-cache miss refill ~15 cycles + 5 pipeline stages + margin
+    await ClockCycles(dut.clk_i, 60)
+
+    mem.stop()
+    dut._log.info("Illegal instruction trap test passed")
 
 
 @cocotb.test()

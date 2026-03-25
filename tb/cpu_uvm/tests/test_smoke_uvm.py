@@ -139,7 +139,7 @@ async def test_addi_uvm(dut):
     dut._log.info("=== Test: ADDI (pyuvm) ===")
 
     # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Create and run test
@@ -175,7 +175,7 @@ async def test_branch_taken_uvm(dut):
     dut._log.info("=== Test: Branch Taken (pyuvm) ===")
 
     # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Create and run test
@@ -211,7 +211,7 @@ async def test_branch_not_taken_uvm(dut):
     dut._log.info("=== Test: Branch Not Taken (pyuvm) ===")
 
     # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Create and run test
@@ -247,7 +247,7 @@ async def test_jal_uvm(dut):
     dut._log.info("=== Test: JAL (pyuvm) ===")
 
     # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Create and run test

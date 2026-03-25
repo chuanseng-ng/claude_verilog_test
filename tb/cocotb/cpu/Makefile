@@ -10,11 +10,33 @@
 SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
 
-# RTL source files (package must come first)
+# Python path: repo root must be on PYTHONPATH for `from tb.xxx import` to work
+export PYTHONPATH := $(PWD)/../../..:$(PYTHONPATH)
+
+# Runtime library path: nix-built Vtop binary needs system libexpat, libz, libffi
+# when it dlopen's system Python (libpython3.10).  Only these three libs are added
+# (not the full system lib directory) to avoid glibc version conflicts.
+# Set USE_VERILATOR_EXTRALIBS=1 to enable; opt-in avoids failures on systems
+# where these paths don't exist or have different SONAME versions.
+_EXTRALIBS := /tmp/verilator_extralibs
+export LD_LIBRARY_PATH := $(_EXTRALIBS):$(LD_LIBRARY_PATH)
+ifneq ($(USE_VERILATOR_EXTRALIBS),)
+$(shell mkdir -p $(_EXTRALIBS) \
+  && ([ -e /usr/lib/x86_64-linux-gnu/libexpat.so.1 ] && ln -sf /usr/lib/x86_64-linux-gnu/libexpat.so.1 $(_EXTRALIBS)/libexpat.so.1 || true) \
+  && ([ -e /lib/x86_64-linux-gnu/libz.so.1 ] && ln -sf /lib/x86_64-linux-gnu/libz.so.1 $(_EXTRALIBS)/libz.so.1 || true) \
+  && ([ -e /lib/x86_64-linux-gnu/libffi.so.8 ] && ln -sf /lib/x86_64-linux-gnu/libffi.so.8 $(_EXTRALIBS)/libffi.so.8 || true))
+endif
+
+# RTL source files (packages must come first)
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_pipeline_pkg.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_cache_pkg.sv
+# Phase 3: Verilator-compatible SRAM behavioral model
+# (sram_1rw_256x32_verilator.v avoids mixed blocking/non-blocking and negedge
+#  triggers that Verilator cannot handle in the original OpenRAM model)
+VERILOG_SOURCES += $(PWD)/../../../sim/sram_1rw_256x32_verilator.v
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/rv32i_cpu_top.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_core.sv
-# rv32i_control.sv is Phase 1 only — rv32i_core.sv (Phase 2) does not instantiate it
+# rv32i_control.sv is Phase 1 only — rv32i_core.sv (Phase 2+) does not instantiate it
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_decode.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_alu.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_regfile.sv
@@ -33,6 +55,10 @@ VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_csr_file.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_interrupt_ctrl.sv
 # Phase 2: AXI arbiter (IF vs MEM priority; lives in rtl/cpu/, not rtl/cpu/core/)
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/rv32i_axi_arbiter.sv
+# Phase 3: Cache RTL (I-cache, D-cache, cache arbiter)
+VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_icache.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_dcache.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_cache_arbiter.sv
 
 # Testbench settings (can override MODULE on command line)
 TOPLEVEL = rv32i_cpu_top
@@ -41,7 +67,7 @@ MODULE ?= test_smoke_uvm
 # Verilator-specific flags
 ifeq ($(SIM), verilator)
     EXTRA_ARGS += --trace --trace-structs
-    COMPILE_ARGS += -Wno-WIDTH -Wno-UNUSED -Wno-BLKSEQ -Wno-UNOPTFLAT
+    COMPILE_ARGS += -Wno-WIDTH -Wno-UNUSED -Wno-BLKSEQ -Wno-UNOPTFLAT --no-timing
     COMPILE_ARGS += -CFLAGS "-std=c++14"
 endif
 

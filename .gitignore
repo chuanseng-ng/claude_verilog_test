@@ -43,3 +43,15 @@ results/
 reports/
 coverage*.dat
 coverage_tb_*.dat
+
+# PD-flow runs
+pnr/librelane/runs
+pnr/openlane/runs
+pnr/openlane1/runs
+pnr/freepdk45/runs
+
+# PDK paths
+pnr/librelane/rv32i_cpu_top
+
+# Verilog
+*.swp

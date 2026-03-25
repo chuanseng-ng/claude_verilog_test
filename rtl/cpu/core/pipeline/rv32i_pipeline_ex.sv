@@ -11,9 +11,9 @@
 //   - Generate ex_pc_redirect and pc_target
 //   - Load EX/MEM pipeline register
 
-import rv32i_pipeline_pkg::*;
 
-module rv32i_pipeline_ex (
+import rv32i_pipeline_pkg::*;
+module rv32i_pipeline_ex(
     input  logic        clk,
     input  logic        rst_n,
 
@@ -261,6 +261,44 @@ module rv32i_pipeline_ex (
     assign ex_pc_target_o   = redirect_target;
 
     // =========================================================================
+    // Byte-alignment pre-computation (moved from MEM stage to cut critical path)
+    // Computes store write strobe and aligned write data in EX so they are
+    // registered into EX/MEM and the MEM stage combinational path is eliminated.
+    // =========================================================================
+    logic [31:0] pre_wdata_aligned;
+    logic [3:0]  pre_wstrb;
+
+    always_comb begin
+        pre_wstrb         = 4'b1111;
+        pre_wdata_aligned = fwd_store;
+
+        case (id_ex_reg_i.mem_size)
+            3'b000: begin  // Byte store
+                case (alu_result[1:0])
+                    2'b00: begin pre_wstrb = 4'b0001; pre_wdata_aligned = {24'h0, fwd_store[7:0]}; end
+                    2'b01: begin pre_wstrb = 4'b0010; pre_wdata_aligned = {16'h0, fwd_store[7:0], 8'h0}; end
+                    2'b10: begin pre_wstrb = 4'b0100; pre_wdata_aligned = {8'h0,  fwd_store[7:0], 16'h0}; end
+                    2'b11: begin pre_wstrb = 4'b1000; pre_wdata_aligned = {fwd_store[7:0], 24'h0}; end
+                endcase
+            end
+            3'b001: begin  // Halfword store
+                case (alu_result[1])
+                    1'b0: begin pre_wstrb = 4'b0011; pre_wdata_aligned = {16'h0, fwd_store[15:0]}; end
+                    1'b1: begin pre_wstrb = 4'b1100; pre_wdata_aligned = {fwd_store[15:0], 16'h0}; end
+                endcase
+            end
+            3'b010: begin  // Word store
+                pre_wstrb         = 4'b1111;
+                pre_wdata_aligned = fwd_store;
+            end
+            default: begin
+                pre_wstrb         = 4'b0000;
+                pre_wdata_aligned = 32'h0;
+            end
+        endcase
+    end
+
+    // =========================================================================
     // EX/MEM Pipeline Register
     // =========================================================================
     always_ff @(posedge clk or negedge rst_n) begin
@@ -282,8 +320,9 @@ module rv32i_pipeline_ex (
             end else begin
                 ex_mem_reg_o.pc          <= id_ex_reg_i.pc;
                 ex_mem_reg_o.instruction <= id_ex_reg_i.instruction;
-                ex_mem_reg_o.alu_result  <= alu_result;
-                ex_mem_reg_o.rs2_data    <= fwd_store;
+                ex_mem_reg_o.alu_result        <= alu_result;
+                ex_mem_reg_o.mem_wdata_aligned <= pre_wdata_aligned;
+                ex_mem_reg_o.mem_wstrb         <= pre_wstrb;
                 ex_mem_reg_o.csr_rdata   <= csr_rdata_i;
                 ex_mem_reg_o.rd_addr     <= id_ex_reg_i.rd_addr;
                 ex_mem_reg_o.reg_wr_en   <= id_ex_reg_i.reg_wr_en;

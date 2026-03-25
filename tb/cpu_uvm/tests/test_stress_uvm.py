@@ -83,7 +83,7 @@ async def _run_stress_profile(dut, profile_name, waveform_subdir, seed_base, str
     os.makedirs(waveform_dir, exist_ok=True)
 
     # Start clock
-    clock = Clock(dut.clk_i, 10, unit="ns")
+    clock = Clock(dut.clk_i, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     # Log stress profile
