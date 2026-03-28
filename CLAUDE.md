@@ -55,9 +55,37 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 
 - **Phase 3**: Memory system with I-cache + D-cache (write-back, no coherence) ← CURRENT
 - **Phase 4**: GPU-lite SIMT compute engine (8-lane warps, single compute unit, no graphics)
-- **Phase 5**: SoC integration (CPU + GPU + DMA + UART + SPI + Timer + Boot ROM)
+- **Phase 5**: SoC integration (CPU + GPU + DMA + AXI4 crossbar + UART + SPI + Timer + behavioral SRAM)
 
 **Note**: GPU in Phase 4 requires Phase 2+ CPU for interrupt support (kernel completion notifications)
+
+### Phase 4: GPU-Lite SIMT Engine (Planned)
+
+- **ISA**: Custom 32-bit vector encoding — VADD, VSUB, VMUL, VAND, VOR, VSLL, VLD, VST, VBEQ, VBNE, VJMP, VRET, VSYNC
+- **Execution**: Single compute unit; 8 SIMD lanes; 8 warps max; 64 total threads
+- **Register file**: 32 registers × 8 threads per warp (1 KB total)
+- **Divergence**: Single-level SIMT stack with per-lane active mask
+- **Scheduler**: Round-robin warp selection
+- **Shared memory**: 16 KB scratchpad, 32 banks
+- **Memory**: AXI4-Lite master + memory coalescer (8-lane requests → fewer AXI transactions)
+- **Control interface**: AXI-Lite slave (kernel launch via command queue)
+- **CPU notification**: Interrupt output on kernel completion
+- **Coherency**: Software-managed — CPU flushes D-cache before kernel launch; CPU invalidates D-cache after kernel completion. No hardware coherence protocol.
+- **Spec**: `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md`
+
+### Phase 5: SoC Integration (Planned)
+
+- **Interconnect**: AXI4 crossbar (data fabric) + AXI-Lite bus (control/config)
+  - AXI4 masters: CPU D-cache (upgraded to burst mode), GPU, DMA engine
+  - AXI4 slave: behavioral SRAM controller (no DRAM refresh)
+  - AXI-Lite slaves: GPU config registers, DMA control registers, UART, SPI, timer, IRQ controller
+- **Cache upgrade**: Phase 3 refill FSMs upgraded from 4 sequential AXI4-Lite beats to AXI4 burst transactions
+- **DMA engine**: Descriptor queue, AXI4 master, interrupt output to CPU
+- **Peripherals**: UART, SPI, timer, interrupt controller (routed to CPU M-mode external interrupt)
+- **Memory model**: Behavioral AXI4-slave SRAM (no DRAM refresh logic)
+- **Power domains**: PD_CPU, PD_GPU, PD_SRAM, PD_PERIPH (clock gating + power gating per `UPF_POWER_SPEC.md`)
+- **Performance counters**: CSR-mapped — cycle count, instructions retired, branch mispredictions, I$/D$ miss counts, active warps, warp stall cycles, divergence events
+- **Benchmarks**: CPU (vector add, dot product, memcpy, branch loop); GPU (vector add, parallel reduction, matrix multiply, prefix scan, divergence test)
 
 ## Key Documentation
 
@@ -273,6 +301,14 @@ Complete register map in `docs/design/MEMORY_MAP.md`.
 - No cache coherence with CPU
 - Memory coalescing when possible
 
+**Phase 5 SoC — Locked Architecture Decisions** (confirmed 2026-03-28):
+
+1. **Cache line size**: 16 bytes locked for Phase 3. Revisit 32-byte lines only if/when an L2 cache is added.
+2. **Cache associativity**: Direct-mapped locked for Phase 3. Upgrade to 2-way I-cache / 1-4 way D-cache only if Phase 5 benchmarks prove measurable conflict-miss impact.
+3. **AXI4 burst upgrade**: Phase 3 refill FSMs use 4 sequential AXI4-Lite transactions. These are upgraded to AXI4 burst mode during Phase 5 SoC integration — do not change Phase 3 FSMs before then.
+4. **L2 cache**: Not in base Phase 5 scope. Add only if Phase 5 benchmarking shows L1 miss rates are a bottleneck.
+5. **DRAM controller**: Use behavioral AXI4-slave SRAM model for Phase 5. Real DRAM controller (with refresh) is a Phase 6+ stretch goal only if tape-out is targeted.
+
 ## Reference Model (Python)
 
 **Phase 0 deliverable**: Python reference models for CPU and GPU
@@ -356,6 +392,29 @@ See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification pla
 7. ⏸️ **Backend flow**: Synthesis + P&R + STA at 75 MHz (Sky130, SRAM macros)
 8. ⏸️ **Sign-off**: Coverage analysis, final review
 
+### Phase 4 Workflow (Planned — GPU-Lite)
+
+1. ⏸️ **Architecture review**: Confirm `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md` covers all open questions
+2. ⏸️ **Write GPU RTL**: 9 modules in `rtl/gpu/` (see Project Structure above)
+3. ⏸️ **Unit tests**: Warp scheduling, SIMT divergence, memory coalescing, shared memory
+4. ⏸️ **GPU kernel tests**: Vector add, parallel reduction, divergence test kernels
+5. ⏸️ **Phase 3 regression**: All cache + Phase 2 tests must still pass
+6. ⏸️ **Backend flow**: Synthesis + P&R + STA for GPU block
+7. ⏸️ **Sign-off**: GPU verified standalone; ready for SoC integration
+
+### Phase 5 Workflow (Planned — SoC Integration)
+
+1. ⏸️ **AXI4 interconnect**: Build `axi4_crossbar.sv`, `axi_lite_interconnect.sv`; upgrade Phase 3 cache refill FSMs to AXI4 burst mode
+2. ⏸️ **Peripherals**: UART, SPI, timer, interrupt controller, DMA engine in `rtl/periph/`
+3. ⏸️ **SRAM controller**: Behavioral AXI4-slave in `rtl/soc/sram_controller.sv`
+4. ⏸️ **SoC top integration**: Wire CPU + GPU + DMA + peripherals in `rtl/soc/soc_top.sv`
+5. ⏸️ **Performance counters**: Add CSR-mapped counters (cache misses, branch mispredictions, warp stalls, divergence events)
+6. ⏸️ **CPU-GPU integration tests**: Kernel launch → interrupt → result read; DMA transfers; software coherency sequence
+7. ⏸️ **Full regression**: All prior tests; CPU + GPU benchmarks
+8. ⏸️ **L2 cache evaluation**: Review L1 miss rates from benchmarks; add `rtl/mem/l2_cache.sv` only if justified
+9. ⏸️ **Backend flow**: Full SoC synthesis + P&R + STA; `pnr/constraints/phase5_soc.sdc`, `phase5_soc.upf`
+10. ⏸️ **Sign-off**: Coverage, power analysis, final review
+
 ## Project Structure
 
 ```text
@@ -395,9 +454,28 @@ See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification pla
 │   │   ├── rv32i_icache.sv            # I-cache (4 KB, direct-mapped)
 │   │   ├── rv32i_dcache.sv            # D-cache (4 KB, write-back)
 │   │   └── rv32i_cache_arbiter.sv     # D$ priority AXI arbiter
-│   ├── gpu/
-│   ├── periph/
-│   └── soc/
+│   ├── gpu/                           # NEW in Phase 4: GPU-Lite RTL
+│   │   ├── gpu_top.sv                 # GPU top (AXI4-Lite ctrl + AXI4 mem + IRQ)
+│   │   ├── gpu_command_queue.sv       # Kernel descriptor queue (PC, grid, block, args)
+│   │   ├── warp_scheduler.sv          # Round-robin scheduler (warp_id, PC, active_mask, ready)
+│   │   ├── gpu_compute_unit.sv        # Vector ALU + register file + SIMT divergence stack
+│   │   ├── vector_register_file.sv    # 32 regs × 8 threads per warp
+│   │   ├── vector_alu.sv              # VADD/VSUB/VMUL/VAND/VOR/VSLL per lane
+│   │   ├── gpu_memory_unit.sv         # Global load/store with AXI burst generation
+│   │   ├── memory_coalescer.sv        # 8-lane requests → fewer AXI bursts
+│   │   └── shared_memory.sv           # 16 KB scratchpad, 32 banks
+│   ├── periph/                        # NEW in Phase 5: peripheral RTL
+│   │   ├── uart_controller.sv
+│   │   ├── spi_controller.sv
+│   │   ├── timer.sv
+│   │   ├── interrupt_controller.sv
+│   │   └── dma_engine.sv              # Descriptor queue + AXI4 master + IRQ
+│   └── soc/                           # NEW in Phase 5: SoC integration RTL
+│       ├── soc_top.sv                 # Top-level: CPU + GPU + DMA + peripherals
+│       ├── axi4_crossbar.sv           # N-master M-slave AXI4 data fabric
+│       ├── axi_lite_interconnect.sv   # AXI-Lite control bus
+│       ├── axi_lite_register_bank.sv  # GPU/DMA config registers
+│       └── sram_controller.sv         # Behavioral AXI4-slave SRAM (no DRAM refresh)
 ├── tb/                       # Testbench
 │   ├── models/               # Python reference models
 │   │   ├── rv32i_model.py
@@ -509,6 +587,55 @@ See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 4. **Physical Design** (follows verification)
    - ⏸️ Synthesis + P&R + STA at 75 MHz on Sky130
    - ⏸️ `pnr/constraints/phase3_cache.sdc` and `phase3_cache.upf`
+
+**Phase 4 Tasks** (follows Phase 3 sign-off):
+
+1. **RTL Implementation**
+   - ⏸️ `rtl/gpu/gpu_top.sv` — top-level with AXI4-Lite control + AXI4 memory + IRQ
+   - ⏸️ `rtl/gpu/gpu_command_queue.sv` — kernel descriptor: PC, grid size, block size, arg pointer
+   - ⏸️ `rtl/gpu/warp_scheduler.sv` — round-robin; warp state: warp_id, PC, active_mask, ready
+   - ⏸️ `rtl/gpu/gpu_compute_unit.sv` — vector ALU + register file + SIMT divergence stack
+   - ⏸️ `rtl/gpu/vector_register_file.sv` — 32 regs × 8 threads per warp
+   - ⏸️ `rtl/gpu/vector_alu.sv` — VADD, VSUB, VMUL, VAND, VOR, VSLL per lane
+   - ⏸️ `rtl/gpu/gpu_memory_unit.sv` — global load/store with AXI burst generation
+   - ⏸️ `rtl/gpu/memory_coalescer.sv` — coalesces 8-lane requests into fewer AXI bursts
+   - ⏸️ `rtl/gpu/shared_memory.sv` — 16 KB scratchpad, 32 banks
+
+2. **Verification**
+   - ⏸️ Unit tests: `tb/cocotb/gpu/test_warp_scheduler.py`, `test_compute_unit.py`, `test_memory_unit.py`
+   - ⏸️ Kernel tests: vector add, parallel reduction, divergence test
+   - ⏸️ Phase 3 full regression (111+ tests must still pass)
+
+3. **Physical Design**
+   - ⏸️ GPU block synthesis + P&R + STA
+   - ⏸️ `pnr/constraints/phase4_gpu.sdc`, `phase4_gpu.upf`
+
+**Phase 5 Tasks** (follows Phase 4 sign-off):
+
+1. **AXI4 Interconnect** (build first — prerequisite for integration)
+   - ⏸️ `rtl/soc/axi4_crossbar.sv` — N-master M-slave data fabric
+   - ⏸️ `rtl/soc/axi_lite_interconnect.sv` — control bus
+   - ⏸️ `rtl/soc/axi_lite_register_bank.sv` — GPU + DMA config registers
+   - ⏸️ Upgrade Phase 3 refill FSMs to AXI4 burst mode
+
+2. **Peripherals + DMA**
+   - ⏸️ `rtl/periph/dma_engine.sv`, `uart_controller.sv`, `spi_controller.sv`, `timer.sv`, `interrupt_controller.sv`
+
+3. **SoC Integration**
+   - ⏸️ `rtl/soc/sram_controller.sv` — behavioral AXI4-slave SRAM
+   - ⏸️ `rtl/soc/soc_top.sv` — full SoC top-level
+   - ⏸️ Performance counters added as CSR-mapped registers
+
+4. **Verification**
+   - ⏸️ CPU-GPU integration: kernel launch → interrupt → result read
+   - ⏸️ Software coherency: CPU D-cache flush → GPU kernel → CPU D-cache invalidate
+   - ⏸️ DMA transfer tests; full benchmark suite (CPU + GPU kernels)
+   - ⏸️ L2 cache decision: add `rtl/mem/l2_cache.sv` only if L1 miss rates justify it
+
+5. **Physical Design**
+   - ⏸️ Full SoC synthesis + P&R + STA
+   - ⏸️ `pnr/constraints/phase5_soc.sdc`, `phase5_soc.upf`
+   - ⏸️ Power domain validation (PD_CPU, PD_GPU, PD_SRAM, PD_PERIPH)
 
 ## Questions?
 
