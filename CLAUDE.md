@@ -67,7 +67,7 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 - **Divergence**: Single-level SIMT stack with per-lane active mask
 - **Scheduler**: Round-robin warp selection
 - **Shared memory**: 16 KB scratchpad, 32 banks
-- **Memory**: AXI4-Lite master + memory coalescer (8-lane requests → fewer AXI transactions)
+- **Memory**: AXI4 master (burst-capable) + memory coalescer (8-lane requests → fewer AXI4 burst transactions)
 - **Control interface**: AXI-Lite slave (kernel launch via command queue)
 - **CPU notification**: Interrupt output on kernel completion
 - **Coherency**: Software-managed — CPU flushes D-cache before kernel launch; CPU invalidates D-cache after kernel completion. No hardware coherence protocol.
