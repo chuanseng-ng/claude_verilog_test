@@ -59,6 +59,24 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 
 **Note**: GPU in Phase 4 requires Phase 2+ CPU for interrupt support (kernel completion notifications)
 
+### Phase 6+: IP Expansion and Tech Node Exploration (Future)
+
+**Additional peripheral IPs** — all attach as AXI4-Lite slaves on the Phase 5 peripheral ring:
+- **GPIO controller** — general I/O pad ring; needed by virtually every embedded SoC
+- **I2C controller** — sensor/EEPROM interface; complements Phase 5 SPI
+- **PWM controller** — counter + compare registers; motor/LED control
+- **Watchdog timer** — counter with AON-domain reset output; embedded safety
+- **TRNG** — ring-oscillator entropy source; Sky130 analog oscillators usable
+- **AES/SHA-256 accelerator** — AXI4 slave; AES-128 round function fits ~6 LUT levels at 75 MHz on Sky130
+
+**NPU (Neural Processing Unit)** — attach as AXI4 master+slave on the Phase 5 crossbar:
+- Minimal viable config: 4×4 INT8 MAC array (16 MACs, 64 ops/cycle), 16 KB weight SRAM
+- Sufficient for keyword spotting / gesture detection class workloads (~3.2 GOPS at 50 MHz)
+- Sky130 estimate: ~5,000 cells, ~20–30 µm², ~5–10 mW; Phase 6 IP
+- Full NPU (INT4, tiling, sparsity) benefits from FreePDK45 or ASAP7 node
+
+**Tech node progression**: Sky130 → FreePDK45/NanGate45 → ASAP7 (see Technology Node Strategy below)
+
 ### Phase 4: GPU-Lite SIMT Engine (Planned)
 
 - **ISA**: Custom 32-bit vector encoding — VADD, VSUB, VMUL, VAND, VOR, VSLL, VLD, VST, VBEQ, VBNE, VJMP, VRET, VSYNC
@@ -116,6 +134,33 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 | `pnr/README.md` | Physical design directory structure |
 | `pnr/constraints/phase1_cpu.sdc` | Phase 1 timing constraints |
 | `pnr/constraints/phase1_cpu.upf` | Phase 1 power intent |
+
+## Technology Node Strategy
+
+Three nodes are supported by the existing `pnr/Makefile`. Use the right node for the right goal:
+
+| Node | Makefile target | Config status | Realistic CPU freq | Fabricatable | Best use |
+|------|----------------|---------------|-------------------|--------------|----------|
+| **Sky130 130nm** | `librelane-sky130`, `docker-run` | ✅ Complete | 75–100 MHz | ✅ Yes (SkyWater MPW) | Functional sign-off; tape-out candidate |
+| **FreePDK45 / NanGate45 45nm** | `librelane-nangate45` | ✅ Complete (`pnr/freepdk45/`) | 150–250 MHz | No (predictive) | First non-Sky130 exploration; SRAM macros available |
+| **ASAP7 7nm FinFET** | `librelane-asap7` | ❌ Missing (`pnr/asap7/` absent) | 400–600 MHz | No (predictive) | Long-range performance projection only |
+
+### Sky130 PPA ceiling (assessed 2026-03-28)
+Sky130 130nm is frequency-limited by cell drive strength and clock tree skew. The realistic ceiling for this pipeline topology is **~100–120 MHz** with all optimisations applied — not the 200–500 MHz originally targeted.
+
+| Technique | Gain | Effort |
+|-----------|------|--------|
+| Switch to `sky130_fd_sc_hs` (high-speed cell library) | +10–30 MHz | Low — Makefile config change |
+| EX-stage retiming (split ALU + branch-compare) | +15–25 MHz | Medium — re-verify forwarding paths |
+| SDC multi-cycle exemptions for CSR/debug paths | +5–10 MHz | Low — SDC annotation only |
+| Floorplan: place forwarding mux adjacent to ALU | +5–10 MHz | Medium — P&R iteration |
+| **Combined ceiling** | **~100–120 MHz** | |
+
+### FreePDK45/NanGate45 (ready to run)
+`pnr/freepdk45/` is fully configured: `config.json` (2.5 ns / 400 MHz target), SRAM macros (`sram_1rw_256x32_freepdk45` with LEF/LIB/GDS), `macro_placement.cfg`, `pdn.tcl`, `freepdk45.sdc`, `freepdk45.upf`. Run with `make librelane-nangate45`. Expected Phase 2 result: 150–250 MHz, ~8–10× logic density vs Sky130.
+
+### ASAP7 (config needs creating)
+`pnr/Makefile` wires up `librelane-asap7` but `pnr/asap7/` does not exist. To enable: create `pnr/asap7/config.json` (model after `pnr/freepdk45/config.json`), a new SDC at 2.0–2.5 ns, and either a synthesised FF-array SRAM or OpenRAM ASAP7 macros (experimental). Run Phase 2 CPU first (no SRAM complications). Expected: 400–600 MHz, ~100× logic density vs Sky130.
 
 ### Verification
 
@@ -300,6 +345,8 @@ Complete register map in `docs/design/MEMORY_MAP.md`.
 - One-level divergence handling
 - No cache coherence with CPU
 - Memory coalescing when possible
+
+**Sky130 frequency ceiling**: ~100–120 MHz maximum for this CPU pipeline topology (see Technology Node Strategy). PDK limitation — not an RTL issue. For higher frequencies, target FreePDK45/NanGate45 (150–250 MHz) or ASAP7 (400–600 MHz).
 
 **Phase 5 SoC — Locked Architecture Decisions** (confirmed 2026-03-28):
 
@@ -636,6 +683,27 @@ See `docs/PHASE_STATUS.md` for current status and immediate next steps.
    - ⏸️ Full SoC synthesis + P&R + STA
    - ⏸️ `pnr/constraints/phase5_soc.sdc`, `phase5_soc.upf`
    - ⏸️ Power domain validation (PD_CPU, PD_GPU, PD_SRAM, PD_PERIPH)
+
+**Phase 6+ Tasks** (follows Phase 5 sign-off):
+
+1. **Additional Peripherals** (AXI4-Lite slaves on existing Phase 5 interconnect)
+   - ⏸️ `rtl/periph/gpio_controller.sv` — pad ring, direction control, interrupt on edge
+   - ⏸️ `rtl/periph/i2c_controller.sv` — multi-master I2C, SCL/SDA open-drain
+   - ⏸️ `rtl/periph/pwm_controller.sv` — configurable counter + compare, N channels
+   - ⏸️ `rtl/periph/watchdog_timer.sv` — AON-domain counter, system reset output
+   - ⏸️ `rtl/periph/trng.sv` — ring-oscillator entropy source (Sky130 analog cells)
+   - ⏸️ `rtl/periph/aes_sha_accel.sv` — AXI4 slave; AES-128 + SHA-256 pipeline
+
+2. **NPU (Minimal INT8 Inference Engine)**
+   - ⏸️ `rtl/npu/npu_top.sv` — AXI4 master (activations) + AXI4-Lite slave (config) + IRQ
+   - ⏸️ `rtl/npu/mac_array.sv` — 4×4 INT8 systolic MAC array (16 MACs, 64 ops/cycle)
+   - ⏸️ `rtl/npu/weight_buffer.sv` — 16 KB SRAM-backed weight store (DMA-loaded)
+   - ⏸️ `rtl/npu/activation_unit.sv` — ReLU; LUT-based sigmoid/tanh optional
+   - ⏸️ Phase 6 only if Phase 5 benchmarks reveal CPU/GPU bottleneck on ML workloads
+
+3. **Tech Node Exploration** (independent of RTL — P&R only)
+   - ⏸️ FreePDK45/NanGate45: run `make librelane-nangate45` (config already complete)
+   - ⏸️ ASAP7: create `pnr/asap7/config.json` + SDC (2.0–2.5 ns) + synthetic SRAM stubs; start with Phase 2 CPU (no SRAM macros needed); then Phase 3 with synthesised SRAM
 
 ## Questions?
 
