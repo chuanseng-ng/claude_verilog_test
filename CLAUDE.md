@@ -61,13 +61,13 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 
 ### Phase 6+: IP Expansion and Tech Node Exploration (Future)
 
-**Additional peripheral IPs** — all attach as AXI4-Lite slaves on the Phase 5 peripheral ring:
+**Additional peripheral IPs** — GPIO through TRNG attach as pure AXI4-Lite slaves on the Phase 5 peripheral ring; the AES/SHA-256 accelerator splits control and data planes:
 - **GPIO controller** — general I/O pad ring; needed by virtually every embedded SoC
 - **I2C controller** — sensor/EEPROM interface; complements Phase 5 SPI
 - **PWM controller** — counter + compare registers; motor/LED control
 - **Watchdog timer** — counter with AON-domain reset output; embedded safety
 - **TRNG** — ring-oscillator entropy source; Sky130 analog oscillators usable
-- **AES/SHA-256 accelerator** — AXI4 slave; AES-128 round function fits ~6 LUT levels at 75 MHz on Sky130
+- **AES/SHA-256 accelerator** — AXI4-Lite slave for control/status and key/IV/digest registers; AXI4 master+slave for bulk plaintext/ciphertext DMA; AES-128 round function fits ~6 LUT levels at 75 MHz on Sky130
 
 **NPU (Neural Processing Unit)** — attach as AXI4 master+slave on the Phase 5 crossbar:
 - Minimal viable config: 4×4 INT8 MAC array (16 MACs, 64 ops/cycle), 16 KB weight SRAM
@@ -692,7 +692,7 @@ See `docs/PHASE_STATUS.md` for current status and immediate next steps.
    - ⏸️ `rtl/periph/pwm_controller.sv` — configurable counter + compare, N channels
    - ⏸️ `rtl/periph/watchdog_timer.sv` — AON-domain counter, system reset output
    - ⏸️ `rtl/periph/trng.sv` — ring-oscillator entropy source (Sky130 analog cells)
-   - ⏸️ `rtl/periph/aes_sha_accel.sv` — AXI4 slave; AES-128 + SHA-256 pipeline
+   - ⏸️ `rtl/periph/aes_sha_accel.sv` — AXI4-Lite slave (control/status, key/IV/digest registers) + AXI4 master/slave (bulk data DMA); AES-128 + SHA-256 pipeline
 
 2. **NPU (Minimal INT8 Inference Engine)**
    - ⏸️ `rtl/npu/npu_top.sv` — AXI4 master (activations) + AXI4-Lite slave (config) + IRQ
