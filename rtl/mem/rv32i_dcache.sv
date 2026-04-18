@@ -99,6 +99,15 @@ module rv32i_dcache (
         .addr1  (8'b0),
         .dout1  ()
     );
+`elsif SRAM_ASAP7
+    sram_1rw_256x32_asap7 u_tag_sram (
+        .clk0   (clk),
+        .csb0   (tag_csb0),
+        .web0   (tag_web0),
+        .addr0  (tag_addr0),
+        .din0   (tag_din0),
+        .dout0  (tag_dout0)
+    );
 `else
     sram_1rw_256x32_freepdk45 u_tag_sram (
         .clk0   (clk),
@@ -135,6 +144,15 @@ module rv32i_dcache (
                 .csb1   (1'b1),
                 .addr1  (8'b0),
                 .dout1  ()
+            );
+`elsif SRAM_ASAP7
+            sram_1rw_256x32_asap7 u_data_sram (
+                .clk0   (clk),
+                .csb0   (data_csb0[gw]),
+                .web0   (data_web0[gw]),
+                .addr0  (data_addr0[gw]),
+                .din0   (data_din0[gw]),
+                .dout0  (data_dout0[gw])
             );
 `else
             sram_1rw_256x32_freepdk45 u_data_sram (

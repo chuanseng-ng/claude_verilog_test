@@ -1,0 +1,123 @@
+###############################################################################
+# asap7.upf — Power intent for rv32i_cpu_top on ASAP7 7nm predictive
+# IEEE 1801-2015 (UPF 3.0)
+#
+# Adapted from freepdk45.upf:
+#  - Same 3-domain structure: PD_TOP, PD_CORE, PD_CACHE
+#  - Nominal supply voltage: 0.7V (ASAP7 RVT nominal)
+#  - Power gating is modelled as design intent; actual header/footer cells
+#    depend on the ASAP7 standard cell library configuration.
+###############################################################################
+
+###############################################################################
+# 1. Supply ports and nets
+###############################################################################
+create_supply_port VDD  -direction in
+create_supply_port VSS  -direction in
+
+create_supply_net VDD        -reuse
+create_supply_net VDD_CORE
+create_supply_net VDD_CACHE
+create_supply_net VSS        -reuse
+
+connect_supply_net VDD -ports VDD
+connect_supply_net VSS -ports VSS
+
+###############################################################################
+# 2. Power domains
+###############################################################################
+create_power_domain PD_TOP \
+    -include_scope \
+    -elements { u_dbg }
+
+set_domain_supply_net PD_TOP \
+    -primary_power_net VDD \
+    -primary_ground_net VSS
+
+create_power_domain PD_CORE \
+    -include_scope \
+    -elements { u_core }
+
+set_domain_supply_net PD_CORE \
+    -primary_power_net VDD_CORE \
+    -primary_ground_net VSS
+
+create_power_domain PD_CACHE \
+    -include_scope \
+    -elements { \
+        u_core/u_icache \
+        u_core/u_dcache \
+        u_core/u_cache_arbiter \
+    }
+
+set_domain_supply_net PD_CACHE \
+    -primary_power_net VDD_CACHE \
+    -primary_ground_net VSS
+
+###############################################################################
+# 3. Power switches (modelled — ASAP7 switch cells TBD from PDK)
+###############################################################################
+create_power_switch PSW_CORE \
+    -domain PD_CORE \
+    -output_supply_port {vout VDD_CORE} \
+    -input_supply_port  {vin VDD} \
+    -control_port       {ctrl dbg_halted} \
+    -on_value  0 \
+    -off_value 1
+
+create_power_switch PSW_CACHE \
+    -domain PD_CACHE \
+    -output_supply_port {vout VDD_CACHE} \
+    -input_supply_port  {vin VDD_CORE} \
+    -control_port       {ctrl cache_ctrl} \
+    -on_value  0 \
+    -off_value 1
+
+###############################################################################
+# 4. Isolation
+###############################################################################
+set_isolation ISO_CORE \
+    -domain PD_CORE \
+    -applies_to outputs \
+    -clamp_value 0 \
+    -isolation_signal dbg_halted \
+    -isolation_sense high
+
+set_isolation ISO_CACHE \
+    -domain PD_CACHE \
+    -applies_to outputs \
+    -clamp_value 0 \
+    -isolation_signal cache_ctrl \
+    -isolation_sense high
+
+###############################################################################
+# 5. Retention (CSR and cache metadata)
+###############################################################################
+set_retention RET_CSR \
+    -domain PD_CORE \
+    -retention_power_net VDD \
+    -retention_ground_net VSS \
+    -elements { \
+        u_core/u_csr/mtvec_q \
+        u_core/u_csr/mstatus_mie_q \
+        u_core/u_csr/mstatus_mpie_q \
+        u_core/u_csr/mie_q \
+        u_core/u_csr/mepc_q \
+        u_core/u_csr/mcause_q \
+    }
+
+set_retention RET_CACHE_META \
+    -domain PD_CACHE \
+    -retention_power_net VDD \
+    -retention_ground_net VSS \
+    -elements { \
+        u_core/u_icache/valid_array \
+        u_core/u_dcache/valid_array \
+        u_core/u_dcache/dirty_array \
+    }
+
+###############################################################################
+# 6. Nominal supply voltages (0.7V for ASAP7 RVT nominal)
+###############################################################################
+add_port_state VDD -state {FULL_ON 0.7}
+add_port_state VSS -state {FULL_ON 0.0}

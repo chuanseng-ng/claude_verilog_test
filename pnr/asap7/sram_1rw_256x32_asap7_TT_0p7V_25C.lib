@@ -1,0 +1,160 @@
+/* sram_1rw_256x32_asap7_TT_0p7V_25C.lib
+ * Liberty timing stub for 256x32 single-port SRAM on ASAP7 7nm predictive PDK.
+ * Corner: TT 0.7V 25C (nominal)
+ * Timing estimates for ASAP7 7nm FinFET:
+ *   Read access (clk->dout): 0.30 ns
+ *   Setup (inputs -> clk):   0.05 ns
+ *   Hold  (inputs -> clk):   0.02 ns
+ */
+library (sram_1rw_256x32_asap7_TT_0p7V_25C) {
+    technology (cmos);
+    delay_model : table_lookup;
+    time_unit : "1ns";
+    voltage_unit : "1V";
+    current_unit : "1mA";
+    capacitive_load_unit (1, pf);
+    leakage_power_unit : "1nW";
+
+    nom_process : 1.0;
+    nom_temperature : 25.0;
+    nom_voltage : 0.7;
+
+    default_input_pin_cap : 0.005;
+    default_output_pin_cap : 0.0;
+    default_fanout_load : 1.0;
+    default_max_transition : 0.040;
+
+    /* Bus type declarations must precede cell definitions */
+    type (addr_bus_8) {
+        base_type : array;
+        data_type : bit;
+        bit_width : 8;
+        bit_from : 7;
+        bit_to : 0;
+    }
+
+    type (data_bus_32) {
+        base_type : array;
+        data_type : bit;
+        bit_width : 32;
+        bit_from : 31;
+        bit_to : 0;
+    }
+
+    lu_table_template (sram_delay_1x1) {
+        variable_1 : total_output_net_capacitance;
+        index_1 ("0.01");
+    }
+
+    lu_table_template (sram_constraint_1x1) {
+        variable_1 : related_pin_transition;
+        index_1 ("0.01");
+    }
+
+    cell (sram_1rw_256x32_asap7) {
+        area : 5000;
+        dont_use : false;
+        dont_touch : true;
+
+        pg_pin (VDD) {
+            pg_type : primary_power;
+            voltage_name : VDD;
+        }
+        pg_pin (VSS) {
+            pg_type : primary_ground;
+            voltage_name : VSS;
+        }
+
+        pin (clk0) {
+            direction : input;
+            capacitance : 0.010;
+            clock : true;
+        }
+
+        pin (csb0) {
+            direction : input;
+            capacitance : 0.005;
+            timing () {
+                related_pin : "clk0";
+                timing_type : setup_rising;
+                rise_constraint (sram_constraint_1x1) { values ("0.05"); }
+                fall_constraint (sram_constraint_1x1) { values ("0.05"); }
+            }
+            timing () {
+                related_pin : "clk0";
+                timing_type : hold_rising;
+                rise_constraint (sram_constraint_1x1) { values ("0.02"); }
+                fall_constraint (sram_constraint_1x1) { values ("0.02"); }
+            }
+        }
+
+        pin (web0) {
+            direction : input;
+            capacitance : 0.005;
+            timing () {
+                related_pin : "clk0";
+                timing_type : setup_rising;
+                rise_constraint (sram_constraint_1x1) { values ("0.05"); }
+                fall_constraint (sram_constraint_1x1) { values ("0.05"); }
+            }
+            timing () {
+                related_pin : "clk0";
+                timing_type : hold_rising;
+                rise_constraint (sram_constraint_1x1) { values ("0.02"); }
+                fall_constraint (sram_constraint_1x1) { values ("0.02"); }
+            }
+        }
+
+        bus (addr0) {
+            bus_type : addr_bus_8;
+            direction : input;
+            capacitance : 0.005;
+            timing () {
+                related_pin : "clk0";
+                timing_type : setup_rising;
+                rise_constraint (sram_constraint_1x1) { values ("0.05"); }
+                fall_constraint (sram_constraint_1x1) { values ("0.05"); }
+            }
+            timing () {
+                related_pin : "clk0";
+                timing_type : hold_rising;
+                rise_constraint (sram_constraint_1x1) { values ("0.02"); }
+                fall_constraint (sram_constraint_1x1) { values ("0.02"); }
+            }
+        }
+
+        bus (din0) {
+            bus_type : data_bus_32;
+            direction : input;
+            capacitance : 0.005;
+            timing () {
+                related_pin : "clk0";
+                timing_type : setup_rising;
+                rise_constraint (sram_constraint_1x1) { values ("0.05"); }
+                fall_constraint (sram_constraint_1x1) { values ("0.05"); }
+            }
+            timing () {
+                related_pin : "clk0";
+                timing_type : hold_rising;
+                rise_constraint (sram_constraint_1x1) { values ("0.02"); }
+                fall_constraint (sram_constraint_1x1) { values ("0.02"); }
+            }
+        }
+
+        bus (dout0) {
+            bus_type : data_bus_32;
+            direction : output;
+            max_capacitance : 0.5;
+            timing () {
+                related_pin : "clk0";
+                timing_type : rising_edge;
+                cell_rise (sram_delay_1x1) { values ("0.30"); }
+                cell_fall (sram_delay_1x1) { values ("0.30"); }
+                rise_transition (sram_delay_1x1) { values ("0.05"); }
+                fall_transition (sram_delay_1x1) { values ("0.05"); }
+            }
+        }
+
+        cell_leakage_power : 100;
+    }
+}

@@ -405,3 +405,67 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 - **All power modes functional (active, idle, sleep)**
 - **DRC/LVS clean**
 - **Tape-out ready (if target technology selected)**
+
+### Phase 6+ — IP Expansion & Technology Node Exploration (Planned)
+
+**Prerequisites**: Phase 5 complete (full SoC validated)
+
+#### 6a. Additional Peripherals (AXI4-Lite slaves on Phase 5 interconnect)
+
+| IP | RTL file | Sky130 | FreePDK45 | ASAP7 |
+|----|----------|--------|-----------|-------|
+| GPIO controller | `rtl/periph/gpio_controller.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |
+| I2C controller | `rtl/periph/i2c_controller.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |
+| PWM controller | `rtl/periph/pwm_controller.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |
+| Watchdog timer | `rtl/periph/watchdog_timer.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |
+| TRNG | `rtl/periph/trng.sv` | ✅ Sky130 analog only | ❌ Not portable | ❌ Not portable |
+
+Note: TRNG uses Sky130 ring-oscillator analog cells — **Sky130-exclusive** for tapeout.
+
+#### 6b. AES-128 + SHA-256 Accelerator
+
+- AXI4-Lite slave (control/status, key/IV/digest registers)
+- AXI4 master/slave for bulk DMA
+- AES-128 round function: ~6 LUT levels → fits 75 MHz on Sky130
+
+| Node | AES throughput | Notes |
+|------|---------------|-------|
+| Sky130 (75 MHz) | ~75 MB/s | 100 cycles/block, tape-out viable |
+| FreePDK45 (400 MHz) | ~400 MB/s | Same pipeline, 5× faster |
+| ASAP7 (1 GHz) | ~1 GB/s | High-throughput secure element |
+
+#### 6c. NPU — Minimal INT8 Inference Engine
+
+- 4×4 INT8 systolic MAC array (16 MACs, 64 ops/cycle)
+- 16 KB weight SRAM (one OpenRAM-compiled macro on FreePDK45/ASAP7; 8× stacked Sky130 macros)
+- Target: keyword spotting / gesture detection class workloads
+
+| Node | NPU clock | Peak throughput | INT4/sparsity |
+|------|-----------|-----------------|---------------|
+| Sky130 (50–60 MHz) | 50–60 MHz | 3.2–3.8 GOPS | ❌ Too slow |
+| FreePDK45 (300–400 MHz) | 300–400 MHz | ~20 GOPS | ✅ Feasible |
+| ASAP7 (800 MHz–1 GHz) | 800 MHz+ | ~50 GOPS | ✅ Preferred |
+
+INT8 MAC critical path: ~10–13 logic levels. Full NPU (INT4/tiling/sparsity) requires FreePDK45 or ASAP7.
+
+#### Technology Node Cross-Comparison (PD Results + Estimates)
+
+| Phase | Sky130 (130nm) | FreePDK45 (45nm) | ASAP7 (7nm) |
+|-------|---------------|------------------|-------------|
+| Ph2 CPU | 75 MHz ✅ | 400 MHz ✅ (run 2026-03-23) | 1 GHz (planned) |
+| Ph3 CPU+Cache | 75 MHz ✅ | **400 MHz ✅ WNS=0** (run 2026-03-23) | 500 MHz–1 GHz (planned) |
+| Ph4 GPU-lite | 50–75 MHz (est.) | 300 MHz (est.) | 500 MHz (est.) |
+| Ph5 SoC | 50–75 MHz (est.) | 250 MHz (est.) | 400 MHz (est.) |
+| Ph6+ peripherals | 75 MHz | 400 MHz | 1 GHz |
+| Ph6+ AES/SHA-256 | 75 MHz | 400 MHz | 1 GHz |
+| Ph6+ NPU (min.) | 50 MHz | 300 MHz | 800 MHz |
+| Ph6+ NPU (full) | ❌ | 300 MHz | 800 MHz |
+
+**FreePDK45 Phase 3 PD results (run 2026-03-23)**:
+- WNS = 0 ns, TNS = 0 ns @ 400 MHz (timing closed)
+- Die: 760 × 480 µm = 364,800 µm² (15.8× smaller than Sky130)
+- Power: 22.59 mW total (vs 59.86 mW Sky130 — 62% lower despite 5.3× faster clock)
+- Cells: 26,038 standard cells, SRAM macros: 164,286 µm²
+- PDN: SRAM macros not connected to grid (PDN_CONNECT_MACROS_TO_GRID=false) — known limitation for predictive PDK
+
+**ASAP7 setup**: In progress. SRAM via OpenRAM ASAP7 port. Config at `pnr/asap7/`.
