@@ -1,7 +1,7 @@
 # Graph Report - /home/neuromorphic/Downloads/Github/claude_verilog_test  (2026-04-20)
 
 ## Corpus Check
-- 584 files · ~5,225,333 words
+- 584 files · ~5,523,030 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -361,12 +361,12 @@
 10. `LBUSequence` - 115 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Phase 1 RTL Verification Ready Document` --describes_creation_of--> `test_smoke.py — cocotb Smoke Tests`  [EXTRACTED]
-  rtl/cpu/VERIFICATION_READY.md → tb/cocotb/cpu/test_smoke.py
-- `Phase 1 RTL Verification Ready Document` --validates_readiness_of--> `rv32i_model.py — Python Reference Model (66/66 tests)`  [EXTRACTED]
-  rtl/cpu/VERIFICATION_READY.md → tb/models/rv32i_model.py
-- `Verification Plan Document` --specifies_use_of--> `rv32i_model.py — Python Reference Model (66/66 tests)`  [EXTRACTED]
-  docs/verification/VERIFICATION_PLAN.md → tb/models/rv32i_model.py
+- `test_smoke.py — cocotb Smoke Tests` --describes_creation_of--> `Phase 1 RTL Verification Ready Document`  [EXTRACTED]
+  tb/cocotb/cpu/test_smoke.py → rtl/cpu/VERIFICATION_READY.md
+- `rv32i_model.py — Python Reference Model (66/66 tests)` --validates_readiness_of--> `Phase 1 RTL Verification Ready Document`  [EXTRACTED]
+  tb/models/rv32i_model.py → rtl/cpu/VERIFICATION_READY.md
+- `rv32i_model.py — Python Reference Model (66/66 tests)` --specifies_use_of--> `Verification Plan Document`  [EXTRACTED]
+  tb/models/rv32i_model.py → docs/verification/VERIFICATION_PLAN.md
 - `Random Tests Status Report` --documents_results_of--> `test_random_instructions.py — Random Instruction Tests (10k instructions)`  [EXTRACTED]
   docs/RANDOM_TESTS_STATUS.md → tb/cocotb/cpu/test_random_instructions.py
 - `test_random_instructions.py — Random Instruction Tests (10k instructions)` --automates--> `GitHub Actions CI/CD — Tiered Test Automation`  [EXTRACTED]
@@ -2362,11 +2362,11 @@ _Questions this graph is uniquely positioned to answer:_
 - **What is the exact relationship between `rv32i_pipeline_pkg` and `rv32i_control`?**
   _Edge tagged AMBIGUOUS (relation: uses_package) - confidence is low._
 - **Why does `RV32IModel` connect `Community 3` to `Community 0`, `Community 1`, `Community 5`, `Community 6`?**
-  _High betweenness centrality (0.197) - this node is a cross-community bridge._
+  _High betweenness centrality (0.226) - this node is a cross-community bridge._
 - **Why does `BaseTest` connect `Community 6` to `Community 3`, `Community 4`?**
-  _High betweenness centrality (0.089) - this node is a cross-community bridge._
+  _High betweenness centrality (0.114) - this node is a cross-community bridge._
 - **Why does `open_component()` connect `Community 2` to `Community 6`?**
-  _High betweenness centrality (0.081) - this node is a cross-community bridge._
+  _High betweenness centrality (0.112) - this node is a cross-community bridge._
 - **Are the 299 inferred relationships involving `RV32IModel` (e.g. with `TestRV32IModel` and `Unit tests for RV32IModel.  Tests the RV32I CPU reference model instruction exec`) actually correct?**
   _`RV32IModel` has 299 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 211 inferred relationships involving `BaseSequence` (e.g. with `ISASequenceBase` and `LWSequence`) actually correct?**
