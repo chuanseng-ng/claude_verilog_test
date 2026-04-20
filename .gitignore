@@ -55,3 +55,6 @@ pnr/librelane/rv32i_cpu_top
 
 # Verilog
 *.swp
+
+# Graphify
+graphify-out/GRAPH_REPORT.md
