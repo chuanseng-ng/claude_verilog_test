@@ -42,6 +42,8 @@
     "FP_PDN_MULTILAYER": true,
     "FP_PDN_ENABLE_RAILS": false,
     "PDN_CONNECT_MACROS_TO_GRID": false,
+    "FP_PDN_VPITCH": 20,
+    "FP_PDN_HPITCH": 20,
 
     "EXTRA_LEFS": [
         "dir::sram_1rw_256x32_freepdk45.lef"
@@ -81,6 +83,7 @@
     "GRT_DESIGN_REPAIR_MAX_CAP_PCT": 20,
     "DRT_THREADS": 4,
 
+    "MAX_FANOUT_CONSTRAINT": 10,
     "RUN_DRT": true,
     "RUN_SPEF_EXTRACTION": false,
     "RUN_MCSTA": false,
