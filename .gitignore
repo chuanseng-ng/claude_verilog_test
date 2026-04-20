@@ -49,6 +49,7 @@ pnr/librelane/runs
 pnr/openlane/runs
 pnr/openlane1/runs
 pnr/freepdk45/runs
+pnr/asap7/runs
 
 # PDK paths
 pnr/librelane/rv32i_cpu_top
@@ -58,3 +59,6 @@ pnr/librelane/rv32i_cpu_top
 
 # Graphify
 graphify-out/GRAPH_REPORT.md
+
+# Agents
+memory/
