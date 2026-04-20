@@ -1,0 +1,1 @@
+{"nodes": [{"id": "rv32i_imm_gen_module", "label": "rv32i_imm_gen", "file_type": "code", "source_file": "rtl/cpu/core/rv32i_imm_gen.sv", "source_location": "line 8", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

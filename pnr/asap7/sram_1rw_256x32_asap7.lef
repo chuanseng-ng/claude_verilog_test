@@ -1,0 +1,136 @@
+# sram_1rw_256x32_asap7.lef
+# Abstract LEF for 256x32 SRAM macro on ASAP7 7nm predictive PDK.
+# Estimated dimensions: ~22 µm x 16 µm at ASAP7 density (placeholder).
+# Replace with OpenRAM-compiled LEF when available.
+#
+VERSION 5.8 ;
+BUSBITCHARS "[]" ;
+DIVIDERCHAR "/" ;
+
+MACRO sram_1rw_256x32_asap7
+    CLASS BLOCK ;
+    ORIGIN 0.000 0.000 ;
+    FOREIGN sram_1rw_256x32_asap7 0.000 0.000 ;
+    SIZE 22.000 BY 16.000 ;
+    SYMMETRY X Y R90 ;
+
+    PIN clk0
+        DIRECTION INPUT ;
+        USE SIGNAL ;
+        PORT
+            LAYER M4 ;
+                RECT 1.000 15.500 2.000 15.900 ;
+        END
+    END clk0
+
+    PIN csb0
+        DIRECTION INPUT ;
+        USE SIGNAL ;
+        PORT
+            LAYER M4 ;
+                RECT 2.000 15.500 3.000 15.900 ;
+        END
+    END csb0
+
+    PIN web0
+        DIRECTION INPUT ;
+        USE SIGNAL ;
+        PORT
+            LAYER M4 ;
+                RECT 3.000 15.500 4.000 15.900 ;
+        END
+    END web0
+
+    PIN addr0[7]
+        DIRECTION INPUT ;
+        USE SIGNAL ;
+        PORT
+            LAYER M4 ;
+                RECT 4.000 15.500 5.000 15.900 ;
+        END
+    END addr0[7]
+
+    PIN addr0[6]
+        DIRECTION INPUT ;
+        USE SIGNAL ;
+        PORT
+            LAYER M4 ;
+                RECT 5.000 15.500 6.000 15.900 ;
+        END
+    END addr0[6]
+
+    PIN addr0[5]
+        DIRECTION INPUT ;
+        USE SIGNAL ;
+        PORT
+            LAYER M4 ;
+                RECT 6.000 15.500 7.000 15.900 ;
+        END
+    END addr0[5]
+
+    PIN addr0[4]
+        DIRECTION INPUT ;
+        USE SIGNAL ;
+        PORT
+            LAYER M4 ;
+                RECT 7.000 15.500 8.000 15.900 ;
+        END
+    END addr0[4]
+
+    PIN addr0[3]
+        DIRECTION INPUT ;
+        USE SIGNAL ;
+        PORT
+            LAYER M4 ;
+                RECT 8.000 15.500 9.000 15.900 ;
+        END
+    END addr0[3]
+
+    PIN addr0[2]
+        DIRECTION INPUT ;
+        USE SIGNAL ;
+        PORT
+            LAYER M4 ;
+                RECT 9.000 15.500 10.000 15.900 ;
+        END
+    END addr0[2]
+
+    PIN addr0[1]
+        DIRECTION INPUT ;
+        USE SIGNAL ;
+        PORT
+            LAYER M4 ;
+                RECT 10.000 15.500 11.000 15.900 ;
+        END
+    END addr0[1]
+
+    PIN addr0[0]
+        DIRECTION INPUT ;
+        USE SIGNAL ;
+        PORT
+            LAYER M4 ;
+                RECT 11.000 15.500 12.000 15.900 ;
+        END
+    END addr0[0]
+
+    PIN VDD
+        DIRECTION INOUT ;
+        USE POWER ;
+        PORT
+            LAYER M5 ;
+                RECT 0.000 14.000 22.000 14.500 ;
+        END
+    END VDD
+
+    PIN VSS
+        DIRECTION INOUT ;
+        USE GROUND ;
+        PORT
+            LAYER M5 ;
+                RECT 0.000 0.000 22.000 0.500 ;
+        END
+    END VSS
+
+END sram_1rw_256x32_asap7
+
+END LIBRARY
