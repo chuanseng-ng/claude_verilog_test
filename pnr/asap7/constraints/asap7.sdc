@@ -17,7 +17,7 @@ create_clock -name clk -period 1.000 [get_ports clk_i]
 
 set_clock_uncertainty -setup 0.020 [get_clocks clk]
 set_clock_uncertainty -hold  0.010 [get_clocks clk]
-set_clock_transition   0.010       [get_clocks clk]
+set_clock_transition   10          [get_clocks clk]
 
 # Source latency: on-chip PLL or synthesised from reference
 set_clock_latency -source 0.050 [get_clocks clk]
@@ -136,7 +136,7 @@ set_multicycle_path -hold  1 -to [get_ports apb_pready_o]
 ###############################################################################
 # 7. Environment
 ###############################################################################
-set_max_transition 0.040 [current_design]
+# set_max_transition handled via MAX_TRANSITION_CONSTRAINT in config.json (40ps for ASAP7 1ps time_unit)
 set_max_fanout     20    [current_design]
 set_max_area       0
 
