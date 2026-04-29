@@ -1,169 +1,388 @@
-/* sram_1rw_256x32_asap7_TT_0p7V_25C.lib
- * Liberty timing stub for 256x32 single-port SRAM on ASAP7 7nm predictive PDK.
- * Corner: TT 0.7V 25C (nominal)
- * Timing estimates for ASAP7 7nm FinFET:
- *   Read access (clk->dout): 0.30 ns
- *   Setup (inputs -> clk):   0.05 ns
- *   Hold  (inputs -> clk):   0.02 ns
- */
-library (sram_1rw_256x32_asap7_TT_0p7V_25C) {
+library(sram_1rw_256x32_asap7) {
     technology (cmos);
     delay_model : table_lookup;
+    revision : 1.0;
+    date : "2023-08-15 21:29:36Z";
+    comment : "SRAM — adapted from ORFS fakeram7_256x32 for sram_1rw_256x32_asap7 port names";
     time_unit : "1ns";
     voltage_unit : "1V";
-    current_unit : "1mA";
-    capacitive_load_unit (1, pf);
-    leakage_power_unit : "1nW";
-
-    nom_process : 1.0;
-    nom_temperature : 25.0;
+    current_unit : "1uA";
+    leakage_power_unit : "1uW";
+    nom_process : 1;
+    nom_temperature : 25.000;
     nom_voltage : 0.7;
+    capacitive_load_unit (1,pf);
 
-    input_threshold_pct_fall  : 50;
-    input_threshold_pct_rise  : 50;
-    output_threshold_pct_fall : 50;
-    output_threshold_pct_rise : 50;
-    slew_lower_threshold_pct_fall : 10;
-    slew_lower_threshold_pct_rise : 10;
-    slew_upper_threshold_pct_fall : 90;
-    slew_upper_threshold_pct_rise : 90;
+    pulling_resistance_unit : "1kohm";
 
-    default_input_pin_cap : 0.005;
-    default_output_pin_cap : 0.0;
-    default_fanout_load : 1.0;
-    default_max_transition : 0.040;
-
-    /* Bus type declarations must precede cell definitions */
-    type (addr_bus_8) {
-        base_type : array;
-        data_type : bit;
-        bit_width : 8;
-        bit_from : 7;
-        bit_to : 0;
+    operating_conditions(tt_1.0_25.0) {
+        process : 1;
+        temperature : 25.000;
+        voltage : 0.7;
+        tree_type : balanced_tree;
     }
 
-    type (data_bus_32) {
-        base_type : array;
-        data_type : bit;
+    /* default attributes */
+    default_cell_leakage_power : 0;
+    default_fanout_load : 1;
+    default_inout_pin_cap : 0.0;
+    default_input_pin_cap : 0.0;
+    default_output_pin_cap : 0.0;
+    default_max_transition : 0.227;
+
+    default_operating_conditions : tt_1.0_25.0;
+    default_leakage_power_density : 0.0;
+
+    /* additional header data */
+    slew_derate_from_library : 1.000;
+    slew_lower_threshold_pct_fall : 20.000;
+    slew_upper_threshold_pct_fall : 80.000;
+    slew_lower_threshold_pct_rise : 20.000;
+    slew_upper_threshold_pct_rise : 80.000;
+    input_threshold_pct_fall : 50.000;
+    input_threshold_pct_rise : 50.000;
+    output_threshold_pct_fall : 50.000;
+    output_threshold_pct_rise : 50.000;
+
+
+    lu_table_template(sram_1rw_256x32_asap7_mem_out_delay_template) {
+        variable_1 : input_net_transition;
+        variable_2 : total_output_net_capacitance;
+            index_1 ("1000, 1001");
+            index_2 ("1000, 1001");
+    }
+    lu_table_template(sram_1rw_256x32_asap7_mem_out_slew_template) {
+        variable_1 : total_output_net_capacitance;
+            index_1 ("1000, 1001");
+    }
+    lu_table_template(sram_1rw_256x32_asap7_constraint_template) {
+        variable_1 : related_pin_transition;
+        variable_2 : constrained_pin_transition;
+            index_1 ("1000, 1001");
+            index_2 ("1000, 1001");
+    }
+    power_lut_template(sram_1rw_256x32_asap7_energy_template_clkslew) {
+        variable_1 : input_transition_time;
+            index_1 ("1000, 1001");
+    }
+    power_lut_template(sram_1rw_256x32_asap7_energy_template_sigslew) {
+        variable_1 : input_transition_time;
+            index_1 ("1000, 1001");
+    }
+    library_features(report_delay_calculation);
+    type (sram_1rw_256x32_asap7_DATA) {
+        base_type : array ;
+        data_type : bit ;
         bit_width : 32;
         bit_from : 31;
-        bit_to : 0;
+        bit_to : 0 ;
+        downto : true ;
+    }
+    type (sram_1rw_256x32_asap7_ADDRESS) {
+        base_type : array ;
+        data_type : bit ;
+        bit_width : 8;
+        bit_from : 7;
+        bit_to : 0 ;
+        downto : true ;
+    }
+cell(sram_1rw_256x32_asap7) {
+    area : 351.12;
+    interface_timing : true;
+    memory() {
+        type : ram;
+        address_width : 8;
+        word_width : 32;
+    }
+    pin(clk0)   {
+        direction : input;
+        capacitance : 0.025;
+        clock : true;
+        min_period           : 0.157 ;
+        internal_power(){
+            rise_power(sram_1rw_256x32_asap7_energy_template_clkslew) {
+                index_1 ("0.009, 0.227");
+                values ("1.345, 1.345")
+            }
+            fall_power(sram_1rw_256x32_asap7_energy_template_clkslew) {
+                index_1 ("0.009, 0.227");
+                values ("1.345, 1.345")
+            }
+        }
     }
 
-    lu_table_template (sram_delay_1x1) {
-        variable_1 : total_output_net_capacitance;
-        index_1 ("0.01");
+    bus(dout0)   {
+        bus_type : sram_1rw_256x32_asap7_DATA;
+        direction : output;
+        max_capacitance : 0.500;
+        memory_read() {
+            address : addr0;
+        }
+        timing() {
+            related_pin : "clk0" ;
+            timing_type : rising_edge;
+            timing_sense : non_unate;
+            cell_rise(sram_1rw_256x32_asap7_mem_out_delay_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.005, 0.500");
+                values ( \
+                  "0.218, 0.218", \
+                  "0.218, 0.218" \
+                )
+            }
+            cell_fall(sram_1rw_256x32_asap7_mem_out_delay_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.005, 0.500");
+                values ( \
+                  "0.218, 0.218", \
+                  "0.218, 0.218" \
+                )
+            }
+            rise_transition(sram_1rw_256x32_asap7_mem_out_slew_template) {
+                index_1 ("0.005, 0.500");
+                values ("0.009, 0.227")
+            }
+            fall_transition(sram_1rw_256x32_asap7_mem_out_slew_template) {
+                index_1 ("0.005, 0.500");
+                values ("0.009, 0.227")
+            }
+        }
     }
-
-    lu_table_template (sram_constraint_1x1) {
-        variable_1 : related_pin_transition;
-        index_1 ("0.01");
+    pin(web0){
+        direction : input;
+        capacitance : 0.005;
+        timing() {
+            related_pin : clk0;
+            timing_type : setup_rising ;
+            rise_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
+            }
+            fall_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
+            }
+        } 
+        timing() {
+            related_pin : clk0;
+            timing_type : hold_rising ;
+            rise_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
+            }
+            fall_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
+            }
+        }
+        internal_power(){
+            rise_power(sram_1rw_256x32_asap7_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.013, 0.013")
+            }
+            fall_power(sram_1rw_256x32_asap7_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.013, 0.013")
+            }
+        }
     }
-
-    cell (sram_1rw_256x32_asap7) {
-        area : 5000;
-        dont_use : false;
-        dont_touch : true;
-
-        pg_pin (VDD) {
-            pg_type : primary_power;
-            voltage_name : VDD;
-        }
-        pg_pin (VSS) {
-            pg_type : primary_ground;
-            voltage_name : VSS;
-        }
-
-        pin (clk0) {
-            direction : input;
-            capacitance : 0.010;
-            clock : true;
-        }
-
-        pin (csb0) {
-            direction : input;
-            capacitance : 0.005;
-            timing () {
-                related_pin : "clk0";
-                timing_type : setup_rising;
-                rise_constraint (sram_constraint_1x1) { values ("0.05"); }
-                fall_constraint (sram_constraint_1x1) { values ("0.05"); }
+    pin(csb0){
+        direction : input;
+        capacitance : 0.005;
+        timing() {
+            related_pin : clk0;
+            timing_type : setup_rising ;
+            rise_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
             }
-            timing () {
-                related_pin : "clk0";
-                timing_type : hold_rising;
-                rise_constraint (sram_constraint_1x1) { values ("0.02"); }
-                fall_constraint (sram_constraint_1x1) { values ("0.02"); }
+            fall_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
             }
-        }
-
-        pin (web0) {
-            direction : input;
-            capacitance : 0.005;
-            timing () {
-                related_pin : "clk0";
-                timing_type : setup_rising;
-                rise_constraint (sram_constraint_1x1) { values ("0.05"); }
-                fall_constraint (sram_constraint_1x1) { values ("0.05"); }
+        } 
+        timing() {
+            related_pin : clk0;
+            timing_type : hold_rising ;
+            rise_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
             }
-            timing () {
-                related_pin : "clk0";
-                timing_type : hold_rising;
-                rise_constraint (sram_constraint_1x1) { values ("0.02"); }
-                fall_constraint (sram_constraint_1x1) { values ("0.02"); }
+            fall_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
             }
         }
-
-        bus (addr0) {
-            bus_type : addr_bus_8;
-            direction : input;
-            capacitance : 0.005;
-            timing () {
-                related_pin : "clk0";
-                timing_type : setup_rising;
-                rise_constraint (sram_constraint_1x1) { values ("0.05"); }
-                fall_constraint (sram_constraint_1x1) { values ("0.05"); }
+        internal_power(){
+            rise_power(sram_1rw_256x32_asap7_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.013, 0.013")
             }
-            timing () {
-                related_pin : "clk0";
-                timing_type : hold_rising;
-                rise_constraint (sram_constraint_1x1) { values ("0.02"); }
-                fall_constraint (sram_constraint_1x1) { values ("0.02"); }
+            fall_power(sram_1rw_256x32_asap7_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.013, 0.013")
             }
         }
-
-        bus (din0) {
-            bus_type : data_bus_32;
-            direction : input;
-            capacitance : 0.005;
-            timing () {
-                related_pin : "clk0";
-                timing_type : setup_rising;
-                rise_constraint (sram_constraint_1x1) { values ("0.05"); }
-                fall_constraint (sram_constraint_1x1) { values ("0.05"); }
-            }
-            timing () {
-                related_pin : "clk0";
-                timing_type : hold_rising;
-                rise_constraint (sram_constraint_1x1) { values ("0.02"); }
-                fall_constraint (sram_constraint_1x1) { values ("0.02"); }
-            }
-        }
-
-        bus (dout0) {
-            bus_type : data_bus_32;
-            direction : output;
-            max_capacitance : 0.5;
-            timing () {
-                related_pin : "clk0";
-                timing_type : rising_edge;
-                cell_rise (sram_delay_1x1) { values ("0.30"); }
-                cell_fall (sram_delay_1x1) { values ("0.30"); }
-                rise_transition (sram_delay_1x1) { values ("0.05"); }
-                fall_transition (sram_delay_1x1) { values ("0.05"); }
-            }
-        }
-
-        cell_leakage_power : 100;
     }
+    bus(addr0)   {
+        bus_type : sram_1rw_256x32_asap7_ADDRESS;
+        direction : input;
+        capacitance : 0.005;
+        timing() {
+            related_pin : clk0;
+            timing_type : setup_rising ;
+            rise_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
+            }
+            fall_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
+            }
+        } 
+        timing() {
+            related_pin : clk0;
+            timing_type : hold_rising ;
+            rise_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
+            }
+            fall_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
+            }
+        }
+        internal_power(){
+            rise_power(sram_1rw_256x32_asap7_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.013, 0.013")
+            }
+            fall_power(sram_1rw_256x32_asap7_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.013, 0.013")
+            }
+        }
+    }
+    bus(din0)   {
+        bus_type : sram_1rw_256x32_asap7_DATA;
+        memory_write() {
+            address : addr0;
+            clocked_on : "clk0";
+        }
+        direction : input;
+        capacitance : 0.005;
+        timing() {
+            related_pin     : clk0;
+            timing_type     : setup_rising ;
+            rise_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
+            }
+            fall_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
+            }
+        } 
+        timing() {
+            related_pin     : clk0;
+            timing_type     : hold_rising ;
+            rise_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
+            }
+            fall_constraint(sram_1rw_256x32_asap7_constraint_template) {
+                index_1 ("0.009, 0.227");
+                index_2 ("0.009, 0.227");
+                values ( \
+                  "0.050, 0.050", \
+                  "0.050, 0.050" \
+                )
+            }
+        }
+        internal_power(){
+            when : "(! (web0) )";
+            rise_power(sram_1rw_256x32_asap7_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.013, 0.013")
+            }
+            fall_power(sram_1rw_256x32_asap7_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.013, 0.013")
+            }
+        }
+        internal_power(){
+            when : "(web0)";
+            rise_power(sram_1rw_256x32_asap7_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.013, 0.013")
+            }
+            fall_power(sram_1rw_256x32_asap7_energy_template_sigslew) {
+                index_1 ("0.009, 0.227");
+                values ("0.013, 0.013")
+            }
+        }
+    }
+    cell_leakage_power : 128.900;
+}
+
 }

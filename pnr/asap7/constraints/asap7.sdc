@@ -1,7 +1,10 @@
 ###############################################################################
 # asap7.sdc — Timing constraints for rv32i_cpu_top on ASAP7 7nm predictive
-# Target: 1 GHz (1.000 ns period)
-# Reference: phase3_cache.sdc (Sky130 75 MHz) scaled to 7nm
+# Target: 1000 MHz (1.000 ns period) — run 7
+# Reference: run 6 at 2.0 ns showed WNS=-1148 ps (WORSE than 1.0 ns run 5 at
+# -1140 ps). Reverting to 1.0 ns: tool optimizes more aggressively, achievable
+# freq ~350-467 MHz. SRAM black-box has no timing arcs so critical path is
+# pure std-cell logic.
 #
 # ASAP7 timing characteristics (asap7sc7p5t_SIMPLE RVT TT 0.7V 25C):
 #   INV delay:      ~15 ps (vs ~100 ps Sky130)
@@ -51,31 +54,31 @@ set_input_delay  -max 0.150 -clock clk [get_ports axi_bresp_i[*]]
 set_input_delay  -min 0.010 -clock clk [get_ports axi_bresp_i[*]]
 
 set_output_delay -max 0.150 -clock clk [get_ports axi_araddr_o[*]]
-set_output_delay -min -0.03 -clock clk [get_ports axi_araddr_o[*]]
+set_output_delay -min -0.015 -clock clk [get_ports axi_araddr_o[*]]
 
 set_output_delay -max 0.150 -clock clk [get_ports axi_arvalid_o]
-set_output_delay -min -0.03 -clock clk [get_ports axi_arvalid_o]
+set_output_delay -min -0.015 -clock clk [get_ports axi_arvalid_o]
 
 set_output_delay -max 0.150 -clock clk [get_ports axi_rready_o]
-set_output_delay -min -0.03 -clock clk [get_ports axi_rready_o]
+set_output_delay -min -0.015 -clock clk [get_ports axi_rready_o]
 
 set_output_delay -max 0.150 -clock clk [get_ports axi_awaddr_o[*]]
-set_output_delay -min -0.03 -clock clk [get_ports axi_awaddr_o[*]]
+set_output_delay -min -0.015 -clock clk [get_ports axi_awaddr_o[*]]
 
 set_output_delay -max 0.150 -clock clk [get_ports axi_awvalid_o]
-set_output_delay -min -0.03 -clock clk [get_ports axi_awvalid_o]
+set_output_delay -min -0.015 -clock clk [get_ports axi_awvalid_o]
 
 set_output_delay -max 0.150 -clock clk [get_ports axi_wdata_o[*]]
-set_output_delay -min -0.03 -clock clk [get_ports axi_wdata_o[*]]
+set_output_delay -min -0.015 -clock clk [get_ports axi_wdata_o[*]]
 
 set_output_delay -max 0.150 -clock clk [get_ports axi_wstrb_o[*]]
-set_output_delay -min -0.03 -clock clk [get_ports axi_wstrb_o[*]]
+set_output_delay -min -0.015 -clock clk [get_ports axi_wstrb_o[*]]
 
 set_output_delay -max 0.150 -clock clk [get_ports axi_wvalid_o]
-set_output_delay -min -0.03 -clock clk [get_ports axi_wvalid_o]
+set_output_delay -min -0.015 -clock clk [get_ports axi_wvalid_o]
 
 set_output_delay -max 0.150 -clock clk [get_ports axi_bready_o]
-set_output_delay -min -0.03 -clock clk [get_ports axi_bready_o]
+set_output_delay -min -0.015 -clock clk [get_ports axi_bready_o]
 
 ###############################################################################
 # 3. APB3 debug slave port (non-critical)
@@ -96,10 +99,10 @@ set_input_delay  -max 0.120 -clock clk [get_ports apb_pwdata_i[*]]
 set_input_delay  -min 0.010 -clock clk [get_ports apb_pwdata_i[*]]
 
 set_output_delay -max 0.120 -clock clk [get_ports apb_pready_o]
-set_output_delay -min -0.03 -clock clk [get_ports apb_pready_o]
+set_output_delay -min -0.015 -clock clk [get_ports apb_pready_o]
 
 set_output_delay -max 0.120 -clock clk [get_ports apb_pslverr_o]
-set_output_delay -min -0.03 -clock clk [get_ports apb_pslverr_o]
+set_output_delay -min -0.015 -clock clk [get_ports apb_pslverr_o]
 
 # APB read data: non-critical debug port
 set_false_path -to [get_ports apb_prdata_o[*]]

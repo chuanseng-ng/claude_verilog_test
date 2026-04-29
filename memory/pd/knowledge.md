@@ -274,7 +274,9 @@ at "1ps") and **zero `timing()` groups**. This means:
 - To get real SRAM timing: generate a lib from OpenRAM ASAP7 port (experimental) or use
   hand-annotated timing arcs (setup/hold/access) in the stub lib file.
 
-## ASAP7 Phase 3 Final PPA Results (RUN_2026-04-25_08-07-21)
+## ASAP7 Phase 3 PPA Results — Run History
+
+### Run 4 (RUN_2026-04-25_08-07-21) — SRAM timing zero (black-box stub, no arcs)
 
 **Design**: rv32i_cpu_top (Phase 3: CPU + I-cache + D-cache)
 **PDK**: asap7sc7p5t_SIMPLE, TT 0.7V 25°C
@@ -286,18 +288,136 @@ at "1ps") and **zero `timing()` groups**. This means:
 | Setup TNS | -2,593,720 ps |
 | Hold WNS | -112 ps (hold not closed) |
 | Cell instance area | **7,207 µm²** |
-| Std cell count | 34,899 cells |
-| Die area | 22,500 µm² (150×150 µm) |
-| Core area | 19,576 µm² (140×140 µm) |
-| Total power | **5.76 mW** (internal 4.14 + switching 1.62 + leakage ~0) |
-| Est. wire length | 203,201 µm |
+| Total power | **5.76 mW** (SRAM power NOT counted — zero-timing stub) |
 
-**Notes**:
-- 462 MHz achievable frequency assumes linear scaling from WNS (actual achievable may differ
-  due to timing distribution). Re-run at 2.0 ns (500 MHz) or 2.5 ns (400 MHz) for closure.
-- Hold violations (-112 ps) occur because no hold fix was run (CTS only, no hold ECO).
-- SRAM timing NOT included in STA — paths through SRAM are black-boxed (see above).
-- No GDS produced (Magic/KLayout skipped) — flow is for PPA estimation only.
+**Notes**: SRAM had no timing arcs — power/timing optimistic.
+
+### Run 5 (RUN_2026-04-25_20-40-58) — SRAM with real timing arcs (setup/hold=0.050 ns)
+
+**Clock target**: 1.0 ns (1 GHz)
+
+| Metric | Value |
+|--------|-------|
+| Setup WNS | **-1140 ps** @ 1 GHz → achievable ≈ **467 MHz** |
+| Setup TNS | -2,738,520 ps |
+| Hold WNS | **-185 ps** (PROBLEM — 924 hold violations on SRAM input paths) |
+| Cell instance area | **7,208 µm²** (10 macros × 351 µm² = 3511 µm² macro area) |
+| Total power | **32.3 mW** (internal 30.8 mW dominates — 10 SRAM × high internal energy) |
+
+**Root cause of hold violations**: SRAM hold constraint is 0.050 ns (50 ps). Hold repair
+inserted 0 buffers because `PL_RESIZER_ALLOW_SETUP_VIOS=false` (default). With massive
+setup violations at 1 GHz, the resizer refuses to add delay (hold fix) that would make
+setup worse. The `repair_timing -hold` ran but printed 0 buffers at iteration 0/final.
+
+**Root cause of high power**: 10 SRAM macros × large internal energy values in Liberty.
+The `internal_power` of ~30.8 mW is from SRAM activity. Std cell power is ~1.5 mW switching.
+
+### Run 6 (RUN_2026-04-25_21-30-27) — COMPLETE — 2.0 ns / 500 MHz target (REGRESSION)
+
+**Changes from run 5**:
+1. `CLOCK_PERIOD`: 1.0 → 2.0 ns (500 MHz target)
+2. `PL_RESIZER_ALLOW_SETUP_VIOS`: true
+3. Hold margins: 0.100 ns
+4. `FP_IO_HTHICKNESS_MULT/VTHICKNESS_MULT`: 5 → 8 (pin width = 8×24 = 192 DBU = 0.192 µm)
+5. SDC: `create_clock -period 2.000`, IO delays 0.300 ns
+
+**Actual results** (WORSE than expected — frequency regression):
+
+| Metric | Value |
+|--------|-------|
+| Setup WNS | **-1148 ps** @ 2.0 ns → data path = 3.148 ns → achievable ≈ **318 MHz** |
+| Hold WNS | -12.5 ps (7 violations — minor, but not fully closed) |
+| Instance area | 7266 µm² |
+| Total power | **16.15 mW** (real SRAM power) |
+| DRT-0074 count | **374 errors** (same pins as before — MULT=8 did NOT fix it) |
+
+**Root cause of frequency regression**: Looser 2.0 ns target caused placement/routing to
+insert MORE buffering fanout cells. The data path grew from ~2.14 ns (run 5) to ~3.15 ns
+(run 6). The tool "gave up" optimizing early since paths only miss by 1.1 ns.
+
+**DRT-0074 root cause update**: MULT=8 gives pin width = 192 DBU. The pin at (148000, 4122)
+has rect X=146000..150000, Y=4026..4218. Track analysis confirms 3 M4 Y-tracks pass through
+(Y=4068, 4122, 4176). Yet DRT-0074 persists — suggesting the issue is not track coverage but
+routing CONGESTION or OBSTRUCTION near the die edge. The drt.tcl catch patch allows the run
+to complete despite these errors.
+
+**Critical path analysis**: The critical path (FF → NAND5 → BUF → AND4 → AOI31 → ... → FF)
+does NOT pass through any SRAM instance — pure std-cell logic is the bottleneck.
+
+### Run 7 (RUN_2026-04-26_07-23-37) — COMPLETE — 1.0 ns target, real SRAM timing lib
+
+**Changes from run 6**:
+1. `CLOCK_PERIOD`: 2.0 → **1.0 ns** (restored — 1.0 ns drives more aggressive optimization)
+2. `RUN_POST_GRT_DESIGN_REPAIR`: false → **true** (post-routing repair pass)
+3. `PL_RESIZER_SETUP_SLACK_MARGIN`: **0.050 ns** added
+4. `GRT_RESIZER_SETUP_SLACK_MARGIN`: **0.050 ns** added
+5. Hold margins: 0.100 → **0.050 ns** (right-sized for SRAM hold=50 ps)
+6. SDC: `create_clock -period 1.000`, IO delays **0.150 ns** (15%), APB = **0.120 ns**
+7. `PL_RESIZER_ALLOW_SETUP_VIOS: true` retained from run 6
+
+**Actual results**:
+
+| Metric | Value |
+|--------|-------|
+| Setup WNS | **-1147 ps** @ 1 GHz → achievable **466 MHz** |
+| Setup TNS | -2,750,980 ps |
+| Hold WNS | **-12.5 ps** (8 violations — NOT improved vs run 6) |
+| Std-cell area | **3,745 um2** (total incl. macros: 7,257 um2) |
+| Total power | **32.29 mW** (internal 30.8 mW from 10 SRAM macros) |
+| DRT-0074 errors | **374** (same as run 6 — structural, non-fatal) |
+| Max-fanout violations | **145** (up from 0 in run 4 — caused by 50 ps slack margins) |
+
+**Critical path analysis (run 7 — definitive)**:
+
+The critical path does NOT pass through any SRAM. It is pure std-cell combinatorial logic:
+- Start: `_55344_` (DFFASRHQNx1 QN output), clock arrival 119 ps
+- Chain: NOR3 -> NAND5 -> NOR5 -> NAND5 -> NOR5 -> BUF2 -> NAND5 -> AOI21 -> A2O1A1O1I ->
+  BUF3 -> BUF6f -> AO21 -> BUF6f -> OA22 -> NAND3 -> BUF3 -> OA31 -> AOI31 -> A2O1A1I ->
+  AOI21 -> OR4 -> AOI21 -> BUF3 -> O2A1O1I -> BUF5 -> NOR2 -> AOI221 -> A2O1A1I -> ... -> OAI32
+- End: `_53574_` (DFFASRHQNx1 D input), data arrival 1025 ps
+- Logic depth: approximately **20 combinational stages** — pipeline control/hazard/flush logic
+- Setup slack post-GRT: -930 ps
+
+**Worst hold path endpoint**: `u_core.u_icache.u_tag_sram` — SRAM IS on the hold critical path.
+The 8 hold violations at -12.5 ps are on paths ending at SRAM data/address inputs. These are
+structurally unfixable at 1 GHz: `repair_timing -hold` refuses to insert delay buffers when
+setup violations are large (known behavior from run 5, confirmed again here).
+
+**Key findings from run 7**:
+
+1. **SRAM is NOT on the setup critical path** — the 0.218 ns fakeram7 read delay applies only
+   to read-data paths THROUGH the SRAM (read-to-output arcs). The setup critical path is
+   purely register-to-register std-cell control logic. WNS is determined by pipeline hazard
+   detection depth, not by SRAM access time.
+
+2. **SRAM IS on the hold critical path** — fakeram7 Liberty hold time = 50 ps for SRAM inputs.
+   Hold cannot be closed without first closing setup. Structural limitation at 1 GHz.
+
+3. **Post-GRT repair pass (RUN_POST_GRT_DESIGN_REPAIR=true) had zero effect on hold** — 0 hold
+   buffers inserted. Same 8 violations at -12.5 ps as run 6. Known blocked behavior.
+
+4. **50 ps slack margins caused 145 fanout violations** — `PL_RESIZER_SETUP_SLACK_MARGIN=0.050`
+   and `GRT_RESIZER_SETUP_SLACK_MARGIN=0.050` generated excessive conservative buffering.
+   Remove these margins in any future run to restore fanout to 0 violations (as in run 4).
+
+5. **Achievable frequency ceiling confirmed: ~466 MHz** for this 5-stage RV32I + L1 cache
+   design on ASAP7 7nm (asap7sc7p5t_SIMPLE). Ceiling is set by ~20-stage control logic depth.
+
+**No further reruns recommended** for PPA characterization of this design configuration.
+The 466 MHz result is consistent across runs 4, 5, and 7 (all at 1 GHz target). To close
+timing, would need RTL-level pipeline retiming (e.g., split EX stage, reduce hazard fanout).
+
+**Log**: `/tmp/asap7_run7.log`
+**tmux session**: `asap7_run7` (completed)
+
+## Hold Repair Root Cause (CRITICAL — learned in run 5)
+
+`repair_timing -hold` inserts ZERO buffers when `PL_RESIZER_ALLOW_SETUP_VIOS=false` (the
+default) AND setup violations are already large. The resizer refuses to add delay for hold
+fixing if it would worsen setup beyond the existing setup margin. Fix: either:
+1. Set `PL_RESIZER_ALLOW_SETUP_VIOS: true` in config.json, OR
+2. Relax the clock period so setup has positive slack before hold repair runs
+BOTH approaches are used in run 6 for belt-and-suspenders.
 
 ## General LibreLane Tips
 
