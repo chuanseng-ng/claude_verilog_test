@@ -48,8 +48,9 @@ package rv32i_pipeline_pkg;
         logic [2:0]  csr_op;       // CSR operation (funct3)
         logic        ebreak;       // EBREAK instruction
         logic        mret;         // MRET instruction
-        logic        fence_i;     // FENCE.I instruction (I-cache invalidate)
+        logic        fence_i;      // FENCE.I instruction (I-cache invalidate)
         logic        illegal;      // Illegal instruction
+        logic        csr_illegal;  // CSR address not implemented (pre-computed in ID)
         logic        valid;        // Stage valid
     } id_ex_reg_t;
 
@@ -139,6 +140,7 @@ package rv32i_pipeline_pkg;
         id_ex_nop.mret         = 1'b0;
         id_ex_nop.fence_i      = 1'b0;
         id_ex_nop.illegal      = 1'b0;
+        id_ex_nop.csr_illegal  = 1'b0;
         id_ex_nop.valid        = 1'b0;
     endfunction
 

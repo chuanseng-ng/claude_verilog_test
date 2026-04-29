@@ -19,6 +19,7 @@ module rv32i_pipeline_ex(
 
     // ── Hazard unit controls ──────────────────────────────────────────────────
     input  logic        stall_ex_mem,   // Hold EX/MEM register
+    input  logic        flush_ex_mem,   // Squash EX→MEM (MEM-stage misalign trap wins)
     // flush_id_ex handled by the ID stage
 
     // ── ID/EX pipeline register input ────────────────────────────────────────
@@ -31,7 +32,6 @@ module rv32i_pipeline_ex(
 
     // ── CSR file interface (combinational reads happen here) ──────────────────
     input  logic [31:0] csr_rdata_i,    // CSR read data (pre-write, from csr_file)
-    input  logic        csr_illegal_i,  // CSR address not implemented
 
     // ── Interrupt controller ──────────────────────────────────────────────────
     input  logic        irq_valid_i,    // Enabled interrupt is pending
@@ -112,32 +112,6 @@ module rv32i_pipeline_ex(
     );
 
     // =========================================================================
-    // Misalignment detection
-    // =========================================================================
-    logic misaligned_load, misaligned_store;
-
-    always_comb begin
-        misaligned_load  = 1'b0;
-        misaligned_store = 1'b0;
-
-        if (id_ex_reg_i.mem_rd) begin
-            case (id_ex_reg_i.mem_size)
-                3'b001: misaligned_load  = alu_result[0];         // halfword
-                3'b010: misaligned_load  = |alu_result[1:0];      // word
-                default: misaligned_load = 1'b0;
-            endcase
-        end
-
-        if (id_ex_reg_i.mem_wr) begin
-            case (id_ex_reg_i.mem_size)
-                3'b001: misaligned_store  = alu_result[0];
-                3'b010: misaligned_store  = |alu_result[1:0];
-                default: misaligned_store = 1'b0;
-            endcase
-        end
-    end
-
-    // =========================================================================
     // CSR write data
     // For immediate variants (funct3[2]=1), CSR write data is the zero-extended
     // 5-bit immediate already in id_ex_reg.immediate.
@@ -147,7 +121,7 @@ module rv32i_pipeline_ex(
     assign csr_wd = id_ex_reg_i.csr_op[2] ? id_ex_reg_i.immediate : fwd_rs1;
 
     // CSR outputs to csr_file
-    assign csr_wr_en_o = id_ex_reg_i.csr_access && id_ex_reg_i.valid && !csr_illegal_i;
+    assign csr_wr_en_o = id_ex_reg_i.csr_access && id_ex_reg_i.valid && !id_ex_reg_i.csr_illegal;
     assign csr_wdata_o = csr_wd;
     assign csr_addr_o  = id_ex_reg_i.csr_addr;
     assign csr_op_o    = id_ex_reg_i.csr_op;
@@ -169,6 +143,15 @@ module rv32i_pipeline_ex(
     logic [31:0] redirect_target;
     logic        is_irq;
 
+    // Register irq_valid one cycle to remove the interrupt controller combinational
+    // fan-in (~6–7 levels through mstatus_mie_eff AND/OR tree) from the EX setup
+    // critical path. RISC-V spec imposes no single-cycle interrupt latency
+    // requirement; a 1-cycle additional delay is fully compliant.
+    logic irq_valid_r;
+    always_ff @(posedge clk or negedge rst_n)
+        if (!rst_n) irq_valid_r <= 1'b0;
+        else        irq_valid_r <= irq_valid_i;
+
     always_comb begin
         trap_valid      = 1'b0;
         trap_cause      = 32'h0;
@@ -183,7 +166,7 @@ module rv32i_pipeline_ex(
         if (!id_ex_reg_i.valid) begin
             // Bubble: nothing to do
 
-        end else if (irq_valid_i) begin
+        end else if (irq_valid_r) begin
             // Interrupt (highest priority among traps)
             trap_valid      = 1'b1;
             trap_cause      = irq_cause_i;
@@ -192,7 +175,7 @@ module rv32i_pipeline_ex(
             redirect_target = mtvec_i;
             is_irq          = 1'b1;
 
-        end else if (id_ex_reg_i.illegal || (id_ex_reg_i.csr_access && csr_illegal_i)) begin
+        end else if (id_ex_reg_i.illegal || id_ex_reg_i.csr_illegal) begin
             // Illegal instruction
             trap_valid      = 1'b1;
             trap_cause      = 32'h0000_0002;   // mcause=2: illegal instruction
@@ -206,18 +189,6 @@ module rv32i_pipeline_ex(
             do_redirect     = 1'b1;
             redirect_target = mtvec_i;
             dbg_halt_req_o  = 1'b1;
-
-        end else if (misaligned_load) begin
-            trap_valid      = 1'b1;
-            trap_cause      = 32'h0000_0004;   // mcause=4: load address misaligned
-            do_redirect     = 1'b1;
-            redirect_target = mtvec_i;
-
-        end else if (misaligned_store) begin
-            trap_valid      = 1'b1;
-            trap_cause      = 32'h0000_0006;   // mcause=6: store address misaligned
-            do_redirect     = 1'b1;
-            redirect_target = mtvec_i;
 
         end else if (id_ex_reg_i.fence_i) begin
             // FENCE.I: flush pipeline (redirect to PC+4) and invalidate I-cache
@@ -303,6 +274,8 @@ module rv32i_pipeline_ex(
     // =========================================================================
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
+            ex_mem_reg_o <= ex_mem_nop();
+        end else if (flush_ex_mem) begin
             ex_mem_reg_o <= ex_mem_nop();
         end else if (!stall_ex_mem) begin
             if (!id_ex_reg_i.valid || trap_valid) begin

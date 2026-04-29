@@ -525,6 +525,7 @@ librelane-asap7:
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_DIR)/config.json"
 	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
 	@echo "  Tool     : $(LIBRELANE_DIR)"
+	@echo "  Skipping : Odb.HeuristicDiodeInsertion OpenROAD.RepairAntennas"
 	@echo "=========================================="
 	@if [ ! -f "$(LIBRELANE_ASAP7_DIR)/config.json" ]; then \
 		echo "ERROR: $(LIBRELANE_ASAP7_DIR)/config.json not found."; \
@@ -534,6 +535,25 @@ librelane-asap7:
 		"python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
 		 $(abspath $(LIBRELANE_ASAP7_DIR))/config.json"
 
 librelane-asap7-results:

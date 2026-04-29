@@ -44,6 +44,9 @@ module rv32i_hazard_unit (
     // Branch/jump/trap flush (from EX stage)
     input  logic        ex_pc_redirect,    // Flush needed: taken branch/jump/trap
 
+    // Misaligned trap flush (from MEM stage — higher priority than EX redirect)
+    input  logic        mem_trap_redirect, // MEM-stage misalign: flush EX+ID+IF
+
     // JAL flush (from ID stage)
     input  logic        id_jal_taken,      // JAL detected in ID → flush IF only
 
@@ -54,6 +57,7 @@ module rv32i_hazard_unit (
     output logic        stall_ex_mem,      // Hold EX/MEM register
     output logic        flush_if_id,       // Clear IF/ID (insert NOP)
     output logic        flush_id_ex,       // Clear ID/EX (insert NOP)
+    output logic        flush_ex_mem,      // Clear EX/MEM (squash EX instruction)
 
     // Outputs — forwarding mux selects (for instruction in EX stage)
     // Encoding: 2'b00=regfile, 2'b01=EX/MEM (EX→EX), 2'b10=MEM/WB (MEM→EX)
@@ -114,8 +118,15 @@ module rv32i_hazard_unit (
         stall_ex_mem = 1'b0;
         flush_if_id  = 1'b0;
         flush_id_ex  = 1'b0;
+        flush_ex_mem = 1'b0;
 
-        if (mem_cache_stall) begin
+        if (mem_trap_redirect) begin
+            // Priority 0: MEM-stage misaligned trap — flush EX, ID, IF; redirect PC
+            flush_if_id  = 1'b1;
+            flush_id_ex  = 1'b1;
+            flush_ex_mem = 1'b1;
+
+        end else if (mem_cache_stall) begin
             // Priority 1: D-cache miss — global pipeline freeze
             stall_pc     = 1'b1;
             stall_if_id  = 1'b1;

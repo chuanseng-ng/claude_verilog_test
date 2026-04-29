@@ -371,8 +371,13 @@ module rv32i_icache (
 
                 // -----------------------------------------------------------------
                 CS_REFILL: begin
-                    // Abort on FENCE.I (drain in-flight beat via axi_rready=1)
-                    if (ic_invalidate_i) begin
+                    // Abort on FENCE.I or cancelled request (!ic_valid_i).
+                    // A cancelled request occurs when the pipeline halts (dbg_halt_req=1
+                    // causes ic_valid_o=0) while a cache-line refill is still in progress.
+                    // Without this abort the I-cache would fill from AXI with stale
+                    // (pre-program-load) data, then serve those zeros to the CPU on resume.
+                    // axi_rready_o=1'b1 drains any in-flight AXI beat without data loss.
+                    if (ic_invalidate_i || !ic_valid_i) begin
                         state_q       <= CS_IDLE;
                         ar_pending_q  <= 1'b0;
                         refill_word_q <= 2'b00;

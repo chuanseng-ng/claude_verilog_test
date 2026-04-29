@@ -59,6 +59,7 @@ module rv32i_pipeline_id(
     logic        fence_i;
 
     logic [31:0] immediate;
+    logic        csr_illegal_id; // Pre-computed CSR illegal: addr not in implemented set
 
     // =========================================================================
     // Instantiate decoder
@@ -109,6 +110,28 @@ module rv32i_pipeline_id(
     assign rf_rs2_addr_o = rs2;
 
     // =========================================================================
+    // CSR illegal pre-decode
+    // Mirrors the address check in rv32i_csr_file so the result can be
+    // registered into id_ex_reg_o.csr_illegal, removing the CSR file
+    // combinational path from the EX-stage critical path.
+    // Keep in sync with the case statement in rv32i_csr_file.sv.
+    // =========================================================================
+    always_comb begin
+        csr_illegal_id = 1'b0;
+        if (csr_access) begin
+            case (csr_addr)
+                12'h300, 12'h304, 12'h305,   // mstatus, mie, mtvec
+                12'h341, 12'h342, 12'h344,   // mepc, mcause, mip
+                12'hF11, 12'hF12,             // mvendorid, marchid
+                12'hF13, 12'hF14:             // mimpid, mhartid
+                    csr_illegal_id = 1'b0;
+                default:
+                    csr_illegal_id = 1'b1;
+            endcase
+        end
+    end
+
+    // =========================================================================
     // JAL early resolution (Decision 2: JAL in ID, 1-cycle penalty)
     // JAL: target = PC + J-immediate; does NOT depend on register values
     // Only fire when the IF/ID register holds a valid JAL instruction
@@ -157,6 +180,7 @@ module rv32i_pipeline_id(
                 id_ex_reg_o.mret        <= mret;
                 id_ex_reg_o.fence_i     <= fence_i;
                 id_ex_reg_o.illegal     <= illegal;
+                id_ex_reg_o.csr_illegal <= csr_illegal_id;
                 id_ex_reg_o.valid       <= 1'b1;
             end
         end

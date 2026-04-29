@@ -22,6 +22,9 @@ module rv32i_pipeline_mem(
     // ── EX/MEM pipeline register input ───────────────────────────────────────
     input  ex_mem_reg_t ex_mem_reg_i,
 
+    // ── Trap handler base address (for misalign redirect) ────────────────────
+    input  logic [31:0] mtvec_i,
+
     // ── D-Cache interface ─────────────────────────────────────────────────────
     output logic [31:0] dc_addr_o,     // Memory address
     output logic        dc_valid_o,    // Access valid
@@ -33,6 +36,13 @@ module rv32i_pipeline_mem(
 
     // ── Cache stall output to hazard unit ─────────────────────────────────────
     output logic        mem_cache_stall_o,
+
+    // ── MEM-stage misaligned trap outputs ────────────────────────────────────
+    output logic        mem_trap_redirect_o,   // 1 = flush IF+ID+EX, redirect PC
+    output logic [31:0] mem_trap_target_o,     // Redirect target (mtvec)
+    output logic        mem_trap_entry_o,      // Update CSR file this cycle
+    output logic [31:0] mem_trap_pc_o,         // mepc value
+    output logic [31:0] mem_trap_cause_o,      // mcause value
 
     // ── MEM/WB pipeline register output ──────────────────────────────────────
     output mem_wb_reg_t mem_wb_reg_o
@@ -76,11 +86,52 @@ module rv32i_pipeline_mem(
     end
 
     // =========================================================================
+    // Misalignment detection (moved from EX to break alu_result data dependency
+    // on the EX-stage setup critical path)
+    // =========================================================================
+    logic        mem_misaligned_load, mem_misaligned_store, mem_misaligned;
+    logic [31:0] mem_trap_cause_d;
+
+    always_comb begin
+        mem_misaligned_load  = 1'b0;
+        mem_misaligned_store = 1'b0;
+
+        if (ex_mem_reg_i.mem_rd) begin
+            case (ex_mem_reg_i.mem_size)
+                3'b001: mem_misaligned_load = ex_mem_reg_i.alu_result[0];
+                3'b010: mem_misaligned_load = |ex_mem_reg_i.alu_result[1:0];
+                default: mem_misaligned_load = 1'b0;
+            endcase
+        end
+
+        if (ex_mem_reg_i.mem_wr) begin
+            case (ex_mem_reg_i.mem_size)
+                3'b001: mem_misaligned_store = ex_mem_reg_i.alu_result[0];
+                3'b010: mem_misaligned_store = |ex_mem_reg_i.alu_result[1:0];
+                default: mem_misaligned_store = 1'b0;
+            endcase
+        end
+    end
+
+    assign mem_misaligned  = ex_mem_reg_i.valid && !ex_mem_reg_i.trap_valid
+                           && (mem_misaligned_load || mem_misaligned_store);
+    assign mem_trap_cause_d = mem_misaligned_load ? 32'h0000_0004   // mcause=4: load misaligned
+                                                  : 32'h0000_0006;  // mcause=6: store misaligned
+
+    // MEM-stage trap outputs (to hazard unit, IF stage, and CSR file)
+    assign mem_trap_redirect_o = mem_misaligned;
+    assign mem_trap_target_o   = mtvec_i;
+    assign mem_trap_entry_o    = mem_misaligned;
+    assign mem_trap_pc_o       = ex_mem_reg_i.pc;
+    assign mem_trap_cause_o    = mem_trap_cause_d;
+
+    // =========================================================================
     // D-Cache interface
     // =========================================================================
     logic need_mem_access;
     assign need_mem_access = ex_mem_reg_i.valid
                            && !ex_mem_reg_i.trap_valid
+                           && !mem_misaligned
                            && (ex_mem_reg_i.mem_rd || ex_mem_reg_i.mem_wr);
 
     assign dc_addr_o  = ex_mem_reg_i.alu_result;
@@ -118,12 +169,14 @@ module rv32i_pipeline_mem(
                 mem_wb_reg_o.mem_rdata   <= mem_rdata_extracted;
                 mem_wb_reg_o.csr_rdata   <= ex_mem_reg_i.csr_rdata;
                 mem_wb_reg_o.rd_addr     <= ex_mem_reg_i.rd_addr;
-                mem_wb_reg_o.reg_wr_en   <= ex_mem_reg_i.reg_wr_en && !ex_mem_reg_i.trap_valid;
-                mem_wb_reg_o.mem_rd      <= ex_mem_reg_i.mem_rd;
+                mem_wb_reg_o.reg_wr_en   <= ex_mem_reg_i.reg_wr_en
+                                           && !ex_mem_reg_i.trap_valid && !mem_misaligned;
+                mem_wb_reg_o.mem_rd      <= ex_mem_reg_i.mem_rd && !mem_misaligned;
                 mem_wb_reg_o.csr_access  <= ex_mem_reg_i.csr_access;
                 mem_wb_reg_o.jump        <= ex_mem_reg_i.jump;
-                mem_wb_reg_o.trap_valid  <= ex_mem_reg_i.trap_valid;
-                mem_wb_reg_o.trap_cause  <= ex_mem_reg_i.trap_cause;
+                mem_wb_reg_o.trap_valid  <= ex_mem_reg_i.trap_valid || mem_misaligned;
+                mem_wb_reg_o.trap_cause  <= mem_misaligned ? mem_trap_cause_d
+                                                           : ex_mem_reg_i.trap_cause;
                 mem_wb_reg_o.valid       <= 1'b1;
             end
         end else begin

@@ -274,11 +274,26 @@ class ISASequenceBase(BaseSequence):
         # Resume CPU - it will execute until EBREAK
         await apb_driver.resume_cpu()
 
-        # Wait for execution to complete (EBREAK will halt the CPU)
-        # setup + test + eviction + EBREAK
-        num_instructions = num_setup_instructions + 1 + num_eviction_instructions + 1
+        # Wait for execution to complete (EBREAK halts the CPU via debug interface).
+        # Poll DBG_STATUS until the halted bit is asserted rather than waiting a fixed
+        # number of cycles.  The fixed-cycle approach underestimates the time needed
+        # when I-cache and D-cache misses add AXI refill latency (4 AXI transactions
+        # per 16-byte cache line), causing false register-value failures.
+        #
+        # On timeout: issue a debug halt so we can read the register state.
+        # This handles tests such as backward-jump (JAL x2, -N) where the CPU
+        # loops forever — the destination register is written before the jump and
+        # must remain readable even though EBREAK is never reached.
         dut = self.env.axi_agent.driver.dut
-        await ClockCycles(dut.clk_i, num_instructions * 10 + self.num_extra_cycles)
+        timeout_cycles = (num_setup_instructions + 1 + num_eviction_instructions + 1) * 200 + self.num_extra_cycles
+        for _ in range(timeout_cycles):
+            status = await apb_driver.apb_read(apb_driver.DBG_STATUS)
+            if status & 0x1:  # HALTED bit
+                break
+            await ClockCycles(dut.clk_i, 1)
+        else:
+            # EBREAK not reached (e.g. backward-jump loop): halt CPU to read state
+            await apb_driver.halt_cpu()
 
         # Verify setup registers were loaded correctly
         for reg_num, expected_val in self.setup_regs.items():

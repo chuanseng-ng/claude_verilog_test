@@ -94,7 +94,7 @@ module rv32i_core(
     // Hazard unit outputs
     // =========================================================================
     logic        stall_pc, stall_if_id, stall_id_ex, stall_ex_mem;
-    logic        flush_if_id, flush_id_ex;
+    logic        flush_if_id, flush_id_ex, flush_ex_mem;
     logic [1:0]  fwd_a_sel, fwd_b_sel, fwd_store_sel;
 
     // =========================================================================
@@ -109,6 +109,18 @@ module rv32i_core(
     logic [31:0] ex_pc_target;
     logic        jal_redirect;
     logic [31:0] jal_target;
+
+    // MEM-stage misaligned trap signals
+    logic        mem_trap_redirect;
+    logic [31:0] mem_trap_target;
+    logic        mem_trap_entry;
+    logic [31:0] mem_trap_pc_val, mem_trap_cause_val;
+
+    // Merged PC redirect (MEM trap has priority over EX redirect)
+    logic        pc_redirect_combined;
+    logic [31:0] pc_target_combined;
+    assign pc_redirect_combined = (ex_pc_redirect && !flush_ex_mem) | mem_trap_redirect;
+    assign pc_target_combined   = mem_trap_redirect ? mem_trap_target : ex_pc_target;
 
     // =========================================================================
     // Register file signals
@@ -134,8 +146,14 @@ module rv32i_core(
     logic [31:0] mret_pc_val;
     logic        mstatus_mie, mstatus_mie_eff, mie_mtie, mie_meie;
     logic [31:0] mip;
-    logic        trap_entry;
-    logic [31:0] trap_pc_val, trap_cause_val;
+    logic        trap_entry;             // From EX
+    logic [31:0] trap_pc_val, trap_cause_val;  // From EX
+    // Merged trap channel (MEM misalign takes priority over EX trap)
+    logic        trap_entry_merged;
+    logic [31:0] trap_pc_merged, trap_cause_merged;
+    assign trap_entry_merged = (trap_entry && !flush_ex_mem) | mem_trap_entry;
+    assign trap_pc_merged    = mem_trap_entry ? mem_trap_pc_val  : trap_pc_val;
+    assign trap_cause_merged = mem_trap_entry ? mem_trap_cause_val : trap_cause_val;
     logic        mret_ex;
 
     // =========================================================================
@@ -244,6 +262,7 @@ module rv32i_core(
         .if_cache_stall    (if_cache_stall),
         .mem_cache_stall   (mem_cache_stall),
         .ex_pc_redirect    (ex_pc_redirect),
+        .mem_trap_redirect (mem_trap_redirect),
         .id_jal_taken      (jal_redirect),
         .stall_pc          (stall_pc),
         .stall_if_id       (stall_if_id),
@@ -251,6 +270,7 @@ module rv32i_core(
         .stall_ex_mem      (stall_ex_mem),
         .flush_if_id       (flush_if_id),
         .flush_id_ex       (flush_id_ex),
+        .flush_ex_mem      (flush_ex_mem),
         .fwd_a_sel         (fwd_a_sel),
         .fwd_b_sel         (fwd_b_sel),
         .fwd_store_sel     (fwd_store_sel)
@@ -295,10 +315,10 @@ module rv32i_core(
         .csr_op           (csr_op_ex),
         .csr_wdata        (csr_wdata_ex),
         .rs1_addr         (csr_rs1_addr_ex),
-        .trap_entry       (trap_entry),
-        .trap_pc          (trap_pc_val),
-        .trap_cause       (trap_cause_val),
-        .mret             (mret_ex),
+        .trap_entry       (trap_entry_merged),
+        .trap_pc          (trap_pc_merged),
+        .trap_cause       (trap_cause_merged),
+        .mret             (mret_ex && !flush_ex_mem),
         .ext_irq_i        (ext_irq_pending),
         .timer_irq_i      (timer_irq_pending),
         .csr_rdata        (csr_rdata),
@@ -359,8 +379,8 @@ module rv32i_core(
         .stall_pc         (stall_pc),
         .stall_if_id      (stall_if_id),
         .flush_if_id      (flush_if_id),
-        .pc_redirect      (ex_pc_redirect),
-        .pc_target        (ex_pc_target),
+        .pc_redirect      (pc_redirect_combined),
+        .pc_target        (pc_target_combined),
         .jal_redirect     (jal_redirect),
         .jal_target       (jal_target),
         .dbg_halt_req     (dbg_halt_combined),
@@ -403,12 +423,12 @@ module rv32i_core(
         .clk              (clk),
         .rst_n            (rst_n),
         .stall_ex_mem     (stall_ex_mem),
+        .flush_ex_mem     (flush_ex_mem),
         .id_ex_reg_i      (id_ex_reg),
         .fwd_rs1          (fwd_rs1),
         .fwd_rs2          (fwd_rs2),
         .fwd_store        (fwd_store),
         .csr_rdata_i      (csr_rdata),
-        .csr_illegal_i    (csr_illegal),
         .irq_valid_i      (irq_valid),
         .irq_cause_i      (irq_cause),
         .mtvec_i          (mtvec),
@@ -433,19 +453,25 @@ module rv32i_core(
     // MEM Stage (Phase 3: D-cache interface)
     // =========================================================================
     rv32i_pipeline_mem u_mem (
-        .clk              (clk),
-        .rst_n            (rst_n),
-        .ex_mem_reg_i     (ex_mem_reg),
+        .clk                 (clk),
+        .rst_n               (rst_n),
+        .ex_mem_reg_i        (ex_mem_reg),
+        .mtvec_i             (mtvec),
         // D-cache interface
-        .dc_addr_o        (dc_addr),
-        .dc_valid_o       (dc_valid),
-        .dc_we_o          (dc_we),
-        .dc_wdata_o       (dc_wdata),
-        .dc_wstrb_o       (dc_wstrb),
-        .dc_rdata_i       (dc_rdata),
-        .dc_stall_i       (dc_stall),
-        .mem_cache_stall_o(mem_cache_stall),
-        .mem_wb_reg_o     (mem_wb_reg)
+        .dc_addr_o           (dc_addr),
+        .dc_valid_o          (dc_valid),
+        .dc_we_o             (dc_we),
+        .dc_wdata_o          (dc_wdata),
+        .dc_wstrb_o          (dc_wstrb),
+        .dc_rdata_i          (dc_rdata),
+        .dc_stall_i          (dc_stall),
+        .mem_cache_stall_o   (mem_cache_stall),
+        .mem_trap_redirect_o (mem_trap_redirect),
+        .mem_trap_target_o   (mem_trap_target),
+        .mem_trap_entry_o    (mem_trap_entry),
+        .mem_trap_pc_o       (mem_trap_pc_val),
+        .mem_trap_cause_o    (mem_trap_cause_val),
+        .mem_wb_reg_o        (mem_wb_reg)
     );
 
     // =========================================================================
@@ -596,6 +622,7 @@ module rv32i_core(
     /* verilator lint_off UNUSEDSIGNAL */
     logic _unused_resume    = dbg_resume_req;
     logic _unused_csr_wr_en = csr_wr_en;
+    logic _unused_csr_illegal = csr_illegal;  // CSR illegal now pre-computed in ID stage
     /* verilator lint_on UNUSEDSIGNAL */
 
 endmodule
