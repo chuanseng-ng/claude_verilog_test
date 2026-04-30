@@ -254,7 +254,7 @@ async def test_multi_dependency_same_source(dut):
 
 @cocotb.test()
 async def test_branch_taken_flush(dut):
-    """Branch taken: 2-cycle flush; instructions in IF and ID are squashed."""
+    """Branch taken: 3-cycle flush; instructions in EX, ID, and IF are squashed."""
     dut._log.info("=== Test: Branch Taken Flush ===")
     mem, dbg = await _setup_test(dut)
 
@@ -386,7 +386,7 @@ async def test_jal_flush(dut):
 
 @cocotb.test()
 async def test_jalr_flush(dut):
-    """JALR: 2-cycle flush (EX stage resolution, flushes IF and ID)."""
+    """JALR: 3-cycle flush (registered EX redirect; flushes EX ghost, ID, and IF)."""
     dut._log.info("=== Test: JALR 2-Cycle Flush ===")
     mem, dbg = await _setup_test(dut)
 

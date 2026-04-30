@@ -134,9 +134,10 @@ module rv32i_hazard_unit (
             stall_ex_mem = 1'b1;
 
         end else if (ex_pc_redirect) begin
-            // Priority 2: PC redirect (taken branch, JALR, trap, interrupt, MRET)
+            // Priority 2: PC redirect (registered) — flush EX ghost + ID + IF
             flush_if_id  = 1'b1;
             flush_id_ex  = 1'b1;
+            flush_ex_mem = 1'b1;
 
         end else if (id_jal_taken) begin
             // Priority 3: JAL resolved in ID — flush IF only

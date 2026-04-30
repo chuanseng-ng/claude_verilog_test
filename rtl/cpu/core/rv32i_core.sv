@@ -138,15 +138,29 @@ module rv32i_core(
         end
     end
 
-    // Ghost instruction kill: NOP-out EX→MEM path when registered redirect fires
+    // Registered EX-redirect — breaks EX→flush_id_ex combinational path (timing fix)
+    logic        ex_pc_redirect_r;
+    logic [31:0] ex_pc_target_r;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            ex_pc_redirect_r <= 1'b0;
+            ex_pc_target_r   <= '0;
+        end else begin
+            ex_pc_redirect_r <= ex_pc_redirect;
+            ex_pc_target_r   <= ex_pc_target;
+        end
+    end
+
+    // Ghost instruction kill: NOP-out EX→MEM path when registered MEM-trap fires
     ex_mem_reg_t ex_mem_reg_to_mem;
     assign ex_mem_reg_to_mem = mem_trap_redirect_r ? ex_mem_nop() : ex_mem_reg;
 
     // Merged PC redirect (MEM trap has priority over EX redirect)
     logic        pc_redirect_combined;
     logic [31:0] pc_target_combined;
-    assign pc_redirect_combined = (ex_pc_redirect && !flush_ex_mem) | mem_trap_redirect_r;
-    assign pc_target_combined   = mem_trap_redirect_r ? mem_trap_target_r : ex_pc_target;
+    assign pc_redirect_combined = ex_pc_redirect_r | mem_trap_redirect_r;
+    assign pc_target_combined   = mem_trap_redirect_r ? mem_trap_target_r : ex_pc_target_r;
 
     // =========================================================================
     // Register file signals
@@ -287,7 +301,7 @@ module rv32i_core(
         .if_id_rs2_addr    (if_id_reg.instruction[24:20]),
         .if_cache_stall    (if_cache_stall),
         .mem_cache_stall   (mem_cache_stall),
-        .ex_pc_redirect    (ex_pc_redirect),
+        .ex_pc_redirect    (ex_pc_redirect_r),
         .mem_trap_redirect (mem_trap_redirect_r),
         .id_jal_taken      (jal_redirect),
         .stall_pc          (stall_pc),
