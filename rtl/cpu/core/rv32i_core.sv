@@ -631,8 +631,8 @@ module rv32i_core(
     assign debug_rs1_data         = 32'h0;
     assign debug_rs2_data         = 32'h0;
     assign debug_branch_taken     = 1'b0;
-    assign debug_take_branch_jump = ex_pc_redirect;
-    assign debug_pc_src           = ex_pc_redirect;
+    assign debug_take_branch_jump = pc_redirect_combined;
+    assign debug_pc_src           = pc_redirect_combined;
     assign debug_state            = 4'h0;
     assign debug_ebreak           = dbg_ebreak_from_ex;
 
