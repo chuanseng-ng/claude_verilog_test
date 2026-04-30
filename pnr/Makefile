@@ -92,7 +92,7 @@ DRT_THREADS         ?= 4
 # Phony Targets
 #----------------------------------------------------------------
 
-.PHONY: all clean help
+.PHONY: all clean help lint
 .PHONY: synth floorplan place cts route parasitics sta power verify gls
 .PHONY: report_timing report_power report_area
 .PHONY: docker-pull docker-check docker-pdk docker-run docker-synth docker-results
@@ -157,6 +157,7 @@ help:
 	@echo "  report_summary - Show all summaries"
 	@echo ""
 	@echo "Utility Targets:"
+	@echo "  lint         - Verilator lint/compile check (nix-shell, no simulator needed)"
 	@echo "  clean        - Remove all generated files"
 	@echo "  help         - Show this help message"
 	@echo ""
@@ -169,6 +170,51 @@ help:
 	@echo "  PDK_ROOT        = $(PDK_ROOT)"
 	@echo "  DOCKER_CMD      = $(DOCKER_CMD)"
 	@echo ""
+
+#----------------------------------------------------------------
+# Verilator Lint / Compile Check
+# Runs via nix-shell (matches cocotb simulation environment).
+# Uses sim/sram_1rw_256x32_verilator.v behavioral stub for SRAM macros.
+#----------------------------------------------------------------
+
+# RTL sources in compile order (packages first, top last)
+RTL_SOURCES := \
+	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
+	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
+	../sim/sram_1rw_256x32_verilator.v \
+	$(RTL_DIR)/cpu/rv32i_cpu_top.sv \
+	$(RTL_DIR)/cpu/core/rv32i_core.sv \
+	$(RTL_DIR)/cpu/core/rv32i_decode.sv \
+	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
+	$(RTL_DIR)/cpu/core/rv32i_regfile.sv \
+	$(RTL_DIR)/cpu/core/rv32i_imm_gen.sv \
+	$(RTL_DIR)/cpu/core/rv32i_branch_comp.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_if.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_id.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_mem.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_wb.sv \
+	$(RTL_DIR)/cpu/core/rv32i_hazard_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_forwarding_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_csr_file.sv \
+	$(RTL_DIR)/cpu/core/rv32i_interrupt_ctrl.sv \
+	$(RTL_DIR)/cpu/rv32i_axi_arbiter.sv \
+	$(RTL_DIR)/mem/rv32i_icache.sv \
+	$(RTL_DIR)/mem/rv32i_dcache.sv \
+	$(RTL_DIR)/mem/rv32i_cache_arbiter.sv
+
+VERILATOR_LINT_FLAGS := --lint-only -sv \
+	-Wno-WIDTH -Wno-UNUSED -Wno-BLKSEQ -Wno-UNOPTFLAT --no-timing \
+	--top-module $(TOP_MODULE)
+
+lint:
+	@echo "=========================================="
+	@echo "Running Verilator lint/compile check"
+	@echo "  Top: $(TOP_MODULE)"
+	@echo "=========================================="
+	nix-shell -p verilator --run \
+		"verilator $(VERILATOR_LINT_FLAGS) $(RTL_SOURCES)"
+	@echo "Lint PASSED."
 
 #----------------------------------------------------------------
 # Stage 1: Synthesis
