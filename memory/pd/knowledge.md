@@ -427,3 +427,37 @@ BOTH approaches are used in run 6 for belt-and-suspenders.
 - Flow log: `flow.log` in the run directory
 - `--manual-pdk` flag required when not using Ciel/Volare for PDK management
 - `--pdk-root` must point to the directory containing the `asap7/` or `sky130*/` folder
+
+## ASAP7 Run 8 Post-Retiming Results (2026-04-29)
+
+**Run**: `RUN_2026-04-29_17-58-24` | 48 steps completed | Flow complete
+
+### PPA vs Baseline (Run 7 `RUN_2026-04-26_07-23-37`)
+
+| Metric | Run 7 (baseline) | Run 8 (post-retiming) | Delta |
+|--------|-----------------|----------------------|-------|
+| WNS (setup) | -1147 ps | **-1026 ps** | **+121 ps (+10.5%)** |
+| fmax | ~466 MHz | **~494 MHz** | **+28 MHz (+6%)** |
+| TNS | -2,751,000 ps | -2,475,200 ps | +276k ps |
+| Hold WNS | -12.51 ps | **+1.76 ps** | **CLEARED** |
+| Hold violations | 8 | **0** | **-8** |
+| Power | 32.29 mW | 32.41 mW | +0.12 mW (flat) |
+| Area | 7256.79 µm² | 7232.63 µm² | -24 µm² |
+
+### RTL Changes Applied
+Three retiming strategies reduced the CPU control-logic critical path:
+1. **Strategy 3**: `irq_valid_i` registered in EX stage — removed 6-7 interrupt AND/OR levels
+2. **Strategy 2**: `csr_illegal` pre-decoded in ID stage (`id_ex_reg_t.csr_illegal`) — removed 3-4 CSR decode levels
+3. **Strategy 1**: Misaligned detection moved EX→MEM — broke `alu_result[1:0]` data dependency
+
+### New Critical Path
+After CPU logic retiming, the critical path shifted to **SRAM address inputs**:
+`u_core.u_icache.gen_data_sram[3].u_data_sram/addr0[7]`
+
+The fakeram7 Liberty setup time on addr/data pins now limits fmax. Further improvement
+requires either SRAM timing optimization or a pipeline register on the I-cache address path.
+
+### Why Improvement Was Lower Than Predicted
+Predicted: 270–410 ps WNS improvement. Actual: 121 ps.
+The SRAM address input path was hidden behind the longer CPU logic path in Run 7.
+Once CPU logic was retimed, SRAM became the binding constraint at ~494 MHz.
