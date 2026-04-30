@@ -461,3 +461,65 @@ requires either SRAM timing optimization or a pipeline register on the I-cache a
 Predicted: 270–410 ps WNS improvement. Actual: 121 ps.
 The SRAM address input path was hidden behind the longer CPU logic path in Run 7.
 Once CPU logic was retimed, SRAM became the binding constraint at ~494 MHz.
+
+## ASAP7 Run 9 — Register mem_trap_redirect Results (2026-04-30)
+
+**Run**: `RUN_2026-04-30_19-30-03` | 48 steps completed | Flow complete
+**RTL commit**: `ffc7bbd` — registered all 5 MEM-trap signals + ghost instruction NOP kill
+
+### PPA vs Run 8
+
+| Metric | Run 8 (baseline) | Run 9 (mem_trap_redirect_r) | Delta |
+|--------|-----------------|------------------------------|-------|
+| WNS (setup) | -1026 ps | **-1059 ps** | -33 ps (flat/slight regression) |
+| fmax | ~494 MHz | **~486 MHz** | -8 MHz |
+| TNS | -2,475,200 ps | -2,514,910 ps | -40k ps |
+| Hold WNS | 0 ps | **-3.2 ps** | new minor violations |
+| Hold TNS | 0 ps | -19.2 ps | |
+| Power | 32.41 mW | **32.50 mW** | +0.09 mW (flat) |
+| Area | 7232.63 µm² | **7274.81 µm²** | +42 µm² (+5 FFs × ~8 µm²) |
+
+**Power correction**: Earlier memory recorded 5.76 mW for "Run 8" — that was incorrect,
+likely from an older intermediate estimate. Both Run 8 and Run 9 are ~32.4 mW from
+the actual final/metrics.json.
+
+### Why Timing Did Not Improve
+
+The mem_trap_redirect → SRAM addr0 critical path **was broken** — no SRAM endpoint
+appears in Run 9's top paths. However, a **co-critical path** of nearly identical length
+was already present in Run 8 and became the new bottleneck:
+
+**New critical path**: EX-stage pipeline register → deep combinational logic → `u_core.flush_id_ex` → ID/EX register NOP insertion → endpoint FF `_54588_`
+- Data arrival: 1161 ps | Required: 102 ps | Slack: -1059 ps
+- All top 6 violating paths share the SAME launch FF (`_53395_`)
+- Launch FF has high fanout (drives NOR5/NAND4/complex logic through 25+ levels)
+- Path group: PIPELINE
+
+The EX→flush_id_ex path was already at ~-1026 ps in Run 8 (second-worst, hidden behind
+SRAM path). Fixing the SRAM path exposed it at -1059 ps. The 33 ps regression is from
+slight placement pressure from the 5 new FFs.
+
+### Synthesis: ex_mem_reg_to_mem NOP Mux
+The ghost instruction kill mux (`ex_mem_reg_to_mem = mem_trap_redirect_r ? ex_mem_nop() : ex_mem_reg`)
+synthesized successfully — `u_core.ex_mem_reg_to_mem[258:265+]` bits are visible in the netlist.
+The NOP mux is NOT on the new critical path (hazard unit reads `ex_mem_reg` directly, not `ex_mem_reg_to_mem`).
+
+### Next Critical Path: EX Stage → flush_id_ex
+
+The new bottleneck is the combinational path:
+```
+EX/MEM pipeline register FF (_53395_, QN output)
+  → ~25 levels of branch/trap/control logic (NOR5, NAND4, OA21, OAI221, AOI21...)
+  → ex_pc_redirect computation
+  → u_core.flush_id_ex (hazard unit output)
+  → BUFx10 fanout342 + ID/EX register NOP gate logic
+  → ID/EX register bit (endpoint FF _54588_)
+Total: ~1161 ps data path → WNS -1059 ps at 1 GHz
+```
+
+**Recommended fix (Run 10)**: Register `ex_pc_redirect` before it feeds the hazard unit.
+This breaks the EX→flush_id_ex combinational path. The launch FF `_53395_` drives into
+the ex_pc_redirect computation; after registration, the path from `ex_pc_redirect_r` to
+`flush_id_ex` to the endpoint FF would be ~300-400 ps.
+Trade-off: branch misprediction penalty increases from 2 cycles → 3 cycles (ISA-compliant).
+Estimated WNS gain: ~+700 ps → targeting 650-750 MHz.
