@@ -134,10 +134,12 @@ module rv32i_pipeline_id(
     // =========================================================================
     // JAL early resolution (Decision 2: JAL in ID, 1-cycle penalty)
     // JAL: target = PC + J-immediate; does NOT depend on register values
-    // Only fire when the IF/ID register holds a valid JAL instruction
-    // and we are NOT being flushed this cycle.
+    // Only fire when the IF/ID register holds a valid JAL instruction.
+    // Note: !flush_id_ex guard removed — pc_redirect already overrides jal_redirect
+    // at the PC mux when a higher-priority flush is active (Priority 0 or 2).
+    // Load-use hazard (Priority 4) cannot coincide with JAL (JAL reads no registers).
     // =========================================================================
-    assign jal_redirect_o = if_id_reg_i.valid && jump && !jalr && !flush_id_ex;
+    assign jal_redirect_o = if_id_reg_i.valid && jump && !jalr;
     assign jal_target_o   = if_id_reg_i.pc + immediate;
 
     // =========================================================================
