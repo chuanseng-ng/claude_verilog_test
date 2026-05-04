@@ -163,8 +163,8 @@ module rv32i_pipeline_ex(
         mret_o          = 1'b0;
         fence_i_o       = 1'b0;
 
-        if (!id_ex_reg_i.valid) begin
-            // Bubble: nothing to do
+        if (!id_ex_reg_i.valid || flush_ex_mem) begin
+            // Bubble or ghost being killed by registered redirect: suppress all outputs
 
         end else if (irq_valid_r) begin
             // Interrupt (highest priority among traps)
@@ -228,7 +228,7 @@ module rv32i_pipeline_ex(
     assign trap_cause_o = trap_cause;
 
     // PC redirect to IF stage and hazard unit
-    assign ex_pc_redirect_o = do_redirect && id_ex_reg_i.valid;
+    assign ex_pc_redirect_o = do_redirect && id_ex_reg_i.valid && !flush_ex_mem;
     assign ex_pc_target_o   = redirect_target;
 
     // =========================================================================

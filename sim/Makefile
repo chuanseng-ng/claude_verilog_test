@@ -105,6 +105,15 @@ ifeq ($(SIM),verilator)
 	# Override PYTHON3 so the nix-verilator's verilated.mk uses the system
 	# Python instead of the nix Python 3.11 (which conflicts with PYTHONHOME=/usr).
 	BUILD_ARGS += PYTHON3=$(shell which python3)
+	# Override CXX/LINK: nix verilator generates Vtop.mk with CXX=clang++ but
+	# only g++ is available on this host outside nix's clang environment.
+	# cxx_shim.sh (in this directory) wraps g++ and strips clang-only flags
+	# (-fbracket-depth, -Qunused-arguments, -fcf-protection, -Wno-non-pod-varargs,
+	#  -Wno-overloaded-virtual, -Wno-parentheses-equality, -Wno-c++11-narrowing,
+	#  -Wno-constant-logical-operand, -Wno-tautological-*) and drops -include-pch
+	# (Vtop.cpp has explicit #include "Vtop__pch.h" so normal include suffices).
+	BUILD_ARGS += CXX=$(SIM_DIR)/cxx_shim.sh
+	BUILD_ARGS += LINK=$(SIM_DIR)/cxx_shim.sh
 ifneq ($(wildcard /nix/store),)
 	# Nix environment only: the nix ld.so can't find system libs (expat, zlib,
 	# etc.) when cocotb dlopen's libpython3.10.so.1.0 (not in its trusted dirs).

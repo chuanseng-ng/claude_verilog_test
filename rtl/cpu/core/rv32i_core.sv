@@ -110,17 +110,57 @@ module rv32i_core(
     logic        jal_redirect;
     logic [31:0] jal_target;
 
-    // MEM-stage misaligned trap signals
+    // MEM-stage misaligned trap signals (combinational, from u_mem)
     logic        mem_trap_redirect;
     logic [31:0] mem_trap_target;
     logic        mem_trap_entry;
     logic [31:0] mem_trap_pc_val, mem_trap_cause_val;
 
+    // Registered MEM-trap signals — breaks MEM→IF combinational feedback (timing fix)
+    logic        mem_trap_redirect_r;
+    logic [31:0] mem_trap_target_r;
+    logic        mem_trap_entry_r;
+    logic [31:0] mem_trap_pc_val_r, mem_trap_cause_val_r;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            mem_trap_redirect_r  <= 1'b0;
+            mem_trap_entry_r     <= 1'b0;
+            mem_trap_target_r    <= '0;
+            mem_trap_pc_val_r    <= '0;
+            mem_trap_cause_val_r <= '0;
+        end else begin
+            mem_trap_redirect_r  <= mem_trap_redirect;
+            mem_trap_entry_r     <= mem_trap_entry;
+            mem_trap_target_r    <= mem_trap_target;
+            mem_trap_pc_val_r    <= mem_trap_pc_val;
+            mem_trap_cause_val_r <= mem_trap_cause_val;
+        end
+    end
+
+    // Registered EX-redirect — breaks EX→flush_id_ex combinational path (timing fix)
+    logic        ex_pc_redirect_r;
+    logic [31:0] ex_pc_target_r;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            ex_pc_redirect_r <= 1'b0;
+            ex_pc_target_r   <= '0;
+        end else begin
+            ex_pc_redirect_r <= ex_pc_redirect;
+            ex_pc_target_r   <= ex_pc_target;
+        end
+    end
+
+    // Ghost instruction kill: NOP-out EX→MEM path when registered MEM-trap fires
+    ex_mem_reg_t ex_mem_reg_to_mem;
+    assign ex_mem_reg_to_mem = mem_trap_redirect_r ? ex_mem_nop() : ex_mem_reg;
+
     // Merged PC redirect (MEM trap has priority over EX redirect)
     logic        pc_redirect_combined;
     logic [31:0] pc_target_combined;
-    assign pc_redirect_combined = (ex_pc_redirect && !flush_ex_mem) | mem_trap_redirect;
-    assign pc_target_combined   = mem_trap_redirect ? mem_trap_target : ex_pc_target;
+    assign pc_redirect_combined = ex_pc_redirect_r | mem_trap_redirect_r;
+    assign pc_target_combined   = mem_trap_redirect_r ? mem_trap_target_r : ex_pc_target_r;
 
     // =========================================================================
     // Register file signals
@@ -151,9 +191,9 @@ module rv32i_core(
     // Merged trap channel (MEM misalign takes priority over EX trap)
     logic        trap_entry_merged;
     logic [31:0] trap_pc_merged, trap_cause_merged;
-    assign trap_entry_merged = (trap_entry && !flush_ex_mem) | mem_trap_entry;
-    assign trap_pc_merged    = mem_trap_entry ? mem_trap_pc_val  : trap_pc_val;
-    assign trap_cause_merged = mem_trap_entry ? mem_trap_cause_val : trap_cause_val;
+    assign trap_entry_merged = (trap_entry && !flush_ex_mem) | mem_trap_entry_r;
+    assign trap_pc_merged    = mem_trap_entry_r ? mem_trap_pc_val_r  : trap_pc_val;
+    assign trap_cause_merged = mem_trap_entry_r ? mem_trap_cause_val_r : trap_cause_val;
     logic        mret_ex;
 
     // =========================================================================
@@ -261,8 +301,8 @@ module rv32i_core(
         .if_id_rs2_addr    (if_id_reg.instruction[24:20]),
         .if_cache_stall    (if_cache_stall),
         .mem_cache_stall   (mem_cache_stall),
-        .ex_pc_redirect    (ex_pc_redirect),
-        .mem_trap_redirect (mem_trap_redirect),
+        .ex_pc_redirect    (ex_pc_redirect_r),
+        .mem_trap_redirect (mem_trap_redirect_r),
         .id_jal_taken      (jal_redirect),
         .stall_pc          (stall_pc),
         .stall_if_id       (stall_if_id),
@@ -305,7 +345,7 @@ module rv32i_core(
     // =========================================================================
     // CSR File
     // =========================================================================
-    assign csr_rd_access = id_ex_reg.csr_access && id_ex_reg.valid;
+    assign csr_rd_access = id_ex_reg.csr_access && id_ex_reg.valid && !flush_ex_mem;
 
     rv32i_csr_file u_csr (
         .clk              (clk),
@@ -455,7 +495,7 @@ module rv32i_core(
     rv32i_pipeline_mem u_mem (
         .clk                 (clk),
         .rst_n               (rst_n),
-        .ex_mem_reg_i        (ex_mem_reg),
+        .ex_mem_reg_i        (ex_mem_reg_to_mem),
         .mtvec_i             (mtvec),
         // D-cache interface
         .dc_addr_o           (dc_addr),
@@ -605,8 +645,8 @@ module rv32i_core(
     assign debug_rs1_data         = 32'h0;
     assign debug_rs2_data         = 32'h0;
     assign debug_branch_taken     = 1'b0;
-    assign debug_take_branch_jump = ex_pc_redirect;
-    assign debug_pc_src           = ex_pc_redirect;
+    assign debug_take_branch_jump = pc_redirect_combined;
+    assign debug_pc_src           = pc_redirect_combined;
     assign debug_state            = 4'h0;
     assign debug_ebreak           = dbg_ebreak_from_ex;
 
