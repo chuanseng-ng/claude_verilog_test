@@ -266,8 +266,10 @@ module rv32i_icache (
             end
 
             CS_REFILL: begin
-                // Write tag on last word (when entire line is committed)
-                if (ar_pending_q && axi_rvalid_i && (refill_word_q == 2'd3)) begin
+                // Write tag on last word (when entire line is committed).
+                // Guard with !addr_mismatch: if IC address changed during refill,
+                // do not commit stale tag — data SRAM was already guarded the same way.
+                if (ar_pending_q && axi_rvalid_i && !addr_mismatch && (refill_word_q == 2'd3)) begin
                     tag_csb0   = 1'b0;
                     tag_web0   = 1'b0;  // write
                     tag_addr0  = refill_line_addr_q[11:4];
@@ -431,8 +433,9 @@ module rv32i_icache (
             for (int j = 0; j < N_SETS; j++)
                 valid_array[j] = 1'b0;
         end else if (state_q == CS_REFILL &&
-                     ar_pending_q && axi_rvalid_i && (refill_word_q == 2'd3)) begin
-            // Refill complete — mark line valid
+                     ar_pending_q && axi_rvalid_i && !addr_mismatch && (refill_word_q == 2'd3)) begin
+            // Refill complete and address still matches — mark line valid.
+            // !addr_mismatch guard prevents marking valid when fetch address changed mid-refill.
             valid_array[refill_line_addr_q[11:4]] <= 1'b1;
         end
     end
