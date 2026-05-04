@@ -345,7 +345,7 @@ module rv32i_core(
     // =========================================================================
     // CSR File
     // =========================================================================
-    assign csr_rd_access = id_ex_reg.csr_access && id_ex_reg.valid;
+    assign csr_rd_access = id_ex_reg.csr_access && id_ex_reg.valid && !flush_ex_mem;
 
     rv32i_csr_file u_csr (
         .clk              (clk),

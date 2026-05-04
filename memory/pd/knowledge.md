@@ -507,7 +507,7 @@ The NOP mux is NOT on the new critical path (hazard unit reads `ex_mem_reg` dire
 ### Next Critical Path: EX Stage → flush_id_ex
 
 The new bottleneck is the combinational path:
-```
+```text
 EX/MEM pipeline register FF (_53395_, QN output)
   → ~25 levels of branch/trap/control logic (NOR5, NAND4, OA21, OAI221, AOI21...)
   → ex_pc_redirect computation

@@ -387,7 +387,7 @@ async def test_jal_flush(dut):
 @cocotb.test()
 async def test_jalr_flush(dut):
     """JALR: 3-cycle flush (registered EX redirect; flushes EX ghost, ID, and IF)."""
-    dut._log.info("=== Test: JALR 2-Cycle Flush ===")
+    dut._log.info("=== Test: JALR 3-Cycle Flush ===")
     mem, dbg = await _setup_test(dut)
 
     HANDLER = 0x40  # jump target
@@ -417,7 +417,7 @@ async def test_jalr_flush(dut):
     x3 = await dbg.read_gpr(3)
     x4 = await dbg.read_gpr(4)
     assert x2 == 0x8, f"JALR link addr wrong: x2=0x{x2:x}, expected 0x8"
-    assert x3 == 0, f"JALR 2-cycle flush failed: x3={x3}, expected 0"
+    assert x3 == 0, f"JALR 3-cycle flush failed: x3={x3}, expected 0"
     assert x4 == 88, f"JALR target failed: x4={x4}, expected 88"
     dut._log.info(f"x2=0x{x2:x}, x3={x3}, x4={x4} — PASS")
 
