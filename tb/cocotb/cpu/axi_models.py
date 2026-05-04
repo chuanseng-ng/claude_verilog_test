@@ -47,7 +47,8 @@ class ConfigurableAXIMemory:
         self.next_write_bvalid_delay = 0
 
         # Error injection (address-based, persistent until cleared)
-        self.error_map = {}  # {addr: 'SLVERR' | 'DECERR'}
+        self.error_map = {}        # {addr: 'SLVERR'|'DECERR'} — affects both R and W
+        self.write_error_map = {}  # {addr: 'SLVERR'|'DECERR'} — affects W only
 
         # Statistics
         self.stats = {
@@ -109,9 +110,23 @@ class ConfigurableAXIMemory:
         assert error_type in ["SLVERR", "DECERR"], f"Invalid error type: {error_type}"
         self.error_map[addr & 0xFFFFFFFC] = error_type
 
+    def inject_write_error(self, addr, error_type="SLVERR"):
+        """Configure error response for write transactions only (not reads).
+
+        Use this when the address will also be read (e.g. write-allocate) to
+        avoid unintended SLVERR on the read that would prevent dirty-line creation.
+
+        Args:
+            addr: Address to inject write error at
+            error_type: 'SLVERR' (0b10) or 'DECERR' (0b11)
+        """
+        assert error_type in ["SLVERR", "DECERR"], f"Invalid error type: {error_type}"
+        self.write_error_map[addr & 0xFFFFFFFC] = error_type
+
     def clear_errors(self):
         """Clear all error injections."""
         self.error_map.clear()
+        self.write_error_map.clear()
 
     def write_word(self, addr, data):
         """Write 32-bit word to memory.
@@ -364,13 +379,12 @@ class ConfigurableAXIMemory:
                     if self.next_write_bvalid_delay > self.stats["max_bvalid_stall"]:
                         self.stats["max_bvalid_stall"] = self.next_write_bvalid_delay
 
-                # Check for error injection
-                if aligned_addr in self.error_map:
-                    error_type = self.error_map[aligned_addr]
-                    if error_type == "SLVERR":
-                        self.dut.axi_bresp_i.value = 0b10
-                    else:  # DECERR
-                        self.dut.axi_bresp_i.value = 0b11
+                # Check for error injection (error_map affects both R+W; write_error_map W only)
+                write_err = self.error_map.get(aligned_addr) or self.write_error_map.get(aligned_addr)
+                if write_err == "SLVERR":
+                    self.dut.axi_bresp_i.value = 0b10
+                elif write_err == "DECERR":
+                    self.dut.axi_bresp_i.value = 0b11
                 else:
                     self.dut.axi_bresp_i.value = 0b00  # OKAY
 

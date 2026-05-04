@@ -642,8 +642,10 @@ async def test_axi_error_store(dut):
     mem.write_word(0x0010, 0x00100073)  # EBREAK
     mem.write_word(0x1200, 0)  # pre-populate eviction target for D-cache refill
 
-    # Inject SLVERR at store address — will be seen when D-cache evicts the dirty line
-    mem.inject_error(0x0200, "SLVERR")
+    # Inject SLVERR on writes only — the SW will first read-allocate 0x200 (write-allocate),
+    # then the LW from 0x1200 evicts the dirty line causing an AXI write to 0x200.
+    # Using inject_write_error avoids triggering SLVERR on the read-allocate fetch.
+    mem.inject_write_error(0x0200, "SLVERR")
 
     # Run and monitor for trap
     cycle = 0
