@@ -176,7 +176,7 @@ module rv32i_icache (
     logic [31:0] tag_dout_r;
     logic [31:0] data_dout_r [0:LINE_WORDS-1];
 
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             tag_dout_r <= '0;
             for (int i = 0; i < LINE_WORDS; i++) data_dout_r[i] <= '0;
@@ -322,7 +322,7 @@ module rv32i_icache (
     // =========================================================================
     // FSM — sequential logic
     // =========================================================================
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             state_q            <= CS_IDLE;
             ic_addr_q          <= '0;

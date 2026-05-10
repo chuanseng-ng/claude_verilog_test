@@ -35,20 +35,20 @@
     "VERILOG_DEFINES": ["SRAM_ASAP7"],
 
     "FP_SIZING":       "absolute",
-    "DIE_AREA":        "0 0 150 150",
-    "CORE_AREA":       "5 5 145 145",
+    "DIE_AREA":        "0 0 140 140",
+    "CORE_AREA":       "5 5 135 135",
     "FP_CORE_UTIL":    40,
     "FP_ASPECT_RATIO": 1,
 
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
 
-    "PL_TARGET_DENSITY_PCT":     40,
+    "PL_TARGET_DENSITY_PCT":     45,
     "PL_TIME_DRIVEN":            true,
     "PL_ROUTABILITY_DRIVEN":     true,
 
     "FP_PDN_MULTILAYER":         true,
     "FP_PDN_ENABLE_RAILS":       true,
-    "PDN_CONNECT_MACROS_TO_GRID": false,
+    "PDN_CONNECT_MACROS_TO_GRID": true,
     "ERROR_ON_PDN_VIOLATIONS":   false,
 
     "FP_PDN_RAIL_WIDTH":  0.054,
@@ -56,8 +56,8 @@
     "FP_PDN_VWIDTH":      0.120,
     "FP_PDN_HSPACING":    0.090,
     "FP_PDN_VSPACING":    0.120,
-    "FP_PDN_HPITCH":      6.48,
-    "FP_PDN_VPITCH":      6.48,
+    "FP_PDN_HPITCH":      4.5,
+    "FP_PDN_VPITCH":      4.5,
     "FP_PDN_HOFFSET":     0.5,
     "FP_PDN_VOFFSET":     0.5,
     "FP_PDN_CORE_RING_HWIDTH":   0.162,

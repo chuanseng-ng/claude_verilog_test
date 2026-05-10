@@ -300,13 +300,13 @@ module rv32i_cpu_top (
   // the register reads non-zero when the CPU is halted and the pipeline is empty.
   logic [31:0] last_commit_insn_q;
 
-  always_ff @(posedge clk_i or negedge rst_n_i) begin
+  always_ff @(posedge clk_i) begin
     if (!rst_n_i)
       last_commit_insn_q <= 32'h0;
     else if (commit_valid_o || trap_taken_o)
       last_commit_insn_q <= commit_insn_o;
   end
-  always_ff @(posedge clk_i or negedge rst_n_i) begin
+  always_ff @(posedge clk_i) begin
     if (!rst_n_i) begin
       dbg_halted_prev <= 1'b0;
     end else begin
@@ -317,7 +317,7 @@ module rv32i_cpu_top (
   // ================================================================
   // Halt latch and single-step sequencer
   // ================================================================
-  always_ff @(posedge clk_i or negedge rst_n_i) begin
+  always_ff @(posedge clk_i) begin
     if (!rst_n_i) begin
       halt_latch_q  <= 1'b0;
       step_pending_q <= 1'b0;
@@ -363,7 +363,7 @@ module rv32i_cpu_top (
   end
 
   // APB write logic
-  always_ff @(posedge clk_i or negedge rst_n_i) begin
+  always_ff @(posedge clk_i) begin
     if (!rst_n_i) begin
       dbg_ctrl_reg    <= 32'h0;
       dbg_bp0_addr    <= 32'h0;
@@ -487,7 +487,7 @@ module rv32i_cpu_top (
   //   0x4 = single-step complete
   //   0x8 = EBREAK instruction
 
-  always_ff @(posedge clk_i or negedge rst_n_i) begin
+  always_ff @(posedge clk_i) begin
     if (!rst_n_i) begin
       halt_cause_lat <= 4'h0;
     end else begin

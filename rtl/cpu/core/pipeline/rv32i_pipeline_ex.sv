@@ -148,7 +148,7 @@ module rv32i_pipeline_ex(
     // critical path. RISC-V spec imposes no single-cycle interrupt latency
     // requirement; a 1-cycle additional delay is fully compliant.
     logic irq_valid_r;
-    always_ff @(posedge clk or negedge rst_n)
+    always_ff @(posedge clk)
         if (!rst_n) irq_valid_r <= 1'b0;
         else        irq_valid_r <= irq_valid_i;
 
@@ -272,7 +272,7 @@ module rv32i_pipeline_ex(
     // =========================================================================
     // EX/MEM Pipeline Register
     // =========================================================================
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             ex_mem_reg_o <= ex_mem_nop();
         end else if (flush_ex_mem) begin

@@ -140,7 +140,6 @@ set_multicycle_path -hold  1 -to [get_ports apb_pready_o]
 # 7. Environment
 ###############################################################################
 # set_max_transition handled via MAX_TRANSITION_CONSTRAINT in config.json (40ps for ASAP7 1ps time_unit)
-set_max_fanout     20    [current_design]
 set_max_area       0
 
 set_driving_cell -lib_cell BUFx2_ASAP7_75t_R -pin Y [all_inputs]

@@ -40,7 +40,7 @@ module rv32i_regfile (
   logic [31:0] regs [1:31];
 
   // Synchronous write
-  always_ff @(posedge clk or negedge rst_n) begin
+  always_ff @(posedge clk) begin
     if (!rst_n) begin
       // Reset all registers to zero
       for (int i = 1; i < 32; i++) begin

@@ -122,7 +122,7 @@ module rv32i_core(
     logic        mem_trap_entry_r;
     logic [31:0] mem_trap_pc_val_r, mem_trap_cause_val_r;
 
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             mem_trap_redirect_r  <= 1'b0;
             mem_trap_entry_r     <= 1'b0;
@@ -142,7 +142,7 @@ module rv32i_core(
     logic        ex_pc_redirect_r;
     logic [31:0] ex_pc_target_r;
 
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             ex_pc_redirect_r <= 1'b0;
             ex_pc_target_r   <= '0;
