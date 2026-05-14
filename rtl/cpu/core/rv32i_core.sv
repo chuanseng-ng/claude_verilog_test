@@ -85,16 +85,19 @@ module rv32i_core(
     // =========================================================================
     // Pipeline registers
     // =========================================================================
-    if_id_reg_t  if_id_reg;
-    id_ex_reg_t  id_ex_reg;
-    ex_mem_reg_t ex_mem_reg;
-    mem_wb_reg_t mem_wb_reg;
+    if_id_reg_t   if_id_reg;
+    id_ex_reg_t   id_ex_reg;
+    ex1_ex2_reg_t ex1_ex2_reg;
+    ex_mem_reg_t  ex_mem_reg;
+    mem_wb_reg_t  mem_wb_reg;
 
     // =========================================================================
     // Hazard unit outputs
     // =========================================================================
     logic        stall_pc, stall_if_id, stall_id_ex, stall_ex_mem;
+    logic        stall_ex1_ex2;
     logic        flush_if_id, flush_id_ex, flush_ex_mem;
+    logic        flush_ex1_ex2;
     logic [1:0]  fwd_a_sel, fwd_b_sel, fwd_store_sel;
 
     // =========================================================================
@@ -308,9 +311,11 @@ module rv32i_core(
         .stall_if_id       (stall_if_id),
         .stall_id_ex       (stall_id_ex),
         .stall_ex_mem      (stall_ex_mem),
+        .stall_ex1_ex2_o   (stall_ex1_ex2),
         .flush_if_id       (flush_if_id),
         .flush_id_ex       (flush_id_ex),
         .flush_ex_mem      (flush_ex_mem),
+        .flush_ex1_ex2_o   (flush_ex1_ex2),
         .fwd_a_sel         (fwd_a_sel),
         .fwd_b_sel         (fwd_b_sel),
         .fwd_store_sel     (fwd_store_sel)
@@ -462,7 +467,6 @@ module rv32i_core(
     rv32i_pipeline_ex u_ex (
         .clk              (clk),
         .rst_n            (rst_n),
-        .stall_ex_mem     (stall_ex_mem),
         .flush_ex_mem     (flush_ex_mem),
         .id_ex_reg_i      (id_ex_reg),
         .fwd_rs1          (fwd_rs1),
@@ -486,6 +490,18 @@ module rv32i_core(
         .mret_o           (mret_ex),
         .dbg_halt_req_o   (dbg_ebreak_from_ex),
         .fence_i_o        (fence_i_pulse),
+        .ex1_ex2_reg_o    (ex1_ex2_reg)
+    );
+
+    // =========================================================================
+    // EX2 Stage — owns the EX1/EX2 → EX/MEM pipeline register
+    // =========================================================================
+    rv32i_pipeline_ex2 u_ex2 (
+        .clk_i            (clk),
+        .rst_n_i          (rst_n),
+        .stall_ex1_ex2_i  (stall_ex1_ex2),
+        .flush_ex1_ex2_i  (flush_ex1_ex2),
+        .ex1_ex2_reg_i    (ex1_ex2_reg),
         .ex_mem_reg_o     (ex_mem_reg)
     );
 

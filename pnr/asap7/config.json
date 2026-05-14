@@ -19,6 +19,7 @@
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_id.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv",
         "dir::../../rtl/mem/rv32i_icache.sv",
@@ -42,7 +43,7 @@
 
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
 
-    "PL_TARGET_DENSITY_PCT":     45,
+    "PL_TARGET_DENSITY_PCT":     50,
     "PL_TIME_DRIVEN":            true,
     "PL_ROUTABILITY_DRIVEN":     true,
 

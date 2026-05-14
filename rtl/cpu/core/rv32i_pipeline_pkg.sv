@@ -84,6 +84,36 @@ package rv32i_pipeline_pkg;
     } ex_mem_reg_t;
 
     // =========================================================================
+    // EX1/EX2 Pipeline Register
+    // Identical fields to ex_mem_reg_t — captures EX1 combinational outputs
+    // at the clock edge; EX2 reads this and drives ex_mem_reg_t.
+    // =========================================================================
+    typedef struct packed {
+        logic [31:0] pc;
+        logic [31:0] instruction;
+        logic [31:0] alu_result;
+        logic [31:0] mem_wdata_aligned;
+        logic [3:0]  mem_wstrb;
+        logic [31:0] csr_rdata;
+        logic [4:0]  rd_addr;
+        logic        reg_wr_en;
+        logic        mem_rd;
+        logic        mem_wr;
+        logic [2:0]  mem_size;
+        logic        mem_unsigned;
+        logic        csr_access;
+        logic [11:0] csr_addr;
+        logic [31:0] csr_wdata;
+        logic        jump;
+        logic        jalr;
+        logic        pc_redirect;
+        logic [31:0] pc_target;
+        logic        trap_valid;
+        logic [31:0] trap_cause;
+        logic        valid;
+    } ex1_ex2_reg_t;
+
+    // =========================================================================
     // MEM/WB Pipeline Register
     // Captures memory read data for WB mux and final writeback.
     // =========================================================================
@@ -167,6 +197,31 @@ package rv32i_pipeline_pkg;
         ex_mem_nop.trap_valid  = 1'b0;
         ex_mem_nop.trap_cause  = 32'h0;
         ex_mem_nop.valid       = 1'b0;
+    endfunction
+
+    function automatic ex1_ex2_reg_t ex1_ex2_nop();
+        ex1_ex2_nop.pc                = 32'h0;
+        ex1_ex2_nop.instruction       = 32'h0;
+        ex1_ex2_nop.alu_result        = 32'h0;
+        ex1_ex2_nop.mem_wdata_aligned = 32'h0;
+        ex1_ex2_nop.mem_wstrb         = 4'h0;
+        ex1_ex2_nop.csr_rdata         = 32'h0;
+        ex1_ex2_nop.rd_addr           = 5'h0;
+        ex1_ex2_nop.reg_wr_en         = 1'b0;
+        ex1_ex2_nop.mem_rd            = 1'b0;
+        ex1_ex2_nop.mem_wr            = 1'b0;
+        ex1_ex2_nop.mem_size          = 3'h0;
+        ex1_ex2_nop.mem_unsigned      = 1'b0;
+        ex1_ex2_nop.csr_access        = 1'b0;
+        ex1_ex2_nop.csr_addr          = 12'h0;
+        ex1_ex2_nop.csr_wdata         = 32'h0;
+        ex1_ex2_nop.jump              = 1'b0;
+        ex1_ex2_nop.jalr              = 1'b0;
+        ex1_ex2_nop.pc_redirect       = 1'b0;
+        ex1_ex2_nop.pc_target         = 32'h0;
+        ex1_ex2_nop.trap_valid        = 1'b0;
+        ex1_ex2_nop.trap_cause        = 32'h0;
+        ex1_ex2_nop.valid             = 1'b0;
     endfunction
 
     function automatic mem_wb_reg_t mem_wb_nop();

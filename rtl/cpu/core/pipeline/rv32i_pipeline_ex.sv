@@ -18,8 +18,8 @@ module rv32i_pipeline_ex(
     input  logic        rst_n,
 
     // ── Hazard unit controls ──────────────────────────────────────────────────
-    input  logic        stall_ex_mem,   // Hold EX/MEM register
-    input  logic        flush_ex_mem,   // Squash EX→MEM (MEM-stage misalign trap wins)
+    input  logic        flush_ex_mem,   // Squash EX output (MEM-stage misalign trap wins)
+    // stall_ex_mem removed — EX2 owns the pipeline register
     // flush_id_ex handled by the ID stage
 
     // ── ID/EX pipeline register input ────────────────────────────────────────
@@ -66,8 +66,8 @@ module rv32i_pipeline_ex(
     // ── FENCE.I I-cache invalidation (Phase 3) ────────────────────────────────
     output logic        fence_i_o,      // Pulse: invalidate I-cache this cycle
 
-    // ── EX/MEM pipeline register output ──────────────────────────────────────
-    output ex_mem_reg_t ex_mem_reg_o
+    // ── EX1/EX2 pipeline register output (combinational; EX2 owns the FF) ────
+    output ex1_ex2_reg_t ex1_ex2_reg_o
 );
 
     // =========================================================================
@@ -270,52 +270,55 @@ module rv32i_pipeline_ex(
     end
 
     // =========================================================================
-    // EX/MEM Pipeline Register
+    // EX1 combinational output — drives ex1_ex2_reg_o (EX2 owns the FF)
+    // stall_ex_mem / flush_ex_mem are no longer used here; EX2 handles them.
     // =========================================================================
-    always_ff @(posedge clk) begin
-        if (!rst_n) begin
-            ex_mem_reg_o <= ex_mem_nop();
-        end else if (flush_ex_mem) begin
-            ex_mem_reg_o <= ex_mem_nop();
-        end else if (!stall_ex_mem) begin
-            if (!id_ex_reg_i.valid || trap_valid) begin
-                // Trap or bubble: propagate as a trap-only or NOP
-                ex_mem_reg_o            <= ex_mem_nop();
-                if (id_ex_reg_i.valid && trap_valid) begin
-                    ex_mem_reg_o.pc         <= id_ex_reg_i.pc;
-                    ex_mem_reg_o.instruction<= id_ex_reg_i.instruction;
-                    ex_mem_reg_o.trap_valid <= 1'b1;
-                    ex_mem_reg_o.trap_cause <= trap_cause;
-                    ex_mem_reg_o.pc_redirect<= do_redirect;
-                    ex_mem_reg_o.pc_target  <= redirect_target;
-                    ex_mem_reg_o.valid      <= 1'b1;
-                end
-            end else begin
-                ex_mem_reg_o.pc          <= id_ex_reg_i.pc;
-                ex_mem_reg_o.instruction <= id_ex_reg_i.instruction;
-                ex_mem_reg_o.alu_result        <= alu_result;
-                ex_mem_reg_o.mem_wdata_aligned <= pre_wdata_aligned;
-                ex_mem_reg_o.mem_wstrb         <= pre_wstrb;
-                ex_mem_reg_o.csr_rdata   <= csr_rdata_i;
-                ex_mem_reg_o.rd_addr     <= id_ex_reg_i.rd_addr;
-                ex_mem_reg_o.reg_wr_en   <= id_ex_reg_i.reg_wr_en;
-                ex_mem_reg_o.mem_rd      <= id_ex_reg_i.mem_rd;
-                ex_mem_reg_o.mem_wr      <= id_ex_reg_i.mem_wr;
-                ex_mem_reg_o.mem_size    <= id_ex_reg_i.mem_size;
-                ex_mem_reg_o.mem_unsigned<= id_ex_reg_i.mem_unsigned;
-                ex_mem_reg_o.csr_access  <= id_ex_reg_i.csr_access;
-                ex_mem_reg_o.csr_addr    <= id_ex_reg_i.csr_addr;
-                ex_mem_reg_o.csr_wdata   <= csr_wd;
-                ex_mem_reg_o.jump        <= id_ex_reg_i.jump;
-                ex_mem_reg_o.jalr        <= id_ex_reg_i.jalr;
-                ex_mem_reg_o.pc_redirect <= do_redirect;
-                ex_mem_reg_o.pc_target   <= redirect_target;
-                ex_mem_reg_o.trap_valid  <= 1'b0;
-                ex_mem_reg_o.trap_cause  <= 32'h0;
-                ex_mem_reg_o.valid       <= 1'b1;
+    always_comb begin
+        ex1_ex2_reg_o = ex1_ex2_nop();
+
+        if (!id_ex_reg_i.valid || flush_ex_mem) begin
+            // Bubble or ghost killed by registered redirect — output NOP
+            if (id_ex_reg_i.valid && trap_valid && !flush_ex_mem) begin
+                ex1_ex2_reg_o.pc          = id_ex_reg_i.pc;
+                ex1_ex2_reg_o.instruction = id_ex_reg_i.instruction;
+                ex1_ex2_reg_o.trap_valid  = 1'b1;
+                ex1_ex2_reg_o.trap_cause  = trap_cause;
+                ex1_ex2_reg_o.pc_redirect = do_redirect;
+                ex1_ex2_reg_o.pc_target   = redirect_target;
+                ex1_ex2_reg_o.valid       = 1'b1;
             end
+        end else if (trap_valid) begin
+            ex1_ex2_reg_o.pc          = id_ex_reg_i.pc;
+            ex1_ex2_reg_o.instruction = id_ex_reg_i.instruction;
+            ex1_ex2_reg_o.trap_valid  = 1'b1;
+            ex1_ex2_reg_o.trap_cause  = trap_cause;
+            ex1_ex2_reg_o.pc_redirect = do_redirect;
+            ex1_ex2_reg_o.pc_target   = redirect_target;
+            ex1_ex2_reg_o.valid       = 1'b1;
+        end else begin
+            ex1_ex2_reg_o.pc                = id_ex_reg_i.pc;
+            ex1_ex2_reg_o.instruction       = id_ex_reg_i.instruction;
+            ex1_ex2_reg_o.alu_result        = alu_result;
+            ex1_ex2_reg_o.mem_wdata_aligned = pre_wdata_aligned;
+            ex1_ex2_reg_o.mem_wstrb         = pre_wstrb;
+            ex1_ex2_reg_o.csr_rdata         = csr_rdata_i;
+            ex1_ex2_reg_o.rd_addr           = id_ex_reg_i.rd_addr;
+            ex1_ex2_reg_o.reg_wr_en         = id_ex_reg_i.reg_wr_en;
+            ex1_ex2_reg_o.mem_rd            = id_ex_reg_i.mem_rd;
+            ex1_ex2_reg_o.mem_wr            = id_ex_reg_i.mem_wr;
+            ex1_ex2_reg_o.mem_size          = id_ex_reg_i.mem_size;
+            ex1_ex2_reg_o.mem_unsigned      = id_ex_reg_i.mem_unsigned;
+            ex1_ex2_reg_o.csr_access        = id_ex_reg_i.csr_access;
+            ex1_ex2_reg_o.csr_addr          = id_ex_reg_i.csr_addr;
+            ex1_ex2_reg_o.csr_wdata         = csr_wd;
+            ex1_ex2_reg_o.jump              = id_ex_reg_i.jump;
+            ex1_ex2_reg_o.jalr              = id_ex_reg_i.jalr;
+            ex1_ex2_reg_o.pc_redirect       = do_redirect;
+            ex1_ex2_reg_o.pc_target         = redirect_target;
+            ex1_ex2_reg_o.trap_valid        = 1'b0;
+            ex1_ex2_reg_o.trap_cause        = 32'h0;
+            ex1_ex2_reg_o.valid             = 1'b1;
         end
-        // else stall_ex_mem=1: hold current value
     end
 
 endmodule
