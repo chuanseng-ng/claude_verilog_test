@@ -219,8 +219,9 @@ async def test_read_miss_then_hit(dut):
     data = await _read(dut, BASE)
     assert data == 0xDEAD_BEEF, f"Got {data:#010x}"
 
-    # Hit — D-cache takes 3 cycles (IDLE→SRAM_LATCH→TAG_CHECK); the key property
-    # is that no AXI read is issued (i.e. it's a cache hit, not a miss+refill).
+    # Hit — D-cache takes 4 cycles (IDLE→SRAM_LATCH→HIT_PENDING→TAG_CHECK); the
+    # key property is that no AXI read is issued (i.e. it's a cache hit, not a
+    # miss+refill).  The 6-cycle polling window covers the extra pipeline stage.
     axi_arvalid_fired = False
     dut.dc_valid_i.value = 1
     dut.dc_we_i.value = 0
@@ -265,8 +266,9 @@ async def test_write_hit_no_axi(dut):
     data = await _read(dut, BASE)
     assert data == 0x1111_1111
 
-    # Write-hit — D-cache takes 3 cycles (IDLE→SRAM_LATCH→TAG_CHECK); the key
-    # property is that no AXI write is issued (dirty bit set in SRAM, no eviction).
+    # Write-hit — D-cache takes 4 cycles (IDLE→SRAM_LATCH→HIT_PENDING→TAG_CHECK);
+    # the key property is that no AXI write is issued (dirty bit set in SRAM, no
+    # eviction).  The 6-cycle polling window covers the extra pipeline stage.
     axi_awvalid_fired = False
     dut.dc_valid_i.value = 1
     dut.dc_we_i.value = 1

@@ -157,10 +157,15 @@ async def test_basic_miss_then_hit(dut):
     assert data0 == 0x0000_0013, f"Got {data0:#010x}"
     dut._log.info(f"Miss fill OK, data={data0:#010x}")
 
-    # Second access to same address → hit (stall_i should deassert immediately)
+    # Second access to same address → hit.
+    # After _fetch() returns at CS_TAG_CHECK, the FSM still needs one edge to
+    # return to CS_IDLE, then two more edges for CS_IDLE→CS_SRAM_LATCH→CS_TAG_CHECK.
+    # Stall deasserts (hit=1) at CS_TAG_CHECK, 3 edges after ic_valid_i is reasserted.
     dut.ic_valid_i.value = 1
     dut.ic_addr_i.value = BASE
-    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)  # CS_TAG_CHECK → CS_IDLE (stall=1: ic_valid_i=1 in IDLE)
+    await RisingEdge(dut.clk)  # CS_IDLE → CS_SRAM_LATCH (stall=1)
+    await RisingEdge(dut.clk)  # CS_SRAM_LATCH → CS_TAG_CHECK (hit: stall=0)
     assert not dut.ic_stall_o.value, "Expected cache hit (no stall) on second access"
     data1 = int(dut.ic_rdata_o.value)
     dut.ic_valid_i.value = 0
@@ -292,10 +297,15 @@ async def test_fence_i_invalidation(dut):
     data = await _fetch(dut, BASE)
     assert data == 0x1234_5678
 
-    # Verify hit
+    # Verify hit.
+    # After _fetch() returns at CS_TAG_CHECK, the FSM still needs one edge to
+    # return to CS_IDLE, then two more edges for CS_IDLE→CS_SRAM_LATCH→CS_TAG_CHECK.
+    # Stall deasserts (hit=1) at CS_TAG_CHECK, 3 edges after ic_valid_i is reasserted.
     dut.ic_valid_i.value = 1
     dut.ic_addr_i.value = BASE
-    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)  # CS_TAG_CHECK → CS_IDLE (stall=1: ic_valid_i=1 in IDLE)
+    await RisingEdge(dut.clk)  # CS_IDLE → CS_SRAM_LATCH (stall=1)
+    await RisingEdge(dut.clk)  # CS_SRAM_LATCH → CS_TAG_CHECK (hit: stall=0)
     assert not dut.ic_stall_o.value, "Expected hit before invalidation"
     dut.ic_valid_i.value = 0
 
