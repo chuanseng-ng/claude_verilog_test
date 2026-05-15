@@ -31,7 +31,7 @@
 
     "CLOCK_PORT":   "clk_i",
     "CLOCK_NET":    "clk_i",
-    "CLOCK_PERIOD": 1.0,
+    "CLOCK_PERIOD": 1.2,
 
     "VERILOG_DEFINES": ["SRAM_ASAP7"],
 
@@ -43,7 +43,7 @@
 
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
 
-    "PL_TARGET_DENSITY_PCT":     50,
+    "PL_TARGET_DENSITY_PCT":     45,
     "PL_TIME_DRIVEN":            true,
     "PL_ROUTABILITY_DRIVEN":     true,
 
@@ -89,7 +89,7 @@
     "SYNTH_STRATEGY":     "DELAY 3",
     "SYNTH_SIZING":       true,
     "SYNTH_ABC_BUFFERING": true,
-    "MAX_FANOUT_CONSTRAINT": 4,
+    "MAX_FANOUT_CONSTRAINT": 20,
 
     "PNR_SDC_FILE":     "dir::constraints/asap7.sdc",
     "SIGNOFF_SDC_FILE": "dir::constraints/asap7.sdc",

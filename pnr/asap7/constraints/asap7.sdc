@@ -16,7 +16,7 @@
 ###############################################################################
 # 1. Clock definition
 ###############################################################################
-create_clock -name clk -period 1.000 [get_ports clk_i]
+create_clock -name clk -period 1.200 [get_ports clk_i]
 
 set_clock_uncertainty -setup 0.020 [get_clocks clk]
 set_clock_uncertainty -hold  0.010 [get_clocks clk]
@@ -156,3 +156,9 @@ group_path -name PIPELINE -from [get_clocks clk] -to [get_clocks clk]
 ###############################################################################
 set_false_path -hold -to [get_pins -hierarchical *din0*]
 set_false_path -hold -to [get_pins -hierarchical *addr0*]
+
+###############################################################################
+# 9. D-cache writeback tag path — multi-cycle (4+ AXI beats per refill)
+###############################################################################
+set_multicycle_path -setup 2 -through [get_nets -hierarchical "*u_dcache*wb_tag*"]
+set_multicycle_path -hold  1 -through [get_nets -hierarchical "*u_dcache*wb_tag*"]
