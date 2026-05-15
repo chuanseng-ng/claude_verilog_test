@@ -17,19 +17,20 @@
 //   - valid_array: needed for 1-cycle bulk reset and in-cycle hit detection
 //   - dirty_array: needed for writeback decision in CS_TAG_CHECK
 //
-// Timing model — SRAM has 1-cycle read latency:
-//   CS_IDLE     : dc_valid_i → issue SRAM read (all 5 SRAMs), stall=1
-//   CS_TAG_CHECK: SRAM output available
-//                 read  hit → stall=0, dc_rdata_o from data SRAM dout
-//                 write hit → issue SRAM byte-masked write, stall=0, dirty←1
-//                 miss, clean victim → → CS_REFILL
-//                 miss, dirty victim → capture dirty line from data SRAM dout
-//                                      into wb_buf_q, → CS_WRITEBACK
-//   CS_WRITEBACK: send wb_buf_q[0..3] to AXI word-by-word, → CS_REFILL
-//   CS_REFILL   : fetch 4 words from AXI, write to SRAM (with write-allocate
-//                 byte merge for write-miss), update valid/tag, → CS_DONE
-//   CS_DONE     : dc_rdata_o from refill_buf_q (read-miss), stall=0, → CS_IDLE
-//                 (write-miss: dc_rdata_o unused, stall=0 releases store)
+// Timing model — SRAM has 1-cycle read latency (6-state FSM, hit = 3 stall cycles):
+//   CS_IDLE       : dc_valid_i → issue SRAM read (all 5 SRAMs), stall=1
+//   CS_SRAM_LATCH : SRAM read in flight; capture dout into tag_dout_r/data_dout_r, stall=1
+//   CS_HIT_PENDING: combinational tag compare (tag_dout_r valid); register into hit_q, stall=1
+//   CS_TAG_CHECK  : hit_q valid
+//                   read  hit → stall=0, dc_rdata_o from data_dout_r[latch_word]
+//                   write hit → SRAM byte-masked write via hit_bank_q, stall=0, dirty←1
+//                   miss, clean victim → CS_REFILL
+//                   miss, dirty victim → capture dirty line into wb_buf_q → CS_WRITEBACK
+//   CS_WRITEBACK  : send wb_buf_q[0..3] to AXI word-by-word, → CS_REFILL
+//   CS_REFILL     : fetch 4 words from AXI, write to SRAM (write-allocate
+//                   byte merge for write-miss), update valid/tag, → CS_DONE
+//   CS_DONE       : dc_rdata_o from refill_buf_q (read-miss), stall=0, → CS_IDLE
+//                   (write-miss: dc_rdata_o unused, stall=0 releases store)
 
 
 import rv32i_cache_pkg::*;
@@ -235,12 +236,38 @@ module rv32i_dcache (
     assign refill_base = {dc_addr_q[31:4], 4'b0000};
 
     // =========================================================================
-    // Hit detection (combinational in CS_TAG_CHECK)
+    // Hit detection — pipelined (Run 15 timing fix)
+    //
+    // CS_HIT_PENDING: combinational tag compare (tag_dout_r already registered).
+    // CS_TAG_CHECK  : registered result drives stall, rdata mux, FSM, dirty update.
+    //
+    // hit_bank_q[0:3]: per-bank registered copies for data SRAM write control.
+    // Reduces post-synthesis fanout from ~821 to ~205 per copy.
     // =========================================================================
-    logic hit;
-    assign hit = (state_q == CS_TAG_CHECK) &&
-                 valid_array[latch_index] &&
-                 (tag_dout_r[TAG_BITS-1:0] == latch_tag);
+    logic hit_comb;
+    assign hit_comb = valid_array[latch_index] &&
+                      (tag_dout_r[TAG_BITS-1:0] == latch_tag);
+
+    // Single registered copy — used by stall, rdata mux, FSM branch, dirty update
+    logic hit_q;
+    always_ff @(posedge clk) begin
+        if (!rst_n)                             hit_q <= 1'b0;
+        else if (state_q == CS_HIT_PENDING)     hit_q <= hit_comb;
+        else if (state_q == CS_TAG_CHECK)       hit_q <= 1'b0;
+    end
+
+    // 4 per-bank registered copies — used only for data SRAM write control
+    (* keep = 1 *) logic hit_bank_q [0:LINE_WORDS-1];
+    genvar gh;
+    generate
+        for (gh = 0; gh < LINE_WORDS; gh++) begin : g_hit_bank
+            always_ff @(posedge clk) begin
+                if (!rst_n)                             hit_bank_q[gh] <= 1'b0;
+                else if (state_q == CS_HIT_PENDING)     hit_bank_q[gh] <= hit_comb;
+                else if (state_q == CS_TAG_CHECK)       hit_bank_q[gh] <= 1'b0;
+            end
+        end
+    endgenerate
 
     // Need writeback: victim line is valid, dirty, and different tag
     logic need_writeback;
@@ -252,12 +279,13 @@ module rv32i_dcache (
     // Stall output
     // =========================================================================
     assign dc_stall_o =
-        (state_q == CS_IDLE       && dc_valid_i) ||   // Initiating SRAM read
-        (state_q == CS_SRAM_LATCH)               ||   // Waiting for pipeline reg
-        (state_q == CS_TAG_CHECK  && !hit)        ||   // Miss or still checking
-        (state_q == CS_WRITEBACK)                ||   // Writing back dirty line
-        (state_q == CS_REFILL);                        // Refilling
-    // CS_TAG_CHECK + hit: stall=0
+        (state_q == CS_IDLE        && dc_valid_i) ||   // Initiating SRAM read
+        (state_q == CS_SRAM_LATCH)                ||   // Waiting for pipeline reg
+        (state_q == CS_HIT_PENDING)               ||   // Registering hit result
+        (state_q == CS_TAG_CHECK   && !hit_q)     ||   // Miss or still checking
+        (state_q == CS_WRITEBACK)                 ||   // Writing back dirty line
+        (state_q == CS_REFILL);                         // Refilling
+    // CS_TAG_CHECK + hit_q: stall=0
     // CS_DONE: stall=0
 
     // =========================================================================
@@ -370,8 +398,10 @@ module rv32i_dcache (
             end
 
             CS_TAG_CHECK: begin
-                // Write hit: byte-masked write to the specific word column
-                if (hit && dc_we_q) begin
+                // Write hit: byte-masked write to the specific word column.
+                // hit_bank_q[latch_word] is the registered per-bank copy of hit_comb;
+                // using per-bank copies reduces fanout vs a single hit_q broadcast.
+                if (hit_bank_q[latch_word] && dc_we_q) begin
                     data_csb0[latch_word]  = 1'b0;
                     data_web0[latch_word]  = 1'b0;   // write (full merged word, no wmask)
                     data_addr0[latch_word] = latch_index;
@@ -432,13 +462,21 @@ module rv32i_dcache (
                 // -----------------------------------------------------------------
                 CS_SRAM_LATCH: begin
                     // tag_dout_r / data_dout_r captured in always_ff above.
-                    // No FENCE.I in D-cache; unconditional transition.
+                    // Advance to CS_HIT_PENDING so hit_comb is registered before
+                    // it fans out to the ~821-load data SRAM mux network.
+                    state_q <= CS_HIT_PENDING;
+                end
+
+                // -----------------------------------------------------------------
+                CS_HIT_PENDING: begin
+                    // hit_comb is sampled into hit_q / hit_bank_q this cycle.
+                    // Unconditional advance to CS_TAG_CHECK.
                     state_q <= CS_TAG_CHECK;
                 end
 
                 // -----------------------------------------------------------------
                 CS_TAG_CHECK: begin
-                    if (hit) begin
+                    if (hit_q) begin
                         // Hit: read data available from SRAM dout.
                         // Write hit: SRAM byte-masked write issued combinationally.
                         // Dirty bit update handled in valid/dirty always_ff below.
@@ -542,7 +580,7 @@ module rv32i_dcache (
             end
         end else begin
             // Write hit: set dirty
-            if (state_q == CS_TAG_CHECK && hit && dc_we_q)
+            if (state_q == CS_TAG_CHECK && hit_q && dc_we_q)
                 dirty_array[latch_index] <= 1'b1;
 
             // Writeback complete: invalidate the evicted line
