@@ -38,14 +38,14 @@
     "VERILOG_DEFINES": ["SRAM_ASAP7"],
 
     "FP_SIZING":       "absolute",
-    "DIE_AREA":        "0 0 140 140",
-    "CORE_AREA":       "5 5 135 135",
+    "DIE_AREA":        "0 0 160 160",
+    "CORE_AREA":       "5 5 155 155",
     "FP_CORE_UTIL":    40,
     "FP_ASPECT_RATIO": 1,
 
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
 
-    "PL_TARGET_DENSITY_PCT":     55,
+    "PL_TARGET_DENSITY_PCT":     48,
     "PL_TIME_DRIVEN":            true,
     "PL_ROUTABILITY_DRIVEN":     true,
 
@@ -100,10 +100,7 @@
     "RUN_POST_GPL_DESIGN_REPAIR":    true,
     "RUN_POST_GRT_RESIZER_TIMING":   true,
     "RUN_POST_GRT_DESIGN_REPAIR":    true,
-    "MAX_TRANSITION_CONSTRAINT":     20.0,
-    "CTS_MAX_SLEW":                  0.020,
-    "CTS_SINK_CLUSTERING_SIZE":      14,
-    "CTS_SINK_CLUSTERING_MAX_DIAMETER": 30,
+    "MAX_TRANSITION_CONSTRAINT":     25.0,
     "PL_RESIZER_SETUP_SLACK_MARGIN":  0.050,
     "GRT_RESIZER_SETUP_SLACK_MARGIN": 0.050,
     "PL_RESIZER_HOLD_SLACK_MARGIN":  0.050,

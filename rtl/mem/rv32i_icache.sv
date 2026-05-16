@@ -331,11 +331,50 @@ module rv32i_icache (
     end
 
     // =========================================================================
+    // Data SRAM write — registered commit (Run-22 timing fix)
+    //
+    // The combinational cone from state_q (CS_REFILL) + axi_rvalid_i into
+    // data_csb0/web0/addr0/din0 had ~530+ fanout sinks and was the dominant
+    // ASAP7 critical-path cluster after Run 21.  Inserting a 1-cycle pipeline
+    // register between the commit condition and the SRAM ports breaks this cone,
+    // mirroring the Run-17 P2 tag-SRAM registered-commit fix (tag_we_q above).
+    //
+    // Latency impact: each refill beat's data SRAM write occurs 1 cycle after
+    // the AXI beat arrives.  Beat 3 fires during CS_DONE (the no-stall cycle),
+    // same timing as the tag write.  Correctness is preserved because the CPU
+    // reads ic_rdata_o from refill_buf_q in CS_DONE, not from the data SRAMs.
+    // valid_array is gated on tag_we_q, so the line is not visible as valid
+    // until the tag write commits — by then all 4 data writes have also fired.
+    // =========================================================================
+    logic        data_write_commit;
+    logic        data_we_q;
+    logic [31:0] data_din_q;
+    logic [7:0]  data_idx_q;
+    logic [1:0]  data_bank_q;
+
+    assign data_write_commit = (state_q == CS_REFILL)
+                             && ar_pending_q
+                             && axi_rvalid_i
+                             && !addr_mismatch;
+
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            data_we_q   <= 1'b0;
+            data_din_q  <= 32'b0;
+            data_idx_q  <= 8'b0;
+            data_bank_q <= 2'b0;
+        end else begin
+            data_we_q   <= data_write_commit;
+            data_din_q  <= axi_rdata_i;
+            data_idx_q  <= refill_addr_bank_q[refill_word_q][11:4];
+            data_bank_q <= refill_word_q;
+        end
+    end
+
+    // =========================================================================
     // SRAM combinational control — Data SRAMs (port 0, all 4 instances)
     // Run-19 P2: Use per-bank duplicate refill_addr_bank_q for addr0/csb0/web0.
-    // Each bank b uses refill_addr_bank_q[b][11:4] for its own address port,
-    // avoiding the multi-bank broadcast from a single refill_line_addr_q.
-    // The per-bank copies are loaded identically in the FSM always_ff block.
+    // Run-22: CS_REFILL write removed from comb path — handled by data_we_q FFs.
     // =========================================================================
     always_comb begin
         for (int w = 0; w < LINE_WORDS; w++) begin
@@ -357,20 +396,18 @@ module rv32i_icache (
                 end
             end
 
-            CS_REFILL: begin
-                // Write each word to its SRAM column as it arrives from AXI.
-                // Suppress write for stale refills (address changed mid-flight).
-                // Use per-bank addr copy to keep each bank's address local.
-                if (ar_pending_q && axi_rvalid_i && !addr_mismatch) begin
-                    data_csb0[refill_word_q]  = 1'b0;
-                    data_web0[refill_word_q]  = 1'b0;  // write
-                    data_addr0[refill_word_q] = refill_addr_bank_q[refill_word_q][11:4];
-                    data_din0[refill_word_q]  = axi_rdata_i;
-                end
-            end
-
             default: ;
         endcase
+
+        // Registered data write — driven from FFs, not combinationally from
+        // state_q.  Overrides the read defaults when data_we_q is asserted.
+        // Mirrors the tag_we_q registered-write override above.
+        if (data_we_q) begin
+            data_csb0[data_bank_q]  = 1'b0;
+            data_web0[data_bank_q]  = 1'b0;   // write
+            data_addr0[data_bank_q] = data_idx_q;
+            data_din0[data_bank_q]  = data_din_q;
+        end
     end
 
     // =========================================================================
