@@ -2,21 +2,23 @@
 // RV32I Pipeline — Execute Stage 1a (EX1a)
 //
 // Run-17 mid-EX retiming: the former monolithic EX combinational cone is split
-// into two halves separated by the ex1a_ex1b_t wire (combinational, no FF).
-// EX1b (rv32i_pipeline_ex1b.sv) handles the second half (store byte-align +
-// trap priority cascade) and drives ex1_ex2_reg_t into EX2 (the FF stage).
+// across three sub-stages (EX1a → FF → EX1c → FF → EX1b) separated by two FFs.
+//
+// Run-20: adds EX1c between ex1a_ex1b_reg_q and ex1c_ex1b_reg_q.
+//   EX1a output: ex1a_ex1b_t with TRAP_NONE and dummy byte-align.
+//   EX1c (rv32i_pipeline_ex1c.sv): overwrites trap_type and pre_w* using
+//     registered alu_result[1:0], branch_taken, and control bits.
+//   EX1b (rv32i_pipeline_ex1b.sv): flat case-mux on trap_type → redirect/trap.
 //
 // EX1a responsibilities:
 //   - ALU computation (all ops including SLT/SLTU comparators)
 //   - Branch comparator result
 //   - JALR target: {alu_result[31:1], 1'b0}
 //   - CSR write data
-//   - Packs all fields into ex1a_ex1b_t, which rv32i_core.sv registers and
-//     feeds to rv32i_pipeline_ex1b (instantiated in core, not here).
+//   - Packs all fields into ex1a_ex1b_t with trap_type=TRAP_NONE (EX1c encodes)
 //
-// NOTE: ex_pc_redirect / trap / mret / fence_i / dbg_halt come from EX1b
-// (rv32i_pipeline_ex1b, instantiated in rv32i_core.sv).  Branch misprediction
-// penalty is 3 cycles (2→3 accepted for Run 17 timing gain).
+// NOTE: ex_pc_redirect / trap / mret / fence_i / dbg_halt come from EX1b.
+// Branch misprediction penalty is 4 cycles (3→4 accepted for Run 20 timing gain).
 
 `default_nettype none
 
@@ -166,76 +168,13 @@ module rv32i_pipeline_ex(
         ex1a_to_ex1b.rs1_addr     = id_ex_reg_i.rs1_addr;
         ex1a_to_ex1b.rs2_addr     = id_ex_reg_i.rs2_addr;
 
-        // Priority-encode trap_type in EX1a before the ex1a_ex1b_reg_q FF.
-        // EX1b replaces the 8-level if/else-if cascade with a flat case-mux
-        // on this registered field — removes ~10-12 gate levels from EX1b cone.
-        // Priority order matches the EX1b cascade (IRQ highest).
-        if (id_ex_reg_i.valid && irq_valid_r)
-            ex1a_to_ex1b.trap_type = TRAP_IRQ;
-        else if (id_ex_reg_i.valid && (id_ex_reg_i.illegal || id_ex_reg_i.csr_illegal))
-            ex1a_to_ex1b.trap_type = TRAP_ILLEGAL;
-        else if (id_ex_reg_i.valid && id_ex_reg_i.ebreak)
-            ex1a_to_ex1b.trap_type = TRAP_EBREAK;
-        else if (id_ex_reg_i.valid && id_ex_reg_i.fence_i)
-            ex1a_to_ex1b.trap_type = TRAP_FENCEI;
-        else if (id_ex_reg_i.valid && id_ex_reg_i.mret)
-            ex1a_to_ex1b.trap_type = TRAP_MRET;
-        else if (id_ex_reg_i.valid && id_ex_reg_i.jump && id_ex_reg_i.jalr)
-            ex1a_to_ex1b.trap_type = TRAP_JALR;
-        else if (id_ex_reg_i.valid && id_ex_reg_i.branch && branch_taken)
-            ex1a_to_ex1b.trap_type = TRAP_BRANCH;
-        else
-            ex1a_to_ex1b.trap_type = TRAP_NONE;
-
-        // =====================================================================
-        // Run-19 P1: Store byte-align pre-computed in EX1a before ex1a_ex1b_reg_q FF.
-        // EX1b reads ex1a_i.pre_wdata_aligned / ex1a_i.pre_wstrb directly, removing
-        // the ~8-10 gate byte-align mux tree from the EX1b combinational cone.
-        // All inputs (alu_result[1:0], mem_size, fwd_store) are available in EX1a.
-        // =====================================================================
-        ex1a_to_ex1b.pre_wstrb         = 4'b1111;
-        ex1a_to_ex1b.pre_wdata_aligned = fwd_store;
-
-        case (id_ex_reg_i.mem_size)
-            3'b000: begin  // Byte store
-                case (alu_result[1:0])
-                    2'b00: begin
-                        ex1a_to_ex1b.pre_wstrb         = 4'b0001;
-                        ex1a_to_ex1b.pre_wdata_aligned = {24'h0, fwd_store[7:0]};
-                    end
-                    2'b01: begin
-                        ex1a_to_ex1b.pre_wstrb         = 4'b0010;
-                        ex1a_to_ex1b.pre_wdata_aligned = {16'h0, fwd_store[7:0], 8'h0};
-                    end
-                    2'b10: begin
-                        ex1a_to_ex1b.pre_wstrb         = 4'b0100;
-                        ex1a_to_ex1b.pre_wdata_aligned = {8'h0, fwd_store[7:0], 16'h0};
-                    end
-                    2'b11: begin
-                        ex1a_to_ex1b.pre_wstrb         = 4'b1000;
-                        ex1a_to_ex1b.pre_wdata_aligned = {fwd_store[7:0], 24'h0};
-                    end
-                endcase
-            end
-            3'b001: begin  // Halfword store
-                case (alu_result[1])
-                    1'b0: begin
-                        ex1a_to_ex1b.pre_wstrb         = 4'b0011;
-                        ex1a_to_ex1b.pre_wdata_aligned = {16'h0, fwd_store[15:0]};
-                    end
-                    1'b1: begin
-                        ex1a_to_ex1b.pre_wstrb         = 4'b1100;
-                        ex1a_to_ex1b.pre_wdata_aligned = {fwd_store[15:0], 16'h0};
-                    end
-                endcase
-            end
-            3'b010: begin  // Word store — defaults already set above
-            end
-            default: begin
-                ex1a_to_ex1b.pre_wstrb         = 4'b0000;
-                ex1a_to_ex1b.pre_wdata_aligned = 32'h0;
-            end
-        endcase
+        // Run-20: trap_type encode and byte-align moved to EX1c (new stage after
+        // ex1a_ex1b_reg_q FF) to break the 22-gate ALU+trap+byte-align cone.
+        // EX1a sets TRAP_NONE and dummy byte-align defaults; EX1c overwrites them
+        // using the REGISTERED alu_result[1:0], branch_taken, and control bits.
+        ex1a_to_ex1b.trap_type          = TRAP_NONE;
+        ex1a_to_ex1b.pre_wstrb          = 4'b1111;
+        ex1a_to_ex1b.pre_wdata_aligned  = fwd_store;
     end
 
     // EX1a combinational output — registered in rv32i_core.sv, then fed to EX1b
