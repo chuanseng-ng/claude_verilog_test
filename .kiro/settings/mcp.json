@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "code-review-graph": {
+      "command": "uvx",
+      "args": [
+        "code-review-graph",
+        "serve"
+      ],
+      "cwd": "/home/neuromorphic/Downloads/Github/claude_verilog_test",
+      "type": "stdio"
+    }
+  }
+}
