@@ -19,6 +19,7 @@
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_id.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv",
@@ -43,7 +44,7 @@
 
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
 
-    "PL_TARGET_DENSITY_PCT":     45,
+    "PL_TARGET_DENSITY_PCT":     42,
     "PL_TIME_DRIVEN":            true,
     "PL_ROUTABILITY_DRIVEN":     true,
 
@@ -89,7 +90,7 @@
     "SYNTH_STRATEGY":     "DELAY 3",
     "SYNTH_SIZING":       true,
     "SYNTH_ABC_BUFFERING": true,
-    "MAX_FANOUT_CONSTRAINT": 20,
+    "MAX_FANOUT_CONSTRAINT": 25,
 
     "PNR_SDC_FILE":     "dir::constraints/asap7.sdc",
     "SIGNOFF_SDC_FILE": "dir::constraints/asap7.sdc",

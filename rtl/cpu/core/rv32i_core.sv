@@ -95,9 +95,9 @@ module rv32i_core(
     // Hazard unit outputs
     // =========================================================================
     logic        stall_pc, stall_if_id, stall_id_ex, stall_ex_mem;
-    logic        stall_ex1_ex2;
+    logic        stall_ex1_ex2, stall_ex1a_ex1b;
     logic        flush_if_id, flush_id_ex, flush_ex_mem;
-    logic        flush_ex1_ex2;
+    logic        flush_ex1_ex2, flush_ex1a_ex1b;
     logic [1:0]  fwd_a_sel, fwd_b_sel, fwd_store_sel;
 
     // =========================================================================
@@ -220,12 +220,25 @@ module rv32i_core(
     logic        dbg_ebreak_from_ex;
 
     assign dbg_halt_combined = dbg_halt_req || dbg_ebreak_from_ex;
-    assign dbg_halted = dbg_halted_wb && !id_ex_reg.valid && !ex_mem_reg.valid;
+    assign dbg_halted = dbg_halted_wb && !id_ex_reg.valid && !ex1a_ex1b_reg_q.valid && !ex_mem_reg.valid;
 
     logic [31:0] pc_if_out;
 
     // =========================================================================
-    // FENCE.I invalidate signal (from EX stage → I-cache)
+    // EX1a/EX1b pipeline FF (Run-17 mid-EX retiming)
+    // =========================================================================
+    ex1a_ex1b_t ex1a_ex1b_comb;   // combinational output from u_ex
+    ex1a_ex1b_t ex1a_ex1b_reg_q;  // registered — fed into u_ex1b
+
+    always_ff @(posedge clk) begin
+        if (!rst_n || flush_ex1a_ex1b)
+            ex1a_ex1b_reg_q <= ex1a_ex1b_nop();
+        else if (!stall_ex1a_ex1b)
+            ex1a_ex1b_reg_q <= ex1a_ex1b_comb;
+    end
+
+    // =========================================================================
+    // FENCE.I invalidate signal (from EX1b stage → I-cache)
     // =========================================================================
     logic fence_i_pulse;
 
@@ -295,6 +308,9 @@ module rv32i_core(
         .id_ex_rd_addr     (id_ex_reg.rd_addr),
         .id_ex_mem_rd      (id_ex_reg.mem_rd),
         .id_ex_reg_wr_en   (id_ex_reg.reg_wr_en),
+        .ex1b_rd_addr      (ex1a_ex1b_reg_q.rd_addr),
+        .ex1b_reg_wr_en    (ex1a_ex1b_reg_q.reg_wr_en),
+        .ex1b_mem_rd       (ex1a_ex1b_reg_q.mem_rd),
         .ex_mem_rd_addr    (ex_mem_reg.rd_addr),
         .ex_mem_reg_wr_en  (ex_mem_reg.reg_wr_en),
         .ex_mem_mem_rd     (ex_mem_reg.mem_rd),
@@ -312,10 +328,12 @@ module rv32i_core(
         .stall_id_ex       (stall_id_ex),
         .stall_ex_mem      (stall_ex_mem),
         .stall_ex1_ex2_o   (stall_ex1_ex2),
+        .stall_ex1a_ex1b_o (stall_ex1a_ex1b),
         .flush_if_id       (flush_if_id),
         .flush_id_ex       (flush_id_ex),
         .flush_ex_mem      (flush_ex_mem),
         .flush_ex1_ex2_o   (flush_ex1_ex2),
+        .flush_ex1a_ex1b_o (flush_ex1a_ex1b),
         .fwd_a_sel         (fwd_a_sel),
         .fwd_b_sel         (fwd_b_sel),
         .fwd_store_sel     (fwd_store_sel)
@@ -330,6 +348,11 @@ module rv32i_core(
         .fwd_store_sel      (fwd_store_sel),
         .id_ex_rs1_data     (id_ex_reg.rs1_data),
         .id_ex_rs2_data     (id_ex_reg.rs2_data),
+        .ex1b_alu_result    (ex1a_ex1b_reg_q.alu_result),
+        .ex1b_csr_rdata     (ex1a_ex1b_reg_q.csr_rdata),
+        .ex1b_pc            (ex1a_ex1b_reg_q.pc),
+        .ex1b_csr_access    (ex1a_ex1b_reg_q.csr_access),
+        .ex1b_jump          (ex1a_ex1b_reg_q.jump),
         .ex_mem_alu_result  (ex_mem_reg.alu_result),
         .ex_mem_csr_rdata   (ex_mem_reg.csr_rdata),
         .ex_mem_pc          (ex_mem_reg.pc),
@@ -462,7 +485,7 @@ module rv32i_core(
     );
 
     // =========================================================================
-    // EX Stage (Phase 3: fence_i_o added)
+    // EX1a Stage (Run-17: outputs ex1a_ex1b_t, registered below into EX1b)
     // =========================================================================
     rv32i_pipeline_ex u_ex (
         .clk              (clk),
@@ -477,20 +500,36 @@ module rv32i_core(
         .irq_cause_i      (irq_cause),
         .mtvec_i          (mtvec),
         .mret_pc_i        (mret_pc_val),
-        .ex_pc_redirect_o (ex_pc_redirect),
-        .ex_pc_target_o   (ex_pc_target),
         .csr_wr_en_o      (csr_wr_en),
         .csr_wdata_o      (csr_wdata_ex),
         .csr_addr_o       (csr_addr_ex),
         .csr_op_o         (csr_op_ex),
         .rs1_addr_o       (csr_rs1_addr_ex),
+        .ex1a_ex1b_o      (ex1a_ex1b_comb)
+    );
+
+    // =========================================================================
+    // EX1b Stage (Run-17: consumes ex1a_ex1b_reg_q, purely combinational)
+    // Bypass mux: if flush_ex1a_ex1b is asserted this cycle, EX1b sees a NOP
+    // so it cannot produce a spurious ex_pc_redirect from a ghost instruction
+    // that is being squashed (the FF clears only at the NEXT rising edge).
+    // =========================================================================
+    ex1a_ex1b_t ex1b_input;
+    always_comb begin
+        ex1b_input = flush_ex1a_ex1b ? ex1a_ex1b_nop() : ex1a_ex1b_reg_q;
+    end
+
+    rv32i_pipeline_ex1b u_ex1b (
+        .ex1a_i           (ex1b_input),
+        .ex1_ex2_reg_o    (ex1_ex2_reg),
+        .ex_pc_redirect_o (ex_pc_redirect),
+        .ex_pc_target_o   (ex_pc_target),
         .trap_entry_o     (trap_entry),
         .trap_pc_o        (trap_pc_val),
         .trap_cause_o     (trap_cause_val),
         .mret_o           (mret_ex),
         .dbg_halt_req_o   (dbg_ebreak_from_ex),
-        .fence_i_o        (fence_i_pulse),
-        .ex1_ex2_reg_o    (ex1_ex2_reg)
+        .fence_i_o        (fence_i_pulse)
     );
 
     // =========================================================================

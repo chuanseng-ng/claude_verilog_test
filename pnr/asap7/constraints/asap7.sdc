@@ -162,3 +162,15 @@ set_false_path -hold -to [get_pins -hierarchical *addr0*]
 ###############################################################################
 set_multicycle_path -setup 2 -through [get_nets -hierarchical "*u_dcache*wb_tag*"]
 set_multicycle_path -hold  1 -through [get_nets -hierarchical "*u_dcache*wb_tag*"]
+
+###############################################################################
+# 10. I-cache tag SRAM write — multi-cycle (refill spans 4 AXI beats)
+# Run 17 P2: tag_web0/tag_din0 now driven from registered FFs (tag_we_q /
+# tag_din_q); the SRAM write happens 1 cycle after refill-commit, which is
+# structurally 2+ cycles after the last AXI beat that started the refill.
+# -hold 1 on *tag_web0* added explicitly. -hold on *tag_din0* is already
+# covered by the false_path on *din0* added in section 8 above.
+###############################################################################
+set_multicycle_path -setup 2 -through [get_nets -hierarchical "*u_icache*tag_web0*"]
+set_multicycle_path -hold  1 -through [get_nets -hierarchical "*u_icache*tag_web0*"]
+set_multicycle_path -setup 2 -through [get_nets -hierarchical "*u_icache*tag_din0*"]

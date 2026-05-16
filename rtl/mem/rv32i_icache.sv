@@ -247,6 +247,47 @@ module rv32i_icache (
     assign axi_rready_o  = 1'b1;  // Always accept R responses (drains in-flight beats)
 
     // =========================================================================
+    // Tag SRAM write — registered commit (Run-17 P2 timing fix)
+    //
+    // The combinational cone from state_q (CS_REFILL one-hot bit) into
+    // tag_web0/tag_din0 had 298 fanout sinks and was the second-worst ASAP7
+    // critical path at -606 ps.  Inserting a 1-cycle pipeline register
+    // between the commit condition and the SRAM ports breaks this cone.
+    //
+    // Latency impact: the tag SRAM write occurs 1 cycle after the last AXI
+    // beat arrives instead of the same cycle.  The valid_array[idx] set is
+    // delayed by the same 1 cycle (see valid_array always_ff below).
+    // CS_REFILL transitions to CS_DONE (or CS_IDLE on mismatch) on the same
+    // cycle as before — the registered write simply completes in the background
+    // during CS_DONE, which is a no-stall cycle.  Correctness is preserved
+    // because the CPU reads ic_rdata_o from refill_buf_q in CS_DONE, not from
+    // the tag SRAM.
+    // =========================================================================
+    logic        tag_write_commit; // combinational commit qualifier
+    logic        tag_we_q;         // registered: assert SRAM write next cycle
+    logic [31:0] tag_din_q;        // registered: tag data to write
+    logic [7:0]  tag_idx_q;        // registered: SRAM row index to write
+
+    assign tag_write_commit = (state_q == CS_REFILL)
+                            && ar_pending_q
+                            && axi_rvalid_i
+                            && !addr_mismatch
+                            && ic_valid_i
+                            && (refill_word_q == 2'd3);
+
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            tag_we_q  <= 1'b0;
+            tag_din_q <= 32'b0;
+            tag_idx_q <= 8'b0;
+        end else begin
+            tag_we_q  <= tag_write_commit;
+            tag_din_q <= {12'b0, refill_line_addr_q[31:12]};  // tag in [19:0]
+            tag_idx_q <= refill_line_addr_q[11:4];
+        end
+    end
+
+    // =========================================================================
     // SRAM combinational control — Tag SRAM (port 0)
     // =========================================================================
     always_comb begin
@@ -265,20 +306,20 @@ module rv32i_icache (
                 end
             end
 
-            CS_REFILL: begin
-                // Write tag on last word (when entire line is committed).
-                // Guard with !addr_mismatch: if IC address changed during refill,
-                // do not commit stale tag — data SRAM was already guarded the same way.
-                if (ar_pending_q && axi_rvalid_i && !addr_mismatch && ic_valid_i && (refill_word_q == 2'd3)) begin
-                    tag_csb0   = 1'b0;
-                    tag_web0   = 1'b0;  // write
-                    tag_addr0  = refill_line_addr_q[11:4];
-                    tag_din0   = {12'b0, refill_line_addr_q[31:12]};  // tag in [19:0]
-                end
-            end
-
             default: ;
         endcase
+
+        // Registered tag write — driven from FFs, not combinationally from
+        // state_q.  Overrides the read defaults when tag_we_q is asserted.
+        // This can coincide with CS_IDLE (which issues a read for a new access)
+        // or CS_DONE (idle/read cycle after refill): the write takes priority
+        // by overriding csb0/web0/addr0/din0.
+        if (tag_we_q) begin
+            tag_csb0  = 1'b0;
+            tag_web0  = 1'b0;   // write
+            tag_addr0 = tag_idx_q;
+            tag_din0  = tag_din_q;
+        end
     end
 
     // =========================================================================
@@ -426,20 +467,22 @@ module rv32i_icache (
 
     // =========================================================================
     // Valid array — sequential (register array, supports 1-cycle bulk clear)
+    //
+    // Run-17 P2: valid_array set is delayed by 1 cycle (uses tag_we_q, the
+    // same registered signal that gates the tag SRAM write) so that the line
+    // is not visible as valid until the tag SRAM write has been registered in.
+    // The index to mark valid is captured in tag_idx_q on the same cycle.
     // =========================================================================
     always_ff @(posedge clk) begin
         if (!rst_n || ic_invalidate_i) begin
             // Reset or FENCE.I: invalidate all lines in one cycle
             for (int j = 0; j < N_SETS; j++)
                 valid_array[j] = 1'b0;
-        end else if (state_q == CS_REFILL &&
-                     ar_pending_q && axi_rvalid_i && !addr_mismatch && ic_valid_i && (refill_word_q == 2'd3)) begin
-            // Refill complete and address still matches — mark line valid.
-            // !addr_mismatch guard prevents marking valid when fetch address changed mid-refill.
-            // ic_valid_i guard prevents committing when the request was cancelled (e.g. pc_redirect
-            // deasserts ic_valid_o while the last AXI beat arrives — addr_mismatch cannot catch
-            // this because it requires ic_valid_i to be high).
-            valid_array[refill_line_addr_q[11:4]] <= 1'b1;
+        end else if (tag_we_q) begin
+            // tag_we_q is the registered version of tag_write_commit (the last-beat
+            // commit qualifier).  Marking valid here ensures the line is considered
+            // valid on the same cycle the tag SRAM write is clocked in.
+            valid_array[tag_idx_q] <= 1'b1;
         end
     end
 

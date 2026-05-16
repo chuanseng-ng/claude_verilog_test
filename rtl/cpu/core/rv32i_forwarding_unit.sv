@@ -6,8 +6,9 @@
 //
 // Forwarding encoding (fwd_*_sel):
 //   2'b00 = register file output (no forwarding)
-//   2'b01 = EX2 result (ex_mem_reg — registered EX1 result, 1 cycle behind EX1)
-//   2'b10 = WB  result (mem_wb writeback data — 2 cycles behind EX1)
+//   2'b01 = EX2 result (ex_mem_reg — 2 cycles behind EX1a after Run-17 split)
+//   2'b10 = WB  result (mem_wb writeback data)
+//   2'b11 = EX1b result (ex1a_ex1b_reg — 1 cycle behind EX1a, highest priority)
 
 `default_nettype none
 module rv32i_forwarding_unit (
@@ -20,14 +21,21 @@ module rv32i_forwarding_unit (
     input  logic [31:0] id_ex_rs1_data,
     input  logic [31:0] id_ex_rs2_data,
 
-    // EX/MEM register data (for EX2→EX1 forwarding — registered EX1 result)
+    // EX1b register data (for EX1b→EX1a forwarding — registered EX1a result)
+    input  logic [31:0] ex1b_alu_result,
+    input  logic [31:0] ex1b_csr_rdata,
+    input  logic [31:0] ex1b_pc,
+    input  logic        ex1b_csr_access,
+    input  logic        ex1b_jump,
+
+    // EX/MEM register data (for EX2→EX1a forwarding)
     input  logic [31:0] ex_mem_alu_result,
     input  logic [31:0] ex_mem_csr_rdata,
     input  logic [31:0] ex_mem_pc,
     input  logic        ex_mem_csr_access,
     input  logic        ex_mem_jump,
 
-    // MEM/WB register data (for WB→EX1 forwarding)
+    // MEM/WB register data (for WB→EX1a forwarding)
     input  logic [31:0] mem_wb_alu_result,
     input  logic [31:0] mem_wb_mem_rdata,
     input  logic [31:0] mem_wb_csr_rdata,
@@ -43,7 +51,22 @@ module rv32i_forwarding_unit (
 );
 
     // =========================================================================
-    // EX/MEM write-back data selection (MEM stage forwarding value)
+    // EX1b write-back data selection (EX1b→EX1a forwarding value)
+    // =========================================================================
+    logic [31:0] ex1b_rd_data;
+
+    always_comb begin
+        if (ex1b_csr_access) begin
+            ex1b_rd_data = ex1b_csr_rdata;
+        end else if (ex1b_jump) begin
+            ex1b_rd_data = ex1b_pc + 32'd4;
+        end else begin
+            ex1b_rd_data = ex1b_alu_result;
+        end
+    end
+
+    // =========================================================================
+    // EX/MEM write-back data selection (EX2→EX1a forwarding value)
     // =========================================================================
     logic [31:0] ex_mem_rd_data;
 
@@ -79,8 +102,9 @@ module rv32i_forwarding_unit (
     // =========================================================================
     always_comb begin
         case (fwd_a_sel)
-            2'b01:   fwd_rs1 = ex_mem_rd_data;    // EX2→EX1 (registered result)
-            2'b10:   fwd_rs1 = mem_wb_rd_data;    // WB→EX1
+            2'b11:   fwd_rs1 = ex1b_rd_data;      // EX1b→EX1a (highest priority)
+            2'b01:   fwd_rs1 = ex_mem_rd_data;    // EX2→EX1a
+            2'b10:   fwd_rs1 = mem_wb_rd_data;    // WB→EX1a
             default: fwd_rs1 = id_ex_rs1_data;    // No forwarding
         endcase
     end
@@ -90,8 +114,9 @@ module rv32i_forwarding_unit (
     // =========================================================================
     always_comb begin
         case (fwd_b_sel)
-            2'b01:   fwd_rs2 = ex_mem_rd_data;    // EX2→EX1
-            2'b10:   fwd_rs2 = mem_wb_rd_data;    // WB→EX1
+            2'b11:   fwd_rs2 = ex1b_rd_data;      // EX1b→EX1a
+            2'b01:   fwd_rs2 = ex_mem_rd_data;    // EX2→EX1a
+            2'b10:   fwd_rs2 = mem_wb_rd_data;    // WB→EX1a
             default: fwd_rs2 = id_ex_rs2_data;
         endcase
     end
@@ -101,8 +126,9 @@ module rv32i_forwarding_unit (
     // =========================================================================
     always_comb begin
         case (fwd_store_sel)
-            2'b01:   fwd_store = ex_mem_rd_data;  // EX2→EX1
-            2'b10:   fwd_store = mem_wb_rd_data;  // WB→EX1
+            2'b11:   fwd_store = ex1b_rd_data;    // EX1b→EX1a
+            2'b01:   fwd_store = ex_mem_rd_data;  // EX2→EX1a
+            2'b10:   fwd_store = mem_wb_rd_data;  // WB→EX1a
             default: fwd_store = id_ex_rs2_data;
         endcase
     end

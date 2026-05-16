@@ -84,8 +84,53 @@ package rv32i_pipeline_pkg;
     } ex_mem_reg_t;
 
     // =========================================================================
+    // EX1a/EX1b Intermediate Wire (combinational — NOT a pipeline register)
+    // Carries EX1a (ALU + branch_comp + JALR) outputs to EX1b (store-align +
+    // trap-cascade).  No FF boundary here; EX2 still owns the only FF.
+    // =========================================================================
+    typedef struct packed {
+        // EX1a computed results
+        logic [31:0] alu_result;    // ALU output
+        logic        branch_taken;  // Branch comparator result
+        logic [31:0] fwd_store;     // Forwarded rs2 store data (for byte-align in EX1b)
+        logic [31:0] csr_wd;        // CSR write data (imm or forwarded rs1)
+        // Passthrough control fields from id_ex_reg_t needed by EX1b
+        logic [31:0] pc;
+        logic [31:0] instruction;
+        logic [4:0]  rd_addr;
+        logic        reg_wr_en;
+        logic        mem_rd;
+        logic        mem_wr;
+        logic [2:0]  mem_size;
+        logic        mem_unsigned;
+        logic        csr_access;
+        logic [11:0] csr_addr;
+        logic [31:0] csr_rdata;     // CSR read data (from csr_file)
+        logic        jump;
+        logic        jalr;
+        logic        branch;
+        logic [31:0] immediate;
+        logic        ebreak;
+        logic        mret;
+        logic        fence_i;
+        logic        illegal;
+        logic        csr_illegal;
+        logic        valid;
+        // Interrupt/trap inputs (passed through for use in EX1b trap cascade)
+        logic        irq_valid_r;   // Registered IRQ valid
+        logic [31:0] irq_cause;
+        logic [31:0] mtvec;
+        logic [31:0] mret_pc;
+        // Flush indicator
+        logic        flush_ex_mem;
+        // rs1/rs2 addresses (for forwarding detection passthrough)
+        logic [4:0]  rs1_addr;
+        logic [4:0]  rs2_addr;
+    } ex1a_ex1b_t;
+
+    // =========================================================================
     // EX1/EX2 Pipeline Register
-    // Identical fields to ex_mem_reg_t — captures EX1 combinational outputs
+    // Identical fields to ex_mem_reg_t — captures EX1b combinational outputs
     // at the clock edge; EX2 reads this and drives ex_mem_reg_t.
     // =========================================================================
     typedef struct packed {
@@ -222,6 +267,41 @@ package rv32i_pipeline_pkg;
         ex1_ex2_nop.trap_valid        = 1'b0;
         ex1_ex2_nop.trap_cause        = 32'h0;
         ex1_ex2_nop.valid             = 1'b0;
+    endfunction
+
+    function automatic ex1a_ex1b_t ex1a_ex1b_nop();
+        ex1a_ex1b_nop.alu_result    = 32'h0;
+        ex1a_ex1b_nop.branch_taken  = 1'b0;
+        ex1a_ex1b_nop.fwd_store     = 32'h0;
+        ex1a_ex1b_nop.csr_wd        = 32'h0;
+        ex1a_ex1b_nop.pc            = 32'h0;
+        ex1a_ex1b_nop.instruction   = 32'h0;
+        ex1a_ex1b_nop.rd_addr       = 5'h0;
+        ex1a_ex1b_nop.reg_wr_en     = 1'b0;
+        ex1a_ex1b_nop.mem_rd        = 1'b0;
+        ex1a_ex1b_nop.mem_wr        = 1'b0;
+        ex1a_ex1b_nop.mem_size      = 3'h0;
+        ex1a_ex1b_nop.mem_unsigned  = 1'b0;
+        ex1a_ex1b_nop.csr_access    = 1'b0;
+        ex1a_ex1b_nop.csr_addr      = 12'h0;
+        ex1a_ex1b_nop.csr_rdata     = 32'h0;
+        ex1a_ex1b_nop.jump          = 1'b0;
+        ex1a_ex1b_nop.jalr          = 1'b0;
+        ex1a_ex1b_nop.branch        = 1'b0;
+        ex1a_ex1b_nop.immediate     = 32'h0;
+        ex1a_ex1b_nop.ebreak        = 1'b0;
+        ex1a_ex1b_nop.mret          = 1'b0;
+        ex1a_ex1b_nop.fence_i       = 1'b0;
+        ex1a_ex1b_nop.illegal       = 1'b0;
+        ex1a_ex1b_nop.csr_illegal   = 1'b0;
+        ex1a_ex1b_nop.valid         = 1'b0;
+        ex1a_ex1b_nop.irq_valid_r   = 1'b0;
+        ex1a_ex1b_nop.irq_cause     = 32'h0;
+        ex1a_ex1b_nop.mtvec         = 32'h0;
+        ex1a_ex1b_nop.mret_pc       = 32'h0;
+        ex1a_ex1b_nop.flush_ex_mem  = 1'b0;
+        ex1a_ex1b_nop.rs1_addr      = 5'h0;
+        ex1a_ex1b_nop.rs2_addr      = 5'h0;
     endfunction
 
     function automatic mem_wb_reg_t mem_wb_nop();
