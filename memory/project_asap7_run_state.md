@@ -12,7 +12,11 @@
 | Run 12 | RUN_2026-05-09_18-28-12 | -853  | 539  | **Complete (48/48) — REGRESSION** | Die shrink 125x125 + PDN + fanout |
 | Run 13 | RUN_2026-05-10_07-18-17 | -782  | 561  | **Complete (48/48) — IMPROVEMENT** | Sync reset all FFs + 140x140 die + remove set_max_fanout |
 | Run 14 | RUN_2026-05-14_22-21-02 | -814  | ~551 | **Complete — REGRESSION** | EX2 stage insertion + SRAM hold fix + density 50% — D-cache tag-compare fanout is true bottleneck |
-| Run 15 | RUN_2026-05-15_... | TBD   | TBD  | **RUNNING** | Clock 1.2 ns + MAX_FANOUT_CONSTRAINT 8 (Option A+C) |
+| Run 15 | RUN_2026-05-15_05-21-02 | -792  | ~509 | **Complete (48/48)** | 1.2 ns period, MAX_FANOUT 8 — marginal improvement |
+| Run 16 | RUN_2026-05-15_18-51-46 | -812  | ~497 | **Complete (48/48) — REGRESSION** | MAX_FANOUT 20, density 45, D-cache multicycle SDC — D-cache tag fan still dominant; startpoint _40621_ (EX ALU), _40031_ (I-cache tag 298-fanout) |
+| Run 17 | RUN_2026-05-16_08-05-19 | **-788** | **~503** | **Complete (48/48) — Marginal improvement** | P1: EX1a/EX1b mid-cone register; P2: I-cache tag_we_q/tag_din_q/tag_idx_q register; MCU SDC on tag nets — both Run 16 startpoints eliminated; new bottleneck is EX1b trap cascade |
+| Run 18 | RUN_2026-05-16_10-12-46 | **-758.99** | **~510** | **Complete (48/48) — Marginal improvement** | P1: trap_type pre-encode in EX1a (flat case-mux, eliminates 22-gate cascade); P3: hold false-path for ex1a→EX1b short path — hold FIXED (0 vio); gain only +29 ps because EX1b byte-align/pack cone (28 gate levels) was co-critical and fully exposed |
+| Run 19 | TBD | **TBD** | **TBD** | **IN PROGRESS** | P1 (RTL): Pre-register store byte-align in EX1a (extends ex1a_ex1b_t with pre_wdata_aligned/pre_wstrb); P2 (RTL): I-cache per-bank refill data register duplication in rv32i_icache.sv — targets _45628_ (537 paths, -639 ps worst) |
 
 ---
 
@@ -231,25 +235,86 @@ All ASAP7 runs use the following permanent fixes — do NOT revert:
 
 ---
 
-## How to Monitor Run 12
+## How to Monitor / Re-launch
 
 ```bash
-# Check session alive
-tmux has-session -t asap7_run12 && echo "ALIVE" || echo "DEAD"
-
-# Tail log
-tail -20 /tmp/asap7_run12.log
-
-# Count completed steps (one dir per step)
-ls pnr/asap7/runs/RUN_*/steps/ 2>/dev/null | wc -l
-
 # Check latest WNS from metrics
-cat pnr/asap7/runs/RUN_*/final/metrics.json 2>/dev/null | python3 -m json.tool | grep -E "wns|tns|power|area"
-```
+cat pnr/asap7/runs/RUN_<timestamp>/final/metrics.json | python3 -m json.tool | grep -E "wns|tns|power|area"
 
-## How to Re-launch (if session dies)
-
-```bash
+# Re-launch (detached tmux)
 cd /home/neuromorphic/Downloads/Github/claude_verilog_test/pnr
-tmux new-session -d -s asap7_run12 "make librelane-asap7 2>&1 | tee /tmp/asap7_run12.log"
+tmux new-session -d -s asap7_run18 "make librelane-asap7 2>&1 | tee /tmp/asap7_run18.log"
 ```
+
+---
+
+## Run 17 — COMPLETE (2026-05-16, Marginal improvement)
+
+### Result Summary
+- Run dir: `pnr/asap7/runs/RUN_2026-05-16_08-05-19`
+- Stages: 48/48 complete
+- **WNS: -788.347 ps** (IMPROVED from Run 16 -812.032 ps — delta +23.7 ps)
+- **fmax: ~503 MHz** (marginal improvement from Run 16 ~497 MHz)
+- **Hold WNS: -13.807 ps / 1 violation** (REGRESSION — Run 16 was hold-clean)
+- Max-fanout violations: 0; Max-slew violations: 0
+- Core utilization: 25.87% stdcell / 41.3% total (140×140 die, core 135×135 µm)
+- Power: 28.73 mW (flat vs Run 16 28.23 mW)
+- Total area: 6,971.66 µm² (stdcell 3,460.46 + SRAM 3,511.2)
+- Instance count: 28,559 (up from 27,074 — P1 EX1b FFs + P2 tag registers)
+- DRC violations: 0; Antenna: 0; DRT-0074: 373 (non-fatal, permanent)
+
+### P1 Result (EX-stage mid-cone retiming)
+- **Target startpoint `_40621_`**: ELIMINATED — zero occurrences in post-route violator list
+- **New bottleneck**: `_43062_` (EX1b trap/redirect cascade output, fanout=7)
+- **WNS on new bottleneck**: -788.347 ps — only 23.7 ps improvement vs Run 16
+- **Root cause of low gain**: EX1b's trap priority cascade (~22 gate levels) is as deep
+  as the original monolithic EX cone. The cone was symmetric; splitting it in half gave
+  ~0 ps improvement from the retiming itself. Cone must be further split or restructured.
+
+### P2 Result (I-cache tag-write register)
+- **Target startpoint `_40031_`**: ELIMINATED — zero occurrences in post-route violator list
+- **Pre-PnR `_45222_` (834 fanout, -2529 ps WNS)**: Now appears only as an endpoint (driven
+  by `_45838_`); its post-route WNS as a startpoint is -513 ps — structural improvement
+  confirmed, no longer near-critical.
+- SDC `set_multicycle_path -setup 2` on tag_web0/tag_din0 accepted cleanly.
+
+### Hold Regression
+- 1 hold violation at -13.807 ps: `_44651_/QN → _44995_/D` (1-gate AOI211 path)
+- Root cause: P1's `ex1a_ex1b_reg_q` creates a new short path (1 gate ≈ 15 ps logic)
+  that violates hold with the 64 ps worst-case clock skew.
+- Remediation: add false-path or multicycle-hold SDC for this specific path in Run 18.
+
+### Critical Path (Worst Setup) — Post-Route
+- **Startpoint**: `_43062_` (DFFHQNx2_ASAP7_75t_R, QN=`_03196_`, fanout=7)
+- **Endpoint**: `_42797_` (DFFHQNx2_ASAP7_75t_R)
+- **Slack**: -788.347 ps
+- **Data arrival**: 898.777 ps; **Launch clock**: 117.854 ps; **Logic delay**: ~780 ps
+- **RTL identity**: EX1b-stage output register — result of trap priority cascade
+  (misalign > illegal > ecall > ebreak > IRQ priority encoder) and PC redirect mux
+- **Gate depth**: ~22 combinational stages through INVx1 → AOI22 → OAI221 → NOR3 →
+  AOI311 → BUFx5 → AOI32 → BUFx5 → AOI21 → NAND5 → NOR5 → AND4 → OAI211 ×2 →
+  O2A1O1Ix ×2 → OAI21 → A2O1A1Ix → HB1 → NOR2 → OAI311 → A2O1A1Ix → endpoint
+
+### Top-5 Violating Startpoints
+| Rank | Startpoint | Worst Slack (ps) | Path Count | RTL Function |
+|------|-----------|-----------------|------------|--------------|
+| 1 | `_43062_` | -788.347 | 126 (est.) | EX1b trap/redirect cascade output FF |
+| 2 | `_43132_` | ~-749 | 684 | EX1b pipeline register bit (broad fan) |
+| 3 | `_43053_` | ~-737 | 471 | EX1b control output FF |
+| 4 | `_45838_` | ~-735 | 434 | I-cache tag pre-stage register |
+| 5 | `_44587_` | ~-725 | 868 | EX/MEM pipeline register bit (high path count, moderate slack) |
+
+### Run 18 Priorities
+1. **P1 (HIGH — est. +200–350 ps)**: Split EX1b trap cascade — either pre-encode
+   `trap_type` in EX1a (removes 10-12 gate levels from EX1b), or add EX1b sub-stage.
+   Both approaches work; pre-encoding is lower ISA impact.
+2. **P2 (MEDIUM — est. +80–150 ps)**: D-cache tag comparison duplication in
+   `rv32i_dcache.sv` (per-bank `tag_hit_bank[b]` registers). SRAM-endpoint paths
+   still appear at -640 ps range (128 paths total from icache/dcache data SRAMs).
+3. **P3 (LOW — fix hold)**: Add hold false-path or multicycle SDC for
+   `_44651_ → _44995_` path to eliminate the 1 hold violation.
+4. **Config (no change)**: Keep density 42%, MAX_FANOUT 25, die 140×140. These
+   produced clean routing and 0 DRC/antenna violations in Run 17.
+
+**Projected Run 18 WNS (with EX1b trap-type pre-encoding + D-cache duplication)**:
+~-450 to -550 ps → **~571–606 MHz**
