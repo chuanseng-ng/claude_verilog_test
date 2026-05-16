@@ -1,7 +1,7 @@
 # Graph Report - /home/neuromorphic/Downloads/Github/claude_verilog_test  (2026-05-16)
 
 ## Corpus Check
-- 700 files · ~5,784,288 words
+- 700 files · ~5,784,286 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -2792,11 +2792,11 @@ Nodes (1): Handle AXI write transactions with delay/error injection.          Im
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `RV32IModel` connect `Community 3` to `Community 0`, `Community 1`, `Community 4`?**
-  _High betweenness centrality (0.206) - this node is a cross-community bridge._
+  _High betweenness centrality (0.173) - this node is a cross-community bridge._
 - **Why does `open_component()` connect `Community 2` to `Community 4`?**
-  _High betweenness centrality (0.098) - this node is a cross-community bridge._
-- **Why does `BaseTest` connect `Community 4` to `Community 3`, `Community 5`?**
-  _High betweenness centrality (0.087) - this node is a cross-community bridge._
+  _High betweenness centrality (0.123) - this node is a cross-community bridge._
+- **Why does `BaseSequence` connect `Community 6` to `Community 0`, `Community 4`, `Community 5`?**
+  _High betweenness centrality (0.075) - this node is a cross-community bridge._
 - **Are the 320 inferred relationships involving `RV32IModel` (e.g. with `TestRV32IModel` and `Unit tests for RV32IModel.  Tests the RV32I CPU reference model instruction exec`) actually correct?**
   _`RV32IModel` has 320 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 274 inferred relationships involving `BaseSequence` (e.g. with `ISASequenceBase` and `LWSequence`) actually correct?**
