@@ -165,6 +165,27 @@ module rv32i_pipeline_ex(
         ex1a_to_ex1b.flush_ex_mem = flush_ex_mem;
         ex1a_to_ex1b.rs1_addr     = id_ex_reg_i.rs1_addr;
         ex1a_to_ex1b.rs2_addr     = id_ex_reg_i.rs2_addr;
+
+        // Priority-encode trap_type in EX1a before the ex1a_ex1b_reg_q FF.
+        // EX1b replaces the 8-level if/else-if cascade with a flat case-mux
+        // on this registered field — removes ~10-12 gate levels from EX1b cone.
+        // Priority order matches the EX1b cascade (IRQ highest).
+        if (id_ex_reg_i.valid && irq_valid_r)
+            ex1a_to_ex1b.trap_type = TRAP_IRQ;
+        else if (id_ex_reg_i.valid && (id_ex_reg_i.illegal || id_ex_reg_i.csr_illegal))
+            ex1a_to_ex1b.trap_type = TRAP_ILLEGAL;
+        else if (id_ex_reg_i.valid && id_ex_reg_i.ebreak)
+            ex1a_to_ex1b.trap_type = TRAP_EBREAK;
+        else if (id_ex_reg_i.valid && id_ex_reg_i.fence_i)
+            ex1a_to_ex1b.trap_type = TRAP_FENCEI;
+        else if (id_ex_reg_i.valid && id_ex_reg_i.mret)
+            ex1a_to_ex1b.trap_type = TRAP_MRET;
+        else if (id_ex_reg_i.valid && id_ex_reg_i.jump && id_ex_reg_i.jalr)
+            ex1a_to_ex1b.trap_type = TRAP_JALR;
+        else if (id_ex_reg_i.valid && id_ex_reg_i.branch && branch_taken)
+            ex1a_to_ex1b.trap_type = TRAP_BRANCH;
+        else
+            ex1a_to_ex1b.trap_type = TRAP_NONE;
     end
 
     // EX1a combinational output — registered in rv32i_core.sv, then fed to EX1b

@@ -86,6 +86,10 @@ module rv32i_pipeline_ex1b (
     // Trap priority and PC redirect logic
     // Priority (highest first): irq > illegal_insn/csr_illegal > ebreak >
     //                           fence_i > mret > jalr > taken-branch
+    //
+    // Run-18 P1: flat case-mux on pre-encoded trap_type (registered in EX1a).
+    // Replaces the 8-level if/else-if priority cascade, removing ~10-12 gate
+    // levels from the EX1b combinational cone.
     // =========================================================================
     logic        trap_valid;
     logic [31:0] trap_cause;
@@ -95,6 +99,7 @@ module rv32i_pipeline_ex1b (
     logic        is_irq;
 
     always_comb begin
+        // Defaults
         trap_valid      = 1'b0;
         trap_cause      = 32'h0;
         trap_pc         = ex1a_i.pc;
@@ -108,55 +113,57 @@ module rv32i_pipeline_ex1b (
         if (!ex1a_i.valid || ex1a_i.flush_ex_mem) begin
             // Bubble or ghost being killed by registered redirect: suppress all outputs
 
-        end else if (ex1a_i.irq_valid_r) begin
-            // Interrupt (highest priority among traps)
-            trap_valid      = 1'b1;
-            trap_cause      = ex1a_i.irq_cause;
-            trap_pc         = ex1a_i.pc;  // mepc = squashed instruction's PC
-            do_redirect     = 1'b1;
-            redirect_target = ex1a_i.mtvec;
-            is_irq          = 1'b1;
-
-        end else if (ex1a_i.illegal || ex1a_i.csr_illegal) begin
-            // Illegal instruction
-            trap_valid      = 1'b1;
-            trap_cause      = 32'h0000_0002;   // mcause=2: illegal instruction
-            do_redirect     = 1'b1;
-            redirect_target = ex1a_i.mtvec;
-
-        end else if (ex1a_i.ebreak) begin
-            // EBREAK: set mcause=3, redirect to mtvec, AND request debug halt
-            trap_valid      = 1'b1;
-            trap_cause      = 32'h0000_0003;   // mcause=3: breakpoint
-            do_redirect     = 1'b1;
-            redirect_target = ex1a_i.mtvec;
-            dbg_halt_req_o  = 1'b1;
-
-        end else if (ex1a_i.fence_i) begin
-            // FENCE.I: flush pipeline (redirect to PC+4) and invalidate I-cache
-            do_redirect     = 1'b1;
-            redirect_target = ex1a_i.pc + 32'd4;
-            fence_i_o       = 1'b1;
-
-        end else if (ex1a_i.mret) begin
-            // MRET: restore PC from mepc, restore MIE
-            do_redirect     = 1'b1;
-            redirect_target = ex1a_i.mret_pc;
-            mret_o          = 1'b1;
-
-        end else if (ex1a_i.jump) begin
-            // JAL (already handled in ID) or JALR
-            if (ex1a_i.jalr) begin
-                // JALR: target = (rs1 + imm) & ~1
-                do_redirect     = 1'b1;
-                redirect_target = {ex1a_i.alu_result[31:1], 1'b0};
-            end
-            // JAL redirect is done in ID; EX doesn't set ex_pc_redirect for JAL
-
-        end else if (ex1a_i.branch && ex1a_i.branch_taken) begin
-            // Taken branch
-            do_redirect     = 1'b1;
-            redirect_target = ex1a_i.pc + ex1a_i.immediate;
+        end else begin
+            // Flat case-mux on pre-encoded trap_type — single gate level select
+            unique case (ex1a_i.trap_type)
+                TRAP_IRQ: begin
+                    // Interrupt (highest priority)
+                    trap_valid      = 1'b1;
+                    trap_cause      = ex1a_i.irq_cause;
+                    trap_pc         = ex1a_i.pc;   // mepc = squashed instruction's PC
+                    do_redirect     = 1'b1;
+                    redirect_target = ex1a_i.mtvec;
+                    is_irq          = 1'b1;
+                end
+                TRAP_ILLEGAL: begin
+                    // Illegal instruction (mcause=2)
+                    trap_valid      = 1'b1;
+                    trap_cause      = 32'h0000_0002;
+                    do_redirect     = 1'b1;
+                    redirect_target = ex1a_i.mtvec;
+                end
+                TRAP_EBREAK: begin
+                    // EBREAK: mcause=3, redirect to mtvec, request debug halt
+                    trap_valid      = 1'b1;
+                    trap_cause      = 32'h0000_0003;
+                    do_redirect     = 1'b1;
+                    redirect_target = ex1a_i.mtvec;
+                    dbg_halt_req_o  = 1'b1;
+                end
+                TRAP_FENCEI: begin
+                    // FENCE.I: redirect to PC+4, invalidate I-cache
+                    do_redirect     = 1'b1;
+                    redirect_target = ex1a_i.pc + 32'd4;
+                    fence_i_o       = 1'b1;
+                end
+                TRAP_MRET: begin
+                    // MRET: restore PC from mepc, restore MIE
+                    do_redirect     = 1'b1;
+                    redirect_target = ex1a_i.mret_pc;
+                    mret_o          = 1'b1;
+                end
+                TRAP_JALR: begin
+                    // JALR: target = (rs1 + imm) & ~1
+                    do_redirect     = 1'b1;
+                    redirect_target = {ex1a_i.alu_result[31:1], 1'b0};
+                end
+                TRAP_BRANCH: begin
+                    // Taken branch
+                    do_redirect     = 1'b1;
+                    redirect_target = ex1a_i.pc + ex1a_i.immediate;
+                end
+                default: ; // TRAP_NONE — no redirect, all defaults hold
+            endcase
         end
     end
 

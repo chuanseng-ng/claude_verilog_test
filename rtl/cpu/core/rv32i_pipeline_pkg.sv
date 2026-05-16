@@ -84,6 +84,22 @@ package rv32i_pipeline_pkg;
     } ex_mem_reg_t;
 
     // =========================================================================
+    // Trap type encoding — pre-computed in EX1a to reduce EX1b cascade depth
+    // Priority (highest first): IRQ > illegal/csr_illegal > ebreak >
+    //                           fence_i > mret > jalr > taken-branch > none
+    // =========================================================================
+    typedef enum logic [2:0] {
+        TRAP_NONE    = 3'd0,
+        TRAP_IRQ     = 3'd1,
+        TRAP_ILLEGAL = 3'd2,
+        TRAP_EBREAK  = 3'd3,
+        TRAP_FENCEI  = 3'd4,
+        TRAP_MRET    = 3'd5,
+        TRAP_JALR    = 3'd6,
+        TRAP_BRANCH  = 3'd7
+    } trap_type_e;
+
+    // =========================================================================
     // EX1a/EX1b Intermediate Wire (combinational — NOT a pipeline register)
     // Carries EX1a (ALU + branch_comp + JALR) outputs to EX1b (store-align +
     // trap-cascade).  No FF boundary here; EX2 still owns the only FF.
@@ -126,6 +142,8 @@ package rv32i_pipeline_pkg;
         // rs1/rs2 addresses (for forwarding detection passthrough)
         logic [4:0]  rs1_addr;
         logic [4:0]  rs2_addr;
+        // Pre-encoded trap type (computed in EX1a, consumed in EX1b as flat case-mux)
+        trap_type_e  trap_type;
     } ex1a_ex1b_t;
 
     // =========================================================================
@@ -302,6 +320,7 @@ package rv32i_pipeline_pkg;
         ex1a_ex1b_nop.flush_ex_mem  = 1'b0;
         ex1a_ex1b_nop.rs1_addr      = 5'h0;
         ex1a_ex1b_nop.rs2_addr      = 5'h0;
+        ex1a_ex1b_nop.trap_type     = TRAP_NONE;
     endfunction
 
     function automatic mem_wb_reg_t mem_wb_nop();
