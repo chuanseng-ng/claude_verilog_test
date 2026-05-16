@@ -16,7 +16,8 @@
 | Run 16 | RUN_2026-05-15_18-51-46 | -812  | ~497 | **Complete (48/48) — REGRESSION** | MAX_FANOUT 20, density 45, D-cache multicycle SDC — D-cache tag fan still dominant; startpoint _40621_ (EX ALU), _40031_ (I-cache tag 298-fanout) |
 | Run 17 | RUN_2026-05-16_08-05-19 | **-788** | **~503** | **Complete (48/48) — Marginal improvement** | P1: EX1a/EX1b mid-cone register; P2: I-cache tag_we_q/tag_din_q/tag_idx_q register; MCU SDC on tag nets — both Run 16 startpoints eliminated; new bottleneck is EX1b trap cascade |
 | Run 18 | RUN_2026-05-16_10-12-46 | **-758.99** | **~510** | **Complete (48/48) — Marginal improvement** | P1: trap_type pre-encode in EX1a (flat case-mux, eliminates 22-gate cascade); P3: hold false-path for ex1a→EX1b short path — hold FIXED (0 vio); gain only +29 ps because EX1b byte-align/pack cone (28 gate levels) was co-critical and fully exposed |
-| Run 19 | RUN_2026-05-16_11-17-03 | **TBD** | **TBD** | **IN PROGRESS** | P1 (RTL): Pre-register store byte-align in EX1a (extends ex1a_ex1b_t with pre_wdata_aligned/pre_wstrb); P2 (RTL): I-cache per-bank refill data register duplication in rv32i_icache.sv — targets _45628_ (537 paths, -639 ps worst) |
+| Run 19 | RUN_2026-05-16_11-17-03 | **-782.06** | **~563** | **Complete (48/48)** | P1: Pre-register store byte-align in EX1a; P2: I-cache per-bank refill data dup — WNS net flat vs Run 18 (-758→-782 ps, slight regression) |
+| Run 20 | RUN_2026-05-16_13-13-20 | **-697.18** | **~563** | **Complete (48/48) — Marginal improvement +85 ps** | EX1c stage (ex1c_ex1b_reg_q) inserted; actual gain only +85 ps vs projected +300-450 ps; EX1b still 26-gate cone bottleneck; new dominant offender _42967_ (if_id_reg, 1740 vio, -680 ps); hold WNS +1.045 ps (input path) / r2r +23.31 ps — NO hold violations |
 
 ---
 
