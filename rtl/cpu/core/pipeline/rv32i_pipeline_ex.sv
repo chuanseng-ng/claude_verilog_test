@@ -186,6 +186,56 @@ module rv32i_pipeline_ex(
             ex1a_to_ex1b.trap_type = TRAP_BRANCH;
         else
             ex1a_to_ex1b.trap_type = TRAP_NONE;
+
+        // =====================================================================
+        // Run-19 P1: Store byte-align pre-computed in EX1a before ex1a_ex1b_reg_q FF.
+        // EX1b reads ex1a_i.pre_wdata_aligned / ex1a_i.pre_wstrb directly, removing
+        // the ~8-10 gate byte-align mux tree from the EX1b combinational cone.
+        // All inputs (alu_result[1:0], mem_size, fwd_store) are available in EX1a.
+        // =====================================================================
+        ex1a_to_ex1b.pre_wstrb         = 4'b1111;
+        ex1a_to_ex1b.pre_wdata_aligned = fwd_store;
+
+        case (id_ex_reg_i.mem_size)
+            3'b000: begin  // Byte store
+                case (alu_result[1:0])
+                    2'b00: begin
+                        ex1a_to_ex1b.pre_wstrb         = 4'b0001;
+                        ex1a_to_ex1b.pre_wdata_aligned = {24'h0, fwd_store[7:0]};
+                    end
+                    2'b01: begin
+                        ex1a_to_ex1b.pre_wstrb         = 4'b0010;
+                        ex1a_to_ex1b.pre_wdata_aligned = {16'h0, fwd_store[7:0], 8'h0};
+                    end
+                    2'b10: begin
+                        ex1a_to_ex1b.pre_wstrb         = 4'b0100;
+                        ex1a_to_ex1b.pre_wdata_aligned = {8'h0, fwd_store[7:0], 16'h0};
+                    end
+                    2'b11: begin
+                        ex1a_to_ex1b.pre_wstrb         = 4'b1000;
+                        ex1a_to_ex1b.pre_wdata_aligned = {fwd_store[7:0], 24'h0};
+                    end
+                endcase
+            end
+            3'b001: begin  // Halfword store
+                case (alu_result[1])
+                    1'b0: begin
+                        ex1a_to_ex1b.pre_wstrb         = 4'b0011;
+                        ex1a_to_ex1b.pre_wdata_aligned = {16'h0, fwd_store[15:0]};
+                    end
+                    1'b1: begin
+                        ex1a_to_ex1b.pre_wstrb         = 4'b1100;
+                        ex1a_to_ex1b.pre_wdata_aligned = {fwd_store[15:0], 16'h0};
+                    end
+                endcase
+            end
+            3'b010: begin  // Word store — defaults already set above
+            end
+            default: begin
+                ex1a_to_ex1b.pre_wstrb         = 4'b0000;
+                ex1a_to_ex1b.pre_wdata_aligned = 32'h0;
+            end
+        endcase
     end
 
     // EX1a combinational output — registered in rv32i_core.sv, then fed to EX1b

@@ -144,6 +144,10 @@ package rv32i_pipeline_pkg;
         logic [4:0]  rs2_addr;
         // Pre-encoded trap type (computed in EX1a, consumed in EX1b as flat case-mux)
         trap_type_e  trap_type;
+        // Run-19 P1: store byte-align pre-computed in EX1a to shorten EX1b cone.
+        // EX1b reads these directly — removing the ~8-10 gate byte-align mux from EX1b.
+        logic [31:0] pre_wdata_aligned;   // Byte/halfword/word-aligned store data
+        logic [3:0]  pre_wstrb;           // Byte write strobe
     } ex1a_ex1b_t;
 
     // =========================================================================
@@ -320,7 +324,9 @@ package rv32i_pipeline_pkg;
         ex1a_ex1b_nop.flush_ex_mem  = 1'b0;
         ex1a_ex1b_nop.rs1_addr      = 5'h0;
         ex1a_ex1b_nop.rs2_addr      = 5'h0;
-        ex1a_ex1b_nop.trap_type     = TRAP_NONE;
+        ex1a_ex1b_nop.trap_type         = TRAP_NONE;
+        ex1a_ex1b_nop.pre_wdata_aligned = 32'h0;
+        ex1a_ex1b_nop.pre_wstrb         = 4'h0;
     endfunction
 
     function automatic mem_wb_reg_t mem_wb_nop();

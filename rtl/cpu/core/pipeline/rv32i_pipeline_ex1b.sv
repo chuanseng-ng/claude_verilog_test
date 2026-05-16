@@ -47,40 +47,16 @@ module rv32i_pipeline_ex1b (
 );
 
     // =========================================================================
-    // Store byte-alignment (uses alu_result[1:0] from EX1a)
+    // Store byte-alignment — Run-19 P1: use pre-computed values from EX1a.
+    // ex1a_i.pre_wdata_aligned and ex1a_i.pre_wstrb were computed in EX1a before
+    // the ex1a_ex1b_reg_q FF, removing the ~8-10 gate byte-align mux from EX1b.
     // =========================================================================
     logic [31:0] pre_wdata_aligned;
     logic [3:0]  pre_wstrb;
 
-    always_comb begin
-        pre_wstrb         = 4'b1111;
-        pre_wdata_aligned = ex1a_i.fwd_store;
-
-        case (ex1a_i.mem_size)
-            3'b000: begin  // Byte store
-                case (ex1a_i.alu_result[1:0])
-                    2'b00: begin pre_wstrb = 4'b0001; pre_wdata_aligned = {24'h0, ex1a_i.fwd_store[7:0]}; end
-                    2'b01: begin pre_wstrb = 4'b0010; pre_wdata_aligned = {16'h0, ex1a_i.fwd_store[7:0], 8'h0}; end
-                    2'b10: begin pre_wstrb = 4'b0100; pre_wdata_aligned = {8'h0,  ex1a_i.fwd_store[7:0], 16'h0}; end
-                    2'b11: begin pre_wstrb = 4'b1000; pre_wdata_aligned = {ex1a_i.fwd_store[7:0], 24'h0}; end
-                endcase
-            end
-            3'b001: begin  // Halfword store
-                case (ex1a_i.alu_result[1])
-                    1'b0: begin pre_wstrb = 4'b0011; pre_wdata_aligned = {16'h0, ex1a_i.fwd_store[15:0]}; end
-                    1'b1: begin pre_wstrb = 4'b1100; pre_wdata_aligned = {ex1a_i.fwd_store[15:0], 16'h0}; end
-                endcase
-            end
-            3'b010: begin  // Word store
-                pre_wstrb         = 4'b1111;
-                pre_wdata_aligned = ex1a_i.fwd_store;
-            end
-            default: begin
-                pre_wstrb         = 4'b0000;
-                pre_wdata_aligned = 32'h0;
-            end
-        endcase
-    end
+    // Directly use the pre-registered values — no combinational mux needed here.
+    assign pre_wdata_aligned = ex1a_i.pre_wdata_aligned;
+    assign pre_wstrb         = ex1a_i.pre_wstrb;
 
     // =========================================================================
     // Trap priority and PC redirect logic

@@ -172,6 +172,14 @@ module rv32i_icache (
     logic                        ar_pending_q;
     logic [LINE_WORDS-1:0][31:0] refill_buf_q;   // Accumulates all 4 words
 
+    // Run-19 P2: Per-bank duplicate of refill_line_addr_q.
+    // refill_line_addr_q[11:4] fans to all 4 data SRAM addr0 ports in CS_REFILL,
+    // creating ~530 fanout paths through the refill_word_q decode tree.
+    // Each per-bank copy is loaded identically but (* keep = 1 *) prevents
+    // Yosys from re-merging them, so each drives only 1 bank's addr0/din0
+    // control — reducing fanout 4×. Functional behaviour is unchanged.
+    (* keep = 1 *) logic [31:0] refill_addr_bank_q [0:LINE_WORDS-1];
+
     // SRAM output pipeline registers — capture negedge-launched dout at posedge
     logic [31:0] tag_dout_r;
     logic [31:0] data_dout_r [0:LINE_WORDS-1];
@@ -324,6 +332,10 @@ module rv32i_icache (
 
     // =========================================================================
     // SRAM combinational control — Data SRAMs (port 0, all 4 instances)
+    // Run-19 P2: Use per-bank duplicate refill_addr_bank_q for addr0/csb0/web0.
+    // Each bank b uses refill_addr_bank_q[b][11:4] for its own address port,
+    // avoiding the multi-bank broadcast from a single refill_line_addr_q.
+    // The per-bank copies are loaded identically in the FSM always_ff block.
     // =========================================================================
     always_comb begin
         for (int w = 0; w < LINE_WORDS; w++) begin
@@ -348,11 +360,12 @@ module rv32i_icache (
             CS_REFILL: begin
                 // Write each word to its SRAM column as it arrives from AXI.
                 // Suppress write for stale refills (address changed mid-flight).
+                // Use per-bank addr copy to keep each bank's address local.
                 if (ar_pending_q && axi_rvalid_i && !addr_mismatch) begin
                     data_csb0[refill_word_q]  = 1'b0;
                     data_web0[refill_word_q]  = 1'b0;  // write
-                    data_addr0[refill_word_q] = refill_line_addr_q[11:4];
-                    data_din0[refill_word_q]   = axi_rdata_i;
+                    data_addr0[refill_word_q] = refill_addr_bank_q[refill_word_q][11:4];
+                    data_din0[refill_word_q]  = axi_rdata_i;
                 end
             end
 
@@ -368,6 +381,7 @@ module rv32i_icache (
             state_q            <= CS_IDLE;
             ic_addr_q          <= '0;
             refill_line_addr_q <= '0;
+            for (int b = 0; b < LINE_WORDS; b++) refill_addr_bank_q[b] <= '0;
             refill_word_q      <= 2'b00;
             ar_pending_q       <= 1'b0;
             refill_buf_q       <= '0;
@@ -406,6 +420,8 @@ module rv32i_icache (
                     end else begin
                         // Miss — start refill
                         refill_line_addr_q <= {ic_addr_q[31:4], 4'b0000};
+                        for (int b = 0; b < LINE_WORDS; b++)
+                            refill_addr_bank_q[b] <= {ic_addr_q[31:4], 4'b0000};
                         refill_word_q      <= 2'b00;
                         ar_pending_q       <= 1'b0;
                         state_q            <= CS_REFILL;
