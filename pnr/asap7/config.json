@@ -33,19 +33,19 @@
 
     "CLOCK_PORT":   "clk_i",
     "CLOCK_NET":    "clk_i",
-    "CLOCK_PERIOD": 1.2,
+    "CLOCK_PERIOD": 1.9,
 
     "VERILOG_DEFINES": ["SRAM_ASAP7"],
 
     "FP_SIZING":       "absolute",
-    "DIE_AREA":        "0 0 160 160",
-    "CORE_AREA":       "5 5 155 155",
+    "DIE_AREA":        "0 0 140 140",
+    "CORE_AREA":       "5 5 135 135",
     "FP_CORE_UTIL":    40,
     "FP_ASPECT_RATIO": 1,
 
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
 
-    "PL_TARGET_DENSITY_PCT":     48,
+    "PL_TARGET_DENSITY_PCT":     50,
     "PL_TIME_DRIVEN":            true,
     "PL_ROUTABILITY_DRIVEN":     true,
 

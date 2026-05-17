@@ -2,19 +2,23 @@
 // RV32I Pipeline Forwarding Unit (Phase 3 / EX2 retiming)
 //
 // Purely combinational. Implements the forwarding mux trees for ALU
-// operands and store data using fwd_*_sel and fwd_*_ex1c signals from
+// operands and store data using fwd_*_sel and fwd_*_ex1c/ex1b2 signals from
 // the hazard unit.
 //
 // Forwarding encoding (fwd_*_sel):
-//   2'b00 = register file output (no forwarding) — or EX1c tier when fwd_*_ex1c=1
-//   2'b01 = EX2 result (ex_mem_reg — 3 cycles behind EX1a after Run-20 split)
+//   2'b00 = register file output (no forwarding) — or EX1c/EX1b2 tier when flag=1
+//   2'b01 = EX2 result (ex_mem_reg — 4 cycles behind EX1a after Run-23 split)
 //   2'b10 = WB  result (mem_wb writeback data)
 //   2'b11 = EX1c-stage result (ex1a_ex1b_reg — 1 cycle behind EX1a, highest priority)
 //           (producer just completed EX1a and is currently passing through EX1c)
 //
 // fwd_*_ex1c = 1: EX1b-stage result (ex1c_ex1b_reg — 2 cycles behind EX1a)
 //   (producer completed EX1c and is currently in EX1b)
-//   Priority: between 2'b11 and 2'b01.
+//   Priority: between 2'b11 and fwd_*_ex1b2.
+//
+// fwd_*_ex1b2 = 1: EX1b2-stage result (ex1b_ex2_reg_q — 3 cycles behind EX1a; Run-23)
+//   (producer completed EX1b and is currently in ex1b_ex2_reg_q, waiting for EX2)
+//   Priority: between fwd_*_ex1c and 2'b01.
 
 `default_nettype none
 module rv32i_forwarding_unit (
@@ -27,6 +31,11 @@ module rv32i_forwarding_unit (
     input  logic        fwd_a_ex1c,
     input  logic        fwd_b_ex1c,
     input  logic        fwd_store_ex1c,
+
+    // EX1b2 forwarding tier (producer in ex1b_ex2_reg_q — Run-23)
+    input  logic        fwd_a_ex1b2,
+    input  logic        fwd_b_ex1b2,
+    input  logic        fwd_store_ex1b2,
 
     // ID/EX pipeline register data (direct register file reads)
     input  logic [31:0] id_ex_rs1_data,
@@ -47,6 +56,13 @@ module rv32i_forwarding_unit (
     input  logic [31:0] ex1c_pc,
     input  logic        ex1c_csr_access,
     input  logic        ex1c_jump,
+
+    // EX1b2 register data (for EX1b2-stage→EX1a forwarding — ex1b_ex2_reg_q; Run-23)
+    input  logic [31:0] ex1b2_alu_result,
+    input  logic [31:0] ex1b2_csr_rdata,
+    input  logic [31:0] ex1b2_pc,
+    input  logic        ex1b2_csr_access,
+    input  logic        ex1b2_jump,
 
     // EX/MEM register data (for EX2→EX1a forwarding)
     input  logic [31:0] ex_mem_alu_result,
@@ -101,6 +117,22 @@ module rv32i_forwarding_unit (
     end
 
     // =========================================================================
+    // EX1b2-stage write-back data (ex1b_ex2_reg_q — producer in EX1b2, 3 cycles behind)
+    // Run-23: new tier between EX1c (ex1c_ex1b_reg_q) and EX2 (ex_mem_reg).
+    // =========================================================================
+    logic [31:0] ex1b2_rd_data;
+
+    always_comb begin
+        if (ex1b2_csr_access) begin
+            ex1b2_rd_data = ex1b2_csr_rdata;
+        end else if (ex1b2_jump) begin
+            ex1b2_rd_data = ex1b2_pc + 32'd4;
+        end else begin
+            ex1b2_rd_data = ex1b2_alu_result;
+        end
+    end
+
+    // =========================================================================
     // EX/MEM write-back data selection (EX2→EX1a forwarding value)
     // =========================================================================
     logic [31:0] ex_mem_rd_data;
@@ -134,13 +166,15 @@ module rv32i_forwarding_unit (
 
     // =========================================================================
     // Forwarded rs1 (ALU operand A)
-    // Priority: EX1c-stage (2'b11) > EX1b-stage (fwd_a_ex1c) > EX2 (2'b01) > WB > regfile
+    // Priority: EX1c(2'b11) > EX1b(fwd_a_ex1c) > EX1b2(fwd_a_ex1b2) > EX2(2'b01) > WB > RF
     // =========================================================================
     always_comb begin
         if (fwd_a_sel == 2'b11) begin
             fwd_rs1 = ex1b_rd_data;       // EX1c-stage→EX1a (highest priority)
         end else if (fwd_a_ex1c) begin
             fwd_rs1 = ex1c_rd_data;       // EX1b-stage→EX1a
+        end else if (fwd_a_ex1b2) begin
+            fwd_rs1 = ex1b2_rd_data;      // EX1b2-stage→EX1a (Run-23)
         end else begin
             case (fwd_a_sel)
                 2'b01:   fwd_rs1 = ex_mem_rd_data;    // EX2→EX1a
@@ -158,6 +192,8 @@ module rv32i_forwarding_unit (
             fwd_rs2 = ex1b_rd_data;       // EX1c-stage→EX1a
         end else if (fwd_b_ex1c) begin
             fwd_rs2 = ex1c_rd_data;       // EX1b-stage→EX1a
+        end else if (fwd_b_ex1b2) begin
+            fwd_rs2 = ex1b2_rd_data;      // EX1b2-stage→EX1a (Run-23)
         end else begin
             case (fwd_b_sel)
                 2'b01:   fwd_rs2 = ex_mem_rd_data;    // EX2→EX1a
@@ -175,6 +211,8 @@ module rv32i_forwarding_unit (
             fwd_store = ex1b_rd_data;     // EX1c-stage→EX1a
         end else if (fwd_store_ex1c) begin
             fwd_store = ex1c_rd_data;     // EX1b-stage→EX1a
+        end else if (fwd_store_ex1b2) begin
+            fwd_store = ex1b2_rd_data;    // EX1b2-stage→EX1a (Run-23)
         end else begin
             case (fwd_store_sel)
                 2'b01:   fwd_store = ex_mem_rd_data;  // EX2→EX1a

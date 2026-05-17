@@ -87,7 +87,7 @@ module rv32i_core(
     // =========================================================================
     if_id_reg_t   if_id_reg;
     id_ex_reg_t   id_ex_reg;
-    ex1_ex2_reg_t ex1_ex2_reg;
+    // ex1_ex2_reg removed Run-23: replaced by ex1b_comb (wire) + ex1b_ex2_reg_q (FF)
     ex_mem_reg_t  ex_mem_reg;
     mem_wb_reg_t  mem_wb_reg;
 
@@ -101,6 +101,8 @@ module rv32i_core(
 
     // Forwarding unit EX1c tier selects
     logic        fwd_a_ex1c, fwd_b_ex1c, fwd_store_ex1c;
+    // Forwarding unit EX1b2 tier selects (Run-23: new ex1b_ex2_reg_q tier)
+    logic        fwd_a_ex1b2, fwd_b_ex1b2, fwd_store_ex1b2;
     logic [1:0]  fwd_a_sel, fwd_b_sel, fwd_store_sel;
 
     // =========================================================================
@@ -223,19 +225,24 @@ module rv32i_core(
     logic        dbg_ebreak_from_ex;
 
     assign dbg_halt_combined = dbg_halt_req || dbg_ebreak_from_ex;
-    assign dbg_halted = dbg_halted_wb && !id_ex_reg.valid && !ex1a_ex1b_reg_q.valid && !ex1c_ex1b_reg_q.valid && !ex_mem_reg.valid;
+    assign dbg_halted = dbg_halted_wb && !id_ex_reg.valid && !ex1a_ex1b_reg_q.valid && !ex1c_ex1b_reg_q.valid && !ex1b_ex2_reg_q.valid && !ex_mem_reg.valid;
 
     logic [31:0] pc_if_out;
 
     // =========================================================================
-    // EX1a/EX1c pipeline FF (Run-17/20 mid-EX retiming)
+    // EX1a/EX1c/EX1b pipeline FFs (Run-17/20/23 mid-EX retiming)
     // ex1a_ex1b_reg_q: registered output of EX1a → input to EX1c combinational
-    // ex1c_ex1b_reg_q: registered output of EX1c → input to EX1b combinational (Run-20 NEW)
+    // ex1c_ex1b_reg_q: registered output of EX1c → input to EX1b combinational (Run-20)
+    // ex1b_ex2_reg_q:  registered output of EX1b → input to EX2 FF (Run-23 NEW)
+    //                  Breaks the ~800 ps EX1b combinational cone (ex1c_ex1b_reg_q
+    //                  → 20-gate EX1b logic → ex1_ex2 FF inputs).
     // =========================================================================
     ex1a_ex1b_t ex1a_ex1b_comb;    // combinational output from u_ex (EX1a)
     ex1a_ex1b_t ex1a_ex1b_reg_q;   // registered EX1a output — fed into u_ex1c
     ex1a_ex1b_t ex1c_comb;         // combinational output from u_ex1c (EX1c)
     ex1a_ex1b_t ex1c_ex1b_reg_q;   // registered EX1c output — fed into u_ex1b
+    ex1_ex2_reg_t ex1b_comb;       // combinational output from u_ex1b (EX1b)
+    ex1_ex2_reg_t ex1b_ex2_reg_q;  // registered EX1b output — fed into u_ex2 (Run-23)
 
     always_ff @(posedge clk) begin
         if (!rst_n || flush_ex1a_ex1b)
@@ -249,6 +256,23 @@ module rv32i_core(
             ex1c_ex1b_reg_q <= ex1a_ex1b_nop();
         else if (!stall_ex1c_ex1b)
             ex1c_ex1b_reg_q <= ex1c_comb;
+    end
+
+    // Run-23: EX1b→EX2 register — breaks the ex1c_ex1b_reg_q→EX1b→ex1_ex2 cone.
+    //
+    // FLUSH RULE: ex1b_ex2_reg_q holds the REDIRECTING instruction itself
+    // (the branch/JALR/trap that caused ex_pc_redirect).  It must NOT be flushed
+    // by flush_ex1_ex2 (which fires one cycle after ex_pc_redirect fires, i.e.
+    // on ex_pc_redirect_r).  Doing so would kill the branch before it commits.
+    //
+    // Only flush on mem_trap_redirect_r (MEM-stage misalign trap), which takes
+    // priority over every in-flight instruction including the redirector.
+    // The stall signal is unchanged (mem_cache_stall global freeze still applies).
+    always_ff @(posedge clk) begin
+        if (!rst_n || mem_trap_redirect_r)
+            ex1b_ex2_reg_q <= ex1_ex2_nop();
+        else if (!stall_ex1_ex2)
+            ex1b_ex2_reg_q <= ex1b_comb;
     end
 
     // =========================================================================
@@ -330,6 +354,10 @@ module rv32i_core(
         .ex1c_rd_addr      (ex1c_ex1b_reg_q.rd_addr),
         .ex1c_reg_wr_en    (ex1c_ex1b_reg_q.reg_wr_en),
         .ex1c_mem_rd       (ex1c_ex1b_reg_q.mem_rd),
+        // ex1b2_ ports = ex1b_ex2_reg_q (producer in EX2, 3 cycles behind EX1a; Run-23)
+        .ex1b2_rd_addr     (ex1b_ex2_reg_q.rd_addr),
+        .ex1b2_reg_wr_en   (ex1b_ex2_reg_q.reg_wr_en),
+        .ex1b2_mem_rd      (ex1b_ex2_reg_q.mem_rd),
         .ex_mem_rd_addr    (ex_mem_reg.rd_addr),
         .ex_mem_reg_wr_en  (ex_mem_reg.reg_wr_en),
         .ex_mem_mem_rd     (ex_mem_reg.mem_rd),
@@ -360,7 +388,10 @@ module rv32i_core(
         .fwd_store_sel     (fwd_store_sel),
         .fwd_a_ex1c        (fwd_a_ex1c),
         .fwd_b_ex1c        (fwd_b_ex1c),
-        .fwd_store_ex1c    (fwd_store_ex1c)
+        .fwd_store_ex1c    (fwd_store_ex1c),
+        .fwd_a_ex1b2       (fwd_a_ex1b2),
+        .fwd_b_ex1b2       (fwd_b_ex1b2),
+        .fwd_store_ex1b2   (fwd_store_ex1b2)
     );
 
     // =========================================================================
@@ -373,6 +404,10 @@ module rv32i_core(
         .fwd_a_ex1c         (fwd_a_ex1c),
         .fwd_b_ex1c         (fwd_b_ex1c),
         .fwd_store_ex1c     (fwd_store_ex1c),
+        // Run-23: new EX1b2 forwarding tier (ex1b_ex2_reg_q, 3 cycles behind EX1a)
+        .fwd_a_ex1b2        (fwd_a_ex1b2),
+        .fwd_b_ex1b2        (fwd_b_ex1b2),
+        .fwd_store_ex1b2    (fwd_store_ex1b2),
         .id_ex_rs1_data     (id_ex_reg.rs1_data),
         .id_ex_rs2_data     (id_ex_reg.rs2_data),
         // ex1b_ ports = ex1a_ex1b_reg_q (producer just completed EX1a, in EX1c)
@@ -387,6 +422,12 @@ module rv32i_core(
         .ex1c_pc            (ex1c_ex1b_reg_q.pc),
         .ex1c_csr_access    (ex1c_ex1b_reg_q.csr_access),
         .ex1c_jump          (ex1c_ex1b_reg_q.jump),
+        // ex1b2_ ports = ex1b_ex2_reg_q (producer completed EX1b, now in EX2; Run-23)
+        .ex1b2_alu_result   (ex1b_ex2_reg_q.alu_result),
+        .ex1b2_csr_rdata    (ex1b_ex2_reg_q.csr_rdata),
+        .ex1b2_pc           (ex1b_ex2_reg_q.pc),
+        .ex1b2_csr_access   (ex1b_ex2_reg_q.csr_access),
+        .ex1b2_jump         (ex1b_ex2_reg_q.jump),
         .ex_mem_alu_result  (ex_mem_reg.alu_result),
         .ex_mem_csr_rdata   (ex_mem_reg.csr_rdata),
         .ex_mem_pc          (ex_mem_reg.pc),
@@ -562,9 +603,13 @@ module rv32i_core(
         ex1b_input = flush_ex1c_ex1b ? ex1a_ex1b_nop() : ex1c_ex1b_reg_q;
     end
 
+    // Run-23: EX1b output now drives ex1b_comb (wire) which is registered into
+    // ex1b_ex2_reg_q before reaching u_ex2.  ex_pc_redirect / trap signals are
+    // still captured combinationally and registered separately (ex_pc_redirect_r,
+    // mem_trap_redirect_r) — their timing is unaffected by this change.
     rv32i_pipeline_ex1b u_ex1b (
         .ex1a_i           (ex1b_input),
-        .ex1_ex2_reg_o    (ex1_ex2_reg),
+        .ex1_ex2_reg_o    (ex1b_comb),
         .ex_pc_redirect_o (ex_pc_redirect),
         .ex_pc_target_o   (ex_pc_target),
         .trap_entry_o     (trap_entry),
@@ -577,13 +622,28 @@ module rv32i_core(
 
     // =========================================================================
     // EX2 Stage — owns the EX1/EX2 → EX/MEM pipeline register
+    // Run-23: input is now ex1b_ex2_reg_q (registered EX1b output) rather than
+    // the raw EX1b combinational output, breaking the critical 800 ps cone.
+    //
+    // FLUSH RULE: u_ex2 must NOT flush on ex_pc_redirect_r (flush_ex1_ex2).
+    // At the cycle flush_ex1_ex2 fires (ex_pc_redirect_r), ex1b_ex2_reg_q holds
+    // the redirecting instruction (branch/JALR) that must reach MEM/WB to commit.
+    // Flushing u_ex2 here would kill that instruction before it commits.
+    //
+    // Before Run-23, flush_ex1_ex2 on ex_pc_redirect_r was correct because the
+    // redirecting instruction had already been captured into ex_mem_reg one cycle
+    // earlier (no ex1b_ex2_reg_q buffer existed).  With the extra FF, it arrives
+    // one cycle later — so u_ex2 must be transparent to the redirect flush.
+    //
+    // Only mem_trap_redirect_r requires flushing u_ex2 (a higher-priority trap
+    // from MEM overrides everything including the instruction in ex1b_ex2_reg_q).
     // =========================================================================
     rv32i_pipeline_ex2 u_ex2 (
         .clk_i            (clk),
         .rst_n_i          (rst_n),
         .stall_ex1_ex2_i  (stall_ex1_ex2),
-        .flush_ex1_ex2_i  (flush_ex1_ex2),
-        .ex1_ex2_reg_i    (ex1_ex2_reg),
+        .flush_ex1_ex2_i  (mem_trap_redirect_r),   // Run-23: use mem_trap only, not ex_pc_redirect
+        .ex1_ex2_reg_i    (ex1b_ex2_reg_q),
         .ex_mem_reg_o     (ex_mem_reg)
     );
 

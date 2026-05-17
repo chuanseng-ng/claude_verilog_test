@@ -1,25 +1,29 @@
 // rv32i_hazard_unit.sv
 // RV32I Pipeline Hazard Detection Unit (EX2 retiming)
 //
-// Extended for 7-stage view: IF / ID / EX1a / EX1c(reg) / EX1b / EX2(reg) / MEM / WB
+// Extended for 8-stage view:
+//   IF / ID / EX1a / EX1c(reg) / EX1b / EX1b2(reg) / EX2(reg) / MEM / WB
 // Run-20: EX1c inserted between ex1a_ex1b_reg_q and ex1c_ex1b_reg_q.
+// Run-23: EX1b2 register (ex1b_ex2_reg_q) inserted between EX1b and EX2.
 //
 // Forwarding encoding (fwd_*_sel):
 //   2'b00 = register file (no forwarding)
-//   2'b01 = EX2 result (ex_mem_reg, 3 cycles behind EX1a after Run-20 split)
+//   2'b01 = EX2 result (ex_mem_reg, 4 cycles behind EX1a after Run-23 split)
 //   2'b10 = WB  result (mem_wb_reg)
 //   2'b11 = EX1b result (ex1a_ex1b_reg, 1 cycle behind EX1a) — highest priority
 //   (EX1c result, 2 cycles behind EX1a, handled by separate ex1c forwarding tier)
+//   (EX1b2 result, 3 cycles behind EX1a, handled by separate ex1b2 forwarding tier)
 //
 // Priority (highest → lowest):
-//   1. mem_trap_redirect  → flush EX2, EX1b, EX1c, EX1a, ID, IF
+//   1. mem_trap_redirect  → flush EX2, EX1b2, EX1b, EX1c, EX1a, ID, IF
 //   2. mem_cache_stall    → global freeze
-//   3. ex_pc_redirect     → flush EX2, EX1b, EX1c, EX1a, ID, IF
+//   3. ex_pc_redirect     → flush EX2, EX1b2, EX1b, EX1c, EX1a, ID, IF
 //   4. id_jal_taken       → flush IF only
 //   5. load_use_ex1       → stall IF,ID; flush ID→EX1a; load in EX1a    (stall 1)
 //   6. load_use_ex1c      → stall IF,ID; flush ID→EX1a; load in EX1c    (stall 2)
 //   7. load_use_ex1b      → stall IF,ID; flush ID→EX1a; load in EX1b    (stall 3)
-//   8. if_cache_stall     → stall PC only
+//   8. load_use_ex2       → stall IF,ID; flush ID→EX1a; load in EX1b2   (stall 4)
+//   9. if_cache_stall     → stall PC only
 
 module rv32i_hazard_unit (
     // From ID/EX register (instruction currently in EX1a)
@@ -40,7 +44,12 @@ module rv32i_hazard_unit (
     input  logic        ex1c_reg_wr_en,
     input  logic        ex1c_mem_rd,
 
-    // From EX/MEM register (instruction in EX2 register / entering MEM)
+    // From EX1b2 register (ex1b_ex2_reg_q — instruction in EX2, 3 cycles behind EX1a; Run-23)
+    input  logic [4:0]  ex1b2_rd_addr,
+    input  logic        ex1b2_reg_wr_en,
+    input  logic        ex1b2_mem_rd,
+
+    // From EX/MEM register (instruction completing EX2 / entering MEM)
     input  logic [4:0]  ex_mem_rd_addr,
     input  logic        ex_mem_reg_wr_en,
     input  logic        ex_mem_mem_rd,
@@ -92,7 +101,13 @@ module rv32i_hazard_unit (
     // Encoding: 1'b1 = forward from ex1c_ex1b_reg; overrides EX2 but not EX1b tier
     output logic        fwd_a_ex1c,
     output logic        fwd_b_ex1c,
-    output logic        fwd_store_ex1c
+    output logic        fwd_store_ex1c,
+
+    // EX1b2 forwarding tier (producer completed EX1b / in EX1b2 register now; Run-23)
+    // Encoding: 1'b1 = forward from ex1b_ex2_reg_q; priority between EX1c and EX2 tiers
+    output logic        fwd_a_ex1b2,
+    output logic        fwd_b_ex1b2,
+    output logic        fwd_store_ex1b2
 );
 
     // =========================================================================
@@ -115,6 +130,7 @@ module rv32i_hazard_unit (
     logic load_use_ex1;
     logic load_use_ex1c;
     logic load_use_ex1b;
+    logic load_use_ex2;
 
     assign load_use_ex1 = id_ex_mem_rd
                         && (id_ex_rd_addr != 5'h0)
@@ -134,6 +150,14 @@ module rv32i_hazard_unit (
                          && ((ex1c_rd_addr == if_id_rs1_addr)
                            || (ex1c_rd_addr == if_id_rs2_addr));
 
+    // Load has advanced to EX1b2 (ex1b_ex2_reg_q); consumer still in ID.
+    // Run-23: fourth stall needed because there are now 4 FFs from EX1a to MEM
+    // (ex1a_ex1b_reg_q → ex1c_ex1b_reg_q → ex1b_ex2_reg_q → ex_mem_reg).
+    assign load_use_ex2  = ex1b2_mem_rd
+                         && (ex1b2_rd_addr != 5'h0)
+                         && ((ex1b2_rd_addr == if_id_rs1_addr)
+                           || (ex1b2_rd_addr == if_id_rs2_addr));
+
     // =========================================================================
     // Forwarding selects
     //
@@ -152,26 +176,38 @@ module rv32i_hazard_unit (
     // =========================================================================
 
     // ALU operand A (rs1 in EX1a)
+    // Priority (highest→lowest): EX1b(2'b11) > EX1c(fwd_a_ex1c) > EX1b2(fwd_a_ex1b2) >
+    //                             EX2(2'b01) > WB(2'b10) > regfile(2'b00)
     always_comb begin
         if (ex1b_reg_wr_en && !ex1b_mem_rd && (ex1b_rd_addr != 5'h0)
                            && (ex1b_rd_addr == id_ex_rs1_addr)) begin
-            fwd_a_sel   = 2'b11;   // EX1c stage→EX1a (highest priority; ex1a_ex1b_reg)
+            fwd_a_sel   = 2'b11;   // EX1c stage→EX1a (highest; ex1a_ex1b_reg)
             fwd_a_ex1c  = 1'b0;
+            fwd_a_ex1b2 = 1'b0;
         end else if (ex1c_reg_wr_en && !ex1c_mem_rd && (ex1c_rd_addr != 5'h0)
                                     && (ex1c_rd_addr == id_ex_rs1_addr)) begin
             fwd_a_sel   = 2'b00;   // placeholder — ex1c tier overrides via fwd_a_ex1c
             fwd_a_ex1c  = 1'b1;   // EX1b stage→EX1a (ex1c_ex1b_reg)
+            fwd_a_ex1b2 = 1'b0;
+        end else if (ex1b2_reg_wr_en && !ex1b2_mem_rd && (ex1b2_rd_addr != 5'h0)
+                                      && (ex1b2_rd_addr == id_ex_rs1_addr)) begin
+            fwd_a_sel   = 2'b00;   // placeholder — ex1b2 tier overrides via fwd_a_ex1b2
+            fwd_a_ex1c  = 1'b0;
+            fwd_a_ex1b2 = 1'b1;   // EX1b2 stage→EX1a (ex1b_ex2_reg_q; Run-23)
         end else if (ex_mem_reg_wr_en && !ex_mem_mem_rd && (ex_mem_rd_addr != 5'h0)
                                       && (ex_mem_rd_addr == id_ex_rs1_addr)) begin
             fwd_a_sel   = 2'b01;   // EX2→EX1a
             fwd_a_ex1c  = 1'b0;
+            fwd_a_ex1b2 = 1'b0;
         end else if (mem_wb_reg_wr_en && (mem_wb_rd_addr != 5'h0)
                                       && (mem_wb_rd_addr == id_ex_rs1_addr)) begin
             fwd_a_sel   = 2'b10;   // WB→EX1a
             fwd_a_ex1c  = 1'b0;
+            fwd_a_ex1b2 = 1'b0;
         end else begin
             fwd_a_sel   = 2'b00;
             fwd_a_ex1c  = 1'b0;
+            fwd_a_ex1b2 = 1'b0;
         end
     end
 
@@ -181,26 +217,37 @@ module rv32i_hazard_unit (
                            && (ex1b_rd_addr == id_ex_rs2_addr)) begin
             fwd_b_sel   = 2'b11;   // EX1c stage→EX1a
             fwd_b_ex1c  = 1'b0;
+            fwd_b_ex1b2 = 1'b0;
         end else if (ex1c_reg_wr_en && !ex1c_mem_rd && (ex1c_rd_addr != 5'h0)
                                     && (ex1c_rd_addr == id_ex_rs2_addr)) begin
             fwd_b_sel   = 2'b00;
             fwd_b_ex1c  = 1'b1;   // EX1b stage→EX1a (ex1c_ex1b_reg)
+            fwd_b_ex1b2 = 1'b0;
+        end else if (ex1b2_reg_wr_en && !ex1b2_mem_rd && (ex1b2_rd_addr != 5'h0)
+                                      && (ex1b2_rd_addr == id_ex_rs2_addr)) begin
+            fwd_b_sel   = 2'b00;
+            fwd_b_ex1c  = 1'b0;
+            fwd_b_ex1b2 = 1'b1;   // EX1b2 stage→EX1a (ex1b_ex2_reg_q; Run-23)
         end else if (ex_mem_reg_wr_en && !ex_mem_mem_rd && (ex_mem_rd_addr != 5'h0)
                                       && (ex_mem_rd_addr == id_ex_rs2_addr)) begin
             fwd_b_sel   = 2'b01;   // EX2→EX1a
             fwd_b_ex1c  = 1'b0;
+            fwd_b_ex1b2 = 1'b0;
         end else if (mem_wb_reg_wr_en && (mem_wb_rd_addr != 5'h0)
                                       && (mem_wb_rd_addr == id_ex_rs2_addr)) begin
             fwd_b_sel   = 2'b10;   // WB→EX1a
             fwd_b_ex1c  = 1'b0;
+            fwd_b_ex1b2 = 1'b0;
         end else begin
             fwd_b_sel   = 2'b00;
             fwd_b_ex1c  = 1'b0;
+            fwd_b_ex1b2 = 1'b0;
         end
     end
 
-    assign fwd_store_sel  = fwd_b_sel;
-    assign fwd_store_ex1c = fwd_b_ex1c;
+    assign fwd_store_sel   = fwd_b_sel;
+    assign fwd_store_ex1c  = fwd_b_ex1c;
+    assign fwd_store_ex1b2 = fwd_b_ex1b2;
 
     // =========================================================================
     // Stall / flush priority logic
@@ -266,14 +313,20 @@ module rv32i_hazard_unit (
             flush_id_ex        = 1'b1;
 
         end else if (load_use_ex1b) begin
-            // Priority 6: Load in EX1b (ex1c_ex1b_reg_q), consumer still in ID → stall 3.
-            // Run-20: three FFs between EX1a and MEM require three stall cycles.
+            // Priority 7: Load in EX1b (ex1c_ex1b_reg_q), consumer still in ID → stall 3.
+            stall_pc           = 1'b1;
+            stall_if_id        = 1'b1;
+            flush_id_ex        = 1'b1;
+
+        end else if (load_use_ex2) begin
+            // Priority 8: Load in EX1b2 (ex1b_ex2_reg_q), consumer still in ID → stall 4.
+            // Run-23: fourth stall because ex1b_ex2_reg_q is a new FF between EX1b and EX2.
             stall_pc           = 1'b1;
             stall_if_id        = 1'b1;
             flush_id_ex        = 1'b1;
 
         end else if (if_cache_stall) begin
-            // Priority 6: I-cache miss — stall PC only
+            // Priority 9: I-cache miss — stall PC only
             stall_pc           = 1'b1;
         end
     end
