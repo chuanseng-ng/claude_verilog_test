@@ -5,8 +5,10 @@
 
     "VERILOG_FILES": [
         "dir::sram_1rw_256x32_asap7_stub.v",
+        "dir::icg_asap7_stub.v",
         "dir::../../rtl/cpu/core/rv32i_pipeline_pkg.sv",
         "dir::../../rtl/mem/rv32i_cache_pkg.sv",
+        "dir::../../rtl/mem/rv32i_clock_gate.sv",
         "dir::../../rtl/cpu/core/rv32i_alu.sv",
         "dir::../../rtl/cpu/core/rv32i_branch_comp.sv",
         "dir::../../rtl/cpu/core/rv32i_imm_gen.sv",
@@ -19,8 +21,8 @@
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_id.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv",
-        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv",
         "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv",
@@ -33,19 +35,22 @@
 
     "CLOCK_PORT":   "clk_i",
     "CLOCK_NET":    "clk_i",
-    "CLOCK_PERIOD": 1.9,
+    "CLOCK_PERIOD": 0.72,
 
-    "VERILOG_DEFINES": ["SRAM_ASAP7"],
+    "VERILOG_DEFINES": ["SRAM_ASAP7", "USE_ICG_CELL"],
+    "LINTER_DEFINES":  ["SRAM_ASAP7"],
 
     "FP_SIZING":       "absolute",
-    "DIE_AREA":        "0 0 140 140",
-    "CORE_AREA":       "5 5 135 135",
-    "FP_CORE_UTIL":    40,
+    "DIE_AREA":        "0 0 130 130",
+    "CORE_AREA":       "5 5 125 125",
+    "FP_CORE_UTIL":    50,
     "FP_ASPECT_RATIO": 1,
 
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
 
     "PL_TARGET_DENSITY_PCT":     50,
+    "CTS_SINK_CLUSTERING_SIZE":        8,
+    "CTS_SINK_CLUSTERING_MAX_DIAMETER": 16,
     "PL_TIME_DRIVEN":            true,
     "PL_ROUTABILITY_DRIVEN":     true,
 
@@ -91,7 +96,8 @@
     "SYNTH_STRATEGY":     "DELAY 3",
     "SYNTH_SIZING":       true,
     "SYNTH_ABC_BUFFERING": true,
-    "MAX_FANOUT_CONSTRAINT": 25,
+    "SYNTH_CLOCK_GATING": true,
+    "MAX_FANOUT_CONSTRAINT": 8,
 
     "PNR_SDC_FILE":     "dir::constraints/asap7.sdc",
     "SIGNOFF_SDC_FILE": "dir::constraints/asap7.sdc",
@@ -100,9 +106,9 @@
     "RUN_POST_GPL_DESIGN_REPAIR":    true,
     "RUN_POST_GRT_RESIZER_TIMING":   true,
     "RUN_POST_GRT_DESIGN_REPAIR":    true,
-    "MAX_TRANSITION_CONSTRAINT":     25.0,
+    "MAX_TRANSITION_CONSTRAINT":     20.0,
     "PL_RESIZER_SETUP_SLACK_MARGIN":  0.050,
-    "GRT_RESIZER_SETUP_SLACK_MARGIN": 0.050,
+    "GRT_RESIZER_SETUP_SLACK_MARGIN": 0.100,
     "PL_RESIZER_HOLD_SLACK_MARGIN":  0.050,
     "GRT_RESIZER_HOLD_SLACK_MARGIN": 0.050,
     "PL_RESIZER_ALLOW_SETUP_VIOS":   true,

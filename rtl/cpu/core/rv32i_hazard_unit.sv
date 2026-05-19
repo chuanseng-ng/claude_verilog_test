@@ -107,7 +107,16 @@ module rv32i_hazard_unit (
     // Encoding: 1'b1 = forward from ex1b_ex2_reg_q; priority between EX1c and EX2 tiers
     output logic        fwd_a_ex1b2,
     output logic        fwd_b_ex1b2,
-    output logic        fwd_store_ex1b2
+    output logic        fwd_store_ex1b2,
+
+    // Pre-decoded forwarding selects (one cycle early, registered in rv32i_core)
+    // Computed using if_id_rs*_addr (consumer in ID) vs producer addresses shifted one stage earlier
+    output logic [1:0]  fwd_a_sel_pre,
+    output logic        fwd_a_ex1c_pre,
+    output logic        fwd_a_ex1b2_pre,
+    output logic [1:0]  fwd_b_sel_pre,
+    output logic        fwd_b_ex1c_pre,
+    output logic        fwd_b_ex1b2_pre
 );
 
     // =========================================================================
@@ -248,6 +257,90 @@ module rv32i_hazard_unit (
     assign fwd_store_sel   = fwd_b_sel;
     assign fwd_store_ex1c  = fwd_b_ex1c;
     assign fwd_store_ex1b2 = fwd_b_ex1b2;
+
+    // =========================================================================
+    // Pre-decoded forwarding selects (one cycle early — consumer in ID)
+    //
+    // Uses if_id_rs*_addr (consumer currently in ID) against producer addresses
+    // shifted one stage earlier vs the normal forwarding logic.  These outputs
+    // are registered in rv32i_core.sv so they arrive at EX1a exactly when needed,
+    // breaking the 18-gate combinational chain that is the WNS bottleneck.
+    //
+    // Stage mapping (each tier shifted one stage earlier):
+    //   Normal EX1b  (2'b11):  ex1b_rd_addr  == id_ex_rs1   →  id_ex_rd_addr  == if_id_rs1
+    //   Normal EX1c  (ex1c):   ex1c_rd_addr  == id_ex_rs1   →  ex1b_rd_addr   == if_id_rs1
+    //   Normal EX1b2 (ex1b2):  ex1b2_rd_addr == id_ex_rs1   →  ex1c_rd_addr   == if_id_rs1
+    //   Normal EX2   (2'b01):  ex_mem_rd_addr== id_ex_rs1   →  ex1b2_rd_addr  == if_id_rs1
+    //   Normal WB    (2'b10):  mem_wb_rd_addr== id_ex_rs1   →  ex_mem_rd_addr == if_id_rs1
+    // =========================================================================
+
+    // Pre-decode: ALU operand A (rs1 consumer currently in ID)
+    always_comb begin
+        if (id_ex_reg_wr_en && !id_ex_mem_rd && (id_ex_rd_addr != 5'h0)
+                            && (id_ex_rd_addr == if_id_rs1_addr)) begin
+            fwd_a_sel_pre   = 2'b11;
+            fwd_a_ex1c_pre  = 1'b0;
+            fwd_a_ex1b2_pre = 1'b0;
+        end else if (ex1b_reg_wr_en && !ex1b_mem_rd && (ex1b_rd_addr != 5'h0)
+                                    && (ex1b_rd_addr == if_id_rs1_addr)) begin
+            fwd_a_sel_pre   = 2'b00;
+            fwd_a_ex1c_pre  = 1'b1;
+            fwd_a_ex1b2_pre = 1'b0;
+        end else if (ex1c_reg_wr_en && !ex1c_mem_rd && (ex1c_rd_addr != 5'h0)
+                                    && (ex1c_rd_addr == if_id_rs1_addr)) begin
+            fwd_a_sel_pre   = 2'b00;
+            fwd_a_ex1c_pre  = 1'b0;
+            fwd_a_ex1b2_pre = 1'b1;
+        end else if (ex1b2_reg_wr_en && !ex1b2_mem_rd && (ex1b2_rd_addr != 5'h0)
+                                      && (ex1b2_rd_addr == if_id_rs1_addr)) begin
+            fwd_a_sel_pre   = 2'b01;
+            fwd_a_ex1c_pre  = 1'b0;
+            fwd_a_ex1b2_pre = 1'b0;
+        end else if (ex_mem_reg_wr_en && (ex_mem_rd_addr != 5'h0)
+                                      && (ex_mem_rd_addr == if_id_rs1_addr)) begin
+            fwd_a_sel_pre   = 2'b10;
+            fwd_a_ex1c_pre  = 1'b0;
+            fwd_a_ex1b2_pre = 1'b0;
+        end else begin
+            fwd_a_sel_pre   = 2'b00;
+            fwd_a_ex1c_pre  = 1'b0;
+            fwd_a_ex1b2_pre = 1'b0;
+        end
+    end
+
+    // Pre-decode: ALU operand B / store data (rs2 consumer currently in ID)
+    always_comb begin
+        if (id_ex_reg_wr_en && !id_ex_mem_rd && (id_ex_rd_addr != 5'h0)
+                            && (id_ex_rd_addr == if_id_rs2_addr)) begin
+            fwd_b_sel_pre   = 2'b11;
+            fwd_b_ex1c_pre  = 1'b0;
+            fwd_b_ex1b2_pre = 1'b0;
+        end else if (ex1b_reg_wr_en && !ex1b_mem_rd && (ex1b_rd_addr != 5'h0)
+                                    && (ex1b_rd_addr == if_id_rs2_addr)) begin
+            fwd_b_sel_pre   = 2'b00;
+            fwd_b_ex1c_pre  = 1'b1;
+            fwd_b_ex1b2_pre = 1'b0;
+        end else if (ex1c_reg_wr_en && !ex1c_mem_rd && (ex1c_rd_addr != 5'h0)
+                                    && (ex1c_rd_addr == if_id_rs2_addr)) begin
+            fwd_b_sel_pre   = 2'b00;
+            fwd_b_ex1c_pre  = 1'b0;
+            fwd_b_ex1b2_pre = 1'b1;
+        end else if (ex1b2_reg_wr_en && !ex1b2_mem_rd && (ex1b2_rd_addr != 5'h0)
+                                      && (ex1b2_rd_addr == if_id_rs2_addr)) begin
+            fwd_b_sel_pre   = 2'b01;
+            fwd_b_ex1c_pre  = 1'b0;
+            fwd_b_ex1b2_pre = 1'b0;
+        end else if (ex_mem_reg_wr_en && (ex_mem_rd_addr != 5'h0)
+                                      && (ex_mem_rd_addr == if_id_rs2_addr)) begin
+            fwd_b_sel_pre   = 2'b10;
+            fwd_b_ex1c_pre  = 1'b0;
+            fwd_b_ex1b2_pre = 1'b0;
+        end else begin
+            fwd_b_sel_pre   = 2'b00;
+            fwd_b_ex1c_pre  = 1'b0;
+            fwd_b_ex1b2_pre = 1'b0;
+        end
+    end
 
     // =========================================================================
     // Stall / flush priority logic

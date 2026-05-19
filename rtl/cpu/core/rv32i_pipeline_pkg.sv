@@ -148,6 +148,17 @@ package rv32i_pipeline_pkg;
         // EX1b reads these directly — removing the ~8-10 gate byte-align mux from EX1b.
         logic [31:0] pre_wdata_aligned;   // Byte/halfword/word-aligned store data
         logic [3:0]  pre_wstrb;           // Byte write strobe
+        // Run-31: EX1c-decoded trap outputs (registered in ex1c_ex1b_reg_q).
+        // EX1b uses these directly — eliminating the 8-way case-mux from the
+        // EX1b combinational cone. Saves ~20 gate levels (NOR5/NAND5 bottleneck).
+        logic        dec_trap_valid;      // trap is being taken
+        logic        dec_do_redirect;     // PC redirect needed
+        logic [31:0] dec_redirect_target; // redirect target PC
+        logic [31:0] dec_trap_cause;      // mcause value
+        logic        dec_is_irq;          // this is an interrupt (for trap_pc = squashed PC)
+        logic        dec_mret;            // MRET action
+        logic        dec_dbg_halt;        // EBREAK debug halt request
+        logic        dec_fence_i;         // FENCE.I I-cache invalidation
     } ex1a_ex1b_t;
 
     // =========================================================================
@@ -327,6 +338,14 @@ package rv32i_pipeline_pkg;
         ex1a_ex1b_nop.trap_type         = TRAP_NONE;
         ex1a_ex1b_nop.pre_wdata_aligned = 32'h0;
         ex1a_ex1b_nop.pre_wstrb         = 4'h0;
+        ex1a_ex1b_nop.dec_trap_valid      = 1'b0;
+        ex1a_ex1b_nop.dec_do_redirect     = 1'b0;
+        ex1a_ex1b_nop.dec_redirect_target = 32'h0;
+        ex1a_ex1b_nop.dec_trap_cause      = 32'h0;
+        ex1a_ex1b_nop.dec_is_irq          = 1'b0;
+        ex1a_ex1b_nop.dec_mret            = 1'b0;
+        ex1a_ex1b_nop.dec_dbg_halt        = 1'b0;
+        ex1a_ex1b_nop.dec_fence_i         = 1'b0;
     endfunction
 
     function automatic mem_wb_reg_t mem_wb_nop();

@@ -2,23 +2,23 @@
 // RV32I Pipeline — Execute Stage 1a (EX1a)
 //
 // Run-17 mid-EX retiming: the former monolithic EX combinational cone is split
-// across three sub-stages (EX1a → FF → EX1c → FF → EX1b) separated by two FFs.
+// across two sub-stages (EX1a → FF → EX1c → FF → EX1b).
 //
-// Run-20: adds EX1c between ex1a_ex1b_reg_q and ex1c_ex1b_reg_q.
-//   EX1a output: ex1a_ex1b_t with TRAP_NONE and dummy byte-align.
-//   EX1c (rv32i_pipeline_ex1c.sv): overwrites trap_type and pre_w* using
-//     registered alu_result[1:0], branch_taken, and control bits.
-//   EX1b (rv32i_pipeline_ex1b.sv): flat case-mux on trap_type → redirect/trap.
+// Run-20: EX1c inserted to break the 22-gate ALU+trap+byte-align cone.
+// Run-25: EX1c removed (regression). Run-26: EX1c re-inserted — trap_type
+//   encoding and store byte-align logic moved back to rv32i_pipeline_ex1c.sv.
+//   EX1a now passes trap_type=TRAP_NONE and default byte-align fields; EX1c
+//   re-encodes them from the registered ex1a_ex1b_reg_q inputs.
 //
 // EX1a responsibilities:
 //   - ALU computation (all ops including SLT/SLTU comparators)
 //   - Branch comparator result
 //   - JALR target: {alu_result[31:1], 1'b0}
 //   - CSR write data
-//   - Packs all fields into ex1a_ex1b_t with trap_type=TRAP_NONE (EX1c encodes)
+//   - Packs all fields into ex1a_ex1b_t (trap_type/byte-align filled by EX1c)
 //
 // NOTE: ex_pc_redirect / trap / mret / fence_i / dbg_halt come from EX1b.
-// Branch misprediction penalty is 4 cycles (3→4 accepted for Run 20 timing gain).
+// Branch misprediction penalty is 4 cycles (EX1c stage adds one cycle).
 
 `default_nettype none
 
@@ -168,13 +168,11 @@ module rv32i_pipeline_ex(
         ex1a_to_ex1b.rs1_addr     = id_ex_reg_i.rs1_addr;
         ex1a_to_ex1b.rs2_addr     = id_ex_reg_i.rs2_addr;
 
-        // Run-20: trap_type encode and byte-align moved to EX1c (new stage after
-        // ex1a_ex1b_reg_q FF) to break the 22-gate ALU+trap+byte-align cone.
-        // EX1a sets TRAP_NONE and dummy byte-align defaults; EX1c overwrites them
-        // using the REGISTERED alu_result[1:0], branch_taken, and control bits.
-        ex1a_to_ex1b.trap_type          = TRAP_NONE;
-        ex1a_to_ex1b.pre_wstrb          = 4'b1111;
-        ex1a_to_ex1b.pre_wdata_aligned  = fwd_store;
+        // trap_type and store byte-align are computed by rv32i_pipeline_ex1c.sv
+        // on registered ex1a_ex1b_reg_q inputs, breaking the 22-gate EX1a cone.
+        ex1a_to_ex1b.trap_type         = TRAP_NONE;
+        ex1a_to_ex1b.pre_wstrb         = 4'b1111;
+        ex1a_to_ex1b.pre_wdata_aligned = fwd_store;
     end
 
     // EX1a combinational output — registered in rv32i_core.sv, then fed to EX1b
