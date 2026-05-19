@@ -45,11 +45,21 @@ module sram_1rw_256x32_freepdk45(
     web0_reg = web0;
     addr0_reg = addr0;
     din0_reg = din0;
+`ifndef VERILATOR
     #(T_HOLD) dout0 = 32'bx;
+`endif
     if ( !csb0_reg && web0_reg && VERBOSE )
+`ifndef VERILATOR
       $display($time," Reading %m addr0=%b dout0=%b",addr0_reg,mem[addr0_reg]);
+`else
+      $display($time," Reading addr0=%b dout0=%b",addr0_reg,mem[addr0_reg]);
+`endif
     if ( !csb0_reg && !web0_reg && VERBOSE )
+`ifndef VERILATOR
       $display($time," Writing %m addr0=%b din0=%b",addr0_reg,din0_reg);
+`else
+      $display($time," Writing addr0=%b din0=%b",addr0_reg,din0_reg);
+`endif
   end
 
 
