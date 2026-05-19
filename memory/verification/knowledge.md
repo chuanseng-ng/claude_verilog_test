@@ -59,7 +59,59 @@ System python3 has no pytest. Use:
 ```
 
 ### Verilator path (nix)
-`/nix/store/mky7gdsf8m3da333lxz2mjf2n3n1v1xy-verilator/bin/verilator`
+`/nix/store/xjx9zx3vaz367c7lbnvsd1isvqfkmgg7-verilator-5.048/bin/verilator`
+
+(Updated 2026-05-19: old path `mky7gdsf8m3da333lxz2mjf2n3n1v1xy-verilator` is stale.)
+
+## SRAM Simulation Model Verilator Guards (sram_1rw_256x32_freepdk45.v)
+
+Two Verilator-incompatible constructs exist in the FreePDK45 SRAM behavioral model
+and are guarded with `` `ifndef VERILATOR ``. These guards MUST be preserved in any
+future edits to `sim/sram_1rw_256x32_freepdk45.v`.
+
+### Guard 1 — `%m` in `$display` (STMTDLY / Internal Error)
+
+Verilator 5.048 raises an internal error (`Display with %m but no AstScopeName`)
+when `$display` contains `%m` inside a module compiled with `--no-timing`. Fixed by
+splitting to a `` `ifndef VERILATOR `` / `` `else `` / `` `endif `` block:
+
+```verilog
+`ifndef VERILATOR
+  $display($time," Reading %m addr0=%b dout0=%b", addr0_reg, mem[addr0_reg]);
+`else
+  $display($time," Reading addr0=%b dout0=%b", addr0_reg, mem[addr0_reg]);
+`endif
+```
+
+### Guard 2 — `#(T_HOLD) dout0 = 32'bx` (BLKANDNBLK error)
+
+The posedge always block uses a blocking delayed assignment to `dout0`; the negedge
+read block uses a non-blocking assignment to the same signal. Verilator raises
+`%Error-BLKANDNBLK` regardless of whether the two assignments are in different
+always blocks. Additionally `--no-timing` drops the `#(T_HOLD)` delay.
+Fixed by wrapping in `` `ifndef VERILATOR ``:
+
+```verilog
+`ifndef VERILATOR
+  #(T_HOLD) dout0 = 32'bx;
+`endif
+```
+
+### Elaboration flags required for cache unit test sim_builds
+
+When elaborating `sim_build_icache` or `sim_build_dcache` (top-level = rv32i_icache /
+rv32i_dcache respectively), both `-Wno-STMTDLY` and `-Wno-BLKANDNBLK` must be passed
+even with the guards in place, because Verilator may still flag residual warnings
+from other instances:
+
+```
+-Wno-fatal -Wno-WIDTH -Wno-CASEINCOMPLETE -Wno-TIMESCALEMOD -Wno-UNOPTFLAT \
+-Wno-STMTDLY -Wno-BLKANDNBLK
+```
+
+The main CPU top (`sim_build/Vtop`) elaboration only needs `-Wno-STMTDLY` (the
+BLKANDNBLK error does not manifest when rv32i_cpu_top is the top-level, likely due
+to different elaboration scope resolution).
 
 ## Known Pre-existing Test Failures — RESOLVED 2026-05-15
 

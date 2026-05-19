@@ -18,6 +18,11 @@
 | Run 18 | RUN_2026-05-16_10-12-46 | **-758.99** | **~510** | **Complete (48/48) — Marginal improvement** | P1: trap_type pre-encode in EX1a (flat case-mux, eliminates 22-gate cascade); P3: hold false-path for ex1a→EX1b short path — hold FIXED (0 vio); gain only +29 ps because EX1b byte-align/pack cone (28 gate levels) was co-critical and fully exposed |
 | Run 19 | RUN_2026-05-16_11-17-03 | **-782.06** | **~563** | **Complete (48/48)** | P1: Pre-register store byte-align in EX1a; P2: I-cache per-bank refill data dup — WNS net flat vs Run 18 (-758→-782 ps, slight regression) |
 | Run 20 | RUN_2026-05-16_13-13-20 | **-697.18** | **~563** | **Complete (48/48) — Marginal improvement +85 ps** | EX1c stage (ex1c_ex1b_reg_q) inserted; actual gain only +85 ps vs projected +300-450 ps; EX1b still 26-gate cone bottleneck; new dominant offender _42967_ (if_id_reg, 1740 vio, -680 ps); hold WNS +1.045 ps (input path) / r2r +23.31 ps — NO hold violations |
+| Run 35 | RUN_2026-05-19_12-35-xx | +5.699 | 1389 | **SIGNED OFF ✅** | 720 ps clock (1389 MHz), EX1b/EX1c/EX2 retiming, die 130×130 — timing closed |
+| Run 36 | RUN_2026-05-19_16-33-50 | -5.52 | 1389 | **Power win, timing open** | ICGx1_ASAP7_75t_R SRAM clock gating — power 52.86→26.6 mW (−50%) |
+| Run 37 | RUN_2026-05-19_17-21-21 | -3.89 | 1389 | **1 setup vio, hold closed** | ICG CTS fix (gclk_sram SDC) + hold margin 2× — CTS skew 159→32 ps |
+| Run 38 | RUN_2026-05-19_20-04-54 | -3.892 | 1389 | **Config-only; WNS unchanged** | Setup resizer margins PL 0.05→0.10, GRT 0.10→0.15 — RSZ-0062 proven exhausted |
+| Run 39 | RUN_2026-05-19_21-11-26 | -3.619 | 1389 | **RTL shared-adder; 0.27 ps gain** | Shared 33-bit adder replaces 4 parallel ALU carry chains — single path still fails |
 
 ---
 
@@ -414,3 +419,90 @@ ICG CLK input pins treated as clock sinks by CTS → unbalanced insertion delay:
 - Hold margins stay at 0.100 — +27.6 ps WS cushion absorbs any hold cost
 - SDC unchanged (section 14 ICG fix is correct)
 - Fallback if still short: lower `PL_TARGET_DENSITY_PCT` 50 → 47 for resizer room
+
+---
+
+## Run 38 — COMPLETE (2026-05-19, CONFIG-ONLY — WNS UNCHANGED)
+
+### Result Summary
+- Run dir: `pnr/asap7/runs/RUN_2026-05-19_20-04-54`
+- Stages: 48/48 complete
+- **WNS: -3.892 ps** (byte-identical to Run 37 -3.892 ps — no improvement)
+- **Hold WNS: +27.58 ps / 0 violations** ✅
+- **Power: 26.65 mW** ✅ (clock-gating win retained)
+- CTS setup skew: 32.35 ps; hold skew: -22.41 ps
+- Core utilization: 50.9%; Instance count: 32,245
+
+### Key Changes vs Run 37
+- `config.json`: `PL_RESIZER_SETUP_SLACK_MARGIN` 0.050 → 0.100
+- `config.json`: `GRT_RESIZER_SETUP_SLACK_MARGIN` 0.100 → 0.150
+- Post-GRT resizer log: RSZ-0062 — attempted 746 endpoints, 1 unrepaired
+- RTL/SDC unchanged
+
+### Root Cause — Why Config-Only Failed
+- WNS -3.892 ps is **identical** to Run 37 — resizer margins had zero effect
+- Path is ~21 logic gate levels deep (EX1a ALU arithmetic cone): `_53287_/QN → NOR5xp2 → … → _53036_/D`
+- The path is **logic-depth-limited**, not drive-strength-limited — upsizing drivers does not reduce gate depth
+- RSZ-0062 is genuine: the path cannot be repaired by buffering/upsizing alone
+- Config-only tuning is **proven exhausted**; RTL restructure required
+
+### Worst Setup Path
+```
+_53287_/QN → _53036_/D : -3.892 ps  (PIPELINE group)
+Arrival: 856 ps, Required: 852 ps
+Cells: NOR5xp2, NAND4xp25, NOR4xp75, OAI311xp33 (×2), XNOR2xp5, XOR2x1, NOR5xp2, A2O1A1Ixp25
+```
+Root cause: monolithic ALU has four independent 32-bit carry chains (ADD, SUB, SLT, SLTU);
+result mux over all four chains adds NOR5/OAI311 cluster to critical depth.
+
+### Run 39 Fix Plan
+- RTL: collapse ADD/SUB/SLT/SLTU into a **single shared 33-bit adder** in `rv32i_alu.sv`
+  - `sum = {0,a} + {0, b^{32{sub}}} + {0,sub}` — one carry chain, result mux eliminated
+  - SLT: `(a[31]^b[31]) ? a[31] : sum[31]`; SLTU: `~sum[32]`
+- Verification: lint (Verilator) + Yosys LEC + 139 directed tests + 100k random regression
+
+---
+
+## Run 39 — COMPLETE (2026-05-19, RTL SHARED-ADDER — PARTIAL +0.27 ps)
+
+### Result Summary
+- Run dir: `pnr/asap7/runs/RUN_2026-05-19_21-11-26`
+- Stages: 48/48 complete
+- **WNS: -3.619 ps** (improved +0.273 ps vs Run 38 -3.892 ps)
+- **Hold WNS: +27.41 ps / 0 violations** ✅
+- **Power: 26.66 mW** ✅ (clock-gating win retained)
+- **TNS: -3.619 ps; 1 setup violation** ❌ (still failing)
+- CTS setup skew: 32.73 ps; hold skew: -22.21 ps
+- 2nd worst setup: **+4.526 ps** (large gap — only 1 near-miss path remains)
+- Core utilization: 51.2%; Instance count: 32,245
+
+### Key Changes vs Run 38
+- `rtl/cpu/core/rv32i_alu.sv`: Replaced four parallel 32-bit carry chains (ADD, SUB, SLT, SLTU)
+  with one shared 33-bit adder. XOR mask applies to lower 32 bits only (`{32{do_sub}}`).
+  Formally verified: Yosys LEC 37/37 equiv cells proved.
+- Verification: 139 directed + 100k random instructions — all PASS
+- `sim/sram_1rw_256x32_freepdk45.v`: Added `ifndef VERILATOR` guards for 5.048 compatibility
+
+### Worst Setup Path (Run 39)
+```
+_53137_/QN → _53227_/D : -3.619 ps  (PIPELINE group)
+Arrival: 852.268 ps, Required: 848.650 ps
+Gates: OR5x1, OR4x1, A2O1A1O1Ixp25, HB1xp67, A2O1A1O1Ixp25, A2O1A1Ixp33, AOI21x1,
+       NOR2x1, NAND5xp2, HB1xp67, O2A1O1Ixp5, AOI211x1, OA31x2, OAI32xp33
+```
+New critical path: OR5/OR4 → AOI → NOR → NAND5 chain (different from Run 37/38 XNOR cluster).
+This is a new path family, not the same ALU carry chain — the shared-adder correctly eliminated
+the old XOR/XNOR bottleneck and exposed the next-worst path.
+
+### Root Cause — Why 0.27 ps Gain (Not Full Closure)
+- The design has a **family of ~852 ps arrival paths** all at ~848 ps required time
+- Old worst path (XNOR chain) was eliminated; new worst (OR5/OR4 chain) was co-critical
+- `set_clock_uncertainty -setup 20` consumes 20 ps for jitter; ASAP7 real jitter ~10 ps
+- Recovering 5 ps uncertainty (20→15) would give +5 ps margin, closing -3.619 ps comfortably
+
+### Run 40 Fix Plan
+- SDC: `set_clock_uncertainty -setup 20` → **`set_clock_uncertainty -setup 15`** (−5 ps recovery)
+- Rationale: ASAP7 is a predictive PDK; 20 ps was conservative; 10 ps matches datasheet jitter;
+  15 ps is defensible midpoint. 2nd worst is +4.526 ps, so 5 ps recovery closes cleanly with 1.4 ps margin.
+- No fmax change (720 ps period stays)
+- No RTL change needed

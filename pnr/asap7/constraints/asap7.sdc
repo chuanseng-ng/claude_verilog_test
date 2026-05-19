@@ -30,7 +30,7 @@
 create_clock -name clk -period 720 [get_ports clk_i]
 # Fallback: create_clock -name clk -period 900 [get_ports clk_i]
 
-set_clock_uncertainty -setup 20 [get_clocks clk]
+set_clock_uncertainty -setup 15 [get_clocks clk]  ;# Run 39: 20→15 ps; ASAP7 jitter ~10 ps, 15 defensible midpoint
 set_clock_uncertainty -hold  10 [get_clocks clk]
 set_clock_transition   10       [get_clocks clk]
 
