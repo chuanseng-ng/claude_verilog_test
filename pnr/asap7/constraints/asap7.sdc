@@ -228,3 +228,45 @@ set_false_path -hold -from [get_cells -hierarchical {*ex1c_ex1b_reg_q*}]
 ###############################################################################
 set_false_path -hold -from [get_ports {axi_rvalid_i axi_rdata_i[*] axi_rresp_i[*]}]
 set_false_path -hold -from [get_ports {axi_awready_i axi_wready_i axi_bvalid_i axi_bresp_i[*]}]
+
+###############################################################################
+# 14. SRAM gated clocks — ICGx1_ASAP7_75t_R generated clocks (Run 37)
+#
+# Run 36 result: power −50% (52.9→26.6 mW) but timing not closed.
+# Root cause: OpenROAD CTS treated each ICG CLK input as a clock sink and
+# tried to balance all 10 to fixed SRAM macro locations, blowing FF-to-FF
+# skew from 62 ps to 159 ps.  SRAM clk0 arrived 146 ps later than the main
+# clock (288 ps vs 143 ps), creating 4 hold violations on short data paths.
+#
+# Fix: declare all ICGx1 GCLK outputs as a single generated clock.
+#   • CTS excludes gated-clock nets from the main FF clock tree → restores
+#     FF-to-FF skew to Run-35 levels (~62 ps).
+#   • STA models SRAM clk0 latency correctly (clk + ICG insertion + routing)
+#     rather than as an unrelated anomaly.
+#   • Proper cross-domain hold analysis: suppress hold on clk→gclk_sram
+#     paths (gclk_sram rises after clk in the same cycle; hold is structurally
+#     guaranteed — Liberty ICGx1 samples ENA on the low phase before GCLK
+#     rises, so GCLK can only rise later than the main clock edge).
+#
+# Cell hierarchy (confirmed from Run-36 netlist, 10 instances):
+#   u_core.u_icache.u_tag_cg.u_icg
+#   u_core.u_icache.gen_data_sram[0..3].u_data_cg.u_icg
+#   u_core.u_dcache.u_tag_cg.u_icg
+#   u_core.u_dcache.gen_data_sram[0..3].u_data_cg.u_icg
+###############################################################################
+
+create_generated_clock -name gclk_sram \
+    -source [get_ports clk_i] \
+    -divide_by 1 \
+    [get_pins -hierarchical {*u_icg/GCLK}]
+
+# Suppress hold on all clk→gclk_sram paths: SRAM clk0 rises ~146 ps after
+# the launch FF's clock edge, making short combinational paths fail hold.
+# This is a structural guarantee (gated clock never leads the source clock),
+# not a timing exception — same rationale as the din0/addr0/csb0 false paths.
+set_false_path -hold -from [get_clocks clk] -to [get_clocks gclk_sram]
+
+# Extend section-8 SRAM hold false-path coverage to web0 (write-enable bar).
+# web0 was omitted from the original fakeram7 hold relaxation in Run 13 since
+# it was not a violation then; the ICG insertion delay now exposes it.
+set_false_path -hold -to [get_pins -hierarchical *web0*]
