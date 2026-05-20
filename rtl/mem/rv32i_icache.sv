@@ -170,6 +170,8 @@ module rv32i_icache (
     logic [31:0]                 refill_line_addr_q;
     logic [1:0]                  refill_word_q;
     logic                        ar_pending_q;
+    logic                        cancel_ar_q;       // AR mid-handshake after cancel — hold arvalid
+    logic                        cancel_wait_r_q;   // AR accepted after cancel — drain stale R beat
     logic [LINE_WORDS-1:0][31:0] refill_buf_q;   // Accumulates all 4 words
 
     // SRAM output pipeline registers — capture negedge-launched dout at posedge
@@ -243,7 +245,9 @@ module rv32i_icache (
     // AXI read control
     // =========================================================================
     assign axi_araddr_o  = {refill_line_addr_q[31:4], refill_word_q, 2'b00};
-    assign axi_arvalid_o = (state_q == CS_REFILL) && !ar_pending_q;
+    // cancel_ar_q holds arvalid asserted after a cancel until arready fires,
+    // satisfying AXI A3.2.1 (arvalid must not retract before arready).
+    assign axi_arvalid_o = ((state_q == CS_REFILL) && !ar_pending_q) || cancel_ar_q;
     assign axi_rready_o  = 1'b1;  // Always accept R responses (drains in-flight beats)
 
     // =========================================================================
@@ -329,12 +333,24 @@ module rv32i_icache (
             refill_line_addr_q <= '0;
             refill_word_q      <= 2'b00;
             ar_pending_q       <= 1'b0;
+            cancel_ar_q        <= 1'b0;
+            cancel_wait_r_q    <= 1'b0;
             refill_buf_q       <= '0;
         end else begin
+            // Background drain: advance cancel-drain flags independently of FSM state.
+            // AR completes after cancel → promote to wait-for-R.
+            if (cancel_ar_q && axi_arready_i) begin
+                cancel_ar_q     <= 1'b0;
+                cancel_wait_r_q <= !axi_rvalid_i;
+            end
+            // Stale R beat drains → safe to start a new refill.
+            if (cancel_wait_r_q && axi_rvalid_i)
+                cancel_wait_r_q <= 1'b0;
+
             case (state_q)
                 // -----------------------------------------------------------------
                 CS_IDLE: begin
-                    if (ic_valid_i && !ic_invalidate_i) begin
+                    if (!cancel_ar_q && !cancel_wait_r_q && ic_valid_i && !ic_invalidate_i) begin
                         // Issue SRAM read (combinational, above). Latch address and
                         // go to CS_SRAM_LATCH to capture SRAM output at next posedge.
                         ic_addr_q <= ic_addr_i;
@@ -381,6 +397,14 @@ module rv32i_icache (
                     // axi_rready_o=1'b1 drains any in-flight AXI beat without data loss.
                     if (ic_invalidate_i || !ic_valid_i) begin
                         state_q       <= CS_IDLE;
+                        // Determine which AXI drain mode is needed at cancel time:
+                        //   ar_pending_q=1, rvalid=0  → R still in flight, drain it
+                        //   ar_pending_q=1, rvalid=1  → R consumed this cycle, no drain
+                        //   ar_pending_q=0, arready=1 → AR just accepted, drain its R
+                        //   ar_pending_q=0, arready=0 → AR mid-handshake, hold arvalid
+                        cancel_ar_q     <= !ar_pending_q && !axi_arready_i;
+                        cancel_wait_r_q <= ( ar_pending_q && !axi_rvalid_i) ||
+                                           (!ar_pending_q &&  axi_arready_i && !axi_rvalid_i);
                         ar_pending_q  <= 1'b0;
                         refill_word_q <= 2'b00;
                     end else begin
