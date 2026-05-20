@@ -537,6 +537,15 @@ module rv32i_dcache (
                 end
 
                 // -----------------------------------------------------------------
+                // Cancel-race audit (2026-05-21): the stale-R-beat race that was
+                // fixed in rv32i_icache.sv does NOT apply here.  The D-cache has
+                // no cancel-on-!dc_valid_i branch in CS_REFILL, so ar_pending_q
+                // is never cleared while an R beat is still in flight.  The two
+                // state_q <= CS_IDLE exit paths (rresp-error below and bresp-error
+                // in CS_WRITEBACK) only fire when the respective handshake
+                // completes that same cycle, so no orphan beat is left in flight.
+                // If a dc_invalidate_i / flush path is ever added here, port the
+                // cancel_ar_q / cancel_wait_r_q fix from rv32i_icache.sv.
                 CS_REFILL: begin
                     if (!ar_pending_q) begin
                         if (axi_arready_i)
