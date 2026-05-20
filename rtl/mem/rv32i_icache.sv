@@ -88,8 +88,10 @@ module rv32i_icache (
         .dout1  ()
     );
 `elsif SRAM_ASAP7
+    logic tag_gclk;
+    rv32i_clock_gate u_tag_cg (.en(!tag_csb0), .clk(clk), .gclk(tag_gclk));
     sram_1rw_256x32_asap7 u_tag_sram (
-        .clk0   (clk),
+        .clk0   (tag_gclk),
         .csb0   (tag_csb0),
         .web0   (tag_web0),
         .addr0  (tag_addr0),
@@ -134,8 +136,10 @@ module rv32i_icache (
                 .dout1  ()
             );
 `elsif SRAM_ASAP7
+            logic data_gclk;
+            rv32i_clock_gate u_data_cg (.en(!data_csb0[gw]), .clk(clk), .gclk(data_gclk));
             sram_1rw_256x32_asap7 u_data_sram (
-                .clk0   (clk),
+                .clk0   (data_gclk),
                 .csb0   (data_csb0[gw]),
                 .web0   (data_web0[gw]),
                 .addr0  (data_addr0[gw]),
@@ -172,11 +176,19 @@ module rv32i_icache (
     logic                        ar_pending_q;
     logic [LINE_WORDS-1:0][31:0] refill_buf_q;   // Accumulates all 4 words
 
+    // Run-19 P2: Per-bank duplicate of refill_line_addr_q.
+    // refill_line_addr_q[11:4] fans to all 4 data SRAM addr0 ports in CS_REFILL,
+    // creating ~530 fanout paths through the refill_word_q decode tree.
+    // Each per-bank copy is loaded identically but (* keep = 1 *) prevents
+    // Yosys from re-merging them, so each drives only 1 bank's addr0/din0
+    // control — reducing fanout 4×. Functional behaviour is unchanged.
+    (* keep = 1 *) logic [31:0] refill_addr_bank_q [0:LINE_WORDS-1];
+
     // SRAM output pipeline registers — capture negedge-launched dout at posedge
     logic [31:0] tag_dout_r;
     logic [31:0] data_dout_r [0:LINE_WORDS-1];
 
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             tag_dout_r <= '0;
             for (int i = 0; i < LINE_WORDS; i++) data_dout_r[i] <= '0;
@@ -247,6 +259,47 @@ module rv32i_icache (
     assign axi_rready_o  = 1'b1;  // Always accept R responses (drains in-flight beats)
 
     // =========================================================================
+    // Tag SRAM write — registered commit (Run-17 P2 timing fix)
+    //
+    // The combinational cone from state_q (CS_REFILL one-hot bit) into
+    // tag_web0/tag_din0 had 298 fanout sinks and was the second-worst ASAP7
+    // critical path at -606 ps.  Inserting a 1-cycle pipeline register
+    // between the commit condition and the SRAM ports breaks this cone.
+    //
+    // Latency impact: the tag SRAM write occurs 1 cycle after the last AXI
+    // beat arrives instead of the same cycle.  The valid_array[idx] set is
+    // delayed by the same 1 cycle (see valid_array always_ff below).
+    // CS_REFILL transitions to CS_DONE (or CS_IDLE on mismatch) on the same
+    // cycle as before — the registered write simply completes in the background
+    // during CS_DONE, which is a no-stall cycle.  Correctness is preserved
+    // because the CPU reads ic_rdata_o from refill_buf_q in CS_DONE, not from
+    // the tag SRAM.
+    // =========================================================================
+    logic        tag_write_commit; // combinational commit qualifier
+    logic        tag_we_q;         // registered: assert SRAM write next cycle
+    logic [31:0] tag_din_q;        // registered: tag data to write
+    logic [7:0]  tag_idx_q;        // registered: SRAM row index to write
+
+    assign tag_write_commit = (state_q == CS_REFILL)
+                            && ar_pending_q
+                            && axi_rvalid_i
+                            && !addr_mismatch
+                            && ic_valid_i
+                            && (refill_word_q == 2'd3);
+
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            tag_we_q  <= 1'b0;
+            tag_din_q <= 32'b0;
+            tag_idx_q <= 8'b0;
+        end else begin
+            tag_we_q  <= tag_write_commit;
+            tag_din_q <= {12'b0, refill_line_addr_q[31:12]};  // tag in [19:0]
+            tag_idx_q <= refill_line_addr_q[11:4];
+        end
+    end
+
+    // =========================================================================
     // SRAM combinational control — Tag SRAM (port 0)
     // =========================================================================
     always_comb begin
@@ -265,24 +318,67 @@ module rv32i_icache (
                 end
             end
 
-            CS_REFILL: begin
-                // Write tag on last word (when entire line is committed).
-                // Guard with !addr_mismatch: if IC address changed during refill,
-                // do not commit stale tag — data SRAM was already guarded the same way.
-                if (ar_pending_q && axi_rvalid_i && !addr_mismatch && ic_valid_i && (refill_word_q == 2'd3)) begin
-                    tag_csb0   = 1'b0;
-                    tag_web0   = 1'b0;  // write
-                    tag_addr0  = refill_line_addr_q[11:4];
-                    tag_din0   = {12'b0, refill_line_addr_q[31:12]};  // tag in [19:0]
-                end
-            end
-
             default: ;
         endcase
+
+        // Registered tag write — driven from FFs, not combinationally from
+        // state_q.  Overrides the read defaults when tag_we_q is asserted.
+        // This can coincide with CS_IDLE (which issues a read for a new access)
+        // or CS_DONE (idle/read cycle after refill): the write takes priority
+        // by overriding csb0/web0/addr0/din0.
+        if (tag_we_q) begin
+            tag_csb0  = 1'b0;
+            tag_web0  = 1'b0;   // write
+            tag_addr0 = tag_idx_q;
+            tag_din0  = tag_din_q;
+        end
+    end
+
+    // =========================================================================
+    // Data SRAM write — registered commit (Run-22 timing fix)
+    //
+    // The combinational cone from state_q (CS_REFILL) + axi_rvalid_i into
+    // data_csb0/web0/addr0/din0 had ~530+ fanout sinks and was the dominant
+    // ASAP7 critical-path cluster after Run 21.  Inserting a 1-cycle pipeline
+    // register between the commit condition and the SRAM ports breaks this cone,
+    // mirroring the Run-17 P2 tag-SRAM registered-commit fix (tag_we_q above).
+    //
+    // Latency impact: each refill beat's data SRAM write occurs 1 cycle after
+    // the AXI beat arrives.  Beat 3 fires during CS_DONE (the no-stall cycle),
+    // same timing as the tag write.  Correctness is preserved because the CPU
+    // reads ic_rdata_o from refill_buf_q in CS_DONE, not from the data SRAMs.
+    // valid_array is gated on tag_we_q, so the line is not visible as valid
+    // until the tag write commits — by then all 4 data writes have also fired.
+    // =========================================================================
+    logic        data_write_commit;
+    logic        data_we_q;
+    logic [31:0] data_din_q;
+    logic [7:0]  data_idx_q;
+    logic [1:0]  data_bank_q;
+
+    assign data_write_commit = (state_q == CS_REFILL)
+                             && ar_pending_q
+                             && axi_rvalid_i
+                             && !addr_mismatch;
+
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            data_we_q   <= 1'b0;
+            data_din_q  <= 32'b0;
+            data_idx_q  <= 8'b0;
+            data_bank_q <= 2'b0;
+        end else begin
+            data_we_q   <= data_write_commit;
+            data_din_q  <= axi_rdata_i;
+            data_idx_q  <= refill_addr_bank_q[refill_word_q][11:4];
+            data_bank_q <= refill_word_q;
+        end
     end
 
     // =========================================================================
     // SRAM combinational control — Data SRAMs (port 0, all 4 instances)
+    // Run-19 P2: Use per-bank duplicate refill_addr_bank_q for addr0/csb0/web0.
+    // Run-22: CS_REFILL write removed from comb path — handled by data_we_q FFs.
     // =========================================================================
     always_comb begin
         for (int w = 0; w < LINE_WORDS; w++) begin
@@ -304,29 +400,29 @@ module rv32i_icache (
                 end
             end
 
-            CS_REFILL: begin
-                // Write each word to its SRAM column as it arrives from AXI.
-                // Suppress write for stale refills (address changed mid-flight).
-                if (ar_pending_q && axi_rvalid_i && !addr_mismatch) begin
-                    data_csb0[refill_word_q]  = 1'b0;
-                    data_web0[refill_word_q]  = 1'b0;  // write
-                    data_addr0[refill_word_q] = refill_line_addr_q[11:4];
-                    data_din0[refill_word_q]   = axi_rdata_i;
-                end
-            end
-
             default: ;
         endcase
+
+        // Registered data write — driven from FFs, not combinationally from
+        // state_q.  Overrides the read defaults when data_we_q is asserted.
+        // Mirrors the tag_we_q registered-write override above.
+        if (data_we_q) begin
+            data_csb0[data_bank_q]  = 1'b0;
+            data_web0[data_bank_q]  = 1'b0;   // write
+            data_addr0[data_bank_q] = data_idx_q;
+            data_din0[data_bank_q]  = data_din_q;
+        end
     end
 
     // =========================================================================
     // FSM — sequential logic
     // =========================================================================
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             state_q            <= CS_IDLE;
             ic_addr_q          <= '0;
             refill_line_addr_q <= '0;
+            for (int b = 0; b < LINE_WORDS; b++) refill_addr_bank_q[b] <= '0;
             refill_word_q      <= 2'b00;
             ar_pending_q       <= 1'b0;
             refill_buf_q       <= '0;
@@ -365,6 +461,8 @@ module rv32i_icache (
                     end else begin
                         // Miss — start refill
                         refill_line_addr_q <= {ic_addr_q[31:4], 4'b0000};
+                        for (int b = 0; b < LINE_WORDS; b++)
+                            refill_addr_bank_q[b] <= {ic_addr_q[31:4], 4'b0000};
                         refill_word_q      <= 2'b00;
                         ar_pending_q       <= 1'b0;
                         state_q            <= CS_REFILL;
@@ -426,20 +524,22 @@ module rv32i_icache (
 
     // =========================================================================
     // Valid array — sequential (register array, supports 1-cycle bulk clear)
+    //
+    // Run-17 P2: valid_array set is delayed by 1 cycle (uses tag_we_q, the
+    // same registered signal that gates the tag SRAM write) so that the line
+    // is not visible as valid until the tag SRAM write has been registered in.
+    // The index to mark valid is captured in tag_idx_q on the same cycle.
     // =========================================================================
     always_ff @(posedge clk) begin
         if (!rst_n || ic_invalidate_i) begin
             // Reset or FENCE.I: invalidate all lines in one cycle
             for (int j = 0; j < N_SETS; j++)
                 valid_array[j] = 1'b0;
-        end else if (state_q == CS_REFILL &&
-                     ar_pending_q && axi_rvalid_i && !addr_mismatch && ic_valid_i && (refill_word_q == 2'd3)) begin
-            // Refill complete and address still matches — mark line valid.
-            // !addr_mismatch guard prevents marking valid when fetch address changed mid-refill.
-            // ic_valid_i guard prevents committing when the request was cancelled (e.g. pc_redirect
-            // deasserts ic_valid_o while the last AXI beat arrives — addr_mismatch cannot catch
-            // this because it requires ic_valid_i to be high).
-            valid_array[refill_line_addr_q[11:4]] <= 1'b1;
+        end else if (tag_we_q) begin
+            // tag_we_q is the registered version of tag_write_commit (the last-beat
+            // commit qualifier).  Marking valid here ensures the line is considered
+            // valid on the same cycle the tag SRAM write is clocked in.
+            valid_array[tag_idx_q] <= 1'b1;
         end
     end
 

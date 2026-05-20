@@ -1,15 +1,15 @@
 # Project Phase Status
 
-Last updated: 2026-03-08
+Last updated: 2026-05-20
 
 ## Current Phase
 
-**Phase 3: Memory System & Caches** - 🔄 IN PROGRESS - RTL implementation (2026-03-08)
+**Phase 3: Memory System & Caches** — 🔄 RTL implementation in progress; ASAP7 PD sign-off complete at Run 43 (2026-05-20)
 
 **Previous Phases**:
-- Phase 2 (Pipelined CPU) - ✅ COMPLETE (2026-03-08) — 75 MHz on Sky130 130nm
-- Phase 1 (Minimal RV32I Core) - ✅ COMPLETE (2026-02-13)
-- Phase 0 (Foundations) - ✅ COMPLETE (2026-01-18)
+- Phase 2 (Pipelined CPU) — ✅ COMPLETE (2026-03-08) — 75 MHz on Sky130 130nm; subsequently re-implemented through ASAP7 PD flow at **1418 MHz / 27.27 mW (Run 43, 2026-05-20)**
+- Phase 1 (Minimal RV32I Core) — ✅ COMPLETE (2026-02-13)
+- Phase 0 (Foundations) — ✅ COMPLETE (2026-01-18)
 
 ## Phase Progress
 
@@ -151,6 +151,11 @@ Last updated: 2026-03-08
 - ✅ Backend flow: **75 MHz achieved on Sky130 130nm** (200 MHz target not met due to PDK limitations)
   - SDC constraints: `pnr/constraints/phase2_cpu.sdc`
   - UPF power intent: `pnr/constraints/phase2_cpu.upf`
+- ✅ ASAP7 backend flow: **1418 MHz achieved at Run 43 (2026-05-20)** — 27.27 mW, 3 844 µm² stdcell, 0 DRC/antenna/timing violations
+  - Run directory: `pnr/asap7/runs/RUN_2026-05-20_06-27-10/`
+  - Config: `pnr/asap7/config.json` (CLOCK_PERIOD 0.705, CTS clustering 8/10)
+  - Constraints: `pnr/asap7/constraints/asap7.sdc`
+  - Full per-run history: `docs/ASAP7_RUN_HISTORY.md`
 
 ### Phase 3: Memory System & Caches 🔄 IN PROGRESS
 
@@ -198,6 +203,30 @@ Last updated: 2026-03-08
 **Prerequisites**: Phase 4 exit criteria must be met
 
 ## Recent Project Changes
+
+### 2026-05-20: ASAP7 Phase 2+3 RTL Sign-off Complete ✅
+
+**Run 43 is the official ASAP7 PD signoff for the current pipelined CPU + caches RTL.**
+
+| Metric | Run 43 Result |
+|---|---|
+| Frequency | **1418 MHz** (705 ps period, RVT TT 0.7 V / 25 °C) |
+| Power | 27.27 mW |
+| Stdcell area | 3 844 µm² |
+| Setup WNS / TNS / vios | +5.97 ps / 0 / 0 |
+| Hold WNS / TNS / vios | +22.54 ps / 0 / 0 |
+| Worst setup skew | 29.08 ps |
+| DRC / antenna / errors | 0 / 0 / 0 |
+| Run directory | `pnr/asap7/runs/RUN_2026-05-20_06-27-10/` |
+
+**Campaign summary (Runs 7–44, branch `phase-2-3/asa7-run-rtl-timing-fix-1`):**
+- 37 runs total across two eras (SDC units bug fixed at Run 33)
+- Era 2 highlights: Run 35 (first 720 ps closure, 52.86 mW) → Run 36 (×10 SRAM ICG clock gating, −50% power) → Run 40 (clock uncertainty 20→15 ps, closes timing at 720 ps) → Run 41 (710 ps push, +6% power regression) → Run 42 (CTS clustering 6/12→8/10, −4% power) → **Run 43 (705 ps + CTS 8/10, signoff)** → Run 44 (resizer margin probe, negative result, config reverted)
+- Final PPA progression vs original Run 35 signoff: **+2.1% fmax, −48% power, −4.4% area**
+- Full per-run analysis: `docs/ASAP7_RUN_HISTORY.md`
+- Per-run experience records: `memory/pd/experiences.jsonl`
+
+This branch's PD campaign is closed. Further PPA exploration (700 ps push, density bump, mixed SVT/RVT) requires non-trivial RTL or PDK changes and should open a new branch.
 
 ### 2026-03-08: Phase 3 RTL Implementation Started
 

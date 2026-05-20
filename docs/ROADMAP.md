@@ -468,4 +468,4 @@ INT8 MAC critical path: ~10–13 logic levels. Full NPU (INT4/tiling/sparsity) r
 - Cells: 26,038 standard cells, SRAM macros: 164,286 µm²
 - PDN: SRAM macros not connected to grid (PDN_CONNECT_MACROS_TO_GRID=false) — known limitation for predictive PDK
 
-**ASAP7 setup**: In progress. SRAM via OpenRAM ASAP7 port. Config at `pnr/asap7/`.
+**ASAP7 sign-off** ✅ (Run 43, 2026-05-20): 1418 MHz / 27.27 mW / 3 844 µm² stdcell, 0 DRC / 0 antenna / 0 setup-hold violations. RVT TT @ 0.7 V / 25 °C. SRAM via FF-array stub (`sram_1rw_256x32_asap7_stub.v` + Liberty/LEF). Config at `pnr/asap7/`. Full campaign history: `docs/ASAP7_RUN_HISTORY.md`.

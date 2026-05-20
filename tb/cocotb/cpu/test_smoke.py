@@ -408,7 +408,6 @@ async def test_simple_addi(dut):
     try:
         dbg = APBDebugInterface(dut)
         count = [0]
-        cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
         cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
 
         # addi x1, x0, 42  →  x1 = 42
@@ -420,6 +419,12 @@ async def test_simple_addi(dut):
         mem.write_word(0x0000000C, JAL(0, 0))  # infinite self-loop
 
         await reset_dut(dut)
+        # Start commit monitor after reset so stale commits from the prior test
+        # (CPU was spinning in a JAL self-loop) are not captured by the scoreboard.
+        # With the deeper EX1c pipeline stage, the first commit after reset takes
+        # one more cycle, which shifts the timing window and exposes a pre-existing
+        # race between monitor startup and in-flight commits.
+        cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
         await ClockCycles(dut.clk_i, 200)
 
         await dbg.halt_cpu()

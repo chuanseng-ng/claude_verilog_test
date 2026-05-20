@@ -156,7 +156,7 @@ module rv32i_pipeline_mem(
                    || !dc_stall_i          // D-cache hit (data available)
                    || ex_mem_reg_i.trap_valid; // Trap bypasses memory
 
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             mem_wb_reg_o <= mem_wb_nop();
         end else if (mem_done) begin

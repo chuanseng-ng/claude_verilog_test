@@ -203,7 +203,7 @@ async def _write(dut, addr: int, data: int, strobe: int = 0xF, timeout: int = 12
 
 @cocotb.test()
 async def test_read_miss_then_hit(dut):
-    """First read (miss) fills the line; second read (hit) returns immediately."""
+    """First read (miss) fills the line; second read (hit) completes without AXI traffic."""
     dut._log.info("=== test_read_miss_then_hit ===")
 
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
@@ -219,14 +219,24 @@ async def test_read_miss_then_hit(dut):
     data = await _read(dut, BASE)
     assert data == 0xDEAD_BEEF, f"Got {data:#010x}"
 
-    # Hit
+    # Hit — D-cache takes 4 cycles (IDLE→SRAM_LATCH→HIT_PENDING→TAG_CHECK); the
+    # key property is that no AXI read is issued (i.e. it's a cache hit, not a
+    # miss+refill).  The 6-cycle polling window covers the extra pipeline stage.
+    axi_arvalid_fired = False
     dut.dc_valid_i.value = 1
     dut.dc_we_i.value = 0
     dut.dc_addr_i.value = BASE
-    await RisingEdge(dut.clk)
-    assert not dut.dc_stall_o.value, "Expected 1-cycle hit"
-    hit_data = int(dut.dc_rdata_o.value)
-    dut.dc_valid_i.value = 0
+    hit_data = None
+    for _ in range(6):
+        await RisingEdge(dut.clk)
+        if dut.axi_arvalid_o.value:
+            axi_arvalid_fired = True
+        if not dut.dc_stall_o.value:
+            hit_data = int(dut.dc_rdata_o.value)
+            dut.dc_valid_i.value = 0
+            break
+    assert hit_data is not None, "Read hit timed out — stall never deasserted"
+    assert not axi_arvalid_fired, "Hit must not trigger AXI read"
     assert hit_data == 0xDEAD_BEEF, f"Hit data wrong: {hit_data:#010x}"
 
     dut._log.info("Read miss → hit: PASS")
@@ -256,17 +266,24 @@ async def test_write_hit_no_axi(dut):
     data = await _read(dut, BASE)
     assert data == 0x1111_1111
 
-    # Write-hit: should not assert dc_axi_awvalid_o
+    # Write-hit — D-cache takes 4 cycles (IDLE→SRAM_LATCH→HIT_PENDING→TAG_CHECK);
+    # the key property is that no AXI write is issued (dirty bit set in SRAM, no
+    # eviction).  The 6-cycle polling window covers the extra pipeline stage.
+    axi_awvalid_fired = False
     dut.dc_valid_i.value = 1
     dut.dc_we_i.value = 1
     dut.dc_addr_i.value = BASE
     dut.dc_wdata_i.value = 0x2222_2222
     dut.dc_wstrb_i.value = 0xF
-    await RisingEdge(dut.clk)
-    assert not dut.dc_stall_o.value, "Write-hit should not stall"
-    assert not dut.axi_awvalid_o.value, "Write-hit must not trigger AXI write"
-    dut.dc_valid_i.value = 0
-    dut.dc_we_i.value = 0
+    for _ in range(6):
+        await RisingEdge(dut.clk)
+        if dut.axi_awvalid_o.value:
+            axi_awvalid_fired = True
+        if not dut.dc_stall_o.value:
+            dut.dc_valid_i.value = 0
+            dut.dc_we_i.value = 0
+            break
+    assert not axi_awvalid_fired, "Write-hit must not trigger AXI write"
 
     # Read back from cache — must see new value
     data2 = await _read(dut, BASE)

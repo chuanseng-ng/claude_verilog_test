@@ -1,6 +1,9 @@
 // rv32i_alu.sv
-// RV32I Arithmetic Logic Unit
-// Implements all 10 RV32I ALU operations
+// RV32I Arithmetic Logic Unit — shared-adder design
+//
+// Implements all 10 RV32I ALU operations.
+// ADD/SUB/SLT/SLTU share one 33-bit adder, eliminating the redundant parallel
+// carry chains that were the binding setup-critical path (EX1a, Run 38 -3.89 ps).
 //
 // Specification: RISC-V ISA Manual, Volume I
 // - ADD, SUB
@@ -42,69 +45,39 @@ module rv32i_alu (
   logic [4:0] shamt;
   assign shamt = operand_b[4:0];
 
-  // Combinational ALU logic
+  // Shared add/subtract datapath for ADD, SUB, SLT, SLTU.
+  // do_sub=1 → invert operand_b and add 1 (two's-complement negation):
+  //   sum = a + ~b + 1 = a - b
+  // sum[32] is carry-out; ~sum[32] is the unsigned borrow (a < b unsigned).
+  // SLT signed: if operand signs differ, a[31] is the sign of the result;
+  //   if equal, sum[31] (the difference MSB) is the sign of (a−b).
+  logic        do_sub;
+  logic [32:0] sum;
+  logic        slt_result;
+
+  assign do_sub    = (alu_op == ALU_SUB)  ||
+                     (alu_op == ALU_SLT)  ||
+                     (alu_op == ALU_SLTU);
+  assign sum       = {1'b0, operand_a}
+                   + {1'b0, operand_b ^ {32{do_sub}}}
+                   + {32'b0, do_sub};
+  assign slt_result = (operand_a[31] ^ operand_b[31]) ? operand_a[31] : sum[31];
+
+  // Result mux
   always_comb begin
     case (alu_op)
-      // ADD: operand_a + operand_b
-      ALU_ADD: begin
-        result = operand_a + operand_b;
-      end
-
-      // SUB: operand_a - operand_b
-      ALU_SUB: begin
-        result = operand_a - operand_b;
-      end
-
-      // SLL: Shift left logical
-      // Shift operand_a left by shamt positions
-      ALU_SLL: begin
-        result = operand_a << shamt;
-      end
-
-      // SLT: Set less than (signed)
-      // result = 1 if operand_a < operand_b (signed), else 0
-      ALU_SLT: begin
-        result = ($signed(operand_a) < $signed(operand_b)) ? 32'h1 : 32'h0;
-      end
-
-      // SLTU: Set less than unsigned
-      // result = 1 if operand_a < operand_b (unsigned), else 0
-      ALU_SLTU: begin
-        result = (operand_a < operand_b) ? 32'h1 : 32'h0;
-      end
-
-      // XOR: Bitwise exclusive OR
-      ALU_XOR: begin
-        result = operand_a ^ operand_b;
-      end
-
-      // SRL: Shift right logical
-      // Shift operand_a right by shamt positions (zero-fill)
-      ALU_SRL: begin
-        result = operand_a >> shamt;
-      end
-
-      // SRA: Shift right arithmetic
-      // Shift operand_a right by shamt positions (sign-extend)
-      ALU_SRA: begin
-        result = $signed(operand_a) >>> shamt;
-      end
-
-      // OR: Bitwise OR
-      ALU_OR: begin
-        result = operand_a | operand_b;
-      end
-
-      // AND: Bitwise AND
-      ALU_AND: begin
-        result = operand_a & operand_b;
-      end
-
-      // Default case to avoid latches
+      ALU_ADD:  result = sum[31:0];
+      ALU_SUB:  result = sum[31:0];
+      ALU_SLL:  result = operand_a << shamt;
+      ALU_SLT:  result = {31'b0, slt_result};
+      ALU_SLTU: result = {31'b0, ~sum[32]};
+      ALU_XOR:  result = operand_a ^ operand_b;
+      ALU_SRL:  result = operand_a >> shamt;
+      ALU_SRA:  result = $signed(operand_a) >>> shamt;
+      ALU_OR:   result = operand_a | operand_b;
+      ALU_AND:  result = operand_a & operand_b;
       /* verilator coverage_off */
-      default: begin
-        result = 32'h0;
-      end
+      default:  result = 32'h0;
       /* verilator coverage_on */
     endcase
   end

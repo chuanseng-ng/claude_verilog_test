@@ -145,7 +145,7 @@ module rv32i_pipeline_id(
     // =========================================================================
     // ID/EX pipeline register
     // =========================================================================
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             id_ex_reg_o <= id_ex_nop();
         end else if (flush_id_ex) begin
