@@ -135,6 +135,27 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 | `pnr/constraints/phase1_cpu.sdc` | Phase 1 timing constraints |
 | `pnr/constraints/phase1_cpu.upf` | Phase 1 power intent |
 
+### Knowledge Graph
+
+A graphify knowledge graph of `rtl/`, `docs/`, and `fixes/` is available in `graphify-out/`:
+
+| File | Purpose |
+| :--- | :------ |
+| `graphify-out/graph.html` | Interactive navigable graph — open in browser |
+| `graphify-out/graph.json` | Raw graph data (261 nodes, 324 edges, 32 communities) |
+| `graphify-out/GRAPH_REPORT.md` | God nodes, surprising connections, suggested questions |
+
+**Key findings from the graph:**
+- **God nodes**: `rv32i_core` (22 edges), `rv32i_control` (16 edges) — central integration hubs
+- `rv32i_control` bridges Pipeline Control, Cache Protocol, and AXI Bug Fix communities
+- The hazard unit is simultaneously touched by Phase 2 spec and Phase 3 status — hidden cross-phase dependency
+- `SDC Timing Constraints Specification` is a surprising cross-cutting hub linking RTL decisions to PD targets
+
+**To update the graph** after adding RTL or docs:
+```bash
+/graphify rtl docs fixes --update
+```
+
 ## Technology Node Strategy
 
 Three nodes are supported by the existing `pnr/Makefile`. Use the right node for the right goal:
