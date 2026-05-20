@@ -27,8 +27,8 @@
 ###############################################################################
 # 1. Clock definition
 ###############################################################################
-create_clock -name clk -period 710 [get_ports clk_i]
-# Fallback: create_clock -name clk -period 720 [get_ports clk_i]
+create_clock -name clk -period 705 [get_ports clk_i]
+# Fallback: create_clock -name clk -period 710 [get_ports clk_i]  ;# Run 42 closed at 710 ps with +9.08 ps slack (CTS clustering 8/10)
 
 set_clock_uncertainty -setup 15 [get_clocks clk]  ;# Run 39: 20→15 ps; ASAP7 jitter ~10 ps, 15 defensible midpoint
 set_clock_uncertainty -hold  10 [get_clocks clk]

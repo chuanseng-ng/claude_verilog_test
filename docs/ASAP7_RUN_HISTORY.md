@@ -7,6 +7,27 @@
 
 ---
 
+## ✅ FINAL SIGNOFF — Run 43 (2026-05-20)
+
+**This stage (Phase 2+3 ASAP7 RTL timing closure) is closed at Run 43.**
+
+| Metric | Value |
+|---|---|
+| Run directory | `pnr/asap7/runs/RUN_2026-05-20_06-27-10` |
+| Fmax | **1418 MHz** (705 ps clock period) |
+| Setup WNS / TNS / vios | +5.97 ps / 0 / 0 |
+| Hold WNS / TNS / vios | +22.54 ps / 0 / 0 |
+| Power (total) | **27.27 mW** (RVT TT @ 0.7 V / 25 °C) |
+| Stdcell area | **3 844 µm²** |
+| Worst setup skew | 29.08 ps |
+| DRC / antenna / errors | 0 / 0 / 0 |
+
+Run 43 supersedes Run 35 (1389 MHz) as the canonical Phase 2+3 ASAP7 sign-off. Run 44 (resizer margin probe) was a documented negative result and is not the signoff state — `pnr/asap7/config.json` is at Run 43 values (CLOCK_PERIOD 0.705, CTS clustering 8/10, resizer margins 100/150/100/100).
+
+Future PPA work on this stage should be opened as a new branch — this branch's campaign is complete.
+
+---
+
 ## ⚠️ SDC Units Bug — Campaign Context
 
 All runs fall into two distinct eras:
@@ -371,14 +392,90 @@ Period pushed 1200→900 ps (1111 MHz target). Clean. Establishes 900 ps baselin
 
 ---
 
-### Run 41 — In Progress (May 20, 2026) — `RUN_2026-05-20_*`
-**Target: 1408 MHz, ≤25.3 mW | Changes applied, run launching**
+### Run 41 — TIMING CLOSED ✅ (May 20, 2026) — `RUN_2026-05-20_05-17-59`
+**Result: 1408 MHz at 710 ps, +11.54 ps slack, 28.23 mW (+6% vs Run 40)**
 
-| Fix | File:line | Expected delta |
-|-----|----------|---------------|
-| Period 720→**710 ps** (+14 MHz) | `asap7.sdc:30`, `config.json:38` | +14 MHz fmax (spends ~10 of 14.59 ps slack) |
-| CTS clustering 8/16→**6/12** | `config.json:52-53` | CTS skew 50→~35 ps; −3% clock power |
-| MAX_TRANSITION 20→**15 ps** | `config.json:109` | −3–5% dynamic power |
+| Metric | Value |
+|--------|-------|
+| Setup WNS / TNS / vios | +11.54 ps / 0 / 0 |
+| Hold WNS | +23.35 ps |
+| Worst setup skew | **52.89 ps** ⚠️ |
+| Power | 28.23 mW (+5.9% vs Run 40) |
+| Setup buffers | 299 (vs 99 in Run 40) |
+| Clock buffers / inv | 854 / 682 |
+
+Fixes applied: period 720→710 ps, CTS clustering 8/16→6/12, MAX_TRANSITION 20→15 ps. Timing closed but at significant power cost — aggressive leaf clustering forced the resizer to insert 200 extra setup buffers and grow the clock tree 28%.
+
+---
+
+### Run 42 — Power Recovery ✅ (May 20, 2026) — `RUN_2026-05-20_05-56-25`
+**Result: 1408 MHz at 710 ps, +9.08 ps slack, 27.09 mW (−4.0% vs Run 41)**
+
+| Metric | Value |
+|--------|-------|
+| Setup WNS / TNS / vios | +9.08 ps / 0 / 0 |
+| Hold WNS | +23.99 ps |
+| Worst setup skew | 51.30 ps (~unchanged) |
+| Power | **27.09 mW (−4.0%)** |
+| Setup buffers | **124 (−58%)** |
+| Clock buffers / inv | **674 / 506 (−22% / −26%)** |
+
+| Fix | File:line | Delta |
+|-----|----------|-------|
+| CTS_SINK_CLUSTERING_SIZE 6→**8** | `config.json:52` | Power −4%, buffers −58% |
+| CTS_SINK_CLUSTERING_MAX_DIAMETER 12→**10** | `config.json:53` | (combined effect) |
+
+Insight: relaxing CTS leaf clustering eliminated over-fragmentation; the resizer no longer needed to compensate with hundreds of setup buffers. Skew didn't move — structural CTS imbalance (ICG-driven) is independent of leaf clustering.
+
+---
+
+### Run 43 — TIMING CLOSED ✅ (May 20, 2026) — `RUN_2026-05-20_06-27-10`
+**Result: 1418 MHz at 705 ps, +5.97 ps slack, 27.27 mW — NEW SIGNOFF TARGET**
+
+| Metric | Value |
+|--------|-------|
+| Setup WNS / TNS / vios | +5.97 ps / 0 / 0 |
+| Hold WNS | +22.54 ps |
+| **Worst setup skew** | **29.08 ps (−45% vs Run 41)** |
+| Worst hold skew | −23.94 ps (−49%) |
+| Power | 27.27 mW (−3.4% vs Run 41) |
+| Setup buffers | **84 (−72% vs Run 41)** |
+| Stdcell area | 3 844 µm² (−1.6%) |
+
+| Fix | File:line | Delta |
+|-----|----------|-------|
+| CLOCK_PERIOD 0.71→**0.705** | `config.json:38`, `asap7.sdc:30` | +10 MHz fmax |
+| Retain CTS 8/10 from Run 42 | `config.json:52-53` | Power win preserved |
+
+Insight: pushing the period 710→705 ps under the relaxed CTS clustering caused the CTS engine to balance more aggressively → worst setup skew dropped 51→29 ps (−45%) as a second-order benefit. This is the new ASAP7 signoff: **+10 MHz, −3.4% power, −1.6% area, ~50% lower skew vs Run 41**.
+
+700 ps not pursued — slack at 705 ps is +5.97 ps; 5 ps period reduction would leave only ~+1 ps margin (insufficient for run-to-run CTS variation).
+
+---
+
+### Run 44 — NEGATIVE RESULT (May 20, 2026) — `RUN_2026-05-20_21-43-24`
+**Result: bit-identical PPA vs Run 43 — Phase B1 hypothesis falsified**
+
+Config cuts:
+- `PL_RESIZER_SETUP_SLACK_MARGIN`:  0.100 → **0.075**
+- `GRT_RESIZER_SETUP_SLACK_MARGIN`: 0.150 → **0.075**
+- `PL_RESIZER_HOLD_SLACK_MARGIN`:   0.100 → **0.050**
+- `GRT_RESIZER_HOLD_SLACK_MARGIN`:  0.100 → **0.050**
+
+| Metric | Run 43 | Run 44 | Δ |
+|---|---:|---:|---:|
+| Setup WNS / TNS / vios | +5.969 ps / 0 / 0 | +5.969 ps / 0 / 0 | **0** |
+| Hold WNS | +22.54 ps | +22.54 ps | **0** |
+| Worst setup skew | 29.08 ps | 29.08 ps | **0** |
+| Power | 27.2686 mW | 27.2685 mW | −0.1 µW |
+| Setup buffers | 84 | 84 | 0 |
+| Hold buffers | 9 | 8 | −1 |
+| Total cells | 32 447 | 32 446 | −1 |
+| Stdcell area | 7 355.60 µm² | 7 355.49 µm² | −0.11 µm² |
+
+**Finding**: Phase B1 expected −0.5 to −1.0 mW from downsizing the timing-repair buffer fleet. The actual delta is noise. After Phase A (Run 42) corrected CTS clustering, the 84 setup buffers Run 43 carries are all necessary repairs on paths with <75 ps slack — **none were speculative repairs in the 75-100 ps slack window**. Margin reduction is only PPA-meaningful when the resizer was repairing paths inside the cut range; on this design, after Phase A, the path-slack distribution clusters tightly behind the +5.969 ps WNS (per the campaign's known "co-critical path exposure" lesson) with virtually no paths in 75–100 ps slack.
+
+**Implication**: Power floor for this RTL/PDK with this floorplan is locked at ~27.27 mW. Further power gains require RTL changes (more ICG clock gating, datapath sharing) or PDK changes (mixed SVT/RVT — requires library availability check). Run 43 remains the signoff; Run 44 documented as a clean negative result for future-campaign reference. **Config was reverted to Run 43 baseline (100/150/100/100) after the probe.**
 
 ---
 
@@ -408,7 +505,10 @@ Run 37:   720 ps period  WNS  −3.9 ps → hold closed, 1 setup vio
 Run 38:   720 ps period  WNS  −3.9 ps → config no-op (RSZ-0062 exhausted)
 Run 39:   720 ps period  WNS  −3.6 ps → RTL shared-adder (+0.27 ps)
 Run 40:   720 ps period  WNS +14.6 ps → ✅ TIMING CLOSED (26.6 mW, 1417 MHz)
-Run 41:   710 ps period  WNS   TBD    → in progress (target 1408 MHz, ≤25.3 mW)
+Run 41:   710 ps period  WNS +11.5 ps → ✅ TIMING CLOSED (28.2 mW, 1408 MHz)  [+6% power regression]
+Run 42:   710 ps period  WNS  +9.1 ps → ✅ POWER RECOVERY (27.1 mW, CTS 6/12→8/10)  [-4% vs Run 41]
+Run 43:   705 ps period  WNS  +6.0 ps → ✅ NEW SIGNOFF    (27.3 mW, 1418 MHz, skew 29 ps)
+Run 44:   705 ps period  WNS  +6.0 ps → ⚠ NEGATIVE RESULT (resizer margin 100/150→75/75: PPA bit-identical)
 ```
 
 ---
@@ -425,6 +525,7 @@ Run 41:   710 ps period  WNS   TBD    → in progress (target 1408 MHz, ≤25.3 
 | **ICG CTS imbalance** | 36 | ICG CLK inputs attract CTS sinks → insertion-delay skew. Fix with `create_generated_clock` on GCLK outputs + `set_false_path -hold`. |
 | **SDC units bug** | 7–31 | Liberty `time_unit: 1ps` + `create_clock -period 1.9` (intended ns) → 1.9 ps effective period. Over-constrained STA by ~1000×. Always check time units before reading WNS. |
 | **Power: SRAM dominates** | 35+ | SRAM macros = 48–73% of power. Only RTL-level clock gating (ICG) provides meaningful reduction. Die shrink and density changes have <5% power effect. |
+| **Resizer margin cut after CTS fix = no-op** | 44 | Lowering `PL_RESIZER_SETUP_SLACK_MARGIN` only helps when paths exist in the cut slack range. Once CTS is balanced (Phase A) the repair fleet sits in the <50 ps slack range; cutting margin from 100→75 ps removes no repairs. Validate path-slack histogram before margin tuning. |
 
 ---
 
@@ -446,7 +547,11 @@ Run 41:   710 ps period  WNS   TBD    → in progress (target 1408 MHz, ≤25.3 
 | `gclk_sram` generated clock + false-paths | 37 | `asap7.sdc` §14 | Restores CTS skew 159→32 ps; closes hold |
 | Shared 33-bit ALU adder | 39 | `rv32i_alu.sv` | Closes XNOR/XOR path; +0.27 ps |
 | Clock uncertainty 20→15 ps | 40 | `asap7.sdc:33` | **Closes timing** (+14.59 ps WNS) |
+| Period 720→710 ps | 41 | `config.json:38`, `asap7.sdc:30` | +14 MHz; +6% power (over-clustered CTS) |
+| CTS clustering 6/12→8/10 | 42 | `config.json:52-53` | **Power −4%**, setup buffers −58% |
+| Period 710→705 ps (with CTS 8/10) | 43 | `config.json:38`, `asap7.sdc:30` | +10 MHz; **skew −45%** as 2nd-order effect |
+| Resizer margins 100/150/100/100 → 75/75/50/50 | 44 (probe) | `config.json:110-113` | **No-op** (−1 cell, −0.1 µW, all timing/skew bit-identical). Negative result; config reverted to Run 43 baseline. |
 
 ---
 
-*Last updated: 2026-05-20. Run 41 in progress.*
+*Last updated: 2026-05-20. Run 43 is the ASAP7 signoff: 1418 MHz, 27.27 mW, 3844 µm² stdcell area. Run 44 (resizer margin cut) is a clean negative result; config.json reverted to Run 43 values. 3-phase optimisation plan complete.*
