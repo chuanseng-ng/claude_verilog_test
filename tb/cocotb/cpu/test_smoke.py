@@ -820,6 +820,88 @@ async def test_illegal_insn_trap(dut):
 
 
 @cocotb.test()
+async def test_hello_world(dut):
+    """Write 'Hello, World!' into a memory buffer and read it back.
+
+    A small RV32I program uses LUI/ADDI/SW to store the 13 ASCII bytes into
+    a 4-word buffer at 0x100, then LW to load them back into x1-x4.  The test
+    halts the CPU via the APB debug port and reconstructs the string from the
+    register values, exercising the full store→D-cache→load path.
+    """
+    dut._log.info("=== Test: Hello World ===")
+    cocotb.start_soon(Clock(dut.clk_i, 10, units="ns").start())
+    _init_inputs(dut)
+
+    ref_model = RV32IModel()
+    scoreboard = CPUScoreboard(ref_model, log=dut._log, coverage=_cov_report)
+    mem = SimpleAXIMemory(dut, ref_model=ref_model)
+    try:
+        dbg = APBDebugInterface(dut)
+        count = [0]
+        cocotb.start_soon(monitor_state(dut, _cov_report.state_cov))
+
+        # Materialize a 32-bit constant using LUI+ADDI (RISC-V li pseudo-instruction).
+        # Applies the standard sign-correction when bits[11] of the low 12 are set.
+        def li(rd, val):
+            hi = (val + 0x800) >> 12 & 0xFFFFF
+            lo = val & 0xFFF
+            if hi == 0:
+                return [ADDI(rd, 0, lo - (0x1000 if lo & 0x800 else 0))]
+            instrs = [LUI(rd, hi)]
+            if lo:
+                instrs.append(ADDI(rd, rd, lo - (0x1000 if lo & 0x800 else 0)))
+            return instrs
+
+        # "Hello, World!" packed as 4 little-endian 32-bit words
+        WORDS = [0x6C6C6548, 0x57202C6F, 0x646C726F, 0x00000021]
+        #         "Hell"       "o, W"       "orld"       "!\0\0\0"
+        BUF = 0x100  # data buffer base address (mapped in the AXI memory model)
+        T = 11       # temp register used to build each constant before storing
+
+        program = []
+        program.append(ADDI(10, 0, BUF))        # x10 = 0x100
+
+        for i, word in enumerate(WORDS):
+            program.extend(li(T, word))          # x11 = word[i]
+            program.append(SW(T, 10, i * 4))     # mem[x10 + i*4] = x11
+
+        for i in range(4):
+            program.append(LW(i + 1, 10, i * 4))  # x1..x4 = mem[x10 + i*4]
+
+        program.append(JAL(0, 0))               # spin forever
+
+        for pc_idx, instr in enumerate(program):
+            mem.write_word(pc_idx * 4, instr)
+
+        await reset_dut(dut)
+        cocotb.start_soon(monitor_commits(dut, scoreboard=scoreboard, count=count))
+        # 600 cycles: 17 instructions + I$/D$ cold-miss refills (4 AXI beats each) + margin
+        await ClockCycles(dut.clk_i, 600)
+
+        await dbg.halt_cpu()
+
+        x1 = await dbg.read_gpr(1)
+        x2 = await dbg.read_gpr(2)
+        x3 = await dbg.read_gpr(3)
+        x4 = await dbg.read_gpr(4)
+
+        # Reconstruct the byte string from four little-endian 32-bit values
+        raw = bytearray()
+        for v in (x1, x2, x3, x4):
+            raw += bytes([v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF, (v >> 24) & 0xFF])
+        decoded = raw.rstrip(b"\x00").decode("ascii")
+
+        dut._log.info(f"Memory buffer contains: {repr(decoded)}")
+        assert decoded == "Hello, World!", f"Expected 'Hello, World!', got {repr(decoded)}"
+
+        passed = scoreboard.report()
+        assert passed, "Scoreboard validation failed"
+        dut._log.info("Hello World test passed!")
+    finally:
+        mem.stop()
+
+
+@cocotb.test()
 async def test_coverage_report(dut):
     """Generate and log coverage report for all smoke tests."""
     dut._log.info("=== Coverage Report ===")
