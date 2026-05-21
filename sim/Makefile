@@ -105,9 +105,12 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += --no-timing
 	COMPILE_ARGS += -I$(RTL_DIR)/cpu/core
 	COMPILE_ARGS += -I$(RTL_DIR)/mem
-	# Override PYTHON3 so the nix-verilator's verilated.mk uses the system
-	# Python instead of the nix Python 3.11 (which conflicts with PYTHONHOME=/usr).
-	BUILD_ARGS += PYTHON3=$(shell which python3)
+	# Override PYTHON3 so the nix-verilator's verilated.mk uses the system Python 3.10
+	# (/usr/bin/python3) instead of the nix-devshell Python 3.11. Inside nix-shell,
+	# `which python3` resolves to nix Python 3.11, but PYTHONHOME=/usr is set in the
+	# outer environment pointing to Python 3.10 stdlib; the mismatch crashes
+	# verilator_includer. Hardcoding /usr/bin/python3 guarantees the version matches.
+	BUILD_ARGS += PYTHON3=/usr/bin/python3
 	# Override CXX/LINK: nix verilator generates Vtop.mk with CXX=clang++ but
 	# only g++ is available on this host outside nix's clang environment.
 	# cxx_shim.sh (in this directory) wraps g++ and strips clang-only flags
@@ -416,7 +419,7 @@ distclean:
 	@$(MAKE) clean 2>/dev/null || true
 	@rm -rf obj_dir 2>/dev/null || true
 	@rm -rf __pycache__ 2>/dev/null || true
-	@rm -rf sim_build 2>/dev/null || true
+	@rm -rf sim_build sim_build_icache sim_build_dcache 2>/dev/null || true
 	@rm -f dump.vcd 2>/dev/null || true
 	@rm -f results.xml 2>/dev/null || true
 	@rm -f *.log 2>/dev/null || true
