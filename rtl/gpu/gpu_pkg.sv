@@ -11,11 +11,15 @@ package gpu_pkg;
     localparam int REG_WIDTH        = 32;   // bits per register
     localparam int SHARED_MEM_BYTES = 16384;// 16 KiB scratchpad
     localparam int SHARED_BANKS     = 32;   // banks in shared memory
-    localparam int SHARED_WORDS     = SHARED_MEM_BYTES / (SHARED_BANKS * 4); // 16 words/bank
+    /* verilator lint_off UNUSEDPARAM */
+    localparam int SHARED_WORDS     = SHARED_MEM_BYTES / (SHARED_BANKS * 4); // 16 words/bank (used by shared_memory.sv)
+    /* verilator lint_on UNUSEDPARAM */
     localparam int DIV_STACK_DEPTH  = 4;    // per-warp divergence stack entries
 
     // Derived widths
-    localparam int LANE_W  = $clog2(N_LANES);   // 3
+    /* verilator lint_off UNUSEDPARAM */
+    localparam int LANE_W  = $clog2(N_LANES);   // 3 (used by shared_memory.sv)
+    /* verilator lint_on UNUSEDPARAM */
     localparam int WARP_W  = $clog2(N_WARPS);   // 3
     localparam int REG_W   = $clog2(N_REGS);    // 5
     localparam int SHMEM_W = $clog2(SHARED_MEM_BYTES); // 14 (byte address)

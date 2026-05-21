@@ -8,7 +8,9 @@ module vector_register_file
     import gpu_pkg::*;
 (
     input  logic                            clk,
-    input  logic                            rst_n,
+    /* verilator lint_off UNUSEDSIGNAL */
+    input  logic                            rst_n,   // reserved: async clear for testbench reset flow
+    /* verilator lint_on UNUSEDSIGNAL */
 
     // Read port A (rs1)
     input  logic [WARP_W-1:0]              rda_warp_i,

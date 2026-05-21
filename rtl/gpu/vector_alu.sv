@@ -7,8 +7,10 @@ module vector_alu
     import gpu_pkg::*;
 (
     input  gpu_opcode_t                       opcode_i,
-    input  logic [2:0]                        funct3_i,
-    input  logic [6:0]                        funct7_i,
+    /* verilator lint_off UNUSEDSIGNAL */
+    input  logic [2:0]                        funct3_i,  // reserved for future R-type sub-encoding
+    input  logic [6:0]                        funct7_i,  // reserved for future R-type sub-encoding
+    /* verilator lint_on UNUSEDSIGNAL */
 
     input  logic [N_LANES-1:0][REG_WIDTH-1:0] rs1_i,
     input  logic [N_LANES-1:0][REG_WIDTH-1:0] rs2_i,
