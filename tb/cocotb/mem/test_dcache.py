@@ -203,7 +203,7 @@ async def _write(dut, addr: int, data: int, strobe: int = 0xF, timeout: int = 12
 
 @cocotb.test()
 async def test_read_miss_then_hit(dut):
-    """First read (miss) fills the line; second read (hit) returns immediately."""
+    """First read (miss) fills the line; second read (hit) completes without AXI traffic."""
     dut._log.info("=== test_read_miss_then_hit ===")
 
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())

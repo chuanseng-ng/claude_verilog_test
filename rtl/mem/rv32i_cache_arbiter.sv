@@ -92,7 +92,7 @@ module rv32i_cache_arbiter (
     // =========================================================================
     // Grant FSM
     // =========================================================================
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             grant_q <= GRANT_NONE;
         end else begin

@@ -152,6 +152,11 @@ Last updated: 2026-05-21
 - ✅ Backend flow: **75 MHz achieved on Sky130 130nm** (200 MHz target not met due to PDK limitations)
   - SDC constraints: `pnr/constraints/phase2_cpu.sdc`
   - UPF power intent: `pnr/constraints/phase2_cpu.upf`
+- ✅ ASAP7 backend flow: **1418 MHz achieved at Run 43 (2026-05-20)** — 27.27 mW, 3 844 µm² stdcell, 0 DRC/antenna/timing violations
+  - Run directory: `pnr/asap7/runs/RUN_2026-05-20_06-27-10/`
+  - Config: `pnr/asap7/config.json` (CLOCK_PERIOD 0.705, CTS clustering 8/10)
+  - Constraints: `pnr/asap7/constraints/asap7.sdc`
+  - Full per-run history: `docs/ASAP7_RUN_HISTORY.md`
 
 ### Phase 3: Memory System & Caches ✅ COMPLETE
 

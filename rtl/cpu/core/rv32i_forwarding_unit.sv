@@ -1,112 +1,227 @@
 // rv32i_forwarding_unit.sv
-// RV32I Pipeline Forwarding Unit (Phase 2)
+// RV32I Pipeline Forwarding Unit (Phase 3 / EX2 retiming)
 //
 // Purely combinational. Implements the forwarding mux trees for ALU
-// operands and store data using the fwd_*_sel signals from the hazard unit.
+// operands and store data using fwd_*_sel and fwd_*_ex1c/ex1b2 signals from
+// the hazard unit.
 //
 // Forwarding encoding (fwd_*_sel):
-//   2'b00 = register file output (no forwarding)
-//   2'b01 = EX/MEM alu_result    (EX→EX path)
-//   2'b10 = MEM/WB writeback data (MEM→EX path; selects mem_rdata / csr_rdata / alu_result)
+//   2'b00 = register file output (no forwarding) — or EX1c/EX1b2 tier when flag=1
+//   2'b01 = EX2 result (ex_mem_reg — 4 cycles behind EX1a after Run-23 split)
+//   2'b10 = WB  result (mem_wb writeback data)
+//   2'b11 = EX1c-stage result (ex1a_ex1b_reg — 1 cycle behind EX1a, highest priority)
+//           (producer just completed EX1a and is currently passing through EX1c)
+//
+// fwd_*_ex1c = 1: EX1b-stage result (ex1c_ex1b_reg — 2 cycles behind EX1a)
+//   (producer completed EX1c and is currently in EX1b)
+//   Priority: between 2'b11 and fwd_*_ex1b2.
+//
+// fwd_*_ex1b2 = 1: EX1b2-stage result (ex1b_ex2_reg_q — 3 cycles behind EX1a; Run-23)
+//   (producer completed EX1b and is currently in ex1b_ex2_reg_q, waiting for EX2)
+//   Priority: between fwd_*_ex1c and 2'b01.
 
+`default_nettype none
 module rv32i_forwarding_unit (
     // Forwarding selects from hazard unit
-    input  logic [1:0]  fwd_a_sel,         // ALU A forwarding select
-    input  logic [1:0]  fwd_b_sel,         // ALU B forwarding select
-    input  logic [1:0]  fwd_store_sel,     // Store data forwarding select
+    input  logic [1:0]  fwd_a_sel,
+    input  logic [1:0]  fwd_b_sel,
+    input  logic [1:0]  fwd_store_sel,
+
+    // EX1c forwarding tier (producer in EX1b — ex1c_ex1b_reg)
+    input  logic        fwd_a_ex1c,
+    input  logic        fwd_b_ex1c,
+    input  logic        fwd_store_ex1c,
+
+    // EX1b2 forwarding tier (producer in ex1b_ex2_reg_q — Run-23)
+    input  logic        fwd_a_ex1b2,
+    input  logic        fwd_b_ex1b2,
+    input  logic        fwd_store_ex1b2,
 
     // ID/EX pipeline register data (direct register file reads)
-    input  logic [31:0] id_ex_rs1_data,    // rs1 from register file
-    input  logic [31:0] id_ex_rs2_data,    // rs2 from register file
+    input  logic [31:0] id_ex_rs1_data,
+    input  logic [31:0] id_ex_rs2_data,
 
-    // EX/MEM register data (for EX→EX forwarding)
-    input  logic [31:0] ex_mem_alu_result, // ALU result forwarded from EX/MEM
-    input  logic [31:0] ex_mem_csr_rdata,  // CSR read data in EX/MEM
-    input  logic [31:0] ex_mem_pc,         // Instruction PC in EX/MEM (for PC+4)
-    input  logic        ex_mem_csr_access, // EX/MEM is a CSR → use csr_rdata
-    input  logic        ex_mem_jump,       // EX/MEM is a jump → use PC+4
+    // EX1b register data (for EX1c-stage→EX1a forwarding — ex1a_ex1b_reg,
+    // producer just completed EX1a and is passing through EX1c combinationally)
+    input  logic [31:0] ex1b_alu_result,
+    input  logic [31:0] ex1b_csr_rdata,
+    input  logic [31:0] ex1b_pc,
+    input  logic        ex1b_csr_access,
+    input  logic        ex1b_jump,
 
-    // MEM/WB register data (for MEM→EX forwarding)
-    input  logic [31:0] mem_wb_alu_result, // ALU result in MEM/WB
-    input  logic [31:0] mem_wb_mem_rdata,  // Loaded data in MEM/WB
-    input  logic [31:0] mem_wb_csr_rdata,  // CSR read data in MEM/WB
-    input  logic [31:0] mem_wb_pc,         // Instruction PC in MEM/WB (for PC+4)
-    input  logic        mem_wb_mem_rd,     // MEM/WB is a load → use mem_rdata
-    input  logic        mem_wb_csr_access, // MEM/WB is a CSR → use csr_rdata
-    input  logic        mem_wb_jump,       // MEM/WB is a jump → use PC+4
+    // EX1c register data (for EX1b-stage→EX1a forwarding — ex1c_ex1b_reg,
+    // producer completed EX1c and is currently in EX1b)
+    input  logic [31:0] ex1c_alu_result,
+    input  logic [31:0] ex1c_csr_rdata,
+    input  logic [31:0] ex1c_pc,
+    input  logic        ex1c_csr_access,
+    input  logic        ex1c_jump,
+
+    // EX1b2 register data (for EX1b2-stage→EX1a forwarding — ex1b_ex2_reg_q; Run-23)
+    input  logic [31:0] ex1b2_alu_result,
+    input  logic [31:0] ex1b2_csr_rdata,
+    input  logic [31:0] ex1b2_pc,
+    input  logic        ex1b2_csr_access,
+    input  logic        ex1b2_jump,
+
+    // EX/MEM register data (for EX2→EX1a forwarding)
+    input  logic [31:0] ex_mem_alu_result,
+    input  logic [31:0] ex_mem_csr_rdata,
+    input  logic [31:0] ex_mem_pc,
+    input  logic        ex_mem_csr_access,
+    input  logic        ex_mem_jump,
+
+    // MEM/WB register data (for WB→EX1a forwarding)
+    input  logic [31:0] mem_wb_alu_result,
+    input  logic [31:0] mem_wb_mem_rdata,
+    input  logic [31:0] mem_wb_csr_rdata,
+    input  logic [31:0] mem_wb_pc,
+    input  logic        mem_wb_mem_rd,
+    input  logic        mem_wb_csr_access,
+    input  logic        mem_wb_jump,
 
     // Forwarded outputs
-    output logic [31:0] fwd_rs1,           // Forwarded rs1 value (for ALU operand A)
-    output logic [31:0] fwd_rs2,           // Forwarded rs2 value (for ALU operand B)
-    output logic [31:0] fwd_store          // Forwarded store data (rs2 as store write data)
+    output logic [31:0] fwd_rs1,
+    output logic [31:0] fwd_rs2,
+    output logic [31:0] fwd_store
 );
 
     // =========================================================================
-    // EX/MEM write-back data selection
-    // Used as the EX→EX forwarding value.
-    // Note: loads don't have data available at EX/MEM boundary (fetched in MEM stage).
+    // EX1c-stage write-back data (ex1a_ex1b_reg — producer in EX1c, 1 cycle behind)
+    // =========================================================================
+    logic [31:0] ex1b_rd_data;
+
+    always_comb begin
+        if (ex1b_csr_access) begin
+            ex1b_rd_data = ex1b_csr_rdata;
+        end else if (ex1b_jump) begin
+            ex1b_rd_data = ex1b_pc + 32'd4;
+        end else begin
+            ex1b_rd_data = ex1b_alu_result;
+        end
+    end
+
+    // =========================================================================
+    // EX1b-stage write-back data (ex1c_ex1b_reg — producer in EX1b, 2 cycles behind)
+    // =========================================================================
+    logic [31:0] ex1c_rd_data;
+
+    always_comb begin
+        if (ex1c_csr_access) begin
+            ex1c_rd_data = ex1c_csr_rdata;
+        end else if (ex1c_jump) begin
+            ex1c_rd_data = ex1c_pc + 32'd4;
+        end else begin
+            ex1c_rd_data = ex1c_alu_result;
+        end
+    end
+
+    // =========================================================================
+    // EX1b2-stage write-back data (ex1b_ex2_reg_q — producer in EX1b2, 3 cycles behind)
+    // Run-23: new tier between EX1c (ex1c_ex1b_reg_q) and EX2 (ex_mem_reg).
+    // =========================================================================
+    logic [31:0] ex1b2_rd_data;
+
+    always_comb begin
+        if (ex1b2_csr_access) begin
+            ex1b2_rd_data = ex1b2_csr_rdata;
+        end else if (ex1b2_jump) begin
+            ex1b2_rd_data = ex1b2_pc + 32'd4;
+        end else begin
+            ex1b2_rd_data = ex1b2_alu_result;
+        end
+    end
+
+    // =========================================================================
+    // EX/MEM write-back data selection (EX2→EX1a forwarding value)
     // =========================================================================
     logic [31:0] ex_mem_rd_data;
 
     always_comb begin
         if (ex_mem_csr_access) begin
-            ex_mem_rd_data = ex_mem_csr_rdata;        // CSR read result
+            ex_mem_rd_data = ex_mem_csr_rdata;
         end else if (ex_mem_jump) begin
-            ex_mem_rd_data = ex_mem_pc + 32'd4;       // JAL/JALR return address
+            ex_mem_rd_data = ex_mem_pc + 32'd4;
         end else begin
-            ex_mem_rd_data = ex_mem_alu_result;       // Default: ALU result
+            ex_mem_rd_data = ex_mem_alu_result;
         end
     end
 
     // =========================================================================
-    // MEM/WB write-back data selection
-    // Mirrors the WB stage write-data mux; used as the MEM→EX forwarding value.
+    // MEM/WB write-back data selection (WB stage forwarding value)
     // =========================================================================
     logic [31:0] mem_wb_rd_data;
 
     always_comb begin
         if (mem_wb_mem_rd) begin
-            mem_wb_rd_data = mem_wb_mem_rdata;        // Load result
+            mem_wb_rd_data = mem_wb_mem_rdata;
         end else if (mem_wb_csr_access) begin
-            mem_wb_rd_data = mem_wb_csr_rdata;        // CSR read result
+            mem_wb_rd_data = mem_wb_csr_rdata;
         end else if (mem_wb_jump) begin
-            mem_wb_rd_data = mem_wb_pc + 32'd4;       // JAL/JALR return address
+            mem_wb_rd_data = mem_wb_pc + 32'd4;
         end else begin
-            mem_wb_rd_data = mem_wb_alu_result;       // Default: ALU result
+            mem_wb_rd_data = mem_wb_alu_result;
         end
     end
 
     // =========================================================================
-    // Forwarded rs1 (ALU operand A mux input)
+    // Forwarded rs1 (ALU operand A)
+    // Priority: EX1c(2'b11) > EX1b(fwd_a_ex1c) > EX1b2(fwd_a_ex1b2) > EX2(2'b01) > WB > RF
     // =========================================================================
     always_comb begin
-        case (fwd_a_sel)
-            2'b01:   fwd_rs1 = ex_mem_rd_data;       // EX→EX
-            2'b10:   fwd_rs1 = mem_wb_rd_data;       // MEM→EX
-            default: fwd_rs1 = id_ex_rs1_data;       // No forwarding (2'b00 or unused)
-        endcase
+        if (fwd_a_sel == 2'b11) begin
+            fwd_rs1 = ex1b_rd_data;       // EX1c-stage→EX1a (highest priority)
+        end else if (fwd_a_ex1c) begin
+            fwd_rs1 = ex1c_rd_data;       // EX1b-stage→EX1a
+        end else if (fwd_a_ex1b2) begin
+            fwd_rs1 = ex1b2_rd_data;      // EX1b2-stage→EX1a (Run-23)
+        end else begin
+            case (fwd_a_sel)
+                2'b01:   fwd_rs1 = ex_mem_rd_data;    // EX2→EX1a
+                2'b10:   fwd_rs1 = mem_wb_rd_data;    // WB→EX1a
+                default: fwd_rs1 = id_ex_rs1_data;    // No forwarding
+            endcase
+        end
     end
 
     // =========================================================================
-    // Forwarded rs2 (ALU operand B mux input)
+    // Forwarded rs2 (ALU operand B)
     // =========================================================================
     always_comb begin
-        case (fwd_b_sel)
-            2'b01:   fwd_rs2 = ex_mem_rd_data;       // EX→EX
-            2'b10:   fwd_rs2 = mem_wb_rd_data;       // MEM→EX
-            default: fwd_rs2 = id_ex_rs2_data;
-        endcase
+        if (fwd_b_sel == 2'b11) begin
+            fwd_rs2 = ex1b_rd_data;       // EX1c-stage→EX1a
+        end else if (fwd_b_ex1c) begin
+            fwd_rs2 = ex1c_rd_data;       // EX1b-stage→EX1a
+        end else if (fwd_b_ex1b2) begin
+            fwd_rs2 = ex1b2_rd_data;      // EX1b2-stage→EX1a (Run-23)
+        end else begin
+            case (fwd_b_sel)
+                2'b01:   fwd_rs2 = ex_mem_rd_data;    // EX2→EX1a
+                2'b10:   fwd_rs2 = mem_wb_rd_data;    // WB→EX1a
+                default: fwd_rs2 = id_ex_rs2_data;
+            endcase
+        end
     end
 
     // =========================================================================
-    // Forwarded store data (rs2 as store write data)
+    // Forwarded store data
     // =========================================================================
     always_comb begin
-        case (fwd_store_sel)
-            2'b01:   fwd_store = ex_mem_rd_data;     // EX→EX
-            2'b10:   fwd_store = mem_wb_rd_data;     // MEM→EX
-            default: fwd_store = id_ex_rs2_data;
-        endcase
+        if (fwd_store_sel == 2'b11) begin
+            fwd_store = ex1b_rd_data;     // EX1c-stage→EX1a
+        end else if (fwd_store_ex1c) begin
+            fwd_store = ex1c_rd_data;     // EX1b-stage→EX1a
+        end else if (fwd_store_ex1b2) begin
+            fwd_store = ex1b2_rd_data;    // EX1b2-stage→EX1a (Run-23)
+        end else begin
+            case (fwd_store_sel)
+                2'b01:   fwd_store = ex_mem_rd_data;  // EX2→EX1a
+                2'b10:   fwd_store = mem_wb_rd_data;  // WB→EX1a
+                default: fwd_store = id_ex_rs2_data;
+            endcase
+        end
     end
 
 endmodule
+
+`default_nettype wire

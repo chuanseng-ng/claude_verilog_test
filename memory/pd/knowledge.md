@@ -523,3 +523,173 @@ the ex_pc_redirect computation; after registration, the path from `ex_pc_redirec
 `flush_id_ex` to the endpoint FF would be ~300-400 ps.
 Trade-off: branch misprediction penalty increases from 2 cycles → 3 cycles (ISA-compliant).
 Estimated WNS gain: ~+700 ps → targeting 650-750 MHz.
+
+## SDC Constraint Patterns (Learned from Run 24, 2026-05-17)
+
+### APB Multicycle Path — Two Separate Calls Required
+
+OpenSTA does **NOT** accept `-setup N -hold M` on a single `set_multicycle_path` call.
+Split into two commands:
+
+```tcl
+# WRONG — OpenSTA rejects combined setup/hold on one line:
+# set_multicycle_path -setup 3 -hold 2 -from [get_ports apb_paddr_i*]
+
+# CORRECT — two separate calls:
+set_multicycle_path -setup 3 -from [get_ports {apb_paddr_i* apb_psel_i apb_penable_i apb_pwrite_i apb_pwdata_i*}]
+set_multicycle_path -hold  2 -from [get_ports {apb_paddr_i* apb_psel_i apb_penable_i apb_pwrite_i apb_pwdata_i*}]
+```
+
+This was confirmed effective in Run 24: the apb_paddr_i[8] startpoint (Run 23 WNS) was
+eliminated from the critical path entirely (+67.5 ps WNS gain attributed to this fix).
+
+### SRAM Liberty False-Path — csb0 Must Be Covered Alongside din0/addr0
+
+The fakeram7/OpenRAM Liberty stubs generate hold violations on SRAM control inputs that
+are timing artifacts, not real violations. The full set of false-path annotations needed:
+
+```tcl
+set_false_path -hold -to [get_pins -hierarchical *din0*]
+set_false_path -hold -to [get_pins -hierarchical *addr0*]
+set_false_path -hold -to [get_pins -hierarchical *csb0*]   # ADD THIS — easy to miss
+```
+
+Omitting `csb0` leaves hold violations that survive routing (Run 24 observed 1→4 hold
+violations; the 3 new violations are likely on paths ending at `*csb0*` pins).
+
+### IRDropReport Requires RUN_SPEF_EXTRACTION: true
+
+`RUN_IR_DROP_REPORT` and `RUN_SPEF_EXTRACTION` must both be `true` or both `false` in
+`config.json`. Enabling IR drop reporting without SPEF extraction causes the flow to abort
+during the power analysis step because parasitics are missing.
+
+## SDC Constraint Patterns (Learned from Run 25, 2026-05-17)
+
+### get_pins vs get_cells for FF-Instance False-Paths
+
+When targeting a pipeline register by its RTL name (e.g., `ex1a_ex1b_reg_q`), use
+`get_cells -hierarchical` — NOT `get_pins -hierarchical`. Post-synthesis, the synthesizer
+mangles FF output pin names; `get_pins` with a hierarchical glob generates STA-0363 "pin
+not found" and the constraint is silently dropped.
+
+```tcl
+# WRONG — STA-0363, constraint not applied:
+set_false_path -hold -from [get_pins -hierarchical {*ex1a_ex1b_reg_q*}]
+
+# CORRECT — targets the FF cell instance, resolves post-synthesis:
+set_false_path -hold -from [get_cells -hierarchical {*ex1a_ex1b_reg_q*}]
+```
+
+If the cell no longer exists (e.g., EX1c removed), `get_cells` returns an empty collection
+silently — no warning — whereas `get_pins` emits STA-0363 for every missing pin.
+
+### get_nets in Flattened Netlists — Use get_pins Instead
+
+`get_nets -hierarchical "*u_dcache*wb_tag*"` fails (STA-0361) in a flattened post-synthesis
+netlist because hierarchy separators are removed and the `*u_dcache*` prefix no longer
+matches. Use `-through [get_pins -hierarchical "*wb_tag*"]` instead:
+
+```tcl
+# WRONG — STA-0361, hierarchy prefix lost in synthesis:
+set_multicycle_path -setup 2 -through [get_nets -hierarchical "*u_dcache*wb_tag*"]
+
+# CORRECT — pin-based through-point, shorter glob survives flattening:
+set_multicycle_path -setup 2 -through [get_pins -hierarchical "*wb_tag*"]
+set_multicycle_path -hold  1 -through [get_pins -hierarchical "*wb_tag*"]
+```
+
+## RTL Pipeline Timing Lessons (Learned from Runs 20–25)
+
+### EX1c Was Timing-Motivated — Do Not Remove Without Replacing
+
+The EX1c pipeline stage was inserted (Run 20) to break a 15-gate combinational cone in
+the EX1a → EX1b path (trap-type encoder + store byte-align case tree). Run 25 removed
+EX1c and moved that logic back into EX1a, which restored the 15-gate cone and regressed
+WNS by -111 ps (from -702 ps to -813 ps).
+
+**Rule**: Do not remove a retiming stage unless the logic it was breaking is also being
+restructured or its cone shortened by another means.
+
+### SYNTH_STRATEGY DELAY 3 Creates High-Fanout ABC FFs
+
+`SYNTH_STRATEGY "DELAY 3"` enables aggressive ABC retiming that can create single-bit
+synthesized FFs (`dfflibmap`) driving 1000+ endpoints. In Run 25, two such FFs (`_48075_`
+and `_50320_`) contributed 952K ps of the 2.36M ps TNS (40% of total). These FFs are
+RTL-invisible — they appear only in the post-synthesis netlist.
+
+**Fix**: Try `SYNTH_STRATEGY "DELAY 2"` first. If high-fanout ABC FFs persist, consider
+`SYNTH_STRATEGY "AREA 0"` as a fallback (sacrifices some WNS for better fanout structure).
+
+### Forwarding Unit Comparison is a Deep Cone (Run 27+ target)
+
+The worst single path in Run 25 (`_49400_/QN → _49478_/D`, -813 ps) traverses the
+forwarding unit address comparison + MUX select tree: 15 unique logic gates (NAND5 → NAND3
+→ NOR5 → AOI211 → AOI21 → NAND4 → ... → A2O1A1I × 3) plus ~15 inserted rebuffer cells.
+The fix is to move the forwarding address comparison (`ex_rd_addr == id_rs1_addr` etc.)
+into the ID stage and register the select signal — leaving only a 2:1 MUX in EX1a.
+This requires a full regression campaign (forwarding correctness re-verification) and is
+deferred to Run 27+ if Run 26 (SYNTH_STRATEGY DELAY 2) is insufficient.
+
+## SDC Clock Period and Synthesis Aggressiveness (Run 26 Lesson)
+
+**Rule**: Keep SDC clock period at 1.9 ns (aggressive target) even when the design is deeply
+violating (WNS -700 to -900 ps). Do NOT relax the clock to 2.0 ns to "make it achievable."
+
+**Why**: ABC uses the SDC clock period as an optimization pressure target. At 1.9 ns, ABC
+aggressively restructures paths between 1.9–2.0 ns that it would leave alone at 2.0 ns.
+Run 26 relaxed to 2.0 ns expecting +100 ps slack benefit, but the achievable fmax dropped
+from 384 MHz (Run 24) to 354 MHz — a 30 MHz regression — because synthesis QoR degraded.
+
+**How to apply**: CLOCK_PERIOD in config.json and create_clock in asap7.sdc must stay at 1.9.
+Only relax once the design is close to meeting timing (WNS within 50–100 ps of 0).
+
+## EX1c Retiming Stage — Removal Discipline (Run 25/26 Lesson)
+
+**Rule**: Do not remove a retiming stage (EX1c) without first restructuring the combinational
+cone it was inserted to break.
+
+**Why**: EX1c was inserted in Run 20 to break a 22-gate ALU+trap-encode+store-byte-align cone.
+Run 25 removed EX1c to restore a 3-cycle branch penalty, causing -111 ps WNS regression.
+Re-inserting EX1c in Run 26 was neutral (the bottleneck had already shifted to forwarding/hazard
+logic), but removing it caused confirmed regression. Do not remove it again without restructuring
+the EX1a trap-encode + byte-align logic to fit in one stage first.
+
+**How to apply**: rv32i_pipeline_ex1c.sv must remain in the flow. If branch-penalty improvement
+is desired, restructure the EX1a logic first, then remove EX1c only after verifying WNS holds.
+
+## SRAM Liberty Power Model — clk0 is Unconditional (Run 36 Finding)
+
+**Finding**: `pnr/asap7/sram_1rw_256x32_asap7_TT_0p7V_25C.lib` has NO `csb0`-conditional
+`internal_power`. The only `when`-conditioned power is on `web0` (read vs write). The clk0
+pin internal power (1.345 energy units per rise/fall) is charged every clock toggle regardless
+of `csb0`.
+
+**Implication for power reduction**:
+- `csb0` / `web0` gating does NOT move `report_power` output (no `when` clause for them)
+- Only gating `clk0` toggles reduces reported SRAM internal power
+- `cell_leakage_power : 128.9 µW` × 10 macros = 1.289 mW (matches report exactly)
+- Macro internal 37.5 mW ≈ all clk0 toggles at 1.4 GHz
+
+**Fix applied in Run 36**: `rtl/mem/rv32i_clock_gate.sv` — behavioral latch-AND ICG wrapper.
+Instantiated for all 10 SRAM clk0 pins (icache tag + 4 data, dcache tag + 4 data) using
+`!csb0` as the enable. `SYNTH_CLOCK_GATING: true` added to config.json so Yosys maps
+the latch-AND to an ICGx* cell from the SEQ library.
+
+**Expected gain**: ~15–22 mW reduction (30–40% of total chip power).
+
+## PDN PSM-0039 Violations — Tool Artifact at Tap Cell Column (Run 35/36 Finding)
+
+**Finding**: 1.81M PSM-0038/0039 "Unconnected instance" violations appear every run.
+All are tap cells (`TAP_TAPCELL_ROW_*`) at a single x coordinate (84.834 µm) spanning
+rows 67–175. SRAM macros are at x=5–54.8 µm — NOT involved.
+
+**Root cause**: x=84.834 µm falls between PDN V-stripes at 81.5 µm and 86.0 µm (pitch=4.5,
+offset=0.5). PSM analysis uses M1-only connectivity. The M1 power rail gap at that column
+(routing congestion / PDN gap) means those tap cells cannot be reached via M1 alone.
+The actual VDD/VSS path goes through M2/M3 straps which PSM does not model.
+
+**Verdict**: Tool artifact — not a real disconnection. `ERROR_ON_PDN_VIOLATIONS: false`
+allows flow to continue. Confirmed: SRAM macros are not involved.
+
+**Potential fix**: Shift `FP_PDN_VOFFSET` by ~2.3 µm so a V-stripe lands near x=84.834 µm,
+or increase V-stripe density. Not needed for ASAP7 predictive flow.

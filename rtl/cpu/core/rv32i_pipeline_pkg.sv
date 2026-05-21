@@ -84,6 +84,114 @@ package rv32i_pipeline_pkg;
     } ex_mem_reg_t;
 
     // =========================================================================
+    // Trap type encoding — pre-computed in EX1a to reduce EX1b cascade depth
+    // Priority (highest first): IRQ > illegal/csr_illegal > ebreak >
+    //                           fence_i > mret > jalr > taken-branch > none
+    // =========================================================================
+    typedef enum logic [2:0] {
+        TRAP_NONE    = 3'd0,
+        TRAP_IRQ     = 3'd1,
+        TRAP_ILLEGAL = 3'd2,
+        TRAP_EBREAK  = 3'd3,
+        TRAP_FENCEI  = 3'd4,
+        TRAP_MRET    = 3'd5,
+        TRAP_JALR    = 3'd6,
+        TRAP_BRANCH  = 3'd7
+    } trap_type_e;
+
+    // =========================================================================
+    // EX1a/EX1b Intermediate Wire (combinational — NOT a pipeline register)
+    // Carries EX1a (ALU + branch_comp + JALR) outputs to EX1b (store-align +
+    // trap-cascade).  No FF boundary here; EX2 still owns the only FF.
+    // =========================================================================
+    typedef struct packed {
+        // EX1a computed results
+        logic [31:0] alu_result;    // ALU output
+        logic        branch_taken;  // Branch comparator result
+        logic [31:0] fwd_store;     // Forwarded rs2 store data (for byte-align in EX1b)
+        logic [31:0] csr_wd;        // CSR write data (imm or forwarded rs1)
+        // Passthrough control fields from id_ex_reg_t needed by EX1b
+        logic [31:0] pc;
+        logic [31:0] instruction;
+        logic [4:0]  rd_addr;
+        logic        reg_wr_en;
+        logic        mem_rd;
+        logic        mem_wr;
+        logic [2:0]  mem_size;
+        logic        mem_unsigned;
+        logic        csr_access;
+        logic [11:0] csr_addr;
+        logic [31:0] csr_rdata;     // CSR read data (from csr_file)
+        logic        jump;
+        logic        jalr;
+        logic        branch;
+        logic [31:0] immediate;
+        logic        ebreak;
+        logic        mret;
+        logic        fence_i;
+        logic        illegal;
+        logic        csr_illegal;
+        logic        valid;
+        // Interrupt/trap inputs (passed through for use in EX1b trap cascade)
+        logic        irq_valid_r;   // Registered IRQ valid
+        logic [31:0] irq_cause;
+        logic [31:0] mtvec;
+        logic [31:0] mret_pc;
+        // Flush indicator
+        logic        flush_ex_mem;
+        // rs1/rs2 addresses (for forwarding detection passthrough)
+        logic [4:0]  rs1_addr;
+        logic [4:0]  rs2_addr;
+        // Pre-encoded trap type (computed in EX1a, consumed in EX1b as flat case-mux)
+        trap_type_e  trap_type;
+        // Run-19 P1: store byte-align pre-computed in EX1a to shorten EX1b cone.
+        // EX1b reads these directly — removing the ~8-10 gate byte-align mux from EX1b.
+        logic [31:0] pre_wdata_aligned;   // Byte/halfword/word-aligned store data
+        logic [3:0]  pre_wstrb;           // Byte write strobe
+        // Run-31: EX1c-decoded trap outputs (registered in ex1c_ex1b_reg_q).
+        // EX1b uses these directly — eliminating the 8-way case-mux from the
+        // EX1b combinational cone. Saves ~20 gate levels (NOR5/NAND5 bottleneck).
+        logic        dec_trap_valid;      // trap is being taken
+        logic        dec_do_redirect;     // PC redirect needed
+        logic [31:0] dec_redirect_target; // redirect target PC
+        logic [31:0] dec_trap_cause;      // mcause value
+        logic        dec_is_irq;          // this is an interrupt (for trap_pc = squashed PC)
+        logic        dec_mret;            // MRET action
+        logic        dec_dbg_halt;        // EBREAK debug halt request
+        logic        dec_fence_i;         // FENCE.I I-cache invalidation
+    } ex1a_ex1b_t;
+
+    // =========================================================================
+    // EX1/EX2 Pipeline Register
+    // Identical fields to ex_mem_reg_t — captures EX1b combinational outputs
+    // at the clock edge; EX2 reads this and drives ex_mem_reg_t.
+    // =========================================================================
+    typedef struct packed {
+        logic [31:0] pc;
+        logic [31:0] instruction;
+        logic [31:0] alu_result;
+        logic [31:0] mem_wdata_aligned;
+        logic [3:0]  mem_wstrb;
+        logic [31:0] csr_rdata;
+        logic [4:0]  rd_addr;
+        logic        reg_wr_en;
+        logic        mem_rd;
+        logic        mem_wr;
+        logic [2:0]  mem_size;
+        logic        mem_unsigned;
+        logic        csr_access;
+        logic [11:0] csr_addr;
+        logic [31:0] csr_wdata;
+        logic        jump;
+        logic        jalr;
+        logic        pc_redirect;
+        logic [31:0] pc_target;
+        logic        trap_valid;
+        logic [31:0] trap_cause;
+        logic        valid;
+    } ex1_ex2_reg_t;
+
+    // =========================================================================
     // MEM/WB Pipeline Register
     // Captures memory read data for WB mux and final writeback.
     // =========================================================================
@@ -167,6 +275,77 @@ package rv32i_pipeline_pkg;
         ex_mem_nop.trap_valid  = 1'b0;
         ex_mem_nop.trap_cause  = 32'h0;
         ex_mem_nop.valid       = 1'b0;
+    endfunction
+
+    function automatic ex1_ex2_reg_t ex1_ex2_nop();
+        ex1_ex2_nop.pc                = 32'h0;
+        ex1_ex2_nop.instruction       = 32'h0;
+        ex1_ex2_nop.alu_result        = 32'h0;
+        ex1_ex2_nop.mem_wdata_aligned = 32'h0;
+        ex1_ex2_nop.mem_wstrb         = 4'h0;
+        ex1_ex2_nop.csr_rdata         = 32'h0;
+        ex1_ex2_nop.rd_addr           = 5'h0;
+        ex1_ex2_nop.reg_wr_en         = 1'b0;
+        ex1_ex2_nop.mem_rd            = 1'b0;
+        ex1_ex2_nop.mem_wr            = 1'b0;
+        ex1_ex2_nop.mem_size          = 3'h0;
+        ex1_ex2_nop.mem_unsigned      = 1'b0;
+        ex1_ex2_nop.csr_access        = 1'b0;
+        ex1_ex2_nop.csr_addr          = 12'h0;
+        ex1_ex2_nop.csr_wdata         = 32'h0;
+        ex1_ex2_nop.jump              = 1'b0;
+        ex1_ex2_nop.jalr              = 1'b0;
+        ex1_ex2_nop.pc_redirect       = 1'b0;
+        ex1_ex2_nop.pc_target         = 32'h0;
+        ex1_ex2_nop.trap_valid        = 1'b0;
+        ex1_ex2_nop.trap_cause        = 32'h0;
+        ex1_ex2_nop.valid             = 1'b0;
+    endfunction
+
+    function automatic ex1a_ex1b_t ex1a_ex1b_nop();
+        ex1a_ex1b_nop.alu_result    = 32'h0;
+        ex1a_ex1b_nop.branch_taken  = 1'b0;
+        ex1a_ex1b_nop.fwd_store     = 32'h0;
+        ex1a_ex1b_nop.csr_wd        = 32'h0;
+        ex1a_ex1b_nop.pc            = 32'h0;
+        ex1a_ex1b_nop.instruction   = 32'h0;
+        ex1a_ex1b_nop.rd_addr       = 5'h0;
+        ex1a_ex1b_nop.reg_wr_en     = 1'b0;
+        ex1a_ex1b_nop.mem_rd        = 1'b0;
+        ex1a_ex1b_nop.mem_wr        = 1'b0;
+        ex1a_ex1b_nop.mem_size      = 3'h0;
+        ex1a_ex1b_nop.mem_unsigned  = 1'b0;
+        ex1a_ex1b_nop.csr_access    = 1'b0;
+        ex1a_ex1b_nop.csr_addr      = 12'h0;
+        ex1a_ex1b_nop.csr_rdata     = 32'h0;
+        ex1a_ex1b_nop.jump          = 1'b0;
+        ex1a_ex1b_nop.jalr          = 1'b0;
+        ex1a_ex1b_nop.branch        = 1'b0;
+        ex1a_ex1b_nop.immediate     = 32'h0;
+        ex1a_ex1b_nop.ebreak        = 1'b0;
+        ex1a_ex1b_nop.mret          = 1'b0;
+        ex1a_ex1b_nop.fence_i       = 1'b0;
+        ex1a_ex1b_nop.illegal       = 1'b0;
+        ex1a_ex1b_nop.csr_illegal   = 1'b0;
+        ex1a_ex1b_nop.valid         = 1'b0;
+        ex1a_ex1b_nop.irq_valid_r   = 1'b0;
+        ex1a_ex1b_nop.irq_cause     = 32'h0;
+        ex1a_ex1b_nop.mtvec         = 32'h0;
+        ex1a_ex1b_nop.mret_pc       = 32'h0;
+        ex1a_ex1b_nop.flush_ex_mem  = 1'b0;
+        ex1a_ex1b_nop.rs1_addr      = 5'h0;
+        ex1a_ex1b_nop.rs2_addr      = 5'h0;
+        ex1a_ex1b_nop.trap_type         = TRAP_NONE;
+        ex1a_ex1b_nop.pre_wdata_aligned = 32'h0;
+        ex1a_ex1b_nop.pre_wstrb         = 4'h0;
+        ex1a_ex1b_nop.dec_trap_valid      = 1'b0;
+        ex1a_ex1b_nop.dec_do_redirect     = 1'b0;
+        ex1a_ex1b_nop.dec_redirect_target = 32'h0;
+        ex1a_ex1b_nop.dec_trap_cause      = 32'h0;
+        ex1a_ex1b_nop.dec_is_irq          = 1'b0;
+        ex1a_ex1b_nop.dec_mret            = 1'b0;
+        ex1a_ex1b_nop.dec_dbg_halt        = 1'b0;
+        ex1a_ex1b_nop.dec_fence_i         = 1'b0;
     endfunction
 
     function automatic mem_wb_reg_t mem_wb_nop();

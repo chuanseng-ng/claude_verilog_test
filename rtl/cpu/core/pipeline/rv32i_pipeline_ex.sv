@@ -1,16 +1,26 @@
 // rv32i_pipeline_ex.sv
-// RV32I Pipeline — Execute (EX) Stage (Phase 2)
+// RV32I Pipeline — Execute Stage 1a (EX1a)
 //
-// Responsibilities:
-//   - ALU operation with forwarded operands
-//   - Branch comparison and resolution (Decision 1: branches in EX)
-//   - JALR target computation (Decision 3)
-//   - Interrupt check (Decision 8: at instruction boundaries)
-//   - CSR read-data capture from CSR file (combinational)
-//   - Generate trap signals (irq, illegal, ebreak, misaligned)
-//   - Generate ex_pc_redirect and pc_target
-//   - Load EX/MEM pipeline register
+// Run-17 mid-EX retiming: the former monolithic EX combinational cone is split
+// across two sub-stages (EX1a → FF → EX1c → FF → EX1b).
+//
+// Run-20: EX1c inserted to break the 22-gate ALU+trap+byte-align cone.
+// Run-25: EX1c removed (regression). Run-26: EX1c re-inserted — trap_type
+//   encoding and store byte-align logic moved back to rv32i_pipeline_ex1c.sv.
+//   EX1a now passes trap_type=TRAP_NONE and default byte-align fields; EX1c
+//   re-encodes them from the registered ex1a_ex1b_reg_q inputs.
+//
+// EX1a responsibilities:
+//   - ALU computation (all ops including SLT/SLTU comparators)
+//   - Branch comparator result
+//   - JALR target: {alu_result[31:1], 1'b0}
+//   - CSR write data
+//   - Packs all fields into ex1a_ex1b_t (trap_type/byte-align filled by EX1c)
+//
+// NOTE: ex_pc_redirect / trap / mret / fence_i / dbg_halt come from EX1b.
+// Branch misprediction penalty is 4 cycles (EX1c stage adds one cycle).
 
+`default_nettype none
 
 import rv32i_pipeline_pkg::*;
 module rv32i_pipeline_ex(
@@ -18,9 +28,7 @@ module rv32i_pipeline_ex(
     input  logic        rst_n,
 
     // ── Hazard unit controls ──────────────────────────────────────────────────
-    input  logic        stall_ex_mem,   // Hold EX/MEM register
-    input  logic        flush_ex_mem,   // Squash EX→MEM (MEM-stage misalign trap wins)
-    // flush_id_ex handled by the ID stage
+    input  logic        flush_ex_mem,   // Squash EX output (MEM-stage misalign trap wins)
 
     // ── ID/EX pipeline register input ────────────────────────────────────────
     input  id_ex_reg_t  id_ex_reg_i,
@@ -41,10 +49,6 @@ module rv32i_pipeline_ex(
     input  logic [31:0] mtvec_i,        // Trap handler base address
     input  logic [31:0] mret_pc_i,      // mepc value for MRET
 
-    // ── PC redirect output (to IF stage and hazard unit) ─────────────────────
-    output logic        ex_pc_redirect_o, // 1 = flush IF+ID and redirect PC
-    output logic [31:0] ex_pc_target_o,   // Redirect target
-
     // ── CSR write-enable to CSR file ─────────────────────────────────────────
     output logic        csr_wr_en_o,    // CSR file write enable
     output logic [31:0] csr_wdata_o,    // CSR write data (forwarded rs1 or imm)
@@ -52,22 +56,8 @@ module rv32i_pipeline_ex(
     output logic [2:0]  csr_op_o,       // CSR operation
     output logic [4:0]  rs1_addr_o,     // rs1 address (for write-suppress)
 
-    // ── Trap entry to CSR file ────────────────────────────────────────────────
-    output logic        trap_entry_o,   // Trap being taken
-    output logic [31:0] trap_pc_o,      // PC to save in mepc
-    output logic [31:0] trap_cause_o,   // Cause to write to mcause
-
-    // ── MRET to CSR file ─────────────────────────────────────────────────────
-    output logic        mret_o,         // MRET executing
-
-    // ── Debug halt request (EBREAK) ───────────────────────────────────────────
-    output logic        dbg_halt_req_o, // EBREAK → request pipeline halt
-
-    // ── FENCE.I I-cache invalidation (Phase 3) ────────────────────────────────
-    output logic        fence_i_o,      // Pulse: invalidate I-cache this cycle
-
-    // ── EX/MEM pipeline register output ──────────────────────────────────────
-    output ex_mem_reg_t ex_mem_reg_o
+    // ── EX1a packed output (registered by rv32i_core.sv → fed to EX1b) ──────
+    output ex1a_ex1b_t  ex1a_ex1b_o
 );
 
     // =========================================================================
@@ -128,194 +118,66 @@ module rv32i_pipeline_ex(
     assign rs1_addr_o  = id_ex_reg_i.rs1_addr;
 
     // =========================================================================
-    // Trap priority and PC redirect logic
-    // Priority (highest first): irq > illegal_insn/csr_illegal > ebreak >
-    //                           misaligned_load > misaligned_store
-    //
-    // Interrupt check happens at instruction boundaries (start of EX stage).
-    // When an interrupt is taken, the instruction currently in EX is SQUASHED
-    // (it was not executed) and mepc = EX instruction's PC.
+    // Register irq_valid one cycle to remove the interrupt controller
+    // combinational fan-in from the EX setup critical path.
     // =========================================================================
-    logic        trap_valid;
-    logic [31:0] trap_cause;
-    logic [31:0] trap_pc;
-    logic        do_redirect;
-    logic [31:0] redirect_target;
-    logic        is_irq;
-
-    // Register irq_valid one cycle to remove the interrupt controller combinational
-    // fan-in (~6–7 levels through mstatus_mie_eff AND/OR tree) from the EX setup
-    // critical path. RISC-V spec imposes no single-cycle interrupt latency
-    // requirement; a 1-cycle additional delay is fully compliant.
     logic irq_valid_r;
-    always_ff @(posedge clk or negedge rst_n)
+    always_ff @(posedge clk)
         if (!rst_n) irq_valid_r <= 1'b0;
         else        irq_valid_r <= irq_valid_i;
 
-    always_comb begin
-        trap_valid      = 1'b0;
-        trap_cause      = 32'h0;
-        trap_pc         = id_ex_reg_i.pc;
-        do_redirect     = 1'b0;
-        redirect_target = 32'h0;
-        is_irq          = 1'b0;
-        dbg_halt_req_o  = 1'b0;
-        mret_o          = 1'b0;
-        fence_i_o       = 1'b0;
-
-        if (!id_ex_reg_i.valid || flush_ex_mem) begin
-            // Bubble or ghost being killed by registered redirect: suppress all outputs
-
-        end else if (irq_valid_r) begin
-            // Interrupt (highest priority among traps)
-            trap_valid      = 1'b1;
-            trap_cause      = irq_cause_i;
-            trap_pc         = id_ex_reg_i.pc;  // mepc = squashed instruction's PC
-            do_redirect     = 1'b1;
-            redirect_target = mtvec_i;
-            is_irq          = 1'b1;
-
-        end else if (id_ex_reg_i.illegal || id_ex_reg_i.csr_illegal) begin
-            // Illegal instruction
-            trap_valid      = 1'b1;
-            trap_cause      = 32'h0000_0002;   // mcause=2: illegal instruction
-            do_redirect     = 1'b1;
-            redirect_target = mtvec_i;
-
-        end else if (id_ex_reg_i.ebreak) begin
-            // EBREAK: set mcause=3, redirect to mtvec, AND request debug halt
-            trap_valid      = 1'b1;
-            trap_cause      = 32'h0000_0003;   // mcause=3: breakpoint
-            do_redirect     = 1'b1;
-            redirect_target = mtvec_i;
-            dbg_halt_req_o  = 1'b1;
-
-        end else if (id_ex_reg_i.fence_i) begin
-            // FENCE.I: flush pipeline (redirect to PC+4) and invalidate I-cache
-            // The redirect flushes speculatively fetched instructions.
-            // fence_i_o causes immediate I-cache invalidation this cycle.
-            // ic_valid_o=0 in IF this cycle (due to pc_redirect), so no stale
-            // instruction is captured from the invalidating cache.
-            do_redirect     = 1'b1;
-            redirect_target = id_ex_reg_i.pc + 32'd4;
-            fence_i_o       = 1'b1;
-
-        end else if (id_ex_reg_i.mret) begin
-            // MRET: restore PC from mepc, restore MIE
-            do_redirect     = 1'b1;
-            redirect_target = mret_pc_i;
-            mret_o          = 1'b1;
-
-        end else if (id_ex_reg_i.jump) begin
-            // JAL (already handled in ID) or JALR
-            if (id_ex_reg_i.jalr) begin
-                // JALR: target = (rs1 + imm) & ~1
-                do_redirect     = 1'b1;
-                redirect_target = {alu_result[31:1], 1'b0};
-            end
-            // JAL redirect is done in ID; EX doesn't set ex_pc_redirect for JAL
-
-        end else if (id_ex_reg_i.branch && branch_taken) begin
-            // Taken branch
-            do_redirect     = 1'b1;
-            redirect_target = id_ex_reg_i.pc + id_ex_reg_i.immediate;
-        end
-    end
-
-    // Trap entry signals to CSR file
-    assign trap_entry_o = trap_valid && id_ex_reg_i.valid;
-    assign trap_pc_o    = trap_pc;
-    assign trap_cause_o = trap_cause;
-
-    // PC redirect to IF stage and hazard unit
-    assign ex_pc_redirect_o = do_redirect && id_ex_reg_i.valid && !flush_ex_mem;
-    assign ex_pc_target_o   = redirect_target;
-
     // =========================================================================
-    // Byte-alignment pre-computation (moved from MEM stage to cut critical path)
-    // Computes store write strobe and aligned write data in EX so they are
-    // registered into EX/MEM and the MEM stage combinational path is eliminated.
+    // EX1a combinational output — pack ex1a_ex1b_t wire for EX1b
     // =========================================================================
-    logic [31:0] pre_wdata_aligned;
-    logic [3:0]  pre_wstrb;
+    ex1a_ex1b_t ex1a_to_ex1b;
 
     always_comb begin
-        pre_wstrb         = 4'b1111;
-        pre_wdata_aligned = fwd_store;
+        ex1a_to_ex1b = ex1a_ex1b_nop();
 
-        case (id_ex_reg_i.mem_size)
-            3'b000: begin  // Byte store
-                case (alu_result[1:0])
-                    2'b00: begin pre_wstrb = 4'b0001; pre_wdata_aligned = {24'h0, fwd_store[7:0]}; end
-                    2'b01: begin pre_wstrb = 4'b0010; pre_wdata_aligned = {16'h0, fwd_store[7:0], 8'h0}; end
-                    2'b10: begin pre_wstrb = 4'b0100; pre_wdata_aligned = {8'h0,  fwd_store[7:0], 16'h0}; end
-                    2'b11: begin pre_wstrb = 4'b1000; pre_wdata_aligned = {fwd_store[7:0], 24'h0}; end
-                endcase
-            end
-            3'b001: begin  // Halfword store
-                case (alu_result[1])
-                    1'b0: begin pre_wstrb = 4'b0011; pre_wdata_aligned = {16'h0, fwd_store[15:0]}; end
-                    1'b1: begin pre_wstrb = 4'b1100; pre_wdata_aligned = {fwd_store[15:0], 16'h0}; end
-                endcase
-            end
-            3'b010: begin  // Word store
-                pre_wstrb         = 4'b1111;
-                pre_wdata_aligned = fwd_store;
-            end
-            default: begin
-                pre_wstrb         = 4'b0000;
-                pre_wdata_aligned = 32'h0;
-            end
-        endcase
+        ex1a_to_ex1b.alu_result   = alu_result;
+        ex1a_to_ex1b.branch_taken = branch_taken;
+        ex1a_to_ex1b.fwd_store    = fwd_store;
+        ex1a_to_ex1b.csr_wd       = csr_wd;
+
+        ex1a_to_ex1b.pc           = id_ex_reg_i.pc;
+        ex1a_to_ex1b.instruction  = id_ex_reg_i.instruction;
+        ex1a_to_ex1b.rd_addr      = id_ex_reg_i.rd_addr;
+        ex1a_to_ex1b.reg_wr_en    = id_ex_reg_i.reg_wr_en;
+        ex1a_to_ex1b.mem_rd       = id_ex_reg_i.mem_rd;
+        ex1a_to_ex1b.mem_wr       = id_ex_reg_i.mem_wr;
+        ex1a_to_ex1b.mem_size     = id_ex_reg_i.mem_size;
+        ex1a_to_ex1b.mem_unsigned = id_ex_reg_i.mem_unsigned;
+        ex1a_to_ex1b.csr_access   = id_ex_reg_i.csr_access;
+        ex1a_to_ex1b.csr_addr     = id_ex_reg_i.csr_addr;
+        ex1a_to_ex1b.csr_rdata    = csr_rdata_i;
+        ex1a_to_ex1b.jump         = id_ex_reg_i.jump;
+        ex1a_to_ex1b.jalr         = id_ex_reg_i.jalr;
+        ex1a_to_ex1b.branch       = id_ex_reg_i.branch;
+        ex1a_to_ex1b.immediate    = id_ex_reg_i.immediate;
+        ex1a_to_ex1b.ebreak       = id_ex_reg_i.ebreak;
+        ex1a_to_ex1b.mret         = id_ex_reg_i.mret;
+        ex1a_to_ex1b.fence_i      = id_ex_reg_i.fence_i;
+        ex1a_to_ex1b.illegal      = id_ex_reg_i.illegal;
+        ex1a_to_ex1b.csr_illegal  = id_ex_reg_i.csr_illegal;
+        ex1a_to_ex1b.valid        = id_ex_reg_i.valid;
+        ex1a_to_ex1b.irq_valid_r  = irq_valid_r;
+        ex1a_to_ex1b.irq_cause    = irq_cause_i;
+        ex1a_to_ex1b.mtvec        = mtvec_i;
+        ex1a_to_ex1b.mret_pc      = mret_pc_i;
+        ex1a_to_ex1b.flush_ex_mem = flush_ex_mem;
+        ex1a_to_ex1b.rs1_addr     = id_ex_reg_i.rs1_addr;
+        ex1a_to_ex1b.rs2_addr     = id_ex_reg_i.rs2_addr;
+
+        // trap_type and store byte-align are computed by rv32i_pipeline_ex1c.sv
+        // on registered ex1a_ex1b_reg_q inputs, breaking the 22-gate EX1a cone.
+        ex1a_to_ex1b.trap_type         = TRAP_NONE;
+        ex1a_to_ex1b.pre_wstrb         = 4'b1111;
+        ex1a_to_ex1b.pre_wdata_aligned = fwd_store;
     end
 
-    // =========================================================================
-    // EX/MEM Pipeline Register
-    // =========================================================================
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            ex_mem_reg_o <= ex_mem_nop();
-        end else if (flush_ex_mem) begin
-            ex_mem_reg_o <= ex_mem_nop();
-        end else if (!stall_ex_mem) begin
-            if (!id_ex_reg_i.valid || trap_valid) begin
-                // Trap or bubble: propagate as a trap-only or NOP
-                ex_mem_reg_o            <= ex_mem_nop();
-                if (id_ex_reg_i.valid && trap_valid) begin
-                    ex_mem_reg_o.pc         <= id_ex_reg_i.pc;
-                    ex_mem_reg_o.instruction<= id_ex_reg_i.instruction;
-                    ex_mem_reg_o.trap_valid <= 1'b1;
-                    ex_mem_reg_o.trap_cause <= trap_cause;
-                    ex_mem_reg_o.pc_redirect<= do_redirect;
-                    ex_mem_reg_o.pc_target  <= redirect_target;
-                    ex_mem_reg_o.valid      <= 1'b1;
-                end
-            end else begin
-                ex_mem_reg_o.pc          <= id_ex_reg_i.pc;
-                ex_mem_reg_o.instruction <= id_ex_reg_i.instruction;
-                ex_mem_reg_o.alu_result        <= alu_result;
-                ex_mem_reg_o.mem_wdata_aligned <= pre_wdata_aligned;
-                ex_mem_reg_o.mem_wstrb         <= pre_wstrb;
-                ex_mem_reg_o.csr_rdata   <= csr_rdata_i;
-                ex_mem_reg_o.rd_addr     <= id_ex_reg_i.rd_addr;
-                ex_mem_reg_o.reg_wr_en   <= id_ex_reg_i.reg_wr_en;
-                ex_mem_reg_o.mem_rd      <= id_ex_reg_i.mem_rd;
-                ex_mem_reg_o.mem_wr      <= id_ex_reg_i.mem_wr;
-                ex_mem_reg_o.mem_size    <= id_ex_reg_i.mem_size;
-                ex_mem_reg_o.mem_unsigned<= id_ex_reg_i.mem_unsigned;
-                ex_mem_reg_o.csr_access  <= id_ex_reg_i.csr_access;
-                ex_mem_reg_o.csr_addr    <= id_ex_reg_i.csr_addr;
-                ex_mem_reg_o.csr_wdata   <= csr_wd;
-                ex_mem_reg_o.jump        <= id_ex_reg_i.jump;
-                ex_mem_reg_o.jalr        <= id_ex_reg_i.jalr;
-                ex_mem_reg_o.pc_redirect <= do_redirect;
-                ex_mem_reg_o.pc_target   <= redirect_target;
-                ex_mem_reg_o.trap_valid  <= 1'b0;
-                ex_mem_reg_o.trap_cause  <= 32'h0;
-                ex_mem_reg_o.valid       <= 1'b1;
-            end
-        end
-        // else stall_ex_mem=1: hold current value
-    end
+    // EX1a combinational output — registered in rv32i_core.sv, then fed to EX1b
+    assign ex1a_ex1b_o = ex1a_to_ex1b;
 
 endmodule
+
+`default_nettype wire

@@ -60,7 +60,7 @@ module rv32i_pipeline_if(
     // =========================================================================
     logic [31:0] pc_q, pc_next;
 
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             pc_q <= 32'h0000_0000;
         end else if (dbg_pc_wr_en && dbg_halted) begin
@@ -90,7 +90,7 @@ module rv32i_pipeline_if(
     // cleared when step_pending deasserts (step instruction committed).
     logic step_done_q;
 
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             step_done_q <= 1'b0;
         end else begin
@@ -125,7 +125,7 @@ module rv32i_pipeline_if(
     // =========================================================================
     // IF/ID Pipeline Register
     // =========================================================================
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             if_id_reg_o <= if_id_nop();
         end else if (flush_if_id || pc_redirect || jal_redirect) begin

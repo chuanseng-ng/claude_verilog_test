@@ -74,6 +74,9 @@ VERILOG_SOURCES := \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_if.sv \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_id.sv \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex1b.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex1c.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex2.sv \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_mem.sv \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_wb.sv \
 	$(RTL_DIR)/cpu/core/rv32i_core.sv \

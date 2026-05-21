@@ -164,7 +164,7 @@ Three nodes are supported by the existing `pnr/Makefile`. Use the right node for
 |------|----------------|---------------|-------------------|--------------|----------|
 | **Sky130 130nm** | `librelane-sky130`, `docker-run` | ✅ Complete | 75–100 MHz | ✅ Yes (SkyWater MPW) | Functional sign-off; tape-out candidate |
 | **FreePDK45 / NanGate45 45nm** | `librelane-nangate45` | ✅ Complete (`pnr/freepdk45/`) | 150–250 MHz | No (predictive) | First non-Sky130 exploration; SRAM macros available |
-| **ASAP7 7nm FinFET** | `librelane-asap7` | ❌ Missing (`pnr/asap7/` absent) | 400–600 MHz | No (predictive) | Long-range performance projection only |
+| **ASAP7 7nm FinFET** | `librelane-asap7` | ✅ Complete (`pnr/asap7/`); Run 43 signoff 2026-05-20 | **1418 MHz achieved (Run 43)** | No (predictive) | Phase 2+3 RTL PPA sign-off completed at 1418 MHz / 27.27 mW / 3 844 µm² |
 
 ### Sky130 PPA ceiling (assessed 2026-03-28)
 Sky130 130nm is frequency-limited by cell drive strength and clock tree skew. The realistic ceiling for this pipeline topology is **~100–120 MHz** with all optimisations applied — not the 200–500 MHz originally targeted.
@@ -180,8 +180,8 @@ Sky130 130nm is frequency-limited by cell drive strength and clock tree skew. Th
 ### FreePDK45/NanGate45 (ready to run)
 `pnr/freepdk45/` is fully configured: `config.json` (2.5 ns / 400 MHz target), SRAM macros (`sram_1rw_256x32_freepdk45` with LEF/LIB/GDS), `macro_placement.cfg`, `pdn.tcl`, `freepdk45.sdc`, `freepdk45.upf`. Run with `make librelane-nangate45`. Expected Phase 2 result: 150–250 MHz, ~8–10× logic density vs Sky130.
 
-### ASAP7 (config needs creating)
-`pnr/Makefile` wires up `librelane-asap7` but `pnr/asap7/` does not exist. To enable: create `pnr/asap7/config.json` (model after `pnr/freepdk45/config.json`), a new SDC at 2.0–2.5 ns, and either a synthesised FF-array SRAM or OpenRAM ASAP7 macros (experimental). Run Phase 2 CPU first (no SRAM complications). Expected: 400–600 MHz, ~100× logic density vs Sky130.
+### ASAP7 (Phase 2+3 sign-off achieved at Run 43, 2026-05-20)
+`pnr/asap7/` is fully configured and signed off: `config.json` (705 ps / 1418 MHz, CTS clustering 8/10, density 50 %), `constraints/asap7.sdc` (single-period clock, hold/setup uncertainty 10/15 ps, SRAM ICG `gclk_sram` generated clock + false-paths), `macro_placement.cfg`, `pdn.tcl`, `sram_1rw_256x32_asap7_TT_0p7V_25C.lib` (RVT TT 0.7 V / 25 °C). Run with `make librelane-asap7`. Final achieved PPA: **1418 MHz fmax, 27.27 mW power, 3 844 µm² stdcell, 0 DRC, 0 antenna, +5.97 ps setup slack, +22.54 ps hold slack** at run `pnr/asap7/runs/RUN_2026-05-20_06-27-10/`. See `docs/ASAP7_RUN_HISTORY.md` for the full 44-run campaign history.
 
 ### Verification
 
@@ -367,7 +367,7 @@ Complete register map in `docs/design/MEMORY_MAP.md`.
 - No cache coherence with CPU
 - Memory coalescing when possible
 
-**Sky130 frequency ceiling**: ~100–120 MHz maximum for this CPU pipeline topology (see Technology Node Strategy). PDK limitation — not an RTL issue. For higher frequencies, target FreePDK45/NanGate45 (150–250 MHz) or ASAP7 (400–600 MHz).
+**Sky130 frequency ceiling**: ~100–120 MHz maximum for this CPU pipeline topology (see Technology Node Strategy). PDK limitation — not an RTL issue. For higher frequencies, target FreePDK45/NanGate45 (150–250 MHz) or ASAP7 (**1418 MHz demonstrated** at Run 43, 2026-05-20).
 
 **Phase 5 SoC — Locked Architecture Decisions** (confirmed 2026-03-28):
 
@@ -724,8 +724,47 @@ See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 
 3. **Tech Node Exploration** (independent of RTL — P&R only)
    - ⏸️ FreePDK45/NanGate45: run `make librelane-nangate45` (config already complete)
-   - ⏸️ ASAP7: create `pnr/asap7/config.json` + SDC (2.0–2.5 ns) + synthetic SRAM stubs; start with Phase 2 CPU (no SRAM macros needed); then Phase 3 with synthesised SRAM
+   - ✅ ASAP7: `pnr/asap7/` complete; Phase 2+3 RTL signed off at Run 43 (1418 MHz / 27.27 mW / 3 844 µm², 2026-05-20)
 
 ## Questions?
 
 Refer to specifications in `docs/` - they are the source of truth.
+
+<!-- code-review-graph MCP tools -->
+## MCP Tools: code-review-graph
+
+**IMPORTANT: This project has a knowledge graph. ALWAYS use the
+code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
+the codebase.** The graph is faster, cheaper (fewer tokens), and gives
+you structural context (callers, dependents, test coverage) that file
+scanning cannot.
+
+### When to use graph tools FIRST
+
+- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
+- **Understanding impact**: `get_impact_radius` instead of manually tracing imports
+- **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
+- **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
+- **Architecture questions**: `get_architecture_overview` + `list_communities`
+
+Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
+
+### Key Tools
+
+| Tool | Use when |
+| ------ | ---------- |
+| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
+| `get_review_context` | Need source snippets for review — token-efficient |
+| `get_impact_radius` | Understanding blast radius of a change |
+| `get_affected_flows` | Finding which execution paths are impacted |
+| `query_graph` | Tracing callers, callees, imports, tests, dependencies |
+| `semantic_search_nodes` | Finding functions/classes by name or keyword |
+| `get_architecture_overview` | Understanding high-level codebase structure |
+| `refactor_tool` | Planning renames, finding dead code |
+
+### Workflow
+
+1. The graph auto-updates on file changes (via hooks).
+2. Use `detect_changes` for code review.
+3. Use `get_affected_flows` to understand impact.
+4. Use `query_graph` pattern="tests_for" to check coverage.

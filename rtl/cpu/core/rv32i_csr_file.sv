@@ -211,7 +211,7 @@ module rv32i_csr_file (
     // Synchronous CSR register updates
     // Priority: reset > trap_entry > mret > csr instruction write
     // =========================================================================
-    always_ff @(posedge clk or negedge rst_n) begin
+    always_ff @(posedge clk) begin
         if (!rst_n) begin
             mstatus_mie_q  <= 1'b0;
             mstatus_mpie_q <= 1'b0;
