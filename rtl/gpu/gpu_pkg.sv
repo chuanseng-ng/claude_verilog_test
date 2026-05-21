@@ -1,5 +1,7 @@
 // GPU-Lite SIMT package: constants, types, and opcode definitions for Phase 4.
 // All GPU RTL modules import this package.
+// lint_off UNUSEDPARAM: not every module uses every localparam; suppress globally.
+/* verilator lint_off UNUSEDPARAM */
 package gpu_pkg;
 
     // -----------------------------------------------------------------------
@@ -14,15 +16,21 @@ package gpu_pkg;
     /* verilator lint_off UNUSEDPARAM */
     localparam int SHARED_WORDS     = SHARED_MEM_BYTES / (SHARED_BANKS * 4); // 16 words/bank (used by shared_memory.sv)
     /* verilator lint_on UNUSEDPARAM */
+    /* verilator lint_off UNUSEDPARAM */
     localparam int DIV_STACK_DEPTH  = 4;    // per-warp divergence stack entries
+    /* verilator lint_on UNUSEDPARAM */
 
     // Derived widths
     /* verilator lint_off UNUSEDPARAM */
     localparam int LANE_W  = $clog2(N_LANES);   // 3 (used by shared_memory.sv)
     /* verilator lint_on UNUSEDPARAM */
+    /* verilator lint_off UNUSEDPARAM */
     localparam int WARP_W  = $clog2(N_WARPS);   // 3
+    /* verilator lint_on UNUSEDPARAM */
+    /* verilator lint_off UNUSEDPARAM */
     localparam int REG_W   = $clog2(N_REGS);    // 5
     localparam int SHMEM_W = $clog2(SHARED_MEM_BYTES); // 14 (byte address)
+    /* verilator lint_on UNUSEDPARAM */
 
     // -----------------------------------------------------------------------
     // Opcode encoding (7-bit primary opcode, RISC-V–style fields retained)
@@ -147,3 +155,4 @@ package gpu_pkg;
     } kernel_desc_t;
 
 endpackage
+/* verilator lint_on UNUSEDPARAM */
