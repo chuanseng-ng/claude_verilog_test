@@ -4,7 +4,7 @@ Last updated: 2026-05-21
 
 ## Current Phase
 
-**Phase 4: GPU-Lite SIMT Compute Engine** - ⏸️ NOT STARTED
+**Phase 4: GPU-Lite SIMT Compute Engine** - 🔄 IN PROGRESS
 
 **Previous Phases**:
 - Phase 3 (Memory System & Caches) - ✅ COMPLETE (2026-05-21) — all 20 cache tests passing, 139/139 total
@@ -406,27 +406,34 @@ All previous specification issues have been resolved:
 
 **Phase 3 COMPLETE** ✅ 139/139 tests passing, all exit criteria met (2026-05-21).
 
-**Current Priority**: Phase 4 GPU-Lite SIMT compute engine (see `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md`)
+**Current Priority**: Phase 4 GPU-Lite SIMT compute engine.
+See `docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md` for the full implementation plan (golden spec).
+Key decisions: AXI4-Lite slave for control (not APB3), shared_memory.sv in scope, ASAP7 PD sign-off required.
 
-1. **New RTL Modules** (9 modules, `rtl/gpu/`):
-   - ⏸️ `gpu_top.sv` — top-level with AXI4-Lite control + AXI4 memory + IRQ
-   - ⏸️ `gpu_command_queue.sv` — kernel descriptor: PC, grid size, block size, arg pointer
-   - ⏸️ `warp_scheduler.sv` — round-robin; warp state: warp_id, PC, active_mask, ready
-   - ⏸️ `gpu_compute_unit.sv` — vector ALU + register file + SIMT divergence stack
-   - ⏸️ `vector_register_file.sv` — 32 regs × 8 threads per warp
-   - ⏸️ `vector_alu.sv` — VADD, VSUB, VMUL, VAND, VOR, VSLL per lane
-   - ⏸️ `gpu_memory_unit.sv` — global load/store with AXI burst generation
-   - ⏸️ `memory_coalescer.sv` — coalesces 8-lane requests into fewer AXI bursts
-   - ⏸️ `shared_memory.sv` — 16 KB scratchpad, 32 banks
+1. **New RTL Modules** (10 files, `rtl/gpu/`):
+   - 🔄 `gpu_pkg.sv` — package: constants, structs, opcode enums (lint-clean ✅)
+   - ⏸️ `vector_register_file.sv` — 32 regs × 8 lanes × 8 warps
+   - ⏸️ `vector_alu.sv` — VADD/VSUB/VMUL/VAND/VOR/VXOR/VSLL/VSRL/VSRA + imm forms (8 lanes)
+   - ⏸️ `gpu_compute_unit.sv` — 4-stage FETCH/DECODE/EX/WB + divergence stack
+   - ⏸️ `warp_scheduler.sv` — round-robin; warp state: warp_id, PC, active_mask, div_stack
+   - ⏸️ `gpu_command_queue.sv` — kernel descriptor FIFO (1-deep in Phase 4)
+   - ⏸️ `gpu_memory_unit.sv` — per-lane address gen; VLD/VST → coalescer
+   - ⏸️ `memory_coalescer.sv` — 8-lane requests → AXI4 single-beat transactions
+   - ⏸️ `shared_memory.sv` — 16 KB scratchpad, 32 banks, bank-conflict serialisation
+   - ⏸️ `gpu_top.sv` — AXI4-Lite slave (control regs) + AXI4 master (memory) + gpu_irq
 
-2. **Verification** (follows RTL):
-   - ⏸️ Unit tests: `tb/cocotb/gpu/test_warp_scheduler.py`, `test_compute_unit.py`, `test_memory_unit.py`
-   - ⏸️ Kernel tests: vector add, parallel reduction, divergence test
-   - ⏸️ Phase 3 full regression (139 tests must still pass)
+2. **Verification** (follows RTL completion per group):
+   - ⏸️ Unit tests: `tb/cocotb/gpu/test_vector_regfile.py`, `test_vector_alu.py`,
+     `test_divergence.py`, `test_warp_scheduler.py`, `test_command_queue.py`,
+     `test_memory_coalescer.py`, `test_shared_memory.py`
+   - ⏸️ Kernel tests: vector add, dot product, divergence, coalescing, shared-mem ping-pong, VSYNC
+   - ⏸️ CPU-GPU handoff integration test
+   - ⏸️ 1,000 random kernel regression
+   - ⏸️ Phase 3 regression re-run (139 tests must still pass)
 
 3. **Physical Design** (follows verification):
-   - ⏸️ GPU block synthesis + P&R + STA
-   - ⏸️ `pnr/constraints/phase4_gpu.sdc`, `phase4_gpu.upf`
+   - ⏸️ ASAP7 GPU block synthesis + P&R + STA (`pnr/asap7/gpu/`)
+   - ⏸️ Target: ≥ 1418 MHz (705 ps), WNS ≥ 0, 0 DRC, 0 antenna
 
 ## Documentation Structure
 
