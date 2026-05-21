@@ -515,6 +515,18 @@ gpu_coalescer:
 		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/memory_coalescer.sv" \
 		SIM_BUILD=sim_build_gpu_coalescer
 
+# gpu_top smoke tests (register bank + FSM)
+.PHONY: gpu_top_smoke
+gpu_top_smoke:
+	@echo "Running Phase 4 gpu_top smoke tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_gpu_top \
+		TOPLEVEL=gpu_top \
+		VERILOG_SOURCES="$(GPU_SOURCES)" \
+		SIM_BUILD=sim_build_gpu_top
+
 # shared_memory unit tests
 .PHONY: gpu_shmem
 gpu_shmem:
