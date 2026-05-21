@@ -11,12 +11,12 @@ This project incrementally builds a fully functional SoC through 6 phases:
 
 1. **Phase 0**: Specification & Reference Models ✅ **COMPLETE** (2026-01-18)
 2. **Phase 1**: Minimal RV32I CPU (single-cycle) ✅ **COMPLETE** (2026-02-13)
-3. **Phase 2** (Current): Pipelined CPU (5-stage + interrupts) ✅ **VERIFICATION COMPLETE** (2026-02-27)
-4. **Phase 3**: Memory System (I-cache + D-cache)
-5. **Phase 4**: GPU-Lite Compute Engine (SIMT)
+3. **Phase 2**: Pipelined CPU (5-stage + interrupts) ✅ **COMPLETE** (2026-03-08)
+4. **Phase 3**: Memory System (I-cache + D-cache) ✅ **COMPLETE** (2026-05-21)
+5. **Phase 4**: GPU-Lite Compute Engine (SIMT) ⏸️ Not Started
 6. **Phase 5**: SoC Integration (peripherals, boot ROM)
 
-## Current Status: Phase 2 (Backend Flow)
+## Current Status: Phase 4 (Not Started) — Phase 3 Complete
 
 **Phase 0 Complete** ✅ (2026-01-18):
 
@@ -35,16 +35,24 @@ This project incrementally builds a fully functional SoC through 6 phases:
 - ✅ Full coverage: 37/37 instructions, 8/8 FSM states
 - ✅ Archived to `micro_p/` directory
 
-**Phase 2 Verification Complete** ✅ (2026-02-27):
+**Phase 2 Complete** ✅ (2026-03-08):
 
 - ✅ Architecture approved (5-stage pipeline + interrupts + CSR)
 - ✅ All 14 RTL modules implemented
 - ✅ Comprehensive verification: 111/111 tests passing (all 7 suites)
 - ✅ Random regression: 50,000 instructions (500 seeds × 100), 0 failures
 - ✅ IRQ latency: ≤3 cycles from assertion to trap_taken
-- 🔄 Backend flow (synthesis → P&R → STA at 200 MHz)
+- ✅ Backend: 75 MHz achieved on Sky130 130nm
 
-## Implemented Features (Phase 1 ✅) & Current Features (Phase 2 🔄)
+**Phase 3 Complete** ✅ (2026-05-21):
+
+- ✅ L1 I-Cache (4 KB, direct-mapped) + L1 D-Cache (4 KB, write-back + write-allocate)
+- ✅ FENCE.I: 1-cycle I-cache invalidation
+- ✅ Cache arbiter: D$ priority over I$ (D-write > D-read > I-read)
+- ✅ Verification: I-cache 7/7, D-cache 8/8, integration 5/5; **139/139 full regression**
+- ✅ PPA sign-off (ASAP7 7nm, Run 43, 2026-05-20): **1418 MHz / 27.27 mW / 3,844 µm²**, 0 DRC, 0 antenna
+
+## Implemented Features
 
 **Phase 1 (Complete)** ✅:
 - **ISA**: Complete RISC-V RV32I base integer instruction set (37 instructions)
@@ -56,7 +64,7 @@ This project incrementally builds a fully functional SoC through 6 phases:
   - Program counter manipulation
   - Hardware breakpoints (2 breakpoints)
 
-**Phase 2 (Current)** ✅:
+**Phase 2** ✅:
 - **ISA**: RV32I + Zicsr (CSR instructions: CSRRW/S/C/I variants)
 - **Architecture**: 5-stage in-order pipeline (IF/ID/EX/MEM/WB)
 - **Interrupt Support**: RISC-V M-mode (timer + external interrupts)
@@ -104,7 +112,11 @@ This project incrementally builds a fully functional SoC through 6 phases:
 │   │   ├── rv32i_cpu_top.sv      # Top-level with AXI4-Lite + APB3
 │   │   └── rv32i_axi_arbiter.sv  # IF/MEM priority arbiter
 │   ├── gpu/                      # (Phase 4 - not started)
-│   ├── mem/                      # (Phase 3 - not started)
+│   ├── mem/                      # ✅ Phase 3 caches (~1,424 lines)
+│   │   ├── rv32i_cache_pkg.sv    # Cache parameters and types
+│   │   ├── rv32i_icache.sv       # I-cache (4 KB, direct-mapped, FENCE.I)
+│   │   ├── rv32i_dcache.sv       # D-cache (4 KB, write-back + write-allocate)
+│   │   └── rv32i_cache_arbiter.sv # D$ priority AXI arbiter
 │   ├── periph/                   # (Phase 5 - not started)
 │   └── soc/                      # (Phase 5 - not started)
 ├── micro_p/                      # Phase 1 single-cycle CPU (archived)
@@ -150,7 +162,7 @@ pytest --cov=tb.models --cov-report=html
 
 Phase 1 single-cycle CPU has been completed and archived. All verification passed.
 
-### Phase 2: RTL Simulation (Current — Verification Complete)
+### Phase 2: RTL Simulation ✅ Complete
 
 ```bash
 # Navigate to cocotb test directory (WSL)
@@ -175,6 +187,24 @@ RANDOM_TEST_SEEDS=500 RANDOM_TEST_INSTRS=100 make random_uvm
 make clean
 ```
 
+### Phase 3: Cache Simulation ✅ Complete
+
+```bash
+# Navigate to sim directory
+cd sim
+
+# Run all Phase 3 cache tests (20 tests)
+make phase3_all
+
+# Run individual cache test suites
+make icache             # I-cache unit tests (7 tests)
+make dcache             # D-cache unit tests (8 tests)
+make cache_integration  # CPU + cache integration tests (5 tests)
+
+# Clean build artifacts
+make clean
+```
+
 ## Documentation
 
 Key documents in `docs/`:
@@ -185,7 +215,8 @@ Key documents in `docs/`:
 | `PHASE_STATUS.md` | Current phase status and next steps |
 | `design/PHASE0_ARCHITECTURE_SPEC.md` | CPU architectural requirements |
 | `design/PHASE1_ARCHITECTURE_SPEC.md` | Phase 1 CPU spec (single-cycle) ✅ Complete |
-| `design/PHASE2_ARCHITECTURE_SPEC.md` | Phase 2 CPU spec (5-stage pipeline) ✅ Verification complete |
+| `design/PHASE2_ARCHITECTURE_SPEC.md` | Phase 2 CPU spec (5-stage pipeline) ✅ Complete |
+| `design/PHASE3_ARCHITECTURE_SPEC.md` | Phase 3 cache spec (I-cache + D-cache) ✅ Complete |
 | `design/PHASE4_GPU_ARCHITECTURE_SPEC.md` | GPU architecture specification (Phase 4) |
 | `design/RTL_DEFINITION.md` | Interface signal definitions |
 | `design/MEMORY_MAP.md` | Address space and register map |
@@ -249,7 +280,7 @@ For detailed phase descriptions and current status, see:
 
 This is a specification-driven project with clear phase boundaries. Contributions should:
 
-1. Follow the current phase's scope (currently Phase 2)
+1. Follow the current phase's scope (Phase 4 — GPU-Lite SIMT; Phase 3 complete)
 2. Maintain consistency with specifications in `docs/`
 3. Include appropriate tests (pytest for Phase 0, cocotb for Phase 1+)
 
