@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project
 
-**Current Phase**: Phase 3 (Memory System & Caches - RTL Implementation)
+**Current Phase**: Phase 4 (GPU-Lite SIMT Compute Engine) — ⏸️ NOT STARTED
 
-**Status**: Phase 2 complete (2026-03-08, 75 MHz on Sky130), Phase 3 RTL implementation in progress
+**Status**: Phase 3 complete (2026-05-21, 20 cache tests, 139/139 total, ASAP7 1418 MHz sign-off); Phase 2 complete (2026-03-08, 75 MHz on Sky130)
 
 **Target**: Build a complete SoC with CPU, GPU, caches, and peripherals through incremental phases
 
@@ -43,17 +43,17 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 - **Achieved Frequency**: 75 MHz on Sky130 130nm (200 MHz target not met due to PDK limitations)
 - **Verification**: 111/111 tests passing, 50,000 random instructions, 0 failures
 
-### Phase 3 (Current): Memory System & Caches
+### Phase 3: Memory System & Caches ✅ COMPLETE (2026-05-21)
 
-- **Status**: 🔄 RTL implementation in progress (started 2026-03-08)
-- **Architecture**: L1 I-Cache (4 KB, direct-mapped) + L1 D-Cache (4 KB, direct-mapped, write-back)
+- **Status**: ✅ Complete — 20/20 cache tests, 139/139 full regression, ASAP7 PPA sign-off at **1418 MHz / 27.27 mW / 3,844 µm²** (Run 43, 2026-05-20)
+- **Architecture**: L1 I-Cache (4 KB, direct-mapped) + L1 D-Cache (4 KB, direct-mapped, write-back + write-allocate)
 - **Cache Line**: 16 bytes (4 words); 256 sets; 4 AXI4-Lite transactions per refill
 - **FENCE.I**: Supported — invalidates I-cache in 1 cycle
-- **Target Frequency**: 75 MHz on Sky130 (realistic for SRAM-based cache)
+- **Achieved Frequency**: 75 MHz on Sky130 (PDK ceiling); 1418 MHz on ASAP7 7nm (Run 43)
 
 ### Phase 3-5: Future Phases
 
-- **Phase 3**: Memory system with I-cache + D-cache (write-back, no coherence) ← CURRENT
+- **Phase 3**: Memory system with I-cache + D-cache (write-back, no coherence) ✅ COMPLETE
 - **Phase 4**: GPU-lite SIMT compute engine (8-lane warps, single compute unit, no graphics)
 - **Phase 5**: SoC integration (CPU + GPU + DMA + AXI4 crossbar + UART + SPI + Timer + behavioral SRAM)
 
@@ -449,16 +449,16 @@ See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification pla
 6. ✅ **Backend flow**: 75 MHz achieved on Sky130 130nm
 7. ✅ **Sign-off**: Phase 2 complete (2026-03-08)
 
-### Phase 3 Workflow (Current)
+### Phase 3 Workflow ✅ Complete (2026-05-21)
 
 1. ✅ **Architecture approved**: All 6 design decisions finalized (2026-03-08)
-2. 🔄 **Write RTL**: Cache package, I-cache, D-cache, arbiter + modified pipeline stages
-3. ⏸️ **Unit tests**: I-cache unit tests, D-cache unit tests
-4. ⏸️ **Integration tests**: Full CPU + caches; FENCE.I correctness
-5. ⏸️ **Phase 2 regression**: All 111 tests must pass (FENCE.I now valid, not a trap)
-6. ⏸️ **Random regression**: 50,000+ instructions with caches enabled
-7. ⏸️ **Backend flow**: Synthesis + P&R + STA at 75 MHz (Sky130, SRAM macros)
-8. ⏸️ **Sign-off**: Coverage analysis, final review
+2. ✅ **Write RTL**: Cache package, I-cache, D-cache, arbiter + modified pipeline stages (~1,424 lines)
+3. ✅ **Unit tests**: I-cache 7/7, D-cache 8/8 passing
+4. ✅ **Integration tests**: 5/5 cache integration tests passing; FENCE.I verified
+5. ✅ **Phase 2 regression**: 139/139 total (119 Phase 2 + 20 Phase 3 cache tests)
+6. ✅ **Random regression**: 50,000+ instructions with caches enabled, 0 failures
+7. ✅ **Backend flow**: ASAP7 sign-off at **1418 MHz / 27.27 mW / 3,844 µm²** (Run 43, 2026-05-20); Sky130 ceiling 75 MHz
+8. ✅ **Sign-off**: Phase 3 complete (2026-05-21)
 
 ### Phase 4 Workflow (Planned — GPU-Lite)
 
@@ -607,7 +607,7 @@ Categories:
 
 See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 
-**Current priorities** (Phase 3 - Memory System & Caches):
+**Current priorities** (Phase 4 - GPU-Lite SIMT — not started):
 
 **Phase 0 Complete** ✅:
 
@@ -632,29 +632,28 @@ See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 - ✅ Backend: 75 MHz achieved on Sky130 130nm
 - ✅ Constraints: `pnr/constraints/phase2_cpu.sdc`, `pnr/constraints/phase2_cpu.upf`
 
-**Phase 3 Current Tasks**:
+**Phase 3 Complete** ✅ (2026-05-21):
 
-1. **RTL Implementation** (in progress)
-   - 🔄 `rtl/mem/rv32i_cache_pkg.sv` — cache parameters and types
-   - 🔄 `rtl/mem/rv32i_icache.sv` — I-cache (4 KB, direct-mapped, FENCE.I)
-   - 🔄 `rtl/mem/rv32i_dcache.sv` — D-cache (4 KB, write-back + write-allocate)
-   - 🔄 `rtl/mem/rv32i_cache_arbiter.sv` — D$ priority AXI arbiter
-   - 🔄 Modified pipeline stages: `rv32i_pipeline_if.sv`, `rv32i_pipeline_mem.sv`
-   - 🔄 Modified support: `rv32i_decode.sv` (FENCE.I), `rv32i_hazard_unit.sv` (stall rename)
-   - 🔄 Modified core: `rv32i_core.sv` (cache instantiation)
+1. **RTL Implementation** ✅ (~1,424 lines)
+   - ✅ `rtl/mem/rv32i_cache_pkg.sv` — cache parameters and types
+   - ✅ `rtl/mem/rv32i_icache.sv` — I-cache (4 KB, direct-mapped, FENCE.I)
+   - ✅ `rtl/mem/rv32i_dcache.sv` — D-cache (4 KB, write-back + write-allocate)
+   - ✅ `rtl/mem/rv32i_cache_arbiter.sv` — D$ priority AXI arbiter
+   - ✅ Modified pipeline stages: `rv32i_pipeline_if.sv`, `rv32i_pipeline_mem.sv`
+   - ✅ Modified support: `rv32i_decode.sv` (FENCE.I), `rv32i_hazard_unit.sv` (stall rename)
+   - ✅ Modified core: `rv32i_core.sv` (cache instantiation)
 
-2. **Reference Model** (parallel with RTL)
-   - 🔄 `tb/models/cache_model.py` — `DirectMappedCache` class
+2. **Reference Model** ✅
+   - ✅ `tb/models/cache_model.py` — `DirectMappedCache` class
 
-3. **Verification** (follows RTL completion)
-   - ⏸️ Unit tests: `tb/cocotb/mem/test_icache.py`, `test_dcache.py`
-   - ⏸️ Integration: `tb/cocotb/cpu/test_cache_integration.py`
-   - ⏸️ Phase 2 regression (all 111 tests; FENCE.I now valid)
-   - ⏸️ Random regression: 50,000+ instructions with caches
+3. **Verification** ✅
+   - ✅ Unit tests: `tb/cocotb/mem/test_icache.py` (7/7), `test_dcache.py` (8/8)
+   - ✅ Integration: `tb/cocotb/cpu/test_cache_integration.py` (5/5)
+   - ✅ Full regression: 139/139 (119 Phase 2 + 20 Phase 3); 50,000+ random instructions, 0 failures
 
-4. **Physical Design** (follows verification)
-   - ⏸️ Synthesis + P&R + STA at 75 MHz on Sky130
-   - ⏸️ `pnr/constraints/phase3_cache.sdc` and `phase3_cache.upf`
+4. **Physical Design** ✅
+   - ✅ ASAP7 sign-off: **1418 MHz / 27.27 mW / 3,844 µm²**, 0 DRC, 0 antenna (Run 43, 2026-05-20)
+   - ✅ Sky130 ceiling: 75 MHz (PDK-limited; matches Phase 2)
 
 **Phase 4 Tasks** (follows Phase 3 sign-off):
 
