@@ -1,1 +1,0 @@
-{"nodes": [{"id": "rv32i_regfile_module", "label": "rv32i_regfile", "file_type": "code", "source_file": "rtl/cpu/core/rv32i_regfile.sv", "source_location": "line 12", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}
