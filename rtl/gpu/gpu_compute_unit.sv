@@ -54,6 +54,9 @@ module gpu_compute_unit
     output logic [31:0]                 div_pop_pc_o,
     output logic [N_LANES-1:0]         div_pop_mask_o,
 
+    // Currently-executing warp ID (for scheduler div-stack lookup)
+    output logic [WARP_W-1:0]          exec_warp_id_o,
+
     // Error output (stack overflow)
     output logic                        gpu_error_o,
 
@@ -80,9 +83,7 @@ module gpu_compute_unit
     output logic [N_LANES-1:0]         mem_lane_mask_o,
     input  logic                        mem_stall_i,
     input  logic [N_LANES-1:0][31:0]   mem_rdata_i,
-    /* verilator lint_off UNUSEDSIGNAL */
-    input  logic                        mem_rvalid_i,   // reserved: explicit load completion
-    /* verilator lint_on UNUSEDSIGNAL */
+    input  logic                        mem_rvalid_i,
 
     // -----------------------------------------------------------------------
     // Shared memory interface (separate path, no AXI)
@@ -161,8 +162,25 @@ module gpu_compute_unit
     logic mem_busy;
     logic pipe_stall;
 
-    assign fetch_stall  = if_id_q.valid && !if_rvalid_i;
-    assign mem_busy     = ex_wb_q.valid && mem_stall_i && (id_ex_q.iclass == IC_MEMORY);
+    // instr_rdy_q: latches rvalid across mem-stall cycles so we don't
+    // deadlock when rvalid pulses once but pipe_stall prevents advance.
+    logic instr_rdy_q;
+    logic instr_avail;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n)           instr_rdy_q <= 1'b0;
+        else if (if_rvalid_i) instr_rdy_q <= 1'b1;
+        else if (!pipe_stall) instr_rdy_q <= 1'b0;
+    end
+
+    assign instr_avail  = if_rvalid_i || instr_rdy_q;
+    assign fetch_stall  = if_id_q.valid && !instr_avail;
+    // mem_busy: stall while the coalescer is in-flight (mem_stall_i high).
+    // Do NOT gate on id_ex_q.iclass: when VST is in EX/WB and the next
+    // instruction (e.g. VRET) is already in EX, id_ex_q.iclass is no longer
+    // IC_MEMORY, so the old check would drop mem_busy one cycle early — letting
+    // VRET fire warp_done before the write completes (lane-4 write-miss bug).
+    assign mem_busy     = mem_stall_i;
     assign pipe_stall   = fetch_stall || mem_busy || shmem_stall_i;
     assign pipe_stall_o = pipe_stall || if_id_q.valid;
 
@@ -280,7 +298,7 @@ module gpu_compute_unit
         if (!rst_n) begin
             id_ex_q <= '0;
         end else if (!pipe_stall) begin
-            if (if_id_q.valid && if_rvalid_i) begin
+            if (if_id_q.valid && instr_avail) begin
                 id_ex_q.valid         <= 1'b1;
                 id_ex_q.warp_id       <= if_id_q.warp_id;
                 id_ex_q.pc            <= if_id_q.pc;
@@ -363,7 +381,13 @@ module gpu_compute_unit
         if (!rst_n) begin
             ex_wb_q     <= '0;
             gpu_error_o <= 1'b0;
-        end else if (!pipe_stall) begin
+        end else begin
+            // VLD result arrives while pipe_stall=1 (memory still busy); capture
+            // it here so that WB sees correct data when the stall clears next cycle.
+            if (mem_rvalid_i && ex_wb_q.valid && ex_wb_q.wr_en)
+                ex_wb_q.result <= mem_rdata_i;
+
+            if (!pipe_stall) begin
             ex_wb_q.valid       <= id_ex_q.valid;
             ex_wb_q.warp_id     <= id_ex_q.warp_id;
             ex_wb_q.active_mask <= id_ex_q.active_mask;
@@ -434,6 +458,7 @@ module gpu_compute_unit
                 endcase
             end
         end
+        end // else
     end
 
     // -----------------------------------------------------------------------
@@ -463,6 +488,8 @@ module gpu_compute_unit
     assign div_pop_warp_o = ex_wb_q.warp_id;
     assign div_pop_pc_o   = div_stack_top_i.return_pc;
     assign div_pop_mask_o = div_stack_top_i.return_mask;
+
+    assign exec_warp_id_o = id_ex_q.warp_id;
 
 endmodule
 

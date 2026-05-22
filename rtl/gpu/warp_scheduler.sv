@@ -61,8 +61,9 @@ module warp_scheduler
     // -----------------------------------------------------------------------
     // Divergence stack state exposed to gpu_compute_unit for its EX stage
     // -----------------------------------------------------------------------
-    output logic [DIV_STACK_DEPTH-1:0] div_stack_depth_o, // depth of current warp's stack
-    output div_entry_t                  div_stack_top_o,   // top of current warp's stack
+    input  logic [WARP_W-1:0]           exec_warp_id_i,    // warp currently in EX stage
+    output logic [DIV_STACK_DEPTH-1:0]  div_stack_depth_o, // depth of executing warp's stack
+    output div_entry_t                   div_stack_top_o,   // top of executing warp's stack
 
     // -----------------------------------------------------------------------
     // GPU error (stack overflow) — reserved: future halting logic
@@ -126,10 +127,13 @@ module warp_scheduler
     assign warp_pc_o    = warp_pc  [next_warp];
     assign warp_mask_o  = warp_mask[next_warp];
 
-    // Divergence stack state for the warp currently presented to the compute unit
-    assign div_stack_depth_o = div_depth[next_warp];
-    assign div_stack_top_o   = (div_depth[next_warp] != '0) ?
-                                div_stack[next_warp][int'(div_depth[next_warp]) - 1] :
+    // Divergence stack state for the warp currently in the EX stage.
+    // Must use exec_warp_id_i (the warp whose VRET/branch is executing), NOT
+    // next_warp (which is whatever round-robin selects next — often wrong for
+    // single-warp kernels where next_warp wraps to an invalid index).
+    assign div_stack_depth_o = div_depth[exec_warp_id_i];
+    assign div_stack_top_o   = (div_depth[exec_warp_id_i] != '0) ?
+                                div_stack[exec_warp_id_i][int'(div_depth[exec_warp_id_i]) - 1] :
                                 '0;
 
     // -----------------------------------------------------------------------

@@ -230,6 +230,7 @@ module gpu_top
     logic                     mu_stall;
     logic [N_LANES-1:0][31:0] mu_rdata;
     logic                     mu_rvalid;
+    logic [WARP_W-1:0]        cu_exec_warp_id;
 
     // Compute unit → shared memory
     logic                              cu_shmem_req, cu_shmem_we;
@@ -391,6 +392,7 @@ module gpu_top
         .div_pop_warp_i   (cu_div_pop_warp),
         .div_pop_pc_i     (cu_div_pop_pc),
         .div_pop_mask_i   (cu_div_pop_mask),
+        .exec_warp_id_i   (cu_exec_warp_id),
         .div_stack_depth_o(sched_div_depth),
         .div_stack_top_o  (sched_div_top),
         .gpu_error_i      (cu_gpu_error),
@@ -421,6 +423,7 @@ module gpu_top
         .div_pop_warp_o   (cu_div_pop_warp),
         .div_pop_pc_o     (cu_div_pop_pc),
         .div_pop_mask_o   (cu_div_pop_mask),
+        .exec_warp_id_o   (cu_exec_warp_id),
         .gpu_error_o      (cu_gpu_error),
         .if_araddr_o      (m_axil_if_araddr),
         .if_arvalid_o     (m_axil_if_arvalid),
