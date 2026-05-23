@@ -93,8 +93,12 @@ CACHE_SOURCES := \
 # GPU sources — package first, then leaf modules, then integration top
 # Unit tests that target a single GPU module use a subset of these.
 GPU_PKG := $(RTL_DIR)/gpu/gpu_pkg.sv
+# Behavioral sim model for the GPU shared-memory SRAM banks (synthesis/P&R use
+# the pnr/asap7 blackbox stub + LEF/Liberty instead).
+GPU_SRAM_SIM := $(SIM_DIR)/sram_1rw_128x32_asap7.v
 GPU_SOURCES := \
 	$(GPU_PKG) \
+	$(GPU_SRAM_SIM) \
 	$(RTL_DIR)/gpu/vector_register_file.sv \
 	$(RTL_DIR)/gpu/vector_alu.sv \
 	$(RTL_DIR)/gpu/gpu_compute_unit.sv \
@@ -548,7 +552,7 @@ gpu_shmem:
 	$(MAKE) sim \
 		MODULE=tb.cocotb.gpu.test_shared_memory \
 		TOPLEVEL=shared_memory \
-		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/shared_memory.sv" \
+		VERILOG_SOURCES="$(GPU_PKG) $(GPU_SRAM_SIM) $(RTL_DIR)/gpu/shared_memory.sv" \
 		SIM_BUILD=sim_build_gpu_shmem
 
 # All Phase 4 unit tests (leaf modules + compute pipeline)

@@ -2,7 +2,7 @@
 // Simulation-only behavioral model for the hand-crafted ASAP7 128x32 1RW SRAM
 // macro used by the GPU shared-memory banks (rtl/gpu/shared_memory.sv).
 //
-// Verilator-friendly (no negedge, no #delays). Behaviour matches the FakeRAM /
+// Sim-only model (no negedge, no #delays). Behaviour matches the FakeRAM /
 // OpenRAM 1RW convention and the blackbox stub pnr/asap7/sram_1rw_128x32_asap7_stub.v:
 //   - addr0/csb0/web0/din0 sampled on posedge clk0
 //   - read data appears on dout0 ONE cycle after address presentation

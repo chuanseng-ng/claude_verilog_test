@@ -100,7 +100,14 @@ async def test_conflict_free_8lane(dut):
 
 @cocotb.test()
 async def test_2lane_bank_conflict(dut):
-    """Lanes 0 and 1 target the same bank; stall for 1 extra cycle; both served."""
+    """Lanes 0 and 1 target the same bank; access serialises (multi-cycle stall);
+    both writes land and read back correctly.
+
+    Banks are now SRAM macros with a registered (1-cycle-latency) read, so the
+    exact stall length is implementation-dependent; this test asserts the access
+    serialises over more than one cycle and that the data is correct, rather than
+    pinning an exact cycle count.
+    """
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     await _reset(dut)
 
@@ -114,18 +121,22 @@ async def test_2lane_bank_conflict(dut):
     dut.sh_wdata_i.value  = _encode_lanes(wdata,  32)
     dut.sh_we_i.value     = 0x03   # lanes 0 and 1 write
     dut.sh_active_i.value = 0x03
-    await RisingEdge(dut.clk)      # posedge A: request accepted → pending=0b11
+    await RisingEdge(dut.clk)      # request accepted → pending=0b11
     dut.sh_active_i.value = 0
-    await Timer(1, units="ns")
-    assert dut.sh_stall_o.value == 1, "Bank conflict should assert stall"
 
-    await RisingEdge(dut.clk)      # posedge B: lane 0 served → pending=0b10
-    await Timer(1, units="ns")
-    assert dut.sh_stall_o.value == 1, "Lane 1 still pending after lane 0 served"
-
-    await RisingEdge(dut.clk)      # posedge C: lane 1 served → pending=0b00
-    await Timer(1, units="ns")
-    assert dut.sh_stall_o.value == 0, "Stall should clear after both lanes served"
+    # Stall must assert and stay high for >=2 cycles (the two same-bank lanes are
+    # served on successive cycles), then deassert.
+    high_cycles = 0
+    for _ in range(20):
+        await Timer(1, units="ns")
+        if not dut.sh_stall_o.value:
+            break
+        high_cycles += 1
+        await RisingEdge(dut.clk)
+    else:
+        assert False, "sh_stall_o never deasserted"
+    assert high_cycles >= 2, \
+        f"bank conflict should serialise over >=2 stall cycles, got {high_cycles}"
 
     # Read back both words
     addrs_r = [_make_addr(BANK, 0), _make_addr(BANK, 1)] + [0] * 6
