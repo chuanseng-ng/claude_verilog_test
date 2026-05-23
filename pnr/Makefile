@@ -103,6 +103,7 @@ DRT_THREADS         ?= 4
 .PHONY: librelane-sky130 librelane-nangate45 librelane-asap7 librelane-asap7-gpu
 .PHONY: librelane-sky130-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results
 .PHONY: prune-asap7-runs prune-asap7-gpu-runs
+.PHONY: macro-views-asap7
 
 #----------------------------------------------------------------
 # Default Target
@@ -133,6 +134,8 @@ help:
 	@echo "  librelane-asap7-gpu-results     - Show metrics from latest ASAP7 GPU LibreLane run"
 	@echo "  prune-asap7-runs          - Delete old CPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
 	@echo "  prune-asap7-gpu-runs      - Delete old GPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
+	@echo "  macro-views-asap7         - Generate LEF + LIB + netlist macro views from latest ASAP7 CPU run"
+	@echo "                              (override run: make macro-views-asap7 RUN=asap7/runs/RUN_...)"
 	@echo ""
 	@echo "  LIBRELANE_DIR     = $(LIBRELANE_DIR)"
 	@echo "  MANUAL_PDK_ROOT   = $(MANUAL_PDK_ROOT)"
@@ -683,6 +686,58 @@ prune-asap7-runs:
 
 prune-asap7-gpu-runs:
 	$(call prune_runs,$(LIBRELANE_ASAP7_GPU_DIR),ASAP7 GPU)
+
+#----------------------------------------------------------------
+# ASAP7 macro views: abstract LEF + timing-model LIB + gate-level netlist
+#
+# Generates the three artifacts needed to instantiate rv32i_cpu_top as a hard
+# macro in a top-level (Phase-5 SoC) P&R run.  Mirrors the SRAM macro
+# convention: LEF (abstract) + LIB (timing model) + NL (blackbox netlist).
+#
+# GDS is omitted: Magic has no ASAP7 tech file and the SRAM stub has no GDS
+# geometry — same reason the existing librelane-asap7 target skips streamout.
+#
+# Uses a standalone OpenROAD script (scripts/asap7_macro_views.tcl) against
+# the saved final/odb so no full flow re-run is needed.
+#
+# Usage:
+#   make macro-views-asap7                              # uses latest CPU run
+#   make macro-views-asap7 RUN=asap7/runs/RUN_2026-…   # specific run
+#
+# Output: pnr/asap7/macro/{rv32i_cpu_top.lef,
+#                           rv32i_cpu_top__nom_tt_025C_0p7V.lib,
+#                           rv32i_cpu_top.nl.v}
+#----------------------------------------------------------------
+
+macro-views-asap7:
+	@echo "=========================================="
+	@echo "Generating ASAP7 macro views — rv32i_cpu_top"
+	@echo "=========================================="
+	@set -e; \
+	if [ -n "$(RUN)" ]; then CPU_RUN="$(RUN)"; \
+	else CPU_RUN="$$(ls -td $(LIBRELANE_ASAP7_DIR)/runs/RUN_* 2>/dev/null | head -1)"; fi; \
+	if [ -z "$$CPU_RUN" ]; then \
+		echo "ERROR: No ASAP7 CPU runs found. Run 'make librelane-asap7' first."; exit 1; fi; \
+	echo "  Run : $$CPU_RUN"; \
+	ODB="$$CPU_RUN/final/odb/rv32i_cpu_top.odb"; \
+	SDC="$$CPU_RUN/final/sdc/rv32i_cpu_top.sdc"; \
+	NL="$$CPU_RUN/final/nl/rv32i_cpu_top.nl.v"; \
+	if [ ! -f "$$ODB" ]; then echo "ERROR: $$ODB not found"; exit 1; fi; \
+	MACRO_DIR="$(abspath $(LIBRELANE_ASAP7_DIR))/macro"; \
+	mkdir -p "$$MACRO_DIR"; \
+	ASAP7_LD="$(MANUAL_PDK_ROOT)/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib"; \
+	SRAM_LIB="$(abspath $(LIBRELANE_ASAP7_DIR))/sram_1rw_256x32_asap7_TT_0p7V_25C.lib"; \
+	export ODB_PATH="$$ODB" \
+	       SDC_PATH="$$SDC" \
+	       DESIGN_NAME="rv32i_cpu_top" \
+	       MACRO_OUT_DIR="$$MACRO_DIR" \
+	       ASAP7_LIBS="$$ASAP7_LD/asap7sc7p5t_AO_RVT_TT_nldm_211120.lib $$ASAP7_LD/asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.lib $$ASAP7_LD/asap7sc7p5t_OA_RVT_TT_nldm_211120.lib $$ASAP7_LD/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib $$ASAP7_LD/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib $$SRAM_LIB"; \
+	(cd $(LIBRELANE_DIR) && nix-shell --run \
+		"openroad -exit $(abspath scripts/asap7_macro_views.tcl)"); \
+	cp "$$NL" "$$MACRO_DIR/rv32i_cpu_top.nl.v"; \
+	echo ""; \
+	echo "Macro views staged to $$MACRO_DIR:"; \
+	ls -lh "$$MACRO_DIR/"
 
 #----------------------------------------------------------------
 # Schematic viewer (yosys `show` -> SVG via graphviz)
