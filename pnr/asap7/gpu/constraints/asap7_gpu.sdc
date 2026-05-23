@@ -23,7 +23,11 @@ set_clock_latency -source 50    [get_clocks clk]
 ###############################################################################
 # 2. IO delays (≈20% of 1000 ps period budget on the AXI4-Lite / AXI4 ports)
 ###############################################################################
-set _in_no_clk [remove_from_collection [all_inputs] [get_ports clk]]
+# OpenSTA does not implement remove_from_collection; use Tcl filter instead.
+set _in_no_clk {}
+foreach _p [all_inputs] {
+    if {[get_full_name $_p] ne "clk"} { lappend _in_no_clk $_p }
+}
 
 set_input_delay  -max 200 -clock clk $_in_no_clk
 set_input_delay  -min  10 -clock clk $_in_no_clk

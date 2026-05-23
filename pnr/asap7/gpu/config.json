@@ -75,6 +75,7 @@
 
     "SYNTH_STRATEGY":     "DELAY 3",
     "SYNTH_SHARE_RESOURCES": false,
+    "SYNTH_HIERARCHY_MODE": "keep",
     "SYNTH_SIZING":       true,
     "SYNTH_ABC_BUFFERING": true,
     "MAX_FANOUT_CONSTRAINT": 8,
