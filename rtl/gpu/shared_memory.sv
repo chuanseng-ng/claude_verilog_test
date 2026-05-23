@@ -27,7 +27,8 @@ module shared_memory
     input  logic [N_LANES-1:0]               sh_active_i,
 
     output logic [N_LANES-1:0][31:0]         sh_rdata_o,
-    output logic                             sh_stall_o
+    output logic                             sh_stall_o,
+    output logic                             sh_rvalid_o   // 1-cycle pulse: last pending lane served
 );
 
     // -----------------------------------------------------------------------
@@ -74,7 +75,16 @@ module shared_memory
         end
     end
 
-    assign sh_stall_o = |pending_q;
+    assign sh_stall_o  = |pending_q;
+    // served_all: the cycle on which the last pending lane(s) are served. The
+    // bank read is registered into rdata_q this cycle (nonblocking), so the data
+    // is only valid NEXT cycle — which is also the cycle sh_stall_o falls. Hence
+    // sh_rvalid_o is a REGISTERED pulse of served_all, so it coincides with valid
+    // rdata_q and with stall falling (matching the gpu_memory_unit rvalid contract).
+    logic served_all;
+    logic rvalid_q;
+    assign served_all  = (|pending_q) && ((pending_q & ~served) == '0);
+    assign sh_rvalid_o = rvalid_q;
 
     // -----------------------------------------------------------------------
     // Sequential state update
@@ -83,12 +93,16 @@ module shared_memory
         if (!rst_n) begin
             pending_q <= '0;
             we_q      <= '0;
+            rvalid_q  <= 1'b0;
             for (int l = 0; l < N_LANES; l++) begin
                 addr_q [l] <= '0;
                 wdata_q[l] <= '0;
                 rdata_q[l] <= '0;
             end
         end else begin
+            // rvalid trails served_all by one cycle so it lands when rdata_q is valid.
+            rvalid_q <= served_all;
+
             // Accept a new request only when the previous one is fully served
             if (|sh_active_i && !sh_stall_o) begin
                 for (int l = 0; l < N_LANES; l++) begin

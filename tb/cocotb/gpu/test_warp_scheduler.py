@@ -41,6 +41,7 @@ async def _reset(dut):
     dut.div_pop_pc_i.value      = 0
     dut.div_pop_mask_i.value    = 0
     dut.gpu_error_i.value       = 0
+    dut.exec_warp_id_i.value    = 0
     for _ in range(3):
         await RisingEdge(dut.clk)
     dut.rst_n.value = 1
@@ -226,6 +227,9 @@ async def test_div_push_pop_state(dut):
     # busy[0]←0, pc[0]←0x5008, mask[0]←0xF0, div_depth[0]←1, rr_ptr←1
     dut.warp_retire_i.value = 0
     dut.div_push_i.value    = 0
+    # div_stack_*_o reflect the EXECUTING warp (exec_warp_id_i), not the issued
+    # warp — inspect warp 1's (empty) stack by pointing exec_warp_id_i at it.
+    dut.exec_warp_id_i.value = 1
     await Timer(1, units="ns")
 
     # Scheduler now presents warp 1 (rr_ptr=1); warp 1 stack depth = 0
@@ -240,6 +244,8 @@ async def test_div_push_pop_state(dut):
     dut.warp_next_mask_i.value = 0xFF
     await RisingEdge(dut.clk)   # busy[1]←0, rr_ptr←2
     dut.warp_retire_i.value = 0
+    # Inspect warp 0's preserved stack (the executing warp after wrap-around).
+    dut.exec_warp_id_i.value = 0
     await Timer(1, units="ns")
 
     # rr_ptr=2, n_warps=2 → wraps to warp 0; stack depth should be 1

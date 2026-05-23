@@ -515,6 +515,18 @@ gpu_coalescer:
 		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/memory_coalescer.sv" \
 		SIM_BUILD=sim_build_gpu_coalescer
 
+# gpu_memory_unit unit tests (AXI master wrapper around memory_coalescer)
+.PHONY: gpu_memunit
+gpu_memunit:
+	@echo "Running Phase 4 gpu_memory_unit unit tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_memory_unit \
+		TOPLEVEL=gpu_memory_unit \
+		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/memory_coalescer.sv $(RTL_DIR)/gpu/gpu_memory_unit.sv" \
+		SIM_BUILD=sim_build_gpu_memunit
+
 # gpu_top smoke tests (register bank + FSM)
 .PHONY: gpu_top_smoke
 gpu_top_smoke:
@@ -546,11 +558,12 @@ gpu_unit:
 	@echo "Note: This should be run in WSL environment"
 	@echo ""
 	@failed_tests=""; \
-	for target in gpu_regfile gpu_alu gpu_diverge gpu_sched gpu_cmdq gpu_coalescer gpu_shmem; do \
+	for target in gpu_regfile gpu_alu gpu_diverge gpu_sched gpu_cmdq gpu_coalescer gpu_memunit gpu_shmem gpu_top_smoke; do \
 		echo "========================================"; \
 		echo "Running target: $$target"; \
 		echo "========================================"; \
-		if ! $(MAKE) $$target; then \
+		rm -f results.xml; \
+		if ! $(MAKE) $$target || [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; then \
 			failed_tests="$$failed_tests $$target"; \
 		fi; \
 		echo ""; \
@@ -583,7 +596,8 @@ gpu_kernels:
 		echo "========================================"; \
 		echo "Running kernel: $$module"; \
 		echo "========================================"; \
-		if ! $(MAKE) sim MODULE=$$module TOPLEVEL=gpu_top VERILOG_SOURCES="$(GPU_SOURCES)" SIM_BUILD=sim_build_gpu_top; then \
+		rm -f results.xml; \
+		if ! $(MAKE) sim MODULE=$$module TOPLEVEL=gpu_top VERILOG_SOURCES="$(GPU_SOURCES)" SIM_BUILD=sim_build_gpu_top || [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; then \
 			failed_tests="$$failed_tests $$module"; \
 		fi; \
 		echo ""; \
@@ -622,7 +636,8 @@ gpu_all:
 		echo "========================================"; \
 		echo "Running target: $$target"; \
 		echo "========================================"; \
-		if ! $(MAKE) $$target; then \
+		rm -f results.xml; \
+		if ! $(MAKE) $$target || { [ "$$target" = "gpu_handoff" ] && { [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; }; }; then \
 			failed_tests="$$failed_tests $$target"; \
 		fi; \
 		echo ""; \
@@ -648,7 +663,7 @@ distclean:
 	@rm -rf sim_build sim_build_icache sim_build_dcache 2>/dev/null || true
 	@rm -rf sim_build_gpu_regfile sim_build_gpu_alu sim_build_gpu_diverge 2>/dev/null || true
 	@rm -rf sim_build_gpu_sched sim_build_gpu_cmdq sim_build_gpu_coalescer 2>/dev/null || true
-	@rm -rf sim_build_gpu_shmem sim_build_gpu_top sim_build_gpu_handoff 2>/dev/null || true
+	@rm -rf sim_build_gpu_memunit sim_build_gpu_shmem sim_build_gpu_top sim_build_gpu_handoff 2>/dev/null || true
 	@rm -f dump.vcd 2>/dev/null || true
 	@rm -f results.xml 2>/dev/null || true
 	@rm -f *.log 2>/dev/null || true

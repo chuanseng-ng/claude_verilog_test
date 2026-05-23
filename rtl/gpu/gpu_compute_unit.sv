@@ -94,10 +94,8 @@ module gpu_compute_unit
     output logic [N_LANES-1:0][31:0]   shmem_wdata_o,
     output logic [N_LANES-1:0]         shmem_lane_mask_o,
     input  logic                        shmem_stall_i,
-    /* verilator lint_off UNUSEDSIGNAL */
-    input  logic [N_LANES-1:0][31:0]   shmem_rdata_i,  // reserved: shared memory reads
-    input  logic                        shmem_rvalid_i, // reserved: shared memory valid
-    /* verilator lint_on UNUSEDSIGNAL */
+    input  logic [N_LANES-1:0][31:0]   shmem_rdata_i,
+    input  logic                        shmem_rvalid_i,
 
     // -----------------------------------------------------------------------
     // Per-warp divergence stack state (held externally in warp_scheduler)
@@ -181,7 +179,13 @@ module gpu_compute_unit
     // IC_MEMORY, so the old check would drop mem_busy one cycle early — letting
     // VRET fire warp_done before the write completes (lane-4 write-miss bug).
     assign mem_busy     = mem_stall_i;
-    assign pipe_stall   = fetch_stall || mem_busy || shmem_stall_i;
+    // shmem_rvalid_i holds the pipe one extra cycle so a VLDS parked in WB is
+    // not advanced the same cycle its read data becomes valid. shared_memory
+    // drops sh_stall_o (=|pending_q) the cycle pending clears, but rdata_q is
+    // only valid that cycle and sh_rvalid_o pulses then — without this term the
+    // WB-advance would overwrite ex_wb_q before the captured result is written
+    // back (mirrors the VLD capture-then-advance ordering of gpu_memory_unit).
+    assign pipe_stall   = fetch_stall || mem_busy || shmem_stall_i || shmem_rvalid_i;
     assign pipe_stall_o = pipe_stall || if_id_q.valid;
 
     // -----------------------------------------------------------------------
@@ -273,6 +277,7 @@ module gpu_compute_unit
             VSLL, VSRL, VSRA,
             VADDI, VANDI, VORI, VXORI: dec_class = IC_ALU;
             VLD, VST:                   dec_class = IC_MEMORY;
+            VLDS, VSTS:                 dec_class = IC_SHMEM;
             VBEQ, VBNE, VBLT, VBGE:    dec_class = IC_BRANCH;
             VJMP:                       dec_class = IC_VJMP;
             VRET:                       dec_class = IC_VRET;
@@ -357,11 +362,14 @@ module gpu_compute_unit
         is_divergent   = (mask_taken != '0) && (mask_not_taken != '0);
     end
 
-    // Memory interface — address generation for VLD/VST
-    logic is_mem_op;
-    assign is_mem_op = id_ex_q.valid && (id_ex_q.iclass == IC_MEMORY);
+    // Memory interface — address generation for VLD/VST (global) and VLDS/VSTS (shared)
+    logic is_mem_op, is_shmem_op;
+    assign is_mem_op   = id_ex_q.valid && (id_ex_q.iclass == IC_MEMORY);
+    assign is_shmem_op = id_ex_q.valid && (id_ex_q.iclass == IC_SHMEM);
 
     always_comb begin
+        logic [31:0] shmem_byte_addr;
+        // Global memory path (VLD/VST) — mutually exclusive with shared path
         mem_req_o       = is_mem_op && !mem_busy;
         mem_we_o        = (id_ex_q.opcode == VST);
         mem_lane_mask_o = id_ex_q.active_mask;
@@ -369,11 +377,16 @@ module gpu_compute_unit
             mem_addr_o[l]  = id_ex_q.rs1_data[l] + {{20{id_ex_q.imm[11]}}, id_ex_q.imm};
             mem_wdata_o[l] = id_ex_q.rs2_data[l];
         end
-        shmem_req_o       = 1'b0;
-        shmem_we_o        = 1'b0;
-        shmem_lane_mask_o = '0;
-        shmem_addr_o      = '0;
-        shmem_wdata_o     = '0;
+        // Shared memory path (VLDS/VSTS) — mutually exclusive with global path
+        shmem_req_o       = is_shmem_op && !shmem_stall_i;
+        shmem_we_o        = (id_ex_q.opcode == VSTS);
+        shmem_lane_mask_o = id_ex_q.active_mask;
+        shmem_byte_addr   = '0;
+        for (int l = 0; l < N_LANES; l++) begin
+            shmem_byte_addr  = id_ex_q.rs1_data[l] + {{20{id_ex_q.imm[11]}}, id_ex_q.imm};
+            shmem_addr_o[l]  = shmem_byte_addr[SHMEM_W-1:0];
+            shmem_wdata_o[l] = id_ex_q.rs2_data[l];
+        end
     end
 
     // EX → WB register
@@ -386,6 +399,9 @@ module gpu_compute_unit
             // it here so that WB sees correct data when the stall clears next cycle.
             if (mem_rvalid_i && ex_wb_q.valid && ex_wb_q.wr_en)
                 ex_wb_q.result <= mem_rdata_i;
+            // VLDS result: shared memory rvalid pulse — capture read data into WB result.
+            if (shmem_rvalid_i && ex_wb_q.valid && ex_wb_q.wr_en)
+                ex_wb_q.result <= shmem_rdata_i;
 
             if (!pipe_stall) begin
             ex_wb_q.valid       <= id_ex_q.valid;
@@ -417,6 +433,13 @@ module gpu_compute_unit
                         // VLD: result from memory unit (captured once mem_stall_i drops)
                         ex_wb_q.wr_en  <= (id_ex_q.opcode == VLD);
                         ex_wb_q.result <= mem_rdata_i;
+                    end
+
+                    IC_SHMEM: begin
+                        // VLDS: result from shared memory (captured via shmem_rvalid_i pulse)
+                        // VSTS: no writeback
+                        ex_wb_q.wr_en  <= (id_ex_q.opcode == VLDS);
+                        ex_wb_q.result <= shmem_rdata_i;
                     end
 
                     IC_BRANCH: begin
@@ -470,21 +493,30 @@ module gpu_compute_unit
     assign rf_wr_mask = ex_wb_q.active_mask;
     assign rf_wr_data = ex_wb_q.result;
 
+    // Retirement events must be SINGLE-CYCLE pulses, fired only when the WB
+    // instruction actually advances out of the stage (!pipe_stall). Without the
+    // !pipe_stall gate, an instruction parked in WB during a memory stall holds
+    // warp_retire_o high for the whole stall, repeatedly clearing warp_busy in
+    // the scheduler — which lets the next instruction (e.g. VRET) be issued
+    // twice and fire warp_done prematurely (divergence lane-4 store dropped).
+    logic wb_retire;
+    assign wb_retire = ex_wb_q.valid && !pipe_stall;
+
     // Normal instruction retirement: update scheduler with new PC and mask.
     // warp_done and div_pop are handled by their own dedicated outputs below.
-    assign warp_retire_o      = ex_wb_q.valid && !ex_wb_q.warp_done && !ex_wb_q.div_pop;
+    assign warp_retire_o      = wb_retire && !ex_wb_q.warp_done && !ex_wb_q.div_pop;
     assign warp_retire_id_o   = ex_wb_q.warp_id;
     assign warp_next_pc_o     = ex_wb_q.next_pc;
     assign warp_next_mask_o   = ex_wb_q.next_mask;
 
-    assign warp_done_o    = ex_wb_q.valid && ex_wb_q.warp_done;
+    assign warp_done_o    = wb_retire && ex_wb_q.warp_done;
     assign warp_done_id_o = ex_wb_q.warp_id;
 
-    assign div_push_o       = ex_wb_q.valid && ex_wb_q.div_push;
+    assign div_push_o       = wb_retire && ex_wb_q.div_push;
     assign div_push_warp_o  = ex_wb_q.warp_id;
     assign div_push_entry_o = ex_wb_q.div_entry;
 
-    assign div_pop_o      = ex_wb_q.valid && ex_wb_q.div_pop;
+    assign div_pop_o      = wb_retire && ex_wb_q.div_pop;
     assign div_pop_warp_o = ex_wb_q.warp_id;
     assign div_pop_pc_o   = div_stack_top_i.return_pc;
     assign div_pop_mask_o = div_stack_top_i.return_mask;

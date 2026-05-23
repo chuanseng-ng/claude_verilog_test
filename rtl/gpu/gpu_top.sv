@@ -239,6 +239,7 @@ module gpu_top
     logic [N_LANES-1:0]               cu_shmem_mask;
     logic                              sm_stall;
     logic [N_LANES-1:0][31:0]         sm_rdata;
+    logic                              sm_rvalid;
 
     // sched_launch: 1-cycle pulse when IDLE and descriptor ready
     logic sched_launch;
@@ -447,7 +448,7 @@ module gpu_top
         .shmem_lane_mask_o(cu_shmem_mask),
         .shmem_stall_i    (sm_stall),
         .shmem_rdata_i    (sm_rdata),
-        .shmem_rvalid_i   (1'b0),
+        .shmem_rvalid_i   (sm_rvalid),
         .div_stack_depth_i(sched_div_depth),
         .div_stack_top_i  (sched_div_top)
     );
@@ -491,14 +492,15 @@ module gpu_top
     // shared_memory
     // -------------------------------------------------------------------
     shared_memory u_sm (
-        .clk         (clk),
-        .rst_n       (rst_n),
-        .sh_addr_i   (cu_shmem_addr),
-        .sh_we_i     (sm_we),
-        .sh_wdata_i  (cu_shmem_wdata),
-        .sh_active_i (sm_active),
-        .sh_rdata_o  (sm_rdata),
-        .sh_stall_o  (sm_stall)
+        .clk          (clk),
+        .rst_n        (rst_n),
+        .sh_addr_i    (cu_shmem_addr),
+        .sh_we_i      (sm_we),
+        .sh_wdata_i   (cu_shmem_wdata),
+        .sh_active_i  (sm_active),
+        .sh_rdata_o   (sm_rdata),
+        .sh_stall_o   (sm_stall),
+        .sh_rvalid_o  (sm_rvalid)
     );
 
 endmodule

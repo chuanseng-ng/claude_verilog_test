@@ -51,9 +51,12 @@ package gpu_pkg;
         VANDI   = 7'h12,
         VORI    = 7'h13,
         VXORI   = 7'h14,
-        // Memory — I-type
+        // Memory — I-type (global)
         VLD     = 7'h20,
         VST     = 7'h21,
+        // Memory — I-type (shared scratchpad)
+        VLDS    = 7'h22,
+        VSTS    = 7'h23,
         // Branch — B-type
         VBEQ    = 7'h30,
         VBNE    = 7'h31,
@@ -74,15 +77,16 @@ package gpu_pkg;
     } gpu_opcode_t;
 
     // Instruction class — decoded by gpu_compute_unit
-    typedef enum logic [2:0] {
-        IC_ALU    = 3'd0,
-        IC_BRANCH = 3'd1,
-        IC_MEMORY = 3'd2,
-        IC_SPECIAL= 3'd3,   // VMOV tid/bid
-        IC_VSYNC  = 3'd4,
-        IC_VRET   = 3'd5,
-        IC_VJMP   = 3'd6,
-        IC_INVALID= 3'd7
+    typedef enum logic [3:0] {
+        IC_ALU    = 4'd0,
+        IC_BRANCH = 4'd1,
+        IC_MEMORY = 4'd2,
+        IC_SPECIAL= 4'd3,   // VMOV tid/bid
+        IC_VSYNC  = 4'd4,
+        IC_VRET   = 4'd5,
+        IC_VJMP   = 4'd6,
+        IC_SHMEM  = 4'd8,   // shared-memory load/store (VLDS/VSTS)
+        IC_INVALID= 4'd9
     } instr_class_t;
 
     // -----------------------------------------------------------------------
