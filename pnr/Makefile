@@ -606,6 +606,102 @@ librelane-asap7-results:
 	$(call librelane_results,$(LIBRELANE_ASAP7_DIR))
 
 #----------------------------------------------------------------
+# Schematic viewer (yosys `show` -> SVG via graphviz)
+#----------------------------------------------------------------
+# Renders a schematic of the CPU or GPU design using the same Synlig
+# (read_systemverilog) front-end LibreLane uses, with the ASAP7 SRAM/ICG cells
+# as blackboxes. xdot is not available in the shell, so output is written as SVG.
+#
+# SCHEM_BLOCK selects the design (cpu | gpu, default gpu); SCHEM_MODULE selects
+# the module within it (defaults to the block's top: rv32i_cpu_top / gpu_top).
+# Default render is the RTL-elaboration view (hierarchy preserved: submodule
+# instances render as boxes) — compact and fast. SCHEM_SYNTH=1 gives the
+# gate-level synthesised view, which for any non-trivial module produces a very
+# large graph that graphviz `dot` lays out slowly (use only on small leaf modules).
+#
+#   make schematic                                  # gpu_top, RTL view
+#   make schematic SCHEM_BLOCK=cpu                  # rv32i_cpu_top, RTL view
+#   make schematic SCHEM_BLOCK=cpu SCHEM_MODULE=rv32i_alu
+#   make schematic SCHEM_MODULE=warp_scheduler
+#   make schematic SCHEM_MODULE=vector_alu SCHEM_SYNTH=1   # gate-level (slow/large)
+#   (gpu-schematic is kept as an alias for `schematic SCHEM_BLOCK=gpu`)
+#
+# Output: pnr/asap7/schematics/schematic_<module>.svg (+ .dot)
+SCHEM_BLOCK ?= gpu
+SCHEM_OUTDIR := asap7/schematics
+
+GPU_SCHEM_SRCS := \
+	$(RTL_DIR)/gpu/gpu_pkg.sv \
+	asap7/sram_1rw_128x32_asap7_stub.v \
+	$(RTL_DIR)/gpu/vector_register_file.sv \
+	$(RTL_DIR)/gpu/vector_alu.sv \
+	$(RTL_DIR)/gpu/gpu_compute_unit.sv \
+	$(RTL_DIR)/gpu/warp_scheduler.sv \
+	$(RTL_DIR)/gpu/gpu_command_queue.sv \
+	$(RTL_DIR)/gpu/gpu_memory_unit.sv \
+	$(RTL_DIR)/gpu/memory_coalescer.sv \
+	$(RTL_DIR)/gpu/shared_memory.sv \
+	$(RTL_DIR)/gpu/gpu_top.sv
+
+CPU_SCHEM_SRCS := \
+	asap7/sram_1rw_256x32_asap7_stub.v \
+	asap7/icg_asap7_stub.v \
+	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
+	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
+	$(RTL_DIR)/mem/rv32i_clock_gate.sv \
+	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
+	$(RTL_DIR)/cpu/core/rv32i_branch_comp.sv \
+	$(RTL_DIR)/cpu/core/rv32i_imm_gen.sv \
+	$(RTL_DIR)/cpu/core/rv32i_regfile.sv \
+	$(RTL_DIR)/cpu/core/rv32i_decode.sv \
+	$(RTL_DIR)/cpu/core/rv32i_forwarding_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_hazard_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_interrupt_ctrl.sv \
+	$(RTL_DIR)/cpu/core/rv32i_csr_file.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_if.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_id.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex1c.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex1b.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex2.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_mem.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_wb.sv \
+	$(RTL_DIR)/mem/rv32i_icache.sv \
+	$(RTL_DIR)/mem/rv32i_dcache.sv \
+	$(RTL_DIR)/mem/rv32i_cache_arbiter.sv \
+	$(RTL_DIR)/cpu/core/rv32i_core.sv \
+	$(RTL_DIR)/cpu/rv32i_cpu_top.sv
+
+ifeq ($(SCHEM_BLOCK),cpu)
+  SCHEM_SRCS    := $(CPU_SCHEM_SRCS)
+  SCHEM_MODULE  ?= rv32i_cpu_top
+  SCHEM_DEFINES := -DSRAM_ASAP7 -DUSE_ICG_CELL
+else
+  SCHEM_SRCS    := $(GPU_SCHEM_SRCS)
+  SCHEM_MODULE  ?= gpu_top
+  SCHEM_DEFINES :=
+endif
+
+.PHONY: schematic gpu-schematic cpu-schematic
+gpu-schematic: ; $(MAKE) schematic SCHEM_BLOCK=gpu SCHEM_MODULE=$(SCHEM_MODULE) SCHEM_SYNTH=$(SCHEM_SYNTH)
+cpu-schematic: ; $(MAKE) schematic SCHEM_BLOCK=cpu SCHEM_MODULE=$(SCHEM_MODULE) SCHEM_SYNTH=$(SCHEM_SYNTH)
+schematic:
+	@echo "=========================================="
+	@echo "Rendering yosys schematic"
+	@echo "  Block  : $(SCHEM_BLOCK)"
+	@echo "  Module : $(SCHEM_MODULE)"
+	@echo "  Mode   : $(if $(SCHEM_SYNTH),synthesised gate-level (large/slow),RTL elaboration)"
+	@echo "  Output : pnr/$(SCHEM_OUTDIR)/schematic_$(SCHEM_MODULE).svg"
+	@echo "=========================================="
+	@mkdir -p $(SCHEM_OUTDIR)
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"cd $(abspath .) && yosys -p ' \
+		   read_systemverilog $(SCHEM_DEFINES) $(SCHEM_SRCS); \
+		   $(if $(SCHEM_SYNTH),synth -top $(SCHEM_MODULE),hierarchy -top $(SCHEM_MODULE); proc; opt_clean); \
+		   show -colors 1 -format svg -prefix $(SCHEM_OUTDIR)/schematic_$(SCHEM_MODULE) $(SCHEM_MODULE)'"
+	@echo "Schematic written to pnr/$(SCHEM_OUTDIR)/schematic_$(SCHEM_MODULE).svg"
+
+#----------------------------------------------------------------
 # Clean Target
 #----------------------------------------------------------------
 

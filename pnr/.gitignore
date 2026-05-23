@@ -28,3 +28,6 @@ librelane/runs/
 # Keep template/example files
 !*.template
 !*_example.*
+
+# Generated yosys schematics (make schematic)
+asap7/schematics/
