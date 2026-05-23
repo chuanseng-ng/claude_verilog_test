@@ -114,7 +114,9 @@ module shared_memory
         end
     end
 
-    for (genvar b = 0; b < SHARED_BANKS; b++) begin : g_bank
+    genvar b;
+    generate
+    for (b = 0; b < SHARED_BANKS; b++) begin : g_bank
         sram_1rw_128x32_asap7 u_bank (
             .clk0  (clk),
             .csb0  (~bank_sel[b]),     // active-low chip select
@@ -124,6 +126,7 @@ module shared_memory
             .dout0 (bank_dout[b])
         );
     end : g_bank
+    endgenerate
 
     // -----------------------------------------------------------------------
     // Completion: the access is done (and every rdata_q is valid) when there is
@@ -190,9 +193,12 @@ module shared_memory
     // -----------------------------------------------------------------------
     // Read data output
     // -----------------------------------------------------------------------
-    for (genvar l = 0; l < N_LANES; l++) begin : g_rdata
-        assign sh_rdata_o[l] = rdata_q[l];
+    genvar gl;
+    generate
+    for (gl = 0; gl < N_LANES; gl++) begin : g_rdata
+        assign sh_rdata_o[gl] = rdata_q[gl];
     end : g_rdata
+    endgenerate
 
 endmodule
 

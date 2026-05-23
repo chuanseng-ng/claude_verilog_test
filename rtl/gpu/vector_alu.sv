@@ -27,7 +27,9 @@ module vector_alu
     assign imm_sext = {{20{imm_i[11]}}, imm_i};
 
     // Per-lane computation
-    for (genvar lane = 0; lane < N_LANES; lane++) begin : g_lane
+    genvar lane;
+    generate
+    for (lane = 0; lane < N_LANES; lane++) begin : g_lane
         logic [REG_WIDTH-1:0] a, b, res;
         logic                 taken;
 
@@ -74,6 +76,7 @@ module vector_alu
         assign result_o[lane]       = res;
         assign branch_taken_o[lane] = taken;
     end : g_lane
+    endgenerate
 
 endmodule
 
