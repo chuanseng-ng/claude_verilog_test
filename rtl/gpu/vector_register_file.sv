@@ -30,37 +30,32 @@ module vector_register_file
     input  logic [N_LANES-1:0][REG_WIDTH-1:0] wr_data_i
 );
 
-    // Storage: [warp][reg][lane]
-    logic [N_WARPS-1:0][N_REGS-1:0][N_LANES-1:0][REG_WIDTH-1:0] regfile;
+    // Address: {warp, reg} — 256 entries × 256-bit lane-packed word.
+    // Unpacked outer dim so yosys infers a $mem rather than 65 536 discrete DFFs.
+    localparam int RF_DEPTH = N_WARPS * N_REGS;     // 256
+    localparam int RF_AW    = WARP_W + REG_W;       // 8
+    localparam int RF_DW    = N_LANES * REG_WIDTH;  // 256
+
+    logic [RF_DW-1:0] regfile [0:RF_DEPTH-1];
+
+    wire [RF_AW-1:0] wr_addr  = {wr_warp_i,  wr_reg_i};
+    wire [RF_AW-1:0] rda_addr = {rda_warp_i, rda_reg_i};
+    wire [RF_AW-1:0] rdb_addr = {rdb_warp_i, rdb_reg_i};
 
     // Synchronous write — r0 writes are silently discarded via mask
     always_ff @(posedge clk) begin
         if (wr_en_i && (wr_reg_i != '0)) begin
             for (int lane = 0; lane < N_LANES; lane++) begin
                 if (wr_mask_i[lane]) begin
-                    regfile[wr_warp_i][wr_reg_i][lane] <= wr_data_i[lane];
+                    regfile[wr_addr][lane*REG_WIDTH +: REG_WIDTH] <= wr_data_i[lane];
                 end
             end
         end
     end
 
-    // Combinational read port A — r0 always returns 0
-    always_comb begin
-        if (rda_reg_i == '0) begin
-            rda_data_o = '0;
-        end else begin
-            rda_data_o = regfile[rda_warp_i][rda_reg_i];
-        end
-    end
-
-    // Combinational read port B — r0 always returns 0
-    always_comb begin
-        if (rdb_reg_i == '0) begin
-            rdb_data_o = '0;
-        end else begin
-            rdb_data_o = regfile[rdb_warp_i][rdb_reg_i];
-        end
-    end
+    // Combinational read ports — r0 always returns 0 (downstream mux; does not block $mem inference)
+    always_comb rda_data_o = (rda_reg_i == '0) ? '0 : regfile[rda_addr];
+    always_comb rdb_data_o = (rdb_reg_i == '0) ? '0 : regfile[rdb_addr];
 
 endmodule
 
