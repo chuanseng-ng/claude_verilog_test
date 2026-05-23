@@ -84,6 +84,10 @@ MANUAL_PDK_ROOT     ?= $(HOME)/pdk
 LIBRELANE_SKY130_DIR    := librelane
 LIBRELANE_NANGATE45_DIR := freepdk45
 LIBRELANE_ASAP7_DIR     := asap7
+LIBRELANE_ASAP7_GPU_DIR := asap7/gpu
+
+# Maximum number of ASAP7 runs to retain (oldest deleted first)
+ASAP7_MAX_RUNS          ?= 10
 
 # Number of threads for detailed routing
 DRT_THREADS         ?= 4
@@ -96,8 +100,9 @@ DRT_THREADS         ?= 4
 .PHONY: synth floorplan place cts route parasitics sta power verify gls
 .PHONY: report_timing report_power report_area
 .PHONY: docker-pull docker-check docker-pdk docker-run docker-synth docker-results
-.PHONY: librelane-sky130 librelane-nangate45 librelane-asap7
-.PHONY: librelane-sky130-results librelane-nangate45-results librelane-asap7-results
+.PHONY: librelane-sky130 librelane-nangate45 librelane-asap7 librelane-asap7-gpu
+.PHONY: librelane-sky130-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results
+.PHONY: prune-asap7-runs prune-asap7-gpu-runs
 
 #----------------------------------------------------------------
 # Default Target
@@ -118,16 +123,21 @@ help:
 	@echo "=================================================="
 	@echo ""
 	@echo "LibreLane Targets (nix-shell, recommended):"
-	@echo "  librelane-sky130      - Run full LibreLane flow on Sky130 (pnr/librelane/)"
-	@echo "  librelane-nangate45   - Run full LibreLane flow on FreePDK45/nangate45 (pnr/freepdk45/)"
-	@echo "  librelane-asap7       - Run full LibreLane flow on ASAP7 (pnr/asap7/)"
-	@echo "  librelane-sky130-results    - Show metrics from latest Sky130 LibreLane run"
-	@echo "  librelane-nangate45-results - Show metrics from latest nangate45 LibreLane run"
-	@echo "  librelane-asap7-results     - Show metrics from latest ASAP7 LibreLane run"
+	@echo "  librelane-sky130          - Run full LibreLane flow on Sky130 (pnr/librelane/)"
+	@echo "  librelane-nangate45       - Run full LibreLane flow on FreePDK45/nangate45 (pnr/freepdk45/)"
+	@echo "  librelane-asap7           - Run full LibreLane flow on ASAP7 CPU (pnr/asap7/), then prune"
+	@echo "  librelane-asap7-gpu       - Run full LibreLane flow on ASAP7 GPU (pnr/asap7/gpu/), then prune"
+	@echo "  librelane-sky130-results        - Show metrics from latest Sky130 LibreLane run"
+	@echo "  librelane-nangate45-results     - Show metrics from latest nangate45 LibreLane run"
+	@echo "  librelane-asap7-results         - Show metrics from latest ASAP7 CPU LibreLane run"
+	@echo "  librelane-asap7-gpu-results     - Show metrics from latest ASAP7 GPU LibreLane run"
+	@echo "  prune-asap7-runs          - Delete old CPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
+	@echo "  prune-asap7-gpu-runs      - Delete old GPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
 	@echo ""
 	@echo "  LIBRELANE_DIR     = $(LIBRELANE_DIR)"
 	@echo "  MANUAL_PDK_ROOT   = $(MANUAL_PDK_ROOT)"
 	@echo "  DRT_THREADS       = $(DRT_THREADS)"
+	@echo "  ASAP7_MAX_RUNS    = $(ASAP7_MAX_RUNS)"
 	@echo ""
 	@echo "OpenLane 1 Docker Targets:"
 	@echo "  docker-pull    - Pull the OpenLane 1 Docker image"
@@ -601,9 +611,78 @@ librelane-asap7:
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
 		 $(abspath $(LIBRELANE_ASAP7_DIR))/config.json"
+	@$(MAKE) prune-asap7-runs
 
 librelane-asap7-results:
 	$(call librelane_results,$(LIBRELANE_ASAP7_DIR))
+
+# ASAP7 GPU: uses same PDK and skip-list as librelane-asap7, but targets pnr/asap7/gpu/
+librelane-asap7-gpu:
+	@echo "=========================================="
+	@echo "Running LibreLane flow — ASAP7 GPU"
+	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_GPU_DIR)/config.json"
+	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
+	@echo "  Tool     : $(LIBRELANE_DIR)"
+	@echo "  Skipping : Odb.HeuristicDiodeInsertion OpenROAD.RepairAntennas"
+	@echo "=========================================="
+	@if [ ! -f "$(LIBRELANE_ASAP7_GPU_DIR)/config.json" ]; then \
+		echo "ERROR: $(LIBRELANE_ASAP7_GPU_DIR)/config.json not found."; \
+		echo "       Create pnr/asap7/gpu/ with a LibreLane config.json to use this target."; \
+		exit 1; fi
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
+		 $(abspath $(LIBRELANE_ASAP7_GPU_DIR))/config.json"
+	@$(MAKE) prune-asap7-gpu-runs
+
+librelane-asap7-gpu-results:
+	$(call librelane_results,$(LIBRELANE_ASAP7_GPU_DIR))
+
+#----------------------------------------------------------------
+# Run pruning: keep only the latest ASAP7_MAX_RUNS runs
+# Runs are named RUN_YYYY-MM-DD_HH-MM-SS; lexicographic sort == time order.
+#----------------------------------------------------------------
+
+define prune_runs
+	@RUNS_DIR="$(1)/runs"; \
+	if [ ! -d "$$RUNS_DIR" ]; then exit 0; fi; \
+	COUNT=$$(ls -d $$RUNS_DIR/RUN_* 2>/dev/null | wc -l); \
+	if [ "$$COUNT" -le "$(ASAP7_MAX_RUNS)" ]; then \
+		echo "$(2): $$COUNT run(s) present (<= $(ASAP7_MAX_RUNS)), nothing to prune."; \
+		exit 0; \
+	fi; \
+	TO_DELETE=$$(ls -dt $$RUNS_DIR/RUN_* 2>/dev/null | tail -n +$$(($(ASAP7_MAX_RUNS)+1))); \
+	NDEL=$$(echo "$$TO_DELETE" | wc -l); \
+	echo "$(2): keeping latest $(ASAP7_MAX_RUNS) of $$COUNT run(s), removing $$NDEL old run(s)."; \
+	echo "$$TO_DELETE" | xargs rm -rf; \
+	echo "Prune complete."
+endef
+
+prune-asap7-runs:
+	$(call prune_runs,$(LIBRELANE_ASAP7_DIR),ASAP7 CPU)
+
+prune-asap7-gpu-runs:
+	$(call prune_runs,$(LIBRELANE_ASAP7_GPU_DIR),ASAP7 GPU)
 
 #----------------------------------------------------------------
 # Schematic viewer (yosys `show` -> SVG via graphviz)
