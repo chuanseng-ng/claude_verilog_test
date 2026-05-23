@@ -28,7 +28,7 @@
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
     "PL_MACRO_HALO": "2 2",
 
-    "PL_TARGET_DENSITY_PCT":     45,
+    "PL_TARGET_DENSITY_PCT":     65,
     "CTS_SINK_CLUSTERING_SIZE":        8,
     "CTS_SINK_CLUSTERING_MAX_DIAMETER": 10,
     "PL_TIME_DRIVEN":            true,
