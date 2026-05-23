@@ -613,6 +613,20 @@ gpu_kernels:
 		echo "========================================"; \
 	fi
 
+# Random-kernel regression (RTL vs GpuRefModel). EXTRA_ARGS="" disables Verilator
+# --trace for this long run so it does not generate a multi-GB dump.vcd.
+# Configure via RANDOM_KERNELS / RANDOM_KERNELS_SMOKE / RANDOM_KERNELS_SEED env.
+.PHONY: gpu_random
+gpu_random:
+	@echo "Running Phase 4 random-kernel regression (RTL vs reference model)..."
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_random_kernels \
+		TOPLEVEL=gpu_top \
+		VERILOG_SOURCES="$(GPU_SOURCES)" \
+		SIM_BUILD=sim_build_gpu_random \
+		EXTRA_ARGS=""
+
 # CPU-GPU handoff integration test
 .PHONY: gpu_handoff
 gpu_handoff:
