@@ -28,7 +28,7 @@
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
     "PL_MACRO_HALO": "2 2",
 
-    "PL_TARGET_DENSITY_PCT":     65,
+    "PL_TARGET_DENSITY_PCT":     70,
     "CTS_SINK_CLUSTERING_SIZE":        8,
     "CTS_SINK_CLUSTERING_MAX_DIAMETER": 10,
     "PL_TIME_DRIVEN":            false,
@@ -73,7 +73,7 @@
     "USE_SYNLIG":    true,
     "SYNLIG_DEFER":  false,
 
-    "SYNTH_STRATEGY":     "DELAY 2",
+    "SYNTH_STRATEGY":     "DELAY 0",
     "SYNTH_SHARE_RESOURCES": false,
     "SYNTH_HIERARCHY_MODE": "keep",
     "SYNTH_SIZING":       true,
