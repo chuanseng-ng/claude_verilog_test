@@ -83,8 +83,10 @@ MANUAL_PDK_ROOT     ?= $(HOME)/pdk
 # LibreLane config directories
 LIBRELANE_SKY130_DIR    := librelane
 LIBRELANE_NANGATE45_DIR := freepdk45
-LIBRELANE_ASAP7_DIR     := asap7
-LIBRELANE_ASAP7_GPU_DIR := asap7/gpu
+LIBRELANE_ASAP7_ROOT    := asap7          # shared PDK resources (stubs, lib, pdn)
+LIBRELANE_ASAP7_DIR     := asap7/cpu      # CPU design directory
+LIBRELANE_ASAP7_GPU_DIR := asap7/gpu      # GPU design directory
+# New designs: copy pnr/asap7/template/ as a starting point
 
 # Maximum number of ASAP7 runs to retain (oldest deleted first)
 ASAP7_MAX_RUNS          ?= 10
@@ -137,7 +139,8 @@ help:
 	@echo "  prune-asap7-runs          - Delete old CPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
 	@echo "  prune-asap7-gpu-runs      - Delete old GPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
 	@echo "  macro-views-asap7         - Generate LEF + LIB + netlist macro views from latest ASAP7 CPU run"
-	@echo "                              (override run: make macro-views-asap7 RUN=asap7/runs/RUN_...)"
+	@echo "                              (override run: make macro-views-asap7 RUN=asap7/cpu/runs/RUN_...)"
+	@echo "  asap7/template/           - Template for new ASAP7 designs (copy to asap7/<design>/)"
 	@echo ""
 	@echo "  LIBRELANE_DIR     = $(LIBRELANE_DIR)"
 	@echo "  MANUAL_PDK_ROOT   = $(MANUAL_PDK_ROOT)"
@@ -751,7 +754,7 @@ macro-views-asap7:
 	MACRO_DIR="$(abspath $(LIBRELANE_ASAP7_DIR))/macro"; \
 	mkdir -p "$$MACRO_DIR"; \
 	ASAP7_LD="$(MANUAL_PDK_ROOT)/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib"; \
-	SRAM_LIB="$(abspath $(LIBRELANE_ASAP7_DIR))/sram_1rw_256x32_asap7_TT_0p7V_25C.lib"; \
+	SRAM_LIB="$(abspath $(LIBRELANE_ASAP7_ROOT))/sram_1rw_256x32_asap7_TT_0p7V_25C.lib"; \
 	export ODB_PATH="$$ODB" \
 	       SDC_PATH="$$SDC" \
 	       DESIGN_NAME="rv32i_cpu_top" \

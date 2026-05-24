@@ -49,7 +49,7 @@ pnr/librelane/runs
 pnr/openlane/runs
 pnr/openlane1/runs
 pnr/freepdk45/runs
-pnr/asap7/runs
+pnr/asap7/cpu/runs
 pnr/asap7/gpu/runs
 
 # PDK paths

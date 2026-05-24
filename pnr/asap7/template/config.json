@@ -1,37 +1,57 @@
 {
-    "DESIGN_NAME": "gpu_top",
+    "DESIGN_NAME": "rv32i_cpu_top",
     "PDK": "asap7",
     "STD_CELL_LIBRARY": "asap7sc7p5t_SIMPLE",
 
     "VERILOG_FILES": [
-        "dir::../../../rtl/gpu/gpu_pkg.sv",
-        "dir::../sram_1rw_128x32_asap7_stub.v",
-        "dir::../../../rtl/gpu/vector_register_file.sv",
-        "dir::../../../rtl/gpu/vector_alu.sv",
-        "dir::../../../rtl/gpu/gpu_compute_unit.sv",
-        "dir::../../../rtl/gpu/warp_scheduler.sv",
-        "dir::../../../rtl/gpu/gpu_command_queue.sv",
-        "dir::../../../rtl/gpu/gpu_memory_unit.sv",
-        "dir::../../../rtl/gpu/memory_coalescer.sv",
-        "dir::../../../rtl/gpu/shared_memory.sv",
-        "dir::../../../rtl/gpu/gpu_top.sv"
+        "dir::sram_1rw_256x32_asap7_stub.v",
+        "dir::icg_asap7_stub.v",
+        "dir::../../rtl/cpu/core/rv32i_pipeline_pkg.sv",
+        "dir::../../rtl/mem/rv32i_cache_pkg.sv",
+        "dir::../../rtl/mem/rv32i_clock_gate.sv",
+        "dir::../../rtl/cpu/core/rv32i_alu.sv",
+        "dir::../../rtl/cpu/core/rv32i_branch_comp.sv",
+        "dir::../../rtl/cpu/core/rv32i_imm_gen.sv",
+        "dir::../../rtl/cpu/core/rv32i_regfile.sv",
+        "dir::../../rtl/cpu/core/rv32i_decode.sv",
+        "dir::../../rtl/cpu/core/rv32i_forwarding_unit.sv",
+        "dir::../../rtl/cpu/core/rv32i_hazard_unit.sv",
+        "dir::../../rtl/cpu/core/rv32i_interrupt_ctrl.sv",
+        "dir::../../rtl/cpu/core/rv32i_csr_file.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_id.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv",
+        "dir::../../rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv",
+        "dir::../../rtl/mem/rv32i_icache.sv",
+        "dir::../../rtl/mem/rv32i_dcache.sv",
+        "dir::../../rtl/mem/rv32i_cache_arbiter.sv",
+        "dir::../../rtl/cpu/core/rv32i_core.sv",
+        "dir::../../rtl/cpu/rv32i_cpu_top.sv"
     ],
 
-    "CLOCK_PORT":   "clk",
-    "CLOCK_NET":    "clk",
-    "CLOCK_PERIOD": 1.0,
+    "CLOCK_PORT":   "clk_i",
+    "CLOCK_NET":    "clk_i",
+    "CLOCK_PERIOD": 0.705,
+
+    "VERILOG_DEFINES": ["SRAM_ASAP7", "USE_ICG_CELL"],
+    "LINTER_DEFINES":  ["SRAM_ASAP7"],
 
     "FP_SIZING":       "absolute",
-    "DIE_AREA":        "0 0 340 340",
-    "CORE_AREA":       "10 10 330 330",
+    "DIE_AREA":        "0 0 130 130",
+    "CORE_AREA":       "5 5 125 125",
+    "FP_CORE_UTIL":    50,
+    "FP_ASPECT_RATIO": 1,
 
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
-    "PL_MACRO_HALO": "4 4",
 
-    "PL_TARGET_DENSITY_PCT":     70,
+    "PL_TARGET_DENSITY_PCT":     50,
     "CTS_SINK_CLUSTERING_SIZE":        8,
     "CTS_SINK_CLUSTERING_MAX_DIAMETER": 10,
-    "PL_TIME_DRIVEN":            false,
+    "PL_TIME_DRIVEN":            true,
     "PL_ROUTABILITY_DRIVEN":     true,
 
     "FP_PDN_MULTILAYER":         true,
@@ -55,7 +75,7 @@
     "FP_PDN_CORE_RING_HOFFSET":  0.5,
     "FP_PDN_CORE_RING_VOFFSET":  0.5,
 
-    "RT_MAX_LAYER":  "M9",
+    "RT_MAX_LAYER":  "M7",
     "DRT_THREADS":   8,
 
     "FP_IO_HLENGTH":          4.0,
@@ -64,9 +84,8 @@
     "FP_IO_HTHICKNESS_MULT":  8,
     "FP_IO_VTHICKNESS_MULT":  8,
 
-    "GRT_ADJUSTMENT":         0.10,
-    "GRT_LAYER_ADJUSTMENTS":  [0.5, 0.0, 0.0, 0.0, 0.0, 0.0],
-    "GRT_ALLOW_CONGESTION":   true,
+    "GRT_ADJUSTMENT":      0.20,
+    "GRT_ALLOW_CONGESTION": true,
 
     "LAYERS_RC": "M2 1.84542e-01 4.62311e-02, M3 1.53955e-01 3.63251e-02, M4 1.89434e-01 2.03083e-02, M5 1.71593e-01 1.93005e-02, M6 1.76146e-01 1.18619e-02, M7 1.47030e-01 1.25311e-02",
     "VIAS_RC": "V1 1.72e-02, V2 1.72e-02, V3 1.72e-02, V4 1.18e-02, V5 1.18e-02, V6 8.20e-03, V7 8.20e-03",
@@ -74,19 +93,17 @@
     "USE_SYNLIG":    true,
     "SYNLIG_DEFER":  false,
 
-    "SYNTH_STRATEGY":     "DELAY 2",
-    "SYNTH_SHARE_RESOURCES": false,
-    "SYNTH_HIERARCHY_MODE": "keep",
+    "SYNTH_STRATEGY":     "DELAY 3",
     "SYNTH_SIZING":       true,
     "SYNTH_ABC_BUFFERING": true,
+    "SYNTH_CLOCK_GATING": true,
     "MAX_FANOUT_CONSTRAINT": 8,
 
-    "PNR_SDC_FILE":     "dir::constraints/asap7_gpu.sdc",
-    "SIGNOFF_SDC_FILE": "dir::constraints/asap7_gpu.sdc",
-    "FALLBACK_SDC_FILE": "dir::constraints/asap7_gpu.sdc",
+    "PNR_SDC_FILE":     "dir::constraints/asap7.sdc",
+    "SIGNOFF_SDC_FILE": "dir::constraints/asap7.sdc",
+    "FALLBACK_SDC_FILE": "dir::constraints/asap7.sdc",
 
     "RUN_POST_GPL_DESIGN_REPAIR":    true,
-    "RUN_POST_CTS_RESIZER_TIMING":   false,
     "RUN_POST_GRT_RESIZER_TIMING":   true,
     "RUN_POST_GRT_DESIGN_REPAIR":    true,
     "MAX_TRANSITION_CONSTRAINT":     15.0,
@@ -99,16 +116,18 @@
     "HOLD_VIOLATION_CORNERS": ["nom_tt_025C_0p7V"],
 
     "EXTRA_LEFS": [
-        "dir::../sram_1rw_128x32_asap7.lef"
+        "dir::sram_1rw_256x32_asap7.lef"
     ],
     "EXTRA_LIBS": [
-        "dir::../sram_1rw_128x32_asap7_TT_0p7V_25C.lib"
+        "dir::sram_1rw_256x32_asap7_TT_0p7V_25C.lib"
     ],
     "EXTRA_GDS_FILES": [],
 
     "PDN_MACRO_CONNECTIONS": [
-        ".*u_bank VDD VSS vdd vss"
+        ".*(u_tag_sram|u_data_sram) VDD VSS vdd vss"
     ],
+
+    "PL_MACRO_HALO": "2 2",
 
     "RUN_ANTENNA_REPAIR":          true,
     "RUN_HEURISTIC_DIODE_INSERTION": true,
