@@ -57,6 +57,9 @@ pnr/librelane/rv32i_cpu_top
 
 # Verilog
 *.swp
+slpp_all/
+pnr/slpp_all
+
 # Added by code-review-graph
 .code-review-graph/
 
