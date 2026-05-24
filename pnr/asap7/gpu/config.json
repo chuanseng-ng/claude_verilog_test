@@ -26,7 +26,7 @@
     "CORE_AREA":       "10 10 330 330",
 
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
-    "PL_MACRO_HALO": "2 2",
+    "PL_MACRO_HALO": "4 4",
 
     "PL_TARGET_DENSITY_PCT":     70,
     "CTS_SINK_CLUSTERING_SIZE":        8,
@@ -55,7 +55,7 @@
     "FP_PDN_CORE_RING_HOFFSET":  0.5,
     "FP_PDN_CORE_RING_VOFFSET":  0.5,
 
-    "RT_MAX_LAYER":  "M7",
+    "RT_MAX_LAYER":  "M9",
     "DRT_THREADS":   8,
 
     "FP_IO_HLENGTH":          4.0,
@@ -64,7 +64,7 @@
     "FP_IO_HTHICKNESS_MULT":  8,
     "FP_IO_VTHICKNESS_MULT":  8,
 
-    "GRT_ADJUSTMENT":      0.20,
+    "GRT_ADJUSTMENT":      0.10,
     "GRT_ALLOW_CONGESTION": true,
 
     "LAYERS_RC": "M2 1.84542e-01 4.62311e-02, M3 1.53955e-01 3.63251e-02, M4 1.89434e-01 2.03083e-02, M5 1.71593e-01 1.93005e-02, M6 1.76146e-01 1.18619e-02, M7 1.47030e-01 1.25311e-02",
@@ -73,7 +73,7 @@
     "USE_SYNLIG":    true,
     "SYNLIG_DEFER":  false,
 
-    "SYNTH_STRATEGY":     "DELAY 0",
+    "SYNTH_STRATEGY":     "DELAY 2",
     "SYNTH_SHARE_RESOURCES": false,
     "SYNTH_HIERARCHY_MODE": "keep",
     "SYNTH_SIZING":       true,

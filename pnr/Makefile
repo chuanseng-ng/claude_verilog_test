@@ -104,6 +104,7 @@ DRT_THREADS         ?= 4
 .PHONY: librelane-sky130-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results
 .PHONY: prune-asap7-runs prune-asap7-gpu-runs
 .PHONY: macro-views-asap7
+.PHONY: flop-count
 
 #----------------------------------------------------------------
 # Default Target
@@ -131,6 +132,7 @@ help:
 	@echo "  librelane-sky130-results        - Show metrics from latest Sky130 LibreLane run"
 	@echo "  librelane-nangate45-results     - Show metrics from latest nangate45 LibreLane run"
 	@echo "  librelane-asap7-results         - Show metrics from latest ASAP7 CPU LibreLane run"
+	@echo "  flop-count RUN_DIR=<path>       - Flop count breakdown from any LibreLane run's synthesis"
 	@echo "  librelane-asap7-gpu-results     - Show metrics from latest ASAP7 GPU LibreLane run"
 	@echo "  prune-asap7-runs          - Delete old CPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
 	@echo "  prune-asap7-gpu-runs      - Delete old GPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
@@ -661,6 +663,28 @@ librelane-asap7-gpu:
 librelane-asap7-gpu-results:
 	$(call librelane_results,$(LIBRELANE_ASAP7_GPU_DIR))
 
+# flop-count: DFF breakdown from any LibreLane run's synthesis log.
+# Usage: make flop-count RUN_DIR=asap7/gpu/runs/RUN_2026-05-24_09-12-00
+#        make flop-count RUN_DIR=asap7/runs/RUN_2026-05-20_06-27-10
+RUN_DIR ?=
+
+flop-count:
+	@if [ -z "$(RUN_DIR)" ]; then \
+		echo "Usage: make flop-count RUN_DIR=<path/to/RUN_*>"; \
+		echo "  GPU runs: asap7/gpu/runs/RUN_*"; \
+		echo "  CPU runs: asap7/runs/RUN_*"; \
+		exit 1; fi; \
+	SYNTH_LOG=$(RUN_DIR)/05-yosys-synthesis/yosys-synthesis.log; \
+	if [ ! -f "$$SYNTH_LOG" ]; then \
+		echo "No synthesis log in $(RUN_DIR) — has synthesis completed?"; exit 1; fi; \
+	echo "=========================================="; \
+	echo "Flop count — $(RUN_DIR)"; \
+	echo "=========================================="; \
+	grep 'mapped.*cells to.*\\DFF' "$$SYNTH_LOG" | \
+	awk '{n=$$2; cell=substr($$6,2); counts[cell]+=n; tot+=n} \
+	     END{for(c in counts) printf "  %-42s %8d\n",c,counts[c]; \
+	         printf "  %-42s %8d\n","Total flops",tot}'
+
 #----------------------------------------------------------------
 # Run pruning: keep only the latest ASAP7_MAX_RUNS runs
 # Runs are named RUN_YYYY-MM-DD_HH-MM-SS; lexicographic sort == time order.
@@ -718,6 +742,7 @@ macro-views-asap7:
 	else CPU_RUN="$$(ls -td $(LIBRELANE_ASAP7_DIR)/runs/RUN_* 2>/dev/null | head -1)"; fi; \
 	if [ -z "$$CPU_RUN" ]; then \
 		echo "ERROR: No ASAP7 CPU runs found. Run 'make librelane-asap7' first."; exit 1; fi; \
+	CPU_RUN="$$(realpath "$$CPU_RUN")"; \
 	echo "  Run : $$CPU_RUN"; \
 	ODB="$$CPU_RUN/final/odb/rv32i_cpu_top.odb"; \
 	SDC="$$CPU_RUN/final/sdc/rv32i_cpu_top.sdc"; \
