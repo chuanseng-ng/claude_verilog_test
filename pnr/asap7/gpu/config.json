@@ -31,7 +31,7 @@
     "PL_TARGET_DENSITY_PCT":     65,
     "CTS_SINK_CLUSTERING_SIZE":        8,
     "CTS_SINK_CLUSTERING_MAX_DIAMETER": 10,
-    "PL_TIME_DRIVEN":            true,
+    "PL_TIME_DRIVEN":            false,
     "PL_ROUTABILITY_DRIVEN":     true,
 
     "FP_PDN_MULTILAYER":         true,
@@ -73,9 +73,9 @@
     "USE_SYNLIG":    true,
     "SYNLIG_DEFER":  false,
 
-    "SYNTH_STRATEGY":     "DELAY 3",
+    "SYNTH_STRATEGY":     "DELAY 2",
     "SYNTH_SHARE_RESOURCES": false,
-    "SYNTH_HIERARCHY_MODE": "flatten",
+    "SYNTH_HIERARCHY_MODE": "keep",
     "SYNTH_SIZING":       true,
     "SYNTH_ABC_BUFFERING": true,
     "MAX_FANOUT_CONSTRAINT": 8,
@@ -85,6 +85,7 @@
     "FALLBACK_SDC_FILE": "dir::constraints/asap7_gpu.sdc",
 
     "RUN_POST_GPL_DESIGN_REPAIR":    true,
+    "RUN_POST_CTS_RESIZER_TIMING":   false,
     "RUN_POST_GRT_RESIZER_TIMING":   true,
     "RUN_POST_GRT_DESIGN_REPAIR":    true,
     "MAX_TRANSITION_CONSTRAINT":     15.0,
