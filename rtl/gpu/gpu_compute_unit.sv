@@ -171,7 +171,10 @@ module gpu_compute_unit
         else if (!pipe_stall) instr_rdy_q <= 1'b0;
     end
 
-    assign instr_avail  = if_rvalid_i || instr_rdy_q;
+    // instr_rdy_q is set one cycle after rvalid — pipeline advances only when
+    // if_id_q.instr already holds the captured instruction (removes combinational
+    // AXI rdata→decode timing path; same-cycle bypass was the critical-path limiter).
+    assign instr_avail  = instr_rdy_q;
     assign fetch_stall  = if_id_q.valid && !instr_avail;
     // mem_busy: stall while the coalescer is in-flight (mem_stall_i high).
     // Do NOT gate on id_ex_q.iclass: when VST is in EX/WB and the next
@@ -254,14 +257,12 @@ module gpu_compute_unit
     instr_class_t dec_class;
     gpu_opcode_t  dec_op;
 
-    // Use arriving rdata directly when rvalid is asserted so that register-file
-    // read addresses (dec_rs1/rs2) are correct on the same cycle id_ex_q advances.
-    // if_id_q.instr is updated by a non-blocking assign in the same edge, so it
-    // would still be stale (old value) if read combinationally in the same cycle.
     /* verilator lint_off UNUSEDSIGNAL */
     logic [31:0] dec_instr;  // funct3 bits[14:12] reserved for future sub-opcode use
     /* verilator lint_on UNUSEDSIGNAL */
-    assign dec_instr  = (if_rvalid_i && if_rready_o) ? if_rdata_i : if_id_q.instr;
+    // Always read the registered instruction. instr_avail (instr_rdy_q) ensures
+    // the pipeline only advances after if_id_q.instr has been captured from rdata.
+    assign dec_instr  = if_id_q.instr;
 
     assign dec_opcode = dec_instr[6:0];
     assign dec_rd     = dec_instr[11:7];
