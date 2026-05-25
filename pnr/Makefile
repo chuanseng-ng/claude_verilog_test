@@ -83,9 +83,12 @@ MANUAL_PDK_ROOT     ?= $(HOME)/pdk
 # LibreLane config directories
 LIBRELANE_SKY130_DIR    := librelane
 LIBRELANE_NANGATE45_DIR := freepdk45
-LIBRELANE_ASAP7_ROOT    := asap7          # shared PDK resources (stubs, lib, pdn)
-LIBRELANE_ASAP7_DIR     := asap7/cpu      # CPU design directory
-LIBRELANE_ASAP7_GPU_DIR := asap7/gpu      # GPU design directory
+# shared PDK resources (stubs, lib, pdn)
+LIBRELANE_ASAP7_ROOT    := asap7
+# CPU design directory
+LIBRELANE_ASAP7_DIR     := asap7/cpu
+# GPU design directory
+LIBRELANE_ASAP7_GPU_DIR := asap7/gpu
 # New designs: copy pnr/asap7/template/ as a starting point
 
 # Maximum number of ASAP7 runs to retain (oldest deleted first)
