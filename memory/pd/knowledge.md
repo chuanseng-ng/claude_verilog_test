@@ -258,6 +258,32 @@ the goal is PPA characterisation, not tape-out signoff.
 --skip Checker.MaxCapViolations \
 ```
 
+## ASAP7 Macro Views for Hierarchical PnR (rv32i_cpu_top)
+
+Because Magic.StreamOut / KLayout.StreamOut / Magic.WriteLEF are all blocked (see above),
+the Classic LibreLane flow produces **no LEF, GDS, or LIB** from an ASAP7 CPU run.
+To use `rv32i_cpu_top` as a hard macro in a top-level (Phase-5 SoC) PnR run, generate
+the views post-hoc from the saved final ODB using:
+
+```bash
+cd pnr && make macro-views-asap7                       # uses latest CPU run
+make macro-views-asap7 RUN=asap7/runs/RUN_2026-05-20_21-43-24  # specific run
+```
+
+**What this produces** (`pnr/asap7/macro/`):
+- `rv32i_cpu_top.lef` — abstract LEF via OpenROAD `write_abstract_lef -bloat_occupied_layers`
+- `rv32i_cpu_top__nom_tt_025C_0p7V.lib` — timing model via OpenROAD `write_timing_model`
+- `rv32i_cpu_top.nl.v` — gate-level netlist for blackbox instantiation
+
+**Why not GDS**: SRAM stub has no GDS geometry; GDS is not needed for PnR on predictive PDKs.
+
+**Implementation** (`pnr/scripts/asap7_macro_views.tcl`): standalone `openroad -exit` script
+that reads the final ODB + liberty + SDC and calls `write_abstract_lef` then `write_timing_model`.
+Does NOT use librelane.steps (avoids SPEF=None hard-fail in `OpenROAD.STAPostPNR.inputs`).
+
+**Convention**: LEF + LIB + NL matches how the SRAM macro is already provided to the CPU run
+(`sram_1rw_256x32_asap7.lef` + `sram_1rw_256x32_asap7_TT_0p7V_25C.lib` + stub.v). Consistent.
+
 ## ASAP7 SRAM Stub — Timing Visibility
 
 The SRAM liberty stub (`sram_1rw_256x32_asap7_TT_0p7V_25C.lib`) is a **hand-crafted black-box**
@@ -693,3 +719,35 @@ allows flow to continue. Confirmed: SRAM macros are not involved.
 
 **Potential fix**: Shift `FP_PDN_VOFFSET` by ~2.3 µm so a V-stripe lands near x=84.834 µm,
 or increase V-stripe density. Not needed for ASAP7 predictive flow.
+
+## Yosys `share` Pass Hangs on GPU 8-Lane Vector Datapath (2026-05-23, Phase 4 GPU)
+
+**Finding**: ASAP7 GPU synthesis (`make librelane-asap7-gpu`, design `gpu_top`) hangs in
+yosys step 05. Symptom: yosys pegged at ~100% CPU for 60+ min, RSS ~4 GB, synthesis log
+frozen mid-`SHARE pass (SAT-based resource sharing)` with repeated "Analyzing resource
+sharing options for ... vector_alu.sv:52 ($shl)" lines and no further progress. NOT a
+crash — no error, 0 latches, lint clean, pre_synth_chk 0 problems. The frozen log mtime
+can look like an "external kill"; it is not — `ps -o time` shows CPU time still climbing.
+
+**Root cause**: the yosys `share` pass does SAT-based resource sharing over the 8 identical
+32-bit barrel-shifter ($shl) cones in `rtl/gpu/vector_alu.sv:52` (VSLL, 8 SIMT lanes). The
+O(n^2) candidate enumeration across structurally-identical wide shifters blows up. The CPU
+designs never hit this (no 8-wide identical shifter cones). In LibreLane's pyosys flow,
+`d.run_pass("share")` at `librelane/scripts/pyosys/synthesize.py` (~line 167) was
+UNCONDITIONAL — the declared `SYNTH_SHARE_RESOURCES` config var (default true) was not
+wired to it, so it could not be disabled from config.json.
+
+**Fix applied (2026-05-23)**: gate the pass on the existing flag, then disable it.
+1. `librelane/scripts/pyosys/synthesize.py` (LOCAL install, outside the project repo):
+   - add `share_resources=True` to `librelane_synth(...)` signature
+   - change the call to `if share_resources: d.run_pass("share")`
+   - at the `librelane_synth(...)` call site, pass `share_resources=config["SYNTH_SHARE_RESOURCES"]`
+2. `pnr/asap7/gpu/config.json`: add `"SYNTH_SHARE_RESOURCES": false`.
+`share` is an area-only optimization (merges shareable resources to cut cell count); skipping
+it is functionally safe — minor area cost only.
+
+**How to apply**: this patch lives in the LOCAL ~/Downloads/Github/librelane checkout and is
+NOT tracked by the project repo — re-apply it after any librelane update/reinstall. For any
+future wide-datapath block (GPU, NPU MAC array) that stalls in synthesis step 05, check the
+synth log for a frozen `SHARE pass` and set `SYNTH_SHARE_RESOURCES: false` in that block's
+config.json. CPU configs are unaffected and can leave it at the default.

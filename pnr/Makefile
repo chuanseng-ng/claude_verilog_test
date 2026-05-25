@@ -83,7 +83,13 @@ MANUAL_PDK_ROOT     ?= $(HOME)/pdk
 # LibreLane config directories
 LIBRELANE_SKY130_DIR    := librelane
 LIBRELANE_NANGATE45_DIR := freepdk45
-LIBRELANE_ASAP7_DIR     := asap7
+LIBRELANE_ASAP7_ROOT    := asap7          # shared PDK resources (stubs, lib, pdn)
+LIBRELANE_ASAP7_DIR     := asap7/cpu      # CPU design directory
+LIBRELANE_ASAP7_GPU_DIR := asap7/gpu      # GPU design directory
+# New designs: copy pnr/asap7/template/ as a starting point
+
+# Maximum number of ASAP7 runs to retain (oldest deleted first)
+ASAP7_MAX_RUNS          ?= 10
 
 # Number of threads for detailed routing
 DRT_THREADS         ?= 4
@@ -96,8 +102,11 @@ DRT_THREADS         ?= 4
 .PHONY: synth floorplan place cts route parasitics sta power verify gls
 .PHONY: report_timing report_power report_area
 .PHONY: docker-pull docker-check docker-pdk docker-run docker-synth docker-results
-.PHONY: librelane-sky130 librelane-nangate45 librelane-asap7
-.PHONY: librelane-sky130-results librelane-nangate45-results librelane-asap7-results
+.PHONY: librelane-sky130 librelane-nangate45 librelane-asap7 librelane-asap7-gpu
+.PHONY: librelane-sky130-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results
+.PHONY: prune-asap7-runs prune-asap7-gpu-runs
+.PHONY: macro-views-asap7
+.PHONY: flop-count
 
 #----------------------------------------------------------------
 # Default Target
@@ -118,16 +127,25 @@ help:
 	@echo "=================================================="
 	@echo ""
 	@echo "LibreLane Targets (nix-shell, recommended):"
-	@echo "  librelane-sky130      - Run full LibreLane flow on Sky130 (pnr/librelane/)"
-	@echo "  librelane-nangate45   - Run full LibreLane flow on FreePDK45/nangate45 (pnr/freepdk45/)"
-	@echo "  librelane-asap7       - Run full LibreLane flow on ASAP7 (pnr/asap7/)"
-	@echo "  librelane-sky130-results    - Show metrics from latest Sky130 LibreLane run"
-	@echo "  librelane-nangate45-results - Show metrics from latest nangate45 LibreLane run"
-	@echo "  librelane-asap7-results     - Show metrics from latest ASAP7 LibreLane run"
+	@echo "  librelane-sky130          - Run full LibreLane flow on Sky130 (pnr/librelane/)"
+	@echo "  librelane-nangate45       - Run full LibreLane flow on FreePDK45/nangate45 (pnr/freepdk45/)"
+	@echo "  librelane-asap7           - Run full LibreLane flow on ASAP7 CPU (pnr/asap7/), then prune"
+	@echo "  librelane-asap7-gpu       - Run full LibreLane flow on ASAP7 GPU (pnr/asap7/gpu/), then prune"
+	@echo "  librelane-sky130-results        - Show metrics from latest Sky130 LibreLane run"
+	@echo "  librelane-nangate45-results     - Show metrics from latest nangate45 LibreLane run"
+	@echo "  librelane-asap7-results         - Show metrics from latest ASAP7 CPU LibreLane run"
+	@echo "  flop-count RUN_DIR=<path>       - Flop count breakdown from any LibreLane run's synthesis"
+	@echo "  librelane-asap7-gpu-results     - Show metrics from latest ASAP7 GPU LibreLane run"
+	@echo "  prune-asap7-runs          - Delete old CPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
+	@echo "  prune-asap7-gpu-runs      - Delete old GPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
+	@echo "  macro-views-asap7         - Generate LEF + LIB + netlist macro views from latest ASAP7 CPU run"
+	@echo "                              (override run: make macro-views-asap7 RUN=asap7/cpu/runs/RUN_...)"
+	@echo "  asap7/template/           - Template for new ASAP7 designs (copy to asap7/<design>/)"
 	@echo ""
 	@echo "  LIBRELANE_DIR     = $(LIBRELANE_DIR)"
 	@echo "  MANUAL_PDK_ROOT   = $(MANUAL_PDK_ROOT)"
 	@echo "  DRT_THREADS       = $(DRT_THREADS)"
+	@echo "  ASAP7_MAX_RUNS    = $(ASAP7_MAX_RUNS)"
 	@echo ""
 	@echo "OpenLane 1 Docker Targets:"
 	@echo "  docker-pull    - Pull the OpenLane 1 Docker image"
@@ -601,9 +619,249 @@ librelane-asap7:
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
 		 $(abspath $(LIBRELANE_ASAP7_DIR))/config.json"
+	@$(MAKE) prune-asap7-runs
 
 librelane-asap7-results:
 	$(call librelane_results,$(LIBRELANE_ASAP7_DIR))
+
+# ASAP7 GPU: uses same PDK and skip-list as librelane-asap7, but targets pnr/asap7/gpu/
+librelane-asap7-gpu:
+	@echo "=========================================="
+	@echo "Running LibreLane flow — ASAP7 GPU"
+	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_GPU_DIR)/config.json"
+	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
+	@echo "  Tool     : $(LIBRELANE_DIR)"
+	@echo "  Skipping : Odb.HeuristicDiodeInsertion OpenROAD.RepairAntennas"
+	@echo "=========================================="
+	@if [ ! -f "$(LIBRELANE_ASAP7_GPU_DIR)/config.json" ]; then \
+		echo "ERROR: $(LIBRELANE_ASAP7_GPU_DIR)/config.json not found."; \
+		echo "       Create pnr/asap7/gpu/ with a LibreLane config.json to use this target."; \
+		exit 1; fi
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
+		 $(abspath $(LIBRELANE_ASAP7_GPU_DIR))/config.json"
+	@$(MAKE) prune-asap7-gpu-runs
+
+librelane-asap7-gpu-results:
+	$(call librelane_results,$(LIBRELANE_ASAP7_GPU_DIR))
+
+# flop-count: DFF breakdown from any LibreLane run's synthesis log.
+# Usage: make flop-count RUN_DIR=asap7/gpu/runs/RUN_2026-05-24_09-12-00
+#        make flop-count RUN_DIR=asap7/runs/RUN_2026-05-20_06-27-10
+RUN_DIR ?=
+
+flop-count:
+	@if [ -z "$(RUN_DIR)" ]; then \
+		echo "Usage: make flop-count RUN_DIR=<path/to/RUN_*>"; \
+		echo "  GPU runs: asap7/gpu/runs/RUN_*"; \
+		echo "  CPU runs: asap7/runs/RUN_*"; \
+		exit 1; fi; \
+	SYNTH_LOG=$(RUN_DIR)/05-yosys-synthesis/yosys-synthesis.log; \
+	if [ ! -f "$$SYNTH_LOG" ]; then \
+		echo "No synthesis log in $(RUN_DIR) — has synthesis completed?"; exit 1; fi; \
+	echo "=========================================="; \
+	echo "Flop count — $(RUN_DIR)"; \
+	echo "=========================================="; \
+	grep 'mapped.*cells to.*\\DFF' "$$SYNTH_LOG" | \
+	awk '{n=$$2; cell=substr($$6,2); counts[cell]+=n; tot+=n} \
+	     END{for(c in counts) printf "  %-42s %8d\n",c,counts[c]; \
+	         printf "  %-42s %8d\n","Total flops",tot}'
+
+#----------------------------------------------------------------
+# Run pruning: keep only the latest ASAP7_MAX_RUNS runs
+# Runs are named RUN_YYYY-MM-DD_HH-MM-SS; lexicographic sort == time order.
+#----------------------------------------------------------------
+
+define prune_runs
+	@RUNS_DIR="$(1)/runs"; \
+	if [ ! -d "$$RUNS_DIR" ]; then exit 0; fi; \
+	COUNT=$$(ls -d $$RUNS_DIR/RUN_* 2>/dev/null | wc -l); \
+	if [ "$$COUNT" -le "$(ASAP7_MAX_RUNS)" ]; then \
+		echo "$(2): $$COUNT run(s) present (<= $(ASAP7_MAX_RUNS)), nothing to prune."; \
+		exit 0; \
+	fi; \
+	TO_DELETE=$$(ls -dt $$RUNS_DIR/RUN_* 2>/dev/null | tail -n +$$(($(ASAP7_MAX_RUNS)+1))); \
+	NDEL=$$(echo "$$TO_DELETE" | wc -l); \
+	echo "$(2): keeping latest $(ASAP7_MAX_RUNS) of $$COUNT run(s), removing $$NDEL old run(s)."; \
+	echo "$$TO_DELETE" | xargs rm -rf; \
+	echo "Prune complete."
+endef
+
+prune-asap7-runs:
+	$(call prune_runs,$(LIBRELANE_ASAP7_DIR),ASAP7 CPU)
+
+prune-asap7-gpu-runs:
+	$(call prune_runs,$(LIBRELANE_ASAP7_GPU_DIR),ASAP7 GPU)
+
+#----------------------------------------------------------------
+# ASAP7 macro views: abstract LEF + timing-model LIB + gate-level netlist
+#
+# Generates the three artifacts needed to instantiate rv32i_cpu_top as a hard
+# macro in a top-level (Phase-5 SoC) P&R run.  Mirrors the SRAM macro
+# convention: LEF (abstract) + LIB (timing model) + NL (blackbox netlist).
+#
+# GDS is omitted: Magic has no ASAP7 tech file and the SRAM stub has no GDS
+# geometry — same reason the existing librelane-asap7 target skips streamout.
+#
+# Uses a standalone OpenROAD script (scripts/asap7_macro_views.tcl) against
+# the saved final/odb so no full flow re-run is needed.
+#
+# Usage:
+#   make macro-views-asap7                              # uses latest CPU run
+#   make macro-views-asap7 RUN=asap7/runs/RUN_2026-…   # specific run
+#
+# Output: pnr/asap7/macro/{rv32i_cpu_top.lef,
+#                           rv32i_cpu_top__nom_tt_025C_0p7V.lib,
+#                           rv32i_cpu_top.nl.v}
+#----------------------------------------------------------------
+
+macro-views-asap7:
+	@echo "=========================================="
+	@echo "Generating ASAP7 macro views — rv32i_cpu_top"
+	@echo "=========================================="
+	@set -e; \
+	if [ -n "$(RUN)" ]; then CPU_RUN="$(RUN)"; \
+	else CPU_RUN="$$(ls -td $(LIBRELANE_ASAP7_DIR)/runs/RUN_* 2>/dev/null | head -1)"; fi; \
+	if [ -z "$$CPU_RUN" ]; then \
+		echo "ERROR: No ASAP7 CPU runs found. Run 'make librelane-asap7' first."; exit 1; fi; \
+	CPU_RUN="$$(realpath "$$CPU_RUN")"; \
+	echo "  Run : $$CPU_RUN"; \
+	ODB="$$CPU_RUN/final/odb/rv32i_cpu_top.odb"; \
+	SDC="$$CPU_RUN/final/sdc/rv32i_cpu_top.sdc"; \
+	NL="$$CPU_RUN/final/nl/rv32i_cpu_top.nl.v"; \
+	if [ ! -f "$$ODB" ]; then echo "ERROR: $$ODB not found"; exit 1; fi; \
+	MACRO_DIR="$(abspath $(LIBRELANE_ASAP7_DIR))/macro"; \
+	mkdir -p "$$MACRO_DIR"; \
+	ASAP7_LD="$(MANUAL_PDK_ROOT)/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib"; \
+	SRAM_LIB="$(abspath $(LIBRELANE_ASAP7_ROOT))/sram_1rw_256x32_asap7_TT_0p7V_25C.lib"; \
+	export ODB_PATH="$$ODB" \
+	       SDC_PATH="$$SDC" \
+	       DESIGN_NAME="rv32i_cpu_top" \
+	       MACRO_OUT_DIR="$$MACRO_DIR" \
+	       ASAP7_LIBS="$$ASAP7_LD/asap7sc7p5t_AO_RVT_TT_nldm_211120.lib $$ASAP7_LD/asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.lib $$ASAP7_LD/asap7sc7p5t_OA_RVT_TT_nldm_211120.lib $$ASAP7_LD/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib $$ASAP7_LD/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib $$SRAM_LIB"; \
+	(cd $(LIBRELANE_DIR) && nix-shell --run \
+		"openroad -exit $(abspath scripts/asap7_macro_views.tcl)"); \
+	cp "$$NL" "$$MACRO_DIR/rv32i_cpu_top.nl.v"; \
+	echo ""; \
+	echo "Macro views staged to $$MACRO_DIR:"; \
+	ls -lh "$$MACRO_DIR/"
+
+#----------------------------------------------------------------
+# Schematic viewer (yosys `show` -> SVG via graphviz)
+#----------------------------------------------------------------
+# Renders a schematic of the CPU or GPU design using the same Synlig
+# (read_systemverilog) front-end LibreLane uses, with the ASAP7 SRAM/ICG cells
+# as blackboxes. xdot is not available in the shell, so output is written as SVG.
+#
+# SCHEM_BLOCK selects the design (cpu | gpu, default gpu); SCHEM_MODULE selects
+# the module within it (defaults to the block's top: rv32i_cpu_top / gpu_top).
+# Default render is the RTL-elaboration view (hierarchy preserved: submodule
+# instances render as boxes) — compact and fast. SCHEM_SYNTH=1 gives the
+# gate-level synthesised view, which for any non-trivial module produces a very
+# large graph that graphviz `dot` lays out slowly (use only on small leaf modules).
+#
+#   make schematic                                  # gpu_top, RTL view
+#   make schematic SCHEM_BLOCK=cpu                  # rv32i_cpu_top, RTL view
+#   make schematic SCHEM_BLOCK=cpu SCHEM_MODULE=rv32i_alu
+#   make schematic SCHEM_MODULE=warp_scheduler
+#   make schematic SCHEM_MODULE=vector_alu SCHEM_SYNTH=1   # gate-level (slow/large)
+#   (gpu-schematic is kept as an alias for `schematic SCHEM_BLOCK=gpu`)
+#
+# Output: pnr/asap7/schematics/schematic_<module>.svg (+ .dot)
+SCHEM_BLOCK ?= gpu
+SCHEM_OUTDIR := asap7/schematics
+
+GPU_SCHEM_SRCS := \
+	$(RTL_DIR)/gpu/gpu_pkg.sv \
+	asap7/sram_1rw_128x32_asap7_stub.v \
+	$(RTL_DIR)/gpu/vector_register_file.sv \
+	$(RTL_DIR)/gpu/vector_alu.sv \
+	$(RTL_DIR)/gpu/gpu_compute_unit.sv \
+	$(RTL_DIR)/gpu/warp_scheduler.sv \
+	$(RTL_DIR)/gpu/gpu_command_queue.sv \
+	$(RTL_DIR)/gpu/gpu_memory_unit.sv \
+	$(RTL_DIR)/gpu/memory_coalescer.sv \
+	$(RTL_DIR)/gpu/shared_memory.sv \
+	$(RTL_DIR)/gpu/gpu_top.sv
+
+CPU_SCHEM_SRCS := \
+	asap7/sram_1rw_256x32_asap7_stub.v \
+	asap7/icg_asap7_stub.v \
+	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
+	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
+	$(RTL_DIR)/mem/rv32i_clock_gate.sv \
+	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
+	$(RTL_DIR)/cpu/core/rv32i_branch_comp.sv \
+	$(RTL_DIR)/cpu/core/rv32i_imm_gen.sv \
+	$(RTL_DIR)/cpu/core/rv32i_regfile.sv \
+	$(RTL_DIR)/cpu/core/rv32i_decode.sv \
+	$(RTL_DIR)/cpu/core/rv32i_forwarding_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_hazard_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_interrupt_ctrl.sv \
+	$(RTL_DIR)/cpu/core/rv32i_csr_file.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_if.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_id.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex1c.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex1b.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex2.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_mem.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_wb.sv \
+	$(RTL_DIR)/mem/rv32i_icache.sv \
+	$(RTL_DIR)/mem/rv32i_dcache.sv \
+	$(RTL_DIR)/mem/rv32i_cache_arbiter.sv \
+	$(RTL_DIR)/cpu/core/rv32i_core.sv \
+	$(RTL_DIR)/cpu/rv32i_cpu_top.sv
+
+ifeq ($(SCHEM_BLOCK),cpu)
+  SCHEM_SRCS    := $(CPU_SCHEM_SRCS)
+  SCHEM_MODULE  ?= rv32i_cpu_top
+  SCHEM_DEFINES := -DSRAM_ASAP7 -DUSE_ICG_CELL
+else
+  SCHEM_SRCS    := $(GPU_SCHEM_SRCS)
+  SCHEM_MODULE  ?= gpu_top
+  SCHEM_DEFINES :=
+endif
+
+.PHONY: schematic gpu-schematic cpu-schematic
+gpu-schematic: ; $(MAKE) schematic SCHEM_BLOCK=gpu SCHEM_MODULE=$(SCHEM_MODULE) SCHEM_SYNTH=$(SCHEM_SYNTH)
+cpu-schematic: ; $(MAKE) schematic SCHEM_BLOCK=cpu SCHEM_MODULE=$(SCHEM_MODULE) SCHEM_SYNTH=$(SCHEM_SYNTH)
+schematic:
+	@echo "=========================================="
+	@echo "Rendering yosys schematic"
+	@echo "  Block  : $(SCHEM_BLOCK)"
+	@echo "  Module : $(SCHEM_MODULE)"
+	@echo "  Mode   : $(if $(SCHEM_SYNTH),synthesised gate-level (large/slow),RTL elaboration)"
+	@echo "  Output : pnr/$(SCHEM_OUTDIR)/schematic_$(SCHEM_MODULE).svg"
+	@echo "=========================================="
+	@mkdir -p $(SCHEM_OUTDIR)
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"cd $(abspath .) && yosys -p ' \
+		   read_systemverilog $(SCHEM_DEFINES) $(SCHEM_SRCS); \
+		   $(if $(SCHEM_SYNTH),synth -top $(SCHEM_MODULE),hierarchy -top $(SCHEM_MODULE); proc; opt_clean); \
+		   show -colors 1 -format svg -prefix $(SCHEM_OUTDIR)/schematic_$(SCHEM_MODULE) $(SCHEM_MODULE)'"
+	@echo "Schematic written to pnr/$(SCHEM_OUTDIR)/schematic_$(SCHEM_MODULE).svg"
 
 #----------------------------------------------------------------
 # Clean Target

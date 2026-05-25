@@ -90,6 +90,25 @@ CACHE_SOURCES := \
 	$(RTL_DIR)/mem/rv32i_dcache.sv \
 	$(RTL_DIR)/mem/rv32i_cache_arbiter.sv
 
+# GPU sources — package first, then leaf modules, then integration top
+# Unit tests that target a single GPU module use a subset of these.
+GPU_PKG := $(RTL_DIR)/gpu/gpu_pkg.sv
+# Behavioral sim model for the GPU shared-memory SRAM banks (synthesis/P&R use
+# the pnr/asap7 blackbox stub + LEF/Liberty instead).
+GPU_SRAM_SIM := $(SIM_DIR)/sram_1rw_128x32_asap7.v
+GPU_SOURCES := \
+	$(GPU_PKG) \
+	$(GPU_SRAM_SIM) \
+	$(RTL_DIR)/gpu/vector_register_file.sv \
+	$(RTL_DIR)/gpu/vector_alu.sv \
+	$(RTL_DIR)/gpu/gpu_compute_unit.sv \
+	$(RTL_DIR)/gpu/warp_scheduler.sv \
+	$(RTL_DIR)/gpu/gpu_command_queue.sv \
+	$(RTL_DIR)/gpu/gpu_memory_unit.sv \
+	$(RTL_DIR)/gpu/memory_coalescer.sv \
+	$(RTL_DIR)/gpu/shared_memory.sv \
+	$(RTL_DIR)/gpu/gpu_top.sv
+
 # Simulator selection (default: verilator)
 SIM ?= verilator
 
@@ -105,6 +124,7 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += --no-timing
 	COMPILE_ARGS += -I$(RTL_DIR)/cpu/core
 	COMPILE_ARGS += -I$(RTL_DIR)/mem
+	COMPILE_ARGS += -I$(RTL_DIR)/gpu
 	# Override PYTHON3 so the nix-verilator's verilated.mk uses the system Python 3.10
 	# (/usr/bin/python3) instead of the nix-devshell Python 3.11. Inside nix-shell,
 	# `which python3` resolves to nix Python 3.11, but PYTHONHOME=/usr is set in the
@@ -175,6 +195,17 @@ help:
 	@echo "  make dcache       - Run Phase 3 D-cache unit tests"
 	@echo "  make cache_integration - Run Phase 3 CPU+cache integration tests"
 	@echo "  make phase3_all   - Run all Phase 3 cache tests"
+	@echo "  make gpu_regfile  - Run Phase 4 vector_register_file unit tests"
+	@echo "  make gpu_alu      - Run Phase 4 vector_alu unit tests"
+	@echo "  make gpu_diverge  - Run Phase 4 gpu_compute_unit divergence tests"
+	@echo "  make gpu_sched    - Run Phase 4 warp_scheduler unit tests"
+	@echo "  make gpu_cmdq     - Run Phase 4 gpu_command_queue unit tests"
+	@echo "  make gpu_coalescer - Run Phase 4 memory_coalescer unit tests"
+	@echo "  make gpu_shmem    - Run Phase 4 shared_memory unit tests"
+	@echo "  make gpu_unit     - Run all Phase 4 GPU unit tests"
+	@echo "  make gpu_kernels  - Run all Phase 4 GPU kernel tests"
+	@echo "  make gpu_handoff  - Run Phase 4 CPU-GPU handoff integration test"
+	@echo "  make gpu_all      - Run all Phase 4 GPU tests"
 	@echo "  make coverage     - Run all tests with Verilator coverage + generate reports"
 	@echo "  make distclean    - Clean simulation artifacts"
 	@echo "  make help         - Show this help"
@@ -412,6 +443,234 @@ phase3_all:
 		echo "========================================"; \
 	fi
 
+# ============================================================================
+# Phase 4 GPU Test Targets
+# ============================================================================
+
+# vector_register_file unit tests
+.PHONY: gpu_regfile
+gpu_regfile:
+	@echo "Running Phase 4 vector_register_file unit tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_vector_regfile \
+		TOPLEVEL=vector_register_file \
+		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/vector_register_file.sv" \
+		SIM_BUILD=sim_build_gpu_regfile
+
+# vector_alu unit tests
+.PHONY: gpu_alu
+gpu_alu:
+	@echo "Running Phase 4 vector_alu unit tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_vector_alu \
+		TOPLEVEL=vector_alu \
+		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/vector_alu.sv" \
+		SIM_BUILD=sim_build_gpu_alu
+
+# gpu_compute_unit unit tests (divergence)
+.PHONY: gpu_diverge
+gpu_diverge:
+	@echo "Running Phase 4 gpu_compute_unit divergence unit tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_divergence \
+		TOPLEVEL=gpu_compute_unit \
+		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/vector_register_file.sv $(RTL_DIR)/gpu/vector_alu.sv $(RTL_DIR)/gpu/gpu_compute_unit.sv" \
+		SIM_BUILD=sim_build_gpu_diverge
+
+# warp_scheduler unit tests
+.PHONY: gpu_sched
+gpu_sched:
+	@echo "Running Phase 4 warp_scheduler unit tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_warp_scheduler \
+		TOPLEVEL=warp_scheduler \
+		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/warp_scheduler.sv" \
+		SIM_BUILD=sim_build_gpu_sched
+
+# gpu_command_queue unit tests
+.PHONY: gpu_cmdq
+gpu_cmdq:
+	@echo "Running Phase 4 gpu_command_queue unit tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_command_queue \
+		TOPLEVEL=gpu_command_queue \
+		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/gpu_command_queue.sv" \
+		SIM_BUILD=sim_build_gpu_cmdq
+
+# memory_coalescer unit tests
+.PHONY: gpu_coalescer
+gpu_coalescer:
+	@echo "Running Phase 4 memory_coalescer unit tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_memory_coalescer \
+		TOPLEVEL=memory_coalescer \
+		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/memory_coalescer.sv" \
+		SIM_BUILD=sim_build_gpu_coalescer
+
+# gpu_memory_unit unit tests (AXI master wrapper around memory_coalescer)
+.PHONY: gpu_memunit
+gpu_memunit:
+	@echo "Running Phase 4 gpu_memory_unit unit tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_memory_unit \
+		TOPLEVEL=gpu_memory_unit \
+		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/memory_coalescer.sv $(RTL_DIR)/gpu/gpu_memory_unit.sv" \
+		SIM_BUILD=sim_build_gpu_memunit
+
+# gpu_top smoke tests (register bank + FSM)
+.PHONY: gpu_top_smoke
+gpu_top_smoke:
+	@echo "Running Phase 4 gpu_top smoke tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_gpu_top \
+		TOPLEVEL=gpu_top \
+		VERILOG_SOURCES="$(GPU_SOURCES)" \
+		SIM_BUILD=sim_build_gpu_top
+
+# shared_memory unit tests
+.PHONY: gpu_shmem
+gpu_shmem:
+	@echo "Running Phase 4 shared_memory unit tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_shared_memory \
+		TOPLEVEL=shared_memory \
+		VERILOG_SOURCES="$(GPU_PKG) $(GPU_SRAM_SIM) $(RTL_DIR)/gpu/shared_memory.sv" \
+		SIM_BUILD=sim_build_gpu_shmem
+
+# All Phase 4 unit tests (leaf modules + compute pipeline)
+.PHONY: gpu_unit
+gpu_unit:
+	@echo "Running all Phase 4 GPU unit tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	@failed_tests=""; \
+	for target in gpu_regfile gpu_alu gpu_diverge gpu_sched gpu_cmdq gpu_coalescer gpu_memunit gpu_shmem gpu_top_smoke; do \
+		echo "========================================"; \
+		echo "Running target: $$target"; \
+		echo "========================================"; \
+		rm -f results.xml; \
+		if ! $(MAKE) $$target || [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; then \
+			failed_tests="$$failed_tests $$target"; \
+		fi; \
+		echo ""; \
+	done; \
+	if [ -n "$$failed_tests" ]; then \
+		echo "========================================"; \
+		echo "FAILED GPU UNIT TESTS:$$failed_tests"; \
+		echo "========================================"; \
+		exit 1; \
+	else \
+		echo "========================================"; \
+		echo "ALL GPU UNIT TESTS PASSED!"; \
+		echo "========================================"; \
+	fi
+
+# All Phase 4 kernel-level tests (full DUT = gpu_top)
+.PHONY: gpu_kernels
+gpu_kernels:
+	@echo "Running all Phase 4 GPU kernel tests..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	@failed_tests=""; \
+	for module in \
+		tb.cocotb.gpu.kernels.kernel_vector_add \
+		tb.cocotb.gpu.kernels.kernel_dot_product \
+		tb.cocotb.gpu.kernels.kernel_divergence_basic \
+		tb.cocotb.gpu.kernels.kernel_memory_coalesce \
+		tb.cocotb.gpu.kernels.kernel_shared_mem_pingpong \
+		tb.cocotb.gpu.kernels.kernel_sync; do \
+		echo "========================================"; \
+		echo "Running kernel: $$module"; \
+		echo "========================================"; \
+		rm -f results.xml; \
+		if ! $(MAKE) sim MODULE=$$module TOPLEVEL=gpu_top VERILOG_SOURCES="$(GPU_SOURCES)" SIM_BUILD=sim_build_gpu_top || [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; then \
+			failed_tests="$$failed_tests $$module"; \
+		fi; \
+		echo ""; \
+	done; \
+	if [ -n "$$failed_tests" ]; then \
+		echo "========================================"; \
+		echo "FAILED GPU KERNEL TESTS:$$failed_tests"; \
+		echo "========================================"; \
+		exit 1; \
+	else \
+		echo "========================================"; \
+		echo "ALL GPU KERNEL TESTS PASSED!"; \
+		echo "========================================"; \
+	fi
+
+# Random-kernel regression (RTL vs GpuRefModel). EXTRA_ARGS="" disables Verilator
+# --trace for this long run so it does not generate a multi-GB dump.vcd.
+# Configure via RANDOM_KERNELS / RANDOM_KERNELS_SMOKE / RANDOM_KERNELS_SEED env.
+.PHONY: gpu_random
+gpu_random:
+	@echo "Running Phase 4 random-kernel regression (RTL vs reference model)..."
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_random_kernels \
+		TOPLEVEL=gpu_top \
+		VERILOG_SOURCES="$(GPU_SOURCES)" \
+		SIM_BUILD=sim_build_gpu_random \
+		EXTRA_ARGS=""
+
+# CPU-GPU handoff integration test
+.PHONY: gpu_handoff
+gpu_handoff:
+	@echo "Running Phase 4 CPU-GPU handoff integration test..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_cpu_gpu_handoff \
+		TOPLEVEL=gpu_top \
+		VERILOG_SOURCES="$(GPU_SOURCES)" \
+		SIM_BUILD=sim_build_gpu_handoff
+
+# All Phase 4 tests: unit + kernels + handoff
+.PHONY: gpu_all
+gpu_all:
+	@echo "Running all Phase 4 GPU tests (unit + kernels + handoff)..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	@failed_tests=""; \
+	for target in gpu_unit gpu_kernels gpu_handoff; do \
+		echo "========================================"; \
+		echo "Running target: $$target"; \
+		echo "========================================"; \
+		rm -f results.xml; \
+		if ! $(MAKE) $$target || { [ "$$target" = "gpu_handoff" ] && { [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; }; }; then \
+			failed_tests="$$failed_tests $$target"; \
+		fi; \
+		echo ""; \
+	done; \
+	if [ -n "$$failed_tests" ]; then \
+		echo "========================================"; \
+		echo "FAILED PHASE 4 TARGETS:$$failed_tests"; \
+		echo "========================================"; \
+		exit 1; \
+	else \
+		echo "========================================"; \
+		echo "ALL PHASE 4 GPU TESTS PASSED!"; \
+		echo "========================================"; \
+	fi
+
 # Use distclean to avoid conflict with cocotb's clean
 # Note: 'clean' target is only defined when cocotb Makefile is included
 distclean:
@@ -420,6 +679,9 @@ distclean:
 	@rm -rf obj_dir 2>/dev/null || true
 	@rm -rf __pycache__ 2>/dev/null || true
 	@rm -rf sim_build sim_build_icache sim_build_dcache 2>/dev/null || true
+	@rm -rf sim_build_gpu_regfile sim_build_gpu_alu sim_build_gpu_diverge 2>/dev/null || true
+	@rm -rf sim_build_gpu_sched sim_build_gpu_cmdq sim_build_gpu_coalescer 2>/dev/null || true
+	@rm -rf sim_build_gpu_memunit sim_build_gpu_shmem sim_build_gpu_top sim_build_gpu_handoff 2>/dev/null || true
 	@rm -f dump.vcd 2>/dev/null || true
 	@rm -f results.xml 2>/dev/null || true
 	@rm -f *.log 2>/dev/null || true

@@ -1,0 +1,139 @@
+{
+    "DESIGN_NAME": "gpu_top",
+    "PDK": "asap7",
+    "STD_CELL_LIBRARY": "asap7sc7p5t_SIMPLE",
+
+    "VERILOG_FILES": [
+        "dir::../../../rtl/gpu/gpu_pkg.sv",
+        "dir::../sram_1rw_128x32_asap7_stub.v",
+        "dir::../../../rtl/gpu/vector_register_file.sv",
+        "dir::../../../rtl/gpu/vector_alu.sv",
+        "dir::../../../rtl/gpu/gpu_compute_unit.sv",
+        "dir::../../../rtl/gpu/warp_scheduler.sv",
+        "dir::../../../rtl/gpu/gpu_command_queue.sv",
+        "dir::../../../rtl/gpu/gpu_memory_unit.sv",
+        "dir::../../../rtl/gpu/memory_coalescer.sv",
+        "dir::../../../rtl/gpu/shared_memory.sv",
+        "dir::../../../rtl/gpu/gpu_top.sv"
+    ],
+
+    "CLOCK_PORT":   "clk",
+    "CLOCK_NET":    "clk",
+    "CLOCK_PERIOD": 1.0,
+
+    "FP_SIZING":       "absolute",
+    "DIE_AREA":        "0 0 340 340",
+    "CORE_AREA":       "10 10 330 330",
+
+    "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
+    "PL_MACRO_HALO": "4 4",
+
+    "PL_TARGET_DENSITY_PCT":     70,
+    "CTS_SINK_CLUSTERING_SIZE":        8,
+    "CTS_SINK_CLUSTERING_MAX_DIAMETER": 10,
+    "PL_TIME_DRIVEN":            false,
+    "PL_ROUTABILITY_DRIVEN":     true,
+
+    "FP_PDN_MULTILAYER":         true,
+    "FP_PDN_ENABLE_RAILS":       true,
+    "PDN_CONNECT_MACROS_TO_GRID": true,
+    "ERROR_ON_PDN_VIOLATIONS":   false,
+
+    "FP_PDN_RAIL_WIDTH":  0.054,
+    "FP_PDN_HWIDTH":      0.090,
+    "FP_PDN_VWIDTH":      0.120,
+    "FP_PDN_HSPACING":    0.090,
+    "FP_PDN_VSPACING":    0.120,
+    "FP_PDN_HPITCH":      4.5,
+    "FP_PDN_VPITCH":      4.5,
+    "FP_PDN_HOFFSET":     0.5,
+    "FP_PDN_VOFFSET":     0.5,
+    "FP_PDN_CORE_RING_HWIDTH":   0.162,
+    "FP_PDN_CORE_RING_VWIDTH":   0.216,
+    "FP_PDN_CORE_RING_HSPACING": 0.162,
+    "FP_PDN_CORE_RING_VSPACING": 0.216,
+    "FP_PDN_CORE_RING_HOFFSET":  0.5,
+    "FP_PDN_CORE_RING_VOFFSET":  0.5,
+
+    "RT_MAX_LAYER":  "M9",
+    "DRT_THREADS":   8,
+
+    "FP_IO_HLENGTH":          4.0,
+    "FP_IO_VLENGTH":          4.0,
+    "FP_IO_MIN_DISTANCE":     1.0,
+    "FP_IO_HTHICKNESS_MULT":  8,
+    "FP_IO_VTHICKNESS_MULT":  8,
+
+    "GRT_ADJUSTMENT":         0.10,
+    "GRT_LAYER_ADJUSTMENTS":  [0.5, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "GRT_ALLOW_CONGESTION":   true,
+
+    "LAYERS_RC": "M2 1.84542e-01 4.62311e-02, M3 1.53955e-01 3.63251e-02, M4 1.89434e-01 2.03083e-02, M5 1.71593e-01 1.93005e-02, M6 1.76146e-01 1.18619e-02, M7 1.47030e-01 1.25311e-02",
+    "VIAS_RC": "V1 1.72e-02, V2 1.72e-02, V3 1.72e-02, V4 1.18e-02, V5 1.18e-02, V6 8.20e-03, V7 8.20e-03",
+
+    "USE_SYNLIG":    true,
+    "SYNLIG_DEFER":  false,
+
+    "SYNTH_STRATEGY":     "DELAY 2",
+    "SYNTH_SHARE_RESOURCES": false,
+    "SYNTH_HIERARCHY_MODE": "keep",
+    "SYNTH_SIZING":       true,
+    "SYNTH_ABC_BUFFERING": true,
+    "MAX_FANOUT_CONSTRAINT": 8,
+
+    "PNR_SDC_FILE":     "dir::constraints/asap7_gpu.sdc",
+    "SIGNOFF_SDC_FILE": "dir::constraints/asap7_gpu.sdc",
+    "FALLBACK_SDC_FILE": "dir::constraints/asap7_gpu.sdc",
+
+    "RUN_POST_GPL_DESIGN_REPAIR":    true,
+    "RUN_POST_CTS_RESIZER_TIMING":   false,
+    "RUN_POST_GRT_RESIZER_TIMING":   true,
+    "RUN_POST_GRT_DESIGN_REPAIR":    true,
+    "MAX_TRANSITION_CONSTRAINT":     15.0,
+    "PL_RESIZER_SETUP_SLACK_MARGIN":  0.100,
+    "GRT_RESIZER_SETUP_SLACK_MARGIN": 0.150,
+    "PL_RESIZER_HOLD_SLACK_MARGIN":  0.100,
+    "GRT_RESIZER_HOLD_SLACK_MARGIN": 0.100,
+    "PL_RESIZER_ALLOW_SETUP_VIOS":   true,
+
+    "HOLD_VIOLATION_CORNERS": ["nom_tt_025C_0p7V"],
+
+    "EXTRA_LEFS": [
+        "dir::../sram_1rw_128x32_asap7.lef"
+    ],
+    "EXTRA_LIBS": [
+        "dir::../sram_1rw_128x32_asap7_TT_0p7V_25C.lib"
+    ],
+    "EXTRA_GDS_FILES": [],
+
+    "PDN_MACRO_CONNECTIONS": [
+        ".*u_bank VDD VSS vdd vss"
+    ],
+
+    "RUN_ANTENNA_REPAIR":          true,
+    "RUN_HEURISTIC_DIODE_INSERTION": true,
+    "GRT_ANTENNA_ITERS":           5,
+    "GRT_ANTENNA_MARGIN":          20,
+    "DIODE_ON_PORTS":              "in",
+
+    "RUN_SPEF_EXTRACTION":  false,
+    "RUN_MCSTA":            false,
+    "RUN_IRDROP_REPORT":    false,
+    "RUN_MAGIC_DRC":        false,
+    "RUN_KLAYOUT_DRC":      false,
+    "RUN_KLAYOUT_XOR":      false,
+    "RUN_LVS":              false,
+
+    "LIB": {
+        "nom_tt_025C_0p7V": [
+            "/home/neuromorphic/pdk/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib/asap7sc7p5t_AO_RVT_TT_nldm_211120.lib",
+            "/home/neuromorphic/pdk/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib/asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.lib",
+            "/home/neuromorphic/pdk/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib/asap7sc7p5t_OA_RVT_TT_nldm_211120.lib",
+            "/home/neuromorphic/pdk/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib",
+            "/home/neuromorphic/pdk/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib"
+        ]
+    },
+    "DEFAULT_CORNER": "nom_tt_025C_0p7V",
+    "STA_CORNERS":    ["nom_tt_025C_0p7V"],
+    "TIMING_VIOLATION_CORNERS": ["*tt*"]
+}

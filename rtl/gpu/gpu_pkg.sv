@@ -1,5 +1,7 @@
 // GPU-Lite SIMT package: constants, types, and opcode definitions for Phase 4.
 // All GPU RTL modules import this package.
+// lint_off UNUSEDPARAM: not every module uses every localparam; suppress globally.
+/* verilator lint_off UNUSEDPARAM */
 package gpu_pkg;
 
     // -----------------------------------------------------------------------
@@ -11,14 +13,24 @@ package gpu_pkg;
     localparam int REG_WIDTH        = 32;   // bits per register
     localparam int SHARED_MEM_BYTES = 16384;// 16 KiB scratchpad
     localparam int SHARED_BANKS     = 32;   // banks in shared memory
-    localparam int SHARED_WORDS     = SHARED_MEM_BYTES / (SHARED_BANKS * 4); // 16 words/bank
+    /* verilator lint_off UNUSEDPARAM */
+    localparam int SHARED_WORDS     = SHARED_MEM_BYTES / (SHARED_BANKS * 4); // 16 words/bank (used by shared_memory.sv)
+    /* verilator lint_on UNUSEDPARAM */
+    /* verilator lint_off UNUSEDPARAM */
     localparam int DIV_STACK_DEPTH  = 4;    // per-warp divergence stack entries
+    /* verilator lint_on UNUSEDPARAM */
 
     // Derived widths
-    localparam int LANE_W  = $clog2(N_LANES);   // 3
+    /* verilator lint_off UNUSEDPARAM */
+    localparam int LANE_W  = $clog2(N_LANES);   // 3 (used by shared_memory.sv)
+    /* verilator lint_on UNUSEDPARAM */
+    /* verilator lint_off UNUSEDPARAM */
     localparam int WARP_W  = $clog2(N_WARPS);   // 3
+    /* verilator lint_on UNUSEDPARAM */
+    /* verilator lint_off UNUSEDPARAM */
     localparam int REG_W   = $clog2(N_REGS);    // 5
     localparam int SHMEM_W = $clog2(SHARED_MEM_BYTES); // 14 (byte address)
+    /* verilator lint_on UNUSEDPARAM */
 
     // -----------------------------------------------------------------------
     // Opcode encoding (7-bit primary opcode, RISC-V–style fields retained)
@@ -39,9 +51,12 @@ package gpu_pkg;
         VANDI   = 7'h12,
         VORI    = 7'h13,
         VXORI   = 7'h14,
-        // Memory — I-type
+        // Memory — I-type (global)
         VLD     = 7'h20,
         VST     = 7'h21,
+        // Memory — I-type (shared scratchpad)
+        VLDS    = 7'h22,
+        VSTS    = 7'h23,
         // Branch — B-type
         VBEQ    = 7'h30,
         VBNE    = 7'h31,
@@ -62,15 +77,16 @@ package gpu_pkg;
     } gpu_opcode_t;
 
     // Instruction class — decoded by gpu_compute_unit
-    typedef enum logic [2:0] {
-        IC_ALU    = 3'd0,
-        IC_BRANCH = 3'd1,
-        IC_MEMORY = 3'd2,
-        IC_SPECIAL= 3'd3,   // VMOV tid/bid
-        IC_VSYNC  = 3'd4,
-        IC_VRET   = 3'd5,
-        IC_VJMP   = 3'd6,
-        IC_INVALID= 3'd7
+    typedef enum logic [3:0] {
+        IC_ALU    = 4'd0,
+        IC_BRANCH = 4'd1,
+        IC_MEMORY = 4'd2,
+        IC_SPECIAL= 4'd3,   // VMOV tid/bid
+        IC_VSYNC  = 4'd4,
+        IC_VRET   = 4'd5,
+        IC_VJMP   = 4'd6,
+        IC_SHMEM  = 4'd8,   // shared-memory load/store (VLDS/VSTS)
+        IC_INVALID= 4'd9
     } instr_class_t;
 
     // -----------------------------------------------------------------------
@@ -143,3 +159,4 @@ package gpu_pkg;
     } kernel_desc_t;
 
 endpackage
+/* verilator lint_on UNUSEDPARAM */
