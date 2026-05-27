@@ -55,7 +55,7 @@
     "FP_PDN_CORE_RING_HOFFSET":  0.5,
     "FP_PDN_CORE_RING_VOFFSET":  0.5,
 
-    "RT_MAX_LAYER":  "M7",
+    "RT_MAX_LAYER":  "M9",
     "DRT_THREADS":   4,
 
     "FP_IO_HLENGTH":          4.0,
@@ -64,7 +64,7 @@
     "FP_IO_HTHICKNESS_MULT":  8,
     "FP_IO_VTHICKNESS_MULT":  8,
 
-    "GRT_ADJUSTMENT":         0.20,
+    "GRT_ADJUSTMENT":         0.10,
     "GRT_LAYER_ADJUSTMENTS":  [0.5, 0.0, 0.0, 0.0, 0.0, 0.0],
     "GRT_ALLOW_CONGESTION":   true,
 
@@ -87,8 +87,8 @@
 
     "RUN_POST_GPL_DESIGN_REPAIR":    true,
     "RUN_POST_CTS_RESIZER_TIMING":   false,
-    "RUN_POST_GRT_RESIZER_TIMING":   true,
-    "RUN_POST_GRT_DESIGN_REPAIR":    true,
+    "RUN_POST_GRT_RESIZER_TIMING":   false,
+    "RUN_POST_GRT_DESIGN_REPAIR":    false,
     "MAX_TRANSITION_CONSTRAINT":     15.0,
     "PL_RESIZER_SETUP_SLACK_MARGIN":  0.075,
     "GRT_RESIZER_SETUP_SLACK_MARGIN": 0.100,
