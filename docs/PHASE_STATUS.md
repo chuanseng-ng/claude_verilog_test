@@ -1,12 +1,13 @@
 # Project Phase Status
 
-Last updated: 2026-05-21
+Last updated: 2026-05-27
 
 ## Current Phase
 
-**Phase 4: GPU-Lite SIMT Compute Engine** - 🔄 IN PROGRESS
+**Phase 5: SoC Integration** - ⏸️ NOT STARTED
 
 **Previous Phases**:
+- Phase 4 (GPU-Lite SIMT Compute Engine) - ✅ COMPLETE (2026-05-27) — all GPU tests green, ASAP7 ≥500 MHz sign-off
 - Phase 3 (Memory System & Caches) - ✅ COMPLETE (2026-05-21) — all 20 cache tests passing, 139/139 total
 - Phase 2 (Pipelined CPU) - ✅ COMPLETE (2026-03-08) — 75 MHz on Sky130 130nm
 - Phase 1 (Minimal RV32I Core) - ✅ COMPLETE (2026-02-13)
@@ -208,11 +209,41 @@ Last updated: 2026-05-21
 
 **Achieved frequency**: 75 MHz on Sky130 130nm (ASAP7 runs 1–43 logged in `docs/CPU_ASAP7_RUN_HISTORY.md`)
 
-### Phase 4: GPU-Lite Compute Engine
+### Phase 4: GPU-Lite Compute Engine ✅ COMPLETE
 
-**Status**: ⏸️ NOT STARTED — Phase 3 exit criteria met (2026-05-21), Phase 4 may now begin
+**Status**: ✅ COMPLETE (2026-05-27) — all GPU tests green, 1,000-kernel random regression pass, ASAP7 PD sign-off
 
 **Prerequisites**: ✅ Phase 3 exit criteria met (2026-05-21)
+
+**RTL Modules** (9/9 complete):
+
+| Module | File | Status |
+|--------|------|--------|
+| GPU top | `rtl/gpu/gpu_top.sv` | ✅ Complete |
+| Command queue | `rtl/gpu/gpu_command_queue.sv` | ✅ Complete |
+| Warp scheduler | `rtl/gpu/warp_scheduler.sv` | ✅ Complete |
+| Compute unit | `rtl/gpu/gpu_compute_unit.sv` | ✅ Complete |
+| Vector register file | `rtl/gpu/vector_register_file.sv` | ✅ Complete |
+| Vector ALU | `rtl/gpu/vector_alu.sv` | ✅ Complete |
+| Memory unit | `rtl/gpu/gpu_memory_unit.sv` | ✅ Complete |
+| Memory coalescer | `rtl/gpu/memory_coalescer.sv` | ✅ Complete |
+| Shared memory | `rtl/gpu/shared_memory.sv` | ✅ Complete |
+
+**Verification Results** (2026-05-23):
+
+| Suite | Tests | Result |
+|-------|-------|--------|
+| GPU unit tests (`make gpu_unit`) | all | ✅ PASS |
+| GPU kernel tests (`make gpu_kernels`) | all | ✅ PASS |
+| CPU-GPU handoff (`test_cpu_gpu_handoff.py`) | 1/1 | ✅ PASS |
+| CPU re-gate (`make test` + `make random_uvm`) | 140/140 + 100k instr | ✅ PASS |
+| GPU random regression (`make gpu_random`) | 1,000 kernels | ✅ PASS |
+
+**Physical Design** (2026-05-27):
+- ✅ ASAP7 sign-off: **≥500 MHz (2000 ps) / 228 mW / 115,600 µm² die / 69.3% util**
+- ✅ Setup WNS +306 ps (0 violations), Hold WNS +37 ps (0 violations), trDRC 0, antenna 0
+- ✅ Run: `pnr/asap7/gpu/runs/RUN_2026-05-27_11-16-37/`
+- ✅ Constraints: `pnr/asap7/gpu/constraints/asap7_gpu.sdc`
 
 ### Phase 5: SoC Integration
 

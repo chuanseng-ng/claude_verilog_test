@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project
 
-**Current Phase**: Phase 4 (GPU-Lite SIMT Compute Engine) — ⏸️ NOT STARTED
+**Current Phase**: Phase 5 (SoC Integration) — ⏸️ NOT STARTED
 
-**Status**: Phase 3 complete (2026-05-21, 20 cache tests, 139/139 total, ASAP7 1418 MHz sign-off); Phase 2 complete (2026-03-08, 75 MHz on Sky130)
+**Status**: Phase 4 complete (2026-05-27, all GPU tests green, ASAP7 ≥500 MHz sign-off); Phase 3 complete (2026-05-21, 139/139 total, ASAP7 1418 MHz sign-off); Phase 2 complete (2026-03-08, 75 MHz on Sky130)
 
 **Target**: Build a complete SoC with CPU, GPU, caches, and peripherals through incremental phases
 
@@ -461,15 +461,15 @@ See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification pla
 7. ✅ **Backend flow**: ASAP7 sign-off at **1418 MHz / 27.27 mW / 3,844 µm²** (Run 43, 2026-05-20); Sky130 ceiling 75 MHz
 8. ✅ **Sign-off**: Phase 3 complete (2026-05-21)
 
-### Phase 4 Workflow (Planned — GPU-Lite)
+### Phase 4 Workflow ✅ COMPLETE (2026-05-27)
 
-1. ⏸️ **Architecture review**: Confirm `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md` covers all open questions
-2. ⏸️ **Write GPU RTL**: 9 modules in `rtl/gpu/` (see Project Structure above)
-3. ⏸️ **Unit tests**: Warp scheduling, SIMT divergence, memory coalescing, shared memory
-4. ⏸️ **GPU kernel tests**: Vector add, parallel reduction, divergence test kernels
-5. ⏸️ **Phase 3 regression**: All cache + Phase 2 tests must still pass
-6. ⏸️ **Backend flow**: Synthesis + P&R + STA for GPU block
-7. ⏸️ **Sign-off**: GPU verified standalone; ready for SoC integration
+1. ✅ **Architecture review**: `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md` approved
+2. ✅ **Write GPU RTL**: 9 modules in `rtl/gpu/` implemented
+3. ✅ **Unit tests**: Warp scheduling, SIMT divergence, memory coalescing, shared memory — all pass
+4. ✅ **GPU kernel tests**: Vector add, parallel reduction, divergence, shared-mem ping-pong, VSYNC — all pass
+5. ✅ **Phase 3 regression**: 140/140 CPU tests pass; 1,000-kernel random GPU regression pass
+6. ✅ **Backend flow**: ASAP7 GPU block P&R + STA — `pnr/asap7/gpu/runs/RUN_2026-05-27_11-16-37/`
+7. ✅ **Sign-off**: GPU verified standalone; ready for SoC integration
 
 ### Phase 5 Workflow (Planned — SoC Integration)
 
@@ -608,7 +608,7 @@ Categories:
 
 See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 
-**Current priorities** (Phase 4 - GPU-Lite SIMT — not started):
+**Current priorities** (Phase 5 - SoC Integration — not started):
 
 **Phase 0 Complete** ✅:
 
@@ -656,27 +656,30 @@ See `docs/PHASE_STATUS.md` for current status and immediate next steps.
    - ✅ ASAP7 sign-off: **1418 MHz / 27.27 mW / 3,844 µm²**, 0 DRC, 0 antenna (Run 43, 2026-05-20)
    - ✅ Sky130 ceiling: 75 MHz (PDK-limited; matches Phase 2)
 
-**Phase 4 Tasks** (follows Phase 3 sign-off):
+**Phase 4 Complete** ✅ (2026-05-27):
 
-1. **RTL Implementation**
-   - ⏸️ `rtl/gpu/gpu_top.sv` — top-level with AXI4-Lite control + AXI4 memory + IRQ
-   - ⏸️ `rtl/gpu/gpu_command_queue.sv` — kernel descriptor: PC, grid size, block size, arg pointer
-   - ⏸️ `rtl/gpu/warp_scheduler.sv` — round-robin; warp state: warp_id, PC, active_mask, ready
-   - ⏸️ `rtl/gpu/gpu_compute_unit.sv` — vector ALU + register file + SIMT divergence stack
-   - ⏸️ `rtl/gpu/vector_register_file.sv` — 32 regs × 8 threads per warp
-   - ⏸️ `rtl/gpu/vector_alu.sv` — VADD, VSUB, VMUL, VAND, VOR, VSLL per lane
-   - ⏸️ `rtl/gpu/gpu_memory_unit.sv` — global load/store with AXI burst generation
-   - ⏸️ `rtl/gpu/memory_coalescer.sv` — coalesces 8-lane requests into fewer AXI bursts
-   - ⏸️ `rtl/gpu/shared_memory.sv` — 16 KB scratchpad, 32 banks
+1. **RTL Implementation** ✅
+   - ✅ `rtl/gpu/gpu_top.sv` — top-level with AXI4-Lite control + AXI4 memory + IRQ
+   - ✅ `rtl/gpu/gpu_command_queue.sv` — kernel descriptor FIFO
+   - ✅ `rtl/gpu/warp_scheduler.sv` — round-robin; warp state: warp_id, PC, active_mask, ready
+   - ✅ `rtl/gpu/gpu_compute_unit.sv` — 4-stage FETCH/DECODE/EX/WB + SIMT divergence stack
+   - ✅ `rtl/gpu/vector_register_file.sv` — 32 regs × 8 threads per warp
+   - ✅ `rtl/gpu/vector_alu.sv` — VADD/VSUB/VMUL/VAND/VOR/VXOR/VSLL/VSRL/VSRA + imm forms
+   - ✅ `rtl/gpu/gpu_memory_unit.sv` — global load/store with AXI burst generation
+   - ✅ `rtl/gpu/memory_coalescer.sv` — coalesces 8-lane requests into AXI4 transactions
+   - ✅ `rtl/gpu/shared_memory.sv` — 16 KB scratchpad, 32 banks, VLDS/VSTS
 
-2. **Verification**
-   - ⏸️ Unit tests: `tb/cocotb/gpu/test_warp_scheduler.py`, `test_compute_unit.py`, `test_memory_unit.py`
-   - ⏸️ Kernel tests: vector add, parallel reduction, divergence test
-   - ⏸️ Phase 3 full regression (111+ tests must still pass)
+2. **Verification** ✅
+   - ✅ Unit tests: `test_warp_scheduler.py`, `test_compute_unit.py`, `test_memory_unit.py`, `test_cpu_gpu_handoff.py`
+   - ✅ Kernel tests: vector add, parallel reduction, divergence, shared-mem ping-pong, VSYNC — all pass (`make gpu_all`)
+   - ✅ CPU re-gate: 140/140 directed + 100k random instructions, 0 failures
+   - ✅ Random GPU regression: 1,000 kernels, 0 deadlocks, 0 mismatches
 
-3. **Physical Design**
-   - ⏸️ GPU block synthesis + P&R + STA
-   - ⏸️ `pnr/constraints/phase4_gpu.sdc`, `phase4_gpu.upf`
+3. **Physical Design** ✅
+   - ✅ ASAP7 GPU block sign-off: **≥500 MHz (2000 ps, +306 ps WNS) / 228 mW / 115,600 µm² die**
+   - ✅ Setup 0 violations, Hold 0 violations (post SDC hold false-path fix), trDRC 0, antenna 0
+   - ✅ Run: `pnr/asap7/gpu/runs/RUN_2026-05-27_11-16-37/`
+   - ✅ Constraints: `pnr/asap7/gpu/constraints/asap7_gpu.sdc`
 
 **Phase 5 Tasks** (follows Phase 4 sign-off):
 
