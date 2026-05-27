@@ -19,7 +19,7 @@
 
     "CLOCK_PORT":   "clk",
     "CLOCK_NET":    "clk",
-    "CLOCK_PERIOD": 2.0,
+    "CLOCK_PERIOD": 1.75,
 
     "FP_SIZING":       "absolute",
     "DIE_AREA":        "0 0 340 340",
@@ -87,8 +87,8 @@
 
     "RUN_POST_GPL_DESIGN_REPAIR":    true,
     "RUN_POST_CTS_RESIZER_TIMING":   false,
-    "RUN_POST_GRT_RESIZER_TIMING":   false,
-    "RUN_POST_GRT_DESIGN_REPAIR":    false,
+    "RUN_POST_GRT_RESIZER_TIMING":   true,
+    "RUN_POST_GRT_DESIGN_REPAIR":    true,
     "MAX_TRANSITION_CONSTRAINT":     15.0,
     "PL_RESIZER_SETUP_SLACK_MARGIN":  0.075,
     "GRT_RESIZER_SETUP_SLACK_MARGIN": 0.100,

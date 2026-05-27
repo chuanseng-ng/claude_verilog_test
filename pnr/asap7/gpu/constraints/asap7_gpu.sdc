@@ -15,7 +15,7 @@
 ###############################################################################
 # 1. Clock
 ###############################################################################
-create_clock -name clk -period 2000 [get_ports clk]
+create_clock -name clk -period 1750 [get_ports clk]
 
 set_clock_uncertainty -setup 15 [get_clocks clk]
 set_clock_uncertainty -hold  10 [get_clocks clk]
