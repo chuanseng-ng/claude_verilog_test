@@ -65,3 +65,23 @@ set_false_path -from [get_ports rst_n]
 set_false_path -hold -to [get_pins -hierarchical -filter "name =~ *din0*"]
 set_false_path -hold -to [get_pins -hierarchical -filter "name =~ *addr0*"]
 set_false_path -hold -to [get_pins -hierarchical -filter "name =~ *csb0*"]
+
+###############################################################################
+# 6. AXI master-interface input hold false-paths
+#    m_axil_if_* and m_axi_* inputs are read/response returns launched by the
+#    REGISTERED SoC fabric on the same clk. Block-level -min 20 ps models an
+#    impossible 20 ps launch and yields 368 fictional hold violations
+#    (register-to-register hold is clean: +16.3 ps, 0 viol).
+#    PHASE-5 NOTE: replace with real fabric register-slice timing at SoC
+#    integration — do NOT carry these false-paths into the SoC SDC blindly.
+###############################################################################
+set _m_axi_inputs {}
+foreach _p [all_inputs] {
+    set _n [get_full_name $_p]
+    if {[string match "m_axil_if_*" $_n] || [string match "m_axi_*" $_n]} {
+        lappend _m_axi_inputs $_p
+    }
+}
+if {[llength $_m_axi_inputs] > 0} {
+    set_false_path -hold -from $_m_axi_inputs
+}
