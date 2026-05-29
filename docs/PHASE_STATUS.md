@@ -245,6 +245,12 @@ Last updated: 2026-05-27
 - ✅ Run: `pnr/asap7/gpu/runs/RUN_2026-05-27_11-16-37/`
 - ✅ Constraints: `pnr/asap7/gpu/constraints/asap7_gpu.sdc`
 
+**Phase 4 sign-off frequency is 500 MHz** — `RUN_2026-05-27_11-16-37` is the final, clean signoff and Phase 4 is closed against it.
+
+**571 MHz stretch push** (optional, non-blocking): `RUN_2026-05-28_06-29-48` retargets `CLOCK_PERIOD` 2.0→1.75 ns. If it closes clean it upgrades the GPU signoff to 571 MHz; if it fails the 500 MHz signoff stands unchanged.
+- Step 37 (`repair_design_postgrt`) is the runtime bottleneck: ~18.9 h single-threaded — runs GRT twice plus a multi-thousand-iteration design-repair loop on the ~485 K-instance design. Iteration count is driven by the aggressive 1.75 ns timing target, not by die size; growing the die only relieves the GRT-congestion component.
+- Runtime mitigation applied: `DRT_THREADS` 4→12 (`pnr/asap7/gpu/config.json`) to shorten the downstream detailed-route stage. Run cleared step 37 and advanced to step 38 (`resizer_timing_postgrt`).
+
 ### Phase 5: SoC Integration
 
 **Status**: NOT STARTED
