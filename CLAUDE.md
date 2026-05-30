@@ -121,6 +121,7 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 | `docs/design/PHASE3_ARCHITECTURE_SPEC.md` | Cache architecture spec (Phase 3) - ✅ Approved |
 | `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md` | GPU architecture spec (Phase 4) — frozen ISA/execution model |
 | `docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md` | Phase 3 closure + Phase 4 implementation plan (golden spec) |
+| `docs/PHASE5_SOC_INTEGRATION_PLAN.md` | Phase 5 SoC integration roadmap — 12 milestones M1–M12 (golden spec) |
 | `docs/design/RTL_DEFINITION.md` | Interface signal definitions |
 | `docs/design/MEMORY_MAP.md` | Address space and register map |
 | `docs/design/REFERENCE_MODEL_SPEC.md` | Python reference model API |
