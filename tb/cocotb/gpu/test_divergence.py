@@ -8,9 +8,14 @@ managed manually by each test, simulating what warp_scheduler.sv would do.
 
 Pipeline timing (relative to issue):
   posedge A : issue (warp_issue_i=1, arready_i=1)
-  posedge B : rvalid=1  →  id_ex_q advances (decode + regfile read)
-  posedge C : ex_wb_q advances  (EX result computed)
-  posedge C + 1 ns : WB outputs stable (combinational from ex_wb_q)
+  posedge B : rvalid=1  →  if_id_q.instr captures rdata; instr_rdy_q latches
+  posedge C : instr_rdy_q=1  →  id_ex_q advances (decode + regfile read)
+  posedge D : ex_wb_q advances  (EX result computed)
+  posedge D + 1 ns : WB outputs stable (combinational from ex_wb_q)
+
+Note: posedge B used to simultaneously advance id_ex_q (same-cycle bypass).
+The bypass was removed to eliminate the AXI rdata→decode combinational timing
+path (critical-path limiter in ASAP7 PD). instr_avail now = instr_rdy_q only.
 
 div_entry_t packing  (40 bits, MSB-first packed struct):
   bits[39:8] = return_pc[31:0]
@@ -125,13 +130,16 @@ async def _run_instr(dut, warp_id, pc, mask, instr_word,
     await RisingEdge(dut.clk)      # if_id_q: valid=1, warp info captured
     dut.warp_issue_i.value = 0
 
-    # posedge B: rvalid fires → id_ex_q advances with correct decode+regfile data
+    # posedge B: rvalid=1 → if_id_q.instr captures rdata, instr_rdy_q latches
     dut.if_rdata_i.value  = instr_word
     dut.if_rvalid_i.value = 1
     await RisingEdge(dut.clk)
     dut.if_rvalid_i.value = 0
 
-    # posedge C: ex_wb_q advances with EX-stage results
+    # posedge C: instr_rdy_q=1 → id_ex_q advances with correct decode+regfile data
+    await RisingEdge(dut.clk)
+
+    # posedge D: ex_wb_q advances with EX-stage results
     await RisingEdge(dut.clk)
     await Timer(1, "ns")           # settle combinational WB outputs from ex_wb_q
 

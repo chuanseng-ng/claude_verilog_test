@@ -258,22 +258,30 @@ the goal is PPA characterisation, not tape-out signoff.
 --skip Checker.MaxCapViolations \
 ```
 
-## ASAP7 Macro Views for Hierarchical PnR (rv32i_cpu_top)
+## ASAP7 Macro Views for Hierarchical PnR (rv32i_cpu_top / gpu_top)
 
 Because Magic.StreamOut / KLayout.StreamOut / Magic.WriteLEF are all blocked (see above),
-the Classic LibreLane flow produces **no LEF, GDS, or LIB** from an ASAP7 CPU run.
-To use `rv32i_cpu_top` as a hard macro in a top-level (Phase-5 SoC) PnR run, generate
-the views post-hoc from the saved final ODB using:
+the Classic LibreLane flow produces **no LEF, GDS, or LIB** from an ASAP7 run.
+To use `rv32i_cpu_top` or `gpu_top` as a hard macro in a top-level (Phase-5 SoC) PnR run,
+generate the views post-hoc from the saved final ODB. The target takes `BLOCK=cpu|gpu`
+(default `cpu`); the GPU variant uses the `sram_1rw_128x32` macro lib (CPU uses `256x32`):
 
 ```bash
-cd pnr && make macro-views-asap7                       # uses latest CPU run
-make macro-views-asap7 RUN=asap7/runs/RUN_2026-05-20_21-43-24  # specific run
+cd pnr && make macro-views-asap7                                   # latest CPU run
+make macro-views-asap7 BLOCK=gpu                                   # latest GPU run
+make macro-views-asap7 BLOCK=gpu RUN=asap7/gpu/runs/RUN_2026-05-28_06-29-48  # specific run
 ```
 
-**What this produces** (`pnr/asap7/macro/`):
-- `rv32i_cpu_top.lef` — abstract LEF via OpenROAD `write_abstract_lef -bloat_occupied_layers`
-- `rv32i_cpu_top__nom_tt_025C_0p7V.lib` — timing model via OpenROAD `write_timing_model`
-- `rv32i_cpu_top.nl.v` — gate-level netlist for blackbox instantiation
+**What this produces** (`pnr/asap7/<cpu|gpu>/macro/`, e.g. gpu):
+- `gpu_top.lef` — abstract LEF via OpenROAD `write_abstract_lef -bloat_occupied_layers` (gitignored)
+- `gpu_top__nom_tt_025C_0p7V.lib` — timing model via OpenROAD `write_timing_model` (committed)
+- `gpu_top.nl.v.gz` — gzipped flat post-route netlist for blackbox/full-flat use (committed)
+
+**Netlist is gzipped**: the GPU flat netlist is ~103 MB raw (over GitHub's 100 MB hard
+limit); ~9.6 MB gzipped. CPU is gzipped too for a uniform convention (~635 KB). The target
+runs `gzip -f` after copy; raw `*.nl.v` is gitignored, `*.nl.v.gz` is tracked (pnr/.gitignore
+has `!asap7/*/macro/*.nl.v.gz` exceptions to the `*.v.gz` ignore). Run `gunzip -k <design>.nl.v.gz`
+to restore for full-flat sim/LEC. LEF + LIB stay uncompressed (P&R tools read them directly).
 
 **Why not GDS**: SRAM stub has no GDS geometry; GDS is not needed for PnR on predictive PDKs.
 
@@ -281,8 +289,8 @@ make macro-views-asap7 RUN=asap7/runs/RUN_2026-05-20_21-43-24  # specific run
 that reads the final ODB + liberty + SDC and calls `write_abstract_lef` then `write_timing_model`.
 Does NOT use librelane.steps (avoids SPEF=None hard-fail in `OpenROAD.STAPostPNR.inputs`).
 
-**Convention**: LEF + LIB + NL matches how the SRAM macro is already provided to the CPU run
-(`sram_1rw_256x32_asap7.lef` + `sram_1rw_256x32_asap7_TT_0p7V_25C.lib` + stub.v). Consistent.
+**Convention**: LEF + LIB + NL matches how the SRAM macro is already provided to the run
+(`sram_1rw_*_asap7.lef` + `..._TT_0p7V_25C.lib` + stub.v). Consistent across CPU and GPU.
 
 ## ASAP7 SRAM Stub — Timing Visibility
 

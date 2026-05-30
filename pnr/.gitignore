@@ -22,8 +22,13 @@ librelane/runs/
 *.spef
 *.sdf
 *.v.gz
+*.nl.v
 *.gds
 *.oas
+
+# Macro hard-views are committed compressed (gunzip -k to use); raw .nl.v stays ignored
+!asap7/cpu/macro/*.nl.v.gz
+!asap7/gpu/macro/*.nl.v.gz
 
 # Keep template/example files
 !*.template
@@ -31,3 +36,8 @@ librelane/runs/
 
 # Generated yosys schematics (make schematic)
 asap7/schematics/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key

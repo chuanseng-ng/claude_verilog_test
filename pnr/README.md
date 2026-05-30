@@ -66,6 +66,23 @@ make clean
 
 Each phase has its own constraints and configuration files in the `constraints/` directory.
 
+ASAP7 GPU block (`gpu_top`) is signed off at **571 MHz / 262 mW / 115,600 µm²**
+(`asap7/gpu/runs/RUN_2026-05-28_06-29-48`); see `docs/GPU_ASAP7_RUN_HISTORY.md`.
+CPU (`rv32i_cpu_top`) is signed off at 1418 MHz (`docs/CPU_ASAP7_RUN_HISTORY.md`).
+
+## Hard-Macro Views (Phase-5 SoC hand-off)
+
+Export a signed-off ASAP7 block as LEF + LIB + netlist for hierarchical SoC P&R:
+
+```bash
+make macro-views-asap7 BLOCK=gpu     # latest GPU run → asap7/gpu/macro/
+make macro-views-asap7               # latest CPU run → asap7/cpu/macro/ (BLOCK=cpu default)
+```
+
+The flat post-route netlist is committed gzipped (`<design>.nl.v.gz`; the raw GPU netlist is
+~103 MB, over GitHub's 100 MB limit). Run `gunzip -k <design>.nl.v.gz` to restore it. The LEF
+(gitignored, regenerated on demand) and LIB are read directly by P&R tools.
+
 ## Quality Gates
 
 Before advancing to the next phase, the design must pass:

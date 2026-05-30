@@ -303,3 +303,74 @@ pipeline hierarchy (no rv32i_core.sv, no rv32i_hazard_unit.sv). Their Vtop
 binaries are built from CACHE_SOURCES only and remain valid across all CPU
 RTL changes that do not touch rv32i_cache_pkg.sv, rv32i_icache.sv, or
 rv32i_dcache.sv.
+
+Confirmed extended scope (Run-35, Run-39): changes to rv32i_pipeline_ex1c.sv
+and rv32i_alu.sv also do not require cache sim_build rebuilds — neither file
+is in CACHE_SOURCES.
+
+## nix-shell LDFLAGS variable expansion pitfall (Run-18 / Run-23 lesson)
+
+When running `nix-shell --run "verilator -cc ... -LDFLAGS \"...$COCOTB_LIBS...\"`,
+shell variables defined outside the nix-shell invocation may not expand inside the
+--run string. Symptoms in the generated Vtop.mk:
+- LDFLAGS contain empty paths: `-Wl,-rpath, -L -lcocotbvpi_verilator`
+- verilator.cpp appears as a relative path: `/lib/verilator/verilator.cpp`
+
+These produce link failures or a Vtop binary that immediately crashes.
+
+**Reliable fix:** Write the elaboration command to a temp bash script where all
+variables are defined and used in the same shell process, then pass the script to
+nix-shell:
+
+```bash
+cat > /tmp/elaborate.sh << 'EOF'
+#!/bin/bash
+COCOTB_SHARE=/home/neuromorphic/.local/lib/python3.10/site-packages/cocotb/share
+COCOTB_LIBS=/home/neuromorphic/.local/lib/python3.10/site-packages/cocotb/libs
+/nix/store/xjx9zx3vaz367c7lbnvsd1isvqfkmgg7-verilator-5.048/bin/verilator -cc --exe \
+  -Mdir <sim_build_dir> --prefix Vtop -o Vtop \
+  --top-module <toplevel> --timescale 1ns/1ps --no-timing \
+  -DCOCOTB_SIM=1 --vpi --public-flat-rw \
+  -Wno-fatal -Wno-WIDTH -Wno-CASEINCOMPLETE -Wno-TIMESCALEMOD -Wno-UNOPTFLAT \
+  -LDFLAGS "-Wl,-rpath,$COCOTB_LIBS -L$COCOTB_LIBS -lcocotbvpi_verilator" \
+  [sources...] $COCOTB_SHARE/lib/verilator/verilator.cpp
+EOF
+chmod +x /tmp/elaborate.sh
+cd ~/Downloads/Github/librelane && nix-shell --run "bash /tmp/elaborate.sh"
+```
+
+After elaboration, verify Vtop.mk LDFLAGS line contains actual paths (not empty strings)
+before proceeding to the `make PYTHON3=...` compile step.
+
+## Large stress UVM run can be silently killed (smoke fallback)
+
+A full stress_uvm run (100 seeds × 500 instructions × 4 profiles) may be silently
+killed partway through — not due to OOM, disk full, or kernel errors; root cause
+unknown. Symptoms: sim exits without error after completing 2–3 of 4 profiles; VCD
+file grows to ~10 GB before exit.
+
+**Reliable fallback:** Use `STRESS_TEST_SMOKE=1` (10 seeds × 100 instructions per
+profile). All 4 profiles complete cleanly in smoke mode and resolve any pass/fail
+ambiguity from a partial full run. Smoke run times: alu≈6.5 s, jump≈32 s,
+shift≈3.8 s, immediate≈3.8 s. The smoke run is adequate for gate-verdict purposes.
+
+## rv32i_clock_gate.sv — `ifdef __pnr__` guard and rebuild scope (Run-36 lesson)
+
+`rv32i_clock_gate.sv` contains an `always_latch` body that is wrapped in an
+`` `ifdef __pnr__ `` / `` `else `` behavioral latch `` `endif `` guard. In Verilator
+simulation the `__pnr__` macro is never defined, so the behavioral `always_latch`
+path is always taken — zero functional change in sim.
+
+The file is referenced inside `` `elsif SRAM_ASAP7 `` conditional guards in
+rv32i_icache.sv and rv32i_dcache.sv. In the default freepdk45 simulation build
+(no `SRAM_ASAP7` define), the clock gate file is NOT compiled into the main
+sim_build/Vtop — only into sim_build_icache and sim_build_dcache when those are
+explicitly built with ASAP7 defines.
+
+**Rebuild scope for clock gate changes:** Only sim_build_icache/Vtop and
+sim_build_dcache/Vtop need rebuilding. The main sim_build/Vtop is unaffected and
+does not require rebuild.
+
+## Notes
+
+_Last distilled: 2026-05-28 from 13 experience records._

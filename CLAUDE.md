@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project
 
-**Current Phase**: Phase 4 (GPU-Lite SIMT Compute Engine) — ⏸️ NOT STARTED
+**Current Phase**: Phase 5 (SoC Integration) — ⏸️ NOT STARTED
 
-**Status**: Phase 3 complete (2026-05-21, 20 cache tests, 139/139 total, ASAP7 1418 MHz sign-off); Phase 2 complete (2026-03-08, 75 MHz on Sky130)
+**Status**: Phase 4 complete (2026-05-27, all GPU tests green; ASAP7 GPU sign-off 571 MHz / 262 mW, Run 2026-05-28); Phase 3 complete (2026-05-21, 139/139 total, ASAP7 1418 MHz sign-off); Phase 2 complete (2026-03-08, 75 MHz on Sky130)
 
 **Target**: Build a complete SoC with CPU, GPU, caches, and peripherals through incremental phases
 
@@ -461,15 +461,15 @@ See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification pla
 7. ✅ **Backend flow**: ASAP7 sign-off at **1418 MHz / 27.27 mW / 3,844 µm²** (Run 43, 2026-05-20); Sky130 ceiling 75 MHz
 8. ✅ **Sign-off**: Phase 3 complete (2026-05-21)
 
-### Phase 4 Workflow (Planned — GPU-Lite)
+### Phase 4 Workflow ✅ COMPLETE (2026-05-27)
 
-1. ⏸️ **Architecture review**: Confirm `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md` covers all open questions
-2. ⏸️ **Write GPU RTL**: 9 modules in `rtl/gpu/` (see Project Structure above)
-3. ⏸️ **Unit tests**: Warp scheduling, SIMT divergence, memory coalescing, shared memory
-4. ⏸️ **GPU kernel tests**: Vector add, parallel reduction, divergence test kernels
-5. ⏸️ **Phase 3 regression**: All cache + Phase 2 tests must still pass
-6. ⏸️ **Backend flow**: Synthesis + P&R + STA for GPU block
-7. ⏸️ **Sign-off**: GPU verified standalone; ready for SoC integration
+1. ✅ **Architecture review**: `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md` approved
+2. ✅ **Write GPU RTL**: 9 modules in `rtl/gpu/` implemented
+3. ✅ **Unit tests**: Warp scheduling, SIMT divergence, memory coalescing, shared memory — all pass
+4. ✅ **GPU kernel tests**: Vector add, parallel reduction, divergence, shared-mem ping-pong, VSYNC — all pass
+5. ✅ **Phase 3 regression**: 140/140 CPU tests pass; 1,000-kernel random GPU regression pass
+6. ✅ **Backend flow**: ASAP7 GPU block P&R + STA — 571 MHz sign-off `pnr/asap7/gpu/runs/RUN_2026-05-28_06-29-48/`
+7. ✅ **Sign-off**: GPU verified standalone; ready for SoC integration
 
 ### Phase 5 Workflow (Planned — SoC Integration)
 
@@ -608,7 +608,7 @@ Categories:
 
 See `docs/PHASE_STATUS.md` for current status and immediate next steps.
 
-**Current priorities** (Phase 4 - GPU-Lite SIMT — not started):
+**Current priorities** (Phase 5 - SoC Integration — not started):
 
 **Phase 0 Complete** ✅:
 
@@ -656,27 +656,31 @@ See `docs/PHASE_STATUS.md` for current status and immediate next steps.
    - ✅ ASAP7 sign-off: **1418 MHz / 27.27 mW / 3,844 µm²**, 0 DRC, 0 antenna (Run 43, 2026-05-20)
    - ✅ Sky130 ceiling: 75 MHz (PDK-limited; matches Phase 2)
 
-**Phase 4 Tasks** (follows Phase 3 sign-off):
+**Phase 4 Complete** ✅ (2026-05-27):
 
-1. **RTL Implementation**
-   - ⏸️ `rtl/gpu/gpu_top.sv` — top-level with AXI4-Lite control + AXI4 memory + IRQ
-   - ⏸️ `rtl/gpu/gpu_command_queue.sv` — kernel descriptor: PC, grid size, block size, arg pointer
-   - ⏸️ `rtl/gpu/warp_scheduler.sv` — round-robin; warp state: warp_id, PC, active_mask, ready
-   - ⏸️ `rtl/gpu/gpu_compute_unit.sv` — vector ALU + register file + SIMT divergence stack
-   - ⏸️ `rtl/gpu/vector_register_file.sv` — 32 regs × 8 threads per warp
-   - ⏸️ `rtl/gpu/vector_alu.sv` — VADD, VSUB, VMUL, VAND, VOR, VSLL per lane
-   - ⏸️ `rtl/gpu/gpu_memory_unit.sv` — global load/store with AXI burst generation
-   - ⏸️ `rtl/gpu/memory_coalescer.sv` — coalesces 8-lane requests into fewer AXI bursts
-   - ⏸️ `rtl/gpu/shared_memory.sv` — 16 KB scratchpad, 32 banks
+1. **RTL Implementation** ✅
+   - ✅ `rtl/gpu/gpu_top.sv` — top-level with AXI4-Lite control + AXI4 memory + IRQ
+   - ✅ `rtl/gpu/gpu_command_queue.sv` — kernel descriptor FIFO
+   - ✅ `rtl/gpu/warp_scheduler.sv` — round-robin; warp state: warp_id, PC, active_mask, ready
+   - ✅ `rtl/gpu/gpu_compute_unit.sv` — 4-stage FETCH/DECODE/EX/WB + SIMT divergence stack
+   - ✅ `rtl/gpu/vector_register_file.sv` — 32 regs × 8 threads per warp
+   - ✅ `rtl/gpu/vector_alu.sv` — VADD/VSUB/VMUL/VAND/VOR/VXOR/VSLL/VSRL/VSRA + imm forms
+   - ✅ `rtl/gpu/gpu_memory_unit.sv` — global load/store with AXI burst generation
+   - ✅ `rtl/gpu/memory_coalescer.sv` — coalesces 8-lane requests into AXI4 transactions
+   - ✅ `rtl/gpu/shared_memory.sv` — 16 KB scratchpad, 32 banks, VLDS/VSTS
 
-2. **Verification**
-   - ⏸️ Unit tests: `tb/cocotb/gpu/test_warp_scheduler.py`, `test_compute_unit.py`, `test_memory_unit.py`
-   - ⏸️ Kernel tests: vector add, parallel reduction, divergence test
-   - ⏸️ Phase 3 full regression (111+ tests must still pass)
+2. **Verification** ✅
+   - ✅ Unit tests: `test_warp_scheduler.py`, `test_compute_unit.py`, `test_memory_unit.py`, `test_cpu_gpu_handoff.py`
+   - ✅ Kernel tests: vector add, parallel reduction, divergence, shared-mem ping-pong, VSYNC — all pass (`make gpu_all`)
+   - ✅ CPU re-gate: 140/140 directed + 100k random instructions, 0 failures
+   - ✅ Random GPU regression: 1,000 kernels, 0 deadlocks, 0 mismatches
 
-3. **Physical Design**
-   - ⏸️ GPU block synthesis + P&R + STA
-   - ⏸️ `pnr/constraints/phase4_gpu.sdc`, `phase4_gpu.upf`
+3. **Physical Design** ✅
+   - ✅ ASAP7 GPU block sign-off: **571 MHz (1.75 ns, +197 ps setup WS) / 262 mW / 115,600 µm² die / 60,500 µm² stdcell**
+   - ✅ Setup 0 violations, Hold 0 violations (+16.3 ps WS), slew/cap/fanout 0, antenna 0
+   - ✅ Run: `pnr/asap7/gpu/runs/RUN_2026-05-28_06-29-48/` (supersedes 500 MHz `RUN_2026-05-27_11-16-37`)
+   - ✅ Constraints: `pnr/asap7/gpu/constraints/asap7_gpu.sdc`; full history: `docs/GPU_ASAP7_RUN_HISTORY.md`
+   - ⚠️ Caveats (deferred to SoC PD): PDN connectivity not closed (PSM-0069/PDN-0179, same as prior run); 325 I/O-port `DRT-0074` (0 internal-net DRC); timing is post-GRT estimated (STAPostPNR/RCX gated off)
 
 **Phase 5 Tasks** (follows Phase 4 sign-off):
 
@@ -768,3 +772,190 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 2. Use `detect_changes` for code review.
 3. Use `get_affected_flows` to understand impact.
 4. Use `query_graph` pattern="tests_for" to check coverage.
+
+<!-- rtk-instructions v2 -->
+# RTK (Rust Token Killer) - Token-Optimized Commands
+
+## Golden Rule
+
+**Always prefix commands with `rtk`**. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged. This means RTK is always safe to use.
+
+**Important**: Even in command chains with `&&`, use `rtk`:
+```bash
+# ❌ Wrong
+git add . && git commit -m "msg" && git push
+
+# ✅ Correct
+rtk git add . && rtk git commit -m "msg" && rtk git push
+```
+
+## RTK Commands by Workflow
+
+### Build & Compile (80-90% savings)
+```bash
+rtk cargo build         # Cargo build output
+rtk cargo check         # Cargo check output
+rtk cargo clippy        # Clippy warnings grouped by file (80%)
+rtk tsc                 # TypeScript errors grouped by file/code (83%)
+rtk lint                # ESLint/Biome violations grouped (84%)
+rtk prettier --check    # Files needing format only (70%)
+rtk next build          # Next.js build with route metrics (87%)
+```
+
+### Test (60-99% savings)
+```bash
+rtk cargo test          # Cargo test failures only (90%)
+rtk go test             # Go test failures only (90%)
+rtk jest                # Jest failures only (99.5%)
+rtk vitest              # Vitest failures only (99.5%)
+rtk playwright test     # Playwright failures only (94%)
+rtk pytest              # Python test failures only (90%)
+rtk rake test           # Ruby test failures only (90%)
+rtk rspec               # RSpec test failures only (60%)
+rtk test <cmd>          # Generic test wrapper - failures only
+```
+
+### Git (59-80% savings)
+```bash
+rtk git status          # Compact status
+rtk git log             # Compact log (works with all git flags)
+rtk git diff            # Compact diff (80%)
+rtk git show            # Compact show (80%)
+rtk git add             # Ultra-compact confirmations (59%)
+rtk git commit          # Ultra-compact confirmations (59%)
+rtk git push            # Ultra-compact confirmations
+rtk git pull            # Ultra-compact confirmations
+rtk git branch          # Compact branch list
+rtk git fetch           # Compact fetch
+rtk git stash           # Compact stash
+rtk git worktree        # Compact worktree
+```
+
+Note: Git passthrough works for ALL subcommands, even those not explicitly listed.
+
+### GitHub (26-87% savings)
+```bash
+rtk gh pr view <num>    # Compact PR view (87%)
+rtk gh pr checks        # Compact PR checks (79%)
+rtk gh run list         # Compact workflow runs (82%)
+rtk gh issue list       # Compact issue list (80%)
+rtk gh api              # Compact API responses (26%)
+```
+
+### JavaScript/TypeScript Tooling (70-90% savings)
+```bash
+rtk pnpm list           # Compact dependency tree (70%)
+rtk pnpm outdated       # Compact outdated packages (80%)
+rtk pnpm install        # Compact install output (90%)
+rtk npm run <script>    # Compact npm script output
+rtk npx <cmd>           # Compact npx command output
+rtk prisma              # Prisma without ASCII art (88%)
+```
+
+### Files & Search (60-75% savings)
+```bash
+rtk ls <path>           # Tree format, compact (65%)
+rtk read <file>         # Code reading with filtering (60%)
+rtk grep <pattern>      # Search grouped by file (75%). Format flags (-c, -l, -L, -o, -Z) run raw.
+rtk find <pattern>      # Find grouped by directory (70%)
+```
+
+### Analysis & Debug (70-90% savings)
+```bash
+rtk err <cmd>           # Filter errors only from any command
+rtk log <file>          # Deduplicated logs with counts
+rtk json <file>         # JSON structure without values
+rtk deps                # Dependency overview
+rtk env                 # Environment variables compact
+rtk summary <cmd>       # Smart summary of command output
+rtk diff                # Ultra-compact diffs
+```
+
+### Infrastructure (85% savings)
+```bash
+rtk docker ps           # Compact container list
+rtk docker images       # Compact image list
+rtk docker logs <c>     # Deduplicated logs
+rtk kubectl get         # Compact resource list
+rtk kubectl logs        # Deduplicated pod logs
+```
+
+### Network (65-70% savings)
+```bash
+rtk curl <url>          # Compact HTTP responses (70%)
+rtk wget <url>          # Compact download output (65%)
+```
+
+### Meta Commands
+```bash
+rtk gain                # View token savings statistics
+rtk gain --history      # View command history with savings
+rtk discover            # Analyze Claude Code sessions for missed RTK usage
+rtk proxy <cmd>         # Run command without filtering (for debugging)
+rtk init                # Add RTK instructions to CLAUDE.md
+rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
+```
+
+## Token Savings Overview
+
+| Category | Commands | Typical Savings |
+|----------|----------|-----------------|
+| Tests | vitest, playwright, cargo test | 90-99% |
+| Build | next, tsc, lint, prettier | 70-87% |
+| Git | status, log, diff, add, commit | 59-80% |
+| GitHub | gh pr, gh run, gh issue | 26-87% |
+| Package Managers | pnpm, npm, npx | 70-90% |
+| Files | ls, read, grep, find | 60-75% |
+| Infrastructure | docker, kubectl | 85% |
+| Network | curl, wget | 65-70% |
+
+Overall average: **60-90% token reduction** on common development operations.
+<!-- /rtk-instructions -->
+
+<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
+## Beads Issue Tracker
+
+This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
+
+### Quick Reference
+
+```bash
+bd ready              # Find available work
+bd show <id>          # View issue details
+bd update <id> --claim  # Claim work
+bd close <id>         # Complete work
+```
+
+### Rules
+
+- Use `bd` for ALL task tracking — do NOT use TodoWrite, TaskCreate, or markdown TODO lists
+- Run `bd prime` for detailed command reference and session close protocol
+- Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
+
+**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+
+## Session Completion
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
+<!-- END BEADS INTEGRATION -->
