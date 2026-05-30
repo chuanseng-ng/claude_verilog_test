@@ -141,8 +141,8 @@ help:
 	@echo "  librelane-asap7-gpu-results     - Show metrics from latest ASAP7 GPU LibreLane run"
 	@echo "  prune-asap7-runs          - Delete old CPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
 	@echo "  prune-asap7-gpu-runs      - Delete old GPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
-	@echo "  macro-views-asap7         - Generate LEF + LIB + netlist macro views from latest ASAP7 CPU run"
-	@echo "                              (override run: make macro-views-asap7 RUN=asap7/cpu/runs/RUN_...)"
+	@echo "  macro-views-asap7         - Generate LEF + LIB + netlist macro views from latest ASAP7 run (BLOCK=cpu|gpu, default cpu)"
+	@echo "                              (override run: make macro-views-asap7 BLOCK=gpu RUN=asap7/gpu/runs/RUN_...)"
 	@echo "  asap7/template/           - Template for new ASAP7 designs (copy to asap7/<design>/)"
 	@echo ""
 	@echo "  LIBRELANE_DIR     = $(LIBRELANE_DIR)"
@@ -720,9 +720,10 @@ prune-asap7-gpu-runs:
 #----------------------------------------------------------------
 # ASAP7 macro views: abstract LEF + timing-model LIB + gate-level netlist
 #
-# Generates the three artifacts needed to instantiate rv32i_cpu_top as a hard
-# macro in a top-level (Phase-5 SoC) P&R run.  Mirrors the SRAM macro
-# convention: LEF (abstract) + LIB (timing model) + NL (blackbox netlist).
+# Generates the three artifacts needed to instantiate a block (rv32i_cpu_top or
+# gpu_top) as a hard macro in a top-level (Phase-5 SoC) P&R run.  Mirrors the
+# SRAM macro convention: LEF (abstract) + LIB (timing model) + NL (blackbox
+# netlist).  BLOCK selects the design (cpu | gpu, default cpu).
 #
 # GDS is omitted: Magic has no ASAP7 tech file and the SRAM stub has no GDS
 # geometry — same reason the existing librelane-asap7 target skips streamout.
@@ -731,43 +732,62 @@ prune-asap7-gpu-runs:
 # the saved final/odb so no full flow re-run is needed.
 #
 # Usage:
-#   make macro-views-asap7                              # uses latest CPU run
-#   make macro-views-asap7 RUN=asap7/runs/RUN_2026-…   # specific run
+#   make macro-views-asap7                                   # latest CPU run
+#   make macro-views-asap7 BLOCK=gpu                         # latest GPU run
+#   make macro-views-asap7 BLOCK=gpu RUN=asap7/gpu/runs/RUN_… # specific run
 #
-# Output: pnr/asap7/macro/{rv32i_cpu_top.lef,
+# Output (cpu): pnr/asap7/cpu/macro/{rv32i_cpu_top.lef,
 #                           rv32i_cpu_top__nom_tt_025C_0p7V.lib,
-#                           rv32i_cpu_top.nl.v}
+#                           rv32i_cpu_top.nl.v.gz}
+# Output (gpu): pnr/asap7/gpu/macro/{gpu_top.lef,
+#                           gpu_top__nom_tt_025C_0p7V.lib,
+#                           gpu_top.nl.v.gz}
+#
+# The flat post-route netlist is gzipped (gpu_top.nl.v is ~103 MB raw, over
+# GitHub's 100 MB limit; ~9.6 MB gzipped). LEF + LIB are read directly by P&R
+# tools and stay uncompressed; run `gunzip -k <design>.nl.v.gz` to restore the
+# netlist for full-flat sim/LEC. Raw .nl.v is gitignored.
 #----------------------------------------------------------------
 
+BLOCK ?= cpu
+
 macro-views-asap7:
-	@echo "=========================================="
-	@echo "Generating ASAP7 macro views — rv32i_cpu_top"
-	@echo "=========================================="
 	@set -e; \
+	case "$(BLOCK)" in \
+	  cpu) DESIGN="rv32i_cpu_top"; SRAM_LIB_NAME="sram_1rw_256x32_asap7_TT_0p7V_25C.lib"; \
+	       BLOCK_DIR="$(LIBRELANE_ASAP7_DIR)"; BLOCK_LABEL="CPU";; \
+	  gpu) DESIGN="gpu_top";       SRAM_LIB_NAME="sram_1rw_128x32_asap7_TT_0p7V_25C.lib"; \
+	       BLOCK_DIR="$(LIBRELANE_ASAP7_GPU_DIR)"; BLOCK_LABEL="GPU";; \
+	  *)   echo "ERROR: BLOCK must be cpu or gpu (got '$(BLOCK)')"; exit 1;; \
+	esac; \
+	echo "=========================================="; \
+	echo "Generating ASAP7 macro views — $$DESIGN"; \
+	echo "=========================================="; \
 	if [ -n "$(RUN)" ]; then CPU_RUN="$(RUN)"; \
-	else CPU_RUN="$$(ls -td $(LIBRELANE_ASAP7_DIR)/runs/RUN_* 2>/dev/null | head -1)"; fi; \
+	else CPU_RUN="$$(ls -td $$BLOCK_DIR/runs/RUN_* 2>/dev/null | head -1)"; fi; \
 	if [ -z "$$CPU_RUN" ]; then \
-		echo "ERROR: No ASAP7 CPU runs found. Run 'make librelane-asap7' first."; exit 1; fi; \
+		echo "ERROR: No ASAP7 $$BLOCK_LABEL runs found. Run 'make librelane-asap7' first."; exit 1; fi; \
 	CPU_RUN="$$(realpath "$$CPU_RUN")"; \
 	echo "  Run : $$CPU_RUN"; \
-	ODB="$$CPU_RUN/final/odb/rv32i_cpu_top.odb"; \
-	SDC="$$CPU_RUN/final/sdc/rv32i_cpu_top.sdc"; \
-	NL="$$CPU_RUN/final/nl/rv32i_cpu_top.nl.v"; \
+	ODB="$$CPU_RUN/final/odb/$$DESIGN.odb"; \
+	SDC="$$CPU_RUN/final/sdc/$$DESIGN.sdc"; \
+	NL="$$CPU_RUN/final/nl/$$DESIGN.nl.v"; \
 	if [ ! -f "$$ODB" ]; then echo "ERROR: $$ODB not found"; exit 1; fi; \
-	MACRO_DIR="$(abspath $(LIBRELANE_ASAP7_DIR))/macro"; \
+	MACRO_DIR="$(abspath .)/$$BLOCK_DIR/macro"; \
 	mkdir -p "$$MACRO_DIR"; \
 	ASAP7_LD="$(MANUAL_PDK_ROOT)/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib"; \
-	SRAM_LIB="$(abspath $(LIBRELANE_ASAP7_ROOT))/sram_1rw_256x32_asap7_TT_0p7V_25C.lib"; \
+	SRAM_LIB="$(abspath $(LIBRELANE_ASAP7_ROOT))/$$SRAM_LIB_NAME"; \
 	export ODB_PATH="$$ODB" \
 	       SDC_PATH="$$SDC" \
-	       DESIGN_NAME="rv32i_cpu_top" \
+	       DESIGN_NAME="$$DESIGN" \
 	       MACRO_OUT_DIR="$$MACRO_DIR" \
 	       ASAP7_LIBS="$$ASAP7_LD/asap7sc7p5t_AO_RVT_TT_nldm_211120.lib $$ASAP7_LD/asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.lib $$ASAP7_LD/asap7sc7p5t_OA_RVT_TT_nldm_211120.lib $$ASAP7_LD/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib $$ASAP7_LD/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib $$SRAM_LIB"; \
 	(cd $(LIBRELANE_DIR) && nix-shell --run \
 		"openroad -exit $(abspath scripts/asap7_macro_views.tcl)"); \
-	cp "$$NL" "$$MACRO_DIR/rv32i_cpu_top.nl.v"; \
+	cp "$$NL" "$$MACRO_DIR/$$DESIGN.nl.v"; \
+	gzip -f -6 "$$MACRO_DIR/$$DESIGN.nl.v"; \
 	echo ""; \
-	echo "Macro views staged to $$MACRO_DIR:"; \
+	echo "Macro views staged to $$MACRO_DIR (netlist gzipped; gunzip -k to use):"; \
 	ls -lh "$$MACRO_DIR/"
 
 #----------------------------------------------------------------

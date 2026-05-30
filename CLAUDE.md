@@ -8,7 +8,7 @@ Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project
 
 **Current Phase**: Phase 5 (SoC Integration) — ⏸️ NOT STARTED
 
-**Status**: Phase 4 complete (2026-05-27, all GPU tests green, ASAP7 ≥500 MHz sign-off); Phase 3 complete (2026-05-21, 139/139 total, ASAP7 1418 MHz sign-off); Phase 2 complete (2026-03-08, 75 MHz on Sky130)
+**Status**: Phase 4 complete (2026-05-27, all GPU tests green; ASAP7 GPU sign-off 571 MHz / 262 mW, Run 2026-05-28); Phase 3 complete (2026-05-21, 139/139 total, ASAP7 1418 MHz sign-off); Phase 2 complete (2026-03-08, 75 MHz on Sky130)
 
 **Target**: Build a complete SoC with CPU, GPU, caches, and peripherals through incremental phases
 
@@ -468,7 +468,7 @@ See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification pla
 3. ✅ **Unit tests**: Warp scheduling, SIMT divergence, memory coalescing, shared memory — all pass
 4. ✅ **GPU kernel tests**: Vector add, parallel reduction, divergence, shared-mem ping-pong, VSYNC — all pass
 5. ✅ **Phase 3 regression**: 140/140 CPU tests pass; 1,000-kernel random GPU regression pass
-6. ✅ **Backend flow**: ASAP7 GPU block P&R + STA — `pnr/asap7/gpu/runs/RUN_2026-05-27_11-16-37/`
+6. ✅ **Backend flow**: ASAP7 GPU block P&R + STA — 571 MHz sign-off `pnr/asap7/gpu/runs/RUN_2026-05-28_06-29-48/`
 7. ✅ **Sign-off**: GPU verified standalone; ready for SoC integration
 
 ### Phase 5 Workflow (Planned — SoC Integration)
@@ -676,10 +676,11 @@ See `docs/PHASE_STATUS.md` for current status and immediate next steps.
    - ✅ Random GPU regression: 1,000 kernels, 0 deadlocks, 0 mismatches
 
 3. **Physical Design** ✅
-   - ✅ ASAP7 GPU block sign-off: **≥500 MHz (2000 ps, +306 ps WNS) / 228 mW / 115,600 µm² die**
-   - ✅ Setup 0 violations, Hold 0 violations (post SDC hold false-path fix), trDRC 0, antenna 0
-   - ✅ Run: `pnr/asap7/gpu/runs/RUN_2026-05-27_11-16-37/`
-   - ✅ Constraints: `pnr/asap7/gpu/constraints/asap7_gpu.sdc`
+   - ✅ ASAP7 GPU block sign-off: **571 MHz (1.75 ns, +197 ps setup WS) / 262 mW / 115,600 µm² die / 60,500 µm² stdcell**
+   - ✅ Setup 0 violations, Hold 0 violations (+16.3 ps WS), slew/cap/fanout 0, antenna 0
+   - ✅ Run: `pnr/asap7/gpu/runs/RUN_2026-05-28_06-29-48/` (supersedes 500 MHz `RUN_2026-05-27_11-16-37`)
+   - ✅ Constraints: `pnr/asap7/gpu/constraints/asap7_gpu.sdc`; full history: `docs/GPU_ASAP7_RUN_HISTORY.md`
+   - ⚠️ Caveats (deferred to SoC PD): PDN connectivity not closed (PSM-0069/PDN-0179, same as prior run); 325 I/O-port `DRT-0074` (0 internal-net DRC); timing is post-GRT estimated (STAPostPNR/RCX gated off)
 
 **Phase 5 Tasks** (follows Phase 4 sign-off):
 

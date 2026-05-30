@@ -1,7 +1,7 @@
 # Phase 4 (GPU-Lite SIMT) — Sign-Off Progress
 
 Tracks progress against the golden-plan sign-off checklist
-(`docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md` §9). Updated 2026-05-23.
+(`docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md` §9). Updated 2026-05-30.
 
 ## Completed & verified
 
@@ -20,5 +20,5 @@ Tracks progress against the golden-plan sign-off checklist
 | :- | :--------- | :---- |
 | ✅ F | Phase 2+3 CPU-only re-gate (hard gate) | **PASSED** 2026-05-23. Directed regression `make test` = 140/140, 0 failures (smoke 12, c_programs 1, axi_protocol 12, debug_if 6, isa_uvm 54, fault_injection 7, hazards 16, interrupts 12, icache 7, dcache 8, cache_integration 5). Random UVM `make random_uvm` = 1000 seeds × 100 instr (100k total), all passed, 0 scoreboard mismatches. Confirms GPU-only edits did not break the CPU (CPU build does not compile `rtl/gpu/`) |
 | ✅ E | 1000-kernel random regression | **PASSED** 2026-05-23: 1000 random straight-line kernels vs new `tb/cocotb/gpu/gpu_ref_model.py` (`GpuRefModel`, matches RTL/`gpu_asm` encoding), 0 deadlocks, 0 mismatches. Harness: `tb/cocotb/gpu/test_random_kernels.py`, `make gpu_random` (sets `EXTRA_ARGS=""` to skip tracing). Report: `docs/regression/PHASE4_RANDOM_KERNELS.md`. Branches/loads/shared-mem out of random scope (covered by directed kernels) |
-| G | ASAP7 GPU-block P&R | New `pnr/asap7/gpu/` (`config.json` DESIGN_NAME `gpu_top`, `constraints/asap7_gpu.sdc`, `macro_placement.cfg`, `pdn.tcl`); multi-hour LibreLane run; sign-off WNS≥0 setup+hold, 0 DRC, 0 antenna; record power/area. GPU UPF deferred to Phase 5 |
-| H | Docs + tag | Update the stale Phase 4 block in `docs/PHASE_STATUS.md` (currently "NOT STARTED"); add PD run-history entry; tag Phase 4 complete in `CLAUDE.md` |
+| ✅ G | ASAP7 GPU-block P&R | **PASSED** 2026-05-28: `RUN_2026-05-28_06-29-48` — **571 MHz** (1.75 ns), setup +197.3 ps / hold +16.3 ps (0 viol each), antenna 0, 262 mW, 115,600 µm² die / 60,500 µm² stdcell. Supersedes 500 MHz `RUN_2026-05-27_11-16-37`. Caveats deferred to SoC PD: PDN connectivity not closed (`PSM-0069`/`PDN-0179`), 325 I/O-port `DRT-0074` (0 internal-net DRC), post-GRT-estimated timing. Full history: `docs/GPU_ASAP7_RUN_HISTORY.md`. GPU UPF deferred to Phase 5 |
+| ✅ H | Docs + tag | **DONE** 2026-05-30: `docs/PHASE_STATUS.md` Phase 4 block updated to 571 MHz signoff; `docs/GPU_ASAP7_RUN_HISTORY.md` created; `CLAUDE.md` tagged Phase 4 complete. Macro views exported via `make macro-views-asap7 BLOCK=gpu` (netlist gzipped under GitHub's 100 MB limit) |
