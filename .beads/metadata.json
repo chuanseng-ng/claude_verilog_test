@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "claude_verilog_test",
+  "project_id": "05537031-fd5f-459f-bc45-b8bc8426b420"
+}
