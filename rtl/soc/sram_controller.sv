@@ -94,6 +94,23 @@ module sram_controller
         return (addr >= SRAM_BASE) && (addr <= SRAM_LIMIT);
     endfunction
 
+    // Last-beat byte address for a burst.  For INCR, the final beat starts at
+    // base + len*4 (AxSIZE fixed at 4 B in this SoC).  For FIXED/WRAP the
+    // address does not advance past the start beat — use base so the caller's
+    // in_range(last) check is identical to in_range(base).
+    // Note: WRAP is already rejected by the burst-type check; returning base
+    // here is conservative but correct.
+    function automatic logic [AW-1:0] last_addr(
+        input logic [AW-1:0]   base,
+        input logic [LENW-1:0] len,
+        input logic [1:0]      burst
+    );
+        if (burst == AXI_BURST_INCR)
+            return base + (AW'(len) << 2);
+        else
+            return base;
+    endfunction
+
     // ── Write FSM ────────────────────────────────────────────────────────────
     typedef enum logic [1:0] {W_IDLE, W_DATA, W_RESP} wstate_e;
     wstate_e          wstate;
@@ -113,20 +130,24 @@ module sram_controller
                     if (s_awvalid) begin
                         w_idx  <= word_index(s_awaddr);
                         bid_q  <= s_awid;
-                        w_err  <= ~in_range(s_awaddr) || (s_awburst == AXI_BURST_WRAP);
+                        w_err  <= ~in_range(s_awaddr)
+                                  || ~in_range(last_addr(s_awaddr, s_awlen, s_awburst))
+                                  || (s_awburst == AXI_BURST_WRAP);
                         w_incr <= (s_awburst == AXI_BURST_INCR);
                         wstate <= W_DATA;
                     end
                 end
                 W_DATA: begin
                     if (s_wvalid) begin
-                        for (int b = 0; b < SW; b++) begin
-                            if (s_wstrb[b]) begin
-                                mem[w_idx][b*8 +: 8] <= s_wdata[b*8 +: 8];
+                        if (!w_err) begin
+                            for (int b = 0; b < SW; b++) begin
+                                if (s_wstrb[b]) begin
+                                    mem[w_idx][b*8 +: 8] <= s_wdata[b*8 +: 8];
+                                end
                             end
-                        end
-                        if (w_incr) begin
-                            w_idx <= w_idx + 1'b1;
+                            if (w_incr) begin
+                                w_idx <= w_idx + 1'b1;
+                            end
                         end
                         if (s_wlast) begin
                             wstate <= W_RESP;
@@ -170,7 +191,9 @@ module sram_controller
                         r_idx  <= word_index(s_araddr);
                         r_cnt  <= s_arlen;
                         rid_q  <= s_arid;
-                        r_err  <= ~in_range(s_araddr) || (s_arburst == AXI_BURST_WRAP);
+                        r_err  <= ~in_range(s_araddr)
+                                  || ~in_range(last_addr(s_araddr, s_arlen, s_arburst))
+                                  || (s_arburst == AXI_BURST_WRAP);
                         r_incr <= (s_arburst == AXI_BURST_INCR);
                         rstate <= R_DATA;
                     end
@@ -203,6 +226,6 @@ module sram_controller
     // AxSIZE is fixed at 4 B for this 32-bit SoC; AWLEN is implied by WLAST on
     // the write path.  Sink them to keep Verilator -Wall clean.
     logic _unused_ok;
-    assign _unused_ok = &{1'b0, s_awsize, s_arsize, s_awlen};
+    assign _unused_ok = &{1'b0, s_awsize, s_arsize};
 
 endmodule
