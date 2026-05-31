@@ -80,7 +80,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller soc_all
+.PHONY: crossbar register_bank axil_interconnect sram_controller soc_all verilator_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar
 
@@ -92,7 +92,11 @@ axil_interconnect:
 	$(MAKE) MODULE=test_axil_interconnect TOPLEVEL=tb_axi_lite_interconnect \
 		VERILOG_SOURCES="$(AXIL_SOURCES)"
 
-sram_controller:
+verilator_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module sram_controller $(SRAM_SOURCES)
+
+sram_controller: verilator_lint
 	$(MAKE) MODULE=test_sram_controller TOPLEVEL=sram_controller \
 		VERILOG_SOURCES="$(SRAM_SOURCES)"
 

@@ -24,8 +24,9 @@ RESP_SLVERR = 0b10
 SIZE_4B = 0b010
 BURST_INCR = 0b01
 
-SRAM_BASE = 0x0000_2000
-OOR_ADDR  = 0x0000_1000   # below SRAM window -> SLVERR
+SRAM_BASE  = 0x0000_2000
+SRAM_LIMIT = 0x0FFF_FFFF   # inclusive top of SRAM window
+OOR_ADDR   = 0x0000_1000   # below SRAM window -> SLVERR
 
 
 async def _setup(dut):
@@ -234,3 +235,47 @@ async def test_back_to_back_bursts(dut):
     assert d0 == w0, f"burst0 mismatch {[hex(d) for d in d0]}"
     assert d1 == w1, f"burst1 mismatch {[hex(d) for d in d1]}"
     dut._log.info("test_back_to_back_bursts PASS")
+
+
+# ── Test 7: INCR burst that crosses SRAM_LIMIT returns SLVERR ────────────────
+
+@cocotb.test()
+async def test_burst_crosses_limit_slverr(dut):
+    """4-beat INCR burst starting near SRAM_LIMIT whose last beat exceeds the
+    window boundary must return SLVERR on both write and read.
+
+    Start address: SRAM_LIMIT - 0xB, aligned down to 4 B = 0x0FFF_FFF4.
+      Beat 0: 0x0FFF_FFF4  (inside  window)
+      Beat 1: 0x0FFF_FFF8  (inside  window)
+      Beat 2: 0x0FFF_FFFC  (inside  window)
+      Beat 3: 0x1000_0000  (OUTSIDE window -> burst crosses limit)
+    The RTL full-span check (last_addr = base + len*4) must catch this and
+    assert w_err / r_err, producing SLVERR on the B and R channels.
+    """
+    m = await _setup(dut)
+
+    # Word-aligned start address inside the SRAM window, close to the top.
+    # last beat byte address = start + 3*4 = 0x0FFF_FFF4 + 0xC = 0x1000_0000
+    # which exceeds SRAM_LIMIT (0x0FFF_FFFF).
+    start = (SRAM_LIMIT - 0xB) & ~0x3   # 0x0FFF_FFF4
+
+    dut._log.info(
+        f"test_burst_crosses_limit_slverr: start=0x{start:08X} "
+        f"last_beat=0x{start + 3*4:08X} SRAM_LIMIT=0x{SRAM_LIMIT:08X}"
+    )
+
+    # Write: 4-beat INCR burst crossing the window end -> expect SLVERR.
+    bresp = await m.write(start, [0xDEAD_0001, 0xDEAD_0002, 0xDEAD_0003, 0xDEAD_0004])
+    assert bresp == RESP_SLVERR, (
+        f"crossing-burst write resp {bresp:#x} != SLVERR (0x{RESP_SLVERR:x}); "
+        "RTL full-span range check may be missing"
+    )
+
+    # Read: same burst -> expect SLVERR.
+    _, rresp = await m.read(start, length=4)
+    assert rresp == RESP_SLVERR, (
+        f"crossing-burst read resp {rresp:#x} != SLVERR (0x{RESP_SLVERR:x}); "
+        "RTL full-span range check may be missing"
+    )
+
+    dut._log.info("test_burst_crosses_limit_slverr PASS")
