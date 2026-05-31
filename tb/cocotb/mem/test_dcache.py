@@ -34,10 +34,17 @@ LINE_WORDS = 4  # 4 words per 16-byte line
 
 class SimpleDCacheAXIMem:
     """
-    Read/write AXI4-Lite slave for D-cache unit tests.
+    Read/write AXI4 burst slave for D-cache unit tests.
 
-    Handles both AXI read (refill) and AXI write (writeback) channels
-    sequentially (not interleaved, since RTL uses them sequentially).
+    Handles both AXI read (cache refill bursts) and AXI write (dirty-line
+    writeback bursts) channels sequentially (RTL uses them sequentially).
+
+    Burst protocol:
+      Read  — samples axi_arlen_o (default 0), loops nbeats R responses,
+               drives axi_rlast_i on the final beat.
+      Write — accepts ONE AW handshake, loops consuming W beats until
+               axi_wlast_o (default 1 for single-beat backward compat),
+               then issues ONE B response.
     """
 
     def __init__(self, dut, rd_latency: int = 0, wr_latency: int = 0):
@@ -67,7 +74,10 @@ class SimpleDCacheAXIMem:
             if self.rd_latency:
                 await ClockCycles(dut.clk, self.rd_latency)
 
+            # Accept AR — sample burst length (default 0 for backward compat)
             addr = int(dut.axi_araddr_o.value) & ~0x3  # word-align
+            arlen = int(getattr(dut, "axi_arlen_o", 0))
+            nbeats = arlen + 1
             dut.axi_arready_i.value = 1
             await RisingEdge(dut.clk)
             dut.axi_arready_i.value = 0
@@ -75,18 +85,27 @@ class SimpleDCacheAXIMem:
             if self.rd_latency:
                 await ClockCycles(dut.clk, self.rd_latency)
 
-            word_addr = addr >> 2
-            data = self.mem.get(word_addr, 0)
-            dut.axi_rvalid_i.value = 1
-            dut.axi_rdata_i.value = data
-            dut.axi_rresp_i.value = AXI_RESP_OK
+            # Drive nbeats of R channel data, asserting rlast on the last beat
+            for beat in range(nbeats):
+                word_addr = (addr >> 2) + beat
+                data = self.mem.get(word_addr, 0)
+                is_last = (beat == nbeats - 1)
 
-            await RisingEdge(dut.clk)
-            while not dut.axi_rready_o.value:
+                dut.axi_rvalid_i.value = 1
+                dut.axi_rdata_i.value = data
+                dut.axi_rresp_i.value = AXI_RESP_OK
+                if hasattr(dut, "axi_rlast_i"):
+                    dut.axi_rlast_i.value = 1 if is_last else 0
+
                 await RisingEdge(dut.clk)
+                while not dut.axi_rready_o.value:
+                    await RisingEdge(dut.clk)
 
+            # Deassert after last beat accepted
             dut.axi_rvalid_i.value = 0
             dut.axi_rdata_i.value = 0
+            if hasattr(dut, "axi_rlast_i"):
+                dut.axi_rlast_i.value = 0
 
     async def _write_handler(self):
         dut = self.dut
@@ -98,37 +117,53 @@ class SimpleDCacheAXIMem:
             if self.wr_latency:
                 await ClockCycles(dut.clk, self.wr_latency)
 
+            # Accept AW — sample burst length (default 0 for backward compat)
             aw_addr = int(dut.axi_awaddr_o.value) & ~0x3
+            awlen = int(getattr(dut, "axi_awlen_o", 0))
+            nbeats = awlen + 1
             dut.axi_awready_i.value = 1
             await RisingEdge(dut.clk)
             dut.axi_awready_i.value = 0
 
-            # Wait for W valid
-            while not dut.axi_wvalid_o.value:
+            # Consume nbeats of W channel, stopping when wlast is seen.
+            # Always consume a rising edge before sampling wdata/wlast so that
+            # Verilator has fully evaluated the RTL (including the combinational
+            # axi_wdata_o = wb_buf_q[axi_word_q] update from the previous beat's
+            # axi_word_q increment) before latching the data.
+            for beat in range(nbeats):
+                # Wait for wvalid at a rising-edge boundary
+                while True:
+                    await RisingEdge(dut.clk)
+                    if dut.axi_wvalid_o.value:
+                        break
+
+                if self.wr_latency:
+                    await ClockCycles(dut.clk, self.wr_latency)
+
+                wdata = int(dut.axi_wdata_o.value)
+                wstrb = int(dut.axi_wstrb_o.value)
+                # wlast: default 1 so single-beat (AXI4-Lite) still works
+                wlast = int(getattr(dut, "axi_wlast_o", 1))
+
+                # Merge with existing memory using byte strobe
+                word_addr = (aw_addr >> 2) + beat
+                old = self.mem.get(word_addr, 0)
+                merged = 0
+                for byte in range(4):
+                    if wstrb & (1 << byte):
+                        merged |= wdata & (0xFF << (byte * 8))
+                    else:
+                        merged |= old & (0xFF << (byte * 8))
+                self.mem[word_addr] = merged
+
+                dut.axi_wready_i.value = 1
                 await RisingEdge(dut.clk)
+                dut.axi_wready_i.value = 0
 
-            if self.wr_latency:
-                await ClockCycles(dut.clk, self.wr_latency)
+                if wlast:
+                    break  # RTL asserted wlast early (or single-beat)
 
-            wdata = int(dut.axi_wdata_o.value)
-            wstrb = int(dut.axi_wstrb_o.value)
-
-            # Merge with existing memory using strobe
-            word_addr = aw_addr >> 2
-            old = self.mem.get(word_addr, 0)
-            merged = 0
-            for byte in range(4):
-                if wstrb & (1 << byte):
-                    merged |= wdata & (0xFF << (byte * 8))
-                else:
-                    merged |= old & (0xFF << (byte * 8))
-            self.mem[word_addr] = merged
-
-            dut.axi_wready_i.value = 1
-            await RisingEdge(dut.clk)
-            dut.axi_wready_i.value = 0
-
-            # B channel
+            # One B response per burst
             if self.wr_latency:
                 await ClockCycles(dut.clk, self.wr_latency)
 
@@ -157,6 +192,8 @@ async def _reset(dut, cycles: int = 4):
     dut.axi_rvalid_i.value = 0
     dut.axi_rdata_i.value = 0
     dut.axi_rresp_i.value = 0
+    if hasattr(dut, "axi_rlast_i"):
+        dut.axi_rlast_i.value = 0
     dut.axi_awready_i.value = 0
     dut.axi_wready_i.value = 0
     dut.axi_bvalid_i.value = 0

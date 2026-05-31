@@ -125,6 +125,8 @@ class BaseTest(uvm_test):
         self.dut.axi_rvalid_i.value = 0
         self.dut.axi_rdata_i.value = 0
         self.dut.axi_rresp_i.value = 0
+        if hasattr(self.dut, "axi_rlast_i"):
+            self.dut.axi_rlast_i.value = 0
         self.dut.axi_awready_i.value = 0
         self.dut.axi_wready_i.value = 0
         self.dut.axi_bvalid_i.value = 0

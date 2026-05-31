@@ -149,6 +149,8 @@ class SimpleAXIMemory:
             if int(self.dut.rst_n_i.value) == 0:
                 self.dut.axi_arready_i.value = 0
                 self.dut.axi_rvalid_i.value = 0
+                if hasattr(self.dut, "axi_rlast_i"):
+                    self.dut.axi_rlast_i.value = 0
                 continue
             if self.dut.axi_arvalid_o.value == 1:
                 # Wait 1 cycle for pipeline/arbiter to settle before reading
@@ -158,31 +160,52 @@ class SimpleAXIMemory:
                 if int(self.dut.rst_n_i.value) == 0:
                     self.dut.axi_arready_i.value = 0
                     self.dut.axi_rvalid_i.value = 0
+                    if hasattr(self.dut, "axi_rlast_i"):
+                        self.dut.axi_rlast_i.value = 0
                     continue
                 if self.dut.axi_arvalid_o.value != 1:
                     self.dut.axi_arready_i.value = 0
                     continue
 
                 addr = int(self.dut.axi_araddr_o.value)
-                data = self.read_word(addr)
+                # Sample burst length (default 0 for AXI4-Lite backward compat)
+                arlen = int(getattr(self.dut, "axi_arlen_o", 0))
+                nbeats = arlen + 1
                 self.dut.axi_arready_i.value = 1
 
                 await RisingEdge(self.dut.clk_i)
                 self.dut.axi_arready_i.value = 0
-                self.dut.axi_rvalid_i.value = 1
-                self.dut.axi_rdata_i.value = data
-                self.dut.axi_rresp_i.value = 0
 
-                # Wait for rready handshake; abort cleanly if reset fires mid-transaction.
-                while self.dut.axi_rready_o.value == 0:
-                    if int(self.dut.rst_n_i.value) == 0:
-                        self.dut.axi_rvalid_i.value = 0
-                        break
-                    await RisingEdge(self.dut.clk_i)
-                else:
-                    # Normal completion: hold rvalid for one cycle after handshake.
-                    await RisingEdge(self.dut.clk_i)
-                    self.dut.axi_rvalid_i.value = 0
+                # Drive nbeats of R data, asserting rlast on final beat.
+                # Reset guard: if reset fires mid-burst, deassert cleanly and break.
+                for beat in range(nbeats):
+                    data = self.read_word((addr & 0xFFFFFFFC) + beat * 4)
+                    is_last = (beat == nbeats - 1)
+                    self.dut.axi_rvalid_i.value = 1
+                    self.dut.axi_rdata_i.value = data
+                    self.dut.axi_rresp_i.value = 0
+                    if hasattr(self.dut, "axi_rlast_i"):
+                        self.dut.axi_rlast_i.value = 1 if is_last else 0
+
+                    # Wait for rready handshake; abort cleanly on reset mid-burst.
+                    while self.dut.axi_rready_o.value == 0:
+                        if int(self.dut.rst_n_i.value) == 0:
+                            self.dut.axi_rvalid_i.value = 0
+                            if hasattr(self.dut, "axi_rlast_i"):
+                                self.dut.axi_rlast_i.value = 0
+                            break
+                        await RisingEdge(self.dut.clk_i)
+                    else:
+                        # Normal beat completion — advance to next beat or finish.
+                        await RisingEdge(self.dut.clk_i)
+                        continue
+                    # Reset fired mid-burst — discard remainder of burst.
+                    break
+
+                # Deassert after burst completed (or reset)
+                self.dut.axi_rvalid_i.value = 0
+                if hasattr(self.dut, "axi_rlast_i"):
+                    self.dut.axi_rlast_i.value = 0
             else:
                 self.dut.axi_arready_i.value = 0
 
@@ -197,19 +220,43 @@ class SimpleAXIMemory:
                 continue
             if (
                 self.dut.axi_awvalid_o.value == 1
-                and self.dut.axi_wvalid_o.value == 1
                 and self.dut.axi_awready_i.value == 0
             ):
-                self.dut.axi_awready_i.value = 1
-                self.dut.axi_wready_i.value = 1
+                # Accept AW — sample burst length (default 0 for single-beat compat)
                 addr = int(self.dut.axi_awaddr_o.value)
-                data = int(self.dut.axi_wdata_o.value)
+                awlen = int(getattr(self.dut, "axi_awlen_o", 0))
+                nbeats = awlen + 1
+                self.dut.axi_awready_i.value = 1
 
                 await RisingEdge(self.dut.clk_i)
                 self.dut.axi_awready_i.value = 0
-                self.dut.axi_wready_i.value = 0
-                self.write_word(addr, data)
 
+                # Consume nbeats of W channel (stop early on wlast)
+                for beat in range(nbeats):
+                    while self.dut.axi_wvalid_o.value == 0:
+                        if int(self.dut.rst_n_i.value) == 0:
+                            self.dut.axi_wready_i.value = 0
+                            self.dut.axi_bvalid_i.value = 0
+                            break
+                        await RisingEdge(self.dut.clk_i)
+                    else:
+                        data = int(self.dut.axi_wdata_o.value)
+                        # wlast: default 1 so single-beat (AXI4-Lite) still terminates
+                        wlast = int(getattr(self.dut, "axi_wlast_o", 1))
+                        self.dut.axi_wready_i.value = 1
+                        beat_addr = (addr & 0xFFFFFFFC) + beat * 4
+                        self.write_word(beat_addr, data)
+
+                        await RisingEdge(self.dut.clk_i)
+                        self.dut.axi_wready_i.value = 0
+
+                        if wlast:
+                            break  # RTL asserted wlast (or single beat)
+                        continue
+                    # Reset fired mid-burst — discard, restart outer loop
+                    break
+
+                # One B response per burst (with reset guard)
                 self.dut.axi_bvalid_i.value = 1
                 self.dut.axi_bresp_i.value = 0
 
@@ -331,6 +378,8 @@ def _init_inputs(dut):
     dut.axi_rvalid_i.value = 0
     dut.axi_rdata_i.value = 0
     dut.axi_rresp_i.value = 0
+    if hasattr(dut, "axi_rlast_i"):
+        dut.axi_rlast_i.value = 0
     dut.axi_awready_i.value = 0
     dut.axi_wready_i.value = 0
     dut.axi_bvalid_i.value = 0

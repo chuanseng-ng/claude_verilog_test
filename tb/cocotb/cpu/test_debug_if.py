@@ -79,6 +79,8 @@ async def reset_dut(dut):
     dut.axi_rvalid_i.value = 0
     dut.axi_rdata_i.value = 0
     dut.axi_rresp_i.value = 0
+    if hasattr(dut, "axi_rlast_i"):
+        dut.axi_rlast_i.value = 0
     dut.axi_awready_i.value = 0
     dut.axi_wready_i.value = 0
     dut.axi_bvalid_i.value = 0

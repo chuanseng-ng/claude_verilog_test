@@ -34,10 +34,12 @@ AXI_RESP_OK = 0b00
 
 class SimpleICacheAXIMem:
     """
-    Simple read-only AXI4-Lite slave for I-cache refill.
+    Read-only AXI4 burst slave for I-cache refill.
 
     Keeps a word-addressed dictionary as backing store.
     Configurable fixed latency (arready_delay + rvalid_delay cycles).
+    Supports burst protocol: samples axi_arlen_o (default 0 for backward
+    compat) and drives axi_rlast_i on the final beat.
     """
 
     def __init__(self, dut, latency: int = 0):
@@ -71,25 +73,37 @@ class SimpleICacheAXIMem:
             # Both ARVALID and ARREADY were high on the previous edge — the
             # address is now stable; sample it here.
             addr = int(dut.axi_araddr_o.value)
+            # Sample burst length (ARLEN=3 → 4 beats); default 0 for AXI4-Lite
+            # backward compatibility when the DUT port is absent.
+            arlen = int(getattr(dut, "axi_arlen_o", 0))
+            nbeats = arlen + 1
             dut.axi_arready_i.value = 0
 
-            # Send read data
+            # Send read data — one beat per burst position
             if self.latency:
                 await ClockCycles(dut.clk, self.latency)
 
-            word_addr = addr >> 2
-            data = self.mem.get(word_addr, 0xDEAD_BEEF)
+            for beat in range(nbeats):
+                word_addr = (addr >> 2) + beat
+                data = self.mem.get(word_addr, 0xDEAD_BEEF)
+                is_last = (beat == nbeats - 1)
 
-            dut.axi_rvalid_i.value = 1
-            dut.axi_rdata_i.value = data
-            dut.axi_rresp_i.value = AXI_RESP_OK
+                dut.axi_rvalid_i.value = 1
+                dut.axi_rdata_i.value = data
+                dut.axi_rresp_i.value = AXI_RESP_OK
+                # Drive rlast on the final beat (default to 0 if signal absent)
+                if hasattr(dut, "axi_rlast_i"):
+                    dut.axi_rlast_i.value = 1 if is_last else 0
 
-            await RisingEdge(dut.clk)
-            while not dut.axi_rready_o.value:
                 await RisingEdge(dut.clk)
+                while not dut.axi_rready_o.value:
+                    await RisingEdge(dut.clk)
 
+            # Deassert rvalid and rlast after the last beat is accepted
             dut.axi_rvalid_i.value = 0
             dut.axi_rdata_i.value = 0
+            if hasattr(dut, "axi_rlast_i"):
+                dut.axi_rlast_i.value = 0
 
 
 # ---------------------------------------------------------------------------
@@ -107,6 +121,8 @@ async def _reset(dut, cycles: int = 4):
     dut.axi_rvalid_i.value = 0
     dut.axi_rdata_i.value = 0
     dut.axi_rresp_i.value = 0
+    if hasattr(dut, "axi_rlast_i"):
+        dut.axi_rlast_i.value = 0
     await ClockCycles(dut.clk, cycles)
     dut.rst_n.value = 1
     await RisingEdge(dut.clk)
