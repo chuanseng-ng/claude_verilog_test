@@ -77,7 +77,7 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 
 **Tech node progression**: Sky130 → FreePDK45/NanGate45 → ASAP7 (see Technology Node Strategy below)
 
-### Phase 4: GPU-Lite SIMT Engine (Planned)
+### Phase 4: GPU-Lite SIMT Engine (✅ COMPLETE 2026-05-27)
 
 - **ISA**: Custom 32-bit vector encoding — VADD, VSUB, VMUL, VAND, VOR, VSLL, VLD, VST, VBEQ, VBNE, VJMP, VRET, VSYNC
 - **Execution**: Single compute unit; 8 SIMD lanes; 8 warps max; 64 total threads

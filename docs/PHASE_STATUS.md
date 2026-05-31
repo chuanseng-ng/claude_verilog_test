@@ -441,38 +441,34 @@ All previous specification issues have been resolved:
 
 ## Next Actions
 
-### Immediate — Phase 4 GPU-Lite RTL Implementation
+### Immediate — Phase 5 SoC Integration
 
-**Phase 3 COMPLETE** ✅ 139/139 tests passing, all exit criteria met (2026-05-21).
+**Phase 4 COMPLETE** ✅ all GPU tests green, 1,000-kernel random regression pass, ASAP7 571 MHz PD sign-off (2026-05-27). See Phase 4 section above and `docs/GPU_ASAP7_RUN_HISTORY.md`.
 
-**Current Priority**: Phase 4 GPU-Lite SIMT compute engine.
-See `docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md` for the full implementation plan (golden spec).
-Key decisions: AXI4-Lite slave for control (not APB3), shared_memory.sv in scope, ASAP7 PD sign-off required.
+**Current Priority**: Phase 5 SoC integration (CPU + GPU + DMA + AXI4 crossbar + peripherals).
+See `docs/PHASE5_SOC_INTEGRATION_PLAN.md` for the full M1–M12 milestone roadmap (golden spec).
+Key decisions: AXI4 crossbar data fabric + AXI-Lite control bus, Phase 3 cache refill FSMs upgraded to AXI4 burst, behavioral AXI4-slave SRAM, ASAP7 SoC PD sign-off required.
 
-1. **New RTL Modules** (10 files, `rtl/gpu/`):
-   - 🔄 `gpu_pkg.sv` — package: constants, structs, opcode enums (lint-clean ✅)
-   - ⏸️ `vector_register_file.sv` — 32 regs × 8 lanes × 8 warps
-   - ⏸️ `vector_alu.sv` — VADD/VSUB/VMUL/VAND/VOR/VXOR/VSLL/VSRL/VSRA + imm forms (8 lanes)
-   - ⏸️ `gpu_compute_unit.sv` — 4-stage FETCH/DECODE/EX/WB + divergence stack
-   - ⏸️ `warp_scheduler.sv` — round-robin; warp state: warp_id, PC, active_mask, div_stack
-   - ⏸️ `gpu_command_queue.sv` — kernel descriptor FIFO (1-deep in Phase 4)
-   - ⏸️ `gpu_memory_unit.sv` — per-lane address gen; VLD/VST → coalescer
-   - ⏸️ `memory_coalescer.sv` — 8-lane requests → AXI4 single-beat transactions
-   - ⏸️ `shared_memory.sv` — 16 KB scratchpad, 32 banks, bank-conflict serialisation
-   - ⏸️ `gpu_top.sv` — AXI4-Lite slave (control regs) + AXI4 master (memory) + gpu_irq
+1. **AXI4 Interconnect** (build first — prerequisite for integration):
+   - ⏸️ `rtl/soc/axi4_crossbar.sv` — N-master M-slave data fabric
+   - ⏸️ `rtl/soc/axi_lite_interconnect.sv` — control bus
+   - ⏸️ `rtl/soc/axi_lite_register_bank.sv` — GPU + DMA config registers
+   - ⏸️ Upgrade Phase 3 refill FSMs from 4 sequential AXI4-Lite beats to AXI4 burst mode
 
-2. **Verification** (follows RTL completion per group):
-   - ⏸️ Unit tests: `tb/cocotb/gpu/test_vector_regfile.py`, `test_vector_alu.py`,
-     `test_divergence.py`, `test_warp_scheduler.py`, `test_command_queue.py`,
-     `test_memory_coalescer.py`, `test_shared_memory.py`
-   - ⏸️ Kernel tests: vector add, dot product, divergence, coalescing, shared-mem ping-pong, VSYNC
-   - ⏸️ CPU-GPU handoff integration test
-   - ⏸️ 1,000 random kernel regression
-   - ⏸️ Phase 3 regression re-run (139 tests must still pass)
+2. **Peripherals + DMA + SRAM**:
+   - ⏸️ `rtl/periph/dma_engine.sv`, `uart_controller.sv`, `spi_controller.sv`, `timer.sv`, `interrupt_controller.sv`
+   - ⏸️ `rtl/soc/sram_controller.sv` — behavioral AXI4-slave SRAM (no DRAM refresh)
+   - ⏸️ `rtl/soc/soc_top.sv` — full SoC top-level; CSR-mapped performance counters
 
-3. **Physical Design** (follows verification):
-   - ⏸️ ASAP7 GPU block synthesis + P&R + STA (`pnr/asap7/gpu/`)
-   - ⏸️ Target: ≥ 1418 MHz (705 ps), WNS ≥ 0, 0 DRC, 0 antenna
+3. **Verification**:
+   - ⏸️ CPU-GPU integration: kernel launch → interrupt → result read
+   - ⏸️ Software coherency: CPU D-cache flush → GPU kernel → CPU D-cache invalidate
+   - ⏸️ DMA transfer tests; full CPU + GPU benchmark suite
+   - ⏸️ L2 cache decision — add `rtl/mem/l2_cache.sv` only if L1 miss rates justify it
+
+4. **Physical Design**:
+   - ⏸️ Full SoC synthesis + P&R + STA; `pnr/constraints/phase5_soc.sdc`, `phase5_soc.upf`
+   - ⏸️ Power domain validation (PD_CPU, PD_GPU, PD_SRAM, PD_PERIPH)
 
 ## Documentation Structure
 
@@ -483,7 +479,7 @@ docs/
 ├── design/
 │   ├── PHASE0_ARCHITECTURE_SPEC.md   # Phase 0 CPU specification
 │   ├── PHASE1_ARCHITECTURE_SPEC.md   # Phase 1 CPU specification (verified 2026-02-13)
-│   ├── PHASE4_GPU_ARCHITECTURE_SPEC.md # Phase 4 GPU specification (TBD)
+│   ├── PHASE4_GPU_ARCHITECTURE_SPEC.md # Phase 4 GPU specification (frozen, ✅ complete)
 │   ├── DESIGN_EXPECTATION.md         # High-level design goals
 │   ├── RTL_DEFINITION.md             # Interface definitions
 │   ├── GPU_MODEL.md                  # GPU execution model overview

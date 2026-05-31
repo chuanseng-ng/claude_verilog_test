@@ -13,10 +13,10 @@ This project incrementally builds a fully functional SoC through 6 phases:
 2. **Phase 1**: Minimal RV32I CPU (single-cycle) ✅ **COMPLETE** (2026-02-13)
 3. **Phase 2**: Pipelined CPU (5-stage + interrupts) ✅ **COMPLETE** (2026-03-08)
 4. **Phase 3**: Memory System (I-cache + D-cache) ✅ **COMPLETE** (2026-05-21)
-5. **Phase 4**: GPU-Lite Compute Engine (SIMT) ⏸️ Not Started
-6. **Phase 5**: SoC Integration (peripherals, boot ROM)
+5. **Phase 4**: GPU-Lite Compute Engine (SIMT) ✅ **COMPLETE** (2026-05-27)
+6. **Phase 5**: SoC Integration (peripherals, boot ROM) ⏸️ Not Started
 
-## Current Status: Phase 4 (Not Started) — Phase 3 Complete
+## Current Status: Phase 5 (SoC Integration) — Not Started; Phase 4 Complete
 
 **Phase 0 Complete** ✅ (2026-01-18):
 
@@ -51,6 +51,13 @@ This project incrementally builds a fully functional SoC through 6 phases:
 - ✅ Cache arbiter: D$ priority over I$ (D-write > D-read > I-read)
 - ✅ Verification: I-cache 7/7, D-cache 8/8, integration 5/5; **139/139 full regression**
 - ✅ PPA sign-off (ASAP7 7nm, Run 43, 2026-05-20): **1418 MHz / 27.27 mW / 3,844 µm²**, 0 DRC, 0 antenna
+
+**Phase 4 Complete** ✅ (2026-05-27):
+
+- ✅ 9/9 GPU-Lite RTL modules (`rtl/gpu/`): top, command queue, warp scheduler, compute unit, vector regfile, vector ALU, memory unit, coalescer, shared memory
+- ✅ SIMT execution: 8-lane warps, round-robin scheduler, single-level divergence stack, 16 KB / 32-bank shared memory
+- ✅ Verification: GPU unit + kernel tests green; CPU re-gate 140/140 + 100k random; 1,000-kernel random regression, 0 deadlocks/mismatches
+- ✅ PPA sign-off (ASAP7 7nm, Run `RUN_2026-05-28_06-29-48`): **571 MHz (1.75 ns) / 262 mW / 115,600 µm² die / 60,500 µm² stdcell**, Setup WS +197.3 ps, Hold WS +16.3 ps (0 viol), 0 antenna
 
 ## Implemented Features
 
@@ -111,7 +118,7 @@ This project incrementally builds a fully functional SoC through 6 phases:
 │   │   │   └── ...
 │   │   ├── rv32i_cpu_top.sv      # Top-level with AXI4-Lite + APB3
 │   │   └── rv32i_axi_arbiter.sv  # IF/MEM priority arbiter
-│   ├── gpu/                      # (Phase 4 - not started)
+│   ├── gpu/                      # ✅ Phase 4 GPU-Lite (9 modules; ASAP7 571 MHz signoff)
 │   ├── mem/                      # ✅ Phase 3 caches (~1,424 lines)
 │   │   ├── rv32i_cache_pkg.sv    # Cache parameters and types
 │   │   ├── rv32i_icache.sv       # I-cache (4 KB, direct-mapped, FENCE.I)
@@ -126,12 +133,12 @@ This project incrementally builds a fully functional SoC through 6 phases:
 
 ## Requirements
 
-### Phase 0 (Current)
+### Reference Models & Tests
 
 - **Python** 3.8+ with pytest
 - **cocotb** (for test infrastructure setup)
 
-### Phase 1+ (Future)
+### RTL Simulation & Backend
 
 - **Verilator** (5.x recommended)
 - **GCC/G++** with C++17 support
