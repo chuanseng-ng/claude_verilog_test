@@ -34,6 +34,7 @@
 
 
 import rv32i_cache_pkg::*;
+import axi_pkg::*;
 
 module rv32i_dcache (
     input  logic        clk,
@@ -48,23 +49,31 @@ module rv32i_dcache (
     output logic [31:0] dc_rdata_o,
     output logic        dc_stall_o,
 
-    // ── AXI4-Lite read channel (refill) ──────────────────────────────────────
-    output logic [31:0] axi_araddr_o,
-    output logic        axi_arvalid_o,
-    input  logic        axi_arready_i,
+    // ── AXI4 read channel (refill) ───────────────────────────────────────────
+    output logic [31:0]                axi_araddr_o,
+    output logic [AXI_LEN_WIDTH-1:0]  axi_arlen_o,
+    output logic [AXI_SIZE_WIDTH-1:0] axi_arsize_o,
+    output logic [1:0]                axi_arburst_o,
+    output logic                      axi_arvalid_o,
+    input  logic                      axi_arready_i,
 
     input  logic [31:0] axi_rdata_i,
     input  logic [1:0]  axi_rresp_i,
     input  logic        axi_rvalid_i,
+    input  logic        axi_rlast_i,
     output logic        axi_rready_o,
 
-    // ── AXI4-Lite write channel (writeback) ──────────────────────────────────
-    output logic [31:0] axi_awaddr_o,
-    output logic        axi_awvalid_o,
-    input  logic        axi_awready_i,
+    // ── AXI4 write channel (writeback) ───────────────────────────────────────
+    output logic [31:0]                axi_awaddr_o,
+    output logic [AXI_LEN_WIDTH-1:0]  axi_awlen_o,
+    output logic [AXI_SIZE_WIDTH-1:0] axi_awsize_o,
+    output logic [1:0]                axi_awburst_o,
+    output logic                      axi_awvalid_o,
+    input  logic                      axi_awready_i,
 
     output logic [31:0] axi_wdata_o,
     output logic [3:0]  axi_wstrb_o,
+    output logic        axi_wlast_o,
     output logic        axi_wvalid_o,
     input  logic        axi_wready_i,
 
@@ -304,19 +313,31 @@ module rv32i_dcache (
     end
 
     // =========================================================================
-    // AXI read control (refill)
+    // AXI read control (refill) — burst mode
+    //   One AR per line: address = line-base; slave auto-increments 4 B/beat.
+    //   ARLEN=3 (4 beats), ARSIZE=4B, ARBURST=INCR (constants from axi_pkg).
     // =========================================================================
-    assign axi_araddr_o  = {refill_base[31:4], axi_word_q, 2'b00};
+    assign axi_araddr_o  = {refill_base[31:4], 4'b0000};
+    assign axi_arlen_o   = axi_pkg::AXI_LEN_LINE;
+    assign axi_arsize_o  = axi_pkg::AXI_SIZE_4B;
+    assign axi_arburst_o = axi_pkg::AXI_BURST_INCR;
     assign axi_arvalid_o = (state_q == CS_REFILL) && !ar_pending_q;
     assign axi_rready_o  = 1'b1;
 
     // =========================================================================
-    // AXI write control (writeback)
+    // AXI write control (writeback) — burst mode
+    //   One AW per line: address = line-base.
+    //   AWLEN=3 (4 beats), AWSIZE=4B, AWBURST=INCR (constants from axi_pkg).
+    //   axi_wlast_o: asserted on the 4th (last) W beat.
     // =========================================================================
-    assign axi_awaddr_o  = {wb_addr_base[31:4], axi_word_q, 2'b00};
+    assign axi_awaddr_o  = {wb_addr_base[31:4], 4'b0000};
+    assign axi_awlen_o   = axi_pkg::AXI_LEN_LINE;
+    assign axi_awsize_o  = axi_pkg::AXI_SIZE_4B;
+    assign axi_awburst_o = axi_pkg::AXI_BURST_INCR;
     assign axi_awvalid_o = (state_q == CS_WRITEBACK) && !aw_done_q;
     assign axi_wdata_o   = wb_buf_q[axi_word_q];
     assign axi_wstrb_o   = 4'b1111;
+    assign axi_wlast_o   = (state_q == CS_WRITEBACK) && (axi_word_q == 2'd3);
     assign axi_wvalid_o  = (state_q == CS_WRITEBACK) && !w_done_q;
     assign axi_bready_o  = 1'b1;
 
@@ -365,8 +386,8 @@ module rv32i_dcache (
             end
 
             CS_REFILL: begin
-                // Write tag when last word arrives
-                if (ar_pending_q && axi_rvalid_i && (axi_word_q == 2'd3)) begin
+                // Write tag on last burst beat (RLAST)
+                if (ar_pending_q && axi_rvalid_i && axi_rlast_i) begin
                     tag_csb0  = 1'b0;
                     tag_web0  = 1'b0;
                     tag_addr0 = latch_index;
@@ -510,23 +531,31 @@ module rv32i_dcache (
                 end
 
                 // -----------------------------------------------------------------
+                // CS_WRITEBACK — AXI4 burst writeback:
+                //   1 AW (AWLEN=3, AWADDR=line-base) + 4 W beats + 1 B response.
+                //   aw_done_q: set when AW handshake completes (one-shot per burst).
+                //   w_done_q:  set when all 4 W beats are accepted.
+                //   axi_word_q advances on each W handshake (not on B).
+                //   WLAST is asserted combinationally when axi_word_q==3.
                 CS_WRITEBACK: begin
-                    // AW channel
+                    // AW channel: single handshake for the entire burst
                     if (!aw_done_q && axi_awready_i)
                         aw_done_q <= 1'b1;
-                    // W channel
-                    if (!w_done_q && axi_wready_i)
-                        w_done_q <= 1'b1;
-                    // B channel: advance word counter only on OKAY response
-                    if (axi_bvalid_i && (axi_bresp_i == 2'b00)) begin
-                        aw_done_q <= 1'b0;
-                        w_done_q  <= 1'b0;
+                    // W channel: advance beat counter on each W handshake
+                    if (!w_done_q && axi_wvalid_o && axi_wready_i) begin
                         if (axi_word_q == 2'd3) begin
-                            state_q    <= CS_REFILL;
-                            axi_word_q <= 2'b00;
+                            w_done_q   <= 1'b1;
+                            // axi_word_q stays at 3 until B; reset on B below
                         end else begin
                             axi_word_q <= axi_word_q + 1'b1;
                         end
+                    end
+                    // B channel: one response for the whole burst
+                    if (axi_bvalid_i && (axi_bresp_i == 2'b00)) begin
+                        aw_done_q  <= 1'b0;
+                        w_done_q   <= 1'b0;
+                        axi_word_q <= 2'b00;
+                        state_q    <= CS_REFILL;
                     end else if (axi_bvalid_i && (axi_bresp_i != 2'b00)) begin
                         // AXI error: abort writeback, return to IDLE
                         state_q    <= CS_IDLE;
@@ -546,20 +575,29 @@ module rv32i_dcache (
                 // completes that same cycle, so no orphan beat is left in flight.
                 // If a dc_invalidate_i / flush path is ever added here, port the
                 // cancel_ar_q / cancel_wait_r_q fix from rv32i_icache.sv.
+                // CS_REFILL — AXI4 burst refill:
+                //   One AR (ARLEN=3, ARADDR=line-base) yields 4 R beats.
+                //   axi_word_q is the beat index; advances on each valid beat.
+                //   Transition to CS_DONE (or CS_IDLE on error) on RLAST.
                 CS_REFILL: begin
                     if (!ar_pending_q) begin
                         if (axi_arready_i)
                             ar_pending_q <= 1'b1;
+                            // axi_word_q stays 0; beat index starts at 0
                     end else begin
                         if (axi_rvalid_i && (axi_rresp_i == 2'b00)) begin
                             refill_buf_q[axi_word_q] <= (is_write_q && (axi_word_q == latch_word))
                                                         ? merged_refill_word
                                                         : axi_rdata_i;
-                            ar_pending_q <= 1'b0;
-                            if (axi_word_q == 2'd3) begin
-                                state_q <= CS_DONE;
+                            if (axi_rlast_i) begin
+                                // Last beat of burst — commit or discard
+                                state_q      <= CS_DONE;
+                                ar_pending_q <= 1'b0;
+                                axi_word_q   <= 2'b00;
                             end else begin
-                                axi_word_q <= axi_word_q + 1'b1;
+                                // Guard: never let word counter wrap past 3
+                                if (axi_word_q != 2'd3)
+                                    axi_word_q <= axi_word_q + 1'b1;
                             end
                         end else if (axi_rvalid_i && (axi_rresp_i != 2'b00)) begin
                             // AXI error: discard bad data, return to IDLE
@@ -596,14 +634,15 @@ module rv32i_dcache (
             if (state_q == CS_TAG_CHECK && hit_q && dc_we_q)
                 dirty_array[latch_index] <= 1'b1;
 
-            // Writeback complete: invalidate the evicted line
-            if (state_q == CS_WRITEBACK && axi_bvalid_i && (axi_word_q == 2'd3)) begin
+            // Writeback complete: invalidate the evicted line on B response
+            if (state_q == CS_WRITEBACK && axi_bvalid_i) begin
                 dirty_array[wb_index_q] <= 1'b0;
                 valid_array[wb_index_q] <= 1'b0;
             end
 
             // Refill complete: mark line valid, clear dirty (or set dirty for write-miss)
-            if (state_q == CS_REFILL && ar_pending_q && axi_rvalid_i && (axi_word_q == 2'd3)) begin
+            // Triggered on the last burst beat (RLAST) — same cycle CS_REFILL→CS_DONE.
+            if (state_q == CS_REFILL && ar_pending_q && axi_rvalid_i && axi_rlast_i) begin
                 valid_array[latch_index] <= 1'b1;
                 dirty_array[latch_index] <= is_write_q;
             end
