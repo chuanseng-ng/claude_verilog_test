@@ -35,6 +35,11 @@ AXIL_SOURCES = \
 	$(RTL)/soc/axi_lite_interconnect.sv \
 	$(SOC_DIR)/tb_axi_lite_interconnect.sv
 
+SRAM_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/soc_addr_map_pkg.sv \
+	$(RTL)/soc/sram_controller.sv
+
 VERILOG_SOURCES = $(XBAR_SOURCES)
 
 ifeq ($(SIM),verilator)
@@ -75,7 +80,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect soc_all
+.PHONY: crossbar register_bank axil_interconnect sram_controller soc_all
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar
 
@@ -87,8 +92,13 @@ axil_interconnect:
 	$(MAKE) MODULE=test_axil_interconnect TOPLEVEL=tb_axi_lite_interconnect \
 		VERILOG_SOURCES="$(AXIL_SOURCES)"
 
-# Run every SoC unit test (crossbar + register bank + AXI-Lite interconnect).
+sram_controller:
+	$(MAKE) MODULE=test_sram_controller TOPLEVEL=sram_controller \
+		VERILOG_SOURCES="$(SRAM_SOURCES)"
+
+# Run every SoC unit test (crossbar + register bank + AXI-Lite interconnect + SRAM).
 soc_all:
 	$(MAKE) clean && $(MAKE) crossbar
 	$(MAKE) clean && $(MAKE) register_bank
 	$(MAKE) clean && $(MAKE) axil_interconnect
+	$(MAKE) clean && $(MAKE) sram_controller
