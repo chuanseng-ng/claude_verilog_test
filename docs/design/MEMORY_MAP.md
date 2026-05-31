@@ -27,14 +27,23 @@ This restriction is due to Ubuntu's page size being 4 KB
 | 0x0000_1000 - 0x0000_1FFF  | 4 KB    | Boot ROM            | Initial boot code           |
 | 0x0000_2000 - 0x0FFF_FFFF  | ~256 MB | Main Memory (RAM)   | Instruction and data        |
 | 0x1000_0000 - 0x1FFF_FFFF  | 256 MB  | Reserved            | Future memory expansion     |
-| 0x2000_0000 - 0x2000_0FFF  | 4 KB    | CPU Debug (APB3)    | CPU debug registers         |
-| 0x2000_1000 - 0x2000_1FFF  | 4 KB    | GPU Control (APB3)  | GPU registers               |
-| 0x2000_2000 - 0x2000_2FFF  | 4 KB    | UART (APB3)         | UART peripheral             |
-| 0x2000_3000 - 0x2000_3FFF  | 4 KB    | SPI (APB3)          | SPI master                  |
-| 0x2000_4000 - 0x2000_4FFF  | 4 KB    | Timer (APB3)        | System timer                |
-| 0x2000_5000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
+| 0x2000_0000 - 0x2000_0FFF  | 4 KB    | CPU Debug (APB3)    | CPU debug registers (only remaining APB3 block) |
+| 0x2000_1000 - 0x2000_1FFF  | 4 KB    | GPU Control (AXI-Lite) | GPU registers            |
+| 0x2000_2000 - 0x2000_2FFF  | 4 KB    | UART (AXI-Lite)     | UART peripheral             |
+| 0x2000_3000 - 0x2000_3FFF  | 4 KB    | SPI (AXI-Lite)      | SPI master                  |
+| 0x2000_4000 - 0x2000_4FFF  | 4 KB    | Timer (AXI-Lite)    | System timer                |
+| 0x2000_5000 - 0x2000_5FFF  | 4 KB    | DMA Control (AXI-Lite) | DMA engine control registers |
+| 0x2000_6000 - 0x2000_6FFF  | 4 KB    | IRQ Control (AXI-Lite) | Interrupt controller registers |
+| 0x2000_7000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
 | 0x3000_0000 - 0x7FFF_FFFF  | 1.25 GB | Reserved            | Future use                  |
 | 0x8000_0000 - 0xFFFF_FFFF  | 2 GB    | External Memory     | Off-chip memory/devices     |
+
+> **Phase 5 peripheral ring (M1 reconcile, 2026-05-31):** peripherals attach to a
+> CPU-driven **AXI4-Lite control interconnect** (`rtl/soc/axi_lite_interconnect.sv`),
+> **not** an APB3 bridge. The GPU control port was already AXI4-Lite, so the whole
+> ring is AXI-Lite-native; APB3 survives only on the CPU debug slot
+> (0x2000_0000–0FFF). Address map is frozen in `rtl/soc/soc_periph_map_pkg.sv`
+> (`decode_axil_slave()`); unmapped accesses within 0x2000_xxxx return DECERR.
 
 ## Phase-Specific Maps
 
