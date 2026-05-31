@@ -416,6 +416,12 @@ cache_integration:
 	@echo ""
 	$(MAKE) sim MODULE=tb.cocotb.cpu.test_cache_integration
 
+# Phase 5 SoC tests (delegates to tb/cocotb/soc/Makefile)
+.PHONY: soc_all
+soc_all:
+	@echo "Running Phase 5 SoC tests (AXI4 crossbar)..."
+	$(MAKE) -C ../tb/cocotb/soc crossbar
+
 # Run all Phase 3 tests
 .PHONY: phase3_all
 phase3_all:

@@ -61,10 +61,10 @@
 Legend: ⏸️ not started · 🔄 in progress · ✅ done
 
 ### M1 — Foundations: AXI package + memory-map freeze *(no deps)*
-- ⏸️ `rtl/soc/axi_pkg.sv` — AXI4 + AXI4-Lite params: `AXI_ADDR_WIDTH=32`, `AXI_DATA_WIDTH=32`, `AXI_ID_WIDTH`, burst encodings (`AXI_BURST_INCR=2'b01`), `AXI_LEN` for 4-beat (ARLEN=3), `AXI_SIZE=2` (32-bit). Optional SV interfaces `if_axi4`, `if_axil`.
-- ⏸️ `rtl/soc/soc_addr_map_pkg.sv` — address-decode constants per memory map.
-- ⏸️ Reconcile `docs/design/MEMORY_MAP.md`: spec routes peripherals via APB3 bridge @0x2000_xxxx, but GPU ctrl is AXI4-Lite. **Recommend AXI-Lite-native peripheral ring** (drop APB3 bridge for peripherals; keep APB3 only on CPU debug). Document the change in MEMORY_MAP.md.
-- **Exit**: package lint-clean (`make -C sim lint`); MEMORY_MAP.md updated + reviewed.
+- ✅ `rtl/soc/axi_pkg.sv` — AXI4 + AXI4-Lite params: `AXI_ADDR_WIDTH=32`, `AXI_DATA_WIDTH=32`, `AXI_ID_WIDTH=4`, burst encodings (`AXI_BURST_INCR=2'b01`), `AXI_LEN_LINE=3` (4-beat), `AXI_SIZE_4B=2`. (SV interfaces deferred — flat ports used.)
+- ✅ `rtl/soc/soc_addr_map_pkg.sv` — address-decode constants + `decode_slave()`; ROM @0x0000_1000–1FFF, SRAM @0x0000_2000–0x0FFF_FFFF.
+- ⏸️ Reconcile `docs/design/MEMORY_MAP.md`: spec routes peripherals via APB3 bridge @0x2000_xxxx, but GPU ctrl is AXI4-Lite. **Recommend AXI-Lite-native peripheral ring** (drop APB3 bridge for peripherals; keep APB3 only on CPU debug). Document the change in MEMORY_MAP.md. *(peripheral ring deferred to M3/M4 follow-up)*
+- **Exit**: package lint-clean (`make -C sim lint`); MEMORY_MAP.md updated + reviewed. *(data-fabric slice 🔄 in progress alongside M3; peripheral-map reconcile pending)*
 
 ### M2 — AXI4 burst upgrade of cache refill FSMs *(deps: M1)*
 - ⏸️ `rtl/mem/rv32i_icache.sv` — replace 4× sequential AR→R (`refill_word_q`) with single AR (ARLEN=3, ARSIZE=2, ARBURST=INCR) + 4× R beats.
@@ -75,11 +75,17 @@ Legend: ⏸️ not started · 🔄 in progress · ✅ done
 - **Exit**: full Phase 3 regression green with burst FSMs — icache 7/7, dcache 8/8, cache_integration 5/5, 139/139 total.
 
 ### M3 — AXI4 crossbar + AXI-Lite control interconnect *(deps: M1)*
-- ⏸️ `rtl/soc/axi4_crossbar.sv` — N-master (CPU cache arbiter, GPU data master, DMA) × M-slave (SRAM ctrl, + boot ROM). Addr-decode routing, arbitration (start from `rv32i_cache_arbiter.sv` priority pattern), burst + outstanding-transaction handling.
-- ⏸️ `rtl/soc/axi_lite_interconnect.sv` — CPU config path + crossbar → AXI-Lite slaves (GPU ctrl, DMA ctrl, UART, SPI, Timer, IRQ ctrl).
-- ⏸️ `rtl/soc/axi_lite_register_bank.sv` — reusable register-file slave.
-- ⏸️ Unit tests `tb/cocotb/soc/test_crossbar.py`, `test_axil_interconnect.py` (reuse `bfm/axi4lite_master.py`).
-- **Exit**: routing + arbitration + backpressure unit tests pass.
+- ✅ `rtl/soc/axi4_crossbar.sv` — N-master (CPU cache arbiter, GPU data master, DMA) × M-slave (SRAM ctrl, + boot ROM). Addr-decode routing, per-slave priority-grant write/read engines (from `rv32i_cache_arbiter.sv` pattern), depth-1 outstanding lock, per-master DECERR engines for unmapped addresses. **Lint-clean (0 err / 0 warn, Verilator -Wall); 6/6 tests pass.**
+- ⏸️ `rtl/soc/axi_lite_interconnect.sv` — CPU config path + crossbar → AXI-Lite slaves (GPU ctrl, DMA ctrl, UART, SPI, Timer, IRQ ctrl). *(next item)*
+- ⏸️ `rtl/soc/axi_lite_register_bank.sv` — reusable register-file slave. *(next item)*
+- ✅ Unit tests `tb/cocotb/soc/test_crossbar.py` — **6/6 PASS**: routing+DECERR, same-slave arbitration, cross-slave concurrency, backpressure, 4-beat burst, response steering. New BFM `tb/cocotb/bfm/axi4_master.py` (burst+len) + `tb/cocotb/soc/axi4_slave_model.py` (burst+id echo); `make soc_all` runs them.
+- ⏸️ `test_axil_interconnect.py` — deferred with `axi_lite_interconnect.sv`.
+- **Exit**: routing + arbitration + backpressure unit tests pass. *(crossbar half ✅ DONE; AXI-Lite interconnect half ⏸️ next item)*
+
+**This-session scope (crossbar + minimal M1 foundation):** delivered `axi_pkg.sv`,
+`soc_addr_map_pkg.sv`, `axi4_crossbar.sv` (3M×2S), cocotb wrapper `tb_axi4_crossbar.sv`,
+`make soc_all` target. RTL lint via **rtl-design** agent; tests via **verification** agent.
+No PD this item (crossbar hardens at SoC top, M11).
 
 ### M4 — Peripherals *(deps: M3; sub-items parallelizable)*
 - ⏸️ `rtl/periph/uart_controller.sv` — AXI-Lite slave; TX/RX FIFO, baud divisor, status + IRQ.
