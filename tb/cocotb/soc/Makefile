@@ -14,11 +14,28 @@ SIM_DIR  := $(PROJ_ROOT)/sim
 # bfm/ lives in tb/cocotb (TB); slave model lives in this directory.
 export PYTHONPATH := $(TB):$(SOC_DIR):$(PYTHONPATH)
 
-VERILOG_SOURCES = \
+# Per-DUT source lists.  The default build is the crossbar (preserves prior
+# `make` behaviour); the register_bank / axil_interconnect targets override
+# VERILOG_SOURCES + MODULE + TOPLEVEL on the recursive make.
+XBAR_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
 	$(RTL)/soc/soc_addr_map_pkg.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(SOC_DIR)/tb_axi4_crossbar.sv
+
+REGBANK_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/axi_lite_register_bank.sv \
+	$(SOC_DIR)/tb_axi_lite_register_bank.sv
+
+AXIL_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/soc_periph_map_pkg.sv \
+	$(RTL)/soc/axi_lite_register_bank.sv \
+	$(RTL)/soc/axi_lite_interconnect.sv \
+	$(SOC_DIR)/tb_axi_lite_interconnect.sv
+
+VERILOG_SOURCES = $(XBAR_SOURCES)
 
 ifeq ($(SIM),verilator)
 	COMPILE_ARGS += -Wno-fatal
@@ -58,6 +75,20 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar
+.PHONY: crossbar register_bank axil_interconnect soc_all
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar
+
+register_bank:
+	$(MAKE) MODULE=test_register_bank TOPLEVEL=tb_axi_lite_register_bank \
+		VERILOG_SOURCES="$(REGBANK_SOURCES)"
+
+axil_interconnect:
+	$(MAKE) MODULE=test_axil_interconnect TOPLEVEL=tb_axi_lite_interconnect \
+		VERILOG_SOURCES="$(AXIL_SOURCES)"
+
+# Run every SoC unit test (crossbar + register bank + AXI-Lite interconnect).
+soc_all:
+	$(MAKE) clean && $(MAKE) crossbar
+	$(MAKE) clean && $(MAKE) register_bank
+	$(MAKE) clean && $(MAKE) axil_interconnect

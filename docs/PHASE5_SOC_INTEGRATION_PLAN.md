@@ -63,8 +63,8 @@ Legend: ⏸️ not started · 🔄 in progress · ✅ done
 ### M1 — Foundations: AXI package + memory-map freeze *(no deps)*
 - ✅ `rtl/soc/axi_pkg.sv` — AXI4 + AXI4-Lite params: `AXI_ADDR_WIDTH=32`, `AXI_DATA_WIDTH=32`, `AXI_ID_WIDTH=4`, burst encodings (`AXI_BURST_INCR=2'b01`), `AXI_LEN_LINE=3` (4-beat), `AXI_SIZE_4B=2`. (SV interfaces deferred — flat ports used.)
 - ✅ `rtl/soc/soc_addr_map_pkg.sv` — address-decode constants + `decode_slave()`; ROM @0x0000_1000–1FFF, SRAM @0x0000_2000–0x0FFF_FFFF.
-- ⏸️ Reconcile `docs/design/MEMORY_MAP.md`: spec routes peripherals via APB3 bridge @0x2000_xxxx, but GPU ctrl is AXI4-Lite. **Recommend AXI-Lite-native peripheral ring** (drop APB3 bridge for peripherals; keep APB3 only on CPU debug). Document the change in MEMORY_MAP.md. *(peripheral ring deferred to M3/M4 follow-up)*
-- **Exit**: package lint-clean (`make -C sim lint`); MEMORY_MAP.md updated + reviewed. *(data-fabric slice 🔄 in progress alongside M3; peripheral-map reconcile pending)*
+- ✅ Reconcile `docs/design/MEMORY_MAP.md`: peripherals are now an **AXI-Lite-native ring** (APB3 bridge dropped for peripherals; APB3 kept only on CPU debug @0x2000_0000–0FFF). Captured in `rtl/soc/soc_periph_map_pkg.sv` and documented in MEMORY_MAP.md: GPU 0x2000_1000, UART _2000, SPI _3000, Timer _4000, DMA _5000, IRQ _6000 (4 KB/slave).
+- **Exit**: package lint-clean (`make -C sim lint`); MEMORY_MAP.md updated + reviewed. *(data-fabric slice ✅; peripheral-map reconcile ✅ done with M3 interconnect)*
 
 ### M2 — AXI4 burst upgrade of cache refill FSMs *(deps: M1)*
 - ⏸️ `rtl/mem/rv32i_icache.sv` — replace 4× sequential AR→R (`refill_word_q`) with single AR (ARLEN=3, ARSIZE=2, ARBURST=INCR) + 4× R beats.
@@ -76,11 +76,12 @@ Legend: ⏸️ not started · 🔄 in progress · ✅ done
 
 ### M3 — AXI4 crossbar + AXI-Lite control interconnect *(deps: M1)*
 - ✅ `rtl/soc/axi4_crossbar.sv` — N-master (CPU cache arbiter, GPU data master, DMA) × M-slave (SRAM ctrl, + boot ROM). Addr-decode routing, per-slave priority-grant write/read engines (from `rv32i_cache_arbiter.sv` pattern), depth-1 outstanding lock, per-master DECERR engines for unmapped addresses. **Lint-clean (0 err / 0 warn, Verilator -Wall); 6/6 tests pass.**
-- ⏸️ `rtl/soc/axi_lite_interconnect.sv` — CPU config path + crossbar → AXI-Lite slaves (GPU ctrl, DMA ctrl, UART, SPI, Timer, IRQ ctrl). *(next item)*
-- ⏸️ `rtl/soc/axi_lite_register_bank.sv` — reusable register-file slave. *(next item)*
-- ✅ Unit tests `tb/cocotb/soc/test_crossbar.py` — **6/6 PASS**: routing+DECERR, same-slave arbitration, cross-slave concurrency, backpressure, 4-beat burst, response steering. New BFM `tb/cocotb/bfm/axi4_master.py` (burst+len) + `tb/cocotb/soc/axi4_slave_model.py` (burst+id echo); `make soc_all` runs them.
-- ⏸️ `test_axil_interconnect.py` — deferred with `axi_lite_interconnect.sv`.
-- **Exit**: routing + arbitration + backpressure unit tests pass. *(crossbar half ✅ DONE; AXI-Lite interconnect half ⏸️ next item)*
+- ✅ `rtl/soc/axi_lite_interconnect.sv` — single-master (CPU config) × 6-slave AXI-Lite router (GPU ctrl, UART, SPI, Timer, DMA ctrl, IRQ ctrl). Pure address-demux + response-mux (no arbitration: one master), depth-1 outstanding write+read, per-channel DECERR engine for unmapped addresses. Parameterized `SLV_BASE`/`SLV_LIMIT` (top-level passes `soc_periph_map_pkg`). **Lint-clean (0 err / 0 warn, Verilator -Wall).**
+- ✅ `rtl/soc/axi_lite_register_bank.sv` — reusable parameterized register-file slave: per-register `WMASK` (RW/RO/partial), `wstrb` byte lanes, HW status-injection path (`hw_wen_i`/`hw_wdata_i`, bypasses WMASK), OOR addresses ack OKAY. Used by M4 peripherals + as the M3 interconnect test slave. **Lint-clean.**
+- ✅ `rtl/soc/soc_periph_map_pkg.sv` — AXI-Lite control-ring address map (`AXIL_N_SLAVES=6`, base/limit arrays, `decode_axil_slave()`); 0x2000_1000–6FFF, 4 KB/slave.
+- ✅ Unit tests `tb/cocotb/soc/test_crossbar.py` — **6/6 PASS**: routing+DECERR, same-slave arbitration, cross-slave concurrency, backpressure, 4-beat burst, response steering. New BFM `tb/cocotb/bfm/axi4_master.py` (burst+len) + `tb/cocotb/soc/axi4_slave_model.py` (burst+id echo).
+- ✅ `tb/cocotb/soc/test_register_bank.py` — **6/6 PASS**: RW round-trip, RO WMASK, HW status injection, wstrb lanes, partial WMASK, out-of-range. `tb/cocotb/soc/test_axil_interconnect.py` — **4/4 PASS**: per-slave routing+isolation, multi-register routing, DECERR (below/above ring), master-side bready/rready backpressure. Both via reused `tb/cocotb/bfm/axi4lite_master.py`; `make soc_all` runs all three suites.
+- **Exit**: routing + arbitration + backpressure unit tests pass. **✅ DONE — crossbar 6/6 + register bank 6/6 + AXI-Lite interconnect 4/4 = 16/16 green; all M3 RTL Verilator -Wall clean.**
 
 **This-session scope (crossbar + minimal M1 foundation):** delivered `axi_pkg.sv`,
 `soc_addr_map_pkg.sv`, `axi4_crossbar.sv` (3M×2S), cocotb wrapper `tb_axi4_crossbar.sv`,

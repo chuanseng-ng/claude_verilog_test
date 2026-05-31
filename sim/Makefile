@@ -419,8 +419,10 @@ cache_integration:
 # Phase 5 SoC tests (delegates to tb/cocotb/soc/Makefile)
 .PHONY: soc_all
 soc_all:
-	@echo "Running Phase 5 SoC tests (AXI4 crossbar)..."
-	$(MAKE) -C ../tb/cocotb/soc crossbar
+	@echo "Running Phase 5 SoC tests (crossbar + register bank + AXI-Lite interconnect)..."
+	$(MAKE) -C ../tb/cocotb/soc clean && $(MAKE) -C ../tb/cocotb/soc crossbar
+	$(MAKE) -C ../tb/cocotb/soc clean && $(MAKE) -C ../tb/cocotb/soc register_bank
+	$(MAKE) -C ../tb/cocotb/soc clean && $(MAKE) -C ../tb/cocotb/soc axil_interconnect
 
 # Run all Phase 3 tests
 .PHONY: phase3_all
