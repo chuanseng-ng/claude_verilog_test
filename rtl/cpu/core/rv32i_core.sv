@@ -12,23 +12,32 @@
 
 import rv32i_pipeline_pkg::*;
 import rv32i_cache_pkg::*;
+import axi_pkg::*;
 module rv32i_core(
     input  logic        clk,
     input  logic        rst_n,
 
-    // ── AXI4-Lite master (unified cache → memory) ────────────────────────────
+    // ── AXI4 master (unified cache → memory, burst-capable from Phase 5 M2) ──
     output logic [31:0] axi_araddr,
+    output logic [axi_pkg::AXI_LEN_WIDTH-1:0]  axi_arlen,
+    output logic [axi_pkg::AXI_SIZE_WIDTH-1:0] axi_arsize,
+    output logic [1:0]  axi_arburst,
     output logic        axi_arvalid,
     input  logic        axi_arready,
     input  logic [31:0] axi_rdata,
     input  logic [1:0]  axi_rresp,
     input  logic        axi_rvalid,
+    input  logic        axi_rlast,
     output logic        axi_rready,
     output logic [31:0] axi_awaddr,
+    output logic [axi_pkg::AXI_LEN_WIDTH-1:0]  axi_awlen,
+    output logic [axi_pkg::AXI_SIZE_WIDTH-1:0] axi_awsize,
+    output logic [1:0]  axi_awburst,
     output logic        axi_awvalid,
     input  logic        axi_awready,
     output logic [31:0] axi_wdata,
     output logic [3:0]  axi_wstrb,
+    output logic        axi_wlast,
     output logic        axi_wvalid,
     input  logic        axi_wready,
     input  logic [1:0]  axi_bresp,
@@ -352,6 +361,25 @@ module rv32i_core(
     logic        dc_axi_bvalid;
     logic [1:0]  dc_axi_bresp;  // See dc_axi_rresp note above.
     logic        dc_axi_bready;
+
+    // =========================================================================
+    // Burst sideband signals (Phase 5 M2): cache ↔ arbiter
+    // =========================================================================
+    // I-cache burst outputs / rlast input
+    logic [axi_pkg::AXI_LEN_WIDTH-1:0]  ic_axi_arlen;
+    logic [axi_pkg::AXI_SIZE_WIDTH-1:0] ic_axi_arsize;
+    logic [1:0]                          ic_axi_arburst;
+    logic                                ic_axi_rlast;
+
+    // D-cache burst outputs / rlast input
+    logic [axi_pkg::AXI_LEN_WIDTH-1:0]  dc_axi_arlen;
+    logic [axi_pkg::AXI_SIZE_WIDTH-1:0] dc_axi_arsize;
+    logic [1:0]                          dc_axi_arburst;
+    logic                                dc_axi_rlast;
+    logic [axi_pkg::AXI_LEN_WIDTH-1:0]  dc_axi_awlen;
+    logic [axi_pkg::AXI_SIZE_WIDTH-1:0] dc_axi_awsize;
+    logic [1:0]                          dc_axi_awburst;
+    logic                                dc_axi_wlast;
 
     // =========================================================================
     // Hazard Unit
@@ -748,11 +776,15 @@ module rv32i_core(
         .ic_stall_o       (ic_stall),
         .ic_invalidate_i  (fence_i_pulse),
         .axi_araddr_o     (ic_axi_araddr),
+        .axi_arlen_o      (ic_axi_arlen),
+        .axi_arsize_o     (ic_axi_arsize),
+        .axi_arburst_o    (ic_axi_arburst),
         .axi_arvalid_o    (ic_axi_arvalid),
         .axi_arready_i    (ic_axi_arready),
         .axi_rdata_i      (ic_axi_rdata),
         .axi_rresp_i      (ic_axi_rresp),
         .axi_rvalid_i     (ic_axi_rvalid),
+        .axi_rlast_i      (ic_axi_rlast),
         .axi_rready_o     (ic_axi_rready)
     );
 
@@ -770,17 +802,25 @@ module rv32i_core(
         .dc_rdata_o       (dc_rdata),
         .dc_stall_o       (dc_stall),
         .axi_araddr_o     (dc_axi_araddr),
+        .axi_arlen_o      (dc_axi_arlen),
+        .axi_arsize_o     (dc_axi_arsize),
+        .axi_arburst_o    (dc_axi_arburst),
         .axi_arvalid_o    (dc_axi_arvalid),
         .axi_arready_i    (dc_axi_arready),
         .axi_rdata_i      (dc_axi_rdata),
         .axi_rresp_i      (dc_axi_rresp),
         .axi_rvalid_i     (dc_axi_rvalid),
+        .axi_rlast_i      (dc_axi_rlast),
         .axi_rready_o     (dc_axi_rready),
         .axi_awaddr_o     (dc_axi_awaddr),
+        .axi_awlen_o      (dc_axi_awlen),
+        .axi_awsize_o     (dc_axi_awsize),
+        .axi_awburst_o    (dc_axi_awburst),
         .axi_awvalid_o    (dc_axi_awvalid),
         .axi_awready_i    (dc_axi_awready),
         .axi_wdata_o      (dc_axi_wdata),
         .axi_wstrb_o      (dc_axi_wstrb),
+        .axi_wlast_o      (dc_axi_wlast),
         .axi_wvalid_o     (dc_axi_wvalid),
         .axi_wready_i     (dc_axi_wready),
         .axi_bvalid_i     (dc_axi_bvalid),
@@ -796,26 +836,38 @@ module rv32i_core(
         .rst_n            (rst_n),
         // I-cache read
         .ic_araddr_i      (ic_axi_araddr),
+        .ic_arlen_i       (ic_axi_arlen),
+        .ic_arsize_i      (ic_axi_arsize),
+        .ic_arburst_i     (ic_axi_arburst),
         .ic_arvalid_i     (ic_axi_arvalid),
         .ic_arready_o     (ic_axi_arready),
         .ic_rdata_o       (ic_axi_rdata),
         .ic_rresp_o       (ic_axi_rresp),
         .ic_rvalid_o      (ic_axi_rvalid),
+        .ic_rlast_o       (ic_axi_rlast),
         .ic_rready_i      (ic_axi_rready),
         // D-cache read (refill)
         .dc_araddr_i      (dc_axi_araddr),
+        .dc_arlen_i       (dc_axi_arlen),
+        .dc_arsize_i      (dc_axi_arsize),
+        .dc_arburst_i     (dc_axi_arburst),
         .dc_arvalid_i     (dc_axi_arvalid),
         .dc_arready_o     (dc_axi_arready),
         .dc_rdata_o       (dc_axi_rdata),
         .dc_rresp_o       (dc_axi_rresp),
         .dc_rvalid_o      (dc_axi_rvalid),
+        .dc_rlast_o       (dc_axi_rlast),
         .dc_rready_i      (dc_axi_rready),
         // D-cache write (writeback)
         .dc_awaddr_i      (dc_axi_awaddr),
+        .dc_awlen_i       (dc_axi_awlen),
+        .dc_awsize_i      (dc_axi_awsize),
+        .dc_awburst_i     (dc_axi_awburst),
         .dc_awvalid_i     (dc_axi_awvalid),
         .dc_awready_o     (dc_axi_awready),
         .dc_wdata_i       (dc_axi_wdata),
         .dc_wstrb_i       (dc_axi_wstrb),
+        .dc_wlast_i       (dc_axi_wlast),
         .dc_wvalid_i      (dc_axi_wvalid),
         .dc_wready_o      (dc_axi_wready),
         .dc_bvalid_o      (dc_axi_bvalid),
@@ -823,17 +875,25 @@ module rv32i_core(
         .dc_bready_i      (dc_axi_bready),
         // AXI master (to external memory)
         .axi_araddr_o     (axi_araddr),
+        .axi_arlen_o      (axi_arlen),
+        .axi_arsize_o     (axi_arsize),
+        .axi_arburst_o    (axi_arburst),
         .axi_arvalid_o    (axi_arvalid),
         .axi_arready_i    (axi_arready),
         .axi_rdata_i      (axi_rdata),
         .axi_rresp_i      (axi_rresp),
         .axi_rvalid_i     (axi_rvalid),
+        .axi_rlast_i      (axi_rlast),
         .axi_rready_o     (axi_rready),
         .axi_awaddr_o     (axi_awaddr),
+        .axi_awlen_o      (axi_awlen),
+        .axi_awsize_o     (axi_awsize),
+        .axi_awburst_o    (axi_awburst),
         .axi_awvalid_o    (axi_awvalid),
         .axi_awready_i    (axi_awready),
         .axi_wdata_o      (axi_wdata),
         .axi_wstrb_o      (axi_wstrb),
+        .axi_wlast_o      (axi_wlast),
         .axi_wvalid_o     (axi_wvalid),
         .axi_wready_i     (axi_wready),
         .axi_bvalid_i     (axi_bvalid),
