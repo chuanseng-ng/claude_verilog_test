@@ -1,6 +1,8 @@
 // rv32i_cpu_top.sv
 // RV32I CPU Top-Level Integration
-// Integrates CPU core with AXI4-Lite memory interface and APB3 debug interface
+// Integrates CPU core with AXI4 burst memory interface and APB3 debug interface
+
+import axi_pkg::*;
 
 module rv32i_cpu_top (
   // Clock and reset
@@ -8,17 +10,21 @@ module rv32i_cpu_top (
   input  logic        rst_n_i,
 
   // ================================================================
-  // AXI4-Lite Master Interface (unified instruction/data)
+  // AXI4 Master Interface (unified instruction/data, burst-capable Phase 5 M2)
   // ================================================================
 
   // Write address channel
   output logic [31:0] axi_awaddr_o,
+  output logic [axi_pkg::AXI_LEN_WIDTH-1:0]  axi_awlen_o,
+  output logic [axi_pkg::AXI_SIZE_WIDTH-1:0] axi_awsize_o,
+  output logic [1:0]  axi_awburst_o,
   output logic        axi_awvalid_o,
   input  logic        axi_awready_i,
 
   // Write data channel
   output logic [31:0] axi_wdata_o,
   output logic [3:0]  axi_wstrb_o,
+  output logic        axi_wlast_o,
   output logic        axi_wvalid_o,
   input  logic        axi_wready_i,
 
@@ -29,6 +35,9 @@ module rv32i_cpu_top (
 
   // Read address channel
   output logic [31:0] axi_araddr_o,
+  output logic [axi_pkg::AXI_LEN_WIDTH-1:0]  axi_arlen_o,
+  output logic [axi_pkg::AXI_SIZE_WIDTH-1:0] axi_arsize_o,
+  output logic [1:0]  axi_arburst_o,
   output logic        axi_arvalid_o,
   input  logic        axi_arready_i,
 
@@ -36,6 +45,7 @@ module rv32i_cpu_top (
   input  logic [31:0] axi_rdata_i,
   input  logic [1:0]  axi_rresp_i,
   input  logic        axi_rvalid_i,
+  input  logic        axi_rlast_i,
   output logic        axi_rready_o,
 
   // ================================================================
@@ -153,19 +163,27 @@ module rv32i_cpu_top (
     .clk            (clk_i),
     .rst_n          (rst_n_i),
 
-    // AXI4-Lite memory interface
+    // AXI4 burst memory interface
     .axi_araddr     (axi_araddr_o),
+    .axi_arlen      (axi_arlen_o),
+    .axi_arsize     (axi_arsize_o),
+    .axi_arburst    (axi_arburst_o),
     .axi_arvalid    (axi_arvalid_o),
     .axi_arready    (axi_arready_i),
     .axi_rdata      (axi_rdata_i),
     .axi_rresp      (axi_rresp_i),
     .axi_rvalid     (axi_rvalid_i),
+    .axi_rlast      (axi_rlast_i),
     .axi_rready     (axi_rready_o),
     .axi_awaddr     (axi_awaddr_o),
+    .axi_awlen      (axi_awlen_o),
+    .axi_awsize     (axi_awsize_o),
+    .axi_awburst    (axi_awburst_o),
     .axi_awvalid    (axi_awvalid_o),
     .axi_awready    (axi_awready_i),
     .axi_wdata      (axi_wdata_o),
     .axi_wstrb      (axi_wstrb_o),
+    .axi_wlast      (axi_wlast_o),
     .axi_wvalid     (axi_wvalid_o),
     .axi_wready     (axi_wready_i),
     .axi_bresp      (axi_bresp_i),

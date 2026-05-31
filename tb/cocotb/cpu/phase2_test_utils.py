@@ -195,6 +195,8 @@ def _init_inputs(dut):
     dut.axi_rvalid_i.value = 0
     dut.axi_rdata_i.value = 0
     dut.axi_rresp_i.value = 0
+    if hasattr(dut, "axi_rlast_i"):
+        dut.axi_rlast_i.value = 0
     # AXI write channel
     dut.axi_awready_i.value = 0
     dut.axi_wready_i.value = 0

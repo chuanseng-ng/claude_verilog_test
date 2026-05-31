@@ -57,6 +57,7 @@ endif
 
 VERILOG_SOURCES := \
 	$(SRAM_SIM_MODEL) \
+	$(RTL_DIR)/soc/axi_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
@@ -83,8 +84,12 @@ VERILOG_SOURCES := \
 	$(RTL_DIR)/cpu/rv32i_cpu_top.sv
 
 # Cache-only sources (for cache unit tests with a single cache DUT)
+# axi_pkg.sv must appear first: rv32i_icache.sv and rv32i_dcache.sv both
+# `import axi_pkg::*` for burst constants (AXI_LEN_LINE, AXI_SIZE_4B, etc.)
+# added in Phase 5 M2 burst upgrade.
 CACHE_SOURCES := \
 	$(SRAM_SIM_MODEL) \
+	$(RTL_DIR)/soc/axi_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_icache.sv \
 	$(RTL_DIR)/mem/rv32i_dcache.sv \
@@ -236,6 +241,7 @@ lint:
 		--top-module $(DUT) \
 		-I$(RTL_DIR)/cpu/core \
 		-I$(RTL_DIR)/mem \
+		-I$(RTL_DIR)/soc \
 		-Wno-IMPORTSTAR \
 		-Wno-UNUSEDSIGNAL \
 		-Wno-UNOPTFLAT \

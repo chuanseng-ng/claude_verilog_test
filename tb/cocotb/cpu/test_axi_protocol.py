@@ -79,6 +79,8 @@ async def setup_test(dut, use_ref_model=False):
     dut.axi_rvalid_i.value = 0
     dut.axi_rdata_i.value = 0
     dut.axi_rresp_i.value = 0
+    if hasattr(dut, "axi_rlast_i"):
+        dut.axi_rlast_i.value = 0
     dut.axi_awready_i.value = 0
     dut.axi_wready_i.value = 0
     dut.axi_bvalid_i.value = 0
@@ -352,33 +354,43 @@ async def test_axi_bvalid_delay(dut):
     # Monitor write transaction — use generous window for 5-stage pipeline
     # with AXI stabilization delays and D-cache eviction latency (Phase 3:
     # the write appears only after the conflicting LW triggers D-cache eviction)
-    awready_handshake = None
+    #
+    # Burst protocol note: with AXI4 burst writeback the sequence is:
+    #   AW handshake (1 cycle)  →  4 W-beats stream  →  5-cycle bvalid delay  →  B
+    # Measuring delay from AW handshake gives "5 + 4 W-beats = 9", not 5.
+    # The correct reference point is the WLAST handshake (cycle where wlast && wvalid
+    # && wready are all 1), after which exactly the injected 5-cycle delay applies.
+    wlast_handshake = None
     bvalid_asserted = None
     cycle = 0
 
     while cycle < 400:
         await RisingEdge(dut.clk_i)
 
-        # Track awready handshake
+        # Track WLAST handshake (final write-data beat accepted)
+        # This is the correct reference for the bvalid delay measurement under burst.
         if (
-            dut.axi_awvalid_o.value == 1
-            and dut.axi_awready_i.value == 1
-            and awready_handshake is None
+            hasattr(dut, "axi_wlast_o")
+            and dut.axi_wlast_o.value == 1
+            and dut.axi_wvalid_o.value == 1
+            and dut.axi_wready_i.value == 1
+            and wlast_handshake is None
         ):
-            awready_handshake = cycle
-            dut._log.info(f"awready handshake at cycle {cycle}")
+            wlast_handshake = cycle
+            dut._log.info(f"wlast handshake at cycle {cycle}")
 
         # Track bvalid assertion
         if dut.axi_bvalid_i.value == 1 and bvalid_asserted is None:
             bvalid_asserted = cycle
             dut._log.info(f"bvalid asserted at cycle {cycle}")
 
-            # Verify 5-cycle delay after awready
-            if awready_handshake is None:
-                dut._log.error("bvalid asserted but awready_handshake was never recorded")
-                assert False, "bvalid asserted before awready handshake was recorded"
+            # Verify 5-cycle delay measured from WLAST handshake.
+            # (Measuring from AW handshake would give 5 + 4_W_beats = 9 under burst.)
+            if wlast_handshake is None:
+                dut._log.error("bvalid asserted but wlast_handshake was never recorded")
+                assert False, "bvalid asserted before wlast handshake was recorded"
 
-            delay_cycles = bvalid_asserted - awready_handshake - 1
+            delay_cycles = bvalid_asserted - wlast_handshake - 1
             assert delay_cycles == 5, f"Expected 5-cycle bvalid delay, got {delay_cycles} cycles"
             break  # Got what we need, stop monitoring
 
@@ -491,9 +503,17 @@ async def test_axi_random_backpressure(dut):
     stats = mem.get_stats()
     dut._log.info(f"Statistics: {stats}")
 
-    # Verify sufficient random testing occurred (at least 40 transactions)
-    # Note: May not reach exactly 50 due to CPU behavior (trap, halt, etc.)
-    assert stats["read_count"] >= 40, f"Expected >=40 reads, got {stats['read_count']}"
+    # Verify sufficient random testing occurred.
+    # Burst protocol note: each AXI4 burst refill transfers 4 instructions via ONE AR
+    # transaction (arlen=3 → 4 R-beats, rlast on beat 4).  The BFM increments
+    # read_count once per burst, so 50 instructions require ~13 AR transactions
+    # (50 instructions / 4 per burst = 12.5 → 13 bursts).  The pre-burst threshold
+    # of >=40 would require 160 instructions, which is wrong for burst mode.
+    # Recalibrated: require at least 10 burst transactions (covers ≥40 instructions).
+    assert stats["read_count"] >= 10, (
+        f"Expected >=10 burst read transactions (>=40 instruction beats), "
+        f"got {stats['read_count']} (burst semantics: 1 AR = 4 R-beats)"
+    )
     assert stats["max_arready_stall"] <= 10, "Max arready stall exceeded 10 cycles"
     assert stats["max_rvalid_stall"] <= 10, "Max rvalid stall exceeded 10 cycles"
 
@@ -839,46 +859,67 @@ async def test_axi_wstrb_encoding(dut):
     mem.write_word(0x1100, 0)  # pre-populate eviction target
 
     # Monitor write strobes
+    # Burst protocol note: AXI4 burst writeback issues ONE AW at the cache-line base
+    # (0x100) with awlen=3, followed by 4 W-beats for words 0x100, 0x104, 0x108, 0x10C.
+    # There is no separate AW per word.  We therefore track:
+    #   - current_aw_addr: set on each AW handshake (line base address)
+    #   - w_beat_idx: per-burst beat counter (increments on each W-beat accepted,
+    #                 resets on each new AW)
+    # The per-beat address is current_aw_addr + w_beat_idx * 4.
+    # wlast_o terminates the beat loop (beat index resets for next burst).
     cycle = 0
     wstrb_values = []
-    current_aw_addr = None  # Capture AW handshake address
+    current_aw_addr = None   # Base address of the current AW burst
+    w_beat_idx = 0           # Beat index within the current burst
 
     while cycle < 400:
         await RisingEdge(dut.clk_i)
 
-        # Capture AW handshake address when both awvalid and awready are asserted
+        # Capture AW handshake: record line base address and reset beat counter
         if dut.axi_awvalid_o.value == 1 and dut.axi_awready_i.value == 1:
-            current_aw_addr = int(dut.axi_awaddr_o.value)
+            current_aw_addr = int(dut.axi_awaddr_o.value) & 0xFFFFFFFC
+            w_beat_idx = 0
 
-        # Capture wstrb when write data is accepted (use captured AW address)
+        # Capture wstrb when write data is accepted; compute per-beat word address
         if dut.axi_wvalid_o.value == 1 and dut.axi_wready_i.value == 1:
             wstrb = int(dut.axi_wstrb_o.value)
-            addr = current_aw_addr if current_aw_addr is not None else 0
-            wstrb_values.append((addr, wstrb))
-            dut._log.info(f"Write at 0x{addr:08x} with wstrb=0b{wstrb:04b}")
+            # Per-beat address = burst base + beat_offset (burst semantics)
+            beat_addr = (current_aw_addr + w_beat_idx * 4) if current_aw_addr is not None else 0
+            wstrb_values.append((beat_addr, wstrb))
+            dut._log.info(f"Write beat {w_beat_idx} at 0x{beat_addr:08x} with wstrb=0b{wstrb:04b}")
+            # Advance beat counter; reset on wlast (end of burst)
+            wlast = int(getattr(dut, "axi_wlast_o", 1))
+            if wlast:
+                w_beat_idx = 0
+            else:
+                w_beat_idx += 1
 
         cycle += 1
 
-    # Phase 3 D-cache write-back behavior:
+    # Phase 3/5 D-cache burst write-back behavior:
     # SB, SH, SW all write to the same 16-byte cache line [0x100..0x10F].
-    # On eviction, the D-cache writes back the full cache line as 4 AXI write
-    # transactions (0x100, 0x104, 0x108, 0x10C), each with wstrb=0b1111.
+    # On eviction, the D-cache issues ONE AW at line base 0x100 (awlen=3) +
+    # 4 W-beats for words at byte offsets 0, 4, 8, 12 (wstrb=0b1111 each).
     n = len(wstrb_values)
-    assert n >= 4, f"Expected all 4 cache-line eviction writes, got {n}"
+    assert n >= 4, f"Expected all 4 cache-line eviction W-beats, got {n}"
 
-    # All eviction writes use full-word strobe (cache writeback granularity)
+    # All eviction W-beats use full-word strobe (cache writeback granularity)
     for addr, wstrb in wstrb_values:
         assert wstrb == 0b1111, (
             f"Expected wstrb=0b1111 (cache line eviction), got 0b{wstrb:04b} at 0x{addr:08x}"
         )
 
-    # Verify all 4 evicted addresses for the expected cache line (0x100..0x10C)
+    # Verify all 4 per-beat word addresses cover the evicted cache line (0x100..0x10C).
+    # With burst: AW fires once at 0x100; beat addresses are computed from beat index.
     evicted_addrs = {addr for addr, _ in wstrb_values}
     for expected_addr in (0x100, 0x104, 0x108, 0x10C):
-        assert expected_addr in evicted_addrs, f"Expected eviction write at 0x{expected_addr:08x}"
+        assert expected_addr in evicted_addrs, (
+            f"Expected eviction W-beat at 0x{expected_addr:08x} "
+            f"(burst: one AW at line base 0x100, 4 W-beats at offsets +0/+4/+8/+12)"
+        )
 
     dut._log.info(
-        "Test passed: Write strobes correctly encoded (Phase 3: full-word cache eviction)"
+        "Test passed: Write strobes correctly encoded (Phase 5 burst: one AW + 4 W-beats)"
     )
 
 

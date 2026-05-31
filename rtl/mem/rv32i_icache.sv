@@ -36,6 +36,7 @@
 
 
 import rv32i_cache_pkg::*;
+import axi_pkg::*;
 
 module rv32i_icache (
     input  logic        clk,
@@ -50,14 +51,18 @@ module rv32i_icache (
     // ── FENCE.I invalidation ──────────────────────────────────────────────────
     input  logic        ic_invalidate_i,  // Invalidate all lines (1-cycle pulse)
 
-    // ── AXI4-Lite read-only (to cache arbiter) ────────────────────────────────
-    output logic [31:0] axi_araddr_o,
-    output logic        axi_arvalid_o,
-    input  logic        axi_arready_i,
+    // ── AXI4 read-only (to cache arbiter) ────────────────────────────────────
+    output logic [31:0]                    axi_araddr_o,
+    output logic [AXI_LEN_WIDTH-1:0]      axi_arlen_o,
+    output logic [AXI_SIZE_WIDTH-1:0]     axi_arsize_o,
+    output logic [1:0]                    axi_arburst_o,
+    output logic                          axi_arvalid_o,
+    input  logic                          axi_arready_i,
 
     input  logic [31:0] axi_rdata_i,
     input  logic [1:0]  axi_rresp_i,
     input  logic        axi_rvalid_i,
+    input  logic        axi_rlast_i,
     output logic        axi_rready_o
 );
 
@@ -175,7 +180,8 @@ module rv32i_icache (
     logic [1:0]                  refill_word_q;
     logic                        ar_pending_q;
     logic                        cancel_ar_q;       // AR mid-handshake after cancel — hold arvalid
-    logic                        cancel_wait_r_q;   // AR accepted after cancel — drain stale R beat
+    logic                        cancel_wait_r_q;   // AR accepted after cancel — single-beat drain (legacy, unused in burst)
+    logic                        cancel_draining;   // Burst in flight at abort — drain until RLAST
     logic [LINE_WORDS-1:0][31:0] refill_buf_q;   // Accumulates all 4 words
 
     // Run-19 P2: Per-bank duplicate of refill_line_addr_q.
@@ -254,12 +260,17 @@ module rv32i_icache (
     end
 
     // =========================================================================
-    // AXI read control
+    // AXI read control — burst mode
+    //   One AR per line: address = line-base (slave auto-increments 4 B per beat).
+    //   ARLEN=3 (4 beats), ARSIZE=4B, ARBURST=INCR (constant).
+    //   cancel_ar_q holds arvalid after a cancel to satisfy AXI A3.2.1.
+    //   cancel_draining: burst accepted at abort — drain all 4 R beats silently.
     // =========================================================================
-    assign axi_araddr_o  = {refill_line_addr_q[31:4], refill_word_q, 2'b00};
-    // cancel_ar_q holds arvalid asserted after a cancel until arready fires,
-    // satisfying AXI A3.2.1 (arvalid must not retract before arready).
-    assign axi_arvalid_o = ((state_q == CS_REFILL) && !ar_pending_q) || cancel_ar_q;
+    assign axi_araddr_o  = {refill_line_addr_q[31:4], 4'b0000};
+    assign axi_arlen_o   = axi_pkg::AXI_LEN_LINE;
+    assign axi_arsize_o  = axi_pkg::AXI_SIZE_4B;
+    assign axi_arburst_o = axi_pkg::AXI_BURST_INCR;
+    assign axi_arvalid_o = ((state_q == CS_REFILL) && !ar_pending_q && !cancel_draining) || cancel_ar_q;
     assign axi_rready_o  = 1'b1;  // Always accept R responses (drains in-flight beats)
 
     // =========================================================================
@@ -287,9 +298,9 @@ module rv32i_icache (
     assign tag_write_commit = (state_q == CS_REFILL)
                             && ar_pending_q
                             && axi_rvalid_i
+                            && axi_rlast_i
                             && !addr_mismatch
-                            && ic_valid_i
-                            && (refill_word_q == 2'd3);
+                            && ic_valid_i;
 
     always_ff @(posedge clk) begin
         if (!rst_n) begin
@@ -431,22 +442,35 @@ module rv32i_icache (
             ar_pending_q       <= 1'b0;
             cancel_ar_q        <= 1'b0;
             cancel_wait_r_q    <= 1'b0;
+            cancel_draining    <= 1'b0;
             refill_buf_q       <= '0;
         end else begin
-            // Background drain: advance cancel-drain flags independently of FSM state.
-            // AR completes after cancel → promote to wait-for-R.
+            // ----------------------------------------------------------------
+            // Background drain: advance cancel-drain flags independently of
+            // FSM state.
+            //
+            // cancel_ar_q: AR mid-handshake at abort — keep arvalid asserted
+            //   until arready fires (AXI A3.2.1).  On acceptance, the slave
+            //   WILL deliver a full 4-beat burst; start cancel_draining so the
+            //   next refill waits until the burst completes.
             if (cancel_ar_q && axi_arready_i) begin
                 cancel_ar_q     <= 1'b0;
-                cancel_wait_r_q <= !axi_rvalid_i;
+                // Burst now in flight; drain all remaining beats.
+                cancel_draining <= !(axi_rvalid_i && axi_rlast_i);
             end
-            // Stale R beat drains → safe to start a new refill.
+            // cancel_draining: burst accepted before/at abort — drain until RLAST.
+            if (cancel_draining && axi_rvalid_i && axi_rlast_i)
+                cancel_draining <= 1'b0;
+            // cancel_wait_r_q is unused in burst mode but kept for symmetry;
+            // clear it unconditionally once any R beat arrives.
             if (cancel_wait_r_q && axi_rvalid_i)
                 cancel_wait_r_q <= 1'b0;
 
             case (state_q)
                 // -----------------------------------------------------------------
                 CS_IDLE: begin
-                    if (!cancel_ar_q && !cancel_wait_r_q && ic_valid_i && !ic_invalidate_i) begin
+                    if (!cancel_ar_q && !cancel_wait_r_q && !cancel_draining
+                            && ic_valid_i && !ic_invalidate_i) begin
                         // Issue SRAM read (combinational, above). Latch address and
                         // go to CS_SRAM_LATCH to capture SRAM output at next posedge.
                         ic_addr_q <= ic_addr_i;
@@ -492,35 +516,42 @@ module rv32i_icache (
                     // causes ic_valid_o=0) while a cache-line refill is still in progress.
                     // Without this abort the I-cache would fill from AXI with stale
                     // (pre-program-load) data, then serve those zeros to the CPU on resume.
-                    // axi_rready_o=1'b1 drains any in-flight AXI beat without data loss.
+                    // axi_rready_o=1'b1 drains any in-flight AXI beats without data loss.
                     if (ic_invalidate_i || !ic_valid_i) begin
-                        state_q       <= CS_IDLE;
-                        // Determine which AXI drain mode is needed at cancel time:
-                        //   ar_pending_q=1, rvalid=0  → R still in flight, drain it
-                        //   ar_pending_q=1, rvalid=1  → R consumed this cycle, no drain
-                        //   ar_pending_q=0, arready=1 → AR just accepted, drain its R
-                        //   ar_pending_q=0, arready=0 → AR mid-handshake, hold arvalid
+                        state_q <= CS_IDLE;
+                        // Determine AXI drain mode at cancel time (burst variant):
+                        //   ar_pending_q=0, arready=0: AR mid-handshake — hold arvalid.
+                        //     Slave will launch burst after arready; start draining then.
+                        //   ar_pending_q=0, arready=1: AR accepted this cycle — burst
+                        //     in flight unless RLAST also arrives now.
+                        //   ar_pending_q=1, rvalid=0:  Burst beats still in flight — drain.
+                        //   ar_pending_q=1, rvalid=1:  Beat arriving now; if RLAST, done.
                         cancel_ar_q     <= !ar_pending_q && !axi_arready_i;
-                        cancel_wait_r_q <= ( ar_pending_q && !axi_rvalid_i) ||
-                                           (!ar_pending_q &&  axi_arready_i && !axi_rvalid_i);
-                        ar_pending_q  <= 1'b0;
-                        refill_word_q <= 2'b00;
+                        cancel_draining <= ( ar_pending_q && !(axi_rvalid_i && axi_rlast_i)) ||
+                                           (!ar_pending_q &&   axi_arready_i && !(axi_rvalid_i && axi_rlast_i));
+                        cancel_wait_r_q <= 1'b0;
+                        ar_pending_q    <= 1'b0;
+                        refill_word_q   <= 2'b00;
                     end else begin
-                        // Issue AR for current word
+                        // Issue single AR for the full 4-beat burst
                         if (!ar_pending_q) begin
                             if (axi_arready_i)
                                 ar_pending_q <= 1'b1;
+                                // refill_word_q stays 0; it is the beat index
                         end else begin
-                            // Waiting for R response
+                            // Collect R beats until RLAST
                             if (axi_rvalid_i) begin
                                 refill_buf_q[refill_word_q] <= axi_rdata_i;
-                                ar_pending_q <= 1'b0;
-                                if (refill_word_q == 2'd3) begin
-                                    // All 4 words received.  Only commit the line if the
-                                    // address hasn't changed (stale-refill guard).
-                                    state_q <= addr_mismatch ? CS_IDLE : CS_DONE;
+                                if (axi_rlast_i) begin
+                                    // Defensive: assert refill_word_q==3 here.
+                                    // Transition: commit if address still valid, else discard.
+                                    state_q       <= addr_mismatch ? CS_IDLE : CS_DONE;
+                                    ar_pending_q  <= 1'b0;
+                                    refill_word_q <= 2'b00;
                                 end else begin
-                                    refill_word_q <= refill_word_q + 1'b1;
+                                    // Guard: never let word counter wrap past 3
+                                    if (refill_word_q != 2'd3)
+                                        refill_word_q <= refill_word_q + 1'b1;
                                 end
                             end
                         end
