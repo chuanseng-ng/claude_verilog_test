@@ -361,6 +361,9 @@ LibreLane-driven incremental campaign Phase 2+3 used (Runs 7→43).
 | `pnr/asap7/gpu/pdn.tcl` | Power grid for GPU block. |
 
 ### To modify
+
+> **✅ COMPLETED (2026-05-27)**: This is a historical planning checklist — Phase 4 is now done. All status-marker actions below are closed: Phase 3 → ✅, Phase 4 → ✅ COMPLETE (ASAP7 571 MHz sign-off). No further action required from this table.
+
 | Path | Why |
 |---|---|
 | `CLAUDE.md` | Add doc link to golden spec; update Phase 3 ✅ status; update Phase 4 status from ⏸️ to 🔄 once started. |
