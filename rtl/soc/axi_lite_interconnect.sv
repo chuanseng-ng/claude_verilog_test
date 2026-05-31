@@ -24,8 +24,8 @@ module axi_lite_interconnect #(
     parameter int unsigned DW       = axi_pkg::AXI_DATA_WIDTH,
     parameter int unsigned SW       = axi_pkg::AXI_STRB_WIDTH,
     // Per-slave address bounds (inclusive).
-    parameter logic [31:0] SLV_BASE  [N_SLAVES] = '{default: '0},
-    parameter logic [31:0] SLV_LIMIT [N_SLAVES] = '{default: '0}
+    parameter logic [AW-1:0] SLV_BASE  [N_SLAVES] = '{default: '0},
+    parameter logic [AW-1:0] SLV_LIMIT [N_SLAVES] = '{default: '0}
 ) (
     input  logic clk,
     input  logic rst_n,

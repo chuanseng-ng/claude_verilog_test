@@ -68,6 +68,8 @@ module tb_axi_lite_register_bank #(
     axi_lite_register_bank #(
         .N_REGS    (N_REGS),
         .ADDR_W    (ADDR_W),
+        .DW        (DW),
+        .SW        (SW),
         .RESET_VAL (RV),
         .WMASK     (WM)
     ) u_bank (

@@ -71,6 +71,12 @@ module axi_lite_register_bank #(
 
     import axi_pkg::*;
 
+    // Static checks: module storage is fixed at 32-bit words with 4-byte strobes.
+    initial begin
+        if (DW != 32) $fatal(1, "axi_lite_register_bank requires DW == 32");
+        if (SW != 4)  $fatal(1, "axi_lite_register_bank requires SW == 4");
+    end
+
     logic [31:0] regs [N_REGS];
     assign regs_o = regs;
 
