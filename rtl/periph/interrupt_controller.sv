@@ -123,15 +123,23 @@ module interrupt_controller
     );
 
     // =========================================================================
-    // 1-FF synchroniser for irq_src_i
+    // 2-FF synchroniser for irq_src_i (CDC hardening)
+    // irq_src_i originates from peripheral IRQ lines that may be asynchronous to
+    // this clock in a multi-clock SoC; a two-stage synchroniser per bit removes
+    // metastability before the level is consumed by masking / status logic.
+    // stage1 samples the raw input; stage2 (irq_src_sync_q) is the synced source.
     // =========================================================================
-    logic [N_SOURCES-1:0] irq_src_sync_q;
+    logic [N_SOURCES-1:0] irq_src_stage1_q;
+    logic [N_SOURCES-1:0] irq_src_sync_q;   // stage2 — synchronised source
 
     always_ff @(posedge clk) begin
-        if (!rst_n)
-            irq_src_sync_q <= {N_SOURCES{1'b0}};
-        else
-            irq_src_sync_q <= irq_src_i;
+        if (!rst_n) begin
+            irq_src_stage1_q <= {N_SOURCES{1'b0}};
+            irq_src_sync_q   <= {N_SOURCES{1'b0}};
+        end else begin
+            irq_src_stage1_q <= irq_src_i;
+            irq_src_sync_q   <= irq_src_stage1_q;
+        end
     end
 
     // =========================================================================

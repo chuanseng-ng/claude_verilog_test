@@ -152,6 +152,5 @@
       "reason": "Phase 5 M4 cocotb suites: interrupt_controller TESTS=5 PASS=5 FAIL=0 (test_irq_ctrl.py); timer TESTS=6 PASS=6 FAIL=0 (test_timer.py). No RTL bugs found. DUT RTL unchanged.",
       "constraint_ref": null
     }
-  ],
-  "updated_at": "2026-06-01T08:39:00+07:00"
+  ]
 }

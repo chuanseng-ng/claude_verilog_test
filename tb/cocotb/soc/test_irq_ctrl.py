@@ -10,13 +10,13 @@
 #   0x04  IRQ_MASK           RW  per-source enable
 #   0x08  IRQ_PENDING_MASKED RO  STATUS & MASK
 #
-# Timing note: irq_src_i goes through a 1-FF synchroniser, so after any
+# Timing note: irq_src_i goes through a 2-FF synchroniser, so after any
 # change to irq_src_i we must wait at least 2 rising edges before reading
 # status registers or sampling irq_o.
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, ClockCycles
+from cocotb.triggers import RisingEdge
 
 from bfm.axi4lite_master import AXI4LiteMaster
 
@@ -28,8 +28,8 @@ REG_IRQ_PENDING_MASKED = 0x08
 # AXI response codes
 RESP_OKAY = 0b00
 
-# Synchroniser depth: 1 FF → need 2 clock edges to guarantee visibility
-SYNC_CYCLES = 2
+# Synchroniser depth: 2 FF → need 2 clock edges to propagate; use 3 for margin
+SYNC_CYCLES = 3
 
 # ── Setup helper ──────────────────────────────────────────────────────────────
 

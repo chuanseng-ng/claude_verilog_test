@@ -141,7 +141,13 @@ async def test_counter_increments(dut):
 
 @cocotb.test()
 async def test_prescaler(dut):
-    """PRESCALE=3 → tick every 4 clocks; count rate should be ~1/4 of clock rate."""
+    """PRESCALE=3 → tick every 4 clocks; observed increment over a fixed
+    ClockCycles window must equal WAIT_CYCLES // (PRESCALE + 1) within ±1.
+
+    Samples the internal counter (dut.count_q, exposed by --public-flat-rw)
+    directly rather than via AXI reads, so the measurement window is exact
+    and free of AXI transaction latency.
+    """
     m = await _setup(dut)
 
     PRESCALE = 3  # tick every (3+1)=4 clocks
@@ -149,24 +155,28 @@ async def test_prescaler(dut):
     await m.write(REG_TMR_PRESCALE, PRESCALE)
     await m.write(REG_TMR_CTRL,     CTRL_ENABLE)
 
-    # Wait ~40 clocks; expect count ≈ 40/4 = 10 increments
+    # Align to a clock edge, then sample the live counter directly.
+    await RisingEdge(dut.clk)
+    start_count = dut.count_q.value.integer
+
     WAIT_CYCLES = 40
-    for _ in range(WAIT_CYCLES):
-        await RisingEdge(dut.clk)
+    await ClockCycles(dut.clk, WAIT_CYCLES)
 
-    count, _ = await m.read(REG_TMR_COUNTER)
+    end_count = dut.count_q.value.integer
 
-    # Expected ~10; generous tolerance for AXI transaction overhead.
-    # Each AXI write above took several cycles before counting started.
-    # We just assert count is in a plausible range rather than exact.
-    assert count >= 1, f"Count too low with PRESCALE={PRESCALE}: count={count}"
-    # Upper bound: can't have more counts than half the total elapsed time
-    # (plenty of slack given AXI overhead), but must be << WAIT_CYCLES
-    assert count < WAIT_CYCLES, (
-        f"Count too high with PRESCALE={PRESCALE}: count={count}, "
-        f"should be < {WAIT_CYCLES}"
+    # Counter is CNT_W=32-bit; no wrap expected in a 40-cycle window, but mask
+    # to the counter width to be safe.
+    delta = (end_count - start_count) & 0xFFFF_FFFF
+    expected = WAIT_CYCLES // (PRESCALE + 1)  # 40 // 4 = 10
+
+    assert abs(delta - expected) <= 1, (
+        f"prescaler rate wrong: PRESCALE={PRESCALE}, window={WAIT_CYCLES} clks, "
+        f"delta={delta}, expected≈{expected} (±1)"
     )
-    dut._log.info(f"test_prescaler PASS  count={count} after ~{WAIT_CYCLES} clocks with PRESCALE={PRESCALE}")
+    dut._log.info(
+        f"test_prescaler PASS  delta={delta} over {WAIT_CYCLES} clks "
+        f"(expected {expected}, PRESCALE={PRESCALE})"
+    )
 
 
 # ── Test 4: IRQ on compare match ─────────────────────────────────────────────
