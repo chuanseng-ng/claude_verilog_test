@@ -175,6 +175,29 @@
       "suggested_next_step": "proceed",
       "reason": "GPU random-kernel regression broadened (B1 global loads, B2 shared-mem round-trip, B3 single-level divergence diamond). TB+ref-model only, no RTL edits. Smoke (25): 0 deadlocks, 0 mismatches PASS. Full (1000): 0 deadlocks, 0 mismatches PASS. gpu_all rollup: ALL PHASE 4 GPU TESTS PASSED (unit+kernels+handoff+random smoke). Bead claude_verilog_test-a81 complete.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-01T19:20:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Phase 5 dq4 UART/SPI hardening: 4 RTL changes applied (A1 WSTRB byte-lane mux on both files, A2 tx_was_nonempty_q spurious-IRQ guard, A3 framing_error sticky + STATUS[6], A4 16x oversample RX redesign with majority vote and stop-bit check). Verilator -Wall -Wno-IMPORTSTAR: 0 errors, 0 warnings on both uart_controller.sv and spi_controller.sv.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-01T19:40:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Phase 5 dq4 UART/SPI hardening verification complete. UART: TESTS=11 PASS=11 FAIL=0 (6 existing updated for A4 16x baud + 5 new: async_rx_raw_pin, oversample_noise_immunity, framing_error, reset_irq_tx_empty, byte_lane_snoop). SPI: TESTS=13 PASS=13 FAIL=0 (10 existing unchanged + 3 new: real_miso_mode0, rx_fifo_overflow, byte_lane_snoop). soc_all: all 9 peripheral suites pass. make test (Phase 1-4 rollup): ALL TESTS PASSED. 0 RTL bugs found. DUT RTL unchanged.",
+      "constraint_ref": null
     }
-  ]
+  ],
+  "updated_at": "2026-06-01T19:40:00+07:00"
 }

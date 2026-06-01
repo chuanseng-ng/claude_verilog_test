@@ -187,6 +187,21 @@ module spi_controller
     logic [7:0]       snoop_wdata_q;
     logic [WORDW-1:0] snoop_raddr_q;
 
+    // A1: WSTRB byte-lane priority mux.
+    // Select the byte from s_axil_wdata that corresponds to the lowest set bit
+    // of s_axil_wstrb so that DMA masters driving a non-lane-0 byte are handled
+    // correctly.  Falls back to lane 0 when wstrb==4'h0.
+    logic [7:0] wstrb_sel_byte;
+    always_comb begin
+        unique casez (s_axil_wstrb)
+            4'b???1: wstrb_sel_byte = s_axil_wdata[ 7: 0];
+            4'b??10: wstrb_sel_byte = s_axil_wdata[15: 8];
+            4'b?100: wstrb_sel_byte = s_axil_wdata[23:16];
+            4'b1000: wstrb_sel_byte = s_axil_wdata[31:24];
+            default: wstrb_sel_byte = s_axil_wdata[ 7: 0];  // wstrb==0: lane 0
+        endcase
+    end
+
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             snoop_waddr_q      <= '0;
@@ -198,7 +213,7 @@ module spi_controller
                 snoop_waddr_q <= s_axil_awaddr[ADDR_W-1:2];
             if (s_axil_wvalid && s_axil_wready) begin
                 snoop_wdata_full_q <= s_axil_wdata;
-                snoop_wdata_q      <= s_axil_wdata[7:0];
+                snoop_wdata_q      <= wstrb_sel_byte;  // A1: lowest active lane
             end
             if (s_axil_arvalid && s_axil_arready)
                 snoop_raddr_q <= s_axil_araddr[ADDR_W-1:2];
