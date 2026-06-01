@@ -383,7 +383,7 @@ increments on `m_rvalid`, the destination memory shows a "doubling" pattern:
 each source word is written to two consecutive destination addresses.
 
 Example with 8 source words and `r_delay=1`:
-```
+```text
 DST[0] = linebuf[0]  ✓
 DST[1] = linebuf[0]  ✗  (expected linebuf[1])
 DST[2] = linebuf[1]  ✗  (expected linebuf[2])
