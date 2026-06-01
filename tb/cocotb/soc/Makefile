@@ -45,6 +45,16 @@ DMA_SOURCES = \
 	$(RTL)/soc/axi_lite_register_bank.sv \
 	$(RTL)/periph/dma_engine.sv
 
+TIMER_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/axi_lite_register_bank.sv \
+	$(RTL)/periph/timer.sv
+
+IRQ_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/axi_lite_register_bank.sv \
+	$(RTL)/periph/interrupt_controller.sv
+
 VERILOG_SOURCES = $(XBAR_SOURCES)
 
 ifeq ($(SIM),verilator)
@@ -85,7 +95,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint soc_all verilator_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint soc_all verilator_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar
 
@@ -113,10 +123,28 @@ dma: dma_lint
 	$(MAKE) MODULE=test_dma TOPLEVEL=dma_engine \
 		VERILOG_SOURCES="$(DMA_SOURCES)"
 
-# Run every SoC unit test (crossbar + register bank + AXI-Lite interconnect + SRAM + DMA).
+timer_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module timer $(TIMER_SOURCES)
+
+timer: timer_lint
+	$(MAKE) MODULE=test_timer TOPLEVEL=timer \
+		VERILOG_SOURCES="$(TIMER_SOURCES)"
+
+irq_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module interrupt_controller $(IRQ_SOURCES)
+
+irq: irq_lint
+	$(MAKE) MODULE=test_irq_ctrl TOPLEVEL=interrupt_controller \
+		VERILOG_SOURCES="$(IRQ_SOURCES)"
+
+# Run every SoC unit test (crossbar + register bank + AXI-Lite interconnect + SRAM + DMA + timer + IRQ).
 soc_all:
 	$(MAKE) clean && $(MAKE) crossbar
 	$(MAKE) clean && $(MAKE) register_bank
 	$(MAKE) clean && $(MAKE) axil_interconnect
 	$(MAKE) clean && $(MAKE) sram_controller
 	$(MAKE) clean && $(MAKE) dma
+	$(MAKE) clean && $(MAKE) irq
+	$(MAKE) clean && $(MAKE) timer
