@@ -210,7 +210,11 @@ help:
 	@echo "  make gpu_unit     - Run all Phase 4 GPU unit tests"
 	@echo "  make gpu_kernels  - Run all Phase 4 GPU kernel tests"
 	@echo "  make gpu_handoff  - Run Phase 4 CPU-GPU handoff integration test"
-	@echo "  make gpu_all      - Run all Phase 4 GPU tests"
+	@echo "  make gpu_random   - Run GPU random-kernel regression (RANDOM_KERNELS=1000 default)"
+	@echo "  make gpu_random_smoke - Run GPU random-kernel smoke (25 kernels)"
+	@echo "  make gpu_all      - Run all Phase 4 GPU tests (unit+kernels+handoff+random smoke)"
+	@echo "  make regression_full - Unified nightly: CPU+cache+GPU + full CPU/GPU random"
+	@echo "                    env: RANDOM_KERNELS / RANDOM_KERNELS_SMOKE / RANDOM_KERNELS_SEED"
 	@echo "  make coverage     - Run all tests with Verilator coverage + generate reports"
 	@echo "  make distclean    - Clean simulation artifacts"
 	@echo "  make help         - Show this help"
@@ -645,6 +649,13 @@ gpu_random:
 		SIM_BUILD=sim_build_gpu_random \
 		EXTRA_ARGS=""
 
+# Random-kernel smoke (25 kernels) — fast variant folded into gpu_all rollup.
+.PHONY: gpu_random_smoke
+gpu_random_smoke:
+	@echo "Running Phase 4 random-kernel smoke (25 kernels)..."
+	@echo ""
+	RANDOM_KERNELS_SMOKE=1 $(MAKE) gpu_random
+
 # CPU-GPU handoff integration test
 .PHONY: gpu_handoff
 gpu_handoff:
@@ -657,19 +668,19 @@ gpu_handoff:
 		VERILOG_SOURCES="$(GPU_SOURCES)" \
 		SIM_BUILD=sim_build_gpu_handoff
 
-# All Phase 4 tests: unit + kernels + handoff
+# All Phase 4 tests: unit + kernels + handoff + random smoke
 .PHONY: gpu_all
 gpu_all:
-	@echo "Running all Phase 4 GPU tests (unit + kernels + handoff)..."
+	@echo "Running all Phase 4 GPU tests (unit + kernels + handoff + random smoke)..."
 	@echo "Note: This should be run in WSL environment"
 	@echo ""
 	@failed_tests=""; \
-	for target in gpu_unit gpu_kernels gpu_handoff; do \
+	for target in gpu_unit gpu_kernels gpu_handoff gpu_random_smoke; do \
 		echo "========================================"; \
 		echo "Running target: $$target"; \
 		echo "========================================"; \
 		rm -f results.xml; \
-		if ! $(MAKE) $$target || { [ "$$target" = "gpu_handoff" ] && { [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; }; }; then \
+		if ! $(MAKE) $$target || { { [ "$$target" = "gpu_handoff" ] || [ "$$target" = "gpu_random_smoke" ]; } && { [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; }; }; then \
 			failed_tests="$$failed_tests $$target"; \
 		fi; \
 		echo ""; \
@@ -682,6 +693,46 @@ gpu_all:
 	else \
 		echo "========================================"; \
 		echo "ALL PHASE 4 GPU TESTS PASSED!"; \
+		echo "========================================"; \
+	fi
+
+# Unified nightly regression: CPU directed + Phase 3 cache (via 'test') + all GPU
+# (unit/kernels/handoff/random-smoke via 'gpu_all') + full CPU random (random_uvm,
+# 100k instr) + full GPU random (gpu_random, 1000 kernels). One failing suite fails
+# the rollup with a summary. Long-running — intended for nightly, not CI smoke.
+.PHONY: regression_full
+regression_full:
+	@echo "Running FULL unified regression (CPU + cache + GPU + CPU/GPU random)..."
+	@echo ""
+	@failed=""; \
+	for grp in test gpu_all; do \
+		echo "========================================"; \
+		echo "Regression group: $$grp"; \
+		echo "========================================"; \
+		$(MAKE) $$grp || failed="$$failed $$grp"; \
+		echo ""; \
+	done; \
+	echo "========================================"; \
+	echo "Regression group: random_uvm (CPU full random)"; \
+	echo "========================================"; \
+	$(MAKE) random_uvm || failed="$$failed random_uvm"; \
+	echo ""; \
+	echo "========================================"; \
+	echo "Regression group: gpu_random (1000 kernels)"; \
+	echo "========================================"; \
+	rm -f results.xml; \
+	if ! $(MAKE) gpu_random || [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; then \
+		failed="$$failed gpu_random"; \
+	fi; \
+	echo ""; \
+	if [ -n "$$failed" ]; then \
+		echo "========================================"; \
+		echo "FAILED REGRESSION GROUPS:$$failed"; \
+		echo "========================================"; \
+		exit 1; \
+	else \
+		echo "========================================"; \
+		echo "FULL REGRESSION PASSED!"; \
 		echo "========================================"; \
 	fi
 
