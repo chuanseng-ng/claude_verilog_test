@@ -715,7 +715,10 @@ regression_full:
 	echo "========================================"; \
 	echo "Regression group: random_uvm (CPU full random)"; \
 	echo "========================================"; \
-	$(MAKE) random_uvm || failed="$$failed random_uvm"; \
+	rm -f results.xml; \
+	if ! $(MAKE) random_uvm || [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; then \
+		failed="$$failed random_uvm"; \
+	fi; \
 	echo ""; \
 	echo "========================================"; \
 	echo "Regression group: gpu_random (1000 kernels)"; \

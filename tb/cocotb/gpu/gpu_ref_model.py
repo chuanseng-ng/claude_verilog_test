@@ -59,9 +59,10 @@ class GpuRefModel:
                  initial_gmem: dict = None):
         self.n = n_lanes
         self.warp_id = warp_id
+        self._seed_gmem = dict(initial_gmem) if initial_gmem else {}
         self.regs = [[0] * n_lanes for _ in range(32)]   # regs[r][lane]
-        self._initial_addrs = set(initial_gmem.keys()) if initial_gmem else set()
-        self.gmem = dict(initial_gmem) if initial_gmem else {}
+        self._initial_addrs = set(self._seed_gmem)
+        self.gmem = dict(self._seed_gmem)
         self.smem = {}    # byte addr -> 32-bit value (shared)
         self.gmem_writes = {}  # only VST destinations (no pre-seeded reads)
 
@@ -93,18 +94,22 @@ class GpuRefModel:
             max_steps:    safety limit to prevent infinite loops.
             initial_gmem: alternative way to pass initial global memory when
                           constructing GpuRefModel without the constructor arg.
-                          If both are provided, constructor value takes precedence
-                          (already merged into self.gmem).
+                          If given here, it overrides the constructor seed for
+                          this and subsequent runs.
 
         Returns:
             self.gmem_writes — only the addresses written by VST during execution.
             Pre-seeded initial_gmem (read-only VLD inputs) is deliberately excluded
             so the scoreboard compares against RTL stores, not seeded reads.
         """
-        if initial_gmem and not self.gmem:
-            self.gmem = dict(initial_gmem)
-            self._initial_addrs = set(initial_gmem.keys())
-            self.gmem_writes = {}
+        # Reset per-run state so a reused instance behaves as if freshly built.
+        if initial_gmem is not None:
+            self._seed_gmem = dict(initial_gmem)
+            self._initial_addrs = set(self._seed_gmem)
+        self.regs = [[0] * self.n for _ in range(32)]
+        self.gmem = dict(self._seed_gmem)
+        self.smem = {}
+        self.gmem_writes = {}
 
         # Single-level SIMT divergence stack: list of (return_pc, return_mask)
         # Each entry is the reconvergence context (false-path) to resume after
@@ -136,8 +141,8 @@ class GpuRefModel:
                     # Pop: resume false-path (not-taken lanes)
                     return_pc, return_mask_bits = div_stack.pop()
                     # Restore active mask from the bitmask stored on stack
-                    active_mask = [l for l in range(self.n)
-                                   if (return_mask_bits >> l) & 1]
+                    active_mask = [lane for lane in range(self.n)
+                                   if (return_mask_bits >> lane) & 1]
                     pc = return_pc
                     continue
                 else:
@@ -149,14 +154,14 @@ class GpuRefModel:
                 branch_target = (pc + simm) & MASK32
                 fall_through  = (pc + 4) & MASK32
 
-                taken_lanes     = [l for l in active_mask
-                                   if self._branch_taken(opcode, a[l], b[l])]
-                not_taken_lanes = [l for l in active_mask
-                                   if not self._branch_taken(opcode, a[l], b[l])]
+                taken_lanes     = [lane for lane in active_mask
+                                   if self._branch_taken(opcode, a[lane], b[lane])]
+                not_taken_lanes = [lane for lane in active_mask
+                                   if not self._branch_taken(opcode, a[lane], b[lane])]
 
                 if taken_lanes and not_taken_lanes:
                     # Divergent: push false-path (not-taken) state, execute true-path
-                    false_mask_bits = sum(1 << l for l in not_taken_lanes)
+                    false_mask_bits = sum(1 << lane for lane in not_taken_lanes)
                     div_stack.append((fall_through, false_mask_bits))
                     active_mask = taken_lanes
                     pc = branch_target
@@ -176,117 +181,117 @@ class GpuRefModel:
                 pc = branch_target
                 continue
             elif opcode == VADD:
-                vals = [a[l] + b[l] for l in range(self.n)]
+                vals = [a[lane] + b[lane] for lane in range(self.n)]
                 # Only update active lanes; preserve inactive lane values
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = vals[l]
+                for lane in active_mask:
+                    result[lane] = vals[lane]
                 self._wr(rd, result)
             elif opcode == VSUB:
-                vals = [a[l] - b[l] for l in range(self.n)]
+                vals = [a[lane] - b[lane] for lane in range(self.n)]
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = vals[l]
+                for lane in active_mask:
+                    result[lane] = vals[lane]
                 self._wr(rd, result)
             elif opcode == VMUL:
-                vals = [a[l] * b[l] for l in range(self.n)]
+                vals = [a[lane] * b[lane] for lane in range(self.n)]
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = vals[l]
+                for lane in active_mask:
+                    result[lane] = vals[lane]
                 self._wr(rd, result)
             elif opcode == VAND:
-                vals = [a[l] & b[l] for l in range(self.n)]
+                vals = [a[lane] & b[lane] for lane in range(self.n)]
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = vals[l]
+                for lane in active_mask:
+                    result[lane] = vals[lane]
                 self._wr(rd, result)
             elif opcode == VOR:
-                vals = [a[l] | b[l] for l in range(self.n)]
+                vals = [a[lane] | b[lane] for lane in range(self.n)]
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = vals[l]
+                for lane in active_mask:
+                    result[lane] = vals[lane]
                 self._wr(rd, result)
             elif opcode == VXOR:
-                vals = [a[l] ^ b[l] for l in range(self.n)]
+                vals = [a[lane] ^ b[lane] for lane in range(self.n)]
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = vals[l]
+                for lane in active_mask:
+                    result[lane] = vals[lane]
                 self._wr(rd, result)
             elif opcode == VSLL:
-                vals = [(a[l] << (b[l] & 0x1F)) & MASK32 for l in range(self.n)]
+                vals = [(a[lane] << (b[lane] & 0x1F)) & MASK32 for lane in range(self.n)]
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = vals[l]
+                for lane in active_mask:
+                    result[lane] = vals[lane]
                 self._wr(rd, result)
             elif opcode == VSRL:
-                vals = [(a[l] & MASK32) >> (b[l] & 0x1F) for l in range(self.n)]
+                vals = [(a[lane] & MASK32) >> (b[lane] & 0x1F) for lane in range(self.n)]
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = vals[l]
+                for lane in active_mask:
+                    result[lane] = vals[lane]
                 self._wr(rd, result)
             elif opcode == VSRA:
-                vals = [_sext32(a[l]) >> (b[l] & 0x1F) for l in range(self.n)]
+                vals = [_sext32(a[lane]) >> (b[lane] & 0x1F) for lane in range(self.n)]
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = vals[l]
+                for lane in active_mask:
+                    result[lane] = vals[lane]
                 self._wr(rd, result)
             elif opcode == VADDI:
-                vals = [a[l] + simm for l in range(self.n)]
+                vals = [a[lane] + simm for lane in range(self.n)]
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = vals[l]
+                for lane in active_mask:
+                    result[lane] = vals[lane]
                 self._wr(rd, result)
             elif opcode == VANDI:
-                vals = [a[l] & (simm & MASK32) for l in range(self.n)]
+                vals = [a[lane] & (simm & MASK32) for lane in range(self.n)]
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = vals[l]
+                for lane in active_mask:
+                    result[lane] = vals[lane]
                 self._wr(rd, result)
             elif opcode == VORI:
-                vals = [a[l] | (simm & MASK32) for l in range(self.n)]
+                vals = [a[lane] | (simm & MASK32) for lane in range(self.n)]
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = vals[l]
+                for lane in active_mask:
+                    result[lane] = vals[lane]
                 self._wr(rd, result)
             elif opcode == VXORI:
-                vals = [a[l] ^ (simm & MASK32) for l in range(self.n)]
+                vals = [a[lane] ^ (simm & MASK32) for lane in range(self.n)]
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = vals[l]
+                for lane in active_mask:
+                    result[lane] = vals[lane]
                 self._wr(rd, result)
             elif opcode == VMOV_TID_X:
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = l
+                for lane in active_mask:
+                    result[lane] = lane
                 self._wr(rd, result)
             elif opcode == VMOV_BID_X:
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    result[l] = self.warp_id
+                for lane in active_mask:
+                    result[lane] = self.warp_id
                 self._wr(rd, result)
             elif opcode == VLD:
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    addr = (a[l] + simm) & MASK32
-                    result[l] = self.gmem.get(addr, 0)
+                for lane in active_mask:
+                    addr = (a[lane] + simm) & MASK32
+                    result[lane] = self.gmem.get(addr, 0)
                 self._wr(rd, result)
             elif opcode == VST:
                 # data register index = imm[4:0] = rs2 field; addr = rs1 + sext(imm)
                 data = self.regs[rs2]
-                for l in active_mask:
-                    addr = (a[l] + simm) & MASK32
-                    self.gmem[addr] = data[l] & MASK32
-                    self.gmem_writes[addr] = data[l] & MASK32
+                for lane in active_mask:
+                    addr = (a[lane] + simm) & MASK32
+                    self.gmem[addr] = data[lane] & MASK32
+                    self.gmem_writes[addr] = data[lane] & MASK32
             elif opcode == VLDS:
                 result = list(self.regs[rd])
-                for l in active_mask:
-                    addr = (a[l] + simm) & MASK32
-                    result[l] = self.smem.get(addr, 0)
+                for lane in active_mask:
+                    addr = (a[lane] + simm) & MASK32
+                    result[lane] = self.smem.get(addr, 0)
                 self._wr(rd, result)
             elif opcode == VSTS:
                 data = self.regs[rs2]
-                for l in active_mask:
-                    self.smem[(a[l] + simm) & MASK32] = data[l] & MASK32
+                for lane in active_mask:
+                    self.smem[(a[lane] + simm) & MASK32] = data[lane] & MASK32
             else:
                 raise ValueError(f"GpuRefModel: unsupported opcode 0x{opcode:02x} "
                                  f"at pc=0x{pc:x} (generator should not emit this)")

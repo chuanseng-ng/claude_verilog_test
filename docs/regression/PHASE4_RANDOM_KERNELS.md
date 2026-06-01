@@ -92,13 +92,17 @@ A single kernel may receive 0, 1, 2, or all 3 extensions simultaneously.
 
 ### Address layout
 
-```
+```text
+Global address space:
 0x000–0x0FF : (unused — VRET fallback returns 0x3F from instr_responder)
 0x100–0x11F : INPUT_REGION — 8 words (one per lane); pre-seeded; read-only VLD source
-0x200–0x23F : STORE_REGIONS[0] — baseline/B3-false store region
-0x240–0x27F : STORE_REGIONS[1] — baseline or B3-false-path diamond store
-0x280–0x2BF : STORE_REGIONS[2] — baseline or B3-true-path diamond store
-0x000–0x1FF : SMEM (shared scratchpad) — 16 KB; lane l writes smem[l*4]
+0x200–0x23F : STORE_REGIONS[0] — baseline store region (also B3 unreachable-tail store)
+0x240–0x27F : STORE_REGIONS[1] — baseline store, or B3 false-path diamond store
+0x280–0x2BF : STORE_REGIONS[2] — baseline store, or B3 true-path diamond store
+
+Shared address space (separate from global):
+0x000–0x1FF : SMEM (shared scratchpad) — 512 B window used (physical 16 KB / 32
+              banks); lane writes smem[lane*4]
 ```
 
 Regions are non-overlapping. Store lane stride is 4 bytes; 8 lanes = 32 bytes per
@@ -119,7 +123,7 @@ After each kernel:
 The B3 generator always emits a provably-reconverging, provably-terminating,
 single-level diamond:
 
-```
+```text
 VBLT rs1=working_reg, rs2=r0, target=true_path   ; push(false_path_pc, not_taken_mask)
 ; fall-through (false-path, lanes where working_reg[l] >= 0):
   VADDI  div_reg, r0, false_val

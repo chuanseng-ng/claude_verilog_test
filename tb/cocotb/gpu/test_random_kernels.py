@@ -76,8 +76,8 @@ SMEM_BASE = 0   # shared byte address for lane 0; lane l → SMEM_BASE + l*4
 def _seed_input_region(rng: random.Random) -> dict:
     """Return a dict {addr: value} seeding INPUT_REGION for one kernel."""
     return {
-        INPUT_REGION_BASE + l * 4: rng.randint(0, 0xFFFF_FFFF)
-        for l in range(INPUT_REGION_SIZE)
+        INPUT_REGION_BASE + lane * 4: rng.randint(0, 0xFFFF_FFFF)
+        for lane in range(INPUT_REGION_SIZE)
     }
 
 
