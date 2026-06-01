@@ -70,6 +70,12 @@ class AXI4SlaveModel:
     def _sig(self, field):
         return getattr(self.dut, f"{self.p}_{field}")
 
+    def _check_4k(self, addr, axlen):
+        """Hook called on every captured AW/AR. Default no-op.
+        Override to assert AXI4 4 KB-boundary compliance:
+        addr[11:0] + (axlen+1)*4 <= 0x1000."""
+        return None
+
     def start(self):
         cocotb.start_soon(self._write_loop())
         cocotb.start_soon(self._read_loop())
@@ -88,6 +94,7 @@ class AXI4SlaveModel:
                     awid  = int(s("awid").value)
                     addr  = int(s("awaddr").value)
                     awlen = int(s("awlen").value)
+                    self._check_4k(addr, awlen)
                     break
                 await RisingEdge(self.clock)
             # Re-enter active phase before any signal writes.
@@ -151,6 +158,7 @@ class AXI4SlaveModel:
                     arid  = int(s("arid").value)
                     addr  = int(s("araddr").value)
                     arlen = int(s("arlen").value)
+                    self._check_4k(addr, arlen)
                     break
                 await RisingEdge(self.clock)
             await RisingEdge(self.clock)

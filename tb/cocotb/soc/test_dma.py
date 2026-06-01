@@ -14,7 +14,7 @@
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, Timer, First
+from cocotb.triggers import RisingEdge
 
 from bfm.axi4lite_master import AXI4LiteMaster
 from axi4_slave_model import AXI4SlaveModel
@@ -46,6 +46,23 @@ RESP_SLVERR = 0b10
 
 CLK_PERIOD_NS = 2
 POLL_TIMEOUT_CYCLES = 5000
+
+class BoundaryCheckSlave(AXI4SlaveModel):
+    """Slave model that fails the test if any AR/AW crosses a 4 KB page.
+
+    AXI4 spec: a burst must not cross a 4 KB boundary, i.e.
+    addr[11:0] + (axlen+1)*4 <= 0x1000. Catches a src_to_4k/dst_to_4k
+    unit bug in the DMA burst-split logic (byte distance vs word count).
+    """
+
+    def _check_4k(self, addr, axlen):
+        span = (addr & 0xFFF) + (axlen + 1) * 4
+        assert span <= 0x1000, (
+            f"AXI4 4 KB-boundary violation: addr={addr:#010x} "
+            f"(low12={addr & 0xFFF:#05x}) axlen={axlen} "
+            f"spans {span:#x} bytes past page base (> 0x1000)"
+        )
+
 
 # Track slave tasks so _setup can cancel them before starting new ones.
 # cocotb does NOT auto-cancel background tasks between tests; if the previous
@@ -84,8 +101,6 @@ async def _setup(dut, mem=None, slave_delays=None, slave_class=None):
     slave = cls(dut, "m", dut.clk, mem=mem, **kwargs)
 
     # Monkey-patch start() to record tasks so we can cancel them later.
-    orig_start = slave.start
-
     def _tracked_start():
         t1 = cocotb.start_soon(slave._write_loop())
         t2 = cocotb.start_soon(slave._read_loop())
@@ -227,7 +242,10 @@ async def test_4kb_boundary_split(dut):
     LEN = N_WORDS * 4
 
     seed = {SRC + i * 4: 0xC000_0000 + i for i in range(N_WORDS)}
-    axil, slave = await _setup(dut, mem=dict(seed))
+    # Use a slave that asserts AXI4 4 KB-boundary compliance on every AR/AW,
+    # so a burst-split unit bug is reported at protocol level before the
+    # data-integrity checks below.
+    axil, slave = await _setup(dut, mem=dict(seed), slave_class=BoundaryCheckSlave)
 
     await _launch(axil, SRC, DST, LEN)
     status = await _poll_done(dut, axil, timeout=10000)

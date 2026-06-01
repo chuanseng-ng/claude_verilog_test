@@ -314,8 +314,8 @@ module dma_engine
     // 4096 needs 13 bits; use 13-bit intermediate, then zero-extend to 32.
     // When addr is perfectly 4K-aligned, addr[11:0]=0 → result=1024.
     // Capped to MAX_BURST_BEATS anyway.
-    assign src_to_4k  = {19'h0, (13'h1000 - {1'b0, src_q[11:0]})};
-    assign dst_to_4k  = {19'h0, (13'h1000 - {1'b0, dst_q[11:0]})};
+    assign src_to_4k  = {19'h0, ((13'h1000 - {1'b0, src_q[11:0]}) >> 2)};
+    assign dst_to_4k  = {19'h0, ((13'h1000 - {1'b0, dst_q[11:0]}) >> 2)};
 
     // min4: use intermediate comparisons to avoid deep chain
     function automatic logic [31:0] min2(input logic [31:0] a, input logic [31:0] b);
