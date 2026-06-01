@@ -371,6 +371,119 @@ explicitly built with ASAP7 defines.
 sim_build_dcache/Vtop need rebuilding. The main sim_build/Vtop is unaffected and
 does not require rebuild.
 
+## AXI4SlaveModel r_delay Incompatibility with Burst DUT rd_idx (CRITICAL)
+
+**Discovered: 2026-06-01, Phase 5 M5 DMA engine verification.**
+
+### Symptom
+
+When `AXI4SlaveModel` is constructed with `r_delay > 0` and the DUT captures
+`m_rdata` into a line buffer indexed by a registered counter (`rd_idx_q`) that
+increments on `m_rvalid`, the destination memory shows a "doubling" pattern:
+each source word is written to two consecutive destination addresses.
+
+Example with 8 source words and `r_delay=1`:
+```
+DST[0] = linebuf[0]  ✓
+DST[1] = linebuf[0]  ✗  (expected linebuf[1])
+DST[2] = linebuf[1]  ✗  (expected linebuf[2])
+...
+```
+
+### Root cause
+
+In Verilator+cocotb, the per-time-step execution order is:
+
+1. **RisingEdge** — RTL registers update (including `rd_idx_q++` when rvalid=1)
+2. **Active phase** — Python VPI writes fire (`rdata`, `rvalid` set by slave)
+3. **ReadOnly phase** — Python VPI reads fire (slave polls rready)
+
+The slave asserts `rdata=mem[addr+i*4]` and `rvalid=1` in the **active phase**
+of cycle T. The slave immediately polls ReadOnly of cycle T and sees `rready=1`
+(DMA drives it combinationally in S_R). The slave then does `await RisingEdge`
+(cycle T+1). At cycle T+1's RisingEdge, the RTL posedge fires **first**: the
+DMA sees `m_rvalid=1` (set in T's active phase), captures `m_rdata`, and
+increments `rd_idx_q` (0→1). **Then** the active phase fires (slave deasserts
+rvalid, sets up beat i+1). **Then** ReadOnly fires for the next beat.
+
+When `r_delay > 0`, there are extra `await RisingEdge` calls between beats.
+This shifts the timing so the slave's ReadOnly sample for beat i captures
+`m_rdata = linebuf[rd_idx_q]` **after** `rd_idx_q` has already incremented
+(the posedge fired before ReadOnly). Result: beat 0 reads `linebuf[1]`,
+beat 1 reads `linebuf[2]`, etc. — except the slave's address counter advances
+by 1 per beat so consecutive slave beats collide.
+
+The net observable pattern is each unique value appearing at two destination
+addresses before the next value appears — a stutter-then-advance artifact.
+
+### Safe patterns
+
+- `r_delay=0` (default): no extra RisingEdge between beats; timing is correct.
+- `aw_delay > 0`: safe — the write path's `wr_idx_q` is gated by `m_wready`,
+  and the slave's `wready=0→1` toggle in the active phase is visible at
+  ReadOnly of the same cycle (before the next posedge). No off-by-one.
+- `ar_delay > 0`: safe — only delays before asserting arready; does not
+  affect R-channel beat-to-beat timing once arready is asserted.
+
+### Workaround for slow-read scenarios
+
+To exercise read-side backpressure in a Verilator+cocotb testbench, either:
+1. Keep `r_delay=0` and use `aw_delay` to control overall transfer throughput.
+2. Write a custom slave that drives `rvalid` and `rdata` on the **RisingEdge**
+   callback (not via active-phase VPI writes) so the RTL sees the data at the
+   same posedge it samples `rvalid`.
+
+### Applies to
+
+Any DUT that captures `rdata` into a registered buffer indexed by a counter
+incremented on `rvalid`. This includes `dma_engine.sv` (linebuf via rd_idx_q)
+and any future burst-read DUT using the same pattern.
+
+## cocotb Inter-Test Coroutine Leakage (CRITICAL for soc/ tests)
+
+**Discovered: 2026-06-01, Phase 5 M5 DMA engine verification.**
+
+### Symptom
+
+When multiple cocotb tests share a single DUT instance (Verilator simulation),
+`cocotb.start_soon` coroutines from test N are **not automatically cancelled**
+when test N+1 starts. The stale slave model loops (e.g., `AXI4SlaveModel`
+`_write_loop` / `_read_loop`) continue running and compete with the new slave
+for `m_awready`, `m_arready`, and write-data signals. This causes:
+
+- Corrupted slave memory (writes go to the stale slave's `mem` dict instead
+  of the new test's `slave.mem`)
+- Spurious handshake completions (stale slave grabs an AW/AR transaction
+  intended for the new slave, then idles waiting for W-data that never comes)
+- Intermittent test failures that depend on coroutine scheduling order
+
+### Fix
+
+Track all slave task handles in a module-level list. At the start of each
+`_setup` call, call `.kill()` on every stored handle before starting new ones:
+
+```python
+_active_slave_tasks = []   # module-level
+
+async def _setup(dut, ...):
+    global _active_slave_tasks
+    for task in _active_slave_tasks:
+        task.kill()
+    _active_slave_tasks = []
+    ...
+    t1 = cocotb.start_soon(slave._write_loop())
+    t2 = cocotb.start_soon(slave._read_loop())
+    _active_slave_tasks.extend([t1, t2])
+```
+
+### Scope
+
+Applies to all soc/ testbenches that use `AXI4SlaveModel` or any long-running
+background coroutine. The existing crossbar, register_bank, and
+axil_interconnect tests are unaffected only because they do not use a
+persistent background slave model — they drive signals directly.
+
 ## Notes
 
-_Last distilled: 2026-05-28 from 13 experience records._
+_Last distilled: 2026-06-01 from 14 experience records (added M5 DMA r_delay
+and inter-test coroutine-leakage sections)._

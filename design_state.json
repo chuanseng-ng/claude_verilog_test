@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-05-31T20:57:00+07:00",
+  "updated_at": "2026-06-01T07:55:00+07:00",
   "rtl": {
     "top_module": "rv32i_cpu_top",
     "files": [
@@ -16,7 +16,8 @@
       "rtl/mem/rv32i_dcache.sv",
       "rtl/mem/rv32i_cache_arbiter.sv",
       "rtl/cpu/core/rv32i_core.sv",
-      "rtl/cpu/rv32i_cpu_top.sv"
+      "rtl/cpu/rv32i_cpu_top.sv",
+      "rtl/periph/dma_engine.sv"
     ],
     "lint_clean": true,
     "cdc_clean": false,
@@ -103,6 +104,28 @@
       "failure_class": "none",
       "suggested_next_step": "proceed",
       "reason": "Phase 5 M2 burst wiring complete: rv32i_core.sv and rv32i_cpu_top.sv wired with AXI4 burst ports (arlen/arsize/arburst/rlast/awlen/awsize/awburst/wlast); rv32i_cache_arbiter.sv burst signal routing and RLAST-gated done conditions implemented; axi_pkg.sv added to VERILOG_SOURCES and -I$(RTL_DIR)/soc added to lint target. Verilator -Wall: 0 new warnings (5 pre-existing: 3xBLKSEQ, DECLFILENAME, UNUSEDPARAM).",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-01T07:10:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Phase 5 M5 dma_engine.sv lint-clean: 5 issues fixed across 3 iterations (comment directive parse, 12-bit literal overflow, linebuf index width, address-increment width, UNUSEDSIGNAL waiver for length_reg[1:0]). Verilator -Wall: 0 errors, 0 warnings.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-01T07:55:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Phase 5 M5 dma_engine: TESTS=6 PASS=6 FAIL=0 (test_dma.py). soc_all full regression: crossbar 6/6, register_bank 6/6, axil_interconnect 4/4, sram_controller 7/7, dma 6/6 = 29/29 total. DUT RTL unchanged (lint-clean confirmed). Two TB-side fixes applied: wait_idle=True poll helper, task-cancellation guard for inter-test coroutine leakage.",
       "constraint_ref": null
     }
   ]
