@@ -186,11 +186,13 @@ module spi_controller
     /* verilator lint_on  UNUSEDSIGNAL */
     logic [7:0]       snoop_wdata_q;
     logic [WORDW-1:0] snoop_raddr_q;
+    logic             snoop_wstrb_nz_q;  // captured |wstrb at W handshake
 
     // A1: WSTRB byte-lane priority mux.
     // Select the byte from s_axil_wdata that corresponds to the lowest set bit
     // of s_axil_wstrb so that DMA masters driving a non-lane-0 byte are handled
-    // correctly.  Falls back to lane 0 when wstrb==4'h0.
+    // correctly.  When wstrb==4'h0 the value is don't-care: the snooped write
+    // is gated out of tx_push (a zero-strobe AXI write updates no bytes).
     logic [7:0] wstrb_sel_byte;
     always_comb begin
         unique casez (s_axil_wstrb)
@@ -198,7 +200,7 @@ module spi_controller
             4'b??10: wstrb_sel_byte = s_axil_wdata[15: 8];
             4'b?100: wstrb_sel_byte = s_axil_wdata[23:16];
             4'b1000: wstrb_sel_byte = s_axil_wdata[31:24];
-            default: wstrb_sel_byte = s_axil_wdata[ 7: 0];  // wstrb==0: lane 0
+            default: wstrb_sel_byte = s_axil_wdata[ 7: 0];  // wstrb==0: don't-care
         endcase
     end
 
@@ -208,12 +210,14 @@ module spi_controller
             snoop_wdata_full_q <= '0;
             snoop_wdata_q      <= '0;
             snoop_raddr_q      <= '0;
+            snoop_wstrb_nz_q   <= 1'b0;
         end else begin
             if (s_axil_awvalid && s_axil_awready)
                 snoop_waddr_q <= s_axil_awaddr[ADDR_W-1:2];
             if (s_axil_wvalid && s_axil_wready) begin
                 snoop_wdata_full_q <= s_axil_wdata;
                 snoop_wdata_q      <= wstrb_sel_byte;  // A1: lowest active lane
+                snoop_wstrb_nz_q   <= |s_axil_wstrb;   // zero-strobe = no-op
             end
             if (s_axil_arvalid && s_axil_arready)
                 snoop_raddr_q <= s_axil_araddr[ADDR_W-1:2];
@@ -223,7 +227,9 @@ module spi_controller
     wire wr_done = s_axil_bvalid && s_axil_bready;
     wire rd_done = s_axil_rvalid && s_axil_rready;
 
-    wire tx_push = wr_done && (snoop_waddr_q == WORDW'(REG_SPI_TX));
+    // A zero-strobe (wstrb==0) write is a legal AXI no-op and must not transmit.
+    wire tx_push = wr_done && (snoop_waddr_q == WORDW'(REG_SPI_TX)) &&
+                   snoop_wstrb_nz_q;
     wire rx_pop  = rd_done && (snoop_raddr_q == WORDW'(REG_SPI_RX));
 
     // =========================================================================

@@ -17,7 +17,7 @@
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, ClockCycles, FallingEdge
+from cocotb.triggers import RisingEdge, ClockCycles
 
 from bfm.axi4lite_master import AXI4LiteMaster
 
@@ -563,3 +563,25 @@ async def test_byte_lane_snoop(dut):
         f"[lane0] expected 0x{LANE0_BYTE:02X}, got {data:#010x}"
     )
     dut._log.info(f"test_byte_lane_snoop PASS  lane0=0x{LANE0_BYTE:02X} lane1=0x{LANE1_BYTE:02X}")
+
+    # ---- wstrb==0 no-op check (A1/wstrb gate): a zero-strobe write to ----
+    # SPI_TX must NOT push a byte to the TX FIFO.  After the write we wait
+    # one full transfer window and confirm rx_valid is still 0.
+    await ClockCycles(dut.clk, 5)
+
+    # Drain any residual RX byte from the lane-0 subtest
+    st, _ = await m.read(REG_SPI_STATUS)
+    if st & STATUS_RX_VALID:
+        await m.read(REG_SPI_RX)  # pop
+
+    # Issue zero-strobe write — must be a no-op
+    resp = await m.write(REG_SPI_TX, 0xDE, strb=0b0000)
+    assert resp == RESP_OKAY, f"wstrb=0 write RESP={resp}"
+
+    await ClockCycles(dut.clk, TRANSFER_WAIT_DIV0)
+
+    status, _ = await m.read(REG_SPI_STATUS)
+    assert (status & STATUS_RX_VALID) == 0, (
+        f"[wstrb=0] rx_valid must be 0 after zero-strobe write: STATUS={status:#010x}"
+    )
+    dut._log.info("test_byte_lane_snoop wstrb=0 no-op PASS")

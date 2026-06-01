@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-01T18:05:00+07:00",
+  "updated_at": "2026-06-01T20:10:00+07:00",
   "rtl": {
     "top_module": "rv32i_cpu_top",
     "files": [
@@ -197,7 +197,17 @@
       "suggested_next_step": "proceed",
       "reason": "Phase 5 dq4 UART/SPI hardening verification complete. UART: TESTS=11 PASS=11 FAIL=0 (6 existing updated for A4 16x baud + 5 new: async_rx_raw_pin, oversample_noise_immunity, framing_error, reset_irq_tx_empty, byte_lane_snoop). SPI: TESTS=13 PASS=13 FAIL=0 (10 existing unchanged + 3 new: real_miso_mode0, rx_fifo_overflow, byte_lane_snoop). soc_all: all 9 peripheral suites pass. make test (Phase 1-4 rollup): ALL TESTS PASSED. 0 RTL bugs found. DUT RTL unchanged.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-01T20:10:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Code-review fix follow-up validation: lint 0 errors/0 warnings on uart_controller.sv and spi_controller.sv (-Wall -Wno-IMPORTSTAR). UART: TESTS=11 PASS=11 FAIL=0 (existing tests unaffected; wstrb=0 no-op sub-check added to test_byte_lane_snoop — RTL gate confirmed). SPI: TESTS=13 PASS=13 FAIL=0 (same pattern). RX false-start rejection (majority-vote rx_maj gate in RX_START state) exercised implicitly by test_async_rx_raw_pin and test_oversample_noise_immunity which both PASS. wstrb==0 no-op assertion ADDED to both byte-lane-snoop tests.",
+      "constraint_ref": null
     }
-  ],
-  "updated_at": "2026-06-01T19:40:00+07:00"
+  ]
 }

@@ -187,11 +187,13 @@ module uart_controller
     /* verilator lint_on  UNUSEDSIGNAL */
     logic [7:0]       snoop_wdata_q;
     logic [WORDW-1:0] snoop_raddr_q;
+    logic             snoop_wstrb_nz_q;  // captured |wstrb at W handshake
 
     // A1: WSTRB byte-lane priority mux.
     // Select the byte from s_axil_wdata that corresponds to the lowest set bit
     // of s_axil_wstrb so that DMA masters driving a non-lane-0 byte are handled
-    // correctly.  Falls back to lane 0 when wstrb==4'h0.
+    // correctly.  When wstrb==4'h0 the value is don't-care: the snooped write
+    // is gated out of tx_push (a zero-strobe AXI write updates no bytes).
     logic [7:0] wstrb_sel_byte;
     always_comb begin
         unique casez (s_axil_wstrb)
@@ -199,7 +201,7 @@ module uart_controller
             4'b??10: wstrb_sel_byte = s_axil_wdata[15: 8];
             4'b?100: wstrb_sel_byte = s_axil_wdata[23:16];
             4'b1000: wstrb_sel_byte = s_axil_wdata[31:24];
-            default: wstrb_sel_byte = s_axil_wdata[ 7: 0];  // wstrb==0: lane 0
+            default: wstrb_sel_byte = s_axil_wdata[ 7: 0];  // wstrb==0: don't-care
         endcase
     end
 
@@ -209,12 +211,14 @@ module uart_controller
             snoop_wdata_full_q <= '0;
             snoop_wdata_q      <= '0;
             snoop_raddr_q      <= '0;
+            snoop_wstrb_nz_q   <= 1'b0;
         end else begin
             if (s_axil_awvalid && s_axil_awready)
                 snoop_waddr_q <= s_axil_awaddr[ADDR_W-1:2];
             if (s_axil_wvalid && s_axil_wready) begin
                 snoop_wdata_full_q <= s_axil_wdata;
                 snoop_wdata_q      <= wstrb_sel_byte;  // A1: lowest active lane
+                snoop_wstrb_nz_q   <= |s_axil_wstrb;   // zero-strobe = no-op
             end
             if (s_axil_arvalid && s_axil_arready)
                 snoop_raddr_q <= s_axil_araddr[ADDR_W-1:2];
@@ -225,8 +229,10 @@ module uart_controller
     wire wr_done = s_axil_bvalid && s_axil_bready;
     wire rd_done = s_axil_rvalid && s_axil_rready;
 
-    // TX FIFO push: fired when a write to UART_TX completes
-    wire tx_push = wr_done && (snoop_waddr_q == WORDW'(REG_UART_TX));
+    // TX FIFO push: fired when a write to UART_TX completes with >=1 strobe set.
+    // A zero-strobe (wstrb==0) write is a legal AXI no-op and must not transmit.
+    wire tx_push = wr_done && (snoop_waddr_q == WORDW'(REG_UART_TX)) &&
+                   snoop_wstrb_nz_q;
     // RX FIFO pop:  fired when a read of UART_RX completes
     wire rx_pop  = rd_done && (snoop_raddr_q == WORDW'(REG_UART_RX));
 
@@ -564,11 +570,15 @@ module uart_controller
                         if (os_phase_q == 4'd9) rx_s9_q <= rx_serial;
                     end
                     if (bit_tick) begin
-                        // START period complete; move to data collection.
+                        // START period complete.  Reject a false start (noise
+                        // glitch): a valid START is majority-LOW across phases
+                        // 7/8/9 (rx_maj==0).  If rx_maj==1 the line was not
+                        // genuinely low mid-bit, so abandon and return to IDLE
+                        // without collecting a bogus byte.
                         rx_s7_q    <= 1'b0;
                         rx_s8_q    <= 1'b0;
                         rx_s9_q    <= 1'b0;
-                        rx_state_q <= RX_DATA;
+                        rx_state_q <= rx_maj ? RX_IDLE : RX_DATA;
                     end
                 end
 
