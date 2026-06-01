@@ -6,17 +6,30 @@
 //   1  UART_RX     RO [7:0]  RX FIFO head; read pops via snoop
 //   2  UART_STATUS RO        [0]=tx_busy [1]=tx_full [2]=tx_empty
 //                            [3]=rx_empty [4]=rx_full [5]=rx_valid(!rx_empty)
+//                            [6]=framing_error (sticky; read-to-clear on UART_RX read)
 //   3  UART_CTRL   RW [4:0]  [0]=tx_en [1]=rx_en [2]=irq_tx_empty_en
 //                            [3]=irq_rx_valid_en [4]=loopback
-//   4  UART_BAUD   RW [15:0] bit-period divisor D: 1 serial bit = (D+1) clocks
+//   4  UART_BAUD   RW [15:0] oversample-period divisor D:
+//                            1 oversample tick = (D+1) clocks;
+//                            1 serial bit      = 16 oversample ticks = 16*(D+1) clocks.
+//                            BREAKING CHANGE from 1x: bit period is 16x longer for the
+//                            same D value.  Update test BAUD divisors accordingly.
+//                            TX and RX share this generator so loopback stays aligned.
 //
 // TX engine: IDLE → START(0) → DATA[0..7] LSB-first → STOP(1) → IDLE
-// RX engine: detect START (line low), sample 8 data bits at baud ticks,
-//            push assembled byte to RX FIFO.
-// Loopback: RX engine receives uart_tx_o (internal serial line) instead of
-//           uart_rx_i; shared baud tick keeps sampling exactly aligned.
+//            advances one state per bit_tick (= 16 oversample ticks).
+// RX engine (A4 — 16x oversample):
+//   2-FF synchroniser on uart_rx_i (loopback bypasses it).
+//   START detect: synchronised line low at any os_tick → align os_phase to 0.
+//   Bits sampled at os_phase==8 (mid-bit); majority-vote of phases 7, 8, 9.
+//   STOP bit sampled at mid-bit; if not 1 → framing_error sticky set (A3).
+//   Byte is always pushed regardless of framing error (flag-only, no drop).
+// Loopback: RX receives internal tx_serial (same clock domain); shared os_tick
+//           generator keeps TX and RX exactly bit-aligned.
 //
-// IRQ: irq_o = (irq_tx_empty_en & tx_empty) | (irq_rx_valid_en & rx_valid)
+// IRQ: irq_o = (irq_tx_empty_en & tx_empty & tx_was_nonempty_q)  [A2]
+//            | (irq_rx_valid_en & rx_valid)
+//      tx-empty term gated by tx_was_nonempty_q to suppress false IRQ at reset.
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
@@ -174,6 +187,23 @@ module uart_controller
     /* verilator lint_on  UNUSEDSIGNAL */
     logic [7:0]       snoop_wdata_q;
     logic [WORDW-1:0] snoop_raddr_q;
+    logic             snoop_wstrb_nz_q;  // captured |wstrb at W handshake
+
+    // A1: WSTRB byte-lane priority mux.
+    // Select the byte from s_axil_wdata that corresponds to the lowest set bit
+    // of s_axil_wstrb so that DMA masters driving a non-lane-0 byte are handled
+    // correctly.  When wstrb==4'h0 the value is don't-care: the snooped write
+    // is gated out of tx_push (a zero-strobe AXI write updates no bytes).
+    logic [7:0] wstrb_sel_byte;
+    always_comb begin
+        unique casez (s_axil_wstrb)
+            4'b???1: wstrb_sel_byte = s_axil_wdata[ 7: 0];
+            4'b??10: wstrb_sel_byte = s_axil_wdata[15: 8];
+            4'b?100: wstrb_sel_byte = s_axil_wdata[23:16];
+            4'b1000: wstrb_sel_byte = s_axil_wdata[31:24];
+            default: wstrb_sel_byte = s_axil_wdata[ 7: 0];  // wstrb==0: don't-care
+        endcase
+    end
 
     always_ff @(posedge clk) begin
         if (!rst_n) begin
@@ -181,12 +211,14 @@ module uart_controller
             snoop_wdata_full_q <= '0;
             snoop_wdata_q      <= '0;
             snoop_raddr_q      <= '0;
+            snoop_wstrb_nz_q   <= 1'b0;
         end else begin
             if (s_axil_awvalid && s_axil_awready)
                 snoop_waddr_q <= s_axil_awaddr[ADDR_W-1:2];
             if (s_axil_wvalid && s_axil_wready) begin
                 snoop_wdata_full_q <= s_axil_wdata;
-                snoop_wdata_q      <= s_axil_wdata[7:0];
+                snoop_wdata_q      <= wstrb_sel_byte;  // A1: lowest active lane
+                snoop_wstrb_nz_q   <= |s_axil_wstrb;   // zero-strobe = no-op
             end
             if (s_axil_arvalid && s_axil_arready)
                 snoop_raddr_q <= s_axil_araddr[ADDR_W-1:2];
@@ -197,8 +229,10 @@ module uart_controller
     wire wr_done = s_axil_bvalid && s_axil_bready;
     wire rd_done = s_axil_rvalid && s_axil_rready;
 
-    // TX FIFO push: fired when a write to UART_TX completes
-    wire tx_push = wr_done && (snoop_waddr_q == WORDW'(REG_UART_TX));
+    // TX FIFO push: fired when a write to UART_TX completes with >=1 strobe set.
+    // A zero-strobe (wstrb==0) write is a legal AXI no-op and must not transmit.
+    wire tx_push = wr_done && (snoop_waddr_q == WORDW'(REG_UART_TX)) &&
+                   snoop_wstrb_nz_q;
     // RX FIFO pop:  fired when a read of UART_RX completes
     wire rx_pop  = rd_done && (snoop_raddr_q == WORDW'(REG_UART_RX));
 
@@ -267,24 +301,46 @@ module uart_controller
     end
 
     // =========================================================================
-    // Baud-rate generator — shared by TX and RX engines
-    // Counts down from (BAUD_DIV) to 0; fires tick when counter reaches 0.
-    // BAUD_DIV = regs_o[REG_UART_BAUD][15:0]; one bit = (BAUD_DIV+1) clocks.
-    // When BAUD_DIV=0 the counter stays at 0 → tick every clock.
+    // A4 — 16x oversample tick generator (shared by TX and RX engines)
+    //
+    // UART_BAUD register (D = regs_o[REG_UART_BAUD][15:0]) sets the oversample
+    // period: 1 os_tick = (D+1) system clocks.
+    // 1 serial bit = 16 os_ticks = 16*(D+1) system clocks.
+    // When D=0 → os_tick every clock; bit period = 16 clocks.
+    //
+    // os_phase counts 0..15; wraps every 16 os_ticks → one bit_tick per wrap.
+    // TX FSM uses bit_tick; RX FSM uses os_tick + os_phase for mid-bit sampling.
+    // TX and RX share this generator so loopback stays exactly bit-aligned.
     // =========================================================================
-    logic [15:0] baud_cnt_q;
-    logic        baud_tick;
+    logic [15:0] baud_cnt_q;   // oversample period down-counter
+    logic        os_tick;      // one pulse per oversample period (every D+1 clks)
+    logic [3:0]  os_phase_q;   // oversample phase 0..15 within one bit period
+    logic        bit_tick;     // one pulse per bit period (every 16 os_ticks)
 
-    assign baud_tick = (baud_cnt_q == 16'h0);
+    assign os_tick  = (baud_cnt_q == 16'h0);
+    assign bit_tick = os_tick && (os_phase_q == 4'd15);
+
+    // rx_align_phase: asserted by RX FSM on START detection to reset os_phase
+    // to 0 so that mid-bit sampling falls at phase 8 of each subsequent bit.
+    // Declared here; driven combinationally below after RX FSM declaration.
+    logic rx_align_phase;
 
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             baud_cnt_q <= 16'h0;
+            os_phase_q <= 4'h0;
         end else begin
-            if (baud_tick)
+            if (rx_align_phase) begin
+                // Align: reset phase to 0 so next bit samples at phase 8.
+                // Also reload the period counter.
                 baud_cnt_q <= regs_o[REG_UART_BAUD][15:0];
-            else
+                os_phase_q <= 4'h0;
+            end else if (os_tick) begin
+                baud_cnt_q <= regs_o[REG_UART_BAUD][15:0];
+                os_phase_q <= os_phase_q + 4'h1;  // wraps 15→0 naturally
+            end else begin
                 baud_cnt_q <= baud_cnt_q - 16'h1;
+            end
         end
     end
 
@@ -305,14 +361,14 @@ module uart_controller
     logic [2:0]  tx_bit_q;    // bit counter 0..7
     logic        tx_serial;   // combinational serial output
 
-    // tx_pop: pop TX FIFO at the IDLE→LOAD transition
+    // tx_pop: pop TX FIFO at the IDLE→LOAD transition (A4: uses bit_tick)
     always_comb begin
         tx_pop   = 1'b0;
         tx_serial = 1'b1;  // idle high
         unique case (tx_state_q)
             TX_IDLE: begin
                 tx_serial = 1'b1;
-                tx_pop    = tx_en && !tx_empty && baud_tick;
+                tx_pop    = tx_en && !tx_empty && bit_tick;
             end
             TX_START: tx_serial = 1'b0;
             TX_DATA:  tx_serial = tx_shift_q[0];
@@ -332,19 +388,20 @@ module uart_controller
         end else begin
             unique case (tx_state_q)
                 TX_IDLE: begin
-                    if (tx_en && !tx_empty && baud_tick) begin
+                    // A4: TX advances on bit_tick (= every 16 oversample ticks)
+                    if (tx_en && !tx_empty && bit_tick) begin
                         tx_shift_q <= tx_head;
                         tx_state_q <= TX_START;
                     end
                 end
                 TX_START: begin
-                    if (baud_tick) begin
+                    if (bit_tick) begin
                         tx_bit_q   <= 3'h0;
                         tx_state_q <= TX_DATA;
                     end
                 end
                 TX_DATA: begin
-                    if (baud_tick) begin
+                    if (bit_tick) begin
                         tx_shift_q <= {1'b0, tx_shift_q[7:1]};
                         if (tx_bit_q == 3'd7) begin
                             tx_state_q <= TX_STOP;
@@ -354,7 +411,7 @@ module uart_controller
                     end
                 end
                 TX_STOP: begin
-                    if (baud_tick)
+                    if (bit_tick)
                         tx_state_q <= TX_IDLE;
                 end
                 default: tx_state_q <= TX_IDLE;
@@ -365,41 +422,69 @@ module uart_controller
     assign uart_tx_o = tx_serial;
 
     // =========================================================================
-    // RX engine — 8N1 serial receiver
-    // Receives from uart_rx_i or uart_tx_o (loopback).
-    // Detects START (line low on baud_tick), samples 8 bits LSB-first, pushes
-    // assembled byte to RX FIFO.
+    // A4 — RX engine (16x oversample, 8N1 serial receiver)
+    //
+    // Receives from uart_rx_i (through 2-FF synchroniser) or from internal
+    // tx_serial when loopback is enabled (same clock domain — no synchroniser
+    // needed).
+    //
+    // Alignment on START detect:
+    //   In IDLE, any os_tick on which the synchronised line is low is treated as
+    //   the start of the START bit.  os_phase is reset to 0 at that moment.
+    //   This means mid-bit sampling occurs at os_phase==8 regardless of when
+    //   within the bit period the edge was detected — worst-case 0.5-bit-period
+    //   misalignment, well within the 3-tick majority-vote window.
+    //
+    // Mid-bit sampling with majority vote (A3-integrated):
+    //   Data bits: majority of rx_serial at os_phase 7, 8, 9 → 2-of-3.
+    //   Stop bit:  majority of rx_serial at os_phase 7, 8, 9.
+    //              If stop-bit majority is 0 → framing error (A3).
+    //
+    // Loopback alignment:
+    //   TX advances on bit_tick (os_phase wraps from 15→0).
+    //   In loopback, RX_IDLE sees START from TX_START which is asserted starting
+    //   at a bit_tick (TX_IDLE→TX_START on bit_tick).  RX detects the low level
+    //   at the next os_tick after the TX flip (phase 1 of that bit period).
+    //   os_phase is then reset to 0 → mid-bit sample at phase 8 of the START
+    //   period, which is the exact mid-point.  TX_START→TX_DATA happens 15
+    //   more os_ticks later (one full bit after start of START period).  RX
+    //   moves from RX_START to RX_DATA at os_phase==15 of the START period
+    //   (= bit_tick), and samples bit0 at os_phase 8 of the next period.
+    //   TX drives bit0 for the full bit period starting at that same bit_tick.
+    //   Sampling is therefore aligned in loopback.
     // =========================================================================
-    // RX engine uses 3 states: IDLE → DATA (8 bits) → DONE (push byte).
-    // The START state is eliminated: on detecting the START bit (line low on
-    // baud_tick) we move directly to DATA and count 8 data bit periods.
-    // This keeps RX sampling aligned with TX because:
-    //   - TX emits START on tick T (tx_state goes TX_IDLE→TX_START).
-    //   - On the NEXT baud_tick (T+D+1) TX transitions TX_START→TX_DATA,
-    //     putting bit0 on the wire.  That same tick, RX (in IDLE) sees the
-    //     START (line=0 from TX_START period) and transitions to RX_DATA.
-    //   - The tick after that (T+2*(D+1)) RX samples bit0 = what TX is
-    //     currently driving.  TX also transitions bit0→bit1 on that tick,
-    //     but the RX samples combinationally BEFORE the FF update, so it
-    //     sees bit0 correctly.
-    typedef enum logic [1:0] {
-        RX_IDLE = 2'd0,
-        RX_DATA = 2'd1,
-        RX_DONE = 2'd2,
-        RX_RSV  = 2'd3   // unused; needed for 2-bit enum completeness
+    typedef enum logic [2:0] {
+        RX_IDLE  = 3'd0,
+        RX_START = 3'd1,   // absorbing the START bit period; verify mid-bit low
+        RX_DATA  = 3'd2,   // collecting 8 data bits
+        RX_STOP  = 3'd3,   // sampling STOP bit (A3 framing-error check)
+        RX_DONE  = 3'd4,   // push byte to FIFO
+        RX_RSV0  = 3'd5,   // unused
+        RX_RSV1  = 3'd6,   // unused
+        RX_RSV2  = 3'd7    // unused; needed for 3-bit enum completeness
     } rx_state_e;
 
     rx_state_e   rx_state_q;
-    logic [7:0]  rx_byte_q;   // assembled receive byte, bit-indexed
-    logic [2:0]  rx_bit_q;
-    logic        rx_serial;   // mux: loopback selects tx_serial
+    logic [7:0]  rx_byte_q;    // assembled receive byte, bit-indexed
+    logic [2:0]  rx_bit_q;     // data bit counter 0..7
+    logic        rx_serial;    // mux: loopback selects tx_serial
+
+    // Majority-vote sample registers for phases 7, 8, 9.
+    logic        rx_s7_q, rx_s8_q, rx_s9_q;
+    logic        rx_maj;   // 2-of-3 majority of phases 7, 8, 9
+
+    assign rx_maj = (rx_s7_q & rx_s8_q) | (rx_s8_q & rx_s9_q) | (rx_s7_q & rx_s9_q);
+
+    // A3: framing-error sticky bit.
+    // Set when a framing error is detected (STOP bit sampled as 0).
+    // Cleared by rx_pop (read of UART_RX — read-to-clear) or by reset.
+    logic framing_error_q;
 
     // 2-FF synchroniser on the asynchronous uart_rx_i pad (CDC hardening).
-    // uart_rx_i may be asynchronous to clk; sample through two stages before
-    // the RX FSM consumes it.  Idle line is high (8N1).  Loopback path uses the
-    // internal tx_serial (same clock domain) and bypasses this synchroniser.
-    logic        uart_rx_sync0_q;
-    logic        uart_rx_sync1_q;
+    // Idle line is high (8N1).  Loopback path uses the internal tx_serial
+    // (same clock domain) and bypasses this synchroniser.
+    logic uart_rx_sync0_q;
+    logic uart_rx_sync1_q;
 
     always_ff @(posedge clk) begin
         if (!rst_n) begin
@@ -413,6 +498,21 @@ module uart_controller
 
     assign rx_serial = loopback ? tx_serial : uart_rx_sync1_q;
 
+    // Framing-error sticky FF (A3): set on framing error, cleared on rx_pop.
+    // Triggered at os_phase==10 in RX_STOP so that rx_s7/s8/s9 are all stable
+    // (they were written at phases 7, 8, 9 in the RX FSM always_ff; at phase 10
+    // they reflect those values and rx_maj gives the correct 2-of-3 result).
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            framing_error_q <= 1'b0;
+        end else begin
+            if (rx_pop)
+                framing_error_q <= 1'b0;        // read-to-clear
+            else if (rx_state_q == RX_STOP && os_tick && os_phase_q == 4'd10)
+                framing_error_q <= framing_error_q | !rx_maj;  // A3: set on bad stop
+        end
+    end
+
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             rx_state_q   <= RX_IDLE;
@@ -420,41 +520,129 @@ module uart_controller
             rx_bit_q     <= 3'h0;
             rx_push      <= 1'b0;
             rx_push_data <= 8'h0;
+            rx_s7_q      <= 1'b0;
+            rx_s8_q      <= 1'b0;
+            rx_s9_q      <= 1'b0;
         end else begin
             rx_push <= 1'b0;  // default: no push this cycle
 
             unique case (rx_state_q)
+                // -----------------------------------------------------------------
+                // RX_IDLE: wait for START bit (line low at any os_tick).
+                // On detection, reset os_phase to 0 by writing the reload value
+                // into baud_cnt_q is not needed — instead we let the normal
+                // os_tick machinery continue and simply track os_phase from here.
+                // Because we enter RX_START on the os_tick that saw the low edge,
+                // os_phase was just incremented to (old+1); we treat that as
+                // phase 0 of the START bit by recording entry via rx_state alone.
+                // The START-bit mid-sample is at os_phase==8 relative to entry.
+                // Since os_phase free-runs and we enter on an arbitrary phase,
+                // we capture the "start phase" and compare against it + 8.
+                // Simpler approach used here: reset os_phase_q to 0 on START
+                // detect (by writing baud_cnt_q = reload inside the always_ff
+                // is not possible here — instead re-align via a dedicated
+                // os_phase reset path below).
+                // -----------------------------------------------------------------
                 RX_IDLE: begin
-                    // Detect START bit: line goes low on baud_tick.
-                    // Immediately begin collecting data bits on the next tick.
-                    if (rx_en && !rx_serial && baud_tick) begin
+                    if (rx_en && !rx_serial && os_tick) begin
+                        // Start detected: align phase to 0 so mid-bit = phase 8.
+                        // os_phase_q is reset in the os_tick always_ff block via
+                        // the rx_align_phase signal asserted here.
                         rx_bit_q   <= 3'h0;
                         rx_byte_q  <= 8'h0;
-                        rx_state_q <= RX_DATA;
+                        rx_s7_q    <= 1'b0;
+                        rx_s8_q    <= 1'b0;
+                        rx_s9_q    <= 1'b0;
+                        rx_state_q <= RX_START;
                     end
                 end
+
+                // -----------------------------------------------------------------
+                // RX_START: absorb the START bit period; mid-bit sample at phase 8
+                // just verifies the line is still low (noise guard).  Advance to
+                // RX_DATA on bit_tick (phase 15 wrap).
+                // -----------------------------------------------------------------
+                RX_START: begin
+                    if (os_tick) begin
+                        // Capture majority-vote samples for START verification
+                        if (os_phase_q == 4'd7) rx_s7_q <= rx_serial;
+                        if (os_phase_q == 4'd8) rx_s8_q <= rx_serial;
+                        if (os_phase_q == 4'd9) rx_s9_q <= rx_serial;
+                    end
+                    if (bit_tick) begin
+                        // START period complete.  Reject a false start (noise
+                        // glitch): a valid START is majority-LOW across phases
+                        // 7/8/9 (rx_maj==0).  If rx_maj==1 the line was not
+                        // genuinely low mid-bit, so abandon and return to IDLE
+                        // without collecting a bogus byte.
+                        rx_s7_q    <= 1'b0;
+                        rx_s8_q    <= 1'b0;
+                        rx_s9_q    <= 1'b0;
+                        rx_state_q <= rx_maj ? RX_IDLE : RX_DATA;
+                    end
+                end
+
+                // -----------------------------------------------------------------
+                // RX_DATA: collect 8 data bits LSB-first using majority vote at
+                // os_phases 7, 8, 9 of each bit period.
+                // -----------------------------------------------------------------
                 RX_DATA: begin
-                    // Sample 8 data bits LSB-first at each baud tick.
-                    if (baud_tick) begin
-                        rx_byte_q[rx_bit_q] <= rx_serial;
+                    if (os_tick) begin
+                        if (os_phase_q == 4'd7) rx_s7_q <= rx_serial;
+                        if (os_phase_q == 4'd8) rx_s8_q <= rx_serial;
+                        if (os_phase_q == 4'd9) rx_s9_q <= rx_serial;
+                    end
+                    if (bit_tick) begin
+                        // Latch majority-voted bit (rx_s9_q already captured this
+                        // cycle: bit_tick == os_tick && os_phase_q==15, so phase 9
+                        // was captured 6 os_ticks ago — rx_s9_q is valid).
+                        rx_byte_q[rx_bit_q] <= rx_maj;
+                        rx_s7_q <= 1'b0;
+                        rx_s8_q <= 1'b0;
+                        rx_s9_q <= 1'b0;
                         if (rx_bit_q == 3'd7) begin
-                            rx_state_q <= RX_DONE;
+                            rx_state_q <= RX_STOP;
                         end else begin
                             rx_bit_q <= rx_bit_q + 3'h1;
                         end
                     end
                 end
+
+                // -----------------------------------------------------------------
+                // RX_STOP: sample the STOP bit (A3 framing-error detection).
+                // The framing_error_q FF is set by its own always_ff block above
+                // when it observes os_phase==9 in this state.  We advance to DONE
+                // on bit_tick regardless (byte is always pushed).
+                // -----------------------------------------------------------------
+                RX_STOP: begin
+                    if (os_tick) begin
+                        if (os_phase_q == 4'd7) rx_s7_q <= rx_serial;
+                        if (os_phase_q == 4'd8) rx_s8_q <= rx_serial;
+                        if (os_phase_q == 4'd9) rx_s9_q <= rx_serial;
+                    end
+                    if (bit_tick) begin
+                        rx_state_q <= RX_DONE;
+                    end
+                end
+
+                // -----------------------------------------------------------------
+                // RX_DONE: push assembled byte to RX FIFO (with or without error).
+                // -----------------------------------------------------------------
                 RX_DONE: begin
-                    // Push assembled byte immediately (no STOP-bit wait needed
-                    // since we already spent 8 baud periods in RX_DATA).
                     rx_push      <= 1'b1;
                     rx_push_data <= rx_byte_q;
                     rx_state_q   <= RX_IDLE;
                 end
+
                 default: rx_state_q <= RX_IDLE;
             endcase
         end
     end
+
+    // rx_align_phase: asserted combinationally when RX_IDLE detects START.
+    // Resets os_phase to 0 so mid-bit sampling lands at phase 8.
+    assign rx_align_phase = rx_en && !rx_serial && os_tick &&
+                            (rx_state_q == RX_IDLE);
 
     // =========================================================================
     // STATUS flags (combinational)
@@ -475,21 +663,43 @@ module uart_controller
         hw_wdata_i[REG_UART_RX] = {24'h0, rx_head};
 
         // UART_STATUS: live FIFO flags (RO — HW owns this)
+        // A3: bit [6] = framing_error_q (sticky; read-to-clear on UART_RX read)
         hw_wen_i  [REG_UART_STATUS] = 1'b1;
         hw_wdata_i[REG_UART_STATUS] = {
-            26'h0,
-            rx_valid,    // [5] rx_valid
-            rx_full,     // [4] rx_full
-            rx_empty,    // [3] rx_empty
-            tx_empty,    // [2] tx_empty
-            tx_full,     // [1] tx_full
-            tx_busy      // [0] tx_busy
+            25'h0,
+            framing_error_q, // [6] framing_error (A3)
+            rx_valid,        // [5] rx_valid
+            rx_full,         // [4] rx_full
+            rx_empty,        // [3] rx_empty
+            tx_empty,        // [2] tx_empty
+            tx_full,         // [1] tx_full
+            tx_busy          // [0] tx_busy
         };
     end
 
     // =========================================================================
-    // IRQ output
+    // A2 — Sticky "TX FIFO was non-empty" register.
+    // Prevents a spurious tx-empty IRQ at reset when tx_empty=1 but no byte
+    // has ever been pushed.  Set whenever the TX FIFO becomes non-empty
+    // (tx_push into a non-full FIFO, or equivalently !tx_empty after push).
+    // Never cleared except by reset.
     // =========================================================================
-    assign irq_o = (irq_tx_empty_en & tx_empty) | (irq_rx_valid_en & rx_valid);
+    logic tx_was_nonempty_q;
+
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            tx_was_nonempty_q <= 1'b0;
+        end else begin
+            if (tx_push && !tx_full)
+                tx_was_nonempty_q <= 1'b1;
+        end
+    end
+
+    // =========================================================================
+    // IRQ output
+    // irq_tx_empty gated by tx_was_nonempty_q to suppress false fire at reset.
+    // =========================================================================
+    assign irq_o = (irq_tx_empty_en & tx_empty & tx_was_nonempty_q) |
+                   (irq_rx_valid_en & rx_valid);
 
 endmodule : uart_controller
