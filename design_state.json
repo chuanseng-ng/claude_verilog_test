@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-01T12:10:00+07:00",
+  "updated_at": "2026-06-01T18:05:00+07:00",
   "rtl": {
     "top_module": "rv32i_cpu_top",
     "files": [
@@ -163,6 +163,17 @@
       "failure_class": "none",
       "suggested_next_step": "proceed",
       "reason": "Phase 5 M4 remainder: uart_controller.sv and spi_controller.sv authored, lint-clean (Verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings each), and all cocotb tests green (UART 6/6, SPI 10/10). Makefile extended with uart/spi targets and soc_all entries.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-01T18:05:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "GPU random-kernel regression broadened (B1 global loads, B2 shared-mem round-trip, B3 single-level divergence diamond). TB+ref-model only, no RTL edits. Smoke (25): 0 deadlocks, 0 mismatches PASS. Full (1000): 0 deadlocks, 0 mismatches PASS. gpu_all rollup: ALL PHASE 4 GPU TESTS PASSED (unit+kernels+handoff+random smoke). Bead claude_verilog_test-a81 complete.",
       "constraint_ref": null
     }
   ]
