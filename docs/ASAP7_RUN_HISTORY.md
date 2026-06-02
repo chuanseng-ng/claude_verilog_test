@@ -28,6 +28,28 @@ Future PPA work on this stage should be opened as a new branch — this branch's
 
 ---
 
+## ⚠️ Phase 5 M7 resynth — perf-counter timing regression (2026-06-02)
+
+**Re-run after Phase 5 M7 added CPU performance-monitoring CSRs** (bead `0ba`). Result: timing does **not** close at the Run 43 target of 705 ps.
+
+| Metric | Value |
+|---|---|
+| Run directory | `pnr/asap7/cpu/runs/RUN_2026-06-02_17-49-55` |
+| Clock target | 705 ps (1418 MHz) |
+| Setup WNS / TNS | **−56.16 ps / −173.4 ps** (VIOLATED) |
+| Implied fmax | ~1313 MHz (761 ps) |
+| Hold WS / TNS | +28.1 ps / 0 ✓ |
+| Power (total) | 26.8 mW |
+| Stdcell area | 4 050 µm² (7 562 µm² incl. macros) |
+| Slew / cap / antenna | 0 / 0 / 0 ✓ |
+| STA stage | post-GRT estimated (STAPostPNR gated off — same caveat as GPU run) |
+
+**Root cause**: M7's new CSRs (mcycle/minstret 64-bit, mhpmcounter3-5, mcountinhibit) widened the CSR read decode / rdata mux in `rv32i_csr_file.sv`. Worst path is a wide OR4/OR5/NOR5/NAND5 reduction tree, Path Group `PIPELINE` (CSR address-match → rdata mux) — **not** the 64-bit counter adder as initially suspected.
+
+**Disposition**: regression is moot for the SoC (SoC clock GPU-governed ~571 MHz ≪ CPU 1313 MHz), but the standalone 1418 MHz CPU sign-off is to be restored via CSR read-mux retiming. Tracked in bead `3ux` (rtl-design-orchestrator), which blocks M11.
+
+---
+
 ## ⚠️ SDC Units Bug — Campaign Context
 
 All runs fall into two distinct eras:
