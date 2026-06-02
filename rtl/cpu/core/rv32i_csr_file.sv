@@ -146,104 +146,36 @@ module rv32i_csr_file (
 
     // =========================================================================
     // Combinational pre-write CSR read (csr_rdata = value BEFORE this cycle's write)
-    //
-    // Two-level decode to reduce synthesis mux depth and address-compare fan-in:
-    //   Level 1: csr_addr[11:8] selects range group (3-bit one-hot: trap/ctr/id)
-    //   Level 2: within each group decode lower bits (max 7 entries per group)
-    //
-    // This cuts the OR-reduction tree depth vs a flat 16-entry case, restoring
-    // ASAP7 setup timing after M7 counter CSRs widened the original flat mux.
     // =========================================================================
-
-    // --- Level-1 range pre-decode (one-hot, function of addr[11:8] only) -----
-    // range_trap: 0x3xx  trap/control CSRs  (mstatus, mie, mtvec, mcountinhibit, mepc, mcause, mip)
-    // range_ctr:  0xBxx  performance counter CSRs (mcycle, minstret, mhpmcounter3-5, mcycleh, minstreth)
-    // range_id:   0xFxx  read-only ID CSRs  (mvendorid, marchid, mimpid, mhartid)
-    logic range_trap, range_ctr, range_id;
-    always_comb begin
-        range_trap = (csr_addr[11:8] == 4'h3);
-        range_ctr  = (csr_addr[11:8] == 4'hB);
-        range_id   = (csr_addr[11:8] == 4'hF);
-    end
-
-    // --- Level-2 per-group sub-mux outputs -----------------------------------
-    // Each sub-mux decodes only the low-order bits within its range group.
-    // Outputs are 0 when the address is not in the group (range_xxx gates output).
-    logic [31:0] rdata_trap, rdata_ctr, rdata_id;
-    logic        illegal_trap, illegal_ctr, illegal_id;
-
-    // Group A: 0x3xx  (7 entries: 0x300, 0x304, 0x305, 0x320, 0x341, 0x342, 0x344)
-    always_comb begin
-        rdata_trap   = 32'h0;
-        illegal_trap = 1'b0;
-        if (range_trap) begin
-            case (csr_addr[7:0])
-                8'h00: rdata_trap = {19'h0, 2'b11, 3'h0, mstatus_mpie_q, 3'h0, mstatus_mie_q, 3'h0}; // mstatus
-                8'h04: rdata_trap = {20'h0, mie_meie_q, 3'h0, mie_mtie_q, 7'h0};                      // mie
-                8'h05: rdata_trap = {mtvec_base_q, 2'b00};                                              // mtvec
-                8'h20: rdata_trap = mcountinhibit_q & 32'h0000_003D; // bits[5:3,2,0]; bit1=0           // mcountinhibit
-                8'h41: rdata_trap = mepc_q;                                                              // mepc
-                8'h42: rdata_trap = mcause_q;                                                            // mcause
-                8'h44: rdata_trap = mip;                                                                 // mip
-                default: begin
-                    rdata_trap   = 32'h0;
-                    illegal_trap = 1'b1;
-                end
-            endcase
-        end
-    end
-
-    // Group B: 0xBxx  (7 entries: 0xB00, 0xB02, 0xB03, 0xB04, 0xB05, 0xB80, 0xB82)
-    always_comb begin
-        rdata_ctr   = 32'h0;
-        illegal_ctr = 1'b0;
-        if (range_ctr) begin
-            case (csr_addr[7:0])
-                8'h00: rdata_ctr = mcycle_q[31:0];     // mcycle
-                8'h02: rdata_ctr = minstret_q[31:0];   // minstret
-                8'h03: rdata_ctr = mhpmcounter3_q;     // mhpmcounter3 (I$ miss)
-                8'h04: rdata_ctr = mhpmcounter4_q;     // mhpmcounter4 (D$ miss)
-                8'h05: rdata_ctr = mhpmcounter5_q;     // mhpmcounter5 (branch mispred)
-                8'h80: rdata_ctr = mcycle_q[63:32];    // mcycleh
-                8'h82: rdata_ctr = minstret_q[63:32];  // minstreth
-                default: begin
-                    rdata_ctr   = 32'h0;
-                    illegal_ctr = 1'b1;
-                end
-            endcase
-        end
-    end
-
-    // Group C: 0xFxx  (4 entries: 0xF11, 0xF12, 0xF13, 0xF14 — all return 0 except mimpid)
-    always_comb begin
-        rdata_id   = 32'h0;
-        illegal_id = 1'b0;
-        if (range_id) begin
-            case (csr_addr[7:0])
-                8'h11: rdata_id = 32'h0;          // mvendorid = 0
-                8'h12: rdata_id = 32'h0;          // marchid = 0
-                8'h13: rdata_id = 32'h0000_0005;  // mimpid = Phase 5
-                8'h14: rdata_id = 32'h0;          // mhartid = 0
-                default: begin
-                    rdata_id   = 32'h0;
-                    illegal_id = 1'b1;
-                end
-            endcase
-        end
-    end
-
-    // --- Level-1 output combine: OR the three mutually-exclusive sub-mux outputs --
-    // Final mux is a 3-input OR (3 entries, very shallow).
-    // csr_illegal: address is valid range but unimplemented low bits, OR no range matched.
     always_comb begin
         csr_rdata   = 32'h0;
         csr_illegal = 1'b0;
+
         if (csr_access) begin
-            csr_rdata   = rdata_trap | rdata_ctr | rdata_id;
-            csr_illegal = (range_trap & illegal_trap) |
-                          (range_ctr  & illegal_ctr)  |
-                          (range_id   & illegal_id)   |
-                          (!range_trap & !range_ctr & !range_id); // no range matched
+            case (csr_addr)
+                12'h300: csr_rdata = {19'h0, 2'b11, 3'h0, mstatus_mpie_q, 3'h0, mstatus_mie_q, 3'h0};
+                12'h304: csr_rdata = {20'h0, mie_meie_q, 3'h0, mie_mtie_q, 7'h0};
+                12'h305: csr_rdata = {mtvec_base_q, 2'b00};
+                12'h320: csr_rdata = mcountinhibit_q & 32'h0000_003D; // bits[5:3,2,0]; bit1=0
+                12'h341: csr_rdata = mepc_q;
+                12'h342: csr_rdata = mcause_q;
+                12'h344: csr_rdata = mip;
+                12'hB00: csr_rdata = mcycle_q[31:0];
+                12'hB02: csr_rdata = minstret_q[31:0];
+                12'hB03: csr_rdata = mhpmcounter3_q;
+                12'hB04: csr_rdata = mhpmcounter4_q;
+                12'hB05: csr_rdata = mhpmcounter5_q;
+                12'hB80: csr_rdata = mcycle_q[63:32];
+                12'hB82: csr_rdata = minstret_q[63:32];
+                12'hF11: csr_rdata = 32'h0;          // mvendorid = 0
+                12'hF12: csr_rdata = 32'h0;          // marchid = 0
+                12'hF13: csr_rdata = 32'h0000_0005;  // mimpid = Phase 5
+                12'hF14: csr_rdata = 32'h0;          // mhartid = 0
+                default: begin
+                    csr_rdata   = 32'h0;
+                    csr_illegal = 1'b1;  // Unimplemented CSR
+                end
+            endcase
         end
     end
 
