@@ -66,12 +66,12 @@ Legend: ⏸️ not started · 🔄 in progress · ✅ done
 - ✅ Reconcile `docs/design/MEMORY_MAP.md`: peripherals are now an **AXI-Lite-native ring** (APB3 bridge dropped for peripherals; APB3 kept only on CPU debug @0x2000_0000–0FFF). Captured in `rtl/soc/soc_periph_map_pkg.sv` and documented in MEMORY_MAP.md: GPU 0x2000_1000, UART _2000, SPI _3000, Timer _4000, DMA _5000, IRQ _6000 (4 KB/slave).
 - **Exit**: package lint-clean (`make -C sim lint`); MEMORY_MAP.md updated + reviewed. *(data-fabric slice ✅; peripheral-map reconcile ✅ done with M3 interconnect)*
 
-### M2 — AXI4 burst upgrade of cache refill FSMs *(deps: M1)*
-- ⏸️ `rtl/mem/rv32i_icache.sv` — replace 4× sequential AR→R (`refill_word_q`) with single AR (ARLEN=3, ARSIZE=2, ARBURST=INCR) + 4× R beats.
-- ⏸️ `rtl/mem/rv32i_dcache.sv` — same for refill **and** writeback (single AW + 4× W burst).
-- ⏸️ `rtl/mem/rv32i_cache_arbiter.sv` — pass burst signals; update grant logic/comment.
-- ⏸️ `rtl/mem/rv32i_cache_pkg.sv` — keep `REFILL_BEATS=4` as the burst-length param.
-- ⏸️ Extend `tb/cocotb/cpu/axi_models.py` for burst (ARLEN-aware).
+### M2 — AXI4 burst upgrade of cache refill FSMs *(deps: M1)* ✅ COMPLETE
+- ✅ `rtl/mem/rv32i_icache.sv` — single AR (ARLEN=3, ARSIZE=2, ARBURST=INCR) + 4× R beats.
+- ✅ `rtl/mem/rv32i_dcache.sv` — burst refill **and** writeback (single AW + 4× W burst).
+- ✅ `rtl/mem/rv32i_cache_arbiter.sv` — burst signals passed through; merged to main.
+- ✅ `rtl/mem/rv32i_cache_pkg.sv` — `REFILL_BEATS=4` burst-length param.
+- ✅ `tb/cocotb/cpu/axi_models.py` extended for ARLEN-aware burst.
 - **Exit**: full Phase 3 regression green with burst FSMs — icache 7/7, dcache 8/8, cache_integration 5/5, 139/139 total.
 
 ### M3 — AXI4 crossbar + AXI-Lite control interconnect *(deps: M1)*
@@ -96,34 +96,40 @@ No PD this item (crossbar hardens at SoC top, M11).
 - ✅ Per-peripheral cocotb test + register-map check (`tb/cocotb/soc/test_{uart,spi,timer,irq}.py`). UART 11/11, SPI 13/13, full `soc_all` green; Phase 1–4 rollup green.
 - **Exit**: ✅ each peripheral test green; IRQ routing to CPU verified; dq4 hardening findings closed.
 
-### M5 — DMA engine *(deps: M3)*
-- ⏸️ `rtl/periph/dma_engine.sv` — descriptor queue, AXI4 master (burst), AXI-Lite ctrl slave, IRQ out → IRQ controller.
-- ⏸️ Tests: descriptor-driven mem→mem copy, IRQ-on-complete, error handling.
-- **Exit**: DMA transfer test passes against SRAM controller.
+### M5 — DMA engine *(deps: M3)* ✅ COMPLETE
+- ✅ `rtl/periph/dma_engine.sv` — descriptor queue, AXI4 master (burst), AXI-Lite ctrl slave, IRQ out → IRQ controller.
+- ✅ Tests: descriptor-driven mem→mem copy, IRQ-on-complete, error handling (`test_dma.py`, 6/6 in `soc_all`).
+- **Exit**: ✅ DMA transfer test passes against SRAM controller.
 
-### M6 — Behavioral SRAM controller *(deps: M1)*
-- ⏸️ `rtl/soc/sram_controller.sv` — AXI4 slave, burst-capable, behavioral (no DRAM refresh), parameterizable; backs main memory 0x0000_2000–0x0FFF_FFFF.
-- **Exit**: AXI4 burst read/write protocol test passes.
+### M6 — Behavioral SRAM controller *(deps: M1)* ✅ COMPLETE
+- ✅ `rtl/soc/sram_controller.sv` — AXI4 slave, burst-capable, behavioral (no DRAM refresh), parameterizable; backs main memory 0x0000_2000–0x0FFF_FFFF.
+- **Exit**: ✅ AXI4 burst read/write protocol test passes (`test_sram_controller.py`, 7/7 in `soc_all`).
 
-### M7 — Performance counters *(deps: CPU+GPU integrated in M8, but spec early)*
-- ⏸️ CSR-mapped (CPU) + AXI-Lite-readable (GPU stats): cycle, instret, branch mispredicts, I$/D$ miss counts, active warps, warp-stall cycles, divergence events. Wire from existing CPU/GPU status signals.
-- **Exit**: counter read-back test matches injected events.
+### M7 — Performance counters *(deps: CPU+GPU integrated in M8, but spec early)* ✅ COMPLETE
+- ✅ CSR-mapped (CPU `mcycle`/`minstret`/`mhpmcounter3-5`) + AXI-Lite-readable (GPU stats). CPU re-sign-off at ASAP7 780 ps / 1282 MHz (perf-CSR cost; see CLAUDE.md + ASAP7_RUN_HISTORY.md).
+- **Exit**: ✅ counter read-back test matches injected events (7/7).
 
-### M8 — SoC top integration *(deps: M2–M7)*
-- ⏸️ `rtl/soc/soc_top.sv` — instantiate CPU + GPU + DMA + crossbar + AXI-Lite bus + peripherals + SRAM ctrl + IRQ ctrl; clock/reset distribution; route `gpu_irq_o` + peripheral IRQs → IRQ ctrl → CPU.
-- ⏸️ Behavioral boot ROM @0x0000_1000.
-- **Exit**: SoC elaborates lint-clean (`make -C sim lint`).
+### M8 — SoC top integration *(deps: M2–M7)* ✅ COMPLETE
+- ✅ `rtl/soc/soc_top.sv` — CPU + GPU(×2 masters) + DMA + crossbar (4M×3S) + AXI-Lite ring (6 slaves) + peripherals + SRAM ctrl + IRQ ctrl; `gpu_irq_o` + peripheral IRQs → IRQ ctrl → CPU.
+- ✅ Behavioral boot ROM @0x0000_1000 (`rtl/soc/boot_rom.sv`).
+- **Exit**: ✅ SoC elaborates lint-clean (`make -C sim lint_soc`); functionally booted in M9 foundation slice.
 
-### M9 — SoC verification *(deps: M8)*
-- ⏸️ Create `tb/cocotb/soc/` + `make soc_all` in `sim/Makefile`.
-- ⏸️ SoC reference model (compose interconnect + peripheral + memory models in `tb/models/`).
+### M9 — SoC verification *(deps: M8)* 🔄 IN PROGRESS — foundation slice ✅ DONE (2026-06-03)
+**Foundation slice ✅ (2026-06-03):**
+- ✅ Created `tb/cocotb/soc/` boot infra + `soc_boot`/`soc_boot_diag` targets; `soc_all` extended to all M3–M6 component suites + boot.
+- ✅ SoC reference model `tb/models/soc_model.py` — composes `rv32i_model.RV32IModel` + `memory_model.MemoryModel` over ROM+SRAM; golden committed-PC stream + final state. (Peripheral-state models deferred to integration fast-follows.)
+- ✅ `tb/cocotb/soc/tb_soc_top.sv` — cocotb wrapper (flat ports + `MEM_INIT_FILE`); `boot_fw/` 8-instr RV32I firmware + generator.
+- ✅ Boot test `tb/cocotb/soc/test_boot.py` — PC scoreboard + SRAM sentinels + **100/100 boot-stability gate, 0 fail**. `soc_all` green (crossbar 6, register_bank 6, axil 4, sram 7, dma 6, timer 5, irq 6, uart 11, spi 13, boot 3 — 0 FAIL).
+- ✅ Bring-up bugs fixed: (1) CPU reset PC hardcoded 0x0 → added `RESET_PC` param (default 0x0) through `rv32i_pipeline_if`→`rv32i_core`→`rv32i_cpu_top`, `soc_top` sets 0x0000_1000; (2) boot ROM image never loaded (string `MEM_INIT_FILE` baked empty under Verilator) → cocotb backdoor load of `boot.hex` into `boot_rom.mem`.
+
+**Fast-follows (remaining M9):**
 - ⏸️ CPU→GPU integration: kernel launch → `gpu_irq_o` → result read (extend `test_cpu_gpu_handoff.py` to data plane).
 - ⏸️ Software coherency: CPU D$ flush → GPU kernel → CPU D$ invalidate.
 - ⏸️ DMA transfer + peripheral loopback (UART TX→RX, SPI).
-- ⏸️ Boot test: load firmware to ROM, boot, run — **100/100 attempts** (per VERIFICATION_PLAN.md).
+- ⏸️ Stronger SRAM check: read DUT SRAM back over AXI (current sentinel test relies on the golden model + SW-commit observation).
 - ⏸️ Full regression: prior CPU (140) + GPU + cache; **1M+ cycle random SoC stress, 0 failures**.
 - ⏸️ Benchmarks: CPU (vector add, dot product, memcpy, branch loop) + GPU (vector add, reduction, matmul, prefix scan, divergence).
-- **Exit**: all SoC tests green; boot 100/100; 1M-cycle random clean.
+- **Exit**: all SoC tests green; boot 100/100 ✅; 1M-cycle random clean (pending).
 
 ### M10 — L2 cache decision gate *(deps: M9 benchmarks)*
 - ⏸️ Review L1 miss rates from M9. Add `rtl/mem/l2_cache.sv` **only if** justified. Document the decision either way.
