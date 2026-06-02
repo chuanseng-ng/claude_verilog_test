@@ -886,12 +886,16 @@ module soc_top
         .s_axil_rresp   (axil_s_rresp   [AXIL_TIMER]),
         .s_axil_rvalid  (axil_s_rvalid  [AXIL_TIMER]),
         .s_axil_rready  (axil_s_rready  [AXIL_TIMER]),
-        .irq_o          (timer_irq)   // → CPU timer_irq_i AND irq_src_i[2]
+        .irq_o          (timer_irq)   // → CPU timer_irq_i (MTIP) only
     );
 
     // =========================================================================
     // Interrupt controller (axil_s[AXIL_IRQ])
     // IRQ source bit order: [0]=UART [1]=SPI [2]=TIMER [3]=DMA [4]=GPU
+    // NOTE: the TIMER slot (index 2) is tied 0 here — the timer drives the CPU
+    // dedicated MTIP line (timer_irq_i) directly, so routing it through the
+    // external-interrupt aggregator too would double-count one timer event as
+    // both MTIP and MEIP. The slot is retained for source-numbering stability.
     // =========================================================================
     interrupt_controller #(
         .ADDR_W    (12),
@@ -918,8 +922,9 @@ module soc_top
         .s_axil_rresp   (axil_s_rresp   [AXIL_IRQ]),
         .s_axil_rvalid  (axil_s_rvalid  [AXIL_IRQ]),
         .s_axil_rready  (axil_s_rready  [AXIL_IRQ]),
-        // irq_src_i[4:0] = {GPU[4], DMA[3], TIMER[2], SPI[1], UART[0]}
-        .irq_src_i      ({gpu_irq_o, dma_irq, timer_irq, spi_irq, uart_irq}),
+        // irq_src_i[4:0] = {GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}
+        // TIMER tied 0: timer interrupt is delivered as MTIP via timer_irq_i.
+        .irq_src_i      ({gpu_irq_o, dma_irq, 1'b0, spi_irq, uart_irq}),
         .irq_o          (ext_irq)
     );
 
