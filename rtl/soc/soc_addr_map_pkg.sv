@@ -24,20 +24,23 @@ package soc_addr_map_pkg;
 
     // ── Data-fabric slave indices ────────────────────────────────────────────
     /* verilator lint_off UNUSEDPARAM */
-    localparam int unsigned SLV_ROM  = 0;
-    localparam int unsigned SLV_SRAM = 1;
+    localparam int unsigned SLV_ROM    = 0;
+    localparam int unsigned SLV_SRAM   = 1;
+    localparam int unsigned SLV_PERIPH = 2;
     /* verilator lint_on  UNUSEDPARAM */
-    localparam int unsigned SOC_N_SLAVES = 2;
+    localparam int unsigned SOC_N_SLAVES = 3;
 
     // ── Region bounds (inclusive) ────────────────────────────────────────────
-    localparam logic [31:0] ROM_BASE   = 32'h0000_1000;
-    localparam logic [31:0] ROM_LIMIT  = 32'h0000_1FFF;
-    localparam logic [31:0] SRAM_BASE  = 32'h0000_2000;
-    localparam logic [31:0] SRAM_LIMIT = 32'h0FFF_FFFF;
+    localparam logic [31:0] ROM_BASE     = 32'h0000_1000;
+    localparam logic [31:0] ROM_LIMIT    = 32'h0000_1FFF;
+    localparam logic [31:0] SRAM_BASE    = 32'h0000_2000;
+    localparam logic [31:0] SRAM_LIMIT   = 32'h0FFF_FFFF;
+    localparam logic [31:0] PERIPH_BASE  = 32'h2000_1000;
+    localparam logic [31:0] PERIPH_LIMIT = 32'h2000_6FFF;
 
     // Packed arrays for crossbar instantiation (index = slave number).
-    localparam logic [31:0] SOC_SLV_BASE  [SOC_N_SLAVES] = '{ROM_BASE,  SRAM_BASE};
-    localparam logic [31:0] SOC_SLV_LIMIT [SOC_N_SLAVES] = '{ROM_LIMIT, SRAM_LIMIT};
+    localparam logic [31:0] SOC_SLV_BASE  [SOC_N_SLAVES] = '{ROM_BASE,  SRAM_BASE,  PERIPH_BASE};
+    localparam logic [31:0] SOC_SLV_LIMIT [SOC_N_SLAVES] = '{ROM_LIMIT, SRAM_LIMIT, PERIPH_LIMIT};
 
     // ── Reference decode ─────────────────────────────────────────────────────
     // Returns slave index [0 .. SOC_N_SLAVES-1], or SOC_N_SLAVES when the
