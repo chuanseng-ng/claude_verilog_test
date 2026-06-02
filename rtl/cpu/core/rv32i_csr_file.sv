@@ -1,23 +1,35 @@
 // rv32i_csr_file.sv
-// RV32I M-mode CSR Register File (Phase 2)
+// RV32I M-mode CSR Register File (Phase 5)
 //
 // Implements the minimal M-mode CSR set required for interrupt support:
-//   0x300  mstatus  - Machine status (MIE, MPIE, MPP)
-//   0x304  mie      - Machine interrupt enable (MTIE, MEIE)
-//   0x305  mtvec    - Trap vector base address (Direct mode only)
-//   0x341  mepc     - Machine exception PC
-//   0x342  mcause   - Machine trap cause
-//   0x344  mip      - Machine interrupt pending (read-only from software)
-//   0xF11  mvendorid- Vendor ID (read-only, 0)
-//   0xF12  marchid  - Architecture ID (read-only, 0)
-//   0xF13  mimpid   - Implementation ID (read-only, phase-specific)
-//   0xF14  mhartid  - Hardware thread ID (read-only, 0)
+//   0x300  mstatus      - Machine status (MIE, MPIE, MPP)
+//   0x304  mie          - Machine interrupt enable (MTIE, MEIE)
+//   0x305  mtvec        - Trap vector base address (Direct mode only)
+//   0x320  mcountinhibit- Performance counter inhibit mask
+//   0x341  mepc         - Machine exception PC
+//   0x342  mcause       - Machine trap cause
+//   0x344  mip          - Machine interrupt pending (read-only from software)
+//   0xB00  mcycle       - Cycle counter low 32 bits
+//   0xB02  minstret     - Retired-instruction counter low 32 bits
+//   0xB03  mhpmcounter3 - I-cache miss counter
+//   0xB04  mhpmcounter4 - D-cache miss counter
+//   0xB05  mhpmcounter5 - Branch mispredict counter
+//   0xB80  mcycleh      - Cycle counter high 32 bits
+//   0xB82  minstreth    - Retired-instruction counter high 32 bits
+//   0xF11  mvendorid    - Vendor ID (read-only, 0)
+//   0xF12  marchid      - Architecture ID (read-only, 0)
+//   0xF13  mimpid       - Implementation ID (read-only, phase-specific)
+//   0xF14  mhartid      - Hardware thread ID (read-only, 0)
 //
 // Write priority (highest first): reset > trap_entry > mret > csr instruction
 //
 // OQ-4: CSR write takes effect in EX (at the clock edge ending EX stage).
 //        mstatus_mie_eff reflects what MIE will be AFTER the pending write,
 //        so the interrupt controller sees the correct gating in the same cycle.
+//
+// Performance counter increment priority: write wins over increment on same
+// cycle (i.e. if a CSR write and counter event arrive simultaneously, the
+// written value takes effect — the event increment is suppressed that cycle).
 
 module rv32i_csr_file (
     input  logic        clk,
@@ -41,6 +53,12 @@ module rv32i_csr_file (
     // ── Hardware interrupt inputs (for mip) ───────────────────────────────────
     input  logic        ext_irq_i,       // External interrupt (drives mip.MEIP)
     input  logic        timer_irq_i,     // Timer interrupt (drives mip.MTIP)
+
+    // ── Performance counter event strobes (1-cycle pulses) ────────────────────
+    input  logic        retire_i,        // 1 = instruction committed this cycle (minstret)
+    input  logic        branch_mispred_i,// 1 = branch/JALR redirect this cycle (hpmcounter5)
+    input  logic        icache_miss_i,   // 1 = I-cache miss this cycle (hpmcounter3)
+    input  logic        dcache_miss_i,   // 1 = D-cache miss this cycle (hpmcounter4)
 
     // ── CSR read output (combinational pre-write, atomic) ─────────────────────
     output logic [31:0] csr_rdata,       // CSR value before any write this cycle
@@ -87,6 +105,27 @@ module rv32i_csr_file (
     logic [31:0] mcause_q;
 
     // =========================================================================
+    // Performance monitoring CSRs (Phase 5 M7)
+    // =========================================================================
+    // mcountinhibit (0x320): per-counter inhibit mask.
+    //   bit0 = mcycle inhibit, bit2 = minstret inhibit,
+    //   bit3 = hpmcounter3 (icache_miss), bit4 = hpmcounter4 (dcache_miss),
+    //   bit5 = hpmcounter5 (branch_mispred). bit1 reserved = 0.
+    //   Reset value 0 (all counters run by default).
+    logic [31:0] mcountinhibit_q;
+
+    // mcycle / mcycleh (0xB00 / 0xB80): 64-bit cycle counter
+    logic [63:0] mcycle_q;
+
+    // minstret / minstreth (0xB02 / 0xB82): 64-bit retired-instruction counter
+    logic [63:0] minstret_q;
+
+    // mhpmcounter3..5 (0xB03..0xB05): 32-bit fixed-event counters
+    logic [31:0] mhpmcounter3_q;   // I-cache misses
+    logic [31:0] mhpmcounter4_q;   // D-cache misses
+    logic [31:0] mhpmcounter5_q;   // Branch mispredictions
+
+    // =========================================================================
     // mip (combinational — driven by hardware)
     // =========================================================================
     assign mip = {20'h0, ext_irq_i, 3'h0, timer_irq_i, 7'h0};
@@ -117,12 +156,20 @@ module rv32i_csr_file (
                 12'h300: csr_rdata = {19'h0, 2'b11, 3'h0, mstatus_mpie_q, 3'h0, mstatus_mie_q, 3'h0};
                 12'h304: csr_rdata = {20'h0, mie_meie_q, 3'h0, mie_mtie_q, 7'h0};
                 12'h305: csr_rdata = {mtvec_base_q, 2'b00};
+                12'h320: csr_rdata = mcountinhibit_q & 32'h0000_003D; // bits[5:3,2,0]; bit1=0
                 12'h341: csr_rdata = mepc_q;
                 12'h342: csr_rdata = mcause_q;
                 12'h344: csr_rdata = mip;
+                12'hB00: csr_rdata = mcycle_q[31:0];
+                12'hB02: csr_rdata = minstret_q[31:0];
+                12'hB03: csr_rdata = mhpmcounter3_q;
+                12'hB04: csr_rdata = mhpmcounter4_q;
+                12'hB05: csr_rdata = mhpmcounter5_q;
+                12'hB80: csr_rdata = mcycle_q[63:32];
+                12'hB82: csr_rdata = minstret_q[63:32];
                 12'hF11: csr_rdata = 32'h0;          // mvendorid = 0
                 12'hF12: csr_rdata = 32'h0;          // marchid = 0
-                12'hF13: csr_rdata = 32'h0000_0002;  // mimpid = Phase 2
+                12'hF13: csr_rdata = 32'h0000_0005;  // mimpid = Phase 5
                 12'hF14: csr_rdata = 32'h0;          // mhartid = 0
                 default: begin
                     csr_rdata   = 32'h0;
@@ -220,6 +267,13 @@ module rv32i_csr_file (
             mtvec_base_q   <= 30'h0;  // Default: trap handler at 0x0000_0000
             mepc_q         <= 32'h0;
             mcause_q       <= 32'h0;
+            // Performance counters reset to 0 (all run by default)
+            mcountinhibit_q <= 32'h0;
+            mcycle_q        <= 64'h0;
+            minstret_q      <= 64'h0;
+            mhpmcounter3_q  <= 32'h0;
+            mhpmcounter4_q  <= 32'h0;
+            mhpmcounter5_q  <= 32'h0;
 
         end else if (trap_entry) begin
             // Trap entry: save MIE→MPIE, disable MIE, update mepc and mcause
@@ -234,43 +288,118 @@ module rv32i_csr_file (
             mstatus_mie_q  <= mstatus_mpie_q; // MIE ← MPIE
             mstatus_mpie_q <= 1'b1;           // MPIE ← 1
 
-        end else if (csr_access && !csr_illegal) begin
-            // CSR instruction write
-            // Local blocking vars (no initializers — assigned explicitly to avoid IMPLICITSTATIC)
-            logic [31:0] csr_cur;
-            logic [31:0] csr_nxt;
-            case (csr_addr)
-                12'h300: begin  // mstatus
-                    csr_cur = {19'h0, 2'b11, 3'h0, mstatus_mpie_q, 3'h0, mstatus_mie_q, 3'h0};
-                    csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
-                    // Only update implemented bits [7] MPIE and [3] MIE
-                    mstatus_mie_q  <= csr_nxt[3];
-                    mstatus_mpie_q <= csr_nxt[7];
+        end else begin
+            // ---------------------------------------------------------------
+            // CSR instruction write (when active, write wins over increment;
+            // increment suppressed this cycle for the written register).
+            // ---------------------------------------------------------------
+            if (csr_access && !csr_illegal) begin
+                // Local blocking vars (no initializers — assigned explicitly to avoid IMPLICITSTATIC)
+                logic [31:0] csr_cur;
+                logic [31:0] csr_nxt;
+                case (csr_addr)
+                    12'h300: begin  // mstatus
+                        csr_cur = {19'h0, 2'b11, 3'h0, mstatus_mpie_q, 3'h0, mstatus_mie_q, 3'h0};
+                        csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
+                        // Only update implemented bits [7] MPIE and [3] MIE
+                        mstatus_mie_q  <= csr_nxt[3];
+                        mstatus_mpie_q <= csr_nxt[7];
+                    end
+                    12'h304: begin  // mie
+                        csr_cur = {20'h0, mie_meie_q, 3'h0, mie_mtie_q, 7'h0};
+                        csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
+                        mie_mtie_q  <= csr_nxt[7];
+                        mie_meie_q  <= csr_nxt[11];
+                    end
+                    12'h305: begin  // mtvec (MODE bits [1:0] forced to 0)
+                        csr_cur = {mtvec_base_q, 2'b00};
+                        csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
+                        mtvec_base_q <= csr_nxt[31:2];
+                    end
+                    12'h320: begin  // mcountinhibit (bit1 RAZ/WI)
+                        csr_cur = mcountinhibit_q & 32'h0000_003D;
+                        csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
+                        mcountinhibit_q <= csr_nxt & 32'h0000_003D;  // mask bit1 always 0
+                    end
+                    12'h341: begin  // mepc
+                        csr_cur = mepc_q;
+                        csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
+                        mepc_q <= csr_nxt;
+                    end
+                    12'h342: begin  // mcause
+                        csr_cur = mcause_q;
+                        csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
+                        mcause_q <= csr_nxt;
+                    end
+                    12'hB00: begin  // mcycle low — write wins; carry suppressed this cycle
+                        csr_cur = mcycle_q[31:0];
+                        csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
+                        mcycle_q[31:0] <= csr_nxt;
+                    end
+                    12'hB02: begin  // minstret low — write wins
+                        csr_cur = minstret_q[31:0];
+                        csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
+                        minstret_q[31:0] <= csr_nxt;
+                    end
+                    12'hB03: begin  // mhpmcounter3 — write wins
+                        csr_cur = mhpmcounter3_q;
+                        csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
+                        mhpmcounter3_q <= csr_nxt;
+                    end
+                    12'hB04: begin  // mhpmcounter4 — write wins
+                        csr_cur = mhpmcounter4_q;
+                        csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
+                        mhpmcounter4_q <= csr_nxt;
+                    end
+                    12'hB05: begin  // mhpmcounter5 — write wins
+                        csr_cur = mhpmcounter5_q;
+                        csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
+                        mhpmcounter5_q <= csr_nxt;
+                    end
+                    12'hB80: begin  // mcycleh high — write wins
+                        csr_cur = mcycle_q[63:32];
+                        csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
+                        mcycle_q[63:32] <= csr_nxt;
+                    end
+                    12'hB82: begin  // minstreth high — write wins
+                        csr_cur = minstret_q[63:32];
+                        csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
+                        minstret_q[63:32] <= csr_nxt;
+                    end
+                    // mip (0x344), mvendorid/marchid/mimpid/mhartid (0xF1x): read-only, writes ignored
+                    default: ; // Illegal already flagged combinatorially; no state change
+                endcase
+            end else begin
+                // ---------------------------------------------------------------
+                // Performance counter increment (no CSR write this cycle).
+                // mcountinhibit bit gates each counter. Carry from low→high word.
+                // ---------------------------------------------------------------
+
+                // mcycle: always-on event (increment=1), inhibited by bit0
+                if (!mcountinhibit_q[0]) begin
+                    mcycle_q <= mcycle_q + 64'h1;
                 end
-                12'h304: begin  // mie
-                    csr_cur = {20'h0, mie_meie_q, 3'h0, mie_mtie_q, 7'h0};
-                    csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
-                    mie_mtie_q  <= csr_nxt[7];
-                    mie_meie_q  <= csr_nxt[11];
+
+                // minstret: retire strobe, inhibited by bit2
+                if (retire_i && !mcountinhibit_q[2]) begin
+                    minstret_q <= minstret_q + 64'h1;
                 end
-                12'h305: begin  // mtvec (MODE bits [1:0] forced to 0)
-                    csr_cur = {mtvec_base_q, 2'b00};
-                    csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
-                    mtvec_base_q <= csr_nxt[31:2];
+
+                // mhpmcounter3: I-cache miss strobe, inhibited by bit3
+                if (icache_miss_i && !mcountinhibit_q[3]) begin
+                    mhpmcounter3_q <= mhpmcounter3_q + 32'h1;
                 end
-                12'h341: begin  // mepc
-                    csr_cur = mepc_q;
-                    csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
-                    mepc_q <= csr_nxt;
+
+                // mhpmcounter4: D-cache miss strobe, inhibited by bit4
+                if (dcache_miss_i && !mcountinhibit_q[4]) begin
+                    mhpmcounter4_q <= mhpmcounter4_q + 32'h1;
                 end
-                12'h342: begin  // mcause
-                    csr_cur = mcause_q;
-                    csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
-                    mcause_q <= csr_nxt;
+
+                // mhpmcounter5: branch mispredict strobe, inhibited by bit5
+                if (branch_mispred_i && !mcountinhibit_q[5]) begin
+                    mhpmcounter5_q <= mhpmcounter5_q + 32'h1;
                 end
-                // mip (0x344), mvendorid/marchid/mimpid/mhartid (0xF1x): read-only, writes ignored
-                default: ; // Illegal already flagged combinatorially; no state change
-            endcase
+            end
         end
     end
 

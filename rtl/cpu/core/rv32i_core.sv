@@ -306,6 +306,14 @@ module rv32i_core(
     logic fence_i_pulse;
 
     // =========================================================================
+    // Performance counter event strobes (Phase 5 M7)
+    // =========================================================================
+    logic ic_miss;    // I-cache miss pulse (from u_icache ic_miss_o)
+    logic dc_miss;    // D-cache miss pulse (from u_dcache dc_miss_o)
+    // retire strobe = commit_valid (mem_wb_reg_i.valid && !trap_valid, from u_wb)
+    // branch_mispred strobe = ex_pc_redirect_r (registered 1-cycle pulse)
+
+    // =========================================================================
     // I-cache CPU-side interface
     // =========================================================================
     logic [31:0] ic_addr;
@@ -544,6 +552,11 @@ module rv32i_core(
         .mret             (mret_ex && !flush_ex_mem),
         .ext_irq_i        (ext_irq_pending),
         .timer_irq_i      (timer_irq_pending),
+        // Performance counter event strobes (Phase 5 M7)
+        .retire_i         (commit_valid),    // WB: valid && !trap_valid (one pulse per committed insn)
+        .branch_mispred_i (ex_pc_redirect_r),// Registered 1-cycle EX redirect pulse
+        .icache_miss_i    (ic_miss),         // I-cache CS_TAG_CHECK miss pulse
+        .dcache_miss_i    (dc_miss),         // D-cache CS_TAG_CHECK miss pulse
         .csr_rdata        (csr_rdata),
         .csr_illegal      (csr_illegal),
         .mtvec_out        (mtvec),
@@ -774,6 +787,7 @@ module rv32i_core(
         .ic_valid_i       (ic_valid),
         .ic_rdata_o       (ic_rdata),
         .ic_stall_o       (ic_stall),
+        .ic_miss_o        (ic_miss),          // Phase 5 M7: miss strobe
         .ic_invalidate_i  (fence_i_pulse),
         .axi_araddr_o     (ic_axi_araddr),
         .axi_arlen_o      (ic_axi_arlen),
@@ -801,6 +815,7 @@ module rv32i_core(
         .dc_wstrb_i       (dc_wstrb),
         .dc_rdata_o       (dc_rdata),
         .dc_stall_o       (dc_stall),
+        .dc_miss_o        (dc_miss),          // Phase 5 M7: miss strobe
         .axi_araddr_o     (dc_axi_araddr),
         .axi_arlen_o      (dc_axi_arlen),
         .axi_arsize_o     (dc_axi_arsize),

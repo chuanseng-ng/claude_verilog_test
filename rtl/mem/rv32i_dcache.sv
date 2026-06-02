@@ -48,6 +48,7 @@ module rv32i_dcache (
     input  logic [3:0]  dc_wstrb_i,
     output logic [31:0] dc_rdata_o,
     output logic        dc_stall_o,
+    output logic        dc_miss_o,    // 1-cycle pulse: CS_TAG_CHECK miss → CS_REFILL/CS_WRITEBACK
 
     // ── AXI4 read channel (refill) ───────────────────────────────────────────
     output logic [31:0]                axi_araddr_o,
@@ -300,6 +301,15 @@ module rv32i_dcache (
         (state_q == CS_REFILL);                         // Refilling
     // CS_TAG_CHECK + hit_q: stall=0
     // CS_DONE: stall=0
+
+    // =========================================================================
+    // Miss strobe output (Phase 5 M7 — performance counter event)
+    // Asserted for exactly 1 cycle: the CS_TAG_CHECK cycle where miss is detected
+    // (hit_q=0), which is the same cycle the FSM branches to CS_REFILL or
+    // CS_WRITEBACK.  hit_q is the registered result; when it is 0 in TAG_CHECK
+    // the cache is definitively missing and will leave this state next cycle.
+    // =========================================================================
+    assign dc_miss_o = (state_q == CS_TAG_CHECK) && !hit_q;
 
     // =========================================================================
     // Read data output

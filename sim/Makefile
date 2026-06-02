@@ -33,7 +33,8 @@ TEST_MODULES := \
 	tb.cocotb.cpu.test_isa_uvm \
 	tb.cocotb.cpu.test_fault_injection \
 	tb.cocotb.cpu.test_pipeline_hazards \
-	tb.cocotb.cpu.test_interrupts
+	tb.cocotb.cpu.test_interrupts \
+	tb.cocotb.cpu.test_perf_counters
 
 # RTL source files (Phase 3: 5-stage pipeline + I-cache + D-cache)
 # Packages must appear first so Verilator can resolve them.
@@ -197,6 +198,8 @@ help:
 	@echo "  make debug        - Run APB3 debug interface tests only"
 	@echo "  make hazards      - Run Phase 2 pipeline hazard tests only"
 	@echo "  make interrupts   - Run Phase 2 interrupt and CSR tests only"
+	@echo "  make perf_counters - Run Phase 5 M7 performance counter tests (subtests a-g)"
+	@echo "  make rollup       - CPU directed + Phase 3 cache + Phase 4 GPU (no long randoms)"
 	@echo "  make icache       - Run Phase 3 I-cache unit tests"
 	@echo "  make dcache       - Run Phase 3 D-cache unit tests"
 	@echo "  make cache_integration - Run Phase 3 CPU+cache integration tests"
@@ -427,6 +430,55 @@ interrupts:
 	@echo "Note: This should be run in WSL environment"
 	@echo ""
 	$(MAKE) sim MODULE=tb.cocotb.cpu.test_interrupts
+
+# Convenience target for Phase 5 M7 performance counter tests
+.PHONY: perf_counters
+perf_counters:
+	@echo "Running Phase 5 M7 performance counter tests (subtests a-g)..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim MODULE=tb.cocotb.cpu.test_perf_counters
+
+# rollup — CPU directed (all TEST_MODULES) + Phase 3 cache + Phase 4 GPU (unit+kernels+handoff+random smoke)
+# Equivalent to the full nightly gate without the long random CPU/GPU runs.
+# One failing group fails the rollup with a summary report.
+.PHONY: rollup
+rollup:
+	@echo "Running rollup: CPU directed (incl. perf_counters) + Phase 3 cache + Phase 4 GPU..."
+	@echo ""
+	@failed=""; \
+	echo "========================================"; \
+	echo "Rollup group: CPU directed tests (all TEST_MODULES)"; \
+	echo "========================================"; \
+	for module in $(TEST_MODULES); do \
+		echo "--- Running: $$module ---"; \
+		rm -f results.xml; \
+		$(MAKE) sim MODULE=$$module || true; \
+		if [ -f results.xml ] && grep -q '<failure\|<error' results.xml; then \
+			failed="$$failed $$module"; \
+		fi; \
+	done; \
+	echo ""; \
+	echo "========================================"; \
+	echo "Rollup group: Phase 3 cache (icache + dcache + integration)"; \
+	echo "========================================"; \
+	$(MAKE) phase3_all || failed="$$failed phase3_all"; \
+	echo ""; \
+	echo "========================================"; \
+	echo "Rollup group: Phase 4 GPU (unit + kernels + handoff + random smoke)"; \
+	echo "========================================"; \
+	$(MAKE) gpu_all || failed="$$failed gpu_all"; \
+	echo ""; \
+	if [ -n "$$failed" ]; then \
+		echo "========================================"; \
+		echo "ROLLUP FAILED GROUPS:$$failed"; \
+		echo "========================================"; \
+		exit 1; \
+	else \
+		echo "========================================"; \
+		echo "ALL ROLLUP TESTS PASSED!"; \
+		echo "========================================"; \
+	fi
 
 # Run all tests with Verilator coverage instrumentation and generate reports
 .PHONY: coverage
