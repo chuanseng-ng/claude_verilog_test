@@ -13,7 +13,9 @@
 import rv32i_pipeline_pkg::*;
 import rv32i_cache_pkg::*;
 import axi_pkg::*;
-module rv32i_core(
+module rv32i_core #(
+    parameter logic [31:0] RESET_PC = 32'h0000_0000
+)(
     input  logic        clk,
     input  logic        rst_n,
 
@@ -609,7 +611,9 @@ module rv32i_core(
     // =========================================================================
     // IF Stage (Phase 3: cache interface)
     // =========================================================================
-    rv32i_pipeline_if u_if (
+    rv32i_pipeline_if #(
+        .RESET_PC         (RESET_PC)
+    ) u_if (
         .clk              (clk),
         .rst_n            (rst_n),
         .stall_pc         (stall_pc),

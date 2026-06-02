@@ -15,7 +15,9 @@
 
 
 import rv32i_pipeline_pkg::*;
-module rv32i_pipeline_if(
+module rv32i_pipeline_if #(
+    parameter logic [31:0] RESET_PC = 32'h0000_0000
+)(
     input  logic        clk,
     input  logic        rst_n,
 
@@ -62,7 +64,7 @@ module rv32i_pipeline_if(
 
     always_ff @(posedge clk) begin
         if (!rst_n) begin
-            pc_q <= 32'h0000_0000;
+            pc_q <= RESET_PC;
         end else if (dbg_pc_wr_en && dbg_halted) begin
             // Debug PC write (only when halted)
             pc_q <= dbg_pc_wr_data;

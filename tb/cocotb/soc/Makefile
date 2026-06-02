@@ -1,5 +1,5 @@
-# Makefile for SoC cocotb tests (Phase 5 / M3)
-# Crossbar unit tests: routing, arbitration, concurrency, backpressure, burst.
+# Makefile for SoC cocotb tests (Phase 5 / M3–M9)
+# Component unit tests (M3–M6) + SoC boot test (M9).
 
 TOPLEVEL_LANG ?= verilog
 SIM ?= verilator
@@ -65,6 +65,66 @@ SPI_SOURCES = \
 	$(RTL)/soc/axi_lite_register_bank.sv \
 	$(RTL)/periph/spi_controller.sv
 
+# Full SoC top-level sources for the boot test (M9).
+# Order: packages first, leaf RTL, adapters, then soc_top + tb wrapper.
+SRAM_SIM_MODEL ?= $(PROJ_ROOT)/sim/sram_1rw_256x32_verilator.v
+GPU_SRAM_SIM   ?= $(PROJ_ROOT)/sim/sram_1rw_128x32_asap7.v
+
+SOC_BOOT_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/soc_addr_map_pkg.sv \
+	$(RTL)/soc/soc_periph_map_pkg.sv \
+	$(SRAM_SIM_MODEL) \
+	$(RTL)/cpu/core/rv32i_pipeline_pkg.sv \
+	$(RTL)/mem/rv32i_cache_pkg.sv \
+	$(RTL)/cpu/core/rv32i_alu.sv \
+	$(RTL)/cpu/core/rv32i_imm_gen.sv \
+	$(RTL)/cpu/core/rv32i_regfile.sv \
+	$(RTL)/cpu/core/rv32i_decode.sv \
+	$(RTL)/cpu/core/rv32i_branch_comp.sv \
+	$(RTL)/cpu/core/rv32i_hazard_unit.sv \
+	$(RTL)/cpu/core/rv32i_forwarding_unit.sv \
+	$(RTL)/cpu/core/rv32i_csr_file.sv \
+	$(RTL)/cpu/core/rv32i_interrupt_ctrl.sv \
+	$(RTL)/mem/rv32i_icache.sv \
+	$(RTL)/mem/rv32i_dcache.sv \
+	$(RTL)/mem/rv32i_cache_arbiter.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_if.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_id.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_ex1b.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_ex1c.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_ex2.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_mem.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_wb.sv \
+	$(RTL)/cpu/core/rv32i_core.sv \
+	$(RTL)/cpu/rv32i_cpu_top.sv \
+	$(RTL)/gpu/gpu_pkg.sv \
+	$(GPU_SRAM_SIM) \
+	$(RTL)/gpu/vector_register_file.sv \
+	$(RTL)/gpu/vector_alu.sv \
+	$(RTL)/gpu/gpu_compute_unit.sv \
+	$(RTL)/gpu/warp_scheduler.sv \
+	$(RTL)/gpu/gpu_command_queue.sv \
+	$(RTL)/gpu/gpu_memory_unit.sv \
+	$(RTL)/gpu/memory_coalescer.sv \
+	$(RTL)/gpu/shared_memory.sv \
+	$(RTL)/gpu/gpu_top.sv \
+	$(RTL)/periph/uart_controller.sv \
+	$(RTL)/periph/spi_controller.sv \
+	$(RTL)/periph/timer.sv \
+	$(RTL)/periph/interrupt_controller.sv \
+	$(RTL)/periph/dma_engine.sv \
+	$(RTL)/soc/axi4_crossbar.sv \
+	$(RTL)/soc/axi_lite_interconnect.sv \
+	$(RTL)/soc/axi_lite_register_bank.sv \
+	$(RTL)/soc/sram_controller.sv \
+	$(RTL)/soc/boot_rom.sv \
+	$(RTL)/soc/axi4_to_axilite.sv \
+	$(RTL)/soc/axilite_to_axi4.sv \
+	$(RTL)/soc/soc_top.sv \
+	$(SOC_DIR)/tb_soc_top.sv
+
 VERILOG_SOURCES = $(XBAR_SOURCES)
 
 ifeq ($(SIM),verilator)
@@ -105,7 +165,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_all verilator_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_all verilator_lint soc_boot_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar
 
@@ -165,7 +225,36 @@ spi: spi_lint
 	$(MAKE) MODULE=test_spi TOPLEVEL=spi_controller \
 		VERILOG_SOURCES="$(SPI_SOURCES)"
 
-# Run every SoC unit test (crossbar + register bank + AXI-Lite interconnect + SRAM + DMA + timer + IRQ + UART + SPI).
+soc_boot_lint:
+	verilator --lint-only -Wall -Wno-fatal -Wno-IMPORTSTAR \
+		-Wno-UNUSEDSIGNAL -Wno-UNOPTFLAT -Wno-SYNCASYNCNET \
+		-Wno-DECLFILENAME -Wno-UNUSEDPARAM -Wno-BLKSEQ \
+		-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		--top-module tb_soc_top \
+		$(SOC_BOOT_SOURCES)
+
+# M9 SoC boot test — 3 tests: PC scoreboard, SRAM sentinels, 100/100 stability.
+# fr_null_20260603_052800_00 (CPU RESET_PC) fixed by rtl-design-orchestrator 2026-06-03.
+# clean first: sim_build/Vtop is always named Vtop regardless of TOPLEVEL, so a
+# stale binary from any prior target (e.g. spi_controller) will cause VPI root
+# handle mismatch ("tb_soc_top != spi_controller").
+soc_boot: soc_boot_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_boot TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET"
+
+# Diagnostic boot test — dumps fetch-path signals for 300 cycles.
+.PHONY: soc_boot_diag
+soc_boot_diag:
+	$(MAKE) clean
+	$(MAKE) MODULE=test_boot_diag TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET"
+
+# Run every SoC test: M3–M6 component suites + M9 boot test.
 soc_all:
 	$(MAKE) clean && $(MAKE) crossbar
 	$(MAKE) clean && $(MAKE) register_bank
@@ -176,3 +265,4 @@ soc_all:
 	$(MAKE) clean && $(MAKE) timer
 	$(MAKE) clean && $(MAKE) uart
 	$(MAKE) clean && $(MAKE) spi
+	$(MAKE) clean && $(MAKE) soc_boot

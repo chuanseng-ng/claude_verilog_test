@@ -4,7 +4,9 @@
 
 import axi_pkg::*;
 
-module rv32i_cpu_top (
+module rv32i_cpu_top #(
+    parameter logic [31:0] RESET_PC = 32'h0000_0000
+) (
   // Clock and reset
   input  logic        clk_i,
   input  logic        rst_n_i,
@@ -159,7 +161,9 @@ module rv32i_cpu_top (
   // CPU Core Instance
   // ================================================================
 
-  rv32i_core u_core (
+  rv32i_core #(
+    .RESET_PC       (RESET_PC)
+  ) u_core (
     .clk            (clk_i),
     .rst_n          (rst_n_i),
 
