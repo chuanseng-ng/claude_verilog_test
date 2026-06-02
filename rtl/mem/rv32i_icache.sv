@@ -47,6 +47,7 @@ module rv32i_icache (
     input  logic        ic_valid_i,       // Fetch request valid
     output logic [31:0] ic_rdata_o,       // Instruction word
     output logic        ic_stall_o,       // 1 = stall the pipeline
+    output logic        ic_miss_o,        // 1-cycle pulse: CS_TAG_CHECK miss → CS_REFILL
 
     // ── FENCE.I invalidation ──────────────────────────────────────────────────
     input  logic        ic_invalidate_i,  // Invalidate all lines (1-cycle pulse)
@@ -247,6 +248,13 @@ module rv32i_icache (
         (state_q == CS_REFILL);                         // Refill in progress
     // CS_TAG_CHECK + hit : stall=0, ic_rdata_o from tag_dout_r/data_dout_r
     // CS_DONE            : stall=0, ic_rdata_o from refill_buf_q
+
+    // =========================================================================
+    // Miss strobe output (Phase 5 M7 — performance counter event)
+    // Asserted for exactly 1 cycle: the CS_TAG_CHECK cycle where miss is detected.
+    // Excludes addr_mismatch (redirect abort, not a true demand miss).
+    // =========================================================================
+    assign ic_miss_o = (state_q == CS_TAG_CHECK) && !hit && !addr_mismatch;
 
     // =========================================================================
     // Read data output

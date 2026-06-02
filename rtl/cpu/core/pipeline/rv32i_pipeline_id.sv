@@ -123,7 +123,11 @@ module rv32i_pipeline_id(
                 12'h300, 12'h304, 12'h305,   // mstatus, mie, mtvec
                 12'h341, 12'h342, 12'h344,   // mepc, mcause, mip
                 12'hF11, 12'hF12,             // mvendorid, marchid
-                12'hF13, 12'hF14:             // mimpid, mhartid
+                12'hF13, 12'hF14,             // mimpid, mhartid
+                12'h320,                      // mcountinhibit
+                12'hB00, 12'hB80,             // mcycle, mcycleh
+                12'hB02, 12'hB82,             // minstret, minstreth
+                12'hB03, 12'hB04, 12'hB05:   // mhpmcounter3, mhpmcounter4, mhpmcounter5
                     csr_illegal_id = 1'b0;
                 default:
                     csr_illegal_id = 1'b1;

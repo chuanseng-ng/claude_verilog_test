@@ -150,10 +150,19 @@ async def test_irq_enable_readback(dut):
 
 @cocotb.test()
 async def test_perf_counters_zero_after_reset(dut):
-    """All performance counters read as 0 after reset (no kernel running)."""
+    """All 16 performance counters (PERFCNT[0..15]) read as 0 after reset.
+
+    GPU_PERFCNT[0..15] occupy AXI4-Lite offsets 0x030..0x06C (4-byte stride).
+    Addresses: 0x030, 0x034, 0x038, 0x03C, 0x040, 0x044, 0x048, 0x04C,
+               0x050, 0x054, 0x058, 0x05C, 0x060, 0x064, 0x068, 0x06C.
+    All must read as 0 immediately after reset with no kernel running.
+    """
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     await _reset(dut)
 
-    for i in range(6):
+    for i in range(16):
         val = await _axil_read(dut, GPU_PERFCNT0 + i * 4)
-        assert val == 0, f"PERFCNT[{i}] should be 0 after reset, got 0x{val:08x}"
+        assert val == 0, (
+            f"PERFCNT[{i}] at offset 0x{GPU_PERFCNT0 + i*4:03X} "
+            f"should be 0 after reset, got 0x{val:08x}"
+        )
