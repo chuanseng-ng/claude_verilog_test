@@ -4,8 +4,9 @@
     "STD_CELL_LIBRARY": "asap7sc7p5t_SIMPLE",
 
     "VERILOG_FILES": [
-        "dir::sram_1rw_256x32_asap7_stub.v",
-        "dir::icg_asap7_stub.v",
+        "dir::../sram_1rw_256x32_asap7_stub.v",
+        "dir::../icg_asap7_stub.v",
+        "dir::../../../rtl/soc/axi_pkg.sv",
         "dir::../../../rtl/cpu/core/rv32i_pipeline_pkg.sv",
         "dir::../../../rtl/mem/rv32i_cache_pkg.sv",
         "dir::../../../rtl/mem/rv32i_clock_gate.sv",
@@ -116,10 +117,10 @@
     "HOLD_VIOLATION_CORNERS": ["nom_tt_025C_0p7V"],
 
     "EXTRA_LEFS": [
-        "dir::sram_1rw_256x32_asap7.lef"
+        "dir::../sram_1rw_256x32_asap7.lef"
     ],
     "EXTRA_LIBS": [
-        "dir::sram_1rw_256x32_asap7_TT_0p7V_25C.lib"
+        "dir::../sram_1rw_256x32_asap7_TT_0p7V_25C.lib"
     ],
     "EXTRA_GDS_FILES": [],
 
