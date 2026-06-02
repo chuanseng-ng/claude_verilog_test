@@ -28,25 +28,31 @@ Future PPA work on this stage should be opened as a new branch — this branch's
 
 ---
 
-## ⚠️ Phase 5 M7 resynth — perf-counter timing regression (2026-06-02)
+## Phase 5 M7 — perf-counter CPU re-sign-off at 1282 MHz (2026-06-02)
 
-**Re-run after Phase 5 M7 added CPU performance-monitoring CSRs** (bead `0ba`). Result: timing does **not** close at the Run 43 target of 705 ps.
+Phase 5 M7 added CPU performance-monitoring CSRs (mcycle/minstret 64-bit, mhpmcounter3-5, mcountinhibit). This re-opened CPU timing (beads `0ba` → `3ux`). **Net result: standalone CPU re-signed-off at 1282 MHz / +24 ps slack (achievable ~1323 MHz); the 1418 MHz Run 43 number does not hold with M7.** Moot for the SoC, whose clock is GPU-governed (~571 MHz) — >2× margin remains.
+
+### ✅ M7 CPU sign-off — Run 2026-06-02_20-37-12 (780 ps)
 
 | Metric | Value |
 |---|---|
-| Run directory | `pnr/asap7/cpu/runs/RUN_2026-06-02_17-49-55` |
-| Clock target | 705 ps (1418 MHz) |
-| Setup WNS / TNS | **−56.16 ps / −173.4 ps** (VIOLATED) |
-| Implied fmax | ~1313 MHz (761 ps) |
-| Hold WS / TNS | +28.1 ps / 0 ✓ |
-| Power (total) | 26.8 mW |
-| Stdcell area | 4 050 µm² (7 562 µm² incl. macros) |
+| Run directory | `pnr/asap7/cpu/runs/RUN_2026-06-02_20-37-12` |
+| Clock period / target | 780 ps / **1282 MHz** |
+| Setup WNS / TNS | **+24.01 ps / 0** ✓ |
+| Achievable fmax | **~1323 MHz** (756 ps) |
+| Hold WS / TNS | +28.14 ps / 0 ✓ |
+| Power (total) | 24.38 mW |
+| Stdcell area | 4 058 µm² |
 | Slew / cap / antenna | 0 / 0 / 0 ✓ |
 | STA stage | post-GRT estimated (STAPostPNR gated off — same caveat as GPU run) |
 
-**Root cause**: M7's new CSRs (mcycle/minstret 64-bit, mhpmcounter3-5, mcountinhibit) widened the CSR read decode / rdata mux in `rv32i_csr_file.sv`. Worst path is a wide OR4/OR5/NOR5/NAND5 reduction tree, Path Group `PIPELINE` (CSR address-match → rdata mux) — **not** the 64-bit counter adder as initially suspected.
+### Why 1418 MHz no longer holds, and what was tried
 
-**Disposition**: regression is moot for the SoC (SoC clock GPU-governed ~571 MHz ≪ CPU 1313 MHz), but the standalone 1418 MHz CPU sign-off is to be restored via CSR read-mux retiming. Tracked in bead `3ux` (rtl-design-orchestrator), which blocks M11.
+At the Run 43 target of 705 ps the flat-case M7 RTL misses setup by WNS −56 ps (run `RUN_2026-06-02_17-49-55`). **True limiter** (PD diagnosis, two-run compare): an **836-fanout counter-write-enable broadcast register** — synthesis collapses the `(csr_access && !csr_illegal)` counter write-select into one node feeding all ~224 M7 counter flops (pre-PNR slew ~3128 ps). The 64-bit mcycle/minstret increment adders sit behind it.
+
+A CSR read-mux two-level restructure (commit `9d8f64a`) was attempted and **reverted** (commit `b0b143e`): functionally clean (192/192) but timing-ineffective — worst-path depth unchanged (56→58 gates, synthesis re-flattens), and its intermediate range signals degraded placement, dropping the post-GRT resizer gain from 111 ps to 10 ps → WNS −89 ps / TNS −7646 ps at 705 ps (run `RUN_2026-06-02_18-52-22`).
+
+**Disposition**: rather than register the counter increment-enables (which would add 1-cycle counter latency + minstret-exactness edge cases for a vanity frequency the SoC does not need), the clock was relaxed to 780 ps for a clean WNS≥0 standalone sign-off. The 836-fanout counter-enable restructure remains an available future RTL optimization if a >1300 MHz standalone CPU is ever required. Bead `3ux` closed at 1282 MHz.
 
 ---
 

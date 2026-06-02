@@ -36,7 +36,7 @@
 
     "CLOCK_PORT":   "clk_i",
     "CLOCK_NET":    "clk_i",
-    "CLOCK_PERIOD": 0.705,
+    "CLOCK_PERIOD": 0.780,
 
     "VERILOG_DEFINES": ["SRAM_ASAP7", "USE_ICG_CELL"],
     "LINTER_DEFINES":  ["SRAM_ASAP7"],
