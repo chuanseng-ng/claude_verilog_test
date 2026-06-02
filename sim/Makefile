@@ -191,7 +191,8 @@ help:
 	@echo "  make test         - Run all cocotb tests (requires WSL)"
 	@echo "  make sim          - Run single test module (requires WSL)"
 	@echo "  make waves        - Open waveform viewer (gtkwave)"
-	@echo "  make lint         - Run Verilator lint check"
+	@echo "  make lint         - Run Verilator lint check (CPU top + chains lint_soc)"
+	@echo "  make lint_soc     - Run Verilator lint check for soc_top (Phase 5 M8)"
 	@echo "  make axi          - Run AXI protocol tests only"
 	@echo "  make debug        - Run APB3 debug interface tests only"
 	@echo "  make hazards      - Run Phase 2 pipeline hazard tests only"
@@ -250,6 +251,81 @@ lint:
 		-Wno-UNUSEDSIGNAL \
 		-Wno-UNOPTFLAT \
 		$(VERILOG_SOURCES) 2>&1
+	@$(MAKE) --no-print-directory lint_soc
+
+# Phase 5 M8 SoC top-level lint (soc_top + all leaf modules)
+# Packages first, then leaf RTL, then glue adapters, then top.
+SOC_TOP_SOURCES := \
+	$(RTL_DIR)/soc/axi_pkg.sv \
+	$(RTL_DIR)/soc/soc_addr_map_pkg.sv \
+	$(RTL_DIR)/soc/soc_periph_map_pkg.sv \
+	$(SRAM_SIM_MODEL) \
+	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
+	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
+	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
+	$(RTL_DIR)/cpu/core/rv32i_imm_gen.sv \
+	$(RTL_DIR)/cpu/core/rv32i_regfile.sv \
+	$(RTL_DIR)/cpu/core/rv32i_decode.sv \
+	$(RTL_DIR)/cpu/core/rv32i_branch_comp.sv \
+	$(RTL_DIR)/cpu/core/rv32i_hazard_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_forwarding_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_csr_file.sv \
+	$(RTL_DIR)/cpu/core/rv32i_interrupt_ctrl.sv \
+	$(RTL_DIR)/mem/rv32i_icache.sv \
+	$(RTL_DIR)/mem/rv32i_dcache.sv \
+	$(RTL_DIR)/mem/rv32i_cache_arbiter.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_if.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_id.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex1b.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex1c.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex2.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_mem.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_wb.sv \
+	$(RTL_DIR)/cpu/core/rv32i_core.sv \
+	$(RTL_DIR)/cpu/rv32i_cpu_top.sv \
+	$(GPU_PKG) \
+	$(GPU_SRAM_SIM) \
+	$(RTL_DIR)/gpu/vector_register_file.sv \
+	$(RTL_DIR)/gpu/vector_alu.sv \
+	$(RTL_DIR)/gpu/gpu_compute_unit.sv \
+	$(RTL_DIR)/gpu/warp_scheduler.sv \
+	$(RTL_DIR)/gpu/gpu_command_queue.sv \
+	$(RTL_DIR)/gpu/gpu_memory_unit.sv \
+	$(RTL_DIR)/gpu/memory_coalescer.sv \
+	$(RTL_DIR)/gpu/shared_memory.sv \
+	$(RTL_DIR)/gpu/gpu_top.sv \
+	$(RTL_DIR)/periph/uart_controller.sv \
+	$(RTL_DIR)/periph/spi_controller.sv \
+	$(RTL_DIR)/periph/timer.sv \
+	$(RTL_DIR)/periph/interrupt_controller.sv \
+	$(RTL_DIR)/periph/dma_engine.sv \
+	$(RTL_DIR)/soc/axi4_crossbar.sv \
+	$(RTL_DIR)/soc/axi_lite_interconnect.sv \
+	$(RTL_DIR)/soc/sram_controller.sv \
+	$(RTL_DIR)/soc/boot_rom.sv \
+	$(RTL_DIR)/soc/axi4_to_axilite.sv \
+	$(RTL_DIR)/soc/axilite_to_axi4.sv \
+	$(RTL_DIR)/soc/soc_top.sv
+
+.PHONY: lint_soc
+lint_soc:
+	@echo "Running Verilator lint check (soc_top)..."
+	@command -v verilator >/dev/null 2>&1 || { echo "ERROR: Verilator not found."; exit 1; }
+	@verilator --lint-only -Wall -Wno-fatal \
+		--top-module soc_top \
+		-I$(RTL_DIR)/cpu/core \
+		-I$(RTL_DIR)/mem \
+		-I$(RTL_DIR)/soc \
+		-I$(RTL_DIR)/gpu \
+		-Wno-IMPORTSTAR \
+		-Wno-UNUSEDSIGNAL \
+		-Wno-UNOPTFLAT \
+		-Wno-SYNCASYNCNET \
+		$(SOC_TOP_SOURCES) 2>&1
+# SYNCASYNCNET waived at SoC top: leaf blocks use heterogeneous reset
+# disciplines (CPU synchronous per ASIC rule, peripherals async); soc_top only
+# distributes the shared rst_n_i. Frozen leaf RTL — not a SoC integration bug.
 
 # ============================================================================
 # Cocotb Targets (require cocotb installation in WSL)
