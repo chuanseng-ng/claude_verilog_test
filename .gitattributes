@@ -1,0 +1,6 @@
+# Beads passive Dolt exports: append-heavy JSONL. Use git's built-in union
+# merge driver so concurrent appends/edits from different branches both survive
+# a merge instead of conflicting. The Dolt DB (.beads/embeddeddolt) remains the
+# authoritative store; these JSONL files are regenerated exports.
+.beads/issues.jsonl        merge=union
+.beads/interactions.jsonl  merge=union
