@@ -6,8 +6,8 @@
 # OpenROAD reads create_clock -period raw against the Liberty time unit, so
 # the period and all IO delays must be expressed in ps, not ns.
 #
-# Target:  1408 MHz (710 ps period)
-# Fallback: 1389 MHz (720 ps period)
+# Target:  1282 MHz (780 ps period) — relaxed from 1418 MHz for flat M7 CSR-revert closure
+# Fallback: 1408 MHz (710 ps period)
 #
 # History:
 #   Runs 7-31 wrote time values in ns against a ps-unit Liberty — this made
@@ -27,7 +27,8 @@
 ###############################################################################
 # 1. Clock definition
 ###############################################################################
-create_clock -name clk -period 705 [get_ports clk_i]
+create_clock -name clk -period 780 [get_ports clk_i]
+# Previous: create_clock -name clk -period 705 [get_ports clk_i]  ;# flat M7 CSR-revert WNS -89 ps at 705 ps
 # Fallback: create_clock -name clk -period 710 [get_ports clk_i]  ;# Run 42 closed at 710 ps with +9.08 ps slack (CTS clustering 8/10)
 
 set_clock_uncertainty -setup 15 [get_clocks clk]  ;# Run 39: 20→15 ps; ASAP7 jitter ~10 ps, 15 defensible midpoint
