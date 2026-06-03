@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-02T11:30:00+07:00",
+  "updated_at": "2026-06-03T05:55:00+07:00",
   "rtl": {
     "top_module": "rv32i_cpu_top",
     "files": [
@@ -22,7 +22,9 @@
       "rtl/periph/timer.sv",
       "rtl/periph/uart_controller.sv",
       "rtl/periph/spi_controller.sv",
-      "rtl/cpu/core/rv32i_csr_file.sv"
+      "rtl/cpu/core/rv32i_csr_file.sv",
+      "rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
+      "rtl/soc/soc_top.sv"
     ],
     "lint_clean": true,
     "cdc_clean": false,
@@ -255,15 +257,26 @@
       "constraint_ref": "fr_generated_20260602_20260602_095600_00"
     },
     {
-      "timestamp": "2026-06-02T11:30:00+07:00",
+      "timestamp": "2026-06-03T05:45:00+07:00",
       "agent": "verification-orchestrator",
-      "stage": "regression_signoff",
+      "stage": "directed_tests",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "functional",
+      "suggested_next_step": "escalate",
+      "reason": "M9 boot test infrastructure complete (tb_soc_top.sv, boot_fw/boot.hex, soc_model.py, test_boot.py, Makefile targets) but CPU RESET_PC hardcoded 0x0000_0000 != ROM_BASE 0x0000_1000; boot test cannot pass until rv32i_pipeline_if/rv32i_core/rv32i_cpu_top gain RESET_PC parameter and soc_top passes 32h0000_1000",
+      "constraint_ref": "fr_null_20260603_052800_00"
+    },
+    {
+      "timestamp": "2026-06-03T05:55:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
       "decision": "proceed",
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
-      "reason": "CSR read-path two-level decode restructure verified: perf_counters 7/7, CPU directed 127/127, phase3_all 20/20, gpu_all 6+unit+handoff+random smoke all PASS. Zero regressions. Trap CSRs (trap sub-group) and counter CSRs (ctr sub-group) functionally identical to pre-restructure flat case.",
-      "constraint_ref": null
+      "reason": "Fixed fr_null_20260603_052800_00: RESET_PC parameter (default 32'h0000_0000) propagated through rv32i_pipeline_if -> rv32i_core -> rv32i_cpu_top; soc_top overrides to 32'h0000_1000. Verilator -Wall make lint + make lint_soc: 0 errors, 0 new warnings (5 pre-existing baseline unchanged).",
+      "constraint_ref": "fr_null_20260603_052800_00"
     }
   ],
   "fix_requests": [
@@ -282,10 +295,7 @@
         "module": "rv32i_pipeline_id",
         "signal": "csr_illegal_id",
         "file": "rtl/cpu/core/pipeline/rv32i_pipeline_id.sv",
-        "line_range": [
-          119,
-          131
-        ]
+        "line_range": [119, 131]
       },
       "summary": "csr_illegal_id in rv32i_pipeline_id.sv does not include M7 performance-counter CSR addresses (0x320, 0xB00/0xB80, 0xB02/0xB82, 0xB03, 0xB04, 0xB05) \u2014 any access to these CSRs triggers an illegal-instruction trap causing CPU to loop at mtvec=0",
       "expected_behavior": "CSRRS/CSRRW to mcycle (0xB00), minstret (0xB02), mhpmcounter3-5 (0xB03-0xB05), mcycleh (0xB80), minstreth (0xB82), and mcountinhibit (0x320) should retire normally and return/write the counter value",
@@ -294,9 +304,7 @@
       "status": "verified_fixed",
       "rtl_response": {
         "diff_summary": "rv32i_pipeline_id.sv csr_illegal_id case block: added 8 M7 CSR addresses (12'h320 mcountinhibit, 12'hB00 mcycle, 12'hB80 mcycleh, 12'hB02 minstret, 12'hB82 minstreth, 12'hB03 mhpmcounter3, 12'hB04 mhpmcounter4, 12'hB05 mhpmcounter5) to the whitelist so csr_illegal_id=0 for all perf-counter CSRs.",
-        "files_changed": [
-          "rtl/cpu/core/pipeline/rv32i_pipeline_id.sv"
-        ],
+        "files_changed": ["rtl/cpu/core/pipeline/rv32i_pipeline_id.sv"],
         "fixed_at": "2026-06-02T17:05:00+07:00"
       },
       "history": [
@@ -311,6 +319,47 @@
           "agent": "verification-orchestrator",
           "action": "regression_confirmed",
           "note": "All 7 perf-counter subtests PASS after RTL fix + 2 TB BNE-offset corrections. RTL DUT clean. fix_request closed."
+        }
+      ]
+    },
+    {
+      "id": "fr_null_20260603_052800_00",
+      "created_at": "2026-06-03T05:45:00+07:00",
+      "updated_at": "2026-06-03T05:55:00+07:00",
+      "created_by": "verification-orchestrator",
+      "failure_class": "functional",
+      "test_name": "test_boot_pc_scoreboard (M9 foundation slice)",
+      "property_or_assertion": null,
+      "seed": 0,
+      "waveform_path": null,
+      "log_path": null,
+      "suspected_rtl": {
+        "module": "rv32i_pipeline_if",
+        "signal": "pc_q",
+        "file": "rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
+        "line_range": [63, 79]
+      },
+      "summary": "CPU reset PC hardcoded to 0x0000_0000 but SoC boot ROM is at 0x0000_1000 — CPU first fetch goes to unmapped address, gets DECERR, and spins at mtvec=0",
+      "expected_behavior": "After reset, CPU fetches from ROM_BASE=0x0000_1000 and executes boot firmware (LUI/ADDI/SW/EBREAK sequence); commit_pc_o stream = [0x1000, 0x1004, 0x1008, 0x100c, 0x1010, 0x1014, 0x1018, 0x101c]",
+      "observed_behavior": "rv32i_pipeline_if.sv line 65 hardcodes pc_q <= 32h0000_0000 on reset; rv32i_cpu_top has no RESET_PC parameter; rv32i_core has no RESET_PC parameter; soc_top instantiates u_cpu with no PC override; first AXI fetch goes to 0x0000_0000 which is below ROM_BASE=0x1000 and below SRAM_BASE=0x2000 — crossbar returns DECERR; CPU traps to mtvec (default 0x0) and spins forever",
+      "session_id": null,
+      "status": "fixed",
+      "rtl_response": {
+        "diff_summary": "Parameterized reset PC through the 3-level CPU hierarchy: (1) rv32i_pipeline_if.sv: added #(parameter logic [31:0] RESET_PC = 32'h0000_0000) and replaced hardcoded pc_q <= 32'h0000_0000 with pc_q <= RESET_PC. (2) rv32i_core.sv: added matching RESET_PC parameter and passed .RESET_PC(RESET_PC) to rv32i_pipeline_if instantiation. (3) rv32i_cpu_top.sv: added matching RESET_PC parameter and passed .RESET_PC(RESET_PC) to rv32i_core instantiation. (4) soc_top.sv: overrode to .RESET_PC(32'h0000_1000) at rv32i_cpu_top instantiation. Default 32'h0000_0000 preserved; all standalone CPU tests unaffected.",
+        "files_changed": [
+          "rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
+          "rtl/cpu/core/rv32i_core.sv",
+          "rtl/cpu/rv32i_cpu_top.sv",
+          "rtl/soc/soc_top.sv"
+        ],
+        "fixed_at": "2026-06-03T05:55:00+07:00"
+      },
+      "history": [
+        {
+          "timestamp": "2026-06-03T05:55:00+07:00",
+          "agent": "rtl-design-orchestrator",
+          "action": "fixed",
+          "note": "RESET_PC parameter added (default 32'h0000_0000) to rv32i_pipeline_if, rv32i_core, rv32i_cpu_top; soc_top overrides to 32'h0000_1000. Verilator -Wall make lint + make lint_soc: 0 errors, 0 new warnings."
         }
       ]
     }

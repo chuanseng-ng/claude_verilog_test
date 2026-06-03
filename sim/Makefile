@@ -194,6 +194,8 @@ help:
 	@echo "  make waves        - Open waveform viewer (gtkwave)"
 	@echo "  make lint         - Run Verilator lint check (CPU top + chains lint_soc)"
 	@echo "  make lint_soc     - Run Verilator lint check for soc_top (Phase 5 M8)"
+	@echo "  make soc_boot     - Run Phase 5 M9 SoC boot test (PC scoreboard + 100/100 stability)"
+	@echo "  make soc_all      - Run all SoC component + boot tests (M3-M6 + M9)"
 	@echo "  make axi          - Run AXI protocol tests only"
 	@echo "  make debug        - Run APB3 debug interface tests only"
 	@echo "  make hazards      - Run Phase 2 pipeline hazard tests only"
@@ -555,12 +557,16 @@ cache_integration:
 	$(MAKE) sim MODULE=tb.cocotb.cpu.test_cache_integration
 
 # Phase 5 SoC tests (delegates to tb/cocotb/soc/Makefile)
-.PHONY: soc_all
+# soc_all: M3-M6 component suites + M9 boot test.
+# soc_boot: M9 SoC boot test only (BLOCKED until CPU RESET_PC fix lands).
+.PHONY: soc_all soc_boot
+soc_boot:
+	@echo "Running Phase 5 M9 SoC boot test..."
+	$(MAKE) -C ../tb/cocotb/soc soc_boot
+
 soc_all:
-	@echo "Running Phase 5 SoC tests (crossbar + register bank + AXI-Lite interconnect)..."
-	$(MAKE) -C ../tb/cocotb/soc clean && $(MAKE) -C ../tb/cocotb/soc crossbar
-	$(MAKE) -C ../tb/cocotb/soc clean && $(MAKE) -C ../tb/cocotb/soc register_bank
-	$(MAKE) -C ../tb/cocotb/soc clean && $(MAKE) -C ../tb/cocotb/soc axil_interconnect
+	@echo "Running Phase 5 SoC tests (M3-M6 components + M9 boot)..."
+	$(MAKE) -C ../tb/cocotb/soc soc_all
 
 # Run all Phase 3 tests
 .PHONY: phase3_all

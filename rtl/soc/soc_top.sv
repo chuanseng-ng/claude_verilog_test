@@ -33,7 +33,11 @@ module soc_top
     import axi_pkg::*;
     import soc_addr_map_pkg::*;
     import soc_periph_map_pkg::*;
-(
+#(
+    // Boot ROM hex image.  Empty string → ROM initialises to zero.
+    // Set at elaboration time by the cocotb test wrapper (tb_soc_top).
+    parameter string MEM_INIT_FILE = ""
+) (
     input  logic clk_i,
     input  logic rst_n_i,
 
@@ -274,7 +278,9 @@ module soc_top
     // =========================================================================
     // M0: CPU (rv32i_cpu_top) → crossbar M0
     // =========================================================================
-    rv32i_cpu_top u_cpu (
+    rv32i_cpu_top #(
+        .RESET_PC (32'h0000_1000)
+    ) u_cpu (
         .clk_i                      (clk_i),
         .rst_n_i                    (rst_n_i),
         // AXI4 master → crossbar M0
@@ -611,7 +617,7 @@ module soc_top
     // =========================================================================
     boot_rom #(
         .MEM_WORDS    (1024),
-        .MEM_INIT_FILE("")
+        .MEM_INIT_FILE(MEM_INIT_FILE)
     ) u_boot_rom (
         .clk          (clk_i),
         .rst_n        (rst_n_i),
