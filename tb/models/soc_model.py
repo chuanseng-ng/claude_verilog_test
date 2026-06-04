@@ -29,24 +29,23 @@ Public API:
     .sram_word(addr)     — read a 32-bit word from SRAM model
 """
 
-import os
 import sys
 from pathlib import Path
+from typing import cast
 
 # Allow import from project root
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from tb.models.rv32i_model import RV32IModel
 from tb.models.memory_model import MemoryModel
+from tb.models.rv32i_model import RV32IModel
 
-
-ROM_BASE  = 0x0000_1000
-ROM_LIMIT = 0x0000_1FFF   # inclusive
+ROM_BASE = 0x0000_1000
+ROM_LIMIT = 0x0000_1FFF  # inclusive
 ROM_WORDS = 1024
 
-SRAM_BASE  = 0x0000_2000
+SRAM_BASE = 0x0000_2000
 SRAM_LIMIT = 0x0FFF_FFFF  # inclusive
 
 
@@ -65,15 +64,15 @@ class SoCModel:
         sram_base: int = SRAM_BASE,
         sram_size: int = SRAM_LIMIT - SRAM_BASE + 1,
     ):
-        self.rom_base   = rom_base
-        self.sram_base  = sram_base
+        self.rom_base = rom_base
+        self.sram_base = sram_base
         self.sram_limit = sram_base + sram_size - 1
 
         # Sparse ROM storage (word-indexed from rom_base)
-        self._rom: dict[int, int] = {}   # byte_addr → word_value (4-byte aligned)
+        self._rom: dict[int, int] = {}  # byte_addr → word_value (4-byte aligned)
 
         # Sparse SRAM storage
-        self._sram_mem = MemoryModel()   # byte-addressable sparse model
+        self._sram_mem = MemoryModel()  # byte-addressable sparse model
 
         # Load hex image into ROM
         if hex_path is not None:
@@ -82,9 +81,16 @@ class SoCModel:
         # Build the RV32I CPU model with ROM_BASE as reset PC
         # Compose: replace the model's memory with our SoC memory adapter
         self.cpu = RV32IModel(reset_pc=rom_base)
-        self.cpu.memory = _SoCMemoryAdapter(self._rom, self._sram_mem,
-                                            rom_base, ROM_LIMIT,
-                                            sram_base, self.sram_limit)
+        # ROM window tracks the caller-provided rom_base (same size as the
+        # default ROM range), mirroring how sram_limit is derived above.
+        rom_limit = rom_base + (ROM_LIMIT - ROM_BASE)
+        # Duck-typed standin for MemoryModel; cast keeps the type checker happy.
+        self.cpu.memory = cast(
+            MemoryModel,
+            _SoCMemoryAdapter(
+                self._rom, self._sram_mem, rom_base, rom_limit, sram_base, self.sram_limit
+            ),
+        )
 
         # Committed PC stream (populated by boot())
         self.committed_pcs: list[int] = []
@@ -170,8 +176,8 @@ class SoCModel:
                     pass
 
         return {
-            "regs":       list(self.cpu.regs),
-            "pc":         self.cpu.pc,
+            "regs": list(self.cpu.regs),
+            "pc": self.cpu.pc,
             "sram_words": sram_words,
         }
 
@@ -192,12 +198,14 @@ class _SoCMemoryAdapter:
         self,
         rom: dict[int, int],
         sram: MemoryModel,
-        rom_base: int, rom_limit: int,
-        sram_base: int, sram_limit: int,
+        rom_base: int,
+        rom_limit: int,
+        sram_base: int,
+        sram_limit: int,
     ):
-        self._rom       = rom
-        self._sram      = sram
-        self._rom_base  = rom_base
+        self._rom = rom
+        self._sram = sram
+        self._rom_base = rom_base
         self._rom_limit = rom_limit
         self._sram_base = sram_base
         self._sram_limit = sram_limit
@@ -229,7 +237,7 @@ class _SoCMemoryAdapter:
         word_addr = addr & ~0x3
         word = self._rom.get(word_addr, 0)
         byte_off = addr & 0x3
-        raw = (word >> (byte_off * 8))
+        raw = word >> (byte_off * 8)
         if size == 1:
             return raw & 0xFF
         if size == 2:

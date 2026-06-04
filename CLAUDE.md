@@ -4,106 +4,53 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project
+Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project.
 
-**Current Phase**: Phase 5 (SoC Integration) — ⏸️ NOT STARTED
+**Current Phase**: Phase 5 (SoC Integration) — 🚧 IN PROGRESS (M9 SoC verification)
 
-**Status**: Phase 4 complete (2026-05-27, all GPU tests green; ASAP7 GPU sign-off 571 MHz / 262 mW, Run 2026-05-28); Phase 3 complete (2026-05-21, 139/139 total, ASAP7 1418 MHz sign-off); Phase 2 complete (2026-03-08, 75 MHz on Sky130)
+**Status**: Phase 4 complete (2026-05-27, all GPU tests green; ASAP7 GPU sign-off 571 MHz / 262 mW); Phase 3 complete (2026-05-21, 139/139 total, ASAP7 1418 MHz sign-off); Phase 2 complete (2026-03-08, 75 MHz on Sky130).
 
-**Target**: Build a complete SoC with CPU, GPU, caches, and peripherals through incremental phases
+**Target**: Build a complete SoC with CPU, GPU, caches, and peripherals through incremental phases.
+
+Per-phase completion records → [`docs/readme/PHASE_HISTORY.md`](docs/readme/PHASE_HISTORY.md) and [`docs/PHASE_STATUS.md`](docs/PHASE_STATUS.md).
 
 ## Project Phases
 
-See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for current status.
+See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for current status.
 
-### Phase 0: Foundations ✅ COMPLETE
+| Phase | Scope | Status |
+| :---- | :---- | :----- |
+| 0 — Foundations | Specs + Python reference models (no RTL) | ✅ 2026-01-18 |
+| 1 — Minimal RV32I core | Single-cycle; AXI4-Lite master; APB3 debug | ✅ 2026-02-13 |
+| 2 — Pipelined CPU | 5-stage in-order; RV32I+Zicsr; M-mode interrupts; hazard/forwarding | ✅ 2026-03-08 (75 MHz Sky130) |
+| 3 — Memory system | L1 I$ + D$ (4 KB each, direct-mapped, write-back); FENCE.I | ✅ 2026-05-21 (ASAP7 1418 MHz) |
+| 4 — GPU-Lite SIMT | 8-lane warps, single CU, round-robin, 1-level divergence, 16 KB shared mem | ✅ 2026-05-27 (ASAP7 571 MHz) |
+| 5 — SoC integration | CPU + GPU + DMA + AXI4 crossbar + UART/SPI/timer/IRQ + behavioral SRAM | 🚧 In progress |
+| 6+ — IP expansion | GPIO/I2C/PWM/WDT/TRNG/AES-SHA peripherals; INT8 NPU; tech-node exploration | ⏸️ Future |
 
-- **Status**: ✅ Complete and approved (2026-01-18)
-- **Goal**: Finalize all specifications and reference models
-- **Deliverables**: Architecture specs (✅ complete), Python reference models (✅ 66/66 tests passing), test infrastructure (✅ complete)
-- **No RTL** (as planned)
-- **Exit Criteria Met**: All 7 specifications approved, Python reference models tested and validated, cocotb infrastructure ready
-
-### Phase 1: Minimal RV32I Core ✅ COMPLETE
-
-- **Status**: ✅ Complete (2026-02-13)
-- **ISA**: RISC-V RV32I (37 base integer instructions)
-- **Architecture**: Single-cycle (stalls on memory operations)
-- **Memory Interface**: AXI4-Lite Master (unified instruction/data)
-- **Debug Interface**: APB3 Slave (halt/resume/step/breakpoints)
-- **Verification**: 9/9 exit criteria met, archived to `micro_p/`
-
-### Phase 2: Pipelined CPU ✅ COMPLETE
-
-- **Status**: ✅ Complete (2026-03-08) — 75 MHz on Sky130 130nm
-- **ISA**: RV32I + Zicsr (CSR instructions)
-- **Architecture**: 5-stage in-order pipeline (IF/ID/EX/MEM/WB)
-- **Interrupt Support**: M-mode (timer + external interrupts)
-- **Hazard Handling**: Detection, stalling, forwarding
-- **Achieved Frequency**: 75 MHz on Sky130 130nm (200 MHz target not met due to PDK limitations)
-- **Verification**: 111/111 tests passing, 50,000 random instructions, 0 failures
-
-### Phase 3: Memory System & Caches ✅ COMPLETE (2026-05-21)
-
-- **Status**: ✅ Complete — 20/20 cache tests, 139/139 full regression, ASAP7 PPA sign-off at **1418 MHz / 27.27 mW / 3,844 µm²** (Run 43, 2026-05-20)
-- **Architecture**: L1 I-Cache (4 KB, direct-mapped) + L1 D-Cache (4 KB, direct-mapped, write-back + write-allocate)
-- **Cache Line**: 16 bytes (4 words); 256 sets; 4 AXI4-Lite transactions per refill
-- **FENCE.I**: Supported — invalidates I-cache in 1 cycle
-- **Achieved Frequency**: 75 MHz on Sky130 (PDK ceiling); 1418 MHz on ASAP7 7nm (Run 43)
-
-### Phase 3-5: Future Phases
-
-- **Phase 3**: Memory system with I-cache + D-cache (write-back, no coherence) ✅ COMPLETE
-- **Phase 4**: GPU-lite SIMT compute engine (8-lane warps, single compute unit, no graphics)
-- **Phase 5**: SoC integration (CPU + GPU + DMA + AXI4 crossbar + UART + SPI + Timer + behavioral SRAM)
-
-**Note**: GPU in Phase 4 requires Phase 2+ CPU for interrupt support (kernel completion notifications)
-
-### Phase 6+: IP Expansion and Tech Node Exploration (Future)
-
-**Additional peripheral IPs** — GPIO through TRNG attach as pure AXI4-Lite slaves on the Phase 5 peripheral ring; the AES/SHA-256 accelerator splits control and data planes:
-- **GPIO controller** — general I/O pad ring; needed by virtually every embedded SoC
-- **I2C controller** — sensor/EEPROM interface; complements Phase 5 SPI
-- **PWM controller** — counter + compare registers; motor/LED control
-- **Watchdog timer** — counter with AON-domain reset output; embedded safety
-- **TRNG** — ring-oscillator entropy source; Sky130 analog oscillators usable
-- **AES/SHA-256 accelerator** — AXI4-Lite slave for control/status and key/IV/digest registers; AXI4 master+slave for bulk plaintext/ciphertext DMA; AES-128 round function fits ~6 LUT levels at 75 MHz on Sky130
-
-**NPU (Neural Processing Unit)** — attach as AXI4 master+slave on the Phase 5 crossbar:
-- Minimal viable config: 4×4 INT8 MAC array (16 MACs, 64 ops/cycle), 16 KB weight SRAM
-- Sufficient for keyword spotting / gesture detection class workloads (~3.2 GOPS at 50 MHz)
-- Sky130 estimate: ~5,000 cells, ~20–30 µm², ~5–10 mW; Phase 6 IP
-- Full NPU (INT4, tiling, sparsity) benefits from FreePDK45 or ASAP7 node
-
-**Tech node progression**: Sky130 → FreePDK45/NanGate45 → ASAP7 (see Technology Node Strategy below)
-
-### Phase 4: GPU-Lite SIMT Engine (✅ COMPLETE 2026-05-27)
+### Phase 4: GPU-Lite SIMT Engine (frozen)
 
 - **ISA**: Custom 32-bit vector encoding — VADD, VSUB, VMUL, VAND, VOR, VSLL, VLD, VST, VBEQ, VBNE, VJMP, VRET, VSYNC
 - **Execution**: Single compute unit; 8 SIMD lanes; 8 warps max; 64 total threads
-- **Register file**: 32 registers × 8 threads per warp (1 KB total)
-- **Divergence**: Single-level SIMT stack with per-lane active mask
-- **Scheduler**: Round-robin warp selection
+- **Register file**: 32 registers × 8 threads per warp (1 KB)
+- **Divergence**: Single-level SIMT stack with per-lane active mask; round-robin scheduler
 - **Shared memory**: 16 KB scratchpad, 32 banks
-- **Memory**: AXI4 master (burst-capable) + memory coalescer (8-lane requests → fewer AXI4 burst transactions)
-- **Control interface**: AXI-Lite slave (kernel launch via command queue)
-- **CPU notification**: Interrupt output on kernel completion
-- **Coherency**: Software-managed — CPU flushes D-cache before kernel launch; CPU invalidates D-cache after kernel completion. No hardware coherence protocol.
+- **Memory**: AXI4 master (burst) + memory coalescer (8-lane → fewer AXI4 bursts)
+- **Coherency**: Software-managed — CPU flushes D-cache before launch, invalidates after completion. No HW coherence.
 - **Spec**: `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md`
 
-### Phase 5: SoC Integration (Planned)
+### Phase 5: SoC Integration (in progress)
 
 - **Interconnect**: AXI4 crossbar (data fabric) + AXI-Lite bus (control/config)
-  - AXI4 masters: CPU D-cache (upgraded to burst mode), GPU, DMA engine
+  - AXI4 masters: CPU D-cache (upgraded to burst), GPU, DMA engine
   - AXI4 slave: behavioral SRAM controller (no DRAM refresh)
-  - AXI-Lite slaves: GPU config registers, DMA control registers, UART, SPI, timer, IRQ controller
+  - AXI-Lite slaves: GPU/DMA config registers, UART, SPI, timer, IRQ controller
 - **Cache upgrade**: Phase 3 refill FSMs upgraded from 4 sequential AXI4-Lite beats to AXI4 burst transactions
 - **DMA engine**: Descriptor queue, AXI4 master, interrupt output to CPU
-- **Peripherals**: UART, SPI, timer, interrupt controller (routed to CPU M-mode external interrupt)
 - **Memory model**: Behavioral AXI4-slave SRAM (no DRAM refresh logic)
-- **Power domains**: PD_CPU, PD_GPU, PD_SRAM, PD_PERIPH (clock gating + power gating per `UPF_POWER_SPEC.md`)
+- **Power domains**: PD_CPU, PD_GPU, PD_SRAM, PD_PERIPH (clock + power gating per `UPF_POWER_SPEC.md`)
 - **Performance counters**: CSR-mapped — cycle count, instructions retired, branch mispredictions, I$/D$ miss counts, active warps, warp stall cycles, divergence events
-- **Benchmarks**: CPU (vector add, dot product, memcpy, branch loop); GPU (vector add, parallel reduction, matrix multiply, prefix scan, divergence test)
+- **Roadmap**: `docs/PHASE5_SOC_INTEGRATION_PLAN.md` (12 milestones M1–M12, golden spec)
 
 ## Key Documentation
 
@@ -126,7 +73,7 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 | `docs/design/MEMORY_MAP.md` | Address space and register map |
 | `docs/design/REFERENCE_MODEL_SPEC.md` | Python reference model API |
 
-### Physical Design (NEW)
+### Physical Design
 
 | Document | Purpose |
 | :------- | :------ |
@@ -134,29 +81,26 @@ See `docs/ROADMAP.md` for complete phase plan and `docs/PHASE_STATUS.md` for cur
 | `docs/design/UPF_POWER_SPEC.md` | Power intent and UPF specification |
 | `docs/design/SDC_TIMING_SPEC.md` | Timing constraints and STA guidelines |
 | `pnr/README.md` | Physical design directory structure |
-| `pnr/constraints/phase1_cpu.sdc` | Phase 1 timing constraints |
-| `pnr/constraints/phase1_cpu.upf` | Phase 1 power intent |
+
+### Verification & Fixes
+
+| Document | Purpose |
+| :------- | :------ |
+| `docs/verification/VERIFICATION_PLAN.md` | Verification strategy (RTL + physical design) |
+| `docs/RANDOM_TESTS_STATUS.md` | Random instruction test results and guide |
+| `fixes/FIXES_INDEX.md` | ⭐ Central reference for all RTL bug fixes |
+
+### README detail set
+
+`docs/readme/` holds the deep content split out of the root README: `PHASE_HISTORY.md`, `QUICK_START.md` (build/run commands per phase), `SUPPORTED_INSTRUCTIONS.md`, `DEBUG_INTERFACE.md` (APB3 register map), `PROJECT_STRUCTURE.md` (full directory tree).
 
 ### Knowledge Graph
 
-A graphify knowledge graph of `rtl/`, `docs/`, and `fixes/` is available in `graphify-out/`:
+A graphify knowledge graph of `rtl/`, `docs/`, and `fixes/` is in `graphify-out/` (`graph.html` interactive, `graph.json` raw, `GRAPH_REPORT.md` findings).
 
-| File | Purpose |
-| :--- | :------ |
-| `graphify-out/graph.html` | Interactive navigable graph — open in browser |
-| `graphify-out/graph.json` | Raw graph data (261 nodes, 324 edges, 32 communities) |
-| `graphify-out/GRAPH_REPORT.md` | God nodes, surprising connections, suggested questions |
+**Key findings**: God nodes `rv32i_core` (22 edges), `rv32i_control` (16 edges) — central integration hubs. `rv32i_control` bridges Pipeline Control, Cache Protocol, and AXI Bug Fix communities. The hazard unit is touched by both Phase 2 spec and Phase 3 status (hidden cross-phase dependency).
 
-**Key findings from the graph:**
-- **God nodes**: `rv32i_core` (22 edges), `rv32i_control` (16 edges) — central integration hubs
-- `rv32i_control` bridges Pipeline Control, Cache Protocol, and AXI Bug Fix communities
-- The hazard unit is simultaneously touched by Phase 2 spec and Phase 3 status — hidden cross-phase dependency
-- `SDC Timing Constraints Specification` is a surprising cross-cutting hub linking RTL decisions to PD targets
-
-**To update the graph** after adding RTL or docs:
-```bash
-/graphify rtl docs fixes --update
-```
+**Update the graph** after adding RTL or docs: `/graphify rtl docs fixes --update`.
 
 ## Technology Node Strategy
 
@@ -185,168 +129,29 @@ Sky130 130nm is frequency-limited by cell drive strength and clock tree skew. Th
 ### ASAP7 (Phase 2+3 sign-off achieved at Run 43, 2026-05-20)
 `pnr/asap7/` is fully configured and signed off: `config.json` (705 ps / 1418 MHz, CTS clustering 8/10, density 50 %), `constraints/asap7.sdc` (single-period clock, hold/setup uncertainty 10/15 ps, SRAM ICG `gclk_sram` generated clock + false-paths), `macro_placement.cfg`, `pdn.tcl`, `sram_1rw_256x32_asap7_TT_0p7V_25C.lib` (RVT TT 0.7 V / 25 °C). Run with `make librelane-asap7`. Phase 2+3 PPA (no perf counters): **1418 MHz fmax, 27.27 mW power, 3 844 µm² stdcell, 0 DRC, 0 antenna, +5.97 ps setup slack, +22.54 ps hold slack** at run `pnr/asap7/runs/RUN_2026-05-20_06-27-10/`. **Phase 5 M7 update (2026-06-02):** adding the perf-monitoring CSRs lowers the standalone CPU sign-off to **1282 MHz (780 ps, +24 ps setup, +28 ps hold, 24.38 mW, 4 058 µm²; achievable ~1323 MHz)** at run `pnr/asap7/cpu/runs/RUN_2026-06-02_20-37-12/` — the 1418 MHz number does not hold with M7 (limiter = 836-fanout counter-write-enable cone). Moot for the SoC (GPU-governed ~571 MHz). `pnr/asap7/cpu/config.json` + `constraints/asap7.sdc` are now at 780 ps. See `docs/ASAP7_RUN_HISTORY.md` for the full campaign history.
 
-### Verification
-
-| Document | Purpose |
-| :------- | :------ |
-| `docs/verification/VERIFICATION_PLAN.md` | Verification strategy (RTL + physical design) |
-| `TODO_PHASE1_VERIFICATION.md` | Phase 1 verification progress tracking |
-| `docs/RANDOM_TESTS_STATUS.md` | Random instruction test results and guide |
-
-### RTL Fixes & Debugging
-
-| Document | Purpose |
-| :------- | :------ |
-| `fixes/FIXES_INDEX.md` | ⭐ **Central reference for all RTL bug fixes** |
-| `fixes/README.md` | Fixes directory guide and navigation |
-| `fixes/CRITICAL_FIXES.md` | Critical AXI protocol fixes (2026-01-19) |
-| `fixes/RTL_BUG_FIXES.md` | Branch/jump/memory fixes (2026-01-24) |
-| `CLEANUP_SUMMARY.md` | Documentation organization summary |
-
-**Note**: All RTL bugs discovered during development are documented in `fixes/` with full analysis, impact assessment, and validation. Start with `fixes/FIXES_INDEX.md` for quick reference.
-
 ## Frequently Used Commands
 
-### Phase 0 (Complete): Reference Model and Tests
+Build/run commands for every phase live in [`docs/readme/QUICK_START.md`](docs/readme/QUICK_START.md). Quick entry points:
 
 ```bash
-# Run reference model unit tests
-cd tb/tests
-pytest test_rv32i_model.py -v
+# Phase 0 reference-model tests
+cd tb/tests && pytest -v
 
-# Run reference model with coverage
-pytest --cov=tb.models --cov-report=html
+# Cache sims (Phase 3)
+cd sim && make phase3_all
 
-# Test memory model
-pytest test_memory_model.py -v
+# OpenROAD back-end flow
+cd pnr && make all          # synth → floorplan → place → cts → route → sta → power
+cd pnr && make report_summary
 ```
 
-### Phase 1: OpenROAD Back-End Flow (NEW)
+Commit with the `[Category]` convention (see below). Use `rtk`-prefixed commands for token-efficient output (see RTK section).
 
-```bash
-# Navigate to physical design directory
-cd pnr
+## Project Structure
 
-# Run full flow (synthesis through power analysis)
-make all
+Top level: `rtl/` (`cpu/`, `gpu/`, `mem/` caches, `periph/`, `soc/`), `tb/` (`models/` Python + `cocotb/`), `docs/` (specs + `readme/` detail set), `pnr/` (physical design), `sim/`, `micro_p/` (archived Phase 1).
 
-# Run individual stages
-make synth        # RTL synthesis
-make floorplan    # Floorplanning
-make place        # Placement
-make cts          # Clock tree synthesis
-make route        # Routing
-make parasitics   # RC extraction
-make sta          # Static timing analysis
-make power        # Power analysis
-
-# Generate reports
-make report_timing   # Show timing summary
-make report_power    # Show power summary
-make report_area     # Show area summary
-make report_summary  # Show all reports
-
-# Clean build artifacts
-make clean
-```
-
-### Phase 1+: Simulation Commands (When RTL exists)
-
-#### WSL Commands (Windows Environment)
-
-```bash
-# Build and run simulation
-wsl bash -c "cd /mnt/c/Users/waele/Documents/Github/claude_verilog_test/sim && make sim"
-wsl bash -c "cd /mnt/c/Users/waele/Documents/Github/claude_verilog_test/sim && make run"
-
-# Clean and rebuild
-wsl bash -c "cd /mnt/c/Users/waele/Documents/Github/claude_verilog_test/sim && make clean && make run"
-
-# Run with waveform generation
-wsl bash -c "cd /mnt/c/Users/waele/Documents/Github/claude_verilog_test/sim && make waves"
-
-# Run cocotb tests
-wsl bash -c "cd /mnt/c/Users/waele/Documents/Github/claude_verilog_test/sim && make test"
-```
-
-#### Native Linux/WSL Commands
-
-```bash
-# Navigate to simulation directory
-cd sim
-
-# Build and run cocotb tests
-make test
-
-# Run specific test
-make test TEST=test_simple_add
-
-# Run with waveforms
-make waves
-
-# Clean build artifacts
-make clean
-```
-
-### Git Commands
-
-```bash
-# Check status
-git status
-
-# View recent commits
-git log --oneline -5
-
-# Create feature branch
-git checkout -b feature/branch-name
-
-# Commit with co-author
-git commit -m "$(cat <<'EOF'
-[Category] Commit message
-
-Description here.
-
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
-EOF
-)"
-```
-
-## Planned Architecture (Phase 1)
-
-**Note**: This architecture will be implemented in Phase 1. No RTL currently exists.
-
-```text
-rtl/
-└── cpu/
-    ├── rv32i_cpu_top.sv          # Top-level (AXI + APB)
-    └── core/
-        ├── rv32i_core.sv         # CPU core wrapper
-        ├── rv32i_control.sv      # Control FSM
-        ├── rv32i_decode.sv       # Instruction decoder
-        ├── rv32i_alu.sv          # ALU (all RV32I ops)
-        ├── rv32i_regfile.sv      # 32x32-bit registers
-        └── rv32i_imm_gen.sv      # Immediate generator
-```
-
-See `docs/design/PHASE1_ARCHITECTURE_SPEC.md` for complete module specifications.
-
-## Planned Debug Interface (APB3)
-
-**Note**: To be implemented in Phase 1. Specification ready in `docs/design/MEMORY_MAP.md`.
-
-| Address | Register | Description |
-| :-----: | :------: | :---------: |
-| 0x000 | DBG_CTRL | [0]=halt, [1]=resume, [2]=step, [3]=reset |
-| 0x004 | DBG_STATUS | [0]=halted, [1]=running, [7:4]=halt_cause |
-| 0x008 | DBG_PC | Program Counter (RW when halted) |
-| 0x00C | DBG_INSTR | Current instruction (RO) |
-| 0x010-0x08C | DBG_GPR[0:31] | General purpose registers (RW when halted) |
-| 0x100 | DBG_BP0_ADDR | Breakpoint 0 address |
-| 0x104 | DBG_BP0_CTRL | [0]=enable |
-| 0x108 | DBG_BP1_ADDR | Breakpoint 1 address |
-| 0x10C | DBG_BP1_CTRL | [0]=enable |
-
-Complete register map in `docs/design/MEMORY_MAP.md`.
+Full annotated directory tree → [`docs/readme/PROJECT_STRUCTURE.md`](docs/readme/PROJECT_STRUCTURE.md).
 
 ## Key Design Decisions (From Specifications)
 
@@ -355,19 +160,15 @@ Complete register map in `docs/design/MEMORY_MAP.md`.
 - Single-cycle execution with AXI stalls for memory operations
 - Unified AXI4-Lite bus for instruction fetch and data access
 - x0 register hardwired to zero (per RV32I spec)
-- EBREAK instruction triggers CPU halt
-- Debug writes only allowed when CPU is halted
+- EBREAK instruction triggers CPU halt; debug writes only allowed when halted
 - Only illegal instruction traps supported (no interrupts in Phase 1)
 - Naturally aligned memory accesses only (misaligned = trap)
 
 **Phase 4 GPU**:
 
-- SIMT execution model (8 lanes per warp)
-- Single compute unit
-- Round-robin warp scheduling
-- One-level divergence handling
-- No cache coherence with CPU
-- Memory coalescing when possible
+- SIMT execution model (8 lanes per warp); single compute unit
+- Round-robin warp scheduling; one-level divergence handling
+- No cache coherence with CPU; memory coalescing when possible
 
 **Sky130 frequency ceiling**: ~100–120 MHz maximum for this CPU pipeline topology (see Technology Node Strategy). PDK limitation — not an RTL issue. For higher frequencies, target FreePDK45/NanGate45 (150–250 MHz) or ASAP7 (**1418 MHz demonstrated** at Run 43, 2026-05-20).
 
@@ -381,194 +182,46 @@ Complete register map in `docs/design/MEMORY_MAP.md`.
 
 ## Reference Model (Python)
 
-**Phase 0 deliverable**: Python reference models for CPU and GPU
-
-**Location**: `tb/models/`
-
-**Key files**:
-
-- `rv32i_model.py` - CPU instruction-accurate model
-- `gpu_kernel_model.py` - GPU SIMT execution model
-- `memory_model.py` - Shared memory model
-
-**Usage**:
+Python reference models for CPU and GPU live in `tb/models/`: `rv32i_model.py` (CPU instruction-accurate), `gpu_kernel_model.py` (GPU SIMT), `memory_model.py`, `cache_model.py` (DirectMappedCache). See `docs/design/REFERENCE_MODEL_SPEC.md` for the complete API.
 
 ```python
 from tb.models.rv32i_model import RV32IModel
-
 cpu = RV32IModel()
-cpu.load_program({0x0000: 0x00000093})  # addi x1, x0, 0
-result = cpu.step(0x00000093)
+result = cpu.step(0x00000093)  # addi x1, x0, 0
 assert result['rd'] == 1
 ```
 
-See `docs/design/REFERENCE_MODEL_SPEC.md` for complete API.
-
 ## Verification Strategy
 
-**Phase 0 focus**:
+- **Phase 0**: Python reference models, pytest unit tests, cross-validate vs RISC-V spike, cocotb infra.
+- **Phase 1+**: cocotb interface drivers, pyuvm sequences/scoreboards, RTL-vs-model comparison, 10k+ random instructions.
 
-1. Implement Python reference models
-2. Unit test reference models (pytest)
-3. Cross-validate CPU model vs RISC-V spike simulator
-4. Setup cocotb infrastructure
+See `docs/verification/VERIFICATION_PLAN.md` for the phase-by-phase plan. Per-phase completion history → [`docs/readme/PHASE_HISTORY.md`](docs/readme/PHASE_HISTORY.md).
 
-**Phase 1+ focus**:
+### Agent delegation policy (user-mandated)
 
-1. cocotb for interface drivers
-2. pyuvm for test sequences and scoreboards
-3. Compare RTL commits against reference model
-4. Random instruction testing (10k+ instructions)
+- RTL design → `chip-design-rtl:rtl-design-orchestrator`
+- Verification (cocotb suites, coverage, regression) → `chip-design-verification:verification-orchestrator`
+- LibreLane / physical design → `chip-design-pd:physical-design-orchestrator` (sub-delegated to specialists)
 
-See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification plan.
+Do NOT hand-write RTL or run PD/verif inline when a matching orchestrator exists.
 
-## Common Workflow
+## Current Workflow (Phase 5 — SoC Integration)
 
-### Phase 0 Workflow ✅ Complete
+Legend: ✅ done · 🚧 in progress · ⏸️ not started. Milestone status (M1–M12) tracked in `docs/PHASE5_SOC_INTEGRATION_PLAN.md`.
 
-1. ✅ **Read specifications**: All docs in `docs/design/` reviewed
-2. ✅ **Implement reference model**: Python models per `REFERENCE_MODEL_SPEC.md` complete
-3. ✅ **Test reference model**: pytest passing (66/66 tests), cross-validated
-4. ✅ **Setup testbench**: cocotb infrastructure ready
-5. ✅ **Review**: All specs approved, ready for Phase 1
+1. ✅ **AXI4 interconnect** (M1/M3): `axi4_crossbar.sv`, `axi_lite_interconnect.sv`, `axi_lite_register_bank.sv`; Phase 3 refill FSMs upgraded to AXI4 burst (M2)
+2. ✅ **Peripherals + DMA** (M4/M5): UART, SPI, timer, interrupt controller, DMA engine in `rtl/periph/`
+3. ✅ **SRAM controller** (M6): behavioral AXI4-slave in `rtl/soc/sram_controller.sv`
+4. ✅ **SoC top integration** (M8): CPU + GPU + DMA + peripherals wired in `rtl/soc/soc_top.sv` (+ `boot_rom.sv`)
+5. ✅ **Performance counters** (M7): CSR-mapped + AXI-Lite GPU stats (CPU re-sign-off 1282 MHz)
+6. 🚧 **SoC verification** (M9): boot test ✅ (100/100); remaining — CPU-GPU integration (kernel launch → IRQ → result read), software coherency sequence, DMA/peripheral loopback
+7. ⏸️ **Full regression**: all prior tests + CPU + GPU benchmarks
+8. ⏸️ **L2 cache evaluation**: add `rtl/mem/l2_cache.sv` only if L1 miss rates justify it
+9. ⏸️ **Backend flow**: full SoC synth + P&R + STA; `pnr/constraints/phase5_soc.sdc`, `phase5_soc.upf`; power-domain validation
+10. ⏸️ **Sign-off**: coverage, power analysis, final review
 
-### Phase 1 Workflow ✅ Complete
-
-1. ✅ **Write RTL**: All 8 modules implemented
-2. ✅ **Lint**: Verilator lint checks passing
-3. ✅ **Write tests**: Comprehensive cocotb test suite
-4. ✅ **Run tests**: All tests passing (9/9 exit criteria met)
-5. ✅ **Debug**: Major bugs fixed (branch/jump, load data, regfile)
-6. ✅ **Complete**: Phase 1 archived to `micro_p/`, ready for Phase 2
-
-### Phase 2 Workflow ✅ Complete
-
-1. ✅ **Architecture approved**: All design decisions finalized
-2. ✅ **Write RTL**: All 14 pipeline modules implemented
-3. ✅ **Initial testing**: 115/115 regression tests passing
-4. ✅ **Comprehensive verification**: 111/111 tests passing (all 7 suites)
-5. ✅ **Random regression**: 50,000 instructions, 0 failures
-6. ✅ **Backend flow**: 75 MHz achieved on Sky130 130nm
-7. ✅ **Sign-off**: Phase 2 complete (2026-03-08)
-
-### Phase 3 Workflow ✅ Complete (2026-05-21)
-
-1. ✅ **Architecture approved**: All 6 design decisions finalized (2026-03-08)
-2. ✅ **Write RTL**: Cache package, I-cache, D-cache, arbiter + modified pipeline stages (~1,424 lines)
-3. ✅ **Unit tests**: I-cache 7/7, D-cache 8/8 passing
-4. ✅ **Integration tests**: 5/5 cache integration tests passing; FENCE.I verified
-5. ✅ **Phase 2 regression**: 139/139 total (119 Phase 2 + 20 Phase 3 cache tests)
-6. ✅ **Random regression**: 50,000+ instructions with caches enabled, 0 failures
-7. ✅ **Backend flow**: ASAP7 sign-off at **1418 MHz / 27.27 mW / 3,844 µm²** (Run 43, 2026-05-20); Sky130 ceiling 75 MHz
-8. ✅ **Sign-off**: Phase 3 complete (2026-05-21)
-
-### Phase 4 Workflow ✅ COMPLETE (2026-05-27)
-
-1. ✅ **Architecture review**: `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md` approved
-2. ✅ **Write GPU RTL**: 9 modules in `rtl/gpu/` implemented
-3. ✅ **Unit tests**: Warp scheduling, SIMT divergence, memory coalescing, shared memory — all pass
-4. ✅ **GPU kernel tests**: Vector add, parallel reduction, divergence, shared-mem ping-pong, VSYNC — all pass
-5. ✅ **Phase 3 regression**: 140/140 CPU tests pass; 1,000-kernel random GPU regression pass
-6. ✅ **Backend flow**: ASAP7 GPU block P&R + STA — 571 MHz sign-off `pnr/asap7/gpu/runs/RUN_2026-05-28_06-29-48/`
-7. ✅ **Sign-off**: GPU verified standalone; ready for SoC integration
-
-### Phase 5 Workflow (Planned — SoC Integration)
-
-1. ⏸️ **AXI4 interconnect**: Build `axi4_crossbar.sv`, `axi_lite_interconnect.sv`; upgrade Phase 3 cache refill FSMs to AXI4 burst mode
-2. ⏸️ **Peripherals**: UART, SPI, timer, interrupt controller, DMA engine in `rtl/periph/`
-3. ⏸️ **SRAM controller**: Behavioral AXI4-slave in `rtl/soc/sram_controller.sv`
-4. ⏸️ **SoC top integration**: Wire CPU + GPU + DMA + peripherals in `rtl/soc/soc_top.sv`
-5. ⏸️ **Performance counters**: Add CSR-mapped counters (cache misses, branch mispredictions, warp stalls, divergence events)
-6. ⏸️ **CPU-GPU integration tests**: Kernel launch → interrupt → result read; DMA transfers; software coherency sequence
-7. ⏸️ **Full regression**: All prior tests; CPU + GPU benchmarks
-8. ⏸️ **L2 cache evaluation**: Review L1 miss rates from benchmarks; add `rtl/mem/l2_cache.sv` only if justified
-9. ⏸️ **Backend flow**: Full SoC synthesis + P&R + STA; `pnr/constraints/phase5_soc.sdc`, `phase5_soc.upf`
-10. ⏸️ **Sign-off**: Coverage, power analysis, final review
-
-## Project Structure
-
-```text
-.
-├── docs/                     # All specifications
-│   ├── ROADMAP.md
-│   ├── PHASE_STATUS.md
-│   ├── design/
-│   │   ├── PHASE0_ARCHITECTURE_SPEC.md
-│   │   ├── PHASE1_ARCHITECTURE_SPEC.md
-│   │   ├── PHASE4_GPU_ARCHITECTURE_SPEC.md
-│   │   ├── RTL_DEFINITION.md
-│   │   ├── MEMORY_MAP.md
-│   │   ├── REFERENCE_MODEL_SPEC.md
-│   │   ├── OPENROAD_FLOW_SPEC.md    # NEW: Physical design flow
-│   │   ├── UPF_POWER_SPEC.md        # NEW: Power intent
-│   │   └── SDC_TIMING_SPEC.md       # NEW: Timing constraints
-│   └── verification/
-│       └── VERIFICATION_PLAN.md
-├── rtl/
-│   ├── cpu/
-│   │   ├── rv32i_cpu_top.sv           # Top-level (AXI4-Lite + APB3)
-│   │   ├── rv32i_axi_arbiter.sv       # Phase 2 arbiter (replaced by cache arbiter in Phase 3)
-│   │   └── core/
-│   │       ├── rv32i_core.sv          # Core wrapper (MODIFIED in Phase 3: adds caches)
-│   │       ├── rv32i_pipeline_pkg.sv  # Pipeline structs (MODIFIED: fence_i added)
-│   │       ├── rv32i_hazard_unit.sv   # Hazard unit (MODIFIED: renamed stall signals)
-│   │       ├── rv32i_decode.sv        # Decoder (MODIFIED: FENCE.I added)
-│   │       └── pipeline/
-│   │           ├── rv32i_pipeline_if.sv   # IF stage (MODIFIED: cache interface)
-│   │           ├── rv32i_pipeline_id.sv   # ID stage
-│   │           ├── rv32i_pipeline_ex.sv   # EX stage
-│   │           ├── rv32i_pipeline_mem.sv  # MEM stage (MODIFIED: cache + FENCE.I)
-│   │           └── rv32i_pipeline_wb.sv   # WB stage
-│   ├── mem/                           # NEW in Phase 3: cache RTL
-│   │   ├── rv32i_cache_pkg.sv         # Cache parameters and types
-│   │   ├── rv32i_icache.sv            # I-cache (4 KB, direct-mapped)
-│   │   ├── rv32i_dcache.sv            # D-cache (4 KB, write-back)
-│   │   └── rv32i_cache_arbiter.sv     # D$ priority AXI arbiter
-│   ├── gpu/                           # NEW in Phase 4: GPU-Lite RTL
-│   │   ├── gpu_top.sv                 # GPU top (AXI4-Lite ctrl + AXI4 mem + IRQ)
-│   │   ├── gpu_command_queue.sv       # Kernel descriptor queue (PC, grid, block, args)
-│   │   ├── warp_scheduler.sv          # Round-robin scheduler (warp_id, PC, active_mask, ready)
-│   │   ├── gpu_compute_unit.sv        # Vector ALU + register file + SIMT divergence stack
-│   │   ├── vector_register_file.sv    # 32 regs × 8 threads per warp
-│   │   ├── vector_alu.sv              # VADD/VSUB/VMUL/VAND/VOR/VSLL per lane
-│   │   ├── gpu_memory_unit.sv         # Global load/store with AXI burst generation
-│   │   ├── memory_coalescer.sv        # 8-lane requests → fewer AXI bursts
-│   │   └── shared_memory.sv           # 16 KB scratchpad, 32 banks
-│   ├── periph/                        # NEW in Phase 5: peripheral RTL
-│   │   ├── uart_controller.sv
-│   │   ├── spi_controller.sv
-│   │   ├── timer.sv
-│   │   ├── interrupt_controller.sv
-│   │   └── dma_engine.sv              # Descriptor queue + AXI4 master + IRQ
-│   └── soc/                           # NEW in Phase 5: SoC integration RTL
-│       ├── soc_top.sv                 # Top-level: CPU + GPU + DMA + peripherals
-│       ├── axi4_crossbar.sv           # N-master M-slave AXI4 data fabric
-│       ├── axi_lite_interconnect.sv   # AXI-Lite control bus
-│       ├── axi_lite_register_bank.sv  # GPU/DMA config registers
-│       └── sram_controller.sv         # Behavioral AXI4-slave SRAM (no DRAM refresh)
-├── tb/                       # Testbench
-│   ├── models/               # Python reference models
-│   │   ├── rv32i_model.py
-│   │   ├── cache_model.py             # NEW in Phase 3: DirectMappedCache
-│   │   ├── gpu_kernel_model.py
-│   │   └── memory_model.py
-│   ├── tests/                # Unit tests for models
-│   │   ├── test_rv32i_model.py
-│   │   └── test_gpu_model.py
-│   └── cocotb/               # cocotb testbenches
-│       ├── cpu/              # CPU tests (Phase 1+)
-│       └── mem/              # Cache tests (Phase 3+)
-├── sim/                      # Simulation scripts
-├── pnr/                      # Physical design (NEW in Phase 1)
-│   ├── Makefile              # Flow automation
-│   ├── config/               # PDK configuration
-│   ├── constraints/          # SDC + UPF files
-│   ├── scripts/              # TCL flow scripts
-│   ├── logs/                 # Flow logs (gitignored)
-│   ├── reports/              # Reports (gitignored)
-│   └── results/              # Netlist, DEF, GDS (gitignored)
-└── CLAUDE.md                 # This file
-```
+**Phase 6+** (after Phase 5 sign-off): additional AXI4-Lite peripherals (GPIO/I2C/PWM/WDT/TRNG/AES-SHA), minimal INT8 NPU (`rtl/npu/`), and FreePDK45 tech-node exploration. See `docs/ROADMAP.md`.
 
 ## AI/Human Boundaries
 
@@ -576,18 +229,13 @@ See `docs/verification/VERIFICATION_PLAN.md` for phase-by-phase verification pla
 
 - Python boilerplate (class structure, imports)
 - Simple instruction implementations (after human verification)
-- cocotb driver scaffolding
-- Test case generation
-- Documentation formatting
+- cocotb driver scaffolding; test case generation; documentation formatting
 
 ### Human MUST
 
 - Write and approve all specifications
-- Implement complex instructions (branches, loads, stores)
-- Design control FSMs
-- Define verification strategy
-- Review all AI-generated code
-- Make architectural decisions
+- Implement complex instructions (branches, loads, stores); design control FSMs
+- Define verification strategy; review all AI-generated code; make architectural decisions
 
 See each phase in `docs/verification/VERIFICATION_PLAN.md` for detailed AI/Human responsibilities.
 
@@ -595,145 +243,11 @@ See each phase in `docs/verification/VERIFICATION_PLAN.md` for detailed AI/Human
 
 Use the format: `[Category] Brief description`
 
-Categories:
-
-- `[Fix]` - Bug fixes
-- `[Feature]` - New features
-- `[Code]` - Code changes/refactoring
-- `[Env]` - Environment/build changes
-- `[Doc]` - Documentation updates
-- `[Test]` - Test additions/changes
-- `[Spec]` - Specification updates
-
-## Next Steps
-
-See `docs/PHASE_STATUS.md` for current status and immediate next steps.
-
-**Current priorities** (Phase 5 - SoC Integration — not started):
-
-**Phase 0 Complete** ✅:
-
-- ✅ All 7 specifications approved (2026-01-18)
-- ✅ Python reference models validated (66/66 tests passing)
-- ✅ cocotb test infrastructure ready
-
-**Phase 1 Complete** ✅ (2026-02-13):
-
-- ✅ All 8 RTL modules implemented (~1,900 lines)
-- ✅ All 9/9 verification exit criteria met
-- ✅ ISA compliance: 37/37 instructions passing
-- ✅ Random testing: 10,000 instructions, 0 failures
-- ✅ Archived to `micro_p/` directory
-
-**Phase 2 Complete** ✅ (2026-03-08):
-
-- ✅ Architecture specification approved (2026-02-14)
-- ✅ All 14 pipeline modules implemented
-- ✅ Comprehensive verification: 111/111 tests passing
-- ✅ Random regression: 50,000 instructions, 0 failures
-- ✅ Backend: 75 MHz achieved on Sky130 130nm
-- ✅ Constraints: `pnr/constraints/phase2_cpu.sdc`, `pnr/constraints/phase2_cpu.upf`
-
-**Phase 3 Complete** ✅ (2026-05-21):
-
-1. **RTL Implementation** ✅ (~1,424 lines)
-   - ✅ `rtl/mem/rv32i_cache_pkg.sv` — cache parameters and types
-   - ✅ `rtl/mem/rv32i_icache.sv` — I-cache (4 KB, direct-mapped, FENCE.I)
-   - ✅ `rtl/mem/rv32i_dcache.sv` — D-cache (4 KB, write-back + write-allocate)
-   - ✅ `rtl/mem/rv32i_cache_arbiter.sv` — D$ priority AXI arbiter
-   - ✅ Modified pipeline stages: `rv32i_pipeline_if.sv`, `rv32i_pipeline_mem.sv`
-   - ✅ Modified support: `rv32i_decode.sv` (FENCE.I), `rv32i_hazard_unit.sv` (stall rename)
-   - ✅ Modified core: `rv32i_core.sv` (cache instantiation)
-
-2. **Reference Model** ✅
-   - ✅ `tb/models/cache_model.py` — `DirectMappedCache` class
-
-3. **Verification** ✅
-   - ✅ Unit tests: `tb/cocotb/mem/test_icache.py` (7/7), `test_dcache.py` (8/8)
-   - ✅ Integration: `tb/cocotb/cpu/test_cache_integration.py` (5/5)
-   - ✅ Full regression: 139/139 (119 Phase 2 + 20 Phase 3); 50,000+ random instructions, 0 failures
-
-4. **Physical Design** ✅
-   - ✅ ASAP7 sign-off: **1418 MHz / 27.27 mW / 3,844 µm²**, 0 DRC, 0 antenna (Run 43, 2026-05-20)
-   - ✅ Sky130 ceiling: 75 MHz (PDK-limited; matches Phase 2)
-
-**Phase 4 Complete** ✅ (2026-05-27):
-
-1. **RTL Implementation** ✅
-   - ✅ `rtl/gpu/gpu_top.sv` — top-level with AXI4-Lite control + AXI4 memory + IRQ
-   - ✅ `rtl/gpu/gpu_command_queue.sv` — kernel descriptor FIFO
-   - ✅ `rtl/gpu/warp_scheduler.sv` — round-robin; warp state: warp_id, PC, active_mask, ready
-   - ✅ `rtl/gpu/gpu_compute_unit.sv` — 4-stage FETCH/DECODE/EX/WB + SIMT divergence stack
-   - ✅ `rtl/gpu/vector_register_file.sv` — 32 regs × 8 threads per warp
-   - ✅ `rtl/gpu/vector_alu.sv` — VADD/VSUB/VMUL/VAND/VOR/VXOR/VSLL/VSRL/VSRA + imm forms
-   - ✅ `rtl/gpu/gpu_memory_unit.sv` — global load/store with AXI burst generation
-   - ✅ `rtl/gpu/memory_coalescer.sv` — coalesces 8-lane requests into AXI4 transactions
-   - ✅ `rtl/gpu/shared_memory.sv` — 16 KB scratchpad, 32 banks, VLDS/VSTS
-
-2. **Verification** ✅
-   - ✅ Unit tests: `test_warp_scheduler.py`, `test_compute_unit.py`, `test_memory_unit.py`, `test_cpu_gpu_handoff.py`
-   - ✅ Kernel tests: vector add, parallel reduction, divergence, shared-mem ping-pong, VSYNC — all pass (`make gpu_all`)
-   - ✅ CPU re-gate: 140/140 directed + 100k random instructions, 0 failures
-   - ✅ Random GPU regression: 1,000 kernels, 0 deadlocks, 0 mismatches
-
-3. **Physical Design** ✅
-   - ✅ ASAP7 GPU block sign-off: **571 MHz (1.75 ns, +197 ps setup WS) / 262 mW / 115,600 µm² die / 60,500 µm² stdcell**
-   - ✅ Setup 0 violations, Hold 0 violations (+16.3 ps WS), slew/cap/fanout 0, antenna 0
-   - ✅ Run: `pnr/asap7/gpu/runs/RUN_2026-05-28_06-29-48/` (supersedes 500 MHz `RUN_2026-05-27_11-16-37`)
-   - ✅ Constraints: `pnr/asap7/gpu/constraints/asap7_gpu.sdc`; full history: `docs/GPU_ASAP7_RUN_HISTORY.md`
-   - ⚠️ Caveats (deferred to SoC PD): PDN connectivity not closed (PSM-0069/PDN-0179, same as prior run); 325 I/O-port `DRT-0074` (0 internal-net DRC); timing is post-GRT estimated (STAPostPNR/RCX gated off)
-
-**Phase 5 Tasks** (follows Phase 4 sign-off):
-
-1. **AXI4 Interconnect** (build first — prerequisite for integration)
-   - ⏸️ `rtl/soc/axi4_crossbar.sv` — N-master M-slave data fabric
-   - ⏸️ `rtl/soc/axi_lite_interconnect.sv` — control bus
-   - ⏸️ `rtl/soc/axi_lite_register_bank.sv` — GPU + DMA config registers
-   - ⏸️ Upgrade Phase 3 refill FSMs to AXI4 burst mode
-
-2. **Peripherals + DMA**
-   - ⏸️ `rtl/periph/dma_engine.sv`, `uart_controller.sv`, `spi_controller.sv`, `timer.sv`, `interrupt_controller.sv`
-
-3. **SoC Integration**
-   - ⏸️ `rtl/soc/sram_controller.sv` — behavioral AXI4-slave SRAM
-   - ⏸️ `rtl/soc/soc_top.sv` — full SoC top-level
-   - ⏸️ Performance counters added as CSR-mapped registers
-
-4. **Verification**
-   - ⏸️ CPU-GPU integration: kernel launch → interrupt → result read
-   - ⏸️ Software coherency: CPU D-cache flush → GPU kernel → CPU D-cache invalidate
-   - ⏸️ DMA transfer tests; full benchmark suite (CPU + GPU kernels)
-   - ⏸️ L2 cache decision: add `rtl/mem/l2_cache.sv` only if L1 miss rates justify it
-
-5. **Physical Design**
-   - ⏸️ Full SoC synthesis + P&R + STA
-   - ⏸️ `pnr/constraints/phase5_soc.sdc`, `phase5_soc.upf`
-   - ⏸️ Power domain validation (PD_CPU, PD_GPU, PD_SRAM, PD_PERIPH)
-
-**Phase 6+ Tasks** (follows Phase 5 sign-off):
-
-1. **Additional Peripherals** (AXI4-Lite slaves on existing Phase 5 interconnect)
-   - ⏸️ `rtl/periph/gpio_controller.sv` — pad ring, direction control, interrupt on edge
-   - ⏸️ `rtl/periph/i2c_controller.sv` — multi-master I2C, SCL/SDA open-drain
-   - ⏸️ `rtl/periph/pwm_controller.sv` — configurable counter + compare, N channels
-   - ⏸️ `rtl/periph/watchdog_timer.sv` — AON-domain counter, system reset output
-   - ⏸️ `rtl/periph/trng.sv` — ring-oscillator entropy source (Sky130 analog cells)
-   - ⏸️ `rtl/periph/aes_sha_accel.sv` — AXI4-Lite slave (control/status, key/IV/digest registers) + AXI4 master/slave (bulk data DMA); AES-128 + SHA-256 pipeline
-
-2. **NPU (Minimal INT8 Inference Engine)**
-   - ⏸️ `rtl/npu/npu_top.sv` — AXI4 master (activations) + AXI4-Lite slave (config) + IRQ
-   - ⏸️ `rtl/npu/mac_array.sv` — 4×4 INT8 systolic MAC array (16 MACs, 64 ops/cycle)
-   - ⏸️ `rtl/npu/weight_buffer.sv` — 16 KB SRAM-backed weight store (DMA-loaded)
-   - ⏸️ `rtl/npu/activation_unit.sv` — ReLU; LUT-based sigmoid/tanh optional
-   - ⏸️ Phase 6 only if Phase 5 benchmarks reveal CPU/GPU bottleneck on ML workloads
-
-3. **Tech Node Exploration** (independent of RTL — P&R only)
-   - ⏸️ FreePDK45/NanGate45: run `make librelane-nangate45` (config already complete)
-   - ✅ ASAP7: `pnr/asap7/` complete; Phase 2+3 RTL signed off at Run 43 (1418 MHz / 27.27 mW / 3 844 µm², 2026-05-20)
+Categories: `[Fix]`, `[Feature]`, `[Code]` (refactoring), `[Env]` (build), `[Doc]`, `[Test]`, `[Spec]`.
 
 ## Questions?
 
-Refer to specifications in `docs/` - they are the source of truth.
+Refer to specifications in `docs/` — they are the source of truth.
 
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph
@@ -775,142 +289,9 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 4. Use `query_graph` pattern="tests_for" to check coverage.
 
 <!-- rtk-instructions v2 -->
-# RTK (Rust Token Killer) - Token-Optimized Commands
+## RTK (Rust Token Killer)
 
-## Golden Rule
-
-**Always prefix commands with `rtk`**. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged. This means RTK is always safe to use.
-
-**Important**: Even in command chains with `&&`, use `rtk`:
-```bash
-# ❌ Wrong
-git add . && git commit -m "msg" && git push
-
-# ✅ Correct
-rtk git add . && rtk git commit -m "msg" && rtk git push
-```
-
-## RTK Commands by Workflow
-
-### Build & Compile (80-90% savings)
-```bash
-rtk cargo build         # Cargo build output
-rtk cargo check         # Cargo check output
-rtk cargo clippy        # Clippy warnings grouped by file (80%)
-rtk tsc                 # TypeScript errors grouped by file/code (83%)
-rtk lint                # ESLint/Biome violations grouped (84%)
-rtk prettier --check    # Files needing format only (70%)
-rtk next build          # Next.js build with route metrics (87%)
-```
-
-### Test (60-99% savings)
-```bash
-rtk cargo test          # Cargo test failures only (90%)
-rtk go test             # Go test failures only (90%)
-rtk jest                # Jest failures only (99.5%)
-rtk vitest              # Vitest failures only (99.5%)
-rtk playwright test     # Playwright failures only (94%)
-rtk pytest              # Python test failures only (90%)
-rtk rake test           # Ruby test failures only (90%)
-rtk rspec               # RSpec test failures only (60%)
-rtk test <cmd>          # Generic test wrapper - failures only
-```
-
-### Git (59-80% savings)
-```bash
-rtk git status          # Compact status
-rtk git log             # Compact log (works with all git flags)
-rtk git diff            # Compact diff (80%)
-rtk git show            # Compact show (80%)
-rtk git add             # Ultra-compact confirmations (59%)
-rtk git commit          # Ultra-compact confirmations (59%)
-rtk git push            # Ultra-compact confirmations
-rtk git pull            # Ultra-compact confirmations
-rtk git branch          # Compact branch list
-rtk git fetch           # Compact fetch
-rtk git stash           # Compact stash
-rtk git worktree        # Compact worktree
-```
-
-Note: Git passthrough works for ALL subcommands, even those not explicitly listed.
-
-### GitHub (26-87% savings)
-```bash
-rtk gh pr view <num>    # Compact PR view (87%)
-rtk gh pr checks        # Compact PR checks (79%)
-rtk gh run list         # Compact workflow runs (82%)
-rtk gh issue list       # Compact issue list (80%)
-rtk gh api              # Compact API responses (26%)
-```
-
-### JavaScript/TypeScript Tooling (70-90% savings)
-```bash
-rtk pnpm list           # Compact dependency tree (70%)
-rtk pnpm outdated       # Compact outdated packages (80%)
-rtk pnpm install        # Compact install output (90%)
-rtk npm run <script>    # Compact npm script output
-rtk npx <cmd>           # Compact npx command output
-rtk prisma              # Prisma without ASCII art (88%)
-```
-
-### Files & Search (60-75% savings)
-```bash
-rtk ls <path>           # Tree format, compact (65%)
-rtk read <file>         # Code reading with filtering (60%)
-rtk grep <pattern>      # Search grouped by file (75%). Format flags (-c, -l, -L, -o, -Z) run raw.
-rtk find <pattern>      # Find grouped by directory (70%)
-```
-
-### Analysis & Debug (70-90% savings)
-```bash
-rtk err <cmd>           # Filter errors only from any command
-rtk log <file>          # Deduplicated logs with counts
-rtk json <file>         # JSON structure without values
-rtk deps                # Dependency overview
-rtk env                 # Environment variables compact
-rtk summary <cmd>       # Smart summary of command output
-rtk diff                # Ultra-compact diffs
-```
-
-### Infrastructure (85% savings)
-```bash
-rtk docker ps           # Compact container list
-rtk docker images       # Compact image list
-rtk docker logs <c>     # Deduplicated logs
-rtk kubectl get         # Compact resource list
-rtk kubectl logs        # Deduplicated pod logs
-```
-
-### Network (65-70% savings)
-```bash
-rtk curl <url>          # Compact HTTP responses (70%)
-rtk wget <url>          # Compact download output (65%)
-```
-
-### Meta Commands
-```bash
-rtk gain                # View token savings statistics
-rtk gain --history      # View command history with savings
-rtk discover            # Analyze Claude Code sessions for missed RTK usage
-rtk proxy <cmd>         # Run command without filtering (for debugging)
-rtk init                # Add RTK instructions to CLAUDE.md
-rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
-```
-
-## Token Savings Overview
-
-| Category | Commands | Typical Savings |
-|----------|----------|-----------------|
-| Tests | vitest, playwright, cargo test | 90-99% |
-| Build | next, tsc, lint, prettier | 70-87% |
-| Git | status, log, diff, add, commit | 59-80% |
-| GitHub | gh pr, gh run, gh issue | 26-87% |
-| Package Managers | pnpm, npm, npx | 70-90% |
-| Files | ls, read, grep, find | 60-75% |
-| Infrastructure | docker, kubectl | 85% |
-| Network | curl, wget | 65-70% |
-
-Overall average: **60-90% token reduction** on common development operations.
+**Golden rule**: prefix dev commands with `rtk` (e.g. `rtk git status`, `rtk pytest`, `rtk cargo build`). RTK uses a dedicated filter when one exists and passes through unchanged otherwise — always safe. Use it even inside `&&` chains. Typical savings 60–90% (tests 90–99%, build 70–87%, git 59–80%). Full command reference is in the user's global `~/.claude/RTK.md`; `rtk gain` shows analytics, `rtk proxy <cmd>` runs raw.
 <!-- /rtk-instructions -->
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
