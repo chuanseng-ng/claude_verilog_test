@@ -14,122 +14,29 @@ This project incrementally builds a fully functional SoC through 6 phases:
 3. **Phase 2**: Pipelined CPU (5-stage + interrupts) ✅ **COMPLETE** (2026-03-08)
 4. **Phase 3**: Memory System (I-cache + D-cache) ✅ **COMPLETE** (2026-05-21)
 5. **Phase 4**: GPU-Lite Compute Engine (SIMT) ✅ **COMPLETE** (2026-05-27)
-6. **Phase 5**: SoC Integration (peripherals, boot ROM) ⏸️ Not Started
+6. **Phase 5**: SoC Integration (peripherals, boot ROM) ⏸️ In Progress
 
-## Current Status: Phase 5 (SoC Integration) — Not Started; Phase 4 Complete
+## Current Status
 
-**Phase 0 Complete** ✅ (2026-01-18):
+Phase 5 (SoC Integration) in progress; Phases 0–4 complete.
 
-- ✅ All 7 architectural specifications finalized and approved
-- ✅ Python reference models implemented and validated (66/66 tests passing)
-- ✅ cocotb test infrastructure ready
+| Phase | Status | Date | Headline result |
+| :---- | :----- | :--- | :-------------- |
+| 0 — Specs & reference models | ✅ | 2026-01-18 | 66/66 model tests passing |
+| 1 — Minimal RV32I CPU | ✅ | 2026-02-13 | 9/9 exit criteria; 37/37 ISA; 10k random, 0 fail |
+| 2 — Pipelined CPU + interrupts | ✅ | 2026-03-08 | 111/111 tests; 50k random; 75 MHz Sky130 |
+| 3 — L1 I/D caches | ✅ | 2026-05-21 | 139/139 regression; ASAP7 **1418 MHz / 27.27 mW / 3,844 µm²** |
+| 4 — GPU-Lite SIMT | ✅ | 2026-05-27 | GPU+CPU regression green; ASAP7 **571 MHz / 262 mW** |
+| 5 — SoC integration | ⏸️ | — | In progress |
 
-**Phase 1 Complete** ✅ (2026-02-13):
-
-- ✅ All 8 RTL modules implemented (~1,900 lines)
-- ✅ All 9/9 verification exit criteria met
-- ✅ 37/37 RV32I instructions verified
-- ✅ 10,000 random instructions, 0 failures
-- ✅ AXI protocol compliance verified (11/11 tests)
-- ✅ Debug interface complete (6/6 tests)
-- ✅ Full coverage: 37/37 instructions, 8/8 FSM states
-- ✅ Archived to `micro_p/` directory
-
-**Phase 2 Complete** ✅ (2026-03-08):
-
-- ✅ Architecture approved (5-stage pipeline + interrupts + CSR)
-- ✅ All 14 RTL modules implemented
-- ✅ Comprehensive verification: 111/111 tests passing (all 7 suites)
-- ✅ Random regression: 50,000 instructions (500 seeds × 100), 0 failures
-- ✅ IRQ latency: ≤3 cycles from assertion to trap_taken
-- ✅ Backend: 75 MHz achieved on Sky130 130nm
-
-**Phase 3 Complete** ✅ (2026-05-21):
-
-- ✅ L1 I-Cache (4 KB, direct-mapped) + L1 D-Cache (4 KB, write-back + write-allocate)
-- ✅ FENCE.I: 1-cycle I-cache invalidation
-- ✅ Cache arbiter: D$ priority over I$ (D-write > D-read > I-read)
-- ✅ Verification: I-cache 7/7, D-cache 8/8, integration 5/5; **139/139 full regression**
-- ✅ PPA sign-off (ASAP7 7nm, Run 43, 2026-05-20): **1418 MHz / 27.27 mW / 3,844 µm²**, 0 DRC, 0 antenna
-
-**Phase 4 Complete** ✅ (2026-05-27):
-
-- ✅ 9/9 GPU-Lite RTL modules (`rtl/gpu/`): top, command queue, warp scheduler, compute unit, vector regfile, vector ALU, memory unit, coalescer, shared memory
-- ✅ SIMT execution: 8-lane warps, round-robin scheduler, single-level divergence stack, 16 KB / 32-bank shared memory
-- ✅ Verification: GPU unit + kernel tests green; CPU re-gate 140/140 + 100k random; 1,000-kernel random regression, 0 deadlocks/mismatches
-- ✅ PPA sign-off (ASAP7 7nm, Run `RUN_2026-05-28_06-29-48`): **571 MHz (1.75 ns) / 262 mW / 115,600 µm² die / 60,500 µm² stdcell**, Setup WS +197.3 ps, Hold WS +16.3 ps (0 viol), 0 antenna
-
-## Implemented Features
-
-**Phase 1 (Complete)** ✅:
-- **ISA**: Complete RISC-V RV32I base integer instruction set (37 instructions)
-- **Architecture**: Single-cycle execution with AXI stalls
-- **Memory Interface**: AXI4-Lite Master (unified instruction/data bus)
-- **Debug Interface**: APB3 Slave with full capabilities
-  - Halt/Resume/Single-step execution
-  - Register file read/write access
-  - Program counter manipulation
-  - Hardware breakpoints (2 breakpoints)
-
-**Phase 2** ✅:
-- **ISA**: RV32I + Zicsr (CSR instructions: CSRRW/S/C/I variants)
-- **Architecture**: 5-stage in-order pipeline (IF/ID/EX/MEM/WB)
-- **Interrupt Support**: RISC-V M-mode (timer + external interrupts)
-- **Hazard Handling**: Detection, stalling, EX/MEM/WB forwarding
-- **Target Performance**: 1 IPC at 200 MHz (2x Phase 1 frequency)
-- **AXI Arbitration**: Priority arbiter for IF vs MEM requests
-- **Debug Interface**: Enhanced with pipeline drain support
-- **GPU-Lite**: SIMT compute engine with 8-lane warp execution (Phase 4)
-- **SoC**: DMA, UART, SPI, Timer, Boot ROM (Phase 5)
+Full per-phase records and feature lists → [`docs/readme/PHASE_HISTORY.md`](docs/readme/PHASE_HISTORY.md).
 
 ## Project Structure
 
-```text
-├── docs/                         # Specifications (Phase 0)
-│   ├── ROADMAP.md                # Project phases and plan
-│   ├── PHASE_STATUS.md           # Current phase status
-│   ├── design/
-│   │   ├── PHASE0_ARCHITECTURE_SPEC.md   # CPU architectural spec
-│   │   ├── PHASE1_ARCHITECTURE_SPEC.md   # CPU implementation spec (Phase 1)
-│   │   ├── PHASE4_GPU_ARCHITECTURE_SPEC.md # GPU architecture spec (Phase 4)
-│   │   ├── RTL_DEFINITION.md     # Interface signal definitions
-│   │   ├── MEMORY_MAP.md         # Address space and registers
-│   │   └── REFERENCE_MODEL_SPEC.md # Python reference model API
-│   └── verification/
-│       └── VERIFICATION_PLAN.md  # Verification strategy
-├── tb/                           # Testbench and reference models
-│   ├── models/                   # Python reference models (Phase 0)
-│   │   ├── rv32i_model.py        # CPU instruction-accurate model
-│   │   ├── gpu_kernel_model.py   # GPU SIMT execution model
-│   │   └── memory_model.py       # Memory system model
-│   ├── tests/                    # Unit tests for reference models
-│   │   ├── test_rv32i_model.py
-│   │   ├── test_gpu_model.py
-│   │   └── test_memory_model.py
-│   └── cocotb/                   # cocotb testbenches (Phase 1+)
-├── rtl/                          # RTL source files
-│   ├── cpu/                      # ✅ Phase 2 CPU (14 modules, ~3000 lines)
-│   │   ├── core/                 # Pipeline stages, hazard/forward units, CSR
-│   │   │   ├── pipeline/         # IF, ID, EX, MEM, WB stages
-│   │   │   ├── rv32i_hazard_unit.sv
-│   │   │   ├── rv32i_forwarding_unit.sv
-│   │   │   ├── rv32i_csr_file.sv
-│   │   │   ├── rv32i_interrupt_ctrl.sv
-│   │   │   └── ...
-│   │   ├── rv32i_cpu_top.sv      # Top-level with AXI4-Lite + APB3
-│   │   └── rv32i_axi_arbiter.sv  # IF/MEM priority arbiter
-│   ├── gpu/                      # ✅ Phase 4 GPU-Lite (9 modules; ASAP7 571 MHz signoff)
-│   ├── mem/                      # ✅ Phase 3 caches (~1,424 lines)
-│   │   ├── rv32i_cache_pkg.sv    # Cache parameters and types
-│   │   ├── rv32i_icache.sv       # I-cache (4 KB, direct-mapped, FENCE.I)
-│   │   ├── rv32i_dcache.sv       # D-cache (4 KB, write-back + write-allocate)
-│   │   └── rv32i_cache_arbiter.sv # D$ priority AXI arbiter
-│   ├── periph/                   # (Phase 5 - not started)
-│   └── soc/                      # (Phase 5 - not started)
-├── micro_p/                      # Phase 1 single-cycle CPU (archived)
-├── sim/                          # Simulation scripts (Phase 1+)
-└── CLAUDE.md                     # Claude Code instructions
-```
+Top level: `rtl/` (CPU, GPU, caches, peripherals, SoC), `tb/` (Python models + cocotb),
+`docs/` (specs), `pnr/` (physical design), `sim/`, `micro_p/` (archived Phase 1).
+
+Full directory tree → [`docs/readme/PROJECT_STRUCTURE.md`](docs/readme/PROJECT_STRUCTURE.md).
 
 ## Requirements
 
@@ -147,74 +54,19 @@ This project incrementally builds a fully functional SoC through 6 phases:
 
 ## Quick Start
 
-### Phase 0: Reference Model Testing (Complete ✅)
+Phase 0 reference-model tests (canonical entry point):
 
 ```bash
-# Navigate to test directory
 cd tb/tests
-
-# Run all reference model unit tests (66 tests)
-pytest -v
-
-# Run specific model tests
-pytest test_rv32i_model.py -v      # CPU model (33 tests)
-pytest test_gpu_model.py -v        # GPU model (12 tests)
-pytest test_memory_model.py -v     # Memory model (21 tests)
-
-# Run with coverage
-pytest --cov=tb.models --cov-report=html
+pytest -v        # 66 reference-model unit tests
 ```
 
-### Phase 1: RTL Simulation ✅ Complete (Archived to `micro_p/`)
-
-Phase 1 single-cycle CPU has been completed and archived. All verification passed.
-
-### Phase 2: RTL Simulation ✅ Complete
-
-```bash
-# Navigate to cocotb test directory (WSL)
-cd tb/cocotb/cpu
-
-# Run all Phase 2 test suites (111 tests)
-make phase2_all
-
-# Run individual suites
-make smoke_uvm          # 4 smoke tests
-make isa_uvm            # 54 ISA compliance tests
-make pipeline_hazards   # 16 pipeline hazard tests
-make interrupts         # 12 interrupt/CSR tests
-make debug              # 6 debug interface tests
-make axi_protocol       # 12 AXI protocol tests
-make fault_injection    # 7 fault injection tests
-
-# Run random regression (500 seeds × 100 instructions)
-RANDOM_TEST_SEEDS=500 RANDOM_TEST_INSTRS=100 make random_uvm
-
-# Clean build artifacts
-make clean
-```
-
-### Phase 3: Cache Simulation ✅ Complete
-
-```bash
-# Navigate to sim directory
-cd sim
-
-# Run all Phase 3 cache tests (20 tests)
-make phase3_all
-
-# Run individual cache test suites
-make icache             # I-cache unit tests (7 tests)
-make dcache             # D-cache unit tests (8 tests)
-make cache_integration  # CPU + cache integration tests (5 tests)
-
-# Clean build artifacts
-make clean
-```
+Per-phase build/run commands (cocotb CPU suites, cache sims, random regression) →
+[`docs/readme/QUICK_START.md`](docs/readme/QUICK_START.md).
 
 ## Documentation
 
-Key documents in `docs/`:
+Core specifications in `docs/`:
 
 | Document | Purpose |
 | :------- | :------ |
@@ -230,64 +82,32 @@ Key documents in `docs/`:
 | `design/REFERENCE_MODEL_SPEC.md` | Python reference model API |
 | `verification/VERIFICATION_PLAN.md` | Verification strategy by phase |
 
-## Debug Interface (Phase 1+)
+README detail set in `docs/readme/`:
 
-The planned APB3 debug interface will provide the following registers:
-
-| Address | Register | Description |
-| :------ | :------- | :---------- |
-| 0x000 | DBG_CTRL | Control: [0]=halt, [1]=resume, [2]=step, [3]=reset |
-| 0x004 | DBG_STATUS | Status: [0]=halted, [1]=running, [7:4]=halt_cause |
-| 0x008 | DBG_PC | Program Counter |
-| 0x00C | DBG_INSTR | Current instruction |
-| 0x010-0x08C | DBG_GPR[0:31] | General purpose registers |
-| 0x100 | DBG_BP0_ADDR | Breakpoint 0 address |
-| 0x104 | DBG_BP0_CTRL | Breakpoint 0 control: [0]=enable |
-| 0x108 | DBG_BP1_ADDR | Breakpoint 1 address |
-| 0x10C | DBG_BP1_CTRL | Breakpoint 1 control: [0]=enable |
-
-See `docs/design/MEMORY_MAP.md` for complete register definitions.
+| Document | Purpose |
+| :------- | :------ |
+| `readme/PHASE_HISTORY.md` | Per-phase completion records and feature lists |
+| `readme/QUICK_START.md` | Build/run commands for every phase |
+| `readme/SUPPORTED_INSTRUCTIONS.md` | RV32I + Zicsr instruction tables |
+| `readme/DEBUG_INTERFACE.md` | APB3 debug register map |
+| `readme/PROJECT_STRUCTURE.md` | Full repository directory tree |
 
 ## Supported Instructions
 
-### Phase 1 ✅ (Complete - RV32I Base)
+RV32I base (Phase 1, 37 instructions) + Zicsr/interrupts (Phase 2) — full tables in
+[`docs/readme/SUPPORTED_INSTRUCTIONS.md`](docs/readme/SUPPORTED_INSTRUCTIONS.md).
 
-All 37 RV32I base integer instructions (verified and passing):
+## Debug Interface
 
-- **Integer Arithmetic**: ADD, ADDI, SUB, LUI, AUIPC
-- **Logical**: AND, ANDI, OR, ORI, XOR, XORI
-- **Shifts**: SLL, SLLI, SRL, SRLI, SRA, SRAI
-- **Comparison**: SLT, SLTI, SLTU, SLTIU
-- **Branches**: BEQ, BNE, BLT, BGE, BLTU, BGEU
-- **Jumps**: JAL, JALR
-- **Memory**: LB, LH, LW, LBU, LHU, SB, SH, SW
-- **System**: ECALL, EBREAK, FENCE
-
-### Phase 2 ✅ (Verification Complete - RV32I + Zicsr)
-
-All Phase 1 instructions PLUS:
-
-- **CSR Instructions**: CSRRW, CSRRS, CSRRC, CSRRWI, CSRRSI, CSRRCI
-- **CSR Registers** (M-mode):
-  - Machine trap setup: `mstatus`, `mie`, `mtvec`
-  - Machine trap handling: `mscratch`, `mepc`, `mcause`, `mtval`, `mip`
-  - Machine counter/timers: `mcycle`, `minstret`
-- **Interrupt Support**: Timer interrupt (MTIP), external interrupt (MEIP)
-
-See `docs/design/PHASE0_ARCHITECTURE_SPEC.md` for RV32I semantics and `docs/design/PHASE2_ARCHITECTURE_SPEC.md` for CSR and interrupt details.
-
-## Project Phases
-
-For detailed phase descriptions and current status, see:
-
-- `docs/ROADMAP.md` - Complete project plan and phase descriptions
-- `docs/PHASE_STATUS.md` - Current phase status and next steps
+APB3 slave: halt/resume/step, register and PC access, 2 hardware breakpoints. Register
+map in [`docs/readme/DEBUG_INTERFACE.md`](docs/readme/DEBUG_INTERFACE.md);
+complete definitions in [`docs/design/MEMORY_MAP.md`](docs/design/MEMORY_MAP.md).
 
 ## Contributing
 
 This is a specification-driven project with clear phase boundaries. Contributions should:
 
-1. Follow the current phase's scope (Phase 4 — GPU-Lite SIMT; Phase 3 complete)
+1. Follow the current phase's scope (Phase 5 — SoC integration)
 2. Maintain consistency with specifications in `docs/`
 3. Include appropriate tests (pytest for Phase 0, cocotb for Phase 1+)
 
