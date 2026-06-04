@@ -165,7 +165,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_all verilator_lint soc_boot_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_all verilator_lint soc_boot_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar
 
@@ -245,6 +245,16 @@ soc_boot: soc_boot_lint
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET"
 
+# M9 SoC DMA + peripheral loopback test — self-checking firmware drives DMA
+# mem->mem + UART/SPI internal loopback via CPU MMIO; scoreboards PASS_PC/FAIL_PC.
+# Reuses the full-SoC source list + boot lint. clean first (stale Vtop guard).
+soc_periph: soc_boot_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_periph_loopback TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET"
+
 # Diagnostic boot test — dumps fetch-path signals for 300 cycles.
 .PHONY: soc_boot_diag
 soc_boot_diag:
@@ -266,3 +276,4 @@ soc_all:
 	$(MAKE) clean && $(MAKE) uart
 	$(MAKE) clean && $(MAKE) spi
 	$(MAKE) clean && $(MAKE) soc_boot
+	$(MAKE) clean && $(MAKE) soc_periph
