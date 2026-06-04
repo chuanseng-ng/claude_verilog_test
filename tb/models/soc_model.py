@@ -81,11 +81,14 @@ class SoCModel:
         # Build the RV32I CPU model with ROM_BASE as reset PC
         # Compose: replace the model's memory with our SoC memory adapter
         self.cpu = RV32IModel(reset_pc=rom_base)
+        # ROM window tracks the caller-provided rom_base (same size as the
+        # default ROM range), mirroring how sram_limit is derived above.
+        rom_limit = rom_base + (ROM_LIMIT - ROM_BASE)
         # Duck-typed standin for MemoryModel; cast keeps the type checker happy.
         self.cpu.memory = cast(
             MemoryModel,
             _SoCMemoryAdapter(
-                self._rom, self._sram_mem, rom_base, ROM_LIMIT, sram_base, self.sram_limit
+                self._rom, self._sram_mem, rom_base, rom_limit, sram_base, self.sram_limit
             ),
         )
 

@@ -208,13 +208,15 @@ Do NOT hand-write RTL or run PD/verif inline when a matching orchestrator exists
 
 ## Current Workflow (Phase 5 — SoC Integration)
 
-1. ⏸️ **AXI4 interconnect**: `axi4_crossbar.sv`, `axi_lite_interconnect.sv`, `axi_lite_register_bank.sv`; upgrade Phase 3 refill FSMs to AXI4 burst mode
-2. ⏸️ **Peripherals + DMA**: UART, SPI, timer, interrupt controller, DMA engine in `rtl/periph/`
-3. ⏸️ **SRAM controller**: behavioral AXI4-slave in `rtl/soc/sram_controller.sv`
-4. ⏸️ **SoC top integration**: wire CPU + GPU + DMA + peripherals in `rtl/soc/soc_top.sv`
-5. ⏸️ **Performance counters**: CSR-mapped (cache misses, branch mispredictions, warp stalls, divergence events)
-6. ⏸️ **CPU-GPU integration tests**: kernel launch → interrupt → result read; DMA transfers; software coherency sequence
-7. ⏸️ **Full regression**: all prior tests; CPU + GPU benchmarks
+Legend: ✅ done · 🚧 in progress · ⏸️ not started. Milestone status (M1–M12) tracked in `docs/PHASE5_SOC_INTEGRATION_PLAN.md`.
+
+1. ✅ **AXI4 interconnect** (M1/M3): `axi4_crossbar.sv`, `axi_lite_interconnect.sv`, `axi_lite_register_bank.sv`; Phase 3 refill FSMs upgraded to AXI4 burst (M2)
+2. ✅ **Peripherals + DMA** (M4/M5): UART, SPI, timer, interrupt controller, DMA engine in `rtl/periph/`
+3. ✅ **SRAM controller** (M6): behavioral AXI4-slave in `rtl/soc/sram_controller.sv`
+4. ✅ **SoC top integration** (M8): CPU + GPU + DMA + peripherals wired in `rtl/soc/soc_top.sv` (+ `boot_rom.sv`)
+5. ✅ **Performance counters** (M7): CSR-mapped + AXI-Lite GPU stats (CPU re-sign-off 1282 MHz)
+6. 🚧 **SoC verification** (M9): boot test ✅ (100/100); remaining — CPU-GPU integration (kernel launch → IRQ → result read), software coherency sequence, DMA/peripheral loopback
+7. ⏸️ **Full regression**: all prior tests + CPU + GPU benchmarks
 8. ⏸️ **L2 cache evaluation**: add `rtl/mem/l2_cache.sv` only if L1 miss rates justify it
 9. ⏸️ **Backend flow**: full SoC synth + P&R + STA; `pnr/constraints/phase5_soc.sdc`, `phase5_soc.upf`; power-domain validation
 10. ⏸️ **Sign-off**: coverage, power analysis, final review

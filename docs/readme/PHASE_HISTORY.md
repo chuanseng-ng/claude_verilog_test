@@ -67,5 +67,3 @@ current status, see the root [`README.md`](../../README.md) and
 - **Target Performance**: 1 IPC at 200 MHz (2x Phase 1 frequency)
 - **AXI Arbitration**: Priority arbiter for IF vs MEM requests
 - **Debug Interface**: Enhanced with pipeline drain support
-- **GPU-Lite**: SIMT compute engine with 8-lane warp execution (Phase 4)
-- **SoC**: DMA, UART, SPI, Timer, Boot ROM (Phase 5)

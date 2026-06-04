@@ -41,8 +41,8 @@
 │   │   ├── rv32i_icache.sv       # I-cache (4 KB, direct-mapped, FENCE.I)
 │   │   ├── rv32i_dcache.sv       # D-cache (4 KB, write-back + write-allocate)
 │   │   └── rv32i_cache_arbiter.sv # D$ priority AXI arbiter
-│   ├── periph/                   # (Phase 5 - not started)
-│   └── soc/                      # (Phase 5 - not started)
+│   ├── periph/                   # 🚧 Phase 5 (UART, SPI, timer, IRQ ctrl, DMA — M4/M5)
+│   └── soc/                      # 🚧 Phase 5 (crossbar, AXI-Lite ring, SRAM ctrl, soc_top — M1/M3/M6/M8)
 ├── micro_p/                      # Phase 1 single-cycle CPU (archived)
 ├── sim/                          # Simulation scripts (Phase 1+)
 └── CLAUDE.md                     # Claude Code instructions

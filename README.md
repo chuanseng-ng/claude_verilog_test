@@ -14,7 +14,7 @@ This project incrementally builds a fully functional SoC through 6 phases:
 3. **Phase 2**: Pipelined CPU (5-stage + interrupts) ✅ **COMPLETE** (2026-03-08)
 4. **Phase 3**: Memory System (I-cache + D-cache) ✅ **COMPLETE** (2026-05-21)
 5. **Phase 4**: GPU-Lite Compute Engine (SIMT) ✅ **COMPLETE** (2026-05-27)
-6. **Phase 5**: SoC Integration (peripherals, boot ROM) ⏸️ In Progress
+6. **Phase 5**: SoC Integration (peripherals, boot ROM) 🚧 In Progress
 
 ## Current Status
 
@@ -27,7 +27,7 @@ Phase 5 (SoC Integration) in progress; Phases 0–4 complete.
 | 2 — Pipelined CPU + interrupts | ✅ | 2026-03-08 | 111/111 tests; 50k random; 75 MHz Sky130 |
 | 3 — L1 I/D caches | ✅ | 2026-05-21 | 139/139 regression; ASAP7 **1418 MHz / 27.27 mW / 3,844 µm²** |
 | 4 — GPU-Lite SIMT | ✅ | 2026-05-27 | GPU+CPU regression green; ASAP7 **571 MHz / 262 mW** |
-| 5 — SoC integration | ⏸️ | — | In progress |
+| 5 — SoC integration | 🚧 | — | M1–M8 done; M9 SoC verification in progress |
 
 Full per-phase records and feature lists → [`docs/readme/PHASE_HISTORY.md`](docs/readme/PHASE_HISTORY.md).
 
