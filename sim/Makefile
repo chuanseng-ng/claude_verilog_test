@@ -194,6 +194,7 @@ help:
 	@echo "  make waves        - Open waveform viewer (gtkwave)"
 	@echo "  make lint         - Run Verilator lint check (CPU top + chains lint_soc)"
 	@echo "  make lint_soc     - Run Verilator lint check for soc_top (Phase 5 M8)"
+	@echo "  make cdc          - Run Bedrock cdc_snitch CDC check (informational; CDC_STRICT=1 to gate)"
 	@echo "  make soc_boot     - Run Phase 5 M9 SoC boot test (PC scoreboard + 100/100 stability)"
 	@echo "  make soc_all      - Run all SoC component + boot tests (M3-M6 + M9)"
 	@echo "  make axi          - Run AXI protocol tests only"
@@ -331,6 +332,30 @@ lint_soc:
 # SYNCASYNCNET waived at SoC top: leaf blocks use heterogeneous reset
 # disciplines (CPU synchronous per ASIC rule, peripherals async); soc_top only
 # distributes the shared rst_n_i. Frozen leaf RTL — not a SoC integration bug.
+
+# ============================================================================
+# CDC check — BerkeleyLab/Bedrock cdc_snitch (informational; see tools/cdc/)
+# ============================================================================
+# sv2v -> yosys (flatten) -> cdc_snitch.py. Parked / informational on this
+# single-clock SoC (BAD count is dominated by false positives: async reset +
+# synchronous APB/SPI ports modeled as separate clock domains). Run as a gate
+# with `make cdc CDC_STRICT=1`. Full writeup: docs/verification/CDC_SNITCH_POC.md
+CDC_DIR     := $(PROJ_ROOT)/sim/build/cdc
+CDC_STRICT  ?= 0
+# SOC_TOP_SOURCES plus axi_lite_register_bank.sv (Verilator auto-discovers it;
+# sv2v/yosys need it listed explicitly).
+CDC_SOURCES := $(SOC_TOP_SOURCES) $(RTL_DIR)/soc/axi_lite_register_bank.sv
+
+.PHONY: cdc
+cdc:
+	@bash $(PROJ_ROOT)/tools/cdc/fetch_cdc_tools.sh
+	@mkdir -p $(CDC_DIR)
+	@printf '%s\n' $(CDC_SOURCES) > $(CDC_DIR)/soc_top.flist
+	@CDC_CACHE="$(CDC_DIR)" \
+	 CDC_FLIST="$(CDC_DIR)/soc_top.flist" \
+	 CDC_INCDIRS="$(RTL_DIR)/cpu/core $(RTL_DIR)/mem $(RTL_DIR)/soc $(RTL_DIR)/gpu $(RTL_DIR)/periph" \
+	 CDC_TOP=soc_top CDC_STRICT=$(CDC_STRICT) \
+	 bash $(PROJ_ROOT)/tools/cdc/run_cdc.sh
 
 # ============================================================================
 # Cocotb Targets (require cocotb installation in WSL)
