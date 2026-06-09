@@ -27,7 +27,7 @@ clock domain.**
 
 ## Toolchain (what actually worked)
 
-```
+```text
 sv2v (SystemVerilog -> Verilog-2005)  ->  yosys (flatten -> JSON)  ->  cdc_snitch.py
 ```
 
@@ -44,7 +44,7 @@ explicitly for the CDC flow.)
 
 ## Result (full `soc_top`, 52 RTL files, ~32k registers)
 
-```
+```text
 OK1: 18249   CDC: 0   OKX: 8653   BAD: 5234
 ```
 
