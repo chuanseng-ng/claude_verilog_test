@@ -67,3 +67,30 @@ make cache_integration  # CPU + cache integration tests (5 tests)
 # Clean build artifacts
 make clean
 ```
+
+## RTL Linting & Formatting
+
+Two complementary tools, both run from `sim/`:
+
+- **Verilator** (`make lint`) — semantic/structural lint (widths, latches, unused signals).
+- **Verible** (`make verible`) — SystemVerilog *style* lint + *formatting* consistency.
+  Install a prebuilt binary from
+  [Verible releases](https://github.com/chipsalliance/verible/releases) (no build needed).
+
+```bash
+cd sim
+
+make lint                  # Verilator semantic lint (CPU top + soc_top)
+
+make lint-verible          # Verible style lint (curated ruleset, whole tree)
+make format-verible-check  # Report formatting deviations (non-mutating)
+make format-verible-fix    # Rewrite files in place to canonical format
+make verible               # lint-verible + format-verible-check
+
+# Check/format a subset (used by CI for changed files only):
+make format-verible-check VERIBLE_CHECK_FILES="rtl/cpu/core/rv32i_alu.sv"
+```
+
+Style rules live in [`.rules.verible_lint`](../../.rules.verible_lint). CI runs Verible via the
+[`rtl-checks.yml`](../../.github/workflows/rtl-checks.yml) workflow — currently **non-blocking**
+during initial adoption (the format check covers only RTL files changed in a PR).

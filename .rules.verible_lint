@@ -1,0 +1,46 @@
+# Verible SystemVerilog style-lint ruleset for claude_verilog_test
+# ---------------------------------------------------------------------------
+# Complements (does NOT replace) the Verilator `make lint` semantic check.
+# Verible enforces *style consistency*; Verilator catches semantic/structural
+# bugs (widths, latches, unused signals).
+#
+# Curated to match the existing RTL house style: 4-space indent, lower
+# snake_case signals with _q (registered) / _w (combinational) suffixes,
+# ALL_CAPS parameters, packed enums/structs, files named after their module.
+#
+# Syntax (one directive per line):
+#   +rule              enable a rule
+#   -rule              disable a rule
+#   rule=param:value   configure a rule
+# Default rule set + full reference:
+#   https://chipsalliance.github.io/verible/lint.html
+# ---------------------------------------------------------------------------
+
+# --- Disabled: pure house-style conflicts (would be noise, not findings) -----
+
+# Long lines are pervasive and intentional — hand-aligned AXI port maps and
+# descriptive block comments. (median file has a ~110-col line; p90 ~200.)
+-line-length
+
+# Parameters / localparams use ALL_CAPS (e.g. AXI_ADDR_WIDTH, N_MASTERS),
+# not Verible's default CamelCase expectation. Re-enable as a configured
+# ALL_CAPS check once the rest of the ruleset is clean.
+-parameter-name-style
+
+# Parameters are declared without an explicit storage type by convention
+# (e.g. `parameter DEPTH = 8`). Enabling this flags ~80 sites — pure house
+# style, not a defect. Revisit if the team adopts typed parameters.
+-explicit-parameter-storage-type
+
+# Memory/array unpacked dimensions are written `[0:DEPTH-1]` deliberately for
+# readability; Verible prefers `[DEPTH]`. ~40 sites — stylistic preference.
+-unpacked-dimensions-range-ordering
+
+# --- Kept at default (report as warnings; high-value structural/style) -------
+# Notably still enabled and meaningful on this codebase:
+#   case-missing-default      — guards against unintended latches/incomplete cases
+#   always-ff-non-blocking    — sequential-logic blocking-assignment discipline
+#   no-trailing-spaces, no-tabs, enum-name-style, module-filename,
+#   packed-dimensions-range-ordering, explicit-function-lifetime, generate-label.
+# These surface real consistency signal (~33 findings today) and are left
+# non-blocking in CI during initial adoption.
