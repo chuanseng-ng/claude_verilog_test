@@ -14,10 +14,9 @@
 # tests use the manual _write_with_id / _read_with_id helpers below.
 
 import cocotb
+from bfm.axi4_master import RESP_OKAY, AXI4Master
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, ReadOnly
-
-from bfm.axi4_master import AXI4Master, RESP_OKAY
+from cocotb.triggers import ReadOnly, RisingEdge, with_timeout
 
 CLK_PERIOD_NS = 2
 RESP_SLVERR = 0b10
@@ -151,6 +150,41 @@ async def test_burst_write_read(dut):
     assert data == words, \
         f"burst readback mismatch:\n  got {[hex(d) for d in data]}\n  exp {[hex(w) for w in words]}"
     dut._log.info("test_burst_write_read PASS")
+
+
+# ── Test 2b: RLAST position conformance ──────────────────────────────────────
+# The cache refill FSMs (rv32i_icache/rv32i_dcache) complete a refill on
+# rvalid && rlast and trust the slave to deliver exactly ARLEN+1 beats: an
+# early RLAST would silently validate a partially-filled line.  This test pins
+# the slave side of that contract — RLAST exactly on the final beat, never
+# earlier, for every burst length the SoC uses.
+
+@cocotb.test()
+async def test_rlast_position(dut):
+    """RLAST asserts on beat ARLEN and only there, for ARLEN = 0..7.
+
+    The BFM's read() collects beats until the first RLAST, so the returned
+    list length pins RLAST's position exactly: shorter than arlen+1 means an
+    early RLAST, a hang (caught by with_timeout) means a late/missing one.
+    """
+    m = await _setup(dut)
+    base = SRAM_BASE + 0x400
+    # Seed 8 words so every burst length reads known data.
+    words = [0xA000_0000 + i for i in range(8)]
+    bresp = await m.write(base, words)
+    assert bresp == RESP_OKAY
+
+    for arlen in range(8):
+        data, rresp = await with_timeout(m.read(base, length=arlen + 1), 2, "us")
+        assert rresp == RESP_OKAY, f"arlen={arlen}: rresp {rresp:#x}"
+        assert len(data) == arlen + 1, (
+            f"arlen={arlen}: RLAST after {len(data)} beats, expected {arlen + 1} "
+            f"(early RLAST would silently truncate cache refills)"
+        )
+        assert data == words[: arlen + 1], (
+            f"arlen={arlen}: data {[hex(d) for d in data]}"
+        )
+    dut._log.info("test_rlast_position PASS")
 
 
 # ── Test 3: WSTRB partial-byte write ─────────────────────────────────────────
