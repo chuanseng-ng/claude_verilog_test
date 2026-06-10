@@ -19,6 +19,12 @@
 //   * Master-facing ports carry NO id; the crossbar tags slave-facing requests
 //     with the master index (s_*id) and routes responses back via the per-slave
 //     grant register (engine memory), so id echo is not required for routing.
+//   * ASSUMPTION: read and write engines are independent, so a master may hold
+//     one AR and one AW in flight to the same slave, but the crossbar provides
+//     NO ordering between them (AXI4 has none either).  A master that requires
+//     read-after-write ordering to the same slave must wait for B before AR.
+//     The deadlock-free claim covers only masters that drain responses; a
+//     master that stalls its R/B channel indefinitely wedges that slave engine.
 //
 // Lint note: flat unpacked-array ports, genvar engines, no SVA (sim-friendly).
 

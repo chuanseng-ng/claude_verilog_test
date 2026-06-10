@@ -326,6 +326,11 @@ module rv32i_dcache (
     // AXI read control (refill) — burst mode
     //   One AR per line: address = line-base; slave auto-increments 4 B/beat.
     //   ARLEN=3 (4 beats), ARSIZE=4B, ARBURST=INCR (constants from axi_pkg).
+    //   TRUSTED-SLAVE ASSUMPTION: refill completion keys on rvalid && rlast and
+    //   trusts the slave to deliver exactly ARLEN+1 beats (AXI4 requires this).
+    //   A protocol-violating early RLAST would mark a partially-filled line
+    //   valid; slave conformance is pinned by test_sram_controller.py
+    //   test_rlast_position rather than defended here.
     // =========================================================================
     assign axi_araddr_o  = {refill_base[31:4], 4'b0000};
     assign axi_arlen_o   = axi_pkg::AXI_LEN_LINE;

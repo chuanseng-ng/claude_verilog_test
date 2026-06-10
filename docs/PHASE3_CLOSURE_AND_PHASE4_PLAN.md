@@ -10,6 +10,13 @@
 
 ## 1. Context
 
+> **Supersession note (2026-06-09)**: the 1418 MHz figures in this document apply
+> to the Phase 2+3 RTL *without* the Phase 5 M7 performance counters. Adding the
+> M7 CSRs lowers the standalone CPU sign-off to **1282 MHz** (780 ps, run
+> `pnr/asap7/cpu/runs/RUN_2026-06-02_20-37-12/`; limiter = 836-fanout
+> counter-write-enable cone). Moot for the SoC, which is GPU-governed at ~571 MHz.
+> See CLAUDE.md "Technology Node Strategy" and `docs/ASAP7_RUN_HISTORY.md` (M7 section).
+
 **Why this plan exists.** The repo just signed off ASAP7 Run 43 at 1418 MHz
 (commit `901fca6`, 2026-05-20) which integrated the Phase 2 pipeline **and**
 the Phase 3 I-cache / D-cache / arbiter RTL into a single timing-closed top.

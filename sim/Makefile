@@ -202,6 +202,8 @@ help:
 	@echo "  make interrupts   - Run Phase 2 interrupt and CSR tests only"
 	@echo "  make perf_counters - Run Phase 5 M7 performance counter tests (subtests a-g)"
 	@echo "  make rollup       - CPU directed + Phase 3 cache + Phase 4 GPU (no long randoms)"
+	@echo "  make random_uvm SEED=<v> [INSTRS=<n>] - Replay one failing random seed"
+	@echo "                    (per-seed outcomes logged to results/random_seed_log.txt)"
 	@echo "  make icache       - Run Phase 3 I-cache unit tests"
 	@echo "  make dcache       - Run Phase 3 D-cache unit tests"
 	@echo "  make cache_integration - Run Phase 3 CPU+cache integration tests"
@@ -504,9 +506,16 @@ coverage:
 
 .PHONY: random_uvm random_uvm_smoke stress_uvm stress_uvm_smoke
 
+# Seed replay: `make random_uvm SEED=<value> [INSTRS=<n>]` re-runs exactly one
+# seed from results/random_seed_log.txt (written by every multi-seed run).
 random_uvm:
 	@echo "Running pyuvm random instruction tests..."
+ifdef SEED
+	RANDOM_TEST_SEED=$(SEED) $(if $(INSTRS),RANDOM_TEST_INSTRS=$(INSTRS)) \
+		$(MAKE) sim MODULE=tb.cocotb.cpu.test_random_uvm
+else
 	$(MAKE) sim MODULE=tb.cocotb.cpu.test_random_uvm
+endif
 
 random_uvm_smoke:
 	@echo "Running pyuvm random instruction tests (SMOKE: 10 seeds × 50 instructions)..."

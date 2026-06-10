@@ -273,6 +273,11 @@ module rv32i_icache (
     //   ARLEN=3 (4 beats), ARSIZE=4B, ARBURST=INCR (constant).
     //   cancel_ar_q holds arvalid after a cancel to satisfy AXI A3.2.1.
     //   cancel_draining: burst accepted at abort — drain all 4 R beats silently.
+    //   TRUSTED-SLAVE ASSUMPTION: refill completion keys on rvalid && rlast and
+    //   trusts the slave to deliver exactly ARLEN+1 beats (AXI4 requires this).
+    //   A protocol-violating early RLAST would mark a partially-filled line
+    //   valid; slave conformance is pinned by test_sram_controller.py
+    //   test_rlast_position rather than defended here.
     // =========================================================================
     assign axi_araddr_o  = {refill_line_addr_q[31:4], 4'b0000};
     assign axi_arlen_o   = axi_pkg::AXI_LEN_LINE;
