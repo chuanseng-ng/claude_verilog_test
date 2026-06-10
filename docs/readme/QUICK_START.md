@@ -38,13 +38,17 @@ make phase2_all
 make smoke_uvm          # 4 smoke tests
 make isa_uvm            # 54 ISA compliance tests
 make pipeline_hazards   # 16 pipeline hazard tests
-make interrupts         # 12 interrupt/CSR tests
+make interrupts         # 13 interrupt/CSR tests (incl. concurrent-IRQ priority)
 make debug              # 6 debug interface tests
 make axi_protocol       # 12 AXI protocol tests
 make fault_injection    # 7 fault injection tests
 
 # Run random regression (500 seeds × 100 instructions)
 RANDOM_TEST_SEEDS=500 RANDOM_TEST_INSTRS=100 make random_uvm
+
+# Replay a single failing seed (per-seed outcomes are logged to
+# results/random_seed_log.txt by every multi-seed run)
+make random_uvm SEED=1042 INSTRS=100
 
 # Clean build artifacts
 make clean

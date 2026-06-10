@@ -122,14 +122,20 @@ No PD this item (crossbar hardens at SoC top, M11).
 - ✅ Boot test `tb/cocotb/soc/test_boot.py` — PC scoreboard + SRAM sentinels + **100/100 boot-stability gate, 0 fail**. `soc_all` green (crossbar 6, register_bank 6, axil 4, sram 7, dma 6, timer 5, irq 6, uart 11, spi 13, boot 3 — 0 FAIL).
 - ✅ Bring-up bugs fixed: (1) CPU reset PC hardcoded 0x0 → added `RESET_PC` param (default 0x0) through `rv32i_pipeline_if`→`rv32i_core`→`rv32i_cpu_top`, `soc_top` sets 0x0000_1000; (2) boot ROM image never loaded (string `MEM_INIT_FILE` baked empty under Verilator) → cocotb backdoor load of `boot.hex` into `boot_rom.mem`.
 
-**Fast-follows (remaining M9):**
+**Fast-follows (remaining M9)** — each item carries explicit acceptance criteria:
 - ⏸️ CPU→GPU integration: kernel launch → `gpu_irq_o` → result read (extend `test_cpu_gpu_handoff.py` to data plane).
+  **Accept**: CPU configures + launches a multi-warp vector-add kernel over AXI-Lite, waits for `gpu_irq_o`, reads results from ≥3 distinct SRAM addresses, all matching `gpu_kernel_model.py` golden; 10/10 consecutive launches clean (no hung IRQ, no stale data).
 - ⏸️ Software coherency: CPU D$ flush → GPU kernel → CPU D$ invalidate.
+  **Accept**: CPU writes a 1 KB buffer (cached, dirty), executes the documented flush sequence, GPU kernel transforms the buffer in SRAM, CPU executes the documented invalidate sequence, then reads back — all 256 words match golden (no stale cache hits). ⚠️ **Blocker**: no D$ flush/invalidate instruction or CSR exists in the RTL today — the flush mechanism must be specced (human decision) before this test can be written as designed. Tracked as a beads issue.
 - ⏸️ DMA transfer + peripheral loopback (UART TX→RX, SPI).
+  **Accept**: DMA descriptor moves ≥256 bytes SRAM→SRAM with end-of-transfer IRQ, byte-exact; UART TX looped to RX recovers the full transmitted string byte-exact; SPI loopback likewise; 3 consecutive runs each, 0 corruption.
 - ⏸️ Stronger SRAM check: read DUT SRAM back over AXI (current sentinel test relies on the golden model + SW-commit observation).
+  **Accept**: testbench backdoor-independent AXI read of every sentinel address matches the golden model after boot.
 - ⏸️ Full regression: prior CPU (140) + GPU + cache; **1M+ cycle random SoC stress, 0 failures**.
+  **Accept**: all prior suites green (no waivers) + 1M-cycle constrained-random SoC stress (interleaved CPU/GPU/DMA traffic) with 0 mismatches vs golden, 0 deadlocks/timeouts; failing seed (if any) logged and replayable via `SEED=`.
 - ⏸️ Benchmarks: CPU (vector add, dot product, memcpy, branch loop) + GPU (vector add, reduction, matmul, prefix scan, divergence).
-- **Exit**: all SoC tests green; boot 100/100 ✅; 1M-cycle random clean (pending).
+  **Accept**: each benchmark completes with correct results; cycle counts + I$/D$ miss rates recorded in `docs/` to feed the M10 L2 decision (the numbers are the deliverable — no pass/fail frequency threshold).
+- **Exit**: boot 100/100 ✅ (done); all fast-follow acceptance criteria above met — including the 1M-cycle random stress, which is **still open** and gates M9 closure.
 
 ### M10 — L2 cache decision gate *(deps: M9 benchmarks)*
 - ⏸️ Review L1 miss rates from M9. Add `rtl/mem/l2_cache.sv` **only if** justified. Document the decision either way.

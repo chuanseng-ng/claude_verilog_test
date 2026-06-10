@@ -12,11 +12,10 @@ Slave map (soc_addr_map_pkg):
 """
 
 import cocotb
-from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, Combine
-
-from bfm.axi4_master import AXI4Master, RESP_OKAY, RESP_DECERR
 from axi4_slave_model import AXI4SlaveModel
+from bfm.axi4_master import RESP_DECERR, RESP_OKAY, AXI4Master
+from cocotb.clock import Clock
+from cocotb.triggers import Combine, RisingEdge, with_timeout
 
 CLK_PERIOD_NS = 2
 
@@ -172,3 +171,59 @@ async def test_response_steering(dut):
     assert t0.result() == 0x5A5A0001, f"m0 got {t0.result():#x}"
     assert t1.result() == 0xA5A50002, f"m1 got {t1.result():#x}"
     dut._log.info("response steering OK")
+
+
+@cocotb.test()
+async def test_concurrent_ar_aw_same_slave(dut):
+    """One master holds AR and AW in flight to the SAME slave simultaneously.
+
+    The crossbar's deadlock-free claim rests on independent per-slave read and
+    write engines (header assumption). Slave-side delays force the two
+    transactions to overlap; both must complete — a hang here is the deadlock
+    the design comment rules out. Repeated back-to-back to catch grant-register
+    cleanup bugs between rounds.
+    """
+    masters, s0, s1 = await _setup(
+        dut, aw_delay=3, w_delay=2, b_delay=4, ar_delay=3, r_delay=3)
+    m0 = masters[0]
+
+    # Seed the read target so data checking is meaningful.
+    await m0.write(SRAM_BASE + 0x300, [0x0D15EA5E])
+
+    for round_idx in range(3):
+        wdata = 0xC0DE0000 + round_idx
+
+        async def wr(value=wdata):
+            return await m0.write(SRAM_BASE + 0x340 + round_idx * 4, [value])
+
+        async def rd():
+            d, r = await m0.read(SRAM_BASE + 0x300)
+            return d[0], r
+
+        t_wr = cocotb.start_soon(wr())
+        t_rd = cocotb.start_soon(rd())
+        # 2 µs >> any legal completion at 2 ns/cycle; converts a deadlock into
+        # a clean test failure instead of a simulator-level timeout.
+        await with_timeout(Combine(t_wr, t_rd), 2, "us")
+
+        assert t_wr.result() == RESP_OKAY, f"round {round_idx}: write resp"
+        rdata, rresp = t_rd.result()
+        assert rresp == RESP_OKAY, f"round {round_idx}: read resp"
+        assert rdata == 0x0D15EA5E, f"round {round_idx}: read data {rdata:#x}"
+        assert s1.mem[SRAM_BASE + 0x340 + round_idx * 4] == wdata
+
+    # Cross-master variant: m0 reads while m1 writes the same slave.
+    async def m0_rd():
+        d, r = await m0.read(SRAM_BASE + 0x300)
+        return d[0], r
+
+    async def m1_wr():
+        return await masters[1].write(SRAM_BASE + 0x360, [0xBEEF0001])
+
+    t0 = cocotb.start_soon(m0_rd())
+    t1 = cocotb.start_soon(m1_wr())
+    await with_timeout(Combine(t0, t1), 2, "us")
+    assert t0.result() == (0x0D15EA5E, RESP_OKAY)
+    assert t1.result() == RESP_OKAY
+    assert s1.mem[SRAM_BASE + 0x360] == 0xBEEF0001
+    dut._log.info("concurrent AR+AW to same slave OK")

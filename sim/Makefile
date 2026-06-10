@@ -198,6 +198,7 @@ help:
 	@echo "  make lint-verible        - Verible SystemVerilog style lint only"
 	@echo "  make format-verible-check- Verible format check (non-mutating)"
 	@echo "  make format-verible-fix  - Verible reformat rtl/ in place"
+	@echo "  make cdc          - Run Bedrock cdc_snitch CDC check (informational; CDC_STRICT=1 to gate)"
 	@echo "  make soc_boot     - Run Phase 5 M9 SoC boot test (PC scoreboard + 100/100 stability)"
 	@echo "  make soc_all      - Run all SoC component + boot tests (M3-M6 + M9)"
 	@echo "  make axi          - Run AXI protocol tests only"
@@ -206,6 +207,8 @@ help:
 	@echo "  make interrupts   - Run Phase 2 interrupt and CSR tests only"
 	@echo "  make perf_counters - Run Phase 5 M7 performance counter tests (subtests a-g)"
 	@echo "  make rollup       - CPU directed + Phase 3 cache + Phase 4 GPU (no long randoms)"
+	@echo "  make random_uvm SEED=<v> [INSTRS=<n>] - Replay one failing random seed"
+	@echo "                    (per-seed outcomes logged to results/random_seed_log.txt)"
 	@echo "  make icache       - Run Phase 3 I-cache unit tests"
 	@echo "  make dcache       - Run Phase 3 D-cache unit tests"
 	@echo "  make cache_integration - Run Phase 3 CPU+cache integration tests"
@@ -392,6 +395,30 @@ format-verible-fix:
 	@cd $(PROJ_ROOT); $(VERIBLE_FORMAT) --inplace $(VERIBLE_FMT_FLAGS) $(VERIBLE_CHECK_FILES)
 
 # ============================================================================
+# CDC check — BerkeleyLab/Bedrock cdc_snitch (informational; see tools/cdc/)
+# ============================================================================
+# sv2v -> yosys (flatten) -> cdc_snitch.py. Parked / informational on this
+# single-clock SoC (BAD count is dominated by false positives: async reset +
+# synchronous APB/SPI ports modeled as separate clock domains). Run as a gate
+# with `make cdc CDC_STRICT=1`. Full writeup: docs/verification/CDC_SNITCH_POC.md
+CDC_DIR     := $(PROJ_ROOT)/sim/build/cdc
+CDC_STRICT  ?= 0
+# SOC_TOP_SOURCES plus axi_lite_register_bank.sv (Verilator auto-discovers it;
+# sv2v/yosys need it listed explicitly).
+CDC_SOURCES := $(SOC_TOP_SOURCES) $(RTL_DIR)/soc/axi_lite_register_bank.sv
+
+.PHONY: cdc
+cdc:
+	@bash $(PROJ_ROOT)/tools/cdc/fetch_cdc_tools.sh
+	@mkdir -p $(CDC_DIR)
+	@printf '%s\n' $(CDC_SOURCES) > $(CDC_DIR)/soc_top.flist
+	@CDC_CACHE="$(CDC_DIR)" \
+	 CDC_FLIST="$(CDC_DIR)/soc_top.flist" \
+	 CDC_INCDIRS="$(RTL_DIR)/cpu/core $(RTL_DIR)/mem $(RTL_DIR)/soc $(RTL_DIR)/gpu $(RTL_DIR)/periph" \
+	 CDC_TOP=soc_top CDC_STRICT=$(CDC_STRICT) \
+	 bash $(PROJ_ROOT)/tools/cdc/run_cdc.sh
+
+# ============================================================================
 # Cocotb Targets (require cocotb installation in WSL)
 # ============================================================================
 
@@ -563,9 +590,16 @@ coverage:
 
 .PHONY: random_uvm random_uvm_smoke stress_uvm stress_uvm_smoke
 
+# Seed replay: `make random_uvm SEED=<value> [INSTRS=<n>]` re-runs exactly one
+# seed from results/random_seed_log.txt (written by every multi-seed run).
 random_uvm:
 	@echo "Running pyuvm random instruction tests..."
+ifdef SEED
+	RANDOM_TEST_SEED=$(SEED) $(if $(INSTRS),RANDOM_TEST_INSTRS=$(INSTRS)) \
+		$(MAKE) sim MODULE=tb.cocotb.cpu.test_random_uvm
+else
 	$(MAKE) sim MODULE=tb.cocotb.cpu.test_random_uvm
+endif
 
 random_uvm_smoke:
 	@echo "Running pyuvm random instruction tests (SMOKE: 10 seeds × 50 instructions)..."

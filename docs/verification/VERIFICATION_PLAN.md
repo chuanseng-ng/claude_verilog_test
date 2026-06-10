@@ -403,10 +403,17 @@ RTL Verification (cocotb + pyuvm)
 | Test Category | Description | Tool | AI/Human |
 | :-----------: | :---------: | :--: | :------: |
 | Synthesis lint | Check for synthesis warnings | Yosys | AI may run, **Human reviews** |
+| CDC check | Clock-domain-crossing anti-patterns (`make cdc`) | Bedrock cdc_snitch (sv2v→yosys) | AI may run, **Human reviews** |
 | Timing analysis | Check setup/hold violations | OpenSTA | **Human analyzes** |
 | Power analysis | Validate power budget | OpenROAD | **Human analyzes** |
 | DRC/LVS | Physical verification | KLayout | **Human reviews** |
 | Gate-level sim | Functional + timing verification | Verilator | **Human validates** |
+
+> **CDC check note:** `make -C sim cdc` runs Bedrock's `cdc_snitch` (sv2v → yosys → analysis).
+> It is **informational / parked** — on the current single-clock SoC its `BAD` count is
+> dominated by false positives (the async reset and synchronous APB/SPI ports are each
+> modeled as a separate clock domain). It becomes a real `BAD=0` gate at Phase 6+ once
+> actual clock domains exist. Full writeup: [`CDC_SNITCH_POC.md`](CDC_SNITCH_POC.md).
 
 **AI may assist with**:
 

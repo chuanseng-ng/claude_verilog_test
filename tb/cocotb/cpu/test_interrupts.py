@@ -262,6 +262,64 @@ async def test_ext_irq_delivery(dut):
 
 
 @cocotb.test()
+async def test_concurrent_irq_priority(dut):
+    """Timer and external IRQ asserted on the SAME cycle — external must win.
+
+    rv32i_interrupt_ctrl.sv documents 'Priority: external (MEIP) > timer
+    (MTIP)' [OQ-2]; at SoC level this is the documented disambiguation between
+    the IRQ-controller MEIP line and the direct timer MTIP line
+    (docs/design/MEMORY_MAP.md, Interrupt Hierarchy). This test pins the
+    behavior: with both enabled and both pending, mcause must be
+    MCAUSE_IRQ_EXTERNAL (0x8000000B), not MCAUSE_IRQ_TIMER (0x80000007).
+    """
+    dut._log.info("=== Test: Concurrent IRQ Priority (MEIP > MTIP) ===")
+    mem, dbg = await _setup_test(dut)
+
+    _ = _load_irq_setup_program(mem, enable_mtie=True, enable_meie=True)
+    _load_irq_handler(
+        mem, flag_reg=11, halt_after=True, save_csrs=True, mepc_save=12, mcause_save=13
+    )
+
+    commit_count = [0]
+
+    async def _count():
+        while True:
+            await RisingEdge(dut.clk_i)
+            if dut.commit_valid_o.value:
+                commit_count[0] += 1
+
+    cocotb.start_soon(_count())
+
+    for _ in range(500):
+        if commit_count[0] >= 6:
+            break
+        await RisingEdge(dut.clk_i)
+
+    # Assert both interrupt lines on the same clock edge.
+    dut.ext_irq_i.value = 1
+    dut.timer_irq_i.value = 1
+    trap_seen = await _wait_for_trap(dut, timeout=100)
+    assert trap_seen, "No IRQ taken with both ext and timer pending"
+
+    # Deassert both immediately so the handler's EBREAK halt is not re-entered.
+    dut.ext_irq_i.value = 0
+    dut.timer_irq_i.value = 0
+
+    await dbg.wait_halted()
+
+    x11 = await dbg.read_gpr(11)
+    mcause = await dbg.read_gpr(13)
+
+    dut._log.info(f"x11={x11}, mcause(x13)=0x{mcause:08x}")
+    assert x11 == 1, f"Handler flag not set: x11={x11}"
+    assert mcause == MCAUSE_IRQ_EXTERNAL, (
+        f"concurrent IRQ priority wrong: mcause=0x{mcause:08x}, expected external "
+        f"0x{MCAUSE_IRQ_EXTERNAL:08x} (MEIP > MTIP per rv32i_interrupt_ctrl.sv)"
+    )
+    dut._log.info("Concurrent IRQ priority test PASSED")
+
+
+@cocotb.test()
 async def test_irq_mie_disabled(dut):
     """IRQ asserted while MIE=0 must NOT be taken."""
     dut._log.info("=== Test: IRQ Blocked When MIE=0 ===")
