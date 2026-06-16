@@ -102,6 +102,23 @@ A graphify knowledge graph of `rtl/`, `docs/`, and `fixes/` is in `graphify-out/
 
 **Update the graph** after adding RTL or docs: `/graphify rtl docs fixes --update`.
 
+### HDL Property Graph (`hdl-kgraph`)
+
+`.hdl-kgraph/graph.db` is a Kùzu property graph of the HDL design (SystemVerilog/Verilog/VHDL), extracted by `hdl-kgraph`. As of 2026-06-04 (commit `1c08229`): **2150 nodes, 22473 edges, 275 files** (verilog, python, bash). Edges carry a confidence score: 1.0 = syntactically resolved, 0.8 = unique cross-file name match, 0.6 = ambiguous match, 0.4 = naming heuristic. Unresolved references appear as stub nodes flagged `unresolved`.
+
+Query it via the **`hdl-kgraph` MCP server** (read-only) — prefer this over Grep/Glob for HDL structure questions:
+
+| Tool | Use when |
+| ---- | -------- |
+| `get_hierarchy` / `find_module` | Orient: module tree, find a module by name |
+| `who_instantiates` / `port_map` | Find parents of a module; inspect port connections |
+| `find_signal_drivers` | Trace what drives a signal |
+| `impact_of_change` | Blast radius of editing a module/signal |
+| `clock_domains` / `uvm_topology` | CDC analysis; UVM testbench structure |
+| `search_nodes` | Find nodes by name/keyword |
+
+Rebuild after RTL changes: `hdl-kgraph build` / `hdl-kgraph update`.
+
 ## Technology Node Strategy
 
 Three nodes are supported by the existing `pnr/Makefile`. Use the right node for the right goal:
