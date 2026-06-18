@@ -59,6 +59,12 @@ from sim.riscv_encoder import (
     LUI, ADDI, ADD, ORI, ANDI, SW, LW, BNE, BEQ, JAL, EBREAK,
 )
 
+
+def CSRRW(rd: int, csr: int, rs1: int) -> int:
+    """CSRRW rd, csr, rs1 — atomic CSR read-write.
+    CSRW csr, rs1 is the pseudo-instruction alias (rd=x0)."""
+    return ((csr & 0xFFF) << 20) | (rs1 << 15) | (0x1 << 12) | (rd << 7) | 0x73
+
 ROM_BASE  = 0x0000_1000
 ROM_WORDS = 1024
 NOP       = 0x00000013   # ADDI x0, x0, 0
@@ -205,6 +211,28 @@ def build_firmware(asm: Assembler):
     l8, a8 = lui_addi(8, 0x0000_4444)
     asm.emit(l8); asm.emit(a8)
     asm.emit(SW(8, 2, 12))   # SRAM[0x200C] = 0x00004444
+
+    # ── Step 1b: D-cache flush (software coherency for DMA) ─────────────────
+    # The 4 stores above are cached (addr < MMIO_BASE). The DMA engine accesses
+    # SRAM directly (bypasses D-cache). Write CSR 0x7C0 to trigger CS_FLUSH_SCAN,
+    # which writes all dirty cache lines back to SRAM before DMA starts.
+    #
+    # CSRW 0x7C0, x0  →  CSRRW x0, 0x7C0, x0  (funct3=001 → always fires)
+    # The CSRW commits immediately (no mem_rd/mem_wr, no dc_stall feedback).
+    # The dcache runs CS_FLUSH_SCAN asynchronously: 256 line scans, 1 dirty line
+    # → ~1 writeback + 255 skip cycles ≈ 300 cycles total.
+    # Spin for 1024 iterations (each = LW+ADDI+BNE ≈ 3-4 cycles, so ~4096 cycles)
+    # to guarantee the flush completes before DMA is programmed.
+    asm.emit(CSRRW(0, 0x7C0, 0))   # dcache_flush: write 0 triggers flush-all
+
+    # Spin-wait for flush: x16 = 1024 iteration countdown
+    asm.emit(ADDI(16, 0, 0))        # x16 = 0 (counter)
+    # x17 = 1024 (spin limit)
+    l17, a17 = lui_addi(17, 1024)
+    asm.emit(l17); asm.emit(a17)
+    asm.label("FLUSH_WAIT")
+    asm.emit(ADDI(16, 16, 1))       # x16++
+    asm.thunk(lambda lbl, pc: BNE(16, 17, lbl["FLUSH_WAIT"] - pc))
 
     # ── Step 2: Program DMA ──────────────────────────────────────────────────
     # SRC = x2 = 0x2000

@@ -127,7 +127,9 @@ module rv32i_pipeline_id(
                 12'h320,                      // mcountinhibit
                 12'hB00, 12'hB80,             // mcycle, mcycleh
                 12'hB02, 12'hB82,             // minstret, minstreth
-                12'hB03, 12'hB04, 12'hB05:   // mhpmcounter3, mhpmcounter4, mhpmcounter5
+                12'hB03, 12'hB04, 12'hB05,   // mhpmcounter3, mhpmcounter4, mhpmcounter5
+                // Phase 5: D-cache maintenance CSRs (write-only, read as 0)
+                12'h7C0, 12'h7C1:             // dcache_flush, dcache_inval
                     csr_illegal_id = 1'b0;
                 default:
                     csr_illegal_id = 1'b1;

@@ -80,7 +80,19 @@ module rv32i_csr_file (
     // ── Debug visibility (APB debug registers 0x200-0x210) ───────────────────
     output logic [31:0] dbg_mstatus_o,   // Full mstatus value
     output logic [31:0] dbg_mie_o,       // Full mie value
-    output logic [31:0] dbg_mcause_o     // Full mcause value
+    output logic [31:0] dbg_mcause_o,    // Full mcause value
+
+    // ── Pipeline stall (for one-shot maintenance pulse suppression) ──────────
+    // Asserted by the hazard unit when the EX stage must hold its output
+    // (mem_cache_stall global freeze).  Normal CSR register writes are
+    // idempotent under re-fire; maintenance pulses are not — gate them.
+    input  logic        csr_stall_i,         // 1 = EX is stalled this cycle; suppress pulse fire
+
+    // ── D-cache maintenance triggers (Phase 5) ───────────────────────────────
+    // 1-cycle pulses generated on CSRW dcache_flush (0x7C0) / dcache_inval (0x7C1).
+    // Both CSRs are write-only, M-mode custom read/write range; read-back = 0.
+    output logic        csr_dcache_flush_o,  // Pulse: trigger CS_FLUSH_SCAN in D-cache
+    output logic        csr_dcache_inval_o   // Pulse: trigger CS_INVAL_SCAN in D-cache
 );
 
     // =========================================================================
@@ -171,6 +183,9 @@ module rv32i_csr_file (
                 12'hF12: csr_rdata = 32'h0;          // marchid = 0
                 12'hF13: csr_rdata = 32'h0000_0005;  // mimpid = Phase 5
                 12'hF14: csr_rdata = 32'h0;          // mhartid = 0
+                // D-cache maintenance CSRs (Phase 5) — write-only, read as 0
+                12'h7C0: csr_rdata = 32'h0;          // dcache_flush (write-only)
+                12'h7C1: csr_rdata = 32'h0;          // dcache_inval (write-only)
                 default: begin
                     csr_rdata   = 32'h0;
                     csr_illegal = 1'b1;  // Unimplemented CSR
@@ -255,6 +270,17 @@ module rv32i_csr_file (
     endfunction
 
     // =========================================================================
+    // D-cache maintenance pulse registers (Phase 5)
+    // 1-cycle pulses generated when a CSRW to 0x7C0 / 0x7C1 is executed.
+    // The pulse is a registered always_ff output so it arrives at the dcache
+    // on the cycle after the CSR write EX beat — same timing path as fence_i_pulse.
+    // =========================================================================
+    logic csr_dcache_flush_q;
+    logic csr_dcache_inval_q;
+    assign csr_dcache_flush_o = csr_dcache_flush_q;
+    assign csr_dcache_inval_o = csr_dcache_inval_q;
+
+    // =========================================================================
     // Synchronous CSR register updates
     // Priority: reset > trap_entry > mret > csr instruction write
     // =========================================================================
@@ -274,6 +300,9 @@ module rv32i_csr_file (
             mhpmcounter3_q  <= 32'h0;
             mhpmcounter4_q  <= 32'h0;
             mhpmcounter5_q  <= 32'h0;
+            // D-cache maintenance pulse registers
+            csr_dcache_flush_q <= 1'b0;
+            csr_dcache_inval_q <= 1'b0;
 
         end else if (trap_entry) begin
             // Trap entry: save MIE→MPIE, disable MIE, update mepc and mcause
@@ -282,13 +311,20 @@ module rv32i_csr_file (
             mstatus_mpie_q <= mstatus_mie_q;  // MPIE ← MIE
             mstatus_mie_q  <= 1'b0;           // MIE ← 0 (disable interrupts)
             // MPP hardwired to 2'b11 (M-mode only)
+            csr_dcache_flush_q <= 1'b0;
+            csr_dcache_inval_q <= 1'b0;
 
         end else if (mret) begin
             // MRET: restore MIE from MPIE, set MPIE=1
             mstatus_mie_q  <= mstatus_mpie_q; // MIE ← MPIE
             mstatus_mpie_q <= 1'b1;           // MPIE ← 1
+            csr_dcache_flush_q <= 1'b0;
+            csr_dcache_inval_q <= 1'b0;
 
         end else begin
+            // Default: clear maintenance pulses every cycle (1-shot behaviour)
+            csr_dcache_flush_q <= 1'b0;
+            csr_dcache_inval_q <= 1'b0;
             // ---------------------------------------------------------------
             // CSR instruction write (when active, write wins over increment;
             // increment suppressed this cycle for the written register).
@@ -365,6 +401,42 @@ module rv32i_csr_file (
                         csr_cur = minstret_q[63:32];
                         csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
                         minstret_q[63:32] <= csr_nxt;
+                    end
+                    // D-cache maintenance CSRs (Phase 5) — write-only; assert 1-cycle pulse.
+                    // Any non-suppressed write triggers the operation; the written value is
+                    // discarded (no register holds state).  CSRW/CSRWI always fire.
+                    // CSRS/CSRC fire only when rs1≠x0 / imm≠0 (suppress_if_zero=1).
+                    //
+                    // csr_stall_i gate: when the EX stage is frozen (mem_cache_stall global
+                    // freeze), csr_access re-asserts every stall cycle because id_ex_reg is
+                    // held.  Normal CSR register writes are idempotent under re-fire, but
+                    // maintenance pulses are not — without this gate, the pulse would stay
+                    // high for the entire stall duration, causing the dcache to enter
+                    // CS_FLUSH_SCAN while the stalling store is still in CS_* → deadlock.
+                    // Fire exactly once: on the first (and only un-stalled) EX cycle.
+                    12'h7C0: begin  // dcache_flush — CSRW dcache_flush, x0 triggers flush-all
+                        begin
+                            logic do_fire;
+                            case (csr_op)
+                                3'b001, 3'b101: do_fire = 1'b1;
+                                3'b010, 3'b110: do_fire = (rs1_addr != 5'h0);
+                                3'b011, 3'b111: do_fire = (rs1_addr != 5'h0);
+                                default:        do_fire = 1'b0;
+                            endcase
+                            csr_dcache_flush_q <= do_fire && !csr_stall_i;
+                        end
+                    end
+                    12'h7C1: begin  // dcache_inval — CSRW dcache_inval, x0 triggers inval-all
+                        begin
+                            logic do_fire;
+                            case (csr_op)
+                                3'b001, 3'b101: do_fire = 1'b1;
+                                3'b010, 3'b110: do_fire = (rs1_addr != 5'h0);
+                                3'b011, 3'b111: do_fire = (rs1_addr != 5'h0);
+                                default:        do_fire = 1'b0;
+                            endcase
+                            csr_dcache_inval_q <= do_fire && !csr_stall_i;
+                        end
                     end
                     // mip (0x344), mvendorid/marchid/mimpid/mhartid (0xF1x): read-only, writes ignored
                     default: ; // Illegal already flagged combinatorially; no state change

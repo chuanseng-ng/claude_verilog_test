@@ -243,7 +243,8 @@ soc_boot: soc_boot_lint
 	$(MAKE) MODULE=test_boot TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
-		  -Wno-SYNCASYNCNET"
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
 
 # M9 SoC DMA + peripheral loopback test — self-checking firmware drives DMA
 # mem->mem + UART/SPI internal loopback via CPU MMIO; scoreboards PASS_PC/FAIL_PC.
@@ -253,7 +254,8 @@ soc_periph: soc_boot_lint
 	$(MAKE) MODULE=test_periph_loopback TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
-		  -Wno-SYNCASYNCNET"
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
 
 # Diagnostic boot test — dumps fetch-path signals for 300 cycles.
 .PHONY: soc_boot_diag

@@ -59,6 +59,7 @@ endif
 VERILOG_SOURCES := \
 	$(SRAM_SIM_MODEL) \
 	$(RTL_DIR)/soc/axi_pkg.sv \
+	$(RTL_DIR)/soc/soc_addr_map_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
@@ -91,6 +92,7 @@ VERILOG_SOURCES := \
 CACHE_SOURCES := \
 	$(SRAM_SIM_MODEL) \
 	$(RTL_DIR)/soc/axi_pkg.sv \
+	$(RTL_DIR)/soc/soc_addr_map_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_icache.sv \
 	$(RTL_DIR)/mem/rv32i_dcache.sv \

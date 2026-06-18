@@ -35,6 +35,7 @@
 
 import rv32i_cache_pkg::*;
 import axi_pkg::*;
+import soc_addr_map_pkg::MMIO_BASE;
 
 module rv32i_dcache (
     input  logic        clk,
@@ -49,6 +50,11 @@ module rv32i_dcache (
     output logic [31:0] dc_rdata_o,
     output logic        dc_stall_o,
     output logic        dc_miss_o,    // 1-cycle pulse: CS_TAG_CHECK miss → CS_REFILL/CS_WRITEBACK
+
+    // ── D-cache maintenance triggers (Phase 5) — from rv32i_csr_file ─────────
+    input  logic        dc_flush_i,       // 1-cycle pulse: flush-all dirty lines to AXI
+    input  logic        dc_inval_i,       // 1-cycle pulse: invalidate all lines
+    output logic        dc_maint_done_o,  // 1-cycle pulse: maintenance operation complete
 
     // ── AXI4 read channel (refill) ───────────────────────────────────────────
     output logic [31:0]                axi_araddr_o,
@@ -212,6 +218,28 @@ module rv32i_dcache (
     logic        aw_done_q;
     logic        w_done_q;
 
+    // ── Phase 5: uncached MMIO bypass registers ───────────────────────────────
+    // uncached_rdata_q: holds the single R beat returned for CS_UNCACHED_RD
+    logic [31:0] uncached_rdata_q;
+
+    // ── Phase 5: maintenance scan registers ──────────────────────────────────
+    // maint_idx_q: 8-bit index walking 0..255 during CS_FLUSH_SCAN/CS_INVAL_SCAN
+    logic [7:0]  maint_idx_q;
+    // flush_mode_q: distinguishes maintenance writeback from miss writeback.
+    // When set, B-response in CS_WRITEBACK returns to CS_FLUSH_SCAN instead of
+    // CS_REFILL, and maint_idx_q is incremented to advance to the next line.
+    logic        flush_mode_q;
+    // maint_done_q: 1-cycle registered pulse, set when scan completes
+    // (either INVAL done or FLUSH all-lines walked). Drives dc_maint_done_o.
+    logic        maint_done_q;
+    // ── Defensive maintenance pending latches ─────────────────────────────────
+    // If dc_flush_i / dc_inval_i arrives while the cache is busy (not CS_IDLE),
+    // latch it here and honour it on the next return to CS_IDLE.  This prevents
+    // a valid maintenance pulse from being dropped if the CSR fires exactly one
+    // cycle before the cache finishes a previous operation.
+    logic        flush_pending_q;
+    logic        inval_pending_q;
+
     // SRAM output pipeline registers — capture negedge-launched dout at posedge
     logic [31:0] tag_dout_r;
     logic [31:0] data_dout_r [0:LINE_WORDS-1];
@@ -293,12 +321,16 @@ module rv32i_dcache (
     // Stall output
     // =========================================================================
     assign dc_stall_o =
-        (state_q == CS_IDLE        && dc_valid_i) ||   // Initiating SRAM read
+        (state_q == CS_IDLE        && dc_valid_i) ||   // Initiating SRAM read or uncached bypass
         (state_q == CS_SRAM_LATCH)                ||   // Waiting for pipeline reg
         (state_q == CS_HIT_PENDING)               ||   // Registering hit result
         (state_q == CS_TAG_CHECK   && !hit_q)     ||   // Miss or still checking
-        (state_q == CS_WRITEBACK)                 ||   // Writing back dirty line
-        (state_q == CS_REFILL);                         // Refilling
+        (state_q == CS_WRITEBACK)                 ||   // Writing back dirty line (normal or flush)
+        (state_q == CS_REFILL)                    ||   // Refilling
+        (state_q == CS_UNCACHED_RD)               ||   // Uncached single-beat AXI read
+        (state_q == CS_UNCACHED_WR)               ||   // Uncached single-beat AXI write
+        (state_q == CS_FLUSH_SCAN)                ||   // Maintenance flush-all scan
+        (state_q == CS_INVAL_SCAN);                    // Maintenance invalidate-all scan
     // CS_TAG_CHECK + hit_q: stall=0
     // CS_DONE: stall=0
 
@@ -312,43 +344,76 @@ module rv32i_dcache (
     assign dc_miss_o = (state_q == CS_TAG_CHECK) && !hit_q;
 
     // =========================================================================
+    // Maintenance done strobe (Phase 5) — 1-cycle registered pulse.
+    // maint_done_q is set to 1 on the same clock edge that the FSM leaves
+    // CS_FLUSH_SCAN or CS_INVAL_SCAN and enters CS_IDLE.  It is cleared every
+    // other cycle (default 0).  This avoids combinational glitches on the
+    // done strobe during the scan.
+    // =========================================================================
+    assign dc_maint_done_o = maint_done_q;
+
+    // =========================================================================
     // Read data output
     // =========================================================================
     always_comb begin
         case (state_q)
-            CS_TAG_CHECK: dc_rdata_o = data_dout_r[latch_word];  // read hit
-            CS_DONE:      dc_rdata_o = refill_buf_q[latch_word]; // read-miss refilled
-            default:      dc_rdata_o = 32'b0;
+            CS_TAG_CHECK:   dc_rdata_o = data_dout_r[latch_word];  // read hit
+            CS_DONE:        dc_rdata_o = refill_buf_q[latch_word]; // read-miss refilled
+            CS_UNCACHED_RD: dc_rdata_o = uncached_rdata_q;         // uncached read (captured R beat)
+            default:        dc_rdata_o = 32'b0;
         endcase
     end
 
     // =========================================================================
-    // AXI read control (refill) — burst mode
-    //   One AR per line: address = line-base; slave auto-increments 4 B/beat.
-    //   ARLEN=3 (4 beats), ARSIZE=4B, ARBURST=INCR (constants from axi_pkg).
+    // AXI read control — muxed between burst refill and uncached single-beat
+    //   Refill (CS_REFILL):       ARLEN=3 (4 beats), addr = line-base
+    //   Uncached (CS_UNCACHED_RD): ARLEN=0 (1 beat),  addr = dc_addr_q (word-aligned)
     // =========================================================================
-    assign axi_araddr_o  = {refill_base[31:4], 4'b0000};
-    assign axi_arlen_o   = axi_pkg::AXI_LEN_LINE;
-    assign axi_arsize_o  = axi_pkg::AXI_SIZE_4B;
-    assign axi_arburst_o = axi_pkg::AXI_BURST_INCR;
-    assign axi_arvalid_o = (state_q == CS_REFILL) && !ar_pending_q;
+    always_comb begin
+        if (state_q == CS_UNCACHED_RD) begin
+            axi_araddr_o  = {dc_addr_q[31:2], 2'b00};   // word-aligned uncached address
+            axi_arlen_o   = 8'd0;    // ARLEN=0 (single beat)
+            axi_arsize_o  = axi_pkg::AXI_SIZE_4B;
+            axi_arburst_o = axi_pkg::AXI_BURST_INCR;
+            axi_arvalid_o = !ar_pending_q;
+        end else begin
+            axi_araddr_o  = {refill_base[31:4], 4'b0000};
+            axi_arlen_o   = axi_pkg::AXI_LEN_LINE;      // ARLEN=3 (4-beat burst)
+            axi_arsize_o  = axi_pkg::AXI_SIZE_4B;
+            axi_arburst_o = axi_pkg::AXI_BURST_INCR;
+            axi_arvalid_o = (state_q == CS_REFILL) && !ar_pending_q;
+        end
+    end
     assign axi_rready_o  = 1'b1;
 
     // =========================================================================
-    // AXI write control (writeback) — burst mode
-    //   One AW per line: address = line-base.
-    //   AWLEN=3 (4 beats), AWSIZE=4B, AWBURST=INCR (constants from axi_pkg).
-    //   axi_wlast_o: asserted on the 4th (last) W beat.
+    // AXI write control — muxed between burst writeback and uncached single-beat
+    //   Writeback (CS_WRITEBACK):   AWLEN=3, addr=wb_addr_base, 4 W beats
+    //   Uncached  (CS_UNCACHED_WR): AWLEN=0, addr=dc_addr_q,    1 W beat
     // =========================================================================
-    assign axi_awaddr_o  = {wb_addr_base[31:4], 4'b0000};
-    assign axi_awlen_o   = axi_pkg::AXI_LEN_LINE;
-    assign axi_awsize_o  = axi_pkg::AXI_SIZE_4B;
-    assign axi_awburst_o = axi_pkg::AXI_BURST_INCR;
-    assign axi_awvalid_o = (state_q == CS_WRITEBACK) && !aw_done_q;
-    assign axi_wdata_o   = wb_buf_q[axi_word_q];
-    assign axi_wstrb_o   = 4'b1111;
-    assign axi_wlast_o   = (state_q == CS_WRITEBACK) && (axi_word_q == 2'd3);
-    assign axi_wvalid_o  = (state_q == CS_WRITEBACK) && !w_done_q;
+    always_comb begin
+        if (state_q == CS_UNCACHED_WR) begin
+            axi_awaddr_o  = {dc_addr_q[31:2], 2'b00};   // word-aligned uncached address
+            axi_awlen_o   = 8'd0;    // AWLEN=0 (single beat)
+            axi_awsize_o  = axi_pkg::AXI_SIZE_4B;
+            axi_awburst_o = axi_pkg::AXI_BURST_INCR;
+            axi_awvalid_o = !aw_done_q;
+            axi_wdata_o   = dc_wdata_q;
+            axi_wstrb_o   = dc_wstrb_q;
+            axi_wlast_o   = !w_done_q;                  // only 1 beat, WLAST always with WVALID
+            axi_wvalid_o  = !w_done_q;
+        end else begin
+            axi_awaddr_o  = {wb_addr_base[31:4], 4'b0000};
+            axi_awlen_o   = axi_pkg::AXI_LEN_LINE;      // AWLEN=3 (4-beat burst)
+            axi_awsize_o  = axi_pkg::AXI_SIZE_4B;
+            axi_awburst_o = axi_pkg::AXI_BURST_INCR;
+            axi_awvalid_o = (state_q == CS_WRITEBACK) && !aw_done_q;
+            axi_wdata_o   = wb_buf_q[axi_word_q];
+            axi_wstrb_o   = 4'b1111;
+            axi_wlast_o   = (state_q == CS_WRITEBACK) && (axi_word_q == 2'd3);
+            axi_wvalid_o  = (state_q == CS_WRITEBACK) && !w_done_q;
+        end
+    end
     assign axi_bready_o  = 1'b1;
 
     // =========================================================================
@@ -381,7 +446,8 @@ module rv32i_dcache (
 
         case (state_q)
             CS_IDLE: begin
-                if (dc_valid_i) begin
+                // Only access tag SRAM for cacheable addresses
+                if (dc_valid_i && !(dc_addr_i >= MMIO_BASE)) begin
                     tag_csb0  = 1'b0;
                     tag_web0  = 1'b1;   // read
                     tag_addr0 = addr_index;
@@ -405,6 +471,17 @@ module rv32i_dcache (
                 end
             end
 
+            // CS_FLUSH_SCAN: read tag SRAM at maint_idx_q every cycle so that
+            // tag_dout_r is valid in CS_SRAM_LATCH (the same pipeline as a normal
+            // IDLE read).  The data SRAMs are also read simultaneously below.
+            CS_FLUSH_SCAN: begin
+                if (dirty_array[maint_idx_q] && valid_array[maint_idx_q]) begin
+                    tag_csb0  = 1'b0;
+                    tag_web0  = 1'b1;   // read
+                    tag_addr0 = maint_idx_q;
+                end
+            end
+
             default: ;
         endcase
     end
@@ -422,8 +499,8 @@ module rv32i_dcache (
 
         case (state_q)
             CS_IDLE: begin
-                // Read all 4 word SRAMs simultaneously
-                if (dc_valid_i) begin
+                // Read all 4 word SRAMs simultaneously (only for cacheable addresses)
+                if (dc_valid_i && !(dc_addr_i >= MMIO_BASE)) begin
                     for (int w = 0; w < LINE_WORDS; w++) begin
                         data_csb0[w]  = 1'b0;
                         data_web0[w]  = 1'b1;   // read
@@ -457,6 +534,18 @@ module rv32i_dcache (
                 end
             end
 
+            // CS_FLUSH_SCAN: read all 4 data SRAMs at maint_idx_q so data_dout_r
+            // captures the full line after CS_SRAM_LATCH.
+            CS_FLUSH_SCAN: begin
+                if (dirty_array[maint_idx_q] && valid_array[maint_idx_q]) begin
+                    for (int w = 0; w < LINE_WORDS; w++) begin
+                        data_csb0[w]  = 1'b0;
+                        data_web0[w]  = 1'b1;   // read
+                        data_addr0[w] = maint_idx_q;
+                    end
+                end
+            end
+
             default: ;
         endcase
     end
@@ -466,31 +555,99 @@ module rv32i_dcache (
     // =========================================================================
     always_ff @(posedge clk) begin
         if (!rst_n) begin
-            state_q      <= CS_IDLE;
-            dc_addr_q    <= '0;
-            dc_we_q      <= 1'b0;
-            dc_wdata_q   <= '0;
-            dc_wstrb_q   <= '0;
-            axi_word_q   <= 2'b00;
-            ar_pending_q <= 1'b0;
-            aw_done_q    <= 1'b0;
-            w_done_q     <= 1'b0;
-            wb_buf_q     <= '0;
-            wb_tag_q     <= '0;
-            wb_index_q   <= '0;
-            refill_buf_q <= '0;
-            is_write_q   <= 1'b0;
+            state_q           <= CS_IDLE;
+            dc_addr_q         <= '0;
+            dc_we_q           <= 1'b0;
+            dc_wdata_q        <= '0;
+            dc_wstrb_q        <= '0;
+            axi_word_q        <= 2'b00;
+            ar_pending_q      <= 1'b0;
+            aw_done_q         <= 1'b0;
+            w_done_q          <= 1'b0;
+            wb_buf_q          <= '0;
+            wb_tag_q          <= '0;
+            wb_index_q        <= '0;
+            refill_buf_q      <= '0;
+            is_write_q        <= 1'b0;
+            uncached_rdata_q  <= '0;
+            maint_idx_q       <= 8'h00;
+            flush_mode_q      <= 1'b0;
+            maint_done_q      <= 1'b0;
+            flush_pending_q   <= 1'b0;
+            inval_pending_q   <= 1'b0;
         end else begin
+            maint_done_q <= 1'b0;  // default: clear done pulse every cycle
+
+            // Latch maintenance requests that arrive while the cache is busy.
+            // A flush supersedes a pending inval (flush is a superset).
+            // Clear the latch when the request is consumed (state_q == CS_IDLE
+            // and we are about to act on it this cycle).
+            if (dc_flush_i && state_q != CS_IDLE) flush_pending_q <= 1'b1;
+            if (dc_inval_i && state_q != CS_IDLE && !flush_pending_q) inval_pending_q <= 1'b1;
+
             case (state_q)
                 // -----------------------------------------------------------------
                 CS_IDLE: begin
+                    // Priority: CPU access > maintenance > idle.
+                    //
+                    // If a CPU request is present (dc_valid_i=1) it takes priority and
+                    // is serviced immediately.  Any maintenance pulse (dc_flush_i /
+                    // dc_inval_i) that arrives concurrently is latched into
+                    // flush_pending_q / inval_pending_q so it is not lost.
+                    //
+                    // When dc_valid_i=0 the else branch below consumes any pending or
+                    // live maintenance request.  This guarantees:
+                    //   (a) a flush/inval pulse that races with a CPU access is not
+                    //       dropped — it executes on the very first idle cycle after
+                    //       the access completes;
+                    //   (b) a new CPU access cannot starve a latched flush forever —
+                    //       a pending maintenance request is only deferred while
+                    //       dc_valid_i remains high; as soon as dc_valid_i falls the
+                    //       maintenance scan fires before any new CPU access can enter.
                     if (dc_valid_i) begin
-                        // Latch access parameters, issue SRAM read (combinationally above)
+                        // CPU access takes priority.  Latch any concurrent maintenance
+                        // pulse so it executes once the access pipeline drains.
+                        if (dc_flush_i) flush_pending_q <= 1'b1;
+                        else if (dc_inval_i && !flush_pending_q) inval_pending_q <= 1'b1;
                         dc_addr_q  <= dc_addr_i;
                         dc_we_q    <= dc_we_i;
                         dc_wdata_q <= dc_wdata_i;
                         dc_wstrb_q <= dc_wstrb_i;
-                        state_q    <= CS_SRAM_LATCH;
+                        if (dc_addr_i >= MMIO_BASE) begin
+                            // MMIO uncached bypass: skip SRAM and tag-check path
+                            axi_word_q   <= 2'b00;
+                            ar_pending_q <= 1'b0;
+                            aw_done_q    <= 1'b0;
+                            w_done_q     <= 1'b0;
+                            if (dc_we_i)
+                                state_q <= CS_UNCACHED_WR;
+                            else
+                                state_q <= CS_UNCACHED_RD;
+                        end else begin
+                            // Cacheable: issue SRAM read (combinationally above)
+                            state_q <= CS_SRAM_LATCH;
+                        end
+                    end else begin
+                        // No CPU access this cycle.  Consume any pending or live
+                        // maintenance request (flush takes priority over inval).
+                        // Pending latches are cleared atomically when consumed here
+                        // so they never re-fire on subsequent cycles.
+                        if (flush_pending_q || dc_flush_i) begin
+                            // Launch flush-all scan.
+                            flush_pending_q <= 1'b0;
+                            flush_mode_q    <= 1'b1;
+                            maint_idx_q     <= 8'h00;
+                            axi_word_q      <= 2'b00;
+                            aw_done_q       <= 1'b0;
+                            w_done_q        <= 1'b0;
+                            state_q         <= CS_FLUSH_SCAN;
+                        end else if (inval_pending_q || dc_inval_i) begin
+                            // Launch invalidate-all scan.
+                            inval_pending_q <= 1'b0;
+                            maint_idx_q     <= 8'h00;
+                            state_q         <= CS_INVAL_SCAN;
+                        end
+                        // else: truly idle — hold CS_IDLE, nothing to do.
                     end
                 end
 
@@ -505,8 +662,21 @@ module rv32i_dcache (
                 // -----------------------------------------------------------------
                 CS_HIT_PENDING: begin
                     // hit_comb is sampled into hit_q / hit_bank_q this cycle.
-                    // Unconditional advance to CS_TAG_CHECK.
-                    state_q <= CS_TAG_CHECK;
+                    if (flush_mode_q) begin
+                        // Flush path: data_dout_r is now valid from the SRAM read
+                        // issued in CS_FLUSH_SCAN.  Load wb_buf and hand off.
+                        // tag_dout_r[TAG_BITS-1:0] holds the tag for this line.
+                        wb_buf_q[0] <= data_dout_r[0];
+                        wb_buf_q[1] <= data_dout_r[1];
+                        wb_buf_q[2] <= data_dout_r[2];
+                        wb_buf_q[3] <= data_dout_r[3];
+                        wb_tag_q    <= tag_dout_r[TAG_BITS-1:0];
+                        // wb_index_q already latched in CS_FLUSH_SCAN
+                        state_q     <= CS_WRITEBACK;
+                    end else begin
+                        // Normal path: advance to CS_TAG_CHECK.
+                        state_q <= CS_TAG_CHECK;
+                    end
                 end
 
                 // -----------------------------------------------------------------
@@ -533,6 +703,7 @@ module rv32i_dcache (
                             wb_buf_q[3] <= data_dout_r[3];
                             wb_tag_q    <= tag_dout_r[TAG_BITS-1:0];
                             wb_index_q  <= latch_index;
+                            flush_mode_q <= 1'b0;  // normal miss writeback → CS_REFILL on B
                             state_q     <= CS_WRITEBACK;
                         end else begin
                             state_q <= CS_REFILL;
@@ -542,11 +713,9 @@ module rv32i_dcache (
 
                 // -----------------------------------------------------------------
                 // CS_WRITEBACK — AXI4 burst writeback:
-                //   1 AW (AWLEN=3, AWADDR=line-base) + 4 W beats + 1 B response.
-                //   aw_done_q: set when AW handshake completes (one-shot per burst).
-                //   w_done_q:  set when all 4 W beats are accepted.
-                //   axi_word_q advances on each W handshake (not on B).
-                //   WLAST is asserted combinationally when axi_word_q==3.
+                //   Normal miss:   AWLEN=3, 4 W beats, B → CS_REFILL
+                //   Flush scan:    AWLEN=3, 4 W beats, B → CS_FLUSH_SCAN + idx++
+                //   Both paths share the same aw/w/B handshake machinery.
                 CS_WRITEBACK: begin
                     // AW channel: single handshake for the entire burst
                     if (!aw_done_q && axi_awready_i)
@@ -565,7 +734,22 @@ module rv32i_dcache (
                         aw_done_q  <= 1'b0;
                         w_done_q   <= 1'b0;
                         axi_word_q <= 2'b00;
-                        state_q    <= CS_REFILL;
+                        if (flush_mode_q) begin
+                            // Maintenance writeback: dirty bit already cleared below.
+                            if (wb_index_q == 8'hFF) begin
+                                // Last line just written back — flush scan complete
+                                maint_done_q <= 1'b1;
+                                maint_idx_q  <= 8'h00;
+                                flush_mode_q <= 1'b0;  // clear so normal accesses use CS_TAG_CHECK
+                                state_q      <= CS_IDLE;
+                            end else begin
+                                // Advance to next line and continue scanning
+                                maint_idx_q <= wb_index_q + 8'h01;
+                                state_q     <= CS_FLUSH_SCAN;
+                            end
+                        end else begin
+                            state_q <= CS_REFILL;
+                        end
                     end else if (axi_bvalid_i && (axi_bresp_i != 2'b00)) begin
                         // AXI error: abort writeback, return to IDLE
                         state_q    <= CS_IDLE;
@@ -583,8 +767,8 @@ module rv32i_dcache (
                 // state_q <= CS_IDLE exit paths (rresp-error below and bresp-error
                 // in CS_WRITEBACK) only fire when the respective handshake
                 // completes that same cycle, so no orphan beat is left in flight.
-                // If a dc_invalidate_i / flush path is ever added here, port the
-                // cancel_ar_q / cancel_wait_r_q fix from rv32i_icache.sv.
+                // CS_FLUSH_SCAN does not issue AR transactions so the cancel-race
+                // does not apply there either.
                 // CS_REFILL — AXI4 burst refill:
                 //   One AR (ARLEN=3, ARADDR=line-base) yields 4 R beats.
                 //   axi_word_q is the beat index; advances on each valid beat.
@@ -625,6 +809,120 @@ module rv32i_dcache (
                     state_q <= CS_IDLE;
                 end
 
+                // -----------------------------------------------------------------
+                // CS_UNCACHED_RD — single-beat AXI read bypass (MMIO address)
+                //   Issue one AR (ARLEN=0), wait for one R beat, capture rdata,
+                //   release stall so next instruction can issue.
+                //   The pipeline sees stall=1 for this entire state; when R beat
+                //   arrives we transition to CS_DONE (stall=0) so the pipeline can
+                //   sample dc_rdata_o before the FSM returns to CS_IDLE.
+                //
+                // CS_DONE reads dc_rdata_o from refill_buf_q[latch_word].  We store
+                // the R beat there so the correct value is presented during CS_DONE.
+                // uncached_rdata_q is also kept for the CS_UNCACHED_RD dc_rdata_o mux
+                // (used only while in this state, before the R beat arrives).
+                CS_UNCACHED_RD: begin
+                    // AR channel: issue one AR handshake
+                    if (!ar_pending_q) begin
+                        if (axi_arready_i)
+                            ar_pending_q <= 1'b1;
+                    end else begin
+                        // R channel: wait for R beat (single beat, RLAST=1 from AXI spec)
+                        if (axi_rvalid_i) begin
+                            uncached_rdata_q         <= axi_rdata_i;
+                            refill_buf_q[latch_word] <= axi_rdata_i;  // for CS_DONE rdata mux
+                            ar_pending_q             <= 1'b0;
+                            state_q                  <= CS_DONE;  // stall=0 for 1 cycle, then CS_IDLE
+                        end
+                    end
+                end
+
+                // -----------------------------------------------------------------
+                // CS_UNCACHED_WR — single-beat AXI write bypass (MMIO address)
+                //   Issue AW (AWLEN=0) + W (WLAST=1, CPU wstrb) + wait for B.
+                //   Pipeline stalls for the full AW/W/B sequence.
+                //   dc_wdata_q / dc_wstrb_q are used directly (no merge with cache).
+                //
+                // Completion: transition to CS_DONE (stall=0 for one cycle) rather
+                // than directly to CS_IDLE.  Going straight to CS_IDLE would re-assert
+                // dc_stall_o immediately (CS_IDLE && dc_valid_i=1) before the hazard
+                // unit has a chance to advance the MEM stage, causing the same MMIO
+                // address to be re-presented and re-entered.  CS_DONE holds stall=0
+                // for one cycle so the pipeline can advance, then falls to CS_IDLE
+                // with dc_valid_i already deasserted.
+                CS_UNCACHED_WR: begin
+                    // AW channel
+                    if (!aw_done_q && axi_awready_i)
+                        aw_done_q <= 1'b1;
+                    // W channel: single beat, wvalid/wlast driven combinationally
+                    if (!w_done_q && axi_wvalid_o && axi_wready_i)
+                        w_done_q <= 1'b1;
+                    // B channel: wait for write response
+                    if (axi_bvalid_i) begin
+                        aw_done_q <= 1'b0;
+                        w_done_q  <= 1'b0;
+                        state_q   <= CS_DONE;   // release stall for 1 cycle before CS_IDLE
+                    end
+                end
+
+                // -----------------------------------------------------------------
+                // CS_FLUSH_SCAN — walk all 256 lines; write back dirty ones.
+                //
+                // Each cycle:
+                //   - If line[maint_idx_q] is dirty and valid: issue SRAM read
+                //     (combinationally above in tag/data SRAM blocks), then advance
+                //     through CS_SRAM_LATCH → CS_HIT_PENDING so that tag_dout_r /
+                //     data_dout_r are valid, then load wb_buf_q and hand off to
+                //     CS_WRITEBACK with flush_mode_q=1.
+                //
+                // Simplified implementation: because dirty_array is a register array
+                // (in-cycle readable), we can check it here.  When dirty, we issue
+                // the SRAM read this cycle (csb=0 combinationally) and transition to
+                // a two-cycle SRAM pipeline (CS_SRAM_LATCH → CS_HIT_PENDING), then
+                // capture wb_buf from data_dout_r and proceed to CS_WRITEBACK.
+                // When clean or invalid, advance maint_idx_q immediately (1 cycle).
+                CS_FLUSH_SCAN: begin
+                    if (dirty_array[maint_idx_q] && valid_array[maint_idx_q]) begin
+                        // Dirty line: issue SRAM read (combinationally above) and
+                        // pipeline through SRAM_LATCH → HIT_PENDING (flush_mode_q=1)
+                        // to capture wb_buf, then to CS_WRITEBACK.
+                        axi_word_q   <= 2'b00;
+                        aw_done_q    <= 1'b0;
+                        w_done_q     <= 1'b0;
+                        wb_index_q   <= maint_idx_q;
+                        state_q      <= CS_SRAM_LATCH;
+                        // maint_idx_q is incremented in CS_WRITEBACK on B-response
+                    end else begin
+                        // Clean or invalid line: skip (1 cycle per line)
+                        if (maint_idx_q == 8'hFF) begin
+                            // All 256 lines walked; scan complete
+                            maint_done_q <= 1'b1;
+                            maint_idx_q  <= 8'h00;
+                            flush_mode_q <= 1'b0;  // clear so normal accesses use CS_TAG_CHECK
+                            state_q      <= CS_IDLE;
+                        end else begin
+                            maint_idx_q <= maint_idx_q + 8'h01;
+                            // remain in CS_FLUSH_SCAN
+                        end
+                    end
+                end
+
+                // -----------------------------------------------------------------
+                // CS_INVAL_SCAN — clear valid+dirty bits for all 256 lines.
+                // No SRAM or AXI activity.  1 cycle per line.
+                // Dirty data is discarded without writeback (by design — D3 spec).
+                CS_INVAL_SCAN: begin
+                    // valid_array / dirty_array writes handled in valid/dirty
+                    // always_ff block below.
+                    if (maint_idx_q == 8'hFF) begin
+                        maint_done_q <= 1'b1;
+                        maint_idx_q  <= 8'h00;
+                        state_q      <= CS_IDLE;
+                    end else begin
+                        maint_idx_q <= maint_idx_q + 8'h01;
+                    end
+                end
+
                 default: state_q <= CS_IDLE;
             endcase
         end
@@ -644,10 +942,13 @@ module rv32i_dcache (
             if (state_q == CS_TAG_CHECK && hit_q && dc_we_q)
                 dirty_array[latch_index] <= 1'b1;
 
-            // Writeback complete: invalidate the evicted line on B response
+            // Writeback complete: clear dirty (and valid for capacity eviction).
+            // Flush-mode writeback (flush_mode_q=1) only clears dirty, keeps valid.
+            // Normal miss writeback (flush_mode_q=0) clears both (line is evicted).
             if (state_q == CS_WRITEBACK && axi_bvalid_i) begin
                 dirty_array[wb_index_q] <= 1'b0;
-                valid_array[wb_index_q] <= 1'b0;
+                if (!flush_mode_q)
+                    valid_array[wb_index_q] <= 1'b0;
             end
 
             // Refill complete: mark line valid, clear dirty (or set dirty for write-miss)
@@ -655,6 +956,13 @@ module rv32i_dcache (
             if (state_q == CS_REFILL && ar_pending_q && axi_rvalid_i && axi_rlast_i) begin
                 valid_array[latch_index] <= 1'b1;
                 dirty_array[latch_index] <= is_write_q;
+            end
+
+            // CS_INVAL_SCAN: clear valid+dirty for one line per cycle.
+            // Dirty data discarded without writeback (Phase 5 D-cache maintenance spec D3).
+            if (state_q == CS_INVAL_SCAN) begin
+                valid_array[maint_idx_q] <= 1'b0;
+                dirty_array[maint_idx_q] <= 1'b0;
             end
         end
     end

@@ -187,6 +187,11 @@ async def _reset(dut, cycles: int = 4):
     dut.dc_addr_i.value = 0
     dut.dc_wdata_i.value = 0
     dut.dc_wstrb_i.value = 0
+    # Phase 5 maintenance ports — tie to 0 for unit tests (no flush/inval needed)
+    if hasattr(dut, "dc_flush_i"):
+        dut.dc_flush_i.value = 0
+    if hasattr(dut, "dc_inval_i"):
+        dut.dc_inval_i.value = 0
     # AXI slave inputs
     dut.axi_arready_i.value = 0
     dut.axi_rvalid_i.value = 0
@@ -245,7 +250,7 @@ async def test_read_miss_then_hit(dut):
 
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     mem = SimpleDCacheAXIMem(dut)
-    BASE = 0x2000_0000
+    BASE = 0x0000_2000   # cacheable SRAM range (below MMIO_BASE=0x2000_0000)
     mem.write_word(BASE, 0xDEAD_BEEF)
     for w in range(1, LINE_WORDS):
         mem.write_word(BASE + w * 4, 0)
@@ -276,7 +281,7 @@ async def test_write_hit_no_axi(dut):
 
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     mem = SimpleDCacheAXIMem(dut)
-    BASE = 0x2000_0010
+    BASE = 0x0000_2010   # cacheable SRAM range (below MMIO_BASE=0x2000_0000)
     mem.write_word(BASE, 0x1111_1111)
     for w in range(1, LINE_WORDS):
         mem.write_word(BASE + w * 4, 0)
@@ -310,7 +315,7 @@ async def test_write_miss_write_allocate(dut):
 
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     mem = SimpleDCacheAXIMem(dut)
-    BASE = 0x2000_0020
+    BASE = 0x0000_2020   # cacheable SRAM range (below MMIO_BASE=0x2000_0000)
     # Backing store word[0] = 0xABCD_EF00, write will overlay byte 0 with 0xFF
     mem.write_word(BASE, 0xABCD_EF00)
     for w in range(1, LINE_WORDS):
@@ -341,9 +346,9 @@ async def test_dirty_eviction_writeback(dut):
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     mem = SimpleDCacheAXIMem(dut)
 
-    # ADDR_A and ADDR_B both map to cache index 0 (addr[11:4]=0)
-    ADDR_A = 0x2000_0000  # tag=... index=0
-    ADDR_B = 0x2001_0000  # different tag, same index
+    # ADDR_A and ADDR_B both map to cache index 0 (addr[11:4]=0), cacheable SRAM range
+    ADDR_A = 0x0000_2000  # tag=0x0000_0, index=0 (below MMIO_BASE=0x2000_0000)
+    ADDR_B = 0x0001_2000  # different tag, same index=0
 
     ORIGINAL_A = 0x1111_1111
     WRITTEN_A = 0x9999_9999
@@ -391,7 +396,7 @@ async def test_byte_write_strobe(dut):
 
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     mem = SimpleDCacheAXIMem(dut)
-    BASE = 0x2000_0030
+    BASE = 0x0000_2030   # cacheable SRAM range (below MMIO_BASE=0x2000_0000)
 
     # Backing store: 0xAABBCCDD
     mem.write_word(BASE, 0xAABB_CCDD)
@@ -427,7 +432,7 @@ async def test_halfword_write_strobe(dut):
 
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     mem = SimpleDCacheAXIMem(dut)
-    BASE = 0x2000_0040
+    BASE = 0x0000_2040   # cacheable SRAM range (below MMIO_BASE=0x2000_0000)
 
     mem.write_word(BASE, 0xDEAD_BEEF)
     for w in range(1, LINE_WORDS):
@@ -462,7 +467,7 @@ async def test_no_access_when_invalid(dut):
     await _reset(dut)
 
     dut.dc_valid_i.value = 0
-    dut.dc_addr_i.value = 0x2000_0000
+    dut.dc_addr_i.value = 0x0000_2000   # cacheable address; valid=0 so no access anyway
     for _ in range(8):
         await RisingEdge(dut.clk)
         assert not dut.dc_stall_o.value, "Unexpected stall with dc_valid_i=0"
@@ -480,7 +485,7 @@ async def test_axi_latency_read(dut):
 
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     mem = SimpleDCacheAXIMem(dut, rd_latency=4)
-    BASE = 0x2000_0050
+    BASE = 0x0000_2050   # cacheable SRAM range (below MMIO_BASE=0x2000_0000)
     mem.write_word(BASE, 0xFEED_C0DE)
     for w in range(1, LINE_WORDS):
         mem.write_word(BASE + w * 4, 0)

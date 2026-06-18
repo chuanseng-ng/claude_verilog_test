@@ -312,6 +312,18 @@ module rv32i_core #(
     // =========================================================================
     logic ic_miss;    // I-cache miss pulse (from u_icache ic_miss_o)
     logic dc_miss;    // D-cache miss pulse (from u_dcache dc_miss_o)
+
+    // =========================================================================
+    // D-cache maintenance wires (Phase 5 — MMIO bypass + flush/inval CSRs)
+    // =========================================================================
+    logic dc_flush_pulse;   // 1-cycle pulse from CSR 0x7C0 write → dcache CS_FLUSH_SCAN
+    logic dc_inval_pulse;   // 1-cycle pulse from CSR 0x7C1 write → dcache CS_INVAL_SCAN
+    logic dc_maint_done;    // 1-cycle pulse from dcache when scan completes (unused by
+                            // CSR file; available for perf-counter extension in Phase 6)
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic unused_dc_maint_done;
+    assign unused_dc_maint_done = dc_maint_done;  // named net; no consumer yet
+    /* verilator lint_on UNUSEDSIGNAL */
     // retire strobe = commit_valid (mem_wb_reg_i.valid && !trap_valid, from u_wb)
     // branch_mispred strobe = ex_pc_redirect_r (registered 1-cycle pulse)
 
@@ -568,9 +580,14 @@ module rv32i_core #(
         .mie_mtie         (mie_mtie),
         .mie_meie         (mie_meie),
         .mip              (mip),
-        .dbg_mstatus_o    (dbg_csr_mstatus_o),
-        .dbg_mie_o        (dbg_csr_mie_o),
-        .dbg_mcause_o     (dbg_csr_mcause_o)
+        .dbg_mstatus_o        (dbg_csr_mstatus_o),
+        .dbg_mie_o            (dbg_csr_mie_o),
+        .dbg_mcause_o         (dbg_csr_mcause_o),
+        // Pipeline stall — gates maintenance pulse to prevent re-fire during stall hold
+        .csr_stall_i          (stall_ex_mem),
+        // D-cache maintenance pulses (Phase 5)
+        .csr_dcache_flush_o   (dc_flush_pulse),
+        .csr_dcache_inval_o   (dc_inval_pulse)
     );
 
     // =========================================================================
@@ -820,6 +837,10 @@ module rv32i_core #(
         .dc_rdata_o       (dc_rdata),
         .dc_stall_o       (dc_stall),
         .dc_miss_o        (dc_miss),          // Phase 5 M7: miss strobe
+        // D-cache maintenance ports (Phase 5)
+        .dc_flush_i       (dc_flush_pulse),
+        .dc_inval_i       (dc_inval_pulse),
+        .dc_maint_done_o  (dc_maint_done),
         .axi_araddr_o     (dc_axi_araddr),
         .axi_arlen_o      (dc_axi_arlen),
         .axi_arsize_o     (dc_axi_arsize),
