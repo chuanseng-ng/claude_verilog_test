@@ -3,6 +3,26 @@
 Build and run commands per phase. For environment requirements see the root
 [`README.md`](../../README.md#requirements).
 
+## Nix dev shell (simulation + lint)
+
+A pinned nix flake at the repo root provides the deterministic EDA toolchain for
+simulation and lint — **Verilator 5.048**, iverilog, gcc, make — so local and CI
+toolchains match. Enter it before running any `sim/` make target:
+
+```bash
+nix develop          # primary entry point (flakes)
+# or, without flakes enabled:
+nix-shell            # same shell via shell.nix flake-compat wrapper
+
+cd sim && make test  # Verilator + cocotb now use the pinned toolchain
+```
+
+The Python/cocotb stack (cocotb, pyuvm, cocotbext-axi, cocotb-bus) stays on the
+system Python + pip — install once with
+`pip install -r requirements.txt cocotb-bus cocotbext-axi`. Synthesis / PnR is
+**not** covered by this shell; it uses the external librelane nix env via
+`pnr/Makefile`.
+
 ## Phase 0: Reference Model Testing (Complete ✅)
 
 ```bash
