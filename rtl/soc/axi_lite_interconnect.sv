@@ -15,6 +15,9 @@
 //     completes the transfer (a bad config access never stalls the CPU).
 //   * Parameterized SLV_BASE / SLV_LIMIT arrays keep the module reusable; the SoC
 //     top-level passes soc_periph_map_pkg constants.
+//   * SINGLE-MASTER ONLY: there is no arbitration logic.  A second control-plane
+//     master (e.g. Phase 6 DMA-to-peripheral access) requires an arbiter front
+//     end; do not wire one in without it.
 //
 // Lint note: flat unpacked-array slave ports, single-master engine, no SVA.
 

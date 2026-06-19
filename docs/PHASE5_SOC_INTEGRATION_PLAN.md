@@ -130,7 +130,7 @@ No PD this item (crossbar hardens at SoC top, M11).
 - ✅ Full regression: `soc_all` **73/73**; CPU rollup green (smoke/c_programs/isa_uvm 54 + fault_inj + caches + gpu_all); **1M+ cycle random SoC stress 0 failures** (`pgf`, `test_soc_stress.py` — 10-iter multi-master mix, **1,079,867 cycles**, watchdog + integrity invariants). Commit 2fad468.
 - ✅ Benchmarks (`pgf`, per iteration): CPU 32-word burst 2358 cyc; DMA mem→mem 26587 cyc; GPU kernel+flush+inval 50538 cyc.
 - ✅ **RTL bugs found+fixed via SoC verification:** `go9` (D-cache cached MMIO) and `7fs` (axi4_crossbar single-cycle-AR/AW handshake hang + arbitration priority mismatch — AR/AW capture regs + single-grant early-accept + lowest-index FSM capture; commit 550bd97; latent since Phase 4, masked by combinational-arready mock slaves).
-- **Exit**: ✅ all SoC tests green; boot 100/100 ✅; soc_all 73/73; 1M-cycle random clean (1,079,867 cyc, 0 fail). **M9 DONE.**
+- **Exit**: ✅ all SoC tests green; boot 100/100 ✅; soc_all 73/73; 1M-cycle random clean (1,079,867 cyc, 0 fail). **M9 DONE.** *(All fast-follow acceptance criteria from the original plan met: CPU→GPU 10/10 launches via gpu_irq; coherency 256-word buffer flush/inval; DMA+UART+SPI byte-exact loopback; AXI/backdoor SRAM sentinel check; full prior regression + 1M-cycle stress; CPU/GPU benchmark cycle counts recorded for the M10 L2 decision.)*
 
 ### M10 — L2 cache decision gate *(deps: M9 benchmarks)*
 - ⏸️ Review L1 miss rates from M9. Add `rtl/mem/l2_cache.sv` **only if** justified. Document the decision either way.

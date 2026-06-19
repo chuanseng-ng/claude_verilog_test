@@ -366,8 +366,14 @@ module rv32i_dcache (
 
     // =========================================================================
     // AXI read control — muxed between burst refill and uncached single-beat
-    //   Refill (CS_REFILL):       ARLEN=3 (4 beats), addr = line-base
+    //   Refill (CS_REFILL):       ARLEN=3 (4 beats), addr = line-base; slave
+    //     auto-increments 4 B/beat. ARSIZE=4B, ARBURST=INCR (constants from axi_pkg).
     //   Uncached (CS_UNCACHED_RD): ARLEN=0 (1 beat),  addr = dc_addr_q (word-aligned)
+    //   TRUSTED-SLAVE ASSUMPTION: refill completion keys on rvalid && rlast and
+    //   trusts the slave to deliver exactly ARLEN+1 beats (AXI4 requires this).
+    //   A protocol-violating early RLAST would mark a partially-filled line
+    //   valid; slave conformance is pinned by test_sram_controller.py
+    //   test_rlast_position rather than defended here.
     // =========================================================================
     always_comb begin
         if (state_q == CS_UNCACHED_RD) begin
