@@ -34,16 +34,16 @@ class RV32IModel:
     TRAP_ILLEGAL_INSTRUCTION = 2
 
     # Opcodes
-    OP_LUI    = 0b0110111
-    OP_AUIPC  = 0b0010111
-    OP_JAL    = 0b1101111
-    OP_JALR   = 0b1100111
+    OP_LUI = 0b0110111
+    OP_AUIPC = 0b0010111
+    OP_JAL = 0b1101111
+    OP_JALR = 0b1100111
     OP_BRANCH = 0b1100011
-    OP_LOAD   = 0b0000011
-    OP_STORE  = 0b0100011
+    OP_LOAD = 0b0000011
+    OP_STORE = 0b0100011
     OP_OP_IMM = 0b0010011
-    OP_OP     = 0b0110011
-    OP_SYSTEM = 0b1110011   # ECALL / EBREAK / CSR instructions
+    OP_OP = 0b0110011
+    OP_SYSTEM = 0b1110011  # ECALL / EBREAK / CSR instructions
 
     def __init__(self, reset_pc: int = 0x0000_0000, trap_vector: int = 0x0000_0100):
         """
@@ -477,8 +477,8 @@ class RV32IModel:
         CSRRW/CSRRS/CSRRC: write 0 to rd (model carries no CSR state).
         """
         funct12 = (insn >> 20) & 0xFFF
-        funct3  = (insn >> 12) & 0x7
-        rd      = (insn >> 7) & 0x1F
+        funct3 = (insn >> 12) & 0x7
+        rd = (insn >> 7) & 0x1F
 
         # EBREAK (funct12=0x001, funct3=0, rs1=0) — halt; do not advance PC.
         # The SoCModel boot() loop catches the re-raised EbreakTrap / halt signal.
