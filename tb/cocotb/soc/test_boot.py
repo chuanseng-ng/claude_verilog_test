@@ -219,27 +219,37 @@ async def test_boot_pc_scoreboard(dut):
     dut._log.info("test_boot_pc_scoreboard PASS")
 
 
+# Sentinel SRAM word indices (word-addressed: index = (addr - SRAM_BASE) >> 2)
+#   SRAM_BASE + 0x000 → word 0 → SENTINEL_0 (0xDEADBEEF)
+#   SRAM_BASE + 0x004 → word 1 → SENTINEL_1 (0x12345678)
+_SENTINEL_0_WI = 0   # SRAM[0x2000]
+_SENTINEL_1_WI = 1   # SRAM[0x2004]
+
+
 # ---------------------------------------------------------------------------
-# Test 2: SRAM sentinel state check (run after test 1 so CPU is past EBREAK)
+# Test 2: SRAM sentinel state check — DUT hardware SRAM backdoor readback
 # ---------------------------------------------------------------------------
 @cocotb.test()
 async def test_boot_sram_sentinels(dut):
-    """Fresh boot; verify SRAM[0x2000]=0xDEADBEEF and SRAM[0x2004]=0x12345678.
+    """Fresh boot; verify DUT hardware SRAM[0x2000]=0xDEADBEEF and SRAM[0x2004]=0x12345678.
 
-    Uses the APB3 debug interface to read SRAM through the CPU — but SRAM
-    is not directly accessible via APB3.  Instead we rely on commit_pc_o
-    reaching the EBREAK PC then waiting a few cycles for the AXI store to
-    settle, then checking commit_insn_o for the SW instruction encodings.
+    Mechanism: backdoor read of dut.u_soc.u_sram.mem[] via Verilator
+    --public-flat-rw hierarchy handle.  This is the same mechanism used by
+    test_soc_stress.py (post-pass SRAM readout) and test_soc_coherency.py
+    (kernel SRAM preload).  It directly reads the physical backing store of
+    the behavioral SRAM DUT, confirming the sentinel values physically landed
+    in hardware memory — not just that the correct SW instructions were
+    dispatched.  An AXI read path is not used here because no TB AXI master
+    exists in tb_soc_top.sv; the backdoor is the established pattern for all
+    post-execution SRAM checks in this project.
 
-    Simpler approach used here: check the commit_insn_o bus at the SW
-    commit cycles to confirm the correct instruction was executed, and
-    confirm commit count == len(golden PCs).  The SoCModel already verified
-    the final SRAM state at the Python level.
+    The golden reference model check is retained as a pre-flight guard before
+    the DUT simulation runs, so a model bug is caught separately from a DUT bug.
     """
-    dut._log.info("Checking golden SRAM state from reference model...")
+    dut._log.info("Checking golden SRAM state from reference model (pre-flight)...")
     golden_sram = _GOLDEN_STATE["sram_words"]
 
-    # Confirm golden model has the sentinels
+    # Pre-flight: confirm golden model has the expected sentinels
     w0_golden = golden_sram.get(SRAM_BASE, None)
     w1_golden = golden_sram.get(SRAM_BASE + 4, None)
     assert w0_golden == SENTINEL_0, (
@@ -248,47 +258,70 @@ async def test_boot_sram_sentinels(dut):
     assert w1_golden == SENTINEL_1, (
         f"Golden model SRAM[0x2004] = 0x{w1_golden:08x}, expected 0x{SENTINEL_1:08x}"
     )
-    dut._log.info(f"Golden SRAM sentinels confirmed: "
-                  f"[0x2000]=0x{SENTINEL_0:08X}, [0x2004]=0x{SENTINEL_1:08X}")
+    dut._log.info(
+        "Golden SRAM sentinels confirmed: "
+        f"[0x2000]=0x{SENTINEL_0:08X}, [0x2004]=0x{SENTINEL_1:08X}"
+    )
 
-    # Fresh boot of DUT
+    # Fresh boot of DUT — backdoor-loads firmware and releases reset
     await _setup(dut)
 
-    # Collect commits and capture insn words at SW positions
-    # Golden sequence: LUI x2, LUI x3, ADDI x3, SW(idx=3), LUI x4, ADDI x4, SW(idx=6), EBREAK
-    SW0_IDX  = 3   # SW x3, 0(x2)  → store SRAM[0x2000]
-    SW1_IDX  = 6   # SW x4, 4(x2)  → store SRAM[0x2004]
-    SW0_INSN = 0x00312023  # encoding from gen_boot_hex.py
-    SW1_INSN = 0x00412223
-
-    collected_pcs:  list[int] = []
-    collected_insns: list[int] = []
-
+    # Wait for DUT to commit all golden PCs (firmware reaches EBREAK)
+    collected_pcs: list[int] = []
     for _ in range(BOOT_TIMEOUT_CYCLES):
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         if dut.commit_valid_o.value:
             collected_pcs.append(int(dut.commit_pc_o.value))
-            collected_insns.append(int(dut.commit_insn_o.value))
             if len(collected_pcs) >= len(_GOLDEN_PCS):
                 break
 
     assert len(collected_pcs) == len(_GOLDEN_PCS), (
-        f"Expected {len(_GOLDEN_PCS)} commits, got {len(collected_pcs)}"
+        f"Expected {len(_GOLDEN_PCS)} commits before SRAM check, "
+        f"got {len(collected_pcs)}"
     )
 
-    # Check SW instruction commits carry correct encodings
-    assert collected_insns[SW0_IDX] == SW0_INSN, (
-        f"commit[{SW0_IDX}] insn = 0x{collected_insns[SW0_IDX]:08x}, "
-        f"expected SW0 = 0x{SW0_INSN:08x}"
-    )
-    assert collected_insns[SW1_IDX] == SW1_INSN, (
-        f"commit[{SW1_IDX}] insn = 0x{collected_insns[SW1_IDX]:08x}, "
-        f"expected SW1 = 0x{SW1_INSN:08x}"
+    # At this point the D-cache flush (CSRRW x0, 0x7C0, x0 at PC 0x101c) has
+    # already committed: the pipeline stalls until the flush-all FSM transitions
+    # out of CS_FLUSH_SCAN (all dirty lines written back).  However, the last
+    # dirty-line burst (4 AXI4 beats) may still be propagating through the
+    # axi4_crossbar W_DATA FSM to the sram_controller at commit time.  The EBREAK
+    # commit (PC 0x1020, not in golden_pcs) is counted above — wait after all 8
+    # commits for the final SRAM write burst to fully settle in the backing store.
+    # 20 cycles is generous for a 4-beat AXI burst through the crossbar + SRAM.
+    for _ in range(20):
+        await RisingEdge(dut.clk_i)
+    await ReadOnly()
+
+    # DUT-side SRAM backdoor readback — same handle as test_soc_stress.py:202
+    # and test_soc_coherency.py:128.  mem[] is word-indexed (32-bit words);
+    # word_index = (byte_addr - SRAM_BASE) >> 2.
+    sram = dut.u_soc.u_sram.mem
+    dut_w0 = int(sram[_SENTINEL_0_WI].value)
+    dut_w1 = int(sram[_SENTINEL_1_WI].value)
+
+    dut._log.info(
+        "DUT SRAM backdoor read: "
+        f"mem[{_SENTINEL_0_WI}] (0x{SRAM_BASE:08x}) = 0x{dut_w0:08x}, "
+        f"mem[{_SENTINEL_1_WI}] (0x{SRAM_BASE+4:08x}) = 0x{dut_w1:08x}"
     )
 
-    dut._log.info("SW instruction commits verified at correct positions")
-    dut._log.info("test_boot_sram_sentinels PASS")
+    # Hard assertions — fail if hardware SRAM does not hold the expected sentinels
+    assert dut_w0 == SENTINEL_0, (
+        f"DUT SRAM[0x{SRAM_BASE:08x}] (word {_SENTINEL_0_WI}) = 0x{dut_w0:08x}, "
+        f"expected SENTINEL_0 = 0x{SENTINEL_0:08x}.  "
+        f"SW x3, 0(x2) either did not complete AXI write or wrote to the wrong address."
+    )
+    assert dut_w1 == SENTINEL_1, (
+        f"DUT SRAM[0x{SRAM_BASE+4:08x}] (word {_SENTINEL_1_WI}) = 0x{dut_w1:08x}, "
+        f"expected SENTINEL_1 = 0x{SENTINEL_1:08x}.  "
+        f"SW x4, 4(x2) either did not complete AXI write or wrote to the wrong address."
+    )
+
+    dut._log.info(
+        "test_boot_sram_sentinels PASS — DUT hardware SRAM holds correct sentinels: "
+        f"[0x{SRAM_BASE:08x}]=0x{dut_w0:08X}, [0x{SRAM_BASE+4:08x}]=0x{dut_w1:08X}"
+    )
 
 
 # ---------------------------------------------------------------------------
