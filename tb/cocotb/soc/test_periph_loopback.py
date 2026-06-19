@@ -86,7 +86,12 @@ def _rom_words() -> list:
 def _load_rom(dut) -> None:
     """Backdoor-load the firmware image into tb_soc_top.u_soc.u_boot_rom.mem."""
     mem = dut.u_soc.u_boot_rom.mem
-    for i, word in enumerate(_rom_words()):
+    words = _rom_words()
+    assert len(words) <= len(mem), (
+        f"Firmware image ({len(words)} words) exceeds boot ROM capacity "
+        f"({len(mem)} words) — regenerate periph_loopback.hex"
+    )
+    for i, word in enumerate(words):
         mem[i].value = word
 
 

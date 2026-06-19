@@ -829,10 +829,17 @@ module rv32i_dcache (
                     end else begin
                         // R channel: wait for R beat (single beat, RLAST=1 from AXI spec)
                         if (axi_rvalid_i) begin
-                            uncached_rdata_q         <= axi_rdata_i;
-                            refill_buf_q[latch_word] <= axi_rdata_i;  // for CS_DONE rdata mux
-                            ar_pending_q             <= 1'b0;
-                            state_q                  <= CS_DONE;  // stall=0 for 1 cycle, then CS_IDLE
+                            ar_pending_q <= 1'b0;
+                            state_q      <= CS_DONE;  // stall=0 for 1 cycle, then CS_IDLE
+                            if (axi_rresp_i == 2'b00) begin
+                                // OKAY: latch valid read data
+                                uncached_rdata_q         <= axi_rdata_i;
+                                refill_buf_q[latch_word] <= axi_rdata_i;  // for CS_DONE rdata mux
+                            end else begin
+                                // Error response: return 0x0 rather than bus garbage; no hang
+                                uncached_rdata_q         <= 32'h0;
+                                refill_buf_q[latch_word] <= 32'h0;
+                            end
                         end
                     end
                 end
@@ -857,11 +864,13 @@ module rv32i_dcache (
                     // W channel: single beat, wvalid/wlast driven combinationally
                     if (!w_done_q && axi_wvalid_o && axi_wready_i)
                         w_done_q <= 1'b1;
-                    // B channel: wait for write response
+                    // B channel: complete on OKAY or error; never hang on bad response
                     if (axi_bvalid_i) begin
                         aw_done_q <= 1'b0;
                         w_done_q  <= 1'b0;
                         state_q   <= CS_DONE;   // release stall for 1 cycle before CS_IDLE
+                        // axi_bresp_i is silently consumed: no CPU exception path exists
+                        // at the dcache interface; goal is robustness (no hang), not trapping
                     end
                 end
 

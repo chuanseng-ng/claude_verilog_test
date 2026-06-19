@@ -441,6 +441,11 @@ def build_stress_fw() -> list:
     a.label('MAIN')
     _emit_load_u32(a, 1, STRESS_ITER)          # x1 = STRESS_ITER
 
+    # Zero the iteration counter in SRAM before the first read-increment-write.
+    # SRAM is not guaranteed zero at boot; explicit initialise ensures ITER_WI
+    # starts at 0 rather than relying on the backing store reset state.
+    _emit_sram_write(a, SRAM_BASE + ITER_WI * 4, 0)
+
     # Initialise GPU src buffer in SRAM once (before loop, so GPU kernel
     # always has valid source data on first iteration).
     # GPU_SRC[l] = l | (MAGIC << 8)  for l in 0..7

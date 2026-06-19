@@ -281,6 +281,22 @@ async def test_boot_sram_sentinels(dut):
         f"got {len(collected_pcs)}"
     )
 
+    # Full PC-trace assert: every committed PC must match the golden model exactly.
+    assert collected_pcs == _GOLDEN_PCS, (
+        f"PC trace mismatch (got {len(collected_pcs)} commits, "
+        f"expected {len(_GOLDEN_PCS)}):\n"
+        + "\n".join(
+            f"  [{i}] got=0x{got:08x} exp=0x{exp:08x}"
+            + (" <-- MISMATCH" if got != exp else "")
+            for i, (got, exp) in enumerate(zip(collected_pcs, _GOLDEN_PCS))
+        )
+        + (
+            f"\n  extra commits: "
+            + ", ".join(f"0x{p:08x}" for p in collected_pcs[len(_GOLDEN_PCS):])
+            if len(collected_pcs) > len(_GOLDEN_PCS) else ""
+        )
+    )
+
     # At this point the D-cache flush (CSRRW x0, 0x7C0, x0 at PC 0x101c) has
     # already committed: the pipeline stalls until the flush-all FSM transitions
     # out of CS_FLUSH_SCAN (all dirty lines written back).  However, the last

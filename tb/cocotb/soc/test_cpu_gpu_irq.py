@@ -152,7 +152,8 @@ async def _setup(dut, hex_path: str = _FW_HEX) -> None:
     """Start clock, idle inputs, backdoor-load firmware, apply + release reset."""
     _kill_active_tasks()
 
-    cocotb.start_soon(Clock(dut.clk_i, CLK_PERIOD_NS, units="ns").start())
+    clk_task = cocotb.start_soon(Clock(dut.clk_i, CLK_PERIOD_NS, units="ns").start())
+    _active_tasks.append(clk_task)
 
     dut.rst_n_i.value       = 0
     dut.apb_paddr_i.value   = 0

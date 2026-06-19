@@ -247,7 +247,7 @@ async def test_soc_stress(dut):
     # ── Verify timer is non-zero (proves AXI-Lite timer path was reached) ─────
     assert timer_snap != 0, (
         f"Timer snapshot is 0 — timer AXI-Lite read path not exercised or "
-        f"timer counter never incremented (check timer enable)"
+        "timer counter never incremented (check timer enable)"
     )
 
     # ── Summary ───────────────────────────────────────────────────────────────
