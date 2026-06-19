@@ -291,7 +291,7 @@ async def test_boot_sram_sentinels(dut):
             for i, (got, exp) in enumerate(zip(collected_pcs, _GOLDEN_PCS))
         )
         + (
-            f"\n  extra commits: "
+            "\n  extra commits: "
             + ", ".join(f"0x{p:08x}" for p in collected_pcs[len(_GOLDEN_PCS):])
             if len(collected_pcs) > len(_GOLDEN_PCS) else ""
         )

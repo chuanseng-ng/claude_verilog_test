@@ -198,7 +198,7 @@ help:
 	@echo "  make lint_soc     - Run Verilator lint check for soc_top (Phase 5 M8)"
 	@echo "  make verible      - Run Verible style-lint + format check on rtl/ (needs verible)"
 	@echo "  make lint-verible        - Verible SystemVerilog style lint only"
-	@echo "  make format-verible-check- Verible format check (non-mutating)"
+	@echo "  make format-verible-check - Verible format check (non-mutating)"
 	@echo "  make format-verible-fix  - Verible reformat rtl/ in place"
 	@echo "  make cdc          - Run Bedrock cdc_snitch CDC check (informational; CDC_STRICT=1 to gate)"
 	@echo "  make soc_periph     - Run Phase 5 M9 SoC DMA + peripheral loopback test"
