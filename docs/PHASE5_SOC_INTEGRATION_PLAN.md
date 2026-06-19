@@ -114,7 +114,7 @@ No PD this item (crossbar hardens at SoC top, M11).
 - ✅ Behavioral boot ROM @0x0000_1000 (`rtl/soc/boot_rom.sv`).
 - **Exit**: ✅ SoC elaborates lint-clean (`make -C sim lint_soc`); functionally booted in M9 foundation slice.
 
-### M9 — SoC verification *(deps: M8)* 🔄 IN PROGRESS — foundation slice ✅ DONE (2026-06-03)
+### M9 — SoC verification *(deps: M8)* ✅ COMPLETE (2026-06-19) — foundation slice ✅ DONE (2026-06-03)
 **Foundation slice ✅ (2026-06-03):**
 - ✅ Created `tb/cocotb/soc/` boot infra + `soc_boot`/`soc_boot_diag` targets; `soc_all` extended to all M3–M6 component suites + boot.
 - ✅ SoC reference model `tb/models/soc_model.py` — composes `rv32i_model.RV32IModel` + `memory_model.MemoryModel` over ROM+SRAM; golden committed-PC stream + final state. (Peripheral-state models deferred to integration fast-follows.)
@@ -122,14 +122,15 @@ No PD this item (crossbar hardens at SoC top, M11).
 - ✅ Boot test `tb/cocotb/soc/test_boot.py` — PC scoreboard + SRAM sentinels + **100/100 boot-stability gate, 0 fail**. `soc_all` green (crossbar 6, register_bank 6, axil 4, sram 7, dma 6, timer 5, irq 6, uart 11, spi 13, boot 3 — 0 FAIL).
 - ✅ Bring-up bugs fixed: (1) CPU reset PC hardcoded 0x0 → added `RESET_PC` param (default 0x0) through `rv32i_pipeline_if`→`rv32i_core`→`rv32i_cpu_top`, `soc_top` sets 0x0000_1000; (2) boot ROM image never loaded (string `MEM_INIT_FILE` baked empty under Verilator) → cocotb backdoor load of `boot.hex` into `boot_rom.mem`.
 
-**Fast-follows (remaining M9):**
-- ⏸️ CPU→GPU integration: kernel launch → `gpu_irq_o` → result read (extend `test_cpu_gpu_handoff.py` to data plane).
-- ⏸️ Software coherency: CPU D$ flush → GPU kernel → CPU D$ invalidate.
-- ⏸️ DMA transfer + peripheral loopback (UART TX→RX, SPI).
-- ⏸️ Stronger SRAM check: read DUT SRAM back over AXI (current sentinel test relies on the golden model + SW-commit observation).
-- ⏸️ Full regression: prior CPU (140) + GPU + cache; **1M+ cycle random SoC stress, 0 failures**.
-- ⏸️ Benchmarks: CPU (vector add, dot product, memcpy, branch loop) + GPU (vector add, reduction, matmul, prefix scan, divergence).
-- **Exit**: all SoC tests green; boot 100/100 ✅; 1M-cycle random clean (pending).
+**Fast-follows ✅ COMPLETE (2026-06-19):**
+- ✅ DMA + peripheral loopback (`qdd`): `test_periph_loopback.py` — DMA mem→mem + UART TX→RX + SPI internal loopback through `soc_top`, self-checking PASS_PC + backdoor DMA check. **1/1.** *(Unblocked by `go9` D-cache MMIO bypass: `addr ≥ 0x2000_0000` uncached single-beat AXI + flush/inval CSRs 0x7C0/0x7C1 — `rv32i_dcache.sv`/`rv32i_csr_file.sv`; commit 9f53f65.)*
+- ✅ Software coherency (`777`): `test_soc_coherency.py` — CPU writes src → `CSRW 0x7C0` flush → GPU kernel reads src + writes dst → `CSRW 0x7C1` inval → CPU reads dst. **3/3** (positive + no_flush negative reaches FAIL_PC + no_inval cold-line). *(Unblocked by `7fs` crossbar AR/AW fix below.)*
+- ✅ CPU→GPU integration (`ov2`): `test_cpu_gpu_irq.py` — CPU launches GPU kernel via AXI-Lite cmd queue, waits interrupt-driven on `gpu_irq`, ISR runs, reads result from SRAM. **2/2** (positive + IRQ-not-enabled teeth). Commit 4c2ffd9.
+- ✅ Stronger SRAM check (`yqc`): `test_boot_sram_sentinels` now backdoor-reads the hardware SRAM array to confirm 0xDEADBEEF/0x12345678 physically landed (boot fw flushes D$ before halt). Commit 83883dc.
+- ✅ Full regression: `soc_all` **73/73**; CPU rollup green (smoke/c_programs/isa_uvm 54 + fault_inj + caches + gpu_all); **1M+ cycle random SoC stress 0 failures** (`pgf`, `test_soc_stress.py` — 10-iter multi-master mix, **1,079,867 cycles**, watchdog + integrity invariants). Commit 2fad468.
+- ✅ Benchmarks (`pgf`, per iteration): CPU 32-word burst 2358 cyc; DMA mem→mem 26587 cyc; GPU kernel+flush+inval 50538 cyc.
+- ✅ **RTL bugs found+fixed via SoC verification:** `go9` (D-cache cached MMIO) and `7fs` (axi4_crossbar single-cycle-AR/AW handshake hang + arbitration priority mismatch — AR/AW capture regs + single-grant early-accept + lowest-index FSM capture; commit 550bd97; latent since Phase 4, masked by combinational-arready mock slaves).
+- **Exit**: ✅ all SoC tests green; boot 100/100 ✅; soc_all 73/73; 1M-cycle random clean (1,079,867 cyc, 0 fail). **M9 DONE.**
 
 ### M10 — L2 cache decision gate *(deps: M9 benchmarks)*
 - ⏸️ Review L1 miss rates from M9. Add `rtl/mem/l2_cache.sv` **only if** justified. Document the decision either way.

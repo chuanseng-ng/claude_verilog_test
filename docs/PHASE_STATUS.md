@@ -1,10 +1,13 @@
 # Project Phase Status
 
-Last updated: 2026-05-27
+Last updated: 2026-06-19
 
 ## Current Phase
 
-**Phase 5: SoC Integration** - ⏸️ NOT STARTED
+**Phase 5: SoC Integration** - 🚧 IN PROGRESS — M1–M9 ✅ complete (2026-06-19); M10 L2 decision gate next, then M11 physical design / M12 sign-off.
+
+- M1–M8 ✅: AXI4 crossbar + AXI-Lite ring, cache burst upgrade, peripherals (UART/SPI/timer/IRQ), DMA, behavioral SRAM, perf counters, SoC top.
+- M9 ✅ SoC verification: boot 100/100; DMA+UART+SPI loopback; SW coherency (D$ flush→GPU→D$ inval); CPU-GPU IRQ integration; DUT-side boot SRAM check. `soc_all` 73/73; 1M+ cycle stress (1,079,867 cyc, 0 fail). Two RTL bugs found+fixed: D-cache MMIO caching (`go9`) and axi4_crossbar AR/AW handshake+arbitration (`7fs`).
 
 **Previous Phases**:
 - Phase 4 (GPU-Lite SIMT Compute Engine) - ✅ COMPLETE (2026-05-27) — all GPU tests green, ASAP7 ≥500 MHz sign-off
