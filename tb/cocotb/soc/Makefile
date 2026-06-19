@@ -165,7 +165,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_all verilator_lint soc_boot_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_all verilator_lint soc_boot_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -303,10 +303,26 @@ soc_cpu_gpu: soc_boot_lint
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
+# M9 SoC stress + benchmark test (bead claude_verilog_test-pgf).
+# Self-checking firmware runs STRESS_ITER=10 outer loops exercising CPU burst,
+# DMA, GPU kernel, UART/SPI loopback, and timer in each loop (≥1M sim cycles).
+# Waveform tracing is DISABLED (EXTRA_ARGS="") — tracing 1M+ cycles would
+# generate a multi-GB VCD dump.  Keep this target OUT of soc_all because
+# runtime is long (>5 min); run explicitly with `make soc_stress`.
+soc_stress: soc_boot_lint
+	/usr/bin/python3 $(SOC_DIR)/stress_fw/gen_stress_hex.py
+	$(MAKE) clean
+	$(MAKE) MODULE=test_soc_stress TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
 # Run every SoC test: M3–M6 component suites + M9 boot + M9 periph + M9 coherency + M9 cpu_gpu.
 # Use rm -rf sim_build (not $(MAKE) clean) for each suite so that stale or
 # partially-written files from a prior build — including large PCH .gch files
 # that $(MAKE) clean sometimes leaves behind — are reliably purged.
+# NOTE: soc_stress is intentionally excluded from soc_all (long runtime >5 min).
 soc_all:
 	rm -rf sim_build && $(MAKE) crossbar
 	rm -rf sim_build && $(MAKE) register_bank

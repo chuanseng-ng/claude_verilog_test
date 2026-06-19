@@ -200,6 +200,7 @@ help:
 	@echo "  make soc_boot       - Run Phase 5 M9 SoC boot test (PC scoreboard + 100/100 stability)"
 	@echo "  make soc_coherency  - Run Phase 5 M9 SoC software coherency test (flush+GPU+inval)"
 	@echo "  make soc_cpu_gpu    - Run Phase 5 M9 interrupt-driven CPU-GPU integration test (IRQ path)"
+	@echo "  make soc_stress     - Run Phase 5 M9 SoC stress + benchmark (≥1M cycles, no trace, separate from soc_all)"
 	@echo "  make soc_all        - Run all SoC component + boot + periph + coherency + cpu_gpu tests (M3-M6 + M9)"
 	@echo "  make axi          - Run AXI protocol tests only"
 	@echo "  make debug        - Run APB3 debug interface tests only"
@@ -564,7 +565,7 @@ cache_integration:
 # Phase 5 SoC tests (delegates to tb/cocotb/soc/Makefile)
 # soc_all: M3-M6 component suites + M9 boot test.
 # soc_boot: M9 SoC boot test only (BLOCKED until CPU RESET_PC fix lands).
-.PHONY: soc_all soc_boot soc_periph soc_coherency soc_cpu_gpu
+.PHONY: soc_all soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress
 soc_boot:
 	@echo "Running Phase 5 M9 SoC boot test..."
 	$(MAKE) -C ../tb/cocotb/soc soc_boot
@@ -580,6 +581,10 @@ soc_coherency:
 soc_cpu_gpu:
 	@echo "Running Phase 5 M9 interrupt-driven CPU-GPU integration test..."
 	$(MAKE) -C ../tb/cocotb/soc soc_cpu_gpu
+
+soc_stress:
+	@echo "Running Phase 5 M9 SoC stress + benchmark (≥1M cycles, no trace)..."
+	$(MAKE) -C ../tb/cocotb/soc soc_stress
 
 soc_all:
 	@echo "Running Phase 5 SoC tests (M3-M6 components + M9 boot + M9 periph + M9 coherency + M9 cpu_gpu)..."
