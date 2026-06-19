@@ -17,6 +17,15 @@
 #   -Wno-tautological-*     clang-only warning family
 #   -include-pch <file>     clang PCH loader; dropped because Vtop.cpp has
 #                           an explicit #include "Vtop__pch.h" at the top
+#   -MMD                    dependency-file generation; verilated.mk uses it
+#                           without -MF, so GCC tries to write the .d file next
+#                           to the source file — which is the nix read-only
+#                           store for verilated.cpp/verilated_vpi.cpp etc.
+#                           Dep files are only needed for incremental builds;
+#                           soc_all always does `make clean` before each suite,
+#                           so stripping -MMD is safe and prevents the fatal
+#                           "opening dependency file *.d: No such file or
+#                           directory" error on a fresh sim_build.
 ARGS=()
 skip_next=0
 for arg in "$@"; do
@@ -26,7 +35,8 @@ for arg in "$@"; do
         -Wno-constant-logical-operand|-Wno-tautological-bitwise-compare|\
         -Wno-tautological-type-limit-compare|\
         -Wno-c++11-narrowing|-Wno-non-pod-varargs|\
-        -Wno-overloaded-virtual|-Wno-parentheses-equality) : ;;
+        -Wno-overloaded-virtual|-Wno-parentheses-equality|\
+        -MMD) : ;;
         -include-pch) skip_next=1 ;;
         *) ARGS+=("$arg") ;;
     esac
