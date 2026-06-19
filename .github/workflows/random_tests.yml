@@ -64,6 +64,15 @@ jobs:
       - name: Show Verilator version
         run: nix develop --command verilator --version
 
+      - name: Install runtime libs for cocotb (system libffi etc.)
+        # cocotb runs on the setup-python interpreter, not nix. sim/Makefile's
+        # NIX_COMPAT_DIR loop symlinks these system libs (resolved via ldconfig)
+        # so the Verilator sim binary can dlopen libpython/ctypes. The old CI
+        # pulled them in transitively via apt; the nix migration dropped that.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5
+
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
@@ -248,6 +257,15 @@ jobs:
       - name: Show Verilator version
         run: nix develop --command verilator --version
 
+      - name: Install runtime libs for cocotb (system libffi etc.)
+        # cocotb runs on the setup-python interpreter, not nix. sim/Makefile's
+        # NIX_COMPAT_DIR loop symlinks these system libs (resolved via ldconfig)
+        # so the Verilator sim binary can dlopen libpython/ctypes. The old CI
+        # pulled them in transitively via apt; the nix migration dropped that.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5
+
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
@@ -373,6 +391,15 @@ jobs:
 
       - name: Show Verilator version
         run: nix develop --command verilator --version
+
+      - name: Install runtime libs for cocotb (system libffi etc.)
+        # cocotb runs on the setup-python interpreter, not nix. sim/Makefile's
+        # NIX_COMPAT_DIR loop symlinks these system libs (resolved via ldconfig)
+        # so the Verilator sim binary can dlopen libpython/ctypes. The old CI
+        # pulled them in transitively via apt; the nix migration dropped that.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5
 
       - name: Install Python dependencies
         run: |
