@@ -128,15 +128,29 @@ module axi4_crossbar #(
     // Per-slave WRITE engine
     // ─────────────────────────────────────────────────────────────────────────
     typedef enum logic [1:0] { W_IDLE, W_AW, W_DATA, W_RESP } wstate_e;
-    wstate_e            wstate [N_SLAVES];
-    logic [MIDX_W-1:0]  wsel   [N_SLAVES];   // granted master per slave
+    wstate_e            wstate    [N_SLAVES];
+    logic [MIDX_W-1:0]  wsel      [N_SLAVES];   // granted master per slave
+    // AW capture registers: latch master AW fields on W_IDLE→W_AW so that a
+    // single-cycle AWVALID master (e.g. future GPU store path) is correctly
+    // held until the slave asserts AWREADY (AXI4 IHI0022 rule A3-38).
+    logic [AW-1:0]      aw_addr_q [N_SLAVES];
+    logic [LENW-1:0]    aw_len_q  [N_SLAVES];
+    logic [2:0]         aw_size_q [N_SLAVES];
+    logic [1:0]         aw_burst_q[N_SLAVES];
 
     // ─────────────────────────────────────────────────────────────────────────
     // Per-slave READ engine
     // ─────────────────────────────────────────────────────────────────────────
     typedef enum logic [1:0] { R_IDLE, R_AR, R_DATA } rstate_e;
-    rstate_e            rstate [N_SLAVES];
-    logic [MIDX_W-1:0]  rsel   [N_SLAVES];
+    rstate_e            rstate    [N_SLAVES];
+    logic [MIDX_W-1:0]  rsel      [N_SLAVES];
+    // AR capture registers: latch master AR fields on R_IDLE→R_AR so that a
+    // single-cycle ARVALID master (gpu_compute_unit if_arvalid_o) is correctly
+    // held until the slave asserts ARREADY (AXI4 IHI0022 rule A3-38).
+    logic [AW-1:0]      ar_addr_q [N_SLAVES];
+    logic [LENW-1:0]    ar_len_q  [N_SLAVES];
+    logic [2:0]         ar_size_q [N_SLAVES];
+    logic [1:0]         ar_burst_q[N_SLAVES];
 
     // ─────────────────────────────────────────────────────────────────────────
     // Per-master DECERR engines (for unmapped addresses)
@@ -179,13 +193,16 @@ module axi4_crossbar #(
             s_bready [gs] = 1'b0;
             unique case (wstate[gs])
                 W_AW: begin
-                    // Zero-extend master index (MIDX_W bits) to full AXI ID width (IW bits).
+                    // Drive from captured registers, not live master signals.
+                    // AW fields were latched on the W_IDLE→W_AW clock edge so
+                    // a single-cycle AWVALID master is safely held until
+                    // AWREADY (AXI4 IHI0022 rule A3-38).
                     s_awid   [gs] = IW'(wsel[gs]);
-                    s_awaddr [gs] = m_awaddr [wsel[gs]];
-                    s_awlen  [gs] = m_awlen  [wsel[gs]];
-                    s_awsize [gs] = m_awsize [wsel[gs]];
-                    s_awburst[gs] = m_awburst[wsel[gs]];
-                    s_awvalid[gs] = m_awvalid[wsel[gs]];
+                    s_awaddr [gs] = aw_addr_q [gs];
+                    s_awlen  [gs] = aw_len_q  [gs];
+                    s_awsize [gs] = aw_size_q [gs];
+                    s_awburst[gs] = aw_burst_q[gs];
+                    s_awvalid[gs] = 1'b1;   // valid is captured; held until AWREADY
                 end
                 W_DATA: begin
                     s_wdata  [gs] = m_wdata [wsel[gs]];
@@ -203,20 +220,41 @@ module axi4_crossbar #(
         // Grant FSM.
         always_ff @(posedge clk) begin
             if (!rst_n) begin
-                wstate[gs] <= W_IDLE;
-                wsel  [gs] <= '0;
+                wstate    [gs] <= W_IDLE;
+                wsel      [gs] <= '0;
+                aw_addr_q [gs] <= '0;
+                aw_len_q  [gs] <= '0;
+                aw_size_q [gs] <= AXI_SIZE_4B;
+                aw_burst_q[gs] <= AXI_BURST_INCR;
             end else begin
                 unique case (wstate[gs])
                     W_IDLE: begin
-                        for (int unsigned m = 0; m < N_MASTERS; m++) begin
-                            if (wstate[gs] == W_IDLE &&
-                                m_awvalid[m] && decode(m_awaddr[m]) == gs) begin
-                                wsel  [gs] <= m[MIDX_W-1:0];
-                                wstate[gs] <= W_AW;
+                        // found_wr prevents lower-priority (higher-index) masters
+                        // from overwriting the capture once the priority winner
+                        // (lowest index) has been latched.  This matches the
+                        // aw_priority_winner logic in the master-facing resolution
+                        // block, which gates early-accept arready/awready on the
+                        // same lowest-index criterion.
+                        begin : wr_arb
+                            logic found_wr;
+                            found_wr = 1'b0;
+                            for (int unsigned m = 0; m < N_MASTERS; m++) begin
+                                if (!found_wr &&
+                                    m_awvalid[m] && decode(m_awaddr[m]) == gs) begin
+                                    wsel      [gs] <= m[MIDX_W-1:0];
+                                    // Capture AW fields now — master may deassert
+                                    // AWVALID the next cycle (AXI4 single-cycle pulse).
+                                    aw_addr_q [gs] <= m_awaddr [m];
+                                    aw_len_q  [gs] <= m_awlen  [m];
+                                    aw_size_q [gs] <= m_awsize [m];
+                                    aw_burst_q[gs] <= m_awburst[m];
+                                    wstate    [gs] <= W_AW;
+                                    found_wr        = 1'b1;
+                                end
                             end
                         end
                     end
-                    W_AW:   if (s_awvalid[gs] && s_awready[gs]) wstate[gs] <= W_DATA;
+                    W_AW:   if (s_awready[gs]) wstate[gs] <= W_DATA;
                     W_DATA: if (s_wvalid[gs] && s_wready[gs] && m_wlast[wsel[gs]])
                                 wstate[gs] <= W_RESP;
                     W_RESP: if (s_bvalid[gs] && s_bready[gs]) wstate[gs] <= W_IDLE;
@@ -240,13 +278,17 @@ module axi4_crossbar #(
             s_rready [gs] = 1'b0;
             unique case (rstate[gs])
                 R_AR: begin
-                    // Zero-extend master index (MIDX_W bits) to full AXI ID width (IW bits).
+                    // Drive from captured registers, not live master signals.
+                    // AR fields were latched on the R_IDLE→R_AR clock edge so
+                    // a single-cycle ARVALID master (e.g. gpu_compute_unit
+                    // if_arvalid_o) is correctly held until ARREADY
+                    // (AXI4 IHI0022 rule A3-38).
                     s_arid   [gs] = IW'(rsel[gs]);
-                    s_araddr [gs] = m_araddr [rsel[gs]];
-                    s_arlen  [gs] = m_arlen  [rsel[gs]];
-                    s_arsize [gs] = m_arsize [rsel[gs]];
-                    s_arburst[gs] = m_arburst[rsel[gs]];
-                    s_arvalid[gs] = m_arvalid[rsel[gs]];
+                    s_araddr [gs] = ar_addr_q [gs];
+                    s_arlen  [gs] = ar_len_q  [gs];
+                    s_arsize [gs] = ar_size_q [gs];
+                    s_arburst[gs] = ar_burst_q[gs];
+                    s_arvalid[gs] = 1'b1;   // valid is captured; held until ARREADY
                 end
                 R_DATA: begin
                     s_rready [gs] = m_rready[rsel[gs]];
@@ -257,20 +299,42 @@ module axi4_crossbar #(
 
         always_ff @(posedge clk) begin
             if (!rst_n) begin
-                rstate[gs] <= R_IDLE;
-                rsel  [gs] <= '0;
+                rstate    [gs] <= R_IDLE;
+                rsel      [gs] <= '0;
+                ar_addr_q [gs] <= '0;
+                ar_len_q  [gs] <= '0;
+                ar_size_q [gs] <= AXI_SIZE_4B;
+                ar_burst_q[gs] <= AXI_BURST_INCR;
             end else begin
                 unique case (rstate[gs])
                     R_IDLE: begin
-                        for (int unsigned m = 0; m < N_MASTERS; m++) begin
-                            if (rstate[gs] == R_IDLE &&
-                                m_arvalid[m] && decode(m_araddr[m]) == gs) begin
-                                rsel  [gs] <= m[MIDX_W-1:0];
-                                rstate[gs] <= R_AR;
+                        // found_rd prevents lower-priority (higher-index) masters
+                        // from overwriting the capture once the priority winner
+                        // (lowest index) has been latched.  This matches the
+                        // ar_priority_winner logic in the master-facing resolution
+                        // block, which gates early-accept arready on the same
+                        // lowest-index criterion.
+                        begin : rd_arb
+                            logic found_rd;
+                            found_rd = 1'b0;
+                            for (int unsigned m = 0; m < N_MASTERS; m++) begin
+                                if (!found_rd &&
+                                    m_arvalid[m] && decode(m_araddr[m]) == gs) begin
+                                    rsel      [gs] <= m[MIDX_W-1:0];
+                                    // Capture AR fields now — master may deassert
+                                    // ARVALID the next cycle (AXI4 single-cycle pulse,
+                                    // e.g. gpu_compute_unit if_arvalid_o).
+                                    ar_addr_q [gs] <= m_araddr [m];
+                                    ar_len_q  [gs] <= m_arlen  [m];
+                                    ar_size_q [gs] <= m_arsize [m];
+                                    ar_burst_q[gs] <= m_arburst[m];
+                                    rstate    [gs] <= R_AR;
+                                    found_rd        = 1'b1;
+                                end
                             end
                         end
                     end
-                    R_AR:   if (s_arvalid[gs] && s_arready[gs]) rstate[gs] <= R_DATA;
+                    R_AR:   if (s_arready[gs]) rstate[gs] <= R_DATA;
                     R_DATA: if (s_rvalid[gs] && s_rready[gs] && s_rlast[gs])
                                 rstate[gs] <= R_IDLE;
                     default: rstate[gs] <= R_IDLE;
@@ -346,6 +410,26 @@ module axi4_crossbar #(
 
     // ═════════════════ MASTER-FACING RESOLUTION (scan slaves) ════════════════
     always_comb begin
+        // aw_priority_winner[m][s]: 1 when master m is the highest-priority
+        // (lowest index) master presenting a valid AW request to slave s.
+        // Used to ensure the early-accept W_IDLE arm grants awready to exactly
+        // one master per slave per cycle — the same winner the FSM captures.
+        logic aw_priority_winner [N_MASTERS][N_SLAVES];
+        logic ar_priority_winner [N_MASTERS][N_SLAVES];
+        for (int unsigned m = 0; m < N_MASTERS; m++) begin
+            for (int unsigned s = 0; s < N_SLAVES; s++) begin
+                aw_priority_winner[m][s] = 1'b1;
+                ar_priority_winner[m][s] = 1'b1;
+                // Check if any lower-index master also targets this slave.
+                for (int unsigned m2 = 0; m2 < m; m2++) begin
+                    if (m_awvalid[m2] && decode(m_awaddr[m2]) == s)
+                        aw_priority_winner[m][s] = 1'b0;
+                    if (m_arvalid[m2] && decode(m_araddr[m2]) == s)
+                        ar_priority_winner[m][s] = 1'b0;
+                end
+            end
+        end
+
         for (int unsigned m = 0; m < N_MASTERS; m++) begin
             slv_awready[m] = 1'b0;
             slv_wready [m] = 1'b0;
@@ -358,6 +442,15 @@ module axi4_crossbar #(
             slv_rlast  [m] = 1'b0;
             for (int unsigned s = 0; s < N_SLAVES; s++) begin
                 // Write path
+                // Early-accept (W_IDLE): grant awready only to the priority-
+                // winner master — the same master the FSM captures into wsel.
+                // Single-grant invariant: at most one master per slave per cycle
+                // sees awready=1 from the early-accept arm, preventing the
+                // "both see ready, only winner captured" silent-drop bug.
+                if (wstate[s] == W_IDLE &&
+                    m_awvalid[m] && decode(m_awaddr[m]) == s &&
+                    aw_priority_winner[m][s])
+                    slv_awready[m] = 1'b1;
                 if (wstate[s] == W_AW   && wsel[s] == m[MIDX_W-1:0])
                     slv_awready[m] = s_awready[s];
                 if (wstate[s] == W_DATA && wsel[s] == m[MIDX_W-1:0])
@@ -367,6 +460,16 @@ module axi4_crossbar #(
                     slv_bresp [m] = s_bresp [s];
                 end
                 // Read path
+                // Early-accept (R_IDLE): grant arready only to the priority-
+                // winner master — the same master the FSM captures into rsel.
+                // Single-grant invariant: at most one master per slave per cycle
+                // sees arready=1 from the early-accept arm.  The address is
+                // latched in ar_*_q on this clock edge; s_arvalid to the slave
+                // is driven 1'b1 from ar_*_q starting next cycle.
+                if (rstate[s] == R_IDLE &&
+                    m_arvalid[m] && decode(m_araddr[m]) == s &&
+                    ar_priority_winner[m][s])
+                    slv_arready[m] = 1'b1;
                 if (rstate[s] == R_AR   && rsel[s] == m[MIDX_W-1:0])
                     slv_arready[m] = s_arready[s];
                 if (rstate[s] == R_DATA && rsel[s] == m[MIDX_W-1:0]) begin
