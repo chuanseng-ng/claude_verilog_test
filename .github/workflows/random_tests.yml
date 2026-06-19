@@ -61,8 +61,10 @@ jobs:
             experimental-features = nix-command flakes
             accept-flake-config = true
 
-      - name: Show Verilator version
-        run: nix develop --command verilator --version
+      - name: Install pinned Verilator (nix profile, system-shell compile)
+        run: |
+          nix profile install .#verilator
+          verilator --version
 
       - name: Install runtime libs for cocotb (system libffi etc.)
         # cocotb runs on the setup-python interpreter, not nix. sim/Makefile's
@@ -97,7 +99,7 @@ jobs:
         run: |
           echo "=== Running Random Instruction Smoke Test ==="
           echo "Configuration: 10 seeds × 50 instructions = 500 total instructions"
-          nix develop .. --command make random_uvm_smoke
+          make random_uvm_smoke
 
       - name: Run smoke tests (Stress)
         env:
@@ -111,7 +113,7 @@ jobs:
         run: |
           echo "=== Running Stress Test Smoke Test ==="
           echo "Configuration: 10 seeds × 100 instructions × 4 profiles = 4,000 total instructions"
-          nix develop .. --command make stress_uvm_smoke
+          make stress_uvm_smoke
 
       - name: Generate test summary
         if: always()
@@ -262,8 +264,10 @@ jobs:
             experimental-features = nix-command flakes
             accept-flake-config = true
 
-      - name: Show Verilator version
-        run: nix develop --command verilator --version
+      - name: Install pinned Verilator (nix profile, system-shell compile)
+        run: |
+          nix profile install .#verilator
+          verilator --version
 
       - name: Install runtime libs for cocotb (system libffi etc.)
         # cocotb runs on the setup-python interpreter, not nix. sim/Makefile's
@@ -299,7 +303,7 @@ jobs:
         run: |
           echo "=== Running Full Random Instruction Tests ==="
           echo "Configuration: 10 seeds × 10,000 instructions = 100,000 total instructions"
-          nix develop .. --command make random_uvm
+          make random_uvm
 
       - name: Generate test summary
         if: always()
@@ -401,8 +405,10 @@ jobs:
             experimental-features = nix-command flakes
             accept-flake-config = true
 
-      - name: Show Verilator version
-        run: nix develop --command verilator --version
+      - name: Install pinned Verilator (nix profile, system-shell compile)
+        run: |
+          nix profile install .#verilator
+          verilator --version
 
       - name: Install runtime libs for cocotb (system libffi etc.)
         # cocotb runs on the setup-python interpreter, not nix. sim/Makefile's
@@ -438,7 +444,7 @@ jobs:
         run: |
           echo "=== [1/2] Running Random Instruction Tests ==="
           echo "Configuration: 10 seeds × 10,000 instructions = 100,000 total instructions"
-          nix develop .. --command make random_uvm
+          make random_uvm
 
       - name: Backup random test results
         if: always()
@@ -464,7 +470,7 @@ jobs:
         run: |
           echo "=== [2/2] Running Stress Tests (All Profiles) ==="
           echo "Configuration: 100 seeds × 500 instructions × 4 profiles = 200,000 total instructions"
-          nix develop .. --command make stress_uvm
+          make stress_uvm
 
       - name: Backup stress test results
         if: always()

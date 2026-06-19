@@ -28,6 +28,17 @@
         nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
     in
     {
+      # Expose the pinned Verilator as a package so CI can put just the binary on
+      # PATH (`nix profile install .#verilator`) and compile/run the cocotb sim in
+      # the system shell with the system g++/glibc. Linking Vtop with the nix gcc
+      # instead makes it use the nix glibc loader, which mixes badly with the
+      # system Python/libffi at runtime (segfaults on the CI runner). The local
+      # `nix develop` shell still bundles gcc for convenience.
+      packages = forAllSystems (pkgs: {
+        verilator = pkgs.verilator;
+        default = pkgs.verilator;
+      });
+
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
           name = "soc-sim-lint";
