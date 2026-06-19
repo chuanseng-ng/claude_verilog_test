@@ -89,6 +89,10 @@ jobs:
         env:
           RANDOM_TEST_SMOKE: '1'
           PYTHONPATH: ${{ github.workspace }}
+          # nix-linked Vtop uses the nix glibc loader (searches the nix store, not
+          # /usr/lib). Point it at the apt-installed system libs (libffi.so.8 etc.)
+          # so cocotb's ctypes import resolves; sim/Makefile prepends its compat dir.
+          LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu
         working-directory: sim
         run: |
           echo "=== Running Random Instruction Smoke Test ==="
@@ -99,6 +103,10 @@ jobs:
         env:
           STRESS_TEST_SMOKE: '1'
           PYTHONPATH: ${{ github.workspace }}
+          # nix-linked Vtop uses the nix glibc loader (searches the nix store, not
+          # /usr/lib). Point it at the apt-installed system libs (libffi.so.8 etc.)
+          # so cocotb's ctypes import resolves; sim/Makefile prepends its compat dir.
+          LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu
         working-directory: sim
         run: |
           echo "=== Running Stress Test Smoke Test ==="
@@ -283,6 +291,10 @@ jobs:
           RANDOM_TEST_SEEDS: '10'
           RANDOM_TEST_INSTRS: '10000'
           PYTHONPATH: ${{ github.workspace }}
+          # nix-linked Vtop uses the nix glibc loader (searches the nix store, not
+          # /usr/lib). Point it at the apt-installed system libs (libffi.so.8 etc.)
+          # so cocotb's ctypes import resolves; sim/Makefile prepends its compat dir.
+          LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu
         working-directory: sim
         run: |
           echo "=== Running Full Random Instruction Tests ==="
@@ -418,6 +430,10 @@ jobs:
           RANDOM_TEST_SEEDS: '10'
           RANDOM_TEST_INSTRS: '10000'
           PYTHONPATH: ${{ github.workspace }}
+          # nix-linked Vtop uses the nix glibc loader (searches the nix store, not
+          # /usr/lib). Point it at the apt-installed system libs (libffi.so.8 etc.)
+          # so cocotb's ctypes import resolves; sim/Makefile prepends its compat dir.
+          LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu
         working-directory: sim
         run: |
           echo "=== [1/2] Running Random Instruction Tests ==="
@@ -440,6 +456,10 @@ jobs:
           STRESS_TEST_SEEDS: '100'
           STRESS_TEST_INSTRS: '500'
           PYTHONPATH: ${{ github.workspace }}
+          # nix-linked Vtop uses the nix glibc loader (searches the nix store, not
+          # /usr/lib). Point it at the apt-installed system libs (libffi.so.8 etc.)
+          # so cocotb's ctypes import resolves; sim/Makefile prepends its compat dir.
+          LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu
         working-directory: sim
         run: |
           echo "=== [2/2] Running Stress Tests (All Profiles) ==="
@@ -690,6 +710,10 @@ jobs:
       - name: Run directed suite with coverage instrumentation
         env:
           PYTHONPATH: ${{ github.workspace }}
+          # nix-linked Vtop uses the nix glibc loader (searches the nix store, not
+          # /usr/lib). Point it at the apt-installed system libs (libffi.so.8 etc.)
+          # so cocotb's ctypes import resolves; sim/Makefile prepends its compat dir.
+          LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu
         working-directory: sim
         run: |
           make coverage
