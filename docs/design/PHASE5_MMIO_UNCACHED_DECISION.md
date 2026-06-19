@@ -53,13 +53,15 @@ covers it at no extra cost.
 
 **Chosen**: `addr >= 32'h2000_0000` is uncached; all lower addresses are cacheable.
 
-The single boundary `0x2000_0000` is a power-of-2-aligned 512 MB boundary, making
-the comparator a single 4-bit equality check on `addr[31:28] == 4'h2` combined with
-`addr[27]` — synthesises to a fast 5-input AND/OR, negligible timing impact.
+The single boundary `0x2000_0000` is a power-of-2-aligned 512 MB boundary.
+Implement as a straight unsigned compare (`addr >= 32'h2000_0000`) — simple and
+timing-friendly on this path. (Equivalent to testing `addr[31:29] != 3'b000`,
+i.e. any address at or above the 512 MB mark, but the unsigned compare is the
+clearest expression and what the RTL uses.)
 
 Add one localparam to `soc_addr_map_pkg.sv`:
 
-```
+```systemverilog
 localparam logic [31:0] MMIO_BASE = 32'h2000_0000;
 ```
 
@@ -137,8 +139,10 @@ A FENCE instruction is not required between MMIO stores and subsequent MMIO load
 to the same device, because the bypass guarantees B-before-AR ordering within a
 single CPU thread. If a firmware sequence writes a DMA descriptor in SRAM and then
 writes the DMA kick register (MMIO), the SRAM store may still be in cache; firmware
-must either flush the cache line (via FENCE) or use the DMA engine's own
-coherency protocol before writing the kick.
+must issue `CSRW dcache_flush, x0` (CSR `0x7C0`, the cache-maintenance primitive
+defined in section D2) before writing the kick, unless the DMA engine guarantees
+its own coherency. (FENCE is an ordering barrier in this design, not a D-cache
+flush — see section D2.)
 
 ---
 
@@ -321,7 +325,7 @@ ordering barrier, not a maintenance instruction in the RISC-V spec.
 
 Two new FSM states are added to `cache_state_t` in `rv32i_cache_pkg.sv`:
 
-```
+```systemverilog
 CS_FLUSH_SCAN   // walk all 256 lines; write back dirty ones via existing wb_buf/AXI path
 CS_INVAL_SCAN   // walk all 256 lines; clear valid_array[] and dirty_array[] in bulk
 ```
@@ -408,7 +412,7 @@ This is the simplest possible firmware model: no polling loop required. Firmware
 writes the CSR and the subsequent instruction (e.g. the DMA kick store to
 `0x2000_5000`) is automatically ordered after the maintenance operation.
 
-```
+```asm
 # Firmware sequence — DMA source coherency (before DMA read)
 csrw  dcache_flush, x0    # stalls pipeline ~2 µs worst case; returns when all dirty
                            # lines are written back to SRAM

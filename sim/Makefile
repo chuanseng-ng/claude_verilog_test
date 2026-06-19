@@ -196,15 +196,25 @@ help:
 	@echo "  make waves        - Open waveform viewer (gtkwave)"
 	@echo "  make lint         - Run Verilator lint check (CPU top + chains lint_soc)"
 	@echo "  make lint_soc     - Run Verilator lint check for soc_top (Phase 5 M8)"
-	@echo "  make soc_periph   - Run Phase 5 M9 SoC DMA + peripheral loopback test"
-	@echo "  make soc_boot     - Run Phase 5 M9 SoC boot test (PC scoreboard + 100/100 stability)"
-	@echo "  make soc_all      - Run all SoC component + boot tests (M3-M6 + M9)"
+	@echo "  make verible      - Run Verible style-lint + format check on rtl/ (needs verible)"
+	@echo "  make lint-verible        - Verible SystemVerilog style lint only"
+	@echo "  make format-verible-check - Verible format check (non-mutating)"
+	@echo "  make format-verible-fix  - Verible reformat rtl/ in place"
+	@echo "  make cdc          - Run Bedrock cdc_snitch CDC check (informational; CDC_STRICT=1 to gate)"
+	@echo "  make soc_periph     - Run Phase 5 M9 SoC DMA + peripheral loopback test"
+	@echo "  make soc_boot       - Run Phase 5 M9 SoC boot test (PC scoreboard + 100/100 stability)"
+	@echo "  make soc_coherency  - Run Phase 5 M9 SoC software coherency test (flush+GPU+inval)"
+	@echo "  make soc_cpu_gpu    - Run Phase 5 M9 interrupt-driven CPU-GPU integration test (IRQ path)"
+	@echo "  make soc_stress     - Run Phase 5 M9 SoC stress + benchmark (≥1M cycles, no trace, separate from soc_all)"
+	@echo "  make soc_all        - Run all SoC component + boot + periph + coherency + cpu_gpu tests (M3-M6 + M9)"
 	@echo "  make axi          - Run AXI protocol tests only"
 	@echo "  make debug        - Run APB3 debug interface tests only"
 	@echo "  make hazards      - Run Phase 2 pipeline hazard tests only"
 	@echo "  make interrupts   - Run Phase 2 interrupt and CSR tests only"
 	@echo "  make perf_counters - Run Phase 5 M7 performance counter tests (subtests a-g)"
 	@echo "  make rollup       - CPU directed + Phase 3 cache + Phase 4 GPU (no long randoms)"
+	@echo "  make random_uvm SEED=<v> [INSTRS=<n>] - Replay one failing random seed"
+	@echo "                    (per-seed outcomes logged to results/random_seed_log.txt)"
 	@echo "  make icache       - Run Phase 3 I-cache unit tests"
 	@echo "  make dcache       - Run Phase 3 D-cache unit tests"
 	@echo "  make cache_integration - Run Phase 3 CPU+cache integration tests"
@@ -334,6 +344,85 @@ lint_soc:
 # SYNCASYNCNET waived at SoC top: leaf blocks use heterogeneous reset
 # disciplines (CPU synchronous per ASIC rule, peripherals async); soc_top only
 # distributes the shared rst_n_i. Frozen leaf RTL — not a SoC integration bug.
+
+# ============================================================================
+# Verible RTL style-lint + formatter (Phase 5 — complements Verilator lint)
+# ----------------------------------------------------------------------------
+# Verible covers SystemVerilog *style consistency* and *formatting*, which
+# Verilator's semantic --lint-only does not. Install a prebuilt release binary
+# from https://github.com/chipsalliance/verible/releases (no build required).
+#   make lint-verible          # style-lint every rtl/**/*.sv (curated ruleset)
+#   make format-verible-check  # report formatting deviations (non-mutating)
+#   make format-verible-fix    # rewrite files in place to canonical format
+#   make verible               # lint-verible + format-verible-check
+# ============================================================================
+VERIBLE_LINT    := verible-verilog-lint
+VERIBLE_FORMAT  := verible-verilog-format
+VERIBLE_RULES   := $(PROJ_ROOT)/.rules.verible_lint
+VERIBLE_SOURCES := $(shell find $(RTL_DIR) -name '*.sv')
+# Files the format check/fix operate on. Defaults to the whole tree; CI
+# overrides this with just the RTL files changed in a PR (the existing tree is
+# hand-aligned, so a whole-tree format gate would always fail). Example:
+#   make format-verible-check VERIBLE_CHECK_FILES="rtl/cpu/core/rv32i_alu.sv"
+VERIBLE_CHECK_FILES ?= $(VERIBLE_SOURCES)
+# 4-space indent + generous column limit + aligned ports/assignments match the
+# existing hand-formatted house style; keeps formatter churn minimal.
+VERIBLE_FMT_FLAGS := --indentation_spaces=4 --column_limit=120 \
+	--assignment_statement_alignment=align \
+	--port_declarations_alignment=align \
+	--named_port_alignment=align
+
+.PHONY: verible lint-verible format-verible-check format-verible-fix
+verible: lint-verible format-verible-check
+
+lint-verible:
+	@echo "Running Verible style lint..."
+	@command -v $(VERIBLE_LINT) >/dev/null 2>&1 || { echo "ERROR: $(VERIBLE_LINT) not found. Download a release from https://github.com/chipsalliance/verible/releases"; exit 1; }
+	@$(VERIBLE_LINT) --rules_config $(VERIBLE_RULES) $(VERIBLE_SOURCES)
+
+# Non-mutating per-file format check (verible-verilog-format --verify rejects
+# multi-file invocations, so loop). Exits non-zero if any file deviates.
+format-verible-check:
+	@echo "Running Verible format check (non-mutating)..."
+	@command -v $(VERIBLE_FORMAT) >/dev/null 2>&1 || { echo "ERROR: $(VERIBLE_FORMAT) not found. Download a release from https://github.com/chipsalliance/verible/releases"; exit 1; }
+	@cd $(PROJ_ROOT); fail=0; for f in $(VERIBLE_CHECK_FILES); do \
+		test -f "$$f" || { echo "ERROR: file not found: $$f"; fail=1; continue; }; \
+		$(VERIBLE_FORMAT) --verify $(VERIBLE_FMT_FLAGS) "$$f" || fail=1; \
+	done; \
+	if [ $$fail -ne 0 ]; then \
+		echo "Some files deviate from canonical format — run 'make format-verible-fix'."; \
+		exit 1; \
+	fi; \
+	echo "All checked files are canonically formatted."
+
+format-verible-fix:
+	@echo "Rewriting RTL to canonical Verible format..."
+	@command -v $(VERIBLE_FORMAT) >/dev/null 2>&1 || { echo "ERROR: $(VERIBLE_FORMAT) not found. Download a release from https://github.com/chipsalliance/verible/releases"; exit 1; }
+	@cd $(PROJ_ROOT); $(VERIBLE_FORMAT) --inplace $(VERIBLE_FMT_FLAGS) $(VERIBLE_CHECK_FILES)
+
+# ============================================================================
+# CDC check — BerkeleyLab/Bedrock cdc_snitch (informational; see tools/cdc/)
+# ============================================================================
+# sv2v -> yosys (flatten) -> cdc_snitch.py. Parked / informational on this
+# single-clock SoC (BAD count is dominated by false positives: async reset +
+# synchronous APB/SPI ports modeled as separate clock domains). Run as a gate
+# with `make cdc CDC_STRICT=1`. Full writeup: docs/verification/CDC_SNITCH_POC.md
+CDC_DIR     := $(PROJ_ROOT)/sim/build/cdc
+CDC_STRICT  ?= 0
+# SOC_TOP_SOURCES plus axi_lite_register_bank.sv (Verilator auto-discovers it;
+# sv2v/yosys need it listed explicitly).
+CDC_SOURCES := $(SOC_TOP_SOURCES) $(RTL_DIR)/soc/axi_lite_register_bank.sv
+
+.PHONY: cdc
+cdc:
+	@bash $(PROJ_ROOT)/tools/cdc/fetch_cdc_tools.sh
+	@mkdir -p $(CDC_DIR)
+	@printf '%s\n' $(CDC_SOURCES) > $(CDC_DIR)/soc_top.flist
+	@CDC_CACHE="$(CDC_DIR)" \
+	 CDC_FLIST="$(CDC_DIR)/soc_top.flist" \
+	 CDC_INCDIRS="$(RTL_DIR)/cpu/core $(RTL_DIR)/mem $(RTL_DIR)/soc $(RTL_DIR)/gpu $(RTL_DIR)/periph" \
+	 CDC_TOP=soc_top CDC_STRICT=$(CDC_STRICT) \
+	 bash $(PROJ_ROOT)/tools/cdc/run_cdc.sh
 
 # ============================================================================
 # Cocotb Targets (require cocotb installation in WSL)
@@ -507,9 +596,16 @@ coverage:
 
 .PHONY: random_uvm random_uvm_smoke stress_uvm stress_uvm_smoke
 
+# Seed replay: `make random_uvm SEED=<value> [INSTRS=<n>]` re-runs exactly one
+# seed from results/random_seed_log.txt (written by every multi-seed run).
 random_uvm:
 	@echo "Running pyuvm random instruction tests..."
+ifdef SEED
+	RANDOM_TEST_SEED=$(SEED) $(if $(INSTRS),RANDOM_TEST_INSTRS=$(INSTRS)) \
+		$(MAKE) sim MODULE=tb.cocotb.cpu.test_random_uvm
+else
 	$(MAKE) sim MODULE=tb.cocotb.cpu.test_random_uvm
+endif
 
 random_uvm_smoke:
 	@echo "Running pyuvm random instruction tests (SMOKE: 10 seeds × 50 instructions)..."
@@ -562,7 +658,7 @@ cache_integration:
 # Phase 5 SoC tests (delegates to tb/cocotb/soc/Makefile)
 # soc_all: M3-M6 component suites + M9 boot test.
 # soc_boot: M9 SoC boot test only (BLOCKED until CPU RESET_PC fix lands).
-.PHONY: soc_all soc_boot soc_periph
+.PHONY: soc_all soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress
 soc_boot:
 	@echo "Running Phase 5 M9 SoC boot test..."
 	$(MAKE) -C ../tb/cocotb/soc soc_boot
@@ -571,8 +667,20 @@ soc_periph:
 	@echo "Running Phase 5 M9 SoC DMA + peripheral loopback test..."
 	$(MAKE) -C ../tb/cocotb/soc soc_periph
 
+soc_coherency:
+	@echo "Running Phase 5 M9 SoC software coherency test (flush+GPU+inval)..."
+	$(MAKE) -C ../tb/cocotb/soc soc_coherency
+
+soc_cpu_gpu:
+	@echo "Running Phase 5 M9 interrupt-driven CPU-GPU integration test..."
+	$(MAKE) -C ../tb/cocotb/soc soc_cpu_gpu
+
+soc_stress:
+	@echo "Running Phase 5 M9 SoC stress + benchmark (≥1M cycles, no trace)..."
+	$(MAKE) -C ../tb/cocotb/soc soc_stress
+
 soc_all:
-	@echo "Running Phase 5 SoC tests (M3-M6 components + M9 boot)..."
+	@echo "Running Phase 5 SoC tests (M3-M6 components + M9 boot + M9 periph + M9 coherency + M9 cpu_gpu)..."
 	$(MAKE) -C ../tb/cocotb/soc soc_all
 
 # Run all Phase 3 tests

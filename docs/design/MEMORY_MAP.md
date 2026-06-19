@@ -322,24 +322,49 @@ Phase 1 has no memory protection. Future phases may add:
 
 ## SoC Interconnect (Phase 5)
 
-The SoC uses an AXI4-Lite crossbar to route transactions:
+As implemented in `rtl/soc/soc_top.sv` (M8):
 
-**Masters**:
+**Data plane** — AXI4 crossbar (`axi4_crossbar.sv`), 4 masters × 3 slaves:
 
-- CPU AXI4-Lite master
-- GPU AXI4-Lite master
+| Port | Agent |
+| :--- | :---- |
+| M0 | CPU (rv32i_cpu_top AXI4 master) |
+| M1 | GPU ifetch (axilite_to_axi4 read-only adapter) |
+| M2 | GPU data (gpu_top `m_axi_*`) |
+| M3 | DMA engine |
+| S0 | Boot ROM (0x0000_1000 – 0x0000_1FFF) |
+| S1 | SRAM controller (0x0000_2000 – 0x0FFF_FFFF) |
+| S2 | Peripheral bridge → AXI-Lite ring (0x2000_1000 – 0x2000_6FFF) |
 
-**Slaves**:
+**Control plane** — `axi4_to_axilite` → `axi_lite_interconnect`, 6 AXI-Lite slaves:
+GPU(0), UART(1), SPI(2), TIMER(3), DMA(4), IRQ(5).
 
-- Main memory (0x0000_0000 - 0x0FFF_FFFF)
-- APB bridge (0x2000_0000 - 0x2FFF_FFFF)
-- External memory (0x8000_0000 - 0xFFFF_FFFF)
+**Debug plane** — APB3 debug slave exposed at top-level ports (no APB bridge on
+the data path; the Phase 1–4 AXI-Lite-crossbar/APB-bridge description is obsolete).
 
-**APB bridge** converts AXI4-Lite to APB3 for peripherals:
+**Interconnect assumptions** (violating these voids the deadlock-free guarantee):
 
-- CPU debug registers
-- GPU control registers
-- UART, SPI, Timer
+- The AXI-Lite control ring is **single-master** (CPU config access only); the
+  interconnect has no arbitration. A second master (e.g. DMA-to-peripheral in
+  Phase 6) requires an interconnect upgrade.
+- The AXI4 crossbar locks a slave to one master per transaction (depth-1
+  outstanding per direction). Masters must **not** hold overlapping AR + AW
+  to the same slave expecting ordering between them.
+
+### Interrupt Hierarchy (Phase 5)
+
+Two interrupt lines reach the CPU (priority: **MEIP > MTIP**, per
+`rv32i_interrupt_ctrl.sv`):
+
+| CPU input | mcause | Source |
+| :-------- | :----- | :----- |
+| `ext_irq_i` (MEIP) | 0x8000_000B | `interrupt_controller.irq_o` — aggregated, 2-FF-synchronised, mask/status registers at 0x2000_6000 |
+| `timer_irq_i` (MTIP) | 0x8000_0007 | Timer `irq_o`, wired **directly** (not via the IRQ controller; its bit 2 is tied 0) |
+
+IRQ controller source bits: `{GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}`.
+On a MEIP trap, software reads `IRQ_STATUS` (0x2000_6000 block) to disambiguate
+the peripheral source; bit priority within the controller does not reorder
+delivery — all enabled sources share the single MEIP line.
 
 ## Testing Recommendations
 

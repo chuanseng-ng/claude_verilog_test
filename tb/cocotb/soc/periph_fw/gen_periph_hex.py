@@ -56,7 +56,7 @@ if _PROJ_ROOT not in sys.path:
     sys.path.insert(0, _PROJ_ROOT)
 
 from sim.riscv_encoder import (
-    LUI, ADDI, ADD, ORI, ANDI, SW, LW, BNE, BEQ, JAL, EBREAK,
+    LUI, ADDI, ADD, ANDI, SW, LW, BNE, JAL, EBREAK,
 )
 
 
@@ -171,45 +171,54 @@ def build_firmware(asm: Assembler):
     # ── Prologue: materialise base registers ─────────────────────────────────
     # x2 = 0x0000_2000  (SRAM base)
     l2, a2 = lui_addi(2, 0x0000_2000)
-    asm.emit(l2); asm.emit(a2)
+    asm.emit(l2)
+    asm.emit(a2)
 
     # x5 = 0x2000_5000  (DMA base)
     l5, a5 = lui_addi(5, 0x2000_5000)
-    asm.emit(l5); asm.emit(a5)
+    asm.emit(l5)
+    asm.emit(a5)
 
     # x6 = 0x2000_2000  (UART base)
     l6, a6 = lui_addi(6, 0x2000_2000)
-    asm.emit(l6); asm.emit(a6)
+    asm.emit(l6)
+    asm.emit(a6)
 
     # x7 = 0x2000_3000  (SPI base)
     l7, a7 = lui_addi(7, 0x2000_3000)
-    asm.emit(l7); asm.emit(a7)
+    asm.emit(l7)
+    asm.emit(a7)
 
     # x14 = 100000 = 0x1_86A0  (poll limit)
     # 100000 = 0x186A0; upper=0x18=24, lower=0x6A0=1696; bit11 of 0x6A0 = 0 → no comp
     l14, a14 = lui_addi(14, 100000)
-    asm.emit(l14); asm.emit(a14)
+    asm.emit(l14)
+    asm.emit(a14)
 
     # ── Step 1: Store 4 pattern words to SRAM src region ────────────────────
     # All 4 patterns have lower 12 bits < 0x800 → no sign-extension complication.
     # 0xA1B2C3D4: lower=0x3D4 (bit11=0) → upper=0xA1B2C, addi=+0x3D4=+980
     l8, a8 = lui_addi(8, 0xA1B2_C3D4)
-    asm.emit(l8); asm.emit(a8)
+    asm.emit(l8)
+    asm.emit(a8)
     asm.emit(SW(8, 2, 0))    # SRAM[0x2000] = 0xA1B2C3D4
 
     # 0x11223344: lower=0x344 (bit11=0) → upper=0x11223, addi=+0x344=+836
     l8, a8 = lui_addi(8, 0x1122_3344)
-    asm.emit(l8); asm.emit(a8)
+    asm.emit(l8)
+    asm.emit(a8)
     asm.emit(SW(8, 2, 4))    # SRAM[0x2004] = 0x11223344
 
     # 0x00003333: lower=0x333 (bit11=0) → no LUI needed, just ADDI
     l8, a8 = lui_addi(8, 0x0000_3333)
-    asm.emit(l8); asm.emit(a8)
+    asm.emit(l8)
+    asm.emit(a8)
     asm.emit(SW(8, 2, 8))    # SRAM[0x2008] = 0x00003333
 
     # 0x00004444: lower=0x444 (bit11=0) → no LUI needed, just ADDI
     l8, a8 = lui_addi(8, 0x0000_4444)
-    asm.emit(l8); asm.emit(a8)
+    asm.emit(l8)
+    asm.emit(a8)
     asm.emit(SW(8, 2, 12))   # SRAM[0x200C] = 0x00004444
 
     # ── Step 1b: D-cache flush (software coherency for DMA) ─────────────────
@@ -240,7 +249,8 @@ def build_firmware(asm: Assembler):
 
     # DST = 0x0000_2040
     l8, a8 = lui_addi(8, 0x0000_2040)
-    asm.emit(l8); asm.emit(a8)
+    asm.emit(l8)
+    asm.emit(a8)
     asm.emit(SW(8, 5, 4))    # DMA DST
 
     # LEN = 16 (bytes)
@@ -390,6 +400,11 @@ if __name__ == '__main__':
     fail_pc = labels['FAIL']
     print(f"PASS_PC = 0x{pass_pc:08x}  (word {(pass_pc - ROM_BASE)//4})")
     print(f"FAIL_PC = 0x{fail_pc:08x}  (word {(fail_pc - ROM_BASE)//4})")
+
+    # Guard: firmware must fit in ROM before padding
+    assert len(words) <= ROM_WORDS, (
+        f"Firmware too large: {len(words)} > ROM_WORDS={ROM_WORDS}"
+    )
 
     # Pad to ROM_WORDS
     padded = list(words)

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project.
 
-**Current Phase**: Phase 5 (SoC Integration) — 🚧 IN PROGRESS (M9 SoC verification)
+**Current Phase**: Phase 5 (SoC Integration) — 🚧 IN PROGRESS (M1–M9 ✅ complete; M10 L2 decision gate next, then M11 PD / M12 sign-off)
 
 **Status**: Phase 4 complete (2026-05-27, all GPU tests green; ASAP7 GPU sign-off 571 MHz / 262 mW); Phase 3 complete (2026-05-21, 139/139 total, ASAP7 1418 MHz sign-off); Phase 2 complete (2026-03-08, 75 MHz on Sky130).
 
@@ -232,8 +232,8 @@ Legend: ✅ done · 🚧 in progress · ⏸️ not started. Milestone status (M1
 3. ✅ **SRAM controller** (M6): behavioral AXI4-slave in `rtl/soc/sram_controller.sv`
 4. ✅ **SoC top integration** (M8): CPU + GPU + DMA + peripherals wired in `rtl/soc/soc_top.sv` (+ `boot_rom.sv`)
 5. ✅ **Performance counters** (M7): CSR-mapped + AXI-Lite GPU stats (CPU re-sign-off 1282 MHz)
-6. 🚧 **SoC verification** (M9): boot test ✅ (100/100); remaining — CPU-GPU integration (kernel launch → IRQ → result read), software coherency sequence, DMA/peripheral loopback
-7. ⏸️ **Full regression**: all prior tests + CPU + GPU benchmarks
+6. ✅ **SoC verification** (M9): boot 100/100; DMA+UART+SPI loopback; SW coherency (D$ flush→GPU→D$ inval); CPU-GPU IRQ-driven integration; DUT-side boot SRAM check. Found+fixed 2 RTL bugs (D-cache MMIO caching `go9`; axi4_crossbar AR/AW handshake+arbitration `7fs`). `soc_all` 73/73.
+7. ✅ **Full regression**: CPU rollup + GPU + cache green; **1M+ cycle SoC stress (1,079,867 cyc, 0 fail)** + CPU/GPU benchmarks (M9 `pgf`)
 8. ⏸️ **L2 cache evaluation**: add `rtl/mem/l2_cache.sv` only if L1 miss rates justify it
 9. ⏸️ **Backend flow**: full SoC synth + P&R + STA; `pnr/constraints/phase5_soc.sdc`, `phase5_soc.upf`; power-domain validation
 10. ⏸️ **Sign-off**: coverage, power analysis, final review

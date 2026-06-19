@@ -1,10 +1,13 @@
 # Project Phase Status
 
-Last updated: 2026-05-27
+Last updated: 2026-06-19
 
 ## Current Phase
 
-**Phase 5: SoC Integration** - ⏸️ NOT STARTED
+**Phase 5: SoC Integration** - 🚧 IN PROGRESS — M1–M9 ✅ complete (2026-06-19); M10 L2 decision gate next, then M11 physical design / M12 sign-off.
+
+- M1–M8 ✅: AXI4 crossbar + AXI-Lite ring, cache burst upgrade, peripherals (UART/SPI/timer/IRQ), DMA, behavioral SRAM, perf counters, SoC top.
+- M9 ✅ SoC verification: boot 100/100; DMA+UART+SPI loopback; SW coherency (D$ flush→GPU→D$ inval); CPU-GPU IRQ integration; DUT-side boot SRAM check. `soc_all` 73/73; 1M+ cycle stress (1,079,867 cyc, 0 fail). Two RTL bugs found+fixed: D-cache MMIO caching (`go9`) and axi4_crossbar AR/AW handshake+arbitration (`7fs`).
 
 **Previous Phases**:
 - Phase 4 (GPU-Lite SIMT Compute Engine) - ✅ COMPLETE (2026-05-27) — all GPU tests green, ASAP7 ≥500 MHz sign-off
@@ -253,11 +256,25 @@ Last updated: 2026-05-27
 
 **Macro views**: signoff DB exported for Phase-5 SoC via `make macro-views-asap7 BLOCK=gpu` → `pnr/asap7/gpu/macro/{gpu_top.lef, *.lib, gpu_top.nl.v.gz}` (netlist gzipped to clear GitHub's 100 MB limit; `gunzip -k` to restore).
 
-### Phase 5: SoC Integration
+### Phase 5: SoC Integration 🚧
 
-**Status**: NOT STARTED
+**Status**: IN PROGRESS — milestone detail in `docs/PHASE5_SOC_INTEGRATION_PLAN.md` (golden spec)
 
-**Prerequisites**: Phase 4 exit criteria must be met
+| Milestone | Scope | Status |
+| :-------- | :---- | :----- |
+| M1 | AXI4/AXI-Lite shared package | ✅ 2026-05-31 (lint-clean) |
+| M2 | Cache refill FSMs → AXI4 burst | ✅ 2026-05-31 (146/146 tests) |
+| M3 | AXI4 crossbar + AXI-Lite interconnect | ✅ 2026-05-31 (16/16 tests) |
+| M4 | UART / SPI / timer / IRQ controller | ✅ 2026-06-01 |
+| M5 | DMA engine | ✅ 2026-06-01 (6/6 tests) |
+| M6 | Behavioral SRAM controller | ✅ 2026-06-01 (7/7 tests) |
+| M7 | Performance counters (CSR + AXI-Lite GPU stats) | ✅ 2026-06-02 (CPU re-sign-off 1282 MHz) |
+| M8 | SoC top integration (`rtl/soc/soc_top.sv`) | ✅ 2026-06-02 (lint-clean) |
+| M9 | SoC verification — foundation slice (boot 100/100) | ✅ 2026-06-03 (PR #65) |
+| M9 | Fast-follows: CPU→GPU kernel launch, SW coherency, DMA/peripheral loopback, SRAM readback, 1M-cycle random, benchmarks | ⏸️ Open |
+| M10 | L2 cache decision gate (needs M9 benchmarks) | ⏸️ Not started |
+| M11 | SoC P&R + STA (`phase5_soc.sdc`/`.upf`) | ⏸️ Not started |
+| M12 | Sign-off + documentation | ⏸️ Not started |
 
 ## Recent Project Changes
 
@@ -449,22 +466,23 @@ All previous specification issues have been resolved:
 See `docs/PHASE5_SOC_INTEGRATION_PLAN.md` for the full M1–M12 milestone roadmap (golden spec).
 Key decisions: AXI4 crossbar data fabric + AXI-Lite control bus, Phase 3 cache refill FSMs upgraded to AXI4 burst, behavioral AXI4-slave SRAM, ASAP7 SoC PD sign-off required.
 
-1. **AXI4 Interconnect** (build first — prerequisite for integration):
-   - ⏸️ `rtl/soc/axi4_crossbar.sv` — N-master M-slave data fabric
-   - ⏸️ `rtl/soc/axi_lite_interconnect.sv` — control bus
-   - ⏸️ `rtl/soc/axi_lite_register_bank.sv` — GPU + DMA config registers
-   - ⏸️ Upgrade Phase 3 refill FSMs from 4 sequential AXI4-Lite beats to AXI4 burst mode
+1. **AXI4 Interconnect** (M1–M3) — ✅ complete 2026-05-31:
+   - ✅ `rtl/soc/axi4_crossbar.sv` — N-master M-slave data fabric
+   - ✅ `rtl/soc/axi_lite_interconnect.sv` — control bus
+   - ✅ `rtl/soc/axi_lite_register_bank.sv` — GPU + DMA config registers
+   - ✅ Phase 3 refill FSMs upgraded from 4 sequential AXI4-Lite beats to AXI4 burst mode
 
-2. **Peripherals + DMA + SRAM**:
-   - ⏸️ `rtl/periph/dma_engine.sv`, `uart_controller.sv`, `spi_controller.sv`, `timer.sv`, `interrupt_controller.sv`
-   - ⏸️ `rtl/soc/sram_controller.sv` — behavioral AXI4-slave SRAM (no DRAM refresh)
-   - ⏸️ `rtl/soc/soc_top.sv` — full SoC top-level; CSR-mapped performance counters
+2. **Peripherals + DMA + SRAM + SoC top** (M4–M8) — ✅ complete 2026-06-02:
+   - ✅ `rtl/periph/dma_engine.sv`, `uart_controller.sv`, `spi_controller.sv`, `timer.sv`, `interrupt_controller.sv`
+   - ✅ `rtl/soc/sram_controller.sv` — behavioral AXI4-slave SRAM (no DRAM refresh)
+   - ✅ `rtl/soc/soc_top.sv` — full SoC top-level; CSR-mapped performance counters (M7)
 
-3. **Verification**:
+3. **Verification** (M9 — current focus):
+   - ✅ Boot foundation slice: 100/100 boot-stability gate (2026-06-03, PR #65)
    - ⏸️ CPU-GPU integration: kernel launch → interrupt → result read
    - ⏸️ Software coherency: CPU D-cache flush → GPU kernel → CPU D-cache invalidate
-   - ⏸️ DMA transfer tests; full CPU + GPU benchmark suite
-   - ⏸️ L2 cache decision — add `rtl/mem/l2_cache.sv` only if L1 miss rates justify it
+   - ⏸️ DMA transfer tests; full CPU + GPU benchmark suite; 1M-cycle random SoC stress
+   - ⏸️ L2 cache decision (M10) — add `rtl/mem/l2_cache.sv` only if L1 miss rates justify it
 
 4. **Physical Design**:
    - ⏸️ Full SoC synthesis + P&R + STA; `pnr/constraints/phase5_soc.sdc`, `phase5_soc.upf`

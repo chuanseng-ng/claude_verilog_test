@@ -107,30 +107,53 @@ async def test_random_multi_seed_uvm(dut):
     - RANDOM_TEST_SEEDS: Number of seeds (default: 1000)
     - RANDOM_TEST_INSTRS: Instructions per seed (default: 100)
     - RANDOM_TEST_SMOKE: If set, use smoke test config (10 seeds × 50 instructions)
+    - RANDOM_TEST_SEED: Replay exactly one seed value (overrides the seed sweep;
+      combine with RANDOM_TEST_INSTRS to match the failing configuration)
 
     Default configuration: 1000 seeds × 100 instructions = 100,000 total instructions
+
+    Per-seed outcomes are appended to results/random_seed_log.txt so any failing
+    seed can be replayed with `make random_uvm SEED=<value> INSTRS=<n>`.
     """
     # Configure test parameters via environment variables
-    if os.getenv("RANDOM_TEST_SMOKE"):
+    replay_seed = os.getenv("RANDOM_TEST_SEED")
+    if replay_seed is not None:
+        seeds = [int(replay_seed)]
+        num_instructions = int(os.getenv("RANDOM_TEST_INSTRS", "100"))
+        dut._log.info(
+            f"=== Test: Random Single-Seed REPLAY (seed={seeds[0]}, "
+            f"{num_instructions} instr) (pyuvm) ==="
+        )
+    elif os.getenv("RANDOM_TEST_SMOKE"):
         num_seeds = 10
         num_instructions = 50
-        total_instructions = num_seeds * num_instructions
+        seeds = [1000 + i for i in range(num_seeds)]
         dut._log.info(
             "=== Test: Random Multi-Seed SMOKE TEST (10 seeds × 50 instr = 500 total) (pyuvm) ==="
         )
     else:
         num_seeds = int(os.getenv("RANDOM_TEST_SEEDS", "1000"))  # Default: 1000 (was 100)
         num_instructions = int(os.getenv("RANDOM_TEST_INSTRS", "100"))  # Default: 100
+        seeds = [1000 + i for i in range(num_seeds)]
         total_instructions = num_seeds * num_instructions
         dut._log.info(
             f"=== Test: Random Multi-Seed ({num_seeds} seeds × "
             f"{num_instructions} instr = {total_instructions:,} total) (pyuvm) ==="
         )
+    num_seeds = len(seeds)
 
     # Create waveform directory for failure captures
     waveform_dir = "results/waveforms"
     os.makedirs(waveform_dir, exist_ok=True)
     dut._log.info(f"Waveform directory created: {waveform_dir}")
+
+    # Seed log: one line per seed so failures are replayable after the run
+    seed_log_path = "results/random_seed_log.txt"
+    with open(seed_log_path, "a", encoding="utf-8") as seed_log:
+        seed_log.write(
+            f"# run: seeds={num_seeds} instrs_per_seed={num_instructions} "
+            f"replay={replay_seed or '-'}\n"
+        )
 
     # Start clock
     clock = Clock(dut.clk_i, 10, units="ns")
@@ -142,8 +165,7 @@ async def test_random_multi_seed_uvm(dut):
     # Track background tasks for cleanup between seeds
     background_tasks = []
 
-    for seed_idx in range(num_seeds):
-        seed = 1000 + seed_idx  # Deterministic seed sequence
+    for seed_idx, seed in enumerate(seeds):
         dut._log.info(f"\n{'=' * 60}")
         dut._log.info(f"Seed {seed_idx + 1}/{num_seeds}: {seed}")
         dut._log.info(f"{'=' * 60}\n")
@@ -203,10 +225,17 @@ async def test_random_multi_seed_uvm(dut):
 
             # Track failure but continue testing other seeds
             failed_seeds.append((seed, test.env.scoreboard.mismatches))
+            with open(seed_log_path, "a", encoding="utf-8") as seed_log:
+                seed_log.write(
+                    f"seed={seed} instrs={num_instructions} FAIL "
+                    f"mismatches={test.env.scoreboard.mismatches}\n"
+                )
         else:
             dut._log.info(
                 f"✓ Seed {seed} passed ({test.env.scoreboard.matches} commits validated)\n"
             )
+            with open(seed_log_path, "a", encoding="utf-8") as seed_log:
+                seed_log.write(f"seed={seed} instrs={num_instructions} PASS\n")
 
     # Report final results
     dut._log.info(f"\n{'=' * 60}")

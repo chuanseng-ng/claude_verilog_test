@@ -1,0 +1,91 @@
+name: RTL Checks
+
+# SystemVerilog style-lint + format check via Verible. Complements the
+# Verilator semantic lint (`make lint`) run elsewhere — Verible enforces style
+# and formatting consistency, which Verilator does not.
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'rtl/**'
+      - '.rules.verible_lint'
+      - 'sim/Makefile'
+      - '.github/workflows/rtl-checks.yml'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'rtl/**'
+      - '.rules.verible_lint'
+      - 'sim/Makefile'
+      - '.github/workflows/rtl-checks.yml'
+  workflow_dispatch:
+
+jobs:
+  verible:
+    name: Verible RTL Lint + Format
+    runs-on: ubuntu-latest
+
+    env:
+      # Pinned for reproducibility — bump deliberately.
+      VERIBLE_VERSION: v0.0-4063-gf831ec18
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # need history to diff changed files for the format check
+
+      - name: Install Verible
+        run: |
+          echo "::group::Install Verible ${VERIBLE_VERSION}"
+          TARBALL="verible-${VERIBLE_VERSION}-linux-static-x86_64.tar.gz"
+          URL="https://github.com/chipsalliance/verible/releases/download/${VERIBLE_VERSION}/${TARBALL}"
+          mkdir -p /tmp/verible
+          curl -sSfL "$URL" | tar -xz -C /tmp/verible --strip-components=1
+          echo "/tmp/verible/bin" >> "$GITHUB_PATH"
+          echo "::endgroup::"
+
+      - name: Verible version
+        run: verible-verilog-lint --version
+
+      # Non-blocking during initial adoption (gradual rollout). Remove the
+      # `continue-on-error` lines below to make these a hard PR gate once the
+      # codebase passes clean.
+
+      # Style lint runs against the whole tree (curated, low-noise ruleset).
+      - name: Verible style lint
+        continue-on-error: true
+        run: |
+          echo "::group::verible-verilog-lint"
+          make -C sim lint-verible
+          echo "::endgroup::"
+
+      # The existing tree is hand-aligned, so the format check only covers RTL
+      # files changed by this push/PR — that keeps the signal actionable and
+      # lets this become a hard gate (drop continue-on-error) without a
+      # one-shot mass reformat of the codebase.
+      - name: Determine changed RTL files
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          # Fall back to main if the base sha is unavailable (e.g. first push).
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            BASE="origin/main"
+            git fetch --no-tags --depth=1 origin main || true
+          fi
+          FILES=$(git diff --name-only --diff-filter=ACMR "$BASE" HEAD -- 'rtl/**/*.sv' || true)
+          echo "Changed RTL files:"; echo "$FILES"
+          # Collapse to a single space-separated line for the make override.
+          echo "files=$(echo $FILES | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+
+      - name: Verible format check (changed files)
+        if: steps.changed.outputs.files != ''
+        continue-on-error: true
+        run: |
+          echo "::group::verible-verilog-format --verify (changed files)"
+          make -C sim format-verible-check VERIBLE_CHECK_FILES="${{ steps.changed.outputs.files }}"
+          echo "::endgroup::"
