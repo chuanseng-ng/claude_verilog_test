@@ -30,6 +30,15 @@ package soc_addr_map_pkg;
     /* verilator lint_on  UNUSEDPARAM */
     localparam int unsigned SOC_N_SLAVES = 3;
 
+    // ── Uncached MMIO window (Phase 5) ──────────────────────────────────────
+    // Single source of truth: any address >= MMIO_BASE is uncached in the D-cache.
+    // All peripheral bases (APB3-debug, GPU-ctrl, UART, SPI, timer, DMA, IRQ-ctrl)
+    // lie at or above 0x2000_0000.  The D-cache bypass comparator uses this constant.
+    // Region-bound constants are consumed by the SoC top-level and testbenches; they
+    // are not referenced inside every module that imports this package.
+    /* verilator lint_off UNUSEDPARAM */
+    localparam logic [31:0] MMIO_BASE    = 32'h2000_0000;
+
     // ── Region bounds (inclusive) ────────────────────────────────────────────
     localparam logic [31:0] ROM_BASE     = 32'h0000_1000;
     localparam logic [31:0] ROM_LIMIT    = 32'h0000_1FFF;
@@ -37,6 +46,7 @@ package soc_addr_map_pkg;
     localparam logic [31:0] SRAM_LIMIT   = 32'h0FFF_FFFF;
     localparam logic [31:0] PERIPH_BASE  = 32'h2000_1000;
     localparam logic [31:0] PERIPH_LIMIT = 32'h2000_6FFF;
+    /* verilator lint_on  UNUSEDPARAM */
 
     // Packed arrays for crossbar instantiation (index = slave number).
     localparam logic [31:0] SOC_SLV_BASE  [SOC_N_SLAVES] = '{ROM_BASE,  SRAM_BASE,  PERIPH_BASE};

@@ -69,6 +69,9 @@ graphify-out/GRAPH_REPORT.md
 # Agents
 memory/
 
+# HDL property graph (hdl-kgraph) - large local Kuzu DB
+.hdl-kgraph/
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db

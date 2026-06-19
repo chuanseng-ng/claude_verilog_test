@@ -43,6 +43,7 @@ class RV32IModel:
     OP_STORE = 0b0100011
     OP_OP_IMM = 0b0010011
     OP_OP = 0b0110011
+    OP_SYSTEM = 0b1110011  # ECALL / EBREAK / CSR instructions
 
     def __init__(self, reset_pc: int = 0x0000_0000, trap_vector: int = 0x0000_0100):
         """
@@ -165,6 +166,8 @@ class RV32IModel:
             self._execute_op_imm(insn, result)
         elif opcode == self.OP_OP:
             self._execute_op(insn, result)
+        elif opcode == self.OP_SYSTEM:
+            self._execute_system(insn, result)
         else:
             raise IllegalInstructionError(f"Unknown opcode: 0x{opcode:02x}")
 
@@ -464,6 +467,35 @@ class RV32IModel:
         self._write_reg(rd, value)
         result["rd"] = rd
         result["rd_value"] = self.regs[rd]
+
+    def _execute_system(self, insn: int, result: dict):
+        """Handle SYSTEM opcode (0x73): EBREAK halts; CSR instructions are no-ops.
+
+        The reference model has no cache, so dcache_flush (CSRRW x0, 0x7C0, x0)
+        and dcache_inval (CSRRW x0, 0x7C1, x0) are silent no-ops that advance
+        PC normally.  ECALL is treated as a no-op (not expected in boot firmware).
+        CSRRW/CSRRS/CSRRC: write 0 to rd (model carries no CSR state).
+        """
+        funct12 = (insn >> 20) & 0xFFF
+        funct3 = (insn >> 12) & 0x7
+        rd = (insn >> 7) & 0x1F
+
+        # EBREAK (funct12=0x001, funct3=0, rs1=0) — halt; do not advance PC.
+        # The SoCModel boot() loop catches the re-raised EbreakTrap / halt signal.
+        if funct3 == 0b000 and funct12 == 0x001:
+            raise IllegalInstructionError("EBREAK")
+
+        # ECALL (funct12=0x000, funct3=0, rs1=0) — treat as no-op in this model.
+        if funct3 == 0b000 and funct12 == 0x000:
+            return
+
+        # CSR instructions (funct3 != 0): CSRRW/CSRRS/CSRRC/CSRRWI/CSRRSI/CSRRCI
+        # The model carries no CSR state. rd always reads 0; write is discarded.
+        # This is correct for dcache_flush (0x7C0) and dcache_inval (0x7C1) which
+        # are write-only maintenance registers returning 0 on read.
+        self._write_reg(rd, 0)
+        result["rd"] = rd
+        result["rd_value"] = 0
 
     def get_state(self) -> dict:
         """

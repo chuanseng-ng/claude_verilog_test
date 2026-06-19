@@ -59,6 +59,7 @@ endif
 VERILOG_SOURCES := \
 	$(SRAM_SIM_MODEL) \
 	$(RTL_DIR)/soc/axi_pkg.sv \
+	$(RTL_DIR)/soc/soc_addr_map_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
@@ -91,6 +92,7 @@ VERILOG_SOURCES := \
 CACHE_SOURCES := \
 	$(SRAM_SIM_MODEL) \
 	$(RTL_DIR)/soc/axi_pkg.sv \
+	$(RTL_DIR)/soc/soc_addr_map_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_icache.sv \
 	$(RTL_DIR)/mem/rv32i_dcache.sv \
@@ -196,11 +198,15 @@ help:
 	@echo "  make lint_soc     - Run Verilator lint check for soc_top (Phase 5 M8)"
 	@echo "  make verible      - Run Verible style-lint + format check on rtl/ (needs verible)"
 	@echo "  make lint-verible        - Verible SystemVerilog style lint only"
-	@echo "  make format-verible-check- Verible format check (non-mutating)"
+	@echo "  make format-verible-check - Verible format check (non-mutating)"
 	@echo "  make format-verible-fix  - Verible reformat rtl/ in place"
 	@echo "  make cdc          - Run Bedrock cdc_snitch CDC check (informational; CDC_STRICT=1 to gate)"
-	@echo "  make soc_boot     - Run Phase 5 M9 SoC boot test (PC scoreboard + 100/100 stability)"
-	@echo "  make soc_all      - Run all SoC component + boot tests (M3-M6 + M9)"
+	@echo "  make soc_periph     - Run Phase 5 M9 SoC DMA + peripheral loopback test"
+	@echo "  make soc_boot       - Run Phase 5 M9 SoC boot test (PC scoreboard + 100/100 stability)"
+	@echo "  make soc_coherency  - Run Phase 5 M9 SoC software coherency test (flush+GPU+inval)"
+	@echo "  make soc_cpu_gpu    - Run Phase 5 M9 interrupt-driven CPU-GPU integration test (IRQ path)"
+	@echo "  make soc_stress     - Run Phase 5 M9 SoC stress + benchmark (≥1M cycles, no trace, separate from soc_all)"
+	@echo "  make soc_all        - Run all SoC component + boot + periph + coherency + cpu_gpu tests (M3-M6 + M9)"
 	@echo "  make axi          - Run AXI protocol tests only"
 	@echo "  make debug        - Run APB3 debug interface tests only"
 	@echo "  make hazards      - Run Phase 2 pipeline hazard tests only"
@@ -652,13 +658,29 @@ cache_integration:
 # Phase 5 SoC tests (delegates to tb/cocotb/soc/Makefile)
 # soc_all: M3-M6 component suites + M9 boot test.
 # soc_boot: M9 SoC boot test only (BLOCKED until CPU RESET_PC fix lands).
-.PHONY: soc_all soc_boot
+.PHONY: soc_all soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress
 soc_boot:
 	@echo "Running Phase 5 M9 SoC boot test..."
 	$(MAKE) -C ../tb/cocotb/soc soc_boot
 
+soc_periph:
+	@echo "Running Phase 5 M9 SoC DMA + peripheral loopback test..."
+	$(MAKE) -C ../tb/cocotb/soc soc_periph
+
+soc_coherency:
+	@echo "Running Phase 5 M9 SoC software coherency test (flush+GPU+inval)..."
+	$(MAKE) -C ../tb/cocotb/soc soc_coherency
+
+soc_cpu_gpu:
+	@echo "Running Phase 5 M9 interrupt-driven CPU-GPU integration test..."
+	$(MAKE) -C ../tb/cocotb/soc soc_cpu_gpu
+
+soc_stress:
+	@echo "Running Phase 5 M9 SoC stress + benchmark (≥1M cycles, no trace)..."
+	$(MAKE) -C ../tb/cocotb/soc soc_stress
+
 soc_all:
-	@echo "Running Phase 5 SoC tests (M3-M6 components + M9 boot)..."
+	@echo "Running Phase 5 SoC tests (M3-M6 components + M9 boot + M9 periph + M9 coherency + M9 cpu_gpu)..."
 	$(MAKE) -C ../tb/cocotb/soc soc_all
 
 # Run all Phase 3 tests

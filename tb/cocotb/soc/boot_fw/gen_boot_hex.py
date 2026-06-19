@@ -125,6 +125,17 @@ def encode_sw(rs2: int, rs1: int, imm12: int) -> int:
 EBREAK = 0x00100073
 
 
+def encode_csrrw(rd: int, csr: int, rs1: int) -> int:
+    """CSRRW rd, csr, rs1  — CSR read/write (funct3=001)."""
+    assert 0 <= rd < 32 and 0 <= rs1 < 32
+    assert 0 <= csr < 0x1000, f"CSR out of range: {csr:#x}"
+    return (csr << 20) | (rs1 << 15) | (0b001 << 12) | (rd << 7) | 0b1110011
+
+
+# CSR addresses for D-cache maintenance (from rv32i_csr_file.sv)
+CSR_DCACHE_FLUSH = 0x7C0   # CSRW 0x7C0 triggers full D-cache flush-all
+
+
 def build_boot_program() -> list[int]:
     """Return list of 32-bit instruction words for the boot program.
 
@@ -135,10 +146,17 @@ def build_boot_program() -> list[int]:
     Program:
       x2 = SRAM_BASE                          (store-address register)
       x3 = 0xDEAD_BEEF                        (sentinel word 0)
-      SW  x3, 0(x2)   -> SRAM[0x2000] = 0xDEAD_BEEF
+      SW  x3, 0(x2)   -> D-cache[0x2000] = 0xDEAD_BEEF (dirty line)
       x4 = 0x1234_5678                        (sentinel word 1)
-      SW  x4, 4(x2)   -> SRAM[0x2004] = 0x12345678
-      EBREAK                                  -> halt
+      SW  x4, 4(x2)   -> D-cache[0x2004] = 0x12345678  (dirty line)
+      CSRRW x0, 0x7C0, x0  -> flush D-cache: write dirty lines back to SRAM
+      EBREAK                -> halt
+
+    The D-cache flush (CSRRW 0x7C0) is required before EBREAK because the
+    D-cache is write-back: SW populates a dirty cache line which is not
+    propagated to the physical SRAM until an explicit flush or eviction.
+    Without the flush, the SRAM backing store remains all-zero even though
+    the software correctly stored the sentinel values.
     """
     insns: list[int] = []
 
@@ -151,16 +169,21 @@ def build_boot_program() -> list[int]:
     insns.append(encode_lui(3, 0xDEADC))           # LUI x3, 0xDEADC -> 0xDEADC000
     insns.append(encode_addi(3, 3, -0x111))        # ADDI x3,x3,-273 -> 0xDEADBEEF
 
-    # SW x3, 0(x2)
-    insns.append(encode_sw(3, 2, 0))               # mem[0x2000] = 0xDEAD_BEEF
+    # SW x3, 0(x2)  — writes sentinel 0 into D-cache dirty line
+    insns.append(encode_sw(3, 2, 0))               # D-cache[0x2000] = 0xDEAD_BEEF
 
     # x4 = 0x1234_5678
     # lower 12 bits: 0x678=1656 → bit11=0 → no compensation needed
     insns.append(encode_lui(4, 0x12345))           # LUI x4, 0x12345 -> 0x12345000
     insns.append(encode_addi(4, 4, 0x678))         # ADDI x4,x4,0x678 -> 0x12345678
 
-    # SW x4, 4(x2)
-    insns.append(encode_sw(4, 2, 4))               # mem[0x2004] = 0x12345678
+    # SW x4, 4(x2)  — writes sentinel 1 into same D-cache dirty line
+    insns.append(encode_sw(4, 2, 4))               # D-cache[0x2004] = 0x12345678
+
+    # CSRRW x0, 0x7C0, x0  — flush D-cache: write-back all dirty lines to SRAM
+    # This stalls the pipeline while the flush-all FSM walks all 256 cache lines.
+    # After this instruction commits, all dirty lines are in the SRAM backing store.
+    insns.append(encode_csrrw(0, CSR_DCACHE_FLUSH, 0))
 
     # EBREAK — trap to debugger / halt
     insns.append(EBREAK)
@@ -170,6 +193,8 @@ def build_boot_program() -> list[int]:
 
 def verify_encoding(insns: list[int]) -> None:
     """Sanity-check the encoded values against known constants."""
+    assert len(insns) == 9, f"Expected 9 instructions, got {len(insns)}"
+
     # Decode x2 LUI: should give 0x00002000
     lui_x2 = insns[0]
     assert lui_x2 & 0x7F == 0b0110111, "LUI opcode wrong"
@@ -183,6 +208,11 @@ def verify_encoding(insns: list[int]) -> None:
     # Verify sentinel 0x12345678
     x4 = ((0x12345 << 12) + 0x678) & 0xFFFFFFFF
     assert x4 == 0x12345678, f"sentinel 1 wrong: {x4:#010x}"
+
+    # Verify CSRRW x0, 0x7C0, x0 encoding
+    csrrw = insns[7]
+    assert csrrw == (CSR_DCACHE_FLUSH << 20) | (0 << 15) | (0b001 << 12) | (0 << 7) | 0b1110011, \
+        f"CSRRW x0,0x7C0,x0 encoding wrong: {csrrw:#010x}"
 
     print("Encoding verification PASS")
     print(f"  Sentinel 0: 0x{0xDEADBEEF:08X}")

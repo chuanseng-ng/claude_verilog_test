@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project.
 
-**Current Phase**: Phase 5 (SoC Integration) — 🚧 IN PROGRESS (M9 SoC verification)
+**Current Phase**: Phase 5 (SoC Integration) — 🚧 IN PROGRESS (M1–M9 ✅ complete; M10 L2 decision gate next, then M11 PD / M12 sign-off)
 
 **Status**: Phase 4 complete (2026-05-27, all GPU tests green; ASAP7 GPU sign-off 571 MHz / 262 mW); Phase 3 complete (2026-05-21, 139/139 total, ASAP7 1418 MHz sign-off); Phase 2 complete (2026-03-08, 75 MHz on Sky130).
 
@@ -101,6 +101,23 @@ A graphify knowledge graph of `rtl/`, `docs/`, and `fixes/` is in `graphify-out/
 **Key findings**: God nodes `rv32i_core` (22 edges), `rv32i_control` (16 edges) — central integration hubs. `rv32i_control` bridges Pipeline Control, Cache Protocol, and AXI Bug Fix communities. The hazard unit is touched by both Phase 2 spec and Phase 3 status (hidden cross-phase dependency).
 
 **Update the graph** after adding RTL or docs: `/graphify rtl docs fixes --update`.
+
+### HDL Property Graph (`hdl-kgraph`)
+
+`.hdl-kgraph/graph.db` is a Kùzu property graph of the HDL design (SystemVerilog/Verilog/VHDL), extracted by `hdl-kgraph`. As of 2026-06-04 (commit `1c08229`): **2150 nodes, 22473 edges, 275 files** (verilog, python, bash). Edges carry a confidence score: 1.0 = syntactically resolved, 0.8 = unique cross-file name match, 0.6 = ambiguous match, 0.4 = naming heuristic. Unresolved references appear as stub nodes flagged `unresolved`.
+
+Query it via the **`hdl-kgraph` MCP server** (read-only) — prefer this over Grep/Glob for HDL structure questions:
+
+| Tool | Use when |
+| ---- | -------- |
+| `get_hierarchy` / `find_module` | Orient: module tree, find a module by name |
+| `who_instantiates` / `port_map` | Find parents of a module; inspect port connections |
+| `find_signal_drivers` | Trace what drives a signal |
+| `impact_of_change` | Blast radius of editing a module/signal |
+| `clock_domains` / `uvm_topology` | CDC analysis; UVM testbench structure |
+| `search_nodes` | Find nodes by name/keyword |
+
+Rebuild after RTL changes: `hdl-kgraph build` / `hdl-kgraph update`.
 
 ## Technology Node Strategy
 
@@ -215,8 +232,8 @@ Legend: ✅ done · 🚧 in progress · ⏸️ not started. Milestone status (M1
 3. ✅ **SRAM controller** (M6): behavioral AXI4-slave in `rtl/soc/sram_controller.sv`
 4. ✅ **SoC top integration** (M8): CPU + GPU + DMA + peripherals wired in `rtl/soc/soc_top.sv` (+ `boot_rom.sv`)
 5. ✅ **Performance counters** (M7): CSR-mapped + AXI-Lite GPU stats (CPU re-sign-off 1282 MHz)
-6. 🚧 **SoC verification** (M9): boot test ✅ (100/100); remaining — CPU-GPU integration (kernel launch → IRQ → result read), software coherency sequence, DMA/peripheral loopback
-7. ⏸️ **Full regression**: all prior tests + CPU + GPU benchmarks
+6. ✅ **SoC verification** (M9): boot 100/100; DMA+UART+SPI loopback; SW coherency (D$ flush→GPU→D$ inval); CPU-GPU IRQ-driven integration; DUT-side boot SRAM check. Found+fixed 2 RTL bugs (D-cache MMIO caching `go9`; axi4_crossbar AR/AW handshake+arbitration `7fs`). `soc_all` 73/73.
+7. ✅ **Full regression**: CPU rollup + GPU + cache green; **1M+ cycle SoC stress (1,079,867 cyc, 0 fail)** + CPU/GPU benchmarks (M9 `pgf`)
 8. ⏸️ **L2 cache evaluation**: add `rtl/mem/l2_cache.sv` only if L1 miss rates justify it
 9. ⏸️ **Backend flow**: full SoC synth + P&R + STA; `pnr/constraints/phase5_soc.sdc`, `phase5_soc.upf`; power-domain validation
 10. ⏸️ **Sign-off**: coverage, power analysis, final review
@@ -248,45 +265,6 @@ Categories: `[Fix]`, `[Feature]`, `[Code]` (refactoring), `[Env]` (build), `[Doc
 ## Questions?
 
 Refer to specifications in `docs/` — they are the source of truth.
-
-<!-- code-review-graph MCP tools -->
-## MCP Tools: code-review-graph
-
-**IMPORTANT: This project has a knowledge graph. ALWAYS use the
-code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
-the codebase.** The graph is faster, cheaper (fewer tokens), and gives
-you structural context (callers, dependents, test coverage) that file
-scanning cannot.
-
-### When to use graph tools FIRST
-
-- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
-- **Understanding impact**: `get_impact_radius` instead of manually tracing imports
-- **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
-- **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
-- **Architecture questions**: `get_architecture_overview` + `list_communities`
-
-Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
-
-### Key Tools
-
-| Tool | Use when |
-| ------ | ---------- |
-| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
-| `get_review_context` | Need source snippets for review — token-efficient |
-| `get_impact_radius` | Understanding blast radius of a change |
-| `get_affected_flows` | Finding which execution paths are impacted |
-| `query_graph` | Tracing callers, callees, imports, tests, dependencies |
-| `semantic_search_nodes` | Finding functions/classes by name or keyword |
-| `get_architecture_overview` | Understanding high-level codebase structure |
-| `refactor_tool` | Planning renames, finding dead code |
-
-### Workflow
-
-1. The graph auto-updates on file changes (via hooks).
-2. Use `detect_changes` for code review.
-3. Use `get_affected_flows` to understand impact.
-4. Use `query_graph` pattern="tests_for" to check coverage.
 
 <!-- rtk-instructions v2 -->
 ## RTK (Rust Token Killer)
