@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "netgen": {
+      "command": "/usr/bin/python3",
+      "args": ["/home/neuromorphic/Downloads/Github/claude_verilog_test/plugins/infrastructure/tools/mcp-adapter.py"],
+      "env": {
+        "MCP_TOOL": "netgen",
+        "WRAPPER": "/home/neuromorphic/Downloads/Github/claude_verilog_test/plugins/infrastructure/tools/netgen-wrapper.sh"
+      }
+    }
+  }
+}

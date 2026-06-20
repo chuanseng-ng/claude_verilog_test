@@ -1,0 +1,7 @@
+{
+  "generated_at": "2026-06-20T00:00:00Z",
+  "module_system": "none",
+  "module_system_detected": false,
+  "tools_found_via_modules": 0,
+  "note": "MODULESHOME is not set and modulecmd is not in PATH. TCL Environment Modules are not available on this host. Proceed — module system is optional."
+}

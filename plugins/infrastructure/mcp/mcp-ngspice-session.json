@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ngspice-session": {
+      "command": "/usr/bin/python3",
+      "args": ["/home/neuromorphic/Downloads/Github/claude_verilog_test/plugins/infrastructure/tools/mcp-session-adapter.py", "--tool", "ngspice"]
+    }
+  }
+}

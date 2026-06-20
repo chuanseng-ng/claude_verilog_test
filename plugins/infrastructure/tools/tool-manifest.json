@@ -1,0 +1,83 @@
+{
+  "generated_at": "2026-06-20T00:00:00Z",
+  "environment_validation": "PASS",
+  "python_env": {
+    "exec": "/usr/bin/python3",
+    "type": "system",
+    "version": "3.10.12",
+    "bin_dir": "/usr/bin"
+  },
+  "nix_analog_shell": {
+    "flake": "~/Downloads/Github/librelane",
+    "shell": "analog",
+    "enter_command": "nix develop ~/Downloads/Github/librelane#analog",
+    "eval_result": "devshell (PASS — nix eval returned derivation name)",
+    "tools_provided_by_nix": {
+      "ngspice":    "45          (extra-packages)",
+      "xschem":     "3.4.7       (extra-packages)",
+      "magic":      "8.3.629     (librelane.includedTools)",
+      "netgen":     "6.2.2505    (librelane.includedTools)",
+      "klayout":    "0.30.8      (librelane.includedTools)",
+      "verilator":  "via librelane.includedTools",
+      "gtkwave":    "via create-shell.nix base packages",
+      "cocotb":     "extra-python-packages (nixpkgs 2.0.1)",
+      "numpy":      "extra-python-packages (nixpkgs 2.4.4)",
+      "scipy":      "extra-python-packages (nixpkgs 1.17.1)",
+      "matplotlib": "extra-python-packages (nixpkgs 3.10.9)"
+    }
+  },
+  "openvaf": {
+    "status": "STUB — not in nixpkgs",
+    "derivation": "~/Downloads/Github/librelane/nix/openvaf.nix",
+    "fallback": "ngspice B-sources / XSPICE behavioral models for M-a and M-b",
+    "enable_when": "fill url+sha256 in openvaf.nix, un-comment in flake.nix#analog"
+  },
+  "wrappers": {
+    "ngspice-wrapper.sh": { "path": "plugins/infrastructure/tools/ngspice-wrapper.sh", "executable": true },
+    "magic-wrapper.sh":   { "path": "plugins/infrastructure/tools/magic-wrapper.sh",   "executable": true },
+    "klayout-wrapper.sh": { "path": "plugins/infrastructure/tools/klayout-wrapper.sh", "executable": true },
+    "netgen-wrapper.sh":  { "path": "plugins/infrastructure/tools/netgen-wrapper.sh",  "executable": true },
+    "openvaf-wrapper.sh": { "path": "plugins/infrastructure/tools/openvaf-wrapper.sh", "executable": true },
+    "mcp-adapter.py":     { "path": "plugins/infrastructure/tools/mcp-adapter.py",     "executable": true },
+    "mcp-session-adapter.py": { "path": "plugins/infrastructure/tools/mcp-session-adapter.py", "executable": true }
+  },
+  "mcp_configs": {
+    "batch": [
+      "plugins/infrastructure/mcp/mcp-ngspice.json",
+      "plugins/infrastructure/mcp/mcp-xyce.json",
+      "plugins/infrastructure/mcp/mcp-magic.json",
+      "plugins/infrastructure/mcp/mcp-klayout.json",
+      "plugins/infrastructure/mcp/mcp-netgen.json",
+      "plugins/infrastructure/mcp/mcp-openvaf.json",
+      "plugins/infrastructure/mcp/mcp-openems.json"
+    ],
+    "session": [
+      "plugins/infrastructure/mcp/mcp-ngspice-session.json"
+    ]
+  },
+  "analog_seed": {
+    "design_state": "analog/pll_clkgen/design_state.json",
+    "vco_test_netlist": "analog/pll_clkgen/behavioral_vco_test.sp"
+  },
+  "sign_off_checklist": {
+    "tool_status_json": true,
+    "module_status_json": true,
+    "install_scripts_generated": true,
+    "load_modules_sh": "N/A — no module system detected",
+    "wrappers_deployed_executable": true,
+    "mcp_adapter_present": true,
+    "mcp_session_adapter_present": true,
+    "mcp_configs_written_with_absolute_paths": true,
+    "no_critical_path_tool_missing": "PASS — ngspice and klayout/magic/netgen delivered via nix#analog",
+    "analog_design_state_seeded": true
+  },
+  "qor": {
+    "tools_detected": 3,
+    "tools_missing": 21,
+    "tools_via_nix_shell": 11,
+    "module_system_detected": false,
+    "tools_found_via_modules": 0,
+    "wrappers_deployed": 7,
+    "mcp_servers_configured": 8
+  }
+}

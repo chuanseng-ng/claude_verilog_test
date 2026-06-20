@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "openvaf": {
+      "command": "/usr/bin/python3",
+      "args": ["/home/neuromorphic/Downloads/Github/claude_verilog_test/plugins/infrastructure/tools/mcp-adapter.py"],
+      "env": {
+        "MCP_TOOL": "openvaf",
+        "WRAPPER": "/home/neuromorphic/Downloads/Github/claude_verilog_test/plugins/infrastructure/tools/openvaf-wrapper.sh"
+      }
+    }
+  }
+}

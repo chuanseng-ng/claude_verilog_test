@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "openems": {
+      "command": "/usr/bin/python3",
+      "args": ["/home/neuromorphic/Downloads/Github/claude_verilog_test/plugins/infrastructure/tools/mcp-adapter.py"],
+      "env": {
+        "MCP_TOOL": "openems",
+        "TOOL_TIMEOUT_S": "1800"
+      }
+    }
+  }
+}
