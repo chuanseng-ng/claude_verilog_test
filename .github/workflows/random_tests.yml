@@ -54,25 +54,26 @@ jobs:
           python-version: '3.10'
           cache: 'pip'
 
-      - name: Install system dependencies
+      - name: Install Nix (pinned Verilator from binary cache)
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Install pinned Verilator (nix profile, system-shell compile)
+        run: |
+          nix profile install .#verilator
+          verilator --version
+
+      - name: Install runtime libs for cocotb (system libffi etc.)
+        # cocotb runs on the setup-python interpreter, not nix. sim/Makefile's
+        # NIX_COMPAT_DIR loop symlinks these system libs (resolved via ldconfig)
+        # so the Verilator sim binary can dlopen libpython/ctypes. The old CI
+        # pulled them in transitively via apt; the nix migration dropped that.
         run: |
           sudo apt-get update
-          sudo apt-get install -y git perl python3 make autoconf g++ flex bison ccache \
-            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlib1g \
-            zlib1g-dev gtkwave help2man
-
-          # Install Verilator 5.036+ from source (Ubuntu's apt has 5.020)
-          echo "Building Verilator 5.036 from source..."
-          cd /tmp
-          git clone https://github.com/verilator/verilator
-          cd verilator
-          git checkout v5.036
-          autoconf
-          ./configure
-          make -j$(nproc)
-          sudo make install
-          echo "Verilator installation complete:"
-          verilator --version
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5
 
       - name: Install Python dependencies
         run: |
@@ -248,25 +249,26 @@ jobs:
           python-version: '3.10'
           cache: 'pip'
 
-      - name: Install system dependencies
+      - name: Install Nix (pinned Verilator from binary cache)
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Install pinned Verilator (nix profile, system-shell compile)
+        run: |
+          nix profile install .#verilator
+          verilator --version
+
+      - name: Install runtime libs for cocotb (system libffi etc.)
+        # cocotb runs on the setup-python interpreter, not nix. sim/Makefile's
+        # NIX_COMPAT_DIR loop symlinks these system libs (resolved via ldconfig)
+        # so the Verilator sim binary can dlopen libpython/ctypes. The old CI
+        # pulled them in transitively via apt; the nix migration dropped that.
         run: |
           sudo apt-get update
-          sudo apt-get install -y git perl python3 make autoconf g++ flex bison ccache \
-            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlib1g \
-            zlib1g-dev gtkwave help2man
-
-          # Install Verilator 5.036+ from source (Ubuntu's apt has 5.020)
-          echo "Building Verilator 5.036 from source..."
-          cd /tmp
-          git clone https://github.com/verilator/verilator
-          cd verilator
-          git checkout v5.036
-          autoconf
-          ./configure
-          make -j$(nproc)
-          sudo make install
-          echo "Verilator installation complete:"
-          verilator --version
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5
 
       - name: Install Python dependencies
         run: |
@@ -384,25 +386,26 @@ jobs:
           python-version: '3.10'
           cache: 'pip'
 
-      - name: Install system dependencies
+      - name: Install Nix (pinned Verilator from binary cache)
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Install pinned Verilator (nix profile, system-shell compile)
+        run: |
+          nix profile install .#verilator
+          verilator --version
+
+      - name: Install runtime libs for cocotb (system libffi etc.)
+        # cocotb runs on the setup-python interpreter, not nix. sim/Makefile's
+        # NIX_COMPAT_DIR loop symlinks these system libs (resolved via ldconfig)
+        # so the Verilator sim binary can dlopen libpython/ctypes. The old CI
+        # pulled them in transitively via apt; the nix migration dropped that.
         run: |
           sudo apt-get update
-          sudo apt-get install -y git perl python3 make autoconf g++ flex bison ccache \
-            libgoogle-perftools-dev numactl perl-doc libfl2 libfl-dev zlib1g \
-            zlib1g-dev gtkwave help2man
-
-          # Install Verilator 5.036+ from source (Ubuntu's apt has 5.020)
-          echo "Building Verilator 5.036 from source..."
-          cd /tmp
-          git clone https://github.com/verilator/verilator
-          cd verilator
-          git checkout v5.036
-          autoconf
-          ./configure
-          make -j$(nproc)
-          sudo make install
-          echo "Verilator installation complete:"
-          verilator --version
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5
 
       - name: Install Python dependencies
         run: |
@@ -666,6 +669,12 @@ jobs:
           python-version: '3.10'
           cache: 'pip'
 
+      # NOTE: rtl-coverage stays on the from-source Verilator build (unlike the
+      # smoke/full/extended jobs which use nix). The `make coverage` -> icache path
+      # crashes under nix Verilator: the coverage build embeds /usr/bin/python3
+      # (system 3.12) while cocotb runs on setup-python 3.10 -> "No module named
+      # 'encodings'". This job is nightly-only, so the source-build cost is moot.
+      # See bead claude_verilog_test-hg2 for the nix-vs-coverage investigation.
       - name: Install system dependencies
         run: |
           sudo apt-get update
