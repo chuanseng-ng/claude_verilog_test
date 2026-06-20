@@ -91,7 +91,7 @@ module soc_top
     // =========================================================================
     localparam int unsigned N_MASTERS   = 4;
     localparam int unsigned N_SLAVES    = SOC_N_SLAVES;    // 3
-    localparam int unsigned N_AXIL_SLV  = AXIL_N_SLAVES;  // 6
+    localparam int unsigned N_AXIL_SLV  = AXIL_N_SLAVES;  // 7 (Phase 7 M-c: +PLL)
     localparam int unsigned AW          = AXI_ADDR_WIDTH;
     localparam int unsigned DW          = AXI_DATA_WIDTH;
     localparam int unsigned SW          = AXI_STRB_WIDTH;

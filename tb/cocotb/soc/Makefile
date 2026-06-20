@@ -65,6 +65,15 @@ SPI_SOURCES = \
 	$(RTL)/soc/axi_lite_register_bank.sv \
 	$(RTL)/periph/spi_controller.sv
 
+# Phase 7 M-c: standalone pll_axil_regs unit-test sources.
+# Minimal: axi_pkg + axi_lite_register_bank (dependency) + pll_axil_regs + standalone TB.
+# Does NOT include the full SoC — the BFM drives s_axil_* top-level ports directly.
+PLL_REGS_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/axi_lite_register_bank.sv \
+	$(RTL)/soc/pll/pll_axil_regs.sv \
+	$(SOC_DIR)/tb_pll_axil_regs.sv
+
 # Full SoC top-level sources for the boot test (M9).
 # Order: packages first, leaf RTL, adapters, then soc_top + tb wrapper.
 SRAM_SIM_MODEL ?= $(PROJ_ROOT)/sim/sram_1rw_256x32_verilator.v
@@ -300,10 +309,9 @@ spi: spi_lint
 		VERILOG_SOURCES="$(SPI_SOURCES)" \
 		$(BUILD_ARGS)
 
-# Phase 7 M-c: PLL lint gate.
-# Lints tb_soc_pll (with PLL_IMPL="STUB"; pll_rnm.sv excluded — pruned by
-# generate/if when PLL_IMPL != "RNM").  Shares the same suppression flags
-# as soc_boot_lint (pre-existing baseline warnings are all in cache/GPU files).
+# Phase 7 M-c: PLL lint gates.
+# soc_pll_lint: lints tb_soc_pll (full SoC, used by test_pll_lock).
+# pll_regs_lint: lints tb_pll_axil_regs (standalone, used by test_pll_regs).
 soc_pll_lint:
 	verilator --lint-only -Wall -Wno-fatal -Wno-IMPORTSTAR \
 		-Wno-UNUSEDSIGNAL -Wno-UNOPTFLAT -Wno-SYNCASYNCNET \
@@ -312,23 +320,36 @@ soc_pll_lint:
 		--top-module tb_soc_pll \
 		$(PLL_SOURCES)
 
-# Phase 7 M-c: SoC PLL simulation target.
-# Runs test_pll_lock (3 tests) + test_pll_regs (4 tests) back-to-back in a
-# single Verilator build sharing the PLL_SOURCES file set.
+pll_regs_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		-I$(RTL)/soc \
+		--top-module tb_pll_axil_regs \
+		$(PLL_REGS_SOURCES)
+
+# Phase 7 M-c: SoC PLL simulation targets.
+# test_pll_lock (3 tests): uses full SoC tb_soc_pll — verifies PLL lock
+#   signal propagation and pll_locked_o port.
+# test_pll_regs (4 tests): uses standalone tb_pll_axil_regs — exercises the
+#   pll_axil_regs register interface directly.  Separated from test_pll_lock
+#   because the original approach (BFM on periph_axil_* in the full SoC) had
+#   a structural conflict: periph_axil_arvalid is continuously driven by
+#   axi4_to_axilite assigns and cannot be force-driven by cocotb value-writes
+#   in Verilator.  The standalone TB exposes true input ports the BFM owns.
 # clean first: stale Vtop from any prior target causes VPI root handle mismatch.
-soc_pll: soc_pll_lint
+pll_regs: pll_regs_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_pll_regs TOPLEVEL=tb_pll_axil_regs \
+		VERILOG_SOURCES="$(PLL_REGS_SOURCES)" \
+		$(BUILD_ARGS)
+
+soc_pll: soc_pll_lint pll_regs_lint
 	$(MAKE) clean
 	$(MAKE) MODULE=test_pll_lock TOPLEVEL=tb_soc_pll \
 		VERILOG_SOURCES="$(PLL_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
-	$(MAKE) clean
-	$(MAKE) MODULE=test_pll_regs TOPLEVEL=tb_soc_pll \
-		VERILOG_SOURCES="$(PLL_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
-		  -Wno-SYNCASYNCNET" \
-		$(BUILD_ARGS)
+	$(MAKE) pll_regs
 
 soc_boot_lint:
 	verilator --lint-only -Wall -Wno-fatal -Wno-IMPORTSTAR \
