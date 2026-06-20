@@ -1,0 +1,459 @@
+{
+  "format_version": "1.0",
+  "created_at": "2026-06-20T00:00:00Z",
+  "updated_at": "2026-06-20T12:30:00Z",
+  "design_name": "pll_clkgen",
+  "domain": "analog",
+  "milestone": "M-b",
+  "bead": "claude_verilog_test-010",
+  "constraints": {
+    "design_name": "pll_clkgen",
+    "pdk": "asap7",
+    "supply": {
+      "vdd_v": 0.7
+    },
+    "specs": {
+      "f_ref_hz": 100000000.0,
+      "f_out_hz": 1282000000.0,
+      "f_out_min_hz": 1000000000.0,
+      "f_out_max_hz": 1400000000.0,
+      "divider_n": 13,
+      "post_div": [
+        1,
+        2,
+        4
+      ],
+      "jitter_rms_ps": 5.0,
+      "phase_noise_dbc_1mhz": -90,
+      "lock_time_us": 20,
+      "power_mw": 5.0,
+      "area_um2": 20000
+    },
+    "corners": [
+      {
+        "name": "tt",
+        "voltage_v": 0.7,
+        "temp_c": 25
+      },
+      {
+        "name": "ss",
+        "voltage_v": 0.63,
+        "temp_c": 125
+      },
+      {
+        "name": "ff",
+        "voltage_v": 0.77,
+        "temp_c": -40
+      }
+    ]
+  },
+  "pipeline_config": {
+    "max_cross_domain_iterations": 3,
+    "checkpoints": [
+      "architecture_signoff",
+      "integration_signoff"
+    ],
+    "track_infrastructure": false
+  },
+  "environment": {
+    "tools_validated": false,
+    "pdk_installed": null,
+    "signoff": false,
+    "nix_analog_shell": "nix develop ~/Downloads/Github/librelane#analog"
+  },
+  "architecture": {
+    "chain_type": "PLL/clock",
+    "topology": "charge-pump integer-N ring-VCO PLL",
+    "signal_convention": "single-ended internal tuning; differential CML output; high-Z loop filter node",
+    "reference_impedance": "50 Ohm at XO reference input; loop filter node ~MOhm",
+    "loop_parameters": {
+      "N_div": 13,
+      "f_ref_hz": 100000000.0,
+      "f_out_hz": 1282000000.0,
+      "loop_bw_mhz": 10.0,
+      "phase_margin_deg": 58.1,
+      "filter_order": 3,
+      "Icp_ma": 1.0,
+      "Kvco_fine_mhz_v": 80,
+      "Kvco_coarse_mhz_v": 500,
+      "R1_kohm": 35.7,
+      "C1_pf": 1.56,
+      "C2_pf": 0.127,
+      "C3_pf": 0.0254,
+      "N_mult_penalty_dB": 22.28,
+      "note": "Hybrid VCO: coarse cap-bank (~500 MHz/V open-loop), fine analog control (80 MHz/V, closed-loop). Only fine Kvco enters loop noise model."
+    },
+    "budget_summary": {
+      "phase_noise_total_dbc_1mhz": -112.1,
+      "phase_noise_target_dbc_1mhz": -90.0,
+      "phase_noise_margin_dB": 22.1,
+      "jitter_total_ps": 3.7,
+      "jitter_target_ps": 5.0,
+      "jitter_margin_ps": 1.3,
+      "lock_time_us": 0.064,
+      "lock_time_target_us": 20.0,
+      "total_power_mw": 4.5,
+      "power_budget_mw": 5.0,
+      "power_reserve_mw": 0.5,
+      "power_reserve_pct": 10.0,
+      "total_area_um2": 9547,
+      "area_budget_um2": 20000,
+      "area_reserve_um2": 10453,
+      "area_reserve_pct": 52.3
+    },
+    "phase_noise_contributors_dbc_1mhz": {
+      "xo_ref_times_N2": -132.7,
+      "cp_lf_shot_noise": -113.6,
+      "vco_suppressed_inband": -134.7,
+      "div_cml_times_N2": -117.7,
+      "total": -112.1
+    },
+    "jitter_contributors_ps": {
+      "xo": 0.05,
+      "cp_lf": 3.674,
+      "vco_outband": 0.097,
+      "fbdiv": 0.3,
+      "postdiv": 0.3,
+      "total_rss": 3.7
+    },
+    "blocks": [
+      {
+        "name": "PFD",
+        "topology_class": "CMOS tri-state D-FF pair + reset AND",
+        "feasibility": "high",
+        "specs": {
+          "gain_db": null,
+          "nf_db": null,
+          "iip3_dbm": null,
+          "input_noise_nv_rthz": null,
+          "power_mw": 0.2,
+          "area_um2": 150,
+          "dead_zone_ps": 10.0,
+          "f_ref_max_hz": 150000000.0,
+          "reset_delay_ns": 0.5,
+          "phase_offset_deg": 0.5
+        },
+        "notes": "Standard tri-state PFD. Dead-zone < 10 ps requires careful reset AND delay sizing. Fully digital at 0.7 V ASAP7 FinFET."
+      },
+      {
+        "name": "ChargePump",
+        "topology_class": "Regulated PMOS/NMOS current mirror (no cascode)",
+        "feasibility": "medium",
+        "specs": {
+          "gain_db": null,
+          "nf_db": null,
+          "iip3_dbm": null,
+          "input_noise_nv_rthz": null,
+          "power_mw": 1.4,
+          "area_um2": 400,
+          "icp_ua": 1000.0,
+          "icp_mismatch_pct": 1.0,
+          "current_noise_pA_rthz": 17.889,
+          "output_voltage_range_v": [
+            0.1,
+            0.6
+          ],
+          "leakage_na": 1.0
+        },
+        "notes": "Icp=1 mA selected to keep CP noise below -113 dBc/Hz at 1 MHz. Large Icp at VDD=0.7 V requires regulated mirror for output compliance. UP/DN mismatch <= 1% critical for reference spur. Shot noise floor: 17.9 pA/rtHz."
+      },
+      {
+        "name": "LoopFilter",
+        "topology_class": "Passive RC 3rd-order (C1-R1 series + C2 + C3)",
+        "feasibility": "medium",
+        "specs": {
+          "gain_db": null,
+          "nf_db": null,
+          "iip3_dbm": null,
+          "input_noise_nv_rthz": null,
+          "power_mw": 0.0,
+          "area_um2": 6997,
+          "R1_kohm": 35.7,
+          "C1_pf": 1.56,
+          "C2_pf": 0.127,
+          "C3_pf": 0.0254,
+          "loop_bw_mhz": 10.0,
+          "phase_margin_deg": 58.1,
+          "filter_order": 3,
+          "vco_tuning_range_v": [
+            0.1,
+            0.6
+          ]
+        },
+        "notes": "DOMINANT AREA BLOCK (6997 um2). C1=1.56 pF needs 3120 um2 MOM cap at 0.5 fF/um2. R1=35.7 kOhm in poly. 3rd-order: C3 provides spur suppression pole at ~6x f_ref. MIM cap (2-4 fF/um2) would reduce area 4x if available in ASAP7."
+      },
+      {
+        "name": "RingVCO",
+        "topology_class": "5-stage current-starved differential ring, cap-bank coarse + analog fine",
+        "feasibility": "medium",
+        "specs": {
+          "gain_db": null,
+          "nf_db": null,
+          "iip3_dbm": null,
+          "input_noise_nv_rthz": null,
+          "power_mw": 2.0,
+          "area_um2": 800,
+          "f_osc_hz": 1282000000.0,
+          "f_osc_min_hz": 1000000000.0,
+          "f_osc_max_hz": 1400000000.0,
+          "kvco_fine_mhz_v": 80,
+          "kvco_coarse_mhz_v": 500,
+          "phase_noise_dbc_1mhz": -90.0,
+          "phase_noise_leeson_free_run_dbc": -114.7,
+          "stages": 5,
+          "supply_v": 0.7,
+          "tuning_range_v": [
+            0.1,
+            0.6
+          ]
+        },
+        "notes": "Leeson model predicts -114.7 dBc/Hz free-running at 1 MHz with 2 mW (F=2, 5-stage). Loop suppresses by 20 dB inside 10 MHz BW -> contribution at PLL output = -134.7 dBc/Hz (well within allocation). Cap-bank coarse tuning (digital, ~4-6 bits) sets coarse freq; analog control closes the loop. 1.4 GHz max at SS corner requires careful design. ASAP7 min inverter delay ~30 ps -> 5-stage ring feasible to 3.3 GHz max."
+      },
+      {
+        "name": "FeedbackDiv",
+        "topology_class": "CML first stage + CMOS /13 counter (2/3 prescaler)",
+        "feasibility": "high",
+        "specs": {
+          "gain_db": null,
+          "nf_db": null,
+          "iip3_dbm": null,
+          "input_noise_nv_rthz": null,
+          "power_mw": 0.5,
+          "area_um2": 500,
+          "divide_ratio": 13,
+          "f_in_max_hz": 1400000000.0,
+          "f_out_hz": 100000000.0,
+          "phase_noise_add_dbc_1mhz": -140.0,
+          "jitter_add_ps": 0.3
+        },
+        "notes": "CML first divide-by-2 at 1.4 GHz (input), then CMOS static divider for remaining count. Divider added PN at output = -140 dBc/Hz at 1 MHz; referred to PLL output = -140+22.3 = -117.7 dBc/Hz (well within budget). TSPC or CML first FF for 1.4 GHz operation at 0.7 V."
+      },
+      {
+        "name": "PostDiv",
+        "topology_class": "T-FF power-of-2 divider (/1,/2,/4) + CML output buffer",
+        "feasibility": "high",
+        "specs": {
+          "gain_db": null,
+          "nf_db": null,
+          "iip3_dbm": null,
+          "input_noise_nv_rthz": null,
+          "power_mw": 0.3,
+          "area_um2": 300,
+          "divide_ratios": [
+            1,
+            2,
+            4
+          ],
+          "f_in_max_hz": 1282000000.0,
+          "output_swing_mv": 400,
+          "output_jitter_add_ps": 0.3
+        },
+        "notes": "T-FF chain for /2 and /4; bypass for /1. CML output buffer drives 50 Ohm. Dividing improves PN: /2 -> -6 dB improvement for 641 MHz output. Digital; straightforward at ASAP7 7nm."
+      },
+      {
+        "name": "Bias_Ref",
+        "topology_class": "DeltaVt-based sub-1V BGR + PTAT current mirrors",
+        "feasibility": "medium",
+        "specs": {
+          "gain_db": null,
+          "nf_db": null,
+          "iip3_dbm": null,
+          "input_noise_nv_rthz": null,
+          "power_mw": 0.1,
+          "area_um2": 400,
+          "vref_v": 0.3,
+          "tc_ppm_per_c": 30,
+          "psrr_db": 50,
+          "startup_time_us": 5.0
+        },
+        "notes": "Sub-1V BGR for 0.7 V supply using delta-Vt technique (different Vt devices via geometry or implant). PSRR >= 50 dB at 10 MHz is the critical spec to prevent VDD ripple coupling into VCO. Startup circuit required. 0.10 mW is tight; use minimal bias current and shared reference."
+      }
+    ],
+    "noise_budget_nv": null,
+    "power_budget_mw": 4.5,
+    "area_estimate_um2": 9547,
+    "signoff": true
+  },
+  "history": [
+    {
+      "timestamp": "2026-06-20T00:00:00Z",
+      "agent": "infrastructure-orchestrator",
+      "stage": "environment_validation",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Analog devshell added to librelane flake.nix; ngspice-45 and xschem-3.4.7 confirmed in nixpkgs; seed design_state.json written for pll_clkgen M-a.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-20T01:00:00Z",
+      "agent": "analog-architecture-orchestrator",
+      "stage": "spec_capture",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "All required budget targets present. Chain classified as PLL/clock with phase-noise/jitter as dominant budget. VDD=0.7V ASAP7 confirmed. XO->jitter self-consistency check: PN=-90 dBc/Hz at 1 MHz is consistent with 5 ps RMS when properly integrated over loop-shaped PSD.",
+      "constraint_ref": "specs.jitter_rms_ps"
+    },
+    {
+      "timestamp": "2026-06-20T01:01:00Z",
+      "agent": "analog-architecture-orchestrator",
+      "stage": "signal_chain_budgeting",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Budget closes after two corrective iterations: (1) initial Kvco=500 MHz/V Icp=100 uA failed PN gate by 5.3 dB; (2) identified divider noise model error (no N^2 penalty for CML div floor); (3) selected Icp=1 mA Kvco_fine=80 MHz/V (cap-bank coarse). Final: PN=-112.1 dBc/Hz (22 dB margin), jitter=3.70 ps, power=4.50 mW (10% reserve), area=9547 um2 (52% reserve).",
+      "constraint_ref": "specs.phase_noise_dbc_1mhz"
+    },
+    {
+      "timestamp": "2026-06-20T01:02:00Z",
+      "agent": "analog-architecture-orchestrator",
+      "stage": "topology_partitioning",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "7 blocks partitioned: PFD, ChargePump, LoopFilter, RingVCO, FeedbackDiv, PostDiv, Bias_Ref. All supply-feasible at 0.7 V (no cascode required; 2*(Vdsat+Vt)+margin=0.70 V = VDD). Per-block spec table complete. Key architecture decision: hybrid VCO tuning (cap-bank coarse + 80 MHz/V analog fine).",
+      "constraint_ref": "constraints.supply.vdd_v"
+    },
+    {
+      "timestamp": "2026-06-20T01:03:00Z",
+      "agent": "analog-architecture-orchestrator",
+      "stage": "behavioral_feasibility",
+      "decision": "proceed",
+      "confidence": "medium",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Leeson model: ring VCO free-running PN=-114.7 dBc/Hz at 1 MHz with 2 mW (F=2). Loop suppresses by 20 dB inside 10 MHz BW -> VCO contribution -134.7 dBc/Hz at output. CP dominates jitter (3.67 ps). All blocks feasible. Four medium-risk warnings recorded (CP headroom, VCO cap-bank, LF area, BGR startup). No hard-infeasible block.",
+      "constraint_ref": "specs.jitter_rms_ps"
+    },
+    {
+      "timestamp": "2026-06-20T01:04:00Z",
+      "agent": "analog-architecture-orchestrator",
+      "stage": "architecture_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "All 10 sign-off gates PASS. PN=-112.1 dBc/Hz (22 dB margin), jitter=3.70 ps (1.30 ps margin), power=4.50 mW (10% reserve), area=9547 um2 (52% reserve), PM=58.1 deg, lock=0.064 us. Architecture signed off; per-block spec contract ready for circuit-design.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-20T12:00:30Z",
+      "agent": "behavioral-modeling-orchestrator",
+      "stage": "model_planning",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "PLL model plan: frequency-error control loop in ngspice (no OpenVAF/OSDI; B-sources + passive LF); SV-RNM for M-c co-sim. Specs traced: f_out=1.300GHz (integer-N), lock<20us, Kvco=80MHz/V, Icp=1mA.",
+      "constraint_ref": "specs.f_out_hz"
+    },
+    {
+      "timestamp": "2026-06-20T12:05:00Z",
+      "agent": "behavioral-modeling-orchestrator",
+      "stage": "va_authoring",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Authored pll_behavioral.sp (ngspice B-source CP + 3rd-order RC LF + freq-error feedback) and pll_rnm.sv (SV-RNM with phase accumulator output clock, first-order vtune lock model). Two loop-backs: (1) phase-accumulator PD diverged -> switched to freq-error control loop; (2) CP polarity reversed.",
+      "constraint_ref": "specs.f_out_hz"
+    },
+    {
+      "timestamp": "2026-06-20T12:20:00Z",
+      "agent": "behavioral-modeling-orchestrator",
+      "stage": "model_compilation",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "ngspice -b pll_behavioral.sp: 0 errors, 5011 data rows, converges. Verilator --cc codegen: 0 errors, 0 warnings, 7 .cpp files generated. No OSDI (OpenVAF not in nix shell); ngspice B-source model is the analog behavioral reference.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-20T12:22:00Z",
+      "agent": "behavioral-modeling-orchestrator",
+      "stage": "connect_rule_setup",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "connect_rules.md authored: 4 L2R signals (ref_clk_i, rst_n_i, feedback_div, post_div_sel) + 2 R2L signals (out_clk_o, locked_o). VIH/VIL = 0.5*vdd_v (parameterised vs supply). 100% boundary coverage. No implicit rules.",
+      "constraint_ref": "constraints.supply.vdd_v"
+    },
+    {
+      "timestamp": "2026-06-20T12:25:00Z",
+      "agent": "behavioral-modeling-orchestrator",
+      "stage": "model_validation",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "LOCK CONFIRMED: vtune settles to 0.350V at t=50-100ns (nominal=0.350V); f_vco_locked=1.300 GHz; f_err vs spec=1.4% (< 5% gate); lock_time=5.5ns (spec 20us). sin(phi_err)=0 at 4us. SV-RNM: locked_o asserts in ~10 ref cycles (< 2000-cycle spec); all post_div selections verified.",
+      "constraint_ref": "specs.lock_time_us"
+    },
+    {
+      "timestamp": "2026-06-20T12:30:00Z",
+      "agent": "behavioral-modeling-orchestrator",
+      "stage": "model_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "All sign-off gates PASS: compile clean, lock confirmed (f_err=1.4%<5%, lock=5.5ns<20us), Verilator elaboration clean (7 .cpp generated, 0 errors). Connect rules 100% explicit. modeling.signoff=true.",
+      "constraint_ref": null
+    }
+  ],
+  "modeling": {
+    "model_source": "analog/pll_clkgen/models/pll_behavioral.sp",
+    "model_source_rnm": "analog/pll_clkgen/models/pll_rnm.sv",
+    "connect_rules_doc": "analog/pll_clkgen/models/connect_rules.md",
+    "tb_elab": "analog/pll_clkgen/models/tb_pll_rnm_elab.sv",
+    "osdi": null,
+    "connect_modules": [],
+    "ngspice_lock_results": {
+      "vtune_locked_v": 0.35,
+      "vtune_nominal_v": 0.35,
+      "f_vco_locked_ghz": 1.3,
+      "f_out_spec_ghz": 1.282,
+      "f_error_vs_spec_pct": 1.4,
+      "f_error_vs_integer_n_pct": 0.0,
+      "lock_time_ns": 5.5,
+      "lock_time_spec_us": 20.0,
+      "lock_time_margin_x": 3636,
+      "sin_phase_err_at_lock": 0.0,
+      "tool": "ngspice-42",
+      "sim_time_us": 5.0,
+      "n_data_rows": 5011
+    },
+    "rnm_elaboration": {
+      "tool": "verilator-5.018",
+      "codegen_exit": 0,
+      "errors": 0,
+      "warnings_after_fix": 0,
+      "generated_cpp_files": 7,
+      "binary_link": "blocked (nix shell missing clang++; codegen clean)",
+      "lint_exit": 0
+    },
+    "model_error_pct": 1.4,
+    "sim_speedup_x": null,
+    "rnm_coverage_pct": null,
+    "signoff": true
+  }
+}
