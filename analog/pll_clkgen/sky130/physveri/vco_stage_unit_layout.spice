@@ -1,0 +1,7 @@
+* NGSPICE file created from vco_stage_unit.ext - technology: sky130A
+
+
+* Top level circuit vco_stage_unit
+
+.end
+

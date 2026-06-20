@@ -1,0 +1,9 @@
+=== DRC SUMMARY: pll_clkgen_sky130 ===
+Tool: Magic 8.3 + sky130A.tech drc(full)
+
+Analog blocks (complete layout): 39 violations
+Stub blocks (bbox only):          25 violations
+Top-level assembly:               57 violations
+
+ANALOG BLOCK DRC: FAIL (39 violations)
+TOP-LEVEL DRC:    FAIL (57 violations)

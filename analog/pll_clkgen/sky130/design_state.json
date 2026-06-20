@@ -5,7 +5,7 @@
   "milestone": "Phase7-M-b2",
   "bead": "claude_verilog_test-llm",
   "created_at": "2026-06-20T12:00:00Z",
-  "updated_at": "2026-06-20T04:03:06Z",
+  "updated_at": "2026-06-20T12:00:02Z",
   "notes": "Sky130 real-signoff PLL variant. Real sky130_fd_pr SPICE models (ngspice native), PDK root ~/.volare/sky130A. Eliminates ASAP7 fx002 (no open FinFET models). Lower freq 100 MHz matching Sky130 SoC ceiling. Shares PDK-agnostic RNM at analog/pll_clkgen/models/pll_rnm.sv for SoC cosim.",
   "constraints": {
     "design_name": "pll_clkgen_sky130",
@@ -68,7 +68,31 @@
       "note": "All 5 architecture stages PASS. Budget: power 4.40/5.0 mW (12% reserve), area 42000/50000 um2 (16% reserve), jitter RSS 44.4/50 ps. Loop params: BW=1MHz, PM=60 deg. Behavioral PLL locked at 100.000 MHz in 1.38 us."
     }
   ],
-  "fix_requests": [],
+  "fix_requests": [
+    {
+      "id": "sky130-pv-fr001",
+      "created_by": "physical-verification-orchestrator",
+      "block": "cp_pmos_array,cp_nmos_array,vco_stage_unit,sky130_vco_layout,sky130_bias_layout",
+      "severity": "ERROR",
+      "failure_class": "drc_lvs",
+      "retry_strategy": "regenerate",
+      "analysis_name": "drc",
+      "spec_or_metric": "drc_violations=39 (analog blocks); lvs_errors=indeterminate (0 FET devices extracted)",
+      "suspected_circuit": "all analog layout cells",
+      "route_to": "custom-layout",
+      "status": "open",
+      "description": "Real magic drc(full) with sky130A.tech: 39 violations in complete analog cells (cp_pmos_array:2, cp_nmos_array:9, vco_stage_unit:4, sky130_vco_layout:12, sky130_lf:7, sky130_bias:5). Dominant classes: li.3 LI spacing, diff/tap.1 diffusion width, poly.1a poly width, poly.4 poly-to-diff spacing, nwell.4 no N+ tap. ext2spice extracted 0 FET devices: poly touches diff at boundary (0 nm overlap) rather than crossing through it. LVS via netgen blocked (empty layout netlist). Prior DRC=0 claim was incorrect.",
+      "fix": "Fix 1 (PRIMARY): Correct poly-diff overlap. Poly must cross through diffusion active region with >= 0.13 um enclosure on each side (26 magic units). Fix 2: All geometry must meet sky130 minimum dimensions: LI >= 0.17 um width/spacing, poly >= 0.15 um, diff >= 0.15 um. Add connected N+ taps to all nwells. Fix 3: Verify geometry scale -- current dimensions appear 10-50x too small (1-2 magic unit widths = 5-10 nm, far below minimums).",
+      "history": [
+        {
+          "timestamp": "2026-06-20T12:00:02Z",
+          "action": "opened",
+          "agent": "physical-verification-orchestrator",
+          "note": "DRC FAIL: 39 violations in 6 complete analog cells. LVS FAIL: 0 FET devices extracted (poly-diff touch not overlap). Netgen LVS blocked. pv_signoff=false."
+        }
+      ]
+    }
+  ],
   "architecture": {
     "chain_type": "PLL/clock",
     "dominant_budget": "jitter (phase-noise) and power",
@@ -470,8 +494,68 @@
       "suggested_next_step": "escalate",
       "reason": "Pre-DRC: 0 violations per-cell, 0 expanded (magic drc(full) + sky130A.tech). GDS written. HOWEVER: area 65856 > 50000 um2 target; PFD/FBDIV/POSTDIV are stubs; antenna diodes missing; density partial. layout.signoff=false pending compaction+stub-fill+finishing. Real assembled GDS exists for physical-verification to proceed in parallel.",
       "constraint_ref": "constraints.specs.area_um2"
+    },
+    {
+      "timestamp": "2026-06-20T12:00:01Z",
+      "agent": "physical-verification-orchestrator",
+      "stage": "drc",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "drc_lvs",
+      "retry_strategy": "regenerate",
+      "suggested_next_step": "loop_back_to:drc",
+      "reason": "Real magic drc(full) sky130A.tech: 39 violations in 6 complete analog cells. Dominant: li.3 LI spacing, diff/tap.1 diff width, poly.1a poly width, poly.4 poly-to-diff, nwell.4 no N+ tap. fix_request sky130-pv-fr001 opened.",
+      "constraint_ref": "sky130-pv-fr001"
+    },
+    {
+      "timestamp": "2026-06-20T12:00:02Z",
+      "agent": "physical-verification-orchestrator",
+      "stage": "lvs",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "drc_lvs",
+      "retry_strategy": "regenerate",
+      "suggested_next_step": "loop_back_to:drc",
+      "reason": "Magic ext2spice extracted 0 FET devices from all layout cells. Root cause: poly touches diff at boundary (0 nm overlap) instead of crossing through it. Netgen LVS blocked (empty layout netlist). LVS FAIL routed to fix_request sky130-pv-fr001.",
+      "constraint_ref": "sky130-pv-fr001"
     }
   ],
+  "physical_verification": {
+    "run_id": "physical-verification_20260620_000001",
+    "tool_drc": "Magic 8.3 rev 489 + sky130A.tech drc(full)",
+    "tool_lvs": "Netgen 1.5.278 + sky130A_setup.tcl",
+    "drc_violations_cp_pmos": 2,
+    "drc_violations_cp_nmos": 9,
+    "drc_violations_vco_unit": 4,
+    "drc_violations_vco_top": 12,
+    "drc_violations_lf": 7,
+    "drc_violations_bias": 5,
+    "drc_violations_analog_total": 39,
+    "drc_violations_stubs_total": 25,
+    "drc_violations_top": 57,
+    "drc_dominant_rules": ["li.3", "diff/tap.1", "poly.1a", "poly.4", "nwell.4", "LU.2", "LU.3", "li.1", "li.6"],
+    "lvs_fets_extracted": 0,
+    "lvs_extraction_root_cause": "poly touches diff at boundary (0 nm overlap); Magic requires poly to cross through diff to form FET channel; no 'fet' lines in .ext files",
+    "lvs_errors": "indeterminate (layout netlist empty)",
+    "lvs_netgen_status": "FAIL (Cannot find cell in extracted SPICE)",
+    "antenna_violations": null,
+    "antenna_status": "NOT_RUN",
+    "density_status": "NOT_RUN",
+    "signoff": false,
+    "signoff_note": "FAIL: 39 DRC violations in complete analog cells; 0 FET devices extracted (poly-diff geometry touch not overlap); LVS blocked. fix_request sky130-pv-fr001 opened for custom-layout. Stubs (PFD/FBDIV/POSTDIV) have additional 25 violations but are expected incomplete. Prior DRC=0 claim was from a different magic run or tile state — real drc(full) shows real violations.",
+    "reports": [
+      "analog/pll_clkgen/sky130/physveri/drc_summary.rpt",
+      "analog/pll_clkgen/sky130/physveri/drc_cp_pmos_array.rpt",
+      "analog/pll_clkgen/sky130/physveri/drc_cp_nmos_array.rpt",
+      "analog/pll_clkgen/sky130/physveri/drc_vco_stage_unit.rpt",
+      "analog/pll_clkgen/sky130/physveri/drc_sky130_vco_layout.rpt",
+      "analog/pll_clkgen/sky130/physveri/drc_sky130_lf_layout.rpt",
+      "analog/pll_clkgen/sky130/physveri/drc_sky130_bias_layout.rpt",
+      "analog/pll_clkgen/sky130/physveri/drc_pll_clkgen_top.rpt",
+      "analog/pll_clkgen/sky130/physveri/lvs_summary.rpt",
+      "analog/pll_clkgen/sky130/physveri/pv_signoff.rpt"
+    ]
+  },
   "archive_fix_requests": [
     {
       "id": "sky130-fr001",

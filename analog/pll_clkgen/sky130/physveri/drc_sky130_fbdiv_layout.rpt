@@ -1,0 +1,14 @@
+=== DRC: sky130_fbdiv_layout ===
+Tool: Magic + sky130A.tech drc(full)
+
+drc_violations: 6
+
+--- Violation Details ---
+  Local interconnect width < 0.17um (li.1)
+  {-2 142 0 172} {2 138 32 142} {0 142 2 172} {278 142 282 172}
+  Core local interconnect width < 0.14um (li.c1)
+  {-2 142 0 166} {2 138 26 142} {0 142 2 166} {278 142 282 166}
+  Metal1 width < 0.14um (met1.1)
+  {142 -2 166 0} {142 280 166 282}
+  Local interconnect minimum area < 0.0561um^2 (li.6)
+  {-2 138 0 142} {-2 138 0 142} {0 138 2 142} {0 138 2 142} {278 138 282 142} {278 138 282 142}
