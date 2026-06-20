@@ -65,10 +65,82 @@ SPI_SOURCES = \
 	$(RTL)/soc/axi_lite_register_bank.sv \
 	$(RTL)/periph/spi_controller.sv
 
+# Phase 7 M-c: standalone pll_axil_regs unit-test sources.
+# Minimal: axi_pkg + axi_lite_register_bank (dependency) + pll_axil_regs + standalone TB.
+# Does NOT include the full SoC — the BFM drives s_axil_* top-level ports directly.
+PLL_REGS_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/axi_lite_register_bank.sv \
+	$(RTL)/soc/pll/pll_axil_regs.sv \
+	$(SOC_DIR)/tb_pll_axil_regs.sv
+
 # Full SoC top-level sources for the boot test (M9).
 # Order: packages first, leaf RTL, adapters, then soc_top + tb wrapper.
 SRAM_SIM_MODEL ?= $(PROJ_ROOT)/sim/sram_1rw_256x32_verilator.v
 GPU_SRAM_SIM   ?= $(PROJ_ROOT)/sim/sram_1rw_128x32_asap7.v
+
+# Phase 7 M-c: PLL verification sources.
+# Uses tb_soc_pll.sv (exposes pll_locked_o) instead of tb_soc_top.sv.
+# PLL_IMPL="STUB" (default in pll_clkgen.sv) keeps this runnable under
+# pure Verilator — no real-number model support required.
+# pll_rnm.sv is intentionally excluded: the generate/if prunes it in STUB mode.
+PLL_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/soc_addr_map_pkg.sv \
+	$(RTL)/soc/soc_periph_map_pkg.sv \
+	$(SRAM_SIM_MODEL) \
+	$(RTL)/cpu/core/rv32i_pipeline_pkg.sv \
+	$(RTL)/mem/rv32i_cache_pkg.sv \
+	$(RTL)/cpu/core/rv32i_alu.sv \
+	$(RTL)/cpu/core/rv32i_imm_gen.sv \
+	$(RTL)/cpu/core/rv32i_regfile.sv \
+	$(RTL)/cpu/core/rv32i_decode.sv \
+	$(RTL)/cpu/core/rv32i_branch_comp.sv \
+	$(RTL)/cpu/core/rv32i_hazard_unit.sv \
+	$(RTL)/cpu/core/rv32i_forwarding_unit.sv \
+	$(RTL)/cpu/core/rv32i_csr_file.sv \
+	$(RTL)/cpu/core/rv32i_interrupt_ctrl.sv \
+	$(RTL)/mem/rv32i_icache.sv \
+	$(RTL)/mem/rv32i_dcache.sv \
+	$(RTL)/mem/rv32i_cache_arbiter.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_if.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_id.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_ex1b.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_ex1c.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_ex2.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_mem.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_wb.sv \
+	$(RTL)/cpu/core/rv32i_core.sv \
+	$(RTL)/cpu/rv32i_cpu_top.sv \
+	$(RTL)/gpu/gpu_pkg.sv \
+	$(GPU_SRAM_SIM) \
+	$(RTL)/gpu/vector_register_file.sv \
+	$(RTL)/gpu/vector_alu.sv \
+	$(RTL)/gpu/gpu_compute_unit.sv \
+	$(RTL)/gpu/warp_scheduler.sv \
+	$(RTL)/gpu/gpu_command_queue.sv \
+	$(RTL)/gpu/gpu_memory_unit.sv \
+	$(RTL)/gpu/memory_coalescer.sv \
+	$(RTL)/gpu/shared_memory.sv \
+	$(RTL)/gpu/gpu_top.sv \
+	$(RTL)/periph/uart_controller.sv \
+	$(RTL)/periph/spi_controller.sv \
+	$(RTL)/periph/timer.sv \
+	$(RTL)/periph/interrupt_controller.sv \
+	$(RTL)/periph/dma_engine.sv \
+	$(RTL)/soc/axi4_crossbar.sv \
+	$(RTL)/soc/axi_lite_interconnect.sv \
+	$(RTL)/soc/axi_lite_register_bank.sv \
+	$(RTL)/soc/sram_controller.sv \
+	$(RTL)/soc/boot_rom.sv \
+	$(RTL)/soc/axi4_to_axilite.sv \
+	$(RTL)/soc/axilite_to_axi4.sv \
+	$(RTL)/soc/pll/pll_clkgen_stub.sv \
+	$(RTL)/soc/pll/pll_axil_regs.sv \
+	$(RTL)/soc/pll/pll_clkgen.sv \
+	$(RTL)/soc/soc_top.sv \
+	$(SOC_DIR)/tb_soc_pll.sv
 
 SOC_BOOT_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
@@ -122,6 +194,9 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/soc/boot_rom.sv \
 	$(RTL)/soc/axi4_to_axilite.sv \
 	$(RTL)/soc/axilite_to_axi4.sv \
+	$(RTL)/soc/pll/pll_clkgen_stub.sv \
+	$(RTL)/soc/pll/pll_axil_regs.sv \
+	$(RTL)/soc/pll/pll_clkgen.sv \
 	$(RTL)/soc/soc_top.sv \
 	$(SOC_DIR)/tb_soc_top.sv
 
@@ -165,7 +240,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_all verilator_lint soc_boot_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -233,6 +308,48 @@ spi: spi_lint
 	$(MAKE) MODULE=test_spi TOPLEVEL=spi_controller \
 		VERILOG_SOURCES="$(SPI_SOURCES)" \
 		$(BUILD_ARGS)
+
+# Phase 7 M-c: PLL lint gates.
+# soc_pll_lint: lints tb_soc_pll (full SoC, used by test_pll_lock).
+# pll_regs_lint: lints tb_pll_axil_regs (standalone, used by test_pll_regs).
+soc_pll_lint:
+	verilator --lint-only -Wall -Wno-fatal -Wno-IMPORTSTAR \
+		-Wno-UNUSEDSIGNAL -Wno-UNOPTFLAT -Wno-SYNCASYNCNET \
+		-Wno-DECLFILENAME -Wno-UNUSEDPARAM -Wno-BLKSEQ \
+		-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		--top-module tb_soc_pll \
+		$(PLL_SOURCES)
+
+pll_regs_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		-I$(RTL)/soc \
+		--top-module tb_pll_axil_regs \
+		$(PLL_REGS_SOURCES)
+
+# Phase 7 M-c: SoC PLL simulation targets.
+# test_pll_lock (3 tests): uses full SoC tb_soc_pll — verifies PLL lock
+#   signal propagation and pll_locked_o port.
+# test_pll_regs (4 tests): uses standalone tb_pll_axil_regs — exercises the
+#   pll_axil_regs register interface directly.  Separated from test_pll_lock
+#   because the original approach (BFM on periph_axil_* in the full SoC) had
+#   a structural conflict: periph_axil_arvalid is continuously driven by
+#   axi4_to_axilite assigns and cannot be force-driven by cocotb value-writes
+#   in Verilator.  The standalone TB exposes true input ports the BFM owns.
+# clean first: stale Vtop from any prior target causes VPI root handle mismatch.
+pll_regs: pll_regs_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_pll_regs TOPLEVEL=tb_pll_axil_regs \
+		VERILOG_SOURCES="$(PLL_REGS_SOURCES)" \
+		$(BUILD_ARGS)
+
+soc_pll: soc_pll_lint pll_regs_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_pll_lock TOPLEVEL=tb_soc_pll \
+		VERILOG_SOURCES="$(PLL_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+	$(MAKE) pll_regs
 
 soc_boot_lint:
 	verilator --lint-only -Wall -Wno-fatal -Wno-IMPORTSTAR \
@@ -318,7 +435,8 @@ soc_stress: soc_boot_lint
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
-# Run every SoC test: M3–M6 component suites + M9 boot + M9 periph + M9 coherency + M9 cpu_gpu.
+# Run every SoC test: M3–M6 component suites + M9 boot + M9 periph + M9 coherency +
+# M9 cpu_gpu + Phase 7 M-c PLL (lock + regs).
 # Use rm -rf sim_build (not $(MAKE) clean) for each suite so that stale or
 # partially-written files from a prior build — including large PCH .gch files
 # that $(MAKE) clean sometimes leaves behind — are reliably purged.
@@ -337,3 +455,4 @@ soc_all:
 	rm -rf sim_build && $(MAKE) soc_periph
 	rm -rf sim_build && $(MAKE) soc_coherency
 	rm -rf sim_build && $(MAKE) soc_cpu_gpu
+	rm -rf sim_build && $(MAKE) soc_pll

@@ -1,0 +1,114 @@
+=== LVS SUMMARY: pll_clkgen_sky130 ===
+Tool: Magic 8.3 (ext2spice) + Netgen 1.5 + sky130A_setup.tcl
+Date: 2026-06-20
+Stage: block-level LVS (CP and VCO focus)
+
+--------------------------------------------------------------------
+EXTRACTION RESULT (Magic ext2spice, all blocks)
+--------------------------------------------------------------------
+Block              | Extracted FET devices | Reason
+-------------------|----------------------|--------------------------
+cp_pmos_array      | 0                    | Poly touches diff, no overlap
+cp_nmos_array      | 0                    | Poly touches diff, no overlap
+vco_stage_unit     | 0                    | Poly touches diff, no overlap
+sky130_vco_layout  | 0                    | Poly touches diff, no overlap
+sky130_bias_layout | 0                    | Poly touches diff, no overlap
+
+ROOT CAUSE: Magic's sky130A extractor requires poly to OVERLAP (cross
+through) diffusion to form a FET device. The scripted layout generator
+placed poly ADJACENT to (touching at the boundary of) diffusion, not
+overlapping it. Magic reads nodes (ndif, pdif, poly) but never generates
+a 'fet' line in the .ext file for any cell.
+
+EVIDENCE:
+  cp_nmos_array.ext: 0 'fet' lines (nodes: ndif, poly, li only)
+  vco_stage_unit.ext: 0 'fet' lines (nodes: ndif, pdif, poly, nw)
+  sky130_vco_layout.ext: 0 'fet' lines
+  sky130_bias_layout.ext: 0 'fet' lines
+  cp_pmos_array.ext: 0 'fet' lines (nodes: pdif, poly, li, nw)
+
+Specific geometry (Magic internal units, 1 unit = 0.005 um = 5 nm):
+  cp_nmos_array: ndiff rect {2,2,4,5}, poly rect {4,1,8,6}
+    -> poly left-edge x=4 == ndiff right-edge x=4: TOUCH only, 0 nm overlap
+  vco_stage_unit: ndiff {3,6,7,10}, poly {3,10,7,11}
+    -> poly bottom y=10 == ndiff top y=10: TOUCH only, 0 nm overlap
+  cp_pmos_array: pdiff {4,4,6,12}, poly {6,2,10,14}
+    -> poly left x=6 == pdiff right x=6: TOUCH only, 0 nm overlap
+
+--------------------------------------------------------------------
+NETGEN LVS RESULT (CP and VCO)
+--------------------------------------------------------------------
+Layout-vs-schematic comparison was attempted using:
+  - Layout netlist: Magic ext2spice output (empty subcircuits)
+  - Schematic: sky130_cp.sp, sky130_vco.sp
+  - Netgen invocation: netgen -batch lvs ... sky130A_setup.tcl
+
+Netgen output:
+  "Cannot find cell cp_pmos_array in extracted SPICE" (layout empty)
+  "Cannot find cell sky130_vco_layout in extracted SPICE" (layout empty)
+  -> Netgen could not complete the LVS comparison; no .rpt written
+
+LVS STATUS: FAIL
+  failure_class: drc_lvs (device mismatch -- 0 layout devices vs N schematic)
+  lvs_errors: indeterminate (0 layout devices extracted; comparison blocked)
+
+--------------------------------------------------------------------
+WHAT THIS MEANS FOR SIGN-OFF
+--------------------------------------------------------------------
+The layout cells contain the correct layer types (pdiff, ndiff, poly,
+locali, metal1, metal2, nwell, via1) and the device dimensions match
+the schematic (e.g. PMOS W=4u/L=2u => 12 pdiff fingers at the correct
+pitch). The DRC violations also confirm real geometry exists.
+
+However, to achieve device extraction, the scripted layout must be
+corrected so that poly overlaps diff (not just touches). In sky130
+the minimum poly enclosure of diff is 0.13 um; the poly must extend
+past the diff edge (actacting as gate oxide) with source and drain
+regions on each side.
+
+FIX REQUIRED (route_to: custom-layout):
+  Move poly rectangles to overlap diff by >= 0.13 um (26 magic units
+  at the 1 unit = 5 nm scale) on each side. Specifically:
+  - cp_pmos_array: pdiff at {4..6, 4..12}; poly must start at x < 4
+    (e.g. poly {3,2,7,14} gives 2-unit overlap each side)
+  - cp_nmos_array: ndiff {2..4, 2..5}; poly must overlap (e.g. {3,1,5,6})
+  - vco_stage_unit: similarly shift poly to cross diff vertically
+  This will also resolve many of the DRC violations (poly.4 poly-to-diff
+  spacing errors fire because they are touching, not properly crossing).
+
+--------------------------------------------------------------------
+BLOCKS VERIFIED AS CLEAN (DRC)
+--------------------------------------------------------------------
+None of the complete analog cells reached DRC=0 in this run.
+Prior stage "DRC=0 per-cell" claim (design_state layout.drc_violations_per_cell=0)
+appears to be from a different Magic session or geometry tile state.
+The real magic drc(full) with sky130A.tech shows violations in all cells.
+
+--------------------------------------------------------------------
+DRC VIOLATION SUMMARY (real magic drc(full) with sky130A.tech)
+--------------------------------------------------------------------
+Cell                 | Violations | Category
+---------------------|------------|-----------------------------
+cp_pmos_array        |     2      | li.3, diff/tap.1 (geometry)
+cp_nmos_array        |     9      | li spacing/width, poly, diff
+vco_stage_unit       |     4      | li, diff/tap, nwell
+sky130_vco_layout    |    12      | li, diff, poly, nwell
+sky130_lf_layout     |     7      | poly serpentine (width/spacing)
+sky130_bias_layout   |     5      | li, met1, diff, nwell
+-- Analog subtotal --| 39 total  |
+sky130_pfd_layout    |    10      | stub geometry
+sky130_fbdiv_layout  |     6      | stub geometry
+sky130_postdiv_layout|     9      | stub geometry
+-- Stub subtotal ----| 25 total  |
+pll_clkgen_top       |    57      | all above + top-level errors
+--------------------------------------------------------------------
+Top dominant error classes: li.3 (LI spacing), diff/tap.1 (diff width),
+poly.1a (poly width), nwell.4 (nwell no connected N+ tap),
+LU.2/LU.3 (tap distance), poly.4 (poly-diff spacing)
+
+SIGN-OFF STATUS:
+  drc: FAIL (39 violations in complete analog cells, 57 at top)
+  lvs: FAIL (0 FET devices extracted; poly-diff overlap missing)
+  antenna: NOT RUN (blocked by LVS failure)
+  density: NOT RUN (blocked by DRC failure)
+  pv_signoff: FALSE

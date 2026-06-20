@@ -1,0 +1,34 @@
+magic
+tech sky130A
+timestamp 1781930000
+use pfet_4u_2u_dum pfet_dum_0
+timestamp 1781929535
+transform 1 0 546 0 1 311
+box 0 0 1092 622
+use pfet_4u_2u_nf4 pfet_pbias_A
+timestamp 1781929535
+transform 1 0 1638 0 1 311
+box 1092 0 2184 622
+use pfet_4u_2u_nf4 pfet_psrc_A
+timestamp 1781929535
+transform 1 0 2730 0 1 311
+box 2184 0 3276 622
+use pfet_4u_2u_nf4 pfet_psrc_B
+timestamp 1781929535
+transform 1 0 3822 0 1 311
+box 3276 0 4368 622
+use pfet_4u_2u_nf4 pfet_pbias_B
+timestamp 1781929535
+transform 1 0 4914 0 1 311
+box 4368 0 5460 622
+use pfet_4u_2u_dum pfet_dum_1
+timestamp 1781929535
+transform 1 0 6006 0 1 311
+box 5460 0 6552 622
+<< labels >>
+flabel metal1 s 1638 311 2184 311 0 FreeSans 200 0 0 0 pbias
+flabel metal1 s 4914 311 5460 311 0 FreeSans 200 0 0 0 pbias
+flabel metal1 s 2730 311 3276 311 0 FreeSans 200 0 0 0 psrc_g
+flabel metal1 s 3822 311 4368 311 0 FreeSans 200 0 0 0 psrc_g
+flabel metal1 s 3276 622 3276 622 0 FreeSans 200 0 0 0 VDD
+<< end >>

@@ -1,0 +1,187 @@
+=== PHYSICAL VERIFICATION SIGN-OFF REPORT ===
+Design:    pll_clkgen_sky130
+Milestone: Phase 7 M-b2
+Run ID:    physical-verification_20260620_000001
+PDK:       sky130A
+Tool:      Magic 8.3 rev 489 + Netgen 1.5.278 + sky130A_setup.tcl
+Date:      2026-06-20
+
+======================================================================
+STAGE 1: DRC
+======================================================================
+Tool invocation:
+  PDK_ROOT=/home/neuromorphic/.volare magic -dnull -noconsole \
+    -rcfile sky130A.magicrc -T sky130A.tech run_drc_top.tcl
+Style: drc(full), euclidean on
+
+RESULT: FAIL
+
+Block-level results (complete analog cells):
+  cp_pmos_array:       2 violations
+    li.3  local interconnect spacing < 0.17 um
+    diff/tap.1  diffusion width < 0.15 um
+  cp_nmos_array:       9 violations
+    li.3, li.1, li.c1, poly.1a, poly.4, poly.2, diff/tap.1, LU.2, li.6
+  vco_stage_unit:      4 violations
+    li.3, li.1, li.c1, diff/tap.1, diff/tap.8, diff/tap.9, nwell.1, nwell.4, poly.1a, poly.4, LU.2, LU.3, li.6
+  sky130_vco_layout:  12 violations
+  sky130_lf_layout:    7 violations (poly width/spacing on serpentine resistor)
+  sky130_bias_layout:  5 violations
+  ANALOG SUBTOTAL:    39 violations (FAIL)
+
+Stub cells (not real layout, expected violations):
+  sky130_pfd_layout:  10 violations  [STUB -- not real layout]
+  sky130_fbdiv_layout: 6 violations  [STUB -- not real layout]
+  sky130_postdiv_layout: 9 violations [STUB -- not real layout]
+  STUB SUBTOTAL:      25 violations
+
+Top-level assembly:
+  pll_clkgen_top:     57 violations (aggregate of all sub-cells)
+
+Dominant error classes:
+  li.3  : LI spacing < 0.17 um  (LI interconnect too close between devices)
+  li.1  : LI width < 0.17 um    (LI wires too narrow)
+  li.c1 : LI core width < 0.14 um
+  li.6  : LI minimum area < 0.0561 um^2
+  diff/tap.1: diffusion width < 0.15 um (device fingers too narrow)
+  poly.1a: poly width < 0.15 um
+  poly.4 : poly spacing to diffusion < 0.075 um (touching, not crossing)
+  nwell.4: nwell has no metal-connected N+ tap
+  LU.2/LU.3: tap distance rule (> 15 um)
+  met1.1 / met1.6: metal1 width/area (bias cell)
+
+Root cause: The scripted layout generator (TCL scripts 01_-07_.tcl) drew
+geometry in Magic internal units (1 unit = 5 nm lambda/2) without
+satisfying minimum dimension rules. A 1-unit rectangle is 5 nm, which
+violates almost every minimum-width rule in sky130. The real intended
+device dimensions (W=4u, L=2u etc.) were placed as bounding-box
+coordinates scaled to Magic internal units, but the finger widths and
+LI routing were not converted to the correct scale.
+
+======================================================================
+STAGE 2: LVS
+======================================================================
+Tool: Magic ext2spice + Netgen 1.5 lvs
+
+Extraction result (Magic ext2spice, sky130A.tech, LVS style):
+  ALL BLOCKS: 0 FET devices extracted
+
+Root cause: In every cell, poly is placed ADJACENT to (touching)
+diffusion at the boundary (0 nm overlap). Magic's extractor requires
+poly to CROSS THROUGH diff to form a MOSFET channel region. Without
+overlap, no 'fet' lines are generated in the .ext file, and the
+output SPICE contains only an empty subcircuit header.
+
+Netgen invocation:
+  netgen -batch lvs "cp_pmos_array_layout.spice cp_pmos_array" \
+    "sky130_cp.sp sky130_cp" sky130A_setup.tcl lvs_cp_pmos.rpt
+  netgen -batch lvs "sky130_vco_layout_layout.spice sky130_vco_layout" \
+    "sky130_vco.sp sky130_vco" sky130A_setup.tcl lvs_vco.rpt
+
+Netgen output:
+  "Cannot find cell cp_pmos_array in extracted SPICE"
+  "Cannot find cell sky130_vco_layout in extracted SPICE"
+  -> LVS comparison could not be completed (layout netlist empty)
+
+LVS RESULT: FAIL
+  failure_class: drc_lvs
+  Schematic devices (sky130_cp): 9 FETs + 2 resistors
+  Layout devices extracted: 0
+  Device delta: 9 FETs, 2 resistors
+
+======================================================================
+STAGE 3: ANTENNA / ERC
+======================================================================
+NOT RUN -- blocked by DRC+LVS failure
+
+======================================================================
+STAGE 4: DENSITY / DFM
+======================================================================
+NOT RUN -- blocked by DRC+LVS failure
+
+======================================================================
+PV SIGN-OFF STATUS
+======================================================================
+  drc_violations:    39 (complete analog cells), 57 (top-level)
+  lvs_errors:        indeterminate (0 devices extracted; FAIL)
+  antenna_violations: not run
+  pv_signoff:        FALSE
+
+Block-level sign-off:
+  cp_pmos_array:   DRC FAIL (2), LVS FAIL (0 devices)
+  cp_nmos_array:   DRC FAIL (9), LVS FAIL (0 devices)
+  vco_stage_unit:  DRC FAIL (4), LVS FAIL (0 devices)
+  sky130_vco:      DRC FAIL (12), LVS FAIL (0 devices)
+  sky130_lf:       DRC FAIL (7), LVS not run
+  sky130_bias:     DRC FAIL (5), LVS not run
+  PFD/FBDIV/POSTDIV: STUB (not real layout)
+
+======================================================================
+FIX REQUEST (for custom-layout)
+======================================================================
+fix_request_id: sky130-pv-fr001
+failure_class:  drc_lvs
+route_to:       custom-layout
+priority:       HIGH
+
+Fix 1 (PRIMARY): Correct poly-diff overlap in all device cells.
+  The poly gate must overlap the diffusion active region by the
+  sky130 minimum poly enclosure of active = 0.13 um (26 magic units).
+  Current: poly touches diff at boundary (0 overlap)
+  Required: poly extends 0.13 um BEYOND each diff edge (source and drain)
+  Impact: Will enable FET device extraction and resolve poly.4 DRC errors.
+  Files: layout/scripts/02_cp_devices.tcl, 03_vco_devices.tcl,
+         layout/mag/cp_pmos_array.mag, cp_nmos_array.mag,
+         vco_stage_unit.mag, sky130_vco_layout.mag, sky130_bias_layout.mag
+
+Fix 2: Correct minimum dimension violations.
+  All geometry must meet sky130 minimum rules:
+  - LI width >= 0.17 um (34 magic units at 1u=200 units)
+  - LI spacing >= 0.17 um
+  - Poly width >= 0.15 um
+  - Diffusion width >= 0.15 um
+  - Nwell must contain connected N+ tap (nwell.4)
+  The scripted cells are drawing at 1-2 unit widths (5-10 nm) which
+  are far below the 0.15-0.17 um minimums.
+
+Fix 3: Scale calibration.
+  Confirm that device W/L values in the .mag files correspond to the
+  intended schematic dimensions (e.g. PMOS W=4u = 800 magic units
+  at 1 magic unit = 0.005 um / 1 lambda = 0.1 um). The current
+  geometry is ~10-50x too small.
+
+======================================================================
+WHAT WAS VERIFIED (REAL TOOL EXECUTION)
+======================================================================
+1. Real magic drc(full) with sky130A.tech: EXECUTED
+   - 10 individual cell DRC runs completed
+   - Real violation counts and rule names recorded
+   - drc_summary.rpt and per-cell .rpt files written
+
+2. Real magic ext2spice (LVS mode): EXECUTED
+   - 5 extraction runs completed
+   - .ext files generated with node and connectivity data
+   - Zero FET devices confirmed across all cells
+
+3. Real netgen LVS: ATTEMPTED
+   - Invocation confirmed working (Netgen 1.5.278)
+   - Could not complete (empty layout netlists)
+   - Error messages recorded
+
+======================================================================
+HONEST ASSESSMENT
+======================================================================
+The layout cells have the correct layer types and approximate
+bounding-box geometry, but two fundamental problems prevent sign-off:
+(1) Geometry dimensions are in incorrect scale / too small, triggering
+    all minimum-width DRC rules.
+(2) Poly-diff relationship is "touching" not "overlapping", preventing
+    device extraction for LVS.
+
+A real block-level LVS clean result (PASS) for CP and VCO cannot be
+claimed for this iteration. The fix_request to custom-layout is
+mandatory before re-attempting LVS.
+
+The DRC sign-off score for the custom-layout stage's prior claim
+of "DRC=0 per-cell" was incorrect; the real magic drc(full) shows
+39 violations in the complete analog cells.

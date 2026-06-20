@@ -453,3 +453,13 @@ INT8 MAC critical path: ~10–13 logic levels. Full NPU (INT4/tiling/sparsity) r
 - PDN: SRAM macros not connected to grid (PDN_CONNECT_MACROS_TO_GRID=false) — known limitation for predictive PDK
 
 **ASAP7 sign-off** ✅ (Run 43, 2026-05-20): 1418 MHz / 27.27 mW / 3 844 µm² stdcell, 0 DRC / 0 antenna / 0 setup-hold violations. RVT TT @ 0.7 V / 25 °C. SRAM via FF-array stub (`sram_1rw_256x32_asap7_stub.v` + Liberty/LEF). Config at `pnr/asap7/`. Full campaign history: `docs/ASAP7_RUN_HISTORY.md`.
+
+### Phase 7 — Mixed-Signal PLL Clock Generator
+
+**Status**: M-a/M-b1/M-b2/M-c complete (2026-06-20); M-d = documentation (this update). Full plan → `docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md` (golden spec).
+
+A dual-PDK charge-pump integer-N PLL (ring VCO) designed end-to-end via the **analog-design orchestrator agents**, then integrated into the SoC as the clock source via a PDK-agnostic real-number model (RNM). This phase also doubled as a validation run of the installed analog-design agent suite (real ngspice / magic / netgen all ran; the closed-loop meta fix loop and adversarial physical verification both demonstrably added value).
+
+- **ASAP7 variant** (`analog/pll_clkgen/`, indicative): 100 MHz → 1.282 GHz, N=13, 0.7 V — matches the ASAP7 SoC 780 ps clock. Electrical is **indicative only**: open ngspice has no BSIM-CMG FinFET models, so transistor sims used a calibrated planar BSIM4 substitute.
+- **Sky130 variant** (`analog/pll_clkgen/sky130/`, **real sign-off**): 10 MHz → 100 MHz, N=10, 1.8 V, real `sky130_fd_pr` models, real magic layout on `sky130A.tech`. Charge-pump block: real magic DRC = 0 + netgen LVS MATCH. VCO/LF/BIAS block regen + full-chip DRC/LVS are follow-ups.
+- **SoC integration** (`rtl/soc/pll/`): `clk_i` → PLL ref → `core_clk`; AXI-Lite config/status slave at `0x2000_7000` (`AXIL_N_SLAVES` 6→7). Two RTL bugs found+fixed (PLL bootstrap deadlock on gated domain; `PERIPH_LIMIT` decode hole). Cosim 7/7 (`test_pll_lock` 3/3 + `test_pll_regs` 4/4) + regression clean. RNM-mode AXI CDC synchroniser deferred.

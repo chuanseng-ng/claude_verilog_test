@@ -6,8 +6,22 @@
 // read master (arlen=0, arsize=4B, arburst=INCR, arid=const=0).
 // Write channels are tied off: awvalid=0, wvalid=0, bready=1.
 //
-// Signals passed through verbatim:
-//   araddr, arvalid, arready, rdata, rresp, rvalid, rready
+// AXI4 handshake buffering (Phase 5 M9 fix):
+//   The GPU compute unit asserts m_axil_if_arvalid for exactly one cycle
+//   (driven by warp_issue_i which is a single-cycle scheduler pulse).
+//   AXI4 rule A3-38 requires arvalid to remain asserted until arready is
+//   seen.  If arready does not arrive that same cycle (e.g. the downstream
+//   crossbar is registering its R_IDLE→R_AR transition), the GPU CU drops
+//   arvalid, the crossbar AR channel is abandoned, and the fetch stalls.
+//
+//   Fix: a one-entry AR skid buffer.  When s_axil_arvalid rises and we are
+//   not already holding a pending request (ar_hold_q==0), we capture araddr
+//   and assert m_axi_arvalid immediately (combinatorially) AND latch both
+//   into ar_hold_q / ar_addr_q on the same rising edge.  We de-assert
+//   m_axi_arvalid (and clear the buffer) only when m_axi_arready is seen.
+//   s_axil_arready is returned to the GPU CU only on the accepting cycle
+//   so the CU does not re-issue the same address.
+//
 // Signals added / tied:
 //   arid   = 0
 //   arlen  = 0       (single-beat)
@@ -104,18 +118,51 @@ module axilite_to_axi4
     assign m_axi_wvalid  = 1'b0;
     assign m_axi_bready  = 1'b1;   // always absorb spurious B beats
 
-    // ── AXI4-Lite awready/wready (not connected from slave side; tie) ────────
-    // (No unused signal here — these are outputs driven by the crossbar side)
+    // ── AR skid buffer: hold arvalid until arready (AXI4 A3-38) ─────────────
+    // ar_hold_q=1 means we have a pending AR transaction the crossbar has not
+    // yet accepted.  ar_addr_q holds the buffered address.
+    logic             ar_hold_q;
+    logic [AW-1:0]    ar_addr_q;
 
-    // ── Read channel pass-through with AXI4 decorations ─────────────────────
+    // Combinatorial: present arvalid to crossbar from either the live slave
+    // input (new request) or the buffer (held request).
+    logic ar_pending;
+    assign ar_pending = ar_hold_q | s_axil_arvalid;
+
     assign m_axi_arid    = IW'(MASTER_ID);
-    assign m_axi_araddr  = s_axil_araddr;
-    assign m_axi_arlen   = '0;                 // single beat
-    assign m_axi_arsize  = AXI_SIZE_4B;        // 4 bytes
+    assign m_axi_araddr  = ar_hold_q ? ar_addr_q : s_axil_araddr;
+    assign m_axi_arlen   = '0;                  // single beat
+    assign m_axi_arsize  = AXI_SIZE_4B;         // 4 bytes
     assign m_axi_arburst = AXI_BURST_INCR;
-    assign m_axi_arvalid = s_axil_arvalid;
-    assign s_axil_arready = m_axi_arready;
+    assign m_axi_arvalid = ar_pending;
 
+    // arready back to GPU CU: only on the cycle we accept a NEW request
+    // (buffer was empty and we got arready simultaneously), or on the cycle
+    // we drain the buffer (arready fires while ar_hold_q=1).
+    // In both cases arready fires the cycle m_axi_arready fires.
+    assign s_axil_arready = m_axi_arready & ar_pending;
+
+    // AR skid buffer state machine
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            ar_hold_q <= 1'b0;
+            ar_addr_q <= '0;
+        end else begin
+            if (ar_pending && !m_axi_arready) begin
+                // Crossbar not ready yet — latch/hold the address.
+                ar_hold_q <= 1'b1;
+                if (!ar_hold_q)
+                    ar_addr_q <= s_axil_araddr;   // capture new address
+                // else: ar_addr_q already holds the buffered address
+            end else if (ar_pending && m_axi_arready) begin
+                // Crossbar accepted the transaction — clear buffer.
+                ar_hold_q <= 1'b0;
+                ar_addr_q <= '0;
+            end
+        end
+    end
+
+    // ── Read channel pass-through (no buffering needed on R channel) ─────────
     assign s_axil_rdata  = m_axi_rdata;
     assign s_axil_rresp  = m_axi_rresp;
     assign s_axil_rvalid = m_axi_rvalid;

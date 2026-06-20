@@ -51,7 +51,13 @@ module tb_soc_top #(
     output logic        commit_valid_o,
     output logic [31:0] commit_pc_o,
     output logic [31:0] commit_insn_o,
-    output logic        gpu_irq_o
+    output logic        gpu_irq_o,
+
+    // ── PLL status (Phase 7 M-c) ─────────────────────────────────────────────
+    // Exposed so soc_boot_lint passes cleanly; soc_boot / soc_periph /
+    // soc_coherency / soc_cpu_gpu tests do not observe this signal directly —
+    // they use commit_pc_o as the boot readiness indicator.
+    output logic        pll_locked_o
 );
 
     soc_top #(
@@ -80,7 +86,9 @@ module tb_soc_top #(
         .commit_valid_o (commit_valid_o),
         .commit_pc_o    (commit_pc_o),
         .commit_insn_o  (commit_insn_o),
-        .gpu_irq_o      (gpu_irq_o)
+        .gpu_irq_o      (gpu_irq_o),
+
+        .pll_locked_o   (pll_locked_o)
     );
 
 endmodule : tb_soc_top

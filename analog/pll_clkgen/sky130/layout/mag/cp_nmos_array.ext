@@ -1,0 +1,24 @@
+timestamp 1781930001
+version 8.3
+tech sky130A
+style ngspice()
+scale 1000 1 1e+06
+resistclasses 4400000 2200000 950000 3050000 120000 197000 114000 191000 120000 197000 114000 191000 48200 319800 2000000 48200 48200 12800 125 125 47 47 29 5
+use nfet_1p5u_2u_dum nfet_dum_1 1 0 2200 0 1 182
+use nfet_1p5u_2u_nf1 nfet_nbias_B 1 0 1800 0 1 182
+use nfet_1p5u_2u_nf1 nfet_nsrc_B 1 0 1400 0 1 182
+use nfet_1p5u_2u_nf1 nfet_nsrc_A 1 0 1000 0 1 182
+use nfet_1p5u_2u_nf1 nfet_nbias_A 1 0 600 0 1 182
+use nfet_1p5u_2u_dum nfet_dum_0 1 0 200 0 1 182
+node "VSS" 0 0 1200 364 m1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node "nsrc_g" 0 0 1400 182 m1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node "nsrc_g" 0 0 1000 182 m1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node "nbias" 0 0 1800 182 m1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node "nbias" 0 0 600 182 m1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+substrate "SUB" 0 0 -1073741817 -1073741817 space 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+merge "nfet_nsrc_B/SUB" "nfet_nbias_B/SUB" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+merge "nfet_nbias_B/SUB" "nfet_dum_1/a_n182_n163#"
+merge "nfet_dum_1/a_n182_n163#" "nfet_dum_0/a_n182_n163#"
+merge "nfet_dum_0/a_n182_n163#" "nfet_nbias_A/SUB"
+merge "nfet_nbias_A/SUB" "nfet_nsrc_A/SUB"
+merge "nfet_nsrc_A/SUB" "SUB"

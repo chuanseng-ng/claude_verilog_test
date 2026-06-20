@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "klayout": {
+      "command": "/usr/bin/python3",
+      "args": ["/home/neuromorphic/Downloads/Github/claude_verilog_test/plugins/infrastructure/tools/mcp-adapter.py"],
+      "env": {
+        "MCP_TOOL": "klayout",
+        "WRAPPER": "/home/neuromorphic/Downloads/Github/claude_verilog_test/plugins/infrastructure/tools/klayout-wrapper.sh"
+      }
+    }
+  }
+}

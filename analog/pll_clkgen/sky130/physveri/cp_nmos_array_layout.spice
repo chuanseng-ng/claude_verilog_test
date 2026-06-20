@@ -1,0 +1,7 @@
+* NGSPICE file created from cp_nmos_array.ext - technology: sky130A
+
+
+* Top level circuit cp_nmos_array
+
+.end
+

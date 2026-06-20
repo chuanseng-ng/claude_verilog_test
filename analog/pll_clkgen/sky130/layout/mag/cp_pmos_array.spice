@@ -1,0 +1,27 @@
+* NGSPICE file created from cp_pmos_array.ext - technology: sky130A
+
+.subckt pfet_4u_2u_nf4
+X0 a_n246_n200# a_n446_n249# a_n476_n200# w_n546_n311# sky130_fd_pr__pfet_01v8 ad=0.62 pd=4.31 as=1.2 ps=8.6 w=4 l=2
+X1 a_447_n200# a_247_n249# a_216_n200# w_n546_n311# sky130_fd_pr__pfet_01v8 ad=1.2 pd=8.6 as=0.62 ps=4.31 w=4 l=2
+X2 a_216_n200# a_16_n249# a_n15_n200# w_n546_n311# sky130_fd_pr__pfet_01v8 ad=0.62 pd=4.31 as=0.62 ps=4.31 w=4 l=2
+X3 a_n15_n200# a_n215_n249# a_n246_n200# w_n546_n311# sky130_fd_pr__pfet_01v8 ad=0.62 pd=4.31 as=0.62 ps=4.31 w=4 l=2
+.ends
+
+.subckt pfet_4u_2u_dum
+X0 a_n246_n200# a_n446_n249# a_n476_n200# w_n546_n311# sky130_fd_pr__pfet_01v8 ad=0.62 pd=4.31 as=1.2 ps=8.6 w=4 l=2
+X1 a_447_n200# a_247_n249# a_216_n200# w_n546_n311# sky130_fd_pr__pfet_01v8 ad=1.2 pd=8.6 as=0.62 ps=4.31 w=4 l=2
+X2 a_216_n200# a_16_n249# a_n15_n200# w_n546_n311# sky130_fd_pr__pfet_01v8 ad=0.62 pd=4.31 as=0.62 ps=4.31 w=4 l=2
+X3 a_n15_n200# a_n215_n249# a_n246_n200# w_n546_n311# sky130_fd_pr__pfet_01v8 ad=0.62 pd=4.31 as=0.62 ps=4.31 w=4 l=2
+.ends
+
+
+* Top level circuit cp_pmos_array
+
+Xpfet_pbias_A pfet_4u_2u_nf4
+Xpfet_pbias_B pfet_4u_2u_nf4
+Xpfet_dum_0 pfet_4u_2u_dum
+Xpfet_dum_1 pfet_4u_2u_dum
+Xpfet_psrc_A pfet_4u_2u_nf4
+Xpfet_psrc_B pfet_4u_2u_nf4
+.end
+

@@ -8,6 +8,15 @@
       ],
       "cwd": "/home/neuromorphic/Downloads/Github/claude_verilog_test",
       "type": "stdio"
+    },
+    "hdl-kgraph": {
+      "command": "hdl-kgraph",
+      "args": [
+        "serve",
+        "--mcp",
+        "--db",
+        "/home/neuromorphic/Downloads/Github/claude_verilog_test/.hdl-kgraph/graph.db"
+      ]
     }
   }
 }

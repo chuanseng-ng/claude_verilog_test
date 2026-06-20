@@ -1,0 +1,25 @@
+magic
+tech sky130A
+timestamp 1781927871
+<< checkpaint >>
+rect -629 651 639 652
+rect -630 -630 640 651
+<< nwell >>
+rect 1 12 9 22
+<< ndiff >>
+rect 3 11 7 12
+rect 3 6 7 10
+rect 3 0 7 2
+<< pdiff >>
+rect 3 16 7 20
+rect 3 12 7 15
+<< poly >>
+rect 3 15 7 16
+rect 3 10 7 11
+rect 3 2 7 6
+<< locali >>
+rect 0 20 10 21
+rect 3 10 7 16
+rect 3 7 7 9
+rect 0 0 10 1
+<< end >>

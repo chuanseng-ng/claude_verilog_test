@@ -34,8 +34,9 @@ package soc_periph_map_pkg;
     localparam int unsigned AXIL_TIMER = 3;
     localparam int unsigned AXIL_DMA   = 4;
     localparam int unsigned AXIL_IRQ   = 5;
+    localparam int unsigned AXIL_PLL   = 6;  // Phase 7 M-c: PLL config slave
     /* verilator lint_on  UNUSEDPARAM */
-    localparam int unsigned AXIL_N_SLAVES = 6;
+    localparam int unsigned AXIL_N_SLAVES = 7;  // was 6; +1 for PLL
 
     // ── Region bounds (inclusive) ────────────────────────────────────────────
     localparam logic [31:0] AXIL_GPU_BASE    = 32'h2000_1000;
@@ -50,14 +51,18 @@ package soc_periph_map_pkg;
     localparam logic [31:0] AXIL_DMA_LIMIT   = 32'h2000_5FFF;
     localparam logic [31:0] AXIL_IRQ_BASE    = 32'h2000_6000;
     localparam logic [31:0] AXIL_IRQ_LIMIT   = 32'h2000_6FFF;
+    // Phase 7 M-c: PLL clock generator config (4 KB slot)
+    localparam logic [31:0] AXIL_PLL_BASE    = 32'h2000_7000;
+    localparam logic [31:0] AXIL_PLL_LIMIT   = 32'h2000_7FFF;
 
     // Packed arrays for interconnect instantiation (index = slave number).
+    // Phase 7 M-c: extended to 7 entries (index 6 = AXIL_PLL).
     localparam logic [31:0] AXIL_SLV_BASE  [AXIL_N_SLAVES] = '{
         AXIL_GPU_BASE,  AXIL_UART_BASE,  AXIL_SPI_BASE,
-        AXIL_TIMER_BASE, AXIL_DMA_BASE,  AXIL_IRQ_BASE};
+        AXIL_TIMER_BASE, AXIL_DMA_BASE,  AXIL_IRQ_BASE, AXIL_PLL_BASE};
     localparam logic [31:0] AXIL_SLV_LIMIT [AXIL_N_SLAVES] = '{
         AXIL_GPU_LIMIT,  AXIL_UART_LIMIT,  AXIL_SPI_LIMIT,
-        AXIL_TIMER_LIMIT, AXIL_DMA_LIMIT,  AXIL_IRQ_LIMIT};
+        AXIL_TIMER_LIMIT, AXIL_DMA_LIMIT,  AXIL_IRQ_LIMIT, AXIL_PLL_LIMIT};
 
     // ── Reference decode ─────────────────────────────────────────────────────
     // Returns slave index [0 .. AXIL_N_SLAVES-1], or AXIL_N_SLAVES when the

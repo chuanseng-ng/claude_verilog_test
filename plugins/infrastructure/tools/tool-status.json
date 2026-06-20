@@ -1,0 +1,57 @@
+{
+  "generated_at": "2026-06-20T00:00:00Z",
+  "python_env": {
+    "exec": "/usr/bin/python3",
+    "type": "system",
+    "bin_dir": "/usr/bin",
+    "module_name": null,
+    "version": "3.10.12"
+  },
+  "tools": [
+    { "tool": "python3",    "command": "python3",        "status": "FOUND",   "version": "3.10.12", "path": "/usr/bin/python3" },
+    { "tool": "ngspice",    "command": "ngspice",        "status": "MISSING", "version": null,      "path": null },
+    { "tool": "Xyce",       "command": "Xyce",           "status": "MISSING", "version": null,      "path": null },
+    { "tool": "gnucap",     "command": "gnucap",         "status": "MISSING", "version": null,      "path": null },
+    { "tool": "qucs-s",     "command": "qucs-s",         "status": "MISSING", "version": null,      "path": null },
+    { "tool": "xschem",     "command": "xschem",         "status": "MISSING", "version": null,      "path": null },
+    { "tool": "magic",      "command": "magic",          "status": "MISSING", "version": null,      "path": null },
+    { "tool": "netgen",     "command": "netgen",         "status": "MISSING", "version": null,      "path": null },
+    { "tool": "klayout",    "command": "klayout",        "status": "MISSING", "version": null,      "path": null },
+    { "tool": "openvaf",    "command": "openvaf",        "status": "MISSING", "version": null,      "path": null },
+    { "tool": "admsXml",    "command": "admsXml",        "status": "MISSING", "version": null,      "path": null },
+    { "tool": "openEMS",    "command": "openEMS",        "status": "MISSING", "version": null,      "path": null },
+    { "tool": "fasthenry",  "command": "fasthenry",      "status": "MISSING", "version": null,      "path": null },
+    { "tool": "fastcap",    "command": "fastcap",        "status": "MISSING", "version": null,      "path": null },
+    { "tool": "gmsh",       "command": "gmsh",           "status": "MISSING", "version": null,      "path": null },
+    { "tool": "verilator",  "command": "verilator",      "status": "MISSING", "version": null,      "path": null },
+    { "tool": "iverilog",   "command": "iverilog",       "status": "MISSING", "version": null,      "path": null },
+    { "tool": "gtkwave",    "command": "gtkwave",        "status": "MISSING", "version": null,      "path": null },
+    { "tool": "uv",         "command": "uv",             "status": "FOUND",   "version": "detected","path": "/home/neuromorphic/.local/bin/uv" },
+    { "tool": "PySpice",    "command": "python3-pip",    "status": "MISSING", "version": null,      "path": null },
+    { "tool": "cocotb",     "command": "python3-pip",    "status": "FOUND",   "version": "1.9.2",   "path": "python3 site-packages" },
+    { "tool": "scikit-rf",  "command": "python3-pip",    "status": "MISSING", "version": null,      "path": null },
+    { "tool": "hdl21",      "command": "python3-pip",    "status": "MISSING", "version": null,      "path": null },
+    { "tool": "gdstk",      "command": "python3-pip",    "status": "MISSING", "version": null,      "path": null },
+    { "tool": "virtuoso",   "command": "virtuoso",       "status": "MISSING", "version": null,      "path": null },
+    { "tool": "spectre",    "command": "spectre",        "status": "MISSING", "version": null,      "path": null },
+    { "tool": "xrun",       "command": "xrun",           "status": "MISSING", "version": null,      "path": null },
+    { "tool": "hspice",     "command": "hspice",         "status": "MISSING", "version": null,      "path": null },
+    { "tool": "calibre",    "command": "calibre",        "status": "MISSING", "version": null,      "path": null },
+    { "tool": "ads",        "command": "ads",            "status": "MISSING", "version": null,      "path": null },
+    { "tool": "hfss",       "command": "hfss",           "status": "MISSING", "version": null,      "path": null }
+  ],
+  "nixpkgs_available": {
+    "ngspice":    "45",
+    "xschem":     "3.4.7",
+    "magic-vlsi": "8.3.629",
+    "netgen":     "6.2.2505",
+    "klayout":    "0.30.8",
+    "openvaf":    "not_in_nixpkgs"
+  },
+  "summary": {
+    "tools_detected": 3,
+    "tools_missing_open_source": 21,
+    "proprietary_found": 0,
+    "note": "All analog tools available via nix devshell (analog) — enter with: nix develop ~/Downloads/Github/librelane#analog"
+  }
+}

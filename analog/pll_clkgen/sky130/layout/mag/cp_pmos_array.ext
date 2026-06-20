@@ -1,0 +1,24 @@
+timestamp 1781930000
+version 8.3
+tech sky130A
+style ngspice()
+scale 1000 1 1e+06
+resistclasses 4400000 2200000 950000 3050000 120000 197000 114000 191000 120000 197000 114000 191000 48200 319800 2000000 48200 48200 12800 125 125 47 47 29 5
+use pfet_4u_2u_dum pfet_dum_1 1 0 6006 0 1 311
+use pfet_4u_2u_nf4 pfet_pbias_B 1 0 4914 0 1 311
+use pfet_4u_2u_nf4 pfet_psrc_B 1 0 3822 0 1 311
+use pfet_4u_2u_nf4 pfet_psrc_A 1 0 2730 0 1 311
+use pfet_4u_2u_nf4 pfet_pbias_A 1 0 1638 0 1 311
+use pfet_4u_2u_dum pfet_dum_0 1 0 546 0 1 311
+node "VDD" 0 0 3276 622 m1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node "psrc_g" 0 0 3822 311 m1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node "psrc_g" 0 0 2730 311 m1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node "pbias" 0 0 4914 311 m1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node "pbias" 0 0 1638 311 m1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+substrate "SUB" 0 0 -1073741817 -1073741817 space 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+merge "pfet_pbias_B/SUB" "pfet_dum_1/SUB" 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+merge "pfet_dum_1/SUB" "pfet_psrc_B/SUB"
+merge "pfet_psrc_B/SUB" "pfet_pbias_A/SUB"
+merge "pfet_pbias_A/SUB" "pfet_psrc_A/SUB"
+merge "pfet_psrc_A/SUB" "pfet_dum_0/SUB"
+merge "pfet_dum_0/SUB" "SUB"
