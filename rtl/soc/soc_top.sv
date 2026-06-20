@@ -1,5 +1,5 @@
 // soc_top.sv
-// Phase 5 (M8) — RV32I + GPU-Lite SoC top-level integration.
+// Phase 5 (M8) / Phase 7 (M-c) — RV32I + GPU-Lite SoC top-level integration.
 //
 // Architecture:
 //   Data plane  : AXI4 crossbar, N_MASTERS=4, N_SLAVES=3
@@ -9,20 +9,27 @@
 //     M3 = DMA       (dma_engine m_*)
 //     S0 = Boot ROM  (boot_rom, 0x0000_1000–0x0000_1FFF)
 //     S1 = SRAM ctrl (sram_controller, 0x0000_2000–0x0FFF_FFFF)
-//     S2 = Periph    (axi4_to_axilite → axi_lite_interconnect, 0x2000_1000–6FFF)
+//     S2 = Periph    (axi4_to_axilite → axi_lite_interconnect, 0x2000_1000–7FFF)
 //
-//   Control plane : axi4_to_axilite → axi_lite_interconnect, N_SLAVES=6
+//   Control plane : axi4_to_axilite → axi_lite_interconnect, N_SLAVES=7
 //     AXIL_GPU=0, AXIL_UART=1, AXIL_SPI=2, AXIL_TIMER=3,
-//     AXIL_DMA=4, AXIL_IRQ=5
+//     AXIL_DMA=4, AXIL_IRQ=5, AXIL_PLL=6
 //
 //   Debug plane   : APB3 debug slave exposed at top-level ports.
+//
+//   Clock seam (Phase 7 M-c):
+//     clk_i is the external reference clock (100 MHz crystal/XO).
+//     pll_clkgen converts it to core_clk (1.282 GHz in RNM; ref passthrough in stub).
+//     All child instances run on core_clk.
+//     core_rst_n = rst_n_i & pll_locked so children are held in reset until PLL locks.
+//     PLL_IMPL parameter selects "STUB" (default, synth-safe) or "RNM" (M-c cosim).
 //
 //   IRQ routing:
 //     irq_src_i = {gpu_irq_o[4], dma_irq[3], timer_irq[2], spi_irq[1], uart_irq[0]}
 //     interrupt_controller.irq_o → CPU ext_irq_i (MEIP)
 //     timer.irq_o                → CPU timer_irq_i (MTIP, direct)
 //
-// Rules: no logic beyond wiring; all clk/rst_n fanned from single root pair.
+// Rules: no logic beyond wiring; clk/rst_n rooted at clk_i/rst_n_i.
 // M7 perf-counter observability outputs from CPU left unconnected (M7 bead).
 //
 // Lint target: verilator -Wall 0 errors 0 warnings.
@@ -36,8 +43,16 @@ module soc_top
 #(
     // Boot ROM hex image.  Empty string → ROM initialises to zero.
     // Set at elaboration time by the cocotb test wrapper (tb_soc_top).
-    parameter string MEM_INIT_FILE = ""
+    parameter string MEM_INIT_FILE = "",
+
+    // PLL implementation selector (Phase 7 M-c).
+    //   "STUB" (default) — synthesisable digital stub; out_clk = ref_clk.
+    //   "RNM"            — real-number model; use only for M-c AMS co-sim.
+    parameter string PLL_IMPL = "STUB"
 ) (
+    // clk_i is the reference clock input (100 MHz crystal / XO).
+    // Internally the SoC runs on core_clk derived from the PLL.
+    // In STUB mode core_clk == clk_i (lock counter fires after 16 cycles).
     input  logic clk_i,
     input  logic rst_n_i,
 
@@ -65,7 +80,10 @@ module soc_top
     output logic        commit_valid_o,
     output logic [31:0] commit_pc_o,
     output logic [31:0] commit_insn_o,
-    output logic        gpu_irq_o
+    output logic        gpu_irq_o,
+
+    // ── PLL status (Phase 7 M-c) ─────────────────────────────────────────────
+    output logic        pll_locked_o    // 1 when PLL has acquired lock
 );
 
     // =========================================================================
@@ -79,6 +97,35 @@ module soc_top
     localparam int unsigned SW          = AXI_STRB_WIDTH;
     localparam int unsigned IW          = AXI_ID_WIDTH;
     localparam int unsigned LENW        = AXI_LEN_WIDTH;
+
+    // =========================================================================
+    // Phase 7 M-c: PLL clock seam
+    //   clk_i  → pll_clkgen.ref_clk_i
+    //   core_clk   = pll_clkgen.out_clk_o  (all children run on this)
+    //   pll_locked = pll_clkgen.locked_o
+    //   core_rst_n = rst_n_i & pll_locked  (children held in reset until lock)
+    //
+    // pll_axil_regs drives pll_enable, feedback_div, post_div_sel; PLL rst_n
+    // is gated by pll_enable so firmware can keep the PLL in reset on boot.
+    // =========================================================================
+    logic       core_clk;       // PLL output clock — feeds all child clk ports
+    logic       core_rst_n;     // gated reset: rst_n_i & pll_locked
+    logic       pll_locked;     // raw PLL lock flag
+
+    // PLL config signals driven by pll_axil_regs
+    logic       pll_enable;     // CONTROL[0]: 1 = de-assert PLL reset
+    logic [3:0] pll_fb_div;     // CONTROL[7:4]: feedback divider (0 → N=13)
+    logic [1:0] pll_post_div;   // CONTROL[9:8]: post-divider select
+
+    // PLL rst_n: de-assert only when top-level rst_n_i AND pll_enable both high
+    logic pll_rst_n;
+    assign pll_rst_n  = rst_n_i & pll_enable;
+
+    // core_rst_n: hold children in reset until PLL locks
+    assign core_rst_n = rst_n_i & pll_locked;
+
+    // Export lock status
+    assign pll_locked_o = pll_locked;
 
     // =========================================================================
     // Crossbar master-facing nets (no ID, unpacked arrays [N_MASTERS])
@@ -281,8 +328,8 @@ module soc_top
     rv32i_cpu_top #(
         .RESET_PC (32'h0000_1000)
     ) u_cpu (
-        .clk_i                      (clk_i),
-        .rst_n_i                    (rst_n_i),
+        .clk_i                      (core_clk),
+        .rst_n_i                    (core_rst_n),
         // AXI4 master → crossbar M0
         .axi_awaddr_o               (xbar_m_awaddr  [0]),
         .axi_awlen_o                (xbar_m_awlen   [0]),
@@ -341,8 +388,8 @@ module soc_top
     // M1: GPU ifetch adapter (axilite_to_axi4) → crossbar M1
     // =========================================================================
     axilite_to_axi4 u_gif_adapter (
-        .clk                        (clk_i),
-        .rst_n                      (rst_n_i),
+        .clk                        (core_clk),
+        .rst_n                      (core_rst_n),
         // AXI4-Lite slave ← gpu_top m_axil_if_*
         .s_axil_araddr              (gif_axil_araddr),
         .s_axil_arvalid             (gif_axil_arvalid),
@@ -416,8 +463,8 @@ module soc_top
     gpu_top #(
         .GPU_ENABLE_COALESCE (1'b0)
     ) u_gpu (
-        .clk                        (clk_i),
-        .rst_n                      (rst_n_i),
+        .clk                        (core_clk),
+        .rst_n                      (core_rst_n),
         // AXI4-Lite ctrl slave ← interconnect AXIL_GPU slot
         .s_axil_awaddr              (axil_s_awaddr  [AXIL_GPU][11:0]),
         .s_axil_awvalid             (axil_s_awvalid [AXIL_GPU]),
@@ -482,8 +529,8 @@ module soc_top
     dma_engine #(
         .ADDR_W (12)
     ) u_dma (
-        .clk                        (clk_i),
-        .rst_n                      (rst_n_i),
+        .clk                        (core_clk),
+        .rst_n                      (core_rst_n),
         // AXI4-Lite ctrl slave ← interconnect AXIL_DMA slot
         .s_axil_awaddr              (axil_s_awaddr  [AXIL_DMA][11:0]),
         .s_axil_awprot              (axil_s_awprot  [AXIL_DMA]),
@@ -552,8 +599,8 @@ module soc_top
         .SLV_BASE   (SOC_SLV_BASE),
         .SLV_LIMIT  (SOC_SLV_LIMIT)
     ) u_xbar (
-        .clk        (clk_i),
-        .rst_n      (rst_n_i),
+        .clk        (core_clk),
+        .rst_n      (core_rst_n),
         // Master-facing ports
         .m_awaddr   (xbar_m_awaddr),
         .m_awlen    (xbar_m_awlen),
@@ -619,8 +666,8 @@ module soc_top
         .MEM_WORDS    (1024),
         .MEM_INIT_FILE(MEM_INIT_FILE)
     ) u_boot_rom (
-        .clk          (clk_i),
-        .rst_n        (rst_n_i),
+        .clk          (core_clk),
+        .rst_n        (core_rst_n),
         .s_awid       (xbar_s_awid    [SLV_ROM]),
         .s_awaddr     (xbar_s_awaddr  [SLV_ROM]),
         .s_awlen      (xbar_s_awlen   [SLV_ROM]),
@@ -656,8 +703,8 @@ module soc_top
     // S1: SRAM controller (sram_controller) ← crossbar SLV_SRAM
     // =========================================================================
     sram_controller u_sram (
-        .clk          (clk_i),
-        .rst_n        (rst_n_i),
+        .clk          (core_clk),
+        .rst_n        (core_rst_n),
         .s_awid       (xbar_s_awid    [SLV_SRAM]),
         .s_awaddr     (xbar_s_awaddr  [SLV_SRAM]),
         .s_awlen      (xbar_s_awlen   [SLV_SRAM]),
@@ -693,8 +740,8 @@ module soc_top
     // S2: axi4_to_axilite bridge ← crossbar SLV_PERIPH → interconnect master
     // =========================================================================
     axi4_to_axilite u_periph_bridge (
-        .clk                        (clk_i),
-        .rst_n                      (rst_n_i),
+        .clk                        (core_clk),
+        .rst_n                      (core_rst_n),
         // AXI4 slave ← crossbar SLV_PERIPH
         .s_awid                     (xbar_s_awid    [SLV_PERIPH]),
         .s_awaddr                   (xbar_s_awaddr  [SLV_PERIPH]),
@@ -755,8 +802,8 @@ module soc_top
         .SLV_BASE   (AXIL_SLV_BASE),
         .SLV_LIMIT  (AXIL_SLV_LIMIT)
     ) u_axil_ic (
-        .clk                (clk_i),
-        .rst_n              (rst_n_i),
+        .clk                (core_clk),
+        .rst_n              (core_rst_n),
         // Master-facing port (from axi4_to_axilite bridge)
         .m_axil_awaddr      (periph_axil_awaddr),
         .m_axil_awprot      (periph_axil_awprot),
@@ -805,8 +852,8 @@ module soc_top
     uart_controller #(
         .ADDR_W (12)
     ) u_uart (
-        .clk            (clk_i),
-        .rst_n          (rst_n_i),
+        .clk            (core_clk),
+        .rst_n          (core_rst_n),
         .s_axil_awaddr  (axil_s_awaddr  [AXIL_UART][11:0]),
         .s_axil_awprot  (axil_s_awprot  [AXIL_UART]),
         .s_axil_awvalid (axil_s_awvalid [AXIL_UART]),
@@ -837,8 +884,8 @@ module soc_top
     spi_controller #(
         .ADDR_W (12)
     ) u_spi (
-        .clk            (clk_i),
-        .rst_n          (rst_n_i),
+        .clk            (core_clk),
+        .rst_n          (core_rst_n),
         .s_axil_awaddr  (axil_s_awaddr  [AXIL_SPI][11:0]),
         .s_axil_awprot  (axil_s_awprot  [AXIL_SPI]),
         .s_axil_awvalid (axil_s_awvalid [AXIL_SPI]),
@@ -871,8 +918,8 @@ module soc_top
     timer #(
         .ADDR_W (12)
     ) u_timer (
-        .clk            (clk_i),
-        .rst_n          (rst_n_i),
+        .clk            (core_clk),
+        .rst_n          (core_rst_n),
         .s_axil_awaddr  (axil_s_awaddr  [AXIL_TIMER][11:0]),
         .s_axil_awprot  (axil_s_awprot  [AXIL_TIMER]),
         .s_axil_awvalid (axil_s_awvalid [AXIL_TIMER]),
@@ -907,8 +954,8 @@ module soc_top
         .ADDR_W    (12),
         .N_SOURCES (5)
     ) u_irq_ctrl (
-        .clk            (clk_i),
-        .rst_n          (rst_n_i),
+        .clk            (core_clk),
+        .rst_n          (core_rst_n),
         .s_axil_awaddr  (axil_s_awaddr  [AXIL_IRQ][11:0]),
         .s_axil_awprot  (axil_s_awprot  [AXIL_IRQ]),
         .s_axil_awvalid (axil_s_awvalid [AXIL_IRQ]),
@@ -932,6 +979,67 @@ module soc_top
         // TIMER tied 0: timer interrupt is delivered as MTIP via timer_irq_i.
         .irq_src_i      ({gpu_irq_o, dma_irq, 1'b0, spi_irq, uart_irq}),
         .irq_o          (ext_irq)
+    );
+
+    // =========================================================================
+    // Phase 7 M-c: PLL clock generator + AXI-Lite config slave
+    // =========================================================================
+    // pll_clkgen: selects STUB (default, synth-safe) or RNM (M-c cosim)
+    // via PLL_IMPL parameter.  clk_i is the 100 MHz reference; core_clk is
+    // the generated clock that feeds all children (see clock seam section).
+    //
+    // Note: pll_clkgen and pll_axil_regs themselves run on clk_i / rst_n_i
+    // (not core_clk) so the clock generator is not clocked by its own output.
+    // pll_axil_regs is in the control ring at AXIL_PLL slot (index 6) but
+    // feeds its AXI-Lite port from the interconnect which now runs on core_clk.
+    // For M-c cosim this is acceptable (ref and core clocks are synchronous in
+    // the stub; the RNM's out_clk is phase-aligned to ref in the model).
+    // =========================================================================
+    pll_clkgen #(
+        .PLL_IMPL        (PLL_IMPL)
+    ) u_pll (
+        .ref_clk_i   (clk_i),
+        .rst_n_i     (pll_rst_n),
+        .feedback_div(pll_fb_div),
+        .post_div_sel(pll_post_div),
+        .out_clk_o   (core_clk),
+        .locked_o    (pll_locked)
+    );
+
+    // =========================================================================
+    // AXIL_PLL (axil_s[AXIL_PLL]): PLL AXI-Lite config slave
+    // =========================================================================
+    pll_axil_regs #(
+        .ADDR_W (12)
+    ) u_pll_regs (
+        .clk_i          (core_clk),
+        .rst_n_i        (core_rst_n),
+        // AXI-Lite slave ← interconnect AXIL_PLL slot
+        .s_axil_awaddr  (axil_s_awaddr  [AXIL_PLL][11:0]),
+        .s_axil_awprot  (axil_s_awprot  [AXIL_PLL]),
+        .s_axil_awvalid (axil_s_awvalid [AXIL_PLL]),
+        .s_axil_awready (axil_s_awready [AXIL_PLL]),
+        .s_axil_wdata   (axil_s_wdata   [AXIL_PLL]),
+        .s_axil_wstrb   (axil_s_wstrb   [AXIL_PLL]),
+        .s_axil_wvalid  (axil_s_wvalid  [AXIL_PLL]),
+        .s_axil_wready  (axil_s_wready  [AXIL_PLL]),
+        .s_axil_bresp   (axil_s_bresp   [AXIL_PLL]),
+        .s_axil_bvalid  (axil_s_bvalid  [AXIL_PLL]),
+        .s_axil_bready  (axil_s_bready  [AXIL_PLL]),
+        .s_axil_araddr  (axil_s_araddr  [AXIL_PLL][11:0]),
+        .s_axil_arprot  (axil_s_arprot  [AXIL_PLL]),
+        .s_axil_arvalid (axil_s_arvalid [AXIL_PLL]),
+        .s_axil_arready (axil_s_arready [AXIL_PLL]),
+        .s_axil_rdata   (axil_s_rdata   [AXIL_PLL]),
+        .s_axil_rresp   (axil_s_rresp   [AXIL_PLL]),
+        .s_axil_rvalid  (axil_s_rvalid  [AXIL_PLL]),
+        .s_axil_rready  (axil_s_rready  [AXIL_PLL]),
+        // PLL config outputs → pll_clkgen inputs
+        .pll_enable_o   (pll_enable),
+        .feedback_div_o (pll_fb_div),
+        .post_div_sel_o (pll_post_div),
+        // PLL status input ← pll_clkgen locked_o
+        .pll_locked_i   (pll_locked)
     );
 
 endmodule : soc_top
