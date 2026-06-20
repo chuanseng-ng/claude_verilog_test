@@ -1008,12 +1008,37 @@ module soc_top
 
     // =========================================================================
     // AXIL_PLL (axil_s[AXIL_PLL]): PLL AXI-Lite config slave
+    //
+    // IMPORTANT — clock-domain intent:
+    //   u_pll_regs and u_pll (pll_clkgen) are the SOURCE of core_clk and
+    //   pll_locked.  They MUST run on the reference clock (clk_i / rst_n_i),
+    //   NOT on core_clk / core_rst_n.  Placing them on core_clk would create
+    //   a bootstrap deadlock: core_rst_n requires pll_locked, pll_locked
+    //   requires pll_enable=1, pll_enable comes from pll_axil_regs CONTROL[0],
+    //   but pll_axil_regs would be held in reset (core_rst_n=0) forever.
+    //
+    //   STUB mode (PLL_IMPL="STUB"):
+    //     out_clk_o = ref_clk_i, so core_clk == clk_i.  No CDC issue — the
+    //     AXI-Lite interconnect (u_axil_ic, running on core_clk) and u_pll_regs
+    //     (running on clk_i) are in the same physical clock domain.
+    //
+    //   RNM mode (PLL_IMPL="RNM"):
+    //     core_clk != clk_i.  The u_axil_ic interconnect runs on core_clk while
+    //     u_pll_regs runs on clk_i (ref clock).  The axil_s_*[AXIL_PLL] bus
+    //     therefore crosses a CDC boundary.  A 2-FF synchroniser (or async
+    //     handshake) on each valid/ready signal would be required for
+    //     production-quality closure.  This is deferred: M-c sim uses STUB
+    //     where the CDC is transparent (same clock), and full RNM CDC hardening
+    //     is a Phase 7 M-d or tape-out pre-requisite.  Do NOT remove this
+    //     comment without adding the synchroniser.
     // =========================================================================
     pll_axil_regs #(
         .ADDR_W (12)
     ) u_pll_regs (
-        .clk_i          (core_clk),
-        .rst_n_i        (core_rst_n),
+        // Run on reference clock — NOT core_clk — to avoid bootstrap deadlock.
+        // See clock-domain note above.
+        .clk_i          (clk_i),
+        .rst_n_i        (rst_n_i),
         // AXI-Lite slave ← interconnect AXIL_PLL slot
         .s_axil_awaddr  (axil_s_awaddr  [AXIL_PLL][11:0]),
         .s_axil_awprot  (axil_s_awprot  [AXIL_PLL]),

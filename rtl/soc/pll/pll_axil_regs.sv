@@ -86,7 +86,11 @@ module pll_axil_regs #(
     };
 
     localparam logic [31:0] RESET_VAL [N_REGS] = '{
-        32'h0000_0000,   // CONTROL: PLL disabled, div_n=0 (→13 default), /1
+        32'h0000_0001,   // CONTROL: pll_enable=1 (default ON so SoC self-locks
+                         //   at reset without firmware intervention).
+                         //   div_n=0 (→N=13 default), post_div_sel=0 (→/1).
+                         //   Firmware may write CONTROL[0]=0 to hold PLL in
+                         //   reset for reconfiguration, then write 1 to re-lock.
         32'h0000_0000,   // STATUS:  cleared
         32'h0000_0000    // RSVD
     };
