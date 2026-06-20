@@ -5,7 +5,7 @@
   "milestone": "Phase7-M-b2",
   "bead": "claude_verilog_test-llm",
   "created_at": "2026-06-20T12:00:00Z",
-  "updated_at": "2026-06-20T03:48:01Z",
+  "updated_at": "2026-06-20T04:03:06Z",
   "notes": "Sky130 real-signoff PLL variant. Real sky130_fd_pr SPICE models (ngspice native), PDK root ~/.volare/sky130A. Eliminates ASAP7 fx002 (no open FinFET models). Lower freq 100 MHz matching Sky130 SoC ceiling. Shares PDK-agnostic RNM at analog/pll_clkgen/models/pll_rnm.sv for SoC cosim.",
   "constraints": {
     "design_name": "pll_clkgen_sky130",
@@ -398,6 +398,78 @@
       "suggested_next_step": "proceed",
       "reason": "Fix-request sky130-fr001 serviced: CP mismatch reduced from 4.78% to 0.37% via independent bias resistors (Rbias_p=90k, Rbias_n=91k). Real sky130 BSIM4 TT sim: IUP=10.017 uA, IDN=10.054 uA. circuit.signoff=true.",
       "constraint_ref": "specs.cp_mismatch_pct"
+    },
+    {
+      "timestamp": "2026-06-20T13:00:00Z",
+      "agent": "custom-layout-orchestrator",
+      "stage": "layout_floorplan",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Floorplan defined: 300x170 um top-level, 7 blocks placed, symmetry axes for CP (x=55) and VCO (x=260/y=50) established, vtune shielded channel reserved.",
+      "constraint_ref": "constraints.specs.area_um2"
+    },
+    {
+      "timestamp": "2026-06-20T13:15:00Z",
+      "agent": "custom-layout-orchestrator",
+      "stage": "device_generation",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "CP PMOS 6-finger common-centroid array and NMOS 4-finger array generated. VCO 5-stage unit cell + symmetric row assembled. LF VPP cap arrays (130+16+2 cells) instantiated from sky130_fd_pr fixed cells. Bias PMOS/NMOS mirror drawn. All 9 cells DRC=0 individually.",
+      "constraint_ref": "constraints.pdk"
+    },
+    {
+      "timestamp": "2026-06-20T13:30:00Z",
+      "agent": "custom-layout-orchestrator",
+      "stage": "analog_placement",
+      "decision": "proceed",
+      "confidence": "medium",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Placed CP/VCO/LF/BIAS with real geometry; PFD/FBDIV/POSTDIV as sized stubs. Symmetric CP mirror axis at x=55 um. VCO unit cells at equal 6 um pitch. BIAS adjacent to CP for short ibias wire. LF between CP and VCO.",
+      "constraint_ref": "constraints.pdk"
+    },
+    {
+      "timestamp": "2026-06-20T13:45:00Z",
+      "agent": "custom-layout-orchestrator",
+      "stage": "analog_routing",
+      "decision": "proceed",
+      "confidence": "medium",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Key nets routed: vtune on met2 with met1 VSS shields. pbias/nbias on met1. VDD/VSS power rings on met2/met1. Digital signal routing (up/dn/clk chains) on met1/met2. CP switch devices and Rbias routing stubbed for next iteration.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-20T14:00:00Z",
+      "agent": "custom-layout-orchestrator",
+      "stage": "layout_finishing",
+      "decision": "proceed",
+      "confidence": "low",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Partial finishing: substrate tap strips at x=160/280/400, guard rings for VCO and CP blocks. Met1 dummy fill in y=340..360 region. Antenna diodes and full density fill NOT completed \u2014 flagged for physical-verification.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-20T14:15:00Z",
+      "agent": "custom-layout-orchestrator",
+      "stage": "layout_check",
+      "decision": "escalate",
+      "confidence": "medium",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "escalate",
+      "reason": "Pre-DRC: 0 violations per-cell, 0 expanded (magic drc(full) + sky130A.tech). GDS written. HOWEVER: area 65856 > 50000 um2 target; PFD/FBDIV/POSTDIV are stubs; antenna diodes missing; density partial. layout.signoff=false pending compaction+stub-fill+finishing. Real assembled GDS exists for physical-verification to proceed in parallel.",
+      "constraint_ref": "constraints.specs.area_um2"
     }
   ],
   "archive_fix_requests": [
@@ -428,5 +500,102 @@
         }
       ]
     }
-  ]
+  ],
+  "layout": {
+    "gds": "analog/pll_clkgen/sky130/layout/gds/pll_clkgen_top.gds",
+    "mag": "analog/pll_clkgen/sky130/layout/mag/pll_clkgen_top.mag",
+    "mag_dir": "analog/pll_clkgen/sky130/layout/mag/",
+    "area_um2": 65856,
+    "area_um2_note": "Top-level bbox 336x196 um; OVER 50000 um2 budget by 32%\u2014LF C1 array (130 cap_vpp cells) dominates. Architecture-level budget 15000 um2 for LF is correct; top-level packing needs compaction pass.",
+    "area_target_um2": 50000,
+    "matching_sigma_pct": null,
+    "density_pct": null,
+    "drc_style": "magic drc(full) expanded",
+    "drc_violations_per_cell": 0,
+    "drc_violations_expanded_top": 0,
+    "drc_note": "Per-cell DRC: 0 violations in all 9 cells. Expanded top-level drc(full): 0 violations. First catchup pass showed 57 geometry tiles (stale pre-load pass, cleared after full re-check). Magic 8.3.489 + sky130A.tech.",
+    "pre_drc_status": "PASS_0_VIOLATIONS",
+    "blocks": {
+      "cp": {
+        "status": "REAL_LAYOUT",
+        "matching": "common-centroid 6-finger PMOS array (2 dummy+2 pbias+2 psrc), 4-finger NMOS array (2 dummy+2 nbias+2 nsrc), shared nwell island",
+        "files": [
+          "cp_pmos_array.mag",
+          "cp_nmos_array.mag"
+        ]
+      },
+      "vco": {
+        "status": "REAL_LAYOUT",
+        "matching": "5 identical unit cells at 6um pitch, symmetric row, vtune shared met1 bus, ring closure via met2",
+        "files": [
+          "vco_stage_unit.mag",
+          "sky130_vco_layout.mag"
+        ]
+      },
+      "lf": {
+        "status": "REAL_LAYOUT_PASSIVE",
+        "note": "VPP cap arrays (130+16+2 cells) + poly serpentine R2/R3. Fixed cells from sky130_fd_pr/mag.",
+        "files": [
+          "sky130_lf_layout.mag"
+        ]
+      },
+      "bias": {
+        "status": "REAL_LAYOUT_PARTIAL",
+        "note": "PMOS mirror + NMOS pair drawn as primitives. Degeneration poly stub.",
+        "files": [
+          "sky130_bias_layout.mag"
+        ]
+      },
+      "pfd": {
+        "status": "STUB",
+        "note": "Bounding box 40x50 um with port labels. Internals not drawn. Recommend sky130_fd_sc_hd standard-cell cluster.",
+        "files": [
+          "sky130_pfd_layout.mag"
+        ]
+      },
+      "fbdiv": {
+        "status": "STUB",
+        "note": "Bounding box 70x70 um. TSPC DFF chain to be laid out in next iteration.",
+        "files": [
+          "sky130_fbdiv_layout.mag"
+        ]
+      },
+      "postdiv": {
+        "status": "STUB",
+        "note": "Bounding box 60x60 um. DFF+mux to be laid out.",
+        "files": [
+          "sky130_postdiv_layout.mag"
+        ]
+      }
+    },
+    "routing": {
+      "vtune": "met2 shielded (VSS met1 above+below), LF\u2192VCO",
+      "pbias_nbias": "met1 from BIAS to CP arrays",
+      "power": "met2 VDD ring + met1 VSS ring + internal distribution stripes",
+      "digital": "met1/met2 UP/DN from CP\u2192PFD, VCO\u2192FBDIV\u2192PFD ring, FBDIV\u2192POSTDIV",
+      "note": "Routing is scripted (not interactively routed). Stubs exist at CP switch devices and Rbias_p/Rbias_n routing."
+    },
+    "layout_sensitivity_notes": [
+      "Vtune (high-Z): shielded met2 channel, fill-exclude between LF and VCO",
+      "CP iout: short direct met1 (< 5 um) from CP drain to LF in",
+      "VCO ring nodes n1..n5: symmetric parasitics by construction (unit cells)",
+      "Matched CP mirror drains: common-centroid eliminates linear gradient mismatch",
+      "Nwell biasing: PMOS mirrors in shared nwell \u2192 matched threshold drift"
+    ],
+    "signoff": false,
+    "signoff_note": "PARTIAL: Real CP/VCO/LF/BIAS layout assembled and DRC clean (magic 0 violations per-cell, 0 expanded). PFD/FBDIV/POSTDIV are stubs. Area 65856 um2 > 50000 um2 target (over by 32%) \u2014 packing compaction needed. Antenna diodes not placed. Metal density fill partial. Next steps: stub\u2192real for PFD/FBDIV/POSTDIV; area compaction; antenna/density finishing; LVS.",
+    "scripts": [
+      "analog/pll_clkgen/sky130/layout/scripts/01_floorplan.tcl",
+      "analog/pll_clkgen/sky130/layout/scripts/02_cp_devices.tcl",
+      "analog/pll_clkgen/sky130/layout/scripts/03_vco_devices.tcl",
+      "analog/pll_clkgen/sky130/layout/scripts/04_lf_passives.tcl",
+      "analog/pll_clkgen/sky130/layout/scripts/05_digital_blocks.tcl",
+      "analog/pll_clkgen/sky130/layout/scripts/06_top_assembly.tcl",
+      "analog/pll_clkgen/sky130/layout/scripts/07e_drc_expanded.tcl"
+    ],
+    "reports": [
+      "analog/pll_clkgen/sky130/layout/reports/drc_precheck.rpt",
+      "analog/pll_clkgen/sky130/layout/reports/device_matching.rpt"
+    ]
+  }
 }

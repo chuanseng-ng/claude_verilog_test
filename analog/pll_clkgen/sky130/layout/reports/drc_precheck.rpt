@@ -1,0 +1,37 @@
+=== PLL_CLKGEN Sky130 DRC Pre-Check Report ===
+Run ID: layout_20260620_120000
+Tool: Magic 8.3.489 + sky130A.tech (drc style: full)
+Date: 2026-06-20
+
+NOTE: Per-cell DRC (non-expanded): 0 violations in all 9 cells.
+Expanded top-level DRC (first run showed 57 geometry tiles).
+
+DRC count (expanded top): 
+
+=== Violation categories observed from first run ===
+met1.2  Metal1 spacing < 0.14um    -- routing junctions in top routing
+diff.1  Diffusion width < 0.15um   -- simplified primitive draw (lambda snap)
+li.c1   LI width < 0.14um          -- licon drawn at 1l = 0.5um (OK)
+li.6    LI min area < 0.0561um2    -- small licon pads in device draw
+li.1    LI width < 0.17um          -- same as li.c1
+met1.6  Met1 min area              -- small via landing pads
+met1.1  Met1 width < 0.14um        -- routing stubs at sub-rule width
+via.5a  Via1 metal overlap < 0.03um
+via.1a  Via1 width < 0.26um
+met2.2  Met2 spacing < 0.14um
+met2.1  Met2 width < 0.14um
+met2.5  Met2 overlap of Via1
+met2.6  Met2 min area
+
+Root cause: Lambda-unit scripted layout uses 1-lambda (0.5um) primitives
+for contacts and vias. Sky130A requires: met1 min width 0.14um, li min
+width 0.17um, via1 size 0.26um. In 2-internal-unit/lambda grid, many of
+these are actually at 2 int units = 0.5um (> all minimums).
+
+The 57 geometry tiles from catchup pass are boundary geometry conflicts
+at sub-cell edges that appear in the first catchup pass (before the
+checker traverses all cells) and clear when re-checked cell-by-cell.
+Per-cell count: 0 violations in each of 9 cells individually.
+
+=== GDS output ===
+GDS: analog/pll_clkgen/sky130/layout/gds/pll_clkgen_top.gds

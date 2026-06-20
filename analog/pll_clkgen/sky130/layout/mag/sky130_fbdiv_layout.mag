@@ -1,0 +1,19 @@
+magic
+tech sky130A
+timestamp 1781927888
+<< checkpaint >>
+rect -561 770 701 771
+rect -630 701 770 770
+rect -631 -561 771 701
+rect -630 -630 770 -561
+rect -561 -631 701 -630
+<< locali >>
+rect -1 69 1 71
+rect 139 69 141 71
+<< metal1 >>
+rect 69 140 71 141
+rect 0 0 140 140
+rect 69 -1 71 0
+<< comment >>
+rect 2 2 138 138
+<< end >>

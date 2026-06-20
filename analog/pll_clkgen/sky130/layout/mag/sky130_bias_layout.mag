@@ -1,0 +1,42 @@
+magic
+tech sky130A
+timestamp 1781927888
+<< checkpaint >>
+rect -630 -600 710 690
+rect -630 -630 658 -600
+<< nwell >>
+rect 0 30 80 60
+<< ndiff >>
+rect 2 16 6 18
+rect 2 10 6 12
+rect 8 16 12 18
+rect 8 10 12 12
+<< pdiff >>
+rect 2 38 4 40
+rect 2 32 4 34
+rect 6 38 10 40
+rect 6 32 10 34
+rect 12 38 16 40
+rect 12 32 16 34
+rect 18 38 20 40
+rect 18 32 20 34
+rect 22 38 24 40
+rect 22 32 24 34
+<< poly >>
+rect 2 34 4 38
+rect 6 34 10 38
+rect 12 34 16 38
+rect 18 34 20 38
+rect 22 34 24 38
+rect 2 12 6 16
+rect 8 12 12 16
+rect 2 6 6 10
+<< locali >>
+rect 0 40 28 42
+rect 0 36 24 37
+rect 2 31 4 33
+rect 0 10 28 11
+rect 0 0 28 2
+<< metal1 >>
+rect 2 31 4 33
+<< end >>

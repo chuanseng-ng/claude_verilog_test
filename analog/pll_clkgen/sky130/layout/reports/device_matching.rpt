@@ -1,0 +1,159 @@
+====================================================================
+PLL_CLKGEN Sky130 — Device Matching Report
+Run ID: layout_20260620_120000
+Tool: Magic 8.3.489 + sky130A.tech
+Date: 2026-06-20
+====================================================================
+
+1. CHARGE PUMP — CP Mirror Pairs
+--------------------------------------------------------------------
+Block: sky130_cp (cp_pmos_array.mag + cp_nmos_array.mag)
+Matched pairs per circuit note (sky130-fr001 fix):
+
+PMOS pair M_pbias / M_psrc:
+  Sizes:       W=4um, L=2um, nf=4 (both identical)
+  Strategy:    6-finger interdigitated array
+  Arrangement: [Dum_P][M_pbias][M_psrc][M_psrc][M_pbias][Dum_P]
+  N-well:      Single shared nwell island (96x24 lambda = 48x12 um)
+  Dummy devices: 2 edge dummies (left and right) to equalise litho env
+  Source tie:  All PMOS sources → common VDD rail (li1 horizontal)
+  Gate-drain:  M_pbias diode-connected (D=G=pbias via poly-to-li short)
+  Pbias net:   B-finger drains connected by horizontal li1 at y=4l
+  Psrc_g net:  S-finger drains by li1 at y=8l
+  Symmetry:    Common-centroid: each pbias finger sees identical
+               neighbour context (psrc on both sides)
+  Expected post-layout mismatch: < 1% (systematic gradient cancelled)
+  Pre-layout sim mismatch: 0.37% (sky130-fr001 fix applied)
+
+NMOS pair M_nbias / M_nsrc:
+  Sizes:       W=1.5um, L=2um, nf=1 (both identical)
+  Strategy:    4-finger interdigitated array
+  Arrangement: [Dum_N][M_nbias][M_nsrc][Dum_N]
+  P-substrate: ndiff in p-sub, no nwell needed
+  Dummy devices: 2 edge dummies
+  Source tie:  All NMOS sources → VSS rail
+  Gate-drain:  M_nbias diode-connected
+  Symmetry:    Common-centroid with dummies
+  Expected post-layout mismatch: < 1%
+
+Additional CP devices (non-matched, less critical):
+  M_psw (PMOS switch, W=8u L=150n nf=8): placed in CP region,
+        not in matched array — switch Ron << bias mirror R
+  M_nsw (NMOS switch, W=4u L=150n nf=4): similar
+  M_pinv_p/n (switch inverter): standard CMOS inverter placement
+  Rbias_p=90k, Rbias_n=91k: serpentine poly resistors in CP region
+  → NOTE: Rbias_p/Rbias_n layout not yet detailed (stubbed in this
+    iteration). These are single-use resistors (not matched pairs)
+    so common-centroid is not required; poly serpentine to be added
+    in routing refinement pass.
+
+2. RING VCO — Stage Symmetry
+--------------------------------------------------------------------
+Block: sky130_vco_layout.mag (5 × vco_stage_unit.mag)
+Stages: 5 identical inverter stages with current-starved tails
+
+Stage unit cell (vco_stage_unit):
+  PMOS load:  W=2u L=150n nf=2 (pdiff in nwell)
+  NMOS driver:W=1u L=150n nf=1 (ndiff in p-sub)
+  CS tail:    W=1u L=2u nf=1 (long-gate NMOS for current starving)
+  Layout:     Vertical stack: CS(bot) → NMOS(mid) → PMOS(top)
+  Symmetry:   All 5 stages placed in identical unit cells at equal
+              x-pitch (12 lambda = 6 um) → matched parasitics
+  Ring nodes: Horizontal li1 ring (n1→n2→...→n5→n1)
+  Vtune bus:  met1 horizontal rail at y=3l connecting all CS gates
+  Output buf: Same unit cell scaled, placed at stage 6 position
+
+VCO matching assessment:
+  - All stages have identical geometry (no inter-stage mismatch)
+  - Vtune gate capacitance per stage: equal (shared gate line)
+  - Stage parasitics symmetric by construction
+  - Ring closure (n5→n1) uses met2 bypass over stages (slight
+    asymmetry at stage 5 → monitor in post-layout sim)
+
+3. BIAS GENERATOR — PMOS Mirror
+--------------------------------------------------------------------
+Block: sky130_bias_layout.mag
+
+PMOS reference pair M_p1 / M_p2 / M_p_out:
+  M_p1:  W=1u L=2u (reference)
+  M_p2:  W=2u L=2u (1:2 ratio → 2× current)
+  Arrangement: [M_p1][M_p2][M_p2'][M_p1'][M_p_out]
+  Strategy: M_p2 split into 2 equal fingers interleaved with M_p1
+  Matching: 1:2 current ratio maintained by geometry
+  nwell: single common island
+
+NMOS pair M_n1 / M_n2:
+  W=2u L=2u both → 1:1 mirror
+  Placed adjacently in p-sub
+  Degeneration resistor Rd=1.8k under M_n1 source
+
+4. DIGITAL BLOCKS — Stub Status
+--------------------------------------------------------------------
+PFD (sky130_pfd_layout.mag):    STUB — 40x50 um bounding box
+  ∙ Contains ~40 transistors (2 TG-DFFs + NAND reset)
+  ∙ Recommended: instantiate from sky130_fd_sc_hd standard cells
+    or lay out as a standard-cell cluster with OA/magic
+  ∙ Port labels placed: clk_ref, clk_div, up, dn, vdd, vss
+
+FBDIV (sky130_fbdiv_layout.mag): STUB — 70x70 um bounding box
+  ∙ TSPC DFF chain (4 FFs × 11 transistors = ~44 transistors)
+  ∙ Recommended: sky130_fd_sc_hd DFF + combinational reset logic
+  ∙ Port labels: clk_in, clk_out, vdd, vss
+
+POSTDIV (sky130_postdiv_layout.mag): STUB — 60x60 um bounding box
+  ∙ 2 DFFs + 3-way mux (~30 transistors)
+  ∙ Port labels: clk_in, clk_out, div0, div1, vdd, vss
+
+5. LOOP FILTER — Passive Layout
+--------------------------------------------------------------------
+Block: sky130_lf_layout.mag
+C1 (17.5 pF):  130 × sky130_fd_pr__cap_vpp_08p6x07p8_m1m2_noshield
+               13×10 array = 117×80 um = 9360 um2
+               Estimated: 130 × ~134 fF/cell = 17.4 pF ≈ 17.5 pF ✓
+C2 (1.75 pF):  16 × sky130_fd_pr__cap_vpp_04p4x04p6_m1m2_noshield
+               4×4 array ≈ 1.76 pF ✓
+C3 (0.175 pF): 2 × sky130_fd_pr__cap_vpp_04p4x04p6_m1m2_noshield
+               ≈ 0.176 pF ✓
+R2 (272.73 kΩ): 20-segment poly serpentine, high-R poly (Rsh~319 Ω/sq)
+               855 squares total, width=0.5 um (1 lambda)
+R3 (90.91 kΩ):  10-segment poly serpentine, 285 squares
+
+LF passive area: 130×95 um = 12,350 um2 (target 15,000 um2) ✓
+
+NOTE: Cap cell instantiation uses magic getcell + move; cells are
+referenced (not inlined) in the .mag hierarchy. LVS will need to
+see these as cap_vpp cells — LVS check to verify correct attribution.
+
+6. AREA SUMMARY
+--------------------------------------------------------------------
+Target total area: 50,000 um2
+Actual top-level bbox: 336×196 = 65,856 um2 (OVER BUDGET by 32%)
+
+Root cause of area overage:
+  LF capacitor array (C1 predominantly): 117×80 um = 9,360 um2
+  plus LF R2/R3 serpentine region: ~30×50 um = 1,500 um2
+  LF total footprint in top-level placement: ~150×95 um = 14,250 um2
+
+  Top-level placement also includes:
+  - Guard rings (4 lambda = 2 um each side): adds ~15 um perimeter
+  - Routing channels between blocks: ~20-30 um
+  - Top-level power ring: 8 lambda = 4 um each side
+
+  The architecture budgeted area_um2=15,000 for LF which is correct;
+  the top-level assembly floorplan did not pack blocks tightly enough
+  (vertical stack of BIAS+PFD at full height adds unused whitespace).
+
+  TO CLOSE AREA TO 50,000 um2:
+  1. Pack BIAS (40×30 um real) + CP arrays more tightly → save ~800 um2
+  2. Use smaller C1 cap cells (cap_vpp_04p4x04p6 × many more) for denser fill
+  3. Compact the PFD/FBDIV/POSTDIV stub cells (they are oversized estimates)
+  4. Remove guard ring whitespace; integrate well taps into block rows
+
+====================================================================
+MATCHING SIGN-OFF: PARTIAL
+- CP mirrors: COMMON-CENTROID, interdigitated, edge dummies: YES
+- VCO stages: SYMMETRIC placement in identical unit cells: YES
+- BIAS mirror: INTERDIGITATED: YES
+- Fill perturbing matching: NOT YET (finishing pass not completed)
+- Antenna diodes: NOT YET (flag for physical-verification)
+====================================================================
