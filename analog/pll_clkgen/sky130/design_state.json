@@ -5,21 +5,27 @@
   "milestone": "Phase7-M-b2",
   "bead": "claude_verilog_test-llm",
   "created_at": "2026-06-20T12:00:00Z",
-  "updated_at": "2026-06-20T14:00:00Z",
+  "updated_at": "2026-06-20T03:48:01Z",
   "notes": "Sky130 real-signoff PLL variant. Real sky130_fd_pr SPICE models (ngspice native), PDK root ~/.volare/sky130A. Eliminates ASAP7 fx002 (no open FinFET models). Lower freq 100 MHz matching Sky130 SoC ceiling. Shares PDK-agnostic RNM at analog/pll_clkgen/models/pll_rnm.sv for SoC cosim.",
   "constraints": {
     "design_name": "pll_clkgen_sky130",
     "pdk": "sky130A",
     "pdk_root": "/home/neuromorphic/.volare/sky130A",
-    "device_models": "sky130_fd_pr (nfet_01v8 / pfet_01v8), real foundry BSIM4 — ngspice native",
-    "supply": { "vdd_v": 1.8 },
+    "device_models": "sky130_fd_pr (nfet_01v8 / pfet_01v8), real foundry BSIM4 \u2014 ngspice native",
+    "supply": {
+      "vdd_v": 1.8
+    },
     "specs": {
       "f_ref_hz": 10000000.0,
       "f_out_hz": 100000000.0,
       "f_out_min_hz": 80000000.0,
       "f_out_max_hz": 120000000.0,
       "divider_n": 10,
-      "post_div": [1, 2, 4],
+      "post_div": [
+        1,
+        2,
+        4
+      ],
       "jitter_rms_ps": 50.0,
       "phase_noise_dbc_1mhz": -80,
       "lock_time_us": 50,
@@ -27,14 +33,32 @@
       "area_um2": 50000
     },
     "corners": [
-      { "name": "tt", "vdd_v": 1.80, "temp_c": 25, "model_corner": "tt" },
-      { "name": "ss", "vdd_v": 1.62, "temp_c": 100, "model_corner": "ss" },
-      { "name": "ff", "vdd_v": 1.98, "temp_c": -40, "model_corner": "ff" }
+      {
+        "name": "tt",
+        "vdd_v": 1.8,
+        "temp_c": 25,
+        "model_corner": "tt"
+      },
+      {
+        "name": "ss",
+        "vdd_v": 1.62,
+        "temp_c": 100,
+        "model_corner": "ss"
+      },
+      {
+        "name": "ff",
+        "vdd_v": 1.98,
+        "temp_c": -40,
+        "model_corner": "ff"
+      }
     ]
   },
   "pipeline_config": {
     "max_cross_domain_iterations": 3,
-    "checkpoints": ["architecture_signoff", "characterization_signoff"]
+    "checkpoints": [
+      "architecture_signoff",
+      "characterization_signoff"
+    ]
   },
   "approved_checkpoints": [
     {
@@ -44,19 +68,7 @@
       "note": "All 5 architecture stages PASS. Budget: power 4.40/5.0 mW (12% reserve), area 42000/50000 um2 (16% reserve), jitter RSS 44.4/50 ps. Loop params: BW=1MHz, PM=60 deg. Behavioral PLL locked at 100.000 MHz in 1.38 us."
     }
   ],
-  "fix_requests": [
-    {
-      "id": "sky130-fr001",
-      "block": "cp",
-      "severity": "WARN",
-      "description": "CP current mismatch 4.78% exceeds 3% target. REAL sky130 BSIM4 sim (TT, calibrated flat models): IUP=9.979 uA (PMOS W=4u/L=2u), IDN=9.513 uA (NMOS W=1.5u/L=2u) at Vbias=0.9V, Vcpout=0.9V. mu_n/mu_p ratio ~2.6x in sky130 causes mismatch with standard mirror sizing.",
-      "fix": "Use independent bias resistors for PMOS and NMOS mirror legs to set IUP=IDN=10 uA independently. Layout common-centroid. Expected post-layout mismatch <2%. Closed-loop impact: ~2 ps rms jitter from 5% mismatch -- within 50 ps budget.",
-      "route_to": "circuit-design",
-      "status": "open",
-      "real_data": true,
-      "note": "Not a fatal blocker for PLL function (loop suppresses static CP offset); exceeds 3% spec gate. Fix deferred to circuit-design refinement iteration."
-    }
-  ],
+  "fix_requests": [],
   "architecture": {
     "chain_type": "PLL/clock",
     "dominant_budget": "jitter (phase-noise) and power",
@@ -80,7 +92,7 @@
         "name": "pfd",
         "topology_class": "TSPC D-FF based (reset-path tri-state gate), sky130_fd_pr nfet_01v8/pfet_01v8 digital",
         "specs": {
-          "power_mw": 0.30,
+          "power_mw": 0.3,
           "area_um2": 2000,
           "jitter_contrib_ps": 10.0,
           "dead_zone_ps": 100,
@@ -92,15 +104,15 @@
         "name": "cp",
         "topology_class": "Matched PMOS/NMOS current sources with transmission-gate switches; Wilson mirror for high output impedance",
         "specs": {
-          "power_mw": 0.50,
+          "power_mw": 0.5,
           "area_um2": 3000,
           "Icp_ua": 10.0,
           "mismatch_pct_target": 3.0,
-          "mismatch_pct_real_sim": 4.78,
+          "mismatch_pct_real_sim": 0.37,
           "supply_v": 1.8
         },
         "feasibility": "high",
-        "note": "4.78% mismatch in REAL sky130 BSIM4 sim. fix_request sky130-fr001 open."
+        "note": "IUP=10.017 uA, IDN=10.054 uA, mismatch=0.37% after independent-bias fix (sky130-fr001 closed)"
       },
       {
         "name": "lf",
@@ -123,7 +135,7 @@
         "name": "vco",
         "topology_class": "5-stage current-starved ring VCO; pfet_01v8 W=2u/L=150n inverter load, nfet_01v8 W=1u/L=150n inverter, tail nfet_01v8 W=1u/L=2u",
         "specs": {
-          "power_mw": 2.40,
+          "power_mw": 2.4,
           "area_um2": 10000,
           "f_center_mhz": 100.0,
           "f_range_mhz_min": 80.0,
@@ -144,12 +156,12 @@
         "name": "fbdiv",
         "topology_class": "Behavioral B-source /10 for sim; TSPC DFF chain in sky130_fbdiv.sp for layout reference",
         "specs": {
-          "power_mw": 0.50,
+          "power_mw": 0.5,
           "area_um2": 5000,
           "divider_ratio": 10,
-          "input_freq_MHz_measured": 100.000,
-          "output_freq_MHz_measured": 10.000,
-          "T_out_ns_measured": 100.000,
+          "input_freq_MHz_measured": 100.0,
+          "output_freq_MHz_measured": 10.0,
+          "T_out_ns_measured": 100.0,
           "supply_v": 1.8
         },
         "feasibility": "high"
@@ -158,9 +170,13 @@
         "name": "postdiv",
         "topology_class": "Configurable /1,/2,/4 divider (2 DFF chain with 2-bit mux select)",
         "specs": {
-          "power_mw": 0.30,
+          "power_mw": 0.3,
           "area_um2": 3000,
-          "div_options": [1, 2, 4],
+          "div_options": [
+            1,
+            2,
+            4
+          ],
           "input_freq_mhz": 100.0,
           "supply_v": 1.8
         },
@@ -170,7 +186,7 @@
         "name": "bias",
         "topology_class": "Widlar self-biased current reference (sub-threshold NMOS ratio) + PMOS mirror distribution",
         "specs": {
-          "power_mw": 0.40,
+          "power_mw": 0.4,
           "area_um2": 4000,
           "Ibias_ua": 10.0,
           "PSRR_db_target": 40.0,
@@ -180,7 +196,7 @@
       }
     ],
     "noise_budget_nv": null,
-    "power_budget_mw": 4.40,
+    "power_budget_mw": 4.4,
     "area_estimate_um2": 42000,
     "jitter_rss_ps": 44.4,
     "leeson_pn_dBc_1MHz": -133.9,
@@ -193,8 +209,8 @@
     "behavioral_lock_sim": {
       "file": "analog/pll_clkgen/sky130/sim/tb_pll_behavioral_lock.sp",
       "tool": "ngspice",
-      "result_f_vco_MHz": 100.000,
-      "result_vtune_lock_V": 0.910,
+      "result_f_vco_MHz": 100.0,
+      "result_vtune_lock_V": 0.91,
       "result_t_lock_us": 1.38,
       "target_t_lock_us": 50.0,
       "status": "LOCKED",
@@ -238,27 +254,33 @@
         }
       },
       "cp_mismatch": {
-        "file": "analog/pll_clkgen/sky130/sim/tb_cp_mismatch.sp",
-        "model": "calibrated flat BSIM4 sky130 TT",
-        "status": "WARN",
+        "file": "analog/pll_clkgen/sky130/sim/tb_cp_mismatch_v2.sp",
+        "model": "calibrated flat BSIM4 sky130 TT (sky130_flat_models.sp)",
+        "status": "PASS",
         "results": {
-          "IUP_uA": 9.979,
-          "IDN_uA": 9.513,
-          "Imean_uA": 9.746,
-          "mismatch_pct": 4.78,
+          "IUP_uA": 10.017,
+          "IDN_uA": 10.054,
+          "Imean_uA": 10.035,
+          "mismatch_pct": 0.37,
           "target_mismatch_pct": 3.0,
-          "sizing": "PMOS W=4u/L=2u, NMOS W=1.5u/L=2u, Vbias=0.9V, Vcpout=0.9V",
+          "sizing": "PMOS W=4u/L=2u, NMOS W=1.5u/L=2u, pbias_op=0.899V, nbias_op=0.915V",
+          "Rbias_p_kohm": 90,
+          "Rbias_n_kohm": 91,
+          "Vcpout_V": 0.9,
+          "VDD_V": 1.8,
+          "T_C": 27,
           "real_silicon_quality": true,
-          "fix_request": "sky130-fr001"
+          "fix_request_closed": "sky130-fr001",
+          "method": "Independent bias resistors per leg: PMOS Rbias_p=90k, NMOS Rbias_n=91k. Sizes each leg to 10 uA independently, compensating sky130 mu_n/mu_p=2.36x mobility ratio."
         }
       },
       "fbdiv_check": {
         "file": "analog/pll_clkgen/sky130/sim/tb_fbdiv_check.sp",
         "status": "PASS",
         "results": {
-          "input_freq_MHz": 100.000,
-          "output_freq_MHz": 10.000,
-          "T_out_ns": 100.000,
+          "input_freq_MHz": 100.0,
+          "output_freq_MHz": 10.0,
+          "T_out_ns": 100.0,
           "divide_ratio_measured": 10.0,
           "divide_ratio_target": 10
         }
@@ -271,11 +293,14 @@
         "no_supply_shorts": "PASS",
         "port_connectivity": "PASS - all 7 blocks connected in pll_top.sp",
         "feedback_loop_closed": "PASS - clk_ref to PFD to CP to LF to VCO to fbdiv to PFD",
-        "ibias_routing": "WARN - sky130_bias ibias_out not wired to VCO/CP bias pins in pll_top.sp; each block has internal Rbias stub"
+        "ibias_routing": "WARN - sky130_bias ibias_out not wired to VCO/CP bias pins in pll_top.sp; each block has internal Rbias stub",
+        "cp_independent_bias": "PASS - independent Rbias_p/Rbias_n per leg, all device terminals connected, bulk=VDD/VSS correct"
       }
     },
-    "signoff": false,
-    "signoff_note": "Pending fix_request sky130-fr001 (CP mismatch 4.78% > 3%). All other circuit specs met. VCO covers 100 MHz at all 3 corners. Divider /10 verified. ERC PASS_WITH_WARN (ibias routing)."
+    "signoff": true,
+    "signoff_note": "FULL CIRCUIT SIGNOFF: sky130-fr001 fixed. CP mismatch 0.37% (was 4.78%). IUP=10.017 uA, IDN=10.054 uA, independent bias (Rbias_p=90k/Rbias_n=91k). VCO covers 100 MHz at tt/ss/ff corners. Divider /10 verified. ERC PASS_WITH_WARN (ibias routing note retained). REAL sky130 BSIM4 TT sim. Binned-model flattening caveat retained (ngspice-42 bin-scope limitation in nested sky130_fd_pr subckts).",
+    "netlist": "analog/pll_clkgen/sky130/circuit/sky130_cp.sp",
+    "schematic_ref": "analog/pll_clkgen/sky130/circuit/"
   },
   "history": [
     {
@@ -361,6 +386,47 @@
       "suggested_next_step": "loop_back_to:circuit-design",
       "reason": "REAL sky130 BSIM4 sims complete. VCO: Kvco=530 MHz/V, 100 MHz at Vtune=0.77 V TT; corners tt/ss/ff all cover 100 MHz at Vtune=0.9 V (167/156/167 MHz). Divider /10 PASS (100 MHz in, 10 MHz out). CP mismatch 4.78% > 3% target -- fix_request sky130-fr001 opened. ERC PASS_WITH_WARN. circuit.signoff=false pending CP fix.",
       "constraint_ref": "specs.cp_mismatch_pct"
+    },
+    {
+      "timestamp": "2026-06-20T03:48:01Z",
+      "agent": "circuit-design-orchestrator",
+      "stage": "device_sizing",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Fix-request sky130-fr001 serviced: CP mismatch reduced from 4.78% to 0.37% via independent bias resistors (Rbias_p=90k, Rbias_n=91k). Real sky130 BSIM4 TT sim: IUP=10.017 uA, IDN=10.054 uA. circuit.signoff=true.",
+      "constraint_ref": "specs.cp_mismatch_pct"
+    }
+  ],
+  "archive_fix_requests": [
+    {
+      "id": "sky130-fr001",
+      "block": "cp",
+      "severity": "WARN",
+      "description": "CP current mismatch 4.78% exceeds 3% target. REAL sky130 BSIM4 sim (TT, calibrated flat models): IUP=9.979 uA (PMOS W=4u/L=2u), IDN=9.513 uA (NMOS W=1.5u/L=2u) at Vbias=0.9V, Vcpout=0.9V. mu_n/mu_p ratio ~2.6x in sky130 causes mismatch with standard mirror sizing.",
+      "fix": "Use independent bias resistors for PMOS and NMOS mirror legs to set IUP=IDN=10 uA independently. Layout common-centroid. Expected post-layout mismatch <2%. Closed-loop impact: ~2 ps rms jitter from 5% mismatch -- within 50 ps budget.",
+      "route_to": "circuit-design",
+      "status": "fixed",
+      "real_data": true,
+      "note": "Not a fatal blocker for PLL function (loop suppresses static CP offset); exceeds 3% spec gate. Fix deferred to circuit-design refinement iteration.",
+      "resolved_at": "2026-06-20T03:48:01Z",
+      "circuit_response": {
+        "diff_summary": "Rbias_p changed 72k->90k, Rbias_n changed 90k->91k. Fix: independent bias sizing per leg accounts for sky130 mu_n/mu_p=2.36x. Result: IUP=10.017 uA, IDN=10.054 uA, mismatch=0.37%.",
+        "files_changed": [
+          "analog/pll_clkgen/sky130/circuit/sky130_cp.sp",
+          "analog/pll_clkgen/sky130/sim/tb_cp_mismatch_v2.sp"
+        ]
+      },
+      "history": [
+        {
+          "timestamp": "2026-06-20T03:48:01Z",
+          "action": "claimed->fixed",
+          "agent": "circuit-design-orchestrator",
+          "note": "Real sky130 BSIM4 TT sim: Rbias_p=90k, Rbias_n=91k. IUP=10.017 uA, IDN=10.054 uA, mismatch=0.37%."
+        }
+      ]
     }
   ]
 }
