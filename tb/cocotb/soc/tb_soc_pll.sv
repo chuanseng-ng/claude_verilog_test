@@ -1,33 +1,40 @@
-// tb_soc_top.sv
-// Phase 5 (M9) — cocotb test wrapper for soc_top.
+// tb_soc_pll.sv
+// Phase 7 (M-c) — cocotb test wrapper for SoC PLL verification.
 //
-// soc_top has no unpacked-array ports at its boundary (those are internal),
-// so no fan-in/fan-out logic is needed — this file is a thin pass-through
-// that adds:
-//   1. MEM_INIT_FILE parameter forwarded to the boot_rom inside soc_top
-//      (boot_rom.MEM_INIT_FILE is re-exposed as a top-level parameter so
-//       each cocotb test can supply its own hex image at elaboration time).
-//   2. Flat scalar ports with the signal names that the cocotb BFMs expect
-//      (clk_i, rst_n_i, apb_*, uart_*, spi_*, commit_*, gpu_irq_o).
+// Instantiates soc_top with PLL_IMPL="STUB" (default) so the testbench runs
+// under pure Verilator without real-number model support.
 //
-// All signals are direct renames of soc_top ports — zero logic, exactly
-// the pattern of tb_axi4_crossbar.sv.
+// Adds pll_locked_o to the port list (soc_top.pll_locked_o, new in M-c) so
+// cocotb can observe lock acquisition directly.  All other ports mirror
+// tb_soc_top.sv exactly (same signal names, same direction, same width).
+//
+// Clock seam (STUB mode):
+//   clk_i drives ref_clk inside soc_top.
+//   core_clk = ref_clk (stub passthrough, no multiply).
+//   pll_locked asserts after STUB_LOCK_CYCLES=16 ref_clk edges.
+//   core_rst_n = rst_n_i & pll_locked, so children come out of reset after
+//   the lock counter fires — roughly 16+1 = 17 ref_clk cycles after reset
+//   de-asserts.
 //
 // Lint target: verilator -Wall 0 errors 0 warnings.
 
 `default_nettype none
 
-module tb_soc_top #(
+module tb_soc_pll #(
     // Forwarded to boot_rom.MEM_INIT_FILE inside soc_top.
-    // Pass "" (empty string) to leave ROM all-zeros; pass a path to a
-    // $readmemh-compatible hex file to pre-load firmware.
-    parameter string MEM_INIT_FILE = ""
+    parameter string MEM_INIT_FILE = "",
+
+    // PLL implementation selector — keep "STUB" for Verilator CI.
+    // Override to "RNM" for AMS co-simulation (requires real-type support).
+    parameter string PLL_IMPL = "STUB"
 ) (
     // ── Clock / reset ─────────────────────────────────────────────────────────
+    // clk_i is the external reference clock (100 MHz in production; any
+    // frequency in simulation — testbench sets the period).
     input  logic        clk_i,
     input  logic        rst_n_i,
 
-    // ── APB3 debug slave (CPU debug port) ────────────────────────────────────
+    // ── APB3 debug slave (pass-through to CPU) ───────────────────────────────
     input  logic [11:0] apb_paddr_i,
     input  logic        apb_psel_i,
     input  logic        apb_penable_i,
@@ -47,21 +54,19 @@ module tb_soc_top #(
     input  logic        spi_miso_i,
     output logic        spi_cs_n_o,
 
-    // ── Observability bus ─────────────────────────────────────────────────────
+    // ── Observability ─────────────────────────────────────────────────────────
     output logic        commit_valid_o,
     output logic [31:0] commit_pc_o,
     output logic [31:0] commit_insn_o,
     output logic        gpu_irq_o,
 
     // ── PLL status (Phase 7 M-c) ─────────────────────────────────────────────
-    // Exposed so soc_boot_lint passes cleanly; soc_boot / soc_periph /
-    // soc_coherency / soc_cpu_gpu tests do not observe this signal directly —
-    // they use commit_pc_o as the boot readiness indicator.
-    output logic        pll_locked_o
+    output logic        pll_locked_o    // 1 when stub lock counter fires
 );
 
     soc_top #(
-        .MEM_INIT_FILE (MEM_INIT_FILE)
+        .MEM_INIT_FILE (MEM_INIT_FILE),
+        .PLL_IMPL      (PLL_IMPL)
     ) u_soc (
         .clk_i          (clk_i),
         .rst_n_i        (rst_n_i),
@@ -91,4 +96,6 @@ module tb_soc_top #(
         .pll_locked_o   (pll_locked_o)
     );
 
-endmodule : tb_soc_top
+endmodule : tb_soc_pll
+
+`default_nettype wire
