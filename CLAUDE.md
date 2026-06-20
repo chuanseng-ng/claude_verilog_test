@@ -27,6 +27,7 @@ See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for
 | 4 — GPU-Lite SIMT | 8-lane warps, single CU, round-robin, 1-level divergence, 16 KB shared mem | ✅ 2026-05-27 (ASAP7 571 MHz) |
 | 5 — SoC integration | CPU + GPU + DMA + AXI4 crossbar + UART/SPI/timer/IRQ + behavioral SRAM | 🚧 In progress |
 | 6+ — IP expansion | GPIO/I2C/PWM/WDT/TRNG/AES-SHA peripherals; INT8 NPU; tech-node exploration | ⏸️ Future |
+| 7 — Mixed-Signal PLL | Dual-PDK charge-pump PLL (ASAP7 indicative + Sky130 real DRC/LVS) via analog-design agents; AMS RNM integrated as SoC clock source | done (M-a..M-c) |
 
 ### Phase 4: GPU-Lite SIMT Engine (frozen)
 
@@ -163,6 +164,8 @@ cd pnr && make report_summary
 ```
 
 Commit with the `[Category]` convention (see below). Use `rtk`-prefixed commands for token-efficient output (see RTK section).
+
+**Analog/mixed-signal flow (Phase 7+)**: the `analog` nix devshell provides the open analog toolchain (ngspice / xschem / magic / klayout / netgen) — enter it with `nix develop ~/Downloads/Github/librelane#analog` (OpenVAF is not in nixpkgs → ngspice-behavioral fallback). The analog flow state lives in `analog/pll_clkgen/{,sky130}/design_state.json` — **separate from the digital `design_state.json`** at repo root. Full-SoC AMS cosim (RNM PLL through `Vtop`) needs `MAKEFLAGS=-j2` (OOM on a 15 GiB host otherwise) with `SIM_BUILD` routed to `/nobackup`. See `docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md`.
 
 ## Project Structure
 

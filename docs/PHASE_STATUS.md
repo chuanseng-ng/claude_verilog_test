@@ -1,10 +1,12 @@
 # Project Phase Status
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 
 ## Current Phase
 
 **Phase 5: SoC Integration** - 🚧 IN PROGRESS — M1–M9 ✅ complete (2026-06-19); M10 L2 decision gate next, then M11 physical design / M12 sign-off.
+
+**Phase 7: Mixed-Signal PLL Clock Generator** - 🚧 IN PROGRESS — M-a/M-b1/M-b2/M-c ✅ complete (2026-06-20); M-d = documentation (this update). Dual-PDK charge-pump PLL via analog-design agents (ASAP7 indicative + Sky130 real CP-block DRC/LVS), AMS RNM integrated as SoC clock source. See `docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md`. (Phase 7 ran alongside the in-progress Phase 5 PD/sign-off tail.)
 
 - M1–M8 ✅: AXI4 crossbar + AXI-Lite ring, cache burst upgrade, peripherals (UART/SPI/timer/IRQ), DMA, behavioral SRAM, perf counters, SoC top.
 - M9 ✅ SoC verification: boot 100/100; DMA+UART+SPI loopback; SW coherency (D$ flush→GPU→D$ inval); CPU-GPU IRQ integration; DUT-side boot SRAM check. `soc_all` 73/73; 1M+ cycle stress (1,079,867 cyc, 0 fail). Two RTL bugs found+fixed: D-cache MMIO caching (`go9`) and axi4_crossbar AR/AW handshake+arbitration (`7fs`).
@@ -276,7 +278,32 @@ Last updated: 2026-06-19
 | M11 | SoC P&R + STA (`phase5_soc.sdc`/`.upf`) | ⏸️ Not started |
 | M12 | Sign-off + documentation | ⏸️ Not started |
 
+### Phase 7: Mixed-Signal PLL Clock Generator 🚧
+
+**Status**: M-a/M-b1/M-b2/M-c ✅ complete (2026-06-20); M-d = documentation (this update). Golden spec: `docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md`.
+
+Dual-PDK charge-pump integer-N PLL (ring VCO) designed end-to-end via the analog-design orchestrator agents, integrated into the SoC as the clock source via a PDK-agnostic real-number model (RNM). Doubled as a validation run of the analog-design agent suite (real ngspice/magic/netgen ran; closed-loop meta fix loop + adversarial physical verification both added value — the latter caught a false DRC pass).
+
+| Milestone | Scope | Status |
+| :-------- | :---- | :----- |
+| M-a | Analog infra (`analog` devshell) + dual-PDK PLL architecture + modeling | ✅ |
+| M-b1 | ASAP7 variant: circuit + ngspice — 100 MHz→1.282 GHz, N=13, 0.7 V | ✅ (electrical **indicative**: BSIM4 substitute, no BSIM-CMG) |
+| M-b2 | Sky130 variant: real `sky130_fd_pr` circuit/sim + magic layout — 10→100 MHz, N=10, 1.8 V; **CP-block DRC=0 + netgen LVS MATCH** | ✅ (CP block; VCO/LF/BIAS regen ⏸️) |
+| M-c | SoC integration (`rtl/soc/pll/`): clock seam, AXI-Lite slave @0x2000_7000 (`AXIL_N_SLAVES` 6→7), 2 RTL bugs fixed, cosim 7/7 + regression | ✅ |
+| M-d | Phase 7 documentation (plan/roadmap/status/CLAUDE.md) | ✅ 2026-06-20 |
+
+**Real vs indicative**: Sky130 CP block carries **real** DRC+LVS sign-off; ASAP7 electrical is **indicative** (no BSIM-CMG FinFET models in open ngspice). **Follow-ups**: Sky130 full-chip DRC/LVS (mechanical VCO/LF/BIAS PDK-generator regen) and the RNM-mode AXI CDC synchroniser. Two RTL bugs found+fixed: PLL bootstrap deadlock (regs were on the gated core domain → moved to ref `clk_i`, default-enable `CONTROL[0]`) and `PERIPH_LIMIT` decode hole (0x2000_6FFF → 0x2000_7FFF).
+
 ## Recent Project Changes
+
+### 2026-06-20: Phase 7 Mixed-Signal PLL — M-a..M-c complete, M-d docs
+
+- ✅ Dual-PDK charge-pump integer-N PLL (ring VCO) designed end-to-end via the analog-design orchestrator agents.
+- ✅ ASAP7 variant (indicative): 100 MHz→1.282 GHz, N=13, 0.7 V; electrical via calibrated planar BSIM4 substitute (no BSIM-CMG in open ngspice).
+- ✅ Sky130 variant (real): 10→100 MHz, N=10, 1.8 V, real `sky130_fd_pr`; Kvco 530 MHz/V; CP UP/DN mismatch 4.78%→0.37% (independent bias legs); behavioral lock 100.000 MHz / 1.38 µs; real magic layout + **CP-block DRC=0 + netgen LVS MATCH** (4 pfet + 1 nfet extracted). Adversarial PV caught a false DRC pass (hand-drawn geometry 50× too small → 0 FETs).
+- ✅ SoC integration (`rtl/soc/pll/`): clock seam (`clk_i`→PLL ref→`core_clk`, `core_rst_n = rst_n_i & pll_locked`), AXI-Lite slave @0x2000_7000 (`AXIL_N_SLAVES` 6→7). Cosim 7/7 (`test_pll_lock` 3/3 + `test_pll_regs` 4/4) + boot/periph regression clean.
+- ✅ Two RTL bugs found+fixed: PLL bootstrap deadlock (regs on gated core domain → ref `clk_i` + default-enable `CONTROL[0]`); `PERIPH_LIMIT` 0x2000_6FFF→0x2000_7FFF.
+- ⏸️ Follow-ups: Sky130 full-chip DRC/LVS (VCO/LF/BIAS PDK-generator regen) and RNM-mode AXI CDC synchroniser.
 
 ### 2026-05-21: Phase 3 COMPLETE ✅
 
