@@ -1,25 +1,34 @@
 magic
 tech sky130A
-timestamp 1781927856
-<< checkpaint >>
-rect -618 636 656 637
-rect -626 635 662 636
-rect -628 632 664 635
-rect -630 -630 666 632
-<< ndiff >>
-rect 2 2 4 5
-rect 8 2 12 5
-rect 16 2 20 5
-rect 24 2 28 5
-rect 32 2 34 5
-<< poly >>
-rect 4 1 8 6
-rect 12 1 16 6
-rect 20 1 24 6
-rect 28 1 32 6
-<< locali >>
-rect 12 3 14 7
-rect 16 5 18 7
-rect 24 5 26 7
-rect 0 0 36 2
+timestamp 1781930001
+use nfet_1p5u_2u_dum nfet_dum_0
+timestamp 1781929535
+transform 1 0 200 0 1 182
+box 0 0 400 364
+use nfet_1p5u_2u_nf1 nfet_nbias_A
+timestamp 1781929535
+transform 1 0 600 0 1 182
+box 400 0 800 364
+use nfet_1p5u_2u_nf1 nfet_nsrc_A
+timestamp 1781929535
+transform 1 0 1000 0 1 182
+box 800 0 1200 364
+use nfet_1p5u_2u_nf1 nfet_nsrc_B
+timestamp 1781929535
+transform 1 0 1400 0 1 182
+box 1200 0 1600 364
+use nfet_1p5u_2u_nf1 nfet_nbias_B
+timestamp 1781929535
+transform 1 0 1800 0 1 182
+box 1600 0 2000 364
+use nfet_1p5u_2u_dum nfet_dum_1
+timestamp 1781929535
+transform 1 0 2200 0 1 182
+box 2000 0 2400 364
+<< labels >>
+flabel metal1 s 600 182 800 182 0 FreeSans 80 0 0 0 nbias
+flabel metal1 s 1800 182 2000 182 0 FreeSans 80 0 0 0 nbias
+flabel metal1 s 1000 182 1200 182 0 FreeSans 80 0 0 0 nsrc_g
+flabel metal1 s 1400 182 1600 182 0 FreeSans 80 0 0 0 nsrc_g
+flabel metal1 s 1200 364 1200 364 0 FreeSans 80 0 0 0 VSS
 << end >>

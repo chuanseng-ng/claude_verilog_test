@@ -1,0 +1,39 @@
+
+Circuit 1 cell sky130_fd_pr__pfet_01v8 and Circuit 2 cell sky130_fd_pr__pfet_01v8 are black boxes.
+Warning: Equate pins:  cell sky130_fd_pr__pfet_01v8 is a placeholder, treated as a black box.
+Warning: Equate pins:  cell sky130_fd_pr__pfet_01v8 is a placeholder, treated as a black box.
+
+Subcircuit pins:
+Circuit 1: sky130_fd_pr__pfet_01v8         |Circuit 2: sky130_fd_pr__pfet_01v8         
+-------------------------------------------|-------------------------------------------
+1                                          |1                                          
+2                                          |2                                          
+3                                          |3                                          
+4                                          |4                                          
+---------------------------------------------------------------------------------------
+Cell pin lists are equivalent.
+Device classes sky130_fd_pr__pfet_01v8 and sky130_fd_pr__pfet_01v8 are equivalent.
+
+Subcircuit summary:
+Circuit 1: pfet_4u_2u_nf4                  |Circuit 2: pfet_4u_2u_nf4                  
+-------------------------------------------|-------------------------------------------
+sky130_fd_pr__pfet_01v8 (4)                |sky130_fd_pr__pfet_01v8 (4)                
+Number of devices: 4                       |Number of devices: 4                       
+Number of nets: 10                         |Number of nets: 10                         
+---------------------------------------------------------------------------------------
+Resolving symmetries by property value.
+Netlists match uniquely with port errors.
+
+Subcircuit pins:
+Circuit 1: pfet_4u_2u_nf4                  |Circuit 2: pfet_4u_2u_nf4                  
+-------------------------------------------|-------------------------------------------
+(no matching pin)                          |a_447                                      
+(no matching pin)                          |a_247                                      
+(no matching pin)                          |a_216                                      
+(no matching pin)                          |w                                          
+proxyw                                     |(no matching pin)                          
+---------------------------------------------------------------------------------------
+Cell pin lists for pfet_4u_2u_nf4 and pfet_4u_2u_nf4 altered to match.
+Device classes pfet_4u_2u_nf4 and pfet_4u_2u_nf4 are equivalent.
+
+Final result: Top level cell failed pin matching.

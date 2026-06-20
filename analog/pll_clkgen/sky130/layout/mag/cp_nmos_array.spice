@@ -1,0 +1,19 @@
+* NGSPICE file created from cp_nmos_array.ext - technology: sky130A
+
+.subckt nfet_1p5u_2u_nf1
+X0 a_100_n75# a_n100_n120# a_n130_n75# w_n200_n182# sky130_fd_pr__nfet_01v8 ad=0.45 pd=3.6 as=0.45 ps=3.6 w=1.5 l=2
+.ends
+
+.subckt nfet_1p5u_2u_dum a_n182_n163#
+X0 a_100_n75# a_n100_n120# a_n130_n75# a_n182_n163# sky130_fd_pr__nfet_01v8 ad=0.45 pd=3.6 as=0.45 ps=3.6 w=1.5 l=2
+.ends
+
+.subckt cp_nmos_array
+Xnfet_nsrc_A nfet_1p5u_2u_nf1
+Xnfet_nsrc_B nfet_1p5u_2u_nf1
+Xnfet_dum_1 SUB nfet_1p5u_2u_dum
+Xnfet_nbias_A nfet_1p5u_2u_nf1
+Xnfet_nbias_B nfet_1p5u_2u_nf1
+Xnfet_dum_0 SUB nfet_1p5u_2u_dum
+.ends
+

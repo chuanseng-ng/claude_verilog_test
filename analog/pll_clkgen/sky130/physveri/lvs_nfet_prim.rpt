@@ -1,0 +1,48 @@
+
+Circuit 1 cell sky130_fd_pr__nfet_01v8 and Circuit 2 cell sky130_fd_pr__nfet_01v8 are black boxes.
+Warning: Equate pins:  cell sky130_fd_pr__nfet_01v8 is a placeholder, treated as a black box.
+Warning: Equate pins:  cell sky130_fd_pr__nfet_01v8 is a placeholder, treated as a black box.
+
+Subcircuit pins:
+Circuit 1: sky130_fd_pr__nfet_01v8         |Circuit 2: sky130_fd_pr__nfet_01v8         
+-------------------------------------------|-------------------------------------------
+1                                          |1                                          
+2                                          |2                                          
+3                                          |3                                          
+4                                          |4                                          
+---------------------------------------------------------------------------------------
+Cell pin lists are equivalent.
+Device classes sky130_fd_pr__nfet_01v8 and sky130_fd_pr__nfet_01v8 are equivalent.
+
+Subcircuit summary:
+Circuit 1: nfet_1p5u_2u_nf1                |Circuit 2: nfet_1p5u_2u_nf1                
+-------------------------------------------|-------------------------------------------
+sky130_fd_pr__nfet_01v8 (1)                |sky130_fd_pr__nfet_01v8 (1)                
+Number of devices: 1                       |Number of devices: 1                       
+Number of nets: 4                          |Number of nets: 4                          
+---------------------------------------------------------------------------------------
+Resolving symmetries by property value.
+Resolving symmetries by pin name.
+Netlists match with 1 symmetry with property errors.
+  Parallelized instances disagree on pin connections.
+    Circuit1 instance sky130_fd_pr__nfet_01v8:0 pin a_100_n75# connections are no connects (1)
+    Circuit2 instance sky130_fd_pr__nfet_01v8:0 pin S connections are tied together (0)
+  Parallelized instances disagree on pin connections.
+    Circuit1 instance sky130_fd_pr__nfet_01v8:0 pin a_n100_n120# connections are no connects (1)
+    Circuit2 instance sky130_fd_pr__nfet_01v8:0 pin G connections are tied together (0)
+  Parallelized instances disagree on pin connections.
+    Circuit1 instance sky130_fd_pr__nfet_01v8:0 pin a_n130_n75# connections are no connects (1)
+    Circuit2 instance sky130_fd_pr__nfet_01v8:0 pin D connections are tied together (0)
+
+Subcircuit pins:
+Circuit 1: nfet_1p5u_2u_nf1                |Circuit 2: nfet_1p5u_2u_nf1                
+-------------------------------------------|-------------------------------------------
+(no pins)                                  |B **Mismatch**                             
+(no matching pin)                          |D                                          
+(no matching pin)                          |G                                          
+(no matching pin)                          |S                                          
+---------------------------------------------------------------------------------------
+Cell pin lists for nfet_1p5u_2u_nf1 and nfet_1p5u_2u_nf1 altered to match.
+Device classes nfet_1p5u_2u_nf1 and nfet_1p5u_2u_nf1 are equivalent.
+
+Final result: Top level cell failed pin matching.

@@ -1,0 +1,6 @@
+* NGSPICE file created from nfet_1p5u_2u_nf1.ext - technology: sky130A
+
+.subckt nfet_1p5u_2u_nf1
+X0 a_100_n75# a_n100_n120# a_n130_n75# a_n182_n163# sky130_fd_pr__nfet_01v8 ad=0.45 pd=3.6 as=0.45 ps=3.6 w=1.5 l=2
+.ends
+

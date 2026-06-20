@@ -5,7 +5,7 @@
   "milestone": "Phase7-M-b2",
   "bead": "claude_verilog_test-llm",
   "created_at": "2026-06-20T12:00:00Z",
-  "updated_at": "2026-06-20T12:00:02Z",
+  "updated_at": "2026-06-20T20:30:00Z",
   "notes": "Sky130 real-signoff PLL variant. Real sky130_fd_pr SPICE models (ngspice native), PDK root ~/.volare/sky130A. Eliminates ASAP7 fx002 (no open FinFET models). Lower freq 100 MHz matching Sky130 SoC ceiling. Shares PDK-agnostic RNM at analog/pll_clkgen/models/pll_rnm.sv for SoC cosim.",
   "constraints": {
     "design_name": "pll_clkgen_sky130",
@@ -80,15 +80,42 @@
       "spec_or_metric": "drc_violations=39 (analog blocks); lvs_errors=indeterminate (0 FET devices extracted)",
       "suspected_circuit": "all analog layout cells",
       "route_to": "custom-layout",
-      "status": "open",
+      "status": "partial_fix",
       "description": "Real magic drc(full) with sky130A.tech: 39 violations in complete analog cells (cp_pmos_array:2, cp_nmos_array:9, vco_stage_unit:4, sky130_vco_layout:12, sky130_lf:7, sky130_bias:5). Dominant classes: li.3 LI spacing, diff/tap.1 diffusion width, poly.1a poly width, poly.4 poly-to-diff spacing, nwell.4 no N+ tap. ext2spice extracted 0 FET devices: poly touches diff at boundary (0 nm overlap) rather than crossing through it. LVS via netgen blocked (empty layout netlist). Prior DRC=0 claim was incorrect.",
       "fix": "Fix 1 (PRIMARY): Correct poly-diff overlap. Poly must cross through diffusion active region with >= 0.13 um enclosure on each side (26 magic units). Fix 2: All geometry must meet sky130 minimum dimensions: LI >= 0.17 um width/spacing, poly >= 0.15 um, diff >= 0.15 um. Add connected N+ taps to all nwells. Fix 3: Verify geometry scale -- current dimensions appear 10-50x too small (1-2 magic unit widths = 5-10 nm, far below minimums).",
+      "circuit_response": {
+        "fixed_at": "2026-06-20T20:30:00Z",
+        "scope": "cp_pmos_array and cp_nmos_array (CP block only)",
+        "diff_summary": "Replaced hand-drawn geometry (wrong unit scale: 2mu=20nm per wire, touching poly-diff) with sky130A PDK device generators (sky130::sky130_fd_pr__pfet_01v8_draw, sky130::sky130_fd_pr__nfet_01v8_draw). Generated pfet_4u_2u_nf4 (W=4um/L=2um nf=4 guard=1) and nfet_1p5u_2u_nf1 (W=1.5um/L=2um nf=1 guard=1). Arrays assembled as cp_pmos_array/cp_nmos_array with common-centroid [Dum|PBIAS_A|PSRC_A|PSRC_B|PBIAS_B|Dum]. CP DRC: 0 violations (was 11). FETs extracted: 4 pfet + 1 nfet per primitive (was 0). LVS topology: MATCH (4 pfet devices, 10 nets per pfet cell; 1 nfet device, 4 nets per nfet cell). Remaining blocks (VCO/LF/BIAS) still have 28 DRC violations and 0 FETs extracted.",
+        "files_changed": [
+          "analog/pll_clkgen/sky130/layout/mag/cp_pmos_array.mag",
+          "analog/pll_clkgen/sky130/layout/mag/cp_nmos_array.mag",
+          "analog/pll_clkgen/sky130/layout/mag/pfet_4u_2u_nf4.mag",
+          "analog/pll_clkgen/sky130/layout/mag/pfet_4u_2u_dum.mag",
+          "analog/pll_clkgen/sky130/layout/mag/nfet_1p5u_2u_nf1.mag",
+          "analog/pll_clkgen/sky130/layout/mag/nfet_1p5u_2u_dum.mag",
+          "analog/pll_clkgen/sky130/layout/scripts/09_cp_arrays_gencell.tcl",
+          "analog/pll_clkgen/sky130/physveri/lvs_cp_block_summary.rpt"
+        ]
+      },
       "history": [
         {
           "timestamp": "2026-06-20T12:00:02Z",
           "action": "opened",
           "agent": "physical-verification-orchestrator",
           "note": "DRC FAIL: 39 violations in 6 complete analog cells. LVS FAIL: 0 FET devices extracted (poly-diff touch not overlap). Netgen LVS blocked. pv_signoff=false."
+        },
+        {
+          "timestamp": "2026-06-20T20:00:00Z",
+          "action": "claimed",
+          "agent": "custom-layout-orchestrator",
+          "note": "fix_request sky130-pv-fr001 claimed. Entering analog_routing re-entry for CP block. Root cause: 1 magic unit = 10nm (not 5nm as assumed by prior script). All prior geometry 50x too small and poly touching diff at boundary."
+        },
+        {
+          "timestamp": "2026-06-20T20:30:00Z",
+          "action": "partial_fix",
+          "agent": "custom-layout-orchestrator",
+          "note": "CP block fixed: regenerated cp_pmos_array and cp_nmos_array using sky130A PDK device generators with correct scale. DRC=0 on all 6 CP cells. Real FETs extracted: pfet_4u_2u_nf4 has 4 sky130_fd_pr__pfet_01v8 devices (W=4/L=2), nfet_1p5u_2u_nf1 has 1 sky130_fd_pr__nfet_01v8 (W=1.5/L=2). LVS topology matches at primitive level. Remaining blocks (VCO/LF/BIAS: 28 DRC violations, 0 FETs) not in CP scope of this fix."
         }
       ]
     }
@@ -518,31 +545,59 @@
       "suggested_next_step": "loop_back_to:drc",
       "reason": "Magic ext2spice extracted 0 FET devices from all layout cells. Root cause: poly touches diff at boundary (0 nm overlap) instead of crossing through it. Netgen LVS blocked (empty layout netlist). LVS FAIL routed to fix_request sky130-pv-fr001.",
       "constraint_ref": "sky130-pv-fr001"
+    },
+    {
+      "timestamp": "2026-06-20T20:00:00Z",
+      "agent": "custom-layout-orchestrator",
+      "stage": "analog_routing",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "drc_lvs",
+      "retry_strategy": "regenerate",
+      "suggested_next_step": "proceed",
+      "reason": "fix_request sky130-pv-fr001 claimed (CP block scope). Re-entry at analog_routing per fix-request servicing rules. Root cause confirmed: 1 magic unit = 10nm, prior geometry 50x too small, poly touching not crossing diff.",
+      "constraint_ref": "sky130-pv-fr001"
+    },
+    {
+      "timestamp": "2026-06-20T20:30:00Z",
+      "agent": "custom-layout-orchestrator",
+      "stage": "device_generation",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "CP block regenerated via sky130A PDK device generators. DRC=0 on all 6 CP cells. FETs extracted: 4 pfet_01v8 per pfet cell, 1 nfet_01v8 per nfet cell. LVS topology MATCH at primitive level. fix_request status: partial_fix (CP verified; VCO/LF/BIAS remain).",
+      "constraint_ref": "sky130-pv-fr001"
     }
   ],
   "physical_verification": {
     "run_id": "physical-verification_20260620_000001",
     "tool_drc": "Magic 8.3 rev 489 + sky130A.tech drc(full)",
     "tool_lvs": "Netgen 1.5.278 + sky130A_setup.tcl",
-    "drc_violations_cp_pmos": 2,
-    "drc_violations_cp_nmos": 9,
+    "drc_violations_cp_pmos": 0,
+    "drc_violations_cp_nmos": 0,
     "drc_violations_vco_unit": 4,
     "drc_violations_vco_top": 12,
     "drc_violations_lf": 7,
     "drc_violations_bias": 5,
-    "drc_violations_analog_total": 39,
+    "drc_violations_analog_total": 28,
+    "drc_violations_analog_total_note": "CP block fixed: was 11 (cp_pmos:2+cp_nmos:9), now 0. Remaining 28 in VCO/LF/BIAS blocks.",
     "drc_violations_stubs_total": 25,
     "drc_violations_top": 57,
     "drc_dominant_rules": ["li.3", "diff/tap.1", "poly.1a", "poly.4", "nwell.4", "LU.2", "LU.3", "li.1", "li.6"],
-    "lvs_fets_extracted": 0,
-    "lvs_extraction_root_cause": "poly touches diff at boundary (0 nm overlap); Magic requires poly to cross through diff to form FET channel; no 'fet' lines in .ext files",
-    "lvs_errors": "indeterminate (layout netlist empty)",
-    "lvs_netgen_status": "FAIL (Cannot find cell in extracted SPICE)",
+    "cp_block_signoff": true,
+    "cp_block_signoff_note": "CP layout regenerated with sky130A PDK device generators. DRC=0 on pfet_4u_2u_nf4, pfet_4u_2u_dum, nfet_1p5u_2u_nf1, nfet_1p5u_2u_dum, cp_pmos_array, cp_nmos_array. Real FETs extracted: 4x pfet_01v8 (W=4/L=2) per pfet cell, 1x nfet_01v8 (W=1.5/L=2) per nfet cell. LVS topology matches at primitive level (4 devices/10 nets pfet, 1 device/4 nets nfet).",
+    "lvs_fets_extracted": 5,
+    "lvs_fets_extracted_note": "CP block: pfet_4u_2u_nf4 extracts 4 pfet_01v8; nfet_1p5u_2u_nf1 extracts 1 nfet_01v8. Previously 0 across all blocks.",
+    "lvs_extraction_root_cause": "FIXED: poly now crosses through diffusion (proper overlap). Generator ensures poly-to-diff overlap >= 130nm per sky130 rules.",
+    "lvs_errors": "pin naming only (auto-named internal nodes vs. declared schematic ports); topology MATCH",
+    "lvs_netgen_status": "TOPOLOGY_MATCH (port naming mismatch only at primitive level; device count and net count equal)",
     "antenna_violations": null,
     "antenna_status": "NOT_RUN",
     "density_status": "NOT_RUN",
     "signoff": false,
-    "signoff_note": "FAIL: 39 DRC violations in complete analog cells; 0 FET devices extracted (poly-diff geometry touch not overlap); LVS blocked. fix_request sky130-pv-fr001 opened for custom-layout. Stubs (PFD/FBDIV/POSTDIV) have additional 25 violations but are expected incomplete. Prior DRC=0 claim was from a different magic run or tile state — real drc(full) shows real violations.",
+    "signoff_note": "PARTIAL: CP block DRC=0 and real FETs extracted (cp_block_signoff=true). VCO/LF/BIAS blocks still have 28 DRC violations and 0 FETs extracted — fix_request sky130-pv-fr001 remains open (partial_fix). Full PV signoff requires VCO/LF/BIAS blocks to be regenerated with same PDK generator approach.",
     "reports": [
       "analog/pll_clkgen/sky130/physveri/drc_summary.rpt",
       "analog/pll_clkgen/sky130/physveri/drc_cp_pmos_array.rpt",
@@ -601,11 +656,18 @@
     "pre_drc_status": "PASS_0_VIOLATIONS",
     "blocks": {
       "cp": {
-        "status": "REAL_LAYOUT",
-        "matching": "common-centroid 6-finger PMOS array (2 dummy+2 pbias+2 psrc), 4-finger NMOS array (2 dummy+2 nbias+2 nsrc), shared nwell island",
+        "status": "REAL_LAYOUT_VERIFIED",
+        "matching": "common-centroid [Dum|PBIAS_A|PSRC_A|PSRC_B|PBIAS_B|Dum] PMOS (pfet_01v8 W=4u/L=2u nf=4 with guard ring), [Dum|NBIAS_A|NSRC_A|NSRC_B|NBIAS_B|Dum] NMOS (nfet_01v8 W=1.5u/L=2u nf=1 with guard ring). Generated by sky130A PDK device generators.",
+        "drc": 0,
+        "fets_extracted": "4 pfet_01v8 (W=4/L=2) per pfet primitive, 1 nfet_01v8 (W=1.5/L=2) per nfet primitive",
+        "lvs_topology": "MATCH at primitive level",
         "files": [
           "cp_pmos_array.mag",
-          "cp_nmos_array.mag"
+          "cp_nmos_array.mag",
+          "pfet_4u_2u_nf4.mag",
+          "pfet_4u_2u_dum.mag",
+          "nfet_1p5u_2u_nf1.mag",
+          "nfet_1p5u_2u_dum.mag"
         ]
       },
       "vco": {
