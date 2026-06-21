@@ -48,7 +48,12 @@ module soc_top
     // PLL implementation selector (Phase 7 M-c).
     //   "STUB" (default) — synthesisable digital stub; out_clk = ref_clk.
     //   "RNM"            — real-number model; use only for M-c AMS co-sim.
-    parameter string PLL_IMPL = "STUB"
+    parameter string PLL_IMPL = "STUB",
+
+    // Behavioral SRAM depth in 32-bit words (power of two).
+    // Default 1024 (4 KB) matches the existing regression/PD baseline.
+    // Override to 65536 (256 KB) for M10 cache-capacity benchmarks.
+    parameter int unsigned SRAM_MEM_WORDS = 1024
 ) (
     // clk_i is the reference clock input (100 MHz crystal / XO).
     // Internally the SoC runs on core_clk derived from the PLL.
@@ -702,7 +707,9 @@ module soc_top
     // =========================================================================
     // S1: SRAM controller (sram_controller) ← crossbar SLV_SRAM
     // =========================================================================
-    sram_controller u_sram (
+    sram_controller #(
+        .MEM_WORDS    (SRAM_MEM_WORDS)
+    ) u_sram (
         .clk          (core_clk),
         .rst_n        (core_rst_n),
         .s_awid       (xbar_s_awid    [SLV_SRAM]),
