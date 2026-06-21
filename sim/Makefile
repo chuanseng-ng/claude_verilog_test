@@ -663,7 +663,7 @@ cache_integration:
 # Phase 5 SoC tests (delegates to tb/cocotb/soc/Makefile)
 # soc_all: M3-M6 component suites + M9 boot test.
 # soc_boot: M9 SoC boot test only (BLOCKED until CPU RESET_PC fix lands).
-.PHONY: soc_all soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress l2_bench
+.PHONY: soc_all soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress l2_bench conflict_bench_1way conflict_bench_2way
 soc_boot:
 	@echo "Running Phase 5 M9 SoC boot test..."
 	$(MAKE) -C ../tb/cocotb/soc soc_boot
@@ -688,6 +688,21 @@ l2_bench:
 	@echo "Running Phase 5 M10 L2-cache decision benchmarks (hello/sweep/matmul)..."
 	@echo "Firmware must be pre-built: nix develop .#bench --command make -C sw/bench"
 	$(MAKE) -C ../tb/cocotb/soc l2_bench
+
+# M10c conflict-stress benchmarks (bead claude_verilog_test-u7f).
+# Set DCACHE_WAYS in rtl/mem/rv32i_cache_pkg.sv before running each target.
+# WAYS=1 target: set DCACHE_WAYS=1 in rv32i_cache_pkg.sv, then run.
+# WAYS=2 target: set DCACHE_WAYS=2 in rv32i_cache_pkg.sv, then run.
+# Each target rebuilds the Verilator binary from scratch (make clean inside).
+conflict_bench_1way:
+	@echo "Running M10c conflict-stress benchmark (WAYS=1, direct-mapped)..."
+	@echo "Ensure DCACHE_WAYS=1 in rtl/mem/rv32i_cache_pkg.sv before running."
+	$(MAKE) -C ../tb/cocotb/soc conflict_bench_1way
+
+conflict_bench_2way:
+	@echo "Running M10c conflict-stress benchmark (WAYS=2, 2-way LRU)..."
+	@echo "Ensure DCACHE_WAYS=2 in rtl/mem/rv32i_cache_pkg.sv before running."
+	$(MAKE) -C ../tb/cocotb/soc conflict_bench_2way
 
 soc_all:
 	@echo "Running Phase 5 SoC tests (M3-M6 components + M9 boot + M9 periph + M9 coherency + M9 cpu_gpu)..."

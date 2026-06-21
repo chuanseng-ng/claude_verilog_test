@@ -240,7 +240,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint conflict_bench_1way conflict_bench_2way
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -460,6 +460,38 @@ l2_bench: l2_bench_lint
 		  -GSRAM_MEM_WORDS=65536" \
 		TESTCASE=test_hello_sanity,test_sweep_l2_bench \
 		$(BUILD_ARGS)
+
+# M10c conflict-stress benchmark (bead claude_verilog_test-u7f).
+# Two separate targets — one per DCACHE_WAYS value.  Each does make clean first so
+# the Verilator binary is rebuilt with the correct DCACHE_WAYS in rv32i_cache_pkg.sv.
+# DCACHE_WAYS_EXPECTED is passed to the Python test so _detect_dcache_ways() can
+# fall back to it if the localparam is not public in the elaborated DUT.
+# The firmware binary (conflict.hex) is the same for both WAYS; it uses a 4096 B
+# stride which maps to the same cache set regardless of WAYS.
+# Do NOT pass --trace: conflict runs are fast but VCD is wasteful here.
+conflict_bench_1way: l2_bench_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_l2_bench TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET \
+		  -GSRAM_MEM_WORDS=65536" \
+		TESTCASE=test_conflict_l2_bench \
+		DCACHE_WAYS_EXPECTED=1 \
+		$(BUILD_ARGS)
+
+conflict_bench_2way: l2_bench_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_l2_bench TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET \
+		  -GSRAM_MEM_WORDS=65536" \
+		TESTCASE=test_conflict_l2_bench \
+		DCACHE_WAYS_EXPECTED=2 \
+		$(BUILD_ARGS)
+
+.PHONY: conflict_bench_1way conflict_bench_2way
 
 # Run every SoC test: M3–M6 component suites + M9 boot + M9 periph + M9 coherency +
 # M9 cpu_gpu + Phase 7 M-c PLL (lock + regs).

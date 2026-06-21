@@ -180,3 +180,92 @@ cd sim && make l2_bench                                      # writes l2_bench_r
 git checkout experiment/dcache-2way
 cd sim && make l2_bench                                      # writes l2_bench_results_2way.md
 ```
+
+## 7. Conflict-stress benchmark (M10c, 2026-06-21)
+
+**Purpose:** M10b's `sweep` benchmark used a 256 B stride which never aliases the same
+cache set — so it tested *capacity* misses only.  To determine whether **conflict misses**
+can be relevant for real SoC workloads, M10c (`conflict.c`) forces true set-aliasing:
+all K probe addresses are at 4096 B intervals (same D$ set for both WAYS=1 and WAYS=2).
+K ∈ {1, 2, 4, 8, 16}.  K=2 is the key discriminator.
+
+### 7.1 Results — D$miss/kI by K-value
+
+Branch `experiment/dcache-2way`.  Same firmware binary (`conflict.hex`) for both WAYS.
+ROUNDS=256 measured-pass accesses per K-value.
+
+| K | WAYS=1 D$miss/kI | WAYS=2 D$miss/kI | WAYS=1 miss/access | WAYS=2 miss/access | verdict |
+| -: | ---------------: | ---------------: | -----------------: | -----------------: | ------- |
+| 1  | **0.00**          | **0.00**          | 0.0000              | 0.0000              | fits both (no conflict) |
+| 2  | **153.48**        | **0.00**          | **1.0000**          | **0.0000**          | **KEY: 1-way thrashes, 2-way holds** |
+| 4  | 173.68            | 173.68            | 1.0000              | 1.0000              | both thrash (K > 2 ways) |
+| 8  | 185.91            | 185.91            | 1.0000              | 1.0000              | both thrash |
+| 16 | 192.70            | 192.70            | 1.0000              | 1.0000              | both thrash |
+
+Raw data: [`tb/cocotb/soc/conflict_results_1way.md`](../tb/cocotb/soc/conflict_results_1way.md),
+[`conflict_results_2way.md`](../tb/cocotb/soc/conflict_results_2way.md).
+
+### 7.2 K=2 headline numbers
+
+| config | ΔD$miss | D$miss/access | D$miss/kI | cycles (measured pass) |
+| ------ | ------: | ------------: | --------: | ---------------------: |
+| WAYS=1 | 512     | **1.0000**    | 153.48    | 20 749                 |
+| WAYS=2 | 0       | **0.0000**    | 0.00      | 16 141                 |
+
+**K=2 WAYS=1:** every access evicts the other line → 1.0000 miss/access. The measured
+pass counts exactly 512 = 2 × ROUNDS misses — one miss for each of the 512 accesses.
+**K=2 WAYS=2:** both lines reside simultaneously in the 2-way LRU set → 0 misses.
+Cycle counts: 20 749 (1-way, stall-heavy) vs 16 141 (2-way, no stalls) — a 22% speedup
+for the K=2 conflict-heavy access pattern.
+
+The 2-way LRU implementation (cand_vw / lru_array fix from `fr_null_20260621_125041_00`)
+is **confirmed functionally correct**.
+
+### 7.3 Interpretation
+
+**What the conflict-stress benchmark proves:**
+
+1. **2-way D$ eliminates conflict misses completely when K=2** — the LRU policy works
+   as designed; the cand_vw RTL fix is confirmed.
+2. **For K>2, both configs thrash equally** — a 2-way cache cannot hold K>2 aliased
+   lines any more than a 1-way cache can hold K>1.  Adding associativity beyond 2 would
+   help K=3 but not K≥4.
+3. **The discriminating question** is whether real SoC firmware has hot data structures
+   that map exactly 2 or more congruent lines to the same cache set.  For this CPU
+   (RV32I control core, not the data-parallel GPU):
+   - Small scalar kernels (boot, peripheral drivers, interrupt handlers): working set
+     typically < 512 B → all in L1, zero misses regardless of WAYS.
+   - `matmul`-class loops with two large arrays: both arrays may alias the same sets,
+     making this a real concern.  But the GPU handles bulk data-parallel work.
+   - Memory-scanning loops (boot ROM copy, DMA setup): stride-based, not aliasing.
+
+4. **The conflict-miss problem is real but workload-conditional.** The experiment
+   proves 2-way works; it does not prove the workload reaches K=2 aliasing in practice.
+
+### 7.4 Final architecture observation
+
+| axis | finding |
+| ---- | ------- |
+| 2-way eliminates conflict misses (K=2) | CONFIRMED — 1.0000 → 0.0000 miss/access |
+| Capacity wall (working set > 4 KB) | UNCHANGED — requires L2 or larger L1 |
+| K≥4 conflict (>2 aliased hot lines) | UNSOLVED by 2-way; needs ≥4-way or L2 |
+| Real workload set aliasing | UNPROVEN — sweep/conflict are synthetic |
+
+> **GO/NO-GO for 2-way promotion and/or L2 is left to the human.**
+> The conflict-stress result closes the open measurement question: **2-way does
+> eliminate true conflict misses when they exist**.  Whether the SoC CPU firmware
+> encounters them is an architectural-judgement call, not a simulation question.
+
+## 8. Reproduce (M10c)
+
+```bash
+# On branch experiment/dcache-2way (DCACHE_WAYS=2 active):
+# conflict.hex is already built (sw/bench/build/conflict.hex, commit 87c16d1).
+# Do NOT need to rebuild firmware — same binary for both WAYS.
+
+# WAYS=1 run: edit rv32i_cache_pkg.sv to DCACHE_WAYS=1 then:
+cd sim && make conflict_bench_1way     # → tb/cocotb/soc/conflict_results_1way.md
+
+# WAYS=2 run: edit rv32i_cache_pkg.sv to DCACHE_WAYS=2 then:
+cd sim && make conflict_bench_2way     # → tb/cocotb/soc/conflict_results_2way.md
+```
