@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-21T13:00:00+07:00",
+  "updated_at": "2026-06-21T19:45:00+07:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -620,8 +620,19 @@
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
-      "reason": "M10b-2 re-validation of fr_null_20260621_125041_00 complete (branch experiment/dcache-2way, DCACHE_WAYS=2). dcache TESTS=8 PASS=8 FAIL=0 (test_dirty_eviction_writeback PASS — confirms cand_vw fix). soc_coherency TESTS=3 PASS=3 FAIL=0 (flush/inval round-trip correct with 2-way). l2_bench TESTS=2 PASS=2 FAIL=0; 2-way miss rates identical to direct-mapped baseline: STRIDE penalty (~189-197/kI) is purely capacity (256B stride avoids set aliasing), not conflict-miss; SEQ plateau (~50/kI above 4KB) also capacity. Residual capacity wall above 4KB is addressable only by L2 or larger L1. L2 GO/NO-GO left to human.",
+      "reason": "M10b-2 re-validation of fr_null_20260621_125041_00 complete (branch experiment/dcache-2way, DCACHE_WAYS=2). dcache TESTS=8 PASS=8 FAIL=0 (test_dirty_eviction_writeback PASS \u2014 confirms cand_vw fix). soc_coherency TESTS=3 PASS=3 FAIL=0 (flush/inval round-trip correct with 2-way). l2_bench TESTS=2 PASS=2 FAIL=0; 2-way miss rates identical to direct-mapped baseline: STRIDE penalty (~189-197/kI) is purely capacity (256B stride avoids set aliasing), not conflict-miss; SEQ plateau (~50/kI above 4KB) also capacity. Residual capacity wall above 4KB is addressable only by L2 or larger L1. L2 GO/NO-GO left to human.",
       "constraint_ref": "fr_null_20260621_125041_00"
+    },
+    {
+      "timestamp": "2026-06-21T19:45:00+07:00",
+      "agent": "firmware-orchestrator",
+      "stage": "peripheral_drivers",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "M10c-1 conflict.c authored and built clean (0 -Wall -Wextra warnings); K in {1,2,4,8,16}, ROUNDS=256, CONFLICT_BASE=0x3100, K=16 top=0x12100 < stack_top=0x41C00; 5 scratch slots; id=K; bead claude_verilog_test-1mw ready for verification agent.",
+      "constraint_ref": "claude_verilog_test-1mw"
     }
   ],
   "fix_requests": [
@@ -903,7 +914,8 @@
     "bench_programs": [
       "hello",
       "matmul",
-      "sweep"
+      "sweep",
+      "conflict"
     ],
     "libgcc_fix": "--no-warn-mismatch (ABI-tag annotation mismatch, safe)",
     "bench_scratch_addr": "0x00041C00",
@@ -925,6 +937,28 @@
     "sweep_stride_cap_accesses": 1024,
     "sweep_record_count": 14,
     "sweep_buf_words": 8192,
-    "sweep_bss_end_addr": "0x0000A320"
+    "sweep_bss_end_addr": "0x0000A320",
+    "conflict_benchmark": {
+      "status": "built_clean",
+      "source": "sw/bench/conflict.c",
+      "conflict_stride_bytes": 4096,
+      "conflict_base_addr": "0x00003100",
+      "k_values": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "rounds": 256,
+      "id_encoding": "id = K (low byte, harness reads slot[0] & 0xFF)",
+      "n_scratch_slots": 5,
+      "k16_top_addr": "0x00012100",
+      "margin_to_stack_top_bytes": 195328,
+      "total_measured_accesses": 7936,
+      "estimated_total_instructions": 79000,
+      "estimated_cycles_range": "80000-320000",
+      "key_discriminator": "K=2: WAYS=1 thrashes (~0 D$-misses/access in 2-way vs ~1/access in 1-way)"
+    }
   }
 }
