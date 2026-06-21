@@ -39,7 +39,7 @@ Sweep ID encoding (from sweep.c):
     bit  [4]    pattern   → 0 = SEQ, 1 = STRIDE
     bits [3:0]  reserved / zero
 
-    SIZE_STEPS: [512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]
+    SIZE_STEPS: [512, 1024, 2048, 4096, 8192, 16384, 32768]  (7 entries; 65536 removed)
 
 Matmul ID: 0x01 (single record).
 
@@ -77,7 +77,7 @@ BENCH_MAGIC = 0xB10C0000
 BENCH_TIMEOUT_CYCLES = 5_000_000
 
 # Sweep size steps (must match sweep.c SIZE_STEPS[])
-_SWEEP_SIZES = [512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]
+_SWEEP_SIZES = [512, 1024, 2048, 4096, 8192, 16384, 32768]
 
 # ── Hex loader helpers ────────────────────────────────────────────────────────
 
@@ -556,10 +556,12 @@ async def test_hello_sanity(dut):
 
 @cocotb.test()
 async def test_sweep_l2_bench(dut):
-    """Sweep benchmark: 16 records (8 sizes × 2 patterns).
+    """Sweep benchmark: 14 records (7 sizes × 2 patterns).
 
     Validates magic on every slot then prints the D$-miss/kI vs
     working-set-size curve that feeds the A4 L2 decision document.
+    sweep.c uses 7 SIZE_STEPS (512B..32KB); 65536 was removed in the
+    sim-time reduction pass (max 32KB is 8× L1, cliff fully visible).
     """
     prog = "sweep"
     await _setup(dut, prog)
@@ -572,8 +574,8 @@ async def test_sweep_l2_bench(dut):
 
     slots = _read_scratch(dut, prog)
 
-    assert len(slots) == 16, (
-        f"[sweep] expected 16 records (8 sizes × 2 patterns), got {len(slots)}"
+    assert len(slots) == 14, (
+        f"[sweep] expected 14 records (7 sizes × 2 patterns), got {len(slots)}"
     )
 
     # Verify all magic words
@@ -605,18 +607,18 @@ async def test_sweep_l2_bench(dut):
             "[sweep] 512B SEQ D$-miss/kI = %.2f (expect < 10 for warm L1)", dmiss_ki_512
         )
 
-    # 64KB SEQ (16× L1) should have much higher D$ miss rate
-    seq_64k = by_size.get(65536, {}).get(0)
-    if seq_64k is not None:
-        dmiss_ki_64k = _miss_rate(seq_64k["d_dmiss"], seq_64k["d_instret"])
+    # 32KB SEQ (8× L1) should have much higher D$ miss rate than sub-L1 sizes
+    seq_32k = by_size.get(32768, {}).get(0)
+    if seq_32k is not None:
+        dmiss_ki_32k = _miss_rate(seq_32k["d_dmiss"], seq_32k["d_instret"])
         dut._log.info(
-            "[sweep] 64KB SEQ D$-miss/kI = %.2f", dmiss_ki_64k
+            "[sweep] 32KB SEQ D$-miss/kI = %.2f", dmiss_ki_32k
         )
-        if seq_512 is not None and dmiss_ki_64k <= dmiss_ki_512:
+        if seq_512 is not None and dmiss_ki_32k <= dmiss_ki_512:
             dut._log.warning(
-                "[sweep] UNEXPECTED: 64KB D$-miss/kI (%.2f) not higher than "
+                "[sweep] UNEXPECTED: 32KB D$-miss/kI (%.2f) not higher than "
                 "512B D$-miss/kI (%.2f) — check L1 size or counter wiring",
-                dmiss_ki_64k, dmiss_ki_512,
+                dmiss_ki_32k, dmiss_ki_512,
             )
 
     dut._log.info(
@@ -637,9 +639,14 @@ async def test_matmul_l2_bench(dut):
 
     await _setup(dut, prog)
 
+    # Matmul uses sw-mul (__mulsi3) on RV32I (no M ext) — 48^3 = 110 592 calls,
+    # each ~20 instructions.  Measured: ~10–12 M cycles with cache misses.
+    # Use 25 M watchdog. 48^3=110592 sw-mul calls (~30 instr each) ≈ 3.3 M instr;
+    # at ~5-8 CPI (D$ miss heavy, no M-ext) → 16-26 M cycles measured range.
+    MATMUL_TIMEOUT = 25_000_000
     dut._log.info("[matmul] starting (48×48, ~27 KB working set) — watchdog=%d cycles",
-                  BENCH_TIMEOUT_CYCLES)
-    sim_cycle = await _run_to_ebreak(dut, prog)
+                  MATMUL_TIMEOUT)
+    sim_cycle = await _run_to_ebreak(dut, prog, timeout=MATMUL_TIMEOUT)
 
     for _ in range(20):
         await RisingEdge(dut.clk_i)
