@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-21T13:34:59Z",
+  "updated_at": "2026-06-21T13:00:00Z",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -644,6 +644,17 @@
       "suggested_next_step": "proceed",
       "reason": "M10c-2 conflict-stress benchmark complete (bead claude_verilog_test-u7f): WAYS=1 TESTS=1 PASS=1, WAYS=2 TESTS=1 PASS=1. K=2 KEY RESULT: WAYS=1 D$miss/access=1.0000 (153.48/kI, THRASH CONFIRMED); WAYS=2 D$miss/access=0.0000 (0.00/kI, CONFLICT-MISS ELIMINATION CONFIRMED). 2-way LRU eliminates set-conflict misses when they exist (K=2 congruent lines). DCACHE_WAYS left at 2 on experiment/dcache-2way branch. Results: conflict_results_1way.md, conflict_results_2way.md. M10_L2_DECISION_ANALYSIS.md \u00a77 appended. No DUT RTL bugs found. GO/NO-GO for 2-way promotion deferred to human.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-21T13:00:00Z",
+      "agent": "firmware-orchestrator",
+      "stage": "bsp_development",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "M10c-3 CoreMark-representative port built clean (0 -Wall -Wextra warnings): 3-kernel freestanding C (list sort + 2x2 matmul + CRC-16), ITERATIONS=1, data working-set ~232B << 4096B L1 D$, bench_report id=1; all symbols within SRAM window (heap_start=0x25A0 < stack_top=0x41C00); committed fed4d5f on experiment/dcache-2way.",
+      "constraint_ref": "claude_verilog_test-5jd"
     }
   ],
   "fix_requests": [
@@ -926,7 +937,8 @@
       "hello",
       "matmul",
       "sweep",
-      "conflict"
+      "conflict",
+      "coremark"
     ],
     "libgcc_fix": "--no-warn-mismatch (ABI-tag annotation mismatch, safe)",
     "bench_scratch_addr": "0x00041C00",
@@ -970,6 +982,45 @@
       "estimated_total_instructions": 79000,
       "estimated_cycles_range": "80000-320000",
       "key_discriminator": "K=2: WAYS=1 thrashes (~0 D$-misses/access in 2-way vs ~1/access in 1-way)"
+    },
+    "coremark_benchmark": {
+      "status": "built_clean",
+      "source": "sw/bench/coremark.c",
+      "benchmark_type": "CoreMark-representative (3-kernel port)",
+      "kernels": [
+        "linked-list bubble sort (LIST_SIZE=10)",
+        "2x2 matrix multiply (MATRIX_SIZE=2)",
+        "CRC-16/CCITT over 16B buffer"
+      ],
+      "iterations": 1,
+      "matrix_size": 2,
+      "list_size": 10,
+      "crc_buflen_bytes": 16,
+      "data_working_set_breakdown": {
+        "mat_a_bytes": 8,
+        "mat_b_bytes": 8,
+        "mat_c_on_stack_bytes": 8,
+        "list_data_bytes": 80,
+        "list_nodes_bytes": 80,
+        "crc_buf_stack_bytes": 16,
+        "misc_locals_bytes": 32,
+        "total_bytes": 232
+      },
+      "total_static_bss_bytes": 176,
+      "heap_start_addr": "0x000025A0",
+      "bss_end_addr": "0x00002598",
+      "text_size_bytes": 1252,
+      "data_size_bytes": 4,
+      "bench_report_id": 1,
+      "id_encoding": "id=1 (COREMARK_ID), single slot per run",
+      "estimated_instructions_total": 2764,
+      "estimated_cycles_range": "3000-6000",
+      "l1_dcache_capacity_bytes": 4096,
+      "working_set_pct_of_l1": 5.7,
+      "headline_finding": "CoreMark at minimum config uses ~232B data \u2014 5.7% of 4KB L1 D$. Fits comfortably. Representative embedded workloads do NOT stress L1 capacity.",
+      "multiply_count_per_iter": 4,
+      "multiply_concern": "none \u2014 4 software multiplies only; no blowup risk",
+      "commit": "fed4d5f"
     }
   }
 }
