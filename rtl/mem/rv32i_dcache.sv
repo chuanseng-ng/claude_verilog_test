@@ -832,10 +832,15 @@ module rv32i_dcache (
 
                         if (need_writeback) begin
                             // Capture dirty line from the victim way's SRAM dout.
+                            // Must use cand_vw (combinational) not victim_way_q (registered):
+                            // both always_ff blocks execute on the same clock edge, so
+                            // victim_way_q still holds the PREVIOUS miss's value here.
+                            // cand_vw is stable in CS_TAG_CHECK; victim_way_q registers
+                            // cand_vw on this same edge, so writeback-way == refill-way.
                             for (int wbw = 0; wbw < LINE_WORDS; wbw++) begin
-                                wb_buf_q[wbw] <= data_dout_r[victim_way_q][wbw];
+                                wb_buf_q[wbw] <= data_dout_r[cand_vw][wbw];
                             end
-                            wb_tag_q     <= tag_dout_r[victim_way_q][TAG_BITS_L-1:0];
+                            wb_tag_q     <= tag_dout_r[cand_vw][TAG_BITS_L-1:0];
                             wb_index_q   <= latch_index;
                             flush_mode_q <= 1'b0;
                             state_q      <= CS_WRITEBACK;
