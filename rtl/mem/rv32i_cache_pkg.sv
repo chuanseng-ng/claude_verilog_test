@@ -15,14 +15,39 @@ package rv32i_cache_pkg;
     // =========================================================================
     // Cache geometry
     // =========================================================================
-    localparam int CACHE_SIZE_BYTES = 4096;              // 4 KB
+    localparam int CACHE_SIZE_BYTES = 4096;              // 4 KB total (all ways combined)
     localparam int LINE_SIZE_BYTES  = 16;                // 16 bytes per line
     localparam int LINE_WORDS       = LINE_SIZE_BYTES / 4; // 4 words per line
-    localparam int N_SETS           = CACHE_SIZE_BYTES / LINE_SIZE_BYTES; // 256
+    localparam int N_SETS           = CACHE_SIZE_BYTES / LINE_SIZE_BYTES; // 256 (direct-mapped baseline)
 
-    // Address field widths
+    // =========================================================================
+    // D-cache associativity parameter (Phase 5 M10b experiment)
+    //
+    // DCACHE_WAYS = 1 (default): direct-mapped, 256 sets × 1 way × 16 B = 4 KB.
+    //              Behaviour is bit-identical to the pre-M10b baseline.
+    //
+    // DCACHE_WAYS = 2: 2-way set-associative, 128 sets × 2 ways × 16 B = 4 KB.
+    //              Same total capacity; conflict-miss component is the target.
+    //              Index field narrows by 1 bit; tag field widens by 1 bit.
+    //
+    // Address decomposition for each WAYS value:
+    //   WAYS=1: tag[31:12] | index[11:4] | offset[3:0]  — 20 | 8 | 4 bits
+    //   WAYS=2: tag[31:11] | index[10:4] | offset[3:0]  — 21 | 7 | 4 bits
+    //
+    // Only rv32i_dcache.sv uses DCACHE_WAYS; rv32i_icache.sv remains
+    // direct-mapped (WAYS=1) at all times.
+    // =========================================================================
+    localparam int DCACHE_WAYS = 1; // default: direct-mapped (experiment overrides to 2)
+
+    // Derived geometry for D-cache (varies with DCACHE_WAYS)
+    // N_SETS_D: number of cache sets in D$ = total lines / ways
+    localparam int N_SETS_D      = N_SETS / DCACHE_WAYS;          // 256 (W=1) or 128 (W=2)
+    localparam int INDEX_BITS_D  = $clog2(N_SETS_D);              //   8 (W=1) or   7 (W=2)
+    localparam int TAG_BITS_D    = 32 - INDEX_BITS_D - OFFSET_BITS; // 20 (W=1) or  21 (W=2)
+
+    // Address field widths (I-cache / direct-mapped baseline, always 256 sets)
     localparam int OFFSET_BITS = $clog2(LINE_SIZE_BYTES); // 4 bits [3:0]
-    localparam int INDEX_BITS  = $clog2(N_SETS);          // 8 bits [11:4]
+    localparam int INDEX_BITS  = $clog2(N_SETS);          // 8 bits [11:4]  (I$ and WAYS=1 D$)
     localparam int TAG_BITS    = 32 - INDEX_BITS - OFFSET_BITS; // 20 bits [31:12]
 
     // AXI4-Lite refill: one transaction per word, N_BEATS per line
