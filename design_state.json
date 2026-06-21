@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-21T16:22:34.587702+07:00",
+  "updated_at": "2026-06-21T19:20:00+07:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -534,6 +534,50 @@
       "suggested_next_step": "proceed",
       "reason": "M10-A3 bench build fixed: -Wl,--no-warn-mismatch added to Makefile; all 3 programs (hello/matmul/sweep) build clean with zero -Wall/-Wextra warnings; all symbols <0x42000; __heap_start below __stack_top/BENCH_SCRATCH_ADDR 0x41F00.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-21T09:30:10Z",
+      "agent": "firmware-orchestrator",
+      "stage": "bsp_development",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "M10 bench scratch multi-slot append protocol: BENCH_SCRATCH_ADDR moved to 0x41C00 (1 KB region 0x41C00..0x41FFF); bench_init() added; bench_report() now appends to slot[count] (8 words/slot, max 31); __stack_top lowered to 0x41C00 in rv32i.ld; bench_init() called in all three mains. Build clean: hello/matmul/sweep zero -Wall/-Wextra warnings. All symbols below 0x41C00; sweep heap ends 0x122B0.",
+      "constraint_ref": "claude_verilog_test-kdj"
+    },
+    {
+      "timestamp": "2026-06-21T17:02:00+07:00",
+      "agent": "firmware-orchestrator",
+      "stage": "bsp_development",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "crt0.S halt sequence patched: sw a0->__result then csrw 0x7C0 (dcache_flush) + 2048-iter drain spin + fence + ebreak. Build clean: hello/matmul/sweep zero -Wall/-Wextra warnings. sweep.dis confirms 7c001073 + drain loop at 0x2044-0x2054 before ebreak at 0x205c. Unblocks harness bead e4f.",
+      "constraint_ref": "claude_verilog_test-kdj"
+    },
+    {
+      "timestamp": "2026-06-21T17:30:00+07:00",
+      "agent": "firmware-orchestrator",
+      "stage": "peripheral_drivers",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "sweep.c tuned for tractable Verilator sim-time: 8 sizes->7 (max 32KB, 8x L1 cliff visible), 4 passes->1 prime+1 measured, STRIDE capped at 1024 accesses. Build clean zero -Wall/-Wextra warnings. bss ends 0xA320, all symbols < 0x41C00. 14 records (7x2). Bead claude_verilog_test-kdj.",
+      "constraint_ref": "claude_verilog_test-kdj"
+    },
+    {
+      "timestamp": "2026-06-21T19:20:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "M10 sweep benchmark complete: TESTS=2 PASS=2 (test_hello_sanity + test_sweep_l2_bench). 14 records: D$miss/1k-instr = 0.00 for <=4KB, jumps to 50.0 SEQ / 189-197 STRIDE for >=8KB. L1 capacity cliff confirmed at 4KB->8KB boundary. l2_bench_results.md written. Bead e4f closed.",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
@@ -770,6 +814,26 @@
       "matmul",
       "sweep"
     ],
-    "libgcc_fix": "--no-warn-mismatch (ABI-tag annotation mismatch, safe)"
+    "libgcc_fix": "--no-warn-mismatch (ABI-tag annotation mismatch, safe)",
+    "bench_scratch_addr": "0x00041C00",
+    "bench_slot_words": 8,
+    "bench_max_records": 31,
+    "bench_init_required": true,
+    "sweep_tuned": true,
+    "sweep_n_sizes": 7,
+    "sweep_size_steps_bytes": [
+      512,
+      1024,
+      2048,
+      4096,
+      8192,
+      16384,
+      32768
+    ],
+    "sweep_pass_structure": "1 prime (untimed) + 1 measured per (size,pattern)",
+    "sweep_stride_cap_accesses": 1024,
+    "sweep_record_count": 14,
+    "sweep_buf_words": 8192,
+    "sweep_bss_end_addr": "0x0000A320"
   }
 }
