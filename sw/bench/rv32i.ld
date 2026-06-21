@@ -8,8 +8,8 @@
  * the L1 caches so mhpmcounter3/4 measure real miss behaviour.
  *
  * SRAM spans 0x0000_2000 .. 0x0FFF_FFFF. We give code+data the low region and
- * put the stack top at 1 MB, leaving generous room for working-set sweeps that
- * deliberately exceed the 4 KB direct-mapped L1.
+ * put the stack top at just below the bench scratch region, leaving generous room
+ * for working-set sweeps that deliberately exceed the 4 KB direct-mapped L1.
  */
 
 ENTRY(_start)
@@ -19,15 +19,17 @@ ENTRY(_start)
  * address — code, data, stack, the bench scratch block — must stay within the
  * realised window. The bench testbench instantiates SRAM with MEM_WORDS=65536
  * (256 KB: 0x0000_2000 .. 0x0004_2000); keep this map and that override in sync.
- * Top 256 bytes (0x41F00..0x41FFF) reserved for the bench scratch block (bench.h);
- * stack grows down from just beneath it. 64 KB of working-set sweep still fits
- * comfortably below the stack. */
+ *
+ * Scratch region (1 KB, 256 words): 0x41C00..0x41FFF — reserved for bench.h
+ * multi-slot append protocol (up to 31 records, 8 words each + 1 header word).
+ * Stack grows down from 0x41C00. 64 KB of working-set sweep still fits
+ * comfortably below the stack (sweep .bss buffer ends ~0x122A8). */
 MEMORY
 {
-  RAM (rwxai) : ORIGIN = 0x00002000, LENGTH = 0x0003FF00  /* 0x2000 .. 0x41F00 */
+  RAM (rwxai) : ORIGIN = 0x00002000, LENGTH = 0x0003EC00  /* 0x2000 .. 0x41C00 */
 }
 
-__stack_top = 0x00041F00;   /* grows down; bench scratch occupies 0x41F00..0x41FFF */
+__stack_top = 0x00041C00;   /* grows down; bench scratch occupies 0x41C00..0x41FFF */
 
 SECTIONS
 {

@@ -13,6 +13,8 @@ static volatile uint32_t buf[N];
 int main(void) {
     bench_snap_t a, b;
 
+    bench_init();   /* zero scratch record-count before first bench_report() */
+
     for (int i = 0; i < N; i++) buf[i] = (uint32_t)(i * 3 + 1);
 
     bench_snapshot(&a);

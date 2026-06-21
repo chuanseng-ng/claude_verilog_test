@@ -31,23 +31,64 @@ needs Zicsr).
 - Benchmark image linked into **SRAM @ `0x0000_2000`** — the cacheable main-memory
   region, so all I-fetch + data traffic flows through L1 (uncached MMIO is
   `0x2000_0000+`). `crt0.S` (`_start`) is first at `0x2000`.
-- Stack top `0x0004_1F00` (grows down). Bench scratch block `0x0004_1F00..0x41FFF`.
+- Stack top `0x0004_1C00` (grows down).
+- **Bench scratch region `0x0004_1C00..0x0004_1FFF` (1 KB, 256 words)** — reserved
+  for the multi-slot append protocol (see below). SRAM word index of base =
+  `(0x41C00 - 0x2000) / 4 = 0x7F00`.
 - **Requires the bench testbench to instantiate SRAM with `MEM_WORDS = 65536`**
   (256 KB window `0x2000..0x42000`). The default model is only 4096 words (16 KB)
   and *aliases* higher addresses — the harness MUST override `MEM_WORDS` (and
   size working-set sweeps ≤ ~64 KB to fit below the stack).
 
+## Multi-slot scratch protocol
+
+`bench.h` implements an **append-on-write** scratch protocol so that all records
+from a single run survive in SRAM until EBREAK, regardless of how many times
+`bench_report()` is called (e.g. `sweep.c` calls it 16 times).
+
+| Word offset from `BENCH_SCRATCH_ADDR` | Content |
+|---------------------------------------|---------|
+| 0 | record count N (written last by each `bench_report`) |
+| 1 + k×8 .. 1 + k×8 + 7 | slot k (0-indexed), 8 words |
+
+Slot layout (8 words):
+
+| Slot word | Content |
+|-----------|---------|
+| 0 | `BENCH_MAGIC \| (id & 0xFF)` |
+| 1 | checksum (dead-code guard) |
+| 2 | Δcycles |
+| 3 | Δinstret |
+| 4 | ΔI$-miss |
+| 5 | ΔD$-miss |
+| 6 | Δbranch-miss |
+| 7 | 0 (pad) |
+
+Maximum 31 slots (1 header + 31×8 = 249 words ≤ 256-word region).
+
+**Every `main()` must call `bench_init()` first** to zero the count word before
+any `bench_report()` call. All three programs (`hello.c`, `matmul.c`, `sweep.c`)
+already do this.
+
 ## Adding benchmarks (A3)
 
-Drop `dhrystone.c` / `coremark.c` / `sweep.c` here — the Makefile builds every
-`*.c` automatically. Each `main()` brackets its hot region with `bench_snapshot()`
-and calls `bench_report(id, checksum, &before, &after)` (see `bench.h`) to write
-cycle/instret/I$-miss/D$-miss/branch-miss deltas to the scratch block. `hello.c` is
-the toolchain-validation example (not a real benchmark).
+Drop `dhrystone.c` / `coremark.c` here — the Makefile builds every `*.c`
+automatically. Each `main()` must:
+1. Call `bench_init()` at the very top (before any `bench_report()`).
+2. Bracket hot regions with `bench_snapshot()` and `bench_report(id, checksum,
+   &before, &after)` (see `bench.h`) to append cycle/instret/I$-miss/D$-miss/
+   branch-miss delta records.
+
+`hello.c` is the toolchain-validation example (not a real benchmark).
 
 ## Harness handoff (A2)
 
-The cocotb side (`tb/cocotb/...`, owned by the verification flow) must: load
-`trampoline.hex` into ROM + `<p>.hex` into SRAM, override SRAM `MEM_WORDS=65536`,
-run to EBREAK, then backdoor-read the scratch block and `__result`, and compute
-miss rates (misses / 1k-instr and miss / mem-access).
+The cocotb side (`tb/cocotb/...`, owned by the verification flow) must:
+1. Load `trampoline.hex` into ROM + `<p>.hex` into SRAM; override `MEM_WORDS=65536`.
+2. Run to EBREAK.
+3. Backdoor-read `BENCH_SCRATCH_ADDR` (SRAM word index `0x7F00`): read Word[0]
+   to get count N, then read N slots (8 words each starting at word index
+   `0x7F00 + 1 + k*8` for slot k).
+4. Also read `__result` (parked in `a0` at EBREAK by `crt0.S`) for checksum
+   cross-check.
+5. Compute miss rates (misses / 1k-instr and miss / mem-access) per slot.

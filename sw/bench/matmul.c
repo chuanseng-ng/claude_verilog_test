@@ -79,6 +79,8 @@ int main(void)
 {
     bench_snap_t a, b;
 
+    bench_init();   /* zero scratch record-count before first bench_report() */
+
     init_matrices();
 
     bench_snapshot(&a);
