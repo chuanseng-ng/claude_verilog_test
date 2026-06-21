@@ -337,28 +337,44 @@ async def test_write_miss_write_allocate(dut):
 @cocotb.test()
 async def test_dirty_eviction_writeback(dut):
     """
-    Write line A (dirty), then access conflicting line B.
-    The cache must write line A back to AXI memory before refilling B.
-    Verify the backing store contains the updated line A value.
+    Write line A (dirty), then access enough conflicting lines to fill all ways
+    in the same set, forcing the LRU eviction of dirty line A.
+
+    Geometry note (M10b):
+      WAYS=1 (direct-mapped, 256 sets, index=addr[11:4]):
+        ADDR_A and ADDR_B share index 0; filling B immediately evicts dirty A.
+      WAYS=2 (2-way SA, 128 sets, index=addr[10:4]):
+        ADDR_A and ADDR_B share index 0; they coexist in way 0 and way 1
+        without eviction.  A 3rd address (ADDR_C, same index, unique tag)
+        forces LRU eviction of A (filled first → LRU when B fills into way 1).
+    The test uses WAYS+1 congruent addresses so the dirty-A eviction is
+    triggered in both WAYS=1 and WAYS=2 configurations.
     """
     dut._log.info("=== test_dirty_eviction_writeback ===")
 
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     mem = SimpleDCacheAXIMem(dut)
 
-    # ADDR_A and ADDR_B both map to cache index 0 (addr[11:4]=0), cacheable SRAM range
-    ADDR_A = 0x0000_2000  # tag=0x0000_0, index=0 (below MMIO_BASE=0x2000_0000)
-    ADDR_B = 0x0001_2000  # different tag, same index=0
+    # All addresses map to index 0 regardless of WAYS (addr[10:4]=0 for all).
+    # They differ only in tag bits, so each occupies a unique cache line.
+    # ADDR_A: tag 0x0004 (WAYS=2: tag=0x04000>>0), index 0
+    # ADDR_B: tag 0x0024 (WAYS=2), index 0  — fits in way 1 alongside A
+    # ADDR_C: tag 0x0044 (WAYS=2), index 0  — forces LRU eviction of A
+    # For WAYS=1 ADDR_B alone already forces eviction of A; ADDR_C read still
+    # completes cleanly (A was already evicted).
+    ADDR_A = 0x0000_2000
+    ADDR_B = 0x0001_2000
+    ADDR_C = 0x0002_2000
 
     ORIGINAL_A = 0x1111_1111
-    WRITTEN_A = 0x9999_9999
+    WRITTEN_A  = 0x9999_9999
     ORIGINAL_B = 0x2222_2222
+    ORIGINAL_C = 0x3333_3333
 
-    mem.write_word(ADDR_A, ORIGINAL_A)
-    mem.write_word(ADDR_B, ORIGINAL_B)
-    for w in range(1, LINE_WORDS):
-        mem.write_word(ADDR_A + w * 4, 0)
-        mem.write_word(ADDR_B + w * 4, 0)
+    for addr, val in ((ADDR_A, ORIGINAL_A), (ADDR_B, ORIGINAL_B), (ADDR_C, ORIGINAL_C)):
+        mem.write_word(addr, val)
+        for w in range(1, LINE_WORDS):
+            mem.write_word(addr + w * 4, 0)
 
     await _reset(dut)
 
@@ -373,11 +389,17 @@ async def test_dirty_eviction_writeback(dut):
     d = await _read(dut, ADDR_A)
     assert d == WRITTEN_A, f"Cache didn't update: {d:#010x}"
 
-    # Step 3: access B (conflict miss) → must write-back A first, then fill B
+    # Step 3: fill B — for WAYS=1 this evicts dirty A immediately;
+    #          for WAYS=2 B occupies way 1, A stays in way 0 (still dirty).
     d = await _read(dut, ADDR_B)
     assert d == ORIGINAL_B, f"B fill wrong: {d:#010x}"
 
-    # Step 4: check that memory[ADDR_A] was updated by writeback
+    # Step 4: fill C — forces LRU eviction of A (way 0, LRU after B fills way 1).
+    #         For WAYS=1 A was already evicted in step 3; this just brings in C.
+    d = await _read(dut, ADDR_C)
+    assert d == ORIGINAL_C, f"C fill wrong: {d:#010x}"
+
+    # Step 5: check that memory[ADDR_A] was updated by writeback (dirty eviction)
     mem_val = mem.read_word(ADDR_A)
     assert mem_val == WRITTEN_A, (
         f"Writeback did not update backing store: got {mem_val:#010x}, expected {WRITTEN_A:#010x}"

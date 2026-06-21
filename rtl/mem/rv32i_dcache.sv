@@ -393,8 +393,16 @@ module rv32i_dcache (
             hit_q     <= 1'b0;
             hit_way_q <= 1'b0;
         end else if (state_q == CS_HIT_PENDING) begin
-            // OR-reduce across ways for overall hit
-            hit_q <= |{hit_comb};  // works for WAYS=1 (1-element) and WAYS=2
+            // OR-reduce across ways for overall hit.
+            // |{hit_comb} does not reduce unpacked arrays in Verilator 5.x;
+            // use an explicit loop so the generated C++ sees scalar ORs.
+            begin
+                logic any_hit;
+                any_hit = 1'b0;
+                for (int hi = 0; hi < WAYS_L; hi++)
+                    any_hit = any_hit | hit_comb[hi];
+                hit_q <= any_hit;
+            end
             // Priority encode: way 0 wins ties (not expected in correct operation)
             if (WAYS_L == 1) begin
                 hit_way_q <= 1'b0;

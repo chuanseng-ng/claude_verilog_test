@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-21T19:20:00+07:00",
+  "updated_at": "2026-06-21T12:51:15Z",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -578,6 +578,28 @@
       "suggested_next_step": "proceed",
       "reason": "M10 sweep benchmark complete: TESTS=2 PASS=2 (test_hello_sanity + test_sweep_l2_bench). 14 records: D$miss/1k-instr = 0.00 for <=4KB, jumps to 50.0 SEQ / 189-197 STRIDE for >=8KB. L1 capacity cliff confirmed at 4KB->8KB boundary. l2_bench_results.md written. Bead e4f closed.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-21T12:50:00Z",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Phase 5 M10b: 2-way set-associative D$ prototype lint-clean on experiment/dcache-2way (commit d34677a). WAYS=1 default: 0 new errors/warnings vs 7-warning baseline. WAYS=2 standalone elaboration: EXIT=0, 0 errors. rtl/mem/rv32i_dcache.sv and rtl/mem/rv32i_cache_pkg.sv modified.",
+      "constraint_ref": "claude_verilog_test-ukw"
+    },
+    {
+      "timestamp": "2026-06-21T12:50:41Z",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "functional",
+      "suggested_next_step": "escalate",
+      "reason": "M10b 2-way D$ dcache unit test FAIL: test_dirty_eviction_writeback FAIL (7/8 pass). RTL bug in rv32i_dcache.sv CS_TAG_CHECK miss path: wb_buf_q/wb_tag_q captured using stale victim_way_q (old registered, from prior miss) instead of combinational cand_vw (current miss victim). With WAYS=2 this reads wrong way's data into writeback buffer; dirty eviction writes back incorrect data, leaving dirty-A backing store unchanged. Fix: replace victim_way_q with cand_vw in CS_TAG_CHECK wb_buf_q/wb_tag_q capture (lines 828-831 of rv32i_dcache.sv). Benchmarking blocked until RTL fix confirmed correct.",
+      "constraint_ref": "fr_null_20260621_125041_00"
     }
   ],
   "fix_requests": [
@@ -801,6 +823,34 @@
           "note": "Two-part fix: (1) u_pll_regs clock domain corrected to clk_i/rst_n_i in soc_top.sv; (2) pll_axil_regs CONTROL reset value set to 32'h0000_0001 (pll_enable=1 default). Verilator -Wall lint EXIT=0; 7 pre-existing warnings only, no new warnings. Commit dacba91."
         }
       ]
+    },
+    {
+      "id": "fr_null_20260621_125041_00",
+      "created_at": "2026-06-21T12:50:41Z",
+      "updated_at": "2026-06-21T12:50:41Z",
+      "created_by": "verification-orchestrator",
+      "failure_class": "functional",
+      "test_name": "test_dirty_eviction_writeback (tb/cocotb/mem/test_dcache.py)",
+      "property_or_assertion": null,
+      "seed": 0,
+      "waveform_path": null,
+      "log_path": "sim/sim_build_dcache/",
+      "suspected_rtl": {
+        "module": "rv32i_dcache",
+        "signal": "wb_buf_q / wb_tag_q capture in CS_TAG_CHECK",
+        "file": "rtl/mem/rv32i_dcache.sv",
+        "line_range": [
+          827,
+          832
+        ]
+      },
+      "summary": "rv32i_dcache.sv CS_TAG_CHECK miss path captures wb_buf_q and wb_tag_q using stale victim_way_q register (old value from previous miss) instead of the combinational cand_vw; with WAYS=2 this reads the wrong way's data into the writeback buffer, so the correct dirty line is never written back to AXI memory on eviction",
+      "expected_behavior": "When WAYS=2 and a dirty line A is evicted (cand_vw=0, LRU way), wb_buf_q should capture data_dout_r[cand_vw=0][0..3] (A's data) and wb_tag_q should capture tag_dout_r[cand_vw=0][TAG_BITS_L-1:0] (A's tag). The writeback AXI burst should target ADDR_A and write 0x99999999 to backing store.",
+      "observed_behavior": "wb_buf_q[wbw] <= data_dout_r[victim_way_q][wbw] uses victim_way_q=1 (old, from B's fill 2 states earlier). wb_tag_q reads tag_dout_r[1] (B's tag). Writeback targets ADDR_B with B's data (effectively a no-op to the clean B data). ADDR_A backing store remains 0x11111111 (original, unwrtten). test_dirty_eviction_writeback assertion fails: got 0x11111111, expected 0x99999999.",
+      "session_id": null,
+      "status": "open",
+      "rtl_response": null,
+      "history": []
     }
   ],
   "firmware": {
