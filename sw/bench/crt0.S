@@ -35,9 +35,39 @@ _start:
     li   a1, 0
     call main
 
-    # Park exit code, then halt.
+    # Park exit code, flush D-cache to SRAM, then halt.
+    #
+    # The D-cache is write-back: bench_report() scratch writes (0x41C00 region)
+    # and __result may still be dirty in the cache at this point.  The cocotb
+    # harness backdoor-reads u_sram.mem[] after EBREAK, so we must write back
+    # all dirty lines before halting.
+    #
+    # Flush sequence (mirrors _emit_dcache_flush in gen_stress_hex.py):
+    #   1. sw a0 → __result  (the only pending store; must complete before flush
+    #      so CSRRW is not in EX while a cache-stall is in MEM — see obs 4867)
+    #   2. csrw 0x7C0, x0   → fires dc_flush_pulse; FSM begins scanning 256 lines
+    #   3. drain spin ~2048 iterations ≥ 256-line scan + AXI write-back bursts
+    #   4. fence             → memory ordering barrier
+    #   5. ebreak            → halt (loop on it)
+    #
+    # Registers: t0/t1 were used for .bss zeroing and are free here.  a0 holds
+    # the return value and must not be clobbered before the sw.
     la   t0, __result
     sw   a0, 0(t0)
+
+    # D-cache flush: CSRW 0x7C0, x0  (encodes to 7c001073)
+    # CSR 0x7C0 = dcache_flush (go9/M9 maintenance CSR, rv32i_csr_file.sv).
+    # rs1=x0 triggers an unconditional flush (do_fire=1 for CSRRW regardless
+    # of rs1 value; FSM scans all 256 lines and write-backs dirty ones).
+    csrw 0x7C0, x0
+
+    # Drain spin: 2048 countdown iterations — gives the flush FSM time to
+    # scan all 256 D-cache lines and drain the resulting AXI4 write-back
+    # bursts to the SRAM before we halt.  Matches gen_stress_hex.py spin=2048.
+    li   t0, 2048
+4:  addi t0, t0, -1
+    bnez t0, 4b
+
     fence
 3:  ebreak
     j    3b
