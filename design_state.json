@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-21T13:00:00Z",
+  "updated_at": "2026-06-21T14:00:00+07:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -654,6 +654,17 @@
       "failure_class": "none",
       "suggested_next_step": "proceed",
       "reason": "M10c-3 CoreMark-representative port built clean (0 -Wall -Wextra warnings): 3-kernel freestanding C (list sort + 2x2 matmul + CRC-16), ITERATIONS=1, data working-set ~232B << 4096B L1 D$, bench_report id=1; all symbols within SRAM window (heap_start=0x25A0 < stack_top=0x41C00); committed fed4d5f on experiment/dcache-2way.",
+      "constraint_ref": "claude_verilog_test-5jd"
+    },
+    {
+      "timestamp": "2026-06-21T14:00:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "M10c-3 CoreMark real-workload run (DCACHE_WAYS=1, direct-mapped shipping config): TESTS=1 PASS=1 FAIL=0. \u0394instret=1463 \u0394cycles=7750 \u0394I$miss=45 \u0394D$miss=14. D$miss/kI=9.57 (14 cold-fill misses, ~232B working set < 6% of 4KB L1). No capacity/conflict pressure confirmed. Results: tb/cocotb/soc/coremark_results.md. M10_L2_DECISION_ANALYSIS.md section 9 appended. DCACHE_WAYS left at 1 (shipping default) on experiment/dcache-2way branch. No DUT RTL bugs found.",
       "constraint_ref": "claude_verilog_test-5jd"
     }
   ],

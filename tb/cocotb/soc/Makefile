@@ -493,6 +493,23 @@ conflict_bench_2way: l2_bench_lint
 
 .PHONY: conflict_bench_1way conflict_bench_2way
 
+# M10c-3 CoreMark-representative benchmark (bead claude_verilog_test-5jd).
+# Runs with DCACHE_WAYS=1 (direct-mapped, shipping default) to confirm that
+# real-workload embedded firmware (~232 B working set) fits L1 with no miss
+# pressure.  Firmware is pre-built (sw/bench/build/coremark.hex).
+# Results written to tb/cocotb/soc/coremark_results.md.
+coremark_bench: l2_bench_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_l2_bench TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET \
+		  -GSRAM_MEM_WORDS=65536" \
+		TESTCASE=test_coremark_bench \
+		$(BUILD_ARGS)
+
+.PHONY: coremark_bench
+
 # Run every SoC test: M3–M6 component suites + M9 boot + M9 periph + M9 coherency +
 # M9 cpu_gpu + Phase 7 M-c PLL (lock + regs).
 # Use rm -rf sim_build (not $(MAKE) clean) for each suite so that stale or

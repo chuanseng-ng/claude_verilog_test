@@ -37,7 +37,7 @@ package rv32i_cache_pkg;
     // Only rv32i_dcache.sv uses DCACHE_WAYS; rv32i_icache.sv remains
     // direct-mapped (WAYS=1) at all times.
     // =========================================================================
-    localparam int DCACHE_WAYS = 2; // M10b/M10c experiment: 2-way set-associative, 128 sets × 2 ways × 16 B = 4 KB
+    localparam int DCACHE_WAYS = 1; // M10c-3: direct-mapped (shipping default); was 2 for M10b/conflict experiment
 
     // Derived geometry for D-cache (varies with DCACHE_WAYS)
     // N_SETS_D: number of cache sets in D$ = total lines / ways

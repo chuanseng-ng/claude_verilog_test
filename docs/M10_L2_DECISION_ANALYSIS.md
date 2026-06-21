@@ -269,3 +269,27 @@ cd sim && make conflict_bench_1way     # → tb/cocotb/soc/conflict_results_1way
 # WAYS=2 run: edit rv32i_cache_pkg.sv to DCACHE_WAYS=2 then:
 cd sim && make conflict_bench_2way     # → tb/cocotb/soc/conflict_results_2way.md
 ```
+
+## 9. CoreMark Real-Workload Run (M10c-3)
+
+**Branch**: `experiment/dcache-2way`, **DCACHE_WAYS=1** (shipping direct-mapped, reverted for this run).
+**Firmware**: `sw/bench/coremark` — 3-kernel port (list sort + 2×2 matmul + CRC-16), ITERATIONS=1.
+**Working-set**: ~232 B (list 80 B + matmul 24 B + CRC buf 16 B + overhead) — < 6% of 4 KB L1 D$.
+
+| metric | value |
+| ------ | ----: |
+| Δinstret | 1,463 |
+| Δcycles | 7,750 |
+| ΔI$-miss | 45 |
+| **ΔD$-miss** | **14** |
+| I$-miss / 1k-instr | 30.76 |
+| **D$-miss / 1k-instr** | **9.57** |
+| D$-miss / 1k-cycle | 1.81 |
+
+**Conclusion**: D$-miss/kI = 9.57 — all 14 D$ misses are cold fills on the first touch of the
+~232 B data region.  After warm-up the working set is fully resident in the 4 KB direct-mapped
+L1 with zero capacity or conflict pressure.  Representative embedded firmware does not drive L1
+D$ miss pressure; the L2 go/no-go decision is driven by application working-set size
+(capacity cliff at 4-8 KB, from the sweep benchmark), not by CoreMark-class workloads.
+
+Results file: `tb/cocotb/soc/coremark_results.md`.
