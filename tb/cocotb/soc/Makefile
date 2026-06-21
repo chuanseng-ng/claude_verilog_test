@@ -458,6 +458,7 @@ l2_bench: l2_bench_lint
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET \
 		  -GSRAM_MEM_WORDS=65536" \
+		TESTCASE=test_hello_sanity,test_sweep_l2_bench \
 		$(BUILD_ARGS)
 
 # Run every SoC test: M3–M6 component suites + M9 boot + M9 periph + M9 coherency +
