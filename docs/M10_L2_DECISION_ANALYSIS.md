@@ -1,6 +1,6 @@
 # Phase 5 M10 — L2 Cache Decision Analysis
 
-**Status:** DECIDED 2026-06-21 — **L2 deferred; evaluate a 2-way set-associative D$ first** (human architectural call). L2 GO/NO-GO is re-decided after the 2-way re-benchmark. M11 floorplan stays L2-free pending that result.
+**Status:** FINAL 2026-06-21 — **NO-GO on both L2 and 2-way; keep the direct-mapped L1 D$** (human architectural sign-off). M11 floorplan is L2-free; the parameterized 2-way RTL stays on branch `experiment/dcache-2way` as a record and is NOT merged. See §10 for the final decision and its full basis.
 **Date:** 2026-06-21
 **Gate criterion** (`docs/PHASE5_SOC_INTEGRATION_PLAN.md` M10; `CLAUDE.md` locked-decision #4):
 > Add `rtl/mem/l2_cache.sv` **only if** Phase 5 benchmarking shows L1 miss rates are a bottleneck. Document the decision either way.
@@ -293,3 +293,31 @@ D$ miss pressure; the L2 go/no-go decision is driven by application working-set 
 (capacity cliff at 4-8 KB, from the sweep benchmark), not by CoreMark-class workloads.
 
 Results file: `tb/cocotb/soc/coremark_results.md`.
+
+## 10. Final Decision (2026-06-21) — NO-GO on L2 and 2-way; keep direct-mapped
+
+Human architectural sign-off after the full three-leg investigation.
+
+### Evidence summary
+
+| Leg | Benchmark | Result | Reading |
+| --- | --------- | ------ | ------- |
+| Capacity | `sweep` | 0 D$miss/kI ≤4 KB; ~50 (SEQ) / ~190 (STRIDE) ≥8 KB, plateau | Hard 4 KB capacity wall — but a **synthetic** adversary |
+| Conflict | `conflict` | K=2: direct-mapped 153/kI → **2-way 0/kI** (−22% cyc); K≥4 both thrash | 2-way **does** eliminate true conflict misses — proven + RTL-correct — but only ≤2 ways |
+| Real workload | `coremark` | 232 B working set; **9.57 D$miss/kI, all 14 cold-fill, 0 steady-state evictions** | Representative firmware **fits L1** with 18× margin — no capacity or conflict pressure |
+
+### Decision
+
+**No L2, and do not adopt the 2-way D$. The shipping L1 stays 4 KB direct-mapped (`DCACHE_WAYS=1`).**
+
+Rationale:
+- The L1 capacity wall (sweep) and the 2-way conflict benefit (conflict) only appear under **synthetic** access patterns. The representative workload (CoreMark) sits 18× inside the 4 KB L1 and shows only cold-fill misses — real control-plane firmware does not reach either regime.
+- This CPU is the control/orchestration core of a **GPU-governed** SoC (~571 MHz). Bulk data-parallel work runs on the GPU (own 16 KB shared mem + coalescer); it does not lean on the CPU L1.
+- An L2 adds latency, area, and an extra **M11 floorplan macro** (area/PDN/timing) for no demonstrated real-workload benefit.
+- A 2-way D$ adds a ~100–200 ps hit-path way-select mux for conflict insurance that representative firmware never cashes in.
+- Consistent with Phase 5 locked decisions #1/#2/#4/#5 (add capacity/associativity only when a real bottleneck is proven). The trigger was tested and **not** met by representative workloads.
+
+### Disposition
+- `experiment/dcache-2way` is **retained as the record**: it holds the verified parameterized 2-way RTL (WAYS=1 bit-identical baseline; WAYS=2 functionally correct, dcache 8/8 + coherency 3/3) and the conflict/CoreMark benchmarks. It is **not merged**.
+- **Revisit trigger:** if a future on-core workload is shown to sustain >4 KB working sets (→ L2 / larger L1) or K≥2 congruent-line hot sets (→ 2-way), re-open this analysis. The benchmark harness (`sw/bench/` + `test_l2_bench.py`) and the 2-way RTL are ready to re-measure.
+- **M11 proceeds** with the 4 KB direct-mapped L1, L2-free.
