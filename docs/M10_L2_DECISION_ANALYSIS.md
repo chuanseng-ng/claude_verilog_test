@@ -92,9 +92,91 @@ modification of the existing L1, not a new macro.
 > Direct-mapped remains the committed default until the 2-way experiment justifies a
 > change (Phase 3 locked decision #2). The prototype runs on an experiment branch.
 
-## 5. Reproduce
+## 5. 2-Way D$ Re-benchmark (M10b-2, 2026-06-21)
+
+**Correctness gate (Step 1):** RTL fix `fr_null_20260621_125041_00` confirmed on
+branch `experiment/dcache-2way` (commit `aba0c18` — writeback buffer now reads
+`cand_vw`, not stale `victim_way_q`).
+- `make -C sim dcache`: TESTS=8 PASS=8 FAIL=0 (including `test_dirty_eviction_writeback`)
+- `make -C sim soc_coherency`: TESTS=3 PASS=3 FAIL=0
+
+**Benchmark (Step 2):** same `sweep` firmware, same `test_l2_bench.py` harness,
+same `SRAM_MEM_WORDS=65536`.  Cache: `DCACHE_WAYS=2`, 128 sets × 2 ways × 16 B = 4 KB.
+
+Raw data: [`tb/cocotb/soc/l2_bench_results_2way.md`](../tb/cocotb/soc/l2_bench_results_2way.md).
+
+### 5.1 Comparison table — direct-mapped vs 2-way (same 4 KB capacity)
+
+| size (B) | 1-way SEQ /kI | 2-way SEQ /kI | 1-way STR /kI | 2-way STR /kI | STRIDE change |
+| -------: | ------------: | ------------: | ------------: | ------------: | :------------ |
+| 512      | 0.00          | 0.00          | 0.00          | 0.00          | no change     |
+| 1024     | 0.00          | 0.00          | 0.00          | 0.00          | no change     |
+| 2048     | 0.00          | 0.00          | 0.00          | 0.00          | no change     |
+| 4096     | 0.00          | 0.00          | 0.00          | 0.00          | no change     |
+| 8192     | 49.96         | 49.96         | 189.35        | 189.35        | 0% reduction  |
+| 16384    | 49.98         | 49.98         | 194.53        | 194.53        | 0% reduction  |
+| 32768    | 49.99         | 49.99         | 197.23        | 197.23        | 0% reduction  |
+
+### 5.2 Capacity vs conflict decomposition
+
+The two benchmarks are **bit-identical**.  This outcome is physically expected once
+the STRIDE access geometry is analyzed:
+
+- The `sweep` firmware uses `STRIDE_STEP = 64 words = 256 bytes`.
+- The D$ line size is 16 bytes, and the cache has 256 sets (WAYS=1) or 128 sets (WAYS=2).
+- A 256 B stride increments the cache-set index by 256/16 = 16 sets (WAYS=1) or
+  8 sets (WAYS=2).  Each consecutive STRIDE access maps to a *different set* in
+  both configurations.
+- Because no two STRIDE accesses map to the same set, **there is no set aliasing**,
+  and therefore **no conflict misses** — only capacity misses (the working set
+  exceeds 4 KB total cache space).
+- 2-way associativity prevents evictions when two addresses map to the *same set*
+  with different tags.  When no two live accesses share a set (as here), extra
+  ways provide no benefit.
+
+**Conclusion:** the STRIDE ≈ 3.8× penalty over SEQ measured in the direct-mapped
+baseline is a **capacity miss phenomenon, not a conflict-miss phenomenon**.  The
+STRIDE pattern in this benchmark always evicts by capacity; reducing the effective
+number of sets from 256 to 128 (the price of adding a second way at constant
+capacity) does not change the miss rate because no aliasing was occurring in the
+first place.
+
+### 5.3 Residual capacity wall
+
+Both WAYS=1 and WAYS=2 sustain ~50 D$miss/kI (SEQ) for working sets ≥ 8 KB.
+This is a pure capacity wall: once the working set exceeds 4 KB, every line
+brought in evicts a line that will be needed again.  The only remedy is more
+cache capacity (a larger L1 or an L2), not more associativity.
+
+The STRIDE ceiling (~190–197/kI) is similarly capacity-driven.  With a 256 B
+stride and a 16 B line, each access is guaranteed cold regardless of cache size
+below the full working-set footprint.  Neither associativity nor an L2 would
+help STRIDE unless the L2 were large enough to hold the entire working set.
+
+### 5.4 Implication for L2
+
+- **2-way D$ at same 4 KB capacity: no measurable miss-rate benefit** for the
+  `sweep` workload (which uses non-aliasing large strides).
+- **Residual capacity wall above 4 KB is entirely a capacity problem**, addressable
+  only by a larger cache (a bigger L1 or an L2).
+- **An L2 of 16–32 KB would absorb the 8–16 KB working-set cases** (SEQ ~50/kI
+  would drop to ~0; STRIDE would drop only if the L2 is large enough to hold the
+  strided footprint — typically not for STRIDE_STEP << working_set).
+- Whether the capacity wall represents a *real bottleneck* for the SoC's actual
+  control-plane firmware remains unproven (see §3 architectural context).
+
+> **L2 GO/NO-GO decision left to the human** on this data.  The 2-way experiment
+> confirms: conflict misses are not the driver for this workload; any remaining
+> miss-rate concern is purely capacity, and only an L2 (or larger L1) would address it.
+
+## 6. Reproduce
 
 ```bash
+# Direct-mapped baseline (DCACHE_WAYS=1 in rv32i_cache_pkg.sv)
 nix develop .#bench --command make -C sw/bench clean all   # build benchmarks
-cd sim && make l2_bench                                      # run hello+sweep, writes l2_bench_results.md
+cd sim && make l2_bench                                      # writes l2_bench_results.md
+
+# 2-way re-benchmark (branch experiment/dcache-2way, DCACHE_WAYS=2)
+git checkout experiment/dcache-2way
+cd sim && make l2_bench                                      # writes l2_bench_results_2way.md
 ```

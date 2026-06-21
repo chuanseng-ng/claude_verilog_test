@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-21T12:56:33Z",
+  "updated_at": "2026-06-21T13:00:00+07:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -611,6 +611,17 @@
       "suggested_next_step": "proceed",
       "reason": "Fixed fr_null_20260621_125041_00: rv32i_dcache.sv CS_TAG_CHECK miss path wb_buf_q/wb_tag_q now use cand_vw (combinational) not victim_way_q (stale register). Verilator -Wall make lint: EXIT=0, 0 errors, 7 pre-existing baseline warnings only. WAYS=1 standalone elaboration: EXIT=0.",
       "constraint_ref": "fr_null_20260621_125041_00"
+    },
+    {
+      "timestamp": "2026-06-21T13:00:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "M10b-2 re-validation of fr_null_20260621_125041_00 complete (branch experiment/dcache-2way, DCACHE_WAYS=2). dcache TESTS=8 PASS=8 FAIL=0 (test_dirty_eviction_writeback PASS — confirms cand_vw fix). soc_coherency TESTS=3 PASS=3 FAIL=0 (flush/inval round-trip correct with 2-way). l2_bench TESTS=2 PASS=2 FAIL=0; 2-way miss rates identical to direct-mapped baseline: STRIDE penalty (~189-197/kI) is purely capacity (256B stride avoids set aliasing), not conflict-miss; SEQ plateau (~50/kI above 4KB) also capacity. Residual capacity wall above 4KB is addressable only by L2 or larger L1. L2 GO/NO-GO left to human.",
+      "constraint_ref": "fr_null_20260621_125041_00"
     }
   ],
   "fix_requests": [
@@ -838,7 +849,7 @@
     {
       "id": "fr_null_20260621_125041_00",
       "created_at": "2026-06-21T12:50:41Z",
-      "updated_at": "2026-06-21T12:56:33Z",
+      "updated_at": "2026-06-21T13:00:00+07:00",
       "created_by": "verification-orchestrator",
       "failure_class": "functional",
       "test_name": "test_dirty_eviction_writeback (tb/cocotb/mem/test_dcache.py)",
@@ -859,7 +870,7 @@
       "expected_behavior": "When WAYS=2 and a dirty line A is evicted (cand_vw=0, LRU way), wb_buf_q should capture data_dout_r[cand_vw=0][0..3] (A's data) and wb_tag_q should capture tag_dout_r[cand_vw=0][TAG_BITS_L-1:0] (A's tag). The writeback AXI burst should target ADDR_A and write 0x99999999 to backing store.",
       "observed_behavior": "wb_buf_q[wbw] <= data_dout_r[victim_way_q][wbw] uses victim_way_q=1 (old, from B's fill 2 states earlier). wb_tag_q reads tag_dout_r[1] (B's tag). Writeback targets ADDR_B with B's data (effectively a no-op to the clean B data). ADDR_A backing store remains 0x11111111 (original, unwrtten). test_dirty_eviction_writeback assertion fails: got 0x11111111, expected 0x99999999.",
       "session_id": null,
-      "status": "fixed",
+      "status": "verified_fixed",
       "rtl_response": {
         "diff_summary": "rv32i_dcache.sv CS_TAG_CHECK miss path (need_writeback branch): replaced data_dout_r[victim_way_q][wbw] with data_dout_r[cand_vw][wbw] and tag_dout_r[victim_way_q][TAG_BITS_L-1:0] with tag_dout_r[cand_vw][TAG_BITS_L-1:0]. cand_vw is the combinational victim-way selector (invalid-first, else LRU); victim_way_q is its registered alias set on the same clock edge \u2014 so victim_way_q still holds the PREVIOUS miss value when wb_buf_q/wb_tag_q latch. Using cand_vw directly ensures writeback reads the correct way. victim_way_q continues to be registered as cand_vw on this edge, so CS_REFILL (which uses victim_way_q) targets the same way as the writeback. WAYS=1 unaffected (cand_vw == 0 == victim always). make lint (Verilator -Wall): EXIT=0, 0 errors, 7 pre-existing baseline warnings only.",
         "files_changed": [
@@ -873,6 +884,12 @@
           "agent": "rtl-design-orchestrator",
           "action": "fixed",
           "note": "Two lines changed: data_dout_r[victim_way_q] -> data_dout_r[cand_vw] (line ~836) and tag_dout_r[victim_way_q] -> tag_dout_r[cand_vw] (line ~838). Root cause: victim_way_q and wb_buf_q both latch on the same posedge; victim_way_q holds the prior miss value until the edge completes. cand_vw is purely combinational and stable in CS_TAG_CHECK. Writeback-way == refill-way guaranteed because victim_way_q registers cand_vw on this same edge and CS_REFILL/CS_WRITEBACK execute in subsequent states. Verilator -Wall make lint: EXIT=0, 0 errors, 7 pre-existing warnings unchanged."
+        },
+        {
+          "timestamp": "2026-06-21T13:00:00+07:00",
+          "agent": "verification-orchestrator",
+          "action": "regression_confirmed",
+          "note": "M10b-2 re-validation complete. dcache TESTS=8 PASS=8 FAIL=0 (test_dirty_eviction_writeback PASS). soc_coherency TESTS=3 PASS=3 FAIL=0. l2_bench TESTS=2 PASS=2 FAIL=0. fix_request verified_fixed. Benchmark shows identical miss rates vs direct-mapped: STRIDE penalty is purely capacity (256B stride avoids set aliasing), not conflict-miss. 2-way D$ provides no measurable miss-rate benefit for this workload."
         }
       ]
     }
