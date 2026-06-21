@@ -1,0 +1,168 @@
+###############################################################################
+# phase5_soc.upf — Power intent for soc_top on ASAP7 7nm predictive
+# IEEE 1801-2015 (UPF 3.0)
+#
+# Phase 5 SoC power architecture (4 power domains at single voltage):
+#
+#   PD_CPU    — rv32i_cpu_top + L1 caches (power-gatable; controlled by SW)
+#   PD_GPU    — gpu_top SIMT engine       (power-gatable; controlled by SW)
+#   PD_SRAM   — sram_controller + SRAM    (always-on; holds program data)
+#   PD_PERIPH — DMA, UART, SPI, timer,    (always-on; peripheral fabric)
+#               IRQ ctrl, AXI crossbar,
+#               AXI-Lite interconnect,
+#               boot ROM, PLL
+#
+# All domains share VDD = 0.7 V (ASAP7 RVT nominal).
+# Power gating of PD_CPU and PD_GPU is modelled as design intent; actual
+# header/footer cells depend on ASAP7 PDK configuration.  OpenROAD does not
+# insert switch cells in this flow — UPF is carried for formal/simulation use.
+#
+# Isolation strategy:
+#   - CPU outputs isolated to 0 when PD_CPU is powered down
+#   - GPU outputs isolated to 0 when PD_GPU is powered down
+#   No retention registers in Phase 5 (state rebuilt from SRAM on wakeup).
+###############################################################################
+
+###############################################################################
+# 1. Supply ports
+###############################################################################
+create_supply_port VDD -direction in
+create_supply_port VSS -direction in
+
+###############################################################################
+# 2. Supply nets
+###############################################################################
+create_supply_net VDD     -reuse
+create_supply_net VDD_CPU
+create_supply_net VDD_GPU
+create_supply_net VSS     -reuse
+
+connect_supply_net VDD -ports VDD
+connect_supply_net VSS -ports VSS
+
+# CPU and GPU use switchable rails derived from top VDD
+connect_supply_net VDD_CPU -reuse
+connect_supply_net VDD_GPU -reuse
+
+###############################################################################
+# 3. Power domains
+###############################################################################
+
+# PD_PERIPH: always-on top-level domain (crossbar, interconnect, peripherals, PLL)
+# Includes anything not explicitly assigned to CPU/GPU/SRAM below.
+create_power_domain PD_PERIPH \
+    -include_scope
+
+set_domain_supply_net PD_PERIPH \
+    -primary_power_net  VDD \
+    -primary_ground_net VSS
+
+# PD_CPU: CPU hard macro + L1 caches (power-gatable)
+create_power_domain PD_CPU \
+    -elements { u_cpu }
+
+set_domain_supply_net PD_CPU \
+    -primary_power_net  VDD_CPU \
+    -primary_ground_net VSS
+
+# PD_GPU: GPU hard macro (power-gatable)
+create_power_domain PD_GPU \
+    -elements { u_gpu }
+
+set_domain_supply_net PD_GPU \
+    -primary_power_net  VDD_GPU \
+    -primary_ground_net VSS
+
+# PD_SRAM: SRAM controller and backing memory (always-on)
+create_power_domain PD_SRAM \
+    -elements { u_sram }
+
+set_domain_supply_net PD_SRAM \
+    -primary_power_net  VDD \
+    -primary_ground_net VSS
+
+###############################################################################
+# 4. Power switches (design intent; ASAP7 switch cell mapping TBD)
+###############################################################################
+
+# CPU power switch — controlled by SW via CSR or firmware register
+create_power_switch PSW_CPU \
+    -domain PD_CPU \
+    -output_supply_port {vout VDD_CPU} \
+    -input_supply_port  {vin VDD} \
+    -control_port       {ctrl cpu_pg_ctrl} \
+    -on_value  0 \
+    -off_value 1
+
+# GPU power switch — controlled by SW kernel launch/completion
+create_power_switch PSW_GPU \
+    -domain PD_GPU \
+    -output_supply_port {vout VDD_GPU} \
+    -input_supply_port  {vin VDD} \
+    -control_port       {ctrl gpu_pg_ctrl} \
+    -on_value  0 \
+    -off_value 1
+
+###############################################################################
+# 5. Isolation cells
+#    Clamp CPU outputs to 0 when PD_CPU is gated.
+#    Clamp GPU outputs to 0 when PD_GPU is gated.
+#    Isolation is in the parent domain (PD_PERIPH) so cells remain powered.
+###############################################################################
+
+set_isolation ISO_CPU \
+    -domain PD_CPU \
+    -isolation_supply_set PD_PERIPH \
+    -clamp_value 0 \
+    -applies_to outputs \
+    -isolation_signal cpu_iso_en \
+    -isolation_sense  high \
+    -location parent
+
+map_isolation_cell ISO_CPU \
+    -domain PD_CPU \
+    -lib_cells {*ISO*}
+
+set_isolation ISO_GPU \
+    -domain PD_GPU \
+    -isolation_supply_set PD_PERIPH \
+    -clamp_value 0 \
+    -applies_to outputs \
+    -isolation_signal gpu_iso_en \
+    -isolation_sense  high \
+    -location parent
+
+map_isolation_cell ISO_GPU \
+    -domain PD_GPU \
+    -lib_cells {*ISO*}
+
+###############################################################################
+# 6. Power state table
+###############################################################################
+
+add_power_state PD_PERIPH \
+    -state ON {-supply_expr {power == FULL_ON && ground == FULL_ON}}
+
+add_power_state PD_SRAM \
+    -state ON {-supply_expr {power == FULL_ON && ground == FULL_ON}}
+
+add_power_state PD_CPU \
+    -state ACTIVE     {-supply_expr {power == FULL_ON}} \
+    -state OFF        {-supply_expr {power == OFF}}
+
+add_power_state PD_GPU \
+    -state ACTIVE     {-supply_expr {power == FULL_ON}} \
+    -state OFF        {-supply_expr {power == OFF}}
+
+# System power state table (legal combinations)
+# NORMAL:      all on
+# CPU_OFF:     CPU gated, GPU+periph+sram on
+# GPU_OFF:     GPU gated, CPU+periph+sram on
+# IDLE:        both CPU and GPU gated
+create_pst system_pst \
+    -supplies {VDD VDD_CPU VDD_GPU}
+
+add_pst_state NORMAL   -pst system_pst -state {VDD VDD_CPU VDD_GPU}
+add_pst_state CPU_OFF  -pst system_pst -state {VDD off VDD_GPU}
+add_pst_state GPU_OFF  -pst system_pst -state {VDD VDD_CPU off}
+add_pst_state IDLE     -pst system_pst -state {VDD off off}

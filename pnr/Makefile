@@ -89,6 +89,8 @@ LIBRELANE_ASAP7_ROOT    := asap7
 LIBRELANE_ASAP7_DIR     := asap7/cpu
 # GPU design directory
 LIBRELANE_ASAP7_GPU_DIR := asap7/gpu
+# SoC top-level design directory (Phase 5 M11)
+LIBRELANE_ASAP7_SOC_DIR := asap7/soc
 # New designs: copy pnr/asap7/template/ as a starting point
 
 # Maximum number of ASAP7 runs to retain (oldest deleted first)
@@ -105,9 +107,9 @@ DRT_THREADS         ?= 4
 .PHONY: synth floorplan place cts route parasitics sta power verify gls
 .PHONY: report_timing report_power report_area
 .PHONY: docker-pull docker-check docker-pdk docker-run docker-synth docker-results
-.PHONY: librelane-sky130 librelane-nangate45 librelane-asap7 librelane-asap7-gpu
-.PHONY: librelane-sky130-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results
-.PHONY: prune-asap7-runs prune-asap7-gpu-runs
+.PHONY: librelane-sky130 librelane-nangate45 librelane-asap7 librelane-asap7-gpu librelane-asap7-soc
+.PHONY: librelane-sky130-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results librelane-asap7-soc-results
+.PHONY: prune-asap7-runs prune-asap7-gpu-runs prune-asap7-soc-runs
 .PHONY: macro-views-asap7
 .PHONY: flop-count
 
@@ -134,13 +136,17 @@ help:
 	@echo "  librelane-nangate45       - Run full LibreLane flow on FreePDK45/nangate45 (pnr/freepdk45/)"
 	@echo "  librelane-asap7           - Run full LibreLane flow on ASAP7 CPU (pnr/asap7/), then prune"
 	@echo "  librelane-asap7-gpu       - Run full LibreLane flow on ASAP7 GPU (pnr/asap7/gpu/), then prune"
+	@echo "  librelane-asap7-soc-synth - Run Yosys synthesis only for ASAP7 SoC (pnr/asap7/soc/) — first-run check"
+	@echo "  librelane-asap7-soc       - Run full LibreLane P&R for ASAP7 SoC (expect 4-8 h), then prune"
 	@echo "  librelane-sky130-results        - Show metrics from latest Sky130 LibreLane run"
 	@echo "  librelane-nangate45-results     - Show metrics from latest nangate45 LibreLane run"
 	@echo "  librelane-asap7-results         - Show metrics from latest ASAP7 CPU LibreLane run"
 	@echo "  flop-count RUN_DIR=<path>       - Flop count breakdown from any LibreLane run's synthesis"
 	@echo "  librelane-asap7-gpu-results     - Show metrics from latest ASAP7 GPU LibreLane run"
+	@echo "  librelane-asap7-soc-results     - Show metrics from latest ASAP7 SoC LibreLane run"
 	@echo "  prune-asap7-runs          - Delete old CPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
 	@echo "  prune-asap7-gpu-runs      - Delete old GPU ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
+	@echo "  prune-asap7-soc-runs      - Delete old SoC ASAP7 runs, keep latest ASAP7_MAX_RUNS (default 10)"
 	@echo "  macro-views-asap7         - Generate LEF + LIB + netlist macro views from latest ASAP7 run (BLOCK=cpu|gpu, default cpu)"
 	@echo "                              (override run: make macro-views-asap7 BLOCK=gpu RUN=asap7/gpu/runs/RUN_...)"
 	@echo "  asap7/template/           - Template for new ASAP7 designs (copy to asap7/<design>/)"
@@ -669,6 +675,87 @@ librelane-asap7-gpu:
 librelane-asap7-gpu-results:
 	$(call librelane_results,$(LIBRELANE_ASAP7_GPU_DIR))
 
+# ASAP7 SoC (Phase 5 M11): hierarchical — CPU+GPU as hard macros, flat peripherals
+# Die: 720×720 µm, clock: 1750 ps (571 MHz GPU-governed), SYNTH-ONLY for first run.
+# To run synthesis only (confirm elaboration before full P&R):
+#   make librelane-asap7-soc-synth
+# To run the full P&R closure (expect 4–8 h):
+#   make librelane-asap7-soc
+librelane-asap7-soc-synth:
+	@echo "=========================================="
+	@echo "Running LibreLane SYNTH-ONLY — ASAP7 SoC"
+	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/config.json"
+	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
+	@echo "  Tool     : $(LIBRELANE_DIR)"
+	@echo "  Step     : Yosys.JsonHeader (synthesis + elaboration only)"
+	@echo "=========================================="
+	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/config.json" ]; then \
+		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/config.json not found."; exit 1; fi
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 --to Yosys.JsonHeader \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
+		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/config.json"
+
+librelane-asap7-soc:
+	@echo "=========================================="
+	@echo "Running LibreLane flow — ASAP7 SoC (full P&R)"
+	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/config.json"
+	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
+	@echo "  Tool     : $(LIBRELANE_DIR)"
+	@echo "  Runtime  : expect 4-8 h (hierarchical, 720x720 um)"
+	@echo "=========================================="
+	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/config.json" ]; then \
+		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/config.json not found."; exit 1; fi
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
+		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/config.json"
+	@$(MAKE) prune-asap7-soc-runs
+
+librelane-asap7-soc-results:
+	$(call librelane_results,$(LIBRELANE_ASAP7_SOC_DIR))
+
 # flop-count: DFF breakdown from any LibreLane run's synthesis log.
 # Usage: make flop-count RUN_DIR=asap7/gpu/runs/RUN_2026-05-24_09-12-00
 #        make flop-count RUN_DIR=asap7/runs/RUN_2026-05-20_06-27-10
@@ -716,6 +803,9 @@ prune-asap7-runs:
 
 prune-asap7-gpu-runs:
 	$(call prune_runs,$(LIBRELANE_ASAP7_GPU_DIR),ASAP7 GPU)
+
+prune-asap7-soc-runs:
+	$(call prune_runs,$(LIBRELANE_ASAP7_SOC_DIR),ASAP7 SoC)
 
 #----------------------------------------------------------------
 # ASAP7 macro views: abstract LEF + timing-model LIB + gate-level netlist
