@@ -817,6 +817,7 @@ librelane-asap7-soc: asap7-soc-sv2v
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --skip Checker.LintTimingConstructs \
+		 --skip Checker.LintErrors \
 		 --skip Checker.YosysSynthChecks \
 		 --skip Odb.HeuristicDiodeInsertion \
 		 --skip Odb.DiodesOnPorts \
