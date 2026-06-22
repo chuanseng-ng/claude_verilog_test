@@ -86,7 +86,7 @@
     ],
     "GRT_ALLOW_CONGESTION": true,
     "USE_SYNLIG": true,
-    "SYNLIG_DEFER": false,
+    "SYNLIG_DEFER": true,
     "SYNTH_STRATEGY": "DELAY 2",
     "SYNTH_SHARE_RESOURCES": false,
     "SYNTH_HIERARCHY_MODE": "keep",

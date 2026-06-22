@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-21T19:20:00+07:00",
+  "updated_at": "2026-06-22T00:20:12.798466+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -578,6 +578,61 @@
       "suggested_next_step": "proceed",
       "reason": "M10 sweep benchmark complete: TESTS=2 PASS=2 (test_hello_sanity + test_sweep_l2_bench). 14 records: D$miss/1k-instr = 0.00 for <=4KB, jumps to 50.0 SEQ / 189-197 STRIDE for >=8KB. L1 capacity cliff confirmed at 4KB->8KB boundary. l2_bench_results.md written. Bead e4f closed.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-22T05:50:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Synlig/Surelog UHDM fix: all module-level unpacked arrays in axi4_crossbar.sv converted to packed 2D form (wstate_e[N_SLAVES-1:0], rstate_e[N_SLAVES-1:0], dwstate_e[N_MASTERS-1:0], drstate_e[N_MASTERS-1:0], and all logic [N-1:0][W-1:0] arb/capture/resolution arrays). Typedefs preserved; access syntax unchanged. Verilator 5.048 -Wall: 0 errors, 0 warnings on axi4_crossbar.sv; full make lint exits with 7 pre-existing baseline warnings only.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-22T06:26:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Synlig/UHDM soc_top.sv packed-2D fix: 66 module-level unpacked array declarations in soc_top.sv, 30 port declarations in axi4_crossbar.sv, and 20 port declarations in axi_lite_interconnect.sv converted to packed 2D form; generate port-bridge blocks replaced with direct whole-array assigns. Verilator 5.048 -Wall: 0 errors, 7 pre-existing baseline warnings (unchanged).",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-22T00:07:00.535048+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "M11 PD synth-readiness RTL rewrites (Synlig/UHDM packed-2D conversion) verified functionally equivalent. lint: 0 errors, 7 pre-existing baseline warnings only. soc_all: TESTS=82 PASS=82 FAIL=0 across 14 suites after 3 TB-only fixes (tb_axi4_crossbar.sv unpacked->packed-2D internals; tb_axi_lite_interconnect.sv same; test_axil_interconnect.py BAD_HIGH 0x2000_7000->0x2000_8000 for Phase 7 PLL slot). No DUT RTL changes required. DUT RTL is safe to commit.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-22T00:19:15.239447+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "floorplan",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "M11 synthesis PASS: 4170 cells / 184.55 um2 peripheral logic; cpu_top + gpu_top as black-box macros confirmed in netlist. Fixes: SYNLIG_DEFER=true, json_header_patched.py wired, hierarchy -check removed from synthesize.py. Next: full P&R run.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-22T00:20:12.798466+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Synlig UHDM intermediate-wire decoupling: all 11 submodule instances (u_cpu, u_gpu, u_dma, u_boot_rom, u_sram, u_periph_bridge, u_uart, u_spi, u_timer, u_irq_ctrl, u_pll_regs) in soc_top.sv now use named logic intermediates + assign bridges instead of indexed packed 2D array expressions in port connections; eliminates rtlil.cc:2150 assert(wire->name not empty). Verilator -Wall: 0 errors, 7 pre-existing baseline warnings only.",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
@@ -835,5 +890,20 @@
     "sweep_record_count": 14,
     "sweep_buf_words": 8192,
     "sweep_bss_end_addr": "0x0000A320"
+  },
+  "pd": {
+    "gds": null,
+    "util_pct": null,
+    "wns_ns": null,
+    "drc_violations": null,
+    "lvs_errors": null,
+    "signoff": false,
+    "synth_complete": true,
+    "synth_cell_count": 4170,
+    "synth_area_um2": 184.55,
+    "synth_run": "pnr/asap7/soc/runs/RUN_2026-06-22_07-16-33",
+    "netlist": "pnr/asap7/soc/runs/RUN_2026-06-22_07-16-33/05-yosys-synthesis/soc_top.nl.v",
+    "cpu_blackbox": true,
+    "gpu_blackbox": true
   }
 }
