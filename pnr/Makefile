@@ -717,6 +717,41 @@ librelane-asap7-soc-synth:
 		 --skip Checker.MaxCapViolations \
 		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/config.json"
 
+librelane-asap7-soc-synth-only:
+	@echo "=========================================="
+	@echo "Running LibreLane SYNTH-ONLY (skip JsonHeader) — ASAP7 SoC"
+	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/config.json"
+	@echo "  Step     : Yosys.Synthesis only (bypasses Yosys.JsonHeader)"
+	@echo "=========================================="
+	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/config.json" ]; then \
+		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/config.json not found."; exit 1; fi
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 --from Yosys.Synthesis \
+		 --to Yosys.Synthesis \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
+		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/config.json"
+
 librelane-asap7-soc:
 	@echo "=========================================="
 	@echo "Running LibreLane flow — ASAP7 SoC (full P&R)"

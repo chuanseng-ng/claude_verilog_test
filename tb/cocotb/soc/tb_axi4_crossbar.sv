@@ -111,54 +111,60 @@ module tb_axi4_crossbar #(
     localparam int unsigned NM = 3;
     localparam int unsigned NS = 2;
 
-    // Array buses to the generic crossbar.
-    logic [AW-1:0]   m_awaddr [NM]; logic [LENW-1:0] m_awlen [NM];
-    logic [2:0]      m_awsize [NM]; logic [1:0]      m_awburst[NM];
-    logic            m_awvalid[NM]; logic            m_awready[NM];
-    logic [DW-1:0]   m_wdata  [NM]; logic [SW-1:0]   m_wstrb [NM];
-    logic            m_wlast  [NM]; logic            m_wvalid[NM]; logic m_wready[NM];
-    logic [1:0]      m_bresp  [NM]; logic            m_bvalid[NM]; logic m_bready[NM];
-    logic [AW-1:0]   m_araddr [NM]; logic [LENW-1:0] m_arlen [NM];
-    logic [2:0]      m_arsize [NM]; logic [1:0]      m_arburst[NM];
-    logic            m_arvalid[NM]; logic            m_arready[NM];
-    logic [DW-1:0]   m_rdata  [NM]; logic [1:0]      m_rresp [NM];
-    logic            m_rlast  [NM]; logic            m_rvalid[NM]; logic m_rready[NM];
+    // Packed 2D buses to match axi4_crossbar packed-2D ports (Synlig/UHDM fix).
+    // Bit ordering: index [0] is LSBs, [N-1] is MSBs — packed 2D [N-1:0][W-1:0].
+    // Fan-in/fan-out uses explicit slice assigns; no unpacked-array aggregates.
+    logic [NM-1:0][AW-1:0]   m_awaddr;  logic [NM-1:0][LENW-1:0] m_awlen;
+    logic [NM-1:0][2:0]      m_awsize;  logic [NM-1:0][1:0]      m_awburst;
+    logic [NM-1:0]            m_awvalid; logic [NM-1:0]            m_awready;
+    logic [NM-1:0][DW-1:0]   m_wdata;   logic [NM-1:0][SW-1:0]   m_wstrb;
+    logic [NM-1:0]            m_wlast;   logic [NM-1:0]            m_wvalid;
+    logic [NM-1:0]            m_wready;
+    logic [NM-1:0][1:0]      m_bresp;   logic [NM-1:0]            m_bvalid;
+    logic [NM-1:0]            m_bready;
+    logic [NM-1:0][AW-1:0]   m_araddr;  logic [NM-1:0][LENW-1:0] m_arlen;
+    logic [NM-1:0][2:0]      m_arsize;  logic [NM-1:0][1:0]      m_arburst;
+    logic [NM-1:0]            m_arvalid; logic [NM-1:0]            m_arready;
+    logic [NM-1:0][DW-1:0]   m_rdata;   logic [NM-1:0][1:0]      m_rresp;
+    logic [NM-1:0]            m_rlast;   logic [NM-1:0]            m_rvalid;
+    logic [NM-1:0]            m_rready;
 
-    logic [IW-1:0]   s_awid   [NS]; logic [AW-1:0]   s_awaddr[NS];
-    logic [LENW-1:0] s_awlen  [NS]; logic [2:0]      s_awsize[NS];
-    logic [1:0]      s_awburst[NS]; logic            s_awvalid[NS]; logic s_awready[NS];
-    logic [DW-1:0]   s_wdata  [NS]; logic [SW-1:0]   s_wstrb [NS];
-    logic            s_wlast  [NS]; logic            s_wvalid[NS]; logic s_wready[NS];
-    logic [IW-1:0]   s_bid    [NS]; logic [1:0]      s_bresp [NS];
-    logic            s_bvalid [NS]; logic            s_bready[NS];
-    logic [IW-1:0]   s_arid   [NS]; logic [AW-1:0]   s_araddr[NS];
-    logic [LENW-1:0] s_arlen  [NS]; logic [2:0]      s_arsize[NS];
-    logic [1:0]      s_arburst[NS]; logic            s_arvalid[NS]; logic s_arready[NS];
-    logic [IW-1:0]   s_rid    [NS]; logic [DW-1:0]   s_rdata [NS];
-    logic [1:0]      s_rresp  [NS]; logic            s_rlast [NS];
-    logic            s_rvalid [NS]; logic            s_rready[NS];
+    logic [NS-1:0][IW-1:0]   s_awid;    logic [NS-1:0][AW-1:0]   s_awaddr;
+    logic [NS-1:0][LENW-1:0] s_awlen;   logic [NS-1:0][2:0]      s_awsize;
+    logic [NS-1:0][1:0]      s_awburst; logic [NS-1:0]            s_awvalid;
+    logic [NS-1:0]            s_awready;
+    logic [NS-1:0][DW-1:0]   s_wdata;   logic [NS-1:0][SW-1:0]   s_wstrb;
+    logic [NS-1:0]            s_wlast;   logic [NS-1:0]            s_wvalid;
+    logic [NS-1:0]            s_wready;
+    logic [NS-1:0][IW-1:0]   s_bid;     logic [NS-1:0][1:0]      s_bresp;
+    logic [NS-1:0]            s_bvalid;  logic [NS-1:0]            s_bready;
+    logic [NS-1:0][IW-1:0]   s_arid;    logic [NS-1:0][AW-1:0]   s_araddr;
+    logic [NS-1:0][LENW-1:0] s_arlen;   logic [NS-1:0][2:0]      s_arsize;
+    logic [NS-1:0][1:0]      s_arburst; logic [NS-1:0]            s_arvalid;
+    logic [NS-1:0]            s_arready;
+    logic [NS-1:0][IW-1:0]   s_rid;     logic [NS-1:0][DW-1:0]   s_rdata;
+    logic [NS-1:0][1:0]      s_rresp;   logic [NS-1:0]            s_rlast;
+    logic [NS-1:0]            s_rvalid;  logic [NS-1:0]            s_rready;
 
-    // ── Master fan-in ──────────────────────────────────────────────────────
-    always_comb begin
-        m_awaddr  = '{m0_awaddr,  m1_awaddr,  m2_awaddr};
-        m_awlen   = '{m0_awlen,   m1_awlen,   m2_awlen};
-        m_awsize  = '{m0_awsize,  m1_awsize,  m2_awsize};
-        m_awburst = '{m0_awburst, m1_awburst, m2_awburst};
-        m_awvalid = '{m0_awvalid, m1_awvalid, m2_awvalid};
-        m_wdata   = '{m0_wdata,   m1_wdata,   m2_wdata};
-        m_wstrb   = '{m0_wstrb,   m1_wstrb,   m2_wstrb};
-        m_wlast   = '{m0_wlast,   m1_wlast,   m2_wlast};
-        m_wvalid  = '{m0_wvalid,  m1_wvalid,  m2_wvalid};
-        m_bready  = '{m0_bready,  m1_bready,  m2_bready};
-        m_araddr  = '{m0_araddr,  m1_araddr,  m2_araddr};
-        m_arlen   = '{m0_arlen,   m1_arlen,   m2_arlen};
-        m_arsize  = '{m0_arsize,  m1_arsize,  m2_arsize};
-        m_arburst = '{m0_arburst, m1_arburst, m2_arburst};
-        m_arvalid = '{m0_arvalid, m1_arvalid, m2_arvalid};
-        m_rready  = '{m0_rready,  m1_rready,  m2_rready};
-    end
+    // ── Master fan-in (scalar -> packed slice) ────────────────────────────────
+    assign m_awaddr[0]  = m0_awaddr;  assign m_awaddr[1]  = m1_awaddr;  assign m_awaddr[2]  = m2_awaddr;
+    assign m_awlen[0]   = m0_awlen;   assign m_awlen[1]   = m1_awlen;   assign m_awlen[2]   = m2_awlen;
+    assign m_awsize[0]  = m0_awsize;  assign m_awsize[1]  = m1_awsize;  assign m_awsize[2]  = m2_awsize;
+    assign m_awburst[0] = m0_awburst; assign m_awburst[1] = m1_awburst; assign m_awburst[2] = m2_awburst;
+    assign m_awvalid[0] = m0_awvalid; assign m_awvalid[1] = m1_awvalid; assign m_awvalid[2] = m2_awvalid;
+    assign m_wdata[0]   = m0_wdata;   assign m_wdata[1]   = m1_wdata;   assign m_wdata[2]   = m2_wdata;
+    assign m_wstrb[0]   = m0_wstrb;   assign m_wstrb[1]   = m1_wstrb;   assign m_wstrb[2]   = m2_wstrb;
+    assign m_wlast[0]   = m0_wlast;   assign m_wlast[1]   = m1_wlast;   assign m_wlast[2]   = m2_wlast;
+    assign m_wvalid[0]  = m0_wvalid;  assign m_wvalid[1]  = m1_wvalid;  assign m_wvalid[2]  = m2_wvalid;
+    assign m_bready[0]  = m0_bready;  assign m_bready[1]  = m1_bready;  assign m_bready[2]  = m2_bready;
+    assign m_araddr[0]  = m0_araddr;  assign m_araddr[1]  = m1_araddr;  assign m_araddr[2]  = m2_araddr;
+    assign m_arlen[0]   = m0_arlen;   assign m_arlen[1]   = m1_arlen;   assign m_arlen[2]   = m2_arlen;
+    assign m_arsize[0]  = m0_arsize;  assign m_arsize[1]  = m1_arsize;  assign m_arsize[2]  = m2_arsize;
+    assign m_arburst[0] = m0_arburst; assign m_arburst[1] = m1_arburst; assign m_arburst[2] = m2_arburst;
+    assign m_arvalid[0] = m0_arvalid; assign m_arvalid[1] = m1_arvalid; assign m_arvalid[2] = m2_arvalid;
+    assign m_rready[0]  = m0_rready;  assign m_rready[1]  = m1_rready;  assign m_rready[2]  = m2_rready;
 
-    // ── Master fan-out ─────────────────────────────────────────────────────
+    // ── Master fan-out (packed slice -> scalar) ───────────────────────────────
     assign m0_awready = m_awready[0]; assign m1_awready = m_awready[1]; assign m2_awready = m_awready[2];
     assign m0_wready  = m_wready [0]; assign m1_wready  = m_wready [1]; assign m2_wready  = m_wready [2];
     assign m0_bresp   = m_bresp  [0]; assign m1_bresp   = m_bresp  [1]; assign m2_bresp   = m_bresp  [2];
@@ -169,7 +175,7 @@ module tb_axi4_crossbar #(
     assign m0_rlast   = m_rlast  [0]; assign m1_rlast   = m_rlast  [1]; assign m2_rlast   = m_rlast  [2];
     assign m0_rvalid  = m_rvalid [0]; assign m1_rvalid  = m_rvalid [1]; assign m2_rvalid  = m_rvalid [2];
 
-    // ── Slave fan-out (crossbar -> slaves) ───────────────────────────────────
+    // ── Slave fan-out (packed slice -> scalar) ───────────────────────────────
     assign s0_awid=s_awid[0]; assign s0_awaddr=s_awaddr[0]; assign s0_awlen=s_awlen[0];
     assign s0_awsize=s_awsize[0]; assign s0_awburst=s_awburst[0]; assign s0_awvalid=s_awvalid[0];
     assign s0_wdata=s_wdata[0]; assign s0_wstrb=s_wstrb[0]; assign s0_wlast=s_wlast[0]; assign s0_wvalid=s_wvalid[0];
@@ -186,20 +192,18 @@ module tb_axi4_crossbar #(
     assign s1_arsize=s_arsize[1]; assign s1_arburst=s_arburst[1]; assign s1_arvalid=s_arvalid[1];
     assign s1_rready=s_rready[1];
 
-    // ── Slave fan-in (slaves -> crossbar) ────────────────────────────────────
-    always_comb begin
-        s_awready = '{s0_awready, s1_awready};
-        s_wready  = '{s0_wready,  s1_wready};
-        s_bid     = '{s0_bid,     s1_bid};
-        s_bresp   = '{s0_bresp,   s1_bresp};
-        s_bvalid  = '{s0_bvalid,  s1_bvalid};
-        s_arready = '{s0_arready, s1_arready};
-        s_rid     = '{s0_rid,     s1_rid};
-        s_rdata   = '{s0_rdata,   s1_rdata};
-        s_rresp   = '{s0_rresp,   s1_rresp};
-        s_rlast   = '{s0_rlast,   s1_rlast};
-        s_rvalid  = '{s0_rvalid,  s1_rvalid};
-    end
+    // ── Slave fan-in (scalar -> packed slice) ────────────────────────────────
+    assign s_awready[0] = s0_awready; assign s_awready[1] = s1_awready;
+    assign s_wready [0] = s0_wready;  assign s_wready [1] = s1_wready;
+    assign s_bid    [0] = s0_bid;     assign s_bid    [1] = s1_bid;
+    assign s_bresp  [0] = s0_bresp;   assign s_bresp  [1] = s1_bresp;
+    assign s_bvalid [0] = s0_bvalid;  assign s_bvalid [1] = s1_bvalid;
+    assign s_arready[0] = s0_arready; assign s_arready[1] = s1_arready;
+    assign s_rid    [0] = s0_rid;     assign s_rid    [1] = s1_rid;
+    assign s_rdata  [0] = s0_rdata;   assign s_rdata  [1] = s1_rdata;
+    assign s_rresp  [0] = s0_rresp;   assign s_rresp  [1] = s1_rresp;
+    assign s_rlast  [0] = s0_rlast;   assign s_rlast  [1] = s1_rlast;
+    assign s_rvalid [0] = s0_rvalid;  assign s_rvalid [1] = s1_rvalid;
 
     axi4_crossbar #(
         .N_MASTERS (NM),

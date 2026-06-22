@@ -6,11 +6,11 @@ together (via tb_axi_lite_interconnect): per-slave routing, cross-slave
 isolation, response steering, DECERR on unmapped addresses, and master-side
 backpressure (response held while the master stalls bready/rready).
 
-Topology: one CPU master ("m_axil_") x 6 register-bank slaves.
+Topology: one CPU master ("m_axil_") x 7 register-bank slaves (Phase 7 M-c +1 PLL).
 Slave map (soc_periph_map_pkg):
     GPU 0x2000_1000  UART 0x2000_2000  SPI 0x2000_3000
-    Timer 0x2000_4000  DMA 0x2000_5000  IRQ 0x2000_6000
-    unmapped (DECERR): 0x2000_0000 (gap), 0x2000_7000 (above ring)
+    Timer 0x2000_4000  DMA 0x2000_5000  IRQ 0x2000_6000  PLL 0x2000_7000
+    unmapped (DECERR): 0x2000_0000 (gap below GPU), 0x2000_8000 (above PLL)
 """
 
 import cocotb
@@ -33,8 +33,8 @@ SLAVES = {
     "dma":   0x2000_5000,
     "irq":   0x2000_6000,
 }
-BAD_LOW  = 0x2000_0000   # below the ring (CPU-debug gap)
-BAD_HIGH = 0x2000_7000   # above the ring
+BAD_LOW  = 0x2000_0000   # below the ring (CPU-debug gap, below GPU at 0x2000_1000)
+BAD_HIGH = 0x2000_8000   # above the ring (PLL limit is 0x2000_7FFF; Phase 7 M-c added slot 6)
 
 
 async def _setup(dut):

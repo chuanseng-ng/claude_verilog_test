@@ -49,15 +49,18 @@ module tb_axi_lite_interconnect #(
     localparam int unsigned NS = AXIL_N_SLAVES;   // 6
 
     // Interconnect <-> slave array buses.
-    logic [AW-1:0] s_awaddr  [NS]; logic [2:0] s_awprot [NS];
-    logic          s_awvalid [NS]; logic       s_awready[NS];
-    logic [DW-1:0] s_wdata   [NS]; logic [SW-1:0] s_wstrb [NS];
-    logic          s_wvalid  [NS]; logic       s_wready [NS];
-    logic [1:0]    s_bresp   [NS]; logic       s_bvalid [NS]; logic s_bready[NS];
-    logic [AW-1:0] s_araddr  [NS]; logic [2:0] s_arprot [NS];
-    logic          s_arvalid [NS]; logic       s_arready[NS];
-    logic [DW-1:0] s_rdata   [NS]; logic [1:0] s_rresp  [NS];
-    logic          s_rvalid  [NS]; logic       s_rready [NS];
+    // Packed 2D to match axi_lite_interconnect packed-2D slave ports (Synlig/UHDM fix).
+    // Slice indexing [gs] in the generate loop below works identically on packed 2D.
+    logic [NS-1:0][AW-1:0] s_awaddr;  logic [NS-1:0][2:0]    s_awprot;
+    logic [NS-1:0]          s_awvalid; logic [NS-1:0]          s_awready;
+    logic [NS-1:0][DW-1:0] s_wdata;   logic [NS-1:0][SW-1:0]  s_wstrb;
+    logic [NS-1:0]          s_wvalid;  logic [NS-1:0]          s_wready;
+    logic [NS-1:0][1:0]    s_bresp;   logic [NS-1:0]           s_bvalid;
+    logic [NS-1:0]          s_bready;
+    logic [NS-1:0][AW-1:0] s_araddr;  logic [NS-1:0][2:0]     s_arprot;
+    logic [NS-1:0]          s_arvalid; logic [NS-1:0]           s_arready;
+    logic [NS-1:0][DW-1:0] s_rdata;   logic [NS-1:0][1:0]     s_rresp;
+    logic [NS-1:0]          s_rvalid;  logic [NS-1:0]           s_rready;
 
     axi_lite_interconnect #(
         .N_SLAVES  (NS),

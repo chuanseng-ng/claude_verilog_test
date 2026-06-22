@@ -43,12 +43,26 @@ module soc_top
 #(
     // Boot ROM hex image.  Empty string → ROM initialises to zero.
     // Set at elaboration time by the cocotb test wrapper (tb_soc_top).
+    // Note: `parameter string` is hidden under `__pnr__` because Synlig UHDM
+    // (this version of Yosys) creates empty-named RTLIL wires for string-typed
+    // parameters, causing kernel/rtlil.cc:2150 assert.  PnR always uses the
+    // integer stub (MEM_INIT_FILE unused; boot ROM inits to zero in synthesis).
+`ifndef __pnr__
     parameter string MEM_INIT_FILE = "",
+`else
+    parameter int unsigned MEM_INIT_FILE = 0,  // unused in PnR — boot ROM = 0
+`endif
 
     // PLL implementation selector (Phase 7 M-c).
     //   "STUB" (default) — synthesisable digital stub; out_clk = ref_clk.
     //   "RNM"            — real-number model; use only for M-c AMS co-sim.
+    // Hidden under `__pnr__` for same Synlig reason as MEM_INIT_FILE.
+    // PnR always synthesises STUB behaviour (pll_rnm.sv excluded from flow).
+`ifndef __pnr__
     parameter string PLL_IMPL = "STUB",
+`else
+    parameter int unsigned PLL_IMPL = 0,        // 0 = STUB in PnR
+`endif
 
     // Behavioral SRAM depth in 32-bit words (power of two).
     // Default 1024 (4 KB) matches the existing regression/PD baseline.
@@ -133,71 +147,73 @@ module soc_top
     assign pll_locked_o = pll_locked;
 
     // =========================================================================
-    // Crossbar master-facing nets (no ID, unpacked arrays [N_MASTERS])
+    // Crossbar master-facing nets (no ID, packed 2D arrays [N_MASTERS-1:0])
+    // Packed form required for Synlig/UHDM RTLIL emission (Yosys synthesis).
     // =========================================================================
     // Write address
-    logic [AW-1:0]   xbar_m_awaddr  [N_MASTERS];
-    logic [LENW-1:0] xbar_m_awlen   [N_MASTERS];
-    logic [2:0]      xbar_m_awsize  [N_MASTERS];
-    logic [1:0]      xbar_m_awburst [N_MASTERS];
-    logic            xbar_m_awvalid [N_MASTERS];
-    logic            xbar_m_awready [N_MASTERS];
+    logic [N_MASTERS-1:0][AW-1:0]   xbar_m_awaddr;
+    logic [N_MASTERS-1:0][LENW-1:0] xbar_m_awlen;
+    logic [N_MASTERS-1:0][2:0]      xbar_m_awsize;
+    logic [N_MASTERS-1:0][1:0]      xbar_m_awburst;
+    logic [N_MASTERS-1:0]           xbar_m_awvalid;
+    logic [N_MASTERS-1:0]           xbar_m_awready;
     // Write data
-    logic [DW-1:0]   xbar_m_wdata   [N_MASTERS];
-    logic [SW-1:0]   xbar_m_wstrb   [N_MASTERS];
-    logic            xbar_m_wlast   [N_MASTERS];
-    logic            xbar_m_wvalid  [N_MASTERS];
-    logic            xbar_m_wready  [N_MASTERS];
+    logic [N_MASTERS-1:0][DW-1:0]   xbar_m_wdata;
+    logic [N_MASTERS-1:0][SW-1:0]   xbar_m_wstrb;
+    logic [N_MASTERS-1:0]           xbar_m_wlast;
+    logic [N_MASTERS-1:0]           xbar_m_wvalid;
+    logic [N_MASTERS-1:0]           xbar_m_wready;
     // Write response
-    logic [1:0]      xbar_m_bresp   [N_MASTERS];
-    logic            xbar_m_bvalid  [N_MASTERS];
-    logic            xbar_m_bready  [N_MASTERS];
+    logic [N_MASTERS-1:0][1:0]      xbar_m_bresp;
+    logic [N_MASTERS-1:0]           xbar_m_bvalid;
+    logic [N_MASTERS-1:0]           xbar_m_bready;
     // Read address
-    logic [AW-1:0]   xbar_m_araddr  [N_MASTERS];
-    logic [LENW-1:0] xbar_m_arlen   [N_MASTERS];
-    logic [2:0]      xbar_m_arsize  [N_MASTERS];
-    logic [1:0]      xbar_m_arburst [N_MASTERS];
-    logic            xbar_m_arvalid [N_MASTERS];
-    logic            xbar_m_arready [N_MASTERS];
+    logic [N_MASTERS-1:0][AW-1:0]   xbar_m_araddr;
+    logic [N_MASTERS-1:0][LENW-1:0] xbar_m_arlen;
+    logic [N_MASTERS-1:0][2:0]      xbar_m_arsize;
+    logic [N_MASTERS-1:0][1:0]      xbar_m_arburst;
+    logic [N_MASTERS-1:0]           xbar_m_arvalid;
+    logic [N_MASTERS-1:0]           xbar_m_arready;
     // Read data
-    logic [DW-1:0]   xbar_m_rdata   [N_MASTERS];
-    logic [1:0]      xbar_m_rresp   [N_MASTERS];
-    logic            xbar_m_rlast   [N_MASTERS];
-    logic            xbar_m_rvalid  [N_MASTERS];
-    logic            xbar_m_rready  [N_MASTERS];
+    logic [N_MASTERS-1:0][DW-1:0]   xbar_m_rdata;
+    logic [N_MASTERS-1:0][1:0]      xbar_m_rresp;
+    logic [N_MASTERS-1:0]           xbar_m_rlast;
+    logic [N_MASTERS-1:0]           xbar_m_rvalid;
+    logic [N_MASTERS-1:0]           xbar_m_rready;
 
     // =========================================================================
-    // Crossbar slave-facing nets (full AXI4 with ID, unpacked arrays [N_SLAVES])
+    // Crossbar slave-facing nets (full AXI4 with ID, packed 2D [N_SLAVES-1:0])
+    // Packed form required for Synlig/UHDM RTLIL emission (Yosys synthesis).
     // =========================================================================
-    logic [IW-1:0]   xbar_s_awid    [N_SLAVES];
-    logic [AW-1:0]   xbar_s_awaddr  [N_SLAVES];
-    logic [LENW-1:0] xbar_s_awlen   [N_SLAVES];
-    logic [2:0]      xbar_s_awsize  [N_SLAVES];
-    logic [1:0]      xbar_s_awburst [N_SLAVES];
-    logic            xbar_s_awvalid [N_SLAVES];
-    logic            xbar_s_awready [N_SLAVES];
-    logic [DW-1:0]   xbar_s_wdata   [N_SLAVES];
-    logic [SW-1:0]   xbar_s_wstrb   [N_SLAVES];
-    logic            xbar_s_wlast   [N_SLAVES];
-    logic            xbar_s_wvalid  [N_SLAVES];
-    logic            xbar_s_wready  [N_SLAVES];
-    logic [IW-1:0]   xbar_s_bid     [N_SLAVES];
-    logic [1:0]      xbar_s_bresp   [N_SLAVES];
-    logic            xbar_s_bvalid  [N_SLAVES];
-    logic            xbar_s_bready  [N_SLAVES];
-    logic [IW-1:0]   xbar_s_arid    [N_SLAVES];
-    logic [AW-1:0]   xbar_s_araddr  [N_SLAVES];
-    logic [LENW-1:0] xbar_s_arlen   [N_SLAVES];
-    logic [2:0]      xbar_s_arsize  [N_SLAVES];
-    logic [1:0]      xbar_s_arburst [N_SLAVES];
-    logic            xbar_s_arvalid [N_SLAVES];
-    logic            xbar_s_arready [N_SLAVES];
-    logic [IW-1:0]   xbar_s_rid     [N_SLAVES];
-    logic [DW-1:0]   xbar_s_rdata   [N_SLAVES];
-    logic [1:0]      xbar_s_rresp   [N_SLAVES];
-    logic            xbar_s_rlast   [N_SLAVES];
-    logic            xbar_s_rvalid  [N_SLAVES];
-    logic            xbar_s_rready  [N_SLAVES];
+    logic [N_SLAVES-1:0][IW-1:0]   xbar_s_awid;
+    logic [N_SLAVES-1:0][AW-1:0]   xbar_s_awaddr;
+    logic [N_SLAVES-1:0][LENW-1:0] xbar_s_awlen;
+    logic [N_SLAVES-1:0][2:0]      xbar_s_awsize;
+    logic [N_SLAVES-1:0][1:0]      xbar_s_awburst;
+    logic [N_SLAVES-1:0]           xbar_s_awvalid;
+    logic [N_SLAVES-1:0]           xbar_s_awready;
+    logic [N_SLAVES-1:0][DW-1:0]   xbar_s_wdata;
+    logic [N_SLAVES-1:0][SW-1:0]   xbar_s_wstrb;
+    logic [N_SLAVES-1:0]           xbar_s_wlast;
+    logic [N_SLAVES-1:0]           xbar_s_wvalid;
+    logic [N_SLAVES-1:0]           xbar_s_wready;
+    logic [N_SLAVES-1:0][IW-1:0]   xbar_s_bid;
+    logic [N_SLAVES-1:0][1:0]      xbar_s_bresp;
+    logic [N_SLAVES-1:0]           xbar_s_bvalid;
+    logic [N_SLAVES-1:0]           xbar_s_bready;
+    logic [N_SLAVES-1:0][IW-1:0]   xbar_s_arid;
+    logic [N_SLAVES-1:0][AW-1:0]   xbar_s_araddr;
+    logic [N_SLAVES-1:0][LENW-1:0] xbar_s_arlen;
+    logic [N_SLAVES-1:0][2:0]      xbar_s_arsize;
+    logic [N_SLAVES-1:0][1:0]      xbar_s_arburst;
+    logic [N_SLAVES-1:0]           xbar_s_arvalid;
+    logic [N_SLAVES-1:0]           xbar_s_arready;
+    logic [N_SLAVES-1:0][IW-1:0]   xbar_s_rid;
+    logic [N_SLAVES-1:0][DW-1:0]   xbar_s_rdata;
+    logic [N_SLAVES-1:0][1:0]      xbar_s_rresp;
+    logic [N_SLAVES-1:0]           xbar_s_rlast;
+    logic [N_SLAVES-1:0]           xbar_s_rvalid;
+    logic [N_SLAVES-1:0]           xbar_s_rready;
 
     // =========================================================================
     // axi4_to_axilite bridge (crossbar S2 → axi_lite_interconnect master)
@@ -223,27 +239,28 @@ module soc_top
     logic            periph_axil_rready;
 
     // =========================================================================
-    // axi_lite_interconnect slave-facing nets [N_AXIL_SLV]
+    // axi_lite_interconnect slave-facing nets (packed 2D [N_AXIL_SLV-1:0])
+    // Packed form required for Synlig/UHDM RTLIL emission (Yosys synthesis).
     // =========================================================================
-    logic [AW-1:0] axil_s_awaddr  [N_AXIL_SLV];
-    logic [2:0]    axil_s_awprot  [N_AXIL_SLV];
-    logic          axil_s_awvalid [N_AXIL_SLV];
-    logic          axil_s_awready [N_AXIL_SLV];
-    logic [DW-1:0] axil_s_wdata   [N_AXIL_SLV];
-    logic [SW-1:0] axil_s_wstrb   [N_AXIL_SLV];
-    logic          axil_s_wvalid  [N_AXIL_SLV];
-    logic          axil_s_wready  [N_AXIL_SLV];
-    logic [1:0]    axil_s_bresp   [N_AXIL_SLV];
-    logic          axil_s_bvalid  [N_AXIL_SLV];
-    logic          axil_s_bready  [N_AXIL_SLV];
-    logic [AW-1:0] axil_s_araddr  [N_AXIL_SLV];
-    logic [2:0]    axil_s_arprot  [N_AXIL_SLV];
-    logic          axil_s_arvalid [N_AXIL_SLV];
-    logic          axil_s_arready [N_AXIL_SLV];
-    logic [DW-1:0] axil_s_rdata   [N_AXIL_SLV];
-    logic [1:0]    axil_s_rresp   [N_AXIL_SLV];
-    logic          axil_s_rvalid  [N_AXIL_SLV];
-    logic          axil_s_rready  [N_AXIL_SLV];
+    logic [N_AXIL_SLV-1:0][AW-1:0] axil_s_awaddr;
+    logic [N_AXIL_SLV-1:0][2:0]    axil_s_awprot;
+    logic [N_AXIL_SLV-1:0]         axil_s_awvalid;
+    logic [N_AXIL_SLV-1:0]         axil_s_awready;
+    logic [N_AXIL_SLV-1:0][DW-1:0] axil_s_wdata;
+    logic [N_AXIL_SLV-1:0][SW-1:0] axil_s_wstrb;
+    logic [N_AXIL_SLV-1:0]         axil_s_wvalid;
+    logic [N_AXIL_SLV-1:0]         axil_s_wready;
+    logic [N_AXIL_SLV-1:0][1:0]    axil_s_bresp;
+    logic [N_AXIL_SLV-1:0]         axil_s_bvalid;
+    logic [N_AXIL_SLV-1:0]         axil_s_bready;
+    logic [N_AXIL_SLV-1:0][AW-1:0] axil_s_araddr;
+    logic [N_AXIL_SLV-1:0][2:0]    axil_s_arprot;
+    logic [N_AXIL_SLV-1:0]         axil_s_arvalid;
+    logic [N_AXIL_SLV-1:0]         axil_s_arready;
+    logic [N_AXIL_SLV-1:0][DW-1:0] axil_s_rdata;
+    logic [N_AXIL_SLV-1:0][1:0]    axil_s_rresp;
+    logic [N_AXIL_SLV-1:0]         axil_s_rvalid;
+    logic [N_AXIL_SLV-1:0]         axil_s_rready;
 
     // =========================================================================
     // axilite_to_axi4 adapter (GPU ifetch → crossbar M1)
