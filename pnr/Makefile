@@ -107,7 +107,10 @@ DRT_THREADS         ?= 4
 .PHONY: synth floorplan place cts route parasitics sta power verify gls
 .PHONY: report_timing report_power report_area
 .PHONY: docker-pull docker-check docker-pdk docker-run docker-synth docker-results
+SV2V                ?= /nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1/bin/sv2v
+
 .PHONY: librelane-sky130 librelane-nangate45 librelane-asap7 librelane-asap7-gpu librelane-asap7-soc
+.PHONY: asap7-soc-sv2v
 .PHONY: librelane-sky130-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results librelane-asap7-soc-results
 .PHONY: prune-asap7-runs prune-asap7-gpu-runs prune-asap7-soc-runs
 .PHONY: macro-views-asap7
@@ -753,7 +756,51 @@ librelane-asap7-soc-synth-only:
 		 --skip Checker.MaxCapViolations \
 		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/config.json"
 
-librelane-asap7-soc:
+###############################################################################
+# sv2v SoC pre-processing step
+# Converts all SoC SV files → plain Verilog-2005 so yosys read_verilog handles
+# packages, packed arrays, and generate blocks without Synlig UHDM.
+# Output: pnr/asap7/soc/soc_top_sv2v.v (generated, gitignored)
+###############################################################################
+SOC_SV_FILES := \
+	$(PROJECT_ROOT)/rtl/soc/axi_pkg.sv \
+	$(PROJECT_ROOT)/rtl/soc/soc_addr_map_pkg.sv \
+	$(PROJECT_ROOT)/rtl/soc/soc_periph_map_pkg.sv \
+	$(LIBRELANE_ASAP7_SOC_DIR)/rv32i_cpu_top_stub.sv \
+	$(LIBRELANE_ASAP7_SOC_DIR)/gpu_top_stub.sv \
+	$(PROJECT_ROOT)/rtl/soc/pll/pll_clkgen_stub.sv \
+	$(LIBRELANE_ASAP7_SOC_DIR)/pll_clkgen_pnr.sv \
+	$(PROJECT_ROOT)/rtl/soc/pll/pll_axil_regs.sv \
+	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
+	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
+	$(PROJECT_ROOT)/rtl/soc/axi_lite_interconnect.sv \
+	$(PROJECT_ROOT)/rtl/soc/axi4_to_axilite.sv \
+	$(PROJECT_ROOT)/rtl/soc/axilite_to_axi4.sv \
+	$(PROJECT_ROOT)/rtl/soc/sram_controller.sv \
+	$(PROJECT_ROOT)/rtl/soc/boot_rom.sv \
+	$(PROJECT_ROOT)/rtl/periph/dma_engine.sv \
+	$(PROJECT_ROOT)/rtl/periph/interrupt_controller.sv \
+	$(PROJECT_ROOT)/rtl/periph/timer.sv \
+	$(PROJECT_ROOT)/rtl/periph/uart_controller.sv \
+	$(PROJECT_ROOT)/rtl/periph/spi_controller.sv \
+	$(PROJECT_ROOT)/rtl/soc/soc_top.sv
+
+SOC_SV2V_OUT := $(abspath $(LIBRELANE_ASAP7_SOC_DIR)/soc_top_sv2v.v)
+
+asap7-soc-sv2v:
+	@echo "=========================================="
+	@echo "Pre-processing: sv2v SV → Verilog-2005"
+	@echo "  Input: $(words $(SOC_SV_FILES)) SV/V files"
+	@echo "  Output: $(SOC_SV2V_OUT)"
+	@echo "=========================================="
+	@if [ ! -f "$(SV2V)" ]; then \
+		echo "ERROR: sv2v not found at $(SV2V)"; \
+		echo "Install via: nix-build '<nixpkgs>' -A haskellPackages.sv2v --no-out-link"; \
+		exit 1; fi
+	$(SV2V) $(SOC_SV_FILES) -w $(SOC_SV2V_OUT)
+	@echo "sv2v complete: $$(wc -l < $(SOC_SV2V_OUT)) lines, $$(grep -c 'always.*posedge\|always.*negedge' $(SOC_SV2V_OUT)) clocked always blocks"
+
+librelane-asap7-soc: asap7-soc-sv2v
 	@echo "=========================================="
 	@echo "Running LibreLane flow — ASAP7 SoC (full P&R)"
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/config.json"
