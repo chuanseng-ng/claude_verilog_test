@@ -29,74 +29,55 @@ set_clock_transition   10       [get_clocks clk_i]
 set_clock_latency -source 50    [get_clocks clk_i]
 
 ###############################################################################
-# 2. PLL stub generated clock — core_clk
+# 2. core_clk domain — PLL stub passthrough
 #
-# pll_clkgen_stub synthesizes to a single BUFx2_ASAP7_75t_R cell (_1_) that
-# passes ref_clk_i through to out_clk_o.  The out_clk_o port of the
-# parameterised pll_clkgen module connects to the SoC-level "core_clk" net,
-# which clocks all sub-blocks (CPU/GPU macros, crossbar, peripherals).
+# pll_clkgen_stub synthesizes to a single BUFx2_ASAP7_75t_R (_1_) that
+# passes ref_clk_i straight to out_clk_o.  At soc_top level, out_clk_o
+# becomes the "core_clk" net, which clocks all SoC sub-blocks.
 #
-# In a SYNTH_HIERARCHY_MODE=keep netlist, all SoC registers are inside
-# parameterised module instances (u_dma, u_axil_ic, etc.) and their clock
-# inputs connect via the "core_clk" net at the soc_top level.  OpenSTA must
-# recognise "core_clk" as a defined clock for timing paths to be reported.
+# SYNTH_HIERARCHY_MODE=keep: all SoC FFs sit inside parameterised module
+# instances (u_dma, u_axil_ic, …).  OpenROAD/OpenSTA cannot create_clock
+# on a Net object (only Pin/Port accepted), and get_pins -hierarchical for
+# the deep stub pin (u_pll/u_stub/_1_/Y) is fragile across tool versions.
 #
-# Strategy:
-#   S1: create_clock at the BUFx2 output pin (u_pll/u_stub/_1_/Y).
-#       Using create_clock (not create_generated_clock) — OpenROAD hierarchical
-#       mode does not propagate generated clocks through module port boundaries.
-#   S2: Define core_clk as create_clock directly on the top-level net.
-#       Fallback when S1 pin match is empty (e.g., after future RTL refactor).
-#   S3: Alias core_clk to clk_i port.  Last resort; all SoC paths still timed.
-#
-# set_clock_groups -logically_equivalent is added so OpenSTA treats clk_i
-# and core_clk as synchronous (no spurious CDC warnings on pll_axil_regs).
+# Robust solution: core_clk is an alias of clk_i at the same period.
+# The stub BUFx2 is a DC-accurate divide-1 passthrough, so this is
+# electrically identical.  LibreLane CTS will use CLOCK_NET=core_clk
+# (set in config.json) to build the clock tree on the right net.
+# set_clock_groups -logically_equivalent suppresses false CDC warnings
+# on the pll_axil_regs/core interface.
 ###############################################################################
 
-# S1 — create_clock at the BUFx2 output pin (Yosys names the internal cell _1_).
-# Using create_clock (not create_generated_clock) because OpenROAD in
-# SYNTH_HIERARCHY_MODE=keep does not propagate generated_clocks through
-# hierarchical module port boundaries.  create_clock defines a root clock
-# that OpenSTA propagates to all downstream FFs regardless of hierarchy.
-set _pll_buf_pin [get_pins -hierarchical -filter "full_name =~ *u_pll*_1_/Y" -quiet]
+# Primary: try the u_pll output port pin (a proper pin, not a net)
+set _pll_out_pin [get_pins -hierarchical \
+    -filter "full_name =~ u_pll/out_clk_o" -quiet]
+if {[llength $_pll_out_pin] == 0} {
+    set _pll_out_pin [get_pins -hierarchical \
+        -filter "name =~ out_clk_o" -quiet]
+}
 
-if {[llength $_pll_buf_pin] > 0} {
+if {[llength $_pll_out_pin] > 0} {
     create_clock \
         -name core_clk \
         -period 1750 \
         -waveform {0 875} \
-        [lindex $_pll_buf_pin 0]
+        [lindex $_pll_out_pin 0]
 } else {
-    # S2 — define core_clk directly at the top-level net.
-    # get_nets returns a flat net object; create_clock on a net is supported
-    # by OpenROAD/OpenSTA and constrains all FFs clocked by that net.
-    set _core_net [get_nets -filter "name == core_clk" -quiet]
-    if {[llength $_core_net] > 0} {
-        create_clock \
-            -name core_clk \
-            -period 1750 \
-            -waveform {0 875} \
-            $_core_net
-    } else {
-        # S3 — last resort: alias core_clk to the clk_i port.
-        # Electrically identical for stub PLL.  Keeps all SoC paths timed.
-        puts "WARNING: core_clk net not found; aliasing to clk_i port."
-        create_clock \
-            -name core_clk \
-            -period 1750 \
-            -waveform {0 875} \
-            [get_ports clk_i]
-    }
+    # Fallback: define core_clk at the clk_i input port.
+    # Electrically identical for divide-1 stub; ensures all SoC paths are timed.
+    create_clock \
+        -name core_clk \
+        -period 1750 \
+        -waveform {0 875} \
+        [get_ports clk_i]
 }
 
-# Apply timing constraints to core_clk (same as clk_i — divide-1 stub).
+# Apply same timing budget to core_clk as to clk_i.
 if {[llength [get_clocks -quiet core_clk]] > 0} {
     set_clock_uncertainty -setup 15 [get_clocks core_clk]
     set_clock_uncertainty -hold  10 [get_clocks core_clk]
     set_clock_transition   10       [get_clocks core_clk]
     set_clock_latency -source 50    [get_clocks core_clk]
-    # Treat clk_i and core_clk as logically equivalent (same source, divide-1 stub).
-    # Suppresses false CDC hold violations on the pll_axil_regs/core interface.
     set_clock_groups -logically_equivalent -group {clk_i core_clk}
 }
 
