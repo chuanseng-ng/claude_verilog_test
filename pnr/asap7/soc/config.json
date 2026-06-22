@@ -66,8 +66,7 @@
     "FP_PDN_CORE_RING_VOFFSET": 0.5,
     "PDN_MACRO_CONNECTIONS": [
         ".*u_cpu.* VDD VSS vdd vss",
-        ".*u_gpu.* VDD VSS VDD VSS",
-        ".*u_sram.* VDD VSS vdd vss"
+        ".*u_gpu.* VDD VSS VDD VSS"
     ],
     "RT_MAX_LAYER": "M9",
     "DRT_THREADS": 12,
