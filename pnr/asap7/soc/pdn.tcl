@@ -109,7 +109,7 @@ define_pdn_grid \
     -default \
     -name macro_grid \
     -starts_with POWER \
-    -halo "$::env(PL_MACRO_HALO)"
+    -halo "10 10"
 
 add_pdn_ring \
     -grid macro_grid \
