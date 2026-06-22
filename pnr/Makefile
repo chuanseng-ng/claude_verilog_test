@@ -759,14 +759,17 @@ librelane-asap7-soc:
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/config.json"
 	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
 	@echo "  Tool     : $(LIBRELANE_DIR)"
-	@echo "  Runtime  : expect 4-8 h (hierarchical, 720x720 um)"
+	@echo "  Runtime  : expect 4-8 h (hierarchical, 520x520 um)"
+	@echo "  Run dir  : /nobackup/asap7_soc_runs/"
 	@echo "=========================================="
 	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/config.json" ]; then \
 		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/config.json not found."; exit 1; fi
+	mkdir -p /nobackup/asap7_soc_runs
 	cd $(LIBRELANE_DIR) && nix-shell --run \
 		"python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
+		 --run-dir /nobackup/asap7_soc_runs \
 		 --skip Checker.LintTimingConstructs \
 		 --skip Checker.YosysSynthChecks \
 		 --skip Odb.HeuristicDiodeInsertion \
@@ -783,10 +786,6 @@ librelane-asap7-soc:
 		 --skip Magic.StreamOut \
 		 --skip KLayout.StreamOut \
 		 --skip Magic.WriteLEF \
-		 --skip Checker.SetupViolations \
-		 --skip Checker.HoldViolations \
-		 --skip Checker.MaxSlewViolations \
-		 --skip Checker.MaxCapViolations \
 		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/config.json"
 	@$(MAKE) prune-asap7-soc-runs
 

@@ -29,19 +29,74 @@ set_clock_transition   10       [get_clocks clk_i]
 set_clock_latency -source 50    [get_clocks clk_i]
 
 ###############################################################################
-# 2. PLL stub generated clock
-#    pll_clkgen_stub is a combinational/registered pass-through in STUB mode.
-#    Model core_clk as a generated clock at the PLL output pin so downstream
-#    paths are constrained relative to clk_i.
-#    Instance path: u_pll/out_clk_o
+# 2. PLL stub generated clock — core_clk
+#
+# pll_clkgen_stub synthesizes to a single BUFx2_ASAP7_75t_R cell (_1_) that
+# passes ref_clk_i straight through to out_clk_o.  The out_clk_o port of the
+# parameterised pll_clkgen module connects to the SoC-level "core_clk" net,
+# which clocks all sub-blocks (CPU/GPU macros, crossbar, peripherals).
+#
+# The generated-clock target must be the driver pin of the core_clk net so
+# that OpenROAD CTS builds the clock tree from that point.  Three strategies
+# are tried in order of specificity; the first that resolves a non-empty
+# collection wins (if all fail, fall back to creating core_clk directly at
+# the clk_i port so that STA still sees a constrained core_clk domain):
+#
+#   S1: Output pin of the BUFx2 inside the PLL stub hierarchy (post-synth name)
+#   S2: Any pin hierarchically below u_pll that drives a net named core_clk
+#   S3: The core_clk net itself (OpenROAD supports create_clock on a net)
+#   S4: Fallback — clone clk_i as core_clk at the port level
 ###############################################################################
-set _pll_out_pin [get_pins -hierarchical -filter "name =~ *u_pll*/out_clk_o"]
-if {[llength $_pll_out_pin] > 0} {
+
+# S1 — exact BUFx2 output pin (reliable pre-CTS; Yosys names the cell _1_)
+set _pll_buf_pin [get_pins -hierarchical -filter "full_name =~ *u_pll*_1_/Y" -quiet]
+
+if {[llength $_pll_buf_pin] > 0} {
     create_generated_clock \
         -name core_clk \
         -source [get_ports clk_i] \
         -divide_by 1 \
-        $_pll_out_pin
+        [lindex $_pll_buf_pin 0]
+} else {
+    # S2 — any output pin of the PLL wrapper (out_clk_o port of pll_clkgen)
+    set _pll_out_pin [get_pins -hierarchical -filter "full_name =~ *u_pll/out_clk_o" -quiet]
+    if {[llength $_pll_out_pin] == 0} {
+        set _pll_out_pin [get_pins -hierarchical -filter "name =~ *out_clk_o" -quiet]
+    }
+
+    if {[llength $_pll_out_pin] > 0} {
+        create_generated_clock \
+            -name core_clk \
+            -source [get_ports clk_i] \
+            -divide_by 1 \
+            [lindex $_pll_out_pin 0]
+    } else {
+        # S3 — target the core_clk net (supported in OpenROAD)
+        set _core_net [get_nets -hierarchical -filter "name =~ core_clk" -quiet]
+        if {[llength $_core_net] > 0} {
+            create_clock \
+                -name core_clk \
+                -period 1750 \
+                -waveform {0 875} \
+                $_core_net
+        } else {
+            # S4 — fallback: define core_clk as an alias at the clk_i port
+            # This keeps STA constrained even if netlist naming has changed.
+            puts "WARNING: phase5_soc.sdc: Could not resolve core_clk driver pin."
+            puts "WARNING: Defining core_clk as a clock alias at clk_i port."
+            create_clock \
+                -name core_clk \
+                -period 1750 \
+                -waveform {0 875} \
+                [get_ports clk_i]
+        }
+    }
+}
+
+# Make clk_i and core_clk synchronous (same source, divide-by-1 stub).
+# This suppresses false CDC warnings on the pll_axil_regs/core interface.
+if {[llength [get_clocks -quiet core_clk]] > 0} {
+    set_clock_groups -logically_equivalent -group {clk_i core_clk}
 }
 
 ###############################################################################
