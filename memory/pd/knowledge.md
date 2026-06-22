@@ -246,6 +246,35 @@ pass on the identical synthesized netlist.
 **Fix**: `--skip Checker.YosysSynthChecks` in the `librelane-asap7-soc` Makefile target.
 Added 2026-06-22 (M11 P&R run 1 stumble, RUN_2026-06-22_18-16-11, step 07).
 
+### PDN_MACRO_CONNECTIONS — Only Include True Hard Macros (SoC M11 Lesson)
+
+**Symptom**: `[ERROR] No match found for regular expression '.*u_sram.*' defined in PDN_MACRO_CONNECTIONS.`
+followed by `exit 1` from `set_global_connections.tcl` (line 59-61). Flow dies at
+`OpenROAD.RepairDesignPostGPL` (stage 29 in the SoC run).
+
+**Root cause**: `sram_controller` is a behavioral SystemVerilog module — it synthesizes flat
+into Yosys-mangled std-cell instances. The SRAM black-box stubs inside `sram_controller`
+appear in the placed netlist as `u_sram/_00_` through `u_sram/_23_` (Yosys `$paramod`
+flattening produces `<parent_name>/<sequential_index>` naming). These are NOT hard macros
+with a physical VDD/VSS pin in a LEF — they are std-cell instances whose power comes from
+the global `.*` connection in `set_global_connections`. The `.*u_sram.*` regex correctly
+matches nothing because no `sram_1rw_256x32_asap7` LEF macro instance appears at the top
+level — `sram_controller` swallowed it during flat synthesis.
+
+**Fix**: Remove any `.*u_sram.*` (or similar behavioral-module) entry from
+`PDN_MACRO_CONNECTIONS` in config.json. Only include true hard macros that appear as
+top-level LEF cells (e.g. rv32i_cpu_top, gpu_top).
+
+**Rule for future runs**: Before adding a regex to `PDN_MACRO_CONNECTIONS`, confirm the
+module produces a hard LEF cell at the top level (i.e., it is a black-box stub in the
+verilog files list, not a real RTL module). Behavioral RTL modules synthesized flat will
+NEVER appear as macro instances.
+
+**Confirmed in**: M11 SoC Run 1 (`RUN_2026-06-22_18-23-26`, 2026-06-22). The floorplan
+log for Run 1 shows `.*u_sram.* matched with u_sram/_00_` through `u_sram/_23_` during
+stage 11 (floorplan-level matching), but by stage 29 the placed DB has these as std-cell
+instances and the regex matches 0 MACRO-type cells — causing the fatal exit.
+
 ### Complete ASAP7 skip list (as of 2026-06-22, SoC M11 run)
 
 ```makefile

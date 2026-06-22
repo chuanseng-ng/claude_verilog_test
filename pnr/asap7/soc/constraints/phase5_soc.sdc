@@ -29,19 +29,75 @@ set_clock_transition   10       [get_clocks clk_i]
 set_clock_latency -source 50    [get_clocks clk_i]
 
 ###############################################################################
-# 2. PLL stub generated clock
-#    pll_clkgen_stub is a combinational/registered pass-through in STUB mode.
-#    Model core_clk as a generated clock at the PLL output pin so downstream
-#    paths are constrained relative to clk_i.
-#    Instance path: u_pll/out_clk_o
+# 2. PLL stub generated clock — core_clk
+#
+# pll_clkgen_stub synthesizes to a single BUFx2_ASAP7_75t_R cell (_1_) that
+# passes ref_clk_i through to out_clk_o.  The out_clk_o port of the
+# parameterised pll_clkgen module connects to the SoC-level "core_clk" net,
+# which clocks all sub-blocks (CPU/GPU macros, crossbar, peripherals).
+#
+# In a SYNTH_HIERARCHY_MODE=keep netlist, all SoC registers are inside
+# parameterised module instances (u_dma, u_axil_ic, etc.) and their clock
+# inputs connect via the "core_clk" net at the soc_top level.  OpenSTA must
+# recognise "core_clk" as a defined clock for timing paths to be reported.
+#
+# Strategy:
+#   S1: create_clock at the BUFx2 output pin (u_pll/u_stub/_1_/Y).
+#       Using create_clock (not create_generated_clock) — OpenROAD hierarchical
+#       mode does not propagate generated clocks through module port boundaries.
+#   S2: Define core_clk as create_clock directly on the top-level net.
+#       Fallback when S1 pin match is empty (e.g., after future RTL refactor).
+#   S3: Alias core_clk to clk_i port.  Last resort; all SoC paths still timed.
+#
+# set_clock_groups -logically_equivalent is added so OpenSTA treats clk_i
+# and core_clk as synchronous (no spurious CDC warnings on pll_axil_regs).
 ###############################################################################
-set _pll_out_pin [get_pins -hierarchical -filter "name =~ *u_pll*/out_clk_o"]
-if {[llength $_pll_out_pin] > 0} {
-    create_generated_clock \
+
+# S1 — create_clock at the BUFx2 output pin (Yosys names the internal cell _1_).
+# Using create_clock (not create_generated_clock) because OpenROAD in
+# SYNTH_HIERARCHY_MODE=keep does not propagate generated_clocks through
+# hierarchical module port boundaries.  create_clock defines a root clock
+# that OpenSTA propagates to all downstream FFs regardless of hierarchy.
+set _pll_buf_pin [get_pins -hierarchical -filter "full_name =~ *u_pll*_1_/Y" -quiet]
+
+if {[llength $_pll_buf_pin] > 0} {
+    create_clock \
         -name core_clk \
-        -source [get_ports clk_i] \
-        -divide_by 1 \
-        $_pll_out_pin
+        -period 1750 \
+        -waveform {0 875} \
+        [lindex $_pll_buf_pin 0]
+} else {
+    # S2 — define core_clk directly at the top-level net.
+    # get_nets returns a flat net object; create_clock on a net is supported
+    # by OpenROAD/OpenSTA and constrains all FFs clocked by that net.
+    set _core_net [get_nets -filter "name == core_clk" -quiet]
+    if {[llength $_core_net] > 0} {
+        create_clock \
+            -name core_clk \
+            -period 1750 \
+            -waveform {0 875} \
+            $_core_net
+    } else {
+        # S3 — last resort: alias core_clk to the clk_i port.
+        # Electrically identical for stub PLL.  Keeps all SoC paths timed.
+        puts "WARNING: core_clk net not found; aliasing to clk_i port."
+        create_clock \
+            -name core_clk \
+            -period 1750 \
+            -waveform {0 875} \
+            [get_ports clk_i]
+    }
+}
+
+# Apply timing constraints to core_clk (same as clk_i — divide-1 stub).
+if {[llength [get_clocks -quiet core_clk]] > 0} {
+    set_clock_uncertainty -setup 15 [get_clocks core_clk]
+    set_clock_uncertainty -hold  10 [get_clocks core_clk]
+    set_clock_transition   10       [get_clocks core_clk]
+    set_clock_latency -source 50    [get_clocks core_clk]
+    # Treat clk_i and core_clk as logically equivalent (same source, divide-1 stub).
+    # Suppresses false CDC hold violations on the pll_axil_regs/core interface.
+    set_clock_groups -logically_equivalent -group {clk_i core_clk}
 }
 
 ###############################################################################
