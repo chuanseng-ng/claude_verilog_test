@@ -119,10 +119,6 @@
         "dir::macro/gpu_top__nom_tt_025C_0p7V.lib",
         "dir::../sram_1rw_256x32_asap7_TT_0p7V_25C.lib"
     ],
-    "EXTRA_VERILOG_MODELS": [
-        "dir::rv32i_cpu_top_stub.sv",
-        "dir::gpu_top_stub.sv"
-    ],
     "EXTRA_GDS_FILES": [],
     "RUN_ANTENNA_REPAIR": true,
     "RUN_HEURISTIC_DIODE_INSERTION": true,
