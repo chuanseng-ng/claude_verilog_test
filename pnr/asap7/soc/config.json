@@ -85,7 +85,7 @@
         0.0
     ],
     "GRT_ALLOW_CONGESTION": true,
-    "USE_SYNLIG": true,
+    "USE_SYNLIG": false,
     "SYNLIG_DEFER": false,
     "SYNTH_STRATEGY": "DELAY 2",
     "SYNTH_SHARE_RESOURCES": false,
