@@ -769,7 +769,6 @@ librelane-asap7-soc:
 		"python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
-		 --run-dir /nobackup/asap7_soc_runs \
 		 --skip Checker.LintTimingConstructs \
 		 --skip Checker.YosysSynthChecks \
 		 --skip Odb.HeuristicDiodeInsertion \
