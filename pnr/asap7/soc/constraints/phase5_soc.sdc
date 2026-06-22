@@ -78,7 +78,11 @@ if {[llength [get_clocks -quiet core_clk]] > 0} {
     set_clock_uncertainty -hold  10 [get_clocks core_clk]
     set_clock_transition   10       [get_clocks core_clk]
     set_clock_latency -source 50    [get_clocks core_clk]
-    set_clock_groups -logically_equivalent -group {clk_i core_clk}
+    # -asynchronous: suppress cross-domain timing arcs between clk_i and core_clk.
+    # Both run at 1750 ps (same period, divide-1 stub) but are separate clock
+    # objects in STA.  Asynchronous grouping avoids false hold violations at
+    # the pll_axil_regs interface while keeping all intra-domain paths timed.
+    set_clock_groups -asynchronous -group {clk_i} -group {core_clk}
 }
 
 ###############################################################################
