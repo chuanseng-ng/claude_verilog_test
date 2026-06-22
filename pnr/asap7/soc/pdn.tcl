@@ -54,13 +54,14 @@ define_pdn_grid \
     -pins "M7 M5 M2"
 
 # M7 vertical stripes (coarsest — top-level SoC strap)
+# M7 WIDTHTABLE: 0.032 0.160 0.288 0.416 0.544 — must use 0.160 (0.144 is invalid)
 add_pdn_stripe \
     -grid stdcell_grid \
     -layer M7 \
-    -width 0.144 \
+    -width 0.160 \
     -pitch $::env(FP_PDN_VPITCH) \
     -offset $::env(FP_PDN_VOFFSET) \
-    -spacing 0.144 \
+    -spacing 0.160 \
     -starts_with POWER -extend_to_core_ring
 
 # M5 horizontal stripes (mid-level)
@@ -113,8 +114,8 @@ define_pdn_grid \
 add_pdn_ring \
     -grid macro_grid \
     -layers {M6 M7} \
-    -widths {0.144 0.144} \
-    -spacings {0.144 0.144} \
+    -widths {0.160 0.160} \
+    -spacings {0.160 0.160} \
     -core_offsets {0.5 0.5}
 
 add_pdn_connect -grid macro_grid -layers "M6 M7"

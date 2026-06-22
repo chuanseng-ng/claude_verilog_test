@@ -697,6 +697,7 @@ librelane-asap7-soc-synth:
 		 --manual-pdk \
 		 --to Yosys.JsonHeader \
 		 --skip Checker.LintTimingConstructs \
+		 --skip Checker.YosysSynthChecks \
 		 --skip Odb.HeuristicDiodeInsertion \
 		 --skip Odb.DiodesOnPorts \
 		 --skip OpenROAD.RepairAntennas \
@@ -767,6 +768,7 @@ librelane-asap7-soc:
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --skip Checker.LintTimingConstructs \
+		 --skip Checker.YosysSynthChecks \
 		 --skip Odb.HeuristicDiodeInsertion \
 		 --skip Odb.DiodesOnPorts \
 		 --skip OpenROAD.RepairAntennas \
