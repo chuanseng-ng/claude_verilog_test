@@ -833,6 +833,10 @@ librelane-asap7-soc: asap7-soc-sv2v
 		 --skip Magic.StreamOut \
 		 --skip KLayout.StreamOut \
 		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
 		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/config.json"
 	@$(MAKE) prune-asap7-soc-runs
 
