@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-22T14:07:17Z",
+  "updated_at": "2026-06-23T00:15:40.628955Z",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -655,6 +655,17 @@
       "suggested_next_step": "proceed",
       "reason": "Run 1 died at stage 29: PDN_MACRO_CONNECTIONS '.*u_sram.*' fatal exit \u2014 sram_controller flat-synthesized, not a hard macro. Fix: removed SRAM entry from PDN_MACRO_CONNECTIONS. Run 2 relaunched in tmux soc_pd.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-23T00:15:40.628955Z",
+      "agent": "physical-design-orchestrator",
+      "stage": "synthesis",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "sv2v frontend breakthrough: SYNLIG UHDM cannot synthesize this SoC (SYNLIG_DEFER=true drops peripheral FSMs, SYNLIG_DEFER=false crashes in UHDM). sv2v 0.0.13.1 converts all SoC SV to Verilog-2005; Yosys read_verilog produces 43546 DFFs + 110K cells. Run 13 (RUN_2026-06-23_06-51-22) actively synthesizing.",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
@@ -918,14 +929,14 @@
     "util_pct": null,
     "wns_ns": null,
     "drc_violations": null,
-    "lvs_errors": null,
+    "lvs_errors": 0,
     "signoff": false,
     "synth_complete": true,
     "synth_cell_count": 4170,
     "synth_area_um2": 184.55,
     "synth_run": "pnr/asap7/soc/runs/RUN_2026-06-22_07-16-33",
     "netlist": "pnr/asap7/soc/runs/RUN_2026-06-22_07-16-33/05-yosys-synthesis/soc_top.nl.v",
-    "pr_run": "pnr/asap7/soc/runs/RUN_2026-06-22_21-03-02",
+    "pr_run": "RUN_2026-06-23_06-51-22",
     "pr_run_id": "pd_20260622_181400",
     "cpu_blackbox": true,
     "gpu_blackbox": true,
@@ -937,6 +948,8 @@
       "pdn.tcl M7/M6 stripe/ring widths corrected to 0.160 (valid M7/M6 WIDTHTABLE entry)",
       "pdn.tcl macro halo hardcoded to '10 10' (PL_MACRO_HALO not exported to GeneratePDN)",
       "PDN_MACRO_CONNECTIONS '.*u_sram.*' entry removed: sram_controller synthesized flat, SRAM black-box instances are std-cell named u_sram/_00_.._23_, not hard macros; power via global rail"
-    ]
+    ],
+    "synth_cells": 110006,
+    "synth_dffs": 43546
   }
 }
