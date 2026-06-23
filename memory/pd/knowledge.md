@@ -300,6 +300,62 @@ instances and the regex matches 0 MACRO-type cells — causing the fatal exit.
 --skip Checker.MaxCapViolations \
 ```
 
+### PSM-0069 Macro PG Pin Connectivity — Abstract LEF Must Have PORT/RECT Geometry (SoC M11 Run 14)
+
+**Symptom**: 8,281,711 PSM-0069 power-grid violations on VDD/VSS after a completed route.
+All other metrics clean (WNS=0, DRC=0). Log shows `[PSM-0069] Check connectivity failed on VDD`
+and `[PSM-0069] Check connectivity failed on VSS` at step 26 (CheckerPowerGridViolations).
+
+**Root cause**: `write_abstract_lef -bloat_occupied_layers` generates `PIN VDD / USE POWER /
+DIRECTION INOUT / END VDD` but **NO PORT/RECT block** when the block-level PDN has no macro
+boundary ring. OpenROAD PSM does M1/M7-based connectivity analysis — without physical pin
+geometry in the abstract LEF, PSM cannot find a macro VDD/VSS node to begin the walk.
+`PDN_MACRO_CONNECTIONS` (logical net assignment via `set_global_connections`) is orthogonal
+to this physical geometry requirement and does not substitute for PORT/RECT.
+
+**Fix**: Add PORT/RECT perimeter geometry on M7 to both VDD and VSS pins in the abstract LEF.
+Match the SoC pdn.tcl macro ring geometry:
+```
+pdn.tcl: add_pdn_ring -layers {M6 M7} -widths {0.160 0.160} -spacings {0.160 0.160}
+         -core_offsets {0.5 0.5}   -> VDD ring: 0.50-0.66 um inset; VSS ring: 0.82-0.98 um inset
+```
+
+LEF PORT/RECT pattern for a W×H macro (e.g. CPU 130×130, GPU 340×340):
+```lef
+  PIN VDD
+    USE POWER ;
+    DIRECTION INOUT ;
+    PORT
+      LAYER M7 ;
+        RECT 0.500 0.500 {W-0.500} 0.660 ;       # bottom edge
+        RECT 0.500 {H-0.660} {W-0.500} {H-0.500} ; # top edge
+        RECT 0.500 0.500 0.660 {H-0.500} ;       # left edge
+        RECT {W-0.660} 0.500 {W-0.500} {H-0.500} ; # right edge
+    END
+  END VDD
+  PIN VSS
+    USE GROUND ;
+    DIRECTION INOUT ;
+    PORT
+      LAYER M7 ;
+        RECT 0.500 0.820 {W-0.500} 0.980 ;
+        RECT 0.500 {H-0.980} {W-0.500} {H-0.820} ;
+        RECT 0.500 0.820 0.980 {H-0.820} ;
+        RECT {W-0.980} 0.500 {W-0.820} {H-0.500} ;
+    END
+  END VSS
+```
+
+VDD and VSS get distinct non-overlapping perimeter bands. VDD at the inner band
+(0.50-0.66 µm from each edge), VSS at the outer band (0.82-0.98 µm).
+
+**Critical note**: The `.gitignore` in `pnr/` has `*.lef` which hides abstract LEFs.
+Add `!asap7/cpu/macro/*.lef` and `!asap7/gpu/macro/*.lef` exceptions so LEF fixes persist.
+
+**Fix applied in**: commit `c1f7bbd` (2026-06-24), SoC M11 Run 15 confirming.
+
+---
+
 ## ASAP7 Macro Views for Hierarchical PnR (rv32i_cpu_top / gpu_top)
 
 Because Magic.StreamOut / KLayout.StreamOut / Magic.WriteLEF are all blocked (see above),
