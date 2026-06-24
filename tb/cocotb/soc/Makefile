@@ -65,6 +65,21 @@ SPI_SOURCES = \
 	$(RTL)/soc/axi_lite_register_bank.sv \
 	$(RTL)/periph/spi_controller.sv
 
+# APB migration PR-1: apb4_register_bank unit-test sources.
+# Standalone: axi_pkg (for DW/SW constants) + DUT + TB wrapper.
+APB4_REG_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(SOC_DIR)/tb_apb4_register_bank.sv
+
+# APB migration PR-1: axil_to_apb bridge unit-test sources.
+# Full AXI→APB path: axi_pkg + bridge + register bank + TB wrapper.
+AXIL_TO_APB_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/soc/axil_to_apb.sv \
+	$(SOC_DIR)/tb_axil_to_apb.sv
+
 # Phase 7 M-c: standalone pll_axil_regs unit-test sources.
 # Minimal: axi_pkg + axi_lite_register_bank (dependency) + pll_axil_regs + standalone TB.
 # Does NOT include the full SoC — the BFM drives s_axil_* top-level ports directly.
@@ -240,7 +255,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -307,6 +322,28 @@ spi_lint:
 spi: spi_lint
 	$(MAKE) MODULE=test_spi TOPLEVEL=spi_controller \
 		VERILOG_SOURCES="$(SPI_SOURCES)" \
+		$(BUILD_ARGS)
+
+# APB migration PR-1: apb4_register_bank lint + sim.
+apb4_register_bank_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module tb_apb4_register_bank $(APB4_REG_SOURCES)
+
+apb4_register_bank: apb4_register_bank_lint
+	$(MAKE) MODULE=test_apb4_register_bank TOPLEVEL=tb_apb4_register_bank \
+		VERILOG_SOURCES="$(APB4_REG_SOURCES)" \
+		$(BUILD_ARGS)
+
+# APB migration PR-1: axil_to_apb bridge lint + sim.
+# clean first: bridge TB uses the same Vtop binary name as other targets.
+axil_to_apb_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module tb_axil_to_apb $(AXIL_TO_APB_SOURCES)
+
+axil_to_apb: axil_to_apb_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_axil_to_apb TOPLEVEL=tb_axil_to_apb \
+		VERILOG_SOURCES="$(AXIL_TO_APB_SOURCES)" \
 		$(BUILD_ARGS)
 
 # Phase 7 M-c: PLL lint gates.
@@ -451,6 +488,8 @@ soc_all:
 	rm -rf sim_build && $(MAKE) timer
 	rm -rf sim_build && $(MAKE) uart
 	rm -rf sim_build && $(MAKE) spi
+	rm -rf sim_build && $(MAKE) apb4_register_bank
+	rm -rf sim_build && $(MAKE) axil_to_apb
 	rm -rf sim_build && $(MAKE) soc_boot
 	rm -rf sim_build && $(MAKE) soc_periph
 	rm -rf sim_build && $(MAKE) soc_coherency
