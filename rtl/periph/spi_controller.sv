@@ -1,9 +1,9 @@
 // spi_controller.sv
-// Phase 5 (M4) — SPI master peripheral, MSB-first, 8-bit, AXI4-Lite slave.
-// Supports all 4 CPOL/CPHA modes.
+// Phase 5 (M4) — SPI master peripheral, MSB-first, 8-bit, APB4 slave.
+// APB migration PR-3: converted from AXI4-Lite slave to APB4 slave.
 //
-// Register map (word indices into axi_lite_register_bank):
-//   0  SPI_TX      WO [7:0]  write pushes byte to TX FIFO (via AXI snoop)
+// Register map (word indices into apb4_register_bank):
+//   0  SPI_TX      WO [7:0]  write pushes byte to TX FIFO (via APB access snoop)
 //   1  SPI_RX      RO [7:0]  RX FIFO head; read pops via snoop
 //   2  SPI_STATUS  RO        [0]=busy [1]=tx_full [2]=tx_empty
 //                            [3]=rx_empty [4]=rx_valid(!rx_empty) [5]=rx_full
@@ -26,47 +26,40 @@
 // slave use SPI_CLK_DIV >= 7 so the 1-clock offset is a negligible fraction of
 // the SCLK half-period and setup margin is preserved.
 //
+// APB snoop (replaces AXI snoop):
+//   TX push: psel & penable & pwrite  & pready at SPI_TX word address with |pstrb.
+//   RX pop:  psel & penable & !pwrite & pready at SPI_RX word address.
+//   APB transfers are single-beat and the access phase completes in one cycle
+//   when pready=1, so the pulse is exactly one cycle — cleaner than the
+//   two-channel AXI-Lite snoop.  No capture registers needed.
+//
 // IRQ: irq_o = irq_done_en & rx_valid
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
 `default_nettype none
 
-module spi_controller
-    import axi_pkg::*;
-#(
-    parameter int unsigned ADDR_W = 12   // AXI-Lite local address width
+module spi_controller #(
+    parameter int unsigned ADDR_W = 12   // APB4 local address width
 ) (
     input  logic clk,
     input  logic rst_n,
 
     // =========================================================================
-    // AXI4-Lite slave — control/status registers
-    // Port names match axi_lite_register_bank.sv exactly.
+    // APB4 slave — control/status registers
+    // pclk / presetn are mapped to clk / rst_n above.
     // =========================================================================
+    input  logic              psel,
+    input  logic              penable,
+    input  logic              pwrite,
     /* verilator lint_off UNUSEDSIGNAL */
-    input  logic [ADDR_W-1:0] s_axil_awaddr,
-    input  logic [2:0]        s_axil_awprot,
+    input  logic [ADDR_W-1:0] paddr,   // byte address; [1:0] unused (word-aligned)
     /* verilator lint_on  UNUSEDSIGNAL */
-    input  logic              s_axil_awvalid,
-    output logic              s_axil_awready,
-    input  logic [31:0]       s_axil_wdata,
-    input  logic [3:0]        s_axil_wstrb,
-    input  logic              s_axil_wvalid,
-    output logic              s_axil_wready,
-    output logic [1:0]        s_axil_bresp,
-    output logic              s_axil_bvalid,
-    input  logic              s_axil_bready,
-    /* verilator lint_off UNUSEDSIGNAL */
-    input  logic [ADDR_W-1:0] s_axil_araddr,
-    input  logic [2:0]        s_axil_arprot,
-    /* verilator lint_on  UNUSEDSIGNAL */
-    input  logic              s_axil_arvalid,
-    output logic              s_axil_arready,
-    output logic [31:0]       s_axil_rdata,
-    output logic [1:0]        s_axil_rresp,
-    output logic              s_axil_rvalid,
-    input  logic              s_axil_rready,
+    input  logic [31:0]       pwdata,
+    input  logic [3:0]        pstrb,
+    output logic [31:0]       prdata,
+    output logic              pready,
+    output logic              pslverr,
 
     // =========================================================================
     // SPI I/O
@@ -134,36 +127,26 @@ module spi_controller
     logic        hw_wen_i  [N_REGS];
     logic [31:0] hw_wdata_i[N_REGS];
 
-    axi_lite_register_bank #(
+    apb4_register_bank #(
         .N_REGS    (N_REGS),
         .ADDR_W    (ADDR_W),
         .RESET_VAL (RESET_VAL),
         .WMASK     (WMASK)
     ) u_regbank (
-        .clk            (clk),
-        .rst_n          (rst_n),
-        .s_axil_awaddr  (s_axil_awaddr),
-        .s_axil_awprot  (s_axil_awprot),
-        .s_axil_awvalid (s_axil_awvalid),
-        .s_axil_awready (s_axil_awready),
-        .s_axil_wdata   (s_axil_wdata),
-        .s_axil_wstrb   (s_axil_wstrb),
-        .s_axil_wvalid  (s_axil_wvalid),
-        .s_axil_wready  (s_axil_wready),
-        .s_axil_bresp   (s_axil_bresp),
-        .s_axil_bvalid  (s_axil_bvalid),
-        .s_axil_bready  (s_axil_bready),
-        .s_axil_araddr  (s_axil_araddr),
-        .s_axil_arprot  (s_axil_arprot),
-        .s_axil_arvalid (s_axil_arvalid),
-        .s_axil_arready (s_axil_arready),
-        .s_axil_rdata   (s_axil_rdata),
-        .s_axil_rresp   (s_axil_rresp),
-        .s_axil_rvalid  (s_axil_rvalid),
-        .s_axil_rready  (s_axil_rready),
-        .regs_o         (regs_o),
-        .hw_wen_i       (hw_wen_i),
-        .hw_wdata_i     (hw_wdata_i)
+        .pclk       (clk),
+        .presetn    (rst_n),
+        .psel       (psel),
+        .penable    (penable),
+        .pwrite     (pwrite),
+        .paddr      (paddr),
+        .pwdata     (pwdata),
+        .pstrb      (pstrb),
+        .prdata     (prdata),
+        .pready     (pready),
+        .pslverr    (pslverr),
+        .regs_o     (regs_o),
+        .hw_wen_i   (hw_wen_i),
+        .hw_wdata_i (hw_wdata_i)
     );
 
     // =========================================================================
@@ -178,59 +161,39 @@ module spi_controller
     assign loopback    = regs_o[REG_SPI_CTRL][CTRL_LOOPBACK_BIT];
 
     // =========================================================================
-    // AXI write/read snoop
+    // APB word address decode
     // =========================================================================
-    logic [WORDW-1:0] snoop_waddr_q;
-    /* verilator lint_off UNUSEDSIGNAL */
-    logic [31:0]      snoop_wdata_full_q;
-    /* verilator lint_on  UNUSEDSIGNAL */
-    logic [7:0]       snoop_wdata_q;
-    logic [WORDW-1:0] snoop_raddr_q;
-    logic             snoop_wstrb_nz_q;  // captured |wstrb at W handshake
+    logic [WORDW-1:0] apb_word_addr;
+    assign apb_word_addr = paddr[ADDR_W-1:2];
 
-    // A1: WSTRB byte-lane priority mux.
-    // Select the byte from s_axil_wdata that corresponds to the lowest set bit
-    // of s_axil_wstrb so that DMA masters driving a non-lane-0 byte are handled
-    // correctly.  When wstrb==4'h0 the value is don't-care: the snooped write
-    // is gated out of tx_push (a zero-strobe AXI write updates no bytes).
-    logic [7:0] wstrb_sel_byte;
+    // Access-phase commit pulse: psel & penable & pready (pready=1 always here)
+    wire apb_access = psel & penable;
+
+    // =========================================================================
+    // A1: PSTRB byte-lane priority mux.
+    // Select the byte from pwdata corresponding to the lowest active strobe lane,
+    // matching the AXI-Lite snoop behaviour so TX byte extraction is equivalent.
+    // When pstrb==4'h0 the value is don't-care: tx_push is gated out.
+    // =========================================================================
+    logic [7:0] pstrb_sel_byte;
     always_comb begin
-        unique casez (s_axil_wstrb)
-            4'b???1: wstrb_sel_byte = s_axil_wdata[ 7: 0];
-            4'b??10: wstrb_sel_byte = s_axil_wdata[15: 8];
-            4'b?100: wstrb_sel_byte = s_axil_wdata[23:16];
-            4'b1000: wstrb_sel_byte = s_axil_wdata[31:24];
-            default: wstrb_sel_byte = s_axil_wdata[ 7: 0];  // wstrb==0: don't-care
+        unique casez (pstrb)
+            4'b???1: pstrb_sel_byte = pwdata[ 7: 0];
+            4'b??10: pstrb_sel_byte = pwdata[15: 8];
+            4'b?100: pstrb_sel_byte = pwdata[23:16];
+            4'b1000: pstrb_sel_byte = pwdata[31:24];
+            default: pstrb_sel_byte = pwdata[ 7: 0];  // pstrb==0: don't-care
         endcase
     end
 
-    always_ff @(posedge clk) begin
-        if (!rst_n) begin
-            snoop_waddr_q      <= '0;
-            snoop_wdata_full_q <= '0;
-            snoop_wdata_q      <= '0;
-            snoop_raddr_q      <= '0;
-            snoop_wstrb_nz_q   <= 1'b0;
-        end else begin
-            if (s_axil_awvalid && s_axil_awready)
-                snoop_waddr_q <= s_axil_awaddr[ADDR_W-1:2];
-            if (s_axil_wvalid && s_axil_wready) begin
-                snoop_wdata_full_q <= s_axil_wdata;
-                snoop_wdata_q      <= wstrb_sel_byte;  // A1: lowest active lane
-                snoop_wstrb_nz_q   <= |s_axil_wstrb;   // zero-strobe = no-op
-            end
-            if (s_axil_arvalid && s_axil_arready)
-                snoop_raddr_q <= s_axil_araddr[ADDR_W-1:2];
-        end
-    end
+    // TX FIFO push: APB write ACCESS to SPI_TX with at least one strobe set.
+    wire tx_push = apb_access && pwrite &&
+                   (apb_word_addr == WORDW'(REG_SPI_TX)) &&
+                   (|pstrb);
 
-    wire wr_done = s_axil_bvalid && s_axil_bready;
-    wire rd_done = s_axil_rvalid && s_axil_rready;
-
-    // A zero-strobe (wstrb==0) write is a legal AXI no-op and must not transmit.
-    wire tx_push = wr_done && (snoop_waddr_q == WORDW'(REG_SPI_TX)) &&
-                   snoop_wstrb_nz_q;
-    wire rx_pop  = rd_done && (snoop_raddr_q == WORDW'(REG_SPI_RX));
+    // RX FIFO pop: APB read ACCESS completing at SPI_RX word address.
+    wire rx_pop  = apb_access && !pwrite &&
+                   (apb_word_addr == WORDW'(REG_SPI_RX));
 
     // =========================================================================
     // TX FIFO (depth=4, 8-bit wide, synchronous)
@@ -253,7 +216,7 @@ module spi_controller
                 tx_fifo_q[i] <= 8'h0;
         end else begin
             if (tx_push && !tx_full) begin
-                tx_fifo_q[tx_wptr_q[FIFO_DEPTH_LG-1:0]] <= snoop_wdata_q;
+                tx_fifo_q[tx_wptr_q[FIFO_DEPTH_LG-1:0]] <= pstrb_sel_byte;
                 tx_wptr_q <= tx_wptr_q + PTR_W'(1);
             end
             if (tx_pop && !tx_empty)
@@ -494,3 +457,5 @@ module spi_controller
     assign irq_o = irq_done_en & rx_valid;
 
 endmodule : spi_controller
+
+`default_nettype wire
