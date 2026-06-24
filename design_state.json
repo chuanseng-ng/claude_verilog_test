@@ -3,10 +3,14 @@
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "updated_at": "2026-06-24T23:38:49.199117+07:00",
 =======
   "updated_at": "2026-06-24T22:55:00+07:00",
 >>>>>>> feat/apb-mig-4-timer
+=======
+  "updated_at": "2026-06-25T00:30:00+07:00",
+>>>>>>> feat/apb-mig-6-pll
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -38,7 +42,8 @@
       "rtl/cpu/core/rv32i_csr_file.sv",
       "rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
       "rtl/soc/apb4_register_bank.sv",
-      "rtl/soc/axil_to_apb.sv"
+      "rtl/soc/axil_to_apb.sv",
+      "rtl/soc/pll/pll_apb_regs.sv"
     ],
     "lint_clean": true,
     "cdc_clean": false,
@@ -543,21 +548,42 @@
     },
     {
 <<<<<<< HEAD
+<<<<<<< HEAD
       "timestamp": "2026-06-24T23:38:49.199117+07:00",
 =======
       "timestamp": "2026-06-24T22:55:00+07:00",
 >>>>>>> feat/apb-mig-4-timer
       "agent": "rtl-design-orchestrator",
       "stage": "lint_check",
+=======
+      "timestamp": "2026-06-25T00:12:58.292235+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+>>>>>>> feat/apb-mig-6-pll
       "decision": "proceed",
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
 <<<<<<< HEAD
+<<<<<<< HEAD
       "reason": "APB migration PR-3: spi_controller.sv converted from AXI4-Lite slave to APB4 slave. axi_pkg import removed; s_axil_* ports replaced with APB4 (psel/penable/pwrite/paddr/pwdata/pstrb/prdata/pready/pslverr); axi_lite_register_bank -> apb4_register_bank; two-channel AXI snoop replaced with combinational apb_access = psel & penable; pstrb_sel_byte direct (no capture regs). Verilator -Wall -Wno-IMPORTSTAR standalone (SPI_SOURCES): 0 errors, 0 warnings. soc_top PINNOTFOUND deferred to PR-6 per task scope.",
 =======
       "reason": "APB migration PR-4 timer.sv: AXI4-Lite -> APB4 port swap complete. Standalone Verilator -Wall -Wno-IMPORTSTAR: 0 errors, 0 warnings. soc_top PINNOTFOUND on timer expected until PR-6 (ignored per spec).",
 >>>>>>> feat/apb-mig-4-timer
+=======
+      "reason": "APB migration PR-6 (pll_apb_regs): TESTS=4 PASS=4 FAIL=0. All 4 directed tests green: status_locked (pll_locked_i\u2192STATUS[0] mirror), control_write_readback (WMASK=0x03F1, div_n=0xA, post_div_sel=/2), status_readonly (RO WMASK=0 write discarded), decode_and_enable (pll_enable_o toggle + OKAY response). pll_apb_regs_lint: Verilator 5.048 -Wall -Wno-IMPORTSTAR 0 errors 0 warnings. No RTL bugs found. DUT RTL unchanged. make exit=0.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-25T00:30:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-6 pll_apb_regs RTL signoff: pll_axil_regs->pll_apb_regs module/file renamed; AXI4-Lite->APB4 bus ports; axi_lite_register_bank->apb4_register_bank; field decode unchanged; lint 0/0; TESTS=4 PASS=4 FAIL=0. soc_top pll_axil_regs instantiation noted for PR-6 soc_top wiring (out of scope here).",
+>>>>>>> feat/apb-mig-6-pll
       "constraint_ref": null
     }
   ],
