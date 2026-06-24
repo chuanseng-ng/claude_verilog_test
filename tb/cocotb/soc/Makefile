@@ -61,8 +61,7 @@ UART_SOURCES = \
 	$(RTL)/periph/uart_controller.sv
 
 SPI_SOURCES = \
-	$(RTL)/soc/axi_pkg.sv \
-	$(RTL)/soc/axi_lite_register_bank.sv \
+	$(RTL)/soc/apb4_register_bank.sv \
 	$(RTL)/periph/spi_controller.sv
 
 # APB migration PR-1: apb4_register_bank unit-test sources.
