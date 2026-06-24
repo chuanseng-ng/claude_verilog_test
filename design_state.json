@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-25T01:00:00+07:00",
+  "updated_at": "2026-06-25T06:00:00+07:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -43,7 +43,7 @@
   },
   "verification_status": {
     "coverage_pct": 100.0,
-    "sim_signoff": false,
+    "sim_signoff": true,
     "signoff": false
   },
   "pipeline_session_id": null,
@@ -226,7 +226,7 @@
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
-      "reason": "Code-review fix follow-up validation: lint 0 errors/0 warnings on uart_controller.sv and spi_controller.sv (-Wall -Wno-IMPORTSTAR). UART: TESTS=11 PASS=11 FAIL=0 (existing tests unaffected; wstrb=0 no-op sub-check added to test_byte_lane_snoop — RTL gate confirmed). SPI: TESTS=13 PASS=13 FAIL=0 (same pattern). RX false-start rejection (majority-vote rx_maj gate in RX_START state) exercised implicitly by test_async_rx_raw_pin and test_oversample_noise_immunity which both PASS. wstrb==0 no-op assertion ADDED to both byte-lane-snoop tests.",
+      "reason": "Code-review fix follow-up validation: lint 0 errors/0 warnings on uart_controller.sv and spi_controller.sv (-Wall -Wno-IMPORTSTAR). UART: TESTS=11 PASS=11 FAIL=0 (existing tests unaffected; wstrb=0 no-op sub-check added to test_byte_lane_snoop \u2014 RTL gate confirmed). SPI: TESTS=13 PASS=13 FAIL=0 (same pattern). RX false-start rejection (majority-vote rx_maj gate in RX_START state) exercised implicitly by test_async_rx_raw_pin and test_oversample_noise_immunity which both PASS. wstrb==0 no-op assertion ADDED to both byte-lane-snoop tests.",
       "constraint_ref": null
     },
     {
@@ -248,7 +248,7 @@
       "confidence": "high",
       "failure_class": "functional",
       "suggested_next_step": "escalate",
-      "reason": "rv32i_pipeline_id.sv csr_illegal_id whitelist missing M7 CSR addresses (0x320/0xB00-0xB05/0xB80/0xB82) — 6/7 perf-counter subtests fail with illegal-instruction trap; test_g (mimpid 0xF13) and all 140 pre-existing CPU tests pass clean; GPU 16-counter read-back PASS.",
+      "reason": "rv32i_pipeline_id.sv csr_illegal_id whitelist missing M7 CSR addresses (0x320/0xB00-0xB05/0xB80/0xB82) \u2014 6/7 perf-counter subtests fail with illegal-instruction trap; test_g (mimpid 0xF13) and all 140 pre-existing CPU tests pass clean; GPU 16-counter read-back PASS.",
       "constraint_ref": "fr_generated_20260602_20260602_095600_00"
     },
     {
@@ -270,7 +270,7 @@
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
-      "reason": "Phase 5 M7 perf counters: TESTS=7 PASS=7 FAIL=0 after two TB-side fixes (BNE offset -8→-4 in test_b minstret loop and test_f branch-mispred loop — wrong offset caused infinite loops, not RTL bugs). RTL DUT unchanged. GPU 16-counter readback (test_perf_counters_zero_after_reset) PASS. fix_request fr_generated_20260602_20260602_095600_00 regression confirmed green.",
+      "reason": "Phase 5 M7 perf counters: TESTS=7 PASS=7 FAIL=0 after two TB-side fixes (BNE offset -8\u2192-4 in test_b minstret loop and test_f branch-mispred loop \u2014 wrong offset caused infinite loops, not RTL bugs). RTL DUT unchanged. GPU 16-counter readback (test_perf_counters_zero_after_reset) PASS. fix_request fr_generated_20260602_20260602_095600_00 regression confirmed green.",
       "constraint_ref": "fr_generated_20260602_20260602_095600_00"
     },
     {
@@ -303,7 +303,7 @@
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
-      "reason": "D-cache MMIO bypass + flush/inval CSR gate (go9, branch feature/phase5-m9-periph-loopback): lint clean (0 errors, warnings all pre-existing); dcache 8/8; soc_periph 1/1 (PASS_PC reached); soc_boot 3/3; phase3_all 20/20 (icache 7/7, dcache 8/8, cache_integration 5/5); soc_all 68/68 (crossbar 6, register_bank 6, axil_interconnect 4, sram_controller 7, dma 6, irq 5, timer 6, uart 11, spi 13, soc_boot 3, soc_periph 1). One lint fix applied to soc_addr_map_pkg.sv (UNUSEDPARAM guard for MMIO_BASE and region-bound constants) — no DUT behavioral change.",
+      "reason": "D-cache MMIO bypass + flush/inval CSR gate (go9, branch feature/phase5-m9-periph-loopback): lint clean (0 errors, warnings all pre-existing); dcache 8/8; soc_periph 1/1 (PASS_PC reached); soc_boot 3/3; phase3_all 20/20 (icache 7/7, dcache 8/8, cache_integration 5/5); soc_all 68/68 (crossbar 6, register_bank 6, axil_interconnect 4, sram_controller 7, dma 6, irq 5, timer 6, uart 11, spi 13, soc_boot 3, soc_periph 1). One lint fix applied to soc_addr_map_pkg.sv (UNUSEDPARAM guard for MMIO_BASE and region-bound constants) \u2014 no DUT behavioral change.",
       "constraint_ref": null
     },
     {
@@ -314,7 +314,7 @@
       "confidence": "high",
       "failure_class": "functional",
       "suggested_next_step": "escalate",
-      "reason": "axi4_crossbar.sv does not buffer the AR channel on R_IDLE→R_AR transition: master arvalid is re-sampled in R_AR state, but GPU ifetch master (gpu_compute_unit) drops arvalid after 1 cycle (when warp_busy is set). Crossbar stays in R_AR with s_arvalid=0 forever; SRAM never sees the read request; GPU fetch stalls indefinitely; GPS_DONE never asserts. All 3 test_soc_coherency tests timeout at GPU_POLL loop.",
+      "reason": "axi4_crossbar.sv does not buffer the AR channel on R_IDLE\u2192R_AR transition: master arvalid is re-sampled in R_AR state, but GPU ifetch master (gpu_compute_unit) drops arvalid after 1 cycle (when warp_busy is set). Crossbar stays in R_AR with s_arvalid=0 forever; SRAM never sees the read request; GPU fetch stalls indefinitely; GPS_DONE never asserts. All 3 test_soc_coherency tests timeout at GPU_POLL loop.",
       "constraint_ref": "fr_null_20260618_113135_00"
     },
     {
@@ -369,7 +369,7 @@
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
-      "reason": "Post-fix regression gate (fr_null_20260619_000400_00 found_wr/found_rd lowest-index capture): soc_all TESTS=70 PASS=70 FAIL=0 across 12 suites (crossbar 6/6 — test_arbitration_same_slave PASS 32ns no hang; register_bank 6/6; axil_interconnect 4/4; sram_controller 7/7; dma 6/6; irq 5/5; timer 6/6; uart 11/11; spi 13/13; soc_boot 3/3; soc_periph 1/1; soc_coherency 3/3). Standalone: soc_coherency 3/3, soc_periph 1/1, soc_boot 3/3. lint EXIT_CODE=0 (7 pre-existing baseline warnings only; 0 in axi4_crossbar.sv). 0 UVM FATAL, 0 UVM ERROR, 0 RTL bugs found.",
+      "reason": "Post-fix regression gate (fr_null_20260619_000400_00 found_wr/found_rd lowest-index capture): soc_all TESTS=70 PASS=70 FAIL=0 across 12 suites (crossbar 6/6 \u2014 test_arbitration_same_slave PASS 32ns no hang; register_bank 6/6; axil_interconnect 4/4; sram_controller 7/7; dma 6/6; irq 5/5; timer 6/6; uart 11/11; spi 13/13; soc_boot 3/3; soc_periph 1/1; soc_coherency 3/3). Standalone: soc_coherency 3/3, soc_periph 1/1, soc_boot 3/3. lint EXIT_CODE=0 (7 pre-existing baseline warnings only; 0 in axi4_crossbar.sv). 0 UVM FATAL, 0 UVM ERROR, 0 RTL bugs found.",
       "constraint_ref": "fr_null_20260619_000400_00"
     },
     {
@@ -402,7 +402,7 @@
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
-      "reason": "Phase 5 M9 stress gate PASS: soc_stress TESTS=1 PASS=1 FAIL=0. 6 outer iterations (CPU burst, DMA mem→mem, GPU vector kernel, UART loopback, SPI loopback, timer read) completed in 661,395 sim cycles / 160.6s wall-clock. Benchmarks (last iteration): CPU 32-word burst 2358 cycles; DMA mem→mem 26587 cycles; GPU kernel+flush 50538 cycles; Timer CNT0 snap 0x0009b5ef. soc_all reconfirmed TESTS=73 PASS=73 FAIL=0. Three firmware-only fixes applied in this run (no RTL changes): (1) GPU VST addr offset 0x138→0x038 (stale r4 register value); (2) D-cache flush before PASS to drain dirty lines so cocotb SRAM backdoor reads see correct values; (3) Timer enable (TIMER_OFF_CTRL=1) before outer loop so CNT0 is non-zero. One TB-side fix: post-pass GPU coherency assertion corrected to dst==src (GPU_SRC_UPDATE copies DST→SRC each iteration, so final values are equal, not +1).",
+      "reason": "Phase 5 M9 stress gate PASS: soc_stress TESTS=1 PASS=1 FAIL=0. 6 outer iterations (CPU burst, DMA mem\u2192mem, GPU vector kernel, UART loopback, SPI loopback, timer read) completed in 661,395 sim cycles / 160.6s wall-clock. Benchmarks (last iteration): CPU 32-word burst 2358 cycles; DMA mem\u2192mem 26587 cycles; GPU kernel+flush 50538 cycles; Timer CNT0 snap 0x0009b5ef. soc_all reconfirmed TESTS=73 PASS=73 FAIL=0. Three firmware-only fixes applied in this run (no RTL changes): (1) GPU VST addr offset 0x138\u21920x038 (stale r4 register value); (2) D-cache flush before PASS to drain dirty lines so cocotb SRAM backdoor reads see correct values; (3) Timer enable (TIMER_OFF_CTRL=1) before outer loop so CNT0 is non-zero. One TB-side fix: post-pass GPU coherency assertion corrected to dst==src (GPU_SRC_UPDATE copies DST\u2192SRC each iteration, so final values are equal, not +1).",
       "constraint_ref": null
     },
     {
@@ -413,7 +413,7 @@
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
-      "reason": "Phase 5 M9 pgf bead stress signoff (STRESS_ITER raised 6→10): soc_stress TESTS=1 PASS=1 FAIL=0. 10 outer iterations completed in 1,079,867 sim cycles / 262.0s wall-clock — exceeds pgf 1,000,000-cycle acceptance bar. Benchmarks (last iteration, unchanged from 6-iter run): CPU 32-word burst 2358 cycles; DMA mem→mem 26587 cycles; GPU kernel+flush 50538 cycles; Timer CNT0 snap 0x00101897. All invariants held: FAIL_PC never committed, ITER_WI=10, DMA BUF_A==BUF_B, GPU SRC==DST==initial+STRESS_ITER, timer nonzero. Master mix (CPU burst/DMA mem→mem/GPU kernel+coherency/UART/SPI/timer) and watchdog+integrity invariants unchanged. No RTL changes.",
+      "reason": "Phase 5 M9 pgf bead stress signoff (STRESS_ITER raised 6\u219210): soc_stress TESTS=1 PASS=1 FAIL=0. 10 outer iterations completed in 1,079,867 sim cycles / 262.0s wall-clock \u2014 exceeds pgf 1,000,000-cycle acceptance bar. Benchmarks (last iteration, unchanged from 6-iter run): CPU 32-word burst 2358 cycles; DMA mem\u2192mem 26587 cycles; GPU kernel+flush 50538 cycles; Timer CNT0 snap 0x00101897. All invariants held: FAIL_PC never committed, ITER_WI=10, DMA BUF_A==BUF_B, GPU SRC==DST==initial+STRESS_ITER, timer nonzero. Master mix (CPU burst/DMA mem\u2192mem/GPU kernel+coherency/UART/SPI/timer) and watchdog+integrity invariants unchanged. No RTL changes.",
       "constraint_ref": null
     },
     {
@@ -446,7 +446,7 @@
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
-      "reason": "CodeRabbit PR#71 TB/firmware fixes applied and validated: (1) gen_periph_hex.py — removed unused ORI/BEQ imports, split E702 semicolons, added ROM_WORDS size assert; periph_loopback.hex byte-identical after regen. (2) gen_stress_hex.py — ITER_WI zero-init store added before first read-increment-write; stress_fw.hex regenerated (PASS_PC 0x158c→0x15a0, OUTER_LOOP_PC 0x1070→0x1084). (3) test_boot.py — full PC-trace assert added after commit-count check in test_boot_sram_sentinels. (4) test_cpu_gpu_irq.py — clock task handle captured and appended to _active_tasks to stop cross-test leakage. (5) test_periph_loopback.py — bounds assert added in _load_rom() before writing ROM. (6) test_soc_stress.py — stray f-prefix removed from placeholder-less string (F541). Gate results: lint PASS (7 pre-existing baseline warnings, 0 new); soc_all TESTS=73 PASS=73 FAIL=0 (13 suites); soc_coherency 3/3; soc_cpu_gpu 2/2; soc_periph 1/1; soc_boot 3/3; soc_stress TESTS=1 PASS=1 FAIL=0 (1,079,945 sim cycles, 10/10 iterations). No RTL changes. dcache uncached-MMIO error-response RTL change validated by soc_all.",
+      "reason": "CodeRabbit PR#71 TB/firmware fixes applied and validated: (1) gen_periph_hex.py \u2014 removed unused ORI/BEQ imports, split E702 semicolons, added ROM_WORDS size assert; periph_loopback.hex byte-identical after regen. (2) gen_stress_hex.py \u2014 ITER_WI zero-init store added before first read-increment-write; stress_fw.hex regenerated (PASS_PC 0x158c\u21920x15a0, OUTER_LOOP_PC 0x1070\u21920x1084). (3) test_boot.py \u2014 full PC-trace assert added after commit-count check in test_boot_sram_sentinels. (4) test_cpu_gpu_irq.py \u2014 clock task handle captured and appended to _active_tasks to stop cross-test leakage. (5) test_periph_loopback.py \u2014 bounds assert added in _load_rom() before writing ROM. (6) test_soc_stress.py \u2014 stray f-prefix removed from placeholder-less string (F541). Gate results: lint PASS (7 pre-existing baseline warnings, 0 new); soc_all TESTS=73 PASS=73 FAIL=0 (13 suites); soc_coherency 3/3; soc_cpu_gpu 2/2; soc_periph 1/1; soc_boot 3/3; soc_stress TESTS=1 PASS=1 FAIL=0 (1,079,945 sim cycles, 10/10 iterations). No RTL changes. dcache uncached-MMIO error-response RTL change validated by soc_all.",
       "constraint_ref": null
     },
     {
@@ -457,7 +457,7 @@
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
-      "reason": "Post-merge regression gate (603fbd5 — CDC #68 + Verible-lint #69 merged into feature/phase5-m9-periph-loopback): lint 0 errors 7 pre-existing warnings (no new); soc_all TESTS=73 PASS=73 FAIL=0 (13 suites); soc_coherency 3/3; soc_cpu_gpu 2/2; soc_periph 1/1; soc_boot 3/3; soc_stress TESTS=1 PASS=1 FAIL=0 1079945 cycles; phase3_all 20/20 (icache 7/7, dcache 8/8, cache_integration 5/5); interrupts 13/13. Merge clean.",
+      "reason": "Post-merge regression gate (603fbd5 \u2014 CDC #68 + Verible-lint #69 merged into feature/phase5-m9-periph-loopback): lint 0 errors 7 pre-existing warnings (no new); soc_all TESTS=73 PASS=73 FAIL=0 (13 suites); soc_coherency 3/3; soc_cpu_gpu 2/2; soc_periph 1/1; soc_boot 3/3; soc_stress TESTS=1 PASS=1 FAIL=0 1079945 cycles; phase3_all 20/20 (icache 7/7, dcache 8/8, cache_integration 5/5); interrupts 13/13. Merge clean.",
       "constraint_ref": null
     },
     {
@@ -546,7 +546,7 @@
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
-      "reason": "APB migration PR-6 (pll_apb_regs): TESTS=4 PASS=4 FAIL=0. All 4 directed tests green: status_locked (pll_locked_i→STATUS[0] mirror), control_write_readback (WMASK=0x03F1, div_n=0xA, post_div_sel=/2), status_readonly (RO WMASK=0 write discarded), decode_and_enable (pll_enable_o toggle + OKAY response). pll_apb_regs_lint: Verilator 5.048 -Wall -Wno-IMPORTSTAR 0 errors 0 warnings. No RTL bugs found. DUT RTL unchanged. make exit=0.",
+      "reason": "APB migration PR-6 (pll_apb_regs): TESTS=4 PASS=4 FAIL=0. All 4 directed tests green: status_locked (pll_locked_i\u2192STATUS[0] mirror), control_write_readback (WMASK=0x03F1, div_n=0xA, post_div_sel=/2), status_readonly (RO WMASK=0 write discarded), decode_and_enable (pll_enable_o toggle + OKAY response). pll_apb_regs_lint: Verilator 5.048 -Wall -Wno-IMPORTSTAR 0 errors 0 warnings. No RTL bugs found. DUT RTL unchanged. make exit=0.",
       "constraint_ref": null
     },
     {
@@ -568,7 +568,18 @@
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
-      "reason": "APB migration PR-7 soc_top rewiring: new apb_interconnect.sv (1-master→5-slave APB decoder); soc_periph_map_pkg updated to 3-slave AXI-Lite ring (GPU/APB_BRIDGE/DMA) + 5-slave APB sub-map; soc_top rewired with axil_to_apb bridge + apb_interconnect + 5 APB peripherals; pll_axil_regs→pll_apb_regs; pll_axil_regs.sv deleted. Verilator -Wall (nix-shell): 0 errors, 7 pre-existing baseline warnings (BLKSEQ×3, DECLFILENAME×1, UNUSEDPARAM×3). 0 new warnings.",
+      "reason": "APB migration PR-7 soc_top rewiring: new apb_interconnect.sv (1-master\u21925-slave APB decoder); soc_periph_map_pkg updated to 3-slave AXI-Lite ring (GPU/APB_BRIDGE/DMA) + 5-slave APB sub-map; soc_top rewired with axil_to_apb bridge + apb_interconnect + 5 APB peripherals; pll_axil_regs\u2192pll_apb_regs; pll_axil_regs.sv deleted. Verilator -Wall (nix-shell): 0 errors, 7 pre-existing baseline warnings (BLKSEQ\u00d73, DECLFILENAME\u00d71, UNUSEDPARAM\u00d73). 0 new warnings.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-25T06:00:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-7 integration gate: soc_all TESTS=95 PASS=95 FAIL=0 (17 suites). lint 0 errors 7 pre-existing baseline warnings. Makefile wiring fixed (SOC_BOOT_SOURCES/PLL_SOURCES updated for deleted pll_axil_regs.sv + 3 new APB files). axil_interconnect TB/test updated for 3-slave AXI-Lite ring (was 6-slave). No DUT RTL bugs found. APB migration PR-7 functionally complete.",
       "constraint_ref": null
     }
   ],
@@ -579,7 +590,7 @@
       "updated_at": "2026-06-02T17:11:00+07:00",
       "created_by": "verification-orchestrator",
       "failure_class": "functional",
-      "test_name": "test_perf_counters (subtests a–f)",
+      "test_name": "test_perf_counters (subtests a\u2013f)",
       "property_or_assertion": null,
       "seed": 0,
       "waveform_path": null,
@@ -593,9 +604,9 @@
           131
         ]
       },
-      "summary": "csr_illegal_id in rv32i_pipeline_id.sv does not include M7 performance-counter CSR addresses (0x320, 0xB00/0xB80, 0xB02/0xB82, 0xB03, 0xB04, 0xB05) — any access to these CSRs triggers an illegal-instruction trap causing CPU to loop at mtvec=0",
+      "summary": "csr_illegal_id in rv32i_pipeline_id.sv does not include M7 performance-counter CSR addresses (0x320, 0xB00/0xB80, 0xB02/0xB82, 0xB03, 0xB04, 0xB05) \u2014 any access to these CSRs triggers an illegal-instruction trap causing CPU to loop at mtvec=0",
       "expected_behavior": "CSRRS/CSRRW to mcycle (0xB00), minstret (0xB02), mhpmcounter3-5 (0xB03-0xB05), mcycleh (0xB80), minstreth (0xB82), and mcountinhibit (0x320) should retire normally and return/write the counter value",
-      "observed_behavior": "csr_illegal_id=1 for all addresses not in the hardcoded whitelist in rv32i_pipeline_id.sv lines 122-131; CPU takes illegal-instruction trap (mcause=2) and spins at mtvec=0 (reset default) indefinitely — never reaches EBREAK",
+      "observed_behavior": "csr_illegal_id=1 for all addresses not in the hardcoded whitelist in rv32i_pipeline_id.sv lines 122-131; CPU takes illegal-instruction trap (mcause=2) and spins at mtvec=0 (reset default) indefinitely \u2014 never reaches EBREAK",
       "session_id": "generated_20260602",
       "status": "verified_fixed",
       "rtl_response": {
@@ -640,9 +651,9 @@
           79
         ]
       },
-      "summary": "CPU reset PC hardcoded to 0x0000_0000 but SoC boot ROM is at 0x0000_1000 — CPU first fetch goes to unmapped address, gets DECERR, and spins at mtvec=0",
+      "summary": "CPU reset PC hardcoded to 0x0000_0000 but SoC boot ROM is at 0x0000_1000 \u2014 CPU first fetch goes to unmapped address, gets DECERR, and spins at mtvec=0",
       "expected_behavior": "After reset, CPU fetches from ROM_BASE=0x0000_1000 and executes boot firmware (LUI/ADDI/SW/EBREAK sequence); commit_pc_o stream = [0x1000, 0x1004, 0x1008, 0x100c, 0x1010, 0x1014, 0x1018, 0x101c]",
-      "observed_behavior": "rv32i_pipeline_if.sv line 65 hardcodes pc_q <= 32h0000_0000 on reset; rv32i_cpu_top has no RESET_PC parameter; rv32i_core has no RESET_PC parameter; soc_top instantiates u_cpu with no PC override; first AXI fetch goes to 0x0000_0000 which is below ROM_BASE=0x1000 and below SRAM_BASE=0x2000 — crossbar returns DECERR; CPU traps to mtvec (default 0x0) and spins forever",
+      "observed_behavior": "rv32i_pipeline_if.sv line 65 hardcodes pc_q <= 32h0000_0000 on reset; rv32i_cpu_top has no RESET_PC parameter; rv32i_core has no RESET_PC parameter; soc_top instantiates u_cpu with no PC override; first AXI fetch goes to 0x0000_0000 which is below ROM_BASE=0x1000 and below SRAM_BASE=0x2000 \u2014 crossbar returns DECERR; CPU traps to mtvec (default 0x0) and spins forever",
       "session_id": null,
       "status": "fixed",
       "rtl_response": {
@@ -684,13 +695,13 @@
           275
         ]
       },
-      "summary": "axi4_crossbar AR channel does not buffer master arvalid on R_IDLE→R_AR transition: in R_AR state, s_arvalid[slave] is driven combinatorially from m_arvalid[master], but the GPU ifetch master (gpu_compute_unit) drops if_arvalid_o after exactly 1 cycle (warp_busy set by warp_issue_o). The crossbar enters R_AR one cycle after the initial arvalid pulse, then presents s_arvalid=0 to the SRAM slave; the SRAM never sees a valid AR transaction; the crossbar stays stuck in R_AR indefinitely; the GPU fetch never completes; GPS_DONE is never asserted.",
+      "summary": "axi4_crossbar AR channel does not buffer master arvalid on R_IDLE\u2192R_AR transition: in R_AR state, s_arvalid[slave] is driven combinatorially from m_arvalid[master], but the GPU ifetch master (gpu_compute_unit) drops if_arvalid_o after exactly 1 cycle (warp_busy set by warp_issue_o). The crossbar enters R_AR one cycle after the initial arvalid pulse, then presents s_arvalid=0 to the SRAM slave; the SRAM never sees a valid AR transaction; the crossbar stays stuck in R_AR indefinitely; the GPU fetch never completes; GPS_DONE is never asserted.",
       "expected_behavior": "AXI4 spec ARM IHI0022: once arvalid is asserted it must remain asserted until arready is seen. The crossbar R_AR state must either: (a) buffer/register the address+valid from R_IDLE and hold s_arvalid=1 in R_AR regardless of current m_arvalid, OR (b) present s_arvalid combinatorially from m_arvalid in R_IDLE (before the registered R_AR state), giving arready to the master in the same cycle the address is decoded. Option (b) avoids a register and costs 0 cycles. Option (a) requires an address/valid latch in the read engine.",
-      "observed_behavior": "GPU compute unit asserts if_arvalid_o for 1 cycle (warp_issue_o cycle). Crossbar latches rsel and transitions R_IDLE→R_AR (registered, takes effect next cycle). In R_AR, s_arvalid[SRAM]=m_arvalid[GPU_M1]=if_arvalid_o=0. SRAM s_arready never fires. rstate[SRAM] stays R_AR forever. GPU CU pipe_stall=1 (fetch_stall=1: if_id_q.valid=1 but instr_rdy_q=0). All 3 test_soc_coherency tests timeout at GPU_POLL loop (last_pc=0x000011a8) at 600,000 cycles.",
+      "observed_behavior": "GPU compute unit asserts if_arvalid_o for 1 cycle (warp_issue_o cycle). Crossbar latches rsel and transitions R_IDLE\u2192R_AR (registered, takes effect next cycle). In R_AR, s_arvalid[SRAM]=m_arvalid[GPU_M1]=if_arvalid_o=0. SRAM s_arready never fires. rstate[SRAM] stays R_AR forever. GPU CU pipe_stall=1 (fetch_stall=1: if_id_q.valid=1 but instr_rdy_q=0). All 3 test_soc_coherency tests timeout at GPU_POLL loop (last_pc=0x000011a8) at 600,000 cycles.",
       "session_id": null,
       "status": "fixed",
       "rtl_response": {
-        "diff_summary": "axi4_crossbar.sv: (1) Added per-slave AR capture registers (ar_addr_q, ar_len_q, ar_size_q, ar_burst_q) and AW capture registers (aw_addr_q, aw_len_q, aw_size_q, aw_burst_q). (2) Read engine g_rd_engine: R_IDLE now latches AR fields alongside rsel on the same clock edge that transitions to R_AR; in R_AR always_comb, s_arvalid[gs]=1'b1 (constant, from capture) replaces m_arvalid[rsel[gs]] (live re-sample); address/len/size/burst driven from ar_*_q registers; R_AR->R_DATA condition simplified to if(s_arready[gs]) since s_arvalid is always 1. (3) Write engine g_wr_engine: identical pattern — AW fields latched on W_IDLE->W_AW; s_awvalid[gs]=1'b1 in W_AW; aw_*_q registers drive slave outputs; W_AW->W_DATA condition simplified to if(s_awready[gs]).",
+        "diff_summary": "axi4_crossbar.sv: (1) Added per-slave AR capture registers (ar_addr_q, ar_len_q, ar_size_q, ar_burst_q) and AW capture registers (aw_addr_q, aw_len_q, aw_size_q, aw_burst_q). (2) Read engine g_rd_engine: R_IDLE now latches AR fields alongside rsel on the same clock edge that transitions to R_AR; in R_AR always_comb, s_arvalid[gs]=1'b1 (constant, from capture) replaces m_arvalid[rsel[gs]] (live re-sample); address/len/size/burst driven from ar_*_q registers; R_AR->R_DATA condition simplified to if(s_arready[gs]) since s_arvalid is always 1. (3) Write engine g_wr_engine: identical pattern \u2014 AW fields latched on W_IDLE->W_AW; s_awvalid[gs]=1'b1 in W_AW; aw_*_q registers drive slave outputs; W_AW->W_DATA condition simplified to if(s_awready[gs]).",
         "files_changed": [
           "rtl/soc/axi4_crossbar.sv"
         ],
@@ -701,13 +712,13 @@
           "timestamp": "2026-06-18T11:45:00Z",
           "agent": "rtl-design-orchestrator",
           "action": "fixed",
-          "note": "Option B capture-register fix applied to both read and write engines. Verilator -Wall make lint + make lint_soc: 0 errors, 0 new warnings (6 pre-existing baseline warnings unchanged — DECLFILENAME x2, UNUSEDPARAM x3, BLKSEQ x3 — all in cache files, none in axi4_crossbar.sv)."
+          "note": "Option B capture-register fix applied to both read and write engines. Verilator -Wall make lint + make lint_soc: 0 errors, 0 new warnings (6 pre-existing baseline warnings unchanged \u2014 DECLFILENAME x2, UNUSEDPARAM x3, BLKSEQ x3 \u2014 all in cache files, none in axi4_crossbar.sv)."
         },
         {
           "timestamp": "2026-06-18T14:42:00Z",
           "agent": "rtl-design-orchestrator",
           "action": "fixed",
-          "note": "Single-grant fix for early-accept regression: aw_priority_winner/ar_priority_winner helper arrays added inside the master-facing resolution always_comb block. Early-accept arms (W_IDLE/R_IDLE) now gate arready/awready on the priority-winner flag, so at most one master per slave per cycle receives ready — matching the FSM capture priority. Verilator -Wall: 0 errors, 0 new warnings (6 pre-existing baseline unchanged)."
+          "note": "Single-grant fix for early-accept regression: aw_priority_winner/ar_priority_winner helper arrays added inside the master-facing resolution always_comb block. Early-accept arms (W_IDLE/R_IDLE) now gate arready/awready on the priority-winner flag, so at most one master per slave per cycle receives ready \u2014 matching the FSM capture priority. Verilator -Wall: 0 errors, 0 new warnings (6 pre-existing baseline unchanged)."
         }
       ]
     },
@@ -748,7 +759,7 @@
           "timestamp": "2026-06-19T06:50:00+07:00",
           "agent": "rtl-design-orchestrator",
           "action": "fixed",
-          "note": "W_IDLE loop (now lines ~232-257) and R_IDLE loop (now lines ~310-336): found_wr/found_rd flag added; first-match-only capture now consistent with lowest-index aw_priority_winner/ar_priority_winner early-accept. Verilator -Wall make lint + make lint_soc: 0 errors, 0 new warnings (6 pre-existing baseline unchanged: DECLFILENAME x1, UNUSEDPARAM x3, BLKSEQ x3 — all in cache/SRAM files)."
+          "note": "W_IDLE loop (now lines ~232-257) and R_IDLE loop (now lines ~310-336): found_wr/found_rd flag added; first-match-only capture now consistent with lowest-index aw_priority_winner/ar_priority_winner early-accept. Verilator -Wall make lint + make lint_soc: 0 errors, 0 new warnings (6 pre-existing baseline unchanged: DECLFILENAME x1, UNUSEDPARAM x3, BLKSEQ x3 \u2014 all in cache/SRAM files)."
         }
       ]
     },
@@ -772,13 +783,13 @@
           1016
         ]
       },
-      "summary": "pll_axil_regs clocked by core_clk/core_rst_n instead of clk_i/rst_n_i: bootstrap deadlock — pll_enable=0 on reset -> pll_rst_n=0 -> PLL never locks -> pll_locked=0 -> core_rst_n=0 -> pll_axil_regs always in reset -> pll_enable=0 forever",
+      "summary": "pll_axil_regs clocked by core_clk/core_rst_n instead of clk_i/rst_n_i: bootstrap deadlock \u2014 pll_enable=0 on reset -> pll_rst_n=0 -> PLL never locks -> pll_locked=0 -> core_rst_n=0 -> pll_axil_regs always in reset -> pll_enable=0 forever",
       "expected_behavior": "soc_top comment (line 990-996) states \"pll_clkgen and pll_axil_regs themselves run on clk_i / rst_n_i (not core_clk)\"; pll_axil_regs should receive .clk_i(clk_i) .rst_n_i(rst_n_i) so firmware can write CONTROL[0]=1 to bootstrap PLL lock. Requires: pll_axil_regs AXI-Lite bus from the axi4_to_axilite bridge also runs on clk_i domain, OR the interconnect feeding it runs at clk_i.",
       "observed_behavior": "pll_axil_regs instantiated with .clk_i(core_clk) .rst_n_i(core_rst_n) at soc_top.sv lines 1015-1016. core_rst_n = rst_n_i & pll_locked. CONTROL resets to 0 (pll_enable=0). pll_rst_n = rst_n_i & pll_enable = 0. PLL lock counter never starts. pll_locked stays 0. core_rst_n stays 0. pll_axil_regs stays in reset. pll_enable stays 0. Deadlock confirmed: pll_locked_o never asserts in 60+ cycles regardless of top-level rst_n_i.",
       "session_id": null,
       "status": "fixed",
       "rtl_response": {
-        "diff_summary": "(1) soc_top.sv u_pll_regs: .clk_i(core_clk)->.clk_i(clk_i), .rst_n_i(core_rst_n)->.rst_n_i(rst_n_i) — moves pll_axil_regs to reference clock domain, breaking the circular dependency. Added detailed clock-domain comment documenting STUB transparency and RNM CDC deferral. (2) pll_axil_regs.sv RESET_VAL[0]: 32'h0000_0000->32'h0000_0001 (CONTROL[0]=pll_enable=1 at reset) so PLL self-locks after 16 ref cycles without firmware intervention. pll_rst_n = rst_n_i & pll_enable deasserts immediately with rst_n_i; pll_clkgen_stub lock counter fires after 16 edges (<<60-cycle test budget); pll_locked releases core_rst_n for all SoC children.",
+        "diff_summary": "(1) soc_top.sv u_pll_regs: .clk_i(core_clk)->.clk_i(clk_i), .rst_n_i(core_rst_n)->.rst_n_i(rst_n_i) \u2014 moves pll_axil_regs to reference clock domain, breaking the circular dependency. Added detailed clock-domain comment documenting STUB transparency and RNM CDC deferral. (2) pll_axil_regs.sv RESET_VAL[0]: 32'h0000_0000->32'h0000_0001 (CONTROL[0]=pll_enable=1 at reset) so PLL self-locks after 16 ref cycles without firmware intervention. pll_rst_n = rst_n_i & pll_enable deasserts immediately with rst_n_i; pll_clkgen_stub lock counter fires after 16 edges (<<60-cycle test budget); pll_locked releases core_rst_n for all SoC children.",
         "files_changed": [
           "rtl/soc/soc_top.sv",
           "rtl/soc/pll/pll_axil_regs.sv"
