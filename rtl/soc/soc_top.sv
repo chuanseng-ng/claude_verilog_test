@@ -1,5 +1,5 @@
 // soc_top.sv
-// Phase 5 (M8) / Phase 7 (M-c) — RV32I + GPU-Lite SoC top-level integration.
+// Phase 5 (M8) / Phase 7 (M-c) / APB migration PR-7 — RV32I + GPU-Lite SoC top-level.
 //
 // Architecture:
 //   Data plane  : AXI4 crossbar, N_MASTERS=4, N_SLAVES=3
@@ -11,9 +11,18 @@
 //     S1 = SRAM ctrl (sram_controller, 0x0000_2000–0x0FFF_FFFF)
 //     S2 = Periph    (axi4_to_axilite → axi_lite_interconnect, 0x2000_1000–7FFF)
 //
-//   Control plane : axi4_to_axilite → axi_lite_interconnect, N_SLAVES=7
-//     AXIL_GPU=0, AXIL_UART=1, AXIL_SPI=2, AXIL_TIMER=3,
-//     AXIL_DMA=4, AXIL_IRQ=5, AXIL_PLL=6
+//   Control plane : axi4_to_axilite → axi_lite_interconnect (N_SLAVES=3)
+//     AXIL_GPU=0        @ 0x2000_1000–1FFF  (AXI-Lite direct)
+//     AXIL_APB_BRIDGE=1 @ 0x2000_2000–7FFF  (axil_to_apb → apb_interconnect)
+//     AXIL_DMA=2        @ 0x2000_5000–5FFF  (AXI-Lite direct; last-match wins
+//                                             over APB_BRIDGE window overlap)
+//
+//   APB sub-tree (5 slaves behind axil_to_apb bridge):
+//     APB_UART=0  @ 0x2000_2000–2FFF  uart_controller
+//     APB_SPI=1   @ 0x2000_3000–3FFF  spi_controller
+//     APB_TIMER=2 @ 0x2000_4000–4FFF  timer
+//     APB_IRQ=3   @ 0x2000_6000–6FFF  interrupt_controller
+//     APB_PLL=4   @ 0x2000_7000–7FFF  pll_apb_regs (clk_i domain)
 //
 //   Debug plane   : APB3 debug slave exposed at top-level ports.
 //
@@ -91,7 +100,7 @@ module soc_top
     // =========================================================================
     localparam int unsigned N_MASTERS   = 4;
     localparam int unsigned N_SLAVES    = SOC_N_SLAVES;    // 3
-    localparam int unsigned N_AXIL_SLV  = AXIL_N_SLAVES;  // 7 (Phase 7 M-c: +PLL)
+    localparam int unsigned N_AXIL_SLV  = AXIL_N_SLAVES;  // 3 (PR-7: GPU, APB_BRIDGE, DMA)
     localparam int unsigned AW          = AXI_ADDR_WIDTH;
     localparam int unsigned DW          = AXI_DATA_WIDTH;
     localparam int unsigned SW          = AXI_STRB_WIDTH;
@@ -239,6 +248,33 @@ module soc_top
     logic [1:0]    axil_s_rresp   [N_AXIL_SLV];
     logic          axil_s_rvalid  [N_AXIL_SLV];
     logic          axil_s_rready  [N_AXIL_SLV];
+
+    // =========================================================================
+    // APB nets: axil_to_apb bridge master → apb_interconnect → 5 APB slaves
+    // =========================================================================
+    localparam int unsigned N_APB_SLV = APB_N_SLAVES; // 5
+
+    // Bridge single APB master output
+    logic        apb_m_psel;
+    logic        apb_m_penable;
+    logic        apb_m_pwrite;
+    logic [31:0] apb_m_paddr;
+    logic [31:0] apb_m_pwdata;
+    logic [3:0]  apb_m_pstrb;
+    logic [31:0] apb_m_prdata;   // response back from interconnect
+    logic        apb_m_pready;
+    logic        apb_m_pslverr;
+
+    // Per-slave APB nets from apb_interconnect to each peripheral
+    logic        apb_psel    [N_APB_SLV];
+    logic        apb_penable [N_APB_SLV];
+    logic        apb_pwrite  [N_APB_SLV];
+    logic [31:0] apb_paddr   [N_APB_SLV];
+    logic [31:0] apb_pwdata  [N_APB_SLV];
+    logic [3:0]  apb_pstrb   [N_APB_SLV];
+    logic [31:0] apb_prdata  [N_APB_SLV];
+    logic        apb_pready  [N_APB_SLV];
+    logic        apb_pslverr [N_APB_SLV];
 
     // =========================================================================
     // axilite_to_axi4 adapter (GPU ifetch → crossbar M1)
@@ -795,7 +831,7 @@ module soc_top
     );
 
     // =========================================================================
-    // AXI4-Lite interconnect (1 master → 6 peripheral slaves)
+    // AXI4-Lite interconnect (1 master → 3 ring slaves: GPU, APB_BRIDGE, DMA)
     // =========================================================================
     axi_lite_interconnect #(
         .N_SLAVES   (N_AXIL_SLV),
@@ -824,7 +860,7 @@ module soc_top
         .m_axil_rresp       (periph_axil_rresp),
         .m_axil_rvalid      (periph_axil_rvalid),
         .m_axil_rready      (periph_axil_rready),
-        // Slave-facing ports (to peripherals)
+        // Slave-facing ports (GPU, APB_BRIDGE, DMA)
         .s_axil_awaddr      (axil_s_awaddr),
         .s_axil_awprot      (axil_s_awprot),
         .s_axil_awvalid     (axil_s_awvalid),
@@ -847,153 +883,177 @@ module soc_top
     );
 
     // =========================================================================
-    // UART (axil_s[AXIL_UART])
+    // AXIL_APB_BRIDGE: axil_to_apb bridge (axil_s[AXIL_APB_BRIDGE])
+    // Converts AXI-Lite ring slot 1 to APB master for the peripheral subtree.
+    // =========================================================================
+    axil_to_apb #(
+        .ADDR_W (32),
+        .DW     (32),
+        .SW     (4)
+    ) u_axil_apb_bridge (
+        .clk            (core_clk),
+        .rst_n          (core_rst_n),
+        // AXI-Lite slave ← ring AXIL_APB_BRIDGE slot
+        .s_axil_awaddr  (axil_s_awaddr  [AXIL_APB_BRIDGE]),
+        .s_axil_awprot  (axil_s_awprot  [AXIL_APB_BRIDGE]),
+        .s_axil_awvalid (axil_s_awvalid [AXIL_APB_BRIDGE]),
+        .s_axil_awready (axil_s_awready [AXIL_APB_BRIDGE]),
+        .s_axil_wdata   (axil_s_wdata   [AXIL_APB_BRIDGE]),
+        .s_axil_wstrb   (axil_s_wstrb   [AXIL_APB_BRIDGE]),
+        .s_axil_wvalid  (axil_s_wvalid  [AXIL_APB_BRIDGE]),
+        .s_axil_wready  (axil_s_wready  [AXIL_APB_BRIDGE]),
+        .s_axil_bresp   (axil_s_bresp   [AXIL_APB_BRIDGE]),
+        .s_axil_bvalid  (axil_s_bvalid  [AXIL_APB_BRIDGE]),
+        .s_axil_bready  (axil_s_bready  [AXIL_APB_BRIDGE]),
+        .s_axil_araddr  (axil_s_araddr  [AXIL_APB_BRIDGE]),
+        .s_axil_arprot  (axil_s_arprot  [AXIL_APB_BRIDGE]),
+        .s_axil_arvalid (axil_s_arvalid [AXIL_APB_BRIDGE]),
+        .s_axil_arready (axil_s_arready [AXIL_APB_BRIDGE]),
+        .s_axil_rdata   (axil_s_rdata   [AXIL_APB_BRIDGE]),
+        .s_axil_rresp   (axil_s_rresp   [AXIL_APB_BRIDGE]),
+        .s_axil_rvalid  (axil_s_rvalid  [AXIL_APB_BRIDGE]),
+        .s_axil_rready  (axil_s_rready  [AXIL_APB_BRIDGE]),
+        // APB4 master → apb_interconnect
+        .psel           (apb_m_psel),
+        .penable        (apb_m_penable),
+        .pwrite         (apb_m_pwrite),
+        .paddr          (apb_m_paddr),
+        .pwdata         (apb_m_pwdata),
+        .pstrb          (apb_m_pstrb),
+        .prdata         (apb_m_prdata),
+        .pready         (apb_m_pready),
+        .pslverr        (apb_m_pslverr)
+    );
+
+    // =========================================================================
+    // APB interconnect: 1 APB master → 5 APB peripheral slaves
+    //   APB_UART=0 APB_SPI=1 APB_TIMER=2 APB_IRQ=3 APB_PLL=4
+    // =========================================================================
+    apb_interconnect #(
+        .N_SLAVES  (N_APB_SLV),
+        .ADDR_W    (32),
+        .DW        (32),
+        .SW        (4),
+        .SLV_BASE  (APB_SLV_BASE),
+        .SLV_LIMIT (APB_SLV_LIMIT)
+    ) u_apb_ic (
+        .psel_i    (apb_m_psel),
+        .penable_i (apb_m_penable),
+        .pwrite_i  (apb_m_pwrite),
+        .paddr_i   (apb_m_paddr),
+        .pwdata_i  (apb_m_pwdata),
+        .pstrb_i   (apb_m_pstrb),
+        .prdata_o  (apb_m_prdata),
+        .pready_o  (apb_m_pready),
+        .pslverr_o (apb_m_pslverr),
+        .psel_o    (apb_psel),
+        .penable_o (apb_penable),
+        .pwrite_o  (apb_pwrite),
+        .paddr_o   (apb_paddr),
+        .pwdata_o  (apb_pwdata),
+        .pstrb_o   (apb_pstrb),
+        .prdata_i  (apb_prdata),
+        .pready_i  (apb_pready),
+        .pslverr_i (apb_pslverr)
+    );
+
+    // =========================================================================
+    // UART — APB slave (apb_psel[APB_UART])
     // =========================================================================
     uart_controller #(
         .ADDR_W (12)
     ) u_uart (
-        .clk            (core_clk),
-        .rst_n          (core_rst_n),
-        .s_axil_awaddr  (axil_s_awaddr  [AXIL_UART][11:0]),
-        .s_axil_awprot  (axil_s_awprot  [AXIL_UART]),
-        .s_axil_awvalid (axil_s_awvalid [AXIL_UART]),
-        .s_axil_awready (axil_s_awready [AXIL_UART]),
-        .s_axil_wdata   (axil_s_wdata   [AXIL_UART]),
-        .s_axil_wstrb   (axil_s_wstrb   [AXIL_UART]),
-        .s_axil_wvalid  (axil_s_wvalid  [AXIL_UART]),
-        .s_axil_wready  (axil_s_wready  [AXIL_UART]),
-        .s_axil_bresp   (axil_s_bresp   [AXIL_UART]),
-        .s_axil_bvalid  (axil_s_bvalid  [AXIL_UART]),
-        .s_axil_bready  (axil_s_bready  [AXIL_UART]),
-        .s_axil_araddr  (axil_s_araddr  [AXIL_UART][11:0]),
-        .s_axil_arprot  (axil_s_arprot  [AXIL_UART]),
-        .s_axil_arvalid (axil_s_arvalid [AXIL_UART]),
-        .s_axil_arready (axil_s_arready [AXIL_UART]),
-        .s_axil_rdata   (axil_s_rdata   [AXIL_UART]),
-        .s_axil_rresp   (axil_s_rresp   [AXIL_UART]),
-        .s_axil_rvalid  (axil_s_rvalid  [AXIL_UART]),
-        .s_axil_rready  (axil_s_rready  [AXIL_UART]),
-        .uart_tx_o      (uart_tx_o),
-        .uart_rx_i      (uart_rx_i),
-        .irq_o          (uart_irq)
+        .clk        (core_clk),
+        .rst_n      (core_rst_n),
+        .psel       (apb_psel    [APB_UART]),
+        .penable    (apb_penable [APB_UART]),
+        .pwrite     (apb_pwrite  [APB_UART]),
+        .paddr      (apb_paddr   [APB_UART][11:0]),
+        .pwdata     (apb_pwdata  [APB_UART]),
+        .pstrb      (apb_pstrb   [APB_UART]),
+        .prdata     (apb_prdata  [APB_UART]),
+        .pready     (apb_pready  [APB_UART]),
+        .pslverr    (apb_pslverr [APB_UART]),
+        .uart_tx_o  (uart_tx_o),
+        .uart_rx_i  (uart_rx_i),
+        .irq_o      (uart_irq)
     );
 
     // =========================================================================
-    // SPI (axil_s[AXIL_SPI])
+    // SPI — APB slave (apb_psel[APB_SPI])
     // =========================================================================
     spi_controller #(
         .ADDR_W (12)
     ) u_spi (
-        .clk            (core_clk),
-        .rst_n          (core_rst_n),
-        .s_axil_awaddr  (axil_s_awaddr  [AXIL_SPI][11:0]),
-        .s_axil_awprot  (axil_s_awprot  [AXIL_SPI]),
-        .s_axil_awvalid (axil_s_awvalid [AXIL_SPI]),
-        .s_axil_awready (axil_s_awready [AXIL_SPI]),
-        .s_axil_wdata   (axil_s_wdata   [AXIL_SPI]),
-        .s_axil_wstrb   (axil_s_wstrb   [AXIL_SPI]),
-        .s_axil_wvalid  (axil_s_wvalid  [AXIL_SPI]),
-        .s_axil_wready  (axil_s_wready  [AXIL_SPI]),
-        .s_axil_bresp   (axil_s_bresp   [AXIL_SPI]),
-        .s_axil_bvalid  (axil_s_bvalid  [AXIL_SPI]),
-        .s_axil_bready  (axil_s_bready  [AXIL_SPI]),
-        .s_axil_araddr  (axil_s_araddr  [AXIL_SPI][11:0]),
-        .s_axil_arprot  (axil_s_arprot  [AXIL_SPI]),
-        .s_axil_arvalid (axil_s_arvalid [AXIL_SPI]),
-        .s_axil_arready (axil_s_arready [AXIL_SPI]),
-        .s_axil_rdata   (axil_s_rdata   [AXIL_SPI]),
-        .s_axil_rresp   (axil_s_rresp   [AXIL_SPI]),
-        .s_axil_rvalid  (axil_s_rvalid  [AXIL_SPI]),
-        .s_axil_rready  (axil_s_rready  [AXIL_SPI]),
-        .spi_sclk_o     (spi_sclk_o),
-        .spi_mosi_o     (spi_mosi_o),
-        .spi_miso_i     (spi_miso_i),
-        .spi_cs_n_o     (spi_cs_n_o),
-        .irq_o          (spi_irq)
+        .clk        (core_clk),
+        .rst_n      (core_rst_n),
+        .psel       (apb_psel    [APB_SPI]),
+        .penable    (apb_penable [APB_SPI]),
+        .pwrite     (apb_pwrite  [APB_SPI]),
+        .paddr      (apb_paddr   [APB_SPI][11:0]),
+        .pwdata     (apb_pwdata  [APB_SPI]),
+        .pstrb      (apb_pstrb   [APB_SPI]),
+        .prdata     (apb_prdata  [APB_SPI]),
+        .pready     (apb_pready  [APB_SPI]),
+        .pslverr    (apb_pslverr [APB_SPI]),
+        .spi_sclk_o (spi_sclk_o),
+        .spi_mosi_o (spi_mosi_o),
+        .spi_miso_i (spi_miso_i),
+        .spi_cs_n_o (spi_cs_n_o),
+        .irq_o      (spi_irq)
     );
 
     // =========================================================================
-    // Timer (axil_s[AXIL_TIMER])
+    // Timer — APB slave (apb_psel[APB_TIMER])
     // =========================================================================
     timer #(
         .ADDR_W (12)
     ) u_timer (
-        .clk            (core_clk),
-        .rst_n          (core_rst_n),
-        .s_axil_awaddr  (axil_s_awaddr  [AXIL_TIMER][11:0]),
-        .s_axil_awprot  (axil_s_awprot  [AXIL_TIMER]),
-        .s_axil_awvalid (axil_s_awvalid [AXIL_TIMER]),
-        .s_axil_awready (axil_s_awready [AXIL_TIMER]),
-        .s_axil_wdata   (axil_s_wdata   [AXIL_TIMER]),
-        .s_axil_wstrb   (axil_s_wstrb   [AXIL_TIMER]),
-        .s_axil_wvalid  (axil_s_wvalid  [AXIL_TIMER]),
-        .s_axil_wready  (axil_s_wready  [AXIL_TIMER]),
-        .s_axil_bresp   (axil_s_bresp   [AXIL_TIMER]),
-        .s_axil_bvalid  (axil_s_bvalid  [AXIL_TIMER]),
-        .s_axil_bready  (axil_s_bready  [AXIL_TIMER]),
-        .s_axil_araddr  (axil_s_araddr  [AXIL_TIMER][11:0]),
-        .s_axil_arprot  (axil_s_arprot  [AXIL_TIMER]),
-        .s_axil_arvalid (axil_s_arvalid [AXIL_TIMER]),
-        .s_axil_arready (axil_s_arready [AXIL_TIMER]),
-        .s_axil_rdata   (axil_s_rdata   [AXIL_TIMER]),
-        .s_axil_rresp   (axil_s_rresp   [AXIL_TIMER]),
-        .s_axil_rvalid  (axil_s_rvalid  [AXIL_TIMER]),
-        .s_axil_rready  (axil_s_rready  [AXIL_TIMER]),
-        .irq_o          (timer_irq)   // → CPU timer_irq_i (MTIP) only
+        .clk     (core_clk),
+        .rst_n   (core_rst_n),
+        .psel    (apb_psel    [APB_TIMER]),
+        .penable (apb_penable [APB_TIMER]),
+        .pwrite  (apb_pwrite  [APB_TIMER]),
+        .paddr   (apb_paddr   [APB_TIMER][11:0]),
+        .pwdata  (apb_pwdata  [APB_TIMER]),
+        .pstrb   (apb_pstrb   [APB_TIMER]),
+        .prdata  (apb_prdata  [APB_TIMER]),
+        .pready  (apb_pready  [APB_TIMER]),
+        .pslverr (apb_pslverr [APB_TIMER]),
+        .irq_o   (timer_irq)   // → CPU timer_irq_i (MTIP)
     );
 
     // =========================================================================
-    // Interrupt controller (axil_s[AXIL_IRQ])
-    // IRQ source bit order: [0]=UART [1]=SPI [2]=TIMER [3]=DMA [4]=GPU
-    // NOTE: the TIMER slot (index 2) is tied 0 here — the timer drives the CPU
-    // dedicated MTIP line (timer_irq_i) directly, so routing it through the
-    // external-interrupt aggregator too would double-count one timer event as
-    // both MTIP and MEIP. The slot is retained for source-numbering stability.
+    // Interrupt controller — APB slave (apb_psel[APB_IRQ])
+    // irq_src_i[4:0] = {GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}
+    // TIMER slot tied 0: timer IRQ goes directly to CPU MTIP; routing it here
+    // too would double-count the event.
     // =========================================================================
     interrupt_controller #(
         .ADDR_W    (12),
         .N_SOURCES (5)
     ) u_irq_ctrl (
-        .clk            (core_clk),
-        .rst_n          (core_rst_n),
-        .s_axil_awaddr  (axil_s_awaddr  [AXIL_IRQ][11:0]),
-        .s_axil_awprot  (axil_s_awprot  [AXIL_IRQ]),
-        .s_axil_awvalid (axil_s_awvalid [AXIL_IRQ]),
-        .s_axil_awready (axil_s_awready [AXIL_IRQ]),
-        .s_axil_wdata   (axil_s_wdata   [AXIL_IRQ]),
-        .s_axil_wstrb   (axil_s_wstrb   [AXIL_IRQ]),
-        .s_axil_wvalid  (axil_s_wvalid  [AXIL_IRQ]),
-        .s_axil_wready  (axil_s_wready  [AXIL_IRQ]),
-        .s_axil_bresp   (axil_s_bresp   [AXIL_IRQ]),
-        .s_axil_bvalid  (axil_s_bvalid  [AXIL_IRQ]),
-        .s_axil_bready  (axil_s_bready  [AXIL_IRQ]),
-        .s_axil_araddr  (axil_s_araddr  [AXIL_IRQ][11:0]),
-        .s_axil_arprot  (axil_s_arprot  [AXIL_IRQ]),
-        .s_axil_arvalid (axil_s_arvalid [AXIL_IRQ]),
-        .s_axil_arready (axil_s_arready [AXIL_IRQ]),
-        .s_axil_rdata   (axil_s_rdata   [AXIL_IRQ]),
-        .s_axil_rresp   (axil_s_rresp   [AXIL_IRQ]),
-        .s_axil_rvalid  (axil_s_rvalid  [AXIL_IRQ]),
-        .s_axil_rready  (axil_s_rready  [AXIL_IRQ]),
-        // irq_src_i[4:0] = {GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}
-        // TIMER tied 0: timer interrupt is delivered as MTIP via timer_irq_i.
-        .irq_src_i      ({gpu_irq_o, dma_irq, 1'b0, spi_irq, uart_irq}),
-        .irq_o          (ext_irq)
+        .clk        (core_clk),
+        .rst_n      (core_rst_n),
+        .psel       (apb_psel    [APB_IRQ]),
+        .penable    (apb_penable [APB_IRQ]),
+        .pwrite     (apb_pwrite  [APB_IRQ]),
+        .paddr      (apb_paddr   [APB_IRQ][11:0]),
+        .pwdata     (apb_pwdata  [APB_IRQ]),
+        .pstrb      (apb_pstrb   [APB_IRQ]),
+        .prdata     (apb_prdata  [APB_IRQ]),
+        .pready     (apb_pready  [APB_IRQ]),
+        .pslverr    (apb_pslverr [APB_IRQ]),
+        .irq_src_i  ({gpu_irq_o, dma_irq, 1'b0, spi_irq, uart_irq}),
+        .irq_o      (ext_irq)
     );
 
     // =========================================================================
-    // Phase 7 M-c: PLL clock generator + AXI-Lite config slave
+    // Phase 7 M-c: PLL clock generator + APB config slave
     // =========================================================================
     // pll_clkgen: selects STUB (default, synth-safe) or RNM (M-c cosim)
     // via PLL_IMPL parameter.  clk_i is the 100 MHz reference; core_clk is
     // the generated clock that feeds all children (see clock seam section).
-    //
-    // Note: pll_clkgen and pll_axil_regs themselves run on clk_i / rst_n_i
-    // (not core_clk) so the clock generator is not clocked by its own output.
-    // pll_axil_regs is in the control ring at AXIL_PLL slot (index 6) but
-    // feeds its AXI-Lite port from the interconnect which now runs on core_clk.
-    // For M-c cosim this is acceptable (ref and core clocks are synchronous in
-    // the stub; the RNM's out_clk is phase-aligned to ref in the model).
     // =========================================================================
     pll_clkgen #(
         .PLL_IMPL        (PLL_IMPL)
@@ -1007,58 +1067,46 @@ module soc_top
     );
 
     // =========================================================================
-    // AXIL_PLL (axil_s[AXIL_PLL]): PLL AXI-Lite config slave
+    // APB_PLL (apb_psel[APB_PLL]): PLL APB config slave
     //
     // IMPORTANT — clock-domain intent:
     //   u_pll_regs and u_pll (pll_clkgen) are the SOURCE of core_clk and
     //   pll_locked.  They MUST run on the reference clock (clk_i / rst_n_i),
     //   NOT on core_clk / core_rst_n.  Placing them on core_clk would create
     //   a bootstrap deadlock: core_rst_n requires pll_locked, pll_locked
-    //   requires pll_enable=1, pll_enable comes from pll_axil_regs CONTROL[0],
-    //   but pll_axil_regs would be held in reset (core_rst_n=0) forever.
+    //   requires pll_enable=1, pll_enable comes from pll_apb_regs CONTROL[0],
+    //   but pll_apb_regs would be held in reset (core_rst_n=0) forever.
     //
     //   STUB mode (PLL_IMPL="STUB"):
     //     out_clk_o = ref_clk_i, so core_clk == clk_i.  No CDC issue — the
-    //     AXI-Lite interconnect (u_axil_ic, running on core_clk) and u_pll_regs
-    //     (running on clk_i) are in the same physical clock domain.
+    //     apb_interconnect (running on core_clk) and u_pll_regs (running on
+    //     clk_i) are in the same physical clock domain.
     //
     //   RNM mode (PLL_IMPL="RNM"):
-    //     core_clk != clk_i.  The u_axil_ic interconnect runs on core_clk while
-    //     u_pll_regs runs on clk_i (ref clock).  The axil_s_*[AXIL_PLL] bus
+    //     core_clk != clk_i.  The apb_interconnect runs on core_clk while
+    //     u_pll_regs runs on clk_i (ref clock).  The apb_psel[APB_PLL] bus
     //     therefore crosses a CDC boundary.  A 2-FF synchroniser (or async
     //     handshake) on each valid/ready signal would be required for
-    //     production-quality closure.  This is deferred: M-c sim uses STUB
-    //     where the CDC is transparent (same clock), and full RNM CDC hardening
-    //     is a Phase 7 M-d or tape-out pre-requisite.  Do NOT remove this
-    //     comment without adding the synchroniser.
+    //     production-quality closure.  Deferred to Phase 7 M-d / tape-out.
+    //     Do NOT remove this comment without adding the synchroniser.
     // =========================================================================
-    pll_axil_regs #(
+    pll_apb_regs #(
         .ADDR_W (12)
     ) u_pll_regs (
         // Run on reference clock — NOT core_clk — to avoid bootstrap deadlock.
         // See clock-domain note above.
-        .clk_i          (clk_i),
-        .rst_n_i        (rst_n_i),
-        // AXI-Lite slave ← interconnect AXIL_PLL slot
-        .s_axil_awaddr  (axil_s_awaddr  [AXIL_PLL][11:0]),
-        .s_axil_awprot  (axil_s_awprot  [AXIL_PLL]),
-        .s_axil_awvalid (axil_s_awvalid [AXIL_PLL]),
-        .s_axil_awready (axil_s_awready [AXIL_PLL]),
-        .s_axil_wdata   (axil_s_wdata   [AXIL_PLL]),
-        .s_axil_wstrb   (axil_s_wstrb   [AXIL_PLL]),
-        .s_axil_wvalid  (axil_s_wvalid  [AXIL_PLL]),
-        .s_axil_wready  (axil_s_wready  [AXIL_PLL]),
-        .s_axil_bresp   (axil_s_bresp   [AXIL_PLL]),
-        .s_axil_bvalid  (axil_s_bvalid  [AXIL_PLL]),
-        .s_axil_bready  (axil_s_bready  [AXIL_PLL]),
-        .s_axil_araddr  (axil_s_araddr  [AXIL_PLL][11:0]),
-        .s_axil_arprot  (axil_s_arprot  [AXIL_PLL]),
-        .s_axil_arvalid (axil_s_arvalid [AXIL_PLL]),
-        .s_axil_arready (axil_s_arready [AXIL_PLL]),
-        .s_axil_rdata   (axil_s_rdata   [AXIL_PLL]),
-        .s_axil_rresp   (axil_s_rresp   [AXIL_PLL]),
-        .s_axil_rvalid  (axil_s_rvalid  [AXIL_PLL]),
-        .s_axil_rready  (axil_s_rready  [AXIL_PLL]),
+        .clk_i       (clk_i),
+        .rst_n_i     (rst_n_i),
+        // APB4 slave ← apb_interconnect APB_PLL slot
+        .psel        (apb_psel    [APB_PLL]),
+        .penable     (apb_penable [APB_PLL]),
+        .pwrite      (apb_pwrite  [APB_PLL]),
+        .paddr       (apb_paddr   [APB_PLL][11:0]),
+        .pwdata      (apb_pwdata  [APB_PLL]),
+        .pstrb       (apb_pstrb   [APB_PLL]),
+        .prdata      (apb_prdata  [APB_PLL]),
+        .pready      (apb_pready  [APB_PLL]),
+        .pslverr     (apb_pslverr [APB_PLL]),
         // PLL config outputs → pll_clkgen inputs
         .pll_enable_o   (pll_enable),
         .feedback_div_o (pll_fb_div),

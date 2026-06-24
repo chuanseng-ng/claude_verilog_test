@@ -326,9 +326,11 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/soc/axilite_to_axi4.sv \
 	$(RTL_DIR)/soc/axi_lite_register_bank.sv \
 	$(RTL_DIR)/soc/apb4_register_bank.sv \
+	$(RTL_DIR)/soc/axil_to_apb.sv \
+	$(RTL_DIR)/soc/apb_interconnect.sv \
 	$(RTL_DIR)/soc/pll/pll_clkgen_stub.sv \
 	$(RTL_DIR)/soc/pll/pll_clkgen.sv \
-	$(RTL_DIR)/soc/pll/pll_axil_regs.sv \
+	$(RTL_DIR)/soc/pll/pll_apb_regs.sv \
 	$(RTL_DIR)/soc/soc_top.sv
 
 .PHONY: lint_soc

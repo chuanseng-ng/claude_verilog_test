@@ -1,24 +1,25 @@
 // soc_periph_map_pkg.sv
-// Phase 5 (M1/M3) — AXI-Lite control-ring address map.
+// Phase 5 (M1/M3) — AXI-Lite control-ring + APB peripheral sub-map.
 //
-// The Phase 5 peripherals attach to a CPU-driven AXI4-Lite control bus
-// (rtl/soc/axi_lite_interconnect.sv), NOT the data crossbar.  This reconciles
-// the deferred M1 item (PHASE5_SOC_INTEGRATION_PLAN.md line 66): the original
-// MEMORY_MAP.md routed peripherals through an APB3 bridge @0x2000_xxxx, but the
-// GPU control port is AXI4-Lite, so the whole ring is AXI-Lite-native.  The
-// APB3 interface survives only on the CPU debug slot (0x2000_0000..0FFF).
+// APB migration PR-7 topology:
+//   AXI-Lite ring (3 slaves): GPU, DMA, APB-bridge window
+//     Slave 0: GPU ctrl    0x2000_1000 .. 0x2000_1FFF
+//     Slave 1: APB bridge  0x2000_2000 .. 0x2000_7FFF  (covers 5 APB perips)
+//     Slave 2: DMA ctrl    0x2000_5000 .. 0x2000_5FFF
 //
-// Region summary (4 KB / slave, local 12-bit addressing):
-//   GPU ctrl : 0x2000_1000 .. 0x2000_1FFF
-//   UART     : 0x2000_2000 .. 0x2000_2FFF
-//   SPI      : 0x2000_3000 .. 0x2000_3FFF
-//   Timer    : 0x2000_4000 .. 0x2000_4FFF
-//   DMA ctrl : 0x2000_5000 .. 0x2000_5FFF
-//   IRQ ctrl : 0x2000_6000 .. 0x2000_6FFF
+//   Note on overlapping window: DMA (index 2) overlaps the APB-bridge window.
+//   axi_lite_interconnect's decode() iterates 0→N-1 and takes the LAST match,
+//   so DMA (highest index) wins for 0x2000_5000-5FFF.  All other addresses in
+//   _2000-_7FFF route to APB_BRIDGE (index 1).
 //
-// The interconnect is parameterized with base/limit arrays so it stays reusable;
-// the SoC top-level passes the constants below.  decode_axil_slave() is the
-// reference model used by the top-level and the testbench.
+//   APB sub-map (5 slaves, decoded by apb_interconnect):
+//     APB_UART  0: 0x2000_2000 .. 0x2000_2FFF
+//     APB_SPI   1: 0x2000_3000 .. 0x2000_3FFF
+//     APB_TIMER 2: 0x2000_4000 .. 0x2000_4FFF
+//     APB_IRQ   3: 0x2000_6000 .. 0x2000_6FFF
+//     APB_PLL   4: 0x2000_7000 .. 0x2000_7FFF
+//
+//   All global MMIO addresses are UNCHANGED from the original 7-slave ring.
 
 /* verilator lint_off UNUSEDPARAM */
 package soc_periph_map_pkg;
@@ -26,49 +27,86 @@ package soc_periph_map_pkg;
 
     import axi_pkg::*;
 
-    // ── Control-ring slave indices ───────────────────────────────────────────
+    // =========================================================================
+    // AXI-Lite ring — 3 slaves (PR-7 topology)
+    // =========================================================================
     /* verilator lint_off UNUSEDPARAM */
-    localparam int unsigned AXIL_GPU   = 0;
-    localparam int unsigned AXIL_UART  = 1;
-    localparam int unsigned AXIL_SPI   = 2;
-    localparam int unsigned AXIL_TIMER = 3;
-    localparam int unsigned AXIL_DMA   = 4;
-    localparam int unsigned AXIL_IRQ   = 5;
-    localparam int unsigned AXIL_PLL   = 6;  // Phase 7 M-c: PLL config slave
+    localparam int unsigned AXIL_GPU        = 0;
+    localparam int unsigned AXIL_APB_BRIDGE = 1;
+    localparam int unsigned AXIL_DMA        = 2;
     /* verilator lint_on  UNUSEDPARAM */
-    localparam int unsigned AXIL_N_SLAVES = 7;  // was 6; +1 for PLL
+    localparam int unsigned AXIL_N_SLAVES   = 3;
 
-    // ── Region bounds (inclusive) ────────────────────────────────────────────
+    // ── AXI-Lite region bounds ───────────────────────────────────────────────
     localparam logic [31:0] AXIL_GPU_BASE    = 32'h2000_1000;
     localparam logic [31:0] AXIL_GPU_LIMIT   = 32'h2000_1FFF;
+    // APB bridge window — covers all APB peripheral slots (5 × 4 KB).
+    // DMA (index 2, checked last) takes priority for 0x2000_5000-5FFF.
+    localparam logic [31:0] AXIL_APB_BASE    = 32'h2000_2000;
+    localparam logic [31:0] AXIL_APB_LIMIT   = 32'h2000_7FFF;
+    localparam logic [31:0] AXIL_DMA_BASE    = 32'h2000_5000;
+    localparam logic [31:0] AXIL_DMA_LIMIT   = 32'h2000_5FFF;
+
+    // Packed arrays for axi_lite_interconnect instantiation.
+    localparam logic [31:0] AXIL_SLV_BASE  [AXIL_N_SLAVES] = '{
+        AXIL_GPU_BASE, AXIL_APB_BASE, AXIL_DMA_BASE};
+    localparam logic [31:0] AXIL_SLV_LIMIT [AXIL_N_SLAVES] = '{
+        AXIL_GPU_LIMIT, AXIL_APB_LIMIT, AXIL_DMA_LIMIT};
+
+    // =========================================================================
+    // APB peripheral sub-map — 5 slaves behind the axil_to_apb bridge
+    // =========================================================================
+    /* verilator lint_off UNUSEDPARAM */
+    localparam int unsigned APB_UART  = 0;
+    localparam int unsigned APB_SPI   = 1;
+    localparam int unsigned APB_TIMER = 2;
+    localparam int unsigned APB_IRQ   = 3;
+    localparam int unsigned APB_PLL   = 4;
+    /* verilator lint_on  UNUSEDPARAM */
+    localparam int unsigned APB_N_SLAVES = 5;
+
+    // ── APB region bounds (preserving original global MMIO addresses) ─────────
+    localparam logic [31:0] APB_UART_BASE   = 32'h2000_2000;
+    localparam logic [31:0] APB_UART_LIMIT  = 32'h2000_2FFF;
+    localparam logic [31:0] APB_SPI_BASE    = 32'h2000_3000;
+    localparam logic [31:0] APB_SPI_LIMIT   = 32'h2000_3FFF;
+    localparam logic [31:0] APB_TIMER_BASE  = 32'h2000_4000;
+    localparam logic [31:0] APB_TIMER_LIMIT = 32'h2000_4FFF;
+    localparam logic [31:0] APB_IRQ_BASE    = 32'h2000_6000;
+    localparam logic [31:0] APB_IRQ_LIMIT   = 32'h2000_6FFF;
+    localparam logic [31:0] APB_PLL_BASE    = 32'h2000_7000;
+    localparam logic [31:0] APB_PLL_LIMIT   = 32'h2000_7FFF;
+
+    // Packed arrays for apb_interconnect instantiation.
+    localparam logic [31:0] APB_SLV_BASE  [APB_N_SLAVES] = '{
+        APB_UART_BASE,  APB_SPI_BASE,  APB_TIMER_BASE,
+        APB_IRQ_BASE,   APB_PLL_BASE};
+    localparam logic [31:0] APB_SLV_LIMIT [APB_N_SLAVES] = '{
+        APB_UART_LIMIT, APB_SPI_LIMIT, APB_TIMER_LIMIT,
+        APB_IRQ_LIMIT,  APB_PLL_LIMIT};
+
+    // =========================================================================
+    // Legacy address constants — kept for testbench / firmware compatibility.
+    // These are the original global MMIO addresses; routing now goes via APB.
+    // =========================================================================
+    /* verilator lint_off UNUSEDPARAM */
     localparam logic [31:0] AXIL_UART_BASE   = 32'h2000_2000;
     localparam logic [31:0] AXIL_UART_LIMIT  = 32'h2000_2FFF;
     localparam logic [31:0] AXIL_SPI_BASE    = 32'h2000_3000;
     localparam logic [31:0] AXIL_SPI_LIMIT   = 32'h2000_3FFF;
     localparam logic [31:0] AXIL_TIMER_BASE  = 32'h2000_4000;
     localparam logic [31:0] AXIL_TIMER_LIMIT = 32'h2000_4FFF;
-    localparam logic [31:0] AXIL_DMA_BASE    = 32'h2000_5000;
-    localparam logic [31:0] AXIL_DMA_LIMIT   = 32'h2000_5FFF;
     localparam logic [31:0] AXIL_IRQ_BASE    = 32'h2000_6000;
     localparam logic [31:0] AXIL_IRQ_LIMIT   = 32'h2000_6FFF;
-    // Phase 7 M-c: PLL clock generator config (4 KB slot)
     localparam logic [31:0] AXIL_PLL_BASE    = 32'h2000_7000;
     localparam logic [31:0] AXIL_PLL_LIMIT   = 32'h2000_7FFF;
+    /* verilator lint_on  UNUSEDPARAM */
 
-    // Packed arrays for interconnect instantiation (index = slave number).
-    // Phase 7 M-c: extended to 7 entries (index 6 = AXIL_PLL).
-    localparam logic [31:0] AXIL_SLV_BASE  [AXIL_N_SLAVES] = '{
-        AXIL_GPU_BASE,  AXIL_UART_BASE,  AXIL_SPI_BASE,
-        AXIL_TIMER_BASE, AXIL_DMA_BASE,  AXIL_IRQ_BASE, AXIL_PLL_BASE};
-    localparam logic [31:0] AXIL_SLV_LIMIT [AXIL_N_SLAVES] = '{
-        AXIL_GPU_LIMIT,  AXIL_UART_LIMIT,  AXIL_SPI_LIMIT,
-        AXIL_TIMER_LIMIT, AXIL_DMA_LIMIT,  AXIL_IRQ_LIMIT, AXIL_PLL_LIMIT};
-
-    // ── Reference decode ─────────────────────────────────────────────────────
-    // Returns slave index [0 .. AXIL_N_SLAVES-1], or AXIL_N_SLAVES when the
-    // address matches no slave (caller must raise DECERR).
+    // ── Reference decode (AXI-Lite ring) ─────────────────────────────────────
     function automatic int unsigned decode_axil_slave(input logic [31:0] addr);
-        decode_axil_slave = AXIL_N_SLAVES;          // default: no match
+        // Last-match (mirrors axi_lite_interconnect behaviour):
+        // highest-index slave that covers addr wins.
+        decode_axil_slave = AXIL_N_SLAVES;
         for (int unsigned s = 0; s < AXIL_N_SLAVES; s++) begin
             if (addr >= AXIL_SLV_BASE[s] && addr <= AXIL_SLV_LIMIT[s]) begin
                 decode_axil_slave = s;
