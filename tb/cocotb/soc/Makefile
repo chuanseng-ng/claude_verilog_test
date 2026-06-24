@@ -240,7 +240,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -435,12 +435,38 @@ soc_stress: soc_boot_lint
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
+# M10 L2-cache decision benchmark (bead claude_verilog_test-e4f).
+# Loads bare-metal C benchmarks (hello / sweep / matmul) onto the full SoC
+# with SRAM_MEM_WORDS=65536 (256 KB window) and reads perf-counter scratch
+# slots after EBREAK to compute I$/D$-miss rates.
+# Firmware is pre-built by `nix develop .#bench --command make -C sw/bench`;
+# this target consumes the build/ outputs — it does NOT rebuild the C code.
+# EXTRA_ARGS: no --trace (miss-rate runs can be long; VCD is wasteful here).
+# Excluded from soc_all (long runtime; separate measurement tool).
+l2_bench_lint:
+	verilator --lint-only -Wall -Wno-fatal -Wno-IMPORTSTAR \
+		-Wno-UNUSEDSIGNAL -Wno-UNOPTFLAT -Wno-SYNCASYNCNET \
+		-Wno-DECLFILENAME -Wno-UNUSEDPARAM -Wno-BLKSEQ \
+		-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		--top-module tb_soc_top \
+		$(SOC_BOOT_SOURCES)
+
+l2_bench: l2_bench_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_l2_bench TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET \
+		  -GSRAM_MEM_WORDS=65536" \
+		TESTCASE=test_hello_sanity,test_sweep_l2_bench \
+		$(BUILD_ARGS)
+
 # Run every SoC test: M3–M6 component suites + M9 boot + M9 periph + M9 coherency +
 # M9 cpu_gpu + Phase 7 M-c PLL (lock + regs).
 # Use rm -rf sim_build (not $(MAKE) clean) for each suite so that stale or
 # partially-written files from a prior build — including large PCH .gch files
 # that $(MAKE) clean sometimes leaves behind — are reliably purged.
-# NOTE: soc_stress is intentionally excluded from soc_all (long runtime >5 min).
+# NOTE: soc_stress and l2_bench are intentionally excluded from soc_all (long runtime).
 soc_all:
 	rm -rf sim_build && $(MAKE) crossbar
 	rm -rf sim_build && $(MAKE) register_bank

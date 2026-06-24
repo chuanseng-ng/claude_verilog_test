@@ -32,7 +32,14 @@ module boot_rom
     // ROM depth in 32-bit words (must be a power of two; 1024 = 4 KB).
     parameter int unsigned MEM_WORDS    = 1024,
     // Optional hex image.  Empty string → ROM contains 0 after reset.
+    // Hidden under __pnr__: Synlig UHDM emits empty-named RTLIL wires for
+    // parameter string, causing kernel/rtlil.cc:2150 assert.  PnR always
+    // synthesises ROM initialised to zero (no file load in silicon anyway).
+`ifndef __pnr__
     parameter string       MEM_INIT_FILE = ""
+`else
+    parameter int unsigned MEM_INIT_FILE = 0   // unused in PnR
+`endif
 ) (
     input  logic clk,
     input  logic rst_n,
@@ -93,11 +100,16 @@ module boot_rom
     // Pre-load from hex file if provided (behavioral only; ignored by synthesis).
     /* verilator lint_off INITIALDLY */
     initial begin
+`ifndef __pnr__
         if (MEM_INIT_FILE != "") begin
             $readmemh(MEM_INIT_FILE, mem);
         end else begin
             for (int i = 0; i < int'(MEM_WORDS); i++) mem[i] = '0;
         end
+`else
+        // PnR: MEM_INIT_FILE is int stub; always zero-init (synthesis anyway)
+        for (int i = 0; i < int'(MEM_WORDS); i++) mem[i] = '0;
+`endif
     end
     /* verilator lint_on  INITIALDLY */
 
