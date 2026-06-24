@@ -46,8 +46,7 @@ DMA_SOURCES = \
 	$(RTL)/periph/dma_engine.sv
 
 TIMER_SOURCES = \
-	$(RTL)/soc/axi_pkg.sv \
-	$(RTL)/soc/axi_lite_register_bank.sv \
+	$(RTL)/soc/apb4_register_bank.sv \
 	$(RTL)/periph/timer.sv
 
 IRQ_SOURCES = \
