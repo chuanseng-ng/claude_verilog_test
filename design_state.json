@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-20T12:57:00Z",
+  "updated_at": "2026-06-24T16:05:00+07:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -32,7 +32,9 @@
       "rtl/periph/uart_controller.sv",
       "rtl/periph/spi_controller.sv",
       "rtl/cpu/core/rv32i_csr_file.sv",
-      "rtl/cpu/core/pipeline/rv32i_pipeline_if.sv"
+      "rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
+      "rtl/soc/apb4_register_bank.sv",
+      "rtl/soc/axil_to_apb.sv"
     ],
     "lint_clean": true,
     "cdc_clean": false,
@@ -512,6 +514,17 @@
       "suggested_next_step": "proceed",
       "reason": "Verilator -Wall (make -C sim lint) EXIT=0: 0 errors, 7 warnings all pre-existing baseline (BLKSEQ x3 rv32i_icache/dcache.sv, DECLFILENAME x1 sram stub, UNUSEDPARAM x3 rv32i_cache_pkg.sv). No new warnings in soc_top.sv or pll_axil_regs.sv. Commit dacba91.",
       "constraint_ref": "fr_null_20260620_123400_00"
+    },
+    {
+      "timestamp": "2026-06-24T16:05:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-1: apb4_register_bank.sv and axil_to_apb.sv authored and lint-clean. Verilator 5.048 -Wall: 0 errors, 0 warnings on both modules (standalone). Full make -C sim lint: 0 errors, 7 pre-existing baseline warnings only (unchanged).",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
@@ -720,7 +733,7 @@
       "session_id": null,
       "status": "fixed",
       "rtl_response": {
-        "diff_summary": "(1) soc_top.sv u_pll_regs: .clk_i(core_clk)->.clk_i(clk_i), .rst_n_i(core_rst_n)->.rst_n_i(rst_n_i) — moves pll_axil_regs to reference clock domain, breaking the circular dependency. Added detailed clock-domain comment documenting STUB transparency and RNM CDC deferral. (2) pll_axil_regs.sv RESET_VAL[0]: 32'h0000_0000->32'h0000_0001 (CONTROL[0]=pll_enable=1 at reset) so PLL self-locks after 16 ref cycles without firmware intervention. pll_rst_n = rst_n_i & pll_enable deasserts immediately with rst_n_i; pll_clkgen_stub lock counter fires after 16 edges (<<60-cycle test budget); pll_locked releases core_rst_n for all SoC children.",
+        "diff_summary": "(1) soc_top.sv u_pll_regs: .clk_i(core_clk)->.clk_i(clk_i), .rst_n_i(core_rst_n)->.rst_n_i(rst_n_i) \u2014 moves pll_axil_regs to reference clock domain, breaking the circular dependency. Added detailed clock-domain comment documenting STUB transparency and RNM CDC deferral. (2) pll_axil_regs.sv RESET_VAL[0]: 32'h0000_0000->32'h0000_0001 (CONTROL[0]=pll_enable=1 at reset) so PLL self-locks after 16 ref cycles without firmware intervention. pll_rst_n = rst_n_i & pll_enable deasserts immediately with rst_n_i; pll_clkgen_stub lock counter fires after 16 edges (<<60-cycle test budget); pll_locked releases core_rst_n for all SoC children.",
         "files_changed": [
           "rtl/soc/soc_top.sv",
           "rtl/soc/pll/pll_axil_regs.sv"
