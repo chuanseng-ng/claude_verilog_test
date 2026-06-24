@@ -89,6 +89,14 @@ PLL_REGS_SOURCES = \
 	$(RTL)/soc/pll/pll_axil_regs.sv \
 	$(SOC_DIR)/tb_pll_axil_regs.sv
 
+# APB migration PR-6: standalone pll_apb_regs unit-test sources.
+# Minimal: apb4_register_bank (no axi_pkg needed) + pll_apb_regs + standalone TB.
+# BFM drives APB4 ports directly; no bus-bridge or full SoC required.
+PLL_APB_REGS_SOURCES = \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/soc/pll/pll_apb_regs.sv \
+	$(SOC_DIR)/tb_pll_apb_regs.sv
+
 # Full SoC top-level sources for the boot test (M9).
 # Order: packages first, leaf RTL, adapters, then soc_top + tb wrapper.
 SRAM_SIM_MODEL ?= $(PROJ_ROOT)/sim/sram_1rw_256x32_verilator.v
@@ -377,6 +385,19 @@ pll_regs: pll_regs_lint
 	$(MAKE) clean
 	$(MAKE) MODULE=test_pll_regs TOPLEVEL=tb_pll_axil_regs \
 		VERILOG_SOURCES="$(PLL_REGS_SOURCES)" \
+		$(BUILD_ARGS)
+
+# APB migration PR-6: pll_apb_regs lint + sim.
+# lint only: apb4_register_bank + pll_apb_regs + standalone TB wrapper.
+pll_apb_regs_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module tb_pll_apb_regs \
+		$(PLL_APB_REGS_SOURCES)
+
+pll_apb_regs: pll_apb_regs_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_pll_apb_regs TOPLEVEL=tb_pll_apb_regs \
+		VERILOG_SOURCES="$(PLL_APB_REGS_SOURCES)" \
 		$(BUILD_ARGS)
 
 soc_pll: soc_pll_lint pll_regs_lint
