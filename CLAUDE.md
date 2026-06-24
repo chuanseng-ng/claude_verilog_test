@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Multi-phase RV32I RISC-V microprocessor + GPU-lite SoC project.
 
-**Current Phase**: Phase 5 (SoC Integration) — 🚧 IN PROGRESS (M1–M10 ✅ complete; M10 L2 gate resolved NO-GO 2026-06-21; M11 PD next, then M12 sign-off)
+**Current Phase**: Phase 5 (SoC Integration) — ✅ COMPLETE (2026-06-24). M1–M12 done; M11 ASAP7 SoC P&R signed off at **571 MHz / 62.9 mW / 520×520 µm / 65.6 % util / 0 DRC / 0 antenna** (run 14, sv2v frontend; PDN = benign tap-cell artifact). See `docs/PHASE5_RUN_HISTORY.md`.
 
 **Status**: Phase 4 complete (2026-05-27, all GPU tests green; ASAP7 GPU sign-off 571 MHz / 262 mW); Phase 3 complete (2026-05-21, 139/139 total, ASAP7 1418 MHz sign-off); Phase 2 complete (2026-03-08, 75 MHz on Sky130).
 
@@ -25,7 +25,7 @@ See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for
 | 2 — Pipelined CPU | 5-stage in-order; RV32I+Zicsr; M-mode interrupts; hazard/forwarding | ✅ 2026-03-08 (75 MHz Sky130) |
 | 3 — Memory system | L1 I$ + D$ (4 KB each, direct-mapped, write-back); FENCE.I | ✅ 2026-05-21 (ASAP7 1418 MHz) |
 | 4 — GPU-Lite SIMT | 8-lane warps, single CU, round-robin, 1-level divergence, 16 KB shared mem | ✅ 2026-05-27 (ASAP7 571 MHz) |
-| 5 — SoC integration | CPU + GPU + DMA + AXI4 crossbar + UART/SPI/timer/IRQ + behavioral SRAM | 🚧 In progress |
+| 5 — SoC integration | CPU + GPU + DMA + AXI4 crossbar + UART/SPI/timer/IRQ + behavioral SRAM | ✅ 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW sign-off) |
 | 6+ — IP expansion | GPIO/I2C/PWM/WDT/TRNG/AES-SHA peripherals; INT8 NPU; tech-node exploration | ⏸️ Future |
 | 7 — Mixed-Signal PLL | Dual-PDK charge-pump PLL (ASAP7 indicative + Sky130 real DRC/LVS) via analog-design agents; AMS RNM integrated as SoC clock source | done (M-a..M-c) |
 
@@ -238,8 +238,8 @@ Legend: ✅ done · 🚧 in progress · ⏸️ not started. Milestone status (M1
 6. ✅ **SoC verification** (M9): boot 100/100; DMA+UART+SPI loopback; SW coherency (D$ flush→GPU→D$ inval); CPU-GPU IRQ-driven integration; DUT-side boot SRAM check. Found+fixed 2 RTL bugs (D-cache MMIO caching `go9`; axi4_crossbar AR/AW handshake+arbitration `7fs`). `soc_all` 73/73.
 7. ✅ **Full regression**: CPU rollup + GPU + cache green; **1M+ cycle SoC stress (1,079,867 cyc, 0 fail)** + CPU/GPU benchmarks (M9 `pgf`)
 8. ✅ **L2 cache evaluation** (M10): benchmarked → **NO-GO** (no L2, keep direct-mapped L1; 2-way also evaluated + rejected). `docs/M10_L2_DECISION_ANALYSIS.md`
-9. ⏸️ **Backend flow**: full SoC synth + P&R + STA; `pnr/constraints/phase5_soc.sdc`, `phase5_soc.upf`; power-domain validation
-10. ⏸️ **Sign-off**: coverage, power analysis, final review
+9. ✅ **Backend flow** (M11): full SoC synth + P&R + STA via `make librelane-asap7-soc` (sv2v frontend — Synlig can't synth this SoC; `pnr/asap7/soc/`, `phase5_soc.sdc` single-clock, `phase5_soc.upf` 4-domain). Signed off **571 MHz / 62.9 mW / 520×520 µm / 65.6 % util / 0 DRC / 0 antenna** (run 14). PDN = benign tap-cell artifact (CPU/GPU precedent). `docs/PHASE5_RUN_HISTORY.md`
+10. ✅ **Sign-off** (M12): M11 PPA recorded; docs updated (CLAUDE/ROADMAP/PHASE_STATUS → Phase 5 complete). Indicative ASAP7 (predictive PDK). Follow-ups: sv2v↔RTL EQY + CPU-macro burst-port LEF (`g0o`)
 
 **Phase 6+** (after Phase 5 sign-off): additional AXI4-Lite peripherals (GPIO/I2C/PWM/WDT/TRNG/AES-SHA), minimal INT8 NPU (`rtl/npu/`), and FreePDK45 tech-node exploration. See `docs/ROADMAP.md`.
 
