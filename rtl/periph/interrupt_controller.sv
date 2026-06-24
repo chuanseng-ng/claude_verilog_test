@@ -1,7 +1,8 @@
 // interrupt_controller.sv
-// Phase 5 (M4) — Level-sensitive interrupt controller, AXI4-Lite slave.
+// Phase 5 (M4) — Level-sensitive interrupt controller.
+// APB migration PR-5: converted from AXI4-Lite slave to APB4 slave.
 //
-// Register map (word indices into the axi_lite_register_bank):
+// Register map (word indices into the apb4_register_bank):
 //   0  IRQ_STATUS        RO  [N_SOURCES-1:0] = synchronised raw source levels
 //   1  IRQ_MASK          RW  [N_SOURCES-1:0] = per-source enable (1 = enabled)
 //   2  IRQ_PENDING_MASKED RO  [N_SOURCES-1:0] = IRQ_STATUS & IRQ_MASK
@@ -13,47 +14,40 @@
 // Sources are level-sensitive; no W1C.  SW clears by masking at IRQ_MASK
 // or by having the peripheral clear its own IRQ output.
 //
-// Lint target: verilator -Wall 0 errors 0 warnings.
+// APB4 interface (ARM IHI0024C):
+//   pclk = clk, presetn = rst_n (active-low synchronous reset)
+//   ADDR_W = 12 (byte address; [1:0] unused, word-aligned)
+//   Zero wait states: pready driven 1 every ACCESS phase.
+//
+// Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
 `default_nettype none
 
 module interrupt_controller
-    import axi_pkg::*;
 #(
-    parameter int unsigned ADDR_W    = 12,   // AXI-Lite local address width
+    parameter int unsigned ADDR_W    = 12,   // APB4 local address width
     parameter int unsigned N_SOURCES = 5     // number of interrupt sources
 ) (
     input  logic clk,
     input  logic rst_n,
 
     // =========================================================================
-    // AXI4-Lite slave — control/status registers
-    // Port names match axi_lite_register_bank.sv exactly so the sub-module
-    // connection is positional-free.
+    // APB4 slave — control/status registers
+    // pclk = clk, presetn = rst_n (active-low).
+    // SETUP  phase: psel=1, penable=0 (one cycle).
+    // ACCESS phase: psel=1, penable=1; transfer complete when pready=1.
     // =========================================================================
+    input  logic              psel,
+    input  logic              penable,
+    input  logic              pwrite,
     /* verilator lint_off UNUSEDSIGNAL */
-    input  logic [ADDR_W-1:0] s_axil_awaddr,
-    input  logic [2:0]        s_axil_awprot,
+    input  logic [ADDR_W-1:0] paddr,   // byte address; [1:0] unused (word-aligned)
     /* verilator lint_on  UNUSEDSIGNAL */
-    input  logic              s_axil_awvalid,
-    output logic              s_axil_awready,
-    input  logic [31:0]       s_axil_wdata,
-    input  logic [3:0]        s_axil_wstrb,
-    input  logic              s_axil_wvalid,
-    output logic              s_axil_wready,
-    output logic [1:0]        s_axil_bresp,
-    output logic              s_axil_bvalid,
-    input  logic              s_axil_bready,
-    /* verilator lint_off UNUSEDSIGNAL */
-    input  logic [ADDR_W-1:0] s_axil_araddr,
-    input  logic [2:0]        s_axil_arprot,
-    /* verilator lint_on  UNUSEDSIGNAL */
-    input  logic              s_axil_arvalid,
-    output logic              s_axil_arready,
-    output logic [31:0]       s_axil_rdata,
-    output logic [1:0]        s_axil_rresp,
-    output logic              s_axil_rvalid,
-    input  logic              s_axil_rready,
+    input  logic [31:0]       pwdata,
+    input  logic [3:0]        pstrb,
+    output logic [31:0]       prdata,
+    output logic              pready,
+    output logic              pslverr,
 
     // =========================================================================
     // Interrupt sources and output
@@ -90,36 +84,26 @@ module interrupt_controller
     logic        hw_wen_i  [N_REGS];
     logic [31:0] hw_wdata_i[N_REGS];
 
-    axi_lite_register_bank #(
+    apb4_register_bank #(
         .N_REGS    (N_REGS),
         .ADDR_W    (ADDR_W),
         .RESET_VAL (RESET_VAL),
         .WMASK     (WMASK)
     ) u_regbank (
-        .clk            (clk),
-        .rst_n          (rst_n),
-        .s_axil_awaddr  (s_axil_awaddr),
-        .s_axil_awprot  (s_axil_awprot),
-        .s_axil_awvalid (s_axil_awvalid),
-        .s_axil_awready (s_axil_awready),
-        .s_axil_wdata   (s_axil_wdata),
-        .s_axil_wstrb   (s_axil_wstrb),
-        .s_axil_wvalid  (s_axil_wvalid),
-        .s_axil_wready  (s_axil_wready),
-        .s_axil_bresp   (s_axil_bresp),
-        .s_axil_bvalid  (s_axil_bvalid),
-        .s_axil_bready  (s_axil_bready),
-        .s_axil_araddr  (s_axil_araddr),
-        .s_axil_arprot  (s_axil_arprot),
-        .s_axil_arvalid (s_axil_arvalid),
-        .s_axil_arready (s_axil_arready),
-        .s_axil_rdata   (s_axil_rdata),
-        .s_axil_rresp   (s_axil_rresp),
-        .s_axil_rvalid  (s_axil_rvalid),
-        .s_axil_rready  (s_axil_rready),
-        .regs_o         (regs_o),
-        .hw_wen_i       (hw_wen_i),
-        .hw_wdata_i     (hw_wdata_i)
+        .pclk       (clk),
+        .presetn    (rst_n),
+        .psel       (psel),
+        .penable    (penable),
+        .pwrite     (pwrite),
+        .paddr      (paddr),
+        .pwdata     (pwdata),
+        .pstrb      (pstrb),
+        .prdata     (prdata),
+        .pready     (pready),
+        .pslverr    (pslverr),
+        .regs_o     (regs_o),
+        .hw_wen_i   (hw_wen_i),
+        .hw_wdata_i (hw_wdata_i)
     );
 
     // =========================================================================
