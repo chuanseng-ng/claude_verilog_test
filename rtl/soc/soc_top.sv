@@ -99,8 +99,6 @@ module soc_top
     // Local parameters
     // =========================================================================
     localparam int unsigned N_MASTERS   = 4;
-    localparam int unsigned N_SLAVES    = SOC_N_SLAVES;    // 3
-    localparam int unsigned N_AXIL_SLV  = AXIL_N_SLAVES;  // 3 (PR-7: GPU, APB_BRIDGE, DMA)
     localparam int unsigned AW          = AXI_ADDR_WIDTH;
     localparam int unsigned DW          = AXI_DATA_WIDTH;
     localparam int unsigned SW          = AXI_STRB_WIDTH;
@@ -171,101 +169,77 @@ module soc_top
     logic            xbar_m_rready  [N_MASTERS];
 
     // =========================================================================
-    // Crossbar slave-facing nets (full AXI4 with ID, unpacked arrays [N_SLAVES])
+    // soc_bus flat slave-facing nets: ROM (S0) and SRAM (S1)
+    // SLV_PERIPH (S2) is consumed inside soc_bus; no wires needed here.
     // =========================================================================
-    logic [IW-1:0]   xbar_s_awid    [N_SLAVES];
-    logic [AW-1:0]   xbar_s_awaddr  [N_SLAVES];
-    logic [LENW-1:0] xbar_s_awlen   [N_SLAVES];
-    logic [2:0]      xbar_s_awsize  [N_SLAVES];
-    logic [1:0]      xbar_s_awburst [N_SLAVES];
-    logic            xbar_s_awvalid [N_SLAVES];
-    logic            xbar_s_awready [N_SLAVES];
-    logic [DW-1:0]   xbar_s_wdata   [N_SLAVES];
-    logic [SW-1:0]   xbar_s_wstrb   [N_SLAVES];
-    logic            xbar_s_wlast   [N_SLAVES];
-    logic            xbar_s_wvalid  [N_SLAVES];
-    logic            xbar_s_wready  [N_SLAVES];
-    logic [IW-1:0]   xbar_s_bid     [N_SLAVES];
-    logic [1:0]      xbar_s_bresp   [N_SLAVES];
-    logic            xbar_s_bvalid  [N_SLAVES];
-    logic            xbar_s_bready  [N_SLAVES];
-    logic [IW-1:0]   xbar_s_arid    [N_SLAVES];
-    logic [AW-1:0]   xbar_s_araddr  [N_SLAVES];
-    logic [LENW-1:0] xbar_s_arlen   [N_SLAVES];
-    logic [2:0]      xbar_s_arsize  [N_SLAVES];
-    logic [1:0]      xbar_s_arburst [N_SLAVES];
-    logic            xbar_s_arvalid [N_SLAVES];
-    logic            xbar_s_arready [N_SLAVES];
-    logic [IW-1:0]   xbar_s_rid     [N_SLAVES];
-    logic [DW-1:0]   xbar_s_rdata   [N_SLAVES];
-    logic [1:0]      xbar_s_rresp   [N_SLAVES];
-    logic            xbar_s_rlast   [N_SLAVES];
-    logic            xbar_s_rvalid  [N_SLAVES];
-    logic            xbar_s_rready  [N_SLAVES];
+    // --- ROM (SLV_ROM) ---
+    logic [IW-1:0]   bus_rom_awid;
+    logic [AW-1:0]   bus_rom_awaddr;
+    logic [LENW-1:0] bus_rom_awlen;
+    logic [2:0]      bus_rom_awsize;
+    logic [1:0]      bus_rom_awburst;
+    logic            bus_rom_awvalid;
+    logic            bus_rom_awready;
+    logic [DW-1:0]   bus_rom_wdata;
+    logic [SW-1:0]   bus_rom_wstrb;
+    logic            bus_rom_wlast;
+    logic            bus_rom_wvalid;
+    logic            bus_rom_wready;
+    logic [IW-1:0]   bus_rom_bid;
+    logic [1:0]      bus_rom_bresp;
+    logic            bus_rom_bvalid;
+    logic            bus_rom_bready;
+    logic [IW-1:0]   bus_rom_arid;
+    logic [AW-1:0]   bus_rom_araddr;
+    logic [LENW-1:0] bus_rom_arlen;
+    logic [2:0]      bus_rom_arsize;
+    logic [1:0]      bus_rom_arburst;
+    logic            bus_rom_arvalid;
+    logic            bus_rom_arready;
+    logic [IW-1:0]   bus_rom_rid;
+    logic [DW-1:0]   bus_rom_rdata;
+    logic [1:0]      bus_rom_rresp;
+    logic            bus_rom_rlast;
+    logic            bus_rom_rvalid;
+    logic            bus_rom_rready;
+    // --- SRAM (SLV_SRAM) ---
+    logic [IW-1:0]   bus_mem_awid;
+    logic [AW-1:0]   bus_mem_awaddr;
+    logic [LENW-1:0] bus_mem_awlen;
+    logic [2:0]      bus_mem_awsize;
+    logic [1:0]      bus_mem_awburst;
+    logic            bus_mem_awvalid;
+    logic            bus_mem_awready;
+    logic [DW-1:0]   bus_mem_wdata;
+    logic [SW-1:0]   bus_mem_wstrb;
+    logic            bus_mem_wlast;
+    logic            bus_mem_wvalid;
+    logic            bus_mem_wready;
+    logic [IW-1:0]   bus_mem_bid;
+    logic [1:0]      bus_mem_bresp;
+    logic            bus_mem_bvalid;
+    logic            bus_mem_bready;
+    logic [IW-1:0]   bus_mem_arid;
+    logic [AW-1:0]   bus_mem_araddr;
+    logic [LENW-1:0] bus_mem_arlen;
+    logic [2:0]      bus_mem_arsize;
+    logic [1:0]      bus_mem_arburst;
+    logic            bus_mem_arvalid;
+    logic            bus_mem_arready;
+    logic [IW-1:0]   bus_mem_rid;
+    logic [DW-1:0]   bus_mem_rdata;
+    logic [1:0]      bus_mem_rresp;
+    logic            bus_mem_rlast;
+    logic            bus_mem_rvalid;
+    logic            bus_mem_rready;
 
     // =========================================================================
-    // axi4_to_axilite bridge (crossbar S2 → axi_lite_interconnect master)
-    // =========================================================================
-    logic [AW-1:0]   periph_axil_awaddr;
-    logic [2:0]      periph_axil_awprot;
-    logic            periph_axil_awvalid;
-    logic            periph_axil_awready;
-    logic [DW-1:0]   periph_axil_wdata;
-    logic [SW-1:0]   periph_axil_wstrb;
-    logic            periph_axil_wvalid;
-    logic            periph_axil_wready;
-    logic [1:0]      periph_axil_bresp;
-    logic            periph_axil_bvalid;
-    logic            periph_axil_bready;
-    logic [AW-1:0]   periph_axil_araddr;
-    logic [2:0]      periph_axil_arprot;
-    logic            periph_axil_arvalid;
-    logic            periph_axil_arready;
-    logic [DW-1:0]   periph_axil_rdata;
-    logic [1:0]      periph_axil_rresp;
-    logic            periph_axil_rvalid;
-    logic            periph_axil_rready;
-
-    // =========================================================================
-    // axi_lite_interconnect slave-facing nets [N_AXIL_SLV]
-    // =========================================================================
-    logic [AW-1:0] axil_s_awaddr  [N_AXIL_SLV];
-    logic [2:0]    axil_s_awprot  [N_AXIL_SLV];
-    logic          axil_s_awvalid [N_AXIL_SLV];
-    logic          axil_s_awready [N_AXIL_SLV];
-    logic [DW-1:0] axil_s_wdata   [N_AXIL_SLV];
-    logic [SW-1:0] axil_s_wstrb   [N_AXIL_SLV];
-    logic          axil_s_wvalid  [N_AXIL_SLV];
-    logic          axil_s_wready  [N_AXIL_SLV];
-    logic [1:0]    axil_s_bresp   [N_AXIL_SLV];
-    logic          axil_s_bvalid  [N_AXIL_SLV];
-    logic          axil_s_bready  [N_AXIL_SLV];
-    logic [AW-1:0] axil_s_araddr  [N_AXIL_SLV];
-    logic [2:0]    axil_s_arprot  [N_AXIL_SLV];
-    logic          axil_s_arvalid [N_AXIL_SLV];
-    logic          axil_s_arready [N_AXIL_SLV];
-    logic [DW-1:0] axil_s_rdata   [N_AXIL_SLV];
-    logic [1:0]    axil_s_rresp   [N_AXIL_SLV];
-    logic          axil_s_rvalid  [N_AXIL_SLV];
-    logic          axil_s_rready  [N_AXIL_SLV];
-
-    // =========================================================================
-    // APB nets: axil_to_apb bridge master → apb_interconnect → 5 APB slaves
+    // APB nets: soc_bus apb_* ports → 5 APB peripherals
+    // (previously apb_interconnect → peripherals; now routed through soc_bus)
     // =========================================================================
     localparam int unsigned N_APB_SLV = APB_N_SLAVES; // 5
 
-    // Bridge single APB master output
-    logic        apb_m_psel;
-    logic        apb_m_penable;
-    logic        apb_m_pwrite;
-    logic [31:0] apb_m_paddr;
-    logic [31:0] apb_m_pwdata;
-    logic [3:0]  apb_m_pstrb;
-    logic [31:0] apb_m_prdata;   // response back from interconnect
-    logic        apb_m_pready;
-    logic        apb_m_pslverr;
-
-    // Per-slave APB nets from apb_interconnect to each peripheral
+    // Per-slave APB nets from soc_bus to each peripheral
     logic        apb_psel    [N_APB_SLV];
     logic        apb_penable [N_APB_SLV];
     logic        apb_pwrite  [N_APB_SLV];
@@ -275,6 +249,51 @@ module soc_top
     logic [31:0] apb_prdata  [N_APB_SLV];
     logic        apb_pready  [N_APB_SLV];
     logic        apb_pslverr [N_APB_SLV];
+
+    // =========================================================================
+    // AXI-Lite flat wires for GPU ctrl and DMA ctrl (ring slaves 0 and 2).
+    // These were axil_s_*[AXIL_GPU] and axil_s_*[AXIL_DMA] in the old soc_top;
+    // soc_bus now exposes them as flat ports (axil_gpu_* / axil_dma_*).
+    // =========================================================================
+    logic [AW-1:0] bus_axil_gpu_awaddr;
+    logic [2:0]    bus_axil_gpu_awprot;
+    logic          bus_axil_gpu_awvalid;
+    logic          bus_axil_gpu_awready;
+    logic [DW-1:0] bus_axil_gpu_wdata;
+    logic [SW-1:0] bus_axil_gpu_wstrb;
+    logic          bus_axil_gpu_wvalid;
+    logic          bus_axil_gpu_wready;
+    logic [1:0]    bus_axil_gpu_bresp;
+    logic          bus_axil_gpu_bvalid;
+    logic          bus_axil_gpu_bready;
+    logic [AW-1:0] bus_axil_gpu_araddr;
+    logic [2:0]    bus_axil_gpu_arprot;
+    logic          bus_axil_gpu_arvalid;
+    logic          bus_axil_gpu_arready;
+    logic [DW-1:0] bus_axil_gpu_rdata;
+    logic [1:0]    bus_axil_gpu_rresp;
+    logic          bus_axil_gpu_rvalid;
+    logic          bus_axil_gpu_rready;
+
+    logic [AW-1:0] bus_axil_dma_awaddr;
+    logic [2:0]    bus_axil_dma_awprot;
+    logic          bus_axil_dma_awvalid;
+    logic          bus_axil_dma_awready;
+    logic [DW-1:0] bus_axil_dma_wdata;
+    logic [SW-1:0] bus_axil_dma_wstrb;
+    logic          bus_axil_dma_wvalid;
+    logic          bus_axil_dma_wready;
+    logic [1:0]    bus_axil_dma_bresp;
+    logic          bus_axil_dma_bvalid;
+    logic          bus_axil_dma_bready;
+    logic [AW-1:0] bus_axil_dma_araddr;
+    logic [2:0]    bus_axil_dma_arprot;
+    logic          bus_axil_dma_arvalid;
+    logic          bus_axil_dma_arready;
+    logic [DW-1:0] bus_axil_dma_rdata;
+    logic [1:0]    bus_axil_dma_rresp;
+    logic          bus_axil_dma_rvalid;
+    logic          bus_axil_dma_rready;
 
     // =========================================================================
     // axilite_to_axi4 adapter (GPU ifetch → crossbar M1)
@@ -501,24 +520,24 @@ module soc_top
     ) u_gpu (
         .clk                        (core_clk),
         .rst_n                      (core_rst_n),
-        // AXI4-Lite ctrl slave ← interconnect AXIL_GPU slot
-        .s_axil_awaddr              (axil_s_awaddr  [AXIL_GPU][11:0]),
-        .s_axil_awvalid             (axil_s_awvalid [AXIL_GPU]),
-        .s_axil_awready             (axil_s_awready [AXIL_GPU]),
-        .s_axil_wdata               (axil_s_wdata   [AXIL_GPU]),
-        .s_axil_wstrb               (axil_s_wstrb   [AXIL_GPU]),
-        .s_axil_wvalid              (axil_s_wvalid  [AXIL_GPU]),
-        .s_axil_wready              (axil_s_wready  [AXIL_GPU]),
-        .s_axil_bresp               (axil_s_bresp   [AXIL_GPU]),
-        .s_axil_bvalid              (axil_s_bvalid  [AXIL_GPU]),
-        .s_axil_bready              (axil_s_bready  [AXIL_GPU]),
-        .s_axil_araddr              (axil_s_araddr  [AXIL_GPU][11:0]),
-        .s_axil_arvalid             (axil_s_arvalid [AXIL_GPU]),
-        .s_axil_arready             (axil_s_arready [AXIL_GPU]),
-        .s_axil_rdata               (axil_s_rdata   [AXIL_GPU]),
-        .s_axil_rresp               (axil_s_rresp   [AXIL_GPU]),
-        .s_axil_rvalid              (axil_s_rvalid  [AXIL_GPU]),
-        .s_axil_rready              (axil_s_rready  [AXIL_GPU]),
+        // AXI4-Lite ctrl slave ← soc_bus axil_gpu_* (ring slot AXIL_GPU=0)
+        .s_axil_awaddr              (bus_axil_gpu_awaddr[11:0]),
+        .s_axil_awvalid             (bus_axil_gpu_awvalid),
+        .s_axil_awready             (bus_axil_gpu_awready),
+        .s_axil_wdata               (bus_axil_gpu_wdata),
+        .s_axil_wstrb               (bus_axil_gpu_wstrb),
+        .s_axil_wvalid              (bus_axil_gpu_wvalid),
+        .s_axil_wready              (bus_axil_gpu_wready),
+        .s_axil_bresp               (bus_axil_gpu_bresp),
+        .s_axil_bvalid              (bus_axil_gpu_bvalid),
+        .s_axil_bready              (bus_axil_gpu_bready),
+        .s_axil_araddr              (bus_axil_gpu_araddr[11:0]),
+        .s_axil_arvalid             (bus_axil_gpu_arvalid),
+        .s_axil_arready             (bus_axil_gpu_arready),
+        .s_axil_rdata               (bus_axil_gpu_rdata),
+        .s_axil_rresp               (bus_axil_gpu_rresp),
+        .s_axil_rvalid              (bus_axil_gpu_rvalid),
+        .s_axil_rready              (bus_axil_gpu_rready),
         // AXI4-Lite ifetch master → gif adapter slave
         .m_axil_if_araddr           (gif_axil_araddr),
         .m_axil_if_arvalid          (gif_axil_arvalid),
@@ -567,26 +586,26 @@ module soc_top
     ) u_dma (
         .clk                        (core_clk),
         .rst_n                      (core_rst_n),
-        // AXI4-Lite ctrl slave ← interconnect AXIL_DMA slot
-        .s_axil_awaddr              (axil_s_awaddr  [AXIL_DMA][11:0]),
-        .s_axil_awprot              (axil_s_awprot  [AXIL_DMA]),
-        .s_axil_awvalid             (axil_s_awvalid [AXIL_DMA]),
-        .s_axil_awready             (axil_s_awready [AXIL_DMA]),
-        .s_axil_wdata               (axil_s_wdata   [AXIL_DMA]),
-        .s_axil_wstrb               (axil_s_wstrb   [AXIL_DMA]),
-        .s_axil_wvalid              (axil_s_wvalid  [AXIL_DMA]),
-        .s_axil_wready              (axil_s_wready  [AXIL_DMA]),
-        .s_axil_bresp               (axil_s_bresp   [AXIL_DMA]),
-        .s_axil_bvalid              (axil_s_bvalid  [AXIL_DMA]),
-        .s_axil_bready              (axil_s_bready  [AXIL_DMA]),
-        .s_axil_araddr              (axil_s_araddr  [AXIL_DMA][11:0]),
-        .s_axil_arprot              (axil_s_arprot  [AXIL_DMA]),
-        .s_axil_arvalid             (axil_s_arvalid [AXIL_DMA]),
-        .s_axil_arready             (axil_s_arready [AXIL_DMA]),
-        .s_axil_rdata               (axil_s_rdata   [AXIL_DMA]),
-        .s_axil_rresp               (axil_s_rresp   [AXIL_DMA]),
-        .s_axil_rvalid              (axil_s_rvalid  [AXIL_DMA]),
-        .s_axil_rready              (axil_s_rready  [AXIL_DMA]),
+        // AXI4-Lite ctrl slave ← soc_bus axil_dma_* (ring slot AXIL_DMA=2)
+        .s_axil_awaddr              (bus_axil_dma_awaddr[11:0]),
+        .s_axil_awprot              (bus_axil_dma_awprot),
+        .s_axil_awvalid             (bus_axil_dma_awvalid),
+        .s_axil_awready             (bus_axil_dma_awready),
+        .s_axil_wdata               (bus_axil_dma_wdata),
+        .s_axil_wstrb               (bus_axil_dma_wstrb),
+        .s_axil_wvalid              (bus_axil_dma_wvalid),
+        .s_axil_wready              (bus_axil_dma_wready),
+        .s_axil_bresp               (bus_axil_dma_bresp),
+        .s_axil_bvalid              (bus_axil_dma_bvalid),
+        .s_axil_bready              (bus_axil_dma_bready),
+        .s_axil_araddr              (bus_axil_dma_araddr[11:0]),
+        .s_axil_arprot              (bus_axil_dma_arprot),
+        .s_axil_arvalid             (bus_axil_dma_arvalid),
+        .s_axil_arready             (bus_axil_dma_arready),
+        .s_axil_rdata               (bus_axil_dma_rdata),
+        .s_axil_rresp               (bus_axil_dma_rresp),
+        .s_axil_rvalid              (bus_axil_dma_rvalid),
+        .s_axil_rready              (bus_axil_dma_rready),
         // AXI4 burst master → crossbar M3
         .m_awid                     (dma_axi_awid_unused),         // ID unused by crossbar (no-ID master port)
         .m_awaddr                   (xbar_m_awaddr  [3]),
@@ -622,77 +641,149 @@ module soc_top
     );
 
     // =========================================================================
-    // AXI4 crossbar
+    // SoC bus fabric — wraps axi4_crossbar + axi4_to_axilite +
+    //   axi_lite_interconnect + axil_to_apb + apb_interconnect
     // =========================================================================
-    axi4_crossbar #(
-        .N_MASTERS  (N_MASTERS),
-        .N_SLAVES   (N_SLAVES),
-        .AW         (AW),
-        .DW         (DW),
-        .SW         (SW),
-        .IW         (IW),
-        .LENW       (LENW),
-        .SLV_BASE   (SOC_SLV_BASE),
-        .SLV_LIMIT  (SOC_SLV_LIMIT)
-    ) u_xbar (
-        .clk        (core_clk),
-        .rst_n      (core_rst_n),
-        // Master-facing ports
-        .m_awaddr   (xbar_m_awaddr),
-        .m_awlen    (xbar_m_awlen),
-        .m_awsize   (xbar_m_awsize),
-        .m_awburst  (xbar_m_awburst),
-        .m_awvalid  (xbar_m_awvalid),
-        .m_awready  (xbar_m_awready),
-        .m_wdata    (xbar_m_wdata),
-        .m_wstrb    (xbar_m_wstrb),
-        .m_wlast    (xbar_m_wlast),
-        .m_wvalid   (xbar_m_wvalid),
-        .m_wready   (xbar_m_wready),
-        .m_bresp    (xbar_m_bresp),
-        .m_bvalid   (xbar_m_bvalid),
-        .m_bready   (xbar_m_bready),
-        .m_araddr   (xbar_m_araddr),
-        .m_arlen    (xbar_m_arlen),
-        .m_arsize   (xbar_m_arsize),
-        .m_arburst  (xbar_m_arburst),
-        .m_arvalid  (xbar_m_arvalid),
-        .m_arready  (xbar_m_arready),
-        .m_rdata    (xbar_m_rdata),
-        .m_rresp    (xbar_m_rresp),
-        .m_rlast    (xbar_m_rlast),
-        .m_rvalid   (xbar_m_rvalid),
-        .m_rready   (xbar_m_rready),
-        // Slave-facing ports
-        .s_awid     (xbar_s_awid),
-        .s_awaddr   (xbar_s_awaddr),
-        .s_awlen    (xbar_s_awlen),
-        .s_awsize   (xbar_s_awsize),
-        .s_awburst  (xbar_s_awburst),
-        .s_awvalid  (xbar_s_awvalid),
-        .s_awready  (xbar_s_awready),
-        .s_wdata    (xbar_s_wdata),
-        .s_wstrb    (xbar_s_wstrb),
-        .s_wlast    (xbar_s_wlast),
-        .s_wvalid   (xbar_s_wvalid),
-        .s_wready   (xbar_s_wready),
-        .s_bid      (xbar_s_bid),
-        .s_bresp    (xbar_s_bresp),
-        .s_bvalid   (xbar_s_bvalid),
-        .s_bready   (xbar_s_bready),
-        .s_arid     (xbar_s_arid),
-        .s_araddr   (xbar_s_araddr),
-        .s_arlen    (xbar_s_arlen),
-        .s_arsize   (xbar_s_arsize),
-        .s_arburst  (xbar_s_arburst),
-        .s_arvalid  (xbar_s_arvalid),
-        .s_arready  (xbar_s_arready),
-        .s_rid      (xbar_s_rid),
-        .s_rdata    (xbar_s_rdata),
-        .s_rresp    (xbar_s_rresp),
-        .s_rlast    (xbar_s_rlast),
-        .s_rvalid   (xbar_s_rvalid),
-        .s_rready   (xbar_s_rready)
+    soc_bus #(
+        .N_MASTERS  (N_MASTERS)
+    ) u_bus (
+        .clk            (core_clk),
+        .rst_n          (core_rst_n),
+        // AXI4 master-facing (CPU, GPU-ifetch, GPU-data, DMA)
+        .m_awaddr       (xbar_m_awaddr),
+        .m_awlen        (xbar_m_awlen),
+        .m_awsize       (xbar_m_awsize),
+        .m_awburst      (xbar_m_awburst),
+        .m_awvalid      (xbar_m_awvalid),
+        .m_awready      (xbar_m_awready),
+        .m_wdata        (xbar_m_wdata),
+        .m_wstrb        (xbar_m_wstrb),
+        .m_wlast        (xbar_m_wlast),
+        .m_wvalid       (xbar_m_wvalid),
+        .m_wready       (xbar_m_wready),
+        .m_bresp        (xbar_m_bresp),
+        .m_bvalid       (xbar_m_bvalid),
+        .m_bready       (xbar_m_bready),
+        .m_araddr       (xbar_m_araddr),
+        .m_arlen        (xbar_m_arlen),
+        .m_arsize       (xbar_m_arsize),
+        .m_arburst      (xbar_m_arburst),
+        .m_arvalid      (xbar_m_arvalid),
+        .m_arready      (xbar_m_arready),
+        .m_rdata        (xbar_m_rdata),
+        .m_rresp        (xbar_m_rresp),
+        .m_rlast        (xbar_m_rlast),
+        .m_rvalid       (xbar_m_rvalid),
+        .m_rready       (xbar_m_rready),
+        // AXI4 slave-facing — ROM (S0) and SRAM (S1) via flat ports
+        .rom_awid       (bus_rom_awid),
+        .rom_awaddr     (bus_rom_awaddr),
+        .rom_awlen      (bus_rom_awlen),
+        .rom_awsize     (bus_rom_awsize),
+        .rom_awburst    (bus_rom_awburst),
+        .rom_awvalid    (bus_rom_awvalid),
+        .rom_awready    (bus_rom_awready),
+        .rom_wdata      (bus_rom_wdata),
+        .rom_wstrb      (bus_rom_wstrb),
+        .rom_wlast      (bus_rom_wlast),
+        .rom_wvalid     (bus_rom_wvalid),
+        .rom_wready     (bus_rom_wready),
+        .rom_bid        (bus_rom_bid),
+        .rom_bresp      (bus_rom_bresp),
+        .rom_bvalid     (bus_rom_bvalid),
+        .rom_bready     (bus_rom_bready),
+        .rom_arid       (bus_rom_arid),
+        .rom_araddr     (bus_rom_araddr),
+        .rom_arlen      (bus_rom_arlen),
+        .rom_arsize     (bus_rom_arsize),
+        .rom_arburst    (bus_rom_arburst),
+        .rom_arvalid    (bus_rom_arvalid),
+        .rom_arready    (bus_rom_arready),
+        .rom_rid        (bus_rom_rid),
+        .rom_rdata      (bus_rom_rdata),
+        .rom_rresp      (bus_rom_rresp),
+        .rom_rlast      (bus_rom_rlast),
+        .rom_rvalid     (bus_rom_rvalid),
+        .rom_rready     (bus_rom_rready),
+        .mem_awid       (bus_mem_awid),
+        .mem_awaddr     (bus_mem_awaddr),
+        .mem_awlen      (bus_mem_awlen),
+        .mem_awsize     (bus_mem_awsize),
+        .mem_awburst    (bus_mem_awburst),
+        .mem_awvalid    (bus_mem_awvalid),
+        .mem_awready    (bus_mem_awready),
+        .mem_wdata      (bus_mem_wdata),
+        .mem_wstrb      (bus_mem_wstrb),
+        .mem_wlast      (bus_mem_wlast),
+        .mem_wvalid     (bus_mem_wvalid),
+        .mem_wready     (bus_mem_wready),
+        .mem_bid        (bus_mem_bid),
+        .mem_bresp      (bus_mem_bresp),
+        .mem_bvalid     (bus_mem_bvalid),
+        .mem_bready     (bus_mem_bready),
+        .mem_arid       (bus_mem_arid),
+        .mem_araddr     (bus_mem_araddr),
+        .mem_arlen      (bus_mem_arlen),
+        .mem_arsize     (bus_mem_arsize),
+        .mem_arburst    (bus_mem_arburst),
+        .mem_arvalid    (bus_mem_arvalid),
+        .mem_arready    (bus_mem_arready),
+        .mem_rid        (bus_mem_rid),
+        .mem_rdata      (bus_mem_rdata),
+        .mem_rresp      (bus_mem_rresp),
+        .mem_rlast      (bus_mem_rlast),
+        .mem_rvalid     (bus_mem_rvalid),
+        .mem_rready     (bus_mem_rready),
+        // AXI-Lite GPU ctrl (ring slot AXIL_GPU=0)
+        .axil_gpu_awaddr    (bus_axil_gpu_awaddr),
+        .axil_gpu_awprot    (bus_axil_gpu_awprot),
+        .axil_gpu_awvalid   (bus_axil_gpu_awvalid),
+        .axil_gpu_awready   (bus_axil_gpu_awready),
+        .axil_gpu_wdata     (bus_axil_gpu_wdata),
+        .axil_gpu_wstrb     (bus_axil_gpu_wstrb),
+        .axil_gpu_wvalid    (bus_axil_gpu_wvalid),
+        .axil_gpu_wready    (bus_axil_gpu_wready),
+        .axil_gpu_bresp     (bus_axil_gpu_bresp),
+        .axil_gpu_bvalid    (bus_axil_gpu_bvalid),
+        .axil_gpu_bready    (bus_axil_gpu_bready),
+        .axil_gpu_araddr    (bus_axil_gpu_araddr),
+        .axil_gpu_arprot    (bus_axil_gpu_arprot),
+        .axil_gpu_arvalid   (bus_axil_gpu_arvalid),
+        .axil_gpu_arready   (bus_axil_gpu_arready),
+        .axil_gpu_rdata     (bus_axil_gpu_rdata),
+        .axil_gpu_rresp     (bus_axil_gpu_rresp),
+        .axil_gpu_rvalid    (bus_axil_gpu_rvalid),
+        .axil_gpu_rready    (bus_axil_gpu_rready),
+        // AXI-Lite DMA ctrl (ring slot AXIL_DMA=2)
+        .axil_dma_awaddr    (bus_axil_dma_awaddr),
+        .axil_dma_awprot    (bus_axil_dma_awprot),
+        .axil_dma_awvalid   (bus_axil_dma_awvalid),
+        .axil_dma_awready   (bus_axil_dma_awready),
+        .axil_dma_wdata     (bus_axil_dma_wdata),
+        .axil_dma_wstrb     (bus_axil_dma_wstrb),
+        .axil_dma_wvalid    (bus_axil_dma_wvalid),
+        .axil_dma_wready    (bus_axil_dma_wready),
+        .axil_dma_bresp     (bus_axil_dma_bresp),
+        .axil_dma_bvalid    (bus_axil_dma_bvalid),
+        .axil_dma_bready    (bus_axil_dma_bready),
+        .axil_dma_araddr    (bus_axil_dma_araddr),
+        .axil_dma_arprot    (bus_axil_dma_arprot),
+        .axil_dma_arvalid   (bus_axil_dma_arvalid),
+        .axil_dma_arready   (bus_axil_dma_arready),
+        .axil_dma_rdata     (bus_axil_dma_rdata),
+        .axil_dma_rresp     (bus_axil_dma_rresp),
+        .axil_dma_rvalid    (bus_axil_dma_rvalid),
+        .axil_dma_rready    (bus_axil_dma_rready),
+        // APB peripheral ports (all 5 slaves)
+        .apb_psel       (apb_psel),
+        .apb_penable    (apb_penable),
+        .apb_pwrite     (apb_pwrite),
+        .apb_paddr      (apb_paddr),
+        .apb_pwdata     (apb_pwdata),
+        .apb_pstrb      (apb_pstrb),
+        .apb_prdata     (apb_prdata),
+        .apb_pready     (apb_pready),
+        .apb_pslverr    (apb_pslverr)
     );
 
     // =========================================================================
@@ -704,35 +795,35 @@ module soc_top
     ) u_boot_rom (
         .clk          (core_clk),
         .rst_n        (core_rst_n),
-        .s_awid       (xbar_s_awid    [SLV_ROM]),
-        .s_awaddr     (xbar_s_awaddr  [SLV_ROM]),
-        .s_awlen      (xbar_s_awlen   [SLV_ROM]),
-        .s_awsize     (xbar_s_awsize  [SLV_ROM]),
-        .s_awburst    (xbar_s_awburst [SLV_ROM]),
-        .s_awvalid    (xbar_s_awvalid [SLV_ROM]),
-        .s_awready    (xbar_s_awready [SLV_ROM]),
-        .s_wdata      (xbar_s_wdata   [SLV_ROM]),
-        .s_wstrb      (xbar_s_wstrb   [SLV_ROM]),
-        .s_wlast      (xbar_s_wlast   [SLV_ROM]),
-        .s_wvalid     (xbar_s_wvalid  [SLV_ROM]),
-        .s_wready     (xbar_s_wready  [SLV_ROM]),
-        .s_bid        (xbar_s_bid     [SLV_ROM]),
-        .s_bresp      (xbar_s_bresp   [SLV_ROM]),
-        .s_bvalid     (xbar_s_bvalid  [SLV_ROM]),
-        .s_bready     (xbar_s_bready  [SLV_ROM]),
-        .s_arid       (xbar_s_arid    [SLV_ROM]),
-        .s_araddr     (xbar_s_araddr  [SLV_ROM]),
-        .s_arlen      (xbar_s_arlen   [SLV_ROM]),
-        .s_arsize     (xbar_s_arsize  [SLV_ROM]),
-        .s_arburst    (xbar_s_arburst [SLV_ROM]),
-        .s_arvalid    (xbar_s_arvalid [SLV_ROM]),
-        .s_arready    (xbar_s_arready [SLV_ROM]),
-        .s_rid        (xbar_s_rid     [SLV_ROM]),
-        .s_rdata      (xbar_s_rdata   [SLV_ROM]),
-        .s_rresp      (xbar_s_rresp   [SLV_ROM]),
-        .s_rlast      (xbar_s_rlast   [SLV_ROM]),
-        .s_rvalid     (xbar_s_rvalid  [SLV_ROM]),
-        .s_rready     (xbar_s_rready  [SLV_ROM])
+        .s_awid       (bus_rom_awid),
+        .s_awaddr     (bus_rom_awaddr),
+        .s_awlen      (bus_rom_awlen),
+        .s_awsize     (bus_rom_awsize),
+        .s_awburst    (bus_rom_awburst),
+        .s_awvalid    (bus_rom_awvalid),
+        .s_awready    (bus_rom_awready),
+        .s_wdata      (bus_rom_wdata),
+        .s_wstrb      (bus_rom_wstrb),
+        .s_wlast      (bus_rom_wlast),
+        .s_wvalid     (bus_rom_wvalid),
+        .s_wready     (bus_rom_wready),
+        .s_bid        (bus_rom_bid),
+        .s_bresp      (bus_rom_bresp),
+        .s_bvalid     (bus_rom_bvalid),
+        .s_bready     (bus_rom_bready),
+        .s_arid       (bus_rom_arid),
+        .s_araddr     (bus_rom_araddr),
+        .s_arlen      (bus_rom_arlen),
+        .s_arsize     (bus_rom_arsize),
+        .s_arburst    (bus_rom_arburst),
+        .s_arvalid    (bus_rom_arvalid),
+        .s_arready    (bus_rom_arready),
+        .s_rid        (bus_rom_rid),
+        .s_rdata      (bus_rom_rdata),
+        .s_rresp      (bus_rom_rresp),
+        .s_rlast      (bus_rom_rlast),
+        .s_rvalid     (bus_rom_rvalid),
+        .s_rready     (bus_rom_rready)
     );
 
     // =========================================================================
@@ -741,221 +832,39 @@ module soc_top
     sram_controller u_sram (
         .clk          (core_clk),
         .rst_n        (core_rst_n),
-        .s_awid       (xbar_s_awid    [SLV_SRAM]),
-        .s_awaddr     (xbar_s_awaddr  [SLV_SRAM]),
-        .s_awlen      (xbar_s_awlen   [SLV_SRAM]),
-        .s_awsize     (xbar_s_awsize  [SLV_SRAM]),
-        .s_awburst    (xbar_s_awburst [SLV_SRAM]),
-        .s_awvalid    (xbar_s_awvalid [SLV_SRAM]),
-        .s_awready    (xbar_s_awready [SLV_SRAM]),
-        .s_wdata      (xbar_s_wdata   [SLV_SRAM]),
-        .s_wstrb      (xbar_s_wstrb   [SLV_SRAM]),
-        .s_wlast      (xbar_s_wlast   [SLV_SRAM]),
-        .s_wvalid     (xbar_s_wvalid  [SLV_SRAM]),
-        .s_wready     (xbar_s_wready  [SLV_SRAM]),
-        .s_bid        (xbar_s_bid     [SLV_SRAM]),
-        .s_bresp      (xbar_s_bresp   [SLV_SRAM]),
-        .s_bvalid     (xbar_s_bvalid  [SLV_SRAM]),
-        .s_bready     (xbar_s_bready  [SLV_SRAM]),
-        .s_arid       (xbar_s_arid    [SLV_SRAM]),
-        .s_araddr     (xbar_s_araddr  [SLV_SRAM]),
-        .s_arlen      (xbar_s_arlen   [SLV_SRAM]),
-        .s_arsize     (xbar_s_arsize  [SLV_SRAM]),
-        .s_arburst    (xbar_s_arburst [SLV_SRAM]),
-        .s_arvalid    (xbar_s_arvalid [SLV_SRAM]),
-        .s_arready    (xbar_s_arready [SLV_SRAM]),
-        .s_rid        (xbar_s_rid     [SLV_SRAM]),
-        .s_rdata      (xbar_s_rdata   [SLV_SRAM]),
-        .s_rresp      (xbar_s_rresp   [SLV_SRAM]),
-        .s_rlast      (xbar_s_rlast   [SLV_SRAM]),
-        .s_rvalid     (xbar_s_rvalid  [SLV_SRAM]),
-        .s_rready     (xbar_s_rready  [SLV_SRAM])
+        .s_awid       (bus_mem_awid),
+        .s_awaddr     (bus_mem_awaddr),
+        .s_awlen      (bus_mem_awlen),
+        .s_awsize     (bus_mem_awsize),
+        .s_awburst    (bus_mem_awburst),
+        .s_awvalid    (bus_mem_awvalid),
+        .s_awready    (bus_mem_awready),
+        .s_wdata      (bus_mem_wdata),
+        .s_wstrb      (bus_mem_wstrb),
+        .s_wlast      (bus_mem_wlast),
+        .s_wvalid     (bus_mem_wvalid),
+        .s_wready     (bus_mem_wready),
+        .s_bid        (bus_mem_bid),
+        .s_bresp      (bus_mem_bresp),
+        .s_bvalid     (bus_mem_bvalid),
+        .s_bready     (bus_mem_bready),
+        .s_arid       (bus_mem_arid),
+        .s_araddr     (bus_mem_araddr),
+        .s_arlen      (bus_mem_arlen),
+        .s_arsize     (bus_mem_arsize),
+        .s_arburst    (bus_mem_arburst),
+        .s_arvalid    (bus_mem_arvalid),
+        .s_arready    (bus_mem_arready),
+        .s_rid        (bus_mem_rid),
+        .s_rdata      (bus_mem_rdata),
+        .s_rresp      (bus_mem_rresp),
+        .s_rlast      (bus_mem_rlast),
+        .s_rvalid     (bus_mem_rvalid),
+        .s_rready     (bus_mem_rready)
     );
 
-    // =========================================================================
-    // S2: axi4_to_axilite bridge ← crossbar SLV_PERIPH → interconnect master
-    // =========================================================================
-    axi4_to_axilite u_periph_bridge (
-        .clk                        (core_clk),
-        .rst_n                      (core_rst_n),
-        // AXI4 slave ← crossbar SLV_PERIPH
-        .s_awid                     (xbar_s_awid    [SLV_PERIPH]),
-        .s_awaddr                   (xbar_s_awaddr  [SLV_PERIPH]),
-        .s_awlen                    (xbar_s_awlen   [SLV_PERIPH]),
-        .s_awsize                   (xbar_s_awsize  [SLV_PERIPH]),
-        .s_awburst                  (xbar_s_awburst [SLV_PERIPH]),
-        .s_awvalid                  (xbar_s_awvalid [SLV_PERIPH]),
-        .s_awready                  (xbar_s_awready [SLV_PERIPH]),
-        .s_wdata                    (xbar_s_wdata   [SLV_PERIPH]),
-        .s_wstrb                    (xbar_s_wstrb   [SLV_PERIPH]),
-        .s_wlast                    (xbar_s_wlast   [SLV_PERIPH]),
-        .s_wvalid                   (xbar_s_wvalid  [SLV_PERIPH]),
-        .s_wready                   (xbar_s_wready  [SLV_PERIPH]),
-        .s_bid                      (xbar_s_bid     [SLV_PERIPH]),
-        .s_bresp                    (xbar_s_bresp   [SLV_PERIPH]),
-        .s_bvalid                   (xbar_s_bvalid  [SLV_PERIPH]),
-        .s_bready                   (xbar_s_bready  [SLV_PERIPH]),
-        .s_arid                     (xbar_s_arid    [SLV_PERIPH]),
-        .s_araddr                   (xbar_s_araddr  [SLV_PERIPH]),
-        .s_arlen                    (xbar_s_arlen   [SLV_PERIPH]),
-        .s_arsize                   (xbar_s_arsize  [SLV_PERIPH]),
-        .s_arburst                  (xbar_s_arburst [SLV_PERIPH]),
-        .s_arvalid                  (xbar_s_arvalid [SLV_PERIPH]),
-        .s_arready                  (xbar_s_arready [SLV_PERIPH]),
-        .s_rid                      (xbar_s_rid     [SLV_PERIPH]),
-        .s_rdata                    (xbar_s_rdata   [SLV_PERIPH]),
-        .s_rresp                    (xbar_s_rresp   [SLV_PERIPH]),
-        .s_rlast                    (xbar_s_rlast   [SLV_PERIPH]),
-        .s_rvalid                   (xbar_s_rvalid  [SLV_PERIPH]),
-        .s_rready                   (xbar_s_rready  [SLV_PERIPH]),
-        // AXI4-Lite master → axi_lite_interconnect
-        .m_axil_awaddr              (periph_axil_awaddr),
-        .m_axil_awprot              (periph_axil_awprot),
-        .m_axil_awvalid             (periph_axil_awvalid),
-        .m_axil_awready             (periph_axil_awready),
-        .m_axil_wdata               (periph_axil_wdata),
-        .m_axil_wstrb               (periph_axil_wstrb),
-        .m_axil_wvalid              (periph_axil_wvalid),
-        .m_axil_wready              (periph_axil_wready),
-        .m_axil_bresp               (periph_axil_bresp),
-        .m_axil_bvalid              (periph_axil_bvalid),
-        .m_axil_bready              (periph_axil_bready),
-        .m_axil_araddr              (periph_axil_araddr),
-        .m_axil_arprot              (periph_axil_arprot),
-        .m_axil_arvalid             (periph_axil_arvalid),
-        .m_axil_arready             (periph_axil_arready),
-        .m_axil_rdata               (periph_axil_rdata),
-        .m_axil_rresp               (periph_axil_rresp),
-        .m_axil_rvalid              (periph_axil_rvalid),
-        .m_axil_rready              (periph_axil_rready)
-    );
-
-    // =========================================================================
-    // AXI4-Lite interconnect (1 master → 3 ring slaves: GPU, APB_BRIDGE, DMA)
-    // =========================================================================
-    axi_lite_interconnect #(
-        .N_SLAVES   (N_AXIL_SLV),
-        .SLV_BASE   (AXIL_SLV_BASE),
-        .SLV_LIMIT  (AXIL_SLV_LIMIT)
-    ) u_axil_ic (
-        .clk                (core_clk),
-        .rst_n              (core_rst_n),
-        // Master-facing port (from axi4_to_axilite bridge)
-        .m_axil_awaddr      (periph_axil_awaddr),
-        .m_axil_awprot      (periph_axil_awprot),
-        .m_axil_awvalid     (periph_axil_awvalid),
-        .m_axil_awready     (periph_axil_awready),
-        .m_axil_wdata       (periph_axil_wdata),
-        .m_axil_wstrb       (periph_axil_wstrb),
-        .m_axil_wvalid      (periph_axil_wvalid),
-        .m_axil_wready      (periph_axil_wready),
-        .m_axil_bresp       (periph_axil_bresp),
-        .m_axil_bvalid      (periph_axil_bvalid),
-        .m_axil_bready      (periph_axil_bready),
-        .m_axil_araddr      (periph_axil_araddr),
-        .m_axil_arprot      (periph_axil_arprot),
-        .m_axil_arvalid     (periph_axil_arvalid),
-        .m_axil_arready     (periph_axil_arready),
-        .m_axil_rdata       (periph_axil_rdata),
-        .m_axil_rresp       (periph_axil_rresp),
-        .m_axil_rvalid      (periph_axil_rvalid),
-        .m_axil_rready      (periph_axil_rready),
-        // Slave-facing ports (GPU, APB_BRIDGE, DMA)
-        .s_axil_awaddr      (axil_s_awaddr),
-        .s_axil_awprot      (axil_s_awprot),
-        .s_axil_awvalid     (axil_s_awvalid),
-        .s_axil_awready     (axil_s_awready),
-        .s_axil_wdata       (axil_s_wdata),
-        .s_axil_wstrb       (axil_s_wstrb),
-        .s_axil_wvalid      (axil_s_wvalid),
-        .s_axil_wready      (axil_s_wready),
-        .s_axil_bresp       (axil_s_bresp),
-        .s_axil_bvalid      (axil_s_bvalid),
-        .s_axil_bready      (axil_s_bready),
-        .s_axil_araddr      (axil_s_araddr),
-        .s_axil_arprot      (axil_s_arprot),
-        .s_axil_arvalid     (axil_s_arvalid),
-        .s_axil_arready     (axil_s_arready),
-        .s_axil_rdata       (axil_s_rdata),
-        .s_axil_rresp       (axil_s_rresp),
-        .s_axil_rvalid      (axil_s_rvalid),
-        .s_axil_rready      (axil_s_rready)
-    );
-
-    // =========================================================================
-    // AXIL_APB_BRIDGE: axil_to_apb bridge (axil_s[AXIL_APB_BRIDGE])
-    // Converts AXI-Lite ring slot 1 to APB master for the peripheral subtree.
-    // =========================================================================
-    axil_to_apb #(
-        .ADDR_W (32),
-        .DW     (32),
-        .SW     (4)
-    ) u_axil_apb_bridge (
-        .clk            (core_clk),
-        .rst_n          (core_rst_n),
-        // AXI-Lite slave ← ring AXIL_APB_BRIDGE slot
-        .s_axil_awaddr  (axil_s_awaddr  [AXIL_APB_BRIDGE]),
-        .s_axil_awprot  (axil_s_awprot  [AXIL_APB_BRIDGE]),
-        .s_axil_awvalid (axil_s_awvalid [AXIL_APB_BRIDGE]),
-        .s_axil_awready (axil_s_awready [AXIL_APB_BRIDGE]),
-        .s_axil_wdata   (axil_s_wdata   [AXIL_APB_BRIDGE]),
-        .s_axil_wstrb   (axil_s_wstrb   [AXIL_APB_BRIDGE]),
-        .s_axil_wvalid  (axil_s_wvalid  [AXIL_APB_BRIDGE]),
-        .s_axil_wready  (axil_s_wready  [AXIL_APB_BRIDGE]),
-        .s_axil_bresp   (axil_s_bresp   [AXIL_APB_BRIDGE]),
-        .s_axil_bvalid  (axil_s_bvalid  [AXIL_APB_BRIDGE]),
-        .s_axil_bready  (axil_s_bready  [AXIL_APB_BRIDGE]),
-        .s_axil_araddr  (axil_s_araddr  [AXIL_APB_BRIDGE]),
-        .s_axil_arprot  (axil_s_arprot  [AXIL_APB_BRIDGE]),
-        .s_axil_arvalid (axil_s_arvalid [AXIL_APB_BRIDGE]),
-        .s_axil_arready (axil_s_arready [AXIL_APB_BRIDGE]),
-        .s_axil_rdata   (axil_s_rdata   [AXIL_APB_BRIDGE]),
-        .s_axil_rresp   (axil_s_rresp   [AXIL_APB_BRIDGE]),
-        .s_axil_rvalid  (axil_s_rvalid  [AXIL_APB_BRIDGE]),
-        .s_axil_rready  (axil_s_rready  [AXIL_APB_BRIDGE]),
-        // APB4 master → apb_interconnect
-        .psel           (apb_m_psel),
-        .penable        (apb_m_penable),
-        .pwrite         (apb_m_pwrite),
-        .paddr          (apb_m_paddr),
-        .pwdata         (apb_m_pwdata),
-        .pstrb          (apb_m_pstrb),
-        .prdata         (apb_m_prdata),
-        .pready         (apb_m_pready),
-        .pslverr        (apb_m_pslverr)
-    );
-
-    // =========================================================================
-    // APB interconnect: 1 APB master → 5 APB peripheral slaves
-    //   APB_UART=0 APB_SPI=1 APB_TIMER=2 APB_IRQ=3 APB_PLL=4
-    // =========================================================================
-    apb_interconnect #(
-        .N_SLAVES  (N_APB_SLV),
-        .ADDR_W    (32),
-        .DW        (32),
-        .SW        (4),
-        .SLV_BASE  (APB_SLV_BASE),
-        .SLV_LIMIT (APB_SLV_LIMIT)
-    ) u_apb_ic (
-        .psel_i    (apb_m_psel),
-        .penable_i (apb_m_penable),
-        .pwrite_i  (apb_m_pwrite),
-        .paddr_i   (apb_m_paddr),
-        .pwdata_i  (apb_m_pwdata),
-        .pstrb_i   (apb_m_pstrb),
-        .prdata_o  (apb_m_prdata),
-        .pready_o  (apb_m_pready),
-        .pslverr_o (apb_m_pslverr),
-        .psel_o    (apb_psel),
-        .penable_o (apb_penable),
-        .pwrite_o  (apb_pwrite),
-        .paddr_o   (apb_paddr),
-        .pwdata_o  (apb_pwdata),
-        .pstrb_o   (apb_pstrb),
-        .prdata_i  (apb_prdata),
-        .pready_i  (apb_pready),
-        .pslverr_i (apb_pslverr)
-    );
+    // (S2/periph, AXI-Lite ring, APB bridge, and APB interconnect are now
+    //  all inside soc_bus u_bus above.)
 
     // =========================================================================
     // UART — APB slave (apb_psel[APB_UART])
