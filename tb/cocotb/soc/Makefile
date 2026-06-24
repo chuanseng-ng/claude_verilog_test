@@ -77,14 +77,15 @@ AXIL_TO_APB_SOURCES = \
 	$(RTL)/soc/axil_to_apb.sv \
 	$(SOC_DIR)/tb_axil_to_apb.sv
 
-# Phase 7 M-c: standalone pll_axil_regs unit-test sources.
-# Minimal: axi_pkg + axi_lite_register_bank (dependency) + pll_axil_regs + standalone TB.
-# Does NOT include the full SoC — the BFM drives s_axil_* top-level ports directly.
+# APB migration PR-7: pll_axil_regs deleted — PLL_REGS_SOURCES now points at
+# pll_apb_regs (APB4 slave).  The pll_regs target and pll_regs_lint below are
+# redirected to the PR-6 pll_apb_regs target (same functional coverage).
+# PLL_REGS_SOURCES kept as an alias so any external callers still compile;
+# the canonical source list is PLL_APB_REGS_SOURCES.
 PLL_REGS_SOURCES = \
-	$(RTL)/soc/axi_pkg.sv \
-	$(RTL)/soc/axi_lite_register_bank.sv \
-	$(RTL)/soc/pll/pll_axil_regs.sv \
-	$(SOC_DIR)/tb_pll_axil_regs.sv
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/soc/pll/pll_apb_regs.sv \
+	$(SOC_DIR)/tb_pll_apb_regs.sv
 
 # APB migration PR-6: standalone pll_apb_regs unit-test sources.
 # Minimal: apb4_register_bank (no axi_pkg needed) + pll_apb_regs + standalone TB.
@@ -156,8 +157,11 @@ PLL_SOURCES = \
 	$(RTL)/soc/boot_rom.sv \
 	$(RTL)/soc/axi4_to_axilite.sv \
 	$(RTL)/soc/axilite_to_axi4.sv \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/soc/axil_to_apb.sv \
+	$(RTL)/soc/apb_interconnect.sv \
 	$(RTL)/soc/pll/pll_clkgen_stub.sv \
-	$(RTL)/soc/pll/pll_axil_regs.sv \
+	$(RTL)/soc/pll/pll_apb_regs.sv \
 	$(RTL)/soc/pll/pll_clkgen.sv \
 	$(RTL)/soc/soc_top.sv \
 	$(SOC_DIR)/tb_soc_pll.sv
@@ -214,8 +218,11 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/soc/boot_rom.sv \
 	$(RTL)/soc/axi4_to_axilite.sv \
 	$(RTL)/soc/axilite_to_axi4.sv \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/soc/axil_to_apb.sv \
+	$(RTL)/soc/apb_interconnect.sv \
 	$(RTL)/soc/pll/pll_clkgen_stub.sv \
-	$(RTL)/soc/pll/pll_axil_regs.sv \
+	$(RTL)/soc/pll/pll_apb_regs.sv \
 	$(RTL)/soc/pll/pll_clkgen.sv \
 	$(RTL)/soc/soc_top.sv \
 	$(SOC_DIR)/tb_soc_top.sv
@@ -353,7 +360,8 @@ axil_to_apb: axil_to_apb_lint
 
 # Phase 7 M-c: PLL lint gates.
 # soc_pll_lint: lints tb_soc_pll (full SoC, used by test_pll_lock).
-# pll_regs_lint: lints tb_pll_axil_regs (standalone, used by test_pll_regs).
+# pll_regs_lint: APB migration PR-7 — pll_axil_regs deleted; redirected to
+#   lint tb_pll_apb_regs (APB4 slave, same functional coverage as original).
 soc_pll_lint:
 	verilator --lint-only -Wall -Wno-fatal -Wno-IMPORTSTAR \
 		-Wno-UNUSEDSIGNAL -Wno-UNOPTFLAT -Wno-SYNCASYNCNET \
@@ -364,25 +372,18 @@ soc_pll_lint:
 
 pll_regs_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
-		-I$(RTL)/soc \
-		--top-module tb_pll_axil_regs \
-		$(PLL_REGS_SOURCES)
+		--top-module tb_pll_apb_regs \
+		$(PLL_APB_REGS_SOURCES)
 
-# Phase 7 M-c: SoC PLL simulation targets.
+# Phase 7 M-c / APB migration PR-7: SoC PLL simulation targets.
 # test_pll_lock (3 tests): uses full SoC tb_soc_pll — verifies PLL lock
 #   signal propagation and pll_locked_o port.
-# test_pll_regs (4 tests): uses standalone tb_pll_axil_regs — exercises the
-#   pll_axil_regs register interface directly.  Separated from test_pll_lock
-#   because the original approach (BFM on periph_axil_* in the full SoC) had
-#   a structural conflict: periph_axil_arvalid is continuously driven by
-#   axi4_to_axilite assigns and cannot be force-driven by cocotb value-writes
-#   in Verilator.  The standalone TB exposes true input ports the BFM owns.
+# pll_regs: APB migration PR-7 — pll_axil_regs deleted; pll_regs is now an
+#   alias for pll_apb_regs (4 tests, tb_pll_apb_regs, APB4 slave).
+#   The original test_pll_regs (AXI-Lite) is superseded by test_pll_apb_regs.
 # clean first: stale Vtop from any prior target causes VPI root handle mismatch.
 pll_regs: pll_regs_lint
-	$(MAKE) clean
-	$(MAKE) MODULE=test_pll_regs TOPLEVEL=tb_pll_axil_regs \
-		VERILOG_SOURCES="$(PLL_REGS_SOURCES)" \
-		$(BUILD_ARGS)
+	$(MAKE) pll_apb_regs
 
 # APB migration PR-6: pll_apb_regs lint + sim.
 # lint only: apb4_register_bank + pll_apb_regs + standalone TB wrapper.
@@ -397,14 +398,14 @@ pll_apb_regs: pll_apb_regs_lint
 		VERILOG_SOURCES="$(PLL_APB_REGS_SOURCES)" \
 		$(BUILD_ARGS)
 
-soc_pll: soc_pll_lint pll_regs_lint
+soc_pll: soc_pll_lint
 	$(MAKE) clean
 	$(MAKE) MODULE=test_pll_lock TOPLEVEL=tb_soc_pll \
 		VERILOG_SOURCES="$(PLL_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
-	$(MAKE) pll_regs
+	$(MAKE) pll_apb_regs
 
 soc_boot_lint:
 	verilator --lint-only -Wall -Wno-fatal -Wno-IMPORTSTAR \
