@@ -1,8 +1,9 @@
 # test_irq_ctrl.py
 # Phase 5 (M4) — cocotb directed-test suite for interrupt_controller.sv
+# APB migration PR-5: BFM swapped from AXI4LiteMaster → APB4Master.
 #
 # DUT:  interrupt_controller  (TOPLEVEL=interrupt_controller)
-# BFM:  AXI4LiteMaster (bfm/axi4lite_master.py) drives s_axil_* registers
+# BFM:  APB4Master (bfm/apb4_master.py) drives psel/penable/... registers
 # Side-inputs: irq_src_i[4:0] poked directly via dut.irq_src_i.value
 #
 # Register byte addresses
@@ -13,20 +14,27 @@
 # Timing note: irq_src_i goes through a 2-FF synchroniser, so after any
 # change to irq_src_i we must wait at least 2 rising edges before reading
 # status registers or sampling irq_o.
+#
+# APB4Master API:
+#   write(addr, data) → True  (ok=True means pslverr=0)
+#   read(addr)        → (data, ok)  ok=True means pslverr=0
 
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
-from bfm.axi4lite_master import AXI4LiteMaster
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from bfm.apb4_master import APB4Master
 
 # ── Register byte addresses ───────────────────────────────────────────────────
 REG_IRQ_STATUS         = 0x00
 REG_IRQ_MASK           = 0x04
 REG_IRQ_PENDING_MASKED = 0x08
 
-# AXI response codes
-RESP_OKAY = 0b00
+# APB4 response: True = OKAY (pslverr=0), False = SLVERR (pslverr=1)
+RESP_OKAY = True
 
 # Synchroniser depth: 2 FF → need 2 clock edges to propagate; use 3 for margin
 SYNC_CYCLES = 3
@@ -35,11 +43,12 @@ SYNC_CYCLES = 3
 
 async def _setup(dut):
     """Start 2 ns clock, apply 5-cycle reset, wait 2 idle cycles.
-    Returns an AXI4LiteMaster pointed at the DUT slave port.
+    Returns an APB4Master pointed at the DUT slave port (bare prefix).
     """
     cocotb.start_soon(Clock(dut.clk, 2, units="ns").start())
 
-    m = AXI4LiteMaster(dut, "s_axil_", dut.clk)
+    # APB4 ports are bare (no prefix): psel, penable, pwrite, paddr, ...
+    m = APB4Master(dut, "", dut.clk)
 
     # Drive side-input to known idle state before reset
     dut.irq_src_i.value = 0
@@ -63,19 +72,19 @@ async def test_mask_rw(dut):
     dut.irq_src_i.value = 0
 
     # Write all 5 source bits set
-    resp = await m.write(REG_IRQ_MASK, 0x1F)
-    assert resp == RESP_OKAY, f"write IRQ_MASK RESP={resp}"
+    ok = await m.write(REG_IRQ_MASK, 0x1F)
+    assert ok == RESP_OKAY, f"write IRQ_MASK ok={ok}"
 
-    data, resp = await m.read(REG_IRQ_MASK)
-    assert resp == RESP_OKAY, f"read IRQ_MASK RESP={resp}"
+    data, ok = await m.read(REG_IRQ_MASK)
+    assert ok == RESP_OKAY, f"read IRQ_MASK ok={ok}"
     assert (data & 0x1F) == 0x1F, f"IRQ_MASK readback: got {data:#010x}, expected low 5 bits = 0x1F"
 
     # Write with high bits set — WMASK must suppress bits above [4:0]
-    resp = await m.write(REG_IRQ_MASK, 0xFFFF_FFFF)
-    assert resp == RESP_OKAY
+    ok = await m.write(REG_IRQ_MASK, 0xFFFF_FFFF)
+    assert ok == RESP_OKAY
 
-    data, resp = await m.read(REG_IRQ_MASK)
-    assert resp == RESP_OKAY
+    data, ok = await m.read(REG_IRQ_MASK)
+    assert ok == RESP_OKAY
     assert (data & ~0x1F) == 0, (
         f"IRQ_MASK bits above [4:0] should be zero; got {data:#010x}"
     )
@@ -95,12 +104,12 @@ async def test_status_mirror(dut):
 
     dut.irq_src_i.value = 0b00101  # UART + TIMER
 
-    # Wait for 1-FF synchroniser to propagate (need ≥2 edges)
+    # Wait for 2-FF synchroniser to propagate (need >= 2 edges)
     for _ in range(SYNC_CYCLES):
         await RisingEdge(dut.clk)
 
-    data, resp = await m.read(REG_IRQ_STATUS)
-    assert resp == RESP_OKAY
+    data, ok = await m.read(REG_IRQ_STATUS)
+    assert ok == RESP_OKAY
     assert (data & 0x1F) == 0x05, (
         f"IRQ_STATUS expected 0x05, got {data:#010x}"
     )
@@ -133,8 +142,8 @@ async def test_masked_pending(dut):
     for _ in range(SYNC_CYCLES):
         await RisingEdge(dut.clk)
 
-    data, resp = await m.read(REG_IRQ_PENDING_MASKED)
-    assert resp == RESP_OKAY
+    data, ok = await m.read(REG_IRQ_PENDING_MASKED)
+    assert ok == RESP_OKAY
     assert (data & 0x1F) == 0x04, (
         f"IRQ_PENDING_MASKED expected 0x04, got {data:#010x}"
     )
@@ -216,8 +225,8 @@ async def test_multi_source_or(dut):
         f"irq_o expected 1 with multi-source active, got {dut.irq_o.value}"
     )
 
-    data, resp = await m.read(REG_IRQ_PENDING_MASKED)
-    assert resp == RESP_OKAY
+    data, ok = await m.read(REG_IRQ_PENDING_MASKED)
+    assert ok == RESP_OKAY
     assert (data & 0x1F) == 0x0A, (
         f"IRQ_PENDING_MASKED expected 0x0A, got {data:#010x}"
     )

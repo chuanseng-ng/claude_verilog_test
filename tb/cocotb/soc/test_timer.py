@@ -1,8 +1,9 @@
 # test_timer.py
 # Phase 5 (M4) — cocotb directed-test suite for timer.sv
+# APB migration PR-4: BFM swapped from AXI4LiteMaster → APB4Master.
 #
 # DUT:  timer  (TOPLEVEL=timer)
-# BFM:  AXI4LiteMaster (bfm/axi4lite_master.py) drives s_axil_* registers
+# BFM:  APB4Master (bfm/apb4_master.py) drives psel/penable/... registers
 #
 # Register byte addresses
 #   0x00  TMR_COUNTER  RO         live count (HW-written)
@@ -11,17 +12,24 @@
 #   0x0C  TMR_PRESCALE RW [15:0]  0 → tick every clock
 #
 # Timing notes:
-#   - TMR_COUNTER is updated every clock; AXI reads have latency of a few
+#   - TMR_COUNTER is updated every clock; APB reads have latency of a few
 #     cycles, so counter assertions use "strictly increasing" or bounded-delta
 #     tolerances rather than exact equality.
 #   - Each .write() / .read() consumes multiple clock cycles; the counter
 #     advances during transactions.  All tolerance windows account for this.
+#
+# APB4Master API:
+#   write(addr, data) → True  (ok=True means pslverr=0)
+#   read(addr)        → (data, ok)  ok=True means pslverr=0
 
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ClockCycles
 
-from bfm.axi4lite_master import AXI4LiteMaster
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from bfm.apb4_master import APB4Master
 
 # ── Register byte addresses ───────────────────────────────────────────────────
 REG_TMR_COUNTER  = 0x00
@@ -34,18 +42,19 @@ CTRL_ENABLE     = (1 << 0)
 CTRL_IRQ_EN     = (1 << 1)
 CTRL_AUTO_CLEAR = (1 << 2)
 
-# AXI response codes
-RESP_OKAY = 0b00
+# APB4 response: True = OKAY (pslverr=0), False = SLVERR (pslverr=1)
+RESP_OKAY = True
 
 # ── Setup helper ──────────────────────────────────────────────────────────────
 
 async def _setup(dut):
     """Start 2 ns clock, apply 5-cycle reset, wait 2 idle cycles.
-    Returns an AXI4LiteMaster pointed at the DUT slave port.
+    Returns an APB4Master pointed at the DUT slave port (bare prefix).
     """
     cocotb.start_soon(Clock(dut.clk, 2, units="ns").start())
 
-    m = AXI4LiteMaster(dut, "s_axil_", dut.clk)
+    # APB4 ports are bare (no prefix): psel, penable, pwrite, paddr, ...
+    m = APB4Master(dut, "", dut.clk)
 
     dut.rst_n.value = 0
     for _ in range(5):
@@ -65,31 +74,31 @@ async def test_rw_roundtrip(dut):
     m = await _setup(dut)
 
     # Write values
-    resp = await m.write(REG_TMR_COMPARE,  0x1000)
-    assert resp == RESP_OKAY, f"write COMPARE RESP={resp}"
+    ok = await m.write(REG_TMR_COMPARE,  0x1000)
+    assert ok == RESP_OKAY, f"write COMPARE ok={ok}"
 
-    resp = await m.write(REG_TMR_PRESCALE, 0x0007)
-    assert resp == RESP_OKAY, f"write PRESCALE RESP={resp}"
+    ok = await m.write(REG_TMR_PRESCALE, 0x0007)
+    assert ok == RESP_OKAY, f"write PRESCALE ok={ok}"
 
     # Write CTRL with only [2:0] — disable everything so counter stays idle
-    resp = await m.write(REG_TMR_CTRL, 0x2)   # irq_en only, not enabled
-    assert resp == RESP_OKAY, f"write CTRL RESP={resp}"
+    ok = await m.write(REG_TMR_CTRL, 0x2)   # irq_en only, not enabled
+    assert ok == RESP_OKAY, f"write CTRL ok={ok}"
 
     # Read back COMPARE
-    data, resp = await m.read(REG_TMR_COMPARE)
-    assert resp == RESP_OKAY
+    data, ok = await m.read(REG_TMR_COMPARE)
+    assert ok == RESP_OKAY
     assert data == 0x1000, f"TMR_COMPARE readback: got {data:#010x}, expected 0x1000"
 
     # Read back PRESCALE — only [15:0] writable per WMASK 0x0000FFFF
-    data, resp = await m.read(REG_TMR_PRESCALE)
-    assert resp == RESP_OKAY
+    data, ok = await m.read(REG_TMR_PRESCALE)
+    assert ok == RESP_OKAY
     assert (data & 0xFFFF) == 0x0007, (
         f"TMR_PRESCALE readback: got {data:#010x}, expected low 16 bits = 0x0007"
     )
 
     # Read back CTRL — only [2:0] writable per WMASK 0x7
-    data, resp = await m.read(REG_TMR_CTRL)
-    assert resp == RESP_OKAY
+    data, ok = await m.read(REG_TMR_CTRL)
+    assert ok == RESP_OKAY
     assert (data & 0x7) == 0x2, (
         f"TMR_CTRL readback: got {data:#010x}, expected [2:0]=0x2"
     )
@@ -123,10 +132,9 @@ async def test_counter_increments(dut):
         f"Counter did not advance: count_a={count_a} count_b={count_b}"
     )
 
-    # Delta: the counter advances during the two AXI reads themselves too.
-    # Each AXI read takes a small number of cycles; allow generous tolerance.
-    # The read itself consumes ~4-6 clocks; N waits in between; so delta should
-    # be between N and N + ~20 (two read transactions overhead).
+    # Delta: the counter advances during the two APB reads themselves too.
+    # Each APB read takes ~3 cycles (SETUP + ACCESS + idle); N waits in between;
+    # so delta should be between N and N + ~20 (two read transactions overhead).
     delta = count_b - count_a
     assert delta >= N - 2, (
         f"Counter advanced too slowly: delta={delta}, expected >= {N - 2}"
@@ -145,8 +153,8 @@ async def test_prescaler(dut):
     ClockCycles window must equal WAIT_CYCLES // (PRESCALE + 1) within ±1.
 
     Samples the internal counter (dut.count_q, exposed by --public-flat-rw)
-    directly rather than via AXI reads, so the measurement window is exact
-    and free of AXI transaction latency.
+    directly rather than via APB reads, so the measurement window is exact
+    and free of APB transaction latency.
     """
     m = await _setup(dut)
 

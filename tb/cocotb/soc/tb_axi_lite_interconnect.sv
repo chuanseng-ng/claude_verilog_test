@@ -1,16 +1,19 @@
 // tb_axi_lite_interconnect.sv
 // Phase 5 (M3) — cocotb test wrapper for axi_lite_interconnect.
 //
-// Instantiates the 6-slave control interconnect with the real peripheral
-// address map (soc_periph_map_pkg) and attaches six axi_lite_register_bank
-// instances as the slaves.  This exercises BOTH new modules together: the BFM
-// drives the CPU-side "m_axil_" master port; routing, isolation, DECERR and
-// backpressure are observed end-to-end through real register banks.
+// APB migration PR-7 topology (3-slave AXI-Lite ring):
+//   s0 GPU         0x2000_1000 .. 0x2000_1FFF
+//   s1 APB bridge  0x2000_2000 .. 0x2000_7FFF  (covers all 5 APB peripherals)
+//   s2 DMA         0x2000_5000 .. 0x2000_5FFF  (last-match wins over bridge)
+//   unmapped: 0x2000_0000 (below GPU) -> DECERR
+//             0x2000_8000 and above   -> DECERR
 //
-// Slave map (soc_periph_map_pkg):
-//   s0 GPU   0x2000_1000   s1 UART  0x2000_2000   s2 SPI 0x2000_3000
-//   s3 Timer 0x2000_4000   s4 DMA   0x2000_5000   s5 IRQ 0x2000_6000
-//   unmapped gap (e.g. 0x2000_0000 / 0x2000_7000) -> DECERR
+// Three axi_lite_register_bank instances are attached as stub slaves (one per
+// AXI-Lite ring slot).  The APB-bridge slot (s1) acts as a proxy for the
+// entire APB subtree — the interconnect unit test only verifies routing, not
+// the APB bridge internals (those are tested by test_axil_to_apb.py).
+//
+// AXIL_N_SLAVES is now 3 (from soc_periph_map_pkg after PR-7 update).
 
 module tb_axi_lite_interconnect #(
     parameter int unsigned AW     = axi_pkg::AXI_ADDR_WIDTH,
@@ -46,7 +49,7 @@ module tb_axi_lite_interconnect #(
 
     import soc_periph_map_pkg::*;
 
-    localparam int unsigned NS = AXIL_N_SLAVES;   // 6
+    localparam int unsigned NS = AXIL_N_SLAVES;   // 3 (PR-7: GPU, APB-bridge, DMA)
 
     // Interconnect <-> slave array buses.
     // Packed 2D to match axi_lite_interconnect packed-2D slave ports (Synlig/UHDM fix).

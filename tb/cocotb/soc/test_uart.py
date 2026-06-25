@@ -2,7 +2,9 @@
 # Phase 5 (M4) — cocotb directed-test suite for uart_controller.sv
 #
 # DUT:  uart_controller  (TOPLEVEL=uart_controller)
-# BFM:  AXI4LiteMaster (bfm/axi4lite_master.py) drives s_axil_* registers
+# BFM:  APB4Master (bfm/apb4_master.py) drives APB4 slave ports
+#        APB migration PR-2: converted from AXI4LiteMaster (s_axil_*) to
+#        APB4Master (bare psel/penable/pwrite/paddr/pwdata/pstrb/prdata/pready/pslverr).
 # Side-inputs: uart_rx_i driven to idle (1) before reset
 #
 # Register byte addresses
@@ -27,7 +29,7 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ClockCycles, FallingEdge
 
-from bfm.axi4lite_master import AXI4LiteMaster
+from bfm.apb4_master import APB4Master
 
 # ── Register byte addresses ───────────────────────────────────────────────────
 REG_UART_TX     = 0x00
@@ -52,8 +54,8 @@ CTRL_IRQ_TX_EMPTY  = (1 << 2)
 CTRL_IRQ_RX_VALID  = (1 << 3)
 CTRL_LOOPBACK      = (1 << 4)
 
-# AXI response codes
-RESP_OKAY = 0b00
+# APB4 response: APB4Master.write/read return True=OKAY, False=SLVERR.
+RESP_OKAY = True
 
 # A4: With BAUD=0, 1 bit = 16 clocks, 1 frame (8N1, 10 bits) = 160 clocks.
 # WAIT_FRAME_D0: generous margin (200 clocks) for a single frame at D=0.
@@ -68,10 +70,16 @@ WAIT_LOOPBACK_D0 = 300
 
 async def _setup(dut):
     """Start 2 ns clock, drive uart_rx_i=1 (idle), apply 5-cycle reset,
-    wait 2 idle cycles. Returns an AXI4LiteMaster."""
+    wait 2 idle cycles. Returns an APB4Master.
+
+    APB migration PR-2: BFM changed from AXI4LiteMaster (s_axil_* prefix)
+    to APB4Master (bare APB4 ports: psel/penable/pwrite/paddr/pwdata/pstrb/
+    prdata/pready/pslverr).  Clock and reset wiring are unchanged.
+    """
     cocotb.start_soon(Clock(dut.clk, 2, units="ns").start())
 
-    m = AXI4LiteMaster(dut, "s_axil_", dut.clk)
+    # APB4Master with empty prefix drives bare psel/penable/... DUT ports.
+    m = APB4Master(dut, "", dut.clk)
 
     # Drive side-input to idle HIGH (UART line idle = 1) before reset
     dut.uart_rx_i.value = 1

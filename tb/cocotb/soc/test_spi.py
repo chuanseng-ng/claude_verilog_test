@@ -2,7 +2,10 @@
 # Phase 5 (M4) — cocotb directed-test suite for spi_controller.sv
 #
 # DUT:  spi_controller  (TOPLEVEL=spi_controller)
-# BFM:  AXI4LiteMaster (bfm/axi4lite_master.py) drives s_axil_* registers
+# BFM:  APB4Master (bfm/apb4_master.py) drives APB4 slave ports.
+#        APB migration PR-3: converted from AXI4LiteMaster (s_axil_* prefix)
+#        to APB4Master (bare psel/penable/pwrite/paddr/pwdata/pstrb/prdata/
+#        pready/pslverr).  No test logic or assertions changed.
 # Side-inputs: spi_miso_i driven to 0 before reset (loopback tests use loopback)
 #
 # Register byte addresses
@@ -19,7 +22,7 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ClockCycles
 
-from bfm.axi4lite_master import AXI4LiteMaster
+from bfm.apb4_master import APB4Master
 
 # ── Register byte addresses ───────────────────────────────────────────────────
 REG_SPI_TX      = 0x00
@@ -44,8 +47,8 @@ CTRL_CPHA       = (1 << 2)
 CTRL_IRQ_DONE   = (1 << 3)
 CTRL_LOOPBACK   = (1 << 4)
 
-# AXI response codes
-RESP_OKAY = 0b00
+# APB4 response: APB4Master.write/read return True=OKAY, False=SLVERR.
+RESP_OKAY = True
 
 # Cycles to wait for an 8-bit SPI transfer with CLK_DIV=0 (half-period=1 clk):
 # 16 SCLK edges × 1 clk each = 16 clocks + margin.
@@ -61,10 +64,16 @@ TRANSFER_WAIT_EXT = 16 * 2 * (CLK_DIV_EXT + 1) + 40  # 16 edges × 16 clks + mar
 
 async def _setup(dut):
     """Start 2 ns clock, drive spi_miso_i=0, apply 5-cycle reset,
-    wait 2 idle cycles. Returns an AXI4LiteMaster."""
+    wait 2 idle cycles. Returns an APB4Master.
+
+    APB migration PR-3: BFM changed from AXI4LiteMaster (s_axil_* prefix)
+    to APB4Master (bare APB4 ports: psel/penable/pwrite/paddr/pwdata/pstrb/
+    prdata/pready/pslverr).  Clock and reset wiring are unchanged.
+    """
     cocotb.start_soon(Clock(dut.clk, 2, units="ns").start())
 
-    m = AXI4LiteMaster(dut, "s_axil_", dut.clk)
+    # APB4Master with empty prefix drives bare psel/penable/... DUT ports.
+    m = APB4Master(dut, "", dut.clk)
 
     # Drive side-input to known state before reset
     dut.spi_miso_i.value = 0
