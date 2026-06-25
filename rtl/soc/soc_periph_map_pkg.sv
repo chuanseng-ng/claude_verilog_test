@@ -55,14 +55,17 @@ package soc_periph_map_pkg;
     localparam logic [31:0] AXIL_PLL_BASE    = 32'h2000_7000;
     localparam logic [31:0] AXIL_PLL_LIMIT   = 32'h2000_7FFF;
 
-    // Packed arrays for interconnect instantiation (index = slave number).
+    // Packed 2D arrays for interconnect instantiation (index = slave number).
     // Phase 7 M-c: extended to 7 entries (index 6 = AXIL_PLL).
-    localparam logic [31:0] AXIL_SLV_BASE  [AXIL_N_SLAVES] = '{
-        AXIL_GPU_BASE,  AXIL_UART_BASE,  AXIL_SPI_BASE,
-        AXIL_TIMER_BASE, AXIL_DMA_BASE,  AXIL_IRQ_BASE, AXIL_PLL_BASE};
-    localparam logic [31:0] AXIL_SLV_LIMIT [AXIL_N_SLAVES] = '{
-        AXIL_GPU_LIMIT,  AXIL_UART_LIMIT,  AXIL_SPI_LIMIT,
-        AXIL_TIMER_LIMIT, AXIL_DMA_LIMIT,  AXIL_IRQ_LIMIT, AXIL_PLL_LIMIT};
+    // NOTE: unpacked localparam arrays cause Synlig/UHDM $mem → empty-named
+    // RTLIL wire assert.  Use packed [N-1:0][31:0] form instead.
+    // Concatenation order: MSB = highest index, so index 0 = rightmost entry.
+    localparam logic [AXIL_N_SLAVES-1:0][31:0] AXIL_SLV_BASE  =
+        {AXIL_PLL_BASE,  AXIL_IRQ_BASE,  AXIL_DMA_BASE,
+         AXIL_TIMER_BASE, AXIL_SPI_BASE, AXIL_UART_BASE, AXIL_GPU_BASE};
+    localparam logic [AXIL_N_SLAVES-1:0][31:0] AXIL_SLV_LIMIT =
+        {AXIL_PLL_LIMIT,  AXIL_IRQ_LIMIT,  AXIL_DMA_LIMIT,
+         AXIL_TIMER_LIMIT, AXIL_SPI_LIMIT, AXIL_UART_LIMIT, AXIL_GPU_LIMIT};
 
     // ── Reference decode ─────────────────────────────────────────────────────
     // Returns slave index [0 .. AXIL_N_SLAVES-1], or AXIL_N_SLAVES when the

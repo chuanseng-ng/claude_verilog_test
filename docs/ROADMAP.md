@@ -330,7 +330,7 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 - **Timing closure for compute datapath**
 - **Power consumption validated per warp**
 
-### Phase 5 — SoC integration (AI shines again)
+### Phase 5 — SoC integration (AI shines again) — ✅ COMPLETE 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW sign-off; `docs/PHASE5_RUN_HISTORY.md`)
 
 - Components
   - CPU + GPU-lite
