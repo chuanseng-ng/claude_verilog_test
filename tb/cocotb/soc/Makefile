@@ -164,6 +164,7 @@ PLL_SOURCES = \
 	$(RTL)/soc/pll/pll_clkgen_stub.sv \
 	$(RTL)/soc/pll/pll_apb_regs.sv \
 	$(RTL)/soc/pll/pll_clkgen.sv \
+	$(RTL)/soc/pll/pll_subsystem.sv \
 	$(RTL)/soc/soc_top.sv \
 	$(SOC_DIR)/tb_soc_pll.sv
 
@@ -226,6 +227,7 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/soc/pll/pll_clkgen_stub.sv \
 	$(RTL)/soc/pll/pll_apb_regs.sv \
 	$(RTL)/soc/pll/pll_clkgen.sv \
+	$(RTL)/soc/pll/pll_subsystem.sv \
 	$(RTL)/soc/soc_top.sv \
 	$(SOC_DIR)/tb_soc_top.sv
 

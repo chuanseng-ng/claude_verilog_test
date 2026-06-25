@@ -332,6 +332,7 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/soc/pll/pll_clkgen_stub.sv \
 	$(RTL_DIR)/soc/pll/pll_clkgen.sv \
 	$(RTL_DIR)/soc/pll/pll_apb_regs.sv \
+	$(RTL_DIR)/soc/pll/pll_subsystem.sv \
 	$(RTL_DIR)/soc/soc_top.sv
 
 .PHONY: lint_soc
