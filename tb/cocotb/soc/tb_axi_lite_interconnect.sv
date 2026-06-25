@@ -102,8 +102,8 @@ module tb_axi_lite_interconnect #(
         end
     end
 
-    // Six register-bank slaves; each takes the low BANK_AW bits of the routed
-    // 32-bit address.
+    // NS register-bank stub slaves (3 after PR-7); each takes the low BANK_AW
+    // bits of the routed 32-bit address.
     genvar gs;
     generate
     for (gs = 0; gs < NS; gs++) begin : g_bank

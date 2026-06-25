@@ -34,7 +34,8 @@
 //     PLL_IMPL parameter selects "STUB" (default, synth-safe) or "RNM" (M-c cosim).
 //
 //   IRQ routing:
-//     irq_src_i = {gpu_irq_o[4], dma_irq[3], timer_irq[2], spi_irq[1], uart_irq[0]}
+//     irq_src_i = {gpu_irq_o[4], dma_irq[3], 1'b0[2], spi_irq[1], uart_irq[0]}
+//       (TIMER slot[2] tied 0: timer IRQ reaches the CPU only as MTIP, never ext_irq)
 //     interrupt_controller.irq_o → CPU ext_irq_i (MEIP)
 //     timer.irq_o                → CPU timer_irq_i (MTIP, direct)
 //

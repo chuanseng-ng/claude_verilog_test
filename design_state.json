@@ -98,17 +98,6 @@
       "constraint_ref": null
     },
     {
-      "timestamp": "2026-05-31T09:28:54Z",
-      "agent": "verification-orchestrator",
-      "stage": "regression_signoff",
-      "decision": "proceed",
-      "confidence": "high",
-      "failure_class": "none",
-      "suggested_next_step": "proceed",
-      "reason": "M6 sram_controller hardened regression: TESTS=7 PASS=7 FAIL=0. Added test_burst_crosses_limit_slverr (start=0x0FFFFFF4 last_beat=0x10000000 > SRAM_LIMIT=0x0FFFFFFF) confirming full-span range check returns SLVERR on both write (bresp) and read (rresp). Added verilator_lint Make prereq (-Wall -Wno-IMPORTSTAR) passes 0 warnings. All 6 prior tests unchanged.",
-      "constraint_ref": null
-    },
-    {
       "timestamp": "2026-05-31T16:27:00+07:00",
       "agent": "rtl-design-orchestrator",
       "stage": "rtl_coding",
@@ -117,6 +106,17 @@
       "failure_class": "none",
       "suggested_next_step": "proceed",
       "reason": "Applied two surgical bug fixes to sram_controller.sv: (1) full-span burst range check via last_addr() function on both write and read accept paths; (2) mem-write and w_idx increment guarded by !w_err in W_DATA. Verilator -Wall: 0 errors, 0 warnings.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-05-31T09:28:54Z",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "M6 sram_controller hardened regression: TESTS=7 PASS=7 FAIL=0. Added test_burst_crosses_limit_slverr (start=0x0FFFFFF4 last_beat=0x10000000 > SRAM_LIMIT=0x0FFFFFFF) confirming full-span range check returns SLVERR on both write (bresp) and read (rresp). Added verilator_lint Make prereq (-Wall -Wno-IMPORTSTAR) passes 0 warnings. All 6 prior tests unchanged.",
       "constraint_ref": null
     },
     {
@@ -296,6 +296,17 @@
       "constraint_ref": "fr_null_20260603_052800_00"
     },
     {
+      "timestamp": "2026-06-18T18:05:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "D-cache MMIO bypass + flush/inval CSR gate (go9, branch feature/phase5-m9-periph-loopback): lint clean (0 errors, warnings all pre-existing); dcache 8/8; soc_periph 1/1 (PASS_PC reached); soc_boot 3/3; phase3_all 20/20 (icache 7/7, dcache 8/8, cache_integration 5/5); soc_all 68/68 (crossbar 6, register_bank 6, axil_interconnect 4, sram_controller 7, dma 6, irq 5, timer 6, uart 11, spi 13, soc_boot 3, soc_periph 1). One lint fix applied to soc_addr_map_pkg.sv (UNUSEDPARAM guard for MMIO_BASE and region-bound constants) \u2014 no DUT behavioral change.",
+      "constraint_ref": null
+    },
+    {
       "timestamp": "2026-06-18T11:31:35Z",
       "agent": "verification-orchestrator",
       "stage": "directed_tests",
@@ -329,15 +340,15 @@
       "constraint_ref": null
     },
     {
-      "timestamp": "2026-06-18T18:05:00+07:00",
-      "agent": "verification-orchestrator",
-      "stage": "regression_signoff",
+      "timestamp": "2026-06-19T06:50:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
       "decision": "proceed",
       "confidence": "high",
       "failure_class": "none",
       "suggested_next_step": "proceed",
-      "reason": "D-cache MMIO bypass + flush/inval CSR gate (go9, branch feature/phase5-m9-periph-loopback): lint clean (0 errors, warnings all pre-existing); dcache 8/8; soc_periph 1/1 (PASS_PC reached); soc_boot 3/3; phase3_all 20/20 (icache 7/7, dcache 8/8, cache_integration 5/5); soc_all 68/68 (crossbar 6, register_bank 6, axil_interconnect 4, sram_controller 7, dma 6, irq 5, timer 6, uart 11, spi 13, soc_boot 3, soc_periph 1). One lint fix applied to soc_addr_map_pkg.sv (UNUSEDPARAM guard for MMIO_BASE and region-bound constants) \u2014 no DUT behavioral change.",
-      "constraint_ref": null
+      "reason": "Fixed fr_null_20260619_000400_00: W_IDLE and R_IDLE capture loops now use found_wr/found_rd flag (lowest-index-first, matches aw_priority_winner/ar_priority_winner early-accept). Verilator -Wall: 0 errors, 0 new warnings.",
+      "constraint_ref": "fr_null_20260619_000400_00"
     },
     {
       "timestamp": "2026-06-19T00:04:00Z",
@@ -359,17 +370,6 @@
       "failure_class": "none",
       "suggested_next_step": "proceed",
       "reason": "Post-fix regression gate (fr_null_20260619_000400_00 found_wr/found_rd lowest-index capture): soc_all TESTS=70 PASS=70 FAIL=0 across 12 suites (crossbar 6/6 \u2014 test_arbitration_same_slave PASS 32ns no hang; register_bank 6/6; axil_interconnect 4/4; sram_controller 7/7; dma 6/6; irq 5/5; timer 6/6; uart 11/11; spi 13/13; soc_boot 3/3; soc_periph 1/1; soc_coherency 3/3). Standalone: soc_coherency 3/3, soc_periph 1/1, soc_boot 3/3. lint EXIT_CODE=0 (7 pre-existing baseline warnings only; 0 in axi4_crossbar.sv). 0 UVM FATAL, 0 UVM ERROR, 0 RTL bugs found.",
-      "constraint_ref": "fr_null_20260619_000400_00"
-    },
-    {
-      "timestamp": "2026-06-19T06:50:00+07:00",
-      "agent": "rtl-design-orchestrator",
-      "stage": "rtl_coding",
-      "decision": "proceed",
-      "confidence": "high",
-      "failure_class": "none",
-      "suggested_next_step": "proceed",
-      "reason": "Fixed fr_null_20260619_000400_00: W_IDLE and R_IDLE capture loops now use found_wr/found_rd flag (lowest-index-first, matches aw_priority_winner/ar_priority_winner early-accept). Verilator -Wall: 0 errors, 0 new warnings.",
       "constraint_ref": "fr_null_20260619_000400_00"
     },
     {
@@ -528,17 +528,6 @@
       "constraint_ref": null
     },
     {
-      "timestamp": "2026-06-21T09:30:10Z",
-      "agent": "firmware-orchestrator",
-      "stage": "bsp_development",
-      "decision": "proceed",
-      "confidence": "high",
-      "failure_class": "none",
-      "suggested_next_step": "proceed",
-      "reason": "M10 bench scratch multi-slot append protocol: BENCH_SCRATCH_ADDR moved to 0x41C00 (1 KB region 0x41C00..0x41FFF); bench_init() added; bench_report() now appends to slot[count] (8 words/slot, max 31); __stack_top lowered to 0x41C00 in rv32i.ld; bench_init() called in all three mains. Build clean: hello/matmul/sweep zero -Wall/-Wextra warnings. All symbols below 0x41C00; sweep heap ends 0x122B0.",
-      "constraint_ref": "claude_verilog_test-kdj"
-    },
-    {
       "timestamp": "2026-06-21T16:22:34.587702+07:00",
       "agent": "firmware-orchestrator",
       "stage": "bsp_development",
@@ -548,6 +537,17 @@
       "suggested_next_step": "proceed",
       "reason": "M10-A3 bench build fixed: -Wl,--no-warn-mismatch added to Makefile; all 3 programs (hello/matmul/sweep) build clean with zero -Wall/-Wextra warnings; all symbols <0x42000; __heap_start below __stack_top/BENCH_SCRATCH_ADDR 0x41F00.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-21T09:30:10Z",
+      "agent": "firmware-orchestrator",
+      "stage": "bsp_development",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "M10 bench scratch multi-slot append protocol: BENCH_SCRATCH_ADDR moved to 0x41C00 (1 KB region 0x41C00..0x41FFF); bench_init() added; bench_report() now appends to slot[count] (8 words/slot, max 31); __stack_top lowered to 0x41C00 in rv32i.ld; bench_init() called in all three mains. Build clean: hello/matmul/sweep zero -Wall/-Wextra warnings. All symbols below 0x41C00; sweep heap ends 0x122B0.",
+      "constraint_ref": "claude_verilog_test-kdj"
     },
     {
       "timestamp": "2026-06-21T17:02:00+07:00",
@@ -583,6 +583,28 @@
       "constraint_ref": null
     },
     {
+      "timestamp": "2026-06-22T05:50:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Synlig/Surelog UHDM fix: all module-level unpacked arrays in axi4_crossbar.sv converted to packed 2D form (wstate_e[N_SLAVES-1:0], rstate_e[N_SLAVES-1:0], dwstate_e[N_MASTERS-1:0], drstate_e[N_MASTERS-1:0], and all logic [N-1:0][W-1:0] arb/capture/resolution arrays). Typedefs preserved; access syntax unchanged. Verilator 5.048 -Wall: 0 errors, 0 warnings on axi4_crossbar.sv; full make lint exits with 7 pre-existing baseline warnings only.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-22T06:26:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Synlig/UHDM soc_top.sv packed-2D fix: 66 module-level unpacked array declarations in soc_top.sv, 30 port declarations in axi4_crossbar.sv, and 20 port declarations in axi_lite_interconnect.sv converted to packed 2D form; generate port-bridge blocks replaced with direct whole-array assigns. Verilator 5.048 -Wall: 0 errors, 7 pre-existing baseline warnings (unchanged).",
+      "constraint_ref": null
+    },
+    {
       "timestamp": "2026-06-22T00:07:00.535048+00:00",
       "agent": "verification-orchestrator",
       "stage": "directed_tests",
@@ -613,28 +635,6 @@
       "failure_class": "none",
       "suggested_next_step": "proceed",
       "reason": "Synlig UHDM intermediate-wire decoupling: all 11 submodule instances (u_cpu, u_gpu, u_dma, u_boot_rom, u_sram, u_periph_bridge, u_uart, u_spi, u_timer, u_irq_ctrl, u_pll_regs) in soc_top.sv now use named logic intermediates + assign bridges instead of indexed packed 2D array expressions in port connections; eliminates rtlil.cc:2150 assert(wire->name not empty). Verilator -Wall: 0 errors, 7 pre-existing baseline warnings only.",
-      "constraint_ref": null
-    },
-    {
-      "timestamp": "2026-06-22T05:50:00+07:00",
-      "agent": "rtl-design-orchestrator",
-      "stage": "rtl_coding",
-      "decision": "proceed",
-      "confidence": "high",
-      "failure_class": "none",
-      "suggested_next_step": "proceed",
-      "reason": "Synlig/Surelog UHDM fix: all module-level unpacked arrays in axi4_crossbar.sv converted to packed 2D form (wstate_e[N_SLAVES-1:0], rstate_e[N_SLAVES-1:0], dwstate_e[N_MASTERS-1:0], drstate_e[N_MASTERS-1:0], and all logic [N-1:0][W-1:0] arb/capture/resolution arrays). Typedefs preserved; access syntax unchanged. Verilator 5.048 -Wall: 0 errors, 0 warnings on axi4_crossbar.sv; full make lint exits with 7 pre-existing baseline warnings only.",
-      "constraint_ref": null
-    },
-    {
-      "timestamp": "2026-06-22T06:26:00+07:00",
-      "agent": "rtl-design-orchestrator",
-      "stage": "lint_check",
-      "decision": "proceed",
-      "confidence": "high",
-      "failure_class": "none",
-      "suggested_next_step": "proceed",
-      "reason": "Synlig/UHDM soc_top.sv packed-2D fix: 66 module-level unpacked array declarations in soc_top.sv, 30 port declarations in axi4_crossbar.sv, and 20 port declarations in axi_lite_interconnect.sv converted to packed 2D form; generate port-bridge blocks replaced with direct whole-array assigns. Verilator 5.048 -Wall: 0 errors, 7 pre-existing baseline warnings (unchanged).",
       "constraint_ref": null
     },
     {
