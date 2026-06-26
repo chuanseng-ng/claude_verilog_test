@@ -54,6 +54,10 @@ module soc_top
     // Set at elaboration time by the cocotb test wrapper (tb_soc_top).
     parameter string MEM_INIT_FILE = "",
 
+    // Behavioral SRAM depth in 32-bit words (Phase 5 M10 benchmark support).
+    // Forwarded into the sram_controller MEM_WORDS parameter below.
+    parameter int unsigned SRAM_MEM_WORDS = 1024,
+
     // PLL implementation selector (Phase 7 M-c).
     //   "STUB" (default) — synthesisable digital stub; out_clk = ref_clk.
     //   "RNM"            — real-number model; use only for M-c AMS co-sim.
@@ -138,35 +142,35 @@ module soc_top
     // Crossbar master-facing nets (no ID, unpacked arrays [N_MASTERS])
     // =========================================================================
     // Write address
-    logic [AW-1:0]   xbar_m_awaddr  [N_MASTERS];
-    logic [LENW-1:0] xbar_m_awlen   [N_MASTERS];
-    logic [2:0]      xbar_m_awsize  [N_MASTERS];
-    logic [1:0]      xbar_m_awburst [N_MASTERS];
-    logic            xbar_m_awvalid [N_MASTERS];
-    logic            xbar_m_awready [N_MASTERS];
+    logic [N_MASTERS-1:0][AW-1:0] xbar_m_awaddr;
+    logic [N_MASTERS-1:0][LENW-1:0] xbar_m_awlen;
+    logic [N_MASTERS-1:0][2:0] xbar_m_awsize;
+    logic [N_MASTERS-1:0][1:0] xbar_m_awburst;
+    logic [N_MASTERS-1:0] xbar_m_awvalid;
+    logic [N_MASTERS-1:0] xbar_m_awready;
     // Write data
-    logic [DW-1:0]   xbar_m_wdata   [N_MASTERS];
-    logic [SW-1:0]   xbar_m_wstrb   [N_MASTERS];
-    logic            xbar_m_wlast   [N_MASTERS];
-    logic            xbar_m_wvalid  [N_MASTERS];
-    logic            xbar_m_wready  [N_MASTERS];
+    logic [N_MASTERS-1:0][DW-1:0] xbar_m_wdata;
+    logic [N_MASTERS-1:0][SW-1:0] xbar_m_wstrb;
+    logic [N_MASTERS-1:0] xbar_m_wlast;
+    logic [N_MASTERS-1:0] xbar_m_wvalid;
+    logic [N_MASTERS-1:0] xbar_m_wready;
     // Write response
-    logic [1:0]      xbar_m_bresp   [N_MASTERS];
-    logic            xbar_m_bvalid  [N_MASTERS];
-    logic            xbar_m_bready  [N_MASTERS];
+    logic [N_MASTERS-1:0][1:0] xbar_m_bresp;
+    logic [N_MASTERS-1:0] xbar_m_bvalid;
+    logic [N_MASTERS-1:0] xbar_m_bready;
     // Read address
-    logic [AW-1:0]   xbar_m_araddr  [N_MASTERS];
-    logic [LENW-1:0] xbar_m_arlen   [N_MASTERS];
-    logic [2:0]      xbar_m_arsize  [N_MASTERS];
-    logic [1:0]      xbar_m_arburst [N_MASTERS];
-    logic            xbar_m_arvalid [N_MASTERS];
-    logic            xbar_m_arready [N_MASTERS];
+    logic [N_MASTERS-1:0][AW-1:0] xbar_m_araddr;
+    logic [N_MASTERS-1:0][LENW-1:0] xbar_m_arlen;
+    logic [N_MASTERS-1:0][2:0] xbar_m_arsize;
+    logic [N_MASTERS-1:0][1:0] xbar_m_arburst;
+    logic [N_MASTERS-1:0] xbar_m_arvalid;
+    logic [N_MASTERS-1:0] xbar_m_arready;
     // Read data
-    logic [DW-1:0]   xbar_m_rdata   [N_MASTERS];
-    logic [1:0]      xbar_m_rresp   [N_MASTERS];
-    logic            xbar_m_rlast   [N_MASTERS];
-    logic            xbar_m_rvalid  [N_MASTERS];
-    logic            xbar_m_rready  [N_MASTERS];
+    logic [N_MASTERS-1:0][DW-1:0] xbar_m_rdata;
+    logic [N_MASTERS-1:0][1:0] xbar_m_rresp;
+    logic [N_MASTERS-1:0] xbar_m_rlast;
+    logic [N_MASTERS-1:0] xbar_m_rvalid;
+    logic [N_MASTERS-1:0] xbar_m_rready;
 
     // =========================================================================
     // soc_bus flat slave-facing nets: ROM (S0) and SRAM (S1)
@@ -829,7 +833,9 @@ module soc_top
     // =========================================================================
     // S1: SRAM controller (sram_controller) ← crossbar SLV_SRAM
     // =========================================================================
-    sram_controller u_sram (
+    sram_controller #(
+        .MEM_WORDS    (SRAM_MEM_WORDS)
+    ) u_sram (
         .clk          (core_clk),
         .rst_n        (core_rst_n),
         .s_awid       (bus_mem_awid),

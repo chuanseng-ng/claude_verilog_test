@@ -207,6 +207,7 @@ help:
 	@echo "  make soc_cpu_gpu    - Run Phase 5 M9 interrupt-driven CPU-GPU integration test (IRQ path)"
 	@echo "  make soc_stress     - Run Phase 5 M9 SoC stress + benchmark (≥1M cycles, no trace, separate from soc_all)"
 	@echo "  make soc_all        - Run all SoC component + boot + periph + coherency + cpu_gpu tests (M3-M6 + M9)"
+	@echo "  make l2_bench       - Run Phase 5 M10 L2-cache decision benchmarks (hello/sweep/matmul miss rates)"
 	@echo "  make axi          - Run AXI protocol tests only"
 	@echo "  make debug        - Run APB3 debug interface tests only"
 	@echo "  make hazards      - Run Phase 2 pipeline hazard tests only"
@@ -667,7 +668,7 @@ cache_integration:
 # soc_all: M3-M6 component suites + M9 boot test.
 # soc_boot: M9 SoC boot test only (BLOCKED until CPU RESET_PC fix lands).
 # APB migration PR-1 targets: apb4_register_bank, axil_to_apb.
-.PHONY: soc_all soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress \
+.PHONY: soc_all soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress l2_bench \
         apb4_register_bank axil_to_apb
 soc_boot:
 	@echo "Running Phase 5 M9 SoC boot test..."
@@ -688,6 +689,11 @@ soc_cpu_gpu:
 soc_stress:
 	@echo "Running Phase 5 M9 SoC stress + benchmark (≥1M cycles, no trace)..."
 	$(MAKE) -C ../tb/cocotb/soc soc_stress
+
+l2_bench:
+	@echo "Running Phase 5 M10 L2-cache decision benchmarks (hello/sweep/matmul)..."
+	@echo "Firmware must be pre-built: nix develop .#bench --command make -C sw/bench"
+	$(MAKE) -C ../tb/cocotb/soc l2_bench
 
 apb4_register_bank:
 	@echo "Running APB migration PR-1: apb4_register_bank unit tests (7 tests)..."

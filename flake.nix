@@ -58,6 +58,29 @@
             echo "Python/cocotb come from system + pip: 'pip install -r requirements.txt cocotb-bus cocotbext-axi'"
           '';
         };
+
+        # Bare-metal RISC-V cross toolchain for compiling C benchmarks (M10 L2
+        # decision: Dhrystone/CoreMark/synthetic working-set sweep -> .elf -> .hex).
+        # Separate from `default` so the lean sim+lint CI shell is unaffected.
+        # `pkgsCross.riscv32-embedded` gives a newlib bare-metal gcc named
+        # `riscv32-none-elf-gcc` (binutils objcopy/objdump come bundled). Target
+        # the SoC ISA explicitly with -march=rv32i -mabi=ilp32.
+        bench = pkgs.mkShell {
+          name = "soc-riscv-bench";
+
+          packages = with pkgs; [
+            pkgsCross.riscv32-embedded.buildPackages.gcc   # riscv32-none-elf-gcc (newlib)
+            pkgsCross.riscv32-embedded.buildPackages.binutils
+            gnumake
+            python3        # hex/elf post-processing for the harness
+            git
+          ];
+
+          shellHook = ''
+            echo "soc riscv-bench env ready — $(riscv32-none-elf-gcc --version | head -1)"
+            echo "Build for the SoC: riscv32-none-elf-gcc -march=rv32i -mabi=ilp32 ..."
+          '';
+        };
       });
     };
 }

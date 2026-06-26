@@ -4,7 +4,7 @@ Last updated: 2026-06-20
 
 ## Current Phase
 
-**Phase 5: SoC Integration** - 🚧 IN PROGRESS — M1–M9 ✅ complete (2026-06-19); M10 L2 decision gate next, then M11 physical design / M12 sign-off.
+**Phase 5: SoC Integration** - ✅ COMPLETE (2026-06-24) — M1–M12 done. M10 L2 gate → NO-GO (`docs/M10_L2_DECISION_ANALYSIS.md`); M11 ASAP7 SoC P&R signed off **571 MHz / 62.9 mW / 520×520 µm / 65.6 % util / 0 DRC / 0 antenna** (sv2v frontend; `docs/PHASE5_RUN_HISTORY.md`). Indicative ASAP7 (predictive PDK).
 
 **Phase 7: Mixed-Signal PLL Clock Generator** - 🚧 IN PROGRESS — M-a/M-b1/M-b2/M-c ✅ complete (2026-06-20); M-d = documentation (this update). Dual-PDK charge-pump PLL via analog-design agents (ASAP7 indicative + Sky130 real CP-block DRC/LVS), AMS RNM integrated as SoC clock source. See `docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md`. (Phase 7 ran alongside the in-progress Phase 5 PD/sign-off tail.)
 
@@ -258,9 +258,9 @@ Last updated: 2026-06-20
 
 **Macro views**: signoff DB exported for Phase-5 SoC via `make macro-views-asap7 BLOCK=gpu` → `pnr/asap7/gpu/macro/{gpu_top.lef, *.lib, gpu_top.nl.v.gz}` (netlist gzipped to clear GitHub's 100 MB limit; `gunzip -k` to restore).
 
-### Phase 5: SoC Integration 🚧
+### Phase 5: SoC Integration ✅
 
-**Status**: IN PROGRESS — milestone detail in `docs/PHASE5_SOC_INTEGRATION_PLAN.md` (golden spec)
+**Status**: COMPLETE (2026-06-24) — M1–M12 done. M11 ASAP7 SoC P&R signed off 571 MHz / 62.9 mW / 520×520 µm / 65.6 % util / 0 DRC / 0 antenna (`docs/PHASE5_RUN_HISTORY.md`). Milestone detail in `docs/PHASE5_SOC_INTEGRATION_PLAN.md` (golden spec)
 
 | Milestone | Scope | Status |
 | :-------- | :---- | :----- |

@@ -44,7 +44,7 @@ from pathlib import Path
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, ClockCycles
+from cocotb.triggers import ClockCycles
 
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(_ROOT) not in sys.path:
@@ -142,7 +142,7 @@ async def test_pll_apb_regs_status_locked(dut):
     bfm = _make_apb_bfm(dut)
     data, ok = await bfm.read(STAT_OFFSET)
 
-    assert ok, f"STATUS read returned pslverr=1 (SLVERR)"
+    assert ok, "STATUS read returned pslverr=1 (SLVERR)"
     assert (data & 0x1) == 1, (
         f"STATUS[0] (locked) expected 1 after pll_locked_i=1, "
         f"got STATUS=0x{data:08x}"
@@ -156,12 +156,12 @@ async def test_pll_apb_regs_control_write_readback(dut):
     Write CONTROL with pll_enable=1, div_n=0xA, post_div_sel=2'b01;
     read back and verify only the writable bits (WMASK=0x03F1) are stored.
 
-    Written value: 0x0000_02A1
+    Written value: 0x0000_01A1
       bit[0]    = 1  (pll_enable)
       bits[7:4] = 0xA (div_n)
       bits[9:8] = 0x1 (post_div_sel = /2)
 
-    Expected readback: written_value & WMASK = 0x02A1.
+    Expected readback: written_value & WMASK = 0x01A1.
     Bits outside WMASK must read back as 0 (not writable).
     """
     _kill_active_tasks()
@@ -169,18 +169,18 @@ async def test_pll_apb_regs_control_write_readback(dut):
 
     bfm = _make_apb_bfm(dut)
 
-    wr_val   = (1 << 0) | (0xA << 4) | (0x1 << 8)   # = 0x000002A1
-    expected = wr_val & CTRL_WMASK                    # = 0x000002A1
+    wr_val   = (1 << 0) | (0xA << 4) | (0x1 << 8)   # = 0x000001A1
+    expected = wr_val & CTRL_WMASK                    # = 0x000001A1
 
     ok = await bfm.write(CTRL_OFFSET, wr_val)
-    assert ok, f"CONTROL write returned pslverr=1 (SLVERR)"
+    assert ok, "CONTROL write returned pslverr=1 (SLVERR)"
     dut._log.info(f"CONTROL write 0x{wr_val:08x} accepted (OKAY)")
 
     # Allow one cycle for register bank to latch
     await ClockCycles(dut.clk, 2)
 
     data, ok = await bfm.read(CTRL_OFFSET)
-    assert ok, f"CONTROL readback pslverr=1 (SLVERR)"
+    assert ok, "CONTROL readback pslverr=1 (SLVERR)"
 
     actual = data & CTRL_WMASK
     assert actual == expected, (
@@ -213,17 +213,17 @@ async def test_pll_apb_regs_status_readonly(dut):
     bfm = _make_apb_bfm(dut)
 
     data_before, ok1 = await bfm.read(STAT_OFFSET)
-    assert ok1, f"STATUS pre-write read returned pslverr=1"
+    assert ok1, "STATUS pre-write read returned pslverr=1"
     dut._log.info(f"STATUS before write: 0x{data_before:08x}")
 
     # Attempt to write all-ones to STATUS — must be silently discarded
     ok_wr = await bfm.write(STAT_OFFSET, 0xFFFF_FFFF)
-    assert ok_wr, f"STATUS write returned pslverr=1 (expected OKAY even for RO)"
+    assert ok_wr, "STATUS write returned pslverr=1 (expected OKAY even for RO)"
 
     await ClockCycles(dut.clk, 2)
 
     data_after, ok2 = await bfm.read(STAT_OFFSET)
-    assert ok2, f"STATUS post-write read returned pslverr=1"
+    assert ok2, "STATUS post-write read returned pslverr=1"
     dut._log.info(f"STATUS after write attempt: 0x{data_after:08x}")
 
     assert data_after == data_before, (

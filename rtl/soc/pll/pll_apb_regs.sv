@@ -37,12 +37,6 @@
 //   * No `timescale directive
 //   * `default_nettype none
 //
-// Instantiation note for PR-6 (soc_top):
-//   The pll_axil_regs module in soc_top.sv (line ~1035) must be replaced with
-//   pll_apb_regs and its AXI-Lite ports swapped for APB4 ports.  The axil_to_apb
-//   bridge (rtl/soc/axil_to_apb.sv) should be inserted between the AXI-Lite
-//   control ring and this module.  That change is out of scope for PR-6 RTL here.
-//
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
 `default_nettype none

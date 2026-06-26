@@ -25,7 +25,7 @@ Tests:
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import RisingEdge
 
 from bfm.apb4_master import APB4Master
 
@@ -156,7 +156,7 @@ async def test_rw_roundtrip(dut):
     """Write a value then read it back; pslverr must be 0 on both."""
     m = await _setup(dut)
     ok = await m.write(REG1, 0xDEADBEEF)
-    assert ok, f"write pslverr on round-trip"
+    assert ok, "write pslverr on round-trip"
     data, ok = await m.read(REG1)
     assert ok, "read pslverr on round-trip"
     assert data == 0xDEADBEEF, f"read {data:#010x} expected 0xDEADBEEF"
@@ -178,7 +178,7 @@ async def test_out_of_range(dut):
     await m.write(REG0, 0x12345678)
 
     ok = await m.write(OOR, 0xDEADC0DE)
-    assert ok, f"OOR write returned pslverr (spec requires OKAY+drop)"
+    assert ok, "OOR write returned pslverr (spec requires OKAY+drop)"
 
     data, ok = await m.read(OOR)
     assert ok,   "OOR read returned pslverr"
@@ -247,14 +247,14 @@ async def test_sw_hw_collision_sw_wins(dut):
     Per the RTL spec (and axi_lite_register_bank parity) SW overrides HW on
     same-cycle collision.
 
-    NOTE: reg6 has WMASK=0 so SW write to reg6 is masked to 0 (the SW value
-    after WMASK application is 0x00000000).  The HW value is 0xABCDEF01.
-    Collision result should be 0x00000000 (SW=0 wins over HW=0xABCDEF01).
+    NOTE: reg6 has WMASK=0.  On an SW/HW same-cycle collision the SW path wins,
+    but because WMASK=0 the masked SW write is (reg6 & ~0) | (pwdata & 0) = reg6
+    — i.e. SW writes back the pre-clock value (0xABCDEF01), blocking HW's new
+    value (0x12345678) from landing.  The collision result is therefore the
+    retained 0xABCDEF01, NOT 0x00000000 and NOT HW's 0x12345678.
 
-    We use reg0 (WMASK=0xFFFFFFFF) for a clean collision: seed 0xDEADBEEF via
-    HW path first (not possible — reg0 hw_wen wired to 0 in the TB).  Instead
-    we test the WMASK=0 case: both HW and SW target reg6; SW (masked=0) wins.
-    The check confirms the register value is 0 not 0xABCDEF01.
+    We test the WMASK=0 case: both HW and SW target reg6; SW wins, and the
+    check confirms the register retains 0xABCDEF01.
     """
     m = await _setup(dut)
 

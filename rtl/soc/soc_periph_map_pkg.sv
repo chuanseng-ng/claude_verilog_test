@@ -47,11 +47,16 @@ package soc_periph_map_pkg;
     localparam logic [31:0] AXIL_DMA_BASE    = 32'h2000_5000;
     localparam logic [31:0] AXIL_DMA_LIMIT   = 32'h2000_5FFF;
 
-    // Packed arrays for axi_lite_interconnect instantiation.
-    localparam logic [31:0] AXIL_SLV_BASE  [AXIL_N_SLAVES] = '{
-        AXIL_GPU_BASE, AXIL_APB_BASE, AXIL_DMA_BASE};
-    localparam logic [31:0] AXIL_SLV_LIMIT [AXIL_N_SLAVES] = '{
-        AXIL_GPU_LIMIT, AXIL_APB_LIMIT, AXIL_DMA_LIMIT};
+    // Packed 2D arrays for axi_lite_interconnect instantiation (index = slave number).
+    // Packed [N-1:0][31:0] form (not unpacked) — matches axi_lite_interconnect's
+    // packed SLV_BASE/SLV_LIMIT ports and avoids the Synlig/UHDM $mem lowering of
+    // unpacked array parameters (empty-named RTLIL wire assert).
+    // Concatenation order: MSB = highest index, so index 0 (GPU) is rightmost.
+    // Ring slaves: 0 = GPU, 1 = APB bridge, 2 = DMA.
+    localparam logic [AXIL_N_SLAVES-1:0][31:0] AXIL_SLV_BASE  =
+        {AXIL_DMA_BASE,  AXIL_APB_BASE,  AXIL_GPU_BASE};
+    localparam logic [AXIL_N_SLAVES-1:0][31:0] AXIL_SLV_LIMIT =
+        {AXIL_DMA_LIMIT, AXIL_APB_LIMIT, AXIL_GPU_LIMIT};
 
     // =========================================================================
     // APB peripheral sub-map — 5 slaves behind the axil_to_apb bridge
@@ -103,6 +108,8 @@ package soc_periph_map_pkg;
     /* verilator lint_on  UNUSEDPARAM */
 
     // ── Reference decode (AXI-Lite ring) ─────────────────────────────────────
+    // Returns slave index [0 .. AXIL_N_SLAVES-1], or AXIL_N_SLAVES when the
+    // address matches no slave (caller must raise DECERR).
     function automatic int unsigned decode_axil_slave(input logic [31:0] addr);
         // Last-match (mirrors axi_lite_interconnect behaviour):
         // highest-index slave that covers addr wins.
