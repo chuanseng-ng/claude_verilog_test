@@ -329,6 +329,7 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/soc/apb4_register_bank.sv \
 	$(RTL_DIR)/soc/axil_to_apb.sv \
 	$(RTL_DIR)/soc/apb_interconnect.sv \
+	$(RTL_DIR)/soc/soc_bus.sv \
 	$(RTL_DIR)/soc/pll/pll_clkgen_stub.sv \
 	$(RTL_DIR)/soc/pll/pll_clkgen.sv \
 	$(RTL_DIR)/soc/pll/pll_apb_regs.sv \

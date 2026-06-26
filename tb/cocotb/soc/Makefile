@@ -160,6 +160,7 @@ PLL_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
 	$(RTL)/soc/axil_to_apb.sv \
 	$(RTL)/soc/apb_interconnect.sv \
+	$(RTL)/soc/soc_bus.sv \
 	$(RTL)/soc/pll/pll_clkgen_stub.sv \
 	$(RTL)/soc/pll/pll_apb_regs.sv \
 	$(RTL)/soc/pll/pll_clkgen.sv \
@@ -221,6 +222,7 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
 	$(RTL)/soc/axil_to_apb.sv \
 	$(RTL)/soc/apb_interconnect.sv \
+	$(RTL)/soc/soc_bus.sv \
 	$(RTL)/soc/pll/pll_clkgen_stub.sv \
 	$(RTL)/soc/pll/pll_apb_regs.sv \
 	$(RTL)/soc/pll/pll_clkgen.sv \
