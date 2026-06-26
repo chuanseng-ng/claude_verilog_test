@@ -1,5 +1,8 @@
-// pll_axil_regs.sv
-// Phase 7 (M-c) — AXI-Lite configuration slave for the PLL clock generator.
+// pll_apb_regs.sv
+// Phase 7 (APB migration PR-6) — APB4 configuration slave for the PLL clock generator.
+//
+// Converted from pll_axil_regs.sv (AXI4-Lite) to APB4 bus protocol.
+// The register map, field decode, and HW-write path are unchanged.
 //
 // Register map (byte offset, 32-bit words):
 //
@@ -15,18 +18,22 @@
 //
 //   0x08  RSVD     [RO]  — reads 0, writes ignored
 //
-// The module is a structural wrapper around axi_lite_register_bank.sv so all
-// AXI-Lite protocol machinery (capture, BVALID/RVALID FSMs) is reused.
+// The module is a structural wrapper around apb4_register_bank.sv so all
+// APB4 protocol machinery (SETUP/ACCESS phases, pready, pslverr) is reused.
 //
-// Output ports drive the PLL wrapper:
+// Output ports drive the PLL wrapper (unchanged from pll_axil_regs):
 //   pll_enable_o   — gate for PLL rst_n (0 = PLL in reset)
-//   feedback_div_o — div_n field from CONTROL
-//   post_div_sel_o — post_div_sel field from CONTROL
+//   feedback_div_o — div_n field from CONTROL[7:4]
+//   post_div_sel_o — post_div_sel field from CONTROL[9:8]
 //   pll_locked_i   — status input from pll_clkgen locked_o
+//
+// APB4 clock/reset mapping:
+//   pclk    = clk_i   (reference clock; register block runs at ref clock)
+//   presetn = rst_n_i (active-low synchronous reset)
 //
 // Coding rules:
 //   * No logic — structural instantiation + assign only
-//   * Always-on domain (AXI-Lite clk_i): config bus runs at ref/core clock
+//   * Always-on domain (clk_i): config bus runs at ref clock
 //   * No `timescale directive
 //   * `default_nettype none
 //
@@ -34,39 +41,30 @@
 
 `default_nettype none
 
-module pll_axil_regs #(
+module pll_apb_regs #(
     parameter int unsigned ADDR_W = 12   // local byte address width (4 KB slot)
 ) (
     input  logic clk_i,
     input  logic rst_n_i,
 
-    // ── AXI4-Lite slave port ────────────────────────────────────────────────
-    input  logic [ADDR_W-1:0] s_axil_awaddr,
-    input  logic [2:0]        s_axil_awprot,
-    input  logic              s_axil_awvalid,
-    output logic              s_axil_awready,
-    input  logic [31:0]       s_axil_wdata,
-    input  logic [3:0]        s_axil_wstrb,
-    input  logic              s_axil_wvalid,
-    output logic              s_axil_wready,
-    output logic [1:0]        s_axil_bresp,
-    output logic              s_axil_bvalid,
-    input  logic              s_axil_bready,
-    input  logic [ADDR_W-1:0] s_axil_araddr,
-    input  logic [2:0]        s_axil_arprot,
-    input  logic              s_axil_arvalid,
-    output logic              s_axil_arready,
-    output logic [31:0]       s_axil_rdata,
-    output logic [1:0]        s_axil_rresp,
-    output logic              s_axil_rvalid,
-    input  logic              s_axil_rready,
+    // ── APB4 slave port ─────────────────────────────────────────────────────
+    // pclk = clk_i, presetn = rst_n_i (mapped inside module)
+    input  logic              psel,
+    input  logic              penable,
+    input  logic              pwrite,
+    input  logic [ADDR_W-1:0] paddr,
+    input  logic [31:0]       pwdata,
+    input  logic [3:0]        pstrb,
+    output logic [31:0]       prdata,
+    output logic              pready,
+    output logic              pslverr,
 
-    // ── PLL configuration outputs ───────────────────────────────────────────
+    // ── PLL configuration outputs ────────────────────────────────────────────
     output logic       pll_enable_o,    // 1 = PLL active (de-asserts PLL reset)
     output logic [3:0] feedback_div_o,  // div_n[3:0] from CONTROL[7:4]
     output logic [1:0] post_div_sel_o,  // post_div_sel from CONTROL[9:8]
 
-    // ── PLL status input ────────────────────────────────────────────────────
+    // ── PLL status input ─────────────────────────────────────────────────────
     input  logic       pll_locked_i     // from pll_clkgen locked_o
 );
 
@@ -99,34 +97,24 @@ module pll_axil_regs #(
     logic        hw_wen   [N_REGS];
     logic [31:0] hw_wdata [N_REGS];
 
-    axi_lite_register_bank #(
+    apb4_register_bank #(
         .N_REGS    (N_REGS),
         .ADDR_W    (ADDR_W),
         .RESET_VAL (RESET_VAL),
         .WMASK     (WMASK)
     ) u_regbank (
-        .clk           (clk_i),
-        .rst_n         (rst_n_i),
-        // AXI-Lite slave
-        .s_axil_awaddr (s_axil_awaddr),
-        .s_axil_awprot (s_axil_awprot),
-        .s_axil_awvalid(s_axil_awvalid),
-        .s_axil_awready(s_axil_awready),
-        .s_axil_wdata  (s_axil_wdata),
-        .s_axil_wstrb  (s_axil_wstrb),
-        .s_axil_wvalid (s_axil_wvalid),
-        .s_axil_wready (s_axil_wready),
-        .s_axil_bresp  (s_axil_bresp),
-        .s_axil_bvalid (s_axil_bvalid),
-        .s_axil_bready (s_axil_bready),
-        .s_axil_araddr (s_axil_araddr),
-        .s_axil_arprot (s_axil_arprot),
-        .s_axil_arvalid(s_axil_arvalid),
-        .s_axil_arready(s_axil_arready),
-        .s_axil_rdata  (s_axil_rdata),
-        .s_axil_rresp  (s_axil_rresp),
-        .s_axil_rvalid (s_axil_rvalid),
-        .s_axil_rready (s_axil_rready),
+        .pclk      (clk_i),
+        .presetn   (rst_n_i),
+        // APB4 slave
+        .psel      (psel),
+        .penable   (penable),
+        .pwrite    (pwrite),
+        .paddr     (paddr),
+        .pwdata    (pwdata),
+        .pstrb     (pstrb),
+        .prdata    (prdata),
+        .pready    (pready),
+        .pslverr   (pslverr),
         // HW side
         .regs_o    (regs_out),
         .hw_wen_i  (hw_wen),
@@ -152,6 +140,6 @@ module pll_axil_regs #(
     assign feedback_div_o = regs_out[0][7:4];
     assign post_div_sel_o = regs_out[0][9:8];
 
-endmodule : pll_axil_regs
+endmodule : pll_apb_regs
 
 `default_nettype wire

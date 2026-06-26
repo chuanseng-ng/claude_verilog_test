@@ -326,9 +326,12 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/soc/axi4_to_axilite.sv \
 	$(RTL_DIR)/soc/axilite_to_axi4.sv \
 	$(RTL_DIR)/soc/axi_lite_register_bank.sv \
+	$(RTL_DIR)/soc/apb4_register_bank.sv \
+	$(RTL_DIR)/soc/axil_to_apb.sv \
+	$(RTL_DIR)/soc/apb_interconnect.sv \
 	$(RTL_DIR)/soc/pll/pll_clkgen_stub.sv \
 	$(RTL_DIR)/soc/pll/pll_clkgen.sv \
-	$(RTL_DIR)/soc/pll/pll_axil_regs.sv \
+	$(RTL_DIR)/soc/pll/pll_apb_regs.sv \
 	$(RTL_DIR)/soc/soc_top.sv
 
 .PHONY: lint_soc
@@ -663,7 +666,9 @@ cache_integration:
 # Phase 5 SoC tests (delegates to tb/cocotb/soc/Makefile)
 # soc_all: M3-M6 component suites + M9 boot test.
 # soc_boot: M9 SoC boot test only (BLOCKED until CPU RESET_PC fix lands).
-.PHONY: soc_all soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress l2_bench
+# APB migration PR-1 targets: apb4_register_bank, axil_to_apb.
+.PHONY: soc_all soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress l2_bench \
+        apb4_register_bank axil_to_apb
 soc_boot:
 	@echo "Running Phase 5 M9 SoC boot test..."
 	$(MAKE) -C ../tb/cocotb/soc soc_boot
@@ -688,6 +693,14 @@ l2_bench:
 	@echo "Running Phase 5 M10 L2-cache decision benchmarks (hello/sweep/matmul)..."
 	@echo "Firmware must be pre-built: nix develop .#bench --command make -C sw/bench"
 	$(MAKE) -C ../tb/cocotb/soc l2_bench
+
+apb4_register_bank:
+	@echo "Running APB migration PR-1: apb4_register_bank unit tests (7 tests)..."
+	$(MAKE) -C ../tb/cocotb/soc apb4_register_bank
+
+axil_to_apb:
+	@echo "Running APB migration PR-1: axil_to_apb bridge unit tests (6 tests)..."
+	$(MAKE) -C ../tb/cocotb/soc axil_to_apb
 
 soc_all:
 	@echo "Running Phase 5 SoC tests (M3-M6 components + M9 boot + M9 periph + M9 coherency + M9 cpu_gpu)..."

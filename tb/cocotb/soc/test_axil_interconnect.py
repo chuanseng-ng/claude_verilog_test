@@ -1,16 +1,18 @@
 """
 Phase 5 (M3) — AXI4-Lite control-interconnect unit tests.
 
-Verifies rtl/soc/axi_lite_interconnect.sv + rtl/soc/axi_lite_register_bank.sv
-together (via tb_axi_lite_interconnect): per-slave routing, cross-slave
-isolation, response steering, DECERR on unmapped addresses, and master-side
-backpressure (response held while the master stalls bready/rready).
+APB migration PR-7 update: the AXI-Lite ring now has 3 slaves, not 6.
+  s0 GPU         0x2000_1000 (register bank slot 0)
+  s1 APB bridge  0x2000_2000 .. 0x2000_7FFF (register bank slot 1, proxy)
+  s2 DMA         0x2000_5000 (register bank slot 2, last-match over bridge)
 
-Topology: one CPU master ("m_axil_") x 7 register-bank slaves (Phase 7 M-c +1 PLL).
-Slave map (soc_periph_map_pkg):
-    GPU 0x2000_1000  UART 0x2000_2000  SPI 0x2000_3000
-    Timer 0x2000_4000  DMA 0x2000_5000  IRQ 0x2000_6000  PLL 0x2000_7000
-    unmapped (DECERR): 0x2000_0000 (gap below GPU), 0x2000_8000 (above PLL)
+Verifies rtl/soc/axi_lite_interconnect.sv + rtl/soc/axi_lite_register_bank.sv
+together: per-slave routing, cross-slave isolation, DECERR on unmapped
+addresses, and master-side backpressure.
+
+Unmapped addresses (DECERR):
+    0x2000_0000 — below GPU base (CPU-debug APB gap)
+    0x2000_8000 — above the APB bridge limit (0x2000_7FFF)
 """
 
 import cocotb
@@ -24,17 +26,17 @@ CLK_PERIOD_NS = 2
 RESP_OKAY = 0
 RESP_DECERR = 3
 
-# Slave base addresses (reg0 of each bank lives at base + 0x0).
+# 3-slave AXI-Lite ring (PR-7 topology).
+# Each entry maps to one register-bank stub in tb_axi_lite_interconnect.
+# APB_BRIDGE covers the address range shared by UART/SPI/Timer/IRQ/PLL;
+# DMA has its own slot (last-match wins at 0x2000_5000).
 SLAVES = {
-    "gpu":   0x2000_1000,
-    "uart":  0x2000_2000,
-    "spi":   0x2000_3000,
-    "timer": 0x2000_4000,
-    "dma":   0x2000_5000,
-    "irq":   0x2000_6000,
+    "gpu":        0x2000_1000,   # slot 0
+    "apb_bridge": 0x2000_2000,   # slot 1 (APB subtree proxy)
+    "dma":        0x2000_5000,   # slot 2 (last-match over bridge window)
 }
-BAD_LOW  = 0x2000_0000   # below the ring (CPU-debug gap, below GPU at 0x2000_1000)
-BAD_HIGH = 0x2000_8000   # above the ring (PLL limit is 0x2000_7FFF; Phase 7 M-c added slot 6)
+BAD_LOW  = 0x2000_0000   # below GPU base — gap before ring
+BAD_HIGH = 0x2000_8000   # above APB bridge limit 0x2000_7FFF
 
 
 async def _setup(dut):
@@ -52,10 +54,12 @@ async def _setup(dut):
 
 @cocotb.test()
 async def test_route_and_isolation(dut):
-    """Write a distinct value to reg0 of every slave, then read all back.
+    """Write a distinct value to reg0 of every ring slave, then read all back.
 
-    Correct read-back of each slave's own value proves both routing (the write
-    reached the addressed slave) and isolation (no slave saw another's write).
+    PR-7 topology: 3 slaves (GPU, APB-bridge proxy, DMA).
+    Correct read-back proves routing and cross-slave isolation.
+    Note: DMA (slot 2) wins last-match over the APB-bridge window at 0x2000_5000.
+    A write to the APB-bridge base (0x2000_2000) must NOT alias to the DMA slot.
     """
     m = await _setup(dut)
     # Distinct payload per slave.
@@ -77,21 +81,31 @@ async def test_route_and_isolation(dut):
 
 @cocotb.test()
 async def test_multi_register_routing(dut):
-    """Routing holds across multiple registers within one slave."""
+    """Routing holds across multiple registers within one slave.
+
+    Uses the APB-bridge proxy slot (slot 1 at 0x2000_2000).  Multiple register
+    offsets within the same 4 KB bank window should read back their written values.
+    """
     m = await _setup(dut)
-    base = SLAVES["uart"]
+    base = SLAVES["apb_bridge"]
     vals = {0x0: 0x11111111, 0x4: 0x22222222, 0x8: 0x33333333}
     for off, v in vals.items():
         assert await m.write(base + off, v) == RESP_OKAY
     for off, v in vals.items():
         data, _ = await m.read(base + off)
-        assert data == v, f"uart+{off:#x} = {data:#x}"
+        assert data == v, f"apb_bridge+{off:#x} = {data:#x}"
     dut._log.info("multi-register routing OK")
 
 
 @cocotb.test()
 async def test_decerr_unmapped(dut):
-    """Unmapped addresses return DECERR and complete (never hang)."""
+    """Unmapped addresses return DECERR and complete (never hang).
+
+    PR-7 unmapped regions:
+      BAD_LOW  = 0x2000_0000 — below GPU base (CPU-debug APB gap)
+      BAD_HIGH = 0x2000_8000 — above APB bridge limit 0x2000_7FFF
+    Note: 0x2000_7000 is now INSIDE the APB bridge window and returns OKAY.
+    """
     m = await _setup(dut)
     for bad in (BAD_LOW, BAD_HIGH):
         resp = await m.write(bad, 0xDEAD)
@@ -100,8 +114,8 @@ async def test_decerr_unmapped(dut):
         assert rresp == RESP_DECERR, f"read {bad:#x} resp {rresp}"
         assert data == 0, f"DECERR read data {data:#x}"
     # A good transaction still works after DECERR (engine returned to idle).
-    assert await m.write(SLAVES["spi"], 0xBEEF) == RESP_OKAY
-    data, _ = await m.read(SLAVES["spi"])
+    assert await m.write(SLAVES["dma"], 0xBEEF) == RESP_OKAY
+    data, _ = await m.read(SLAVES["dma"])
     assert data == 0xBEEF
     dut._log.info("DECERR unmapped OK")
 
@@ -125,7 +139,7 @@ async def test_backpressure(dut):
     for _ in range(2):
         await RisingEdge(dut.clk)
 
-    addr = SLAVES["timer"] + 0x0
+    addr = SLAVES["gpu"] + 0x0
     # ── Write with delayed bready ────────────────────────────────────────────
     dut.m_axil_awaddr.value = addr
     dut.m_axil_awvalid.value = 1

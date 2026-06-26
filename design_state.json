@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-23T22:23:36.085992+00:00",
+  "updated_at": "2026-06-25T06:00:00+07:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -18,7 +18,6 @@
       "rtl/soc/axilite_to_axi4.sv",
       "rtl/soc/pll/pll_clkgen_stub.sv",
       "rtl/soc/pll/pll_clkgen.sv",
-      "rtl/soc/pll/pll_axil_regs.sv",
       "rtl/soc/pll/pll_rnm.sv",
       "rtl/soc/soc_top.sv",
       "rtl/mem/rv32i_icache.sv",
@@ -32,7 +31,11 @@
       "rtl/periph/uart_controller.sv",
       "rtl/periph/spi_controller.sv",
       "rtl/cpu/core/rv32i_csr_file.sv",
-      "rtl/cpu/core/pipeline/rv32i_pipeline_if.sv"
+      "rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
+      "rtl/soc/apb_interconnect.sv",
+      "rtl/soc/apb4_register_bank.sv",
+      "rtl/soc/axil_to_apb.sv",
+      "rtl/soc/pll/pll_apb_regs.sv"
     ],
     "lint_clean": true,
     "cdc_clean": false,
@@ -150,17 +153,6 @@
       "constraint_ref": null
     },
     {
-      "timestamp": "2026-06-01T08:40:00+07:00",
-      "agent": "rtl-design-orchestrator",
-      "stage": "lint_check",
-      "decision": "proceed",
-      "confidence": "high",
-      "failure_class": "none",
-      "suggested_next_step": "proceed",
-      "reason": "Phase 5 M4: interrupt_controller.sv and timer.sv authored and lint-clean on first pass. Verilator 5.028 -Wall -Wno-IMPORTSTAR: 0 errors, 0 warnings for both modules.",
-      "constraint_ref": null
-    },
-    {
       "timestamp": "2026-06-01T08:39:00+07:00",
       "agent": "verification-orchestrator",
       "stage": "regression_signoff",
@@ -169,6 +161,17 @@
       "failure_class": "none",
       "suggested_next_step": "proceed",
       "reason": "Phase 5 M4 cocotb suites: interrupt_controller TESTS=5 PASS=5 FAIL=0 (test_irq_ctrl.py); timer TESTS=6 PASS=6 FAIL=0 (test_timer.py). No RTL bugs found. DUT RTL unchanged.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-01T08:40:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Phase 5 M4: interrupt_controller.sv and timer.sv authored and lint-clean on first pass. Verilator 5.028 -Wall -Wno-IMPORTSTAR: 0 errors, 0 warnings for both modules.",
       "constraint_ref": null
     },
     {
@@ -337,17 +340,6 @@
       "constraint_ref": null
     },
     {
-      "timestamp": "2026-06-19T00:04:00Z",
-      "agent": "verification-orchestrator",
-      "stage": "directed_tests",
-      "decision": "escalate",
-      "confidence": "high",
-      "failure_class": "functional",
-      "suggested_next_step": "escalate",
-      "reason": "axi4_crossbar W_IDLE/R_IDLE FSM priority mismatch: for-loop captures highest-index master (last-wins) but early-accept grants awready/arready to lowest-index master (priority-winner); test_arbitration_same_slave deadlocks when m0+m1 target same slave concurrently.",
-      "constraint_ref": "fr_null_20260619_000400_00"
-    },
-    {
       "timestamp": "2026-06-19T06:50:00+07:00",
       "agent": "rtl-design-orchestrator",
       "stage": "rtl_coding",
@@ -356,6 +348,17 @@
       "failure_class": "none",
       "suggested_next_step": "proceed",
       "reason": "Fixed fr_null_20260619_000400_00: W_IDLE and R_IDLE capture loops now use found_wr/found_rd flag (lowest-index-first, matches aw_priority_winner/ar_priority_winner early-accept). Verilator -Wall: 0 errors, 0 new warnings.",
+      "constraint_ref": "fr_null_20260619_000400_00"
+    },
+    {
+      "timestamp": "2026-06-19T00:04:00Z",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "functional",
+      "suggested_next_step": "escalate",
+      "reason": "axi4_crossbar W_IDLE/R_IDLE FSM priority mismatch: for-loop captures highest-index master (last-wins) but early-accept grants awready/arready to lowest-index master (priority-winner); test_arbitration_same_slave deadlocks when m0+m1 target same slave concurrently.",
       "constraint_ref": "fr_null_20260619_000400_00"
     },
     {
@@ -403,17 +406,6 @@
       "constraint_ref": null
     },
     {
-      "timestamp": "2026-06-19T11:30:00+07:00",
-      "agent": "verification-orchestrator",
-      "stage": "regression_signoff",
-      "decision": "proceed",
-      "confidence": "high",
-      "failure_class": "none",
-      "suggested_next_step": "proceed",
-      "reason": "Phase 5 M9 pgf bead stress signoff (STRESS_ITER raised 6\u219210): soc_stress TESTS=1 PASS=1 FAIL=0. 10 outer iterations completed in 1,079,867 sim cycles / 262.0s wall-clock \u2014 exceeds pgf 1,000,000-cycle acceptance bar. Benchmarks (last iteration, unchanged from 6-iter run): CPU 32-word burst 2358 cycles; DMA mem\u2192mem 26587 cycles; GPU kernel+flush 50538 cycles; Timer CNT0 snap 0x00101897. All invariants held: FAIL_PC never committed, ITER_WI=10, DMA BUF_A==BUF_B, GPU SRC==DST==initial+STRESS_ITER, timer nonzero. Master mix (CPU burst/DMA mem\u2192mem/GPU kernel+coherency/UART/SPI/timer) and watchdog+integrity invariants unchanged. No RTL changes.",
-      "constraint_ref": null
-    },
-    {
       "timestamp": "2026-06-19T10:20:00+07:00",
       "agent": "verification-orchestrator",
       "stage": "directed_tests",
@@ -422,6 +414,17 @@
       "failure_class": "none",
       "suggested_next_step": "proceed",
       "reason": "test_boot_sram_sentinels strengthened with DUT hardware SRAM backdoor readback (dut.u_soc.u_sram.mem[0]=0xDEADBEEF, mem[1]=0x12345678). Three fixes applied: (1) boot firmware now includes CSRRW x0,0x7C0,x0 (dcache_flush) before EBREAK so dirty D-cache lines are written back to SRAM before halt; (2) rv32i_model.py gained OP_SYSTEM handler (CSRRW no-op, EBREAK halt); (3) 20-cycle AXI burst settling wait before backdoor read. soc_boot TESTS=3 PASS=3 FAIL=0. No RTL changes.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-19T11:30:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Phase 5 M9 pgf bead stress signoff (STRESS_ITER raised 6\u219210): soc_stress TESTS=1 PASS=1 FAIL=0. 10 outer iterations completed in 1,079,867 sim cycles / 262.0s wall-clock \u2014 exceeds pgf 1,000,000-cycle acceptance bar. Benchmarks (last iteration, unchanged from 6-iter run): CPU 32-word burst 2358 cycles; DMA mem\u2192mem 26587 cycles; GPU kernel+flush 50538 cycles; Timer CNT0 snap 0x00101897. All invariants held: FAIL_PC never committed, ITER_WI=10, DMA BUF_A==BUF_B, GPU SRC==DST==initial+STRESS_ITER, timer nonzero. Master mix (CPU burst/DMA mem\u2192mem/GPU kernel+coherency/UART/SPI/timer) and watchdog+integrity invariants unchanged. No RTL changes.",
       "constraint_ref": null
     },
     {
@@ -687,6 +690,72 @@
       "failure_class": "power_area",
       "suggested_next_step": "proceed",
       "reason": "Run 14 complete (WNS=0, DRC=0, Util=65.6%) but 8.28M PSM-0069 PG violations from macro abstract LEFs lacking PORT/RECT geometry; fixed by adding M7 perimeter PORT/RECT rings to both CPU and GPU LEFs; Run 15 launched",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-24T16:05:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-1: apb4_register_bank.sv and axil_to_apb.sv authored and lint-clean. Verilator 5.048 -Wall: 0 errors, 0 warnings on both modules (standalone). Full make -C sim lint: 0 errors, 7 pre-existing baseline warnings only (unchanged).",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-24T23:05:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-1 (bead o4p): apb4_register_bank TESTS=7 PASS=7 FAIL=0; axil_to_apb TESTS=6 PASS=6 FAIL=0. Both TB wrappers lint-clean (0 errors, 0 warnings). APB4 bank behaviorally equivalent to AXI-Lite bank (same register semantics, WMASK, pstrb, HW injection, OOR policy). No RTL bugs found.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-25T00:12:58.292235+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-6 (pll_apb_regs): TESTS=4 PASS=4 FAIL=0. All 4 directed tests green: status_locked (pll_locked_i\u2192STATUS[0] mirror), control_write_readback (WMASK=0x03F1, div_n=0xA, post_div_sel=/2), status_readonly (RO WMASK=0 write discarded), decode_and_enable (pll_enable_o toggle + OKAY response). pll_apb_regs_lint: Verilator 5.048 -Wall -Wno-IMPORTSTAR 0 errors 0 warnings. No RTL bugs found. DUT RTL unchanged. make exit=0.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-25T00:30:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-6 pll_apb_regs RTL signoff: pll_axil_regs->pll_apb_regs module/file renamed; AXI4-Lite->APB4 bus ports; axi_lite_register_bank->apb4_register_bank; field decode unchanged; lint 0/0; TESTS=4 PASS=4 FAIL=0. soc_top pll_axil_regs instantiation noted for PR-6 soc_top wiring (out of scope here).",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-25T01:00:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-7 soc_top rewiring: new apb_interconnect.sv (1-master\u21925-slave APB decoder); soc_periph_map_pkg updated to 3-slave AXI-Lite ring (GPU/APB_BRIDGE/DMA) + 5-slave APB sub-map; soc_top rewired with axil_to_apb bridge + apb_interconnect + 5 APB peripherals; pll_axil_regs\u2192pll_apb_regs; pll_axil_regs.sv deleted. Verilator -Wall (nix-shell): 0 errors, 7 pre-existing baseline warnings (BLKSEQ\u00d73, DECLFILENAME\u00d71, UNUSEDPARAM\u00d73). 0 new warnings.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-25T06:00:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-7 integration gate: soc_all TESTS=95 PASS=95 FAIL=0 (17 suites). lint 0 errors 7 pre-existing baseline warnings. Makefile wiring fixed (SOC_BOOT_SOURCES/PLL_SOURCES updated for deleted pll_axil_regs.sv + 3 new APB files). axil_interconnect TB/test updated for 3-slave AXI-Lite ring (was 6-slave). No DUT RTL bugs found. APB migration PR-7 functionally complete.",
       "constraint_ref": null
     }
   ],
