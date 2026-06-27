@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-25T22:07:00+07:00",
+  "updated_at": "2026-06-27T10:40:59.877657+07:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -615,6 +615,17 @@
       "failure_class": "none",
       "suggested_next_step": "proceed",
       "reason": "pll_subsystem wrapper (bead claude_verilog_test-1xb, feat/pll-subsystem-wrapper, commit a513f9c): new rtl/soc/pll/pll_subsystem.sv wraps pll_clkgen + pll_apb_regs + reset glue; soc_top -39 lines; lint_soc 0 errors 7 pre-existing baseline warnings; clk_i-domain rule preserved; PLL_IMPL/STUB_LOCK_CYCLES/ADDR_W parameterised for 3x reuse in #4.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-27T10:40:59.877657+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "pll_subsystem wrapper (bead claude_verilog_test-1xb, feat/pll-subsystem-wrapper): TB hierarchy fix in test_pll_lock.py (dut.u_soc.pll_enable -> dut.u_soc.u_pll_sub.pll_enable, pll_enable moved into u_pll_sub by a513f9c); OPT_FAST/OPT_SLOW=-O0 in tb/cocotb/soc/Makefile to prevent 30+ min Vtop__Syms.cpp compile; soc_pll 7/7 PASS (test_pll_lock 3/3 + pll_apb_regs 4/4); soc_integration_batch 9/9 PASS (boot 3 + periph 1 + coherency 3 + cpu_gpu 2); pll_subsystem connectivity-preserving VERDICT confirmed.",
       "constraint_ref": null
     }
   ],
