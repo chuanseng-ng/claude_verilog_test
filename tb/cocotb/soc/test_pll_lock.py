@@ -125,9 +125,12 @@ def _force_pll_enable(dut, val: int = 1) -> None:
     the register interface separately, also using this bootstrap.
 
     Verilator flat name (from sim_build/Vtb_soc_pll.h, --public-flat-rw):
-      dut.u_soc__DOT__pll_enable  (CData, 1-bit)
+      dut.u_soc.u_pll_sub.pll_enable  (CData, 1-bit)
+
+    pll_enable moved into pll_subsystem (u_pll_sub) by the 1xb wrapper refactor
+    (commit a513f9c). Old path dut.u_soc.pll_enable was removed from soc_top.
     """
-    dut.u_soc.pll_enable.value = val
+    dut.u_soc.u_pll_sub.pll_enable.value = val
 
 
 async def _reset(dut, cycles: int = 8) -> None:

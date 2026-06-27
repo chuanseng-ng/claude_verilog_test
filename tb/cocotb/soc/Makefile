@@ -250,6 +250,11 @@ ifeq ($(SIM),verilator)
 	# strips clang-only flags.
 	BUILD_ARGS += CXX=$(SIM_DIR)/cxx_shim.sh
 	BUILD_ARGS += LINK=$(SIM_DIR)/cxx_shim.sh
+	# -O0 compile: Vtop__Syms.cpp (809 KB, thousands of scope initialisers) takes
+	# 30+ min at default -Os on this host via cxx_shim; -O0 reduces it to seconds.
+	# Functional regression only — short integration test runtime overhead is negligible.
+	BUILD_ARGS += OPT_FAST=-O0
+	BUILD_ARGS += OPT_SLOW=-O0
 ifneq ($(wildcard /nix/store),)
 	# Nix environment: nix ld.so cannot find system libs when cocotb dlopen's
 	# libpython3.10.so.1.0.  Create a compat dir with symlinks to system libs.
