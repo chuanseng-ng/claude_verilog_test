@@ -164,6 +164,7 @@ PLL_SOURCES = \
 	$(RTL)/soc/pll/pll_clkgen_stub.sv \
 	$(RTL)/soc/pll/pll_apb_regs.sv \
 	$(RTL)/soc/pll/pll_clkgen.sv \
+	$(RTL)/soc/pll/pll_subsystem.sv \
 	$(RTL)/soc/soc_top.sv \
 	$(SOC_DIR)/tb_soc_pll.sv
 
@@ -226,6 +227,7 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/soc/pll/pll_clkgen_stub.sv \
 	$(RTL)/soc/pll/pll_apb_regs.sv \
 	$(RTL)/soc/pll/pll_clkgen.sv \
+	$(RTL)/soc/pll/pll_subsystem.sv \
 	$(RTL)/soc/soc_top.sv \
 	$(SOC_DIR)/tb_soc_top.sv
 
@@ -248,6 +250,11 @@ ifeq ($(SIM),verilator)
 	# strips clang-only flags.
 	BUILD_ARGS += CXX=$(SIM_DIR)/cxx_shim.sh
 	BUILD_ARGS += LINK=$(SIM_DIR)/cxx_shim.sh
+	# -O0 compile: Vtop__Syms.cpp (809 KB, thousands of scope initialisers) takes
+	# 30+ min at default -Os on this host via cxx_shim; -O0 reduces it to seconds.
+	# Functional regression only — short integration test runtime overhead is negligible.
+	BUILD_ARGS += OPT_FAST=-O0
+	BUILD_ARGS += OPT_SLOW=-O0
 ifneq ($(wildcard /nix/store),)
 	# Nix environment: nix ld.so cannot find system libs when cocotb dlopen's
 	# libpython3.10.so.1.0.  Create a compat dir with symlinks to system libs.
@@ -542,3 +549,34 @@ soc_all:
 	rm -rf sim_build && $(MAKE) soc_coherency
 	rm -rf sim_build && $(MAKE) soc_cpu_gpu
 	rm -rf sim_build && $(MAKE) soc_pll
+
+# soc_integration_batch — compile tb_soc_top ONCE and run the four soc_top integration
+# suites back-to-back without a clean between MODULE changes.
+# Saves ~3 full compilations (~90 min at -j2) vs running soc_boot/periph/coherency/cpu_gpu
+# individually. Safe because all four share identical VERILOG_SOURCES, TOPLEVEL, EXTRA_ARGS,
+# and BUILD_ARGS; only the MODULE (Python test) differs. cocotb's dependency check sees the
+# Vtop binary is current and skips recompilation for suites 2-4.
+# Requires the same SIM_BUILD for all four invocations (set via env or command line).
+.PHONY: soc_integration_batch
+soc_integration_batch: soc_boot_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_boot TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+	$(MAKE) MODULE=test_periph_loopback TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+	$(MAKE) MODULE=test_soc_coherency TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+	$(MAKE) MODULE=test_cpu_gpu_irq TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)

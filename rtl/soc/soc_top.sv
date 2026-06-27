@@ -110,33 +110,19 @@ module soc_top
     localparam int unsigned LENW        = AXI_LEN_WIDTH;
 
     // =========================================================================
-    // Phase 7 M-c: PLL clock seam
-    //   clk_i  → pll_clkgen.ref_clk_i
-    //   core_clk   = pll_clkgen.out_clk_o  (all children run on this)
-    //   pll_locked = pll_clkgen.locked_o
-    //   core_rst_n = rst_n_i & pll_locked  (children held in reset until lock)
+    // Phase 7 M-c / Pre-Phase-6 #3: PLL subsystem
+    //   clk_i  → pll_subsystem.clk_i
+    //   core_clk   = pll_subsystem.core_clk   (all children run on this)
+    //   core_rst_n = pll_subsystem.core_rst_n  (rst_n_i & pll_locked)
     //
-    // pll_axil_regs drives pll_enable, feedback_div, post_div_sel; PLL rst_n
-    // is gated by pll_enable so firmware can keep the PLL in reset on boot.
+    // pll_clkgen + pll_apb_regs + reset glue are consolidated inside
+    // pll_subsystem (rtl/soc/pll/pll_subsystem.sv).
+    // The clk_i-domain rule is preserved: pll_subsystem runs entirely on
+    // clk_i / rst_n_i (see pll_subsystem.sv header for the full rationale).
     // =========================================================================
-    logic       core_clk;       // PLL output clock — feeds all child clk ports
-    logic       core_rst_n;     // gated reset: rst_n_i & pll_locked
-    logic       pll_locked;     // raw PLL lock flag
-
-    // PLL config signals driven by pll_axil_regs
-    logic       pll_enable;     // CONTROL[0]: 1 = de-assert PLL reset
-    logic [3:0] pll_fb_div;     // CONTROL[7:4]: feedback divider (0 → N=13)
-    logic [1:0] pll_post_div;   // CONTROL[9:8]: post-divider select
-
-    // PLL rst_n: de-assert only when top-level rst_n_i AND pll_enable both high
-    logic pll_rst_n;
-    assign pll_rst_n  = rst_n_i & pll_enable;
-
-    // core_rst_n: hold children in reset until PLL locks
-    assign core_rst_n = rst_n_i & pll_locked;
-
-    // Export lock status
-    assign pll_locked_o = pll_locked;
+    logic core_clk;     // PLL output clock — feeds all child clk ports
+    logic core_rst_n;   // gated reset: rst_n_i & pll_locked (from pll_subsystem)
+    logic pll_locked;   // raw PLL lock flag — export to top-level port
 
     // =========================================================================
     // Crossbar master-facing nets (no ID, unpacked arrays [N_MASTERS])
@@ -964,55 +950,29 @@ module soc_top
     );
 
     // =========================================================================
-    // Phase 7 M-c: PLL clock generator + APB config slave
-    // =========================================================================
-    // pll_clkgen: selects STUB (default, synth-safe) or RNM (M-c cosim)
-    // via PLL_IMPL parameter.  clk_i is the 100 MHz reference; core_clk is
-    // the generated clock that feeds all children (see clock seam section).
-    // =========================================================================
-    pll_clkgen #(
-        .PLL_IMPL        (PLL_IMPL)
-    ) u_pll (
-        .ref_clk_i   (clk_i),
-        .rst_n_i     (pll_rst_n),
-        .feedback_div(pll_fb_div),
-        .post_div_sel(pll_post_div),
-        .out_clk_o   (core_clk),
-        .locked_o    (pll_locked)
-    );
-
-    // =========================================================================
-    // APB_PLL (apb_psel[APB_PLL]): PLL APB config slave
+    // Pre-Phase-6 #3: PLL subsystem (pll_clkgen + pll_apb_regs + reset glue)
     //
-    // IMPORTANT — clock-domain intent:
-    //   u_pll_regs and u_pll (pll_clkgen) are the SOURCE of core_clk and
-    //   pll_locked.  They MUST run on the reference clock (clk_i / rst_n_i),
-    //   NOT on core_clk / core_rst_n.  Placing them on core_clk would create
-    //   a bootstrap deadlock: core_rst_n requires pll_locked, pll_locked
-    //   requires pll_enable=1, pll_enable comes from pll_apb_regs CONTROL[0],
-    //   but pll_apb_regs would be held in reset (core_rst_n=0) forever.
+    // pll_subsystem encapsulates:
+    //   • pll_clkgen (STUB or RNM via PLL_IMPL)
+    //   • pll_apb_regs (APB4 config slave for CONTROL/STATUS registers)
+    //   • pll_rst_n = rst_n_i & pll_enable
+    //   • core_rst_n = rst_n_i & pll_locked
     //
-    //   STUB mode (PLL_IMPL="STUB"):
-    //     out_clk_o = ref_clk_i, so core_clk == clk_i.  No CDC issue — the
-    //     apb_interconnect (running on core_clk) and u_pll_regs (running on
-    //     clk_i) are in the same physical clock domain.
-    //
-    //   RNM mode (PLL_IMPL="RNM"):
-    //     core_clk != clk_i.  The apb_interconnect runs on core_clk while
-    //     u_pll_regs runs on clk_i (ref clock).  The apb_psel[APB_PLL] bus
-    //     therefore crosses a CDC boundary.  A 2-FF synchroniser (or async
-    //     handshake) on each valid/ready signal would be required for
-    //     production-quality closure.  Deferred to Phase 7 M-d / tape-out.
-    //     Do NOT remove this comment without adding the synchroniser.
+    // IMPORTANT — clock-domain rule (preserved from prior inline form):
+    //   u_pll_sub and all logic inside it run on clk_i / rst_n_i.
+    //   They are the SOURCE of core_clk and pll_locked; placing them on
+    //   core_clk creates a bootstrap deadlock.  See pll_subsystem.sv header
+    //   for the full rationale and RNM-mode CDC deferral note.
     // =========================================================================
-    pll_apb_regs #(
-        .ADDR_W (12)
-    ) u_pll_regs (
-        // Run on reference clock — NOT core_clk — to avoid bootstrap deadlock.
-        // See clock-domain note above.
+    pll_subsystem #(
+        .PLL_IMPL        (PLL_IMPL),
+        .STUB_LOCK_CYCLES(16),
+        .ADDR_W          (12)
+    ) u_pll_sub (
+        // Reference clock domain — NOT core_clk (see note above)
         .clk_i       (clk_i),
         .rst_n_i     (rst_n_i),
-        // APB4 slave ← apb_interconnect APB_PLL slot
+        // APB4 slave ← apb_interconnect APB_PLL slot (runs on clk_i in STUB)
         .psel        (apb_psel    [APB_PLL]),
         .penable     (apb_penable [APB_PLL]),
         .pwrite      (apb_pwrite  [APB_PLL]),
@@ -1022,12 +982,13 @@ module soc_top
         .prdata      (apb_prdata  [APB_PLL]),
         .pready      (apb_pready  [APB_PLL]),
         .pslverr     (apb_pslverr [APB_PLL]),
-        // PLL config outputs → pll_clkgen inputs
-        .pll_enable_o   (pll_enable),
-        .feedback_div_o (pll_fb_div),
-        .post_div_sel_o (pll_post_div),
-        // PLL status input ← pll_clkgen locked_o
-        .pll_locked_i   (pll_locked)
+        // PLL outputs → soc_top distribution
+        .core_clk    (core_clk),
+        .core_rst_n  (core_rst_n),
+        .pll_locked_o(pll_locked)
     );
+
+    // Export PLL lock status to top-level port
+    assign pll_locked_o = pll_locked;
 
 endmodule : soc_top
