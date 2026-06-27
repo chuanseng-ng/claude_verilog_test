@@ -26,7 +26,9 @@ librelane/runs/
 *.gds
 *.oas
 
-# Macro hard-views are committed compressed (gunzip -k to use); raw .nl.v stays ignored
+# Macro hard-views are committed; raw .nl.v stays ignored
+!asap7/cpu/macro/*.lef
+!asap7/gpu/macro/*.lef
 !asap7/cpu/macro/*.nl.v.gz
 !asap7/gpu/macro/*.nl.v.gz
 

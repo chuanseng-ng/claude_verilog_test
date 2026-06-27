@@ -76,3 +76,4 @@ memory/
 .dolt/
 *.db
 .beads-credential-key
+pnr/asap7/soc/soc_top_sv2v.v

@@ -49,9 +49,12 @@ package soc_addr_map_pkg;
     localparam logic [31:0] PERIPH_LIMIT = 32'h2000_7FFF;  // Phase 7 M-c: extended to cover PLL slot (0x2000_7000-7FFF)
     /* verilator lint_on  UNUSEDPARAM */
 
-    // Packed arrays for crossbar instantiation (index = slave number).
-    localparam logic [31:0] SOC_SLV_BASE  [SOC_N_SLAVES] = '{ROM_BASE,  SRAM_BASE,  PERIPH_BASE};
-    localparam logic [31:0] SOC_SLV_LIMIT [SOC_N_SLAVES] = '{ROM_LIMIT, SRAM_LIMIT, PERIPH_LIMIT};
+    // Packed 2D arrays for crossbar instantiation (index = slave number).
+    // NOTE: unpacked localparam arrays (logic [31:0] arr [N]) cause Synlig/UHDM
+    // to emit $mem cells → empty-named RTLIL wires → yosys assert.
+    // Use packed 2D form [N-1:0][31:0] which Synlig handles correctly.
+    localparam logic [SOC_N_SLAVES-1:0][31:0] SOC_SLV_BASE  = {PERIPH_BASE,  SRAM_BASE,  ROM_BASE};
+    localparam logic [SOC_N_SLAVES-1:0][31:0] SOC_SLV_LIMIT = {PERIPH_LIMIT, SRAM_LIMIT, ROM_LIMIT};
 
     // ── Reference decode ─────────────────────────────────────────────────────
     // Returns slave index [0 .. SOC_N_SLAVES-1], or SOC_N_SLAVES when the

@@ -21,7 +21,12 @@ module tb_soc_top #(
     // Forwarded to boot_rom.MEM_INIT_FILE inside soc_top.
     // Pass "" (empty string) to leave ROM all-zeros; pass a path to a
     // $readmemh-compatible hex file to pre-load firmware.
-    parameter string MEM_INIT_FILE = ""
+    parameter string       MEM_INIT_FILE  = "",
+
+    // Forwarded to sram_controller.MEM_WORDS inside soc_top.
+    // Default 1024 (4 KB) preserves all existing test behaviour.
+    // M10 cache benchmarks set this to 65536 (256 KB).
+    parameter int unsigned SRAM_MEM_WORDS = 1024
 ) (
     // ── Clock / reset ─────────────────────────────────────────────────────────
     input  logic        clk_i,
@@ -61,7 +66,8 @@ module tb_soc_top #(
 );
 
     soc_top #(
-        .MEM_INIT_FILE (MEM_INIT_FILE)
+        .MEM_INIT_FILE  (MEM_INIT_FILE),
+        .SRAM_MEM_WORDS (SRAM_MEM_WORDS)
     ) u_soc (
         .clk_i          (clk_i),
         .rst_n_i        (rst_n_i),

@@ -42,35 +42,35 @@ module soc_bus
     //   M0=CPU, M1=GPU-ifetch, M2=GPU-data, M3=DMA
     // =========================================================================
     // Write address
-    input  logic [AXI_ADDR_WIDTH-1:0]  m_awaddr  [N_MASTERS],
-    input  logic [AXI_LEN_WIDTH-1:0]   m_awlen   [N_MASTERS],
-    input  logic [2:0]                 m_awsize  [N_MASTERS],
-    input  logic [1:0]                 m_awburst [N_MASTERS],
-    input  logic                       m_awvalid [N_MASTERS],
-    output logic                       m_awready [N_MASTERS],
+    input  logic [N_MASTERS-1:0][AXI_ADDR_WIDTH-1:0] m_awaddr,
+    input  logic [N_MASTERS-1:0][AXI_LEN_WIDTH-1:0] m_awlen,
+    input  logic [N_MASTERS-1:0][2:0] m_awsize,
+    input  logic [N_MASTERS-1:0][1:0] m_awburst,
+    input  logic [N_MASTERS-1:0] m_awvalid,
+    output logic [N_MASTERS-1:0] m_awready,
     // Write data
-    input  logic [AXI_DATA_WIDTH-1:0]  m_wdata   [N_MASTERS],
-    input  logic [AXI_STRB_WIDTH-1:0]  m_wstrb   [N_MASTERS],
-    input  logic                       m_wlast   [N_MASTERS],
-    input  logic                       m_wvalid  [N_MASTERS],
-    output logic                       m_wready  [N_MASTERS],
+    input  logic [N_MASTERS-1:0][AXI_DATA_WIDTH-1:0] m_wdata,
+    input  logic [N_MASTERS-1:0][AXI_STRB_WIDTH-1:0] m_wstrb,
+    input  logic [N_MASTERS-1:0] m_wlast,
+    input  logic [N_MASTERS-1:0] m_wvalid,
+    output logic [N_MASTERS-1:0] m_wready,
     // Write response
-    output logic [1:0]                 m_bresp   [N_MASTERS],
-    output logic                       m_bvalid  [N_MASTERS],
-    input  logic                       m_bready  [N_MASTERS],
+    output logic [N_MASTERS-1:0][1:0] m_bresp,
+    output logic [N_MASTERS-1:0] m_bvalid,
+    input  logic [N_MASTERS-1:0] m_bready,
     // Read address
-    input  logic [AXI_ADDR_WIDTH-1:0]  m_araddr  [N_MASTERS],
-    input  logic [AXI_LEN_WIDTH-1:0]   m_arlen   [N_MASTERS],
-    input  logic [2:0]                 m_arsize  [N_MASTERS],
-    input  logic [1:0]                 m_arburst [N_MASTERS],
-    input  logic                       m_arvalid [N_MASTERS],
-    output logic                       m_arready [N_MASTERS],
+    input  logic [N_MASTERS-1:0][AXI_ADDR_WIDTH-1:0] m_araddr,
+    input  logic [N_MASTERS-1:0][AXI_LEN_WIDTH-1:0] m_arlen,
+    input  logic [N_MASTERS-1:0][2:0] m_arsize,
+    input  logic [N_MASTERS-1:0][1:0] m_arburst,
+    input  logic [N_MASTERS-1:0] m_arvalid,
+    output logic [N_MASTERS-1:0] m_arready,
     // Read data
-    output logic [AXI_DATA_WIDTH-1:0]  m_rdata   [N_MASTERS],
-    output logic [1:0]                 m_rresp   [N_MASTERS],
-    output logic                       m_rlast   [N_MASTERS],
-    output logic                       m_rvalid  [N_MASTERS],
-    input  logic                       m_rready  [N_MASTERS],
+    output logic [N_MASTERS-1:0][AXI_DATA_WIDTH-1:0] m_rdata,
+    output logic [N_MASTERS-1:0][1:0] m_rresp,
+    output logic [N_MASTERS-1:0] m_rlast,
+    output logic [N_MASTERS-1:0] m_rvalid,
+    input  logic [N_MASTERS-1:0] m_rready,
 
     // =========================================================================
     // AXI4 slave-facing ports — S0 (ROM) and S1 (SRAM) only.
@@ -217,35 +217,35 @@ module soc_bus
     // S0=ROM, S1=SRAM exposed via flat rom_*/mem_* ports.
     // S2=SLV_PERIPH consumed by internal axi4_to_axilite bridge.
     // =========================================================================
-    logic [IW-1:0]   xbar_s_awid    [N_SLAVES];
-    logic [AW-1:0]   xbar_s_awaddr  [N_SLAVES];
-    logic [LENW-1:0] xbar_s_awlen   [N_SLAVES];
-    logic [2:0]      xbar_s_awsize  [N_SLAVES];
-    logic [1:0]      xbar_s_awburst [N_SLAVES];
-    logic            xbar_s_awvalid [N_SLAVES];
-    logic            xbar_s_awready [N_SLAVES];
-    logic [DW-1:0]   xbar_s_wdata   [N_SLAVES];
-    logic [SW-1:0]   xbar_s_wstrb   [N_SLAVES];
-    logic            xbar_s_wlast   [N_SLAVES];
-    logic            xbar_s_wvalid  [N_SLAVES];
-    logic            xbar_s_wready  [N_SLAVES];
-    logic [IW-1:0]   xbar_s_bid     [N_SLAVES];
-    logic [1:0]      xbar_s_bresp   [N_SLAVES];
-    logic            xbar_s_bvalid  [N_SLAVES];
-    logic            xbar_s_bready  [N_SLAVES];
-    logic [IW-1:0]   xbar_s_arid    [N_SLAVES];
-    logic [AW-1:0]   xbar_s_araddr  [N_SLAVES];
-    logic [LENW-1:0] xbar_s_arlen   [N_SLAVES];
-    logic [2:0]      xbar_s_arsize  [N_SLAVES];
-    logic [1:0]      xbar_s_arburst [N_SLAVES];
-    logic            xbar_s_arvalid [N_SLAVES];
-    logic            xbar_s_arready [N_SLAVES];
-    logic [IW-1:0]   xbar_s_rid     [N_SLAVES];
-    logic [DW-1:0]   xbar_s_rdata   [N_SLAVES];
-    logic [1:0]      xbar_s_rresp   [N_SLAVES];
-    logic            xbar_s_rlast   [N_SLAVES];
-    logic            xbar_s_rvalid  [N_SLAVES];
-    logic            xbar_s_rready  [N_SLAVES];
+    logic [N_SLAVES-1:0][IW-1:0] xbar_s_awid;
+    logic [N_SLAVES-1:0][AW-1:0] xbar_s_awaddr;
+    logic [N_SLAVES-1:0][LENW-1:0] xbar_s_awlen;
+    logic [N_SLAVES-1:0][2:0] xbar_s_awsize;
+    logic [N_SLAVES-1:0][1:0] xbar_s_awburst;
+    logic [N_SLAVES-1:0] xbar_s_awvalid;
+    logic [N_SLAVES-1:0] xbar_s_awready;
+    logic [N_SLAVES-1:0][DW-1:0] xbar_s_wdata;
+    logic [N_SLAVES-1:0][SW-1:0] xbar_s_wstrb;
+    logic [N_SLAVES-1:0] xbar_s_wlast;
+    logic [N_SLAVES-1:0] xbar_s_wvalid;
+    logic [N_SLAVES-1:0] xbar_s_wready;
+    logic [N_SLAVES-1:0][IW-1:0] xbar_s_bid;
+    logic [N_SLAVES-1:0][1:0] xbar_s_bresp;
+    logic [N_SLAVES-1:0] xbar_s_bvalid;
+    logic [N_SLAVES-1:0] xbar_s_bready;
+    logic [N_SLAVES-1:0][IW-1:0] xbar_s_arid;
+    logic [N_SLAVES-1:0][AW-1:0] xbar_s_araddr;
+    logic [N_SLAVES-1:0][LENW-1:0] xbar_s_arlen;
+    logic [N_SLAVES-1:0][2:0] xbar_s_arsize;
+    logic [N_SLAVES-1:0][1:0] xbar_s_arburst;
+    logic [N_SLAVES-1:0] xbar_s_arvalid;
+    logic [N_SLAVES-1:0] xbar_s_arready;
+    logic [N_SLAVES-1:0][IW-1:0] xbar_s_rid;
+    logic [N_SLAVES-1:0][DW-1:0] xbar_s_rdata;
+    logic [N_SLAVES-1:0][1:0] xbar_s_rresp;
+    logic [N_SLAVES-1:0] xbar_s_rlast;
+    logic [N_SLAVES-1:0] xbar_s_rvalid;
+    logic [N_SLAVES-1:0] xbar_s_rready;
 
     // =========================================================================
     // Connect flat ROM ports ↔ internal crossbar slave array [SLV_ROM]
@@ -339,25 +339,25 @@ module soc_bus
     // =========================================================================
     // Internal: axi_lite_interconnect slave-facing arrays [N_AXIL_SLV=3]
     // =========================================================================
-    logic [AW-1:0] axil_s_awaddr  [N_AXIL_SLV];
-    logic [2:0]    axil_s_awprot  [N_AXIL_SLV];
-    logic          axil_s_awvalid [N_AXIL_SLV];
-    logic          axil_s_awready [N_AXIL_SLV];
-    logic [DW-1:0] axil_s_wdata   [N_AXIL_SLV];
-    logic [SW-1:0] axil_s_wstrb   [N_AXIL_SLV];
-    logic          axil_s_wvalid  [N_AXIL_SLV];
-    logic          axil_s_wready  [N_AXIL_SLV];
-    logic [1:0]    axil_s_bresp   [N_AXIL_SLV];
-    logic          axil_s_bvalid  [N_AXIL_SLV];
-    logic          axil_s_bready  [N_AXIL_SLV];
-    logic [AW-1:0] axil_s_araddr  [N_AXIL_SLV];
-    logic [2:0]    axil_s_arprot  [N_AXIL_SLV];
-    logic          axil_s_arvalid [N_AXIL_SLV];
-    logic          axil_s_arready [N_AXIL_SLV];
-    logic [DW-1:0] axil_s_rdata   [N_AXIL_SLV];
-    logic [1:0]    axil_s_rresp   [N_AXIL_SLV];
-    logic          axil_s_rvalid  [N_AXIL_SLV];
-    logic          axil_s_rready  [N_AXIL_SLV];
+    logic [N_AXIL_SLV-1:0][AW-1:0] axil_s_awaddr;
+    logic [N_AXIL_SLV-1:0][2:0] axil_s_awprot;
+    logic [N_AXIL_SLV-1:0] axil_s_awvalid;
+    logic [N_AXIL_SLV-1:0] axil_s_awready;
+    logic [N_AXIL_SLV-1:0][DW-1:0] axil_s_wdata;
+    logic [N_AXIL_SLV-1:0][SW-1:0] axil_s_wstrb;
+    logic [N_AXIL_SLV-1:0] axil_s_wvalid;
+    logic [N_AXIL_SLV-1:0] axil_s_wready;
+    logic [N_AXIL_SLV-1:0][1:0] axil_s_bresp;
+    logic [N_AXIL_SLV-1:0] axil_s_bvalid;
+    logic [N_AXIL_SLV-1:0] axil_s_bready;
+    logic [N_AXIL_SLV-1:0][AW-1:0] axil_s_araddr;
+    logic [N_AXIL_SLV-1:0][2:0] axil_s_arprot;
+    logic [N_AXIL_SLV-1:0] axil_s_arvalid;
+    logic [N_AXIL_SLV-1:0] axil_s_arready;
+    logic [N_AXIL_SLV-1:0][DW-1:0] axil_s_rdata;
+    logic [N_AXIL_SLV-1:0][1:0] axil_s_rresp;
+    logic [N_AXIL_SLV-1:0] axil_s_rvalid;
+    logic [N_AXIL_SLV-1:0] axil_s_rready;
 
     // =========================================================================
     // Internal: axil_to_apb bridge single APB master output

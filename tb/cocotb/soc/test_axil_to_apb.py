@@ -22,7 +22,7 @@ Tests:
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, Combine
+from cocotb.triggers import RisingEdge
 
 from bfm.axi4lite_master import AXI4LiteMaster
 
@@ -157,7 +157,7 @@ async def test_aw_before_w(dut):
       - Hold off APB SETUP until W also arrives
       - Complete write with bresp OKAY
     """
-    m = await _setup(dut)
+    await _setup(dut)
 
     # Drive AW, withhold W
     dut.s_axil_awaddr.value  = REG0
@@ -210,7 +210,7 @@ async def test_w_before_aw(dut):
       - Hold off APB SETUP until AW also arrives
       - Complete write with bresp OKAY
     """
-    m = await _setup(dut)
+    await _setup(dut)
 
     # Drive W, withhold AW
     dut.s_axil_wdata.value  = 0xC0DECAFE
