@@ -17,8 +17,12 @@ The goal is *test power on/off sequencing*. Real power-gating verification (does
 A **behavioral power-mode controller** modeled as ordinary synchronous RTL — testable in Verilator as plain logic:
 
 - **PMU register block** (APB4 slave, reuses `apb4_register_bank`): power-mode request register, status register, per-domain enable bits.
-- **Sequencer FSM**: drives `cpu_clk_en` / `gpu_clk_en` (clock-gating via ICG) + `cpu_iso_en` / `gpu_iso_en` (functional output clamps modeled as muxes) + per-domain reset assertion, in the correct order (isolate → gate clock → assert reset → … → release). This is the actual *sequencing* logic — the part with real design content.
+- **Sequencer FSM**: drives `cpu_clk_en` / `gpu_clk_en` (clock-gating via ICG) + `cpu_iso_en` / `gpu_iso_en` (functional output clamps) + per-domain reset + retention-control outputs (`cpu_ret_save`/`cpu_ret_restore`, GPU likewise), in the full UPF-ordered sequence **both directions**:
+  - **Power-down** (e.g. enter CPU_OFF): assert retention-save → assert isolation (clamp outputs) → gate clock → (optionally) assert domain reset. Mirrors the `phase2_cpu.upf` rule "save BEFORE the switch opens".
+  - **Power-up** (exit to NORMAL): (release domain reset) → ungate clock → assert retention-restore → de-assert isolation. Mirrors "restore AFTER the switch closes".
+  - This is the actual *sequencing* logic — the part with real design content.
 - **Functional isolation** = output-clamp muxes at the CPU/GPU macro boundaries (clamp to the UPF `clamp_value 0`) when the domain is "off" — behaviorally identical to isolation cells for sim, synthesizes as logic.
+- **Retention scope (explicit):** the PMU *emits* the retention save/restore control signals in the correct order (forward-compatible with the deferred real-power-gating work), and the verification asserts that ordering. But in the behavioral model the domain is **clock-gated, not supply-removed**, so the macro's flops inherently keep their architectural state (MTVEC/MSTATUS/PC) across an off→on cycle — retention save/restore is therefore a **functional no-op in this model**. Real retention-cell save/restore (where the supply is actually cut and state would be lost without it) is part of the **deferred** real-power-gating scope (§4), which needs power switches + a UPF-aware simulator. So: retention *control sequencing* = in scope; retention *cell silicon / true supply-off state preservation* = explicitly out of scope here.
 
 This delivers the **on/off-sequencing controller + its verification** (enter/exit each PST state, observe clock-gate, observe isolation clamp, confirm no functional X-leak from a gated domain). It does **not** model real supply-off, retention-cell silicon, or power switches.
 
@@ -31,7 +35,7 @@ True power-gating sign-off — real isolation/retention cells inserted in the ne
 - **C — NO-GO:** keep UPF spec-only. (Rejected — the behavioral sequencer has real, verifiable design value.)
 
 ## 6. If GO (A) — implementation sketch (own PRs, each re-verified)
-1. **`rtl/soc/pmu.sv`** — power-mode APB register block + sequencer FSM (clock-en, iso-en, reset per domain; PST-state encode). Lint via rtl-design-orchestrator.
+1. **`rtl/soc/pmu.sv`** — power-mode APB register block + sequencer FSM (clock-en, iso-en, retention save/restore, reset per domain; PST-state encode; both-direction ordering per §3). Lint via rtl-design-orchestrator.
 2. Wire PMU into `soc_top`: ICG clock-gates on CPU/GPU macro clocks, isolation-clamp muxes on macro outputs, per-domain reset. (New APB slot in the periph map.)
 3. **Verification**: cocotb `test_pmu.py` — enter/exit CPU_OFF/GPU_OFF/IDLE, assert clock-gate observed, isolation clamp asserted, gated-domain outputs clamped (no X-leak), sequencer ordering correct; `soc_all` stays green. Via verification-orchestrator.
 
