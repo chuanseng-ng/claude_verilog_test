@@ -110,19 +110,22 @@ def _force_pll_enable(dut, val: int = 1) -> None:
     """
     Force pll_enable internal signal via Verilator --public-flat-rw.
 
-    Bootstrap context (soc_top M-c):
+    Bootstrap context (soc_top, post-APB-migration + pll_subsystem wrapper):
       pll_rst_n = rst_n_i & pll_enable
-      pll_enable is driven by pll_axil_regs CONTROL[0] (reset default = 0).
-      pll_axil_regs.rst_n_i = core_rst_n = rst_n_i & pll_locked.
-      In STUB mode core_clk == ref_clk (passthrough) but core_rst_n stays 0
-      until pll_locked fires, which requires pll_enable=1 first.
+      pll_enable is driven by pll_apb_regs CONTROL[0] (reset default = 1, so the
+      PLL is enabled out of reset — no firmware bring-up step required).
+      pll_apb_regs runs on clk_i / rst_n_i (always-on ref domain), NOT
+      core_rst_n — config regs survive a core reset, so there is no
+      chicken-and-egg dependency on pll_locked.
+      In STUB mode core_clk == ref_clk (passthrough); core_rst_n stays 0 only
+      until pll_locked fires (a few ref cycles after reset, since pll_enable=1).
 
-    This chicken-and-egg dependency means firmware must write CONTROL[0]=1
-    during its very first instruction after reset to enable the PLL.  In
-    hardware the intent is to use a startup sequencer or power-on defaults.
-    For testbench purposes we model firmware intent by forcing the internal
-    signal directly.  The AXI-Lite register tests (test_pll_regs.py) verify
-    the register interface separately, also using this bootstrap.
+    This helper forces the internal pll_enable directly so a test can model
+    firmware toggling CONTROL[0] without driving the APB bus.  The APB register
+    interface is verified separately by test_pll_apb_regs.py.
+    NOTE: clearing pll_enable at runtime drops core_rst_n (resets CPU+bus) — a
+    firmware self-brick path tracked as a separate design follow-up (not a
+    refactor concern).
 
     Verilator flat name (from sim_build/Vtb_soc_pll.h, --public-flat-rw):
       dut.u_soc.u_pll_sub.pll_enable  (CData, 1-bit)
