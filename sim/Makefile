@@ -669,7 +669,11 @@ cache_integration:
 # soc_boot: M9 SoC boot test only (BLOCKED until CPU RESET_PC fix lands).
 # APB migration PR-1 targets: apb4_register_bank, axil_to_apb.
 .PHONY: soc_all soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress \
-        apb4_register_bank axil_to_apb
+        apb4_register_bank axil_to_apb soc_pll soc_integration_batch
+soc_pll:
+	@echo "Running Phase 7 M-c PLL lock + APB regs tests..."
+	$(MAKE) -C ../tb/cocotb/soc soc_pll
+
 soc_boot:
 	@echo "Running Phase 5 M9 SoC boot test..."
 	$(MAKE) -C ../tb/cocotb/soc soc_boot
@@ -697,6 +701,10 @@ apb4_register_bank:
 axil_to_apb:
 	@echo "Running APB migration PR-1: axil_to_apb bridge unit tests (6 tests)..."
 	$(MAKE) -C ../tb/cocotb/soc axil_to_apb
+
+soc_integration_batch:
+	@echo "Running SoC integration batch (soc_boot + soc_periph + soc_coherency + soc_cpu_gpu, one compile)..."
+	$(MAKE) -C ../tb/cocotb/soc soc_integration_batch
 
 soc_all:
 	@echo "Running Phase 5 SoC tests (M3-M6 components + M9 boot + M9 periph + M9 coherency + M9 cpu_gpu)..."
