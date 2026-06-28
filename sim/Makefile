@@ -705,7 +705,7 @@ apb4_register_bank:
 	$(MAKE) -C ../tb/cocotb/soc apb4_register_bank
 
 axil_to_apb:
-	@echo "Running APB migration PR-1: axil_to_apb bridge unit tests (6 tests)..."
+	@echo "Running APB migration PR-1: axil_to_apb bridge unit tests (7 tests)..."
 	$(MAKE) -C ../tb/cocotb/soc axil_to_apb
 
 soc_integration_batch:

@@ -290,3 +290,109 @@ async def test_back_to_back_write_read(dut):
     assert rresp == RESP_OKAY,  f"read rresp {rresp}"
     assert data  == WRITE_VAL, f"read {data:#010x} expected {WRITE_VAL:#010x}"
     dut._log.info("back-to-back write→read: both complete in order OK")
+
+
+# ---------------------------------------------------------------------------
+# T7 — GH #85 regression guard: concurrent AR + AW + W in S_IDLE
+# ---------------------------------------------------------------------------
+@cocotb.test()
+async def test_concurrent_ar_aw_w_write_priority(dut):
+    """
+    GH #85 regression: simultaneous AR + AW + W presented while the bridge is
+    in S_IDLE.
+
+    Pre-fix RTL (s_axil_arready had no !s_axil_awvalid/!s_axil_wvalid gate):
+      arready=1 fires in the same clock edge as the AW+W handshake.  Both the
+      write-address capture block and the read-address capture block evaluate
+      in the same always_ff body.  Non-blocking assignments execute in program
+      order, so the AR block's  "addr_q <= araddr; is_write_q <= 0"  takes
+      effect last and overwrites the write address and direction flag.  The
+      subsequent APB transfer is therefore issued as a READ — the write data
+      never lands in the register bank.  The bridge then goes to S_RRESP
+      (not S_WRESP), so bvalid never fires.
+
+    Post-fix RTL:
+      arready is gated by (!s_axil_awvalid && !s_axil_wvalid).  While awvalid
+      or wvalid is asserted, arready=0; the AR-capture block never fires in the
+      same cycle.  The write completes correctly (bresp=OKAY, data lands), then
+      the bridge returns to S_IDLE with awvalid=wvalid=0 and accepts AR.
+
+    This test FAILS against pre-fix RTL (timeout on bvalid) and PASSES after
+    the GH #85 fix.
+    """
+    await _setup(dut)
+
+    WRITE_VAL = 0xDEAD_BEEF
+
+    # ── Drive AW + W + AR simultaneously to REG0 ─────────────────────────────
+    dut.s_axil_awaddr.value  = REG0
+    dut.s_axil_awprot.value  = 0
+    dut.s_axil_awvalid.value = 1
+    dut.s_axil_wdata.value   = WRITE_VAL
+    dut.s_axil_wstrb.value   = 0xF
+    dut.s_axil_wvalid.value  = 1
+    dut.s_axil_araddr.value  = REG0
+    dut.s_axil_arprot.value  = 0
+    dut.s_axil_arvalid.value = 1
+    dut.s_axil_bready.value  = 1
+    dut.s_axil_rready.value  = 1
+
+    # ── One clock edge: AW+W handshake fires; AR must be deferred ────────────
+    # After this edge the bridge is in S_SETUP with is_write_q=1 (post-fix) or
+    # is_write_q=0/addr=araddr (pre-fix).  Deassert write channels — they were
+    # captured (awready=wready=1 in IDLE).
+    await RisingEdge(dut.clk)
+    dut.s_axil_awvalid.value = 0
+    dut.s_axil_wvalid.value  = 0
+    # s_axil_arvalid stays 1 — AR is waiting for arready to come back high.
+
+    # ── Wait for B response: the write must complete correctly ────────────────
+    # Pre-fix: bridge goes to S_RRESP (not S_WRESP), bvalid never fires →
+    #          timeout, AssertionError — test correctly fails.
+    # Post-fix: S_SETUP→S_ACCESS→S_WRESP, bvalid=1.
+    bresp = None
+    for _ in range(20):
+        await RisingEdge(dut.clk)
+        if int(dut.s_axil_bvalid.value) and int(dut.s_axil_bready.value):
+            bresp = int(dut.s_axil_bresp.value)
+            break
+    assert bresp is not None, (
+        "write B response not received within 20 cycles — "
+        "pre-fix RTL issued a read instead of a write (is_write_q overwritten "
+        "by concurrent AR capture), so bvalid never fires"
+    )
+    assert bresp == RESP_OKAY, f"write bresp {bresp} expected OKAY(0)"
+    dut._log.info("write completed with bresp=OKAY (GH #85)")
+
+    # ── AR must now be accepted — bridge is IDLE, write channels deasserted ───
+    ar_accepted = False
+    for _ in range(10):
+        await RisingEdge(dut.clk)
+        if int(dut.s_axil_arvalid.value) and int(dut.s_axil_arready.value):
+            ar_accepted = True
+            dut.s_axil_arvalid.value = 0
+            dut._log.info("AR accepted after write completed (GH #85)")
+            break
+    assert ar_accepted, "AR not accepted within 10 cycles after write completion"
+
+    # ── R response must carry the written value ───────────────────────────────
+    # Pre-fix: if somehow bvalid fired (it won't), the read would return the
+    # APB prdata from the spurious read — register value is 0 (never written).
+    rdata = rresp = None
+    for _ in range(20):
+        await RisingEdge(dut.clk)
+        if int(dut.s_axil_rvalid.value) and int(dut.s_axil_rready.value):
+            rdata = int(dut.s_axil_rdata.value)
+            rresp = int(dut.s_axil_rresp.value)
+            break
+    assert rdata is not None, "R response not received within 20 cycles"
+    assert rresp == RESP_OKAY, f"read rresp {rresp} expected OKAY(0)"
+    assert rdata == WRITE_VAL, (
+        f"rdata {rdata:#010x} != {WRITE_VAL:#010x} — "
+        "pre-fix: concurrent AR corrupted addr_q/is_write_q, APB did a read "
+        "instead of a write, register was never updated"
+    )
+    dut._log.info(
+        f"GH #85 concurrent AR+AW+W: write priority correct, "
+        f"AR deferred, rdata={rdata:#010x}  PASS"
+    )

@@ -96,8 +96,10 @@ module apb4_register_bank #(
 
             // 2. SW write on ACCESS phase of a write transfer.
             //    SW write priority: overrides HW write on same-cycle collision.
+            //    GH #87: zero-extend addr_word to 32 b before comparing with N_REGS
+            //    so that N_REGS == 2**WORDW does not wrap to 0 (truncating cast bug).
             if (access && pwrite) begin
-                if (addr_word < WORDW'(N_REGS)) begin
+                if ({{(32-WORDW){1'b0}}, addr_word} < N_REGS) begin
                     automatic logic [IDXW-1:0] ci = addr_word[IDXW-1:0];
                     automatic logic [31:0]     m  = WMASK[ci] & strb_expand(pstrb);
                     regs[ci] <= (regs[ci] & ~m) | (pwdata & m);
@@ -112,7 +114,7 @@ module apb4_register_bank #(
     // (when pready is high).  We drive it combinatorially — valid whenever psel
     // is asserted (covers both SETUP and ACCESS), which is safe and conventional.
     always_comb begin
-        if (!pwrite && addr_word < WORDW'(N_REGS))
+        if (!pwrite && {{(32-WORDW){1'b0}}, addr_word} < N_REGS)
             prdata = regs[addr_word[IDXW-1:0]];
         else
             prdata = '0;
