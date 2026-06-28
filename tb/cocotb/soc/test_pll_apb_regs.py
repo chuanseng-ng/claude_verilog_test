@@ -29,14 +29,17 @@ Tests (same coverage as test_pll_regs.py, bus protocol updated to APB4):
       Inject pll_locked_i=1; read STATUS at 0x004; confirm bit[0]==1.
 
   test_pll_apb_regs_control_write_readback
-      Write CONTROL (pll_enable=1, div_n=0xA, post_div_sel=0b01); readback;
-      verify only WMASK=0x03F1 bits are stored.
+      Write CONTROL (div_n=0xA, post_div_sel=0b01); readback; verify
+      SW-writable bits (WMASK=0x03F0, bits[9:4]) are stored correctly.
+      GH #89 sub-check: write CONTROL=0x0000 (clear attempt on bit[0]);
+      assert bit[0] stays 1 and pll_enable_o stays asserted (non-clearable).
 
   test_pll_apb_regs_status_readonly
       Write all-ones to STATUS; confirm STATUS unchanged (RO).
 
   test_pll_apb_regs_decode_and_enable
-      Write+read CONTROL; confirm pslverr=0 (OKAY), pll_enable_o toggles.
+      Write+read CONTROL; confirm pslverr=0 (OKAY), pll_enable_o always 1
+      (non-clearable by design, GH #89 anti-brick).
 """
 
 import sys
@@ -62,11 +65,13 @@ CTRL_OFFSET  = 0x000   # CONTROL register
 STAT_OFFSET  = 0x004   # STATUS  register
 RSVD_OFFSET  = 0x008   # RSVD    register
 
-# CONTROL writable bit mask (pll_apb_regs WMASK[0] = 32'h0000_03F1)
-#   bit[0]    = pll_enable
-#   bits[7:4] = div_n (feedback_div)
-#   bits[9:8] = post_div_sel
-CTRL_WMASK = 0x0000_03F1
+# CONTROL software-writable bit mask (pll_apb_regs WMASK[0] = 32'h0000_03F0, GH #89)
+#   bit[0]    = pll_enable — NOT in WMASK; non-clearable by design (GH #89 anti-brick).
+#               RESET_VAL[0]=1, WMASK[0]=0 → firmware writes to this bit are ignored;
+#               pll_enable stays 1 at all times so firmware cannot deadlock the SoC.
+#   bits[7:4] = div_n (feedback_div)   — writable
+#   bits[9:8] = post_div_sel           — writable
+CTRL_WMASK = 0x0000_03F0
 
 # ---------------------------------------------------------------------------
 # Module-level task handle list (guard against cross-test coroutine leakage)
@@ -153,45 +158,88 @@ async def test_pll_apb_regs_status_locked(dut):
 @cocotb.test()
 async def test_pll_apb_regs_control_write_readback(dut):
     """
-    Write CONTROL with pll_enable=1, div_n=0xA, post_div_sel=2'b01;
-    read back and verify only the writable bits (WMASK=0x03F1) are stored.
+    Write CONTROL with div_n=0xA, post_div_sel=2'b01 and verify:
+      (a) SW-writable bits (WMASK=0x03F0: bits[9:4]) are stored correctly.
+      (b) GH #89 non-clearable invariant: bit[0] (pll_enable) stays 1
+          even when firmware writes 0 to it (WMASK[0]=0, RESET_VAL[0]=1).
 
-    Written value: 0x0000_01A1
-      bit[0]    = 1  (pll_enable)
-      bits[7:4] = 0xA (div_n)
-      bits[9:8] = 0x1 (post_div_sel = /2)
+    Pass 1 — write with bit[0]=1 (div_n=0xA, post_div_sel=/2):
+      Written value : 0x0000_01A1
+      SW-writable portion (CTRL_WMASK=0x03F0): 0x01A0
+      bit[0] stays 1 regardless → raw readback = 0x01A1
 
-    Expected readback: written_value & WMASK = 0x01A1.
-    Bits outside WMASK must read back as 0 (not writable).
+    Pass 2 — write all-zeros (attempt to clear pll_enable):
+      Written value : 0x0000_0000
+      SW-writable portion: 0x0000 (div_n=0, post_div_sel=/1)
+      bit[0] non-clearable → raw readback = 0x0001 (pll_enable locked high)
     """
     _kill_active_tasks()
     await _start_clock_and_reset(dut)
 
     bfm = _make_apb_bfm(dut)
 
+    # --- Pass 1: writable-field round-trip ---
     wr_val   = (1 << 0) | (0xA << 4) | (0x1 << 8)   # = 0x000001A1
-    expected = wr_val & CTRL_WMASK                    # = 0x000001A1
+    expected = wr_val & CTRL_WMASK                    # = 0x000001A0 (bit[0] excluded)
 
     ok = await bfm.write(CTRL_OFFSET, wr_val)
-    assert ok, "CONTROL write returned pslverr=1 (SLVERR)"
+    assert ok, "CONTROL write (pass 1) returned pslverr=1 (SLVERR)"
     dut._log.info(f"CONTROL write 0x{wr_val:08x} accepted (OKAY)")
 
-    # Allow one cycle for register bank to latch
     await ClockCycles(dut.clk, 2)
 
     data, ok = await bfm.read(CTRL_OFFSET)
-    assert ok, "CONTROL readback pslverr=1 (SLVERR)"
+    assert ok, "CONTROL readback (pass 1) returned pslverr=1 (SLVERR)"
 
     actual = data & CTRL_WMASK
     assert actual == expected, (
-        f"CONTROL readback mismatch: "
-        f"wrote 0x{wr_val:08x}, expected masked 0x{expected:08x}, "
+        f"CONTROL writable-field mismatch: "
+        f"wrote 0x{wr_val:08x}, expected SW-writable portion 0x{expected:08x}, "
         f"got raw 0x{data:08x} (masked 0x{actual:08x})"
     )
+    # bit[0] must still be 1 (non-clearable reset value)
+    assert (data & 0x1) == 1, (
+        f"GH #89: pll_enable (bit[0]) not 1 after pass-1 write; CONTROL=0x{data:08x}"
+    )
     dut._log.info(
-        f"CONTROL readback 0x{data:08x}: "
+        f"Pass 1 CONTROL readback 0x{data:08x}: "
         f"pll_enable={data & 1}, div_n=0x{(data >> 4) & 0xF:X}, "
         f"post_div_sel={(data >> 8) & 3} — PASS"
+    )
+
+    # --- Pass 2: GH #89 non-clearable invariant ---
+    # Writing all-zeros tries to clear pll_enable. WMASK[0]=0 must suppress the
+    # clear; bit[0] must remain 1 (RESET_VAL); pll_enable_o must stay asserted.
+    ok2 = await bfm.write(CTRL_OFFSET, 0x0000_0000)
+    assert ok2, "CONTROL write-zero (pass 2) returned pslverr=1 (SLVERR)"
+    dut._log.info("CONTROL write 0x00000000 (clear attempt) accepted (OKAY)")
+
+    await ClockCycles(dut.clk, 2)
+
+    data2, ok3 = await bfm.read(CTRL_OFFSET)
+    assert ok3, "CONTROL readback (pass 2) returned pslverr=1 (SLVERR)"
+
+    # SW-writable fields (div_n[7:4] + post_div_sel[9:8], CTRL_WMASK=0x03F0)
+    # must actually clear on the zero write — Pass 1 set them to 0x01A0, so a
+    # non-zero masked value here means the zero write did not take effect.
+    actual2 = data2 & CTRL_WMASK
+    assert actual2 == 0, (
+        f"CONTROL writable fields did not clear on zero write: "
+        f"got masked value 0x{actual2:08x} from raw 0x{data2:08x}"
+    )
+    assert (data2 & 0x1) == 1, (
+        f"GH #89 VIOLATION: pll_enable (CONTROL[0]) was cleared by a firmware write — "
+        f"WMASK[0]=0 must preserve reset value 1; "
+        f"got CONTROL=0x{data2:08x}"
+    )
+    assert int(dut.pll_enable_o.value) == 1, (
+        "GH #89 VIOLATION: pll_enable_o dropped to 0 after write-zero — "
+        "pll_enable_o must always be 1 (non-clearable)"
+    )
+    dut._log.info(
+        f"Pass 2 CONTROL readback 0x{data2:08x}: "
+        f"pll_enable={data2 & 1} (non-clearable confirmed), "
+        f"pll_enable_o={int(dut.pll_enable_o.value)} — GH #89 PASS"
     )
 
 
@@ -238,8 +286,10 @@ async def test_pll_apb_regs_status_readonly(dut):
 async def test_pll_apb_regs_decode_and_enable(dut):
     """
     Explicit register-bank decode verification: write+read CONTROL at offset
-    0x000 and confirm no SLVERR (pslverr=0).  Also verifies pll_enable_o
-    output toggles in response to CONTROL[0] writes.
+    0x000 and confirm no SLVERR (pslverr=0).  Verifies pll_enable_o is always
+    1 (non-clearable by design, GH #89 anti-brick): WMASK[0]=0 means firmware
+    writes to CONTROL[0] are ignored; pll_enable_o stays 1 regardless of what
+    value is written to bit[0].
 
     APB4 counterpart of test_pll_regs_decode_and_enable in test_pll_regs.py.
     """
@@ -248,7 +298,7 @@ async def test_pll_apb_regs_decode_and_enable(dut):
 
     bfm = _make_apb_bfm(dut)
 
-    # Write a distinguishable value: pll_enable=1 only
+    # Write CONTROL[0]=1 (same as reset value — OKAY, SLVERR must not fire)
     wr_val = 0x0000_0001
     ok = await bfm.write(CTRL_OFFSET, wr_val)
     assert ok, (
@@ -259,9 +309,9 @@ async def test_pll_apb_regs_decode_and_enable(dut):
 
     await ClockCycles(dut.clk, 2)
 
-    # Verify pll_enable_o reflects the written value
+    # pll_enable_o must be 1 (non-clearable; stays at reset value)
     assert int(dut.pll_enable_o.value) == 1, (
-        f"pll_enable_o expected 1 after writing CONTROL[0]=1, "
+        f"pll_enable_o expected 1 (non-clearable reset value), "
         f"got {int(dut.pll_enable_o.value)}"
     )
 
@@ -269,10 +319,11 @@ async def test_pll_apb_regs_decode_and_enable(dut):
     assert ok, (
         f"CONTROL read at offset 0x{CTRL_OFFSET:03x} returned pslverr=1"
     )
-    assert (data & 0x1) == (wr_val & 0x1), (
-        f"Readback mismatch: wrote pll_enable=1, got CONTROL=0x{data:08x}"
+    assert (data & 0x1) == 1, (
+        f"CONTROL[0] (pll_enable) expected 1 (non-clearable), "
+        f"got CONTROL=0x{data:08x}"
     )
     dut._log.info(
         f"Read offset 0x{CTRL_OFFSET:03x}: data=0x{data:08x}, OKAY, "
-        f"pll_enable_o={int(dut.pll_enable_o.value)} — PASS"
+        f"pll_enable_o={int(dut.pll_enable_o.value)} (non-clearable) — PASS"
     )

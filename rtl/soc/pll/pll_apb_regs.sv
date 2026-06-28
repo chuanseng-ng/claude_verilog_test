@@ -7,7 +7,8 @@
 // Register map (byte offset, 32-bit words):
 //
 //   0x00  CONTROL  [RW]
-//           [0]    pll_enable   — 1: assert rst_n to PLL; 0: hold PLL in reset
+//           [0]    pll_enable   — set-only/RO-1 (non-clearable; GH #89 anti-brick):
+//                                 PLL is always enabled; firmware cannot hold PLL in reset
 //           [7:4]  div_n[3:0]  — feedback divider ratio (4'h0 → N=13 default)
 //           [9:8]  post_div_sel — post-divider: 2'b00→/1, 2'b01→/2, 2'b10→/4
 //           [31:10] reserved (RO 0)
@@ -22,7 +23,7 @@
 // APB4 protocol machinery (SETUP/ACCESS phases, pready, pslverr) is reused.
 //
 // Output ports drive the PLL wrapper (unchanged from pll_axil_regs):
-//   pll_enable_o   — gate for PLL rst_n (0 = PLL in reset)
+//   pll_enable_o   — always 1 at runtime (WMASK bit[0]=0; non-clearable; GH #89)
 //   feedback_div_o — div_n field from CONTROL[7:4]
 //   post_div_sel_o — post_div_sel field from CONTROL[9:8]
 //   pll_locked_i   — status input from pll_clkgen locked_o
@@ -42,10 +43,10 @@
 `default_nettype none
 
 module pll_apb_regs #(
-    parameter int unsigned ADDR_W = 12   // local byte address width (4 KB slot)
+    parameter int unsigned ADDR_W = 12  // local byte address width (4 KB slot)
 ) (
-    input  logic clk_i,
-    input  logic rst_n_i,
+    input logic clk_i,
+    input logic rst_n_i,
 
     // ── APB4 slave port ─────────────────────────────────────────────────────
     // pclk = clk_i, presetn = rst_n_i (mapped inside module)
@@ -53,9 +54,9 @@ module pll_apb_regs #(
     input  logic              penable,
     input  logic              pwrite,
     input  logic [ADDR_W-1:0] paddr,
-    input  logic [31:0]       pwdata,
-    input  logic [3:0]        pstrb,
-    output logic [31:0]       prdata,
+    input  logic [      31:0] pwdata,
+    input  logic [       3:0] pstrb,
+    output logic [      31:0] prdata,
     output logic              pready,
     output logic              pslverr,
 
@@ -65,7 +66,7 @@ module pll_apb_regs #(
     output logic [1:0] post_div_sel_o,  // post_div_sel from CONTROL[9:8]
 
     // ── PLL status input ─────────────────────────────────────────────────────
-    input  logic       pll_locked_i     // from pll_clkgen locked_o
+    input logic pll_locked_i  // from pll_clkgen locked_o
 );
 
     // ── Register file: 3 words ──────────────────────────────────────────────
@@ -76,32 +77,35 @@ module pll_apb_regs #(
     localparam int unsigned N_REGS = 3;
 
     // Per-register SW-writable bit masks
-    // CONTROL: bits [9:8] post_div_sel, [7:4] div_n, [0] pll_enable
-    localparam logic [31:0] WMASK [N_REGS] = '{
-        32'h0000_03F1,   // CONTROL: bits [9:8],[7:4],[0] writable
-        32'h0000_0000,   // STATUS:  RO
-        32'h0000_0000    // RSVD:    RO
+    // CONTROL: bits [9:8] post_div_sel, [7:4] div_n writable.
+    // bit[0] pll_enable is NOT in WMASK — non-clearable by design (GH #89 anti-brick):
+    // apb4_register_bank leaves bit[0] at its reset value (1) on every write, so
+    // firmware can never hold the PLL in reset and deadlock the SoC.
+    localparam logic [31:0] WMASK[N_REGS] = '{
+        32'h0000_03F0,  // CONTROL: bits [9:8],[7:4] writable; bit[0] non-clearable (GH #89)
+        32'h0000_0000,  // STATUS:  RO
+        32'h0000_0000  // RSVD:    RO
     };
 
-    localparam logic [31:0] RESET_VAL [N_REGS] = '{
-        32'h0000_0001,   // CONTROL: pll_enable=1 (default ON so SoC self-locks
-                         //   at reset without firmware intervention).
-                         //   div_n=0 (→N=13 default), post_div_sel=0 (→/1).
-                         //   Firmware may write CONTROL[0]=0 to hold PLL in
-                         //   reset for reconfiguration, then write 1 to re-lock.
-        32'h0000_0000,   // STATUS:  cleared
-        32'h0000_0000    // RSVD
+    localparam logic [31:0] RESET_VAL[N_REGS] = '{
+        32'h0000_0001,  // CONTROL: pll_enable=1 (default ON so SoC self-locks
+                        //   at reset without firmware intervention).
+                        //   div_n=0 (→N=13 default), post_div_sel=0 (→/1).
+                        //   bit[0] excluded from WMASK (GH #89): firmware
+                        //   cannot clear pll_enable — self-brick path unreachable.
+        32'h0000_0000,  // STATUS:  cleared
+        32'h0000_0000  // RSVD
     };
 
-    logic [31:0] regs_out [N_REGS];
-    logic        hw_wen   [N_REGS];
-    logic [31:0] hw_wdata [N_REGS];
+    logic [31:0] regs_out[N_REGS];
+    logic        hw_wen  [N_REGS];
+    logic [31:0] hw_wdata[N_REGS];
 
     apb4_register_bank #(
-        .N_REGS    (N_REGS),
-        .ADDR_W    (ADDR_W),
-        .RESET_VAL (RESET_VAL),
-        .WMASK     (WMASK)
+        .N_REGS   (N_REGS),
+        .ADDR_W   (ADDR_W),
+        .RESET_VAL(RESET_VAL),
+        .WMASK    (WMASK)
     ) u_regbank (
         .pclk      (clk_i),
         .presetn   (rst_n_i),
@@ -123,14 +127,14 @@ module pll_apb_regs #(
 
     // ── HW write: push locked status into STATUS reg each cycle ────────────
     // reg 0 (CONTROL): no HW write
-    assign hw_wen  [0] = 1'b0;
-    assign hw_wdata[0] = '0;
+    assign hw_wen[0]      = 1'b0;
+    assign hw_wdata[0]    = '0;
     // reg 1 (STATUS): locked bit driven by PLL
-    assign hw_wen  [1] = 1'b1;
-    assign hw_wdata[1] = {31'b0, pll_locked_i};
+    assign hw_wen[1]      = 1'b1;
+    assign hw_wdata[1]    = {31'b0, pll_locked_i};
     // reg 2 (RSVD): no HW write
-    assign hw_wen  [2] = 1'b0;
-    assign hw_wdata[2] = '0;
+    assign hw_wen[2]      = 1'b0;
+    assign hw_wdata[2]    = '0;
 
     // ── Extract PLL config from CONTROL register ────────────────────────────
     // CONTROL[0]   = pll_enable
