@@ -219,13 +219,21 @@ async def test_pll_apb_regs_control_write_readback(dut):
     data2, ok3 = await bfm.read(CTRL_OFFSET)
     assert ok3, "CONTROL readback (pass 2) returned pslverr=1 (SLVERR)"
 
+    # SW-writable fields (div_n[7:4] + post_div_sel[9:8], CTRL_WMASK=0x03F0)
+    # must actually clear on the zero write — Pass 1 set them to 0x01A0, so a
+    # non-zero masked value here means the zero write did not take effect.
+    actual2 = data2 & CTRL_WMASK
+    assert actual2 == 0, (
+        f"CONTROL writable fields did not clear on zero write: "
+        f"got masked value 0x{actual2:08x} from raw 0x{data2:08x}"
+    )
     assert (data2 & 0x1) == 1, (
         f"GH #89 VIOLATION: pll_enable (CONTROL[0]) was cleared by a firmware write — "
         f"WMASK[0]=0 must preserve reset value 1; "
         f"got CONTROL=0x{data2:08x}"
     )
     assert int(dut.pll_enable_o.value) == 1, (
-        f"GH #89 VIOLATION: pll_enable_o dropped to 0 after write-zero — "
+        "GH #89 VIOLATION: pll_enable_o dropped to 0 after write-zero — "
         "pll_enable_o must always be 1 (non-clearable)"
     )
     dut._log.info(
