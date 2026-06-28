@@ -351,6 +351,7 @@ apb4_register_bank_lint:
 		--top-module tb_apb4_register_bank $(APB4_REG_SOURCES)
 
 apb4_register_bank: apb4_register_bank_lint
+	$(MAKE) clean
 	$(MAKE) MODULE=test_apb4_register_bank TOPLEVEL=tb_apb4_register_bank \
 		VERILOG_SOURCES="$(APB4_REG_SOURCES)" \
 		$(BUILD_ARGS)
