@@ -11,6 +11,7 @@
     "VERILOG_FILES": [
         "dir::../sky130_sram_1kbyte_1rw1r_32x256_8_stub.v",
         "dir::../../../rtl/soc/axi_pkg.sv",
+        "dir::../../../rtl/soc/soc_addr_map_pkg.sv",
         "dir::../../../rtl/cpu/core/rv32i_pipeline_pkg.sv",
         "dir::../../../rtl/mem/rv32i_cache_pkg.sv",
         "dir::../../../rtl/cpu/core/rv32i_alu.sv",
@@ -46,11 +47,10 @@
     "FP_PDN_MULTILAYER": true,
 
     "FP_SIZING": "absolute",
-    "DIE_AREA":  "0 0 3200 1800",
-    "CORE_AREA": "20 20 3180 1780",
+    "DIE_AREA":  [0, 0, 3200, 1800],
+    "CORE_AREA": [20, 20, 3180, 1780],
 
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
-    "PIN_ORDER_CFG":       "dir::pin_order.cfg",
 
     "FP_CORE_UTIL":    30,
     "FP_ASPECT_RATIO": 1,
@@ -127,8 +127,6 @@
     "PDN_MACRO_CONNECTIONS": [
         ".*(u_tag_sram|u_data_sram) VPWR VGND vccd1 vssd1"
     ],
-
-    "PL_MACRO_HALO": "10 10",
 
     "EXTRA_EXCLUDED_CELLS": [
         "sky130_fd_sc_hd__probe_p_8",
