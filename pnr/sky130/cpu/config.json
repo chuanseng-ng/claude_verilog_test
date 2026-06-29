@@ -47,8 +47,8 @@
     "FP_PDN_MULTILAYER": true,
 
     "FP_SIZING": "absolute",
-    "DIE_AREA":  [0, 0, 3200, 1800],
-    "CORE_AREA": [20, 20, 3180, 1780],
+    "DIE_AREA":  [0, 0, 3600, 1800],
+    "CORE_AREA": [20, 20, 3580, 1780],
 
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
 
@@ -56,6 +56,8 @@
     "FP_ASPECT_RATIO": 1,
 
     "PL_TARGET_DENSITY_PCT": 25,
+    "GPL_CELL_PADDING":      4,
+    "DPL_CELL_PADDING":      4,
     "PL_TIME_DRIVEN":        true,
     "PL_ROUTABILITY_DRIVEN": true,
 
@@ -114,15 +116,21 @@
     "RUN_KLAYOUT_XOR":  false,
     "RUN_LVS":          true,
 
+    "MAGIC_DRC_USE_GDS": false,
+
+    "EXTRA_GDS_FILES": [
+        "/home/neuromorphic/.volare/sky130A/libs.ref/sky130_sram_macros/gds/sky130_sram_1kbyte_1rw1r_32x256_8.gds"
+    ],
     "EXTRA_LEFS": [
         "/home/neuromorphic/.volare/sky130A/libs.ref/sky130_sram_macros/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef"
     ],
     "EXTRA_LIBS": [
         "/home/neuromorphic/.volare/sky130A/libs.ref/sky130_sram_macros/lib/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib"
     ],
-    "EXTRA_GDS_FILES": [
-        "/home/neuromorphic/.volare/sky130A/libs.ref/sky130_sram_macros/gds/sky130_sram_1kbyte_1rw1r_32x256_8.gds"
+    "EXTRA_SPICE_MODELS": [
+        "/home/neuromorphic/.volare/sky130A/libs.ref/sky130_sram_macros/spice/sky130_sram_1kbyte_1rw1r_32x256_8.spice"
     ],
+
 
     "PDN_MACRO_CONNECTIONS": [
         ".*(u_tag_sram|u_data_sram) VPWR VGND vccd1 vssd1"

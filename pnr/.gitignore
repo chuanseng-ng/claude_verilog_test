@@ -31,6 +31,8 @@ librelane/runs/
 !asap7/gpu/macro/*.lef
 !asap7/cpu/macro/*.nl.v.gz
 !asap7/gpu/macro/*.nl.v.gz
+!sky130/cpu/macro/*.lef
+!sky130/cpu/macro/*.nl.v.gz
 
 # Keep template/example files
 !*.template

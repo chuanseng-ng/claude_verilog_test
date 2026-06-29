@@ -180,7 +180,7 @@ set_false_path -to [get_ports {debug_rs1_data_o[*]}]
 set_false_path -to [get_ports {debug_rs2_data_o[*]}]
 set_false_path -to [get_ports debug_branch_taken_o]
 set_false_path -to [get_ports debug_take_branch_jump_o]
-set_false_path -to [get_ports {debug_pc_src_o[*]}]
+set_false_path -to [get_ports debug_pc_src_o]
 set_false_path -to [get_ports {debug_state_o[*]}]
 set_false_path -to [get_ports debug_ebreak_o]
 
