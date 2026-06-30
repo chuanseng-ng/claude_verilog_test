@@ -81,8 +81,9 @@ LIBRELANE_DIR       ?= $(HOME)/Downloads/Github/librelane
 MANUAL_PDK_ROOT     ?= $(HOME)/pdk
 
 # LibreLane config directories
-LIBRELANE_SKY130_DIR    := librelane
-LIBRELANE_NANGATE45_DIR := freepdk45
+LIBRELANE_SKY130_DIR     := librelane
+LIBRELANE_SKY130_CPU_DIR := sky130/cpu
+LIBRELANE_NANGATE45_DIR  := freepdk45
 # shared PDK resources (stubs, lib, pdn)
 LIBRELANE_ASAP7_ROOT    := asap7
 # CPU design directory
@@ -109,9 +110,9 @@ DRT_THREADS         ?= 4
 .PHONY: docker-pull docker-check docker-pdk docker-run docker-synth docker-results
 SV2V                ?= /nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1/bin/sv2v
 
-.PHONY: librelane-sky130 librelane-nangate45 librelane-asap7 librelane-asap7-gpu librelane-asap7-soc
+.PHONY: librelane-sky130 librelane-sky130-cpu librelane-nangate45 librelane-asap7 librelane-asap7-gpu librelane-asap7-soc
 .PHONY: asap7-soc-sv2v
-.PHONY: librelane-sky130-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results librelane-asap7-soc-results
+.PHONY: librelane-sky130-results librelane-sky130-cpu-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results librelane-asap7-soc-results
 .PHONY: prune-asap7-runs prune-asap7-gpu-runs prune-asap7-soc-runs
 .PHONY: macro-views-asap7
 .PHONY: flop-count
@@ -135,13 +136,15 @@ help:
 	@echo "=================================================="
 	@echo ""
 	@echo "LibreLane Targets (nix-shell, recommended):"
-	@echo "  librelane-sky130          - Run full LibreLane flow on Sky130 (pnr/librelane/)"
+	@echo "  librelane-sky130          - Run full LibreLane flow on Sky130 (pnr/librelane/) — Phase 3 baseline"
+	@echo "  librelane-sky130-cpu      - Sky130 CPU Stage 1: REAL Magic DRC + Netgen LVS (pnr/sky130/cpu/) GH#103"
 	@echo "  librelane-nangate45       - Run full LibreLane flow on FreePDK45/nangate45 (pnr/freepdk45/)"
 	@echo "  librelane-asap7           - Run full LibreLane flow on ASAP7 CPU (pnr/asap7/), then prune"
 	@echo "  librelane-asap7-gpu       - Run full LibreLane flow on ASAP7 GPU (pnr/asap7/gpu/), then prune"
 	@echo "  librelane-asap7-soc-synth - Run Yosys synthesis only for ASAP7 SoC (pnr/asap7/soc/) — first-run check"
 	@echo "  librelane-asap7-soc       - Run full LibreLane P&R for ASAP7 SoC (expect 4-8 h), then prune"
-	@echo "  librelane-sky130-results        - Show metrics from latest Sky130 LibreLane run"
+	@echo "  librelane-sky130-results        - Show metrics from latest Sky130 LibreLane run (Phase 3)"
+	@echo "  librelane-sky130-cpu-results    - Show metrics from latest Sky130 CPU Stage 1 run (GH#103)"
 	@echo "  librelane-nangate45-results     - Show metrics from latest nangate45 LibreLane run"
 	@echo "  librelane-asap7-results         - Show metrics from latest ASAP7 CPU LibreLane run"
 	@echo "  flop-count RUN_DIR=<path>       - Flop count breakdown from any LibreLane run's synthesis"
@@ -563,6 +566,25 @@ librelane-sky130:
 
 librelane-sky130-results:
 	$(call librelane_results,$(LIBRELANE_SKY130_DIR))
+
+# Sky130 Stage 1: CPU standalone with REAL Magic DRC + Netgen LVS (GH #103)
+# Builds native sky130_rv32i_cpu_top.{lef,lib,nl.v} macro views.
+# Uses volare PDK auto-detection (same as librelane-sky130).
+librelane-sky130-cpu:
+	@echo "=========================================="
+	@echo "Running LibreLane flow — Sky130 CPU Stage 1 (real DRC/LVS)"
+	@echo "  Config : pnr/$(LIBRELANE_SKY130_CPU_DIR)/config.json"
+	@echo "  Tool   : $(LIBRELANE_DIR)"
+	@echo "  Runs   : /nobackup/sky130_cpu_runs"
+	@echo "=========================================="
+	@if [ ! -f "$(LIBRELANE_SKY130_CPU_DIR)/config.json" ]; then \
+		echo "ERROR: $(LIBRELANE_SKY130_CPU_DIR)/config.json not found."; exit 1; fi
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"python3 -m librelane \
+		 $(abspath $(LIBRELANE_SKY130_CPU_DIR))/config.json"
+
+librelane-sky130-cpu-results:
+	$(call librelane_results,$(LIBRELANE_SKY130_CPU_DIR))
 
 # nangate45 / FreePDK45: uses manually structured PDK under MANUAL_PDK_ROOT
 librelane-nangate45:

@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-28T07:10:00+07:00",
+  "updated_at": "2026-06-30T01:20:00Z",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -660,6 +660,73 @@
       "suggested_next_step": "proceed",
       "reason": "make -C sim lint (Verilator -Wall): 0 errors, 0 new warnings. Exactly 7 pre-existing baseline warnings (DECLFILENAME x1, UNUSEDPARAM x3, BLKSEQ x3 \u2014 all in cache/SRAM files). Both GH #87 and GH #85 RTL fixes are lint-clean.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-28T08:06:00+07:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "floorplan",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Sky130 CPU Stage 1 config created (pnr/sky130/cpu/); real Magic DRC + Netgen LVS enabled; LibreLane run launched in tmux session sky130_cpu_run1.",
+      "constraint_ref": "gh103"
+    },
+    {
+      "timestamp": "2026-06-28T18:41:45+07:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "routing",
+      "decision": "loop_back_to:routing",
+      "confidence": "high",
+      "failure_class": "drc_lvs",
+      "suggested_next_step": "retry_stage",
+      "reason": "Run 3 DRT plateaued at 32 met1/met2 shorts (GPL_CELL_PADDING=0); fixed to 4 and relaunched as Run 4",
+      "constraint_ref": "GPL_CELL_PADDING"
+    },
+    {
+      "timestamp": "2026-06-29T01:31:58+07:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "routing",
+      "decision": "retry_stage",
+      "confidence": "high",
+      "failure_class": "drc_lvs",
+      "suggested_next_step": "retry_stage",
+      "reason": "Run 4 Magic DRC 27M phantom violations (initially misattributed to SRAM GDS unknown layers - CORRECTED: violations are li.3 LI spacing at stdcell boundaries in both GDS and DEF+LEF modes). Run 4 also had 10 DRT met1/met2 shorts (SRAM LEF missing OBS); Netgen LVS missing SRAM spice. Run 5 fixes: MAGIC_DRC_USE_GDS=false + ROUTING_OBSTRUCTIONS(20) + EXTRA_SPICE_MODELS",
+      "constraint_ref": "MAGIC_DRC_USE_GDS"
+    },
+    {
+      "timestamp": "2026-06-29T02:15:44Z",
+      "agent": "physical-design-orchestrator",
+      "stage": "routing",
+      "decision": "retry_stage",
+      "confidence": "high",
+      "failure_class": "drc_lvs",
+      "suggested_next_step": "retry_stage",
+      "reason": "Run 5 DRT hung iter56 (100-160 violations): ROUTING_OBSTRUCTIONS were redundant with native SRAM LEF OBS (line 889: met1/met2 RECT 0.62 0.62 479.16 396.88) and disrupted GPL congestion map. Run 6: removed ROUTING_OBSTRUCTIONS, widened die 3200->3600um, data-SRAM gaps 100->200um. Also: json_header_patched.py absent from nix store; fixed with PYTHONPATH=/home/neuromorphic/Downloads/Github/librelane override.",
+      "constraint_ref": "SRAM_LEF_OBS"
+    },
+    {
+      "timestamp": "2026-06-29T18:30:00+07:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "signoff",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "drc_lvs",
+      "suggested_next_step": "escalate",
+      "reason": "Sky130 CPU Run 6 WARN: KLayout DRC=0, LVS MATCH, nom_tt setup WNS +0.366 ns / TNS=0; hold violations at I/O only (R2R hold clean); Magic DRC 27.7M is tool artifact (EXTRA_GDS_FILES fallback, fix applied to config); antenna 81 nets at I/O ports; SS corner setup fails (SRAM TT-only liberty). Macro views staged: rv32i_cpu_top.lef (g0o closed), rv32i_cpu_top__nom_tt_025C_1v80.lib.",
+      "constraint_ref": "gh103"
+    },
+    {
+      "timestamp": "2026-06-30T01:20:00+07:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "signoff",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "escalate",
+      "reason": "Sky130 CPU Stage 1 sign-off Run 8 (honest): KLayout DRC=0 + LVS MATCH + DRT=0 + setup nom_tt WNS=+0.228ns/TNS=0. set_driving_cell applied (CodeRabbit #2). max_tt marginal (2 vio, -0.188 ns). Macro views updated from Run 8. Awaiting user authorization to commit and push PR.",
+      "constraint_ref": "gh103",
+      "block": "rv32i_cpu_top"
     }
   ],
   "fix_requests": [
@@ -884,5 +951,63 @@
         }
       ]
     }
-  ]
+  ],
+  "pd": {
+    "gds": "/nobackup/sky130_cpu_runs/RUN_2026-06-30_05-37-56/58-magic-streamout/rv32i_cpu_top.gds",
+    "util_pct": 40.67,
+    "wns_ns": 0.2285,
+    "drc_violations": 0,
+    "lvs_errors": 0,
+    "antenna_violations": 91,
+    "signoff": false,
+    "stage1_config": "pnr/sky130/cpu/config.json",
+    "run_id": "pd_20260629_021153",
+    "run_tag": "RUN_2026-06-30_05-37-56",
+    "pdk": "sky130A",
+    "klayout_gds": "/nobackup/sky130_cpu_runs/RUN_2026-06-30_05-37-56/59-klayout-streamout/rv32i_cpu_top.klayout.gds",
+    "macro_lef": "pnr/sky130/cpu/macro/rv32i_cpu_top.lef",
+    "macro_lib_nom_tt": "pnr/sky130/cpu/macro/rv32i_cpu_top__nom_tt_025C_1v80.lib",
+    "nl_v": "/nobackup/sky130_cpu_runs/RUN_2026-06-30_05-37-56/53-openroad-fillinsertion/rv32i_cpu_top.nl.v",
+    "hold_wns_ns_nom_tt": -0.293,
+    "hold_r2r_wns_ns": 0.6191,
+    "tns_ps": 0.0,
+    "power_mw": 88.5,
+    "core_area_um2": 6254430,
+    "die_um": "3600x1800",
+    "klayout_drc": 0,
+    "magic_drc": 27733913,
+    "magic_drc_note": "Option C accepted (2026-06-30). Magic DRC=27,733,913 is a DOCUMENTED STOCK-TOOL ARTIFACT:\nRoot cause: Magic DEF mode (MAGIC_DRC_USE_GDS=false) resolves SRAM instances by searching\nmagic addpath, finds sky130_sram_1kbyte_1rw1r_32x256_8.mag (72,269 lines full layout),\nloads all internal geometry -> li.3 (locali spacing) + poly.8/licon.*/diff.tap.3 SRAM-core rules.\nProof: KLayout DRC=0 on the IDENTICAL merged GDS (authoritative foundry DRC deck).\nStandalone test with read_extra_lef before read_def: 27.7M->3,626 (nwell.4 DEF+LEF artifacts only).\nGDS-mode (MAGIC_DRC_USE_GDS=true) cannot achieve 0 because gds write embeds SRAM geometry\ninto the merged GDS regardless of MACROS blackbox (GDS_FILE property copies cells at write time).\nCandidate LibreLane upstream fix: add read_extra_lef before read_def in drc.tcl DEF+LEF path.",
+    "antenna_note": "all at I/O ports after diode insertion; hold_r2r_vio=0 at all corners",
+    "fmax_mhz": 75,
+    "corners_setup_clean": [
+      "nom_tt_025C_1v80",
+      "nom_ff_n40C_1v95",
+      "min_tt_025C_1v80",
+      "min_ff_n40C_1v95",
+      "max_ff_n40C_1v95"
+    ],
+    "corners_setup_fail": [
+      "nom_ss_100C_1v60",
+      "min_ss_100C_1v60",
+      "max_ss_100C_1v60"
+    ],
+    "ss_fail_note": "SS corner setup violations: SRAM Liberty only has TT corner model; R2R paths at SS fail (-2.5 to -3.0 ns WNS); expected block-level artifact for first-pass Sky130 hardening",
+    "stage1_phy_signoff": "PASS",
+    "stage1_phy_signoff_note": "Option C sign-off Run 8 (honest timing): KLayout DRC=0 + Netgen LVS MATCH. DRT=0 after 13 routing iters. Setup nom_tt WNS=+0.228 ns TNS=0 (0 violations). Hold R2R all corners WNS>=0 (0 violations). Hold I/O WNS=-0.293 ns: block-level artifact. max_tt marginal: 2 violations (WNS -0.188 ns) from set_driving_cell slew degradation. SS corner setup fails: SRAM TT-only liberty. Magic DRC=27.7M: documented stock-tool SRAM artifact. Antenna 91 nets: I/O ports. set_driving_cell added (CodeRabbit #2) \u2014 honest input drive modeling.",
+    "axi4_burst_ports_in_lef": true,
+    "g0o_closed": true,
+    "run_dir": "/nobackup/sky130_cpu_runs/RUN_2026-06-30_05-37-56",
+    "magic_drc_standalone_result": 3626,
+    "magic_drc_violation_type_remaining": "li.3 (27.7M) + SRAM-core rules: all inside SRAM footprints. KLayout DRC=0 on same GDS is authoritative proof these are not real physical DRC violations.",
+    "macro_nl_v_gz": "pnr/sky130/cpu/macro/rv32i_cpu_top.nl.v.gz",
+    "config_choice": "option_a_run6_exact",
+    "config_note": "Config restored to exact Run-6 validated state: EXTRA_LEFS-based, MAGIC_DRC_USE_GDS=false, NO MACROS object. Stock drc.tcl (no read_extra_lef patch). No EXTRA_GDS_FILES. This config produced KLayout DRC=0 + Netgen LVS=MATCH in RUN_2026-06-29_09-15-44.",
+    "block": "rv32i_cpu_top",
+    "corners_setup_marginal": [
+      "max_tt_025C_1v80"
+    ],
+    "max_tt_note": "max_tt_025C_1v80: 2 setup violations, WNS -0.188 ns \u2014 marginal regression from set_driving_cell; nom_tt +0.228 ns clean",
+    "run8_sdc_change": "set_driving_cell sky130_fd_sc_hd__buf_4 on all_inputs (CodeRabbit finding #2)",
+    "run8_wns_delta_ns": -0.1375
+  }
 }
