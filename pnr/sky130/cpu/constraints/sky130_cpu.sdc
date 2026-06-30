@@ -194,6 +194,10 @@ group_path -name PIPELINE -from [get_clocks clk_i] -to [get_clocks clk_i]
 #---------------------------------------------
 # Load and Drive Constraints
 #---------------------------------------------
+# Input drive: sky130_fd_sc_hd__buf_4 models a typical upstream driver strength.
+# Without this, OpenROAD STA computes zero input slew which over-optimises
+# hold margins and under-estimates input-path delay on setup.
+set_driving_cell -lib_cell sky130_fd_sc_hd__buf_4 -pin X [all_inputs]
 set_load 0.05 [all_outputs]
 set_max_area 0
 

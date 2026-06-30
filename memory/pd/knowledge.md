@@ -1030,24 +1030,36 @@ so the local librelane source takes precedence over the nix store.
 **Symptom**: STA-0366 on `debug_pc_src_o[*]` — port is 1-bit scalar, not an array.
 **Fix**: Use `get_ports debug_pc_src_o` (no index) instead of `{debug_pc_src_o[*]}`.
 
-### Sky130A CPU Run 6 — Final PPA (2026-06-29)
+### Sky130A CPU Run 8 — Authoritative PPA (2026-06-30, honest timing with set_driving_cell)
 
-- Run tag: `RUN_2026-06-29_09-15-44` at `/nobackup/sky130_cpu_runs/`
+Run 8 is the authoritative sign-off run. Run 6 (+0.366 ns) was optimistic — no input drive
+modelling. Run 8 adds `set_driving_cell sky130_fd_sc_hd__buf_4` (CodeRabbit #2).
+
+- Run tag: `RUN_2026-06-30_05-37-56` at `/nobackup/sky130_cpu_runs/`
 - CLOCK_PERIOD: 13.333 ns → fmax: 75 MHz
-- Setup WNS: +0.366 ns (nom_tt) / TNS: 0 — PASS
-- Hold R2R WNS: +0.647 ns — PASS at all corners
-- Hold I/O WNS: -0.102 ns (nom_tt) — block-level artifact (SoC SDC will add false paths)
+- Setup WNS: +0.2285 ns (nom_tt) / TNS: 0 — PASS  [Run 6 was +0.366 ns without input drive]
+- Hold R2R WNS: +0.6191 ns — PASS at all corners (0 R2R violations)
+- Hold I/O WNS: -0.2930 ns (nom_tt, 87 paths) — block-level artifact (same class as Run 6 -0.102)
+- max_tt corner: 2 setup violations, WNS -0.188 ns — marginal; nom/FF corners all clean
 - KLayout DRC: 0 — PASS
 - Netgen LVS: MATCH (0 errors) — PASS
-- Magic DRC (Run 6, original): 27,733,913 — SRAM full .mag loaded (confirmed root cause)
-- Magic DRC (standalone fix test, 2026-06-29): 3,626 — read_extra_lef fix applied; SRAM li.3
-  violations GONE; remaining = 906 nwell.4 DEF+LEF abstract-view artifacts (full-die uniform)
-- Antenna: 81 nets (all at I/O ports; 55386 diodes inserted) — block-level artifact
-- Power: 88.2 mW total (nom_tt, 75 MHz)
-- Die: 3600 × 1800 µm; Core util: 40.6%
+- Magic DRC (Run 8): 27,733,913 — SRAM full .mag loaded (same root cause as Run 6)
+- Magic DRC (standalone fix test, 2026-06-29): 3,626 total coord-pair entries — read_extra_lef fix
+  applied; SRAM li.3 violations GONE; remaining = 3,626 nwell.4 DEF+LEF abstract-view artifacts
+  (906 distinct nwell.4 rule instances × ~4 coord pairs each ≈ 3,626; full-die uniform)
+- Antenna: 91 nets (I/O ports) — block-level artifact
+- Power: 88.5 mW total (nom_tt, 75 MHz)
+- Die: 3600 × 1800 µm; Core util: 40.67%
 - AXI4 burst ports in LEF: arlen[7:0], arsize[2:0], arburst[1:0], awlen[7:0], awsize[2:0],
-  awburst[1:0] — bead g0o CLOSED
+  awburst[1:0] — bead g0o CLOSED (confirmed in Run 8 LEF)
 - Macro views: `pnr/sky130/cpu/macro/rv32i_cpu_top.lef` + `rv32i_cpu_top__nom_tt_025C_1v80.lib`
+  (regenerated from Run 8)
+
+### Sky130A CPU Run 6 — Baseline PPA (2026-06-29, superseded by Run 8)
+
+- Run tag: `RUN_2026-06-29_09-15-44`
+- Setup WNS: +0.366 ns (nom_tt) — OPTIMISTIC (no set_driving_cell; input slew = 0)
+- All other metrics similar to Run 8; superseded by Run 8 for sign-off purposes
 
 ### Sky130A Magic DRC — SRAM Full Layout Loading (CONFIRMED 2026-06-29)
 
@@ -1093,9 +1105,9 @@ Both fixes applied for belt-and-suspenders: `EXTRA_LEFS` → `read_extra_lef`, `
 
 **Result after fix** (standalone test on Run 6 DEF, 2026-06-29):
 - Before: 27,733,913 (27.7M li.3 from SRAM internals)
-- After: 3,626 (906 `nwell.4` DEF+LEF abstract-view artifacts only)
+- After: 3,626 total coord-pair entries (906 distinct `nwell.4` rule instances × ~4 coord pairs each)
 
-**Remaining 3,626 = nwell.4 DEF+LEF artifact**:
+**Remaining 3,626 coord pairs = nwell.4 DEF+LEF artifact** (906 distinct instances):
 Rule: "All nwells must contain metal-connected N+ taps". In DEF+LEF mode, abstract LEF views
 don't expose the actual N-well geometry inside stdcells. Magic can't verify tap-to-nwell
 connectivity from abstracts → false `nwell.4` fires. Distribution: full die (X: 20–3460µm,

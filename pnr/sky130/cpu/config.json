@@ -119,16 +119,16 @@
     "MAGIC_DRC_USE_GDS": false,
 
     "EXTRA_GDS_FILES": [
-        "/home/neuromorphic/.volare/sky130A/libs.ref/sky130_sram_macros/gds/sky130_sram_1kbyte_1rw1r_32x256_8.gds"
+        "pdk_dir::libs.ref/sky130_sram_macros/gds/sky130_sram_1kbyte_1rw1r_32x256_8.gds"
     ],
     "EXTRA_LEFS": [
-        "/home/neuromorphic/.volare/sky130A/libs.ref/sky130_sram_macros/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef"
+        "pdk_dir::libs.ref/sky130_sram_macros/lef/sky130_sram_1kbyte_1rw1r_32x256_8.lef"
     ],
     "EXTRA_LIBS": [
-        "/home/neuromorphic/.volare/sky130A/libs.ref/sky130_sram_macros/lib/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib"
+        "pdk_dir::libs.ref/sky130_sram_macros/lib/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib"
     ],
     "EXTRA_SPICE_MODELS": [
-        "/home/neuromorphic/.volare/sky130A/libs.ref/sky130_sram_macros/spice/sky130_sram_1kbyte_1rw1r_32x256_8.spice"
+        "pdk_dir::libs.ref/sky130_sram_macros/spice/sky130_sram_1kbyte_1rw1r_32x256_8.spice"
     ],
 
 
