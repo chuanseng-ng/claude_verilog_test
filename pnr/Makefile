@@ -792,12 +792,17 @@ SOC_SV_FILES := \
 	$(LIBRELANE_ASAP7_SOC_DIR)/gpu_top_stub.sv \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_clkgen_stub.sv \
 	$(LIBRELANE_ASAP7_SOC_DIR)/pll_clkgen_pnr.sv \
-	$(PROJECT_ROOT)/rtl/soc/pll/pll_axil_regs.sv \
+	$(PROJECT_ROOT)/rtl/soc/pll/pll_apb_regs.sv \
+	$(PROJECT_ROOT)/rtl/soc/pll/pll_subsystem.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
+	$(PROJECT_ROOT)/rtl/soc/apb4_register_bank.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_interconnect.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_to_axilite.sv \
 	$(PROJECT_ROOT)/rtl/soc/axilite_to_axi4.sv \
+	$(PROJECT_ROOT)/rtl/soc/axil_to_apb.sv \
+	$(PROJECT_ROOT)/rtl/soc/apb_interconnect.sv \
+	$(PROJECT_ROOT)/rtl/soc/soc_bus.sv \
 	$(PROJECT_ROOT)/rtl/soc/sram_controller.sv \
 	$(PROJECT_ROOT)/rtl/soc/boot_rom.sv \
 	$(PROJECT_ROOT)/rtl/periph/dma_engine.sv \
