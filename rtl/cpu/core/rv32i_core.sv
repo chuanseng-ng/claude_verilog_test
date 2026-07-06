@@ -265,7 +265,8 @@ module rv32i_core #(
 
     // Placed after the EX1* register declarations it reads (declare-before-use,
     // IEEE 1800 §6.21 — strict elaborators like slang reject a forward reference).
-    assign dbg_halted = dbg_halted_wb && !id_ex_reg.valid && !ex1a_ex1b_reg_q.valid && !ex1c_ex1b_reg_q.valid && !ex1b_ex2_reg_q.valid && !ex_mem_reg.valid;
+    assign dbg_halted = dbg_halted_wb && !id_ex_reg.valid && !ex1a_ex1b_reg_q.valid &&
+                        !ex1c_ex1b_reg_q.valid && !ex1b_ex2_reg_q.valid && !ex_mem_reg.valid;
 
     always_ff @(posedge clk) begin
         if (!rst_n || flush_ex1a_ex1b)
