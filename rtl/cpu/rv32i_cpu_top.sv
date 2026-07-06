@@ -252,6 +252,11 @@ module rv32i_cpu_top #(
                          (apb_paddr_i >= 12'h200) && (apb_paddr_i <= 12'h214) &&
                          (apb_paddr_i[1:0] == 2'b00);
 
+  // DBG_INSTR latch: holds the last retired instruction (commit or trap) so
+  // the register reads non-zero when the CPU is halted and the pipeline is empty.
+  // Declared ahead of the APB read mux that reads it (declare-before-use).
+  logic [31:0] last_commit_insn_q;
+
   // APB read logic
   always_comb begin
     apb_prdata_o = 32'h0;
@@ -318,9 +323,6 @@ module rv32i_cpu_top #(
 
   // Edge detection for dbg_halted (to auto-clear command bits)
   logic dbg_halted_prev;
-  // DBG_INSTR latch: holds the last retired instruction (commit or trap) so
-  // the register reads non-zero when the CPU is halted and the pipeline is empty.
-  logic [31:0] last_commit_insn_q;
 
   always_ff @(posedge clk_i) begin
     if (!rst_n_i)

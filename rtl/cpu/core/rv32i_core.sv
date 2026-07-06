@@ -244,7 +244,6 @@ module rv32i_core #(
     logic        dbg_ebreak_from_ex;
 
     assign dbg_halt_combined = dbg_halt_req || dbg_ebreak_from_ex;
-    assign dbg_halted = dbg_halted_wb && !id_ex_reg.valid && !ex1a_ex1b_reg_q.valid && !ex1c_ex1b_reg_q.valid && !ex1b_ex2_reg_q.valid && !ex_mem_reg.valid;
 
     logic [31:0] pc_if_out;
 
@@ -263,6 +262,10 @@ module rv32i_core #(
     ex1a_ex1b_t ex1c_ex1b_reg_q;   // registered EX1c output — fed into u_ex1b
     ex1_ex2_reg_t ex1b_comb;       // combinational output from u_ex1b (EX1b)
     ex1_ex2_reg_t ex1b_ex2_reg_q;  // registered EX1b output — fed into u_ex2 (Run-23)
+
+    // Placed after the EX1* register declarations it reads (declare-before-use,
+    // IEEE 1800 §6.21 — strict elaborators like slang reject a forward reference).
+    assign dbg_halted = dbg_halted_wb && !id_ex_reg.valid && !ex1a_ex1b_reg_q.valid && !ex1c_ex1b_reg_q.valid && !ex1b_ex2_reg_q.valid && !ex_mem_reg.valid;
 
     always_ff @(posedge clk) begin
         if (!rst_n || flush_ex1a_ex1b)
