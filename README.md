@@ -81,6 +81,8 @@ Core specifications in `docs/`:
 | `design/MEMORY_MAP.md` | Address space and register map |
 | `design/REFERENCE_MODEL_SPEC.md` | Python reference model API |
 | `verification/VERIFICATION_PLAN.md` | Verification strategy by phase |
+| `development/CODING_GUIDELINES.md` | Coding practices & style guidelines (RTL + Python + shell) |
+| `development/CODING_COMPLIANCE_AUDIT.md` | Guidelines compliance audit and remediation backlog |
 
 README detail set in `docs/readme/`:
 

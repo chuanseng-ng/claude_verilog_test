@@ -101,21 +101,5 @@ exclude_lines = [
     "if __name__ == .__main__.:",
 ]
 
-[tool.pylint.main]
-ignore = ["legacy"]
-recursive = true
-
-[tool.pylint."messages control"]
-disable = [
-    "C0301",  # line-too-long (handled by ruff)
-    "C0302",  # too-many-lines (acceptable for test files)
-    "C0413",  # wrong-import-position (intentional for path setup)
-    "C0411",  # wrong-import-order (handled by ruff)
-    "W0107",  # unnecessary-pass (needed for empty template methods)
-    "W0212",  # protected-access (acceptable in test code)
-    "W0613",  # unused-argument (needed for API compatibility)
-    "W0718",  # broad-exception-caught (intentional for test robustness)
-    "R0911",  # too-many-return-statements
-    "R1705",  # no-else-return (stylistic preference)
-    "R1714",  # consider-using-in (stylistic preference)
-]
+# Pylint config lives in .pylintrc (single source of truth — bare `pylint`
+# invocations in CI auto-load it). See docs/development/CODING_GUIDELINES.md.
