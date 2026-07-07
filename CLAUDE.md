@@ -263,7 +263,11 @@ See each phase in `docs/verification/VERIFICATION_PLAN.md` for detailed AI/Human
 
 Use the format: `[Category] Brief description`
 
-Categories: `[Fix]`, `[Feature]`, `[Code]` (refactoring), `[Env]` (build), `[Doc]`, `[Test]`, `[Spec]`.
+Categories: `[Fix]`, `[Feature]`, `[Code]` (refactoring), `[Env]` (build), `[Doc]`, `[Test]`, `[Spec]`, `[RTL]` (RTL design), `[PD]` (physical design), `[Analog]` (mixed-signal), `[Chore]` (maintenance).
+
+## Coding Guidelines
+
+All new/modified code follows [`docs/development/CODING_GUIDELINES.md`](docs/development/CODING_GUIDELINES.md) (SystemVerilog per lowRISC-adapted house style, Python per ruff/PEP 8). Compliance backlog: [`docs/development/CODING_COMPLIANCE_AUDIT.md`](docs/development/CODING_COMPLIANCE_AUDIT.md). Existing verified RTL is grandfathered — no style-only mass edits.
 
 ## Questions?
 

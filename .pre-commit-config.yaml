@@ -62,7 +62,7 @@ repos:
         types: [python]
         files: ^tb/(models|tests)/
         args:
-          - --rcfile=pyproject.toml
+          - --rcfile=.pylintrc
           - --fail-under=9.5
 
       # Pytest - Run tests on push only (not on every commit)

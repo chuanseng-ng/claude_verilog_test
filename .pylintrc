@@ -5,6 +5,12 @@ fail-under=9.5
 # Use multiple processes to speed up Pylint.
 jobs=0
 
+# Skip frozen legacy test code (mirrors ruff/mypy excludes).
+ignore=legacy
+
+# Discover and analyse Python files in subdirectories.
+recursive=yes
+
 [MESSAGES CONTROL]
 # Disable specific warnings that are acceptable for this project
 disable=
@@ -20,7 +26,26 @@ disable=
     # Duplicate code in immediate value decoding (minor, could extract later)
     duplicate-code,
     # Attributes defined in reset() method is an acceptable pattern
-    attribute-defined-outside-init
+    attribute-defined-outside-init,
+    # line-too-long / import order handled by ruff
+    line-too-long,
+    wrong-import-order,
+    # too-many-lines acceptable for test files
+    too-many-lines,
+    # wrong-import-position intentional for cocotb sys.path setup
+    wrong-import-position,
+    # unnecessary-pass needed for empty template methods
+    unnecessary-pass,
+    # protected-access acceptable in test code
+    protected-access,
+    # unused-argument needed for API compatibility
+    unused-argument,
+    # broad-exception-caught intentional for test robustness
+    broad-exception-caught,
+    # stylistic preferences
+    too-many-return-statements,
+    no-else-return,
+    consider-using-in
 
 [FORMAT]
 # Maximum number of characters on a single line.

@@ -1,0 +1,33 @@
+# EditorConfig — https://editorconfig.org
+# Single source of truth for whitespace/EOL conventions
+# (see docs/development/CODING_GUIDELINES.md).
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# SystemVerilog / Verilog: 4-space house style (.rules.verible_lint)
+[*.{sv,svh,v,vh}]
+indent_size = 4
+
+# Python: ruff format, 4-space (pyproject.toml)
+[*.py]
+indent_size = 4
+
+# Make requires tabs in recipes
+[{Makefile,makefile,*.mk}]
+indent_style = tab
+
+# YAML conventionally 2-space
+[*.{yml,yaml}]
+indent_size = 2
+
+# Markdown: trailing double-space is a hard line break
+[*.md]
+trim_trailing_whitespace = false
