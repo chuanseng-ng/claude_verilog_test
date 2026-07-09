@@ -59,8 +59,9 @@ Reference: lowRISC Verilog Style Guide, adapted to the house style codified in
 ### 1.3 Language constructs
 
 - **`logic` only.** No `reg`; no `wire` for new declarations (continuous assigns drive
-  `logic` fine). `` `default_nettype none `` at the top of each file (restore with
-  `` `default_nettype wire `` at the end) to catch implicit nets.
+  `logic` fine). **Do not use `` `default_nettype `` directives** — they conflict with Spyglass
+  (`IND` "identifier not declared yet" on the port list). Implicit-net detection is covered by
+  Verilator (`IMPLICIT`/`UNDRIVEN`) and Verible instead. See §1.8.
 - **`always_ff` / `always_comb` only.** Never plain `always @(...)`. Sequential blocks
   use non-blocking (`<=`); combinational blocks use blocking (`=`). Never mix within a block.
 - **Case statements**: `unique case` with a `default` arm. `casez` only for genuine
@@ -121,6 +122,38 @@ make verible     # Verible style lint + format check
   `lint_off`/`lint_on` pairs through the body; every waiver carries a one-line reason.
 - CI runs Verible via `.github/workflows/rtl-checks.yml` (currently non-blocking during
   adoption; the goal is a hard gate once the open findings are burned down — audit P1-4).
+
+### 1.8 Spyglass lint discipline
+
+Synopsys Spyglass is run on the SoC design as an additional lint gate (it is not installed in the
+default dev environment — see the remediation plan for how to run it). Write new RTL to these rules so
+it passes cleanly:
+
+- **No `` `default_nettype `` directives** (§1.3) — they trigger Spyglass `IND`.
+- **Non-blocking (`<=`) exclusively in `always_ff`** — including reset for-loops. Blocking (`=`) is
+  allowed only in `always_comb` and for local automatic temporaries declared and consumed within the
+  same iteration. Never mix `=` and `<=` in one sequential block (`SM_BNP` / `W336` / `NonBlockAssign`).
+- **No empty `begin/end` blocks or empty case arms** — use a null statement `;` (`W192`).
+- **Size index / loop-temporary variables** to the array they index — no bare 32-bit `int` used as a
+  small-array index (`LINT_IMPROPER_RANGE_INDEX`).
+- **No bare `initial` / `$fatal` / `$readmemh` / `$display`** in synthesizable RTL — guard with
+  `` `ifndef SYNTHESIS `` so simulation keeps them but lint/synth skip them
+  (`SM_IGN_INITIAL` / `W430` / `W213` / `LINT_SV_STRING_USED_IN_DESIGN`).
+- **Match signedness and width in expressions** — use explicit `signed'()` / `unsigned'()` casts and
+  width-matched operands (`SignedUnsignedExpr-ML`).
+
+**Standing waivers** (intentional design, captured in `lint/spyglass/waivers.awl` with per-rule
+rationale — do not "fix" these):
+
+- `SynchReset-ML` — the CPU core/pipeline + peripherals use **synchronous reset** by design (§1.4).
+  Async conversion is a separate P3 audit effort, not a lint fix.
+- `STARC05-2.3.6.1` / `UnInitializedReset-ML` — no-reset memory/stack arrays (e.g. GPU `div_stack`),
+  local blocking temporaries, and combinational defaults are not resettable flip-flops.
+- `W392` — cross-module reset-name collisions (`core_rst_n`) are false positives, not polarity bugs.
+- `STARC05-2.10.3.1` — elaboration-time `string` parameter compares (e.g. `PLL_IMPL == "RNM"`).
+- `UndrivenInTerm-ML` — behavioral `$readmemh` ROM contents (e.g. `boot_rom.mem`).
+
+Full per-file remediation status: [`SPYGLASS_LINT_REMEDIATION_PLAN.md`](SPYGLASS_LINT_REMEDIATION_PLAN.md).
 
 ---
 
@@ -210,6 +243,7 @@ Categories: `[Fix]`, `[Feature]`, `[Code]` (refactoring), `[Env]` (build/tooling
 | Editor | `.editorconfig` | whitespace/EOL, all files | advisory |
 | pre-commit | ruff, mypy, pylint, pytest-smoke, whitespace hooks | `tb/models`, `tb/tests`, `tb/cpu_uvm`, `sim` | blocking locally |
 | `sim/Makefile` | Verilator lint, Verible lint+format, CDC snitch | `rtl/**` | manual, run before commit |
+| Spyglass | Synopsys Spyglass lint (+ `lint/spyglass/waivers.awl`) | `rtl/**` (SoC) | manual (external tool) — see §1.8 |
 | CI `qa-checks.yml` | ruff format+lint, mypy, pylint, pytest+coverage | `tb/models`, `tb/tests` | **blocking** |
 | CI `rtl-checks.yml` | Verible lint (tree) + format (changed files) | `rtl/**` | non-blocking (adoption) |
 | CI `tests.yml` / `random_tests.yml` | pytest / cocotb regression | functional | blocking |
