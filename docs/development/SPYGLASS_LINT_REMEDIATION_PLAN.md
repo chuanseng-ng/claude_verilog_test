@@ -213,6 +213,9 @@ script and from `CODING_GUIDELINES.md`.
 
 ## 4. Coding-guideline updates (`docs/development/CODING_GUIDELINES.md`)
 
+> **STATUS: the guideline edits below are already APPLIED** to `CODING_GUIDELINES.md` (§1.3, new
+> §1.8, §6 table). The RTL fixes (§2) and the waiver file (§3) remain for a subsequent session.
+
 1. **§1.3 Language constructs** — **reverse** the current mandate. Replace:
    > `` `default_nettype none `` at the top of each file (restore with `` `default_nettype wire ``…)
    with guidance to **not** use `default_nettype` directives (Spyglass `IND` conflict); rely on
