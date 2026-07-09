@@ -10,9 +10,8 @@ can execute the cleanup without re-discovering scope.
 
 ## 0. Ground rules & context
 
-- Spyglass was run from an **external mirror** (`/proj/csng03085/claude_verilog_rtl/...`). It is **not
-  installed in this repo/environment** — remediation must be pattern-based and re-verified with the
-  repo's own gates: `cd sim && make lint && make lint_soc && make verible`.
+- Spyglass is **not installed in this repo/environment** — remediation must be pattern-based and
+  re-verified with the repo's own gates: `cd sim && make lint && make lint_soc && make verible`.
 - The screenshots that seeded this plan show only a **subset per category**. **Every RTL file under
   `rtl/` must be swept for each rule** — do not fix only the files named below.
 - **Two decisions are locked** (confirmed with the user):
@@ -228,7 +227,7 @@ script and from `CODING_GUIDELINES.md`.
    - Match signedness/width in expressions; use explicit `signed'()`/`unsigned'()` casts.
    - List the standing **waivers** (synchronous CPU reset, no-reset memories, cross-module reset
      naming, string-param compares) and point to `lint/spyglass/waivers.awl`.
-3. Update the **enforcement summary** table (§6) to mention Spyglass (external) + the waiver file.
+3. Update the **enforcement summary** table (§6) to mention Spyglass + the waiver file.
 
 ---
 
@@ -256,4 +255,4 @@ script and from `CODING_GUIDELINES.md`.
   `` `ifndef `` guards actually suppress items C/D in Spyglass, not just in the synth tool.
 - Confirm whether `rtl/soc/pll/pll_rnm.sv` (RNM behavioral model) is in the Spyglass filelist.
 - Confirm the preferred waiver-file location/format (`lint/spyglass/waivers.awl` vs `pnr/spyglass/`)
-  and whether the Spyglass run script lives outside this repo (external `/proj/...` mirror).
+  and where the Spyglass run script lives.
