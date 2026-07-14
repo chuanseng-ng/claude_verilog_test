@@ -73,11 +73,11 @@ subset* — none ingests arbitrary modern C++.
 
 ## Backlog item — Empirical confirmation pilot
 
-> **Intended tracker:** beads (`bd`). Logged here as a doc because the remote beads DB is
-> at schema v32 while the available `bd` is v53; writing a native issue would require
-> migrating the shared schema (forces every clone to re-bootstrap), which is a team-wide
-> coordination decision left to the maintainer. **Action for maintainer:** create a `bd`
-> issue mirroring the block below, then this section can be trimmed.
+> **Tracked as GitHub issue [#119](https://github.com/chuanseng-ng/claude_verilog_test/issues/119).**
+> Filed on GitHub rather than beads (`bd`) because the remote beads DB is at schema v32 while
+> the available `bd` is v53; writing a native `bd` issue would require migrating the shared
+> schema (forces every clone to re-bootstrap), a team-wide coordination decision left to the
+> maintainer. Convert to a `bd` issue later if desired.
 
 **Title:** Empirically confirm HLS-vs-hand-RTL PPA gap on one datapath + one control block
 **Type:** task · **Priority:** low (validation, not blocking) · **Phase:** 6+ exploration
