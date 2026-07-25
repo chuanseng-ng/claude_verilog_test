@@ -24,15 +24,24 @@ librelane/runs/
 *.v.gz
 *.nl.v
 *.gds
+*.spice
+*.sp
 *.oas
 
-# Macro hard-views are committed; raw .nl.v stays ignored
+# Macro hard-views are committed; raw .nl.v / .gds / .sp stay ignored
 !asap7/cpu/macro/*.lef
 !asap7/gpu/macro/*.lef
 !asap7/cpu/macro/*.nl.v.gz
 !asap7/gpu/macro/*.nl.v.gz
 !sky130/cpu/macro/*.lef
 !sky130/cpu/macro/*.nl.v.gz
+
+# GH #104 Sky130 SoC Stage-2: OpenRAM sky130_sram_4kbyte_1rw1r_32x1024_8
+# hard macro -- lef/lib/behavioural-v are committed-class views; the
+# abandoned composite sram_controller.* macro (GDS/spice/lib/nl.v.gz from
+# the failed custom-hardened approach) stays fully ignored/untracked.
+!sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8.lef
+!sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8.v
 
 # Keep template/example files
 !*.template

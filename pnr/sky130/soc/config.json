@@ -1,0 +1,103 @@
+{
+    "meta": {
+        "version": 2,
+        "flow": "Classic"
+    },
+
+    "DESIGN_NAME": "soc_top",
+
+    "PDK":              "sky130A",
+    "STD_CELL_LIBRARY": "sky130_fd_sc_hd",
+
+    "CLOCK_PORT":   "clk_i",
+    "CLOCK_NET":    "clk_i",
+    "CLOCK_PERIOD": 15.385,
+
+    "FP_SIZING": "absolute",
+    "DIE_AREA":  [0, 0, 6700, 3100],
+    "CORE_AREA": [20, 20, 6680, 3080],
+
+    "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
+
+    "FP_PDN_MULTILAYER": true,
+    "FP_PDN_VWIDTH":      3.1,
+    "FP_PDN_HWIDTH":      3.1,
+    "FP_PDN_VPITCH":      200,
+    "FP_PDN_HPITCH":      100,
+    "FP_PDN_VOFFSET":     10,
+    "FP_PDN_HOFFSET":     10,
+    "FP_PDN_RAIL_WIDTH":  0.48,
+    "FP_PDN_CFG": "dir::pdn.tcl",
+
+    "PDN_MACRO_CONNECTIONS": [
+        ".*u_cpu.*  VPWR VGND VPWR VGND",
+        ".*u_sram_macro.*  VPWR VGND vccd1 vssd1"
+    ],
+
+    "SYNTH_STRATEGY":       "DELAY 0",
+    "SYNTH_HIERARCHY_MODE": "flatten",
+    "USE_SYNLIG":           false,
+
+    "VERILOG_FILES": [
+        "dir::soc_top_sv2v.v"
+    ],
+
+    "VERILOG_DEFINES": ["__pnr__", "SRAM_SKY130"],
+
+    "MACROS": {
+        "rv32i_cpu_top": {
+            "gds":   ["dir::../cpu/macro/rv32i_cpu_top.gds"],
+            "lef":   ["dir::../cpu/macro/rv32i_cpu_top.lef"],
+            "lib":   {
+                "*": ["dir::../cpu/macro/rv32i_cpu_top__nom_tt_025C_1v80.lib"]
+            },
+            "spice": ["dir::../cpu/macro/rv32i_cpu_top.spice"]
+        },
+        "sky130_sram_4kbyte_1rw1r_32x1024_8": {
+            "gds":   ["dir::macro/sky130_sram_4kbyte_1rw1r_32x1024_8.gds"],
+            "lef":   ["dir::macro/sky130_sram_4kbyte_1rw1r_32x1024_8.lef"],
+            "lib":   {
+                "*": ["dir::macro/sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.lib"]
+            },
+            "spice": ["dir::macro/sky130_sram_4kbyte_1rw1r_32x1024_8.sp"]
+        }
+    },
+
+    "RUN_MAGIC_WRITE_LEF": false,
+
+    "GPL_CELL_PADDING": 4,
+    "DPL_CELL_PADDING": 4,
+
+    "PL_TARGET_DENSITY_PCT": 45,
+    "PL_TIME_DRIVEN":        false,
+    "PL_ROUTABILITY_DRIVEN": true,
+
+    "GRT_MACRO_EXTENSION": 0,
+
+    "DRT_THREADS": 8,
+
+    "GRT_ALLOW_CONGESTION": false,
+    "GRT_OVERFLOW_ITERS":   50,
+
+    "CTS_CLK_BUFFERS": [
+        "sky130_fd_sc_hd__clkbuf_4",
+        "sky130_fd_sc_hd__clkbuf_8",
+        "sky130_fd_sc_hd__clkbuf_16"
+    ],
+    "CTS_ROOT_BUFFER": "sky130_fd_sc_hd__clkbuf_16",
+
+    "RUN_POST_GPL_DESIGN_REPAIR":    true,
+    "RUN_POST_GRT_RESIZER_TIMING":   true,
+    "RUN_POST_GRT_DESIGN_REPAIR":    false,
+
+    "PNR_SDC_FILE":      "dir::constraints/sky130_soc.sdc",
+    "SIGNOFF_SDC_FILE":  "dir::constraints/sky130_soc.sdc",
+    "FALLBACK_SDC_FILE": "dir::constraints/sky130_soc.sdc",
+
+    "RUN_MAGIC_DRC":    true,
+    "RUN_KLAYOUT_DRC":  true,
+    "RUN_KLAYOUT_XOR":  false,
+    "RUN_LVS":          true,
+
+    "MAGIC_DRC_USE_GDS": false
+}

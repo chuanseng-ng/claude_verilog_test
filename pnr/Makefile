@@ -83,6 +83,7 @@ MANUAL_PDK_ROOT     ?= $(HOME)/pdk
 # LibreLane config directories
 LIBRELANE_SKY130_DIR     := librelane
 LIBRELANE_SKY130_CPU_DIR := sky130/cpu
+LIBRELANE_SKY130_SOC_DIR := sky130/soc
 LIBRELANE_NANGATE45_DIR  := freepdk45
 # shared PDK resources (stubs, lib, pdn)
 LIBRELANE_ASAP7_ROOT    := asap7
@@ -138,6 +139,8 @@ help:
 	@echo "LibreLane Targets (nix-shell, recommended):"
 	@echo "  librelane-sky130          - Run full LibreLane flow on Sky130 (pnr/librelane/) — Phase 3 baseline"
 	@echo "  librelane-sky130-cpu      - Sky130 CPU Stage 1: REAL Magic DRC + Netgen LVS (pnr/sky130/cpu/) GH#103"
+	@echo "  sky130-soc-sv2v           - Convert Sky130 SoC SV files to Verilog-2005 (sanity check, pnr/sky130/soc/)"
+	@echo "  librelane-sky130-soc      - Sky130 SoC Stage 2: CPU hard macro + flat periph, real DRC/LVS GH#104"
 	@echo "  librelane-nangate45       - Run full LibreLane flow on FreePDK45/nangate45 (pnr/freepdk45/)"
 	@echo "  librelane-asap7           - Run full LibreLane flow on ASAP7 CPU (pnr/asap7/), then prune"
 	@echo "  librelane-asap7-gpu       - Run full LibreLane flow on ASAP7 GPU (pnr/asap7/gpu/), then prune"
@@ -145,6 +148,7 @@ help:
 	@echo "  librelane-asap7-soc       - Run full LibreLane P&R for ASAP7 SoC (expect 4-8 h), then prune"
 	@echo "  librelane-sky130-results        - Show metrics from latest Sky130 LibreLane run (Phase 3)"
 	@echo "  librelane-sky130-cpu-results    - Show metrics from latest Sky130 CPU Stage 1 run (GH#103)"
+	@echo "  librelane-sky130-soc-results    - Show metrics from latest Sky130 SoC Stage 2 run (GH#104)"
 	@echo "  librelane-nangate45-results     - Show metrics from latest nangate45 LibreLane run"
 	@echo "  librelane-asap7-results         - Show metrics from latest ASAP7 CPU LibreLane run"
 	@echo "  flop-count RUN_DIR=<path>       - Flop count breakdown from any LibreLane run's synthesis"
@@ -585,6 +589,136 @@ librelane-sky130-cpu:
 
 librelane-sky130-cpu-results:
 	$(call librelane_results,$(LIBRELANE_SKY130_CPU_DIR))
+
+# NOTE: the former `librelane-sky130-sram` target (standalone hardening of
+# rtl/soc/sram_controller.sv as a composite macro) was REMOVED. That approach
+# was abandoned: its hardened macro could never be PDN-stitched at SoC level
+# (unresolvable PSM-0069, ~1001 unconnected nodes). It was replaced by a real
+# OpenRAM-compiled macro (sky130_sram_4kbyte_1rw1r_32x1024_8) — see the Stage 2
+# SoC section below. Config/artifacts archived to
+# /nobackup/abandoned_sram_composite/.
+
+###############################################################################
+# Sky130 Stage 2: SoC (CPU hard macro + flat peripherals)  GH #104
+#
+# sv2v converts all SV files to Verilog-2005 so Yosys read_verilog handles
+# packages, structs, and generate blocks without Synlig UHDM.
+# GPU is a synthesisable tie-off stub (gpu_top_tieoff.sv); CPU is blackboxed
+# (rv32i_cpu_top_stub.sv); SRAM is now ALSO a blackboxed OpenRAM hard macro
+# (sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv, via +define+SRAM_SKY130 --
+# see below); boot_rom remains behavioural (ROM-only, no DFFs).
+#
+# GH #104 SCOPE DECISION (2026-07-23, REVERSES Option C): sram_controller's
+# backing store is a real sky130_sram_4kbyte_1rw1r_32x1024_8 OpenRAM hard
+# macro again (1024 x 32b, 4 KB), compiled fresh via OpenRAM (see
+# memory/pd/run_state.md, openram_sram4k_subtask). This is NOT the old
+# custom-hardened composite sram_controller macro (whole AXI4 wrapper +
+# behavioral array hardened as one block) that hit the unresolved
+# PSM-0069 PDN wall -- that approach is abandoned. Instead, only the raw
+# OpenRAM SRAM primitive is blackboxed (u_sram_macro, instantiated inside
+# the still-synthesisable rtl/soc/sram_controller.sv control-logic RTL
+# under `ifdef SRAM_SKY130`); its LEF is a standard OpenRAM PG abstract
+# (vccd1/vssd1 on met3+met4), already proven connectable via
+# rv32i_cpu_top's own 10 internal OpenRAM SRAMs (PSM-0040 clean). This
+# macro is also ~14x smaller in area (701.64 x 673.335 um) than the
+# failed composite block (2585 x 2595 um).
+###############################################################################
+SKY130_SOC_SV_FILES := \
+	$(PROJECT_ROOT)/rtl/soc/axi_pkg.sv \
+	$(PROJECT_ROOT)/rtl/soc/soc_addr_map_pkg.sv \
+	$(PROJECT_ROOT)/rtl/soc/soc_periph_map_pkg.sv \
+	$(LIBRELANE_SKY130_SOC_DIR)/rv32i_cpu_top_stub.sv \
+	$(LIBRELANE_SKY130_SOC_DIR)/gpu_top_tieoff.sv \
+	$(PROJECT_ROOT)/rtl/soc/pll/pll_clkgen_stub.sv \
+	$(LIBRELANE_SKY130_SOC_DIR)/pll_clkgen_pnr.sv \
+	$(PROJECT_ROOT)/rtl/soc/apb4_register_bank.sv \
+	$(PROJECT_ROOT)/rtl/soc/pll/pll_apb_regs.sv \
+	$(PROJECT_ROOT)/rtl/soc/pll/pll_subsystem.sv \
+	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
+	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
+	$(PROJECT_ROOT)/rtl/soc/axi_lite_interconnect.sv \
+	$(PROJECT_ROOT)/rtl/soc/axi4_to_axilite.sv \
+	$(PROJECT_ROOT)/rtl/soc/axilite_to_axi4.sv \
+	$(PROJECT_ROOT)/rtl/soc/axil_to_apb.sv \
+	$(PROJECT_ROOT)/rtl/soc/apb_interconnect.sv \
+	$(PROJECT_ROOT)/rtl/soc/soc_bus.sv \
+	$(LIBRELANE_SKY130_SOC_DIR)/sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv \
+	$(PROJECT_ROOT)/rtl/soc/sram_controller.sv \
+	$(PROJECT_ROOT)/rtl/soc/boot_rom.sv \
+	$(PROJECT_ROOT)/rtl/periph/dma_engine.sv \
+	$(PROJECT_ROOT)/rtl/periph/interrupt_controller.sv \
+	$(PROJECT_ROOT)/rtl/periph/timer.sv \
+	$(PROJECT_ROOT)/rtl/periph/uart_controller.sv \
+	$(PROJECT_ROOT)/rtl/periph/spi_controller.sv \
+	$(PROJECT_ROOT)/rtl/soc/soc_top.sv
+
+SKY130_SOC_SV2V_OUT := $(abspath $(LIBRELANE_SKY130_SOC_DIR)/soc_top_sv2v.v)
+
+sky130-soc-sv2v:
+	@echo "=========================================="
+	@echo "Pre-processing: sv2v SV -> Verilog-2005 (Sky130 SoC)"
+	@echo "  Input: $(words $(SKY130_SOC_SV_FILES)) SV/V files"
+	@echo "  Output: $(SKY130_SOC_SV2V_OUT)"
+	@echo "  GPU: tie-off stub (synthesisable, no blackbox)"
+	@echo "  CPU: blackbox stub (hard macro)"
+	@echo "  SRAM: blackbox stub (hard macro, +define+SRAM_SKY130)"
+	@echo "=========================================="
+	@if [ ! -f "$(SV2V)" ]; then \
+		echo "ERROR: sv2v not found at $(SV2V)"; \
+		echo "Install via: nix-build '<nixpkgs>' -A haskellPackages.sv2v --no-out-link"; \
+		exit 1; fi
+	$(SV2V) --define=__pnr__ --define=SRAM_SKY130 $(SKY130_SOC_SV_FILES) -w $(SKY130_SOC_SV2V_OUT)
+	@echo "sv2v complete: $$(wc -l < $(SKY130_SOC_SV2V_OUT)) lines"
+	@echo "  Clocked always blocks: $$(grep -c 'always.*posedge\|always.*negedge' $(SKY130_SOC_SV2V_OUT))"
+	@echo "  DFF count (reg decls): $$(grep -c '^\s*reg\s' $(SKY130_SOC_SV2V_OUT))"
+	@echo "  GPU cells (should be 0): $$(grep -c 'gpu_top\b' $(SKY130_SOC_SV2V_OUT) || echo 0)"
+
+# Sky130 Stage 2: SoC P&R with real DRC + LVS.
+# Requires:  make sky130-soc-sv2v   (generates soc_top_sv2v.v)
+# Requires:  pnr/sky130/cpu/macro/rv32i_cpu_top.{lef,gds,spice,lib}  (Stage-1 outputs)
+# Outputs:   pnr/sky130/soc/runs/<RUN>/
+# Run dir:   /nobackup/sky130_soc_runs/
+librelane-sky130-soc: sky130-soc-sv2v
+	@echo "=========================================="
+	@echo "Running LibreLane flow — Sky130 SoC Stage 2 (real DRC/LVS)"
+	@echo "  Config : pnr/$(LIBRELANE_SKY130_SOC_DIR)/config.json"
+	@echo "  Tool   : $(LIBRELANE_DIR)"
+	@echo "  Runs   : /nobackup/sky130_soc_runs"
+	@echo "  Runtime: expect 4-10 h (3600x1800 um CPU macro + flat periph)"
+	@echo "=========================================="
+	@if [ ! -f "$(LIBRELANE_SKY130_SOC_DIR)/config.json" ]; then \
+		echo "ERROR: $(LIBRELANE_SKY130_SOC_DIR)/config.json not found."; exit 1; fi
+	@if [ ! -f "$(LIBRELANE_SKY130_SOC_DIR)/soc_top_sv2v.v" ]; then \
+		echo "ERROR: soc_top_sv2v.v not found — run: make sky130-soc-sv2v first"; exit 1; fi
+	@if [ ! -f "$(LIBRELANE_SKY130_SOC_DIR)/../cpu/macro/rv32i_cpu_top.lef" ]; then \
+		echo "ERROR: CPU macro LEF missing — copy Stage-1 macro views to pnr/sky130/cpu/macro/"; exit 1; fi
+	mkdir -p /nobackup/sky130_soc_runs
+	@[ -L $(LIBRELANE_SKY130_SOC_DIR)/runs ] || \
+		ln -sfn /nobackup/sky130_soc_runs $(LIBRELANE_SKY130_SOC_DIR)/runs
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"PYTHONPATH=$(LIBRELANE_DIR) \
+		 python3 -m librelane \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Checker.LintErrors \
+		 --skip Checker.YosysSynthChecks \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
+		 --skip Magic.WriteLEF \
+		 $(abspath $(LIBRELANE_SKY130_SOC_DIR))/config.json"
+
+librelane-sky130-soc-results:
+	$(call librelane_results,$(LIBRELANE_SKY130_SOC_DIR))
 
 # nangate45 / FreePDK45: uses manually structured PDK under MANUAL_PDK_ROOT
 librelane-nangate45:

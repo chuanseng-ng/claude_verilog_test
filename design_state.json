@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-06-30T01:20:00Z",
+  "updated_at": "2026-07-25T01:42:37.117819+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -45,8 +45,18 @@
   },
   "verification_status": {
     "coverage_pct": 100.0,
-    "sim_signoff": true,
-    "signoff": true
+    "sim_signoff": false,
+    "signoff": false,
+    "sram_sky130_soc_all_regression": {
+      "status": "PASS",
+      "total_tests": 110,
+      "pass": 110,
+      "fail": 0,
+      "skip": 0,
+      "suites": 18,
+      "log": "/nobackup/soc_all_gh104/soc_all_68m_run1.log",
+      "checked_at": "2026-07-25T01:42:37.117819+00:00"
+    }
   },
   "pipeline_session_id": null,
   "pipeline_config": {
@@ -727,6 +737,94 @@
       "reason": "Sky130 CPU Stage 1 sign-off Run 8 (honest): KLayout DRC=0 + LVS MATCH + DRT=0 + setup nom_tt WNS=+0.228ns/TNS=0. set_driving_cell applied (CodeRabbit #2). max_tt marginal (2 vio, -0.188 ns). Macro views updated from Run 8. Awaiting user authorization to commit and push PR.",
       "constraint_ref": "gh103",
       "block": "rv32i_cpu_top"
+    },
+    {
+      "timestamp": "2026-07-18T00:37:20.439747Z",
+      "agent": "physical-design-orchestrator",
+      "stage": "synthesis",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Run 3 (RUN_2026-07-18_07-34-28) launched with macro_placement.cfg fix (u_cpu 20 20 N); synthesis flat with 107K gates + rv32i_cpu_top blackbox; watching for step 12-14 clearance",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-07-21T22:37:05.920178+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "routing",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "resource_limit",
+      "suggested_next_step": "loop_back_to:routing",
+      "reason": "GH#104 Sky130 SoC Run 11 (RUN_2026-07-22_05-15-36): regenerated balanced-pin CPU macro (N95/S97/E113/W96, was N255/S125/E20/W1) + floorplan clearance fix (die 6300x3200->6700x3100, macro margins 20um->150um) installed and relaunched. GRT-0118 still fires in the literal flow (fail at step 35, 16min), BUT standalone -allow_congestion re-diagnosis shows congestion collapsed >99.5% (19863 violations/82% derating -> 82 violations/8.56% usage), now localized to a single GCell row below CPU's new south edge (AXI4-read-channel escape route, capacity:0 vertical met2), not the old systemic top-edge crisis. Root-cause hypothesis (pin skew) confirmed correct; residual is a small, well-characterized boundary-halo pinch. Candidate fixes (S-edge clearance increase, macro halo tuning, or GRT_ALLOW_CONGESTION stopgap) identified but not applied -- awaiting decision.",
+      "constraint_ref": "gh104"
+    },
+    {
+      "timestamp": "2026-07-21T23:12:27.200912+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "routing",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "resource_limit",
+      "suggested_next_step": "retry_stage",
+      "reason": "GH#104 Run 12 (RUN_2026-07-22_05-45-08): applied GCell-grid-alignment fix (u_cpu/u_sram y_origin 150->207.0, exact multiple of GRT's fixed 6.9um tile pitch). GRT-0118 still fired in the literal flow, but standalone re-diagnosis showed overflow collapsed further from 82 (Run 11) to just 3 units, now met1/Horizontal (was met2/Vertical), tightly localized to 3 GCells near specific S-edge net pins (net608, u_bus.m_araddr[23], u_bus.m_arlen[2]). Control A/B test (GRT_MACRO_EXTENSION 0 vs 2) on this exact floorplan/placement state showed extension=0 yields fully clean 0/0/0 overflow across all layers -- opposite of the Run-11 control test where extension made no difference (systemic problem swamped it then). Applied GRT_MACRO_EXTENSION 2->0 (genuine routing-margin parameter, not GRT_ALLOW_CONGESTION masking) and relaunched as Run 13 (RUN tag pending), high confidence of a clean GRT based on the direct empirical test on identical placement/CTS state.",
+      "constraint_ref": "gh104"
+    },
+    {
+      "timestamp": "2026-07-22T11:13:04.413622+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "power_optimization",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "power_area",
+      "suggested_next_step": "escalate",
+      "reason": "GH#104 Run 13 (RUN_2026-07-22_06-09-37): GRT-0118 FULLY CLEARED (0/0/0 overflow, confirmed on the real flow, not just standalone) -- the 6+ run congestion blocker is genuinely resolved. Detailed routing: 0 DRT violations (confirmed). BUT the run stopped fatally at step 47/78 (OpenROAD.IRDropReport) on PSM-0069 VPWR/VGND connectivity failure -- 15,555 unconnected nodes (14,332 met5) spread uniformly across the entire die, plus both hard macro instances (u_cpu, u_sram) fully isolated. This does NOT match the documented ASAP7 tap-cell precedent (different signature: TAP_TAPCELL_ROW_* vs macro instances + die-wide met5 nodes) and is NOT deferred (IRDropReport has no deferred-error mechanism; this is what actually stopped Run 13, confirmed via the full flow-termination log sequence, independent of the later host reboot). Pre-existing since Run 11's PDN generation (byte-identical error report) -- Run 13 is simply the first run to reach the step where it becomes fatal. CPU-alone is genuinely clean (PSM-0040 pass) using stock pdn_cfg.tcl; the SoC's custom pdn.tcl is implicated. Two fix hypotheses tested and DISPROVEN (missing core-level PDN ring; missing VSRC_LOC_FILES) via controlled fresh-run tests. Root cause not yet identified -- declined to relaunch a full production run on the unverified premise it would pass, to avoid repeating the same failure or risking a false-positive DRC/LVS pass on a design with a broken power grid. Magic/KLayout DRC and Netgen LVS have NEVER been reached for this floorplan/macro configuration.",
+      "constraint_ref": "gh104"
+    },
+    {
+      "timestamp": "2026-07-22T11:40:38.427801+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "power_optimization",
+      "decision": "escalate",
+      "confidence": "medium",
+      "failure_class": "power_area",
+      "suggested_next_step": "escalate",
+      "reason": "GH#104 PSM-0069 root cause investigation: removed custom add_pdn_ring around macros in pdn.tcl (matching stock LibreLane pdn_cfg.tcl, which CPU-alone's 10 internal SRAM macros prove works ring-less). Validated via fresh -T OpenROAD.GeneratePDN run (RUN_2026-07-22_18-16-30): total violations 46671->22155 lines (52.5% reduction). u_cpu is now FULLY connected (0 violations). u_sram remains FULLY disconnected -- all 22155 remaining violations confined exactly to u_sram's footprint (X 3910-6485, matching its placed bbox), uniform across its entire height. Both macro grids inserted cleanly and PDN_MACRO_CONNECTIONS matched both instances correctly -- ruled out config/pattern issues. Root cause of the CPU-vs-SRAM asymmetry still unknown; leading candidate is SRAM's much taller footprint (2595.75um vs CPU's 1800um, only 277um core headroom above it vs CPU's 1073um) interacting with -extend_to_core_ring, or SRAM needing its own instance-specific (non-default) macro PDN grid. Keeping the ring-removed pdn.tcl (net improvement, no downside). NOT launching full production run -- still short of PSM-0040 clean.",
+      "constraint_ref": "gh104"
+    },
+    {
+      "timestamp": "2026-07-23T22:31:08.348170Z",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "functional",
+      "suggested_next_step": "escalate",
+      "reason": "GH #104 sram_controller SRAM_SKY130 rework: baseline (flat array) confirmed no-regression (10/10 unit + 3/3 soc_boot PASS); SRAM_SKY130 critical-pass build found a genuine read-latency bug (6/10 unit tests FAIL) -- RVALID asserts one cycle before the OpenRAM macro's negedge-launched dout1 is valid, corrupting AXI read data (stale/shifted, final burst beat dropped). Also fixed a test-harness gap (tb/cocotb/soc/Makefile missing -GMEM_WORDS=1024 override for the sky130 macro's 1024-word geometry) to even get the SRAM_SKY130 build to elaborate cleanly. Filing fix_request and halting per policy -- RTL fix owned by rtl-design-orchestrator.",
+      "constraint_ref": "fr_null_20260724_051800_00"
+    },
+    {
+      "timestamp": "2026-07-24T06:30:00Z",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Fixed fr_null_20260724_051800_00: sram_controller.sv SRAM_SKY130 read FSM reworked with an extra in-flight stage (rd_pend_q) feeding a new 2-entry output skid buffer (buf_v_q/buf_last_q/buf_data_q) so s_rvalid/s_rdata/s_rlast are only exposed once the macro's negedge-launched dout1 is genuinely stable (2 cycles after address issue, not 1); issue gating changed to buf_has_room to preserve sustained 1-beat/cycle throughput and correctly buffer one beat under R-channel backpressure (no drop/dup/early-RLAST). MEM_WORDS!=1024 guard hardened from `initial $error` (simulation-time only) to a bare elaboration-time $fatal (IEEE 1800-2017 elaboration system task), confirmed to fire under standalone verilator --lint-only with a mismatched -GMEM_WORDS. Verilator -Wall (make -C sim lint_soc_sky130): 0 errors, 0 new warnings. Cocotb re-run intentionally deferred to verification-orchestrator per project policy (not run in this session). Not committed per instruction.",
+      "constraint_ref": "fr_null_20260724_051800_00"
+    },
+    {
+      "timestamp": "2026-07-25T01:42:37.117819+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Verified bead claude_verilog_test-68m: tb/cocotb/soc/Makefile soc_all now runs sram_controller twice (default flat freepdk45 array + SRAM_TARGET=sky130 OpenRAM macro branch). Full soc_all re-run: 18 suite invocations, 110/110 tests PASS, 0 FAIL, 0 SKIP, exit 0. sky130 sram_controller pass confirmed 11/11 (matches fr_null_20260724_051800_00's RTL fix, now covered by default regression) with correct +define+SRAM_SKY130 -GMEM_WORDS=1024 and sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv in the build -- not a silent fallback to the flat array. No ordering/stale-sim_build issue from running sram_controller twice (each invocation does rm -rf sim_build first). No new bugs found; no fix_request needed.",
+      "constraint_ref": "claude_verilog_test-68m"
     }
   ],
   "fix_requests": [
@@ -950,14 +1048,61 @@
           "note": "Two-part fix: (1) u_pll_regs clock domain corrected to clk_i/rst_n_i in soc_top.sv; (2) pll_axil_regs CONTROL reset value set to 32'h0000_0001 (pll_enable=1 default). Verilator -Wall lint EXIT=0; 7 pre-existing warnings only, no new warnings. Commit dacba91."
         }
       ]
+    },
+    {
+      "id": "fr_null_20260724_051800_00",
+      "created_at": "2026-07-23T22:31:08.348170Z",
+      "updated_at": "2026-07-24T06:30:00Z",
+      "created_by": "verification-orchestrator",
+      "failure_class": "functional",
+      "test_name": "tb/cocotb/soc/test_sram_controller.py (SRAM_TARGET=sky130): test_single_write_read, test_burst_write_read, test_rlast_position, test_wstrb_partial, test_back_to_back_bursts, test_read_after_write_no_gap (6/10 FAIL; seed 1784845133)",
+      "property_or_assertion": null,
+      "seed": 1784845133,
+      "waveform_path": null,
+      "log_path": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0cddba12-bd5a-427f-bf90-2aac5386d818/scratchpad/sky130_sram_controller2.log",
+      "suspected_rtl": {
+        "module": "sram_controller",
+        "signal": "rd_dv_q / r_issue_now (SRAM_SKY130 read FSM, R_BUSY state)",
+        "file": "rtl/soc/sram_controller.sv",
+        "line_range": [
+          296,
+          391
+        ]
+      },
+      "summary": "GH #104 Sky130 SoC Stage-2 rework: under `+define+SRAM_SKY130`, the sram_controller read FSM asserts s_rvalid (rd_dv_q) one cycle before the sky130_sram_4kbyte_1rw1r_32x1024_8 macro's negedge-launched dout1 register actually holds the addressed data -- AXI reads return stale or one-beat-shifted data, and the true final beat of every burst is silently dropped. Confirmed via cycle-accurate signal trace (ReadOnly-phase sampling, matching how any real AXI consumer/BFM samples the R channel): at the cycle RVALID first asserts with RREADY=1 (a legal, completing R-channel handshake, RLAST=1 for a single-beat burst), RDATA reads 0x00000000 instead of the just-written 0xDEADBEEF. Baseline (no SRAM_SKY130, flat behavioral array) is unaffected: 10/10 sram_controller unit tests + 3/3 soc_boot tests PASS -- this is isolated to the SRAM_SKY130 macro read-latency path introduced by this rework.",
+      "expected_behavior": "AXI4 R channel: RDATA must equal the addressed word at every cycle RVALID&RREADY both assert (AXI4 protocol + this SoC's existing AXI4-slave contract, per test_sram_controller.py's pre-existing test_single_write_read/test_burst_write_read/test_rlast_position). sram_controller.sv's own header comment (lines 23-33) states the SRAM_SKY130 read FSM issues the macro address 'one cycle ahead' so that data is ready when RVALID is presented -- i.e. RVALID should only assert once dout1 is genuinely valid for the requested address.",
+      "observed_behavior": "RVALID (rd_dv_q) asserts, and for single-beat reads RLAST asserts simultaneously (transaction completes), one cycle before the sky130_sram_4kbyte macro's dout1 register (negedge-launched, per sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv and the real OpenRAM macro's characterized read timing) has latched the requested address's data. Net effect: test_single_write_read reads back 0x00000000 instead of 0xDEADBEEF; test_burst_write_read's 4-beat burst returns [stale, w0, w1, w2] instead of [w0, w1, w2, w3] -- the true last beat (w3) is dropped; test_rlast_position/test_wstrb_partial/test_back_to_back_bursts/test_read_after_write_no_gap show the same stale/shifted-data pattern. 6/10 sram_controller unit tests FAIL under SRAM_TARGET=sky130 vs 10/10 PASS on the default (flat array) build -- a regression isolated entirely to the new SRAM_SKY130 macro-backed read path.",
+      "session_id": null,
+      "status": "fixed",
+      "rtl_response": {
+        "diff_summary": "sram_controller.sv SRAM_SKY130 read FSM (R_BUSY): root cause was a 1-cycle phase error -- s_rvalid/s_rdata were exposed the cycle after macro address issue, but the macro's dout1 is negedge-launched so it is only stable for posedge sampling TWO cycles after issue, not one. Fix: added a second pipeline stage (rd_pend_q/rd_pend_last_q, tracking 'macro negedge write for this address is happening this cycle') feeding a new 2-entry output skid buffer (buf_v_q/buf_last_q/buf_data_q, slot0=AXI-facing head, slot1=one-beat overflow reserve). s_rvalid/s_rdata/s_rlast now source from buf_v_q[0]/buf_data_q[0]/buf_last_q[0] instead of rd_dv_q/mem_dout1/rd_last_q directly. Issue gating (r_issue_now) changed from single-slot occupancy (!rd_dv_q||s_rready) to buf_has_room (slot1 guaranteed free after this cycle's drain/fill settle), preserving sustained 1-beat/cycle throughput in steady state (slot1 unused when RREADY stays asserted) while safely absorbing one beat landing during backpressure with no drop/duplicate/early-RLAST. R_BUSY->R_IDLE now waits for the whole pipeline (r_active, rd_pend_q, both buffer slots) to drain. Separately, hardened the MEM_WORDS!=1024 guard (line ~115-126): replaced `initial $error(...)` (simulation-time only, never fires under --lint-only elaboration) with a bare `$fatal(1,...)` directly in the generate scope -- an IEEE 1800-2017 elaboration system task that fires during elaboration itself, confirmed via standalone verilator --lint-only -GMEM_WORDS=2048 (fires + prints USERFATAL; without -Wno-fatal also gives EXIT_CODE=1). Also updated the file header comment (lines ~23-33) to document the corrected 2-cycle/2-stage timing model. No changes to the `ifndef SRAM_SKY130` flat-array path or the write FSM/macro-port-0 side.",
+        "files_changed": [
+          "rtl/soc/sram_controller.sv"
+        ],
+        "fixed_at": "2026-07-24T06:30:00Z"
+      },
+      "history": [
+        {
+          "timestamp": "2026-07-24T06:05:00Z",
+          "agent": "rtl-design-orchestrator",
+          "action": "claimed",
+          "note": "Claimed fr_null_20260724_051800_00 for rtl_coding per dispatched P0 bug-fix request."
+        },
+        {
+          "timestamp": "2026-07-24T06:30:00Z",
+          "agent": "rtl-design-orchestrator",
+          "action": "fixed",
+          "note": "Added rd_pend_q in-flight stage + 2-entry output skid buffer to correct the negedge-launch phase error; hardened MEM_WORDS guard to a bare elaboration-time $fatal. Verilator -Wall lint_soc_sky130: 0 errors, 0 new warnings (baseline unchanged: PINCONNECTEMPTY x4 pre-existing in rv32i_icache/dcache.sv, UNUSEDPARAM x3, BLKSEQ x3). Cocotb re-run deferred to verification-orchestrator per project policy."
+        }
+      ]
     }
   ],
   "pd": {
-    "gds": "/nobackup/sky130_cpu_runs/RUN_2026-06-30_05-37-56/58-magic-streamout/rv32i_cpu_top.gds",
-    "util_pct": 40.67,
-    "wns_ns": 0.2285,
-    "drc_violations": 0,
-    "lvs_errors": 0,
+    "gds": null,
+    "util_pct": null,
+    "wns_ns": null,
+    "drc_violations": null,
+    "lvs_errors": null,
     "antenna_violations": 91,
     "signoff": false,
     "stage1_config": "pnr/sky130/cpu/config.json",
@@ -1008,6 +1153,145 @@
     ],
     "max_tt_note": "max_tt_025C_1v80: 2 setup violations, WNS -0.188 ns \u2014 marginal regression from set_driving_cell; nom_tt +0.228 ns clean",
     "run8_sdc_change": "set_driving_cell sky130_fd_sc_hd__buf_4 on all_inputs (CodeRabbit finding #2)",
-    "run8_wns_delta_ns": -0.1375
+    "run8_wns_delta_ns": -0.1375,
+    "sram_controller_block": {
+      "block": "sram_controller",
+      "run_id": "pd_20260630_soc_stage2",
+      "run_tag": "RUN_2026-07-19_05-10-55",
+      "run_dir": "pnr/sky130/sram/runs/RUN_2026-07-19_05-10-55/",
+      "stage1_phy_signoff": "PASS_WITH_DOCUMENTED_LIMITATIONS",
+      "mem_words": 1024,
+      "dff_count": 32822,
+      "mux_cell_count": 65648,
+      "drt_violations": 0,
+      "klayout_drc": 0,
+      "lvs": "MATCH",
+      "magic_drc": 4293,
+      "magic_drc_note": "Same documented stock-tool artifact class as Stage-1 CPU (Magic DEF-mode geometry over-count on large flattened design; KLayout DRC=0 on identical layout is authoritative).",
+      "setup_wns_nom_tt_ns": 0.0446,
+      "setup_tns_nom_tt_ps": 0.0,
+      "hold_wns_nom_tt_ns": -0.514,
+      "hold_r2r_wns_all_corners": "0 reg-to-reg violations at ALL TT corners (nom/min/max) -- all TT-corner hold/setup violations that exist are I/O-path-only artifacts, matching Stage-1 CPU accepted-artifact pattern.",
+      "ss_corner_setup_fail": {
+        "status": "GENUINE reg-to-reg failure, documented and ACCEPTED as known limitation (user decision, no RTL change)",
+        "nom_ss_100C_1v60": {
+          "wns_ns": -8.603,
+          "tns_ns": -347.56,
+          "violations": 169,
+          "reg_to_reg": 137
+        },
+        "max_ss_100C_1v60": {
+          "wns_ns": -9.56,
+          "tns_ns": -509.2,
+          "violations": 505,
+          "reg_to_reg": 473
+        },
+        "min_ss_100C_1v60": {
+          "wns_ns": -7.48,
+          "tns_ns": -258.98,
+          "violations": 106,
+          "reg_to_reg": 74
+        },
+        "root_cause": "Combinational 1024:1 read mux (assign s_rdata = mem[r_idx], 65648 $_MUX_ cells, no output register) too deep for 75 MHz under slow-slow process.",
+        "fix_requires_rtl": "Register the read-mux output (adds 1 cycle read latency) -- needed for tape-out, out of scope for this hardening pass."
+      },
+      "antenna_violations": 178,
+      "antenna_net_violations": 153,
+      "antenna_pre_repair": {
+        "pin": 2849,
+        "net": 1711
+      },
+      "antenna_classification": "100% INTERNAL-NET/instance-pin residuals (verified: zero matches against any sram_controller top-level I/O port name in antenna.rpt Pin column). This is the OPPOSITE of I/O-pin-only -- flagged explicitly as it diverges from the CPU's 81-I/O-port-antenna precedent and does not meet the stricter 'I/O-only is acceptable' bar as originally framed. Carried forward as a second documented limitation given the 94% reduction already achieved and indicative-Sky130 project scope.",
+      "macro_lef": "pnr/sky130/soc/macro/sram_controller.lef",
+      "macro_lef_size_um": "2585.030 x 2595.750",
+      "macro_lib_nom_tt": "pnr/sky130/soc/macro/sram_controller__nom_tt_025C_1v80.lib",
+      "macro_nl_v_gz": "pnr/sky130/soc/macro/sram_controller.nl.v.gz",
+      "macro_power_pins": "VPWR/VGND on met4 (standard sky130_fd_sc_hd naming, NOT vccd1/vssd1 -- synthesized through std cells, not a native SRAM macro)",
+      "replaces": "hollow 33KB abstract-only blackbox placeholder (rejected by user decision -- deleted the real 32K-flop memory from sign-off)"
+    },
+    "soc_stage2_gh104": {
+      "cpu_macro_regen_verdict": "ACCEPTED_USABLE",
+      "cpu_macro_regen_run_tag": "RUN_2026-07-21_18-02-11",
+      "cpu_macro_lef_pin_balance": {
+        "N": 95,
+        "S": 97,
+        "E": 113,
+        "W": 96,
+        "signal_pins": 401,
+        "pg_pins": [
+          "VPWR",
+          "VGND"
+        ]
+      },
+      "cpu_macro_installed_dir": "pnr/sky130/cpu/macro/",
+      "soc_floorplan_fix": {
+        "die_area_before": [
+          0,
+          0,
+          6300,
+          3200
+        ],
+        "die_area_after": [
+          0,
+          0,
+          6700,
+          3100
+        ],
+        "u_cpu_before": [
+          20,
+          20
+        ],
+        "u_cpu_after": [
+          150,
+          150
+        ],
+        "u_sram_gap_before_um": 40,
+        "u_sram_gap_after_um": 150
+      },
+      "run11_tag": "RUN_2026-07-22_05-15-36",
+      "run11_run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-22_05-15-36/",
+      "run11_result": "GRT-0118 FAIL (literal flow exit), but congestion severity reduced >99.5% vs prior runs (82 violations/8.56% usage vs 19863/82%)",
+      "run11_residual_root_cause": "Single GCell row (met2 vertical, capacity:0) directly below CPU's new south edge, blocking all AXI4-read-channel S-edge pin escape routes -- suspected macro halo/extension obstruction",
+      "signoff": false,
+      "run12_tag": "RUN_2026-07-22_05-45-08",
+      "run12_result": "GRT-0118 FAIL (literal), but overflow reduced 82->3 (met1/Horizontal), confirming grid-alignment fix worked",
+      "run12_grid_alignment_fix": {
+        "u_cpu_y_origin": 207.0,
+        "u_sram_y_origin": 207.0,
+        "tile_pitch_um": 6.9
+      },
+      "run12_control_test_macro_extension": {
+        "extension_2_overflow": 3,
+        "extension_0_overflow": 0,
+        "conclusion": "GRT_MACRO_EXTENSION confirmed root cause of residual 3-unit overflow"
+      },
+      "grt_macro_extension_fix": {
+        "before": 2,
+        "after": 0
+      },
+      "run13_tag_pending": true,
+      "run13_run_dir": "/nobackup/sky130_soc_runs/ (tag TBD, launched 2026-07-22T06:09:31)",
+      "run13_tag": "RUN_2026-07-22_06-09-37",
+      "run13_grt_result": "CLEARED (0/0/0 overflow, confirmed on real flow)",
+      "run13_drt_result": "0 DRT violations (confirmed)",
+      "run13_stopped_at": "step 47/78 OpenROAD.IRDropReport, PSM-0069 VPWR/VGND connectivity FATAL failure",
+      "psm0069_is_documented_benign_artifact": false,
+      "psm0069_signature": "u_cpu/VPWR + u_sram/VPWR instance-level isolation + 15555 die-wide met5/met4 unconnected nodes -- does NOT match ASAP7 TAP_TAPCELL_ROW_* precedent",
+      "psm0069_hypotheses_disproven": [
+        "missing_core_pdn_ring_for_stdcell_grid",
+        "missing_VSRC_LOC_FILES"
+      ],
+      "psm0069_root_cause": "u_cpu fixed by removing macro ring; u_sram still fully disconnected, cause unknown -- candidates: SRAM height/core-headroom vs CPU, or needs instance-specific (non-default) macro PDN grid",
+      "drc_lvs_reached": false,
+      "psm0069_fix_test3": {
+        "change": "removed add_pdn_ring around macros in pdn.tcl, matching stock pdn_cfg.tcl",
+        "validated_run": "RUN_2026-07-22_18-16-30",
+        "violations_before": 46671,
+        "violations_after": 22155,
+        "u_cpu_status": "FULLY CONNECTED (0 violations)",
+        "u_sram_status": "FULLY DISCONNECTED (all 22155 remaining violations confined to its exact footprint)",
+        "kept": true
+      }
+    }
   }
 }
