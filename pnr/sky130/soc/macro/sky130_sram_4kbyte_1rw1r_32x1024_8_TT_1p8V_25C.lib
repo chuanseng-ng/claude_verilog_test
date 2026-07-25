@@ -1,3 +1,44 @@
+/*
+ * ============================================================================
+ * MODIFIED VIEW -- SRAM MACRO INTERNAL POWER IS ZEROED, NOT MEASURED.
+ * ============================================================================
+ * Patched 2026-07-25 (GH #104 follow-up, GH #120 / bead claude_verilog_test-o1i).
+ *
+ * OpenRAM compiled this macro with ANALYTICAL characterization
+ * (analytical_delay=True -- "Characterization is disabled (using analytical
+ * delay models)", views_run.log). Its analytical power model emitted
+ * physically impossible internal_power values: rise_power/fall_power =
+ * 1.998525e+11 in a library declaring leakage_power_unit "1mW". This drove
+ * OpenROAD report_power at SoC level to 5.2e+07 W (~52 megawatts, 100% of
+ * reported total) and contaminated every power number the flow produced.
+ * Root-caused as a genuine OpenRAM .lib data-quality defect -- NOT a
+ * units-declaration mismatch (all *_unit fields match the reference installed
+ * sky130 SRAM macro exactly).
+ *
+ * All 12 internal_power rise_power/fall_power scalars are therefore set to
+ * 0.0. CONSEQUENCE: reported SoC power EXCLUDES SRAM macro internal
+ * (switching) power and is a known UNDERSTATEMENT. It is NOT a power
+ * sign-off. Do not quote SoC power from this flow as characterized.
+ *
+ * Deliberately UNCHANGED: all delay / transition / setup / hold / recovery
+ * tables, min_pulse_width and minimum_period constraints, and
+ * cell_leakage_power (0.035146 mW -- a sane value, retained).
+ *
+ * Pristine original (absurd values intact) kept as the provenance record at:
+ *   /nobackup/openram_sky130_4kb/macro/sky130_sram_4kbyte_1rw1r_32x1024_8/
+ *     sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.lib
+ *
+ * PROPER FIX (not done -- cost/risk rejected 2026-07-25): recompile with
+ * analytical_delay=False for real SPICE characterization. Measured baseline
+ * is 190 min for the views-only build; SPICE characterization of a 1024-word
+ * SRAM is far longer, against a host that reboots every 2-8 h. Tracked in
+ * GH #120 / bead claude_verilog_test-o1i.
+ *
+ * This library also remains SINGLE-CORNER (TT/1.8V/25C) and is wildcarded to
+ * all 9 STA corners via config.json MACROS "lib": {"*": ...}. The CPU macro
+ * was fixed to genuine per-corner libs on 2026-07-25; this SRAM was not.
+ * ============================================================================
+ */
 library (sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C_lib){
     delay_model : "table_lookup";
     time_unit : "1ns" ;
@@ -328,37 +369,37 @@ cell (sky130_sram_4kbyte_1rw1r_32x1024_8){
         internal_power(){
             when : "!csb0 & !web0"; 
             rise_power(scalar){
-                values("1.998525e+11");
+                values("0.0");
             }
             fall_power(scalar){
-                values("1.998525e+11");
+                values("0.0");
             }
         }
         internal_power(){
             when : "csb0 & !web0"; 
             rise_power(scalar){
-                values("1.998525e+11");
+                values("0.0");
             }
             fall_power(scalar){
-                values("1.998525e+11");
+                values("0.0");
             }
         }
         internal_power(){
             when : "!csb0 & web0"; 
             rise_power(scalar){
-                values("1.998525e+11");
+                values("0.0");
             }
             fall_power(scalar){
-                values("1.998525e+11");
+                values("0.0");
             }
         }
         internal_power(){
             when : "csb0 & web0"; 
             rise_power(scalar){
-                values("1.998525e+11");
+                values("0.0");
             }
             fall_power(scalar){
-                values("1.998525e+11");
+                values("0.0");
             }
         }
         timing(){ 
@@ -497,19 +538,19 @@ cell (sky130_sram_4kbyte_1rw1r_32x1024_8){
         internal_power(){
             when : "!csb1"; 
             rise_power(scalar){
-                values("1.998525e+11");
+                values("0.0");
             }
             fall_power(scalar){
-                values("1.998525e+11");
+                values("0.0");
             }
         }
         internal_power(){
             when : "csb1"; 
             rise_power(scalar){
-                values("1.998525e+11");
+                values("0.0");
             }
             fall_power(scalar){
-                values("1.998525e+11");
+                values("0.0");
             }
         }
         timing(){ 
