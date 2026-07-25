@@ -483,6 +483,69 @@ background coroutine. The existing crossbar, register_bank, and
 axil_interconnect tests are unaffected only because they do not use a
 persistent background slave model — they drive signals directly.
 
+## GH #104 sram_controller SRAM_SKY130: RVALID one cycle ahead of negedge-launched macro data (P0 bug, escalated 2026-07-24)
+
+**Symptom:** Under `+define+SRAM_SKY130`, `sram_controller`'s AXI read channel
+returns stale or one-beat-shifted data. Single-beat reads return whatever the
+macro's `dout1` register last held (0x0 on a pristine sim, or leftover data
+from an unrelated prior transaction) instead of the addressed word. Bursts
+shift by one beat (a bogus stale beat prepended) and silently drop the true
+final beat. 6/10 `tb/cocotb/soc/test_sram_controller.py` tests FAIL with
+`SRAM_TARGET=sky130`; the same 10/10 tests PASS on the default flat-array
+build. See `design_state.json` fix_request `fr_null_20260724_051800_00`.
+
+**Root cause:** `sram_controller.sv`'s SRAM_SKY130 read FSM (`rd_dv_q` /
+`r_issue_now` in the R_BUSY state, ~lines 307-391) asserts `s_rvalid` at the
+SAME edge the macro's `csb1_r`/`addr1_r` input registers capture the new
+address. But `sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv` (and the real
+OpenRAM macro it models) is **negedge-launched**: `dout1` only updates at the
+`negedge clk1` roughly half a cycle *after* that same posedge, i.e. from a
+rising-edge-sampling AXI consumer's point of view, `dout1` is only
+*guaranteed* settled starting the edge *after* the one where `rd_dv_q` was
+set. The RTL is missing one full cycle of pipeline delay between "address
+registered into the macro" and "RVALID asserted" — it assumes a plain
+posedge-only-registered-output SRAM (1-cycle: address cycle N → data cycle
+N+1), but the actual model needs the FULL period to settle before it's safe
+to declare RVALID (effectively: address cycle N → data ready cycle N+1, but
+only *provably* settled by the START of cycle N+2 given the negedge-launch).
+
+**How this was diagnosed (reusable technique):** A raw same-timestep signal
+read taken directly after `await RisingEdge(dut.clk)` (no `ReadOnly()`)
+misleadingly showed the *correct* data one delta earlier than a disciplined
+`await RisingEdge(); await ReadOnly()` read of the same signal in the same
+test — i.e. two coroutines racing to sample `s_rdata` in the same timestep
+disagreed. Trust the `ReadOnly()`-disciplined read (the same idiom the
+project's own `AXI4Master` BFM and all working regression tests already use)
+as ground truth for what a real AXI consumer would see; a bare post-edge read
+without `ReadOnly()` is not a reliable oracle for this kind of race and
+produced a false-negative ("looks fine") during initial investigation.
+
+**Test-harness gap found + fixed while investigating (NOT an RTL fix):**
+`tb/cocotb/soc/Makefile`'s `sram_controller` target didn't override
+`MEM_WORDS` to 1024 when `SRAM_TARGET=sky130` — the module's default
+`MEM_WORDS=4096` (12-bit word index) silently truncates onto the
+sky130_sram_4kbyte macro's fixed 10-bit `addr0`/`addr1` ports (Verilator
+`WIDTHTRUNC`, caught at `--lint-only` before any sim ran). Fixed by adding
+`-GMEM_WORDS=1024` to both the `verilator_lint` and `sram_controller`
+Makefile targets under `SRAM_TARGET=sky130`. The RTL's own
+`MEM_WORDS != 1024` guard (`sram_controller.sv` ~line 108) is an `initial
+$error` — this is a **runtime-only** check; it does not fire under
+`--lint-only` and does not stop a live cocotb simulation either (`$error` is
+non-fatal per IEEE spec). Any future `SRAM_SKY130` build must pass the
+parameter override explicitly; don't rely on that guard to catch a missing
+override.
+
+**Full soc_top-level SRAM_SKY130 cocotb coverage does not exist yet:** as of
+this session, `tb/cocotb/soc/Makefile`'s `SRAM_TARGET=sky130` switch only
+wires the real macro into the standalone `sram_controller` unit-test target.
+`soc_boot`/`soc_periph`/`soc_coherency`/`soc_cpu_gpu` still always build with
+the flat behavioral array regardless of `SRAM_TARGET`. Full-SoC SRAM_SKY130
+elaboration is currently lint-only, via `make -C sim lint_soc_sky130`. A
+future verification pass (once the read-latency bug above is fixed) should
+either wire `SRAM_SKY130` through to the soc_top cocotb targets, or
+explicitly accept unit-level-only coverage as the sign-off boundary for this
+macro.
+
 ## Notes
 
 _Last distilled: 2026-06-01 from 14 experience records (added M5 DMA r_delay

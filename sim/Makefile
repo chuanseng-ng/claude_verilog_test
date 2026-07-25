@@ -52,8 +52,14 @@ SRAM_TARGET ?= freepdk45
 ifeq ($(SRAM_TARGET),sky130)
     SRAM_SIM_MODEL := $(SIM_DIR)/sky130_sram_1kbyte_1rw1r_32x256_8.sv
     COMPILE_ARGS   += +define+SRAM_SKY130
+    # GH #104 Sky130 SoC Stage-2: sram_controller.sv's own backing-store macro
+    # (separate from the cache tag/data SRAM_SIM_MODEL above). Only meaningful
+    # for SoC-level (soc_top) builds — the CPU-only VERILOG_SOURCES/
+    # CACHE_SOURCES lists below never instantiate sram_controller.
+    SRAM_CTRL_SIM_MODEL := $(SIM_DIR)/sky130_sram_4kbyte_1rw1r_32x1024_8.sv
 else
     SRAM_SIM_MODEL := $(SIM_DIR)/sram_1rw_256x32_verilator.v
+    SRAM_CTRL_SIM_MODEL :=
 endif
 
 VERILOG_SOURCES := \
@@ -196,6 +202,7 @@ help:
 	@echo "  make waves        - Open waveform viewer (gtkwave)"
 	@echo "  make lint         - Run Verilator lint check (CPU top + chains lint_soc)"
 	@echo "  make lint_soc     - Run Verilator lint check for soc_top (Phase 5 M8)"
+	@echo "  make lint_soc_sky130 - lint_soc with SRAM_TARGET=sky130 (+define+SRAM_SKY130, GH #104)"
 	@echo "  make verible      - Run Verible style-lint + format check on rtl/ (needs verible)"
 	@echo "  make lint-verible        - Verible SystemVerilog style lint only"
 	@echo "  make format-verible-check - Verible format check (non-mutating)"
@@ -279,6 +286,7 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/soc/soc_addr_map_pkg.sv \
 	$(RTL_DIR)/soc/soc_periph_map_pkg.sv \
 	$(SRAM_SIM_MODEL) \
+	$(SRAM_CTRL_SIM_MODEL) \
 	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
@@ -338,7 +346,7 @@ SOC_TOP_SOURCES := \
 
 .PHONY: lint_soc
 lint_soc:
-	@echo "Running Verilator lint check (soc_top)..."
+	@echo "Running Verilator lint check (soc_top, SRAM_TARGET=$(SRAM_TARGET))..."
 	@command -v verilator >/dev/null 2>&1 || { echo "ERROR: Verilator not found."; exit 1; }
 	@verilator --lint-only -Wall -Wno-fatal \
 		--top-module soc_top \
@@ -350,7 +358,18 @@ lint_soc:
 		-Wno-UNUSEDSIGNAL \
 		-Wno-UNOPTFLAT \
 		-Wno-SYNCASYNCNET \
+		$(if $(filter sky130,$(SRAM_TARGET)),+define+SRAM_SKY130) \
 		$(SOC_TOP_SOURCES) 2>&1
+
+# GH #104 Sky130 SoC Stage-2: explicit convenience target so the SRAM_SKY130
+# branch of sram_controller.sv (+ the cache tag/data macros it shares the
+# define with) is actually elaborated with the macro-backed model, not just
+# selected via SRAM_TARGET (the plain `lint`/`lint_soc` targets above never
+# passed +define+SRAM_SKY130 to verilator even when SRAM_TARGET=sky130 was
+# set — this target fixes that gap for soc_top specifically).
+.PHONY: lint_soc_sky130
+lint_soc_sky130:
+	@$(MAKE) --no-print-directory lint_soc SRAM_TARGET=sky130
 # SYNCASYNCNET waived at SoC top: leaf blocks use heterogeneous reset
 # disciplines (CPU synchronous per ASIC rule, peripherals async); soc_top only
 # distributes the shared rst_n_i. Frozen leaf RTL — not a SoC integration bug.

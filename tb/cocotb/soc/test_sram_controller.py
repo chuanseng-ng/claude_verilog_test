@@ -17,6 +17,7 @@ import cocotb
 from bfm.axi4_master import RESP_OKAY, AXI4Master
 from cocotb.clock import Clock
 from cocotb.triggers import ReadOnly, RisingEdge, with_timeout
+from cocotb.utils import get_sim_time
 
 CLK_PERIOD_NS = 2
 RESP_SLVERR = 0b10
@@ -51,8 +52,23 @@ async def _write_with_id(dut, addr, data, axid, strb=0xF):
 
     Does not use the BFM so we can set AxID freely.
     Timing: drives AW and polls awready; then drives W and polls wready; then
-    collects B-channel response.  All polls are RisingEdge-based (safe for
-    registered-ready responders like this FSM).
+    collects B-channel response.
+
+    GH #104 fix (fr_null_20260724_051800_00) hardening: every poll now checks
+    its ready/valid signal via `await ReadOnly()` **before** advancing to a
+    new `RisingEdge` -- the same check-then-advance order the AXI4Master BFM
+    uses (`await ReadOnly(); if ready: break; await edge()`), NOT
+    `await RisingEdge(); await ReadOnly(); if ready: ...`. Those two orderings
+    are not equivalent for a combinationally-immediate responder like this
+    FSM: awready/arready/wready/bvalid/rvalid can drop back to 0 in the very
+    same cycle a request is accepted (the FSM has already advanced state), so
+    checking *after* crossing that accept edge sees the post-accept 0 and
+    never recognises the (already-completed) handshake -- an infinite poll.
+    Checking via ReadOnly() *before* advancing samples the signal as it
+    stands for the cycle the request is actually live in, matching AXI4's
+    same-cycle valid&ready semantics. (This was a bug in an earlier revision
+    of this helper reached while investigating fr_null_20260724_051800_00 --
+    it hung indefinitely, not an RTL deadlock; see knowledge.md.)
     """
     # AW channel
     dut.s_awid.value    = axid
@@ -61,9 +77,12 @@ async def _write_with_id(dut, addr, data, axid, strb=0xF):
     dut.s_awsize.value  = SIZE_4B
     dut.s_awburst.value = BURST_INCR
     dut.s_awvalid.value = 1
-    await RisingEdge(dut.clk)
-    while not dut.s_awready.value:
+    while True:
+        await ReadOnly()
+        if dut.s_awready.value:
+            break
         await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
     dut.s_awvalid.value = 0
 
     # W channel — wready goes high once FSM reaches W_DATA (next cycle)
@@ -71,18 +90,22 @@ async def _write_with_id(dut, addr, data, axid, strb=0xF):
     dut.s_wstrb.value  = strb
     dut.s_wlast.value  = 1
     dut.s_wvalid.value = 1
-    await RisingEdge(dut.clk)
-    while not dut.s_wready.value:
+    while True:
+        await ReadOnly()
+        if dut.s_wready.value:
+            break
         await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
     dut.s_wvalid.value = 0
     dut.s_wlast.value  = 0
 
     # B channel
     dut.s_bready.value = 1
-    await RisingEdge(dut.clk)
-    while not dut.s_bvalid.value:
+    while True:
+        await ReadOnly()
+        if dut.s_bvalid.value:
+            break
         await RisingEdge(dut.clk)
-    await ReadOnly()
     bresp = int(dut.s_bresp.value)
     bid   = int(dut.s_bid.value)
     await RisingEdge(dut.clk)
@@ -91,7 +114,12 @@ async def _write_with_id(dut, addr, data, axid, strb=0xF):
 
 
 async def _read_with_id(dut, addr, axid):
-    """Manual single-beat read that drives a non-zero ARID. Returns (data, rresp, rid)."""
+    """Manual single-beat read that drives a non-zero ARID. Returns (data, rresp, rid).
+
+    See _write_with_id's docstring for why every poll below checks via
+    ReadOnly() *before* advancing to a new RisingEdge (GH #104
+    fr_null_20260724_051800_00 hardening).
+    """
     # AR channel
     dut.s_arid.value    = axid
     dut.s_araddr.value  = addr
@@ -99,17 +127,21 @@ async def _read_with_id(dut, addr, axid):
     dut.s_arsize.value  = SIZE_4B
     dut.s_arburst.value = BURST_INCR
     dut.s_arvalid.value = 1
-    await RisingEdge(dut.clk)
-    while not dut.s_arready.value:
+    while True:
+        await ReadOnly()
+        if dut.s_arready.value:
+            break
         await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
     dut.s_arvalid.value = 0
 
     # R channel
     dut.s_rready.value = 1
-    await RisingEdge(dut.clk)
-    while not dut.s_rvalid.value:
+    while True:
+        await ReadOnly()
+        if dut.s_rvalid.value:
+            break
         await RisingEdge(dut.clk)
-    await ReadOnly()
     data  = int(dut.s_rdata.value)
     rresp = int(dut.s_rresp.value)
     rid   = int(dut.s_rid.value)
@@ -313,3 +345,231 @@ async def test_burst_crosses_limit_slverr(dut):
     )
 
     dut._log.info("test_burst_crosses_limit_slverr PASS")
+
+
+# ── Test 8: R-channel backpressure — no dropped/duplicated/early beats ───────
+# GH #104 Sky130 SoC Stage-2: added to close the one gap the existing suite
+# left uncovered for the SRAM_SKY130 rework -- the AXI4Master BFM's read()
+# only supports a single `ready_delay` *before* the burst starts, never
+# toggles RREADY *within* a burst.  That leaves the read FSM's single-entry
+# skid buffer (rd_dv_q / r_issue_now in the SRAM_SKY130 branch -- the pending
+# beat must be held, and no new macro address issued, until the AXI master
+# actually consumes it) completely unexercised.  This test manually drives an
+# irregular RREADY pattern (including idle cycles immediately after the AR
+# handshake, before any data could possibly be valid) and checks, cycle by
+# cycle:
+#   1. AXI4 VALID-stability rule: once RVALID=1 and RREADY=0 (beat pending,
+#      not consumed), RVALID must stay 1 and RDATA must not change on the
+#      next cycle -- no silent withdrawal.
+#   2. Exactly ARLEN+1 beats are ever captured (valid&ready) -- no drops, no
+#      duplicates.
+#   3. RLAST asserts exactly on the last captured beat, never earlier.
+# Runs unchanged under both the default flat-array model and SRAM_SKY130 (no
+# latency assumption is hardcoded -- only the AXI4 protocol invariants are
+# checked), so it doubles as a same-suite baseline/SKY130 comparison point.
+
+@cocotb.test()
+async def test_read_backpressure_no_drop_no_dup(dut):
+    """Irregular RREADY under a burst read must not drop, duplicate, or
+    early-terminate beats, and RVALID/RDATA must hold stable while pending."""
+    m = await _setup(dut)
+    base = SRAM_BASE + 0x600
+    words = [0xC000_0000 + i for i in range(6)]
+    bresp = await m.write(base, words)
+    assert bresp == RESP_OKAY, f"seed write resp {bresp:#x}"
+
+    # Manual AR (BFM has no per-beat RREADY control).
+    dut.s_arid.value    = 0
+    dut.s_araddr.value  = base
+    dut.s_arlen.value   = len(words) - 1
+    dut.s_arsize.value  = SIZE_4B
+    dut.s_arburst.value = BURST_INCR
+    dut.s_arvalid.value = 1
+    await RisingEdge(dut.clk)
+    while not dut.s_arready.value:
+        await RisingEdge(dut.clk)
+    dut.s_arvalid.value = 0
+
+    # Irregular RREADY: 2 idle cycles right after AR-accept (stresses "no
+    # macro address issued while nothing can be consumed yet"), then a mixed
+    # on/off pattern across the burst, settling to always-ready to drain.
+    ready_pattern = [0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+
+    got = []
+    pending = False       # RVALID was 1 last cycle and NOT consumed (rready=0)
+    pending_data = None
+    cyc = 0
+    timeout_cycles = 200
+    while len(got) < len(words) and cyc < timeout_cycles:
+        rr = ready_pattern[cyc] if cyc < len(ready_pattern) else 1
+        dut.s_rready.value = rr
+        await RisingEdge(dut.clk)
+        # NOTE: no explicit ReadOnly() here -- unlike the single-shot
+        # _read_with_id/BFM helpers, this loop must write s_rready again on
+        # the very next iteration, and cocotb forbids scheduling a write
+        # while parked in the ReadOnly phase. Verilator evaluates the whole
+        # design to a fixed point before returning control from RisingEdge,
+        # so the combinational R-channel outputs (rvalid/rdata/rlast/rresp)
+        # are already settled here.
+        rvalid = int(dut.s_rvalid.value)
+        rdata  = int(dut.s_rdata.value)
+        rlast  = int(dut.s_rlast.value)
+        rresp  = int(dut.s_rresp.value)
+
+        if pending:
+            assert rvalid == 1, (
+                f"cycle {cyc}: RVALID dropped a pending (unconsumed) beat "
+                f"under backpressure -- violates AXI4 VALID-stability rule"
+            )
+            assert rdata == pending_data, (
+                f"cycle {cyc}: RDATA changed ({rdata:#010x} != "
+                f"{pending_data:#010x}) while a pending beat was held "
+                f"under backpressure -- violates AXI4 stability rule"
+            )
+
+        transfer_now = bool(rvalid) and bool(rr)
+        if transfer_now:
+            assert rresp == RESP_OKAY, f"cycle {cyc}: rresp {rresp:#x}"
+            got.append(rdata)
+            if len(got) == len(words):
+                assert rlast == 1, f"cycle {cyc}: RLAST missing on final beat"
+            else:
+                assert rlast == 0, (
+                    f"cycle {cyc}: early RLAST at beat {len(got)}/{len(words)}"
+                )
+
+        pending = bool(rvalid) and not rr
+        pending_data = rdata
+        cyc += 1
+
+    dut.s_rready.value = 0
+    assert len(got) == len(words), (
+        f"timeout after {cyc} cycles: only {len(got)}/{len(words)} beats "
+        f"captured (dropped beats or stuck FSM)"
+    )
+    assert got == words, (
+        f"backpressure readback mismatch (dropped/duplicated/reordered "
+        f"beats):\n  got {[hex(d) for d in got]}\n  exp {[hex(w) for w in words]}"
+    )
+    dut._log.info("test_read_backpressure_no_drop_no_dup PASS")
+
+
+# ── Test 9: read-after-write to the same address, back-to-back (no gap) ─────
+# Highest-risk scenario for the SRAM_SKY130 rework per GH #104: a read issued
+# immediately after the write that produced its data, with zero idle cycles
+# in between, must observe the write.  This is where a stale-macro-latency
+# assumption (e.g. treating the write as visible 0 cycles after WLAST instead
+# of after the macro's negedge-launched commit) would most likely surface as
+# a readback of old/garbage data.
+
+@cocotb.test()
+async def test_read_after_write_no_gap(dut):
+    """Read issued the cycle immediately after a write's BVALID/BREADY
+    handshake (no idle gap) must return the just-written data, repeated for
+    several distinct addresses back-to-back."""
+    m = await _setup(dut)
+    base = SRAM_BASE + 0x700
+    for i in range(4):
+        addr = base + i * 4
+        pattern = 0xD00D_0000 + i
+        bresp = await m.write(addr, [pattern])
+        assert bresp == RESP_OKAY, f"i={i}: write resp {bresp:#x}"
+        # No extra idle RisingEdge inserted here -- m.read() drives ARVALID
+        # on the very next edge after write() returns (which itself returns
+        # the edge right after BVALID&BREADY).
+        data, rresp = await m.read(addr, length=1)
+        assert rresp == RESP_OKAY, f"i={i}: read resp {rresp:#x}"
+        assert data[0] == pattern, (
+            f"i={i}: read-after-write (no gap) got {data[0]:#010x}, "
+            f"expected {pattern:#010x}"
+        )
+    dut._log.info("test_read_after_write_no_gap PASS")
+
+
+# ── Test 11: burst-read throughput -- 1 beat/cycle once primed, no every-  ──
+# ── other-cycle degradation from the SRAM_SKY130 skid-buffer pipeline    ──
+# GH #104 fr_null_20260724_051800_00 fix review: the RTL fix adds pipeline
+# depth (rd_pend_q stage + 2-entry output skid buffer) to correct the
+# read-latency bug. The RTL orchestrator's claim is that steady-state
+# continuous-RREADY throughput is UNCHANGED at 1 beat/cycle once the pipeline
+# is primed (only burst *start* latency grows, from 1 cycle to 3). This test
+# does not take that on faith -- it manually drives an 8-beat INCR burst with
+# RREADY held high throughout and records the simulation time of every beat,
+# then asserts every inter-beat gap AFTER the first beat is exactly one clock
+# period (2 ns / 1 cycle). A degraded implementation (e.g. one that
+# accidentally gates issuance on the full buffer being empty, rather than on
+# just slot 1 having room) would show every-other-cycle (4 ns) gaps instead
+# once the buffer's second slot is needed for the skid function.
+
+@cocotb.test()
+async def test_burst_read_throughput_1_beat_per_cycle(dut):
+    """8-beat INCR burst, RREADY held high throughout: after the initial
+    fill latency, every beat must land exactly 1 clock cycle after the
+    previous one -- no every-other-cycle throughput degradation."""
+    m = await _setup(dut)
+    base = SRAM_BASE + 0x800
+    length = 8
+    words = [0xB0B0_0000 + i for i in range(length)]
+    bresp = await m.write(base, words)
+    assert bresp == RESP_OKAY, f"seed write resp {bresp:#x}"
+
+    # Manual AR (need per-beat cocotb-time timestamps, which m.read() does
+    # not expose).
+    dut.s_arid.value    = 0
+    dut.s_araddr.value  = base
+    dut.s_arlen.value   = length - 1
+    dut.s_arsize.value  = SIZE_4B
+    dut.s_arburst.value = BURST_INCR
+    dut.s_arvalid.value = 1
+    while True:
+        await ReadOnly()
+        if dut.s_arready.value:
+            break
+        await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+    dut.s_arvalid.value = 0
+
+    dut.s_rready.value = 1
+    beat_times_ns = []
+    got = []
+    cyc = 0
+    timeout_cycles = 200
+    # Check-before-advance (ReadOnly() first, THEN RisingEdge): RVALID can
+    # already be true for the very cycle RREADY is asserted -- e.g. on the
+    # default flat array, RVALID/RDATA for the first beat become valid in
+    # the same cycle the AR-accept edge lands, before this loop ever runs.
+    # Checking only *after* crossing a RisingEdge first (as an earlier
+    # revision of this test did) misses that already-valid first beat --
+    # a testbench bug (silently dropping the first beat), not an RTL one.
+    while len(got) < length and cyc < timeout_cycles:
+        await ReadOnly()
+        if dut.s_rvalid.value:
+            beat_times_ns.append(float(get_sim_time(units="ns")))
+            got.append(int(dut.s_rdata.value))
+        await RisingEdge(dut.clk)
+        cyc += 1
+    dut.s_rready.value = 0
+
+    assert len(got) == length, (
+        f"timeout after {cyc} cycles: only {len(got)}/{length} beats captured"
+    )
+    assert got == words, (
+        f"throughput-test readback mismatch:\n  got {[hex(d) for d in got]}\n"
+        f"  exp {[hex(w) for w in words]}"
+    )
+
+    gaps = [beat_times_ns[i + 1] - beat_times_ns[i] for i in range(len(beat_times_ns) - 1)]
+    dut._log.info(
+        f"beat arrival times (ns): {beat_times_ns}; inter-beat gaps (ns): {gaps}"
+    )
+    bad_gaps = [(i, g) for i, g in enumerate(gaps) if g != CLK_PERIOD_NS]
+    assert not bad_gaps, (
+        f"throughput degraded: expected every inter-beat gap == "
+        f"{CLK_PERIOD_NS} ns (1 beat/cycle) once primed, but got gaps "
+        f"{gaps} (bad: {bad_gaps}) -- pipeline is stalling beyond the "
+        f"documented 3-cycle fill latency"
+    )
+    dut._log.info(
+        f"test_burst_read_throughput_1_beat_per_cycle PASS: {length} beats, "
+        f"all inter-beat gaps == {CLK_PERIOD_NS} ns (1 beat/cycle)"
+    )

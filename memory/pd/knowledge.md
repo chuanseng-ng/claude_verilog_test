@@ -560,6 +560,43 @@ BOTH approaches are used in run 6 for belt-and-suspenders.
 - `--manual-pdk` flag required when not using Ciel/Volare for PDK management
 - `--pdk-root` must point to the directory containing the `asap7/` or `sky130*/` folder
 
+## LibreLane Classic Flow Has NO Hold-Repair Step After Detailed Routing
+(GH #104 Sky130 SoC Stage-2, 2026-07-24 — structural, applies to any PDK)
+
+**Finding**: `librelane/flows/classic.py`'s `Steps` list places
+`OpenROAD.ResizerTimingPostGRT` immediately before `OpenROAD.DetailedRouting`, and
+`OpenROAD.STAPostPNR` (the step that produces final signed-off timing numbers) runs
+after `OpenROAD.DetailedRouting` with **no resizer/repair step in between**.
+`OpenROAD.STAPostPNR` is pure reporting — it has no timing-repair capability at all.
+
+**Consequence**: any hold (or setup) degradation introduced by the shift from
+GRT-estimated to DRT-actual parasitics is **structurally invisible and unfixable**
+within a single Classic-flow invocation. A design can show `RSZ-0033 No hold
+violations found` at `OpenROAD.ResizerTimingPostGRT` and still report real hold
+violations at `OpenROAD.STAPostPNR` after detailed routing — this is not the resizer
+"stopping early" or an under-effort run; there is no step positioned to catch it.
+Observed directly: a net (`u_cpu/axi_bready_o` fanning to 2 endpoints) went from
+clean at PostGRT to a `-70.8 ps` / `-47.7 ps` hold violation at sign-off, entirely a
+routing-parasitic-shift effect, roughly a 120 ps swing on that specific net.
+
+**Available levers** (pre-route only, do not address post-route degradation
+directly): `PL_RESIZER_HOLD_SLACK_MARGIN` (`OpenROAD.ResizerTimingPostCTS`, default
+0.1 ns) and `GRT_RESIZER_HOLD_SLACK_MARGIN` (`OpenROAD.ResizerTimingPostGRT`, default
+0.05 ns) — both are "overfix" margins that make the pre-route resizer stop above
+zero slack instead of at it, building in cushion to *survive* whatever the
+post-route shift turns out to be. This is probabilistic insurance, not a guarantee,
+and since both margins are global (apply to every hold-violating endpoint
+design-wide, not a targeted net), raising them risks perturbing nearby setup paths
+if setup and hold critical paths cluster in the same region (e.g. a hard-macro
+boundary) — quantify this per-design before applying, don't assume it's free.
+
+**If you need guaranteed post-route hold closure**: this requires either (a) a
+custom step/flow variant that re-invokes a resizer pass after
+`OpenROAD.DetailedRouting` (not present in stock Classic), or (b) enough PostGRT
+margin headroom (raised `GRT_RESIZER_HOLD_SLACK_MARGIN`) that empirically survives
+your design's typical GRT-to-DRT parasitic shift — verify empirically per design/PDK,
+the ~120 ps shift seen here is not a universal constant.
+
 ## ASAP7 Run 8 Post-Retiming Results (2026-04-29)
 
 **Run**: `RUN_2026-04-29_17-58-24` | 48 steps completed | Flow complete

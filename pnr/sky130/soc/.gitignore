@@ -1,0 +1,11 @@
+# Generated sv2v output (rebuilt by make sky130-soc-sv2v)
+soc_top_sv2v.v
+
+# LibreLane run outputs go to /nobackup via symlink.
+# NOTE: no trailing slash — a trailing-slash pattern matches only real
+# directories, NOT symlinks, and `runs` here is a symlink to /nobackup.
+runs
+
+# Large local macro views (gitignored — must be copied manually from Stage-1)
+# These exist at pnr/sky130/cpu/macro/ and are referenced via dir:: paths.
+# Keeping them gitignored here prevents accidental double-tracking.

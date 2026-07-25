@@ -14,6 +14,26 @@ SIM_DIR  := $(PROJ_ROOT)/sim
 # bfm/ lives in tb/cocotb (TB); slave model lives in this directory.
 export PYTHONPATH := $(TB):$(SOC_DIR):$(PYTHONPATH)
 
+# GH #104 Sky130 SoC Stage-2 — sram_controller.sv backing-store selection for
+# the standalone `sram_controller` unit-test target only (mirrors the
+# SRAM_TARGET convention in sim/Makefile). PLL_SOURCES/SOC_BOOT_SOURCES below
+# instantiate soc_top, which also has a cache-macro `ifdef SRAM_SKY130`
+# selection (rv32i_dcache.sv/rv32i_icache.sv) not wired to a SRAM_TARGET
+# switch in *this* Makefile today — enabling SRAM_TARGET=sky130 here only
+# affects the isolated sram_controller DUT (no cache in its source list).
+# For a full soc_top elaboration under SRAM_SKY130, use
+# `make -C sim lint_soc_sky130` (sim/Makefile swaps both the cache and
+# sram_controller macros together).
+#   make sram_controller                      # flat array (existing 7/7 suite)
+#   make sram_controller SRAM_TARGET=sky130   # sky130_sram_4kbyte_1rw1r_32x1024_8
+SRAM_TARGET ?= freepdk45
+ifeq ($(SRAM_TARGET),sky130)
+    SRAM_CTRL_SIM_MODEL := $(SIM_DIR)/sky130_sram_4kbyte_1rw1r_32x1024_8.sv
+    COMPILE_ARGS += +define+SRAM_SKY130
+else
+    SRAM_CTRL_SIM_MODEL :=
+endif
+
 # Per-DUT source lists.  The default build is the crossbar (preserves prior
 # `make` behaviour); the register_bank / axil_interconnect targets override
 # VERILOG_SOURCES + MODULE + TOPLEVEL on the recursive make.
@@ -38,6 +58,7 @@ AXIL_SOURCES = \
 SRAM_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
 	$(RTL)/soc/soc_addr_map_pkg.sv \
+	$(SRAM_CTRL_SIM_MODEL) \
 	$(RTL)/soc/sram_controller.sv
 
 DMA_SOURCES = \
@@ -293,11 +314,23 @@ axil_interconnect:
 
 verilator_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		$(if $(filter sky130,$(SRAM_TARGET)),+define+SRAM_SKY130 -GMEM_WORDS=1024) \
 		--top-module sram_controller $(SRAM_SOURCES)
 
+# GH #104 verification finding: sram_controller's MEM_WORDS parameter
+# defaults to 4096 (16 KB flat-array window); the sky130_sram_4kbyte macro is
+# hardwired to 1024 words (10-bit addr0/addr1). Without overriding MEM_WORDS
+# here, SRAM_SKY130 elaborates with a 12-bit word_index() truncated onto the
+# macro's 10-bit address ports (WIDTHTRUNC) -- a silent address-aliasing bug
+# in the *test build*, not caught by the RTL's own MEM_WORDS!=1024 check
+# (that check is a runtime `initial $error`, which neither Verilator
+# `--lint-only` nor a live cocotb run treats as fatal). -GMEM_WORDS=1024
+# matches the macro geometry the RTL comment (sram_controller.sv line ~52)
+# already documents as mandatory under SRAM_SKY130.
 sram_controller: verilator_lint
 	$(MAKE) MODULE=test_sram_controller TOPLEVEL=sram_controller \
 		VERILOG_SOURCES="$(SRAM_SOURCES)" \
+		EXTRA_ARGS="$(if $(filter sky130,$(SRAM_TARGET)),-GMEM_WORDS=1024)" \
 		$(BUILD_ARGS)
 
 dma_lint:
@@ -538,6 +571,7 @@ soc_all:
 	rm -rf sim_build && $(MAKE) register_bank
 	rm -rf sim_build && $(MAKE) axil_interconnect
 	rm -rf sim_build && $(MAKE) sram_controller
+	rm -rf sim_build && $(MAKE) sram_controller SRAM_TARGET=sky130
 	rm -rf sim_build && $(MAKE) dma
 	rm -rf sim_build && $(MAKE) irq
 	rm -rf sim_build && $(MAKE) timer
