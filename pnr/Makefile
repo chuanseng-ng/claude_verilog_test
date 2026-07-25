@@ -688,13 +688,22 @@ librelane-sky130-soc: sky130-soc-sv2v
 	@echo "=========================================="
 	@# ANTENNA FLOW ENABLED (2026-07-25, GH #104 follow-up). The antenna steps
 	@# (Odb.HeuristicDiodeInsertion, Odb.DiodesOnPorts, OpenROAD.RepairAntennas,
-	@# Odb.CheckDesignAntennaProperties, OpenROAD.CheckAntennas*) used to be in
-	@# the --skip list below, which is why RUN_2026-07-24_21-36-12 reported
-	@# manufacturability "Antenna: FAILED -- 557 pin / 442 net violations".
-	@# Stage-1 CPU (librelane-sky130-cpu) runs the full default flow with no
-	@# skips at all and the repair flow works on this PDK: 2849 -> 57 pin
-	@# violations (~98% reduction). Matching that precedent here. If the repair
-	@# step regresses DRC or blows up runtime, re-add the skips AND record why.
+	@# OpenROAD.CheckAntennas*) used to be in the --skip list below, which is
+	@# why RUN_2026-07-24_21-36-12 reported manufacturability
+	@# "Antenna: FAILED -- 557 pin / 442 net violations": the repair flow was
+	@# never running, so that number was simply the UNREPAIRED state.
+	@# Enabling them works -- RUN_2026-07-25_09-21-05 measured
+	@# 556 pin / 440 net -> 154 pin / 129 net via 2018 inserted diodes (~72%
+	@# reduction). Stage-1 CPU precedent: 2849 -> 57 pin (~98%).
+	@#
+	@# Odb.CheckDesignAntennaProperties STAYS SKIPPED, deliberately. It is not
+	@# part of the repair flow; it requires a LEF input, which this recipe does
+	@# not produce (Magic.WriteLEF is skipped below and config.json sets
+	@# RUN_MAGIC_WRITE_LEF: false). Un-skipping it killed RUN_2026-07-25_09-21-05
+	@# at step 54 with "CheckDesignAntennaProperties: missing required input
+	@# 'LEF'" -- AFTER post-PnR STA/streamout had completed but BEFORE the
+	@# DRC/LVS signoff checkers ran. Re-enable it only together with
+	@# Magic.WriteLEF.
 	@if [ ! -f "$(LIBRELANE_SKY130_SOC_DIR)/config.json" ]; then \
 		echo "ERROR: $(LIBRELANE_SKY130_SOC_DIR)/config.json not found."; exit 1; fi
 	@if [ ! -f "$(LIBRELANE_SKY130_SOC_DIR)/soc_top_sv2v.v" ]; then \
@@ -713,6 +722,7 @@ librelane-sky130-soc: sky130-soc-sv2v
 		 --skip Odb.ReportDisconnectedPins \
 		 --skip Checker.DisconnectedPins \
 		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
 		 --skip Checker.SetupViolations \
 		 --skip Checker.HoldViolations \
 		 --skip Checker.MaxSlewViolations \
