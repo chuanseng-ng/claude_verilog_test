@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-07-25T01:42:37.117819+00:00",
+  "updated_at": "2026-07-25T09:34:28.772643+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -825,6 +825,17 @@
       "suggested_next_step": "proceed",
       "reason": "Verified bead claude_verilog_test-68m: tb/cocotb/soc/Makefile soc_all now runs sram_controller twice (default flat freepdk45 array + SRAM_TARGET=sky130 OpenRAM macro branch). Full soc_all re-run: 18 suite invocations, 110/110 tests PASS, 0 FAIL, 0 SKIP, exit 0. sky130 sram_controller pass confirmed 11/11 (matches fr_null_20260724_051800_00's RTL fix, now covered by default regression) with correct +define+SRAM_SKY130 -GMEM_WORDS=1024 and sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv in the build -- not a silent fallback to the flat array. No ordering/stale-sim_build issue from running sram_controller twice (each invocation does rm -rf sim_build first). No new bugs found; no fix_request needed.",
       "constraint_ref": "claude_verilog_test-68m"
+    },
+    {
+      "timestamp": "2026-07-25T09:34:28.772643+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "drc_lvs",
+      "suggested_next_step": "loop_back_to:routing",
+      "reason": "Sky130 SoC Stage-2 GH#104 follow-up re-run (RUN_2026-07-25_13-29-40, commit a31a626) completed all 78 flow stages with no regressions on prior-passing checks (LVS clean/0 errors, KLayout DRC exactly 4 known-artifact, area/util unchanged, power now physically sane at 61.1mW) and confirmed the per-corner CPU macro lib fix took effect. Not signoff-clean: antenna repair now runs but leaves a 154/129 residual (was never running before), Magic DRC 9081 known-artifact unchanged, and multi-corner timing (previously invalid under a wildcard-lib bug) now shows genuine setup/hold violations at 6 of 9 corners including the worst max_ss corner roughly doubling in WNS/TNS. Per loop-back rules this is a DRC/antenna signoff gap that would route to routing (max 2x) and/or timing_optimization, but no loop-back was executed this session -- the task scope was verifying number honesty, not chasing closure. Full independently-verified numbers in memory/pd/run_state.md.",
+      "constraint_ref": "GH-104"
     }
   ],
   "fix_requests": [
@@ -1291,6 +1302,71 @@
         "u_cpu_status": "FULLY CONNECTED (0 violations)",
         "u_sram_status": "FULLY DISCONNECTED (all 22155 remaining violations confined to its exact footprint)",
         "kept": true
+      },
+      "gh104_followup_20260725": {
+        "purpose": "Re-run Stage-2 SoC DRC/LVS sign-off with three honesty fixes from 86e89c1: per-corner CPU macro libs (9 exact keys replacing wildcard), antenna repair flow enabled, SRAM lib internal_power zeroed",
+        "attempt1_run_tag": "RUN_2026-07-25_09-21-05",
+        "attempt1_result": "TOOL ERROR (not design/timing/DRC failure) -- died at step 54 Odb.CheckDesignAntennaProperties: missing required input 'LEF' (un-skipped one step too many in 86e89c1). Fixed in commit a31a626 (re-skip only that one step).",
+        "attempt2_run_tag": "RUN_2026-07-25_13-29-40",
+        "attempt2_run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-25_13-29-40",
+        "attempt2_log": "/nobackup/sky130_soc_stage2_rerun2_20260725.log",
+        "attempt2_commit": "a31a626",
+        "attempt2_wall_time": "2:54:53 (78/78 stages)",
+        "attempt2_exit_code": 2,
+        "attempt2_exit_code_meaning": "KNOWN BENIGN -- LibreLane's own Checker.MagicDRC/Checker.KLayoutDRC gate firing on nonzero Magic DRC count (documented artifact class), same as prior 65MHz baseline. Not a crash; all 78 stages completed.",
+        "per_corner_lib_proof": "PASSED -- each corner's own sta.log confirmed to load its own matching rv32i_cpu_top__<corner>.lib (nom_ss_100C_1v60 loads nom_ss lib, not nom_tt)",
+        "sta_post_pnr": {
+          "note": "Bit-for-bit identical between attempt1 and attempt2 (diff clean) -- only a downstream-of-STA skip flag differed",
+          "nom_tt_setup_wns_ns": 0.2413,
+          "nom_tt_setup_tns_ns": 0.0,
+          "nom_tt_hold_wns_ns": -0.0923,
+          "nom_tt_hold_violators": 1,
+          "max_ss_setup_wns_ns": -10.473,
+          "max_ss_setup_tns_ns": -252.61,
+          "max_ss_setup_violators": 374,
+          "max_ss_hold_wns_ns": -0.3997,
+          "max_ss_hold_violators": 3,
+          "attribution_caveat": "Timing deltas vs the RUN_2026-07-24_21-36-12 wildcard-lib baseline reflect TWO simultaneous changes (correct per-corner libs AND 2018 antenna-repair diodes perturbing routing) -- not cleanly attributable to the corner-lib fix alone. nom_tt hold regressed from clean to 1 violator; max_ss setup/TNS roughly doubled; max_ss hold worsened from 2 to 3 paths."
+        },
+        "antenna": {
+          "pre_repair_pin": 556,
+          "pre_repair_net": 440,
+          "post_repair_final_pin": 154,
+          "post_repair_final_net": 129,
+          "diodes_inserted": 2018,
+          "verdict": "FAILED (residual 154/129) but repair flow now demonstrably running (~72% reduction) vs baseline where it never ran at all"
+        },
+        "power_mw_total": 61.11085,
+        "power_breakdown_mw": {
+          "internal": 47.31763,
+          "switching": 13.72199,
+          "leakage": 0.07123
+        },
+        "macro_leakage_uw": 70.29201,
+        "lvs": {
+          "verdict": "Circuits match uniquely",
+          "devices": 35439,
+          "nets": 35282,
+          "errors_all_categories": 0,
+          "device_net_count_note": "Higher than baseline's 34,835/35,252 due to the 2018 antenna diodes now actually being inserted (baseline never ran antenna repair)"
+        },
+        "klayout_drc": 4,
+        "klayout_drc_breakdown": {
+          "m2.2": 1,
+          "m3.2": 1,
+          "via2.2": 2
+        },
+        "klayout_drc_note": "EXACTLY 4, matches known macro-internal OpenRAM-generator artifact class from both prior baselines. NO REGRESSION.",
+        "magic_drc": 9081,
+        "magic_drc_note": "Matches baseline total exactly. Same 2 known categories only: nwell.4 (~9051) and met4.4a (~37). NO REGRESSION, no new rule types.",
+        "die_area_mm2": 20.77,
+        "core_area_mm2": 20.36,
+        "instance_area_mm2": 7.72,
+        "util_pct_overall": 37.92,
+        "util_pct_stdcell": 5.72,
+        "signoff_clean": false,
+        "signoff_gap_summary": "setup TNS != 0 at multiple corners; hold WNS < 0 at 6 of 9 corners; antenna not fully repaired (154/129 residual); Magic DRC 9081 (known artifact, previously user-accepted). Deliverable of this session was NUMBER HONESTY (real per-corner timing, real antenna repair, real power total), not new sign-off closure.",
+        "mid_run_note": "A message purporting to be from 'the coordinator' reported attempt 1's failure/results mid-session with specific claimed numbers. Per policy that no agent message is automatic authorization, every claim was independently re-derived from on-disk run artifacts before being acted on -- all checked out exactly. See memory/pd/run_state.md for full verification trail."
       }
     }
   }

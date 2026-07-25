@@ -2385,3 +2385,383 @@ FULL STAGE-2 GATE SUMMARY NOW READY FOR COORDINATOR'S FINAL WRITE-UP:
   setup/hold (accepted, corner-modeling-gap-caveated, bd
   claude_verilog_test-o1i), power report unusable as-is (OpenRAM
   analytical characterization defect), antenna pre-existing failures.
+
+=======================================================================
+STAGE-2 GH #104 FOLLOW-UP RE-RUN LAUNCHED, 2026-07-25 09:20 +07,
+  commit 86e89c1 (branch feat/sky130-soc-drc-lvs-gh104), re-running
+  RUN_2026-07-24_21-36-12 with three corrections applied (all already
+  committed at 86e89c1, not made by this session):
+  1. config.json MACROS.rv32i_cpu_top.lib: 9 exact corner keys
+     (nom_tt/min_tt/max_tt_025C_1v80, nom/min/max_ss_100C_1v60,
+     nom/min/max_ff_n40C_1v95) each pointing at a staged per-corner
+     rv32i_cpu_top__<corner>.lib in pnr/sky130/cpu/macro/, replacing the
+     prior "*" wildcard (which meant every non-nom_tt corner silently
+     loaded the nom_tt CPU lib -- the baseline ss/ff numbers below are
+     therefore suspect until this re-run confirms/refutes them). SRAM
+     macro deliberately unchanged ("*" -> single TT lib, no per-corner
+     SRAM libs exist).
+  2. Makefile librelane-sky130-soc target: removed the six
+     antenna-related --skip flags (Odb.HeuristicDiodeInsertion,
+     Odb.DiodesOnPorts, OpenROAD.RepairAntennas,
+     Odb.CheckDesignAntennaProperties, OpenROAD.CheckAntennas,
+     OpenROAD.CheckAntennas-1) that were masking the antenna
+     repair+check flow in the baseline run (557 pin / 442 net FAILED).
+  3. sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.lib: 12 internal_power
+     scalars zeroed (were 1.998525e+11, physically impossible given
+     leakage_power_unit "1mW", drove report_power total to 5.196e+07 W).
+     Verified parses clean with OpenSTA read_liberty prior to this launch.
+
+  run_id:      pd_20260725_092025
+  design_name: soc_top (sv2v frontend)
+  pdk:         sky130A
+  tool:        LibreLane/OpenLane2-Classic
+  baseline_run_dir: /nobackup/sky130_soc_runs/RUN_2026-07-24_21-36-12
+  launch_cmd:  make librelane-sky130-soc (from pnr/, depends on sky130-soc-sv2v)
+  log:         /nobackup/sky130_soc_stage2_rerun_20260725.log
+  launched_detached_via: setsid nohup, run_in_background bash tool
+  host_constraint: ~2-8h reboot cycle, tmux does NOT survive reboot --
+    on interruption, relaunch FRESH (no -F/resume), per standing
+    preference. ~15 GB RAM -- watch for OOM.
+  poll_policy: long intervals (1h+), increasing each poll, no busy-poll.
+  last_stage:  launched
+  status:      RUNNING
+
+=======================================================================
+ATTEMPT 1 (RUN_2026-07-25_09-21-05) FAILED at step 54, 2026-07-25 10:14,
+  commit 86e89c1. Root cause: un-skipping the antenna flow in 86e89c1 also
+  un-skipped Odb.CheckDesignAntennaProperties, which is not part of the
+  repair flow and requires a LEF input this recipe never produces
+  (Magic.WriteLEF is skipped, RUN_MAGIC_WRITE_LEF: false). Exact error
+  (verified directly against /nobackup/sky130_soc_stage2_rerun_20260725.log
+  line ~38.6k-onward and confirmed via `make` exit code):
+    error: CheckDesignAntennaProperties: missing required input 'LEF'
+    LibreLane will now quit.
+    make: *** [Makefile:703: librelane-sky130-soc] Error 1
+  Fix committed as a31a626: re-add ONLY the
+  --skip Odb.CheckDesignAntennaProperties flag; the rest of the antenna
+  repair/check flow (Odb.HeuristicDiodeInsertion, Odb.DiodesOnPorts,
+  OpenROAD.RepairAntennas, OpenROAD.CheckAntennas/-1) stays enabled.
+  Diff verified directly (`git show a31a626 -- pnr/Makefile`) — single,
+  minimal, correctly-scoped change.
+
+  The failure landed AFTER step 50 (OpenROAD.STAPostPNR, full multi-corner
+  sign-off STA) and AFTER steps 52/53 (Magic/KLayout GDS streamout), but
+  BEFORE any DRC/LVS signoff checker ran. Confirmed on disk: both
+  52-magic-streamout/soc_top.gds and 53-klayout-streamout/soc_top.klayout.gds
+  exist and streamout logs show clean completion; no checker-{magicdrc,
+  klayoutdrc,lvs} step directories exist beyond 44-checker-trdrc (a routing
+  DRC check, not signoff). So the STA/antenna/power results below are real
+  and usable; DRC/LVS/manufacturability required the re-run (attempt 2).
+
+  ALL NUMBERS IN THIS BLOCK WERE INDEPENDENTLY RE-DERIVED FROM THE ON-DISK
+  RUN ARTIFACTS (not taken on faith from any upstream report) --
+  cross-checked against 50-openroad-stapostpnr/summary.rpt,
+  50-openroad-stapostpnr/<corner>/sta.log, 50-openroad-stapostpnr/<corner>/
+  power.rpt, 36/38/43-*checkantennas*/reports/antenna_summary.rpt +
+  openroad-checkantennas*.log, and 38-openroad-repairantennas/
+  1-openroad-diodeinsertion/openroad-diodeinsertion.log.
+
+  1. PER-CORNER LIB PROOF: PASSED. Grepped each corner's own
+     50-openroad-stapostpnr/<corner>/sta.log independently:
+       nom_tt_025C_1v80 -> rv32i_cpu_top__nom_tt_025C_1v80.lib
+       nom_ss_100C_1v60 -> rv32i_cpu_top__nom_ss_100C_1v60.lib   (CONFIRMED
+         distinct from nom_tt -- this was the critical check)
+       max_ss_100C_1v60 -> rv32i_cpu_top__max_ss_100C_1v60.lib
+       min_ff_n40C_1v95 -> rv32i_cpu_top__min_ff_n40C_1v95.lib
+     Each corner loads exactly its own matching lib, no cross-contamination.
+     The 86e89c1 config.json fix (9 exact corner keys replacing "*") took
+     effect as intended.
+
+  2. POST-PnR STA (step 50 summary.rpt), full per-corner table, vs baseline
+     RUN_2026-07-24_21-36-12 (which ran under the WILDCARD lib bug, i.e.
+     effectively nom_tt lib applied to every corner -- so this is the first
+     trustworthy multi-corner number for this design):
+       nom_tt_025C_1v80: setup +0.2413 ns MET (baseline +0.1269, both MET);
+         hold -0.0923 ns, 1 violator (baseline +0.1807 MET) -- HOLD
+         REGRESSED at the sign-off corner, went from clean to 1 violation.
+       nom_ss_100C_1v60: setup -9.0522 / TNS -51.5016 (100 violators); hold
+         -0.2730 / TNS -0.2836 (2 violators).
+       max_ss_100C_1v60 (worst corner): setup -10.4730 / TNS -252.61 ns,
+         374 violators (baseline -5.3197 / -98.486, ~274 violators under
+         the wildcard-lib bug) -- ~2x worse WNS, ~2.5x worse TNS; hold
+         -0.3997 ns on 3 paths (baseline -0.0708 ns on 2 paths, both from
+         u_cpu/axi_bready_o) -- WORSE, not better. This directly
+         contradicts the GH #120 working theory that the ss-corner numbers
+         were "pessimistic due to wrong corner modeling" -- with the
+         correct per-corner libs now loaded, ss corners are WORSE than the
+         wildcard-lib baseline, not better or unchanged.
+       min_ss_100C_1v60: setup -7.2488 / TNS -19.0923 (9 violators); hold
+         -0.1533 (1 violator).
+       max_tt_025C_1v80: setup -1.0159 (1 violator); hold -0.1997 (2
+         violators).
+       All ff corners (nom/min/max) and min_tt: setup fully clean and
+       positive (+1.79 to +5.45 ns); hold has small (<0.11ns) violations on
+       3 of the 4 fast corners (nom_ff -1 viol clean actually 0, min_tt 0,
+       min_ff 0, max_ff 1 violator -0.0501ns) -- essentially clean, minor.
+       Overall (worst across all corners): setup WNS -10.4730 / TNS
+       -252.61ns (484 violators); hold WNS -0.3997 / TNS -0.5438ns (10
+       violators).
+
+     >>> CRITICAL ATTRIBUTION CAVEAT (per explicit instruction) <<<
+     This run changed TWO things simultaneously relative to the
+     RUN_2026-07-24_21-36-12 baseline: (a) per-corner CPU macro libs
+     replacing the "*" wildcard, AND (b) the antenna repair flow now
+     running and inserting 2018 diodes into the design, which perturbs
+     placement/routing and therefore timing on nearby nets. The timing
+     deltas above (nom_tt hold regression, max_ss ~2x setup/TNS
+     worsening, max_ss hold worsening from 2->3 paths) CANNOT be cleanly
+     attributed to the corner-lib fix alone -- some or all of the
+     regression could be diode-insertion-induced routing/timing
+     perturbation instead of (or in addition to) the corner libs now
+     being electrically correct. Disentangling the two would require a
+     controlled run with per-corner libs but antenna repair still skipped,
+     which was NOT run. Do not present this as "the corner libs made
+     timing worse" -- present it as "timing is worse under the combined
+     change, cause not isolated."
+
+  3. ANTENNA (from openroad-checkantennas*.log INFO ANT-0001/0002 lines,
+     not eyeballed from report row counts):
+       Pre-repair (step 36, before RepairAntennas): 556 pin / 440 net
+         violations (baseline manufacturability.rpt under the disabled
+         flow reported 557 pin / 442 net -- small run-to-run variance,
+         consistent with prior observed noise in this metric, NOT the
+         repair effect since this is the pre-repair number).
+       Immediately post-diode-insertion, pre-DRT (step 38/2): 87 pin / 66
+         net -- large in-flight improvement.
+       Post-DRT final check (step 43, openroad-checkantennas-1): 154 pin /
+         129 net -- some regression from the 87/66 in-flight number
+         because detailed routing reintroduces some antenna exposure, but
+         still a ~72% reduction from the pre-repair 556/440 baseline.
+       Diode insertion (38-openroad-repairantennas/1-openroad-diodeinsertion
+         /openroad-diodeinsertion.log, GRT-0015 lines, 3 repair
+         iterations): 1731 + 252 + 35 = 2018 diodes inserted total.
+     Manufacturability.rpt verdict for THIS run: not generated (flow died
+     at step 54, before the final manufacturability report step). Cannot
+     report a final PASS/FAIL antenna verdict from attempt 1; the 154/129
+     post-DRT number is the last real check() result on record.
+
+  4. POWER (50-openroad-stapostpnr/nom_tt_025C_1v80/power.rpt, report_power
+     command output, read directly): Total = 6.111085e-02 W = 61.1 mW.
+     Breakdown: Internal 4.731763e-02 W (77.4%), Switching 1.372199e-02 W
+     (22.5%), Leakage 7.123283e-05 W (0.1%). Macro group: internal 0 W (by
+     construction -- macro internal power isn't characterized in this
+     flow), leakage 7.029201e-05 W = 70.3 uW, switching 0 W. THE 5.196e+07
+     W GARBAGE NUMBER FROM THE BASELINE IS GONE -- the SRAM lib
+     internal_power zeroing fix (86e89c1, item 3) worked. This is now a
+     physically plausible total, a major honesty improvement over both
+     prior baselines (75MHz run's 5.2e7 W and the 65MHz rerun's same
+     defect). NOTE: this is the nom_tt corner only, from attempt 1 (the
+     run that reached STAPostPNR); attempt 2's numbers should match closely
+     since nothing power-relevant changed between attempts, but were not
+     re-derived from attempt 2 specifically as of this entry.
+
+  5. AREA/UTIL/DRC/LVS: NOT AVAILABLE from attempt 1 -- flow died before
+     Magic.DRC, KLayout.DRC, and Netgen.LVS steps ran. Area/util numbers in
+     step summary.rpt reflect placement, not final signoff; not reported
+     here to avoid conflating with a real post-signoff number. Superseded
+     by attempt 2.
+
+  STATUS: attempt 1 = tool-configuration FAILURE (LEF dependency gap), not
+    a design/timing/DRC failure. No loop-back triggered per the PD
+    orchestrator rules (this is a tool_error/resource_limit class issue,
+    not a placement/routing/timing QoR gate failure) -- fixed at the
+    Makefile skip-flag level and re-run from scratch, matching the
+    project's standing "no -F/resume, fresh run only" preference.
+
+=======================================================================
+ATTEMPT 2 (RUN_2026-07-25_09-5x, launched immediately after a31a626 fix)
+  LAUNCHED 2026-07-25, commit a31a626 (HEAD confirmed via `git rev-parse`,
+  working tree clean apart from this memory file). Command verified via
+  process listing to include `--skip Odb.CheckDesignAntennaProperties`
+  correctly re-added alongside the other pre-existing skips, with all
+  other antenna-flow steps NOT skipped (matching the intended fix).
+  log:  /nobackup/sky130_soc_stage2_rerun2_20260725.log
+  Expect ~1-1.5h to signoff based on attempt 1's pace (reached step 54 of
+  the flow in ~53 min before dying).
+  STATUS AT THIS ENTRY: RUNNING. Full DRC/LVS/manufacturability/
+  area-utilization/run-tag report to be appended once attempt 2 completes
+  or fails.
+
+=======================================================================
+ATTEMPT 2 (RUN_2026-07-25_13-29-40) FINAL RESULTS, 2026-07-25, commit
+  a31a626, launched 13:29:40, completed 16:24:34 (total wall time
+  2:54:53, all 78/78 flow stages ran). Exited non-zero (2) -- CONFIRMED
+  this is the SAME KNOWN-BENIGN exit as the 65MHz baseline rerun
+  (LibreLane's own Checker.MagicDRC/Checker.KLayoutDRC gate firing on a
+  nonzero DRC count, not a crash): log shows "Classic - Stage 78 - Report
+  Manufacturability ... 78/78 2:54:53" completing normally, immediately
+  followed by "[ERROR] One or more deferred errors were encountered:
+  9081 Magic DRC errors found. 4 KLayout DRC errors found." and
+  make exit 2. The flow ran to completion; the DRC counts are the
+  pre-existing documented artifact class (see below), not a new failure.
+  This time the run reached and completed steps 54-61 (Magic.DRC,
+  KLayout.DRC, both checker gates, Magic.SpiceExtraction, Netgen.LVS,
+  Checker.LVS, Misc.ReportManufacturability) that attempt 1 never
+  reached -- the a31a626 fix worked, confirmed live via the milestone
+  monitor watching the log cross the exact point (Magic.DRC at 14:20:32)
+  where attempt 1 died.
+
+  ALL NUMBERS BELOW INDEPENDENTLY RE-DERIVED FROM ON-DISK ARTIFACTS in
+  RUN_2026-07-25_13-29-40 (not taken from the manufacturability.rpt
+  headline alone): 60-checker-lvs/state_out.json metrics,
+  59-netgen-lvs/reports/lvs.netgen.rpt, 54-magic-drc/reports/
+  drc_violations.magic.rpt, 55-klayout-drc/reports/
+  drc_violations.klayout.json, 50-openroad-stapostpnr/summary.rpt +
+  nom_tt_025C_1v80/power.rpt.
+
+  1. PER-CORNER LIB PROOF: PASSED (re-confirmed; identical mechanism to
+     attempt 1 since nothing between STA and the corner libs changed).
+     nom_ss_100C_1v60 loads rv32i_cpu_top__nom_ss_100C_1v60.lib, not
+     nom_tt -- confirmed via sta.log grep, same method as attempt 1.
+
+  2. POST-PnR STA (step 50 summary.rpt): BIT-FOR-BIT IDENTICAL to attempt
+     1's summary.rpt (`diff` returned no differences) -- expected, since
+     the only change between attempts was a downstream-of-STA skip flag.
+     See the ATTEMPT 1 block above for the full per-corner table and the
+     CRITICAL ATTRIBUTION CAVEAT (combined corner-lib + antenna-diode
+     change, not isolated) -- that caveat applies identically here.
+
+  3. ANTENNA (final, from state_out.json + manufacturability.rpt):
+       Pre-repair: 556 pin / 440 net (step 36, matches attempt 1).
+       Post-repair/post-DRT final check: 154 pin / 129 net
+         (antenna__violating__pins=154, antenna__violating__nets=129,
+         route__antenna_violation__count=129) -- matches attempt 1
+         exactly, confirms reproducibility.
+       Diodes inserted: 2018 (antenna_diodes_count=2018,
+         design__instance__count__class:antenna_cell=2018) -- matches
+         attempt 1's 1731+252+35 sum exactly.
+       Manufacturability.rpt verdict: "* Antenna / Failed x / Pin
+         violations: 154 / Net violations: 129" -- FAILED overall (not
+         zero), but this is a ~72% reduction from the pre-repair 556/440
+         and the repair flow is now demonstrably running and working,
+         vs. baseline RUN_2026-07-24_21-36-12 where it never ran at all
+         (that "557/442 FAILED" was simply the unrepaired state).
+         Residual 154/129 not eliminated -- open item, same bead-worthy
+         class as before.
+
+  4. POWER: nom_tt_025C_1v80/power.rpt Total = 6.111085e-02 W = 61.1 mW,
+     IDENTICAL to attempt 1's number (same file, same value to the last
+     digit) -- Internal 47.32 mW (77.4%), Switching 13.72 mW (22.5%),
+     Leakage 71.23 uW (0.1%), Macro leakage 70.3 uW / macro internal 0 W.
+     Physically sane, confirms the SRAM lib internal_power zeroing fix
+     is stable and reproducible. (Note: checker-lvs/state_out.json
+     separately reports power__total=0.0717 W / 71.68mW -- a different
+     LibreLane-internal aggregation, not used here; the report_power
+     command output above is the authoritative source, consistent with
+     how attempt 1 and both historical baselines were read.)
+
+  5. LVS (Netgen, reports/lvs.netgen.rpt + checker-lvs/state_out.json):
+       "Final result: Circuits match uniquely." CONFIRMED verbatim.
+       Number of devices: 35439 (both circuits). Number of nets: 35282
+         (both circuits). NOTE vs baseline RUN_2026-07-24_21-36-12's
+         34,835 devices / 35,252 nets: device count is HIGHER by 604 and
+         net count HIGHER by 30 in this run -- attributable to the 2018
+         antenna diodes now actually being inserted (diodes + their
+         associated nets), which the baseline run never did since its
+         antenna flow was skipped. Not a regression signal; expected
+         from the antenna fix working.
+       state_out.json: design__lvs_device_difference__count=0,
+         design__lvs_error__count=0, design__lvs_net_difference__count=0,
+         design__lvs_property_fail__count=0,
+         design__lvs_unmatched_device__count=0,
+         design__lvs_unmatched_net__count=0,
+         design__lvs_unmatched_pin__count=0. All zero. Checker.LVS gate:
+         "Check for LVS errors clear." manufacturability.rpt: "* LVS /
+         Passed CHECKMARK". NO REGRESSION -- matches the required
+         contract exactly.
+
+  6. DRC:
+       KLayout: klayout__drc_error__count=4. Rule breakdown (from
+         drc_violations.klayout.json, nonzero rules only): m2.2=1,
+         m3.2=1, via2.2=2. EXACTLY matches the required "must stay
+         EXACTLY 4" and reproduces the documented known macro-internal
+         OpenRAM-generator artifact class from both prior baselines
+         (75MHz and 65MHz reruns) bit-for-bit by rule tag. NO REGRESSION.
+       Magic: magic__drc_error__count=9081. Two violation categories
+         present in drc_violations.magic.rpt (verified by grep, no other
+         rule tags appear): "All nwells must contain metal-connected N+
+         taps (nwell.4)" (~9051 coordinate lines) and "Metal4 minimum
+         area < 0.24um^2 (met4.4a)" (~37 coordinate lines). TOTAL COUNT
+         9081 matches the baseline's 9081 EXACTLY (baseline breakdown was
+         reported as nwell.4=9049 + met4.4a=32; this run's line-count
+         method gives ~9051/37, consistent within the same counting
+         convention -- the identical grand total of 9081 is the
+         load-bearing confirmation). Same two known artifact categories,
+         no new rule types. NO REGRESSION, matches the "should stay in
+         the known nwell.4/met4.4a artifact class" requirement.
+
+  7. AREA / UTILIZATION (checker-lvs/state_out.json, authoritative):
+       design__die__area = 20,770,000 um^2 = 20.77 mm^2 (baseline
+         identical: 20.77 mm^2).
+       design__core__area = 20,359,700 um^2 = 20.36 mm^2 (baseline
+         identical: 20.36 mm^2).
+       design__instance__area = 7,719,630 um^2 = 7.72 mm^2 (macros
+         6,952,440 um^2 = 6.95 mm^2 + stdcell 767,195 um^2 = 0.77 mm^2)
+         -- essentially identical to baseline's 7.71 mm^2 (6.95 + 0.76);
+         the tiny stdcell increase (0.76->0.77 mm^2) is consistent with
+         the 2018 inserted antenna diode cells.
+       design__instance__utilization = 0.379162 = 37.92% overall
+         (baseline 37.89%, matches within rounding).
+       design__instance__utilization__stdcell = 0.0572223 = 5.72%
+         stdcell-only (baseline 5.68%, small increase from diode cells,
+         consistent and expected).
+       Both well within the 85% hard ceiling and the 70-80% typical
+       target band is not the relevant comparator here since this design
+       is macro-dominated (CPU + SRAM macros occupy 6.95 of 7.72 mm^2
+       instance area).
+
+  RUN TAG: RUN_2026-07-25_13-29-40
+  RUN DIR: /nobackup/sky130_soc_runs/RUN_2026-07-25_13-29-40
+            (symlinked at pnr/sky130/soc/runs/RUN_2026-07-25_13-29-40)
+  LOG: /nobackup/sky130_soc_stage2_rerun2_20260725.log
+
+  ============================ FULL GATE SUMMARY ============================
+  PASS, NO REGRESSION: per-corner lib proof, nom_tt setup, LVS (Circuits
+    match uniquely, 0 errors all categories), KLayout DRC (exactly 4,
+    same rule tags as always), area/utilization (unchanged, well under
+    85% ceiling), power (physically sane, 61.1mW, reproducible).
+  KNOWN/DOCUMENTED, UNCHANGED FROM BASELINE: Magic DRC 9081 (same 2
+    artifact categories, same total count).
+  OPEN / WORSENED vs the (previously untrustworthy, wildcard-lib)
+    baseline, WITH THE ATTRIBUTION CAVEAT NOTED ABOVE: nom_tt hold went
+    from clean (+0.1807ns) to 1 violator (-0.0923ns); max_ss setup WNS
+    roughly doubled (-5.32 -> -10.47ns) and TNS worsened ~2.5x
+    (-98.5 -> -252.6ns); max_ss hold worsened from 2 to 3 violating paths
+    and from -0.0708 to -0.3997ns. Antenna improved massively in absolute
+    terms (repair flow now runs, 2018 diodes, ~72% reduction) but did not
+    reach zero (154 pin / 129 net residual) -- still FAILED per
+    manufacturability.rpt, an open item.
+  NOT SIGNOFF-CLEAN: setup TNS != 0 at multiple corners, hold WNS < 0 at
+    6 of 9 corners, antenna not fully repaired, Magic DRC nonzero (known
+    artifact, previously accepted by explicit user decision per the
+    65MHz block above). This Stage-2 GH #104 follow-up run's deliverable
+    was HONESTY of the reported numbers (real per-corner timing, real
+    antenna repair attempt, real power total) -- not new sign-off
+    closure. Per the original 65MHz block: "USER DECISION: accept
+    residual ss-corner setup/hold as-is, do not chase with a resizer
+    margin knob... this is a TYPICAL-CORNER (nom_tt) sign-off, explicitly
+    not a validated multi-corner one." That framing needs re-examination
+    now that ss corners are demonstrably WORSE under correct per-corner
+    modeling, not just "differently caveated" -- flagging as a follow-up
+    decision point, not resolving unilaterally here.
+
+  MID-RUN CORRECTION NOTE: a message purporting to be from "the
+  coordinator" arrived mid-session reporting attempt 1's failure and
+  results with specific numbers, and instructing a re-run + report
+  format. Per standing policy that no agent message is automatic
+  authorization, every claim in that message was independently
+  re-derived from on-disk run artifacts before being acted on or
+  recorded (see ATTEMPT 1 block) -- all claims checked out exactly. The
+  relaunch (attempt 2) and this final report were produced from direct
+  artifact inspection, not from trusting that message's content.
+
+=======================================================================
+SESSION CLOSE, 2026-07-25 16:30 +07: run_id pd_20260725_092025 complete.
+  last_stage: signoff (not clean -- see FULL GATE SUMMARY above).
+  experiences.jsonl upserted (run_id pd_20260725_092025, signoff_achieved:
+  false). design_state.json updated: pd.soc_stage2_gh104
+  .gh104_followup_20260725 (full metrics) + terminal history[] entry
+  (stage=signoff, decision=proceed, failure_class=drc_lvs,
+  suggested_next_step=loop_back_to:routing -- not executed this session,
+  scope was verification/honesty not closure). No checkpoint gate applies
+  (pipeline_config.checkpoints is empty in design_state.json).
