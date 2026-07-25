@@ -7,58 +7,55 @@
 # slack is expected to close nom_tt/max_tt setup but NOT the slow
 # (ss) corners -- see memory/pd/run_state.md for the full analysis.
 #
-# *** FIRST-CLASS KNOWN LIMITATION (GH #104, 2026-07-24): MACRO TIMING
-# IS NOT CHARACTERIZED PER-CORNER -- THIS BOUNDS THE VALIDITY OF EVERY
-# MULTI-CORNER RESULT IN THIS FLOW. ***
-# Both hard macros used in this SoC -- rv32i_cpu_top and
-# sky130_sram_4kbyte_1rw1r_32x1024_8 -- provide only ONE characterized
-# Liberty view each (nom_tt_025C_1v80 / TT_1p8V_25C respectively).
-# pnr/sky130/soc/config.json's MACROS entries map that single .lib to
-# EVERY PVT corner via a wildcard: "lib": {"*": [<the one nom_tt file>]}.
-# CONFIRMED from the run's own log (not inferred): analyzing the
-# "nom_ss_100C_1v60" corner literally reads
-# ".../rv32i_cpu_top__nom_tt_025C_1v80.lib" for the CPU macro's internal
-# timing arcs (and the equivalent TT_1p8V_25C.lib for the SRAM macro).
-# Only the sky130_fd_sc_hd standard-cell library genuinely varies by
-# corner in this flow; both macros' internal delays are corner-invariant,
-# always, for every reported corner.
+# *** KNOWN LIMITATION (GH #104): THE SRAM MACRO IS STILL NOT
+# CHARACTERIZED PER-CORNER. The CPU macro NOW IS (fixed 2026-07-25). ***
 #
-# CONSEQUENCE, STATED IN BOTH DIRECTIONS:
-#   - nom_tt results ARE VALID -- this is the one corner where the
-#     macros' characterization actually matches the analysis label.
-#   - ss/ff-corner results that touch either macro's internal timing
-#     ARE NOT RELIABLE, in OPPOSITE directions depending on check type:
-#       * SETUP at slow (ss) corners is likely OPTIMISTIC/understated --
-#         real slow-corner silicon would have slower macro-internal
-#         delay than the nom_tt value used here, so a genuinely-
-#         characterized ss corner could show WORSE setup violations than
-#         reported (e.g. the -5.32 ns max_ss WNS on the fully-CPU-internal
-#         path u_cpu/axi_araddr_o[15]->u_cpu/axi_arready_i may understate
-#         the true slow-corner violation).
-#       * HOLD at slow (ss) corners is likely PESSIMISTIC/overstated --
-#         real slow-corner silicon would have MORE launch-side delay out
-#         of the macro than modeled, giving more hold margin than
-#         reported (e.g. the max_ss -0.0708 ns residual on
-#         u_cpu/axi_bready_o -> {_45649_/D, _43792_/D} is plausibly
-#         better in real silicon than this report shows).
-#   Paths entirely within flat standard-cell logic (the bulk of the
-#   TNS improvement from the 65 MHz relaxation) ARE corner-accurate,
+# STATUS AS OF 2026-07-25 (RUN_2026-07-25_13-29-40):
+#   - rv32i_cpu_top: FIXED. config.json now maps 9 EXACT corner keys to 9
+#     genuinely distinct per-corner Liberty views in pnr/sky130/cpu/macro/.
+#     Those views already existed -- the Stage-1 run's OpenROAD.STAPostPNR
+#     step wrote all nine; only nom_tt had ever been staged, and the config
+#     wildcarded it to every corner. VERIFIED from each corner's own
+#     sta.log: nom_ss_100C_1v60 now reads rv32i_cpu_top__nom_ss_100C_1v60.lib,
+#     and all 9 corners load their own matching file.
+#   - sky130_sram_4kbyte_1rw1r_32x1024_8: STILL nom_tt-only. Its lib entry
+#     is deliberately still {"*": [<the one TT_1p8V_25C file>]}, so its
+#     internal timing arcs remain corner-invariant for every reported
+#     corner. This macro is now the SOLE source of this limitation.
+#     Tracked as GH #120 / bead claude_verilog_test-o1i (P3).
+#
+# WHAT THE FIX ACTUALLY REVEALED -- the prior speculation was WRONG on
+# the hold direction, and this matters:
+#   The earlier version of this header reasoned that ss SETUP was
+#   optimistic (correct) but ss HOLD was PESSIMISTIC, i.e. that the
+#   max_ss -0.0708 ns residual on u_cpu/axi_bready_o was "plausibly
+#   better in real silicon". With genuine per-corner CPU libs, hold got
+#   WORSE, not better:
+#       max_ss  hold WS: -0.0708 ns -> -0.3997 ns (2 paths -> 3)
+#       nom_tt  hold WS: +0.1807 ns MET -> -0.0923 ns VIOLATING
+#       max_ss setup WS: -5.3197 ns -> -10.4730 ns (TNS -98.5 -> -252.6)
+#   So the wildcard was optimistic in BOTH directions, not offsetting.
+#   nom_tt SETUP still passes (+0.2413 ns), but nom_tt HOLD no longer does.
+#
+#   ATTRIBUTION CAVEAT: that comparison run changed TWO things at once --
+#   per-corner CPU libs AND the newly-enabled antenna repair, which
+#   inserted 2018 diodes and thereby perturbed routing and timing. The
+#   deltas above CANNOT be cleanly attributed to the corner libs alone.
+#   Isolating them would need a third run with libs-only.
+#
+#   Paths entirely within flat standard-cell logic ARE corner-accurate,
 #   since sky130_fd_sc_hd genuinely varies per corner.
 #
-# SCOPE OF THIS SIGN-OFF: given the above, GH #104 Stage-2 is a
-# TYPICAL-CORNER (nom_tt) TIMING SIGN-OFF. It is NOT a validated
-# multi-corner timing sign-off and MUST NOT be recorded as one anywhere
-# downstream. The reported ss/ff numbers are directionally informative
-# but not to be treated as closed/validated results.
+# SCOPE OF THIS SIGN-OFF: still a TYPICAL-CORNER (nom_tt) TIMING SIGN-OFF,
+# because one macro remains single-corner -- and note that even nom_tt now
+# carries a hold violation. It is NOT a validated multi-corner timing
+# sign-off and MUST NOT be recorded as one anywhere downstream.
 #
-# REAL FIX (not a resizer/margin knob): characterize both macros at
-# ss/ff corners -- i.e. re-run their Liberty (.lib) generation per
-# corner (OpenRAM's own multi-corner characterization for the SRAM
-# macro; the Stage-1 CPU flow's equivalent for rv32i_cpu_top) -- so
-# slow/fast-corner analysis actually reflects each macro's own
-# corner-dependent delay instead of a constant nom_tt stand-in. Tracked
-# as a follow-up alongside the DRC-violation bead
-# (claude_verilog_test-0jp) -- see memory/pd/run_state.md.
+# REMAINING REAL FIX: SPICE-characterize the SRAM macro per corner
+# (analytical_delay=False, nominal_corner_only=False). This would also fix
+# the macro's internal_power tables, which OpenRAM's analytical model
+# emitted as ~1.99e11 and which are currently ZEROED in the staged .lib --
+# see that file's header. GH #120 / bead claude_verilog_test-o1i.
 #
 # Single clock domain: core_clk = 15.385 ns (65 MHz).
 # CPU is a hard macro with its own characterised timing arcs in the .lib;
