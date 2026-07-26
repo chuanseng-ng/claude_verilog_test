@@ -696,6 +696,20 @@ librelane-sky130-soc: sky130-soc-sv2v
 	@# 556 pin / 440 net -> 154 pin / 129 net via 2018 inserted diodes (~72%
 	@# reduction). Stage-1 CPU precedent: 2849 -> 57 pin (~98%).
 	@#
+	@# HOLD CHECKER NOW GATES (2026-07-26, bead claude_verilog_test-y7v).
+	@# --skip Checker.HoldViolations was removed: RUN_2026-07-25_13-29-40
+	@# reported nom_tt hold WNS -0.0923 ns (1 endpoint,
+	@# apb_paddr_i[4] -> u_cpu/apb_paddr_i[4]) and the skip meant the flow
+	@# signed off anyway. Hold is now a hard gate at the sign-off corner.
+	@#
+	@# CONSEQUENCE, deliberate: Checker.HoldViolations runs immediately after
+	@# OpenROAD.STAPostPNR (step 50) and BEFORE Magic.StreamOut / Magic.DRC /
+	@# KLayout.DRC / Netgen.LVS (steps 52-60). A residual hold violation
+	@# therefore ABORTS the run without producing DRC/LVS sign-off, the same
+	@# way Odb.CheckDesignAntennaProperties killed RUN_2026-07-25_09-21-05.
+	@# That is the point of a gate; re-add the skip only to harvest DRC/LVS
+	@# from a run whose hold is knowingly unfixed, and say so if you do.
+	@#
 	@# Odb.CheckDesignAntennaProperties STAYS SKIPPED, deliberately. It is not
 	@# part of the repair flow; it requires a LEF input, which this recipe does
 	@# not produce (Magic.WriteLEF is skipped below and config.json sets
@@ -724,7 +738,6 @@ librelane-sky130-soc: sky130-soc-sv2v
 		 --skip Checker.IllegalOverlap \
 		 --skip Odb.CheckDesignAntennaProperties \
 		 --skip Checker.SetupViolations \
-		 --skip Checker.HoldViolations \
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
 		 --skip Magic.WriteLEF \
