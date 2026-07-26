@@ -2765,3 +2765,70 @@ SESSION CLOSE, 2026-07-25 16:30 +07: run_id pd_20260725_092025 complete.
   suggested_next_step=loop_back_to:routing -- not executed this session,
   scope was verification/honesty not closure). No checkpoint gate applies
   (pipeline_config.checkpoints is empty in design_state.json).
+
+###############################################################################
+# GH #123 / bead 1ls: CPU macro AXI I/O budget tightening (2026-07-25 19:30 +07)
+###############################################################################
+gh123_run_id: pd_20260725_192957
+gh123_reason: Sky130 SoC nom_tt setup only closes at 65 MHz (15.385 ns), not
+  the target 75 MHz (13.333 ns). Root cause independently re-verified against
+  RUN_2026-07-25_13-29-40 (50-openroad-stapostpnr/<corner>/max.rpt) -- ALL
+  NUMBERS CONFIRMED EXACT, grep-reproducible:
+    axi_araddr_o[18] clk_i->Q inside u_cpu: nom_tt=4.544564ns,
+    nom_ss=7.541793ns, max_ss=8.121114ns (grep "axi_araddr_o\[18\]" -A1 in
+    each corner's max.rpt, line 25).
+    Worst path (max_ss, Startpoint/Endpoint both u_cpu, via araddr_o[18] ->
+    u_bus fabric -> axi_arready_i): slack -10.473048ns
+    (50-.../max_ss_100C_1v60/max.rpt). Breakdown: 8.121114ns clk->Q inside
+    CPU macro + 14.115234ns SoC fabric (u_bus crossbar arready early-accept
+    comb path, rtl/soc/axi4_crossbar.sv, OUT OF SCOPE, not touched) +
+    3.321700ns far-end characterized library setup time.
+  Root cause: pnr/sky130/cpu/constraints/sky130_cpu.sdc had uniform
+  set_output_delay -max 2.0 / set_input_delay -max 2.0 on all AXI4 master
+  ports at CLOCK_PERIOD=13.333ns -- leaves ~11.3ns of "free" internal
+  register-to-port budget, so the Stage-1 resizer never had pressure to
+  speed up those paths.
+  ADDITIONAL FINDING (not in original diagnosis, does not contradict it):
+  checked the accepted Run-8 baseline (RUN_2026-06-30_05-37-56,
+  56-openroad-stapostpnr/nom_tt.../max.rpt) for the WORST existing AXI
+  output arrival among all axi_*_o ports -- it is NOT bit[18]
+  (4.5ns) but axi_araddr_o[2] at 9.1631ns (required time was a constant
+  11.8330ns for all axi_*_o endpoints under -max 2.0, confirmed via
+  python parse of all "Endpoint: axi_*_o" blocks). Full path trace shows
+  this is sourced off u_core.u_dcache.state_q[2] (D-cache FSM state
+  register) fanning through fanout2152 (29 loads) / fanout2151 (33 loads),
+  both sky130_fd_sc_hd__buf_4 (smallest non-trivial buffer) -- a classic
+  undersized-buffer-on-high-fanout-net pattern, NOT an inherently-too-deep
+  logic cone. This gives good confidence the resizer has real upsizing
+  headroom once given pressure (buf_4 -> buf_8/12/16 all exist in the lib).
+
+sdc_change: pnr/sky130/cpu/constraints/sky130_cpu.sdc
+  set_output_delay -max: 2.0 -> 8.0 ns on ALL AXI4 *_o ports (write addr,
+    awlen/awsize/awburst, wdata/wstrb/wvalid, wlast, bready, read addr,
+    arlen/arsize/arburst/arvalid, rready) -- lines ~92-145 (post-edit).
+  set_input_delay -max: 2.0 -> 8.0 ns on ALL AXI4 *_i ports (awready/wready/
+    arready, bresp/bvalid, rdata/rresp/rvalid, rlast) -- lines ~46-77
+    (post-edit), applied symmetrically per task guidance (the far-end
+    3.3217ns "library setup time" on axi_arready_i is itself the abstracted
+    write_timing_model folding of an internal input-capture cone into a
+    single port setup number -- tightening input side pressures that cone
+    too).
+  APB debug I/O (3.5/1.0ns) and all -min hold values (0.5/1.0ns) UNCHANGED
+  per guardrail.
+  Justification for 8.0 (not the suggested-range midpoint): empirically
+  derived from Run-8 baseline that required_time = 13.833 - output_delay_max
+  (constant across all axi_*_o endpoints, confirmed via python parse).
+  8.0ns -> ~5.33ns internal budget, inside the ~4.5-5.5ns target band from
+  a period of 11.3ns free, but at the looser/safer end of the suggested
+  7.8-8.8ns range to raise first-attempt-closure odds given these are
+  multi-hour reruns.
+  CLOCK_PERIOD in pnr/sky130/cpu/config.json left at 13.333 (unchanged).
+
+gh123_run1:
+  launched:  2026-07-25T19:29:57+07:00
+  log:       /nobackup/sky130_cpu_gh123_20260725_192957.log
+  cmd:       cd pnr && nohup make librelane-sky130-cpu > $LOG 2>&1 < /dev/null & disown
+  run_dir:   /nobackup/sky130_cpu_runs/RUN_<tag TBD, check log/ls when checking>
+  status:    LAUNCHED, polling per feedback_librelane_wait_intervals (1hr,
+             then +1hr each subsequent check).
+  next_check: >= 2026-07-25T20:30+07 (1hr after launch)
