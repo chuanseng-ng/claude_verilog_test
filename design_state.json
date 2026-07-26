@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-07-25T09:34:28.772643+00:00",
+  "updated_at": "2026-07-26T02:40:50.343129+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -836,6 +836,17 @@
       "suggested_next_step": "loop_back_to:routing",
       "reason": "Sky130 SoC Stage-2 GH#104 follow-up re-run (RUN_2026-07-25_13-29-40, commit a31a626) completed all 78 flow stages with no regressions on prior-passing checks (LVS clean/0 errors, KLayout DRC exactly 4 known-artifact, area/util unchanged, power now physically sane at 61.1mW) and confirmed the per-corner CPU macro lib fix took effect. Not signoff-clean: antenna repair now runs but leaves a 154/129 residual (was never running before), Magic DRC 9081 known-artifact unchanged, and multi-corner timing (previously invalid under a wildcard-lib bug) now shows genuine setup/hold violations at 6 of 9 corners including the worst max_ss corner roughly doubling in WNS/TNS. Per loop-back rules this is a DRC/antenna signoff gap that would route to routing (max 2x) and/or timing_optimization, but no loop-back was executed this session -- the task scope was verifying number honesty, not chasing closure. Full independently-verified numbers in memory/pd/run_state.md.",
       "constraint_ref": "GH-104"
+    },
+    {
+      "timestamp": "2026-07-26T02:40:50.343129+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "timing_optimization",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "timing",
+      "suggested_next_step": "retry_stage",
+      "reason": "Root-caused and fixed bead claude_verilog_test-y7v (nom_tt hold WNS -0.0923 ns, single endpoint apb_paddr_i[4]->u_cpu): excluded clk_i from the SDC's blanket set_driving_cell buf_4 (was inflating capture-clock latency via an 886ps/1.218ns-slew weak-driver artifact on the clock port) and gave it clkbuf_16 instead; raised GRT_RESIZER_HOLD_SLACK_MARGIN 0.05->0.15ns to cover observed GRT-estimate-to-RCX drift. Relaunched make librelane-sky130-soc (tmux sky130_soc_hold_fix_20260726_093603, run RUN_2026-07-26_09-36-48); confirmed floorplan completes 0 errors and clkbuf_16 correctly applied to clk_i in the written SDC, then handed off without awaiting the 4-10h full run per task scope. Checker.HoldViolations still hard-gates the flow (skip not re-added) so a residual violation will abort before DRC/LVS.",
+      "constraint_ref": "claude_verilog_test-y7v"
     }
   ],
   "fix_requests": [
@@ -1367,6 +1378,29 @@
         "signoff_clean": false,
         "signoff_gap_summary": "setup TNS != 0 at multiple corners; hold WNS < 0 at 6 of 9 corners; antenna not fully repaired (154/129 residual); Magic DRC 9081 (known artifact, previously user-accepted). Deliverable of this session was NUMBER HONESTY (real per-corner timing, real antenna repair, real power total), not new sign-off closure.",
         "mid_run_note": "A message purporting to be from 'the coordinator' reported attempt 1's failure/results mid-session with specific claimed numbers. Per policy that no agent message is automatic authorization, every claim was independently re-derived from on-disk run artifacts before being acted on -- all checked out exactly. See memory/pd/run_state.md for full verification trail."
+      },
+      "hold_fix_20260726": {
+        "bead": "claude_verilog_test-y7v",
+        "baseline_run": "RUN_2026-07-25_13-29-40",
+        "baseline_hold_wns_nom_tt_ns": -0.092328,
+        "baseline_violator": "apb_paddr_i[4] -> u_cpu/apb_paddr_i[4] (hold in-reg)",
+        "root_cause": [
+          "set_driving_cell [all_inputs] applied weak buf_4 to clk_i itself (886 ps port delay / 1.218 ns slew, fanout 5, cap 0.4516pF per min.rpt) -- inflated capture-clock latency 1:1 into every hold requirement",
+          "GRT_RESIZER_HOLD_SLACK_MARGIN at LibreLane default 0.05 ns did not cover ~92 ps GRT-estimate-to-RCX-extracted drift at hold repair (step 39, pre-detailed-route/RCX)"
+        ],
+        "fixes_applied": [
+          "pnr/sky130/soc/constraints/sky130_soc.sdc: excluded clk_i from buf_4 set_driving_cell, gave it its own set_driving_cell -lib_cell sky130_fd_sc_hd__clkbuf_16 (matches CTS_ROOT_BUFFER)",
+          "pnr/sky130/soc/config.json: GRT_RESIZER_HOLD_SLACK_MARGIN 0.05 -> 0.15"
+        ],
+        "relaunch": {
+          "run_id": "pd_20260726_093603",
+          "tmux_session": "sky130_soc_hold_fix_20260726_093603",
+          "log": "/nobackup/sky130_soc_hold_fix_20260726_093603.log",
+          "run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-26_09-36-48",
+          "launched_at": "2026-07-26T09:36:03+07:00",
+          "status": "in_progress_not_awaited",
+          "confirmed_progress": "floorplan (step 10) completed 0 errors; soc_top.sdc line 781 confirms clkbuf_16 applied to clk_i; flow proceeding into PDN generation (step 17) as of last check"
+        }
       }
     }
   }

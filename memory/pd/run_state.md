@@ -2832,3 +2832,86 @@ gh123_run1:
   status:    LAUNCHED, polling per feedback_librelane_wait_intervals (1hr,
              then +1hr each subsequent check).
   next_check: >= 2026-07-25T20:30+07 (1hr after launch)
+
+## soc_stage2_hold_fix_20260726 (bead claude_verilog_test-y7v)
+
+run_id:      pd_20260726_093603
+bead:        claude_verilog_test-y7v
+reason:      nom_tt_025C_1v80 hold WNS -0.0923 ns (1 endpoint, apb_paddr_i[4] ->
+             u_cpu/apb_paddr_i[4]) in baseline RUN_2026-07-25_13-29-40 -- see
+             50-openroad-stapostpnr/nom_tt_025C_1v80/{violator_list.rpt,min.rpt}.
+             Two contributors, both fixed (not re-derived -- confirmed by reading
+             the reports):
+  1. set_driving_cell [all_inputs] in pnr/sky130/soc/constraints/sky130_soc.sdc
+     covered clk_i with the same weak sky130_fd_sc_hd__buf_4 used for data
+     inputs. min.rpt showed clk_i costing 886 ps delay / 1.218 ns slew
+     (fanout 5, cap 0.4516 pF) before CTS's own clkbuf_16 root buffer --
+     inflating capture-clock latency and, 1:1, every downstream hold
+     requirement.
+  2. GRT_RESIZER_HOLD_SLACK_MARGIN was at the LibreLane default 0.05 ns. Hold
+     repair (OpenROAD.ResizerTimingPostGRT, step 39) runs on GRT-estimated
+     parasitics, before detailed routing (41) / RCX extraction (49); 50 ps
+     margin did not cover the ~92 ps estimate-to-extracted drift that
+     surfaced as the residual violator.
+
+fixes_applied:
+  - pnr/sky130/soc/constraints/sky130_soc.sdc: excluded clk_i from
+    set_driving_cell buf_4 (reused the existing _in_timed = all_inputs-minus-
+    clk_i idiom, hoisted earlier in the file and shared with
+    set_input_delay). Added a separate
+    `set_driving_cell -lib_cell sky130_fd_sc_hd__clkbuf_16 -pin X [get_ports clk_i]`
+    -- matches CTS_ROOT_BUFFER in config.json. Chose clkbuf_16 over a
+    zero-slew ideal clock source because a zero-slew assumption would be
+    optimistic in the other direction; clkbuf_16 models "driven by the same
+    strength buffer CTS will use as its root". Header comment block added
+    documenting the fix and root cause inline (bead y7v, 2026-07-26).
+  - pnr/sky130/soc/config.json: GRT_RESIZER_HOLD_SLACK_MARGIN 0.05 -> 0.15
+    (new explicit key, confirmed against LibreLane's
+    steps/openroad.py ResizerTimingPostGRT.config_vars: units ns, default
+    0.05). GRT_RESIZER_ALLOW_SETUP_VIOS left at its false default (hold
+    repair must not trade away setup). GRT_RESIZER_HOLD_MAX_BUFFER_PCT left
+    at its 50% default -- watch for it being hit in the new run.
+    NOTE: did NOT add a "_comment_..." pseudo-key to config.json to carry
+    the rationale -- LibreLane's config loader (config.py ~line 1010) can
+    hard-error on unrecognized top-level keys unless they start with "//" or
+    "#"; safer to keep rationale only in the SDC comment + this file + the
+    commit message, not risk a config-parse failure at launch.
+
+pnr_Makefile_note: librelane-sky130-soc target already had
+  --skip Checker.HoldViolations REMOVED by a prior session action (bead y7v)
+  before this fix -- hold now hard-gates the flow, positioned right after
+  step 50 OpenROAD.STAPostPNR and BEFORE
+  Magic.StreamOut/Magic.DRC/KLayout.DRC/Netgen.LVS (steps 52-60). A residual
+  hold violation aborts the run with no DRC/LVS signoff. Verified this skip
+  is still absent from the Makefile target as of this launch.
+
+launch:
+  command:      cd /home/neuromorphic/Downloads/Github/claude_verilog_test/pnr && make librelane-sky130-soc
+  tmux_session: sky130_soc_hold_fix_20260726_093603
+  log:          /nobackup/sky130_soc_hold_fix_20260726_093603.log
+  launched_at:  2026-07-26T09:36:03+07:00
+  expected_runtime: 4-10 h
+  run_dir_glob: /nobackup/sky130_soc_runs/RUN_2026-07-26_*
+
+status: LAUNCHED_IN_PROGRESS as of 2026-07-26T09:4x+07 -- confirmed past
+  synthesis (Yosys register inference proceeding normally, same
+  BLKANDNBLK-lint-then-skip pattern as prior successful baseline runs). Not
+  waited to full completion per task instruction. Host reboots every ~2-8 h
+  and tmux does NOT survive them -- on a reboot kill, relaunch fresh
+  (`make librelane-sky130-soc`) rather than resuming, per
+  feedback_pd_run_strategy. Check via:
+    tmux attach -t sky130_soc_hold_fix_20260726_093603
+    tmux capture-pane -t sky130_soc_hold_fix_20260726_093603 -p | tail -40
+    tail -f /nobackup/sky130_soc_hold_fix_20260726_093603.log
+    ls -lat /nobackup/sky130_soc_runs/ | head
+
+success_criteria:
+  - nom_tt_025C_1v80 hold WNS >= 0 (passes Checker.HoldViolations gate)
+  - nom_tt_025C_1v80 setup stays MET (baseline +0.2413 ns; expect a small
+    setup regression from removing clock-port weak-driver latency, which
+    the APB inputs' 2-cycle set_multicycle_path -setup should absorb)
+  - Netgen LVS "Circuits match uniquely"; KLayout DRC exactly 4 (known
+    macro-internal set), not more
+  - antenna pin/net counts vs 154/129 baseline
+  - ss/ff corner hold movement reported but NOT gating (SRAM macro still
+    nom_tt-only, GH #120 / bead o1i)

@@ -98,6 +98,8 @@
     "RUN_POST_GRT_RESIZER_TIMING":   true,
     "RUN_POST_GRT_DESIGN_REPAIR":    false,
 
+    "GRT_RESIZER_HOLD_SLACK_MARGIN": 0.15,
+
     "PNR_SDC_FILE":      "dir::constraints/sky130_soc.sdc",
     "SIGNOFF_SDC_FILE":  "dir::constraints/sky130_soc.sdc",
     "FALLBACK_SDC_FILE": "dir::constraints/sky130_soc.sdc",

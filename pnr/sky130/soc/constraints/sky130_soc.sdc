@@ -57,12 +57,28 @@
 # emitted as ~1.99e11 and which are currently ZEROED in the staged .lib --
 # see that file's header. GH #120 / bead claude_verilog_test-o1i.
 #
+# FIX 2026-07-26 (bead claude_verilog_test-y7v): the nom_tt hold violation
+# reported just above (-0.0923 ns, apb_paddr_i[4] -> u_cpu) was root-caused
+# to set_driving_cell [all_inputs] also covering clk_i with the same weak
+# buf_4 used for data inputs -- min.rpt showed this cost the clock port
+# 886 ps of delay / 1.218 ns slew before CTS's clkbuf_16 root buffer even
+# entered the picture, inflating capture-clock latency and, 1:1, every
+# downstream hold requirement. clk_i is now excluded from the buf_4
+# set_driving_cell line and given its own -lib_cell clkbuf_16 (matches
+# CTS_ROOT_BUFFER in config.json) so the clock source model is neither an
+# ideal zero-slew source (optimistic) nor buf_4 (spuriously weak for a
+# clock pin). Paired with GRT_RESIZER_HOLD_SLACK_MARGIN raised 0.05 -> 0.15
+# ns in config.json to cover GRT-estimate-to-RCX-extracted drift during
+# hold repair. See RUN_2026-07-25_13-29-40 min.rpt for the violator detail
+# and the re-run launched after this fix for the outcome.
+#
 # Single clock domain: core_clk = 15.385 ns (65 MHz).
 # CPU is a hard macro with its own characterised timing arcs in the .lib;
 # path analysis through the CPU macro boundary uses those timing arcs.
 #
-# set_driving_cell matches Stage-1 CPU SDC (buf_4 at all inputs) so that
-# input-slew assumptions are consistent with the CPU macro timing model.
+# set_driving_cell matches Stage-1 CPU SDC (buf_4) for all DATA inputs so
+# that input-slew assumptions are consistent with the CPU macro timing
+# model. clk_i is excluded and driven by clkbuf_16 instead (see FIX above).
 
 set clock_period 15.385
 
@@ -79,18 +95,22 @@ set_clock_uncertainty -hold  0.150 [get_clocks core_clk]
 
 ###############################################################################
 # Load and drive modelling
-###############################################################################
-set_driving_cell \
-    -lib_cell sky130_fd_sc_hd__buf_4 \
-    -pin X \
-    [all_inputs]
-
-set_load 0.1 [all_outputs]
-
-###############################################################################
-# Input / output delays (20% of period for setup, 5% for hold)
-# Exclude clk_i from set_input_delay — STA-0441: input delay on clock port
-# not allowed.  Use the same OpenSTA-compatible foreach idiom as ASAP7 SoC SDC.
+#
+# Bead claude_verilog_test-y7v (2026-07-26): clk_i was previously swept into
+# set_driving_cell [all_inputs] along with buf_4, the same weak driver used
+# for real data inputs. min.rpt (RUN_2026-07-25_13-29-40) showed this cost
+# the clock port 886 ps of delay with a 1.218 ns slew (fanout 5, cap 0.4516
+# pF) before CTS's own clkbuf_16 root buffer ever got involved — a pure
+# weak-driver modelling artifact that inflates capture-clock latency and,
+# 1:1, the hold requirement at every downstream endpoint. Excluded clk_i
+# here using the same "_in_timed = all_inputs minus clk_i" idiom already
+# used below for set_input_delay (STA-0441), computed once and reused by
+# both. clk_i now gets its own driving cell: sky130_fd_sc_hd__clkbuf_16,
+# matching CTS_ROOT_BUFFER in config.json — modelling the clock source as
+# "driven by the same strength buffer CTS will use as its root", not a
+# zero-slew ideal source (optimistic) and not buf_4 (spuriously weak for a
+# clock pin). Data inputs keep buf_4 — Stage-1 CPU SDC uses buf_4 and this
+# file matches it deliberately (see header).
 ###############################################################################
 set _in_timed {}
 foreach _p [all_inputs] {
@@ -99,6 +119,24 @@ foreach _p [all_inputs] {
         lappend _in_timed $_p
     }
 }
+
+set_driving_cell \
+    -lib_cell sky130_fd_sc_hd__buf_4 \
+    -pin X \
+    $_in_timed
+
+set_driving_cell \
+    -lib_cell sky130_fd_sc_hd__clkbuf_16 \
+    -pin X \
+    [get_ports clk_i]
+
+set_load 0.1 [all_outputs]
+
+###############################################################################
+# Input / output delays (20% of period for setup, 5% for hold)
+# Exclude clk_i from set_input_delay — STA-0441: input delay on clock port
+# not allowed. Reuses $_in_timed computed above.
+###############################################################################
 if {[llength $_in_timed] > 0} {
     set_input_delay  [expr $clock_period * 0.20] -clock core_clk -max $_in_timed
     set_input_delay  [expr $clock_period * 0.05] -clock core_clk -min $_in_timed
