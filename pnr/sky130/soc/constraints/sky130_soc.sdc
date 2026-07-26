@@ -67,10 +67,33 @@
 # set_driving_cell line and given its own -lib_cell clkbuf_16 (matches
 # CTS_ROOT_BUFFER in config.json) so the clock source model is neither an
 # ideal zero-slew source (optimistic) nor buf_4 (spuriously weak for a
-# clock pin). Paired with GRT_RESIZER_HOLD_SLACK_MARGIN raised 0.05 -> 0.15
-# ns in config.json to cover GRT-estimate-to-RCX-extracted drift during
-# hold repair. See RUN_2026-07-25_13-29-40 min.rpt for the violator detail
-# and the re-run launched after this fix for the outcome.
+# clock pin). See RUN_2026-07-25_13-29-40 min.rpt for the violator detail.
+#
+# VERIFIED (RUN_2026-07-26_09-36-48): the clk_i change alone is worth
+# +0.362 ns of hold slack at the worst endpoint, measured at post-CTS STA
+# (step 32) before any hold repair runs: -1.3339 -> -0.9723 ns WS,
+# TNS -51.02 -> -34.38. Final nom_tt hold closed at +0.1354 ns (was
+# -0.0923). It is SETUP-NEUTRAL: steps 32 and 34 setup WS match the
+# baseline to 6 decimal places (4.190165/4.190166, 4.933771/4.933770),
+# as expected -- common clock latency cancels on reg-to-reg paths, so
+# reducing it moves hold only.
+#
+# THAT RUN ALSO CARRIED a second change, GRT_RESIZER_HOLD_SLACK_MARGIN
+# raised 0.05 -> 0.15, intended to cover GRT-estimate-to-RCX drift during
+# hold repair. IT WAS BOTH UNNECESSARY AND HARMFUL, and has been REVERTED
+# to 0.05:
+#   - Unnecessary: the drift it was meant to absorb is ~0.33 ns (baseline
+#     step-40 hold +0.2363 -> signoff -0.0923), which 0.15 ns could never
+#     have covered anyway. The clk_i fix, not the margin, closed hold.
+#   - Harmful: the wider margin over-inserted hold buffers at the post-GRT
+#     resizer, costing -0.856 ns of setup by step 40 (4.0600 -> 3.2044)
+#     and widening to -1.929 ns at signoff -- nom_tt setup went +0.2413
+#     MET to -1.6877 FAIL on u_cpu/axi_araddr_o[18] -> u_cpu/axi_arready_i.
+#     GRT_RESIZER_ALLOW_SETUP_VIOS=false did NOT prevent this: it only
+#     stops the resizer knowingly creating setup violations against
+#     GRT-ESTIMATED parasitics, not against post-detailed-route reality.
+# Do not raise this margin again to chase hold; fix the clock/data
+# arrival modelling instead.
 #
 # Single clock domain: core_clk = 15.385 ns (65 MHz).
 # CPU is a hard macro with its own characterised timing arcs in the .lib;
