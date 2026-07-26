@@ -78,12 +78,41 @@
 # as expected -- common clock latency cancels on reg-to-reg paths, so
 # reducing it moves hold only.
 #
-# OPEN PROBLEM -- SETUP REGRESSED WHEN HOLD WAS FIXED. Both runs carrying
-# the clk_i change close hold and FAIL setup at nom_tt:
-#     RUN_2026-07-26_09-36-48 : hold +0.1354 MET, setup -1.6877 FAIL
-#     RUN_2026-07-26_12-43-06 : hold +0.1453 MET, setup -1.4304 FAIL
-#     baseline RUN_2026-07-25_13-29-40: hold -0.0923 FAIL, setup +0.2413 MET
-# Violator both times: u_cpu/axi_araddr_o[18] -> u_cpu/axi_arready_i.
+# RESOLVED 2026-07-26 by RUN_2026-07-26_16-05-43. nom_tt_025C_1v80 now closes
+# BOTH: setup +1.38729 ns (TNS 0.0), hold +0.14439 ns, violator list EMPTY.
+# LVS "Circuits match uniquely". Full series:
+#     RUN_2026-07-25_13-29-40 baseline:             hold -0.0923 FAIL | setup +0.2413 MET
+#     RUN_2026-07-26_09-36-48 clk fix, margin 0.15: hold +0.1354 MET  | setup -1.6877 FAIL
+#     RUN_2026-07-26_12-43-06 clk fix, margin 0.05: hold +0.1453 MET  | setup -1.4304 FAIL
+#     RUN_2026-07-26_15-38-37 + postGRT repair:     DIED step 37, RSZ-0090
+#     RUN_2026-07-26_16-05-43 + SRAM max_trans fix: hold +0.1444 MET  | setup +1.3873 MET
+#
+# TWO fixes were needed, not one:
+#   (1) the clk_i driving-cell change described below -- closes hold;
+#   (2) RUN_POST_GRT_DESIGN_REPAIR true in config.json, which required
+#       raising the SRAM macro .lib max_transition 0.04 -> 0.5 because 40 ps
+#       is unachievable in sky130_fd_sc_hd and OpenROAD hard-aborts with
+#       RSZ-0090 -- closes setup. See that .lib's header for the tradeoff.
+#
+# PROOF the setup fix hit the real defect rather than a lucky placement
+# reshuffle: the offending net returned to baseline values.
+#     u_cpu/axi_araddr_o[18]  broken:   fanout 2, cap 0.625885, clk->Q 5.572786
+#                             fixed:    fanout 1, cap 0.019504, clk->Q 4.544736
+#                             baseline: fanout 1, cap 0.019349, clk->Q 4.544564
+# Setup also finished +1.15 ns BETTER than baseline, because post-GRT design
+# repair fixed other over-cap/over-slew nets that had gone unrepaired for the
+# whole Stage-2 history while that step was disabled.
+#
+# COST: antenna regressed. Pin violations across the series ran
+# 154 -> 152 -> 144 -> 164; the repair buffers added ~20 over the best run and
+# 10 over baseline. Antenna was already FAILED in every run; tracked on bead
+# claude_verilog_test-58q. DRC unchanged: KLayout 4 (known macro-internal),
+# Magic 9081 (known artifact class).
+#
+# The historical analysis below is retained because it documents two wrong
+# diagnoses that cost runs -- do not repeat them.
+#
+# The setup violator throughout was u_cpu/axi_araddr_o[18] -> u_cpu/axi_arready_i.
 #
 # GRT_RESIZER_HOLD_SLACK_MARGIN WAS NOT THE CAUSE. An earlier revision of
 # this header blamed the 0.05 -> 0.15 margin raise; RUN_2026-07-26_12-43-06
@@ -116,9 +145,10 @@
 # GH #123 measured at 8.83 ns of crossbar fabric across 20 driver stages.
 # Baseline's +0.2413 ns is 1.6% of the 15.385 ns period -- the path has
 # always been critically marginal and routing-sensitive, so a placement
-# reshuffle flips it. Note also that RUN_POST_GRT_DESIGN_REPAIR is false and
+# reshuffle flips it. RUN_POST_GRT_DESIGN_REPAIR was false and
 # Checker.MaxSlewViolations / MaxCapViolations are skipped, so nothing in the
-# flow is repairing that 1.687 ns slew / 0.626 pF cap.
+# flow was repairing that 1.687 ns slew / 0.626 pF cap. Enabling that step is
+# what fixed it -- see the RESOLVED block at the top of this section.
 #
 # DO NOT record either configuration as a sign-off: one fails hold, the
 # other fails setup, both at nom_tt. Tracked on bead claude_verilog_test-y7v.
