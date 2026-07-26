@@ -24,6 +24,39 @@
  * tables, min_pulse_width and minimum_period constraints, and
  * cell_leakage_power (0.035146 mW -- a sane value, retained).
  *
+ * ----------------------------------------------------------------------------
+ * SECOND PATCH 2026-07-26 (bead claude_verilog_test-y7v): max_transition
+ * 0.04 -> 0.5 on the 3 input buses that declared it (addr0, addr1, and the
+ * third input bus). THIS IS A SEPARATE DEFECT FROM THE POWER ONE ABOVE.
+ *
+ * 0.04 ns is PHYSICALLY UNACHIEVABLE in sky130_fd_sc_hd. OpenROAD says so
+ * outright and refuses to proceed:
+ *     [ERROR RSZ-0090] Max transition time from SDC is 0.040ns. Best
+ *     achievable transition time is 0.043ns with a load of 0.01pF
+ * That error is a hard abort of OpenROAD.RepairDesignPostGRT, which killed
+ * RUN_2026-07-26_15-38-37 at step 37. The check is global: it blocked repair
+ * of a CPU-macro net that has nothing to do with this SRAM.
+ *
+ * The 0.04 is not random -- it is the top of OpenRAM's characterization
+ * range, index_1("0.00125, 0.005, 0.04"). OpenRAM characterized this macro
+ * over input slews of 1.25-40 ps, which is unrealistically fast for sky130,
+ * where real nets run hundreds of ps. Same analytical-model root cause as
+ * the power defect above. 0.5 is the library's OWN declared
+ * default_max_transition, so it is the least invented value available, and
+ * it stays below LibreLane's MAX_TRANSITION_CONSTRAINT of 0.75.
+ *
+ * CONSEQUENCE, stated plainly: SRAM input slews between 0.04 and 0.5 ns are
+ * now permitted but sit OUTSIDE the characterized table, so STA extrapolates
+ * this macro's timing arcs there. Those arcs were already untrustworthy
+ * (analytical, single-corner), and all Stage-2 runs to date -- including the
+ * GH #104 sign-off -- already ran with SRAM slews effectively unconstrained,
+ * because no repair step was enforcing max_transition at all. So this
+ * changes nothing about how the tool treats SRAM nets versus the status quo;
+ * it only stops an impossible constraint from blocking repair elsewhere. It
+ * does NOT make this macro's timing more trustworthy. Real fix is the same
+ * one: SPICE characterization, GH #120 / bead claude_verilog_test-o1i.
+ * ----------------------------------------------------------------------------
+ *
  * Pristine original (absurd values intact) kept as the provenance record at:
  *   /nobackup/openram_sky130_4kb/macro/sky130_sram_4kbyte_1rw1r_32x1024_8/
  *     sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.lib
@@ -226,7 +259,7 @@ cell (sky130_sram_4kbyte_1rw1r_32x1024_8){
         bus_type  : addr; 
         direction  : input; 
         capacitance : 0.006889999999999999;  
-        max_transition       : 0.04;
+        max_transition       : 0.5;
         pin(addr0[9:0]){
         timing(){ 
             timing_type : setup_rising; 
@@ -263,7 +296,7 @@ cell (sky130_sram_4kbyte_1rw1r_32x1024_8){
         bus_type  : wmask; 
         direction  : input; 
         capacitance : 0.006889999999999999;  
-        max_transition       : 0.04;
+        max_transition       : 0.5;
         pin(wmask0[3:0]){
         timing(){ 
             timing_type : setup_rising; 
@@ -465,7 +498,7 @@ cell (sky130_sram_4kbyte_1rw1r_32x1024_8){
         bus_type  : addr; 
         direction  : input; 
         capacitance : 0.006889999999999999;  
-        max_transition       : 0.04;
+        max_transition       : 0.5;
         pin(addr1[9:0]){
         timing(){ 
             timing_type : setup_rising; 
