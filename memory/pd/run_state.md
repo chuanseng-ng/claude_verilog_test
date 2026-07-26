@@ -2997,3 +2997,74 @@ note: two stale idle tmux sessions from the prior invocation (sky130_soc_full,
       sky130_soc_signoff_65mhz — both dead bash panes, no active make process)
       were killed before this launch to avoid confusion; their runs had already
       terminated (one of them was RUN_2026-07-26_15-38-37 above).
+
+---
+
+## RUN_2026-07-26 (later) — SRAM SPICE characterization feasibility probe (bead o1i / GH #120)
+
+run_id:      pd_20260726_sramchar_probe
+design_name: sky130_sram_4kbyte_1rw1r_32x1024_8
+pdk:         sky130A
+tool:        OpenRAM v1.2.49 (SPICE characterization, ngspice-42 via librelane#analog devshell)
+start_time:  see actual_launch_time below
+last_stage:  n/a (this is an OpenRAM macro characterization sub-task, not the 8-stage PD flow)
+
+bead:        claude_verilog_test-o1i (branch feat/sram-spice-char-gh120, NOT feat/sky130-soc-drc-lvs-gh104)
+goal:        SPICE-characterize sky130_sram_4kbyte_1rw1r_32x1024_8 at TT/SS/FF corners to replace
+             the two hand-patches on pnr/sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.lib
+             (zeroed internal_power scalars; max_transition 0.04->0.5) and to stop wildcarding one
+             nom_tt .lib to all 9 STA corners in pnr/sky130/soc/config.json.
+
+pre-launch verification done (2026-07-26):
+  - compiler/characterizer/lib.py:107-138 read directly: use_specified_corners bypasses the
+    process_corners x supply_voltages x temperatures cross product entirely, does NOT prepend a
+    nominal corner when set, and add_corner(*tuple) accepts the (proc, volt, temp) tuple form
+    directly. Matches the plan exactly.
+  - compiler/options.py defaults confirmed: nominal_corner_only=False, use_specified_corners=None,
+    trim_netlist=True, spice_name=None (auto-detect), num_threads=1, analytical_delay=True.
+  - technology/sky130/tech/tech.py:720-724 confirmed SPICE_MODEL_DIR env var is read for all 5
+    process corner .lib.spice sections (tt/ss/ff/sf/fs) -- must be set before python3 starts.
+  - ngspice-42 confirmed present only inside `nix develop /home/neuromorphic/Downloads/Github/librelane#analog`
+    (not on default PATH).
+  - views_run.log (prior analytical-only run, 2026-07-22/23): Routing phase alone was 10765.2s
+    (~3.0h) of the 11392.1s (~3.16h) total; the analytical "Characterization" step was only 4.6s
+    (that run had analytical_delay default True, i.e. NOT real SPICE -- this is the number the
+    real-SPICE probe is measuring against).
+  - Host: 16 cores, ~13 GiB available at probe launch time.
+
+probe config: /nobackup/openram_sky130_4kb/config_sky130_sram_4kbyte_1rw1r_32x1024_8_charprobe.py
+  use_specified_corners = [("TT", 1.80, 25)]   # single corner only, feasibility probe
+  analytical_delay = False                      # real SPICE, the point of the probe
+  nominal_corner_only = False
+  trim_netlist = True (default)
+  num_threads = 1 (default)
+  check_lvsdrc = False
+  output_name = sky130_sram_4kbyte_1rw1r_32x1024_8_charprobe   # DISTINCT from the production
+    views-only output (sky130_sram_4kbyte_1rw1r_32x1024_8) -- probe cannot clobber the macro
+    currently staged into pnr/sky130/soc/macro/.
+
+env for launch (set BEFORE python3 starts, per OPENRAM_TMP no-op-as-config-key finding from the
+views run):
+  export OPENRAM_TMP=/nobackup/openram_sky130_4kb/temp_charprobe
+  export SPICE_MODEL_DIR=/nobackup/openram_sky130_4kb/pdk_root/skywater-pdk/libraries/sky130_fd_pr/latest/models
+
+launch cmd (inside analog devshell, cwd=/nobackup/openram_sky130_4kb, matching the views run's
+cwd-relative output_path convention):
+  nix develop /home/neuromorphic/Downloads/Github/librelane#analog -c \
+    python3 /home/neuromorphic/Downloads/Github/OpenRAM/sram_compiler.py \
+    config_sky130_sram_4kbyte_1rw1r_32x1024_8_charprobe.py
+
+do_not_touch: existing macro/sky130_sram_4kbyte_1rw1r_32x1024_8/ output dir (production views-only
+  macro, currently staged in pnr/sky130/soc/macro/), pnr/sky130/soc/config.json,
+  pnr/sky130/soc/macro/*.lib (not touched until characterization proven and libs staged per plan),
+  feat/sky130-soc-drc-lvs-gh104 branch (PR #124 open against it -- all bead o1i work stays on
+  feat/sram-spice-char-gh120).
+
+known risk: host reboots every 2-8h, does not preserve tmux/background processes across reboot.
+  Prior views run took 3.2h total with routing = 3.0h of that; a characterization run repeats
+  routing before characterizing, so the probe alone could exceed one reboot cycle. Log file is
+  the recovery point if the agent session or host dies mid-run.
+
+log:         /nobackup/openram_sky130_4kb/charprobe_run.log
+tmux_session: sram_charprobe (nix develop + python3, launched detached)
+
