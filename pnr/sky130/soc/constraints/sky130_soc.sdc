@@ -78,22 +78,50 @@
 # as expected -- common clock latency cancels on reg-to-reg paths, so
 # reducing it moves hold only.
 #
-# THAT RUN ALSO CARRIED a second change, GRT_RESIZER_HOLD_SLACK_MARGIN
-# raised 0.05 -> 0.15, intended to cover GRT-estimate-to-RCX drift during
-# hold repair. IT WAS BOTH UNNECESSARY AND HARMFUL, and has been REVERTED
-# to 0.05:
-#   - Unnecessary: the drift it was meant to absorb is ~0.33 ns (baseline
-#     step-40 hold +0.2363 -> signoff -0.0923), which 0.15 ns could never
-#     have covered anyway. The clk_i fix, not the margin, closed hold.
-#   - Harmful: the wider margin over-inserted hold buffers at the post-GRT
-#     resizer, costing -0.856 ns of setup by step 40 (4.0600 -> 3.2044)
-#     and widening to -1.929 ns at signoff -- nom_tt setup went +0.2413
-#     MET to -1.6877 FAIL on u_cpu/axi_araddr_o[18] -> u_cpu/axi_arready_i.
-#     GRT_RESIZER_ALLOW_SETUP_VIOS=false did NOT prevent this: it only
-#     stops the resizer knowingly creating setup violations against
-#     GRT-ESTIMATED parasitics, not against post-detailed-route reality.
-# Do not raise this margin again to chase hold; fix the clock/data
-# arrival modelling instead.
+# OPEN PROBLEM -- SETUP REGRESSED WHEN HOLD WAS FIXED. Both runs carrying
+# the clk_i change close hold and FAIL setup at nom_tt:
+#     RUN_2026-07-26_09-36-48 : hold +0.1354 MET, setup -1.6877 FAIL
+#     RUN_2026-07-26_12-43-06 : hold +0.1453 MET, setup -1.4304 FAIL
+#     baseline RUN_2026-07-25_13-29-40: hold -0.0923 FAIL, setup +0.2413 MET
+# Violator both times: u_cpu/axi_araddr_o[18] -> u_cpu/axi_arready_i.
+#
+# GRT_RESIZER_HOLD_SLACK_MARGIN WAS NOT THE CAUSE. An earlier revision of
+# this header blamed the 0.05 -> 0.15 margin raise; RUN_2026-07-26_12-43-06
+# put it back to 0.05 and DISPROVED that:
+#     step-40 setup: 4.0600 baseline | 3.2044 at margin 0.15 | 3.0776 at 0.05
+#     step-40 hold : 0.2620799207389556 at BOTH 0.15 and 0.05 -- bit-identical
+# The knob moved neither hold nor setup in the direction claimed; setup at
+# step 40 is if anything worse at 0.05. Margin is left at 0.05 (the default)
+# because nothing justifies deviating, NOT because it fixes anything.
+#
+# ACTUAL MECHANISM (RUN_2026-07-26_12-43-06 max.rpt, same path both runs):
+# the clock half behaves correctly -- launch and capture clock both drop
+# 0.588 ns and cancel exactly, as reg-to-reg through one macro clock pin
+# must. The loss is 1.672 ns of DATA path, and 1.028 ns of that is the CPU
+# macro's own clk->Q arc inflating because its output net exploded:
+#     u_cpu/axi_araddr_o[18]  fanout 1 -> 2, cap 0.019349 -> 0.625885 pF
+#                             slew 0.0425 -> 1.6868 ns
+#                             clk->Q 4.5446 -> 5.5728 ns
+# The CPU is a hard macro with fixed output drive, so that load lands
+# directly on its delay arc with no resizing possible.
+#
+# WHY THE NET CHANGED: cascade, not a direct effect of the clock model.
+# Better hold slack -> post-CTS hold repair inserts different buffers ->
+# different placement -> different GRT -> antenna violations 556 -> 558 and
+# diodes 2018 -> 2039 -> this net picked up a second, distant sink and a
+# long route. A diode's own load is ~0.005 pF and cannot explain 0.36 pF;
+# the wire length does.
+#
+# CONTEXT: this is the SAME path that forced 75 -> 65 MHz (GH #104) and that
+# GH #123 measured at 8.83 ns of crossbar fabric across 20 driver stages.
+# Baseline's +0.2413 ns is 1.6% of the 15.385 ns period -- the path has
+# always been critically marginal and routing-sensitive, so a placement
+# reshuffle flips it. Note also that RUN_POST_GRT_DESIGN_REPAIR is false and
+# Checker.MaxSlewViolations / MaxCapViolations are skipped, so nothing in the
+# flow is repairing that 1.687 ns slew / 0.626 pF cap.
+#
+# DO NOT record either configuration as a sign-off: one fails hold, the
+# other fails setup, both at nom_tt. Tracked on bead claude_verilog_test-y7v.
 #
 # Single clock domain: core_clk = 15.385 ns (65 MHz).
 # CPU is a hard macro with its own characterised timing arcs in the .lib;
