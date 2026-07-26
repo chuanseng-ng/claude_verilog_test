@@ -2915,3 +2915,34 @@ success_criteria:
   - antenna pin/net counts vs 154/129 baseline
   - ss/ff corner hold movement reported but NOT gating (SRAM macro still
     nom_tt-only, GH #120 / bead o1i)
+
+
+---
+
+## RUN_2026-07-26_15-38-37 — post-GRT design repair experiment (bead y7v)
+
+run_id:      pd_20260726_153800
+design_name: soc_top
+pdk:         sky130A
+tool:        LibreLane/OpenLane2-Classic
+start_time:  2026-07-26T15:38:00+07:00
+last_stage:  routing
+
+bead:        claude_verilog_test-y7v
+change:      pnr/sky130/soc/config.json: RUN_POST_GRT_DESIGN_REPAIR false -> true
+             (single variable change; ONE experiment)
+rationale:   Setup violator u_cpu/axi_araddr_o[18] -> u_cpu/axi_arready_i needs
+             post-GRT max-cap/max-slew/max-fanout net repair. With RUN_POST_GRT_DESIGN_REPAIR
+             off, nothing in the flow buffers the 0.626 pF / 1.687 ns net that inflates the
+             CPU macro clk->Q by +1.028 ns. Precedent: all ASAP7 configs run with this true.
+prior_runs:
+  - RUN_2026-07-25_13-29-40 (baseline): hold -0.0923 FAIL | setup +0.2413 MET
+  - RUN_2026-07-26_09-36-48 (clk fix + GRT hold margin 0.15): hold +0.1354 MET | setup -1.6877 FAIL
+  - RUN_2026-07-26_12-43-06 (clk fix + GRT hold margin 0.05): hold +0.1453 MET | setup -1.4304 FAIL
+do_not_touch: SDC, GRT_RESIZER_HOLD_SLACK_MARGIN (stays 0.05), CLOCK_PERIOD, Makefile skip list
+
+run_dir:     /nobackup/sky130_soc_runs  (actual RUN_<timestamp> dir assigned by LibreLane at launch)
+log:         /nobackup/sky130_soc_grtrepair_launch.log
+tmux_session: sky130_soc_grtrepair
+
+actual_run_dir: /nobackup/sky130_soc_runs/RUN_2026-07-26_15-38-37
