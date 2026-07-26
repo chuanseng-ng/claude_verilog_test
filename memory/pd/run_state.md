@@ -2946,3 +2946,54 @@ log:         /nobackup/sky130_soc_grtrepair_launch.log
 tmux_session: sky130_soc_grtrepair
 
 actual_run_dir: /nobackup/sky130_soc_runs/RUN_2026-07-26_15-38-37
+
+---
+
+## RUN_2026-07-26_16-05-43 — relaunch after SRAM lib max_transition fix (bead y7v)
+
+run_id:      pd_20260726_160543
+design_name: soc_top
+pdk:         sky130A
+tool:        LibreLane/OpenLane2-Classic
+start_time:  2026-07-26T16:05:36+07:00
+last_stage:  floorplan (launched, synth in progress at time of this record)
+
+bead:        claude_verilog_test-y7v
+change:      commit 8b11092 — pnr/sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.lib:
+             3 max_transition declarations (addr0, addr1, one data-adjacent bus) 0.04 -> 0.5
+             (the library's own default_max_transition). 0.04 ns was physically unachievable
+             in sky130_fd_sc_hd (RSZ-0090: best achievable 0.043 ns at 0.01pF load), and the
+             repair check is global so it blocked repair of an unrelated CPU-macro net.
+             No other files touched. Verified via OpenSTA read_liberty parse before commit.
+rationale:   RUN_2026-07-26_15-38-37 (RUN_POST_GRT_DESIGN_REPAIR=true experiment) died at
+             step 37 OpenROAD.RepairDesignPostGRT with RSZ-0090 citing the SRAM's 0.04ns
+             max_transition. This is a pure unblock of that death; no other config touched.
+prior_runs:
+  - RUN_2026-07-25_13-29-40 (baseline): hold -0.0923 FAIL | setup +0.2413 MET
+  - RUN_2026-07-26_09-36-48 (clk fix + GRT hold margin 0.15): hold +0.1354 MET | setup -1.6877 FAIL
+  - RUN_2026-07-26_12-43-06 (clk fix + GRT hold margin 0.05): hold +0.1453 MET | setup -1.4304 FAIL
+  - RUN_2026-07-26_15-38-37 (+ postGRT repair, SRAM lib still 0.04): DIED step 37 RSZ-0090
+do_not_touch: SDC, GRT_RESIZER_HOLD_SLACK_MARGIN (stays 0.05), CLOCK_PERIOD, Makefile skip list,
+              RUN_POST_GRT_DESIGN_REPAIR (stays true)
+
+verify_on_landing:
+  - Does it get PAST *-openroad-repairdesignpostgrt at all (first question, RSZ-0090 must not recur)
+  - *-openroad-stamidpnr-3/ws.max.rpt: baseline 4.0600, failing runs were 3.2044/3.0776
+  - *-openroad-stapostpnr/nom_tt_025C_1v80/ws.max.rpt: setup, needs >= 0
+  - same dir ws.min.rpt: hold must STAY >= 0 (currently +0.1453 baseline to beat)
+  - grep max.rpt for u_cpu/axi_araddr_o[18]: cap must drop from 0.625885, clk->Q from 5.572786
+    (original baseline was cap 0.019349, clk->Q 4.544564)
+  - No regression: LVS "Circuits match uniquely", KLayout DRC exactly 4, Magic DRC 9081,
+    antenna no worse than 144 pin / 115 net
+  - Runtime / peak memory on 6700x3100 um design on ~15 GiB host — has never completed this step
+
+run_dir:      /nobackup/sky130_soc_runs
+log:          /nobackup/sky130_soc_run_20260726_090536.log
+tmux_session: sky130_soc_y7v_relaunch
+
+actual_run_dir: /nobackup/sky130_soc_runs/RUN_2026-07-26_16-05-43
+
+note: two stale idle tmux sessions from the prior invocation (sky130_soc_full,
+      sky130_soc_signoff_65mhz — both dead bash panes, no active make process)
+      were killed before this launch to avoid confusion; their runs had already
+      terminated (one of them was RUN_2026-07-26_15-38-37 above).

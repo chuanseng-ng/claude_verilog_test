@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-07-26T02:40:50.343129+00:00",
+  "updated_at": "2026-07-26T09:07:44.282379+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -847,6 +847,17 @@
       "suggested_next_step": "retry_stage",
       "reason": "Root-caused and fixed bead claude_verilog_test-y7v (nom_tt hold WNS -0.0923 ns, single endpoint apb_paddr_i[4]->u_cpu): excluded clk_i from the SDC's blanket set_driving_cell buf_4 (was inflating capture-clock latency via an 886ps/1.218ns-slew weak-driver artifact on the clock port) and gave it clkbuf_16 instead; raised GRT_RESIZER_HOLD_SLACK_MARGIN 0.05->0.15ns to cover observed GRT-estimate-to-RCX drift. Relaunched make librelane-sky130-soc (tmux sky130_soc_hold_fix_20260726_093603, run RUN_2026-07-26_09-36-48); confirmed floorplan completes 0 errors and clkbuf_16 correctly applied to clk_i in the written SDC, then handed off without awaiting the 4-10h full run per task scope. Checker.HoldViolations still hard-gates the flow (skip not re-added) so a residual violation will abort before DRC/LVS.",
       "constraint_ref": "claude_verilog_test-y7v"
+    },
+    {
+      "timestamp": "2026-07-26T09:07:44.282408+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "timing_optimization",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "tool_error",
+      "suggested_next_step": "retry_stage",
+      "reason": "Relaunched bead claude_verilog_test-y7v Stage-2 SoC run after unblocking RSZ-0090 (RUN_2026-07-26_15-38-37 died at OpenROAD.RepairDesignPostGRT: SRAM macro Liberty's 0.04ns max_transition on 3 input buses was physically unachievable in sky130_fd_sc_hd). Fix (commit 8b11092, already committed prior to this session) raised those 3 values to 0.5, the library's own default_max_transition; verified via OpenSTA parse. This session made no edits -- verified 5 pre-launch checks (SRAM lib clean, RUN_POST_GRT_DESIGN_REPAIR=true, GRT_RESIZER_HOLD_SLACK_MARGIN=0.05, SDC clk_i/clkbuf_16 exclusion intact, no --skip Checker.HoldViolations, git clean at 8b11092), killed 2 stale dead tmux sessions from a prior invocation, then launched make librelane-sky130-soc detached (tmux sky130_soc_y7v_relaunch, run RUN_2026-07-26_16-05-43, log /nobackup/sky130_soc_run_20260726_090536.log). Confirmed yosys synthesis running before handing off without awaiting the ~2.5-3h completion, per task scope. Checker.HoldViolations still hard-gates the flow so a residual hold violation will abort before DRC/LVS as before.",
+      "constraint_ref": "claude_verilog_test-y7v"
     }
   ],
   "fix_requests": [
@@ -1400,6 +1411,49 @@
           "launched_at": "2026-07-26T09:36:03+07:00",
           "status": "in_progress_not_awaited",
           "confirmed_progress": "floorplan (step 10) completed 0 errors; soc_top.sdc line 781 confirms clkbuf_16 applied to clk_i; flow proceeding into PDN generation (step 17) as of last check"
+        }
+      },
+      "postgrt_repair_fix_20260726": {
+        "bead": "claude_verilog_test-y7v",
+        "prior_run_died": {
+          "run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-26_15-38-37",
+          "died_at_step": "37 OpenROAD.RepairDesignPostGRT",
+          "error": "RSZ-0090 Max transition time from SDC is 0.040ns. Best achievable transition time is 0.043ns with a load of 0.01pF",
+          "root_cause": "OpenRAM SRAM macro Liberty declared max_transition:0.04 on 3 input buses (addr0, addr1, one data-adjacent bus); physically unachievable in sky130_fd_sc_hd; global check blocked repair of an unrelated CPU-macro net (u_cpu/axi_araddr_o[18])."
+        },
+        "fix_applied": {
+          "commit": "8b11092",
+          "change": "sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.lib: 3 max_transition values 0.04 -> 0.5 (library's own default_max_transition). Verified via OpenSTA read_liberty parse before commit. No other files touched."
+        },
+        "pre_launch_verification": {
+          "sram_lib_clean_of_0.04_max_transition": true,
+          "config_RUN_POST_GRT_DESIGN_REPAIR": true,
+          "config_GRT_RESIZER_HOLD_SLACK_MARGIN": 0.05,
+          "sdc_clk_i_excluded_from_buf4_has_own_clkbuf_16": true,
+          "makefile_no_skip_HoldViolations": true,
+          "git_status_clean_at_8b11092": true
+        },
+        "relaunch": {
+          "run_id": "pd_20260726_160543",
+          "tmux_session": "sky130_soc_y7v_relaunch",
+          "log": "/nobackup/sky130_soc_run_20260726_090536.log",
+          "run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-26_16-05-43",
+          "launched_at": "2026-07-26T16:05:36+07:00",
+          "status": "in_progress_not_awaited",
+          "confirmed_progress": "yosys synthesis actively running (pid 329803) at time of handoff",
+          "stale_sessions_killed_before_launch": [
+            "sky130_soc_full",
+            "sky130_soc_signoff_65mhz"
+          ],
+          "verify_on_landing": [
+            "Passes *-openroad-repairdesignpostgrt without RSZ-0090 recurrence (first question)",
+            "*-openroad-stamidpnr-3/ws.max.rpt recovers toward baseline 4.0600 (failing runs were 3.2044/3.0776)",
+            "*-openroad-stapostpnr/nom_tt_025C_1v80/ws.max.rpt setup >= 0",
+            "same dir ws.min.rpt hold stays >= 0 (+0.1453 baseline to beat)",
+            "u_cpu/axi_araddr_o[18] cap drops from 0.625885 and clk->Q from 5.572786",
+            "no regression: LVS match, KLayout DRC exactly 4, Magic DRC 9081, antenna <= 144 pin/115 net",
+            "runtime/peak memory on 6700x3100um design on ~15GiB host -- step has never completed before"
+          ]
         }
       }
     }
