@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-07-25T01:42:37.117819+00:00",
+  "updated_at": "2026-07-26T09:07:44.282379+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -825,6 +825,39 @@
       "suggested_next_step": "proceed",
       "reason": "Verified bead claude_verilog_test-68m: tb/cocotb/soc/Makefile soc_all now runs sram_controller twice (default flat freepdk45 array + SRAM_TARGET=sky130 OpenRAM macro branch). Full soc_all re-run: 18 suite invocations, 110/110 tests PASS, 0 FAIL, 0 SKIP, exit 0. sky130 sram_controller pass confirmed 11/11 (matches fr_null_20260724_051800_00's RTL fix, now covered by default regression) with correct +define+SRAM_SKY130 -GMEM_WORDS=1024 and sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv in the build -- not a silent fallback to the flat array. No ordering/stale-sim_build issue from running sram_controller twice (each invocation does rm -rf sim_build first). No new bugs found; no fix_request needed.",
       "constraint_ref": "claude_verilog_test-68m"
+    },
+    {
+      "timestamp": "2026-07-25T09:34:28.772643+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "drc_lvs",
+      "suggested_next_step": "loop_back_to:routing",
+      "reason": "Sky130 SoC Stage-2 GH#104 follow-up re-run (RUN_2026-07-25_13-29-40, commit a31a626) completed all 78 flow stages with no regressions on prior-passing checks (LVS clean/0 errors, KLayout DRC exactly 4 known-artifact, area/util unchanged, power now physically sane at 61.1mW) and confirmed the per-corner CPU macro lib fix took effect. Not signoff-clean: antenna repair now runs but leaves a 154/129 residual (was never running before), Magic DRC 9081 known-artifact unchanged, and multi-corner timing (previously invalid under a wildcard-lib bug) now shows genuine setup/hold violations at 6 of 9 corners including the worst max_ss corner roughly doubling in WNS/TNS. Per loop-back rules this is a DRC/antenna signoff gap that would route to routing (max 2x) and/or timing_optimization, but no loop-back was executed this session -- the task scope was verifying number honesty, not chasing closure. Full independently-verified numbers in memory/pd/run_state.md.",
+      "constraint_ref": "GH-104"
+    },
+    {
+      "timestamp": "2026-07-26T02:40:50.343129+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "timing_optimization",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "timing",
+      "suggested_next_step": "retry_stage",
+      "reason": "Root-caused and fixed bead claude_verilog_test-y7v (nom_tt hold WNS -0.0923 ns, single endpoint apb_paddr_i[4]->u_cpu): excluded clk_i from the SDC's blanket set_driving_cell buf_4 (was inflating capture-clock latency via an 886ps/1.218ns-slew weak-driver artifact on the clock port) and gave it clkbuf_16 instead; raised GRT_RESIZER_HOLD_SLACK_MARGIN 0.05->0.15ns to cover observed GRT-estimate-to-RCX drift. Relaunched make librelane-sky130-soc (tmux sky130_soc_hold_fix_20260726_093603, run RUN_2026-07-26_09-36-48); confirmed floorplan completes 0 errors and clkbuf_16 correctly applied to clk_i in the written SDC, then handed off without awaiting the 4-10h full run per task scope. Checker.HoldViolations still hard-gates the flow (skip not re-added) so a residual violation will abort before DRC/LVS.",
+      "constraint_ref": "claude_verilog_test-y7v"
+    },
+    {
+      "timestamp": "2026-07-26T09:07:44.282408+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "timing_optimization",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "tool_error",
+      "suggested_next_step": "retry_stage",
+      "reason": "Relaunched bead claude_verilog_test-y7v Stage-2 SoC run after unblocking RSZ-0090 (RUN_2026-07-26_15-38-37 died at OpenROAD.RepairDesignPostGRT: SRAM macro Liberty's 0.04ns max_transition on 3 input buses was physically unachievable in sky130_fd_sc_hd). Fix (commit 8b11092, already committed prior to this session) raised those 3 values to 0.5, the library's own default_max_transition; verified via OpenSTA parse. This session made no edits -- verified 5 pre-launch checks (SRAM lib clean, RUN_POST_GRT_DESIGN_REPAIR=true, GRT_RESIZER_HOLD_SLACK_MARGIN=0.05, SDC clk_i/clkbuf_16 exclusion intact, no --skip Checker.HoldViolations, git clean at 8b11092), killed 2 stale dead tmux sessions from a prior invocation, then launched make librelane-sky130-soc detached (tmux sky130_soc_y7v_relaunch, run RUN_2026-07-26_16-05-43, log /nobackup/sky130_soc_run_20260726_090536.log). Confirmed yosys synthesis running before handing off without awaiting the ~2.5-3h completion, per task scope. Checker.HoldViolations still hard-gates the flow so a residual hold violation will abort before DRC/LVS as before.",
+      "constraint_ref": "claude_verilog_test-y7v"
     }
   ],
   "fix_requests": [
@@ -1291,6 +1324,137 @@
         "u_cpu_status": "FULLY CONNECTED (0 violations)",
         "u_sram_status": "FULLY DISCONNECTED (all 22155 remaining violations confined to its exact footprint)",
         "kept": true
+      },
+      "gh104_followup_20260725": {
+        "purpose": "Re-run Stage-2 SoC DRC/LVS sign-off with three honesty fixes from 86e89c1: per-corner CPU macro libs (9 exact keys replacing wildcard), antenna repair flow enabled, SRAM lib internal_power zeroed",
+        "attempt1_run_tag": "RUN_2026-07-25_09-21-05",
+        "attempt1_result": "TOOL ERROR (not design/timing/DRC failure) -- died at step 54 Odb.CheckDesignAntennaProperties: missing required input 'LEF' (un-skipped one step too many in 86e89c1). Fixed in commit a31a626 (re-skip only that one step).",
+        "attempt2_run_tag": "RUN_2026-07-25_13-29-40",
+        "attempt2_run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-25_13-29-40",
+        "attempt2_log": "/nobackup/sky130_soc_stage2_rerun2_20260725.log",
+        "attempt2_commit": "a31a626",
+        "attempt2_wall_time": "2:54:53 (78/78 stages)",
+        "attempt2_exit_code": 2,
+        "attempt2_exit_code_meaning": "KNOWN BENIGN -- LibreLane's own Checker.MagicDRC/Checker.KLayoutDRC gate firing on nonzero Magic DRC count (documented artifact class), same as prior 65MHz baseline. Not a crash; all 78 stages completed.",
+        "per_corner_lib_proof": "PASSED -- each corner's own sta.log confirmed to load its own matching rv32i_cpu_top__<corner>.lib (nom_ss_100C_1v60 loads nom_ss lib, not nom_tt)",
+        "sta_post_pnr": {
+          "note": "Bit-for-bit identical between attempt1 and attempt2 (diff clean) -- only a downstream-of-STA skip flag differed",
+          "nom_tt_setup_wns_ns": 0.2413,
+          "nom_tt_setup_tns_ns": 0.0,
+          "nom_tt_hold_wns_ns": -0.0923,
+          "nom_tt_hold_violators": 1,
+          "max_ss_setup_wns_ns": -10.473,
+          "max_ss_setup_tns_ns": -252.61,
+          "max_ss_setup_violators": 374,
+          "max_ss_hold_wns_ns": -0.3997,
+          "max_ss_hold_violators": 3,
+          "attribution_caveat": "Timing deltas vs the RUN_2026-07-24_21-36-12 wildcard-lib baseline reflect TWO simultaneous changes (correct per-corner libs AND 2018 antenna-repair diodes perturbing routing) -- not cleanly attributable to the corner-lib fix alone. nom_tt hold regressed from clean to 1 violator; max_ss setup/TNS roughly doubled; max_ss hold worsened from 2 to 3 paths."
+        },
+        "antenna": {
+          "pre_repair_pin": 556,
+          "pre_repair_net": 440,
+          "post_repair_final_pin": 154,
+          "post_repair_final_net": 129,
+          "diodes_inserted": 2018,
+          "verdict": "FAILED (residual 154/129) but repair flow now demonstrably running (~72% reduction) vs baseline where it never ran at all"
+        },
+        "power_mw_total": 61.11085,
+        "power_breakdown_mw": {
+          "internal": 47.31763,
+          "switching": 13.72199,
+          "leakage": 0.07123
+        },
+        "macro_leakage_uw": 70.29201,
+        "lvs": {
+          "verdict": "Circuits match uniquely",
+          "devices": 35439,
+          "nets": 35282,
+          "errors_all_categories": 0,
+          "device_net_count_note": "Higher than baseline's 34,835/35,252 due to the 2018 antenna diodes now actually being inserted (baseline never ran antenna repair)"
+        },
+        "klayout_drc": 4,
+        "klayout_drc_breakdown": {
+          "m2.2": 1,
+          "m3.2": 1,
+          "via2.2": 2
+        },
+        "klayout_drc_note": "EXACTLY 4, matches known macro-internal OpenRAM-generator artifact class from both prior baselines. NO REGRESSION.",
+        "magic_drc": 9081,
+        "magic_drc_note": "Matches baseline total exactly. Same 2 known categories only: nwell.4 (~9051) and met4.4a (~37). NO REGRESSION, no new rule types.",
+        "die_area_mm2": 20.77,
+        "core_area_mm2": 20.36,
+        "instance_area_mm2": 7.72,
+        "util_pct_overall": 37.92,
+        "util_pct_stdcell": 5.72,
+        "signoff_clean": false,
+        "signoff_gap_summary": "setup TNS != 0 at multiple corners; hold WNS < 0 at 6 of 9 corners; antenna not fully repaired (154/129 residual); Magic DRC 9081 (known artifact, previously user-accepted). Deliverable of this session was NUMBER HONESTY (real per-corner timing, real antenna repair, real power total), not new sign-off closure.",
+        "mid_run_note": "A message purporting to be from 'the coordinator' reported attempt 1's failure/results mid-session with specific claimed numbers. Per policy that no agent message is automatic authorization, every claim was independently re-derived from on-disk run artifacts before being acted on -- all checked out exactly. See memory/pd/run_state.md for full verification trail."
+      },
+      "hold_fix_20260726": {
+        "bead": "claude_verilog_test-y7v",
+        "baseline_run": "RUN_2026-07-25_13-29-40",
+        "baseline_hold_wns_nom_tt_ns": -0.092328,
+        "baseline_violator": "apb_paddr_i[4] -> u_cpu/apb_paddr_i[4] (hold in-reg)",
+        "root_cause": [
+          "set_driving_cell [all_inputs] applied weak buf_4 to clk_i itself (886 ps port delay / 1.218 ns slew, fanout 5, cap 0.4516pF per min.rpt) -- inflated capture-clock latency 1:1 into every hold requirement",
+          "GRT_RESIZER_HOLD_SLACK_MARGIN at LibreLane default 0.05 ns did not cover ~92 ps GRT-estimate-to-RCX-extracted drift at hold repair (step 39, pre-detailed-route/RCX)"
+        ],
+        "fixes_applied": [
+          "pnr/sky130/soc/constraints/sky130_soc.sdc: excluded clk_i from buf_4 set_driving_cell, gave it its own set_driving_cell -lib_cell sky130_fd_sc_hd__clkbuf_16 (matches CTS_ROOT_BUFFER)",
+          "pnr/sky130/soc/config.json: GRT_RESIZER_HOLD_SLACK_MARGIN 0.05 -> 0.15"
+        ],
+        "relaunch": {
+          "run_id": "pd_20260726_093603",
+          "tmux_session": "sky130_soc_hold_fix_20260726_093603",
+          "log": "/nobackup/sky130_soc_hold_fix_20260726_093603.log",
+          "run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-26_09-36-48",
+          "launched_at": "2026-07-26T09:36:03+07:00",
+          "status": "in_progress_not_awaited",
+          "confirmed_progress": "floorplan (step 10) completed 0 errors; soc_top.sdc line 781 confirms clkbuf_16 applied to clk_i; flow proceeding into PDN generation (step 17) as of last check"
+        }
+      },
+      "postgrt_repair_fix_20260726": {
+        "bead": "claude_verilog_test-y7v",
+        "prior_run_died": {
+          "run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-26_15-38-37",
+          "died_at_step": "37 OpenROAD.RepairDesignPostGRT",
+          "error": "RSZ-0090 Max transition time from SDC is 0.040ns. Best achievable transition time is 0.043ns with a load of 0.01pF",
+          "root_cause": "OpenRAM SRAM macro Liberty declared max_transition:0.04 on 3 input buses (addr0, addr1, one data-adjacent bus); physically unachievable in sky130_fd_sc_hd; global check blocked repair of an unrelated CPU-macro net (u_cpu/axi_araddr_o[18])."
+        },
+        "fix_applied": {
+          "commit": "8b11092",
+          "change": "sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.lib: 3 max_transition values 0.04 -> 0.5 (library's own default_max_transition). Verified via OpenSTA read_liberty parse before commit. No other files touched."
+        },
+        "pre_launch_verification": {
+          "sram_lib_clean_of_0.04_max_transition": true,
+          "config_RUN_POST_GRT_DESIGN_REPAIR": true,
+          "config_GRT_RESIZER_HOLD_SLACK_MARGIN": 0.05,
+          "sdc_clk_i_excluded_from_buf4_has_own_clkbuf_16": true,
+          "makefile_no_skip_HoldViolations": true,
+          "git_status_clean_at_8b11092": true
+        },
+        "relaunch": {
+          "run_id": "pd_20260726_160543",
+          "tmux_session": "sky130_soc_y7v_relaunch",
+          "log": "/nobackup/sky130_soc_run_20260726_090536.log",
+          "run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-26_16-05-43",
+          "launched_at": "2026-07-26T16:05:36+07:00",
+          "status": "in_progress_not_awaited",
+          "confirmed_progress": "yosys synthesis actively running (pid 329803) at time of handoff",
+          "stale_sessions_killed_before_launch": [
+            "sky130_soc_full",
+            "sky130_soc_signoff_65mhz"
+          ],
+          "verify_on_landing": [
+            "Passes *-openroad-repairdesignpostgrt without RSZ-0090 recurrence (first question)",
+            "*-openroad-stamidpnr-3/ws.max.rpt recovers toward baseline 4.0600 (failing runs were 3.2044/3.0776)",
+            "*-openroad-stapostpnr/nom_tt_025C_1v80/ws.max.rpt setup >= 0",
+            "same dir ws.min.rpt hold stays >= 0 (+0.1453 baseline to beat)",
+            "u_cpu/axi_araddr_o[18] cap drops from 0.625885 and clk->Q from 5.572786",
+            "no regression: LVS match, KLayout DRC exactly 4, Magic DRC 9081, antenna <= 144 pin/115 net",
+            "runtime/peak memory on 6700x3100um design on ~15GiB host -- step has never completed before"
+          ]
+        }
       }
     }
   }

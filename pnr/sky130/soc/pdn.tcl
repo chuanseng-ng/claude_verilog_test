@@ -4,15 +4,21 @@
 # Die: 6700 x 3100 um (GH #104 clearance fix, 2026-07-22).  Single power
 #   domain (VPWR/VGND at 1.8 V).
 #
-# *** MOST CONSEQUENTIAL KNOWN LIMITATION, SEE constraints/sky130_soc.sdc
-# HEADER FOR FULL DETAIL (2026-07-24): both hard macros (rv32i_cpu_top,
-# sky130_sram_4kbyte_1rw1r_32x1024_8) are characterized at nom_tt ONLY
-# and mapped to every PVT corner via config.json's MACROS wildcard --
-# this bounds the validity of EVERY multi-corner timing result in this
-# flow (nom_tt is trustworthy; ss/ff touching either macro's internal
-# timing is not -- setup understated, hold overstated at slow corners).
-# This is a TYPICAL-CORNER (nom_tt) sign-off, not a validated
-# multi-corner one. Do not let a summary imply otherwise. ***
+# *** KNOWN LIMITATION, SEE constraints/sky130_soc.sdc HEADER FOR FULL
+# DETAIL. UPDATED 2026-07-25: rv32i_cpu_top is NOW characterized
+# per-corner (9 exact corner keys -> 9 distinct Liberty views, verified
+# from each corner's own sta.log). Only sky130_sram_4kbyte_1rw1r_32x1024_8
+# remains nom_tt-only, wildcarded to every PVT corner, and it is now the
+# SOLE source of this limitation (GH #120 / bead o1i).
+#
+# The fix showed the earlier "ss hold is pessimistic" reasoning was WRONG:
+# with real per-corner CPU libs, hold got WORSE (max_ss -0.0708 ->
+# -0.3997 ns; nom_tt +0.1807 MET -> -0.0923 VIOLATING), and max_ss setup
+# went -5.3197 -> -10.4730 ns. The wildcard was optimistic in BOTH
+# directions. CAVEAT: that run also enabled antenna repair (+2018 diodes,
+# perturbing routing), so the deltas are not cleanly attributable to the
+# libs alone. Still a TYPICAL-CORNER (nom_tt) sign-off -- and even nom_tt
+# now carries a hold violation. Do not let a summary imply otherwise. ***
 #
 # KNOWN LIMITATION (GH #104, 2026-07-24): sky130_sram_4kbyte_1rw1r_32x1024_8
 # is NOT KLayout-DRC-clean. Full-deck KLayout DRC (sky130A_mr.drc, the
@@ -63,9 +69,23 @@
 # "KLayout DRC: 4 violations, all macro-internal, upstream OpenRAM
 # generator, accepted+documented". Do not let a summary imply a clean
 # full-chip DRC signoff.
-# FOLLOW-UP: tracked for a future DRC-clean macro regeneration (see bd
-# issue filed alongside this record -- do not lose this to agent memory
-# alone).
+# FOLLOW-UP: CLOSED WON'T-FIX 2026-07-25 (GH #121, bead
+# claude_verilog_test-0jp). Evidence for the acceptance: efabless's own
+# prebuilt sky130_sram_2kbyte_1rw1r_32x512_8 -- the macro used in real
+# MPW silicon -- ships 32 magic DRC errors in its OWN committed OpenRAM
+# build log, and is likewise "Analytical model enabled" / "Only
+# generating nominal corner timing" with a single _TT_1p8V_25C.lib. The
+# repo has no 4 KB 32x1024_8 variant to swap to. These 4 violations are
+# OpenRAM generator norm, not a consequence of our check_lvsdrc=False
+# shortcut (OpenRAM geometry is deterministic; the checker only reports).
+# Re-open trigger: a genuine tape-out-readiness review.
+#
+# RE-CONFIRMED 2026-07-25 at RUN_2026-07-25_13-29-40: still EXACTLY 4,
+# same rules and same cells (m2.2 in ..._wmask_dff; via2.2 x2 in macro-top
+# and ..._bank; m3.2 in ..._bank). Notably this run inserted 2018 antenna
+# diodes and re-routed, and introduced ZERO new KLayout violations --
+# so the antenna flow is DRC-safe. Magic DRC also unchanged at 9081
+# (nwell.4 = 9049 + met4.4a = 32, the known artifact class).
 #
 # KNOWN LIMITATION (GH #104, 2026-07-24): IR-drop analysis
 # (OpenROAD.IRDropReport) is NOT meaningful for this flow -- VSRC_LOC_FILES

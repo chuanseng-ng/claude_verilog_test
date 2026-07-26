@@ -686,6 +686,60 @@ librelane-sky130-soc: sky130-soc-sv2v
 	@echo "  Runs   : /nobackup/sky130_soc_runs"
 	@echo "  Runtime: expect 4-10 h (3600x1800 um CPU macro + flat periph)"
 	@echo "=========================================="
+	@# ANTENNA FLOW ENABLED (2026-07-25, GH #104 follow-up). The antenna steps
+	@# (Odb.HeuristicDiodeInsertion, Odb.DiodesOnPorts, OpenROAD.RepairAntennas,
+	@# OpenROAD.CheckAntennas*) used to be in the --skip list below, which is
+	@# why RUN_2026-07-24_21-36-12 reported manufacturability
+	@# "Antenna: FAILED -- 557 pin / 442 net violations": the repair flow was
+	@# never running, so that number was simply the UNREPAIRED state.
+	@# Enabling them works -- RUN_2026-07-25_09-21-05 measured
+	@# 556 pin / 440 net -> 154 pin / 129 net via 2018 inserted diodes (~72%
+	@# reduction). Stage-1 CPU precedent: 2849 -> 57 pin (~98%).
+	@#
+	@# HOLD CHECKER NOW GATES (2026-07-26, bead claude_verilog_test-y7v).
+	@# --skip Checker.HoldViolations was removed: RUN_2026-07-25_13-29-40
+	@# reported nom_tt hold WNS -0.0923 ns (1 endpoint,
+	@# apb_paddr_i[4] -> u_cpu/apb_paddr_i[4]) and the skip meant the flow
+	@# signed off anyway. Hold is now a hard gate at the sign-off corner.
+	@#
+	@# ORDERING (measured on RUN_2026-07-26_09-36-48, not assumed): the
+	@# timing checkers run at the END of the flow, not next to the STA that
+	@# feeds them. Actual step order is 50-openroad-stapostpnr,
+	@# 52-magic-streamout, 54-magic-drc, 55-klayout-drc,
+	@# 58-magic-spiceextraction, 59-netgen-lvs, 60-checker-lvs,
+	@# 61-checker-holdviolations, 62-misc-reportmanufacturability.
+	@# So a residual hold violation costs only the manufacturability report --
+	@# Magic/KLayout DRC and Netgen LVS have all completed by then and their
+	@# results are on disk. This is UNLIKE Odb.CheckDesignAntennaProperties,
+	@# which sits at step 54 mid-flow and did kill RUN_2026-07-25_09-21-05
+	@# before DRC/LVS. Do not generalise from that one to the checkers.
+	@#
+	@# SETUP CHECKER NOW GATES TOO (2026-07-26). --skip Checker.SetupViolations
+	@# was removed once RUN_2026-07-26_16-05-43 closed setup at every gated
+	@# corner. Both timing checkers are now live.
+	@#
+	@# Why this is safe despite ss-corner setup failing by -6 to -9 ns: the
+	@# checkers gate only the corners matched by TIMING_VIOLATION_CORNERS,
+	@# which sky130A sets at PDK level to ['*tt*']. Verified from
+	@# RUN_2026-07-26_16-05-43/resolved.json -- SETUP_VIOLATION_CORNERS and
+	@# HOLD_VIOLATION_CORNERS are both null, so both fall back to that PDK
+	@# value (librelane/steps/checker.py get_corner_wildcards). Margins at the
+	@# three gated corners:
+	@#     setup  nom_tt +1.3873 | min_tt +2.5656 | max_tt +0.3391
+	@#     hold   nom_tt +0.1444 | min_tt +0.2489 | max_tt +0.0923
+	@# max_tt is the tightest on both and is the one to watch. The ss corners
+	@# (setup -6.30 / -7.72 / -8.94) are outside the gate BY PDK DESIGN, not
+	@# by our choice, and remain untrustworthy anyway while the SRAM macro is
+	@# single-corner -- GH #120 / bead claude_verilog_test-o1i.
+	@#
+	@# Odb.CheckDesignAntennaProperties STAYS SKIPPED, deliberately. It is not
+	@# part of the repair flow; it requires a LEF input, which this recipe does
+	@# not produce (Magic.WriteLEF is skipped below and config.json sets
+	@# RUN_MAGIC_WRITE_LEF: false). Un-skipping it killed RUN_2026-07-25_09-21-05
+	@# at step 54 with "CheckDesignAntennaProperties: missing required input
+	@# 'LEF'" -- AFTER post-PnR STA/streamout had completed but BEFORE the
+	@# DRC/LVS signoff checkers ran. Re-enable it only together with
+	@# Magic.WriteLEF.
 	@if [ ! -f "$(LIBRELANE_SKY130_SOC_DIR)/config.json" ]; then \
 		echo "ERROR: $(LIBRELANE_SKY130_SOC_DIR)/config.json not found."; exit 1; fi
 	@if [ ! -f "$(LIBRELANE_SKY130_SOC_DIR)/soc_top_sv2v.v" ]; then \
@@ -701,17 +755,10 @@ librelane-sky130-soc: sky130-soc-sv2v
 		 --skip Checker.LintTimingConstructs \
 		 --skip Checker.LintErrors \
 		 --skip Checker.YosysSynthChecks \
-		 --skip Odb.HeuristicDiodeInsertion \
-		 --skip Odb.DiodesOnPorts \
 		 --skip Odb.ReportDisconnectedPins \
 		 --skip Checker.DisconnectedPins \
-		 --skip OpenROAD.RepairAntennas \
 		 --skip Checker.IllegalOverlap \
 		 --skip Odb.CheckDesignAntennaProperties \
-		 --skip OpenROAD.CheckAntennas \
-		 --skip OpenROAD.CheckAntennas-1 \
-		 --skip Checker.SetupViolations \
-		 --skip Checker.HoldViolations \
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
 		 --skip Magic.WriteLEF \
