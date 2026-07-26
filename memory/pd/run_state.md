@@ -3068,3 +3068,73 @@ known risk: host reboots every 2-8h, does not preserve tmux/background processes
 log:         /nobackup/openram_sky130_4kb/charprobe_run.log
 tmux_session: sram_charprobe (nix develop + python3, launched detached)
 
+## Sky130 CPU Stage-1 re-harden with RUN_POST_GRT_DESIGN_REPAIR=true (bead claude_verilog_test-0ro)
+
+run_id:      pd_20260727_054809
+design_name: rv32i_cpu_top
+pdk:         sky130A
+tool:        LibreLane (nix-shell python3 -m librelane)
+start_time:  2026-07-27T05:48:09+07:00
+last_stage:  floorplan (just launched; full sequential flow, will read metrics.json / per-step
+             reports on completion)
+
+context: commit 74d3064 (already on branch feat/sram-spice-char-gh120, does NOT touch
+  feat/sky130-soc-drc-lvs-gh104 / PR #124) flipped pnr/sky130/cpu/config.json
+  RUN_POST_GRT_DESIGN_REPAIR false->true. Verified pre-launch: value is true, MAX_TRANSITION_
+  CONSTRAINT=0.5 already set, no MACROS key (flat sky130_fd_sc_hd + EXTRA_LEFS/LIBS/GDS SRAM
+  macro only, so the RSZ-0090 OpenRAM-SRAM abort that hit the SoC run cannot recur here).
+
+baseline being re-hardened against: RUN_2026-07-21_18-02-11 (currently staged macro,
+  pnr/sky130/cpu/macro/) FAILS ITS OWN TIMING at nom_tt_025C_1v80: setup -0.39906 ns VIOLATING,
+  hold -0.12321 ns VIOLATING (13.333 ns / 75 MHz). That baseline run did NOT have
+  RUN_POST_GRT_DESIGN_REPAIR on (no repairdesignpostgrt step dir; step 43 was
+  resizertimingpostgrt directly after checkantennas/repairantennas). Its full flow wall time
+  was ~2h17m (dir mtime 18:02:11 -> 20:18:55); detailedrouting alone took 13m17s, stapostpnr
+  1m07s. Expect the new run to take at least as long, likely a bit more (one extra repair step,
+  possible extra GRT/DRT iterations from the repair pass).
+
+why this run: on the SoC (bead y7v, commit 1ef3426), enabling this same flag recovered setup
+  from -1.4304 to +1.3873 (+1.15 ns) by repairing over-cap/over-slew nets. Testing whether the
+  same repair recovers the CPU macro's own -0.399/-0.123 violations. NOT assumed to transfer —
+  ASAP7 knowledge.md (run 7, unrelated node/flow) records a case where this same flag had ZERO
+  effect on hold. Reporting the real number either way.
+
+known risk (SoC precedent): enabling this step regressed SoC antenna count 144->164 pins
+  (still a PASS there, but a cost). Watch CPU antenna_violations count vs baseline for the same
+  pattern.
+
+launch cmd:
+  tmux new-session -d -s sky130_cpu_0ro -c /home/neuromorphic/Downloads/Github/claude_verilog_test/pnr \
+    "make librelane-sky130-cpu 2>&1 | tee /nobackup/sky130_cpu_runs/run_0ro_20260727_054809.log; echo DONE_EXIT_\$?"
+
+tmux_session: sky130_cpu_0ro (detached)
+log:          /nobackup/sky130_cpu_runs/run_0ro_20260727_054809.log
+run_dir:      /nobackup/sky130_cpu_runs/RUN_<timestamp-tbd> (not yet created as of launch —
+  nix-shell was still unpacking nixexprs channel; will appear under
+  pnr/sky130/cpu/runs -> /nobackup/sky130_cpu_runs, use `ls -td RUN_*|head -1` to find it, do
+  NOT assume the run tag)
+
+host state at launch: 15 GiB total, ~12 GiB available, 7.2 GiB free. Other tmux sessions
+  checked and confirmed idle/stale (sky130_soc_y7v_relaunch already errored out and returned to
+  shell prompt; openram_sram4k / openram_sram4k_drclvs panes empty) -- no concurrent heavy job
+  contending for memory at launch time.
+
+known risk: host reboots every ~2-8h, tmux does NOT survive. On a reboot kill, relaunch fresh
+  (same command above) rather than resuming -F, per feedback_pd_run_strategy.
+
+DO NOT stage this macro's outputs into pnr/sky130/cpu/macro/ and DO NOT launch a SoC run off
+  it until the numbers are reviewed against the -0.39906/-0.12321 baseline -- explicit user
+  instruction, staging is a separate decision. The currently-staged SoC macro views close the
+  SoC at setup +1.3873 / hold +0.1444 (RUN_2026-07-26_16-05-43, published on GH #104 / PR #124)
+  and re-staging invalidates that until a fresh SoC run confirms it.
+
+what to check on landing (glob-based, not step-index-based — indices shift when repair steps
+  are inserted):
+  1. did *-openroad-repairdesignpostgrt clear at all
+  2. *-openroad-stapostpnr/nom_tt_025C_1v80/ws.max.rpt + ws.min.rpt vs baseline -0.39906/-0.12321
+     (both should improve; a >=0/>=0 result would be the CPU macro's first self-clean timing)
+  3. all 9 corners, but only *tt* corners gate (TIMING_VIOLATION_CORNERS=['*tt*'] at sky130A)
+  4. Magic DRC / KLayout DRC / Netgen LVS vs baseline, esp. antenna count (SoC saw 144->164 with
+     this flag)
+  5. runtime + peak memory vs the ~2h17m / no-OOM baseline
+
