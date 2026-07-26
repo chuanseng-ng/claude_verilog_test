@@ -702,13 +702,22 @@ librelane-sky130-soc: sky130-soc-sv2v
 	@# apb_paddr_i[4] -> u_cpu/apb_paddr_i[4]) and the skip meant the flow
 	@# signed off anyway. Hold is now a hard gate at the sign-off corner.
 	@#
-	@# CONSEQUENCE, deliberate: Checker.HoldViolations runs immediately after
-	@# OpenROAD.STAPostPNR (step 50) and BEFORE Magic.StreamOut / Magic.DRC /
-	@# KLayout.DRC / Netgen.LVS (steps 52-60). A residual hold violation
-	@# therefore ABORTS the run without producing DRC/LVS sign-off, the same
-	@# way Odb.CheckDesignAntennaProperties killed RUN_2026-07-25_09-21-05.
-	@# That is the point of a gate; re-add the skip only to harvest DRC/LVS
-	@# from a run whose hold is knowingly unfixed, and say so if you do.
+	@# ORDERING (measured on RUN_2026-07-26_09-36-48, not assumed): the
+	@# timing checkers run at the END of the flow, not next to the STA that
+	@# feeds them. Actual step order is 50-openroad-stapostpnr,
+	@# 52-magic-streamout, 54-magic-drc, 55-klayout-drc,
+	@# 58-magic-spiceextraction, 59-netgen-lvs, 60-checker-lvs,
+	@# 61-checker-holdviolations, 62-misc-reportmanufacturability.
+	@# So a residual hold violation costs only the manufacturability report --
+	@# Magic/KLayout DRC and Netgen LVS have all completed by then and their
+	@# results are on disk. This is UNLIKE Odb.CheckDesignAntennaProperties,
+	@# which sits at step 54 mid-flow and did kill RUN_2026-07-25_09-21-05
+	@# before DRC/LVS. Do not generalise from that one to the checkers.
+	@#
+	@# NOTE Checker.SetupViolations is still skipped, so setup does NOT gate.
+	@# RUN_2026-07-26_09-36-48 passed hold (+0.1354) while carrying a
+	@# -1.6877 ns nom_tt setup violation and still reported through to
+	@# manufacturability. Remove that skip too once a run closes both.
 	@#
 	@# Odb.CheckDesignAntennaProperties STAYS SKIPPED, deliberately. It is not
 	@# part of the repair flow; it requires a LEF input, which this recipe does
