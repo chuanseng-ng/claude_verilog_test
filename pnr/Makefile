@@ -714,10 +714,23 @@ librelane-sky130-soc: sky130-soc-sv2v
 	@# which sits at step 54 mid-flow and did kill RUN_2026-07-25_09-21-05
 	@# before DRC/LVS. Do not generalise from that one to the checkers.
 	@#
-	@# NOTE Checker.SetupViolations is still skipped, so setup does NOT gate.
-	@# RUN_2026-07-26_09-36-48 passed hold (+0.1354) while carrying a
-	@# -1.6877 ns nom_tt setup violation and still reported through to
-	@# manufacturability. Remove that skip too once a run closes both.
+	@# SETUP CHECKER NOW GATES TOO (2026-07-26). --skip Checker.SetupViolations
+	@# was removed once RUN_2026-07-26_16-05-43 closed setup at every gated
+	@# corner. Both timing checkers are now live.
+	@#
+	@# Why this is safe despite ss-corner setup failing by -6 to -9 ns: the
+	@# checkers gate only the corners matched by TIMING_VIOLATION_CORNERS,
+	@# which sky130A sets at PDK level to ['*tt*']. Verified from
+	@# RUN_2026-07-26_16-05-43/resolved.json -- SETUP_VIOLATION_CORNERS and
+	@# HOLD_VIOLATION_CORNERS are both null, so both fall back to that PDK
+	@# value (librelane/steps/checker.py get_corner_wildcards). Margins at the
+	@# three gated corners:
+	@#     setup  nom_tt +1.3873 | min_tt +2.5656 | max_tt +0.3391
+	@#     hold   nom_tt +0.1444 | min_tt +0.2489 | max_tt +0.0923
+	@# max_tt is the tightest on both and is the one to watch. The ss corners
+	@# (setup -6.30 / -7.72 / -8.94) are outside the gate BY PDK DESIGN, not
+	@# by our choice, and remain untrustworthy anyway while the SRAM macro is
+	@# single-corner -- GH #120 / bead claude_verilog_test-o1i.
 	@#
 	@# Odb.CheckDesignAntennaProperties STAYS SKIPPED, deliberately. It is not
 	@# part of the repair flow; it requires a LEF input, which this recipe does
@@ -746,7 +759,6 @@ librelane-sky130-soc: sky130-soc-sv2v
 		 --skip Checker.DisconnectedPins \
 		 --skip Checker.IllegalOverlap \
 		 --skip Odb.CheckDesignAntennaProperties \
-		 --skip Checker.SetupViolations \
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
 		 --skip Magic.WriteLEF \
