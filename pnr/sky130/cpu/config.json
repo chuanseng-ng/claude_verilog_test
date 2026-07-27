@@ -119,7 +119,7 @@
     "RUN_KLAYOUT_XOR":  false,
     "RUN_LVS":          true,
 
-    "MAGIC_DRC_USE_GDS": true,
+    "MAGIC_DRC_USE_GDS": false,
 
     "EXTRA_GDS_FILES": [
         "pdk_dir::libs.ref/sky130_sram_macros/gds/sky130_sram_1kbyte_1rw1r_32x256_8.gds"

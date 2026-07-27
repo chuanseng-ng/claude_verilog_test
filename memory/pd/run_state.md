@@ -3345,3 +3345,54 @@ not yet awaited -- report back when it lands. Check per bead 45a instructions:
      hold -0.13577, KLayout DRC 0, LVS "Circuits match uniquely", antenna
      93 pin / 90 net. Timing should be UNCHANGED (MAGIC_DRC_USE_GDS only
      affects the DRC step) -- any movement is run-to-run noise, not a result.
+
+
+---
+
+## RUN_2026-07-27_20-33-10 — bead 45a: MAGIC_DRC_USE_GDS=true — HYPOTHESIS REFUTED
+
+question:  are the 27.7M Stage-1 Magic DRC li.3 violations real, or a
+           LEF-abstract artifact from MAGIC_DRC_USE_GDS=false rendering the
+           sky130_sram_1kbyte_1rw1r_32x256_8 macro as a black box?
+
+answer:    NOT an artifact. The count is essentially unchanged with real GDS.
+
+    Magic DRC COUNT   27,730,498   (MAGIC_DRC_USE_GDS = true,  this run)
+                      27,733,913   (MAGIC_DRC_USE_GDS = false, baseline)
+    difference 3,415 -- about 0.01 %.
+
+    Same rule families in both reports: licon.1, licon.5a, licon.8a,
+    poly.2/4/7/8, psd.10b (and li.3 dominating the coordinate entries).
+
+SCALE CORRECTION, from the magic-drc log:
+    [INFO] COUNT: 27730498
+    [INFO] Should be divided by 3 or 4
+Magic counts each violation 3-4x, so DISTINCT violations are ~6.9M-9.2M.
+Still enormous, but quote the corrected figure, not the raw COUNT.
+
+SECONDARY FINDING -- why the config was reverted to false:
+MAGIC_DRC_USE_GDS=true is NOT USABLE on this design. Reading the real GDS,
+Magic hits fatal "Unknown layer/datatype in boundary" errors on the PDK SRAM
+macro's internal cells (sky130_fd_bd_sram__openram_dp_cell*, layer 235 type 0,
+layer 33 type 42/43, layer 22 type 21/22) and LibreLane aborts the entire flow:
+    ERROR  Encountered one or more fatal errors while running Magic.
+    make: *** [Makefile:585: librelane-sky130-cpu] Error 2
+The DRC itself COMPLETED and wrote its report before the abort, which is the
+only reason the number above exists. Config reverted to false so future CPU
+runs are not broken by this.
+
+NOT an OOM: RAM went 11G -> 13G at process death (freed, no pressure), and the
+magic-drc step ran 42 min (21:37 -> 22:19). The earlier OOM concern about
+loading a ~205 MB GDS did not materialise.
+
+leads for whoever picks this up:
+ (a) sample actual li.3 coordinates -- do they cluster inside the SRAM macro
+     footprint, or spread across the standard-cell array? That separates a
+     macro-local problem from a global one.
+ (b) the "Unknown layer/datatype" errors suggest the sky130A Magic tech file
+     may not match what the PDK SRAM GDS expects. A tech-file/GDS version
+     mismatch could plausibly generate spurious li.3 as well -- worth checking
+     before treating 7-9M violations as genuine geometry errors.
+ (c) STRONGEST CLUE: the Sky130 SoC reports only 9081 Magic DRC errors on a
+     LARGER die (6700x3100 vs 3600x1800). Same PDK, same Magic, vastly
+     different result. Explaining that asymmetry probably explains everything.
