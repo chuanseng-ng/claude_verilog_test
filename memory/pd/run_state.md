@@ -2997,3 +2997,233 @@ note: two stale idle tmux sessions from the prior invocation (sky130_soc_full,
       sky130_soc_signoff_65mhz — both dead bash panes, no active make process)
       were killed before this launch to avoid confusion; their runs had already
       terminated (one of them was RUN_2026-07-26_15-38-37 above).
+
+---
+
+## RUN_2026-07-26 (later) — SRAM SPICE characterization feasibility probe (bead o1i / GH #120)
+
+run_id:      pd_20260726_sramchar_probe
+design_name: sky130_sram_4kbyte_1rw1r_32x1024_8
+pdk:         sky130A
+tool:        OpenRAM v1.2.49 (SPICE characterization, ngspice-42 via librelane#analog devshell)
+start_time:  see actual_launch_time below
+last_stage:  n/a (this is an OpenRAM macro characterization sub-task, not the 8-stage PD flow)
+
+bead:        claude_verilog_test-o1i (branch feat/sram-spice-char-gh120, NOT feat/sky130-soc-drc-lvs-gh104)
+goal:        SPICE-characterize sky130_sram_4kbyte_1rw1r_32x1024_8 at TT/SS/FF corners to replace
+             the two hand-patches on pnr/sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.lib
+             (zeroed internal_power scalars; max_transition 0.04->0.5) and to stop wildcarding one
+             nom_tt .lib to all 9 STA corners in pnr/sky130/soc/config.json.
+
+pre-launch verification done (2026-07-26):
+  - compiler/characterizer/lib.py:107-138 read directly: use_specified_corners bypasses the
+    process_corners x supply_voltages x temperatures cross product entirely, does NOT prepend a
+    nominal corner when set, and add_corner(*tuple) accepts the (proc, volt, temp) tuple form
+    directly. Matches the plan exactly.
+  - compiler/options.py defaults confirmed: nominal_corner_only=False, use_specified_corners=None,
+    trim_netlist=True, spice_name=None (auto-detect), num_threads=1, analytical_delay=True.
+  - technology/sky130/tech/tech.py:720-724 confirmed SPICE_MODEL_DIR env var is read for all 5
+    process corner .lib.spice sections (tt/ss/ff/sf/fs) -- must be set before python3 starts.
+  - ngspice-42 confirmed present only inside `nix develop /home/neuromorphic/Downloads/Github/librelane#analog`
+    (not on default PATH).
+  - views_run.log (prior analytical-only run, 2026-07-22/23): Routing phase alone was 10765.2s
+    (~3.0h) of the 11392.1s (~3.16h) total; the analytical "Characterization" step was only 4.6s
+    (that run had analytical_delay default True, i.e. NOT real SPICE -- this is the number the
+    real-SPICE probe is measuring against).
+  - Host: 16 cores, ~13 GiB available at probe launch time.
+
+probe config: /nobackup/openram_sky130_4kb/config_sky130_sram_4kbyte_1rw1r_32x1024_8_charprobe.py
+  use_specified_corners = [("TT", 1.80, 25)]   # single corner only, feasibility probe
+  analytical_delay = False                      # real SPICE, the point of the probe
+  nominal_corner_only = False
+  trim_netlist = True (default)
+  num_threads = 1 (default)
+  check_lvsdrc = False
+  output_name = sky130_sram_4kbyte_1rw1r_32x1024_8_charprobe   # DISTINCT from the production
+    views-only output (sky130_sram_4kbyte_1rw1r_32x1024_8) -- probe cannot clobber the macro
+    currently staged into pnr/sky130/soc/macro/.
+
+env for launch (set BEFORE python3 starts, per OPENRAM_TMP no-op-as-config-key finding from the
+views run):
+  export OPENRAM_TMP=/nobackup/openram_sky130_4kb/temp_charprobe
+  export SPICE_MODEL_DIR=/nobackup/openram_sky130_4kb/pdk_root/skywater-pdk/libraries/sky130_fd_pr/latest/models
+
+launch cmd (inside analog devshell, cwd=/nobackup/openram_sky130_4kb, matching the views run's
+cwd-relative output_path convention):
+  nix develop /home/neuromorphic/Downloads/Github/librelane#analog -c \
+    python3 /home/neuromorphic/Downloads/Github/OpenRAM/sram_compiler.py \
+    config_sky130_sram_4kbyte_1rw1r_32x1024_8_charprobe.py
+
+do_not_touch: existing macro/sky130_sram_4kbyte_1rw1r_32x1024_8/ output dir (production views-only
+  macro, currently staged in pnr/sky130/soc/macro/), pnr/sky130/soc/config.json,
+  pnr/sky130/soc/macro/*.lib (not touched until characterization proven and libs staged per plan),
+  feat/sky130-soc-drc-lvs-gh104 branch (PR #124 open against it -- all bead o1i work stays on
+  feat/sram-spice-char-gh120).
+
+known risk: host reboots every 2-8h, does not preserve tmux/background processes across reboot.
+  Prior views run took 3.2h total with routing = 3.0h of that; a characterization run repeats
+  routing before characterizing, so the probe alone could exceed one reboot cycle. Log file is
+  the recovery point if the agent session or host dies mid-run.
+
+log:         /nobackup/openram_sky130_4kb/charprobe_run.log
+tmux_session: sram_charprobe (nix develop + python3, launched detached)
+
+## Sky130 CPU Stage-1 re-harden with RUN_POST_GRT_DESIGN_REPAIR=true (bead claude_verilog_test-0ro)
+
+run_id:      pd_20260727_054809
+design_name: rv32i_cpu_top
+pdk:         sky130A
+tool:        LibreLane (nix-shell python3 -m librelane)
+start_time:  2026-07-27T05:48:09+07:00
+last_stage:  floorplan (just launched; full sequential flow, will read metrics.json / per-step
+             reports on completion)
+
+context: commit 74d3064 (already on branch feat/sram-spice-char-gh120, does NOT touch
+  feat/sky130-soc-drc-lvs-gh104 / PR #124) flipped pnr/sky130/cpu/config.json
+  RUN_POST_GRT_DESIGN_REPAIR false->true. Verified pre-launch: value is true, MAX_TRANSITION_
+  CONSTRAINT=0.5 already set, no MACROS key (flat sky130_fd_sc_hd + EXTRA_LEFS/LIBS/GDS SRAM
+  macro only, so the RSZ-0090 OpenRAM-SRAM abort that hit the SoC run cannot recur here).
+
+baseline being re-hardened against: RUN_2026-07-21_18-02-11 (currently staged macro,
+  pnr/sky130/cpu/macro/) FAILS ITS OWN TIMING at nom_tt_025C_1v80: setup -0.39906 ns VIOLATING,
+  hold -0.12321 ns VIOLATING (13.333 ns / 75 MHz). That baseline run did NOT have
+  RUN_POST_GRT_DESIGN_REPAIR on (no repairdesignpostgrt step dir; step 43 was
+  resizertimingpostgrt directly after checkantennas/repairantennas). Its full flow wall time
+  was ~2h17m (dir mtime 18:02:11 -> 20:18:55); detailedrouting alone took 13m17s, stapostpnr
+  1m07s. Expect the new run to take at least as long, likely a bit more (one extra repair step,
+  possible extra GRT/DRT iterations from the repair pass).
+
+why this run: on the SoC (bead y7v, commit 1ef3426), enabling this same flag recovered setup
+  from -1.4304 to +1.3873 (+1.15 ns) by repairing over-cap/over-slew nets. Testing whether the
+  same repair recovers the CPU macro's own -0.399/-0.123 violations. NOT assumed to transfer —
+  ASAP7 knowledge.md (run 7, unrelated node/flow) records a case where this same flag had ZERO
+  effect on hold. Reporting the real number either way.
+
+known risk (SoC precedent): enabling this step regressed SoC antenna count 144->164 pins
+  (still a PASS there, but a cost). Watch CPU antenna_violations count vs baseline for the same
+  pattern.
+
+launch cmd:
+  tmux new-session -d -s sky130_cpu_0ro -c /home/neuromorphic/Downloads/Github/claude_verilog_test/pnr \
+    "make librelane-sky130-cpu 2>&1 | tee /nobackup/sky130_cpu_runs/run_0ro_20260727_054809.log; echo DONE_EXIT_\$?"
+
+tmux_session: sky130_cpu_0ro (detached)
+log:          /nobackup/sky130_cpu_runs/run_0ro_20260727_054809.log
+run_dir:      /nobackup/sky130_cpu_runs/RUN_<timestamp-tbd> (not yet created as of launch —
+  nix-shell was still unpacking nixexprs channel; will appear under
+  pnr/sky130/cpu/runs -> /nobackup/sky130_cpu_runs, use `ls -td RUN_*|head -1` to find it, do
+  NOT assume the run tag)
+
+host state at launch: 15 GiB total, ~12 GiB available, 7.2 GiB free. Other tmux sessions
+  checked and confirmed idle/stale (sky130_soc_y7v_relaunch already errored out and returned to
+  shell prompt; openram_sram4k / openram_sram4k_drclvs panes empty) -- no concurrent heavy job
+  contending for memory at launch time.
+
+known risk: host reboots every ~2-8h, tmux does NOT survive. On a reboot kill, relaunch fresh
+  (same command above) rather than resuming -F, per feedback_pd_run_strategy.
+
+DO NOT stage this macro's outputs into pnr/sky130/cpu/macro/ and DO NOT launch a SoC run off
+  it until the numbers are reviewed against the -0.39906/-0.12321 baseline -- explicit user
+  instruction, staging is a separate decision. The currently-staged SoC macro views close the
+  SoC at setup +1.3873 / hold +0.1444 (RUN_2026-07-26_16-05-43, published on GH #104 / PR #124)
+  and re-staging invalidates that until a fresh SoC run confirms it.
+
+what to check on landing (glob-based, not step-index-based — indices shift when repair steps
+  are inserted):
+  1. did *-openroad-repairdesignpostgrt clear at all
+  2. *-openroad-stapostpnr/nom_tt_025C_1v80/ws.max.rpt + ws.min.rpt vs baseline -0.39906/-0.12321
+     (both should improve; a >=0/>=0 result would be the CPU macro's first self-clean timing)
+  3. all 9 corners, but only *tt* corners gate (TIMING_VIOLATION_CORNERS=['*tt*'] at sky130A)
+  4. Magic DRC / KLayout DRC / Netgen LVS vs baseline, esp. antenna count (SoC saw 144->164 with
+     this flag)
+  5. runtime + peak memory vs the ~2h17m / no-OOM baseline
+
+
+---
+run_id:      pd_20260727_171511
+design_name: soc_top (sky130 SoC Stage 2, GH#104 flow) + rv32i_cpu_top macro re-stage (GH#120/bead 0ro)
+pdk:         sky130A
+tool:        librelane (nix-shell)
+start_time:  2026-07-27T17:15:11+07:00
+last_stage:  routing (launched, in flight — this entry is a launch record, not a result)
+
+## Step 1 complete: CPU macro views re-staged (bead 0ro final step)
+
+Adopted RUN_2026-07-27_05-52-19 (RUN_POST_GRT_DESIGN_REPAIR + patched PDK SRAM lib)
+into pnr/sky130/cpu/macro/, replacing the RUN_2026-07-21_18-02-11 baseline that was
+tracked there before. Committed standalone: commit 995c487 on
+feat/sram-spice-char-gh120 ("[PD] Stage GH#120 re-hardened CPU macro views (0ro)").
+
+Verified before staging (all against the source run, located by content/mtime, not
+assumed step index):
+  - 9 corner .lib files (57-openroad-stapostpnr/<corner>/*.lib) are pairwise DISTINCT
+    by md5 (guards against the GH#120 wildcard-lib regression).
+  - each lib's nom_temperature/nom_voltage matches its corner name exactly:
+    tt->25.0/1.80, ss->100.0/1.60, ff->-40.0/1.95, all 9/9.
+  - LEF (61-magic-writelef/rv32i_cpu_top.lef) still exposes all AXI4 burst ports
+    (awlen/wlast/arlen/rlast/awsize/awburst/arsize/arburst, prefixed axi_*_o/i[n]);
+    404 total PINs, matching the pre-existing tracked LEF's PIN count (404) and the
+    ~403 expected from prior notes.
+  - netlist taken from 54-openroad-fillinsertion/rv32i_cpu_top.nl.v (the LAST-modified
+    nl.v across the run by mtime/md5 -- later than 44/46 which are identical to each
+    other; this is the final post-fill netlist matching GDS/spice), gzipped to
+    rv32i_cpu_top.nl.v.gz.
+  - GDS from 59-magic-streamout/rv32i_cpu_top.gds, spice from
+    67-magic-spiceextraction/rv32i_cpu_top.spice -- both gitignored (per
+    pnr/.gitignore sky130/cpu/macro/*.lef + *.nl.v.gz whitelist only), working-tree
+    copies updated but NOT committed, matching existing convention.
+
+Numbers this staging carries into the SoC run (CPU macro standalone, vs
+RUN_2026-07-21_18-02-11 baseline):
+  nom_tt setup  -0.39906 FAIL -> +0.17416 MET   (+0.573)
+  nom_tt hold   -0.12321       -> -0.13577       (all violators I/O-boundary, 0 internal)
+  KLayout DRC 0 -> 0; Magic DRC 27733913 -> 27733913 (bit-identical, pre-existing)
+  Netgen LVS match uniquely -> match uniquely
+  antenna 89 pin -> 93 pin / 90 net
+KNOWN REMAINING LIMIT (accepted by user, not a blocker): max_tt setup still violates
+  at -0.12078 internally. max_tt IS a gated SoC corner (TIMING_VIOLATION_CORNERS =
+  ['*tt*']) -- watch it first at SoC sign-off.
+
+## Step 2: SoC run launched
+
+tmux session: sky130_soc_0ro (detached, `tmux attach -t sky130_soc_0ro` to view)
+log:          /nobackup/sky130_soc_runs/run_0ro_20260727_171511.log
+run_dir:      /nobackup/sky130_soc_runs/RUN_2026-07-27_17-15-57
+launch cmd:   make librelane-sky130-soc  (pnr/Makefile target, unmodified config/skip-list)
+sv2v regenerated cleanly at launch: 5680 lines, 38 clocked always blocks, 304 reg
+  decls, GPU cells=2 (tie-off, expected). error.log empty at launch+70s, Yosys
+  synthesis actively running (module soc_top, OPT_MUXTREE pass) by that point --
+  nix-shell/channel-unpack overhead (~60-90s) cleared normally, matches prior-run
+  precedent, no hang.
+
+Both timing checkers (Checker.SetupViolations, Checker.HoldViolations) are LIVE in
+  this recipe's --skip list (neither is skipped) -- flow will fail loudly on a
+  regression, that is intended, do not add them back to --skip to "fix" a failure.
+
+known risk: host reboots every ~2-8h, tmux does NOT survive. On a reboot kill,
+  relaunch fresh (same `make librelane-sky130-soc` command) rather than resuming -F,
+  per feedback_pd_run_strategy. Expect ~2.5-3h based on recent SoC run history.
+
+## What to check when it lands (accept/revert decision for the bead-0ro macro restage)
+
+Baseline to beat: RUN_2026-07-26_16-05-43 (currently-published SoC closure) --
+  setup +1.38729, hold +0.14439, violator list empty, LVS match uniquely, KLayout
+  DRC 4, Magic DRC 9081, antenna 164 pin / 134 net.
+
+Use GLOBS over step numbers (indices shift). Mid-PnR STA writes reports FLAT; only
+  *-openroad-stapostpnr has per-corner subdirectories.
+
+1. *-openroad-stapostpnr/nom_tt_025C_1v80/{ws.max,ws.min}.rpt -- setup and hold must
+   both stay >= 0. Report deltas against +1.38729 / +0.14439.
+2. All three *tt* corners (only ones the PDK gates). Previous SoC numbers: setup
+   nom +1.3873 / min +2.5656 / max +0.3391; hold nom +0.1444 / min +0.2489 /
+   max +0.0923. max_tt was tightest on both -- watch especially, since the CPU
+   macro itself still violates max_tt setup internally (-0.12078).
+3. Checker.SetupViolations / Checker.HoldViolations pass? They sit near the END of
+   the flow (after Netgen LVS), so DRC/LVS results exist even if timing fails.
+4. LVS / KLayout DRC / Magic DRC / antenna vs the RUN_2026-07-26_16-05-43 numbers
+   above.
+
+If the SoC regresses: report plainly and recommend reverting commit 995c487
+  (the macro re-stage). Do NOT tune knobs/margins to chase a regression -- per
+  explicit user instruction, that cost two runs previously on a wrong hypothesis.
