@@ -3227,3 +3227,57 @@ Use GLOBS over step numbers (indices shift). Mid-PnR STA writes reports FLAT; on
 If the SoC regresses: report plainly and recommend reverting commit 995c487
   (the macro re-stage). Do NOT tune knobs/margins to chase a regression -- per
   explicit user instruction, that cost two runs previously on a wrong hypothesis.
+
+
+---
+
+## RUN_2026-07-27_17-15-57 — SoC confirmation of the re-hardened CPU macro (bead 0ro) — COMPLETE
+
+result:      ADOPTION VALIDATED on every axis. Macro views staged in commit
+             995c487 (merged to main via PR #125).
+baseline:    RUN_2026-07-26_16-05-43 (the previously published Stage-2 closure)
+
+timing (nom_tt/min_tt/max_tt are the gated corners; sky130A sets
+        TIMING_VIOLATION_CORNERS = ['*tt*'] at PDK level):
+
+    setup   nom_tt  +1.38729 -> +1.85846   (+0.471)
+            min_tt  +2.56559 -> +2.89398   (+0.328)
+            max_tt  +0.33912 -> +0.86619   (+0.527)
+    hold    nom_tt  +0.14439 -> +0.29318   (+0.149)
+            min_tt  +0.24888 -> +0.29186   (+0.043)
+            max_tt  +0.09232 -> +0.27062   (+0.178)
+    violator list EMPTY.
+    Checker.SetupViolations AND Checker.HoldViolations were both LIVE GATES
+    for this run -- these numbers passed a real gate, not a skipped one.
+
+physical:
+    Netgen LVS   "Circuits match uniquely"      (unchanged)
+    KLayout DRC  4                              (unchanged, macro-internal, GH #121)
+    Magic DRC    9081                           (unchanged, known artifact class)
+    antenna      164 -> 147 pin, 134 -> 127 net (IMPROVED)
+
+two things worth carrying forward:
+
+ 1. ANTENNA IMPROVED, against prediction. Enabling RUN_POST_GRT_DESIGN_REPAIR
+    had previously cost +20 antenna pins at SoC level and +4 at CPU level, so a
+    further regression was expected here. Instead it fell 164 -> 147. Repairing
+    the macro that the SoC-level design-repair step had been compensating for
+    recovered part of that cost. Full series: 154/129 -> 152/128 -> 144/115 ->
+    164/134 -> 147/127; best-ever remains 144/115. Bead 58q updated.
+
+ 2. max_tt -- the tightest gated corner on BOTH axes, and the corner where the
+    Stage-1 CPU macro STILL violates setup internally at -0.12078 -- gained the
+    most of any corner (+0.527 setup, +0.178 hold). The macro's residual
+    max_tt violation does NOT propagate to the SoC. This retrospectively
+    justifies not blocking adoption on it.
+
+conclusion: the 0ro premise is confirmed end-to-end. Unrepaired
+over-cap/over-slew nets inside the Stage-1 CPU made its Liberty arcs
+pessimistic; repairing them improves every downstream consumer. Bead closed.
+
+still NOT a multi-corner sign-off: the OpenRAM SRAM macro remains analytical
+and single-corner (GH #120 / bead o1i measured NOT feasible on this host --
+~63 min per delay simulation, ~25-30 sims per corner via delay.py's
+period-doubling + per-read-port binary search, so ~80-95 h for 3 corners
+against 2-8 h of uptime). ss-corner setup still fails by -6 to -9 ns and sits
+outside the PDK's *tt* gate by design.
