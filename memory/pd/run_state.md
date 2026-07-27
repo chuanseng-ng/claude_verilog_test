@@ -3281,3 +3281,67 @@ and single-corner (GH #120 / bead o1i measured NOT feasible on this host --
 period-doubling + per-read-port binary search, so ~80-95 h for 3 corners
 against 2-8 h of uptime). ss-corner setup still fails by -6 to -9 ns and sits
 outside the PDK's *tt* gate by design.
+
+---
+
+## bead 45a — MAGIC_DRC_USE_GDS=true test on Sky130 Stage-1 CPU (launched 2026-07-27)
+
+run_id:      pd_20260727_203206
+design_name: rv32i_cpu_top (Sky130 CPU Stage 1)
+pdk:         sky130A
+tool:        librelane (nix-shell)
+start_time:  2026-07-27T20:32:06+07:00
+last_stage:  floorplan
+
+question: baseline Magic DRC = 27,733,913 (bit-identical across
+RUN_2026-07-21_18-02-11 and RUN_2026-07-27_05-52-19), dominated by li.3
+(local interconnect spacing) inside the SRAM macro footprint. Hypothesis
+(documented in knowledge.md, Sky130A Magic DRC section): with
+MAGIC_DRC_USE_GDS=false, Magic resolves the SRAM instance by loading the full
+.mag layout via addpath rather than the LEF abstract, producing spurious
+li.3 hits. This run flips MAGIC_DRC_USE_GDS false->true (commit 8a3691f,
+single key) to test whether Magic reading the real merged GDS collapses the
+count. Prior GDS-mode investigation (2026-06-30) found gds write embeds full
+SRAM geometry via GDS_FILE property regardless of MACROS blackbox, so this
+number could go either way -- both outcomes are reportable results per user
+instruction (no knob-tuning to chase a preferred answer).
+
+pre-launch verification (all confirmed unchanged, config diff is the single
+MAGIC_DRC_USE_GDS key per commit 8a3691f):
+  - RUN_POST_GRT_DESIGN_REPAIR: true
+  - RUN_MAGIC_DRC: true, RUN_KLAYOUT_DRC: true
+  - EXTRA_LIBS: dir::pdk_lib_patched/... (patched copy, NOT pdk_dir::) -- this
+    is what prevents the RSZ-0090 abort at RepairDesignPostGRT
+  - git status clean at 8a3691f, branch feat/sky130-0ro-soc-confirm
+
+host state at launch: 12 GiB RAM free / 15 GiB total, 618G free on
+/nobackup (30% used, 916G total). No other PD run active (sky130_soc_0ro
+and sky130_soc_y7v_relaunch tmux sessions both idle/completed --
+sky130_soc_0ro pane shows a finished run: 9081 Magic DRC / 4 KLayout DRC,
+matching the already-recorded 0ro SoC result).
+
+launch:
+  tmux session: sky130_cpu_magic_gds_45a
+  command:      cd /home/neuromorphic/Downloads/Github/claude_verilog_test/pnr && make librelane-sky130-cpu 2>&1 | tee /nobackup/sky130_cpu_magic_gds_45a_20260727_203206.log
+  run dir:      will appear under /nobackup/sky130_cpu_runs/RUN_<timestamp>/ (timestamp assigned by LibreLane at flow start, not yet known at launch time)
+  log path:     /nobackup/sky130_cpu_magic_gds_45a_20260727_203206.log
+  reference runtime: ~2h17m for the baseline (MAGIC_DRC_USE_GDS=false) flow;
+    MAGIC_DRC_USE_GDS=true is expected to be substantially heavier at the
+    magic-drc step because Magic must now load the ~205 MB merged GDS
+    including full SRAM macro internal geometry instead of an abstract --
+    watch that step specifically for runtime blowup or OOM (no privileged
+    OOM logging available on this host; judge by process disappearing +
+    free/step timing).
+  host reboot caveat: this host reboots every ~2-8h and tmux does not
+    survive reboots -- on a reboot kill, relaunch fresh (do not resume with
+    -F on this project per prior user instruction preferring fresh runs).
+
+not yet awaited -- report back when it lands. Check per bead 45a instructions:
+  1. `Magic DRC errors: N` in *-misc-reportmanufacturability/*.rpt (glob, not
+     step index) -- baseline is exactly 27,733,913.
+  2. If changed, new rule-type breakdown from *-magic-drc/reports/drc_violations.magic.rpt
+     (bound the scan, file was 27.7M lines before).
+  3. No-regression check vs RUN_2026-07-27_05-52-19: nom_tt setup +0.17416,
+     hold -0.13577, KLayout DRC 0, LVS "Circuits match uniquely", antenna
+     93 pin / 90 net. Timing should be UNCHANGED (MAGIC_DRC_USE_GDS only
+     affects the DRC step) -- any movement is run-to-run noise, not a result.
