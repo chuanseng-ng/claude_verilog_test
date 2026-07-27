@@ -3138,3 +3138,92 @@ what to check on landing (glob-based, not step-index-based — indices shift whe
      this flag)
   5. runtime + peak memory vs the ~2h17m / no-OOM baseline
 
+
+---
+run_id:      pd_20260727_171511
+design_name: soc_top (sky130 SoC Stage 2, GH#104 flow) + rv32i_cpu_top macro re-stage (GH#120/bead 0ro)
+pdk:         sky130A
+tool:        librelane (nix-shell)
+start_time:  2026-07-27T17:15:11+07:00
+last_stage:  routing (launched, in flight — this entry is a launch record, not a result)
+
+## Step 1 complete: CPU macro views re-staged (bead 0ro final step)
+
+Adopted RUN_2026-07-27_05-52-19 (RUN_POST_GRT_DESIGN_REPAIR + patched PDK SRAM lib)
+into pnr/sky130/cpu/macro/, replacing the RUN_2026-07-21_18-02-11 baseline that was
+tracked there before. Committed standalone: commit 995c487 on
+feat/sram-spice-char-gh120 ("[PD] Stage GH#120 re-hardened CPU macro views (0ro)").
+
+Verified before staging (all against the source run, located by content/mtime, not
+assumed step index):
+  - 9 corner .lib files (57-openroad-stapostpnr/<corner>/*.lib) are pairwise DISTINCT
+    by md5 (guards against the GH#120 wildcard-lib regression).
+  - each lib's nom_temperature/nom_voltage matches its corner name exactly:
+    tt->25.0/1.80, ss->100.0/1.60, ff->-40.0/1.95, all 9/9.
+  - LEF (61-magic-writelef/rv32i_cpu_top.lef) still exposes all AXI4 burst ports
+    (awlen/wlast/arlen/rlast/awsize/awburst/arsize/arburst, prefixed axi_*_o/i[n]);
+    404 total PINs, matching the pre-existing tracked LEF's PIN count (404) and the
+    ~403 expected from prior notes.
+  - netlist taken from 54-openroad-fillinsertion/rv32i_cpu_top.nl.v (the LAST-modified
+    nl.v across the run by mtime/md5 -- later than 44/46 which are identical to each
+    other; this is the final post-fill netlist matching GDS/spice), gzipped to
+    rv32i_cpu_top.nl.v.gz.
+  - GDS from 59-magic-streamout/rv32i_cpu_top.gds, spice from
+    67-magic-spiceextraction/rv32i_cpu_top.spice -- both gitignored (per
+    pnr/.gitignore sky130/cpu/macro/*.lef + *.nl.v.gz whitelist only), working-tree
+    copies updated but NOT committed, matching existing convention.
+
+Numbers this staging carries into the SoC run (CPU macro standalone, vs
+RUN_2026-07-21_18-02-11 baseline):
+  nom_tt setup  -0.39906 FAIL -> +0.17416 MET   (+0.573)
+  nom_tt hold   -0.12321       -> -0.13577       (all violators I/O-boundary, 0 internal)
+  KLayout DRC 0 -> 0; Magic DRC 27733913 -> 27733913 (bit-identical, pre-existing)
+  Netgen LVS match uniquely -> match uniquely
+  antenna 89 pin -> 93 pin / 90 net
+KNOWN REMAINING LIMIT (accepted by user, not a blocker): max_tt setup still violates
+  at -0.12078 internally. max_tt IS a gated SoC corner (TIMING_VIOLATION_CORNERS =
+  ['*tt*']) -- watch it first at SoC sign-off.
+
+## Step 2: SoC run launched
+
+tmux session: sky130_soc_0ro (detached, `tmux attach -t sky130_soc_0ro` to view)
+log:          /nobackup/sky130_soc_runs/run_0ro_20260727_171511.log
+run_dir:      /nobackup/sky130_soc_runs/RUN_2026-07-27_17-15-57
+launch cmd:   make librelane-sky130-soc  (pnr/Makefile target, unmodified config/skip-list)
+sv2v regenerated cleanly at launch: 5680 lines, 38 clocked always blocks, 304 reg
+  decls, GPU cells=2 (tie-off, expected). error.log empty at launch+70s, Yosys
+  synthesis actively running (module soc_top, OPT_MUXTREE pass) by that point --
+  nix-shell/channel-unpack overhead (~60-90s) cleared normally, matches prior-run
+  precedent, no hang.
+
+Both timing checkers (Checker.SetupViolations, Checker.HoldViolations) are LIVE in
+  this recipe's --skip list (neither is skipped) -- flow will fail loudly on a
+  regression, that is intended, do not add them back to --skip to "fix" a failure.
+
+known risk: host reboots every ~2-8h, tmux does NOT survive. On a reboot kill,
+  relaunch fresh (same `make librelane-sky130-soc` command) rather than resuming -F,
+  per feedback_pd_run_strategy. Expect ~2.5-3h based on recent SoC run history.
+
+## What to check when it lands (accept/revert decision for the bead-0ro macro restage)
+
+Baseline to beat: RUN_2026-07-26_16-05-43 (currently-published SoC closure) --
+  setup +1.38729, hold +0.14439, violator list empty, LVS match uniquely, KLayout
+  DRC 4, Magic DRC 9081, antenna 164 pin / 134 net.
+
+Use GLOBS over step numbers (indices shift). Mid-PnR STA writes reports FLAT; only
+  *-openroad-stapostpnr has per-corner subdirectories.
+
+1. *-openroad-stapostpnr/nom_tt_025C_1v80/{ws.max,ws.min}.rpt -- setup and hold must
+   both stay >= 0. Report deltas against +1.38729 / +0.14439.
+2. All three *tt* corners (only ones the PDK gates). Previous SoC numbers: setup
+   nom +1.3873 / min +2.5656 / max +0.3391; hold nom +0.1444 / min +0.2489 /
+   max +0.0923. max_tt was tightest on both -- watch especially, since the CPU
+   macro itself still violates max_tt setup internally (-0.12078).
+3. Checker.SetupViolations / Checker.HoldViolations pass? They sit near the END of
+   the flow (after Netgen LVS), so DRC/LVS results exist even if timing fails.
+4. LVS / KLayout DRC / Magic DRC / antenna vs the RUN_2026-07-26_16-05-43 numbers
+   above.
+
+If the SoC regresses: report plainly and recommend reverting commit 995c487
+  (the macro re-stage). Do NOT tune knobs/margins to chase a regression -- per
+  explicit user instruction, that cost two runs previously on a wrong hypothesis.
