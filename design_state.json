@@ -2,7 +2,7 @@
   "format_version": "1.3",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-07-26T09:07:44.282379+00:00",
+  "updated_at": "2026-07-27T22:16:43.472838Z",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -56,6 +56,18 @@
       "suites": 18,
       "log": "/nobackup/soc_all_gh104/soc_all_68m_run1.log",
       "checked_at": "2026-07-25T01:42:37.117819+00:00"
+    },
+    "soc_periph_regression_go9_k12_confirm": {
+      "status": "PASS",
+      "total_tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skip": 0,
+      "test": "test_periph_loopback",
+      "log": "/nobackup/soc_periph_verify/run2.log",
+      "results_xml": "/home/neuromorphic/Downloads/Github/claude_verilog_test/tb/cocotb/soc/results.xml",
+      "purpose": "Confirm go9 (D-cache MMIO bypass) fix + k12 (DMA/periph loopback test) functional closure",
+      "checked_at": "2026-07-27T22:16:43.472838Z"
     }
   },
   "pipeline_session_id": null,
@@ -858,6 +870,17 @@
       "suggested_next_step": "retry_stage",
       "reason": "Relaunched bead claude_verilog_test-y7v Stage-2 SoC run after unblocking RSZ-0090 (RUN_2026-07-26_15-38-37 died at OpenROAD.RepairDesignPostGRT: SRAM macro Liberty's 0.04ns max_transition on 3 input buses was physically unachievable in sky130_fd_sc_hd). Fix (commit 8b11092, already committed prior to this session) raised those 3 values to 0.5, the library's own default_max_transition; verified via OpenSTA parse. This session made no edits -- verified 5 pre-launch checks (SRAM lib clean, RUN_POST_GRT_DESIGN_REPAIR=true, GRT_RESIZER_HOLD_SLACK_MARGIN=0.05, SDC clk_i/clkbuf_16 exclusion intact, no --skip Checker.HoldViolations, git clean at 8b11092), killed 2 stale dead tmux sessions from a prior invocation, then launched make librelane-sky130-soc detached (tmux sky130_soc_y7v_relaunch, run RUN_2026-07-26_16-05-43, log /nobackup/sky130_soc_run_20260726_090536.log). Confirmed yosys synthesis running before handing off without awaiting the ~2.5-3h completion, per task scope. Checker.HoldViolations still hard-gates the flow so a residual hold violation will abort before DRC/LVS as before.",
       "constraint_ref": "claude_verilog_test-y7v"
+    },
+    {
+      "timestamp": "2026-07-27T22:16:43.472838Z",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Re-ran soc_periph (test_periph_loopback) on current HEAD (commit 9f53f65 CS_UNCACHED_RD/CS_UNCACHED_WR MMIO bypass is an ancestor): TESTS=1 PASS=1 FAIL=0. PASS_PC committed, FAIL_PC never seen \u2014 confirms bead go9 (D-cache MMIO bypass) and dependent k12 (DMA+peripheral loopback SoC test) are functionally closed on this branch. No RTL changes made.",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
