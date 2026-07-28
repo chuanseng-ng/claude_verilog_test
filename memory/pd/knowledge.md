@@ -1162,6 +1162,62 @@ as the authoritative sign-off. Magic DRC=27,733,913 is a documented stock-tool a
 MACROS object. This is the exact Run-6 validated state (RUN_2026-06-29_09-15-44). Reproducible
 with stock LibreLane tools, no drc.tcl patch required.
 
+#### Quantitative confirmation (2026-07-28, bead 45a — re-derived, then closed)
+
+⚠️ Bead 45a was filed 2026-07-27 asking whether the 27.7M were real, **unaware this section
+already answered it on 2026-06-29**. Read this section first before re-opening the question.
+The 2026-07-28 pass added hard numbers and three genuinely new facts (marked NEW below).
+
+Exhaustive streaming classification of **every** coordinate in the 1.1 GB report from
+`RUN_2026-07-27_20-33-10/63-magic-drc` (not sampled; reproduced twice with independent awk passes):
+
+| Zone | Count | % |
+|------|-------|---|
+| Inside one of the 10 SRAM footprints | 27,730,498 | **100.0000 %** |
+| Routing channel (417.5 < y < 520) | 0 | 0 % |
+| Standard-cell logic zone (y > 917.5) | 0 | 0 % |
+
+Coordinate extents x 0..3189.11 µm, y 0..**907.87** µm. The logic zone begins at y=917.5 —
+nothing is reported above 907.87. Rightmost SRAM's right edge = 2719.12+479.78 = 3198.90.
+
+Per-rule-family (all 26 families 100 % SRAM-internal, none leak outside): diff/tap.9 3,017,505;
+licon.1 2,572,862; li.1 2,278,399; licon.5a 2,262,998; licon.8 1,850,092; poly.8 1,833,708;
+diff/tap.1 1,820,192; licon.14 1,697,877; via.1a+2·via.4a 1,597,260; poly.4 1,339,088;
+met1.4 841,738; **li.3 922,628**. Note li.3 is *not* the dominant family once counted —
+earlier notes calling this "27.7M li.3" overstate that one rule.
+
+**NEW 1 — why KLayout reports 0 on the identical GDS.** `sky130A_mr.drc` has explicit,
+hierarchy-aware SRAM exclusion: `SRAM_EXCLUDE=true` →
+`not_sram = layout(source.cell_obj).select("-*sky130_sram_*kbyte_*")`, subtracting all shapes in
+cells matching the SRAM macro name from the nsdm/psdm/nwell rule groups. The deck log states it:
+`nwell.6 | sky130_fd_io__gpiov2_amux, sky130_fd_io__simple_pad_and_busses, sram` and
+`nsd.1/nsd.2/psd.1/psd.2 | sram` — the foundry deck groups this SRAM with the I/O pad cells and
+treats it as a pre-verified hard macro by convention. KLayout also splits li1 via an `areaid:ce`
+scope (strict li.1/li.3 0.17 µm outside, relaxed li.7/li.8 0.14 µm in core) — the same intent as
+Magic's `COREID`/`coreli`, but it works here where Magic's does not.
+
+**NEW 2 — SoC-vs-CPU asymmetry reconciled.** The Sky130 SoC run reports only 9,081 on a *larger*
+die = 9,049 `nwell.4` + 32 `met4.4a`, a **completely disjoint** rule set (zero li.3/licon/poly/diff),
+not a diluted CPU flood. `pnr/sky130/soc/config.json` declares the CPU as a hard `MACROS` entry
+with `MAGIC_DRC_USE_GDS=false`, so `read_macro_lef` loads the CPU LEF abstract before `def read`
+and Magic never reaches CPU-internal (hence SRAM-internal) geometry. **The SRAM-flood failure mode
+is structurally impossible at SoC level.** The 9,049 `nwell.4` is the same DEF+LEF-abstract artifact
+class documented above at 3,626 on the smaller CPU-only test — same phenomenon, larger die.
+
+**NEW 3 — sky130A techfile layer/datatype gap (bead y0w).** `sky130A.tech` maps GDS layer 235 only
+at datatype 4 (→ CELLBOUND), but `sky130_fd_bd_sram__openram_dp_cell{,_dummy,_replica,_cap_row}`
+draw their boundary at 235/**0**; layers 33 (42/43) and 22 (21/22) are unmapped entirely. This is
+the exact cause of the fatal `Unknown layer/datatype in boundary` abort under
+`MAGIC_DRC_USE_GDS=true`. It is mechanistically relevant — `coreli` classification derives from
+`COREID`, bloated off the same CELLBOUND geometry Magic can't read — but it is **not** the driver
+of the flood: DEF+LEF mode never invokes that GDS calma path and still gives 27,733,913 (Δ 0.01 %).
+Filed low-priority; only matters if GDS mode is ever wanted again.
+
+**Bottom line, unchanged**: Magic's flat `drc(full)` engine cannot validate this dense custom
+OpenRAM macro's internals regardless of read path. KLayout DRC=0 + Netgen LVS=MATCH + DRT 0 are
+authoritative for Sky130 Stage-1. Stages 2–4 inherit the waiver cleanly. Keep
+`MAGIC_DRC_USE_GDS: false` — `true` aborts the flow and produces the same count anyway.
+
 **GDS-mode investigation conclusion (2026-06-30)**:
 - `MAGIC_DRC_USE_GDS: true` + `MACROS` cannot achieve Magic DRC=0 because `gds write` embeds
   the full SRAM cell hierarchy into the merged GDS via the `GDS_FILE` property pointer mechanism.

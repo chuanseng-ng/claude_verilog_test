@@ -3396,3 +3396,102 @@ leads for whoever picks this up:
  (c) STRONGEST CLUE: the Sky130 SoC reports only 9081 Magic DRC errors on a
      LARGER die (6700x3100 vs 3600x1800). Same PDK, same Magic, vastly
      different result. Explaining that asymmetry probably explains everything.
+
+================================================================================
+2026-07-28 -- BEAD 45a RESOLVED: PDK SRAM MACRO ARTIFACT, WAIVABLE
+================================================================================
+
+All three leads (a)/(b)/(c) above were run down. Verdict: the ~27.7M Magic DRC
+violations are entirely internal to the PDK SRAM macro geometry. Not our
+placement, not our routing, not our standard cells. Waived.
+
+(a) COORDINATE CLUSTERING -- exhaustive, not sampled
+Full streaming pass over the 1.1 GB report from RUN_2026-07-27_20-33-10
+(63-magic-drc/reports/drc_violations.magic.rpt), every coordinate classified
+against the 10 sky130_sram_1kbyte_1rw1r_32x256_8 rectangles in
+macro_placement.cfg (origins x=100.00/679.78/1359.56/2039.34/2719.12,
+y=20/520, extent 479.78 x 397.5):
+
+    inside an SRAM footprint      27,730,498   100.0000 %
+    routing channel (y 417.5-520)          0          0 %
+    standard-cell logic (y>917.5)          0          0 %
+
+Independently reproduced twice (PD agent + main session, separate awk passes,
+identical counts). Coordinate extents: x 0..3189.11, y 0..907.87. The logic
+zone starts at y=917.5 -- NOTHING is reported above 907.87. The rightmost
+SRAM's right edge is 2719.12+479.78 = 3198.90, and max x is 3189.11.
+
+All 26 rule families are 100 % SRAM-internal -- none leak outside. Largest:
+diff/tap.9 3,017,505; licon.1 2,572,862; li.1 2,278,399; licon.5a 2,262,998;
+licon.8 1,850,092; poly.8 1,833,708; diff/tap.1 1,820,192; licon.14 1,697,877;
+via.1a+2*via.4a 1,597,260; poly.4 1,339,088; li.3 922,628; met1.4 841,738.
+Note li.3 is NOT actually the dominant family once counted properly.
+
+Per-instance: 9 macros at ~2.831M each; col5_row1 (x0=2719.12) at 2,245,976,
+a ~21 % low outlier -- edge-of-row effect on Magic's 3-4x multi-count, not a
+different cause. Sums exactly to 27,730,498.
+
+(b) TECHFILE vs MACRO GDS -- real gap, but NOT the driver
+sky130A.tech maps GDS layer 235 only at datatype 4 (-> CELLBOUND); the SRAM
+bitcells draw their boundary at 235/0. Layers 33 and 22/21,22 are unmapped
+entirely. That is the exact cause of the fatal "Unknown layer/datatype" abort
+(18 errors, 4 distinct cell definitions: openram_dp_cell, _dummy, _replica,
+_cap_row).
+
+It matters mechanistically -- sky130A.tech has a deliberate two-tier li1 rule,
+strict li.3 (0.17um) for generic `locali` vs relaxed li.c2 (0.14um) for
+`coreli` ("Local interconnect in core (SRAM) cells has more relaxed rules"),
+and `coreli` classification derives from COREID, bloated off the same CELLBOUND
+geometry Magic cannot read at 235/0.
+
+But it is NOT sufficient as an explanation: MAGIC_DRC_USE_GDS=false never
+invokes the GDS calma path for the SRAM at all (resolves via .mag/LEF addpath)
+and still yields 27,733,913 -- 0.01 % apart. And the SRAM-aware relaxed rules
+Magic DOES apply correctly still fire in the hundreds of thousands (li.c2
+661,744; poly.8 "SRAM core transistor" 1,833,708; diff/tap.2 "P-Transistor in
+SRAM core" 331,004). Root cause is broader: Magic's flat drc(full) engine is
+not equipped to validate this dense custom OpenRAM macro's internals, whatever
+the read path.
+
+(c) THE SoC/CPU ASYMMETRY -- fully reconciled
+SoC RUN_2026-07-27_17-15-57/55-magic-drc: 9,081 = 9,049 nwell.4 + 32 met4.4a.
+A COMPLETELY DISJOINT rule set -- zero li.3/licon/poly/diff. Not a diluted
+version of the CPU flood.
+
+Reason: pnr/sky130/soc/config.json declares the CPU as a hard MACROS entry and
+SoC runs MAGIC_DRC_USE_GDS=false, so read_macro_lef loads the CPU LEF ABSTRACT
+before def read and Magic never touches CPU-internal (hence SRAM-internal)
+geometry. The SRAM-flood failure mode is structurally impossible at SoC level.
+The residual 9,049 nwell.4 is the same DEF+LEF-abstract-view artifact class
+already documented in knowledge.md (N-well tap connectivity unverifiable from
+an abstract), previously seen at 3,626 on a smaller CPU-only test -- same
+phenomenon, larger die. met4.4a x32 is a small uniform ~12.3um-pitch minimum-
+area artifact, likely a PDN-strap/via quirk; immaterial, not chased.
+
+WHY KLAYOUT REPORTS 0 ON THE IDENTICAL GDS
+sky130A_mr.drc (foundry deck) has explicit hierarchy-aware SRAM exclusion:
+SRAM_EXCLUDE=true ->
+    not_sram = layout(source.cell_obj).select("-*sky130_sram_*kbyte_*")
+subtracting all shapes in cells matching the SRAM macro name from the
+nsdm/psdm/nwell rule groups. The log states it outright:
+    nwell.6 | sky130_fd_io__gpiov2_amux, sky130_fd_io__simple_pad_and_busses, sram
+    nsd.1/nsd.2/psd.1/psd.2 | sram
+i.e. the foundry deck groups this SRAM with the I/O pad cells and treats it as
+a pre-verified hard macro by convention. KLayout also implements the two-tier
+li1 split via an areaid:ce scope (li_outside_or_touching_areaidce -> strict
+li.1/li.3 0.17um; li_core -> relaxed li.7/li.8 0.14um) -- same intent as
+Magic's COREID/coreli, but it actually works here.
+
+SIGN-OFF POSITION
+Stage-1 Sky130 CPU sign-off rests on KLayout DRC = 0 + Netgen LVS = "Circuits
+match uniquely" + DRT 0, with Magic's 27.7M waived as a stock-tool limitation
+(flat Magic DRC vs OpenRAM macro hierarchy). This is consistent with, and now
+quantitatively reinforces, the existing knowledge.md position that
+KLayout+Netgen are authoritative for Sky130. Stages 2-4 inherit the waiver
+cleanly, and at SoC level the failure mode cannot even occur (CPU is an
+abstracted macro).
+
+LEAVE MAGIC_DRC_USE_GDS = false in pnr/sky130/cpu/config.json. true aborts the
+whole flow on the techfile gap and buys nothing -- it produces the same count.
+The techfile layer/datatype gap is filed separately as its own low-priority
+bead; it only matters if MAGIC_DRC_USE_GDS=true is ever wanted again.
