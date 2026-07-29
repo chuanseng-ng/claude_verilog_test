@@ -116,6 +116,5 @@
     "RUN_ANTENNA_REPAIR":            true,
     "RUN_HEURISTIC_DIODE_INSERTION": true,
     "GRT_ANTENNA_ITERS":             8,
-    "GRT_ANTENNA_MARGIN":            25,
-    "DIODE_ON_PORTS":                "in"
+    "GRT_ANTENNA_MARGIN":            25
 }

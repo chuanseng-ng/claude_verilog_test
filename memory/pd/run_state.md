@@ -3822,3 +3822,110 @@ sanity check per explicit instruction before burning another multi-hour run):
 STATUS: reported to coordinator, NOT YET APPLIED, NOT YET RE-LAUNCHED --
 holding for explicit go-ahead per "report... before making changes... before
 another multi-hour cycle burns."
+
+--- APPROVED (coordinator, same session) -- corrections + clk_i alternative-fix check ---
+
+Coordinator independently re-verified the diode/clock-latency numbers (exact
+match) and APPROVED: drop DIODE_ON_PORTS, keep the other 3 keys + 25.0 ns
+period. Two corrections to carry into the permanent record:
+
+1. Coordinator's OWN "+47k cells" framing was WRONG, not mine: DIODE_ON_PORTS
+   inserted only 52 ANTENNA_* cells total (grep-countable), not 47,385 --
+   design__instance__count__class:antenna_cell=47385 is a different metric
+   (counts diode-like fill broadly, not attributable to DIODE_ON_PORTS
+   specifically). So this is NOT a generic +20%-cell-count placement-pressure
+   story -- it is precisely the two diodes landing directly on the clock
+   root, nothing more diffuse. Recorded as coordinator's correction to their
+   own initial framing, not mine to walk back.
+2. SDC multicycle pairing verified NOT to be the bug: `set_multicycle_path 2
+   -setup / 1 -hold -from {apb_paddr_i ...}` (sky130_soc.sdc ~287-288) is the
+   textbook-standard pairing. Worth stating explicitly because "hold fails on
+   a multicycle group" is exactly the shape that USUALLY IS a constraint
+   bug -- ruling it out here has real value, not a formality. Also: SDC
+   header line ~60-61 already records a prior, smaller instance of this same
+   I/O-boundary hold class (`-0.0923 ns apb_paddr_i[4] -> u_cpu`, bead y7v,
+   2026-07-26) -- this design's APB debug bus has been the hold-sensitive
+   boundary class before; this is a recurrence of a known-fragile spot under
+   a new perturbation, not a first-time surprise.
+
+CLK_I ANTENNA -- ALTERNATIVE-FIX CHECK (before defaulting to a waiver, per
+coordinator instruction): read librelane/scripts/odbpy/diodes.py
+(DiodeInserter, the actual engine behind Odb.PortDiodePlacement /
+DIODE_ON_PORTS). Finding: place_diode_stdcell() ALWAYS places the diode
+immediately abutting the FIRST SINK INSTANCE on the net (left/right of it,
+touching), governed by a `side_strategy` internal parameter ("source"/"pin"/
+"balanced") with NO distance/threshold/offset control exposed anywhere in
+the LibreLane Variable surface (checked common_variables.py, odb.py -- only
+DIODE_ON_PORTS polarity and the diode cell/pin choice are configurable, not
+placement distance). For clk_i, "first sink instance" IS clkbuf_0_clk_i /
+clkbuf_0_clk_i_regs -- the clock tree roots. There is therefore NO config
+knob to make this mechanism protect clk_i from farther away; abutting the
+clock root is not a misconfiguration, it is what this script does by
+design. A custom post-placement ECO (script an OpenROAD/ODB pass that
+legally relocates just these 2 diode instances a few sites away after
+placement, before CTS) is technically possible but is bespoke, untested
+engineering for a single moderate-severity net -- not attempted this
+session per "don't spend a whole extra cycle on it."
+
+CLK_I SEVERITY (for the eventual waiver-or-not call): original ratio (pre-
+any-of-the-4-new-keys baseline, RUN_2026-07-27_17-15-57/44-checkantennas-1)
+was partial 843.44 / required 400.00 = 2.11x -- moderate, not the worst in
+that report (worst was 11.4x), but not negligible either.
+
+PATH FORWARD (no extra cycle spent): dropping DIODE_ON_PORTS while keeping
+GRT_ANTENNA_ITERS=8 / GRT_ANTENNA_MARGIN=25 (both well above CPU's already-
+validated 5/20, and both act via the GRT-based RepairAntennas jumper/diode
+pass, which is placement-legalization-aware and runs on already-routed
+nets, unlike the blunt port-diode script) is ALREADY the experiment that
+answers whether clk_i can be closed without the disruptive mechanism -- no
+separate isolation run needed. Next run's checkantennas-1 report settles it:
+if clk_i is absent, GRT-alone with the enhanced settings sufficed; if
+present, it becomes a single documented residual (2.11x, top-level clock
+port, mechanism-explained-not-just-observed, same evidentiary bar as the
+CPU tie-cell and SRAM-LEF waivers from task 2) rather than reaching for the
+bespoke-ECO route on a first attempt.
+
+FIX APPLIED: pnr/sky130/soc/config.json -- removed "DIODE_ON_PORTS": "in".
+Kept RUN_ANTENNA_REPAIR, RUN_HEURISTIC_DIODE_INSERTION, GRT_ANTENNA_ITERS=8,
+GRT_ANTENNA_MARGIN=25, CLOCK_PERIOD=25.0, TIMING_VIOLATION_CORNERS=['*']
+unchanged. No SDC change this round (multicycle pairing already correct,
+nothing to fix there). No RTL. Re-launching once the CURRENT run
+(RUN_2026-07-29_18-40-38) finishes and its full gate table is reported.
+
+--- RUN_2026-07-29_18-40-38 FINAL GATE TABLE (coordinator-confirmed, cross-
+checked against this session's own step-52/44 reads above -- consistent) ---
+
+    LVS (Netgen)      PASSED               (7m18s)
+    Routing DRC       0                    (10 DRT iters: 22648->5803->4998->289->15->2->0)
+    KLayout DRC       4                    unchanged, GH #121 waiver           (1h20m)
+    Magic DRC         9081                 unchanged, bead 45a waiver          (31m34s)
+    Antenna           52 pin / 46 net      FAIL, was 147/127 (~65% better)
+    Setup             FAIL at ss only      max_ss -4.3284, nom_ss -2.8851, min_ss -1.1200; tt/ff all 0
+    Hold              FAIL at 4 corners    max_ss -0.6633, max_tt -0.4586, nom_ss -0.2825, nom_tt -0.2098
+                                            (min_* and nom_ff all 0; 51 endpoints worst corner, 3 another)
+    Power             44.6 mW              was 71.7 mW
+    Utilization       38.47 %
+
+All DRC/timing failures are LibreLane "deferred" errors (flow ran to 65/65
+completion rather than aborting) -- consistent with every prior run in this
+project's history. Monitor-tooling note for future sessions: the first
+Monitor task for this run used a 15-min heartbeat with weak log-text
+matching and missed the actual completion signal -- the coordinator caught
+it live by reading runtime.txt/state_out.json directly. Replaced with a
+Monitor that polls for the manufacturability.rpt file's existence (or
+process death) every 3 min -- more reliable, use this pattern for future
+multi-hour LibreLane runs rather than a fixed-text log grep alone.
+
+RELAUNCH: pd_20260729_2215 approx, run_2 of the DIODE_ON_PORTS-drop
+experiment. Command identical to before (make librelane-sky130-soc), config
+now has DIODE_ON_PORTS removed. tmux session sky130_soc_58q_run2, log
+/nobackup/sky130_soc_58q_run2_<timestamp>.log. On landing: (1) confirm hold
+WNS >= 0 at all 9 corners, (2) measure clk_i -> u_cpu/clk_i clock latency at
+nom_tt and confirm it drops back toward the 0.870159 ns baseline (coordinator
+explicitly wants this checked, not assumed, as the proof the root cause was
+correct -- if hold improves WITHOUT this latency dropping, the diagnosis is
+wrong and must be re-opened), (3) check whether clk_i returns as an antenna
+violator and if so whether GRT_ANTENNA_ITERS=8/MARGIN=25 alone left it
+worse/better/same as the DIODE_ON_PORTS run's 52/46, (4) confirm LVS MATCH,
+KLayout DRC 4, Magic DRC ~9081, PDN 0, setup at tt/ff unchanged (0), ss setup
+still failing as expected (frequency parked, not being re-judged this round).
