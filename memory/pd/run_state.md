@@ -4092,3 +4092,65 @@ earlier coordinator summary, already caught and corrected in this file);
 "antenna 52->29" was a misread of a pre-DRT metric carried forward through
 steps 40-44 instead of the true checkantennas-1 report -- this session's own
 54/48 read is confirmed correct.
+
+--- RUN_2026-07-30_04-58-36 (run 2) DIED MID-FLOW, 56-magic-drc, ~06:12 ---
+
+STA/antenna results (reported above, already forwarded to coordinator) are
+NOT in question -- they came from step 52, which completed cleanly before
+the death at step 56. DRC/LVS/manufacturability were never reached this run.
+
+WHAT HAPPENED: `56-magic-drc/reports/drc_violations.magic.rpt` exists but is
+0 bytes; magic-drc.log's last line is a "Moving label ... from metalN to
+viaN" (pre-DRC geometry normalization, before the actual drc(full) check
+ever ran); no Python traceback, no Magic error text, no clean exit -- log
+just stops. Confirmed via three independent checks, not assumed: `ps aux`
+found no make/python/openroad/magic process at all; `tmux list-panes
+-F pane_current_command` on the run's session reported "bash" (pipeline
+already returned to shell); `ps -p <magicdnull pid>` (113264, found in one
+transitional check showing 99.9% CPU / 27:52 accumulated CPU time / 0 RSS in
+`[bracket]` notation -- a stuck/thrashing signature, not a live user
+process) came back empty moments later. Directory/log mtimes frozen at
+06:12, ~26 min of zero output before I caught it at 06:38. No host reboot
+(uptime continuous since ~04:09, well before this run started at 04:58).
+No dmesg/journalctl access to directly confirm OOM (permission denied both
+ways), but the signature (long CPU-bound stall producing zero forward
+progress, zero swap used despite 31 GiB configured, host shared with ~10
+other tmux sessions + multiple MCP servers + several htop/abtop instances
+all baseline-consuming RAM) is consistent with the systemd-oomd PSI-kill
+pattern already documented in this project's memory for GRT-heavy OpenROAD
+steps, applied here to Magic DRC instead -- SoC Magic DRC has hit ~15.4 GiB
+RSS on this exact host in a PRIOR SUCCESSFUL run (RUN_2026-07-29_18-40-38,
+run 1), i.e. already within ~1 GiB of this host's 15 GiB total before any
+other load is counted. Not root-caused to certainty (no privileged OOM log
+access this session, consistent with every prior OOM suspicion in this
+project's history) -- reported as the leading hypothesis, not a fact.
+
+ACTION: killed the dead tmux session (tmux kill-session -t
+sky130_soc_58q_run2b -- also cleaned up a zombie-state magicdnull that a
+`ps -p` check no longer found afterward, confirming it was this session's
+child). Per feedback_pd_run_strategy.md (fresh relaunch preferred over -F
+resume on a mid-flow death), relaunched fresh rather than resuming.
+
+DECISION: did NOT re-run the identical (DIODE_ON_PORTS=none,
+RUN_HEURISTIC_DIODE_INSERTION=true) config just to re-confirm DRC/LVS/PDN.
+Reasoning: (1) those three gates have been UNIFORMLY stable (LVS MATCH,
+KLayout DRC 4, Magic DRC ~9081) across every single run in this entire
+multi-week campaign regardless of antenna/clock/hold changes -- they are
+structurally decoupled from what's being tested, so a repeat run buys very
+low incremental confidence for a multi-hour cost; (2) the coordinator's own
+approved next experiment (RUN_HEURISTIC_DIODE_INSERTION=false) is strictly
+more informative AND plausibly lowers the same memory-pressure risk that
+likely killed this run (far fewer antenna cells inserted -- run1/run2 both
+showed 47,385+ ANTENNA_ instances from the heuristic pass alone, vs 1,934 in
+the antenna-key-free baseline; removing that pass should meaningfully
+shrink total processed geometry for magic-drc too). Reflexively launched a
+same-config relaunch first (tmux session sky130_soc_58q_run2b) then killed
+it within seconds, before it had done real work, once this reasoning was
+worked through -- recorded so the aborted launch doesn't look like an
+unexplained extra run if anyone greps tmux/process history later.
+
+FIX APPLIED: pnr/sky130/soc/config.json -- RUN_HEURISTIC_DIODE_INSERTION
+true -> false. Unchanged: RUN_ANTENNA_REPAIR=true, GRT_ANTENNA_ITERS=8,
+GRT_ANTENNA_MARGIN=25, DIODE_ON_PORTS absent (still off), CLOCK_PERIOD=25.0,
+TIMING_VIOLATION_CORNERS=['*']. This is run 3 of the antenna/hold
+investigation (bead 58q). Launching next.
