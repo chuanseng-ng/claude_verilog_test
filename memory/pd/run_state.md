@@ -3704,3 +3704,121 @@ LAUNCH:
   numbered checkantennas step) cross-checked against manufacturability.rpt
   the same way this session did (do not trust an in-flight repair-step report
   as the final number -- this session's own mistake, corrected above).
+
+================================================================================
+2026-07-29 (same day, continued) -- RUN_2026-07-29_18-40-38 mid-flight review:
+coordinator caught antenna 147/127 -> 52/46 (real improvement, not zero), ss
+setup still open (extrapolation ~34 ns / 29 MHz needed, my 24.287 ns linear
+estimate was wrong -- confirmed path delay is NOT period-invariant, ~0.48 ns
+recovered per 1 ns relaxed), AND a HOLD REGRESSION at 4/9 corners
+(max_ss -0.663, max_tt -0.459, nom_ss -0.283, nom_tt -0.210 -- nom_tt was
+clean before). User decision: fix hold first, ss re-decided after. DO NOT
+launch another multi-hour run until this diagnosis is reported and the
+coordinator sanity-checks direction.
+================================================================================
+
+HOLD REGRESSION ROOT CAUSE -- FOUND AND QUANTIFIED, coordinator's
+DIODE_ON_PORTS hypothesis CONFIRMED (not just "not ruled out"):
+
+1. summary.rpt "of which reg to reg" column is 0 at EVERY corner, both runs
+   -- reg-to-reg hold is UNCHANGED (nom_tt: 0.2932 old -> 0.2927 new,
+   noise-level). 100% of the regression is on non-reg-to-reg (I/O-boundary)
+   paths.
+
+2. Parsed every VIOLATED path (min.rpt, all 5 failing corners, python regex
+   over report_checks output, not eyeballed): EVERY SINGLE hold violator at
+   EVERY failing corner is {apb_paddr_i[*], apb_psel_i, apb_penable_i,
+   apb_pwdata_i[*]} -> u_cpu. Zero exceptions, zero other startpoints. This
+   is exactly (and only) the APB debug-bus multicycle group
+   (`set_multicycle_path 2 -setup / 1 -hold -from {apb_paddr_i apb_psel_i
+   apb_penable_i apb_pwrite_i apb_pwdata_i}` in sky130_soc.sdc). All AXI
+   data paths route through the crossbar's own registers (reg-to-reg,
+   insulated) -- APB is the ONLY direct input-port-to-macro-register class
+   in this design, which is why it and only it is exposed.
+
+3. WHY this class specifically: input ports have NO clock-network term on
+   the data/arrival side (fixed set_input_delay model only) but the FULL
+   clock-tree latency on the capture side (through to u_cpu/clk_i). Reg-to-
+   reg paths have clock latency on BOTH sides and it largely cancels. So
+   this class has zero cancellation cushion against any clock-latency growth
+   -- a direct, unbuffered exposure.
+
+4. MEASURED the clock-latency term directly (grepped u_cpu/clk_i out of both
+   runs' nom_tt max.rpt setup reports, same physical clock path, corner-
+   identical latency number regardless of setup/hold):
+       OLD (RUN_2026-07-27_17-15-57): clk_i -> u_cpu/clk_i = 0.870159 ns
+       NEW (RUN_2026-07-29_18-40-38): clk_i -> u_cpu/clk_i = 1.439363 ns
+       DELTA: +0.569204 ns
+   Segment-by-segment, the growth is almost entirely in the FIRST hop (clk_i
+   port -> clkbuf_0_clk_i/A, the set_driving_cell-modelled boundary segment):
+       OLD: fanout 5, cap 0.429969 pF, delay 0.319984 ns
+       NEW: fanout 4, cap 0.505111 pF, delay 0.787429 ns   (+0.467445 ns)
+   FEWER fanout (5->4) but MORE cap and 2.5x the delay -- not explained by
+   "more load", which rules out the generic "+20% stdcell count" story as
+   the direct mechanism for THIS specific segment. Cross-checked against the
+   new run's own netlist: clk_i now has TWO antenna diodes wired directly
+   onto it (`ANTENNA_clkbuf_0_clk_i_A` and `ANTENNA_clkbuf_regs_0_core_clk_A`,
+   both `.DIODE(clk_i)`) -- these did not exist in the old run
+   (DIODE_ON_PORTS was unset/"none" there). DIODE_ON_PORTS="in" is the only
+   one of the 4 new antenna keys that touches top-level ports at all; the
+   other three (RUN_HEURISTIC_DIODE_INSERTION, GRT_ANTENNA_ITERS,
+   GRT_ANTENNA_MARGIN) act on internal nets. A cell placed directly on the
+   clk_i net's first segment, competing for the same legalization slot as
+   the clock root buffers, is a direct, mechanistic explanation for that
+   segment specifically getting longer/more-resistive even with one fewer
+   logical fanout -- consistent with (not just analogous to) this project's
+   own prior documented pattern for antenna-insertion-driven placement
+   cascades (bead y7v SDC header: "Better hold slack -> ... different
+   placement -> different GRT -> antenna violations ... this net picked up
+   a second, distant sink and a long route").
+   Arithmetic check: required-side grew ~+0.569 ns; arrival-side gained only
+   ~+0.481 ns from the bigger set_input_delay -min (0.05 * 25.0 - 0.05 *
+   15.385 = 0.481 ns, unavoidable and structural, NOT the antenna keys'
+   fault) -- net ~-0.09 ns explained by period alone, the remainder of the
+   observed ~-0.50 ns nom_tt delta plus the internal path-side hold-buffer
+   (hold53, sky130_fd_sc_hd__dlygate4sd3_1, 0.5376 ns through ONE cell --
+   plausible for this cell class) is consistent with the clock-latency
+   shift once corner-to-corner variance in clock buffer delay is folded in.
+   Not a perfect single-variable equation (period change and diode placement
+   happened in the same run, cannot be split further without an isolation
+   run), but the DIRECTION, MAGNITUDE, and MECHANISM all point at
+   DIODE_ON_PORTS as the dominant, identifiable cause, not the period change
+   or the other 3 antenna keys.
+
+5. ANTENNA BENEFIT OF DIODE_ON_PORTS SPECIFICALLY, quantified: clk_i was the
+   ONLY top-level-port violator in the original 147/127 list (this session's
+   own task-1 classification: 1/149 instances). It is NOT in the new run's
+   52/46 final list (checkantennas-1, confirmed via direct grep). No other
+   SoC top-level input port (apb_*, spi_*, uart_rx_i) was ever a violator in
+   either list. So DIODE_ON_PORTS="in" demonstrably fixed AT MOST 1 of the
+   95 violations closed by this run (147->52 = 95 closed; the other 3 keys
+   -- more repair iterations, more margin, pre-placement heuristic diode
+   pass -- account for the internal-net majority, matching this session's
+   task-1 finding that 82.6% of the ORIGINAL violators were plain stdcell-
+   driven internal nets, not ports).
+
+RECOMMENDATION (quantified trade, not yet applied -- awaiting coordinator
+sanity check per explicit instruction before burning another multi-hour run):
+  DROP DIODE_ON_PORTS (remove the key / revert to LibreLane default "none").
+  Cost: likely reintroduces clk_i as a single antenna violator (1 pin, the
+    same class already well-understood and easily documented/waived the
+    same way the CPU's 95-pin tie-cell gap was handled in task 2 -- a lone
+    top-level clock port antenna exposure on a large SoC is a small,
+    explainable residual, not a new open question).
+  Benefit: removes the two diodes sitting directly on clk_i's first clock-
+    tree segment, which is the most direct, evidence-backed lever available
+    to recover the measured +0.569 ns clock-latency / hold regression
+    without touching RUN_HEURISTIC_DIODE_INSERTION, GRT_ANTENNA_ITERS=8, or
+    GRT_ANTENNA_MARGIN=25 (the three keys responsible for the other 94
+    closed violations).
+  Keep everything else as-is (CLOCK_PERIOD 25.0, TIMING_VIOLATION_CORNERS
+  ['*'], the other 3 antenna keys) per the coordinator's explicit "leave
+  clock at 25.0 for now" instruction -- this is a hold-only fix attempt,
+  not a re-opening of the frequency question.
+  NOT proposed: touching GRT_RESIZER_HOLD_SLACK_MARGIN or other hold-repair
+  budget knobs pre-emptively -- want to see if removing the identified cause
+  is sufficient before adding more variables to the next multi-hour cycle.
+
+STATUS: reported to coordinator, NOT YET APPLIED, NOT YET RE-LAUNCHED --
+holding for explicit go-ahead per "report... before making changes... before
+another multi-hour cycle burns."
