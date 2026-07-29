@@ -3929,3 +3929,166 @@ violator and if so whether GRT_ANTENNA_ITERS=8/MARGIN=25 alone left it
 worse/better/same as the DIODE_ON_PORTS run's 52/46, (4) confirm LVS MATCH,
 KLayout DRC 4, Magic DRC ~9081, PDN 0, setup at tt/ff unchanged (0), ss setup
 still failing as expected (frequency parked, not being re-judged this round).
+
+CORROBORATING EVIDENCE (coordinator, post-CTS isolation): clk_i -> u_cpu/clk_i
+measured at POST-CTS STA (step 32/stamidpnr-1, nom_tt, before any antenna
+repair/diode step runs) across all three runs:
+    RUN_2026-07-27_17-15-57   0.864490 ns
+    RUN_2026-07-29_18-40-38   0.864490 ns   (the run that ended at 1.439363 ns post-route)
+    RUN_2026-07-30_04-58-36   0.864490 ns   (run 2, in flight)
+Byte-identical across all three, including the run whose POST-ROUTE latency
+diverged to 1.439363 ns. This rules out CTS variation as an alternative
+explanation outright (CTS built the same tree every time) rather than merely
+correlating -- the +0.569 ns in RUN_2026-07-29_18-40-38 provably appeared
+strictly AFTER step 32, and the only relevant structural change in that
+window (vs the clean baseline) was odb-diodesonports at step 38. This is the
+strongest form of evidence in this diagnosis: not "the numbers moved
+together" but "we isolated the exact stage boundary before which the three
+runs are provably identical and after which one diverges, and that boundary
+brackets the mechanism already identified independently via netlist
+inspection (2 diodes landing on clk_i)."
+IMPORTANT CAVEAT for whoever reads this next: the post-CTS number is
+IDENTICAL BY CONSTRUCTION across any run that hasn't yet reached the
+antenna-repair stage -- an unchanged 0.864490 ns at step 32 in run 2 is NOT
+itself evidence that run 2 will end up clean; it only rules OUT worse. The
+decisive comparison is POST-ROUTE (stapostpnr, the same report location used
+for the 0.870159 / 1.439363 pair above). Do not report the post-CTS number
+as if it settles the run-2 outcome -- only the post-route number does.
+Also: step numbering shifts between run 1 and run 2 after ~step 37 because
+dropping DIODE_ON_PORTS removes the odb-diodesonports step entirely -- match
+run-2 steps to run-1 steps BY NAME (e.g. "stapostpnr", "checkantennas-1"),
+never by number, when diffing directories.
+
+--- RUN_2026-07-30_04-58-36 (run 2) RESULTS -- FALSIFICATION CHECK FAILS
+PARTIALLY: the root cause was NOT fully DIODE_ON_PORTS-specific ---
+
+clk_i -> u_cpu/clk_i clock latency, nom_tt, measured the same way each time:
+    clean baseline (RUN_2026-07-27_17-15-57):   0.870159 ns
+    run1 (RUN_2026-07-29_18-40-38, DIODE_ON_PORTS=in):  1.439363 ns  (+0.569)
+    run2 (RUN_2026-07-30_04-58-36, DIODE_ON_PORTS=none): 1.388234 ns  (+0.518,
+        only 0.051 ns recovered -- under 10% of the gap)
+First-hop delay (clk_i port -> clkbuf_0_clk_i/A), same three runs:
+    0.319984 ns -> 0.787429 ns -> 0.743895 ns (run2 barely below run1)
+
+WHY: grepped run2's post-fill netlist for diodes on clk_i -- THEY ARE STILL
+THERE. `ANTENNA_clkbuf_0_clk_i_A` and `ANTENNA_clkbuf_regs_0_core_clk_A`,
+both `.DIODE(clk_i)`, same instance names as run1. DIODE_ON_PORTS is
+confirmed off (Odb.PortDiodePlacement step still runs but as a documented
+no-op per coordinator's earlier check) -- so these diodes were placed by a
+DIFFERENT mechanism: OpenROAD's own GRT-based RepairAntennas
+(RUN_ANTENNA_REPAIR, always-on regardless of DIODE_ON_PORTS, now at
+ITERS=8/MARGIN=25). clk_i's antenna violation is REAL (2.11x over threshold,
+confirmed task-1 finding) -- with the port-diode shortcut removed, the
+general antenna-repair pass found the SAME violation and converged on
+essentially the SAME fix (a diode abutting the clock root buffer), because
+that is structurally the only place a diode can protect this specific net.
+CONFIRMED: clk_i itself is absent from run2's final checkantennas-1 report
+(48 unique nets, was 46 in run1) -- so the antenna fix still worked, just
+via a different code path with the same physical side effect.
+
+REVISED ROOT CAUSE (supersedes the DIODE_ON_PORTS-specific framing --
+record this correction prominently, the earlier framing was incomplete):
+protecting clk_i's genuine antenna violation costs ~0.5 ns of hold margin
+at the clock root IN THIS FLOW, REGARDLESS OF WHICH LibreLane mechanism
+performs the fix (Odb.PortDiodePlacement or OpenROAD.RepairAntennas) --
+both insert a diode in essentially the same place because the clock root
+buffers are the only physically sensible attachment point on this short,
+low-fanout net. DIODE_ON_PORTS was never the true independent variable; it
+was one of two redundant paths to the same disruptive fix. Removing it only
+helped by the small margin between how the two insertion mechanisms
+legalize/orient the diode, not by avoiding the diode altogether.
+
+HOLD RESULT: improved but NOT closed. Still 5 corners failing (nom_tt,
+nom_ss, max_tt, max_ss, max_ff -- max_ff was ALSO failing in run1 at
+-0.1267, the coordinator's run1 summary of "4 corners" omitted it; this
+report's own run1 read above already had it right), all still 100% the same
+apb_paddr_i/psel_i/penable_i/pwdata_i -> u_cpu class (re-verified this run,
+zero new startpoint categories):
+    corner    run1      run2      delta
+    nom_tt   -0.2098   -0.1633   +0.0465
+    nom_ss   -0.2825   -0.2108   +0.0717
+    max_tt   -0.4586   -0.3943   +0.0643
+    max_ss   -0.6633   -0.5785   +0.0848
+    max_ff   -0.1267   -0.0790   +0.0477
+Every corner improved by roughly 5-8% of the clock period, consistent with a
+minor difference in diode legalization between the two insertion mechanisms
+-- but none reach >=0. GOAL NOT MET.
+
+Antenna: run2 54 pin / 48 net (run1 was 52/46) -- clk_i closed, small
+regression elsewhere; net difference is noise-level relative to the 95
+violations both runs fixed from the 147/127 starting point.
+
+STATUS: reported to coordinator with full falsification-check data before
+any further action. This is exactly the "hold improves but the identified
+mechanism doesn't fully explain it" case the coordinator asked to be told
+about rather than papered over. NOT proposing a further fix unilaterally --
+holding for direction. Options on the table for whoever picks this up:
+(a) accept the SMALLER hold residual as a new documented gap (worse than the
+    original clean baseline, better than run1); (b) increase hold-repair
+    budget (GRT_RESIZER_HOLD_SLACK_MARGIN or similar) to absorb the ~0.5 ns
+    clock-root cost directly on the APB paths rather than trying to remove
+    the diode; (c) investigate whether a layer/route-based antenna fix
+    (jumper insertion moving the vulnerable first-hop segment to a
+    protected layer instead of a diode) can protect clk_i without touching
+    placement at the clock root -- not yet attempted, would need scripting
+    beyond LibreLane's stock Variable surface; (d) accept clk_i as an
+    unrepaired antenna residual (if there is a way to scope RUN_ANTENNA_REPAIR
+    away from just this one net -- not found in the LibreLane Variable
+    surface so far, likely requires a custom ECO/skip-list, not investigated
+    this round).
+
+--- COORDINATOR CORRECTION: attribution too narrow, real variable is
+RUN_HEURISTIC_DIODE_INSERTION, not GRT RepairAntennas ---
+
+Coordinator did a like-for-like same-step comparison (fillinsertion/
+soc_top.nl.v, post-antenna-repair, all three runs) that I had not done:
+
+    run                                   ANTENNA_ total   clk-net diodes   clkbuf_0_clk_i_A present
+    baseline RUN_2026-07-27_17-15-57              1,934                0    no
+    run1     RUN_2026-07-29_18-40-38             47,385            1,589    yes
+    run2     RUN_2026-07-30_04-58-36             47,530            1,589    yes
+
+Not 2 diodes on the clock root -- 1,589 diodes sprayed across the WHOLE
+clock tree, IDENTICAL count in run1 and run2, ZERO in baseline. The single
+clkbuf_0_clk_i_A instance I found is one member of this much larger set, not
+the whole story.
+
+Mechanism: Odb.HeuristicDiodeInsertion (RUN_HEURISTIC_DIODE_INSERTION) is
+ABSENT from baseline (verified at commit 29cb64a^, before any of the 4 keys
+were added) and PRESENT in both run1 and run2 (~6m15s each, untouched by the
+DIODE_ON_PORTS removal). This step inserts diodes heuristically/broadly
+across the design by design intent, not narrowly on confirmed violators like
+GRT_REPAIR_ANTENNAS does -- the 1,934 -> 47,385 jump (24x) lines up with
+this key turning on, not with GRT_ANTENNA_ITERS/MARGIN (which were also new
+but operate narrowly on checked violators). This is why removing
+DIODE_ON_PORTS only recovered 0.051 ns of the 0.569 ns gap: it was never the
+dominant variable, RUN_HEURISTIC_DIODE_INSERTION spraying diodes through the
+clock tree is.
+
+NEXT EXPERIMENT (approved by coordinator, launch after current run's gate
+table is reported): set RUN_HEURISTIC_DIODE_INSERTION: false in
+pnr/sky130/soc/config.json, KEEP GRT_ANTENNA_ITERS=8, GRT_ANTENNA_MARGIN=25,
+CLOCK_PERIOD=25.0, TIMING_VIOLATION_CORNERS=['*'], DIODE_ON_PORTS stays
+removed (already off). This isolates whether GRT-based repair alone (narrow,
+violator-driven) delivers most of the 147->54 antenna win without the mass
+clock-tree diode spray and its hold cost.
+MUST VERIFY on landing, not assume:
+  1. Do the ~1,589 clock-net diodes actually disappear or drop sharply with
+     the heuristic pass off? (grep the post-fill netlist for ANTENNA_*
+     instances connected to clk_i/clk_i_regs/clknet_* nets, same method used
+     to find the 1,589 count.)
+  2. Measure clk_i -> u_cpu/clk_i clock latency at nom_tt, same method as
+     before, and compare against ALL THREE known values:
+         0.870159 ns (baseline, clean)
+         1.439363 ns (run1, DIODE_ON_PORTS=in + heuristic on)
+         1.388234 ns (run2, DIODE_ON_PORTS=none + heuristic on)
+     If latency does NOT come back down toward 0.870 with the 1,589 diodes
+     gone, the diode-count theory is ALSO wrong and the mechanism needs to
+     be re-opened from scratch -- say so plainly, do not paper over it.
+
+Corrections for the permanent record (both coordinator's, not mine, stated
+as such): run1 hold failed at 5 corners not 4 (max_ff omitted from an
+earlier coordinator summary, already caught and corrected in this file);
+"antenna 52->29" was a misread of a pre-DRT metric carried forward through
+steps 40-44 instead of the true checkantennas-1 report -- this session's own
+54/48 read is confirmed correct.
