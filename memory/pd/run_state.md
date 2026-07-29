@@ -3495,3 +3495,212 @@ LEAVE MAGIC_DRC_USE_GDS = false in pnr/sky130/cpu/config.json. true aborts the
 whole flow on the techfile gap and buys nothing -- it produces the same count.
 The techfile layer/datatype gap is filed separately as its own low-priority
 bead; it only matters if MAGIC_DRC_USE_GDS=true is ever wanted again.
+
+================================================================================
+2026-07-29 -- bead 58q: SoC antenna diagnosis + clock relax + antenna retune
+(SCOPE-EXPANDED mid-task by coordinator: also drop clock so ss closes honestly)
+================================================================================
+
+baseline: RUN_2026-07-27_17-15-57 (65 MHz, TIMING_VIOLATION_CORNERS=['*tt*']).
+Gate table: LVS PASS, power grid 0, KLayout DRC 4 (waived, bead 0jp), Magic DRC
+9081 (waived, bead 45a), antenna FAILED 147 pin / 127 net, tt setup/hold clean,
+ss setup WNS -8.902 ns (out of gate).
+
+--- TASK 1: antenna diagnosis (does the 147/127 split by macro-pin cause?) ---
+
+FIRST FINDING: the coordinator's brief cited
+39-openroad-repairantennas/2-openroad-checkantennas/reports/antenna_summary.rpt
+as the violator list. That report is an IN-FLIGHT check (post-diode-insertion,
+PRE-DRT: 89 rows / 56 nets). It is NOT the final gate. The step that matches
+manufacturability.rpt's 147 pin / 127 net exactly is
+44-openroad-checkantennas-1/reports/antenna_summary.rpt (149 rows, 147 unique
+net+pin pairs, 127 unique nets -- post-DRT, the real signoff-relevant check).
+DRT measurably reshuffles the violator set between these two checks (this
+project's own history already documents "DRT reintroduces antenna exposure").
+Net names cited in the brief (net578, net608, m_araddr[4], m_rresp[1],
+m_rvalid[0] as a violator) do NOT appear in the final 44- report at all --
+they were transient, repaired-out by the time DRT ran. All analysis below
+uses the 44- (final, authoritative) report only.
+
+METHOD: wrote a driver-classifier (python, one-pass regex over the flattened
+post-route netlist 42-openroad-detailedrouting/soc_top.nl.v, 364,783 lines,
+17.4 MB) that resolves each of the 127 violating net names to its physical
+driver pin, using: (a) sky130_fd_sc_hd's own output-pin name set {COUT,
+COUT_N, GCLK, HI, LO, Q, Q_N, SUM, X, Y, Z} pulled from the vendor LEF
+(437 macros), (b) rv32i_cpu_top.lef's 403 pins re-parsed independently
+(matches the brief's 95-missing-output-pin claim once VPWR/VGND are excluded:
+97 raw missing - 2 power pins = 95), (c) the SRAM macro LEF's pin set. Bus
+concatenations (`.pin({netA, netB, ...})`, MSB-first per observed pattern)
+were resolved to per-bit LEF pin names by list position. 126/127 nets
+resolved to a definitive driver; the 127th (clk_i) is a top-level input port
+with no internal driver by construction.
+
+RESULT -- the split, in violation-instance units (149 total incl. 2 nets
+double-counted across layers; 147 unique pins, matching manufacturability.rpt):
+
+    CPU macro pin, ANTENNADIFFAREA PRESENT     19   (12.8%)
+    CPU macro pin, ANTENNADIFFAREA MISSING      4   ( 2.7%)  [axi_awlen_o[5],[7]]
+    SRAM macro pin, ANTENNADIFFAREA MISSING     2   ( 1.3%)  [dout1[9],[31]]
+    top-level input port (clk_i, no diode)      1   ( 0.7%)
+    plain standard-cell logic/flop (X/Y/Q)    123   (82.6%)
+    ------------------------------------------------------
+    TOTAL                                     149
+
+CONCLUSION: the brief's premise ("violators are overwhelmingly CPU<->bus AXI
+nets", implying the LEF gap explains a meaningful share) does NOT hold against
+the final report. 82.6% of violations are on nets driven entirely by ordinary
+placed-and-routed standard cells inside the flattened SoC fabric (crossbar
+arbiter registers, DMA engine registers/datapath, APB peripheral bus,
+sram_controller glue) with NO macro pin anywhere in their drive path -- e.g.
+net30/net155/.../net823 (33 instances), u_dma.regs_o/dst_addr_reg/length_reg
+(9), u_bus.u_xbar.ar_addr_q/wsel (3), apb_pwdata/pstrb (4), u_bus.m_rdata/
+m_rvalid (5, driven by the crossbar's OWN read-mux, not the CPU -- these are
+CPU *input* signals, direction was previously mis-assumed). This is
+classic large-die (6700x3100 um) long-route antenna exposure, independent of
+any macro LEF defect. Only 6/149 (4.0%) trace to a macro pin lacking
+ANTENNADIFFAREA (4 CPU + 2 SRAM); 19/149 (12.8%) trace to a CPU macro pin that
+already HAS correct ANTENNADIFFAREA and still violates (proves diffusion
+credit at the pin cannot bound arbitrarily long SoC-level fanout by itself).
+net578/net608 (named in the brief) are not macro-adjacent -- moot, they are
+not in the final violator set at all.
+
+CONFIG-GAP FINDING (explains a real, fixable, distinct problem): SoC
+config.json was MISSING RUN_HEURISTIC_DIODE_INSERTION, GRT_ANTENNA_ITERS,
+GRT_ANTENNA_MARGIN, DIODE_ON_PORTS entirely (confirmed via `grep -rn` across
+pnr/) -- every other block in this project (CPU, SRAM, GPU, ASAP7 variants)
+sets these explicitly. LibreLane defaults (read from
+librelane/steps/common_variables.py + flows/classic.py +
+librelane/steps/odb.py, this session's librelane checkout):
+GRT_ANTENNA_ITERS=3 (CPU uses 5), GRT_ANTENNA_MARGIN=10% (CPU uses 20%),
+RUN_HEURISTIC_DIODE_INSERTION default=False (CPU=true), DIODE_ON_PORTS
+default="none" (CPU="in"). RUN_ANTENNA_REPAIR defaults True so the GRT-level
+repair pass WAS running (explains the observed 2018-diode insertion and the
+556/440 -> 147/127 in-run reduction already achieved) but with weaker
+iteration/margin than any other block in the project, no heuristic
+pre-placement diode pass, and NO port-diode protection -- directly explaining
+clk_i's presence in the violator list (DIODE_ON_PORTS="none" means the one
+top-level input port on this design's SDC-timed clock got zero antenna
+protection at the port itself).
+
+--- TASK 2: 95-pin CPU LEF gap -- ROOT CAUSE FOUND, REGENERATION REFUTED ---
+
+Traced all 95 missing-ANTENNADIFFAREA CPU output pins through the CPU-ONLY
+signed-off netlist (RUN_2026-07-27_05-52-19/46-openroad-detailedrouting/
+rv32i_cpu_top.nl.v, the CPU's OWN top-level module, not the SoC flatten).
+Method: for each of the 95 port names, found its `assign PORT = netN;`
+statement (all 95 are single-hop wire aliases, zero intervening logic), then
+found netN's driver instance.
+
+RESULT (100% of 95, exhaustively, not sampled): every single one is driven by
+a `sky130_fd_sc_hd__conb_1` constant-tie cell (.LO() for the ties-to-0 pins,
+.HI() for apb_pready_o which ties to 1). Breakdown: debug_rs1_data_o[31:0] +
+debug_rs2_data_o[31:0] (64, half the total), debug_state_o[3:0] (4),
+debug_branch_taken_o (1), apb_pready_o (1), axi_rready_o (1), and 24 AXI4
+burst-control constant fields (awaddr/araddr[1:0], awlen/arlen[7:2], awsize,
+arsize, awburst, arburst) consistent with this CPU's AXI master only ever
+issuing single-beat 4-byte-aligned transactions.
+
+WHY: checked the vendor's OWN sky130_fd_sc_hd.lef (volare
+bdc9412b.../sky130A/.../sky130_fd_sc_hd.lef, 450 ANTENNADIFFAREA occurrences
+total in the file, confirming the library DOES normally publish this
+property, e.g. buf_1/X = 0.3406). sky130_fd_sc_hd__conb_1's LO and HI pins
+have ZERO ANTENNADIFFAREA in the VENDOR'S OWN base LEF -- not just in our
+Magic-regenerated macro abstract. This is upstream SkyWater library
+convention (a tie-cell output is a permanent rail tap through an always-on
+device, not a floating net that can accumulate plasma-etch charge the way a
+normal logic gate's output can), not a LibreLane, Magic, or project defect.
+Magic's `lef write` (step 61-magic-writelef in the CPU run -- confirmed
+byte-identical md5 to the staged pnr/sky130/cpu/macro/rv32i_cpu_top.lef, so
+Magic, not OpenROAD's write_abstract_lef, is the actual LEF author here)
+correctly propagates the vendor's own omission up to the macro boundary pin.
+
+REGENERATION VERDICT: REFUTED as a fix path, same evidentiary class as the
+45a MAGIC_DRC_USE_GDS result. Because every one of the 95 pins deterministically
+traces to conb_1 (not e.g. an unlucky routing/extraction failure), re-running
+Magic's lef write against the same layout would reproduce the identical 95-pin
+gap -- there is nothing stochastic to regenerate away.
+
+HAND-PATCH VERDICT: NOT applied, and NOT recommended. Reasons: (1) the
+vendor's own conb_1 LEF entry has no ANTENNADIFFAREA value to copy -- any
+number written would be fabricated, not measured, which this project's
+evidentiary standard (bead 45a: "numbers, not narrative") rules out; (2) even
+if a plausible small tie-cell diffusion value existed, only 2 of these 95
+pins (axi_awlen_o[5],[7]) are actually on the violator list, and their
+partial/required ratios (4544/400 = 11.4x, worst in the whole report) are far
+too large for a tie-cell's typically-sub-1-um^2 diffusion to close -- the fix
+has to come from repair (diode insertion / margin), not LEF credit; (3) a
+fabricated ANTENNADIFFAREA value written into a signed-off macro LEF risks
+UNDER-protecting some other, unrelated pin if the checker trusts a wrong
+number -- writing nothing is safer than writing a guess. CLASSIFIED AS A
+DOCUMENTED, WAIVED PDK/vendor-convention artifact, not an open defect.
+
+SRAM MACRO SIDE-FINDING (bigger, same family, also NOT fixed here): the SRAM
+LEF (both pnr/sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8.lef AND the
+CPU-internal sky130_sram_1kbyte_1rw1r_32x256_8.lef, the latter SHIPPED BY THE
+PDK in volare sky130B, not project-generated) has ZERO ANTENNADIFFAREA or
+ANTENNAGATEAREA on ANY pin, output or input, of either macro -- not a 2-pin
+gap, a total absence, and upstream of us (OpenRAM-generated / PDK-vendor
+LEF, not Magic-written). Regenerating this would require running Magic
+extraction over the SRAM's own dense custom layout, which bead 45a already
+established Magic's flat engine cannot validate meaningfully for this exact
+macro family (the 27.7M-violation DRC flood). Not attempted -- out of scope,
+documented as a waived third-party/vendor-abstraction limitation, same
+evidentiary class as the DRC waiver. Only 2/149 (1.3%) violations trace to
+it in the current design.
+
+--- TASK 3 fix + coordinator scope-change: clock relax + antenna retune ---
+
+Applied to pnr/sky130/soc/config.json (commit pending):
+  CLOCK_PERIOD: 15.385 -> 25.0                  (65 -> 40 MHz)
+  TIMING_VIOLATION_CORNERS: ['*tt*'] -> ['*']   (all 9 corners now gated)
+  RUN_ANTENNA_REPAIR: true                      (was implicit default; now explicit)
+  RUN_HEURISTIC_DIODE_INSERTION: true           (was absent -> LibreLane default False)
+  GRT_ANTENNA_ITERS: 8                          (was absent -> default 3; CPU uses 5,
+                                                  went higher given the die is ~3.2x CPU's area)
+  GRT_ANTENNA_MARGIN: 25                        (was absent -> default 10%; CPU uses 20%)
+  DIODE_ON_PORTS: "in"                          (was absent -> default "none"; directly
+                                                  protects clk_i, the one top-port violator)
+
+pnr/sky130/soc/constraints/sky130_soc.sdc: `set clock_period 15.385` ->
+`set clock_period 25.0`. All set_input_delay/set_output_delay lines already
+compute off $clock_period (0.20/0.05 fractions) so they scale automatically --
+verified no other hardcoded ns values reference the old period. Header
+comment block added documenting the coordinator-directed reversal of the
+prior "do not touch ss" instruction, the 25.0 ns period choice (arithmetic
+min 24.287 ns assuming invariant path delay, +0.7 ns headroom for expected
+resizer response to the looser budget -- this project's own bead-1ls history
+shows the same critical path moved hundreds of ps purely from resizer
+response to a period change), and the SRAM-single-corner caveat (bead o1i /
+GH #120 still open -- ss/ff numbers touching SRAM read/write timing carry
+unquantified model error; only the CPU macro and flat std-cell fabric are
+genuinely 9-corner-accurate this run).
+
+NOT changed: floorplan, die size, macro placement (die-size lever from the
+brief's task-3 options list was considered and rejected -- would invalidate
+multiple prior runs' worth of timing-closure work for a fix that config-level
+antenna retuning + the new clock headroom should reach first; only revisit if
+this run's antenna residual is still large). No RTL. MAGIC_DRC_USE_GDS
+unchanged (false). Did not touch bead 1ls's CPU-internal SDC (separate file,
+separate macro-level budget, unaffected by the SoC-level period).
+
+LAUNCH:
+  run_id:      pd_20260729_183700 (approx, see run_state timestamp)
+  design_name: soc_top (Sky130 SoC Stage 2)
+  pdk:         sky130A
+  tool:        librelane (nix-shell), make librelane-sky130-soc
+  host state at launch: 12 GiB free / 15 GiB total RAM, 611G free on
+    /nobackup, no other PD process running (checked via ps aux + tmux ls --
+    prior sky130_soc_0ro / sky130_cpu_magic_gds_45a / sky130_soc_y7v_relaunch
+    tmux sessions all idle, no live librelane/openroad/magic/klayout procs).
+  expected runtime: 4-10 h per the Makefile's own estimate for this design;
+    the looser 40 MHz clock may reduce resizer/repair iteration time somewhat
+    but this is not counted on.
+  NOT YET AWAITED as of this entry -- report back once landed. Per
+  feedback_librelane_wait_intervals: wait >=1 h before first poll, +1 h each
+  subsequent poll until termination. Check, in order: (1) manufacturability.rpt
+  gate table (LVS/DRC/antenna/PDN), (2) STAPostPNR summary.rpt for all 9
+  corners (setup+hold WNS/TNS, reg-to-reg violator counts), (3) antenna
+  final report step (grep run dir for "checkantennas-1" or the highest-
+  numbered checkantennas step) cross-checked against manufacturability.rpt
+  the same way this session did (do not trust an in-flight repair-step report
+  as the final number -- this session's own mistake, corrected above).
