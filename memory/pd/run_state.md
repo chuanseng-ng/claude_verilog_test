@@ -4322,3 +4322,87 @@ further (GRT-based repair is the mechanism that closed clk_i in run3
 without the clock-root disruption, and it already narrowly outperforms
 heuristic on placement-legalization safety per the point above) -- not
 re-enabling the heuristic pass at any threshold.
+
+--- RUN_2026-07-30_22-10-20 (run 4, clock-net-skip patch) -- PATCH VERIFIED
+WORKING AS DESIGNED, BUT GUARD FAILS: HOLD REGRESSED AGAIN ---
+
+User approved and directed applying a librelane patch (documented above and
+in knowledge.md + memory/pd/patches/58q_librelane_heuristic_diode_skip_
+clock_nets.diff, committed a569818) to exclude dbNet SigType==CLOCK nets
+from Odb.HeuristicDiodeInsertion, plus kill its independent --port-protect
+"in" default. RUN_HEURISTIC_DIODE_INSERTION turned back on,
+HEURISTIC_ANTENNA_SKIP_CLOCK_NETS: true added, everything else identical to
+run3 (GRT_ANTENNA_ITERS=8, GRT_ANTENNA_MARGIN=25, CLOCK_PERIOD=25.0,
+TIMING_VIOLATION_CORNERS=['*'], DIODE_ON_PORTS absent).
+
+PATCH MECHANISM VERIFIED WORKING, TWICE: (1) smoke test before launch
+(openroad -python diodes.py place --skip-clock-nets --port-protect none
+against a saved odb): exactly 1,327 clock nets skipped, 0 clk_i diodes.
+(2) real flow, 39-odb-heuristicdiodeinsertion/2-openroad-detailedplacement/
+soc_top.nl.v: 44,408 total diodes (down from unpatched 47,385), ZERO with
+any clk-related name, explicit grep for `.DIODE(clk_i)` / `.DIODE(clk_i_
+regs)` returns nothing. Independently reconfirmed at the FINAL post-DRT
+netlist too (52-...-later steps). The patch does exactly what it was
+designed to do.
+
+ANTENNA: BEST RESULT OF ANY RUN. 44-openroad-checkantennas-1 (post-DRT,
+final, same method as every read in this file): 40 rows / 39 unique nets /
+40 unique pins, clk_i confirmed ABSENT. Beats run1 (52/46), run2 (54/48),
+AND run3 (140/120) by a wide margin. In-flight (post-repair, pre-DRT) number
+was 19 net / 20 pin -- the heuristic pass's broader (non-clock) coverage is
+clearly doing real work here, on top of GRT's own contribution.
+
+HOLD: REGRESSED AGAIN, worse than run3, same 5 corners as run1/run2:
+    corner    run3      run4      hold_vio_count(run4)
+    nom_tt   +0.2400   -0.1932   10
+    nom_ss   +0.2693   -0.2491    6
+    nom_ff   +0.1215   +0.0706    0  (still clean)
+    min_tt   +0.2911   +0.0869    0  (still clean)
+    min_ss   +0.5311   +0.1776    0  (still clean)
+    min_ff   +0.1204   +0.1207    0  (still clean)
+    max_tt   +0.0534   -0.4291   18
+    max_ss   +0.0274   -0.6279   15
+    max_ff   +0.1229   -0.1073   10
+GOAL NOT MET. Overall hold TNS -4.7341, 59 violations total (all "of which
+reg to reg"=0, same APB-debug-bus class as every prior regression in this
+investigation -- re-confirmed, no new violator class opened up).
+
+DECISIVE FALSIFICATION GUARD -- FAILS, exactly the scenario the coordinator
+asked to be told about plainly rather than have papered over:
+    clk_i -> u_cpu/clk_i, nom_tt, same method every time:
+        baseline (clean):           0.870159 ns
+        run1 (heuristic, no fix):   1.439363 ns  (+0.569)
+        run2 (DIODE_ON_PORTS off):  1.388234 ns  (+0.518)
+        run3 (heuristic OFF):       0.933178 ns  (+0.063)
+        run4 (clock-net exclusion): 1.410208 ns  (+0.540)  -- back up near
+                                                               run1/run2,
+                                                               NOT run3
+First-hop delay (clk_i port -> clkbuf_0_clk_i/A): 0.320 -> 0.787 -> 0.744 ->
+0.370 -> 1.410208's own first hop is 0.763076 (fanout 5, matching baseline's
+fanout exactly, NOT run1/run2's fanout 4) -- so this is not the same
+topology change as before; something is inflating the DELAY on the same
+logical connectivity as baseline, despite zero diodes anywhere near this
+net or the rest of the clock tree.
+
+CONCLUSION, stated plainly per instruction: the clock-net exclusion, though
+verified working exactly as designed (zero clock-tree diodes, zero clk_i
+diodes), is INCOMPLETE as a fix for the hold regression. Diodes physically
+sitting on clock-tree nets was A cause (proven by run3: remove ALL diodes
+including clock-tree ones -> clean hold) but not THE cause in isolation --
+run4 proves you can remove every clock-tree diode specifically and still
+get nearly the same hold damage. Leading unconfirmed hypothesis (explicitly
+flagged as NOT proven to the same evidentiary standard as the diode-
+placement mechanism): general placement congestion from the heuristic
+pass's ~44,000 non-clock diode insertions elsewhere in the design pushes
+standard-cell placement near the clock root regardless of whether a diode
+itself lands there, lengthening clk_i's physical route even at unchanged
+logical fanout. NOT verified by direct measurement the way the diode-
+placement mechanism was (would need a placement/congestion diff between
+run3 and run4 near the clock root specifically -- not attempted this
+session). Reported as the leading candidate only, not a confirmed cause.
+
+STATUS: reported to coordinator with the guard failure stated plainly, not
+hidden or reframed as a partial win. DRC/LVS/manufacturability tail let run
+to completion per instruction for one full gate table on this configuration
+regardless of the hold outcome. No further fix proposed unilaterally --
+holding for direction, per this investigation's established pattern.
