@@ -4230,3 +4230,95 @@ held back. Flow continued past this point (not stopped) because the result
 is a clear PASS on the hold goal, not a failure -- letting it run to
 manufacturability.rpt per the agreed plan for the full gate table
 (LVS/DRC/PDN tail still pending as of this entry).
+
+--- HEURISTIC_ANTENNA_THRESHOLD investigation (coordinator's proposed "third
+option", run 4 candidate) -- MEASURED, NOT GUESSED, VERDICT: NO CLEAN
+THRESHOLD EXISTS ---
+
+METHOD: wrote a standalone OpenROAD Tcl script (not part of the standard
+flow) to compute per-net Manhattan bounding-box span for every net in run3's
+37-openroad-repairdesignpostgrt/soc_top.odb (post-CTS/post-GRT-resize,
+pre-antenna-repair -- the same geometry basis both the heuristic script and
+this analysis use). Method matches diodes.py's own net_manhattan_distance:
+bbox over all ITerm getAvgXY() + BTerm pin centers, in microns via
+getDbUnitsPerMicron. Output: /tmp/.../scratchpad/net_spans.csv, 34,197 nets.
+Also discovered (reading odb.py + diodes.py source, not assumed): the
+heuristic step (Odb.FuzzyDiodePlacement -> diodes.py `place` subcommand)
+never passes `--port-protect` in its get_command(), so it inherits the
+CLI's OWN default of `"in"` -- INDEPENDENT of the LibreLane-level
+DIODE_ON_PORTS variable entirely. This means the heuristic pass, whenever
+enabled, ALWAYS force-inserts a diode on every INPUT port net (io_protect
+bypasses the span<threshold check unconditionally) -- clk_i's port-adjacent
+net WILL get a diode under heuristic+ANY finite threshold, no matter how
+high. This is a previously-missed detail; DIODE_ON_PORTS and the heuristic
+pass turned out to be two INDEPENDENT paths to the same clk_i diode all
+along, not just "redundant" as characterized after run 2.
+
+DISTRIBUTION (fine buckets, exact counts not estimates):
+    clk-related nets (name contains "clk"), n=1345:
+        min 6.4, median 68.7, max 3331.9 um
+        [50,90) : 985 (73%)     <90 total: 1119 (83%)
+        >=90    : 226 (17%)    >=105.4 (min violator span): 208
+        >=150   : 141           >=200: 88   >=500: 8   >=1000: 2
+    run3's still-violating nets (checkantennas-1, final, n=120, 85 resolved
+    to placement data):
+        min 105.4, median 685.6, max 4517.3 um
+        100% are ABOVE 90 um -- ZERO in any bucket under 90
+        [90,150):2  [150,200):7  [200,500):17  [500,1000):40  [1000,5000):19
+
+OVERLAP CHECK (coordinator's second question): cross-referenced run3's 120
+violating net names against the full set of 3,383 unique nets run1's
+heuristic pass protected with a diode (extracted from
+49-openroad-fillinsertion/soc_top.nl.v, all `.DIODE(netname)` connections,
+47,385 diode instances -> 3,383 unique nets, ~14 diodes/net average since
+one diode is inserted per net PER SINK PIN, not once per net). RESULT:
+120/120 (100%) of run3's residual violators were ALSO protected by run1.
+The heuristic pass was NOT "mostly fixing many short ones" -- every single
+net it would need to protect to close run3's residual IS a net it already
+covered. This directly answers the coordinator's second question but does
+NOT by itself make a threshold viable, because of the next finding.
+
+WHY NO THRESHOLD WORKS: the clock tree is NOT uniformly short-hop. Levels 6
+and 7 (near-leaf CTS stages, hundreds of individual `clknet_6_N_0_clk_i_regs`
+/ `clknet_7_N__leaf_clk_i_regs` nets) span 105-800 um EACH -- squarely
+inside the SAME range as the real antenna violators (105-4517 um, median
+686). 208 clock nets sit at or above the minimum violator span (105.4 um);
+raising the threshold from the current 90 up to 105.4 (the tightest
+possible bound that loses zero violators) only trims 18 of 226 clock nets
+-- negligible. Pushing further: at threshold=500 um, clock-net coverage
+drops to 8 (96% cut from 226) but 26/120 (22%) of real violators are also
+lost; at threshold=1000, clock coverage drops to 2 (clk_i itself +
+delaynet_2_core_clk, both structurally guaranteed regardless of threshold
+for clk_i, or just very long for the delay-balance net) but 66/120 (55%) of
+real violators are lost. THE TWO POPULATIONS OVERLAP ACROSS THEIR ENTIRE
+COMMON RANGE (105-800 um) -- there is no cut point where clock-tree
+coverage drops to near-zero while violator coverage stays near-100%. This
+is the "distributions overlap heavily" case the coordinator asked me to
+call out plainly if it occurred.
+
+ADDITIONAL DATA POINT (bears on but doesn't overturn the above): run3 (heuristic
+fully OFF) still ended up with 3 diodes ON clk_i itself -- inserted by
+GRT-based RepairAntennas with generic names (ANTENNA_1103/1104/1105), NOT
+abutting clkbuf_0_clk_i/A the way the heuristic/port scripts do. Hold
+closed cleanly anyway. This shows clk_i CAN tolerate some diode presence
+without breaking hold -- the damage mechanism is specifically the
+DiodeInserter class's "abut the first sink instance" placement strategy
+(place_diode_stdcell, side_strategy=source) landing directly on the clock
+root buffer, not diode-on-clk_i in general. A GRT-legalized diode elsewhere
+along the same net is a materially different physical outcome. This doesn't
+create a viable threshold-based fix (the diode/no-diode-at-the-root
+distinction isn't controlled by HEURISTIC_ANTENNA_THRESHOLD), but it is
+worth recording as a nuance for whoever next touches this area.
+
+RECOMMENDATION: do NOT run the threshold experiment as conceived (heuristic
+back on + raised threshold). The measured distributions do not separate at
+any threshold value tested or interpolated between; a "run 4" here would
+either reproduce run1/run2's hold damage (low threshold) or fail to close
+most of the real antenna residual anyway (high threshold), for a result
+strictly worse than run3 on at least one axis in every case checked. If
+further antenna reduction beyond run3's 140/120 is wanted, the untried lever
+consistent with this data is pushing GRT_ANTENNA_ITERS / GRT_ANTENNA_MARGIN
+further (GRT-based repair is the mechanism that closed clk_i in run3
+without the clock-root disruption, and it already narrowly outperforms
+heuristic on placement-legalization safety per the point above) -- not
+re-enabling the heuristic pass at any threshold.
