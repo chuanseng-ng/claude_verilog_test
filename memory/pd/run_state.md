@@ -4406,3 +4406,88 @@ hidden or reframed as a partial win. DRC/LVS/manufacturability tail let run
 to completion per instruction for one full gate table on this configuration
 regardless of the hold outcome. No further fix proposed unilaterally --
 holding for direction, per this investigation's established pattern.
+
+RUN 4 FINAL GATE TABLE (65-misc-reportmanufacturability, confirmed):
+    LVS PASSED. Routing DRC 0. KLayout DRC 4. Magic DRC 9081.
+    Antenna 40 pin / 39 net (best of any run). Hold FAILS 5/9 corners.
+    design__instance__count = 270,219. antenna_cell count = 45,744.
+
+COORDINATOR CORRECTION (vindicated their own earlier-retracted hypothesis,
+recorded per their explicit request): total cell/stdcell VOLUME correlates
+almost perfectly with clk_i->u_cpu/clk_i latency and hold outcome -- NOT
+clock-net diode presence specifically. Table across all 4 runs:
+    run       antenna_cells   stdcells   clk_i_latency(nom_tt)   hold
+    baseline       1,934       226,454        0.870159          clean
+    run1          47,385       271,858        1.439363          fails 5
+    run2          47,530       272,003        1.388234          fails 5
+    run3           2,482       226,952        0.933178          clean 9
+    run4          45,744       270,217        1.410208          fails 5
+Run4 has ZERO diodes on any CLOCK-sigtype net (independently reconfirmed)
+and still sits at 1.410 ns -- proves the clock-net-skip patch's target
+mechanism (diodes physically on the clock tree) was A cause but not THE
+cause. The coordinator's OWN first hypothesis (general placement-pressure
+from mass cell-count insertion, first raised for DIODE_ON_PORTS's 52 cells
+where it was wrong, then retracted) turns out to be the right explanation
+at the ~45k-diode scale. This correction is the coordinator's, not this
+session's -- recorded here per their explicit instruction not to let it
+stand unattributed.
+
+--- RUN 5: HEURISTIC_ANTENNA_THRESHOLD=800, targeting the untested
+227k-270k cell-count middle ---
+
+DIODE-COUNT-VS-THRESHOLD PREDICTION METHOD: odb query (per-net span AND
+fanout, since diode count = 1 per net PER SINK PIN, not per net) against
+run4's own pre-heuristic odb (37-openroad-repairdesignpostgrt, self-
+consistent calibration source). Non-clock (SIGNAL sigtype) net population,
+32,868 nets:
+    threshold(um)   predicted_nets   predicted_diodes
+        90              3,094           44,742
+       500                907           21,781
+       700                582           12,488
+       800                454            7,970
+       900                390            4,976
+      1000                343            3,222
+      1200                250              991
+CALIBRATION GAP, explicitly flagged, NOT root-caused (coordinator directed
+not to spend a cycle on it -- the ranking across thresholds is what
+matters, not the absolute count): predicted 44,742 diodes at threshold=90
+vs actual measured 27,953 (run4's own odb-fuzzydiodeplacement.log, "Inserted
+27953 diodes") -- ~1.6x over-prediction. Checked two candidate explanations
+(port-touching-net exclusion from --port-protect none: only 155 net/iterm
+pairs total, far too small; unplaced-instance filtering: ruled out by using
+run4's own odb for calibration, same result as run3's odb) and neither
+explains the gap. Open question, deliberately not pursued further.
+
+THRESHOLD CHOICE: 800 um (coordinator's call, overriding this session's
+initial proposal of 1000). Reasoning (coordinator's, recorded for the
+permanent record): (1) at 1000, only 19/85 measured run3-residual-violator
+nets retain heuristic coverage -- leans almost entirely on GRT alone, i.e.
+risks reproducing run3's 140/120 antenna result with extra steps for no
+benefit; at 800, materially more violator coverage is retained while still
+cutting insertion ~5.6x (7,970 raw / ~5,000 if the 1.6x over-prediction
+holds); (2) 1000 projects to ~229-230k cells, hugging the ALREADY-KNOWN-SAFE
+227k point -- an uninformative test; 800 projects to ~234k cells, actually
+sampling the untested 227k-270k gap -- if clean, establishes the safe
+ceiling is meaningfully above 227k; if it fails, that is a sharp, valuable,
+surprising result on its own; (3) downside bounded -- 234k is still 36k
+cells below the known-bad 270k, so the volume model predicts clean either
+way; not much is being risked to get a more informative data point than a
+threshold that would have merely re-confirmed what run3 already showed.
+
+FALSIFIABLE PREDICTION STATED BEFORE LAUNCH (coordinator's framing,
+recorded verbatim so the outcome can be graded honestly): ~234k stdcells ->
+latency near 0.93-1.0 ns -> hold 0 at all 9 corners. Success = hold clean at
+9 corners AND antenna (post-DRT checkantennas-1, not the pre-DRT in-flight
+number) below run3's 140/120.
+IF THIS FAILS: coordinator's explicit instruction -- do NOT launch a run 6
+without checking first. Five failed hold attempts would be the honest
+trigger to stop, adopt run3 (140/120 antenna, clean hold at all 9 corners,
+otherwise-identical gate table) as the accepted configuration, and document
+the antenna/hold trade-off rather than continuing to iterate.
+
+CONFIG: pnr/sky130/soc/config.json -- added HEURISTIC_ANTENNA_THRESHOLD:
+800. Everything else unchanged from run4: RUN_HEURISTIC_DIODE_INSERTION=
+true, HEURISTIC_ANTENNA_SKIP_CLOCK_NETS=true (patch stays enabled --
+"harmless and principled, cheap insurance" per coordinator, even though it
+did not prove sufficient alone), GRT_ANTENNA_ITERS=8, GRT_ANTENNA_MARGIN=25,
+CLOCK_PERIOD=25.0, TIMING_VIOLATION_CORNERS=['*'], DIODE_ON_PORTS absent.

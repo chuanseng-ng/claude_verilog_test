@@ -116,6 +116,7 @@
     "RUN_ANTENNA_REPAIR":               true,
     "RUN_HEURISTIC_DIODE_INSERTION":    true,
     "HEURISTIC_ANTENNA_SKIP_CLOCK_NETS": true,
+    "HEURISTIC_ANTENNA_THRESHOLD":       800,
     "GRT_ANTENNA_ITERS":                8,
     "GRT_ANTENNA_MARGIN":               25
 }
