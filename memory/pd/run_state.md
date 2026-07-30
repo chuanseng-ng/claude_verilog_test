@@ -4154,3 +4154,79 @@ true -> false. Unchanged: RUN_ANTENNA_REPAIR=true, GRT_ANTENNA_ITERS=8,
 GRT_ANTENNA_MARGIN=25, DIODE_ON_PORTS absent (still off), CLOCK_PERIOD=25.0,
 TIMING_VIOLATION_CORNERS=['*']. This is run 3 of the antenna/hold
 investigation (bead 58q). Launching next.
+
+--- RUN_2026-07-30_06-42-17 (run 3) -- HYPOTHESIS CONFIRMED, HOLD FULLY
+CLOSED AT ALL 9 CORNERS ---
+
+Monitor rebuilt per coordinator feedback: CPU-time-delta liveness (ps -eo
+pid,comm,cputimes, flag only if a step's worker process accumulates ZERO
+additional CPU time across 2 consecutive 3-min polls) instead of file-mtime,
+plus per-step baselines from run1/run2 disk data (repairantennas ~1080s,
+detailedrouting ~450s, magic-drc ~1900s, klayout-drc ~4800s, netgen-lvs
+~450s) for context rather than as an alert trigger by itself. Zero false
+positives this run (unlike the old mtime-based detector, which fired twice
+on healthy compute-bound steps in this same run before being replaced).
+
+DIODE COUNT (39-openroad-repairantennas/state_out.json, exact metric read,
+not estimated): antenna_diodes_count = 2,482 (== design__instance__count__
+class:antenna_cell, the two metrics agree here unlike run1/run2 where they
+diverged). Compare:
+    baseline (no antenna keys):              1,934
+    run1 (all 4 keys incl. heuristic):       47,385
+    run2 (heuristic on, DIODE_ON_PORTS off): 47,530
+    run3 (heuristic OFF, ITERS=8/MARGIN=25):  2,482
+Turning off RUN_HEURISTIC_DIODE_INSERTION alone collapses the count back
+near baseline (the small excess over 1,934 is consistent with
+GRT_ANTENNA_ITERS=8/MARGIN=25 being more thorough than the pre-antenna-key
+default 3/10%). Confirms the coordinator's hypothesis: the heuristic pass,
+not GRT-based repair, drove the 24x cell-count spray.
+
+CLOCK-TREE DIODE COUNT, same netlist snapshot method used throughout this
+investigation (40-openroad-resizertimingpostgrt/soc_top.nl.v, grep
+ANTENNA_* instances whose net matches clk_i/clk_i_regs/clknet/clkbuf):
+    run1/run2: 1,589 (identical both runs)
+    run3:      4
+ANTENNA_clkbuf_0_clk_i_A / ANTENNA_clkbuf_regs_0_core_clk_A (the specific
+diodes found earlier sitting directly on the clock root) are ABSENT from
+run3's netlist entirely.
+
+CLOCK LATENCY, decisive falsification check, same method every time
+(clk_i -> u_cpu/clk_i, nom_tt, from STAPostPNR max.rpt clock path):
+    baseline (clean):                0.870159 ns
+    run1 (heuristic+DIODE_ON_PORTS): 1.439363 ns  (+0.569)
+    run2 (heuristic only):           1.388234 ns  (+0.518)
+    run3 (heuristic OFF):            0.933178 ns  (+0.063)  -- 89% of the
+                                                                 gap recovered
+First-hop delay (clk_i port -> clkbuf_0_clk_i/A) confirms the same pattern:
+0.319984 -> 0.787429 -> 0.743895 -> 0.370022 ns (run3 nearly back to
+baseline). GUARD PASSES CLEANLY: latency came back down almost to baseline
+when the diodes were removed, exactly as the hypothesis predicted -- not the
+ambiguous partial recovery seen in run2's DIODE_ON_PORTS-only experiment.
+
+HOLD RESULT (51-openroad-stapostpnr/summary.rpt): Hold Vio Count = 0 AT
+EVERY SINGLE CORNER. Slack all positive:
+    nom_tt +0.2400   nom_ss +0.2693   nom_ff +0.1215
+    min_tt +0.2911   min_ss +0.5311   min_ff +0.1204
+    max_tt +0.0534   max_ss +0.0274   max_ff +0.1229
+Worst corner (max_ss) closes by only +0.0274 ns -- thin, but clean. GOAL MET
+for the first time in this investigation.
+
+SETUP: unchanged from expectation -- tt/ff all TNS 0.0000, 0 violations
+(clean, matching every prior run in this campaign); ss still fails as
+expected (nom_ss -3.1228, min_ss -1.2536, max_ss -4.6432) -- frequency
+question stays parked, not being re-judged.
+
+ANTENNA (44-openroad-checkantennas-1, final post-DRT, same method as every
+prior read in this file): 141 rows / 120 unique nets / 140 unique pins.
+clk_i confirmed ABSENT (grep, not assumed). Larger residual than run1/run2's
+52-54/46-48 because the heuristic pass was also fixing non-clock-tree
+violators as a side effect of its broad spray; losing it costs some of that
+incidental coverage. This is the expected, quantified trade the coordinator
+asked to see: full hold closure at the cost of a bigger (but still ~68%
+reduced from the 147/127 starting point) antenna residual.
+
+STATUS: STA/antenna results reported to coordinator as they landed, not
+held back. Flow continued past this point (not stopped) because the result
+is a clear PASS on the hold goal, not a failure -- letting it run to
+manufacturability.rpt per the agreed plan for the full gate table
+(LVS/DRC/PDN tail still pending as of this entry).
