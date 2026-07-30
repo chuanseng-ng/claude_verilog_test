@@ -4491,3 +4491,76 @@ true, HEURISTIC_ANTENNA_SKIP_CLOCK_NETS=true (patch stays enabled --
 "harmless and principled, cheap insurance" per coordinator, even though it
 did not prove sufficient alone), GRT_ANTENNA_ITERS=8, GRT_ANTENNA_MARGIN=25,
 CLOCK_PERIOD=25.0, TIMING_VIOLATION_CORNERS=['*'], DIODE_ON_PORTS absent.
+
+--- RUN_2026-07-31_05-13-54 (run 5, threshold=800) -- VOLUME MODEL
+FALSIFIED. Stopped per explicit instruction, no run 6 launched. ---
+
+DIODE COUNT: heuristic step alone inserted 7,064 diodes (odb-
+fuzzydiodeplacement.log, "Inserted 7064 diodes") -- close to the raw
+prediction of 7,970 (11% low), NOT the 1.6x-scaled-down ~5,000 estimate.
+Post-repair (GRT added its own contribution on top): antenna_cell=9,897,
+design__instance__count=234,369 -- matches the ~234k target almost exactly.
+
+ANTENNA: post-repair in-flight (40-openroad-repairantennas/state_out.json)
+42 net / 44 pin. FINAL post-DRT (45-openroad-checkantennas-1, same method
+as every prior read in this file): 90 rows / 84 unique nets / 90 unique
+pins, clk_i confirmed ABSENT. Between run3 (140/120) and run4 (40/39) as
+expected for a middle threshold.
+
+HOLD: FAILS AGAIN, same 5-corner pattern as run1/run2/run4 (nom_tt, nom_ss,
+max_tt, max_ss, max_ff), slightly better in magnitude than run4 at every
+failing corner (consistent with fewer total cells) but not close to
+closing:
+    corner    run3      run4      run5      hold_vio_count(run5)
+    nom_tt   +0.2400   -0.1932   -0.1623    6
+    nom_ss   +0.2693   -0.2491   -0.1748    3
+    nom_ff   +0.1215   +0.0706   +0.0946    0  (clean)
+    min_tt   +0.2911   +0.0869   +0.1016    0  (clean)
+    min_ss   +0.5311   +0.1776   +0.2185    0  (clean)
+    min_ff   +0.1204   +0.1207   +0.1212    0  (clean)
+    max_tt   +0.0534   -0.4291   -0.4093   17
+    max_ss   +0.0274   -0.6279   -0.5278   14
+    max_ff   +0.1229   -0.1073   -0.0914    6
+GOAL NOT MET.
+
+DECISIVE FALSIFICATION, exactly the scenario the coordinator pre-registered
+as possible before launch ("If hold fails at ~234k, the volume model is
+wrong or the safe ceiling is much lower than expected"):
+    clk_i -> u_cpu/clk_i, nom_tt, same method every time, with the
+    falsifiable prediction stated BEFORE this run landed for grading:
+        baseline:                    0.870159 ns   (0 stdcells delta)
+        run1 (heuristic, no fix):    1.439363 ns   (271,858 stdcells)
+        run2 (DIODE_ON_PORTS off):   1.388234 ns   (272,003 stdcells)
+        run3 (heuristic OFF):        0.933178 ns   (226,952 stdcells)
+        run4 (clock-net exclusion):  1.410208 ns   (270,217 stdcells)
+        run5 (threshold=800):        1.381585 ns   (234,369 stdcells --
+                                                      near-exact match to
+                                                      the ~234k prediction)
+        PREDICTED for run5: latency near 0.93-1.0 ns. ACTUAL: 1.381585 ns.
+        PREDICTION FALSIFIED.
+Stdcell count landed almost exactly on target (234,369 vs ~234k predicted)
+but latency is NOT anywhere near the predicted 0.93-1.0 -- it sits at
+essentially run1/run2/run4 levels despite being 36k cells below run4 and
+only 7.4k cells above run3. This rules out a smooth/linear interpolation
+between run3's 227k-clean and run4's 270k-broken as the model: whatever
+breaks the clock path is close to fully triggered well before 234k, closer
+to run3's 227k than the runs so far have sampled. The true safe ceiling is
+unknown but is now known to sit BELOW 234k, possibly much closer to
+run3's 227k specifically (i.e. possibly not a "volume" threshold at all so
+much as "any heuristic-driven insertion above a small amount" -- run3 had
+2,482 antenna cells and was clean; run5 has 9,897 and is broken; that
+9,897-2,482=7,415-cell gap, not the 43k-cell run3-to-run4 gap, may be where
+the real transition lives, but this is NOT measured, only inferred from the
+two data points now in hand).
+
+STATUS: per coordinator's explicit pre-registered instruction, NOT
+launching a run 6 without checking first. Five runs (1,2,4,5) have now
+failed to close hold with any antenna-repair configuration beyond the
+GRT-only baseline; only run3 (heuristic fully off, GRT_ANTENNA_ITERS=8/
+MARGIN=25 alone, antenna 140/120) has achieved both clean hold at all 9
+corners AND a meaningfully-reduced antenna count from the original
+147/127. Letting run5 finish its DRC/LVS tail for one complete final gate
+table (same standing practice as every prior run in this investigation),
+then reporting and holding for direction on whether to adopt run3 as the
+accepted configuration or investigate the narrower 2,482-9,897 antenna-cell
+range further.
