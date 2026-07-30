@@ -1245,3 +1245,100 @@ and resolves nwell tap connectivity. However, GDS mode with OpenRAM SRAM macros 
 geometry, causing a different set of SRAM-internal violations. The complete zero-violation solution
 requires hierarchical DRC with SRAM cells marked as pre-verified (Magic `-nocheck` property or
 equivalent), which is not supported in the current stock `drc.tcl`.
+
+## Local LibreLane patch: heuristic diode insertion skips clock-network nets
+### (Sky130 SoC bead 58q, 2026-07-30)
+
+**Applies to**: `~/Downloads/Github/librelane` local checkout only. **NOT tracked by this project
+repo** — same class of patch as the `pdn.tcl`/`drt.tcl` non-fatal-error patches above. Re-apply
+after any librelane reinstall/update. Files: `librelane/scripts/odbpy/diodes.py`,
+`librelane/steps/odb.py`.
+
+**Problem**: `Odb.HeuristicDiodeInsertion` (`RUN_HEURISTIC_DIODE_INSERTION: true`), when enabled
+on the Sky130 SoC (large die, 6700×3100 µm), inserts diodes on ~24× more cells than needed
+(1,934 → 47,385 `ANTENNA_*` instances measured on this design) because its net-selection loop
+(`DiodeInserter.execute()` in `diodes.py`) has no clock-awareness:
+1. It walks **every** net in the design and inserts a diode on every sink pin of any net whose
+   Manhattan bounding-box span exceeds `HEURISTIC_ANTENNA_THRESHOLD` (default 90 µm on sky130A).
+   The CTS clock tree is not uniformly short-hop — measured span distribution on this design shows
+   1,345 clock-related nets with median 68.7 µm but a real tail: 226 nets ≥90 µm, 208 nets ≥105 µm
+   (deep in the same range as genuine long-route antenna violators, 105–4517 µm, median 686 µm).
+   No threshold value cleanly separates the two populations — verified by direct measurement, not
+   assumed (see `memory/pd/run_state.md`, bead 58q run3→run4 investigation, for the full
+   distribution data and the ruled-out threshold experiment).
+2. Independently of (1): `Odb.FuzzyDiodePlacement.get_command()` (the step wrapping the heuristic
+   pass) never passes `--port-protect` to `diodes.py place`, so it silently inherits that CLI
+   option's own hardcoded default of `"in"` — **independent of the `DIODE_ON_PORTS` LibreLane
+   variable entirely**. This means the heuristic pass always force-inserts a diode on every design
+   input port net (`clk_i` included) regardless of threshold or `DIODE_ON_PORTS`.
+
+Diode placement (`DiodeInserter.place_diode_stdcell`, default `side_strategy="source"`) always
+abuts the diode directly against the **first sink instance** of the protected net. For a clock net
+this lands the diode directly on the clock-tree root/leaf buffer's input pin, physically disrupting
+placement/legalization at that exact point. Measured on this design: `clk_i -> u_cpu/clk_i` clock
+latency at nom_tt grew from 0.870159 ns (clean) to 1.439363 ns (heuristic on, +0.569 ns) — this
+single mechanism was traced (grep the netlist for `ANTENNA_clkbuf_0_clk_i_A` etc., confirmed via a
+post-CTS-vs-post-repair step comparison that ruled out CTS variation as the cause) to a hold
+regression at 5 of 9 corners that had previously been clean.
+
+**Root cause confirmed NOT threshold-fixable**: raising `HEURISTIC_ANTENNA_THRESHOLD` cannot
+separate the two populations (see distribution above) and cannot avoid the `clk_i`-port-forced
+diode at any threshold value (the io-protect path bypasses the span check unconditionally).
+
+**Fix**: add clock-net awareness via `dbNet.getSigType() == "CLOCK"` — the odb-native,
+CTS-assigned classification that correctly covers both the clock root net (`clk_i`) and every
+downstream CTS-inserted buffer-to-buffer segment (confirmed via direct odb query: 1,327 CLOCK-typed
+nets on this design, vs 1,345 nets found by a fragile `"clk"` substring match — do not use name
+matching, it was explicitly considered and rejected for robustness). Opt-in via a new
+`--skip-clock-nets` CLI flag / `HEURISTIC_ANTENNA_SKIP_CLOCK_NETS` LibreLane Variable, default
+`False`, so CPU/SRAM/GPU stage-1 macro configs that already use
+`RUN_HEURISTIC_DIODE_INSERTION: true` are completely unaffected unless they opt in.
+
+`diodes.py` — `DiodeInserter.__init__` gains `skip_clock_nets: bool = False`; `execute()` gains,
+right after the existing `isSpecial()` check:
+```python
+if self.skip_clock_nets and net.getSigType() == "CLOCK":
+    self.debug(f"[d] Skipping clock-network net {net.getConstName():s}")
+    continue
+```
+The `place` click command gains a `--skip-clock-nets` flag (`is_flag=True, default=False`), threaded
+through to the constructor.
+
+`steps/odb.py` — `FuzzyDiodePlacement.config_vars` gains:
+```python
+Variable(
+    "HEURISTIC_ANTENNA_SKIP_CLOCK_NETS",
+    bool,
+    "... exclude SigType CLOCK nets from heuristic diode insertion and "
+    "disable port-forcing ...",
+    default=False,
+),
+```
+and `get_command()` gains:
+```python
+skip_clock_opts = []
+if self.config["HEURISTIC_ANTENNA_SKIP_CLOCK_NETS"]:
+    skip_clock_opts = ["--skip-clock-nets", "--port-protect", "none"]
+```
+(appended to the returned command list). `--port-protect none` is passed alongside
+`--skip-clock-nets` specifically to also kill the independent port-forcing default described above
+— both are needed to fully stop `clk_i` from being diode-protected by this step.
+
+**Verified working** (smoke test, `openroad -exit -no_splash -python librelane/scripts/odbpy/
+diodes.py place -v --skip-clock-nets --port-protect none -t 90 <odb>`, run against
+`RUN_2026-07-30_06-42-17/37-openroad-repairdesignpostgrt/soc_top.odb`): exactly 1,327 "Skipping
+clock-network net" debug lines (matches the odb CLOCK-sigtype count exactly), zero `clk_i` diode
+insertions, non-clock long nets still correctly protected (e.g. `_00000_` at 428 µm still gets a
+diode). Full-flow result (`HEURISTIC_ANTENNA_SKIP_CLOCK_NETS: true` +
+`RUN_HEURISTIC_DIODE_INSERTION: true`, keeping `GRT_ANTENNA_ITERS=8`/`GRT_ANTENNA_MARGIN=25`/
+`CLOCK_PERIOD=25.0` from the accepted run3 baseline) is bead 58q run4 — see
+`memory/pd/run_state.md` for the outcome once landed.
+
+**How to re-apply after a librelane reinstall**: the exact diff is checked into THIS repo (not
+just the local librelane checkout) at
+`memory/pd/patches/58q_librelane_heuristic_diode_skip_clock_nets.diff` — apply with
+`cd ~/Downloads/Github/librelane && git apply /path/to/that/diff` (or by hand, it's ~127 lines
+across the two files, both edits shown in full above). No other files touched. Any future design
+that wants this behavior sets `HEURISTIC_ANTENNA_SKIP_CLOCK_NETS: true` in its own `config.json`;
+the default is off everywhere
+else.

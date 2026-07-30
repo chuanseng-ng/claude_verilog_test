@@ -113,8 +113,9 @@
 
     "MAGIC_DRC_USE_GDS": false,
 
-    "RUN_ANTENNA_REPAIR":            true,
-    "RUN_HEURISTIC_DIODE_INSERTION": false,
-    "GRT_ANTENNA_ITERS":             8,
-    "GRT_ANTENNA_MARGIN":            25
+    "RUN_ANTENNA_REPAIR":               true,
+    "RUN_HEURISTIC_DIODE_INSERTION":    true,
+    "HEURISTIC_ANTENNA_SKIP_CLOCK_NETS": true,
+    "GRT_ANTENNA_ITERS":                8,
+    "GRT_ANTENNA_MARGIN":               25
 }
