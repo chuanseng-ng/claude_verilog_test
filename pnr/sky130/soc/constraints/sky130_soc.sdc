@@ -1,11 +1,27 @@
-# sky130_soc.sdc — Timing constraints for SoC Stage 2 (Sky130A, 65 MHz)
+# sky130_soc.sdc — Timing constraints for SoC Stage 2 (Sky130A, 40 MHz)
 #
+# ############################################################################
+# CURRENT CONTRACT (2026-07-31, adopted run RUN_2026-07-30_06-42-17):
+#   clock_period          = 25.0 ns (40 MHz)   <- set below, line ~205
+#   TIMING_VIOLATION_CORNERS = ["*"]           <- all 9 corners gated
+#   Result: hold clean at all 9 corners; setup clean at tt/ff; setup STILL
+#   FAILS at ss (max_ss -4.643 ns) -- tracked as bead ujv, OPEN.
+# Everything below this block describing 75 MHz / 65 MHz / nom_tt-only
+# gating is HISTORICAL CONTEXT ONLY. Do not read it as the current target.
+# ############################################################################
+#
+# --- HISTORICAL (2026-07-24, superseded) ---
 # GH #104 (2026-07-24): clock target relaxed from 75 MHz (13.333 ns) to
 # 65 MHz (15.385 ns) per user decision, after the sign-off run
 # (RUN_2026-07-24_09-58-19) showed nom_tt setup WNS -1.069 ns at 75 MHz
 # (single CPU-macro-internal-boundary violator). The added +2.051 ns of
 # slack is expected to close nom_tt/max_tt setup but NOT the slow
 # (ss) corners -- see memory/pd/run_state.md for the full analysis.
+# That 65 MHz value was itself superseded on 2026-07-31: it did NOT close
+# ss (WNS -8.902 ns), and relaxing to 25.0 ns only improved ss to
+# -4.643 ns because path delay scales with period at ~0.52 ns/ns.
+# Extrapolated closure is ~29 MHz -- a two-point lower bound, not a
+# validated target. See bead ujv.
 #
 # *** KNOWN LIMITATION (GH #104): THE SRAM MACRO IS STILL NOT
 # CHARACTERIZED PER-CORNER. The CPU macro NOW IS (fixed 2026-07-25). ***

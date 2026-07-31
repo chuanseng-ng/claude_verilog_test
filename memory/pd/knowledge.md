@@ -979,24 +979,42 @@ harmless but the main SoC synth now uses the sv2v path, not deferred_flatten.
 
 ### Magic DRC — li.3 Standard Cell Boundary Artifact (sky130A, 27M+ violations)
 
-**Symptom**: Magic DRC reports ~27.7M violations regardless of `MAGIC_DRC_USE_GDS` setting.
-KLayout DRC on the identical merged GDS reports **0 violations**.
+> ⚠️ **SUPERSEDED 2026-07-28 — the attribution in this section is WRONG.** It was written from
+> a partial reading of the violation report. An exhaustive streaming classification of all
+> 27,730,498 coordinates (reproduced twice, independently) proved the violations are **100.0000 %
+> inside the 10 SRAM macro footprints**, with **zero** in the standard-cell array or routing
+> channels, and that `li.3` is **not** the dominant rule family. See
+> "Quantitative confirmation (2026-07-28, bead 45a)" further down this section for the corrected
+> data. The three specific claims below that are now known false are struck through inline.
+> The *conclusion* (KLayout + Netgen authoritative, Magic waived) is unchanged and still correct —
+> only the mechanism was misattributed.
 
-**True root cause (confirmed by reading violation report, Run 4 + Run 6)**:
-The violations are **NOT** from SRAM GDS unknown layers. Both GDS mode (Run 4) and
-DEF+LEF mode (Run 6) produce the same count with the same dominant violation type:
+**Symptom**: Magic DRC reports ~27.7M violations regardless of `MAGIC_DRC_USE_GDS` setting.
+KLayout DRC on the identical merged GDS reports **0 violations**. *(Symptom is accurate; see the
+KLayout caveat below — that 0 excludes SRAM internals by deck design.)*
+
+**~~True root cause (confirmed by reading violation report, Run 4 + Run 6)~~** — WRONG, superseded:
+~~The violations are **NOT** from SRAM GDS unknown layers.~~ Both GDS mode (Run 4) and
+DEF+LEF mode (Run 6) produce the same count *(this part is correct — 27,730,498 vs 27,733,913,
+Δ 0.01 %)*, with this violation type present:
 ```
 Local interconnect spacing < 0.17um (li.3)
 ```
-These occur at **standard cell boundaries** — the local interconnect (li1) layer routes
-continuously through abutting cell rows. Magic's `drc(full)` mode checks ALL li1 shapes
-pairwise without the abutting-net exception → every std cell boundary row generates
-false-positive spacing violations. KLayout's foundry-calibrated DRC deck correctly
-ignores abutting/connected li1 shapes.
+~~These occur at **standard cell boundaries**~~ — **FALSE**: measured `li.3` count is 922,628 of
+27,730,498 (3.3 %), and every one of them lies inside an SRAM footprint. Zero violations of any
+rule family occur in the standard-cell array (max reported y = 907.87 µm; the logic zone starts at
+917.5 µm).
 
-The SRAM-specific violations (diff/tap.2 "SRAM core", poly.8 "SRAM core transistor") each
+~~The SRAM-specific violations (diff/tap.2 "SRAM core", poly.8 "SRAM core transistor") each
 appear only ONCE — they are NOT the bulk. The 27.7M count is entirely li.3 cell-boundary
-artifacts.
+artifacts.~~ — **FALSE on both counts**: the actual dominant families are `diff/tap.9` 3,017,505;
+`licon.1` 2,572,862; `li.1` 2,278,399; `licon.5a` 2,262,998; `licon.8` 1,850,092;
+`poly.8` 1,833,708 (i.e. the "SRAM core transistor" rule fires ~1.8M times, not once).
+
+**Why the original reading went wrong**: the report is 1.1 GB and was sampled from the top rather
+than classified in full. Rule-family headers near the start are dominated by `li.3`, which is not
+representative of the body. Always stream-classify the whole file — see the corrected method
+below.
 
 **Non-fixes (tried and confirmed not to work)**:
 - `MAGIC_DRC_USE_GDS: false` (DEF+LEF mode) → same li.3 count
@@ -1217,6 +1235,26 @@ Filed low-priority; only matters if GDS mode is ever wanted again.
 OpenRAM macro's internals regardless of read path. KLayout DRC=0 + Netgen LVS=MATCH + DRT 0 are
 authoritative for Sky130 Stage-1. Stages 2–4 inherit the waiver cleanly. Keep
 `MAGIC_DRC_USE_GDS: false` — `true` aborts the flow and produces the same count anyway.
+
+> ⚠️ **Scope of the KLayout DRC=0 result — state this whenever the sign-off is cited.**
+> `sky130A_mr.drc` runs with `SRAM_EXCLUDE = true`, implemented as
+> `layout(source.cell_obj).select("-*sky130_sram_*kbyte_*")`, which subtracts every shape
+> belonging to the SRAM macro cells from the nsdm/psdm/nwell rule groups. So **KLayout DRC = 0
+> validates the design *surrounding* the SRAM macros — it does not verify SRAM internal
+> geometry.** Neither tool independently signs off the macro interior: Magic sees it and floods,
+> KLayout excludes it by deck design.
+>
+> The sign-off contract is therefore conditional, and should be written that way:
+> **(a)** the non-SRAM design is clean — KLayout DRC 0, Netgen LVS MATCH, DRT 0; **(b)** the
+> `sky130_sram_1kbyte_1rw1r_32x256_8` macro interior is accepted as **pre-verified vendor IP**,
+> on the strength of the foundry deck grouping it with the `sky130_fd_io__*` pad cells (the same
+> treatment given to hardened I/O), not on the strength of any check run in this project.
+> If (b) is ever unacceptable — e.g. a real tape-out on this macro — the macro interior needs
+> independent verification (vendor DRC report, or a Magic run with a techfile that matches the
+> macro GDS vintage; see bead y0w for why the current techfile cannot do that).
+> Related precedent: GH #121 found 4 real macro-internal KLayout violations in the *OpenRAM*
+> SRAM used at SoC level, which is direct evidence that these macro interiors are not
+> automatically clean.
 
 **GDS-mode investigation conclusion (2026-06-30)**:
 - `MAGIC_DRC_USE_GDS: true` + `MACROS` cannot achieve Magic DRC=0 because `gds write` embeds

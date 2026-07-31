@@ -3684,7 +3684,11 @@ unchanged (false). Did not touch bead 1ls's CPU-internal SDC (separate file,
 separate macro-level budget, unaffected by the SoC-level period).
 
 LAUNCH:
-  run_id:      pd_20260729_183700 (approx, see run_state timestamp)
+  run_id:      pd_20260729_183955 (launch-log timestamp; NOT tool-generated)
+  run_dir:     pnr/sky130/soc/runs/RUN_2026-07-29_18-40-38
+               ^ AUTHORITATIVE artifact identifier -- correlate STA/DRC/
+                 antenna results to this directory, not to the run_id above.
+  launch_log:  /nobackup/sky130_soc_58q_antenna_clockfix_20260729_183955.log
   design_name: soc_top (Sky130 SoC Stage 2)
   pdk:         sky130A
   tool:        librelane (nix-shell), make librelane-sky130-soc
@@ -3715,6 +3719,25 @@ recovered per 1 ns relaxed), AND a HOLD REGRESSION at 4/9 corners
 clean before). User decision: fix hold first, ss re-decided after. DO NOT
 launch another multi-hour run until this diagnosis is reported and the
 coordinator sanity-checks direction.
+================================================================================
+
+*** SUPERSEDED 2026-07-31 -- READ THIS FIRST ***
+The "DIODE_ON_PORTS hypothesis CONFIRMED" verdict below is WRONG and was
+overturned by later ablation runs. Removing DIODE_ON_PORTS (run 2) recovered
+only 0.051 ns of the 0.569 ns clock-latency regression. The true cause is that
+Odb.HeuristicDiodeInsertion costs ~0.5 ns of clock-root latency whenever the
+step RUNS AT ALL -- it re-legalizes placement and re-routes globally after
+inserting -- independent of diode count, diode location, or clock-net
+exclusion. Proven across 6 runs; see the campaign summary in
+memory/pd/knowledge.md ("Odb.HeuristicDiodeInsertion costs ~0.5 ns of clock
+latency -- BINARY, not tunable").
+What IS still valid below: items 1 and 2 (the reg-to-reg vs I/O-boundary
+split, and the fact that 100% of hold violators are the APB debug-bus group).
+Those measurements held up across every subsequent run.
+NOTE on the corner count: "all 5 failing corners" in item 2 is CORRECT
+(nom_tt, nom_ss, max_tt, max_ss, max_ff). Any place in this file or in the
+bead notes that says 4 failing corners is an error -- max_ff (-0.1267 ns) was
+omitted from that earlier tally.
 ================================================================================
 
 HOLD REGRESSION ROOT CAUSE -- FOUND AND QUANTIFIED, coordinator's
@@ -3772,8 +3795,8 @@ DIODE_ON_PORTS hypothesis CONFIRMED (not just "not ruled out"):
    placement -> different GRT -> antenna violations ... this net picked up
    a second, distant sink and a long route").
    Arithmetic check: required-side grew ~+0.569 ns; arrival-side gained only
-   ~+0.481 ns from the bigger set_input_delay -min (0.05 * 25.0 - 0.05 *
-   15.385 = 0.481 ns, unavoidable and structural, NOT the antenna keys'
+   ~+0.481 ns from the bigger set_input_delay -min (`0.05 * 25.0 - 0.05 *
+   15.385 = 0.481 ns`, unavoidable and structural, NOT the antenna keys'
    fault) -- net ~-0.09 ns explained by period alone, the remainder of the
    observed ~-0.50 ns nom_tt delta plus the internal path-side hold-buffer
    (hold53, sky130_fd_sc_hd__dlygate4sd3_1, 0.5376 ns through ONE cell --
