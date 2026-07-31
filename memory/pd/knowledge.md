@@ -1342,3 +1342,58 @@ across the two files, both edits shown in full above). No other files touched. A
 that wants this behavior sets `HEURISTIC_ANTENNA_SKIP_CLOCK_NETS: true` in its own `config.json`;
 the default is off everywhere
 else.
+
+---
+
+### Odb.HeuristicDiodeInsertion costs ~0.5 ns of clock latency — BINARY, not tunable (bead 58q, 2026-07-31)
+
+**The single most reusable finding of the Sky130 SoC antenna campaign.** If a design is
+hold-sensitive, `RUN_HEURISTIC_DIODE_INSERTION` is an all-or-nothing choice. Do not spend runs
+trying to tune it down — three separate levers were tried and all failed identically.
+
+Six-run evidence, `clk_i -> u_cpu/clk_i` at nom_tt on the same design:
+
+| run | heuristic pass | stdcells | clk latency | hold |
+|-----|---------------|----------|-------------|------|
+| baseline | off | 226,454 | **0.870159** | clean 9/9 |
+| run 3 | off | 226,952 | **0.933178** | clean 9/9 |
+| run 5 | **ON** | 234,371 | **1.381585** | fails 5/9 |
+| run 4 | **ON** | 270,217 | **1.410208** | fails 5/9 |
+| run 2 | **ON** | 272,003 | **1.388234** | fails 5/9 |
+| run 1 | **ON** | 271,858 | **1.439363** | fails 5/9 |
+
+Latency is binary on whether the step runs. Among the ON runs, cell count spans 234k-272k — a
+38k spread — with no material latency effect (1.38-1.44 ns). Off: 0.87-0.93 ns.
+
+**Mechanism**: the step is not just diode insertion. It wraps
+`1-odb-fuzzydiodeplacement` -> `2-openroad-detailedplacement` -> `3-openroad-globalrouting`,
+i.e. it **re-legalizes placement and re-routes globally** after inserting. That perturbation
+lengthens the clock-root route by ~0.45-0.5 ns whether it placed 7,970 diodes or 44,742.
+
+**Levers that do NOT help** (all reduce *what* is inserted; the cost comes from the pass
+*running*):
+- `DIODE_ON_PORTS: none` — no effect on latency
+- clock-net exclusion (`HEURISTIC_ANTENNA_SKIP_CLOCK_NETS`, the patch documented above) —
+  achieves literally zero diodes on any CLOCK-sigtype net, no effect on latency
+- `HEURISTIC_ANTENNA_THRESHOLD: 800` — 5.6x fewer diodes (7,970 vs 44,742), no effect on latency
+
+**Which hold paths break**: only the I/O-boundary class — input ports carry no clock-network
+delay on the data side but the full clock-tree latency on the capture side, so there is no
+cancellation cushion and a clock-latency increase hits them directly. Here that was
+`apb_paddr_i/psel_i/penable_i/pwdata_i -> u_cpu`, 100% of violators, zero reg-to-reg. The SDC
+multicycle on that group is correctly paired (`2 -setup` / `1 -hold`) — this is physical, not a
+constraint bug.
+
+**What it buys**, for the cost/benefit call: heuristic ON gives antenna 40-90 violations vs
+140/120 with it off (baseline 147/127). GRT repair alone (`GRT_ANTENNA_ITERS=8`,
+`GRT_ANTENNA_MARGIN=25`) delivers only 147 -> 140.
+
+**Untried lever, recorded for whoever needs better antenna on a hold-sensitive design**:
+GRT-based `RepairAntennas` does *not* trigger the legalization sub-steps, so pushing
+`GRT_ANTENNA_ITERS`/`GRT_ANTENNA_MARGIN` harder should improve antenna without the hold cost.
+Run 3 already used 8/25 for 140/120, so expect incremental gains.
+
+**Process note worth carrying forward**: four successive root-cause claims on this campaign were
+wrong — cell-count pressure (raised, retracted, wrongly re-adopted), `DIODE_ON_PORTS`,
+clock-tree diodes, and a cell-volume model. Every one was caught by attaching a falsifiable
+prediction to the next run, never by a run coming back green. Attach a guard to any claim here.
