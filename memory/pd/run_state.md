@@ -4564,3 +4564,31 @@ table (same standing practice as every prior run in this investigation),
 then reporting and holding for direction on whether to adopt run3 as the
 accepted configuration or investigate the narrower 2,482-9,897 antenna-cell
 range further.
+
+================================================================================
+BEAD 58q CLOSED, 2026-07-31. NO ACTIVE/INTERRUPTED RUN AT THIS FILE'S TAIL.
+================================================================================
+Run5 finished its DRC/LVS tail cleanly after the entry above (LVS PASS,
+KLayout 4, Magic 9081, antenna 90/84, hold fails 5/9 corners as predicted --
+final gate table already folded into the run5 section above and into
+design_state.json). Coordinator closed the investigation: adopted run3
+(RUN_2026-07-30_06-42-17) as the Stage-2 antenna/hold result. Full mechanism,
+final gate table, and the untried GRT-only lever for future work are
+recorded in memory/pd/knowledge.md ("Local LibreLane patch..." section) and
+in design_state.json under pd.soc_stage2_gh104.bead_58q_antenna_hold_
+investigation. config.json reverted to run3's exact settings (commit
+3088046) so `make librelane-sky130-soc` reproduces the adopted result, not
+a later experimental one.
+
+pnr/sky130/soc/config.json final state (adopted, matches commit 1aafe06 and
+current HEAD exactly):
+    RUN_ANTENNA_REPAIR: true, RUN_HEURISTIC_DIODE_INSERTION: false,
+    GRT_ANTENNA_ITERS: 8, GRT_ANTENNA_MARGIN: 25, CLOCK_PERIOD: 25.0,
+    TIMING_VIOLATION_CORNERS: ['*'], DIODE_ON_PORTS: absent.
+
+If a future session reads this file: there is NO interrupted run to resume.
+This entire file is historical diagnostic record for bead 58q (now closed)
+and the earlier CPU-macro/SRAM/floorplan hardening history that preceded
+it. Check design_state.json's `history[]` tail and `pd` top-level fields
+for the current authoritative state before starting new PD work on this
+design; do not treat any run_id/run_tag in this file as "in progress."
