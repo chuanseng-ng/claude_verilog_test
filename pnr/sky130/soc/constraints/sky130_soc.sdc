@@ -1,11 +1,27 @@
-# sky130_soc.sdc — Timing constraints for SoC Stage 2 (Sky130A, 65 MHz)
+# sky130_soc.sdc — Timing constraints for SoC Stage 2 (Sky130A, 40 MHz)
 #
+# ############################################################################
+# CURRENT CONTRACT (2026-07-31, adopted run RUN_2026-07-30_06-42-17):
+#   clock_period          = 25.0 ns (40 MHz)   <- set below, line ~205
+#   TIMING_VIOLATION_CORNERS = ["*"]           <- all 9 corners gated
+#   Result: hold clean at all 9 corners; setup clean at tt/ff; setup STILL
+#   FAILS at ss (max_ss -4.643 ns) -- tracked as bead ujv, OPEN.
+# Everything below this block describing 75 MHz / 65 MHz / nom_tt-only
+# gating is HISTORICAL CONTEXT ONLY. Do not read it as the current target.
+# ############################################################################
+#
+# --- HISTORICAL (2026-07-24, superseded) ---
 # GH #104 (2026-07-24): clock target relaxed from 75 MHz (13.333 ns) to
 # 65 MHz (15.385 ns) per user decision, after the sign-off run
 # (RUN_2026-07-24_09-58-19) showed nom_tt setup WNS -1.069 ns at 75 MHz
 # (single CPU-macro-internal-boundary violator). The added +2.051 ns of
 # slack is expected to close nom_tt/max_tt setup but NOT the slow
 # (ss) corners -- see memory/pd/run_state.md for the full analysis.
+# That 65 MHz value was itself superseded on 2026-07-31: it did NOT close
+# ss (WNS -8.902 ns), and relaxing to 25.0 ns only improved ss to
+# -4.643 ns because path delay scales with period at ~0.52 ns/ns.
+# Extrapolated closure is ~29 MHz -- a two-point lower bound, not a
+# validated target. See bead ujv.
 #
 # *** KNOWN LIMITATION (GH #104): THE SRAM MACRO IS STILL NOT
 # CHARACTERIZED PER-CORNER. The CPU macro NOW IS (fixed 2026-07-25). ***
@@ -153,7 +169,48 @@
 # DO NOT record either configuration as a sign-off: one fails hold, the
 # other fails setup, both at nom_tt. Tracked on bead claude_verilog_test-y7v.
 #
-# Single clock domain: core_clk = 15.385 ns (65 MHz).
+###############################################################################
+# 2026-07-29 (bead claude_verilog_test-58q, coordinator-directed scope change):
+# CLOCK RELAXED 65 MHz (15.385 ns) -> 40 MHz (25.0 ns), AND
+# TIMING_VIOLATION_CORNERS WIDENED FROM ['*tt*'] TO ['*] (all 9 corners
+# gated: nom/min/max x tt/ss/ff).
+#
+# Manufacturability.rpt for RUN_2026-07-27_17-15-57 (65 MHz, tt-only gate)
+# showed the ss corner genuinely fails setup by WNS -8.902 ns -- the *tt*-only
+# gate in prior runs hid this from the Checker.SetupViolations/HoldViolations
+# gates, reporting only a tt-clean, non-multi-corner sign-off. Root cause is
+# NOT this SDC or the SoC fabric: it is the CPU macro's own clk->Q arc, which
+# per bead 1ls / GH #123 is 8.16 ns at ss vs 4.55 ns at tt (9-corner CPU libs,
+# commit 86e89c1) -- a macro-internal characteristic, out of scope for an SoC
+# ECO to fix (no RTL, no macro re-timing here).
+#
+# PERIOD CHOICE: arithmetic minimum to close ss with the OLD 15.385 ns
+# critical-path delay would be 15.385 + 8.902 = 24.287 ns (41.17 MHz). That
+# assumes the ss critical-path delay is invariant under period relaxation,
+# which it is not -- loosening the period lets the resizer legally downsize
+# drive strength on non-critical cells it previously had to oversize, and
+# delays on marginal paths typically grow back somewhat when that happens
+# (observed directly in this project's own history: the 65->75 MHz tightening
+# in bead 1ls moved delays on the SAME araddr[18]/awlen critical path by
+# hundreds of ps purely from resizer/placement response to the new budget).
+# 25.0 ns (40 MHz) was chosen to give ~0.7 ns of headroom over the naive
+# arithmetic minimum for that effect, without over-relaxing and losing
+# frequency for no reason.
+#
+# CAVEAT ON SS-CORNER CONFIDENCE: the CPU macro now has real 9-corner
+# characterisation (commit 86e89c1), but the SRAM macro
+# (sky130_sram_4kbyte_1rw1r_32x1024_8) remains single-corner analytical
+# (TT_1p8V_25C only, wildcarded to all 9 corner keys -- GH #120 / bead
+# claude_verilog_test-o1i, SPICE per-corner characterisation measured NOT
+# feasible on this host, ~80-95 h for 3 corners). Every ss/ff number that
+# touches SRAM read/write timing through this run therefore carries
+# unquantified model error in the SRAM's contribution specifically; only the
+# CPU macro and the flat sky130_fd_sc_hd fabric are corner-accurate. This
+# sign-off is "all 9 corners gated" but NOT "all 9 corners independently
+# verified at the macro level" -- report both facts, do not conflate them.
+###############################################################################
+#
+# Single clock domain: core_clk = 25.0 ns (40 MHz).
 # CPU is a hard macro with its own characterised timing arcs in the .lib;
 # path analysis through the CPU macro boundary uses those timing arcs.
 #
@@ -161,7 +218,7 @@
 # that input-slew assumptions are consistent with the CPU macro timing
 # model. clk_i is excluded and driven by clkbuf_16 instead (see FIX above).
 
-set clock_period 15.385
+set clock_period 25.0
 
 ###############################################################################
 # Primary clock

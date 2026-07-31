@@ -979,24 +979,42 @@ harmless but the main SoC synth now uses the sv2v path, not deferred_flatten.
 
 ### Magic DRC — li.3 Standard Cell Boundary Artifact (sky130A, 27M+ violations)
 
-**Symptom**: Magic DRC reports ~27.7M violations regardless of `MAGIC_DRC_USE_GDS` setting.
-KLayout DRC on the identical merged GDS reports **0 violations**.
+> ⚠️ **SUPERSEDED 2026-07-28 — the attribution in this section is WRONG.** It was written from
+> a partial reading of the violation report. An exhaustive streaming classification of all
+> 27,730,498 coordinates (reproduced twice, independently) proved the violations are **100.0000 %
+> inside the 10 SRAM macro footprints**, with **zero** in the standard-cell array or routing
+> channels, and that `li.3` is **not** the dominant rule family. See
+> "Quantitative confirmation (2026-07-28, bead 45a)" further down this section for the corrected
+> data. The three specific claims below that are now known false are struck through inline.
+> The *conclusion* (KLayout + Netgen authoritative, Magic waived) is unchanged and still correct —
+> only the mechanism was misattributed.
 
-**True root cause (confirmed by reading violation report, Run 4 + Run 6)**:
-The violations are **NOT** from SRAM GDS unknown layers. Both GDS mode (Run 4) and
-DEF+LEF mode (Run 6) produce the same count with the same dominant violation type:
+**Symptom**: Magic DRC reports ~27.7M violations regardless of `MAGIC_DRC_USE_GDS` setting.
+KLayout DRC on the identical merged GDS reports **0 violations**. *(Symptom is accurate; see the
+KLayout caveat below — that 0 excludes SRAM internals by deck design.)*
+
+**~~True root cause (confirmed by reading violation report, Run 4 + Run 6)~~** — WRONG, superseded:
+~~The violations are **NOT** from SRAM GDS unknown layers.~~ Both GDS mode (Run 4) and
+DEF+LEF mode (Run 6) produce the same count *(this part is correct — 27,730,498 vs 27,733,913,
+Δ 0.01 %)*, with this violation type present:
 ```
 Local interconnect spacing < 0.17um (li.3)
 ```
-These occur at **standard cell boundaries** — the local interconnect (li1) layer routes
-continuously through abutting cell rows. Magic's `drc(full)` mode checks ALL li1 shapes
-pairwise without the abutting-net exception → every std cell boundary row generates
-false-positive spacing violations. KLayout's foundry-calibrated DRC deck correctly
-ignores abutting/connected li1 shapes.
+~~These occur at **standard cell boundaries**~~ — **FALSE**: measured `li.3` count is 922,628 of
+27,730,498 (3.3 %), and every one of them lies inside an SRAM footprint. Zero violations of any
+rule family occur in the standard-cell array (max reported y = 907.87 µm; the logic zone starts at
+917.5 µm).
 
-The SRAM-specific violations (diff/tap.2 "SRAM core", poly.8 "SRAM core transistor") each
+~~The SRAM-specific violations (diff/tap.2 "SRAM core", poly.8 "SRAM core transistor") each
 appear only ONCE — they are NOT the bulk. The 27.7M count is entirely li.3 cell-boundary
-artifacts.
+artifacts.~~ — **FALSE on both counts**: the actual dominant families are `diff/tap.9` 3,017,505;
+`licon.1` 2,572,862; `li.1` 2,278,399; `licon.5a` 2,262,998; `licon.8` 1,850,092;
+`poly.8` 1,833,708 (i.e. the "SRAM core transistor" rule fires ~1.8M times, not once).
+
+**Why the original reading went wrong**: the report is 1.1 GB and was sampled from the top rather
+than classified in full. Rule-family headers near the start are dominated by `li.3`, which is not
+representative of the body. Always stream-classify the whole file — see the corrected method
+below.
 
 **Non-fixes (tried and confirmed not to work)**:
 - `MAGIC_DRC_USE_GDS: false` (DEF+LEF mode) → same li.3 count
@@ -1162,6 +1180,82 @@ as the authoritative sign-off. Magic DRC=27,733,913 is a documented stock-tool a
 MACROS object. This is the exact Run-6 validated state (RUN_2026-06-29_09-15-44). Reproducible
 with stock LibreLane tools, no drc.tcl patch required.
 
+#### Quantitative confirmation (2026-07-28, bead 45a — re-derived, then closed)
+
+⚠️ Bead 45a was filed 2026-07-27 asking whether the 27.7M were real, **unaware this section
+already answered it on 2026-06-29**. Read this section first before re-opening the question.
+The 2026-07-28 pass added hard numbers and three genuinely new facts (marked NEW below).
+
+Exhaustive streaming classification of **every** coordinate in the 1.1 GB report from
+`RUN_2026-07-27_20-33-10/63-magic-drc` (not sampled; reproduced twice with independent awk passes):
+
+| Zone | Count | % |
+|------|-------|---|
+| Inside one of the 10 SRAM footprints | 27,730,498 | **100.0000 %** |
+| Routing channel (417.5 < y < 520) | 0 | 0 % |
+| Standard-cell logic zone (y > 917.5) | 0 | 0 % |
+
+Coordinate extents x 0..3189.11 µm, y 0..**907.87** µm. The logic zone begins at y=917.5 —
+nothing is reported above 907.87. Rightmost SRAM's right edge = 2719.12+479.78 = 3198.90.
+
+Per-rule-family (all 26 families 100 % SRAM-internal, none leak outside): diff/tap.9 3,017,505;
+licon.1 2,572,862; li.1 2,278,399; licon.5a 2,262,998; licon.8 1,850,092; poly.8 1,833,708;
+diff/tap.1 1,820,192; licon.14 1,697,877; via.1a+2·via.4a 1,597,260; poly.4 1,339,088;
+met1.4 841,738; **li.3 922,628**. Note li.3 is *not* the dominant family once counted —
+earlier notes calling this "27.7M li.3" overstate that one rule.
+
+**NEW 1 — why KLayout reports 0 on the identical GDS.** `sky130A_mr.drc` has explicit,
+hierarchy-aware SRAM exclusion: `SRAM_EXCLUDE=true` →
+`not_sram = layout(source.cell_obj).select("-*sky130_sram_*kbyte_*")`, subtracting all shapes in
+cells matching the SRAM macro name from the nsdm/psdm/nwell rule groups. The deck log states it:
+`nwell.6 | sky130_fd_io__gpiov2_amux, sky130_fd_io__simple_pad_and_busses, sram` and
+`nsd.1/nsd.2/psd.1/psd.2 | sram` — the foundry deck groups this SRAM with the I/O pad cells and
+treats it as a pre-verified hard macro by convention. KLayout also splits li1 via an `areaid:ce`
+scope (strict li.1/li.3 0.17 µm outside, relaxed li.7/li.8 0.14 µm in core) — the same intent as
+Magic's `COREID`/`coreli`, but it works here where Magic's does not.
+
+**NEW 2 — SoC-vs-CPU asymmetry reconciled.** The Sky130 SoC run reports only 9,081 on a *larger*
+die = 9,049 `nwell.4` + 32 `met4.4a`, a **completely disjoint** rule set (zero li.3/licon/poly/diff),
+not a diluted CPU flood. `pnr/sky130/soc/config.json` declares the CPU as a hard `MACROS` entry
+with `MAGIC_DRC_USE_GDS=false`, so `read_macro_lef` loads the CPU LEF abstract before `def read`
+and Magic never reaches CPU-internal (hence SRAM-internal) geometry. **The SRAM-flood failure mode
+is structurally impossible at SoC level.** The 9,049 `nwell.4` is the same DEF+LEF-abstract artifact
+class documented above at 3,626 on the smaller CPU-only test — same phenomenon, larger die.
+
+**NEW 3 — sky130A techfile layer/datatype gap (bead y0w).** `sky130A.tech` maps GDS layer 235 only
+at datatype 4 (→ CELLBOUND), but `sky130_fd_bd_sram__openram_dp_cell{,_dummy,_replica,_cap_row}`
+draw their boundary at 235/**0**; layers 33 (42/43) and 22 (21/22) are unmapped entirely. This is
+the exact cause of the fatal `Unknown layer/datatype in boundary` abort under
+`MAGIC_DRC_USE_GDS=true`. It is mechanistically relevant — `coreli` classification derives from
+`COREID`, bloated off the same CELLBOUND geometry Magic can't read — but it is **not** the driver
+of the flood: DEF+LEF mode never invokes that GDS calma path and still gives 27,733,913 (Δ 0.01 %).
+Filed low-priority; only matters if GDS mode is ever wanted again.
+
+**Bottom line, unchanged**: Magic's flat `drc(full)` engine cannot validate this dense custom
+OpenRAM macro's internals regardless of read path. KLayout DRC=0 + Netgen LVS=MATCH + DRT 0 are
+authoritative for Sky130 Stage-1. Stages 2–4 inherit the waiver cleanly. Keep
+`MAGIC_DRC_USE_GDS: false` — `true` aborts the flow and produces the same count anyway.
+
+> ⚠️ **Scope of the KLayout DRC=0 result — state this whenever the sign-off is cited.**
+> `sky130A_mr.drc` runs with `SRAM_EXCLUDE = true`, implemented as
+> `layout(source.cell_obj).select("-*sky130_sram_*kbyte_*")`, which subtracts every shape
+> belonging to the SRAM macro cells from the nsdm/psdm/nwell rule groups. So **KLayout DRC = 0
+> validates the design *surrounding* the SRAM macros — it does not verify SRAM internal
+> geometry.** Neither tool independently signs off the macro interior: Magic sees it and floods,
+> KLayout excludes it by deck design.
+>
+> The sign-off contract is therefore conditional, and should be written that way:
+> **(a)** the non-SRAM design is clean — KLayout DRC 0, Netgen LVS MATCH, DRT 0; **(b)** the
+> `sky130_sram_1kbyte_1rw1r_32x256_8` macro interior is accepted as **pre-verified vendor IP**,
+> on the strength of the foundry deck grouping it with the `sky130_fd_io__*` pad cells (the same
+> treatment given to hardened I/O), not on the strength of any check run in this project.
+> If (b) is ever unacceptable — e.g. a real tape-out on this macro — the macro interior needs
+> independent verification (vendor DRC report, or a Magic run with a techfile that matches the
+> macro GDS vintage; see bead y0w for why the current techfile cannot do that).
+> Related precedent: GH #121 found 4 real macro-internal KLayout violations in the *OpenRAM*
+> SRAM used at SoC level, which is direct evidence that these macro interiors are not
+> automatically clean.
+
 **GDS-mode investigation conclusion (2026-06-30)**:
 - `MAGIC_DRC_USE_GDS: true` + `MACROS` cannot achieve Magic DRC=0 because `gds write` embeds
   the full SRAM cell hierarchy into the merged GDS via the `GDS_FILE` property pointer mechanism.
@@ -1189,3 +1283,155 @@ and resolves nwell tap connectivity. However, GDS mode with OpenRAM SRAM macros 
 geometry, causing a different set of SRAM-internal violations. The complete zero-violation solution
 requires hierarchical DRC with SRAM cells marked as pre-verified (Magic `-nocheck` property or
 equivalent), which is not supported in the current stock `drc.tcl`.
+
+## Local LibreLane patch: heuristic diode insertion skips clock-network nets
+### (Sky130 SoC bead 58q, 2026-07-30)
+
+**Applies to**: `~/Downloads/Github/librelane` local checkout only. **NOT tracked by this project
+repo** — same class of patch as the `pdn.tcl`/`drt.tcl` non-fatal-error patches above. Re-apply
+after any librelane reinstall/update. Files: `librelane/scripts/odbpy/diodes.py`,
+`librelane/steps/odb.py`.
+
+**Problem**: `Odb.HeuristicDiodeInsertion` (`RUN_HEURISTIC_DIODE_INSERTION: true`), when enabled
+on the Sky130 SoC (large die, 6700×3100 µm), inserts diodes on ~24× more cells than needed
+(1,934 → 47,385 `ANTENNA_*` instances measured on this design) because its net-selection loop
+(`DiodeInserter.execute()` in `diodes.py`) has no clock-awareness:
+1. It walks **every** net in the design and inserts a diode on every sink pin of any net whose
+   Manhattan bounding-box span exceeds `HEURISTIC_ANTENNA_THRESHOLD` (default 90 µm on sky130A).
+   The CTS clock tree is not uniformly short-hop — measured span distribution on this design shows
+   1,345 clock-related nets with median 68.7 µm but a real tail: 226 nets ≥90 µm, 208 nets ≥105 µm
+   (deep in the same range as genuine long-route antenna violators, 105–4517 µm, median 686 µm).
+   No threshold value cleanly separates the two populations — verified by direct measurement, not
+   assumed (see `memory/pd/run_state.md`, bead 58q run3→run4 investigation, for the full
+   distribution data and the ruled-out threshold experiment).
+2. Independently of (1): `Odb.FuzzyDiodePlacement.get_command()` (the step wrapping the heuristic
+   pass) never passes `--port-protect` to `diodes.py place`, so it silently inherits that CLI
+   option's own hardcoded default of `"in"` — **independent of the `DIODE_ON_PORTS` LibreLane
+   variable entirely**. This means the heuristic pass always force-inserts a diode on every design
+   input port net (`clk_i` included) regardless of threshold or `DIODE_ON_PORTS`.
+
+Diode placement (`DiodeInserter.place_diode_stdcell`, default `side_strategy="source"`) always
+abuts the diode directly against the **first sink instance** of the protected net. For a clock net
+this lands the diode directly on the clock-tree root/leaf buffer's input pin, physically disrupting
+placement/legalization at that exact point. Measured on this design: `clk_i -> u_cpu/clk_i` clock
+latency at nom_tt grew from 0.870159 ns (clean) to 1.439363 ns (heuristic on, +0.569 ns) — this
+single mechanism was traced (grep the netlist for `ANTENNA_clkbuf_0_clk_i_A` etc., confirmed via a
+post-CTS-vs-post-repair step comparison that ruled out CTS variation as the cause) to a hold
+regression at 5 of 9 corners that had previously been clean.
+
+**Root cause confirmed NOT threshold-fixable**: raising `HEURISTIC_ANTENNA_THRESHOLD` cannot
+separate the two populations (see distribution above) and cannot avoid the `clk_i`-port-forced
+diode at any threshold value (the io-protect path bypasses the span check unconditionally).
+
+**Fix**: add clock-net awareness via `dbNet.getSigType() == "CLOCK"` — the odb-native,
+CTS-assigned classification that correctly covers both the clock root net (`clk_i`) and every
+downstream CTS-inserted buffer-to-buffer segment (confirmed via direct odb query: 1,327 CLOCK-typed
+nets on this design, vs 1,345 nets found by a fragile `"clk"` substring match — do not use name
+matching, it was explicitly considered and rejected for robustness). Opt-in via a new
+`--skip-clock-nets` CLI flag / `HEURISTIC_ANTENNA_SKIP_CLOCK_NETS` LibreLane Variable, default
+`False`, so CPU/SRAM/GPU stage-1 macro configs that already use
+`RUN_HEURISTIC_DIODE_INSERTION: true` are completely unaffected unless they opt in.
+
+`diodes.py` — `DiodeInserter.__init__` gains `skip_clock_nets: bool = False`; `execute()` gains,
+right after the existing `isSpecial()` check:
+```python
+if self.skip_clock_nets and net.getSigType() == "CLOCK":
+    self.debug(f"[d] Skipping clock-network net {net.getConstName():s}")
+    continue
+```
+The `place` click command gains a `--skip-clock-nets` flag (`is_flag=True, default=False`), threaded
+through to the constructor.
+
+`steps/odb.py` — `FuzzyDiodePlacement.config_vars` gains:
+```python
+Variable(
+    "HEURISTIC_ANTENNA_SKIP_CLOCK_NETS",
+    bool,
+    "... exclude SigType CLOCK nets from heuristic diode insertion and "
+    "disable port-forcing ...",
+    default=False,
+),
+```
+and `get_command()` gains:
+```python
+skip_clock_opts = []
+if self.config["HEURISTIC_ANTENNA_SKIP_CLOCK_NETS"]:
+    skip_clock_opts = ["--skip-clock-nets", "--port-protect", "none"]
+```
+(appended to the returned command list). `--port-protect none` is passed alongside
+`--skip-clock-nets` specifically to also kill the independent port-forcing default described above
+— both are needed to fully stop `clk_i` from being diode-protected by this step.
+
+**Verified working** (smoke test, `openroad -exit -no_splash -python librelane/scripts/odbpy/
+diodes.py place -v --skip-clock-nets --port-protect none -t 90 <odb>`, run against
+`RUN_2026-07-30_06-42-17/37-openroad-repairdesignpostgrt/soc_top.odb`): exactly 1,327 "Skipping
+clock-network net" debug lines (matches the odb CLOCK-sigtype count exactly), zero `clk_i` diode
+insertions, non-clock long nets still correctly protected (e.g. `_00000_` at 428 µm still gets a
+diode). Full-flow result (`HEURISTIC_ANTENNA_SKIP_CLOCK_NETS: true` +
+`RUN_HEURISTIC_DIODE_INSERTION: true`, keeping `GRT_ANTENNA_ITERS=8`/`GRT_ANTENNA_MARGIN=25`/
+`CLOCK_PERIOD=25.0` from the accepted run3 baseline) is bead 58q run4 — see
+`memory/pd/run_state.md` for the outcome once landed.
+
+**How to re-apply after a librelane reinstall**: the exact diff is checked into THIS repo (not
+just the local librelane checkout) at
+`memory/pd/patches/58q_librelane_heuristic_diode_skip_clock_nets.diff` — apply with
+`cd ~/Downloads/Github/librelane && git apply /path/to/that/diff` (or by hand, it's ~127 lines
+across the two files, both edits shown in full above). No other files touched. Any future design
+that wants this behavior sets `HEURISTIC_ANTENNA_SKIP_CLOCK_NETS: true` in its own `config.json`;
+the default is off everywhere
+else.
+
+---
+
+### Odb.HeuristicDiodeInsertion costs ~0.5 ns of clock latency — BINARY, not tunable (bead 58q, 2026-07-31)
+
+**The single most reusable finding of the Sky130 SoC antenna campaign.** If a design is
+hold-sensitive, `RUN_HEURISTIC_DIODE_INSERTION` is an all-or-nothing choice. Do not spend runs
+trying to tune it down — three separate levers were tried and all failed identically.
+
+Six-run evidence, `clk_i -> u_cpu/clk_i` at nom_tt on the same design:
+
+| run | heuristic pass | stdcells | clk latency | hold |
+|-----|---------------|----------|-------------|------|
+| baseline | off | 226,454 | **0.870159** | clean 9/9 |
+| run 3 | off | 226,952 | **0.933178** | clean 9/9 |
+| run 5 | **ON** | 234,371 | **1.381585** | fails 5/9 |
+| run 4 | **ON** | 270,217 | **1.410208** | fails 5/9 |
+| run 2 | **ON** | 272,003 | **1.388234** | fails 5/9 |
+| run 1 | **ON** | 271,858 | **1.439363** | fails 5/9 |
+
+Latency is binary on whether the step runs. Among the ON runs, cell count spans 234k-272k — a
+38k spread — with no material latency effect (1.38-1.44 ns). Off: 0.87-0.93 ns.
+
+**Mechanism**: the step is not just diode insertion. It wraps
+`1-odb-fuzzydiodeplacement` -> `2-openroad-detailedplacement` -> `3-openroad-globalrouting`,
+i.e. it **re-legalizes placement and re-routes globally** after inserting. That perturbation
+lengthens the clock-root route by ~0.45-0.5 ns whether it placed 7,970 diodes or 44,742.
+
+**Levers that do NOT help** (all reduce *what* is inserted; the cost comes from the pass
+*running*):
+- `DIODE_ON_PORTS: none` — no effect on latency
+- clock-net exclusion (`HEURISTIC_ANTENNA_SKIP_CLOCK_NETS`, the patch documented above) —
+  achieves literally zero diodes on any CLOCK-sigtype net, no effect on latency
+- `HEURISTIC_ANTENNA_THRESHOLD: 800` — 5.6x fewer diodes (7,970 vs 44,742), no effect on latency
+
+**Which hold paths break**: only the I/O-boundary class — input ports carry no clock-network
+delay on the data side but the full clock-tree latency on the capture side, so there is no
+cancellation cushion and a clock-latency increase hits them directly. Here that was
+`apb_paddr_i/psel_i/penable_i/pwdata_i -> u_cpu`, 100% of violators, zero reg-to-reg. The SDC
+multicycle on that group is correctly paired (`2 -setup` / `1 -hold`) — this is physical, not a
+constraint bug.
+
+**What it buys**, for the cost/benefit call: heuristic ON gives antenna 40-90 violations vs
+140/120 with it off (baseline 147/127). GRT repair alone (`GRT_ANTENNA_ITERS=8`,
+`GRT_ANTENNA_MARGIN=25`) delivers only 147 -> 140.
+
+**Untried lever, recorded for whoever needs better antenna on a hold-sensitive design**:
+GRT-based `RepairAntennas` does *not* trigger the legalization sub-steps, so pushing
+`GRT_ANTENNA_ITERS`/`GRT_ANTENNA_MARGIN` harder should improve antenna without the hold cost.
+Run 3 already used 8/25 for 140/120, so expect incremental gains.
+
+**Process note worth carrying forward**: four successive root-cause claims on this campaign were
+wrong — cell-count pressure (raised, retracted, wrongly re-adopted), `DIODE_ON_PORTS`,
+clock-tree diodes, and a cell-volume model. Every one was caught by attaching a falsifiable
+prediction to the next run, never by a run coming back green. Attach a guard to any claim here.

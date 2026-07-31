@@ -3281,3 +3281,1337 @@ and single-corner (GH #120 / bead o1i measured NOT feasible on this host --
 period-doubling + per-read-port binary search, so ~80-95 h for 3 corners
 against 2-8 h of uptime). ss-corner setup still fails by -6 to -9 ns and sits
 outside the PDK's *tt* gate by design.
+
+---
+
+## bead 45a — MAGIC_DRC_USE_GDS=true test on Sky130 Stage-1 CPU (launched 2026-07-27)
+
+run_id:      pd_20260727_203206
+design_name: rv32i_cpu_top (Sky130 CPU Stage 1)
+pdk:         sky130A
+tool:        librelane (nix-shell)
+start_time:  2026-07-27T20:32:06+07:00
+last_stage:  floorplan
+
+question: baseline Magic DRC = 27,733,913 (bit-identical across
+RUN_2026-07-21_18-02-11 and RUN_2026-07-27_05-52-19), dominated by li.3
+(local interconnect spacing) inside the SRAM macro footprint. Hypothesis
+(documented in knowledge.md, Sky130A Magic DRC section): with
+MAGIC_DRC_USE_GDS=false, Magic resolves the SRAM instance by loading the full
+.mag layout via addpath rather than the LEF abstract, producing spurious
+li.3 hits. This run flips MAGIC_DRC_USE_GDS false->true (commit 8a3691f,
+single key) to test whether Magic reading the real merged GDS collapses the
+count. Prior GDS-mode investigation (2026-06-30) found gds write embeds full
+SRAM geometry via GDS_FILE property regardless of MACROS blackbox, so this
+number could go either way -- both outcomes are reportable results per user
+instruction (no knob-tuning to chase a preferred answer).
+
+pre-launch verification (all confirmed unchanged, config diff is the single
+MAGIC_DRC_USE_GDS key per commit 8a3691f):
+  - RUN_POST_GRT_DESIGN_REPAIR: true
+  - RUN_MAGIC_DRC: true, RUN_KLAYOUT_DRC: true
+  - EXTRA_LIBS: dir::pdk_lib_patched/... (patched copy, NOT pdk_dir::) -- this
+    is what prevents the RSZ-0090 abort at RepairDesignPostGRT
+  - git status clean at 8a3691f, branch feat/sky130-0ro-soc-confirm
+
+host state at launch: 12 GiB RAM free / 15 GiB total, 618G free on
+/nobackup (30% used, 916G total). No other PD run active (sky130_soc_0ro
+and sky130_soc_y7v_relaunch tmux sessions both idle/completed --
+sky130_soc_0ro pane shows a finished run: 9081 Magic DRC / 4 KLayout DRC,
+matching the already-recorded 0ro SoC result).
+
+launch:
+  tmux session: sky130_cpu_magic_gds_45a
+  command:      cd /home/neuromorphic/Downloads/Github/claude_verilog_test/pnr && make librelane-sky130-cpu 2>&1 | tee /nobackup/sky130_cpu_magic_gds_45a_20260727_203206.log
+  run dir:      will appear under /nobackup/sky130_cpu_runs/RUN_<timestamp>/ (timestamp assigned by LibreLane at flow start, not yet known at launch time)
+  log path:     /nobackup/sky130_cpu_magic_gds_45a_20260727_203206.log
+  reference runtime: ~2h17m for the baseline (MAGIC_DRC_USE_GDS=false) flow;
+    MAGIC_DRC_USE_GDS=true is expected to be substantially heavier at the
+    magic-drc step because Magic must now load the ~205 MB merged GDS
+    including full SRAM macro internal geometry instead of an abstract --
+    watch that step specifically for runtime blowup or OOM (no privileged
+    OOM logging available on this host; judge by process disappearing +
+    free/step timing).
+  host reboot caveat: this host reboots every ~2-8h and tmux does not
+    survive reboots -- on a reboot kill, relaunch fresh (do not resume with
+    -F on this project per prior user instruction preferring fresh runs).
+
+not yet awaited -- report back when it lands. Check per bead 45a instructions:
+  1. `Magic DRC errors: N` in *-misc-reportmanufacturability/*.rpt (glob, not
+     step index) -- baseline is exactly 27,733,913.
+  2. If changed, new rule-type breakdown from *-magic-drc/reports/drc_violations.magic.rpt
+     (bound the scan, file was 27.7M lines before).
+  3. No-regression check vs RUN_2026-07-27_05-52-19: nom_tt setup +0.17416,
+     hold -0.13577, KLayout DRC 0, LVS "Circuits match uniquely", antenna
+     93 pin / 90 net. Timing should be UNCHANGED (MAGIC_DRC_USE_GDS only
+     affects the DRC step) -- any movement is run-to-run noise, not a result.
+
+
+---
+
+## RUN_2026-07-27_20-33-10 — bead 45a: MAGIC_DRC_USE_GDS=true — HYPOTHESIS REFUTED
+
+question:  are the 27.7M Stage-1 Magic DRC li.3 violations real, or a
+           LEF-abstract artifact from MAGIC_DRC_USE_GDS=false rendering the
+           sky130_sram_1kbyte_1rw1r_32x256_8 macro as a black box?
+
+answer:    NOT an artifact. The count is essentially unchanged with real GDS.
+
+    Magic DRC COUNT   27,730,498   (MAGIC_DRC_USE_GDS = true,  this run)
+                      27,733,913   (MAGIC_DRC_USE_GDS = false, baseline)
+    difference 3,415 -- about 0.01 %.
+
+    Same rule families in both reports: licon.1, licon.5a, licon.8a,
+    poly.2/4/7/8, psd.10b (and li.3 dominating the coordinate entries).
+
+SCALE CORRECTION, from the magic-drc log:
+    [INFO] COUNT: 27730498
+    [INFO] Should be divided by 3 or 4
+Magic counts each violation 3-4x, so DISTINCT violations are ~6.9M-9.2M.
+Still enormous, but quote the corrected figure, not the raw COUNT.
+
+SECONDARY FINDING -- why the config was reverted to false:
+MAGIC_DRC_USE_GDS=true is NOT USABLE on this design. Reading the real GDS,
+Magic hits fatal "Unknown layer/datatype in boundary" errors on the PDK SRAM
+macro's internal cells (sky130_fd_bd_sram__openram_dp_cell*, layer 235 type 0,
+layer 33 type 42/43, layer 22 type 21/22) and LibreLane aborts the entire flow:
+    ERROR  Encountered one or more fatal errors while running Magic.
+    make: *** [Makefile:585: librelane-sky130-cpu] Error 2
+The DRC itself COMPLETED and wrote its report before the abort, which is the
+only reason the number above exists. Config reverted to false so future CPU
+runs are not broken by this.
+
+NOT an OOM: RAM went 11G -> 13G at process death (freed, no pressure), and the
+magic-drc step ran 42 min (21:37 -> 22:19). The earlier OOM concern about
+loading a ~205 MB GDS did not materialise.
+
+leads for whoever picks this up:
+ (a) sample actual li.3 coordinates -- do they cluster inside the SRAM macro
+     footprint, or spread across the standard-cell array? That separates a
+     macro-local problem from a global one.
+ (b) the "Unknown layer/datatype" errors suggest the sky130A Magic tech file
+     may not match what the PDK SRAM GDS expects. A tech-file/GDS version
+     mismatch could plausibly generate spurious li.3 as well -- worth checking
+     before treating 7-9M violations as genuine geometry errors.
+ (c) STRONGEST CLUE: the Sky130 SoC reports only 9081 Magic DRC errors on a
+     LARGER die (6700x3100 vs 3600x1800). Same PDK, same Magic, vastly
+     different result. Explaining that asymmetry probably explains everything.
+
+================================================================================
+2026-07-28 -- BEAD 45a RESOLVED: PDK SRAM MACRO ARTIFACT, WAIVABLE
+================================================================================
+
+All three leads (a)/(b)/(c) above were run down. Verdict: the ~27.7M Magic DRC
+violations are entirely internal to the PDK SRAM macro geometry. Not our
+placement, not our routing, not our standard cells. Waived.
+
+(a) COORDINATE CLUSTERING -- exhaustive, not sampled
+Full streaming pass over the 1.1 GB report from RUN_2026-07-27_20-33-10
+(63-magic-drc/reports/drc_violations.magic.rpt), every coordinate classified
+against the 10 sky130_sram_1kbyte_1rw1r_32x256_8 rectangles in
+macro_placement.cfg (origins x=100.00/679.78/1359.56/2039.34/2719.12,
+y=20/520, extent 479.78 x 397.5):
+
+    inside an SRAM footprint      27,730,498   100.0000 %
+    routing channel (y 417.5-520)          0          0 %
+    standard-cell logic (y>917.5)          0          0 %
+
+Independently reproduced twice (PD agent + main session, separate awk passes,
+identical counts). Coordinate extents: x 0..3189.11, y 0..907.87. The logic
+zone starts at y=917.5 -- NOTHING is reported above 907.87. The rightmost
+SRAM's right edge is 2719.12+479.78 = 3198.90, and max x is 3189.11.
+
+All 26 rule families are 100 % SRAM-internal -- none leak outside. Largest:
+diff/tap.9 3,017,505; licon.1 2,572,862; li.1 2,278,399; licon.5a 2,262,998;
+licon.8 1,850,092; poly.8 1,833,708; diff/tap.1 1,820,192; licon.14 1,697,877;
+via.1a+2*via.4a 1,597,260; poly.4 1,339,088; li.3 922,628; met1.4 841,738.
+Note li.3 is NOT actually the dominant family once counted properly.
+
+Per-instance: 9 macros at ~2.831M each; col5_row1 (x0=2719.12) at 2,245,976,
+a ~21 % low outlier -- edge-of-row effect on Magic's 3-4x multi-count, not a
+different cause. Sums exactly to 27,730,498.
+
+(b) TECHFILE vs MACRO GDS -- real gap, but NOT the driver
+sky130A.tech maps GDS layer 235 only at datatype 4 (-> CELLBOUND); the SRAM
+bitcells draw their boundary at 235/0. Layers 33 and 22/21,22 are unmapped
+entirely. That is the exact cause of the fatal "Unknown layer/datatype" abort
+(18 errors, 4 distinct cell definitions: openram_dp_cell, _dummy, _replica,
+_cap_row).
+
+It matters mechanistically -- sky130A.tech has a deliberate two-tier li1 rule,
+strict li.3 (0.17um) for generic `locali` vs relaxed li.c2 (0.14um) for
+`coreli` ("Local interconnect in core (SRAM) cells has more relaxed rules"),
+and `coreli` classification derives from COREID, bloated off the same CELLBOUND
+geometry Magic cannot read at 235/0.
+
+But it is NOT sufficient as an explanation: MAGIC_DRC_USE_GDS=false never
+invokes the GDS calma path for the SRAM at all (resolves via .mag/LEF addpath)
+and still yields 27,733,913 -- 0.01 % apart. And the SRAM-aware relaxed rules
+Magic DOES apply correctly still fire in the hundreds of thousands (li.c2
+661,744; poly.8 "SRAM core transistor" 1,833,708; diff/tap.2 "P-Transistor in
+SRAM core" 331,004). Root cause is broader: Magic's flat drc(full) engine is
+not equipped to validate this dense custom OpenRAM macro's internals, whatever
+the read path.
+
+(c) THE SoC/CPU ASYMMETRY -- fully reconciled
+SoC RUN_2026-07-27_17-15-57/55-magic-drc: 9,081 = 9,049 nwell.4 + 32 met4.4a.
+A COMPLETELY DISJOINT rule set -- zero li.3/licon/poly/diff. Not a diluted
+version of the CPU flood.
+
+Reason: pnr/sky130/soc/config.json declares the CPU as a hard MACROS entry and
+SoC runs MAGIC_DRC_USE_GDS=false, so read_macro_lef loads the CPU LEF ABSTRACT
+before def read and Magic never touches CPU-internal (hence SRAM-internal)
+geometry. The SRAM-flood failure mode is structurally impossible at SoC level.
+The residual 9,049 nwell.4 is the same DEF+LEF-abstract-view artifact class
+already documented in knowledge.md (N-well tap connectivity unverifiable from
+an abstract), previously seen at 3,626 on a smaller CPU-only test -- same
+phenomenon, larger die. met4.4a x32 is a small uniform ~12.3um-pitch minimum-
+area artifact, likely a PDN-strap/via quirk; immaterial, not chased.
+
+WHY KLAYOUT REPORTS 0 ON THE IDENTICAL GDS
+sky130A_mr.drc (foundry deck) has explicit hierarchy-aware SRAM exclusion:
+SRAM_EXCLUDE=true ->
+    not_sram = layout(source.cell_obj).select("-*sky130_sram_*kbyte_*")
+subtracting all shapes in cells matching the SRAM macro name from the
+nsdm/psdm/nwell rule groups. The log states it outright:
+    nwell.6 | sky130_fd_io__gpiov2_amux, sky130_fd_io__simple_pad_and_busses, sram
+    nsd.1/nsd.2/psd.1/psd.2 | sram
+i.e. the foundry deck groups this SRAM with the I/O pad cells and treats it as
+a pre-verified hard macro by convention. KLayout also implements the two-tier
+li1 split via an areaid:ce scope (li_outside_or_touching_areaidce -> strict
+li.1/li.3 0.17um; li_core -> relaxed li.7/li.8 0.14um) -- same intent as
+Magic's COREID/coreli, but it actually works here.
+
+SIGN-OFF POSITION
+Stage-1 Sky130 CPU sign-off rests on KLayout DRC = 0 + Netgen LVS = "Circuits
+match uniquely" + DRT 0, with Magic's 27.7M waived as a stock-tool limitation
+(flat Magic DRC vs OpenRAM macro hierarchy). This is consistent with, and now
+quantitatively reinforces, the existing knowledge.md position that
+KLayout+Netgen are authoritative for Sky130. Stages 2-4 inherit the waiver
+cleanly, and at SoC level the failure mode cannot even occur (CPU is an
+abstracted macro).
+
+LEAVE MAGIC_DRC_USE_GDS = false in pnr/sky130/cpu/config.json. true aborts the
+whole flow on the techfile gap and buys nothing -- it produces the same count.
+The techfile layer/datatype gap is filed separately as its own low-priority
+bead; it only matters if MAGIC_DRC_USE_GDS=true is ever wanted again.
+
+================================================================================
+2026-07-29 -- bead 58q: SoC antenna diagnosis + clock relax + antenna retune
+(SCOPE-EXPANDED mid-task by coordinator: also drop clock so ss closes honestly)
+================================================================================
+
+baseline: RUN_2026-07-27_17-15-57 (65 MHz, TIMING_VIOLATION_CORNERS=['*tt*']).
+Gate table: LVS PASS, power grid 0, KLayout DRC 4 (waived, bead 0jp), Magic DRC
+9081 (waived, bead 45a), antenna FAILED 147 pin / 127 net, tt setup/hold clean,
+ss setup WNS -8.902 ns (out of gate).
+
+--- TASK 1: antenna diagnosis (does the 147/127 split by macro-pin cause?) ---
+
+FIRST FINDING: the coordinator's brief cited
+39-openroad-repairantennas/2-openroad-checkantennas/reports/antenna_summary.rpt
+as the violator list. That report is an IN-FLIGHT check (post-diode-insertion,
+PRE-DRT: 89 rows / 56 nets). It is NOT the final gate. The step that matches
+manufacturability.rpt's 147 pin / 127 net exactly is
+44-openroad-checkantennas-1/reports/antenna_summary.rpt (149 rows, 147 unique
+net+pin pairs, 127 unique nets -- post-DRT, the real signoff-relevant check).
+DRT measurably reshuffles the violator set between these two checks (this
+project's own history already documents "DRT reintroduces antenna exposure").
+Net names cited in the brief (net578, net608, m_araddr[4], m_rresp[1],
+m_rvalid[0] as a violator) do NOT appear in the final 44- report at all --
+they were transient, repaired-out by the time DRT ran. All analysis below
+uses the 44- (final, authoritative) report only.
+
+METHOD: wrote a driver-classifier (python, one-pass regex over the flattened
+post-route netlist 42-openroad-detailedrouting/soc_top.nl.v, 364,783 lines,
+17.4 MB) that resolves each of the 127 violating net names to its physical
+driver pin, using: (a) sky130_fd_sc_hd's own output-pin name set {COUT,
+COUT_N, GCLK, HI, LO, Q, Q_N, SUM, X, Y, Z} pulled from the vendor LEF
+(437 macros), (b) rv32i_cpu_top.lef's 403 pins re-parsed independently
+(matches the brief's 95-missing-output-pin claim once VPWR/VGND are excluded:
+97 raw missing - 2 power pins = 95), (c) the SRAM macro LEF's pin set. Bus
+concatenations (`.pin({netA, netB, ...})`, MSB-first per observed pattern)
+were resolved to per-bit LEF pin names by list position. 126/127 nets
+resolved to a definitive driver; the 127th (clk_i) is a top-level input port
+with no internal driver by construction.
+
+RESULT -- the split, in violation-instance units (149 total incl. 2 nets
+double-counted across layers; 147 unique pins, matching manufacturability.rpt):
+
+    CPU macro pin, ANTENNADIFFAREA PRESENT     19   (12.8%)
+    CPU macro pin, ANTENNADIFFAREA MISSING      4   ( 2.7%)  [axi_awlen_o[5],[7]]
+    SRAM macro pin, ANTENNADIFFAREA MISSING     2   ( 1.3%)  [dout1[9],[31]]
+    top-level input port (clk_i, no diode)      1   ( 0.7%)
+    plain standard-cell logic/flop (X/Y/Q)    123   (82.6%)
+    ------------------------------------------------------
+    TOTAL                                     149
+
+CONCLUSION: the brief's premise ("violators are overwhelmingly CPU<->bus AXI
+nets", implying the LEF gap explains a meaningful share) does NOT hold against
+the final report. 82.6% of violations are on nets driven entirely by ordinary
+placed-and-routed standard cells inside the flattened SoC fabric (crossbar
+arbiter registers, DMA engine registers/datapath, APB peripheral bus,
+sram_controller glue) with NO macro pin anywhere in their drive path -- e.g.
+net30/net155/.../net823 (33 instances), u_dma.regs_o/dst_addr_reg/length_reg
+(9), u_bus.u_xbar.ar_addr_q/wsel (3), apb_pwdata/pstrb (4), u_bus.m_rdata/
+m_rvalid (5, driven by the crossbar's OWN read-mux, not the CPU -- these are
+CPU *input* signals, direction was previously mis-assumed). This is
+classic large-die (6700x3100 um) long-route antenna exposure, independent of
+any macro LEF defect. Only 6/149 (4.0%) trace to a macro pin lacking
+ANTENNADIFFAREA (4 CPU + 2 SRAM); 19/149 (12.8%) trace to a CPU macro pin that
+already HAS correct ANTENNADIFFAREA and still violates (proves diffusion
+credit at the pin cannot bound arbitrarily long SoC-level fanout by itself).
+net578/net608 (named in the brief) are not macro-adjacent -- moot, they are
+not in the final violator set at all.
+
+CONFIG-GAP FINDING (explains a real, fixable, distinct problem): SoC
+config.json was MISSING RUN_HEURISTIC_DIODE_INSERTION, GRT_ANTENNA_ITERS,
+GRT_ANTENNA_MARGIN, DIODE_ON_PORTS entirely (confirmed via `grep -rn` across
+pnr/) -- every other block in this project (CPU, SRAM, GPU, ASAP7 variants)
+sets these explicitly. LibreLane defaults (read from
+librelane/steps/common_variables.py + flows/classic.py +
+librelane/steps/odb.py, this session's librelane checkout):
+GRT_ANTENNA_ITERS=3 (CPU uses 5), GRT_ANTENNA_MARGIN=10% (CPU uses 20%),
+RUN_HEURISTIC_DIODE_INSERTION default=False (CPU=true), DIODE_ON_PORTS
+default="none" (CPU="in"). RUN_ANTENNA_REPAIR defaults True so the GRT-level
+repair pass WAS running (explains the observed 2018-diode insertion and the
+556/440 -> 147/127 in-run reduction already achieved) but with weaker
+iteration/margin than any other block in the project, no heuristic
+pre-placement diode pass, and NO port-diode protection -- directly explaining
+clk_i's presence in the violator list (DIODE_ON_PORTS="none" means the one
+top-level input port on this design's SDC-timed clock got zero antenna
+protection at the port itself).
+
+--- TASK 2: 95-pin CPU LEF gap -- ROOT CAUSE FOUND, REGENERATION REFUTED ---
+
+Traced all 95 missing-ANTENNADIFFAREA CPU output pins through the CPU-ONLY
+signed-off netlist (RUN_2026-07-27_05-52-19/46-openroad-detailedrouting/
+rv32i_cpu_top.nl.v, the CPU's OWN top-level module, not the SoC flatten).
+Method: for each of the 95 port names, found its `assign PORT = netN;`
+statement (all 95 are single-hop wire aliases, zero intervening logic), then
+found netN's driver instance.
+
+RESULT (100% of 95, exhaustively, not sampled): every single one is driven by
+a `sky130_fd_sc_hd__conb_1` constant-tie cell (.LO() for the ties-to-0 pins,
+.HI() for apb_pready_o which ties to 1). Breakdown: debug_rs1_data_o[31:0] +
+debug_rs2_data_o[31:0] (64, half the total), debug_state_o[3:0] (4),
+debug_branch_taken_o (1), apb_pready_o (1), axi_rready_o (1), and 24 AXI4
+burst-control constant fields (awaddr/araddr[1:0], awlen/arlen[7:2], awsize,
+arsize, awburst, arburst) consistent with this CPU's AXI master only ever
+issuing single-beat 4-byte-aligned transactions.
+
+WHY: checked the vendor's OWN sky130_fd_sc_hd.lef (volare
+bdc9412b.../sky130A/.../sky130_fd_sc_hd.lef, 450 ANTENNADIFFAREA occurrences
+total in the file, confirming the library DOES normally publish this
+property, e.g. buf_1/X = 0.3406). sky130_fd_sc_hd__conb_1's LO and HI pins
+have ZERO ANTENNADIFFAREA in the VENDOR'S OWN base LEF -- not just in our
+Magic-regenerated macro abstract. This is upstream SkyWater library
+convention (a tie-cell output is a permanent rail tap through an always-on
+device, not a floating net that can accumulate plasma-etch charge the way a
+normal logic gate's output can), not a LibreLane, Magic, or project defect.
+Magic's `lef write` (step 61-magic-writelef in the CPU run -- confirmed
+byte-identical md5 to the staged pnr/sky130/cpu/macro/rv32i_cpu_top.lef, so
+Magic, not OpenROAD's write_abstract_lef, is the actual LEF author here)
+correctly propagates the vendor's own omission up to the macro boundary pin.
+
+REGENERATION VERDICT: REFUTED as a fix path, same evidentiary class as the
+45a MAGIC_DRC_USE_GDS result. Because every one of the 95 pins deterministically
+traces to conb_1 (not e.g. an unlucky routing/extraction failure), re-running
+Magic's lef write against the same layout would reproduce the identical 95-pin
+gap -- there is nothing stochastic to regenerate away.
+
+HAND-PATCH VERDICT: NOT applied, and NOT recommended. Reasons: (1) the
+vendor's own conb_1 LEF entry has no ANTENNADIFFAREA value to copy -- any
+number written would be fabricated, not measured, which this project's
+evidentiary standard (bead 45a: "numbers, not narrative") rules out; (2) even
+if a plausible small tie-cell diffusion value existed, only 2 of these 95
+pins (axi_awlen_o[5],[7]) are actually on the violator list, and their
+partial/required ratios (4544/400 = 11.4x, worst in the whole report) are far
+too large for a tie-cell's typically-sub-1-um^2 diffusion to close -- the fix
+has to come from repair (diode insertion / margin), not LEF credit; (3) a
+fabricated ANTENNADIFFAREA value written into a signed-off macro LEF risks
+UNDER-protecting some other, unrelated pin if the checker trusts a wrong
+number -- writing nothing is safer than writing a guess. CLASSIFIED AS A
+DOCUMENTED, WAIVED PDK/vendor-convention artifact, not an open defect.
+
+SRAM MACRO SIDE-FINDING (bigger, same family, also NOT fixed here): the SRAM
+LEF (both pnr/sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8.lef AND the
+CPU-internal sky130_sram_1kbyte_1rw1r_32x256_8.lef, the latter SHIPPED BY THE
+PDK in volare sky130B, not project-generated) has ZERO ANTENNADIFFAREA or
+ANTENNAGATEAREA on ANY pin, output or input, of either macro -- not a 2-pin
+gap, a total absence, and upstream of us (OpenRAM-generated / PDK-vendor
+LEF, not Magic-written). Regenerating this would require running Magic
+extraction over the SRAM's own dense custom layout, which bead 45a already
+established Magic's flat engine cannot validate meaningfully for this exact
+macro family (the 27.7M-violation DRC flood). Not attempted -- out of scope,
+documented as a waived third-party/vendor-abstraction limitation, same
+evidentiary class as the DRC waiver. Only 2/149 (1.3%) violations trace to
+it in the current design.
+
+--- TASK 3 fix + coordinator scope-change: clock relax + antenna retune ---
+
+Applied to pnr/sky130/soc/config.json (commit pending):
+  CLOCK_PERIOD: 15.385 -> 25.0                  (65 -> 40 MHz)
+  TIMING_VIOLATION_CORNERS: ['*tt*'] -> ['*']   (all 9 corners now gated)
+  RUN_ANTENNA_REPAIR: true                      (was implicit default; now explicit)
+  RUN_HEURISTIC_DIODE_INSERTION: true           (was absent -> LibreLane default False)
+  GRT_ANTENNA_ITERS: 8                          (was absent -> default 3; CPU uses 5,
+                                                  went higher given the die is ~3.2x CPU's area)
+  GRT_ANTENNA_MARGIN: 25                        (was absent -> default 10%; CPU uses 20%)
+  DIODE_ON_PORTS: "in"                          (was absent -> default "none"; directly
+                                                  protects clk_i, the one top-port violator)
+
+pnr/sky130/soc/constraints/sky130_soc.sdc: `set clock_period 15.385` ->
+`set clock_period 25.0`. All set_input_delay/set_output_delay lines already
+compute off $clock_period (0.20/0.05 fractions) so they scale automatically --
+verified no other hardcoded ns values reference the old period. Header
+comment block added documenting the coordinator-directed reversal of the
+prior "do not touch ss" instruction, the 25.0 ns period choice (arithmetic
+min 24.287 ns assuming invariant path delay, +0.7 ns headroom for expected
+resizer response to the looser budget -- this project's own bead-1ls history
+shows the same critical path moved hundreds of ps purely from resizer
+response to a period change), and the SRAM-single-corner caveat (bead o1i /
+GH #120 still open -- ss/ff numbers touching SRAM read/write timing carry
+unquantified model error; only the CPU macro and flat std-cell fabric are
+genuinely 9-corner-accurate this run).
+
+NOT changed: floorplan, die size, macro placement (die-size lever from the
+brief's task-3 options list was considered and rejected -- would invalidate
+multiple prior runs' worth of timing-closure work for a fix that config-level
+antenna retuning + the new clock headroom should reach first; only revisit if
+this run's antenna residual is still large). No RTL. MAGIC_DRC_USE_GDS
+unchanged (false). Did not touch bead 1ls's CPU-internal SDC (separate file,
+separate macro-level budget, unaffected by the SoC-level period).
+
+LAUNCH:
+  run_id:      pd_20260729_183955 (launch-log timestamp; NOT tool-generated)
+  run_dir:     pnr/sky130/soc/runs/RUN_2026-07-29_18-40-38
+               ^ AUTHORITATIVE artifact identifier -- correlate STA/DRC/
+                 antenna results to this directory, not to the run_id above.
+  launch_log:  /nobackup/sky130_soc_58q_antenna_clockfix_20260729_183955.log
+  design_name: soc_top (Sky130 SoC Stage 2)
+  pdk:         sky130A
+  tool:        librelane (nix-shell), make librelane-sky130-soc
+  host state at launch: 12 GiB free / 15 GiB total RAM, 611G free on
+    /nobackup, no other PD process running (checked via ps aux + tmux ls --
+    prior sky130_soc_0ro / sky130_cpu_magic_gds_45a / sky130_soc_y7v_relaunch
+    tmux sessions all idle, no live librelane/openroad/magic/klayout procs).
+  expected runtime: 4-10 h per the Makefile's own estimate for this design;
+    the looser 40 MHz clock may reduce resizer/repair iteration time somewhat
+    but this is not counted on.
+  NOT YET AWAITED as of this entry -- report back once landed. Per
+  feedback_librelane_wait_intervals: wait >=1 h before first poll, +1 h each
+  subsequent poll until termination. Check, in order: (1) manufacturability.rpt
+  gate table (LVS/DRC/antenna/PDN), (2) STAPostPNR summary.rpt for all 9
+  corners (setup+hold WNS/TNS, reg-to-reg violator counts), (3) antenna
+  final report step (grep run dir for "checkantennas-1" or the highest-
+  numbered checkantennas step) cross-checked against manufacturability.rpt
+  the same way this session did (do not trust an in-flight repair-step report
+  as the final number -- this session's own mistake, corrected above).
+
+================================================================================
+2026-07-29 (same day, continued) -- RUN_2026-07-29_18-40-38 mid-flight review:
+coordinator caught antenna 147/127 -> 52/46 (real improvement, not zero), ss
+setup still open (extrapolation ~34 ns / 29 MHz needed, my 24.287 ns linear
+estimate was wrong -- confirmed path delay is NOT period-invariant, ~0.48 ns
+recovered per 1 ns relaxed), AND a HOLD REGRESSION at 4/9 corners
+(max_ss -0.663, max_tt -0.459, nom_ss -0.283, nom_tt -0.210 -- nom_tt was
+clean before). User decision: fix hold first, ss re-decided after. DO NOT
+launch another multi-hour run until this diagnosis is reported and the
+coordinator sanity-checks direction.
+================================================================================
+
+*** SUPERSEDED 2026-07-31 -- READ THIS FIRST ***
+The "DIODE_ON_PORTS hypothesis CONFIRMED" verdict below is WRONG and was
+overturned by later ablation runs. Removing DIODE_ON_PORTS (run 2) recovered
+only 0.051 ns of the 0.569 ns clock-latency regression. The true cause is that
+Odb.HeuristicDiodeInsertion costs ~0.5 ns of clock-root latency whenever the
+step RUNS AT ALL -- it re-legalizes placement and re-routes globally after
+inserting -- independent of diode count, diode location, or clock-net
+exclusion. Proven across 6 runs; see the campaign summary in
+memory/pd/knowledge.md ("Odb.HeuristicDiodeInsertion costs ~0.5 ns of clock
+latency -- BINARY, not tunable").
+What IS still valid below: items 1 and 2 (the reg-to-reg vs I/O-boundary
+split, and the fact that 100% of hold violators are the APB debug-bus group).
+Those measurements held up across every subsequent run.
+NOTE on the corner count: "all 5 failing corners" in item 2 is CORRECT
+(nom_tt, nom_ss, max_tt, max_ss, max_ff). Any place in this file or in the
+bead notes that says 4 failing corners is an error -- max_ff (-0.1267 ns) was
+omitted from that earlier tally.
+================================================================================
+
+HOLD REGRESSION ROOT CAUSE -- FOUND AND QUANTIFIED, coordinator's
+DIODE_ON_PORTS hypothesis CONFIRMED (not just "not ruled out"):
+
+1. summary.rpt "of which reg to reg" column is 0 at EVERY corner, both runs
+   -- reg-to-reg hold is UNCHANGED (nom_tt: 0.2932 old -> 0.2927 new,
+   noise-level). 100% of the regression is on non-reg-to-reg (I/O-boundary)
+   paths.
+
+2. Parsed every VIOLATED path (min.rpt, all 5 failing corners, python regex
+   over report_checks output, not eyeballed): EVERY SINGLE hold violator at
+   EVERY failing corner is {apb_paddr_i[*], apb_psel_i, apb_penable_i,
+   apb_pwdata_i[*]} -> u_cpu. Zero exceptions, zero other startpoints. This
+   is exactly (and only) the APB debug-bus multicycle group
+   (`set_multicycle_path 2 -setup / 1 -hold -from {apb_paddr_i apb_psel_i
+   apb_penable_i apb_pwrite_i apb_pwdata_i}` in sky130_soc.sdc). All AXI
+   data paths route through the crossbar's own registers (reg-to-reg,
+   insulated) -- APB is the ONLY direct input-port-to-macro-register class
+   in this design, which is why it and only it is exposed.
+
+3. WHY this class specifically: input ports have NO clock-network term on
+   the data/arrival side (fixed set_input_delay model only) but the FULL
+   clock-tree latency on the capture side (through to u_cpu/clk_i). Reg-to-
+   reg paths have clock latency on BOTH sides and it largely cancels. So
+   this class has zero cancellation cushion against any clock-latency growth
+   -- a direct, unbuffered exposure.
+
+4. MEASURED the clock-latency term directly (grepped u_cpu/clk_i out of both
+   runs' nom_tt max.rpt setup reports, same physical clock path, corner-
+   identical latency number regardless of setup/hold):
+       OLD (RUN_2026-07-27_17-15-57): clk_i -> u_cpu/clk_i = 0.870159 ns
+       NEW (RUN_2026-07-29_18-40-38): clk_i -> u_cpu/clk_i = 1.439363 ns
+       DELTA: +0.569204 ns
+   Segment-by-segment, the growth is almost entirely in the FIRST hop (clk_i
+   port -> clkbuf_0_clk_i/A, the set_driving_cell-modelled boundary segment):
+       OLD: fanout 5, cap 0.429969 pF, delay 0.319984 ns
+       NEW: fanout 4, cap 0.505111 pF, delay 0.787429 ns   (+0.467445 ns)
+   FEWER fanout (5->4) but MORE cap and 2.5x the delay -- not explained by
+   "more load", which rules out the generic "+20% stdcell count" story as
+   the direct mechanism for THIS specific segment. Cross-checked against the
+   new run's own netlist: clk_i now has TWO antenna diodes wired directly
+   onto it (`ANTENNA_clkbuf_0_clk_i_A` and `ANTENNA_clkbuf_regs_0_core_clk_A`,
+   both `.DIODE(clk_i)`) -- these did not exist in the old run
+   (DIODE_ON_PORTS was unset/"none" there). DIODE_ON_PORTS="in" is the only
+   one of the 4 new antenna keys that touches top-level ports at all; the
+   other three (RUN_HEURISTIC_DIODE_INSERTION, GRT_ANTENNA_ITERS,
+   GRT_ANTENNA_MARGIN) act on internal nets. A cell placed directly on the
+   clk_i net's first segment, competing for the same legalization slot as
+   the clock root buffers, is a direct, mechanistic explanation for that
+   segment specifically getting longer/more-resistive even with one fewer
+   logical fanout -- consistent with (not just analogous to) this project's
+   own prior documented pattern for antenna-insertion-driven placement
+   cascades (bead y7v SDC header: "Better hold slack -> ... different
+   placement -> different GRT -> antenna violations ... this net picked up
+   a second, distant sink and a long route").
+   Arithmetic check: required-side grew ~+0.569 ns; arrival-side gained only
+   ~+0.481 ns from the bigger set_input_delay -min (`0.05 * 25.0 - 0.05 *
+   15.385 = 0.481 ns`, unavoidable and structural, NOT the antenna keys'
+   fault) -- net ~-0.09 ns explained by period alone, the remainder of the
+   observed ~-0.50 ns nom_tt delta plus the internal path-side hold-buffer
+   (hold53, sky130_fd_sc_hd__dlygate4sd3_1, 0.5376 ns through ONE cell --
+   plausible for this cell class) is consistent with the clock-latency
+   shift once corner-to-corner variance in clock buffer delay is folded in.
+   Not a perfect single-variable equation (period change and diode placement
+   happened in the same run, cannot be split further without an isolation
+   run), but the DIRECTION, MAGNITUDE, and MECHANISM all point at
+   DIODE_ON_PORTS as the dominant, identifiable cause, not the period change
+   or the other 3 antenna keys.
+
+5. ANTENNA BENEFIT OF DIODE_ON_PORTS SPECIFICALLY, quantified: clk_i was the
+   ONLY top-level-port violator in the original 147/127 list (this session's
+   own task-1 classification: 1/149 instances). It is NOT in the new run's
+   52/46 final list (checkantennas-1, confirmed via direct grep). No other
+   SoC top-level input port (apb_*, spi_*, uart_rx_i) was ever a violator in
+   either list. So DIODE_ON_PORTS="in" demonstrably fixed AT MOST 1 of the
+   95 violations closed by this run (147->52 = 95 closed; the other 3 keys
+   -- more repair iterations, more margin, pre-placement heuristic diode
+   pass -- account for the internal-net majority, matching this session's
+   task-1 finding that 82.6% of the ORIGINAL violators were plain stdcell-
+   driven internal nets, not ports).
+
+RECOMMENDATION (quantified trade, not yet applied -- awaiting coordinator
+sanity check per explicit instruction before burning another multi-hour run):
+  DROP DIODE_ON_PORTS (remove the key / revert to LibreLane default "none").
+  Cost: likely reintroduces clk_i as a single antenna violator (1 pin, the
+    same class already well-understood and easily documented/waived the
+    same way the CPU's 95-pin tie-cell gap was handled in task 2 -- a lone
+    top-level clock port antenna exposure on a large SoC is a small,
+    explainable residual, not a new open question).
+  Benefit: removes the two diodes sitting directly on clk_i's first clock-
+    tree segment, which is the most direct, evidence-backed lever available
+    to recover the measured +0.569 ns clock-latency / hold regression
+    without touching RUN_HEURISTIC_DIODE_INSERTION, GRT_ANTENNA_ITERS=8, or
+    GRT_ANTENNA_MARGIN=25 (the three keys responsible for the other 94
+    closed violations).
+  Keep everything else as-is (CLOCK_PERIOD 25.0, TIMING_VIOLATION_CORNERS
+  ['*'], the other 3 antenna keys) per the coordinator's explicit "leave
+  clock at 25.0 for now" instruction -- this is a hold-only fix attempt,
+  not a re-opening of the frequency question.
+  NOT proposed: touching GRT_RESIZER_HOLD_SLACK_MARGIN or other hold-repair
+  budget knobs pre-emptively -- want to see if removing the identified cause
+  is sufficient before adding more variables to the next multi-hour cycle.
+
+STATUS: reported to coordinator, NOT YET APPLIED, NOT YET RE-LAUNCHED --
+holding for explicit go-ahead per "report... before making changes... before
+another multi-hour cycle burns."
+
+--- APPROVED (coordinator, same session) -- corrections + clk_i alternative-fix check ---
+
+Coordinator independently re-verified the diode/clock-latency numbers (exact
+match) and APPROVED: drop DIODE_ON_PORTS, keep the other 3 keys + 25.0 ns
+period. Two corrections to carry into the permanent record:
+
+1. Coordinator's OWN "+47k cells" framing was WRONG, not mine: DIODE_ON_PORTS
+   inserted only 52 ANTENNA_* cells total (grep-countable), not 47,385 --
+   design__instance__count__class:antenna_cell=47385 is a different metric
+   (counts diode-like fill broadly, not attributable to DIODE_ON_PORTS
+   specifically). So this is NOT a generic +20%-cell-count placement-pressure
+   story -- it is precisely the two diodes landing directly on the clock
+   root, nothing more diffuse. Recorded as coordinator's correction to their
+   own initial framing, not mine to walk back.
+2. SDC multicycle pairing verified NOT to be the bug: `set_multicycle_path 2
+   -setup / 1 -hold -from {apb_paddr_i ...}` (sky130_soc.sdc ~287-288) is the
+   textbook-standard pairing. Worth stating explicitly because "hold fails on
+   a multicycle group" is exactly the shape that USUALLY IS a constraint
+   bug -- ruling it out here has real value, not a formality. Also: SDC
+   header line ~60-61 already records a prior, smaller instance of this same
+   I/O-boundary hold class (`-0.0923 ns apb_paddr_i[4] -> u_cpu`, bead y7v,
+   2026-07-26) -- this design's APB debug bus has been the hold-sensitive
+   boundary class before; this is a recurrence of a known-fragile spot under
+   a new perturbation, not a first-time surprise.
+
+CLK_I ANTENNA -- ALTERNATIVE-FIX CHECK (before defaulting to a waiver, per
+coordinator instruction): read librelane/scripts/odbpy/diodes.py
+(DiodeInserter, the actual engine behind Odb.PortDiodePlacement /
+DIODE_ON_PORTS). Finding: place_diode_stdcell() ALWAYS places the diode
+immediately abutting the FIRST SINK INSTANCE on the net (left/right of it,
+touching), governed by a `side_strategy` internal parameter ("source"/"pin"/
+"balanced") with NO distance/threshold/offset control exposed anywhere in
+the LibreLane Variable surface (checked common_variables.py, odb.py -- only
+DIODE_ON_PORTS polarity and the diode cell/pin choice are configurable, not
+placement distance). For clk_i, "first sink instance" IS clkbuf_0_clk_i /
+clkbuf_0_clk_i_regs -- the clock tree roots. There is therefore NO config
+knob to make this mechanism protect clk_i from farther away; abutting the
+clock root is not a misconfiguration, it is what this script does by
+design. A custom post-placement ECO (script an OpenROAD/ODB pass that
+legally relocates just these 2 diode instances a few sites away after
+placement, before CTS) is technically possible but is bespoke, untested
+engineering for a single moderate-severity net -- not attempted this
+session per "don't spend a whole extra cycle on it."
+
+CLK_I SEVERITY (for the eventual waiver-or-not call): original ratio (pre-
+any-of-the-4-new-keys baseline, RUN_2026-07-27_17-15-57/44-checkantennas-1)
+was partial 843.44 / required 400.00 = 2.11x -- moderate, not the worst in
+that report (worst was 11.4x), but not negligible either.
+
+PATH FORWARD (no extra cycle spent): dropping DIODE_ON_PORTS while keeping
+GRT_ANTENNA_ITERS=8 / GRT_ANTENNA_MARGIN=25 (both well above CPU's already-
+validated 5/20, and both act via the GRT-based RepairAntennas jumper/diode
+pass, which is placement-legalization-aware and runs on already-routed
+nets, unlike the blunt port-diode script) is ALREADY the experiment that
+answers whether clk_i can be closed without the disruptive mechanism -- no
+separate isolation run needed. Next run's checkantennas-1 report settles it:
+if clk_i is absent, GRT-alone with the enhanced settings sufficed; if
+present, it becomes a single documented residual (2.11x, top-level clock
+port, mechanism-explained-not-just-observed, same evidentiary bar as the
+CPU tie-cell and SRAM-LEF waivers from task 2) rather than reaching for the
+bespoke-ECO route on a first attempt.
+
+FIX APPLIED: pnr/sky130/soc/config.json -- removed "DIODE_ON_PORTS": "in".
+Kept RUN_ANTENNA_REPAIR, RUN_HEURISTIC_DIODE_INSERTION, GRT_ANTENNA_ITERS=8,
+GRT_ANTENNA_MARGIN=25, CLOCK_PERIOD=25.0, TIMING_VIOLATION_CORNERS=['*']
+unchanged. No SDC change this round (multicycle pairing already correct,
+nothing to fix there). No RTL. Re-launching once the CURRENT run
+(RUN_2026-07-29_18-40-38) finishes and its full gate table is reported.
+
+--- RUN_2026-07-29_18-40-38 FINAL GATE TABLE (coordinator-confirmed, cross-
+checked against this session's own step-52/44 reads above -- consistent) ---
+
+    LVS (Netgen)      PASSED               (7m18s)
+    Routing DRC       0                    (10 DRT iters: 22648->5803->4998->289->15->2->0)
+    KLayout DRC       4                    unchanged, GH #121 waiver           (1h20m)
+    Magic DRC         9081                 unchanged, bead 45a waiver          (31m34s)
+    Antenna           52 pin / 46 net      FAIL, was 147/127 (~65% better)
+    Setup             FAIL at ss only      max_ss -4.3284, nom_ss -2.8851, min_ss -1.1200; tt/ff all 0
+    Hold              FAIL at 4 corners    max_ss -0.6633, max_tt -0.4586, nom_ss -0.2825, nom_tt -0.2098
+                                            (min_* and nom_ff all 0; 51 endpoints worst corner, 3 another)
+    Power             44.6 mW              was 71.7 mW
+    Utilization       38.47 %
+
+All DRC/timing failures are LibreLane "deferred" errors (flow ran to 65/65
+completion rather than aborting) -- consistent with every prior run in this
+project's history. Monitor-tooling note for future sessions: the first
+Monitor task for this run used a 15-min heartbeat with weak log-text
+matching and missed the actual completion signal -- the coordinator caught
+it live by reading runtime.txt/state_out.json directly. Replaced with a
+Monitor that polls for the manufacturability.rpt file's existence (or
+process death) every 3 min -- more reliable, use this pattern for future
+multi-hour LibreLane runs rather than a fixed-text log grep alone.
+
+RELAUNCH: pd_20260729_2215 approx, run_2 of the DIODE_ON_PORTS-drop
+experiment. Command identical to before (make librelane-sky130-soc), config
+now has DIODE_ON_PORTS removed. tmux session sky130_soc_58q_run2, log
+/nobackup/sky130_soc_58q_run2_<timestamp>.log. On landing: (1) confirm hold
+WNS >= 0 at all 9 corners, (2) measure clk_i -> u_cpu/clk_i clock latency at
+nom_tt and confirm it drops back toward the 0.870159 ns baseline (coordinator
+explicitly wants this checked, not assumed, as the proof the root cause was
+correct -- if hold improves WITHOUT this latency dropping, the diagnosis is
+wrong and must be re-opened), (3) check whether clk_i returns as an antenna
+violator and if so whether GRT_ANTENNA_ITERS=8/MARGIN=25 alone left it
+worse/better/same as the DIODE_ON_PORTS run's 52/46, (4) confirm LVS MATCH,
+KLayout DRC 4, Magic DRC ~9081, PDN 0, setup at tt/ff unchanged (0), ss setup
+still failing as expected (frequency parked, not being re-judged this round).
+
+CORROBORATING EVIDENCE (coordinator, post-CTS isolation): clk_i -> u_cpu/clk_i
+measured at POST-CTS STA (step 32/stamidpnr-1, nom_tt, before any antenna
+repair/diode step runs) across all three runs:
+    RUN_2026-07-27_17-15-57   0.864490 ns
+    RUN_2026-07-29_18-40-38   0.864490 ns   (the run that ended at 1.439363 ns post-route)
+    RUN_2026-07-30_04-58-36   0.864490 ns   (run 2, in flight)
+Byte-identical across all three, including the run whose POST-ROUTE latency
+diverged to 1.439363 ns. This rules out CTS variation as an alternative
+explanation outright (CTS built the same tree every time) rather than merely
+correlating -- the +0.569 ns in RUN_2026-07-29_18-40-38 provably appeared
+strictly AFTER step 32, and the only relevant structural change in that
+window (vs the clean baseline) was odb-diodesonports at step 38. This is the
+strongest form of evidence in this diagnosis: not "the numbers moved
+together" but "we isolated the exact stage boundary before which the three
+runs are provably identical and after which one diverges, and that boundary
+brackets the mechanism already identified independently via netlist
+inspection (2 diodes landing on clk_i)."
+IMPORTANT CAVEAT for whoever reads this next: the post-CTS number is
+IDENTICAL BY CONSTRUCTION across any run that hasn't yet reached the
+antenna-repair stage -- an unchanged 0.864490 ns at step 32 in run 2 is NOT
+itself evidence that run 2 will end up clean; it only rules OUT worse. The
+decisive comparison is POST-ROUTE (stapostpnr, the same report location used
+for the 0.870159 / 1.439363 pair above). Do not report the post-CTS number
+as if it settles the run-2 outcome -- only the post-route number does.
+Also: step numbering shifts between run 1 and run 2 after ~step 37 because
+dropping DIODE_ON_PORTS removes the odb-diodesonports step entirely -- match
+run-2 steps to run-1 steps BY NAME (e.g. "stapostpnr", "checkantennas-1"),
+never by number, when diffing directories.
+
+--- RUN_2026-07-30_04-58-36 (run 2) RESULTS -- FALSIFICATION CHECK FAILS
+PARTIALLY: the root cause was NOT fully DIODE_ON_PORTS-specific ---
+
+clk_i -> u_cpu/clk_i clock latency, nom_tt, measured the same way each time:
+    clean baseline (RUN_2026-07-27_17-15-57):   0.870159 ns
+    run1 (RUN_2026-07-29_18-40-38, DIODE_ON_PORTS=in):  1.439363 ns  (+0.569)
+    run2 (RUN_2026-07-30_04-58-36, DIODE_ON_PORTS=none): 1.388234 ns  (+0.518,
+        only 0.051 ns recovered -- under 10% of the gap)
+First-hop delay (clk_i port -> clkbuf_0_clk_i/A), same three runs:
+    0.319984 ns -> 0.787429 ns -> 0.743895 ns (run2 barely below run1)
+
+WHY: grepped run2's post-fill netlist for diodes on clk_i -- THEY ARE STILL
+THERE. `ANTENNA_clkbuf_0_clk_i_A` and `ANTENNA_clkbuf_regs_0_core_clk_A`,
+both `.DIODE(clk_i)`, same instance names as run1. DIODE_ON_PORTS is
+confirmed off (Odb.PortDiodePlacement step still runs but as a documented
+no-op per coordinator's earlier check) -- so these diodes were placed by a
+DIFFERENT mechanism: OpenROAD's own GRT-based RepairAntennas
+(RUN_ANTENNA_REPAIR, always-on regardless of DIODE_ON_PORTS, now at
+ITERS=8/MARGIN=25). clk_i's antenna violation is REAL (2.11x over threshold,
+confirmed task-1 finding) -- with the port-diode shortcut removed, the
+general antenna-repair pass found the SAME violation and converged on
+essentially the SAME fix (a diode abutting the clock root buffer), because
+that is structurally the only place a diode can protect this specific net.
+CONFIRMED: clk_i itself is absent from run2's final checkantennas-1 report
+(48 unique nets, was 46 in run1) -- so the antenna fix still worked, just
+via a different code path with the same physical side effect.
+
+REVISED ROOT CAUSE (supersedes the DIODE_ON_PORTS-specific framing --
+record this correction prominently, the earlier framing was incomplete):
+protecting clk_i's genuine antenna violation costs ~0.5 ns of hold margin
+at the clock root IN THIS FLOW, REGARDLESS OF WHICH LibreLane mechanism
+performs the fix (Odb.PortDiodePlacement or OpenROAD.RepairAntennas) --
+both insert a diode in essentially the same place because the clock root
+buffers are the only physically sensible attachment point on this short,
+low-fanout net. DIODE_ON_PORTS was never the true independent variable; it
+was one of two redundant paths to the same disruptive fix. Removing it only
+helped by the small margin between how the two insertion mechanisms
+legalize/orient the diode, not by avoiding the diode altogether.
+
+HOLD RESULT: improved but NOT closed. Still 5 corners failing (nom_tt,
+nom_ss, max_tt, max_ss, max_ff -- max_ff was ALSO failing in run1 at
+-0.1267, the coordinator's run1 summary of "4 corners" omitted it; this
+report's own run1 read above already had it right), all still 100% the same
+apb_paddr_i/psel_i/penable_i/pwdata_i -> u_cpu class (re-verified this run,
+zero new startpoint categories):
+    corner    run1      run2      delta
+    nom_tt   -0.2098   -0.1633   +0.0465
+    nom_ss   -0.2825   -0.2108   +0.0717
+    max_tt   -0.4586   -0.3943   +0.0643
+    max_ss   -0.6633   -0.5785   +0.0848
+    max_ff   -0.1267   -0.0790   +0.0477
+Every corner improved by roughly 5-8% of the clock period, consistent with a
+minor difference in diode legalization between the two insertion mechanisms
+-- but none reach >=0. GOAL NOT MET.
+
+Antenna: run2 54 pin / 48 net (run1 was 52/46) -- clk_i closed, small
+regression elsewhere; net difference is noise-level relative to the 95
+violations both runs fixed from the 147/127 starting point.
+
+STATUS: reported to coordinator with full falsification-check data before
+any further action. This is exactly the "hold improves but the identified
+mechanism doesn't fully explain it" case the coordinator asked to be told
+about rather than papered over. NOT proposing a further fix unilaterally --
+holding for direction. Options on the table for whoever picks this up:
+(a) accept the SMALLER hold residual as a new documented gap (worse than the
+    original clean baseline, better than run1); (b) increase hold-repair
+    budget (GRT_RESIZER_HOLD_SLACK_MARGIN or similar) to absorb the ~0.5 ns
+    clock-root cost directly on the APB paths rather than trying to remove
+    the diode; (c) investigate whether a layer/route-based antenna fix
+    (jumper insertion moving the vulnerable first-hop segment to a
+    protected layer instead of a diode) can protect clk_i without touching
+    placement at the clock root -- not yet attempted, would need scripting
+    beyond LibreLane's stock Variable surface; (d) accept clk_i as an
+    unrepaired antenna residual (if there is a way to scope RUN_ANTENNA_REPAIR
+    away from just this one net -- not found in the LibreLane Variable
+    surface so far, likely requires a custom ECO/skip-list, not investigated
+    this round).
+
+--- COORDINATOR CORRECTION: attribution too narrow, real variable is
+RUN_HEURISTIC_DIODE_INSERTION, not GRT RepairAntennas ---
+
+Coordinator did a like-for-like same-step comparison (fillinsertion/
+soc_top.nl.v, post-antenna-repair, all three runs) that I had not done:
+
+    run                                   ANTENNA_ total   clk-net diodes   clkbuf_0_clk_i_A present
+    baseline RUN_2026-07-27_17-15-57              1,934                0    no
+    run1     RUN_2026-07-29_18-40-38             47,385            1,589    yes
+    run2     RUN_2026-07-30_04-58-36             47,530            1,589    yes
+
+Not 2 diodes on the clock root -- 1,589 diodes sprayed across the WHOLE
+clock tree, IDENTICAL count in run1 and run2, ZERO in baseline. The single
+clkbuf_0_clk_i_A instance I found is one member of this much larger set, not
+the whole story.
+
+Mechanism: Odb.HeuristicDiodeInsertion (RUN_HEURISTIC_DIODE_INSERTION) is
+ABSENT from baseline (verified at commit 29cb64a^, before any of the 4 keys
+were added) and PRESENT in both run1 and run2 (~6m15s each, untouched by the
+DIODE_ON_PORTS removal). This step inserts diodes heuristically/broadly
+across the design by design intent, not narrowly on confirmed violators like
+GRT_REPAIR_ANTENNAS does -- the 1,934 -> 47,385 jump (24x) lines up with
+this key turning on, not with GRT_ANTENNA_ITERS/MARGIN (which were also new
+but operate narrowly on checked violators). This is why removing
+DIODE_ON_PORTS only recovered 0.051 ns of the 0.569 ns gap: it was never the
+dominant variable, RUN_HEURISTIC_DIODE_INSERTION spraying diodes through the
+clock tree is.
+
+NEXT EXPERIMENT (approved by coordinator, launch after current run's gate
+table is reported): set RUN_HEURISTIC_DIODE_INSERTION: false in
+pnr/sky130/soc/config.json, KEEP GRT_ANTENNA_ITERS=8, GRT_ANTENNA_MARGIN=25,
+CLOCK_PERIOD=25.0, TIMING_VIOLATION_CORNERS=['*'], DIODE_ON_PORTS stays
+removed (already off). This isolates whether GRT-based repair alone (narrow,
+violator-driven) delivers most of the 147->54 antenna win without the mass
+clock-tree diode spray and its hold cost.
+MUST VERIFY on landing, not assume:
+  1. Do the ~1,589 clock-net diodes actually disappear or drop sharply with
+     the heuristic pass off? (grep the post-fill netlist for ANTENNA_*
+     instances connected to clk_i/clk_i_regs/clknet_* nets, same method used
+     to find the 1,589 count.)
+  2. Measure clk_i -> u_cpu/clk_i clock latency at nom_tt, same method as
+     before, and compare against ALL THREE known values:
+         0.870159 ns (baseline, clean)
+         1.439363 ns (run1, DIODE_ON_PORTS=in + heuristic on)
+         1.388234 ns (run2, DIODE_ON_PORTS=none + heuristic on)
+     If latency does NOT come back down toward 0.870 with the 1,589 diodes
+     gone, the diode-count theory is ALSO wrong and the mechanism needs to
+     be re-opened from scratch -- say so plainly, do not paper over it.
+
+Corrections for the permanent record (both coordinator's, not mine, stated
+as such): run1 hold failed at 5 corners not 4 (max_ff omitted from an
+earlier coordinator summary, already caught and corrected in this file);
+"antenna 52->29" was a misread of a pre-DRT metric carried forward through
+steps 40-44 instead of the true checkantennas-1 report -- this session's own
+54/48 read is confirmed correct.
+
+--- RUN_2026-07-30_04-58-36 (run 2) DIED MID-FLOW, 56-magic-drc, ~06:12 ---
+
+STA/antenna results (reported above, already forwarded to coordinator) are
+NOT in question -- they came from step 52, which completed cleanly before
+the death at step 56. DRC/LVS/manufacturability were never reached this run.
+
+WHAT HAPPENED: `56-magic-drc/reports/drc_violations.magic.rpt` exists but is
+0 bytes; magic-drc.log's last line is a "Moving label ... from metalN to
+viaN" (pre-DRC geometry normalization, before the actual drc(full) check
+ever ran); no Python traceback, no Magic error text, no clean exit -- log
+just stops. Confirmed via three independent checks, not assumed: `ps aux`
+found no make/python/openroad/magic process at all; `tmux list-panes
+-F pane_current_command` on the run's session reported "bash" (pipeline
+already returned to shell); `ps -p <magicdnull pid>` (113264, found in one
+transitional check showing 99.9% CPU / 27:52 accumulated CPU time / 0 RSS in
+`[bracket]` notation -- a stuck/thrashing signature, not a live user
+process) came back empty moments later. Directory/log mtimes frozen at
+06:12, ~26 min of zero output before I caught it at 06:38. No host reboot
+(uptime continuous since ~04:09, well before this run started at 04:58).
+No dmesg/journalctl access to directly confirm OOM (permission denied both
+ways), but the signature (long CPU-bound stall producing zero forward
+progress, zero swap used despite 31 GiB configured, host shared with ~10
+other tmux sessions + multiple MCP servers + several htop/abtop instances
+all baseline-consuming RAM) is consistent with the systemd-oomd PSI-kill
+pattern already documented in this project's memory for GRT-heavy OpenROAD
+steps, applied here to Magic DRC instead -- SoC Magic DRC has hit ~15.4 GiB
+RSS on this exact host in a PRIOR SUCCESSFUL run (RUN_2026-07-29_18-40-38,
+run 1), i.e. already within ~1 GiB of this host's 15 GiB total before any
+other load is counted. Not root-caused to certainty (no privileged OOM log
+access this session, consistent with every prior OOM suspicion in this
+project's history) -- reported as the leading hypothesis, not a fact.
+
+ACTION: killed the dead tmux session (tmux kill-session -t
+sky130_soc_58q_run2b -- also cleaned up a zombie-state magicdnull that a
+`ps -p` check no longer found afterward, confirming it was this session's
+child). Per feedback_pd_run_strategy.md (fresh relaunch preferred over -F
+resume on a mid-flow death), relaunched fresh rather than resuming.
+
+DECISION: did NOT re-run the identical (DIODE_ON_PORTS=none,
+RUN_HEURISTIC_DIODE_INSERTION=true) config just to re-confirm DRC/LVS/PDN.
+Reasoning: (1) those three gates have been UNIFORMLY stable (LVS MATCH,
+KLayout DRC 4, Magic DRC ~9081) across every single run in this entire
+multi-week campaign regardless of antenna/clock/hold changes -- they are
+structurally decoupled from what's being tested, so a repeat run buys very
+low incremental confidence for a multi-hour cost; (2) the coordinator's own
+approved next experiment (RUN_HEURISTIC_DIODE_INSERTION=false) is strictly
+more informative AND plausibly lowers the same memory-pressure risk that
+likely killed this run (far fewer antenna cells inserted -- run1/run2 both
+showed 47,385+ ANTENNA_ instances from the heuristic pass alone, vs 1,934 in
+the antenna-key-free baseline; removing that pass should meaningfully
+shrink total processed geometry for magic-drc too). Reflexively launched a
+same-config relaunch first (tmux session sky130_soc_58q_run2b) then killed
+it within seconds, before it had done real work, once this reasoning was
+worked through -- recorded so the aborted launch doesn't look like an
+unexplained extra run if anyone greps tmux/process history later.
+
+FIX APPLIED: pnr/sky130/soc/config.json -- RUN_HEURISTIC_DIODE_INSERTION
+true -> false. Unchanged: RUN_ANTENNA_REPAIR=true, GRT_ANTENNA_ITERS=8,
+GRT_ANTENNA_MARGIN=25, DIODE_ON_PORTS absent (still off), CLOCK_PERIOD=25.0,
+TIMING_VIOLATION_CORNERS=['*']. This is run 3 of the antenna/hold
+investigation (bead 58q). Launching next.
+
+--- RUN_2026-07-30_06-42-17 (run 3) -- HYPOTHESIS CONFIRMED, HOLD FULLY
+CLOSED AT ALL 9 CORNERS ---
+
+Monitor rebuilt per coordinator feedback: CPU-time-delta liveness (ps -eo
+pid,comm,cputimes, flag only if a step's worker process accumulates ZERO
+additional CPU time across 2 consecutive 3-min polls) instead of file-mtime,
+plus per-step baselines from run1/run2 disk data (repairantennas ~1080s,
+detailedrouting ~450s, magic-drc ~1900s, klayout-drc ~4800s, netgen-lvs
+~450s) for context rather than as an alert trigger by itself. Zero false
+positives this run (unlike the old mtime-based detector, which fired twice
+on healthy compute-bound steps in this same run before being replaced).
+
+DIODE COUNT (39-openroad-repairantennas/state_out.json, exact metric read,
+not estimated): antenna_diodes_count = 2,482 (== design__instance__count__
+class:antenna_cell, the two metrics agree here unlike run1/run2 where they
+diverged). Compare:
+    baseline (no antenna keys):              1,934
+    run1 (all 4 keys incl. heuristic):       47,385
+    run2 (heuristic on, DIODE_ON_PORTS off): 47,530
+    run3 (heuristic OFF, ITERS=8/MARGIN=25):  2,482
+Turning off RUN_HEURISTIC_DIODE_INSERTION alone collapses the count back
+near baseline (the small excess over 1,934 is consistent with
+GRT_ANTENNA_ITERS=8/MARGIN=25 being more thorough than the pre-antenna-key
+default 3/10%). Confirms the coordinator's hypothesis: the heuristic pass,
+not GRT-based repair, drove the 24x cell-count spray.
+
+CLOCK-TREE DIODE COUNT, same netlist snapshot method used throughout this
+investigation (40-openroad-resizertimingpostgrt/soc_top.nl.v, grep
+ANTENNA_* instances whose net matches clk_i/clk_i_regs/clknet/clkbuf):
+    run1/run2: 1,589 (identical both runs)
+    run3:      4
+ANTENNA_clkbuf_0_clk_i_A / ANTENNA_clkbuf_regs_0_core_clk_A (the specific
+diodes found earlier sitting directly on the clock root) are ABSENT from
+run3's netlist entirely.
+
+CLOCK LATENCY, decisive falsification check, same method every time
+(clk_i -> u_cpu/clk_i, nom_tt, from STAPostPNR max.rpt clock path):
+    baseline (clean):                0.870159 ns
+    run1 (heuristic+DIODE_ON_PORTS): 1.439363 ns  (+0.569)
+    run2 (heuristic only):           1.388234 ns  (+0.518)
+    run3 (heuristic OFF):            0.933178 ns  (+0.063)  -- 89% of the
+                                                                 gap recovered
+First-hop delay (clk_i port -> clkbuf_0_clk_i/A) confirms the same pattern:
+0.319984 -> 0.787429 -> 0.743895 -> 0.370022 ns (run3 nearly back to
+baseline). GUARD PASSES CLEANLY: latency came back down almost to baseline
+when the diodes were removed, exactly as the hypothesis predicted -- not the
+ambiguous partial recovery seen in run2's DIODE_ON_PORTS-only experiment.
+
+HOLD RESULT (51-openroad-stapostpnr/summary.rpt): Hold Vio Count = 0 AT
+EVERY SINGLE CORNER. Slack all positive:
+    nom_tt +0.2400   nom_ss +0.2693   nom_ff +0.1215
+    min_tt +0.2911   min_ss +0.5311   min_ff +0.1204
+    max_tt +0.0534   max_ss +0.0274   max_ff +0.1229
+Worst corner (max_ss) closes by only +0.0274 ns -- thin, but clean. GOAL MET
+for the first time in this investigation.
+
+SETUP: unchanged from expectation -- tt/ff all TNS 0.0000, 0 violations
+(clean, matching every prior run in this campaign); ss still fails as
+expected (nom_ss -3.1228, min_ss -1.2536, max_ss -4.6432) -- frequency
+question stays parked, not being re-judged.
+
+ANTENNA (44-openroad-checkantennas-1, final post-DRT, same method as every
+prior read in this file): 141 rows / 120 unique nets / 140 unique pins.
+clk_i confirmed ABSENT (grep, not assumed). Larger residual than run1/run2's
+52-54/46-48 because the heuristic pass was also fixing non-clock-tree
+violators as a side effect of its broad spray; losing it costs some of that
+incidental coverage. This is the expected, quantified trade the coordinator
+asked to see: full hold closure at the cost of a bigger (but still ~68%
+reduced from the 147/127 starting point) antenna residual.
+
+STATUS: STA/antenna results reported to coordinator as they landed, not
+held back. Flow continued past this point (not stopped) because the result
+is a clear PASS on the hold goal, not a failure -- letting it run to
+manufacturability.rpt per the agreed plan for the full gate table
+(LVS/DRC/PDN tail still pending as of this entry).
+
+--- HEURISTIC_ANTENNA_THRESHOLD investigation (coordinator's proposed "third
+option", run 4 candidate) -- MEASURED, NOT GUESSED, VERDICT: NO CLEAN
+THRESHOLD EXISTS ---
+
+METHOD: wrote a standalone OpenROAD Tcl script (not part of the standard
+flow) to compute per-net Manhattan bounding-box span for every net in run3's
+37-openroad-repairdesignpostgrt/soc_top.odb (post-CTS/post-GRT-resize,
+pre-antenna-repair -- the same geometry basis both the heuristic script and
+this analysis use). Method matches diodes.py's own net_manhattan_distance:
+bbox over all ITerm getAvgXY() + BTerm pin centers, in microns via
+getDbUnitsPerMicron. Output: /tmp/.../scratchpad/net_spans.csv, 34,197 nets.
+Also discovered (reading odb.py + diodes.py source, not assumed): the
+heuristic step (Odb.FuzzyDiodePlacement -> diodes.py `place` subcommand)
+never passes `--port-protect` in its get_command(), so it inherits the
+CLI's OWN default of `"in"` -- INDEPENDENT of the LibreLane-level
+DIODE_ON_PORTS variable entirely. This means the heuristic pass, whenever
+enabled, ALWAYS force-inserts a diode on every INPUT port net (io_protect
+bypasses the span<threshold check unconditionally) -- clk_i's port-adjacent
+net WILL get a diode under heuristic+ANY finite threshold, no matter how
+high. This is a previously-missed detail; DIODE_ON_PORTS and the heuristic
+pass turned out to be two INDEPENDENT paths to the same clk_i diode all
+along, not just "redundant" as characterized after run 2.
+
+DISTRIBUTION (fine buckets, exact counts not estimates):
+    clk-related nets (name contains "clk"), n=1345:
+        min 6.4, median 68.7, max 3331.9 um
+        [50,90) : 985 (73%)     <90 total: 1119 (83%)
+        >=90    : 226 (17%)    >=105.4 (min violator span): 208
+        >=150   : 141           >=200: 88   >=500: 8   >=1000: 2
+    run3's still-violating nets (checkantennas-1, final, n=120, 85 resolved
+    to placement data):
+        min 105.4, median 685.6, max 4517.3 um
+        100% are ABOVE 90 um -- ZERO in any bucket under 90
+        [90,150):2  [150,200):7  [200,500):17  [500,1000):40  [1000,5000):19
+
+OVERLAP CHECK (coordinator's second question): cross-referenced run3's 120
+violating net names against the full set of 3,383 unique nets run1's
+heuristic pass protected with a diode (extracted from
+49-openroad-fillinsertion/soc_top.nl.v, all `.DIODE(netname)` connections,
+47,385 diode instances -> 3,383 unique nets, ~14 diodes/net average since
+one diode is inserted per net PER SINK PIN, not once per net). RESULT:
+120/120 (100%) of run3's residual violators were ALSO protected by run1.
+The heuristic pass was NOT "mostly fixing many short ones" -- every single
+net it would need to protect to close run3's residual IS a net it already
+covered. This directly answers the coordinator's second question but does
+NOT by itself make a threshold viable, because of the next finding.
+
+WHY NO THRESHOLD WORKS: the clock tree is NOT uniformly short-hop. Levels 6
+and 7 (near-leaf CTS stages, hundreds of individual `clknet_6_N_0_clk_i_regs`
+/ `clknet_7_N__leaf_clk_i_regs` nets) span 105-800 um EACH -- squarely
+inside the SAME range as the real antenna violators (105-4517 um, median
+686). 208 clock nets sit at or above the minimum violator span (105.4 um);
+raising the threshold from the current 90 up to 105.4 (the tightest
+possible bound that loses zero violators) only trims 18 of 226 clock nets
+-- negligible. Pushing further: at threshold=500 um, clock-net coverage
+drops to 8 (96% cut from 226) but 26/120 (22%) of real violators are also
+lost; at threshold=1000, clock coverage drops to 2 (clk_i itself +
+delaynet_2_core_clk, both structurally guaranteed regardless of threshold
+for clk_i, or just very long for the delay-balance net) but 66/120 (55%) of
+real violators are lost. THE TWO POPULATIONS OVERLAP ACROSS THEIR ENTIRE
+COMMON RANGE (105-800 um) -- there is no cut point where clock-tree
+coverage drops to near-zero while violator coverage stays near-100%. This
+is the "distributions overlap heavily" case the coordinator asked me to
+call out plainly if it occurred.
+
+ADDITIONAL DATA POINT (bears on but doesn't overturn the above): run3 (heuristic
+fully OFF) still ended up with 3 diodes ON clk_i itself -- inserted by
+GRT-based RepairAntennas with generic names (ANTENNA_1103/1104/1105), NOT
+abutting clkbuf_0_clk_i/A the way the heuristic/port scripts do. Hold
+closed cleanly anyway. This shows clk_i CAN tolerate some diode presence
+without breaking hold -- the damage mechanism is specifically the
+DiodeInserter class's "abut the first sink instance" placement strategy
+(place_diode_stdcell, side_strategy=source) landing directly on the clock
+root buffer, not diode-on-clk_i in general. A GRT-legalized diode elsewhere
+along the same net is a materially different physical outcome. This doesn't
+create a viable threshold-based fix (the diode/no-diode-at-the-root
+distinction isn't controlled by HEURISTIC_ANTENNA_THRESHOLD), but it is
+worth recording as a nuance for whoever next touches this area.
+
+RECOMMENDATION: do NOT run the threshold experiment as conceived (heuristic
+back on + raised threshold). The measured distributions do not separate at
+any threshold value tested or interpolated between; a "run 4" here would
+either reproduce run1/run2's hold damage (low threshold) or fail to close
+most of the real antenna residual anyway (high threshold), for a result
+strictly worse than run3 on at least one axis in every case checked. If
+further antenna reduction beyond run3's 140/120 is wanted, the untried lever
+consistent with this data is pushing GRT_ANTENNA_ITERS / GRT_ANTENNA_MARGIN
+further (GRT-based repair is the mechanism that closed clk_i in run3
+without the clock-root disruption, and it already narrowly outperforms
+heuristic on placement-legalization safety per the point above) -- not
+re-enabling the heuristic pass at any threshold.
+
+--- RUN_2026-07-30_22-10-20 (run 4, clock-net-skip patch) -- PATCH VERIFIED
+WORKING AS DESIGNED, BUT GUARD FAILS: HOLD REGRESSED AGAIN ---
+
+User approved and directed applying a librelane patch (documented above and
+in knowledge.md + memory/pd/patches/58q_librelane_heuristic_diode_skip_
+clock_nets.diff, committed a569818) to exclude dbNet SigType==CLOCK nets
+from Odb.HeuristicDiodeInsertion, plus kill its independent --port-protect
+"in" default. RUN_HEURISTIC_DIODE_INSERTION turned back on,
+HEURISTIC_ANTENNA_SKIP_CLOCK_NETS: true added, everything else identical to
+run3 (GRT_ANTENNA_ITERS=8, GRT_ANTENNA_MARGIN=25, CLOCK_PERIOD=25.0,
+TIMING_VIOLATION_CORNERS=['*'], DIODE_ON_PORTS absent).
+
+PATCH MECHANISM VERIFIED WORKING, TWICE: (1) smoke test before launch
+(openroad -python diodes.py place --skip-clock-nets --port-protect none
+against a saved odb): exactly 1,327 clock nets skipped, 0 clk_i diodes.
+(2) real flow, 39-odb-heuristicdiodeinsertion/2-openroad-detailedplacement/
+soc_top.nl.v: 44,408 total diodes (down from unpatched 47,385), ZERO with
+any clk-related name, explicit grep for `.DIODE(clk_i)` / `.DIODE(clk_i_
+regs)` returns nothing. Independently reconfirmed at the FINAL post-DRT
+netlist too (52-...-later steps). The patch does exactly what it was
+designed to do.
+
+ANTENNA: BEST RESULT OF ANY RUN. 44-openroad-checkantennas-1 (post-DRT,
+final, same method as every read in this file): 40 rows / 39 unique nets /
+40 unique pins, clk_i confirmed ABSENT. Beats run1 (52/46), run2 (54/48),
+AND run3 (140/120) by a wide margin. In-flight (post-repair, pre-DRT) number
+was 19 net / 20 pin -- the heuristic pass's broader (non-clock) coverage is
+clearly doing real work here, on top of GRT's own contribution.
+
+HOLD: REGRESSED AGAIN, worse than run3, same 5 corners as run1/run2:
+    corner    run3      run4      hold_vio_count(run4)
+    nom_tt   +0.2400   -0.1932   10
+    nom_ss   +0.2693   -0.2491    6
+    nom_ff   +0.1215   +0.0706    0  (still clean)
+    min_tt   +0.2911   +0.0869    0  (still clean)
+    min_ss   +0.5311   +0.1776    0  (still clean)
+    min_ff   +0.1204   +0.1207    0  (still clean)
+    max_tt   +0.0534   -0.4291   18
+    max_ss   +0.0274   -0.6279   15
+    max_ff   +0.1229   -0.1073   10
+GOAL NOT MET. Overall hold TNS -4.7341, 59 violations total (all "of which
+reg to reg"=0, same APB-debug-bus class as every prior regression in this
+investigation -- re-confirmed, no new violator class opened up).
+
+DECISIVE FALSIFICATION GUARD -- FAILS, exactly the scenario the coordinator
+asked to be told about plainly rather than have papered over:
+    clk_i -> u_cpu/clk_i, nom_tt, same method every time:
+        baseline (clean):           0.870159 ns
+        run1 (heuristic, no fix):   1.439363 ns  (+0.569)
+        run2 (DIODE_ON_PORTS off):  1.388234 ns  (+0.518)
+        run3 (heuristic OFF):       0.933178 ns  (+0.063)
+        run4 (clock-net exclusion): 1.410208 ns  (+0.540)  -- back up near
+                                                               run1/run2,
+                                                               NOT run3
+First-hop delay (clk_i port -> clkbuf_0_clk_i/A): 0.320 -> 0.787 -> 0.744 ->
+0.370 -> 1.410208's own first hop is 0.763076 (fanout 5, matching baseline's
+fanout exactly, NOT run1/run2's fanout 4) -- so this is not the same
+topology change as before; something is inflating the DELAY on the same
+logical connectivity as baseline, despite zero diodes anywhere near this
+net or the rest of the clock tree.
+
+CONCLUSION, stated plainly per instruction: the clock-net exclusion, though
+verified working exactly as designed (zero clock-tree diodes, zero clk_i
+diodes), is INCOMPLETE as a fix for the hold regression. Diodes physically
+sitting on clock-tree nets was A cause (proven by run3: remove ALL diodes
+including clock-tree ones -> clean hold) but not THE cause in isolation --
+run4 proves you can remove every clock-tree diode specifically and still
+get nearly the same hold damage. Leading unconfirmed hypothesis (explicitly
+flagged as NOT proven to the same evidentiary standard as the diode-
+placement mechanism): general placement congestion from the heuristic
+pass's ~44,000 non-clock diode insertions elsewhere in the design pushes
+standard-cell placement near the clock root regardless of whether a diode
+itself lands there, lengthening clk_i's physical route even at unchanged
+logical fanout. NOT verified by direct measurement the way the diode-
+placement mechanism was (would need a placement/congestion diff between
+run3 and run4 near the clock root specifically -- not attempted this
+session). Reported as the leading candidate only, not a confirmed cause.
+
+STATUS: reported to coordinator with the guard failure stated plainly, not
+hidden or reframed as a partial win. DRC/LVS/manufacturability tail let run
+to completion per instruction for one full gate table on this configuration
+regardless of the hold outcome. No further fix proposed unilaterally --
+holding for direction, per this investigation's established pattern.
+
+RUN 4 FINAL GATE TABLE (65-misc-reportmanufacturability, confirmed):
+    LVS PASSED. Routing DRC 0. KLayout DRC 4. Magic DRC 9081.
+    Antenna 40 pin / 39 net (best of any run). Hold FAILS 5/9 corners.
+    design__instance__count = 270,219. antenna_cell count = 45,744.
+
+COORDINATOR CORRECTION (vindicated their own earlier-retracted hypothesis,
+recorded per their explicit request): total cell/stdcell VOLUME correlates
+almost perfectly with clk_i->u_cpu/clk_i latency and hold outcome -- NOT
+clock-net diode presence specifically. Table across all 4 runs:
+    run       antenna_cells   stdcells   clk_i_latency(nom_tt)   hold
+    baseline       1,934       226,454        0.870159          clean
+    run1          47,385       271,858        1.439363          fails 5
+    run2          47,530       272,003        1.388234          fails 5
+    run3           2,482       226,952        0.933178          clean 9
+    run4          45,744       270,217        1.410208          fails 5
+Run4 has ZERO diodes on any CLOCK-sigtype net (independently reconfirmed)
+and still sits at 1.410 ns -- proves the clock-net-skip patch's target
+mechanism (diodes physically on the clock tree) was A cause but not THE
+cause. The coordinator's OWN first hypothesis (general placement-pressure
+from mass cell-count insertion, first raised for DIODE_ON_PORTS's 52 cells
+where it was wrong, then retracted) turns out to be the right explanation
+at the ~45k-diode scale. This correction is the coordinator's, not this
+session's -- recorded here per their explicit instruction not to let it
+stand unattributed.
+
+--- RUN 5: HEURISTIC_ANTENNA_THRESHOLD=800, targeting the untested
+227k-270k cell-count middle ---
+
+DIODE-COUNT-VS-THRESHOLD PREDICTION METHOD: odb query (per-net span AND
+fanout, since diode count = 1 per net PER SINK PIN, not per net) against
+run4's own pre-heuristic odb (37-openroad-repairdesignpostgrt, self-
+consistent calibration source). Non-clock (SIGNAL sigtype) net population,
+32,868 nets:
+    threshold(um)   predicted_nets   predicted_diodes
+        90              3,094           44,742
+       500                907           21,781
+       700                582           12,488
+       800                454            7,970
+       900                390            4,976
+      1000                343            3,222
+      1200                250              991
+CALIBRATION GAP, explicitly flagged, NOT root-caused (coordinator directed
+not to spend a cycle on it -- the ranking across thresholds is what
+matters, not the absolute count): predicted 44,742 diodes at threshold=90
+vs actual measured 27,953 (run4's own odb-fuzzydiodeplacement.log, "Inserted
+27953 diodes") -- ~1.6x over-prediction. Checked two candidate explanations
+(port-touching-net exclusion from --port-protect none: only 155 net/iterm
+pairs total, far too small; unplaced-instance filtering: ruled out by using
+run4's own odb for calibration, same result as run3's odb) and neither
+explains the gap. Open question, deliberately not pursued further.
+
+THRESHOLD CHOICE: 800 um (coordinator's call, overriding this session's
+initial proposal of 1000). Reasoning (coordinator's, recorded for the
+permanent record): (1) at 1000, only 19/85 measured run3-residual-violator
+nets retain heuristic coverage -- leans almost entirely on GRT alone, i.e.
+risks reproducing run3's 140/120 antenna result with extra steps for no
+benefit; at 800, materially more violator coverage is retained while still
+cutting insertion ~5.6x (7,970 raw / ~5,000 if the 1.6x over-prediction
+holds); (2) 1000 projects to ~229-230k cells, hugging the ALREADY-KNOWN-SAFE
+227k point -- an uninformative test; 800 projects to ~234k cells, actually
+sampling the untested 227k-270k gap -- if clean, establishes the safe
+ceiling is meaningfully above 227k; if it fails, that is a sharp, valuable,
+surprising result on its own; (3) downside bounded -- 234k is still 36k
+cells below the known-bad 270k, so the volume model predicts clean either
+way; not much is being risked to get a more informative data point than a
+threshold that would have merely re-confirmed what run3 already showed.
+
+FALSIFIABLE PREDICTION STATED BEFORE LAUNCH (coordinator's framing,
+recorded verbatim so the outcome can be graded honestly): ~234k stdcells ->
+latency near 0.93-1.0 ns -> hold 0 at all 9 corners. Success = hold clean at
+9 corners AND antenna (post-DRT checkantennas-1, not the pre-DRT in-flight
+number) below run3's 140/120.
+IF THIS FAILS: coordinator's explicit instruction -- do NOT launch a run 6
+without checking first. Five failed hold attempts would be the honest
+trigger to stop, adopt run3 (140/120 antenna, clean hold at all 9 corners,
+otherwise-identical gate table) as the accepted configuration, and document
+the antenna/hold trade-off rather than continuing to iterate.
+
+CONFIG: pnr/sky130/soc/config.json -- added HEURISTIC_ANTENNA_THRESHOLD:
+800. Everything else unchanged from run4: RUN_HEURISTIC_DIODE_INSERTION=
+true, HEURISTIC_ANTENNA_SKIP_CLOCK_NETS=true (patch stays enabled --
+"harmless and principled, cheap insurance" per coordinator, even though it
+did not prove sufficient alone), GRT_ANTENNA_ITERS=8, GRT_ANTENNA_MARGIN=25,
+CLOCK_PERIOD=25.0, TIMING_VIOLATION_CORNERS=['*'], DIODE_ON_PORTS absent.
+
+--- RUN_2026-07-31_05-13-54 (run 5, threshold=800) -- VOLUME MODEL
+FALSIFIED. Stopped per explicit instruction, no run 6 launched. ---
+
+DIODE COUNT: heuristic step alone inserted 7,064 diodes (odb-
+fuzzydiodeplacement.log, "Inserted 7064 diodes") -- close to the raw
+prediction of 7,970 (11% low), NOT the 1.6x-scaled-down ~5,000 estimate.
+Post-repair (GRT added its own contribution on top): antenna_cell=9,897,
+design__instance__count=234,369 -- matches the ~234k target almost exactly.
+
+ANTENNA: post-repair in-flight (40-openroad-repairantennas/state_out.json)
+42 net / 44 pin. FINAL post-DRT (45-openroad-checkantennas-1, same method
+as every prior read in this file): 90 rows / 84 unique nets / 90 unique
+pins, clk_i confirmed ABSENT. Between run3 (140/120) and run4 (40/39) as
+expected for a middle threshold.
+
+HOLD: FAILS AGAIN, same 5-corner pattern as run1/run2/run4 (nom_tt, nom_ss,
+max_tt, max_ss, max_ff), slightly better in magnitude than run4 at every
+failing corner (consistent with fewer total cells) but not close to
+closing:
+    corner    run3      run4      run5      hold_vio_count(run5)
+    nom_tt   +0.2400   -0.1932   -0.1623    6
+    nom_ss   +0.2693   -0.2491   -0.1748    3
+    nom_ff   +0.1215   +0.0706   +0.0946    0  (clean)
+    min_tt   +0.2911   +0.0869   +0.1016    0  (clean)
+    min_ss   +0.5311   +0.1776   +0.2185    0  (clean)
+    min_ff   +0.1204   +0.1207   +0.1212    0  (clean)
+    max_tt   +0.0534   -0.4291   -0.4093   17
+    max_ss   +0.0274   -0.6279   -0.5278   14
+    max_ff   +0.1229   -0.1073   -0.0914    6
+GOAL NOT MET.
+
+DECISIVE FALSIFICATION, exactly the scenario the coordinator pre-registered
+as possible before launch ("If hold fails at ~234k, the volume model is
+wrong or the safe ceiling is much lower than expected"):
+    clk_i -> u_cpu/clk_i, nom_tt, same method every time, with the
+    falsifiable prediction stated BEFORE this run landed for grading:
+        baseline:                    0.870159 ns   (0 stdcells delta)
+        run1 (heuristic, no fix):    1.439363 ns   (271,858 stdcells)
+        run2 (DIODE_ON_PORTS off):   1.388234 ns   (272,003 stdcells)
+        run3 (heuristic OFF):        0.933178 ns   (226,952 stdcells)
+        run4 (clock-net exclusion):  1.410208 ns   (270,217 stdcells)
+        run5 (threshold=800):        1.381585 ns   (234,369 stdcells --
+                                                      near-exact match to
+                                                      the ~234k prediction)
+        PREDICTED for run5: latency near 0.93-1.0 ns. ACTUAL: 1.381585 ns.
+        PREDICTION FALSIFIED.
+Stdcell count landed almost exactly on target (234,369 vs ~234k predicted)
+but latency is NOT anywhere near the predicted 0.93-1.0 -- it sits at
+essentially run1/run2/run4 levels despite being 36k cells below run4 and
+only 7.4k cells above run3. This rules out a smooth/linear interpolation
+between run3's 227k-clean and run4's 270k-broken as the model: whatever
+breaks the clock path is close to fully triggered well before 234k, closer
+to run3's 227k than the runs so far have sampled. The true safe ceiling is
+unknown but is now known to sit BELOW 234k, possibly much closer to
+run3's 227k specifically (i.e. possibly not a "volume" threshold at all so
+much as "any heuristic-driven insertion above a small amount" -- run3 had
+2,482 antenna cells and was clean; run5 has 9,897 and is broken; that
+9,897-2,482=7,415-cell gap, not the 43k-cell run3-to-run4 gap, may be where
+the real transition lives, but this is NOT measured, only inferred from the
+two data points now in hand).
+
+STATUS: per coordinator's explicit pre-registered instruction, NOT
+launching a run 6 without checking first. Five runs (1,2,4,5) have now
+failed to close hold with any antenna-repair configuration beyond the
+GRT-only baseline; only run3 (heuristic fully off, GRT_ANTENNA_ITERS=8/
+MARGIN=25 alone, antenna 140/120) has achieved both clean hold at all 9
+corners AND a meaningfully-reduced antenna count from the original
+147/127. Letting run5 finish its DRC/LVS tail for one complete final gate
+table (same standing practice as every prior run in this investigation),
+then reporting and holding for direction on whether to adopt run3 as the
+accepted configuration or investigate the narrower 2,482-9,897 antenna-cell
+range further.
+
+================================================================================
+BEAD 58q CLOSED, 2026-07-31. NO ACTIVE/INTERRUPTED RUN AT THIS FILE'S TAIL.
+================================================================================
+Run5 finished its DRC/LVS tail cleanly after the entry above (LVS PASS,
+KLayout 4, Magic 9081, antenna 90/84, hold fails 5/9 corners as predicted --
+final gate table already folded into the run5 section above and into
+design_state.json). Coordinator closed the investigation: adopted run3
+(RUN_2026-07-30_06-42-17) as the Stage-2 antenna/hold result. Full mechanism,
+final gate table, and the untried GRT-only lever for future work are
+recorded in memory/pd/knowledge.md ("Local LibreLane patch..." section) and
+in design_state.json under pd.soc_stage2_gh104.bead_58q_antenna_hold_
+investigation. config.json reverted to run3's exact settings (commit
+3088046) so `make librelane-sky130-soc` reproduces the adopted result, not
+a later experimental one.
+
+pnr/sky130/soc/config.json final state (adopted, matches commit 1aafe06 and
+current HEAD exactly):
+    RUN_ANTENNA_REPAIR: true, RUN_HEURISTIC_DIODE_INSERTION: false,
+    GRT_ANTENNA_ITERS: 8, GRT_ANTENNA_MARGIN: 25, CLOCK_PERIOD: 25.0,
+    TIMING_VIOLATION_CORNERS: ['*'], DIODE_ON_PORTS: absent.
+
+If a future session reads this file: there is NO interrupted run to resume.
+This entire file is historical diagnostic record for bead 58q (now closed)
+and the earlier CPU-macro/SRAM/floorplan hardening history that preceded
+it. Check design_state.json's `history[]` tail and `pd` top-level fields
+for the current authoritative state before starting new PD work on this
+design; do not treat any run_id/run_tag in this file as "in progress."

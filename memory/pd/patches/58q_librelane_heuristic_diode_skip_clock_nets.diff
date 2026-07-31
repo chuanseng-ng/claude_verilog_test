@@ -1,0 +1,127 @@
+diff --git a/librelane/scripts/odbpy/diodes.py b/librelane/scripts/odbpy/diodes.py
+index 4f31e7c..615ecc0 100644
+--- a/librelane/scripts/odbpy/diodes.py
++++ b/librelane/scripts/odbpy/diodes.py
+@@ -38,6 +38,7 @@ class DiodeInserter:
+         threshold_microns: Decimal,
+         side_strategy: str = "source",
+         port_protect_polarities: Optional[List[str]] = None,
++        skip_clock_nets: bool = False,
+         verbose=False,
+     ):
+         print(f"Using threshold {threshold_microns}µm…")
+@@ -51,6 +52,13 @@ class DiodeInserter:
+         self.side_strategy = side_strategy
+         self.threshold_microns = threshold_microns
+         self.port_protect = port_protect_polarities or []
++        # claude_verilog_test / bead 58q local patch (2026-07-30): see
++        # memory/pd/knowledge.md "Local LibreLane patch: heuristic diode
++        # insertion skips clock-network nets" for full rationale. Opt-in,
++        # default False so existing designs (CPU/SRAM/GPU stage-1 macros)
++        # that already use RUN_HEURISTIC_DIODE_INSERTION=true are unaffected
++        # unless a step explicitly requests it.
++        self.skip_clock_nets = skip_clock_nets
+ 
+         self.diode_master = self.block.getDataBase().findMaster(diode_cell)
+         self.diode_site = self.diode_master.getSite().getConstName()
+@@ -255,6 +263,23 @@ class DiodeInserter:
+                 self.debug(f"[d] Skipping special net {net.getConstName():s}")
+                 continue
+ 
++            # claude_verilog_test / bead 58q local patch (2026-07-30):
++            # skip clock-network nets entirely when requested. Classified
++            # via dbNet.getSigType() == "CLOCK" -- this is the CTS-assigned
++            # signal type covering the clock root net (e.g. clk_i) AND every
++            # downstream clock-tree buffer-to-buffer segment, NOT a name
++            # pattern match (deliberately: name matching on "clk*" is
++            # fragile and was explicitly ruled out). Rationale: the
++            # heuristic pass's placement strategy (abut the first sink
++            # instance of any net crossing the span threshold) lands
++            # directly on clock buffer inputs when applied to clock-tree
++            # nets, which measurably disrupts clock-tree insertion delay and
++            # regresses hold at multiple corners. See
++            # memory/pd/knowledge.md for the measured before/after data.
++            if self.skip_clock_nets and net.getSigType() == "CLOCK":
++                self.debug(f"[d] Skipping clock-network net {net.getConstName():s}")
++                continue
++
+             # Check if we already have diode on the net
+             # if yes, then we assume that the user took care of that some
+             # other way
+@@ -333,6 +358,15 @@ class DiodeInserter:
+     default=None,
+     help="Minimum Manhattan distance of a net to be considered an antenna risk requiring a diode. By default, the value used is 200 * the minimum site width.",
+ )
++@click.option(
++    "--skip-clock-nets",
++    default=False,
++    is_flag=True,
++    help="claude_verilog_test / bead 58q local patch: exclude nets classified "
++    "SigType CLOCK (dbNet.getSigType(), i.e. the clock root net and every "
++    "CTS-inserted clock-tree segment) from heuristic span-based diode "
++    "insertion. Opt-in, default off -- see memory/pd/knowledge.md.",
++)
+ @click_odb
+ def place(
+     reader,
+@@ -342,6 +376,7 @@ def place(
+     side_strategy,
+     port_protect,
+     threshold_microns,
++    skip_clock_nets,
+ ):
+     print(f"Design name: {reader.name}")
+ 
+@@ -359,6 +394,7 @@ def place(
+         side_strategy=side_strategy,
+         threshold_microns=threshold_microns,
+         port_protect_polarities=pp_val[port_protect],
++        skip_clock_nets=skip_clock_nets,
+         verbose=verbose,
+     )
+     di.execute()
+diff --git a/librelane/steps/odb.py b/librelane/steps/odb.py
+index 68c7ed9..39815c6 100644
+--- a/librelane/steps/odb.py
++++ b/librelane/steps/odb.py
+@@ -852,6 +852,21 @@ class FuzzyDiodePlacement(OdbpyStep):
+             units="sites",
+             pdk=True,
+         ),
++        Variable(
++            "HEURISTIC_ANTENNA_SKIP_CLOCK_NETS",
++            bool,
++            "claude_verilog_test / bead 58q local patch: if true, exclude nets "
++            "classified SigType CLOCK (the clock root net and every CTS "
++            "clock-tree segment, identified via dbNet.getSigType(), not "
++            "name matching) from heuristic diode insertion, and disable "
++            "the script's independent port-forcing default (which "
++            "otherwise always places a diode on every input port net "
++            "regardless of DIODE_ON_PORTS). Opt-in, default false, so "
++            "designs that already validated RUN_HEURISTIC_DIODE_INSERTION "
++            "results (CPU/SRAM/GPU stage-1 macros) are unaffected unless "
++            "explicitly opted in. See memory/pd/knowledge.md.",
++            default=False,
++        ),
+     ]
+ 
+     def get_script_path(self):
+@@ -867,6 +882,10 @@ class FuzzyDiodePlacement(OdbpyStep):
+         if threshold := self.config["HEURISTIC_ANTENNA_THRESHOLD"]:
+             threshold_opts = ["--threshold", threshold]
+ 
++        skip_clock_opts = []
++        if self.config["HEURISTIC_ANTENNA_SKIP_CLOCK_NETS"]:
++            skip_clock_opts = ["--skip-clock-nets", "--port-protect", "none"]
++
+         return (
+             super().get_command()
+             + [
+@@ -876,6 +895,7 @@ class FuzzyDiodePlacement(OdbpyStep):
+                 pin,
+             ]
+             + threshold_opts
++            + skip_clock_opts
+         )
+ 
+     def run(self, state_in: State, **kwargs) -> Tuple[ViewsUpdate, MetricsUpdate]:

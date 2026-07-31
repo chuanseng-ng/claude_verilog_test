@@ -280,9 +280,18 @@ ifneq ($(wildcard /nix/store),)
 	# Nix environment: nix ld.so cannot find system libs when cocotb dlopen's
 	# libpython3.10.so.1.0.  Create a compat dir with symlinks to system libs.
 	NIX_COMPAT_DIR := /tmp/cocotb_nix_compat
+	# `ldconfig` inside `nix develop` resolves to the nix-store glibc binary, whose
+	# ld.so.cache is empty/unreadable — the probe then returns nothing and the compat
+	# dir is silently left empty.  Prefer the system /sbin/ldconfig, and fall back to
+	# a direct lookup in the usual multiarch dirs if that is unavailable too.
 	SIM_CMD_PREFIX := mkdir -p $(NIX_COMPAT_DIR) && \
 	  for _lib in libexpat.so.1 libz.so.1 libbz2.so.1.0 liblzma.so.5 libffi.so.8; do \
-	    _src=$$(ldconfig -p 2>/dev/null | grep "^	$$_lib " | awk '{print $$NF}' | head -1); \
+	    _src=$$(PATH=/sbin:/usr/sbin:$$PATH ldconfig -p 2>/dev/null | grep "^	$$_lib " | awk '{print $$NF}' | head -1); \
+	    if [ -z "$$_src" ]; then \
+	      for _d in /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu /usr/lib64 /usr/lib; do \
+	        if [ -e "$$_d/$$_lib" ]; then _src="$$_d/$$_lib"; break; fi; \
+	      done; \
+	    fi; \
 	    [ -n "$$_src" ] && ln -sf "$$_src" $(NIX_COMPAT_DIR)/$$_lib 2>/dev/null || true; \
 	  done && \
 	  export LD_LIBRARY_PATH=$(NIX_COMPAT_DIR):$${LD_LIBRARY_PATH} &&

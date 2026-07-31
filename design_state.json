@@ -1,8 +1,8 @@
 {
-  "format_version": "1.3",
+  "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-07-26T09:07:44.282379+00:00",
+  "updated_at": "2026-07-31T16:04:20.907058+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -56,6 +56,18 @@
       "suites": 18,
       "log": "/nobackup/soc_all_gh104/soc_all_68m_run1.log",
       "checked_at": "2026-07-25T01:42:37.117819+00:00"
+    },
+    "soc_periph_regression_go9_k12_confirm": {
+      "status": "PASS",
+      "total_tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skip": 0,
+      "test": "test_periph_loopback",
+      "log": "/nobackup/soc_periph_verify/run2.log",
+      "results_xml": "/home/neuromorphic/Downloads/Github/claude_verilog_test/tb/cocotb/soc/results.xml",
+      "purpose": "Confirm go9 (D-cache MMIO bypass) fix + k12 (DMA/periph loopback test) functional closure",
+      "checked_at": "2026-07-27T22:16:43.472838Z"
     }
   },
   "pipeline_session_id": null,
@@ -858,6 +870,29 @@
       "suggested_next_step": "retry_stage",
       "reason": "Relaunched bead claude_verilog_test-y7v Stage-2 SoC run after unblocking RSZ-0090 (RUN_2026-07-26_15-38-37 died at OpenROAD.RepairDesignPostGRT: SRAM macro Liberty's 0.04ns max_transition on 3 input buses was physically unachievable in sky130_fd_sc_hd). Fix (commit 8b11092, already committed prior to this session) raised those 3 values to 0.5, the library's own default_max_transition; verified via OpenSTA parse. This session made no edits -- verified 5 pre-launch checks (SRAM lib clean, RUN_POST_GRT_DESIGN_REPAIR=true, GRT_RESIZER_HOLD_SLACK_MARGIN=0.05, SDC clk_i/clkbuf_16 exclusion intact, no --skip Checker.HoldViolations, git clean at 8b11092), killed 2 stale dead tmux sessions from a prior invocation, then launched make librelane-sky130-soc detached (tmux sky130_soc_y7v_relaunch, run RUN_2026-07-26_16-05-43, log /nobackup/sky130_soc_run_20260726_090536.log). Confirmed yosys synthesis running before handing off without awaiting the ~2.5-3h completion, per task scope. Checker.HoldViolations still hard-gates the flow so a residual hold violation will abort before DRC/LVS as before.",
       "constraint_ref": "claude_verilog_test-y7v"
+    },
+    {
+      "timestamp": "2026-07-27T22:16:43.472838Z",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Re-ran soc_periph (test_periph_loopback) on current HEAD (commit 9f53f65 CS_UNCACHED_RD/CS_UNCACHED_WR MMIO bypass is an ancestor): TESTS=1 PASS=1 FAIL=0. PASS_PC committed, FAIL_PC never seen \u2014 confirms bead go9 (D-cache MMIO bypass) and dependent k12 (DMA+peripheral loopback SoC test) are functionally closed on this branch. No RTL changes made.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-07-31T16:04:20.907058+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "coverage_gap",
+      "retry_strategy": "refine",
+      "suggested_next_step": "proceed",
+      "reason": "Bead 58q (Sky130 SoC Stage-2 antenna residual) closed by coordinator decision: adopted run3 (RUN_2026-07-30_06-42-17) -- LVS PASSED, routing DRC 0, KLayout DRC 4 (waived, bead 0jp), Magic DRC 9081 (waived, bead 45a), hold clean at all 9 corners (worst +0.0274 ns at max_ss), antenna 140 pin / 120 net (down from 147/127 baseline, residual accepted as a quantified, root-caused gap rather than a defect -- diode-insertion mechanism proven binary on hold via 6-run falsifiable-prediction campaign, not fixable via any tested config lever). ss-corner setup (WNS -8.90 ns) remains a separately tracked, out-of-scope gap per bead 1ls/ujv. pd.signoff stays false: two documented open gates (antenna residual, ss-corner setup) prevent a clean tape-out sign-off, but no further PD action is pending on either without new direction. design_state.json pd fields updated to reflect the adopted run3 gate table; config.json reverted to match run3 exactly (was left at a later, hold-broken experimental config) so the flow is reproducible.",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
@@ -1131,12 +1166,12 @@
     }
   ],
   "pd": {
-    "gds": null,
-    "util_pct": null,
-    "wns_ns": null,
-    "drc_violations": null,
-    "lvs_errors": null,
-    "antenna_violations": 91,
+    "gds": "pnr/sky130/soc/runs/RUN_2026-07-30_06-42-17/54-magic-streamout/soc_top.gds",
+    "util_pct": 37.9,
+    "wns_ns": 0.24,
+    "drc_violations": 9085,
+    "lvs_errors": 0,
+    "antenna_violations": 120,
     "signoff": false,
     "stage1_config": "pnr/sky130/cpu/config.json",
     "run_id": "pd_20260629_021153",
@@ -1455,7 +1490,304 @@
             "runtime/peak memory on 6700x3100um design on ~15GiB host -- step has never completed before"
           ]
         }
+      },
+      "bead_58q_antenna_hold_investigation": {
+        "status": "CLOSED, adopted run3",
+        "campaign_summary": "6 configurations tested (baseline + runs 1-5) chasing antenna reduction below the accepted 147/127 without breaking hold. Adopted run3: RUN_HEURISTIC_DIODE_INSERTION=false, RUN_ANTENNA_REPAIR=true (GRT-based only), GRT_ANTENNA_ITERS=8, GRT_ANTENNA_MARGIN=25.",
+        "adopted_run_tag": "RUN_2026-07-30_06-42-17",
+        "adopted_gate_table": {
+          "lvs": "PASSED",
+          "routing_drc": 0,
+          "klayout_drc": 4,
+          "magic_drc": 9081,
+          "antenna_pin": 140,
+          "antenna_net": 120,
+          "hold_vio_count_all_corners": 0,
+          "hold_worst_slack_corner": "max_ss_100C_1v60",
+          "hold_worst_slack_ns": 0.0274,
+          "setup_clean_corners": [
+            "nom_tt_025C_1v80",
+            "nom_ff_n40C_1v95",
+            "min_tt_025C_1v80",
+            "min_ff_n40C_1v95",
+            "max_ff_n40C_1v95"
+          ],
+          "setup_fail_corners": [
+            "nom_ss_100C_1v60",
+            "min_ss_100C_1v60",
+            "max_ss_100C_1v60"
+          ],
+          "power_mw": 44.6,
+          "util_pct": 37.9,
+          "stdcell_count": 226952
+        },
+        "root_cause_established": "clk_i -> u_cpu/clk_i clock latency at nom_tt is BINARY on whether Odb.HeuristicDiodeInsertion runs at all (0.87-0.93ns off, 1.38-1.44ns on regardless of diode count 7k-47k or clock-tree exclusion) -- the composite step's DetailedPlacement+GlobalRouting re-legalization sub-steps perturb the clock tree, not the number/location of diodes inserted. Three independent fix hypotheses (DIODE_ON_PORTS removal, clock-SigType-net exclusion patch, insertion-volume reduction via raised threshold) all failed to close hold because none of them address whether the composite step runs.",
+        "runs_rejected": [
+          "run1/run2 (heuristic on, default threshold): antenna 52-54/46-48 but hold fails 5/9 corners",
+          "run4 (heuristic on + clock-net-skip patch): antenna 40/39 (best) but hold still fails 5/9 corners",
+          "run5 (heuristic on + threshold=800): antenna 90/84 but hold still fails 5/9 corners"
+        ],
+        "untried_lever_for_future_work": "GRT_ANTENNA_ITERS/GRT_ANTENNA_MARGIN past 8/25 -- GRT-based RepairAntennas does not trigger the DetailedPlacement/GlobalRouting re-legalization sub-steps that heuristic insertion does, so pushing these further could improve antenna without the hold cost. Expected incremental (8/25 already gave 140/120).",
+        "librelane_patch": "scripts/odbpy/diodes.py + steps/odb.py in ~/Downloads/Github/librelane local checkout gained HEURISTIC_ANTENNA_SKIP_CLOCK_NETS (opt-in, default off) -- stays in the tree as a principled, harmless, currently-unused-by-adopted-config patch. Diff checked into this repo at memory/pd/patches/58q_librelane_heuristic_diode_skip_clock_nets.diff.",
+        "process_note": "Four successive root-cause claims across this campaign were wrong (two the orchestrator's, two the coordinator's) and none were caught by a run coming back green -- only pre-registered falsifiable predictions (stated before each run landed) caught them. See memory/pd/knowledge.md for the process note.",
+        "closed_at": "2026-07-31T16:04:04.262614+00:00"
       }
+    }
+  },
+  "soc_stage2_gh104": {
+    "cpu_macro_regen_verdict": "ACCEPTED_USABLE",
+    "cpu_macro_regen_run_tag": "RUN_2026-07-21_18-02-11",
+    "cpu_macro_lef_pin_balance": {
+      "N": 95,
+      "S": 97,
+      "E": 113,
+      "W": 96,
+      "signal_pins": 401,
+      "pg_pins": [
+        "VPWR",
+        "VGND"
+      ]
+    },
+    "cpu_macro_installed_dir": "pnr/sky130/cpu/macro/",
+    "soc_floorplan_fix": {
+      "die_area_before": [
+        0,
+        0,
+        6300,
+        3200
+      ],
+      "die_area_after": [
+        0,
+        0,
+        6700,
+        3100
+      ],
+      "u_cpu_before": [
+        20,
+        20
+      ],
+      "u_cpu_after": [
+        150,
+        150
+      ],
+      "u_sram_gap_before_um": 40,
+      "u_sram_gap_after_um": 150
+    },
+    "run11_tag": "RUN_2026-07-22_05-15-36",
+    "run11_run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-22_05-15-36/",
+    "run11_result": "GRT-0118 FAIL (literal flow exit), but congestion severity reduced >99.5% vs prior runs (82 violations/8.56% usage vs 19863/82%)",
+    "run11_residual_root_cause": "Single GCell row (met2 vertical, capacity:0) directly below CPU's new south edge, blocking all AXI4-read-channel S-edge pin escape routes -- suspected macro halo/extension obstruction",
+    "signoff": false,
+    "run12_tag": "RUN_2026-07-22_05-45-08",
+    "run12_result": "GRT-0118 FAIL (literal), but overflow reduced 82->3 (met1/Horizontal), confirming grid-alignment fix worked",
+    "run12_grid_alignment_fix": {
+      "u_cpu_y_origin": 207.0,
+      "u_sram_y_origin": 207.0,
+      "tile_pitch_um": 6.9
+    },
+    "run12_control_test_macro_extension": {
+      "extension_2_overflow": 3,
+      "extension_0_overflow": 0,
+      "conclusion": "GRT_MACRO_EXTENSION confirmed root cause of residual 3-unit overflow"
+    },
+    "grt_macro_extension_fix": {
+      "before": 2,
+      "after": 0
+    },
+    "run13_tag_pending": true,
+    "run13_run_dir": "/nobackup/sky130_soc_runs/ (tag TBD, launched 2026-07-22T06:09:31)",
+    "run13_tag": "RUN_2026-07-22_06-09-37",
+    "run13_grt_result": "CLEARED (0/0/0 overflow, confirmed on real flow)",
+    "run13_drt_result": "0 DRT violations (confirmed)",
+    "run13_stopped_at": "step 47/78 OpenROAD.IRDropReport, PSM-0069 VPWR/VGND connectivity FATAL failure",
+    "psm0069_is_documented_benign_artifact": false,
+    "psm0069_signature": "u_cpu/VPWR + u_sram/VPWR instance-level isolation + 15555 die-wide met5/met4 unconnected nodes -- does NOT match ASAP7 TAP_TAPCELL_ROW_* precedent",
+    "psm0069_hypotheses_disproven": [
+      "missing_core_pdn_ring_for_stdcell_grid",
+      "missing_VSRC_LOC_FILES"
+    ],
+    "psm0069_root_cause": "u_cpu fixed by removing macro ring; u_sram still fully disconnected, cause unknown -- candidates: SRAM height/core-headroom vs CPU, or needs instance-specific (non-default) macro PDN grid",
+    "drc_lvs_reached": false,
+    "psm0069_fix_test3": {
+      "change": "removed add_pdn_ring around macros in pdn.tcl, matching stock pdn_cfg.tcl",
+      "validated_run": "RUN_2026-07-22_18-16-30",
+      "violations_before": 46671,
+      "violations_after": 22155,
+      "u_cpu_status": "FULLY CONNECTED (0 violations)",
+      "u_sram_status": "FULLY DISCONNECTED (all 22155 remaining violations confined to its exact footprint)",
+      "kept": true
+    },
+    "gh104_followup_20260725": {
+      "purpose": "Re-run Stage-2 SoC DRC/LVS sign-off with three honesty fixes from 86e89c1: per-corner CPU macro libs (9 exact keys replacing wildcard), antenna repair flow enabled, SRAM lib internal_power zeroed",
+      "attempt1_run_tag": "RUN_2026-07-25_09-21-05",
+      "attempt1_result": "TOOL ERROR (not design/timing/DRC failure) -- died at step 54 Odb.CheckDesignAntennaProperties: missing required input 'LEF' (un-skipped one step too many in 86e89c1). Fixed in commit a31a626 (re-skip only that one step).",
+      "attempt2_run_tag": "RUN_2026-07-25_13-29-40",
+      "attempt2_run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-25_13-29-40",
+      "attempt2_log": "/nobackup/sky130_soc_stage2_rerun2_20260725.log",
+      "attempt2_commit": "a31a626",
+      "attempt2_wall_time": "2:54:53 (78/78 stages)",
+      "attempt2_exit_code": 2,
+      "attempt2_exit_code_meaning": "KNOWN BENIGN -- LibreLane's own Checker.MagicDRC/Checker.KLayoutDRC gate firing on nonzero Magic DRC count (documented artifact class), same as prior 65MHz baseline. Not a crash; all 78 stages completed.",
+      "per_corner_lib_proof": "PASSED -- each corner's own sta.log confirmed to load its own matching rv32i_cpu_top__<corner>.lib (nom_ss_100C_1v60 loads nom_ss lib, not nom_tt)",
+      "sta_post_pnr": {
+        "note": "Bit-for-bit identical between attempt1 and attempt2 (diff clean) -- only a downstream-of-STA skip flag differed",
+        "nom_tt_setup_wns_ns": 0.2413,
+        "nom_tt_setup_tns_ns": 0.0,
+        "nom_tt_hold_wns_ns": -0.0923,
+        "nom_tt_hold_violators": 1,
+        "max_ss_setup_wns_ns": -10.473,
+        "max_ss_setup_tns_ns": -252.61,
+        "max_ss_setup_violators": 374,
+        "max_ss_hold_wns_ns": -0.3997,
+        "max_ss_hold_violators": 3,
+        "attribution_caveat": "Timing deltas vs the RUN_2026-07-24_21-36-12 wildcard-lib baseline reflect TWO simultaneous changes (correct per-corner libs AND 2018 antenna-repair diodes perturbing routing) -- not cleanly attributable to the corner-lib fix alone. nom_tt hold regressed from clean to 1 violator; max_ss setup/TNS roughly doubled; max_ss hold worsened from 2 to 3 paths."
+      },
+      "antenna": {
+        "pre_repair_pin": 556,
+        "pre_repair_net": 440,
+        "post_repair_final_pin": 154,
+        "post_repair_final_net": 129,
+        "diodes_inserted": 2018,
+        "verdict": "FAILED (residual 154/129) but repair flow now demonstrably running (~72% reduction) vs baseline where it never ran at all"
+      },
+      "power_mw_total": 61.11085,
+      "power_breakdown_mw": {
+        "internal": 47.31763,
+        "switching": 13.72199,
+        "leakage": 0.07123
+      },
+      "macro_leakage_uw": 70.29201,
+      "lvs": {
+        "verdict": "Circuits match uniquely",
+        "devices": 35439,
+        "nets": 35282,
+        "errors_all_categories": 0,
+        "device_net_count_note": "Higher than baseline's 34,835/35,252 due to the 2018 antenna diodes now actually being inserted (baseline never ran antenna repair)"
+      },
+      "klayout_drc": 4,
+      "klayout_drc_breakdown": {
+        "m2.2": 1,
+        "m3.2": 1,
+        "via2.2": 2
+      },
+      "klayout_drc_note": "EXACTLY 4, matches known macro-internal OpenRAM-generator artifact class from both prior baselines. NO REGRESSION.",
+      "magic_drc": 9081,
+      "magic_drc_note": "Matches baseline total exactly. Same 2 known categories only: nwell.4 (~9051) and met4.4a (~37). NO REGRESSION, no new rule types.",
+      "die_area_mm2": 20.77,
+      "core_area_mm2": 20.36,
+      "instance_area_mm2": 7.72,
+      "util_pct_overall": 37.92,
+      "util_pct_stdcell": 5.72,
+      "signoff_clean": false,
+      "signoff_gap_summary": "setup TNS != 0 at multiple corners; hold WNS < 0 at 6 of 9 corners; antenna not fully repaired (154/129 residual); Magic DRC 9081 (known artifact, previously user-accepted). Deliverable of this session was NUMBER HONESTY (real per-corner timing, real antenna repair, real power total), not new sign-off closure.",
+      "mid_run_note": "A message purporting to be from 'the coordinator' reported attempt 1's failure/results mid-session with specific claimed numbers. Per policy that no agent message is automatic authorization, every claim was independently re-derived from on-disk run artifacts before being acted on -- all checked out exactly. See memory/pd/run_state.md for full verification trail."
+    },
+    "hold_fix_20260726": {
+      "bead": "claude_verilog_test-y7v",
+      "baseline_run": "RUN_2026-07-25_13-29-40",
+      "baseline_hold_wns_nom_tt_ns": -0.092328,
+      "baseline_violator": "apb_paddr_i[4] -> u_cpu/apb_paddr_i[4] (hold in-reg)",
+      "root_cause": [
+        "set_driving_cell [all_inputs] applied weak buf_4 to clk_i itself (886 ps port delay / 1.218 ns slew, fanout 5, cap 0.4516pF per min.rpt) -- inflated capture-clock latency 1:1 into every hold requirement",
+        "GRT_RESIZER_HOLD_SLACK_MARGIN at LibreLane default 0.05 ns did not cover ~92 ps GRT-estimate-to-RCX-extracted drift at hold repair (step 39, pre-detailed-route/RCX)"
+      ],
+      "fixes_applied": [
+        "pnr/sky130/soc/constraints/sky130_soc.sdc: excluded clk_i from buf_4 set_driving_cell, gave it its own set_driving_cell -lib_cell sky130_fd_sc_hd__clkbuf_16 (matches CTS_ROOT_BUFFER)",
+        "pnr/sky130/soc/config.json: GRT_RESIZER_HOLD_SLACK_MARGIN 0.05 -> 0.15"
+      ],
+      "relaunch": {
+        "run_id": "pd_20260726_093603",
+        "tmux_session": "sky130_soc_hold_fix_20260726_093603",
+        "log": "/nobackup/sky130_soc_hold_fix_20260726_093603.log",
+        "run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-26_09-36-48",
+        "launched_at": "2026-07-26T09:36:03+07:00",
+        "status": "in_progress_not_awaited",
+        "confirmed_progress": "floorplan (step 10) completed 0 errors; soc_top.sdc line 781 confirms clkbuf_16 applied to clk_i; flow proceeding into PDN generation (step 17) as of last check"
+      }
+    },
+    "postgrt_repair_fix_20260726": {
+      "bead": "claude_verilog_test-y7v",
+      "prior_run_died": {
+        "run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-26_15-38-37",
+        "died_at_step": "37 OpenROAD.RepairDesignPostGRT",
+        "error": "RSZ-0090 Max transition time from SDC is 0.040ns. Best achievable transition time is 0.043ns with a load of 0.01pF",
+        "root_cause": "OpenRAM SRAM macro Liberty declared max_transition:0.04 on 3 input buses (addr0, addr1, one data-adjacent bus); physically unachievable in sky130_fd_sc_hd; global check blocked repair of an unrelated CPU-macro net (u_cpu/axi_araddr_o[18])."
+      },
+      "fix_applied": {
+        "commit": "8b11092",
+        "change": "sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.lib: 3 max_transition values 0.04 -> 0.5 (library's own default_max_transition). Verified via OpenSTA read_liberty parse before commit. No other files touched."
+      },
+      "pre_launch_verification": {
+        "sram_lib_clean_of_0.04_max_transition": true,
+        "config_RUN_POST_GRT_DESIGN_REPAIR": true,
+        "config_GRT_RESIZER_HOLD_SLACK_MARGIN": 0.05,
+        "sdc_clk_i_excluded_from_buf4_has_own_clkbuf_16": true,
+        "makefile_no_skip_HoldViolations": true,
+        "git_status_clean_at_8b11092": true
+      },
+      "relaunch": {
+        "run_id": "pd_20260726_160543",
+        "tmux_session": "sky130_soc_y7v_relaunch",
+        "log": "/nobackup/sky130_soc_run_20260726_090536.log",
+        "run_dir": "/nobackup/sky130_soc_runs/RUN_2026-07-26_16-05-43",
+        "launched_at": "2026-07-26T16:05:36+07:00",
+        "status": "in_progress_not_awaited",
+        "confirmed_progress": "yosys synthesis actively running (pid 329803) at time of handoff",
+        "stale_sessions_killed_before_launch": [
+          "sky130_soc_full",
+          "sky130_soc_signoff_65mhz"
+        ],
+        "verify_on_landing": [
+          "Passes *-openroad-repairdesignpostgrt without RSZ-0090 recurrence (first question)",
+          "*-openroad-stamidpnr-3/ws.max.rpt recovers toward baseline 4.0600 (failing runs were 3.2044/3.0776)",
+          "*-openroad-stapostpnr/nom_tt_025C_1v80/ws.max.rpt setup >= 0",
+          "same dir ws.min.rpt hold stays >= 0 (+0.1453 baseline to beat)",
+          "u_cpu/axi_araddr_o[18] cap drops from 0.625885 and clk->Q from 5.572786",
+          "no regression: LVS match, KLayout DRC exactly 4, Magic DRC 9081, antenna <= 144 pin/115 net",
+          "runtime/peak memory on 6700x3100um design on ~15GiB host -- step has never completed before"
+        ]
+      }
+    },
+    "bead_58q_antenna_hold_investigation": {
+      "status": "CLOSED, adopted run3",
+      "campaign_summary": "6 configurations tested (baseline + runs 1-5) chasing antenna reduction below the accepted 147/127 without breaking hold. Adopted run3: RUN_HEURISTIC_DIODE_INSERTION=false, RUN_ANTENNA_REPAIR=true (GRT-based only), GRT_ANTENNA_ITERS=8, GRT_ANTENNA_MARGIN=25.",
+      "adopted_run_tag": "RUN_2026-07-30_06-42-17",
+      "adopted_gate_table": {
+        "lvs": "PASSED",
+        "routing_drc": 0,
+        "klayout_drc": 4,
+        "magic_drc": 9081,
+        "antenna_pin": 140,
+        "antenna_net": 120,
+        "hold_vio_count_all_corners": 0,
+        "hold_worst_slack_corner": "max_ss_100C_1v60",
+        "hold_worst_slack_ns": 0.0274,
+        "setup_clean_corners": [
+          "nom_tt_025C_1v80",
+          "nom_ff_n40C_1v95",
+          "min_tt_025C_1v80",
+          "min_ff_n40C_1v95",
+          "max_ff_n40C_1v95"
+        ],
+        "setup_fail_corners": [
+          "nom_ss_100C_1v60",
+          "min_ss_100C_1v60",
+          "max_ss_100C_1v60"
+        ],
+        "power_mw": 44.6,
+        "util_pct": 37.9,
+        "stdcell_count": 226952
+      },
+      "root_cause_established": "clk_i -> u_cpu/clk_i clock latency at nom_tt is BINARY on whether Odb.HeuristicDiodeInsertion runs at all (0.87-0.93ns off, 1.38-1.44ns on regardless of diode count 7k-47k or clock-tree exclusion) -- the composite step's DetailedPlacement+GlobalRouting re-legalization sub-steps perturb the clock tree, not the number/location of diodes inserted. Three independent fix hypotheses (DIODE_ON_PORTS removal, clock-SigType-net exclusion patch, insertion-volume reduction via raised threshold) all failed to close hold because none of them address whether the composite step runs.",
+      "runs_rejected": [
+        "run1/run2 (heuristic on, default threshold): antenna 52-54/46-48 but hold fails 5/9 corners",
+        "run4 (heuristic on + clock-net-skip patch): antenna 40/39 (best) but hold still fails 5/9 corners",
+        "run5 (heuristic on + threshold=800): antenna 90/84 but hold still fails 5/9 corners"
+      ],
+      "untried_lever_for_future_work": "GRT_ANTENNA_ITERS/GRT_ANTENNA_MARGIN past 8/25 -- GRT-based RepairAntennas does not trigger the DetailedPlacement/GlobalRouting re-legalization sub-steps that heuristic insertion does, so pushing these further could improve antenna without the hold cost. Expected incremental (8/25 already gave 140/120).",
+      "librelane_patch": "scripts/odbpy/diodes.py + steps/odb.py in ~/Downloads/Github/librelane local checkout gained HEURISTIC_ANTENNA_SKIP_CLOCK_NETS (opt-in, default off) -- stays in the tree as a principled, harmless, currently-unused-by-adopted-config patch. Diff checked into this repo at memory/pd/patches/58q_librelane_heuristic_diode_skip_clock_nets.diff.",
+      "process_note": "Four successive root-cause claims across this campaign were wrong (two the orchestrator's, two the coordinator's) and none were caught by a run coming back green -- only pre-registered falsifiable predictions (stated before each run landed) caught them. See memory/pd/knowledge.md for the process note.",
+      "closed_at": "2026-07-31T16:04:04.262614+00:00"
     }
   }
 }
