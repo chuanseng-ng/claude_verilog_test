@@ -63,9 +63,17 @@
 #   since sky130_fd_sc_hd genuinely varies per corner.
 #
 # SCOPE OF THIS SIGN-OFF: still a TYPICAL-CORNER (nom_tt) TIMING SIGN-OFF,
-# because one macro remains single-corner -- and note that even nom_tt now
-# carries a hold violation. It is NOT a validated multi-corner timing
-# sign-off and MUST NOT be recorded as one anywhere downstream.
+# because one macro remains single-corner. It is NOT a validated
+# multi-corner timing sign-off and MUST NOT be recorded as one anywhere
+# downstream.
+#   UPDATE 2026-07-31 (adopted run RUN_2026-07-30_06-42-17): the "even
+#   nom_tt now carries a hold violation" clause that used to appear here
+#   is SUPERSEDED. That violation was root-caused to the clk_i
+#   set_driving_cell issue (bead y7v, see FIX 2026-07-26 below) and the
+#   adopted run reports hold clean at all 9 corners. The scope statement
+#   itself still stands: "hold clean at all 9 corners" is a statement
+#   about 9 corner LABELS, not 9 independently characterized macro
+#   models. The SRAM macro's timing arcs are identical in all nine.
 #
 # REMAINING REAL FIX: SPICE-characterize the SRAM macro per corner
 # (analytical_delay=False, nominal_corner_only=False). This would also fix

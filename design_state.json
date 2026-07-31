@@ -1774,9 +1774,13 @@
           "min_ss_100C_1v60",
           "max_ss_100C_1v60"
         ],
-        "power_mw": 44.6,
+        "power_nom_tt_mw": 37.63,
+        "power_worst_corner_mw": 44.13,
+        "power_worst_corner": "max_ff_n40C_1v95",
+        "power_figure_correction_2026-07-31": "This table previously carried a single scalar 'power_mw': 44.6, and bead 9t6 carried 44.1. Both were re-derived from 51-openroad-stapostpnr/<corner>/power.rpt in the adopted run: nom_tt = 3.762750e-02 W = 37.63 mW; max_ff = 4.412770e-02 W = 44.13 mW. The 44.1 figure was the max_ff corner reported as if it were the headline number; 44.6 matches no corner of any Sky130 SoC run and was unsourced. Power is now recorded per corner so the tt sign-off number and the worst-corner number cannot be conflated.",
         "util_pct": 37.9,
-        "stdcell_count": 226952
+        "stdcell_count": 226952,
+        "corner_modeling_caveat": "TYPICAL-CORNER (nom_tt) SIGN-OFF ONLY. 'hold 0 at all 9 corners' and the setup_clean/setup_fail corner lists above are statements about 9 corner LABELS, not 9 independently characterized macro models. The SRAM macro sky130_sram_4kbyte_1rw1r_32x1024_8 is characterized at TT only (its config.json lib entry is deliberately {\"*\": [<one TT_1p8V_25C file>]}), so its internal timing arcs are identical in all nine reported corners. Results at ss/ff therefore carry macro-model error of unknown sign and this is NOT a validated multi-corner timing sign-off. The CPU macro rv32i_cpu_top IS genuinely per-corner (fixed 2026-07-25, 9 distinct libs). Paths entirely within flat sky130_fd_sc_hd standard-cell logic ARE corner-accurate. Tracked as GH #120 / bead o1i, deferred host-blocked. See pnr/sky130/soc/constraints/sky130_soc.sdc header."
       },
       "root_cause_established": "clk_i -> u_cpu/clk_i clock latency at nom_tt is BINARY on whether Odb.HeuristicDiodeInsertion runs at all (0.87-0.93ns off, 1.38-1.44ns on regardless of diode count 7k-47k or clock-tree exclusion) -- the composite step's DetailedPlacement+GlobalRouting re-legalization sub-steps perturb the clock tree, not the number/location of diodes inserted. Three independent fix hypotheses (DIODE_ON_PORTS removal, clock-SigType-net exclusion patch, insertion-volume reduction via raised threshold) all failed to close hold because none of them address whether the composite step runs.",
       "runs_rejected": [

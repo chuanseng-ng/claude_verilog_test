@@ -4181,6 +4181,18 @@ investigation (bead 58q). Launching next.
 --- RUN_2026-07-30_06-42-17 (run 3) -- HYPOTHESIS CONFIRMED, HOLD FULLY
 CLOSED AT ALL 9 CORNERS ---
 
+READ THIS FIRST (added 2026-07-31): "all 9 corners" throughout this section
+means 9 corner LABELS, not 9 independently characterized macro models. The
+SRAM macro sky130_sram_4kbyte_1rw1r_32x1024_8 is characterized at TT only,
+so its internal timing arcs are IDENTICAL in every corner reported below.
+The CPU macro is genuinely per-corner (fixed 2026-07-25); flat standard-cell
+paths are corner-accurate. Every ss/ff number in this section therefore
+carries macro-model error of unknown sign. This is a TYPICAL-CORNER (nom_tt)
+sign-off, not a validated multi-corner one -- per the standing instruction in
+pnr/sky130/soc/constraints/sky130_soc.sdc, it MUST NOT be recorded as one.
+Tracked as GH #120 / bead o1i (deferred, host-blocked: ~80-95 h of SPICE on
+a host that reboots every 2-8 h).
+
 Monitor rebuilt per coordinator feedback: CPU-time-delta liveness (ps -eo
 pid,comm,cputimes, flag only if a step's worker process accumulates ZERO
 additional CPU time across 2 consecutive 3-min polls) instead of file-mtime,
@@ -4608,6 +4620,21 @@ current HEAD exactly):
     RUN_ANTENNA_REPAIR: true, RUN_HEURISTIC_DIODE_INSERTION: false,
     GRT_ANTENNA_ITERS: 8, GRT_ANTENNA_MARGIN: 25, CLOCK_PERIOD: 25.0,
     TIMING_VIOLATION_CORNERS: ['*'], DIODE_ON_PORTS: absent.
+
+STAGE-2 SCOPE, RECORDED 2026-07-31 (bead 9t6 closure): the adopted result is
+a TYPICAL-CORNER (nom_tt) TIMING SIGN-OFF. The nine reported corners are nine
+LABELS; the SRAM macro is characterized at TT only and its arcs are identical
+in all of them, so ss/ff numbers carry macro-model error of unknown sign. The
+"hold clean at all 9 corners" headline is real as a LibreLane gate result and
+should not be restated as multi-corner silicon confidence. Power for the
+adopted run, re-derived per corner from 51-openroad-stapostpnr/<corner>/
+power.rpt: nom_tt 37.63 mW, worst corner max_ff 44.13 mW. The single scalars
+previously recorded (44.6 in design_state.json, 44.1 in bead 9t6) were
+respectively unsourced and the max_ff corner mislabeled as the headline.
+
+Setup at ss remains failing (bead ujv) and is now DEFERRED rather than open
+work: closing it honestly requires per-corner SRAM characterization, which
+bead o1i measured as infeasible on this host. It is not a PD-tuning problem.
 
 If a future session reads this file: there is NO interrupted run to resume.
 This entire file is historical diagnostic record for bead 58q (now closed)

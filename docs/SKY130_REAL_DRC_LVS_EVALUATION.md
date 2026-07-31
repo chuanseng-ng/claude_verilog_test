@@ -44,3 +44,32 @@ All PD via physical-design-orchestrator; read PD memories first. PD-only artifac
 
 ## 6. Verdict line
 **GO, staged.** CPU+periph Sky130 real DRC/LVS now (Stages 1-2); GPU host-gated (Stages 3-4). FreePDK45 out. Tracking: GitHub epic + children below.
+
+## 7. Results (added 2026-07-31 — sections 1-6 above are the original 2026-06-27 plan)
+
+### Stage 1 — CPU standalone (GH #103, bead closed)
+Real sign-off achieved: **KLayout DRC 0, Netgen LVS MATCH, setup +0.366 ns @ 75 MHz**, native Sky130 macro views produced in `pnr/sky130/cpu/macro/`. `g0o` verified fixed for Sky130 (all 403 LEF pins incl. AXI4 burst ports present; `g0o` remains open as an ASAP7-only issue). Magic DRC reported 27.7 M violations — **waived**: 100.0000 % of all 27,730,498 coordinates fall inside the 10 SRAM macro footprints, KLayout on the same GDS reports 0, and the foundry KLayout deck excludes SRAM as pre-verified. Bead `45a`.
+
+### Stage 2 — CPU macro + peripherals SoC, no GPU (GH #104, bead `9t6` closed)
+Adopted run `RUN_2026-07-30_06-42-17` at 25.0 ns / 40 MHz:
+
+| Gate | Result |
+|---|---|
+| Netgen LVS | **PASSED** |
+| Routing DRC | **0** |
+| Power-grid violations | **0** |
+| Hold | 0 at all 9 corner labels (worst +0.0274 ns, max_ss) |
+| Setup tt / ff | 0 |
+| Setup ss | **FAIL** −4.6432 ns → bead `ujv`, deferred |
+| Antenna | **FAIL** 140 pin / 120 net — quantified accepted residual, bead `58q` |
+| KLayout DRC | 4 — GH #121 macro-internal waiver |
+| Magic DRC | 9,081 — bead `45a` DEF+LEF-abstract waiver |
+
+Power (per corner, from `51-openroad-stapostpnr/<corner>/power.rpt`): **nom_tt 37.63 mW**, worst corner max_ff 44.13 mW. 37.9 % utilization, 226,952 stdcells, die 6700 × 3100 µm.
+
+**⚠️ SCOPE — this is a TYPICAL-CORNER (nom_tt) TIMING SIGN-OFF, not a validated multi-corner one.** The nine reported corners are nine *labels*. The SRAM macro `sky130_sram_4kbyte_1rw1r_32x1024_8` is characterized at TT only, so its internal timing arcs are identical in all nine; ss/ff results carry macro-model error of unknown sign. The CPU macro *is* genuinely per-corner (9 distinct Liberty views, fixed 2026-07-25), and paths entirely within flat `sky130_fd_sc_hd` logic are corner-accurate. The physical gates — LVS, routing DRC, PDN, KLayout DRC — are **not** subject to this caveat and stand as real results. See the `pnr/sky130/soc/constraints/sky130_soc.sdc` header.
+
+**Why Stage 2 stops here.** Closing ss honestly requires SPICE characterization of the SRAM macro at ss/ff. Bead `o1i` measured this as ~26–31 h **per corner** (~80–95 h for three) from Xyce's own progress meter, against a host that reboots every 2–8 h. Both `ujv` (ss setup) and `o1i` (SRAM characterization) are therefore **deferred as host-blocked**, not open work — `ujv` is not a PD-tuning problem, and relaxing frequency does not fix it (path delay scales with period at ≈0.52 ns/ns, so extrapolated closure is ~29 MHz and even that is a two-point lower bound).
+
+### Stages 3 & 4 — GPU (GH #105, #106)
+**Not attempted. Still host-gated** on ≥32 GB RAM + ~500 GB scratch; the current host has ~15 GB. The GPU remains ASAP7-indicative-only, exactly the fallback anticipated in §2. Epic GH #102 stays open on these two stages.

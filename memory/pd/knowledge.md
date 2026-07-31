@@ -565,8 +565,16 @@ BOTH approaches are used in run 6 for belt-and-suspenders.
 
 **Finding**: `librelane/flows/classic.py`'s `Steps` list places
 `OpenROAD.ResizerTimingPostGRT` immediately before `OpenROAD.DetailedRouting`, and
-`OpenROAD.STAPostPNR` (the step that produces final signed-off timing numbers) runs
+`OpenROAD.STAPostPNR` (the step that produces the final sign-off timing report) runs
 after `OpenROAD.DetailedRouting` with **no resizer/repair step in between**.
+
+> **Caveat on "signed-off" (added 2026-07-31):** STAPostPNR's numbers are only as
+> honest as the Liberty views behind them. On the Sky130 SoC they are a
+> TYPICAL-CORNER (nom_tt) result — the SRAM macro is characterized at TT only, so
+> STAPostPNR reports nine corner *labels* backed by one macro model. Never quote
+> "clean at all 9 corners" from a STAPostPNR report without first checking that
+> every macro in `config.json`'s `MACROS` has genuinely distinct per-corner libs
+> (a `{"*": [...]}` lib entry is the tell). See GH #120 / bead `o1i`.
 `OpenROAD.STAPostPNR` is pure reporting — it has no timing-repair capability at all.
 
 **Consequence**: any hold (or setup) degradation introduced by the shift from
