@@ -725,6 +725,38 @@ class GPUScoreboard(uvm_component):
 - All peripherals functional
 - System-level assertions pass
 
+### CDC Verification (GH epic #90, 2-domain multi-clock SoC)
+
+The SoC is single-clock through Phase 5, so it has **no genuine internal CDC**. Epic #90 introduces
+exactly one crossing (CPU ↔ crossbar M0) and with it the project's first CDC verification.
+
+**`test_async_axi_fifo` (GH #91, 22/22)** — unit suite for `rtl/soc/async_axi_fifo.sv` and the
+`rtl/soc/cdc/` primitives. First testbench in the repo to drive **two independent `Clock()`
+coroutines**. Clock-ratio matrix (ns): 4/9 (the real ~2.25 CPU:fabric ratio), 9/4, 4/20, 20/4,
+10/10 (the `PLL_IMPL="STUB"` equal-clock case), 10/11 (coprime — edges slide continuously through
+each other, the closest simulatable proxy for a violation window).
+
+Load-bearing cases, none of which may be dropped:
+
+| Test | What it catches |
+| :--- | :--- |
+| exact-depth-full | ±1 error in the gray full-comparison (accepted count must equal `*_depth_o` exactly) |
+| pointer wrap + near-empty ping-pong | wrap bug at the pointer MSB; every pointer value visited at depth 0/1 |
+| cross-flush (assert ONE reset only) | one-sided reset injecting fabricated AXI beats — the failure the cross-coupled reset exists to prevent |
+| no-combinational-crossing (freeze `s_clk`) | any combinational path across the domain boundary |
+| white-box gray pointer | multi-bit gray transitions (`popcount(prev^curr) <= 1`) |
+
+**Not simulatable — do not mistake a green run for silicon confidence.** Verilator is 2-state and
+zero-delay, so metastability, a missing synchronizer stage, or a raw binary pointer crossing would
+all pass. The real mitigations are structural: `(* magic_cdc *)` on the primitives feeding GH #95's
+`cdc_snitch` BAD=0 gate, GH #94's `set_clock_groups -asynchronous` plus `set_max_delay
+-datapath_only` on the `mem_q` read and the two pointer crossings, and the PR review checklist in
+the module headers.
+
+**Coverage gap to close in #92:** with `PLL_IMPL="STUB"`, `core_clk == clk_i`, so after #93 the
+`soc_all` integration suites exercise the bridge at ratio 1:1 and contribute **zero** CDC coverage.
+Until the two stub PLLs get different ratios, `test_async_axi_fifo` is the only CDC coverage there is.
+
 ---
 
 ## Regression Testing
