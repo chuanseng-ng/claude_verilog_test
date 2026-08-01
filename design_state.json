@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-07-31T16:04:20.907058+00:00",
+  "updated_at": "2026-08-01T15:34:41.803329+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -912,6 +912,18 @@
       "suggested_next_step": "escalate",
       "reason": "GH #93 verification task: authored apb_cdc_bridge unit suite (15/15 PASS, lint-clean), TB wrapper cpu_clk_i/cpu_rst_n_i ports + soc_clocks.py helper + 8-suite retrofit (lint-clean), and soc_multiclock/soc_pll_multiclock suites -- then found via `make soc_boot` that the SoC does not boot at all on this branch (0/8 commits, 0/100 stability attempts observed), root-caused to a CPU clock-gate/synchronous-reset race in soc_top.sv introduced by commit 66a9af1. This blocks essentially every SoC-level suite (soc_boot/periph/coherency/cpu_gpu/pll/multiclock), a regression against the prior 142/142 baseline. Filed fix_request and stopping per Behaviour Rule 4 -- RTL re-invocation is the pipeline-orchestrator's responsibility, not this run's.",
       "constraint_ref": "fr_57f49b7f9b29_20260801_000000_00"
+    },
+    {
+      "timestamp": "2026-08-01T15:34:41.803329+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Fixed GH #93 CPU-domain clock/reset race in soc_top.sv (cpu_gated_clk never toggled during cpu_domain_rst_n) by inverting the clk-enable CDC synchroniser so its safe reset value is clock-running; Verilator lint_soc 0 errors / 7 baseline warnings. Re-verification of SoC boot is the verification-orchestrator's responsibility.",
+      "constraint_ref": "fr_57f49b7f9b29_20260801_000000_00"
     }
   ],
   "fix_requests": [
@@ -1186,7 +1198,7 @@
     {
       "id": "fr_57f49b7f9b29_20260801_000000_00",
       "created_at": "2026-08-01T15:29:22.974567+00:00",
-      "updated_at": "2026-08-01T15:29:22.974567+00:00",
+      "updated_at": "2026-08-01T15:34:41.803329+00:00",
       "created_by": "verification-orchestrator",
       "failure_class": "functional",
       "test_name": "test_boot_pc_scoreboard, test_boot_sram_sentinels, test_boot_stability_100 (tb/cocotb/soc/test_boot.py, soc_boot suite)",
@@ -1207,9 +1219,22 @@
       "expected_behavior": "Per docs/design/RTL_DEFINITION.md / fr_null_20260603_052800_00 (already-fixed CPU RESET_PC bug): after rst_n_i/cpu_rst_n_i release and PLL lock, the CPU must synchronously load RESET_PC=0x0000_1000 and begin committing instructions from boot ROM within a few hundred cycles.",
       "observed_behavior": "Verified via `make soc_boot` (tb/cocotb/soc/, commit 66a9af1, pristine working tree): test_boot_pc_scoreboard FAILS with 'timeout: collected 0/8 commits'; test_boot_sram_sentinels FAILS identically (golden reference model confirms SRAM[0x2000]=0xDEADBEEF/[0x2004]=0x12345678 are correct pre-flight, but the DUT never gets far enough to write them); test_boot_stability_100 FAILS on every single observed attempt (22+ consecutive attempts with varied reset-phase offsets and random seeds, all 'timeout: collected 0/8 commits', 0/100 before the run was stopped as conclusive). Root cause (confirmed by independent RTL trace, cross-checked against a second agent's identical finding): rtl/soc/soc_top.sv's u_cpu_clk_en_sync (cdc_2ff_sync gating cpu_gated_clk via u_cpu_cg, rooted at cpu_core_rst_n) and u_cpu_pmu_rst_sync (feeds cpu_domain_rst_n = cpu_core_rst_n & pmu_cpu_rst_n_cpu_sync, also rooted at cpu_core_rst_n) are both 2-stage synchronizers with an already-asserted (=1) source value (pmu_cpu_clk_en and pmu_cpu_rst_n both default to 1 out of pmu.sv reset), so both transition 0->1 on the SAME cpu_core_clk edge (2 cycles after cpu_core_rst_n releases). rv32i_clock_gate's ICG (rtl/mem/rv32i_clock_gate.sv) only updates its enable latch while clk is low, so cpu_gated_clk's first toggle coincides with cpu_domain_rst_n's release -- there is no cpu_gated_clk edge while cpu_domain_rst_n is still asserted. u_cpu's pipeline (rtl/cpu/core/pipeline/rv32i_pipeline_if.sv and siblings) uses plain synchronous reset (`always_ff @(posedge clk) if (!rst_n) pc_q <= RESET_PC`), which requires at least one clock edge WHILE rst_n is low to actually load the reset value -- since that never happens, pc_q keeps its uninitialized/0 simulation value instead of RESET_PC=0x1000, and the CPU fetches from an unmapped address forever. Blast radius: every SoC-level cocotb suite that boots real CPU firmware through tb_soc_top/tb_soc_pll is blocked -- soc_boot, soc_periph, soc_coherency, soc_cpu_gpu, soc_pll (commit_pc-dependent checks), plus the newly-authored soc_multiclock and soc_pll_multiclock suites. This is a regression against the prior 142/142 soc_all baseline (pre-commit 66a9af1).",
       "session_id": null,
-      "status": "open",
-      "rtl_response": null,
-      "history": []
+      "status": "fixed",
+      "rtl_response": {
+        "diff_summary": "rtl/soc/soc_top.sv: replaced the non-inverted pmu_cpu_clk_en_sync (cdc_2ff_sync, reset-to-0 = clock DISABLED) with pmu_cpu_clk_dis_sync (cdc_2ff_sync of ~pmu_cpu_clk_en, reset-to-0 = NOT disabled = clock RUNNING). u_cpu_cg's en is now ~pmu_cpu_clk_dis_sync. This keeps cpu_gated_clk = cpu_core_clk running unconditionally for the entire cpu_core_rst_n-low window (the safe cdc_2ff_sync reset value now matches the required safe state), so u_cpu (and u_cpu_axi_cdc's s-side cdc_reset_sync, same s_clk_i=cpu_gated_clk) both see clock edges throughout cpu_domain_rst_n's assertion and correctly load their synchronous reset values, including RESET_PC. Added extensive header comments documenting the reset-release ordering with cycle counts, plus sanity-check findings for pmu_cpu_iso_en_sync's safe reset value, u_cpu_pmu_rst_sync's rst_n_i choice, and async_axi_fifo's reset-hold contract. Flagged (documented, not fixed -- out of scope, needs a pmu.sv change) a narrower residual risk: pmu.sv releases rst_n_w one core_clk cycle before ungating clk_en_w on the power-up path, which could reintroduce a brief version of this bug during a live PMU-driven CPU power-cycle (not cold boot).",
+        "files_changed": [
+          "rtl/soc/soc_top.sv"
+        ],
+        "fixed_at": "2026-08-01T15:34:41.803329+00:00"
+      },
+      "history": [
+        {
+          "timestamp": "2026-08-01T15:34:41.803329+00:00",
+          "agent": "rtl-design-orchestrator",
+          "action": "fixed",
+          "note": "Re-sourced u_cpu_cg's enable from an inverted, sync-safe pmu_cpu_clk_dis_sync so cpu_gated_clk runs throughout cpu_domain_rst_n's assertion. Verilator lint_soc: 0 errors, 7 pre-existing baseline warnings only. Commit [Fix] GH #93 on feat/cpu-domain-cdc-gh93."
+        }
+      ]
     }
   ],
   "pd": {
