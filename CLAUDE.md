@@ -134,7 +134,7 @@ Three nodes are supported by the existing `pnr/Makefile`. Use the right node for
 Sky130 is the **only** node in this project with genuine physical verification — ASAP7 skips Magic/KLayout/Netgen entirely (predictive PDK) and FreePDK45 has them permanently blocked.
 
 - **Stage 1** — CPU standalone (`pnr/sky130/cpu/`): KLayout DRC 0, Netgen LVS MATCH, +0.366 ns setup @ 75 MHz. Magic DRC 27.7 M is a waived PDK artifact — 100 % of violations sit inside SRAM macro footprints (bead `45a`).
-- **Stage 2** — CPU macro + peripherals SoC, no GPU (`pnr/sky130/soc/`): LVS PASSED, routing DRC 0, PDN 0, hold clean, 40 MHz, nom_tt 37.63 mW, die 6700 × 3100 µm. Open gates: ss setup fail (`ujv`), antenna 140/120 residual (`58q`).
+- **Stage 2** — CPU macro + peripherals SoC, no GPU (`pnr/sky130/soc/`): LVS PASSED, routing DRC 0, PDN 0, hold clean, 40 MHz, nom_tt 37.63 mW, die 6700 × 3100 µm. Residual gates, neither open work: ss setup fail (`ujv`, deferred host-blocked), antenna 140/120 (`58q`, closed as an accepted trade-off against hold).
 - ⚠️ **Stage-2 timing is typical-corner (nom_tt) only.** The SRAM macro is characterized at TT alone, so "clean at 9 corners" means 9 corner *labels* backed by one macro model. Physical gates (LVS/DRC/PDN) are unaffected. Per-corner SRAM characterization is host-blocked (~80–95 h SPICE; bead `o1i`).
 - **Stages 3–4** (GPU, GH #105/#106): host-gated on ≥32 GB RAM + ~500 GB scratch. GPU stays ASAP7-indicative.
 - Detail → `docs/SKY130_REAL_DRC_LVS_EVALUATION.md` §7.

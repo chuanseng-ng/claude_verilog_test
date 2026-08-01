@@ -5,7 +5,10 @@
 #   clock_period          = 25.0 ns (40 MHz)   <- set below, line ~205
 #   TIMING_VIOLATION_CORNERS = ["*"]           <- all 9 corners gated
 #   Result: hold clean at all 9 corners; setup clean at tt/ff; setup STILL
-#   FAILS at ss (max_ss -4.643 ns) -- tracked as bead ujv, OPEN.
+#   FAILS at ss (max_ss -4.643 ns) -- tracked as bead ujv, DEFERRED
+#   host-blocked 2026-07-31 (honest ss closure needs per-corner SRAM
+#   characterization; bead o1i measured that as infeasible on this host).
+#   Stage 2 closed on that basis as a typical-corner (nom_tt) sign-off.
 # Everything below this block describing 75 MHz / 65 MHz / nom_tt-only
 # gating is HISTORICAL CONTEXT ONLY. Do not read it as the current target.
 # ############################################################################
