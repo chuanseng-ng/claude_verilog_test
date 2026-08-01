@@ -46,8 +46,8 @@
   },
   "verification_status": {
     "coverage_pct": 100.0,
-    "sim_signoff": false,
-    "signoff": false,
+    "sim_signoff": true,
+    "signoff": true,
     "sram_sky130_soc_all_regression": {
       "status": "PASS",
       "total_tests": 110,
@@ -71,7 +71,7 @@
       "checked_at": "2026-07-27T22:16:43.472838Z"
     },
     "gh93_cdc_verification": {
-      "status": "PARTIAL -- boot regression fixed, second CDC bug found",
+      "status": "SIGNED OFF",
       "reason": "SoC boot regression (see fix_requests[] entry) blocks soc_boot/soc_periph/soc_coherency/soc_cpu_gpu/soc_pll/soc_multiclock/soc_pll_multiclock",
       "fix_request_id": "fr_280f3ac18c66_20260801_000001_00",
       "tb_infra_status": "complete, lint-clean: cpu_clk_i/cpu_rst_n_i real ports on tb_soc_top.sv/tb_soc_pll.sv, soc_clocks.py shared helper, 8 suites retrofitted (zero behaviour change), apb_cdc_bridge unit suite 15/15 PASS (unaffected, does not instantiate soc_top), soc_multiclock + soc_pll_multiclock authored and lint-clean but blocked from passing until the RTL fix lands",
@@ -106,7 +106,62 @@
         "fix_request_id": "fr_280f3ac18c66_20260801_000001_00",
         "checked_at": "2026-08-01T16:28:27.576477+00:00"
       },
-      "prior_gh93_fix_request_id": "fr_57f49b7f9b29_20260801_000000_00 (status: fixed)"
+      "prior_gh93_fix_request_id": "fr_57f49b7f9b29_20260801_000000_00 (status: fixed)",
+      "final_regression": {
+        "soc_all": {
+          "status": "PASS",
+          "total_tests": 159,
+          "pass": 159,
+          "fail": 0,
+          "skip": 0,
+          "suites": 21,
+          "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_all_run2.log"
+        },
+        "async_axi_fifo": {
+          "status": "PASS",
+          "total_tests": 22,
+          "pass": 22,
+          "fail": 0,
+          "skip": 0,
+          "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/async_fifo_full.log"
+        },
+        "soc_multiclock": {
+          "status": "PASS",
+          "total_tests": 4,
+          "pass": 4,
+          "fail": 0,
+          "skip": 0,
+          "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_multiclock2.log"
+        },
+        "soc_pll_multiclock": {
+          "status": "PASS",
+          "total_tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skip": 0,
+          "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_pll_multiclock2.log"
+        },
+        "apb_cdc_bridge": {
+          "status": "PASS",
+          "total_tests": 15,
+          "pass": 15,
+          "fail": 0,
+          "skip": 0
+        },
+        "checked_at": "2026-08-01T17:18:35.594706+00:00"
+      },
+      "fix_requests_resolved": [
+        "fr_57f49b7f9b29_20260801_000000_00 (CPU clock-gate/sync-reset race, soc_top.sv, fixed 4398c2e)",
+        "fr_280f3ac18c66_20260801_000001_00 (cdc_gray_fifo wr_ready_o reset-release-skew accept-and-drop, fixed 7a9f9d4)"
+      ],
+      "testbench_fix": "test_async_axi_fifo.py test_reset_while_busy_s_side: kill-timing race exposed (not caused) by the wr_ready_o fix -- corrected to kill the interrupted master task at reset assertion instead of after recovery, preserving the hard-flush property under test (commit 8db3fe3)",
+      "residual_gaps": [
+        "Metastability injection -- not modelable in Verilator/cocotb (no delta-cycle randomization at a synchronizer's setup/hold boundary)",
+        "PMU-driven live CPU power-cycling across domains -- not exercised (flagged separately by the soc_top.sv fix commit as a narrower, out-of-scope residual risk: pmu.sv releases rst_n_w one core_clk cycle before ungating clk_en_w on the power-up path)",
+        "timer_irq -- never exercised by any reused firmware in soc_multiclock; u_timer_irq_sync (cdc_2ff_sync, same structure as u_ext_irq_sync) is unexercised at the multiclock ratio",
+        "GH #94 (multi-clock SDC): set_max_delay -datapath_only still needed on cdc_gray_fifo's mem_q read and both gray-pointer crossings, and on apb_cdc_bridge's 4 payload buses + 2 toggle crossings -- unaffected by this campaign's fixes, still open",
+        "GH #95 (cdc_snitch BAD=0 gate): both bugs this campaign found share a signature -- a reset value that advertises availability while cross-domain readiness has not actually been established (clock-enable sync defaulting to 'disabled', ready output defaulting to 'not full'/'ready') -- invisible whenever both domains reset together, which is every scenario before GH #93. Recommend cdc_snitch explicitly check for this class: any handshake-ready/valid output whose reset value asserts availability must be verified to also depend (directly or via the same-domain synchronized reset) on that domain's own reset signal, not just on its own control-array flags."
+      ]
     }
   },
   "pipeline_session_id": null,
@@ -980,6 +1035,18 @@
       "suggested_next_step": "proceed",
       "reason": "Serviced fix_request fr_280f3ac18c66_20260801_000001_00 (GH #93 accept-and-drop bug): gated cdc_gray_fifo.sv's wr_ready_o on wr_rst_n_i so it reads 0 for the entire write-domain reset window instead of falsely advertising ready via full_q's reset-to-0 default. Confirmed rd_valid_o already correct (empty_q resets to 1). Audited apb_cdc_bridge.sv: s_pready_o safe by construction (gated by s_state_q==S_DONE, resets to S_IDLE). Swept rtl/soc/cdc/ and rtl/soc/ for the same bug class (registered handshake output whose reset value advertises availability): apb_interconnect.sv's pready_o=1 default is purely combinational/no-reset (DECERR idle default, not a CDC artifact); axi4_crossbar.sv's ready/valid arbitration outputs derive from single-clock synchronous-reset state machines resetting to IDLE (not-ready) -- no async dual-clock reset-skew window exists there structurally. Lint clean: lint_soc, async_axi_fifo_lint, apb_cdc_bridge_lint all 0 errors. GH #91 regression: 21/22 (one pre-existing test, test_reset_while_busy_s_side, now fails -- root-caused via an uncommitted scratch diagnostic outside tb/ to a testbench timing assumption that only held under the old buggy behaviour; flagged for verification-orchestrator, not fixed here per the do-not-edit-tb/ constraint). cdc_clean/signoff left false -- no formal CDC or full signoff stage was run this session, scope was a single targeted fix_request.",
       "constraint_ref": "fr_280f3ac18c66_20260801_000001_00"
+    },
+    {
+      "timestamp": "2026-08-01T17:18:35.594706+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "GH #93 CPU-domain CDC verification signed off. Both RTL bugs found this campaign (fr_57f49b7f9b29 CPU clock-gate/sync-reset race; fr_280f3ac18c66 cdc_gray_fifo wr_ready_o reset-release-skew accept-and-drop) are fixed and independently reconfirmed: make soc_boot 3/3 (100/100 stability), async_axi_fifo 22/22 (after correcting a testbench kill-timing race the RTL fix exposed, not caused, in test_reset_while_busy_s_side), soc_multiclock 4/4 and soc_pll_multiclock 1/1 at the 7ns/3ns coprime ratio (the first suites in this repo to exercise the CPU<->fabric CDC boundary at a genuinely asynchronous ratio), apb_cdc_bridge 15/15, full soc_all 159/159 across 21 suites with zero regressions. All regression numbers independently reconciled from raw logs, not accepted from summaries alone. Residual, explicitly documented (non-blocking) gaps: metastability injection (not modelable), PMU-driven live power-cycling across domains, timer_irq unexercised, and GH #94/#95 follow-up items noted in verification_status.gh93_cdc_verification.residual_gaps.",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
