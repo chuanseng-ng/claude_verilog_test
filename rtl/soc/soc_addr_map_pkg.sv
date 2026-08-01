@@ -46,7 +46,8 @@ package soc_addr_map_pkg;
     localparam logic [31:0] SRAM_BASE    = 32'h0000_2000;
     localparam logic [31:0] SRAM_LIMIT   = 32'h0FFF_FFFF;
     localparam logic [31:0] PERIPH_BASE  = 32'h2000_1000;
-    localparam logic [31:0] PERIPH_LIMIT = 32'h2000_7FFF;  // Phase 7 M-c: extended to cover PLL slot (0x2000_7000-7FFF)
+    localparam logic [31:0] PERIPH_LIMIT = 32'h2000_8FFF;  // Phase 7 M-c: extended to cover PLL slot (0x2000_7000-7FFF);
+                                                            // Pre-Phase-6 #5 / GH #100: extended again to cover PMU slot (0x2000_8000-8FFF)
     /* verilator lint_on  UNUSEDPARAM */
 
     // Packed 2D arrays for crossbar instantiation (index = slave number).

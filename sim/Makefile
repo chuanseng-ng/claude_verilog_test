@@ -344,6 +344,7 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/soc/axilite_to_axi4.sv \
 	$(RTL_DIR)/soc/axi_lite_register_bank.sv \
 	$(RTL_DIR)/soc/apb4_register_bank.sv \
+	$(RTL_DIR)/soc/pmu.sv \
 	$(RTL_DIR)/soc/axil_to_apb.sv \
 	$(RTL_DIR)/soc/apb_interconnect.sv \
 	$(RTL_DIR)/soc/soc_bus.sv \

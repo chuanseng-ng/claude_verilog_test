@@ -17,12 +17,13 @@
 //     AXIL_DMA=2        @ 0x2000_5000–5FFF  (AXI-Lite direct; last-match wins
 //                                             over APB_BRIDGE window overlap)
 //
-//   APB sub-tree (5 slaves behind axil_to_apb bridge):
+//   APB sub-tree (6 slaves behind axil_to_apb bridge):
 //     APB_UART=0  @ 0x2000_2000–2FFF  uart_controller
 //     APB_SPI=1   @ 0x2000_3000–3FFF  spi_controller
 //     APB_TIMER=2 @ 0x2000_4000–4FFF  timer
 //     APB_IRQ=3   @ 0x2000_6000–6FFF  interrupt_controller
 //     APB_PLL=4   @ 0x2000_7000–7FFF  pll_apb_regs (clk_i domain)
+//     APB_PMU=5   @ 0x2000_8000–8FFF  pmu (core_clk domain; GH #99/#100)
 //
 //   Debug plane   : APB3 debug slave exposed at top-level ports.
 //
@@ -33,12 +34,25 @@
 //     core_rst_n = rst_n_i & pll_locked so children are held in reset until PLL locks.
 //     PLL_IMPL parameter selects "STUB" (default, synth-safe) or "RNM" (M-c cosim).
 //
+//   Power management (Pre-Phase-6 #5, GH #98/#99/#100 — behavioral PMU only,
+//   see docs/POWER_DOMAIN_EVALUATION.md):
+//     pmu (APB_PMU slot) sequences PD_CPU/PD_GPU per phase5_soc.upf: drives
+//     cpu_clk_en/gpu_clk_en into rv32i_clock_gate cells that gate core_clk
+//     before it reaches u_cpu/u_gpu, cpu_iso_en/gpu_iso_en into output-clamp
+//     muxes on the CPU/GPU->fabric handshake signals (ISO_CPU/ISO_GPU,
+//     `-location parent`, clamp_value 0), and per-domain resets ANDed with
+//     core_rst_n. Reset default (NORMAL, both domains DOM_ON) is functionally
+//     identical to the pre-PMU wiring, so soc_all is unaffected unless
+//     firmware writes pmu CTRL. Real power-switch/retention silicon remains
+//     out of scope (UPF-sim-tooling gated) — see pmu.sv header.
+//
 //   IRQ routing:
 //     irq_src_i = {gpu_irq_o[4], dma_irq[3], timer_irq[2], spi_irq[1], uart_irq[0]}
 //     interrupt_controller.irq_o → CPU ext_irq_i (MEIP)
 //     timer.irq_o                → CPU timer_irq_i (MTIP, direct)
 //
-// Rules: no logic beyond wiring; clk/rst_n rooted at clk_i/rst_n_i.
+// Rules: no logic beyond wiring; clk/rst_n rooted at clk_i/rst_n_i (except the
+// PMU clock-gate/isolation/reset muxing on the CPU/GPU domains, documented above).
 // M7 perf-counter observability outputs from CPU left unconnected (M7 bead).
 //
 // Lint target: verilator -Wall 0 errors 0 warnings.
@@ -227,7 +241,7 @@ module soc_top
     // APB nets: soc_bus apb_* ports → 5 APB peripherals
     // (previously apb_interconnect → peripherals; now routed through soc_bus)
     // =========================================================================
-    localparam int unsigned N_APB_SLV = APB_N_SLAVES; // 5
+    localparam int unsigned N_APB_SLV = APB_N_SLAVES; // 6
 
     // Per-slave APB nets from soc_bus to each peripheral
     logic        apb_psel    [N_APB_SLV];
@@ -239,6 +253,51 @@ module soc_top
     logic [31:0] apb_prdata  [N_APB_SLV];
     logic        apb_pready  [N_APB_SLV];
     logic        apb_pslverr [N_APB_SLV];
+
+    // =========================================================================
+    // Pre-Phase-6 #5 (GH #98/#99/#100) — PMU sequencing nets
+    // =========================================================================
+    // CPU/GPU domain sequencing outputs from pmu (core_clk domain, PD_PERIPH).
+    logic pmu_cpu_clk_en, pmu_gpu_clk_en;
+    logic pmu_cpu_iso_en, pmu_gpu_iso_en;
+    logic pmu_cpu_rst_n,  pmu_gpu_rst_n;
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic pmu_cpu_ret_save, pmu_cpu_ret_restore;
+    logic pmu_gpu_ret_save, pmu_gpu_ret_restore;
+    /* verilator lint_on  UNUSEDSIGNAL */
+
+    // Gated clocks (rv32i_clock_gate, glitch-free ICG) feeding u_cpu / u_gpu.
+    logic cpu_gated_clk, gpu_gated_clk;
+
+    // Per-domain reset actually applied to u_cpu / u_gpu: core_rst_n ANDed
+    // with the PMU's per-domain reset. Default (pmu_*_rst_n=1 at PMU reset,
+    // DOM_ON) makes this identical to core_rst_n -- no behavior change for
+    // the existing soc_all regression.
+    logic cpu_domain_rst_n, gpu_domain_rst_n;
+    assign cpu_domain_rst_n = core_rst_n & pmu_cpu_rst_n;
+    assign gpu_domain_rst_n = core_rst_n & pmu_gpu_rst_n;
+
+    // ISO_CPU / ISO_GPU clamp scope (functional isolation, `-location parent`,
+    // clamp_value 0): the master-side AXI4 request/accept handshake signals
+    // that leave each domain toward the always-on fabric, plus the domain's
+    // top-level observability/IRQ outputs. Address/data/control payload bits
+    // are NOT individually clamped -- they are qualified by the corresponding
+    // valid signal (already forced to 0 below) and are therefore don't-care
+    // downstream once valid=0, so clamping them adds no functional isolation
+    // value in this cycle-accurate behavioral model. Slave-side (control-
+    // register) response ports of u_gpu / the CPU debug port are likewise not
+    // clamped: an access into a powered-down domain's registers stalling while
+    // the domain is off is acceptable/expected behavior for a sequencing-only
+    // PMU (docs/POWER_DOMAIN_EVALUATION.md) -- full per-port isolation-cell
+    // coverage is part of the deferred true-power-gating scope.
+    logic cpu_axi_awvalid_raw, cpu_axi_wvalid_raw, cpu_axi_arvalid_raw;
+    logic cpu_axi_bready_raw, cpu_axi_rready_raw;
+    logic cpu_commit_valid_raw;
+
+    logic gpu_axi_awvalid_raw, gpu_axi_wvalid_raw, gpu_axi_arvalid_raw;
+    logic gpu_axi_bready_raw, gpu_axi_rready_raw;
+    logic gpu_gif_arvalid_raw;
+    logic gpu_irq_raw;
 
     // =========================================================================
     // AXI-Lite flat wires for GPU ctrl and DMA ctrl (ring slaves 0 and 2).
@@ -373,35 +432,36 @@ module soc_top
     rv32i_cpu_top #(
         .RESET_PC (32'h0000_1000)
     ) u_cpu (
-        .clk_i                      (core_clk),
-        .rst_n_i                    (core_rst_n),
-        // AXI4 master → crossbar M0
+        .clk_i                      (cpu_gated_clk),
+        .rst_n_i                    (cpu_domain_rst_n),
+        // AXI4 master → crossbar M0 (raw; clamped by ISO_CPU below)
         .axi_awaddr_o               (xbar_m_awaddr  [0]),
         .axi_awlen_o                (xbar_m_awlen   [0]),
         .axi_awsize_o               (xbar_m_awsize  [0]),
         .axi_awburst_o              (xbar_m_awburst [0]),
-        .axi_awvalid_o              (xbar_m_awvalid [0]),
+        .axi_awvalid_o              (cpu_axi_awvalid_raw),
         .axi_awready_i              (xbar_m_awready [0]),
         .axi_wdata_o                (xbar_m_wdata   [0]),
         .axi_wstrb_o                (xbar_m_wstrb   [0]),
         .axi_wlast_o                (xbar_m_wlast   [0]),
-        .axi_wvalid_o               (xbar_m_wvalid  [0]),
+        .axi_wvalid_o               (cpu_axi_wvalid_raw),
         .axi_wready_i               (xbar_m_wready  [0]),
         .axi_bresp_i                (xbar_m_bresp   [0]),
         .axi_bvalid_i               (xbar_m_bvalid  [0]),
-        .axi_bready_o               (xbar_m_bready  [0]),
+        .axi_bready_o               (cpu_axi_bready_raw),
         .axi_araddr_o               (xbar_m_araddr  [0]),
         .axi_arlen_o                (xbar_m_arlen   [0]),
         .axi_arsize_o               (xbar_m_arsize  [0]),
         .axi_arburst_o              (xbar_m_arburst [0]),
-        .axi_arvalid_o              (xbar_m_arvalid [0]),
+        .axi_arvalid_o              (cpu_axi_arvalid_raw),
         .axi_arready_i              (xbar_m_arready [0]),
         .axi_rdata_i                (xbar_m_rdata   [0]),
         .axi_rresp_i                (xbar_m_rresp   [0]),
         .axi_rvalid_i               (xbar_m_rvalid  [0]),
         .axi_rlast_i                (xbar_m_rlast   [0]),
-        .axi_rready_o               (xbar_m_rready  [0]),
-        // APB3 debug slave (exposed at soc_top ports)
+        .axi_rready_o               (cpu_axi_rready_raw),
+        // APB3 debug slave (exposed at soc_top ports; not isolation-clamped —
+        // stalling a debug access into a gated CPU domain is expected/OK)
         .apb_paddr_i                (apb_paddr_i),
         .apb_psel_i                 (apb_psel_i),
         .apb_penable_i              (apb_penable_i),
@@ -411,7 +471,7 @@ module soc_top
         .apb_pready_o               (apb_pready_o),
         .apb_pslverr_o              (apb_pslverr_o),
         // Commit observability (partially exposed at top)
-        .commit_valid_o             (commit_valid_o),
+        .commit_valid_o             (cpu_commit_valid_raw),
         .commit_pc_o                (commit_pc_o),
         .commit_insn_o              (commit_insn_o),
         .trap_taken_o               (cpu_trap_taken),
@@ -428,6 +488,16 @@ module soc_top
         .ext_irq_i                  (ext_irq),
         .timer_irq_i                (timer_irq)
     );
+
+    // ISO_CPU functional-isolation clamp (`-location parent`, clamp_value 0):
+    // forces the CPU->fabric handshake + commit observability to 0 while
+    // pmu_cpu_iso_en is asserted. See clamp-scope note above u_cpu.
+    assign xbar_m_awvalid [0] = pmu_cpu_iso_en ? 1'b0 : cpu_axi_awvalid_raw;
+    assign xbar_m_wvalid  [0] = pmu_cpu_iso_en ? 1'b0 : cpu_axi_wvalid_raw;
+    assign xbar_m_arvalid [0] = pmu_cpu_iso_en ? 1'b0 : cpu_axi_arvalid_raw;
+    assign xbar_m_bready  [0] = pmu_cpu_iso_en ? 1'b0 : cpu_axi_bready_raw;
+    assign xbar_m_rready  [0] = pmu_cpu_iso_en ? 1'b0 : cpu_axi_rready_raw;
+    assign commit_valid_o     = pmu_cpu_iso_en ? 1'b0 : cpu_commit_valid_raw;
 
     // =========================================================================
     // M1: GPU ifetch adapter (axilite_to_axi4) → crossbar M1
@@ -508,9 +578,11 @@ module soc_top
     gpu_top #(
         .GPU_ENABLE_COALESCE (1'b0)
     ) u_gpu (
-        .clk                        (core_clk),
-        .rst_n                      (core_rst_n),
-        // AXI4-Lite ctrl slave ← soc_bus axil_gpu_* (ring slot AXIL_GPU=0)
+        .clk                        (gpu_gated_clk),
+        .rst_n                      (gpu_domain_rst_n),
+        // AXI4-Lite ctrl slave ← soc_bus axil_gpu_* (ring slot AXIL_GPU=0);
+        // slave-side response port not isolation-clamped (see clamp-scope
+        // note above) — stalling a ctrl access into a gated GPU is expected.
         .s_axil_awaddr              (bus_axil_gpu_awaddr[11:0]),
         .s_axil_awvalid             (bus_axil_gpu_awvalid),
         .s_axil_awready             (bus_axil_gpu_awready),
@@ -528,34 +600,34 @@ module soc_top
         .s_axil_rresp               (bus_axil_gpu_rresp),
         .s_axil_rvalid              (bus_axil_gpu_rvalid),
         .s_axil_rready              (bus_axil_gpu_rready),
-        // AXI4-Lite ifetch master → gif adapter slave
+        // AXI4-Lite ifetch master → gif adapter slave (raw; clamped below)
         .m_axil_if_araddr           (gif_axil_araddr),
-        .m_axil_if_arvalid          (gif_axil_arvalid),
+        .m_axil_if_arvalid          (gpu_gif_arvalid_raw),
         .m_axil_if_arready          (gif_axil_arready),
         .m_axil_if_rdata            (gif_axil_rdata),
         .m_axil_if_rresp            (gif_axil_rresp),
         .m_axil_if_rvalid           (gif_axil_rvalid),
         .m_axil_if_rready           (gif_axil_rready),
-        // AXI4 data master → crossbar M2
+        // AXI4 data master → crossbar M2 (raw; clamped below)
         .m_axi_araddr               (xbar_m_araddr  [2]),
-        .m_axi_arvalid              (xbar_m_arvalid [2]),
+        .m_axi_arvalid              (gpu_axi_arvalid_raw),
         .m_axi_arready              (xbar_m_arready [2]),
         .m_axi_rdata                (xbar_m_rdata   [2]),
         .m_axi_rresp                (xbar_m_rresp   [2]),
         .m_axi_rvalid               (xbar_m_rvalid  [2]),
-        .m_axi_rready               (xbar_m_rready  [2]),
+        .m_axi_rready               (gpu_axi_rready_raw),
         .m_axi_awaddr               (xbar_m_awaddr  [2]),
-        .m_axi_awvalid              (xbar_m_awvalid [2]),
+        .m_axi_awvalid              (gpu_axi_awvalid_raw),
         .m_axi_awready              (xbar_m_awready [2]),
         .m_axi_wdata                (xbar_m_wdata   [2]),
         .m_axi_wstrb                (xbar_m_wstrb   [2]),
-        .m_axi_wvalid               (xbar_m_wvalid  [2]),
+        .m_axi_wvalid               (gpu_axi_wvalid_raw),
         .m_axi_wready               (xbar_m_wready  [2]),
         .m_axi_bresp                (xbar_m_bresp   [2]),
         .m_axi_bvalid               (xbar_m_bvalid  [2]),
-        .m_axi_bready               (xbar_m_bready  [2]),
+        .m_axi_bready               (gpu_axi_bready_raw),
         // IRQ
-        .gpu_irq_o                  (gpu_irq_o)
+        .gpu_irq_o                  (gpu_irq_raw)
     );
 
     // GPU AXI4 data master has no len/size/burst/last at gpu_top port level;
@@ -567,6 +639,17 @@ module soc_top
     assign xbar_m_arlen   [2] = '0;
     assign xbar_m_arsize  [2] = AXI_SIZE_4B;
     assign xbar_m_arburst [2] = AXI_BURST_INCR;
+
+    // ISO_GPU functional-isolation clamp (`-location parent`, clamp_value 0):
+    // forces the GPU->fabric handshake + IRQ to 0 while pmu_gpu_iso_en is
+    // asserted. See clamp-scope note above u_gpu.
+    assign xbar_m_awvalid [2] = pmu_gpu_iso_en ? 1'b0 : gpu_axi_awvalid_raw;
+    assign xbar_m_wvalid  [2] = pmu_gpu_iso_en ? 1'b0 : gpu_axi_wvalid_raw;
+    assign xbar_m_arvalid [2] = pmu_gpu_iso_en ? 1'b0 : gpu_axi_arvalid_raw;
+    assign xbar_m_bready  [2] = pmu_gpu_iso_en ? 1'b0 : gpu_axi_bready_raw;
+    assign xbar_m_rready  [2] = pmu_gpu_iso_en ? 1'b0 : gpu_axi_rready_raw;
+    assign gif_axil_arvalid   = pmu_gpu_iso_en ? 1'b0 : gpu_gif_arvalid_raw;
+    assign gpu_irq_o          = pmu_gpu_iso_en ? 1'b0 : gpu_irq_raw;
 
     // =========================================================================
     // M3: DMA engine (dma_engine) → crossbar M3 + interconnect AXIL_DMA
@@ -764,7 +847,7 @@ module soc_top
         .axil_dma_rresp     (bus_axil_dma_rresp),
         .axil_dma_rvalid    (bus_axil_dma_rvalid),
         .axil_dma_rready    (bus_axil_dma_rready),
-        // APB peripheral ports (all 5 slaves)
+        // APB peripheral ports (all 6 slaves)
         .apb_psel       (apb_psel),
         .apb_penable    (apb_penable),
         .apb_pwrite     (apb_pwrite),
@@ -990,5 +1073,49 @@ module soc_top
 
     // Export PLL lock status to top-level port
     assign pll_locked_o = pll_locked;
+
+    // =========================================================================
+    // Pre-Phase-6 #5 (GH #98/#99/#100): PMU (behavioral power-mode sequencer)
+    //
+    // Runs on core_clk/core_rst_n (PD_PERIPH, always-on) — the PMU sequences
+    // the CPU/GPU domains, so it must never itself be clock-gated or held in
+    // one of the domain resets it drives. See pmu.sv header for the register
+    // map, FSM, and reset-style rationale.
+    // =========================================================================
+    pmu #(
+        .ADDR_W (12)
+    ) u_pmu (
+        .clk_i               (core_clk),
+        .rst_n_i             (core_rst_n),
+        // APB4 slave ← apb_interconnect APB_PMU slot
+        .psel                (apb_psel    [APB_PMU]),
+        .penable             (apb_penable [APB_PMU]),
+        .pwrite              (apb_pwrite  [APB_PMU]),
+        .paddr               (apb_paddr   [APB_PMU][11:0]),
+        .pwdata              (apb_pwdata  [APB_PMU]),
+        .pstrb               (apb_pstrb   [APB_PMU]),
+        .prdata              (apb_prdata  [APB_PMU]),
+        .pready              (apb_pready  [APB_PMU]),
+        .pslverr             (apb_pslverr [APB_PMU]),
+        // CPU domain sequencing (PD_CPU)
+        .cpu_clk_en_o        (pmu_cpu_clk_en),
+        .cpu_iso_en_o        (pmu_cpu_iso_en),
+        .cpu_rst_n_o         (pmu_cpu_rst_n),
+        .cpu_ret_save_o      (pmu_cpu_ret_save),
+        .cpu_ret_restore_o   (pmu_cpu_ret_restore),
+        // GPU domain sequencing (PD_GPU)
+        .gpu_clk_en_o        (pmu_gpu_clk_en),
+        .gpu_iso_en_o        (pmu_gpu_iso_en),
+        .gpu_rst_n_o         (pmu_gpu_rst_n),
+        .gpu_ret_save_o      (pmu_gpu_ret_save),
+        .gpu_ret_restore_o   (pmu_gpu_ret_restore)
+    );
+
+    // CPU/GPU integrated clock gates (glitch-free ICG) — gate core_clk before
+    // it reaches u_cpu / u_gpu, enabled by the PMU's per-domain clk_en. At
+    // pmu.sv reset default (clk_en=1) these are transparent, so cpu_gated_clk
+    // / gpu_gated_clk == core_clk with no firmware PMU writes.
+    rv32i_clock_gate u_cpu_cg (.en(pmu_cpu_clk_en), .clk(core_clk), .gclk(cpu_gated_clk));
+    rv32i_clock_gate u_gpu_cg (.en(pmu_gpu_clk_en), .clk(core_clk), .gclk(gpu_gated_clk));
 
 endmodule : soc_top

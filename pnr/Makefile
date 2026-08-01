@@ -632,6 +632,7 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_clkgen_stub.sv \
 	$(LIBRELANE_SKY130_SOC_DIR)/pll_clkgen_pnr.sv \
 	$(PROJECT_ROOT)/rtl/soc/apb4_register_bank.sv \
+	$(PROJECT_ROOT)/rtl/soc/pmu.sv \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_apb_regs.sv \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_subsystem.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
@@ -978,6 +979,7 @@ SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
 	$(PROJECT_ROOT)/rtl/soc/apb4_register_bank.sv \
+	$(PROJECT_ROOT)/rtl/soc/pmu.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_interconnect.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_to_axilite.sv \
 	$(PROJECT_ROOT)/rtl/soc/axilite_to_axi4.sv \
