@@ -124,6 +124,17 @@ PMU_SOURCES = \
 	$(RTL)/soc/pmu.sv \
 	$(SOC_DIR)/tb_pmu.sv
 
+# GH #91: standalone async_axi_fifo (dual-clock AXI4 CDC bridge) unit-test
+# sources. axi_pkg (bus geometry defaults) + the 3 cdc/ primitives +
+# async_axi_fifo + standalone TB wrapper. No bus-bridge or full SoC required.
+ASYNC_AXI_FIFO_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_reset_sync.sv \
+	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
+	$(RTL)/soc/async_axi_fifo.sv \
+	$(SOC_DIR)/tb_async_axi_fifo.sv
+
 # Full SoC top-level sources for the boot test (M9).
 # Order: packages first, leaf RTL, adapters, then soc_top + tb wrapper.
 SRAM_SIM_MODEL ?= $(PROJ_ROOT)/sim/sram_1rw_256x32_verilator.v
@@ -316,7 +327,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -474,6 +485,20 @@ pmu: pmu_lint
 		VERILOG_SOURCES="$(PMU_SOURCES)" \
 		$(BUILD_ARGS)
 
+# GH #91: async_axi_fifo lint + sim.
+# lint only: axi_pkg + 3 cdc/ primitives + async_axi_fifo + standalone TB wrapper.
+async_axi_fifo_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module tb_async_axi_fifo \
+		$(ASYNC_AXI_FIFO_SOURCES)
+
+# clean first: stale Vtop from any prior target causes VPI root handle mismatch.
+async_axi_fifo: async_axi_fifo_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_async_axi_fifo TOPLEVEL=tb_async_axi_fifo \
+		VERILOG_SOURCES="$(ASYNC_AXI_FIFO_SOURCES)" \
+		$(BUILD_ARGS)
+
 soc_pll: soc_pll_lint
 	$(MAKE) clean
 	$(MAKE) MODULE=test_pll_lock TOPLEVEL=tb_soc_pll \
@@ -594,7 +619,7 @@ l2_bench: l2_bench_lint
 		$(BUILD_ARGS)
 
 # Run every SoC test: M3–M6 component suites + M9 boot + M9 periph + M9 coherency +
-# M9 cpu_gpu + Phase 7 M-c PLL (lock + regs) + GH #101 PMU.
+# M9 cpu_gpu + Phase 7 M-c PLL (lock + regs) + GH #101 PMU + GH #91 async_axi_fifo.
 # Use rm -rf sim_build (not $(MAKE) clean) for each suite so that stale or
 # partially-written files from a prior build — including large PCH .gch files
 # that $(MAKE) clean sometimes leaves behind — are reliably purged.
@@ -613,6 +638,7 @@ soc_all:
 	rm -rf sim_build && $(MAKE) apb4_register_bank
 	rm -rf sim_build && $(MAKE) axil_to_apb
 	rm -rf sim_build && $(MAKE) pmu
+	rm -rf sim_build && $(MAKE) async_axi_fifo
 	rm -rf sim_build && $(MAKE) soc_boot
 	rm -rf sim_build && $(MAKE) soc_periph
 	rm -rf sim_build && $(MAKE) soc_coherency
