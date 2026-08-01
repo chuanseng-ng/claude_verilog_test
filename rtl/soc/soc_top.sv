@@ -54,9 +54,18 @@
 //         * APB_PLL2 (u_cpu_pll_sub) <-> apb_interconnect: rtl/soc/
 //           apb_cdc_bridge.sv (u_apb_pll2_cdc, new in GH #93) — 2-phase
 //           toggle handshake; see that file's header for the protocol.
-//         * pmu_cpu_clk_en (core_clk, drives u_cpu_cg's enable): cdc_2ff_sync
+//         * pmu_cpu_clk_en (core_clk, drives u_cpu_cg's enable): synchronised
+//           INVERTED, as pmu_cpu_clk_dis_sync (cdc_2ff_sync of ~pmu_cpu_clk_en),
 //           clocked by cpu_core_clk (NOT cpu_gated_clk — see the bootstrap-
-//           deadlock note above u_cpu_clk_en_sync below).
+//           deadlock note above u_cpu_clk_dis_sync below). GH #93-fix
+//           (originally landed as pmu_cpu_clk_en_sync, non-inverted): a
+//           non-inverted enable sync resets to 0 (disabled) while
+//           cpu_core_rst_n is low, stopping cpu_gated_clk for the CPU's
+//           entire reset window and making u_cpu's synchronous reset
+//           unloadable. Inverting so the synchronised value is "disabled"
+//           (0 = not disabled = clock runs) makes cdc_2ff_sync's reset-to-0
+//           behavior the SAFE state instead of the unsafe one. See the
+//           detailed ordering note above u_cpu_clk_dis_sync below.
 //         * pmu_cpu_rst_n (core_clk, ANDed into cpu_domain_rst_n): cdc_reset_sync
 //           clocked by cpu_core_clk.
 //         * pmu_cpu_iso_en (core_clk, clamps the CPU->fabric handshake):
@@ -349,40 +358,104 @@ module soc_top
     // the core_clk domain (by u_pmu below) but now gate/reset/clamp CPU-domain
     // (cpu_core_clk) logic, so each needs its own crossing.
     //
-    // u_cpu_clk_en_sync clock choice (bootstrap-deadlock avoidance): this
+    // u_cpu_clk_dis_sync clock choice (bootstrap-deadlock avoidance): this
     // synchroniser MUST be clocked by cpu_core_clk, the UNGATED PLL output —
     // never by cpu_gated_clk. cpu_gated_clk is itself gated by this
-    // synchroniser's own output (via u_cpu_cg below); clocking the
+    // synchroniser's own (inverted) output (via u_cpu_cg below); clocking the
     // synchroniser from its own gated output would mean the enable that
     // opens the gate can only advance once the gate is already open, a
     // circular dependency that never resolves. cpu_core_clk is the PLL's raw,
     // never-gated output, so it is always available to drive this crossing.
     //
-    // Reset choice for u_cpu_clk_en_sync (also a chicken-and-egg avoidance):
-    // deliberately cpu_core_rst_n (the PLL-lock-only reset), NOT the
-    // composite cpu_domain_rst_n computed below. cpu_domain_rst_n depends on
-    // u_cpu_pmu_rst_sync's output, which is itself a synchroniser output;
-    // resetting one synchroniser from another's output adds an unnecessary
-    // dependency edge for no benefit (clk_en gating is orthogonal to the
-    // domain's reset composition), so the enable-sync path is kept rooted
-    // directly in the PLL-lock reset only.
+    // ---- BUG (fixed here) + reset-release ordering, with cycle counts -----
+    // The original (non-inverted) u_cpu_clk_en_sync synchronised pmu_cpu_clk_en
+    // directly and was reset by cpu_core_rst_n. cdc_2ff_sync resets its flop
+    // chain to 0 (see cdc_2ff_sync.sv), so that synchroniser's output was 0
+    // (clock DISABLED) for the entire time cpu_core_rst_n was low, and for
+    // STAGES=2 more cpu_core_clk edges after cpu_core_rst_n released (pipeline
+    // fill latency) before it could reach 1. Meanwhile pmu_cpu_rst_n defaults
+    // to 1 at the PMU's own reset (DOM_ON, see pmu.sv reset-defaults comment),
+    // so u_cpu_pmu_rst_sync's chain filled to 1 within STAGES=2 cpu_core_clk
+    // edges of cpu_core_clk simply toggling — independent of, and much faster
+    // than, cpu_core_rst_n's release. Net effect: cpu_domain_rst_n
+    // (= cpu_core_rst_n & pmu_cpu_rst_n_cpu_sync) tracked cpu_core_rst_n almost
+    // exactly, releasing on the SAME edge cpu_core_rst_n released — the exact
+    // edge at which cpu_gated_clk was still 2 cycles away from resuming. Zero
+    // cpu_gated_clk edges ever occurred while cpu_domain_rst_n was low, so
+    // u_cpu's `if (!rst_n_i) ... else ...` synchronous reset never executed
+    // its reset branch.
+    //
+    // Fix: synchronise the INVERTED enable, pmu_cpu_clk_dis_sync = sync(
+    // ~pmu_cpu_clk_en). cdc_2ff_sync's reset-to-0 value now means "NOT
+    // disabled", i.e. the safe/reset state is "clock running", not "clock
+    // stopped". u_cpu_cg's en input is ~pmu_cpu_clk_dis_sync.
+    //
+    // Revised ordering (cold-boot / PLL-(re)lock, the scenario this bug
+    // report is about): while cpu_core_rst_n is low, pmu_cpu_clk_dis_sync is
+    // held at its async-reset value of 0 (not disabled), so
+    // cpu_gated_clk = cpu_core_clk unconditionally for the ENTIRE duration
+    // cpu_core_rst_n (and therefore cpu_domain_rst_n, which can only release
+    // no earlier than cpu_core_rst_n) is low — i.e. as many cpu_gated_clk
+    // edges as cpu_core_rst_n's assertion lasts (STUB_LOCK_CYCLES=16 in the
+    // PLL stub, or the real PLL's lock time), far more than the 1 edge
+    // u_cpu's synchronous reset needs to load RESET_PC and its other reset
+    // values. cpu_core_rst_n releases; pmu_cpu_rst_n_cpu_sync is already 1
+    // (per the analysis above); cpu_domain_rst_n releases on that same edge,
+    // and cpu_gated_clk has been ticking every cycle before, through, and
+    // after that edge — no gap, so the release edge itself is also cleanly
+    // observed by u_cpu. Only afterward, once firmware ever asserts
+    // pmu_cpu_clk_en=0, does pmu_cpu_clk_dis_sync begin tracking it (2-cycle
+    // pipeline latency), which is the normal, intended clock-gating path.
+    //
+    // Residual, out-of-scope risk (found during this sanity check, reported
+    // to the user, NOT fixed here — would require a pmu.sv change and is a
+    // narrower window than the bug above): pmu.sv's per-domain sequencer
+    // asserts rst_n_w=1 one full core_clk cycle BEFORE it asserts clk_en_w=1
+    // on the power-UP path (DOM_PU_RST releases reset; DOM_PU_CLK, the next
+    // state, ungates the clock). pmu_cpu_rst_n and pmu_cpu_clk_en are two
+    // independently-timed signals crossing into the (asynchronous,
+    // independently-clocked, GH #92 dual-PLL) cpu_core_clk domain through two
+    // separate 2-stage synchronisers; their relative arrival order after
+    // synchronisation is not structurally guaranteed to preserve the 1-cycle
+    // core_clk-domain offset. A live PMU-driven CPU power-down/up cycle
+    // (firmware writes PMU CTRL) could therefore, in principle, see
+    // cpu_domain_rst_n release a cycle or so before pmu_cpu_clk_dis_sync
+    // clears — a brief re-occurrence of this same class of bug, but only on
+    // firmware-initiated power-cycling, not on cold boot / PLL relock (this
+    // fix's target). This is the same category as the already-documented
+    // "PMU power-down sequence has no drain/quiesce step" hazard above and is
+    // left for a follow-up GH issue against pmu.sv (e.g. merge DOM_PU_RST and
+    // DOM_PU_CLK into a single state, or reorder clk-ungate before rst-
+    // release) rather than expanded here (soc_top.sv-only fix scope).
     // =========================================================================
-    logic pmu_cpu_clk_en_sync;
+    logic pmu_cpu_clk_dis_sync;
     cdc_2ff_sync #(
         .WIDTH  (1),
         .STAGES (2)
-    ) u_cpu_clk_en_sync (
+    ) u_cpu_clk_dis_sync (
         .clk_i   (cpu_core_clk),
         .rst_n_i (cpu_core_rst_n),
-        .d_i     (pmu_cpu_clk_en),
-        .q_o     (pmu_cpu_clk_en_sync)
+        .d_i     (~pmu_cpu_clk_en),
+        .q_o     (pmu_cpu_clk_dis_sync)
     );
 
     // pmu_cpu_iso_en: clamps the CPU->fabric AXI handshake at the
     // async_axi_fifo s_* (CPU-domain) face — see clamp-scope note below.
-    // Clocked/reset the same way as u_cpu_clk_en_sync, for the same reason
+    // Clocked/reset the same way as u_cpu_clk_dis_sync, for the same reason
     // (this clamp gates signals that feed u_cpu_axi_cdc's s_* inputs, which
     // run on cpu_gated_clk; cpu_core_clk is the safe, always-running root).
+    //
+    // Safe-reset-value sanity check (GH #93-fix review): unlike the clk_en
+    // crossing above, this one is NOT inverted, and that is correct.
+    // cdc_2ff_sync resets pmu_cpu_iso_en_sync to 0 = "not isolated", which
+    // matches pmu_cpu_iso_en's own PMU-side reset default (DOM_ON: iso_en_w=0,
+    // see pmu.sv reset-defaults comment) — the synchroniser's safe state and
+    // the source signal's safe state agree, so there is no cold-boot window
+    // where this crossing disagrees with its source the way the un-inverted
+    // clk_en sync did. (Whether "not isolated" is itself the physically safe
+    // choice for isolation cells in general is a separate, pre-existing
+    // design decision — see the ISO_CPU clamp-scope note below — not one this
+    // fix revisits.)
     logic pmu_cpu_iso_en_sync;
     cdc_2ff_sync #(
         .WIDTH  (1),
@@ -397,6 +470,23 @@ module soc_top
     // pmu_cpu_rst_n: synchronised into the cpu_core_clk domain with
     // cdc_reset_sync (async-assert / sync-deassert) — this is exactly the
     // "per-domain PMU reset" reuse cdc_reset_sync.sv's header anticipates.
+    //
+    // Ordering sanity check (GH #93-fix review): rst_n_i here is deliberately
+    // pmu_cpu_rst_n, NOT cpu_core_rst_n. cdc_reset_sync's rst_n_i is the
+    // SOURCE async reset event being synchronised into clk_i's domain (see
+    // cdc_reset_sync.sv header and its other two uses inside
+    // async_axi_fifo.sv, which feed it s_rst_n_i/m_rst_n_i — the real per-
+    // domain reset events, never a foreign domain's reset). cpu_core_rst_n is
+    // already NATIVE to the cpu_core_clk destination domain (produced by
+    // u_cpu_pll_sub, synchronous to cpu_core_clk already), so it needs no
+    // synchroniser of its own; it is combined with pmu_cpu_rst_n_cpu_sync by
+    // the plain AND below instead. Feeding cpu_core_rst_n into this
+    // synchroniser's rst_n_i in place of pmu_cpu_rst_n would be wrong (it
+    // would synchronise the wrong signal) and feeding it in ADDITION (e.g. as
+    // an extra async clear) would be redundant — cpu_domain_rst_n's
+    // combinational AND already asserts whenever EITHER source is low. No
+    // ordering surprise: this is the correct, intentional use of the
+    // primitive.
     logic pmu_cpu_rst_n_cpu_sync;
     cdc_reset_sync #(
         .STAGES (2)
@@ -448,6 +538,12 @@ module soc_top
     // Inserting a cdc_reset_sync here would add STAGES cycles of reset-
     // deassert latency to every peripheral for zero CDC benefit and is
     // deliberately NOT done, to avoid perturbing that regression baseline.
+    //
+    // GH #93-fix note: cpu_domain_rst_n release timing (cold boot) and the
+    // requirement that u_cpu see clock edges throughout its assertion are
+    // analysed in full above u_cpu_clk_dis_sync — that is where the reset-
+    // release ordering and cycle counts for this signal are documented, not
+    // here, to keep the analysis next to the fix it justifies.
     // =========================================================================
     logic cpu_domain_rst_n, gpu_domain_rst_n;
     assign cpu_domain_rst_n = cpu_core_rst_n & pmu_cpu_rst_n_cpu_sync;
@@ -722,6 +818,24 @@ module soc_top
     // instances (see async_axi_fifo.sv header) — this bridge's hard-flush
     // reset is discussed in the clock-seam header note above (known hazard,
     // not fixed here).
+    //
+    // async_axi_fifo.sv's contract requires each of s_rst_n_i/m_rst_n_i to be
+    // held low for >= SYNC_STAGES+1 periods of the OTHER face's clock (see
+    // async_axi_fifo.sv header). Before the GH #93-fix above, this was
+    // VIOLATED for s_rst_n_i (= cpu_domain_rst_n): s_clk_i is cpu_gated_clk,
+    // which the pre-fix clk_en sync stopped completely for the entire time
+    // cpu_domain_rst_n was low — i.e. s_clk_i saw ZERO periods (not
+    // SYNC_STAGES+1) during s_rst_n_i's assertion, and async_axi_fifo's own
+    // internal cpu-side cdc_reset_sync instance would have been just as stuck
+    // as u_cpu itself. With the fix, u_cpu_clk_dis_sync's reset-to-0 default
+    // keeps cpu_gated_clk = cpu_core_clk running unconditionally for the
+    // entire cpu_core_rst_n-low window (which is what gates cpu_domain_rst_n
+    // low on cold boot — see the ordering note above u_cpu_clk_dis_sync), so
+    // s_clk_i now ticks throughout s_rst_n_i's assertion and the contract is
+    // met for the cold-boot/PLL-relock case this fix targets. The residual
+    // PMU-live-power-cycle skew risk noted above u_cpu_clk_dis_sync applies
+    // identically here (same s_rst_n_i, same s_clk_i) and is not fixed here
+    // for the same reason.
     // =========================================================================
     async_axi_fifo u_cpu_axi_cdc (
         .s_clk_i     (cpu_gated_clk),
@@ -1493,11 +1607,22 @@ module soc_top
     // core_clk with no firmware PMU writes.
     //
     // GH #93: u_cpu_cg is re-sourced from cpu_core_clk (the CPU's own PLL
-    // output) instead of core_clk, gated by pmu_cpu_clk_en_sync (already
-    // synchronised into the cpu_core_clk domain above — see PMU sequencing
-    // nets). u_gpu_cg is UNCHANGED (still core_clk / pmu_gpu_clk_en directly;
-    // the GPU did not move domains).
-    rv32i_clock_gate u_cpu_cg (.en(pmu_cpu_clk_en_sync), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
+    // output) instead of core_clk, gated by ~pmu_cpu_clk_dis_sync (already
+    // synchronised into the cpu_core_clk domain above, INVERTED for reset
+    // safety — see the ordering note above u_cpu_clk_dis_sync — GH #93-fix).
+    // u_gpu_cg is UNCHANGED (still core_clk / pmu_gpu_clk_en directly; the
+    // GPU did not move domains).
+    //
+    // ICG glitch-safety (rv32i_clock_gate.sv): en is latched transparent-low
+    // and ANDed with clk, so `en` may only be sampled while clk is low —
+    // any change to `en` while clk is high is invisible to gclk until the
+    // next low phase, which is exactly what makes this ICG glitch-free
+    // regardless of what drives `en`. ~pmu_cpu_clk_dis_sync is a plain
+    // inversion of a single cdc_2ff_sync flop output (registered on
+    // cpu_core_clk, the same clk driving this gate), so it is a clean,
+    // single, synchronously-timed transition with no combinational glitch
+    // hazard of its own — safe to drive `en` directly.
+    rv32i_clock_gate u_cpu_cg (.en(~pmu_cpu_clk_dis_sync), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
     rv32i_clock_gate u_gpu_cg (.en(pmu_gpu_clk_en), .clk(core_clk), .gclk(gpu_gated_clk));
 
 endmodule : soc_top
