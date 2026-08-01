@@ -512,6 +512,31 @@ async def test_pointer_wrap_ping_pong(dut):
 # --- 9. reset-while-busy, s side ---------------------------------------------
 
 async def _reset_while_busy_s_side_body(dut):
+    """Mid-burst reset on the s side must be a hard flush: whatever the
+    master had in flight is discarded, and the bridge recovers cleanly for
+    genuinely NEW transactions afterward.
+
+    Kill-timing note (fixed 2026-08-01, alongside the cdc_gray_fifo
+    wr_ready_o reset-gating fix, commit 7a9f9d4): the interrupted master
+    task is killed AT reset assertion, not after release+settling. A real
+    AXI master is itself part of the domain this reset covers, so its own
+    issuing FSM would be wiped by the very same reset edge -- it would never
+    "resume" a half-issued burst afterward without re-establishing AW, since
+    the bridge's hard flush (rst_both_n) drops the AW entry it already
+    latched right along with the W data. Killing after settling (the
+    original ordering) let this un-reset Python coroutine do exactly the
+    invalid thing a real master never would: with the wr_ready_o fix's
+    correct backpressure, the still-alive task would block through reset,
+    then resume pushing its remaining W-beats (with no matching AW, since
+    that entry was flushed) the moment s_wready recovered -- silently
+    queuing orphaned W data ahead of the deliberately-fresh 0x50100
+    transaction below and corrupting its read-back. That failure
+    (`test_reset_while_busy_s_side` reading back 0x2222, one of the
+    orphaned beats, instead of 0xCAFEBABE) was a testbench modeling gap
+    exposed BY the RTL fix, not a new RTL defect -- pre-fix, wr_ready_o
+    read 1 throughout the reset pulse, so the burst completed falsely-
+    instantly before the old, later kill() ever ran, hiding the gap.
+    """
     ctx = await _setup(dut, 10, 10)
 
     async def _wr():
@@ -520,12 +545,14 @@ async def _reset_while_busy_s_side_body(dut):
     t = cocotb.start_soon(_wr())
     await ClockCycles(dut.s_clk, 3)
     dut.s_rst_n.value = 0
+    # Kill + idle immediately -- models the master's own reset, not a
+    # surviving driver resuming mid-burst across the DUT's reset boundary.
+    t.kill()
+    _idle_s_side(dut)
     await ClockCycles(dut.s_clk, 5)
     dut.s_rst_n.value = 1
     await ClockCycles(dut.s_clk, 3)
     await ClockCycles(dut.m_clk, 3)
-    t.kill()
-    _idle_s_side(dut)
 
     await ClockCycles(dut.s_clk, 2)
     assert int(dut.s_awready.value) == 1
