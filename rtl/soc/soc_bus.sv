@@ -6,7 +6,7 @@
 //   2. axi4_to_axilite    — crossbar S2 (periph) → AXI-Lite master
 //   3. axi_lite_interconnect — AXI-Lite ring (3 slaves: GPU, APB_BRIDGE, DMA)
 //   4. axil_to_apb        — AXI-Lite ring slot 1 → APB master
-//   5. apb_interconnect   — APB master → 5 APB peripheral slaves
+//   5. apb_interconnect   — APB master → 6 APB peripheral slaves (Pre-Phase-6 #5: +PMU)
 //
 // This is a PURE STRUCTURAL WRAPPER.  No logic is added or removed.
 // Every signal that crossed the soc_top/bus boundary is an explicit port here.
@@ -186,8 +186,8 @@ module soc_bus
     output logic                      axil_dma_rready,
 
     // =========================================================================
-    // APB peripheral ports [N_APB_SLV=5]: from apb_interconnect to peripherals
-    //   APB_UART=0  APB_SPI=1  APB_TIMER=2  APB_IRQ=3  APB_PLL=4
+    // APB peripheral ports [N_APB_SLV=6]: from apb_interconnect to peripherals
+    //   APB_UART=0  APB_SPI=1  APB_TIMER=2  APB_IRQ=3  APB_PLL=4  APB_PMU=5
     // =========================================================================
     output logic        apb_psel    [APB_N_SLAVES],
     output logic        apb_penable [APB_N_SLAVES],
@@ -205,7 +205,7 @@ module soc_bus
     // =========================================================================
     localparam int unsigned N_SLAVES   = SOC_N_SLAVES;    // 3
     localparam int unsigned N_AXIL_SLV = AXIL_N_SLAVES;   // 3
-    localparam int unsigned N_APB_SLV  = APB_N_SLAVES;    // 5
+    localparam int unsigned N_APB_SLV  = APB_N_SLAVES;    // 6
     localparam int unsigned AW         = AXI_ADDR_WIDTH;
     localparam int unsigned DW         = AXI_DATA_WIDTH;
     localparam int unsigned SW         = AXI_STRB_WIDTH;
@@ -645,8 +645,8 @@ module soc_bus
     );
 
     // =========================================================================
-    // 5. APB interconnect: 1 APB master → 5 APB peripheral slaves
-    //   APB_UART=0  APB_SPI=1  APB_TIMER=2  APB_IRQ=3  APB_PLL=4
+    // 5. APB interconnect: 1 APB master → 6 APB peripheral slaves
+    //   APB_UART=0  APB_SPI=1  APB_TIMER=2  APB_IRQ=3  APB_PLL=4  APB_PMU=5
     // =========================================================================
     apb_interconnect #(
         .N_SLAVES  (N_APB_SLV),

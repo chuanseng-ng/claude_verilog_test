@@ -53,7 +53,7 @@ LibreLane's **Synlig/UHDM SystemVerilog frontend cannot synthesize this SoC**:
 **Fix:** `sv2v 0.0.13.1` (nixpkgs `haskellPackages.sv2v`) converts all SoC
 SystemVerilog → flat Verilog-2005, then native Yosys `read_verilog` + `flatten` +
 blackbox the two macros → 43,546 DFFs, 110 k cells, clean. The verified RTL
-(`soc_all` 82/82) remains the correctness source; sv2v is a synth-frontend
+(`soc_all` 82/82 as of M11) remains the correctness source; sv2v is a synth-frontend
 transform only (Verilator lint skipped on its benign `1'sb0`/ascending-range
 output). **Always sanity-check DFF count > 0 after SoC synth.** Core commit
 `6ee91b6`.
@@ -71,7 +71,7 @@ cd pnr && make librelane-asap7-soc      # sv2v frontend; run dir on /nobackup
 ```
 
 ## Known limitations / follow-ups
-- **sv2v ≠ formal-equivalent to source RTL.** Correctness rests on `soc_all` 82/82
+- **sv2v ≠ formal-equivalent to source RTL.** Correctness rests on `soc_all` 82/82 (M11-era count; 120/120 as of 2026-08-01)
   against the original SystemVerilog. A Yosys EQY/LEC of sv2v output vs RTL would
   add tape-out rigor (not required for indicative ASAP7).
 - **CPU macro LEF lacks AXI4 burst ports** (`awlen`/`wlast`/…) — abstract predates
