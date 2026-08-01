@@ -407,26 +407,79 @@ module soc_top
     // pmu_cpu_clk_en=0, does pmu_cpu_clk_dis_sync begin tracking it (2-cycle
     // pipeline latency), which is the normal, intended clock-gating path.
     //
-    // Residual, out-of-scope risk (found during this sanity check, reported
-    // to the user, NOT fixed here — would require a pmu.sv change and is a
-    // narrower window than the bug above): pmu.sv's per-domain sequencer
-    // asserts rst_n_w=1 one full core_clk cycle BEFORE it asserts clk_en_w=1
-    // on the power-UP path (DOM_PU_RST releases reset; DOM_PU_CLK, the next
-    // state, ungates the clock). pmu_cpu_rst_n and pmu_cpu_clk_en are two
-    // independently-timed signals crossing into the (asynchronous,
-    // independently-clocked, GH #92 dual-PLL) cpu_core_clk domain through two
-    // separate 2-stage synchronisers; their relative arrival order after
-    // synchronisation is not structurally guaranteed to preserve the 1-cycle
-    // core_clk-domain offset. A live PMU-driven CPU power-down/up cycle
-    // (firmware writes PMU CTRL) could therefore, in principle, see
-    // cpu_domain_rst_n release a cycle or so before pmu_cpu_clk_dis_sync
-    // clears — a brief re-occurrence of this same class of bug, but only on
-    // firmware-initiated power-cycling, not on cold boot / PLL relock (this
-    // fix's target). This is the same category as the already-documented
-    // "PMU power-down sequence has no drain/quiesce step" hazard above and is
-    // left for a follow-up GH issue against pmu.sv (e.g. merge DOM_PU_RST and
-    // DOM_PU_CLK into a single state, or reorder clk-ungate before rst-
-    // release) rather than expanded here (soc_top.sv-only fix scope).
+    // GH #90 bead 542 fix (live PMU power-cycle ordering hazard, found during
+    // the GH #93 sanity check above and deliberately deferred at the time):
+    // pmu.sv's per-domain sequencer asserts rst_n_w=1 one full core_clk cycle
+    // BEFORE it asserts clk_en_w=1 on the power-UP path (DOM_PU_RST releases
+    // reset; DOM_PU_CLK, the next state, ungates the clock) — and mirrors
+    // that on power-DOWN (clk_en_w drops one cycle before rst_n_w drops).
+    // This ordering is NOT a pmu.sv implementation choice: docs/
+    // POWER_DOMAIN_EVALUATION.md section 3 and pmu.sv's own header fix this
+    // order as the UPF-mandated sequence, and it is the mechanism that lets
+    // this behavioral model preserve CPU architectural state (PC/MSTATUS/
+    // MTVEC) across an off->on cycle WITHOUT real retention-cell silicon: as
+    // long as u_cpu's clock never ticks while its domain reset is asserted,
+    // its synchronous `if (!rst_n)` branch never executes during a PMU
+    // power-cycle, so its flops simply hold whatever value they had before
+    // the domain went quiet. Editing pmu.sv's state order to fix this bead
+    // would either violate that documented UPF sequencing or defeat the
+    // retention-by-construction trick (see pmu.sv header) — so this fix is
+    // deliberately in soc_top.sv, not pmu.sv.
+    //
+    // Hazard: pmu_cpu_rst_n and pmu_cpu_clk_en are two independently-timed
+    // core_clk-domain signals crossing into the asynchronous, independently-
+    // clocked (GH #92 dual-PLL) cpu_core_clk domain through two SEPARATE
+    // synchronisers (u_cpu_pmu_rst_sync / u_cpu_clk_dis_sync above). Two
+    // independent synchronisers do not preserve a source-side 1-cycle
+    // offset — after crossing, either signal can settle first, in either
+    // direction, for any relative skew. If pmu_cpu_clk_dis_sync clears
+    // (clock re-enabled) at or before pmu_cpu_rst_n_cpu_sync releases, the
+    // CPU domain would see a clock edge while cpu_domain_rst_n is still low,
+    // its synchronous reset branch would fire, and the "retained" PC/state
+    // this power-cycle was supposed to preserve would be silently
+    // overwritten with RESET_PC/RESET_VAL instead — a data-corrupting CDC
+    // race, not merely a missed reset.
+    //
+    // Fix: gate u_cpu_cg's enable with the ALREADY cpu_core_clk-domain-native
+    // pmu_cpu_rst_n_cpu_sync (see cpu_gated_clk_en below, used at the u_cpu_cg
+    // instantiation), so cpu_gated_clk is structurally forbidden from ticking
+    // whenever the CPU-domain-observed PMU reset is asserted — regardless of
+    // what pmu_cpu_clk_dis_sync (the independent clk-enable synchroniser) is
+    // doing. This is a same-domain combinational AND of two flops already
+    // registered on cpu_core_clk (pmu_cpu_rst_n_cpu_sync from
+    // u_cpu_pmu_rst_sync, ~pmu_cpu_clk_dis_sync from u_cpu_clk_dis_sync) — it
+    // adds no new CDC crossing and does not touch pmu.sv or any rtl/soc/cdc/*
+    // primitive.
+    //
+    // Worst-case skew tolerance: UNBOUNDED. The fix does not rely on
+    // bounding, matching, or reasoning about the relative latency of the two
+    // independent synchronisers at all — it makes cpu_domain-observed PMU
+    // reset the master gating term for the CPU's own clock, so no amount of
+    // relative skew between u_cpu_pmu_rst_sync and u_cpu_clk_dis_sync can
+    // produce a clock edge while that reset is asserted. It is symmetric
+    // across both directions: on power-up, the gate cannot open until
+    // pmu_cpu_rst_n_cpu_sync is already 1; on power-down, the gate closes the
+    // instant pmu_cpu_rst_n_cpu_sync drops to 0, even if
+    // pmu_cpu_clk_dis_sync has not yet caught up to reflect clk_en_w=0.
+    //
+    // Cold-boot regression check (GH #93's own fix, re-verified here): during
+    // cpu_core_rst_n=0 (PLL not locked), the PMU's own dom_state_q is held at
+    // its synchronous reset default DOM_ON (pmu.sv's rst_n_i is core_rst_n),
+    // so pmu_cpu_rst_n=1 constant throughout — pmu_cpu_rst_n_cpu_sync tracks
+    // to 1 well within cold boot's multi-cycle PLL-lock window and stays
+    // there. cpu_gated_clk_en is therefore unaffected by this fix during cold
+    // boot (gated only by ~pmu_cpu_clk_dis_sync, exactly as GH #93 left it) —
+    // this fix only changes behavior once the PMU's OWN FSM genuinely drives
+    // pmu_cpu_rst_n low, which happens only on a live, firmware-initiated
+    // power-cycle.
+    //
+    // Test-suite note: test_pmu.py's DUT (tb_pmu.sv) instantiates pmu.sv
+    // standalone with no CDC and no soc_top glue, so its per-cycle ordering
+    // assertions exercise pmu.sv's own (unchanged) FSM outputs only and are
+    // unaffected by this fix. soc_multiclock / soc_pll_multiclock exercise
+    // soc_top's synchronisers at a divergent clock ratio but do not drive a
+    // live PMU power-cycle, so they do not currently cover this path either
+    // (see "Residual risk" callout in CLAUDE.md's GH #90 status entry).
     // =========================================================================
     logic pmu_cpu_clk_dis_sync;
     cdc_2ff_sync #(
@@ -1611,18 +1664,31 @@ module soc_top
     // synchronised into the cpu_core_clk domain above, INVERTED for reset
     // safety — see the ordering note above u_cpu_clk_dis_sync — GH #93-fix).
     // u_gpu_cg is UNCHANGED (still core_clk / pmu_gpu_clk_en directly; the
-    // GPU did not move domains).
+    // GPU did not move domains, so its clk_en/rst_n share one clock domain
+    // with the PMU FSM that drives them — no independent-synchroniser race
+    // is possible there, so it needs no equivalent of the AND below).
+    //
+    // GH #90 bead 542 fix: u_cpu_cg's enable is additionally ANDed with
+    // pmu_cpu_rst_n_cpu_sync (see the detailed hazard/skew-tolerance writeup
+    // above u_cpu_clk_dis_sync) so cpu_gated_clk cannot tick while the
+    // CPU-domain-observed PMU reset is asserted, regardless of the relative
+    // timing of the two independent CDC synchronisers feeding this logic.
     //
     // ICG glitch-safety (rv32i_clock_gate.sv): en is latched transparent-low
     // and ANDed with clk, so `en` may only be sampled while clk is low —
     // any change to `en` while clk is high is invisible to gclk until the
     // next low phase, which is exactly what makes this ICG glitch-free
-    // regardless of what drives `en`. ~pmu_cpu_clk_dis_sync is a plain
-    // inversion of a single cdc_2ff_sync flop output (registered on
-    // cpu_core_clk, the same clk driving this gate), so it is a clean,
-    // single, synchronously-timed transition with no combinational glitch
-    // hazard of its own — safe to drive `en` directly.
-    rv32i_clock_gate u_cpu_cg (.en(~pmu_cpu_clk_dis_sync), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
+    // regardless of what drives `en`. cpu_gated_clk_en is a combinational AND
+    // of two flop outputs both registered on cpu_core_clk (the same clk
+    // driving this gate) — ~pmu_cpu_clk_dis_sync (u_cpu_clk_dis_sync) and
+    // pmu_cpu_rst_n_cpu_sync (u_cpu_pmu_rst_sync) — so it is a clean,
+    // synchronously-timed signal with no combinational glitch hazard of its
+    // own, same as the single-signal case it replaces — safe to drive `en`
+    // directly.
+    logic cpu_gated_clk_en;
+    assign cpu_gated_clk_en = ~pmu_cpu_clk_dis_sync & pmu_cpu_rst_n_cpu_sync;
+
+    rv32i_clock_gate u_cpu_cg (.en(cpu_gated_clk_en), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
     rv32i_clock_gate u_gpu_cg (.en(pmu_gpu_clk_en), .clk(core_clk), .gclk(gpu_gated_clk));
 
 endmodule : soc_top
