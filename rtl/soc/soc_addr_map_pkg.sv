@@ -8,7 +8,8 @@
 // Region summary (data crossbar slaves):
 //   Boot ROM : 0x0000_1000 .. 0x0000_1FFF   (4 KB, behavioral until M8)
 //   Main SRAM: 0x0000_2000 .. 0x0FFF_FFFF   (behavioral AXI4 SRAM, M6)
-//   Periph   : 0x2000_1000 .. 0x2000_7FFF   (AXI4→AXI-Lite bridge; Phase 7 M-c extended +PLL)
+//   Periph   : 0x2000_1000 .. 0x2000_9FFF   (AXI4→AXI-Lite bridge; Phase 7 M-c extended +PLL;
+//              GH #92 extended again +PLL2)
 //
 // The crossbar itself is parameterized with SLV_BASE / SLV_LIMIT arrays so it
 // stays reusable; the SoC top-level passes the constants below.  decode_slave()
@@ -46,8 +47,9 @@ package soc_addr_map_pkg;
     localparam logic [31:0] SRAM_BASE    = 32'h0000_2000;
     localparam logic [31:0] SRAM_LIMIT   = 32'h0FFF_FFFF;
     localparam logic [31:0] PERIPH_BASE  = 32'h2000_1000;
-    localparam logic [31:0] PERIPH_LIMIT = 32'h2000_8FFF;  // Phase 7 M-c: extended to cover PLL slot (0x2000_7000-7FFF);
-                                                            // Pre-Phase-6 #5 / GH #100: extended again to cover PMU slot (0x2000_8000-8FFF)
+    localparam logic [31:0] PERIPH_LIMIT = 32'h2000_9FFF;  // Phase 7 M-c: extended to cover PLL slot (0x2000_7000-7FFF);
+                                                            // Pre-Phase-6 #5 / GH #100: extended again to cover PMU slot (0x2000_8000-8FFF);
+                                                            // GH #92: extended again to cover PLL2 slot (0x2000_9000-9FFF)
     /* verilator lint_on  UNUSEDPARAM */
 
     // Packed 2D arrays for crossbar instantiation (index = slave number).

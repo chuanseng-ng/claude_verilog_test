@@ -13,6 +13,16 @@
 // All signals are direct renames of soc_top ports — zero logic, exactly
 // the pattern of tb_axi4_crossbar.sv.
 //
+// GH #92 (dual PLL / CPU-domain clock seam): soc_top now requires a second
+// clock/reset pair (cpu_clk_i/cpu_rst_n_i). This wrapper is a single-clock
+// suite (existing soc_all regression) and does not need to drive the
+// CPU-domain clock independently, so cpu_clk_i/cpu_rst_n_i are tied to
+// clk_i/rst_n_i internally — behaviourally unchanged from before GH #92.
+// The 2-domain split (a genuinely independent CPU clock) arrives in GH #93.
+// cpu_pll_locked_o is left unconnected here (soc_boot / soc_periph /
+// soc_coherency / soc_cpu_gpu do not observe it); see tb_soc_pll.sv for the
+// wrapper that exposes both lock signals.
+//
 // Lint target: verilator -Wall 0 errors 0 warnings.
 
 `default_nettype none
@@ -65,12 +75,22 @@ module tb_soc_top #(
     output logic        pll_locked_o
 );
 
+    // GH #92: this single-clock wrapper does not expose cpu_pll_locked_o to
+    // cocotb (soc_boot/soc_periph/soc_coherency/soc_cpu_gpu do not observe
+    // it — see tb_soc_pll.sv for the wrapper that does). Sink it to a local
+    // net rather than an empty port connection.
+    logic cpu_pll_locked_unused;
+
     soc_top #(
         .MEM_INIT_FILE  (MEM_INIT_FILE),
         .SRAM_MEM_WORDS (SRAM_MEM_WORDS)
     ) u_soc (
         .clk_i          (clk_i),
         .rst_n_i        (rst_n_i),
+        // GH #92: tie CPU-domain reference to the system reference — see
+        // header comment. Genuine 2-domain split arrives in GH #93.
+        .cpu_clk_i      (clk_i),
+        .cpu_rst_n_i    (rst_n_i),
 
         .apb_paddr_i    (apb_paddr_i),
         .apb_psel_i     (apb_psel_i),
@@ -94,7 +114,10 @@ module tb_soc_top #(
         .commit_insn_o  (commit_insn_o),
         .gpu_irq_o      (gpu_irq_o),
 
-        .pll_locked_o   (pll_locked_o)
+        .pll_locked_o   (pll_locked_o),
+        // GH #92: CPU-domain PLL lock, not observed by this single-clock
+        // wrapper's tests (soc_boot/soc_periph/soc_coherency/soc_cpu_gpu).
+        .cpu_pll_locked_o (cpu_pll_locked_unused)
     );
 
 endmodule : tb_soc_top

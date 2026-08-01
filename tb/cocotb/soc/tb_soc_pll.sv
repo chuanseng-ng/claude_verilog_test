@@ -16,6 +16,13 @@
 //   the lock counter fires — roughly 16+1 = 17 ref_clk cycles after reset
 //   de-asserts.
 //
+// GH #92 (dual PLL): soc_top now requires a second clock/reset pair
+// (cpu_clk_i/cpu_rst_n_i) driving a second pll_subsystem instance. This
+// wrapper ties cpu_clk_i/cpu_rst_n_i to clk_i/rst_n_i (single-clock suite,
+// test_pll_lock.py exercises the system PLL only) but exposes
+// cpu_pll_locked_o alongside pll_locked_o so a future test can observe both
+// lock signals independently. The genuine 2-domain split arrives in GH #93.
+//
 // Lint target: verilator -Wall 0 errors 0 warnings.
 
 `default_nettype none
@@ -60,8 +67,9 @@ module tb_soc_pll #(
     output logic [31:0] commit_insn_o,
     output logic        gpu_irq_o,
 
-    // ── PLL status (Phase 7 M-c) ─────────────────────────────────────────────
-    output logic        pll_locked_o    // 1 when stub lock counter fires
+    // ── PLL status (Phase 7 M-c; GH #92 adds the CPU-domain PLL) ──────────────
+    output logic        pll_locked_o,      // 1 when system PLL stub lock counter fires
+    output logic        cpu_pll_locked_o   // 1 when CPU-domain PLL stub lock counter fires
 );
 
     soc_top #(
@@ -70,6 +78,10 @@ module tb_soc_pll #(
     ) u_soc (
         .clk_i          (clk_i),
         .rst_n_i        (rst_n_i),
+        // GH #92: tie CPU-domain reference to the system reference — see
+        // header comment. Genuine 2-domain split arrives in GH #93.
+        .cpu_clk_i      (clk_i),
+        .cpu_rst_n_i    (rst_n_i),
 
         .apb_paddr_i    (apb_paddr_i),
         .apb_psel_i     (apb_psel_i),
@@ -93,7 +105,8 @@ module tb_soc_pll #(
         .commit_insn_o  (commit_insn_o),
         .gpu_irq_o      (gpu_irq_o),
 
-        .pll_locked_o   (pll_locked_o)
+        .pll_locked_o     (pll_locked_o),
+        .cpu_pll_locked_o (cpu_pll_locked_o)
     );
 
 endmodule : tb_soc_pll

@@ -9,30 +9,54 @@
 //     M3 = DMA       (dma_engine m_*)
 //     S0 = Boot ROM  (boot_rom, 0x0000_1000–0x0000_1FFF)
 //     S1 = SRAM ctrl (sram_controller, 0x0000_2000–0x0FFF_FFFF)
-//     S2 = Periph    (axi4_to_axilite → axi_lite_interconnect, 0x2000_1000–7FFF)
+//     S2 = Periph    (axi4_to_axilite → axi_lite_interconnect, 0x2000_1000–9FFF)
 //
 //   Control plane : axi4_to_axilite → axi_lite_interconnect (N_SLAVES=3)
 //     AXIL_GPU=0        @ 0x2000_1000–1FFF  (AXI-Lite direct)
-//     AXIL_APB_BRIDGE=1 @ 0x2000_2000–7FFF  (axil_to_apb → apb_interconnect)
+//     AXIL_APB_BRIDGE=1 @ 0x2000_2000–9FFF  (axil_to_apb → apb_interconnect)
 //     AXIL_DMA=2        @ 0x2000_5000–5FFF  (AXI-Lite direct; last-match wins
 //                                             over APB_BRIDGE window overlap)
 //
-//   APB sub-tree (6 slaves behind axil_to_apb bridge):
+//   APB sub-tree (7 slaves behind axil_to_apb bridge):
 //     APB_UART=0  @ 0x2000_2000–2FFF  uart_controller
 //     APB_SPI=1   @ 0x2000_3000–3FFF  spi_controller
 //     APB_TIMER=2 @ 0x2000_4000–4FFF  timer
 //     APB_IRQ=3   @ 0x2000_6000–6FFF  interrupt_controller
-//     APB_PLL=4   @ 0x2000_7000–7FFF  pll_apb_regs (clk_i domain)
+//     APB_PLL=4   @ 0x2000_7000–7FFF  pll_apb_regs (clk_i domain — system/fabric PLL)
 //     APB_PMU=5   @ 0x2000_8000–8FFF  pmu (core_clk domain; GH #99/#100)
+//     APB_PLL2=6  @ 0x2000_9000–9FFF  pll_apb_regs (cpu_clk_i domain — CPU-domain
+//                                      PLL, GH #92; output unconsumed until GH #93)
 //
 //   Debug plane   : APB3 debug slave exposed at top-level ports.
 //
-//   Clock seam (Phase 7 M-c):
-//     clk_i is the external reference clock (100 MHz crystal/XO).
-//     pll_clkgen converts it to core_clk (1.282 GHz in RNM; ref passthrough in stub).
-//     All child instances run on core_clk.
-//     core_rst_n = rst_n_i & pll_locked so children are held in reset until PLL locks.
-//     PLL_IMPL parameter selects "STUB" (default, synth-safe) or "RNM" (M-c cosim).
+//   Clock seam (Phase 7 M-c; GH #92 — dual PLL / two reference clock roots):
+//     clk_i is the external SYSTEM/FABRIC reference clock (100 MHz crystal/XO).
+//       pll_clkgen converts it to core_clk (1.282 GHz in RNM; ref passthrough
+//       in stub). All child instances except the CPU run on core_clk.
+//       core_rst_n = rst_n_i & pll_locked so children are held in reset until
+//       PLL locks. PLL_IMPL parameter selects "STUB" (default, synth-safe) or
+//       "RNM" (M-c cosim).
+//     cpu_clk_i is a SECOND, independent CPU-domain reference clock input
+//       (GH #92), feeding its own pll_subsystem instance (u_cpu_pll_sub) to
+//       produce cpu_core_clk / cpu_core_rst_n / cpu_pll_locked. This gives PD
+//       two genuine, non-identical clock roots for the two create_clock
+//       statements in GH #94 (pll_clkgen_stub.sv is a pure ref_clk passthrough
+//       with no divide/multiply, so two instances fed from ONE reference would
+//       be bit-identical clocks with zero real CDC coverage).
+//     Scope note: the CPU (u_cpu / u_cpu_cg) still runs on core_clk /
+//       cpu_gated_clk in THIS PR — cpu_core_clk / cpu_core_rst_n are generated
+//       but have no consumer until GH #93 re-sources u_cpu_cg from them (scoped
+//       lint waiver below). In a single-clock build, tie cpu_clk_i == clk_i and
+//       cpu_rst_n_i == rst_n_i at the integration site (see tb_soc_top.sv /
+//       tb_soc_pll.sv for the reference tie-off).
+//     CDC hazard surfaced by this exploration, left for GH #93 to solve: once
+//       GH #93 re-sources u_cpu_cg from cpu_core_clk, the PMU's
+//       pmu_cpu_clk_en / pmu_cpu_rst_n (generated in the core_clk/system
+//       domain, see PMU sequencing nets below) will cross into the CPU domain
+//       unsynchronised. The intended primitives for that crossing are
+//       rtl/soc/cdc/cdc_2ff_sync.sv (control bit) and
+//       rtl/soc/cdc/cdc_reset_sync.sv (reset), landed in GH #91. NOT fixed
+//       here — CPU stays on core_clk in this PR, so no crossing exists yet.
 //
 //   Power management (Pre-Phase-6 #5, GH #98/#99/#100 — behavioral PMU only,
 //   see docs/POWER_DOMAIN_EVALUATION.md):
@@ -77,11 +101,21 @@ module soc_top
     //   "RNM"            — real-number model; use only for M-c AMS co-sim.
     parameter string PLL_IMPL = "STUB"
 ) (
-    // clk_i is the reference clock input (100 MHz crystal / XO).
+    // clk_i is the SYSTEM/FABRIC reference clock input (100 MHz crystal / XO).
     // Internally the SoC runs on core_clk derived from the PLL.
     // In STUB mode core_clk == clk_i (lock counter fires after 16 cycles).
     input  logic clk_i,
     input  logic rst_n_i,
+
+    // cpu_clk_i / cpu_rst_n_i (GH #92): a SECOND, independent CPU-domain
+    // reference clock/reset pair, feeding its own pll_subsystem instance
+    // (u_cpu_pll_sub). The CPU itself is NOT yet re-sourced from this domain
+    // — that is GH #93's scope; here the reference clock + PLL are wired up
+    // so PD has two genuine clock roots (GH #94) and the output (cpu_core_clk)
+    // is intentionally unconsumed (see scoped waiver below). In a
+    // single-clock build, tie cpu_clk_i == clk_i and cpu_rst_n_i == rst_n_i.
+    input  logic cpu_clk_i,
+    input  logic cpu_rst_n_i,
 
     // ── APB3 debug slave (pass-through to CPU) ───────────────────────────────
     input  logic [11:0] apb_paddr_i,
@@ -109,8 +143,9 @@ module soc_top
     output logic [31:0] commit_insn_o,
     output logic        gpu_irq_o,
 
-    // ── PLL status (Phase 7 M-c) ─────────────────────────────────────────────
-    output logic        pll_locked_o    // 1 when PLL has acquired lock
+    // ── PLL status (Phase 7 M-c; GH #92 adds the CPU-domain PLL) ──────────────
+    output logic        pll_locked_o,       // 1 when system/fabric PLL has acquired lock
+    output logic        cpu_pll_locked_o    // 1 when CPU-domain PLL has acquired lock
 );
 
     // =========================================================================
@@ -137,6 +172,23 @@ module soc_top
     logic core_clk;     // PLL output clock — feeds all child clk ports
     logic core_rst_n;   // gated reset: rst_n_i & pll_locked (from pll_subsystem)
     logic pll_locked;   // raw PLL lock flag — export to top-level port
+
+    // =========================================================================
+    // GH #92: second (CPU-domain) PLL subsystem
+    //   cpu_clk_i → u_cpu_pll_sub.clk_i  (independent reference clock root)
+    //   cpu_core_clk / cpu_core_rst_n / cpu_pll_locked are produced but have
+    //   NO consumer in this PR — the CPU stays on core_clk/cpu_gated_clk
+    //   until GH #93 re-sources u_cpu_cg from cpu_core_clk. Scoped waiver
+    //   below (not a bare dangling net): only cpu_pll_locked is genuinely
+    //   consumed, by being exported at cpu_pll_locked_o.
+    // =========================================================================
+    /* verilator lint_off UNUSEDSIGNAL */
+    // cpu_core_clk / cpu_core_rst_n: unconsumed until GH #93 re-sources
+    // u_cpu_cg from the CPU-domain PLL instead of core_clk.
+    logic cpu_core_clk;
+    logic cpu_core_rst_n;
+    /* verilator lint_on  UNUSEDSIGNAL */
+    logic cpu_pll_locked;   // raw CPU-domain PLL lock flag — export to top-level port
 
     // =========================================================================
     // Crossbar master-facing nets (no ID, unpacked arrays [N_MASTERS])
@@ -1073,6 +1125,66 @@ module soc_top
 
     // Export PLL lock status to top-level port
     assign pll_locked_o = pll_locked;
+
+    // =========================================================================
+    // GH #92: second pll_subsystem instance — CPU-domain reference clock.
+    //
+    // Same bootstrap rule as u_pll_sub above: u_cpu_pll_sub and everything
+    // inside it run on cpu_clk_i / cpu_rst_n_i (its own raw reference), never
+    // on a generated clock. cpu_core_clk / cpu_core_rst_n are produced here
+    // but have no consumer until GH #93 (see scoped UNUSEDSIGNAL waiver on
+    // the net declarations above). cpu_pll_locked IS consumed — exported at
+    // cpu_pll_locked_o for observability, mirroring pll_locked_o.
+    // =========================================================================
+    pll_subsystem #(
+        .PLL_IMPL        (PLL_IMPL),
+        .STUB_LOCK_CYCLES(16),
+        .ADDR_W          (12)
+    ) u_cpu_pll_sub (
+        // Reference clock domain — the CPU-domain reference, NOT core_clk
+        // and NOT cpu_core_clk (see bootstrap-deadlock note above).
+        .clk_i       (cpu_clk_i),
+        .rst_n_i     (cpu_rst_n_i),
+        // APB4 slave ← apb_interconnect APB_PLL2 slot.
+        //
+        // ⚠️ UNSYNCHRONISED CDC — READ BEFORE DRIVING cpu_clk_i != clk_i.
+        // apb_interconnect is purely combinational (no clock port, see
+        // soc_bus.sv "APB interconnect"); the APB transaction is driven by
+        // axil_to_apb in the core_clk domain, while this instance samples
+        // psel/penable and returns pready/prdata in the cpu_clk_i domain.
+        // Whenever cpu_clk_i != clk_i that handshake crosses a clock boundary
+        // with no synchroniser, so an APB access to the PLL2 config registers
+        // (0x2000_9000-9FFF) can be corrupted or can hang the APB master.
+        //
+        // This is the same mechanism as GH #86 (APB_PLL in RNM mode), but for
+        // PLL2 it is live in the DEFAULT STUB build as soon as the two
+        // reference clocks differ — #86's "STUB makes core_clk == clk_i so no
+        // CDC exists" argument does NOT rescue this slot.
+        //
+        // Safe today: every current testbench ties cpu_clk_i == clk_i (see
+        // tb_soc_top.sv / tb_soc_pll.sv), so the two domains are one physical
+        // clock and no crossing exists. Firmware/tests MUST NOT access the
+        // PLL2 register block while the references differ until an async APB
+        // bridge (or command CDC with synchronised valid/ready) is added.
+        // Tracked for GH #93/#95 alongside the pmu_cpu_* crossing noted in the
+        // clock-seam block above.
+        .psel        (apb_psel    [APB_PLL2]),
+        .penable     (apb_penable [APB_PLL2]),
+        .pwrite      (apb_pwrite  [APB_PLL2]),
+        .paddr       (apb_paddr   [APB_PLL2][11:0]),
+        .pwdata      (apb_pwdata  [APB_PLL2]),
+        .pstrb       (apb_pstrb   [APB_PLL2]),
+        .prdata      (apb_prdata  [APB_PLL2]),
+        .pready      (apb_pready  [APB_PLL2]),
+        .pslverr     (apb_pslverr [APB_PLL2]),
+        // PLL outputs — unconsumed until GH #93 (cpu_core_clk/cpu_core_rst_n)
+        .core_clk    (cpu_core_clk),
+        .core_rst_n  (cpu_core_rst_n),
+        .pll_locked_o(cpu_pll_locked)
+    );
+
+    // Export CPU-domain PLL lock status to top-level port
+    assign cpu_pll_locked_o = cpu_pll_locked;
 
     // =========================================================================
     // Pre-Phase-6 #5 (GH #98/#99/#100): PMU (behavioral power-mode sequencer)
