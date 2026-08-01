@@ -135,6 +135,17 @@ ASYNC_AXI_FIFO_SOURCES = \
 	$(RTL)/soc/async_axi_fifo.sv \
 	$(SOC_DIR)/tb_async_axi_fifo.sv
 
+# GH #93: standalone apb_cdc_bridge (APB4 2-phase toggle-handshake CDC
+# bridge) unit-test sources. apb_cdc_bridge.sv only depends on the 2
+# cdc/ reset/sync primitives (no axi_pkg, no cdc_gray_fifo -- it crosses
+# single-bit toggles, not gray-coded multi-bit pointers) + standalone TB
+# wrapper. No bus-bridge or full SoC required.
+APB_CDC_BRIDGE_SOURCES = \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_reset_sync.sv \
+	$(RTL)/soc/apb_cdc_bridge.sv \
+	$(SOC_DIR)/tb_apb_cdc_bridge.sv
+
 # Full SoC top-level sources for the boot test (M9).
 # Order: packages first, leaf RTL, adapters, then soc_top + tb wrapper.
 SRAM_SIM_MODEL ?= $(PROJ_ROOT)/sim/sram_1rw_256x32_verilator.v
@@ -337,7 +348,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -509,6 +520,20 @@ async_axi_fifo: async_axi_fifo_lint
 		VERILOG_SOURCES="$(ASYNC_AXI_FIFO_SOURCES)" \
 		$(BUILD_ARGS)
 
+# GH #93: apb_cdc_bridge lint + sim.
+# lint only: 2 cdc/ primitives + apb_cdc_bridge + standalone TB wrapper.
+apb_cdc_bridge_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module tb_apb_cdc_bridge \
+		$(APB_CDC_BRIDGE_SOURCES)
+
+# clean first: stale Vtop from any prior target causes VPI root handle mismatch.
+apb_cdc_bridge: apb_cdc_bridge_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_apb_cdc_bridge TOPLEVEL=tb_apb_cdc_bridge \
+		VERILOG_SOURCES="$(APB_CDC_BRIDGE_SOURCES)" \
+		$(BUILD_ARGS)
+
 soc_pll: soc_pll_lint
 	$(MAKE) clean
 	$(MAKE) MODULE=test_pll_lock TOPLEVEL=tb_soc_pll \
@@ -517,6 +542,19 @@ soc_pll: soc_pll_lint
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 	$(MAKE) pll_apb_regs
+
+# GH #93 multiclock APB_PLL2 / apb_cdc_bridge exercise (bonus item 4 of the
+# GH #93 multiclock verification task — see test_soc_multiclock_pll2.py's
+# module docstring for why this is a separate DUT/target from
+# soc_multiclock). Reuses pll2_fw/pll2_decode.hex — no new firmware.
+# clean first (stale Vtop guard).
+soc_pll_multiclock: soc_pll_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_soc_multiclock_pll2 TOPLEVEL=tb_soc_pll \
+		VERILOG_SOURCES="$(PLL_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
 
 soc_boot_lint:
 	verilator --lint-only -Wall -Wno-fatal -Wno-IMPORTSTAR \
@@ -587,6 +625,27 @@ soc_cpu_gpu: soc_boot_lint
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
+# GH #93 multiclock SoC CDC exercise (bead: feat/cpu-domain-cdc-gh93 verif task).
+# Drives clk_i (fabric) / cpu_clk_i (CPU) at a genuinely asynchronous 7 ns /
+# 3 ns ratio (see test_soc_multiclock.py's module docstring for the full
+# rationale) to prove the CPU<->fabric CDC (async_axi_fifo + the
+# ext_irq/timer_irq/pmu_cpu_* cdc_2ff_sync synchronisers in soc_top.sv) works
+# when the two domains are not clock-aligned, reusing boot_fw/boot.hex,
+# periph_fw/periph_loopback.hex, and cpu_gpu_irq_fw/cpu_gpu_irq_fw.hex — no
+# new firmware. Reuses SOC_BOOT_SOURCES + soc_boot_lint (same DUT/lint gate
+# as soc_boot/soc_periph/soc_cpu_gpu). clean first (stale Vtop guard).
+#
+# NOT in soc_all — see the soc_all comment block for the reason (currently
+# blocked by the GH #93 CPU-clock-gating boot regression; run explicitly with
+# `make soc_multiclock`).
+soc_multiclock: soc_boot_lint
+	$(MAKE) clean
+	$(MAKE) MODULE=test_soc_multiclock TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
 # M9 SoC stress + benchmark test (bead claude_verilog_test-pgf).
 # Self-checking firmware runs STRESS_ITER=10 outer loops exercising CPU burst,
 # DMA, GPU kernel, UART/SPI loopback, and timer in each loop (≥1M sim cycles).
@@ -634,6 +693,17 @@ l2_bench: l2_bench_lint
 # partially-written files from a prior build — including large PCH .gch files
 # that $(MAKE) clean sometimes leaves behind — are reliably purged.
 # NOTE: soc_stress and l2_bench are intentionally excluded from soc_all (long runtime).
+# NOTE: soc_multiclock / soc_pll_multiclock (GH #93) are ALSO excluded, but for a
+#   different reason than runtime: as of 2026-08-01 the SoC does not boot at all on
+#   this branch (0/8 committed PCs), so neither suite — nor soc_boot/soc_periph/
+#   soc_coherency/soc_cpu_gpu, which are already listed below — can pass. Root cause
+#   is a GH #93 RTL regression, NOT a testbench issue: soc_top.sv gates the CPU's
+#   clock (cpu_gated_clk) with pmu_cpu_clk_en_sync, a cdc_2ff_sync output that resets
+#   to 0, while the whole CPU uses SYNCHRONOUS reset — so the CPU receives no clock
+#   edge while cpu_core_rst_n is low, never loads RESET_PC=0x1000, and starts from
+#   PC=0. Reproduced on a pristine worktree at commit 66a9af1 with the stock
+#   `make soc_boot` (0/8 commits on every stability attempt). Add both targets here
+#   once that regression is fixed and their runtime has been measured.
 soc_all:
 	rm -rf sim_build && $(MAKE) crossbar
 	rm -rf sim_build && $(MAKE) register_bank
@@ -649,6 +719,7 @@ soc_all:
 	rm -rf sim_build && $(MAKE) axil_to_apb
 	rm -rf sim_build && $(MAKE) pmu
 	rm -rf sim_build && $(MAKE) async_axi_fifo
+	rm -rf sim_build && $(MAKE) apb_cdc_bridge
 	rm -rf sim_build && $(MAKE) soc_boot
 	rm -rf sim_build && $(MAKE) soc_periph
 	rm -rf sim_build && $(MAKE) soc_coherency

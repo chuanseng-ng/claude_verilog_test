@@ -68,6 +68,13 @@
       "results_xml": "/home/neuromorphic/Downloads/Github/claude_verilog_test/tb/cocotb/soc/results.xml",
       "purpose": "Confirm go9 (D-cache MMIO bypass) fix + k12 (DMA/periph loopback test) functional closure",
       "checked_at": "2026-07-27T22:16:43.472838Z"
+    },
+    "gh93_cdc_verification": {
+      "status": "BLOCKED",
+      "reason": "SoC boot regression (see fix_requests[] entry) blocks soc_boot/soc_periph/soc_coherency/soc_cpu_gpu/soc_pll/soc_multiclock/soc_pll_multiclock",
+      "fix_request_id": "fr_57f49b7f9b29_20260801_000000_00",
+      "tb_infra_status": "complete, lint-clean: cpu_clk_i/cpu_rst_n_i real ports on tb_soc_top.sv/tb_soc_pll.sv, soc_clocks.py shared helper, 8 suites retrofitted (zero behaviour change), apb_cdc_bridge unit suite 15/15 PASS (unaffected, does not instantiate soc_top), soc_multiclock + soc_pll_multiclock authored and lint-clean but blocked from passing until the RTL fix lands",
+      "checked_at": "2026-08-01T15:29:22.974567+00:00"
     }
   },
   "pipeline_session_id": null,
@@ -893,6 +900,18 @@
       "suggested_next_step": "proceed",
       "reason": "Bead 58q (Sky130 SoC Stage-2 antenna residual) closed by coordinator decision: adopted run3 (RUN_2026-07-30_06-42-17) -- LVS PASSED, routing DRC 0, KLayout DRC 4 (waived, bead 0jp), Magic DRC 9081 (waived, bead 45a), hold clean at all 9 corners (worst +0.0274 ns at max_ss), antenna 140 pin / 120 net (down from 147/127 baseline, residual accepted as a quantified, root-caused gap rather than a defect -- diode-insertion mechanism proven binary on hold via 6-run falsifiable-prediction campaign, not fixable via any tested config lever). ss-corner setup (WNS -8.90 ns) remains a separately tracked, out-of-scope gap per bead 1ls/ujv. pd.signoff stays false: two documented open gates (antenna residual, ss-corner setup) prevent a clean tape-out sign-off, but no further PD action is pending on either without new direction. design_state.json pd fields updated to reflect the adopted run3 gate table; config.json reverted to match run3 exactly (was left at a later, hold-broken experimental config) so the flow is reproducible.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-08-01T15:29:22.974567+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "functional",
+      "retry_strategy": "escalate",
+      "suggested_next_step": "escalate",
+      "reason": "GH #93 verification task: authored apb_cdc_bridge unit suite (15/15 PASS, lint-clean), TB wrapper cpu_clk_i/cpu_rst_n_i ports + soc_clocks.py helper + 8-suite retrofit (lint-clean), and soc_multiclock/soc_pll_multiclock suites -- then found via `make soc_boot` that the SoC does not boot at all on this branch (0/8 commits, 0/100 stability attempts observed), root-caused to a CPU clock-gate/synchronous-reset race in soc_top.sv introduced by commit 66a9af1. This blocks essentially every SoC-level suite (soc_boot/periph/coherency/cpu_gpu/pll/multiclock), a regression against the prior 142/142 baseline. Filed fix_request and stopping per Behaviour Rule 4 -- RTL re-invocation is the pipeline-orchestrator's responsibility, not this run's.",
+      "constraint_ref": "fr_57f49b7f9b29_20260801_000000_00"
     }
   ],
   "fix_requests": [
@@ -1163,6 +1182,34 @@
           "note": "Added rd_pend_q in-flight stage + 2-entry output skid buffer to correct the negedge-launch phase error; hardened MEM_WORDS guard to a bare elaboration-time $fatal. Verilator -Wall lint_soc_sky130: 0 errors, 0 new warnings (baseline unchanged: PINCONNECTEMPTY x4 pre-existing in rv32i_icache/dcache.sv, UNUSEDPARAM x3, BLKSEQ x3). Cocotb re-run deferred to verification-orchestrator per project policy."
         }
       ]
+    },
+    {
+      "id": "fr_57f49b7f9b29_20260801_000000_00",
+      "created_at": "2026-08-01T15:29:22.974567+00:00",
+      "updated_at": "2026-08-01T15:29:22.974567+00:00",
+      "created_by": "verification-orchestrator",
+      "failure_class": "functional",
+      "test_name": "test_boot_pc_scoreboard, test_boot_sram_sentinels, test_boot_stability_100 (tb/cocotb/soc/test_boot.py, soc_boot suite)",
+      "property_or_assertion": null,
+      "seed": 0,
+      "waveform_path": null,
+      "log_path": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_boot_verify.log",
+      "suspected_rtl": {
+        "module": "soc_top",
+        "signal": "pmu_cpu_clk_en_sync / cpu_domain_rst_n (u_cpu_clk_en_sync, u_cpu_pmu_rst_sync, u_cpu_cg)",
+        "file": "rtl/soc/soc_top.sv",
+        "line_range": [
+          345,
+          453
+        ]
+      },
+      "summary": "GH #93 regression: SoC does not boot at all on feat/cpu-domain-cdc-gh93 (commit 66a9af1) -- CPU never commits a single instruction (0/8 PCs, 0/100 boot-stability attempts).",
+      "expected_behavior": "Per docs/design/RTL_DEFINITION.md / fr_null_20260603_052800_00 (already-fixed CPU RESET_PC bug): after rst_n_i/cpu_rst_n_i release and PLL lock, the CPU must synchronously load RESET_PC=0x0000_1000 and begin committing instructions from boot ROM within a few hundred cycles.",
+      "observed_behavior": "Verified via `make soc_boot` (tb/cocotb/soc/, commit 66a9af1, pristine working tree): test_boot_pc_scoreboard FAILS with 'timeout: collected 0/8 commits'; test_boot_sram_sentinels FAILS identically (golden reference model confirms SRAM[0x2000]=0xDEADBEEF/[0x2004]=0x12345678 are correct pre-flight, but the DUT never gets far enough to write them); test_boot_stability_100 FAILS on every single observed attempt (22+ consecutive attempts with varied reset-phase offsets and random seeds, all 'timeout: collected 0/8 commits', 0/100 before the run was stopped as conclusive). Root cause (confirmed by independent RTL trace, cross-checked against a second agent's identical finding): rtl/soc/soc_top.sv's u_cpu_clk_en_sync (cdc_2ff_sync gating cpu_gated_clk via u_cpu_cg, rooted at cpu_core_rst_n) and u_cpu_pmu_rst_sync (feeds cpu_domain_rst_n = cpu_core_rst_n & pmu_cpu_rst_n_cpu_sync, also rooted at cpu_core_rst_n) are both 2-stage synchronizers with an already-asserted (=1) source value (pmu_cpu_clk_en and pmu_cpu_rst_n both default to 1 out of pmu.sv reset), so both transition 0->1 on the SAME cpu_core_clk edge (2 cycles after cpu_core_rst_n releases). rv32i_clock_gate's ICG (rtl/mem/rv32i_clock_gate.sv) only updates its enable latch while clk is low, so cpu_gated_clk's first toggle coincides with cpu_domain_rst_n's release -- there is no cpu_gated_clk edge while cpu_domain_rst_n is still asserted. u_cpu's pipeline (rtl/cpu/core/pipeline/rv32i_pipeline_if.sv and siblings) uses plain synchronous reset (`always_ff @(posedge clk) if (!rst_n) pc_q <= RESET_PC`), which requires at least one clock edge WHILE rst_n is low to actually load the reset value -- since that never happens, pc_q keeps its uninitialized/0 simulation value instead of RESET_PC=0x1000, and the CPU fetches from an unmapped address forever. Blast radius: every SoC-level cocotb suite that boots real CPU firmware through tb_soc_top/tb_soc_pll is blocked -- soc_boot, soc_periph, soc_coherency, soc_cpu_gpu, soc_pll (commit_pc-dependent checks), plus the newly-authored soc_multiclock and soc_pll_multiclock suites. This is a regression against the prior 142/142 soc_all baseline (pre-commit 66a9af1).",
+      "session_id": null,
+      "status": "open",
+      "rtl_response": null,
+      "history": []
     }
   ],
   "pd": {
@@ -1784,7 +1831,8 @@
         "power_nom_tt_mw": 37.63,
         "power_worst_corner_mw": 44.13,
         "power_worst_corner": "max_ff_n40C_1v95",
-        "setup_corner_accounting_correction_2026-08-01": "setup_clean_corners previously listed only 5 corners while setup_fail_corners listed 3, leaving max_tt_025C_1v80 (9th corner) unclassified. Re-read from 51-openroad-stapostpnr/<corner>/ws.max.rpt in the adopted run: max_tt = +6.959 ns, clean. All 9 corners are now accounted for -- 6 clean (nom/max/min tt, nom/min/max ff), 3 failing (nom/min/max ss). Full setup WS: nom_tt +8.250, max_tt +6.959, min_tt +9.779, nom_ff +10.852, max_ff +10.785, min_ff +10.938, nom_ss -3.123, max_ss -4.643, min_ss -1.254. Hold WS worst is max_ss +0.027. Note the unrelated historical 'max_tt_note' field elsewhere in this file describes an EARLIER run, not this one.", "power_figure_correction_2026-07-31": "This table previously carried a single scalar 'power_mw': 44.6, and bead 9t6 carried 44.1. Both were re-derived from 51-openroad-stapostpnr/<corner>/power.rpt in the adopted run: nom_tt = 3.762750e-02 W = 37.63 mW; max_ff = 4.412770e-02 W = 44.13 mW. The 44.1 figure was the max_ff corner reported as if it were the headline number; 44.6 matches no corner of any Sky130 SoC run and was unsourced. Power is now recorded per corner so the tt sign-off number and the worst-corner number cannot be conflated.",
+        "setup_corner_accounting_correction_2026-08-01": "setup_clean_corners previously listed only 5 corners while setup_fail_corners listed 3, leaving max_tt_025C_1v80 (9th corner) unclassified. Re-read from 51-openroad-stapostpnr/<corner>/ws.max.rpt in the adopted run: max_tt = +6.959 ns, clean. All 9 corners are now accounted for -- 6 clean (nom/max/min tt, nom/min/max ff), 3 failing (nom/min/max ss). Full setup WS: nom_tt +8.250, max_tt +6.959, min_tt +9.779, nom_ff +10.852, max_ff +10.785, min_ff +10.938, nom_ss -3.123, max_ss -4.643, min_ss -1.254. Hold WS worst is max_ss +0.027. Note the unrelated historical 'max_tt_note' field elsewhere in this file describes an EARLIER run, not this one.",
+        "power_figure_correction_2026-07-31": "This table previously carried a single scalar 'power_mw': 44.6, and bead 9t6 carried 44.1. Both were re-derived from 51-openroad-stapostpnr/<corner>/power.rpt in the adopted run: nom_tt = 3.762750e-02 W = 37.63 mW; max_ff = 4.412770e-02 W = 44.13 mW. The 44.1 figure was the max_ff corner reported as if it were the headline number; 44.6 matches no corner of any Sky130 SoC run and was unsourced. Power is now recorded per corner so the tt sign-off number and the worst-corner number cannot be conflated.",
         "util_pct": 37.9,
         "stdcell_count": 226952,
         "corner_modeling_caveat": "TYPICAL-CORNER (nom_tt) SIGN-OFF ONLY. 'hold 0 at all 9 corners' and the setup_clean/setup_fail corner lists above are statements about 9 corner LABELS, not 9 independently characterized macro models. The SRAM macro sky130_sram_4kbyte_1rw1r_32x1024_8 is characterized at TT only (its config.json lib entry is deliberately {\"*\": [<one TT_1p8V_25C file>]}), so its internal timing arcs are identical in all nine reported corners. Results at ss/ff therefore carry macro-model error of unknown sign and this is NOT a validated multi-corner timing sign-off. The CPU macro rv32i_cpu_top IS genuinely per-corner (fixed 2026-07-25, 9 distinct libs). Paths entirely within flat sky130_fd_sc_hd standard-cell logic ARE corner-accurate. Tracked as GH #120 / bead o1i, deferred host-blocked. See pnr/sky130/soc/constraints/sky130_soc.sdc header."
