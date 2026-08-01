@@ -70,11 +70,42 @@
       "checked_at": "2026-07-27T22:16:43.472838Z"
     },
     "gh93_cdc_verification": {
-      "status": "BLOCKED",
+      "status": "PARTIAL -- boot regression fixed, second CDC bug found",
       "reason": "SoC boot regression (see fix_requests[] entry) blocks soc_boot/soc_periph/soc_coherency/soc_cpu_gpu/soc_pll/soc_multiclock/soc_pll_multiclock",
-      "fix_request_id": "fr_57f49b7f9b29_20260801_000000_00",
+      "fix_request_id": "fr_280f3ac18c66_20260801_000001_00",
       "tb_infra_status": "complete, lint-clean: cpu_clk_i/cpu_rst_n_i real ports on tb_soc_top.sv/tb_soc_pll.sv, soc_clocks.py shared helper, 8 suites retrofitted (zero behaviour change), apb_cdc_bridge unit suite 15/15 PASS (unaffected, does not instantiate soc_top), soc_multiclock + soc_pll_multiclock authored and lint-clean but blocked from passing until the RTL fix lands",
-      "checked_at": "2026-08-01T15:29:22.974567+00:00"
+      "checked_at": "2026-08-01T15:29:22.974567+00:00",
+      "soc_all_regression": {
+        "status": "PASS",
+        "total_tests": 159,
+        "pass": 159,
+        "fail": 0,
+        "skip": 0,
+        "suites": 21,
+        "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_all_run.log",
+        "checked_at": "2026-08-01T16:28:27.576477+00:00"
+      },
+      "soc_multiclock": {
+        "status": "FAIL",
+        "total_tests": 4,
+        "pass": 0,
+        "fail": 4,
+        "skip": 0,
+        "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_multiclock.log",
+        "fix_request_id": "fr_280f3ac18c66_20260801_000001_00",
+        "checked_at": "2026-08-01T16:28:27.576477+00:00"
+      },
+      "soc_pll_multiclock": {
+        "status": "FAIL",
+        "total_tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skip": 0,
+        "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_pll_multiclock.log",
+        "fix_request_id": "fr_280f3ac18c66_20260801_000001_00",
+        "checked_at": "2026-08-01T16:28:27.576477+00:00"
+      },
+      "prior_gh93_fix_request_id": "fr_57f49b7f9b29_20260801_000000_00 (status: fixed)"
     }
   },
   "pipeline_session_id": null,
@@ -924,6 +955,18 @@
       "suggested_next_step": "proceed",
       "reason": "Fixed GH #93 CPU-domain clock/reset race in soc_top.sv (cpu_gated_clk never toggled during cpu_domain_rst_n) by inverting the clk-enable CDC synchroniser so its safe reset value is clock-running; Verilator lint_soc 0 errors / 7 baseline warnings. Re-verification of SoC boot is the verification-orchestrator's responsibility.",
       "constraint_ref": "fr_57f49b7f9b29_20260801_000000_00"
+    },
+    {
+      "timestamp": "2026-08-01T16:28:27.576477+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "constrained_random",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "protocol",
+      "retry_strategy": "escalate",
+      "suggested_next_step": "escalate",
+      "reason": "Smoke gate (make soc_boot: 3/3, 100/100 stability) and full soc_all (159/159, 21 suites, 0 regressions vs 144-test prior baseline + 15 new apb_cdc_bridge) both confirm fr_57f49b7f9b29 is genuinely fixed. Ran the multiclock suites (the actual point of GH #93 -- first exercise of a genuinely asynchronous CPU:fabric ratio) and found BOTH fail (soc_multiclock 0/4, soc_pll_multiclock 0/1). Root-caused via a throwaway ns-resolution diagnostic to a second, distinct bug in rtl/soc/cdc/cdc_gray_fifo.sv: wr_ready_o=!full_q is not gated by wr_rst_n_i, so it reads 'ready' while the FIFO's write side is still held in a cross-coupled reset -- only reachable when the two domains' PLL-lock resets release at different real times, impossible at the 1:1 ratio every pre-existing suite uses. Filed fix_request; escalating per Behaviour Rule 4.",
+      "constraint_ref": "fr_280f3ac18c66_20260801_000001_00"
     }
   ],
   "fix_requests": [
@@ -1235,6 +1278,34 @@
           "note": "Re-sourced u_cpu_cg's enable from an inverted, sync-safe pmu_cpu_clk_dis_sync so cpu_gated_clk runs throughout cpu_domain_rst_n's assertion. Verilator lint_soc: 0 errors, 7 pre-existing baseline warnings only. Commit [Fix] GH #93 on feat/cpu-domain-cdc-gh93."
         }
       ]
+    },
+    {
+      "id": "fr_280f3ac18c66_20260801_000001_00",
+      "created_at": "2026-08-01T16:28:27.576477+00:00",
+      "updated_at": "2026-08-01T16:28:27.576477+00:00",
+      "created_by": "verification-orchestrator",
+      "failure_class": "protocol",
+      "test_name": "test_multiclock_boot_pc_scoreboard, test_multiclock_boot_sram_sentinels, test_multiclock_periph_loopback, test_multiclock_cpu_gpu_irq_pass (tb/cocotb/soc/test_soc_multiclock.py); test_multiclock_pll2_apb_slot_decode (test_soc_multiclock_pll2.py)",
+      "property_or_assertion": "AXI4 handshake integrity across a CDC bridge during reset-release skew (no accept-and-drop)",
+      "seed": 0,
+      "waveform_path": null,
+      "log_path": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_multiclock.log, /tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_pll_multiclock.log, /tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/diag_multiclock5.log (throwaway diagnostic, 1ns free-running Timer probe -- not committed)",
+      "suspected_rtl": {
+        "module": "cdc_gray_fifo",
+        "signal": "wr_ready_o (= !full_q, not gated by wr_rst_n_i)",
+        "file": "rtl/soc/cdc/cdc_gray_fifo.sv",
+        "line_range": [
+          153,
+          173
+        ]
+      },
+      "summary": "NEW (distinct from fr_57f49b7f9b29): async_axi_fifo's cdc_gray_fifo silently accepts-and-drops the CPU's first AXI transaction whenever the CPU-domain reset releases before the fabric-domain reset -- only possible at a genuinely asynchronous CPU:fabric clock ratio, which is the entire point of GH #93. Both new multiclock suites (test_soc_multiclock.py, test_soc_multiclock_pll2.py) fail because of this; soc_boot/soc_periph/soc_coherency/soc_cpu_gpu at the pre-existing 1:1 ratio are unaffected and still pass.",
+      "expected_behavior": "async_axi_fifo.sv's own header contract: 's_rst_n_i and m_rst_n_i must each be held low for >= the respective SYNC_STAGES+1 periods of the OTHER clock' and 'reset is a hard flush ... no SLVERR/data is fabricated'. Per AXI4 protocol, a slave must not assert xREADY in a way that causes a master to complete a legal handshake (valid&&ready) whose transaction is then silently discarded -- if the bridge cannot yet accept a transfer (because its own reset has not fully released), wr_ready_o/s_arready_o must read 0, not 1.",
+      "observed_behavior": "Root-caused via a throwaway (uncommitted, reverted) 1ns free-running Timer() diagnostic probe added to test_soc_multiclock.py, driving the SoC at the CPU_PERIOD_NS=3/FABRIC_PERIOD_NS=7 ratio and sampling cpu_domain_rst_n, core_rst_n, cpu_axi_arvalid_raw, cpu_bridge_s_arvalid/s_arready, and xbar_m_arvalid/arready[0] every 1ns from t=0: t=0ns cpu_domain_rst_n=0 core_rst_n=0 (both in reset); t=33ns cpu_domain_rst_n=1 core_rst_n=0 (CPU-domain reset releases FIRST -- its PLL locks in 16*3ns=48ns vs the fabric PLL's 16*7ns=112ns, an asymmetry impossible at the pre-GH#93 1:1 ratio where both PLLs shared one clock net); t=45ns cpu_axi_arvalid_raw=1 s_arvalid=1 s_arready=1 (the CPU's first I$-miss AR handshake completes -- s_arready_o reads 'ready' even though core_rst_n, and therefore rst_both_n=s_rst_n_i&m_rst_n_i, and therefore the FIFO's own wr_rst_n_i=s_rst_sync_n, are all STILL 0/in-reset); t=48ns cpu_axi_arvalid_raw=0 (the CPU, per AXI4 protocol, never re-asserts arvalid for an already-completed handshake -- the transaction is gone); t=98ns core_rst_n=1 (fabric reset finally releases, 40ns too late). Confirmed pc_q (rtl/cpu/core/pipeline/rv32i_pipeline_if.sv) loads RESET_PC=0x1000 correctly (proving fix fr_57f49b7f9b29 works) but never advances past it -- ic_valid_o=1/ic_stall_i=1 persist (a permanent, unrecovered I-cache miss) because the dropped AR request's response never arrives. make soc_multiclock: TESTS=4 PASS=0 FAIL=4 (all four tests fail identically -- 0 commits or PASS_PC never reached). make soc_pll_multiclock: TESTS=1 PASS=0 FAIL=1 (last committed PC=0x00000000, same class of stall -- CPU never boots far enough to even reach the APB_PLL2 MMIO path this suite targets, so it provides no independent evidence about apb_cdc_bridge specifically). Code-level root cause: rtl/soc/cdc/cdc_gray_fifo.sv line ~166 `full_q <= 1'b0` on `!wr_rst_n_i` (async reset default = not full), and line ~173 `assign wr_ready_o = !full_q;` (no gating on wr_rst_n_i itself). wr_rst_n_i is s_rst_sync_n (async_axi_fifo.sv), derived from rst_both_n = s_rst_n_i & m_rst_n_i. While m_rst_n_i (core_rst_n) is still low, s_rst_sync_n is also still low, so the FIFO's own `always_ff @(posedge wr_clk_i or negedge wr_rst_n_i) if (!wr_rst_n_i) ... else if (push) ...` can only take the reset branch every cycle -- no push logic ever executes -- yet wr_ready_o already reads 1 purely because full_q's reset value happens to be 0. apb_cdc_bridge.sv (GH #93's other new CDC primitive) is NOT expected to share this exact defect: its s_pready_o = (s_state_q == S_DONE), and s_state_q resets to S_IDLE (!= S_DONE) via the same rst_both_n-derived s_rst_sync_n, so its ready output correctly defaults to 0 (not ready) while held in reset -- consistent with its own 15/15 passing unit suite, which explicitly covers independent-side mid-transaction reset. This cannot be confirmed empirically at the SoC level because soc_pll_multiclock's firmware needs the CPU to boot first, which this same bug prevents.",
+      "session_id": null,
+      "status": "open",
+      "rtl_response": null,
+      "history": []
     }
   ],
   "pd": {

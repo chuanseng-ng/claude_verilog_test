@@ -4,40 +4,91 @@ Bead: feat/cpu-domain-cdc-gh93 verification task.
 
 DUT: tb_soc_top (same SOC_BOOT_SOURCES as soc_boot / soc_periph / soc_cpu_gpu).
 
-BLOCKER NOTE (2026-08-01) — this suite is written and structurally correct but
-CANNOT PASS until a GH #93 RTL regression is fixed. It is NOT a testbench or
-clock-ratio issue:
+BLOCKER NOTE #1 (2026-08-01, commit 66a9af1) — RESOLVED by commit 4398c2e
+("[Fix] GH #93: keep cpu_gated_clk running through cpu_domain_rst_n"). The
+original symptom (0 committed instructions on every ratio including 1:1,
+`make soc_boot` itself red) was a CPU clock-gate/synchronous-reset race:
+u_cpu_clk_en_sync (a cdc_2ff_sync, reset-to-0) gated cpu_gated_clk directly,
+so the CPU saw zero clock edges during its own reset window and its
+synchronous reset was never sampled. Fixed by synchronising the INVERTED
+enable (pmu_cpu_clk_dis_sync) so the synchroniser's reset-to-0 state means
+"not disabled" instead of "disabled". `make soc_boot` now passes 3/3
+(100/100 stability); see design_state.json fix_requests[]
+fr_57f49b7f9b29_20260801_000000_00 (status: fixed).
 
-  Symptom: 0 committed instructions, ever. commit_valid_o never asserts, the
-  CPU sits at PC=0 (not RESET_PC=0x1000), and no AXI read request is ever
-  issued into u_cpu_axi_cdc (cpu_bridge_s_arvalid stays 0).
+BLOCKER NOTE #2 (2026-08-01, still open) — a SECOND, DISTINCT bug, found by
+running this suite after fix #1 landed. This suite (and soc_pll_multiclock)
+still FAIL, but no longer with the BLOCKER NOTE #1 symptom -- pc_q now
+correctly loads RESET_PC=0x1000 (confirmed via cpu_gated_clk free-running
+Timer probe: toggles normally, ~1333 edges/2000ns at the 3 ns CPU period;
+pc_q holds exactly 0x1000, never advancing). The new failure is a genuine
+CDC-bridge bug, reproduced and root-caused via a throwaway diagnostic
+(not committed) that scanned cpu_domain_rst_n / core_rst_n / the AR-channel
+handshake signals with 1 ns free-running Timer() sampling from t=0:
 
-  Root cause: soc_top.sv clocks the CPU from
-      cpu_gated_clk = cpu_core_clk & latch(pmu_cpu_clk_en_sync)   [u_cpu_cg]
-  where pmu_cpu_clk_en_sync is the output of u_cpu_clk_en_sync, a cdc_2ff_sync
-  whose flop array RESETS TO 0 (cdc_2ff_sync.sv: `sync_q[i] <= '0`) and whose
-  reset is cpu_core_rst_n. Meanwhile the entire CPU uses SYNCHRONOUS reset
-  (e.g. rv32i_pipeline_if.sv:65 `always_ff @(posedge clk)` with
-  `if (!rst_n) pc_q <= RESET_PC;` — there is not one async-reset always_ff in
-  rtl/cpu/). So while cpu_core_rst_n is low the clock enable is 0, the gate
-  holds cpu_gated_clk low, the CPU sees NO clock edge, and its synchronous
-  reset is never sampled: pc_q never loads RESET_PC and no pipeline/CSR/cache
-  state is initialised. When reset releases, the 2-FF sync needs 2 more
-  cpu_core_clk edges to raise the enable; by then reset is already gone and
-  the CPU free-runs from its power-up state at PC=0, outside the ROM window.
+  t=0ns:  cpu_domain_rst_n=0 core_rst_n=0                       (both in reset)
+  t=33ns: cpu_domain_rst_n=1 core_rst_n=0                       (CPU domain releases FIRST --
+                                                                  its PLL locks in 16 * 3ns = 48ns,
+                                                                  fabric's PLL needs 16 * 7ns = 112ns)
+  t=45ns: cpu_axi_arvalid_raw=1 s_arvalid=1 s_arready=1          (CPU's first I$-miss AR fires;
+                                                                  u_cpu_axi_cdc's s_arready_o reads
+                                                                  1 -- "ready" -- even though
+                                                                  core_rst_n is STILL 0)
+  t=48ns: cpu_axi_arvalid_raw=0                                 (arvalid&&arready on the previous
+                                                                  edge = AXI4-legal completed
+                                                                  handshake; CPU never re-asserts)
+  t=98ns: core_rst_n=1                                          (fabric reset finally releases --
+                                                                  40ns too late; the request is gone)
 
-  Pre-GH#93 this worked because u_cpu_cg was gated by pmu_cpu_clk_en DIRECTLY
-  (pmu.sv reset default clk_en=1 → gate transparent during reset). u_gpu_cg
-  still is (`.en(pmu_gpu_clk_en)`), which is why only the CPU regressed.
+  Root cause: rtl/soc/cdc/cdc_gray_fifo.sv's `assign wr_ready_o = !full_q;`
+  with `full_q <= 1'b0` on `!wr_rst_n_i` (async reset default). wr_rst_n_i is
+  s_rst_sync_n, itself gated by rst_both_n = s_rst_n_i & m_rst_n_i (see
+  async_axi_fifo.sv). While core_rst_n (m_rst_n_i) is still low, rst_both_n
+  and therefore s_rst_sync_n are ALSO still low -- the write-pointer/push
+  logic in cdc_gray_fifo's `always_ff @(posedge wr_clk_i or negedge
+  wr_rst_n_i) if (!wr_rst_n_i) ... else if (push) ...` can only take the
+  reset branch, so no push ever happens -- yet wr_ready_o already reads 1
+  (not-full is a true statement about an empty, reset FIFO, but it is NOT a
+  safe thing to expose externally as "ready" while the write side is still
+  held in an unreleased cross-coupled reset). The CPU's AXI master sees
+  arvalid && arready complete on that cycle, which is a legal, final AXI4
+  handshake -- it never re-issues the request, but the data was silently
+  dropped. This is a genuine accept-and-drop CDC bridge bug: the fix would
+  need `wr_ready_o` (and likely equivalent read-side logic) to also be
+  gated by the reset, e.g. `assign wr_ready_o = wr_rst_n_i && !full_q;`.
 
-  Evidence that this is pre-existing and not caused by this suite: the stock,
-  unmodified `make soc_boot` fails identically (0/8 commits on every one of
-  100 stability attempts) on a pristine git worktree at commit 66a9af1 with
-  none of the GH #93 testbench retrofit applied. It also reproduces at the
-  1:1 2 ns/2 ns ratio the pre-existing suites use — the ratio is irrelevant.
+  Why this is NEW and could not have been caught by any 1:1-ratio suite,
+  including async_axi_fifo's own 22/22 unit tests: at a 1:1 clock ratio
+  (the only ratio ever exercised end-to-end pre-GH#93, since cpu_clk_i and
+  clk_i were the same net), both domains' PLL-lock-based resets release in
+  lockstep -- there is no window where one side is out of reset while the
+  other is still in it. Only a genuinely asynchronous ratio (this suite's
+  entire reason for existing) can expose a release-order/skew hazard like
+  this. async_axi_fifo.sv's own header explicitly documents the "common
+  root" reset assumption (`rst_both_n = s_rst_n_i & m_rst_n_i`) but that
+  assumption is violated at the SoC level: cpu_domain_rst_n and core_rst_n
+  are each derived from an INDEPENDENT PLL lock counter (16 cycles of EACH
+  PLL's own, different-period reference clock), so they do not actually
+  release simultaneously once the two clocks genuinely differ.
 
-  Until it is fixed, soc_boot / soc_periph / soc_coherency / soc_cpu_gpu and
-  both multiclock suites are all red. See the Makefile's soc_all comment.
+  apb_cdc_bridge (GH #93's other new CDC primitive, exercised by
+  soc_pll_multiclock) is NOT expected to share this exact defect by design:
+  its s_pready_o is `assign s_pready_o = (s_state_q == S_DONE);`, and
+  s_state_q resets to S_IDLE (!= S_DONE) via the same s_rst_sync_n
+  mechanism -- so its APB4 "ready" output correctly reads 0 (NOT ready)
+  while held in the cross-coupled reset, unlike cdc_gray_fifo's
+  `!full_q`-only default. This cannot be confirmed empirically at the SoC
+  level, though, because soc_pll_multiclock's firmware needs the CPU to
+  boot first, and boot itself is blocked by the bug above -- see
+  soc_pll_multiclock's own FAIL (last_pc=0x00000000) in the regression
+  results, which is this SAME bug masking any PLL2/apb_cdc_bridge-specific
+  behaviour, not independent evidence against apb_cdc_bridge.
+
+  Until this is fixed, soc_boot / soc_periph / soc_coherency / soc_cpu_gpu
+  DO pass (the CPU's own D$/I$ traffic through u_cpu_axi_cdc at the 1:1
+  ratio never hits the reset-skew window), but BOTH multiclock suites
+  remain red. See design_state.json fix_requests[] for the filed report
+  and the Makefile's soc_all comment.
 
 Purpose: every pre-existing SoC-level cocotb suite drives clk_i (fabric
 domain) and cpu_clk_i (CPU domain, GH #93) at a 1:1 ratio via

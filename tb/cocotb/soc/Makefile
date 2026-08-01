@@ -693,17 +693,26 @@ l2_bench: l2_bench_lint
 # partially-written files from a prior build — including large PCH .gch files
 # that $(MAKE) clean sometimes leaves behind — are reliably purged.
 # NOTE: soc_stress and l2_bench are intentionally excluded from soc_all (long runtime).
-# NOTE: soc_multiclock / soc_pll_multiclock (GH #93) are ALSO excluded, but for a
-#   different reason than runtime: as of 2026-08-01 the SoC does not boot at all on
-#   this branch (0/8 committed PCs), so neither suite — nor soc_boot/soc_periph/
-#   soc_coherency/soc_cpu_gpu, which are already listed below — can pass. Root cause
-#   is a GH #93 RTL regression, NOT a testbench issue: soc_top.sv gates the CPU's
-#   clock (cpu_gated_clk) with pmu_cpu_clk_en_sync, a cdc_2ff_sync output that resets
-#   to 0, while the whole CPU uses SYNCHRONOUS reset — so the CPU receives no clock
-#   edge while cpu_core_rst_n is low, never loads RESET_PC=0x1000, and starts from
-#   PC=0. Reproduced on a pristine worktree at commit 66a9af1 with the stock
-#   `make soc_boot` (0/8 commits on every stability attempt). Add both targets here
-#   once that regression is fixed and their runtime has been measured.
+# NOTE: soc_multiclock / soc_pll_multiclock (GH #93) are ALSO excluded, but not
+#   for a runtime reason. Update 2026-08-01: the original SoC-does-not-boot-at-all
+#   regression (soc_top.sv CPU clock-gate/sync-reset race) is FIXED (commit
+#   4398c2e) — soc_boot/soc_periph/soc_coherency/soc_cpu_gpu above all pass at the
+#   1:1 ratio these two multiclock suites still cannot reach. A SECOND, distinct
+#   bug — found by these two suites specifically, exactly the kind of finding they
+#   exist to catch — blocks them: rtl/soc/cdc/cdc_gray_fifo.sv's
+#   `wr_ready_o = !full_q` (full_q resets to 0) reports "ready" while the FIFO's
+#   write side is still held in its own cross-coupled reset (rst_both_n =
+#   s_rst_n_i & m_rst_n_i), which can happen for tens of ns at a genuinely
+#   asynchronous ratio because cpu_domain_rst_n and core_rst_n are each gated by
+#   an INDEPENDENT PLL lock counter (16 cycles of each PLL's own, different-period
+#   clock) and so no longer release in lockstep the way they always did at 1:1.
+#   The CPU's very first AXI AR (I$ refill) completes arvalid&&arready against
+#   this false-ready and is silently dropped; the CPU then waits forever for a
+#   response that will never arrive. See test_soc_multiclock.py's "BLOCKER NOTE #2"
+#   docstring and design_state.json fix_requests[] for the full evidence trail
+#   (a 1 ns free-running Timer probe pinpointing the exact ns-level sequence).
+#   Add both targets here once that regression is fixed and their runtime has
+#   been measured.
 soc_all:
 	rm -rf sim_build && $(MAKE) crossbar
 	rm -rf sim_build && $(MAKE) register_bank
