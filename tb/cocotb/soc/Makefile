@@ -205,6 +205,11 @@ PLL_SOURCES = \
 	$(RTL)/soc/pll/pll_apb_regs.sv \
 	$(RTL)/soc/pll/pll_clkgen.sv \
 	$(RTL)/soc/pll/pll_subsystem.sv \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_reset_sync.sv \
+	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
+	$(RTL)/soc/async_axi_fifo.sv \
+	$(RTL)/soc/apb_cdc_bridge.sv \
 	$(RTL)/soc/pmu.sv \
 	$(RTL)/soc/soc_top.sv \
 	$(SOC_DIR)/tb_soc_pll.sv
@@ -269,6 +274,11 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/soc/pll/pll_apb_regs.sv \
 	$(RTL)/soc/pll/pll_clkgen.sv \
 	$(RTL)/soc/pll/pll_subsystem.sv \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_reset_sync.sv \
+	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
+	$(RTL)/soc/async_axi_fifo.sv \
+	$(RTL)/soc/apb_cdc_bridge.sv \
 	$(RTL)/soc/pmu.sv \
 	$(RTL)/soc/soc_top.sv \
 	$(SOC_DIR)/tb_soc_top.sv
@@ -439,7 +449,7 @@ soc_pll_lint:
 	verilator --lint-only -Wall -Wno-fatal -Wno-IMPORTSTAR \
 		-Wno-UNUSEDSIGNAL -Wno-UNOPTFLAT -Wno-SYNCASYNCNET \
 		-Wno-DECLFILENAME -Wno-UNUSEDPARAM -Wno-BLKSEQ \
-		-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		--top-module tb_soc_pll \
 		$(PLL_SOURCES)
 
@@ -503,7 +513,7 @@ soc_pll: soc_pll_lint
 	$(MAKE) clean
 	$(MAKE) MODULE=test_pll_lock TOPLEVEL=tb_soc_pll \
 		VERILOG_SOURCES="$(PLL_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 	$(MAKE) pll_apb_regs
@@ -512,7 +522,7 @@ soc_boot_lint:
 	verilator --lint-only -Wall -Wno-fatal -Wno-IMPORTSTAR \
 		-Wno-UNUSEDSIGNAL -Wno-UNOPTFLAT -Wno-SYNCASYNCNET \
 		-Wno-DECLFILENAME -Wno-UNUSEDPARAM -Wno-BLKSEQ \
-		-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		--top-module tb_soc_top \
 		$(SOC_BOOT_SOURCES)
 
@@ -525,7 +535,7 @@ soc_boot: soc_boot_lint
 	$(MAKE) clean
 	$(MAKE) MODULE=test_boot TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 

@@ -187,7 +187,7 @@ module soc_bus
     output logic                      axil_dma_rready,
 
     // =========================================================================
-    // APB peripheral ports [N_APB_SLV=6]: from apb_interconnect to peripherals
+    // APB peripheral ports [N_APB_SLV=7]: from apb_interconnect to peripherals
     //   APB_UART=0  APB_SPI=1  APB_TIMER=2  APB_IRQ=3  APB_PLL=4  APB_PMU=5  APB_PLL2=6
     // =========================================================================
     output logic        apb_psel    [APB_N_SLAVES],
@@ -206,7 +206,7 @@ module soc_bus
     // =========================================================================
     localparam int unsigned N_SLAVES   = SOC_N_SLAVES;    // 3
     localparam int unsigned N_AXIL_SLV = AXIL_N_SLAVES;   // 3
-    localparam int unsigned N_APB_SLV  = APB_N_SLAVES;    // 6
+    localparam int unsigned N_APB_SLV  = APB_N_SLAVES;    // 7
     localparam int unsigned AW         = AXI_ADDR_WIDTH;
     localparam int unsigned DW         = AXI_DATA_WIDTH;
     localparam int unsigned SW         = AXI_STRB_WIDTH;
