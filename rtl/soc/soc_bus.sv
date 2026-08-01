@@ -6,7 +6,8 @@
 //   2. axi4_to_axilite    — crossbar S2 (periph) → AXI-Lite master
 //   3. axi_lite_interconnect — AXI-Lite ring (3 slaves: GPU, APB_BRIDGE, DMA)
 //   4. axil_to_apb        — AXI-Lite ring slot 1 → APB master
-//   5. apb_interconnect   — APB master → 6 APB peripheral slaves (Pre-Phase-6 #5: +PMU)
+//   5. apb_interconnect   — APB master → 7 APB peripheral slaves (Pre-Phase-6 #5: +PMU;
+//                            GH #92: +PLL2)
 //
 // This is a PURE STRUCTURAL WRAPPER.  No logic is added or removed.
 // Every signal that crossed the soc_top/bus boundary is an explicit port here.
@@ -187,7 +188,7 @@ module soc_bus
 
     // =========================================================================
     // APB peripheral ports [N_APB_SLV=6]: from apb_interconnect to peripherals
-    //   APB_UART=0  APB_SPI=1  APB_TIMER=2  APB_IRQ=3  APB_PLL=4  APB_PMU=5
+    //   APB_UART=0  APB_SPI=1  APB_TIMER=2  APB_IRQ=3  APB_PLL=4  APB_PMU=5  APB_PLL2=6
     // =========================================================================
     output logic        apb_psel    [APB_N_SLAVES],
     output logic        apb_penable [APB_N_SLAVES],
@@ -645,8 +646,8 @@ module soc_bus
     );
 
     // =========================================================================
-    // 5. APB interconnect: 1 APB master → 6 APB peripheral slaves
-    //   APB_UART=0  APB_SPI=1  APB_TIMER=2  APB_IRQ=3  APB_PLL=4  APB_PMU=5
+    // 5. APB interconnect: 1 APB master → 7 APB peripheral slaves
+    //   APB_UART=0  APB_SPI=1  APB_TIMER=2  APB_IRQ=3  APB_PLL=4  APB_PMU=5  APB_PLL2=6
     // =========================================================================
     apb_interconnect #(
         .N_SLAVES  (N_APB_SLV),

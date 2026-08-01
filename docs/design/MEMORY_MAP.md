@@ -36,16 +36,17 @@ This restriction is due to Ubuntu's page size being 4 KB
 | 0x2000_6000 - 0x2000_6FFF  | 4 KB    | IRQ Control (AXI-Lite) | Interrupt controller registers |
 | 0x2000_7000 - 0x2000_7FFF  | 4 KB    | PLL Control (APB4)  | PLL subsystem config/status (`pll_apb_regs`) |
 | 0x2000_8000 - 0x2000_8FFF  | 4 KB    | PMU Control (APB4)  | Power-mode sequencer registers (`pmu.sv`, GH #98/#99/#100) |
-| 0x2000_9000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
+| 0x2000_9000 - 0x2000_9FFF  | 4 KB    | PLL2 Control (APB4) | Second PLL subsystem config/status, CPU-domain reference clock (`pll_apb_regs`, GH #92) |
+| 0x2000_A000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
 | 0x3000_0000 - 0x7FFF_FFFF  | 1.25 GB | Reserved            | Future use                  |
 | 0x8000_0000 - 0xFFFF_FFFF  | 2 GB    | External Memory     | Off-chip memory/devices     |
 
-> **Phase 5 peripheral ring (APB migration PR-7, updated Pre-Phase-6 #5):**
+> **Phase 5 peripheral ring (APB migration PR-7, updated GH #92):**
 > peripherals attach to a CPU-driven **AXI4-Lite control interconnect**
 > (`rtl/soc/axi_lite_interconnect.sv`) whose APB-bridge ring slot (slave 1,
-> `0x2000_2000-0x2000_8FFF`) fans out through `axil_to_apb` + `apb_interconnect`
-> into a genuine **APB4 sub-tree of 6 slaves** (UART, SPI, Timer, IRQ, PLL, PMU;
-> `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_PMU). GPU/DMA control remain
+> `0x2000_2000-0x2000_9FFF`) fans out through `axil_to_apb` + `apb_interconnect`
+> into a genuine **APB4 sub-tree of 7 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2;
+> `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_PLL2). GPU/DMA control remain
 > AXI-Lite-direct ring slaves (0 and 2). APB3 also survives standalone on the
 > CPU debug slot (0x2000_0000–0FFF), unrelated to this APB4 sub-tree. Address
 > map is frozen in `rtl/soc/soc_periph_map_pkg.sv` (`decode_axil_slave()`);
