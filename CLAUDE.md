@@ -130,6 +130,15 @@ Three nodes are supported by the existing `pnr/Makefile`. Use the right node for
 | **FreePDK45 / NanGate45 45nm** | `librelane-nangate45` | ✅ Complete (`pnr/freepdk45/`) | 150–250 MHz | No (predictive) | First non-Sky130 exploration; SRAM macros available |
 | **ASAP7 7nm FinFET** | `librelane-asap7` | ✅ Complete (`pnr/asap7/`); Run 43 signoff 2026-05-20 | **1418 MHz achieved (Run 43)** | No (predictive) | Phase 2+3 RTL PPA sign-off completed at 1418 MHz / 27.27 mW / 3 844 µm² |
 
+### Sky130 real DRC/LVS sign-off (GH epic #102, Stages 1–2 complete 2026-07-31)
+Sky130 is the **only** node in this project with genuine physical verification — ASAP7 skips Magic/KLayout/Netgen entirely (predictive PDK) and FreePDK45 has them permanently blocked.
+
+- **Stage 1** — CPU standalone (`pnr/sky130/cpu/`): KLayout DRC 0, Netgen LVS MATCH, +0.366 ns setup @ 75 MHz. Magic DRC 27.7 M is a waived PDK artifact — 100 % of violations sit inside SRAM macro footprints (bead `45a`).
+- **Stage 2** — CPU macro + peripherals SoC, no GPU (`pnr/sky130/soc/`): LVS PASSED, routing DRC 0, PDN 0, hold clean, 40 MHz, nom_tt 37.63 mW, die 6700 × 3100 µm. Residual gates, neither open work: ss setup fail (`ujv`, deferred host-blocked), antenna 140/120 (`58q`, closed as an accepted trade-off against hold).
+- ⚠️ **Stage-2 timing is typical-corner (nom_tt) only.** The SRAM macro is characterized at TT alone, so "clean at 9 corners" means 9 corner *labels* backed by one macro model. Physical gates (LVS/DRC/PDN) are unaffected. Per-corner SRAM characterization is host-blocked (~80–95 h SPICE; bead `o1i`).
+- **Stages 3–4** (GPU, GH #105/#106): host-gated on ≥32 GB RAM + ~500 GB scratch. GPU stays ASAP7-indicative.
+- Detail → `docs/SKY130_REAL_DRC_LVS_EVALUATION.md` §7.
+
 ### Sky130 PPA ceiling (assessed 2026-03-28)
 Sky130 130nm is frequency-limited by cell drive strength and clock tree skew. The realistic ceiling for this pipeline topology is **~100–120 MHz** with all optimisations applied — not the 200–500 MHz originally targeted.
 

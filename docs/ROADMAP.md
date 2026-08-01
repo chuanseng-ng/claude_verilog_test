@@ -454,6 +454,14 @@ INT8 MAC critical path: ~10–13 logic levels. Full NPU (INT4/tiling/sparsity) r
 
 **ASAP7 sign-off** ✅ (Run 43, 2026-05-20): 1418 MHz / 27.27 mW / 3 844 µm² stdcell, 0 DRC / 0 antenna / 0 setup-hold violations. RVT TT @ 0.7 V / 25 °C. SRAM via FF-array stub (`sram_1rw_256x32_asap7_stub.v` + Liberty/LEF). Config at `pnr/asap7/`. Full campaign history: `docs/ASAP7_RUN_HISTORY.md`.
 
+**Sky130 real DRC/LVS sign-off** (GH epic #102) — the only PDK in this project with genuine physical verification; ASAP7 skips Magic/KLayout/Netgen entirely, and FreePDK45 has them permanently blocked. Stages 1–2 ✅ complete 2026-07-31, Stages 3–4 ⏸️ host-gated.
+
+- **Stage 1 — CPU standalone** (GH #103): KLayout DRC 0, Netgen LVS MATCH, setup +0.366 ns @ 75 MHz, native Sky130 macro views. Magic DRC 27.7 M waived (100 % inside SRAM macro footprints, PDK artifact; bead `45a`).
+- **Stage 2 — CPU macro + peripherals SoC, no GPU** (GH #104): LVS PASSED, routing DRC 0, PDN 0, hold clean, KLayout DRC 4 (waived), 40 MHz, nom_tt 37.63 mW, 226,952 stdcells, die 6700 × 3100 µm. Two documented residual gates, neither open work: setup fails at ss (bead `ujv`, **deferred host-blocked**) and antenna 140 pin / 120 net (bead `58q`, **closed** as a quantified accepted trade-off against hold).
+- ⚠️ **Stage-2 timing is a typical-corner (nom_tt) sign-off**, not a validated multi-corner one — the SRAM macro is characterized at TT only, so the nine reported corners are nine labels backed by a single macro model. The physical gates (LVS/DRC/PDN) carry no such caveat. Per-corner SRAM SPICE characterization measured at ~80–95 h against a host that reboots every 2–8 h → bead `o1i`, deferred host-blocked.
+- **Stages 3–4 — GPU** (GH #105/#106): not attempted; need ≥32 GB RAM + ~500 GB scratch vs the current ~15 GB host. GPU stays ASAP7-indicative-only.
+- Full record: `docs/SKY130_REAL_DRC_LVS_EVALUATION.md` §7.
+
 ### Phase 7 — Mixed-Signal PLL Clock Generator
 
 **Status**: M-a/M-b1/M-b2/M-c complete (2026-06-20); M-d = documentation (this update). Full plan → `docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md` (golden spec).

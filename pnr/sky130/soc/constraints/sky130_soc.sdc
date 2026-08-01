@@ -5,7 +5,10 @@
 #   clock_period          = 25.0 ns (40 MHz)   <- set below, line ~205
 #   TIMING_VIOLATION_CORNERS = ["*"]           <- all 9 corners gated
 #   Result: hold clean at all 9 corners; setup clean at tt/ff; setup STILL
-#   FAILS at ss (max_ss -4.643 ns) -- tracked as bead ujv, OPEN.
+#   FAILS at ss (max_ss -4.643 ns) -- tracked as bead ujv, DEFERRED
+#   host-blocked 2026-07-31 (honest ss closure needs per-corner SRAM
+#   characterization; bead o1i measured that as infeasible on this host).
+#   Stage 2 closed on that basis as a typical-corner (nom_tt) sign-off.
 # Everything below this block describing 75 MHz / 65 MHz / nom_tt-only
 # gating is HISTORICAL CONTEXT ONLY. Do not read it as the current target.
 # ############################################################################
@@ -63,9 +66,17 @@
 #   since sky130_fd_sc_hd genuinely varies per corner.
 #
 # SCOPE OF THIS SIGN-OFF: still a TYPICAL-CORNER (nom_tt) TIMING SIGN-OFF,
-# because one macro remains single-corner -- and note that even nom_tt now
-# carries a hold violation. It is NOT a validated multi-corner timing
-# sign-off and MUST NOT be recorded as one anywhere downstream.
+# because one macro remains single-corner. It is NOT a validated
+# multi-corner timing sign-off and MUST NOT be recorded as one anywhere
+# downstream.
+#   UPDATE 2026-07-31 (adopted run RUN_2026-07-30_06-42-17): the "even
+#   nom_tt now carries a hold violation" clause that used to appear here
+#   is SUPERSEDED. That violation was root-caused to the clk_i
+#   set_driving_cell issue (bead y7v, see FIX 2026-07-26 below) and the
+#   adopted run reports hold clean at all 9 corners. The scope statement
+#   itself still stands: "hold clean at all 9 corners" is a statement
+#   about 9 corner LABELS, not 9 independently characterized macro
+#   models. The SRAM macro's timing arcs are identical in all nine.
 #
 # REMAINING REAL FIX: SPICE-characterize the SRAM macro per corner
 # (analytical_delay=False, nominal_corner_only=False). This would also fix

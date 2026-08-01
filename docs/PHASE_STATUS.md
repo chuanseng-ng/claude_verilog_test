@@ -11,6 +11,13 @@ Last updated: 2026-06-20
 - M1–M8 ✅: AXI4 crossbar + AXI-Lite ring, cache burst upgrade, peripherals (UART/SPI/timer/IRQ), DMA, behavioral SRAM, perf counters, SoC top.
 - M9 ✅ SoC verification: boot 100/100; DMA+UART+SPI loopback; SW coherency (D$ flush→GPU→D$ inval); CPU-GPU IRQ integration; DUT-side boot SRAM check. `soc_all` 73/73; 1M+ cycle stress (1,079,867 cyc, 0 fail). Two RTL bugs found+fixed: D-cache MMIO caching (`go9`) and axi4_crossbar AR/AW handshake+arbitration (`7fs`).
 
+**Sky130 real DRC/LVS sign-off (GH epic #102)** — Stages 1–2 ✅ complete (2026-07-31); Stages 3–4 ⏸️ host-gated.
+- **Stage 1** (CPU standalone, GH #103): KLayout DRC 0, Netgen LVS MATCH, setup +0.366 ns @ 75 MHz. Magic DRC 27.7 M waived — 100 % inside SRAM macro footprints, PDK artifact (bead `45a`).
+- **Stage 2** (CPU macro + peripherals SoC, no GPU, GH #104): LVS PASSED, routing DRC 0, PDN 0, hold clean, 40 MHz, nom_tt 37.63 mW, 226,952 stdcells, die 6700 × 3100 µm. Setup fails at ss (bead `ujv`) and antenna leaves a 140/120 residual (bead `58q`) — both documented, deferred.
+- ⚠️ **Timing scope: typical-corner (nom_tt) only.** The SRAM macro is characterized at TT alone, so the nine reported corners are nine labels backed by one macro model. The physical gates (LVS/DRC/PDN) are not affected and stand as real results. Closing ss honestly needs per-corner SRAM SPICE characterization, measured at ~80–95 h on a host that reboots every 2–8 h → bead `o1i`, deferred host-blocked.
+- **Stages 3–4** (GPU standalone + full SoC incl. GPU, GH #105/#106): not attempted; need ≥32 GB RAM + ~500 GB scratch. GPU stays ASAP7-indicative-only.
+- Full record: [`docs/SKY130_REAL_DRC_LVS_EVALUATION.md`](SKY130_REAL_DRC_LVS_EVALUATION.md) §7.
+
 **Previous Phases**:
 - Phase 4 (GPU-Lite SIMT Compute Engine) - ✅ COMPLETE (2026-05-27) — all GPU tests green, ASAP7 ≥500 MHz sign-off
 - Phase 3 (Memory System & Caches) - ✅ COMPLETE (2026-05-21) — all 20 cache tests passing, 139/139 total
