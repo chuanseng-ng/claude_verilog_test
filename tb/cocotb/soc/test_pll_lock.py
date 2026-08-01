@@ -22,6 +22,31 @@ Clock: 2 ns period (500 MHz ref) — matches test_boot.py convention.
 Lock budget: STUB_LOCK_CYCLES=16 + 8 cycles margin = 24 cycles from reset
 de-assert.  core_rst_n = rst_n_i & pll_locked, so the first commit_valid_o
 after lock fires + the pipeline fills (typically 5–10 additional cycles).
+
+GH #92 (dual PLL) additions:
+  test_cpu_pll_locked_asserts
+      cpu_pll_locked_o (second, CPU-domain stub PLL) must assert within the
+      same lock budget as pll_locked_o, and must not glitch once asserted.
+      Runs with the stock boot.hex firmware (no MMIO needed — this is a pure
+      signal-level check on the new tb_soc_pll port).
+
+  test_pll2_apb_slot_decode
+      Self-checking firmware (pll2_fw/pll2_decode.hex) verifies, via real
+      CPU MMIO through the crossbar -> axi4_to_axilite -> axi_lite_interconnect
+      -> axil_to_apb -> apb_interconnect path:
+        - PLL  (APB_PLL=4,  0x2000_7000) CONTROL[0]==1, STATUS[0]==1 (existing
+          slot unaffected by the map extension).
+        - PMU  (APB_PMU=5,  0x2000_8000) STATUS==0x3 (slot did not move).
+        - PLL2 (APB_PLL2=6, 0x2000_9000) CONTROL==0x0000_0001 (new slot
+          decodes to pll_apb_regs' RESET_VAL, not DECERR/garbage/another
+          slave), STATUS[0]==1 (second stub PLL locked).
+        - Anti-brick (GH #89, applies to instance 2 via the shared
+          pll_apb_regs module): writing CONTROL=0 does NOT clear bit[0];
+          readback stays 0x0000_0001, and STATUS[0] (lock) is unaffected.
+      See pll2_fw/gen_pll2_decode_hex.py for the full firmware listing and the
+      rationale for CPU-firmware-based MMIO (a live cocotb AXI-Lite/APB BFM
+      against soc_top's internal, continuously-RTL-driven nets hangs under
+      Verilator — documented in test_pll_regs.py's module docstring).
 """
 
 import sys
@@ -38,6 +63,11 @@ _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from tb.cocotb.soc.pll2_fw.pll2_decode_fw_addrs import (
+    PASS_PC as PLL2_PASS_PC,
+    FAIL_PC as PLL2_FAIL_PC,
+)
+
 # ---------------------------------------------------------------------------
 # Boot ROM backdoor load (same approach as test_boot.py)
 # ---------------------------------------------------------------------------
@@ -47,6 +77,10 @@ if str(_ROOT) not in sys.path:
 # the pipeline is active after PLL lock releases core_rst_n.
 _BOOT_HEX  = Path(__file__).parent / "boot_fw" / "boot.hex"
 _BOOT_WORDS: list = []
+
+# GH #92: PLL2 APB-slot-decode self-checking firmware image.
+_PLL2_HEX = Path(__file__).parent / "pll2_fw" / "pll2_decode.hex"
+_PLL2_WORDS: list = []
 
 
 def _rom_words() -> list:
@@ -69,6 +103,32 @@ def _load_rom(dut) -> None:
     for i, word in enumerate(_rom_words()):
         mem[i].value = word
 
+
+def _pll2_rom_words() -> list:
+    global _PLL2_WORDS
+    if not _PLL2_WORDS:
+        words: list = []
+        with open(_PLL2_HEX) as fh:
+            for line in fh:
+                tok = line.strip()
+                if not tok or tok.startswith("//") or tok.startswith("@"):
+                    continue
+                words.append(int(tok, 16))
+        _PLL2_WORDS = words
+    return _PLL2_WORDS
+
+
+def _load_pll2_rom(dut) -> None:
+    """Backdoor-load the PLL2-decode self-checking firmware."""
+    mem = dut.u_soc.u_boot_rom.mem
+    words = _pll2_rom_words()
+    assert len(words) <= len(mem), (
+        f"pll2_decode.hex ({len(words)} words) exceeds boot ROM capacity "
+        f"({len(mem)} words) — regenerate via gen_pll2_decode_hex.py"
+    )
+    for i, word in enumerate(words):
+        mem[i].value = word
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -79,6 +139,11 @@ ROM_BASE         = 0x0000_1000
 # After reset de-assert: lock fires at ~17 cycles, pipeline fills ~10 more.
 LOCK_TIMEOUT_CYCLES  = 60    # pll_locked_o must assert within this many cycles
 PC_ADVANCE_TIMEOUT   = 5000  # commit_pc_o must advance within this after lock
+
+# PLL2 firmware runs a handful of MMIO reads/writes after lock+boot fill —
+# generous bound consistent with PC_ADVANCE_TIMEOUT (test_periph_loopback.py
+# uses a much larger bound for a much longer firmware; this one is ~35 words).
+PLL2_TIMEOUT_CYCLES = 5000
                              # Full-SoC boot: I-cache miss → AXI crossbar → SRAM
                              # takes ~200-500 cycles; matches BOOT_TIMEOUT_CYCLES
                              # in test_boot.py.
@@ -136,8 +201,14 @@ def _force_pll_enable(dut, val: int = 1) -> None:
     dut.u_soc.u_pll_sub.pll_enable.value = val
 
 
-async def _reset(dut, cycles: int = 8) -> None:
-    """Drive active-low reset for *cycles* rising edges then release."""
+async def _reset(dut, cycles: int = 8, rom_loader=None) -> None:
+    """Drive active-low reset for *cycles* rising edges then release.
+
+    rom_loader defaults to _load_rom (stock boot.hex); GH #92 tests pass
+    _load_pll2_rom to run the self-checking PLL2-decode firmware instead.
+    """
+    if rom_loader is None:
+        rom_loader = _load_rom
     dut.rst_n_i.value      = 0
     # Tie off all inputs that have no default driver in this TB.
     dut.apb_paddr_i.value  = 0
@@ -152,7 +223,7 @@ async def _reset(dut, cycles: int = 8) -> None:
     _force_pll_enable(dut, 1)
     # Backdoor-load boot firmware so the CPU can commit instructions after
     # core_rst_n releases (MEM_INIT_FILE is baked at elaboration under Verilator).
-    _load_rom(dut)
+    rom_loader(dut)
     await ClockCycles(dut.clk_i, cycles)
     dut.rst_n_i.value = 1
 
@@ -166,6 +237,19 @@ async def _wait_for_lock(dut, timeout_cycles: int) -> bool:
         await RisingEdge(dut.clk_i)
         await ReadOnly()
         if int(dut.pll_locked_o.value) == 1:
+            return True
+    return False
+
+
+async def _wait_for_cpu_lock(dut, timeout_cycles: int) -> bool:
+    """
+    Wait up to *timeout_cycles* rising edges for cpu_pll_locked_o == 1
+    (GH #92 second, CPU-domain stub PLL).
+    """
+    for _ in range(timeout_cycles):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        if int(dut.cpu_pll_locked_o.value) == 1:
             return True
     return False
 
@@ -292,3 +376,109 @@ async def test_pll_reset_clears_lock(dut):
         "after second reset de-assert"
     )
     dut._log.info("pll_locked_o re-asserted after second reset release")
+
+
+@cocotb.test()
+async def test_cpu_pll_locked_asserts(dut):
+    """
+    GH #92: cpu_pll_locked_o (second, CPU-domain stub PLL, u_cpu_pll_sub) must
+    assert within the same lock budget as pll_locked_o and must not glitch
+    once asserted.  tb_soc_pll ties cpu_clk_i/cpu_rst_n_i to clk_i/rst_n_i
+    (single-clock suite — see tb_soc_pll.sv header), so both stub lock
+    counters start on the same reset de-assert edge and are expected to
+    assert together.
+
+    Uses the stock boot.hex firmware (no MMIO needed for this check).
+    """
+    _kill_active_tasks()
+
+    await _start_clock(dut)
+    await _reset(dut)
+
+    locked = await _wait_for_lock(dut, LOCK_TIMEOUT_CYCLES)
+    assert locked, "pll_locked_o did not assert — see test_pll_lock_asserts"
+
+    cpu_locked_now = int(dut.cpu_pll_locked_o.value)
+    dut._log.info(
+        f"pll_locked_o asserted; cpu_pll_locked_o={cpu_locked_now} at same instant"
+    )
+
+    # cpu_pll_locked_o may assert on the same edge as pll_locked_o (both stub
+    # counters share STUB_LOCK_CYCLES=16 and the same reset de-assert edge) or
+    # within a few cycles either side depending on elaboration order — poll
+    # forward with the same budget rather than requiring exact simultaneity.
+    if cpu_locked_now == 0:
+        cpu_locked = await _wait_for_cpu_lock(dut, LOCK_TIMEOUT_CYCLES)
+        assert cpu_locked, (
+            f"cpu_pll_locked_o did not assert within {LOCK_TIMEOUT_CYCLES} "
+            "cycles of reset de-assert, even though pll_locked_o did "
+            "(u_cpu_pll_sub lock counter — see soc_top.sv u_cpu_pll_sub)"
+        )
+    dut._log.info("cpu_pll_locked_o asserted — CPU-domain stub PLL lock acquired")
+
+    # Confirm both lock signals are held (no glitch) through the boot window.
+    dropped = []
+    for _ in range(PC_ADVANCE_TIMEOUT):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        if int(dut.pll_locked_o.value) == 0:
+            dropped.append("pll_locked_o")
+        if int(dut.cpu_pll_locked_o.value) == 0:
+            dropped.append("cpu_pll_locked_o")
+        if dropped:
+            break
+
+    assert not dropped, (
+        f"{dropped[0]} dropped to 0 after initial assertion during the boot "
+        "window — stub lock counters must not decrement once locked"
+    )
+    dut._log.info(
+        "pll_locked_o and cpu_pll_locked_o both held asserted through boot — PASS"
+    )
+
+
+@cocotb.test()
+async def test_pll2_apb_slot_decode(dut):
+    """
+    GH #92: verify the new APB_PLL2 slot (0x2000_9000-0x2000_9FFF) decodes
+    correctly at the SoC level, that the pre-existing PLL (0x2000_7000) and
+    PMU (0x2000_8000) slots are unaffected, and that the GH #89 anti-brick
+    fix (CONTROL[0] non-clearable) holds for the second pll_apb_regs
+    instance.  Driven entirely by real CPU MMIO (self-checking firmware —
+    see pll2_fw/gen_pll2_decode_hex.py for the full check list and firmware
+    listing); the firmware branches to PASS_PC on full success or FAIL_PC on
+    any single check failing.
+    """
+    _kill_active_tasks()
+
+    await _start_clock(dut)
+    await _reset(dut, rom_loader=_load_pll2_rom)
+
+    saw_fail = False
+    last_pc = 0
+    for _ in range(PLL2_TIMEOUT_CYCLES):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        if int(dut.commit_valid_o.value) == 1:
+            pc = int(dut.commit_pc_o.value)
+            last_pc = pc
+            if pc == PLL2_FAIL_PC:
+                saw_fail = True
+                break
+            if pc == PLL2_PASS_PC:
+                break
+
+    assert not saw_fail, (
+        f"pll2_decode firmware reached FAIL_PC=0x{PLL2_FAIL_PC:08x} — one of "
+        "the PLL/PMU/PLL2 APB decode or anti-brick checks failed "
+        "(see gen_pll2_decode_hex.py check list for the exact assertion order)"
+    )
+    assert last_pc == PLL2_PASS_PC, (
+        f"pll2_decode firmware did not reach PASS_PC=0x{PLL2_PASS_PC:08x} "
+        f"within {PLL2_TIMEOUT_CYCLES} cycles; last committed PC=0x{last_pc:08x}"
+    )
+    dut._log.info(
+        f"pll2_decode firmware reached PASS_PC=0x{PLL2_PASS_PC:08x} — PLL2 "
+        "APB slot decodes correctly; PLL/PMU slots unaffected; CONTROL[0] "
+        "non-clearable on the second pll_apb_regs instance — PASS"
+    )
