@@ -95,14 +95,6 @@ See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for
 
 `docs/readme/` holds the deep content split out of the root README: `PHASE_HISTORY.md`, `QUICK_START.md` (build/run commands per phase), `SUPPORTED_INSTRUCTIONS.md`, `DEBUG_INTERFACE.md` (APB3 register map), `PROJECT_STRUCTURE.md` (full directory tree).
 
-### Knowledge Graph
-
-A graphify knowledge graph of `rtl/`, `docs/`, and `fixes/` is in `graphify-out/` (`graph.html` interactive, `graph.json` raw, `GRAPH_REPORT.md` findings).
-
-**Key findings**: God nodes `rv32i_core` (22 edges), `rv32i_control` (16 edges) — central integration hubs. `rv32i_control` bridges Pipeline Control, Cache Protocol, and AXI Bug Fix communities. The hazard unit is touched by both Phase 2 spec and Phase 3 status (hidden cross-phase dependency).
-
-**Update the graph** after adding RTL or docs: `/graphify rtl docs fixes --update`.
-
 ### HDL Property Graph (`hdl-kgraph`)
 
 `.hdl-kgraph/graph.db` is a Kùzu property graph of the HDL design (SystemVerilog/Verilog/VHDL), extracted by `hdl-kgraph`. As of 2026-06-04 (commit `1c08229`): **2150 nodes, 22473 edges, 275 files** (verilog, python, bash). Edges carry a confidence score: 1.0 = syntactically resolved, 0.8 = unique cross-file name match, 0.6 = ambiguous match, 0.4 = naming heuristic. Unresolved references appear as stub nodes flagged `unresolved`.
