@@ -19,9 +19,17 @@
 //       the upstream APB master (axil_to_apb) enters SETUP (psel && !penable)
 //       — this is the one cycle APB guarantees these fields are already
 //       stable and unchanging through the whole subsequent ACCESS phase.
-//     - Toggles req_toggle_q once per new request and holds s_pready_o low
-//       (arbitrary APB wait states) until the destination domain's response
-//       has round-tripped back.
+//     - Forwards the request (toggles req_toggle_q) ONLY if the destination
+//       domain is currently observed out of reset (see "Availability fix"
+//       below); otherwise the request is completed locally with an error
+//       and never forwarded at all.
+//     - Holds s_pready_o low (arbitrary APB wait states) until either the
+//       destination domain's response has round-tripped back, OR the
+//       destination domain is observed to enter reset while the request is
+//       in flight — whichever happens first. Either way s_pready_o is
+//       guaranteed to assert within a bounded number of s_clk_i cycles; the
+//       source domain can never be held waiting on a destination that will
+//       never answer.
 //   Destination (m_*) domain:
 //     - Synchronises ONLY req_toggle_q (single bit) via cdc_2ff_sync, never
 //       the multi-bit command payload itself — see the CDC argument below.
@@ -59,20 +67,90 @@
 // datapaths. Mirroring the GH #94 action item already open on
 // async_axi_fifo.sv, STA must add `set_max_delay -datapath_only` on these
 // four payload buses AND on the two toggle-bit crossings (req_toggle_q,
-// ack_toggle_q) through their respective cdc_2ff_sync instances.
+// ack_toggle_q) through their respective cdc_2ff_sync instances, AND on the
+// new m_rst_n_i -> m_rst_n_s single-bit status crossing described below.
 //
-// ── Reset strategy: hard flush, common root, both domains always together ──
-// Identical rationale to async_axi_fifo.sv: rst_both_n = s_rst_n_i &
-// m_rst_n_i feeds BOTH cdc_reset_sync instances, so a reset on either side
-// clears both toggle/state machines together — there is no scenario where
-// one domain resumes mid-transfer while the other has forgotten it was ever
-// asked to. This is a hard flush: a transfer in flight when either reset
-// asserts is simply dropped (the upstream APB master will re-issue after
-// reset deasserts); no SLVERR is fabricated.
+// ── Reset strategy (post-#93 availability fix, see PR #132 review) ─────────
+// The ORIGINAL strategy here was a straight copy of async_axi_fifo.sv's
+// hard-flush, common-root argument: rst_both_n = s_rst_n_i & m_rst_n_i fed
+// BOTH cdc_reset_sync instances, so a reset on either side cleared both
+// toggle/state machines together. That argument is FALSE for this module's
+// source-domain FSM and was the root cause of a confirmed availability bug:
+// while m_rst_n_i alone is asserted (the CPU-domain PLL2 reference resets
+// independently of the fabric, exactly the scenario #92/#93 exist to
+// support), rst_both_n held s_rst_sync_n low too, which held s_state_q in
+// S_IDLE — s_pready_o could never assert, EVER, for as long as m_rst_n_i
+// stayed low, wedging the upstream axil_to_apb master (and therefore the
+// entire fabric APB tree: UART/SPI/timer/IRQ/PMU/both PLL blocks) until a
+// full SoC reset. Because the source FSM was itself held in reset, it could
+// not even emit an error response — a new state transition alone cannot fix
+// this; the reset structure itself has to change.
+//
+// The fix is now ASYMMETRIC, and each half is justified independently:
+//
+//   * s_rst_sync_n is rooted in s_rst_n_i ONLY (no longer rst_both_n). The
+//     source-domain FSM (s_state_q, cmd_*_q, req_toggle_q, req_fwd_q,
+//     ack_seen_q, resp_*_q) resets/advances purely on its own domain's
+//     reset, so it is never starved by an event on the OTHER domain. This
+//     is what actually closes the availability bug.
+//
+//   * m_rst_sync_n is DELIBERATELY LEFT on rst_both_n = s_rst_n_i &
+//     m_rst_n_i — this coupling is still genuinely required, not an
+//     unexamined leftover. Reason: req_seen_q (destination domain) must
+//     never observe req_toggle_q (source domain) having advanced past a
+//     request the destination never actually completed, or a stale toggle
+//     value left over from BEFORE a reset can be misread as a brand-new
+//     request once the destination comes back up, and the destination would
+//     silently replay (or, symmetrically, silently drop) a transfer the
+//     upstream master already believes is resolved. Keeping m_rst_sync_n
+//     coupled to s_rst_n_i means an s-side reset still forces req_seen_q
+//     (and ack_toggle_q, d_state_q, cmd_*_cap_q) back to their power-on
+//     values in lock-step with req_toggle_q resetting to 0 in the source
+//     domain, preserving the toggle protocol's invariant. (An earlier fully
+//     -decoupled design was analysed and REJECTED for exactly this reason:
+//     it reproduces a silent-drop hang on the very first post-reset request
+//     whenever an odd number of successful transfers had completed before
+//     the s-side reset — see PR #132 discussion.)
+//
+//   Because s_rst_sync_n no longer follows m_rst_n_i, req_toggle_q on its
+//   own can no longer be guaranteed to land back at 0 in step with
+//   req_seen_q for an m_rst_n_i-only event. This is closed by a THIRD
+//   mechanism: m_rst_n_i is synchronised into the s domain (m_rst_n_s, via
+//   cdc_2ff_sync, single-bit — safe under that module's own scope rules)
+//   and used to (a) gate whether a new request is forwarded at all
+//   (req_fwd_q captured at SETUP), (b) bound S_WAIT so it always resolves —
+//   on ack_new (normal), or immediately if the request was never forwarded,
+//   or by force-completing with s_pslverr_o=1 if the destination is observed
+//   to go into reset while the request is in flight — and (c) continuously
+//   clamp req_toggle_q to 0 for as long as m_rst_n_s reads 0. That clamp is
+//   what re-establishes the req_toggle_q == req_seen_q(==0) invariant for an
+//   m_rst_n_i-only event, without needing s_rst_sync_n to depend on
+//   m_rst_n_i at all. No write is ever fabricated on the destination side
+//   from an errored request: either the request was never forwarded
+//   (req_fwd_q=0, req_toggle_q never moved), or it WAS forwarded and the
+//   clamp guarantees req_toggle_q returns to 0 well before m_rst_sync_n
+//   (which the same m_rst_n_i event also asserts, asynchronously and
+//   immediately) ever releases and lets req_seen_q resume tracking it.
+//
+// Net effect per reset source:
+//   - m_rst_n_i asserts alone: destination domain resets (correct — it is
+//     that domain's own reset). Source domain is NOT held; any in-flight or
+//     new request completes within a bounded number of s_clk_i cycles via
+//     s_pready_o=1, s_pslverr_o=1 instead of hanging. This is the fixed bug.
+//   - s_rst_n_i asserts alone: UNCHANGED from the original hard-flush
+//     behaviour — rst_both_n still drops, so the destination domain (and,
+//     independently, the source domain via its own s_rst_n_i) both flush
+//     together. A destination-side in-flight APB transfer to the real
+//     downstream slave is simply abandoned; the source never even observes
+//     it (it has already gone back to S_IDLE with no response, exactly as
+//     before). No SLVERR is fabricated for this direction; the upstream APB
+//     master re-issues after reset deasserts.
 //
 // Caller contract: s_rst_n_i and m_rst_n_i must each be held low for
 // >= the respective SYNC_STAGES+1 periods of the OTHER clock, exactly as
-// documented in cdc_reset_sync.sv and async_axi_fifo.sv.
+// documented in cdc_reset_sync.sv and async_axi_fifo.sv. Note the source
+// domain's error-completion path is bounded by SYNC_STAGES_TO_S cycles of
+// s_clk_i after m_rst_n_i is asserted, not by any property of m_clk_i.
 //
 // Instantiated in soc_top.sv between apb_psel/penable/...[APB_PLL2] (source,
 // core_clk domain) and u_cpu_pll_sub's APB4 slave port (destination,
@@ -89,7 +167,7 @@
 
 module apb_cdc_bridge #(
     parameter int unsigned ADDR_W           = 12,  // APB4 local address width (byte address)
-    parameter int unsigned SYNC_STAGES_TO_S = 2,    // stages synchronising INTO the s_* domain (ack_toggle, s reset)
+    parameter int unsigned SYNC_STAGES_TO_S = 2,    // stages synchronising INTO the s_* domain (ack_toggle, s reset, m_rst_n_i status)
     parameter int unsigned SYNC_STAGES_TO_M = 2     // stages synchronising INTO the m_* domain (req_toggle, m reset)
 ) (
     // ══ s_* face — source domain, APB4 SLAVE port (fabric/core_clk side) ═══
@@ -120,8 +198,13 @@ module apb_cdc_bridge #(
     input  logic              m_pslverr_i
 );
 
-    // ── Reset: common root feeding both per-domain synchronisers ────────────
-    // (identical rationale to async_axi_fifo.sv — see module header)
+    // ── Reset: ASYMMETRIC — see "Reset strategy" in the module header ───────
+    // rst_both_n still exists and still couples the DESTINATION domain to
+    // BOTH resets (required to keep req_seen_q's toggle bookkeeping
+    // consistent across an s_rst_n_i event — see header). The SOURCE
+    // domain's own reset sync (u_s_rst_sync, just below) is deliberately
+    // rooted in s_rst_n_i alone, NOT rst_both_n — that decoupling is the
+    // actual availability fix.
     logic rst_both_n;
     assign rst_both_n = s_rst_n_i & m_rst_n_i;
 
@@ -132,7 +215,7 @@ module apb_cdc_bridge #(
         .STAGES (SYNC_STAGES_TO_S)
     ) u_s_rst_sync (
         .clk_i   (s_clk_i),
-        .rst_n_i (rst_both_n),
+        .rst_n_i (s_rst_n_i),
         .rst_n_o (s_rst_sync_n)
     );
 
@@ -143,6 +226,53 @@ module apb_cdc_bridge #(
         .rst_n_i (rst_both_n),
         .rst_n_o (m_rst_sync_n)
     );
+
+    // ── Destination-reset status, synchronised INTO the source domain ──────
+    // Single-bit level crossing of the raw m_rst_n_i input (not m_rst_sync_n
+    // — we want the source domain's own view of "is the destination
+    // currently reset", independent of the destination's internal sync
+    // latency) via the same cdc_2ff_sync primitive already used for the
+    // toggle bits.
+    //
+    // Polarity is DELIBERATE: we synchronise the ACTIVE-HIGH "destination in
+    // reset" sense (~m_rst_n_i), not m_rst_n_i directly, so that
+    // cdc_2ff_sync's own fixed reset-to-0 behaviour means "presumed NOT in
+    // reset" (i.e. presumed alive) the instant s_rst_sync_n releases. This
+    // is not just a style choice: an earlier version of this synchroniser
+    // sampled m_rst_n_i directly (reset-to-0 = "presumed IN reset"), which
+    // is conservative for the availability fix in isolation but silently
+    // STACKS a second synchroniser's settling latency onto the very first
+    // transaction after every s_rst_n_i release — even when m_rst_n_i was
+    // never actually asserted — because the reset-default (0) disagreed
+    // with the immediate steady-state truth (1/alive), and it takes
+    // SYNC_STAGES_TO_S more s_clk_i cycles for the real value to arrive. In
+    // the s_ns=18/m_ns=4 clock-ratio regression this cost exactly one
+    // spurious pslverr=1 on the first post-reset write. With the inverted
+    // polarity, the reset default (0 = "not in reset") already MATCHES
+    // steady-state truth whenever m_rst_n_i is genuinely high, so the good
+    // path incurs no extra latency. The bad path (m_rst_n_i genuinely low)
+    // is unaffected: the destination's own req_toggle_m/req_seen_q stay
+    // async-held at 0 by m_rst_sync_n for as long as m_rst_n_i is actually
+    // low (rst_both_n includes it), so a request forwarded during the few
+    // cycles before this synchroniser catches up is invisible to the
+    // destination and is cleaned up (req_toggle_q clamped to 0, S_WAIT
+    // aborted with pslverr) the moment m_in_rst_s does catch up — still
+    // bounded, still no fabricated write, just detected a few cycles later
+    // in that narrow race. See header "Reset strategy".
+    logic m_in_rst_s;   // 1 = destination domain observed in reset
+    logic m_rst_n_s;    // 1 = destination domain observed NOT in reset (alive)
+
+    cdc_2ff_sync #(
+        .WIDTH  (1),
+        .STAGES (SYNC_STAGES_TO_S)
+    ) u_m_rst_status_sync (
+        .clk_i   (s_clk_i),
+        .rst_n_i (s_rst_sync_n),
+        .d_i     (~m_rst_n_i),
+        .q_o     (m_in_rst_s)
+    );
+
+    assign m_rst_n_s = !m_in_rst_s;
 
     // =========================================================================
     // Source domain (s_clk_i): command capture + request toggle + FSM
@@ -160,14 +290,31 @@ module apb_cdc_bridge #(
     logic [31:0]       cmd_pwdata_q;
     logic [3:0]        cmd_pstrb_q;
     logic              req_toggle_q;
+    // Latched once at SETUP: was this request actually forwarded to the
+    // destination (destination observed live), or was it captured only to
+    // be locally error-completed (destination already observed in reset)?
+    // Gates both the S_WAIT exit condition and the response below — see
+    // header "Reset strategy" / "Availability fix".
+    logic              req_fwd_q;
 
     logic              ack_new;   // defined below; forward-referenced here (SV allows it)
 
     always_comb begin
         s_state_d = s_state_q;
         unique case (s_state_q)
-            S_IDLE:  if (s_psel_i && !s_penable_i) s_state_d = S_WAIT;
-            S_WAIT:  if (ack_new)                  s_state_d = S_DONE;
+            S_IDLE: if (s_psel_i && !s_penable_i) s_state_d = S_WAIT;
+            S_WAIT: begin
+                // Bounded on three independent, mutually-exclusive-in-intent
+                // conditions so S_WAIT can NEVER hold forever:
+                //   1. ack_new     — normal completion, destination answered.
+                //   2. !req_fwd_q  — never forwarded (destination was already
+                //                    observed in reset at SETUP); complete
+                //                    with error on the very next cycle.
+                //   3. !m_rst_n_s  — WAS forwarded, but the destination is
+                //                    now observed to have gone into reset
+                //                    before answering; abort with error.
+                if (ack_new || !req_fwd_q || !m_rst_n_s) s_state_d = S_DONE;
+            end
             S_DONE:  s_state_d = S_IDLE;
             default: s_state_d = S_IDLE;
         endcase
@@ -181,16 +328,34 @@ module apb_cdc_bridge #(
             cmd_pwdata_q <= '0;
             cmd_pstrb_q  <= '0;
             req_toggle_q <= 1'b0;
+            req_fwd_q    <= 1'b0;
         end else begin
             s_state_q <= s_state_d;
             // Capture happens exactly once per transfer, on the SETUP cycle
             // (psel && !penable) — APB guarantees these fields are already
             // stable here and remain so through the whole ACCESS phase.
+            // cmd_* are always captured (harmless even if never forwarded);
+            // req_fwd_q latches whether the destination was observed live
+            // at that instant.
             if (s_state_q == S_IDLE && s_psel_i && !s_penable_i) begin
                 cmd_pwrite_q <= s_pwrite_i;
                 cmd_paddr_q  <= s_paddr_i;
                 cmd_pwdata_q <= s_pwdata_i;
                 cmd_pstrb_q  <= s_pstrb_i;
+                req_fwd_q    <= m_rst_n_s;
+            end
+            // req_toggle_q: advances exactly once per request that is
+            // actually forwarded to a live destination, and is otherwise
+            // continuously clamped to 0 whenever the destination is
+            // observed in reset. The clamp (not a one-shot "revert") is
+            // what keeps req_toggle_q correct even if the destination goes
+            // into reset mid-S_WAIT after having already been forwarded —
+            // by the time m_rst_sync_n (destination side) later releases,
+            // req_toggle_q has been sitting at 0 for many cycles, matching
+            // req_seen_q's own reset value. See header "Reset strategy".
+            if (!m_rst_n_s) begin
+                req_toggle_q <= 1'b0;
+            end else if (s_state_q == S_IDLE && s_psel_i && !s_penable_i) begin
                 req_toggle_q <= ~req_toggle_q;
             end
         end
@@ -315,6 +480,14 @@ module apb_cdc_bridge #(
     // Source-domain response capture (cross-domain combinational read of
     // resp_*_dq — see "CDC argument" in the module header; GH #94 STA
     // action: set_max_delay -datapath_only on this read too) + APB outputs
+    //
+    // Two ways to complete out of S_WAIT (mirrors the s_state_d bound
+    // above): a normal ack_new carries the real destination response
+    // through; a forced completion (request never forwarded, or the
+    // destination went into reset before answering) synthesises
+    // prdata=0/pslverr=1 locally — this is the availability-fix escape path,
+    // never a read of resp_*_dq, since there is no valid destination
+    // response to read in that case.
     // =========================================================================
     logic [31:0] resp_prdata_q;
     logic        resp_pslverr_q;
@@ -323,9 +496,14 @@ module apb_cdc_bridge #(
         if (!s_rst_sync_n) begin
             resp_prdata_q  <= '0;
             resp_pslverr_q <= 1'b0;
-        end else if (s_state_q == S_WAIT && ack_new) begin
-            resp_prdata_q  <= resp_prdata_dq;
-            resp_pslverr_q <= resp_pslverr_dq;
+        end else if (s_state_q == S_WAIT) begin
+            if (ack_new) begin
+                resp_prdata_q  <= resp_prdata_dq;
+                resp_pslverr_q <= resp_pslverr_dq;
+            end else if (!req_fwd_q || !m_rst_n_s) begin
+                resp_prdata_q  <= '0;
+                resp_pslverr_q <= 1'b1;
+            end
         end
     end
 
