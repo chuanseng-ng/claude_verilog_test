@@ -25,10 +25,12 @@
 #       the async_axi_fifo.sv / apb_cdc_bridge.sv / docs/3PLL_CDC_EVALUATION.md
 #       naming convention — "cpu_clk" and "sys_clk" are the names already used
 #       in prose throughout this CDC epic);
-#   (b) three new sections (11-13) constraining the CPU<->fabric CDC boundary
-#       that GH #91/#92/#93 built and this bead's whole reason for existing:
-#       async_axi_fifo (u_cpu_axi_cdc), apb_cdc_bridge (u_apb_pll2_cdc), and
-#       the PMU/IRQ single-bit crossings into cpu_core_clk.
+#   (b) three new sections (11-13, plus 12a added by the GH #95 fix below)
+#       constraining the CPU<->fabric CDC boundary that GH #91/#92/#93 built
+#       and this bead's whole reason for existing: async_axi_fifo
+#       (u_cpu_axi_cdc), apb_cdc_bridge (u_apb_pll2_cdc, and — GH #95 fix,
+#       bead claude_verilog_test-eg2 — u_apb_dbg_cdc), and the PMU/IRQ
+#       single-bit crossings into cpu_core_clk.
 #
 # Clock topology (2-domain SoC, sv2v synthesis, GH #92/#93):
 #   clk_i      = fabric-domain top-level reference input. CTS root for sys_clk.
@@ -148,11 +150,22 @@ set_output_delay -min  10 -clock sys_clk [all_outputs]
 
 ###############################################################################
 # 6. Debug/APB interface — infrequent config path; false-path for timing.
-#    Unaffected by the CPU/fabric split: the APB3 debug slave sits on
-#    apb_interconnect, entirely in the fabric (sys_clk) domain. APB_PLL2 (the
-#    one APB slot that now reaches into the cpu_clk domain) is bridged
-#    transparently by apb_cdc_bridge — see section 12 — and does not change
-#    this top-level port's domain.
+#
+#    GH #95 fix (bead claude_verilog_test-eg2): the APB3 debug slave does NOT
+#    sit entirely in the fabric (sys_clk) domain any more. It never truly did
+#    post-GH #93 — u_cpu (the debug slave) moved onto cpu_gated_clk while
+#    these top-level ports fed it directly and unsynchronised, which is
+#    exactly the cdc_snitch BAD=233 finding this fix closes. The apb_* ports
+#    themselves ARE still sys_clk-domain (that is what "false-path for
+#    timing" below is about — these are chip-boundary, infrequent-access
+#    ports with no meaningful setup/hold relationship to any internal clock),
+#    but they now terminate at a second apb_cdc_bridge instance,
+#    u_apb_dbg_cdc, whose s-face is sys_clk (core_clk/core_rst_n, matching
+#    apb_interconnect/axil_to_apb) and whose m-face is cpu_clk
+#    (cpu_gated_clk/cpu_domain_rst_n, matching u_cpu itself) — see section 12a
+#    for its internal CDC timing exceptions, mirroring u_apb_pll2_cdc's
+#    treatment in section 12. APB_PLL2 (the other APB slot reaching into the
+#    cpu_clk domain) continues to be bridged by u_apb_pll2_cdc as before.
 ###############################################################################
 set _apb_in {}
 set _apb_out {}
@@ -404,6 +417,62 @@ foreach _sig {resp_prdata_dq resp_pslverr_dq} {
 }
 if {[llength $_resp_nets] > 0} {
     set_max_delay 1750 -datapath_only -through $_resp_nets
+}
+
+###############################################################################
+# 12a. APB debug-port CDC bridge — apb_cdc_bridge (instance u_apb_dbg_cdc)
+#
+# GH #95 fix (bead claude_verilog_test-eg2): the top-level apb_* debug ports
+# fed u_cpu directly and unsynchronised until this fix — the cdc_snitch
+# BAD=233 finding closed by inserting u_apb_dbg_cdc between them. Same IP,
+# same six crossing paths, same rationale as section 12 (u_apb_pll2_cdc)
+# above — mirrored here rather than duplicated in prose:
+#   - req_toggle_q  (s -> m, single bit, through u_req_sync)
+#   - ack_toggle_q  (m -> s, single bit, through u_ack_sync)
+#   - cmd_pwrite_q / cmd_paddr_q / cmd_pwdata_q / cmd_pstrb_q
+#     (s -> m, 4 combinational payload reads, captured by the m-domain FSM)
+#   - resp_prdata_dq / resp_pslverr_dq
+#     (m -> s, 2 combinational payload reads, captured by the s-domain FSM)
+# s_clk_i = core_clk (sys_clk, 1750 ps); m_clk_i = cpu_gated_clk (cpu_clk,
+# 780 ps) — see soc_top.sv's u_apb_dbg_cdc instantiation. Unlike
+# u_apb_pll2_cdc (m-face tied to the raw cpu_clk_i reference for a bootstrap
+# reason that does not apply here), this bridge's m-face is the GATED CPU
+# clock, so a PMU-gated CPU correctly stalls debug accesses — see
+# soc_top.sv's u_apb_dbg_cdc header note. Same -datapath_only / one-
+# destination-period rationale as sections 11-12.
+###############################################################################
+set _dbg_req_sync [get_pins -hierarchical -filter "full_name =~ *u_apb_dbg_cdc/u_req_sync/q_o*" -quiet]
+if {[cdc_require_match $_dbg_req_sync "sec.12a u_apb_dbg_cdc/u_req_sync/q_o toggle-bit crossing (s->m)"]} {
+    set_max_delay 780 -datapath_only -through $_dbg_req_sync
+}
+
+set _dbg_ack_sync [get_pins -hierarchical -filter "full_name =~ *u_apb_dbg_cdc/u_ack_sync/q_o*" -quiet]
+if {[cdc_require_match $_dbg_ack_sync "sec.12a u_apb_dbg_cdc/u_ack_sync/q_o toggle-bit crossing (m->s)"]} {
+    set_max_delay 1750 -datapath_only -through $_dbg_ack_sync
+}
+
+# cmd_* payload (s=sys_clk -> m=cpu_clk domain capture): bound to cpu_clk
+set _dbg_cmd_nets {}
+foreach _sig {cmd_pwrite_q cmd_paddr_q cmd_pwdata_q cmd_pstrb_q} {
+    set _n [get_nets -hierarchical -filter "name =~ *u_apb_dbg_cdc/${_sig}*" -quiet]
+    if {[cdc_require_match $_n "sec.12a u_apb_dbg_cdc/${_sig} payload read (s->m capture)"]} {
+        lappend _dbg_cmd_nets {*}$_n
+    }
+}
+if {[llength $_dbg_cmd_nets] > 0} {
+    set_max_delay 780 -datapath_only -through $_dbg_cmd_nets
+}
+
+# resp_* payload (m=cpu_clk -> s=sys_clk domain capture): bound to sys_clk
+set _dbg_resp_nets {}
+foreach _sig {resp_prdata_dq resp_pslverr_dq} {
+    set _n [get_nets -hierarchical -filter "name =~ *u_apb_dbg_cdc/${_sig}*" -quiet]
+    if {[cdc_require_match $_n "sec.12a u_apb_dbg_cdc/${_sig} payload read (m->s capture)"]} {
+        lappend _dbg_resp_nets {*}$_n
+    }
+}
+if {[llength $_dbg_resp_nets] > 0} {
+    set_max_delay 1750 -datapath_only -through $_dbg_resp_nets
 }
 
 ###############################################################################

@@ -69,7 +69,23 @@ reset_domains:
 # absent on purpose: it is async, it has a real 2-FF synchroniser in
 # uart_controller.sv, and cdc_snitch correctly reports it OKX. That OKX is the
 # evidence the tool would still catch a MISSING synchroniser.)
-port_domains: {}
+# The APB3 debug slave port. NOTE THE HISTORY: before GH #95 these ports fed
+# u_cpu DIRECTLY, and u_cpu runs on cpu_gated_clk -- so mapping them to any
+# domain here would have been a lie covering a real unsynchronised crossing
+# (233 registers; bead claude_verilog_test-3fp). GH #95 inserted
+# u_apb_dbg_cdc, so they now terminate at that bridge's s-face, clocked by
+# core_clk. Declaring them clk_i-domain is therefore true, and it is also just
+# the APB3 contract: a slave port's requester is by definition synchronous to
+# PCLK, which here is the fabric clock. Matches
+# phase5_soc_multiclock.sdc section 6, whose rationale GH #95 made correct
+# again. The crossing INTO the CPU domain is now inside u_apb_dbg_cdc and is
+# checked on its own merits (its synchronisers are magic_cdc -> CDC).
+port_domains:
+  apb_psel_i:    clk_i
+  apb_penable_i: clk_i
+  apb_pwrite_i:  clk_i
+  apb_paddr_i:   clk_i
+  apb_pwdata_i:  clk_i
 
 # --- 4. Waivers -------------------------------------------------------------
 # kind: tool-limitation  -> a correct, reviewed structure cdc_snitch cannot express
@@ -80,35 +96,47 @@ port_domains: {}
 # match, as a sorted '+'-joined string -- it keeps a broad `dest` regex from
 # silently swallowing a different, new crossing on the same instance.
 waivers:
-  - id: async-fifo-cross-coupled-reset
+  - id: cdc-bridge-cross-coupled-reset
     kind: tool-limitation
-    dest: '^u_cpu_axi_cdc\.u_[sm]_rst_sync\.sync_q\[\d+\]:R$'
+    dest: '^u_(cpu_axi|apb_pll2|apb_dbg)_cdc\.u_[sm]_rst_sync\.sync_q\[\d+\]:R$'
     domains: 'clk_i+cpu_clk_i'
     reason: >
-      By design, not a defect. async_axi_fifo drives BOTH internal
-      cdc_reset_sync chains from rst_both_n = s_rst_n_i & m_rst_n_i
-      (async_axi_fifo.sv:174-175), so each chain's async-clear pin genuinely
-      combines the CPU and fabric reset roots. This is deliberate: a one-sided
-      reset would leave the FIFO half-flushed and inject fabricated AXI beats
-      into the surviving domain. cdc_snitch has no concept of a reset pin, so
-      it reports the two-domain clear as data BAD. Timing-wise these are
+      By design, not a defect. Both CDC bridge types drive their internal
+      cdc_reset_sync chains from a cross-coupled root -- async_axi_fifo from
+      rst_both_n = s_rst_n_i & m_rst_n_i (async_axi_fifo.sv:174-175), and
+      apb_cdc_bridge likewise for its m-side (apb_cdc_bridge.sv:226-227) -- so
+      each chain's async-clear pin genuinely combines the CPU and fabric reset
+      roots. This is deliberate: a one-sided reset would leave the bridge
+      half-flushed and inject fabricated beats into the surviving domain. It is
+      also the documented industry contract -- OpenTitan's prim_sync_reqack
+      states it verbatim ("When resetting one domain, also the other domain
+      needs to be reset with both resets being active at the same time") and
+      AMD PG059 requires the same ("None of the AXI Interconnect cores support
+      partial resetting"). cdc_snitch has no concept of a reset pin, so it
+      reports the two-domain clear as data BAD. Timing-wise these are
       set_false_path'd (async clear is not a setup-checked datapath).
-    ref: GH#91, async_axi_fifo.sv:174-175, phase5_soc_multiclock.sdc sec.4
+    ref: GH#91, GH#95, async_axi_fifo.sv:174-175, apb_cdc_bridge.sv:226-227, phase5_soc_multiclock.sdc sec.4
 
   - id: apb-cdc-bridge-resp-payload-read
     kind: tool-limitation
-    dest: '^u_apb_pll2_cdc\.s_prdata_o\[\d+\]:D$'
+    dest: '^(u_apb_(pll2|dbg)_cdc\.s_|apb_)(prdata_o\[\d+\]|pslverr_o):D$'
     domains: 'clk_i+cpu_clk_i'
     reason: >
-      Qualified 2-phase-handshake payload read. resp_prdata_q is an s-domain
-      (fabric) flop that combinationally reads the m-domain (CPU) resp_*_dq
-      payload registers. It is safe because the payload is only sampled after
+      Qualified 2-phase-handshake payload read. resp_prdata_q and
+      resp_pslverr_q are s-domain (fabric) flops that combinationally read the
+      m-domain (CPU) resp_*_dq payload registers -- both captured in the same
+      block (apb_cdc_bridge.sv:574-587), so both carry the same finding. It is safe because the payload is only sampled after
       the ack toggle has propagated through u_ack_sync (2-FF, magic_cdc,
       classified CDC), by which point the payload has been stable for at least
       SYNC_STAGES_TO_S receiving clocks. cdc_snitch sees the combinational read
       and cannot see the handshake that qualifies it. The path is bounded in
-      STA by set_max_delay -datapath_only.
-    ref: GH#93, apb_cdc_bridge.sv:558-587, phase5_soc_multiclock.sdc:406
+      STA by set_max_delay -datapath_only. Covers BOTH apb_cdc_bridge
+      instances (u_apb_pll2_cdc, GH#93; u_apb_dbg_cdc, GH#95 fix) — same
+      structural finding on the same reusable IP, not a per-instance issue.
+      The bare `apb_prdata_o` alternative is the SAME register: on the debug
+      bridge, s_prdata_o drives a top-level port directly, so yosys names the
+      net after the port rather than the instance pin.
+    ref: GH#93, GH#95, apb_cdc_bridge.sv:558-587, phase5_soc_multiclock.sdc:406
 
   - id: spi-miso-unsynchronised-sample
     kind: accepted-risk

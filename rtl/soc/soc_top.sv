@@ -27,7 +27,9 @@
 //     APB_PLL2=6  @ 0x2000_9000–9FFF  pll_apb_regs (cpu_clk_i domain — CPU-domain
 //                                      PLL, GH #92; output unconsumed until GH #93)
 //
-//   Debug plane   : APB3 debug slave exposed at top-level ports.
+//   Debug plane   : APB3 debug slave exposed at top-level ports, bridged into
+//     the CPU domain by apb_cdc_bridge (u_apb_dbg_cdc, GH #95) — see the
+//     clock-seam note below.
 //
 //   Clock seam (Phase 7 M-c / GH #92 dual PLL; GH #93 makes the CPU domain
 //   real — two genuine, non-identical clock roots with one intentional CDC
@@ -75,6 +77,13 @@
 //         * ext_irq / timer_irq (core_clk, level-held sources — see
 //           interrupt_controller.sv / timer.sv headers): cdc_2ff_sync each,
 //           clocked by cpu_core_clk.
+//         * apb_* top-level debug port (core_clk, chip-boundary bus) <->
+//           u_cpu's APB3 debug slave: rtl/soc/apb_cdc_bridge.sv
+//           (u_apb_dbg_cdc, GH #95 fix, bead claude_verilog_test-eg2) — same
+//           2-phase toggle handshake as u_apb_pll2_cdc, s-face core_clk,
+//           m-face cpu_gated_clk/cpu_domain_rst_n. Closes the cdc_snitch
+//           BAD=233 finding left when GH #93 moved u_cpu onto cpu_gated_clk
+//           without re-homing this chip-boundary bus.
 //       In a single-clock build, tie cpu_clk_i == clk_i and cpu_rst_n_i ==
 //       rst_n_i at the integration site (see tb_soc_top.sv / tb_soc_pll.sv for
 //       the reference tie-off) — every crossing above degenerates to a 1:1
@@ -761,6 +770,76 @@ module soc_top
     /* verilator lint_on  UNUSEDSIGNAL */
 
     // =========================================================================
+    // GH #95 fix (bead claude_verilog_test-eg2): APB3 debug-port CDC bridge.
+    //
+    // The top-level apb_* debug ports fed u_cpu DIRECTLY until this fix. GH
+    // #93 moved u_cpu onto cpu_gated_clk, so this chip-boundary bus silently
+    // migrated from the fabric (core_clk) domain into the CPU domain with no
+    // synchroniser — a cdc_snitch BAD=233 finding (all one root cause:
+    // apb_paddr_i/apb_pwdata_i/psel/penable/pwrite captured unsynchronised by
+    // u_cpu.dbg_pc_wr_data/dbg_ctrl_reg/dbg_reg_wr_en/halt_latch_q).
+    //
+    // Fix: a second apb_cdc_bridge instance, u_apb_dbg_cdc, restores the
+    // pre-#93 external contract ("drive apb_* synchronously to clk_i") by
+    // bridging INTO the CPU domain instead of redefining that contract.
+    // Modelled on ARM CoreSight SoC-400's DAPBUS async bridge (DDI 0480F
+    // §4.2.6/§4.2.8): the debug port clock is asynchronous to the block it
+    // drives by construction (an external probe cannot guarantee edge
+    // alignment with cpu_clk_i), and the async bridge is what lets debug stay
+    // power-isolated from the domain it accesses.
+    //   s-face: core_clk / core_rst_n — matches every other fabric-domain
+    //     block (same domain as apb_interconnect / axil_to_apb).
+    //   m-face: cpu_gated_clk / cpu_domain_rst_n — matches u_cpu itself, so a
+    //     PMU-gated CPU correctly stalls debug accesses (already the
+    //     documented intent below: "stalling ... into a gated CPU domain is
+    //     expected/OK"). NOT cpu_clk_i/cpu_rst_n_i raw (unlike u_apb_pll2_cdc,
+    //     whose bootstrap reasoning at its instantiation does not apply here).
+    //
+    // APB3/APB4 pstrb mismatch: apb_cdc_bridge is APB4 (has pstrb); the CPU's
+    // debug slave (rv32i_cpu_top) is APB3 (no pstrb port) and — confirmed by
+    // inspection of rv32i_cpu_top.sv's debug-write block — every debug
+    // register write captures the full 32-bit apb_pwdata_i unconditionally
+    // (`dbg_ctrl_reg <= apb_pwdata_i;` etc.), with no per-byte/strobe-
+    // qualified partial write anywhere in that logic. s_pstrb_i is therefore
+    // tied to all-ones (full-word strobe, matching the top-level apb_* ports'
+    // own lack of a pstrb signal) and m_pstrb_o is sunk to a dedicated unused
+    // net (the CPU has no pstrb input to connect it to).
+    // =========================================================================
+    logic        dbg_bridge_m_psel, dbg_bridge_m_penable, dbg_bridge_m_pwrite;
+    logic [11:0] dbg_bridge_m_paddr;
+    logic [31:0] dbg_bridge_m_pwdata, dbg_bridge_m_prdata;
+    logic        dbg_bridge_m_pready, dbg_bridge_m_pslverr;
+    logic [3:0]  dbg_bridge_m_pstrb_unused;
+
+    apb_cdc_bridge #(
+        .ADDR_W (12)
+    ) u_apb_dbg_cdc (
+        .s_clk_i     (core_clk),
+        .s_rst_n_i   (core_rst_n),
+        .s_psel_i    (apb_psel_i),
+        .s_penable_i (apb_penable_i),
+        .s_pwrite_i  (apb_pwrite_i),
+        .s_paddr_i   (apb_paddr_i),
+        .s_pwdata_i  (apb_pwdata_i),
+        .s_pstrb_i   (4'hF),
+        .s_prdata_o  (apb_prdata_o),
+        .s_pready_o  (apb_pready_o),
+        .s_pslverr_o (apb_pslverr_o),
+
+        .m_clk_i     (cpu_gated_clk),
+        .m_rst_n_i   (cpu_domain_rst_n),
+        .m_psel_o    (dbg_bridge_m_psel),
+        .m_penable_o (dbg_bridge_m_penable),
+        .m_pwrite_o  (dbg_bridge_m_pwrite),
+        .m_paddr_o   (dbg_bridge_m_paddr),
+        .m_pwdata_o  (dbg_bridge_m_pwdata),
+        .m_pstrb_o   (dbg_bridge_m_pstrb_unused),
+        .m_prdata_i  (dbg_bridge_m_prdata),
+        .m_pready_i  (dbg_bridge_m_pready),
+        .m_pslverr_i (dbg_bridge_m_pslverr)
+    );
+
+    // =========================================================================
     // GH #93: CPU-domain face of the CPU<->crossbar-M0 AXI4 CDC bridge.
     // u_cpu's AXI4 master now terminates here (not at xbar_m_*[0] directly);
     // u_cpu_axi_cdc's m_* face (fabric domain) drives xbar_m_*[0] below.
@@ -820,16 +899,18 @@ module soc_top
         .axi_rvalid_i               (cpu_bridge_s_rvalid),
         .axi_rlast_i                (cpu_bridge_s_rlast),
         .axi_rready_o               (cpu_axi_rready_raw),
-        // APB3 debug slave (exposed at soc_top ports; not isolation-clamped —
-        // stalling a debug access into a gated CPU domain is expected/OK)
-        .apb_paddr_i                (apb_paddr_i),
-        .apb_psel_i                 (apb_psel_i),
-        .apb_penable_i              (apb_penable_i),
-        .apb_pwrite_i               (apb_pwrite_i),
-        .apb_pwdata_i               (apb_pwdata_i),
-        .apb_prdata_o               (apb_prdata_o),
-        .apb_pready_o               (apb_pready_o),
-        .apb_pslverr_o              (apb_pslverr_o),
+        // APB3 debug slave — GH #95 fix: now fed from u_apb_dbg_cdc's m_*
+        // (CPU-domain) face instead of the top-level apb_* ports directly
+        // (see u_apb_dbg_cdc above). Not isolation-clamped — stalling a
+        // debug access into a gated CPU domain is expected/OK.
+        .apb_paddr_i                (dbg_bridge_m_paddr),
+        .apb_psel_i                 (dbg_bridge_m_psel),
+        .apb_penable_i              (dbg_bridge_m_penable),
+        .apb_pwrite_i               (dbg_bridge_m_pwrite),
+        .apb_pwdata_i               (dbg_bridge_m_pwdata),
+        .apb_prdata_o               (dbg_bridge_m_prdata),
+        .apb_pready_o               (dbg_bridge_m_pready),
+        .apb_pslverr_o              (dbg_bridge_m_pslverr),
         // Commit observability (partially exposed at top)
         .commit_valid_o             (cpu_commit_valid_raw),
         .commit_pc_o                (commit_pc_o),
