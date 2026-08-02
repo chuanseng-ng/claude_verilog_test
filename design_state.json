@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-08-02T07:45:57.977019+07:00",
+  "updated_at": "2026-08-02T02:02:44.967986+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -1090,6 +1090,18 @@
       "retry_strategy": "none",
       "suggested_next_step": "proceed",
       "reason": "Fixed a confirmed availability bug in rtl/soc/apb_cdc_bridge.sv (CodeRabbit finding on PR #132, branch feat/cpu-domain-cdc-gh93, independently verified): s_rst_sync_n was rooted in rst_both_n = s_rst_n_i & m_rst_n_i, so an APB access to the CPU-domain PLL2 window while m_rst_n_i alone was asserted held the SOURCE FSM in S_IDLE forever, wedging the entire fabric APB tree (UART/SPI/timer/IRQ/PMU/both PLL blocks) until a full SoC reset -- a held-in-reset FSM cannot even emit an error response, so the fix required a reset-structure change, not a new state transition. Fix: s_rst_sync_n now roots on s_rst_n_i only; m_rst_sync_n deliberately stays on rst_both_n (still required to keep req_seen_q/req_toggle_q toggle-parity consistent across an s-only reset -- a fully-decoupled alternative was analysed and rejected for reproducing a silent-drop hang); a new active-high m_rst_n_i status synchronised into the source domain (cdc_2ff_sync) gates request forwarding, bounds S_WAIT, and continuously clamps req_toggle_q to 0 while the destination is observed in reset, closing the fabricated-write hazard. verilator --lint-only: 0 errors, 0 warnings (apb_cdc_bridge_lint); lint_soc baseline unchanged (7 expected warnings). apb_cdc_bridge suite: 14/15 -- test_reset_mid_transaction_m_side now fails BY DESIGN (asserts s_pslverr==0 after an m-only reset, encoding the old silent-drop/hang semantics this fix replaces); left untouched per scope (no test edits), flagged to verification-orchestrator to update. Touched rtl/soc/apb_cdc_bridge.sv only, per explicit scope -- no other files modified.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-08-02T02:02:44.967986+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "PR #132 CodeRabbit doc finding on apb_cdc_bridge.sv:275 (m_rst_n_s availability-gating exception) resolved as documentation: traced the race cycle-by-cycle, confirmed benign/bounded (S_WAIT bounded exit, no fabricated destination write via m_rst_sync_n gating, window == SYNC_STAGES_TO_S s_clk_i cycles); added explicit exception documentation + tightened m_rst_n_i minimum-low-width caller contract. lint_soc 0 errors/7 baseline warnings, apb_cdc_bridge_lint 0/0, apb_cdc_bridge cocotb 19/19.",
       "constraint_ref": null
     }
   ],

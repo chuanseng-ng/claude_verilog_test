@@ -152,6 +152,24 @@
 // domain's error-completion path is bounded by SYNC_STAGES_TO_S cycles of
 // s_clk_i after m_rst_n_i is asserted, not by any property of m_clk_i.
 //
+// m_rst_n_i specifically crosses TWO independent synchronisers and the
+// contract above must be met against BOTH, i.e. m_rst_n_i must be held low
+// for >= max(SYNC_STAGES_TO_M+1 periods of m_clk_i, SYNC_STAGES_TO_S+1
+// periods of s_clk_i):
+//   (1) rst_both_n -> u_m_rst_sync (cdc_reset_sync, STAGES_TO_M, m_clk_i) —
+//       the destination domain's own reset settling, standard contract.
+//   (2) ~m_rst_n_i -> u_m_rst_status_sync (cdc_2ff_sync, STAGES_TO_S,
+//       s_clk_i) — the availability-status crossing added by the #93
+//       availability fix (see "Availability-gating exception" below). This
+//       is the NEW crossing this fix introduced; violating its minimum low
+//       width (e.g. a glitch/pulse on m_rst_n_i shorter than
+//       SYNC_STAGES_TO_S+1 s_clk_i periods) does not just risk the standard
+//       metastability outcome — it can make the s domain's synchroniser
+//       entirely miss the reset event, so m_rst_n_s never dips and the
+//       self-healing bound in the exception below does not apply. That
+//       degenerate case is a caller-contract violation (same class as
+//       violating (1)), not a defect in this module.
+//
 // Instantiated in soc_top.sv between apb_psel/penable/...[APB_PLL2] (source,
 // core_clk domain) and u_cpu_pll_sub's APB4 slave port (destination,
 // cpu_clk_i domain — the CPU-domain PLL's own raw reference clock, NOT
@@ -259,6 +277,62 @@ module apb_cdc_bridge #(
     // aborted with pslverr) the moment m_in_rst_s does catch up — still
     // bounded, still no fabricated write, just detected a few cycles later
     // in that narrow race. See header "Reset strategy".
+    //
+    // ── Availability-gating exception (PR #132 review, m_rst_n_s) ──────────
+    // Project rule: a signal gated by reset state must not advertise
+    // "available" as its OWN reset default (this is the exact bug class
+    // behind 4398c2e's cpu_gated_clk-stopped-in-reset bug and 7a9f9d4's
+    // cdc_gray_fifo wr_ready_o-asserted-in-reset bug — see CLAUDE.md GH #93
+    // status). m_rst_n_s violates that rule on its face: cdc_2ff_sync's
+    // reset-to-0 default makes m_rst_n_s read 1 ("destination alive") for up
+    // to SYNC_STAGES_TO_S s_clk_i cycles after s_rst_sync_n releases, even
+    // when m_rst_n_i is genuinely already low. This IS a deliberate,
+    // reviewed, LOCAL exception to that rule, not an oversight — recorded
+    // here explicitly so a future audit for the same bug class (GH #95)
+    // finds it documented rather than rediscovering it. It is safe only
+    // because, unlike the two bugs above, every consumer of the
+    // false-"alive" reading is independently re-guarded by a second signal
+    // (m_rst_sync_n) that does NOT share the exception:
+    //   (a) S_WAIT always exits within a bounded number of cycles: either
+    //       ack_new (impossible here, see (b)), !req_fwd_q, or !m_rst_n_s
+    //       once the synchroniser catches up (<= SYNC_STAGES_TO_S s_clk_i
+    //       cycles after the false read began) — completing with
+    //       s_pslverr_o=1, never hanging.
+    //   (b) No fabricated destination-side write and no toggle-parity
+    //       collision: m_rst_sync_n (rst_both_n, async-assert) is already
+    //       low for the entire real duration m_rst_n_i is low, independent
+    //       of m_rst_n_s's read. That holds u_req_sync/req_seen_q/d_state_q
+    //       /ack_toggle_q at their reset values the whole time, so
+    //       req_new = (req_toggle_m != req_seen_q) stays false throughout
+    //       even if req_toggle_q toggled on the false-alive reading. The
+    //       req_toggle_q clamp (below) restores req_toggle_q == 0 the
+    //       moment m_rst_n_s catches up, which is guaranteed to happen
+    //       before m_rst_sync_n releases (m_rst_sync_n can only release
+    //       after m_rst_n_i itself rises — a strictly later event than the
+    //       synchroniser catching up to a m_rst_n_i that is still low).
+    //   (c) The false-read window is bounded to exactly SYNC_STAGES_TO_S
+    //       s_clk_i cycles — ordinary 2FF-sync propagation latency, not an
+    //       unbounded or data-dependent hazard.
+    // Why documentation, not enforcement: the reviewer's proposed
+    // alternative (gate s_psel_i && !s_penable_i with an asserted reset
+    // value) is exactly the conservative polarity already tried and
+    // rejected — it regressed test_clock_ratio_slow_s_fast_m at an 18 ns/
+    // 4 ns clock ratio by stacking a full extra SYNC_STAGES_TO_S-cycle
+    // settle latency onto the FIRST post-reset transaction even when
+    // m_rst_n_i was never actually asserted (one spurious pslverr=1 that
+    // does not exist today). The forwarding decision (req_fwd_q) is
+    // already the narrowest thing this status bit gates — the SETUP is
+    // still accepted into S_WAIT unconditionally; only the forward is
+    // gated — so there is no cheaper enforcement point to move the gate
+    // to. The only way to also close the window itself (rather than just
+    // bound and no-op it, as done here) is a synchroniser whose reset
+    // default depends on knowing m_rst_n_i's true value at reset time,
+    // which is precisely what a synchroniser resolves only after
+    // SYNC_STAGES_TO_S clock edges — not achievable without deviating from
+    // the shared cdc_2ff_sync primitive and its per-domain-synchronised-
+    // reset discipline used uniformly everywhere else in this file. Given
+    // the window is already proven bounded and side-effect-free by (a)-(c),
+    // that deviation is not worth the extra risk. Documentation is correct.
     logic m_in_rst_s;   // 1 = destination domain observed in reset
     logic m_rst_n_s;    // 1 = destination domain observed NOT in reset (alive)
 
@@ -272,6 +346,11 @@ module apb_cdc_bridge #(
         .q_o     (m_in_rst_s)
     );
 
+    // Reads 1 ("alive") as its reset default even while m_rst_n_i is
+    // genuinely low, for up to SYNC_STAGES_TO_S s_clk_i cycles after
+    // s_rst_sync_n releases — a reviewed, bounded, documented exception
+    // to the availability-gating rule. See "Availability-gating exception
+    // (PR #132 review, m_rst_n_s)" comment above.
     assign m_rst_n_s = !m_in_rst_s;
 
     // =========================================================================
