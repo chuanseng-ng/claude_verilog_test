@@ -1,8 +1,9 @@
 name: RTL Checks
 
-# SystemVerilog style-lint + format check via Verible. Complements the
-# Verilator semantic lint (`make lint`) run elsewhere — Verible enforces style
-# and formatting consistency, which Verilator does not.
+# Two independent RTL gates:
+#   1. Verible style-lint + format check (complements Verilator's semantic lint —
+#      Verible enforces style and formatting, which Verilator does not).
+#   2. Static CDC check (GH #95) — cdc_snitch + cdc_gate. Hard gate.
 on:
   push:
     branches: [ "main" ]
@@ -10,6 +11,7 @@ on:
       - 'rtl/**'
       - '.rules.verible_lint'
       - 'sim/Makefile'
+      - 'tools/cdc/**'
       - '.github/workflows/rtl-checks.yml'
   pull_request:
     branches: [ "main" ]
@@ -17,6 +19,7 @@ on:
       - 'rtl/**'
       - '.rules.verible_lint'
       - 'sim/Makefile'
+      - 'tools/cdc/**'
       - '.github/workflows/rtl-checks.yml'
   workflow_dispatch:
 
@@ -89,3 +92,64 @@ jobs:
           echo "::group::verible-verilog-format --verify (changed files)"
           make -C sim format-verible-check VERIBLE_CHECK_FILES="${{ steps.changed.outputs.files }}"
           echo "::endgroup::"
+
+  # ==========================================================================
+  # GH #95 — static clock-domain-crossing gate.
+  #
+  # This one IS a hard gate (no continue-on-error). It is meaningful only
+  # because cdc_gate.py post-processes cdc_snitch's raw output: the raw BAD
+  # count is ~98% modelling artifacts (every top-level port modelled as its own
+  # clock domain, clock-gate outputs treated as separate from their source
+  # clock, one "domain" per bus bit). cdc_gate canonicalizes those away using
+  # the same design facts phase5_soc_multiclock.sdc encodes for STA, then
+  # applies explicit justified waivers and fails on anything left over — or on
+  # any waiver that has gone stale. See tools/cdc/README.md.
+  # ==========================================================================
+  cdc:
+    name: CDC check (cdc_snitch + gate)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # yosys >= 0.23 is the only hard external dependency. Ubuntu's package is
+      # well past that, so this avoids the ~700 MB oss-cad-suite download that
+      # tools/cdc/fetch_cdc_tools.sh --with-yosys would otherwise pull.
+      - name: Install yosys
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends yosys
+          yosys --version
+
+      - name: Install PyYAML
+        run: python3 -m pip install --user pyyaml
+
+      # sv2v and cdc_snitch.py are fetched from pinned upstream revisions
+      # (tools/cdc/versions.env). Cache them so a CI run does not depend on
+      # GitHub raw/release availability, and keyed on versions.env so a
+      # deliberate version bump invalidates the cache.
+      - name: Cache pinned CDC tools
+        uses: actions/cache@v4
+        with:
+          path: sim/build/cdc
+          key: cdc-tools-${{ hashFiles('tools/cdc/versions.env') }}
+
+      - name: Run CDC gate
+        run: |
+          echo "::group::make cdc CDC_STRICT=1"
+          make -C sim cdc CDC_STRICT=1
+          echo "::endgroup::"
+
+      # Keep the raw report and the machine-readable summary even on failure —
+      # the gate output names the offending registers, which is what you need
+      # to triage without reproducing the run locally.
+      - name: Upload CDC report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdc-report
+          path: |
+            sim/build/cdc/soc_top_cdc.txt
+            sim/build/cdc/soc_top_cdc_gate.json
+          if-no-files-found: warn
