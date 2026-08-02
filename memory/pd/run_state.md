@@ -4642,3 +4642,48 @@ and the earlier CPU-macro/SRAM/floorplan hardening history that preceded
 it. Check design_state.json's `history[]` tail and `pd` top-level fields
 for the current authoritative state before starting new PD work on this
 design; do not treat any run_id/run_tag in this file as "in progress."
+
+================================================================================
+run_id:      pd_20260802_000000  (GH #94 / bead claude_verilog_test-oa7)
+design_name: phase5_soc
+pdk:         asap7 (constraint file) + sky130/asap7 (sv2v build-list fix)
+tool:        hand-authored SDC + sv2v 0.0.13.1 + pnr/Makefile
+start_time:  2026-08-02T00:00:00Z (approx, see design_state.json history[] tail)
+last_stage:  constraint_authoring (COMPLETE, no P&R run launched)
+================================================================================
+Constraint-authoring + build-list-repair only, per explicit task scope. NOT a
+LibreLane/OpenROAD run -- there is nothing to resume here either.
+
+1. Authored pnr/constraints/phase5_soc_multiclock.sdc: 2-domain evolution of
+   the signed-off pnr/asap7/soc/constraints/phase5_soc.sdc (run 14). cpu_clk
+   @780ps (cpu_clk_i port) + sys_clk @1750ps (clk_i port), no
+   create_generated_clock for core_clk/cpu_core_clk (Run-13 lesson extended
+   to the second PLL stub), set_clock_groups -asynchronous between the two,
+   set_max_delay -datapath_only on both CDC modules (async_axi_fifo's 5x
+   mem_q + 2 gray-pointer crossings each; apb_cdc_bridge's 2 toggle bits + 4
+   cmd_* + 2 resp_* signals) and on 4 of 5 PMU/IRQ single-bit crossings into
+   cpu_core_clk (the 5th, the reset synchroniser, got set_false_path
+   instead -- see the SDC's own section-13 comment for why). Validated only
+   by sourcing the file under plain tclsh with stub procs for every SDC
+   command used (Tcl syntax/control-flow OK); NOT run through OpenSTA. Not
+   yet wired into any config.json SDC pointer -- GH #96 owns that.
+
+2. Fixed pnr/Makefile's SKY130_SOC_SV_FILES and SOC_SV_FILES: both were
+   missing rtl/mem/rv32i_clock_gate.sv and all 5 rtl/soc/cdc/* + async_axi_
+   fifo.sv + apb_cdc_bridge.sv files (stale since the PMU epic and GH #91/
+   #93 respectively -- neither list had been exercised since). Root cause
+   this class of gap is invisible to the cocotb regression: Verilator's -I
+   include-dir flag does automatic module-file discovery, but sv2v does not
+   -- it only sees exactly the files on its command line, so a stale sv2v
+   list silently produces a netlist with undefined-module instantiations
+   that Yosys can blackbox without an obvious error. Verified for real:
+   `make sky130-soc-sv2v` (34 files, 6865-line output, all 6 new modules +
+   their instances present via grep, zero undefined-module warnings) and
+   `make asap7-soc-sv2v` (33 files, 6710-line output, same clean result --
+   generated artifact deleted afterward since it wasn't previously in the
+   tree). See memory/pd/knowledge.md for the sv2v-vs-Verilator module-
+   resolution note added alongside this entry.
+
+No P&R run, no new PPA numbers. design_state.json history[] entry
+(stage: "constraint_authoring") and memory/pd/experiences.jsonl (run_id
+pd_20260802_000000) both record this. Nothing to resume.

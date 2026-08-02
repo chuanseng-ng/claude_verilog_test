@@ -981,6 +981,35 @@ VERILOG_FILES with `(* blackbox *)` attribute into the second-pass design, so `d
 assignments (e.g. `gpu_top.GPU_ENABLE_COALESCE = 1'b0`) can be resolved. This patch is
 harmless but the main SoC synth now uses the sv2v path, not deferred_flatten.
 
+### sv2v has NO automatic module-file discovery — the source list must be exhaustive
+(GH #94 / bead oa7, 2026-08-02)
+
+**sv2v only sees exactly the files passed on its command line.** Unlike Verilator, which
+resolves an undefined module reference by searching any `-I<dir>` (or `-y<dir>`) directory for
+a matching filename, sv2v (0.0.13.1) does no such search. If `pnr/Makefile`'s
+`SKY130_SOC_SV_FILES` / `SOC_SV_FILES` lists omit a file that `soc_top.sv` (or anything it
+instantiates) depends on, sv2v's Verilog-2005 output simply contains an instantiation of an
+undefined module — and Yosys `read_verilog`/synthesis can blackbox that silently rather than
+erroring, discarding real logic (in the discovered case: the entire GH #91/#93 CDC boundary —
+`rtl/mem/rv32i_clock_gate.sv` plus all 5 `rtl/soc/cdc/*` + `async_axi_fifo.sv` +
+`apb_cdc_bridge.sv` files — had been missing from both SoC sv2v lists since the PMU epoch and
+the CDC epic respectively, unnoticed because neither list had been regenerated since).
+
+**Why the cocotb regression (159/159) never caught this**: `tb/cocotb/soc/Makefile` passes
+`EXTRA_ARGS="-I$(RTL)/mem -I$(RTL)/soc/cdc ..."` to Verilator for every SoC-level target, so
+Verilator auto-resolves `rv32i_clock_gate`/`cdc_2ff_sync`/etc. even though `SOC_BOOT_SOURCES`
+never lists them explicitly either. Two different SystemVerilog frontends, reading the same
+`soc_top.sv`, with two different module-resolution semantics — a clean simulation regression is
+*not* evidence that a from-scratch sv2v/Yosys synthesis of the same RTL will elaborate cleanly.
+
+**Rule going forward**: whenever a new module is added anywhere in `soc_top.sv`'s instantiation
+tree (directly, or nested inside another RTL file `soc_top.sv` already includes), add it
+explicitly to *both* `SKY130_SOC_SV_FILES` and `SOC_SV_FILES` in `pnr/Makefile` in the same
+commit — do not rely on the cocotb suite passing as a proxy for the sv2v list being complete.
+After any such edit, regenerate for real (`make sky130-soc-sv2v` / `make asap7-soc-sv2v`) and
+grep the output for the new module's `module <name> (` definition and its instance name, not
+just a clean exit code — sv2v does not reliably print a warning for an unresolved instantiation.
+
 ---
 
 ## Sky130A PDK — LibreLane Issues and Fixes
