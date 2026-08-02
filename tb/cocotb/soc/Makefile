@@ -302,6 +302,15 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += -Wno-CASEINCOMPLETE
 	COMPILE_ARGS += -Wno-TIMESCALEMOD
 	COMPILE_ARGS += -Wno-UNOPTFLAT
+	# bead claude_verilog_test-rvs: gates rtl/soc/cdc/cdc_2ff_sync.sv's
+	# optional simulation-only randomised-delay CDC injector (RAND_CDC_DELAY_EN,
+	# default OFF at every instantiation site — this define alone changes
+	# nothing observable). Never defined for sim/Makefile's lint_soc or the
+	# tools/cdc/ sv2v+yosys CDC-gate flow, so the synthesis/lint/CDC-gate
+	# paths stay bit-identical; only actual cocotb simulation runs (this
+	# Makefile) can see the injector at all, and only instances that
+	# explicitly override RAND_CDC_DELAY_EN=1 activate it.
+	COMPILE_ARGS += +define+SIMULATION
 	COMPILE_ARGS += --timescale 1ns/1ps
 	COMPILE_ARGS += --public-flat-rw
 	COMPILE_ARGS += --no-timing

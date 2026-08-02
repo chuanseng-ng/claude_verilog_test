@@ -67,8 +67,20 @@ Known hazards under test, characterised (NOT fixed) per this task's scope:
     counter fails to resume cleanly, that is itself the reportable finding
     the task explicitly anticipates, not a testbench bug to paper over.
 
-Metastability injection is not modelable in Verilator/cocotb — this test
-characterises the synchronised, deterministic RTL behaviour only.
+Metastability injection: corrected claim (bead claude_verilog_test-rvs). Earlier
+revisions of this docstring said this was "not modelable in Verilator/cocotb" --
+that was imprecise. rtl/soc/cdc/cdc_2ff_sync.sv now carries an optional,
+per-instance, simulation-only randomised EXTRA-CYCLE-OF-DELAY injector
+(RAND_CDC_DELAY_EN, default OFF at every instantiation site in this repo,
+including every synchroniser this test exercises) -- see that file's header
+for the full model and provenance (ported concept, not code, from OpenTitan's
+prim_cdc_rand_delay.sv). This test runs with the injector at its default OFF
+and so still characterises the synchronised, deterministic RTL behaviour only
+-- opting a synchroniser in here is future work, not something this file does
+today. What remains genuinely NOT modelable in a 2-state simulator (Verilator,
+or any cocotb-driven flow) is true analog metastability itself: an
+intermediate, non-01, potentially-oscillating flop output. The injector models
+a randomised settling DELAY, not that voltage-domain physics.
 """
 
 import sys

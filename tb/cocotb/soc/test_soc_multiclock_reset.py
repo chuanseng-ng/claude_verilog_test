@@ -49,8 +49,20 @@ under dut.u_soc):
   cpu_domain_rst_n / core_rst_n — the two composed per-domain reset trees
     the CDC bridge's s_rst_n_i / m_rst_n_i are wired from (soc_top.sv:601-603).
 
-Metastability injection is not modelable in Verilator/cocotb — these tests
-characterise the synchronised, deterministic RTL behaviour only.
+Metastability injection: corrected claim (bead claude_verilog_test-rvs). Earlier
+revisions of this docstring said this was "not modelable in Verilator/cocotb" --
+that was imprecise. rtl/soc/cdc/cdc_2ff_sync.sv now carries an optional,
+per-instance, simulation-only randomised EXTRA-CYCLE-OF-DELAY injector
+(RAND_CDC_DELAY_EN, default OFF at every instantiation site in this repo,
+including every synchroniser these tests exercise) -- see that file's header
+for the full model and provenance (ported concept, not code, from OpenTitan's
+prim_cdc_rand_delay.sv). These tests run with the injector at its default OFF
+and so still characterise the synchronised, deterministic RTL behaviour only
+-- opting a synchroniser in here is future work, not something this file does
+today. What remains genuinely NOT modelable in a 2-state simulator (Verilator,
+or any cocotb-driven flow) is true analog metastability itself: an
+intermediate, non-01, potentially-oscillating flop output. The injector models
+a randomised settling DELAY, not that voltage-domain physics.
 """
 
 import sys
