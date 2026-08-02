@@ -122,7 +122,9 @@ async def _setup(dut, *, reset_extra_cycles: int = 0):
     """
     _kill_active_tasks()
 
-    start_soc_clocks(dut, CLK_PERIOD_NS)
+    clk_task, cpu_clk_task = start_soc_clocks(dut, CLK_PERIOD_NS)
+    _active_tasks.append(clk_task)
+    _active_tasks.append(cpu_clk_task)
 
     # Idle all inputs
     drive_soc_reset(dut, True)

@@ -149,7 +149,9 @@ async def _setup(dut, hex_path: str | None = None) -> None:
     """Start clock, idle inputs, backdoor-load firmware, apply + release reset."""
     _kill_active_tasks()
 
-    start_soc_clocks(dut, CLK_PERIOD_NS)
+    clk_task, cpu_clk_task = start_soc_clocks(dut, CLK_PERIOD_NS)
+    _active_tasks.append(clk_task)
+    _active_tasks.append(cpu_clk_task)
 
     drive_soc_reset(dut, True)
     dut.apb_paddr_i.value   = 0

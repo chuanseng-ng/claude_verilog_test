@@ -116,6 +116,7 @@ class ApbSlaveResponder:
         self.wait_states = wait_states
         self.err_addrs = err_addrs if err_addrs is not None else set()
         self.completed = 0
+        self.aborted = 0
 
         self.psel = getattr(dut, f"{prefix}psel")
         self.penable = getattr(dut, f"{prefix}penable")
@@ -126,6 +127,7 @@ class ApbSlaveResponder:
         self.prdata = getattr(dut, f"{prefix}prdata")
         self.pready = getattr(dut, f"{prefix}pready")
         self.pslverr = getattr(dut, f"{prefix}pslverr")
+        self.rst_n = getattr(dut, f"{prefix}rst_n")
 
         self.prdata.value = 0
         self.pready.value = 0
@@ -168,26 +170,50 @@ class ApbSlaveResponder:
             ws = self._resolve_ws(addr, write)
             err = self._resolve_err(addr, write)
 
-            # -- Enter ACCESS phase (active/Normal region, safe to write) --
+            # -- Enter ACCESS phase, then hold for ws extra cycles, checking
+            #    after EVERY edge (via ReadOnly, safe against NBA-settling
+            #    races -- see the note below) whether this transfer has been
+            #    abandoned: either m_psel dropped (the GH #93 availability
+            #    fix force-completed the SOURCE side with a bounded error
+            #    before this destination ever answered -- see
+            #    apb_cdc_bridge.sv's req_fwd_q / S_WAIT-abort logic) or this
+            #    destination domain's own reset asserted mid-transfer
+            #    (m_rst_n=0). Either way, blindly asserting m_pready later
+            #    for a request nobody is listening for anymore would let
+            #    THIS RESPONDER fabricate a "completed" destination-side
+            #    write the real bridge never asked for -- exactly what the
+            #    "no destination-side write lands after an aborted request"
+            #    property (see test_availability_* below) needs to be false
+            #    to hold. CodeRabbit PR #132 finding — this responder used to
+            #    have no such check at all.
+            #
+            #    Deliberately does NOT read anything in the plain active
+            #    region right after a bare RisingEdge (only ever after
+            #    ReadOnly()) -- reading a DUT-driven signal before the
+            #    delta-cycle NBA settling that ReadOnly() guarantees races
+            #    with whatever edge just moved that signal (confirmed by an
+            #    earlier iteration of this test: a naive direct .value check
+            #    immediately after the D_SETUP->D_ACCESS edge specifically
+            #    spuriously saw m_penable=0 on roughly half the
+            #    transactions). This costs one extra ACCESS cycle versus the
+            #    original zero-wait-state timing (a fixed, constant +1 for
+            #    every ws value, since the abort-check for the FINAL ACCESS
+            #    cycle is what gates entering the writable region needed to
+            #    drive pready) -- harmless for every existing lower/upper
+            #    -bound-style timing assertion in this suite (they all have
+            #    margin, none check for an exact cycle count).
             await RisingEdge(self.clock)
-
-            # -- Extra wait-state cycles: m_pready stays low (already its
-            #    reset/idle value -- no write needed each iteration) -------
-            for _ in range(ws):
+            aborted = False
+            for _ in range(ws + 1):
+                await ReadOnly()
+                if not int(self.psel.value) or not int(self.rst_n.value):
+                    aborted = True
+                    break
                 await RisingEdge(self.clock)
 
-            # Note: no direct (non-ReadOnly) sanity read of psel/penable here
-            # -- reading a DUT-driven signal immediately after a RisingEdge,
-            # before the delta-cycle NBA settling that ReadOnly() guarantees,
-            # races with the very same edge that moved d_state_q into
-            # D_ACCESS (confirmed by an earlier iteration of this test: a
-            # naive direct .value check right here spuriously saw
-            # m_penable=0 on roughly half the transactions). The D_SETUP ->
-            # D_ACCESS transition is protocol-guaranteed unconditional RTL
-            # (apb_cdc_bridge.sv's d_state_d case), so no live re-check is
-            # needed; psel/penable are still verified properly (via
-            # ReadOnly) on the *next* SETUP-detection pass, and any real
-            # protocol violation would surface as a hung with_timeout above.
+            if aborted:
+                self.aborted += 1
+                continue
 
             # -- Complete the transfer (active phase -- safe to write) ----
             if write:
@@ -466,6 +492,21 @@ async def test_clock_ratio_coprime(dut):
 # --- 12. reset mid-transaction, s side (single-sided; rst_both_n hard flush) --
 
 async def _reset_mid_transaction_s_side_body(dut):
+    """s-only reset while a transfer is mid-flight must still be a hard
+    flush (this leg is UNCHANGED by the GH #93 availability fix, commit
+    cb5c780 -- see apb_cdc_bridge.sv's header: an s_rst_n_i-only event still
+    drops rst_both_n and flushes both domains together).
+
+    Kill-timing note (CodeRabbit PR #132 finding, same reasoning already
+    applied to test_async_axi_fifo.py's test_reset_while_busy_s_side): the
+    interrupted master task is killed AT reset assertion, not after
+    release+settling. A real APB master is itself part of the domain this
+    reset covers, so its own issuing state would be wiped by the very same
+    reset edge; a surviving, un-reset Python coroutine that resumed driving
+    psel/penable into the freshly-recovered bridge afterward would not model
+    any real master's behaviour, and _idle_s_side() could then cut a
+    resumed drive in half at an arbitrary point.
+    """
     ctx = await _setup(dut, 10, 10, wait_states=5)
 
     t = cocotb.start_soon(ctx.s_master.write(0x600, 0xABCD1234))
@@ -474,12 +515,14 @@ async def _reset_mid_transaction_s_side_body(dut):
     # test is that a single-sided reset still flushes BOTH domains via
     # rst_both_n = s_rst_n_i & m_rst_n_i (see apb_cdc_bridge.sv header).
     dut.s_rst_n.value = 0
+    # Kill + idle immediately -- models the master's own reset, not a
+    # surviving driver resuming mid-transfer across the DUT's reset boundary.
+    t.kill()
+    _idle_s_side(dut)
     await ClockCycles(dut.s_clk, 5)
     dut.s_rst_n.value = 1
     await ClockCycles(dut.s_clk, 3)
     await ClockCycles(dut.m_clk, 3)
-    t.kill()
-    _idle_s_side(dut)
 
     await ClockCycles(dut.s_clk, 2)
     assert int(dut.s_pready.value) == 0, "s_pready must be idle-low after s-side reset recovery"
@@ -502,30 +545,114 @@ async def test_reset_mid_transaction_s_side(dut):
 # --- 13. reset mid-transaction, m side (single-sided; rst_both_n hard flush) --
 
 async def _reset_mid_transaction_m_side_body(dut):
+    """GH #93 availability fix (commit cb5c780): an m-only reset while a
+    request has already been FORWARDED and is genuinely in flight (S_WAIT,
+    req_fwd_q=1) no longer wedges s_pready forever. The bridge's S_WAIT exit
+    condition (`ack_new || !req_fwd_q || !m_rst_n_s`) force-completes with
+    s_pready=1, s_pslverr=1 within a bounded number of s_clk cycles once the
+    destination is observed to have entered reset.
+
+    This REPLACES the old assertion here (s_pslverr==0, silently dropped) --
+    that encoded exactly the permanent hang this fix closes: previously
+    rst_both_n held the source FSM itself in S_IDLE for as long as m_rst_n_i
+    stayed low, so s_pready could never assert at all while an APB access to
+    the PLL2 window raced an m-only reset, wedging the entire upstream APB
+    tree. See apb_cdc_bridge.sv's "Reset strategy" header for the full
+    asymmetric-reset justification (m_rst_sync_n deliberately stays coupled
+    to rst_both_n for toggle-parity reasons; m_rst_n_s + req_fwd_q + the
+    bounded S_WAIT exit are what make this direction safe without that
+    coupling).
+
+    The interrupted read task now completes ON ITS OWN (no t.kill() needed)
+    -- unlike the s-side test above, there is no surviving un-reset master
+    coroutine to race here: the bridge itself resolves the transaction with
+    a real (error) response, so simply awaiting the task is correct.
+    """
     ctx = await _setup(dut, 10, 10, wait_states=5)
     ctx.responder.mem[0x700] = 0xBEEF0001
 
     t = cocotb.start_soon(ctx.s_master.read(0x700))
-    await ClockCycles(dut.m_clk, 3)  # let the request cross into the m domain first
+    await ClockCycles(dut.m_clk, 3)  # let the request cross into the m domain and be forwarded first
+
+    # Confirm (via backdoor, --public-flat-rw) this really is the "forwarded,
+    # then aborted mid-S_WAIT" path, not the "never forwarded" one covered
+    # separately by test_availability_never_forwarded.
+    assert int(dut.u_dut.req_fwd_q.value) == 1, (
+        "setup assumption violated: request was not yet forwarded (req_fwd_q=0) "
+        "before m_rst_n is asserted below -- this test targets the "
+        "'aborted after forwarding' escape path, not the 'never forwarded' one"
+    )
+    assert int(dut.u_dut.s_state_q.value) == 1, (  # s_state_e: S_IDLE=0, S_WAIT=1, S_DONE=2
+        "setup assumption violated: source FSM is not in S_WAIT -- the request "
+        "must still be genuinely in flight when m_rst_n is asserted"
+    )
+
     # Assert ONLY m_rst_n -- s_rst_n stays high throughout.
     dut.m_rst_n.value = 0
+
+    data, ok = await t
+    assert ok is False, (
+        "expected the m-only-reset-interrupted read to force-complete with "
+        "s_pslverr=1 (the availability fix's bounded error-completion path), "
+        "not silently hang forever or fabricate an OKAY response"
+    )
+    assert ctx.responder.completed == 0, (
+        "no destination-side transfer should have completed for the aborted "
+        "request -- the responder observed one anyway (completed="
+        f"{ctx.responder.completed})"
+    )
+    assert ctx.responder.mem.get(0x700) == 0xBEEF0001, (
+        "destination-side mem for the aborted read's address must be "
+        "unchanged (it was a read, and the responder must not have been "
+        "allowed to fabricate a completion for it)"
+    )
+
     await ClockCycles(dut.m_clk, 5)
     dut.m_rst_n.value = 1
     await ClockCycles(dut.s_clk, 3)
     await ClockCycles(dut.m_clk, 3)
-    t.kill()
-    _idle_s_side(dut)
 
     await ClockCycles(dut.s_clk, 2)
-    assert int(dut.s_pready.value) == 0, "s_pready must be idle-low after m-side reset recovery"
-    assert int(dut.s_pslverr.value) == 0, "no fabricated pslverr after reset (hard flush, not an error response)"
+    assert int(dut.s_pready.value) == 0, "s_pready must return to idle-low after the error-completion pulse"
+    # Note: s_pslverr_o (resp_pslverr_q) is a "last response status" register
+    # captured only during S_WAIT and held stable in between transactions --
+    # apb_cdc_bridge.sv never self-clears it after S_DONE (mirroring
+    # resp_prdata_q's identical behaviour), and no real APB master looks at
+    # pslverr except in the same cycle it observes pready=1 (exactly what
+    # APB4Master.read()/write() do). Asserting it reads 0 here would test a
+    # property the RTL never promised. The post-recovery write+read below
+    # already proves it gets correctly overwritten to 0 on the next genuine
+    # OKAY completion.
 
-    ok = await ctx.s_master.write(0x700, 0x33334444)
-    assert ok, "post-recovery write reported pslverr -- fabricated error after reset?"
-    data, ok2 = await ctx.s_master.read(0x700)
-    assert ok2, "post-recovery read reported pslverr"
-    assert data == 0x33334444, f"post-recovery readback mismatch: {data:#x}"
-    dut._log.info("reset-mid-transaction (m side) OK: in-flight transfer dropped, no fabricated pslverr, clean recovery")
+    # Re-check (not just during the abort itself, but again now, in the
+    # window after m_rst_n_i has actually released) that the aborted request
+    # produced no destination-side completion -- closes the "no stray write
+    # lands once m_rst_n_i deasserts" / toggle-parity-non-collision property:
+    # if req_toggle_q's clamp-to-0 (while !m_rst_n_s) had NOT correctly held
+    # it at 0 for the entire abort, releasing m_rst_n_i here is exactly the
+    # moment a stale, out-of-sync req_toggle_q could suddenly look like a
+    # "new" request to req_seen_q and fire a spurious destination transfer.
+    assert ctx.responder.completed == 0, (
+        "a destination-side transfer appeared after m_rst_n_i released, "
+        "before any new request was issued -- req_toggle_q's clamp did not "
+        "correctly prevent a stale/collided toggle from firing"
+    )
+
+    ok2 = await ctx.s_master.write(0x700, 0x33334444)
+    assert ok2, "post-recovery write reported pslverr -- unrelated to the earlier aborted request?"
+    assert ctx.responder.completed == 1, (
+        f"expected exactly 1 destination-side completion for this one new "
+        f"write, got {ctx.responder.completed} -- possible extra transfer "
+        "from a toggle-parity collision with the earlier aborted request"
+    )
+    data2, ok3 = await ctx.s_master.read(0x700)
+    assert ok3, "post-recovery read reported pslverr"
+    assert data2 == 0x33334444, f"post-recovery readback mismatch: {data2:#x}"
+    dut._log.info(
+        "reset-mid-transaction (m side) OK: in-flight transfer force-completed with "
+        "s_pslverr=1 within bounded time (GH #93 availability fix), no destination "
+        "write/completion fabricated, clean recovery for a new transaction"
+    )
 
 
 @cocotb.test()
@@ -584,7 +711,12 @@ async def test_no_lost_or_duplicated_stream(dut):
 async def _latency_budget_body(dut):
     # s_clk=4ns / m_clk=9ns -- same proxy ratio as the GH #93 integration
     # case (see module docstring), so this number is a usable budget input.
-    ctx = await _setup(dut, 4, 9)
+    # Bound once (CodeRabbit PR #132 finding): previously `_setup(dut, 4, 9)`
+    # and `slow_ns = max(4, 9)` repeated the same two literals independently,
+    # so changing one without the other would silently desynchronize the
+    # derived bound from the ratio actually under test.
+    s_ns, m_ns = 4, 9
+    ctx = await _setup(dut, s_ns, m_ns)
 
     sync_s = int(dut.sync_stages_to_s_o.value)
     sync_m = int(dut.sync_stages_to_m_o.value)
@@ -613,12 +745,12 @@ async def _latency_budget_body(dut):
     # free-running Clock() coroutines (not a tight bound, but a real,
     # derived one -- see the GH #94 STA action item in apb_cdc_bridge.sv's
     # header for the eventual set_max_delay treatment of these same paths).
-    slow_ns = max(4, 9)
+    slow_ns = max(s_ns, m_ns)
     budget_cycles = (sync_m + 1) + 2 + (sync_s + 1) + 2
     bound_ns = 2 * budget_cycles * slow_ns
 
     dut._log.info(
-        "GH #93 apb_cdc_bridge round-trip latency budget (s_clk=4ns/m_clk=9ns): "
+        f"GH #93 apb_cdc_bridge round-trip latency budget (s_clk={s_ns}ns/m_clk={m_ns}ns): "
         f"write={write_latency_ns:.1f} ns, read={read_latency_ns:.1f} ns, "
         f"derived bound={bound_ns:.1f} ns (budget_cycles={budget_cycles})"
     )
@@ -633,3 +765,282 @@ async def _latency_budget_body(dut):
 @cocotb.test()
 async def test_latency_budget(dut):
     await with_timeout(_latency_budget_body(dut), 50, "us")
+
+
+# --- 16-18. GH #93 availability-fix escape-path coverage (commit cb5c780) ----
+#
+# apb_cdc_bridge.sv's availability fix closes a hang where an APB access to
+# the PLL2 window while ONLY the destination (m_rst_n_i) domain was in reset
+# used to wedge the source FSM in S_IDLE forever. The fix adds a new
+# same-domain status crossing (m_rst_n_s), a req_fwd_q latch, and a bounded
+# S_WAIT exit (`ack_new || !req_fwd_q || !m_rst_n_s`). The tests below
+# exercise each of the three ways S_WAIT can now resolve, plus the two
+# structural invariants the fix's own header commits to: no destination
+# write ever lands for an aborted/errored request, and req_toggle_q's
+# clamp-to-0 prevents a toggle-parity collision across repeated m-only
+# resets. test_reset_mid_transaction_m_side above already covers the
+# "forwarded, then aborted mid-S_WAIT" path with an explicit req_fwd_q/
+# s_state_q backdoor check.
+
+# --- 16. never forwarded: destination already observed in reset at SETUP ----
+
+async def _availability_never_forwarded_body(dut):
+    """m_rst_n_i asserted BEFORE any request is issued: the very first SETUP
+    latches req_fwd_q=0 (destination already observed dead), so the request
+    is never forwarded at all and S_WAIT resolves via the `!req_fwd_q`
+    escape on the very next cycle -- a fast, local-only completion, not a
+    round trip through the destination."""
+    ctx = await _setup(dut, 10, 10)
+    addr = 0xA00
+
+    sync_s = int(dut.sync_stages_to_s_o.value)
+    dut.m_rst_n.value = 0
+    # Let m_rst_n_s (this domain's own synchronised view) settle to "in
+    # reset" before issuing anything -- SYNC_STAGES_TO_S cycles plus margin.
+    await ClockCycles(dut.s_clk, sync_s + 3)
+    assert int(dut.u_dut.m_rst_n_s.value) == 0, (
+        "setup assumption violated: m_rst_n_s should already read 0 "
+        "(destination observed in reset) before SETUP is even issued"
+    )
+
+    t0 = get_sim_time(units="ns")
+    data, ok = await ctx.s_master.read(addr)
+    t1 = get_sim_time(units="ns")
+    elapsed_ns = t1 - t0
+
+    assert ok is False, (
+        "expected an immediate pslverr=1 completion -- the destination was "
+        "already observed in reset at SETUP, so req_fwd_q should latch 0 and "
+        "the request should never be forwarded at all"
+    )
+    assert ctx.responder.completed == 0, (
+        "the request must never have reached the destination responder "
+        f"(completed={ctx.responder.completed})"
+    )
+    # Fast, local-only completion -- nowhere near a real round trip (which
+    # needs at least one m_clk SETUP+ACCESS cycle plus two full CDC
+    # crossings). Generous bound, not a tight one.
+    generous_local_bound_ns = (sync_s + 4) * 10
+    assert elapsed_ns <= generous_local_bound_ns, (
+        f"never-forwarded completion took {elapsed_ns} ns, expected a fast "
+        f"local-only completion under {generous_local_bound_ns} ns -- did it "
+        "actually reach the destination instead of completing locally?"
+    )
+
+    # Recover and confirm clean transactions afterward.
+    dut.m_rst_n.value = 1
+    await ClockCycles(dut.m_clk, 3)
+    # Re-check (now that m_rst_n_i has actually released, not just during
+    # the never-forwarded completion itself) that nothing spurious reached
+    # the destination -- same toggle-parity-non-collision property as
+    # test_reset_mid_transaction_m_side's equivalent check.
+    assert ctx.responder.completed == 0, (
+        "a destination-side transfer appeared after m_rst_n_i released, "
+        "before any new request was issued"
+    )
+    ok2 = await ctx.s_master.write(addr, 0xAAAA5555)
+    assert ok2, "post-recovery write reported pslverr"
+    assert ctx.responder.completed == 1, (
+        f"expected exactly 1 destination-side completion for this one new "
+        f"write, got {ctx.responder.completed}"
+    )
+    data2, ok3 = await ctx.s_master.read(addr)
+    assert ok3 and data2 == 0xAAAA5555, f"post-recovery readback mismatch: {data2:#x}"
+    dut._log.info(
+        f"availability never-forwarded OK: read force-completed with pslverr=1 in "
+        f"{elapsed_ns:.1f} ns without ever reaching the destination "
+        f"(completed={ctx.responder.completed}); clean recovery after m_rst_n release"
+    )
+
+
+@cocotb.test()
+async def test_availability_never_forwarded(dut):
+    await with_timeout(_availability_never_forwarded_body(dut), 50, "us")
+
+
+# --- 17. ack_new wins a same-s_clk-edge race against destination-reset -------
+
+async def _availability_ack_race_wins_body(dut):
+    """Prove that when ack_new (the real destination response, already
+    safely captured at the destination and independently propagating) and
+    !m_rst_n_s (the destination-reset-detected condition) become true on the
+    EXACT SAME s_clk edge, ack_new wins -- apb_cdc_bridge.sv's
+    `if (ack_new) ... else if (!req_fwd_q || !m_rst_n_s) ...` checks ack_new
+    first, so this is a deterministic priority encoding on two already-
+    synchronised, registered single-bit signals (no metastability, no real
+    hardware race) -- but it is only actually EXERCISED if both are
+    engineered to change on the identical edge.
+
+    ack_toggle_q's flip at the destination is NOT influenced by m_rst_n_i at
+    all (u_ack_sync's reset is s_rst_sync_n, never m_rst_n_i), so it is safe
+    to let the ack complete for real at the destination first, then align
+    m_rst_n_i's assertion so its OWN independent 2-stage synchroniser
+    (u_m_rst_status_sync) settles on the same edge that ack_toggle_q's
+    propagation (through u_ack_sync, also 2-stage, both clocked by s_clk_i)
+    completes. Getting the timestep-boundary offset for that byte-perfect
+    is delicate under cocotb's RisingEdge/ReadOnly discipline (you cannot
+    write a signal in the same timestep you just read it via ReadOnly), so
+    this test self-calibrates: it sweeps the exact number of edges to wait
+    after observing the ack_toggle_q flip before asserting m_rst_n_i, on a
+    fresh transaction each time, until it observes (via safe ReadOnly reads
+    of ack_toggle_s / m_in_rst_s) that both actually changed on the same
+    s_clk edge, then checks the response from that specific run.
+    """
+    addr = 0xB00
+    golden = 0xCAFED00D
+    aligned = None
+
+    for wait_edges in range(1, 7):
+        ctx = await _setup(dut, 10, 10)
+        ctx.responder.mem[addr] = golden
+
+        prev_ack_q = int(dut.u_dut.ack_toggle_q.value)
+        t = cocotb.start_soon(ctx.s_master.read(addr))
+
+        flip_seen = False
+        for _ in range(300):
+            await RisingEdge(dut.m_clk)
+            await ReadOnly()
+            cur = int(dut.u_dut.ack_toggle_q.value)
+            if cur != prev_ack_q:
+                flip_seen = True
+                break
+            prev_ack_q = cur
+        assert flip_seen, f"wait_edges={wait_edges}: ack_toggle_q never flipped at the destination"
+
+        # Advance wait_edges more m_clk edges (== s_clk edges here, 10/10 ns
+        # phase-aligned) before writing m_rst_n_i -- the earliest possible
+        # write is 1 edge after the ReadOnly-based detection above (cocotb
+        # cannot write in the same timestep it just read via ReadOnly), so
+        # this sweep's wait_edges=1 is the tightest offset actually reachable.
+        for _ in range(wait_edges):
+            await RisingEdge(dut.m_clk)
+        dut.m_rst_n.value = 0
+
+        prev_ack_s = int(dut.u_dut.ack_toggle_s.value)
+        prev_in_rst = int(dut.u_dut.m_in_rst_s.value)
+        ack_s_edge = None
+        rst_edge = None
+        for i in range(10):
+            await RisingEdge(dut.s_clk)
+            await ReadOnly()
+            cur_ack_s = int(dut.u_dut.ack_toggle_s.value)
+            cur_in_rst = int(dut.u_dut.m_in_rst_s.value)
+            if ack_s_edge is None and cur_ack_s != prev_ack_s:
+                ack_s_edge = i
+            if rst_edge is None and cur_in_rst != prev_in_rst:
+                rst_edge = i
+            prev_ack_s, prev_in_rst = cur_ack_s, cur_in_rst
+            if ack_s_edge is not None and rst_edge is not None:
+                break
+
+        if ack_s_edge is not None and rst_edge is not None and ack_s_edge == rst_edge:
+            data, ok = await t
+            aligned = (wait_edges, ack_s_edge, data, ok)
+            break
+
+        # Not aligned this attempt -- clean up and try the next offset with
+        # a fresh _setup() (which fully re-resets everything, including
+        # ack_toggle_q back to 0, so each attempt is independent). The watch
+        # loop above always exits from a ReadOnly phase (whether it broke on
+        # a match or ran out of iterations), so a RisingEdge is needed first
+        # to reach a writable region before touching m_rst_n.
+        t.kill()
+        await RisingEdge(dut.s_clk)
+        dut.m_rst_n.value = 1
+        await ClockCycles(dut.m_clk, 5)
+
+    assert aligned is not None, (
+        "could not engineer ack_new and the destination-reset-detected "
+        "condition to land on the same s_clk edge within the swept "
+        "wait_edges range 1..6 -- test calibration needs adjustment"
+    )
+    wait_edges, ack_s_edge, data, ok = aligned
+    assert ok is True, (
+        f"ack_new and the destination-reset-detected condition landed on the "
+        f"same s_clk edge (wait_edges={wait_edges}, edge offset {ack_s_edge}) "
+        f"but the response was NOT the real one (ok={ok}) -- ack_new must win "
+        "this race per apb_cdc_bridge.sv's if/else-if priority"
+    )
+    assert data == golden, f"race-won response data mismatch: {data:#x}"
+    dut._log.info(
+        f"availability ack-race OK: at wait_edges={wait_edges}, ack_toggle_s and "
+        f"m_in_rst_s both changed on the same s_clk edge (offset {ack_s_edge}) -- "
+        f"ack_new won, real data 0x{data:08x} returned, not a fabricated pslverr=1"
+    )
+
+
+@cocotb.test()
+async def test_availability_ack_race_wins(dut):
+    await with_timeout(_availability_ack_race_wins_body(dut), 200, "us")
+
+
+# --- 18. back-to-back m_rst_n_i pulses, transaction attempted between them --
+
+async def _availability_back_to_back_resets_workload(dut, s_ns, m_ns):
+    """Two m_rst_n_i pulses with a real transaction attempted between them,
+    then a final round trip after the second pulse recovers -- proves
+    req_toggle_q's continuous clamp-to-0 (while !m_rst_n_s) re-establishes
+    the req_toggle_q == req_seen_q(==0) invariant across EACH pulse
+    independently, so back-to-back resets never leave a toggle-parity
+    collision that corrupts or hangs a later, genuinely new transaction.
+    Also confirms no destination-side write lands for anything spurious
+    across either pulse (completed count check)."""
+    ctx = await _setup(dut, s_ns, m_ns)
+    addr = 0xC00
+
+    # First pulse -- no transaction in flight, just the reset/recover cycle.
+    dut.m_rst_n.value = 0
+    await ClockCycles(dut.m_clk, 5)
+    dut.m_rst_n.value = 1
+    await ClockCycles(dut.m_clk, 3)
+    await ClockCycles(dut.s_clk, 3)
+
+    # Between the two pulses, the destination is genuinely alive -- this
+    # must complete for real.
+    ok = await ctx.s_master.write(addr, 0x11112222)
+    assert ok, "write between back-to-back resets unexpectedly reported pslverr"
+    assert ctx.responder.mem.get(addr) == 0x11112222, "write between resets did not land at the destination"
+
+    # Second pulse.
+    dut.m_rst_n.value = 0
+    await ClockCycles(dut.m_clk, 5)
+    dut.m_rst_n.value = 1
+    await ClockCycles(dut.m_clk, 3)
+    await ClockCycles(dut.s_clk, 3)
+
+    completed_before = ctx.responder.completed
+    data, ok2 = await ctx.s_master.read(addr)
+    assert ok2, "read after second reset pulse reported pslverr"
+    assert data == 0x11112222, (
+        f"read after second reset pulse mismatch: {data:#x} -- possible "
+        "toggle-parity collision across the back-to-back resets"
+    )
+
+    ok3 = await ctx.s_master.write(addr, 0x33334444)
+    assert ok3, "write after second reset pulse reported pslverr"
+    data2, ok4 = await ctx.s_master.read(addr)
+    assert ok4 and data2 == 0x33334444, f"final post-reset round trip mismatch: {data2:#x}"
+
+    assert ctx.responder.completed == completed_before + 3, (
+        f"expected exactly 3 more destination-side completions (read+write+read) "
+        f"after the second pulse, got {ctx.responder.completed - completed_before} "
+        "-- possible extra/missing transfer from toggle-parity drift"
+    )
+    dut._log.info(
+        f"back-to-back resets OK at {s_ns}ns/{m_ns}ns: mid-pulse write landed, "
+        f"post-pulse round trips correct, no toggle-parity drift "
+        f"(completed={ctx.responder.completed})"
+    )
+
+
+@cocotb.test()
+async def test_availability_back_to_back_resets_equal(dut):
+    await with_timeout(_availability_back_to_back_resets_workload(dut, 10, 10), 50, "us")
+
+
+@cocotb.test()
+async def test_availability_back_to_back_resets_wide_ratio(dut):
+    # 18ns/4ns (slow-s/fast-m) -- explicitly called out: this exact ratio
+    # caught a regression in the RTL agent's own first attempt at this fix.
+    await with_timeout(_availability_back_to_back_resets_workload(dut, 18, 4), 50, "us")

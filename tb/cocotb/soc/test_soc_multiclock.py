@@ -4,6 +4,11 @@ Bead: feat/cpu-domain-cdc-gh93 verification task.
 
 DUT: tb_soc_top (same SOC_BOOT_SOURCES as soc_boot / soc_periph / soc_cpu_gpu).
 
+STATUS (2026-08-02): this suite (and soc_pll_multiclock) now PASS. Both bugs
+found and root-caused during GH #93 verification are fixed; the two notes
+below are kept as the historical record of what they were and how they were
+caught, not a description of current (red) behaviour.
+
 BLOCKER NOTE #1 (2026-08-01, commit 66a9af1) — RESOLVED by commit 4398c2e
 ("[Fix] GH #93: keep cpu_gated_clk running through cpu_domain_rst_n"). The
 original symptom (0 committed instructions on every ratio including 1:1,
@@ -16,15 +21,17 @@ enable (pmu_cpu_clk_dis_sync) so the synchroniser's reset-to-0 state means
 (100/100 stability); see design_state.json fix_requests[]
 fr_57f49b7f9b29_20260801_000000_00 (status: fixed).
 
-BLOCKER NOTE #2 (2026-08-01, still open) — a SECOND, DISTINCT bug, found by
-running this suite after fix #1 landed. This suite (and soc_pll_multiclock)
-still FAIL, but no longer with the BLOCKER NOTE #1 symptom -- pc_q now
-correctly loads RESET_PC=0x1000 (confirmed via cpu_gated_clk free-running
-Timer probe: toggles normally, ~1333 edges/2000ns at the 3 ns CPU period;
-pc_q holds exactly 0x1000, never advancing). The new failure is a genuine
-CDC-bridge bug, reproduced and root-caused via a throwaway diagnostic
-(not committed) that scanned cpu_domain_rst_n / core_rst_n / the AR-channel
-handshake signals with 1 ns free-running Timer() sampling from t=0:
+BLOCKER NOTE #2 (2026-08-01) — RESOLVED by commit 7a9f9d4 ("[Fix] GH #93:
+gate cdc_gray_fifo wr_ready_o on wr_rst_n_i (accept-and-drop bug)"). A
+SECOND, DISTINCT bug, found by running this suite after fix #1 landed: this
+suite (and soc_pll_multiclock) still FAILed, but no longer with the BLOCKER
+NOTE #1 symptom -- pc_q correctly loaded RESET_PC=0x1000 (confirmed via a
+cpu_gated_clk free-running Timer probe: toggled normally, ~1333 edges/2000ns
+at the 3 ns CPU period; pc_q held exactly 0x1000, never advancing). The
+failure was a genuine CDC-bridge bug, reproduced and root-caused via a
+throwaway diagnostic (not committed) that scanned cpu_domain_rst_n /
+core_rst_n / the AR-channel handshake signals with 1 ns free-running
+Timer() sampling from t=0:
 
   t=0ns:  cpu_domain_rst_n=0 core_rst_n=0                       (both in reset)
   t=33ns: cpu_domain_rst_n=1 core_rst_n=0                       (CPU domain releases FIRST --
@@ -53,9 +60,11 @@ handshake signals with 1 ns free-running Timer() sampling from t=0:
   held in an unreleased cross-coupled reset). The CPU's AXI master sees
   arvalid && arready complete on that cycle, which is a legal, final AXI4
   handshake -- it never re-issues the request, but the data was silently
-  dropped. This is a genuine accept-and-drop CDC bridge bug: the fix would
-  need `wr_ready_o` (and likely equivalent read-side logic) to also be
-  gated by the reset, e.g. `assign wr_ready_o = wr_rst_n_i && !full_q;`.
+  dropped. This was a genuine accept-and-drop CDC bridge bug; the fix
+  (commit 7a9f9d4) gates `wr_ready_o` on `wr_rst_n_i` directly:
+  `assign wr_ready_o = wr_rst_n_i && !full_q;`. `rd_valid_o` needed no
+  equivalent fix -- `empty_q` already resets to 1'b1, confirmed by
+  inspection, not assumed.
 
   Why this is NEW and could not have been caught by any 1:1-ratio suite,
   including async_axi_fifo's own 22/22 unit tests: at a 1:1 clock ratio
@@ -72,23 +81,25 @@ handshake signals with 1 ns free-running Timer() sampling from t=0:
   release simultaneously once the two clocks genuinely differ.
 
   apb_cdc_bridge (GH #93's other new CDC primitive, exercised by
-  soc_pll_multiclock) is NOT expected to share this exact defect by design:
-  its s_pready_o is `assign s_pready_o = (s_state_q == S_DONE);`, and
-  s_state_q resets to S_IDLE (!= S_DONE) via the same s_rst_sync_n
-  mechanism -- so its APB4 "ready" output correctly reads 0 (NOT ready)
-  while held in the cross-coupled reset, unlike cdc_gray_fifo's
-  `!full_q`-only default. This cannot be confirmed empirically at the SoC
-  level, though, because soc_pll_multiclock's firmware needs the CPU to
-  boot first, and boot itself is blocked by the bug above -- see
-  soc_pll_multiclock's own FAIL (last_pc=0x00000000) in the regression
-  results, which is this SAME bug masking any PLL2/apb_cdc_bridge-specific
-  behaviour, not independent evidence against apb_cdc_bridge.
+  soc_pll_multiclock) did NOT share this exact `!full_q`-only-default
+  defect -- its s_pready_o was `assign s_pready_o = (s_state_q == S_DONE);`,
+  and s_state_q resets to S_IDLE (!= S_DONE), so its APB4 "ready" output
+  correctly read 0 (NOT ready) while held in the cross-coupled reset. It
+  did, however, turn out to have a DIFFERENT, real availability bug of its
+  own once the CPU could boot far enough to actually exercise it: an APB
+  access to the PLL2 window while ONLY the destination (m_rst_n_i) side was
+  in reset used to wedge the source FSM in S_IDLE forever (rst_both_n held
+  s_rst_sync_n low for as long as m_rst_n_i stayed low), hanging the entire
+  fabric APB tree with no timeout. Fixed in commit cb5c780 -- see
+  test_apb_cdc_bridge.py's availability-fix tests (test_availability_*) for
+  the dedicated escape-path coverage this added.
 
-  Until this is fixed, soc_boot / soc_periph / soc_coherency / soc_cpu_gpu
-  DO pass (the CPU's own D$/I$ traffic through u_cpu_axi_cdc at the 1:1
-  ratio never hits the reset-skew window), but BOTH multiclock suites
-  remain red. See design_state.json fix_requests[] for the filed report
-  and the Makefile's soc_all comment.
+  Both bugs above are fixed; `make soc_multiclock` / `make soc_pll_multiclock`
+  now pass. soc_boot / soc_periph / soc_coherency / soc_cpu_gpu also
+  continued to pass throughout (the CPU's own D$/I$ traffic through
+  u_cpu_axi_cdc at the 1:1 ratio never hit the reset-skew window that
+  exposed bug #2). See design_state.json fix_requests[] for the full
+  resolved-bug records.
 
 Purpose: every pre-existing SoC-level cocotb suite drives clk_i (fabric
 domain) and cpu_clk_i (CPU domain, GH #93) at a 1:1 ratio via
@@ -348,7 +359,18 @@ async def test_multiclock_boot_pc_scoreboard(dut):
     mismatches: list = []
     n_expected = len(_GOLDEN_PCS)
 
-    for _ in range(BOOT_TIMEOUT_CYCLES):
+    # CodeRabbit PR #132 finding: breaking out of the loop the instant
+    # len(collected) reached n_expected made the "extra commit" branch below
+    # dead code -- it could never actually fire, so this scoreboard could
+    # never detect over-execution (the CPU spuriously committing one more
+    # instruction than the golden model). Fix: once the n_expected-th commit
+    # lands, keep polling for a bounded grace window (EXTRA_COMMIT_WATCH_CYCLES
+    # more cpu_clk_i cycles) so a genuine extra commit has a real chance to be
+    # observed and recorded as a mismatch before the loop exits successfully.
+    EXTRA_COMMIT_WATCH_CYCLES = 20
+    watch_until_cyc = None
+
+    for cyc in range(BOOT_TIMEOUT_CYCLES):
         await RisingEdge(dut.cpu_clk_i)
         await ReadOnly()
         if dut.commit_valid_o.value:
@@ -361,13 +383,18 @@ async def test_multiclock_boot_pc_scoreboard(dut):
                     mismatches.append(
                         f"commit[{idx}]: got 0x{pc:08x}, expected 0x{exp:08x}"
                     )
+                if idx == n_expected - 1:
+                    # Just received the LAST expected commit -- arm the
+                    # over-execution watch window instead of breaking here.
+                    watch_until_cyc = cyc + EXTRA_COMMIT_WATCH_CYCLES
             else:
                 mismatches.append(
                     f"commit[{idx}]: extra commit 0x{pc:08x} "
-                    f"(expected {n_expected} total)"
+                    f"(expected {n_expected} total) -- over-execution detected"
                 )
-            if len(collected) >= n_expected:
                 break
+        if watch_until_cyc is not None and cyc >= watch_until_cyc:
+            break
 
     if len(collected) < n_expected:
         mismatches.append(

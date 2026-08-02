@@ -64,6 +64,23 @@ DMA_N_WORDS = 4
 
 
 # ---------------------------------------------------------------------------
+# Module-level task handle tracking (coroutine leakage guard per knowledge.md
+# / CodeRabbit PR #132 review — this module only has one @cocotb.test(), so
+# there is no repeat _setup() call today to actually leak against, but the
+# guard is added for consistency with every other SoC-level test module and
+# defensiveness against a future second test being added here).
+# ---------------------------------------------------------------------------
+_active_tasks: list = []
+
+
+def _kill_active_tasks() -> None:
+    global _active_tasks
+    for t in _active_tasks:
+        t.kill()
+    _active_tasks = []
+
+
+# ---------------------------------------------------------------------------
 # Boot-ROM backdoor loader (see test_boot.py for rationale)
 # ---------------------------------------------------------------------------
 _FW_WORDS: list | None = None
@@ -101,7 +118,11 @@ def _load_rom(dut) -> None:
 # ---------------------------------------------------------------------------
 async def _setup(dut) -> None:
     """Start clock, idle inputs, backdoor-load firmware, apply + release reset."""
-    start_soc_clocks(dut, CLK_PERIOD_NS)
+    _kill_active_tasks()
+
+    clk_task, cpu_clk_task = start_soc_clocks(dut, CLK_PERIOD_NS)
+    _active_tasks.append(clk_task)
+    _active_tasks.append(cpu_clk_task)
 
     # Idle all inputs
     drive_soc_reset(dut, True)

@@ -15,11 +15,18 @@ under one MODULE, which this Makefile has no mechanism for without a second
 `make clean && make` sub-invocation — against the grain of every existing
 target here.
 
-BLOCKER NOTE (2026-08-01): like test_soc_multiclock.py, this suite cannot pass
-until the GH #93 CPU-clock-gating boot regression is fixed — it is driven by
-CPU firmware, and the CPU never executes an instruction. See
-test_soc_multiclock.py's BLOCKER NOTE for the full root-cause analysis and
-the reproduction on a pristine worktree at commit 66a9af1.
+STATUS (2026-08-02): this suite PASSES. Two bugs were found and fixed during
+GH #93 verification before it could: (1) a CPU clock-gating/sync-reset race
+that blocked the CPU from booting at all (fixed 4398c2e; this suite's
+firmware never executed a single instruction until then), and (2) a
+cdc_gray_fifo reset-release-skew accept-and-drop bug that blocked the boot
+firmware's SRAM traffic once (1) was fixed (fixed 7a9f9d4). A third,
+apb_cdc_bridge-specific availability bug (an m_rst_n_i-only reset could wedge
+the source-side APB FSM forever) was also found and fixed (cb5c780) — see
+test_apb_cdc_bridge.py's test_availability_* tests for the dedicated
+escape-path coverage that added. See test_soc_multiclock.py's BLOCKER NOTE
+#1/#2 for the full root-cause analysis of the first two, and
+design_state.json fix_requests[] for all three resolved-bug records.
 
 Purpose: verify rtl/soc/apb_cdc_bridge.sv (u_apb_pll2_cdc, the 2-phase
 toggle-handshake APB4 bridge in front of the APB_PLL2 slot at 0x2000_9000 —

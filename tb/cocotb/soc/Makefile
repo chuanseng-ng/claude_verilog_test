@@ -635,9 +635,8 @@ soc_cpu_gpu: soc_boot_lint
 # new firmware. Reuses SOC_BOOT_SOURCES + soc_boot_lint (same DUT/lint gate
 # as soc_boot/soc_periph/soc_cpu_gpu). clean first (stale Vtop guard).
 #
-# NOT in soc_all — see the soc_all comment block for the reason (currently
-# blocked by the GH #93 CPU-clock-gating boot regression; run explicitly with
-# `make soc_multiclock`).
+# In soc_all (see the soc_all comment block) since 2026-08-02, once both
+# bugs it found were fixed. Runnable standalone too: `rtk make soc_multiclock`.
 soc_multiclock: soc_boot_lint
 	$(MAKE) clean
 	$(MAKE) MODULE=test_soc_multiclock TOPLEVEL=tb_soc_top \
@@ -693,26 +692,14 @@ l2_bench: l2_bench_lint
 # partially-written files from a prior build — including large PCH .gch files
 # that $(MAKE) clean sometimes leaves behind — are reliably purged.
 # NOTE: soc_stress and l2_bench are intentionally excluded from soc_all (long runtime).
-# NOTE: soc_multiclock / soc_pll_multiclock (GH #93) are ALSO excluded, but not
-#   for a runtime reason. Update 2026-08-01: the original SoC-does-not-boot-at-all
-#   regression (soc_top.sv CPU clock-gate/sync-reset race) is FIXED (commit
-#   4398c2e) — soc_boot/soc_periph/soc_coherency/soc_cpu_gpu above all pass at the
-#   1:1 ratio these two multiclock suites still cannot reach. A SECOND, distinct
-#   bug — found by these two suites specifically, exactly the kind of finding they
-#   exist to catch — blocks them: rtl/soc/cdc/cdc_gray_fifo.sv's
-#   `wr_ready_o = !full_q` (full_q resets to 0) reports "ready" while the FIFO's
-#   write side is still held in its own cross-coupled reset (rst_both_n =
-#   s_rst_n_i & m_rst_n_i), which can happen for tens of ns at a genuinely
-#   asynchronous ratio because cpu_domain_rst_n and core_rst_n are each gated by
-#   an INDEPENDENT PLL lock counter (16 cycles of each PLL's own, different-period
-#   clock) and so no longer release in lockstep the way they always did at 1:1.
-#   The CPU's very first AXI AR (I$ refill) completes arvalid&&arready against
-#   this false-ready and is silently dropped; the CPU then waits forever for a
-#   response that will never arrive. See test_soc_multiclock.py's "BLOCKER NOTE #2"
-#   docstring and design_state.json fix_requests[] for the full evidence trail
-#   (a 1 ns free-running Timer probe pinpointing the exact ns-level sequence).
-#   Add both targets here once that regression is fixed and their runtime has
-#   been measured.
+# soc_multiclock / soc_pll_multiclock (GH #93) joined soc_all on 2026-08-02.
+#   Both blocking bugs they found (soc_top.sv CPU clock-gate/sync-reset race,
+#   commit 4398c2e; cdc_gray_fifo wr_ready_o reset-release-skew accept-and-drop,
+#   commit 7a9f9d4 — see test_soc_multiclock.py's BLOCKER NOTE #1/#2 for the
+#   full root-cause trail) are fixed, and both suites pass. Runtime measured at
+#   ~95s combined (soc_multiclock ~93s dominated by test_multiclock_periph_loopback's
+#   UART/SPI bit-banging at the 7ns/3ns ratio; soc_pll_multiclock <1s) — comparable
+#   to soc_boot's own 100-attempt stability gate already in this list, so kept in.
 soc_all:
 	rm -rf sim_build && $(MAKE) crossbar
 	rm -rf sim_build && $(MAKE) register_bank
@@ -734,6 +721,8 @@ soc_all:
 	rm -rf sim_build && $(MAKE) soc_coherency
 	rm -rf sim_build && $(MAKE) soc_cpu_gpu
 	rm -rf sim_build && $(MAKE) soc_pll
+	rm -rf sim_build && $(MAKE) soc_multiclock
+	rm -rf sim_build && $(MAKE) soc_pll_multiclock
 
 # soc_integration_batch — compile tb_soc_top ONCE and run the four soc_top integration
 # suites back-to-back without a clean between MODULE changes.
