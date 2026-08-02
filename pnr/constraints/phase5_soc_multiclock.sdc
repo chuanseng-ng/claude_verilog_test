@@ -242,6 +242,51 @@ if {[llength $_gpu_in] > 0} {
 }
 
 ###############################################################################
+# CDC exception coverage guard (GH #94 hardening — CodeRabbit review, PR #132,
+# this file line 389: "add a diagnostic when a CDC exception's hierarchical
+# pattern fails to match"). Shared by every exception in sections 11-13.
+#
+# Every exception below is built from get_pins/get_nets -hierarchical
+# -filter against a specific instance path (e.g.
+# u_cpu_axi_cdc/u_aw_fifo/mem_q). If that path is ever renamed — RTL
+# refactor, or synthesis hierarchy flattening — the pattern silently matches
+# an EMPTY collection, and a bare [llength $x > 0] guard just skips the
+# exception with no trace. Timing then reports clean because OpenSTA was
+# never told the path exists, not because the path is safe. That is exactly
+# the failure class this CDC epic has already hit three times independently
+# (stale soc_top_ports.v stub, stale generated soc_top_sv2v.v, an incomplete
+# sv2v source list) — each would have quietly discarded real design content
+# rather than erroring. A clean STA report is not proof this file did its
+# job; an empty ::cdc_exception_misses list, checked in section 15, is.
+#
+# cdc_require_match reports EVERY miss immediately via a grep-able
+# "CDC-EXCEPTION-MISS:" puts — so a human scanning a long P&R log catches it
+# without knowing in advance to look — and records the miss in
+# ::cdc_exception_misses. Section 15 (end of file) promotes any recorded
+# miss to a hard Tcl `error`, aborting read_sdc, rather than leaving it as a
+# warning-and-continue:
+#   - this file is not yet wired into any config.json SDC pointer (see the
+#     file header STATUS note), so failing loudly here breaks nothing that
+#     currently passes;
+#   - a puts-only warning is exactly what a multi-hour P&R log swallows —
+#     this project's three prior incidents above were each discovered late,
+#     not at the point of failure;
+#   - an unconstrained CDC boundary that STA reports as "clean" is a strictly
+#     worse outcome than an aborted read_sdc that names the missing
+#     instance/pin/net.
+###############################################################################
+set ::cdc_exception_misses {}
+
+proc cdc_require_match {collection description} {
+    if {[llength $collection] > 0} {
+        return 1
+    }
+    puts "ERROR: CDC-EXCEPTION-MISS: ${description} -- pattern matched an EMPTY collection. This CDC timing exception was NOT applied; the boundary is UNCONSTRAINED."
+    lappend ::cdc_exception_misses $description
+    return 0
+}
+
+###############################################################################
 # 11. CPU<->fabric CDC boundary — async_axi_fifo (instance u_cpu_axi_cdc)
 #
 # GH #94 / bead oa7, item 1 of 2 (async_axi_fifo). Per cdc_gray_fifo.sv's
@@ -283,19 +328,19 @@ set _cdc_fifo_dirs {
 foreach {_fifo_inst _fifo_wr_period _fifo_rd_period} $_cdc_fifo_dirs {
     # (1) mem_q combinational read — bounded to the READ (destination) domain
     set _memq [get_nets -hierarchical -filter "name =~ *u_cpu_axi_cdc/${_fifo_inst}/mem_q*" -quiet]
-    if {[llength $_memq] > 0} {
+    if {[cdc_require_match $_memq "sec.11 u_cpu_axi_cdc/${_fifo_inst}/mem_q combinational read"]} {
         set_max_delay $_fifo_rd_period -datapath_only -through $_memq
     }
 
     # (2) u_wr_ptr_to_rd: wr_gray_q -> rd domain — bounded to rd (destination)
     set _wr2rd [get_pins -hierarchical -filter "full_name =~ *u_cpu_axi_cdc/${_fifo_inst}/u_wr_ptr_to_rd/q_o*" -quiet]
-    if {[llength $_wr2rd] > 0} {
+    if {[cdc_require_match $_wr2rd "sec.11 u_cpu_axi_cdc/${_fifo_inst}/u_wr_ptr_to_rd/q_o gray-pointer crossing"]} {
         set_max_delay $_fifo_rd_period -datapath_only -through $_wr2rd
     }
 
     # (3) u_rd_ptr_to_wr: rd_gray_q -> wr domain — bounded to wr (destination)
     set _rd2wr [get_pins -hierarchical -filter "full_name =~ *u_cpu_axi_cdc/${_fifo_inst}/u_rd_ptr_to_wr/q_o*" -quiet]
-    if {[llength $_rd2wr] > 0} {
+    if {[cdc_require_match $_rd2wr "sec.11 u_cpu_axi_cdc/${_fifo_inst}/u_rd_ptr_to_wr/q_o gray-pointer crossing"]} {
         set_max_delay $_fifo_wr_period -datapath_only -through $_rd2wr
     }
 }
@@ -322,30 +367,40 @@ foreach {_fifo_inst _fifo_wr_period _fifo_rd_period} $_cdc_fifo_dirs {
 # CAPTURES it, not the domain it originates in.
 ###############################################################################
 set _req_sync [get_pins -hierarchical -filter "full_name =~ *u_apb_pll2_cdc/u_req_sync/q_o*" -quiet]
-if {[llength $_req_sync] > 0} {
+if {[cdc_require_match $_req_sync "sec.12 u_apb_pll2_cdc/u_req_sync/q_o toggle-bit crossing (s->m)"]} {
     set_max_delay 780 -datapath_only -through $_req_sync
 }
 
 set _ack_sync [get_pins -hierarchical -filter "full_name =~ *u_apb_pll2_cdc/u_ack_sync/q_o*" -quiet]
-if {[llength $_ack_sync] > 0} {
+if {[cdc_require_match $_ack_sync "sec.12 u_apb_pll2_cdc/u_ack_sync/q_o toggle-bit crossing (m->s)"]} {
     set_max_delay 1750 -datapath_only -through $_ack_sync
 }
 
 # cmd_* payload (s=sys_clk -> m=cpu_clk domain capture): bound to cpu_clk
+# NOTE: each of the 4 signals is checked individually via cdc_require_match
+# (not just the aggregate _cmd_nets list) so that if, say, cmd_pstrb_q's
+# path is renamed but the other 3 still match, that ONE miss still gets
+# reported and gates section 15 — an aggregate-only check would have let a
+# partial match through silently as if it were complete.
 set _cmd_nets {}
 foreach _sig {cmd_pwrite_q cmd_paddr_q cmd_pwdata_q cmd_pstrb_q} {
     set _n [get_nets -hierarchical -filter "name =~ *u_apb_pll2_cdc/${_sig}*" -quiet]
-    if {[llength $_n] > 0} { lappend _cmd_nets {*}$_n }
+    if {[cdc_require_match $_n "sec.12 u_apb_pll2_cdc/${_sig} payload read (s->m capture)"]} {
+        lappend _cmd_nets {*}$_n
+    }
 }
 if {[llength $_cmd_nets] > 0} {
     set_max_delay 780 -datapath_only -through $_cmd_nets
 }
 
 # resp_* payload (m=cpu_clk -> s=sys_clk domain capture): bound to sys_clk
+# Same per-signal rationale as cmd_* above.
 set _resp_nets {}
 foreach _sig {resp_prdata_dq resp_pslverr_dq} {
     set _n [get_nets -hierarchical -filter "name =~ *u_apb_pll2_cdc/${_sig}*" -quiet]
-    if {[llength $_n] > 0} { lappend _resp_nets {*}$_n }
+    if {[cdc_require_match $_n "sec.12 u_apb_pll2_cdc/${_sig} payload read (m->s capture)"]} {
+        lappend _resp_nets {*}$_n
+    }
 }
 if {[llength $_resp_nets] > 0} {
     set_max_delay 1750 -datapath_only -through $_resp_nets
@@ -377,13 +432,13 @@ if {[llength $_resp_nets] > 0} {
 # treatment as sections 11-12 (destination = cpu_core_clk = cpu_clk, 780 ps).
 ###############################################################################
 set _rst_sync_pins [get_pins -hierarchical -filter "full_name =~ *u_cpu_pmu_rst_sync*" -quiet]
-if {[llength $_rst_sync_pins] > 0} {
+if {[cdc_require_match $_rst_sync_pins "sec.13 u_cpu_pmu_rst_sync async-clear reset sync (false_path)"]} {
     set_false_path -through $_rst_sync_pins
 }
 
 foreach _sync_inst {u_cpu_clk_dis_sync u_cpu_iso_en_sync u_ext_irq_sync u_timer_irq_sync} {
     set _p [get_pins -hierarchical -filter "full_name =~ *${_sync_inst}/q_o*" -quiet]
-    if {[llength $_p] > 0} {
+    if {[cdc_require_match $_p "sec.13 ${_sync_inst}/q_o single-bit CDC crossing"]} {
         set_max_delay 780 -datapath_only -through $_p
     }
 }
@@ -393,3 +448,37 @@ foreach _sync_inst {u_cpu_clk_dis_sync u_cpu_iso_en_sync u_ext_irq_sync u_timer_
 ###############################################################################
 set_false_path -hold -from [all_inputs]
 set_false_path -hold -to [all_outputs]
+
+###############################################################################
+# 15. CDC exception coverage gate — hard-fail on any section 11-13 miss.
+#
+# See the cdc_require_match proc / ::cdc_exception_misses list defined just
+# before section 11. If ANY exception's get_pins/get_nets pattern matched an
+# empty collection above, a CDC-EXCEPTION-MISS line was already puts'd at
+# the point of failure, naming exactly which instance/pin/net path went
+# missing. This final check promotes that from "logged" to "fatal": abort
+# read_sdc with a nonzero-equivalent Tcl `error` rather than let the file
+# finish reading as if nothing were wrong.
+#
+# This is a deliberate promotion from warning to hard error, not a stylistic
+# default:
+#   - this file is presently unwired into any config.json SDC pointer (see
+#     the file header STATUS note) — failing loudly here breaks nothing that
+#     currently passes today;
+#   - this exact failure class (a pattern that silently matches nothing) has
+#     already cost this CDC epic three separate incidents that were each
+#     found late, not at the point of failure, precisely because nothing
+#     errored; a puts-only warning would reproduce that same failure mode
+#     for the fourth time;
+#   - "STA reports clean" and "the CDC boundary is actually constrained" are
+#     two different claims. Once any exception here goes missing, this file
+#     can no longer tell those two claims apart — the only honest response
+#     left is to refuse to be trusted, not to continue quietly.
+###############################################################################
+if {[llength $::cdc_exception_misses] > 0} {
+    puts "ERROR: CDC-EXCEPTION-MISS: [llength $::cdc_exception_misses] of sections 11-13's CDC timing exceptions failed to match any object:"
+    foreach _miss $::cdc_exception_misses {
+        puts "ERROR: CDC-EXCEPTION-MISS:   - ${_miss}"
+    }
+    error "phase5_soc_multiclock.sdc: [llength $::cdc_exception_misses] CDC timing exception(s) in sections 11-13 matched an EMPTY collection -- see CDC-EXCEPTION-MISS lines above. Fix the referenced instance/pin/net path (RTL rename or hierarchy flattening) before trusting this SDC's STA results."
+}
