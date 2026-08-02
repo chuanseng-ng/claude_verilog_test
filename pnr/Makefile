@@ -112,6 +112,7 @@ DRT_THREADS         ?= 4
 SV2V                ?= /nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1/bin/sv2v
 
 .PHONY: librelane-sky130 librelane-sky130-cpu librelane-nangate45 librelane-asap7 librelane-asap7-gpu librelane-asap7-soc
+.PHONY: check-cdc-timing-asap7-soc
 .PHONY: asap7-soc-sv2v
 .PHONY: librelane-sky130-results librelane-sky130-cpu-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results librelane-asap7-soc-results
 .PHONY: prune-asap7-runs prune-asap7-gpu-runs prune-asap7-soc-runs
@@ -146,6 +147,7 @@ help:
 	@echo "  librelane-asap7-gpu       - Run full LibreLane flow on ASAP7 GPU (pnr/asap7/gpu/), then prune"
 	@echo "  librelane-asap7-soc-synth - Run Yosys synthesis only for ASAP7 SoC (pnr/asap7/soc/) — first-run check"
 	@echo "  librelane-asap7-soc       - Run full LibreLane P&R for ASAP7 SoC (expect 4-8 h), then prune"
+	@echo "  check-cdc-timing-asap7-soc - Post-route CDC budget check (OpenSTA, phase5_soc_multiclock_check.sdc; GH #96)"
 	@echo "  librelane-sky130-results        - Show metrics from latest Sky130 LibreLane run (Phase 3)"
 	@echo "  librelane-sky130-cpu-results    - Show metrics from latest Sky130 CPU Stage 1 run (GH#103)"
 	@echo "  librelane-sky130-soc-results    - Show metrics from latest Sky130 SoC Stage 2 run (GH#104)"
@@ -1064,6 +1066,42 @@ librelane-asap7-soc: asap7-soc-sv2v
 
 librelane-asap7-soc-results:
 	$(call librelane_results,$(LIBRELANE_ASAP7_SOC_DIR))
+
+#----------------------------------------------------------------
+# check-cdc-timing-asap7-soc: post-route CDC budget verification.
+# bead claude_verilog_test-k07 / GH #96. Runs pnr/scripts/check_cdc_timing.tcl
+# (standalone OpenSTA) with pnr/constraints/phase5_soc_multiclock_check.sdc
+# against a routed ASAP7 SoC netlist that actually contains the CDC modules
+# (async_axi_fifo / apb_cdc_bridge / second PLL) -- i.e. a run of
+# pnr/asap7/soc/config.json with PNR_SDC_FILE pointed at
+# phase5_soc_multiclock.sdc. That re-closure run is GH #96 scope; as of
+# 2026-08-02 it has not happened yet, so this target will correctly report
+# "Netlist not found" until it does. Deliberately separate from
+# `make sta` / 07_sta.tcl: this is CDC-boundary-only verification, not a
+# full-chip signoff sweep (see check_cdc_timing.tcl's header for why the
+# two cannot be combined in one SDC read).
+#
+# Usage: make check-cdc-timing-asap7-soc RUN_DIR=/nobackup/asap7_soc_runs/RUN_...
+#        (defaults to the latest run under /nobackup/asap7_soc_runs if unset)
+#----------------------------------------------------------------
+check-cdc-timing-asap7-soc:
+	@CDC_RUN_DIR="$(RUN_DIR)"; \
+	if [ -z "$$CDC_RUN_DIR" ]; then \
+		CDC_RUN_DIR=$$(ls -td /nobackup/asap7_soc_runs/RUN_* 2>/dev/null | head -1); fi; \
+	if [ -z "$$CDC_RUN_DIR" ]; then \
+		echo "No ASAP7 SoC run found under /nobackup/asap7_soc_runs/ and RUN_DIR not set."; \
+		echo "Run 'make librelane-asap7-soc' first (with PNR_SDC_FILE pointed at"; \
+		echo "phase5_soc_multiclock.sdc -- GH #96 scope), or pass RUN_DIR= explicitly."; \
+		exit 1; fi; \
+	echo "=========================================="; \
+	echo "Post-route CDC budget check — ASAP7 SoC"; \
+	echo "  Run dir : $$CDC_RUN_DIR"; \
+	echo "  SDC     : $(LIBRELANE_ASAP7_SOC_DIR)/constraints/phase5_soc_multiclock_check.sdc"; \
+	echo "=========================================="; \
+	cd $(LIBRELANE_ASAP7_SOC_DIR) && \
+		CDC_CHECK_RUN_DIR="$$CDC_RUN_DIR" \
+		CDC_CHECK_SDC="$(abspath constraints/phase5_soc_multiclock_check.sdc)" \
+		sta $(abspath $(PROJECT_ROOT))/pnr/scripts/check_cdc_timing.tcl
 
 # flop-count: DFF breakdown from any LibreLane run's synthesis log.
 # Usage: make flop-count RUN_DIR=asap7/gpu/runs/RUN_2026-05-24_09-12-00

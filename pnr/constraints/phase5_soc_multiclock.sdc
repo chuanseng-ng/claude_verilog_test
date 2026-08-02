@@ -1,7 +1,14 @@
 ###############################################################################
-# phase5_soc_multiclock.sdc — 2-domain timing constraints for soc_top
+# phase5_soc_multiclock.sdc — 2-domain IMPLEMENTATION constraints for soc_top
+# (synthesis / P&R). Post-route CDC budget verification lives in the
+# COMPANION file phase5_soc_multiclock_check.sdc — see the section 11-13
+# note below for why the split exists (bead claude_verilog_test-k07).
 #
 # GH #94 / bead claude_verilog_test-oa7 (epic #90 -> #91..#96).
+# GH #96 / bead claude_verilog_test-k07 (2026-08-02): split this file per
+# OpenTitan precedent after tool-verified evidence that set_max_delay
+# exceptions on CDC paths are NOT honoured once those paths sit between two
+# set_clock_groups -asynchronous groups. See section 11-13 header below.
 #
 # STATUS: authored constraint-only deliverable. NOT yet wired into any
 # config.json PNR_SDC_FILE/SIGNOFF_SDC_FILE/FALLBACK_SDC_FILE pointer — GH #96
@@ -98,11 +105,52 @@ puts "INFO: No generated clock for cpu_core_clk — CTS traces through the CPU-d
 #    -asynchronous tells STA there is no fixed phase relationship: ordinary
 #    setup/hold analysis between the two domains is skipped (would otherwise
 #    report fabricated violations on every unrelated pair of FFs that happen
-#    to sit in different domains). This does NOT, by itself, constrain the
-#    deliberate CDC synchroniser paths that legitimately cross the boundary —
-#    those get explicit set_max_delay -datapath_only overrides in sections
-#    11-13 below, which OpenSTA honours even though the clock groups are
-#    otherwise asynchronous.
+#    to sit in different domains). This IS needed for real synthesis/P&R —
+#    do not remove it from this (implementation) file.
+#
+#    bead claude_verilog_test-k07 (2026-08-02) — TOOL-VERIFIED CORRECTION:
+#    a prior version of this comment claimed set_max_delay -datapath_only
+#    overrides in sections 11-13 "OpenSTA honours even though the clock
+#    groups are otherwise asynchronous." That claim was UNVERIFIED and is
+#    WRONG on both counts, confirmed with OpenSTA 2.6.0 (both the standalone
+#    `sta` binary and OpenROAD's embedded STA engine, same STA-0563 error
+#    code) against a synthetic sky130hd netlist reproducing this exact
+#    two-clock / set_clock_groups -asynchronous / set_max_delay -through
+#    topology:
+#      (a) `-datapath_only` is not an implemented flag of OpenSTA's
+#          set_max_delay/set_min_delay (see sdc/Sdc.tcl: only -rise -fall
+#          -ignore_clock_latency -reset_path -comment are recognised).
+#          read_sdc aborts immediately with "set_max_delay -datapath_only
+#          is not a known keyword or flag" (STA-0563) the instant it hits
+#          the first occurrence — every set_max_delay line at and after
+#          that point (all of sections 11-13, and the section 15 coverage
+#          gate) NEVER EXECUTES. This is not "masked"; it is a hard parse
+#          failure that would have aborted read_sdc for this entire file.
+#      (b) even after removing the illegal flag so the SDC parses, a
+#          side-by-side comparison (identical set_max_delay -through
+#          exception, with vs without set_clock_groups -asynchronous
+#          between the two clocks) shows the exception is NOT applied when
+#          -asynchronous is present: report_checks -to <the excepted pin>
+#          returns "No paths found" under normal path_delay queries, and
+#          only appears under -unconstrained, reported as
+#          "Path Group: unconstrained" / "(Path is unconstrained)" — i.e.
+#          OpenSTA drops the max_delay check entirely rather than applying
+#          it. A further control (set_false_path -from/-to clocks, instead
+#          of set_clock_groups) reproduces the same result even though the
+#          set_max_delay exception is -through-qualified and therefore
+#          "more specific" — confirming the textbook precedence rule
+#          set_false_path > set_max_delay applies REGARDLESS of exception
+#          specificity in this tool, not just when tied (matching this
+#          bead's original hypothesis and the OpenTitan precedent cited
+#          below).
+#    CONSEQUENCE: sections 11-13's CDC budgets cannot live in the same file
+#    as this set_clock_groups -asynchronous declaration and be honoured by
+#    OpenSTA. Per OpenTitan precedent (hw/top_earlgrey/syn/
+#    chip_earlgrey_asic_check_only.sdc), those budgets have been MOVED to
+#    phase5_soc_multiclock_check.sdc, a separate post-route CDC-verification
+#    SDC that intentionally does NOT declare sys_clk/cpu_clk asynchronous
+#    (or false-path them) so the set_max_delay budgets are genuinely timed.
+#    That file is not a substitute for this one at synthesis/P&R time.
 ###############################################################################
 set_clock_groups -name cdc_boundary -asynchronous \
     -group [get_clocks sys_clk] \
@@ -255,262 +303,31 @@ if {[llength $_gpu_in] > 0} {
 }
 
 ###############################################################################
-# CDC exception coverage guard (GH #94 hardening — CodeRabbit review, PR #132,
-# this file line 389: "add a diagnostic when a CDC exception's hierarchical
-# pattern fails to match"). Shared by every exception in sections 11-13.
+# Sections 11-13 (async_axi_fifo gray-pointer/mem_q crossings, apb_cdc_bridge
+# CDC (u_apb_pll2_cdc + u_apb_dbg_cdc), PMU/IRQ single-bit crossings into
+# cpu_core_clk) MOVED to phase5_soc_multiclock_check.sdc.
 #
-# Every exception below is built from get_pins/get_nets -hierarchical
-# -filter against a specific instance path (e.g.
-# u_cpu_axi_cdc/u_aw_fifo/mem_q). If that path is ever renamed — RTL
-# refactor, or synthesis hierarchy flattening — the pattern silently matches
-# an EMPTY collection, and a bare [llength $x > 0] guard just skips the
-# exception with no trace. Timing then reports clean because OpenSTA was
-# never told the path exists, not because the path is safe. That is exactly
-# the failure class this CDC epic has already hit three times independently
-# (stale soc_top_ports.v stub, stale generated soc_top_sv2v.v, an incomplete
-# sv2v source list) — each would have quietly discarded real design content
-# rather than erroring. A clean STA report is not proof this file did its
-# job; an empty ::cdc_exception_misses list, checked in section 15, is.
-#
-# cdc_require_match reports EVERY miss immediately via a grep-able
-# "CDC-EXCEPTION-MISS:" puts — so a human scanning a long P&R log catches it
-# without knowing in advance to look — and records the miss in
-# ::cdc_exception_misses. Section 15 (end of file) promotes any recorded
-# miss to a hard Tcl `error`, aborting read_sdc, rather than leaving it as a
-# warning-and-continue:
-#   - this file is not yet wired into any config.json SDC pointer (see the
-#     file header STATUS note), so failing loudly here breaks nothing that
-#     currently passes;
-#   - a puts-only warning is exactly what a multi-hour P&R log swallows —
-#     this project's three prior incidents above were each discovered late,
-#     not at the point of failure;
-#   - an unconstrained CDC boundary that STA reports as "clean" is a strictly
-#     worse outcome than an aborted read_sdc that names the missing
-#     instance/pin/net.
+# bead claude_verilog_test-k07 (2026-08-02): those set_max_delay exceptions
+# cannot be honoured by OpenSTA in the same file as section 3's
+# set_clock_groups -asynchronous (see section 3's header note above for the
+# tool-verified evidence — a literal OpenSTA/OpenROAD read_sdc parse abort
+# from the unsupported -datapath_only flag, and a proven "set_false_path
+# beats set_max_delay regardless of -through specificity" precedence result
+# even after that flag is removed). This file keeps set_clock_groups
+# -asynchronous because it is still correct and necessary for real
+# synthesis/P&R (suppresses fabricated setup/hold checks between the two
+# genuinely-unrelated clock domains) — it simply can no longer also carry
+# the CDC budget exceptions. phase5_soc_multiclock_check.sdc carries them,
+# deliberately WITHOUT any clock-group/false-path declaration between
+# sys_clk and cpu_clk, so the set_max_delay budgets are genuinely timed by
+# OpenSTA when read against a post-route netlist for targeted
+# report_checks -to/-through CDC-path queries (OpenTitan precedent:
+# hw/top_earlgrey/syn/chip_earlgrey_asic_check_only.sdc). GH #96 owns
+# wiring both files into the actual re-closure P&R + post-route check run;
+# pnr/scripts/check_cdc_timing.tcl + `make check-cdc-timing-asap7-soc`
+# (pnr/Makefile) is the invocation point once a routed netlist with the
+# CDC modules exists.
 ###############################################################################
-set ::cdc_exception_misses {}
-
-proc cdc_require_match {collection description} {
-    if {[llength $collection] > 0} {
-        return 1
-    }
-    puts "ERROR: CDC-EXCEPTION-MISS: ${description} -- pattern matched an EMPTY collection. This CDC timing exception was NOT applied; the boundary is UNCONSTRAINED."
-    lappend ::cdc_exception_misses $description
-    return 0
-}
-
-###############################################################################
-# 11. CPU<->fabric CDC boundary — async_axi_fifo (instance u_cpu_axi_cdc)
-#
-# GH #94 / bead oa7, item 1 of 2 (async_axi_fifo). Per cdc_gray_fifo.sv's
-# header, three classes of path genuinely cross the clock boundary inside
-# EACH of the 5 channel FIFOs (AW/W/B/AR/R):
-#   (1) the mem_q write-clk -> read-domain COMBINATIONAL read (storage array,
-#       no capture register of its own within the FIFO — see the header's
-#       "mem_q is a genuine ASYNCHRONOUS DATA PATH" warning);
-#   (2) the u_wr_ptr_to_rd registered gray-pointer crossing (cdc_2ff_sync);
-#   (3) the u_rd_ptr_to_wr registered gray-pointer crossing (cdc_2ff_sync).
-# Because section 3 declares sys_clk/cpu_clk asynchronous, OpenSTA does not
-# analyze setup/hold across them by default; these set_max_delay
-# -datapath_only overrides are additive exceptions that still apply (OpenSTA
-# honours explicit exceptions even between clock groups otherwise marked
-# asynchronous) and give the router an actual budget instead of leaving the
-# path completely unconstrained. -datapath_only means only the maximum delay
-# is checked (no clock uncertainty/skew term, which is meaningless between
-# two free-running clocks). Each is bounded to ONE PERIOD OF THE PATH'S
-# DESTINATION DOMAIN: generous relative to the real settling requirement
-# (empty_q/full_q already gate visibility one cycle behind the raw compare —
-# see cdc_gray_fifo.sv), but tight enough that P&R still optimises it.
-#
-#   AW/W/AR fifos: wr_clk_i = s_clk_i = cpu_clk (780 ps)
-#                  rd_clk_i = m_clk_i = sys_clk (1750 ps)
-#   B/R    fifos: wr_clk_i = m_clk_i = sys_clk (1750 ps)
-#                  rd_clk_i = s_clk_i = cpu_clk (780 ps)
-# (see async_axi_fifo.sv's per-channel instantiations for the wr/rd wiring;
-# s_clk_i is the CPU domain and m_clk_i is the fabric domain throughout that
-# module, despite the confusable "s"/"m" naming — see its header.)
-###############################################################################
-set _cdc_fifo_dirs {
-    u_aw_fifo 780  1750
-    u_w_fifo  780  1750
-    u_ar_fifo 780  1750
-    u_b_fifo  1750 780
-    u_r_fifo  1750 780
-}
-
-foreach {_fifo_inst _fifo_wr_period _fifo_rd_period} $_cdc_fifo_dirs {
-    # (1) mem_q combinational read — bounded to the READ (destination) domain
-    set _memq [get_nets -hierarchical -filter "name =~ *u_cpu_axi_cdc/${_fifo_inst}/mem_q*" -quiet]
-    if {[cdc_require_match $_memq "sec.11 u_cpu_axi_cdc/${_fifo_inst}/mem_q combinational read"]} {
-        set_max_delay $_fifo_rd_period -datapath_only -through $_memq
-    }
-
-    # (2) u_wr_ptr_to_rd: wr_gray_q -> rd domain — bounded to rd (destination)
-    set _wr2rd [get_pins -hierarchical -filter "full_name =~ *u_cpu_axi_cdc/${_fifo_inst}/u_wr_ptr_to_rd/q_o*" -quiet]
-    if {[cdc_require_match $_wr2rd "sec.11 u_cpu_axi_cdc/${_fifo_inst}/u_wr_ptr_to_rd/q_o gray-pointer crossing"]} {
-        set_max_delay $_fifo_rd_period -datapath_only -through $_wr2rd
-    }
-
-    # (3) u_rd_ptr_to_wr: rd_gray_q -> wr domain — bounded to wr (destination)
-    set _rd2wr [get_pins -hierarchical -filter "full_name =~ *u_cpu_axi_cdc/${_fifo_inst}/u_rd_ptr_to_wr/q_o*" -quiet]
-    if {[cdc_require_match $_rd2wr "sec.11 u_cpu_axi_cdc/${_fifo_inst}/u_rd_ptr_to_wr/q_o gray-pointer crossing"]} {
-        set_max_delay $_fifo_wr_period -datapath_only -through $_rd2wr
-    }
-}
-
-###############################################################################
-# 12. APB_PLL2 CDC bridge — apb_cdc_bridge (instance u_apb_pll2_cdc)
-#
-# GH #94 / bead oa7, item 2 of 2 (apb_cdc_bridge) — bead oa7 exists
-# specifically because this second module, sitting on a single low-traffic
-# APB slot rather than the main AXI datapath, is easy to forget. Per
-# apb_cdc_bridge.sv's header, six paths cross the boundary:
-#   - req_toggle_q  (s -> m, single bit, through u_req_sync)
-#   - ack_toggle_q  (m -> s, single bit, through u_ack_sync)
-#   - cmd_pwrite_q / cmd_paddr_q / cmd_pwdata_q / cmd_pstrb_q
-#     (s -> m, 4 combinational payload reads, captured by the m-domain FSM)
-#   - resp_prdata_dq / resp_pslverr_dq
-#     (m -> s, 2 combinational payload reads, captured by the s-domain FSM)
-# s_clk_i = core_clk (sys_clk, 1750 ps); m_clk_i = cpu_clk_i (cpu_clk,
-# 780 ps) — see soc_top.sv's u_apb_pll2_cdc instantiation (m_clk_i is tied to
-# the CPU-domain PLL's raw reference cpu_clk_i, not cpu_core_clk — matches
-# u_cpu_pll_sub's own bootstrap rule that its APB regs run on the raw
-# reference). Same -datapath_only / one-destination-period rationale as
-# section 11: each bus/bit is bounded to the period of the domain that
-# CAPTURES it, not the domain it originates in.
-###############################################################################
-set _req_sync [get_pins -hierarchical -filter "full_name =~ *u_apb_pll2_cdc/u_req_sync/q_o*" -quiet]
-if {[cdc_require_match $_req_sync "sec.12 u_apb_pll2_cdc/u_req_sync/q_o toggle-bit crossing (s->m)"]} {
-    set_max_delay 780 -datapath_only -through $_req_sync
-}
-
-set _ack_sync [get_pins -hierarchical -filter "full_name =~ *u_apb_pll2_cdc/u_ack_sync/q_o*" -quiet]
-if {[cdc_require_match $_ack_sync "sec.12 u_apb_pll2_cdc/u_ack_sync/q_o toggle-bit crossing (m->s)"]} {
-    set_max_delay 1750 -datapath_only -through $_ack_sync
-}
-
-# cmd_* payload (s=sys_clk -> m=cpu_clk domain capture): bound to cpu_clk
-# NOTE: each of the 4 signals is checked individually via cdc_require_match
-# (not just the aggregate _cmd_nets list) so that if, say, cmd_pstrb_q's
-# path is renamed but the other 3 still match, that ONE miss still gets
-# reported and gates section 15 — an aggregate-only check would have let a
-# partial match through silently as if it were complete.
-set _cmd_nets {}
-foreach _sig {cmd_pwrite_q cmd_paddr_q cmd_pwdata_q cmd_pstrb_q} {
-    set _n [get_nets -hierarchical -filter "name =~ *u_apb_pll2_cdc/${_sig}*" -quiet]
-    if {[cdc_require_match $_n "sec.12 u_apb_pll2_cdc/${_sig} payload read (s->m capture)"]} {
-        lappend _cmd_nets {*}$_n
-    }
-}
-if {[llength $_cmd_nets] > 0} {
-    set_max_delay 780 -datapath_only -through $_cmd_nets
-}
-
-# resp_* payload (m=cpu_clk -> s=sys_clk domain capture): bound to sys_clk
-# Same per-signal rationale as cmd_* above.
-set _resp_nets {}
-foreach _sig {resp_prdata_dq resp_pslverr_dq} {
-    set _n [get_nets -hierarchical -filter "name =~ *u_apb_pll2_cdc/${_sig}*" -quiet]
-    if {[cdc_require_match $_n "sec.12 u_apb_pll2_cdc/${_sig} payload read (m->s capture)"]} {
-        lappend _resp_nets {*}$_n
-    }
-}
-if {[llength $_resp_nets] > 0} {
-    set_max_delay 1750 -datapath_only -through $_resp_nets
-}
-
-###############################################################################
-# 12a. APB debug-port CDC bridge — apb_cdc_bridge (instance u_apb_dbg_cdc)
-#
-# GH #95 fix (bead claude_verilog_test-eg2): the top-level apb_* debug ports
-# fed u_cpu directly and unsynchronised until this fix — the cdc_snitch
-# BAD=233 finding closed by inserting u_apb_dbg_cdc between them. Same IP,
-# same six crossing paths, same rationale as section 12 (u_apb_pll2_cdc)
-# above — mirrored here rather than duplicated in prose:
-#   - req_toggle_q  (s -> m, single bit, through u_req_sync)
-#   - ack_toggle_q  (m -> s, single bit, through u_ack_sync)
-#   - cmd_pwrite_q / cmd_paddr_q / cmd_pwdata_q / cmd_pstrb_q
-#     (s -> m, 4 combinational payload reads, captured by the m-domain FSM)
-#   - resp_prdata_dq / resp_pslverr_dq
-#     (m -> s, 2 combinational payload reads, captured by the s-domain FSM)
-# s_clk_i = core_clk (sys_clk, 1750 ps); m_clk_i = cpu_gated_clk (cpu_clk,
-# 780 ps) — see soc_top.sv's u_apb_dbg_cdc instantiation. Unlike
-# u_apb_pll2_cdc (m-face tied to the raw cpu_clk_i reference for a bootstrap
-# reason that does not apply here), this bridge's m-face is the GATED CPU
-# clock, so a PMU-gated CPU correctly stalls debug accesses — see
-# soc_top.sv's u_apb_dbg_cdc header note. Same -datapath_only / one-
-# destination-period rationale as sections 11-12.
-###############################################################################
-set _dbg_req_sync [get_pins -hierarchical -filter "full_name =~ *u_apb_dbg_cdc/u_req_sync/q_o*" -quiet]
-if {[cdc_require_match $_dbg_req_sync "sec.12a u_apb_dbg_cdc/u_req_sync/q_o toggle-bit crossing (s->m)"]} {
-    set_max_delay 780 -datapath_only -through $_dbg_req_sync
-}
-
-set _dbg_ack_sync [get_pins -hierarchical -filter "full_name =~ *u_apb_dbg_cdc/u_ack_sync/q_o*" -quiet]
-if {[cdc_require_match $_dbg_ack_sync "sec.12a u_apb_dbg_cdc/u_ack_sync/q_o toggle-bit crossing (m->s)"]} {
-    set_max_delay 1750 -datapath_only -through $_dbg_ack_sync
-}
-
-# cmd_* payload (s=sys_clk -> m=cpu_clk domain capture): bound to cpu_clk
-set _dbg_cmd_nets {}
-foreach _sig {cmd_pwrite_q cmd_paddr_q cmd_pwdata_q cmd_pstrb_q} {
-    set _n [get_nets -hierarchical -filter "name =~ *u_apb_dbg_cdc/${_sig}*" -quiet]
-    if {[cdc_require_match $_n "sec.12a u_apb_dbg_cdc/${_sig} payload read (s->m capture)"]} {
-        lappend _dbg_cmd_nets {*}$_n
-    }
-}
-if {[llength $_dbg_cmd_nets] > 0} {
-    set_max_delay 780 -datapath_only -through $_dbg_cmd_nets
-}
-
-# resp_* payload (m=cpu_clk -> s=sys_clk domain capture): bound to sys_clk
-set _dbg_resp_nets {}
-foreach _sig {resp_prdata_dq resp_pslverr_dq} {
-    set _n [get_nets -hierarchical -filter "name =~ *u_apb_dbg_cdc/${_sig}*" -quiet]
-    if {[cdc_require_match $_n "sec.12a u_apb_dbg_cdc/${_sig} payload read (m->s capture)"]} {
-        lappend _dbg_resp_nets {*}$_n
-    }
-}
-if {[llength $_dbg_resp_nets] > 0} {
-    set_max_delay 1750 -datapath_only -through $_dbg_resp_nets
-}
-
-###############################################################################
-# 13. PMU/IRQ single-bit crossings into the cpu_core_clk domain
-#
-# soc_top.sv sources pmu_cpu_clk_en / pmu_cpu_iso_en / pmu_cpu_rst_n and
-# ext_irq / timer_irq in the core_clk (sys_clk) domain and synchronises each
-# into cpu_core_clk (== cpu_clk_i in STUB PLL mode, so shares cpu_clk's
-# create_clock) via a dedicated instance:
-#   u_cpu_clk_dis_sync  (cdc_2ff_sync, d_i = ~pmu_cpu_clk_en)
-#   u_cpu_iso_en_sync   (cdc_2ff_sync, d_i = pmu_cpu_iso_en)
-#   u_cpu_pmu_rst_sync  (cdc_reset_sync, rst_n_i = pmu_cpu_rst_n)
-#   u_ext_irq_sync      (cdc_2ff_sync, d_i = ext_irq)
-#   u_timer_irq_sync    (cdc_2ff_sync, d_i = timer_irq)
-#
-# u_cpu_pmu_rst_sync is DELIBERATELY excluded from the max_delay treatment
-# below and given a false_path instead: cdc_reset_sync's rst_n_i is consumed
-# only as an ASYNCHRONOUS CLEAR (negedge-sensitive, see cdc_reset_sync.sv) —
-# by construction it has no setup/hold relationship to any clock, so a
-# max_delay exception (which implies a setup-style data-arrival check) would
-# be the wrong exception type. This mirrors section 4's treatment of the
-# primary chip resets, not sections 11-12's data-path treatment.
-#
-# The other four are genuine single-bit DATA crossings through cdc_2ff_sync
-# and get the same one-destination-period set_max_delay -datapath_only
-# treatment as sections 11-12 (destination = cpu_core_clk = cpu_clk, 780 ps).
-###############################################################################
-set _rst_sync_pins [get_pins -hierarchical -filter "full_name =~ *u_cpu_pmu_rst_sync*" -quiet]
-if {[cdc_require_match $_rst_sync_pins "sec.13 u_cpu_pmu_rst_sync async-clear reset sync (false_path)"]} {
-    set_false_path -through $_rst_sync_pins
-}
-
-foreach _sync_inst {u_cpu_clk_dis_sync u_cpu_iso_en_sync u_ext_irq_sync u_timer_irq_sync} {
-    set _p [get_pins -hierarchical -filter "full_name =~ *${_sync_inst}/q_o*" -quiet]
-    if {[cdc_require_match $_p "sec.13 ${_sync_inst}/q_o single-bit CDC crossing"]} {
-        set_max_delay 780 -datapath_only -through $_p
-    }
-}
 
 ###############################################################################
 # 14. I/O hold false-paths — suppress spurious port hold violations.
@@ -518,36 +335,7 @@ foreach _sync_inst {u_cpu_clk_dis_sync u_cpu_iso_en_sync u_ext_irq_sync u_timer_
 set_false_path -hold -from [all_inputs]
 set_false_path -hold -to [all_outputs]
 
-###############################################################################
-# 15. CDC exception coverage gate — hard-fail on any section 11-13 miss.
-#
-# See the cdc_require_match proc / ::cdc_exception_misses list defined just
-# before section 11. If ANY exception's get_pins/get_nets pattern matched an
-# empty collection above, a CDC-EXCEPTION-MISS line was already puts'd at
-# the point of failure, naming exactly which instance/pin/net path went
-# missing. This final check promotes that from "logged" to "fatal": abort
-# read_sdc with a nonzero-equivalent Tcl `error` rather than let the file
-# finish reading as if nothing were wrong.
-#
-# This is a deliberate promotion from warning to hard error, not a stylistic
-# default:
-#   - this file is presently unwired into any config.json SDC pointer (see
-#     the file header STATUS note) — failing loudly here breaks nothing that
-#     currently passes today;
-#   - this exact failure class (a pattern that silently matches nothing) has
-#     already cost this CDC epic three separate incidents that were each
-#     found late, not at the point of failure, precisely because nothing
-#     errored; a puts-only warning would reproduce that same failure mode
-#     for the fourth time;
-#   - "STA reports clean" and "the CDC boundary is actually constrained" are
-#     two different claims. Once any exception here goes missing, this file
-#     can no longer tell those two claims apart — the only honest response
-#     left is to refuse to be trusted, not to continue quietly.
-###############################################################################
-if {[llength $::cdc_exception_misses] > 0} {
-    puts "ERROR: CDC-EXCEPTION-MISS: [llength $::cdc_exception_misses] of sections 11-13's CDC timing exceptions failed to match any object:"
-    foreach _miss $::cdc_exception_misses {
-        puts "ERROR: CDC-EXCEPTION-MISS:   - ${_miss}"
-    }
-    error "phase5_soc_multiclock.sdc: [llength $::cdc_exception_misses] CDC timing exception(s) in sections 11-13 matched an EMPTY collection -- see CDC-EXCEPTION-MISS lines above. Fix the referenced instance/pin/net path (RTL rename or hierarchy flattening) before trusting this SDC's STA results."
-}
+# (Former section 15, the CDC exception coverage hard-fail gate, moved to
+# phase5_soc_multiclock_check.sdc along with the cdc_require_match proc and
+# the sections 11-13 exceptions it guards — this file no longer defines any
+# CDC exceptions for it to guard.)

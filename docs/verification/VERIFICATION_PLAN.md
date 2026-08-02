@@ -749,9 +749,18 @@ Load-bearing cases, none of which may be dropped:
 **Not simulatable — do not mistake a green run for silicon confidence.** Verilator is 2-state and
 zero-delay, so metastability, a missing synchronizer stage, or a raw binary pointer crossing would
 all pass. The real mitigations are structural: `(* magic_cdc *)` on the primitives feeding GH #95's
-`cdc_snitch` BAD=0 gate, GH #94's `set_clock_groups -asynchronous` plus `set_max_delay
--datapath_only` on the `mem_q` read and the two pointer crossings, and the PR review checklist in
-the module headers.
+`cdc_snitch` BAD=0 gate, and — since bead claude_verilog_test-k07 (2026-08-02) —
+`pnr/constraints/phase5_soc_multiclock.sdc`'s `set_clock_groups -asynchronous` (for real
+synthesis/P&R) PLUS a separate `pnr/constraints/phase5_soc_multiclock_check.sdc` carrying
+`set_max_delay` (no `-datapath_only` — OpenSTA does not implement that flag; tool-verified, see
+that file's header) on the `mem_q` read and the two pointer crossings, read post-route for targeted
+CDC budget verification only. The original single-file design (one SDC with both
+`set_clock_groups -asynchronous` and `set_max_delay -datapath_only`) was tool-verified to never
+apply those budgets at all — OpenSTA aborts `read_sdc` on the unrecognised `-datapath_only` flag,
+and even with that flag removed, `set_clock_groups -asynchronous` (or an equivalent
+`set_false_path` between the two clocks) suppresses the `set_max_delay` exception outright,
+regardless of its `-through` specificity — hence the OpenTitan-precedent split. The PR review
+checklist in the module headers is unaffected by this correction.
 
 **Coverage gap to close in #92:** with `PLL_IMPL="STUB"`, `core_clk == clk_i`, so after #93 the
 `soc_all` integration suites exercise the bridge at ratio 1:1 and contribute **zero** CDC coverage.
