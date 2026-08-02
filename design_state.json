@@ -2,42 +2,49 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-07-31T16:04:20.907058+00:00",
+  "updated_at": "2026-08-02T02:02:44.967986+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
-      "rtl/soc/axi_pkg.sv",
-      "rtl/soc/soc_addr_map_pkg.sv",
-      "rtl/soc/soc_periph_map_pkg.sv",
-      "rtl/soc/axi4_crossbar.sv",
-      "rtl/soc/axi_lite_register_bank.sv",
-      "rtl/soc/axi_lite_interconnect.sv",
-      "rtl/soc/sram_controller.sv",
-      "rtl/soc/boot_rom.sv",
-      "rtl/soc/axi4_to_axilite.sv",
-      "rtl/soc/axilite_to_axi4.sv",
-      "rtl/soc/pll/pll_clkgen_stub.sv",
-      "rtl/soc/pll/pll_clkgen.sv",
-      "rtl/soc/pll/pll_rnm.sv",
-      "rtl/soc/pll/pll_apb_regs.sv",
-      "rtl/soc/pll/pll_subsystem.sv",
-      "rtl/soc/apb_interconnect.sv",
-      "rtl/soc/soc_top.sv",
-      "rtl/mem/rv32i_icache.sv",
-      "rtl/mem/rv32i_dcache.sv",
-      "rtl/mem/rv32i_cache_arbiter.sv",
+      "rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
       "rtl/cpu/core/rv32i_core.sv",
+      "rtl/cpu/core/rv32i_csr_file.sv",
       "rtl/cpu/rv32i_cpu_top.sv",
+      "rtl/mem/rv32i_cache_arbiter.sv",
+      "rtl/mem/rv32i_clock_gate.sv",
+      "rtl/mem/rv32i_dcache.sv",
+      "rtl/mem/rv32i_icache.sv",
       "rtl/periph/dma_engine.sv",
       "rtl/periph/interrupt_controller.sv",
+      "rtl/periph/spi_controller.sv",
       "rtl/periph/timer.sv",
       "rtl/periph/uart_controller.sv",
-      "rtl/periph/spi_controller.sv",
-      "rtl/cpu/core/rv32i_csr_file.sv",
-      "rtl/cpu/core/pipeline/rv32i_pipeline_if.sv",
       "rtl/soc/apb4_register_bank.sv",
+      "rtl/soc/apb_cdc_bridge.sv",
+      "rtl/soc/apb_interconnect.sv",
+      "rtl/soc/async_axi_fifo.sv",
+      "rtl/soc/axi4_crossbar.sv",
+      "rtl/soc/axi4_to_axilite.sv",
+      "rtl/soc/axi_lite_interconnect.sv",
+      "rtl/soc/axi_lite_register_bank.sv",
+      "rtl/soc/axi_pkg.sv",
       "rtl/soc/axil_to_apb.sv",
-      "rtl/soc/soc_bus.sv"
+      "rtl/soc/axilite_to_axi4.sv",
+      "rtl/soc/boot_rom.sv",
+      "rtl/soc/cdc/cdc_2ff_sync.sv",
+      "rtl/soc/cdc/cdc_gray_fifo.sv",
+      "rtl/soc/cdc/cdc_reset_sync.sv",
+      "rtl/soc/pll/pll_apb_regs.sv",
+      "rtl/soc/pll/pll_clkgen.sv",
+      "rtl/soc/pll/pll_clkgen_stub.sv",
+      "rtl/soc/pll/pll_rnm.sv",
+      "rtl/soc/pll/pll_subsystem.sv",
+      "rtl/soc/pmu.sv",
+      "rtl/soc/soc_addr_map_pkg.sv",
+      "rtl/soc/soc_bus.sv",
+      "rtl/soc/soc_periph_map_pkg.sv",
+      "rtl/soc/soc_top.sv",
+      "rtl/soc/sram_controller.sv"
     ],
     "lint_clean": true,
     "cdc_clean": false,
@@ -45,8 +52,8 @@
   },
   "verification_status": {
     "coverage_pct": 100.0,
-    "sim_signoff": false,
-    "signoff": false,
+    "sim_signoff": true,
+    "signoff": true,
     "sram_sky130_soc_all_regression": {
       "status": "PASS",
       "total_tests": 110,
@@ -68,6 +75,101 @@
       "results_xml": "/home/neuromorphic/Downloads/Github/claude_verilog_test/tb/cocotb/soc/results.xml",
       "purpose": "Confirm go9 (D-cache MMIO bypass) fix + k12 (DMA/periph loopback test) functional closure",
       "checked_at": "2026-07-27T22:16:43.472838Z"
+    },
+    "gh93_cdc_verification": {
+      "status": "SIGNED OFF",
+      "reason": "Signed off 2026-08-01 -- see final_regression (soc_all 159/159, soc_multiclock 4/4, soc_pll_multiclock 1/1). Both blocking fix_requests resolved: fr_57f49b7f9b29 (cpu_gated_clk stopped during CPU reset, fixed 4398c2e) and fr_280f3ac18c66 (cdc_gray_fifo wr_ready_o asserted in reset, fixed 7a9f9d4).",
+      "fix_request_id": "fr_280f3ac18c66_20260801_000001_00",
+      "tb_infra_status": "complete, lint-clean, all passing: cpu_clk_i/cpu_rst_n_i real ports on tb_soc_top.sv/tb_soc_pll.sv, soc_clocks.py shared helper, 8 suites retrofitted (zero behaviour change), apb_cdc_bridge unit suite 15/15, soc_multiclock 4/4 and soc_pll_multiclock 1/1 at a 7ns/3ns coprime ratio.",
+      "checked_at": "2026-08-01T15:29:22.974567+00:00",
+      "soc_all_regression": {
+        "status": "PASS",
+        "total_tests": 159,
+        "pass": 159,
+        "fail": 0,
+        "skip": 0,
+        "suites": 21,
+        "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_all_run.log",
+        "checked_at": "2026-08-01T16:28:27.576477+00:00"
+      },
+      "soc_multiclock": {
+        "status": "FAIL",
+        "total_tests": 4,
+        "pass": 0,
+        "fail": 4,
+        "skip": 0,
+        "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_multiclock.log",
+        "fix_request_id": "fr_280f3ac18c66_20260801_000001_00",
+        "checked_at": "2026-08-01T16:28:27.576477+00:00"
+      },
+      "soc_pll_multiclock": {
+        "status": "FAIL",
+        "total_tests": 1,
+        "pass": 0,
+        "fail": 1,
+        "skip": 0,
+        "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_pll_multiclock.log",
+        "fix_request_id": "fr_280f3ac18c66_20260801_000001_00",
+        "checked_at": "2026-08-01T16:28:27.576477+00:00"
+      },
+      "prior_gh93_fix_request_id": "fr_57f49b7f9b29_20260801_000000_00 (status: fixed)",
+      "final_regression": {
+        "soc_all": {
+          "status": "PASS",
+          "total_tests": 159,
+          "pass": 159,
+          "fail": 0,
+          "skip": 0,
+          "suites": 21,
+          "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_all_run2.log"
+        },
+        "async_axi_fifo": {
+          "status": "PASS",
+          "total_tests": 22,
+          "pass": 22,
+          "fail": 0,
+          "skip": 0,
+          "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/async_fifo_full.log"
+        },
+        "soc_multiclock": {
+          "status": "PASS",
+          "total_tests": 4,
+          "pass": 4,
+          "fail": 0,
+          "skip": 0,
+          "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_multiclock2.log"
+        },
+        "soc_pll_multiclock": {
+          "status": "PASS",
+          "total_tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "skip": 0,
+          "log": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_pll_multiclock2.log"
+        },
+        "apb_cdc_bridge": {
+          "status": "PASS",
+          "total_tests": 15,
+          "pass": 15,
+          "fail": 0,
+          "skip": 0
+        },
+        "checked_at": "2026-08-01T17:18:35.594706+00:00"
+      },
+      "fix_requests_resolved": [
+        "fr_57f49b7f9b29_20260801_000000_00 (CPU clock-gate/sync-reset race, soc_top.sv, fixed 4398c2e)",
+        "fr_280f3ac18c66_20260801_000001_00 (cdc_gray_fifo wr_ready_o reset-release-skew accept-and-drop, fixed 7a9f9d4)"
+      ],
+      "testbench_fix": "test_async_axi_fifo.py test_reset_while_busy_s_side: kill-timing race exposed (not caused) by the wr_ready_o fix -- corrected to kill the interrupted master task at reset assertion instead of after recovery, preserving the hard-flush property under test (commit 8db3fe3)",
+      "residual_gaps": [
+        "Metastability injection -- not modelable in Verilator/cocotb (no delta-cycle randomization at a synchronizer's setup/hold boundary)",
+        "PMU-driven live CPU power-cycling across domains -- not exercised (flagged separately by the soc_top.sv fix commit as a narrower, out-of-scope residual risk: pmu.sv releases rst_n_w one core_clk cycle before ungating clk_en_w on the power-up path)",
+        "timer_irq -- never exercised by any reused firmware in soc_multiclock; u_timer_irq_sync (cdc_2ff_sync, same structure as u_ext_irq_sync) is unexercised at the multiclock ratio",
+        "GH #94 (multi-clock SDC): set_max_delay -datapath_only still needed on cdc_gray_fifo's mem_q read and both gray-pointer crossings, and on apb_cdc_bridge's 4 payload buses + 2 toggle crossings -- unaffected by this campaign's fixes, still open",
+        "GH #95 (cdc_snitch BAD=0 gate): both bugs this campaign found share a signature -- a reset value that advertises availability while cross-domain readiness has not actually been established (clock-enable sync defaulting to 'disabled', ready output defaulting to 'not full'/'ready') -- invisible whenever both domains reset together, which is every scenario before GH #93. Recommend cdc_snitch explicitly check for this class: any handshake-ready/valid output whose reset value asserts availability must be verified to also depend (directly or via the same-domain synchronized reset) on that domain's own reset signal, not just on its own control-array flags."
+      ],
+      "historical_reason_pre_fix": "SoC boot regression (see fix_requests[] entry) blocks soc_boot/soc_periph/soc_coherency/soc_cpu_gpu/soc_pll/soc_multiclock/soc_pll_multiclock",
+      "historical_tb_infra_status_pre_fix": "complete, lint-clean: cpu_clk_i/cpu_rst_n_i real ports on tb_soc_top.sv/tb_soc_pll.sv, soc_clocks.py shared helper, 8 suites retrofitted (zero behaviour change), apb_cdc_bridge unit suite 15/15 PASS (unaffected, does not instantiate soc_top), soc_multiclock + soc_pll_multiclock authored and lint-clean but blocked from passing until the RTL fix lands"
     }
   },
   "pipeline_session_id": null,
@@ -893,6 +995,114 @@
       "suggested_next_step": "proceed",
       "reason": "Bead 58q (Sky130 SoC Stage-2 antenna residual) closed by coordinator decision: adopted run3 (RUN_2026-07-30_06-42-17) -- LVS PASSED, routing DRC 0, KLayout DRC 4 (waived, bead 0jp), Magic DRC 9081 (waived, bead 45a), hold clean at all 9 corners (worst +0.0274 ns at max_ss), antenna 140 pin / 120 net (down from 147/127 baseline, residual accepted as a quantified, root-caused gap rather than a defect -- diode-insertion mechanism proven binary on hold via 6-run falsifiable-prediction campaign, not fixable via any tested config lever). ss-corner setup (WNS -8.90 ns) remains a separately tracked, out-of-scope gap per bead 1ls/ujv. pd.signoff stays false: two documented open gates (antenna residual, ss-corner setup) prevent a clean tape-out sign-off, but no further PD action is pending on either without new direction. design_state.json pd fields updated to reflect the adopted run3 gate table; config.json reverted to match run3 exactly (was left at a later, hold-broken experimental config) so the flow is reproducible.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-08-01T15:29:22.974567+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "functional",
+      "retry_strategy": "escalate",
+      "suggested_next_step": "escalate",
+      "reason": "GH #93 verification task: authored apb_cdc_bridge unit suite (15/15 PASS, lint-clean), TB wrapper cpu_clk_i/cpu_rst_n_i ports + soc_clocks.py helper + 8-suite retrofit (lint-clean), and soc_multiclock/soc_pll_multiclock suites -- then found via `make soc_boot` that the SoC does not boot at all on this branch (0/8 commits, 0/100 stability attempts observed), root-caused to a CPU clock-gate/synchronous-reset race in soc_top.sv introduced by commit 66a9af1. This blocks essentially every SoC-level suite (soc_boot/periph/coherency/cpu_gpu/pll/multiclock), a regression against the prior 142/142 baseline. Filed fix_request and stopping per Behaviour Rule 4 -- RTL re-invocation is the pipeline-orchestrator's responsibility, not this run's.",
+      "constraint_ref": "fr_57f49b7f9b29_20260801_000000_00"
+    },
+    {
+      "timestamp": "2026-08-01T15:34:41.803329+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Fixed GH #93 CPU-domain clock/reset race in soc_top.sv (cpu_gated_clk never toggled during cpu_domain_rst_n) by inverting the clk-enable CDC synchroniser so its safe reset value is clock-running; Verilator lint_soc 0 errors / 7 baseline warnings. Re-verification of SoC boot is the verification-orchestrator's responsibility.",
+      "constraint_ref": "fr_57f49b7f9b29_20260801_000000_00"
+    },
+    {
+      "timestamp": "2026-08-01T16:28:27.576477+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "constrained_random",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "protocol",
+      "retry_strategy": "escalate",
+      "suggested_next_step": "escalate",
+      "reason": "Smoke gate (make soc_boot: 3/3, 100/100 stability) and full soc_all (159/159, 21 suites, 0 regressions vs 144-test prior baseline + 15 new apb_cdc_bridge) both confirm fr_57f49b7f9b29 is genuinely fixed. Ran the multiclock suites (the actual point of GH #93 -- first exercise of a genuinely asynchronous CPU:fabric ratio) and found BOTH fail (soc_multiclock 0/4, soc_pll_multiclock 0/1). Root-caused via a throwaway ns-resolution diagnostic to a second, distinct bug in rtl/soc/cdc/cdc_gray_fifo.sv: wr_ready_o=!full_q is not gated by wr_rst_n_i, so it reads 'ready' while the FIFO's write side is still held in a cross-coupled reset -- only reachable when the two domains' PLL-lock resets release at different real times, impossible at the 1:1 ratio every pre-existing suite uses. Filed fix_request; escalating per Behaviour Rule 4.",
+      "constraint_ref": "fr_280f3ac18c66_20260801_000001_00"
+    },
+    {
+      "timestamp": "2026-08-01T16:43:12.847989+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Serviced fix_request fr_280f3ac18c66_20260801_000001_00 (GH #93 accept-and-drop bug): gated cdc_gray_fifo.sv's wr_ready_o on wr_rst_n_i so it reads 0 for the entire write-domain reset window instead of falsely advertising ready via full_q's reset-to-0 default. Confirmed rd_valid_o already correct (empty_q resets to 1). Audited apb_cdc_bridge.sv: s_pready_o safe by construction (gated by s_state_q==S_DONE, resets to S_IDLE). Swept rtl/soc/cdc/ and rtl/soc/ for the same bug class (registered handshake output whose reset value advertises availability): apb_interconnect.sv's pready_o=1 default is purely combinational/no-reset (DECERR idle default, not a CDC artifact); axi4_crossbar.sv's ready/valid arbitration outputs derive from single-clock synchronous-reset state machines resetting to IDLE (not-ready) -- no async dual-clock reset-skew window exists there structurally. Lint clean: lint_soc, async_axi_fifo_lint, apb_cdc_bridge_lint all 0 errors. GH #91 regression: 21/22 (one pre-existing test, test_reset_while_busy_s_side, now fails -- root-caused via an uncommitted scratch diagnostic outside tb/ to a testbench timing assumption that only held under the old buggy behaviour; flagged for verification-orchestrator, not fixed here per the do-not-edit-tb/ constraint). cdc_clean/signoff left false -- no formal CDC or full signoff stage was run this session, scope was a single targeted fix_request.",
+      "constraint_ref": "fr_280f3ac18c66_20260801_000001_00"
+    },
+    {
+      "timestamp": "2026-08-01T17:18:35.594706+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "GH #93 CPU-domain CDC verification signed off. Both RTL bugs found this campaign (fr_57f49b7f9b29 CPU clock-gate/sync-reset race; fr_280f3ac18c66 cdc_gray_fifo wr_ready_o reset-release-skew accept-and-drop) are fixed and independently reconfirmed: make soc_boot 3/3 (100/100 stability), async_axi_fifo 22/22 (after correcting a testbench kill-timing race the RTL fix exposed, not caused, in test_reset_while_busy_s_side), soc_multiclock 4/4 and soc_pll_multiclock 1/1 at the 7ns/3ns coprime ratio (the first suites in this repo to exercise the CPU<->fabric CDC boundary at a genuinely asynchronous ratio), apb_cdc_bridge 15/15, full soc_all 159/159 across 21 suites with zero regressions. All regression numbers independently reconciled from raw logs, not accepted from summaries alone. Residual, explicitly documented (non-blocking) gaps: metastability injection (not modelable), PMU-driven live power-cycling across domains, timer_irq unexercised, and GH #94/#95 follow-up items noted in verification_status.gh93_cdc_verification.residual_gaps.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-08-01T23:58:13.021086+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "constraint_authoring",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "GH #94 / bead oa7: authored pnr/constraints/phase5_soc_multiclock.sdc (2-domain SDC evolving the signed-off run-14 pnr/asap7/soc/constraints/phase5_soc.sdc: cpu_clk @780ps / sys_clk @1750ps, set_clock_groups -asynchronous, set_max_delay -datapath_only on both async_axi_fifo's mem_q+gray-pointer crossings and apb_cdc_bridge's 4 payload buses+2 toggle crossings, plus PMU/IRQ single-bit cpu_core_clk crossings). Also fixed pnr/Makefile's SKY130_SOC_SV_FILES and SOC_SV_FILES sv2v lists, which were missing rtl/mem/rv32i_clock_gate.sv and the 5 GH #91/#93 CDC files (rtl/soc/cdc/cdc_2ff_sync.sv, cdc_reset_sync.sv, cdc_gray_fifo.sv, rtl/soc/async_axi_fifo.sv, apb_cdc_bridge.sv) -- verified via a clean `make sky130-soc-sv2v` and `make asap7-soc-sv2v` run (both regenerate with all 6 new modules present and zero undefined-module warnings). Constraint-authoring + build-list-repair only, per explicit scope -- no LibreLane/P&R run was launched; the new SDC is not yet wired into any config.json PNR_SDC_FILE pointer (deferred to GH #96's re-closure run). design_state.constraints is still null (no floorplan-stage constraint gate applied -- this was a bounded authoring task, not a stage-sequence invocation).",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-08-01T23:58:18.992483+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Fixed bead claude_verilog_test-542 (GH #90 follow-up): pmu.sv power-up ordering (rst-release-before-clk-ungate, UPF-mandated, retention-by-construction) was not robust across the two independent CDC synchronisers (u_cpu_pmu_rst_sync / u_cpu_clk_dis_sync) introduced in GH #93 for the CPU-domain clock. Fix is in rtl/soc/soc_top.sv only (pmu.sv left unchanged, per UPF compliance): u_cpu_cg enable is now cpu_gated_clk_en = ~pmu_cpu_clk_dis_sync & pmu_cpu_rst_n_cpu_sync, a same-domain (cpu_core_clk) combinational AND of two already-registered signals, structurally forbidding cpu_gated_clk from ticking whenever the CPU-domain-observed PMU reset is asserted, for arbitrary skew between the two synchronisers, both power-up and power-down directions. Verified: lint_soc 0 errors (7 expected baseline warnings unchanged), make pmu 10/10 unchanged (tb_pmu.sv is a standalone pmu-only DUT, no CDC, unaffected by a soc_top-only fix), soc_boot 3/3 (100/100 boot-stability, cold-boot regression check), soc_multiclock 4/4 at the 7ns/3ns coprime ratio (CDC-heavy regression). No tb/ files modified. Residual: no suite exercises a live PMU-driven CPU power-cycle at a divergent clock ratio (would need firmware CTRL writes + async ratio combined) -- flagged for verification-orchestrator, not added here.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-08-02T07:45:57.977019+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Fixed a confirmed availability bug in rtl/soc/apb_cdc_bridge.sv (CodeRabbit finding on PR #132, branch feat/cpu-domain-cdc-gh93, independently verified): s_rst_sync_n was rooted in rst_both_n = s_rst_n_i & m_rst_n_i, so an APB access to the CPU-domain PLL2 window while m_rst_n_i alone was asserted held the SOURCE FSM in S_IDLE forever, wedging the entire fabric APB tree (UART/SPI/timer/IRQ/PMU/both PLL blocks) until a full SoC reset -- a held-in-reset FSM cannot even emit an error response, so the fix required a reset-structure change, not a new state transition. Fix: s_rst_sync_n now roots on s_rst_n_i only; m_rst_sync_n deliberately stays on rst_both_n (still required to keep req_seen_q/req_toggle_q toggle-parity consistent across an s-only reset -- a fully-decoupled alternative was analysed and rejected for reproducing a silent-drop hang); a new active-high m_rst_n_i status synchronised into the source domain (cdc_2ff_sync) gates request forwarding, bounds S_WAIT, and continuously clamps req_toggle_q to 0 while the destination is observed in reset, closing the fabricated-write hazard. verilator --lint-only: 0 errors, 0 warnings (apb_cdc_bridge_lint); lint_soc baseline unchanged (7 expected warnings). apb_cdc_bridge suite: 14/15 -- test_reset_mid_transaction_m_side now fails BY DESIGN (asserts s_pslverr==0 after an m-only reset, encoding the old silent-drop/hang semantics this fix replaces); left untouched per scope (no test edits), flagged to verification-orchestrator to update. Touched rtl/soc/apb_cdc_bridge.sv only, per explicit scope -- no other files modified.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-08-02T02:02:44.967986+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "PR #132 CodeRabbit doc finding on apb_cdc_bridge.sv:275 (m_rst_n_s availability-gating exception) resolved as documentation: traced the race cycle-by-cycle, confirmed benign/bounded (S_WAIT bounded exit, no fabricated destination write via m_rst_sync_n gating, window == SYNC_STAGES_TO_S s_clk_i cycles); added explicit exception documentation + tightened m_rst_n_i minimum-low-width caller contract. lint_soc 0 errors/7 baseline warnings, apb_cdc_bridge_lint 0/0, apb_cdc_bridge cocotb 19/19.",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
@@ -1161,6 +1371,88 @@
           "agent": "rtl-design-orchestrator",
           "action": "fixed",
           "note": "Added rd_pend_q in-flight stage + 2-entry output skid buffer to correct the negedge-launch phase error; hardened MEM_WORDS guard to a bare elaboration-time $fatal. Verilator -Wall lint_soc_sky130: 0 errors, 0 new warnings (baseline unchanged: PINCONNECTEMPTY x4 pre-existing in rv32i_icache/dcache.sv, UNUSEDPARAM x3, BLKSEQ x3). Cocotb re-run deferred to verification-orchestrator per project policy."
+        }
+      ]
+    },
+    {
+      "id": "fr_57f49b7f9b29_20260801_000000_00",
+      "created_at": "2026-08-01T15:29:22.974567+00:00",
+      "updated_at": "2026-08-01T15:34:41.803329+00:00",
+      "created_by": "verification-orchestrator",
+      "failure_class": "functional",
+      "test_name": "test_boot_pc_scoreboard, test_boot_sram_sentinels, test_boot_stability_100 (tb/cocotb/soc/test_boot.py, soc_boot suite)",
+      "property_or_assertion": null,
+      "seed": 0,
+      "waveform_path": null,
+      "log_path": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_boot_verify.log",
+      "suspected_rtl": {
+        "module": "soc_top",
+        "signal": "pmu_cpu_clk_en_sync / cpu_domain_rst_n (u_cpu_clk_en_sync, u_cpu_pmu_rst_sync, u_cpu_cg)",
+        "file": "rtl/soc/soc_top.sv",
+        "line_range": [
+          345,
+          453
+        ]
+      },
+      "summary": "GH #93 regression: SoC does not boot at all on feat/cpu-domain-cdc-gh93 (commit 66a9af1) -- CPU never commits a single instruction (0/8 PCs, 0/100 boot-stability attempts).",
+      "expected_behavior": "Per docs/design/RTL_DEFINITION.md / fr_null_20260603_052800_00 (already-fixed CPU RESET_PC bug): after rst_n_i/cpu_rst_n_i release and PLL lock, the CPU must synchronously load RESET_PC=0x0000_1000 and begin committing instructions from boot ROM within a few hundred cycles.",
+      "observed_behavior": "Verified via `make soc_boot` (tb/cocotb/soc/, commit 66a9af1, pristine working tree): test_boot_pc_scoreboard FAILS with 'timeout: collected 0/8 commits'; test_boot_sram_sentinels FAILS identically (golden reference model confirms SRAM[0x2000]=0xDEADBEEF/[0x2004]=0x12345678 are correct pre-flight, but the DUT never gets far enough to write them); test_boot_stability_100 FAILS on every single observed attempt (22+ consecutive attempts with varied reset-phase offsets and random seeds, all 'timeout: collected 0/8 commits', 0/100 before the run was stopped as conclusive). Root cause (confirmed by independent RTL trace, cross-checked against a second agent's identical finding): rtl/soc/soc_top.sv's u_cpu_clk_en_sync (cdc_2ff_sync gating cpu_gated_clk via u_cpu_cg, rooted at cpu_core_rst_n) and u_cpu_pmu_rst_sync (feeds cpu_domain_rst_n = cpu_core_rst_n & pmu_cpu_rst_n_cpu_sync, also rooted at cpu_core_rst_n) are both 2-stage synchronizers with an already-asserted (=1) source value (pmu_cpu_clk_en and pmu_cpu_rst_n both default to 1 out of pmu.sv reset), so both transition 0->1 on the SAME cpu_core_clk edge (2 cycles after cpu_core_rst_n releases). rv32i_clock_gate's ICG (rtl/mem/rv32i_clock_gate.sv) only updates its enable latch while clk is low, so cpu_gated_clk's first toggle coincides with cpu_domain_rst_n's release -- there is no cpu_gated_clk edge while cpu_domain_rst_n is still asserted. u_cpu's pipeline (rtl/cpu/core/pipeline/rv32i_pipeline_if.sv and siblings) uses plain synchronous reset (`always_ff @(posedge clk) if (!rst_n) pc_q <= RESET_PC`), which requires at least one clock edge WHILE rst_n is low to actually load the reset value -- since that never happens, pc_q keeps its uninitialized/0 simulation value instead of RESET_PC=0x1000, and the CPU fetches from an unmapped address forever. Blast radius: every SoC-level cocotb suite that boots real CPU firmware through tb_soc_top/tb_soc_pll is blocked -- soc_boot, soc_periph, soc_coherency, soc_cpu_gpu, soc_pll (commit_pc-dependent checks), plus the newly-authored soc_multiclock and soc_pll_multiclock suites. This is a regression against the prior 142/142 soc_all baseline (pre-commit 66a9af1).",
+      "session_id": null,
+      "status": "fixed",
+      "rtl_response": {
+        "diff_summary": "rtl/soc/soc_top.sv: replaced the non-inverted pmu_cpu_clk_en_sync (cdc_2ff_sync, reset-to-0 = clock DISABLED) with pmu_cpu_clk_dis_sync (cdc_2ff_sync of ~pmu_cpu_clk_en, reset-to-0 = NOT disabled = clock RUNNING). u_cpu_cg's en is now ~pmu_cpu_clk_dis_sync. This keeps cpu_gated_clk = cpu_core_clk running unconditionally for the entire cpu_core_rst_n-low window (the safe cdc_2ff_sync reset value now matches the required safe state), so u_cpu (and u_cpu_axi_cdc's s-side cdc_reset_sync, same s_clk_i=cpu_gated_clk) both see clock edges throughout cpu_domain_rst_n's assertion and correctly load their synchronous reset values, including RESET_PC. Added extensive header comments documenting the reset-release ordering with cycle counts, plus sanity-check findings for pmu_cpu_iso_en_sync's safe reset value, u_cpu_pmu_rst_sync's rst_n_i choice, and async_axi_fifo's reset-hold contract. Flagged (documented, not fixed -- out of scope, needs a pmu.sv change) a narrower residual risk: pmu.sv releases rst_n_w one core_clk cycle before ungating clk_en_w on the power-up path, which could reintroduce a brief version of this bug during a live PMU-driven CPU power-cycle (not cold boot).",
+        "files_changed": [
+          "rtl/soc/soc_top.sv"
+        ],
+        "fixed_at": "2026-08-01T15:34:41.803329+00:00"
+      },
+      "history": [
+        {
+          "timestamp": "2026-08-01T15:34:41.803329+00:00",
+          "agent": "rtl-design-orchestrator",
+          "action": "fixed",
+          "note": "Re-sourced u_cpu_cg's enable from an inverted, sync-safe pmu_cpu_clk_dis_sync so cpu_gated_clk runs throughout cpu_domain_rst_n's assertion. Verilator lint_soc: 0 errors, 7 pre-existing baseline warnings only. Commit [Fix] GH #93 on feat/cpu-domain-cdc-gh93."
+        }
+      ]
+    },
+    {
+      "id": "fr_280f3ac18c66_20260801_000001_00",
+      "created_at": "2026-08-01T16:28:27.576477+00:00",
+      "updated_at": "2026-08-01T16:43:12.847989+00:00",
+      "created_by": "verification-orchestrator",
+      "failure_class": "protocol",
+      "test_name": "test_multiclock_boot_pc_scoreboard, test_multiclock_boot_sram_sentinels, test_multiclock_periph_loopback, test_multiclock_cpu_gpu_irq_pass (tb/cocotb/soc/test_soc_multiclock.py); test_multiclock_pll2_apb_slot_decode (test_soc_multiclock_pll2.py)",
+      "property_or_assertion": "AXI4 handshake integrity across a CDC bridge during reset-release skew (no accept-and-drop)",
+      "seed": 0,
+      "waveform_path": null,
+      "log_path": "/tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_multiclock.log, /tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/soc_pll_multiclock.log, /tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/0fb76525-13a3-4c7c-bade-c2c0b5305ee8/scratchpad/diag_multiclock5.log (throwaway diagnostic, 1ns free-running Timer probe -- not committed)",
+      "suspected_rtl": {
+        "module": "cdc_gray_fifo",
+        "signal": "wr_ready_o (= !full_q, not gated by wr_rst_n_i)",
+        "file": "rtl/soc/cdc/cdc_gray_fifo.sv",
+        "line_range": [
+          153,
+          173
+        ]
+      },
+      "summary": "NEW (distinct from fr_57f49b7f9b29): async_axi_fifo's cdc_gray_fifo silently accepts-and-drops the CPU's first AXI transaction whenever the CPU-domain reset releases before the fabric-domain reset -- only possible at a genuinely asynchronous CPU:fabric clock ratio, which is the entire point of GH #93. Both new multiclock suites (test_soc_multiclock.py, test_soc_multiclock_pll2.py) fail because of this; soc_boot/soc_periph/soc_coherency/soc_cpu_gpu at the pre-existing 1:1 ratio are unaffected and still pass.",
+      "expected_behavior": "async_axi_fifo.sv's own header contract: 's_rst_n_i and m_rst_n_i must each be held low for >= the respective SYNC_STAGES+1 periods of the OTHER clock' and 'reset is a hard flush ... no SLVERR/data is fabricated'. Per AXI4 protocol, a slave must not assert xREADY in a way that causes a master to complete a legal handshake (valid&&ready) whose transaction is then silently discarded -- if the bridge cannot yet accept a transfer (because its own reset has not fully released), wr_ready_o/s_arready_o must read 0, not 1.",
+      "observed_behavior": "Root-caused via a throwaway (uncommitted, reverted) 1ns free-running Timer() diagnostic probe added to test_soc_multiclock.py, driving the SoC at the CPU_PERIOD_NS=3/FABRIC_PERIOD_NS=7 ratio and sampling cpu_domain_rst_n, core_rst_n, cpu_axi_arvalid_raw, cpu_bridge_s_arvalid/s_arready, and xbar_m_arvalid/arready[0] every 1ns from t=0: t=0ns cpu_domain_rst_n=0 core_rst_n=0 (both in reset); t=33ns cpu_domain_rst_n=1 core_rst_n=0 (CPU-domain reset releases FIRST -- its PLL locks in 16*3ns=48ns vs the fabric PLL's 16*7ns=112ns, an asymmetry impossible at the pre-GH#93 1:1 ratio where both PLLs shared one clock net); t=45ns cpu_axi_arvalid_raw=1 s_arvalid=1 s_arready=1 (the CPU's first I$-miss AR handshake completes -- s_arready_o reads 'ready' even though core_rst_n, and therefore rst_both_n=s_rst_n_i&m_rst_n_i, and therefore the FIFO's own wr_rst_n_i=s_rst_sync_n, are all STILL 0/in-reset); t=48ns cpu_axi_arvalid_raw=0 (the CPU, per AXI4 protocol, never re-asserts arvalid for an already-completed handshake -- the transaction is gone); t=98ns core_rst_n=1 (fabric reset finally releases, 40ns too late). Confirmed pc_q (rtl/cpu/core/pipeline/rv32i_pipeline_if.sv) loads RESET_PC=0x1000 correctly (proving fix fr_57f49b7f9b29 works) but never advances past it -- ic_valid_o=1/ic_stall_i=1 persist (a permanent, unrecovered I-cache miss) because the dropped AR request's response never arrives. make soc_multiclock: TESTS=4 PASS=0 FAIL=4 (all four tests fail identically -- 0 commits or PASS_PC never reached). make soc_pll_multiclock: TESTS=1 PASS=0 FAIL=1 (last committed PC=0x00000000, same class of stall -- CPU never boots far enough to even reach the APB_PLL2 MMIO path this suite targets, so it provides no independent evidence about apb_cdc_bridge specifically). Code-level root cause: rtl/soc/cdc/cdc_gray_fifo.sv line ~166 `full_q <= 1'b0` on `!wr_rst_n_i` (async reset default = not full), and line ~173 `assign wr_ready_o = !full_q;` (no gating on wr_rst_n_i itself). wr_rst_n_i is s_rst_sync_n (async_axi_fifo.sv), derived from rst_both_n = s_rst_n_i & m_rst_n_i. While m_rst_n_i (core_rst_n) is still low, s_rst_sync_n is also still low, so the FIFO's own `always_ff @(posedge wr_clk_i or negedge wr_rst_n_i) if (!wr_rst_n_i) ... else if (push) ...` can only take the reset branch every cycle -- no push logic ever executes -- yet wr_ready_o already reads 1 purely because full_q's reset value happens to be 0. apb_cdc_bridge.sv (GH #93's other new CDC primitive) is NOT expected to share this exact defect: its s_pready_o = (s_state_q == S_DONE), and s_state_q resets to S_IDLE (!= S_DONE) via the same rst_both_n-derived s_rst_sync_n, so its ready output correctly defaults to 0 (not ready) while held in reset -- consistent with its own 15/15 passing unit suite, which explicitly covers independent-side mid-transaction reset. This cannot be confirmed empirically at the SoC level because soc_pll_multiclock's firmware needs the CPU to boot first, which this same bug prevents.",
+      "session_id": null,
+      "status": "fixed",
+      "rtl_response": {
+        "diff_summary": "cdc_gray_fifo.sv: wr_ready_o changed from `!full_q` to `wr_rst_n_i && !full_q` (lines ~172-186). full_q's async reset value is 1'b0 ('not full'), so on its own !full_q read 1 for the entire window the write domain was held in reset, while wr_bin_q was simultaneously held at 0 by the same reset -- a write master could complete a handshake whose beat was then silently dropped, never committed to mem_q/wr_bin_q. Gating wr_ready_o directly on wr_rst_n_i (a same-domain input, not a cross-domain signal -- no new CDC path introduced) makes the FIFO correctly backpressure (ready=0) for the entire reset window, matching rd_valid_o's existing correct behaviour (empty_q already resets to 1'b1). Also updated two header comments in cdc_gray_fifo.sv (the no-combinational-crossing note and the full_q/empty_q derivation site) to describe the new gating precisely. async_axi_fifo.sv was read but NOT edited -- its header claim 'while a domain is held in reset, both its ready and valid outputs are 0' was FALSE before this fix and is TRUE after it, so no comment correction was needed there. apb_cdc_bridge.sv audited, confirmed already safe by construction (s_pready_o = (s_state_q==S_DONE), s_state_q resets to S_IDLE != S_DONE) -- not touched. IMPORTANT CAVEAT: re-running the GH #91 unit suite (tb/cocotb/soc, make async_axi_fifo) after this fix gives 21/22, not 22/22. The one new failure, test_reset_while_busy_s_side, was root-caused (via a throwaway, uncommitted, reverted scratch diagnostic outside tb/ -- see design_state history reason) to a testbench-timing assumption that only held under the OLD buggy RTL: previously, s_wready read 1 throughout the entire reset pulse (the bug), so the test's still-running interrupted AXI master task completed its whole burst falsely and instantly *inside* the reset window itself, long before the test's post-release wait + t.kill()/_idle_s_side() calls -- so it never had a chance to touch the post-reset FIFO. With the fix, the master genuinely blocks (ready=0) through reset, so it is still mid-burst when reset releases; empirically confirmed (scratch probe) that s_wready recovers ~2 s_clk cycles after release while the interrupted task's s_wvalid is still 1, so it legitimately completes 2+ more real W beats into the FRESH FIFO before the test's kill() call several cycles later -- an AXI-protocol-compliant master resuming a genuinely-blocked burst, not an RTL defect. This is a testbench race exposed (not caused) by correcting the RTL, and cannot be resolved without editing tb/ (out of scope per this task's constraints -- verification-orchestrator owns tb/ and should adjust the test's kill/idle timing, e.g. kill the interrupted task before or at reset assertion rather than after release).",
+        "files_changed": [
+          "rtl/soc/cdc/cdc_gray_fifo.sv"
+        ],
+        "fixed_at": "2026-08-01T16:43:12.847989+00:00"
+      },
+      "history": [
+        {
+          "timestamp": "2026-08-01T16:43:12.847989+00:00",
+          "agent": "rtl-design-orchestrator",
+          "action": "fixed",
+          "note": "Gated wr_ready_o on wr_rst_n_i in cdc_gray_fifo.sv. Verilator lint_soc + async_axi_fifo_lint + apb_cdc_bridge_lint all 0 errors (7 known baseline warnings on lint_soc only). async_axi_fifo unit suite: 21/22 (1 pre-existing test now fails due to a testbench timing assumption tied to the old bug, not a new RTL defect -- see rtl_response.diff_summary)."
         }
       ]
     }
@@ -1784,7 +2076,8 @@
         "power_nom_tt_mw": 37.63,
         "power_worst_corner_mw": 44.13,
         "power_worst_corner": "max_ff_n40C_1v95",
-        "setup_corner_accounting_correction_2026-08-01": "setup_clean_corners previously listed only 5 corners while setup_fail_corners listed 3, leaving max_tt_025C_1v80 (9th corner) unclassified. Re-read from 51-openroad-stapostpnr/<corner>/ws.max.rpt in the adopted run: max_tt = +6.959 ns, clean. All 9 corners are now accounted for -- 6 clean (nom/max/min tt, nom/min/max ff), 3 failing (nom/min/max ss). Full setup WS: nom_tt +8.250, max_tt +6.959, min_tt +9.779, nom_ff +10.852, max_ff +10.785, min_ff +10.938, nom_ss -3.123, max_ss -4.643, min_ss -1.254. Hold WS worst is max_ss +0.027. Note the unrelated historical 'max_tt_note' field elsewhere in this file describes an EARLIER run, not this one.", "power_figure_correction_2026-07-31": "This table previously carried a single scalar 'power_mw': 44.6, and bead 9t6 carried 44.1. Both were re-derived from 51-openroad-stapostpnr/<corner>/power.rpt in the adopted run: nom_tt = 3.762750e-02 W = 37.63 mW; max_ff = 4.412770e-02 W = 44.13 mW. The 44.1 figure was the max_ff corner reported as if it were the headline number; 44.6 matches no corner of any Sky130 SoC run and was unsourced. Power is now recorded per corner so the tt sign-off number and the worst-corner number cannot be conflated.",
+        "setup_corner_accounting_correction_2026-08-01": "setup_clean_corners previously listed only 5 corners while setup_fail_corners listed 3, leaving max_tt_025C_1v80 (9th corner) unclassified. Re-read from 51-openroad-stapostpnr/<corner>/ws.max.rpt in the adopted run: max_tt = +6.959 ns, clean. All 9 corners are now accounted for -- 6 clean (nom/max/min tt, nom/min/max ff), 3 failing (nom/min/max ss). Full setup WS: nom_tt +8.250, max_tt +6.959, min_tt +9.779, nom_ff +10.852, max_ff +10.785, min_ff +10.938, nom_ss -3.123, max_ss -4.643, min_ss -1.254. Hold WS worst is max_ss +0.027. Note the unrelated historical 'max_tt_note' field elsewhere in this file describes an EARLIER run, not this one.",
+        "power_figure_correction_2026-07-31": "This table previously carried a single scalar 'power_mw': 44.6, and bead 9t6 carried 44.1. Both were re-derived from 51-openroad-stapostpnr/<corner>/power.rpt in the adopted run: nom_tt = 3.762750e-02 W = 37.63 mW; max_ff = 4.412770e-02 W = 44.13 mW. The 44.1 figure was the max_ff corner reported as if it were the headline number; 44.6 matches no corner of any Sky130 SoC run and was unsourced. Power is now recorded per corner so the tt sign-off number and the worst-corner number cannot be conflated.",
         "util_pct": 37.9,
         "stdcell_count": 226952,
         "corner_modeling_caveat": "TYPICAL-CORNER (nom_tt) SIGN-OFF ONLY. 'hold 0 at all 9 corners' and the setup_clean/setup_fail corner lists above are statements about 9 corner LABELS, not 9 independently characterized macro models. The SRAM macro sky130_sram_4kbyte_1rw1r_32x1024_8 is characterized at TT only (its config.json lib entry is deliberately {\"*\": [<one TT_1p8V_25C file>]}), so its internal timing arcs are identical in all nine reported corners. Results at ss/ff therefore carry macro-model error of unknown sign and this is NOT a validated multi-corner timing sign-off. The CPU macro rv32i_cpu_top IS genuinely per-corner (fixed 2026-07-25, 9 distinct libs). Paths entirely within flat sky130_fd_sc_hd standard-cell logic ARE corner-accurate. Tracked as GH #120 / bead o1i, deferred host-blocked. See pnr/sky130/soc/constraints/sky130_soc.sdc header."

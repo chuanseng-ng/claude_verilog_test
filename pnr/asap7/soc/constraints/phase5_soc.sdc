@@ -142,8 +142,21 @@ if {[llength $_sram_csb]  > 0} { set_false_path -hold -to $_sram_csb  }
 ###############################################################################
 set _cpu_in  [get_pins -hierarchical -filter "full_name =~ *u_cpu/*" -quiet]
 set _gpu_in  [get_pins -hierarchical -filter "full_name =~ *u_gpu/*" -quiet]
-set _cpu_out [get_ports -quiet -filter "name =~ *u_cpu*"]
-set _gpu_out [get_ports -quiet -filter "name =~ *u_gpu*"]
+
+# GH #94 dead-code note: this file previously also declared
+#   set _cpu_out [get_ports -quiet -filter "name =~ *u_cpu*"]
+#   set _gpu_out [get_ports -quiet -filter "name =~ *u_gpu*"]
+# get_ports only ever matches TOP-LEVEL port names, never instance/hierarchy
+# paths — soc_top has no top-level port containing "u_cpu"/"u_gpu" (those
+# are instance name prefixes, found via get_pins -hierarchical above, not
+# get_ports), so both collections were always empty and neither variable was
+# ever read again below. Confirmed unused (repo-wide grep, 2026-08-02) and
+# removed: this is a pure dead local-variable assignment with no downstream
+# reference, so deleting it cannot change any constraint STA applies —
+# run-14's signed-off timing behaviour is unaffected. (Same bug class as the
+# CDC-exception silent-miss hardening added to
+# pnr/constraints/phase5_soc_multiclock.sdc for GH #94 — an empty-collection
+# query that nothing ever consumed, so it never had a chance to bite here.)
 
 # Multicycle on CPU/GPU macro INPUTS (real paths — crossbar → macro regs)
 if {[llength $_cpu_in] > 0} {

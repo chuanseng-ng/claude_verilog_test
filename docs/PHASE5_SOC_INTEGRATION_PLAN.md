@@ -146,7 +146,6 @@ No PD this item (crossbar hardens at SoC top, M11).
 ### M12 — Sign-off + docs *(deps: M11)* ✅ COMPLETE (2026-06-24)
 - ✅ Updated `CLAUDE.md`, `docs/PHASE_STATUS.md`, this plan → Phase 5 complete.
 - ✅ Wrote `docs/PHASE5_RUN_HISTORY.md` (M11 run campaign + final PPA).
-- ⏸️ Regenerate knowledge graph: `/graphify rtl docs fixes --update` (optional; user-invoked).
 - **Exit**: all VERIFICATION_PLAN.md Phase 5 exit criteria met.
 
 ---

@@ -37,8 +37,11 @@
 //   (2) both registered gray-pointer crossings (u_wr_ptr_to_rd, u_rd_ptr_to_wr).
 //
 // No combinational path crosses the clock boundary anywhere else in this
-// module — both wr_ready_o and rd_valid_o are registered locally from flags
-// that are themselves computed from already-synchronised inputs.
+// module — both wr_ready_o and rd_valid_o are driven locally from flags that
+// are themselves computed from already-synchronised inputs (wr_ready_o is
+// additionally qualified by its own domain's wr_rst_n_i, a same-domain
+// input, not a cross-domain path — see the reset-gating note above
+// full_q/empty_q's derivation below).
 //
 // Reset: asynchronous assert, synchronous deassert, active-low per domain
 // (docs/development/CODING_GUIDELINES.md §1.4). wr_rst_n_i / rd_rst_n_i are
@@ -169,8 +172,18 @@ module cdc_gray_fifo #(
         end
     end
 
+    // wr_ready_o is additionally gated by wr_rst_n_i itself: full_q's reset
+    // value is 1'b0 ("not full"), so on its own !full_q would read 1 for the
+    // entire window this domain is held in reset -- a write master could
+    // then complete a handshake (wr_valid_i && wr_ready_o) whose beat is
+    // silently dropped, since wr_bin_q is also held at its reset value and
+    // wr_en's clocked branch never executes while !wr_rst_n_i. Gating on
+    // wr_rst_n_i directly backpressures the attached master until this
+    // domain's own reset has released, matching rd_valid_o's behaviour below
+    // (empty_q already resets to 1'b1, so no equivalent gate is needed there
+    // -- confirmed, not assumed, by inspection of the reset block above).
     assign rd_valid_o = !empty_q;
-    assign wr_ready_o = !full_q;
+    assign wr_ready_o = wr_rst_n_i && !full_q;
 
     // ── Storage ───────────────────────────────────────────────────────────────
     // Flop-array memory, combinational read at rd_bin_q, no reset — see the

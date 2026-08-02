@@ -16,12 +16,15 @@
 //   the lock counter fires — roughly 16+1 = 17 ref_clk cycles after reset
 //   de-asserts.
 //
-// GH #92 (dual PLL): soc_top now requires a second clock/reset pair
-// (cpu_clk_i/cpu_rst_n_i) driving a second pll_subsystem instance. This
-// wrapper ties cpu_clk_i/cpu_rst_n_i to clk_i/rst_n_i (single-clock suite,
-// test_pll_lock.py exercises the system PLL only) but exposes
-// cpu_pll_locked_o alongside pll_locked_o so a future test can observe both
-// lock signals independently. The genuine 2-domain split arrives in GH #93.
+// GH #92 (dual PLL): soc_top requires a second clock/reset pair
+// (cpu_clk_i/cpu_rst_n_i) driving a second pll_subsystem instance; exposes
+// cpu_pll_locked_o alongside pll_locked_o so a test can observe both lock
+// signals independently.
+//
+// GH #93: cpu_clk_i/cpu_rst_n_i are now true top-level ports (previously
+// tied internally to clk_i/rst_n_i). test_pll_lock.py drives both pairs via
+// tb/cocotb/soc/soc_clocks.py at a 1:1 ratio (behaviourally unchanged);
+// only the new multiclock suite drives a genuinely independent cpu_clk_i.
 //
 // Lint target: verilator -Wall 0 errors 0 warnings.
 
@@ -40,6 +43,10 @@ module tb_soc_pll #(
     // frequency in simulation — testbench sets the period).
     input  logic        clk_i,
     input  logic        rst_n_i,
+
+    // ── CPU-domain reference clock / reset (GH #93 — genuinely independent) ──
+    input  logic        cpu_clk_i,
+    input  logic        cpu_rst_n_i,
 
     // ── APB3 debug slave (pass-through to CPU) ───────────────────────────────
     input  logic [11:0] apb_paddr_i,
@@ -78,10 +85,9 @@ module tb_soc_pll #(
     ) u_soc (
         .clk_i          (clk_i),
         .rst_n_i        (rst_n_i),
-        // GH #92: tie CPU-domain reference to the system reference — see
-        // header comment. Genuine 2-domain split arrives in GH #93.
-        .cpu_clk_i      (clk_i),
-        .cpu_rst_n_i    (rst_n_i),
+        // GH #93: genuinely independent CPU-domain reference — see header.
+        .cpu_clk_i      (cpu_clk_i),
+        .cpu_rst_n_i    (cpu_rst_n_i),
 
         .apb_paddr_i    (apb_paddr_i),
         .apb_psel_i     (apb_psel_i),

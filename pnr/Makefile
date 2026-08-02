@@ -651,6 +651,12 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/periph/timer.sv \
 	$(PROJECT_ROOT)/rtl/periph/uart_controller.sv \
 	$(PROJECT_ROOT)/rtl/periph/spi_controller.sv \
+	$(PROJECT_ROOT)/rtl/mem/rv32i_clock_gate.sv \
+	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_2ff_sync.sv \
+	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_reset_sync.sv \
+	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_gray_fifo.sv \
+	$(PROJECT_ROOT)/rtl/soc/async_axi_fifo.sv \
+	$(PROJECT_ROOT)/rtl/soc/apb_cdc_bridge.sv \
 	$(PROJECT_ROOT)/rtl/soc/soc_top.sv
 
 SKY130_SOC_SV2V_OUT := $(abspath $(LIBRELANE_SKY130_SOC_DIR)/soc_top_sv2v.v)
@@ -993,6 +999,12 @@ SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/periph/timer.sv \
 	$(PROJECT_ROOT)/rtl/periph/uart_controller.sv \
 	$(PROJECT_ROOT)/rtl/periph/spi_controller.sv \
+	$(PROJECT_ROOT)/rtl/mem/rv32i_clock_gate.sv \
+	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_2ff_sync.sv \
+	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_reset_sync.sv \
+	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_gray_fifo.sv \
+	$(PROJECT_ROOT)/rtl/soc/async_axi_fifo.sv \
+	$(PROJECT_ROOT)/rtl/soc/apb_cdc_bridge.sv \
 	$(PROJECT_ROOT)/rtl/soc/soc_top.sv
 
 SOC_SV2V_OUT := $(abspath $(LIBRELANE_ASAP7_SOC_DIR)/soc_top_sv2v.v)

@@ -13,15 +13,17 @@
 // All signals are direct renames of soc_top ports — zero logic, exactly
 // the pattern of tb_axi4_crossbar.sv.
 //
-// GH #92 (dual PLL / CPU-domain clock seam): soc_top now requires a second
-// clock/reset pair (cpu_clk_i/cpu_rst_n_i). This wrapper is a single-clock
-// suite (existing soc_all regression) and does not need to drive the
-// CPU-domain clock independently, so cpu_clk_i/cpu_rst_n_i are tied to
-// clk_i/rst_n_i internally — behaviourally unchanged from before GH #92.
-// The 2-domain split (a genuinely independent CPU clock) arrives in GH #93.
+// GH #93 (real CPU-domain clock): cpu_clk_i/cpu_rst_n_i are now true
+// top-level ports (previously tied internally to clk_i/rst_n_i under GH
+// #92). Every existing cocotb suite (test_boot / test_periph_loopback /
+// test_soc_coherency / test_cpu_gpu_irq / test_soc_stress / test_l2_bench)
+// drives both clock/reset pairs via tb/cocotb/soc/soc_clocks.py at a 1:1
+// ratio and identical phase, which is behaviourally unchanged from the old
+// internal tie. Only the new multiclock suite (test_soc_multiclock.py)
+// drives a genuinely independent, non-1:1 cpu_clk_i.
 // cpu_pll_locked_o is left unconnected here (soc_boot / soc_periph /
-// soc_coherency / soc_cpu_gpu do not observe it); see tb_soc_pll.sv for the
-// wrapper that exposes both lock signals.
+// soc_coherency / soc_cpu_gpu / soc_multiclock do not observe it); see
+// tb_soc_pll.sv for the wrapper that exposes both lock signals.
 //
 // Lint target: verilator -Wall 0 errors 0 warnings.
 
@@ -41,6 +43,10 @@ module tb_soc_top #(
     // ── Clock / reset ─────────────────────────────────────────────────────────
     input  logic        clk_i,
     input  logic        rst_n_i,
+
+    // ── CPU-domain reference clock / reset (GH #93 — genuinely independent) ──
+    input  logic        cpu_clk_i,
+    input  logic        cpu_rst_n_i,
 
     // ── APB3 debug slave (CPU debug port) ────────────────────────────────────
     input  logic [11:0] apb_paddr_i,
@@ -87,10 +93,9 @@ module tb_soc_top #(
     ) u_soc (
         .clk_i          (clk_i),
         .rst_n_i        (rst_n_i),
-        // GH #92: tie CPU-domain reference to the system reference — see
-        // header comment. Genuine 2-domain split arrives in GH #93.
-        .cpu_clk_i      (clk_i),
-        .cpu_rst_n_i    (rst_n_i),
+        // GH #93: genuinely independent CPU-domain reference — see header.
+        .cpu_clk_i      (cpu_clk_i),
+        .cpu_rst_n_i    (cpu_rst_n_i),
 
         .apb_paddr_i    (apb_paddr_i),
         .apb_psel_i     (apb_psel_i),

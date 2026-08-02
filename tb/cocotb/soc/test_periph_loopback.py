@@ -31,8 +31,9 @@ import sys
 from pathlib import Path
 
 import cocotb
-from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ReadOnly
+
+from soc_clocks import drive_soc_reset, start_soc_clocks
 
 # Project root on Python path so imports work
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -60,6 +61,23 @@ PERIPH_TIMEOUT_CYCLES = 200_000
 
 # Number of DMA words copied (must match firmware)
 DMA_N_WORDS = 4
+
+
+# ---------------------------------------------------------------------------
+# Module-level task handle tracking (coroutine leakage guard per knowledge.md
+# / CodeRabbit PR #132 review — this module only has one @cocotb.test(), so
+# there is no repeat _setup() call today to actually leak against, but the
+# guard is added for consistency with every other SoC-level test module and
+# defensiveness against a future second test being added here).
+# ---------------------------------------------------------------------------
+_active_tasks: list = []
+
+
+def _kill_active_tasks() -> None:
+    global _active_tasks
+    for t in _active_tasks:
+        t.kill()
+    _active_tasks = []
 
 
 # ---------------------------------------------------------------------------
@@ -100,10 +118,14 @@ def _load_rom(dut) -> None:
 # ---------------------------------------------------------------------------
 async def _setup(dut) -> None:
     """Start clock, idle inputs, backdoor-load firmware, apply + release reset."""
-    cocotb.start_soon(Clock(dut.clk_i, CLK_PERIOD_NS, units="ns").start())
+    _kill_active_tasks()
+
+    clk_task, cpu_clk_task = start_soc_clocks(dut, CLK_PERIOD_NS)
+    _active_tasks.append(clk_task)
+    _active_tasks.append(cpu_clk_task)
 
     # Idle all inputs
-    dut.rst_n_i.value       = 0
+    drive_soc_reset(dut, True)
     dut.apb_paddr_i.value   = 0
     dut.apb_psel_i.value    = 0
     dut.apb_penable_i.value = 0
@@ -118,7 +140,7 @@ async def _setup(dut) -> None:
     for _ in range(5):
         await RisingEdge(dut.clk_i)
 
-    dut.rst_n_i.value = 1
+    drive_soc_reset(dut, False)
 
     # 2-cycle settling after reset release
     for _ in range(2):

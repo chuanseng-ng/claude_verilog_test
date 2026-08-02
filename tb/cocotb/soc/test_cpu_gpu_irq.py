@@ -63,8 +63,9 @@ import sys
 from pathlib import Path
 
 import cocotb
-from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ReadOnly
+
+from soc_clocks import drive_soc_reset, start_soc_clocks
 
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(_ROOT) not in sys.path:
@@ -152,10 +153,11 @@ async def _setup(dut, hex_path: str = _FW_HEX) -> None:
     """Start clock, idle inputs, backdoor-load firmware, apply + release reset."""
     _kill_active_tasks()
 
-    clk_task = cocotb.start_soon(Clock(dut.clk_i, CLK_PERIOD_NS, units="ns").start())
+    clk_task, cpu_clk_task = start_soc_clocks(dut, CLK_PERIOD_NS)
     _active_tasks.append(clk_task)
+    _active_tasks.append(cpu_clk_task)
 
-    dut.rst_n_i.value       = 0
+    drive_soc_reset(dut, True)
     dut.apb_paddr_i.value   = 0
     dut.apb_psel_i.value    = 0
     dut.apb_penable_i.value = 0
@@ -176,7 +178,7 @@ async def _setup(dut, hex_path: str = _FW_HEX) -> None:
     for _ in range(5):
         await RisingEdge(dut.clk_i)
 
-    dut.rst_n_i.value = 1
+    drive_soc_reset(dut, False)
 
     for _ in range(2):
         await RisingEdge(dut.clk_i)

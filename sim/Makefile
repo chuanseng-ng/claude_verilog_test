@@ -352,6 +352,11 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/soc/pll/pll_clkgen.sv \
 	$(RTL_DIR)/soc/pll/pll_apb_regs.sv \
 	$(RTL_DIR)/soc/pll/pll_subsystem.sv \
+	$(RTL_DIR)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL_DIR)/soc/cdc/cdc_reset_sync.sv \
+	$(RTL_DIR)/soc/cdc/cdc_gray_fifo.sv \
+	$(RTL_DIR)/soc/async_axi_fifo.sv \
+	$(RTL_DIR)/soc/apb_cdc_bridge.sv \
 	$(RTL_DIR)/soc/soc_top.sv
 
 .PHONY: lint_soc
@@ -363,6 +368,7 @@ lint_soc:
 		-I$(RTL_DIR)/cpu/core \
 		-I$(RTL_DIR)/mem \
 		-I$(RTL_DIR)/soc \
+		-I$(RTL_DIR)/soc/cdc \
 		-I$(RTL_DIR)/gpu \
 		-Wno-IMPORTSTAR \
 		-Wno-UNUSEDSIGNAL \

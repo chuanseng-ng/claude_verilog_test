@@ -53,8 +53,9 @@ import sys
 from pathlib import Path
 
 import cocotb
-from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ClockCycles, ReadOnly
+
+from soc_clocks import drive_soc_reset, start_soc_clocks
 
 # ---------------------------------------------------------------------------
 # Project root on Python path
@@ -166,9 +167,10 @@ def _kill_active_tasks() -> None:
 # ---------------------------------------------------------------------------
 
 async def _start_clock(dut) -> None:
-    """Start the reference clock coroutine and track the handle."""
-    clk_task = await cocotb.start(Clock(dut.clk_i, CLK_PERIOD_NS, units="ns").start())
+    """Start clk_i and cpu_clk_i (1:1 ratio — see soc_clocks.py) and track handles."""
+    clk_task, cpu_clk_task = start_soc_clocks(dut, CLK_PERIOD_NS)
     _active_tasks.append(clk_task)
+    _active_tasks.append(cpu_clk_task)
 
 
 def _force_pll_enable(dut, val: int = 1) -> None:
@@ -209,7 +211,7 @@ async def _reset(dut, cycles: int = 8, rom_loader=None) -> None:
     """
     if rom_loader is None:
         rom_loader = _load_rom
-    dut.rst_n_i.value      = 0
+    drive_soc_reset(dut, True)
     # Tie off all inputs that have no default driver in this TB.
     dut.apb_paddr_i.value  = 0
     dut.apb_psel_i.value   = 0
@@ -225,7 +227,7 @@ async def _reset(dut, cycles: int = 8, rom_loader=None) -> None:
     # core_rst_n releases (MEM_INIT_FILE is baked at elaboration under Verilator).
     rom_loader(dut)
     await ClockCycles(dut.clk_i, cycles)
-    dut.rst_n_i.value = 1
+    drive_soc_reset(dut, False)
 
 
 async def _wait_for_lock(dut, timeout_cycles: int) -> bool:
@@ -243,11 +245,18 @@ async def _wait_for_lock(dut, timeout_cycles: int) -> bool:
 
 async def _wait_for_cpu_lock(dut, timeout_cycles: int) -> bool:
     """
-    Wait up to *timeout_cycles* rising edges for cpu_pll_locked_o == 1
-    (GH #92 second, CPU-domain stub PLL).
+    Wait up to *timeout_cycles* rising edges of cpu_clk_i for cpu_pll_locked_o
+    == 1 (GH #92 second, CPU-domain stub PLL; its STUB_LOCK_CYCLES=16 counter
+    lives in the cpu_clk_i domain).
+
+    GH #93 fix: this budget is counted in cpu_clk_i edges, not clk_i edges —
+    polling on RisingEdge(dut.clk_i) here was a latent bug (harmless only
+    because this suite keeps a 1:1 clk_i:cpu_clk_i ratio; at any other ratio
+    a fixed clk_i-edge budget no longer covers 16 genuine cpu_clk_i edges).
+    Callers must pass a budget already expressed in cpu_clk_i cycles.
     """
     for _ in range(timeout_cycles):
-        await RisingEdge(dut.clk_i)
+        await RisingEdge(dut.cpu_clk_i)
         await ReadOnly()
         if int(dut.cpu_pll_locked_o.value) == 1:
             return True
@@ -353,7 +362,7 @@ async def test_pll_reset_clears_lock(dut):
     await RisingEdge(dut.clk_i)
 
     # Re-assert reset (active-low: drive 0)
-    dut.rst_n_i.value = 0
+    drive_soc_reset(dut, True)
     await ClockCycles(dut.clk_i, 4)
     await ReadOnly()
 
@@ -369,7 +378,7 @@ async def test_pll_reset_clears_lock(dut):
 
     # Release reset again — re-assert pll_enable (bootstrap) and confirm re-lock.
     _force_pll_enable(dut, 1)
-    dut.rst_n_i.value = 1
+    drive_soc_reset(dut, False)
     re_locked = await _wait_for_lock(dut, LOCK_TIMEOUT_CYCLES)
     assert re_locked, (
         f"pll_locked_o did not re-assert within {LOCK_TIMEOUT_CYCLES} cycles "

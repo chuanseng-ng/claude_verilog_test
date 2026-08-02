@@ -15,8 +15,9 @@ Run with:
 """
 
 import cocotb
-from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ReadOnly
+
+from soc_clocks import drive_soc_reset, start_soc_clocks
 
 CLK_PERIOD_NS = 2   # 500 MHz
 
@@ -45,9 +46,9 @@ def _get(dut, dotted):
 @cocotb.test()
 async def test_diag_boot_fetch(dut):
     """Dump 300 cycles of fetch-path signals after reset release."""
-    cocotb.start_soon(Clock(dut.clk_i, CLK_PERIOD_NS, units="ns").start())
+    start_soc_clocks(dut, CLK_PERIOD_NS)
 
-    dut.rst_n_i.value = 0
+    drive_soc_reset(dut, True)
     dut.apb_psel_i.value = 0
     dut.apb_penable_i.value = 0
     dut.apb_pwrite_i.value = 0
@@ -58,7 +59,7 @@ async def test_diag_boot_fetch(dut):
 
     for _ in range(8):
         await RisingEdge(dut.clk_i)
-    dut.rst_n_i.value = 1
+    drive_soc_reset(dut, False)
     for _ in range(2):
         await RisingEdge(dut.clk_i)
 
