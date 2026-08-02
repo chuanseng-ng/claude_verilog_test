@@ -11,6 +11,7 @@
       "rtl/cpu/core/rv32i_csr_file.sv",
       "rtl/cpu/rv32i_cpu_top.sv",
       "rtl/mem/rv32i_cache_arbiter.sv",
+      "rtl/mem/rv32i_clock_gate.sv",
       "rtl/mem/rv32i_dcache.sv",
       "rtl/mem/rv32i_icache.sv",
       "rtl/periph/dma_engine.sv",
@@ -19,7 +20,9 @@
       "rtl/periph/timer.sv",
       "rtl/periph/uart_controller.sv",
       "rtl/soc/apb4_register_bank.sv",
+      "rtl/soc/apb_cdc_bridge.sv",
       "rtl/soc/apb_interconnect.sv",
+      "rtl/soc/async_axi_fifo.sv",
       "rtl/soc/axi4_crossbar.sv",
       "rtl/soc/axi4_to_axilite.sv",
       "rtl/soc/axi_lite_interconnect.sv",
@@ -28,12 +31,15 @@
       "rtl/soc/axil_to_apb.sv",
       "rtl/soc/axilite_to_axi4.sv",
       "rtl/soc/boot_rom.sv",
+      "rtl/soc/cdc/cdc_2ff_sync.sv",
       "rtl/soc/cdc/cdc_gray_fifo.sv",
+      "rtl/soc/cdc/cdc_reset_sync.sv",
       "rtl/soc/pll/pll_apb_regs.sv",
       "rtl/soc/pll/pll_clkgen.sv",
       "rtl/soc/pll/pll_clkgen_stub.sv",
       "rtl/soc/pll/pll_rnm.sv",
       "rtl/soc/pll/pll_subsystem.sv",
+      "rtl/soc/pmu.sv",
       "rtl/soc/soc_addr_map_pkg.sv",
       "rtl/soc/soc_bus.sv",
       "rtl/soc/soc_periph_map_pkg.sv",
@@ -72,9 +78,9 @@
     },
     "gh93_cdc_verification": {
       "status": "SIGNED OFF",
-      "reason": "SoC boot regression (see fix_requests[] entry) blocks soc_boot/soc_periph/soc_coherency/soc_cpu_gpu/soc_pll/soc_multiclock/soc_pll_multiclock",
+      "reason": "Signed off 2026-08-01 -- see final_regression (soc_all 159/159, soc_multiclock 4/4, soc_pll_multiclock 1/1). Both blocking fix_requests resolved: fr_57f49b7f9b29 (cpu_gated_clk stopped during CPU reset, fixed 4398c2e) and fr_280f3ac18c66 (cdc_gray_fifo wr_ready_o asserted in reset, fixed 7a9f9d4).",
       "fix_request_id": "fr_280f3ac18c66_20260801_000001_00",
-      "tb_infra_status": "complete, lint-clean: cpu_clk_i/cpu_rst_n_i real ports on tb_soc_top.sv/tb_soc_pll.sv, soc_clocks.py shared helper, 8 suites retrofitted (zero behaviour change), apb_cdc_bridge unit suite 15/15 PASS (unaffected, does not instantiate soc_top), soc_multiclock + soc_pll_multiclock authored and lint-clean but blocked from passing until the RTL fix lands",
+      "tb_infra_status": "complete, lint-clean, all passing: cpu_clk_i/cpu_rst_n_i real ports on tb_soc_top.sv/tb_soc_pll.sv, soc_clocks.py shared helper, 8 suites retrofitted (zero behaviour change), apb_cdc_bridge unit suite 15/15, soc_multiclock 4/4 and soc_pll_multiclock 1/1 at a 7ns/3ns coprime ratio.",
       "checked_at": "2026-08-01T15:29:22.974567+00:00",
       "soc_all_regression": {
         "status": "PASS",
@@ -161,7 +167,9 @@
         "timer_irq -- never exercised by any reused firmware in soc_multiclock; u_timer_irq_sync (cdc_2ff_sync, same structure as u_ext_irq_sync) is unexercised at the multiclock ratio",
         "GH #94 (multi-clock SDC): set_max_delay -datapath_only still needed on cdc_gray_fifo's mem_q read and both gray-pointer crossings, and on apb_cdc_bridge's 4 payload buses + 2 toggle crossings -- unaffected by this campaign's fixes, still open",
         "GH #95 (cdc_snitch BAD=0 gate): both bugs this campaign found share a signature -- a reset value that advertises availability while cross-domain readiness has not actually been established (clock-enable sync defaulting to 'disabled', ready output defaulting to 'not full'/'ready') -- invisible whenever both domains reset together, which is every scenario before GH #93. Recommend cdc_snitch explicitly check for this class: any handshake-ready/valid output whose reset value asserts availability must be verified to also depend (directly or via the same-domain synchronized reset) on that domain's own reset signal, not just on its own control-array flags."
-      ]
+      ],
+      "historical_reason_pre_fix": "SoC boot regression (see fix_requests[] entry) blocks soc_boot/soc_periph/soc_coherency/soc_cpu_gpu/soc_pll/soc_multiclock/soc_pll_multiclock",
+      "historical_tb_infra_status_pre_fix": "complete, lint-clean: cpu_clk_i/cpu_rst_n_i real ports on tb_soc_top.sv/tb_soc_pll.sv, soc_clocks.py shared helper, 8 suites retrofitted (zero behaviour change), apb_cdc_bridge unit suite 15/15 PASS (unaffected, does not instantiate soc_top), soc_multiclock + soc_pll_multiclock authored and lint-clean but blocked from passing until the RTL fix lands"
     }
   },
   "pipeline_session_id": null,
