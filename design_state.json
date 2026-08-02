@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-08-01T23:58:18.992483+00:00",
+  "updated_at": "2026-08-02T07:45:57.977019+07:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -1078,6 +1078,18 @@
       "retry_strategy": "none",
       "suggested_next_step": "proceed",
       "reason": "Fixed bead claude_verilog_test-542 (GH #90 follow-up): pmu.sv power-up ordering (rst-release-before-clk-ungate, UPF-mandated, retention-by-construction) was not robust across the two independent CDC synchronisers (u_cpu_pmu_rst_sync / u_cpu_clk_dis_sync) introduced in GH #93 for the CPU-domain clock. Fix is in rtl/soc/soc_top.sv only (pmu.sv left unchanged, per UPF compliance): u_cpu_cg enable is now cpu_gated_clk_en = ~pmu_cpu_clk_dis_sync & pmu_cpu_rst_n_cpu_sync, a same-domain (cpu_core_clk) combinational AND of two already-registered signals, structurally forbidding cpu_gated_clk from ticking whenever the CPU-domain-observed PMU reset is asserted, for arbitrary skew between the two synchronisers, both power-up and power-down directions. Verified: lint_soc 0 errors (7 expected baseline warnings unchanged), make pmu 10/10 unchanged (tb_pmu.sv is a standalone pmu-only DUT, no CDC, unaffected by a soc_top-only fix), soc_boot 3/3 (100/100 boot-stability, cold-boot regression check), soc_multiclock 4/4 at the 7ns/3ns coprime ratio (CDC-heavy regression). No tb/ files modified. Residual: no suite exercises a live PMU-driven CPU power-cycle at a divergent clock ratio (would need firmware CTRL writes + async ratio combined) -- flagged for verification-orchestrator, not added here.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-08-02T07:45:57.977019+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Fixed a confirmed availability bug in rtl/soc/apb_cdc_bridge.sv (CodeRabbit finding on PR #132, branch feat/cpu-domain-cdc-gh93, independently verified): s_rst_sync_n was rooted in rst_both_n = s_rst_n_i & m_rst_n_i, so an APB access to the CPU-domain PLL2 window while m_rst_n_i alone was asserted held the SOURCE FSM in S_IDLE forever, wedging the entire fabric APB tree (UART/SPI/timer/IRQ/PMU/both PLL blocks) until a full SoC reset -- a held-in-reset FSM cannot even emit an error response, so the fix required a reset-structure change, not a new state transition. Fix: s_rst_sync_n now roots on s_rst_n_i only; m_rst_sync_n deliberately stays on rst_both_n (still required to keep req_seen_q/req_toggle_q toggle-parity consistent across an s-only reset -- a fully-decoupled alternative was analysed and rejected for reproducing a silent-drop hang); a new active-high m_rst_n_i status synchronised into the source domain (cdc_2ff_sync) gates request forwarding, bounds S_WAIT, and continuously clamps req_toggle_q to 0 while the destination is observed in reset, closing the fabricated-write hazard. verilator --lint-only: 0 errors, 0 warnings (apb_cdc_bridge_lint); lint_soc baseline unchanged (7 expected warnings). apb_cdc_bridge suite: 14/15 -- test_reset_mid_transaction_m_side now fails BY DESIGN (asserts s_pslverr==0 after an m-only reset, encoding the old silent-drop/hang semantics this fix replaces); left untouched per scope (no test edits), flagged to verification-orchestrator to update. Touched rtl/soc/apb_cdc_bridge.sv only, per explicit scope -- no other files modified.",
       "constraint_ref": null
     }
   ],
