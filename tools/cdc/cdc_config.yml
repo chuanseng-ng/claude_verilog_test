@@ -1,0 +1,128 @@
+# ---------------------------------------------------------------------------
+# cdc_gate.py configuration — turns the raw cdc_snitch report into a gate.
+#
+# WHY THIS FILE EXISTS
+# --------------------
+# cdc_snitch (BerkeleyLab/Bedrock) classifies a register BAD when its data
+# combines more than one clock domain. It has three structural blind spots on
+# a design like this one, and none of them can be fixed with the `magic_cdc`
+# attribute (that attribute only promotes a SINGLE-source crossing from OKX to
+# CDC; a multi-domain register stays BAD no matter what -- see cdc_snitch.py
+# check_bit(): "doesn't matter if they claim CDC or not, it's still bad"):
+#
+#   1. Every top-level input port is modelled as its own clock domain, so an
+#      async reset port shows up as a "domain" on the reset pin of every flop
+#      it reaches.  (~13.8k of the 16233 baseline BADs.)
+#   2. A clock-gate output net is a different net from its source clock, so
+#      cpu_gated_clk and cpu_clk_i look like two domains when they are one.
+#      (~2.2k baseline BADs.)
+#   3. A synchronous top-level bus has one "domain" PER BIT, so a 12-bit
+#      address bus alone puts 12 domains into a register's input set.
+#
+# The three lists below (`domain_aliases`, `reset_domains`, `port_domains`)
+# encode exactly the same intent the signed-off timing constraints already
+# encode in pnr/constraints/phase5_soc_multiclock.sdc. They are deliberately
+# NOT per-line waivers: they are design facts, they apply uniformly, and if
+# the clock topology changes they stop matching and the gate re-opens.
+#
+# `waivers` is the escape hatch for the residue those rules cannot express.
+# Every waiver must carry a justification, a reference, and a `kind`. A waiver
+# that stops matching anything FAILS the gate -- a stale waiver is a bug, not
+# a free pass.
+#
+# Baseline for reference (2026-08-02, main + GH #93, first multi-clock run):
+#   OK1: 17009   CDC: 37   OKX: 464   BAD: 16233
+# ---------------------------------------------------------------------------
+
+# --- 0. The real clock domains of this design -------------------------------
+# Anything cdc_snitch reports as a "domain" that is not in this list, not a
+# reset, and not an alias below is a top-level PORT being modelled as a clock.
+# Such entries are shown as `PORT:<name>` so a genuine clock crossing can never
+# be confused with a port artifact when reading the gate output.
+clock_domains:
+  - clk_i          # fabric / GPU / peripheral domain reference (sys_clk, 571 MHz)
+  - cpu_clk_i      # CPU domain reference (cpu_clk, 1282 MHz)
+
+# --- 1. Clock nets that are the SAME physical domain as their root ----------
+# Mirrors phase5_soc_multiclock.sdc, which deliberately declares clocks on the
+# two top-level PORTS only and creates NO generated clocks for the PLL-stub or
+# clock-gate outputs (the Run-13 CTS split-tree lesson). Same topology, same
+# canonicalization here.
+domain_aliases:
+  core_clk:       clk_i          # PLL-stub passthrough, fabric domain
+  gpu_gated_clk:  clk_i          # rv32i_clock_gate u_gpu_cg output
+  cpu_core_clk:   cpu_clk_i      # PLL-stub passthrough, CPU domain
+  cpu_gated_clk:  cpu_clk_i      # rv32i_clock_gate u_cpu_cg output
+
+# --- 2. Ports that are resets, not clock domains ---------------------------
+# Mirrors phase5_soc_multiclock.sdc section 4, which set_false_paths both.
+# Reset *crossings* are still checked: cdc_reset_sync's flop chain carries
+# (* magic_cdc *) and is classified CDC on its own merits.
+reset_domains:
+  - rst_n_i
+  - cpu_rst_n_i
+
+# --- 3. Top-level buses that are synchronous to a named domain --------------
+# Collapses a whole bus to one domain so per-bit fan-in stops looking
+# multi-domain. Only list a bus here if it is genuinely synchronous to the
+# named domain -- a truly asynchronous pin must NOT be listed (uart_rx_i is
+# absent on purpose: it is async, it has a real 2-FF synchroniser in
+# uart_controller.sv, and cdc_snitch correctly reports it OKX. That OKX is the
+# evidence the tool would still catch a MISSING synchroniser.)
+port_domains: {}
+
+# --- 4. Waivers -------------------------------------------------------------
+# kind: tool-limitation  -> a correct, reviewed structure cdc_snitch cannot express
+# kind: accepted-risk    -> a real gap we are knowingly carrying; MUST have a bead
+#
+# `dest` is a regex matched against the register name in the report.
+# `domains` (optional) is the exact canonicalized source-domain set that must
+# match, as a sorted '+'-joined string -- it keeps a broad `dest` regex from
+# silently swallowing a different, new crossing on the same instance.
+waivers:
+  - id: async-fifo-cross-coupled-reset
+    kind: tool-limitation
+    dest: '^u_cpu_axi_cdc\.u_[sm]_rst_sync\.sync_q\[\d+\]:R$'
+    domains: 'clk_i+cpu_clk_i'
+    reason: >
+      By design, not a defect. async_axi_fifo drives BOTH internal
+      cdc_reset_sync chains from rst_both_n = s_rst_n_i & m_rst_n_i
+      (async_axi_fifo.sv:174-175), so each chain's async-clear pin genuinely
+      combines the CPU and fabric reset roots. This is deliberate: a one-sided
+      reset would leave the FIFO half-flushed and inject fabricated AXI beats
+      into the surviving domain. cdc_snitch has no concept of a reset pin, so
+      it reports the two-domain clear as data BAD. Timing-wise these are
+      set_false_path'd (async clear is not a setup-checked datapath).
+    ref: GH#91, async_axi_fifo.sv:174-175, phase5_soc_multiclock.sdc sec.4
+
+  - id: apb-cdc-bridge-resp-payload-read
+    kind: tool-limitation
+    dest: '^u_apb_pll2_cdc\.s_prdata_o\[\d+\]:D$'
+    domains: 'clk_i+cpu_clk_i'
+    reason: >
+      Qualified 2-phase-handshake payload read. resp_prdata_q is an s-domain
+      (fabric) flop that combinationally reads the m-domain (CPU) resp_*_dq
+      payload registers. It is safe because the payload is only sampled after
+      the ack toggle has propagated through u_ack_sync (2-FF, magic_cdc,
+      classified CDC), by which point the payload has been stable for at least
+      SYNC_STAGES_TO_S receiving clocks. cdc_snitch sees the combinational read
+      and cannot see the handshake that qualifies it. The path is bounded in
+      STA by set_max_delay -datapath_only.
+    ref: GH#93, apb_cdc_bridge.sv:558-587, phase5_soc_multiclock.sdc:406
+
+  - id: spi-miso-unsynchronised-sample
+    kind: accepted-risk
+    dest: '^u_spi\.(rx_shift_q|rx_push_data)\[\d+\]:D$'
+    domains: 'PORT:spi_miso_i+clk_i'
+    reason: >
+      Real finding, accepted for now. spi_miso_i is a board-level asynchronous
+      pin sampled directly into the fabric domain with no 2-FF synchroniser.
+      Benign in SPI master mode -- the SoC generates SCLK, so MISO is sampled a
+      known number of fabric cycles after the driving edge and is stable by
+      construction -- but it is not CDC-clean by inspection and would be a real
+      hazard in any future slave-mode or divided-SCLK use. First reported by
+      the 2026-06-09 cdc_snitch POC; carried forward here rather than silently
+      resolved. spi_controller.sv is Phase-5-verified RTL, so adding the
+      synchroniser is a tracked change, not a drive-by edit.
+    ref: docs/verification/CDC_SNITCH_POC.md:68-76
+    bead: claude_verilog_test-a2g
