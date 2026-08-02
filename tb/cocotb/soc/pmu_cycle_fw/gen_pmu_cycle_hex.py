@@ -197,10 +197,28 @@ def build_firmware(asm: Assembler):
     # The CPU domain's clock is gated out from under this loop by the PMU
     # once the DMA write above lands; the loop resumes on the exact next
     # instruction once the PMU sequences the CPU domain back to DOM_ON.
+    #
+    # bead claude_verilog_test-2k8 fix note: the loop body includes a
+    # per-iteration CSRW dcache_flush (0x7C0). SRAM_BASE is below MMIO_BASE
+    # (rv32i_dcache.sv's cacheable-address check), so without an explicit
+    # flush the counter store only dirties the write-back D-cache's line —
+    # it never reaches real SRAM, and the testbench observes the counter
+    # via a BACKDOOR read of u_soc.u_sram.mem (bypassing the D-cache
+    # entirely), which would then never see the increment regardless of
+    # whether the CPU is actually executing correctly. This is the same
+    # flush-before-external-observation pattern Step 1c above already uses
+    # (D-cache flush before the DMA's own SRAM read) and that
+    # docs/M9's "SW coherency (D$ flush->GPU->D$ inval)" convention
+    # establishes elsewhere in this repo. dc_stall_o is asserted for the
+    # full duration of CS_FLUSH_SCAN (rv32i_dcache.sv), so the pipeline
+    # naturally blocks the following JAL until the flush (and any
+    # resulting single-line writeback) completes — no software spin-wait
+    # is needed here, unlike Step 1c's cross-domain DMA-visibility case.
     asm.label("LOOP")
     asm.emit(LW(9, 2, COUNTER_BYTE_OFFSET))
     asm.emit(ADDI(9, 9, 1))
     asm.emit(SW(9, 2, COUNTER_BYTE_OFFSET))
+    asm.emit(CSRRW(0, 0x7C0, 0))   # dcache_flush -- make the store SRAM-visible
     asm.thunk(lambda lbl, pc: JAL(0, lbl["LOOP"] - pc))
 
 

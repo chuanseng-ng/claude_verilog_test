@@ -53,19 +53,30 @@ stops — the PLL-driven cpu_core_clk reference and cpu_clk_i itself never
 stop), matching every other suite's "Clock() coroutines are never
 reset/gate-gated, only the RTL's internal state is" convention.
 
-Known hazards under test, characterised (NOT fixed) per this task's scope:
+Known hazards under test:
   - pmu.sv's power-up ordering (rst-release-before-clk-ungate) was closed in
     soc_top.sv (commit 30beab3) by gating u_cpu_cg with the CPU-domain-native
     pmu_cpu_rst_n_cpu_sync. This test's power-up ordering assertion is the
     first live exercise of that fix under real cross-domain traffic.
-  - The PMU power-down path has NO drain/quiesce step (soc_top.sv:83-93) —
-    a mid-burst CPU AXI transaction or D-cache writeback in flight when the
-    clock gates is a pre-existing, documented, non-blocking gap. This test's
-    firmware is deliberately minimal (a 2-word SRAM working set, no fabric
-    AXI traffic after the DMA-trigger write) specifically to stay clear of
-    that gap rather than exercise it — if this test times out or the
-    counter fails to resume cleanly, that is itself the reportable finding
-    the task explicitly anticipates, not a testbench bug to paper over.
+  - u_cpu_axi_cdc's reset-semantics asymmetry (bead claude_verilog_test-2k8,
+    FIXED — see the "BEAD claude_verilog_test-2k8" note below
+    @cocotb.test): u_cpu_axi_cdc's s_rst_n_i used to be wired to
+    cpu_domain_rst_n, which folds in the PMU's own retention-hold reset —
+    every PMU power-down therefore hard-flushed the CDC bridge's in-flight
+    state even though u_cpu itself (synchronous reset, gated clock) was
+    correctly RETAINING its own state across the same event. The fix
+    rewires s_rst_n_i to cpu_core_rst_n (the CPU domain's true POR/PLL-lock
+    reset), so the bridge now retains, not flushes, across a PMU power-
+    cycle, matching u_cpu's own contract. This test is what regression-
+    guards that fix.
+  - The PMU power-down path still has NO drain/quiesce step (soc_top.sv:
+    83-93) — a mid-burst CPU AXI transaction or D-cache writeback in flight
+    when the clock gates is a pre-existing, documented, non-blocking gap,
+    DISTINCT from the bead-2k8 fix above (that gap is about the crossbar's
+    per-slave engine having no drain FSM at all, not about this CDC
+    bridge's reset semantics). This test's firmware is deliberately minimal
+    (a 2-word SRAM working set, no fabric AXI traffic after the DMA-trigger
+    write) specifically to stay clear of that gap rather than exercise it.
 
 Metastability injection: corrected claim (bead claude_verilog_test-rvs). Earlier
 revisions of this docstring said this was "not modelable in Verilator/cocotb" --
@@ -159,7 +170,10 @@ DOM_CPU = 0  # pmu.sv N_DOM index for the CPU domain
 POWERDOWN_TIMEOUT_CLK_I_CYCLES = 6_000
 POWERUP_TIMEOUT_CLK_I_CYCLES = 6_000
 FROZEN_WINDOW_CPU_CLK_CYCLES = 200
-DIAG_RESUME_WINDOW_CPU_CLK_CYCLES = 1_000
+DIAG_RESUME_WINDOW_CPU_CLK_CYCLES = 2_500  # bead 2k8: >2x the measured
+                                            # first-SRAM-visible-increment
+                                            # latency (~1000 cycles, see the
+                                            # note above this constant's use)
 
 ROM_BASE = 0x0000_1000
 LOOP_PC = 0x0000_1058  # pmu_cycle_fw/pmu_cycle_fw_addrs.py LOOP_PC
@@ -251,26 +265,67 @@ async def _pmu_live_cycle_body(dut) -> None:
     # covered by the per-cycle ordering assertion above.
     await ClockCycles(dut.clk_i, 10)
 
-    # While OFF: zero acceptance at u_cpu_axi_cdc's s_* face (the exact
-    # property fr_280f3ac18c66/commit 7a9f9d4 fixed, now exercised via a
-    # real PMU-driven transition instead of an external reset hold), zero
+    # While OFF: zero *request initiation* at u_cpu_axi_cdc's s_* face, zero
     # commit activity, and the busy-loop counter frozen (clock genuinely
     # gated, not merely stalled).
+    #
+    # Bead claude_verilog_test-2k8 fix note: this block used to assert
+    # cpu_bridge_s_{aw,w,ar}ready == 0 as its "zero acceptance" proxy. That
+    # was correct ONLY under the pre-fix hard-flush wiring (s_rst_n_i =
+    # cpu_domain_rst_n), where those *_ready signals read 0 purely as a
+    # side effect of the bridge itself being held in reset during OFF -- not
+    # because anything genuinely clamped them. Post-fix (s_rst_n_i =
+    # cpu_core_rst_n), the bridge correctly stays UN-reset and running
+    # during a PMU-only power-cycle (that is the entire point of the fix --
+    # it retains, not flushes), so those *_ready signals legitimately read 1
+    # (idle-ready, nothing pending) throughout OFF. Asserting them ==0 now
+    # would be asserting a stale implementation artifact, not a real safety
+    # property, and per this task's "do not weaken any assertion" rule the
+    # right move is to replace it with the actual property that matters --
+    # not delete it.
+    #
+    # The REAL "zero acceptance" guarantee comes from the ISO_CPU clamp
+    # forcing cpu_bridge_s_{aw,w,ar}valid to 0 while pmu_cpu_iso_en_sync is
+    # asserted (soc_top.sv, "ISO_CPU functional-isolation clamp" note, and
+    # the RTL header's clamp-scope note): per AXI4, a transfer requires BOTH
+    # valid AND ready in the same cycle, so valid==0 is sufficient on its
+    # own to guarantee no CPU-initiated request is ever accepted-and-dropped
+    # while OFF, regardless of what the bridge's *_ready happens to read.
+    # Checking valid==0 directly is a strictly more precise formulation of
+    # the same "accept-and-drop hazard" the original assertion named.
     counter_before = await _read_counter(dut)
     for i in range(FROZEN_WINDOW_CPU_CLK_CYCLES):
         await RisingEdge(dut.cpu_clk_i)
         await ReadOnly()
-        assert int(dut.u_soc.cpu_bridge_s_awready.value) == 0, (
-            f"cpu_bridge_s_awready asserted at cpu_clk_i cycle {i} while the CPU "
-            "domain is PMU-gated OFF -- accept-and-drop hazard"
+        assert int(dut.u_soc.cpu_bridge_s_awvalid.value) == 0, (
+            f"cpu_bridge_s_awvalid asserted at cpu_clk_i cycle {i} while the CPU "
+            "domain is PMU-gated OFF -- ISO_CPU clamp failure / accept-and-drop hazard"
         )
-        assert int(dut.u_soc.cpu_bridge_s_wready.value) == 0, (
-            f"cpu_bridge_s_wready asserted at cpu_clk_i cycle {i} while the CPU "
-            "domain is PMU-gated OFF"
+        assert int(dut.u_soc.cpu_bridge_s_wvalid.value) == 0, (
+            f"cpu_bridge_s_wvalid asserted at cpu_clk_i cycle {i} while the CPU "
+            "domain is PMU-gated OFF -- ISO_CPU clamp failure"
         )
-        assert int(dut.u_soc.cpu_bridge_s_arready.value) == 0, (
-            f"cpu_bridge_s_arready asserted at cpu_clk_i cycle {i} while the CPU "
-            "domain is PMU-gated OFF"
+        assert int(dut.u_soc.cpu_bridge_s_arvalid.value) == 0, (
+            f"cpu_bridge_s_arvalid asserted at cpu_clk_i cycle {i} while the CPU "
+            "domain is PMU-gated OFF -- ISO_CPU clamp failure"
+        )
+        assert not (
+            int(dut.u_soc.cpu_bridge_s_awvalid.value) and int(dut.u_soc.cpu_bridge_s_awready.value)
+        ), (
+            f"AW transfer (valid && ready) occurred at cpu_clk_i cycle {i} while "
+            "the CPU domain is PMU-gated OFF -- accept-and-drop hazard"
+        )
+        assert not (
+            int(dut.u_soc.cpu_bridge_s_wvalid.value) and int(dut.u_soc.cpu_bridge_s_wready.value)
+        ), (
+            f"W transfer (valid && ready) occurred at cpu_clk_i cycle {i} while "
+            "the CPU domain is PMU-gated OFF -- accept-and-drop hazard"
+        )
+        assert not (
+            int(dut.u_soc.cpu_bridge_s_arvalid.value) and int(dut.u_soc.cpu_bridge_s_arready.value)
+        ), (
+            f"AR transfer (valid && ready) occurred at cpu_clk_i cycle {i} while "
+            "the CPU domain is PMU-gated OFF -- accept-and-drop hazard"
         )
         assert int(dut.commit_valid_o.value) == 0, (
             f"commit_valid_o asserted at cpu_clk_i cycle {i} while the CPU domain "
@@ -338,13 +393,28 @@ async def _pmu_live_cycle_body(dut) -> None:
     # registers) survived the live, clock-gate-only power cycle intact and
     # the loop resumed on the exact next instruction, not from RESET_PC.
     #
-    # DIAGNOSTIC INSTRUMENTATION (temporary, GH #95 Group C root-cause
-    # isolation): log every commit_valid_o pulse's PC for up to
-    # DIAG_RESUME_WINDOW_CPU_CLK_CYCLES so a failure here can be
-    # distinguished as (a) a full re-boot from RESET_PC (architectural state
-    # lost), (b) a permanent wedge (zero commits ever again -- the
-    # no-drain/quiesce hazard soc_top.sv:83-93 flags), or (c) a merely slow
-    # resume (counter eventually climbs, just past the original window).
+    # Bead claude_verilog_test-2k8 fix note on DIAG_RESUME_WINDOW_CPU_CLK_CYCLES's
+    # size: the loop body's per-iteration CSRW dcache_flush (see
+    # pmu_cycle_fw/gen_pmu_cycle_hex.py's LOOP note) is what makes the
+    # counter observable via the backdoor SRAM read below at all (SRAM_BASE
+    # is cacheable/write-back, so a store alone only dirties the D-cache
+    # line -- see that file's note), but a full CS_FLUSH_SCAN (256 sets) is
+    # the dominant per-iteration cost, not the 4-instruction loop body
+    # itself. Measured: the first post-resume SRAM-visible increment lands
+    # ~1000 cpu_clk_i cycles after DOM_ON (one-time settle cost: draining
+    # any beat the fabric-side CDC bridge retained in flight across the
+    # power-cycle, per the bead 2k8 fix above, plus the loop's own first
+    # flush), then roughly every ~300 cycles thereafter in steady state.
+    # DIAG_RESUME_WINDOW_CPU_CLK_CYCLES is sized with margin above the
+    # measured first-increment latency so this assertion is not flaky.
+    #
+    # This loop intentionally does NOT break early on commit count (an
+    # earlier revision did, and broke well before even one flush-writeback
+    # round-trip could complete, which produced a "0 -> 0" false failure
+    # that briefly looked like a resume deadlock but was purely a test-
+    # timing-budget artifact -- see git history for that investigation). It
+    # always runs the full window so real wall-clock cycles reliably elapse
+    # regardless of how bursty commits are.
     await ClockCycles(dut.clk_i, 10)
     counter_resumed_start = await _read_counter(dut)
     commits_seen = []
@@ -354,10 +424,8 @@ async def _pmu_live_cycle_body(dut) -> None:
     for i in range(DIAG_RESUME_WINDOW_CPU_CLK_CYCLES):
         await RisingEdge(dut.cpu_clk_i)
         await ReadOnly()
-        if dut.commit_valid_o.value:
+        if dut.commit_valid_o.value and len(commits_seen) < 64:
             commits_seen.append((i, int(dut.commit_pc_o.value)))
-            if len(commits_seen) >= 8:
-                break
         gated_clk = int(dut.u_soc.cpu_gated_clk.value)
         if prev_gated_clk is not None and gated_clk != prev_gated_clk:
             toggle_count += 1
@@ -371,11 +439,11 @@ async def _pmu_live_cycle_body(dut) -> None:
                 int(dut.u_soc.pmu_cpu_rst_n_cpu_sync.value),
                 int(dut.u_soc.cpu_domain_rst_n.value),
                 int(dut.u_soc.pmu_cpu_iso_en_sync.value) if hasattr(dut.u_soc, "pmu_cpu_iso_en_sync") else -1,
-                # bead 2k8 wedge-hypothesis evidence: CPU-side stall + AXI
-                # request/response valid state at resume. A stall stuck at 1
-                # combined with a valid stuck at 1 (no ready ever) for the
-                # full window is the wedge signature; both reading 0 rules
-                # out an outstanding-request wedge as the cause.
+                # bead 2k8 evidence trail: CPU-side stall + AXI request/
+                # response valid state across resume, kept as a regression
+                # trace even though the wedge hypothesis this originally
+                # tested for is now fixed (see u_cpu_axi_cdc's s_rst_n_i
+                # rewiring in soc_top.sv).
                 int(dut.u_soc.u_cpu.u_core.ic_stall.value),
                 int(dut.u_soc.u_cpu.u_core.dc_stall.value),
                 int(dut.u_soc.cpu_bridge_s_awvalid.value),
@@ -422,32 +490,47 @@ async def _pmu_live_cycle_body(dut) -> None:
 
 
 #
-# BEAD claude_verilog_test-2k8 (P1): this test FAILS against current RTL, and
-# it is expected to. Root cause is NOT in this test's subject (pmu.sv's
-# sequencer): the diagnostic trace above proves the sequencer is correct in
-# both directions (power-down [0,1,2,3,4] and power-up [5,6,7,8,0] both match
-# the exact UPF-mandated order) and that every cross-domain control signal is
-# restored correctly on power-up (cpu_gated_clk_en=1, pmu_cpu_clk_dis_sync=0,
-# pmu_cpu_rst_n_cpu_sync=1, cpu_domain_rst_n=1, pmu_cpu_iso_en_sync=0 -- a
-# fully ungated, unreset, unisolated CPU domain). Yet the CPU never commits
-# another instruction (zero commits over 1000 cpu_clk_i cycles post-DOM_ON).
-# rv32i_cpu_top.sv is synchronous-reset throughout, and commit 30beab3
-# deliberately forbids cpu_gated_clk from ticking until
-# pmu_cpu_rst_n_cpu_sync is already 1 specifically so the CPU never sees a
-# clock edge while reset -- i.e. this is retention-by-construction and the
-# CPU MUST resume from wherever it was, not reboot. It does not. Leading
-# hypothesis (NOT proven -- would need a full waveform, not yet captured):
-# the no-drain/quiesce gap at soc_top.sv:83-93 -- a CPU-side cache/AXI-
-# arbiter FSM left an in-flight request state that the fabric will now never
-# answer (async_axi_fifo's hard-flush reset does not distinguish "abandon
-# cleanly" from "abandon while the CPU still thinks it's owed a response").
-# This is a PRE-EXISTING architectural gap the GH #95 task explicitly
-# anticipated finding, not a regression introduced by this test or by GH #95.
-# expect_fail=True keeps soc_all green while this stays open, and will
-# ALERT the moment an RTL fix makes this test start passing (cocotb fails
-# the run if an expect_fail test unexpectedly passes) -- so this must not be
-# "fixed" by weakening the assertions above, only by an actual RTL fix
-# tracked against bead 2k8.
-@cocotb.test(expect_fail=True)
+# BEAD claude_verilog_test-2k8 (P1): FIXED. This test used to fail against
+# RTL prior to the fix below, and was pinned @cocotb.test(expect_fail=True)
+# while the root cause was open. Root cause was NOT in this test's subject
+# (pmu.sv's sequencer): the diagnostic trace proved the sequencer was correct
+# in both directions (power-down [0,1,2,3,4] and power-up [5,6,7,8,0] both
+# match the exact UPF-mandated order) and that every cross-domain control
+# signal was restored correctly on power-up (cpu_gated_clk_en=1,
+# pmu_cpu_clk_dis_sync=0, pmu_cpu_rst_n_cpu_sync=1, cpu_domain_rst_n=1,
+# pmu_cpu_iso_en_sync=0 -- a fully ungated, unreset, unisolated CPU domain).
+# Yet the CPU never committed another instruction (zero commits over 1000
+# cpu_clk_i cycles post-DOM_ON). rv32i_cpu_top.sv is synchronous-reset
+# throughout, and commit 30beab3 deliberately forbids cpu_gated_clk from
+# ticking until pmu_cpu_rst_n_cpu_sync is already 1 specifically so the CPU
+# never sees a clock edge while reset -- i.e. u_cpu is retention-by-
+# construction and MUST resume from wherever it was, not reboot.
+#
+# Actual root cause (confirmed, not the earlier no-drain/quiesce hypothesis):
+# a reset-semantics ASYMMETRY between u_cpu and u_cpu_axi_cdc (the CDC
+# bridge to the fabric). u_cpu_axi_cdc's s_rst_n_i was wired to
+# cpu_domain_rst_n -- the SAME signal that folds in the PMU's own
+# retention-hold reset (pmu_cpu_rst_n_cpu_sync) -- so every PMU power-down
+# hard-FLUSHED the bridge's gray-code pointers and any FIFO'd beats
+# (async_axi_fifo's reset is a hard flush, not a graceful abort -- see that
+# file's header) at the exact same moment u_cpu was correctly RETAINING its
+# own architectural state. On resume, u_cpu's D-cache/AXI-arbiter FSM was
+# still waiting for the response to its outstanding request (its own state
+# WAS retained), but the bridge that was supposed to deliver that response
+# had already discarded it -- permanent deadlock. Fix (soc_top.sv, near
+# u_cpu_axi_cdc's instantiation): s_rst_n_i is now cpu_core_rst_n, the CPU
+# domain's TRUE POR/PLL-lock reset, which stays asserted-high (1) throughout
+# a PMU-only power-cycle -- so the bridge now retains its state exactly like
+# u_cpu does, and the response the D-cache was waiting for survives the
+# power-cycle in the bridge's R FIFO for the CPU to consume on resume.
+#
+# This test regression-guards that fix: it must keep PASSING (no
+# expect_fail) to prove a live, firmware-triggered PMU power-cycle of the
+# CPU domain survives with zero architectural-state corruption under a
+# genuinely asynchronous CPU/fabric clock ratio. Do not re-add
+# expect_fail=True, and do not "fix" a future regression here by weakening
+# the assertions above -- trace it back to soc_top.sv's u_cpu_axi_cdc
+# reset wiring first.
+@cocotb.test()
 async def test_pmu_live_power_cycle(dut):
     await with_timeout(_pmu_live_cycle_body(dut), 400, "us")
