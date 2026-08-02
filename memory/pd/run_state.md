@@ -4661,7 +4661,7 @@ LibreLane/OpenROAD run -- there is nothing to resume here either.
    to the second PLL stub), set_clock_groups -asynchronous between the two,
    set_max_delay -datapath_only on both CDC modules (async_axi_fifo's 5x
    mem_q + 2 gray-pointer crossings each; apb_cdc_bridge's 2 toggle bits + 4
-   cmd_* + 2 resp_* signals) and on 4 of 5 PMU/IRQ single-bit crossings into
+   `cmd_*` + 2 `resp_*` signals) and on 4 of 5 PMU/IRQ single-bit crossings into
    cpu_core_clk (the 5th, the reset synchroniser, got set_false_path
    instead -- see the SDC's own section-13 comment for why). Validated only
    by sourcing the file under plain tclsh with stub procs for every SDC
