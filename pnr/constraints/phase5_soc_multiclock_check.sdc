@@ -243,21 +243,26 @@ if {[llength $_dbg_resp_nets] > 0} {
 ###############################################################################
 # 13. PMU/IRQ single-bit crossings into the cpu_core_clk domain
 #
-# u_cpu_pmu_rst_sync is excluded and given a false_path instead: its
-# rst_n_i is consumed only as an ASYNCHRONOUS CLEAR (negedge-sensitive, see
-# cdc_reset_sync.sv), by construction with no setup/hold relationship to
-# any clock — a max_delay exception (a setup-style data-arrival check)
-# would be the wrong exception type. This is a legitimate, narrowly-scoped
-# false_path (on one specific reset-sync instance's pins, not a
-# clock-to-clock blanket exception) and does not reintroduce the masking
-# problem this file exists to avoid.
+# u_cpu_pmu_rst_sync's rst_n_i pin (only) is excluded and given a
+# false_path instead: it is consumed only as an ASYNCHRONOUS CLEAR
+# (negedge-sensitive, see cdc_reset_sync.sv), by construction with no
+# setup/hold relationship to any clock — a max_delay exception (a
+# setup-style data-arrival check) would be the wrong exception type. The
+# filter is scoped to the rst_n_i pin specifically, NOT the whole instance
+# (CodeRabbit PR #133): an instance-wide wildcard also matches rst_n_o,
+# whose fanout (pmu_cpu_rst_n_cpu_sync, feeding u_cpu's synchronous reset
+# and the cpu_gated_clk_en AND-gate in soc_top.sv) is a synchronised
+# release inside the cpu_core_clk domain and must stay timed. This is a
+# legitimate, narrowly-scoped false_path (on one specific pin of one
+# reset-sync instance, not a clock-to-clock blanket exception) and does
+# not reintroduce the masking problem this file exists to avoid.
 #
 # The other four are genuine single-bit DATA crossings through
 # cdc_2ff_sync; budgets left at 1.0x destination period (cpu_core_clk =
 # cpu_clk, 780 ps) — same rationale as sections 12/12a.
 ###############################################################################
-set _rst_sync_pins [get_pins -hierarchical -filter "full_name =~ *u_cpu_pmu_rst_sync*" -quiet]
-if {[cdc_require_match $_rst_sync_pins "sec.13 u_cpu_pmu_rst_sync async-clear reset sync (false_path)"]} {
+set _rst_sync_pins [get_pins -hierarchical -filter "full_name =~ *u_cpu_pmu_rst_sync/rst_n_i" -quiet]
+if {[cdc_require_match $_rst_sync_pins "sec.13 u_cpu_pmu_rst_sync/rst_n_i async-clear reset sync (false_path)"]} {
     set_false_path -through $_rst_sync_pins
 }
 

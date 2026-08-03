@@ -1096,7 +1096,7 @@ check-cdc-timing-asap7-soc:
 	echo "=========================================="; \
 	echo "Post-route CDC budget check — ASAP7 SoC"; \
 	echo "  Run dir : $$CDC_RUN_DIR"; \
-	echo "  SDC     : $(LIBRELANE_ASAP7_SOC_DIR)/constraints/phase5_soc_multiclock_check.sdc"; \
+	echo "  SDC     : $(abspath constraints/phase5_soc_multiclock_check.sdc)"; \
 	echo "=========================================="; \
 	cd $(LIBRELANE_ASAP7_SOC_DIR) && \
 		CDC_CHECK_RUN_DIR="$$CDC_RUN_DIR" \

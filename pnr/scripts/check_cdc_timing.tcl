@@ -28,6 +28,9 @@
 # "Netlist not found" rather than silently doing nothing.
 #================================================================
 
+if {![info exists ::env(CDC_CHECK_RUN_DIR)]} {
+    error "check_cdc_timing.tcl: CDC_CHECK_RUN_DIR is not set. Point it at a routed ASAP7 SoC run directory built with PNR_SDC_FILE=phase5_soc_multiclock.sdc (containing final/nl/soc_top.nl.v) -- e.g. 'make check-cdc-timing-asap7-soc RUN_DIR=/path/to/RUN_...' (see pnr/Makefile), or export CDC_CHECK_RUN_DIR yourself before invoking 'sta pnr/scripts/check_cdc_timing.tcl' directly."
+}
 set RUN_DIR    $::env(CDC_CHECK_RUN_DIR)
 set TOP_MODULE "soc_top"
 
@@ -118,35 +121,68 @@ read_sdc $CHECK_SDC
 # or "(Path is unconstrained)" is the bead-k07 failure mode this file
 # exists to prevent from recurring silently).
 #----------------------------------------------------------------
+# cdc_report_through: run a targeted report_checks -through query, but fail
+# loudly (Tcl `error`) if the pin/net collection is empty instead of
+# silently passing -through {} to report_checks, which either errors deep
+# inside OpenSTA or -- worse -- runs an UNFILTERED sweep (see file header:
+# every unrelated cross-domain FF pair would then show a fabricated
+# violation, since sys_clk/cpu_clk are deliberately not declared
+# asynchronous in $CHECK_SDC). Reuses the cdc_require_match proc that
+# $CHECK_SDC defines (in scope here: read_sdc evaluates that file's
+# proc/set statements in this same Tcl interpreter, and it ran above)
+# rather than re-inventing the empty-collection idiom -- CodeRabbit PR #133
+# finding 2.
+proc cdc_report_through {collection description report_path} {
+    if {![cdc_require_match $collection $description]} {
+        error "check_cdc_timing.tcl: ${description} matched an EMPTY collection -- see CDC-EXCEPTION-MISS line above. Aborting rather than running an unfiltered report_checks sweep."
+    }
+    report_checks -through $collection \
+        -path_delay max -format full_clock_expanded -digits 3 \
+        > $report_path
+}
+
 puts "================================================================"
 puts "CDC boundary timing -- async_axi_fifo (u_cpu_axi_cdc), all 5 channels"
 puts "================================================================"
-report_checks -through [get_pins -hierarchical -filter "full_name =~ *u_cpu_axi_cdc/*/mem_q*" -quiet] \
-    -path_delay max -format full_clock_expanded -digits 3 \
-    > $REPORTS_DIR/cdc_fifo_memq.rpt
-report_checks -through [get_pins -hierarchical -filter "full_name =~ *u_cpu_axi_cdc/*/u_wr_ptr_to_rd/q_o*" -quiet] \
-    -path_delay max -format full_clock_expanded -digits 3 \
-    > $REPORTS_DIR/cdc_fifo_wr2rd.rpt
-report_checks -through [get_pins -hierarchical -filter "full_name =~ *u_cpu_axi_cdc/*/u_rd_ptr_to_wr/q_o*" -quiet] \
-    -path_delay max -format full_clock_expanded -digits 3 \
-    > $REPORTS_DIR/cdc_fifo_rd2wr.rpt
+# mem_q is queried as get_nets here to match the OBJECT CLASS
+# phase5_soc_multiclock_check.sdc sec.11 item 1 writes its set_max_delay
+# exception against (get_nets, not get_pins) -- mem_q is a FIFO storage
+# array and resolves differently as a net collection vs. a flop-pin
+# collection post-synthesis, so a get_pins query here was not guaranteed to
+# report against the same paths the SDC actually budgets (CodeRabbit PR
+# #133 finding 2).
+cdc_report_through \
+    [get_nets -hierarchical -filter "name =~ *u_cpu_axi_cdc/*/mem_q*" -quiet] \
+    "check_cdc_timing.tcl mem_q report query (u_cpu_axi_cdc/*/mem_q)" \
+    $REPORTS_DIR/cdc_fifo_memq.rpt
+cdc_report_through \
+    [get_pins -hierarchical -filter "full_name =~ *u_cpu_axi_cdc/*/u_wr_ptr_to_rd/q_o*" -quiet] \
+    "check_cdc_timing.tcl u_wr_ptr_to_rd/q_o report query" \
+    $REPORTS_DIR/cdc_fifo_wr2rd.rpt
+cdc_report_through \
+    [get_pins -hierarchical -filter "full_name =~ *u_cpu_axi_cdc/*/u_rd_ptr_to_wr/q_o*" -quiet] \
+    "check_cdc_timing.tcl u_rd_ptr_to_wr/q_o report query" \
+    $REPORTS_DIR/cdc_fifo_rd2wr.rpt
 
 puts "================================================================"
 puts "CDC boundary timing -- apb_cdc_bridge (u_apb_pll2_cdc, u_apb_dbg_cdc)"
 puts "================================================================"
-report_checks -through [get_pins -hierarchical -filter "full_name =~ *u_apb_pll2_cdc/u_req_sync/q_o* || full_name =~ *u_apb_pll2_cdc/u_ack_sync/q_o*" -quiet] \
-    -path_delay max -format full_clock_expanded -digits 3 \
-    > $REPORTS_DIR/cdc_apb_pll2_toggle.rpt
-report_checks -through [get_pins -hierarchical -filter "full_name =~ *u_apb_dbg_cdc/u_req_sync/q_o* || full_name =~ *u_apb_dbg_cdc/u_ack_sync/q_o*" -quiet] \
-    -path_delay max -format full_clock_expanded -digits 3 \
-    > $REPORTS_DIR/cdc_apb_dbg_toggle.rpt
+cdc_report_through \
+    [get_pins -hierarchical -filter "full_name =~ *u_apb_pll2_cdc/u_req_sync/q_o* || full_name =~ *u_apb_pll2_cdc/u_ack_sync/q_o*" -quiet] \
+    "check_cdc_timing.tcl u_apb_pll2_cdc toggle report query" \
+    $REPORTS_DIR/cdc_apb_pll2_toggle.rpt
+cdc_report_through \
+    [get_pins -hierarchical -filter "full_name =~ *u_apb_dbg_cdc/u_req_sync/q_o* || full_name =~ *u_apb_dbg_cdc/u_ack_sync/q_o*" -quiet] \
+    "check_cdc_timing.tcl u_apb_dbg_cdc toggle report query" \
+    $REPORTS_DIR/cdc_apb_dbg_toggle.rpt
 
 puts "================================================================"
 puts "CDC boundary timing -- PMU/IRQ single-bit crossings"
 puts "================================================================"
-report_checks -through [get_pins -hierarchical -filter "full_name =~ *u_cpu_clk_dis_sync/q_o* || full_name =~ *u_cpu_iso_en_sync/q_o* || full_name =~ *u_ext_irq_sync/q_o* || full_name =~ *u_timer_irq_sync/q_o*" -quiet] \
-    -path_delay max -format full_clock_expanded -digits 3 \
-    > $REPORTS_DIR/cdc_pmu_irq.rpt
+cdc_report_through \
+    [get_pins -hierarchical -filter "full_name =~ *u_cpu_clk_dis_sync/q_o* || full_name =~ *u_cpu_iso_en_sync/q_o* || full_name =~ *u_ext_irq_sync/q_o* || full_name =~ *u_timer_irq_sync/q_o*" -quiet] \
+    "check_cdc_timing.tcl PMU/IRQ single-bit crossing report query" \
+    $REPORTS_DIR/cdc_pmu_irq.rpt
 
 puts ""
 puts "================================================================"
