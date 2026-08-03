@@ -5,12 +5,14 @@ on:
     branches: [ "main" ]
     paths:
       - 'tb/**/*.py'
+      - 'tools/cdc/**'
       - 'requirements.txt'
       - '.github/workflows/tests.yml'
   pull_request:
     branches: [ "main" ]
     paths:
       - 'tb/**/*.py'
+      - 'tools/cdc/**'
       - 'requirements.txt'
   workflow_dispatch:
 
