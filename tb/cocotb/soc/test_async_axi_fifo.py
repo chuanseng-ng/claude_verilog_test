@@ -374,6 +374,7 @@ async def _backpressure_fabric_side_body(dut):
         assert resp == RESP_OKAY
     for i in range(n):
         data, rresp = await ctx.s_master.read(0x22000 + i * 4)
+        assert rresp == RESP_OKAY, f"read {i}: rresp={rresp}"
         assert data[0] == 0x50000000 + i
     dut._log.info("fabric-side backpressure OK: slave-model AW/W/B/AR/R delays absorbed cleanly")
 
@@ -500,6 +501,7 @@ async def _pointer_wrap_ping_pong_body(dut):
         resp = await ctx.s_master.write(0x26000, [0x80000000 + i])
         assert resp == RESP_OKAY
         data, rresp = await ctx.s_master.read(0x26000)
+        assert rresp == RESP_OKAY, f"ping-pong {i}: rresp={rresp}"
         assert data[0] == 0x80000000 + i, f"ping-pong {i}: {data[0]:#x}"
     dut._log.info(f"pointer wrap OK: {n} fill/drain writes+reads, {2 * depth + 2} near-empty ping-pongs")
 
@@ -562,6 +564,7 @@ async def _reset_while_busy_s_side_body(dut):
     resp = await ctx.s_master.write(0x50100, [0xCAFEBABE])
     assert resp == RESP_OKAY
     data, rresp = await ctx.s_master.read(0x50100)
+    assert rresp == RESP_OKAY, f"post-reset read rresp={rresp}"
     assert data[0] == 0xCAFEBABE
     dut._log.info("reset-while-busy (s side) OK: interrupted write recovered cleanly")
 
@@ -598,6 +601,7 @@ async def _reset_while_busy_m_side_body(dut):
     resp = await ctx.s_master.write(0x40100, [0x1234ABCD])
     assert resp == RESP_OKAY
     data, rresp = await ctx.s_master.read(0x40100)
+    assert rresp == RESP_OKAY, f"post-reset read rresp={rresp}"
     assert data[0] == 0x1234ABCD
     dut._log.info("reset-while-busy (m side) OK: interrupted read recovered cleanly")
 
@@ -661,6 +665,7 @@ async def _ratio_sweep_workload(dut, s_ns, m_ns, n=8):
         assert resp == RESP_OKAY
     for i in range(n):
         data, rresp = await ctx.s_master.read(0x30000 + i * 4)
+        assert rresp == RESP_OKAY, f"txn {i}: rresp={rresp}"
         assert data[0] == 0x60000000 + i, f"txn {i}: {data[0]:#x}"
     dut._log.info(f"clock ratio {s_ns}/{m_ns} ns OK: {n} write+read round trips")
 
@@ -698,6 +703,7 @@ async def _no_valid_withdrawal_stress_body(dut):
         assert resp == RESP_OKAY
     for i in range(n):
         data, rresp = await ctx.s_master.read(0x13000 + i * 4, ready_delay=(i % 3))
+        assert rresp == RESP_OKAY, f"txn {i}: rresp={rresp}"
         assert data[0] == 0x20000000 + i
     # Pass condition is implicit: the background _valid_no_withdrawal_monitor
     # tasks (started by _setup) would have raised AssertionError by now if
@@ -753,6 +759,7 @@ async def _burst_integrity_body(dut):
     mon_r = cocotb.start_soon(_monitor_r())
     data, rresp = await ctx.s_master.read(0x11000, length=length)
     mon_r.kill()
+    assert rresp == RESP_OKAY, f"burst read rresp={rresp}"
     assert data == data_words
     assert r_beats == length, f"s_rvalid&&s_rready beats={r_beats}, expected {length}"
     assert r_lasts == 1, f"s_rlast asserted {r_lasts} times, expected exactly 1"
@@ -785,6 +792,7 @@ async def _concurrent_read_write_body(dut):
 
     assert t_w.result() == RESP_OKAY
     data, rresp = t_r.result()
+    assert rresp == RESP_OKAY, f"concurrent read rresp={rresp}"
     assert data[0] == 0xCAFEF00D
     assert ctx.m_slave.mem[0x12000] == 0xABCD1234
     dut._log.info("concurrent read+write OK: independent AW/W/B vs AR/R channels did not interfere")
@@ -936,6 +944,7 @@ async def _latency_budget_body(dut):
     t2 = get_sim_time(units="ns")
     data, rresp = await ctx.s_master.read(0x10000)
     t3 = get_sim_time(units="ns")
+    assert rresp == RESP_OKAY, f"latency-budget read rresp={rresp}"
     assert data[0] == 0x11223344
     read_latency_ns = t3 - t2
 
@@ -1117,6 +1126,7 @@ async def _recover_and_verify_once(dut, addr, wdata) -> None:
     resp = await s_master.write(addr, [wdata])
     assert resp == RESP_OKAY, f"post-recovery write at {addr:#x} failed (resp={resp})"
     data, rresp = await s_master.read(addr)
+    assert rresp == RESP_OKAY, f"post-recovery read at {addr:#x} failed (rresp={rresp})"
     assert data[0] == wdata, f"post-recovery readback mismatch at {addr:#x}: {data[0]:#x} != {wdata:#x}"
 
 

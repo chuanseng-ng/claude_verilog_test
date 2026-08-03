@@ -210,6 +210,10 @@ async def _fabric_held_cpu_free_body(dut) -> None:
             f"cpu_bridge_s_awready asserted at cycle {i} while the fabric domain "
             "(m_rst_n_i at the CDC bridge) is still held in reset -- accept-and-drop hazard"
         )
+        assert int(dut.u_soc.cpu_bridge_s_wready.value) == 0, (
+            f"cpu_bridge_s_wready asserted at cycle {i} while the fabric domain "
+            "(m_rst_n_i at the CDC bridge) is still held in reset -- accept-and-drop hazard"
+        )
         assert int(dut.u_soc.cpu_bridge_s_arready.value) == 0, (
             f"cpu_bridge_s_arready asserted at cycle {i} while the fabric domain "
             "is still held in reset -- accept-and-drop hazard"
@@ -313,6 +317,24 @@ async def _cpu_held_fabric_free_body(dut) -> None:
             f"commit_valid_o asserted at fabric cycle {i} while cpu_rst_n_i is "
             "still held low -- CPU domain must be completely silent"
         )
+        # Mirror of test 1's exact 7a9f9d4 property, from the other side: with
+        # cpu_rst_n_i held low, u_cpu_axi_cdc's s_rst_n_i (CPU-domain reset)
+        # feeds the shared rst_both_n root, so the write-domain gray FIFOs'
+        # wr_ready_o must stay gated to 0 regardless of the fabric domain's
+        # own state -- the same reset-gates-own-ready contract, checked here
+        # through the CPU-held mirror rather than the fabric-held case above.
+        assert int(dut.u_soc.cpu_bridge_s_awready.value) == 0, (
+            f"cpu_bridge_s_awready asserted at fabric cycle {i} while cpu_rst_n_i "
+            "is still held low -- accept-and-drop hazard"
+        )
+        assert int(dut.u_soc.cpu_bridge_s_wready.value) == 0, (
+            f"cpu_bridge_s_wready asserted at fabric cycle {i} while cpu_rst_n_i "
+            "is still held low -- accept-and-drop hazard"
+        )
+        assert int(dut.u_soc.cpu_bridge_s_arready.value) == 0, (
+            f"cpu_bridge_s_arready asserted at fabric cycle {i} while cpu_rst_n_i "
+            "is still held low -- accept-and-drop hazard"
+        )
     await RisingEdge(dut.clk_i)
 
     dut.cpu_rst_n_i.value = 1
@@ -335,7 +357,8 @@ async def _cpu_held_fabric_free_body(dut) -> None:
     assert dut_w1 == SENTINEL_1, f"SRAM sentinel 1 mismatch after cpu-held boot: {dut_w1:#x}"
     dut._log.info(
         "test_soc_reset_asym_cpu_held_fabric_free PASS: zero commit_valid_o "
-        f"activity for {CPU_HELD_FABRIC_CYCLES} clk_i cycles while cpu_rst_n_i "
+        f"activity and zero acceptance at u_cpu_axi_cdc's s_* face for "
+        f"{CPU_HELD_FABRIC_CYCLES} clk_i cycles while cpu_rst_n_i "
         "was held low, clean full boot + SRAM sentinels after release"
     )
 
