@@ -110,8 +110,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # persist-credentials: false — this job downloads and EXECUTES pinned
+      # third-party tooling (sv2v, cdc_snitch.py, oss-cad-suite). Do not leave
+      # the GitHub token sitting in .git/config where that tooling could read it.
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install PyYAML
         run: python3 -m pip install --user pyyaml
@@ -120,10 +125,21 @@ jobs:
       # revisions in tools/cdc/versions.env. Cached so a run does not depend on
       # upstream availability, keyed on versions.env so a deliberate bump
       # invalidates it.
+      #
+      # Cache the TOOL paths only, never the whole of sim/build/cdc: that
+      # directory also holds this run's generated outputs (soc_top_cdc.txt,
+      # soc_top_cdc_gate.json, soc_top.flist). Caching those means a run that
+      # fails before regenerating them restores a prior run's report, which the
+      # `if: always()` upload below would then publish as if it were current —
+      # a stale-artifact trap of exactly the kind this gate exists to prevent.
       - name: Cache pinned CDC tools
         uses: actions/cache@v4
         with:
-          path: sim/build/cdc
+          path: |
+            sim/build/cdc/oss-cad-suite
+            sim/build/cdc/sv2v-Linux
+            sim/build/cdc/cdc_snitch.py
+            sim/build/cdc/cdc_snitch_proc.ys
           key: cdc-tools-${{ hashFiles('tools/cdc/versions.env') }}
 
       # THE YOSYS VERSION IS PART OF THE GATE'S CONTRACT — do not swap this for
