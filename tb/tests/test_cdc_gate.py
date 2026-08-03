@@ -10,6 +10,7 @@ parsing (which would otherwise look like "zero findings").
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -18,6 +19,9 @@ import pytest
 _GATE_PATH = Path(__file__).resolve().parents[2] / "tools" / "cdc" / "cdc_gate.py"
 
 _spec = importlib.util.spec_from_file_location("cdc_gate", _GATE_PATH)
+# Narrow the Optionals for mypy: both are None only if the path is unreadable,
+# which would be a broken checkout rather than a test condition.
+assert _spec is not None and _spec.loader is not None, f"cannot load {_GATE_PATH}"
 cdc_gate = importlib.util.module_from_spec(_spec)
 sys.modules["cdc_gate"] = cdc_gate
 _spec.loader.exec_module(cdc_gate)
@@ -55,6 +59,7 @@ def line(stat, name, clk, inputs, magic=False):
 # canonicalization
 # --------------------------------------------------------------------------
 
+
 def test_reset_port_is_not_a_domain(tmp_path):
     """The ~85% case: a flop's reset pin shows clk + the async reset port."""
     cfg = load(tmp_path)
@@ -84,8 +89,9 @@ def test_single_bit_port_is_tagged_like_a_bus(tmp_path):
 
 
 def test_port_domains_maps_a_bus_onto_a_real_clock(tmp_path):
-    cfg = load(tmp_path, BASE_CFG.replace(
-        "port_domains: {}", "port_domains: {apb_paddr_i: cpu_clk_i}"))
+    cfg = load(
+        tmp_path, BASE_CFG.replace("port_domains: {}", "port_domains: {apb_paddr_i: cpu_clk_i}")
+    )
     doms = cdc_gate.canonical_domains("1 x apb_paddr_i[3], 4 x cpu_gated_clk", cfg)
     assert doms == {"cpu_clk_i"}
 
@@ -98,8 +104,10 @@ def test_genuine_two_domain_crossing_survives(tmp_path):
 
 
 def test_alias_cycle_is_rejected(tmp_path):
-    cfg = load(tmp_path, BASE_CFG.replace(
-        "  gpu_gated_clk: clk_i", "  gpu_gated_clk: clk_i\n  a: b\n  b: a"))
+    cfg = load(
+        tmp_path,
+        BASE_CFG.replace("  gpu_gated_clk: clk_i", "  gpu_gated_clk: clk_i\n  a: b\n  b: a"),
+    )
     with pytest.raises(cdc_gate.ConfigError, match="cycle"):
         cdc_gate.canonical_domains("1 x a", cfg)
 
@@ -108,20 +116,24 @@ def test_alias_cycle_is_rejected(tmp_path):
 # report parsing
 # --------------------------------------------------------------------------
 
+
 def test_parse_counts_and_resolves(tmp_path):
     cfg = load(tmp_path)
-    rpt = write(tmp_path, "r.txt",
-                line("OK1", "u.a", "clk_i", "1 x clk_i")
-                + line("CDC", "u.s.sync_q[0]:D", "clk_i", "1 x cpu_gated_clk", magic=True)
-                + line("OKX", "u.rx0:D", "clk_i", "1 x uart_rx_i")
-                + line("BAD", "u.b:R", "clk_i", "1 x clk_i, 1 x rst_n_i")
-                + line("BAD", "u.c:D", "clk_i", "1 x clk_i, 1 x cpu_clk_i")
-                + "  tree 0 from 19482 clk clk_i name u.whatever\n")
+    rpt = write(
+        tmp_path,
+        "r.txt",
+        line("OK1", "u.a", "clk_i", "1 x clk_i")
+        + line("CDC", "u.s.sync_q[0]:D", "clk_i", "1 x cpu_gated_clk", magic=True)
+        + line("OKX", "u.rx0:D", "clk_i", "1 x uart_rx_i")
+        + line("BAD", "u.b:R", "clk_i", "1 x clk_i, 1 x rst_n_i")
+        + line("BAD", "u.c:D", "clk_i", "1 x clk_i, 1 x cpu_clk_i")
+        + "  tree 0 from 19482 clk clk_i name u.whatever\n",
+    )
     counts, residue, unparsed = cdc_gate.parse_report(rpt, cfg)
     assert counts["OK1"] == 1 and counts["CDC"] == 1 and counts["OKX"] == 1
     assert counts["BAD"] == 2
-    assert counts["RESOLVED"] == 1          # the :R reset line
-    assert unparsed == []                   # 'tree' lines are not classifications
+    assert counts["RESOLVED"] == 1  # the :R reset line
+    assert unparsed == []  # 'tree' lines are not classifications
     assert [r["name"] for r in residue] == ["u.c:D"]
     assert residue[0]["domains"] == "clk_i+cpu_clk_i"
 
@@ -140,7 +152,9 @@ def test_malformed_classification_line_is_surfaced(tmp_path):
 # waivers
 # --------------------------------------------------------------------------
 
-WAIVED_CFG = BASE_CFG.replace("waivers: []", """
+WAIVED_CFG = BASE_CFG.replace(
+    "waivers: []",
+    """
 waivers:
   - id: w-exact
     kind: tool-limitation
@@ -148,7 +162,8 @@ waivers:
     domains: 'clk_i+cpu_clk_i'
     reason: test
     ref: test
-""")
+""",
+)
 
 
 def test_waiver_matches_and_clears(tmp_path):
@@ -180,55 +195,73 @@ def test_unmatched_item_is_unwaived(tmp_path):
 # config validation
 # --------------------------------------------------------------------------
 
+
 def test_accepted_risk_without_a_bead_is_rejected(tmp_path):
-    cfg_text = BASE_CFG.replace("waivers: []", """
+    cfg_text = BASE_CFG.replace(
+        "waivers: []",
+        """
 waivers:
   - id: risky
     kind: accepted-risk
     dest: 'x'
     reason: test
     ref: test
-""")
+""",
+    )
     with pytest.raises(cdc_gate.ConfigError, match="tracking bead"):
         load(tmp_path, cfg_text)
 
 
 def test_unknown_waiver_kind_is_rejected(tmp_path):
-    cfg_text = BASE_CFG.replace("waivers: []", """
+    cfg_text = BASE_CFG.replace(
+        "waivers: []",
+        """
 waivers:
   - id: w
     kind: probably-fine
     dest: 'x'
     reason: test
     ref: test
-""")
+""",
+    )
     with pytest.raises(cdc_gate.ConfigError, match="kind"):
         load(tmp_path, cfg_text)
 
 
 def test_missing_required_field_is_rejected(tmp_path):
-    cfg_text = BASE_CFG.replace("waivers: []", """
+    """Every waiver must carry id/kind/dest/reason/ref — a waiver without a
+    reference is unreviewable."""
+    cfg_text = BASE_CFG.replace(
+        "waivers: []",
+        """
 waivers:
   - id: w
     kind: tool-limitation
     dest: 'x'
     reason: test
-""")
+""",
+    )
     with pytest.raises(cdc_gate.ConfigError, match="'ref'"):
         load(tmp_path, cfg_text)
 
 
 def test_duplicate_waiver_id_is_rejected(tmp_path):
-    cfg_text = BASE_CFG.replace("waivers: []", """
+    """Duplicate ids would make the stale-waiver report ambiguous."""
+    cfg_text = BASE_CFG.replace(
+        "waivers: []",
+        """
 waivers:
   - {id: w, kind: tool-limitation, dest: 'a', reason: t, ref: t}
   - {id: w, kind: tool-limitation, dest: 'b', reason: t, ref: t}
-""")
+""",
+    )
     with pytest.raises(cdc_gate.ConfigError, match="duplicate"):
         load(tmp_path, cfg_text)
 
 
 def test_missing_clock_domains_is_rejected(tmp_path):
+    """Without the real clock list, every port would canonicalize to PORT: and
+    genuine crossings could be silently resolved away."""
     with pytest.raises(cdc_gate.ConfigError, match="clock_domains"):
         load(tmp_path, "reset_domains: []\nwaivers: []\n")
 
@@ -237,7 +270,9 @@ def test_missing_clock_domains_is_rejected(tmp_path):
 # end-to-end exit status
 # --------------------------------------------------------------------------
 
+
 def test_main_passes_when_everything_resolves(tmp_path, capsys):
+    """A report of pure modelling artifacts must exit 0."""
     cfg = write(tmp_path, "cfg.yml", BASE_CFG)
     rpt = write(tmp_path, "r.txt", line("BAD", "u.b:R", "clk_i", "1 x clk_i, 1 x rst_n_i"))
     assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 0
@@ -245,6 +280,7 @@ def test_main_passes_when_everything_resolves(tmp_path, capsys):
 
 
 def test_main_fails_on_unwaived_crossing(tmp_path, capsys):
+    """A genuine two-domain register with no waiver must exit 1."""
     cfg = write(tmp_path, "cfg.yml", BASE_CFG)
     rpt = write(tmp_path, "r.txt", line("BAD", "u.c:D", "clk_i", "1 x clk_i, 1 x cpu_clk_i"))
     assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 1
@@ -261,16 +297,18 @@ def test_main_fails_on_stale_waiver(tmp_path, capsys):
 
 
 def test_main_reports_usage_error_for_missing_report(tmp_path):
+    """A missing report is exit 2 (usage), distinct from exit 1 (gate failed) —
+    so CI can tell "tool broke" from "design is dirty"."""
     cfg = write(tmp_path, "cfg.yml", BASE_CFG)
     assert cdc_gate.main([str(tmp_path / "nope.txt"), "-c", str(cfg)]) == 2
 
 
 def test_json_summary_is_written(tmp_path):
+    """The machine-readable summary is what CI uploads for triage."""
     cfg = write(tmp_path, "cfg.yml", BASE_CFG)
     rpt = write(tmp_path, "r.txt", line("BAD", "u.c:D", "clk_i", "1 x clk_i, 1 x cpu_clk_i"))
     out = tmp_path / "gate.json"
     cdc_gate.main([str(rpt), "-c", str(cfg), "--json", str(out)])
-    import json
     data = json.loads(out.read_text())
     assert data["pass"] is False
     assert data["unwaived"][0]["name"] == "u.c:D"
@@ -279,6 +317,7 @@ def test_json_summary_is_written(tmp_path):
 # --------------------------------------------------------------------------
 # the real config must stay valid
 # --------------------------------------------------------------------------
+
 
 def test_repo_config_loads_and_validates():
     """Catches a typo'd regex or a missing bead in the committed config."""

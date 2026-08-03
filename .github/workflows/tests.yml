@@ -31,10 +31,15 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
+      # Install from requirements.txt rather than a hardcoded package list.
+      # The list here had drifted out of sync with the declared dependencies:
+      # tb/tests/test_cdc_gate.py needs PyYAML (tools/cdc/cdc_gate.py reads a
+      # YAML config), which was declared in requirements.txt but never reached
+      # this job. Using the single source of truth stops that recurring.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-cov
+          pip install -r requirements.txt
 
       - name: Run tests
         run: |
