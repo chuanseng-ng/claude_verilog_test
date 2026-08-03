@@ -102,7 +102,18 @@ Tools land in the git-ignored `sim/build/cdc/`; pinned versions are in
 
 ## Requirements
 
-- `yosys` >= 0.23 on `PATH` (or fetch oss-cad-suite with `--with-yosys`)
+> **Use the pinned yosys.** The gate's verdict depends on it. `cdc_config.yml`'s
+> `domain_aliases` are written against the net names the pinned yosys emits after
+> `flatten`; a different build can name the same clock differently (0.33 leaves
+> instance-local `u_gpu.clk` / `u_apb_dbg_cdc.m_clk_i` where the pinned 0.62
+> resolves them to the top-level `clk_i` / `cpu_clk_i`). With a mismatched yosys
+> the aliases miss and thousands of same-domain registers are reported as
+> cross-domain — a failure that reads like a design bug but is a tool-version bug.
+> `run_cdc.sh` prints the version in use and warns when it is not the pinned one.
+
+- `yosys` — **the version pinned in [`versions.env`](versions.env)**, obtained via
+  `fetch_cdc_tools.sh --with-yosys`. A system/distro yosys will run, but its
+  result is not comparable and must not be used to gate.
 - `python3` with **PyYAML** (`python3 -m pip install --user pyyaml`)
 - `sv2v` (auto-fetched). Needed because oss-cad-suite's built-in `yosys -sv`
   reader can't parse this RTL's package-import-in-package, and its `slang`

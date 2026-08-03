@@ -113,27 +113,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # yosys >= 0.23 is the only hard external dependency. Ubuntu's package is
-      # well past that, so this avoids the ~700 MB oss-cad-suite download that
-      # tools/cdc/fetch_cdc_tools.sh --with-yosys would otherwise pull.
-      - name: Install yosys
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends yosys
-          yosys --version
-
       - name: Install PyYAML
         run: python3 -m pip install --user pyyaml
 
-      # sv2v and cdc_snitch.py are fetched from pinned upstream revisions
-      # (tools/cdc/versions.env). Cache them so a CI run does not depend on
-      # GitHub raw/release availability, and keyed on versions.env so a
-      # deliberate version bump invalidates the cache.
+      # All three tools (yosys, sv2v, cdc_snitch.py) come from the pinned
+      # revisions in tools/cdc/versions.env. Cached so a run does not depend on
+      # upstream availability, keyed on versions.env so a deliberate bump
+      # invalidates it.
       - name: Cache pinned CDC tools
         uses: actions/cache@v4
         with:
           path: sim/build/cdc
           key: cdc-tools-${{ hashFiles('tools/cdc/versions.env') }}
+
+      # THE YOSYS VERSION IS PART OF THE GATE'S CONTRACT — do not swap this for
+      # a distro package. An earlier revision of this workflow used Ubuntu's
+      # yosys (0.33) to skip the ~700 MB oss-cad-suite download, and the gate
+      # failed with thousands of bogus findings: 0.33's flatten pass leaves
+      # clock domains as instance-local net names (`u_gpu.clk`,
+      # `u_apb_dbg_cdc.m_clk_i`) where the pinned 0.62 resolves them to the
+      # top-level ports (`clk_i`, `cpu_clk_i`) that cdc_config.yml's
+      # domain_aliases are written against. Different yosys, different verdict —
+      # so the pin is what makes this a gate rather than a coin flip.
+      # The download is a one-time cost per versions.env bump thanks to the
+      # cache above; the tarball is pruned to keep the cache small.
+      - name: Fetch pinned CDC tools (yosys + sv2v + cdc_snitch)
+        run: |
+          echo "::group::fetch_cdc_tools.sh --with-yosys"
+          bash tools/cdc/fetch_cdc_tools.sh --with-yosys
+          rm -f sim/build/cdc/oss-cad-suite.tgz sim/build/cdc/sv2v.zip
+          sim/build/cdc/oss-cad-suite/bin/yosys --version
+          echo "::endgroup::"
 
       - name: Run CDC gate
         run: |

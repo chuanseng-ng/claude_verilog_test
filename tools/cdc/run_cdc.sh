@@ -35,8 +35,25 @@ CDC_CONFIG="${CDC_CONFIG:-$SCRIPT_DIR/cdc_config.yml}"
 export PATH="$CDC_CACHE/oss-cad-suite/bin:$CDC_CACHE/sv2v-Linux:$PATH"
 
 command -v sv2v   >/dev/null 2>&1 || { echo "ERROR: sv2v not found. Run tools/cdc/fetch_cdc_tools.sh"; exit 3; }
-command -v yosys  >/dev/null 2>&1 || { echo "ERROR: yosys not found. Install yosys>=0.23 or run fetch_cdc_tools.sh --with-yosys"; exit 3; }
+command -v yosys  >/dev/null 2>&1 || { echo "ERROR: yosys not found. Run fetch_cdc_tools.sh --with-yosys"; exit 3; }
 [[ -f "$CDC_CACHE/cdc_snitch.py" ]] || { echo "ERROR: cdc_snitch.py missing. Run tools/cdc/fetch_cdc_tools.sh"; exit 3; }
+
+# THE YOSYS VERSION CHANGES THE VERDICT — warn loudly if it is not the pinned one.
+#
+# cdc_config.yml's domain_aliases are written against the net names the PINNED
+# yosys produces after flatten. A different build can name the same clock
+# differently: yosys 0.33 leaves instance-local names (u_gpu.clk,
+# u_apb_dbg_cdc.m_clk_i) where 0.62 resolves them to the top-level ports
+# (clk_i, cpu_clk_i). The aliases then miss, thousands of same-domain registers
+# look cross-domain, and the failure reads like a design problem instead of a
+# tool-version problem. That cost a full debugging round once; hence this check.
+echo "== yosys: $(yosys -V 2>/dev/null | head -1) =="
+if [[ ! -x "$CDC_CACHE/oss-cad-suite/bin/yosys" ]]; then
+  echo "WARNING: using a system yosys, not the version pinned in tools/cdc/versions.env." >&2
+  echo "         Gate results are NOT comparable across yosys versions — a mismatch" >&2
+  echo "         shows up as a flood of bogus cross-domain findings, not a clean error." >&2
+  echo "         For a trustworthy verdict: tools/cdc/fetch_cdc_tools.sh --with-yosys" >&2
+fi
 
 mkdir -p "$CDC_CACHE"
 INC_FLAGS=()
