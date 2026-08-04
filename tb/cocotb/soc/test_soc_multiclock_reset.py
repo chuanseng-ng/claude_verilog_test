@@ -51,13 +51,14 @@ under dut.u_soc):
 
 Metastability injection: corrected claim (bead claude_verilog_test-rvs). Earlier
 revisions of this docstring said this was "not modelable in Verilator/cocotb" --
-that was imprecise. rtl/soc/cdc/cdc_2ff_sync.sv now carries an optional,
-per-instance, simulation-only randomised EXTRA-CYCLE-OF-DELAY injector
-(RAND_CDC_DELAY_EN, default OFF at every instantiation site in this repo,
-including every synchroniser these tests exercise) -- see that file's header
-for the full model and provenance (ported concept, not code, from OpenTitan's
-prim_cdc_rand_delay.sv). These tests run with the injector at its default OFF
-and so still characterise the synchronised, deterministic RTL behaviour only
+that is imprecise. A randomised EXTRA-CYCLE-OF-SETTLING-DELAY on a
+synchroniser's first stage IS modelable in a 2-state simulator (it is plain RTL,
+no timing control) and is exactly the fault model that reproduces the
+same-edge-assumption bug class GH #93 hit twice. What genuinely is NOT modelable
+here is analog metastability itself -- an intermediate, non-0/1 voltage on Q.
+No injector is implemented today (an attempt was reverted before merge; see
+rtl/soc/cdc/cdc_2ff_sync.sv's header and bead rvs), so these tests characterise
+the synchronised, deterministic RTL behaviour only
 -- opting a synchroniser in here is future work, not something this file does
 today. What remains genuinely NOT modelable in a 2-state simulator (Verilator,
 or any cocotb-driven flow) is true analog metastability itself: an
