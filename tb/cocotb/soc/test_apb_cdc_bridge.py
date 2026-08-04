@@ -1044,3 +1044,205 @@ async def test_availability_back_to_back_resets_wide_ratio(dut):
     # 18ns/4ns (slow-s/fast-m) -- explicitly called out: this exact ratio
     # caught a regression in the RTL agent's own first attempt at this fix.
     await with_timeout(_availability_back_to_back_resets_workload(dut, 18, 4), 50, "us")
+
+
+# =============================================================================
+# GH #95 (Group A): reset-asymmetry test class.
+#
+# The existing availability tests above (test_availability_never_forwarded,
+# test_reset_mid_transaction_m_side, test_availability_back_to_back_resets_*)
+# already cover the m_rst_n_i-held direction thoroughly. Two things they do
+# NOT cover, which these tests add:
+#   1. The MIRROR direction (s_rst_n_i held, m_clk free-running) -- per the
+#      post-#93 asymmetric reset fix, s_rst_sync_n is rooted in s_rst_n_i
+#      ALONE (not rst_both_n -- see apb_cdc_bridge.sv's "Reset strategy"
+#      header), so this direction fully holds the source FSM at S_IDLE
+#      regardless of the destination. m_rst_sync_n stays coupled to
+#      rst_both_n, so the destination is ALSO held even though m_rst_n_i
+#      itself is released -- zero activity on either face is the expected,
+#      testable invariant.
+#   2. A staggered RELEASE-ORDER sweep with CONTINUOUS offered traffic
+#      during the asymmetric window (existing tests hold m_rst_n_i low
+#      from before _setup()'s reset even starts, i.e. release order is not
+#      exercised) -- the actual GH #93 SoC bug (fr_280f3ac18c66) was a
+#      release-SKEW defect, not a simultaneous-both-held one.
+#
+# Both classes explicitly respect the documented, reviewed
+# "Availability-gating exception (PR #132 review, m_rst_n_s)" in
+# apb_cdc_bridge.sv (m_rst_n_s reads "alive" for up to SYNC_STAGES_TO_S
+# s_clk_i cycles after s_rst_sync_n releases, even if m_rst_n_i is already
+# low) by asserting only the properties the module's own header proves hold
+# THROUGH that exception: m_psel_o/m_penable_o never pulse while m_rst_n_i
+# is genuinely low (no fabricated destination-side write, ever), and
+# s_pready_o always completes within a bounded number of s_clk_i cycles
+# (S_WAIT never hangs). This class does NOT assert req_fwd_q or the forward
+# decision itself, which the exception explicitly and correctly permits to
+# be wrong for a bounded window.
+# =============================================================================
+
+# --- 20. mirror direction: s held, m free-running ------------------------------
+
+async def _apb_reset_asym_s_held_m_free_body(dut, s_ns, m_ns) -> None:
+    _kill_active_tasks()
+    s_clk_task = cocotb.start_soon(Clock(dut.s_clk, s_ns, units="ns").start())
+    m_clk_task = cocotb.start_soon(Clock(dut.m_clk, m_ns, units="ns").start())
+    _active_tasks.extend([s_clk_task, m_clk_task])
+
+    responder = ApbSlaveResponder(dut, "m_", dut.m_clk)
+    resp_task = responder.start()
+    _active_tasks.append(resp_task)
+
+    dut.s_rst_n.value = 0
+    dut.m_rst_n.value = 0
+    _idle_s_side(dut)
+    await Timer(RESET_HOLD_NS, units="ns")
+
+    # Release ONLY m_rst_n_i -- s_rst_n_i stays low. s_psel/s_penable are
+    # left at their idle-low default throughout this window (an APB master
+    # genuinely held in its own domain's reset would never drive SETUP), so
+    # this checks the DUT's own idle/held outputs, not a rejected offer.
+    dut.m_rst_n.value = 1
+    for i in range(20):
+        await RisingEdge(dut.m_clk)
+        await ReadOnly()
+        assert int(dut.s_pready.value) == 0, f"s_pready asserted while s_rst_n_i held low (cycle {i})"
+        assert int(dut.m_psel.value) == 0, f"m_psel pulsed while the bridge is held in reset (cycle {i})"
+        assert int(dut.m_penable.value) == 0, f"m_penable pulsed while the bridge is held in reset (cycle {i})"
+    await RisingEdge(dut.m_clk)
+
+    dut.s_rst_n.value = 1
+    await ClockCycles(dut.s_clk, 3)
+    await ClockCycles(dut.m_clk, 3)
+
+    s_master = APB4Master(dut, "s_", dut.s_clk)
+    ok = await s_master.write(0x900, 0xDEADBEEF)
+    assert ok, "post-recovery write reported pslverr"
+    assert responder.mem.get(0x900) == 0xDEADBEEF, "post-recovery write did not land at the destination"
+    data, ok2 = await s_master.read(0x900)
+    assert ok2 and data == 0xDEADBEEF, f"post-recovery readback mismatch: {data:#x}"
+    dut._log.info(
+        f"reset-asym s-held ({s_ns}/{m_ns} ns) OK: s_pready/m_psel/m_penable stayed low for "
+        f"20 m_clk cycles while s_rst_n_i was held low, clean recovery after release"
+    )
+
+
+@cocotb.test()
+async def test_reset_asym_s_held_m_free(dut):
+    # Coprime ratio (7ns/13ns), matching the suite's existing convention for
+    # its "genuinely different ratio" coprime pair.
+    await with_timeout(_apb_reset_asym_s_held_m_free_body(dut, 7, 13), 50, "us")
+
+
+# --- 21-22. staggered release-order sweep with continuous offered traffic -----
+
+async def _apb_reset_asym_staggered_body(dut, s_ns, m_ns, order) -> None:
+    assert order in ("s_first", "m_first")
+    first, second = ("s", "m") if order == "s_first" else ("m", "s")
+    slower_period = max(s_ns, m_ns)
+    stagger_windows_ns = [1 * slower_period, 3 * slower_period, 8 * slower_period]
+
+    for idx, stagger_ns in enumerate(stagger_windows_ns):
+        _kill_active_tasks()
+        s_clk_task = cocotb.start_soon(Clock(dut.s_clk, s_ns, units="ns").start())
+        m_clk_task = cocotb.start_soon(Clock(dut.m_clk, m_ns, units="ns").start())
+        _active_tasks.extend([s_clk_task, m_clk_task])
+
+        responder = ApbSlaveResponder(dut, "m_", dut.m_clk)
+        resp_task = responder.start()
+        _active_tasks.append(resp_task)
+
+        dut.s_rst_n.value = 0
+        dut.m_rst_n.value = 0
+        _idle_s_side(dut)
+        await Timer(RESET_HOLD_NS, units="ns")
+
+        getattr(dut, f"{first}_rst_n").value = 1
+        first_clock = dut.m_clk if first == "m" else dut.s_clk
+        await ClockCycles(first_clock, 2)
+
+        # Background invariant for the ENTIRE staggered window (both
+        # branches below): no destination-side APB transaction is ever
+        # fabricated while m_rst_n_i is genuinely low. This is the one
+        # property the documented m_rst_n_s exception guarantees holds
+        # even during its own bounded false-"alive" window (see header
+        # "Availability-gating exception", point (b)).
+        async def _m_psel_never_pulses(dut=dut):
+            while True:
+                await RisingEdge(dut.m_clk)
+                await ReadOnly()
+                assert int(dut.m_psel.value) == 0, (
+                    "m_psel pulsed while m_rst_n_i is held low (staggered "
+                    f"order={order} stagger={stagger_ns}ns iteration {idx})"
+                )
+
+        watch = None
+        if first == "s":
+            watch = cocotb.start_soon(_m_psel_never_pulses())
+            _active_tasks.append(watch)
+            # s_rst_n_i released, m_rst_n_i still low: offer continuous
+            # transactions from the s side. Each must force-complete with
+            # pslverr=1 within a bounded time (S_WAIT never hangs) -- the
+            # same escape path test_availability_never_forwarded exercises
+            # once; here it is exercised repeatedly, back-to-back, for the
+            # full stagger window, at a genuinely staggered (not
+            # simultaneous) release.
+            s_master = APB4Master(dut, "s_", dut.s_clk)
+            elapsed_ns = 0.0
+            n_offered = 0
+            while elapsed_ns < stagger_ns:
+                t0 = get_sim_time(units="ns")
+                data, ok = await s_master.read(0xA00 + idx)
+                t1 = get_sim_time(units="ns")
+                assert ok is False, (
+                    f"staggered order={order} stagger={stagger_ns}ns: read completed "
+                    f"OK while m_rst_n_i was still low -- destination should be "
+                    f"unreachable (fabricated success?)"
+                )
+                elapsed_ns += (t1 - t0)
+                n_offered += 1
+            assert n_offered > 0, "test did not actually offer any transactions during the window"
+            watch.kill()
+            _active_tasks.remove(watch)
+        else:
+            # m_rst_n_i released, s_rst_n_i still low: s FSM is fully held
+            # (s_rst_sync_n rooted in s_rst_n_i alone) so nothing can be
+            # offered from the s side at all -- just prove no destination
+            # activity appears on its own for the swept window.
+            watch = cocotb.start_soon(_m_psel_never_pulses())
+            _active_tasks.append(watch)
+            await Timer(stagger_ns, units="ns")
+            watch.kill()
+            _active_tasks.remove(watch)
+            await RisingEdge(dut.s_clk)  # land back in a writable phase before the release write below
+
+        getattr(dut, f"{second}_rst_n").value = 1
+        await ClockCycles(dut.s_clk, 3)
+        await ClockCycles(dut.m_clk, 3)
+
+        s_master2 = APB4Master(dut, "s_", dut.s_clk)
+        ok = await s_master2.write(0xB00 + idx, 0x10000000 + idx)
+        assert ok, f"post-recovery write failed (order={order}, stagger={stagger_ns}ns, iteration {idx})"
+        assert responder.mem.get(0xB00 + idx) == 0x10000000 + idx, (
+            "post-recovery write did not land at the destination"
+        )
+        data2, ok2 = await s_master2.read(0xB00 + idx)
+        assert ok2 and data2 == 0x10000000 + idx, f"post-recovery readback mismatch: {data2:#x}"
+        dut._log.info(
+            f"staggered apb reset-asym OK: order={order} stagger={stagger_ns}ns, "
+            f"iteration {idx} ({s_ns}/{m_ns} ns)"
+        )
+
+
+@cocotb.test()
+async def test_reset_asym_staggered_s_then_m(dut):
+    # s (source domain) releases first, m held -- offered traffic during the
+    # window must bounded-error-complete, never fabricate a destination
+    # write. Wide ratio (18ns/4ns), the same ratio already flagged in this
+    # file as having caught a real RTL regression.
+    await with_timeout(_apb_reset_asym_staggered_body(dut, 18, 4, order="s_first"), 100, "us")
+
+
+@cocotb.test()
+async def test_reset_asym_staggered_m_then_s(dut):
+    # Mirror ordering: m releases first, s held.
+    await with_timeout(_apb_reset_asym_staggered_body(dut, 18, 4, order="m_first"), 100, "us")

@@ -27,6 +27,38 @@
 // cdc_reset_sync.sv) at the instantiation site.
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
+//
+// ── On simulating CDC delay (bead claude_verilog_test-rvs) ────────────────
+// This module has NO simulation-time delay injection. An attempt at one was
+// reverted before merge because its model was wrong (it could latch a hold
+// permanently and stick the synchroniser rather than delaying it by a cycle).
+//
+// The finding that motivated it stands and is worth recording here, because
+// this repo has repeatedly written the opposite: the claim that "metastability
+// injection is not modelable in Verilator/cocotb" (design_state.json, CLAUDE.md,
+// several test docstrings) is imprecise. What IS modelable, and what OpenTitan
+// actually does, is a randomised EXTRA-CYCLE-OF-SETTLING-DELAY on a
+// synchroniser's first stage — plain RTL, no timing control, so it works in a
+// 2-state cycle-based simulator. That is precisely the fault model that
+// reproduces a same-edge-assumption bug, which is the class this repo hit twice
+// in GH #93 (fr_57f49b7f9b29 and fr_280f3ac18c66) and which every 1:1-ratio,
+// lockstep-reset unit test was structurally blind to.
+//
+// What remains genuinely NOT modelable here is analog metastability itself — an
+// intermediate, non-0/1, potentially oscillating voltage on Q. 4-state X
+// injection at the setup/hold boundary is a different and heavier technique.
+//
+// Reference for a correct implementation, should bead rvs be picked up
+// (Apache-2.0, lowRISC contributors — note it takes BOTH src_data_i and
+// prev_data_i and is evaluated in the DESTINATION clock's process, which is
+// exactly what makes it converge):
+//   https://github.com/lowRISC/opentitan/blob/master/hw/ip/prim/rtl/prim_cdc_rand_delay.sv
+//   https://github.com/lowRISC/opentitan/blob/master/hw/ip/prim_generic/rtl/prim_flop_2sync.sv
+//
+// Per house style: no `default_nettype` directive (Spyglass IND, CODING
+// GUIDELINES §1.3) — matching pmu.sv:123 and the sibling cdc_reset_sync.sv /
+// cdc_gray_fifo.sv. Implicit-net detection is covered by Verilator
+// (IMPLICIT/UNDRIVEN) and Verible instead.
 
 module cdc_2ff_sync #(
     parameter int unsigned WIDTH  = 1,

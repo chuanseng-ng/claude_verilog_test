@@ -374,6 +374,7 @@ async def _backpressure_fabric_side_body(dut):
         assert resp == RESP_OKAY
     for i in range(n):
         data, rresp = await ctx.s_master.read(0x22000 + i * 4)
+        assert rresp == RESP_OKAY, f"read {i}: rresp={rresp}"
         assert data[0] == 0x50000000 + i
     dut._log.info("fabric-side backpressure OK: slave-model AW/W/B/AR/R delays absorbed cleanly")
 
@@ -500,6 +501,7 @@ async def _pointer_wrap_ping_pong_body(dut):
         resp = await ctx.s_master.write(0x26000, [0x80000000 + i])
         assert resp == RESP_OKAY
         data, rresp = await ctx.s_master.read(0x26000)
+        assert rresp == RESP_OKAY, f"ping-pong {i}: rresp={rresp}"
         assert data[0] == 0x80000000 + i, f"ping-pong {i}: {data[0]:#x}"
     dut._log.info(f"pointer wrap OK: {n} fill/drain writes+reads, {2 * depth + 2} near-empty ping-pongs")
 
@@ -562,6 +564,7 @@ async def _reset_while_busy_s_side_body(dut):
     resp = await ctx.s_master.write(0x50100, [0xCAFEBABE])
     assert resp == RESP_OKAY
     data, rresp = await ctx.s_master.read(0x50100)
+    assert rresp == RESP_OKAY, f"post-reset read rresp={rresp}"
     assert data[0] == 0xCAFEBABE
     dut._log.info("reset-while-busy (s side) OK: interrupted write recovered cleanly")
 
@@ -598,6 +601,7 @@ async def _reset_while_busy_m_side_body(dut):
     resp = await ctx.s_master.write(0x40100, [0x1234ABCD])
     assert resp == RESP_OKAY
     data, rresp = await ctx.s_master.read(0x40100)
+    assert rresp == RESP_OKAY, f"post-reset read rresp={rresp}"
     assert data[0] == 0x1234ABCD
     dut._log.info("reset-while-busy (m side) OK: interrupted read recovered cleanly")
 
@@ -661,6 +665,7 @@ async def _ratio_sweep_workload(dut, s_ns, m_ns, n=8):
         assert resp == RESP_OKAY
     for i in range(n):
         data, rresp = await ctx.s_master.read(0x30000 + i * 4)
+        assert rresp == RESP_OKAY, f"txn {i}: rresp={rresp}"
         assert data[0] == 0x60000000 + i, f"txn {i}: {data[0]:#x}"
     dut._log.info(f"clock ratio {s_ns}/{m_ns} ns OK: {n} write+read round trips")
 
@@ -698,6 +703,7 @@ async def _no_valid_withdrawal_stress_body(dut):
         assert resp == RESP_OKAY
     for i in range(n):
         data, rresp = await ctx.s_master.read(0x13000 + i * 4, ready_delay=(i % 3))
+        assert rresp == RESP_OKAY, f"txn {i}: rresp={rresp}"
         assert data[0] == 0x20000000 + i
     # Pass condition is implicit: the background _valid_no_withdrawal_monitor
     # tasks (started by _setup) would have raised AssertionError by now if
@@ -753,6 +759,7 @@ async def _burst_integrity_body(dut):
     mon_r = cocotb.start_soon(_monitor_r())
     data, rresp = await ctx.s_master.read(0x11000, length=length)
     mon_r.kill()
+    assert rresp == RESP_OKAY, f"burst read rresp={rresp}"
     assert data == data_words
     assert r_beats == length, f"s_rvalid&&s_rready beats={r_beats}, expected {length}"
     assert r_lasts == 1, f"s_rlast asserted {r_lasts} times, expected exactly 1"
@@ -785,6 +792,7 @@ async def _concurrent_read_write_body(dut):
 
     assert t_w.result() == RESP_OKAY
     data, rresp = t_r.result()
+    assert rresp == RESP_OKAY, f"concurrent read rresp={rresp}"
     assert data[0] == 0xCAFEF00D
     assert ctx.m_slave.mem[0x12000] == 0xABCD1234
     dut._log.info("concurrent read+write OK: independent AW/W/B vs AR/R channels did not interfere")
@@ -936,6 +944,7 @@ async def _latency_budget_body(dut):
     t2 = get_sim_time(units="ns")
     data, rresp = await ctx.s_master.read(0x10000)
     t3 = get_sim_time(units="ns")
+    assert rresp == RESP_OKAY, f"latency-budget read rresp={rresp}"
     assert data[0] == 0x11223344
     read_latency_ns = t3 - t2
 
@@ -991,3 +1000,240 @@ async def _white_box_gray_pointer_body(dut):
 @cocotb.test()
 async def test_white_box_gray_pointer_single_bit_change(dut):
     await with_timeout(_white_box_gray_pointer_body(dut), 50, "us")
+
+
+# =============================================================================
+# GH #95 (Group A): reset-asymmetry test class.
+#
+# design_state.json's gh93_cdc_verification record documents that BOTH RTL
+# bugs GH #93 found (commit 4398c2e -- soc_top.sv's cpu_gated_clk stopped
+# during the CPU's own reset window; commit 7a9f9d4 -- this module's
+# cdc_gray_fifo.sv wr_ready_o not gated by wr_rst_n_i) shared one root
+# signature: a reset value that advertises availability while cross-domain
+# readiness has not actually been established -- invisible whenever both
+# domains release reset together, which was every scenario before GH #93's
+# genuinely divergent-ratio SoC boot ever ran.
+#
+# async_axi_fifo.sv's reset strategy is "hard flush, common root": BOTH
+# s_rst_n_i and m_rst_n_i feed rst_both_n = s_rst_n_i & m_rst_n_i, which
+# feeds BOTH per-domain cdc_reset_sync instances (see async_axi_fifo.sv
+# header -- this is NOT decoupled the way apb_cdc_bridge's post-#93 fix is;
+# see that file's tests below for the asymmetric case). Consequence: holding
+# EITHER physical reset input low holds BOTH domains' internal synchronised
+# resets (s_rst_sync_n AND m_rst_sync_n) low, regardless of which physical
+# clock is still ticking. These tests exploit exactly that: hold one
+# physical input low (or release it on a staggered delay after the other),
+# keep BOTH clocks free-running throughout (Clock() coroutines here are
+# never reset-gated -- only the RTL's internal state is), and offer
+# full-throttle traffic on all 5 channels simultaneously. The essential
+# property under test: while EITHER physical reset input is low, every
+# *_ready output must read 0 (zero acceptance) and every read-side *_valid
+# output must read 0 (zero silent pass-through) -- exactly what 7a9f9d4
+# fixed (`wr_ready_o = wr_rst_n_i && !full_q`, not just `!full_q`). After
+# both inputs release, one real transaction must complete cleanly, exactly
+# once, proving nothing offered during the rejected window was silently
+# latched.
+#
+# Metastability injection is not modelable in Verilator/cocotb -- these
+# tests characterise the synchronised, deterministic RTL behaviour only.
+# =============================================================================
+
+RESP_OKAY_LOCAL = 0b00  # RESP_OKAY re-derived locally for the m_bresp/m_rresp raw drives below
+
+
+def _drive_offer_all_channels(dut) -> None:
+    """Assert VALID with a legal-looking payload on all 5 channels
+    simultaneously (s-side AW/W/AR *and* m-side B/R), and hold the m-side
+    *ready inputs high (downstream always-ready) so any false accept on the
+    bridge's read-side outputs would be immediately observable. Does NOT
+    wait for READY -- the caller samples readiness itself via
+    _assert_zero_accept_window."""
+    dut.s_awaddr.value = 0x50000
+    dut.s_awlen.value = 0
+    dut.s_awsize.value = AW_SIZE_4B
+    dut.s_awburst.value = BURST_INCR
+    dut.s_awvalid.value = 1
+    dut.s_wdata.value = 0xA5A5A5A5
+    dut.s_wstrb.value = 0xF
+    dut.s_wlast.value = 1
+    dut.s_wvalid.value = 1
+    dut.s_araddr.value = 0x50000
+    dut.s_arlen.value = 0
+    dut.s_arsize.value = AW_SIZE_4B
+    dut.s_arburst.value = BURST_INCR
+    dut.s_arvalid.value = 1
+    dut.s_bready.value = 1
+    dut.s_rready.value = 1
+    dut.m_bvalid.value = 1
+    dut.m_bresp.value = RESP_OKAY_LOCAL
+    dut.m_rvalid.value = 1
+    dut.m_rdata.value = 0x5A5A5A5A
+    dut.m_rresp.value = RESP_OKAY_LOCAL
+    dut.m_rlast.value = 1
+    dut.m_awready.value = 1
+    dut.m_wready.value = 1
+    dut.m_arready.value = 1
+
+
+def _quiesce_offer(dut) -> None:
+    _idle_s_side(dut)
+    dut.m_bvalid.value = 0
+    dut.m_rvalid.value = 0
+    dut.m_awready.value = 0
+    dut.m_wready.value = 0
+    dut.m_arready.value = 0
+
+
+async def _assert_zero_accept_window(dut, clock, n_cycles, ctx_label) -> None:
+    """Sample every *_ready and read-side *_valid output once per `clock`
+    edge for n_cycles; every one must read 0 throughout -- zero acceptance,
+    zero silent pass-through, while either physical reset is asserted."""
+    for i in range(n_cycles):
+        await RisingEdge(clock)
+        await ReadOnly()
+        assert int(dut.s_awready.value) == 0, f"{ctx_label}: s_awready asserted (cycle {i})"
+        assert int(dut.s_wready.value) == 0, f"{ctx_label}: s_wready asserted (cycle {i})"
+        assert int(dut.s_arready.value) == 0, f"{ctx_label}: s_arready asserted (cycle {i})"
+        assert int(dut.m_bready.value) == 0, f"{ctx_label}: m_bready asserted (cycle {i})"
+        assert int(dut.m_rready.value) == 0, f"{ctx_label}: m_rready asserted (cycle {i})"
+        assert int(dut.m_awvalid.value) == 0, f"{ctx_label}: m_awvalid (accepted!) (cycle {i})"
+        assert int(dut.m_wvalid.value) == 0, f"{ctx_label}: m_wvalid (accepted!) (cycle {i})"
+        assert int(dut.m_arvalid.value) == 0, f"{ctx_label}: m_arvalid (accepted!) (cycle {i})"
+        assert int(dut.s_bvalid.value) == 0, f"{ctx_label}: s_bvalid (accepted!) (cycle {i})"
+        assert int(dut.s_rvalid.value) == 0, f"{ctx_label}: s_rvalid (accepted!) (cycle {i})"
+    # Leave the caller in a writable (post-RisingEdge, pre-ReadOnly) phase --
+    # the loop above always exits from a ReadOnly context, and cocotb+
+    # Verilator has no ReadWrite(); writing a signal immediately after a bare
+    # ReadOnly() raises "scheduled during a read-only sync phase" (same
+    # discipline as _poll_until above).
+    await RisingEdge(clock)
+
+
+async def _recover_and_verify_once(dut, addr, wdata) -> None:
+    """After both resets have released and offered signals were quiesced,
+    build a fresh AXI4Master/AXI4SlaveModel pair, start the slave loops, and
+    prove exactly one clean write+read round trip -- confirms nothing from
+    the rejected offer window was silently latched or duplicated."""
+    await ClockCycles(dut.s_clk, 3)
+    await ClockCycles(dut.m_clk, 3)
+    s_master = AXI4Master(dut, "s", dut.s_clk)
+    m_slave = AXI4SlaveModel(dut, "m", dut.m_clk)
+    dut.m_awid.value = 0
+    dut.m_arid.value = 0
+    wt = cocotb.start_soon(m_slave._write_loop())
+    rt = cocotb.start_soon(m_slave._read_loop())
+    _active_tasks.extend([wt, rt])
+    resp = await s_master.write(addr, [wdata])
+    assert resp == RESP_OKAY, f"post-recovery write at {addr:#x} failed (resp={resp})"
+    data, rresp = await s_master.read(addr)
+    assert rresp == RESP_OKAY, f"post-recovery read at {addr:#x} failed (rresp={rresp})"
+    assert data[0] == wdata, f"post-recovery readback mismatch at {addr:#x}: {data[0]:#x} != {wdata:#x}"
+
+
+# --- 23-24. held-reset, free-running far side, wide clock ratio ---------------
+
+async def _reset_asym_held_body(dut, s_ns, m_ns, held) -> None:
+    assert held in ("s", "m")
+    _kill_active_tasks()
+    s_clk_task = cocotb.start_soon(Clock(dut.s_clk, s_ns, units="ns").start())
+    m_clk_task = cocotb.start_soon(Clock(dut.m_clk, m_ns, units="ns").start())
+    _active_tasks.extend([s_clk_task, m_clk_task])
+
+    dut.s_rst_n.value = 0
+    dut.m_rst_n.value = 0
+    _quiesce_offer(dut)
+    dut.m_awid.value = 0
+    dut.m_arid.value = 0
+    await Timer(RESET_HOLD_NS, units="ns")
+
+    free = "m" if held == "s" else "s"
+    getattr(dut, f"{free}_rst_n").value = 1
+    free_clock = dut.m_clk if free == "m" else dut.s_clk
+
+    # Let the free domain's own external input settle a couple of its own
+    # cycles before offering -- the point of this test is the STEADY-STATE
+    # held window, not the immediate release edge.
+    await ClockCycles(free_clock, 2)
+    _drive_offer_all_channels(dut)
+    await _assert_zero_accept_window(
+        dut, free_clock, 20, f"held={held},free={free},{s_ns}/{m_ns}ns"
+    )
+    _quiesce_offer(dut)
+
+    getattr(dut, f"{held}_rst_n").value = 1
+    await _recover_and_verify_once(dut, 0x51000, 0x1357_9BDF)
+    dut._log.info(
+        f"reset-asym held={held} ({s_ns}/{m_ns} ns) OK: zero acceptance for 20 "
+        f"{free}_clk cycles while {held}_rst_n was held low, clean recovery after release"
+    )
+
+
+@cocotb.test()
+async def test_reset_asym_m_held_s_free_wide_ratio(dut):
+    # m held low, s released and free-running (mirrors the CPU-releases-
+    # first scenario that exposed fr_280f3ac18c66 at the SoC level) -- 5x
+    # wide ratio (4ns/20ns).
+    await with_timeout(_reset_asym_held_body(dut, 4, 20, held="m"), 50, "us")
+
+
+@cocotb.test()
+async def test_reset_asym_s_held_m_free_wide_ratio(dut):
+    # Mirror: s held low, m released and free-running -- 5x wide ratio
+    # (20ns/4ns).
+    await with_timeout(_reset_asym_held_body(dut, 20, 4, held="s"), 50, "us")
+
+
+# --- 25-26. staggered release-order sweep, coprime ratio -----------------------
+
+async def _reset_asym_staggered_body(dut, s_ns, m_ns, order) -> None:
+    assert order in ("s_first", "m_first")
+    first, second = ("s", "m") if order == "s_first" else ("m", "s")
+    slower_period = max(s_ns, m_ns)
+    stagger_windows_ns = [1 * slower_period, 3 * slower_period, 8 * slower_period]
+
+    for idx, stagger_ns in enumerate(stagger_windows_ns):
+        _kill_active_tasks()
+        s_clk_task = cocotb.start_soon(Clock(dut.s_clk, s_ns, units="ns").start())
+        m_clk_task = cocotb.start_soon(Clock(dut.m_clk, m_ns, units="ns").start())
+        _active_tasks.extend([s_clk_task, m_clk_task])
+
+        dut.s_rst_n.value = 0
+        dut.m_rst_n.value = 0
+        _quiesce_offer(dut)
+        dut.m_awid.value = 0
+        dut.m_arid.value = 0
+        await Timer(RESET_HOLD_NS, units="ns")
+
+        getattr(dut, f"{first}_rst_n").value = 1
+        first_clock = dut.m_clk if first == "m" else dut.s_clk
+        first_period = m_ns if first == "m" else s_ns
+        await ClockCycles(first_clock, 2)
+
+        _drive_offer_all_channels(dut)
+        window_cycles = max(2, int(stagger_ns / first_period))
+        await _assert_zero_accept_window(
+            dut, first_clock, window_cycles,
+            f"staggered order={order} stagger={stagger_ns}ns ({s_ns}/{m_ns} ns)"
+        )
+        _quiesce_offer(dut)
+
+        getattr(dut, f"{second}_rst_n").value = 1
+        await _recover_and_verify_once(dut, 0x52000 + idx * 0x100, 0x2468_ACE0 + idx)
+        dut._log.info(
+            f"staggered reset-asym OK: order={order} stagger={stagger_ns}ns "
+            f"window_cycles={window_cycles} ({s_ns}/{m_ns} ns), iteration {idx}"
+        )
+
+
+@cocotb.test()
+async def test_reset_asym_staggered_s_then_m_coprime(dut):
+    # s (CPU domain proxy) releases first, m held -- the exact ordering that
+    # exposed fr_280f3ac18c66 at the SoC level -- swept over 3 stagger
+    # windows at a coprime 10ns/11ns ratio.
+    await with_timeout(_reset_asym_staggered_body(dut, 10, 11, order="s_first"), 100, "us")
+
+
+@cocotb.test()
+async def test_reset_asym_staggered_m_then_s_coprime(dut):
+    # Mirror ordering: m releases first, s held.
+    await with_timeout(_reset_asym_staggered_body(dut, 10, 11, order="m_first"), 100, "us")
