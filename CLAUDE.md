@@ -289,6 +289,18 @@ Refer to specifications in `docs/` — they are the source of truth.
 **Golden rule**: prefix dev commands with `rtk` (e.g. `rtk git status`, `rtk pytest`, `rtk cargo build`). RTK uses a dedicated filter when one exists and passes through unchanged otherwise — always safe. Use it even inside `&&` chains. Typical savings 60–90% (tests 90–99%, build 70–87%, git 59–80%). Full command reference is in the user's global `~/.claude/RTK.md`; `rtk gain` shows analytics, `rtk proxy <cmd>` runs raw.
 <!-- /rtk-instructions -->
 
+### Project filters (`.rtk/filters.toml`)
+
+The sim/lint flows are driven through `nix develop --command make ...`; without setup, none of that output is filtered. Two one-time steps per clone / per machine:
+
+```bash
+cd <repo> && rtk trust          # register .rtk/filters.toml (re-run after editing it)
+# ~/.config/rtk/config.toml, [hooks] section — lets the PreToolUse hook see through nix:
+#   transparent_prefixes = ["nix develop --command", "nix develop -c", "nix-shell --run"]
+```
+
+With both in place, `nix develop --command make -C tb/cocotb/soc soc_all` is auto-rewritten to `... --command rtk make ...` and a 26-test suite drops from 244 lines / 35 KB to 2 lines. Failures are never hidden: every non-PASS row, ERROR line, traceback and `make: *** Error` is kept, the exit code propagates, and rtk tees the complete log to `~/.local/share/rtk/tee/`. Edit the filters with `rtk verify` as the gate (inline tests live beside each filter).
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
 ## Beads Issue Tracker
 
