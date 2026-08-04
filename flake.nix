@@ -53,9 +53,15 @@
             git
           ];
 
+          # Only greet an interactive shell. `nix develop --command <cmd>` is how the
+          # test/lint flows are driven, and these two lines otherwise prepend to every
+          # captured command output (they are emitted by the shell before the command
+          # runs, so no downstream output filter can remove them).
           shellHook = ''
-            echo "soc sim+lint env ready — Verilator $(verilator --version | head -1 | awk '{print $2}')"
-            echo "Python/cocotb come from system + pip: 'pip install -r requirements.txt cocotb-bus cocotbext-axi'"
+            if [[ $- == *i* ]]; then
+              echo "soc sim+lint env ready — Verilator $(verilator --version | head -1 | awk '{print $2}')"
+              echo "Python/cocotb come from system + pip: 'pip install -r requirements.txt cocotb-bus cocotbext-axi'"
+            fi
           '';
         };
 
@@ -77,8 +83,10 @@
           ];
 
           shellHook = ''
-            echo "soc riscv-bench env ready — $(riscv32-none-elf-gcc --version | head -1)"
-            echo "Build for the SoC: riscv32-none-elf-gcc -march=rv32i -mabi=ilp32 ..."
+            if [[ $- == *i* ]]; then
+              echo "soc riscv-bench env ready — $(riscv32-none-elf-gcc --version | head -1)"
+              echo "Build for the SoC: riscv32-none-elf-gcc -march=rv32i -mabi=ilp32 ..."
+            fi
           '';
         };
       });
