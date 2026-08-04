@@ -26,10 +26,62 @@
 # 2026-08-02 no such run exists yet (the signed-off run 14 predates GH
 # #91-95's CDC RTL entirely). Until then this script will correctly report
 # "Netlist not found" rather than silently doing nothing.
+#
+# EXIT CODE CONTRACT (bead claude_verilog_test-dwp, 2026-08-03):
+# OpenSTA's batch-mode 'sta' binary returns exit code 0 even when a Tcl
+# script calls the Tcl `error` command (tool-confirmed, both standalone
+# 'sta' and OpenROAD's embedded STA engine) -- so this script must never
+# rely on an uncaught Tcl error to signal failure to its caller. Every
+# check below funnels into one of two explicit `exit` calls at the very
+# end (or an immediate `exit 2` for setup problems), mirroring the
+# convention tools/cdc/cdc_gate.py already uses (see that file -- NOT
+# modified here, this script only mirrors the convention):
+#   exit 0 -- PASS: every CDC exception matched a real object and every
+#             targeted timing budget was met.
+#   exit 1 -- CDC FINDING(S): a design/constraint problem -- one or more
+#             CDC exceptions matched an EMPTY collection (unmatched /
+#             renamed instance) and/or one or more targeted budgets
+#             reported a VIOLATED slack. Names of every finding are
+#             printed in the final CDC-CHECK-RESULT block, not just the
+#             exit code.
+#   exit 2 -- SETUP/USAGE ERROR: the check itself could not run at all
+#             (missing env var, missing liberty/netlist/SDC file, or an
+#             SDC read failure unrelated to the CDC-EXCEPTION-MISS
+#             mechanism below). This is a tool/environment problem, not a
+#             finding about the design -- CI must be able to tell the two
+#             apart.
+# All checks are accumulated (see ::cdc_check_findings /
+# ::cdc_check_finding_msgs below) -- a single run reports every unmatched
+# exception and every violated budget, not just the first one hit.
 #================================================================
 
+# cdc_fatal_setup: used ONLY for problems that mean the check cannot be
+# meaningfully run at all (missing tool inputs). Exits immediately with
+# code 2 -- see EXIT CODE CONTRACT above. Not used for CDC findings.
+proc cdc_fatal_setup {msg} {
+    puts "ERROR: CDC-CHECK-SETUP-ERROR: $msg"
+    exit 2
+}
+
+# cdc_check_findings / cdc_check_finding_msgs: accumulate EVERY CDC
+# finding (unmatched exception collections and violated timing budgets)
+# across the whole run so the final report names all of them, not just
+# the first. Populated by cdc_record_finding below, and by the read_sdc
+# catch block folding in phase5_soc_multiclock_check.sdc's own
+# ::cdc_exception_misses list (that file's cdc_require_match proc is the
+# canonical "does this collection match anything" check; this script
+# reuses it rather than re-implementing the empty-collection idiom --
+# CodeRabbit PR #133 finding 2).
+set ::cdc_check_findings 0
+set ::cdc_check_finding_msgs {}
+
+proc cdc_record_finding {msg} {
+    incr ::cdc_check_findings
+    lappend ::cdc_check_finding_msgs $msg
+}
+
 if {![info exists ::env(CDC_CHECK_RUN_DIR)]} {
-    error "check_cdc_timing.tcl: CDC_CHECK_RUN_DIR is not set. Point it at a routed ASAP7 SoC run directory built with PNR_SDC_FILE=phase5_soc_multiclock.sdc (containing final/nl/soc_top.nl.v) -- e.g. 'make check-cdc-timing-asap7-soc RUN_DIR=/path/to/RUN_...' (see pnr/Makefile), or export CDC_CHECK_RUN_DIR yourself before invoking 'sta pnr/scripts/check_cdc_timing.tcl' directly."
+    cdc_fatal_setup "CDC_CHECK_RUN_DIR is not set. Point it at a routed ASAP7 SoC run directory built with PNR_SDC_FILE=phase5_soc_multiclock.sdc (containing final/nl/soc_top.nl.v) -- e.g. 'make check-cdc-timing-asap7-soc RUN_DIR=/path/to/RUN_...' (see pnr/Makefile), or export CDC_CHECK_RUN_DIR yourself before invoking 'sta pnr/scripts/check_cdc_timing.tcl' directly."
 }
 set RUN_DIR    $::env(CDC_CHECK_RUN_DIR)
 set TOP_MODULE "soc_top"
@@ -72,7 +124,7 @@ puts "================================================================"
 foreach _lib $_stdcell_libs {
     set _path "$ASAP7_LIB_DIR/$_lib"
     if {![file exists $_path]} {
-        error "Liberty file not found: $_path (set ASAP7_LIB_DIR if the PDK lives elsewhere)"
+        cdc_fatal_setup "Liberty file not found: $_path (set ASAP7_LIB_DIR if the PDK lives elsewhere)"
     }
     read_liberty $_path
 }
@@ -101,7 +153,7 @@ puts "================================================================"
 puts "Reading gate-level netlist: $NETLIST"
 puts "================================================================"
 if {![file exists $NETLIST]} {
-    error "Netlist not found: $NETLIST -- no CDC re-closure P&R run exists yet (GH #96 scope). Run pnr/asap7/soc/config.json with PNR_SDC_FILE=phase5_soc_multiclock.sdc first, then set CDC_CHECK_RUN_DIR to that run's directory."
+    cdc_fatal_setup "Netlist not found: $NETLIST -- no CDC re-closure P&R run exists yet (GH #96 scope). Run pnr/asap7/soc/config.json with PNR_SDC_FILE=phase5_soc_multiclock.sdc first, then set CDC_CHECK_RUN_DIR to that run's directory."
 }
 read_verilog $NETLIST
 link_design $TOP_MODULE
@@ -112,7 +164,31 @@ link_design $TOP_MODULE
 puts "================================================================"
 puts "Reading CDC check-only SDC: $CHECK_SDC"
 puts "================================================================"
-read_sdc $CHECK_SDC
+if {![file exists $CHECK_SDC]} {
+    cdc_fatal_setup "CDC check-only SDC not found: $CHECK_SDC"
+}
+
+if {[catch {read_sdc $CHECK_SDC} _sdc_err]} {
+    # phase5_soc_multiclock_check.sdc's own section 15 gate raises a Tcl
+    # `error` when one or more of ITS CDC timing exceptions (sections
+    # 11-13) failed to match any pin/net -- an EXPECTED finding, not a
+    # tool failure (see that file's cdc_require_match proc / the
+    # ::cdc_exception_misses global it populates). Distinguish that case
+    # from a genuine SDC read failure (syntax error, bad Tcl elsewhere):
+    # only ::cdc_exception_misses being non-empty proves this was the
+    # expected mechanism. Continue past it (rather than exiting here) so
+    # the report_checks queries below still run and any additional budget
+    # violations are folded into the SAME final report -- this is the
+    # "accumulate across all checks, don't bail on first" requirement.
+    if {[info exists ::cdc_exception_misses] && [llength $::cdc_exception_misses] > 0} {
+        foreach _miss $::cdc_exception_misses {
+            cdc_record_finding "unmatched CDC exception (phase5_soc_multiclock_check.sdc): $_miss"
+        }
+        puts "WARNING: check_cdc_timing.tcl: $CHECK_SDC reported [llength $::cdc_exception_misses] unmatched CDC exception(s) above (CDC-EXCEPTION-MISS). Continuing to run the remaining targeted timing queries; all findings are summarized in the final CDC-CHECK-RESULT block."
+    } else {
+        cdc_fatal_setup "read_sdc failed on $CHECK_SDC for a reason other than an unmatched CDC exception: $_sdc_err"
+    }
+}
 
 #----------------------------------------------------------------
 # Targeted CDC path reports. -unconstrained is NOT used here: the whole
@@ -121,24 +197,38 @@ read_sdc $CHECK_SDC
 # or "(Path is unconstrained)" is the bead-k07 failure mode this file
 # exists to prevent from recurring silently).
 #----------------------------------------------------------------
-# cdc_report_through: run a targeted report_checks -through query, but fail
-# loudly (Tcl `error`) if the pin/net collection is empty instead of
-# silently passing -through {} to report_checks, which either errors deep
-# inside OpenSTA or -- worse -- runs an UNFILTERED sweep (see file header:
-# every unrelated cross-domain FF pair would then show a fabricated
-# violation, since sys_clk/cpu_clk are deliberately not declared
-# asynchronous in $CHECK_SDC). Reuses the cdc_require_match proc that
-# $CHECK_SDC defines (in scope here: read_sdc evaluates that file's
-# proc/set statements in this same Tcl interpreter, and it ran above)
-# rather than re-inventing the empty-collection idiom -- CodeRabbit PR #133
-# finding 2.
+# cdc_report_through: run a targeted report_checks -through query. Reuses
+# the cdc_require_match proc that $CHECK_SDC defines (in scope here:
+# read_sdc evaluates that file's proc/set statements in this same Tcl
+# interpreter, and it ran above) rather than re-inventing the
+# empty-collection idiom -- CodeRabbit PR #133 finding 2.
+#
+# On an empty collection: record the finding via cdc_record_finding and
+# `return` (skip this one report) instead of `error`-ing out of the whole
+# script -- a single unmatched pattern must not prevent the remaining
+# report_checks queries below from running (bead claude_verilog_test-dwp:
+# "do not bail on the first failure").
+#
+# On a non-empty collection: also inspect the generated report for a
+# VIOLATED slack and record that as a finding too -- the pre-fix script
+# wrote the report but never actually looked at whether the budget was
+# met, so a real timing violation would have passed silently.
 proc cdc_report_through {collection description report_path} {
     if {![cdc_require_match $collection $description]} {
-        error "check_cdc_timing.tcl: ${description} matched an EMPTY collection -- see CDC-EXCEPTION-MISS line above. Aborting rather than running an unfiltered report_checks sweep."
+        cdc_record_finding "empty collection: ${description} (see CDC-EXCEPTION-MISS line above; no report written to $report_path)"
+        return
     }
     report_checks -through $collection \
         -path_delay max -format full_clock_expanded -digits 3 \
         > $report_path
+    set _fh [open $report_path r]
+    set _rpt_content [read $_fh]
+    close $_fh
+    if {[string match "*VIOLATED*" $_rpt_content]} {
+        cdc_record_finding "budget VIOLATED: ${description} (see $report_path)"
+    } elseif {[string match "*No paths found*" $_rpt_content] || [string match "*unconstrained*" $_rpt_content]} {
+        cdc_record_finding "path unconstrained/not found despite non-empty collection: ${description} (see $report_path)"
+    }
 }
 
 puts "================================================================"
@@ -192,3 +282,23 @@ puts "  (not 'No paths found' / 'Path Group: unconstrained' -- see bead"
 puts "  k07 / phase5_soc_multiclock.sdc section 3 for why that distinction"
 puts "  matters here)."
 puts "================================================================"
+
+#----------------------------------------------------------------
+# Final gate. See EXIT CODE CONTRACT in the file header: OpenSTA's batch
+# mode does not propagate a Tcl `error` into the process exit code, so
+# PASS/FAIL must be signalled with an explicit `exit` here regardless of
+# whether every check above matched or not.
+#----------------------------------------------------------------
+puts ""
+puts "================================================================"
+if {$::cdc_check_findings > 0} {
+    puts "CDC-CHECK-RESULT: FAIL -- $::cdc_check_findings CDC finding(s) detected:"
+    foreach _msg $::cdc_check_finding_msgs {
+        puts "  - $_msg"
+    }
+    puts "================================================================"
+    exit 1
+}
+puts "CDC-CHECK-RESULT: PASS -- every CDC exception matched a real object and every targeted timing budget was met."
+puts "================================================================"
+exit 0

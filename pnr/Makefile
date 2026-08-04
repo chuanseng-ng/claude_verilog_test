@@ -1083,6 +1083,23 @@ librelane-asap7-soc-results:
 #
 # Usage: make check-cdc-timing-asap7-soc RUN_DIR=/nobackup/asap7_soc_runs/RUN_...
 #        (defaults to the latest run under /nobackup/asap7_soc_runs if unset)
+#
+# EXIT CODE (bead claude_verilog_test-dwp, 2026-08-03): check_cdc_timing.tcl
+# now exits 0/1/2 explicitly on its own (see that file's header) -- OpenSTA
+# batch mode does not propagate a Tcl `error` into the process exit code,
+# so the script never relies on that. This recipe ALSO greps the captured
+# log for the CDC-EXCEPTION-MISS / budget-VIOLATED / CDC-CHECK-RESULT: FAIL
+# markers the script emits and fails the make target on any hit,
+# independent of $?  from `sta` itself -- belt-and-braces in case a future
+# OpenSTA version's exit-code behaviour regresses again (bead dwp
+# rationale). NOTE: this recipe deliberately does NOT pipe `sta`'s output
+# through `tee` to get "live" console output -- this Makefile has no
+# SHELL override (default POSIX /bin/sh, e.g. dash), which has no
+# PIPESTATUS, so `$?` after a `cmd | tee log` pipeline would capture
+# tee's exit status (always 0) instead of sta's. Output is redirected
+# straight to a log file, `$?` is captured from that direct invocation,
+# and the full log is `cat`'d to the console afterwards -- readable, just
+# not streamed live.
 #----------------------------------------------------------------
 check-cdc-timing-asap7-soc:
 	@CDC_RUN_DIR="$(RUN_DIR)"; \
@@ -1098,10 +1115,31 @@ check-cdc-timing-asap7-soc:
 	echo "  Run dir : $$CDC_RUN_DIR"; \
 	echo "  SDC     : $(abspath constraints/phase5_soc_multiclock_check.sdc)"; \
 	echo "=========================================="; \
-	cd $(LIBRELANE_ASAP7_SOC_DIR) && \
+	CDC_LOG=$$(mktemp /tmp/check_cdc_timing.XXXXXX.log); \
+	( cd $(LIBRELANE_ASAP7_SOC_DIR) && \
 		CDC_CHECK_RUN_DIR="$$CDC_RUN_DIR" \
 		CDC_CHECK_SDC="$(abspath constraints/phase5_soc_multiclock_check.sdc)" \
-		sta $(abspath $(PROJECT_ROOT))/pnr/scripts/check_cdc_timing.tcl
+		sta $(abspath $(PROJECT_ROOT))/pnr/scripts/check_cdc_timing.tcl ) > "$$CDC_LOG" 2>&1; \
+	STA_EXIT=$$?; \
+	cat "$$CDC_LOG"; \
+	if grep -qE "CDC-EXCEPTION-MISS|budget VIOLATED|CDC-CHECK-RESULT: FAIL|CDC-CHECK-SETUP-ERROR" "$$CDC_LOG"; then \
+		echo "=========================================="; \
+		echo "FAIL: check-cdc-timing-asap7-soc -- CDC finding marker(s) present in log (see above), regardless of sta's own exit code ($$STA_EXIT)."; \
+		echo "  Log saved at: $$CDC_LOG"; \
+		grep -E "CDC-EXCEPTION-MISS|budget VIOLATED|CDC-CHECK-RESULT|CDC-CHECK-SETUP-ERROR" "$$CDC_LOG" | sed 's/^/  marker: /'; \
+		echo "=========================================="; \
+		rm -f "$$CDC_LOG"; \
+		exit 1; \
+	fi; \
+	if [ "$$STA_EXIT" -ne 0 ]; then \
+		echo "=========================================="; \
+		echo "FAIL: check-cdc-timing-asap7-soc -- sta exited $$STA_EXIT with no recognised CDC finding marker in the log; treating as a tool/setup error."; \
+		echo "  Log saved at: $$CDC_LOG"; \
+		echo "=========================================="; \
+		rm -f "$$CDC_LOG"; \
+		exit "$$STA_EXIT"; \
+	fi; \
+	rm -f "$$CDC_LOG"
 
 # flop-count: DFF breakdown from any LibreLane run's synthesis log.
 # Usage: make flop-count RUN_DIR=asap7/gpu/runs/RUN_2026-05-24_09-12-00
