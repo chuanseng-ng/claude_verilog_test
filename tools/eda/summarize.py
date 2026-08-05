@@ -49,7 +49,13 @@ def _cap(items: list) -> list:
 def parse_verilator(text: str, exit_code: int) -> tuple[int, dict]:
     """Count %Error/%Warning lines and group the warnings by Verilator code."""
     errors = re.findall(r"^%Error.*$", text, re.M)
-    warns = re.findall(r"^%Warning-([A-Z0-9_]+):\s*(.*)$", text, re.M)
+    # The -CODE suffix is optional: Verilator also emits bare "%Warning: ..."
+    # lines (SystemVerilog $warning, some driver messages). Requiring the code
+    # dropped those from both the count and the list, under-reporting the run.
+    warns = [
+        (code or "UNCODED", msg)
+        for code, msg in re.findall(r"^%Warning(?:-([A-Z0-9_]+))?:\s*(.*)$", text, re.M)
+    ]
 
     by_code: dict[str, int] = {}
     for code, _ in warns:
@@ -139,7 +145,17 @@ def parse_opensta(text: str, exit_code: int) -> tuple[int, dict]:
         )
         return ERROR, summary
 
-    if summary["violated_endpoints"] or summary.get("wns", 0.0) < 0 or summary.get("tns", 0.0) < 0:
+    # worst_slack is checked alongside wns/tns: a truncated report, or a run_tcl
+    # call that only issued report_worst_slack, can carry a negative slack with
+    # no VIOLATED row and no wns/tns line at all. Leaving it out of the verdict
+    # made "worst slack -1.5" read as PASS — exactly the false pass this module
+    # exists to prevent.
+    if (
+        summary["violated_endpoints"]
+        or summary.get("wns", 0.0) < 0
+        or summary.get("tns", 0.0) < 0
+        or summary.get("worst_slack", 0.0) < 0
+    ):
         return FAIL, summary
     return PASS, summary
 
@@ -212,7 +228,15 @@ def parse_cocotb(text: str, exit_code: int, results_xml: Path | None) -> tuple[i
         "skipped": skipped,
         "failures": _cap([name for name, _ in rows]),
     }
-    return (FAIL if (failed or exit_code != 0) else PASS), summary
+    if failed or exit_code != 0:
+        return FAIL, summary
+    # Same guard the results.xml path applies: a clean exit with nothing run is
+    # not a pass. "TESTS=0 PASS=0 FAIL=0 SKIP=0" means the suite selected no
+    # tests, which is a setup fault, not success.
+    if passed == 0:
+        summary["note"] = "the tally reports no passing test — did the suite select anything?"
+        return ERROR, summary
+    return PASS, summary
 
 
 PARSERS = {
@@ -231,11 +255,29 @@ def main() -> int:
     ap.add_argument("--results-xml", help="cocotb JUnit results.xml, if any")
     args = ap.parse_args()
 
-    text = (
-        Path(args.log).read_text(encoding="utf-8", errors="replace")
-        if args.log
-        else sys.stdin.read()
-    )
+    # An unreadable log is ERROR (2), not a traceback. An uncaught
+    # FileNotFoundError exits 1, which a gate reads as FAIL — the very
+    # distinction this script exists to keep.
+    try:
+        text = (
+            Path(args.log).read_text(encoding="utf-8", errors="replace")
+            if args.log
+            else sys.stdin.read()
+        )
+    except OSError as exc:
+        print(
+            json.dumps(
+                {
+                    "tool": args.tool,
+                    "status": "ERROR",
+                    "exit_code": args.exit_code,
+                    "summary": {"errors": [f"could not read log: {exc}"]},
+                    "raw_log": args.log,
+                },
+                indent=2,
+            )
+        )
+        return ERROR
 
     if args.tool == "cocotb":
         xml_path = Path(args.results_xml) if args.results_xml else None

@@ -204,3 +204,45 @@ def test_main_survives_unhandled_exception_in_handle_itself(monkeypatch, capsys)
 
     # sanity: the real handle() is untouched by the monkeypatch elsewhere
     assert real_handle is not _flaky_handle
+
+
+def test_server_keeps_serving_after_each_injected_exception(monkeypatch, capsys) -> None:
+    """The property that actually matters: service CONTINUES after a fault.
+
+    The other boundary tests each send a single bad request, so they prove the
+    process does not die but not that it still answers. Here a handler raises
+    on the first request and the next two requests must still get correct
+    replies — that is the whole point of the boundary, since the alternative is
+    losing the loaded design.
+    """
+    monkeypatch.setattr(sys, "argv", ["session_server.py", "--tool", "opensta"])
+    requests = [
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": "run_tcl", "arguments": {"command": "puts hi"}},
+        },
+        {"jsonrpc": "2.0", "id": 2, "method": "ping"},
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/list"},
+    ]
+    monkeypatch.setattr(
+        sys, "stdin", io.StringIO("\n".join(json.dumps(r) for r in requests) + "\n")
+    )
+
+    def _boom(*_args, **_kwargs):
+        raise ValueError("boom")
+
+    monkeypatch.setattr(session_server.TclSession, "run", _boom)
+    monkeypatch.setattr(session_server.TclSession, "start", lambda self: "/fake/sta")
+
+    assert session_server.main() == 0
+
+    replies = [json.loads(ln) for ln in capsys.readouterr().out.splitlines() if ln.strip()]
+    assert [r["id"] for r in replies] == [1, 2, 3], "every request must get a reply"
+
+    # 1: the fault, reported as a tool-level error rather than a crash
+    assert replies[0]["result"]["isError"] is True
+    # 2 and 3: normal service, unaffected by the earlier fault
+    assert replies[1]["result"] == {}
+    assert [t["name"] for t in replies[2]["result"]["tools"]]

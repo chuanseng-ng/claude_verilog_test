@@ -20,14 +20,21 @@ eda::need make "install make, or enter the sim devshell"
 # MAKE_DIR is caller-supplied and this script is meant for CI gates and other
 # automated callers, so a wrong or traversing argument ("../../elsewhere") must
 # not turn the stale-results cleanup below into a delete outside the tree.
+# json_err: emit the ERROR reply with the message JSON-encoded as a whole. A
+# path holding a quote or backslash would otherwise produce invalid JSON in the
+# replies below, which callers parse.
+json_err() {
+  python3 -c 'import json,sys; print(json.dumps({"tool":"cocotb","status":"ERROR","exit_code":2,"summary":{"errors":[sys.argv[1]]}}))' "$1"
+}
+
 SUITE_DIR="$(cd "$REPO_ROOT/$MAKE_DIR" 2>/dev/null && pwd -P)" || {
-  printf '{"tool":"cocotb","status":"ERROR","exit_code":2,"summary":{"errors":["no such make dir: %s"]}}\n' "$MAKE_DIR"
+  json_err "no such make dir: $MAKE_DIR"
   exit 2
 }
 case "$SUITE_DIR/" in
   "$REPO_ROOT"/*) ;;
   *)
-    printf '{"tool":"cocotb","status":"ERROR","exit_code":2,"summary":{"errors":["make dir escapes the repo root: %s"]}}\n' "$SUITE_DIR"
+    json_err "make dir escapes the repo root: $SUITE_DIR"
     exit 2
     ;;
 esac

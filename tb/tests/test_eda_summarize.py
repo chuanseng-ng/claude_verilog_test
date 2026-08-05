@@ -9,6 +9,7 @@ PASS. This repo shipped a CDC timing gate that passed for exactly that reason
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -247,3 +248,51 @@ def test_cap_marks_truncation_instead_of_dropping_silently() -> None:
     capped = summarize._cap(items)  # pylint: disable=protected-access
     assert len(capped) == summarize.MAX_ITEMS + 1
     assert "5 more" in capped[-1]
+
+
+# ------------------------------------------- CodeRabbit PR #134 regressions
+
+
+def test_opensta_negative_worst_slack_alone_fails() -> None:
+    """A report carrying only a negative `worst slack` must FAIL, not PASS.
+
+    Reachable via run_tcl or a truncated timing report: no VIOLATED row, no
+    wns/tns line, so every other violation signal reads clean.
+    """
+    status, summary = summarize.parse_opensta("worst slack -1.5\n", 0)
+    assert status == FAIL
+    assert summary["worst_slack"] == pytest.approx(-1.5)
+
+
+def test_verilator_counts_uncoded_warning_lines() -> None:
+    """Bare `%Warning:` lines (SystemVerilog $warning) are counted too."""
+    log = "%Warning: rtl/a.sv:3: user warning via $warning\n%Warning-WIDTHTRUNC: rtl/b.sv:4: x\n"
+    status, summary = summarize.parse_verilator(log, 0)
+    assert status == PASS
+    assert summary["warning_count"] == 2
+    assert summary["warnings_by_code"] == {"UNCODED": 1, "WIDTHTRUNC": 1}
+
+
+def test_cocotb_zero_test_tally_is_error_not_pass() -> None:
+    """`TESTS=0 PASS=0 FAIL=0 SKIP=0` with a clean exit means nothing ran."""
+    status, summary = summarize.parse_cocotb("** TESTS=0 PASS=0 FAIL=0 SKIP=0 **\n", 0, None)
+    assert status == ERROR
+    assert "note" in summary
+
+
+def test_missing_log_file_exits_error_not_traceback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    """An unreadable --log yields the ERROR verdict as JSON, not a traceback.
+
+    A traceback exits 1, which a gate reads as FAIL — the distinction this
+    script exists to preserve.
+    """
+    monkeypatch.setattr(
+        "sys.argv",
+        ["summarize.py", "--tool", "opensta", "--log", str(tmp_path / "nope.log")],
+    )
+    assert summarize.main() == ERROR
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "ERROR"
+    assert "could not read log" in payload["summary"]["errors"][0]

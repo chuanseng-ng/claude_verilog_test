@@ -148,3 +148,21 @@ def test_main_exits_nonzero_on_bail_out(tmp_path: Path) -> None:
     finally:
         sys.argv = argv_backup
     assert rc == 1
+
+
+def test_literal_string_array_is_left_untouched(tmp_path: Path) -> None:
+    """TOML literal strings ('x') are not decodable by the line parser.
+
+    Rewriting the line anyway would silently DELETE the user's entries, since
+    the double-quote regex sees zero elements. The file must stay byte-for-byte
+    identical and sync() must report failure so the caller pastes by hand.
+    """
+    cfg = tmp_path / "config.toml"
+    original = "[hooks]\ntransparent_prefixes = ['custom-wrapper']\n"
+    cfg.write_text(original, encoding="utf-8")
+
+    ok, message = sync_rtk_config.sync(cfg)
+
+    assert ok is False
+    assert cfg.read_text(encoding="utf-8") == original
+    assert "cannot parse" in message

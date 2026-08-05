@@ -13,9 +13,12 @@ Safety model: this script has no TOML writer and does not attempt to be one.
 It only ever does one of three things to the file:
 
   1. transparent_prefixes already has all required entries -> no write.
-  2. transparent_prefixes exists as a single-line array -> that one line is
-     rewritten in place, in disc, to include the union of its existing
-     entries and the required ones. Every other line is untouched.
+  2. transparent_prefixes exists as a single-line array whose every element
+     the double-quote parser recognises -> that one line is rewritten in
+     place to hold the union of its existing entries and the required ones.
+     Every other line is untouched. If any element is NOT recognised (TOML
+     literal strings, `'like this'`), the line is left alone and case 3
+     applies -- rewriting it would silently delete the user's values.
   3. No [hooks] section, or a [hooks] section with no transparent_prefixes
      line (including a multi-line array, which this script deliberately
      does not try to parse) -> nothing is written. The exact TOML snippet
@@ -84,7 +87,20 @@ def sync(config_path: Path) -> tuple[bool, str]:
     if array_line is not None:
         match = _ARRAY_LINE_RE.match(lines[array_line].rstrip("\n"))
         assert match is not None
-        existing = _STRING_RE.findall(match.group("body"))
+        body = match.group("body")
+        existing = _STRING_RE.findall(body)
+        # _STRING_RE only understands double-quoted strings. TOML also allows
+        # literal strings ('custom-wrapper'), which would parse as zero entries
+        # and silently DELETE the user's values when the line is rewritten.
+        # Bail out to the manual-edit path unless every element was recognised.
+        residue = _STRING_RE.sub("", body)
+        if residue.strip(" \t,"):
+            return False, (
+                f"{config_path}: transparent_prefixes contains values this script "
+                "cannot parse (only double-quoted strings are understood), so it "
+                "was left untouched. Add these by hand inside [hooks]:\n\n"
+                f"transparent_prefixes = [{', '.join(json.dumps(p) for p in REQUIRED_PREFIXES)}]\n"
+            )
         missing = [p for p in REQUIRED_PREFIXES if p not in existing]
         if not missing:
             return True, f"{config_path}: transparent_prefixes already complete"

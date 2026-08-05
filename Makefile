@@ -50,9 +50,12 @@ setup-rtk:
 	@command -v $(RTK) >/dev/null 2>&1 || { \
 	  echo "rtk not found in PATH — see the RTK section of CLAUDE.md"; exit 1; }
 	@# rtk trust echoes the whole filter file back for review; keep the summary
-	@# line only, but let a real failure through on stderr with its exit code.
-	@cd $(REPO_ROOT) && $(RTK) trust | grep -E "^(Trusted|Project-local)" || \
-	  { cd $(REPO_ROOT) && $(RTK) trust; }
+	@# lines only. Capture first and check rtk's own status BEFORE filtering —
+	@# piping straight into grep would make grep define the pipeline status, so a
+	@# failing rtk trust would still report a completed setup.
+	@cd $(REPO_ROOT) && out=$$($(RTK) trust 2>&1); rc=$$?; \
+	  if [ $$rc -ne 0 ]; then printf '%s\n' "$$out"; exit $$rc; fi; \
+	  printf '%s\n' "$$out" | grep -E "^(Trusted|Project-local)" || true
 	@echo "==> ensuring rtk can see through the nix devshell wrappers"
 	@$(PYTHON) $(REPO_ROOT)/tools/setup/sync_rtk_config.py
 
