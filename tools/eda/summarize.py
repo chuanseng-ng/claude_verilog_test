@@ -96,9 +96,12 @@ def parse_yosys(text: str, exit_code: int) -> tuple[int, dict]:
 
 # `  -0.0123   slack (VIOLATED)` / `   0.0456   slack (MET)`
 _SLACK_RE = re.compile(r"^\s*(-?[\d.]+)\s+slack\s+\((MET|VIOLATED)\)", re.M)
-# `wns -12.34` / `tns 0.00`, as printed by report_wns / report_tns
+# `wns -12.34` / `tns 0.00` / `worst slack 24.01`, as printed by report_wns,
+# report_tns and report_worst_slack. Note wns is worst *negative* slack: it reads
+# 0.00 on a clean design, so worst_slack is the one that carries the margin.
 _WNS_RE = re.compile(r"^\s*wns\s+(-?[\d.]+)", re.M | re.I)
 _TNS_RE = re.compile(r"^\s*tns\s+(-?[\d.]+)", re.M | re.I)
+_WORST_RE = re.compile(r"^\s*worst slack\s+(-?[\d.]+)", re.M | re.I)
 
 
 def parse_opensta(text: str, exit_code: int) -> tuple[int, dict]:
@@ -115,18 +118,21 @@ def parse_opensta(text: str, exit_code: int) -> tuple[int, dict]:
 
     wns = _WNS_RE.findall(text)
     tns = _TNS_RE.findall(text)
+    worst = _WORST_RE.findall(text)
     if wns:
         summary["wns"] = float(wns[-1])
     elif slacks:
         summary["wns"] = min(float(s) for s, _ in slacks)
     if tns:
         summary["tns"] = float(tns[-1])
+    if worst:
+        summary["worst_slack"] = float(worst[-1])
 
     if summary["errors"] or exit_code != 0:
         return FAIL, summary
 
     # OpenSTA exits 0 on an empty report. Refuse to call that a pass.
-    if not slacks and not wns and not tns:
+    if not slacks and not wns and not tns and not worst:
         summary["note"] = (
             "no slack, wns or tns found — empty report or the design/SDC never "
             "loaded. Treated as ERROR, not PASS (bead dwp)."

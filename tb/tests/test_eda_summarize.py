@@ -132,6 +132,31 @@ def test_opensta_error_line_fails() -> None:
     assert status == FAIL
 
 
+def test_opensta_zero_wns_tns_with_positive_worst_slack_is_pass() -> None:
+    """A clean design: wns/tns read 0.00 (no negative slack), but the real
+    margin only shows up in worst_slack. This is the report_wns_tns shape of
+    the signed-off rv32i_cpu_top ASAP7 run — wns/tns=0.00 must not be mistaken
+    for "nothing reported" and must still surface worst_slack in the summary.
+    """
+    status, summary = summarize.parse_opensta("wns 0.00\ntns 0.00\nworst slack 24.01\n", 0)
+    assert status == PASS
+    assert summary["wns"] == pytest.approx(0.0)
+    assert summary["tns"] == pytest.approx(0.0)
+    assert summary["worst_slack"] == pytest.approx(24.01)
+    assert "note" not in summary
+
+
+def test_opensta_worst_slack_only_is_not_empty_report_error() -> None:
+    """A report with only a 'worst slack' line (no slack paths, no wns/tns)
+    must not fall into the empty-report ERROR case (bead `dwp`) -- worst_slack
+    alone is enough evidence that report_worst_slack actually ran.
+    """
+    status, summary = summarize.parse_opensta("worst slack 24.01\n", 0)
+    assert status == PASS
+    assert summary["worst_slack"] == pytest.approx(24.01)
+    assert "note" not in summary
+
+
 # ------------------------------------------------------------------- cocotb
 
 _XML_PASS = """<?xml version="1.0" encoding="UTF-8"?>
