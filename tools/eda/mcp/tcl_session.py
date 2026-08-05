@@ -28,6 +28,7 @@ import subprocess
 import tempfile
 import threading
 from dataclasses import dataclass, field
+from typing import IO
 
 # How a tool is found, in order: explicit env var, PATH, then a best-effort look
 # through the nix store (the PD tools live in the librelane nix-shell and are not
@@ -91,6 +92,12 @@ class TclSession:
         """True while the tool subprocess is running."""
         return self.proc is not None and self.proc.poll() is None
 
+    @property
+    def seq(self) -> int:
+        """Current command sequence number (public accessor for callers like
+        session_server's `_save`, so they need not reach into `_seq` directly)."""
+        return self._seq
+
     def start(self) -> str:
         """Spawn the tool. Returns the resolved binary path."""
         if self.alive:
@@ -110,36 +117,67 @@ class TclSession:
         except OSError as exc:
             raise SessionError(f"could not start {self.binary}: {exc}") from exc
 
+        assert self.proc.stdout is not None
         self._lines = queue.Queue()
-        self._reader = threading.Thread(target=self._pump, daemon=True)
+        # Bind the queue and the stream to the thread via args, rather than
+        # letting _pump read self._lines/self.proc.stdout off `self` inside
+        # its loop. If the *previous* process's reader thread is still
+        # draining to EOF when start() rebinds self._lines to this fresh
+        # queue, an unbound _pump would resolve self._lines lazily and the
+        # old thread would dump its leftover lines -- and finally its EOF
+        # `None` marker -- into the new queue, making run() raise
+        # "exited unexpectedly" for a perfectly healthy new process.
+        self._reader = threading.Thread(
+            target=self._pump, args=(self.proc.stdout, self._lines), daemon=True
+        )
         self._reader.start()
         return self.binary
 
-    def _pump(self) -> None:
-        assert self.proc is not None and self.proc.stdout is not None
-        for line in self.proc.stdout:
-            self._lines.put(line.rstrip("\n"))
-        self._lines.put(None)  # EOF marker
+    @staticmethod
+    def _pump(stream: IO[str], out_queue: queue.Queue) -> None:
+        for line in stream:
+            out_queue.put(line.rstrip("\n"))
+        out_queue.put(None)  # EOF marker
 
     def close(self) -> None:
-        """Ask the tool to exit, then make sure it is gone."""
-        if not self.alive:
-            self.proc = None
-            return
-        assert self.proc is not None
-        try:
-            if self.proc.stdin:
-                self.proc.stdin.write("exit\n")
-                self.proc.stdin.flush()
-            self.proc.wait(timeout=10)
-        except (OSError, ValueError, subprocess.TimeoutExpired):
-            self.proc.kill()
-            try:
-                self.proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                pass
-        finally:
-            self.proc = None
+        """Ask the tool to exit, then make sure it is gone.
+
+        Cleans up everything start() allocated: the subprocess, its stdin/
+        stdout pipes, the reader thread, and the per-session scratch dir
+        (`_workdir()`) that holds only this session's `cmd_<n>.tcl`/
+        `out_<n>.rpt` files. The reports handed back to MCP callers live
+        under `sim/build/eda-logs/` (see session_server.py's REPORT_DIR),
+        a separate directory this method never touches, so a `close_design`
+        cannot invalidate a `report` path already returned to a caller.
+        """
+        proc, self.proc = self.proc, None
+        if proc is not None:
+            if proc.poll() is None:
+                try:
+                    if proc.stdin:
+                        proc.stdin.write("exit\n")
+                        proc.stdin.flush()
+                    proc.wait(timeout=10)
+                except (OSError, ValueError, subprocess.TimeoutExpired):
+                    proc.kill()
+                    try:
+                        proc.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        pass
+            for stream in (proc.stdin, proc.stdout):
+                if stream is not None:
+                    try:
+                        stream.close()
+                    except OSError:
+                        pass
+
+        if self._reader is not None:
+            self._reader.join(timeout=2)
+            self._reader = None
+
+        if self._tmpdir:
+            shutil.rmtree(self._tmpdir, ignore_errors=True)
+            self._tmpdir = ""
 
     # ------------------------------------------------------------------ command
 

@@ -26,6 +26,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,14 @@ MAX_INLINE_CHARS = 4000  # cap on any raw text echoed back to the client
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 REPORT_DIR = Path(os.environ.get("EDA_LOG_DIR", REPO_ROOT / "sim" / "build" / "eda-logs"))
+
+# Per-process discriminator for report filenames. TclSession._seq restarts at
+# 0 in every new server process, so without this a second server run's
+# "opensta-timing-1.rpt" silently overwrites the first run's file of the same
+# name -- and a `report` path returned to a caller in the first run then
+# points at the second run's content. PID + start time makes each process's
+# reports unique on disk without changing the human-readable shape of the name.
+_RUN_ID = f"{os.getpid()}-{int(time.time())}"
 
 
 # ---------------------------------------------------------------------------
@@ -167,7 +176,7 @@ class EdaSessionServer:
 
     def _save(self, name: str, text: str) -> str:
         REPORT_DIR.mkdir(parents=True, exist_ok=True)
-        path = REPORT_DIR / f"{self.tool}-{name}-{self.session._seq}.rpt"  # pylint: disable=protected-access
+        path = REPORT_DIR / f"{self.tool}-{name}-{_RUN_ID}-{self.session.seq}.rpt"
         path.write_text(text, encoding="utf-8")
         return str(path)
 
@@ -358,6 +367,13 @@ class EdaSessionServer:
             return {"status": "ERROR", "error": str(exc)}, True
         except (KeyError, OSError) as exc:
             return {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"}, True
+        except Exception as exc:
+            # A handler fault (bad args shape, an unexpected Tcl reply, ...)
+            # must stay a tool-level error, not kill the server and discard
+            # the loaded design -- exactly the loss this server exists to
+            # prevent. See main()'s outer boundary for the request-parsing
+            # equivalent of this guard.
+            return {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"}, True
         return payload, payload.get("status") == "ERROR"
 
 
@@ -446,7 +462,17 @@ def main() -> int:
             except json.JSONDecodeError as exc:
                 _emit(_error(None, -32700, f"Parse error: {exc}"))
                 continue
-            response = handle(server, req)
+            try:
+                response = handle(server, req)
+            except Exception as exc:
+                # Outermost guard: one malformed request (e.g. a `params`
+                # shape `handle`/a handler does not expect, such as a list
+                # where a dict is required) must not end the process and
+                # discard the loaded design. Keep the session alive and
+                # report the fault as a JSON-RPC internal error instead.
+                req_id = req.get("id") if isinstance(req, dict) else None
+                _emit(_error(req_id, -32603, f"Internal error: {type(exc).__name__}: {exc}"))
+                continue
             if response is not None:
                 _emit(response)
     finally:
