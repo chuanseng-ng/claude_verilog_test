@@ -216,7 +216,7 @@ help:
 	@echo "  make lint-verible        - Verible SystemVerilog style lint only"
 	@echo "  make format-verible-check - Verible format check (non-mutating)"
 	@echo "  make format-verible-fix  - Verible reformat rtl/ in place"
-	@echo "  make cdc          - Run Bedrock cdc_snitch CDC check (informational; CDC_STRICT=1 to gate)"
+	@echo "  make cdc          - CDC check: cdc_snitch + cdc_gate waiver/domain analysis (CDC_STRICT=1 to gate)"
 	@echo "  make soc_periph     - Run Phase 5 M9 SoC DMA + peripheral loopback test"
 	@echo "  make soc_boot       - Run Phase 5 M9 SoC boot test (PC scoreboard + 100/100 stability)"
 	@echo "  make soc_coherency  - Run Phase 5 M9 SoC software coherency test (flush+GPU+inval)"
@@ -352,6 +352,7 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/soc/pll/pll_clkgen.sv \
 	$(RTL_DIR)/soc/pll/pll_apb_regs.sv \
 	$(RTL_DIR)/soc/pll/pll_subsystem.sv \
+	$(RTL_DIR)/mem/rv32i_clock_gate.sv \
 	$(RTL_DIR)/soc/cdc/cdc_2ff_sync.sv \
 	$(RTL_DIR)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL_DIR)/soc/cdc/cdc_gray_fifo.sv \
@@ -448,15 +449,23 @@ format-verible-fix:
 # ============================================================================
 # CDC check — BerkeleyLab/Bedrock cdc_snitch (informational; see tools/cdc/)
 # ============================================================================
-# sv2v -> yosys (flatten) -> cdc_snitch.py. Parked / informational on this
-# single-clock SoC (BAD count is dominated by false positives: async reset +
-# synchronous APB/SPI ports modeled as separate clock domains). Run as a gate
-# with `make cdc CDC_STRICT=1`. Full writeup: docs/verification/CDC_SNITCH_POC.md
+# sv2v -> yosys (flatten) -> cdc_snitch.py -> tools/cdc/cdc_gate.py.
+#
+# cdc_snitch's raw BAD count is not the verdict: it models every top-level port
+# as its own clock domain and cannot tell a clock-gate output from its source
+# clock, so on this SoC ~98% of raw BADs are modelling artifacts. cdc_gate.py
+# canonicalizes domains (tools/cdc/cdc_config.yml, mirroring
+# pnr/constraints/phase5_soc_multiclock.sdc) and applies explicit justified
+# waivers; its exit status is the gate. `make cdc CDC_STRICT=1` propagates it.
+# Full writeup: docs/verification/CDC_SNITCH_POC.md
 CDC_DIR     := $(PROJ_ROOT)/sim/build/cdc
 CDC_STRICT  ?= 0
-# SOC_TOP_SOURCES plus axi_lite_register_bank.sv (Verilator auto-discovers it;
-# sv2v/yosys need it listed explicitly).
-CDC_SOURCES := $(SOC_TOP_SOURCES) $(RTL_DIR)/soc/axi_lite_register_bank.sv
+# Same file list as lint_soc. axi_lite_register_bank.sv used to be appended here
+# (Verilator auto-discovered it, sv2v/yosys did not) but it is now listed in
+# SOC_TOP_SOURCES directly -- appending it again makes yosys abort with
+# "Re-definition of module \axi_lite_register_bank". Keep this list == the lint
+# list; $(sort) also de-dupes if a future edit reintroduces an overlap.
+CDC_SOURCES := $(sort $(SOC_TOP_SOURCES))
 
 .PHONY: cdc
 cdc:

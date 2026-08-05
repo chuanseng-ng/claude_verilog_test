@@ -2,18 +2,23 @@
 # Run the BerkeleyLab/Bedrock cdc_snitch clock-domain-crossing check on a
 # SystemVerilog design: sv2v -> yosys (flatten to gates) -> cdc_snitch.py.
 #
-# This is an INFORMATIONAL check by default (CDC_STRICT=0): on this single-clock
-# SoC, cdc_snitch reports thousands of false-positive BADs because it models
-# every top-level input port (including the async reset and synchronous APB/SPI
-# buses) as an independent clock domain. See tools/cdc/README.md and
-# docs/verification/CDC_SNITCH_POC.md for the full story.
+# cdc_snitch's own BAD count is NOT the verdict. It models every top-level input
+# port as its own clock domain, cannot tell a clock-gate output from its source
+# clock, and cannot express a qualified crossing -- on this SoC that puts the
+# raw count in the thousands, essentially all modelling artifacts. The raw
+# report is therefore post-processed by tools/cdc/cdc_gate.py, which
+# canonicalizes domains (per tools/cdc/cdc_config.yml, mirroring
+# pnr/constraints/phase5_soc_multiclock.sdc) and applies explicit justified
+# waivers. The GATE's exit status is the verdict. See tools/cdc/README.md and
+# docs/verification/CDC_SNITCH_POC.md.
 #
 # Env (all optional except CDC_FLIST):
 #   CDC_FLIST    newline-separated list of source files (required)
 #   CDC_CACHE    tool/work dir            (default: <repo>/sim/build/cdc)
 #   CDC_INCDIRS  space-separated incdirs  (default: none)
 #   CDC_TOP      top module name          (default: soc_top)
-#   CDC_STRICT   1 = exit non-zero on BAD>0 (gate); 0 = informational (default)
+#   CDC_CONFIG   cdc_gate.py config       (default: tools/cdc/cdc_config.yml)
+#   CDC_STRICT   1 = exit non-zero if the gate fails; 0 = informational (default)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,14 +28,32 @@ CDC_CACHE="${CDC_CACHE:-$REPO_ROOT/sim/build/cdc}"
 CDC_TOP="${CDC_TOP:-soc_top}"
 CDC_STRICT="${CDC_STRICT:-0}"
 CDC_INCDIRS="${CDC_INCDIRS:-}"
+CDC_CONFIG="${CDC_CONFIG:-$SCRIPT_DIR/cdc_config.yml}"
 : "${CDC_FLIST:?set CDC_FLIST to a file listing the RTL sources}"
 
 # Make cached sv2v / oss-cad-suite yosys discoverable without polluting PATH.
 export PATH="$CDC_CACHE/oss-cad-suite/bin:$CDC_CACHE/sv2v-Linux:$PATH"
 
 command -v sv2v   >/dev/null 2>&1 || { echo "ERROR: sv2v not found. Run tools/cdc/fetch_cdc_tools.sh"; exit 3; }
-command -v yosys  >/dev/null 2>&1 || { echo "ERROR: yosys not found. Install yosys>=0.23 or run fetch_cdc_tools.sh --with-yosys"; exit 3; }
+command -v yosys  >/dev/null 2>&1 || { echo "ERROR: yosys not found. Run fetch_cdc_tools.sh --with-yosys"; exit 3; }
 [[ -f "$CDC_CACHE/cdc_snitch.py" ]] || { echo "ERROR: cdc_snitch.py missing. Run tools/cdc/fetch_cdc_tools.sh"; exit 3; }
+
+# THE YOSYS VERSION CHANGES THE VERDICT — warn loudly if it is not the pinned one.
+#
+# cdc_config.yml's domain_aliases are written against the net names the PINNED
+# yosys produces after flatten. A different build can name the same clock
+# differently: yosys 0.33 leaves instance-local names (u_gpu.clk,
+# u_apb_dbg_cdc.m_clk_i) where 0.62 resolves them to the top-level ports
+# (clk_i, cpu_clk_i). The aliases then miss, thousands of same-domain registers
+# look cross-domain, and the failure reads like a design problem instead of a
+# tool-version problem. That cost a full debugging round once; hence this check.
+echo "== yosys: $(yosys -V 2>/dev/null | head -1) =="
+if [[ ! -x "$CDC_CACHE/oss-cad-suite/bin/yosys" ]]; then
+  echo "WARNING: using a system yosys, not the version pinned in tools/cdc/versions.env." >&2
+  echo "         Gate results are NOT comparable across yosys versions — a mismatch" >&2
+  echo "         shows up as a flood of bogus cross-domain findings, not a clean error." >&2
+  echo "         For a trustworthy verdict: tools/cdc/fetch_cdc_tools.sh --with-yosys" >&2
+fi
 
 mkdir -p "$CDC_CACHE"
 INC_FLAGS=()
@@ -44,18 +67,32 @@ sv2v "${INC_FLAGS[@]}" "--top=$CDC_TOP" "${FILES[@]}" > "$CDC_CACHE/${CDC_TOP}_f
 echo "== [2/3] yosys: elaborate + flatten -> JSON =="
 yosys -q -p "read_verilog $CDC_CACHE/${CDC_TOP}_flat.v; script $CDC_CACHE/cdc_snitch_proc.ys; write_json $CDC_CACHE/${CDC_TOP}_yosys.json"
 
-echo "== [3/3] cdc_snitch: categorize registers =="
+echo "== [3/4] cdc_snitch: categorize registers =="
+# cdc_snitch exits non-zero whenever its raw BAD count is non-zero, which is
+# expected here -- the gate below is what decides. Don't let set -e kill us.
 set +e
 python3 "$CDC_CACHE/cdc_snitch.py" "$CDC_CACHE/${CDC_TOP}_yosys.json" -o "$CDC_CACHE/${CDC_TOP}_cdc.txt"
+set -e
+echo "raw report: $CDC_CACHE/${CDC_TOP}_cdc.txt"
+
+echo "== [4/4] cdc_gate: canonicalize domains + apply waivers =="
+set +e
+python3 "$SCRIPT_DIR/cdc_gate.py" "$CDC_CACHE/${CDC_TOP}_cdc.txt" \
+  -c "$CDC_CONFIG" --json "$CDC_CACHE/${CDC_TOP}_cdc_gate.json"
 rc=$?
 set -e
-echo "report: $CDC_CACHE/${CDC_TOP}_cdc.txt"
+
+if [[ "$rc" -eq 2 ]]; then
+  echo "ERROR: cdc_gate.py could not run (bad config or unreadable report)." >&2
+  exit 2
+fi
 
 if [[ "$CDC_STRICT" -eq 1 ]]; then
   exit "$rc"
 fi
-echo "NOTE: informational mode (CDC_STRICT=0). On this single-clock SoC the BAD"
-echo "      count is dominated by false positives (async reset + synchronous"
-echo "      APB/SPI ports modeled as separate clock domains). Not a CI gate yet;"
-echo "      see docs/verification/CDC_SNITCH_POC.md."
+if [[ "$rc" -ne 0 ]]; then
+  echo
+  echo "NOTE: informational mode (CDC_STRICT=0) -- the gate FAILED but this run"
+  echo "      still exits 0. Re-run with CDC_STRICT=1 for gate semantics."
+fi
 exit 0

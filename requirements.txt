@@ -8,6 +8,7 @@ ruff>=0.1.0
 # Verification infrastructure
 cocotb>=1.8.0,<2.0  # cocotb 2.x removed the units= kwarg used throughout tb/
 pyuvm>=3.0.0,<3.1   # pinned alongside cocotb 1.x
+pyyaml>=6.0         # tools/cdc/cdc_gate.py config + tb/tests/test_cdc_gate.py
 
 # Pre-commit hooks
 pre-commit>=3.5.0
