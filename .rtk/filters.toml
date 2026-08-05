@@ -39,8 +39,13 @@ strip_lines_matching = [
   "^MODULE=",
   "^verilator\\s",
   "^\\t",
-  # compiler / verilator driver invocations (echoed full paths)
-  "^/nix/store/",
+  # compiler / verilator driver invocations (echoed full paths). Anchored on the
+  # /bin/<exe> component on purpose: a bare "^/nix/store/" also matches a gcc
+  # diagnostic raised *inside* a nix-store header
+  # (/nix/store/...-glibc-dev/include/features.h:435:4: error: ...), and this
+  # project has already hit real nix-toolchain build breakage in this exact path
+  # (see sim/cxx_shim.sh). Those diagnostics must reach the reader.
+  "^/nix/store/\\S+/bin/\\S+\\s",
   "^/usr/bin/python3 ",
   "^/home/[^ ]*/(sim/cxx_shim\\.sh|\\.local/)",
   # C++ include-trace and the harmless _FORTIFY_SOURCE warning
@@ -145,6 +150,15 @@ ERROR: results.xml was not written by the simulation!
 make: *** [Makefile:401: timer] Error 2
 """
 expected = "     0.00ns ERROR    gpi                                VPI: Couldn't find root handle timer\nTraceback (most recent call last):\n  File \"/home/u/.local/lib/python3.10/site-packages/cocotb/__init__.py\", line 233, in _initialise_testbench\nRuntimeError: Can not find root handle (timer)\nERROR: results.xml was not written by the simulation!\nmake: *** [Makefile:401: timer] Error 2"
+
+[[tests.soc-sim]]
+name = "a compiler error inside a nix-store header is not mistaken for an echoed invocation"
+input = """
+/nix/store/yn6c25dnzkl8z4qqcfd752ccrdk9lj2s-verilator-5.048/bin/verilator -cc --exe -Mdir sim_build
+/nix/store/15h9askp4k1lx44d9871wid23j2a8ijp-glibc-2.42-61-dev/include/features.h:435:4: warning: #warning _FORTIFY_SOURCE requires compiling with optimization
+/nix/store/15h9askp4k1lx44d9871wid23j2a8ijp-glibc-2.42-61-dev/include/features.h:512:9: error: 'nonexistent_symbol' was not declared in this scope
+"""
+expected = "/nix/store/15h9askp4k1lx44d9871wid23j2a8ijp-glibc-2.42-61-dev/include/features.h:512:9: error: 'nonexistent_symbol' was not declared in this scope"
 
 [[tests.soc-sim]]
 name = "verilator design error survives"

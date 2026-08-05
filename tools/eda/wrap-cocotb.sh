@@ -16,8 +16,24 @@ shift 2
 
 eda::need make "install make, or enter the sim devshell"
 
-RESULTS_XML="$REPO_ROOT/$MAKE_DIR/results.xml"
+# Resolve the suite directory and confine it to the repo before deleting anything.
+# MAKE_DIR is caller-supplied and this script is meant for CI gates and other
+# automated callers, so a wrong or traversing argument ("../../elsewhere") must
+# not turn the stale-results cleanup below into a delete outside the tree.
+SUITE_DIR="$(cd "$REPO_ROOT/$MAKE_DIR" 2>/dev/null && pwd -P)" || {
+  printf '{"tool":"cocotb","status":"ERROR","exit_code":2,"summary":{"errors":["no such make dir: %s"]}}\n' "$MAKE_DIR"
+  exit 2
+}
+case "$SUITE_DIR/" in
+  "$REPO_ROOT"/*) ;;
+  *)
+    printf '{"tool":"cocotb","status":"ERROR","exit_code":2,"summary":{"errors":["make dir escapes the repo root: %s"]}}\n' "$SUITE_DIR"
+    exit 2
+    ;;
+esac
+
+RESULTS_XML="$SUITE_DIR/results.xml"
 rm -f "$RESULTS_XML"   # a stale file from a previous suite would be read as this run's result
 
 declare -a EDA_SUMMARIZE_EXTRA=(--results-xml "$RESULTS_XML")
-eda::run cocotb "$(eda::logfile cocotb)" -- make -C "$REPO_ROOT/$MAKE_DIR" "$TARGET" "$@"
+eda::run cocotb "$(eda::logfile cocotb)" -- make -C "$SUITE_DIR" "$TARGET" "$@"
