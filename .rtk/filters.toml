@@ -215,44 +215,26 @@ input = """
 expected = "verilator: clean"
 
 # ---------------------------------------------------------------------------
-# sv2v — used by the PD frontend (make <pdk>-soc-sv2v). Errors only.
-# ---------------------------------------------------------------------------
-[filters.sv2v]
-description = "sv2v SystemVerilog->Verilog conversion — errors only"
-match_command = "^(nix\\s+(develop|shell)\\s+(--command\\s+)?)?(rtk\\s+)?sv2v\\b"
-strip_ansi = true
-filter_stderr = true
-truncate_lines_at = 220
-keep_lines_matching = [
-  "[Ee]rror",
-  "[Ww]arning",
-  "not found",
-  "Unsupported",
-]
-max_lines = 60
-on_empty = "sv2v: ok"
-
-[[tests.sv2v]]
-name = "errors kept, converted RTL dropped"
-input = """
-module soc_top (input wire clk_i);
-  wire [31:0] x;
-endmodule
-Error: unsupported construct at rtl/soc/pmu.sv:12
-"""
-expected = "Error: unsupported construct at rtl/soc/pmu.sv:12"
-
-[[tests.sv2v]]
-name = "clean conversion collapses"
-input = "module soc_top (input wire clk_i);\nendmodule"
-expected = "sv2v: ok"
+# sv2v — deliberately NOT filtered.
+#
+# sv2v writes the converted Verilog to stdout by default, so with a redirection
+# (`sv2v ... > out.v`) stdout IS the payload, not a log. rtk applies a TOML
+# filter to the captured stdout *before* writing it to the redirection target,
+# so a keep-only filter here would silently truncate a generated netlist down to
+# its error lines. CLAUDE.md tells everyone to prefix dev commands with `rtk`,
+# which is exactly what would trigger it.
+#
+# There is nothing to gain either way: the PreToolUse hook does not rewrite a
+# bare `sv2v` command, and the repo drives sv2v through `make <pdk>-soc-sv2v`,
+# whose output the make filter already handles. Do not add an sv2v filter back
+# without a `-w`/`--write` guard proving stdout is not carrying the design.
 
 # ---------------------------------------------------------------------------
 # beads issue tracker — strip table chrome
 # ---------------------------------------------------------------------------
 [filters.bd]
 description = "beads (bd) output — drop blank lines and box-drawing chrome"
-match_command = "^bd\\s+(show|list|ready|stats|blocked|memories)\\b"
+match_command = "^(nix\\s+(develop|shell)\\s+(--command\\s+)?)?(rtk\\s+)?bd\\s+(show|list|ready|stats|blocked|memories)\\b"
 strip_ansi = true
 truncate_lines_at = 200
 strip_lines_matching = [
