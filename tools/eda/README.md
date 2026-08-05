@@ -126,6 +126,26 @@ correctly). The session driver cannot capture their text, so `get_area` reports
 `status: ERROR` rather than a false `PASS` with a silently empty report — same
 rule as the empty-report case below.
 
+### Setup
+
+```bash
+make setup            # from the repo root — idempotent, safe to re-run
+make verify-tooling   # handshakes both servers; exits non-zero if anything is off
+make mcp-status       # just the handshake check
+```
+
+Then restart Claude Code so it re-reads `.mcp.json`.
+
+`.mcp.json` stores an **absolute** path to `session_server.py`, so the checked-in
+value is only correct for the clone it was generated in — `make setup-mcp`
+rewrites it for yours. There is no portable placeholder that works: Claude Code's
+`${CLAUDE_PROJECT_DIR}` is only guaranteed in the *spawned server's* environment,
+and the `${CLAUDE_PROJECT_DIR:-.}` fallback resolves `.` against Claude Code's own
+cwd. Measured on Claude Code 2.1.222: with that form, `claude mcp list` reports
+both servers Connected from the repo root but "Failed to connect" from a
+subdirectory. Hence the generated absolute path, matching what the pre-existing
+`code-review-graph` / `hdl-kgraph` entries already do.
+
 Configured in the repo's `.mcp.json` as `eda-opensta` / `eda-openroad`, both
 launching `python3 tools/eda/mcp/session_server.py --tool <tool>` from the repo
 root. Neither `sta` nor `openroad` is on the login `PATH` on this host;

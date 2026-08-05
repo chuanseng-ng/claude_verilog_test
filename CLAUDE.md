@@ -291,13 +291,14 @@ Refer to specifications in `docs/` — they are the source of truth.
 
 ### Project filters (`.rtk/filters.toml`)
 
-The sim/lint flows are driven through `nix develop --command make ...`; without setup, none of that output is filtered. Two one-time steps per clone / per machine:
+The sim/lint flows are driven through `nix develop --command make ...`; without setup, none of that output is filtered. One command per clone / per machine:
 
 ```bash
-cd <repo> && rtk trust          # register .rtk/filters.toml (re-run after editing it)
-# ~/.config/rtk/config.toml, [hooks] section — lets the PreToolUse hook see through nix:
-#   transparent_prefixes = ["nix develop --command", "nix develop -c", "nix-shell --run"]
+make setup            # rtk trust + rtk transparent_prefixes + .mcp.json paths for this clone
+make verify-tooling   # proves all three took effect; exits non-zero if not
 ```
+
+Both setup steps fail **silently** when skipped — the suites still run, they are just no longer compressed, so there is no error to notice. `make verify-tooling` is the check. `make setup` is idempotent; re-run it after editing `.rtk/filters.toml`.
 
 With both in place, `nix develop --command make -C tb/cocotb/soc soc_all` is auto-rewritten to `... --command rtk make ...` and a 26-test suite drops from 244 lines / 35 KB to 2 lines. Failures are never hidden: every non-PASS row, ERROR line, traceback and `make: *** Error` is kept, the exit code propagates, and rtk tees the complete log to `~/.local/share/rtk/tee/`. Edit the filters with `rtk verify` as the gate (inline tests live beside each filter).
 
