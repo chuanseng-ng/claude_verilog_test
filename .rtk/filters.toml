@@ -1,0 +1,257 @@
+# Project-local RTK filters for the RV32I + GPU-lite SoC repo.
+#
+# Why: the simulation/lint flows here run through `nix develop --command make ...`
+# and emit 200-2000 lines of build chatter per suite (one 26-test suite measured at
+# 244 lines / 35 KB); the verdict is 1-5 lines of that. These filters keep the
+# verdict, the failures and anything unrecognised, and drop the known noise.
+#
+# Register with `rtk trust` (run once, in this directory). Validate with `rtk verify`.
+# Precedence: project-local filters override ~/.config/rtk/filters.toml and the
+# built-in filters, so each match_command below is kept narrow on purpose --
+# `make librelane-*` deliberately does NOT match, it is already handled by the
+# built-in `make` filter at ~99.9%.
+
+schema_version = 1
+
+# ---------------------------------------------------------------------------
+# cocotb suites: make -C tb/cocotb/... and make -C sim ...
+# ---------------------------------------------------------------------------
+[filters.soc-sim]
+description = "cocotb/Verilator suite output — keep the pass/fail tally, failures and errors"
+match_command = "^(nix\\s+(develop|shell)\\s+(--command\\s+)?)?(rtk\\s+)?make\\b.*-C\\s+\\S*(tb/cocotb|sim)\\b"
+strip_ansi = true
+truncate_lines_at = 220
+# cocotb logs, Verilator and gcc all write to stderr — without this the bulk of the
+# noise bypasses the filter entirely. Measured on `make -C tb/cocotb/soc async_axi_fifo`:
+# 244 lines / 35 KB raw -> 87 lines without filter_stderr -> 2 lines with it.
+filter_stderr = true
+strip_lines_matching = [
+  "^\\s*$",
+  # nix devshell preamble
+  "^warning: Git tree ",
+  "^soc sim\\+lint env ready",
+  "^Python/cocotb come from system",
+  # make bookkeeping and echoed recipe lines
+  "^make(\\[[0-9]+\\])?: (Entering|Leaving) directory",
+  "^make(\\[[0-9]+\\])? (clean|MODULE=|-C |-f )",
+  "^\"?[^\"]*make\"? -f ",
+  "^(rm|mkdir|ln|cp|mv) ",
+  "^MODULE=",
+  "^verilator\\s",
+  "^\\t",
+  # compiler / verilator driver invocations (echoed full paths). Anchored on the
+  # /bin/<exe> component on purpose: a bare "^/nix/store/" also matches a gcc
+  # diagnostic raised *inside* a nix-store header
+  # (/nix/store/...-glibc-dev/include/features.h:435:4: error: ...), and this
+  # project has already hit real nix-toolchain build breakage in this exact path
+  # (see sim/cxx_shim.sh). Those diagnostics must reach the reader.
+  "^/nix/store/\\S+/bin/\\S+\\s",
+  "^/usr/bin/python3 ",
+  "^/home/[^ ]*/(sim/cxx_shim\\.sh|\\.local/)",
+  # C++ include-trace and the harmless _FORTIFY_SOURCE warning
+  "^In file included from ",
+  "^\\s+from \\S+[,:]$",
+  "^\\s+[0-9]+ \\|",
+  "^\\s+\\|",
+  "^\\s+\\^~*$",
+  "warning: #warning _FORTIFY_SOURCE",
+  # verilator banner / stats
+  "^- V e r i l a t i o n",
+  "^- Verilator: ",
+  "^- :0: Verilog \\$finish",
+  # cocotb per-test progress chatter (results-table rows carry no INFO token)
+  "^\\s*-?[0-9.]*-?\\.?-?-?ns\\s+INFO\\s",
+  "^\\s+mkdir -p /tmp/cocotb_nix_compat",
+  # Known-benign, every-run cocotb warm-up traceback: cocotb tries to install
+  # pytest's assertion-rewrite hook, which drags in anyio -> ssl -> libssl.so.3,
+  # absent under the nix devshell. Tests run unaffected (bead `npz`). Only
+  # pytest/pluggy/anyio/importlib internals are stripped — a real test traceback
+  # points at tb/cocotb/... or test_*.py and still survives.
+  "Configuring the assertion rewrite hook using pytest",
+  "^\\s+ImportError: libssl\\.so\\.3: cannot open shared object",
+  "^\\s+File \"[^\"]*(_pytest|pluggy|anyio)/",
+  "^\\s+File \"<frozen importlib\\._bootstrap>\"",
+  "^\\s+File \"/usr/lib/python3\\.[0-9]+/(importlib|ssl)",
+  "^\\s+File \"[^\"]*site-packages/cocotb/regression\\.py\"",
+  "^\\s+(exec\\(co, module\\.__dict__\\)|import ssl|plugin = ep\\.load\\(\\))$",
+  "^\\s+(pytest_conf = Config\\.fromdictargs\\(|config\\.parse\\(args, addopts=False\\))$",
+  "^\\s+(module = import_module\\(match\\.group\\('module'\\)\\)|return _bootstrap\\._gcd_import)",
+  "^\\s+self\\.pluginmanager\\.load_setuptools_entrypoints",
+  "^\\s+from \\._core\\._sockets import",
+  "^\\s+import _ssl\\s",
+  # the bare header of that suppressed trace; a real failure still shows its
+  # File "..." frames and the assertion line
+  "^\\s{20,}Traceback \\(most recent call last\\):$",
+  # results table: keep the TESTS= tally and any non-PASS row, drop passing rows,
+  # the column header and the rule lines
+  "^\\s*\\*\\* \\S+\\s+PASS\\s+[0-9]",
+  "^\\s*\\*\\* TEST\\s+STATUS\\s",
+  "^\\s*\\*{20,}\\s*$",
+]
+max_lines = 120
+on_empty = "soc-sim: no output (check the suite actually ran)"
+
+[[tests.soc-sim]]
+name = "passing suite collapses to the tally line"
+input = """
+warning: Git tree '/home/neuromorphic/Downloads/Github/claude_verilog_test' is dirty
+soc sim+lint env ready — Verilator 5.048
+make[1]: Entering directory '/repo/tb/cocotb/soc'
+rm -f results.xml
+- Verilator: Built from 0.195 MB sources in 7 modules
+/nix/store/abc-verilator/bin/verilator -cc --exe -Mdir sim_build
+In file included from /nix/store/glibc/include/libgen.h:21,
+                 from /home/u/.local/lib/python3.10/site-packages/cocotb/share/lib/verilator/verilator.cpp:5:
+     0.00ns INFO     cocotb                             Running on Verilator version 5.048
+                    ** TEST                                        STATUS  SIM TIME  REAL TIME  RATIO **
+                    ***********************************************************************************
+                    ** test_async_axi_fifo.test_cross_flush        PASS   570.00   0.02  28150.07 **
+                    ** TESTS=26 PASS=26 FAIL=0 SKIP=0              79352.03  6.03  13160.23 **
+make[1]: Leaving directory '/repo/tb/cocotb/soc'
+"""
+expected = "                    ** TESTS=26 PASS=26 FAIL=0 SKIP=0              79352.03  6.03  13160.23 **"
+
+[[tests.soc-sim]]
+name = "failing rows survive the PASS-row strip"
+input = """
+                    ** test_soc_boot.test_reset_vector             PASS   570.00   0.02  28150.07 **
+                    ** test_soc_boot.test_uart_tx                  FAIL   120.00   0.01   9000.00 **
+                    ** TESTS=2 PASS=1 FAIL=1 SKIP=0                690.00  0.03  20000.00 **
+"""
+expected = "                    ** test_soc_boot.test_uart_tx                  FAIL   120.00   0.01   9000.00 **\n                    ** TESTS=2 PASS=1 FAIL=1 SKIP=0                690.00  0.03  20000.00 **"
+
+[[tests.soc-sim]]
+name = "benign libssl warm-up trace is dropped but a real test traceback is not"
+input = """
+     0.00ns ERROR    cocotb.regression   Configuring the assertion rewrite hook using pytest 9.0.3 failed. Please file a bug report!
+                                         Traceback (most recent call last):
+                                           File "/home/u/.local/lib/python3.10/site-packages/_pytest/config/__init__.py", line 1, in x
+                                             config.parse(args, addopts=False)
+                                           File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+                                           File "/usr/lib/python3.10/ssl.py", line 99, in <module>
+                                             import _ssl             # if we can't import it, let the error propagate
+                                         ImportError: libssl.so.3: cannot open shared object file: No such file or directory
+     0.00ns ERROR    cocotb.regression   Test failed
+                                           File "/repo/tb/cocotb/soc/test_soc_boot.py", line 88, in test_uart_tx
+                                         AssertionError: expected 0x2a, got 0x00
+"""
+expected = "     0.00ns ERROR    cocotb.regression   Test failed\n                                           File \"/repo/tb/cocotb/soc/test_soc_boot.py\", line 88, in test_uart_tx\n                                         AssertionError: expected 0x2a, got 0x00"
+
+[[tests.soc-sim]]
+name = "failure keeps the traceback, the ERROR lines and the make error"
+input = """
+make[1]: Entering directory '/repo/tb/cocotb/soc'
+     0.00ns INFO     cocotb                             Seeding Python random module with 1785844477
+     0.00ns ERROR    gpi                                VPI: Couldn't find root handle timer
+Traceback (most recent call last):
+  File "/home/u/.local/lib/python3.10/site-packages/cocotb/__init__.py", line 233, in _initialise_testbench
+RuntimeError: Can not find root handle (timer)
+ERROR: results.xml was not written by the simulation!
+make: *** [Makefile:401: timer] Error 2
+"""
+expected = "     0.00ns ERROR    gpi                                VPI: Couldn't find root handle timer\nTraceback (most recent call last):\n  File \"/home/u/.local/lib/python3.10/site-packages/cocotb/__init__.py\", line 233, in _initialise_testbench\nRuntimeError: Can not find root handle (timer)\nERROR: results.xml was not written by the simulation!\nmake: *** [Makefile:401: timer] Error 2"
+
+[[tests.soc-sim]]
+name = "a compiler error inside a nix-store header is not mistaken for an echoed invocation"
+input = """
+/nix/store/yn6c25dnzkl8z4qqcfd752ccrdk9lj2s-verilator-5.048/bin/verilator -cc --exe -Mdir sim_build
+/nix/store/15h9askp4k1lx44d9871wid23j2a8ijp-glibc-2.42-61-dev/include/features.h:435:4: warning: #warning _FORTIFY_SOURCE requires compiling with optimization
+/nix/store/15h9askp4k1lx44d9871wid23j2a8ijp-glibc-2.42-61-dev/include/features.h:512:9: error: 'nonexistent_symbol' was not declared in this scope
+"""
+expected = "/nix/store/15h9askp4k1lx44d9871wid23j2a8ijp-glibc-2.42-61-dev/include/features.h:512:9: error: 'nonexistent_symbol' was not declared in this scope"
+
+[[tests.soc-sim]]
+name = "verilator design error survives"
+input = """
+make[1]: Entering directory '/repo/sim'
+%Error: rtl/soc/soc_top.sv:412:7: Cannot find file containing module: 'async_axi_fifo'
+%Error: Exiting due to 1 error(s)
+"""
+expected = "%Error: rtl/soc/soc_top.sv:412:7: Cannot find file containing module: 'async_axi_fifo'\n%Error: Exiting due to 1 error(s)"
+
+# ---------------------------------------------------------------------------
+# direct verilator invocations (lint or build outside make)
+# ---------------------------------------------------------------------------
+[filters.verilator]
+description = "Verilator lint/build — keep %Error and %Warning lines, drop the banner"
+match_command = "^(nix\\s+(develop|shell)\\s+(--command\\s+)?)?(rtk\\s+)?verilator\\b"
+strip_ansi = true
+filter_stderr = true
+truncate_lines_at = 220
+strip_lines_matching = [
+  "^\\s*$",
+  "^warning: Git tree ",
+  "^soc sim\\+lint env ready",
+  "^Python/cocotb come from system",
+  "^- V e r i l a t i o n",
+  "^- Verilator: ",
+  "^\\s+[0-9]+ \\|",
+  "^\\s+\\|",
+  "^\\s+\\^~*$",
+  "^\\s+\\.\\.\\. ",
+]
+max_lines = 80
+on_empty = "verilator: clean"
+
+[[tests.verilator]]
+name = "keeps warnings, drops banner and source echo"
+input = """
+- V e r i l a t i o n   R e p o r t: Verilator 5.048
+- Verilator: Built from 0.069 MB sources in 3 modules
+%Warning-WIDTHTRUNC: rtl/soc/pmu.sv:88:21: Operator ASSIGN expects 32 bits
+   88 |   assign x = y;
+      |            ^
+%Error: Exiting due to 1 warning(s)
+"""
+expected = "%Warning-WIDTHTRUNC: rtl/soc/pmu.sv:88:21: Operator ASSIGN expects 32 bits\n%Error: Exiting due to 1 warning(s)"
+
+[[tests.verilator]]
+name = "clean lint collapses to one line"
+input = """
+- V e r i l a t i o n   R e p o r t: Verilator 5.048
+- Verilator: Built from 0.069 MB sources in 3 modules
+- Verilator: Walltime 0.015 s (elab=0.002, cvt=0.006, bld=0.000)
+"""
+expected = "verilator: clean"
+
+# ---------------------------------------------------------------------------
+# sv2v — deliberately NOT filtered.
+#
+# sv2v writes the converted Verilog to stdout by default, so with a redirection
+# (`sv2v ... > out.v`) stdout IS the payload, not a log. rtk applies a TOML
+# filter to the captured stdout *before* writing it to the redirection target,
+# so a keep-only filter here would silently truncate a generated netlist down to
+# its error lines. CLAUDE.md tells everyone to prefix dev commands with `rtk`,
+# which is exactly what would trigger it.
+#
+# There is nothing to gain either way: the PreToolUse hook does not rewrite a
+# bare `sv2v` command, and the repo drives sv2v through `make <pdk>-soc-sv2v`,
+# whose output the make filter already handles. Do not add an sv2v filter back
+# without a `-w`/`--write` guard proving stdout is not carrying the design.
+
+# ---------------------------------------------------------------------------
+# beads issue tracker — strip table chrome
+# ---------------------------------------------------------------------------
+[filters.bd]
+description = "beads (bd) output — drop blank lines and box-drawing chrome"
+match_command = "^(nix\\s+(develop|shell)\\s+(--command\\s+)?)?(rtk\\s+)?bd\\s+(show|list|ready|stats|blocked|memories)\\b"
+strip_ansi = true
+truncate_lines_at = 200
+strip_lines_matching = [
+  "^\\s*$",
+  "^[-=_+|]{3,}$",
+  "^[\\s|+]*[-=]{3,}[\\s|+]*$",
+]
+max_lines = 80
+on_empty = "bd: no results"
+
+[[tests.bd]]
+name = "drops rule lines, keeps rows"
+input = """
+ID        STATUS  TITLE
+--------------------------------
+zud       open    Cut EDA tool-output tokens
+
+================================
+"""
+expected = "ID        STATUS  TITLE\nzud       open    Cut EDA tool-output tokens"

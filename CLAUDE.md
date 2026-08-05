@@ -289,6 +289,32 @@ Refer to specifications in `docs/` — they are the source of truth.
 **Golden rule**: prefix dev commands with `rtk` (e.g. `rtk git status`, `rtk pytest`, `rtk cargo build`). RTK uses a dedicated filter when one exists and passes through unchanged otherwise — always safe. Use it even inside `&&` chains. Typical savings 60–90% (tests 90–99%, build 70–87%, git 59–80%). Full command reference is in the user's global `~/.claude/RTK.md`; `rtk gain` shows analytics, `rtk proxy <cmd>` runs raw.
 <!-- /rtk-instructions -->
 
+### Project filters (`.rtk/filters.toml`)
+
+The sim/lint flows are driven through `nix develop --command make ...`; without setup, none of that output is filtered. One command per clone / per machine:
+
+```bash
+make setup            # rtk trust + rtk transparent_prefixes + .mcp.json paths for this clone
+make verify-tooling   # proves all three took effect; exits non-zero if not
+```
+
+Both setup steps fail **silently** when skipped — the suites still run, they are just no longer compressed, so there is no error to notice. `make verify-tooling` is the check. `make setup` is idempotent; re-run it after editing `.rtk/filters.toml`.
+
+With both in place, `nix develop --command make -C tb/cocotb/soc soc_all` is auto-rewritten to `... --command rtk make ...` and a 26-test suite drops from 244 lines / 35 KB to 2 lines. Failures are never hidden: every non-PASS row, ERROR line, traceback and `make: *** Error` is kept, the exit code propagates, and rtk tees the complete log to `~/.local/share/rtk/tee/`. Edit the filters with `rtk verify` as the gate (inline tests live beside each filter).
+
+### EDA tool output: wrappers + MCP session servers (`tools/eda/`)
+
+`tools/eda/wrap-{verilator,yosys,opensta,cocotb}.sh` turn a raw one-shot tool
+log into a compact JSON verdict (`tools/eda/summarize.py`) with a real exit
+code (0 PASS / 1 FAIL / 2 ERROR / 3 tool missing) — a tool that exits 0 with an
+empty or unparsable report is never read as PASS (bead `dwp`). For repeated
+queries against one loaded design (timing closure), `tools/eda/mcp/` instead
+exposes a persistent OpenSTA/OpenROAD session as an MCP server (`eda-opensta`,
+`eda-openroad` in `.mcp.json`) so the multi-minute liberty+netlist+SDC load
+happens once, not per query; raw reports are never returned inline, only a
+JSON summary plus the on-disk path. See `tools/eda/README.md` for the full tool
+surface and the session-vs-wrapper guidance.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
 ## Beads Issue Tracker
 

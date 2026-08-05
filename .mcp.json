@@ -17,6 +17,26 @@
         "--db",
         "/home/neuromorphic/Downloads/Github/claude_verilog_test/.hdl-kgraph/graph.db"
       ]
+    },
+    "eda-opensta": {
+      "command": "python3",
+      "args": [
+        "/home/neuromorphic/Downloads/Github/claude_verilog_test/tools/eda/mcp/session_server.py",
+        "--tool",
+        "opensta"
+      ],
+      "cwd": "/home/neuromorphic/Downloads/Github/claude_verilog_test",
+      "type": "stdio"
+    },
+    "eda-openroad": {
+      "command": "python3",
+      "args": [
+        "/home/neuromorphic/Downloads/Github/claude_verilog_test/tools/eda/mcp/session_server.py",
+        "--tool",
+        "openroad"
+      ],
+      "cwd": "/home/neuromorphic/Downloads/Github/claude_verilog_test",
+      "type": "stdio"
     }
   }
 }
