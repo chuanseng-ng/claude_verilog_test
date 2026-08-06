@@ -1,4 +1,13 @@
 ###############################################################################
+# STAGED COPY — GH #96 preflight (2026-08-05).
+# Canonical source: pnr/constraints/phase5_soc_multiclock.sdc
+# This copy exists only so PNR_SDC_FILE/SIGNOFF_SDC_FILE/FALLBACK_SDC_FILE's
+# "dir::constraints/..." resolution (relative to pnr/asap7/soc/) finds it,
+# matching how phase5_soc.sdc is consumed by the single-clock run-14 config.
+# Edit the canonical file above and re-copy; do not hand-edit this copy.
+###############################################################################
+
+###############################################################################
 # phase5_soc_multiclock.sdc — 2-domain IMPLEMENTATION constraints for soc_top
 # (synthesis / P&R). Post-route CDC budget verification lives in the
 # COMPANION file phase5_soc_multiclock_check.sdc — see the section 11-13

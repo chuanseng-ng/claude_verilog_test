@@ -51,7 +51,9 @@ pnr/openlane1/runs
 pnr/freepdk45/runs
 pnr/asap7/cpu/runs
 pnr/asap7/gpu/runs
+pnr/asap7/soc/runs
 pnr/sky130/cpu/runs
+pnr/sky130/soc/runs
 
 # PDK paths
 pnr/librelane/rv32i_cpu_top

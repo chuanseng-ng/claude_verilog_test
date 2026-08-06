@@ -1,4 +1,19 @@
 ###############################################################################
+# WARNING (GH #96, 2026-08-05): THIS COPY IS STALE AND DIVERGENT.
+# It still carries the run-13 `create_generated_clock` block for core_clk
+# (see section 2 below) that caused the CTS split-tree failure (~214 ps
+# setup skew between the macro-clk tree and the std-cell-FF tree).
+# The IN-USE, run-14 sign-off file is:
+#   pnr/asap7/soc/constraints/phase5_soc.sdc
+# (no create_generated_clock; CLOCK_NET=clk_i lets CTS trace through the PLL
+# stub buffer into one balanced tree — see that file's own header).
+# config.json's PNR_SDC_FILE/SIGNOFF_SDC_FILE/FALLBACK_SDC_FILE all point at
+# the asap7/soc/constraints/ copy, not this one. Do not point any config at
+# this file. Kept for history only; not deleted in GH #96 (deletion is a
+# separate, deferred cleanup).
+###############################################################################
+
+###############################################################################
 # phase5_soc.sdc — Timing constraints for soc_top on ASAP7 7nm predictive
 #
 # IMPORTANT: All time values are in PICOSECONDS.
