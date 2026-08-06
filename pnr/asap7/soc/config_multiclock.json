@@ -91,10 +91,12 @@
     "RUN_POST_GRT_RESIZER_TIMING": true,
     "RUN_POST_GRT_DESIGN_REPAIR": true,
     "MAX_TRANSITION_CONSTRAINT": 15.0,
-    "PL_RESIZER_SETUP_SLACK_MARGIN": 0.1,
-    "GRT_RESIZER_SETUP_SLACK_MARGIN": 0.1,
-    "PL_RESIZER_HOLD_SLACK_MARGIN": 0.075,
-    "GRT_RESIZER_HOLD_SLACK_MARGIN": 0.075,
+    "// UNITS_S9F_1": "librelane declares PL/GRT_RESIZER_*_SLACK_MARGIN as units=ns in its schema, but scripts/openroad/rsz_timing_post{cts,grt}.tcl pass the value RAW to OpenROAD, which reads it in the Liberty time_unit. ASAP7 Liberty is time_unit 1ps -- so these are PS values, NOT ns. The old 0.1/0.075 values meant 0.1/0.075 ps (~0 guard band). See claude_verilog_test-s9f.",
+    "// UNITS_S9F_2": "Values below are real ps, sized at 2.5% of the 1750 ps sys_clk period for setup / 1.5% for hold (same basis as cpu/, gpu/ and template/ configs), applied against the dominant fabric clock. CAUTION: LibreLane's PL/GRT_RESIZER_*_SLACK_MARGIN is a single global knob, not per-clock-domain -- it also applies to the 780 ps cpu_clk domain, which as of run 19 (docs/PHASE5_RUN_HISTORY.md) is at -32.3 ps (target not met). A real margin on top of an already-negative domain may push the resizer harder there (plausibly helpful) or may fail to converge within this global setting -- neither has been exercised under real ps margins yet. Validate on the next real multiclock PD run and watch cpu_clk specifically.",
+    "PL_RESIZER_SETUP_SLACK_MARGIN": 45,
+    "GRT_RESIZER_SETUP_SLACK_MARGIN": 45,
+    "PL_RESIZER_HOLD_SLACK_MARGIN": 25,
+    "GRT_RESIZER_HOLD_SLACK_MARGIN": 25,
     "PL_RESIZER_ALLOW_SETUP_VIOS": true,
     "HOLD_VIOLATION_CORNERS": [
         "nom_tt_025C_0p7V"

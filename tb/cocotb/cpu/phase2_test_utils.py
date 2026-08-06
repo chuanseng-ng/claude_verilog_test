@@ -87,7 +87,13 @@ class APBDebug:
         self.dut.apb_pwrite_i.value = 0
 
     async def _read(self, addr):
-        """APB read: setup → enable → sample → idle (3 clock cycles)."""
+        """APB read: setup → enable → wait for pready → sample → idle.
+
+        GH #96 bead cyb: rv32i_cpu_top.apb_prdata_o is now a registered
+        output and the slave inserts one APB3 wait state on reads (writes
+        are unaffected — still single-cycle), so this polls apb_pready_o
+        instead of assuming prdata is valid the cycle penable asserts.
+        """
         await RisingEdge(self.dut.clk_i)
         self.dut.apb_psel_i.value = 1
         self.dut.apb_penable_i.value = 0
@@ -96,6 +102,9 @@ class APBDebug:
         await RisingEdge(self.dut.clk_i)
         self.dut.apb_penable_i.value = 1
         await ReadOnly()
+        while not self.dut.apb_pready_o.value:
+            await RisingEdge(self.dut.clk_i)
+            await ReadOnly()
         data = int(self.dut.apb_prdata_o.value)
         await RisingEdge(self.dut.clk_i)
         self.dut.apb_psel_i.value = 0
@@ -110,7 +119,11 @@ class APBDebug:
         """Assert halt and poll DBG_STATUS until halted.
 
         The pipeline drains (up to ~5 cycles) before halted is signalled.
-        Each poll iteration costs 3 APB clock cycles.
+        Each poll iteration costs 3 base APB clock cycles plus one extra
+        wait-state cycle on the read (GH #96 bead cyb); `polls` below is
+        sized off the pre-wait-state 3-cycle figure, which only shortens
+        the effective timeout margin slightly — timeout_cycles is generous
+        enough that this does not affect pass/fail.
 
         Args:
             timeout_cycles: Total clock cycles to poll before raising

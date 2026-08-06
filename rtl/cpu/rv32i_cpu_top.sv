@@ -245,9 +245,39 @@ module rv32i_cpu_top #(
   // APB3 Debug Interface
   // ================================================================
 
-  // APB is always ready (single-cycle access)
-  assign apb_pready_o  = 1'b1;
-  // CSR debug registers (0x200-0x214) are read-only — writes return PSLVERR
+  // APB pready / prdata timing (GH #96 bead cyb):
+  //   apb_prdata_o is a *registered* output (see always_ff below) — this
+  //   breaks the ~800 ps combinational paddr[]/psel/pwrite -> prdata_o arc
+  //   that the multi-clock SoC found inside this macro at the 780 ps cpu_clk
+  //   period. Writes stay single-cycle (pready=1 immediately, matching prior
+  //   behaviour exactly — dbg_ctrl_reg / breakpoint / GPR / PC writes are
+  //   unaffected). Reads get exactly one APB3 wait state so the registered
+  //   apb_prdata_o is valid on the same cycle apb_pready_o asserts.
+  //
+  //   apb_read_wait_q tracks whether the wait cycle has already been
+  //   inserted for the read transfer currently in the ACCESS phase:
+  //     SETUP  (penable=0):            apb_read_wait_q held at 0.
+  //     ACCESS, 1st cycle (wait_q=0):  apb_pready_o=0 (wait state) -> wait_q<=1.
+  //     ACCESS, 2nd cycle (wait_q=1):  apb_pready_o=1 (transfer completes) -> wait_q<=0.
+  logic apb_read_wait_q;
+
+  always_ff @(posedge clk_i) begin
+    if (!rst_n_i) begin
+      apb_read_wait_q <= 1'b0;
+    end else if (apb_psel_i && apb_penable_i && !apb_pwrite_i && !apb_read_wait_q) begin
+      apb_read_wait_q <= 1'b1;
+    end else begin
+      apb_read_wait_q <= 1'b0;
+    end
+  end
+
+  assign apb_pready_o  = apb_pwrite_i ? 1'b1 : apb_read_wait_q;
+  // CSR debug registers (0x200-0x214) are read-only — writes return PSLVERR.
+  // Combinational (not registered): writes complete in a single ACCESS cycle
+  // (apb_pready_o=1 immediately for pwrite=1 above), and paddr/psel/penable/
+  // pwrite are held stable by the master for that whole cycle, so this is
+  // already valid at the instant apb_pready_o samples true — no wait-state
+  // interaction to account for on the write side.
   assign apb_pslverr_o = apb_psel_i && apb_penable_i && apb_pwrite_i &&
                          (apb_paddr_i >= 12'h200) && (apb_paddr_i <= 12'h214) &&
                          (apb_paddr_i[1:0] == 2'b00);
@@ -257,32 +287,36 @@ module rv32i_cpu_top #(
   // Declared ahead of the APB read mux that reads it (declare-before-use).
   logic [31:0] last_commit_insn_q;
 
+  // Combinational read-mux decode. Feeds the apb_prdata_o register below
+  // rather than driving the port directly (see GH #96 bead cyb header note).
+  logic [31:0] apb_prdata_comb;
+
   // APB read logic
   always_comb begin
-    apb_prdata_o = 32'h0;
+    apb_prdata_comb = 32'h0;
     dbg_reg_rd_addr = 5'h0;  // Default register address
 
     if (apb_psel_i && !apb_pwrite_i) begin
       case (apb_paddr_i)
         // Control register (0x000)
-        12'h000: apb_prdata_o = dbg_ctrl_reg;
+        12'h000: apb_prdata_comb = dbg_ctrl_reg;
 
         // Status register (0x004)
-        12'h004: apb_prdata_o = dbg_status_reg;
+        12'h004: apb_prdata_comb = dbg_status_reg;
 
         // PC register (0x008) — IF-stage PC (correct when halted; frozen by pipeline_if)
-        12'h008: apb_prdata_o = pc_if_from_core;
+        12'h008: apb_prdata_comb = pc_if_from_core;
 
         // Current instruction (0x00C) — last retired instruction (latched)
-        12'h00C: apb_prdata_o = last_commit_insn_q;
+        12'h00C: apb_prdata_comb = last_commit_insn_q;
 
         // CSR debug registers (read-only, Phase 2)
-        12'h200: apb_prdata_o = dbg_csr_mstatus;   // DBG_MSTATUS
-        12'h204: apb_prdata_o = dbg_csr_mie;       // DBG_MIE
-        12'h208: apb_prdata_o = dbg_csr_mtvec;     // DBG_MTVEC
-        12'h20C: apb_prdata_o = dbg_csr_mepc;      // DBG_MEPC
-        12'h210: apb_prdata_o = dbg_csr_mcause;    // DBG_MCAUSE
-        12'h214: apb_prdata_o = dbg_csr_mip;       // DBG_MIP
+        12'h200: apb_prdata_comb = dbg_csr_mstatus;   // DBG_MSTATUS
+        12'h204: apb_prdata_comb = dbg_csr_mie;       // DBG_MIE
+        12'h208: apb_prdata_comb = dbg_csr_mtvec;     // DBG_MTVEC
+        12'h20C: apb_prdata_comb = dbg_csr_mepc;      // DBG_MEPC
+        12'h210: apb_prdata_comb = dbg_csr_mcause;    // DBG_MCAUSE
+        12'h214: apb_prdata_comb = dbg_csr_mip;       // DBG_MIP
 
         // GPR[0:31] (0x010-0x08C)
         // Address format: 0x010 + (reg_num * 4)
@@ -293,31 +327,44 @@ module rv32i_cpu_top #(
             // 0x010 -> x0, 0x014 -> x1, etc.
             // Formula: (addr - 0x010) / 4 = (addr[6:2] - 4)
             dbg_reg_rd_addr = apb_paddr_i[6:2] - 5'd4;
-            apb_prdata_o = dbg_reg_rd_data;
+            apb_prdata_comb = dbg_reg_rd_data;
           end
           // Breakpoint 0 address (0x100)
           else if (apb_paddr_i == 12'h100) begin
-            apb_prdata_o = dbg_bp0_addr;
+            apb_prdata_comb = dbg_bp0_addr;
           end
           // Breakpoint 0 control (0x104)
           else if (apb_paddr_i == 12'h104) begin
-            apb_prdata_o = dbg_bp0_ctrl;
+            apb_prdata_comb = dbg_bp0_ctrl;
           end
           // Breakpoint 1 address (0x108)
           else if (apb_paddr_i == 12'h108) begin
-            apb_prdata_o = dbg_bp1_addr;
+            apb_prdata_comb = dbg_bp1_addr;
           end
           // Breakpoint 1 control (0x10C)
           else if (apb_paddr_i == 12'h10C) begin
-            apb_prdata_o = dbg_bp1_ctrl;
+            apb_prdata_comb = dbg_bp1_ctrl;
           end
           /* verilator coverage_off */
           else begin
-            apb_prdata_o = 32'h0;  // Read to unknown APB address → return 0
+            apb_prdata_comb = 32'h0;  // Read to unknown APB address → return 0
           end
           /* verilator coverage_on */
         end
       endcase
+    end
+  end
+
+  // Register the read-mux output. The master holds paddr/psel/pwrite stable
+  // across the SETUP phase and both ACCESS cycles of a read transfer (APB3
+  // protocol), so capturing apb_prdata_comb on every selected cycle
+  // guarantees apb_prdata_o already holds the correct value by the cycle
+  // apb_pready_o (via apb_read_wait_q above) asserts.
+  always_ff @(posedge clk_i) begin
+    if (!rst_n_i) begin
+      apb_prdata_o <= 32'h0;
+    end else if (apb_psel_i) begin
+      apb_prdata_o <= apb_prdata_comb;
     end
   end
 
