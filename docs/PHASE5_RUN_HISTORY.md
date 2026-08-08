@@ -45,7 +45,9 @@ as with the CPU/GPU sign-offs).
 | 16 | first **multi-clock** | GH #96. `phase5_soc_multiclock.sdc` wired in via new `config_multiclock.json` (`config.json` untouched). Two real CTS trees. `sys_clk` **+106.2 ps (MET)**, `cpu_clk` **−205.3 ps** → 1014.9 MHz. Limiter measured: an 800.71 ps *combinational* arc inside the CPU macro (APB debug read). |
 | 17 | APB exception | Added SDC §10a `set_false_path -through u_cpu/apb_prdata_o[*]`, matching the CPU block's own sign-off. `cpu_clk` −205.3 → **−44.9 ps** (1212.2 MHz), TNS −7262 → −1757. `CLOCK_PERIOD 1.75→0.78` tried in the same run and measured as a **no-op** (−11 std cells). |
 | 18 | **null result** | Hold-margin 0.075→0.030 produced a **byte-identical netlist**. Root cause: librelane declares the resizer margins `units="ns"` but passes them raw to OpenROAD, which reads the Liberty unit — ASAP7 is `1ps`, so both values meant ~0. Bead `s9f`; affects **every** ASAP7 sign-off. |
-| 19 | **best multi-clock** | `CTS_SINK_CLUSTERING` 20/50 → 8/10. `cpu_clk` −44.9 → **−32.3 ps** (1231.1 MHz), TNS −1757 → −283, violators 162 → 64. `sys_clk` held at +104.4 ps. 0 DRC, 0 antenna, **CDC budget check PASS**. |
+| 19 | best under the old abstract | `CTS_SINK_CLUSTERING` 20/50 → 8/10. `cpu_clk` −44.9 → **−32.3 ps** (1231.1 MHz), TNS −1757 → −283, violators 162 → 64. `sys_clk` held at +104.4 ps. 0 DRC, 0 antenna, **CDC budget check PASS**. Still relied on the §10a false path and a CPU abstract with no burst pins. |
+| 20 | regression, diagnostic | First run on the **regenerated CPU macro** (registered `apb_prdata_o`, burst pins present) with §10a retired. `cpu_clk` **−350.1 ps** (884.9 MHz), 15 violators — **all 15 end at macro APB input pins**. Cause: registering the output *relocated* the ~800 ps read mux from an in→out arc into an **876.85 ps input setup requirement** in the Liberty. |
+| 21 | **best honest multi-clock** | Added §10b mirroring the CPU block's own `set_multicycle_path -setup 3 / -hold 2` on the APB inputs (`asap7.sdc:183-184`). `cpu_clk` **−60.7 ps → 1189.5 MHz**, 1 violator; `sys_clk` **+83.8 ps, TNS 0 — 571 MHz MET**; 0 DRC, 0 antenna, 53.2 mW, **CDC check PASS**. PDN artifact fell 8.28 M → 7.19 M with the new abstract. |
 
 ## Multi-clock re-closure (GH #96, 2026-08-06)
 
@@ -99,6 +101,42 @@ result.
   both rails with 32,862 "Unconnected shape … on Layer M1" errors — the same
   M1-only connectivity model behind the benign tap-cell PDN count. No bypass
   flag exists; `-source_type STRAPS` fails identically.
+
+### Runs 20–21: the follow-up fixes, and what they actually bought
+
+Runs 20–21 rebuilt the CPU macro (beads `cyb`/`g0o`/`s9f`) and re-integrated it.
+**Run 21 supersedes run 19 as the trustworthy multi-clock result**, even though
+its `cpu_clk` number is lower — run 19's 1231 MHz rested on a false path hiding
+an 800 ps arc and on a CPU abstract that had no AXI4 burst pins at all.
+
+| | Run 19 | Run 21 |
+| --- | --- | --- |
+| `sys_clk` | +104.4 ps, TNS 0 | **+83.8 ps, TNS 0 — 571 MHz MET** |
+| `cpu_clk` | −32.3 ps → 1231.1 MHz | **−60.7 ps → 1189.5 MHz**, 1 violator |
+| CPU macro abstract | stale (no burst pins, 800 ps in→out APB arc) | **regenerated** (burst pins present, `apb_prdata_o` clocked) |
+| APB constraint | §10a false path on the read-data arc | §10b multicycle mirroring the block's own sign-off |
+| DRC / antenna | 0 / 0 | **0 / 0** |
+| CDC budget check | PASS | **PASS** |
+| PDN artifact | 8,281,711 | 7,186,185 |
+
+Three things worth carrying forward:
+
+1. **Registering an output relocates delay; it does not delete it.** Making
+   `apb_prdata_o` a flop removed the combinational in→out arc from the Liberty
+   but moved the same read-mux depth into an **876.85 ps input setup
+   requirement** on `apb_psel_i`/`apb_paddr_i[*]`. Run 20 measured the result:
+   −350.1 ps, every violator at a macro APB input. The fix was to mirror the
+   constraint the CPU block has always used itself.
+2. **Run 21's netlist is byte-identical to run 20's.** A multicycle only
+   relaxes, and these paths end at macro input pins whose setup requirement is
+   internal to the macro — nothing the resizer can act on. Only the verdict
+   changed. (Confirmed: run 21's signoff SDC carries 2 multicycles and 6
+   `apb_psel_i` references; run 20's carries none.)
+3. **The one remaining `cpu_clk` violator is `apb_pslverr_o`** — a 620.67 ps
+   combinational arc still exported by the macro, deliberately left
+   unregistered because it is write-side only. Registering it is the next step
+   if the 780 ps target must be met; the block itself closes it because its own
+   SDC budgets only 120 ps of external delay, and the SoC consumes more.
 
 ### What made `cpu_clk` hard (measured, not inferred)
 

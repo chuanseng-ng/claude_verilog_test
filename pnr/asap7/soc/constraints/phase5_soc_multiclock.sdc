@@ -377,11 +377,75 @@ if {[llength $_gpu_in] > 0} {
 #      sys_clk was byte-identical (+106.217033 ps, 0 violators) in both,
 #      confirming the exception is confined to the CPU domain.
 ###############################################################################
-set _cpu_apb_rdata [get_pins -quiet u_cpu/apb_prdata_o[*]]
+# RETIRED 2026-08-07 (bead cyb fixed at the source). apb_prdata_o is now a
+# REGISTERED output of the CPU macro: the regenerated Liberty
+# (pnr/asap7/cpu/macro/rv32i_cpu_top__nom_tt_025C_0p7V.lib) reports
+# apb_prdata_o[*] as related_pin clk_i with timing_type rising_edge, where it
+# previously carried a combinational arc from apb_paddr_i[9..11]/apb_psel_i/
+# apb_pwrite_i. The 800.71 ps arc this exception existed to excuse no longer
+# exists, so the exception is removed rather than left to hide a future
+# regression. If cpu_clk setup regresses on the macro APB pins, do NOT simply
+# restore this -- re-check the Liberty first, because a reappearing
+# combinational arc would mean the macro abstract went stale again.
+#
+# set_false_path -through [get_pins u_cpu/apb_prdata_o[*]]   <-- retired
 
-if {[llength $_cpu_apb_rdata] > 0} {
-    set_false_path -through $_cpu_apb_rdata
+###############################################################################
+# 10b. CPU macro APB INPUT multicycle — mirrors the CPU block's OWN sign-off
+#      constraint. Added 2026-08-07 after run 20 measured the consequence of
+#      omitting it.
+#
+#      WHAT MOVED. Registering apb_prdata_o (bead cyb) did NOT delete the APB
+#      read mux; it RELOCATED where STA charges it. Before, the mux appeared in
+#      the macro abstract as an ~800 ps COMBINATIONAL in->out arc, excused by
+#      section 10a (now retired). After, the same logic appears as an INPUT
+#      SETUP REQUIREMENT: the regenerated Liberty reports 876.85 ps of library
+#      setup on u_cpu/apb_psel_i. Run 20 (no exception) therefore measured
+#      cpu_clk WNS -350.05 ps over 15 violating endpoints, and every one of
+#      those 15 ends at a macro APB input pin (apb_psel_i, apb_paddr_i[*],
+#      apb_pwrite_i) — not one is a datapath failure.
+#
+#      WHY THIS IS CONTRACT-MIRRORING, NOT VIOLATION-HIDING. The CPU block has
+#      always signed off this interface with exactly this relaxation:
+#          pnr/asap7/cpu/constraints/asap7.sdc:183-184
+#          set_multicycle_path -setup 3 -from [get_ports {apb_paddr_i[*] ...}]
+#          set_multicycle_path -hold  2 -from [get_ports {apb_paddr_i[*] ...}]
+#      under the header "APB multicycle — PREADY stretches for 2-cycle APB
+#      handshake". Block-level STA confirms it: the worst apb_psel_i path has a
+#      data-required time of 2480 ps (~3x780), and closes with +1328 ps. The
+#      SoC was simply never mirroring that contract on the input side, because
+#      until now the same logic reached it in output-arc form instead.
+#
+#      WHY IT IS SOUNDER NOW THAN IT WAS BEFORE. The protocol genuinely takes
+#      more than one cycle: rv32i_cpu_top now inserts an APB3 wait state on
+#      reads (apb_pready_o = apb_pwrite_i ? 1'b1 : apb_read_wait_q), and the
+#      driving master holds the command stable for the whole transfer —
+#      u_apb_dbg_cdc drives m_paddr_o from the REGISTERED cmd_paddr_cap_q
+#      (apb_cdc_bridge.sv:530) and stays in D_ACCESS until m_pready_i. So the
+#      3-cycle setup / 2-cycle hold window is one the hardware actually
+#      provides, rather than an assertion about an infrequent path.
+#
+#      Measured effect on run 20's routed netlist, constraint as the only
+#      variable: cpu_clk WNS -350.05 -> -60.66 ps, TNS -2406.71 -> -60.66,
+#      violating endpoints 15 -> 1, achieved 884.92 -> 1189.54 MHz. sys_clk
+#      byte-identical at +83.789642 ps, confirming CPU-domain-only scope.
+###############################################################################
+#      TCL GOTCHA (cost one wasted 5 h run, 2026-08-08): the pattern list below
+#      MUST stay on a single line. A "\" line-continuation inside {braces} is
+#      NOT a continuation — Tcl takes the backslash and newline literally, the
+#      pattern matches nothing, and a `if {[llength ...] > 0}` guard then skips
+#      the constraint in SILENCE. Run 21 was byte-identical to run 20 because of
+#      exactly that. Hence the hard error below rather than a soft guard: an
+#      exception that cannot bind must stop the flow, not quietly vanish.
+set _cpu_apb_in [get_pins -quiet {u_cpu/apb_paddr_i[*] u_cpu/apb_psel_i u_cpu/apb_penable_i u_cpu/apb_pwrite_i u_cpu/apb_pwdata_i[*]}]
+
+if {[llength $_cpu_apb_in] == 0} {
+    puts "ERROR: SDC-EXCEPTION-MISS: section 10b matched no u_cpu APB input pins."
+    error "phase5_soc_multiclock.sdc section 10b bound to nothing — refusing to run with the CPU macro APB inputs unconstrained."
 }
+puts "INFO: section 10b: APB input multicycle applied to [llength $_cpu_apb_in] macro pin(s)."
+set_multicycle_path -setup 3 -to $_cpu_apb_in
+set_multicycle_path -hold  2 -to $_cpu_apb_in
 
 ###############################################################################
 # Sections 11-13 (async_axi_fifo gray-pointer/mem_q crossings, apb_cdc_bridge

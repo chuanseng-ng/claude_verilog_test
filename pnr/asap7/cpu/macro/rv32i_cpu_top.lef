@@ -22,7 +22,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 37.884 130 38.076 ;
+        RECT  126 117.912 130 118.104 ;
     END
   END apb_paddr_i[0]
   PIN apb_paddr_i[10]
@@ -30,7 +30,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 122.016 130 122.208 ;
+        RECT  126 69.69 130 69.882 ;
     END
   END apb_paddr_i[10]
   PIN apb_paddr_i[11]
@@ -38,7 +38,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 124.068 130 124.26 ;
+        RECT  126 68.664 130 68.856 ;
     END
   END apb_paddr_i[11]
   PIN apb_paddr_i[1]
@@ -46,7 +46,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 30.702 130 30.894 ;
+        RECT  126 119.964 130 120.156 ;
     END
   END apb_paddr_i[1]
   PIN apb_paddr_i[2]
@@ -54,7 +54,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 11.208 130 11.4 ;
+        RECT  126 128.172 130 128.364 ;
     END
   END apb_paddr_i[2]
   PIN apb_paddr_i[3]
@@ -62,7 +62,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 16.338 130 16.53 ;
+        RECT  126 110.73 130 110.922 ;
     END
   END apb_paddr_i[3]
   PIN apb_paddr_i[4]
@@ -70,7 +70,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 10.182 130 10.374 ;
+        RECT  126 112.782 130 112.974 ;
     END
   END apb_paddr_i[4]
   PIN apb_paddr_i[5]
@@ -78,7 +78,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 18.39 130 18.582 ;
+        RECT  126 129.198 130 129.39 ;
     END
   END apb_paddr_i[5]
   PIN apb_paddr_i[6]
@@ -86,7 +86,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 21.468 130 21.66 ;
+        RECT  126 124.068 130 124.26 ;
     END
   END apb_paddr_i[6]
   PIN apb_paddr_i[7]
@@ -94,7 +94,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 48.144 130 48.336 ;
+        RECT  126 70.716 130 70.908 ;
     END
   END apb_paddr_i[7]
   PIN apb_paddr_i[8]
@@ -102,7 +102,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 59.43 130 59.622 ;
+        RECT  126 65.586 130 65.778 ;
     END
   END apb_paddr_i[8]
   PIN apb_paddr_i[9]
@@ -110,7 +110,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 110.73 130 110.922 ;
+        RECT  126 17.364 130 17.556 ;
     END
   END apb_paddr_i[9]
   PIN apb_penable_i
@@ -118,7 +118,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 61.482 130 61.674 ;
+        RECT  126 85.08 130 85.272 ;
     END
   END apb_penable_i
   PIN apb_prdata_o[0]
@@ -126,7 +126,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 58.404 130 58.596 ;
+        RECT  126 67.638 130 67.83 ;
     END
   END apb_prdata_o[0]
   PIN apb_prdata_o[10]
@@ -134,7 +134,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 54.3 130 54.492 ;
+        RECT  126 64.56 130 64.752 ;
     END
   END apb_prdata_o[10]
   PIN apb_prdata_o[11]
@@ -142,7 +142,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 107.652 130 107.844 ;
+        RECT  126 103.548 130 103.74 ;
     END
   END apb_prdata_o[11]
   PIN apb_prdata_o[12]
@@ -150,7 +150,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 44.04 130 44.232 ;
+        RECT  126 113.808 130 114 ;
     END
   END apb_prdata_o[12]
   PIN apb_prdata_o[13]
@@ -158,7 +158,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 45.066 130 45.258 ;
+        RECT  126 116.886 130 117.078 ;
     END
   END apb_prdata_o[13]
   PIN apb_prdata_o[14]
@@ -166,7 +166,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 55.326 130 55.518 ;
+        RECT  126 91.236 130 91.428 ;
     END
   END apb_prdata_o[14]
   PIN apb_prdata_o[15]
@@ -174,7 +174,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 43.014 130 43.206 ;
+        RECT  126 96.366 130 96.558 ;
     END
   END apb_prdata_o[15]
   PIN apb_prdata_o[16]
@@ -182,7 +182,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 27.624 130 27.816 ;
+        RECT  126 98.418 130 98.61 ;
     END
   END apb_prdata_o[16]
   PIN apb_prdata_o[17]
@@ -190,7 +190,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 19.416 130 19.608 ;
+        RECT  126 125.094 130 125.286 ;
     END
   END apb_prdata_o[17]
   PIN apb_prdata_o[18]
@@ -198,7 +198,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 57.378 130 57.57 ;
+        RECT  126 50.196 130 50.388 ;
     END
   END apb_prdata_o[18]
   PIN apb_prdata_o[19]
@@ -206,7 +206,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 41.988 130 42.18 ;
+        RECT  126 97.392 130 97.584 ;
     END
   END apb_prdata_o[19]
   PIN apb_prdata_o[1]
@@ -214,7 +214,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 53.274 130 53.466 ;
+        RECT  126 72.768 130 72.96 ;
     END
   END apb_prdata_o[1]
   PIN apb_prdata_o[20]
@@ -222,7 +222,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 26.598 130 26.79 ;
+        RECT  126 109.704 130 109.896 ;
     END
   END apb_prdata_o[20]
   PIN apb_prdata_o[21]
@@ -230,7 +230,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 33.78 130 33.972 ;
+        RECT  126 99.444 130 99.636 ;
     END
   END apb_prdata_o[21]
   PIN apb_prdata_o[22]
@@ -238,7 +238,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 24.546 130 24.738 ;
+        RECT  126 86.106 130 86.298 ;
     END
   END apb_prdata_o[22]
   PIN apb_prdata_o[23]
@@ -246,7 +246,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 23.52 130 23.712 ;
+        RECT  126 111.756 130 111.948 ;
     END
   END apb_prdata_o[23]
   PIN apb_prdata_o[24]
@@ -254,7 +254,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 39.936 130 40.128 ;
+        RECT  126 90.21 130 90.402 ;
     END
   END apb_prdata_o[24]
   PIN apb_prdata_o[25]
@@ -262,7 +262,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 36.858 130 37.05 ;
+        RECT  126 108.678 130 108.87 ;
     END
   END apb_prdata_o[25]
   PIN apb_prdata_o[26]
@@ -270,7 +270,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 46.092 130 46.284 ;
+        RECT  126 106.626 130 106.818 ;
     END
   END apb_prdata_o[26]
   PIN apb_prdata_o[27]
@@ -278,7 +278,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 56.352 130 56.544 ;
+        RECT  126 87.132 130 87.324 ;
     END
   END apb_prdata_o[27]
   PIN apb_prdata_o[28]
@@ -286,7 +286,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 29.676 130 29.868 ;
+        RECT  126 101.496 130 101.688 ;
     END
   END apb_prdata_o[28]
   PIN apb_prdata_o[29]
@@ -294,7 +294,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 32.754 130 32.946 ;
+        RECT  126 104.574 130 104.766 ;
     END
   END apb_prdata_o[29]
   PIN apb_prdata_o[2]
@@ -302,7 +302,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 9.156 130 9.348 ;
+        RECT  126 123.042 130 123.234 ;
     END
   END apb_prdata_o[2]
   PIN apb_prdata_o[30]
@@ -310,7 +310,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 25.572 130 25.764 ;
+        RECT  126 120.99 130 121.182 ;
     END
   END apb_prdata_o[30]
   PIN apb_prdata_o[31]
@@ -318,7 +318,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 31.728 130 31.92 ;
+        RECT  126 114.834 130 115.026 ;
     END
   END apb_prdata_o[31]
   PIN apb_prdata_o[3]
@@ -326,7 +326,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 51.222 130 51.414 ;
+        RECT  126 107.652 130 107.844 ;
     END
   END apb_prdata_o[3]
   PIN apb_prdata_o[4]
@@ -334,7 +334,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 109.704 130 109.896 ;
+        RECT  126 88.158 130 88.35 ;
     END
   END apb_prdata_o[4]
   PIN apb_prdata_o[5]
@@ -342,7 +342,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 22.494 130 22.686 ;
+        RECT  126 100.47 130 100.662 ;
     END
   END apb_prdata_o[5]
   PIN apb_prdata_o[6]
@@ -350,7 +350,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 35.832 130 36.024 ;
+        RECT  126 95.34 130 95.532 ;
     END
   END apb_prdata_o[6]
   PIN apb_prdata_o[7]
@@ -358,7 +358,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 38.91 130 39.102 ;
+        RECT  126 127.146 130 127.338 ;
     END
   END apb_prdata_o[7]
   PIN apb_prdata_o[8]
@@ -366,7 +366,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 40.962 130 41.154 ;
+        RECT  126 92.262 130 92.454 ;
     END
   END apb_prdata_o[8]
   PIN apb_prdata_o[9]
@@ -374,15 +374,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 52.248 130 52.44 ;
+        RECT  126 115.86 130 116.052 ;
     END
   END apb_prdata_o[9]
   PIN apb_pready_o
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  110.73 126 110.922 130 ;
+      LAYER M4 ;
+        RECT  126 89.184 130 89.376 ;
     END
   END apb_pready_o
   PIN apb_psel_i
@@ -390,7 +390,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 17.364 130 17.556 ;
+        RECT  126 122.016 130 122.208 ;
     END
   END apb_psel_i
   PIN apb_pslverr_o
@@ -398,7 +398,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 60.456 130 60.648 ;
+        RECT  126 24.546 130 24.738 ;
     END
   END apb_pslverr_o
   PIN apb_pwdata_i[0]
@@ -406,7 +406,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 20.442 130 20.634 ;
+        RECT  126 93.288 130 93.48 ;
     END
   END apb_pwdata_i[0]
   PIN apb_pwdata_i[10]
@@ -414,7 +414,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 7.104 130 7.296 ;
+        RECT  126 54.3 130 54.492 ;
     END
   END apb_pwdata_i[10]
   PIN apb_pwdata_i[11]
@@ -422,7 +422,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 111.756 130 111.948 ;
+        RECT  126 53.274 130 53.466 ;
     END
   END apb_pwdata_i[11]
   PIN apb_pwdata_i[12]
@@ -430,7 +430,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 6.078 130 6.27 ;
+        RECT  126 25.572 130 25.764 ;
     END
   END apb_pwdata_i[12]
   PIN apb_pwdata_i[13]
@@ -438,7 +438,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 62.508 130 62.7 ;
+        RECT  126 43.014 130 43.206 ;
     END
   END apb_pwdata_i[13]
   PIN apb_pwdata_i[14]
@@ -446,7 +446,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 74.82 130 75.012 ;
+        RECT  126 30.702 130 30.894 ;
     END
   END apb_pwdata_i[14]
   PIN apb_pwdata_i[15]
@@ -454,7 +454,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 13.26 130 13.452 ;
+        RECT  126 37.884 130 38.076 ;
     END
   END apb_pwdata_i[15]
   PIN apb_pwdata_i[16]
@@ -470,7 +470,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 67.638 130 67.83 ;
+        RECT  126 35.832 130 36.024 ;
     END
   END apb_pwdata_i[17]
   PIN apb_pwdata_i[18]
@@ -478,7 +478,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 69.69 130 69.882 ;
+        RECT  126 20.442 130 20.634 ;
     END
   END apb_pwdata_i[18]
   PIN apb_pwdata_i[19]
@@ -486,7 +486,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 65.586 130 65.778 ;
+        RECT  126 51.222 130 51.414 ;
     END
   END apb_pwdata_i[19]
   PIN apb_pwdata_i[1]
@@ -494,7 +494,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 8.13 130 8.322 ;
+        RECT  126 118.938 130 119.13 ;
     END
   END apb_pwdata_i[1]
   PIN apb_pwdata_i[20]
@@ -502,7 +502,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 115.86 130 116.052 ;
+        RECT  126 32.754 130 32.946 ;
     END
   END apb_pwdata_i[20]
   PIN apb_pwdata_i[21]
@@ -510,7 +510,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 101.496 130 101.688 ;
+        RECT  126 34.806 130 34.998 ;
     END
   END apb_pwdata_i[21]
   PIN apb_pwdata_i[22]
@@ -518,7 +518,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 123.042 130 123.234 ;
+        RECT  126 47.118 130 47.31 ;
     END
   END apb_pwdata_i[22]
   PIN apb_pwdata_i[23]
@@ -526,7 +526,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 85.08 130 85.272 ;
+        RECT  126 48.144 130 48.336 ;
     END
   END apb_pwdata_i[23]
   PIN apb_pwdata_i[24]
@@ -534,7 +534,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 106.626 130 106.818 ;
+        RECT  126 13.26 130 13.452 ;
     END
   END apb_pwdata_i[24]
   PIN apb_pwdata_i[25]
@@ -542,7 +542,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 76.872 130 77.064 ;
+        RECT  126 80.976 130 81.168 ;
     END
   END apb_pwdata_i[25]
   PIN apb_pwdata_i[26]
@@ -550,7 +550,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 127.146 130 127.338 ;
+        RECT  126 84.054 130 84.246 ;
     END
   END apb_pwdata_i[26]
   PIN apb_pwdata_i[27]
@@ -558,7 +558,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 50.196 130 50.388 ;
+        RECT  126 29.676 130 29.868 ;
     END
   END apb_pwdata_i[27]
   PIN apb_pwdata_i[28]
@@ -566,7 +566,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 12.234 130 12.426 ;
+        RECT  126 60.456 130 60.648 ;
     END
   END apb_pwdata_i[28]
   PIN apb_pwdata_i[29]
@@ -574,7 +574,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 47.118 130 47.31 ;
+        RECT  126 52.248 130 52.44 ;
     END
   END apb_pwdata_i[29]
   PIN apb_pwdata_i[2]
@@ -582,7 +582,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 5.052 130 5.244 ;
+        RECT  126 102.522 130 102.714 ;
     END
   END apb_pwdata_i[2]
   PIN apb_pwdata_i[30]
@@ -590,7 +590,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 49.17 130 49.362 ;
+        RECT  126 94.314 130 94.506 ;
     END
   END apb_pwdata_i[30]
   PIN apb_pwdata_i[31]
@@ -598,7 +598,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 64.56 130 64.752 ;
+        RECT  126 83.028 130 83.22 ;
     END
   END apb_pwdata_i[31]
   PIN apb_pwdata_i[3]
@@ -606,7 +606,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 4.026 130 4.218 ;
+        RECT  126 79.95 130 80.142 ;
     END
   END apb_pwdata_i[3]
   PIN apb_pwdata_i[4]
@@ -614,7 +614,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 14.286 130 14.478 ;
+        RECT  126 27.624 130 27.816 ;
     END
   END apb_pwdata_i[4]
   PIN apb_pwdata_i[5]
@@ -622,7 +622,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 15.312 130 15.504 ;
+        RECT  126 82.002 130 82.194 ;
     END
   END apb_pwdata_i[5]
   PIN apb_pwdata_i[6]
@@ -630,7 +630,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 28.65 130 28.842 ;
+        RECT  126 39.936 130 40.128 ;
     END
   END apb_pwdata_i[6]
   PIN apb_pwdata_i[7]
@@ -638,7 +638,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 0.948 130 1.14 ;
+        RECT  126 22.494 130 22.686 ;
     END
   END apb_pwdata_i[7]
   PIN apb_pwdata_i[8]
@@ -646,7 +646,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 3 130 3.192 ;
+        RECT  126 38.91 130 39.102 ;
     END
   END apb_pwdata_i[8]
   PIN apb_pwdata_i[9]
@@ -654,7 +654,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 1.974 130 2.166 ;
+        RECT  126 19.416 130 19.608 ;
     END
   END apb_pwdata_i[9]
   PIN apb_pwrite_i
@@ -662,7 +662,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  126 34.806 130 34.998 ;
+        RECT  126 105.6 130 105.792 ;
     END
   END apb_pwrite_i
   PIN axi_araddr_o[0]
@@ -670,7 +670,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  122.016 126 122.208 130 ;
+        RECT  47.118 126 47.31 130 ;
     END
   END axi_araddr_o[0]
   PIN axi_araddr_o[10]
@@ -678,7 +678,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  103.548 126 103.74 130 ;
+        RECT  53.274 126 53.466 130 ;
     END
   END axi_araddr_o[10]
   PIN axi_araddr_o[11]
@@ -686,15 +686,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  88.158 126 88.35 130 ;
+        RECT  4.026 126 4.218 130 ;
     END
   END axi_araddr_o[11]
   PIN axi_araddr_o[12]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  71.742 126 71.934 130 ;
+      LAYER M4 ;
+        RECT  126 28.65 130 28.842 ;
     END
   END axi_araddr_o[12]
   PIN axi_araddr_o[13]
@@ -702,15 +702,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  79.95 126 80.142 130 ;
+        RECT  73.794 0 73.986 4 ;
     END
   END axi_araddr_o[13]
   PIN axi_araddr_o[14]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  83.028 126 83.22 130 ;
+      LAYER M4 ;
+        RECT  126 36.858 130 37.05 ;
     END
   END axi_araddr_o[14]
   PIN axi_araddr_o[15]
@@ -718,7 +718,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  84.054 126 84.246 130 ;
+        RECT  45.066 0 45.258 4 ;
     END
   END axi_araddr_o[15]
   PIN axi_araddr_o[16]
@@ -726,7 +726,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  68.664 126 68.856 130 ;
+        RECT  70.716 0 70.908 4 ;
     END
   END axi_araddr_o[16]
   PIN axi_araddr_o[17]
@@ -734,7 +734,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  67.638 126 67.83 130 ;
+        RECT  46.092 0 46.284 4 ;
     END
   END axi_araddr_o[17]
   PIN axi_araddr_o[18]
@@ -742,7 +742,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  75.846 126 76.038 130 ;
+        RECT  78.924 0 79.116 4 ;
     END
   END axi_araddr_o[18]
   PIN axi_araddr_o[19]
@@ -750,7 +750,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  74.82 126 75.012 130 ;
+        RECT  72.768 0 72.96 4 ;
     END
   END axi_araddr_o[19]
   PIN axi_araddr_o[1]
@@ -758,7 +758,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  101.496 126 101.688 130 ;
+        RECT  114.834 126 115.026 130 ;
     END
   END axi_araddr_o[1]
   PIN axi_araddr_o[20]
@@ -766,15 +766,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  96.366 126 96.558 130 ;
+        RECT  48.144 0 48.336 4 ;
     END
   END axi_araddr_o[20]
   PIN axi_araddr_o[21]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  85.08 126 85.272 130 ;
+      LAYER M4 ;
+        RECT  126 33.78 130 33.972 ;
     END
   END axi_araddr_o[21]
   PIN axi_araddr_o[22]
@@ -782,7 +782,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  72.768 126 72.96 130 ;
+        RECT  49.17 0 49.362 4 ;
     END
   END axi_araddr_o[22]
   PIN axi_araddr_o[23]
@@ -790,7 +790,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  87.132 126 87.324 130 ;
+        RECT  69.69 0 69.882 4 ;
     END
   END axi_araddr_o[23]
   PIN axi_araddr_o[24]
@@ -798,7 +798,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  86.106 126 86.298 130 ;
+        RECT  71.742 0 71.934 4 ;
     END
   END axi_araddr_o[24]
   PIN axi_araddr_o[25]
@@ -806,7 +806,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  95.34 126 95.532 130 ;
+        RECT  54.3 0 54.492 4 ;
     END
   END axi_araddr_o[25]
   PIN axi_araddr_o[26]
@@ -814,7 +814,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  100.47 126 100.662 130 ;
+        RECT  51.222 0 51.414 4 ;
     END
   END axi_araddr_o[26]
   PIN axi_araddr_o[27]
@@ -822,23 +822,23 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  89.184 126 89.376 130 ;
+        RECT  55.326 0 55.518 4 ;
     END
   END axi_araddr_o[27]
   PIN axi_araddr_o[28]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  92.262 126 92.454 130 ;
+      LAYER M4 ;
+        RECT  126 75.846 130 76.038 ;
     END
   END axi_araddr_o[28]
   PIN axi_araddr_o[29]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  91.236 126 91.428 130 ;
+      LAYER M4 ;
+        RECT  126 46.092 130 46.284 ;
     END
   END axi_araddr_o[29]
   PIN axi_araddr_o[2]
@@ -846,15 +846,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  82.002 126 82.194 130 ;
+        RECT  5.052 126 5.244 130 ;
     END
   END axi_araddr_o[2]
   PIN axi_araddr_o[30]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  93.288 126 93.48 130 ;
+      LAYER M4 ;
+        RECT  126 45.066 130 45.258 ;
     END
   END axi_araddr_o[30]
   PIN axi_araddr_o[31]
@@ -862,7 +862,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  90.21 126 90.402 130 ;
+        RECT  50.196 0 50.388 4 ;
     END
   END axi_araddr_o[31]
   PIN axi_araddr_o[3]
@@ -870,15 +870,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  66.612 126 66.804 130 ;
+        RECT  41.988 126 42.18 130 ;
     END
   END axi_araddr_o[3]
   PIN axi_araddr_o[4]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  76.872 126 77.064 130 ;
+      LAYER M4 ;
+        RECT  126 57.378 130 57.57 ;
     END
   END axi_araddr_o[4]
   PIN axi_araddr_o[5]
@@ -886,15 +886,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  70.716 126 70.908 130 ;
+        RECT  74.82 126 75.012 130 ;
     END
   END axi_araddr_o[5]
   PIN axi_araddr_o[6]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  69.69 126 69.882 130 ;
+      LAYER M4 ;
+        RECT  126 44.04 130 44.232 ;
     END
   END axi_araddr_o[6]
   PIN axi_araddr_o[7]
@@ -902,7 +902,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  73.794 126 73.986 130 ;
+        RECT  78.924 126 79.116 130 ;
     END
   END axi_araddr_o[7]
   PIN axi_araddr_o[8]
@@ -910,7 +910,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  78.924 126 79.116 130 ;
+        RECT  73.794 126 73.986 130 ;
     END
   END axi_araddr_o[8]
   PIN axi_araddr_o[9]
@@ -918,23 +918,127 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  77.898 126 78.09 130 ;
+        RECT  37.884 126 38.076 130 ;
     END
   END axi_araddr_o[9]
+  PIN axi_arburst_o[0]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  67.638 126 67.83 130 ;
+    END
+  END axi_arburst_o[0]
+  PIN axi_arburst_o[1]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  13.26 126 13.452 130 ;
+    END
+  END axi_arburst_o[1]
+  PIN axi_arlen_o[0]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  6.078 126 6.27 130 ;
+    END
+  END axi_arlen_o[0]
+  PIN axi_arlen_o[1]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  55.326 126 55.518 130 ;
+    END
+  END axi_arlen_o[1]
+  PIN axi_arlen_o[2]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  58.404 126 58.596 130 ;
+    END
+  END axi_arlen_o[2]
+  PIN axi_arlen_o[3]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  62.508 126 62.7 130 ;
+    END
+  END axi_arlen_o[3]
+  PIN axi_arlen_o[4]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  75.846 126 76.038 130 ;
+    END
+  END axi_arlen_o[4]
+  PIN axi_arlen_o[5]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  80.976 126 81.168 130 ;
+    END
+  END axi_arlen_o[5]
+  PIN axi_arlen_o[6]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  40.962 126 41.154 130 ;
+    END
+  END axi_arlen_o[6]
+  PIN axi_arlen_o[7]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  125.094 126 125.286 130 ;
+    END
+  END axi_arlen_o[7]
   PIN axi_arready_i
     DIRECTION INPUT ;
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  94.314 126 94.506 130 ;
+        RECT  59.43 126 59.622 130 ;
     END
   END axi_arready_i
+  PIN axi_arsize_o[0]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  109.704 126 109.896 130 ;
+    END
+  END axi_arsize_o[0]
+  PIN axi_arsize_o[1]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  76.872 126 77.064 130 ;
+    END
+  END axi_arsize_o[1]
+  PIN axi_arsize_o[2]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  118.938 126 119.13 130 ;
+    END
+  END axi_arsize_o[2]
   PIN axi_arvalid_o
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  99.444 126 99.636 130 ;
+        RECT  43.014 126 43.206 130 ;
     END
   END axi_arvalid_o
   PIN axi_awaddr_o[0]
@@ -942,7 +1046,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  80.976 126 81.168 130 ;
+        RECT  82.002 126 82.194 130 ;
     END
   END axi_awaddr_o[0]
   PIN axi_awaddr_o[10]
@@ -950,7 +1054,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  55.326 126 55.518 130 ;
+        RECT  36.858 126 37.05 130 ;
     END
   END axi_awaddr_o[10]
   PIN axi_awaddr_o[11]
@@ -958,7 +1062,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  61.482 126 61.674 130 ;
+        RECT  52.248 126 52.44 130 ;
     END
   END axi_awaddr_o[11]
   PIN axi_awaddr_o[12]
@@ -966,7 +1070,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  9.156 126 9.348 130 ;
+        RECT  77.898 126 78.09 130 ;
     END
   END axi_awaddr_o[12]
   PIN axi_awaddr_o[13]
@@ -974,7 +1078,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 18.39 4 18.582 ;
+        RECT  126 12.234 130 12.426 ;
     END
   END axi_awaddr_o[13]
   PIN axi_awaddr_o[14]
@@ -982,7 +1086,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 65.586 4 65.778 ;
+        RECT  126 58.404 130 58.596 ;
     END
   END axi_awaddr_o[14]
   PIN axi_awaddr_o[15]
@@ -990,15 +1094,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 86.106 4 86.298 ;
+        RECT  126 59.43 130 59.622 ;
     END
   END axi_awaddr_o[15]
   PIN axi_awaddr_o[16]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  20.442 126 20.634 130 ;
+      LAYER M4 ;
+        RECT  126 10.182 130 10.374 ;
     END
   END axi_awaddr_o[16]
   PIN axi_awaddr_o[17]
@@ -1006,7 +1110,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 36.858 4 37.05 ;
+        RECT  126 62.508 130 62.7 ;
     END
   END axi_awaddr_o[17]
   PIN axi_awaddr_o[18]
@@ -1014,7 +1118,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 63.534 4 63.726 ;
+        RECT  126 66.612 130 66.804 ;
     END
   END axi_awaddr_o[18]
   PIN axi_awaddr_o[19]
@@ -1022,7 +1126,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 66.612 4 66.804 ;
+        RECT  126 18.39 130 18.582 ;
     END
   END axi_awaddr_o[19]
   PIN axi_awaddr_o[1]
@@ -1030,7 +1134,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  111.756 126 111.948 130 ;
+        RECT  39.936 126 40.128 130 ;
     END
   END axi_awaddr_o[1]
   PIN axi_awaddr_o[20]
@@ -1038,15 +1142,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 75.846 4 76.038 ;
+        RECT  126 49.17 130 49.362 ;
     END
   END axi_awaddr_o[20]
   PIN axi_awaddr_o[21]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  12.234 126 12.426 130 ;
+      LAYER M4 ;
+        RECT  126 8.13 130 8.322 ;
     END
   END axi_awaddr_o[21]
   PIN axi_awaddr_o[22]
@@ -1054,15 +1158,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 102.522 4 102.714 ;
+        RECT  126 31.728 130 31.92 ;
     END
   END axi_awaddr_o[22]
   PIN axi_awaddr_o[23]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  10.182 126 10.374 130 ;
+      LAYER M4 ;
+        RECT  126 41.988 130 42.18 ;
     END
   END axi_awaddr_o[23]
   PIN axi_awaddr_o[24]
@@ -1070,7 +1174,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 79.95 4 80.142 ;
+        RECT  126 21.468 130 21.66 ;
     END
   END axi_awaddr_o[24]
   PIN axi_awaddr_o[25]
@@ -1078,15 +1182,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 97.392 4 97.584 ;
+        RECT  126 40.962 130 41.154 ;
     END
   END axi_awaddr_o[25]
   PIN axi_awaddr_o[26]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  21.468 126 21.66 130 ;
+      LAYER M4 ;
+        RECT  126 11.208 130 11.4 ;
     END
   END axi_awaddr_o[26]
   PIN axi_awaddr_o[27]
@@ -1094,15 +1198,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 89.184 4 89.376 ;
+        RECT  126 56.352 130 56.544 ;
     END
   END axi_awaddr_o[27]
   PIN axi_awaddr_o[28]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  13.26 126 13.452 130 ;
+      LAYER M4 ;
+        RECT  126 76.872 130 77.064 ;
     END
   END axi_awaddr_o[28]
   PIN axi_awaddr_o[29]
@@ -1110,7 +1214,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 83.028 4 83.22 ;
+        RECT  126 15.312 130 15.504 ;
     END
   END axi_awaddr_o[29]
   PIN axi_awaddr_o[2]
@@ -1118,15 +1222,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  60.456 126 60.648 130 ;
+        RECT  28.65 126 28.842 130 ;
     END
   END axi_awaddr_o[2]
   PIN axi_awaddr_o[30]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  7.104 126 7.296 130 ;
+      LAYER M4 ;
+        RECT  126 61.482 130 61.674 ;
     END
   END axi_awaddr_o[30]
   PIN axi_awaddr_o[31]
@@ -1134,7 +1238,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 84.054 4 84.246 ;
+        RECT  126 4.026 130 4.218 ;
     END
   END axi_awaddr_o[31]
   PIN axi_awaddr_o[3]
@@ -1142,7 +1246,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  59.43 126 59.622 130 ;
+        RECT  17.364 126 17.556 130 ;
     END
   END axi_awaddr_o[3]
   PIN axi_awaddr_o[4]
@@ -1150,7 +1254,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  57.378 126 57.57 130 ;
+        RECT  35.832 126 36.024 130 ;
     END
   END axi_awaddr_o[4]
   PIN axi_awaddr_o[5]
@@ -1158,7 +1262,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  53.274 126 53.466 130 ;
+        RECT  56.352 126 56.544 130 ;
     END
   END axi_awaddr_o[5]
   PIN axi_awaddr_o[6]
@@ -1166,7 +1270,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  56.352 126 56.544 130 ;
+        RECT  34.806 126 34.998 130 ;
     END
   END axi_awaddr_o[6]
   PIN axi_awaddr_o[7]
@@ -1174,7 +1278,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  107.652 126 107.844 130 ;
+        RECT  51.222 126 51.414 130 ;
     END
   END axi_awaddr_o[7]
   PIN axi_awaddr_o[8]
@@ -1182,7 +1286,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  58.404 126 58.596 130 ;
+        RECT  20.442 126 20.634 130 ;
     END
   END axi_awaddr_o[8]
   PIN axi_awaddr_o[9]
@@ -1190,23 +1294,127 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  54.3 126 54.492 130 ;
+        RECT  44.04 126 44.232 130 ;
     END
   END axi_awaddr_o[9]
+  PIN axi_awburst_o[0]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  57.378 126 57.57 130 ;
+    END
+  END axi_awburst_o[0]
+  PIN axi_awburst_o[1]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  124.068 126 124.26 130 ;
+    END
+  END axi_awburst_o[1]
+  PIN axi_awlen_o[0]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  66.612 126 66.804 130 ;
+    END
+  END axi_awlen_o[0]
+  PIN axi_awlen_o[1]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  14.286 126 14.478 130 ;
+    END
+  END axi_awlen_o[1]
+  PIN axi_awlen_o[2]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  113.808 126 114 130 ;
+    END
+  END axi_awlen_o[2]
+  PIN axi_awlen_o[3]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  107.652 126 107.844 130 ;
+    END
+  END axi_awlen_o[3]
+  PIN axi_awlen_o[4]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M4 ;
+        RECT  126 126.12 130 126.312 ;
+    END
+  END axi_awlen_o[4]
+  PIN axi_awlen_o[5]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  71.742 126 71.934 130 ;
+    END
+  END axi_awlen_o[5]
+  PIN axi_awlen_o[6]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  123.042 126 123.234 130 ;
+    END
+  END axi_awlen_o[6]
+  PIN axi_awlen_o[7]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  45.066 126 45.258 130 ;
+    END
+  END axi_awlen_o[7]
   PIN axi_awready_i
     DIRECTION INPUT ;
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  65.586 126 65.778 130 ;
+        RECT  54.3 126 54.492 130 ;
     END
   END axi_awready_i
+  PIN axi_awsize_o[0]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  16.338 126 16.53 130 ;
+    END
+  END axi_awsize_o[0]
+  PIN axi_awsize_o[1]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  84.054 126 84.246 130 ;
+    END
+  END axi_awsize_o[1]
+  PIN axi_awsize_o[2]
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  120.99 126 121.182 130 ;
+    END
+  END axi_awsize_o[2]
   PIN axi_awvalid_o
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  98.418 126 98.61 130 ;
+        RECT  25.572 126 25.764 130 ;
     END
   END axi_awvalid_o
   PIN axi_bready_o
@@ -1214,7 +1422,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  104.574 126 104.766 130 ;
+        RECT  9.156 126 9.348 130 ;
     END
   END axi_bready_o
   PIN axi_bresp_i[0]
@@ -1222,7 +1430,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  62.508 126 62.7 130 ;
+        RECT  48.144 126 48.336 130 ;
     END
   END axi_bresp_i[0]
   PIN axi_bresp_i[1]
@@ -1230,7 +1438,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  63.534 126 63.726 130 ;
+        RECT  50.196 126 50.388 130 ;
     END
   END axi_bresp_i[1]
   PIN axi_bvalid_i
@@ -1238,7 +1446,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  97.392 126 97.584 130 ;
+        RECT  32.754 126 32.946 130 ;
     END
   END axi_bvalid_i
   PIN axi_rdata_i[0]
@@ -1246,7 +1454,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  115.86 126 116.052 130 ;
+        RECT  75.846 0 76.038 4 ;
     END
   END axi_rdata_i[0]
   PIN axi_rdata_i[10]
@@ -1254,7 +1462,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  109.704 126 109.896 130 ;
+        RECT  97.392 0 97.584 4 ;
     END
   END axi_rdata_i[10]
   PIN axi_rdata_i[11]
@@ -1262,7 +1470,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  129.198 126 129.39 130 ;
+        RECT  93.288 0 93.48 4 ;
     END
   END axi_rdata_i[11]
   PIN axi_rdata_i[12]
@@ -1270,7 +1478,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  108.678 126 108.87 130 ;
+        RECT  96.366 0 96.558 4 ;
     END
   END axi_rdata_i[12]
   PIN axi_rdata_i[13]
@@ -1278,7 +1486,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  120.99 126 121.182 130 ;
+        RECT  87.132 0 87.324 4 ;
     END
   END axi_rdata_i[13]
   PIN axi_rdata_i[14]
@@ -1286,7 +1494,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  49.17 126 49.362 130 ;
+        RECT  80.976 0 81.168 4 ;
     END
   END axi_rdata_i[14]
   PIN axi_rdata_i[15]
@@ -1294,7 +1502,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  124.068 126 124.26 130 ;
+        RECT  92.262 0 92.454 4 ;
     END
   END axi_rdata_i[15]
   PIN axi_rdata_i[16]
@@ -1302,7 +1510,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  116.886 126 117.078 130 ;
+        RECT  86.106 0 86.298 4 ;
     END
   END axi_rdata_i[16]
   PIN axi_rdata_i[17]
@@ -1310,7 +1518,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  125.094 126 125.286 130 ;
+        RECT  85.08 0 85.272 4 ;
     END
   END axi_rdata_i[17]
   PIN axi_rdata_i[18]
@@ -1318,7 +1526,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  106.626 126 106.818 130 ;
+        RECT  90.21 0 90.402 4 ;
     END
   END axi_rdata_i[18]
   PIN axi_rdata_i[19]
@@ -1326,7 +1534,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  118.938 126 119.13 130 ;
+        RECT  84.054 0 84.246 4 ;
     END
   END axi_rdata_i[19]
   PIN axi_rdata_i[1]
@@ -1334,7 +1542,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  113.808 126 114 130 ;
+        RECT  57.378 0 57.57 4 ;
     END
   END axi_rdata_i[1]
   PIN axi_rdata_i[20]
@@ -1342,7 +1550,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  127.146 126 127.338 130 ;
+        RECT  94.314 0 94.506 4 ;
     END
   END axi_rdata_i[20]
   PIN axi_rdata_i[21]
@@ -1350,7 +1558,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  119.964 126 120.156 130 ;
+        RECT  83.028 0 83.22 4 ;
     END
   END axi_rdata_i[21]
   PIN axi_rdata_i[22]
@@ -1358,7 +1566,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  126.12 126 126.312 130 ;
+        RECT  91.236 0 91.428 4 ;
     END
   END axi_rdata_i[22]
   PIN axi_rdata_i[23]
@@ -1366,7 +1574,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  45.066 126 45.258 130 ;
+        RECT  88.158 0 88.35 4 ;
     END
   END axi_rdata_i[23]
   PIN axi_rdata_i[24]
@@ -1374,7 +1582,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  35.832 126 36.024 130 ;
+        RECT  89.184 0 89.376 4 ;
     END
   END axi_rdata_i[24]
   PIN axi_rdata_i[25]
@@ -1382,7 +1590,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  40.962 126 41.154 130 ;
+        RECT  95.34 0 95.532 4 ;
     END
   END axi_rdata_i[25]
   PIN axi_rdata_i[26]
@@ -1390,7 +1598,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  41.988 126 42.18 130 ;
+        RECT  66.612 0 66.804 4 ;
     END
   END axi_rdata_i[26]
   PIN axi_rdata_i[27]
@@ -1398,7 +1606,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  44.04 126 44.232 130 ;
+        RECT  56.352 0 56.544 4 ;
     END
   END axi_rdata_i[27]
   PIN axi_rdata_i[28]
@@ -1406,7 +1614,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  46.092 126 46.284 130 ;
+        RECT  82.002 0 82.194 4 ;
     END
   END axi_rdata_i[28]
   PIN axi_rdata_i[29]
@@ -1414,7 +1622,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  117.912 126 118.104 130 ;
+        RECT  79.95 0 80.142 4 ;
     END
   END axi_rdata_i[29]
   PIN axi_rdata_i[2]
@@ -1422,7 +1630,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  123.042 126 123.234 130 ;
+        RECT  59.43 0 59.622 4 ;
     END
   END axi_rdata_i[2]
   PIN axi_rdata_i[30]
@@ -1430,7 +1638,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  48.144 126 48.336 130 ;
+        RECT  58.404 0 58.596 4 ;
     END
   END axi_rdata_i[30]
   PIN axi_rdata_i[31]
@@ -1438,7 +1646,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  47.118 126 47.31 130 ;
+        RECT  61.482 0 61.674 4 ;
     END
   END axi_rdata_i[31]
   PIN axi_rdata_i[3]
@@ -1446,7 +1654,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  114.834 126 115.026 130 ;
+        RECT  63.534 0 63.726 4 ;
     END
   END axi_rdata_i[3]
   PIN axi_rdata_i[4]
@@ -1454,7 +1662,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  112.782 126 112.974 130 ;
+        RECT  60.456 0 60.648 4 ;
     END
   END axi_rdata_i[4]
   PIN axi_rdata_i[5]
@@ -1462,7 +1670,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  52.248 126 52.44 130 ;
+        RECT  65.586 0 65.778 4 ;
     END
   END axi_rdata_i[5]
   PIN axi_rdata_i[6]
@@ -1470,7 +1678,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  128.172 126 128.364 130 ;
+        RECT  64.56 0 64.752 4 ;
     END
   END axi_rdata_i[6]
   PIN axi_rdata_i[7]
@@ -1478,7 +1686,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  105.6 126 105.792 130 ;
+        RECT  62.508 0 62.7 4 ;
     END
   END axi_rdata_i[7]
   PIN axi_rdata_i[8]
@@ -1486,7 +1694,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  51.222 126 51.414 130 ;
+        RECT  76.872 0 77.064 4 ;
     END
   END axi_rdata_i[8]
   PIN axi_rdata_i[9]
@@ -1494,15 +1702,23 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  50.196 126 50.388 130 ;
+        RECT  77.898 0 78.09 4 ;
     END
   END axi_rdata_i[9]
+  PIN axi_rlast_i
+    DIRECTION INPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  38.91 126 39.102 130 ;
+    END
+  END axi_rlast_i
   PIN axi_rready_o
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  102.522 126 102.714 130 ;
+        RECT  127.146 126 127.338 130 ;
     END
   END axi_rready_o
   PIN axi_rresp_i[0]
@@ -1510,7 +1726,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  36.858 126 37.05 130 ;
+        RECT  46.092 126 46.284 130 ;
     END
   END axi_rresp_i[0]
   PIN axi_rresp_i[1]
@@ -1518,7 +1734,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  43.014 126 43.206 130 ;
+        RECT  61.482 126 61.674 130 ;
     END
   END axi_rresp_i[1]
   PIN axi_rvalid_i
@@ -1526,7 +1742,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  64.56 126 64.752 130 ;
+        RECT  72.768 126 72.96 130 ;
     END
   END axi_rvalid_i
   PIN axi_wdata_o[0]
@@ -1534,143 +1750,143 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  34.806 126 34.998 130 ;
+        RECT  10.182 126 10.374 130 ;
     END
   END axi_wdata_o[0]
   PIN axi_wdata_o[10]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  31.728 126 31.92 130 ;
+      LAYER M4 ;
+        RECT  126 9.156 130 9.348 ;
     END
   END axi_wdata_o[10]
   PIN axi_wdata_o[11]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  25.572 126 25.764 130 ;
+      LAYER M4 ;
+        RECT  126 7.104 130 7.296 ;
     END
   END axi_wdata_o[11]
   PIN axi_wdata_o[12]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  17.364 126 17.556 130 ;
+      LAYER M4 ;
+        RECT  126 5.052 130 5.244 ;
     END
   END axi_wdata_o[12]
   PIN axi_wdata_o[13]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  32.754 126 32.946 130 ;
+      LAYER M4 ;
+        RECT  126 16.338 130 16.53 ;
     END
   END axi_wdata_o[13]
   PIN axi_wdata_o[14]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  19.416 126 19.608 130 ;
+      LAYER M4 ;
+        RECT  126 23.52 130 23.712 ;
     END
   END axi_wdata_o[14]
   PIN axi_wdata_o[15]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  6.078 126 6.27 130 ;
+      LAYER M4 ;
+        RECT  126 6.078 130 6.27 ;
     END
   END axi_wdata_o[15]
   PIN axi_wdata_o[16]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  22.494 126 22.686 130 ;
+      LAYER M4 ;
+        RECT  126 26.598 130 26.79 ;
     END
   END axi_wdata_o[16]
   PIN axi_wdata_o[17]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  27.624 126 27.816 130 ;
+      LAYER M4 ;
+        RECT  126 1.974 130 2.166 ;
     END
   END axi_wdata_o[17]
   PIN axi_wdata_o[18]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  15.312 126 15.504 130 ;
+      LAYER M4 ;
+        RECT  126 55.326 130 55.518 ;
     END
   END axi_wdata_o[18]
   PIN axi_wdata_o[19]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  23.52 126 23.712 130 ;
+      LAYER M4 ;
+        RECT  126 3 130 3.192 ;
     END
   END axi_wdata_o[19]
   PIN axi_wdata_o[1]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  37.884 126 38.076 130 ;
+      LAYER M4 ;
+        RECT  126 0.948 130 1.14 ;
     END
   END axi_wdata_o[1]
   PIN axi_wdata_o[20]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  28.65 126 28.842 130 ;
+      LAYER M4 ;
+        RECT  126 14.286 130 14.478 ;
     END
   END axi_wdata_o[20]
   PIN axi_wdata_o[21]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  11.208 126 11.4 130 ;
+      LAYER M4 ;
+        RECT  126 71.742 130 71.934 ;
     END
   END axi_wdata_o[21]
   PIN axi_wdata_o[22]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  24.546 126 24.738 130 ;
+      LAYER M4 ;
+        RECT  126 73.794 130 73.986 ;
     END
   END axi_wdata_o[22]
   PIN axi_wdata_o[23]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  18.39 126 18.582 130 ;
+      LAYER M4 ;
+        RECT  126 74.82 130 75.012 ;
     END
   END axi_wdata_o[23]
   PIN axi_wdata_o[24]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  3 126 3.192 130 ;
+      LAYER M4 ;
+        RECT  126 77.898 130 78.09 ;
     END
   END axi_wdata_o[24]
   PIN axi_wdata_o[25]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M5 ;
-        RECT  5.052 126 5.244 130 ;
+      LAYER M4 ;
+        RECT  126 78.924 130 79.116 ;
     END
   END axi_wdata_o[25]
   PIN axi_wdata_o[26]
@@ -1678,7 +1894,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  0.948 126 1.14 130 ;
+        RECT  18.39 126 18.582 130 ;
     END
   END axi_wdata_o[26]
   PIN axi_wdata_o[27]
@@ -1686,7 +1902,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  1.974 126 2.166 130 ;
+        RECT  8.13 126 8.322 130 ;
     END
   END axi_wdata_o[27]
   PIN axi_wdata_o[28]
@@ -1694,7 +1910,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  26.598 126 26.79 130 ;
+        RECT  23.52 126 23.712 130 ;
     END
   END axi_wdata_o[28]
   PIN axi_wdata_o[29]
@@ -1702,7 +1918,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  4.026 126 4.218 130 ;
+        RECT  0.948 126 1.14 130 ;
     END
   END axi_wdata_o[29]
   PIN axi_wdata_o[2]
@@ -1710,7 +1926,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  39.936 126 40.128 130 ;
+        RECT  70.716 126 70.908 130 ;
     END
   END axi_wdata_o[2]
   PIN axi_wdata_o[30]
@@ -1718,7 +1934,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  29.676 126 29.868 130 ;
+        RECT  22.494 126 22.686 130 ;
     END
   END axi_wdata_o[30]
   PIN axi_wdata_o[31]
@@ -1726,7 +1942,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  30.702 126 30.894 130 ;
+        RECT  27.624 126 27.816 130 ;
     END
   END axi_wdata_o[31]
   PIN axi_wdata_o[3]
@@ -1734,7 +1950,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  38.91 126 39.102 130 ;
+        RECT  68.664 126 68.856 130 ;
     END
   END axi_wdata_o[3]
   PIN axi_wdata_o[4]
@@ -1742,7 +1958,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  8.13 126 8.322 130 ;
+        RECT  64.56 126 64.752 130 ;
     END
   END axi_wdata_o[4]
   PIN axi_wdata_o[5]
@@ -1750,7 +1966,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  33.78 126 33.972 130 ;
+        RECT  19.416 126 19.608 130 ;
     END
   END axi_wdata_o[5]
   PIN axi_wdata_o[6]
@@ -1758,7 +1974,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  16.338 126 16.53 130 ;
+        RECT  21.468 126 21.66 130 ;
     END
   END axi_wdata_o[6]
   PIN axi_wdata_o[7]
@@ -1766,71 +1982,79 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  14.286 126 14.478 130 ;
+        RECT  12.234 126 12.426 130 ;
     END
   END axi_wdata_o[7]
   PIN axi_wdata_o[8]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 82.002 4 82.194 ;
+      LAYER M5 ;
+        RECT  11.208 126 11.4 130 ;
     END
   END axi_wdata_o[8]
   PIN axi_wdata_o[9]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 110.73 4 110.922 ;
+      LAYER M5 ;
+        RECT  74.82 0 75.012 4 ;
     END
   END axi_wdata_o[9]
+  PIN axi_wlast_o
+    DIRECTION OUTPUT ;
+    USE SIGNAL ;
+    PORT
+      LAYER M5 ;
+        RECT  1.974 126 2.166 130 ;
+    END
+  END axi_wlast_o
   PIN axi_wready_i
     DIRECTION INPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 76.872 4 77.064 ;
+      LAYER M5 ;
+        RECT  49.17 126 49.362 130 ;
     END
   END axi_wready_i
   PIN axi_wstrb_o[0]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 108.678 130 108.87 ;
+      LAYER M5 ;
+        RECT  53.274 0 53.466 4 ;
     END
   END axi_wstrb_o[0]
   PIN axi_wstrb_o[1]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 112.782 130 112.974 ;
+      LAYER M5 ;
+        RECT  67.638 0 67.83 4 ;
     END
   END axi_wstrb_o[1]
   PIN axi_wstrb_o[2]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 126.12 130 126.312 ;
+      LAYER M5 ;
+        RECT  52.248 0 52.44 4 ;
     END
   END axi_wstrb_o[2]
   PIN axi_wstrb_o[3]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 116.886 130 117.078 ;
+      LAYER M5 ;
+        RECT  68.664 0 68.856 4 ;
     END
   END axi_wstrb_o[3]
   PIN axi_wvalid_o
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 104.574 130 104.766 ;
+      LAYER M5 ;
+        RECT  26.598 126 26.79 130 ;
     END
   END axi_wvalid_o
   PIN clk_i
@@ -1838,351 +2062,351 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  7.104 0 7.296 4 ;
+        RECT  6.078 0 6.27 4 ;
     END
   END clk_i
   PIN commit_insn_o[0]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 119.964 130 120.156 ;
+      LAYER M5 ;
+        RECT  104.574 126 104.766 130 ;
     END
   END commit_insn_o[0]
   PIN commit_insn_o[10]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 128.172 130 128.364 ;
+      LAYER M5 ;
+        RECT  125.094 0 125.286 4 ;
     END
   END commit_insn_o[10]
   PIN commit_insn_o[11]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 96.366 130 96.558 ;
+      LAYER M5 ;
+        RECT  111.756 0 111.948 4 ;
     END
   END commit_insn_o[11]
   PIN commit_insn_o[12]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 88.158 130 88.35 ;
+      LAYER M5 ;
+        RECT  98.418 0 98.61 4 ;
     END
   END commit_insn_o[12]
   PIN commit_insn_o[13]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 91.236 130 91.428 ;
+      LAYER M5 ;
+        RECT  117.912 0 118.104 4 ;
     END
   END commit_insn_o[13]
   PIN commit_insn_o[14]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 87.132 130 87.324 ;
+      LAYER M5 ;
+        RECT  113.808 0 114 4 ;
     END
   END commit_insn_o[14]
   PIN commit_insn_o[15]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 98.418 130 98.61 ;
+      LAYER M5 ;
+        RECT  124.068 0 124.26 4 ;
     END
   END commit_insn_o[15]
   PIN commit_insn_o[16]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 90.21 130 90.402 ;
+      LAYER M5 ;
+        RECT  101.496 0 101.688 4 ;
     END
   END commit_insn_o[16]
   PIN commit_insn_o[17]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 93.288 130 93.48 ;
+      LAYER M5 ;
+        RECT  115.86 0 116.052 4 ;
     END
   END commit_insn_o[17]
   PIN commit_insn_o[18]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 97.392 130 97.584 ;
+      LAYER M5 ;
+        RECT  122.016 0 122.208 4 ;
     END
   END commit_insn_o[18]
   PIN commit_insn_o[19]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 129.198 130 129.39 ;
+      LAYER M5 ;
+        RECT  104.574 0 104.766 4 ;
     END
   END commit_insn_o[19]
   PIN commit_insn_o[1]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 79.95 130 80.142 ;
+      LAYER M5 ;
+        RECT  110.73 0 110.922 4 ;
     END
   END commit_insn_o[1]
   PIN commit_insn_o[20]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 82.002 130 82.194 ;
+      LAYER M5 ;
+        RECT  116.886 0 117.078 4 ;
     END
   END commit_insn_o[20]
   PIN commit_insn_o[21]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 100.47 130 100.662 ;
+      LAYER M5 ;
+        RECT  103.548 126 103.74 130 ;
     END
   END commit_insn_o[21]
   PIN commit_insn_o[22]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 80.976 130 81.168 ;
+      LAYER M5 ;
+        RECT  123.042 0 123.234 4 ;
     END
   END commit_insn_o[22]
   PIN commit_insn_o[23]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 84.054 130 84.246 ;
+      LAYER M5 ;
+        RECT  47.118 0 47.31 4 ;
     END
   END commit_insn_o[23]
   PIN commit_insn_o[24]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 94.314 130 94.506 ;
+      LAYER M5 ;
+        RECT  120.99 0 121.182 4 ;
     END
   END commit_insn_o[24]
   PIN commit_insn_o[25]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 120.99 130 121.182 ;
+      LAYER M5 ;
+        RECT  114.834 0 115.026 4 ;
     END
   END commit_insn_o[25]
   PIN commit_insn_o[26]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 78.924 130 79.116 ;
+      LAYER M5 ;
+        RECT  97.392 126 97.584 130 ;
     END
   END commit_insn_o[26]
   PIN commit_insn_o[27]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 118.938 130 119.13 ;
+      LAYER M5 ;
+        RECT  106.626 0 106.818 4 ;
     END
   END commit_insn_o[27]
   PIN commit_insn_o[28]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 83.028 130 83.22 ;
+      LAYER M5 ;
+        RECT  108.678 0 108.87 4 ;
     END
   END commit_insn_o[28]
   PIN commit_insn_o[29]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 125.094 130 125.286 ;
+      LAYER M5 ;
+        RECT  105.6 0 105.792 4 ;
     END
   END commit_insn_o[29]
   PIN commit_insn_o[2]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 113.808 130 114 ;
+      LAYER M5 ;
+        RECT  109.704 0 109.896 4 ;
     END
   END commit_insn_o[2]
   PIN commit_insn_o[30]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 99.444 130 99.636 ;
+      LAYER M5 ;
+        RECT  128.172 126 128.364 130 ;
     END
   END commit_insn_o[30]
   PIN commit_insn_o[31]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 86.106 130 86.298 ;
+      LAYER M5 ;
+        RECT  118.938 0 119.13 4 ;
     END
   END commit_insn_o[31]
   PIN commit_insn_o[3]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 75.846 130 76.038 ;
+      LAYER M5 ;
+        RECT  112.782 0 112.974 4 ;
     END
   END commit_insn_o[3]
   PIN commit_insn_o[4]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 89.184 130 89.376 ;
+      LAYER M5 ;
+        RECT  119.964 0 120.156 4 ;
     END
   END commit_insn_o[4]
   PIN commit_insn_o[5]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 102.522 130 102.714 ;
+      LAYER M5 ;
+        RECT  98.418 126 98.61 130 ;
     END
   END commit_insn_o[5]
   PIN commit_insn_o[6]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 77.898 130 78.09 ;
+      LAYER M5 ;
+        RECT  100.47 126 100.662 130 ;
     END
   END commit_insn_o[6]
   PIN commit_insn_o[7]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 68.664 130 68.856 ;
+      LAYER M5 ;
+        RECT  129.198 126 129.39 130 ;
     END
   END commit_insn_o[7]
   PIN commit_insn_o[8]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 117.912 130 118.104 ;
+      LAYER M5 ;
+        RECT  107.652 0 107.844 4 ;
     END
   END commit_insn_o[8]
   PIN commit_insn_o[9]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 95.34 130 95.532 ;
+      LAYER M5 ;
+        RECT  103.548 0 103.74 4 ;
     END
   END commit_insn_o[9]
   PIN commit_pc_o[0]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 71.742 130 71.934 ;
+      LAYER M5 ;
+        RECT  102.522 126 102.714 130 ;
     END
   END commit_pc_o[0]
   PIN commit_pc_o[10]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 66.612 130 66.804 ;
+      LAYER M5 ;
+        RECT  91.236 126 91.428 130 ;
     END
   END commit_pc_o[10]
   PIN commit_pc_o[11]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 105.6 130 105.792 ;
+      LAYER M5 ;
+        RECT  92.262 126 92.454 130 ;
     END
   END commit_pc_o[11]
   PIN commit_pc_o[12]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 72.768 130 72.96 ;
+      LAYER M5 ;
+        RECT  33.78 126 33.972 130 ;
     END
   END commit_pc_o[12]
   PIN commit_pc_o[13]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 73.794 130 73.986 ;
+      LAYER M5 ;
+        RECT  96.366 126 96.558 130 ;
     END
   END commit_pc_o[13]
   PIN commit_pc_o[14]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 114.834 130 115.026 ;
+      LAYER M5 ;
+        RECT  116.886 126 117.078 130 ;
     END
   END commit_pc_o[14]
   PIN commit_pc_o[15]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 70.716 130 70.908 ;
+      LAYER M5 ;
+        RECT  115.86 126 116.052 130 ;
     END
   END commit_pc_o[15]
   PIN commit_pc_o[16]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 92.262 130 92.454 ;
+      LAYER M5 ;
+        RECT  69.69 126 69.882 130 ;
     END
   END commit_pc_o[16]
   PIN commit_pc_o[17]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  126 103.548 130 103.74 ;
+      LAYER M5 ;
+        RECT  29.676 126 29.868 130 ;
     END
   END commit_pc_o[17]
   PIN commit_pc_o[18]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 35.832 4 36.024 ;
+      LAYER M5 ;
+        RECT  101.496 126 101.688 130 ;
     END
   END commit_pc_o[18]
   PIN commit_pc_o[19]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 25.572 4 25.764 ;
+      LAYER M5 ;
+        RECT  63.534 126 63.726 130 ;
     END
   END commit_pc_o[19]
   PIN commit_pc_o[1]
@@ -2190,7 +2414,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  85.08 0 85.272 4 ;
+        RECT  60.456 126 60.648 130 ;
     END
   END commit_pc_o[1]
   PIN commit_pc_o[20]
@@ -2198,23 +2422,23 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  93.288 0 93.48 4 ;
+        RECT  99.444 126 99.636 130 ;
     END
   END commit_pc_o[20]
   PIN commit_pc_o[21]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 61.482 4 61.674 ;
+      LAYER M5 ;
+        RECT  94.314 126 94.506 130 ;
     END
   END commit_pc_o[21]
   PIN commit_pc_o[22]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 44.04 4 44.232 ;
+      LAYER M5 ;
+        RECT  112.782 126 112.974 130 ;
     END
   END commit_pc_o[22]
   PIN commit_pc_o[23]
@@ -2222,23 +2446,23 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  96.366 0 96.558 4 ;
+        RECT  95.34 126 95.532 130 ;
     END
   END commit_pc_o[23]
   PIN commit_pc_o[24]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 69.69 4 69.882 ;
+      LAYER M5 ;
+        RECT  65.586 126 65.778 130 ;
     END
   END commit_pc_o[24]
   PIN commit_pc_o[25]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 51.222 4 51.414 ;
+      LAYER M5 ;
+        RECT  30.702 126 30.894 130 ;
     END
   END commit_pc_o[25]
   PIN commit_pc_o[26]
@@ -2246,31 +2470,31 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  98.418 0 98.61 4 ;
+        RECT  90.21 126 90.402 130 ;
     END
   END commit_pc_o[26]
   PIN commit_pc_o[27]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 45.066 4 45.258 ;
+      LAYER M5 ;
+        RECT  15.312 126 15.504 130 ;
     END
   END commit_pc_o[27]
   PIN commit_pc_o[28]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 68.664 4 68.856 ;
+      LAYER M5 ;
+        RECT  79.95 126 80.142 130 ;
     END
   END commit_pc_o[28]
   PIN commit_pc_o[29]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 70.716 4 70.908 ;
+      LAYER M5 ;
+        RECT  89.184 126 89.376 130 ;
     END
   END commit_pc_o[29]
   PIN commit_pc_o[2]
@@ -2278,23 +2502,23 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  88.158 0 88.35 4 ;
+        RECT  126.12 126 126.312 130 ;
     END
   END commit_pc_o[2]
   PIN commit_pc_o[30]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 56.352 4 56.544 ;
+      LAYER M5 ;
+        RECT  110.73 126 110.922 130 ;
     END
   END commit_pc_o[30]
   PIN commit_pc_o[31]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 67.638 4 67.83 ;
+      LAYER M5 ;
+        RECT  7.104 126 7.296 130 ;
     END
   END commit_pc_o[31]
   PIN commit_pc_o[3]
@@ -2302,7 +2526,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  86.106 0 86.298 4 ;
+        RECT  88.158 126 88.35 130 ;
     END
   END commit_pc_o[3]
   PIN commit_pc_o[4]
@@ -2310,15 +2534,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  97.392 0 97.584 4 ;
+        RECT  108.678 126 108.87 130 ;
     END
   END commit_pc_o[4]
   PIN commit_pc_o[5]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 80.976 4 81.168 ;
+      LAYER M5 ;
+        RECT  111.756 126 111.948 130 ;
     END
   END commit_pc_o[5]
   PIN commit_pc_o[6]
@@ -2326,15 +2550,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  87.132 0 87.324 4 ;
+        RECT  106.626 126 106.818 130 ;
     END
   END commit_pc_o[6]
   PIN commit_pc_o[7]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 78.924 4 79.116 ;
+      LAYER M5 ;
+        RECT  87.132 126 87.324 130 ;
     END
   END commit_pc_o[7]
   PIN commit_pc_o[8]
@@ -2342,7 +2566,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  94.314 0 94.506 4 ;
+        RECT  117.912 126 118.104 130 ;
     END
   END commit_pc_o[8]
   PIN commit_pc_o[9]
@@ -2350,95 +2574,95 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  95.34 0 95.532 4 ;
+        RECT  93.288 126 93.48 130 ;
     END
   END commit_pc_o[9]
   PIN commit_valid_o
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 38.91 4 39.102 ;
+      LAYER M5 ;
+        RECT  105.6 126 105.792 130 ;
     END
   END commit_valid_o
   PIN debug_branch_taken_o
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 88.158 4 88.35 ;
+      LAYER M5 ;
+        RECT  3 126 3.192 130 ;
     END
   END debug_branch_taken_o
   PIN debug_ebreak_o
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 60.456 4 60.648 ;
+      LAYER M5 ;
+        RECT  100.47 0 100.662 4 ;
     END
   END debug_ebreak_o
   PIN debug_pc_src_o
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 71.742 4 71.934 ;
+      LAYER M5 ;
+        RECT  102.522 0 102.714 4 ;
     END
   END debug_pc_src_o
   PIN debug_rs1_data_o[0]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 96.366 4 96.558 ;
+      LAYER M5 ;
+        RECT  85.08 126 85.272 130 ;
     END
   END debug_rs1_data_o[0]
   PIN debug_rs1_data_o[10]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 120.99 4 121.182 ;
+      LAYER M5 ;
+        RECT  86.106 126 86.298 130 ;
     END
   END debug_rs1_data_o[10]
   PIN debug_rs1_data_o[11]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 24.546 4 24.738 ;
+      LAYER M5 ;
+        RECT  24.546 126 24.738 130 ;
     END
   END debug_rs1_data_o[11]
   PIN debug_rs1_data_o[12]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 104.574 4 104.766 ;
+      LAYER M5 ;
+        RECT  83.028 126 83.22 130 ;
     END
   END debug_rs1_data_o[12]
   PIN debug_rs1_data_o[13]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 19.416 4 19.608 ;
+      LAYER M5 ;
+        RECT  122.016 126 122.208 130 ;
     END
   END debug_rs1_data_o[13]
   PIN debug_rs1_data_o[14]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 74.82 4 75.012 ;
+      LAYER M5 ;
+        RECT  119.964 126 120.156 130 ;
     END
   END debug_rs1_data_o[14]
   PIN debug_rs1_data_o[15]
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 116.886 4 117.078 ;
+      LAYER M5 ;
+        RECT  31.728 126 31.92 130 ;
     END
   END debug_rs1_data_o[15]
   PIN debug_rs1_data_o[16]
@@ -2446,7 +2670,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 123.042 4 123.234 ;
+        RECT  0 60.456 4 60.648 ;
     END
   END debug_rs1_data_o[16]
   PIN debug_rs1_data_o[17]
@@ -2454,7 +2678,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 125.094 4 125.286 ;
+        RECT  0 120.99 4 121.182 ;
     END
   END debug_rs1_data_o[17]
   PIN debug_rs1_data_o[18]
@@ -2462,7 +2686,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 53.274 4 53.466 ;
+        RECT  0 78.924 4 79.116 ;
     END
   END debug_rs1_data_o[18]
   PIN debug_rs1_data_o[19]
@@ -2470,7 +2694,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 128.172 4 128.364 ;
+        RECT  0 105.6 4 105.792 ;
     END
   END debug_rs1_data_o[19]
   PIN debug_rs1_data_o[1]
@@ -2478,7 +2702,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 117.912 4 118.104 ;
+        RECT  0 101.496 4 101.688 ;
     END
   END debug_rs1_data_o[1]
   PIN debug_rs1_data_o[20]
@@ -2486,7 +2710,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 90.21 4 90.402 ;
+        RECT  0 93.288 4 93.48 ;
     END
   END debug_rs1_data_o[20]
   PIN debug_rs1_data_o[21]
@@ -2494,7 +2718,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 92.262 4 92.454 ;
+        RECT  0 103.548 4 103.74 ;
     END
   END debug_rs1_data_o[21]
   PIN debug_rs1_data_o[22]
@@ -2502,7 +2726,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 109.704 4 109.896 ;
+        RECT  0 126.12 4 126.312 ;
     END
   END debug_rs1_data_o[22]
   PIN debug_rs1_data_o[23]
@@ -2510,7 +2734,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 85.08 4 85.272 ;
+        RECT  0 124.068 4 124.26 ;
     END
   END debug_rs1_data_o[23]
   PIN debug_rs1_data_o[24]
@@ -2518,7 +2742,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 43.014 4 43.206 ;
+        RECT  0 77.898 4 78.09 ;
     END
   END debug_rs1_data_o[24]
   PIN debug_rs1_data_o[25]
@@ -2526,7 +2750,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 126.12 4 126.312 ;
+        RECT  0 100.47 4 100.662 ;
     END
   END debug_rs1_data_o[25]
   PIN debug_rs1_data_o[26]
@@ -2534,7 +2758,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 127.146 4 127.338 ;
+        RECT  0 112.782 4 112.974 ;
     END
   END debug_rs1_data_o[26]
   PIN debug_rs1_data_o[27]
@@ -2542,7 +2766,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 124.068 4 124.26 ;
+        RECT  0 129.198 4 129.39 ;
     END
   END debug_rs1_data_o[27]
   PIN debug_rs1_data_o[28]
@@ -2550,7 +2774,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 33.78 4 33.972 ;
+        RECT  0 127.146 4 127.338 ;
     END
   END debug_rs1_data_o[28]
   PIN debug_rs1_data_o[29]
@@ -2558,7 +2782,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 106.626 4 106.818 ;
+        RECT  0 110.73 4 110.922 ;
     END
   END debug_rs1_data_o[29]
   PIN debug_rs1_data_o[2]
@@ -2566,7 +2790,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 20.442 4 20.634 ;
+        RECT  0 76.872 4 77.064 ;
     END
   END debug_rs1_data_o[2]
   PIN debug_rs1_data_o[30]
@@ -2574,7 +2798,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 95.34 4 95.532 ;
+        RECT  0 92.262 4 92.454 ;
     END
   END debug_rs1_data_o[30]
   PIN debug_rs1_data_o[31]
@@ -2582,7 +2806,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 23.52 4 23.712 ;
+        RECT  0 128.172 4 128.364 ;
     END
   END debug_rs1_data_o[31]
   PIN debug_rs1_data_o[3]
@@ -2590,7 +2814,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 129.198 4 129.39 ;
+        RECT  0 61.482 4 61.674 ;
     END
   END debug_rs1_data_o[3]
   PIN debug_rs1_data_o[4]
@@ -2598,7 +2822,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 103.548 4 103.74 ;
+        RECT  0 74.82 4 75.012 ;
     END
   END debug_rs1_data_o[4]
   PIN debug_rs1_data_o[5]
@@ -2606,7 +2830,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 58.404 4 58.596 ;
+        RECT  0 114.834 4 115.026 ;
     END
   END debug_rs1_data_o[5]
   PIN debug_rs1_data_o[6]
@@ -2614,7 +2838,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 122.016 4 122.208 ;
+        RECT  0 111.756 4 111.948 ;
     END
   END debug_rs1_data_o[6]
   PIN debug_rs1_data_o[7]
@@ -2622,7 +2846,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 30.702 4 30.894 ;
+        RECT  0 75.846 4 76.038 ;
     END
   END debug_rs1_data_o[7]
   PIN debug_rs1_data_o[8]
@@ -2630,7 +2854,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 113.808 4 114 ;
+        RECT  0 90.21 4 90.402 ;
     END
   END debug_rs1_data_o[8]
   PIN debug_rs1_data_o[9]
@@ -2638,7 +2862,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 93.288 4 93.48 ;
+        RECT  0 87.132 4 87.324 ;
     END
   END debug_rs1_data_o[9]
   PIN debug_rs2_data_o[0]
@@ -2646,7 +2870,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 118.938 4 119.13 ;
+        RECT  0 84.054 4 84.246 ;
     END
   END debug_rs2_data_o[0]
   PIN debug_rs2_data_o[10]
@@ -2654,7 +2878,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 62.508 4 62.7 ;
+        RECT  0 95.34 4 95.532 ;
     END
   END debug_rs2_data_o[10]
   PIN debug_rs2_data_o[11]
@@ -2662,7 +2886,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 28.65 4 28.842 ;
+        RECT  0 86.106 4 86.298 ;
     END
   END debug_rs2_data_o[11]
   PIN debug_rs2_data_o[12]
@@ -2670,7 +2894,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 34.806 4 34.998 ;
+        RECT  0 115.86 4 116.052 ;
     END
   END debug_rs2_data_o[12]
   PIN debug_rs2_data_o[13]
@@ -2678,7 +2902,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 31.728 4 31.92 ;
+        RECT  0 106.626 4 106.818 ;
     END
   END debug_rs2_data_o[13]
   PIN debug_rs2_data_o[14]
@@ -2686,7 +2910,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 105.6 4 105.792 ;
+        RECT  0 63.534 4 63.726 ;
     END
   END debug_rs2_data_o[14]
   PIN debug_rs2_data_o[15]
@@ -2694,7 +2918,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 91.236 4 91.428 ;
+        RECT  0 94.314 4 94.506 ;
     END
   END debug_rs2_data_o[15]
   PIN debug_rs2_data_o[16]
@@ -2702,7 +2926,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 114.834 4 115.026 ;
+        RECT  0 85.08 4 85.272 ;
     END
   END debug_rs2_data_o[16]
   PIN debug_rs2_data_o[17]
@@ -2710,7 +2934,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 111.756 4 111.948 ;
+        RECT  0 97.392 4 97.584 ;
     END
   END debug_rs2_data_o[17]
   PIN debug_rs2_data_o[18]
@@ -2718,7 +2942,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 73.794 4 73.986 ;
+        RECT  0 89.184 4 89.376 ;
     END
   END debug_rs2_data_o[18]
   PIN debug_rs2_data_o[19]
@@ -2726,7 +2950,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 22.494 4 22.686 ;
+        RECT  0 102.522 4 102.714 ;
     END
   END debug_rs2_data_o[19]
   PIN debug_rs2_data_o[1]
@@ -2734,7 +2958,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 107.652 4 107.844 ;
+        RECT  0 73.794 4 73.986 ;
     END
   END debug_rs2_data_o[1]
   PIN debug_rs2_data_o[20]
@@ -2742,7 +2966,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 98.418 4 98.61 ;
+        RECT  0 107.652 4 107.844 ;
     END
   END debug_rs2_data_o[20]
   PIN debug_rs2_data_o[21]
@@ -2750,7 +2974,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 50.196 4 50.388 ;
+        RECT  0 99.444 4 99.636 ;
     END
   END debug_rs2_data_o[21]
   PIN debug_rs2_data_o[22]
@@ -2758,7 +2982,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 100.47 4 100.662 ;
+        RECT  0 104.574 4 104.766 ;
     END
   END debug_rs2_data_o[22]
   PIN debug_rs2_data_o[23]
@@ -2766,7 +2990,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 59.43 4 59.622 ;
+        RECT  0 80.976 4 81.168 ;
     END
   END debug_rs2_data_o[23]
   PIN debug_rs2_data_o[24]
@@ -2774,7 +2998,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 112.782 4 112.974 ;
+        RECT  0 83.028 4 83.22 ;
     END
   END debug_rs2_data_o[24]
   PIN debug_rs2_data_o[25]
@@ -2782,7 +3006,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 94.314 4 94.506 ;
+        RECT  0 123.042 4 123.234 ;
     END
   END debug_rs2_data_o[25]
   PIN debug_rs2_data_o[26]
@@ -2790,7 +3014,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 108.678 4 108.87 ;
+        RECT  0 96.366 4 96.558 ;
     END
   END debug_rs2_data_o[26]
   PIN debug_rs2_data_o[27]
@@ -2798,7 +3022,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 41.988 4 42.18 ;
+        RECT  0 62.508 4 62.7 ;
     END
   END debug_rs2_data_o[27]
   PIN debug_rs2_data_o[28]
@@ -2806,7 +3030,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 57.378 4 57.57 ;
+        RECT  0 82.002 4 82.194 ;
     END
   END debug_rs2_data_o[28]
   PIN debug_rs2_data_o[29]
@@ -2814,7 +3038,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 99.444 4 99.636 ;
+        RECT  0 98.418 4 98.61 ;
     END
   END debug_rs2_data_o[29]
   PIN debug_rs2_data_o[2]
@@ -2822,7 +3046,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 101.496 4 101.688 ;
+        RECT  0 125.094 4 125.286 ;
     END
   END debug_rs2_data_o[2]
   PIN debug_rs2_data_o[30]
@@ -2838,7 +3062,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 32.754 4 32.946 ;
+        RECT  0 109.704 4 109.896 ;
     END
   END debug_rs2_data_o[31]
   PIN debug_rs2_data_o[3]
@@ -2846,7 +3070,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 46.092 4 46.284 ;
+        RECT  0 116.886 4 117.078 ;
     END
   END debug_rs2_data_o[3]
   PIN debug_rs2_data_o[4]
@@ -2854,7 +3078,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 87.132 4 87.324 ;
+        RECT  0 118.938 4 119.13 ;
     END
   END debug_rs2_data_o[4]
   PIN debug_rs2_data_o[5]
@@ -2862,7 +3086,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 27.624 4 27.816 ;
+        RECT  0 79.95 4 80.142 ;
     END
   END debug_rs2_data_o[5]
   PIN debug_rs2_data_o[6]
@@ -2870,7 +3094,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 119.964 4 120.156 ;
+        RECT  0 91.236 4 91.428 ;
     END
   END debug_rs2_data_o[6]
   PIN debug_rs2_data_o[7]
@@ -2878,7 +3102,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 49.17 4 49.362 ;
+        RECT  0 88.158 4 88.35 ;
     END
   END debug_rs2_data_o[7]
   PIN debug_rs2_data_o[8]
@@ -2886,7 +3110,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 115.86 4 116.052 ;
+        RECT  0 108.678 4 108.87 ;
     END
   END debug_rs2_data_o[8]
   PIN debug_rs2_data_o[9]
@@ -2894,7 +3118,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 48.144 4 48.336 ;
+        RECT  0 113.808 4 114 ;
     END
   END debug_rs2_data_o[9]
   PIN debug_state_o[0]
@@ -2902,7 +3126,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 37.884 4 38.076 ;
+        RECT  0 117.912 4 118.104 ;
     END
   END debug_state_o[0]
   PIN debug_state_o[1]
@@ -2910,7 +3134,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 26.598 4 26.79 ;
+        RECT  0 71.742 4 71.934 ;
     END
   END debug_state_o[1]
   PIN debug_state_o[2]
@@ -2918,7 +3142,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 77.898 4 78.09 ;
+        RECT  0 122.016 4 122.208 ;
     END
   END debug_state_o[2]
   PIN debug_state_o[3]
@@ -2926,15 +3150,15 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 29.676 4 29.868 ;
+        RECT  0 119.964 4 120.156 ;
     END
   END debug_state_o[3]
   PIN debug_take_branch_jump_o
     DIRECTION OUTPUT ;
     USE SIGNAL ;
     PORT
-      LAYER M4 ;
-        RECT  0 64.56 4 64.752 ;
+      LAYER M5 ;
+        RECT  99.444 0 99.636 4 ;
     END
   END debug_take_branch_jump_o
   PIN ext_irq_i
@@ -2942,7 +3166,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 54.3 4 54.492 ;
+        RECT  0 64.56 4 64.752 ;
     END
   END ext_irq_i
   PIN rst_n_i
@@ -2950,7 +3174,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M5 ;
-        RECT  8.13 0 8.322 4 ;
+        RECT  31.728 0 31.92 4 ;
     END
   END rst_n_i
   PIN timer_irq_i
@@ -2958,7 +3182,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 21.468 4 21.66 ;
+        RECT  0 65.586 4 65.778 ;
     END
   END timer_irq_i
   PIN trap_cause_o[0]
@@ -2966,7 +3190,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 47.118 4 47.31 ;
+        RECT  0 67.638 4 67.83 ;
     END
   END trap_cause_o[0]
   PIN trap_cause_o[1]
@@ -2974,7 +3198,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 55.326 4 55.518 ;
+        RECT  0 70.716 4 70.908 ;
     END
   END trap_cause_o[1]
   PIN trap_cause_o[2]
@@ -2982,7 +3206,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 52.248 4 52.44 ;
+        RECT  0 68.664 4 68.856 ;
     END
   END trap_cause_o[2]
   PIN trap_cause_o[3]
@@ -2990,7 +3214,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 39.936 4 40.128 ;
+        RECT  0 69.69 4 69.882 ;
     END
   END trap_cause_o[3]
   PIN trap_taken_o
@@ -2998,7 +3222,7 @@ MACRO rv32i_cpu_top
     USE SIGNAL ;
     PORT
       LAYER M4 ;
-        RECT  0 40.962 4 41.154 ;
+        RECT  0 66.612 4 66.804 ;
     END
   END trap_taken_o
   OBS
