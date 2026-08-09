@@ -146,5 +146,7 @@
     ],
     "TIMING_VIOLATION_CORNERS": [
         "*tt*"
-    ]
+    ],
+    "// PIN_ORDER_NOTE": "FP_PIN_ORDER_CFG pins the macro's boundary pin layout. Without it OpenROAD free-floats pin assignment per block run: two consecutive regenerations moved 393 of 401 pins, which perturbed SoC placement around u_cpu, doubled post-CTS cpu_clk skew (worst_hold -485.6 -> -922.1 ps), drove hold violations 805 -> 4702 endpoints and 4814 inserted hold buffers, and took cpu_clk WNS from -60.66 to -596.00 ps. The file is generated from the known-good run-21 abstract. io_place.py ERRORS if a design pin is missing from the file or vice versa (power/ground are excluded by the tool), so adding a port fails loudly instead of silently reshuffling.",
+    "FP_PIN_ORDER_CFG": "dir::pin_order.cfg"
 }

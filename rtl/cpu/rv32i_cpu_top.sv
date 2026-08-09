@@ -254,33 +254,84 @@ module rv32i_cpu_top #(
   //   unaffected). Reads get exactly one APB3 wait state so the registered
   //   apb_prdata_o is valid on the same cycle apb_pready_o asserts.
   //
-  //   apb_read_wait_q tracks whether the wait cycle has already been
-  //   inserted for the read transfer currently in the ACCESS phase:
-  //     SETUP  (penable=0):            apb_read_wait_q held at 0.
-  //     ACCESS, 1st cycle (wait_q=0):  apb_pready_o=0 (wait state) -> wait_q<=1.
-  //     ACCESS, 2nd cycle (wait_q=1):  apb_pready_o=1 (transfer completes) -> wait_q<=0.
-  logic apb_read_wait_q;
-
+  //   apb_pready_o is likewise a PURE registered output. It was previously
+  //   `apb_pwrite_i ? 1'b1 : apb_read_wait_q`, and that one 2:1 mux exported a
+  //   601.9 ps combinational arc from apb_pwrite_i in the macro Liberty —
+  //   the same ~600 ps every APB input pays to cross this block's internal
+  //   distribution, and the same reason apb_pslverr_o had to become a pure
+  //   flop (see its comment below). Left combinational it would simply have
+  //   become the next cpu_clk violator at SoC level after pslverr was fixed.
+  //
+  //   EXTERNAL BEHAVIOUR IS UNCHANGED — writes still complete in one ACCESS
+  //   cycle, reads still take exactly one wait state:
+  //     write: SETUP (psel=1,pen=0,pwrite=1) latches 1 -> pready=1 throughout
+  //            the single ACCESS cycle. Write-commit conditions elsewhere in
+  //            this file stay (psel && penable && pwrite), true for exactly
+  //            that one cycle, so pulse outputs such as dbg_pc_wr_en still
+  //            fire once.
+  //     read:  SETUP latches 0; ACCESS cycle 1 (pready=0) latches 1; ACCESS
+  //            cycle 2 pready=1 completes the transfer alongside the
+  //            registered apb_prdata_o, then self-clears.
   always_ff @(posedge clk_i) begin
     if (!rst_n_i) begin
-      apb_read_wait_q <= 1'b0;
-    end else if (apb_psel_i && apb_penable_i && !apb_pwrite_i && !apb_read_wait_q) begin
-      apb_read_wait_q <= 1'b1;
+      apb_pready_o <= 1'b0;
     end else begin
-      apb_read_wait_q <= 1'b0;
+      apb_pready_o <= (apb_psel_i && !apb_penable_i &&  apb_pwrite_i) ||
+                      (apb_psel_i &&  apb_penable_i && !apb_pwrite_i && !apb_pready_o);
     end
   end
-
-  assign apb_pready_o  = apb_pwrite_i ? 1'b1 : apb_read_wait_q;
   // CSR debug registers (0x200-0x214) are read-only — writes return PSLVERR.
-  // Combinational (not registered): writes complete in a single ACCESS cycle
-  // (apb_pready_o=1 immediately for pwrite=1 above), and paddr/psel/penable/
-  // pwrite are held stable by the master for that whole cycle, so this is
-  // already valid at the instant apb_pready_o samples true — no wait-state
-  // interaction to account for on the write side.
-  assign apb_pslverr_o = apb_psel_i && apb_penable_i && apb_pwrite_i &&
-                         (apb_paddr_i >= 12'h200) && (apb_paddr_i <= 12'h214) &&
-                         (apb_paddr_i[1:0] == 2'b00);
+  //
+  // SETUP-PHASE DECODE (GH #96 run-21 follow-up). The address-range compare
+  // used to sit combinationally between the APB input pins and apb_pslverr_o.
+  // At SoC level that exported a 620.67 ps macro in->out arc which, after the
+  // apb_prdata_o register landed, became the LAST remaining cpu_clk violator
+  // (-60.66 ps, 1 endpoint, run 21 / RUN_2026-08-08_04-24-08).
+  //
+  // APB3 guarantees PADDR/PWRITE/PSEL are stable from the SETUP phase through
+  // the whole ACCESS phase, so the decode is evaluated one cycle EARLY (during
+  // SETUP: psel=1, penable=0) and registered. Only a two-gate qualification
+  // with psel/penable is left on the output path.
+  //
+  // Deliberately NOT done by registering the output the way apb_prdata_o was:
+  // that would force a wait state onto WRITES, and writes commit on
+  // (psel && penable && pwrite) at two sites below — including pulse outputs
+  // such as dbg_pc_wr_en — so a two-cycle-long penable would fire them TWICE.
+  // The SETUP-phase decode keeps writes single-cycle and leaves every existing
+  // write-commit condition, and every APB master, untouched.
+  // apb_pslverr_o is a PURE registered output — no combinational qualification
+  // on the output path at all.
+  //
+  // MEASURED, not assumed: an intermediate version of this fix registered the
+  // decode in SETUP but still qualified the output with
+  // (apb_pslverr_q && apb_psel_i && apb_penable_i). That did NOT help — the
+  // regenerated Liberty still reported a 617.9 ps combinational arc, now from
+  // apb_psel_i instead of apb_paddr_i (vs 620.67 ps before). The cost was
+  // never the address decode: apb_psel_i drives a large internal fanout and
+  // its buffered distribution across the block is what spends the ~600 ps
+  // before reaching any output gate. So ANY combinational term on this output,
+  // however shallow it looks in RTL, re-exports the same arc.
+  //
+  // Capturing the whole condition — including the SETUP-phase qualifier — in
+  // one flop leaves clk_i as the only related pin. APB3 runs SETUP (psel=1,
+  // penable=0) for exactly one cycle immediately before ACCESS, so a value
+  // latched at the end of SETUP is asserted precisely during ACCESS, which is
+  // when the master samples PSLVERR alongside PREADY (writes complete in a
+  // single ACCESS cycle — apb_pready_o=1 for pwrite=1). Both masters provide
+  // that SETUP phase: axil_to_apb.sv:158 and apb_cdc_bridge.sv:527-528.
+  //
+  // Harmless corner: if a master stretched SETUP over several cycles, this
+  // would assert during them too, but PSLVERR is only meaningful while PREADY
+  // is high, so nothing samples it there.
+  always_ff @(posedge clk_i) begin
+    if (!rst_n_i) begin
+      apb_pslverr_o <= 1'b0;
+    end else begin
+      apb_pslverr_o <= apb_psel_i && !apb_penable_i && apb_pwrite_i &&
+                       (apb_paddr_i >= 12'h200) && (apb_paddr_i <= 12'h214) &&
+                       (apb_paddr_i[1:0] == 2'b00);
+    end
+  end
 
   // DBG_INSTR latch: holds the last retired instruction (commit or trap) so
   // the register reads non-zero when the CPU is halted and the pipeline is empty.
@@ -359,7 +410,7 @@ module rv32i_cpu_top #(
   // across the SETUP phase and both ACCESS cycles of a read transfer (APB3
   // protocol), so capturing apb_prdata_comb on every selected cycle
   // guarantees apb_prdata_o already holds the correct value by the cycle
-  // apb_pready_o (via apb_read_wait_q above) asserts.
+  // apb_pready_o (now a pure registered output, above) asserts.
   always_ff @(posedge clk_i) begin
     if (!rst_n_i) begin
       apb_prdata_o <= 32'h0;
