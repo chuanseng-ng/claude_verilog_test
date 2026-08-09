@@ -91,7 +91,10 @@ epic #90.
   synchronisers, the clock gate and the PLL2 APB registers.
 - **Optimisation guard band was ~0 before bead `s9f`** — the resizer margins
   were declared `units="ns"` but read in the Liberty's `1ps`. Run 23 is the
-  first multi-clock run with real margins (45 ps setup / 25 ps hold).
+  first multi-clock run with real margins — 45 ps setup / 25 ps hold in
+  `pnr/asap7/soc/config_multiclock.json`; the CPU block config
+  (`pnr/asap7/cpu/config.json`) uses 20 ps / 10 ps, sized under its own achieved
+  slack.
 - **IR drop is still unobtainable**: `analyze_power_grid` fails `PSM-0069` on
   both rails from the same M1-only tap-cell connectivity artifact.
 - Indicative ASAP7 (predictive PDK): no Magic/KLayout DRC, no Netgen LVS.
@@ -132,11 +135,17 @@ be **long** and should never occupy scarce fabric-facing slots.
 
 ### What made `cpu_clk` hard (measured, not inferred)
 
+> **Status note.** This subsection records the runs 16–19 diagnosis. §10a is
+> **retired** in the accepted run-23 configuration: all three APB outputs are now
+> pure registered outputs, so the combinational arc it excluded no longer exists.
+> What remains active is §10b (the APB *input* multicycle mirroring
+> `asap7.sdc:183-184`). See "How `cpu_clk` was closed" above for the shipped state.
+
 1. **An 800.71 ps combinational arc inside the CPU macro** — `apb_paddr_i` →
    `apb_prdata_o`, the APB debug read mux (`rv32i_cpu_top.sv:261-285`, pure
    `always_comb`). It cannot fit a 780 ps period and is fixed in Liberty. The
    CPU's own standalone sign-off already excludes it
-   (`set_false_path -to [get_ports apb_prdata_o[*]]`, `pnr/asap7/cpu/constraints/asap7.sdc:121`),
+   (`set_false_path -to [get_ports apb_prdata_o[*]]`, `pnr/asap7/cpu/constraints/asap7.sdc:150`),
    so SDC §10a restores that contract at SoC level. Root fix → bead `cyb`.
    Note `-through`, not `-from`: at block level the pin is an endpoint, at SoC
    level the path continues through it.

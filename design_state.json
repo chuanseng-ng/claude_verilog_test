@@ -1854,7 +1854,7 @@
       "hold_margin_25ps_bead_s9f_status": "ruled out as amplifier: raw pre-fix violations already hundreds of ps",
       "recommended_fix": "add FP_PIN_ORDER_CFG to pnr/asap7/cpu/config.json (durable) or revert uncommitted apb_pready_o RTL change to reproduce run21 macro (zero-risk, cheaper, loses RTL improvement)",
       "fix_implemented": "FP_PIN_ORDER_CFG added (pnr/asap7/cpu/pin_order.cfg) + all three APB outputs (apb_prdata_o/apb_pslverr_o/apb_pready_o) made pure registered outputs in rtl/cpu/rv32i_cpu_top.sv",
-      "new_pr_run_launched": false,
+      "new_pr_run_launched": "RUN_2026-08-09_14-36-16 (run 23) - completed, both domains MET; see resolution below",
       "resolution": {
         "status": "RESOLVED",
         "run": "RUN_2026-08-09_14-36-16 (run 23)",
