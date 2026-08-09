@@ -4687,3 +4687,51 @@ LibreLane/OpenROAD run -- there is nothing to resume here either.
 No P&R run, no new PPA numbers. design_state.json history[] entry
 (stage: "constraint_authoring") and memory/pd/experiences.jsonl (run_id
 pd_20260802_000000) both record this. Nothing to resume.
+
+================================================================================
+run_id:      pd_20260809_diag01  (GH #96 / bead claude_verilog_test-cyb)
+design_name: phase5_soc (multiclock, asap7)
+pdk:         asap7
+tool:        OpenSTA / OpenROAD (eda-openroad MCP session) + git archaeology
+start_time:  2026-08-09T00:00:00Z (approx)
+last_stage:  diagnostic_only (no P&R launched; investigation only)
+================================================================================
+Root-caused the run21(GOOD)->run22(BAD) cpu_clk regression between two ASAP7
+multiclock SoC runs whose only differing input is the regenerated CPU macro
+(LEF+LIB+netlist). NOT primarily the "apb_pready_o/apb_pslverr_o now
+registered gives faster clk-to-Q" hypothesis (real but only ~9-14ps delta,
+too small). Dominant, measured cause: the CPU block's own P&R has no
+FP_PIN_ORDER_CFG, so its io-placement step gives an essentially random
+boundary pin layout each regeneration. LEF diff of run21-source
+(pnr/asap7/cpu/macro/rv32i_cpu_top.lef @ git HEAD d7f45b6) vs run22-source
+(working tree, from RUN_2026-08-08_23-19-10) found 393/401 pins moved (up
+to ~170 units within a 130x130um macro); only clk_i stayed pinned exactly.
+This reshuffled SoC-level placement near u_cpu, and TritonCTS built a badly
+imbalanced tree on the "cpu_gated_clk_regs" subtree (behind u_cpu_cg's
+ICG), inserting a never-before-needed `delaybuf_0_cpu_clk` cell (0 in
+run21's final netlist, 1 in run22's) and nearly doubling cpu_clk's worst
+clock skew: hold -485.6ps->-922.1ps, setup -436.2ps->-865.2ps (stage-32
+corner.tcl reports, both runs, same SDC verified byte-identical). That
+skew is what the post-CTS resizer's hold-violation explosion (805->4702
+endpoints, 680->4814 buffers, final HB4xp67 population 1934->6017) and the
+final cpu_clk setup WNS collapse to -596ps/690 endpoints trace back to.
+The 25ps hold-margin (bead s9f) is not the amplifier -- flow's own log
+shows raw pre-fix violations already hundreds of ps (worst -332ps run21,
+-782ps run22) before any margin applies.
+
+Recommended fix (NOT implemented -- awaiting user direction, no RTL/config
+edited this session): add FP_PIN_ORDER_CFG to pnr/asap7/cpu/config.json so
+future CPU-macro regenerations keep a stable boundary pin layout
+(LibreLane supports this var in steps/openroad.py + odb.py). Zero-risk
+immediate unblock alternative: revert the uncommitted rtl/cpu/
+rv32i_cpu_top.sv apb_pready_o change back to combinational, reproducing
+run21's exact known-good macro (loses whatever motivated the "mirror the
+APB multicycle" register change -- human call).
+
+Full re-timing detail (OpenSTA/OpenROAD MCP session on both runs'
+post-CTS ODB checkpoints, both runs' Liberty pin-arc diffs, LEF pin
+position diff) is in this session's report to the user, not re-duplicated
+here. See design_state.json history[] tail (stage "pd_diagnostic_gh96")
+and memory/pd/experiences.jsonl (run_id pd_20260809_diag01) for the
+structured record. No run_id in this block is "in progress" -- diagnostic
+complete, no P&R launched.
