@@ -54,6 +54,12 @@ set_input_delay  -min  10 -clock clk [get_ports axi_rresp_i[*]]
 set_input_delay  -max 150 -clock clk [get_ports axi_rvalid_i]
 set_input_delay  -min  10 -clock clk [get_ports axi_rvalid_i]
 
+# axi_rlast_i (M2 AXI4 burst upgrade): part of the R channel, same IO delay
+# budget as the other R-channel inputs above. Previously unconstrained --
+# see claude_verilog_test-g0o. Hold is handled separately in section 13.
+set_input_delay  -max 150 -clock clk [get_ports axi_rlast_i]
+set_input_delay  -min  10 -clock clk [get_ports axi_rlast_i]
+
 set_input_delay  -max 150 -clock clk [get_ports axi_awready_i]
 set_input_delay  -min  10 -clock clk [get_ports axi_awready_i]
 
@@ -69,6 +75,15 @@ set_input_delay  -min  10 -clock clk [get_ports axi_bresp_i[*]]
 set_output_delay -max  150 -clock clk [get_ports axi_araddr_o[*]]
 set_output_delay -min  -15 -clock clk [get_ports axi_araddr_o[*]]
 
+# axi_arlen_o / axi_arsize_o (M2 AXI4 burst upgrade): AR channel, same IO
+# delay budget as axi_araddr_o above. Previously unconstrained -- see
+# claude_verilog_test-g0o.
+set_output_delay -max  150 -clock clk [get_ports axi_arlen_o[*]]
+set_output_delay -min  -15 -clock clk [get_ports axi_arlen_o[*]]
+
+set_output_delay -max  150 -clock clk [get_ports axi_arsize_o[*]]
+set_output_delay -min  -15 -clock clk [get_ports axi_arsize_o[*]]
+
 set_output_delay -max  150 -clock clk [get_ports axi_arvalid_o]
 set_output_delay -min  -15 -clock clk [get_ports axi_arvalid_o]
 
@@ -78,6 +93,15 @@ set_output_delay -min  -15 -clock clk [get_ports axi_rready_o]
 set_output_delay -max  150 -clock clk [get_ports axi_awaddr_o[*]]
 set_output_delay -min  -15 -clock clk [get_ports axi_awaddr_o[*]]
 
+# axi_awlen_o / axi_awsize_o (M2 AXI4 burst upgrade): AW channel, same IO
+# delay budget as axi_awaddr_o above. Previously unconstrained -- see
+# claude_verilog_test-g0o.
+set_output_delay -max  150 -clock clk [get_ports axi_awlen_o[*]]
+set_output_delay -min  -15 -clock clk [get_ports axi_awlen_o[*]]
+
+set_output_delay -max  150 -clock clk [get_ports axi_awsize_o[*]]
+set_output_delay -min  -15 -clock clk [get_ports axi_awsize_o[*]]
+
 set_output_delay -max  150 -clock clk [get_ports axi_awvalid_o]
 set_output_delay -min  -15 -clock clk [get_ports axi_awvalid_o]
 
@@ -86,6 +110,11 @@ set_output_delay -min  -15 -clock clk [get_ports axi_wdata_o[*]]
 
 set_output_delay -max  150 -clock clk [get_ports axi_wstrb_o[*]]
 set_output_delay -min  -15 -clock clk [get_ports axi_wstrb_o[*]]
+
+# axi_wlast_o (M2 AXI4 burst upgrade): W channel, same IO delay budget as
+# axi_wvalid_o below. Previously unconstrained -- see claude_verilog_test-g0o.
+set_output_delay -max  150 -clock clk [get_ports axi_wlast_o]
+set_output_delay -min  -15 -clock clk [get_ports axi_wlast_o]
 
 set_output_delay -max  150 -clock clk [get_ports axi_wvalid_o]
 set_output_delay -min  -15 -clock clk [get_ports axi_wvalid_o]
@@ -226,8 +255,13 @@ set_false_path -hold -from [get_cells -hierarchical {*ex1c_ex1b_reg_q*}]
 # forcing the router to insert hold cells that then penalise setup paths.
 # External IO ports have no intra-chip hold requirement — suppress hold checks
 # on all AXI master read/write channel inputs.
+#
+# axi_rlast_i (M2 AXI4 burst upgrade, claude_verilog_test-g0o): same R-channel
+# group as axi_rvalid_i/axi_rdata_i/axi_rresp_i above and the same
+# set_input_delay -min 10 near-zero-minimum-path risk applies -- added here
+# alongside them rather than left to time for hold on its own.
 ###############################################################################
-set_false_path -hold -from [get_ports {axi_rvalid_i axi_rdata_i[*] axi_rresp_i[*]}]
+set_false_path -hold -from [get_ports {axi_rvalid_i axi_rdata_i[*] axi_rresp_i[*] axi_rlast_i}]
 set_false_path -hold -from [get_ports {axi_awready_i axi_wready_i axi_bvalid_i axi_bresp_i[*]}]
 
 ###############################################################################

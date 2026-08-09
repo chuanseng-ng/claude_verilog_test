@@ -82,6 +82,8 @@
     "RUN_POST_GRT_RESIZER_TIMING": true,
     "RUN_POST_GRT_DESIGN_REPAIR": true,
     "MAX_TRANSITION_CONSTRAINT": 15.0,
+    "// UNITS_S9F_1": "librelane declares PL/GRT_RESIZER_*_SLACK_MARGIN as units=ns in its schema, but scripts/openroad/rsz_timing_post{cts,grt}.tcl pass the value RAW to OpenROAD, which reads it in the Liberty time_unit. ASAP7 Liberty is time_unit 1ps -- so the 0.1/0.075 below are PS values, NOT ns (~0 guard band). See claude_verilog_test-s9f.",
+    "// UNITS_S9F_2": "DELIBERATELY LEFT NUMERICALLY UNCHANGED: this file is the run-14 M11 SoC sign-off artifact (571 MHz / 62.9 mW / 520x520 um / 0 DRC, docs/PHASE5_RUN_HISTORY.md). Changing these margins would perturb placement/route optimisation on any re-run and break byte-reproducibility of that sign-off. The corrected real-ps values (2.5%/1.5% of the 1750 ps sys_clk period) are applied instead in config_multiclock.json, the active GH #96 variant -- use that config for any new SoC PD work.",
     "PL_RESIZER_SETUP_SLACK_MARGIN": 0.1,
     "GRT_RESIZER_SETUP_SLACK_MARGIN": 0.1,
     "PL_RESIZER_HOLD_SLACK_MARGIN": 0.075,

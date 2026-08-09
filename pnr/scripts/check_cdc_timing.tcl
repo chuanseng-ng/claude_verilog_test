@@ -231,48 +231,131 @@ proc cdc_report_through {collection description report_path} {
     }
 }
 
+# cdc_report_domain_wide: companion to cdc_report_through for the section-14
+# domain-wide fallback (phase5_soc_multiclock_check.sdc) -- reports
+# report_checks -from <from_clock> -to <to_clock> instead of -through
+# <collection>, since mem_q / cmd_*/resp_* have no matchable object to query
+# -through post-flatten (bead claude_verilog_test-7l5). from_clock/to_clock
+# are expected to already be non-empty get_clocks results (sys_clk/cpu_clk
+# are declared unconditionally in section 1, so no cdc_require_match guard
+# is needed here the way it is for name-pattern-derived collections).
+proc cdc_report_domain_wide {from_clock to_clock description report_path} {
+    report_checks -from $from_clock -to $to_clock \
+        -path_delay max -format full_clock_expanded -digits 3 \
+        > $report_path
+    set _fh [open $report_path r]
+    set _rpt_content [read $_fh]
+    close $_fh
+    if {[string match "*VIOLATED*" $_rpt_content]} {
+        cdc_record_finding "budget VIOLATED: ${description} (see $report_path)"
+    } elseif {[string match "*No paths found*" $_rpt_content] || [string match "*unconstrained*" $_rpt_content]} {
+        cdc_record_finding "path unconstrained/not found: ${description} (see $report_path)"
+    }
+}
+
 puts "================================================================"
 puts "CDC boundary timing -- async_axi_fifo (u_cpu_axi_cdc), all 5 channels"
 puts "================================================================"
-# mem_q is queried as get_nets here to match the OBJECT CLASS
-# phase5_soc_multiclock_check.sdc sec.11 item 1 writes its set_max_delay
-# exception against (get_nets, not get_pins) -- mem_q is a FIFO storage
-# array and resolves differently as a net collection vs. a flop-pin
-# collection post-synthesis, so a get_pins query here was not guaranteed to
-# report against the same paths the SDC actually budgets (CodeRabbit PR
-# #133 finding 2).
+# Object mapping re-derived under bead claude_verilog_test-7l5 (2026-08-06)
+# against the FLATTENED netlist (SYNTH_HIERARCHY_MODE=flatten) -- see
+# phase5_soc_multiclock_check.sdc's "OBJECT RESOLUTION" header block for the
+# full tool-verified writeup. Three independent things changed vs. the
+# pre-7l5 version of this script, all confirmed empirically against
+# final/nl/soc_top.nl.v, not assumed:
+#   (1) separator: hierarchy survives only as literal '.' in escaped
+#       identifiers, not '/'.
+#   (2) object class: cells are anonymous post-flatten (get_cells/get_pins
+#       hierarchical name patterns always return empty) -- get_nets is the
+#       only name-matchable class, and even then only for nets that kept a
+#       clean RTL-derived name.
+#   (3) filter syntax: a literal '.' inside a `-filter "name =~ <pattern>"`
+#       pattern is NOT a safe glob character on this tool once wildcards
+#       surround it (tool-verified: it either returns 0 or, for a bare
+#       leading `*.`, silently matches almost the entire netlist). Every
+#       pattern below is therefore a '*'-joined chain of dot-free
+#       substrings only.
+#   (4) semantics: q_o (the synchroniser's LAST-stage output) is a
+#       destination-domain-only net, not the crossing itself -- see
+#       cdc_2ff_sync.sv. These reports now target the launch->first-capture
+#       segment instead: d_i where it survives as its own net
+#       (u_wr_ptr_to_rd.d_i does), or the source register net directly
+#       where d_i does not survive (u_rd_ptr_to_wr.d_i collapses into
+#       rd_gray_q's net during optimisation -- rd_gray_q is used instead,
+#       same electrical node).
+# mem_q itself (the FIFO storage array's combinational read) has ZERO
+# occurrences anywhere in the routed netlist under any object class or
+# separator -- it cannot be re-expressed by name post-flatten. It is no
+# longer reported here; it is one of the crossings covered by the
+# domain-wide fallback report below (mirrors
+# phase5_soc_multiclock_check.sdc section 14).
 cdc_report_through \
-    [get_nets -hierarchical -filter "name =~ *u_cpu_axi_cdc/*/mem_q*" -quiet] \
-    "check_cdc_timing.tcl mem_q report query (u_cpu_axi_cdc/*/mem_q)" \
-    $REPORTS_DIR/cdc_fifo_memq.rpt
-cdc_report_through \
-    [get_pins -hierarchical -filter "full_name =~ *u_cpu_axi_cdc/*/u_wr_ptr_to_rd/q_o*" -quiet] \
-    "check_cdc_timing.tcl u_wr_ptr_to_rd/q_o report query" \
+    [get_nets -hierarchical -filter {name =~ *u_cpu_axi_cdc*u_wr_ptr_to_rd*d_i*} -quiet] \
+    "check_cdc_timing.tcl u_wr_ptr_to_rd.d_i report query (all 5 fifos)" \
     $REPORTS_DIR/cdc_fifo_wr2rd.rpt
 cdc_report_through \
-    [get_pins -hierarchical -filter "full_name =~ *u_cpu_axi_cdc/*/u_rd_ptr_to_wr/q_o*" -quiet] \
-    "check_cdc_timing.tcl u_rd_ptr_to_wr/q_o report query" \
+    [get_nets -hierarchical -filter {name =~ *u_cpu_axi_cdc*rd_gray_q*} -quiet] \
+    "check_cdc_timing.tcl rd_gray_q report query (all 5 fifos, source of u_rd_ptr_to_wr.d_i)" \
     $REPORTS_DIR/cdc_fifo_rd2wr.rpt
 
 puts "================================================================"
 puts "CDC boundary timing -- apb_cdc_bridge (u_apb_pll2_cdc, u_apb_dbg_cdc)"
 puts "================================================================"
+# req_toggle_q / ack_toggle_q are each a direct RTL passthrough into their
+# cdc_2ff_sync's d_i (see apb_cdc_bridge.sv), and unlike section 11's
+# gray-pointer case, BOTH source registers keep their own net name here --
+# matched directly, no d_i lookup needed. The cmd_*/resp_* payload capture
+# registers have zero occurrences anywhere in the netlist (same class as
+# mem_q) and are covered by the domain-wide fallback report below instead.
 cdc_report_through \
-    [get_pins -hierarchical -filter "full_name =~ *u_apb_pll2_cdc/u_req_sync/q_o* || full_name =~ *u_apb_pll2_cdc/u_ack_sync/q_o*" -quiet] \
+    [get_nets -hierarchical -filter {name =~ *u_apb_pll2_cdc*req_toggle_q* || name =~ *u_apb_pll2_cdc*ack_toggle_q*} -quiet] \
     "check_cdc_timing.tcl u_apb_pll2_cdc toggle report query" \
     $REPORTS_DIR/cdc_apb_pll2_toggle.rpt
 cdc_report_through \
-    [get_pins -hierarchical -filter "full_name =~ *u_apb_dbg_cdc/u_req_sync/q_o* || full_name =~ *u_apb_dbg_cdc/u_ack_sync/q_o*" -quiet] \
+    [get_nets -hierarchical -filter {name =~ *u_apb_dbg_cdc*req_toggle_q* || name =~ *u_apb_dbg_cdc*ack_toggle_q*} -quiet] \
     "check_cdc_timing.tcl u_apb_dbg_cdc toggle report query" \
     $REPORTS_DIR/cdc_apb_dbg_toggle.rpt
 
 puts "================================================================"
 puts "CDC boundary timing -- PMU/IRQ single-bit crossings"
 puts "================================================================"
+# u_cpu_clk_dis_sync is fed `.d_i(~pmu_cpu_clk_en)` (an inverter output --
+# real logic between source and synchroniser), so its d_i net survives
+# under its own scoped name. u_cpu_iso_en_sync / u_ext_irq_sync /
+# u_timer_irq_sync are each a direct passthrough whose d_i net does NOT
+# survive; the source signal itself does, as a PLAIN top-level net
+# (pmu_cpu_iso_en / ext_irq / timer_irq). NOTE: OpenSTA's -filter grammar
+# was tool-verified to only evaluate the first two clauses of a 3+-way
+# "||" chain (a latent bug in this script's pre-7l5 4-way OR here, silently
+# dropping u_ext_irq_sync and u_timer_irq_sync from the old report even
+# before the separator/object-class issues) -- this is why the query below
+# is split into two 2-way-OR get_nets calls and concatenated, rather than
+# one 4-way chain.
+set _pmu_irq_a [get_nets -hierarchical -filter {name =~ *u_cpu_clk_dis_sync*d_i* || name == pmu_cpu_iso_en} -quiet]
+set _pmu_irq_b [get_nets -hierarchical -filter {name == ext_irq || name == timer_irq} -quiet]
 cdc_report_through \
-    [get_pins -hierarchical -filter "full_name =~ *u_cpu_clk_dis_sync/q_o* || full_name =~ *u_cpu_iso_en_sync/q_o* || full_name =~ *u_ext_irq_sync/q_o* || full_name =~ *u_timer_irq_sync/q_o*" -quiet] \
+    [concat $_pmu_irq_a $_pmu_irq_b] \
     "check_cdc_timing.tcl PMU/IRQ single-bit crossing report query" \
     $REPORTS_DIR/cdc_pmu_irq.rpt
+
+puts "================================================================"
+puts "CDC boundary timing -- domain-wide fallback (mem_q + apb cmd_/resp_ payload)"
+puts "================================================================"
+# mem_q (async_axi_fifo) and cmd_*/resp_* (both apb_cdc_bridge instances)
+# have zero occurrences anywhere in the routed netlist by any name/object
+# class -- see phase5_soc_multiclock_check.sdc section 14 for the full
+# writeup and the measured -through-vs-from/to precedence this relies on.
+# This report is inherently a whole-boundary catch-all (report_checks
+# -from/-to over ALL registers in each domain, not a query isolated to
+# these specific payload buses) since there is no narrower object to query
+# post-flatten; the VIOLATED/unconstrained detection below still applies.
+cdc_report_domain_wide \
+    [get_clocks cpu_clk] [get_clocks sys_clk] \
+    "check_cdc_timing.tcl domain-wide fallback report (cpu_clk -> sys_clk, covers mem_q/cmd_*/resp_* class)" \
+    $REPORTS_DIR/cdc_domain_wide_cpu_to_sys.rpt
+cdc_report_domain_wide \
+    [get_clocks sys_clk] [get_clocks cpu_clk] \
+    "check_cdc_timing.tcl domain-wide fallback report (sys_clk -> cpu_clk, covers mem_q/cmd_*/resp_* class)" \
+    $REPORTS_DIR/cdc_domain_wide_sys_to_cpu.rpt
 
 puts ""
 puts "================================================================"

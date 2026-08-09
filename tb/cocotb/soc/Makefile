@@ -307,7 +307,19 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += --no-timing
 	# Override PYTHON3: nix verilator hardcodes nix Python 3.11 but PYTHONHOME=/usr
 	# points to Python 3.10 stdlib — mismatch crashes verilator_includer.
-	BUILD_ARGS += PYTHON3=/usr/bin/python3
+	#
+	# SIM_PYTHON3 is overridable because the right answer is environment-specific.
+	# Locally /usr/bin/python3 IS the interpreter cocotb runs on, so it is the
+	# default. On a GitHub runner, actions/setup-python puts a hostedtoolcache
+	# interpreter on PATH and points PYTHONHOME/LD_LIBRARY_PATH at it, while
+	# /usr/bin/python3 is Ubuntu's own (different minor version) — verilator_includer
+	# then loads the wrong stdlib and dies with
+	#   Fatal Python error: init_fs_encoding: failed to get the Python codec of the
+	#   filesystem encoding / ModuleNotFoundError: No module named 'encodings'
+	# CI therefore passes SIM_PYTHON3=$(command -v python3) so the compile-time
+	# interpreter matches the one cocotb itself runs on.
+	SIM_PYTHON3 ?= /usr/bin/python3
+	BUILD_ARGS += PYTHON3=$(SIM_PYTHON3)
 	# Override CXX/LINK: nix verilator generates clang++ commands but only g++
 	# is available outside nix's clang environment.  cxx_shim.sh wraps g++ and
 	# strips clang-only flags.

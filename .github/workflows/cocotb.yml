@@ -1,0 +1,168 @@
+name: Cocotb Regression
+
+# Runs the maintained cocotb regression (tb/cocotb/soc soc_all) in CI.
+#
+# WHY THIS EXISTS (bead claude_verilog_test-50t): before this workflow, CI ran
+# only `make -C sim {lint,format,cdc}`. No cocotb suite was executed anywhere,
+# so a testbench could stop *compiling* while every CI gate stayed green. That
+# is not hypothetical: the whole of tb/cocotb/cpu has been failing elaboration
+# with "Import package not found: 'axi_pkg'" since the M2 AXI4 burst upgrade
+# moved the CPU onto axi_pkg types without updating that Makefile's
+# VERILOG_SOURCES, and nobody noticed because lint does assemble the right
+# file list and therefore passed throughout.
+#
+# Tool sourcing mirrors random_tests.yml deliberately: Verilator comes from the
+# repo flake (pinned 5.048 — the version the RTL is known to elaborate under),
+# while cocotb runs on the setup-python interpreter, not on nix. Do not "simplify"
+# this to apt's verilator; the pin is part of the contract, same rationale as the
+# yosys pin in rtl-checks.yml's CDC job.
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'rtl/**'
+      - 'tb/cocotb/**'
+      - 'sim/Makefile'
+      - 'flake.nix'
+      - 'flake.lock'
+      - '.github/workflows/cocotb.yml'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'rtl/**'
+      - 'tb/cocotb/**'
+      - 'sim/Makefile'
+      - 'flake.nix'
+      - 'flake.lock'
+      - '.github/workflows/cocotb.yml'
+  workflow_dispatch:
+
+# A second push to the same branch supersedes an in-flight run — the regression
+# is the long pole in CI and there is no value in finishing a stale one.
+concurrency:
+  group: cocotb-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: this job only reads the repo. It runs `make -C tb/cocotb/soc
+# soc_all`, i.e. repository-controlled Makefile and Python, so the default
+# read-write GITHUB_TOKEN on a push to main would be handed to that code for no
+# reason. Same posture as rtl-checks.yml's CDC job.
+permissions:
+  contents: read
+
+jobs:
+  soc_all:
+    name: cocotb soc_all (SoC regression)
+    runs-on: ubuntu-latest
+    # Measured ~15-25 min locally on a 16-core host; CI runners are smaller, so
+    # allow generous headroom but still fail rather than burn the 6 h default.
+    timeout-minutes: 120
+
+    steps:
+      # persist-credentials: false — do not leave the token in .git/config where
+      # the regression's own code could read it.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Nix (pinned Verilator from binary cache)
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Install pinned Verilator (nix profile, system-shell compile)
+        run: |
+          nix profile install .#verilator
+          verilator --version
+
+      # cocotb runs on the setup-python interpreter, not on nix. sim/Makefile's
+      # NIX_COMPAT_DIR loop symlinks these system libs (resolved via ldconfig)
+      # so the Verilator sim binary can dlopen libpython/ctypes.
+      - name: Install runtime libs for cocotb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
+          pip list
+
+      # soc_all is the maintained regression (21 suites). It builds its own
+      # source list, so it is unaffected by the tb/cocotb/cpu breakage above.
+      # No `|| true` and no `continue-on-error`: this is a gate.
+      # pipefail matters: without it the tee would mask make's exit status and
+      # the gate would pass on a failing regression.
+      - name: Run soc_all
+        run: |
+          set -o pipefail
+          echo "::group::make -C tb/cocotb/soc soc_all"
+          # SIM_PYTHON3 must be the SAME interpreter cocotb runs on. The Makefile
+          # defaults to /usr/bin/python3, which is right locally but wrong here:
+          # setup-python puts a hostedtoolcache interpreter on PATH and points
+          # PYTHONHOME/LD_LIBRARY_PATH at it, while /usr/bin/python3 is Ubuntu's
+          # own. Verilator's verilator_includer then loads a mismatched stdlib and
+          # dies with "ModuleNotFoundError: No module named 'encodings'".
+          echo "SIM_PYTHON3=$(command -v python3) ($(python3 -V))"
+          make -C tb/cocotb/soc soc_all SIM_PYTHON3="$(command -v python3)" 2>&1 | tee cocotb_soc.log
+          echo "::endgroup::"
+
+      # Belt-and-braces on top of make's exit code, same rationale as bead dwp
+      # (a tool that exits 0 with an empty report must never read as PASS).
+      #
+      # This checks the LOG, not results.xml, deliberately. soc_all runs 21
+      # suites through the same target and each overwrites the previous
+      # results.xml, so the XML on disk at the end describes only the last
+      # suite — it cannot witness the whole regression. (Its schema is also
+      # <testsuites>/<testsuite>/<testcase> with failures as child ELEMENTS and
+      # no tests=/failures= attributes, so attribute-based counting silently
+      # yields zero.)
+      #
+      # PASS_FLOOR guards the "regression collapsed to a handful of suites"
+      # failure mode, where make still exits 0. Measured 178 passing tests on
+      # 2026-08-07 (soc_all, 21 suites); the floor is set just under that so a
+      # dropped suite trips it rather than passing unnoticed. Raise it
+      # deliberately as suites are added.
+      - name: Verify regression actually ran
+        if: always()
+        env:
+          PASS_FLOOR: '170'
+        run: |
+          if [ ! -s cocotb_soc.log ]; then
+            echo "FAIL: no cocotb log produced — the regression did not run."
+            exit 1
+          fi
+          passed=$(grep -cE 'cocotb\.regression .* passed$' cocotb_soc.log || true)
+          failed=$(grep -cE 'cocotb\.regression .* (failed|FAILED)$' cocotb_soc.log || true)
+          echo "cocotb: ${passed} passed, ${failed} failed (floor ${PASS_FLOOR})"
+          if [ "${failed}" -ne 0 ]; then
+            echo "FAIL: ${failed} test(s) reported failed."
+            grep -E 'cocotb\.regression .* (failed|FAILED)$' cocotb_soc.log | head -40
+            exit 1
+          fi
+          if [ "${passed}" -lt "${PASS_FLOOR}" ]; then
+            echo "FAIL: only ${passed} tests passed, expected >= ${PASS_FLOOR}."
+            echo "A suite likely failed to elaborate and was skipped while make still exited 0."
+            exit 1
+          fi
+
+      - name: Upload cocotb results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cocotb-soc-results
+          path: |
+            cocotb_soc.log
+            tb/cocotb/**/results.xml
+          if-no-files-found: warn

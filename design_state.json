@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-08-02T02:02:44.967986+00:00",
+  "updated_at": "2026-08-09T00:00:00+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -1103,6 +1103,18 @@
       "suggested_next_step": "proceed",
       "reason": "PR #132 CodeRabbit doc finding on apb_cdc_bridge.sv:275 (m_rst_n_s availability-gating exception) resolved as documentation: traced the race cycle-by-cycle, confirmed benign/bounded (S_WAIT bounded exit, no fabricated destination write via m_rst_sync_n gating, window == SYNC_STAGES_TO_S s_clk_i cycles); added explicit exception documentation + tightened m_rst_n_i minimum-low-width caller contract. lint_soc 0 errors/7 baseline warnings, apb_cdc_bridge_lint 0/0, apb_cdc_bridge cocotb 19/19.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-08-09T00:18:13.477861+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "pd_diagnostic_gh96",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "timing",
+      "retry_strategy": "refine",
+      "suggested_next_step": "escalate",
+      "reason": "Root-caused run21->run22 cpu_clk regression to CPU-macro pin-order instability (no FP_PIN_ORDER_CFG) driving a CTS skew blowup; recommended fix requires human decision (revert RTL vs add pin-order constraint) before any new P&R run.",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
@@ -1829,6 +1841,33 @@
         "librelane_patch": "scripts/odbpy/diodes.py + steps/odb.py in ~/Downloads/Github/librelane local checkout gained HEURISTIC_ANTENNA_SKIP_CLOCK_NETS (opt-in, default off) -- stays in the tree as a principled, harmless, currently-unused-by-adopted-config patch. Diff checked into this repo at memory/pd/patches/58q_librelane_heuristic_diode_skip_clock_nets.diff.",
         "process_note": "Four successive root-cause claims across this campaign were wrong (two the orchestrator's, two the coordinator's) and none were caught by a run coming back green -- only pre-registered falsifiable predictions (stated before each run landed) caught them. See memory/pd/knowledge.md for the process note.",
         "closed_at": "2026-07-31T16:04:04.262614+00:00"
+      }
+    },
+    "gh96_multiclock_diag": {
+      "bead": "claude_verilog_test-cyb",
+      "runs_compared": {
+        "good": "RUN_2026-08-08_04-24-08",
+        "bad": "RUN_2026-08-08_23-56-03"
+      },
+      "root_cause": "CPU macro io-placement (pnr/asap7/cpu/config.json) has no FP_PIN_ORDER_CFG; independent macro regenerations reshuffle ~98% of boundary pins (393/401 moved, up to ~170 units in a 130x130um macro), perturbing SoC-level placement/CTS near u_cpu and nearly doubling cpu_clk clock skew post-CTS (hold -485.6ps->-922.1ps, setup -436.2ps->-865.2ps), which drives the post-CTS hold-violation explosion (805->4702 endpoints) and the resulting cpu_clk setup WNS collapse (-60.66ps->-596.00ps).",
+      "user_hypothesis_status": "secondary/minor: measured clk-to-Q delta on apb_pready_o/apb_pslverr_o is only ~9-14ps, not the dominant mechanism",
+      "hold_margin_25ps_bead_s9f_status": "ruled out as amplifier: raw pre-fix violations already hundreds of ps",
+      "recommended_fix": "add FP_PIN_ORDER_CFG to pnr/asap7/cpu/config.json (durable) or revert uncommitted apb_pready_o RTL change to reproduce run21 macro (zero-risk, cheaper, loses RTL improvement)",
+      "fix_implemented": "FP_PIN_ORDER_CFG added (pnr/asap7/cpu/pin_order.cfg) + all three APB outputs (apb_prdata_o/apb_pslverr_o/apb_pready_o) made pure registered outputs in rtl/cpu/rv32i_cpu_top.sv",
+      "new_pr_run_launched": "RUN_2026-08-09_14-36-16 (run 23) - completed, both domains MET; see resolution below",
+      "resolution": {
+        "status": "RESOLVED",
+        "run": "RUN_2026-08-09_14-36-16 (run 23)",
+        "sys_clk": "+74.79 ps, TNS 0, 0 violating endpoints - 571 MHz MET",
+        "cpu_clk": "+9.79 ps, TNS 0, 0 violating endpoints - 1282 MHz MET (first time the CPU domain has met its 780 ps target)",
+        "drc": 0,
+        "antenna": 0,
+        "power_mw": 51.9,
+        "util_pct": 66.9,
+        "cdc_budget_check": "PASS - 0 unmatched exceptions, 0 budget violations",
+        "determinism_proof": "two CPU runs with the same pin_order.cfg produced a byte-identical LEF (matching md5, 0/401 pins moved) and identical metrics",
+        "pin_order_tuning": "v1 replicate free-floated sides: setup -25.87 / TNS -1180.02 / hold +27.47; v2 group AXI on W/N: -10.48 / -10.48 / -2.06; v3 move APB off the fabric-facing edge: -0.87 / -0.87 / +8.54",
+        "commits": "999e44a (closure), 122e939 (docs)"
       }
     }
   },

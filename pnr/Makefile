@@ -93,6 +93,10 @@ LIBRELANE_ASAP7_DIR     := asap7/cpu
 LIBRELANE_ASAP7_GPU_DIR := asap7/gpu
 # SoC top-level design directory (Phase 5 M11)
 LIBRELANE_ASAP7_SOC_DIR := asap7/soc
+# Config file basename (relative to LIBRELANE_ASAP7_SOC_DIR) used by all
+# librelane-asap7-soc* targets. Override for the GH #96 multiclock variant:
+#   make librelane-asap7-soc-synth-only SOC_CONFIG=config_multiclock.json
+SOC_CONFIG ?= config.json
 # New designs: copy pnr/asap7/template/ as a starting point
 
 # Maximum number of ASAP7 runs to retain (oldest deleted first)
@@ -112,6 +116,7 @@ DRT_THREADS         ?= 4
 SV2V                ?= /nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1/bin/sv2v
 
 .PHONY: librelane-sky130 librelane-sky130-cpu librelane-nangate45 librelane-asap7 librelane-asap7-gpu librelane-asap7-soc
+.PHONY: librelane-asap7-soc-multiclock
 .PHONY: check-cdc-timing-asap7-soc
 .PHONY: asap7-soc-sv2v
 .PHONY: librelane-sky130-results librelane-sky130-cpu-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results librelane-asap7-soc-results
@@ -147,6 +152,8 @@ help:
 	@echo "  librelane-asap7-gpu       - Run full LibreLane flow on ASAP7 GPU (pnr/asap7/gpu/), then prune"
 	@echo "  librelane-asap7-soc-synth - Run Yosys synthesis only for ASAP7 SoC (pnr/asap7/soc/) — first-run check"
 	@echo "  librelane-asap7-soc       - Run full LibreLane P&R for ASAP7 SoC (expect 4-8 h), then prune"
+	@echo "  librelane-asap7-soc-multiclock - GH #96: same flow with the 2-clock SDC (config_multiclock.json)"
+	@echo "                              (SOC_CONFIG overrides the config file for all three librelane-asap7-soc* targets)"
 	@echo "  check-cdc-timing-asap7-soc - Post-route CDC budget check (OpenSTA, phase5_soc_multiclock_check.sdc; GH #96)"
 	@echo "  librelane-sky130-results        - Show metrics from latest Sky130 LibreLane run (Phase 3)"
 	@echo "  librelane-sky130-cpu-results    - Show metrics from latest Sky130 CPU Stage 1 run (GH#103)"
@@ -899,13 +906,13 @@ librelane-asap7-gpu-results:
 librelane-asap7-soc-synth:
 	@echo "=========================================="
 	@echo "Running LibreLane SYNTH-ONLY — ASAP7 SoC"
-	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/config.json"
+	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)"
 	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
 	@echo "  Tool     : $(LIBRELANE_DIR)"
 	@echo "  Step     : Yosys.JsonHeader (synthesis + elaboration only)"
 	@echo "=========================================="
-	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/config.json" ]; then \
-		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/config.json not found."; exit 1; fi
+	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)" ]; then \
+		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG) not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
 		"python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
@@ -931,16 +938,16 @@ librelane-asap7-soc-synth:
 		 --skip Checker.HoldViolations \
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
-		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/config.json"
+		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/$(SOC_CONFIG)"
 
 librelane-asap7-soc-synth-only:
 	@echo "=========================================="
 	@echo "Running LibreLane SYNTH-ONLY (skip JsonHeader) — ASAP7 SoC"
-	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/config.json"
+	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)"
 	@echo "  Step     : Yosys.Synthesis only (bypasses Yosys.JsonHeader)"
 	@echo "=========================================="
-	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/config.json" ]; then \
-		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/config.json not found."; exit 1; fi
+	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)" ]; then \
+		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG) not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
 		"python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
@@ -966,7 +973,7 @@ librelane-asap7-soc-synth-only:
 		 --skip Checker.HoldViolations \
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
-		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/config.json"
+		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/$(SOC_CONFIG)"
 
 ###############################################################################
 # sv2v SoC pre-processing step
@@ -1011,6 +1018,82 @@ SOC_SV_FILES := \
 
 SOC_SV2V_OUT := $(abspath $(LIBRELANE_ASAP7_SOC_DIR)/soc_top_sv2v.v)
 
+#----------------------------------------------------------------
+# sv2v defines for the ASAP7 SoC.
+#
+# sv2v resolves `ifdef ITSELF, before Yosys ever runs. config.json's
+# VERILOG_DEFINES is therefore TOO LATE for anything sv2v already decided:
+# whichever branch sv2v takes is baked into soc_top_sv2v.v as plain Verilog.
+#
+# USE_ICG_CELL: without it, rv32i_clock_gate.sv falls to its behavioural
+# `always_latch` model, which Yosys infers as $_DLATCH_N_ and cannot map to
+# any ASAP7 standard cell -- Checker.YosysUnmappedCells then aborts the flow
+# with "2 Unmapped Yosys instances found" (observed 2026-08-05,
+# RUN_2026-08-05_21-20-25). With it, the module instantiates the real
+# ICGx1_ASAP7_75t_R, which exists in both asap7sc7p5t_SEQ_RVT_TT liberty and
+# asap7sc7p5t_SIMPLE_RVT_1x.lef. This did not bite before 2026-08 because the
+# SoC had no clock gates until the PMU epic (GH #98) and GH #93 added them.
+#
+# Deliberately NOT passed here, despite being in VERILOG_DEFINES:
+#   __pnr__      - boot_rom.sv keys its ROM-preload branch off `ifndef __pnr__.
+#                  The run-14 sign-off was produced WITHOUT it, so adding it
+#                  now would change the boot ROM relative to the PPA baseline
+#                  this run is being compared against. Inconsistent with the
+#                  sky130 SoC target, which does pass it -- tracked separately.
+#   SRAM_ASAP7   - no file in SOC_SV_FILES branches on it; it only matters to
+#                  Yosys, which does get it from VERILOG_DEFINES.
+#
+# The sky130 SoC target deliberately does NOT get USE_ICG_CELL: ICGx1 is an
+# ASAP7 cell, and sky130 has real latch cells for the behavioural model to
+# map onto.
+#----------------------------------------------------------------
+SOC_SV2V_DEFINES := --define=USE_ICG_CELL
+
+#----------------------------------------------------------------
+# asap7_soc_preflight: shared launch guards for every ASAP7 SoC P&R target.
+#
+# The `runs` symlink is NOT optional. Without it LibreLane writes its run
+# directory to pnr/asap7/soc/runs on `/`, which has ~8 GB free, while a single
+# SoC run is ~6 GB -- so the run dies on a full root filesystem partway
+# through. It also keeps run auto-discovery working for
+# check-cdc-timing-asap7-soc and makes prune-asap7-soc-runs effective.
+# Mirrors the sky130 SoC idiom above.
+#
+# The macro .lib guard matters because a missing .lib does not fail loudly:
+# pnr/scripts/check_cdc_timing.tcl skips absent macro libs with a "(skip, not
+# found)" note, and the macro ends up blackboxed rather than timed.
+#----------------------------------------------------------------
+define asap7_soc_preflight
+	mkdir -p /nobackup/asap7_soc_runs
+	@if [ -e "$(LIBRELANE_ASAP7_SOC_DIR)/runs" ] && [ ! -L "$(LIBRELANE_ASAP7_SOC_DIR)/runs" ]; then \
+		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/runs is a REAL directory, not the /nobackup symlink."; \
+		echo "  A run started before the symlink existed (or two runs raced) and LibreLane"; \
+		echo "  created it on '/', which has far less headroom than a ~6 GB run needs."; \
+		echo "  A plain 'ln -sfn' here would silently nest the link INSIDE that directory"; \
+		echo "  (runs/asap7_soc_runs) and the run would still land on '/'. Fix by hand:"; \
+		echo "    mv $(LIBRELANE_ASAP7_SOC_DIR)/runs/RUN_* /nobackup/asap7_soc_runs/"; \
+		echo "    rm -rf $(LIBRELANE_ASAP7_SOC_DIR)/runs"; \
+		echo "  then re-run this target."; \
+		df -h / | tail -1; \
+		exit 1; fi
+	@[ -L $(LIBRELANE_ASAP7_SOC_DIR)/runs ] || \
+		ln -sfn /nobackup/asap7_soc_runs $(LIBRELANE_ASAP7_SOC_DIR)/runs
+	@if [ ! -f "$(SOC_SV2V_OUT)" ]; then \
+		echo "ERROR: soc_top_sv2v.v not found — run: make asap7-soc-sv2v first"; exit 1; fi
+	@for f in macro/rv32i_cpu_top.lef macro/gpu_top.lef \
+	          macro/rv32i_cpu_top__nom_tt_025C_0p7V.lib macro/gpu_top__nom_tt_025C_0p7V.lib; do \
+		if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/$$f" ]; then \
+			echo "ERROR: macro view $$f missing under $(LIBRELANE_ASAP7_SOC_DIR)/."; \
+			echo "  Stage the .lib files with:"; \
+			echo "    cp pnr/asap7/cpu/macro/rv32i_cpu_top__nom_tt_025C_0p7V.lib pnr/asap7/soc/macro/"; \
+			echo "    cp pnr/asap7/gpu/macro/gpu_top__nom_tt_025C_0p7V.lib       pnr/asap7/soc/macro/"; \
+			echo "  Do NOT bulk-copy the block macro dirs: the SoC .lef abstracts are"; \
+			echo "  NOT the same files as pnr/asap7/{cpu,gpu}/macro/*.lef, and overwriting"; \
+			echo "  them changes the PDN/routing environment of the run-14 sign-off."; \
+			exit 1; fi; \
+	done
+endef
+
 asap7-soc-sv2v:
 	@echo "=========================================="
 	@echo "Pre-processing: sv2v SV → Verilog-2005"
@@ -1021,21 +1104,21 @@ asap7-soc-sv2v:
 		echo "ERROR: sv2v not found at $(SV2V)"; \
 		echo "Install via: nix-build '<nixpkgs>' -A haskellPackages.sv2v --no-out-link"; \
 		exit 1; fi
-	$(SV2V) $(SOC_SV_FILES) -w $(SOC_SV2V_OUT)
+	$(SV2V) $(SOC_SV2V_DEFINES) $(SOC_SV_FILES) -w $(SOC_SV2V_OUT)
 	@echo "sv2v complete: $$(wc -l < $(SOC_SV2V_OUT)) lines, $$(grep -c 'always.*posedge\|always.*negedge' $(SOC_SV2V_OUT)) clocked always blocks"
 
 librelane-asap7-soc: asap7-soc-sv2v
 	@echo "=========================================="
 	@echo "Running LibreLane flow — ASAP7 SoC (full P&R)"
-	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/config.json"
+	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)"
 	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
 	@echo "  Tool     : $(LIBRELANE_DIR)"
 	@echo "  Runtime  : expect 4-8 h (hierarchical, 520x520 um)"
 	@echo "  Run dir  : /nobackup/asap7_soc_runs/"
 	@echo "=========================================="
-	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/config.json" ]; then \
-		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/config.json not found."; exit 1; fi
-	mkdir -p /nobackup/asap7_soc_runs
+	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)" ]; then \
+		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG) not found."; exit 1; fi
+	$(call asap7_soc_preflight)
 	cd $(LIBRELANE_DIR) && nix-shell --run \
 		"python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
@@ -1061,8 +1144,79 @@ librelane-asap7-soc: asap7-soc-sv2v
 		 --skip Checker.HoldViolations \
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
-		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/config.json"
+		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/$(SOC_CONFIG)"
 	@$(MAKE) prune-asap7-soc-runs
+
+#----------------------------------------------------------------
+# librelane-asap7-soc-multiclock: GH #96 PD re-closure (bead 8nz).
+#
+# Same flow as librelane-asap7-soc, but driven by config_multiclock.json,
+# which points PNR/SIGNOFF/FALLBACK_SDC_FILE at
+# constraints/phase5_soc_multiclock.sdc (GH #94): two create_clock statements
+# -- sys_clk 1750 ps on port clk_i, cpu_clk 780 ps on port cpu_clk_i -- plus
+# set_clock_groups -asynchronous between them.
+#
+# The two CTS trees come from those two create_clock statements, NOT from
+# CLOCK_PORT/CLOCK_NET: librelane's CTS step only derives CLOCK_NET from
+# CLOCK_PORT when CLOCK_NET is unset, and cts.tcl's own use of $::env(CLOCK_NET)
+# is an informational `puts`, not a clock_tree_synthesis argument. OpenROAD
+# builds one tree per clock defined in the SDC.
+#
+# NO prune step here, unlike librelane-asap7-soc: /nobackup/asap7_soc_runs
+# holds exactly ASAP7_MAX_RUNS (10) runs today, so pruning would start aging
+# out runs the moment a #96 run lands. The run-14 sign-off baseline
+# (RUN_2026-06-23_18-05-38) must not be at the mercy of an `ls -td | tail`
+# heuristic across the iteration budget. /nobackup has ~570 GB free; prune
+# manually if that ever changes, and never delete RUN_2026-06-23_18-05-38.
+#
+# Usage:
+#   make librelane-asap7-soc-multiclock                       # full P&R, ~5 h
+#   make librelane-asap7-soc-multiclock LIBRELANE_EXTRA_ARGS='--to OpenROAD.STAPrePNR'
+#                                                             # preflight gate, ~75 min
+#----------------------------------------------------------------
+librelane-asap7-soc-multiclock: SOC_CONFIG = config_multiclock.json
+librelane-asap7-soc-multiclock: asap7-soc-sv2v
+	@echo "=========================================="
+	@echo "Running LibreLane flow — ASAP7 SoC MULTICLOCK (GH #96)"
+	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)"
+	@echo "  SDC      : constraints/phase5_soc_multiclock.sdc (sys_clk 1750 ps / cpu_clk 780 ps)"
+	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
+	@echo "  Runtime  : expect 4-8 h full flow (~75 min to OpenROAD.STAPrePNR)"
+	@echo "  Run dir  : /nobackup/asap7_soc_runs/"
+	@echo "  Extra    : $(LIBRELANE_EXTRA_ARGS)"
+	@echo "=========================================="
+	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)" ]; then \
+		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG) not found."; exit 1; fi
+	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/constraints/phase5_soc_multiclock.sdc" ]; then \
+		echo "ERROR: multiclock SDC missing — copy pnr/constraints/phase5_soc_multiclock.sdc"; exit 1; fi
+	$(call asap7_soc_preflight)
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Checker.LintErrors \
+		 --skip Checker.YosysSynthChecks \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
+		 $(LIBRELANE_EXTRA_ARGS) \
+		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/$(SOC_CONFIG)"
 
 librelane-asap7-soc-results:
 	$(call librelane_results,$(LIBRELANE_ASAP7_SOC_DIR))

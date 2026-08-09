@@ -2,11 +2,11 @@
     "DESIGN_NAME": "rv32i_cpu_top",
     "PDK": "asap7",
     "STD_CELL_LIBRARY": "asap7sc7p5t_SIMPLE",
-
     "VERILOG_FILES": [
         "dir::../sram_1rw_256x32_asap7_stub.v",
         "dir::../icg_asap7_stub.v",
         "dir::../../../rtl/soc/axi_pkg.sv",
+        "dir::../../../rtl/soc/soc_addr_map_pkg.sv",
         "dir::../../../rtl/cpu/core/rv32i_pipeline_pkg.sv",
         "dir::../../../rtl/mem/rv32i_cache_pkg.sv",
         "dir::../../../rtl/mem/rv32i_clock_gate.sv",
@@ -33,89 +33,81 @@
         "dir::../../../rtl/cpu/core/rv32i_core.sv",
         "dir::../../../rtl/cpu/rv32i_cpu_top.sv"
     ],
-
-    "CLOCK_PORT":   "clk_i",
-    "CLOCK_NET":    "clk_i",
-    "CLOCK_PERIOD": 0.780,
-
-    "VERILOG_DEFINES": ["SRAM_ASAP7", "USE_ICG_CELL"],
-    "LINTER_DEFINES":  ["SRAM_ASAP7"],
-
-    "FP_SIZING":       "absolute",
-    "DIE_AREA":        "0 0 130 130",
-    "CORE_AREA":       "5 5 125 125",
-    "FP_CORE_UTIL":    50,
+    "CLOCK_PORT": "clk_i",
+    "CLOCK_NET": "clk_i",
+    "CLOCK_PERIOD": 0.78,
+    "VERILOG_DEFINES": [
+        "SRAM_ASAP7",
+        "USE_ICG_CELL"
+    ],
+    "LINTER_DEFINES": [
+        "SRAM_ASAP7"
+    ],
+    "FP_SIZING": "absolute",
+    "DIE_AREA": "0 0 130 130",
+    "CORE_AREA": "5 5 125 125",
+    "FP_CORE_UTIL": 50,
     "FP_ASPECT_RATIO": 1,
-
     "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
-
-    "PL_TARGET_DENSITY_PCT":     50,
-    "CTS_SINK_CLUSTERING_SIZE":        8,
+    "PL_TARGET_DENSITY_PCT": 50,
+    "CTS_SINK_CLUSTERING_SIZE": 8,
     "CTS_SINK_CLUSTERING_MAX_DIAMETER": 10,
-    "PL_TIME_DRIVEN":            true,
-    "PL_ROUTABILITY_DRIVEN":     true,
-
-    "FP_PDN_MULTILAYER":         true,
-    "FP_PDN_ENABLE_RAILS":       true,
+    "PL_TIME_DRIVEN": true,
+    "PL_ROUTABILITY_DRIVEN": true,
+    "FP_PDN_MULTILAYER": true,
+    "FP_PDN_ENABLE_RAILS": true,
     "PDN_CONNECT_MACROS_TO_GRID": true,
-    "ERROR_ON_PDN_VIOLATIONS":   false,
-
-    "FP_PDN_RAIL_WIDTH":  0.054,
-    "FP_PDN_HWIDTH":      0.090,
-    "FP_PDN_VWIDTH":      0.120,
-    "FP_PDN_HSPACING":    0.090,
-    "FP_PDN_VSPACING":    0.120,
-    "FP_PDN_HPITCH":      4.5,
-    "FP_PDN_VPITCH":      4.5,
-    "FP_PDN_HOFFSET":     0.5,
-    "FP_PDN_VOFFSET":     0.5,
-    "FP_PDN_CORE_RING_HWIDTH":   0.162,
-    "FP_PDN_CORE_RING_VWIDTH":   0.216,
+    "ERROR_ON_PDN_VIOLATIONS": false,
+    "FP_PDN_RAIL_WIDTH": 0.054,
+    "FP_PDN_HWIDTH": 0.09,
+    "FP_PDN_VWIDTH": 0.12,
+    "FP_PDN_HSPACING": 0.09,
+    "FP_PDN_VSPACING": 0.12,
+    "FP_PDN_HPITCH": 4.5,
+    "FP_PDN_VPITCH": 4.5,
+    "FP_PDN_HOFFSET": 0.5,
+    "FP_PDN_VOFFSET": 0.5,
+    "FP_PDN_CORE_RING_HWIDTH": 0.162,
+    "FP_PDN_CORE_RING_VWIDTH": 0.216,
     "FP_PDN_CORE_RING_HSPACING": 0.162,
     "FP_PDN_CORE_RING_VSPACING": 0.216,
-    "FP_PDN_CORE_RING_HOFFSET":  0.5,
-    "FP_PDN_CORE_RING_VOFFSET":  0.5,
-
-    "RT_MAX_LAYER":  "M7",
-    "DRT_THREADS":   8,
-
-    "FP_IO_HLENGTH":          4.0,
-    "FP_IO_VLENGTH":          4.0,
-    "FP_IO_MIN_DISTANCE":     1.0,
-    "FP_IO_HTHICKNESS_MULT":  8,
-    "FP_IO_VTHICKNESS_MULT":  8,
-
-    "GRT_ADJUSTMENT":      0.20,
+    "FP_PDN_CORE_RING_HOFFSET": 0.5,
+    "FP_PDN_CORE_RING_VOFFSET": 0.5,
+    "RT_MAX_LAYER": "M7",
+    "DRT_THREADS": 8,
+    "FP_IO_HLENGTH": 4.0,
+    "FP_IO_VLENGTH": 4.0,
+    "FP_IO_MIN_DISTANCE": 1.0,
+    "FP_IO_HTHICKNESS_MULT": 8,
+    "FP_IO_VTHICKNESS_MULT": 8,
+    "GRT_ADJUSTMENT": 0.2,
     "GRT_ALLOW_CONGESTION": true,
-
     "LAYERS_RC": "M2 1.84542e-01 4.62311e-02, M3 1.53955e-01 3.63251e-02, M4 1.89434e-01 2.03083e-02, M5 1.71593e-01 1.93005e-02, M6 1.76146e-01 1.18619e-02, M7 1.47030e-01 1.25311e-02",
     "VIAS_RC": "V1 1.72e-02, V2 1.72e-02, V3 1.72e-02, V4 1.18e-02, V5 1.18e-02, V6 8.20e-03, V7 8.20e-03",
-
-    "USE_SYNLIG":    true,
-    "SYNLIG_DEFER":  false,
-
-    "SYNTH_STRATEGY":     "DELAY 3",
-    "SYNTH_SIZING":       true,
+    "USE_SYNLIG": true,
+    "SYNLIG_DEFER": false,
+    "SYNTH_STRATEGY": "DELAY 3",
+    "SYNTH_SIZING": true,
     "SYNTH_ABC_BUFFERING": true,
     "SYNTH_CLOCK_GATING": true,
     "MAX_FANOUT_CONSTRAINT": 8,
-
-    "PNR_SDC_FILE":     "dir::constraints/asap7.sdc",
+    "PNR_SDC_FILE": "dir::constraints/asap7.sdc",
     "SIGNOFF_SDC_FILE": "dir::constraints/asap7.sdc",
     "FALLBACK_SDC_FILE": "dir::constraints/asap7.sdc",
-
-    "RUN_POST_GPL_DESIGN_REPAIR":    true,
-    "RUN_POST_GRT_RESIZER_TIMING":   true,
-    "RUN_POST_GRT_DESIGN_REPAIR":    true,
-    "MAX_TRANSITION_CONSTRAINT":     15.0,
-    "PL_RESIZER_SETUP_SLACK_MARGIN":  0.100,
-    "GRT_RESIZER_SETUP_SLACK_MARGIN": 0.150,
-    "PL_RESIZER_HOLD_SLACK_MARGIN":  0.100,
-    "GRT_RESIZER_HOLD_SLACK_MARGIN": 0.100,
-    "PL_RESIZER_ALLOW_SETUP_VIOS":   true,
-
-    "HOLD_VIOLATION_CORNERS": ["nom_tt_025C_0p7V"],
-
+    "RUN_POST_GPL_DESIGN_REPAIR": true,
+    "RUN_POST_GRT_RESIZER_TIMING": true,
+    "RUN_POST_GRT_DESIGN_REPAIR": true,
+    "MAX_TRANSITION_CONSTRAINT": 15.0,
+    "// UNITS_S9F_1": "librelane declares PL/GRT_RESIZER_*_SLACK_MARGIN as units=ns in its schema, but scripts/openroad/rsz_timing_post{cts,grt}.tcl pass the value RAW to OpenROAD, which reads it in the Liberty time_unit. ASAP7 Liberty (asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib) is time_unit 1ps -- so these are PS values, NOT ns. The old 0.100/0.150 values meant 0.1-0.15 ps (~0 guard band); every prior ASAP7 sign-off (CPU 1282 MHz, GPU, SoC run 14) ran with effectively zero resizer guard band. Proven by GH #96 runs 17/18: 2.5x change in the (misread) margin produced a byte-identical netlist. See claude_verilog_test-s9f.",
+    "// UNITS_S9F_2": "Values below are real ps, sized at 2.5% of the 780 ps CPU period for setup / 1.5% for hold, rounded to 5 ps, and kept under the current signed-off slack (+24.011 ps setup / +28.142 ps hold at RUN_2026-06-02_20-37-12) so the guard band cannot demand more than this design is known to achieve. PL and GRT stage margins are set equal (the old 100/150 vs 100/100 stage split was never a deliberate ratio -- both were sub-ps and effectively inert). Re-validate on the next real ASAP7 CPU PD run -- not exercised here.",
+    "PL_RESIZER_SETUP_SLACK_MARGIN": 20,
+    "GRT_RESIZER_SETUP_SLACK_MARGIN": 20,
+    "PL_RESIZER_HOLD_SLACK_MARGIN": 10,
+    "GRT_RESIZER_HOLD_SLACK_MARGIN": 10,
+    "PL_RESIZER_ALLOW_SETUP_VIOS": true,
+    "HOLD_VIOLATION_CORNERS": [
+        "nom_tt_025C_0p7V"
+    ],
     "EXTRA_LEFS": [
         "dir::../sram_1rw_256x32_asap7.lef"
     ],
@@ -123,27 +115,22 @@
         "dir::../sram_1rw_256x32_asap7_TT_0p7V_25C.lib"
     ],
     "EXTRA_GDS_FILES": [],
-
     "PDN_MACRO_CONNECTIONS": [
         ".*(u_tag_sram|u_data_sram) VDD VSS vdd vss"
     ],
-
     "PL_MACRO_HALO": "2 2",
-
-    "RUN_ANTENNA_REPAIR":          true,
+    "RUN_ANTENNA_REPAIR": true,
     "RUN_HEURISTIC_DIODE_INSERTION": true,
-    "GRT_ANTENNA_ITERS":           5,
-    "GRT_ANTENNA_MARGIN":          20,
-    "DIODE_ON_PORTS":              "in",
-
-    "RUN_SPEF_EXTRACTION":  false,
-    "RUN_MCSTA":            false,
-    "RUN_IRDROP_REPORT":    false,
-    "RUN_MAGIC_DRC":        false,
-    "RUN_KLAYOUT_DRC":      false,
-    "RUN_KLAYOUT_XOR":      false,
-    "RUN_LVS":              false,
-
+    "GRT_ANTENNA_ITERS": 5,
+    "GRT_ANTENNA_MARGIN": 20,
+    "DIODE_ON_PORTS": "in",
+    "RUN_SPEF_EXTRACTION": false,
+    "RUN_MCSTA": false,
+    "RUN_IRDROP_REPORT": false,
+    "RUN_MAGIC_DRC": false,
+    "RUN_KLAYOUT_DRC": false,
+    "RUN_KLAYOUT_XOR": false,
+    "RUN_LVS": false,
     "LIB": {
         "nom_tt_025C_0p7V": [
             "/home/neuromorphic/pdk/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib/asap7sc7p5t_AO_RVT_TT_nldm_211120.lib",
@@ -154,6 +141,12 @@
         ]
     },
     "DEFAULT_CORNER": "nom_tt_025C_0p7V",
-    "STA_CORNERS":    ["nom_tt_025C_0p7V"],
-    "TIMING_VIOLATION_CORNERS": ["*tt*"]
+    "STA_CORNERS": [
+        "nom_tt_025C_0p7V"
+    ],
+    "TIMING_VIOLATION_CORNERS": [
+        "*tt*"
+    ],
+    "// PIN_ORDER_NOTE": "FP_PIN_ORDER_CFG pins the macro's boundary pin layout. Without it OpenROAD free-floats pin assignment per block run: two consecutive regenerations moved 393 of 401 pins, which perturbed SoC placement around u_cpu, doubled post-CTS cpu_clk skew (worst_hold -485.6 -> -922.1 ps), drove hold violations 805 -> 4702 endpoints and 4814 inserted hold buffers, and took cpu_clk WNS from -60.66 to -596.00 ps. The file is generated from the known-good run-21 abstract. io_place.py ERRORS if a design pin is missing from the file or vice versa (power/ground are excluded by the tool), so adding a port fails loudly instead of silently reshuffling.",
+    "FP_PIN_ORDER_CFG": "dir::pin_order.cfg"
 }
