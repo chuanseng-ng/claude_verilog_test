@@ -137,5 +137,8 @@
     },
     "DEFAULT_CORNER": "nom_tt_025C_0p7V",
     "STA_CORNERS":    ["nom_tt_025C_0p7V"],
-    "TIMING_VIOLATION_CORNERS": ["*tt*"]
+    "TIMING_VIOLATION_CORNERS": ["*tt*"],
+
+    "// PIN_ORDER_NOTE": "FP_PIN_ORDER_CFG pins the macro's boundary pin layout. Without it OpenROAD free-floats pin assignment per block run -- measured on the CPU macro (GH #96): two consecutive regenerations moved 393 of 401 pins, which perturbed SoC placement around u_cpu and took cpu_clk setup WNS from -60.66 to -596.00 ps (see pnr/asap7/cpu/README_pin_order.md). This file pins the GPU macro to the same boundary as the checked-in, run-23-signed-off pnr/asap7/soc/macro/gpu_top.lef -- it is generated, not hand-tuned, because the GPU has no measured timing problem to tune against (see pnr/asap7/gpu/README_pin_order.md). io_place.py ERRORS if a design pin is missing from the file or vice versa (power/ground are excluded by the tool), so adding a port fails loudly instead of silently reshuffling.",
+    "FP_PIN_ORDER_CFG": "dir::pin_order.cfg"
 }
