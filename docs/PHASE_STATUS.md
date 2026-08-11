@@ -1,6 +1,6 @@
 # Project Phase Status
 
-Last updated: 2026-06-20
+Last updated: 2026-08-10
 
 ## Current Phase
 
@@ -17,6 +17,14 @@ Last updated: 2026-06-20
 - **Integration** (#100): no free APB slot existed — every 4 KB slot from `0x2000_2000` to `0x2000_7FFF` was taken — so `PERIPH_LIMIT` and `AXIL_APB_LIMIT` were both extended to `0x2000_8FFF`, with PMU at `0x2000_8000–8FFF` as APB slave 5. Two `rv32i_clock_gate` cells now gate `core_clk` into `u_cpu`/`u_gpu` — the first SoC-level clock gates. Isolation clamps sit in `soc_top` outside the gated domains, per the UPF's `-location parent`.
 - **Scope limit**: this is a *sequencing* controller. Retention save/restore are emitted in the correct order for verification to assert but are a functional no-op — `phase5_soc.upf:23` declares no retention registers in Phase 5. No real supply removal, power switches, or retention silicon; `pg_ctrl` is deliberately not emitted.
 - **Verification** (#101): `soc_all` **120/120** (was 82/82), `test_pmu` 10/10 with per-cycle ordering assertions in both directions. Reset defaults leave both domains on/un-isolated/un-reset, so the SoC is functionally identical to pre-PMU for firmware that never writes CTRL.
+
+**Pre-Phase-6 #4: 2-domain multi-clock SoC + CDC (GH epic #90)** - ✅ COMPLETE (2026-08-09). The SoC is split into a CPU domain and a GPU+bus+peripheral domain, giving exactly **one** CDC boundary (CPU ↔ crossbar M0).
+
+- **PD result** (#96, run 23 `RUN_2026-08-09_14-36-16`): `cpu_clk` 780 ps at **+9.8 ps** WS, TNS 0, 0 violators → **1282 MHz MET**; `sys_clk` 1750 ps at **+74.8 ps** WS, TNS 0, 0 violators → **571 MHz MET**. 0 routing DRC, 0 antenna, 0 slew/cap, 51.9 mW, 66.9 % util, die unchanged 520 × 520 µm, post-route CDC budget check PASS. **The CPU runs at 2.24× the fabric clock and is no longer de-rated onto the 1750 ps cycle** — the point of the epic. Run 14 remains the accepted single-clock M11 sign-off and is byte-reproducible; the multi-clock flow runs off `pnr/asap7/soc/config_multiclock.json` + `constraints/phase5_soc_multiclock.sdc`.
+- **RTL** (#91/#92/#93): `rtl/soc/async_axi_fifo.sv` (dual-clock AXI4 bridge on new `rtl/soc/cdc/` primitives), a second `pll_subsystem` + `APB_PLL2` slot, and `rtl/soc/apb_cdc_bridge.sv`. `soc_all` 159/159; `soc_multiclock` 4/4 at a **7 ns / 3 ns coprime ratio** — the first real CDC coverage in this repo, and it found two RTL bugs invisible to every 1:1 suite (both a *reset value that advertises availability*).
+- **Two PD root causes, both now fixed and documented**: the CPU macro Liberty exported ~600–800 ps combinational in→out arcs on its APB outputs (fixed by making all three outputs pure registered), and the macro's boundary pins free-floated between regenerations — **393 of 401 moved**, worth 535 ps of setup — fixed by `pnr/asap7/cpu/pin_order.cfg` (`pnr/asap7/cpu/README_pin_order.md`).
+- ⚠️ **Do not quote 62.9 → 51.9 mW as a multi-clock power win.** `report_power` attributes 0.00 W to the macros, and the drop coincides with the first-ever ICG insertion (`USE_ICG_CELL`). ASAP7 IR drop remains unobtainable — `analyze_power_grid` fails `PSM-0069` on both rails from the M1-only tap-cell connectivity artifact. Both tracked as beads.
+- Full record: [`docs/PHASE5_RUN_HISTORY.md`](PHASE5_RUN_HISTORY.md) and [`docs/3PLL_CDC_EVALUATION.md`](3PLL_CDC_EVALUATION.md).
 
 **Sky130 real DRC/LVS sign-off (GH epic #102)** — Stages 1–2 ✅ complete (2026-07-31); Stages 3–4 ⏸️ host-gated.
 - **Stage 1** (CPU standalone, GH #103): KLayout DRC 0, Netgen LVS MATCH, setup +0.366 ns @ 75 MHz. Magic DRC 27.7 M waived — 100 % inside SRAM macro footprints, PDK artifact (bead `45a`).
