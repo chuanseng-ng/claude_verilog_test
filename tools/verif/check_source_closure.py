@@ -4,6 +4,7 @@
 Motivation (bead claude_verilog_test-50t, follow-up to v2q): source lists in
 this repo are hand-maintained in three different places (PD `config.json`
 `VERILOG_FILES`, `tb/cocotb/*/Makefile` `VERILOG_SOURCES`, `sim/Makefile`'s
+and `pnr/Makefile`'s
 several `*_SOURCES` variables) and nothing ever cross-checked them against
 each other or against the RTL's actual `import <pkg>::*` statements. When RTL
 gained a new package dependency (e.g. the M2 AXI4 burst upgrade adding
@@ -86,7 +87,15 @@ class ListReport:
         return not (self.missing_packages or self.missing_files or self.unresolved_tokens)
 
 
-def evaluate_list(label: str, tokens: list[str]) -> ListReport:
+def evaluate_list(label: str, tokens: list[str], base_dir: Path | None = None) -> ListReport:
+    """Check one source list. Relative tokens resolve against `base_dir`.
+
+    A Makefile's relative paths are relative to that Makefile's own directory,
+    not the repo root — `pnr/Makefile` uses `RTL_DIR := ../rtl`, which means
+    `<repo>/rtl` only when resolved from `pnr/`. Defaulting `base_dir` to the
+    repo root would silently report every such file as missing.
+    """
+    base = base_dir or REPO_ROOT
     report = ListReport(label=label)
     for tok in tokens:
         if "$(" in tok or "${" in tok:
@@ -94,7 +103,7 @@ def evaluate_list(label: str, tokens: list[str]) -> ListReport:
             continue
         path = Path(tok)
         if not path.is_absolute():
-            path = (REPO_ROOT / tok).resolve()
+            path = (base / tok).resolve()
         if path.suffix.lower() not in DESIGN_FILE_EXTS:
             continue
         report.files.append(str(path))
@@ -198,14 +207,29 @@ def _resolve_shell(cmd: str, makefile_dir: Path) -> str | None:
 _ABSPATH_RE = re.compile(r"\$\(abspath\s+([^()]*)\)")
 
 
-def _apply_abspath(value: str) -> str:
+def _apply_abspath(value: str, makefile_dir: Path) -> str:
     """Resolve GNU-Make's `$(abspath ...)` function once its argument no
     longer contains nested `$(...)` references (i.e. after variable
-    substitution has already run on it)."""
+    substitution has already run on it).
+
+    Make resolves a relative argument against the directory of the Makefile
+    being read, NOT the invoking process's CWD -- `pnr/Makefile` has
+    `PROJECT_ROOT := $(abspath ..)`, which is the repo root only when
+    resolved from `pnr/`. Using `Path(arg).resolve()` here would make the
+    result depend on where the checker happened to be run from, and every
+    file under that variable would be reported missing.
+    """
+
+    def _one(m: re.Match[str]) -> str:
+        arg = Path(m.group(1).strip())
+        if not arg.is_absolute():
+            arg = makefile_dir / arg
+        return str(arg.resolve())
+
     prev = None
     while prev != value:
         prev = value
-        value = _ABSPATH_RE.sub(lambda m: str(Path(m.group(1).strip()).resolve()), value)
+        value = _ABSPATH_RE.sub(_one, value)
     return value
 
 
@@ -224,7 +248,9 @@ def resolve_makefile_vars(makefile_path: Path) -> tuple[dict[str, str], list[str
         if is_recipe:
             continue
         line = raw_line.split("#", 1)[0].strip()
-        if not line or line.startswith(("ifeq", "ifneq", "ifdef", "ifndef", "else", "endif", "include")):
+        if not line or line.startswith(
+            ("ifeq", "ifneq", "ifdef", "ifndef", "else", "endif", "include")
+        ):
             continue
         m = ASSIGN_RE.match(line)
         if not m:
@@ -239,12 +265,13 @@ def resolve_makefile_vars(makefile_path: Path) -> tuple[dict[str, str], list[str
                 unresolved_names.append(name)
                 value = raw_value  # keep literal so it's visible in output
         else:
+
             def _sub(mm: re.Match) -> str:
                 ref = mm.group(1)
                 return resolved.get(ref, mm.group(0))
 
             value = VAR_REF_RE.sub(_sub, raw_value)
-            value = _apply_abspath(value)
+            value = _apply_abspath(value, makefile_path.parent)
 
         if op == "+=":
             resolved[name] = (resolved.get(name, "") + " " + value).strip()
@@ -263,7 +290,11 @@ def extract_makefile_lists(makefile_path: Path) -> dict[str, list[str]]:
         if not SOURCE_LIST_VAR_RE.match(name):
             continue
         tokens = _split_tokens(value)
-        if not any(Path(t.split("$")[0]).suffix.lower() in DESIGN_FILE_EXTS for t in tokens if "$" not in t or t.rsplit(".", 1)[-1] in ("sv", "v")):
+        if not any(
+            Path(t.split("$")[0]).suffix.lower() in DESIGN_FILE_EXTS
+            for t in tokens
+            if "$" not in t or t.rsplit(".", 1)[-1] in ("sv", "v")
+        ):
             # Cheap pre-filter: skip vars that plainly hold no design files
             # (e.g. TEST_MODULES-style lists wouldn't match the name pattern
             # anyway; this guards oddities like empty/def-only vars).
@@ -280,9 +311,10 @@ def discover_targets() -> list[Path]:
     targets = sorted(REPO_ROOT.glob("pnr/*/config*.json"))
     targets += sorted(REPO_ROOT.glob("pnr/*/*/config*.json"))
     targets += sorted(REPO_ROOT.glob("tb/cocotb/*/Makefile"))
-    sim_mk = REPO_ROOT / "sim" / "Makefile"
-    if sim_mk.exists():
-        targets.append(sim_mk)
+    for extra in ("sim/Makefile", "pnr/Makefile"):
+        mk = REPO_ROOT / extra
+        if mk.exists():
+            targets.append(mk)
     return targets
 
 
@@ -294,7 +326,10 @@ def reports_for_target(path: Path) -> list[ListReport]:
     else:
         return []
     rel = path.relative_to(REPO_ROOT)
-    reports = [evaluate_list(f"{rel}:{name}", tokens) for name, tokens in lists.items()]
+    base = path.parent
+    reports = [
+        evaluate_list(f"{rel}:{name}", tokens, base_dir=base) for name, tokens in lists.items()
+    ]
     # Dedupe lists that resolve to an identical file set (e.g. CDC_SOURCES :=
     # $(sort $(SOC_TOP_SOURCES))) — keep the first label, note the alias.
     seen: dict[tuple[str, ...], ListReport] = {}
@@ -326,13 +361,17 @@ def print_human(all_reports: list[ListReport]) -> bool:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument(
         "paths",
         nargs="*",
         help="Specific config.json / Makefile path(s) to check. Default: scan the whole repo.",
     )
-    parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON instead of text.")
+    parser.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON instead of text."
+    )
     args = parser.parse_args()
 
     targets = [Path(p).resolve() for p in args.paths] if args.paths else discover_targets()

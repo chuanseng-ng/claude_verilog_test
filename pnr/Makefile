@@ -223,31 +223,38 @@ help:
 # Uses sim/sram_1rw_256x32_verilator.v behavioral stub for SRAM macros.
 #----------------------------------------------------------------
 
-# RTL sources in compile order (packages first, top last)
+# RTL sources in compile order (packages first, top last).
+# Mirrors the import-closed order proven in pnr/asap7/cpu/config.json; see
+# tools/verif/check_source_closure.py, which now gates this list.
 RTL_SOURCES := \
+	../sim/sram_1rw_256x32_verilator.v \
+	$(RTL_DIR)/soc/axi_pkg.sv \
+	$(RTL_DIR)/soc/soc_addr_map_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
-	../sim/sram_1rw_256x32_verilator.v \
-	$(RTL_DIR)/cpu/rv32i_cpu_top.sv \
-	$(RTL_DIR)/cpu/core/rv32i_core.sv \
-	$(RTL_DIR)/cpu/core/rv32i_decode.sv \
+	$(RTL_DIR)/mem/rv32i_clock_gate.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
-	$(RTL_DIR)/cpu/core/rv32i_regfile.sv \
-	$(RTL_DIR)/cpu/core/rv32i_imm_gen.sv \
 	$(RTL_DIR)/cpu/core/rv32i_branch_comp.sv \
+	$(RTL_DIR)/cpu/core/rv32i_imm_gen.sv \
+	$(RTL_DIR)/cpu/core/rv32i_regfile.sv \
+	$(RTL_DIR)/cpu/core/rv32i_decode.sv \
+	$(RTL_DIR)/cpu/core/rv32i_forwarding_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_hazard_unit.sv \
+	$(RTL_DIR)/cpu/core/rv32i_interrupt_ctrl.sv \
+	$(RTL_DIR)/cpu/core/rv32i_csr_file.sv \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_if.sv \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_id.sv \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex1c.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex1b.sv \
+	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_ex2.sv \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_mem.sv \
 	$(RTL_DIR)/cpu/core/pipeline/rv32i_pipeline_wb.sv \
-	$(RTL_DIR)/cpu/core/rv32i_hazard_unit.sv \
-	$(RTL_DIR)/cpu/core/rv32i_forwarding_unit.sv \
-	$(RTL_DIR)/cpu/core/rv32i_csr_file.sv \
-	$(RTL_DIR)/cpu/core/rv32i_interrupt_ctrl.sv \
-	$(RTL_DIR)/cpu/rv32i_axi_arbiter.sv \
 	$(RTL_DIR)/mem/rv32i_icache.sv \
 	$(RTL_DIR)/mem/rv32i_dcache.sv \
-	$(RTL_DIR)/mem/rv32i_cache_arbiter.sv
+	$(RTL_DIR)/mem/rv32i_cache_arbiter.sv \
+	$(RTL_DIR)/cpu/core/rv32i_core.sv \
+	$(RTL_DIR)/cpu/rv32i_cpu_top.sv
 
 VERILATOR_LINT_FLAGS := --lint-only -sv \
 	-Wno-WIDTH -Wno-UNUSED -Wno-BLKSEQ -Wno-UNOPTFLAT --no-timing \

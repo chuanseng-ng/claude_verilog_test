@@ -59,6 +59,11 @@ nightly.
 - A `config.json`'s `VERILOG_FILES` entries that aren't `dir::`-prefixed
   (e.g. PDK-relative `$PDK_ROOT/...` macro views) are skipped — they aren't
   repo-relative design sources this check can reason about.
+- Relative paths in a Makefile resolve against **that Makefile's own
+  directory**, not the repo root and not the invoking CWD. `pnr/Makefile`
+  has `RTL_DIR := ../rtl` and `PROJECT_ROOT := $(abspath ..)`, both of which
+  mean the repo root only when read from `pnr/`. Getting this wrong doesn't
+  under-report — it reports every file in the list as missing.
 - `pnr/asap7/template/config.json` reports as a gap when scanned in place —
   it's a stencil meant to be copied into a sibling `pnr/asap7/<design>/`
   directory (its `dir::../../rtl/...` paths are one level short from
@@ -72,6 +77,8 @@ nightly.
 | `tb/cocotb/soc/Makefile` (18 source vars) | closes |
 | `sim/Makefile:VERILOG_SOURCES`/`CACHE_SOURCES`/`GPU_SOURCES`/`SOC_TOP_SOURCES` | closes |
 | `pnr/asap7/{cpu,gpu,soc}/config.json`, `pnr/sky130/{cpu,soc}/config.json` | closes |
+| `pnr/Makefile:RTL_SOURCES` (the `make -C pnr lint` list) | closes (fixed by bead `a7k`) |
+| `pnr/Makefile:SOC_SV_FILES`/`SKY130_SOC_SV_FILES` (sv2v inputs) | closes |
 | `pnr/freepdk45/config.json`, `pnr/librelane/config.json`, `pnr/openlane/config.json`, `pnr/openlane1/config.json` | **gap** — missing `axi_pkg`/`soc_addr_map_pkg`, same defect class as `50t`, predates the M2 AXI4 burst upgrade. Not fixed here (out of scope for a verification-branch bead) — file a follow-up bead against whichever of these flows is still live before relying on them. |
 | `pnr/asap7/template/config.json` | reports a gap in place — expected, see above |
 
