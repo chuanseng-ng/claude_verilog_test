@@ -15,9 +15,16 @@ m_* face = destination domain, APB4 MASTER port (apb_cdc_bridge drives
   file provides a small local `ApbSlaveResponder` to play that role, with
   configurable wait-states and pslverr injection.
 
-apb_cdc_bridge is a depth-1 (one outstanding transfer) 2-phase toggle-
-handshake bridge -- see the RTL module header (rtl/soc/apb_cdc_bridge.sv)
-for the full protocol and CDC argument before reading the tests below.
+apb_cdc_bridge is a depth-1 (one outstanding transfer) 4-phase RZ
+(return-to-zero) handshake bridge -- converted from a 2-phase NRZ toggle
+handshake by bead claude_verilog_test-rfz (2026-08-12; PULP/OpenTitan/ARM/
+Hazard3/OpenDAP precedent for why NRZ is unsafe under one-sided async
+reset -- see the RTL header). See the RTL module header
+(rtl/soc/apb_cdc_bridge.sv) for the full protocol and CDC argument before
+reading the tests below. Internal backdoor register names below reflect the
+RZ rename: req_toggle_q/ack_toggle_q (source/destination "toggle" bits) are
+now req_q/ack_q (source/destination request/ack LEVELS); req_toggle_m/
+ack_toggle_s (their synchronised copies) are now req_m/ack_s.
 
 **Two-Clock() mechanic**: both s_clk and m_clk are true top-level input ports
 written via VPI, so two independent `Clock()` coroutines free-run with no
@@ -176,7 +183,7 @@ class ApbSlaveResponder:
             #    abandoned: either m_psel dropped (the GH #93 availability
             #    fix force-completed the SOURCE side with a bounded error
             #    before this destination ever answered -- see
-            #    apb_cdc_bridge.sv's req_fwd_q / S_WAIT-abort logic) or this
+            #    apb_cdc_bridge.sv's req_fwd_q / S_REQ-abort logic) or this
             #    destination domain's own reset asserted mid-transfer
             #    (m_rst_n=0). Either way, blindly asserting m_pready later
             #    for a request nobody is listening for anymore would let
@@ -290,6 +297,15 @@ async def _reset_defaults_body(dut):
     assert int(dut.m_penable.value) == 0, "m_penable must be low (idle) at reset"
     dut._log.info("reset defaults OK: s_pready/s_pslverr/m_psel/m_penable all idle-low")
 
+
+
+# apb_cdc_bridge.sv s_state_e / d_state_e encodings (rtl/soc/apb_cdc_bridge.sv
+# :487-492, :608-613). Named here so a structural check can never silently
+# assert against the wrong ordinal -- an earlier draft of
+# test_rz_four_phase_structural_proof looked for S_DONE's 3 while its message
+# said S_DROP, so it failed on correct RTL.
+S_IDLE, S_REQ, S_DROP, S_DONE = 0, 1, 2, 3
+D_IDLE, D_SETUP, D_ACCESS, D_ACK = 0, 1, 2, 3
 
 @cocotb.test()
 async def test_reset_defaults(dut):
@@ -510,7 +526,7 @@ async def _reset_mid_transaction_s_side_body(dut):
     ctx = await _setup(dut, 10, 10, wait_states=5)
 
     t = cocotb.start_soon(ctx.s_master.write(0x600, 0xABCD1234))
-    await ClockCycles(dut.s_clk, 2)  # let SETUP + req_toggle_q launch happen first
+    await ClockCycles(dut.s_clk, 2)  # let SETUP + req_q launch happen first
     # Assert ONLY s_rst_n -- m_rst_n stays high throughout. The point of this
     # test is that a single-sided reset still flushes BOTH domains via
     # rst_both_n = s_rst_n_i & m_rst_n_i (see apb_cdc_bridge.sv header).
@@ -546,9 +562,9 @@ async def test_reset_mid_transaction_s_side(dut):
 
 async def _reset_mid_transaction_m_side_body(dut):
     """GH #93 availability fix (commit cb5c780): an m-only reset while a
-    request has already been FORWARDED and is genuinely in flight (S_WAIT,
-    req_fwd_q=1) no longer wedges s_pready forever. The bridge's S_WAIT exit
-    condition (`ack_new || !req_fwd_q || !m_rst_n_s`) force-completes with
+    request has already been FORWARDED and is genuinely in flight (S_REQ,
+    req_fwd_q=1) no longer wedges s_pready forever. The bridge's S_REQ exit
+    condition (`ack_s || !req_fwd_q || !m_rst_n_s`) force-completes with
     s_pready=1, s_pslverr=1 within a bounded number of s_clk cycles once the
     destination is observed to have entered reset.
 
@@ -559,8 +575,10 @@ async def _reset_mid_transaction_m_side_body(dut):
     the PLL2 window raced an m-only reset, wedging the entire upstream APB
     tree. See apb_cdc_bridge.sv's "Reset strategy" header for the full
     asymmetric-reset justification (m_rst_sync_n deliberately stays coupled
-    to rst_both_n for toggle-parity reasons; m_rst_n_s + req_fwd_q + the
-    bounded S_WAIT exit are what make this direction safe without that
+    to rst_both_n as a conservative, reviewed choice (bead
+    claude_verilog_test-rfz's RZ conversion removed the parity invariant this
+    coupling used to protect -- see apb_cdc_bridge.sv header); m_rst_n_s + req_fwd_q + the
+    bounded S_REQ exit are what make this direction safe without that
     coupling).
 
     The interrupted read task now completes ON ITS OWN (no t.kill() needed)
@@ -575,15 +593,15 @@ async def _reset_mid_transaction_m_side_body(dut):
     await ClockCycles(dut.m_clk, 3)  # let the request cross into the m domain and be forwarded first
 
     # Confirm (via backdoor, --public-flat-rw) this really is the "forwarded,
-    # then aborted mid-S_WAIT" path, not the "never forwarded" one covered
+    # then aborted mid-S_REQ" path, not the "never forwarded" one covered
     # separately by test_availability_never_forwarded.
     assert int(dut.u_dut.req_fwd_q.value) == 1, (
         "setup assumption violated: request was not yet forwarded (req_fwd_q=0) "
         "before m_rst_n is asserted below -- this test targets the "
         "'aborted after forwarding' escape path, not the 'never forwarded' one"
     )
-    assert int(dut.u_dut.s_state_q.value) == 1, (  # s_state_e: S_IDLE=0, S_WAIT=1, S_DONE=2
-        "setup assumption violated: source FSM is not in S_WAIT -- the request "
+    assert int(dut.u_dut.s_state_q.value) == S_REQ, (
+        "setup assumption violated: source FSM is not in S_REQ -- the request "
         "must still be genuinely in flight when m_rst_n is asserted"
     )
 
@@ -615,7 +633,7 @@ async def _reset_mid_transaction_m_side_body(dut):
     await ClockCycles(dut.s_clk, 2)
     assert int(dut.s_pready.value) == 0, "s_pready must return to idle-low after the error-completion pulse"
     # Note: s_pslverr_o (resp_pslverr_q) is a "last response status" register
-    # captured only during S_WAIT and held stable in between transactions --
+    # captured only during S_REQ and held stable in between transactions --
     # apb_cdc_bridge.sv never self-clears it after S_DONE (mirroring
     # resp_prdata_q's identical behaviour), and no real APB master looks at
     # pslverr except in the same cycle it observes pready=1 (exactly what
@@ -627,15 +645,18 @@ async def _reset_mid_transaction_m_side_body(dut):
     # Re-check (not just during the abort itself, but again now, in the
     # window after m_rst_n_i has actually released) that the aborted request
     # produced no destination-side completion -- closes the "no stray write
-    # lands once m_rst_n_i deasserts" / toggle-parity-non-collision property:
-    # if req_toggle_q's clamp-to-0 (while !m_rst_n_s) had NOT correctly held
-    # it at 0 for the entire abort, releasing m_rst_n_i here is exactly the
-    # moment a stale, out-of-sync req_toggle_q could suddenly look like a
-    # "new" request to req_seen_q and fire a spurious destination transfer.
+    # lands once m_rst_n_i deasserts" / no-stale-level-collision property
+    # (bead claude_verilog_test-rfz: RZ has no parity register to protect,
+    # but the req_q clamp-to-0 must still hold -- see apb_cdc_bridge.sv
+    # header "No fabricated destination-side write, RZ argument"):
+    # if req_q's clamp-to-0 (while !m_rst_n_s) had NOT correctly held it at
+    # 0 for the entire abort, releasing m_rst_n_i here is exactly the moment
+    # a stale, out-of-sync req_q could suddenly look like a "new" request to
+    # D_IDLE and fire a spurious destination transfer.
     assert ctx.responder.completed == 0, (
         "a destination-side transfer appeared after m_rst_n_i released, "
-        "before any new request was issued -- req_toggle_q's clamp did not "
-        "correctly prevent a stale/collided toggle from firing"
+        "before any new request was issued -- req_q's clamp did not "
+        "correctly prevent a stale/collided level from firing"
     )
 
     ok2 = await ctx.s_master.write(0x700, 0x33334444)
@@ -643,7 +664,7 @@ async def _reset_mid_transaction_m_side_body(dut):
     assert ctx.responder.completed == 1, (
         f"expected exactly 1 destination-side completion for this one new "
         f"write, got {ctx.responder.completed} -- possible extra transfer "
-        "from a toggle-parity collision with the earlier aborted request"
+        "from a stale-level collision with the earlier aborted request"
     )
     data2, ok3 = await ctx.s_master.read(0x700)
     assert ok3, "post-recovery read reported pslverr"
@@ -734,19 +755,35 @@ async def _latency_budget_body(dut):
     assert data == 0xFEEDFACE, f"latency-budget readback mismatch: {data:#x}"
     read_latency_ns = t3 - t2
 
-    # Derived bound (not just measured): a single-beat round trip crosses
-    # req_toggle_q into the m domain ((sync_m + 1) m-cycles: SYNC_STAGES_TO_M
-    # sync flops + 1 cycle for req_seen_q to catch up), runs one D_SETUP +
-    # one zero-wait D_ACCESS cycle (2 m-cycles), crosses ack_toggle_q back
-    # into the s domain ((sync_s + 1) s-cycles, same reasoning), then takes
-    # one S_WAIT-capture + one S_DONE-pulse cycle (2 s-cycles) to complete.
-    # Expressed conservatively in the SLOWER of the two periods, with a 2x
-    # safety margin for scheduling slop between two independently
-    # free-running Clock() coroutines (not a tight bound, but a real,
-    # derived one -- see the GH #94 STA action item in apb_cdc_bridge.sv's
-    # header for the eventual set_max_delay treatment of these same paths).
+    # Derived bound (not just measured), bead claude_verilog_test-rfz update:
+    # apb_cdc_bridge.sv's s_pready_o now gates on the FULL 4-phase round
+    # trip (assert AND deassert), not just the assert half -- APB is
+    # master-driven, so pready must not pulse until this bridge is actually
+    # back at (one cycle from) S_IDLE to accept a new SETUP, or the next
+    # transaction's SETUP would be silently missed (see apb_cdc_bridge.sv's
+    # S_DROP/S_DONE header note for the full reasoning; an earlier draft of
+    # this RTL got this ordering wrong and a back-to-back test caught it
+    # immediately). One-way (assert) trip: req_q crosses into the m domain
+    # as req_m ((sync_m + 1) m-cycles: SYNC_STAGES_TO_M sync flops + 1 cycle
+    # of conservative padding -- D_IDLE watches req_m directly, RZ has no
+    # comparator register to "catch up" the way the old NRZ req_seen_q did,
+    # but this padding is kept as slack, not a requirement), runs one
+    # D_SETUP + one zero-wait D_ACCESS cycle (2 m-cycles), then ack_q
+    # crosses back into the s domain as ack_s ((sync_s + 1) s-cycles, same
+    # reasoning), plus 2 s-cycles of state-transition slack. The deassert
+    # (return-to-zero) half mirrors the SAME crossings and transitions in
+    # reverse (req_q fall -> req_m fall -> D_ACK exit -> ack_q fall ->
+    # ack_s fall -> S_DROP exit -> S_DONE pulse), so the total budget is
+    # simply DOUBLE the one-way figure -- not a new derivation, just the
+    # same trip taken twice. Expressed conservatively in the SLOWER of the
+    # two periods, with a 2x safety margin for scheduling slop between two
+    # independently free-running Clock() coroutines (not a tight bound, but
+    # a real, derived one -- see the GH #94 STA action item in
+    # apb_cdc_bridge.sv's header for the eventual set_max_delay treatment
+    # of these same paths).
     slow_ns = max(s_ns, m_ns)
-    budget_cycles = (sync_m + 1) + 2 + (sync_s + 1) + 2
+    one_way_budget_cycles = (sync_m + 1) + 2 + (sync_s + 1) + 2
+    budget_cycles = 2 * one_way_budget_cycles
     bound_ns = 2 * budget_cycles * slow_ns
 
     dut._log.info(
@@ -773,13 +810,15 @@ async def test_latency_budget(dut):
 # the PLL2 window while ONLY the destination (m_rst_n_i) domain was in reset
 # used to wedge the source FSM in S_IDLE forever. The fix adds a new
 # same-domain status crossing (m_rst_n_s), a req_fwd_q latch, and a bounded
-# S_WAIT exit (`ack_new || !req_fwd_q || !m_rst_n_s`). The tests below
-# exercise each of the three ways S_WAIT can now resolve, plus the two
+# S_REQ exit (`ack_s || !req_fwd_q || !m_rst_n_s`). The tests below
+# exercise each of the three ways S_REQ can now resolve, plus the two
 # structural invariants the fix's own header commits to: no destination
-# write ever lands for an aborted/errored request, and req_toggle_q's
-# clamp-to-0 prevents a toggle-parity collision across repeated m-only
-# resets. test_reset_mid_transaction_m_side above already covers the
-# "forwarded, then aborted mid-S_WAIT" path with an explicit req_fwd_q/
+# write ever lands for an aborted/errored request, and req_q's
+# clamp-to-0 prevents a stale-level collision across repeated m-only
+# resets (bead claude_verilog_test-rfz: RZ removed the "toggle-parity"
+# concept these comments used to invoke -- see apb_cdc_bridge.sv header).
+# test_reset_mid_transaction_m_side above already covers the
+# "forwarded, then aborted mid-S_REQ" path with an explicit req_fwd_q/
 # s_state_q backdoor check.
 
 # --- 16. never forwarded: destination already observed in reset at SETUP ----
@@ -787,7 +826,7 @@ async def test_latency_budget(dut):
 async def _availability_never_forwarded_body(dut):
     """m_rst_n_i asserted BEFORE any request is issued: the very first SETUP
     latches req_fwd_q=0 (destination already observed dead), so the request
-    is never forwarded at all and S_WAIT resolves via the `!req_fwd_q`
+    is never forwarded at all and S_REQ resolves via the `!req_fwd_q`
     escape on the very next cycle -- a fast, local-only completion, not a
     round trip through the destination."""
     ctx = await _setup(dut, 10, 10)
@@ -832,7 +871,7 @@ async def _availability_never_forwarded_body(dut):
     await ClockCycles(dut.m_clk, 3)
     # Re-check (now that m_rst_n_i has actually released, not just during
     # the never-forwarded completion itself) that nothing spurious reached
-    # the destination -- same toggle-parity-non-collision property as
+    # the destination -- same no-stale-level-collision property as
     # test_reset_mid_transaction_m_side's equivalent check.
     assert ctx.responder.completed == 0, (
         "a destination-side transfer appeared after m_rst_n_i released, "
@@ -858,33 +897,39 @@ async def test_availability_never_forwarded(dut):
     await with_timeout(_availability_never_forwarded_body(dut), 50, "us")
 
 
-# --- 17. ack_new wins a same-s_clk-edge race against destination-reset -------
+# --- 17. ack_s wins a same-s_clk-edge race against destination-reset -------
 
 async def _availability_ack_race_wins_body(dut):
-    """Prove that when ack_new (the real destination response, already
+    """Prove that when ack_s (the real destination response, already
     safely captured at the destination and independently propagating) and
     !m_rst_n_s (the destination-reset-detected condition) become true on the
-    EXACT SAME s_clk edge, ack_new wins -- apb_cdc_bridge.sv's
-    `if (ack_new) ... else if (!req_fwd_q || !m_rst_n_s) ...` checks ack_new
+    EXACT SAME s_clk edge, ack_s wins -- apb_cdc_bridge.sv's
+    `if (ack_s) ... else if (!req_fwd_q || !m_rst_n_s) ...` checks ack_s
     first, so this is a deterministic priority encoding on two already-
     synchronised, registered single-bit signals (no metastability, no real
     hardware race) -- but it is only actually EXERCISED if both are
     engineered to change on the identical edge.
 
-    ack_toggle_q's flip at the destination is NOT influenced by m_rst_n_i at
-    all (u_ack_sync's reset is s_rst_sync_n, never m_rst_n_i), so it is safe
-    to let the ack complete for real at the destination first, then align
-    m_rst_n_i's assertion so its OWN independent 2-stage synchroniser
-    (u_m_rst_status_sync) settles on the same edge that ack_toggle_q's
+    ack_q's assert-edge (0->1) at the destination is NOT influenced by
+    m_rst_n_i at all (u_ack_sync's reset is s_rst_sync_n, never m_rst_n_i),
+    so it is safe to let the ack complete for real at the destination first,
+    then align m_rst_n_i's assertion so its OWN independent 2-stage
+    synchroniser (u_m_rst_status_sync) settles on the same edge that ack_q's
     propagation (through u_ack_sync, also 2-stage, both clocked by s_clk_i)
     completes. Getting the timestep-boundary offset for that byte-perfect
     is delicate under cocotb's RisingEdge/ReadOnly discipline (you cannot
     write a signal in the same timestep you just read it via ReadOnly), so
     this test self-calibrates: it sweeps the exact number of edges to wait
-    after observing the ack_toggle_q flip before asserting m_rst_n_i, on a
-    fresh transaction each time, until it observes (via safe ReadOnly reads
-    of ack_toggle_s / m_in_rst_s) that both actually changed on the same
-    s_clk edge, then checks the response from that specific run.
+    after observing ack_q assert before asserting m_rst_n_i, on a fresh
+    transaction each time, until it observes (via safe ReadOnly reads of
+    ack_s / m_in_rst_s -- ack_s is ack_q's synchronised copy in the s
+    domain, renamed from ack_toggle_s by bead claude_verilog_test-rfz) that
+    both actually changed on the same s_clk edge, then checks the response
+    from that specific run. Only the FIRST assert (0->1) is tracked here --
+    under the old NRZ encoding this was ack_toggle_q's only meaningful
+    transition per request; under RZ, ack_q also later deasserts (1->0,
+    the "return to zero" half), but that is irrelevant to this race, which
+    only cares about the moment the real response first becomes visible.
     """
     addr = 0xB00
     golden = 0xCAFED00D
@@ -894,19 +939,19 @@ async def _availability_ack_race_wins_body(dut):
         ctx = await _setup(dut, 10, 10)
         ctx.responder.mem[addr] = golden
 
-        prev_ack_q = int(dut.u_dut.ack_toggle_q.value)
+        prev_ack_q = int(dut.u_dut.ack_q.value)
         t = cocotb.start_soon(ctx.s_master.read(addr))
 
         flip_seen = False
         for _ in range(300):
             await RisingEdge(dut.m_clk)
             await ReadOnly()
-            cur = int(dut.u_dut.ack_toggle_q.value)
+            cur = int(dut.u_dut.ack_q.value)
             if cur != prev_ack_q:
                 flip_seen = True
                 break
             prev_ack_q = cur
-        assert flip_seen, f"wait_edges={wait_edges}: ack_toggle_q never flipped at the destination"
+        assert flip_seen, f"wait_edges={wait_edges}: ack_q never asserted at the destination"
 
         # Advance wait_edges more m_clk edges (== s_clk edges here, 10/10 ns
         # phase-aligned) before writing m_rst_n_i -- the earliest possible
@@ -917,14 +962,14 @@ async def _availability_ack_race_wins_body(dut):
             await RisingEdge(dut.m_clk)
         dut.m_rst_n.value = 0
 
-        prev_ack_s = int(dut.u_dut.ack_toggle_s.value)
+        prev_ack_s = int(dut.u_dut.ack_s.value)
         prev_in_rst = int(dut.u_dut.m_in_rst_s.value)
         ack_s_edge = None
         rst_edge = None
         for i in range(10):
             await RisingEdge(dut.s_clk)
             await ReadOnly()
-            cur_ack_s = int(dut.u_dut.ack_toggle_s.value)
+            cur_ack_s = int(dut.u_dut.ack_s.value)
             cur_in_rst = int(dut.u_dut.m_in_rst_s.value)
             if ack_s_edge is None and cur_ack_s != prev_ack_s:
                 ack_s_edge = i
@@ -941,7 +986,7 @@ async def _availability_ack_race_wins_body(dut):
 
         # Not aligned this attempt -- clean up and try the next offset with
         # a fresh _setup() (which fully re-resets everything, including
-        # ack_toggle_q back to 0, so each attempt is independent). The watch
+        # ack_q back to 0, so each attempt is independent). The watch
         # loop above always exits from a ReadOnly phase (whether it broke on
         # a match or ran out of iterations), so a RisingEdge is needed first
         # to reach a writable region before touching m_rst_n.
@@ -951,22 +996,22 @@ async def _availability_ack_race_wins_body(dut):
         await ClockCycles(dut.m_clk, 5)
 
     assert aligned is not None, (
-        "could not engineer ack_new and the destination-reset-detected "
+        "could not engineer ack_s and the destination-reset-detected "
         "condition to land on the same s_clk edge within the swept "
         "wait_edges range 1..6 -- test calibration needs adjustment"
     )
     wait_edges, ack_s_edge, data, ok = aligned
     assert ok is True, (
-        f"ack_new and the destination-reset-detected condition landed on the "
+        f"ack_s and the destination-reset-detected condition landed on the "
         f"same s_clk edge (wait_edges={wait_edges}, edge offset {ack_s_edge}) "
-        f"but the response was NOT the real one (ok={ok}) -- ack_new must win "
+        f"but the response was NOT the real one (ok={ok}) -- ack_s must win "
         "this race per apb_cdc_bridge.sv's if/else-if priority"
     )
     assert data == golden, f"race-won response data mismatch: {data:#x}"
     dut._log.info(
-        f"availability ack-race OK: at wait_edges={wait_edges}, ack_toggle_s and "
+        f"availability ack-race OK: at wait_edges={wait_edges}, ack_s and "
         f"m_in_rst_s both changed on the same s_clk edge (offset {ack_s_edge}) -- "
-        f"ack_new won, real data 0x{data:08x} returned, not a fabricated pslverr=1"
+        f"ack_s won, real data 0x{data:08x} returned, not a fabricated pslverr=1"
     )
 
 
@@ -980,12 +1025,15 @@ async def test_availability_ack_race_wins(dut):
 async def _availability_back_to_back_resets_workload(dut, s_ns, m_ns):
     """Two m_rst_n_i pulses with a real transaction attempted between them,
     then a final round trip after the second pulse recovers -- proves
-    req_toggle_q's continuous clamp-to-0 (while !m_rst_n_s) re-establishes
-    the req_toggle_q == req_seen_q(==0) invariant across EACH pulse
-    independently, so back-to-back resets never leave a toggle-parity
-    collision that corrupts or hangs a later, genuinely new transaction.
-    Also confirms no destination-side write lands for anything spurious
-    across either pulse (completed count check)."""
+    req_q's continuous clamp-to-0 (while !m_rst_n_s) re-establishes req_q's
+    level matching req_m's own reset default (0) across EACH pulse
+    independently, so back-to-back resets never leave a stale-level
+    collision (bead claude_verilog_test-rfz: RZ has no parity register, but
+    the clamp invariant this test proves is unchanged from the old NRZ
+    scheme's toggle-parity property -- see apb_cdc_bridge.sv header) that
+    corrupts or hangs a later, genuinely new transaction. Also confirms no
+    destination-side write lands for anything spurious across either pulse
+    (completed count check)."""
     ctx = await _setup(dut, s_ns, m_ns)
     addr = 0xC00
 
@@ -1014,7 +1062,7 @@ async def _availability_back_to_back_resets_workload(dut, s_ns, m_ns):
     assert ok2, "read after second reset pulse reported pslverr"
     assert data == 0x11112222, (
         f"read after second reset pulse mismatch: {data:#x} -- possible "
-        "toggle-parity collision across the back-to-back resets"
+        "stale-level collision across the back-to-back resets"
     )
 
     ok3 = await ctx.s_master.write(addr, 0x33334444)
@@ -1025,11 +1073,11 @@ async def _availability_back_to_back_resets_workload(dut, s_ns, m_ns):
     assert ctx.responder.completed == completed_before + 3, (
         f"expected exactly 3 more destination-side completions (read+write+read) "
         f"after the second pulse, got {ctx.responder.completed - completed_before} "
-        "-- possible extra/missing transfer from toggle-parity drift"
+        "-- possible extra/missing transfer from stale-level drift"
     )
     dut._log.info(
         f"back-to-back resets OK at {s_ns}ns/{m_ns}ns: mid-pulse write landed, "
-        f"post-pulse round trips correct, no toggle-parity drift "
+        f"post-pulse round trips correct, no stale-level drift "
         f"(completed={ctx.responder.completed})"
     )
 
@@ -1044,6 +1092,153 @@ async def test_availability_back_to_back_resets_wide_ratio(dut):
     # 18ns/4ns (slow-s/fast-m) -- explicitly called out: this exact ratio
     # caught a regression in the RTL agent's own first attempt at this fix.
     await with_timeout(_availability_back_to_back_resets_workload(dut, 18, 4), 50, "us")
+
+
+# --- 19. RZ 4-phase structural proof (bead claude_verilog_test-rfz) ----------
+#
+# Every test above proves FUNCTIONAL correctness -- data integrity, bounded
+# completion, no fabricated writes -- and all of it holds for EITHER
+# handshake encoding (NRZ toggle or RZ level); that is deliberate, since the
+# conversion must not change externally observable APB behaviour. This test
+# instead proves the ENCODING itself: that apb_cdc_bridge.sv actually
+# executes a 4-phase return-to-zero round trip (assert req, assert ack,
+# DEASSERT req, DEASSERT ack) and not a 2-phase toggle. It is the one test
+# in this suite that is EXPECTED TO FAIL against the pre-bead-rfz 2-phase
+# NRZ RTL, not just a regression check against the current (already-RZ)
+# RTL -- see the docstring below for exactly why.
+
+async def _rz_four_phase_structural_body(dut):
+    """Directed structural proof that the handshake is 4-phase RZ, not
+    2-phase NRZ. Monitors s_state_q, req_q and ack_s (all via
+    --public-flat-rw backdoor, same mechanism test_reset_mid_transaction_m_side
+    / test_availability_ack_race_wins already rely on) across one full write
+    transaction and asserts the return-to-zero sequence:
+      1. req_q rises (0->1)            -- phase 1, request asserted
+      2. ack_s rises (0->1)            -- phase 2, destination answered
+      3. req_q FALLS (1->0) while ack_s is STILL 1
+                                        -- phase 3, source deasserts req
+                                           FIRST, strictly before ack_s falls
+      4. ack_s FALLS (1->0)            -- phase 4, destination completes
+                                           the round trip
+      5. s_state_q visits S_DROP (the dedicated "waiting for ack_s to fall"
+         state) between S_DONE and the next S_IDLE.
+
+    Why this fails on the OLD (pre-rfz) 2-phase NRZ RTL: that RTL's
+    s_state_e had only 3 values (S_IDLE, S_WAIT, S_DONE) and went directly
+    S_DONE -> S_IDLE every transaction -- step 5 above is structurally
+    impossible to observe, since no state numbered 3 (S_DROP) ever existed.
+    Steps 1-4 are equally impossible: the old RTL's req_toggle_q/ack_toggle_q
+    FLIP (change value, either direction) once per transfer and never
+    "return to zero" relative to each other by design -- there is no
+    req-falls-before-ack-falls ordering to observe because req_toggle_q does
+    not fall at all on a normal completion (it toggles again only on the
+    NEXT SETUP, which may be many idle cycles later or may re-toggle it back
+    to the value it fell from, depending on parity -- there is no
+    deterministic per-transaction deassert step to synchronise on). Run
+    against that RTL, this test's phase-3/phase-4/state-5 assertions would
+    either time out (the awaited transitions never happen) or never
+    observe s_state_q == 3 at all -- a clean, mechanistic failure, not a
+    timing coincidence.
+    """
+    ctx = await _setup(dut, 10, 10)
+    addr = 0xD00
+
+    # --- Phase 1: launch a write and watch for req_q's assert edge --------
+    prev_req_q = int(dut.u_dut.req_q.value)
+    assert prev_req_q == 0, "setup assumption violated: req_q must be idle-low before SETUP"
+    t = cocotb.start_soon(ctx.s_master.write(addr, 0xE4A5E4A5))
+
+    req_assert_seen = False
+    for _ in range(50):
+        await RisingEdge(dut.s_clk)
+        await ReadOnly()
+        cur = int(dut.u_dut.req_q.value)
+        if cur == 1 and prev_req_q == 0:
+            req_assert_seen = True
+            break
+        prev_req_q = cur
+    assert req_assert_seen, "phase 1 FAILED: req_q never asserted (0->1) after SETUP"
+
+    # --- Phase 2: watch for ack_s's assert edge (destination answered) ----
+    prev_ack_s = int(dut.u_dut.ack_s.value)
+    ack_assert_seen = False
+    for _ in range(50):
+        await RisingEdge(dut.s_clk)
+        await ReadOnly()
+        cur_ack = int(dut.u_dut.ack_s.value)
+        cur_req = int(dut.u_dut.req_q.value)
+        if cur_ack == 1 and prev_ack_s == 0:
+            ack_assert_seen = True
+            # req_q must still read 1 here -- ack_s asserting is what
+            # TRIGGERS req_q's deassert (S_REQ's ack_s-seen branch), so on
+            # the very cycle ack_s is first observed high, req_q has not
+            # yet had a chance to fall.
+            assert cur_req == 1, (
+                "phase ordering FAILED: req_q already fell before ack_s's "
+                "assert edge was even observed -- the RZ round trip requires "
+                "req_q to stay asserted until the source has SEEN ack_s"
+            )
+            break
+        prev_ack_s = cur_ack
+    assert ack_assert_seen, "phase 2 FAILED: ack_s never asserted (0->1)"
+
+    # --- Phase 3: watch for req_q's deassert edge, confirming ack_s is
+    #     STILL high at that moment (source drops req FIRST) -------------
+    prev_req_q = 1
+    req_deassert_seen = False
+    ack_still_high_at_req_fall = False
+    for _ in range(50):
+        await RisingEdge(dut.s_clk)
+        await ReadOnly()
+        cur_req = int(dut.u_dut.req_q.value)
+        if cur_req == 0 and prev_req_q == 1:
+            req_deassert_seen = True
+            ack_still_high_at_req_fall = int(dut.u_dut.ack_s.value) == 1
+            break
+        prev_req_q = cur_req
+    assert req_deassert_seen, "phase 3 FAILED: req_q never deasserted (1->0) after ack_s"
+    assert ack_still_high_at_req_fall, (
+        "phase 3 FAILED: ack_s had already fallen by the time req_q "
+        "deasserted -- the defining RZ ordering (req falls strictly before "
+        "ack falls) does not hold; this looks like an NRZ-style transition, "
+        "not a 4-phase return-to-zero round trip"
+    )
+
+    # --- Phase 4: watch for ack_s's deassert edge (round trip complete) ---
+    prev_ack_s = 1
+    ack_deassert_seen = False
+    saw_s_drop = False
+    for _ in range(50):
+        await RisingEdge(dut.s_clk)
+        await ReadOnly()
+        if int(dut.u_dut.s_state_q.value) == S_DROP:
+            saw_s_drop = True
+        cur_ack = int(dut.u_dut.ack_s.value)
+        if cur_ack == 0 and prev_ack_s == 1:
+            ack_deassert_seen = True
+            break
+        prev_ack_s = cur_ack
+    assert ack_deassert_seen, "phase 4 FAILED: ack_s never deasserted (1->0) -- round trip did not complete"
+    assert saw_s_drop, (
+        "structural check FAILED: s_state_q never visited S_DROP (2) while "
+        "waiting for ack_s to fall -- the dedicated return-to-zero state was "
+        "not exercised"
+    )
+
+    ok = await t
+    assert ok, "the monitored write itself reported pslverr"
+    assert ctx.responder.mem.get(addr) == 0xE4A5E4A5, "the monitored write did not land at the destination"
+    dut._log.info(
+        "RZ 4-phase structural proof OK: req_q asserted -> ack_s asserted "
+        "(req_q still 1) -> req_q deasserted (ack_s still 1) -> ack_s "
+        "deasserted, with s_state_q visiting S_DROP in between -- this exact "
+        "sequence is impossible on the pre-bead-rfz 2-phase NRZ encoding"
+    )
+
+
+@cocotb.test()
+async def test_rz_four_phase_structural_proof(dut):
+    await with_timeout(_rz_four_phase_structural_body(dut), 50, "us")
 
 
 # =============================================================================
@@ -1075,7 +1270,7 @@ async def test_availability_back_to_back_resets_wide_ratio(dut):
 # THROUGH that exception: m_psel_o/m_penable_o never pulse while m_rst_n_i
 # is genuinely low (no fabricated destination-side write, ever), and
 # s_pready_o always completes within a bounded number of s_clk_i cycles
-# (S_WAIT never hangs). This class does NOT assert req_fwd_q or the forward
+# (S_REQ never hangs). This class does NOT assert req_fwd_q or the forward
 # decision itself, which the exception explicitly and correctly permits to
 # be wrong for a bounded window.
 # =============================================================================
@@ -1181,7 +1376,7 @@ async def _apb_reset_asym_staggered_body(dut, s_ns, m_ns, order) -> None:
             _active_tasks.append(watch)
             # s_rst_n_i released, m_rst_n_i still low: offer continuous
             # transactions from the s side. Each must force-complete with
-            # pslverr=1 within a bounded time (S_WAIT never hangs) -- the
+            # pslverr=1 within a bounded time (S_REQ never hangs) -- the
             # same escape path test_availability_never_forwarded exercises
             # once; here it is exercised repeatedly, back-to-back, for the
             # full stagger window, at a genuinely staggered (not

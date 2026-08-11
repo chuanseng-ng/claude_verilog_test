@@ -7,6 +7,15 @@
 # RESOLUTION" below for the full, tool-verified writeup of why every
 # exception in this file had to change shape, not just separator.
 #
+# Sections 12/12a updated under bead claude_verilog_test-rfz (2026-08-12):
+# apb_cdc_bridge.sv converted from a 2-phase NRZ toggle handshake to a
+# 4-phase RZ handshake; req_toggle_q/ack_toggle_q renamed to req_q/ack_q.
+# Only the `-filter {name =~ ...}` patterns and description strings changed
+# (same electrical role, same object-mapping methodology) — this is
+# precisely the "stale name pattern silently matches zero objects" hazard
+# bead 7l5 warns about in OBJECT RESOLUTION item 3, so it is called out here
+# too, not just at the two touched sections.
+#
 # These SDC's are not used for synthesis, since they collide with the
 # set_clock_groups -asynchronous constraint in phase5_soc_multiclock.sdc.
 # Instead, they are used to time the design after P&R in order to make sure
@@ -112,7 +121,7 @@
 #       segment: `d_i` where it survives as its own net (some d_i ports
 #       collapse into their driving net's name during optimisation instead
 #       — verified case by case below), or the source register net
-#       directly (`rd_gray_q`, `req_toggle_q`, `ext_irq`, ...) where it
+#       directly (`rd_gray_q`, `req_q`, `ext_irq`, ...) where it
 #       does not.
 #
 #   (5) mem_q AND the apb_cdc_bridge cmd_*/resp_* payload capture registers
@@ -121,7 +130,7 @@
 #       is not a pattern bug: `assign rd_data_o = mem_q[rd_bin_q[...]];`-
 #       style muxed array reads and the FSM-gated `cmd_paddr_cap_q <=
 #       cmd_paddr_q;` capture do not survive optimisation as identifiable
-#       nets the way a straight passthrough (`req_toggle_q`, `ext_irq`, ...)
+#       nets the way a straight passthrough (`req_q`, `ext_irq`, ...)
 #       does. Section 10 below (declared BEFORE sections 11-13 -- see its
 #       PRECEDENCE note for why) replaces all of these with a domain-wide
 #       max_delay fallback instead of a per-signal exception.
@@ -148,7 +157,8 @@
 #       MATCHED NET'S IMMEDIATE PINS (bead 7l5, second pass): the naive
 #       `get_cells -of_objects [get_pins -of_objects $net -filter
 #       {direction == output}]` looked correct (non-empty, cdc_require_match
-#       passed) but was WRONG for req_toggle_q: the matched net's immediate
+#       passed) but was WRONG for req_q (named req_toggle_q before bead
+#       claude_verilog_test-rfz's NRZ->RZ rename): the matched net's immediate
 #       driver was an INVxp67 polarity inverter, not the real source
 #       register (the ASAP7 flop cells used here only expose an inverted Q
 #       (QN); synthesis inserts an inverter even for a "direct RTL
@@ -236,7 +246,7 @@ proc cdc_require_match {collection description} {
 # output}]` for -from directly. That is WRONG whenever technology mapping
 # inserted a buffer/inverter between the true source register and the
 # matched net -- tool-verified this happens even for a "direct RTL
-# passthrough" signal (e.g. req_toggle_q's matched net is actually driven
+# passthrough" signal (e.g. req_q's matched net is actually driven
 # by an INVxp67 polarity inverter, itself fed by the real source flop's QN
 # output; the ASAP7 flop cells used here (DFFASRHQNx1) only expose an
 # inverted Q). Using the inverter cell as `-from` produced a -from/-to
@@ -308,7 +318,7 @@ proc cdc_filter_by_clock {cells clk_name} {
 # output}]` for -from directly. That is WRONG whenever technology mapping
 # inserted a buffer/inverter between the true source register and the
 # matched net -- tool-verified this happens even for a "direct RTL
-# passthrough" signal (e.g. req_toggle_q's matched net is actually driven
+# passthrough" signal (e.g. req_q's matched net is actually driven
 # by an INVxp67 polarity inverter, itself fed by the real source flop's QN
 # output; the ASAP7 flop cells used here (DFFASRHQNx1) only expose an
 # inverted Q). Using the inverter cell as `-from` produced a -from/-to
@@ -387,7 +397,7 @@ proc cdc_apply_max_delay {netc val from_clk to_clk description} {
 # expected to be MORE likely than before, not evidence of a broken check.
 #
 # PRECEDENCE (measured, bead 7l5, real routed netlist, distinctive sentinel
-# values, req_toggle_q crossing used as the probe):
+# values, req_q crossing used as the probe):
 #   - a `-through <net>` exception is ALWAYS dominated by ANY applicable
 #     `-from/-to` exception on the same path, REGARDLESS of declaration
 #     order or how much narrower the -through net list is. This is why
@@ -468,26 +478,35 @@ foreach {_fifo_inst _wr_clk _wr_period _rd_clk _rd_period} $_cdc_fifo_dirs {
 #
 # GH #94 / bead oa7 item 2. Budgets left at 1.0x destination period —
 # bead k07 item 1 only asked for retightening on the gray-pointer FIFOs
-# (section 11) and mem_q; these single-bit toggle-handshake crossings are
-# lower-rate control paths, not the gray-pointer datapath OpenTitan singles
-# out for the tighter 0.5x GRAY_MAX_DELAY budget.
+# (section 11) and mem_q; these single-bit req/ack level-handshake
+# crossings are lower-rate control paths, not the gray-pointer datapath
+# OpenTitan singles out for the tighter 0.5x GRAY_MAX_DELAY budget.
 #
-# Object mapping (bead 7l5): req_toggle_q / ack_toggle_q are each a direct
-# RTL passthrough into their cdc_2ff_sync's d_i (`.d_i(req_toggle_q)` /
-# `.d_i(ack_toggle_q)`, see rtl/soc/apb_cdc_bridge.sv), and in THIS module
-# both source registers keep their own clean net names post-optimisation
-# (unlike section 11's asymmetric case) -- matched directly, no d_i net
-# needed. The cmd_*/resp_* payload capture registers are unmatchable by
-# name (0 occurrences anywhere in the routed netlist, same class as
-# mem_q) -- moved to section 10.
+# RENAMED (bead claude_verilog_test-rfz, 2026-08-12): apb_cdc_bridge.sv
+# converted from a 2-phase NRZ toggle handshake to a 4-phase RZ handshake.
+# req_toggle_q/ack_toggle_q became req_q/ack_q -- same electrical role (each
+# is still the one register whose value crosses via cdc_2ff_sync), so the
+# object-mapping methodology below (bead 7l5) is unaffected; only the name
+# patterns changed. This is exactly the class of stale-pattern-matches-zero
+# hazard bead 7l5 itself warns about (see OBJECT RESOLUTION item 3) -- do
+# not let a future RTL rename slip past this file again without updating
+# these `-filter {name =~ ...}` strings in the same commit.
+#
+# Object mapping (bead 7l5): req_q / ack_q are each a direct RTL passthrough
+# into their cdc_2ff_sync's d_i (`.d_i(req_q)` / `.d_i(ack_q)`, see
+# rtl/soc/apb_cdc_bridge.sv), and in THIS module both source registers keep
+# their own clean net names post-optimisation (unlike section 11's
+# asymmetric case) -- matched directly, no d_i net needed. The cmd_*/resp_*
+# payload capture registers are unmatchable by name (0 occurrences anywhere
+# in the routed netlist, same class as mem_q) -- moved to section 10.
 ###############################################################################
-set _req_sync [get_nets -hierarchical -filter {name =~ *u_apb_pll2_cdc*req_toggle_q*} -quiet]
+set _req_sync [get_nets -hierarchical -filter {name =~ *u_apb_pll2_cdc*req_q*} -quiet]
 cdc_apply_max_delay $_req_sync 780 sys_clk cpu_clk \
-    "sec.12 u_apb_pll2_cdc.req_toggle_q toggle-bit crossing (s->m)"
+    "sec.12 u_apb_pll2_cdc.req_q level crossing (s->m)"
 
-set _ack_sync [get_nets -hierarchical -filter {name =~ *u_apb_pll2_cdc*ack_toggle_q*} -quiet]
+set _ack_sync [get_nets -hierarchical -filter {name =~ *u_apb_pll2_cdc*ack_q*} -quiet]
 cdc_apply_max_delay $_ack_sync 1750 cpu_clk sys_clk \
-    "sec.12 u_apb_pll2_cdc.ack_toggle_q toggle-bit crossing (m->s)"
+    "sec.12 u_apb_pll2_cdc.ack_q level crossing (m->s)"
 
 # cmd_*/resp_* payload (u_apb_pll2_cdc): unmatchable by name -- see
 # section 10's domain-wide fallback, which covers this crossing instead.
@@ -499,13 +518,13 @@ cdc_apply_max_delay $_ack_sync 1750 cpu_clk sys_clk \
 # section 12 (u_apb_pll2_cdc) above, mirrored here rather than duplicated in
 # prose.
 ###############################################################################
-set _dbg_req_sync [get_nets -hierarchical -filter {name =~ *u_apb_dbg_cdc*req_toggle_q*} -quiet]
+set _dbg_req_sync [get_nets -hierarchical -filter {name =~ *u_apb_dbg_cdc*req_q*} -quiet]
 cdc_apply_max_delay $_dbg_req_sync 780 sys_clk cpu_clk \
-    "sec.12a u_apb_dbg_cdc.req_toggle_q toggle-bit crossing (s->m)"
+    "sec.12a u_apb_dbg_cdc.req_q level crossing (s->m)"
 
-set _dbg_ack_sync [get_nets -hierarchical -filter {name =~ *u_apb_dbg_cdc*ack_toggle_q*} -quiet]
+set _dbg_ack_sync [get_nets -hierarchical -filter {name =~ *u_apb_dbg_cdc*ack_q*} -quiet]
 cdc_apply_max_delay $_dbg_ack_sync 1750 cpu_clk sys_clk \
-    "sec.12a u_apb_dbg_cdc.ack_toggle_q toggle-bit crossing (m->s)"
+    "sec.12a u_apb_dbg_cdc.ack_q level crossing (m->s)"
 
 # cmd_*/resp_* payload (u_apb_dbg_cdc): unmatchable by name -- see
 # section 10's domain-wide fallback, which covers this crossing instead.

@@ -358,7 +358,8 @@ if {[llength $_gpu_in] > 0} {
 #      Safety: APB debug is an infrequent, non-performance config interface
 #      (same rationale as the top-level apb_* port false paths in section 6),
 #      and u_apb_dbg_cdc drives it from a REGISTERED, captured address
-#      (m_paddr_o = cmd_paddr_cap_q, apb_cdc_bridge.sv:530) held stable
+#      (m_paddr_o = cmd_paddr_cap_q, apb_cdc_bridge.sv:648 -- line number as
+#      of bead claude_verilog_test-rfz's NRZ->RZ conversion) held stable
 #      across D_SETUP -> D_ACCESS until m_pready_i, i.e. >= 2 cpu_clk cycles.
 #      The read data is likewise captured only on m_pready_i.
 ###############################################################################
@@ -421,7 +422,7 @@ if {[llength $_gpu_in] > 0} {
 #      reads (apb_pready_o = apb_pwrite_i ? 1'b1 : apb_read_wait_q), and the
 #      driving master holds the command stable for the whole transfer —
 #      u_apb_dbg_cdc drives m_paddr_o from the REGISTERED cmd_paddr_cap_q
-#      (apb_cdc_bridge.sv:530) and stays in D_ACCESS until m_pready_i. So the
+#      (apb_cdc_bridge.sv:648) and stays in D_ACCESS until m_pready_i. So the
 #      3-cycle setup / 2-cycle hold window is one the hardware actually
 #      provides, rather than an assertion about an infrequent path.
 #

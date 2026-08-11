@@ -59,8 +59,10 @@
 //           bridge's state exactly like it retains u_cpu, not hard-flush it;
 //           see the full rationale at u_cpu_axi_cdc's instantiation below.
 //         * APB_PLL2 (u_cpu_pll_sub) <-> apb_interconnect: rtl/soc/
-//           apb_cdc_bridge.sv (u_apb_pll2_cdc, new in GH #93) — 2-phase
-//           toggle handshake; see that file's header for the protocol.
+//           apb_cdc_bridge.sv (u_apb_pll2_cdc, new in GH #93) — 4-phase RZ
+//           handshake (bead claude_verilog_test-rfz, 2026-08-12; was a
+//           2-phase NRZ toggle handshake before then); see that file's
+//           header for the protocol and why it was converted.
 //         * pmu_cpu_clk_en (core_clk, drives u_cpu_cg's enable): synchronised
 //           INVERTED, as pmu_cpu_clk_dis_sync (cdc_2ff_sync of ~pmu_cpu_clk_en),
 //           clocked by cpu_core_clk (NOT cpu_gated_clk — see the bootstrap-
@@ -85,7 +87,8 @@
 //         * apb_* top-level debug port (core_clk, chip-boundary bus) <->
 //           u_cpu's APB3 debug slave: rtl/soc/apb_cdc_bridge.sv
 //           (u_apb_dbg_cdc, GH #95 fix, bead claude_verilog_test-eg2) — same
-//           2-phase toggle handshake as u_apb_pll2_cdc, s-face core_clk,
+//           4-phase RZ handshake as u_apb_pll2_cdc (bead
+//           claude_verilog_test-rfz), s-face core_clk,
 //           m-face cpu_gated_clk/cpu_domain_rst_n. Closes the cdc_snitch
 //           BAD=233 finding left when GH #93 moved u_cpu onto cpu_gated_clk
 //           without re-homing this chip-boundary bus.
@@ -1706,9 +1709,10 @@ module soc_top
     // mechanism as GH #86 (APB_PLL in RNM mode), but live in the DEFAULT
     // STUB build as soon as the two reference clocks differ.
     //
-    // Fixed here (not deferred): apb_cdc_bridge.sv implements a 2-phase
-    // toggle handshake between the two domains — see that file's header for
-    // the full protocol and CDC argument. Source (s_*) face is core_clk
+    // Fixed here (not deferred): apb_cdc_bridge.sv implements a 4-phase RZ
+    // handshake between the two domains (bead claude_verilog_test-rfz;
+    // originally a 2-phase NRZ toggle handshake) — see that file's header
+    // for the full protocol and CDC argument. Source (s_*) face is core_clk
     // (matches apb_interconnect/axil_to_apb); destination (m_*) face is
     // cpu_clk_i (matches u_cpu_pll_sub's own clk_i — pll_subsystem.sv:11-17's
     // bootstrap rule requires its APB regs run on the raw reference, not
