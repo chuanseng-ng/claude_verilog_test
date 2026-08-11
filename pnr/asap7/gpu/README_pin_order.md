@@ -103,3 +103,44 @@ rule (`y1==0`→S, `y2==SIZE_Y`→N, `x1==0`→W, else E) *and* under a
 nearest-edge rule (distance to E = 0 in both cases, versus ≥10.5 µm to
 S/N), both agree on **E** — there is no actual rule disagreement for
 these two pins, despite their corner-adjacent geometry.
+
+## Before you regenerate this macro — read this first
+
+The refresh described above is **deliberately deferred** (bead
+`claude_verilog_test-buw`, decided 2026-08-11). Nothing in the repo needs a
+regenerated GPU macro today, and the measured cost of producing one is much
+higher than it looks:
+
+- **A full GPU block run with post-GRT repair on is a ~2.5-day job.**
+  `RUN_2026-05-28_06-29-48` spanned 05-28 06:29 → 05-30 19:13. Step 37
+  `repair_design_postgrt` alone took **20.9 h** (09:03 → 05-29 05:55), and
+  step 38 `resizer_timing_postgrt` a further ~37 h. Commit `b0dc46b`
+  documents step 37 as the GPU runtime bottleneck at ~18.9 h — single-threaded
+  GRT ×2 plus a multi-thousand-iteration repair over ~485 K instances, with
+  the iteration count driven by the timing target rather than die size.
+  The 500 MHz sign-off run `RUN_2026-05-27_11-16-37` had post-GRT repair
+  **off**, has no step 37 at all, and finished in ~3 h — that is the
+  two-stage Run A / Run B pattern, not a faster path to the same result.
+- **Long silences in step 37 are normal.** The GH #96 validation run
+  (`RUN_2026-08-10_19-04-14`) was killed ~7 h into step 37 after appearing to
+  stall; the step-directory mtime matches the abort to the second, so the
+  `GRT-0026` errors in that log are the *consequence* of the kill, not a
+  failure of this config. Budget the full ~20 h before concluding anything.
+- **A regeneration today changes two things at once, not one.** Since the
+  last GPU run, `config.json` gained `FP_PIN_ORDER_CFG` *and*
+  `PL`/`GRT_RESIZER_{SETUP,HOLD}_SLACK_MARGIN` went `0.1`/`0.075` → `45`/`25`
+  (the units fix from bead `s9f` — the old values were being read in the
+  Liberty's 1 ps unit, so they meant ~0). The next GPU macro is therefore a
+  **new PPA point**, and any SoC delta has to be attributed between the
+  boundary shift and the first-ever real optimisation guard band.
+
+If you do regenerate, the full sequence is:
+
+1. GPU block run to completion (budget ~2.5 days, uninterrupted).
+2. Refresh `pnr/asap7/gpu/macro/gpu_top.{lef,lib,nl.v.gz}`, then copy into
+   `pnr/asap7/soc/macro/` (those copies are gitignored; the tracked source of
+   truth is `pnr/asap7/{cpu,gpu}/macro/`).
+3. Re-run the ASAP7 SoC multiclock flow (~4–5 h) against the new abstract.
+4. Re-verify `sys_clk` still closes. Run 23 has only **+74.8 ps** of margin,
+   and SoC-level placement around `u_gpu` will move somewhat the way `u_cpu`'s
+   did in GH #96 — milder and order-preserving, but not zero.
