@@ -5,11 +5,15 @@ name: Cocotb Regression
 # WHY THIS EXISTS (bead claude_verilog_test-50t): before this workflow, CI ran
 # only `make -C sim {lint,format,cdc}`. No cocotb suite was executed anywhere,
 # so a testbench could stop *compiling* while every CI gate stayed green. That
-# is not hypothetical: the whole of tb/cocotb/cpu has been failing elaboration
-# with "Import package not found: 'axi_pkg'" since the M2 AXI4 burst upgrade
-# moved the CPU onto axi_pkg types without updating that Makefile's
-# VERILOG_SOURCES, and nobody noticed because lint does assemble the right
-# file list and therefore passed throughout.
+# is not hypothetical: the whole of tb/cocotb/cpu was failing elaboration with
+# "Import package not found: 'axi_pkg'" since the M2 AXI4 burst upgrade moved
+# the CPU onto axi_pkg types without updating that Makefile's VERILOG_SOURCES,
+# and nobody noticed because lint does assemble the right file list and
+# therefore passed throughout. Fixed 2026-08-11 (VERILOG_SOURCES now closes
+# over axi_pkg/soc_addr_map_pkg + the EX1b/EX1c/EX2 retiming split — see
+# tools/verif/check_source_closure.py, which verifies this class of gap
+# statically without needing a simulator). Both jobs below now run in CI so
+# neither list can silently rot again.
 #
 # Tool sourcing mirrors random_tests.yml deliberately: Verilator comes from the
 # repo flake (pinned 5.048 — the version the RTL is known to elaborate under),
@@ -165,4 +169,106 @@ jobs:
           path: |
             cocotb_soc.log
             tb/cocotb/**/results.xml
+          if-no-files-found: warn
+
+  cpu_phase2_all:
+    name: cocotb phase2_all (CPU standalone regression)
+    runs-on: ubuntu-latest
+    # 7 sub-suites, 112 tests, ~8s of simulated time / well under a minute of
+    # wall time locally (single Verilator build reused via sim_build's normal
+    # incremental compile — VERILOG_SOURCES is identical across all 7
+    # sub-targets). Generous headroom for a colder CI runner.
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Nix (pinned Verilator from binary cache)
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Install pinned Verilator (nix profile, system-shell compile)
+        run: |
+          nix profile install .#verilator
+          verilator --version
+
+      # Same rationale as soc_all's step above: the Vtop binary dlopen's the
+      # setup-python interpreter's libpython, which needs these system libs.
+      # tb/cocotb/cpu/Makefile's own USE_VERILATOR_EXTRALIBS=1 opt-in
+      # symlinks them into place rather than relying on sim/Makefile's
+      # NIX_COMPAT_DIR loop (this Makefile doesn't have that loop).
+      - name: Install runtime libs for cocotb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
+          pip list
+
+      # phase2_all chains 7 `$(MAKE)` sub-invocations (smoke_uvm, isa_uvm,
+      # pipeline_hazards, interrupts, debug, axi_protocol, fault_injection)
+      # and its own recipe already tallies ✓/✗ per suite and exits non-zero
+      # on any failure — no `|| true` here either.
+      - name: Run phase2_all
+        env:
+          USE_VERILATOR_EXTRALIBS: '1'
+        run: |
+          set -o pipefail
+          echo "::group::make -C tb/cocotb/cpu phase2_all"
+          echo "SIM_PYTHON3=$(command -v python3) ($(python3 -V))"
+          make -C tb/cocotb/cpu phase2_all SIM_PYTHON3="$(command -v python3)" 2>&1 | tee cocotb_cpu.log
+          echo "::endgroup::"
+
+      # Same belt-and-braces rationale as soc_all's equivalent step (bead
+      # dwp): don't trust a bare exit code, and don't trust results.xml
+      # either (phase2_all's sub-targets each overwrite it in turn).
+      # Measured 112 passing tests on 2026-08-11 (7 suites: smoke_uvm 4,
+      # isa_uvm 54, pipeline_hazards 16, interrupts 13, debug 6,
+      # axi_protocol 12, fault_injection 7). Floor set just under that.
+      - name: Verify regression actually ran
+        if: always()
+        env:
+          PASS_FLOOR: '100'
+        run: |
+          if [ ! -s cocotb_cpu.log ]; then
+            echo "FAIL: no cocotb log produced — the regression did not run."
+            exit 1
+          fi
+          passed=$(grep -cE 'cocotb\.regression .* passed$' cocotb_cpu.log || true)
+          failed=$(grep -cE 'cocotb\.regression .* (failed|FAILED)$' cocotb_cpu.log || true)
+          echo "cocotb: ${passed} passed, ${failed} failed (floor ${PASS_FLOOR})"
+          if [ "${failed}" -ne 0 ]; then
+            echo "FAIL: ${failed} test(s) reported failed."
+            grep -E 'cocotb\.regression .* (failed|FAILED)$' cocotb_cpu.log | head -40
+            exit 1
+          fi
+          if [ "${passed}" -lt "${PASS_FLOOR}" ]; then
+            echo "FAIL: only ${passed} tests passed, expected >= ${PASS_FLOOR}."
+            echo "A suite likely failed to elaborate and was skipped while make still exited 0."
+            exit 1
+          fi
+
+      - name: Upload cocotb results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cocotb-cpu-results
+          path: |
+            cocotb_cpu.log
+            tb/cocotb/cpu/results.xml
           if-no-files-found: warn

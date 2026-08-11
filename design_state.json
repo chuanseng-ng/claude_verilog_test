@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-08-09T00:00:00+00:00",
+  "updated_at": "2026-08-11T14:50:04.986592+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -170,6 +170,45 @@
       ],
       "historical_reason_pre_fix": "SoC boot regression (see fix_requests[] entry) blocks soc_boot/soc_periph/soc_coherency/soc_cpu_gpu/soc_pll/soc_multiclock/soc_pll_multiclock",
       "historical_tb_infra_status_pre_fix": "complete, lint-clean: cpu_clk_i/cpu_rst_n_i real ports on tb_soc_top.sv/tb_soc_pll.sv, soc_clocks.py shared helper, 8 suites retrofitted (zero behaviour change), apb_cdc_bridge unit suite 15/15 PASS (unaffected, does not instantiate soc_top), soc_multiclock + soc_pll_multiclock authored and lint-clean but blocked from passing until the RTL fix lands"
+    },
+    "cpu_cocotb_tb_build_gh50t": {
+      "status": "PASS",
+      "bead": "claude_verilog_test-50t",
+      "reason": "tb/cocotb/cpu/Makefile VERILOG_SOURCES was missing axi_pkg.sv, soc_addr_map_pkg.sv, rv32i_clock_gate.sv, and the EX1b/EX1c/EX2 retiming split (predates the M2 AXI4 burst upgrade); fixed to match pnr/asap7/cpu/config.json's import-closed list; dead rv32i_axi_arbiter.sv (Phase 1, unreferenced) dropped.",
+      "smoke": {
+        "total_tests": 12,
+        "pass": 12,
+        "fail": 0
+      },
+      "debug": {
+        "total_tests": 6,
+        "pass": 6,
+        "fail": 0
+      },
+      "phase2_all": {
+        "total_tests": 112,
+        "pass": 112,
+        "fail": 0,
+        "suites": [
+          "smoke_uvm",
+          "isa_uvm",
+          "pipeline_hazards",
+          "interrupts",
+          "debug",
+          "axi_protocol",
+          "fault_injection"
+        ]
+      },
+      "dut_bugs_found": 0,
+      "closure_tool": "tools/verif/check_source_closure.py (new, bead 50t deliverable)",
+      "closure_scan_gaps": [
+        "pnr/freepdk45/config.json",
+        "pnr/librelane/config.json",
+        "pnr/openlane/config.json",
+        "pnr/openlane1/config.json"
+      ],
+      "ci": ".github/workflows/cocotb.yml now runs tb/cocotb/cpu phase2_all as a second job (cpu_phase2_all), alongside the existing soc_all job",
+      "checked_at": "2026-08-11T14:50:04.986592+00:00"
     }
   },
   "pipeline_session_id": null,
@@ -1114,6 +1153,18 @@
       "retry_strategy": "refine",
       "suggested_next_step": "escalate",
       "reason": "Root-caused run21->run22 cpu_clk regression to CPU-macro pin-order instability (no FP_PIN_ORDER_CFG) driving a CTS skew blowup; recommended fix requires human decision (revert RTL vs add pin-order constraint) before any new P&R run.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-08-11T14:50:04.986592+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Bead claude_verilog_test-50t: tb/cocotb/cpu/Makefile's VERILOG_SOURCES was a bit-rotted package/module list (missing axi_pkg, soc_addr_map_pkg, rv32i_clock_gate, and the EX1b/EX1c/EX2 retiming split) blocking Verilator elaboration entirely. Fixed to close over imports (verified via new tools/verif/check_source_closure.py); re-ran smoke (12/12), debug (6/6), phase2_all (112/112 across 7 suites) -- 0 failures, 0 DUT bugs found, so no fix_request was needed. Wired tb/cocotb/cpu phase2_all into .github/workflows/cocotb.yml as a second CI job so this class of rot is now gated. Repo-wide closure scan additionally found the same package-import gap in 4 legacy PD configs (freepdk45/librelane/openlane/openlane1) -- reported, not fixed (out of scope for this bead).",
       "constraint_ref": null
     }
   ],
