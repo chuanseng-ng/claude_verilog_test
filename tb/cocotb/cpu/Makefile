@@ -28,8 +28,15 @@ $(shell mkdir -p $(_EXTRALIBS) \
 endif
 
 # RTL source files (packages must come first)
+# Kept in sync with pnr/asap7/cpu/config.json's VERILOG_FILES import order —
+# see tools/verif/check_source_closure.py, which verifies this list closes
+# over every `import <pkg>::*` used by the files it lists (bead claude_verilog_test-50t).
+VERILOG_SOURCES += $(PWD)/../../../rtl/soc/axi_pkg.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/soc/soc_addr_map_pkg.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_pipeline_pkg.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_cache_pkg.sv
+# rv32i_clock_gate.sv: instantiated by rv32i_icache.sv/rv32i_dcache.sv (tag/data bank clock gating)
+VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_clock_gate.sv
 # Phase 3: Verilator-compatible SRAM behavioral model
 # (sram_1rw_256x32_verilator.v avoids mixed blocking/non-blocking and negedge
 #  triggers that Verilator cannot handle in the original OpenRAM model)
@@ -42,19 +49,25 @@ VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_alu.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_regfile.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_imm_gen.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_branch_comp.sv
-# Phase 2: Pipeline stage modules (IF / ID / EX / MEM / WB)
+# Pipeline stage modules (IF / ID / EX / EX1b / EX1c / EX2 / MEM / WB).
+# EX1b/EX1c/EX2 are the EX-stage retiming split (Run 14+, ASAP7 sign-off) —
+# the pre-retiming TB list only had IF/ID/EX/MEM/WB and predates this.
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_if.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_id.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv
-# Phase 2: Hazard detection, forwarding, CSR, and interrupt control units
+# Hazard detection, forwarding, CSR, and interrupt control units
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_hazard_unit.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_forwarding_unit.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_csr_file.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_interrupt_ctrl.sv
-# Phase 2: AXI arbiter (IF vs MEM priority; lives in rtl/cpu/, not rtl/cpu/core/)
-VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/rv32i_axi_arbiter.sv
+# NOTE: rv32i_axi_arbiter.sv (Phase 1 AXI4-Lite IF-vs-MEM arbiter) intentionally
+# dropped — dead since Phase 2's cache_arbiter took over; nothing in the current
+# hierarchy instantiates it (confirmed via grep + absent from pnr/asap7/cpu/config.json).
 # Phase 3: Cache RTL (I-cache, D-cache, cache arbiter)
 VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_icache.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_dcache.sv
