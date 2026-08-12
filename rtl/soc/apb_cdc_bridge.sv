@@ -187,19 +187,21 @@
 //
 //   * m_rst_sync_n is DELIBERATELY LEFT on rst_both_n = s_rst_n_i &
 //     m_rst_n_i. Under the OLD NRZ scheme this coupling was strictly
-//     required to protect req_toggle_q's parity invariant against req_q
-//     (destination domain) — see the pre-rfz version of this file. Under
-//     RZ, req_q/req_m have NO parity/count state to protect (each side just
-//     tracks a current level, and D_ACK's exit condition — !req_m — and
-//     S_REQ's entry condition — a fresh SETUP — cannot alias: see "no
-//     fabricated write" argument below), so this coupling is no longer
-//     strictly NECESSARY for correctness. It is retained anyway as a
-//     conservative, minimal-diff choice: this bead's scope is the handshake
-//     ENCODING, not a re-derivation of the reset topology, and the coupled
-//     hard-flush behaviour below is already reviewed, documented, and
-//     tested. Revisiting whether m_rst_sync_n can also be decoupled from
-//     s_rst_n_i (matching OpenTitan's "safe to reset either domain in
-//     isolation" claim even MORE literally) is a follow-up, not this bead.
+//     required to protect req_toggle_q's parity invariant against
+//     req_seen_q — the destination domain's "last seen" register, removed
+//     by this conversion (see line 29). See the pre-rfz version of this
+//     file. Under RZ, req_q/req_m have NO parity/count state to protect
+//     (each side just tracks a current level, and D_ACK's exit condition
+//     — !req_m — and S_REQ's entry condition — a fresh SETUP — cannot
+//     alias: see "no fabricated write" argument below), so this coupling
+//     is no longer strictly NECESSARY for correctness. It is retained
+//     anyway as a conservative, minimal-diff choice: this bead's scope is
+//     the handshake ENCODING, not a re-derivation of the reset topology,
+//     and the coupled hard-flush behaviour below is already reviewed,
+//     documented, and tested. Revisiting whether m_rst_sync_n can also be
+//     decoupled from s_rst_n_i (matching OpenTitan's "safe to reset either
+//     domain in isolation" claim even MORE literally) is a follow-up, not
+//     this bead.
 //
 //   Because s_rst_sync_n no longer follows m_rst_n_i, req_q on its own can
 //   no longer be guaranteed to land back at 0 in step with the destination

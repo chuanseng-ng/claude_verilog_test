@@ -1121,7 +1121,8 @@ async def _rz_four_phase_structural_body(dut):
       4. ack_s FALLS (1->0)            -- phase 4, destination completes
                                            the round trip
       5. s_state_q visits S_DROP (the dedicated "waiting for ack_s to fall"
-         state) between S_DONE and the next S_IDLE.
+         state) between S_REQ and S_DONE -- the FSM order is
+         S_IDLE -> S_REQ -> S_DROP -> S_DONE -> S_IDLE.
 
     Why this fails on the OLD (pre-rfz) 2-phase NRZ RTL: that RTL's
     s_state_e had only 3 values (S_IDLE, S_WAIT, S_DONE) and went directly
