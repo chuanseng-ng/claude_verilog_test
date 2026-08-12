@@ -135,11 +135,13 @@ ASYNC_AXI_FIFO_SOURCES = \
 	$(RTL)/soc/async_axi_fifo.sv \
 	$(SOC_DIR)/tb_async_axi_fifo.sv
 
-# GH #93: standalone apb_cdc_bridge (APB4 2-phase toggle-handshake CDC
-# bridge) unit-test sources. apb_cdc_bridge.sv only depends on the 2
-# cdc/ reset/sync primitives (no axi_pkg, no cdc_gray_fifo -- it crosses
-# single-bit toggles, not gray-coded multi-bit pointers) + standalone TB
-# wrapper. No bus-bridge or full SoC required.
+# GH #93: standalone apb_cdc_bridge (APB4 4-phase RZ-handshake CDC bridge --
+# converted from 2-phase NRZ toggle by bead claude_verilog_test-rfz,
+# 2026-08-12, see rtl/soc/apb_cdc_bridge.sv header) unit-test sources.
+# apb_cdc_bridge.sv only depends on the 2 cdc/ reset/sync primitives (no
+# axi_pkg, no cdc_gray_fifo -- it crosses single-bit req/ack levels, not
+# gray-coded multi-bit pointers) + standalone TB wrapper. No bus-bridge or
+# full SoC required.
 APB_CDC_BRIDGE_SOURCES = \
 	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \

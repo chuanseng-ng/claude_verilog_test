@@ -300,19 +300,25 @@ cdc_report_through \
 puts "================================================================"
 puts "CDC boundary timing -- apb_cdc_bridge (u_apb_pll2_cdc, u_apb_dbg_cdc)"
 puts "================================================================"
-# req_toggle_q / ack_toggle_q are each a direct RTL passthrough into their
-# cdc_2ff_sync's d_i (see apb_cdc_bridge.sv), and unlike section 11's
-# gray-pointer case, BOTH source registers keep their own net name here --
-# matched directly, no d_i lookup needed. The cmd_*/resp_* payload capture
+# req_q / ack_q are each a direct RTL passthrough into their cdc_2ff_sync's
+# d_i (see apb_cdc_bridge.sv), and unlike section 11's gray-pointer case,
+# BOTH source registers keep their own net name here -- matched directly, no
+# d_i lookup needed.
+#
+# NAMES: these were req_toggle_q / ack_toggle_q until bead
+# claude_verilog_test-rfz converted the handshake from 2-phase NRZ to 4-phase
+# RZ. The filters below MUST track that rename -- a stale pattern here matches
+# zero nets and the budget silently goes unchecked, which is exactly bead
+# claude_verilog_test-7l5's failure mode. The cmd_*/resp_* payload capture
 # registers have zero occurrences anywhere in the netlist (same class as
 # mem_q) and are covered by the domain-wide fallback report below instead.
 cdc_report_through \
-    [get_nets -hierarchical -filter {name =~ *u_apb_pll2_cdc*req_toggle_q* || name =~ *u_apb_pll2_cdc*ack_toggle_q*} -quiet] \
-    "check_cdc_timing.tcl u_apb_pll2_cdc toggle report query" \
+    [get_nets -hierarchical -filter {name =~ *u_apb_pll2_cdc*req_q* || name =~ *u_apb_pll2_cdc*ack_q*} -quiet] \
+    "check_cdc_timing.tcl u_apb_pll2_cdc req_q/ack_q report query" \
     $REPORTS_DIR/cdc_apb_pll2_toggle.rpt
 cdc_report_through \
-    [get_nets -hierarchical -filter {name =~ *u_apb_dbg_cdc*req_toggle_q* || name =~ *u_apb_dbg_cdc*ack_toggle_q*} -quiet] \
-    "check_cdc_timing.tcl u_apb_dbg_cdc toggle report query" \
+    [get_nets -hierarchical -filter {name =~ *u_apb_dbg_cdc*req_q* || name =~ *u_apb_dbg_cdc*ack_q*} -quiet] \
+    "check_cdc_timing.tcl u_apb_dbg_cdc req_q/ack_q report query" \
     $REPORTS_DIR/cdc_apb_dbg_toggle.rpt
 
 puts "================================================================"
