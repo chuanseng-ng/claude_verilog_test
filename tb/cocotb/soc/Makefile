@@ -332,6 +332,16 @@ ifeq ($(SIM),verilator)
 	# Functional regression only — short integration test runtime overhead is negligible.
 	BUILD_ARGS += OPT_FAST=-O0
 	BUILD_ARGS += OPT_SLOW=-O0
+# Bead claude_verilog_test-7je: give every target its OWN build dir.
+# Verilator always names the binary Vtop regardless of TOPLEVEL, so a single
+# shared sim_build/ meant `make timer` straight after `make async_axi_fifo`
+# silently reused the previous suite's Vtop and died with
+#   VPI: Couldn't find root handle timer / Toplevel instances: timer != tb_async_axi_fifo
+# BUILD_ARGS is recursively expanded (only ever `+=`, never `:=`), so `$@`
+# resolves at recipe time to the target being built.  soc_all's per-suite
+# `rm -rf sim_build` and the per-target `$(MAKE) clean` calls that used to
+# paper over this are removed -- the dirs no longer collide.
+BUILD_ARGS += SIM_BUILD=sim_build_$@
 ifneq ($(wildcard /nix/store),)
 	# Nix environment: nix ld.so cannot find system libs when cocotb dlopen's
 	# libpython3.10.so.1.0.  Create a compat dir with symlinks to system libs.
@@ -449,7 +459,6 @@ apb4_register_bank_lint:
 		--top-module tb_apb4_register_bank $(APB4_REG_SOURCES)
 
 apb4_register_bank: apb4_register_bank_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_apb4_register_bank TOPLEVEL=tb_apb4_register_bank \
 		VERILOG_SOURCES="$(APB4_REG_SOURCES)" \
 		$(BUILD_ARGS)
@@ -461,7 +470,6 @@ axil_to_apb_lint:
 		--top-module tb_axil_to_apb $(AXIL_TO_APB_SOURCES)
 
 axil_to_apb: axil_to_apb_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_axil_to_apb TOPLEVEL=tb_axil_to_apb \
 		VERILOG_SOURCES="$(AXIL_TO_APB_SOURCES)" \
 		$(BUILD_ARGS)
@@ -489,7 +497,6 @@ pll_regs_lint:
 # pll_regs: APB migration PR-7 — pll_axil_regs deleted; pll_regs is now an
 #   alias for pll_apb_regs (4 tests, tb_pll_apb_regs, APB4 slave).
 #   The original test_pll_regs (AXI-Lite) is superseded by test_pll_apb_regs.
-# clean first: stale Vtop from any prior target causes VPI root handle mismatch.
 pll_regs: pll_regs_lint
 	$(MAKE) pll_apb_regs
 
@@ -501,7 +508,6 @@ pll_apb_regs_lint:
 		$(PLL_APB_REGS_SOURCES)
 
 pll_apb_regs: pll_apb_regs_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_pll_apb_regs TOPLEVEL=tb_pll_apb_regs \
 		VERILOG_SOURCES="$(PLL_APB_REGS_SOURCES)" \
 		$(BUILD_ARGS)
@@ -513,9 +519,7 @@ pmu_lint:
 		--top-module tb_pmu \
 		$(PMU_SOURCES)
 
-# clean first: stale Vtop from any prior target causes VPI root handle mismatch.
 pmu: pmu_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_pmu TOPLEVEL=tb_pmu \
 		VERILOG_SOURCES="$(PMU_SOURCES)" \
 		$(BUILD_ARGS)
@@ -527,9 +531,7 @@ async_axi_fifo_lint:
 		--top-module tb_async_axi_fifo \
 		$(ASYNC_AXI_FIFO_SOURCES)
 
-# clean first: stale Vtop from any prior target causes VPI root handle mismatch.
 async_axi_fifo: async_axi_fifo_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_async_axi_fifo TOPLEVEL=tb_async_axi_fifo \
 		VERILOG_SOURCES="$(ASYNC_AXI_FIFO_SOURCES)" \
 		$(BUILD_ARGS)
@@ -541,15 +543,12 @@ apb_cdc_bridge_lint:
 		--top-module tb_apb_cdc_bridge \
 		$(APB_CDC_BRIDGE_SOURCES)
 
-# clean first: stale Vtop from any prior target causes VPI root handle mismatch.
 apb_cdc_bridge: apb_cdc_bridge_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_apb_cdc_bridge TOPLEVEL=tb_apb_cdc_bridge \
 		VERILOG_SOURCES="$(APB_CDC_BRIDGE_SOURCES)" \
 		$(BUILD_ARGS)
 
 soc_pll: soc_pll_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_pll_lock TOPLEVEL=tb_soc_pll \
 		VERILOG_SOURCES="$(PLL_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -561,9 +560,8 @@ soc_pll: soc_pll_lint
 # GH #93 multiclock verification task — see test_soc_multiclock_pll2.py's
 # module docstring for why this is a separate DUT/target from
 # soc_multiclock). Reuses pll2_fw/pll2_decode.hex — no new firmware.
-# clean first (stale Vtop guard).
+#
 soc_pll_multiclock: soc_pll_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_soc_multiclock_pll2 TOPLEVEL=tb_soc_pll \
 		VERILOG_SOURCES="$(PLL_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -580,11 +578,7 @@ soc_boot_lint:
 
 # M9 SoC boot test — 3 tests: PC scoreboard, SRAM sentinels, 100/100 stability.
 # fr_null_20260603_052800_00 (CPU RESET_PC) fixed by rtl-design-orchestrator 2026-06-03.
-# clean first: sim_build/Vtop is always named Vtop regardless of TOPLEVEL, so a
-# stale binary from any prior target (e.g. spi_controller) will cause VPI root
-# handle mismatch ("tb_soc_top != spi_controller").
 soc_boot: soc_boot_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_boot TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -593,9 +587,7 @@ soc_boot: soc_boot_lint
 
 # M9 SoC DMA + peripheral loopback test — self-checking firmware drives DMA
 # mem->mem + UART/SPI internal loopback via CPU MMIO; scoreboards PASS_PC/FAIL_PC.
-# Reuses the full-SoC source list + boot lint. clean first (stale Vtop guard).
 soc_periph: soc_boot_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_periph_loopback TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
@@ -605,7 +597,6 @@ soc_periph: soc_boot_lint
 # Diagnostic boot test — dumps fetch-path signals for 300 cycles.
 .PHONY: soc_boot_diag
 soc_boot_diag:
-	$(MAKE) clean
 	$(MAKE) MODULE=test_boot_diag TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
@@ -618,7 +609,6 @@ soc_boot_diag:
 # Tests: test_coherency_pass (positive), test_coherency_no_flush (negative),
 #        test_coherency_no_inval (negative/warn if dst lines cold).
 soc_coherency: soc_boot_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_soc_coherency TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
@@ -632,7 +622,6 @@ soc_coherency: soc_boot_lint
 # MRET), then reads corrected dst words and verifies src+1.
 # Tests: test_cpu_gpu_irq_pass (positive), test_cpu_gpu_irq_no_irq_enable (negative).
 soc_cpu_gpu: soc_boot_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_cpu_gpu_irq TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
@@ -647,12 +636,11 @@ soc_cpu_gpu: soc_boot_lint
 # when the two domains are not clock-aligned, reusing boot_fw/boot.hex,
 # periph_fw/periph_loopback.hex, and cpu_gpu_irq_fw/cpu_gpu_irq_fw.hex — no
 # new firmware. Reuses SOC_BOOT_SOURCES + soc_boot_lint (same DUT/lint gate
-# as soc_boot/soc_periph/soc_cpu_gpu). clean first (stale Vtop guard).
+# as soc_boot/soc_periph/soc_cpu_gpu).
 #
 # In soc_all (see the soc_all comment block) since 2026-08-02, once both
 # bugs it found were fixed. Runnable standalone too: `rtk make soc_multiclock`.
 soc_multiclock: soc_boot_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_soc_multiclock TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -666,10 +654,8 @@ soc_multiclock: soc_boot_lint
 # u_cpu_axi_cdc. See test_soc_multiclock_reset.py's module docstring for the
 # full rationale (regression coverage for fr_57f49b7f9b29 / fr_280f3ac18c66's
 # shared bug-class signature, at full-SoC scale). Reuses boot_fw/boot.hex --
-# no new firmware. Same DUT/source list/lint gate as soc_multiclock. clean
-# first (stale Vtop guard).
+# no new firmware. Same DUT/source list/lint gate as soc_multiclock.
 soc_multiclock_reset: soc_boot_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_soc_multiclock_reset TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -683,9 +669,8 @@ soc_multiclock_reset: soc_boot_lint
 # by the testbench itself, since the CPU cannot write its own wake register
 # once gated). Firmware: pmu_cycle_fw/pmu_cycle.hex (generated by
 # gen_pmu_cycle_hex.py) -- new firmware, not reused from another suite. Same
-# DUT/source list/lint gate as soc_multiclock. clean first (stale Vtop guard).
+# DUT/source list/lint gate as soc_multiclock.
 soc_pmu_multiclock: soc_boot_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_soc_pmu_multiclock TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -700,7 +685,6 @@ soc_pmu_multiclock: soc_boot_lint
 # runtime is long (>5 min); run explicitly with `make soc_stress`.
 soc_stress: soc_boot_lint
 	/usr/bin/python3 $(SOC_DIR)/stress_fw/gen_stress_hex.py
-	$(MAKE) clean
 	$(MAKE) MODULE=test_soc_stress TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
@@ -724,7 +708,6 @@ l2_bench_lint:
 		$(SOC_BOOT_SOURCES)
 
 l2_bench: l2_bench_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_l2_bench TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
@@ -735,9 +718,9 @@ l2_bench: l2_bench_lint
 
 # Run every SoC test: M3–M6 component suites + M9 boot + M9 periph + M9 coherency +
 # M9 cpu_gpu + Phase 7 M-c PLL (lock + regs) + GH #101 PMU + GH #91 async_axi_fifo.
-# Use rm -rf sim_build (not $(MAKE) clean) for each suite so that stale or
-# partially-written files from a prior build — including large PCH .gch files
-# that $(MAKE) clean sometimes leaves behind — are reliably purged.
+# Bead claude_verilog_test-7je: each suite now builds into its own
+# sim_build_<target>/ (see BUILD_ARGS above), so no per-suite purge is needed
+# here.  Use `make distclean` to sweep every build dir.
 # NOTE: soc_stress and l2_bench are intentionally excluded from soc_all (long runtime).
 # soc_multiclock / soc_pll_multiclock (GH #93) joined soc_all on 2026-08-02.
 #   Both blocking bugs they found (soc_top.sv CPU clock-gate/sync-reset race,
@@ -748,30 +731,30 @@ l2_bench: l2_bench_lint
 #   UART/SPI bit-banging at the 7ns/3ns ratio; soc_pll_multiclock <1s) — comparable
 #   to soc_boot's own 100-attempt stability gate already in this list, so kept in.
 soc_all:
-	rm -rf sim_build && $(MAKE) crossbar
-	rm -rf sim_build && $(MAKE) register_bank
-	rm -rf sim_build && $(MAKE) axil_interconnect
-	rm -rf sim_build && $(MAKE) sram_controller
-	rm -rf sim_build && $(MAKE) sram_controller SRAM_TARGET=sky130
-	rm -rf sim_build && $(MAKE) dma
-	rm -rf sim_build && $(MAKE) irq
-	rm -rf sim_build && $(MAKE) timer
-	rm -rf sim_build && $(MAKE) uart
-	rm -rf sim_build && $(MAKE) spi
-	rm -rf sim_build && $(MAKE) apb4_register_bank
-	rm -rf sim_build && $(MAKE) axil_to_apb
-	rm -rf sim_build && $(MAKE) pmu
-	rm -rf sim_build && $(MAKE) async_axi_fifo
-	rm -rf sim_build && $(MAKE) apb_cdc_bridge
-	rm -rf sim_build && $(MAKE) soc_boot
-	rm -rf sim_build && $(MAKE) soc_periph
-	rm -rf sim_build && $(MAKE) soc_coherency
-	rm -rf sim_build && $(MAKE) soc_cpu_gpu
-	rm -rf sim_build && $(MAKE) soc_pll
-	rm -rf sim_build && $(MAKE) soc_multiclock
-	rm -rf sim_build && $(MAKE) soc_multiclock_reset
-	rm -rf sim_build && $(MAKE) soc_pll_multiclock
-	rm -rf sim_build && $(MAKE) soc_pmu_multiclock
+	$(MAKE) crossbar
+	$(MAKE) register_bank
+	$(MAKE) axil_interconnect
+	$(MAKE) sram_controller
+	$(MAKE) sram_controller SRAM_TARGET=sky130
+	$(MAKE) dma
+	$(MAKE) irq
+	$(MAKE) timer
+	$(MAKE) uart
+	$(MAKE) spi
+	$(MAKE) apb4_register_bank
+	$(MAKE) axil_to_apb
+	$(MAKE) pmu
+	$(MAKE) async_axi_fifo
+	$(MAKE) apb_cdc_bridge
+	$(MAKE) soc_boot
+	$(MAKE) soc_periph
+	$(MAKE) soc_coherency
+	$(MAKE) soc_cpu_gpu
+	$(MAKE) soc_pll
+	$(MAKE) soc_multiclock
+	$(MAKE) soc_multiclock_reset
+	$(MAKE) soc_pll_multiclock
+	$(MAKE) soc_pmu_multiclock
 
 # soc_integration_batch — compile tb_soc_top ONCE and run the four soc_top integration
 # suites back-to-back without a clean between MODULE changes.
@@ -782,7 +765,6 @@ soc_all:
 # Requires the same SIM_BUILD for all four invocations (set via env or command line).
 .PHONY: soc_integration_batch
 soc_integration_batch: soc_boot_lint
-	$(MAKE) clean
 	$(MAKE) MODULE=test_boot TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
@@ -803,3 +785,9 @@ soc_integration_batch: soc_boot_lint
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
+
+# Bead claude_verilog_test-7je: cocotb's own `clean` only removes $(SIM_BUILD),
+# which is now per-target, so it cannot sweep the others.
+.PHONY: distclean
+distclean:
+	rm -rf sim_build sim_build_*
