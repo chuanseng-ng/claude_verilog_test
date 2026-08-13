@@ -148,6 +148,14 @@ APB_CDC_BRIDGE_SOURCES = \
 	$(RTL)/soc/apb_cdc_bridge.sv \
 	$(SOC_DIR)/tb_apb_cdc_bridge.sv
 
+# Bead claude_verilog_test-07n: standalone cdc_reset_sync DFT scan-bypass
+# mux (scanmode_i / scan_rst_ni) directed unit test. cdc_reset_sync alone +
+# standalone TB wrapper -- no cdc_2ff_sync/cdc_gray_fifo dependency, this is
+# a single-primitive test, not a CDC bridge test.
+CDC_RESET_SYNC_SCAN_SOURCES = \
+	$(RTL)/soc/cdc/cdc_reset_sync.sv \
+	$(SOC_DIR)/tb_cdc_reset_sync_scan.sv
+
 # Full SoC top-level sources for the boot test (M9).
 # Order: packages first, leaf RTL, adapters, then soc_top + tb wrapper.
 SRAM_SIM_MODEL ?= $(PROJ_ROOT)/sim/sram_1rw_256x32_verilator.v
@@ -382,7 +390,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -556,6 +564,18 @@ apb_cdc_bridge_lint:
 apb_cdc_bridge: apb_cdc_bridge_lint
 	$(MAKE) MODULE=test_apb_cdc_bridge TOPLEVEL=tb_apb_cdc_bridge \
 		VERILOG_SOURCES="$(APB_CDC_BRIDGE_SOURCES)" \
+		$(BUILD_ARGS)
+
+# Bead claude_verilog_test-07n: cdc_reset_sync DFT scan-bypass lint + sim.
+# lint only: cdc_reset_sync + standalone TB wrapper.
+cdc_reset_sync_scan_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module tb_cdc_reset_sync_scan \
+		$(CDC_RESET_SYNC_SCAN_SOURCES)
+
+cdc_reset_sync_scan: cdc_reset_sync_scan_lint
+	$(MAKE) MODULE=test_cdc_reset_sync_scan TOPLEVEL=tb_cdc_reset_sync_scan \
+		VERILOG_SOURCES="$(CDC_RESET_SYNC_SCAN_SOURCES)" \
 		$(BUILD_ARGS)
 
 soc_pll: soc_pll_lint
@@ -756,6 +776,7 @@ soc_all:
 	$(MAKE) pmu
 	$(MAKE) async_axi_fifo
 	$(MAKE) apb_cdc_bridge
+	$(MAKE) cdc_reset_sync_scan
 	$(MAKE) soc_boot
 	$(MAKE) soc_periph
 	$(MAKE) soc_coherency

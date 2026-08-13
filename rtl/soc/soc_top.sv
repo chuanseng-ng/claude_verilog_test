@@ -217,6 +217,23 @@ module soc_top
     localparam int unsigned IW          = AXI_ID_WIDTH;
     localparam int unsigned LENW        = AXI_LEN_WIDTH;
 
+    // ── DFT scan tie-off — SINGLE CHANGE POINT (bead claude_verilog_test-07n)
+    // No DFT/scan flow exists in this project yet, so every cdc_reset_sync
+    // consumer below (directly, or inside async_axi_fifo / apb_cdc_bridge)
+    // is wired inert through these two constants: scan mode off, scan reset
+    // held inactive, so each internal mux is a pure pass-through of the
+    // functional reset and NOTHING about current behaviour changes. This is
+    // deliberately NOT exposed as a soc_top port — a new boundary port would
+    // perturb the pinned CPU macro (pnr/asap7/cpu/pin_order.cfg, 401 pins)
+    // and the run-23 SoC sign-off (docs/PHASE5_RUN_HISTORY.md) for a DFT
+    // flow that does not exist yet. When a real scan flow is wired up,
+    // change SCAN_MODE_TIE_OFF / SCAN_RST_TIE_OFF here (or replace their
+    // uses below with real scanmode_i/scan_rst_ni top-level ports) — every
+    // consumer already threads the pair through, so that is the only edit
+    // required.
+    localparam logic SCAN_MODE_TIE_OFF = 1'b0;
+    localparam logic SCAN_RST_TIE_OFF  = 1'b1;
+
     // =========================================================================
     // Phase 7 M-c / Pre-Phase-6 #3: PLL subsystem
     //   clk_i  → pll_subsystem.clk_i
@@ -569,9 +586,11 @@ module soc_top
     cdc_reset_sync #(
         .STAGES (2)
     ) u_cpu_pmu_rst_sync (
-        .clk_i   (cpu_core_clk),
-        .rst_n_i (pmu_cpu_rst_n),
-        .rst_n_o (pmu_cpu_rst_n_cpu_sync)
+        .clk_i       (cpu_core_clk),
+        .rst_n_i     (pmu_cpu_rst_n),
+        .scanmode_i  (SCAN_MODE_TIE_OFF),
+        .scan_rst_ni (SCAN_RST_TIE_OFF),
+        .rst_n_o     (pmu_cpu_rst_n_cpu_sync)
     );
 
     // ext_irq / timer_irq: level-held sources (see interrupt_controller.sv /
@@ -840,6 +859,9 @@ module soc_top
     apb_cdc_bridge #(
         .ADDR_W (12)
     ) u_apb_dbg_cdc (
+        .scanmode_i  (SCAN_MODE_TIE_OFF),
+        .scan_rst_ni (SCAN_RST_TIE_OFF),
+
         .s_clk_i     (core_clk),
         .s_rst_n_i   (core_rst_n),
         .s_psel_i    (apb_psel_i),
@@ -1064,6 +1086,9 @@ module soc_top
     // wiring too — the contract is met for the cold-boot/PLL-relock case.
     // =========================================================================
     async_axi_fifo u_cpu_axi_cdc (
+        .scanmode_i  (SCAN_MODE_TIE_OFF),
+        .scan_rst_ni (SCAN_RST_TIE_OFF),
+
         .s_clk_i     (cpu_gated_clk),
         .s_rst_n_i   (cpu_core_rst_n),
         .s_awaddr_i  (cpu_bridge_s_awaddr),
@@ -1727,6 +1752,9 @@ module soc_top
     apb_cdc_bridge #(
         .ADDR_W (12)
     ) u_apb_pll2_cdc (
+        .scanmode_i  (SCAN_MODE_TIE_OFF),
+        .scan_rst_ni (SCAN_RST_TIE_OFF),
+
         .s_clk_i     (core_clk),
         .s_rst_n_i   (core_rst_n),
         .s_psel_i    (apb_psel    [APB_PLL2]),

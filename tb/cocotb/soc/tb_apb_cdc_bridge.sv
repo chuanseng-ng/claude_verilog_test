@@ -70,6 +70,12 @@ module tb_apb_cdc_bridge #(
         .SYNC_STAGES_TO_S (SYNC_STAGES_TO_S),
         .SYNC_STAGES_TO_M (SYNC_STAGES_TO_M)
     ) u_dut (
+        // DFT scan bypass tied inert — this TB exercises functional CDC
+        // behaviour only; scan-mux behaviour is covered by
+        // tb_cdc_reset_sync_scan.sv (bead claude_verilog_test-07n).
+        .scanmode_i  (1'b0),
+        .scan_rst_ni (1'b1),
+
         .s_clk_i     (s_clk),
         .s_rst_n_i   (s_rst_n),
         .s_psel_i    (s_psel),

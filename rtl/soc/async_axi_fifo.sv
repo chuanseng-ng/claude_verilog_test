@@ -99,6 +99,15 @@ module async_axi_fifo #(
     parameter int unsigned SYNC_STAGES_TO_S = 2,
     parameter int unsigned SYNC_STAGES_TO_M = 2
 ) (
+    // ── DFT scan bypass (bead claude_verilog_test-07n) — global, not
+    //    per-face: forwarded to BOTH internal cdc_reset_sync instances
+    //    (u_s_rst_sync, u_m_rst_sync). Must be connected explicitly at
+    //    every instantiation (no SV port defaults); tie scanmode_i=1'b0,
+    //    scan_rst_ni=1'b1 where no scan flow exists — see
+    //    cdc_reset_sync.sv for the full rationale. ─────────────────────────
+    input  logic               scanmode_i,
+    input  logic               scan_rst_ni,
+
     // ══ s_* face — CPU domain, AXI SLAVE port (CPU's AXI master attaches here) ══
     input  logic              s_clk_i,
     input  logic              s_rst_n_i,
@@ -180,17 +189,21 @@ module async_axi_fifo #(
     cdc_reset_sync #(
         .STAGES (SYNC_STAGES_TO_S)
     ) u_s_rst_sync (
-        .clk_i   (s_clk_i),
-        .rst_n_i (rst_both_n),
-        .rst_n_o (s_rst_sync_n)
+        .clk_i       (s_clk_i),
+        .rst_n_i     (rst_both_n),
+        .scanmode_i  (scanmode_i),
+        .scan_rst_ni (scan_rst_ni),
+        .rst_n_o     (s_rst_sync_n)
     );
 
     cdc_reset_sync #(
         .STAGES (SYNC_STAGES_TO_M)
     ) u_m_rst_sync (
-        .clk_i   (m_clk_i),
-        .rst_n_i (rst_both_n),
-        .rst_n_o (m_rst_sync_n)
+        .clk_i       (m_clk_i),
+        .rst_n_i     (rst_both_n),
+        .scanmode_i  (scanmode_i),
+        .scan_rst_ni (scan_rst_ni),
+        .rst_n_o     (m_rst_sync_n)
     );
 
     // ══ AW channel (s -> m) ═══════════════════════════════════════════════════
