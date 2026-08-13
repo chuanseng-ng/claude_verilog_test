@@ -341,7 +341,17 @@ ifeq ($(SIM),verilator)
 # resolves at recipe time to the target being built.  soc_all's per-suite
 # `rm -rf sim_build` and the per-target `$(MAKE) clean` calls that used to
 # paper over this are removed -- the dirs no longer collide.
-BUILD_ARGS += SIM_BUILD=sim_build_$@
+# The build dir must also distinguish BUILD VARIANTS of the same target, not
+# just different targets. soc_all runs `sram_controller` twice -- once default,
+# once SRAM_TARGET=sky130 -- and that switch changes the source list
+# (SRAM_CTRL_SIM_MODEL), a define (SRAM_SKY130) and a parameter
+# (MEM_WORDS 4096 -> 1024). Same $@, so without the suffix below both land in
+# sim_build_sram_controller and the second run silently REUSES the first's
+# Vtop: measured MEM_WORDS=0x1000 and zero sky130 references in the binary
+# while the suite still reported 11/11 PASS. That is a false pass, strictly
+# worse than the VPI crash this bead started from, and it is only invisible
+# because TOPLEVEL happens to match. (Caught in review of PR #142.)
+BUILD_ARGS += SIM_BUILD=sim_build_$@$(if $(filter-out freepdk45,$(SRAM_TARGET)),_$(SRAM_TARGET))
 ifneq ($(wildcard /nix/store),)
 	# Nix environment: nix ld.so cannot find system libs when cocotb dlopen's
 	# libpython3.10.so.1.0.  Create a compat dir with symlinks to system libs.
