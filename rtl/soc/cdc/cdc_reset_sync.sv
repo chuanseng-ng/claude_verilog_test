@@ -24,6 +24,29 @@
 // Reset: asynchronous assert, synchronous deassert, active-low (new-module
 // discipline, docs/development/CODING_GUIDELINES.md §1.4).
 //
+// ── Scan bypass (DFT, bead claude_verilog_test-07n) ────────────────────────
+// During scan shift the tester must be able to control this chain's async
+// clear directly — otherwise the synchroniser flops (and everything
+// downstream that consumes rst_n_o as an async reset) cannot be scanned, and
+// the reset tree feeding them becomes an untestable island. Standard fix,
+// same shape as OpenTitan's prim_rst_sync: mux the async-clear SOURCE
+// between the functional rst_n_i and a tester-driven scan_rst_ni, selected
+// by scanmode_i. The mux output (rst_n_async below) replaces rst_n_i
+// everywhere it previously appeared as the `negedge` reset in this file's
+// always_ff blocks; scanmode_i itself is treated as quasi-static (driven by
+// a scan controller / boundary-scan cell, not toggled mid-shift), matching
+// how every other DFT mode signal in a real flow behaves, so this is not an
+// arbitrary-glitch combinational hazard in practice.
+//
+// SystemVerilog has no port default values, so BOTH scanmode_i and
+// scan_rst_ni must be connected explicitly at every instantiation. This
+// project has no DFT/scan flow yet (bead claude_verilog_test-07n is filed
+// pre-emptively): every current instantiation ties scanmode_i=1'b0,
+// scan_rst_ni=1'b1 (scan mode off, scan reset held inactive so it can never
+// be the clear source), making the mux a pure pass-through of rst_n_i and
+// changing nothing about current behaviour. See soc_top.sv's single tie-off
+// comment block for where those constants live for this design.
+//
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
 module cdc_reset_sync #(
@@ -31,6 +54,12 @@ module cdc_reset_sync #(
 ) (
     input  logic clk_i,
     input  logic rst_n_i,
+
+    // ── DFT scan bypass — see "Scan bypass (DFT)" note above. Must be
+    //    connected explicitly at every instantiation (no SV port defaults);
+    //    tie scanmode_i=1'b0, scan_rst_ni=1'b1 where no scan flow exists. ──
+    input  logic scanmode_i,
+    input  logic scan_rst_ni,
 
     output logic rst_n_o
 );
@@ -42,6 +71,15 @@ module cdc_reset_sync #(
     if (STAGES < 2) begin : g_stages_check
         $fatal(1, "cdc_reset_sync: STAGES (%0d) must be >= 2", STAGES);
     end
+
+    // Scan-mode async-clear source mux (OpenTitan prim_rst_sync style): the
+    // functional rst_n_i is replaced by the tester-driven scan_rst_ni while
+    // scanmode_i is asserted, so ATPG owns this chain's async clear during
+    // scan shift instead of being at the mercy of whatever rst_n_i happens
+    // to be doing. With scanmode_i tied low (no scan flow today), this is a
+    // pure combinational pass-through and rst_n_async === rst_n_i.
+    logic rst_n_async;
+    assign rst_n_async = scanmode_i ? scan_rst_ni : rst_n_i;
 
     // One always_ff PER STAGE (genvar generate), packed vector storage.
     // Functionally: shift a '1' in at stage 0 every cycle out of reset, i.e.
@@ -68,16 +106,16 @@ module cdc_reset_sync #(
     generate
         for (g = 0; g < STAGES; g++) begin : g_stage
             if (g == 0) begin : g_first
-                always_ff @(posedge clk_i or negedge rst_n_i) begin
-                    if (!rst_n_i) begin
+                always_ff @(posedge clk_i or negedge rst_n_async) begin
+                    if (!rst_n_async) begin
                         sync_q[0] <= 1'b0;
                     end else begin
                         sync_q[0] <= 1'b1;
                     end
                 end
             end else begin : g_rest
-                always_ff @(posedge clk_i or negedge rst_n_i) begin
-                    if (!rst_n_i) begin
+                always_ff @(posedge clk_i or negedge rst_n_async) begin
+                    if (!rst_n_async) begin
                         sync_q[g] <= 1'b0;
                     end else begin
                         sync_q[g] <= sync_q[g-1];
