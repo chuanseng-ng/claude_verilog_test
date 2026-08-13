@@ -368,8 +368,17 @@ ifneq ($(wildcard /nix/store),)
 	# ld.so.cache is empty/unreadable — the probe then returns nothing and the compat
 	# dir is silently left empty.  Prefer the system /sbin/ldconfig, and fall back to
 	# a direct lookup in the usual multiarch dirs if that is unavailable too.
+	#
+	# libssl/libcrypto (bead npz): cocotb.regression installs pytest's assertion
+	# rewrite hook, which imports anyio -> ssl -> libssl.so.3.  Without these two
+	# the hook raises ImportError and every run prints an ERROR + ~30-line
+	# traceback before the tests (which are unaffected) proceed with assertion
+	# rewriting silently disabled.  Note the failure is inside the SIMULATOR
+	# process, not the shell: plain `nix develop --command python3 -c 'import ssl'`
+	# succeeds, which is why this looked like a nix-shell problem and was not.
 	SIM_CMD_PREFIX := mkdir -p $(NIX_COMPAT_DIR) && \
-	  for _lib in libexpat.so.1 libz.so.1 libbz2.so.1.0 liblzma.so.5 libffi.so.8; do \
+	  for _lib in libexpat.so.1 libz.so.1 libbz2.so.1.0 liblzma.so.5 libffi.so.8 \
+	              libssl.so.3 libcrypto.so.3; do \
 	    _src=$$(PATH=/sbin:/usr/sbin:$$PATH ldconfig -p 2>/dev/null | grep "^	$$_lib " | awk '{print $$NF}' | head -1); \
 	    if [ -z "$$_src" ]; then \
 	      for _d in /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu /usr/lib64 /usr/lib; do \
