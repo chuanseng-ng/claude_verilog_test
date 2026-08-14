@@ -118,9 +118,22 @@ Three nodes are supported by the existing `pnr/Makefile`. Use the right node for
 
 | Node | Makefile target | Config status | Realistic CPU freq | Fabricatable | Best use |
 |------|----------------|---------------|-------------------|--------------|----------|
-| **Sky130 130nm** | `librelane-sky130`, `docker-run` | ✅ Complete | 75–100 MHz | ✅ Yes (SkyWater MPW) | Functional sign-off; tape-out candidate |
+| **Sky130 130nm** | `librelane-sky130-cpu`, `librelane-sky130-soc` | ✅ Complete (`pnr/sky130/`) | 75–100 MHz | ✅ Yes (SkyWater MPW) | Functional sign-off; tape-out candidate |
 | **FreePDK45 / NanGate45 45nm** | `librelane-nangate45` | ✅ Complete (`pnr/freepdk45/`) | 150–250 MHz | No (predictive) | First non-Sky130 exploration; SRAM macros available |
 | **ASAP7 7nm FinFET** | `librelane-asap7` | ✅ Complete (`pnr/asap7/`); Run 43 signoff 2026-05-20 | **1418 MHz achieved (Run 43)** | No (predictive) | Phase 2+3 RTL PPA sign-off completed at 1418 MHz / 27.27 mW / 3 844 µm² |
+
+### Legacy P&R directories (superseded — do not start new work here)
+`pnr/librelane/` and `pnr/openlane1/` are the pre-per-node Sky130 CPU flows. Both are
+**superseded by `pnr/sky130/cpu/` and `pnr/sky130/soc/`**, which are the live Sky130 flows and the
+only ones with real Magic DRC + Netgen LVS enabled. `pnr/sky130/cpu/config.json` was forked from
+`pnr/librelane/config.json` (see `docs/SKY130_REAL_DRC_LVS_EVALUATION.md` §Stage 1). Their targets
+(`librelane-sky130`, `docker-run`/`docker-synth`/`docker-results`) still exist as a fallback, but
+neither directory has run since 2026-03-25 and both carry the stale `VERILOG_FILES` package-closure
+gap tracked in bead `135` — run `python3 tools/verif/check_source_closure.py <config>` before
+trusting either. `pnr/openlane/` was speculative OpenLane-2 scaffolding that was never wired to any
+Makefile target and has been deleted (LibreLane is the OL2-lineage tool this project actually uses).
+`pnr/freepdk45/` is **not** superseded — it is a dormant-but-intentional third node with no per-node
+replacement, and `librelane-nangate45` remains the only path to it.
 
 ### Sky130 real DRC/LVS sign-off (GH epic #102, Stages 1–2 complete 2026-07-31)
 Sky130 is the **only** node in this project with genuine physical verification — ASAP7 skips Magic/KLayout/Netgen entirely (predictive PDK) and FreePDK45 has them permanently blocked.
