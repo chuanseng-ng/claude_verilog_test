@@ -78,6 +78,25 @@ module warp_scheduler
 );
 
     // -----------------------------------------------------------------------
+    // Parameter contract: N_WARPS_P sizes the per-warp arrays below, but the
+    // round-robin scan, reset/launch/completion loops and the `% N_WARPS` wrap
+    // are all bounded by the package constant N_WARPS, and the warp-id width
+    // WARP_W (and therefore n_warps_active_i) is derived from N_WARPS too.
+    // An override BELOW N_WARPS would index these arrays out of range; an
+    // override ABOVE it would leave the extra entries permanently unreachable
+    // and unrepresentable in WARP_W bits.  Nothing overrides it today
+    // (gpu_top.sv instantiates `warp_scheduler u_sched` with no parameter
+    // block), so this is latent rather than live -- but it is silent, so make
+    // it loud.  Generate-scope $fatal, not `initial $fatal`, so it fires under
+    // lint/synth elaboration and not only in simulation; same idiom as
+    // rtl/soc/cdc/cdc_2ff_sync.sv:82-84.
+    // -----------------------------------------------------------------------
+    if (N_WARPS_P != N_WARPS) begin : g_n_warps_p_check
+        $fatal(1, "warp_scheduler: N_WARPS_P (%0d) must equal gpu_pkg::N_WARPS (%0d) -- the scan/reset loops and WARP_W are bound to N_WARPS",
+               N_WARPS_P, N_WARPS);
+    end
+
+    // -----------------------------------------------------------------------
     // Per-warp state
     // -----------------------------------------------------------------------
     logic [31:0]             warp_pc    [N_WARPS_P-1:0];

@@ -110,7 +110,7 @@ waive -rule UndrivenInTerm-ML -scope "soc_top.u_boot_rom.mem" -comment "Behavior
 # electrical connection to each other, so there is no actual polarity
 # conflict — only a naming coincidence.
 waive -rule W392 -scope "soc_top.core_rst_n" -comment "Cross-module name collision, not a real polarity conflict — soc_top's top-level core_rst_n (rst_n_i & pll_locked) is a distinct net from any same-named local signal inside child module scopes (e.g. dma_engine); no electrical connection exists between them."
-waive -rule W392 -scope "dma_engine.*rst_n*" -comment "See soc_top.core_rst_n waiver above — same false-positive class from SpyGlass's name-based cross-hierarchy polarity check."
+waive -rule W392 -scope "dma_engine.rst_n" -comment "See soc_top.core_rst_n waiver above — same false-positive class from SpyGlass's name-based cross-hierarchy polarity check."
 
 
 # -----------------------------------------------------------------------------
