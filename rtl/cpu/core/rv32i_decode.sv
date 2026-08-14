@@ -505,10 +505,9 @@ module rv32i_decode (
           end else begin
             illegal = 1'b1;
           end
-        end else if (funct3 == 3'b000) begin
-          // FENCE (funct3=000): NOP in a single-CPU design (no coherence).
-          // No action; illegal remains 0.
-        end else begin
+        end else if (funct3 == 3'b000) ;  // FENCE: NOP in a single-CPU design
+                                           // (no coherence); illegal remains 0.
+        else begin
           // Other funct3 encodings are reserved/illegal.
           illegal = 1'b1;
         end

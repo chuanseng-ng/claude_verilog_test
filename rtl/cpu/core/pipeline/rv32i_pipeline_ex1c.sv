@@ -150,8 +150,7 @@ module rv32i_pipeline_ex1c (
                     end
                 endcase
             end
-            3'b010: begin  // Word store — defaults already set above
-            end
+            3'b010: ;  // Word store — defaults already set above
             default: begin
                 ex1c_o.pre_wstrb         = 4'b0000;
                 ex1c_o.pre_wdata_aligned = 32'h0;

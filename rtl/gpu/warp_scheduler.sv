@@ -108,11 +108,11 @@ module warp_scheduler
         next_warp = rr_ptr;
         found     = 1'b0;
         for (int i = 0; i < N_WARPS; i++) begin
-            int cand_i;
-            cand_i = (int'(rr_ptr) + i) % N_WARPS;
-            if (!found && cand_i < int'(n_warps_q) &&
+            logic [WARP_W-1:0] cand_i;
+            cand_i = WARP_W'((int'(rr_ptr) + i) % N_WARPS);
+            if (!found && (cand_i < n_warps_q) &&
                 !warp_busy[cand_i] && !warp_done[cand_i]) begin
-                next_warp = WARP_W'(cand_i);
+                next_warp = cand_i;
                 found     = 1'b1;
             end
         end
@@ -132,7 +132,7 @@ module warp_scheduler
     // single-warp kernels where next_warp wraps to an invalid index).
     assign div_stack_depth_o = div_depth[exec_warp_id_i];
     assign div_stack_top_o   = (div_depth[exec_warp_id_i] != '0) ?
-                                div_stack[exec_warp_id_i][int'(div_depth[exec_warp_id_i]) - 1] :
+                                div_stack[exec_warp_id_i][div_depth[exec_warp_id_i] - 1'b1] :
                                 '0;
 
     // -----------------------------------------------------------------------

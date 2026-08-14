@@ -381,9 +381,8 @@ module dma_engine
             S_B: begin
                 m_bready = 1'b1;
             end
-            default: begin
-                // S_IDLE, S_CALC, S_DESC_DONE, S_ERR — all AXI outputs stay at defaults
-            end
+            // S_IDLE, S_CALC, S_DESC_DONE, S_ERR — all AXI outputs stay at defaults
+            default: ;
         endcase
     end
 

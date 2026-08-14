@@ -143,6 +143,7 @@ module rv32i_pipeline_if #(
             if_id_reg_o.valid       <= 1'b1;
         end else if (stall_if_id) begin
             // Hold current IF/ID (downstream stall)
+            if_id_reg_o <= if_id_reg_o;
         end else begin
             // No valid instruction this cycle (e.g. cache miss, halt, redirect)
             if_id_reg_o <= if_id_nop();

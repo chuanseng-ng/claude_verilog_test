@@ -73,6 +73,8 @@ module rv32i_alu (
       ALU_SLTU: result = {31'b0, ~sum[32]};
       ALU_XOR:  result = operand_a ^ operand_b;
       ALU_SRL:  result = operand_a >> shamt;
+      // Spyglass SignedUnsignedExpr-ML: waived (lint/spyglass/waivers.awl) —
+      // arithmetic right shift is functionally required to be signed (RV32I SRA).
       ALU_SRA:  result = $signed(operand_a) >>> shamt;
       ALU_OR:   result = operand_a | operand_b;
       ALU_AND:  result = operand_a & operand_b;
