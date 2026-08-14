@@ -52,11 +52,14 @@ module apb4_register_bank #(
     input  logic [31:0] hw_wdata_i[N_REGS]   // hardware write data (bypasses WMASK)
 );
 
-    // Static width checks.
+    // Static width checks (simulation only — synthesis/lint views never
+    // instantiate DW/SW outside 32/4, and $fatal is non-synthesizable).
+`ifndef __pnr__
     initial begin
         if (DW != 32) $fatal(1, "apb4_register_bank requires DW == 32");
         if (SW != 4)  $fatal(1, "apb4_register_bank requires SW == 4");
     end
+`endif
 
     // Word index widths: WORDW spans the full ADDR_W slot; IDXW indexes N_REGS.
     localparam int unsigned WORDW = ADDR_W - 2;
