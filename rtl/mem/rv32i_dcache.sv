@@ -949,8 +949,8 @@ module rv32i_dcache (
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             for (int j = 0; j < N_SETS; j++) begin
-                valid_array[j] = 1'b0;
-                dirty_array[j] = 1'b0;
+                valid_array[j] <= 1'b0;
+                dirty_array[j] <= 1'b0;
             end
         end else begin
             // Write hit: set dirty
