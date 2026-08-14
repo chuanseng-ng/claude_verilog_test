@@ -26,6 +26,12 @@
 // slave use SPI_CLK_DIV >= 7 so the 1-clock offset is a negligible fraction of
 // the SCLK half-period and setup margin is preserved.
 //
+// spi_miso_i is routed through a cdc_2ff_sync (bead claude_verilog_test-a2g)
+// before reaching the shift engine, adding 2 fabric clocks of latency on top
+// of the above. SPI_CLK_DIV >= 7 keeps this well inside the settled window;
+// SPI_CLK_DIV == 0 or 1 is NOT safe for a real external slave (loopback is
+// unaffected -- see the miso_in mux below).
+//
 // APB snoop (replaces AXI snoop):
 //   TX push: psel & penable & pwrite  & pready at SPI_TX word address with |pstrb.
 //   RX pop:  psel & penable & !pwrite & pready at SPI_RX word address.
@@ -345,7 +351,41 @@ module spi_controller #(
     //           tx_shift_q[7] already shows the NEXT bit (post-shift).  Use
     //           mosi_hold_q which was captured just before the shift.
     wire miso_loopback = cpha ? mosi_hold_q : tx_shift_q[7];
-    wire miso_in = loopback ? miso_loopback : spi_miso_i;
+
+    // spi_miso_i CDC synchroniser (bead claude_verilog_test-a2g, GH #95
+    // cdc_snitch finding spi-miso-unsynchronised-sample). spi_miso_i is a
+    // board-level asynchronous pin; sampling it directly into rx_shift_q /
+    // rx_push_data was benign only by construction (SPI master mode drives
+    // SCLK itself), not clean by inspection. Route it through the standard
+    // 2-FF synchroniser instead of hand-rolling flops.
+    //
+    // Timing impact: cdc_2ff_sync adds 2 fabric-clock cycles of latency
+    // between a spi_miso_i transition and its visibility to the shift
+    // engine. This is transparent as long as the external slave's MISO has
+    // already been stable for >= 2 cycles by the sample edge -- true for any
+    // half-period (SPI_CLK_DIV+1) comfortably larger than 2, which is what
+    // this module's own external-slave guidance already requires (see the
+    // SPI_CLK_DIV >= 7 recommendation above). Loopback mode is unaffected:
+    // miso_loopback never routes through spi_miso_i/spi_miso_sync_q.
+    // KNOWN GAP: SPI_CLK_DIV == 0 (half-period = 1 clock) and SPI_CLK_DIV == 1
+    // (half-period = 2 clocks) are NOT safe for a real external slave with
+    // this synchroniser in place -- the 2-cycle sync latency meets or exceeds
+    // the half-period, so the sampled bit can be stale by a full bit
+    // position. Flagged, not silently retimed; see bead
+    // claude_verilog_test-a2g close-out notes.
+    logic spi_miso_sync_q;
+
+    cdc_2ff_sync #(
+        .WIDTH  (1),
+        .STAGES (2)
+    ) u_spi_miso_sync (
+        .clk_i   (clk),
+        .rst_n_i (rst_n),
+        .d_i     (spi_miso_i),
+        .q_o     (spi_miso_sync_q)
+    );
+
+    wire miso_in = loopback ? miso_loopback : spi_miso_sync_q;
 
     always_ff @(posedge clk) begin
         if (!rst_n) begin
