@@ -1,7 +1,6 @@
 // 8-lane vector ALU. All operations are single-cycle combinational.
 // Inactive lanes (active_mask bit = 0) produce 0 on result_o and branch_taken_o.
 // VMUL produces the lower 32 bits of the 64-bit product (no pipeline stage in Phase 4).
-`default_nettype none
 
 module vector_alu
     import gpu_pkg::*;
@@ -80,4 +79,3 @@ module vector_alu
 
 endmodule
 
-`default_nettype wire

@@ -15,7 +15,6 @@
 //
 // NOTE: Human review required before merge (divergence algorithm,
 //       memory stall interaction, reconverge logic).
-`default_nettype none
 
 module gpu_compute_unit
     import gpu_pkg::*;
@@ -526,4 +525,3 @@ module gpu_compute_unit
 
 endmodule
 
-`default_nettype wire

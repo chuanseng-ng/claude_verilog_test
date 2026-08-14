@@ -12,13 +12,12 @@
 // Ports mirror sram_controller.sv exactly so the crossbar can use either
 // as a generic AXI4 slave.
 //
-// Coding conventions: `default_nettype none, synchronous reset, no #delays,
-// no initial blocks in synthesisable path.  $readmemh is in an initial block
+// Coding conventions: no `default_nettype` directive (Spyglass IND,
+// CODING_GUIDELINES.md sec 1.3), synchronous reset, no #delays, no initial
+// blocks in synthesisable path.  $readmemh is in an initial block
 // (behavioral ROM pre-load, identical pattern to sram_controller.sv).
 //
 // Lint target: verilator -Wall 0 errors 0 warnings.
-
-`default_nettype none
 
 module boot_rom
     import axi_pkg::*;

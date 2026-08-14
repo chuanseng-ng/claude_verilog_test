@@ -153,8 +153,6 @@
 //
 // Lint target: verilator -Wall 0 errors 0 warnings.
 
-`default_nettype none
-
 module soc_top
     import axi_pkg::*;
     import soc_addr_map_pkg::*;

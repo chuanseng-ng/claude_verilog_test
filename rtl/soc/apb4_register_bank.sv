@@ -21,8 +21,6 @@
 // Lint note: paddr[1:0] are unused (word-aligned register file); they are
 // bracketed with a targeted lint_off to keep -Wall clean.
 
-`default_nettype none
-
 module apb4_register_bank #(
     parameter int unsigned N_REGS    = 16,
     parameter int unsigned ADDR_W    = 12,           // local byte address width
@@ -122,4 +120,3 @@ module apb4_register_bank #(
 
 endmodule : apb4_register_bank
 
-`default_nettype wire

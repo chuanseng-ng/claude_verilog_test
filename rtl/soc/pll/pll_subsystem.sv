@@ -49,8 +49,6 @@
 // Coding rules: no logic — structural instantiation + assign only.
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
-`default_nettype none
-
 module pll_subsystem #(
     // PLL implementation selector — "STUB" (default, synth-safe) or "RNM" (cosim)
     parameter string       PLL_IMPL        = "STUB",
@@ -144,4 +142,3 @@ module pll_subsystem #(
 
 endmodule : pll_subsystem
 
-`default_nettype wire

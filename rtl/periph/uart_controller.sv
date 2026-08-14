@@ -39,8 +39,6 @@
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
-`default_nettype none
-
 module uart_controller #(
     parameter int unsigned ADDR_W = 12   // APB4 local address width
 ) (
@@ -660,4 +658,3 @@ module uart_controller #(
 
 endmodule : uart_controller
 
-`default_nettype wire

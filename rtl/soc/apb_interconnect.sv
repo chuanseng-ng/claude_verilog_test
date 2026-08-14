@@ -12,8 +12,6 @@
 // All logic is combinational — APB timing handshake (SETUP/ACCESS/pready) is
 // the responsibility of each downstream slave.
 
-`default_nettype none
-
 module apb_interconnect #(
     parameter int unsigned N_SLAVES = 1,
     parameter int unsigned ADDR_W   = 32,
@@ -103,4 +101,3 @@ module apb_interconnect #(
 
 endmodule : apb_interconnect
 
-`default_nettype wire

@@ -25,11 +25,9 @@
 // Coding rules:
 //   * No #delays, no initial blocks, no real types
 //   * All registers synchronous reset (active-low)
-//   * `default_nettype none enforced by parent wrapper
+//   * No `default_nettype` directive (Spyglass IND, CODING_GUIDELINES.md §1.3)
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
-
-`default_nettype none
 
 module pll_clkgen_stub #(
     // Number of ref_clk_i rising edges to wait before asserting locked_o.
@@ -72,4 +70,3 @@ module pll_clkgen_stub #(
 
 endmodule : pll_clkgen_stub
 
-`default_nettype wire

@@ -23,8 +23,6 @@
 //
 // Branch misprediction penalty: 4 cycles (unchanged from Run-20).
 
-`default_nettype none
-
 import rv32i_pipeline_pkg::*;
 module rv32i_pipeline_ex1c (
     // ── Registered EX1a output (ex1a_ex1b_reg_q from rv32i_core.sv) ──────────
@@ -208,4 +206,3 @@ module rv32i_pipeline_ex1c (
 
 endmodule
 
-`default_nettype wire

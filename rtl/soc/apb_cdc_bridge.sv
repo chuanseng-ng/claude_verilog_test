@@ -290,8 +290,6 @@
 // cdc_reset_sync discipline.
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
-`default_nettype none
-
 module apb_cdc_bridge #(
     parameter int unsigned ADDR_W           = 12,  // APB4 local address width (byte address)
     parameter int unsigned SYNC_STAGES_TO_S = 2,    // stages synchronising INTO the s_* domain (ack, s reset, m_rst_n_i status)

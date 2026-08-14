@@ -8,7 +8,6 @@
 // stalled; that is safe because the compute unit's pipe_stall causes the
 // result to be captured from rdata_o only when stall_o drops, not one
 // cycle earlier.
-`default_nettype none
 
 module gpu_memory_unit
     import gpu_pkg::*;
@@ -103,4 +102,3 @@ module gpu_memory_unit
 
 endmodule
 
-`default_nettype wire

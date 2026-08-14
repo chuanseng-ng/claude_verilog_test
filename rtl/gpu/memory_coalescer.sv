@@ -13,7 +13,6 @@
 //        → (load) AR → R → next lane or DONE
 //        → (store) AW → W → B → next lane or DONE
 //   DONE: assert done_o for one cycle, then return to IDLE.
-`default_nettype none
 
 module memory_coalescer
     import gpu_pkg::*;
@@ -213,4 +212,3 @@ module memory_coalescer
 
 endmodule
 
-`default_nettype wire

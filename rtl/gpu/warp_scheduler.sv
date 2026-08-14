@@ -7,7 +7,6 @@
 // Round-robin: starting from rr_ptr, scan forward to find the first warp
 // that is neither busy nor done. Issue it and advance rr_ptr.
 // When all warps are done: assert kernel_done_o.
-`default_nettype none
 
 module warp_scheduler
     import gpu_pkg::*;
@@ -230,4 +229,3 @@ module warp_scheduler
 
 endmodule
 
-`default_nettype wire

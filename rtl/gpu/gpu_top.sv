@@ -15,7 +15,6 @@
 //   0x024 GPU_ARG_PTR
 //   0x028 GPU_IRQ_CLR   [0]=W1C
 //   0x030–0x06C GPU_PERFCNT[0..15]  (RO)
-`default_nettype none
 
 module gpu_top
     import gpu_pkg::*;
@@ -505,4 +504,3 @@ module gpu_top
 
 endmodule
 
-`default_nettype wire

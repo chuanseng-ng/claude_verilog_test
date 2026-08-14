@@ -33,8 +33,6 @@
 //
 // Lint target: verilator -Wall 0 errors 0 warnings.
 
-`default_nettype none
-
 module axilite_to_axi4
     import axi_pkg::*;
 #(

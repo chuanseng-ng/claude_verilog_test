@@ -29,8 +29,6 @@
 //   The RNM branch is present in the generate block but pruned when
 //   PLL_IMPL != "RNM"; pll_rnm.sv is excluded from the lint source list.
 
-`default_nettype none
-
 module pll_clkgen #(
     // Implementation selector — "STUB" (default, synth-safe) or "RNM" (cosim)
     parameter string   PLL_IMPL        = "STUB",
@@ -96,4 +94,3 @@ module pll_clkgen #(
 
 endmodule : pll_clkgen
 
-`default_nettype wire
