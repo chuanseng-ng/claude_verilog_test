@@ -40,7 +40,8 @@
 //   rst_n_i     — top-level active-low reset (synchronous inside sub-modules)
 //   PLL_IMPL    — "STUB" (default) or "RNM" (AMS cosim only)
 //   APB4 slave  — psel/penable/pwrite/paddr/pwdata/pstrb/prdata/pready/pslverr
-//                 sourced from apb_interconnect APB_PLL slot
+//                 driven by soc_top from an apb_cdc_bridge DESTINATION (m_*)
+//                 face, not straight off the apb_interconnect slot (GH #86)
 //   core_clk    — PLL output clock; feeds all children of soc_top
 //   core_rst_n  — gated reset: rst_n_i & pll_locked
 //   pll_locked_o — raw PLL lock flag (exported to soc_top port)
@@ -63,9 +64,13 @@ module pll_subsystem #(
     input  logic clk_i,
     input  logic rst_n_i,
 
-    // ── APB4 slave port (from apb_interconnect APB_PLL slot) ─────────────────
-    // Sourced by the APB interconnect which runs on core_clk in STUB mode
-    // (core_clk == clk_i) and on core_clk != clk_i in RNM mode (CDC deferred).
+    // ── APB4 slave port (from an apb_cdc_bridge destination face) ───────────
+    // soc_top does NOT wire this port straight to the apb_interconnect slot.
+    // The interconnect runs on core_clk; this module runs on clk_i. In STUB
+    // mode those are the same net, but in RNM mode core_clk != clk_i, so
+    // soc_top interposes an apb_cdc_bridge (u_apb_pll_cdc for u_pll_sub,
+    // u_apb_pll2_cdc for u_cpu_pll_sub) and drives this port from its m_*
+    // face — GH #86. No longer deferred; see the file header.
     input  logic              psel,
     input  logic              penable,
     input  logic              pwrite,
