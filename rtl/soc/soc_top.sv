@@ -22,7 +22,9 @@
 //     APB_SPI=1   @ 0x2000_3000–3FFF  spi_controller
 //     APB_TIMER=2 @ 0x2000_4000–4FFF  timer
 //     APB_IRQ=3   @ 0x2000_6000–6FFF  interrupt_controller
-//     APB_PLL=4   @ 0x2000_7000–7FFF  pll_apb_regs (clk_i domain — system/fabric PLL)
+//     APB_PLL=4   @ 0x2000_7000–7FFF  pll_apb_regs (clk_i domain — system/fabric PLL;
+//                                      bridged from core_clk by apb_cdc_bridge
+//                                      (u_apb_pll_cdc, GH #86 fix))
 //     APB_PMU=5   @ 0x2000_8000–8FFF  pmu (core_clk domain; GH #99/#100)
 //     APB_PLL2=6  @ 0x2000_9000–9FFF  pll_apb_regs (cpu_clk_i domain — CPU-domain
 //                                      PLL, GH #92; output unconsumed until GH #93)
@@ -30,6 +32,17 @@
 //   Debug plane   : APB3 debug slave exposed at top-level ports, bridged into
 //     the CPU domain by apb_cdc_bridge (u_apb_dbg_cdc, GH #95) — see the
 //     clock-seam note below.
+//
+//   PLL config plane (core_clk <-> reference-clock CDC, independent of the
+//   CPU clock seam below): both pll_apb_regs instances run their APB4 slave
+//   port on their OWN raw reference clock (u_pll_sub on clk_i, u_cpu_pll_sub
+//   on cpu_clk_i — pll_subsystem.sv's bootstrap rule), while apb_interconnect
+//   always drives both APB_PLL/APB_PLL2 slots from core_clk. Both crossings
+//   are bridged: APB_PLL by u_apb_pll_cdc (GH #86), APB_PLL2 by
+//   u_apb_pll2_cdc (GH #93) — see each instantiation's comment below. In
+//   STUB mode core_clk == clk_i so both degenerate to a 1:1 handshake with
+//   no real CDC hazard; the hazard is live as soon as PLL_IMPL="RNM" makes
+//   core_clk a generated (non-identical) clock.
 //
 //   Clock seam (Phase 7 M-c / GH #92 dual PLL; GH #93 makes the CPU domain
 //   real — two genuine, non-identical clock roots with one intentional CDC
@@ -1680,6 +1693,83 @@ module soc_top
     );
 
     // =========================================================================
+    // GH #86: APB4 CDC bridge for the APB_PLL slot.
+    //
+    // apb_interconnect is purely combinational (no clock port, see
+    // soc_bus.sv "5. APB interconnect"); the APB transaction is driven by
+    // axil_to_apb in the core_clk domain, while u_pll_sub samples
+    // psel/penable and returns pready/prdata on clk_i / rst_n_i — the raw
+    // reference clock, per pll_subsystem.sv's bootstrap rule (u_pll_sub is
+    // the SOURCE of core_clk/pll_locked, so it cannot itself run on core_clk
+    // without a deadlock — see pll_subsystem.sv header). With PLL_IMPL=
+    // "RNM", core_clk != clk_i, so psel/penable/pready/prdata on this slot
+    // crossed a clock boundary with no synchroniser. GH #93 fixed the
+    // identical mechanism for the SECOND PLL (APB_PLL2, see u_apb_pll2_cdc
+    // below) and explicitly named this slot (GH #86) as the same bug left
+    // unfixed; this bridge closes it, modelled line-for-line on
+    // u_apb_pll2_cdc.
+    //
+    // Source (s_*) face is core_clk / core_rst_n (matches
+    // apb_interconnect/axil_to_apb, same as u_apb_pll2_cdc's s_* face).
+    // Destination (m_*) face is clk_i / rst_n_i — the RAW reference clock,
+    // NOT core_clk and NOT cpu_clk_i — matching u_pll_sub's own clk_i /
+    // rst_n_i (pll_subsystem.sv's bootstrap rule).
+    //
+    // Instantiated UNCONDITIONALLY (not generate-guarded on PLL_IMPL=="RNM"):
+    // a guarded bridge would mean the default STUB regression exercises a
+    // different netlist from the one being fixed, and u_apb_pll2_cdc set the
+    // precedent of an unconditional bridge. In STUB mode core_clk == clk_i,
+    // so this is a latency change only (one 4-phase RZ handshake added to
+    // every APB_PLL access), not a functional one.
+    //
+    // Bootstrap safety (no self-brick risk): the bridge's source face is
+    // held in reset by core_rst_n = rst_n_i & pll_locked, i.e. the bridge
+    // cannot pass a transaction until the PLL has already locked once. This
+    // cannot deadlock the PLL itself: pll_apb_regs' CONTROL register resets
+    // to 32'h0000_0001 (pll_enable=1) and bit[0] is excluded from WMASK
+    // (non-clearable — the GH #89 anti-brick fix, commit 110d7ac), so the
+    // PLL always enables and locks with zero APB access required. Putting a
+    // reset-gated bridge in front of the (already non-clearable) enable
+    // register therefore cannot recreate that self-brick.
+    // =========================================================================
+    logic        pll_m_psel, pll_m_penable, pll_m_pwrite;
+    logic [11:0] pll_m_paddr;
+    logic [31:0] pll_m_pwdata, pll_m_prdata;
+    logic [3:0]  pll_m_pstrb;
+    logic        pll_m_pready, pll_m_pslverr;
+
+    apb_cdc_bridge #(
+        .ADDR_W (12)
+    ) u_apb_pll_cdc (
+        .scanmode_i  (SCAN_MODE_TIE_OFF),
+        .scan_rst_ni (SCAN_RST_TIE_OFF),
+
+        .s_clk_i     (core_clk),
+        .s_rst_n_i   (core_rst_n),
+        .s_psel_i    (apb_psel    [APB_PLL]),
+        .s_penable_i (apb_penable [APB_PLL]),
+        .s_pwrite_i  (apb_pwrite  [APB_PLL]),
+        .s_paddr_i   (apb_paddr   [APB_PLL][11:0]),
+        .s_pwdata_i  (apb_pwdata  [APB_PLL]),
+        .s_pstrb_i   (apb_pstrb   [APB_PLL]),
+        .s_prdata_o  (apb_prdata  [APB_PLL]),
+        .s_pready_o  (apb_pready  [APB_PLL]),
+        .s_pslverr_o (apb_pslverr [APB_PLL]),
+
+        .m_clk_i     (clk_i),
+        .m_rst_n_i   (rst_n_i),
+        .m_psel_o    (pll_m_psel),
+        .m_penable_o (pll_m_penable),
+        .m_pwrite_o  (pll_m_pwrite),
+        .m_paddr_o   (pll_m_paddr),
+        .m_pwdata_o  (pll_m_pwdata),
+        .m_pstrb_o   (pll_m_pstrb),
+        .m_prdata_i  (pll_m_prdata),
+        .m_pready_i  (pll_m_pready),
+        .m_pslverr_i (pll_m_pslverr)
+    );
+
+    // =========================================================================
     // Pre-Phase-6 #3: PLL subsystem (pll_clkgen + pll_apb_regs + reset glue)
     //
     // pll_subsystem encapsulates:
@@ -1692,7 +1782,10 @@ module soc_top
     //   u_pll_sub and all logic inside it run on clk_i / rst_n_i.
     //   They are the SOURCE of core_clk and pll_locked; placing them on
     //   core_clk creates a bootstrap deadlock.  See pll_subsystem.sv header
-    //   for the full rationale and RNM-mode CDC deferral note.
+    //   for the full rationale. The core_clk <-> clk_i CDC on this module's
+    //   APB4 port (GH #86) is fixed by u_apb_pll_cdc above — u_pll_sub's
+    //   psel/penable/... are now driven by that bridge's m_* face, not
+    //   directly by apb_interconnect.
     // =========================================================================
     pll_subsystem #(
         .PLL_IMPL        (PLL_IMPL),
@@ -1702,16 +1795,17 @@ module soc_top
         // Reference clock domain — NOT core_clk (see note above)
         .clk_i       (clk_i),
         .rst_n_i     (rst_n_i),
-        // APB4 slave ← apb_interconnect APB_PLL slot (runs on clk_i in STUB)
-        .psel        (apb_psel    [APB_PLL]),
-        .penable     (apb_penable [APB_PLL]),
-        .pwrite      (apb_pwrite  [APB_PLL]),
-        .paddr       (apb_paddr   [APB_PLL][11:0]),
-        .pwdata      (apb_pwdata  [APB_PLL]),
-        .pstrb       (apb_pstrb   [APB_PLL]),
-        .prdata      (apb_prdata  [APB_PLL]),
-        .pready      (apb_pready  [APB_PLL]),
-        .pslverr     (apb_pslverr [APB_PLL]),
+        // APB4 slave ← u_apb_pll_cdc m_* face (clk_i domain — GH #86 fix,
+        // see CDC bridge note above)
+        .psel        (pll_m_psel),
+        .penable     (pll_m_penable),
+        .pwrite      (pll_m_pwrite),
+        .paddr       (pll_m_paddr),
+        .pwdata      (pll_m_pwdata),
+        .pstrb       (pll_m_pstrb),
+        .prdata      (pll_m_prdata),
+        .pready      (pll_m_pready),
+        .pslverr     (pll_m_pslverr),
         // PLL outputs → soc_top distribution
         .core_clk    (core_clk),
         .core_rst_n  (core_rst_n),
@@ -1731,8 +1825,9 @@ module soc_top
     // GH #93 makes cpu_clk_i a genuinely independent reference (no longer
     // required to equal clk_i for correctness elsewhere), that handshake
     // would cross a clock boundary with no synchroniser — the same
-    // mechanism as GH #86 (APB_PLL in RNM mode), but live in the DEFAULT
-    // STUB build as soon as the two reference clocks differ.
+    // mechanism GH #86 fixed for the APB_PLL slot (see u_apb_pll_cdc above),
+    // but live in the DEFAULT STUB build as soon as the two reference
+    // clocks differ.
     //
     // Fixed here (not deferred): apb_cdc_bridge.sv implements a 4-phase RZ
     // handshake between the two domains (bead claude_verilog_test-rfz;
