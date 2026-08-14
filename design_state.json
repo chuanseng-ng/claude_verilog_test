@@ -1178,6 +1178,105 @@
       "suggested_next_step": "proceed",
       "reason": "GH #86 fix: soc_top's APB_PLL slot (u_pll_sub) sampled psel/penable/pready/prdata on clk_i (raw reference) while apb_interconnect/axil_to_apb drove the slot from core_clk, an unsynchronised CDC live whenever PLL_IMPL=\"RNM\". Added a third apb_cdc_bridge instance (u_apb_pll_cdc, modelled on GH #93's u_apb_pll2_cdc) unconditionally in soc_top.sv: s_* face core_clk/core_rst_n, m_* face clk_i/rst_n_i (raw reference, matching u_pll_sub's own domain); rewired u_pll_sub's APB port to the bridge's m_* face. Updated the two stale comments that referenced GH #86 as unfixed (pll_subsystem.sv:19-26 deferral note; soc_top.sv u_apb_pll2_cdc instantiation comment) plus the file header's APB sub-tree/PLL-config-plane documentation. No new file added (apb_cdc_bridge.sv already listed in pnr/Makefile SOC_SV_FILES/SKY130_SOC_SV_FILES); apb_cdc_bridge.sv/pll_apb_regs.sv/peripherals left untouched per scope. Verified: sim/Makefile `make lint lint_soc` (Verilator -Wall) 0 errors; the 7 pre-existing baseline warnings (1 DECLFILENAME sram model, 3 BLKSEQ rv32i_icache/dcache, 3 UNUSEDPARAM rv32i_cache_pkg) are byte-identical to a stashed pre-change baseline run -- confirmed zero new warnings introduced. No cocotb regression run (explicitly out of scope; calling user runs it) and no full cdc_rdc_analysis/synth_check/rtl_signoff stage executed this session -- targeted, fully-specified surgical fix only, matching the task's narrowed-scope instruction.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-24T22:55:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-4 timer.sv: AXI4-Lite -> APB4 port swap complete. Standalone Verilator -Wall -Wno-IMPORTSTAR: 0 errors, 0 warnings. soc_top PINNOTFOUND on timer expected until PR-6 (ignored per spec).",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-24T23:20:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-2: uart_controller.sv converted from AXI4-Lite slave to APB4 slave (apb4_register_bank, single-cycle APB access-phase snoop). Verilator 5.048 standalone: 0 errors, 0 warnings. make -C sim lint: 7 pre-existing baseline warnings only; all 19 errors are PINNOTFOUND in soc_top.sv (expected \u2014 PR-6 wires APB ports).",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-24T23:35:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-2 UART test port update: TESTS=11 PASS=11 FAIL=0. All 11 directed tests pass over APB4Master BFM with identical coverage to the AXI-Lite baseline (TX/RX FIFO, STATUS, baud, IRQ A2, framing error A3, 16x oversample RX A4, byte-lane snoop A1, wstrb=0 no-op). Lint 0 errors 0 warnings (uart_controller standalone with apb4_register_bank). soc_top PINNOTFOUND on UART APB ports is expected until PR-6.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-24T23:38:49.199117+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-3: spi_controller.sv converted from AXI4-Lite slave to APB4 slave. axi_pkg import removed; s_axil_* ports replaced with APB4 (psel/penable/pwrite/paddr/pwdata/pstrb/prdata/pready/pslverr); axi_lite_register_bank -> apb4_register_bank; two-channel AXI snoop replaced with combinational apb_access = psel & penable; pstrb_sel_byte direct (no capture regs). Verilator -Wall -Wno-IMPORTSTAR standalone (SPI_SOURCES): 0 errors, 0 warnings. soc_top PINNOTFOUND deferred to PR-6 per task scope.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-24T23:40:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-3 (bead 6vf): spi_controller.sv converted to APB4 slave. Lint: 0 errors, 0 warnings (verilator --lint-only -Wall -Wno-IMPORTSTAR --top-module spi_controller on SPI_SOURCES=apb4_register_bank.sv+spi_controller.sv). cocotb suite: TESTS=13 PASS=13 FAIL=0. All 13 tests green: test_reg_rw_wmask, test_status_reset, test_loopback_mode0-3, test_busy_asserts, test_irq_done, test_cs_n_follows_ctrl, test_clk_div_rate, test_real_miso_mode0, test_rx_fifo_overflow, test_byte_lane_snoop. APB4Master BFM (empty prefix, bare psel/penable/... ports) drives spi_controller directly. 0 RTL bugs found. No DUT changes.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-24T23:50:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-4 timer cocotb suite: TESTS=6 PASS=6 FAIL=0. Lint clean (0 errors, 0 warnings). All 6 directed tests green: rw_roundtrip, counter_increments (delta=22), prescaler (delta=10/40 clks exact), irq_on_compare (count=7), auto_clear (irq_o=0 count=5), disable_freezes_counter (frozen at count=32). APB4Master BFM with bare prefix works; dut.count_q/irq_o internal signal access confirmed. No RTL bugs found. DUT RTL unchanged. Commit a5a58a8.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-24T23:55:00+07:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-5: interrupt_controller.sv AXI4-Lite\u2192APB4 complete. Standalone verilator -Wall -Wno-IMPORTSTAR: 0 errors, 0 warnings. make -C sim lint: 0 errors, 7 pre-existing baseline warnings only (DECLFILENAME x1, UNUSEDPARAM x3, BLKSEQ x3). soc_top PINNOTFOUND (19) expected \u2014 deferred to PR-6. TB: test_irq_ctrl.py BFM swapped to APB4Master, Makefile IRQ_SOURCES updated.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-24T23:59:00+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-5 IRQ suite (bead claude_verilog_test-jxn): irq_lint 0 errors 0 warnings; TESTS=5 PASS=5 FAIL=0 (test_mask_rw, test_status_mirror, test_masked_pending, test_per_source_sweep, test_multi_source_or). interrupt_controller.sv AXI4-Lite\u2192APB4 migration verified functionally equivalent to prior AXI4-Lite version (M4 irq 5/5 2026-06-01). No RTL bugs found. DUT RTL unchanged.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-06-25T01:08:59.406205+07:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "suggested_next_step": "proceed",
+      "reason": "APB migration PR-7 1M-cycle SoC stress PASS (feat/apb-mig-7-soctop commit 646624b): TESTS=1 PASS=1 FAIL=0. 10/10 outer iterations completed in 1,080,111 sim cycles / 257.7s wall-clock. UART/SPI/Timer/IRQ/PLL now routed through axil_to_apb->apb_interconnect APB4 subtree. Benchmarks (last iter): DMA mem->mem 26587 cycles; GPU kernel+flush 50538 cycles; Timer CNT0 snap 0x000ff926. FAIL_PC never committed. 0 UVM FATAL. 0 UVM ERROR. soc_all 95/95 + 1M-cycle stress clean -> APB migration fully signed off.",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
