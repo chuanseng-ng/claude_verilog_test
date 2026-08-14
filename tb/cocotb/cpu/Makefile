@@ -10,6 +10,16 @@
 SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
 
+# Bead claude_verilog_test-f97: base directory for the build dir.  Defaults to
+# `.`, so an unset environment behaves exactly as before.  Point it at scratch
+# when the root filesystem is tight:
+#   make SIM_BUILD_ROOT=/nobackup/claude_sim_build/cpu
+SIM_BUILD_ROOT ?= .
+ifeq ($(strip $(SIM_BUILD_ROOT)),)
+  $(error SIM_BUILD_ROOT is empty -- refusing to build or clean at the filesystem root)
+endif
+SIM_BUILD ?= $(SIM_BUILD_ROOT)/sim_build
+
 # Python path: repo root must be on PYTHONPATH for `from tb.xxx import` to work
 export PYTHONPATH := $(PWD)/../../..:$(PYTHONPATH)
 
@@ -464,7 +474,13 @@ usage info:
 	@echo "  - cocotb Python package installed"
 
 # Custom clean target to avoid conflicts with cocotb's clean
-distclean: clean
+# Bead claude_verilog_test-f97: also sweep $(SIM_BUILD_ROOT) so a relocated
+# build dir is actually reclaimed rather than orphaned on the scratch FS.
+.PHONY: clean-sim-builds
+clean-sim-builds:
+	rm -rf $(SIM_BUILD_ROOT)/sim_build ./sim_build
+
+distclean: clean clean-sim-builds
 	@rm -rf __pycache__ 2>/dev/null || true
 	@rm -f *.vcd *.fst 2>/dev/null || true
 	@echo "Deep clean complete"

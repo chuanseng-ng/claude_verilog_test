@@ -13,6 +13,16 @@ export PATH := $(HOME)/.local/bin:$(PATH)
 
 # Paths
 PROJ_ROOT := $(shell cd .. && pwd)
+
+# Bead claude_verilog_test-f97: base directory for the per-target sim_build dirs.
+# Defaults to `.`, so an unset environment behaves exactly as before.  These dirs
+# are large (sim_build_gpu_top alone is ~130 MB) and every one of them is
+# invalidated by any RTL edit.  Point it at scratch when root is tight:
+#   make SIM_BUILD_ROOT=/nobackup/claude_sim_build/sim gpu_all
+SIM_BUILD_ROOT ?= .
+ifeq ($(strip $(SIM_BUILD_ROOT)),)
+  $(error SIM_BUILD_ROOT is empty -- refusing to build or clean at the filesystem root)
+endif
 RTL_DIR := $(PROJ_ROOT)/rtl
 TB_DIR := $(PROJ_ROOT)/tb
 SIM_DIR := $(PROJ_ROOT)/sim
@@ -687,7 +697,7 @@ icache:
 		MODULE=tb.cocotb.mem.test_icache \
 		TOPLEVEL=rv32i_icache \
 		VERILOG_SOURCES="$(CACHE_SOURCES)" \
-		SIM_BUILD=sim_build_icache
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_icache
 
 # D-Cache unit tests (DUT = rv32i_dcache)
 .PHONY: dcache
@@ -699,7 +709,7 @@ dcache:
 		MODULE=tb.cocotb.mem.test_dcache \
 		TOPLEVEL=rv32i_dcache \
 		VERILOG_SOURCES="$(CACHE_SOURCES)" \
-		SIM_BUILD=sim_build_dcache
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_dcache
 
 # CPU + cache integration tests (DUT = rv32i_cpu_top)
 .PHONY: cache_integration
@@ -801,7 +811,7 @@ gpu_regfile:
 		MODULE=tb.cocotb.gpu.test_vector_regfile \
 		TOPLEVEL=vector_register_file \
 		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/vector_register_file.sv" \
-		SIM_BUILD=sim_build_gpu_regfile
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_regfile
 
 # vector_alu unit tests
 .PHONY: gpu_alu
@@ -813,7 +823,7 @@ gpu_alu:
 		MODULE=tb.cocotb.gpu.test_vector_alu \
 		TOPLEVEL=vector_alu \
 		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/vector_alu.sv" \
-		SIM_BUILD=sim_build_gpu_alu
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_alu
 
 # gpu_compute_unit unit tests (divergence)
 .PHONY: gpu_diverge
@@ -825,7 +835,7 @@ gpu_diverge:
 		MODULE=tb.cocotb.gpu.test_divergence \
 		TOPLEVEL=gpu_compute_unit \
 		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/vector_register_file.sv $(RTL_DIR)/gpu/vector_alu.sv $(RTL_DIR)/gpu/gpu_compute_unit.sv" \
-		SIM_BUILD=sim_build_gpu_diverge
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_diverge
 
 # warp_scheduler unit tests
 .PHONY: gpu_sched
@@ -837,7 +847,7 @@ gpu_sched:
 		MODULE=tb.cocotb.gpu.test_warp_scheduler \
 		TOPLEVEL=warp_scheduler \
 		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/warp_scheduler.sv" \
-		SIM_BUILD=sim_build_gpu_sched
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_sched
 
 # gpu_command_queue unit tests
 .PHONY: gpu_cmdq
@@ -849,7 +859,7 @@ gpu_cmdq:
 		MODULE=tb.cocotb.gpu.test_command_queue \
 		TOPLEVEL=gpu_command_queue \
 		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/gpu_command_queue.sv" \
-		SIM_BUILD=sim_build_gpu_cmdq
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_cmdq
 
 # memory_coalescer unit tests
 .PHONY: gpu_coalescer
@@ -861,7 +871,7 @@ gpu_coalescer:
 		MODULE=tb.cocotb.gpu.test_memory_coalescer \
 		TOPLEVEL=memory_coalescer \
 		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/memory_coalescer.sv" \
-		SIM_BUILD=sim_build_gpu_coalescer
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_coalescer
 
 # gpu_memory_unit unit tests (AXI master wrapper around memory_coalescer)
 .PHONY: gpu_memunit
@@ -873,7 +883,7 @@ gpu_memunit:
 		MODULE=tb.cocotb.gpu.test_memory_unit \
 		TOPLEVEL=gpu_memory_unit \
 		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/memory_coalescer.sv $(RTL_DIR)/gpu/gpu_memory_unit.sv" \
-		SIM_BUILD=sim_build_gpu_memunit
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_memunit
 
 # gpu_top smoke tests (register bank + FSM)
 .PHONY: gpu_top_smoke
@@ -885,7 +895,7 @@ gpu_top_smoke:
 		MODULE=tb.cocotb.gpu.test_gpu_top \
 		TOPLEVEL=gpu_top \
 		VERILOG_SOURCES="$(GPU_SOURCES)" \
-		SIM_BUILD=sim_build_gpu_top
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_top
 
 # shared_memory unit tests
 .PHONY: gpu_shmem
@@ -897,7 +907,7 @@ gpu_shmem:
 		MODULE=tb.cocotb.gpu.test_shared_memory \
 		TOPLEVEL=shared_memory \
 		VERILOG_SOURCES="$(GPU_PKG) $(GPU_SRAM_SIM) $(RTL_DIR)/gpu/shared_memory.sv" \
-		SIM_BUILD=sim_build_gpu_shmem
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_shmem
 
 # All Phase 4 unit tests (leaf modules + compute pipeline)
 .PHONY: gpu_unit
@@ -945,7 +955,7 @@ gpu_kernels:
 		echo "Running kernel: $$module"; \
 		echo "========================================"; \
 		rm -f results.xml; \
-		if ! $(MAKE) sim MODULE=$$module TOPLEVEL=gpu_top VERILOG_SOURCES="$(GPU_SOURCES)" SIM_BUILD=sim_build_gpu_top || [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; then \
+		if ! $(MAKE) sim MODULE=$$module TOPLEVEL=gpu_top VERILOG_SOURCES="$(GPU_SOURCES)" SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_top || [ ! -f results.xml ] || grep -q '<failure\|<error' results.xml; then \
 			failed_tests="$$failed_tests $$module"; \
 		fi; \
 		echo ""; \
@@ -972,7 +982,7 @@ gpu_random:
 		MODULE=tb.cocotb.gpu.test_random_kernels \
 		TOPLEVEL=gpu_top \
 		VERILOG_SOURCES="$(GPU_SOURCES)" \
-		SIM_BUILD=sim_build_gpu_random \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_random \
 		EXTRA_ARGS=""
 
 # Random-kernel smoke (25 kernels) — fast variant folded into gpu_all rollup.
@@ -992,7 +1002,7 @@ gpu_handoff:
 		MODULE=tb.cocotb.gpu.test_cpu_gpu_handoff \
 		TOPLEVEL=gpu_top \
 		VERILOG_SOURCES="$(GPU_SOURCES)" \
-		SIM_BUILD=sim_build_gpu_handoff
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_handoff
 
 # All Phase 4 tests: unit + kernels + handoff + random smoke
 .PHONY: gpu_all
@@ -1065,6 +1075,15 @@ regression_full:
 		echo "========================================"; \
 	fi
 
+# Bead claude_verilog_test-f97: sweep $(SIM_BUILD_ROOT) rather than a hardcoded
+# CWD-relative list, so a relocated build dir is reclaimed instead of orphaned.
+# The glob also picks up targets added after this was written -- the old explicit
+# list had already drifted out of date.
+.PHONY: clean-sim-builds
+clean-sim-builds:
+	@rm -rf $(SIM_BUILD_ROOT)/sim_build $(SIM_BUILD_ROOT)/sim_build_* 2>/dev/null || true
+	@rm -rf ./sim_build ./sim_build_* 2>/dev/null || true
+
 # Use distclean to avoid conflict with cocotb's clean
 # Note: 'clean' target is only defined when cocotb Makefile is included
 distclean:
@@ -1072,10 +1091,7 @@ distclean:
 	@$(MAKE) clean 2>/dev/null || true
 	@rm -rf obj_dir 2>/dev/null || true
 	@rm -rf __pycache__ 2>/dev/null || true
-	@rm -rf sim_build sim_build_icache sim_build_dcache 2>/dev/null || true
-	@rm -rf sim_build_gpu_regfile sim_build_gpu_alu sim_build_gpu_diverge 2>/dev/null || true
-	@rm -rf sim_build_gpu_sched sim_build_gpu_cmdq sim_build_gpu_coalescer 2>/dev/null || true
-	@rm -rf sim_build_gpu_memunit sim_build_gpu_shmem sim_build_gpu_top sim_build_gpu_handoff 2>/dev/null || true
+	@$(MAKE) clean-sim-builds
 	@rm -f dump.vcd 2>/dev/null || true
 	@rm -f results.xml 2>/dev/null || true
 	@rm -f *.log 2>/dev/null || true
