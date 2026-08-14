@@ -72,9 +72,11 @@ Both superseded directories carry the stale `VERILOG_FILES` package-closure gap 
 `openlane/` (speculative OpenLane-2 scaffolding, never wired to any Makefile target) was deleted;
 LibreLane is the OL2-lineage tool this project uses.
 
-> **Note:** the Directory Structure and Quick Start sections above predate the per-node layout and
-> describe `make synth/place/route` targets that no longer exist. Treat `pnr/Makefile help` as the
-> authoritative target list.
+> **Two flows coexist here.** The *Usage* / *Quick Start* section above drives the standalone
+> Yosys + OpenROAD + OpenSTA script flow (`pnr/scripts/0*.tcl`, reading `pnr/config/` and
+> `pnr/constraints/`) — those targets are real and still work. The per-node directories in the
+> table below are the LibreLane flows, invoked through the `librelane-*` targets instead. Run
+> `make -C pnr help` for the authoritative target list.
 
 ## Phase-Specific Flows
 

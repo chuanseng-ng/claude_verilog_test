@@ -1529,7 +1529,7 @@ schematic:
 clean:
 	@echo "Cleaning generated files..."
 	rm -rf $(WORK_DIR) $(LOGS_DIR) $(REPORTS_DIR) $(RESULTS_DIR) \
-		openlane/runs openlane1/runs \
+		$(OPENLANE1_DIR)/runs \
 		$(LIBRELANE_SKY130_DIR)/runs \
 		$(LIBRELANE_NANGATE45_DIR)/runs \
 		$(LIBRELANE_ASAP7_DIR)/runs
