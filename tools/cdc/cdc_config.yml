@@ -137,20 +137,3 @@ waivers:
       bridge, s_prdata_o drives a top-level port directly, so yosys names the
       net after the port rather than the instance pin.
     ref: GH#93, GH#95, apb_cdc_bridge.sv:558-587, phase5_soc_multiclock.sdc:406
-
-  - id: spi-miso-unsynchronised-sample
-    kind: accepted-risk
-    dest: '^u_spi\.(rx_shift_q|rx_push_data)\[\d+\]:D$'
-    domains: 'PORT:spi_miso_i+clk_i'
-    reason: >
-      Real finding, accepted for now. spi_miso_i is a board-level asynchronous
-      pin sampled directly into the fabric domain with no 2-FF synchroniser.
-      Benign in SPI master mode -- the SoC generates SCLK, so MISO is sampled a
-      known number of fabric cycles after the driving edge and is stable by
-      construction -- but it is not CDC-clean by inspection and would be a real
-      hazard in any future slave-mode or divided-SCLK use. First reported by
-      the 2026-06-09 cdc_snitch POC; carried forward here rather than silently
-      resolved. spi_controller.sv is Phase-5-verified RTL, so adding the
-      synchroniser is a tracked change, not a drive-by edit.
-    ref: docs/verification/CDC_SNITCH_POC.md:68-76
-    bead: claude_verilog_test-a2g

@@ -81,6 +81,7 @@ UART_SOURCES = \
 
 SPI_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
 	$(RTL)/periph/spi_controller.sv
 
 # APB migration PR-1: apb4_register_bank unit-test sources.
@@ -471,13 +472,20 @@ uart: uart_lint
 		VERILOG_SOURCES="$(UART_SOURCES)" \
 		$(BUILD_ARGS)
 
+# -Wno-SYNCASYNCNET: spi_controller's own flops are synchronous-reset while the
+# cdc_2ff_sync on spi_miso_i (bead a2g) asserts reset asynchronously, so rst_n
+# reaches both styles.  With spi_controller as the lint ROOT there is no logic
+# between the port and the two usages, so Verilator flags the mix; the same
+# rst_n / cdc_2ff_sync pattern raises nothing at soc_top scope.  Every SoC-level
+# target in this file already carries this flag for the same reason.
 spi_lint:
-	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
 		--top-module spi_controller $(SPI_SOURCES)
 
 spi: spi_lint
 	$(MAKE) MODULE=test_spi TOPLEVEL=spi_controller \
 		VERILOG_SOURCES="$(SPI_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
 # APB migration PR-1: apb4_register_bank lint + sim.
