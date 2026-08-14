@@ -15,7 +15,12 @@ logs/
 *.vcd
 
 # cocotb
+# Bead claude_verilog_test-f97: BOTH forms are needed.  The trailing slash matches
+# only real directories, so with SIM_BUILD_ROOT pointed at scratch the in-tree
+# symlinks were left untracked-but-committable on any clone that lacks a local
+# .git/info/exclude entry.  The slashless form covers the symlinks.
 sim_build*/
+sim_build*
 __pycache__/
 *.pyc
 *.pyo

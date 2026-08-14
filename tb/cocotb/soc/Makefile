@@ -11,6 +11,35 @@ RTL      := $(PROJ_ROOT)/rtl
 TB       := $(PROJ_ROOT)/tb/cocotb
 SIM_DIR  := $(PROJ_ROOT)/sim
 
+# Bead claude_verilog_test-f97: base directory for the per-target sim_build dirs.
+# Defaults to `.` so an unset environment behaves exactly as before (CI unchanged).
+# Point it at scratch when the root filesystem is tight, e.g.
+#   make SIM_BUILD_ROOT=/nobackup/claude_sim_build/soc soc_all
+# The 26 per-target dirs are ~190 MB each (~5 GB total) and EVERY one of them is
+# invalidated by any RTL edit, so a full soc_all rebuild needs several GB at once.
+# When that space is not there the run dies part-way and reports
+#   ERROR: results.xml was not written by the simulation!
+# AFTER the per-suite PASS lines -- an ENOSPC that does not look like one.
+# Same idea as the AMS cosim flow's SIM_BUILD routing (CLAUDE.md, PHASE7 plan).
+SIM_BUILD_ROOT ?= .
+ifeq ($(strip $(SIM_BUILD_ROOT)),)
+  $(error SIM_BUILD_ROOT is empty -- refusing to build or clean at the filesystem root)
+endif
+
+# Bead claude_verilog_test-f97: pre-flight free-space gate.  A full soc_all
+# rebuild writes ~5 GB of Verilator objects; running out mid-flight surfaces as
+# a post-PASS `results.xml was not written` error that reads like flaky infra.
+# Fail here instead, naming the real cause.  Override the floor if you know the
+# build is incremental: make SIM_BUILD_MIN_FREE_MB=500 soc_all
+SIM_BUILD_MIN_FREE_MB ?= 6000
+
+# NOTE: the check-space RECIPE lives at the bottom of this file, after the
+# cocotb `include`.  Any target defined before that include becomes make's
+# default goal, and the per-suite recipes re-invoke `$(MAKE) MODULE=... ` with
+# NO explicit target -- so a target up here silently replaces the cocotb `sim`
+# goal and every suite runs the check instead of the test, exiting 0 having
+# tested nothing.  Only the variables may live up here.
+
 # bfm/ lives in tb/cocotb (TB); slave model lives in this directory.
 export PYTHONPATH := $(TB):$(SOC_DIR):$(PYTHONPATH)
 
@@ -360,7 +389,7 @@ ifeq ($(SIM),verilator)
 # while the suite still reported 11/11 PASS. That is a false pass, strictly
 # worse than the VPI crash this bead started from, and it is only invisible
 # because TOPLEVEL happens to match. (Caught in review of PR #142.)
-BUILD_ARGS += SIM_BUILD=sim_build_$@$(if $(filter-out freepdk45,$(SRAM_TARGET)),_$(SRAM_TARGET))
+BUILD_ARGS += SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_$@$(if $(filter-out freepdk45,$(SRAM_TARGET)),_$(SRAM_TARGET))
 ifneq ($(wildcard /nix/store),)
 	# Nix environment: nix ld.so cannot find system libs when cocotb dlopen's
 	# libpython3.10.so.1.0.  Create a compat dir with symlinks to system libs.
@@ -777,7 +806,7 @@ l2_bench: l2_bench_lint
 #   ~95s combined (soc_multiclock ~93s dominated by test_multiclock_periph_loopback's
 #   UART/SPI bit-banging at the 7ns/3ns ratio; soc_pll_multiclock <1s) — comparable
 #   to soc_boot's own 100-attempt stability gate already in this list, so kept in.
-soc_all:
+soc_all: check-space
 	$(MAKE) crossbar
 	$(MAKE) register_bank
 	$(MAKE) axil_interconnect
@@ -836,6 +865,28 @@ soc_integration_batch: soc_boot_lint
 
 # Bead claude_verilog_test-7je: cocotb's own `clean` only removes $(SIM_BUILD),
 # which is now per-target, so it cannot sweep the others.
-.PHONY: distclean
-distclean:
-	rm -rf sim_build sim_build_*
+# Bead claude_verilog_test-f97: sweep $(SIM_BUILD_ROOT), not the CWD.  With the
+# dirs relocated, a CWD-relative `rm -rf sim_build_*` deleted only the local
+# symlinks and orphaned the real ~1.8 GB on the scratch filesystem.
+.PHONY: distclean clean-sim-builds
+distclean: clean-sim-builds
+
+clean-sim-builds:
+	rm -rf $(SIM_BUILD_ROOT)/sim_build $(SIM_BUILD_ROOT)/sim_build_*
+	@# Also clear any stale in-tree dirs/symlinks left by an earlier SIM_BUILD_ROOT.
+	rm -rf ./sim_build ./sim_build_*
+
+.PHONY: check-space
+check-space:
+	@mkdir -p $(SIM_BUILD_ROOT)
+	@free_mb=$$(df -Pm $(SIM_BUILD_ROOT) | awk 'NR==2 {print $$4}'); \
+	if [ "$$free_mb" -lt "$(SIM_BUILD_MIN_FREE_MB)" ]; then \
+	  echo "ERROR: only $${free_mb} MB free on the filesystem holding SIM_BUILD_ROOT=$(SIM_BUILD_ROOT)"; \
+	  echo "       a full rebuild of every sim_build dir needs >= $(SIM_BUILD_MIN_FREE_MB) MB."; \
+	  echo "       Point SIM_BUILD_ROOT at a bigger filesystem, e.g."; \
+	  echo "         make SIM_BUILD_ROOT=/nobackup/claude_sim_build/soc $(MAKECMDGOALS)"; \
+	  echo "       or reclaim space with: make clean-sim-builds"; \
+	  echo "       (override the floor with SIM_BUILD_MIN_FREE_MB=<n> if the build is incremental)"; \
+	  exit 1; \
+	fi; \
+	echo "check-space: $${free_mb} MB free at $(SIM_BUILD_ROOT) (floor $(SIM_BUILD_MIN_FREE_MB) MB) -- OK"
