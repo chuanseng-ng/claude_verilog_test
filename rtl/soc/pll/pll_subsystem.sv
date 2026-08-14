@@ -20,10 +20,14 @@
 //     out_clk_o = ref_clk_i, so core_clk == clk_i.  No CDC issue.
 //   RNM mode (PLL_IMPL="RNM"):
 //     core_clk != clk_i.  The apb_interconnect (on core_clk) drives the APB
-//     bus into pll_apb_regs (on clk_i) across a CDC boundary.  A 2-FF
-//     synchroniser on each valid/ready signal is required for tape-out.
-//     Deferred to Phase 7 M-d.  Do NOT remove this comment without adding
-//     the synchroniser.
+//     bus into pll_apb_regs (on clk_i) across a CDC boundary.  FIXED (GH #86,
+//     soc_top.sv): every soc_top instance of this module (u_pll_sub,
+//     u_cpu_pll_sub) has its APB4 slave port fed through an apb_cdc_bridge
+//     instance (u_apb_pll_cdc / u_apb_pll2_cdc respectively) rather than
+//     wired directly to the apb_interconnect slot — see soc_top.sv's
+//     u_apb_pll_cdc instantiation comment for the full CDC argument and the
+//     bootstrap-safety proof. Do NOT remove this comment without confirming
+//     the calling soc_top still bridges this module's APB4 port.
 //
 // Precursor note for #4 (3-PLL: CPU / GPU / bus):
 //   PLL_IMPL and STUB_LOCK_CYCLES are exposed as parameters so that three
@@ -36,7 +40,8 @@
 //   rst_n_i     — top-level active-low reset (synchronous inside sub-modules)
 //   PLL_IMPL    — "STUB" (default) or "RNM" (AMS cosim only)
 //   APB4 slave  — psel/penable/pwrite/paddr/pwdata/pstrb/prdata/pready/pslverr
-//                 sourced from apb_interconnect APB_PLL slot
+//                 driven by soc_top from an apb_cdc_bridge DESTINATION (m_*)
+//                 face, not straight off the apb_interconnect slot (GH #86)
 //   core_clk    — PLL output clock; feeds all children of soc_top
 //   core_rst_n  — gated reset: rst_n_i & pll_locked
 //   pll_locked_o — raw PLL lock flag (exported to soc_top port)
@@ -59,9 +64,13 @@ module pll_subsystem #(
     input  logic clk_i,
     input  logic rst_n_i,
 
-    // ── APB4 slave port (from apb_interconnect APB_PLL slot) ─────────────────
-    // Sourced by the APB interconnect which runs on core_clk in STUB mode
-    // (core_clk == clk_i) and on core_clk != clk_i in RNM mode (CDC deferred).
+    // ── APB4 slave port (from an apb_cdc_bridge destination face) ───────────
+    // soc_top does NOT wire this port straight to the apb_interconnect slot.
+    // The interconnect runs on core_clk; this module runs on clk_i. In STUB
+    // mode those are the same net, but in RNM mode core_clk != clk_i, so
+    // soc_top interposes an apb_cdc_bridge (u_apb_pll_cdc for u_pll_sub,
+    // u_apb_pll2_cdc for u_cpu_pll_sub) and drives this port from its m_*
+    // face — GH #86. No longer deferred; see the file header.
     input  logic              psel,
     input  logic              penable,
     input  logic              pwrite,
