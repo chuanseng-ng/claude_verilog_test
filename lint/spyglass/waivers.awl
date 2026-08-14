@@ -1,0 +1,148 @@
+# =============================================================================
+# Spyglass lint waiver file — phase5_soc / soc_top
+# =============================================================================
+# GH #116 — Spyglass lint violation remediation.
+# Plan: docs/development/SPYGLASS_LINT_REMEDIATION_PLAN.md (dispositions locked
+# with the user; this file implements section 3, "WAIVE + DOCUMENT items").
+#
+# Every waiver below carries a rationale explaining WHY the flagged construct
+# is intentional design behaviour, not a suppression of convenience. Do not
+# add a waiver here without a comment that would let a reviewer independently
+# judge whether the disposition is still correct.
+#
+# Format: standard SpyGlass `waive` directive.
+#   waive -rule <RULE> -scope <hierarchy|signal|file> -comment "<rationale>"
+# Load with: spyglass -waiver lint/spyglass/waivers.awl (or `read_waiver` in
+# the SpyGlass project script). Not exercised by this repo's own gates
+# (Verilator/Verible) — Spyglass is not installed in this environment; this
+# file is prepared for the next session/user that has SpyGlass access.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# K. SynchReset-ML (x56) — synchronous-reset CPU pipeline + peripherals
+# -----------------------------------------------------------------------------
+# Design intent, not an oversight: this project uses an ALL-SYNCHRONOUS reset
+# discipline end-to-end (CODING_GUIDELINES.md section 1.4), by explicit
+# architectural choice. The entire CPU pipeline (IF/ID/EX1a/EX1b/EX1c/EX2/MEM/
+# WB), rv32i_core, rv32i_csr_file, and every peripheral (uart_controller,
+# spi_controller, timer, interrupt_controller, dma_engine) reset on
+# `always_ff @(posedge clk)` with `if (!rst_n)` inside the clocked block —
+# never `posedge clk or negedge rst_n`. This was signed off at ASAP7 (1282 MHz
+# CPU standalone, 571 MHz SoC, run 14/run 23 — see docs/PHASE5_RUN_HISTORY.md)
+# and re-verified through the M11/M12 physical-design flow on this exact
+# reset structure. Converting to asynchronous reset is a SEPARATE, explicitly
+# out-of-scope effort (tracked as the existing P3 audit item in
+# CODING_GUIDELINES.md section 1.4) because it would require: (a) whole-CPU
+# functional re-verification (async reset changes recovery/removal timing and
+# can change first-cycle-after-reset behaviour), and (b) a full ASAP7 PPA
+# re-sign-off (reset tree becomes a real clock-like network needing its own
+# CTS/skew budget). GH #116 explicitly excludes this conversion.
+waive -rule SynchReset-ML -scope "soc_top.u_cpu.*" -comment "Intentional, signed-off synchronous-reset CPU pipeline (CODING_GUIDELINES.md 1.4). Async conversion is a separate P3 effort requiring full regression + ASAP7 PPA re-sign-off; explicitly out of scope for GH #116."
+waive -rule SynchReset-ML -scope "soc_top.u_uart.*" -comment "Intentional synchronous-reset peripheral discipline (CODING_GUIDELINES.md 1.4)."
+waive -rule SynchReset-ML -scope "soc_top.u_spi.*" -comment "Intentional synchronous-reset peripheral discipline (CODING_GUIDELINES.md 1.4)."
+waive -rule SynchReset-ML -scope "soc_top.u_timer.*" -comment "Intentional synchronous-reset peripheral discipline (CODING_GUIDELINES.md 1.4)."
+waive -rule SynchReset-ML -scope "soc_top.u_irq_ctrl.*" -comment "Intentional synchronous-reset peripheral discipline (CODING_GUIDELINES.md 1.4)."
+waive -rule SynchReset-ML -scope "soc_top.u_dma.*" -comment "Intentional synchronous-reset peripheral discipline (CODING_GUIDELINES.md 1.4)."
+
+
+# -----------------------------------------------------------------------------
+# I. STARC05-2.3.6.1 / UnInitializedReset-ML — no-reset arrays and local temps
+# -----------------------------------------------------------------------------
+# (a) No-reset memory/stack arrays: div_stack / div_depth in warp_scheduler.sv,
+# and every cache/register-file storage array (rv32i_dcache/icache data+tag
+# SRAM-equivalents, rv32i_regfile). Adding a reset mux across a multi-KB array
+# is a genuine area/timing cost for zero functional benefit — architectural
+# state (regfile x0..x31, cache lines, divergence stack entries) is defined by
+# software convention (x0 hardwired, cache tags qualified by a separate valid
+# bit that DOES reset, divergence stack entries qualified by div_depth which
+# DOES reset) rather than by a reset value on the storage itself. This is
+# standard SRAM/register-file design practice, not an omission.
+waive -rule STARC05-2.3.6.1 -scope "warp_scheduler.div_stack" -comment "No-reset divergence stack — depth-qualified by div_depth (which does reset); resetting the stack storage itself would add a wide mux for no functional benefit."
+waive -rule UnInitializedReset-ML -scope "warp_scheduler.div_stack" -comment "See STARC05-2.3.6.1 waiver above — depth-qualified, not consumed until div_depth confirms a valid entry."
+waive -rule STARC05-2.3.6.1 -scope "warp_scheduler.div_depth" -comment "See div_stack waiver — div_depth itself DOES reset (to 0) in the RTL; flagged only because it coexists with the no-reset div_stack array it qualifies."
+waive -rule STARC05-2.3.6.1 -scope "rv32i_regfile.regfile" -comment "Register file storage array — x0 is hardwired to zero at the read mux, not by resetting the storage; standard regfile practice, no reset value defines architectural state at power-on (firmware/boot code initializes live registers before use)."
+waive -rule STARC05-2.3.6.1 -scope "rv32i_dcache.*_array" -comment "Cache data/tag storage arrays — validity is carried by valid_array (which DOES reset, see GH #116 item B fix), not by the data/tag storage itself. Standard cache design practice."
+waive -rule STARC05-2.3.6.1 -scope "rv32i_icache.*_array" -comment "Cache data/tag storage arrays — validity is carried by valid_array (which DOES reset, see GH #116 item B fix), not by the data/tag storage itself. Standard cache design practice."
+#
+# (b) Local automatic temporaries assigned with blocking `=` inside an
+# always_ff — rv32i_csr_file.sv csr_cur/csr_nxt (declared and fully consumed
+# within the same always_ff iteration, never carrying state across clock
+# edges). Converting these to `<=` would be a FUNCTIONAL BUG: csr_nxt reads
+# csr_cur in the same statement, and both are recomputed from scratch every
+# cycle — they are not registers. Flagged only because the surrounding
+# always_ff block also contains real `<=` state updates.
+waive -rule STARC05-2.3.6.1 -scope "rv32i_csr_file.csr_cur" -comment "Local automatic temporary, blocking-assigned and fully consumed within the same always_ff iteration — not a flip-flop. Converting to <= would be a functional bug (see GH #116 plan section 2, item B)."
+waive -rule STARC05-2.3.6.1 -scope "rv32i_csr_file.csr_nxt" -comment "Local automatic temporary, blocking-assigned and fully consumed within the same always_ff iteration — not a flip-flop. Converting to <= would be a functional bug (see GH #116 plan section 2, item B)."
+waive -rule UnInitializedReset-ML -scope "rv32i_csr_file.csr_cur" -comment "See STARC05-2.3.6.1 waiver above — local temporary, not a register."
+waive -rule UnInitializedReset-ML -scope "rv32i_csr_file.csr_nxt" -comment "See STARC05-2.3.6.1 waiver above — local temporary, not a register."
+#
+# (c) Combinational defaults — rv32i_csr_file.sv `do_fire`. Assigned in every
+# case arm of a combinational (always_comb-equivalent) block with no reset
+# port at all; flagged only because the file elsewhere contains reset-bearing
+# always_ff blocks.
+waive -rule UnInitializedReset-ML -scope "rv32i_csr_file.do_fire" -comment "Purely combinational signal (no clock, no reset port) — computed fresh every cycle in a case statement with a default arm. False positive from proximity to the file's other, genuinely-registered always_ff blocks."
+#
+# (d) boot_rom.mem — falls out of GH #116 item C (initial-block guarding).
+# Once the parameter-check `initial` blocks in apb4_register_bank.sv /
+# axi_lite_register_bank.sv / axil_to_apb.sv are guarded (`ifndef __pnr__`),
+# a synthesis-view lint run that defines __pnr__ (matching the sky130 sv2v/
+# Yosys flow) sees boot_rom.mem as driven only inside its own pre-existing
+# `ifndef __pnr__` initial block (rtl/soc/boot_rom.sv, untouched by GH #116 —
+# see plan item D) — i.e. undriven from the synthesis view. This is inherent
+# to a $readmemh-loaded behavioral ROM: contents are supplied by the boot
+# flow / back-annotated at bring-up, not by RTL. A synthesizable case-based
+# ROM would lose the hex-file flexibility this behavioral SoC model relies on
+# — not recommended for this design.
+waive -rule UndrivenInTerm-ML -scope "soc_top.u_boot_rom.mem" -comment "Behavioral $readmemh-loaded ROM (rtl/soc/boot_rom.sv) — contents supplied by the boot flow / back-annotated at bring-up, not RTL-driven. Inherent to this ROM style; see GH #116 plan item D."
+
+
+# -----------------------------------------------------------------------------
+# J. W392 — core_rst_n "used with different polarity" (cross-module clash)
+# -----------------------------------------------------------------------------
+# False positive: soc_top.sv declares its own top-level net `core_rst_n`
+# (= rst_n_i & pll_locked, the PLL-gated reset distributed to CPU/GPU/fabric
+# children) alongside internally-scoped nets/parameters of similar name
+# inside child hierarchy (e.g. dma_engine's local reset wiring). SpyGlass's
+# W392 name-based polarity check compares these across module boundaries as
+# if they were the same signal purely because the base name matches after
+# hierarchy flattening; they are DIFFERENT nets in DIFFERENT scopes with no
+# electrical connection to each other, so there is no actual polarity
+# conflict — only a naming coincidence.
+waive -rule W392 -scope "soc_top.core_rst_n" -comment "Cross-module name collision, not a real polarity conflict — soc_top's top-level core_rst_n (rst_n_i & pll_locked) is a distinct net from any same-named local signal inside child module scopes (e.g. dma_engine); no electrical connection exists between them."
+waive -rule W392 -scope "dma_engine.*rst_n*" -comment "See soc_top.core_rst_n waiver above — same false-positive class from SpyGlass's name-based cross-hierarchy polarity check."
+
+
+# -----------------------------------------------------------------------------
+# H. STARC05-2.10.3.1 — PLL_IMPL == "RNM" string-parameter compare
+# -----------------------------------------------------------------------------
+# rtl/soc/pll/pll_clkgen.sv:63 `if (PLL_IMPL == "RNM") begin : g_rnm` selects,
+# at ELABORATION time, between the RNM (real-number model, analog cosim) and
+# STUB (pure digital passthrough) PLL implementations via a `generate` guard.
+# STARC05-2.10.3.1 flags the operand-width mismatch between a `string`
+# parameter and a string literal — this is not real hardware: no comparator
+# is synthesized: the branch not taken is elaborated away entirely. Optional
+# future refactor (not required to close GH #116): map PLL_IMPL to a
+# `localparam int` selector to silence this without a waiver.
+waive -rule STARC05-2.10.3.1 -scope "pll_clkgen.PLL_IMPL" -comment "Elaboration-time string-parameter compare selecting an RNM-vs-STUB `generate` branch (rtl/soc/pll/pll_clkgen.sv:63) — not synthesized hardware, no comparator exists in the gate-level netlist."
+
+
+# -----------------------------------------------------------------------------
+# G (residual). SignedUnsignedExpr-ML — functionally-required signed math /
+#                string parameters
+# -----------------------------------------------------------------------------
+# rv32i_alu.sv:78 `ALU_SRA: result = $signed(operand_a) >>> shamt;` — RV32I's
+# SRA instruction is defined as an ARITHMETIC (sign-extending) right shift;
+# the `$signed()` cast is functionally REQUIRED, not incidental. "Fixing"
+# this to unsigned would silently break every SRA instruction (logical
+# instead of arithmetic shift) — see GH #116 plan section 2, item G.
+waive -rule SignedUnsignedExpr-ML -scope "rv32i_alu.result" -comment "$signed(operand_a) >>> shamt implements RV32I SRA (arithmetic right shift) — signedness here is functionally required, not an unintended mix. See GH #116 plan section 2, item G."
+#
+# `parameter string` declarations — string parameters are benign; SpyGlass's
+# signed/unsigned check does not meaningfully apply to a `string` type
+# (elaboration-time only, never synthesized as a signed/unsigned bit vector).
+waive -rule SignedUnsignedExpr-ML -scope "soc_top.MEM_INIT_FILE" -comment "parameter string — elaboration-time only, not a synthesized bit vector; signed/unsigned does not apply."
+waive -rule SignedUnsignedExpr-ML -scope "soc_top.PLL_IMPL" -comment "parameter string — elaboration-time only, not a synthesized bit vector; signed/unsigned does not apply."
+waive -rule SignedUnsignedExpr-ML -scope "boot_rom.MEM_INIT_FILE" -comment "parameter string — elaboration-time only, not a synthesized bit vector; signed/unsigned does not apply. (rtl/soc/boot_rom.sv is unmodified by GH #116 — see plan items C/D exclusions.)"
+waive -rule SignedUnsignedExpr-ML -scope "pll_subsystem.PLL_IMPL" -comment "parameter string — elaboration-time only, not a synthesized bit vector; signed/unsigned does not apply."
+waive -rule SignedUnsignedExpr-ML -scope "pll_clkgen.PLL_IMPL" -comment "parameter string — elaboration-time only, not a synthesized bit vector; signed/unsigned does not apply."
