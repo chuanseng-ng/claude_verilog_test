@@ -1,0 +1,71 @@
+{
+  "_comment": "Registry for bead claude_verilog_test-q7n -- EQY sv2v-vs-RTL equivalence. Each entry compares one module's original SystemVerilog (gold) against the corresponding module block(s) extracted from pnr/asap7/soc/soc_top_sv2v.v (gate, the netlist actually consumed by the ASAP7 SoC synthesis flow). gold_files are read in order (packages before consumers) with -sv and the listed defines. gate_modules lists every module that must be extracted from the flat gate netlist and concatenated (>1 for hierarchical entries, e.g. async_axi_fifo pulls in its cdc_* submodules too -- they are separate modules in the flat sv2v output). common_fixtures are read identically on both sides (blackbox stubs for cells neither RTL nor sv2v output define). Scope note: SOC_SV_FILES (pnr/Makefile) covers rtl/soc/**, rtl/periph/**, rtl/mem/rv32i_clock_gate.sv and the CDC primitives -- NOT CPU/GPU internals, which are hardened macros stubbed out (rv32i_cpu_top_stub.sv / gpu_top_stub.sv) for this SoC-level sv2v conversion and are out of scope for this bead.",
+  "gate_netlist": "pnr/asap7/soc/soc_top_sv2v.v",
+  "modules": [
+    {
+      "name": "rv32i_clock_gate",
+      "tier": 1,
+      "top": "rv32i_clock_gate",
+      "gate_modules": ["rv32i_clock_gate"],
+      "gold_files": ["rtl/mem/rv32i_clock_gate.sv"],
+      "defines": ["USE_ICG_CELL"],
+      "common_fixtures": ["icg_stub.v"],
+      "depth": 5,
+      "note": "Tier 1 -- trivial leaf (29 lines), directly gated by USE_ICG_CELL (one of the two live SOC_SV2V_DEFINES). Under __pnr__+USE_ICG_CELL the module instantiates the ASAP7 ICGx1 liberty cell; icg_stub.v blackboxes it identically on both sides so the proof checks instance connectivity, not liberty behaviour."
+    },
+    {
+      "name": "cdc_2ff_sync",
+      "tier": 2,
+      "top": "cdc_2ff_sync",
+      "gate_modules": ["cdc_2ff_sync"],
+      "gold_files": ["rtl/soc/cdc/cdc_2ff_sync.sv"],
+      "defines": [],
+      "common_fixtures": [],
+      "depth": 5,
+      "note": "Tier 2 -- sequential leaf, the base CDC synchroniser primitive (async-assert/sync-deassert reset, magic_cdc attribute). Checked at default parameters WIDTH=1/STAGES=2 (the instantiation defaults) -- other instantiated widths in the design are not separately re-checked (see README scope note)."
+    },
+    {
+      "name": "async_axi_fifo",
+      "tier": 3,
+      "top": "async_axi_fifo",
+      "gate_modules": ["cdc_2ff_sync", "cdc_reset_sync", "cdc_gray_fifo", "async_axi_fifo"],
+      "gold_files": [
+        "rtl/soc/axi_pkg.sv",
+        "rtl/soc/cdc/cdc_2ff_sync.sv",
+        "rtl/soc/cdc/cdc_reset_sync.sv",
+        "rtl/soc/cdc/cdc_gray_fifo.sv",
+        "rtl/soc/async_axi_fifo.sv"
+      ],
+      "defines": [],
+      "common_fixtures": [],
+      "depth": 5,
+      "note": "Tier 3 -- the heaviest genuinely-checkable leaf: the full dual-clock AXI4 CDC bridge hierarchy (GH #91/#93/#96 -- the design's single most safety-critical CDC structure). 4-module hierarchy, gray-code pointer synchronisation, per-channel FIFO storage arrays. Parameters use axi_pkg::CONST scope resolution (not `import axi_pkg::*`), which Yosys 0.46's native -sv frontend DOES support -- see BLOCKED_MODULES for the ones that needed the unsupported wildcard-import or packed-array-parameter forms and could not be run this way."
+    }
+  ],
+  "blocked_modules": [
+    {
+      "name": "dma_engine",
+      "reason": "module header places `import axi_pkg::*;` BETWEEN the module name and the #(...) parameter list (a valid IEEE 1800 ANSI-header import clause). Yosys 0.46's native `read_verilog -sv` frontend errors immediately on this token position: \"unexpected TOK_ID, expecting '(' or ';' or '#'\" at dma_engine.sv:31. This is also the only module in SOC_SV_FILES with a packed-struct-typed memory (desc_t q_mem[QDEPTH]), so it is the highest-value target lost to this limitation."
+    },
+    {
+      "name": "axi4_crossbar",
+      "reason": "parameters use packed 2D array syntax `parameter logic [N_SLAVES-1:0][31:0] SLV_BASE` (deliberately packed, per the file's own comment, specifically to avoid a *different* known Synlig/UHDM lowering issue with unpacked array parameters). Yosys 0.46's native -sv frontend still rejects it: \"unexpected '[', expecting TOK_ID\" at axi4_crossbar.sv:49. Also uses `import axi_pkg::*;` in-body (see pkgtest negative result below), which independently blocks it."
+    },
+    {
+      "name": "axi_lite_register_bank",
+      "reason": "one of the three files with a __pnr__-guarded param-check initial/$fatal block (PR #152 / GH #116 item C). Blocked for two independent reasons: `parameter logic [31:0] RESET_VAL [N_REGS]` is an unpacked-array parameter (\"unexpected '[', expecting ',' or '=' or ')'\"), and it also needs axi_pkg default resolution patterns not fully isolated once the array-parameter error stops elaboration."
+    },
+    {
+      "name": "apb4_register_bank",
+      "reason": "one of the three __pnr__-guarded files. `parameter logic [31:0] RESET_VAL [N_REGS] = '{default: '0}` -- same unpacked-array-parameter construct Yosys 0.46's -sv frontend does not support (\"unexpected '[', expecting ',' or '=' or ')'\" at apb4_register_bank.sv:29). Confirmed by isolated repro: a synthetic `parameter logic [31:0] X[2]` module reproduces the identical parser error outside this design."
+    },
+    {
+      "name": "axil_to_apb",
+      "reason": "one of the three __pnr__-guarded files. Uses `import axi_pkg::*;` as an in-body statement (not a header clause). Confirmed by isolated repro (tools/formal/README.md pkgtest) that this Yosys 0.46 build's -sv frontend rejects ANY `import pkg::*;` -- \"unexpected TOK_PACKAGESEP, expecting '(' or '['\" -- even in a 7-line synthetic module with no other content. This is a frontend limitation, not specific to this file."
+    },
+    {
+      "name": "boot_rom",
+      "reason": "the fourth __pnr__-affected file (ROM preload / MEM_INIT_FILE string-vs-int, not a param-check block). Not attempted: it has 2 package imports and is lower priority than the register-bank pair once the frontend's import-wildcard limitation was confirmed structural rather than file-specific. See README.md #pnr-manual-check for the textual (non-EQY) verification performed instead."
+    }
+  ]
+}
