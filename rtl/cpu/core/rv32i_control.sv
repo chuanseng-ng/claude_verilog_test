@@ -501,11 +501,9 @@ module rv32i_control (
       // ------------------------------------------------------------
       // EXECUTE
       // ------------------------------------------------------------
-      EXECUTE: begin
-        // Branch/jump decision is latched in pc_src_execute register
-        // and used in WRITEBACK state
-        // (no pc_src setting needed here)
-      end
+      // Branch/jump decision is latched in pc_src_execute register and used
+      // in WRITEBACK state (no pc_src setting needed here).
+      EXECUTE: ;
 
       // ------------------------------------------------------------
       // MEM_WAIT

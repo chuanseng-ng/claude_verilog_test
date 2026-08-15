@@ -35,8 +35,6 @@
 //   * paddr[1:0] unused on APB side (word-aligned slave) — suppressed in the
 //     slave (apb4_register_bank); forwarded verbatim here (bridge is transparent).
 
-`default_nettype none
-
 module axil_to_apb #(
     parameter int unsigned ADDR_W = 32,              // AXI-Lite / APB address width
     parameter int unsigned DW     = 32,              // Data width — must be 32
@@ -89,11 +87,13 @@ module axil_to_apb #(
 
     import axi_pkg::*;
 
-    // Static width checks.
+    // Static width checks (simulation only — $fatal is non-synthesizable).
+`ifndef __pnr__
     initial begin
         if (DW != 32) $fatal(1, "axil_to_apb requires DW == 32");
         if (SW != 4)  $fatal(1, "axil_to_apb requires SW == 4");
     end
+`endif
 
     // ── FSM ──────────────────────────────────────────────────────────────────
     typedef enum logic [2:0] {
@@ -237,4 +237,3 @@ module axil_to_apb #(
 
 endmodule : axil_to_apb
 
-`default_nettype wire

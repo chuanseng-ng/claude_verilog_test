@@ -27,8 +27,6 @@
 // Flat per-channel AXI ports (no SV interfaces) per Phase 5 RTL convention.
 // Lint target: verilator -Wall 0 errors 0 warnings.
 
-`default_nettype none
-
 module dma_engine
     import axi_pkg::*;
 #(
@@ -383,9 +381,8 @@ module dma_engine
             S_B: begin
                 m_bready = 1'b1;
             end
-            default: begin
-                // S_IDLE, S_CALC, S_DESC_DONE, S_ERR — all AXI outputs stay at defaults
-            end
+            // S_IDLE, S_CALC, S_DESC_DONE, S_ERR — all AXI outputs stay at defaults
+            default: ;
         endcase
     end
 
@@ -612,4 +609,3 @@ module dma_engine
 
 endmodule : dma_engine
 
-`default_nettype wire

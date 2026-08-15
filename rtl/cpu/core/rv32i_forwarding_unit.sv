@@ -20,7 +20,6 @@
 //   (producer completed EX1b and is currently in ex1b_ex2_reg_q, waiting for EX2)
 //   Priority: between fwd_*_ex1c and 2'b01.
 
-`default_nettype none
 module rv32i_forwarding_unit (
     // Forwarding selects from hazard unit
     input  logic [1:0]  fwd_a_sel,
@@ -224,4 +223,3 @@ module rv32i_forwarding_unit (
 
 endmodule
 
-`default_nettype wire

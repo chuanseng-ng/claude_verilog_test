@@ -7,7 +7,6 @@
 // Round-robin: starting from rr_ptr, scan forward to find the first warp
 // that is neither busy nor done. Issue it and advance rr_ptr.
 // When all warps are done: assert kernel_done_o.
-`default_nettype none
 
 module warp_scheduler
     import gpu_pkg::*;
@@ -79,6 +78,25 @@ module warp_scheduler
 );
 
     // -----------------------------------------------------------------------
+    // Parameter contract: N_WARPS_P sizes the per-warp arrays below, but the
+    // round-robin scan, reset/launch/completion loops and the `% N_WARPS` wrap
+    // are all bounded by the package constant N_WARPS, and the warp-id width
+    // WARP_W (and therefore n_warps_active_i) is derived from N_WARPS too.
+    // An override BELOW N_WARPS would index these arrays out of range; an
+    // override ABOVE it would leave the extra entries permanently unreachable
+    // and unrepresentable in WARP_W bits.  Nothing overrides it today
+    // (gpu_top.sv instantiates `warp_scheduler u_sched` with no parameter
+    // block), so this is latent rather than live -- but it is silent, so make
+    // it loud.  Generate-scope $fatal, not `initial $fatal`, so it fires under
+    // lint/synth elaboration and not only in simulation; same idiom as
+    // rtl/soc/cdc/cdc_2ff_sync.sv:82-84.
+    // -----------------------------------------------------------------------
+    if (N_WARPS_P != N_WARPS) begin : g_n_warps_p_check
+        $fatal(1, "warp_scheduler: N_WARPS_P (%0d) must equal gpu_pkg::N_WARPS (%0d) -- the scan/reset loops and WARP_W are bound to N_WARPS",
+               N_WARPS_P, N_WARPS);
+    end
+
+    // -----------------------------------------------------------------------
     // Per-warp state
     // -----------------------------------------------------------------------
     logic [31:0]             warp_pc    [N_WARPS_P-1:0];
@@ -109,11 +127,11 @@ module warp_scheduler
         next_warp = rr_ptr;
         found     = 1'b0;
         for (int i = 0; i < N_WARPS; i++) begin
-            int cand_i;
-            cand_i = (int'(rr_ptr) + i) % N_WARPS;
-            if (!found && cand_i < int'(n_warps_q) &&
+            logic [WARP_W-1:0] cand_i;
+            cand_i = WARP_W'((int'(rr_ptr) + i) % N_WARPS);
+            if (!found && (cand_i < n_warps_q) &&
                 !warp_busy[cand_i] && !warp_done[cand_i]) begin
-                next_warp = WARP_W'(cand_i);
+                next_warp = cand_i;
                 found     = 1'b1;
             end
         end
@@ -133,7 +151,7 @@ module warp_scheduler
     // single-warp kernels where next_warp wraps to an invalid index).
     assign div_stack_depth_o = div_depth[exec_warp_id_i];
     assign div_stack_top_o   = (div_depth[exec_warp_id_i] != '0) ?
-                                div_stack[exec_warp_id_i][int'(div_depth[exec_warp_id_i]) - 1] :
+                                div_stack[exec_warp_id_i][div_depth[exec_warp_id_i] - 1'b1] :
                                 '0;
 
     // -----------------------------------------------------------------------
@@ -230,4 +248,3 @@ module warp_scheduler
 
 endmodule
 
-`default_nettype wire

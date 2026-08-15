@@ -15,7 +15,6 @@
 //
 // NOTE: Human review required before merge (divergence algorithm,
 //       memory stall interaction, reconverge logic).
-`default_nettype none
 
 module gpu_compute_unit
     import gpu_pkg::*;
@@ -474,9 +473,8 @@ module gpu_compute_unit
                         end
                     end
 
-                    IC_VSYNC: begin
-                        // Intra-warp VSYNC: Phase 4 passes immediately (single CU)
-                    end
+                    // Intra-warp VSYNC: Phase 4 passes immediately (single CU)
+                    IC_VSYNC: ;
 
                     default: ; // IC_INVALID
                 endcase
@@ -526,4 +524,3 @@ module gpu_compute_unit
 
 endmodule
 
-`default_nettype wire

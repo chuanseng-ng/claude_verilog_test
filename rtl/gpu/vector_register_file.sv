@@ -7,7 +7,6 @@
 // write enable so yosys infers a $mem cell for every lane.  A single
 // monolithic 256×256-bit array with per-lane sub-word write-enables blocks
 // $mem inference and causes a 65 536-DFF explosion in TECHMAP/ABC.
-`default_nettype none
 
 module vector_register_file
     import gpu_pkg::*;
@@ -66,4 +65,3 @@ module vector_register_file
 
 endmodule
 
-`default_nettype wire

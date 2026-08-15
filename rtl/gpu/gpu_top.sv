@@ -15,7 +15,6 @@
 //   0x024 GPU_ARG_PTR
 //   0x028 GPU_IRQ_CLR   [0]=W1C
 //   0x030–0x06C GPU_PERFCNT[0..15]  (RO)
-`default_nettype none
 
 module gpu_top
     import gpu_pkg::*;
@@ -249,7 +248,7 @@ module gpu_top
     logic [WARP_W-1:0] n_warps_w;
     logic [9:0]        n_warps_raw;
     assign n_warps_raw = {3'b0, cq_desc.block_x[9:3]} + {9'b0, |cq_desc.block_x[2:0]};
-    assign n_warps_w   = |n_warps_raw[9:WARP_W] ? WARP_W'(N_WARPS-1) : n_warps_raw[WARP_W-1:0];
+    assign n_warps_w   = |n_warps_raw[9:WARP_W] ? unsigned'(WARP_W'(N_WARPS-1)) : n_warps_raw[WARP_W-1:0];
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -505,4 +504,3 @@ module gpu_top
 
 endmodule
 
-`default_nettype wire

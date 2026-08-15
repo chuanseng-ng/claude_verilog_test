@@ -36,11 +36,9 @@
 //   * No logic — structural instantiation + assign only
 //   * Always-on domain (clk_i): config bus runs at ref clock
 //   * No `timescale directive
-//   * `default_nettype none
+//   * No `default_nettype` directive (Spyglass IND, CODING_GUIDELINES.md §1.3)
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
-
-`default_nettype none
 
 module pll_apb_regs #(
     parameter int unsigned ADDR_W = 12  // local byte address width (4 KB slot)
@@ -146,4 +144,3 @@ module pll_apb_regs #(
 
 endmodule : pll_apb_regs
 
-`default_nettype wire

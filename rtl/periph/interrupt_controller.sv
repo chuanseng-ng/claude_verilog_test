@@ -21,8 +21,6 @@
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
-`default_nettype none
-
 module interrupt_controller
 #(
     parameter int unsigned ADDR_W    = 12,   // APB4 local address width

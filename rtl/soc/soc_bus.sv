@@ -24,8 +24,6 @@
 //
 // Lint: verilator -Wall 0 errors 0 warnings (same baseline as pre-refactor).
 
-`default_nettype none
-
 module soc_bus
     import axi_pkg::*;
     import soc_addr_map_pkg::*;

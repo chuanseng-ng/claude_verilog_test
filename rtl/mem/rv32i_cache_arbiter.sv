@@ -171,13 +171,12 @@ module rv32i_cache_arbiter (
                 axi_arvalid_o = dc_arvalid_i;
                 dc_arready_o  = axi_arready_i;
             end
-            GRANT_NONE: begin
-                // Do NOT forward AR beats during GRANT_NONE.
-                // The read-data routing (ic_rvalid_o / dc_rvalid_o) is gated
-                // on grant_q, so any AR that completes while grant_q==GRANT_NONE
-                // would produce rdata with no valid destination.  Wait one cycle
-                // for the FSM to register the grant before forwarding AR.
-            end
+            // Do NOT forward AR beats during GRANT_NONE.
+            // The read-data routing (ic_rvalid_o / dc_rvalid_o) is gated
+            // on grant_q, so any AR that completes while grant_q==GRANT_NONE
+            // would produce rdata with no valid destination.  Wait one cycle
+            // for the FSM to register the grant before forwarding AR.
+            GRANT_NONE: ;
             default: ;
         endcase
     end

@@ -16,8 +16,6 @@
 // combinationally from EX1b using the registered dec_do_redirect /
 // dec_redirect_target rather than a case-mux derived value.
 
-`default_nettype none
-
 import rv32i_pipeline_pkg::*;
 module rv32i_pipeline_ex1b (
     // ── EX1a combinational wire input ─────────────────────────────────────────
@@ -120,4 +118,3 @@ module rv32i_pipeline_ex1b (
 
 endmodule
 
-`default_nettype wire

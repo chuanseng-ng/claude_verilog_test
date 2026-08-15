@@ -4,7 +4,6 @@
 // On launch_i pulse: latch the kernel descriptor and assert desc_valid_o.
 // New launches while busy_o are silently dropped (gpu_top guards with idle check).
 // On desc_ack_i: clear valid so a new descriptor can be accepted.
-`default_nettype none
 
 module gpu_command_queue
     import gpu_pkg::*;
@@ -75,4 +74,3 @@ module gpu_command_queue
 
 endmodule
 
-`default_nettype wire

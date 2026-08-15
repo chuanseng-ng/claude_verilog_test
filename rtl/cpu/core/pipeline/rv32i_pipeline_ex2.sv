@@ -7,8 +7,6 @@
 // This splits the former single EX combinational cone into two independent
 // timing windows, targeting ~200 ps WNS improvement on ASAP7.
 
-`default_nettype none
-
 import rv32i_pipeline_pkg::*;
 module rv32i_pipeline_ex2 (
     input  logic          clk_i,
@@ -53,4 +51,3 @@ module rv32i_pipeline_ex2 (
 
 endmodule
 
-`default_nettype wire

@@ -20,8 +20,6 @@
 // NOTE: ex_pc_redirect / trap / mret / fence_i / dbg_halt come from EX1b.
 // Branch misprediction penalty is 4 cycles (EX1c stage adds one cycle).
 
-`default_nettype none
-
 import rv32i_pipeline_pkg::*;
 module rv32i_pipeline_ex(
     input  logic        clk,
@@ -180,4 +178,3 @@ module rv32i_pipeline_ex(
 
 endmodule
 
-`default_nettype wire

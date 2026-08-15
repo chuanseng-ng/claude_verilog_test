@@ -20,7 +20,6 @@
 //   - sh_stall_o stays high for the whole access (issue + read-capture),
 //   - sh_rvalid_o pulses (while sh_stall_o is still high) the cycle every
 //     rdata_q is valid, mirroring the gpu_memory_unit (VLD) capture contract.
-`default_nettype none
 
 module shared_memory
     import gpu_pkg::*;
@@ -202,4 +201,3 @@ module shared_memory
 
 endmodule
 
-`default_nettype wire
