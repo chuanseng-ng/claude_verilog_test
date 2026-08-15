@@ -1041,20 +1041,33 @@ SOC_SV2V_OUT := $(abspath $(LIBRELANE_ASAP7_SOC_DIR)/soc_top_sv2v.v)
 # asap7sc7p5t_SIMPLE_RVT_1x.lef. This did not bite before 2026-08 because the
 # SoC had no clock gates until the PMU epic (GH #98) and GH #93 added them.
 #
-# Deliberately NOT passed here, despite being in VERILOG_DEFINES:
-#   __pnr__      - boot_rom.sv keys its ROM-preload branch off `ifndef __pnr__.
-#                  The run-14 sign-off was produced WITHOUT it, so adding it
-#                  now would change the boot ROM relative to the PPA baseline
-#                  this run is being compared against. Inconsistent with the
-#                  sky130 SoC target, which does pass it -- tracked separately.
-#   SRAM_ASAP7   - no file in SOC_SV_FILES branches on it; it only matters to
-#                  Yosys, which does get it from VERILOG_DEFINES.
+# __pnr__ (added 2026-08-15, bead claude_verilog_test-61v): boot_rom.sv keys
+# its ROM-preload branch off `ifndef __pnr__ -- without it, this target and
+# the sky130 SoC target (pnr/Makefile:693, which has always passed __pnr__)
+# elaborated DIFFERENT boot ROM RTL from the same source tree. Originally
+# withheld here because run 14 (RUN_2026-06-23_18-05-38, the single-clock M11 ASAP7
+# SoC signoff) was built WITHOUT it, and adding it mid-campaign would have
+# changed boot ROM contents relative to that PPA baseline. That reason has
+# now expired: GH #96 run 23 (RUN_2026-08-09_14-36-16) is the accepted
+# multi-clock ASAP7 SoC baseline, and it is driven by the separate
+# pnr/asap7/soc/config_multiclock.json, so run 14 / config.json stay
+# byte-reproducible regardless of this change. Adding __pnr__ makes this
+# target consistent with sky130 and removes the behavioural $readmemh /
+# MEM_INIT_FILE-as-string path from the synthesised ASAP7 netlist (the
+# `else` arm supplies the same zero-filled ROM synthesis always produced
+# anyway -- see rtl/soc/boot_rom.sv:33-41,102-111). Any future ASAP7 SoC
+# re-signoff run picks this up; there is no run built on config.json between
+# 2026-08-15 and the next full P&R that this could silently perturb.
+#
+# SRAM_ASAP7 remains deliberately NOT passed here: no file in SOC_SV_FILES
+# branches on it; it only matters to Yosys, which does get it from
+# config.json's VERILOG_DEFINES.
 #
 # The sky130 SoC target deliberately does NOT get USE_ICG_CELL: ICGx1 is an
 # ASAP7 cell, and sky130 has real latch cells for the behavioural model to
 # map onto.
 #----------------------------------------------------------------
-SOC_SV2V_DEFINES := --define=USE_ICG_CELL
+SOC_SV2V_DEFINES := --define=USE_ICG_CELL --define=__pnr__
 
 #----------------------------------------------------------------
 # asap7_soc_preflight: shared launch guards for every ASAP7 SoC P&R target.
