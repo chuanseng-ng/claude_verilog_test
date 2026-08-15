@@ -5,6 +5,8 @@
 
     "VERILOG_FILES": [
         "dir::sram_1rw_256x32_freepdk45_stub.v",
+        "dir::../../rtl/soc/axi_pkg.sv",
+        "dir::../../rtl/soc/soc_addr_map_pkg.sv",
         "dir::../../rtl/cpu/core/rv32i_pipeline_pkg.sv",
         "dir::../../rtl/mem/rv32i_cache_pkg.sv",
         "dir::../../rtl/cpu/core/rv32i_alu.sv",
