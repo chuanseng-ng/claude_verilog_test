@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-08-13T12:22:52.287539+00:00",
+  "updated_at": "2026-08-15T00:18:28.365154+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -1452,6 +1452,18 @@
       "failure_class": "power_area",
       "suggested_next_step": "proceed",
       "reason": "Run 14 complete (WNS=0, DRC=0, Util=65.6%) but 8.28M PSM-0069 PG violations from macro abstract LEFs lacking PORT/RECT geometry; fixed by adding M7 perimeter PORT/RECT rings to both CPU and GPU LEFs; Run 15 launched",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-08-15T00:18:28.365154+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Config/Makefile consistency task (beads 61v+135), no P&R run performed or needed. Fixed __pnr__ sv2v-define asymmetry between sky130/ASAP7 SoC boot ROM elaboration (pnr/Makefile SOC_SV2V_DEFINES) and closed pnr/freepdk45/config.json's axi_pkg/soc_addr_map_pkg package gap; check_source_closure.py now exits 1 with only the two documented-superseded legacy configs (pnr/librelane, pnr/openlane1) remaining as expected [GAP]. Regression guard (make -C sim lint, chains lint_soc) byte-identical to pre-change baseline. Committed e4b7af6 (61v) and 8a9f9c6 (135) on fix/pd-config-consistency-61v-135, not pushed per instruction.",
       "constraint_ref": null
     }
   ],
