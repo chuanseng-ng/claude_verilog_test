@@ -2,6 +2,8 @@
     "DESIGN_NAME": "rv32i_cpu_top",
 
     "VERILOG_FILES": [
+        "dir::../../rtl/soc/axi_pkg.sv",
+        "dir::../../rtl/soc/soc_addr_map_pkg.sv",
         "dir::../../rtl/cpu/core/rv32i_pipeline_pkg.sv",
         "dir::../../rtl/mem/rv32i_cache_pkg.sv",
         "dir::../../rtl/cpu/core/rv32i_alu.sv",

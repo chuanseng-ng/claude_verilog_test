@@ -307,6 +307,22 @@ def extract_makefile_lists(makefile_path: Path) -> dict[str, list[str]]:
 # ── discovery + reporting ────────────────────────────────────────────────────
 
 
+# Targets that intentionally do not close and are not defects (bead
+# claude_verilog_test-135, 2026-08-14 comment). Keyed by path relative to
+# REPO_ROOT; extend with a comment explaining why each entry is safe to skip.
+SKIP_TARGETS: dict[str, str] = {
+    # Copy-me template, not a real flow config: its `dir::` entries are
+    # written relative to a not-yet-created run directory and resolve to
+    # non-existent pnr/rtl/... paths from here. Reported [GAP] on every scan
+    # even though nothing is actually missing once the template is copied
+    # and adapted for a real run.
+    "pnr/asap7/template/config.json": (
+        "copy-me template; relative dir:: paths resolve to non-existent "
+        "pnr/rtl/... until copied into a real run directory"
+    ),
+}
+
+
 def discover_targets() -> list[Path]:
     targets = sorted(REPO_ROOT.glob("pnr/*/config*.json"))
     targets += sorted(REPO_ROOT.glob("pnr/*/*/config*.json"))
@@ -315,6 +331,7 @@ def discover_targets() -> list[Path]:
         mk = REPO_ROOT / extra
         if mk.exists():
             targets.append(mk)
+    targets = [t for t in targets if str(t.relative_to(REPO_ROOT)) not in SKIP_TARGETS]
     return targets
 
 
