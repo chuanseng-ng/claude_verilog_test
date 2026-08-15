@@ -1059,6 +1059,13 @@ SOC_SV2V_OUT := $(abspath $(LIBRELANE_ASAP7_SOC_DIR)/soc_top_sv2v.v)
 # re-signoff run picks this up; there is no run built on config.json between
 # 2026-08-15 and the next full P&R that this could silently perturb.
 #
+# NOTE for whoever next diffs this netlist: boot_rom.sv is NOT the only file
+# affected. PR #152 (GH #116 item C) wired the same __pnr__ macro into the
+# non-synthesizable param-check initial/$fatal blocks in
+# axi_lite_register_bank.sv, apb4_register_bank.sv and axil_to_apb.sv, so
+# enabling it here drops those too. Measured delta on the 2026-08-15
+# regeneration: 43 lines. Do not attribute the whole change to the boot ROM.
+#
 # SRAM_ASAP7 remains deliberately NOT passed here: no file in SOC_SV_FILES
 # branches on it; it only matters to Yosys, which does get it from
 # config.json's VERILOG_DEFINES.
