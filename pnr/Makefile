@@ -80,6 +80,11 @@ LIBRELANE_DIR       ?= $(HOME)/Downloads/Github/librelane
 # PDK root for manual-pdk flows (nangate45, asap7)
 MANUAL_PDK_ROOT     ?= $(HOME)/pdk
 
+# OpenROAD-flow-scripts checkout — source of the real ASAP7 OpenRCX rules deck
+# (flow/platforms/asap7/rcx_patterns.rules) installed by install-asap7-rcx-rules.
+# See claude_verilog_test-e69.
+ORFS_ROOT            ?= $(HOME)/Downloads/Github/OpenROAD-flow-scripts
+
 # LibreLane config directories
 LIBRELANE_SKY130_DIR     := librelane
 LIBRELANE_SKY130_CPU_DIR := sky130/cpu
@@ -115,6 +120,7 @@ DRT_THREADS         ?= 4
 .PHONY: docker-pull docker-check docker-pdk docker-run docker-synth docker-results
 SV2V                ?= /nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1/bin/sv2v
 
+.PHONY: install-asap7-rcx-rules check-asap7-rcx-rules
 .PHONY: librelane-sky130 librelane-sky130-cpu librelane-nangate45 librelane-asap7 librelane-asap7-gpu librelane-asap7-soc
 .PHONY: librelane-asap7-soc-multiclock
 .PHONY: check-cdc-timing-asap7-soc
@@ -148,6 +154,8 @@ help:
 	@echo "  sky130-soc-sv2v           - Convert Sky130 SoC SV files to Verilog-2005 (sanity check, pnr/sky130/soc/)"
 	@echo "  librelane-sky130-soc      - Sky130 SoC Stage 2: CPU hard macro + flat periph, real DRC/LVS GH#104"
 	@echo "  librelane-nangate45       - Run full LibreLane flow on FreePDK45/nangate45 (pnr/freepdk45/)"
+	@echo "  install-asap7-rcx-rules   - Vendor the real ASAP7 OpenRCX rules from ORFS_ROOT into MANUAL_PDK_ROOT"
+	@echo "  check-asap7-rcx-rules     - Fail loudly if the ASAP7 RCX rules are still the 0-byte stub"
 	@echo "  librelane-asap7           - Run full LibreLane flow on ASAP7 CPU (pnr/asap7/), then prune"
 	@echo "  librelane-asap7-gpu       - Run full LibreLane flow on ASAP7 GPU (pnr/asap7/gpu/), then prune"
 	@echo "  librelane-asap7-soc-synth - Run Yosys synthesis only for ASAP7 SoC (pnr/asap7/soc/) — first-run check"
@@ -819,9 +827,27 @@ librelane-nangate45:
 librelane-nangate45-results:
 	$(call librelane_results,$(LIBRELANE_NANGATE45_DIR))
 
+# Install the real ASAP7 OpenRCX extraction-rules deck, replacing the 0-byte
+# rcx_rules.pex stub the manual PDK tree ships with. ~/pdk/asap7 is NOT a git
+# repo and NOT vendored into this repo, so this must be re-run on every fresh
+# machine/clone that needs RUN_SPEF_EXTRACTION/RUN_MCSTA — see
+# claude_verilog_test-e69 and tools/setup/install_asap7_rcx_rules.py.
+install-asap7-rcx-rules:
+	@python3 $(abspath ../tools/setup/install_asap7_rcx_rules.py) \
+		--orfs-root $(ORFS_ROOT) --pdk-root $(MANUAL_PDK_ROOT)
+
+# Fails loudly (non-zero) if the PDK still carries the 0-byte RCX rules stub.
+# Run before any ASAP7 flow that relies on RUN_SPEF_EXTRACTION/RUN_MCSTA.
+check-asap7-rcx-rules:
+	@python3 $(abspath ../tools/setup/install_asap7_rcx_rules.py) \
+		--pdk-root $(MANUAL_PDK_ROOT) --check-only
+
 # ASAP7: uses manually structured PDK under MANUAL_PDK_ROOT
 # Config directory pnr/asap7/ must exist with a valid config.json.
-librelane-asap7:
+# check-asap7-rcx-rules is a prerequisite ONLY here (the CPU config has
+# RUN_SPEF_EXTRACTION=true) — GPU/SoC configs still have it false and do not
+# need the real ruleset installed (claude_verilog_test-e69).
+librelane-asap7: check-asap7-rcx-rules
 	@echo "=========================================="
 	@echo "Running LibreLane flow — ASAP7"
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_DIR)/config.json"
