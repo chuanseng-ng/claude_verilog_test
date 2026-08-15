@@ -1,34 +1,63 @@
 {
-  "_comment": "Registry for bead claude_verilog_test-q7n -- EQY sv2v-vs-RTL equivalence. Each entry compares one module's original SystemVerilog (gold) against the corresponding module block(s) extracted from pnr/asap7/soc/soc_top_sv2v.v (gate, the netlist actually consumed by the ASAP7 SoC synthesis flow). gold_files are read in order (packages before consumers) with -sv and the listed defines. gate_modules lists every module that must be extracted from the flat gate netlist and concatenated (>1 for hierarchical entries, e.g. async_axi_fifo pulls in its cdc_* submodules too -- they are separate modules in the flat sv2v output). common_fixtures are read identically on both sides (blackbox stubs for cells neither RTL nor sv2v output define). Scope note: SOC_SV_FILES (pnr/Makefile) covers rtl/soc/**, rtl/periph/**, rtl/mem/rv32i_clock_gate.sv and the CDC primitives -- NOT CPU/GPU internals, which are hardened macros stubbed out (rv32i_cpu_top_stub.sv / gpu_top_stub.sv) for this SoC-level sv2v conversion and are out of scope for this bead.",
+  "_comment": "Registry for bead claude_verilog_test-q7n -- EQY sv2v-vs-RTL equivalence. Each entry compares one module's original SystemVerilog (gold) against the corresponding module block(s) extracted from pnr/asap7/soc/soc_top_sv2v.v (gate, the netlist actually consumed by the ASAP7 SoC synthesis flow). gold_files are read in order (packages before consumers). frontend selects the gold-side Yosys frontend: 'yosys-sv' (default, omitted below for tiers 1-3) is Yosys 0.46's native `read_verilog -sv`, defines applied as `-D NAME` (space form). 'synlig' loads the Synlig plugin (synlig-sv.so, path resolved at runtime by run_eqy.py's resolve_synlig_plugin() -- never hardcoded) and uses `read_systemverilog`, defines applied as `-DNAME` (glued form -- confirmed empirically, the two frontends use different CLI conventions). gate_modules lists every module that must be extracted from the flat gate netlist and concatenated (>1 for hierarchical entries). common_fixtures are read identically on both sides (blackbox stubs for cells neither RTL nor sv2v output define). Gold-side source rewrites (applied to an in-memory COPY -- the committed RTL is never modified, and the rewrite order is fixed in run_eqy.py's build_patched_gold_files): `param_override` changes a `parameter int unsigned` default on gold and issues the matching `chparam -set` on gate; `gold_rewrites` is a list of exactly-once find/replace edits used by the tier-5 diagnostics; `negative_control` is the deliberate corruption injected by `--negative-control`, whose verdict is INVERTED (the run passes only if eqy catches it). `post_prep_both` appends Yosys commands IDENTICALLY to both sides after `prep` (there is deliberately no per-side variant -- that would be a way to launder a mismatch into a PASS). `baseline_matched_points`/`baseline_partitions` feed the match-set-drift guard: a PASS below the recorded baseline is downgraded to ERROR. `expected_status` documents a FAIL/ERROR that is understood and root-caused; it is reported but NEVER suppresses the exit code. NOTE: an earlier `synlig_array_fill_workaround` key was removed on 2026-08-15 -- it was a proven no-op, see README.md. Scope note: SOC_SV_FILES (pnr/Makefile) covers rtl/soc/**, rtl/periph/**, rtl/mem/rv32i_clock_gate.sv and the CDC primitives -- NOT CPU/GPU internals, which are hardened macros stubbed out (rv32i_cpu_top_stub.sv / gpu_top_stub.sv) for this SoC-level sv2v conversion and are out of scope for this bead.",
   "gate_netlist": "pnr/asap7/soc/soc_top_sv2v.v",
   "modules": [
     {
       "name": "rv32i_clock_gate",
       "tier": 1,
       "top": "rv32i_clock_gate",
-      "gate_modules": ["rv32i_clock_gate"],
-      "gold_files": ["rtl/mem/rv32i_clock_gate.sv"],
-      "defines": ["USE_ICG_CELL"],
-      "common_fixtures": ["icg_stub.v"],
+      "gate_modules": [
+        "rv32i_clock_gate"
+      ],
+      "gold_files": [
+        "rtl/mem/rv32i_clock_gate.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL"
+      ],
+      "common_fixtures": [
+        "icg_stub.v"
+      ],
       "depth": 5,
-      "note": "Tier 1 -- trivial leaf (29 lines), directly gated by USE_ICG_CELL (one of the two live SOC_SV2V_DEFINES). Under __pnr__+USE_ICG_CELL the module instantiates the ASAP7 ICGx1 liberty cell; icg_stub.v blackboxes it identically on both sides so the proof checks instance connectivity, not liberty behaviour."
+      "note": "Tier 1 -- trivial leaf (29 lines), directly gated by USE_ICG_CELL (one of the two live SOC_SV2V_DEFINES). Under __pnr__+USE_ICG_CELL the module instantiates the ASAP7 ICGx1 liberty cell; icg_stub.v blackboxes it identically on both sides. RE-ASSESSED 2026-08-15: this module's PASS was VACUOUS and is now reported as ERROR. eqy matches 8 points (3 ports, the u_icg cell, its 4 pins) and then prints `Successfully proved designs equivalent` / DONE (PASS) having generated ZERO partitions -- its partitions/ directory is empty, so not one proof obligation was ever created. The earlier record of '1 partition (whole module, combinational)' was wrong. With the liberty cell blackboxed there is no logic left for the prover, so there is nothing here that formal equivalence can add over reading the 29 lines. Kept in the registry, as an expected_status=ERROR, precisely so this stays visible instead of being quietly dropped.",
+      "baseline_matched_points": 8,
+      "expected_status": "ERROR",
+      "negative_control_na": "The baseline itself is ERROR (zero partitions), so there is nothing for a mutation to break. Two were tried anyway: tying ENA to 1'b1 (reported DONE (PASS)) and swapping CLK/ENA (broke eqy's matcher: `partition: ERROR: conflicting matches for gold bit \\clk: \\clk vs \\en`). Neither is a detection."
     },
     {
       "name": "cdc_2ff_sync",
       "tier": 2,
       "top": "cdc_2ff_sync",
-      "gate_modules": ["cdc_2ff_sync"],
-      "gold_files": ["rtl/soc/cdc/cdc_2ff_sync.sv"],
+      "gate_modules": [
+        "cdc_2ff_sync"
+      ],
+      "gold_files": [
+        "rtl/soc/cdc/cdc_2ff_sync.sv"
+      ],
       "defines": [],
       "common_fixtures": [],
       "depth": 5,
-      "note": "Tier 2 -- sequential leaf, the base CDC synchroniser primitive (async-assert/sync-deassert reset, magic_cdc attribute). Checked at default parameters WIDTH=1/STAGES=2 (the instantiation defaults) -- other instantiated widths in the design are not separately re-checked (see README scope note)."
+      "note": "Tier 2 -- sequential leaf, the base CDC synchroniser primitive (async-assert/sync-deassert reset, magic_cdc attribute). Checked at default parameters WIDTH=1/STAGES=2 (the instantiation defaults) -- other instantiated widths in the design are not separately re-checked (see README scope note).",
+      "negative_control": {
+        "file": "rtl/soc/cdc/cdc_2ff_sync.sv",
+        "find": "    assign q_o = sync_q[STAGES-1];",
+        "replace": "    assign q_o = ~sync_q[STAGES-1];",
+        "note": "invert the synchroniser's combinational output",
+        "design_note": "THREE mutations were tried on this module before one discriminated, and the two rejects are the most important results in this bead's negative-control round -- do not delete them. (1) `sync_q[i] <= d_i` instead of `sync_q[i-1]` (collapse the 2-FF chain): signal-DELETING, matched points 6 -> 5 and partitions 3 -> 2, reported DONE (PASS). Motivated the baseline_matched_points drift guard. (2) `sync_q[0] <= ~d_i` (invert the D input of the first stage): signal-PRESERVING, full 6-point / 3-partition match set, gold RTLIL provably carries a $not cell the gate does not -- and eqy STILL proved all three partitions and reported DONE (PASS). That is a FALSE PASS, not a match-set artifact, and the drift guard cannot see it. See README.md 'A false PASS that eqy's default strategy does not catch'. (3) The committed mutation inverts the combinational output q_o instead, which eqy catches cleanly (FAIL on partition cdc_2ff_sync.q_o)."
+      },
+      "baseline_matched_points": 6,
+      "baseline_partitions": 3
     },
     {
       "name": "async_axi_fifo",
       "tier": 3,
       "top": "async_axi_fifo",
-      "gate_modules": ["cdc_2ff_sync", "cdc_reset_sync", "cdc_gray_fifo", "async_axi_fifo"],
+      "gate_modules": [
+        "cdc_2ff_sync",
+        "cdc_reset_sync",
+        "cdc_gray_fifo",
+        "async_axi_fifo"
+      ],
       "gold_files": [
         "rtl/soc/axi_pkg.sv",
         "rtl/soc/cdc/cdc_2ff_sync.sv",
@@ -39,33 +68,344 @@
       "defines": [],
       "common_fixtures": [],
       "depth": 5,
-      "note": "Tier 3 -- the heaviest genuinely-checkable leaf: the full dual-clock AXI4 CDC bridge hierarchy (GH #91/#93/#96 -- the design's single most safety-critical CDC structure). 4-module hierarchy, gray-code pointer synchronisation, per-channel FIFO storage arrays. Parameters use axi_pkg::CONST scope resolution (not `import axi_pkg::*`), which Yosys 0.46's native -sv frontend DOES support -- see BLOCKED_MODULES for the ones that needed the unsupported wildcard-import or packed-array-parameter forms and could not be run this way."
+      "note": "Tier 3 -- the heaviest genuinely-checkable leaf under the yosys-sv frontend: the full dual-clock AXI4 CDC bridge hierarchy (GH #91/#93/#96 -- the design's single most safety-critical CDC structure). 4-module hierarchy, gray-code pointer synchronisation, per-channel FIFO storage arrays. Parameters use axi_pkg::CONST scope resolution (not `import axi_pkg::*`), which Yosys 0.46's native -sv frontend DOES support.",
+      "negative_control": {
+        "file": "rtl/soc/cdc/cdc_gray_fifo.sv",
+        "find": "    assign wr_gray_d = (wr_bin_d >> 1) ^ wr_bin_d;",
+        "replace": "    assign wr_gray_d = (wr_bin_d >> 2) ^ wr_bin_d;",
+        "note": "corrupt the binary-to-gray encoding of the write pointer (>>1 becomes >>2), so the pointer that crosses the clock boundary is no longer single-bit-change -- the exact property the whole CDC structure rests on",
+        "design_note": "Signal-preserving. The first attempt re-introduced commit 7a9f9d4's bug (`wr_ready_o = wr_rst_n_i` without `&& !full_q`), which made full_q dead and broke eqy's own matcher instead of producing a verdict: `partition: ERROR: conflicting matches for gold bit \\\\wr_clk_i: \\\\u_rd_ptr_to_wr.clk_i vs \\\\wr_clk_i`. A mutation that changes the design's signal set does not test the prover."
+      },
+      "baseline_matched_points": 285,
+      "baseline_partitions": 476
+    },
+    {
+      "name": "dma_engine",
+      "tier": 4,
+      "top": "dma_engine",
+      "gate_modules": [
+        "axi_lite_register_bank",
+        "dma_engine"
+      ],
+      "gold_files": [
+        "rtl/soc/axi_pkg.sv",
+        "rtl/soc/axi_lite_register_bank.sv",
+        "rtl/periph/dma_engine.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "depth": 5,
+      "note": "Tier 4 (Synlig-unblocked parse, 2026-08-15) but STILL NOT PROVABLE -- three distinct blockers were peeled off in sequence and a fourth remains. (1) The original 2026-08-15 run ERRORed in read_gate: `Module `\\axi_lite_register_bank' referenced in module `\\dma_engine' in cell `\\u_regbank' is not part of the design.` That was a harness EXTRACTION gap, not a mismatch -- gate_modules pulled only dma_engine out of the flat sv2v netlist and left its submodule behind. FIXED here the way the Tier 3 hierarchical entry already did it: the submodule is named in gate_modules and its RTL added to gold_files. (2) The next run then ERRORed in partition: `Can't find cell q_mem in gold circuit.` -- dma_engine's `desc_t q_mem[QDEPTH]` packed-struct queue is inferred as a $mem cell by the gate side but not by Synlig on the gold side. Addressed with post_prep_both=[memory_map], which maps memories to flops IDENTICALLY on both sides (matched points went 128 -> 382). (3) The current run ERRORs in partition: `conflicting matches for gold bit \\hw_wen_i [3]: \\hw_wen_i [3] vs 1'1` -- the u_regbank boundary again, the same unpacked-array-port family as the standalone register-bank FAILs (dma_engine drives regs_o/hw_wen_i/hw_wdata_i with N_REGS=8, and several hw_wen_i elements are constant on the gate side). expected_status is ERROR: this is recorded as a KNOWN LIMITATION with its exact errors, not silently skipped, and not presented as a design defect -- every blocker so far has been a gold-side frontend/representation artifact. See README.md.",
+      "expected_status": "ERROR",
+      "negative_control_na": "Baseline is already FAIL (inherited flattening-order mismatch in u_regbank), so an injected mutation cannot discriminate. Negative-control coverage of the Synlig frontend comes from axil_to_apb and boot_rom, which have PASS baselines.",
+      "post_prep_both": [
+        "memory_map"
+      ]
+    },
+    {
+      "name": "axil_to_apb",
+      "tier": 4,
+      "top": "axil_to_apb",
+      "gate_modules": [
+        "axil_to_apb"
+      ],
+      "gold_files": [
+        "rtl/soc/axi_pkg.sv",
+        "rtl/soc/axil_to_apb.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "depth": 5,
+      "note": "Tier 4 (Synlig-unblocked, 2026-08-15). One of the three __pnr__-guarded param-check files (PR #152 / GH #116 item C) -- `__pnr__` strips the non-synthesizable initial/$fatal width-check block from BOTH gold (via -D__pnr__, matching SOC_SV2V_DEFINES) and gate (already true of the netlist), so this is an apples-to-apples proof, not a masked mismatch. Previously blocked under yosys-sv purely by the in-body `import axi_pkg::*;` statement; no array-shaped parameters in this file, so no array-fill workaround needed. Clean Synlig elaboration: 0 errors, 0 warnings.",
+      "negative_control": {
+        "file": "rtl/soc/axil_to_apb.sv",
+        "find": "            S_ACCESS: if (pready) state_d = is_write_q ? S_WRESP : S_RRESP;",
+        "replace": "            S_ACCESS: if (pready) state_d = is_write_q ? S_RRESP : S_WRESP;",
+        "note": "swap the write/read response states out of S_ACCESS (bridge answers on the wrong AXI channel)"
+      },
+      "baseline_matched_points": 41,
+      "baseline_partitions": 122
+    },
+    {
+      "name": "boot_rom",
+      "tier": 4,
+      "top": "boot_rom",
+      "gate_modules": [
+        "boot_rom"
+      ],
+      "gold_files": [
+        "rtl/soc/axi_pkg.sv",
+        "rtl/soc/soc_addr_map_pkg.sv",
+        "rtl/soc/boot_rom.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "depth": 5,
+      "note": "Tier 4 (Synlig-unblocked, 2026-08-15). The fourth __pnr__-affected file: under __pnr__, MEM_INIT_FILE becomes `int unsigned` instead of `string` and the $readmemh preload branch is dropped -- boot_rom.sv's own comment says this was specifically added because Synlig's UHDM path asserts on string-typed parameters (`kernel/rtlil.cc:2150`, the SAME assert class this bead independently hit on axi4_crossbar's packed-2D-array parameter, see blocked_modules). With -D__pnr__ the string-typed parameter never exists on either side, so the known Synlig crash class does not trigger. Clean elaboration: 0 errors, 0 warnings (aside from benign post-increment notes).",
+      "negative_control": {
+        "file": "rtl/soc/boot_rom.sv",
+        "find": "                            r_addr_q      <= r_addr_q + 32'd4;  // INCR, 4-byte beat",
+        "replace": "                            r_addr_q      <= r_addr_q + 32'd8;  // NEGATIVE CONTROL: wrong INCR stride",
+        "note": "corrupt the INCR burst stride from 4 to 8 bytes (every multi-beat read returns the wrong words)"
+      },
+      "baseline_matched_points": 41,
+      "baseline_partitions": 36
+    },
+    {
+      "name": "axi_lite_register_bank",
+      "tier": 4,
+      "top": "axi_lite_register_bank",
+      "gate_modules": [
+        "axi_lite_register_bank"
+      ],
+      "gold_files": [
+        "rtl/soc/axi_pkg.sv",
+        "rtl/soc/axi_lite_register_bank.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "depth": 5,
+      "note": "Tier 4 (Synlig-unblocked, 2026-08-15). One of the three __pnr__-guarded param-check files. Previously blocked under yosys-sv by the unpacked-array parameters `RESET_VAL`/`WMASK`; Synlig parses them but mis-elaborates them (see below). ROOT CAUSE OF THE FAIL (2026-08-15, this run): NOT a defines mismatch (gold and gate both carry __pnr__), NOT an sv2v conversion defect, NOT an eqy init artifact. TWO independent gold-side (Synlig) artifacts stack. (A) The read-data partition (rdata_q/prdata) fails because sv2v and Synlig flatten unpacked-array module PORTS into packed vectors in OPPOSITE element orders -- sv2v puts element 0 at the MSB end (`regs[((N_REGS-1)-r)*32+:32]`), Synlig at the LSB end (`regs[r*32+:32]`); proved by tier 5 _n1 (permutation = identity, this partition proves) vs _n2 (permutation = swap, it fails again). (B) The `regs` partition fails even at N_REGS=1 because Synlig mis-elaborates the unpacked-array parameters RESET_VAL/WMASK to garbage; proved by tier 5 _n1_constfold, which replaces those two parameter reads with their default constants and PASSES. See README.md for the full evidence chain. The `synlig_array_fill_workaround` that previously sat on this entry was DELETED on 2026-08-15: it was a proven no-op. Elaborating the file through Synlig with and without the explicit-positional-literal rewrite produces byte-identical write_verilog output, and a synthetic repro shows Surelog corrupts an explicit `'{32'hAAAA_AAAA, 32'hBBBB_BBBB}` array parameter exactly as badly as a `'{default: '1}` fill (both read back as 32'b0000000000000000000000000000001x, while a scalar parameter in the same module reads back correctly). The defect is the unpacked-array parameter TYPE, not the literal form -- see run_eqy.py, above apply_param_override().",
+      "expected_status": "FAIL",
+      "negative_control_na": "Baseline is already FAIL (root-caused: unpacked-array flattening-order mismatch, see README.md), so a further injected mutation cannot discriminate. The tier-5 *_n1 entry is the discriminating experiment for this module: it collapses N_REGS to 1, which makes the permutation the identity, and must PASS."
+    },
+    {
+      "name": "apb4_register_bank",
+      "tier": 4,
+      "top": "apb4_register_bank",
+      "gate_modules": [
+        "apb4_register_bank"
+      ],
+      "gold_files": [
+        "rtl/soc/apb4_register_bank.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "depth": 5,
+      "note": "Tier 4 (Synlig-unblocked, 2026-08-15). One of the three __pnr__-guarded param-check files. Same RESET_VAL/WMASK unpacked-array-parameter Synlig bug as axi_lite_register_bank (see that entry). Self-contained -- no axi_pkg.sv dependency (DW/SW are fixed int literals here, not axi_pkg:: references). ROOT CAUSE OF THE FAIL (2026-08-15, this run): NOT a defines mismatch (gold and gate both carry __pnr__), NOT an sv2v conversion defect, NOT an eqy init artifact. TWO independent gold-side (Synlig) artifacts stack. (A) The read-data partition (rdata_q/prdata) fails because sv2v and Synlig flatten unpacked-array module PORTS into packed vectors in OPPOSITE element orders -- sv2v puts element 0 at the MSB end (`regs[((N_REGS-1)-r)*32+:32]`), Synlig at the LSB end (`regs[r*32+:32]`); proved by tier 5 _n1 (permutation = identity, this partition proves) vs _n2 (permutation = swap, it fails again). (B) The `regs` partition fails even at N_REGS=1 because Synlig mis-elaborates the unpacked-array parameters RESET_VAL/WMASK to garbage; proved by tier 5 _n1_constfold, which replaces those two parameter reads with their default constants and PASSES. See README.md for the full evidence chain. The `synlig_array_fill_workaround` that previously sat on this entry was DELETED on 2026-08-15: it was a proven no-op. Elaborating the file through Synlig with and without the explicit-positional-literal rewrite produces byte-identical write_verilog output, and a synthetic repro shows Surelog corrupts an explicit `'{32'hAAAA_AAAA, 32'hBBBB_BBBB}` array parameter exactly as badly as a `'{default: '1}` fill (both read back as 32'b0000000000000000000000000000001x, while a scalar parameter in the same module reads back correctly). The defect is the unpacked-array parameter TYPE, not the literal form -- see run_eqy.py, above apply_param_override().",
+      "expected_status": "FAIL",
+      "negative_control_na": "Baseline is already FAIL (root-caused: unpacked-array flattening-order mismatch, see README.md), so a further injected mutation cannot discriminate. The tier-5 *_n1 entry is the discriminating experiment for this module: it collapses N_REGS to 1, which makes the permutation the identity, and must PASS."
+    },
+    {
+      "name": "axi_lite_register_bank_n1",
+      "tier": 5,
+      "top": "axi_lite_register_bank",
+      "gate_modules": [
+        "axi_lite_register_bank"
+      ],
+      "gold_files": [
+        "rtl/soc/axi_pkg.sv",
+        "rtl/soc/axi_lite_register_bank.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "param_override": {
+        "file": "rtl/soc/axi_lite_register_bank.sv",
+        "params": {
+          "N_REGS": 1
+        }
+      },
+      "depth": 5,
+      "expected_status": "FAIL",
+      "note": "Tier 5 DIAGNOSTIC (not a sign-off proof) -- the discriminating experiment that root-causes axi_lite_register_bank's tier-4 FAIL. Collapses N_REGS from 16 to 1 on BOTH sides (gold by source rewrite, gate by `chparam -set`). With one element the sv2v element-order reversal `(N_REGS-1)-r` degenerates to the identity, so IF the flattening order were the whole story this would PASS. It does NOT: the read-data partition (rdata_q/prdata) does start proving, but `regs` still fails -- which is how the SECOND, independent cause was found (Synlig's unpacked-array PARAMETER corruption, isolated by the _n1_constfold entry). Paired with the _n2 entry (permutation = a swap, must FAIL), this isolates the cause to the array element ordering and rules out a defines mismatch, an sv2v logic defect, and an eqy init-handling artifact."
+    },
+    {
+      "name": "axi_lite_register_bank_n2",
+      "tier": 5,
+      "top": "axi_lite_register_bank",
+      "gate_modules": [
+        "axi_lite_register_bank"
+      ],
+      "gold_files": [
+        "rtl/soc/axi_pkg.sv",
+        "rtl/soc/axi_lite_register_bank.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "param_override": {
+        "file": "rtl/soc/axi_lite_register_bank.sv",
+        "params": {
+          "N_REGS": 2
+        }
+      },
+      "depth": 5,
+      "expected_status": "FAIL",
+      "note": "Tier 5 DIAGNOSTIC control for axi_lite_register_bank_n1. N_REGS=2 makes the element-order reversal a genuine SWAP, the smallest non-identity permutation, so this MUST FAIL. If it ever passed, the _n1 PASS would prove nothing (it would mean the harness stops discriminating at small N rather than that the permutation is the cause)."
+    },
+    {
+      "name": "apb4_register_bank_n1",
+      "tier": 5,
+      "top": "apb4_register_bank",
+      "gate_modules": [
+        "apb4_register_bank"
+      ],
+      "gold_files": [
+        "rtl/soc/apb4_register_bank.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "param_override": {
+        "file": "rtl/soc/apb4_register_bank.sv",
+        "params": {
+          "N_REGS": 1
+        }
+      },
+      "depth": 5,
+      "expected_status": "FAIL",
+      "note": "Tier 5 DIAGNOSTIC (not a sign-off proof) -- the discriminating experiment that root-causes apb4_register_bank's tier-4 FAIL. Collapses N_REGS from 16 to 1 on BOTH sides (gold by source rewrite, gate by `chparam -set`). With one element the sv2v element-order reversal `(N_REGS-1)-r` degenerates to the identity, so IF the flattening order were the whole story this would PASS. It does NOT: the read-data partition (rdata_q/prdata) does start proving, but `regs` still fails -- which is how the SECOND, independent cause was found (Synlig's unpacked-array PARAMETER corruption, isolated by the _n1_constfold entry). Paired with the _n2 entry (permutation = a swap, must FAIL), this isolates the cause to the array element ordering and rules out a defines mismatch, an sv2v logic defect, and an eqy init-handling artifact."
+    },
+    {
+      "name": "apb4_register_bank_n2",
+      "tier": 5,
+      "top": "apb4_register_bank",
+      "gate_modules": [
+        "apb4_register_bank"
+      ],
+      "gold_files": [
+        "rtl/soc/apb4_register_bank.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "param_override": {
+        "file": "rtl/soc/apb4_register_bank.sv",
+        "params": {
+          "N_REGS": 2
+        }
+      },
+      "depth": 5,
+      "expected_status": "FAIL",
+      "note": "Tier 5 DIAGNOSTIC control for apb4_register_bank_n1. N_REGS=2 makes the element-order reversal a genuine SWAP, the smallest non-identity permutation, so this MUST FAIL. If it ever passed, the _n1 PASS would prove nothing (it would mean the harness stops discriminating at small N rather than that the permutation is the cause)."
+    },
+    {
+      "name": "axi_lite_register_bank_n1_constfold",
+      "tier": 5,
+      "top": "axi_lite_register_bank",
+      "gate_modules": [
+        "axi_lite_register_bank"
+      ],
+      "gold_files": [
+        "rtl/soc/axi_pkg.sv",
+        "rtl/soc/axi_lite_register_bank.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "param_override": {
+        "file": "rtl/soc/axi_lite_register_bank.sv",
+        "params": {
+          "N_REGS": 1
+        }
+      },
+      "depth": 5,
+      "expected_status": "PASS",
+      "note": "Tier 5 DIAGNOSTIC (not a sign-off proof) -- isolates the SECOND cause of axi_lite_register_bank's tier-4 FAIL. Same N_REGS=1 collapse as the _n1 entry (so the port element-order permutation is already the identity), plus two gold-only source rewrites that replace the reads of the unpacked-array parameters RESET_VAL[]/WMASK[] with the exact default constants those parameters carry (32'h00000000 / 32'hffffffff -- the same values the gate side elaborates). That is semantically a no-op at default parameters, and it removes the only construct Synlig mis-elaborates. _n1 FAILS on `regs`; this PASSES. Together they pin the residual `regs` failure on Synlig's unpacked-array-parameter lowering and nothing else -- in particular not on sv2v, which emits the correct reversed-order constants (verified in pll_apb_regs's converted instantiation).",
+      "gold_rewrites": [
+        {
+          "file": "rtl/soc/axi_lite_register_bank.sv",
+          "find": "for (int unsigned r = 0; r < N_REGS; r++) regs[r] <= RESET_VAL[r];",
+          "replace": "for (int unsigned r = 0; r < N_REGS; r++) regs[r] <= 32'h00000000;",
+          "note": "constant-fold RESET_VAL[] to its default value, removing the unpacked-array parameter read"
+        },
+        {
+          "file": "rtl/soc/axi_lite_register_bank.sv",
+          "find": "                                WMASK[ci] & strb_expand(ws);",
+          "replace": "                                32'hffffffff & strb_expand(ws);",
+          "note": "constant-fold WMASK[] to its default value, removing the unpacked-array parameter read"
+        }
+      ]
+    },
+    {
+      "name": "apb4_register_bank_n1_constfold",
+      "tier": 5,
+      "top": "apb4_register_bank",
+      "gate_modules": [
+        "apb4_register_bank"
+      ],
+      "gold_files": [
+        "rtl/soc/apb4_register_bank.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "param_override": {
+        "file": "rtl/soc/apb4_register_bank.sv",
+        "params": {
+          "N_REGS": 1
+        }
+      },
+      "depth": 5,
+      "expected_status": "PASS",
+      "note": "Tier 5 DIAGNOSTIC (not a sign-off proof) -- isolates the SECOND cause of apb4_register_bank's tier-4 FAIL. Same N_REGS=1 collapse as the _n1 entry (so the port element-order permutation is already the identity), plus two gold-only source rewrites that replace the reads of the unpacked-array parameters RESET_VAL[]/WMASK[] with the exact default constants those parameters carry (32'h00000000 / 32'hffffffff -- the same values the gate side elaborates). That is semantically a no-op at default parameters, and it removes the only construct Synlig mis-elaborates. _n1 FAILS on `regs`; this PASSES. Together they pin the residual `regs` failure on Synlig's unpacked-array-parameter lowering and nothing else -- in particular not on sv2v, which emits the correct reversed-order constants (verified in pll_apb_regs's converted instantiation).",
+      "gold_rewrites": [
+        {
+          "file": "rtl/soc/apb4_register_bank.sv",
+          "find": "for (int unsigned r = 0; r < N_REGS; r++) regs[r] <= RESET_VAL[r];",
+          "replace": "for (int unsigned r = 0; r < N_REGS; r++) regs[r] <= 32'h00000000;",
+          "note": "constant-fold RESET_VAL[] to its default value, removing the unpacked-array parameter read"
+        },
+        {
+          "file": "rtl/soc/apb4_register_bank.sv",
+          "find": "automatic logic [31:0]     m  = WMASK[ci] & strb_expand(pstrb);",
+          "replace": "automatic logic [31:0]     m  = 32'hffffffff & strb_expand(pstrb);",
+          "note": "constant-fold WMASK[] to its default value, removing the unpacked-array parameter read"
+        }
+      ]
     }
   ],
   "blocked_modules": [
     {
-      "name": "dma_engine",
-      "reason": "module header places `import axi_pkg::*;` BETWEEN the module name and the #(...) parameter list (a valid IEEE 1800 ANSI-header import clause). Yosys 0.46's native `read_verilog -sv` frontend errors immediately on this token position: \"unexpected TOK_ID, expecting '(' or ';' or '#'\" at dma_engine.sv:31. This is also the only module in SOC_SV_FILES with a packed-struct-typed memory (desc_t q_mem[QDEPTH]), so it is the highest-value target lost to this limitation."
-    },
-    {
       "name": "axi4_crossbar",
-      "reason": "parameters use packed 2D array syntax `parameter logic [N_SLAVES-1:0][31:0] SLV_BASE` (deliberately packed, per the file's own comment, specifically to avoid a *different* known Synlig/UHDM lowering issue with unpacked array parameters). Yosys 0.46's native -sv frontend still rejects it: \"unexpected '[', expecting TOK_ID\" at axi4_crossbar.sv:49. Also uses `import axi_pkg::*;` in-body (see pkgtest negative result below), which independently blocks it."
+      "reason": "STILL BLOCKED under both frontends, for two independent reasons, re-tested 2026-08-15 with Synlig now available. (1) yosys-sv (unchanged from the original finding): parameters use packed 2D array syntax `parameter logic [N_SLAVES-1:0][31:0] SLV_BASE` -- \"unexpected '[', expecting TOK_ID\" at axi4_crossbar.sv:49 -- plus in-body `import axi_pkg::*;`, independently blocking. (2) Synlig (NEW finding): `read_systemverilog` parses the file (Surelog itself reports 0 errors/0 warnings) but the UHDM-to-RTLIL lowering CRASHES on the packed-2D-array-typed parameter: \"ERROR: Assert `!wire->name.empty()' failed in kernel/rtlil.cc:2150.\" This is the SAME assert class boot_rom.sv's own header comment already documented for STRING-typed parameters (why __pnr__ exists for that file) -- i.e. Synlig's UHDM path has a general problem lowering certain non-scalar Yosys-RTLIL-unrepresentable parameter TYPES to RTLIL, not specific to this file. The register-bank pair's RESET_VAL/WMASK defect turned out to be the SILENT member of the same family -- Surelog does not corrupt the fill EXPRESSION, it mis-lowers the unpacked-array parameter TYPE, and an explicit positional literal is corrupted identically (proved 2026-08-15; see run_eqy.py's note above apply_param_override() and README.md). So the unifying statement is: Yosys RTLIL cannot represent non-scalar parameter types, and Synlig's UHDM lowering either asserts or silently emits garbage. Here it asserts, and the crash is triggered by the packed-2D-array TYPE DECLARATION itself regardless of the value assigned to it (`'0` here is a completely ordinary unsized-fill of a packed vector, not the buggy unpacked-array default-fill construct) -- there is no source-level literal rewrite that avoids declaring the parameter as `logic [N_SLAVES-1:0][31:0]` without changing what SLV_BASE/SLV_LIMIT actually mean to the real crossbar routing logic, so no equivalent-behavior workaround exists. Confirmed via isolated batch probe (tools/formal, 2026-08-15) on the real file, not just theorised from the boot_rom comment."
     },
     {
-      "name": "axi_lite_register_bank",
-      "reason": "one of the three files with a __pnr__-guarded param-check initial/$fatal block (PR #152 / GH #116 item C). Blocked for two independent reasons: `parameter logic [31:0] RESET_VAL [N_REGS]` is an unpacked-array parameter (\"unexpected '[', expecting ',' or '=' or ')'\"), and it also needs axi_pkg default resolution patterns not fully isolated once the array-parameter error stops elaboration."
+      "name": "axi_lite_register_bank / apb4_register_bank",
+      "reason": "NOT parse-blocked -- Synlig reads both files cleanly -- but PROVEN UNPROVABLE at module scope with this sv2v + Synlig pairing, by two independent gold-side artifacts isolated with the tier-5 diagnostics (2026-08-15). (A) Synlig mis-elaborates the unpacked-array parameters RESET_VAL[]/WMASK[] to garbage (WMASK reads back 32'hxxxxxxxx, RESET_VAL 32'b0...0x), which is what fails the `regs` partition; proved by the *_n1_constfold entries, which replace those parameter reads with their default constants and PASS. (B) sv2v and Synlig flatten unpacked-array module PORTS into packed vectors in opposite element orders (sv2v element 0 at the MSB end, Synlig at the LSB end), which is what fails the read-data partition; proved by *_n1 (N_REGS=1, permutation = identity, read-data partition proves) vs *_n2 (N_REGS=2, permutation = swap, it fails again). Neither is an sv2v defect: sv2v's reversal is applied consistently to the module, its parameter arrays and every instantiation (verified in the converted pll_apb_regs). These entries stay in `modules` with expected_status=FAIL rather than being removed, so the FAIL and its root cause stay visible in every run instead of being quietly dropped from the registry."
     },
     {
-      "name": "apb4_register_bank",
-      "reason": "one of the three __pnr__-guarded files. `parameter logic [31:0] RESET_VAL [N_REGS] = '{default: '0}` -- same unpacked-array-parameter construct Yosys 0.46's -sv frontend does not support (\"unexpected '[', expecting ',' or '=' or ')'\" at apb4_register_bank.sv:29). Confirmed by isolated repro: a synthetic `parameter logic [31:0] X[2]` module reproduces the identical parser error outside this design."
-    },
-    {
-      "name": "axil_to_apb",
-      "reason": "one of the three __pnr__-guarded files. Uses `import axi_pkg::*;` as an in-body statement (not a header clause). Confirmed by isolated repro (tools/formal/README.md pkgtest) that this Yosys 0.46 build's -sv frontend rejects ANY `import pkg::*;` -- \"unexpected TOK_PACKAGESEP, expecting '(' or '['\" -- even in a 7-line synthetic module with no other content. This is a frontend limitation, not specific to this file."
-    },
-    {
-      "name": "boot_rom",
-      "reason": "the fourth __pnr__-affected file (ROM preload / MEM_INIT_FILE string-vs-int, not a param-check block). Not attempted: it has 2 package imports and is lower priority than the register-bank pair once the frontend's import-wildcard limitation was confirmed structural rather than file-specific. See README.md #pnr-manual-check for the textual (non-EQY) verification performed instead."
+      "name": "dma_engine",
+      "reason": "See the dma_engine entry in `modules` for the full three-blocker chain and its exact errors. Summary: the original read_gate error was a harness extraction gap (fixed); $mem inference then diverged between the frontends (addressed with post_prep_both=[memory_map], applied identically to both sides); the residual blocker is the u_regbank unpacked-array port boundary, the same family as the register-bank pair. expected_status=ERROR."
     }
   ]
 }
