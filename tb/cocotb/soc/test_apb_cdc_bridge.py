@@ -63,6 +63,34 @@ from cocotb.utils import get_sim_time
 # ---------------------------------------------------------------------------
 RESET_HOLD_NS = 300  # generous vs. SYNC_STAGES(2)+1 periods of any clock used here (max period 18 ns)
 
+
+def _post_reset_recovery_cycles(dut) -> int:
+    """Cycles to wait, on the relevant destination clock(s), after a reset
+    domain releases before code may assume this crossing's reset-status
+    synchronisers have resolved and issue a transaction expected to
+    succeed.
+
+    Both directions here are cdc_2ff_sync instances (SYNC_STAGES_TO_S /
+    SYNC_STAGES_TO_M, read back from the RTL via sync_stages_to_{s,m}_o
+    rather than hardcoded a second time -- see tb_apb_cdc_bridge.sv
+    header) whose NOMINAL settling latency is STAGES cycles. Under the
+    RAND_CDC_DELAY_EN settling-delay injector (bead
+    claude_verilog_test-rvs; default OFF, not shipped), either
+    synchroniser can legitimately take one extra cycle. A recovery wait
+    pinned to the bare nominal STAGES is exactly-tight against the
+    synchroniser's own worst case, not generously tight against it --
+    that is precisely what bead claude_verilog_test-0eh found: a literal
+    `ClockCycles(dut.m_clk, 3)` (== STAGES+1) in
+    test_availability_never_forwarded failed deterministically once the
+    injector's one-extra-cycle fault model was active, because the
+    post-recovery write landed one cycle before the synchroniser had
+    actually resolved. Returns STAGES+1 (worst-case settling) + 1 cycle of
+    slack for the receiving FSM to act on the newly-resolved value.
+    """
+    stages = max(int(dut.sync_stages_to_s_o.value), int(dut.sync_stages_to_m_o.value))
+    return stages + 2
+
+
 # ---------------------------------------------------------------------------
 # Module-level task handle list (guard against cross-test coroutine leakage,
 # same pattern as test_pmu.py's / test_async_axi_fifo.py's
@@ -268,8 +296,13 @@ async def _setup(dut, s_ns, m_ns, wait_states=0, err_addrs=None, mem=None) -> Si
     await Timer(RESET_HOLD_NS, units="ns")
     dut.s_rst_n.value = 1
     dut.m_rst_n.value = 1
-    await ClockCycles(dut.s_clk, 3)
-    await ClockCycles(dut.m_clk, 3)
+    # Post-reset recovery margin (bead claude_verilog_test-0eh) -- every
+    # test builds on this baseline wait before issuing its first
+    # transaction, so it must cover the synchronisers' worst case, not
+    # just their nominal latency.
+    n = _post_reset_recovery_cycles(dut)
+    await ClockCycles(dut.s_clk, n)
+    await ClockCycles(dut.m_clk, n)
 
     return SimpleNamespace(
         s_master=s_master,
@@ -537,8 +570,13 @@ async def _reset_mid_transaction_s_side_body(dut):
     _idle_s_side(dut)
     await ClockCycles(dut.s_clk, 5)
     dut.s_rst_n.value = 1
-    await ClockCycles(dut.s_clk, 3)
-    await ClockCycles(dut.m_clk, 3)
+    # Post-reset recovery margin (bead claude_verilog_test-0eh) -- the
+    # post-recovery write below assumes success, so this must cover the
+    # reset-status synchronisers' worst case, not just their nominal
+    # latency.
+    n = _post_reset_recovery_cycles(dut)
+    await ClockCycles(dut.s_clk, n)
+    await ClockCycles(dut.m_clk, n)
 
     await ClockCycles(dut.s_clk, 2)
     assert int(dut.s_pready.value) == 0, "s_pready must be idle-low after s-side reset recovery"
@@ -627,8 +665,13 @@ async def _reset_mid_transaction_m_side_body(dut):
 
     await ClockCycles(dut.m_clk, 5)
     dut.m_rst_n.value = 1
-    await ClockCycles(dut.s_clk, 3)
-    await ClockCycles(dut.m_clk, 3)
+    # Post-reset recovery margin (bead claude_verilog_test-0eh) -- the
+    # post-recovery write further below assumes success, so this must
+    # cover the reset-status synchronisers' worst case, not just their
+    # nominal latency.
+    n = _post_reset_recovery_cycles(dut)
+    await ClockCycles(dut.s_clk, n)
+    await ClockCycles(dut.m_clk, n)
 
     await ClockCycles(dut.s_clk, 2)
     assert int(dut.s_pready.value) == 0, "s_pready must return to idle-low after the error-completion pulse"
@@ -868,7 +911,18 @@ async def _availability_never_forwarded_body(dut):
 
     # Recover and confirm clean transactions afterward.
     dut.m_rst_n.value = 1
-    await ClockCycles(dut.m_clk, 3)
+    # Post-reset recovery margin (bead claude_verilog_test-0eh) -- THIS is
+    # the site the bead was filed against: the old bare `ClockCycles(dut.
+    # m_clk, 3)` (== SYNC_STAGES+1) was exactly-tight against the
+    # m_rst_n_i-status synchroniser into the s domain's own nominal
+    # latency, not generously tight against its worst case, so it failed
+    # deterministically once the settling-delay injector's one-extra-cycle
+    # fault model was active on that synchroniser. Also wait s_clk cycles
+    # (not just m_clk) since the post-recovery write below is issued from
+    # the s domain and is gated by the synchroniser that resolves there.
+    n = _post_reset_recovery_cycles(dut)
+    await ClockCycles(dut.s_clk, n)
+    await ClockCycles(dut.m_clk, n)
     # Re-check (now that m_rst_n_i has actually released, not just during
     # the never-forwarded completion itself) that nothing spurious reached
     # the destination -- same no-stale-level-collision property as
@@ -1041,8 +1095,13 @@ async def _availability_back_to_back_resets_workload(dut, s_ns, m_ns):
     dut.m_rst_n.value = 0
     await ClockCycles(dut.m_clk, 5)
     dut.m_rst_n.value = 1
-    await ClockCycles(dut.m_clk, 3)
-    await ClockCycles(dut.s_clk, 3)
+    # Post-reset recovery margin (bead claude_verilog_test-0eh) -- the
+    # write below assumes success, so this must cover the reset-status
+    # synchronisers' worst case, not just their nominal latency. Applies
+    # to both pulses below.
+    n = _post_reset_recovery_cycles(dut)
+    await ClockCycles(dut.m_clk, n)
+    await ClockCycles(dut.s_clk, n)
 
     # Between the two pulses, the destination is genuinely alive -- this
     # must complete for real.
@@ -1054,8 +1113,8 @@ async def _availability_back_to_back_resets_workload(dut, s_ns, m_ns):
     dut.m_rst_n.value = 0
     await ClockCycles(dut.m_clk, 5)
     dut.m_rst_n.value = 1
-    await ClockCycles(dut.m_clk, 3)
-    await ClockCycles(dut.s_clk, 3)
+    await ClockCycles(dut.m_clk, n)
+    await ClockCycles(dut.s_clk, n)
 
     completed_before = ctx.responder.completed
     data, ok2 = await ctx.s_master.read(addr)
@@ -1307,8 +1366,13 @@ async def _apb_reset_asym_s_held_m_free_body(dut, s_ns, m_ns) -> None:
     await RisingEdge(dut.m_clk)
 
     dut.s_rst_n.value = 1
-    await ClockCycles(dut.s_clk, 3)
-    await ClockCycles(dut.m_clk, 3)
+    # Post-reset recovery margin (bead claude_verilog_test-0eh) -- the
+    # post-recovery write below assumes success, so this must cover the
+    # reset-status synchronisers' worst case, not just their nominal
+    # latency.
+    n = _post_reset_recovery_cycles(dut)
+    await ClockCycles(dut.s_clk, n)
+    await ClockCycles(dut.m_clk, n)
 
     s_master = APB4Master(dut, "s_", dut.s_clk)
     ok = await s_master.write(0x900, 0xDEADBEEF)
@@ -1412,8 +1476,13 @@ async def _apb_reset_asym_staggered_body(dut, s_ns, m_ns, order) -> None:
             await RisingEdge(dut.s_clk)  # land back in a writable phase before the release write below
 
         getattr(dut, f"{second}_rst_n").value = 1
-        await ClockCycles(dut.s_clk, 3)
-        await ClockCycles(dut.m_clk, 3)
+        # Post-reset recovery margin (bead claude_verilog_test-0eh) -- the
+        # post-recovery write below assumes success, so this must cover
+        # the reset-status synchronisers' worst case, not just their
+        # nominal latency.
+        n = _post_reset_recovery_cycles(dut)
+        await ClockCycles(dut.s_clk, n)
+        await ClockCycles(dut.m_clk, n)
 
         s_master2 = APB4Master(dut, "s_", dut.s_clk)
         ok = await s_master2.write(0xB00 + idx, 0x10000000 + idx)
