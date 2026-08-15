@@ -280,24 +280,33 @@ class EdaSessionServer:
         out, err = self._run("report_design_area; report_cell_usage")
         report = self._save("area", out)
         if not err and not out.strip():
-            # report_design_area/report_cell_usage print through OpenROAD's
-            # own Logger (utl::report), not the STA report-string channel
-            # that sta::redirect_file_begin hooks -- confirmed on OpenROAD
-            # 26Q2 by comparing against report_power (which does go through
-            # that channel and captures fine). The text still lands on the
-            # session's real stdout/terminal, it just never reaches `out`.
-            # An empty report here does not mean a clean run; refuse to call
-            # it PASS (same rule summarize.py enforces for opensta -- bead
-            # dwp).
+            # Guard, not a known defect. Both commands DO route through
+            # sta::redirect_file_begin and capture correctly -- measured on
+            # OpenROAD 26Q2 against run 23's final ODB: the combined command
+            # returns 497 chars ("Design area 235977 um^2 94% utilization."
+            # plus the full cell-type table). An earlier note here claimed
+            # they bypass the redirect via utl::Logger and are uncapturable;
+            # that was wrong and is retracted (bead pzj).
+            #
+            # The realistic way to land here is a session with no ODB block:
+            # get_area needs a design loaded by load_odb (read_db). After
+            # load_design (read_liberty + read_verilog + link_design) there
+            # is an STA network but no block for report_design_area to
+            # measure. With nothing loaded at all, OpenROAD raises a real Tcl
+            # error ("no network has been linked") and `err` is set instead.
+            #
+            # Silence is still never PASS -- same rule summarize.py enforces
+            # for opensta (bead dwp).
             return {
                 "status": "ERROR",
                 "error": (
                     "report_design_area/report_cell_usage produced no "
-                    "captured output. These OpenROAD commands write via "
-                    "utl::Logger and bypass sta::redirect_file_begin, so "
-                    "this session driver cannot capture them -- use run_tcl "
-                    "with a script that redirects via 'exec' or read the "
-                    ".odb report_design_area output directly."
+                    "captured output and raised no Tcl error. Most likely "
+                    "this session has no ODB block: use load_odb (read_db), "
+                    "not load_design, before get_area. If an ODB is loaded, "
+                    "this is an unknown condition -- inspect the saved "
+                    "report path rather than treating the empty result as a "
+                    "clean design."
                 ),
                 "report": report,
                 "text": _truncate(out),

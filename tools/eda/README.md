@@ -118,13 +118,21 @@ under `sim/build/eda-logs/` (override with `EDA_LOG_DIR`). `run_tcl`/`get_area`/
 `get_power`/`check_setup` inline up to 4000 chars of text with an explicit
 `truncated` flag; the full text is always on disk.
 
-**Known OpenROAD limitation:** `report_design_area`/`report_cell_usage` print
-through OpenROAD's own `utl::Logger`, not the STA report-string channel that
-`sta::redirect_file_begin` hooks (confirmed on OpenROAD 26Q2 by comparing
-against `report_power`, which *does* go through that channel and captures
-correctly). The session driver cannot capture their text, so `get_area` reports
-`status: ERROR` rather than a false `PASS` with a silently empty report — same
-rule as the empty-report case below.
+**`get_area` needs an ODB, not just a linked netlist.** Load the design with
+`load_odb` (`read_db`) before calling it. After `load_design`
+(`read_liberty` + `read_verilog` + `link_design`) there is an STA network but
+no ODB block for `report_design_area` to measure, and the reply is
+`status: ERROR` with an empty report rather than a false `PASS` — same rule as
+the empty-report case below.
+
+> **Retraction (bead `pzj`, 2026-08-15).** This section previously claimed
+> `report_design_area`/`report_cell_usage` print through `utl::Logger`, bypass
+> `sta::redirect_file_begin`, and are therefore uncapturable by this driver.
+> **That is wrong.** Measured on OpenROAD 26Q2 against run 23's final ODB
+> (`RUN_2026-08-09_14-36-16/final/odb/soc_top.odb`), the combined command
+> `report_design_area; report_cell_usage` is captured in full — 497 characters,
+> both the design-area line and the complete cell-type table. `utl::report` is
+> captured too. No `run_tcl`/`exec` workaround is needed.
 
 ### Setup
 
