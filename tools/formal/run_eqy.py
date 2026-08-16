@@ -358,11 +358,38 @@ def build_eqy_config(
     gate_lines.extend(entry.get("post_prep_both", []))
 
     depth = entry.get("depth", 5)
+    # Strategy: "sby" (SymbiYosys), NOT "sat" -- see the false-PASS class
+    # documented at the top of this file and in README.md ("Step 0"). Both
+    # strategy types are hardcoded inside eqy's own driver
+    # (yosys-eqy/bin/.eqy-wrapped, EqySatStrategy vs EqySbyStrategy); "sat"
+    # is not configurable to close this gap (its run.ys template has no
+    # xprop/ASSUME_DEFINED_INPUTS hook at all -- confirmed by reading the
+    # driver directly, not inferred). EqySbyStrategy defaults `xprop=True`,
+    # which appends `xprop -formal -split-ports -assume-def-inputs miter` to
+    # the per-partition proof script -- this is the actual, load-bearing fix.
+    # `engine smtbmc bitwuzla` is required: the class default is bare
+    # "smtbmc", which picks yices2 and fails immediately in this devshell
+    # ("SMT Solver 'yices-smt2' not found in path") -- bitwuzla is the solver
+    # this devshell actually vendors (confirmed present on PATH).
+    # Empirically verified (2026-08-15, manual eqy runs outside this
+    # harness): cdc_2ff_sync's baseline still PASSes under sby+xprop, and the
+    # `sync_q[0] <= ~d_i` false-PASS mutation that "sat" missed now FAILs on
+    # partition cdc_2ff_sync.sync_q.0 -- DONE (FAIL, rc=2).
     return (
         "[gold]\n" + "\n".join(gold_lines) + "\n\n"
         "[gate]\n" + "\n".join(gate_lines) + "\n\n"
-        "[strategy simple]\nuse sat\ndepth " + str(depth) + "\n"
+        "[strategy simple]\nuse sby\ndepth " + str(depth) + "\nengine smtbmc bitwuzla\n"
     )
+
+
+EQY_TIMEOUT_S = 3600  # was 900 under the "sat" strategy; "sby" spawns a full
+# SymbiYosys job (model build + smt2 export + bitwuzla) per partition instead
+# of one `sat -tempinduct` call, which is heavier per-partition -- observed
+# ~0.3-0.5s/partition serial, so Tier 3's 476 partitions needs real headroom.
+# -j lets independent partitions run concurrently (eqy passes -j through to
+# its own `make -f strategies.mk`); capped, not os.cpu_count(), to leave
+# headroom for other work in this devshell.
+EQY_JOBS = 8
 
 
 def run_eqy_case(config_path: Path, workdir: Path) -> tuple[int, str]:
@@ -370,11 +397,11 @@ def run_eqy_case(config_path: Path, workdir: Path) -> tuple[int, str]:
         shutil.rmtree(workdir)
     t0 = time.time()
     proc = subprocess.run(
-        ["eqy", "-f", "-d", str(workdir), str(config_path)],
+        ["eqy", "-f", "-j", str(EQY_JOBS), "-d", str(workdir), str(config_path)],
         cwd=config_path.parent,
         capture_output=True,
         text=True,
-        timeout=900,
+        timeout=EQY_TIMEOUT_S,
     )
     elapsed = time.time() - t0
     log = (proc.stdout or "") + (proc.stderr or "")
