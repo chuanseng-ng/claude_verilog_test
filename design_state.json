@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-08-15T00:18:28.365154+00:00",
+  "updated_at": "2026-08-16T00:03:33Z",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -1465,6 +1465,18 @@
       "suggested_next_step": "proceed",
       "reason": "Config/Makefile consistency task (beads 61v+135), no P&R run performed or needed. Fixed __pnr__ sv2v-define asymmetry between sky130/ASAP7 SoC boot ROM elaboration (pnr/Makefile SOC_SV2V_DEFINES) and closed pnr/freepdk45/config.json's axi_pkg/soc_addr_map_pkg package gap; check_source_closure.py now exits 1 with only the two documented-superseded legacy configs (pnr/librelane, pnr/openlane1) remaining as expected [GAP]. Regression guard (make -C sim lint, chains lint_soc) byte-identical to pre-change baseline. Committed e4b7af6 (61v) and 8a9f9c6 (135) on fix/pd-config-consistency-61v-135, not pushed per instruction.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-08-16T00:03:33Z",
+      "agent": "physical-design-orchestrator",
+      "stage": "routing",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "tool_error",
+      "retry_strategy": "escalate",
+      "suggested_next_step": "escalate",
+      "reason": "RCX 0-byte-stub root cause fixed and vendored ruleset validated as mechanically correct (parses/loads with 0 errors), but full-flow proof (real SPEF + STAPostPNR) blocked by a newly discovered, unrelated P1 defect (claude_verilog_test-xy6): detailed routing on both CPU and SoC recent runs silently commits zero wires after a swallowed DRT-0073/0074 pin-access error, and a full CPU validation run was separately lost to a host reboot (bead o1i) before reaching routing.",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
@@ -2219,6 +2231,26 @@
         "pin_order_tuning": "v1 replicate free-floated sides: setup -25.87 / TNS -1180.02 / hold +27.47; v2 group AXI on W/N: -10.48 / -10.48 / -2.06; v3 move APB off the fabric-facing edge: -0.87 / -0.87 / +8.54",
         "commits": "999e44a (closure), 122e939 (docs)"
       }
+    },
+    "asap7_cpu_rcx_e69": {
+      "bead": "claude_verilog_test-e69",
+      "status": "partial_validation",
+      "rcx_rules_installed": true,
+      "rcx_rules_source": "OpenROAD-flow-scripts flow/platforms/asap7/rcx_patterns.rules commit 8ad0ff779",
+      "rcx_rules_path": "/home/neuromorphic/pdk/asap7/libs.tech/openlane/rcx_rules.pex",
+      "rcx_rules_bytes": 117122,
+      "cpu_config_run_spef_extraction": true,
+      "cpu_config_run_mcsta": true,
+      "gpu_soc_config_touched": false,
+      "spef_produced": false,
+      "spef_reason": "blocked by claude_verilog_test-xy6 (DRT-0073/0074 pin-access failures leave detailed routing at 0 committed wires on both CPU and SoC recent runs); full-flow CPU validation run RUN_2026-08-15_21-36-49 also lost to a host reboot before reaching routing",
+      "ruleset_mechanically_valid": true,
+      "ruleset_mechanically_valid_note": "standalone extract_parasitics against a real ASAP7 ODB parsed/consumed the ruleset with zero errors (RCX-0435/0436/0439); only failed to produce output because the reference ODB had zero routed wires",
+      "pr_url": "https://github.com/chuanseng-ng/claude_verilog_test/pull/159",
+      "new_beads_filed": [
+        "claude_verilog_test-xy6",
+        "claude_verilog_test-2wo"
+      ]
     }
   },
   "soc_stage2_gh104": {
