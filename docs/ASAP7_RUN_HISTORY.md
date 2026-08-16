@@ -5,6 +5,27 @@
 **Target**: Max fmax with 0 DRC, 0 setup/hold violations  
 **Branch**: `phase-2-3/asa7-run-rtl-timing-fix-1`
 
+> ⚠️ **Every "DRC / antenna / errors: 0 / 0 / 0" claim in this document is
+> unsupported.** Confirmed 2026-08-16 (bead `claude_verilog_test-xy6`):
+> `OpenROAD.DetailedRouting` on this repo's ASAP7 flow errors out during pin
+> access (`[ERROR DRT-0074] No access point for PIN/...`) before any wire is
+> routed, and a local LibreLane patch (`drt.tcl`'s `catch {}` around
+> `detailed_route`) lets the flow continue anyway — so every downstream DRC/
+> antenna/slew/cap checker reports 0 because nothing was routed to violate,
+> not because routing is clean. Verified directly on the 8-run #96
+> `pin_order.cfg` tuning campaign (2026-08-08/09, 401 `DRT-0074` errors and
+> zero `ROUTED` net records in every run's final DEF); the artifacts for
+> Run 43 and the M7 re-sign-off no longer exist on disk to re-check directly,
+> but the catch patch was already in place during this campaign (see the
+> Run 6/7 note in `memory/pd/knowledge.md`, predating Run 43 by weeks), so
+> there is no basis to assume they are exempt. **What survives:** the
+> setup/hold WNS/TNS/fmax/power/area numbers below are computed from a real
+> placed netlist and are self-consistent on their own terms (pre-route GRT-
+> estimated parasitics, same as always) — only the DRC/antenna/routing-clean
+> claims are withdrawn. Full mechanism, the cross-block routed/unrouted
+> table, and the fail-loud gate that now catches this:
+> `docs/PHASE5_RUN_HISTORY.md` § "Routing / physical-closure caveat".
+
 ---
 
 ## ✅ FINAL SIGNOFF — Run 43 (2026-05-20)

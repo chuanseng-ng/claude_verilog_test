@@ -4735,3 +4735,64 @@ here. See design_state.json history[] tail (stage "pd_diagnostic_gh96")
 and memory/pd/experiences.jsonl (run_id pd_20260809_diag01) for the
 structured record. No run_id in this block is "in progress" -- diagnostic
 complete, no P&R launched.
+
+================================================================================
+run_id:      pd_20260816_xy6_rootcause  (bead claude_verilog_test-xy6, P1)
+design_name: asap7_soc_and_blocks
+pdk:         asap7
+tool:        LibreLane (openroad-based, manual-pdk) -- diagnostic + tooling fix,
+             no new P&R run launched
+start_time:  2026-08-16T00:00:00Z (approx)
+last_stage:  routing_verification_gate_landed (diagnostic complete, gate shipped;
+             DRT-0073/0074 pin-access root cause NOT solved -- open follow-up)
+================================================================================
+Root-caused the scope of bead xy6 (filed by the prior e69 session, which had
+already found run 23 and the CPU pin_order.cfg runs unrouted and suspected a
+run-23-era regression). Swept every ASAP7 run with recoverable final/
+artifacts across SoC (/nobackup/asap7_soc_runs), GPU
+(/nobackup/asap7_gpu_runs), and CPU (/nobackup/asap7_runs): 100% show zero
+'ROUTED ' net records in final/def/*.def and route__wirelength__max=0,
+INCLUDING run 14 (the accepted M11 single-clock SoC sign-off, 2026-06-23)
+and both GPU 571 MHz sign-off runs (2026-05-27/28) -- more than three weeks
+before the run-23-era APB/pin_order changes. This falsifies the "regression"
+hypothesis: the defect is not new and not SoC-specific. drt.tcl's catch{}
+(a local, non-upstream LibreLane patch) around the entire detailed_route
+call was already in place during the April Phase-3 CPU PPA campaign
+(runs 6-7) per the pre-existing DRT-0074 knowledge.md note -- it just was
+never connected to "therefore zero wires get committed" until now. No
+ASAP7 run in this project's recoverable history has ever been confirmed to
+have actually routed.
+
+Root cause of WHY individual pins fail access-point resolution
+(DRT-0073 on SoC macro-boundary pins, DRT-0074 on standalone-block
+top-level I/O pins) was NOT fully solved this session -- the existing
+WIDTHTABLE mechanism for I/O pins (memory/pd/knowledge.md) is a partial
+explanation, mitigated but not eliminated by FP_IO_HTHICKNESS_MULT; the
+SoC macro-pin case is unexplained beyond "abstract LEF pin geometry vs.
+post-placement track grid," and run 14's exact failing-pin geometry can't
+be reconstructed (pin_order.cfg postdates it). Flagged as an open
+follow-up, not pursued further because it would need a full P&R run and
+the host had just rebooted mid a 9h run (bead o1i) at investigation time.
+
+Landed instead, per explicit instruction to prioritize the fail-loud gate
+even if root cause stalls: tools/verif/check_asap7_routing.py (FAIL/exit 1
+on zero routed nets, wirelength_max==0, or unresolved [ERROR DRT-*]; ERROR/
+exit 2 distinctly on missing/unparsable artifacts per bead dwp discipline)
++ pnr/Makefile check-asap7-routing / check-asap7-gpu-routing /
+check-asap7-soc-routing targets, wired mandatory post-flow (before pruning)
+on all three full ASAP7 targets and conditionally on the multiclock target
+(skipped only for a partial --to run). Tested against 3 known-bad runs
+(run14, GPU run 05-28, CPU run 08-09_14-05-02) -- all correctly FAIL.
+
+Docs corrected: docs/PHASE5_RUN_HISTORY.md (new "Routing / physical-closure
+caveat" section with the full routed/unrouted table), docs/ASAP7_RUN_HISTORY.md
+(banner near the top), CLAUDE.md (inline caveats at every affected claim site).
+Timing/power/area numbers throughout are explicitly NOT walked back -- they
+are GRT-estimated-parasitic STA results, same as they always were; only the
+DRC/antenna/routing-clean claims are withdrawn.
+
+design_state.json history[] tail (stage "routing", decision "proceed",
+failure_class "tool_error") and memory/pd/experiences.jsonl (run_id
+pd_20260816_xy6_rootcause) hold the structured record. Branch
+fix/asap7-drt-zero-routing-xy6. No P&R run in progress or launched this
+session.

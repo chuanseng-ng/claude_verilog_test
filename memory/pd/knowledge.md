@@ -1523,3 +1523,54 @@ until this bead is resolved.** Measured, not inferred:
   `apb_prdata_o`/`apb_pslverr_o`/`apb_pready_o` as pure outputs, and/or the `FP_PIN_ORDER_CFG`
   macro-boundary pinning from bead `g0o`, may have moved these pins into a position/geometry
   DRT can't find a legal access point for. Not root-caused yet.
+
+#### UPDATE 2026-08-16 — NOT a regression, NOT SoC/2026-08-onward-specific. Root-caused the mechanism; gate landed.
+
+Swept every ASAP7 run with recoverable `final/` artifacts (SoC, GPU, CPU — `/nobackup/asap7_soc_runs`,
+`/nobackup/asap7_gpu_runs`, `/nobackup/asap7_runs`) with `grep -c 'ROUTED '` + `route__wirelength__max`
++ `[ERROR DRT-` count on the detailedrouting log. **Every single run checked shows zero routed nets**,
+including:
+- **Run 14** (`RUN_2026-06-23_18-05-38`, the accepted M11 single-clock SoC sign-off, 2026-06-23):
+  `route__wirelength__max=0`, 0 `ROUTED ` records, 2 `DRT-0073` errors on macro pins
+  (`u_cpu/apb_paddr_i[5]`, `u_gpu/m_axi_araddr[19]`).
+- **Both GPU 571 MHz sign-off runs** (`RUN_2026-05-27_11-16-37`, `RUN_2026-05-28_06-29-48`,
+  2026-05-27/28) — **more than three weeks before** the run-23-era CPU APB/pin_order changes.
+  325 `DRT-0074` errors each, same zero-wire signature. This alone falsifies the "run-23-era
+  trigger" hypothesis above as the *cause* (it may still be A cause of the specific pins that
+  fail in later runs, but it cannot be THE cause since the defect predates it).
+- All 8 runs of the `#96` CPU `pin_order.cfg` tuning campaign (2026-08-08/09): 401 `DRT-0074`
+  errors each, zero wires, consistent with the original note above.
+- Run 23 (`RUN_2026-08-09_14-36-16`) itself: confirmed zero wires, 1 `DRT-0073` error.
+
+**Root cause of "zero wires committed" (confirmed, not suspected): `drt.tcl`'s `catch {}` wraps
+the entire `detailed_route` call**, not per-pin resolution. Every failing run's log shows the
+error firing during `[INFO DRT-0165] Start pin access` — before track assignment or any
+search-and-repair pass starts — so the Tcl exception aborts the whole routing attempt and
+`write_views` commits whatever DEF existed going in (the post-CTS/post-resizer placed netlist).
+A design with 250,000 nets and exactly 1 bad pin gets *zero* wires, not 249,999 good ones. This
+patch was already in place during the Phase-3 CPU PPA campaign (runs 6–7, 2026-04-25/26 —
+see the "DRT-0074: No Access Point for PIN" entry above, written at the time as if 374
+DRT-0074 errors per run were an accepted non-fatal quirk). **No ASAP7 run in this project's
+history has ever been confirmed to have actually routed.** Run 43 (1418 MHz CPU sign-off,
+2026-05-20) and the M7 1282 MHz re-sign-off (2026-06-02) cannot be directly re-checked — their
+run directories are gone from `/nobackup` — but there is no basis to assume they are exempt
+given the catch patch predates them too.
+
+Root cause of the individual pin-access failures themselves (DRT-0073/0074) is still only
+partially characterized — see the existing DRT-0074 WIDTHTABLE note above for top-level I/O
+pins (mitigated, not eliminated, by `FP_IO_HTHICKNESS_MULT`); the SoC macro-boundary DRT-0073
+failures (1-2 pins per run, different pins each run) are unexplained beyond "abstract LEF pin
+geometry vs. post-macro-placement track grid," and run 14's exact failing-pin geometry cannot
+be reconstructed since `pin_order.cfg` (which pins CPU macro boundary pins) postdates it.
+
+**Fix landed** (branch `fix/asap7-drt-zero-routing-xy6`): `tools/verif/check_asap7_routing.py` +
+`pnr/Makefile` targets `check-asap7-routing`/`check-asap7-gpu-routing`/`check-asap7-soc-routing`,
+wired as a mandatory post-flow gate (before pruning) on all three full-flow ASAP7 targets and
+conditionally on the multiclock target (skipped only when `LIBRELANE_EXTRA_ARGS` indicates a
+partial `--to` run). Fails the build (non-zero exit) on zero routed net records,
+`route__wirelength__max == 0`, or any unresolved `[ERROR DRT-*]`. Root-causing DRT-0073's exact
+per-pin geometric trigger was NOT pursued further (would require a full P&R run; the host had
+just rebooted mid-run per bead `o1i` at the time this was investigated) — flagged as an open
+follow-up, not solved by this bead. `docs/PHASE5_RUN_HISTORY.md` §"Routing / physical-closure
+caveat" has the full run-by-run table; `docs/ASAP7_RUN_HISTORY.md` and `CLAUDE.md` carry pointer
+caveats next to every affected PPA figure.

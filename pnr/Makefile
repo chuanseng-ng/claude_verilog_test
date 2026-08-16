@@ -127,6 +127,7 @@ SV2V                ?= /nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1
 .PHONY: asap7-soc-sv2v
 .PHONY: librelane-sky130-results librelane-sky130-cpu-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results librelane-asap7-soc-results
 .PHONY: prune-asap7-runs prune-asap7-gpu-runs prune-asap7-soc-runs
+.PHONY: check-asap7-routing check-asap7-gpu-routing check-asap7-soc-routing
 .PHONY: macro-views-asap7
 .PHONY: flop-count
 
@@ -156,13 +157,16 @@ help:
 	@echo "  librelane-nangate45       - Run full LibreLane flow on FreePDK45/nangate45 (pnr/freepdk45/)"
 	@echo "  install-asap7-rcx-rules   - Vendor the real ASAP7 OpenRCX rules from ORFS_ROOT into MANUAL_PDK_ROOT"
 	@echo "  check-asap7-rcx-rules     - Fail loudly if the ASAP7 RCX rules are still the 0-byte stub"
-	@echo "  librelane-asap7           - Run full LibreLane flow on ASAP7 CPU (pnr/asap7/), then prune"
-	@echo "  librelane-asap7-gpu       - Run full LibreLane flow on ASAP7 GPU (pnr/asap7/gpu/), then prune"
+	@echo "  librelane-asap7           - Run full LibreLane flow on ASAP7 CPU (pnr/asap7/), verify routing, then prune"
+	@echo "  librelane-asap7-gpu       - Run full LibreLane flow on ASAP7 GPU (pnr/asap7/gpu/), verify routing, then prune"
 	@echo "  librelane-asap7-soc-synth - Run Yosys synthesis only for ASAP7 SoC (pnr/asap7/soc/) — first-run check"
-	@echo "  librelane-asap7-soc       - Run full LibreLane P&R for ASAP7 SoC (expect 4-8 h), then prune"
+	@echo "  librelane-asap7-soc       - Run full LibreLane P&R for ASAP7 SoC (expect 4-8 h), verify routing, then prune"
 	@echo "  librelane-asap7-soc-multiclock - GH #96: same flow with the 2-clock SDC (config_multiclock.json)"
 	@echo "                              (SOC_CONFIG overrides the config file for all three librelane-asap7-soc* targets)"
 	@echo "  check-cdc-timing-asap7-soc - Post-route CDC budget check (OpenSTA, phase5_soc_multiclock_check.sdc; GH #96)"
+	@echo "  check-asap7-routing        - Fail loudly if the latest ASAP7 CPU run committed zero routed wires (bead xy6)"
+	@echo "  check-asap7-gpu-routing    - Fail loudly if the latest ASAP7 GPU run committed zero routed wires (bead xy6)"
+	@echo "  check-asap7-soc-routing    - Fail loudly if the latest ASAP7 SoC run committed zero routed wires (bead xy6)"
 	@echo "  librelane-sky130-results        - Show metrics from latest Sky130 LibreLane run (Phase 3)"
 	@echo "  librelane-sky130-cpu-results    - Show metrics from latest Sky130 CPU Stage 1 run (GH#103)"
 	@echo "  librelane-sky130-soc-results    - Show metrics from latest Sky130 SoC Stage 2 run (GH#104)"
@@ -883,6 +887,7 @@ librelane-asap7: check-asap7-rcx-rules
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
 		 $(abspath $(LIBRELANE_ASAP7_DIR))/config.json"
+	@$(MAKE) check-asap7-routing
 	@$(MAKE) prune-asap7-runs
 
 librelane-asap7-results:
@@ -925,6 +930,7 @@ librelane-asap7-gpu:
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
 		 $(abspath $(LIBRELANE_ASAP7_GPU_DIR))/config.json"
+	@$(MAKE) check-asap7-gpu-routing
 	@$(MAKE) prune-asap7-gpu-runs
 
 librelane-asap7-gpu-results:
@@ -1198,6 +1204,7 @@ librelane-asap7-soc: asap7-soc-sv2v
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
 		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/$(SOC_CONFIG)"
+	@$(MAKE) check-asap7-soc-routing
 	@$(MAKE) prune-asap7-soc-runs
 
 #----------------------------------------------------------------
@@ -1270,6 +1277,14 @@ librelane-asap7-soc-multiclock: asap7-soc-sv2v
 		 --skip Checker.MaxCapViolations \
 		 $(LIBRELANE_EXTRA_ARGS) \
 		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/$(SOC_CONFIG)"
+	@if [ -z "$(LIBRELANE_EXTRA_ARGS)" ]; then \
+		$(MAKE) check-asap7-soc-routing; \
+	else \
+		echo "NOTE: LIBRELANE_EXTRA_ARGS set ($(LIBRELANE_EXTRA_ARGS)) -- this may be a"; \
+		echo "      partial run (e.g. --to before DetailedRouting). Skipping the"; \
+		echo "      routing gate; run 'make check-asap7-soc-routing' by hand once a"; \
+		echo "      full flow (through DetailedRouting) has completed."; \
+	fi
 
 librelane-asap7-soc-results:
 	$(call librelane_results,$(LIBRELANE_ASAP7_SOC_DIR))
@@ -1398,6 +1413,46 @@ prune-asap7-gpu-runs:
 
 prune-asap7-soc-runs:
 	$(call prune_runs,$(LIBRELANE_ASAP7_SOC_DIR),ASAP7 SoC)
+
+#----------------------------------------------------------------
+# Routing sign-off gate: fail loudly if detailed routing committed zero wires.
+#
+# bead claude_verilog_test-xy6. `pnr/scripts/openroad/drt.tcl` is a local
+# LibreLane patch that wraps `detailed_route` in a `catch {}` so a single
+# unresolved pin-access point does not abort the flow (see the DRT-0074 note
+# in memory/pd/knowledge.md). The catch is too broad: when the access-point
+# error fires before track assignment starts -- which is what has actually
+# happened on every ASAP7 run inspected to date, including the accepted M11
+# SoC sign-off (run 14) and both GPU 571 MHz sign-off runs -- the whole
+# `detailed_route` call throws immediately, the catch swallows it, and
+# `write_views` commits a DEF with ZERO routed nets. Every downstream
+# checker then reports 0 violations because nothing was routed to violate.
+#
+# This runs BEFORE the corresponding prune-asap7-*-runs target so a failing
+# run is never pruned away before it can be inspected. Run manually against
+# any specific run: python3 tools/verif/check_asap7_routing.py <run_dir>
+#----------------------------------------------------------------
+define check_routing
+	@LATEST=$$(ls -td $(1)/runs/RUN_* 2>/dev/null | head -1); \
+	if [ -z "$$LATEST" ]; then \
+		echo "ERROR: no completed LibreLane run found in pnr/$(1)/runs/ -- cannot verify routing."; \
+		exit 2; \
+	fi; \
+	echo "=========================================="; \
+	echo "$(2): verifying detailed routing actually committed wires"; \
+	echo "  Run: $$LATEST"; \
+	echo "=========================================="; \
+	python3 $(abspath ../tools/verif/check_asap7_routing.py) "$$LATEST"
+endef
+
+check-asap7-routing:
+	$(call check_routing,$(LIBRELANE_ASAP7_DIR),ASAP7 CPU)
+
+check-asap7-gpu-routing:
+	$(call check_routing,$(LIBRELANE_ASAP7_GPU_DIR),ASAP7 GPU)
+
+check-asap7-soc-routing:
+	$(call check_routing,$(LIBRELANE_ASAP7_SOC_DIR),ASAP7 SoC)
 
 #----------------------------------------------------------------
 # ASAP7 macro views: abstract LEF + timing-model LIB + gate-level netlist
