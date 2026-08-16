@@ -1472,3 +1472,54 @@ Run 3 already used 8/25 for 140/120, so expect incremental gains.
 wrong — cell-count pressure (raised, retracted, wrongly re-adopted), `DIODE_ON_PORTS`,
 clock-tree diodes, and a cell-volume model. Every one was caught by attaching a falsifiable
 prediction to the next run, never by a run coming back green. Attach a guard to any claim here.
+
+### RCX_RULESETS 0-byte stub — FIXED 2026-08-16 (bead claude_verilog_test-e69)
+
+`~/pdk/asap7/libs.tech/openlane/rcx_rules.pex` used to be a 0-byte stub, so `OpenROAD.RCX`
+could never emit a SPEF and `OpenROAD.STAPostPNR`/`OpenROAD.IRDropReport` (both hard-require
+SPEF as a step input) were unusable — every ASAP7 sign-off's final metrics were post-GRT
+*estimated* RC, never post-route extraction.
+
+**Fix**: vendored the real OpenRCX ruleset from OpenROAD-flow-scripts
+(`flow/platforms/asap7/rcx_patterns.rules`, commit `8ad0ff779`, 117122 bytes; ORFS itself uses
+it as `RCX_RULES`). Geometry-equivalence with this repo's tech LEF was hand-verified first (all
+76 WIDTH/PITCH/SPACING/THICKNESS/DIRECTION lines across the 10 ROUTING layers match byte-for-
+byte). Reproducible install: `tools/setup/install_asap7_rcx_rules.py` (stdlib, `--check-only`
+mode) + `pnr/Makefile` targets `install-asap7-rcx-rules` / `check-asap7-rcx-rules` — the latter
+is now a prerequisite of `librelane-asap7` (CPU target only; GPU/SoC configs left at
+`RUN_SPEF_EXTRACTION: false`, unvalidated). `~/pdk/asap7` is not git-tracked, so this installer
+must be re-run on every fresh machine/clone.
+
+Standalone validation (`read_db` + `define_process_corner` + `extract_parasitics
+-ext_model_file <rcx_rules.pex>` against a real ODB, no LibreLane needed): the ruleset loads
+and is consumed by OpenRCX with zero parse/format errors. If you see `[WARNING RCX-0107]
+Nothing is extracted out of N nets!` and `write_spef` no-ops, that means the ODB you handed it
+has no routed wires — check `route__wirelength__max` in that step's `or_metrics_out.json`
+before blaming the ruleset. See the next entry.
+
+### CRITICAL — ASAP7 detailed routing has been silently producing ZERO committed wires (bead claude_verilog_test-xy6, P1, filed 2026-08-16)
+
+**Do not trust "0 routing DRC" on any ASAP7 CPU or SoC run from 2026-08-08 onward (including
+the celebrated run 23, `RUN_2026-08-09_14-36-16`, and the `#96` CPU pin-order tuning runs)
+until this bead is resolved.** Measured, not inferred:
+
+- `openroad-detailedrouting.log` dies during **pin access**, before the main track-assignment /
+  search-and-repair loop ever starts: `[ERROR DRT-0073] No access point for
+  u_gpu/m_axi_araddr[19]` (SoC) or 401× `[ERROR DRT-0074] No access point for
+  PIN/apb_prdata_o[N]` / `apb_pslverr_o` / `apb_pready_o` (CPU — exactly the 3 pins bead
+  `cyb`/`g0o` made "pure registered outputs"). LibreLane's wrapper treats this as non-fatal
+  (`WARNING: detailed_route reported errors; continuing (DRT may be incomplete)`) and writes
+  out the DB as-is — which is the pre-route placed/CTS'd netlist, not a routed one.
+- Proof the DB really has no routing: `<run>/*/or_metrics_out.json` →
+  `route__wirelength__max: 0`; `wire_lengths.csv` has only a header row; the final DEF has zero
+  `ROUTED ` occurrences (`grep -c 'ROUTED ' <run>/final/def/*.def`); a direct odb query
+  (`foreach n [$block getNets] { $n getWire }`) returns `NULL` for every net.
+  `antenna__violating__nets/pins: 0` and `flow__errors__count: 0` in the final aggregate are
+  trivially true with nothing routed to check — they are not evidence of a clean route.
+- **Check this on any ASAP7 run before citing its DRC/antenna/wirelength numbers**:
+  `python3 -c "import json; print(json.load(open('<run>/*-odb-reportwirelength/or_metrics_out.json'))['route__wirelength__max'])"`
+  — if it prints `0`, the run's checker-stage "0 violations" is a null result, not a pass.
+- Suspected (unconfirmed) trigger: the run-23-era change registering
+  `apb_prdata_o`/`apb_pslverr_o`/`apb_pready_o` as pure outputs, and/or the `FP_PIN_ORDER_CFG`
+  macro-boundary pinning from bead `g0o`, may have moved these pins into a position/geometry
+  DRT can't find a legal access point for. Not root-caused yet.
