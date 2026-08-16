@@ -12,6 +12,21 @@ synthesized flat. Branch `feature/phase7-mixed-signal-pll`.
 > not true SoC power. Root cause, re-measurement, and how to bound the gap:
 > see **[§ Power figure caveat (bead `ew3`)](#power-figure-caveat-macro-power-omitted-from-every-figure-bead-ew3)**.
 
+> ⚠️ **Every "Routing DRC 0" / "antenna 0" claim in this document is
+> unsupported — detailed routing never committed a wire.** Measured directly
+> on run 14's own artifacts: `final/def/soc_top.def` has zero `ROUTED ` net
+> records and `route__wirelength__max = 0`. `OpenROAD.DetailedRouting`
+> (step 38) errored during pin access (`[ERROR DRT-0073] No access point for
+> u_cpu/apb_paddr_i[5]` / `u_gpu/m_axi_araddr[19]`) before track assignment
+> ever ran; a local, non-upstream patch to LibreLane's `drt.tcl` wraps the
+> whole call in `catch {}` and lets the flow continue anyway, so every
+> downstream checker reports 0 violations because nothing was routed to
+> violate. This is **not** a run-14-specific or SoC-specific defect: it
+> reproduces on both GPU 571 MHz sign-off runs and every CPU tuning run in
+> the #96 campaign — see **[§ Routing / physical-closure caveat (bead
+> `xy6`)](#routing--physical-closure-caveat-detailed-routing-committed-zero-wires-bead-xy6)**
+> for the full table and what remains valid.
+
 ## Sign-off result (run 14 — accepted)
 
 Run `RUN_2026-06-23_18-05-38`, sv2v synthesis frontend, single-clock 1750 ps.
@@ -308,6 +323,129 @@ characterization step to `asap7_macro_views.tcl` (or equivalent) so
 tables — is tracked separately as **bead `claude_verilog_test-86a`** so it
 isn't lost. Any future SoC power number must carry the same ⚠️ fabric-only
 caveat until that follow-up lands.
+
+## Routing / physical-closure caveat: detailed routing committed zero wires (bead `xy6`)
+
+Found 2026-08-16 while standalone-validating the RCX ruleset for bead `e69`
+against run 23's ODB. **MEASURED, not inferred**, and swept across every
+ASAP7 run with recoverable artifacts on disk (SoC, GPU, and CPU alike) as
+part of root-causing bead `claude_verilog_test-xy6`. This section is the
+authoritative statement — every inline ⚠️ mark above points here.
+
+**What "zero wires" means, precisely.** `OpenROAD.DetailedRouting`'s
+`detailed_route` call is wrapped in `catch {}` by a local (uncommitted-to-
+upstream) patch to LibreLane's `librelane/scripts/openroad/drt.tcl`. On
+every run below, the pin-access phase (`[INFO DRT-0165] Start pin access`)
+hits an unresolved access point — `[ERROR DRT-0073]` for a macro boundary
+pin (SoC integration, 1–2 pins) or `[ERROR DRT-0074]` for a top-level I/O
+pin (standalone CPU/GPU blocks, hundreds of pins) — **before track
+assignment or any search-and-repair pass ever runs.** The Tcl error is
+caught, a `WARNING: detailed_route reported errors; continuing` line is
+printed, and `write_views` commits the DEF as-is: `final/def/*.def` has
+**zero** `ROUTED ` net records, `final/metrics.json`'s
+`route__wirelength__max` is `0`, and every downstream checker
+(`design__violations`, antenna, max slew/cap) reports 0 because nothing was
+routed to violate. Reproduction: `grep -c 'ROUTED ' <run>/final/def/*.def`.
+
+**Scope: this is not a regression, and not limited to the SoC.** The leading
+hypothesis when this was filed was that the run-23-era changes (registering
+the CPU macro's APB outputs, bead `cyb`/`g0o`; adding `pin_order.cfg`, bead
+GH #96) introduced the failure. They did not — the identical zero-wire
+pattern is present on **every** ASAP7 run with recoverable final-stage
+artifacts, including the GPU 571 MHz sign-off runs from 2026-05-27/28, more
+than three weeks before those changes landed. `drt.tcl`'s catch-and-continue
+patch itself predates all of them: `memory/pd/knowledge.md`'s DRT-0074 note
+already describes it as in place during the Phase-3 CPU PPA campaign
+(runs 6–7, 2026-04-25/26), where 374 DRT-0074 errors per run were already
+being treated as "structural, non-fatal" without anyone connecting that
+acceptance to "therefore zero wires were committed." **No ASAP7 run
+inspected in this investigation ever produced a genuinely routed design.**
+
+| Run (design) | Date | Routed net records | `route__wirelength__max` | DRT errors | Note |
+| --- | --- | --- | --- | --- | --- |
+| GPU `RUN_2026-05-27_11-16-37` | 2026-05-27 | 0 | 0 | 325 (`DRT-0074`, top-level I/O) | Phase-4 GPU 571 MHz sign-off input |
+| **GPU `RUN_2026-05-28_06-29-48`** | 2026-05-28 | **0** | **0** | 325 (`DRT-0074`) | **the accepted GPU 571 MHz / 262 mW sign-off run** |
+| SoC `RUN_2026-06-23_18-05-38` (**run 14**) | 2026-06-23 | **0** | **0** | 2 (`DRT-0073`, macro pins: `u_cpu/apb_paddr_i[5]`, `u_gpu/m_axi_araddr[19]`) | **the accepted M11 single-clock sign-off — every claim below "Routing DRC 0 / antenna 0" in the table above is vacuous** |
+| SoC `RUN_2026-06-24_05-23-19` | 2026-06-24 | 0 | 0 | 2 (`DRT-0073`) | run 15 (reverted PDN LEF change) |
+| SoC runs 16–22 (2026-08-05 – 2026-08-08) | 2026-08 | 0 | 0 | 1–2 (`DRT-0073`) | every GH #96 multi-clock re-closure iteration |
+| **SoC `RUN_2026-08-09_14-36-16` (run 23)** | 2026-08-09 | **0** | **0** | 1 (`DRT-0073`) | **the accepted "BOTH DOMAINS MET" multi-clock sign-off — same defect** |
+| CPU `RUN_2026-08-08_21-01-46` … `RUN_2026-08-09_14-05-02` (8 runs) | 2026-08-08/09 | 0 (all 8) | 0 (all 8) | 401 each (`DRT-0074`, the 3 registered APB output pins × fan-out) | #96 `pin_order.cfg` tuning campaign |
+
+Runs not listed either predate the artifact retention window (`/nobackup`
+periodically cleaned; see bead `o1i` on host reboots) or never reached
+`write_views` (`ndef=0` in the sweep — earlier "hollow" synthesis-only runs
+1–12, ~2026-06-23 06:xx). Notably absent and **not directly re-verifiable**:
+the CPU 1418 MHz Run 43 (2026-05-20) and the 1282 MHz M7 re-sign-off
+(2026-06-02) cited in `CLAUDE.md` — both run directories are gone from disk.
+Given `drt.tcl`'s catch patch was already in place by the April Phase-3 PPA
+campaign (predating both), and given **100 % of the runs that could be
+checked show the same pattern with no exception**, the working assumption
+must be that those two are affected as well, not that they are somehow
+exempt — but this is inference, not measurement, and is flagged as such.
+
+**Root cause, to the depth reached.** Two separate things compound:
+
+1. *Software defect (root-caused, fixed by this bead — see the routing gate
+   below):* `drt.tcl`'s `catch {}` wraps the **entire** `detailed_route`
+   call, not just per-pin access-point resolution. A single unresolved pin
+   anywhere in a 150,000–250,000-pin design aborts the whole call before any
+   wire is committed. LibreLane's own upstream default (no catch at all)
+   would have failed these runs loudly at step 38/40/41 instead of
+   completing 20+ downstream steps against an empty layout.
+2. *Why individual pins fail access-point resolution at all (only partially
+   characterized, not fully solved):* for standalone-block top-level I/O
+   pins (`DRT-0074`), `memory/pd/knowledge.md` already documents that ASAP7
+   M4/M5's `WIDTHTABLE` rejects the default pin width and that even the
+   mitigated width (`FP_IO_HTHICKNESS_MULT=5`, later 8) does not eliminate
+   all failures — congestion/obstruction near specific die-edge locations is
+   the untested remaining hypothesis. For SoC macro-boundary pins
+   (`DRT-0073`), the failing pins are on the CPU/GPU hard-macro abstract
+   LEFs (e.g. `apb_paddr_i[5]` at `RECT 126 15.042 130 15.234` on M4 in the
+   current `rv32i_cpu_top.lef`) — the exact geometry in force *at run-14
+   time* cannot be recovered (pin_order.cfg postdates run 14 by GH #96, and
+   393/401 boundary pins reshuffle on every macro regeneration absent it),
+   so the precise geometric cause for run 14's two specific pins is
+   unconfirmed. The `gyx` PSM-0069 tap-cell connectivity artifact was
+   considered as a related mechanism (both are PDK/geometry artifacts on the
+   ASAP7 predictive stack) but no evidence ties the two together — they stay
+   separate beads, not merged.
+
+**What survives and what doesn't.** The setup/hold WNS/TNS numbers quoted
+throughout this document are **not fabricated** — `OpenROAD.STAPostPNR`
+genuinely runs and genuinely computes timing on the placed netlist. But
+because detailed routing committed no wires, the parasitics behind every
+one of those numbers are the **pre-route global-route (GRT) estimate**, not
+real extracted post-route RC — STAPostPNR runs after `DetailedRouting` in
+flow order, but "after DetailedRouting" and "on routed parasitics" are not
+the same thing when DetailedRouting produced nothing. Read plainly:
+
+- **Survives, self-consistent on its own terms:** setup/hold WNS/TNS, fmax,
+  cell count, utilization, die area, std-cell power (all computed from
+  GRT-estimated RC on a real placed netlist — this was already true before
+  this investigation and is a pre-existing, separately documented
+  limitation, not new information).
+- **Does not survive — withdrawn as of this bead:** every "Routing DRC 0",
+  "antenna 0 violating nets/pins", and "0 max slew/cap/fanout" claim in this
+  document, for every run in the table above, including run 14 and run 23.
+  These numbers are not "clean" — they are computed over an empty routed
+  layout and are vacuously zero.
+- **Downstream consequence:** bead `claude_verilog_test-e69` (RCX ruleset)
+  is effectively blocked behind this bead — RCX extraction on an unrouted
+  design cannot produce a meaningful SPEF. Cross-linked, not merged.
+
+**Fix landed with this bead.** `tools/verif/check_asap7_routing.py` +
+`pnr/Makefile` targets `check-asap7-routing` / `check-asap7-gpu-routing` /
+`check-asap7-soc-routing`, wired as a mandatory gate immediately after every
+full-flow ASAP7 `librelane-asap7*` target (before pruning, so a failing run
+is never pruned away) — the build now fails loudly (non-zero exit) whenever
+a completed run has zero routed net records, `route__wirelength__max == 0`,
+or any unresolved `[ERROR DRT-*]` in the `OpenROAD.DetailedRouting` log,
+following the precedent of bead `dwp` ("a tool exiting 0 with an empty or
+absent report must never be read as PASS"). **Root-causing why the
+individual pin-access points fail (item 2 above) is not solved by this
+bead** and is tracked as a follow-up; no full P&R run was launched to
+pursue it further given the 2026-08-16 06:48 host reboot (bead `o1i`) that
+had just killed a 9-hour in-flight run.
 
 ## Known limitations / follow-ups
 - **sv2v ≠ formal-equivalent to source RTL.** Correctness rests on `soc_all` 82/82 (M11-era count; 120/120 as of 2026-08-01)

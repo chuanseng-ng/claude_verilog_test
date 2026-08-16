@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-08-16T00:03:33Z",
+  "updated_at": "2026-08-16T00:26:16.058442+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -1476,6 +1476,18 @@
       "retry_strategy": "escalate",
       "suggested_next_step": "escalate",
       "reason": "RCX 0-byte-stub root cause fixed and vendored ruleset validated as mechanically correct (parses/loads with 0 errors), but full-flow proof (real SPEF + STAPostPNR) blocked by a newly discovered, unrelated P1 defect (claude_verilog_test-xy6): detailed routing on both CPU and SoC recent runs silently commits zero wires after a swallowed DRT-0073/0074 pin-access error, and a full CPU validation run was separately lost to a host reboot (bead o1i) before reaching routing.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-08-16T00:26:16.058470+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "routing",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "tool_error",
+      "retry_strategy": "regenerate",
+      "suggested_next_step": "loop_back_to:routing",
+      "reason": "Root-caused bead xy6: swept every ASAP7 run with recoverable final/ artifacts (SoC run 14/23, both GPU 571 MHz sign-off runs, all 8 CPU pin_order.cfg tuning runs) -- 100% show zero ROUTED net records and route__wirelength__max=0. NOT a run-23-era regression: drt.tcl's catch{} around detailed_route (a local, non-upstream LibreLane patch) aborts the whole routing call on the first pin-access failure (DRT-0073/0074), before track assignment starts; this predates run 23 by months (present since the April Phase-3 CPU PPA campaign). No ASAP7 run in this project has ever been confirmed to have actually routed. Landed the fix-loud gate (tools/verif/check_asap7_routing.py + pnr/Makefile check-asap7-{routing,gpu-routing,soc-routing} targets, wired mandatory post-flow on all full ASAP7 targets) so this can never again pass silently. Did NOT root-cause the underlying DRT-0073/0074 pin-access geometry trigger, and did NOT launch a new P&R run to obtain a genuinely routed design (host rebooted 2026-08-16 06:48 mid a prior 9h run per bead o1i; instructed not to launch a run without saying so first). Docs corrected: docs/PHASE5_RUN_HISTORY.md, docs/ASAP7_RUN_HISTORY.md, CLAUDE.md now carry explicit caveats on every affected DRC/antenna/routing-clean claim; timing/power/area numbers are unaffected (GRT-estimated parasitics, unchanged from before this finding).",
       "constraint_ref": null
     }
   ],
