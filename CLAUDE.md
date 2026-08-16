@@ -350,7 +350,7 @@ bd close <id>         # Complete work
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
-**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+**Architecture in one line:** issues live in a local Dolt DB; `.beads/issues.jsonl` is an export of it. ⚠️ **The documented `refs/dolt/data` sync is NOT running** — that ref has been stale since 2026-06-06 and the Dolt backup writes only to the gitignored `.beads/backup/`, so the tracked `issues.jsonl` is currently the *only* bead state that reaches the remote (bead `a7c`). Keep it tracked. It merges through a custom driver that regenerates it from the DB (`.gitattributes` → `tools/setup/beads_merge_driver.sh`, registered by `make setup-beads`); plain `union` merge silently reinstated stale `open` rows and reopened closed beads twice (bead `b1o`). Note each git worktree gets its **own** `.beads/embeddeddolt`, so agents in separate worktrees run diverging databases. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 
 ## Session Completion
 
