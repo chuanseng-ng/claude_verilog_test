@@ -68,3 +68,20 @@ bd.db
 # They would override fork protection in .git/info/exclude.
 # Config files (metadata.json, config.yaml) are tracked by git by default
 # since no pattern above ignores them.
+
+# --- bead b1o: the JSONL exports are NOT tracked ---
+# issues.jsonl / interactions.jsonl are passive exports of the Dolt DB. The real
+# cross-machine sync is refs/dolt/data on the git remote (see .beads/README.md
+# and the beads SYNC_CONCEPTS doc), so tracking the exports is redundant.
+#
+# Worse than redundant: it actively corrupted tracker state. A PR branched before
+# a bead was closed carries that bead's stale open-state row; merging it
+# overwrote issues.jsonl in main, and the `bd hooks run post-merge` import then
+# replayed the stale row over the newer closed state -- silently reopening closed
+# beads and discarding their close_reason. Reproduced twice on 2026-08-16
+# (open beads 8 -> 10 both times, same pair: 0eh and pzj, whose fixes were
+# already merged in #157 and #158).
+#
+# Regenerate a local snapshot any time with `bd export`.
+issues.jsonl
+interactions.jsonl
