@@ -40,10 +40,23 @@ help:
 
 # ---------------------------------------------------------------- setup
 
-setup: setup-rtk setup-mcp
+setup: setup-rtk setup-mcp setup-beads
 	@echo ""
 	@echo "Setup done. Run 'make verify-tooling' to confirm, and restart Claude Code"
 	@echo "so it re-reads .mcp.json and picks up the eda-opensta/eda-openroad servers."
+
+setup-beads:
+	@echo "==> registering the beads issues.jsonl merge driver (bead b1o)"
+	@# .gitattributes names merge=beads-export, but a merge driver's COMMAND
+	@# lives in git config, which is per-clone and cannot be committed. Without
+	@# this step git silently falls back to the default driver, which is exactly
+	@# the stale-row behaviour b1o describes -- and it fails quietly, so
+	@# verify-tooling checks it.
+	@cd $(REPO_ROOT) && git config merge.beads-export.name \
+	  "regenerate .beads/issues.jsonl from the authoritative Dolt DB"
+	@cd $(REPO_ROOT) && git config merge.beads-export.driver \
+	  "$(REPO_ROOT)/tools/setup/beads_merge_driver.sh %A"
+	@echo "  ok: merge.beads-export -> tools/setup/beads_merge_driver.sh"
 
 setup-rtk:
 	@echo "==> registering .rtk/filters.toml with rtk"
@@ -80,6 +93,16 @@ verify-tooling:
 	  bad=[n for n in ('eda-opensta','eda-openroad') if '$(REPO_ROOT)' not in ' '.join(d[n]['args'])]; \
 	  sys.exit('.mcp.json points at another clone: %s (run: make setup-mcp)' % bad) if bad else None; \
 	  print('  ok: eda-opensta, eda-openroad -> $(REPO_ROOT)')"
+	@echo "==> beads merge driver is registered (bead b1o)"
+	@cd $(REPO_ROOT) && d=$$(git config --get merge.beads-export.driver || true); \
+	  if [ -z "$$d" ]; then \
+	    echo "  merge.beads-export.driver is NOT set — run: make setup-beads"; exit 1; \
+	  fi; \
+	  case "$$d" in *beads_merge_driver.sh*) ;; \
+	    *) echo "  merge.beads-export.driver points elsewhere: $$d"; exit 1 ;; esac; \
+	  test -x $(REPO_ROOT)/tools/setup/beads_merge_driver.sh || { \
+	    echo "  driver script missing or not executable"; exit 1; }; \
+	  echo "  ok: $$d"
 	@$(MAKE) --no-print-directory mcp-status
 	@echo ""
 	@echo "verify-tooling: PASS"

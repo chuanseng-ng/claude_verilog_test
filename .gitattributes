@@ -1,6 +1,18 @@
-# Beads passive Dolt exports: append-heavy JSONL. Use git's built-in union
-# merge driver so concurrent appends/edits from different branches both survive
-# a merge instead of conflicting. The Dolt DB (.beads/embeddeddolt) remains the
-# authoritative store; these JSONL files are regenerated exports.
-.beads/issues.jsonl        merge=union
+# .beads/*.jsonl are exports of the authoritative Dolt DB (.beads/embeddeddolt).
+#
+# issues.jsonl is a per-record STATE file (one JSON object per issue, keyed by
+# id). It was previously `merge=union`; that is correct for an append-only log
+# and WRONG for state. Union concatenates hunks, so it happily keeps a stale
+# "status":"open" row for an issue the DB has already closed, and never
+# reconciles two rows carrying the same id. Measured 2026-08-16: main held
+# claude_verilog_test-0eh and -pzj as "open" at both the #159 and #160 merge
+# points, weeks after both were closed, and beads' post-merge import replayed
+# those stale rows back into the DB -- silently reopening them twice. Bead b1o.
+#
+# The custom driver regenerates the file from the DB instead of reconciling two
+# texts, so the result is correct by construction. Register it per clone with
+# `make setup` (or `make setup-beads`); `make verify-tooling` checks it.
+.beads/issues.jsonl        merge=beads-export
+
+# interactions.jsonl really IS an append-only audit log, so union is right here.
 .beads/interactions.jsonl  merge=union
