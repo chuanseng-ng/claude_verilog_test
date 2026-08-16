@@ -92,6 +92,23 @@ mutation report `SKIP`, never `PASS`.
 | `async_axi_fifo` | yosys-sv | corrupt the binary→gray encoding (`>>1` → `>>2`) of the write pointer | caught (FAIL on `wr_gray_d` in **all five** channel FIFOs) |
 | `axil_to_apb` | **synlig** | swap the write/read response states out of `S_ACCESS` | caught (FAIL on `axil_to_apb.state_d`) |
 | `boot_rom` | **synlig** | corrupt the INCR burst stride from 4 to 8 bytes | caught (FAIL on `boot_rom.r_addr_q`) |
+| `axi_lite_interconnect` | **synlig** | off-by-one the inclusive upper address-decode bound (`<=` → `<`) | caught (FAIL) |
+| `sram_controller` | **synlig** | corrupt the INCR-burst write word-index stride (`+1` → `+2`) | caught (FAIL) |
+
+**6 of this file's 20 registered entries have a verified-discriminating
+proof** (the six above — each one's declared corruption was shown to actually
+flip the verdict, through the committed `--negative-control` harness, not by
+inspection). The other **14 report `SKIP`**, never `PASS`, because they
+declare no `negative_control` (`rv32i_clock_gate`, `dma_engine`, `timer`,
+`uart_controller`, `spi_controller`, `interrupt_controller`, both register
+banks, and all six tier-5 diagnostics) — every one of those 14 already has a
+FAIL or ERROR baseline (see "What is proven" below) for which a further
+injected mutation cannot discriminate, so this is expected, not a gap in
+control coverage. But read the ratio plainly: **a PASS with no declared
+control that can catch a deliberate corruption is unverified**, and the
+6-of-20 count is the honest measure of how much of this file's PASS/FAIL
+output has actually been shown to move when the underlying RTL is wrong,
+versus how much is "eqy said so."
 
 `rv32i_clock_gate` has **no** negative control and reports `SKIP`: its
 unmutated baseline is already `ERROR` (zero partitions — see below), so there
@@ -170,11 +187,46 @@ partition's assertion vacuous.
 | async-reset constant (`1'sb0` → `1'sb1`, previously recorded) | ❌ |
 
 This generalises the reset-value caveat that was already in this README: it is
-not just *init* values that the default `sat` strategy under-checks. **Read
-every PASS in the table below as "no counterexample was found by eqy's default
-strategy", not as "these two descriptions are equivalent."** Tightening it
-would mean a custom strategy (`ASSUME_DEFINED_INPUTS`, or a miter that does
-not exempt gold `x`), which is follow-up work, not something this bead closes.
+not just *init* values that the default `sat` strategy under-checks.
+
+## RETRACTED (2026-08-16): the false-PASS class above is closed
+
+The paragraph that used to sit here told every reader to treat every PASS in
+this harness as "no counterexample found", not "proven equivalent". That is no
+longer the right way to read this file. `tools/formal/run_eqy.py`'s
+`build_eqy_config()` now emits `use sby` instead of `use sat` for every
+module's `[strategy simple]` section, with `engine smtbmc bitwuzla`.
+
+The two strategies are hardcoded inside eqy's own driver
+(`yosys-eqy/bin/.eqy-wrapped`, `EqySatStrategy` vs `EqySbyStrategy` — read
+directly, not inferred from behaviour). `EqySatStrategy` (`use sat`, the
+previous default) has **no** xprop/`ASSUME_DEFINED_INPUTS` hook anywhere in
+its generated `run.ys` — there was no `.eqy`-file knob that could have closed
+this gap without a strategy change. `EqySbyStrategy` (`use sby`) defaults
+`xprop=True`, which appends `xprop -formal -split-ports -assume-def-inputs
+miter` to every partition's proof script — this is the actual fix, not a
+config tweak.
+
+Verified through the committed harness itself, not just a manual repro: with
+`use sby`, `cdc_2ff_sync`'s baseline still PASSes (6/6 matched points, 3/3
+partitions — no regression), and the previously-false-PASS mutation
+(`sync_q[0] <= ~d_i`, the exact case in the table above) now **FAILs** on
+partition `cdc_2ff_sync.sync_q.0` — `DONE (FAIL, rc=2)`. A full `--all` re-run
+under the new strategy reproduced every pre-existing tier's result exactly (no
+`expected_status` mismatches, no drift-guard trips, `async_axi_fifo` still
+285 matched points / 476 partitions) — the strategy switch closed the
+false-PASS class at zero cost to anything already proven. It did cost
+runtime: `sby` spawns a full SymbiYosys job (model build + smt2 export +
+bitwuzla solve) per partition instead of one `sat -tempinduct` call, so
+`run_eqy.py` now passes `-j 8` to `eqy` and raised its subprocess timeout from
+900 s to 3600 s (`EQY_TIMEOUT_S`) — `async_axi_fifo`'s 476 partitions went
+from 29.5 s to ~75-100 s.
+
+**Read every PASS in this file from here on as "eqy's `sby`+xprop strategy
+found no counterexample, including in states where gold-side registers are
+otherwise unconstrained" — meaningfully stronger than the old `sat`-strategy
+reading, though still not a substitute for independent review of the
+generated `xprop`/`formalff` script for a specific partition if it matters.**
 
 ## What is proven
 
@@ -188,6 +240,47 @@ not exempt gold `x`), which is follow-up work, not something this bead closes.
 | 4 | `axi_lite_register_bank` | synlig | FAIL (expected, root-caused) | 38 | 574 proved / 2 failed | — |
 | 4 | `apb4_register_bank` | synlig | FAIL (expected, root-caused) | 17 | 525 proved / 2 failed | — |
 | 4 | `dma_engine` | synlig | ERROR (known limitation, 3 blockers peeled, 4th remains) | 382 | — | — |
+| 4 | `axi_lite_interconnect` | synlig | **PASS** | 64 | 698 | 140.3 s |
+| 4 | `sram_controller` | synlig | **PASS** (MEM_WORDS collapsed 4096→8, see caveat below) | 51 | 37 | 10.2 s |
+| 4 | `timer` | synlig | ERROR (known limitation — see below) | 45 | — | 1.5 s |
+| 4 | `uart_controller` | synlig | ERROR (known limitation — see below) | 83 | — | 2.0 s |
+| 4 | `spi_controller` | synlig | ERROR (known limitation — see below) | 85 | — | 2.1 s |
+| 4 | `interrupt_controller` | synlig | FAIL (known limitation, different shape — see below) | 37 | 173 proved / 14 failed | 27.8 s |
+
+**`sram_controller`'s PASS is weaker than it looks — say so plainly.** Its
+true default (`MEM_WORDS=4096`) is intractable under the `sby` strategy this
+bead switched to for Step 0 (a 4096×32 memory would generate thousands of
+per-word partitions); the entry collapses `MEM_WORDS` to 8 via
+`param_override` on **both** sides (gold source rewrite + gate `chparam`, the
+same mechanism the tier-5 register-bank diagnostics use). The write/read
+control FSM, WSTRB byte-masking, and INCR address-stepping logic this check
+actually exercises do not depend on the depth — only on `IDX_W=$clog2(MEM_WORDS)`
+staying consistent, which `chparam` re-derives identically on both sides — but
+this is **not** a proof of the shipped 4096-word configuration. Read it as
+"the control logic is proven at a representative depth", not "the SRAM
+controller is proven".
+
+**The four `rtl/periph/` peripherals were never attempted before this round,
+and none of them turned out to be clean new coverage — this is a genuinely
+new finding, not the "cheapest remaining coverage" they looked like going
+in.** All four instantiate `apb4_register_bank` (already root-caused
+unprovable at `N_REGS>1` — see "Tier-4 register-bank FAIL" below) with
+`N_REGS` ∈ {3, 4, 5, 6}. `timer` (N_REGS=4), `uart_controller` (N_REGS=5), and
+`spi_controller` (N_REGS=6, and — a second, harness-side bug caught before
+commit — it also instantiates `cdc_2ff_sync` for its MISO input synchroniser,
+which the first draft of this entry omitted from `gate_modules`) all ERROR at
+the partition-matching step, before any proof is attempted: `conflicting
+matches for gold bit \hw_wdata_i [N]: \hw_wdata_i [N] vs 1'<const>` (N=0 for
+timer, N=32 for uart_controller and spi_controller) — the exact `u_regbank`
+port-flattening-order family `dma_engine` already hit. `interrupt_controller`
+(N_REGS=3, the smallest) behaves differently: its smaller register count lets
+the matcher succeed (37 matched points, 187 partitions attempted) and it
+reaches a real, negative proof result instead of a matcher crash — 173/187
+PASS, 14/187 FAIL, on `u_regbank.regs`, `u_regbank.prdata`, `masked`, `irq_o`,
+and 10 individual `hw_wdata_i[N]` bits. Both shapes are recorded as
+`expected_status` (ERROR for the first three, FAIL for `interrupt_controller`)
+rather than forced toward a uniform result — they are not the same failure
+shape and pretending otherwise would misreport what was actually measured.
 
 Tier-3's matched-point count is **285**, not the 286 previously recorded here:
 `matched.ids` has 286 lines, one of which is the `# [*] gold-match *` comment
@@ -403,11 +496,37 @@ out to be the *silent* member of the same family rather than a different bug
 unpacked-array parameter *type*, and an explicit positional literal is
 corrupted identically.
 
-Modules never attempted, and still not attempted (no frontend blocker known,
-just not in scope for this bead): `axi_lite_interconnect`, `axi4_to_axilite`,
-`axilite_to_axi4`, `apb_interconnect`, `soc_bus`, `sram_controller`,
-`uart_controller`, `spi_controller`, `timer`, `interrupt_controller`, `pmu`,
-`pll_*`, `soc_top`.
+**`soc_bus` (attempted 2026-08-15, added to `blocked_modules`):**
+transitively blocked via `axi4_crossbar`, which it instantiates as `u_xbar`.
+`soc_bus.sv` itself has no array-typed parameters — checked with
+`gold_files`/`gate_modules` including `axi4_crossbar.sv`,
+`axi_lite_interconnect.sv`, `apb_interconnect.sv`, `axi4_to_axilite.sv`, and
+`axil_to_apb.sv` (hierarchical, matching the `async_axi_fifo`/`dma_engine`
+convention) — and `read_gold` crashes with the identical
+`kernel/rtlil.cc:2150` assert, confirmed by isolated probe. Blackboxing
+`axi4_crossbar` instead of reading its real source does not help: the crash
+happens while Synlig elaborates the packed-2D-array parameter *declaration*
+itself, before any blackbox/hierarchy command in the script runs.
+`axi_lite_interconnect.sv` — also instantiated by `soc_bus`, also
+packed-2D-array-typed `SLV_BASE`/`SLV_LIMIT` — does **not** crash Synlig when
+checked standalone (see its own entry above, now `modules[]`, PASS): the
+crash is specific to `axi4_crossbar`'s declaration, not the parameter shape in
+general. That difference was not further isolated (out of scope for this
+bead).
+
+Modules attempted this round (2026-08-15/16, bead `claude_verilog_test-q7n`
+Step 1) and their outcome: `axi_lite_interconnect` — **PASS**, real new
+coverage. `sram_controller` — **PASS** at a collapsed `MEM_WORDS=8` (see "What
+is proven" caveat above), real new coverage but weaker than the shipped
+4096-word configuration. `timer`/`uart_controller`/`spi_controller` — **ERROR**,
+transitively inherit `apb4_register_bank`'s port-flattening-order limitation.
+`interrupt_controller` — **FAIL**, same family, different failure shape (see
+above). `soc_bus` — **blocked**, transitively via `axi4_crossbar` (this
+section).
+
+Modules still never attempted (no frontend blocker known, just not in scope
+for this bead): `axi4_to_axilite`, `axilite_to_axi4`, `apb_interconnect`,
+`pmu`, `pll_*`, `soc_top`.
 
 ## Scope limits that survive this round
 
@@ -443,33 +562,70 @@ for self-consistency at an instantiation boundary and is correct.
 
 ## Recommendation on bead `claude_verilog_test-q7n`
 
-**Stays open**, and the case for keeping it open got *stronger*, not weaker.
-Two modules were genuinely added (`axil_to_apb`, `boot_rom`, both via the new
-Synlig frontend, both `__pnr__`-affected files that previously had only a
-by-eye check), the harness is now shown to fail on both frontends, and the two
-register-bank FAILs are fully root-caused with reproducible diagnostics. But
-one previously-claimed proof was **withdrawn** — `rv32i_clock_gate`'s PASS was
-vacuous (zero partitions) — so the real count of modules with a non-empty
-proof went 3 → 4 (`cdc_2ff_sync`, the `async_axi_fifo` CDC hierarchy,
-`axil_to_apb`, `boot_rom`), and every one of those four is qualified by the
-false-PASS class documented above. But the majority of `SOC_SV_FILES` — the whole bus
-fabric (`axi4_crossbar`, `axi_lite_interconnect`, `soc_bus`, ...), all the
-peripherals, `sram_controller`, `pmu` — is still unchecked, and two modules
-(`axi_lite_register_bank`, `apb4_register_bank`) plus `axi4_crossbar` are
-demonstrably *unprovable* with the tools in this devshell. Closing q7n now
-would overstate what has been shown.
+**Stays open.** This round (2026-08-15/16) did two things: closed the
+harness's own false-PASS class (Step 0), and attempted the seven
+never-before-tried modules the prior recommendation called "the cheapest
+remaining coverage" (Step 1). Both moved the bead forward, but neither closes
+it, and the second one delivered less new coverage than it looked like it
+would going in — report that plainly rather than leading with the PASS count.
+
+**Step 0 — the real win.** `sat` → `sby` (`EqySbyStrategy`, `xprop=True`,
+`engine smtbmc bitwuzla`), verified through the committed `--negative-control`
+harness itself: the previously-false-PASSing `cdc_2ff_sync`
+`sync_q[0] <= ~d_i` mutation now genuinely FAILs, and a full `--all` re-run
+reproduced every pre-existing result exactly (0 `expected_status` mismatches,
+0 drift-guard trips) — the fix cost nothing already proven, only runtime
+(`-j 8`, timeout 900s → 3600s). See "RETRACTED" above: the old blanket
+warning that every PASS in this file is weakened by the gold-side `x`
+exemption no longer holds.
+
+**Step 1 — two real modules, not seven, plus a genuine new finding about
+five more.** `axi_lite_interconnect` and `sram_controller` are real new PASS
+coverage (`sram_controller` at a collapsed `MEM_WORDS=8`, weaker than the
+shipped 4096-word configuration — see "What is proven"). The other five
+targets (`timer`, `uart_controller`, `spi_controller`, `interrupt_controller`,
+`soc_bus`) were never attempted before this round, and attempting them is
+itself the finding: all five turn out to be unprovable with the current
+tools, for two already-known root causes (`apb4_register_bank`'s
+port-flattening-order limit for the four peripherals; `axi4_crossbar`'s
+Synlig UHDM crash for `soc_bus`) neither of which was previously known to
+reach this far into the design. That is valuable — it means the
+`apb4_register_bank`/`axi4_crossbar` blockers are not two isolated dead ends,
+they are load-bearing for a fifth of `SOC_SV2V_DEFINES` — but it is a finding
+about scope, not new coverage, and should not be read as "5 more modules
+checked."
+
+**Read the totals honestly, not by leading with the PASS count.** `--all`
+now reports **8 PASS / 7 FAIL / 5 ERROR** across 20 registered entries (was
+6/6/2 across 14 before this round), 0 `expected_status` mismatches. But
+`--negative-control` reports only **6 PASS (verified-discriminating) / 14
+SKIP (no declared control)** — a PASS with no declared negative control is an
+*unverified* proof, not evidence of correctness, and 14 of this file's 20
+entries are in that state (every FAIL/ERROR entry, by construction, since a
+further mutation cannot discriminate a baseline that already fails). The
+6-of-20 ratio is the honest measure of how much of this file has actually
+been shown to move when the RTL is wrong.
+
+The majority of `SOC_SV2V_DEFINES` — `axi4_crossbar` itself, `apb_interconnect`,
+`axi4_to_axilite`, `axilite_to_axi4`, `pmu`, `pll_*`, `soc_top`, and now
+confirmed-unprovable `soc_bus` and all four `rtl/periph/` peripherals — is
+still unchecked or blocked. Closing q7n now would overstate what has been
+shown by a wider margin than it would have before this round, precisely
+because Step 1 demonstrated the blockers reach further than known.
 
 Concrete next steps, in order of expected value:
-0. **Close the false-PASS class first.** Until eqy's miter stops exempting
-   gold-side `x` (a custom strategy with `ASSUME_DEFINED_INPUTS`, or
-   `formalff` applied symmetrically), every PASS in this harness is weaker
-   than it reads, and adding more modules just adds more weak PASSes.
-1. Run the never-attempted modules (`axi_lite_interconnect`, `soc_bus`,
-   `sram_controller`, the four peripherals). No frontend blocker is known for
-   them; they are the cheapest remaining coverage.
-2. Report the two Synlig defects upstream (unpacked-array parameter garbage;
-   unpacked-array port flattening order vs sv2v) — both have minimal repros in
-   this README. Fixing the first would unblock the two register banks
-   outright.
-3. `axi4_crossbar` needs the `rtlil.cc:2150` assert fixed upstream, or a newer
-   Yosys/Synlig; there is no local workaround.
+1. Report the Synlig defects upstream (unpacked-array parameter garbage;
+   unpacked-array port flattening order vs sv2v; the `axi4_crossbar`
+   packed-2D-array `rtlil.cc:2150` crash) — all three have minimal repros in
+   this README. Fixing the port-flattening-order defect would unblock
+   `axi_lite_register_bank`, `apb4_register_bank`, `timer`, `uart_controller`,
+   `spi_controller`, and `interrupt_controller` at once — six modules behind
+   one upstream fix, now that Step 1 has shown how many peripherals share it.
+2. `axi4_crossbar` (and transitively `soc_bus`) needs the `rtlil.cc:2150`
+   assert fixed upstream, or a newer Yosys/Synlig; there is no local
+   workaround.
+3. If upstream fixes are not forthcoming, the remaining never-attempted
+   modules (`axi4_to_axilite`, `axilite_to_axi4`, `apb_interconnect`, `pmu`,
+   `pll_*`, `soc_top`) are still open, though `soc_top`'s own hierarchy
+   drags in every blocked module transitively and is unlikely to be
+   checkable at all until the crossbar/register-bank issues are fixed.

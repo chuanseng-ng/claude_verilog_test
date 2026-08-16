@@ -164,6 +164,160 @@
       "baseline_partitions": 36
     },
     {
+      "name": "axi_lite_interconnect",
+      "tier": 4,
+      "top": "axi_lite_interconnect",
+      "gate_modules": [
+        "axi_lite_interconnect"
+      ],
+      "gold_files": [
+        "rtl/soc/axi_pkg.sv",
+        "rtl/soc/axi_lite_interconnect.sv"
+      ],
+      "defines": [],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "depth": 5,
+      "note": "Bead claude_verilog_test-q7n Step 1 (2026-08-15) -- never-attempted before this round. Single-master AXI4-Lite control-ring demux (address decode + response mux, no arbitration). Requires the synlig frontend purely for the in-body `import axi_pkg::*;` (yosys-sv 0.46 cannot parse `import` in any position -- see README.md). SLV_BASE/SLV_LIMIT are PACKED 2D array parameters ([N_SLAVES-1:0][AW-1:0], deliberately NOT unpacked -- see the file's own header comment on why), which is the SAME parameter shape that crashes Synlig's UHDM lowering for axi4_crossbar (kernel/rtlil.cc:2150) -- but this file does NOT crash: confirmed by direct elaboration probe (2026-08-15), 216 cells, 0 errors. Checked at the RTL header defaults (N_SLAVES=6, SLV_BASE=SLV_LIMIT='0) -- per the extraction methodology used throughout this harness (extract_module() pulls a standalone `module ... endmodule` block by regex; sv2v does NOT monomorphize a singly-instantiated module's parameter declarations away, so the gate-side extracted module ALSO carries the RTL header defaults, not soc_bus's real override values (N_AXIL_SLV=3, AXIL_SLV_BASE/LIMIT from soc_periph_map_pkg) -- gold-default vs gate-default is therefore a fair, matched comparison, not a parameter mismatch dressed up as one.",
+      "negative_control": {
+        "file": "rtl/soc/axi_lite_interconnect.sv",
+        "find": "            if (a >= SLV_BASE[s] && a <= SLV_LIMIT[s]) decode = 32'(s);",
+        "replace": "            if (a >= SLV_BASE[s] && a < SLV_LIMIT[s]) decode = 32'(s);",
+        "note": "off-by-one the inclusive upper address-decode bound (<=  -> <); at the default SLV_BASE=SLV_LIMIT='0 every slave's window collapses to a single address and this makes every access decode unmapped instead"
+      },
+      "baseline_matched_points": 64,
+      "baseline_partitions": 698
+    },
+    {
+      "name": "sram_controller",
+      "tier": 4,
+      "top": "sram_controller",
+      "gate_modules": [
+        "sram_controller"
+      ],
+      "gold_files": [
+        "rtl/soc/axi_pkg.sv",
+        "rtl/soc/soc_addr_map_pkg.sv",
+        "rtl/soc/sram_controller.sv"
+      ],
+      "defines": [],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "depth": 5,
+      "param_override": {
+        "file": "rtl/soc/sram_controller.sv",
+        "params": {
+          "MEM_WORDS": 8
+        }
+      },
+      "post_prep_both": [
+        "memory_map"
+      ],
+      "note": "Bead claude_verilog_test-q7n Step 1 (2026-08-15) -- never-attempted before this round. Behavioral AXI4-slave SRAM model (write/read FSMs + INCR-burst address stepping + WSTRB byte masking); the module the ASAP7 SoC flow actually consumes for its behavioral backing store. Requires synlig purely for the two in-header `import axi_pkg::*;`/`import soc_addr_map_pkg::*;` (no array-typed parameters in this file at all). MEM_WORDS is deliberately COLLAPSED from its true default (4096) to 8 via param_override on BOTH sides (gold source rewrite + gate chparam, same mechanism the tier-5 register-bank diagnostics use) -- a full 4096x32 `mem` array would make eqy's per-word partitioning intractable under the sby strategy this bead switched to for Step 0 (thousands of partitions); the write/read control FSM, byte-strobe masking, and INCR address-stepping logic this check actually cares about do not depend on the depth, only on IDX_W=$clog2(MEM_WORDS) being consistent, which chparam re-derives on both sides identically. post_prep_both=[memory_map] is carried over from the dma_engine precedent -- `mem` is a real unpacked memory array (not a struct queue) and needs `$mem`<->flop-array reconciliation between the two frontends the same way.",
+      "negative_control": {
+        "file": "rtl/soc/sram_controller.sv",
+        "find": "                            w_idx <= w_idx + 1'b1;",
+        "replace": "                            w_idx <= w_idx + 2'd2;",
+        "note": "corrupt the INCR-burst write word-index stride from 1 to 2 (every multi-beat write after the first lands on the wrong word) -- the sram_controller analogue of boot_rom's committed stride-corruption control"
+      },
+      "baseline_matched_points": 51,
+      "baseline_partitions": 37
+    },
+    {
+      "name": "timer",
+      "tier": 4,
+      "top": "timer",
+      "gate_modules": [
+        "apb4_register_bank",
+        "timer"
+      ],
+      "gold_files": [
+        "rtl/soc/apb4_register_bank.sv",
+        "rtl/periph/timer.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "depth": 5,
+      "expected_status": "ERROR",
+      "note": "Bead claude_verilog_test-q7n Step 1 (2026-08-15) -- ATTEMPTED, NOT a clean new PASS. timer instantiates apb4_register_bank (u_regbank) with N_REGS=4 (RESET_VAL/WMASK passed in as this module's own per-register override arrays). apb4_register_bank is already root-caused unprovable at N_REGS>1 in modules.json's own apb4_register_bank entry (Cause A: sv2v and Synlig flatten unpacked-array module PORTS -- regs_o/hw_wen_i/hw_wdata_i -- in OPPOSITE element orders, an identity permutation only at N_REGS=1). timer inherits this at N_REGS=4: confirmed empirically (2026-08-15, gate_modules=[apb4_register_bank, timer], gold_files include rtl/soc/apb4_register_bank.sv), read_gold succeeds (Synlig elaborates fine, keeping apb4_register_bank as a $paramod), but the partition step ERRORs identically to dma_engine's own u_regbank finding: `conflicting matches for gold bit \\\\hw_wdata_i [N]: \\\\hw_wdata_i [N] vs 1'<const>` (N=0 for timer, N=32 for uart_controller -- bit index varies by module, same root cause). This is a genuinely NEW finding this round -- it was not previously known that ALL FOUR rtl/periph/ peripherals (not just dma_engine) transitively inherit this limitation, since none had been attempted before. Not pursued further: the only known workaround (collapsing N_REGS to 1, per the apb4_register_bank_n1 tier-5 diagnostic) would mean checking timer with all but one of its real registers removed -- not real coverage of the peripheral, so this is recorded as a known limitation (like dma_engine) rather than forced into a misleading PASS. expected_status is ERROR.",
+      "negative_control_na": "Baseline is already ERROR (partition-matcher error inherited from apb4_register_bank's u_regbank port-flattening-order mismatch at N_REGS>1, confirmed empirically -- see note), so an injected mutation cannot discriminate. Negative-control coverage of the synlig frontend + apb4_register_bank family comes from axil_to_apb, boot_rom (Synlig frontend controls) and apb4_register_bank_n1/_n2 (tier-5 diagnostics, which have PASS/FAIL baselines a mutation could act on)."
+    },
+    {
+      "name": "uart_controller",
+      "tier": 4,
+      "top": "uart_controller",
+      "gate_modules": [
+        "apb4_register_bank",
+        "uart_controller"
+      ],
+      "gold_files": [
+        "rtl/soc/apb4_register_bank.sv",
+        "rtl/periph/uart_controller.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "depth": 5,
+      "expected_status": "ERROR",
+      "note": "Bead claude_verilog_test-q7n Step 1 (2026-08-15) -- ATTEMPTED, NOT a clean new PASS. uart_controller instantiates apb4_register_bank (u_regbank) with N_REGS=5 (RESET_VAL/WMASK passed in as this module's own per-register override arrays). apb4_register_bank is already root-caused unprovable at N_REGS>1 in modules.json's own apb4_register_bank entry (Cause A: sv2v and Synlig flatten unpacked-array module PORTS -- regs_o/hw_wen_i/hw_wdata_i -- in OPPOSITE element orders, an identity permutation only at N_REGS=1). uart_controller inherits this at N_REGS=5: confirmed empirically (2026-08-15, gate_modules=[apb4_register_bank, uart_controller], gold_files include rtl/soc/apb4_register_bank.sv), read_gold succeeds (Synlig elaborates fine, keeping apb4_register_bank as a $paramod), but the partition step ERRORs identically to dma_engine's own u_regbank finding: `conflicting matches for gold bit \\\\hw_wdata_i [N]: \\\\hw_wdata_i [N] vs 1'<const>` (N=0 for timer, N=32 for uart_controller -- bit index varies by module, same root cause). This is a genuinely NEW finding this round -- it was not previously known that ALL FOUR rtl/periph/ peripherals (not just dma_engine) transitively inherit this limitation, since none had been attempted before. Not pursued further: the only known workaround (collapsing N_REGS to 1, per the apb4_register_bank_n1 tier-5 diagnostic) would mean checking uart_controller with all but one of its real registers removed -- not real coverage of the peripheral, so this is recorded as a known limitation (like dma_engine) rather than forced into a misleading PASS. expected_status is ERROR.",
+      "negative_control_na": "Baseline is already ERROR (partition-matcher error inherited from apb4_register_bank's u_regbank port-flattening-order mismatch at N_REGS>1, confirmed empirically -- see note), so an injected mutation cannot discriminate. Negative-control coverage of the synlig frontend + apb4_register_bank family comes from axil_to_apb, boot_rom (Synlig frontend controls) and apb4_register_bank_n1/_n2 (tier-5 diagnostics, which have PASS/FAIL baselines a mutation could act on)."
+    },
+    {
+      "name": "spi_controller",
+      "tier": 4,
+      "top": "spi_controller",
+      "gate_modules": [
+        "cdc_2ff_sync",
+        "apb4_register_bank",
+        "spi_controller"
+      ],
+      "gold_files": [
+        "rtl/soc/cdc/cdc_2ff_sync.sv",
+        "rtl/soc/apb4_register_bank.sv",
+        "rtl/periph/spi_controller.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "depth": 5,
+      "expected_status": "ERROR",
+      "note": "Bead claude_verilog_test-q7n Step 1 (2026-08-15) -- ATTEMPTED, NOT a clean new PASS. spi_controller instantiates apb4_register_bank (u_regbank) with N_REGS=6 (RESET_VAL/WMASK passed in as this module's own per-register override arrays). apb4_register_bank is already root-caused unprovable at N_REGS>1 in modules.json's own apb4_register_bank entry (Cause A: sv2v and Synlig flatten unpacked-array module PORTS -- regs_o/hw_wen_i/hw_wdata_i -- in OPPOSITE element orders, an identity permutation only at N_REGS=1). spi_controller inherits this at N_REGS=6: confirmed empirically (2026-08-15, gate_modules=[cdc_2ff_sync, apb4_register_bank, spi_controller] -- spi_controller ALSO instantiates cdc_2ff_sync for its MISO input synchroniser (u_spi_miso_sync), an extraction dependency the first draft of this entry missed, which produced a misleading `Module \\\\cdc_2ff_sync ... is not part of the design` ERROR instead; fixed before commit), the partition step ERRORs the same way as timer/uart_controller's u_regbank finding: `conflicting matches for gold bit \\\\hw_wdata_i [N]: \\\\hw_wdata_i [N] vs 1'<const>` (bit index varies by module -- N_REGS and DW differ). This is a genuinely NEW finding this round -- it was not previously known that ALL FOUR rtl/periph/ peripherals (not just dma_engine) transitively inherit this limitation, since none had been attempted before. Not pursued further: the only known workaround (collapsing N_REGS to 1, per the apb4_register_bank_n1 tier-5 diagnostic) would mean checking spi_controller with all but one of its real registers removed -- not real coverage of the peripheral, so this is recorded as a known limitation (like dma_engine) rather than forced into a misleading PASS. expected_status is ERROR.",
+      "negative_control_na": "Baseline is already ERROR (partition-matcher error inherited from apb4_register_bank's u_regbank port-flattening-order mismatch at N_REGS>1, confirmed empirically -- see note), so an injected mutation cannot discriminate. Negative-control coverage of the synlig frontend + apb4_register_bank family comes from axil_to_apb, boot_rom (Synlig frontend controls) and apb4_register_bank_n1/_n2 (tier-5 diagnostics, which have PASS/FAIL baselines a mutation could act on)."
+    },
+    {
+      "name": "interrupt_controller",
+      "tier": 4,
+      "top": "interrupt_controller",
+      "gate_modules": [
+        "apb4_register_bank",
+        "interrupt_controller"
+      ],
+      "gold_files": [
+        "rtl/soc/apb4_register_bank.sv",
+        "rtl/periph/interrupt_controller.sv"
+      ],
+      "defines": [
+        "USE_ICG_CELL",
+        "__pnr__"
+      ],
+      "common_fixtures": [],
+      "frontend": "synlig",
+      "depth": 5,
+      "expected_status": "FAIL",
+      "note": "Bead claude_verilog_test-q7n Step 1 (2026-08-15) -- ATTEMPTED, NOT a clean new PASS, and NOT the same failure shape as timer/uart_controller/spi_controller. interrupt_controller instantiates apb4_register_bank (u_regbank) with N_REGS=3, the smallest of the four peripherals. Unlike the other three (which ERROR at the partition-matching step with a matcher-level `conflicting matches for gold bit` failure before any proof is even attempted), interrupt_controller's smaller register count lets eqy's matcher succeed -- 37 matched points, 187 partitions attempted -- and it reaches a real, if negative, proof result: 173/187 PASS, 14/187 FAIL, on `u_regbank.regs`, `u_regbank.prdata`, `masked`, `irq_o`, and 10 individual `hw_wdata_i[N]` bits (confirmed empirically, 2026-08-15, gate_modules=[apb4_register_bank, interrupt_controller]). This is consistent with the SAME apb4_register_bank Cause A/B family (port-flattening-order + unpacked-array-parameter corruption) manifesting as genuine partition FAILs rather than a matcher crash at this smaller N_REGS -- not further isolated (out of scope for this bead; the register-bank entries above already carry the tier-5 diagnostics for that root cause). expected_status is FAIL, not ERROR -- this differs from the other three peripherals and was corrected before commit after the real run disagreed with an initial ERROR assumption generalised from the timer probe alone.",
+      "negative_control_na": "Baseline is already ERROR (partition-matcher error inherited from apb4_register_bank's u_regbank port-flattening-order mismatch at N_REGS>1, confirmed empirically -- see note), so an injected mutation cannot discriminate. Negative-control coverage of the synlig frontend + apb4_register_bank family comes from axil_to_apb, boot_rom (Synlig frontend controls) and apb4_register_bank_n1/_n2 (tier-5 diagnostics, which have PASS/FAIL baselines a mutation could act on)."
+    },
+    {
       "name": "axi_lite_register_bank",
       "tier": 4,
       "top": "axi_lite_register_bank",
@@ -406,6 +560,10 @@
     {
       "name": "dma_engine",
       "reason": "See the dma_engine entry in `modules` for the full three-blocker chain and its exact errors. Summary: the original read_gate error was a harness extraction gap (fixed); $mem inference then diverged between the frontends (addressed with post_prep_both=[memory_map], applied identically to both sides); the residual blocker is the u_regbank unpacked-array port boundary, the same family as the register-bank pair. expected_status=ERROR."
+    },
+    {
+      "name": "soc_bus",
+      "reason": "ATTEMPTED this round (bead claude_verilog_test-q7n Step 1, 2026-08-15), STILL BLOCKED -- transitively via axi4_crossbar, which soc_bus instantiates as u_xbar. soc_bus.sv itself has no array-typed parameters and only scalar N_MASTERS, so it is not the direct cause. gold_files = [axi_pkg.sv, soc_addr_map_pkg.sv, soc_periph_map_pkg.sv, axi4_crossbar.sv, axi_lite_interconnect.sv, apb_interconnect.sv, axi4_to_axilite.sv, axil_to_apb.sv, soc_bus.sv] (gate_modules matching, hierarchical style per the async_axi_fifo/dma_engine precedent) -- read_gold CRASHES with the exact same `Assert `!wire->name.empty()' failed in kernel/rtlil.cc:2150` as the standalone axi4_crossbar entry above, confirmed via isolated probe (2026-08-15). Blackboxing axi4_crossbar instead of including its real source does not help: Synlig's UHDM lowering crashes while PARSING/ELABORATING the packed-2D-array parameter declaration itself (`parameter logic [N_SLAVES-1:0][31:0] SLV_BASE`), before any blackbox/hierarchy command in the .eqy script ever runs -- there is no way to reach a point where soc_bus could blackbox the submodule instead of reading its declaration. axi_lite_interconnect.sv (also instantiated by soc_bus, also packed-2D-array-typed SLV_BASE/SLV_LIMIT) does NOT itself crash Synlig when checked standalone -- see the axi_lite_interconnect entry above -- so the crash is specific to axi4_crossbar's declaration, not the parameter shape in general; the difference was not further isolated (out of scope for this bead). No workaround exists short of the same upstream fix axi4_crossbar itself needs."
     }
   ]
 }
