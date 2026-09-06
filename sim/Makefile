@@ -720,6 +720,23 @@ icache:
 		VERILOG_SOURCES="$(CACHE_SOURCES)" \
 		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_icache
 
+# Cache arbiter unit tests (DUT = rv32i_cache_arbiter) -- GH #119 bead 2ft.
+# Standalone coverage for the priority mux (D$ write > D$ read > I$ read),
+# grant-hold-for-the-whole-burst, read-data routing isolation, and the
+# one-cycle registered-grant AR/AW forwarding delay documented in the RTL
+# header. No HLS arm here -- this is hand-written arbitration logic, not an
+# HLS-synthesizable block, so it is held to the normal lint bar.
+.PHONY: mem_cache_arbiter
+mem_cache_arbiter:
+	@echo "Running cache arbiter unit tests (priority, grant hold, isolation)..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.mem.test_cache_arbiter \
+		TOPLEVEL=rv32i_cache_arbiter \
+		VERILOG_SOURCES="$(CACHE_SOURCES)" \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_cache_arbiter
+
 # D-Cache unit tests (DUT = rv32i_dcache)
 .PHONY: dcache
 dcache:
