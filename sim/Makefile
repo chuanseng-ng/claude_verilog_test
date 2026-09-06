@@ -138,7 +138,16 @@ SIM ?= verilator
 
 # Verilator-specific flags
 ifeq ($(SIM),verilator)
+	# Waveform tracing is on by default but opt-out (NO_TRACE=1), because it does
+	# not scale to machine-generated RTL. Bambu emits ~550 modules for one block,
+	# and Verilator then produces a Vtop__Syms__ctor translation unit whose trace
+	# registration is effectively uncompilable: g++ sat on that single file for
+	# 20+ minutes on the GH #119 HLS arm and had to be killed. Tracing is harness
+	# convenience and changes no functional result, so the HLS arms disable it
+	# while the hand-RTL arms keep it.
+ifneq ($(NO_TRACE),1)
 	EXTRA_ARGS += --trace --trace-structs
+endif
 	COMPILE_ARGS += -Wno-fatal
 	COMPILE_ARGS += -Wno-WIDTH
 	COMPILE_ARGS += -Wno-CASEINCOMPLETE
@@ -151,7 +160,12 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += -I$(RTL_DIR)/gpu
 	# Per-target escape hatch for sources this repo does not author and therefore
 	# does not hold to its lint bar -- currently only the HLS-generated Verilog in
-	# the GH #119 pilot (gpu_coalescer_hls), which needs -Wno-lint -Wno-style.
+	# the GH #119 pilot, which needs -Wno-lint -Wno-style plus a far smaller
+	# --output-split than Verilator's 20000 default. Bambu's hierarchy explodes
+	# into hundreds of instances, and Verilator then emits a symbol-table
+	# constructor of ~4000 giant statements in ONE 1.2 MB translation unit; g++
+	# spun on that single file at 99.9% CPU for 32 minutes at -O0 before being
+	# killed. Splitting it into many small functions is the fix.
 	# It exists because you must NOT set COMPILE_ARGS on the sub-make command line:
 	# a command-line assignment overrides every `+=` above, silently dropping
 	# -Wno-fatal, --public-flat-rw, --no-timing, --timescale and the include dirs.
@@ -718,6 +732,58 @@ dcache:
 		VERILOG_SOURCES="$(CACHE_SOURCES)" \
 		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_dcache
 
+# rv32i_hazard_unit standalone unit tests (GH #119 bead `gvr`). The DUT is
+# purely combinational (no clock/reset) -- see tb/cocotb/cpu/test_hazard_unit.py
+# for the directed tests (oracle = the RTL's header comment) plus the
+# randomised cross-arm differential that dumps sim/build/hazard_trace_*.json.
+.PHONY: cpu_hazard_unit
+cpu_hazard_unit:
+	@echo "Running rv32i_hazard_unit unit tests (hand-RTL arm)..."
+	@echo "Note: This should be run in WSL environment"
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.cpu.test_hazard_unit \
+		TOPLEVEL=rv32i_hazard_unit \
+		VERILOG_SOURCES="$(RTL_DIR)/cpu/core/rv32i_hazard_unit.sv" \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_cpu_hazard_unit
+
+# rv32i_hazard_unit, HLS arm (GH #119 bead `gvr`): the SAME cocotb test
+# module as cpu_hazard_unit above, run against Bambu-generated Verilog
+# wrapped in a port-adapting + clock/reset/start/done handshake shim. The
+# testbench branches on the protocol difference in exactly one place
+# (HazardUnitDriver in test_hazard_unit.py); every vector and expected value
+# is identical for both arms.
+#
+# TOPLEVEL is the SHIM (rv32i_hazard_unit_hls), not the reference name, same
+# convention as gpu_coalescer_hls below.
+#
+# The generated .v and the shim are produced in parallel (not yet committed
+# when this target was authored) -- run the HLS flow first if this guard fires.
+# Recursive (=), not immediate (:=): HLS_OUT is defined later in this file
+# (gpu_coalescer_hls section) and must still be picked up here.
+HLS_HAZARD_UNIT_V = $(HLS_OUT)/rv32i_hazard_unit/rv32i_hazard_unit.v
+HLS_HAZARD_UNIT_SHIM := $(PROJ_ROOT)/hls/cpu/rv32i_hazard_unit/shim/rv32i_hazard_unit_hls.sv
+
+.PHONY: cpu_hazard_unit_hls
+cpu_hazard_unit_hls:
+	@echo "Running rv32i_hazard_unit unit tests against the HLS arm..."
+	@test -s $(HLS_HAZARD_UNIT_V) || { \
+	  echo "ERROR: $(HLS_HAZARD_UNIT_V) missing or empty."; \
+	  echo "       Generate it first: nix develop .#hls --command make -C hls rv32i_hazard_unit"; \
+	  exit 2; }
+	@test -s $(HLS_HAZARD_UNIT_SHIM) || { \
+	  echo "ERROR: $(HLS_HAZARD_UNIT_SHIM) missing or empty."; \
+	  echo "       The GH #119 bead gvr shim has not landed yet -- see hls/cpu/rv32i_hazard_unit/shim/."; \
+	  exit 2; }
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.cpu.test_hazard_unit \
+		TOPLEVEL=rv32i_hazard_unit_hls \
+		VERILOG_SOURCES="$(HLS_HAZARD_UNIT_V) $(HLS_HAZARD_UNIT_SHIM)" \
+		EXTRA_VERILATOR_FLAGS="-Wno-lint -Wno-style --output-split 500" \
+		NO_TRACE=1 \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_cpu_hazard_unit_hls
+
 # CPU + cache integration tests (DUT = rv32i_cpu_top)
 .PHONY: cache_integration
 cache_integration:
@@ -915,7 +981,8 @@ gpu_coalescer_hls:
 		MODULE=tb.cocotb.gpu.test_memory_coalescer \
 		TOPLEVEL=memory_coalescer_hls \
 		VERILOG_SOURCES="$(GPU_PKG) $(HLS_COALESCER_V) $(HLS_COALESCER_SHIM)" \
-		EXTRA_VERILATOR_FLAGS="-Wno-lint -Wno-style" \
+		EXTRA_VERILATOR_FLAGS="-Wno-lint -Wno-style --output-split 500" \
+		NO_TRACE=1 \
 		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_coalescer_hls
 
 # gpu_memory_unit unit tests (AXI master wrapper around memory_coalescer)

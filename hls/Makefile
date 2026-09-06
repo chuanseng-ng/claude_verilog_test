@@ -13,7 +13,8 @@ HLS_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 .PHONY: help
 help:
 	@echo "HLS (Bambu) targets — run via: nix develop .#hls --command make -C hls <target>"
-	@echo "  memory_coalescer — GH #119 datapath pole: C -> Verilog + cosim"
+	@echo "  memory_coalescer   — GH #119 datapath pole: C -> Verilog + cosim"
+	@echo "  rv32i_hazard_unit  — GH #119 control pole: C -> Verilog (combinational ref)"
 	@echo "  gate_b   — port-shape probe from GH #119 Gate B (regression for the flow itself)"
 	@echo "  clean    — remove generated output under \$$(HLS_OUT)"
 	@echo ""
@@ -41,6 +42,27 @@ memory_coalescer:
 	$(WRAP_BAMBU) $(HLS_OUT)/memory_coalescer memory_coalescer \
 	  $(COALESCER_DIR)/memory_coalescer.c \
 	  $(BAMBU_FLAGS) --generate-tb=$(COALESCER_DIR)/memory_coalescer_tb.xml \
+	  $(BAMBU_SIM_FLAGS)
+
+# The GH #119 CONTROL pole: rv32i_hazard_unit, authored in C from the block's
+# natural-language spec with the reference RTL body withheld (see NOTES.md).
+#
+# The reference is PURELY COMBINATIONAL (no clock, no reset, no always_ff), so
+# the headline result for this block is that Bambu must wrap a zero-cycle
+# function in a start/done FSM at all -- see NOTES.md.
+#
+# Leg 1 (Bambu's own C/RTL co-simulation) still applies and is still run: the C
+# is the golden reference whether or not the reference RTL is combinational, so
+# this leg validates the C->RTL step independently of whether the C itself is
+# right. Leg 2 (the shared cocotb suite plus the cross-arm trace diff in
+# tools/verif/compare_hazard_traces.py) is what validates the C against the spec.
+HAZARD_DIR := $(HLS_DIR)/cpu/rv32i_hazard_unit
+
+.PHONY: rv32i_hazard_unit
+rv32i_hazard_unit:
+	$(WRAP_BAMBU) $(HLS_OUT)/rv32i_hazard_unit rv32i_hazard_unit \
+	  $(HAZARD_DIR)/rv32i_hazard_unit.c \
+	  $(BAMBU_FLAGS) --generate-tb=$(HAZARD_DIR)/rv32i_hazard_unit_tb.xml \
 	  $(BAMBU_SIM_FLAGS)
 
 .PHONY: clean
