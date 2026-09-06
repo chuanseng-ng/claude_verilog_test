@@ -149,6 +149,13 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += -I$(RTL_DIR)/cpu/core
 	COMPILE_ARGS += -I$(RTL_DIR)/mem
 	COMPILE_ARGS += -I$(RTL_DIR)/gpu
+	# Per-target escape hatch for sources this repo does not author and therefore
+	# does not hold to its lint bar -- currently only the HLS-generated Verilog in
+	# the GH #119 pilot (gpu_coalescer_hls), which needs -Wno-lint -Wno-style.
+	# It exists because you must NOT set COMPILE_ARGS on the sub-make command line:
+	# a command-line assignment overrides every `+=` above, silently dropping
+	# -Wno-fatal, --public-flat-rw, --no-timing, --timescale and the include dirs.
+	COMPILE_ARGS += $(EXTRA_VERILATOR_FLAGS)
 	# Override PYTHON3 so the nix-verilator's verilated.mk uses the system Python 3.10
 	# (/usr/bin/python3) instead of the nix-devshell Python 3.11. Inside nix-shell,
 	# `which python3` resolves to nix Python 3.11, but PYTHONHOME=/usr is set in the
@@ -872,6 +879,44 @@ gpu_coalescer:
 		TOPLEVEL=memory_coalescer \
 		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/memory_coalescer.sv" \
 		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_coalescer
+
+# memory_coalescer, HLS arm (GH #119 bead cfi): the SAME cocotb tests as
+# gpu_coalescer above, run against Bambu-generated Verilog wrapped in a
+# port-adapting shim. Running both arms through one unchanged testbench is what
+# makes the equivalence claim mean anything.
+#
+# Two deliberate differences from the hand-RTL target:
+#   * a distinct SIM_BUILD, so the two arms do not invalidate each other's
+#     ~100 MB Verilator build dir on every alternation;
+#   * EXTRA_VERILATOR_FLAGS, because machine-generated Verilog does not lint
+#     clean (20 warnings at Verilator's default, 0 errors) and this repo does not
+#     hold code it did not author to its own bar. The shim IS held to it.
+#
+# TOPLEVEL is the SHIM (memory_coalescer_hls), not the reference name: Bambu's
+# generated core is itself called `memory_coalescer`, and renaming machine-output
+# on every build is one more thing to break silently. The testbench never refers
+# to a module name -- only to dut.<signal> -- so the two coexist happily.
+#
+# The generated .v is not committed; run `make -C hls memory_coalescer` (inside
+# `nix develop .#hls`) to produce it first.
+HLS_OUT ?= /nobackup/hls/out
+HLS_COALESCER_V := $(HLS_OUT)/memory_coalescer/memory_coalescer.v
+HLS_COALESCER_SHIM := $(PROJ_ROOT)/hls/gpu/memory_coalescer/shim/memory_coalescer_hls.sv
+
+.PHONY: gpu_coalescer_hls
+gpu_coalescer_hls:
+	@echo "Running Phase 4 memory_coalescer unit tests against the HLS arm..."
+	@test -s $(HLS_COALESCER_V) || { \
+	  echo "ERROR: $(HLS_COALESCER_V) missing or empty."; \
+	  echo "       Generate it first: nix develop .#hls --command make -C hls memory_coalescer"; \
+	  exit 2; }
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_memory_coalescer \
+		TOPLEVEL=memory_coalescer_hls \
+		VERILOG_SOURCES="$(GPU_PKG) $(HLS_COALESCER_V) $(HLS_COALESCER_SHIM)" \
+		EXTRA_VERILATOR_FLAGS="-Wno-lint -Wno-style" \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_coalescer_hls
 
 # gpu_memory_unit unit tests (AXI master wrapper around memory_coalescer)
 .PHONY: gpu_memunit

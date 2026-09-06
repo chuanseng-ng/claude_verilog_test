@@ -13,6 +13,7 @@ HLS_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 .PHONY: help
 help:
 	@echo "HLS (Bambu) targets — run via: nix develop .#hls --command make -C hls <target>"
+	@echo "  memory_coalescer — GH #119 datapath pole: C -> Verilog + cosim"
 	@echo "  gate_b   — port-shape probe from GH #119 Gate B (regression for the flow itself)"
 	@echo "  clean    — remove generated output under \$$(HLS_OUT)"
 	@echo ""
@@ -28,6 +29,19 @@ GATE_B_TB  := /nobackup/hls/scratch/gateB/gate_b_tb.xml
 gate_b:
 	$(WRAP_BAMBU) $(HLS_OUT)/gate_b coal_shape $(GATE_B_SRC) \
 	  $(BAMBU_FLAGS) --generate-tb=$(GATE_B_TB) $(BAMBU_SIM_FLAGS)
+
+# The GH #119 datapath-pole arm: memory_coalescer, authored in C from the block's
+# natural-language spec with the reference RTL body withheld (see NOTES.md). The
+# generated .v is consumed by `make -C sim gpu_coalescer_hls`, which runs the
+# SAME cocotb suite as the hand-RTL arm.
+COALESCER_DIR := $(HLS_DIR)/gpu/memory_coalescer
+
+.PHONY: memory_coalescer
+memory_coalescer:
+	$(WRAP_BAMBU) $(HLS_OUT)/memory_coalescer memory_coalescer \
+	  $(COALESCER_DIR)/memory_coalescer.c \
+	  $(BAMBU_FLAGS) --generate-tb=$(COALESCER_DIR)/memory_coalescer_tb.xml \
+	  $(BAMBU_SIM_FLAGS)
 
 .PHONY: clean
 clean:

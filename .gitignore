@@ -91,3 +91,8 @@ pnr/asap7/soc/soc_top_sv2v.v
 # a source dir drops HLS_output/ beside the sources.
 HLS_output/
 hls/**/HLS_output/
+# ...but the Bambu co-simulation testbenches ARE inputs and must be tracked. The
+# blanket `*.xml` above targets cocotb's generated results.xml; without this
+# negation it silently swallows these too, and the artefact would stop being
+# regenerable with no error to notice.
+!hls/**/*_tb.xml
