@@ -280,6 +280,134 @@ def test_cocotb_zero_test_tally_is_error_not_pass() -> None:
     assert "note" in summary
 
 
+# -------------------------------------------------------------------- bambu
+
+# Bambu echoes its own invocation on line 1; the parser reads --simulate from it
+# to decide whether co-simulation results are required. Everything below is
+# trimmed from real Gate A/B logs (GH #119).
+_BAMBU_HEAD = (
+    " ==  Bambu executed with: /nix/store/xx/bambu --top-fname=coal_shape "
+    "--generate-interface=INFER {sim}--device-name=asap7-TC --clock-period=0.705 gate_b.c \n"
+)
+_BAMBU_HLS_DONE = (
+    "    Total estimated area: 352744\n  Total number of flip-flops in function coal_shape: 820\n"
+)
+_BAMBU_COSIM_OK = (
+    "  Total cycles             : 58 cycles\n"
+    "  Number of executions     : 2\n"
+    "  Average execution        : 29 cycles\n"
+)
+
+
+def _bambu_log(*, simulate: bool, hls_done: bool = True, cosim: bool = True) -> str:
+    """Build a Bambu log with the requested phases present."""
+    text = _BAMBU_HEAD.format(sim="--simulate --simulator=VERILATOR " if simulate else "")
+    text += "                         High-Level Synthesis Tool\n"
+    if hls_done:
+        text += _BAMBU_HLS_DONE
+    if simulate and cosim:
+        text += _BAMBU_COSIM_OK
+    return text
+
+
+def _v(tmp_path: Path, content: str = "module coal_shape(); endmodule\n") -> Path:
+    """Write a stand-in generated Verilog file."""
+    path = tmp_path / "coal_shape.v"
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def test_bambu_cosim_run_is_pass(tmp_path: Path) -> None:
+    """A --simulate run with a cosim block and a non-empty .v is PASS."""
+    status, summary = summarize.parse_bambu(_bambu_log(simulate=True), 0, _v(tmp_path))
+    assert status == PASS
+    assert summary["simulated"] is True
+    assert summary["top"] == "coal_shape"
+    assert summary["device"] == "asap7-TC"
+    assert summary["cycles"] == 58
+    assert summary["executions"] == 2
+    assert summary["flip_flops"] == 820
+    assert summary["estimated_area"] == 352744
+    assert len(summary["verilog_sha256"]) == 64
+
+
+def test_bambu_generation_only_is_pass(tmp_path: Path) -> None:
+    """A run without --simulate is PASS despite having no cosim block.
+
+    Generation-only runs legitimately print no cycle counts. The parser learns
+    the mode from the echoed command line rather than demanding cycles always.
+    """
+    status, summary = summarize.parse_bambu(_bambu_log(simulate=False), 0, _v(tmp_path))
+    assert status == PASS
+    assert summary["simulated"] is False
+    assert "cycles" not in summary
+
+
+def test_bambu_cosim_abort_is_fail(tmp_path: Path) -> None:
+    """Bambu's own `error ->` line is a FAIL even when the HLS phase completed."""
+    text = _bambu_log(simulate=True, cosim=False)
+    text += "Warning: Returned error code!\nerror -> Co-simulation main aborted\n"
+    status, summary = summarize.parse_bambu(text, 1, _v(tmp_path))
+    assert status == FAIL
+    assert any("Co-simulation main aborted" in e for e in summary["errors"])
+
+
+def test_bambu_truncated_log_is_error_not_pass(tmp_path: Path) -> None:
+    """A log that never reached the end of the HLS phase is ERROR, not PASS.
+
+    The banner alone proves nothing: Bambu prints it before doing any work.
+    """
+    status, summary = summarize.parse_bambu(
+        _bambu_log(simulate=False, hls_done=False), 0, _v(tmp_path)
+    )
+    assert status == ERROR
+    assert "dwp" in summary["note"]
+
+
+def test_bambu_simulate_without_cycles_is_error_not_pass(tmp_path: Path) -> None:
+    """--simulate that produced no cosim block verified nothing, so it is ERROR."""
+    status, summary = summarize.parse_bambu(_bambu_log(simulate=True, cosim=False), 0, _v(tmp_path))
+    assert status == ERROR
+    assert "dwp" in summary["note"]
+
+
+def test_bambu_missing_verilog_is_error_not_pass(tmp_path: Path) -> None:
+    """A clean exit that produced no .v is ERROR — the artefact is the deliverable."""
+    status, summary = summarize.parse_bambu(_bambu_log(simulate=True), 0, tmp_path / "absent.v")
+    assert status == ERROR
+    assert "not found" in summary["note"]
+
+
+def test_bambu_normalized_hash_ignores_the_generation_timestamp(tmp_path: Path) -> None:
+    """Two runs of identical input differ only in Bambu's embedded date stamp.
+
+    Verified against the real tool: three back-to-back runs of the same source
+    produced three different raw digests and were byte-identical everywhere
+    except the `- Date ...` header line. The normalized digest is what a
+    committed "expected sha256" must pin, or it would fail on every
+    regeneration.
+    """
+    head = "// Code created using PandA - Version: PandA 2024.10 - Date "
+    body = "module coal_shape(); endmodule\n"
+    first = tmp_path / "a.v"
+    first.write_text(head + "2026-09-06T01:13:19\n" + body, encoding="utf-8")
+    second = tmp_path / "b.v"
+    second.write_text(head + "2026-09-06T01:13:52\n" + body, encoding="utf-8")
+
+    _, sum_a = summarize.parse_bambu(_bambu_log(simulate=True), 0, first)
+    _, sum_b = summarize.parse_bambu(_bambu_log(simulate=True), 0, second)
+
+    assert sum_a["verilog_sha256"] != sum_b["verilog_sha256"]
+    assert sum_a["verilog_sha256_normalized"] == sum_b["verilog_sha256_normalized"]
+
+
+def test_bambu_empty_verilog_is_error_not_pass(tmp_path: Path) -> None:
+    """A zero-byte .v is the exit-0-empty-report shape and must not be PASS."""
+    status, summary = summarize.parse_bambu(_bambu_log(simulate=True), 0, _v(tmp_path, ""))
+    assert status == ERROR
+    assert "empty" in summary["note"]
+
+
 def test_missing_log_file_exits_error_not_traceback(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
 ) -> None:

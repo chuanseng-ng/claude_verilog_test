@@ -9,6 +9,7 @@ tools/eda/wrap-verilator.sh --lint-only -Wall --top-module timer rtl/periph/time
 tools/eda/wrap-yosys.sh     synth.ys
 tools/eda/wrap-opensta.sh   pnr/scripts/07_sta.tcl
 tools/eda/wrap-cocotb.sh    tb/cocotb/soc uart
+tools/eda/wrap-bambu.sh     /nobackup/hls/out/gate_b coal_shape /abs/gate_b.c --simulate
 ```
 
 ## Exit codes
@@ -33,6 +34,7 @@ exactly that reason (bead `dwp`). A gate built on these wrappers cannot repeat i
 | `yosys` | `ERROR:` lines / tool exit; **no statistics ⇒ `ERROR`** | `cell_count`, `chip_area`, `errors` |
 | `opensta` | violated endpoints, negative `wns`/`tns`; **empty report ⇒ `ERROR`** | `wns`, `tns`, `worst_slack`, `paths_reported`, `violated_endpoints` |
 | `cocotb` | JUnit `results.xml`, else the `TESTS=` tally; **neither ⇒ `ERROR`** | `passed`, `failed`, `skipped`, `failures[]` |
+| `bambu` | `error ->` lines / tool exit; **HLS phase never finished, `--simulate` with no cycle block, or a missing/empty `.v` ⇒ `ERROR`** | `top`, `device`, `clock_period_ns`, `simulated`, `cycles`, `executions`, `flip_flops`, `estimated_area`, `verilog_sha256`, `verilog_sha256_normalized` |
 
 Every list is capped at 20 entries with an explicit `... N more (see raw log)`
 marker — truncation is never silent. Full logs land in `sim/build/eda-logs/`
@@ -59,10 +61,15 @@ clone that has run the CDC flow needs no second download. Otherwise:
 - `verilator` — repo devshell: `nix develop --command tools/eda/wrap-verilator.sh ...`
 - `yosys` — `tools/cdc/fetch_cdc_tools.sh --with-yosys`, or the librelane nix-shell
 - `sta`, `openroad` — librelane nix-shell (`~/Downloads/Github/librelane`)
+- `bambu` — HLS devshell: `nix develop .#hls --command tools/eda/wrap-bambu.sh ...`
 
 A missing tool exits 3 with the hint in the JSON, never a stack trace.
 
 ## MCP session servers (OpenSTA / OpenROAD)
+
+Bambu is deliberately **not** in this section: it is a one-shot batch compiler
+with no interactive query surface, so there is nothing to keep warm between
+calls. It stays wrapper-only.
 
 `wrap-opensta.sh` is a one-shot driver: every invocation re-reads liberty +
 netlist + SDC from scratch, which is minutes of setup on a design this size.
@@ -163,8 +170,8 @@ root. Neither `sta` nor `openroad` is on the login `PATH` on this host;
 
 ## Tests
 
-`tb/tests/test_eda_summarize.py` (20 cases, part of the CI QA job) covers every
-parser, and specifically pins the three "exit 0 but nothing to report" paths to
+`tb/tests/test_eda_summarize.py` (32 cases, part of the CI QA job) covers every
+parser, and specifically pins every "exit 0 but nothing to report" path to
 `ERROR`, plus the `worst_slack` field (including the clean-design case where
 `wns`/`tns` read `0.00` and `worst_slack` carries the real margin). Run with
 `rtk pytest tb/tests/test_eda_summarize.py -q`.

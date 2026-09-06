@@ -319,7 +319,7 @@ With both in place, `nix develop --command make -C tb/cocotb/soc soc_all` is aut
 
 ### EDA tool output: wrappers + MCP session servers (`tools/eda/`)
 
-`tools/eda/wrap-{verilator,yosys,opensta,cocotb}.sh` turn a raw one-shot tool
+`tools/eda/wrap-{verilator,yosys,opensta,cocotb,bambu}.sh` turn a raw one-shot tool
 log into a compact JSON verdict (`tools/eda/summarize.py`) with a real exit
 code (0 PASS / 1 FAIL / 2 ERROR / 3 tool missing) — a tool that exits 0 with an
 empty or unparsable report is never read as PASS (bead `dwp`). For repeated

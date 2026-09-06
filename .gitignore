@@ -85,3 +85,9 @@ memory/
 *.db
 .beads-credential-key
 pnr/asap7/soc/soc_top_sv2v.v
+
+# HLS (GH #119): Bambu build artefacts. Generated Verilog lives in /nobackup
+# (see hls/README.md) and never lands in the tree, but a run invoked by hand from
+# a source dir drops HLS_output/ beside the sources.
+HLS_output/
+hls/**/HLS_output/
