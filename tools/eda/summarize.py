@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -239,6 +240,127 @@ def parse_cocotb(text: str, exit_code: int, results_xml: Path | None) -> tuple[i
     return PASS, summary
 
 
+# Bambu echoes its own full invocation back on the first line of the log:
+#   ==  Bambu executed with: /nix/store/.../bambu --top-fname=sum ... --simulate ...
+# Parsing that one line is what lets this verdict tell a generation-only run
+# (which legitimately has no co-simulation results) apart from a --simulate run
+# whose results are missing. Without it the parser would have to either demand
+# cycles unconditionally (failing every valid generation run) or never demand
+# them (letting a silently-dead cosim read as PASS).
+_BAMBU_CMDLINE_RE = re.compile(r"^\s*==\s+Bambu executed with:\s*(.+)$", re.M)
+_BAMBU_TOP_RE = re.compile(r"--top-fname=(\S+)")
+_BAMBU_DEVICE_RE = re.compile(r"--device-name=(\S+)")
+_BAMBU_PERIOD_RE = re.compile(r"--clock-period=(\S+)")
+# `  Total number of flip-flops in function sum: 1183` — the end of the HLS phase,
+# and the marker that proves synthesis actually ran rather than dying at startup.
+_BAMBU_FF_RE = re.compile(r"^\s*Total number of flip-flops in function\s+\S+?:\s*(\d+)", re.M)
+_BAMBU_AREA_RE = re.compile(r"^\s*Total estimated area:\s*(\d+)", re.M)
+# The co-simulation result block, printed only when --simulate ran to completion.
+_BAMBU_CYCLES_RE = re.compile(r"^\s*Total cycles\s*:\s*(\d+)", re.M)
+_BAMBU_EXECS_RE = re.compile(r"^\s*Number of executions\s*:\s*(\d+)", re.M)
+_BAMBU_AVG_RE = re.compile(r"^\s*Average execution\s*:\s*(\d+)", re.M)
+# Bambu's own terminal error line, e.g. "error -> Co-simulation main aborted".
+_BAMBU_ERR_RE = re.compile(r"^error -> .*$", re.M)
+# The MDPI co-simulation driver's per-parameter mismatch report. These appear
+# only under -v4; the plain log carries just the "error ->" line above, so the
+# ladder must never depend on finding them.
+_BAMBU_MDPI_RE = re.compile(r"^ERROR: MDPI driver: .*$", re.M)
+# Bambu stamps the generation time into a header comment of every .v:
+#   // Code created using PandA - Version: ... - Date 2026-09-06T01:13:19
+# That timestamp is the ONLY thing that varies between two runs of identical
+# input (verified: 3 back-to-back runs differed in exactly this one line and
+# nowhere else). Hashing the raw bytes therefore yields a different digest every
+# time, which would make a committed "expected sha256" fail on every
+# regeneration. verilog_sha256_normalized blanks the date and is the digest to
+# pin; verilog_sha256 stays as the identity of the exact file on disk.
+_BAMBU_DATE_RE = re.compile(rb"(// Code created using PandA .* - Date )\S+")
+
+
+def parse_bambu(text: str, exit_code: int, verilog: Path | None) -> tuple[int, dict]:
+    """Verdict a Bambu HLS run; a missing .v or an absent cosim block is ERROR, not PASS."""
+    cmdline_m = _BAMBU_CMDLINE_RE.search(text)
+    cmdline = cmdline_m.group(1) if cmdline_m else ""
+    simulated = "--simulate" in cmdline
+
+    ff = _BAMBU_FF_RE.findall(text)
+    cycles = _BAMBU_CYCLES_RE.findall(text)
+    execs = _BAMBU_EXECS_RE.findall(text)
+    avg = _BAMBU_AVG_RE.findall(text)
+    area = _BAMBU_AREA_RE.findall(text)
+
+    errors = [e.strip() for e in _BAMBU_ERR_RE.findall(text)]
+    errors += [e.strip() for e in _BAMBU_MDPI_RE.findall(text)]
+    if "Warning: Returned error code!" in text:
+        errors.append("Warning: Returned error code!")
+
+    summary: dict = {
+        "simulated": simulated,
+        "errors": _cap(errors),
+    }
+    for key, pattern in (
+        ("top", _BAMBU_TOP_RE),
+        ("device", _BAMBU_DEVICE_RE),
+        ("clock_period_ns", _BAMBU_PERIOD_RE),
+    ):
+        found = pattern.search(cmdline)
+        if found:
+            summary[key] = found.group(1)
+    if ff:
+        summary["flip_flops"] = int(ff[-1])
+    if area:
+        summary["estimated_area"] = int(area[-1])
+    if cycles:
+        summary["cycles"] = int(cycles[-1])
+    if execs:
+        summary["executions"] = int(execs[-1])
+    if avg:
+        summary["avg_cycles"] = int(avg[-1])
+    if verilog:
+        summary["verilog"] = str(verilog)
+
+    if exit_code != 0 or errors:
+        return FAIL, summary
+
+    # Bambu prints its banner before doing any work, so the banner alone proves
+    # nothing. The flip-flop line is the first marker that only appears once
+    # synthesis has actually finished; without it the log is truncated, the run
+    # died at startup, or this is not a Bambu log at all.
+    if not ff:
+        summary["note"] = (
+            "no 'Total number of flip-flops' line — the HLS phase never "
+            "completed, or the log is truncated. Treated as ERROR, not PASS "
+            "(bead dwp)."
+        )
+        return ERROR, summary
+
+    # A --simulate run that produced no cosim block did not verify anything.
+    # Exit code 0 here would otherwise report an unverified design as PASS.
+    if simulated and not cycles:
+        summary["note"] = (
+            "--simulate was requested but the log has no 'Total cycles' block — "
+            "the co-simulation did not run to completion. Treated as ERROR, not "
+            "PASS (bead dwp)."
+        )
+        return ERROR, summary
+
+    # The generated Verilog is the artefact the whole run exists to produce.
+    # An absent or empty .v with a clean exit is the exit-0-empty-report shape.
+    if verilog is not None:
+        if not verilog.is_file():
+            summary["note"] = f"expected Verilog not found: {verilog}"
+            return ERROR, summary
+        data = verilog.read_bytes()
+        if not data:
+            summary["note"] = f"generated Verilog is empty: {verilog}"
+            return ERROR, summary
+        summary["verilog_sha256"] = hashlib.sha256(data).hexdigest()
+        summary["verilog_bytes"] = len(data)
+        normalized = _BAMBU_DATE_RE.sub(rb"\1<normalized>", data)
+        summary["verilog_sha256_normalized"] = hashlib.sha256(normalized).hexdigest()
+
+    return PASS, summary
+
+
 PARSERS = {
     "verilator": parse_verilator,
     "yosys": parse_yosys,
@@ -249,10 +371,11 @@ PARSERS = {
 def main() -> int:
     """Parse args, summarise the log, print the JSON verdict, return the status."""
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--tool", required=True, choices=sorted(set(PARSERS) | {"cocotb"}))
+    ap.add_argument("--tool", required=True, choices=sorted(set(PARSERS) | {"cocotb", "bambu"}))
     ap.add_argument("--log", help="raw log file (also echoed in the JSON)")
     ap.add_argument("--exit-code", type=int, default=0, help="exit status of the wrapped tool")
     ap.add_argument("--results-xml", help="cocotb JUnit results.xml, if any")
+    ap.add_argument("--verilog", help="Verilog the bambu run should have produced")
     args = ap.parse_args()
 
     # An unreadable log is ERROR (2), not a traceback. An uncaught
@@ -279,9 +402,14 @@ def main() -> int:
         )
         return ERROR
 
+    # cocotb and bambu each need an artefact path, so they take a third argument
+    # and stay out of PARSERS (which only holds the 2-arg parsers).
     if args.tool == "cocotb":
         xml_path = Path(args.results_xml) if args.results_xml else None
         status, summary = parse_cocotb(text, args.exit_code, xml_path)
+    elif args.tool == "bambu":
+        v_path = Path(args.verilog) if args.verilog else None
+        status, summary = parse_bambu(text, args.exit_code, v_path)
     else:
         status, summary = PARSERS[args.tool](text, args.exit_code)
 

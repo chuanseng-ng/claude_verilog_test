@@ -1,7 +1,7 @@
 # C++ → SystemVerilog (HLS) Flow Evaluation & RTL-Generation Approach Decision
 
 **Date:** 2026-07-14
-**Status:** Decision recorded · empirical-confirmation pilot logged as backlog (below)
+**Status:** Decision recorded · **empirical-confirmation pilot RUN — Stage 1 complete 2026-09-07** (see "Stage 1 results" at the end; Stage 2 = P&R/PPA, not yet run)
 **Scope:** Should RTL be generated via `NL → C++ (AI) → RTL (HLS tool)` instead of the
 current `NL → SystemVerilog (RTL-orchestrator agents)` flow?
 
@@ -134,10 +134,21 @@ throughput at matched fmax, and report the II/latency of each version).
 
 **Acceptance thresholds (measurable; tune before the run if desired):**
 - "Regresses noticeably" = Flow B is worse than Flow A by **>10 % fmax** *or* **>20 % area**
-  *or* **>20 % power** at matched function, *or* introduces any DRC/antenna violation Flow A
-  did not have.
-- "Competitive" = Flow B within **±5 % fmax** and **±10 % area/power** of Flow A, with 0 DRC.
+  *or* **>20 % power** at matched function. ~~*or* introduces any DRC/antenna violation Flow A
+  did not have.~~ — **DRC clause struck, see below.**
+- "Competitive" = Flow B within **±5 % fmax** and **±10 % area/power** of Flow A. ~~with 0 DRC.~~
 - Any result between these bands is "inconclusive → widen the block set or re-tune pragmas."
+
+> **⚠ The DRC/antenna axis is withdrawn for ASAP7 — struck 2026-09-07 (Stage 1, bead `cge`).**
+> Bead `xy6` (closed, root-caused) established that **no ASAP7 run in this project's history has
+> ever completed detailed routing**: `pnr/scripts/openroad/drt.tcl` wraps the whole
+> `detailed_route` call in a bare `catch{}`, so DRT-0073/0074 pin-access failures abort routing
+> and `write_views` commits the pre-route placed netlist. 100 % of recoverable runs show zero
+> ROUTED nets. Bead `ocm` (open) owns the unsolved pin-access cause.
+> Both arms of this pilot would hit the identical wall, so a DRC column yields **no
+> discriminating signal** — it would compare two vacuous zeros. Timing/power/area survive as
+> GRT-estimate-based figures that are self-consistent between arms.
+> **Stage 2 must not promise a DRC column.** Revisit only if `ocm` is solved.
 
 **Expected result (hypothesis):** HLS regresses per the thresholds above on the FSM, is
 competitive on the coalescer — which would confirm "keep hand-RTL for the control core,
@@ -146,6 +157,156 @@ would itself be a useful signal to revisit the recommendation.
 
 **Deliverable:** a short PPA comparison table appended to this doc.
 
-**Note:** this pilot is optional — the literature + this project's existing PPA profile
-already support the decision above. Run only if empirical proof is wanted before committing
-HLS to any future datapath accelerator.
+**Note:** this pilot was optional. **It was run anyway — Stage 1 completed 2026-09-07;
+see "Stage 1 results" at the end of this document.** Two of the three blocks returned
+categorical results rather than PPA numbers, and one correction landed on this section's own
+framing (the "datapath-ish" pole is not a datapath block). Stage 2 (P&R + the PPA table) has
+not been run.
+
+---
+
+# Stage 1 results — the pilot was run (2026-09-07)
+
+**Status:** Stage 1 complete. **No PPA table yet** — that is Stage 2, which measures. Stage 1
+installed the tool, authored the C, generated the RTL, and proved functional equivalence.
+
+The pilot was expected to return a PPA delta. It returned something more decisive: on the three
+blocks attempted, **two of the three results are categorical rather than numeric.** Details in
+`hls/*/NOTES.md`; the reproducibility pin is `hls/PROVENANCE.json`.
+
+## What was pinned
+
+Bambu (PandA) **2024.10**, revision `c2ba6936ca2ed63137095fea0b630a1c66e20e63-main`. Upstream ships
+only a prebuilt AppImage, so it is packaged as a nix devshell (`flake.nix`, `devShells.hls`) via
+`appimageTools.wrapType2` + `fetchurl` with the AppImage sha256 enforced by nix. **The flake is the
+pin** — no per-machine install step, and nix refuses to build if the upstream artefact ever changes.
+
+Target `--device-name=asap7-TC`, `--clock-period=0.705` ns (matching
+`pnr/asap7/template/config.json`). Bambu bundles `asap7sc7p5t_SIMPLE_RVT_TT_nldm_201020.lib` — the
+same cell library and TT corner `pnr/asap7/cpu/config.json` already uses, so Stage 2 can match the
+corner exactly. Co-simulation against the flake's Verilator 5.048.
+
+Generated Verilog is **not committed**. Bambu stamps a timestamp into a header comment of every
+`.v`, so the raw digest changes every run (verified: three back-to-back runs of identical input gave
+three digests, byte-identical except the `- Date …` line). `tools/eda/wrap-bambu.sh` therefore emits
+a **normalized** digest, which is stable and is what `PROVENANCE.json` pins.
+
+## Method: the reference RTL body was withheld
+
+Each C source was authored by a fresh agent given **only** the block's natural-language spec (the
+reference `.sv` header comment) and its port list, explicitly barred from reading anything under
+`rtl/`. Transliterating the SystemVerilog would have measured transliteration and answered nothing.
+Each block's `ASSUMPTIONS.md` records every point where the spec was silent and what was chosen —
+those files are a measured output of the experiment, not paperwork.
+
+## Results
+
+| Block | Pole | Outcome |
+|---|---|---|
+| `memory_coalescer` | AXI / serialiser | Equivalent on both legs. One measured latency penalty. |
+| `rv32i_hazard_unit` | control | **Form inexpressible** (combinational → 6-9 cycle FSM) **and** functional divergence, 254/2000 vectors |
+| `rv32i_cache_arbiter` | control / bus arbitration | **Inexpressible — no C authored** |
+
+Every block was checked on **two independent legs**: Bambu's own C/RTL co-simulation (which
+validates the C→RTL step), and the *same, unmodified* cocotb suite run against both the hand-RTL and
+the HLS arm behind a wire-only shim (which validates the C against the spec). Neither leg
+substitutes for the other.
+
+### 1. `memory_coalescer` — equivalent, with a 6× control-path latency penalty
+
+Both legs green: cosim 5/5 vectors; the existing 5-test cocotb suite passes on both arms.
+
+One test initially failed. Measured cause: on an empty lane mask the hand-RTL asserts `done_o` after
+**1** rising edge (`IDLE → DONE` directly), the HLS version after **6** — Bambu walks all eight lane
+predicates sequentially even when none fire. The test's 5-cycle bound was a testbench assumption
+calibrated against the reference, not a specified requirement (the spec sets no cycle budget), so it
+was rebased for **both** arms with the AXI-silence assertions untouched.
+
+**Correction to this document's own framing:** `memory_coalescer` was named here as the
+"datapath-ish → HLS-favorable" pole. It is not a datapath block. It is 214 lines of lane-walking FSM
+plus AXI handshakes with zero arithmetic, and `GPU_ENABLE_COALESCE = 1'b0` means nothing is actually
+coalesced — it serialises one single-beat transaction per active lane. It was kept because it is the
+block that exercises Bambu's `m_axi` path and carries the real interface risk, but it never tested
+the datapath hypothesis.
+
+### 2. `rv32i_hazard_unit` — the control pole, substituted and doubly negative
+
+Substituted for "a cache refill FSM", which turned out not to exist as a standalone module — the
+refill logic is smeared across `rv32i_icache.sv` (619 lines, 5 SRAM macros) and `rv32i_dcache.sv`
+(990 lines). Carving it out would have created a *new* baseline that was never signed off. The
+hazard unit is 427 lines, purely combinational, and is named in this document's own control-heavy
+list, so it tests the same hypothesis against real signed-off RTL.
+
+**Result 2a — HLS cannot express the block's form.** The reference has no clock, no reset and
+**zero flip-flops**. Bambu wraps every design in a start/done handshake: **9 FSM states, 50
+flip-flops, 6-9 cycles per evaluation, data-dependent latency.** For a block whose job is resolving
+hazards within one cycle, that is not a drop-in replacement at any clock period. This is not an
+authoring artefact — rebuilding the stall/flush logic branch-free, with no priority chain at all,
+produced an *identical* schedule (area within 0.3 %).
+
+**Result 2b — spec drift, precisely localised.** Hand-RTL 28/28 spec-derived directed tests;
+HLS 26/28; the 2000-vector cross-arm differential reports **254 mismatches (12.7 %)**. Root cause:
+the failing vectors make the EX1b/EX1c producers *loads*, whose data is not ready, so those
+forwarding tiers must be excluded; the HLS version gates only the EX2 tier on `mem_rd`.
+
+The sharp part: **all 254 mismatches land on forwarding outputs. Not one stall, flush or load-use
+output ever mismatched.** The 9-item priority ladder — which this document's source spec states
+explicitly and completely — transferred perfectly. The drift is confined entirely to what the spec
+left to inference. **Spec-stated behaviour transferred; spec-implied behaviour did not.**
+
+The divergence was deliberately not fixed. It is the measurement. It was also *predicted in advance*
+by the C author in `ASSUMPTIONS.md`, including the observation that it would "only ever fail under
+random-vector equivalence, never under a trace" — which is exactly what happened.
+
+### 3. `rv32i_cache_arbiter` — outside the expressible domain
+
+No C was authored, and none should be. Bambu emits AXI **masters** only, and only as a side-effect
+of pointer dereference; asking for a slave is rejected (`error: Invalid HLS interface mode` for
+`mode = s_axilite`), the shipped clang plugin contains no AXI-slave mode string at all, and
+`--generate-interface` accepts only `MINIMAL` / `INFER` / `WB4`. Under the first two every top
+module carries `start_port`/`done_port` — the C execution model made structural. The arbiter is
+permanently reactive, with three incoming AXI channel sets and grant-hold-until-`RLAST`; there is no
+invocation to map onto. Full evidence, including a probe of the one slave-shaped option (`WB4`, a
+memory-mapped *control* interface in Wishbone), is in
+`hls/mem/rv32i_cache_arbiter/INEXPRESSIBLE.md`.
+
+Forcing it would have required a hand-written shim containing the grant register, priority encoder,
+burst-hold logic and response routing — the entire design — around an HLS core contributing nothing.
+That comparison would be hand-RTL versus hand-RTL, reported as hand-RTL versus HLS.
+
+## What this does to the recommendation
+
+The recommendation at the top of this document **stands, and is strengthened on its control-logic
+half.** For that half the claim can now be stated more strongly than the literature supported:
+
+> Not "HLS produces worse control logic" but, for the two control blocks attempted, **"HLS cannot
+> express these blocks at all"** — one because a combinational block becomes a multi-cycle FSM, the
+> other because the interface has no representation. Neither is a scheduling or pragma-tuning
+> problem; both follow from the C execution model, so neither is fixed by re-tuning.
+
+**The datapath half of the recommendation remains untested.** Neither measured block is a datapath
+block, and the one named as such is not. Nothing here supports or undermines reserving HLS for
+datapath accelerators — that hypothesis is exactly as evidenced as it was before this pilot ran.
+If it matters, a genuine datapath pole (`rtl/gpu/vector_alu.sv`, 8 × 32-bit multiply plus
+shift/logic) would test it.
+
+Two secondary findings worth carrying into any future HLS work:
+- **Ordinary C factoring is not available.** Bambu refuses to inline `static` helpers — it made a
+  shared helper a 1-resource submodule with internal DISTRAM and *failed the build*
+  (`clock constraint too tight: BRAMs for this device cannot run so fast`).
+  `__attribute__((always_inline))` did not change the decision; only preprocessor macros worked.
+- **The output is structurally explosive.** Bambu instantiates ~550 modules for one small block.
+  Verilator then emits a 1.2 MB symbol-table constructor on which g++ spun at 99.9 % CPU for
+  32 minutes at `-O0`. `sim/Makefile` carries `--output-split 500` and `NO_TRACE=1` on the HLS arms
+  for this reason.
+
+## Stage 2 — what it may and may not claim
+
+- **No DRC column.** See the struck threshold above (beads `xy6` / `ocm`).
+- Bambu's own estimates (coalescer 820 FF / area 352 744; hazard unit 50 FF / area 1 791 535) are
+  **not comparable to hand-RTL** — they cover the whole generated hierarchy including Bambu's AXI
+  master adapter, which the hand-RTL has no equivalent of. Stage 2 must synthesise both arms for
+  real and state the counting boundary before quoting anything.
+- Both shims are wire-only (zero registers), so Flow B's area needs no separate shim line.
+- Normalize on throughput per the pinning list above: the hand-RTL cycle counts are 1 (coalescer,
+  empty mask) and **0** (hazard unit, combinational) against 6 and 6-9 respectively.

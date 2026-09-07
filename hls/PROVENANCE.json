@@ -1,0 +1,114 @@
+{
+  "_comment": [
+    "GH #119 Stage 1 reproducibility pin, per docs/CPP_TO_RTL_HLS_EVALUATION.md L127-133.",
+    "Stage 1 produced NO PPA table. These are Bambu's own pre-synthesis estimates and are",
+    "NOT comparable to hand-RTL: they cover the whole generated hierarchy including Bambu's",
+    "AXI master adapter, which the hand-RTL has no equivalent of. Stage 2 must synthesise",
+    "both arms for real and state the counting boundary before quoting any number."
+  ],
+  "stage": 1,
+  "issue": "https://github.com/chuanseng-ng/claude_verilog_test/issues/119",
+  "hls_tool": {
+    "name": "Bambu (PandA)",
+    "version": "2024.10",
+    "revision": "c2ba6936ca2ed63137095fea0b630a1c66e20e63-main",
+    "appimage_url": "https://release.bambuhls.eu/bambu-2024.10.AppImage",
+    "appimage_sha256": "e4f0214496a5d35de1932975b0f41cd95bc33a53a904fc565d6c2cb01df40773",
+    "appimage_bytes": 1405510848,
+    "appimage_last_modified": "2025-05-11",
+    "pinned_by": "flake.nix devShells.hls via appimageTools.wrapType2 + fetchurl; the sha256 is enforced by nix, so the flake IS the pin -- no per-machine install step",
+    "bundled_frontends": [
+      "clang-12",
+      "clang-16",
+      "gcc-8 (x86_64-linux-gnu-gcc-8.5.0)"
+    ],
+    "frontend_used": "I386_CLANG16 (the interface pragmas are parsed by Bambu's clang plugin; a GCC frontend never sees them)",
+    "help_capture": "/nobackup/hls/provenance/bambu-help.txt (880 lines)"
+  },
+  "simulator": {
+    "name": "Verilator",
+    "version": "5.048 2026-04-26 rev v5.048",
+    "source": "in-repo flake devShells.hls (inside the FHS sandbox: Bambu locates it with a literal `which verilator`)",
+    "nixpkgs_rev": "567a49d1913ce81ac6e9582e3553dd90a955875f"
+  },
+  "target": {
+    "device_name": "asap7-TC",
+    "clock_period_ns": 0.705,
+    "clock_period_rationale": "matches pnr/asap7/template/config.json CLOCK_PERIOD; Stage 2 must use the same value for BOTH arms or the comparison is void",
+    "liberty_bundled_with_bambu": "asap7sc7p5t_SIMPLE_RVT_TT_nldm_201020.lib",
+    "corner_note": "same cell library and TT corner pnr/asap7/cpu/config.json already uses"
+  },
+  "authorship_protocol": {
+    "method": "Each C source was authored by a fresh agent given ONLY the block's natural-language spec (the reference .sv header comment) plus its port list, explicitly barred from reading anything under rtl/.",
+    "rationale": "GH #119 asks about the NL->C->HLS flow. Transliterating the SystemVerilog would have measured transliteration and answered nothing.",
+    "prompts_recorded_in": "the bead records (bd show claude_verilog_test-{cfi,gvr}) and each block's NOTES.md"
+  },
+  "blocks": {
+    "memory_coalescer": {
+      "top_function": "memory_coalescer",
+      "c_source": "hls/gpu/memory_coalescer/memory_coalescer.c",
+      "cosim_testbench": "hls/gpu/memory_coalescer/memory_coalescer_tb.xml",
+      "shim": "hls/gpu/memory_coalescer/shim/memory_coalescer_hls.sv",
+      "notes": "hls/gpu/memory_coalescer/NOTES.md",
+      "assumptions": "hls/gpu/memory_coalescer/ASSUMPTIONS.md",
+      "bambu_command": "bambu <abs>/memory_coalescer.c --top-fname=memory_coalescer --generate-interface=INFER --compiler=I386_CLANG16 --device-name=asap7-TC --clock-period=0.705 --reset-type=async --reset-level=low --disable-reg-init-value --no-mixed-design -w V --generate-tb=<abs>/memory_coalescer --simulate --simulator=VERILATOR",
+      "generated_verilog": "/nobackup/hls/out/memory_coalescer/memory_coalescer.v  (NOT committed)",
+      "verilog_sha256_normalized": "2cb8a8a2c8b146080a98039ae1a3a07b3a72c70b4a13efb5072cf85d4301a045",
+      "leg1_bambu_cosim": {
+        "status": "PASS",
+        "vectors": 5,
+        "total_cycles": 119,
+        "avg_cycles": 23
+      },
+      "bambu_estimate_flip_flops": 820,
+      "bambu_estimate_area": 352744,
+      "hand_rtl_latency_cycles": 1,
+      "hls_latency_cycles": 6,
+      "latency_note": "empty-mask done_o latency: hand-RTL 1 rising edge (IDLE->DONE direct), HLS 6"
+    },
+    "rv32i_hazard_unit": {
+      "top_function": "rv32i_hazard_unit",
+      "c_source": "hls/cpu/rv32i_hazard_unit/rv32i_hazard_unit.c",
+      "cosim_testbench": "hls/cpu/rv32i_hazard_unit/rv32i_hazard_unit_tb.xml",
+      "shim": "hls/cpu/rv32i_hazard_unit/shim/rv32i_hazard_unit_hls.sv",
+      "notes": "hls/cpu/rv32i_hazard_unit/NOTES.md",
+      "assumptions": "hls/cpu/rv32i_hazard_unit/ASSUMPTIONS.md",
+      "bambu_command": "bambu <abs>/rv32i_hazard_unit.c --top-fname=rv32i_hazard_unit --generate-interface=INFER --compiler=I386_CLANG16 --device-name=asap7-TC --clock-period=0.705 --reset-type=async --reset-level=low --disable-reg-init-value --no-mixed-design -w V --generate-tb=<abs>/rv32i_hazard_unit --simulate --simulator=VERILATOR",
+      "generated_verilog": "/nobackup/hls/out/rv32i_hazard_unit/rv32i_hazard_unit.v  (NOT committed)",
+      "verilog_sha256_normalized": "397eb1ce38e3619a3f0072daa90035b88283fb87216eaf4444512faae593aeda",
+      "leg1_bambu_cosim": {
+        "status": "PASS",
+        "vectors": 30,
+        "total_cycles": 203,
+        "avg_cycles": 6
+      },
+      "bambu_estimate_flip_flops": 50,
+      "bambu_estimate_area": 1791535,
+      "hand_rtl_latency_cycles": 0,
+      "hls_latency_cycles": "6-9 (data-dependent)",
+      "latency_note": "reference is PURELY COMBINATIONAL: 0 cycles, 0 flip-flops. HLS needs 6-9 cycles and 50 flip-flops. This figure needs no normalisation and is the sharpest result."
+    },
+    "rv32i_cache_arbiter": {
+      "status": "INEXPRESSIBLE -- no C authored, by design",
+      "verdict": "hls/mem/rv32i_cache_arbiter/INEXPRESSIBLE.md",
+      "summary": "Bambu emits AXI masters only, as a side-effect of pointer dereference; there is no AXI-slave interface mode, and every design is wrapped in a start_port/done_port invocation handshake. The arbiter is permanently reactive with three incoming AXI channel sets and grant-hold-until-RLAST."
+    }
+  },
+  "digest_note": "Bambu stamps the generation time into a header comment of every .v, so the RAW sha256 differs on every run (verified: 3 back-to-back runs of identical input gave 3 digests, byte-identical except the '- Date ...' line). Pin the NORMALIZED digest, which blanks that date and is stable. tools/eda/wrap-bambu.sh emits both.",
+  "shim_accounting": {
+    "rule": "Both shims are WIRE-ONLY -- zero registers, only renaming, slicing, zero-extension/truncation and tie-offs; each contributes 0 Verilator warnings.",
+    "consequence": "Flow B's area is not inflated by the wrapper, so Stage 2 can compare the arms without a separate shim line. If a future shim ever needs real registers, its cell count must be reported as a SEPARATE line and never folded into Flow B."
+  },
+  "power_activity": "Stage 2. Both arms must use the same VCD source (the shared cocotb suite).",
+  "drc_axis": {
+    "status": "WITHDRAWN for ASAP7 -- not measured, not measurable",
+    "reason": "Bead xy6 (closed, root-caused): pnr/scripts/openroad/drt.tcl wraps the whole detailed_route call in a bare catch{}, so DRT-0073/0074 pin-access failures abort routing and write_views commits the pre-route placed netlist. 100% of recoverable ASAP7 runs show zero ROUTED nets. Bead ocm (open) owns the unsolved pin-access cause.",
+    "consequence": "Both arms would hit the identical wall, so the column yields no discriminating signal. The acceptance thresholds in the evaluation doc have been amended accordingly. Stage 2 must NOT promise a DRC column."
+  },
+  "deferred_to_stage_2": [
+    "LibreLane + ASAP7 PDK revision",
+    "the exact SDC used for both arms",
+    "real synthesis of both arms, with the counting boundary stated",
+    "power with matched switching activity"
+  ]
+}
