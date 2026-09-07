@@ -1574,3 +1574,297 @@ just rebooted mid-run per bead `o1i` at the time this was investigated) — flag
 follow-up, not solved by this bead. `docs/PHASE5_RUN_HISTORY.md` §"Routing / physical-closure
 caveat" has the full run-by-run table; `docs/ASAP7_RUN_HISTORY.md` and `CLAUDE.md` carry pointer
 caveats next to every affected PPA figure.
+
+#### UPDATE 2026-09-07 (bead `ocm`) — WIDTHTABLE and every other per-pin geometry theory FALSIFIED by direct A/B test; failure reproduces on an empty 0-instance design; DRT-0073 and DRT-0074 are the same mechanism
+
+Static analysis via the `eda-openroad` MCP session (`load_odb` on CPU run
+`RUN_2026-08-09_14-05-02` checkpoint `39-openroad-resizertimingpostgrt/rv32i_cpu_top.odb`, the
+exact input state step 41's `detailed_route` consumed) plus standalone `openroad -python` probe
+scripts (`odb`/`design.evalTclString` — the MCP session's `run_tcl` does NOT capture DRT's
+logger output even via `set_debug_level DRT pa 4` / `detailed_route_debug -pa`, since that
+output bypasses `sta::redirect_file_begin`; a standalone `openroad -no_init script.tcl >
+log 2>&1` process does capture it and is the only way to see it in batch mode — confirmed
+consistent with the "GUI required for `-pa_markers`" answer in
+[OpenROAD-flow-scripts discussion #1810](https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts/discussions/1810)).
+
+**Geometry of one representative DRT-0074 pin** (`apb_pwdata_i[12]`, CPU standalone): M4,
+rect (126000,62562)-(130000,62754) DBU (DBU=1nm). **Geometry of the DRT-0073 macro-boundary
+pin** (`u_gpu/m_axi_araddr[19]`, SoC run 23 config re-checked on checkpoint
+`37-openroad-resizertimingpostgrt/soc_top.odb`): M4, rect (351000,289890)-(355000,290082) DBU,
+sitting exactly on the `u_gpu` macro's own right edge. **Both have identical geometry
+fingerprints**: 4000×192 DBU (4µm × 0.192µm), `FP_IO_HTHICKNESS_MULT=8` × 24nm base width —
+because the GPU macro's boundary pins ARE the GPU's own standalone-run IOPlacement-generated
+top-level pins, hardened into its LEF. **DRT-0073 and DRT-0074 are not two mechanisms — a
+DRT-0074 top-level-IO pin becomes a DRT-0073 macro-boundary pin the moment its block is
+hardened into a macro and re-instantiated.** No separate root-cause investigation is needed for
+DRT-0073.
+
+Checked and ruled out for both representative pins, using the **real DEF track grid**
+(`$block findTrackGrid $layer`, NOT the LEF `PITCH`/`OFFSET` properties returned by
+`$layer getPitchX/Y` — these differ: LEF M4/M5 `PITCH 0.048`, but the actual `make_tracks`-built
+DEF grid this project uses is M4 X: origin 18 step 54 DBU, Y: origin 18 step 27 DBU, confirmed
+identical on both the CPU and SoC checkpoints):
+- **Track alignment**: 7+ on-grid M4 Y-tracks and 74+ on-grid X-tracks fall strictly inside
+  each pin's own footprint. Not the blocker.
+- **Obstruction**: zero `dbObstruction` boxes within a ±2-8µm window of either pin.
+- **PDN**: zero special-net (`dbSWire`) shapes within the same window.
+- **Via enclosure**: the M4-side rect of the `VIA45` default via (46×24 DBU) fits trivially
+  inside either pin's 4000×192 DBU footprint.
+- **Pin-to-pin spacing**: nearest same-column neighbor pins are 672nm away — the
+  `LEF58_SPACING ... ENDOFLINE 0.025 WITHIN 0.04 ENDTOEND 0.04` rule (40nm) has 16x margin.
+- **GRT guide coverage**: `net.getGuides()` on the CPU pin's net shows a real M4 guide box
+  (127575-128384, 62370-62774) overlapping the pin. Guides exist and reach the pin.
+- **RT_MIN/MAX_LAYER**: M2-M7 (config + PDK default `~/pdk/asap7/libs.tech/openlane/config.tcl`
+  line 33-34); M4/M5 are inside range, and passing `-bottom_routing_layer M2
+  -top_routing_layer M7` explicitly to `pin_access` (matching `drt.tcl` exactly) changes nothing.
+
+**Direct controlled experiment (odb Tcl API lacks a `dbBox` delete for `BPin` boxes — use
+`odb::dbBPin_destroy` + `odb::dbBPin_create` + `odb::dbBox_create` via `openroad -python`, not
+Tcl)**: replaced `apb_pwdata_i[12]`'s M4 box in-place with a **legal WIDTHTABLE width (120 DBU
+exactly = 0.12µm, an exact table entry)**, re-ran `pin_access -verbose 2` on the same odb —
+**identical failure, same 401/401 count, same pin still named**. This falsifies the
+`FP_IO_HTHICKNESS_MULT`/WIDTHTABLE theory in the original DRT-0074 entry above as a root cause
+(it may still be worth fixing as a latent DRC issue, but it is not what is causing DRT-0074).
+
+Escalating the experiment (each independently falsified, same 401/401 count every time):
+- A **1000×1000nm pin** (grossly oversized, huge DRC margin, still real-track-aligned) at
+  the same location: still fails.
+- The same giant pin **relocated deep inside the placed core** (60000,60000 — real rows, real
+  neighboring logic, nowhere near the die edge or IO margin): still fails.
+- A **from-scratch, 0-instance, 0-net-complexity design** (just the ASAP7 tech LEF, a bare
+  50×50µm die, `make_tracks` run for M1-M7, one BTerm on M4 in the dead center): **still
+  DRT-0074**, confirming this is not an artifact of this project's specific netlist, IOPlacement
+  script, or 36247-cell design history.
+- The same minimal design with the pin's layer changed to **M6** instead of M4 (M6 sits between
+  cut layers V5/V6, both of which — unlike V3/V4 — DO have `GENERATE DEFAULT`-flagged
+  `VIARULE`s in the tech LEF, ruling out my leading hypothesis that the missing
+  DEFAULT-flagged `VIARULE GENERATE` for V3/V4 — only `...widePWR...` power-only GENERATE
+  rules exist there — was the mechanism): **still DRT-0074**. Falsifies the via-generate-rule
+  theory too.
+- A proper **2-terminal net** (two BTerms on the same net, ruling out "DRT refuses
+  single-terminal/dangling nets"): **both pins still fail**.
+
+**Net effect: every geometry, connectivity, and layer variable tested is independent of the
+failure.** `pin_access` fails 100% of BTerms (401/401 exactly — every top-level port, no
+exceptions) on every checkpoint tried, real or synthetic, regardless of width, size, position,
+routing layer, or net terminal count. This is not a per-pin DRC violation — no static geometry
+fix (pin_order.cfg reshuffle, `FP_IO_HTHICKNESS_MULT` retune, obstruction/PDN keepout) can
+possibly address it, because the giant/relocated/synthetic control pins had none of the
+properties any such fix would change and still failed identically.
+
+**Leading remaining hypothesis (NOT yet tested — next step for whoever picks this up)**: the
+`initialize_floorplan`/ROWS+SITE construction path. Every experiment above manually set
+`dbBlock::setDieArea` and injected BTerms via raw odb calls without ever calling
+`initialize_floorplan` (which failed with `IFP-0038 No design is loaded` when tried standalone
+without a `read_verilog`+`link_design` first — building that harness was not finished this
+session). It remains untested whether DRT's `pin_access` implicitly depends on `dbRow`/`dbSite`
+being present (even in the IO margin where no row exists) to build a valid initial "Complete
+Active" region-query index — the very first entry in the "Init region query" sequence DRT logs
+before pin access, which might be malformed globally (not just locally near a given pin) when
+rows are absent or don't match what a real `init_floorplan` call produces. This matters because
+the tech LEF itself, `asap7sc7p5t_SIMPLE` (per its own directory name — this PDK install has
+only that one tech LEF variant, no fuller alternative on disk), is the same tech LEF ORFS's own
+official ASAP7
+reference flows (aes, ibex, etc.) use and route successfully in ORFS CI, which argues against
+"this LEF variant is categorically incapable of real detailed routing" as a standalone
+explanation and toward "something in how this project's floorplan/pins are constructed differs
+from a stock ORFS/init_floorplan-driven flow."
+
+**How to test the ROWS hypothesis cheaply (no full P&R run needed)**: build the minimal repro
+via `read_verilog` of a trivial 1-module stub + `link_design`, THEN `initialize_floorplan
+-site asap7sc7p5t`, THEN inject BTerms exactly as done here, THEN `pin_access`. Runtime per
+iteration should be seconds (all prior probes here completed in under 2 minutes each with
+peak RSS under 400MB). If ROWS presence flips the result, the fix is in how LibreLane's
+`Odb.CustomIOPlacement`/floorplan step sequences relative to `initialize_floorplan` for this
+flow — not a DRC/geometry tune. If it does NOT flip the result, compare directly against a
+literal ORFS `flow/designs/asap7/ibex` (or similar) run using the identical `asap7sc7p5t_SIMPLE`
+LEF to isolate "this project's flow setup" from "this OpenROAD build" as the differentiator —
+the OpenROAD version string on this host is `edf00dff99f6c40d67a30c0e22a8191c5d2ed9d6`.
+
+Reproducer scripts (kept for the next session, not committed):
+`/tmp/claude-1000/.../scratchpad/{widthtable_ab.py,giant_pin_test.py,giant_pin_incore.py,
+minimal_test.py,minimal_test_m6.py,minimal_test_2pin.py,minimal_test_rows2.tcl,
+minimal_test_orfs.tcl}` — these are in a session-scoped scratchpad and will not survive;
+re-derive from this note if needed rather than searching for the files.
+
+#### UPDATE 2026-09-07 continued — ROWS hypothesis also falsified; reproduces against ORFS's own asap7 LEF set. This is a tool-build / PDK-combination-level defect, not a project-flow-sequencing defect.
+
+**ROWS/SITE hypothesis, tested properly** (the gap flagged above): built the repro via the
+*real* commands a flow uses, not raw `odb` calls — `read_lef` (tech + cell), `read_verilog` of
+a trivial 2-port stub module, `link_design`, `initialize_floorplan -site asap7sc7p5t`
+(confirmed **129,629 real `dbRow`s created**, proper `SITE`-based rows, not the 0-row synthetic
+setup used earlier), then the real `place_pin -pin_name ... -layer M4 -location {...}
+-pin_size {1.0 1.0}` command (not `odb::dbBox_create`) for both pins, then `make_tracks`,
+then `pin_access -bottom_routing_layer M2 -top_routing_layer M7`. **Still `DRT-0074` on both
+pins.** Real rows, real `SITE`, real `place_pin`-generated `BPin`s — no change. The ROWS/SITE
+hypothesis is dead.
+
+**ORFS reference-LEF comparison** (the decisive test): `~/Downloads/Github/OpenROAD-flow-scripts`
+is checked out locally with its own `flow/platforms/asap7/` — the tech LEF there
+(`lef/asap7_tech_1x_201209.lef`) differs from this project's `~/pdk/asap7/...` copy by only 25
+lines (six `LAYER ... TYPE IMPLANT` blocks for LVT/RVT/SLVT recognition — irrelevant to M2-M9
+routing/via rules; every `VIARULE`, `WIDTHTABLE`, `PITCH`, and track-relevant property is
+identical). ORFS's own `config.mk` confirms `IO_PLACER_H=M4 IO_PLACER_V=M5
+MIN_ROUTING_LAYER=M2 MAX_ROUTING_LAYER=M7` — the same layer choices this project uses. ORFS
+does use a **different cell LEF** than this project (`asap7sc7p5t_28_R_1x_220121a.lef`, not
+`asap7sc7p5t_SIMPLE_RVT_1x.lef`) — irrelevant here since the repro has 0 cell instances.
+Re-ran the exact same `read_lef`(ORFS's tech+cell LEF) → `link_design` → `initialize_floorplan`
+→ `place_pin` → `make_tracks` → `pin_access` sequence pointed at **ORFS's own LEF files**
+instead of this project's PDK copy: **still `DRT-0074` on both pins**, identical signature.
+
+**This means the defect is NOT specific to this project's PDK install, cell LEF choice, or
+floorplan/pin sequencing** — it reproduces against the LEF set ORFS's own official ASAP7
+reference designs (gcd, ibex, aes, ...) build from. **Caveat, so the finding is stated at the
+right scope**: this comparison used *this host's* OpenROAD binary
+(`edf00dff99f6c40d67a30c0e22a8191c5d2ed9d6`, from the nix `openroad` package) against ORFS's
+LEF files — it does NOT prove ORFS's own CI (which builds and pins its own OpenROAD via the
+`tools/OpenROAD` git submodule) would fail the same way, because that submodule is
+**uninitialized on this host** (`git submodule status` shows `-63ed2e0fe5992...` — the leading
+`-` means never checked out) and building it was out of scope for a diagnosis-only session. So
+the honest conclusion is: **this specific OpenROAD build, on this host, cannot grant `pin_access`
+to any bare top-level BTerm against the ASAP7 SIMPLE-derived tech/via rule set — real project
+netlist or a 0-instance synthetic design, this project's PDK copy or ORFS's own copy, raw `odb`
+pin injection or the real `place_pin`/`initialize_floorplan` command path — with 100% (401/401,
+2/2, 2/2, 2/2...) failure in every configuration tried.** Whether ORFS's *own pinned* OpenROAD
+build (a different, uninitialized-here commit) would succeed against the identical LEF set is
+the one remaining unknown, and is the right next step before concluding this is unfixable
+in-place: `cd ~/Downloads/Github/OpenROAD-flow-scripts && git submodule update --init
+tools/OpenROAD && <build it>` and re-run this exact minimal repro against the resulting binary.
+That build is a real time/resource cost (OpenROAD from source is a multi-hour build) — flag it
+to the user before starting rather than launching it unasked.
+
+#### UPDATE 2026-09-07 continued — negative control: Sky130 (known-good) passes the identical probe cleanly; ASAP7's standalone and in-flow paths agree. The falsification chain is validated, not a probe artifact.
+
+Per bead `7l5`'s standing lesson (a check that examines nothing must never be accepted as a
+PASS), the whole ASAP7 chain above rests on one unverified assumption: that standalone
+`pin_access` (called directly, not via a full `detailed_route`) is a meaningful measurement at
+all. Ran the identical probe methodology against a design **known to route successfully on this
+exact host** — Sky130 SoC Stage 2, `pnr/sky130/soc/runs/RUN_2026-07-31_05-13-54/`. Confirmed
+first that "known-good" is real, not assumed: `grep -c 'ROUTED ' 43-openroad-detailedrouting/soc_top.def`
+→ **34082** (genuine committed wires — unlike every ASAP7 run), and its own
+`openroad-detailedrouting.log` has **zero** `[ERROR DRT-007x]` lines.
+
+Loaded `41-openroad-resizertimingpostgrt/soc_top.odb` (the pre-DRT checkpoint, same relative
+position as the ASAP7 probes) via a standalone `openroad -no_init` script and ran
+`pin_access -bottom_routing_layer met1 -top_routing_layer met5 -verbose 2` (Sky130's PDK-default
+`RT_MIN_LAYER`/`RT_MAX_LAYER`, from
+`~/.volare/.../sky130A/libs.tech/openlane/config.tcl:155-156`). Result: **158/158 `BTerm`s, ZERO
+`DRT-007x` errors, `pin_access` returned cleanly (no Tcl error caught)**. Clean PASS.
+
+Then confirmed standalone `pin_access` and in-flow `detailed_route` agree on ASAP7 too: loaded
+the same CPU checkpoint (`39-openroad-resizertimingpostgrt/rv32i_cpu_top.odb`) fresh and called
+the **full `detailed_route -bottom_routing_layer M2 -top_routing_layer M7 -verbose 1`** (the
+exact invocation `drt.tcl` uses, not the bare `pin_access` command used in every earlier probe
+this session) — **401/401 `DRT-0074`, identical to every standalone `pin_access` result and to
+the original flow's own recorded log from run `RUN_2026-08-09_14-05-02`.**
+
+**This is the non-vacuity check, and it passes in the direction that validates everything
+above**: the probe is discriminating (0/158 on a design proven to route vs. 401/401 / 2/2 on
+every ASAP7 configuration tried), and standalone `pin_access` is not measuring something
+different from what the real flow's `detailed_route` measures. The WIDTHTABLE, giant-pin,
+in-core-relocation, M6-layer, 2-terminal-net, ROWS/`place_pin`, and ORFS-LEF falsifications
+all stand. This is a real ASAP7-tech/via-rule-set-plus-this-OpenROAD-build defect, not an
+artifact of how this session queried it.
+
+**Practical implication for Phase 2 / anyone resuming this bead (superseded — see next UPDATE)**:
+the productive next move was "obtain/build a known-good OpenROAD version" — turned out to be
+free, not a multi-hour build; see below.
+
+#### UPDATE 2026-09-07 continued — ROOT CAUSE FOUND: this is the OpenROAD BUILD, not the PDK. A second nix-store OpenROAD (26Q2) grants pin access on the identical ASAP7 minimal repro.
+
+Two OpenROAD builds are present in this host's nix store:
+- `/nix/store/zzypcxbrgw1qink1l7fwgwpbk7fvdwpg-openroad` → version string
+  `edf00dff99f6c40d67a30c0e22a8191c5d2ed9d6` — the build every probe above used, and the one
+  librelane's nix-shell actually provides on `PATH` (confirmed this is what `make librelane-*`
+  resolves to on this host).
+- `/nix/store/hgqrwa4687mf7n0y2x6lcgx1kj42sfga-openroad-26Q2` → version string `26Q2` — present
+  in the store (a nixpkgs build) but not on the flow's `PATH`, never tried before this bead.
+
+Re-ran the exact minimal ASAP7 repro (from-scratch `read_lef` tech+cell, trivial 2-port
+`link_design`, `initialize_floorplan -site asap7sc7p5t`, `make_tracks` M1-M7, `place_pin` ×2 on
+M4) under **26Q2**. Two API differences needed adapting (not behavior differences — both are
+just newer-CLI syntax): (1) `make_tracks`/`place_pin` must come in that order — 26Q2 raises
+`[ERROR PPL-0022] Routing tracks not found for layer M4` if `place_pin` runs before
+`make_tracks` (edf00dff tolerates either order; re-tested edf00dff with the corrected
+tracks-before-pins order too — still 2/2 `DRT-0074`, order was not the confound); (2) 26Q2 has
+removed `pin_access -bottom_routing_layer/-top_routing_layer` (`[ERROR DRT-0511]
+-bottom_routing_layer is deprecated. Use set_routing_layers command instead`) — replaced with
+`set_routing_layers -signal M2-M7` called once before `pin_access -verbose 2` (no positional
+args).
+
+**Result on 26Q2: `[INFO DRT-0165] Start pin access.` → `[INFO DRT-0166] Complete pin access.`
+— zero `DRT-0074`, zero `DRT-007x` of any kind, clean success**, on the byte-identical LEF,
+floorplan, and pin geometry that fails 2/2 on edf00dff. 26Q2's pin-access implementation is also
+visibly different/more instrumented (prints `#stdCellGenAp`, `#macroGenAp`,
+`#stdCellValidViaAp`, etc. — counters edf00dff's build does not have), consistent with this
+being a materially different, later DRT implementation, not just a rebuild.
+
+**Negative-control discipline applied to this result too**: re-ran the Sky130 known-good control
+(`pnr/sky130/soc/runs/RUN_2026-07-31_05-13-54/41-openroad-resizertimingpostgrt/soc_top.odb`,
+158 BTerms, `set_routing_layers -signal met1-met5`) under 26Q2 as well, to rule out "26Q2 is
+just permissive/broken and would pass anything." **Confirmed clean**: `[INFO DRT-0166] Complete
+pin access.`, `SKY130_26Q2_PA_RESULT:` empty (no error), zero `DRT-007x` lines anywhere in the
+full log. Took 4m29s cpu time / 817.65 MB peak RSS for the real 200k-instance SoC — genuine work
+was done (not an instant no-op that would suggest the build silently skips checks), it simply
+didn't find any illegal access points. 26Q2 is not "just permissive" — it does real,
+time-costed DRC work and still passes the design that's supposed to pass.
+
+**CONCLUSION (confirmed, both controls closed): the root cause is the specific OpenROAD build
+this project's flow uses (`edf00dff99f6c40d67a30c0e22a8191c5d2ed9d6`), not the ASAP7 PDK/tech
+LEF, not this project's floorplan/pin sequencing, and not the design netlists.** `edf00dff`
+fails pin access on every ASAP7 configuration tried (100% of BTerms, every time) while passing
+Sky130 cleanly; `26Q2` passes both ASAP7 and Sky130 cleanly. The defect is specific to
+`edf00dff`'s handling of the ASAP7 tech/via-rule combination.
+
+**The fix is a tool-pin change, not a PDK swap and not an RTL change**: `pnr/Makefile`'s
+`librelane-asap7*` targets (and whatever nix devshell/`.mcp.json` puts `openroad` on `PATH` for
+those targets) need to resolve to
+`/nix/store/hgqrwa4687mf7n0y2x6lcgx1kj42sfga-openroad-26Q2/bin/openroad` (or the nixpkgs
+derivation that produces it, `openroad-26Q2`) instead of the `edf00dff` build, at least for the
+detailed-routing step. Two follow-up items before trusting a real run on 26Q2: (1) 26Q2 has
+already been observed to use a different/newer Tcl CLI in two places relevant to this flow —
+`pin_access -bottom_routing_layer/-top_routing_layer` is removed in favor of
+`set_routing_layers -signal <min>-<max>` (`[ERROR DRT-0511]` if the old flags are passed), and
+`place_pin` before `make_tracks` now errors (`[ERROR PPL-0022]`) where `edf00dff` tolerated it
+— `librelane`'s own `scripts/openroad/drt.tcl` and any other script using these flags/ordering
+will need auditing/patching for 26Q2 compatibility, not just a `PATH` swap; (2) the rest of the
+flow (synth through GRT) has never shown a version-dependent symptom in this project's history,
+so a global swap should be low-risk, but placement/CTS/GRT numbers should be re-verified
+unchanged on 26Q2 before trusting a full run's PPA. This is now a config/environment change for
+Phase 2 — the ASAP7 diagnosis phase of bead `ocm` is complete.
+
+#### UPDATE 2026-09-07 (bead `ocm`, main session) — real 401-pin ASAP7 design confirmed clean under 26Q2
+
+The build-identification update above tested the **minimal 0-instance repro** under `26Q2`, not a
+real design. That gap is now closed directly.
+
+Checkpoint `pnr/asap7/cpu/runs/RUN_2026-08-09_14-05-02/39-openroad-resizertimingpostgrt/rv32i_cpu_top.odb`
+— the exact input state step 41's `detailed_route` consumed, and the same one that gives 401/401
+`DRT-0074` under `edf00dff` — loaded under `26Q2` with `set_routing_layers -signal M2-M7` followed by
+`pin_access -verbose 2`:
+
+```
+TOTAL_BTERMS: 401
+[INFO DRT-0166] Complete pin access.
+#stdCellValidViaAp     = 10352
+#stdCellPinNoAp        = 0
+#instTermValidViaApCnt = 0
+#macroValidViaAp       = 1350
+#macroNoAp             = 0
+[INFO DRT-0267] cpu time = 00:08:58, elapsed time = 00:08:58, memory = 370.08 (MB), peak = 369.18 (MB)
+```
+
+Zero `DRT-0074`, zero `DRT-0073`, zero `ERROR`. The 8m58s runtime and the 11,702 valid via access
+points confirm real work was done — this is not a permissive no-op.
+
+**Completed matrix — every cell measured, none inferred:**
+
+| design | `edf00dff` (librelane nix-shell) | `26Q2` (nixpkgs, already in store) |
+| :--- | :--- | :--- |
+| ASAP7 minimal 0-instance repro | FAIL `DRT-0074` | **PASS** |
+| ASAP7 real CPU checkpoint (401 BTerms) | FAIL 401/401 | **PASS** |
+| Sky130 SoC known-good (6562 pins) | PASS 158/158 | **PASS** |
+
+Note the diagonal: the failure is specific to the (`edf00dff` × ASAP7) cell. Neither the build
+nor the PDK is independently at fault, which is why every single-variable geometry experiment
+above came back negative — they were all varying within the failing cell.
