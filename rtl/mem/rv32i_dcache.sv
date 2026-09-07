@@ -948,10 +948,12 @@ module rv32i_dcache (
     // =========================================================================
     always_ff @(posedge clk) begin
         if (!rst_n) begin
+            /* verilator lint_off BLKLOOPINIT */
             for (int j = 0; j < N_SETS; j++) begin
                 valid_array[j] <= 1'b0;
                 dirty_array[j] <= 1'b0;
             end
+            /* verilator lint_on BLKLOOPINIT */
         end else begin
             // Write hit: set dirty
             if (state_q == CS_TAG_CHECK && hit_q && dc_we_q)

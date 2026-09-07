@@ -601,8 +601,10 @@ module rv32i_icache (
     always_ff @(posedge clk) begin
         if (!rst_n || ic_invalidate_i) begin
             // Reset or FENCE.I: invalidate all lines in one cycle
+            /* verilator lint_off BLKLOOPINIT */
             for (int j = 0; j < N_SETS; j++)
                 valid_array[j] <= 1'b0;
+            /* verilator lint_on BLKLOOPINIT */
         end else if (tag_we_q) begin
             // tag_we_q is the registered version of tag_write_commit (the last-beat
             // commit qualifier).  Marking valid here ensures the line is considered
