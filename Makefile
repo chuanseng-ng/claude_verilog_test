@@ -19,7 +19,7 @@ MCP_JSON  := $(REPO_ROOT)/.mcp.json
 SESSION_SERVER := $(REPO_ROOT)/tools/eda/mcp/session_server.py
 
 .DEFAULT_GOAL := help
-.PHONY: help setup setup-rtk setup-mcp verify-tooling mcp-status
+.PHONY: help setup setup-rtk setup-mcp setup-beads verify-tooling mcp-status verify-librelane-lint
 
 help:
 	@echo "RV32I + GPU-lite SoC — developer tooling Makefile"
@@ -28,6 +28,7 @@ help:
 	@echo "  make setup          - One-time per clone: rtk trust + rtk transparent_prefixes + .mcp.json paths"
 	@echo "  make verify-tooling - Prove the setup took effect (filters, tests, both MCP servers). Fails loudly."
 	@echo "  make mcp-status     - Show the configured MCP servers and whether each one handshakes"
+	@echo "  make verify-librelane-lint - Lint the CPU RTL with LibreLane's own Verilator (bead 2wo)"
 	@echo "  make setup-rtk      - Just the rtk half of setup"
 	@echo "  make setup-mcp      - Just the .mcp.json half of setup"
 	@echo ""
@@ -103,9 +104,19 @@ verify-tooling:
 	  test -x $(REPO_ROOT)/tools/setup/beads_merge_driver.sh || { \
 	    echo "  driver script missing or not executable"; exit 1; }; \
 	  echo "  ok: $$d"
+	@echo "==> RTL lints under LibreLane's OWN Verilator (bead 2wo)"
+	@$(MAKE) --no-print-directory verify-librelane-lint
 	@$(MAKE) --no-print-directory mcp-status
 	@echo ""
 	@echo "verify-tooling: PASS"
+
+# LibreLane runs `01-verilator-lint` with ITS nix-shell's Verilator (5.018),
+# not the project flake's (5.048). RTL can be clean under one and rejected by
+# the other, and the only place that shows up is step 1 of a multi-hour P&R
+# run. Commit f814b21 did exactly that -- see bead claude_verilog_test-2wo.
+# Skips (loudly) when no LibreLane checkout is present.
+verify-librelane-lint:
+	@$(PYTHON) $(REPO_ROOT)/tools/setup/check_librelane_verilator.py
 
 # Handshake each server exactly the way Claude Code launches it. A server that
 # starts but answers `initialize` with an error is a failure, not a pass — the
