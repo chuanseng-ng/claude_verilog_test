@@ -412,6 +412,108 @@ in HLS's favour on a block that is *not* control-dominated in the hazard-unit se
 consistent with reserving HLS for throughput-oriented dataflow rather than for cycle-critical
 control.
 
-**The datapath half of the recommendation remains untested** — neither measured block is a datapath
+~~**The datapath half of the recommendation remains untested** — neither measured block is a datapath
 block (see the Stage 1 correction above). Bead `gg8` tracks `rtl/gpu/vector_alu.sv` as the block
-that would actually test it.
+that would actually test it.~~
+
+> **Superseded by Stage 3 (bead `gg8`, below).** It was tested. It does not hold.
+
+
+---
+
+# Stage 3 results — the datapath pole (2026-09-07, bead `gg8`)
+
+Stage 2 closed by admitting that the pilot's *datapath* half rested on nothing: `memory_coalescer`,
+the block chosen as the "datapath-ish → HLS-favorable" pole, is an AXI transaction FSM. Stage 3
+measures the real thing — `rtl/gpu/vector_alu.sv`, 8 lanes × 32 bits of pure combinational
+arithmetic with **zero registers**.
+
+Same protocol throughout: the C was authored from the natural-language spec with the hand-RTL
+withheld (`hls/gpu/vector_alu/ASSUMPTIONS.md`), then both arms taken through identical ASAP7 runs to
+`OpenROAD.STAPrePNR` — same 705 ps clock, same `nom_tt_025C_0p7V` corner, same skip list. The HLS
+arm is synthesised with its wire-only shim.
+
+## The table
+
+| Metric | hand-RTL `vector_alu` | HLS `vector_alu_hls` | Δ | Band |
+| :-- | --: | --: | :-- | :-- |
+| Area (µm²) | 4 655.15 | 7 234.00 | **+55.4 %** | regresses |
+| Cells | 54 634 | 70 895 | +29.8 % | — |
+| Sequential cells | **0** | 9 412 | — | — |
+| Power (mW) | 14.147 | 37.281 | **+163.5 %** | regresses |
+| Critical path | 759.29 ps (comb, in→out) | 4 142.52 ps (FF→FF) | **×5.5** | regresses |
+| Cycles / operation | 1 (combinational) | mean 14.35, range 8–38 | ×14–38 | regresses |
+| Undriven wires | **0** | 16 | — | — |
+
+Every axis regresses, by margins several times this document's own thresholds (>10 % fmax or >20 %
+area/power). Throughput — the number that actually matters for a datapath — is 759.29 ps for one
+operation against 4 142.52 ps × 14.35 = **59.4 ns** mean, 157.4 ns worst: **≈78× mean, ≈207× worst**.
+
+## Two caveats, both cutting in the HLS arm's favour
+
+**1. The 4 142.52 ps is partly a flow artifact.** 2 550.65 ps of it — **62.3 %** — is a *single* arc:
+a minimum-drive `DFFASRHQNx1` driving **fanout 1188 / 630.7 fF**, unbuffered because `--to
+OpenROAD.STAPrePNR` stops before the resizer. The other 12 arcs total 1 546.4 ps. Buffered, the path
+would plausibly land near 1.7–1.8 ns. The hand-RTL arm has no comparable net — its worst arc is
+60.6 ps, 8.0 % of its path, spread over 24 well-balanced arcs — so skipping the resizer penalises the
+HLS arm **asymmetrically**, even though both ran the identical flow. Read the timing ratio as
+**×2.2–5.5**, not ×5.5 flat. Area and power are resizer-independent and regress on their own, so the
+verdict is unaffected.
+
+This also refines Stage 2's caveat that "comparison valid because treatment is identical" — true
+procedurally, but the *effect* is not symmetric. Measured share of critical path in one unbuffered
+high-fanout arc, all six arms:
+
+| Arm | share | worst-arc fanout |
+| :-- | --: | --: |
+| `coalescer_rtl` | 71.5 % | 532 |
+| `coalescer_hls` | 50.6 % | 267 |
+| `hazard_rtl` | 34.2 % | 2 |
+| `hazard_hls` | 31.6 % | 15 |
+| `valu_rtl` | 8.0 % | 6 |
+| `valu_hls` | **62.3 %** | **1188** |
+
+No Stage 2 verdict changes direction: the coalescer's *hand-RTL* arm suffered more than its HLS arm,
+so that HLS win is if anything understated, and both hazard arms are artifact-free. But absolute
+timing ratios across this pilot are bounds, not exact figures.
+
+**2. Bambu's own `CYCLES value="7"` is not the latency.** Parsed per-vector from `results.txt`, the
+real distribution is 8 cycles ×22, 22 ×9, 38 ×3 — mean **14.35** over 488 cycles / 34 vectors. The
+`7` is roughly half the true mean; it must not be quoted.
+
+## The FSM is structural, not an authoring or clock artifact
+
+Two ablations, neither requested, both run because "the C was written badly" and "the clock was too
+tight" are the first two objections to a result like this:
+
+- **Relaxed clock (1.75 ns instead of 0.705 ns):** 62 control steps, 6 012 FF, **identical area**. A
+  slower target does not buy a flatter datapath.
+- **"HLS-friendly" rewrite** — the lane loop restructured into a ternary-select chain, the shape
+  usually recommended to coax parallel hardware out of HLS: **3.3× area**, still sequential.
+
+Bambu schedules a loop over lanes into a multi-cycle FSM over a shared functional unit. It has no
+mode that emits 8 parallel combinational slices. Whether it can be made to emit a single-control-step
+datapath *at all* is a genuinely open question, left as a follow-up.
+
+## Effect on the recommendation
+
+The recommendation's control-logic half **stands** and is now supported by two independent blocks.
+
+Its datapath half **does not**. It was never evidence-backed — Stage 1 and Stage 2 both said so — and
+now that it has been measured on a genuine datapath block, it is contradicted: HLS is **not**
+favourable here, it is decisively worse on area, power, latency and throughput simultaneously. The
+useful reformulation is narrower than "reserve HLS for datapath accelerators":
+
+> On this toolchain, HLS is worth considering for **throughput-oriented transaction/dataflow logic**
+> (the coalescer result), and not for **combinational arithmetic datapaths** (this result) or for
+> **cycle-critical control** (the hazard unit). The distinction that predicted the outcome was not
+> datapath-vs-control; it was whether the block's natural form is already a cycle-by-cycle state
+> machine — HLS reproduces those, and rebuilds everything else as one.
+
+## Verification
+
+Both arms pass `tb/cocotb/gpu/test_vector_alu.py` **14/14**. The suite had no handshake handling at
+all, so the HLS arm scored 1/14 until a runtime protocol branch (the `test_hazard_unit.py` pattern)
+was added; expected values and assertions are unchanged, only the sampling point moved into
+`ReadOnly()`. This directed suite does **not** exercise `ASSUMPTIONS.md` items 8 (`result_o` for
+branch opcodes) or 10 (`VMOV_*`), so those two spec-drift candidates remain **unprobed, not cleared**.

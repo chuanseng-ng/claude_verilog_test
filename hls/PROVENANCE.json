@@ -1,167 +1,218 @@
 {
-  "_comment": [
-    "GH #119 Stage 1 reproducibility pin, per docs/CPP_TO_RTL_HLS_EVALUATION.md L127-133.",
-    "Stage 1 produced NO PPA table. These are Bambu's own pre-synthesis estimates and are",
-    "NOT comparable to hand-RTL: they cover the whole generated hierarchy including Bambu's",
-    "AXI master adapter, which the hand-RTL has no equivalent of. Stage 2 must synthesise",
-    "both arms for real and state the counting boundary before quoting any number."
+ "_comment": [
+  "GH #119 reproducibility pin, per docs/CPP_TO_RTL_HLS_EVALUATION.md L127-133.",
+  "CORRECTION (bead gg8): the Stage 1 text here previously justified not quoting Bambu's",
+  "own numbers by saying they cover an 'AXI master adapter the hand-RTL has no equivalent",
+  "of'. That is wrong on both Stage 1 blocks and is retracted: the hand-RTL coalescer has",
+  "its own AXI master FSM (S_AR/S_R/S_AW/S_W/S_B), and the hazard unit has no AXI adapter",
+  "at all. The real reason stands and is simpler -- Bambu's figures are PRE-SYNTHESIS",
+  "estimates in Bambu's own units. Stages 2-3 synthesise every arm for real."
+ ],
+ "stage": 3,
+ "issue": "https://github.com/chuanseng-ng/claude_verilog_test/issues/119",
+ "hls_tool": {
+  "name": "Bambu (PandA)",
+  "version": "2024.10",
+  "revision": "c2ba6936ca2ed63137095fea0b630a1c66e20e63-main",
+  "appimage_url": "https://release.bambuhls.eu/bambu-2024.10.AppImage",
+  "appimage_sha256": "e4f0214496a5d35de1932975b0f41cd95bc33a53a904fc565d6c2cb01df40773",
+  "appimage_bytes": 1405510848,
+  "appimage_last_modified": "2025-05-11",
+  "pinned_by": "flake.nix devShells.hls via appimageTools.wrapType2 + fetchurl; the sha256 is enforced by nix, so the flake IS the pin -- no per-machine install step",
+  "bundled_frontends": [
+   "clang-12",
+   "clang-16",
+   "gcc-8 (x86_64-linux-gnu-gcc-8.5.0)"
   ],
-  "stage": 2,
-  "issue": "https://github.com/chuanseng-ng/claude_verilog_test/issues/119",
-  "hls_tool": {
-    "name": "Bambu (PandA)",
-    "version": "2024.10",
-    "revision": "c2ba6936ca2ed63137095fea0b630a1c66e20e63-main",
-    "appimage_url": "https://release.bambuhls.eu/bambu-2024.10.AppImage",
-    "appimage_sha256": "e4f0214496a5d35de1932975b0f41cd95bc33a53a904fc565d6c2cb01df40773",
-    "appimage_bytes": 1405510848,
-    "appimage_last_modified": "2025-05-11",
-    "pinned_by": "flake.nix devShells.hls via appimageTools.wrapType2 + fetchurl; the sha256 is enforced by nix, so the flake IS the pin -- no per-machine install step",
-    "bundled_frontends": [
-      "clang-12",
-      "clang-16",
-      "gcc-8 (x86_64-linux-gnu-gcc-8.5.0)"
-    ],
-    "frontend_used": "I386_CLANG16 (the interface pragmas are parsed by Bambu's clang plugin; a GCC frontend never sees them)",
-    "help_capture": "/nobackup/hls/provenance/bambu-help.txt (880 lines)"
+  "frontend_used": "I386_CLANG16 (the interface pragmas are parsed by Bambu's clang plugin; a GCC frontend never sees them)",
+  "help_capture": "/nobackup/hls/provenance/bambu-help.txt (880 lines)"
+ },
+ "simulator": {
+  "name": "Verilator",
+  "version": "5.048 2026-04-26 rev v5.048",
+  "source": "in-repo flake devShells.hls (inside the FHS sandbox: Bambu locates it with a literal `which verilator`)",
+  "nixpkgs_rev": "567a49d1913ce81ac6e9582e3553dd90a955875f"
+ },
+ "target": {
+  "device_name": "asap7-TC",
+  "clock_period_ns": 0.705,
+  "clock_period_rationale": "matches pnr/asap7/template/config.json CLOCK_PERIOD; Stage 2 must use the same value for BOTH arms or the comparison is void",
+  "liberty_bundled_with_bambu": "asap7sc7p5t_SIMPLE_RVT_TT_nldm_201020.lib",
+  "corner_note": "same cell library and TT corner pnr/asap7/cpu/config.json already uses"
+ },
+ "authorship_protocol": {
+  "method": "Each C source was authored by a fresh agent given ONLY the block's natural-language spec (the reference .sv header comment) plus its port list, explicitly barred from reading anything under rtl/.",
+  "rationale": "GH #119 asks about the NL->C->HLS flow. Transliterating the SystemVerilog would have measured transliteration and answered nothing.",
+  "prompts_recorded_in": "the bead records (bd show claude_verilog_test-{cfi,gvr}) and each block's NOTES.md"
+ },
+ "blocks": {
+  "memory_coalescer": {
+   "top_function": "memory_coalescer",
+   "c_source": "hls/gpu/memory_coalescer/memory_coalescer.c",
+   "cosim_testbench": "hls/gpu/memory_coalescer/memory_coalescer_tb.xml",
+   "shim": "hls/gpu/memory_coalescer/shim/memory_coalescer_hls.sv",
+   "notes": "hls/gpu/memory_coalescer/NOTES.md",
+   "assumptions": "hls/gpu/memory_coalescer/ASSUMPTIONS.md",
+   "bambu_command": "bambu <abs>/memory_coalescer.c --top-fname=memory_coalescer --generate-interface=INFER --compiler=I386_CLANG16 --device-name=asap7-TC --clock-period=0.705 --reset-type=async --reset-level=low --disable-reg-init-value --no-mixed-design -w V --generate-tb=<abs>/memory_coalescer --simulate --simulator=VERILATOR",
+   "generated_verilog": "/nobackup/hls/out/memory_coalescer/memory_coalescer.v  (NOT committed)",
+   "verilog_sha256_normalized": "376e64ea719512cfef4cfdac5c12502731dcf9ccef5aa039afcfc52fa61e3b50",
+   "leg1_bambu_cosim": {
+    "status": "PASS",
+    "vectors": 5,
+    "total_cycles": 119,
+    "avg_cycles": 23
+   },
+   "bambu_estimate_flip_flops": 820,
+   "bambu_estimate_area": 352744,
+   "hand_rtl_latency_cycles": 1,
+   "hls_latency_cycles": 6,
+   "latency_note": "empty-mask done_o latency: hand-RTL 1 rising edge (IDLE->DONE direct), HLS 6"
   },
-  "simulator": {
-    "name": "Verilator",
-    "version": "5.048 2026-04-26 rev v5.048",
-    "source": "in-repo flake devShells.hls (inside the FHS sandbox: Bambu locates it with a literal `which verilator`)",
-    "nixpkgs_rev": "567a49d1913ce81ac6e9582e3553dd90a955875f"
+  "rv32i_hazard_unit": {
+   "top_function": "rv32i_hazard_unit",
+   "c_source": "hls/cpu/rv32i_hazard_unit/rv32i_hazard_unit.c",
+   "cosim_testbench": "hls/cpu/rv32i_hazard_unit/rv32i_hazard_unit_tb.xml",
+   "shim": "hls/cpu/rv32i_hazard_unit/shim/rv32i_hazard_unit_hls.sv",
+   "notes": "hls/cpu/rv32i_hazard_unit/NOTES.md",
+   "assumptions": "hls/cpu/rv32i_hazard_unit/ASSUMPTIONS.md",
+   "bambu_command": "bambu <abs>/rv32i_hazard_unit.c --top-fname=rv32i_hazard_unit --generate-interface=INFER --compiler=I386_CLANG16 --device-name=asap7-TC --clock-period=0.705 --reset-type=async --reset-level=low --disable-reg-init-value --no-mixed-design -w V --generate-tb=<abs>/rv32i_hazard_unit --simulate --simulator=VERILATOR",
+   "generated_verilog": "/nobackup/hls/out/rv32i_hazard_unit/rv32i_hazard_unit.v  (NOT committed)",
+   "verilog_sha256_normalized": "72dde9f0179c8c1a114258ec128a9642cd77b747a6b10fcecb0f148821a6e146",
+   "leg1_bambu_cosim": {
+    "status": "PASS",
+    "vectors": 30,
+    "total_cycles": 203,
+    "avg_cycles": 6
+   },
+   "bambu_estimate_flip_flops": 50,
+   "bambu_estimate_area": 1791535,
+   "hand_rtl_latency_cycles": 0,
+   "hls_latency_cycles": "6-9 (data-dependent)",
+   "latency_note": "reference is PURELY COMBINATIONAL: 0 cycles, 0 flip-flops. HLS needs 6-9 cycles and 50 flip-flops. This figure needs no normalisation and is the sharpest result."
   },
-  "target": {
-    "device_name": "asap7-TC",
-    "clock_period_ns": 0.705,
-    "clock_period_rationale": "matches pnr/asap7/template/config.json CLOCK_PERIOD; Stage 2 must use the same value for BOTH arms or the comparison is void",
-    "liberty_bundled_with_bambu": "asap7sc7p5t_SIMPLE_RVT_TT_nldm_201020.lib",
-    "corner_note": "same cell library and TT corner pnr/asap7/cpu/config.json already uses"
-  },
-  "authorship_protocol": {
-    "method": "Each C source was authored by a fresh agent given ONLY the block's natural-language spec (the reference .sv header comment) plus its port list, explicitly barred from reading anything under rtl/.",
-    "rationale": "GH #119 asks about the NL->C->HLS flow. Transliterating the SystemVerilog would have measured transliteration and answered nothing.",
-    "prompts_recorded_in": "the bead records (bd show claude_verilog_test-{cfi,gvr}) and each block's NOTES.md"
-  },
-  "blocks": {
-    "memory_coalescer": {
-      "top_function": "memory_coalescer",
-      "c_source": "hls/gpu/memory_coalescer/memory_coalescer.c",
-      "cosim_testbench": "hls/gpu/memory_coalescer/memory_coalescer_tb.xml",
-      "shim": "hls/gpu/memory_coalescer/shim/memory_coalescer_hls.sv",
-      "notes": "hls/gpu/memory_coalescer/NOTES.md",
-      "assumptions": "hls/gpu/memory_coalescer/ASSUMPTIONS.md",
-      "bambu_command": "bambu <abs>/memory_coalescer.c --top-fname=memory_coalescer --generate-interface=INFER --compiler=I386_CLANG16 --device-name=asap7-TC --clock-period=0.705 --reset-type=async --reset-level=low --disable-reg-init-value --no-mixed-design -w V --generate-tb=<abs>/memory_coalescer --simulate --simulator=VERILATOR",
-      "generated_verilog": "/nobackup/hls/out/memory_coalescer/memory_coalescer.v  (NOT committed)",
-      "verilog_sha256_normalized": "376e64ea719512cfef4cfdac5c12502731dcf9ccef5aa039afcfc52fa61e3b50",
-      "leg1_bambu_cosim": {
-        "status": "PASS",
-        "vectors": 5,
-        "total_cycles": 119,
-        "avg_cycles": 23
-      },
-      "bambu_estimate_flip_flops": 820,
-      "bambu_estimate_area": 352744,
-      "hand_rtl_latency_cycles": 1,
-      "hls_latency_cycles": 6,
-      "latency_note": "empty-mask done_o latency: hand-RTL 1 rising edge (IDLE->DONE direct), HLS 6"
-    },
-    "rv32i_hazard_unit": {
-      "top_function": "rv32i_hazard_unit",
-      "c_source": "hls/cpu/rv32i_hazard_unit/rv32i_hazard_unit.c",
-      "cosim_testbench": "hls/cpu/rv32i_hazard_unit/rv32i_hazard_unit_tb.xml",
-      "shim": "hls/cpu/rv32i_hazard_unit/shim/rv32i_hazard_unit_hls.sv",
-      "notes": "hls/cpu/rv32i_hazard_unit/NOTES.md",
-      "assumptions": "hls/cpu/rv32i_hazard_unit/ASSUMPTIONS.md",
-      "bambu_command": "bambu <abs>/rv32i_hazard_unit.c --top-fname=rv32i_hazard_unit --generate-interface=INFER --compiler=I386_CLANG16 --device-name=asap7-TC --clock-period=0.705 --reset-type=async --reset-level=low --disable-reg-init-value --no-mixed-design -w V --generate-tb=<abs>/rv32i_hazard_unit --simulate --simulator=VERILATOR",
-      "generated_verilog": "/nobackup/hls/out/rv32i_hazard_unit/rv32i_hazard_unit.v  (NOT committed)",
-      "verilog_sha256_normalized": "72dde9f0179c8c1a114258ec128a9642cd77b747a6b10fcecb0f148821a6e146",
-      "leg1_bambu_cosim": {
-        "status": "PASS",
-        "vectors": 30,
-        "total_cycles": 203,
-        "avg_cycles": 6
-      },
-      "bambu_estimate_flip_flops": 50,
-      "bambu_estimate_area": 1791535,
-      "hand_rtl_latency_cycles": 0,
-      "hls_latency_cycles": "6-9 (data-dependent)",
-      "latency_note": "reference is PURELY COMBINATIONAL: 0 cycles, 0 flip-flops. HLS needs 6-9 cycles and 50 flip-flops. This figure needs no normalisation and is the sharpest result."
-    },
-    "rv32i_cache_arbiter": {
-      "status": "INEXPRESSIBLE -- no C authored, by design",
-      "verdict": "hls/mem/rv32i_cache_arbiter/INEXPRESSIBLE.md",
-      "summary": "Bambu emits AXI masters only, as a side-effect of pointer dereference; there is no AXI-slave interface mode, and every design is wrapped in a start_port/done_port invocation handshake. The arbiter is permanently reactive with three incoming AXI channel sets and grant-hold-until-RLAST."
-    }
-  },
-  "digest_note": "Bambu stamps BOTH the generation time AND its full command line (absolute paths and all) into header comments of every .v, so the RAW sha256 differs on every run and even the date-only normalisation differs between checkouts. tools/eda/wrap-bambu.sh now blanks both lines. Pin the NORMALIZED digest. HISTORY (GH #119 bead r8r): Stage 1 normalised only the date and pinned memory_coalescer=2cb8a8a2... / rv32i_hazard_unit=397eb1ce.... On re-running at Stage 2 with byte-identical inputs the coalescer reproduced but the hazard unit did NOT (8c5b9cde...), which exposed the incomplete normalisation. The Stage-1 hazard pin was therefore never reproducible and has been retired rather than trusted. The digests above are re-pinned under the corrected normalisation and were each verified stable across two consecutive runs.",
-  "shim_accounting": {
-    "rule": "Both shims are WIRE-ONLY -- zero registers, only renaming, slicing, zero-extension/truncation and tie-offs; each contributes 0 Verilator warnings.",
-    "consequence": "Flow B's area is not inflated by the wrapper, so Stage 2 can compare the arms without a separate shim line. If a future shim ever needs real registers, its cell count must be reported as a SEPARATE line and never folded into Flow B."
-  },
-  "power_activity": "Stage 2. Both arms must use the same VCD source (the shared cocotb suite).",
-  "drc_axis": {
-    "status": "WITHDRAWN for ASAP7 -- not measured, not measurable",
-    "reason": "Bead xy6 (closed, root-caused): pnr/scripts/openroad/drt.tcl wraps the whole detailed_route call in a bare catch{}, so DRT-0073/0074 pin-access failures abort routing and write_views commits the pre-route placed netlist. 100% of recoverable ASAP7 runs show zero ROUTED nets. Bead ocm (open) owns the unsolved pin-access cause.",
-    "consequence": "Both arms would hit the identical wall, so the column yields no discriminating signal. The acceptance thresholds in the evaluation doc have been amended accordingly. Stage 2 must NOT promise a DRC column."
-  },
-  "deferred_to_stage_2": [
-    "LibreLane + ASAP7 PDK revision",
-    "the exact SDC used for both arms",
-    "real synthesis of both arms, with the counting boundary stated",
-    "power with matched switching activity"
-  ],
-  "stage2": {
-    "method": "Four ASAP7 runs to OpenROAD.STAPrePNR only (area+timing+power all appear there; placement/CTS/routing not required). Same clock 705 ps, corner nom_tt_025C_0p7V, synthesis strategy and skip list across all four; configs differ only in DESIGN_NAME, VERILOG_FILES and clock port. HLS arms synthesised with their wire-only shim.",
-    "configs": "pnr/asap7/{coalescer_rtl,coalescer_hls,hazard_rtl,hazard_hls}/",
-    "collector": "tools/verif/collect_r8r_ppa.py",
-    "synthesis_input_note": "The HLS arms synthesise a *_synth.v produced by tools/hls/strip_translate_off.py, which removes Bambu's `// synthesis translate_off` simulation-only regions. Synlig (needed for this repo's SystemVerilog) does not honour that pragma and rejects $finish outside an initial block. Removing a translate_off region is a semantic no-op for synthesis; the pinned .v itself is untouched.",
-    "checker_skipped": "Checker.YosysSynthChecks, on ALL FOUR so the flow stays identical. Required because the HLS netlists contain undriven wires (9 coalescer, 28 hazard); both hand-RTL arms report 0. Reported as a result, not hidden.",
-    "results": {
-      "memory_coalescer": {
-        "hand_rtl": {
-          "area_um2": 569.74,
-          "cells": 4219,
-          "tmin_ps": 1620.15,
-          "fmax_mhz": 617.23,
-          "power_mw": 4.469,
-          "undriven": 0
-        },
-        "hls": {
-          "area_um2": 605.22,
-          "cells": 4814,
-          "tmin_ps": 1059.09,
-          "fmax_mhz": 944.2,
-          "power_mw": 4.845,
-          "undriven": 9
-        },
-        "verdict": "HLS better than competitive on raw PPA (critical path -34.6%, area +6.2%, power +8.4%) but pays it back in cycles/transaction (empty-mask 1 vs 6 edges)."
-      },
-      "rv32i_hazard_unit": {
-        "hand_rtl": {
-          "area_um2": 23.17,
-          "cells": 233,
-          "comb_delay_ps": 149.3,
-          "fmax_mhz": null,
-          "power_mw": 0.018,
-          "undriven": 0,
-          "note": "purely combinational; timed against a virtual clock, number is input-to-output delay"
-        },
-        "hls": {
-          "area_um2": 26.55,
-          "cells": 233,
-          "tmin_ps": 302.53,
-          "fmax_mhz": 3305.51,
-          "power_mw": 0.182,
-          "undriven": 28
-        },
-        "verdict": "REGRESSES decisively: power x10.1, area +14.6%, latency x12.2-x18.2 (149.3 ps combinational vs 302.53 ps x 6-9 cycles)."
-      }
-    },
-    "not_measured": "A full 8-lane-transaction cycle count for the hand-RTL coalescer. The throughput comparison for that block is therefore anchored only on the empty-mask case; a rigorous ratio needs that measurement and is not claimed.",
-    "caveats": [
-      "No DRC column by construction (xy6/ocm) - partial runs never route.",
-      "Pre-placement zero-parasitic STA: absolute fmax optimistic for all four, comparison valid because treatment is identical."
-    ]
+  "rv32i_cache_arbiter": {
+   "status": "INEXPRESSIBLE -- no C authored, by design",
+   "verdict": "hls/mem/rv32i_cache_arbiter/INEXPRESSIBLE.md",
+   "summary": "Bambu emits AXI masters only, as a side-effect of pointer dereference; there is no AXI-slave interface mode, and every design is wrapped in a start_port/done_port invocation handshake. The arbiter is permanently reactive with three incoming AXI channel sets and grant-hold-until-RLAST."
   }
+ },
+ "digest_note": "Bambu stamps BOTH the generation time AND its full command line (absolute paths and all) into header comments of every .v, so the RAW sha256 differs on every run and even the date-only normalisation differs between checkouts. tools/eda/wrap-bambu.sh now blanks both lines. Pin the NORMALIZED digest. HISTORY (GH #119 bead r8r): Stage 1 normalised only the date and pinned memory_coalescer=2cb8a8a2... / rv32i_hazard_unit=397eb1ce.... On re-running at Stage 2 with byte-identical inputs the coalescer reproduced but the hazard unit did NOT (8c5b9cde...), which exposed the incomplete normalisation. The Stage-1 hazard pin was therefore never reproducible and has been retired rather than trusted. The digests above are re-pinned under the corrected normalisation and were each verified stable across two consecutive runs.",
+ "shim_accounting": {
+  "rule": "Both shims are WIRE-ONLY -- zero registers, only renaming, slicing, zero-extension/truncation and tie-offs; each contributes 0 Verilator warnings.",
+  "consequence": "Flow B's area is not inflated by the wrapper, so Stage 2 can compare the arms without a separate shim line. If a future shim ever needs real registers, its cell count must be reported as a SEPARATE line and never folded into Flow B."
+ },
+ "power_activity": "Stage 2. Both arms must use the same VCD source (the shared cocotb suite).",
+ "drc_axis": {
+  "status": "WITHDRAWN for ASAP7 -- not measured, not measurable",
+  "reason": "Bead xy6 (closed, root-caused): pnr/scripts/openroad/drt.tcl wraps the whole detailed_route call in a bare catch{}, so DRT-0073/0074 pin-access failures abort routing and write_views commits the pre-route placed netlist. 100% of recoverable ASAP7 runs show zero ROUTED nets. Bead ocm (open) owns the unsolved pin-access cause.",
+  "consequence": "Both arms would hit the identical wall, so the column yields no discriminating signal. The acceptance thresholds in the evaluation doc have been amended accordingly. Stage 2 must NOT promise a DRC column."
+ },
+ "deferred_to_stage_2": [
+  "LibreLane + ASAP7 PDK revision",
+  "the exact SDC used for both arms",
+  "real synthesis of both arms, with the counting boundary stated",
+  "power with matched switching activity"
+ ],
+ "stage2": {
+  "method": "Four ASAP7 runs to OpenROAD.STAPrePNR only (area+timing+power all appear there; placement/CTS/routing not required). Same clock 705 ps, corner nom_tt_025C_0p7V, synthesis strategy and skip list across all four; configs differ only in DESIGN_NAME, VERILOG_FILES and clock port. HLS arms synthesised with their wire-only shim.",
+  "configs": "pnr/asap7/{coalescer_rtl,coalescer_hls,hazard_rtl,hazard_hls}/",
+  "collector": "tools/verif/collect_r8r_ppa.py",
+  "synthesis_input_note": "The HLS arms synthesise a *_synth.v produced by tools/hls/strip_translate_off.py, which removes Bambu's `// synthesis translate_off` simulation-only regions. Synlig (needed for this repo's SystemVerilog) does not honour that pragma and rejects $finish outside an initial block. Removing a translate_off region is a semantic no-op for synthesis; the pinned .v itself is untouched.",
+  "checker_skipped": "Checker.YosysSynthChecks, on ALL FOUR so the flow stays identical. Required because the HLS netlists contain undriven wires (9 coalescer, 28 hazard); both hand-RTL arms report 0. Reported as a result, not hidden.",
+  "results": {
+   "memory_coalescer": {
+    "hand_rtl": {
+     "area_um2": 569.74,
+     "cells": 4219,
+     "tmin_ps": 1620.15,
+     "fmax_mhz": 617.23,
+     "power_mw": 4.469,
+     "undriven": 0
+    },
+    "hls": {
+     "area_um2": 605.22,
+     "cells": 4814,
+     "tmin_ps": 1059.09,
+     "fmax_mhz": 944.2,
+     "power_mw": 4.845,
+     "undriven": 9
+    },
+    "verdict": "HLS better than competitive on raw PPA (critical path -34.6%, area +6.2%, power +8.4%) but pays it back in cycles/transaction (empty-mask 1 vs 6 edges)."
+   },
+   "rv32i_hazard_unit": {
+    "hand_rtl": {
+     "area_um2": 23.17,
+     "cells": 233,
+     "comb_delay_ps": 149.3,
+     "fmax_mhz": null,
+     "power_mw": 0.018,
+     "undriven": 0,
+     "note": "purely combinational; timed against a virtual clock, number is input-to-output delay"
+    },
+    "hls": {
+     "area_um2": 26.55,
+     "cells": 233,
+     "tmin_ps": 302.53,
+     "fmax_mhz": 3305.51,
+     "power_mw": 0.182,
+     "undriven": 28
+    },
+    "verdict": "REGRESSES decisively: power x10.1, area +14.6%, latency x12.2-x18.2 (149.3 ps combinational vs 302.53 ps x 6-9 cycles)."
+   }
+  },
+  "not_measured": "A full 8-lane-transaction cycle count for the hand-RTL coalescer. The throughput comparison for that block is therefore anchored only on the empty-mask case; a rigorous ratio needs that measurement and is not claimed.",
+  "caveats": [
+   "No DRC column by construction (xy6/ocm) - partial runs never route.",
+   "Pre-placement zero-parasitic STA: absolute fmax optimistic for all four, comparison valid because treatment is identical.",
+   "REFINED (bead gg8): caveat 2's 'comparison valid because treatment is identical' is true procedurally but the EFFECT of stopping before the resizer is asymmetric. Measured share of the critical path spent in one unbuffered high-fanout arc: coalescer_rtl 71.5% (fanout 532), coalescer_hls 50.6% (267), hazard_rtl 34.2% (2), hazard_hls 31.6% (15), valu_rtl 8.0% (6), valu_hls 62.3% (1188). Direction of every Stage 2 verdict is unchanged -- the coalescer's hand-RTL arm suffered MORE than its HLS arm, so that HLS win is understated, and both hazard arms are artifact-free -- but absolute timing ratios in this pilot should be read as bounded, not exact."
+  ]
+ },
+ "stage3": {
+  "bead": "gg8",
+  "why": "Stage 2 closed with an admitted hole: memory_coalescer is an AXI transaction FSM, not a datapath, so the pilot's recommendation had a datapath half that no measured block supported. rtl/gpu/vector_alu.sv is the real datapath pole -- 8 lanes x 32 bits of pure combinational arithmetic, zero registers.",
+  "method": "Identical to Stage 2: C authored from the natural-language spec with the hand-RTL withheld, then two ASAP7 runs to OpenROAD.STAPrePNR, same 705 ps clock, same corner nom_tt_025C_0p7V, same skip list. HLS arm synthesised with its wire-only shim.",
+  "configs": "pnr/asap7/{valu_rtl,valu_hls}/",
+  "runs": {
+   "valu_rtl": "/nobackup/asap7_valu_rtl_runs/RUN_2026-09-07_19-54-52",
+   "valu_hls": "/nobackup/asap7_valu_hls_runs/RUN_2026-09-07_20-12-34"
+  },
+  "results": {
+   "vector_alu": {
+    "hand_rtl": {
+     "area_um2": 4655.15,
+     "cells": 54634,
+     "seq_cells": 0,
+     "comb_delay_ps": 759.29,
+     "power_mw": 14.147,
+     "undriven": 0,
+     "cycles_per_op": 1,
+     "note": "purely combinational; timed against a virtual clock, number is input-to-output delay"
+    },
+    "hls": {
+     "area_um2": 7234.0,
+     "cells": 70895,
+     "seq_cells": 9412,
+     "tmin_ps": 4142.52,
+     "fmax_mhz": 241.4,
+     "power_mw": 37.281,
+     "undriven": 16,
+     "cycles_per_op": {
+      "mean": 14.35,
+      "min": 8,
+      "max": 38,
+      "total": 488,
+      "vectors": 34,
+      "note": "parsed per-vector from Bambu results.txt. Bambu's own CYCLES value=\"7\" is ~half the true mean and must not be quoted."
+     }
+    },
+    "verdict": "REGRESSES on every axis, by margins several times the doc's thresholds: area +55.4%, power +163.5%, critical path x5.5, cycles/op x14-38. Throughput 759.29 ps vs 4142.52 ps x 14.35 = 59.4 ns mean (157.4 ns worst) = ~78x mean, ~207x worst."
+   }
+  },
+  "ablations": [
+   "Relaxed clock 1.75 ns instead of 0.705 ns: 62 control steps, 6012 FF, IDENTICAL area. A slower target does not buy a flatter datapath.",
+   "'HLS-friendly' rewrite (lane loop restructured into a ternary-select chain): 3.3x area, still sequential."
+  ],
+  "conclusion": "The datapath half of the pilot's recommendation does not hold. Bambu schedules a loop over lanes into a multi-cycle FSM over a shared functional unit and has no mode that emits 8 parallel combinational slices. Whether it can be made to emit a single-control-step datapath at all is left open as a follow-up.",
+  "verification": "Both arms pass tb/cocotb/gpu/test_vector_alu.py 14/14. The suite had no handshake handling, so the HLS arm scored 1/14 until a runtime protocol branch (the test_hazard_unit.py pattern) was added; expected values and assertions unchanged, only the sampling point moved into ReadOnly(). This directed suite does NOT exercise ASSUMPTIONS.md items 8 (result_o for branch opcodes) or 10 (VMOV_*), so those two spec-drift candidates remain unprobed rather than cleared."
+ }
 }

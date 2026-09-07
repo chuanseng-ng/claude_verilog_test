@@ -65,6 +65,20 @@ rv32i_hazard_unit:
 	  $(BAMBU_FLAGS) --generate-tb=$(HAZARD_DIR)/rv32i_hazard_unit_tb.xml \
 	  $(BAMBU_SIM_FLAGS)
 
+# The GH #119 gg8 arm: vector_alu -- the GENUINE datapath pole. Neither block
+# measured in Stage 1/2 was arithmetic-dominated (memory_coalescer is an FSM with
+# zero arithmetic; rv32i_hazard_unit is a comparison network), so the datapath
+# half of the evaluation doc's recommendation was never tested. This block is
+# 8 lanes x 32-bit multiply plus shift/logic.
+VALU_DIR := $(HLS_DIR)/gpu/vector_alu
+
+.PHONY: vector_alu
+vector_alu:
+	$(WRAP_BAMBU) $(HLS_OUT)/vector_alu vector_alu \
+	  $(VALU_DIR)/vector_alu.c \
+	  $(BAMBU_FLAGS) --generate-tb=$(VALU_DIR)/vector_alu_tb.xml \
+	  $(BAMBU_SIM_FLAGS)
+
 .PHONY: clean
 clean:
 	rm -rf $(HLS_OUT)

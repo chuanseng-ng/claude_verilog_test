@@ -963,6 +963,29 @@ gpu_coalescer:
 		VERILOG_SOURCES="$(GPU_PKG) $(RTL_DIR)/gpu/memory_coalescer.sv" \
 		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_coalescer
 
+# vector_alu, HLS arm (GH #119 bead gg8 -- the genuine datapath pole). Same
+# unmodified cocotb suite as the hand-RTL gpu_alu target above; see the
+# gpu_coalescer_hls comment for why NO_TRACE / --output-split / -Wno-lint are
+# needed on machine-generated Verilog.
+HLS_VALU_V = $(HLS_OUT)/vector_alu/vector_alu.v
+HLS_VALU_SHIM = $(PROJ_ROOT)/hls/gpu/vector_alu/shim/vector_alu_hls.sv
+
+.PHONY: gpu_alu_hls
+gpu_alu_hls:
+	@echo "Running Phase 4 vector_alu unit tests against the HLS arm..."
+	@test -s $(HLS_VALU_V) || { \
+	  echo "ERROR: $(HLS_VALU_V) missing or empty."; \
+	  echo "       Generate it first: nix develop .#hls --command make -C hls vector_alu"; \
+	  exit 2; }
+	@echo ""
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_vector_alu \
+		TOPLEVEL=vector_alu_hls \
+		VERILOG_SOURCES="$(GPU_PKG) $(HLS_VALU_V) $(HLS_VALU_SHIM)" \
+		EXTRA_VERILATOR_FLAGS="-Wno-lint -Wno-style --output-split 500" \
+		NO_TRACE=1 EXTRA_BUILD_ARGS="" \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_alu_hls
+
 # memory_coalescer, HLS arm (GH #119 bead cfi): the SAME cocotb tests as
 # gpu_coalescer above, run against Bambu-generated Verilog wrapped in a
 # port-adapting shim. Running both arms through one unchanged testbench is what
