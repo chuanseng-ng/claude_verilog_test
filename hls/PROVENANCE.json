@@ -53,7 +53,7 @@
       "assumptions": "hls/gpu/memory_coalescer/ASSUMPTIONS.md",
       "bambu_command": "bambu <abs>/memory_coalescer.c --top-fname=memory_coalescer --generate-interface=INFER --compiler=I386_CLANG16 --device-name=asap7-TC --clock-period=0.705 --reset-type=async --reset-level=low --disable-reg-init-value --no-mixed-design -w V --generate-tb=<abs>/memory_coalescer --simulate --simulator=VERILATOR",
       "generated_verilog": "/nobackup/hls/out/memory_coalescer/memory_coalescer.v  (NOT committed)",
-      "verilog_sha256_normalized": "2cb8a8a2c8b146080a98039ae1a3a07b3a72c70b4a13efb5072cf85d4301a045",
+      "verilog_sha256_normalized": "376e64ea719512cfef4cfdac5c12502731dcf9ccef5aa039afcfc52fa61e3b50",
       "leg1_bambu_cosim": {
         "status": "PASS",
         "vectors": 5,
@@ -75,7 +75,7 @@
       "assumptions": "hls/cpu/rv32i_hazard_unit/ASSUMPTIONS.md",
       "bambu_command": "bambu <abs>/rv32i_hazard_unit.c --top-fname=rv32i_hazard_unit --generate-interface=INFER --compiler=I386_CLANG16 --device-name=asap7-TC --clock-period=0.705 --reset-type=async --reset-level=low --disable-reg-init-value --no-mixed-design -w V --generate-tb=<abs>/rv32i_hazard_unit --simulate --simulator=VERILATOR",
       "generated_verilog": "/nobackup/hls/out/rv32i_hazard_unit/rv32i_hazard_unit.v  (NOT committed)",
-      "verilog_sha256_normalized": "397eb1ce38e3619a3f0072daa90035b88283fb87216eaf4444512faae593aeda",
+      "verilog_sha256_normalized": "72dde9f0179c8c1a114258ec128a9642cd77b747a6b10fcecb0f148821a6e146",
       "leg1_bambu_cosim": {
         "status": "PASS",
         "vectors": 30,
@@ -94,7 +94,7 @@
       "summary": "Bambu emits AXI masters only, as a side-effect of pointer dereference; there is no AXI-slave interface mode, and every design is wrapped in a start_port/done_port invocation handshake. The arbiter is permanently reactive with three incoming AXI channel sets and grant-hold-until-RLAST."
     }
   },
-  "digest_note": "Bambu stamps the generation time into a header comment of every .v, so the RAW sha256 differs on every run (verified: 3 back-to-back runs of identical input gave 3 digests, byte-identical except the '- Date ...' line). Pin the NORMALIZED digest, which blanks that date and is stable. tools/eda/wrap-bambu.sh emits both.",
+  "digest_note": "Bambu stamps BOTH the generation time AND its full command line (absolute paths and all) into header comments of every .v, so the RAW sha256 differs on every run and even the date-only normalisation differs between checkouts. tools/eda/wrap-bambu.sh now blanks both lines. Pin the NORMALIZED digest. HISTORY (GH #119 bead r8r): Stage 1 normalised only the date and pinned memory_coalescer=2cb8a8a2... / rv32i_hazard_unit=397eb1ce.... On re-running at Stage 2 with byte-identical inputs the coalescer reproduced but the hazard unit did NOT (8c5b9cde...), which exposed the incomplete normalisation. The Stage-1 hazard pin was therefore never reproducible and has been retired rather than trusted. The digests above are re-pinned under the corrected normalisation and were each verified stable across two consecutive runs.",
   "shim_accounting": {
     "rule": "Both shims are WIRE-ONLY -- zero registers, only renaming, slicing, zero-extension/truncation and tie-offs; each contributes 0 Verilator warnings.",
     "consequence": "Flow B's area is not inflated by the wrapper, so Stage 2 can compare the arms without a separate shim line. If a future shim ever needs real registers, its cell count must be reported as a SEPARATE line and never folded into Flow B."

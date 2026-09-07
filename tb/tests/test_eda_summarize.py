@@ -371,6 +371,27 @@ def test_bambu_simulate_without_cycles_is_error_not_pass(tmp_path: Path) -> None
     assert "dwp" in summary["note"]
 
 
+def test_bambu_normalized_hash_ignores_the_embedded_command_line(tmp_path: Path) -> None:
+    """The digest must not depend on where the checkout lives.
+
+    Bambu echoes its full command line, absolute paths and all, into a header
+    comment. Stage 1 normalised only the date and missed this, so the "normalized"
+    digest still changed between clones (GH #119 bead r8r).
+    """
+    body = "module rv32i_hazard_unit(); endmodule\n"
+    head = "// Code created using PandA - Date 2026-09-07T12:19:18\n// Bambu executed with: "
+    a = tmp_path / "a.v"
+    a.write_text(head + "/home/alice/repo/x.c --generate-tb=/home/alice/repo/x.xml\n" + body)
+    b = tmp_path / "b.v"
+    b.write_text(head + "/srv/build/repo/x.c --generate-tb=/srv/build/repo/x.xml\n" + body)
+
+    _, sum_a = summarize.parse_bambu(_bambu_log(simulate=True), 0, a)
+    _, sum_b = summarize.parse_bambu(_bambu_log(simulate=True), 0, b)
+
+    assert sum_a["verilog_sha256"] != sum_b["verilog_sha256"]
+    assert sum_a["verilog_sha256_normalized"] == sum_b["verilog_sha256_normalized"]
+
+
 def test_bambu_missing_verilog_is_error_not_pass(tmp_path: Path) -> None:
     """A clean exit that produced no .v is ERROR — the artefact is the deliverable."""
     status, summary = summarize.parse_bambu(_bambu_log(simulate=True), 0, tmp_path / "absent.v")

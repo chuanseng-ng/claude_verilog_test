@@ -274,6 +274,12 @@ _BAMBU_MDPI_RE = re.compile(r"^ERROR: MDPI driver: .*$", re.M)
 # regeneration. verilog_sha256_normalized blanks the date and is the digest to
 # pin; verilog_sha256 stays as the identity of the exact file on disk.
 _BAMBU_DATE_RE = re.compile(rb"(// Code created using PandA .* - Date )\S+")
+# Bambu also echoes its full command line into a header comment, absolute paths
+# and all. That makes the digest depend on the checkout location and on flag
+# paths, so the same C in a different clone hashes differently. Blank it too, or
+# "normalized" is not actually normalized. (Stage 1 stripped only the date and
+# missed this; see GH #119 bead r8r.)
+_BAMBU_CMDLINE_HDR_RE = re.compile(rb"(// Bambu executed with: ).*")
 
 
 def parse_bambu(text: str, exit_code: int, verilog: Path | None) -> tuple[int, dict]:
@@ -356,6 +362,7 @@ def parse_bambu(text: str, exit_code: int, verilog: Path | None) -> tuple[int, d
         summary["verilog_sha256"] = hashlib.sha256(data).hexdigest()
         summary["verilog_bytes"] = len(data)
         normalized = _BAMBU_DATE_RE.sub(rb"\1<normalized>", data)
+        normalized = _BAMBU_CMDLINE_HDR_RE.sub(rb"\1<normalized>", normalized)
         summary["verilog_sha256_normalized"] = hashlib.sha256(normalized).hexdigest()
 
     return PASS, summary
