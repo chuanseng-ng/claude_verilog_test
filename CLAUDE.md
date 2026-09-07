@@ -310,8 +310,12 @@ Refer to specifications in `docs/` — they are the source of truth.
 
 ### ⚠ `rtk diff` must not decide pass/fail below rtk 0.48.0
 
-`rtk diff` on **rtk 0.42.0** has two defects that silently corrupt conclusions. Both are fixed in
-**v0.48.0** — check with `rtk --version` and upgrade if below it.
+**This machine was upgraded to rtk 0.48.0 on 2026-09-07 and both defects are verified gone here.**
+The warning is kept because it is version-dependent: another clone or machine still on an older
+rtk is affected. Check with `rtk --version` and upgrade if below **0.48.0**.
+
+`rtk diff` on **rtk 0.42.0** had two defects that silently corrupt conclusions, both fixed in
+**v0.48.0**.
 
 1. **False "identical" verdict.** A change consisting only of *modified* (similar) lines was
    reported as `[ok] Files are identical` and the content discarded. A 3-line file where every
@@ -326,8 +330,8 @@ Upstream: [#781](https://github.com/rtk-ai/rtk/issues/781),
 [#3267](https://github.com/rtk-ai/rtk/issues/3267). Both verified fixed on the v0.48.0 release
 binary; identical files still correctly return exit 0, so the guard was not merely inverted.
 
-**Regardless of version, do not gate a decision on `diff`.** Use `cmp -s` (exit 0/1) or
-`sha256sum` — both were correct throughout. Two further traps that outlive the fix:
+**Regardless of version, prefer not to gate a decision on `diff`.** `cmp -s` (exit 0/1) and
+`sha256sum` were correct throughout both the broken and fixed versions, and cost nothing. Two further traps that outlive the fix:
 - `RTK_DISABLED=1` suppresses the *hook rewrite*, not an explicit `rtk diff`; the latter still
   filters.
 - The rewrite is cwd- and parse-dependent, so a bare `diff` can behave correctly in one context
