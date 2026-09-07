@@ -1,7 +1,7 @@
 # C++ → SystemVerilog (HLS) Flow Evaluation & RTL-Generation Approach Decision
 
 **Date:** 2026-07-14
-**Status:** Decision recorded · **empirical-confirmation pilot RUN — Stage 1 complete 2026-09-07** (see "Stage 1 results" at the end; Stage 2 = P&R/PPA, not yet run)
+**Status:** Decision recorded · **pilot RUN and COMPLETE — Stage 1 + Stage 2, 2026-09-07** (see "Stage 1 results" and "Stage 2 results — the PPA table" at the end)
 **Scope:** Should RTL be generated via `NL → C++ (AI) → RTL (HLS tool)` instead of the
 current `NL → SystemVerilog (RTL-orchestrator agents)` flow?
 
@@ -310,3 +310,108 @@ Two secondary findings worth carrying into any future HLS work:
 - Both shims are wire-only (zero registers), so Flow B's area needs no separate shim line.
 - Normalize on throughput per the pinning list above: the hand-RTL cycle counts are 1 (coalescer,
   empty mask) and **0** (hazard unit, combinational) against 6 and 6-9 respectively.
+
+---
+
+# Stage 2 results — the PPA table (2026-09-07)
+
+**Status:** Stage 2 complete (bead `r8r`). This is the comparison table this document names as the
+pilot's deliverable. Reproducibility pin: `hls/PROVENANCE.json`; configs under
+`pnr/asap7/{coalescer,hazard}_{rtl,hls}/`; collector `tools/verif/collect_r8r_ppa.py`.
+
+## Method
+
+Four ASAP7 runs — two hand-RTL, two Bambu-HLS — **to `OpenROAD.STAPrePNR` only**. That step is
+where area, timing *and* power all first appear, so placement, CTS and routing are needed for none
+of them. All four use the same clock period (705 ps), the same corner (`nom_tt_025C_0p7V`), the same
+synthesis strategy and the same skip list; a diff of the four `config.json` differs **only** in
+`DESIGN_NAME`, `VERILOG_FILES` and the clock port. Both HLS arms are synthesised *with* their
+wire-only shim, so all four have identical port lists.
+
+## The table
+
+| Block | Flow | Area µm² | Cells | Critical path ps | fmax MHz | Power mW | Undriven wires |
+|---|---|---|---|---|---|---|---|
+| `memory_coalescer` | hand-RTL | 569.74 | 4219 | 1620.15 | 617.2 | 4.469 | **0** |
+| `memory_coalescer` | **HLS** | 605.22 | 4814 | **1059.09** | **944.2** | 4.845 | **9** |
+| `rv32i_hazard_unit` | hand-RTL | 23.17 | 233 | **149.3** (combinational) | n/a | **0.018** | **0** |
+| `rv32i_hazard_unit` | **HLS** | 26.55 | 233 | 302.53 (per cycle) | 3305.5 | **0.182** | **28** |
+
+`rv32i_hazard_unit`'s hand-RTL arm is purely combinational — no clock, no registers, zero
+register-to-register paths — so "fmax" is undefined for it. It is timed against a **virtual clock**
+with a zero I/O budget, and its number is the input-to-output path delay (705 − 555.7 slack).
+
+## Result 1 — the coalescer: HLS *won* on speed, and that was not the hypothesis
+
+Against this document's own thresholds (>10 % fmax or >20 % area/power = "regresses"; ±5 % fmax and
+±10 % area/power = "competitive"):
+
+- **Critical path −34.6 %** (1620 → 1059 ps), i.e. **fmax +53 %**, in the HLS arm's favour.
+- **Area +6.2 %**, **power +8.4 %** — both inside the ±10 % "competitive" band.
+
+So on raw PPA the HLS coalescer is **better than competitive**. The reason is visible in the
+structure: Bambu split the lane walk across more, shorter cycles, while the hand-RTL keeps a longer
+combinational path through the 8-lane mux and its AXI FSM.
+
+**This does not overturn the recommendation, and the reason is throughput.** A shorter clock period
+bought with more cycles per transaction is only a win if the cycle count holds, and it does not:
+on the empty-mask case the hand-RTL completes in **1** rising edge and the HLS arm in **6**.
+Per-transaction latency, not fmax, is what this block's consumer sees.
+
+*Honest gap:* a full 8-lane-transaction cycle count for the hand-RTL arm was **not measured**, so
+the throughput comparison is anchored only on the empty-mask case plus Bambu's own cosim average of
+23 cycles/vector. A rigorous throughput ratio needs that measurement; it is not claimed here.
+
+## Result 2 — the hazard unit: regression on every axis that matters
+
+- **Power ×10.1** (0.018 → 0.182 mW, +911 %) — far outside the >20 % "regresses" threshold, and the
+  single starkest number in this pilot.
+- **Area +14.6 %** — past the ±10 % competitive band.
+- **Latency ×12.2 – ×18.2**: 149.3 ps of combinational delay versus 302.53 ps × 6–9 cycles =
+  1815–2723 ps for the same evaluation.
+
+**Verdict: regresses**, decisively. This is the block Stage 1 already showed to be *inexpressible in
+form* — a zero-flip-flop combinational cloud becoming a 9-state, 33-flop FSM — and the PPA numbers
+now put a cost on that: an order of magnitude more power and over an order of magnitude more
+latency, for logic the pipeline needs resolved within a single cycle.
+
+## Result 3 — netlist quality: undriven wires, only in the HLS arms
+
+Yosys' own `CHECK` pass reports wires that are used but never driven:
+
+| | hand-RTL | HLS |
+|---|---|---|
+| `memory_coalescer` | 0 | **9** |
+| `rv32i_hazard_unit` | 0 | **28** |
+
+They are `OUT_UNBOUNDED_*` functional-unit outputs plus an undriven `s_start_port0`. Both hand-RTL
+arms are clean. The flow's `Checker.YosysSynthChecks` had to be skipped **on all four** (to keep the
+flow identical) for the HLS arms to synthesise at all; the skip is documented in `pnr/Makefile` and
+this asymmetry is reported rather than hidden by it.
+
+## What must not be read into this table
+
+- **No DRC column, by construction.** Struck in Stage 1 (beads `xy6`/`ocm`): no ASAP7 run in this
+  project has ever completed detailed routing, so both arms would compare two vacuous zeros. These
+  are partial runs and never route.
+- **Pre-placement, zero-parasitic STA.** Absolute fmax is optimistic for all four. The *comparison*
+  holds because every arm is treated identically, but these are not sign-off numbers.
+- The 233-cell count matching across the two hazard arms is a coincidence, not an error — the areas
+  and flop counts differ (the HLS arm has 33 flip-flops; the hand-RTL arm has none).
+
+## Effect on the recommendation
+
+The recommendation at the top of this document **stands**, now with numbers behind its control-logic
+half rather than only literature: on the control block, HLS costs **10× the power and 12–18× the
+latency**, on top of Stage 1's finding that it cannot reproduce the block's combinational form at
+all.
+
+The coalescer result is the honest complication, and it is worth stating plainly: **on an
+AXI-serialiser workload, HLS produced a shorter critical path at ~6 % area cost.** That is a point
+in HLS's favour on a block that is *not* control-dominated in the hazard-unit sense, and it is
+consistent with reserving HLS for throughput-oriented dataflow rather than for cycle-critical
+control.
+
+**The datapath half of the recommendation remains untested** — neither measured block is a datapath
+block (see the Stage 1 correction above). Bead `gg8` tracks `rtl/gpu/vector_alu.sv` as the block
+that would actually test it.

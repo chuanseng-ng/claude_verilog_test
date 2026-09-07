@@ -114,7 +114,7 @@ the two coexist.
   (a C driver cannot size a memory space from a decayed pointer; see `hls/README.md`).
 - Generated Verilog is **not committed**. Bambu stamps a timestamp into a header comment, so pin
   the **normalized** digest, which is stable across runs:
-  `verilog_sha256_normalized = 2cb8a8a2c8b146080a98039ae1a3a07b3a72c70b4a13efb5072cf85d4301a045`
+  `verilog_sha256_normalized = 376e64ea719512cfef4cfdac5c12502731dcf9ccef5aa039afcfc52fa61e3b50`
 
 ### Numbers for Stage 2 (do not treat as PPA)
 
@@ -126,3 +126,10 @@ decide the counting boundary before any comparison.
 
 Cycle counts for throughput normalisation (doc L133): empty-mask latency 1 (hand-RTL) vs 6 (HLS);
 Bambu cosim reports 119 cycles across 5 vectors, 23 average.
+
+> **Digest re-pinned at Stage 2 (bead `r8r`).** Stage 1's normalisation stripped only
+> Bambu's date stamp and missed the header line that echoes its **full command line,
+> absolute paths included** — so the digest was never checkout-independent. Re-running at
+> Stage 2 with byte-identical inputs reproduced the coalescer but **not** the hazard unit,
+> which exposed it. `tools/eda/wrap-bambu.sh` now blanks both lines; the value above is
+> under the corrected normalisation and was verified stable across two consecutive runs.

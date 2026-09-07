@@ -116,7 +116,7 @@ zero-extension of the 26 inputs (5-bit and 1-bit → 32-bit), truncation of the 
   x0 case and 13 randomised): **PASS**, 203 cycles / 6 average.
 - Generated Verilog is not committed. Pin the **normalized** digest (Bambu stamps a timestamp into
   a header comment, so the raw digest changes every run):
-  `verilog_sha256_normalized = 397eb1ce38e3619a3f0072daa90035b88283fb87216eaf4444512faae593aeda`
+  `verilog_sha256_normalized = 72dde9f0179c8c1a114258ec128a9642cd77b747a6b10fcecb0f148821a6e146`
 
 ### Numbers for Stage 2 (do not treat as PPA)
 
@@ -125,3 +125,10 @@ Bambu's own pre-synthesis estimates: **50 flip-flops** (reference: **0**), estim
 comparable to the hand-RTL as-is — Stage 2 must synthesise both for real and state the counting
 boundary. The flip-flop count is the one figure that needs no normalisation: 0 versus 50, for a
 block the spec describes as combinational.
+
+> **Digest re-pinned at Stage 2 (bead `r8r`).** Stage 1's normalisation stripped only
+> Bambu's date stamp and missed the header line that echoes its **full command line,
+> absolute paths included** — so the digest was never checkout-independent. Re-running at
+> Stage 2 with byte-identical inputs reproduced the coalescer but **not** the hazard unit,
+> which exposed it. `tools/eda/wrap-bambu.sh` now blanks both lines; the value above is
+> under the corrected normalisation and was verified stable across two consecutive runs.
