@@ -1807,6 +1807,78 @@ librelane-asap7-hazard-hls:
 		 $(abspath asap7/hazard_hls)/config.json"
 
 .PHONY: librelane-asap7-r8r-all
-librelane-asap7-r8r-all: librelane-asap7-coalescer-rtl librelane-asap7-coalescer-hls librelane-asap7-hazard-rtl librelane-asap7-hazard-hls
+librelane-asap7-r8r-all: librelane-asap7-coalescer-rtl librelane-asap7-coalescer-hls librelane-asap7-hazard-rtl librelane-asap7-hazard-hls librelane-asap7-valu-rtl librelane-asap7-valu-hls
 	@echo ""
 	@echo "All four GH #119 Stage 2 runs complete."
+
+.PHONY: librelane-asap7-valu-rtl
+librelane-asap7-valu-rtl:
+	@echo "=========================================="
+	@echo "ASAP7 leaf-block PPA (GH #119 r8r) -- vector_alu, hand-RTL arm (purely combinational, virtual clock)"
+	@echo "  Config   : pnr/asap7/valu_rtl/config.json"
+	@echo "  Stopping : OpenROAD.STAPrePNR (area+timing+power; no floorplan/route)"
+	@echo "=========================================="
+	@if [ ! -f "asap7/valu_rtl/config.json" ]; then \
+		echo "ERROR: asap7/valu_rtl/config.json not found."; exit 1; fi
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 --to OpenROAD.STAPrePNR \
+		 --skip Checker.YosysSynthChecks \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
+		 $(abspath asap7/valu_rtl)/config.json"
+
+.PHONY: librelane-asap7-valu-hls
+librelane-asap7-valu-hls:
+	@echo "=========================================="
+	@echo "ASAP7 leaf-block PPA (GH #119 r8r) -- vector_alu, HLS arm (generated .v + wire-only shim)"
+	@echo "  Config   : pnr/asap7/valu_hls/config.json"
+	@echo "  Stopping : OpenROAD.STAPrePNR (area+timing+power; no floorplan/route)"
+	@echo "=========================================="
+	@if [ ! -f "asap7/valu_hls/config.json" ]; then \
+		echo "ERROR: asap7/valu_hls/config.json not found."; exit 1; fi
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 --to OpenROAD.STAPrePNR \
+		 --skip Checker.YosysSynthChecks \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
+		 $(abspath asap7/valu_hls)/config.json"
