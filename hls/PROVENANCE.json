@@ -6,7 +6,7 @@
     "AXI master adapter, which the hand-RTL has no equivalent of. Stage 2 must synthesise",
     "both arms for real and state the counting boundary before quoting any number."
   ],
-  "stage": 1,
+  "stage": 2,
   "issue": "https://github.com/chuanseng-ng/claude_verilog_test/issues/119",
   "hls_tool": {
     "name": "Bambu (PandA)",
@@ -110,5 +110,58 @@
     "the exact SDC used for both arms",
     "real synthesis of both arms, with the counting boundary stated",
     "power with matched switching activity"
-  ]
+  ],
+  "stage2": {
+    "method": "Four ASAP7 runs to OpenROAD.STAPrePNR only (area+timing+power all appear there; placement/CTS/routing not required). Same clock 705 ps, corner nom_tt_025C_0p7V, synthesis strategy and skip list across all four; configs differ only in DESIGN_NAME, VERILOG_FILES and clock port. HLS arms synthesised with their wire-only shim.",
+    "configs": "pnr/asap7/{coalescer_rtl,coalescer_hls,hazard_rtl,hazard_hls}/",
+    "collector": "tools/verif/collect_r8r_ppa.py",
+    "synthesis_input_note": "The HLS arms synthesise a *_synth.v produced by tools/hls/strip_translate_off.py, which removes Bambu's `// synthesis translate_off` simulation-only regions. Synlig (needed for this repo's SystemVerilog) does not honour that pragma and rejects $finish outside an initial block. Removing a translate_off region is a semantic no-op for synthesis; the pinned .v itself is untouched.",
+    "checker_skipped": "Checker.YosysSynthChecks, on ALL FOUR so the flow stays identical. Required because the HLS netlists contain undriven wires (9 coalescer, 28 hazard); both hand-RTL arms report 0. Reported as a result, not hidden.",
+    "results": {
+      "memory_coalescer": {
+        "hand_rtl": {
+          "area_um2": 569.74,
+          "cells": 4219,
+          "tmin_ps": 1620.15,
+          "fmax_mhz": 617.23,
+          "power_mw": 4.469,
+          "undriven": 0
+        },
+        "hls": {
+          "area_um2": 605.22,
+          "cells": 4814,
+          "tmin_ps": 1059.09,
+          "fmax_mhz": 944.2,
+          "power_mw": 4.845,
+          "undriven": 9
+        },
+        "verdict": "HLS better than competitive on raw PPA (critical path -34.6%, area +6.2%, power +8.4%) but pays it back in cycles/transaction (empty-mask 1 vs 6 edges)."
+      },
+      "rv32i_hazard_unit": {
+        "hand_rtl": {
+          "area_um2": 23.17,
+          "cells": 233,
+          "comb_delay_ps": 149.3,
+          "fmax_mhz": null,
+          "power_mw": 0.018,
+          "undriven": 0,
+          "note": "purely combinational; timed against a virtual clock, number is input-to-output delay"
+        },
+        "hls": {
+          "area_um2": 26.55,
+          "cells": 233,
+          "tmin_ps": 302.53,
+          "fmax_mhz": 3305.51,
+          "power_mw": 0.182,
+          "undriven": 28
+        },
+        "verdict": "REGRESSES decisively: power x10.1, area +14.6%, latency x12.2-x18.2 (149.3 ps combinational vs 302.53 ps x 6-9 cycles)."
+      }
+    },
+    "not_measured": "A full 8-lane-transaction cycle count for the hand-RTL coalescer. The throughput comparison for that block is therefore anchored only on the empty-mask case; a rigorous ratio needs that measurement and is not claimed.",
+    "caveats": [
+      "No DRC column by construction (xy6/ocm) - partial runs never route.",
+      "Pre-placement zero-parasitic STA: absolute fmax optimistic for all four, comparison valid because treatment is identical."
+    ]
+  }
 }
