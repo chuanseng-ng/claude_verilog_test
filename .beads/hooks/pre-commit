@@ -22,3 +22,28 @@ if command -v bd >/dev/null 2>&1; then
   if [ $_bd_exit -ne 0 ]; then exit $_bd_exit; fi
 fi
 # --- END BEADS INTEGRATION v1.0.4 ---
+
+# --- BEGIN claude_verilog_test (bead o4y) ---
+# Deliberately OUTSIDE the beads markers: `bd` regenerates only the marked block,
+# so anything placed inside it is silently wiped on the next beads upgrade. Same
+# convention CLAUDE.md already documents for the rtk warning block.
+#
+# Why this lives here at all: git honours core.hooksPath EXCLUSIVELY. This repo
+# sets it to .beads/hooks, so .git/hooks/ is never consulted and anything a tool
+# installs there is inert with no error. code-review-graph had installed a
+# pre-commit hook that had therefore not run since beads set hooksPath. Chained
+# here so both actually execute; `make verify-tooling` now fails if a non-sample
+# hook reappears in .git/hooks/.
+#
+# Never allowed to block a commit: both calls are `|| true`, and `timeout` caps a
+# slow or wedged graph update so committing never hangs on it.
+if command -v code-review-graph >/dev/null 2>&1; then
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 60 code-review-graph update || true
+    timeout 30 code-review-graph detect-changes --brief || true
+  else
+    code-review-graph update || true
+    code-review-graph detect-changes --brief || true
+  fi
+fi
+# --- END claude_verilog_test (bead o4y) ---

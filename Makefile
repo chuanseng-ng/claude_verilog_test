@@ -104,6 +104,19 @@ verify-tooling:
 	  test -x $(REPO_ROOT)/tools/setup/beads_merge_driver.sh || { \
 	    echo "  driver script missing or not executable"; exit 1; }; \
 	  echo "  ok: $$d"
+	@echo "==> no hooks stranded outside core.hooksPath (bead o4y)"
+	@cd $(REPO_ROOT) && hp=$$(git config --get core.hooksPath || true); \
+	  if [ -n "$$hp" ]; then \
+	    stranded=$$(ls .git/hooks 2>/dev/null | grep -v '\.sample$$' || true); \
+	    if [ -n "$$stranded" ]; then \
+	      echo "  core.hooksPath=$$hp, so git IGNORES .git/hooks entirely,"; \
+	      echo "  but these non-sample hooks are installed there and will never run:"; \
+	      for h in $$stranded; do echo "    .git/hooks/$$h"; done; \
+	      echo "  Chain them into $$hp/<name> OUTSIDE the beads markers, or delete them."; \
+	      exit 1; \
+	    fi; \
+	    echo "  ok: core.hooksPath=$$hp, nothing stranded in .git/hooks"; \
+	  else echo "  ok: core.hooksPath unset, .git/hooks is authoritative"; fi
 	@echo "==> RTL lints under LibreLane's OWN Verilator (bead 2wo)"
 	@$(MAKE) --no-print-directory verify-librelane-lint
 	@$(MAKE) --no-print-directory mcp-status
