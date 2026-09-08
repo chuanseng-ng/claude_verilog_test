@@ -49,7 +49,7 @@
     "FP_CORE_UTIL": 50,
     "FP_ASPECT_RATIO": 1,
     "MACRO_PLACEMENT_CFG": "dir::macro_placement_3014.cfg",
-    "PL_TARGET_DENSITY_PCT": 50,
+    "PL_TARGET_DENSITY_PCT": 40,
     "CTS_SINK_CLUSTERING_SIZE": 8,
     "CTS_SINK_CLUSTERING_MAX_DIAMETER": 10,
     "PL_TIME_DRIVEN": true,
@@ -199,5 +199,7 @@
     ],
     "// PIN_ORDER_NOTE": "FP_PIN_ORDER_CFG pins the macro's boundary pin layout. Without it OpenROAD free-floats pin assignment per block run: two consecutive regenerations moved 393 of 401 pins, which perturbed SoC placement around u_cpu, doubled post-CTS cpu_clk skew (worst_hold -485.6 -> -922.1 ps), drove hold violations 805 -> 4702 endpoints and 4814 inserted hold buffers, and took cpu_clk WNS from -60.66 to -596.00 ps. The file is generated from the known-good run-21 abstract. io_place.py ERRORS if a design pin is missing from the file or vice versa (power/ground are excluded by the tool), so adding a port fails loudly instead of silently reshuffling.",
     "FP_PIN_ORDER_CFG": "dir::pin_order.cfg",
-    "// GRT_ALLOW_CONGESTION_NOTE": "Set false for the 3.0.14 routing bring-up (bead ocm). With true, global routing may hand detailed routing a plan it cannot realise; the first ASAP7 run that ever reached detailed routing failed with 16 DRT-0255 maze-route errors concentrated on SRAM macro pins (data_din0/data_dout0/data_gclk) after successfully routing 33905 nets."
+    "// GRT_ALLOW_CONGESTION_NOTE": "Set false for the 3.0.14 routing bring-up (bead ocm). With true, global routing may hand detailed routing a plan it cannot realise; the first ASAP7 run that ever reached detailed routing failed with 16 DRT-0255 maze-route errors concentrated on SRAM macro pins (data_din0/data_dout0/data_gclk) after successfully routing 33905 nets.",
+    "// DRT_THREADS_NOTE": "Set to 1 for the bead-ocm bring-up experiment. Every attempt so far reported EXACTLY 16 DRT-0255 errors regardless of channel width, macro position or the M4 obstruction, always confined to one worker routeBox column. 16 = 2 x DRT_THREADS(8), so the count may be an artifact of in-flight parallel workers at abort rather than 16 genuinely unroutable nets. Single-threaded should collapse it to the real number.",
+    "// DENSITY_NOTE": "Attempt 10: PL_TARGET_DENSITY_PCT 50 -> 40. Every earlier experiment moved MACROS (channel width, half-worker shift) or changed the abstract; none changed standard-cell density near the macro pins. DRT_THREADS restored to 8 -- single-threaded gave the identical 16 failures, so the count is real and not a parallel-abort artifact."
 }
