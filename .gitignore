@@ -96,3 +96,4 @@ hls/**/HLS_output/
 # negation it silently swallows these too, and the artefact would stop being
 # regenerable with no error to notice.
 !hls/**/*_tb.xml
+pnr/.openroad-shim/
