@@ -1868,3 +1868,91 @@ points confirm real work was done — this is not a permissive no-op.
 Note the diagonal: the failure is specific to the (`edf00dff` × ASAP7) cell. Neither the build
 nor the PDK is independently at fault, which is why every single-variable geometry experiment
 above came back negative — they were all varying within the failing cell.
+
+#### UPDATE 2026-09-08/09 (beads `ocm` + `b5a`) — ASAP7 detailed routing RUNS for the first time; two further defects exposed
+
+Bead `ocm` established that OpenROAD `edf00dff` (LibreLane 2.4.13's own pin) cannot grant pin
+access on ASAP7. This entry records the end-to-end bring-up that followed.
+
+**The fix is a LibreLane upgrade, not a tool swap.** Forcing a newer OpenROAD under LibreLane
+2.4.13 fails: `corner.tcl, 44 invalid command name "rsz::check_corner_wire_cap"` at
+`OpenROAD.STAMidPNR`, because LibreLane's Tcl calls OpenROAD/OpenSTA *internal namespace*
+APIs that moved. Mixing builds per-step is also impossible —
+`incompatible database schema revision 0.129 > 0.91` (26Q2 writes 0.129, edf00dff reads ≤0.91).
+LibreLane ships tool and scripts as a matched pair.
+
+`nix build .#openroad` in a worktree of tag **3.0.14** substituted OpenROAD `dcf36133`
+(2026-02-17) **prebuilt from nix-cache.fossi-foundation.org** — no source compile, ~7 min.
+A from-source build was never needed.
+
+**Local-patch audit against 3.0.14** (the 2.4.13 tree carries 7 modified files):
+
+| patch | verdict |
+| --- | --- |
+| `drt.tcl` `catch{}` | **must NOT port** — it *is* the workaround for the pin-access bug and is what made routing failures silent (bead `xy6`) |
+| `odb.py` + `diodes.py` (bead `58q`) | not needed — opt-in, and no config in this repo sets `HEURISTIC_ANTENNA_SKIP_CLOCK_NETS` |
+| `set_rc.tcl` ASAP7 wire-RC | not needed — guarded by `![info exist ::env(LAYERS_RC)]`, and every ASAP7 config sets `LAYERS_RC` |
+| `pdn.tcl` | **required** — without it the flow dies at `GeneratePDN` on the benign `PDN-0179` tap-cell artifact |
+| `synthesize.py` liberty sort | **required** — see ABC note below |
+| `pyosys.py` / `json_header_patched.py` | Synlig-specific; untested, and 3.0.14 replaces Synlig with **Slang**, so possibly moot |
+
+**Config schema drift (2.4.13 → 3.0.14).** `LAYERS_RC` moves from the flat Tcl-style string
+`"<layer> <cap> <res>, …"` to a nested per-IPVT-corner mapping
+`{"*": {"M2": {"res": r, "cap": c}, …}}` — **note the old order is cap-then-res**, verified
+against `set_rc.tcl`'s own numbers. `GRT_ANTENNA_REPAIR_MARGIN` → `DRT_ANTENNA_REPAIR_MARGIN`.
+Removed outright: `SYNLIG_DEFER`, `SYNTH_CLOCK_GATING`, `PL_MACRO_HALO`, and **`VIAS_RC`** —
+the last is a real semantic loss, since this project was injecting ORFS via resistances
+(V1–V7) that now have no equivalent and are simply dropped. Do not compare PPA across this
+boundary without accounting for it.
+
+**ABC on ASAP7's split Liberty set.** All runs hit `ABC: Error: The network is combinational`
+under `DELAY_3.abc`; the *segfault* that follows is nondeterministic (observed in 2 of 3
+otherwise identical runs). Do not read one passing run as "flaky, ignore" — the trigger is
+deterministic. The 2.4.13 `synthesize.py` liberty sort (ff-carrying libs last, richest lib
+first) exists for exactly this and must be ported.
+
+**Bead `b5a` — the SRAM abstract blocks its own pin layer.** ⚠️ **The causal claim in this
+paragraph was DISPROVED — see the correction immediately after it.** `sram_1rw_256x32_asap7.lef`
+declares all 77 signal pins on **M4** (24×24 nm rects at `x=0.000`) while its `OBS` block
+obstructs **M4 across the full 8.360 × 42.000 µm footprint**. Detailed routing therefore
+cannot reach them: 16 `[ERROR DRT-0255] Maze Route cannot find path`, on exactly those pins
+(`data_din0[71]/[81]`, `data_dout0[70]/[84]/[91]`, `gen_data_sram[1].data_gclk`, icache
+equivalents, + 7 unnamed nets) — after pin access came back clean (0 DRT-0073/0074) and
+**33 905 nets routed**. This is version-independent and has been wrong since the file was
+created; it stayed invisible only because no ASAP7 run ever reached detailed routing.
+Ruled out first: `GRT_ALLOW_CONGESTION=false` (identical 16 failures, same nets) and
+`PL_MACRO_HALO` removal (defaults `"0 0"`, drives the *automatic* macro placer, unused here —
+this design has a fixed `macro_placement.cfg`). Fixed by dropping M4 from the OBS; if the stub
+is ever replaced by a compiled SRAM, its true M4 blockages must be re-derived, not inherited.
+
+**Diagnostic order that worked**, worth reusing: check the macro abstract's own pin/OBS layer
+consistency *before* reaching for congestion knobs. Density and congestion settings cannot fix
+a pin that is covered by its own obstruction.
+
+#### CORRECTION 2026-09-09 — the M4-OBS theory above is WRONG
+
+Removing `LAYER M4` from the SRAM abstract's `OBS` block made routing **worse**: `DRT-0255`
+went **16 → 79**, spreading from one worker column to five (`RUN_2026-09-08_23-59-44`). The
+LEF edit was reverted. In hindsight the evidence was already there — pin access had *succeeded*
+with the OBS in place (0 `DRT-0073/0074`), so the obstruction never blocked access; it was
+keeping M4 clear of over-macro routing, and dropping it merely added congestion.
+
+Also disproved, none of which should be retried:
+
+| theory | test | result |
+| --- | --- | --- |
+| 24 nm M4 pins illegal | ASAP7 M4 `LEF58_WIDTHTABLE` = `0.024 0.12 0.216 0.312 0.408` | 0.024 is an explicit legal entry |
+| GRT handing DRT a bad plan | `GRT_ALLOW_CONGESTION=false` | identical 16 failures, identical nets |
+| inter-macro channel congestion | channel 2.00 → 6.00 µm (stride 10.36 → 14.36) | **exactly 16 again**, same structural mix, only bit indices moved |
+
+**What the evidence actually shows.** In any given run every `DRT-0255` falls in a *single* DRT
+worker routeBox column, and the reported source access point sits **on that worker's boundary** —
+e.g. `gen_data_sram[3].u_data_sram/dout0[4]` with ap at x=62790 DBU inside routeBox
+`(60060 5460)(62790 8190)`. The worker grid is 2730 DBU (2.73 µm), and that macro's left edge
+(62440) sat 350 DBU from the boundary. Attempt 4 showed the same shape at a different column.
+Under test: shifting every macro by +1.365 µm (half a worker) to move pin columns mid-worker.
+
+**Method lesson, the expensive one from this session:** a fixed failure *count* whose *identity*
+moves with placement is not a congestion signature, and a geometry theory read off a file is not
+a root cause until a negative control confirms it. Both the M4-OBS and the channel-width
+theories looked convincing on inspection and were killed by a single A/B run each.
