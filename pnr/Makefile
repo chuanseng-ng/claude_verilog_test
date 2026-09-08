@@ -1486,6 +1486,23 @@ flop-count:
 # Runs are named RUN_YYYY-MM-DD_HH-MM-SS; lexicographic sort == time order.
 #----------------------------------------------------------------
 
+# Deletes old run directories, keeping the newest ASAP7_MAX_RUNS.
+#
+# TWO PROTECTIONS, both added after this macro silently destroyed the ASAP7 CPU
+# sign-off runs (2026-09-09): a 10-run bring-up campaign in one night evicted
+# every pre-September run, including the one CLAUDE.md and
+# docs/PHASE5_RUN_HISTORY.md cite. The macro-view archiving under
+# pnr/asap7/*/macro/ is what saved the netlists and abstracts; the run
+# directories -- step logs, per-step metrics, intermediate ODBs, the STA reports
+# behind the quoted numbers -- were lost and are not reproducible (different
+# LibreLane, different OpenROAD now).
+#
+#  1. A run directory containing a `.signoff` file is NEVER deleted, regardless
+#     of age or run count. Mark a run the moment its numbers are quoted anywhere:
+#         touch pnr/asap7/cpu/runs/RUN_<stamp>/.signoff
+#  2. Every deletion is PRINTED before it happens. The old macro reported only a
+#     count, so an eviction of something irreplaceable looked identical to
+#     cleaning up scratch runs.
 define prune_runs
 	@RUNS_DIR="$(1)/runs"; \
 	if [ ! -d "$$RUNS_DIR" ]; then exit 0; fi; \
@@ -1494,10 +1511,21 @@ define prune_runs
 		echo "$(2): $$COUNT run(s) present (<= $(ASAP7_MAX_RUNS)), nothing to prune."; \
 		exit 0; \
 	fi; \
-	TO_DELETE=$$(ls -dt $$RUNS_DIR/RUN_* 2>/dev/null | tail -n +$$(($(ASAP7_MAX_RUNS)+1))); \
-	NDEL=$$(echo "$$TO_DELETE" | wc -l); \
-	echo "$(2): keeping latest $(ASAP7_MAX_RUNS) of $$COUNT run(s), removing $$NDEL old run(s)."; \
-	echo "$$TO_DELETE" | xargs rm -rf; \
+	CANDIDATES=$$(ls -dt $$RUNS_DIR/RUN_* 2>/dev/null | tail -n +$$(($(ASAP7_MAX_RUNS)+1))); \
+	TO_DELETE=""; KEPT_SIGNOFF=""; \
+	for d in $$CANDIDATES; do \
+		if [ -e "$$d/.signoff" ]; then KEPT_SIGNOFF="$$KEPT_SIGNOFF $$d"; \
+		else TO_DELETE="$$TO_DELETE $$d"; fi; \
+	done; \
+	if [ -n "$$KEPT_SIGNOFF" ]; then \
+		echo "$(2): PROTECTED (.signoff marker), not pruned:"; \
+		for d in $$KEPT_SIGNOFF; do echo "    $$d"; done; \
+	fi; \
+	if [ -z "$$TO_DELETE" ]; then echo "$(2): nothing eligible to prune."; exit 0; fi; \
+	NDEL=$$(echo $$TO_DELETE | wc -w); \
+	echo "$(2): keeping latest $(ASAP7_MAX_RUNS) of $$COUNT run(s); DELETING $$NDEL old run(s):"; \
+	for d in $$TO_DELETE; do echo "    rm -rf $$d"; done; \
+	rm -rf $$TO_DELETE; \
 	echo "Prune complete."
 endef
 
