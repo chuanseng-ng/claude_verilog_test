@@ -1,4 +1,61 @@
 library (gpu_top) {
+  /* === asap7_macro_power_inject.py: BEGIN injected power characterization ===
+   * Generated 2026-09-08T23:19:06Z by pnr/scripts/asap7_macro_power_inject.py
+   * (bead claude_verilog_test-86a — write_timing_model has no power path;
+   *  this backfills cell_leakage_power / internal_power onto the macro
+   *  view it produced, from a SEPARATE report_power characterization run
+   *  in pnr/scripts/asap7_macro_power.tcl. Neither script modifies the other.)
+   *
+   * SOURCE: gpu_top's own flat post-route netlist
+   *   netlist : pnr/asap7/gpu/macro/gpu_top.nl.v.gz
+   *   sdc     : pnr/asap7/gpu/constraints/asap7_gpu.sdc  (period 1750.0 ps, 571.4286 MHz)
+   *   report  : /tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/8cd410b9-0a95-4c88-80b9-46b6d8c6e29b/scratchpad/pwr/gpu_top.power.rpt
+   *   instances: 814908 standard cells + 32 sram_1rw_128x32_asap7 (shared mem banks)
+   *
+   * ACTIVITY ASSUMPTION (read this before trusting these numbers):
+   *   report_power was run with ONE FLAT, UNMEASURED toggle-rate
+   *   assumption applied uniformly to every internal net:
+   *     set_power_activity -global -activity 0.2 -duty 0.5
+   *   This is NOT derived from a workload trace, VCD, or SAIF for this
+   *   design -- no gate-level switching capture exists for this macro.
+   *   0.2/0.5 matches this repo's own established
+   *   'no VCD available' default (pnr/scripts/08_power.tcl, Sky130 Phase 3:
+   *   deliberately conservative, errs toward overestimating dynamic power).
+   *   Treat every number below as ESTIMATED UNDER AN ASSUMED ACTIVITY,
+   *   not measured under real firmware/workload switching.
+   *
+   *   Also: no post-route SPEF/DEF was available for this characterization
+   *   (the signed-off run directory this macro came from was pruned by
+   *   ASAP7_MAX_RUNS before this ran -- see bead 86a session notes), so
+   *   report_power used gate input-pin capacitance only, with NO wire RC.
+   *   That tends to UNDERESTIMATE switching power somewhat, partially
+   *   offsetting the 0.2 activity rate's deliberate conservatism
+   *   in the other direction. Net effect on accuracy is not separately
+   *   quantified here.
+   *
+   * report_power totals at this activity (Watts):
+   *   Internal=1.305425e-01  Switching=3.133301e-02
+   *   Leakage=4.164141e-03  Dynamic(Int+Sw)=1.618755e-01
+   *
+   * INJECTED VALUES:
+   *   cell_leakage_power = 4.16414e+09 (in this file's own leakage_power_unit)
+   *     = 4.164141 mW lumped macro leakage (includes any internal
+   *       hard macro's own real, vendor-Liberty-sourced leakage).
+   *   internal_power on clock pin "clk": rise_power=fall_power=
+   *     141641 raw units each (unit = capacitive_load_unit x voltage_unit^2
+   *     = 1 fJ per this file's own header, verified empirically
+   *     against this project's OpenSTA build -- see this script's module docstring).
+   *     rise+fall reproduces 161.875510 mW dynamic power at 571.4286 MHz
+   *     (1750.0 ps period), i.e. energy_per_cycle = dynamic_W x period.
+   *     No other pin carries an internal_power entry -- see this script's
+   *     module docstring, "Why the clock pin only".
+   *
+   * Macro-inclusive total for THIS macro alone at this activity:
+   *   166.039651 mW. This is a NEW figure, not a
+   *   replacement for any existing fabric-only sign-off number in
+   *   docs/PHASE5_RUN_HISTORY.md -- those remain correctly-reported
+   *   fabric-only figures and are not retro-edited by this injection.
+  === asap7_macro_power_inject.py: END injected power characterization === */
   comment                        : "";
   delay_model                    : table_lookup;
   simulation                     : false;
@@ -152,10 +209,15 @@ library (gpu_top) {
   cell ("gpu_top") {
     area : 71279.414 
     is_macro_cell : true;
+    cell_leakage_power : 4.16414e+09;
     pin("clk") {
       direction : input;
       clock : true;
       capacitance : 2.3419;
+      internal_power () {
+        rise_power (scalar) { values("141641"); }
+        fall_power (scalar) { values("141641"); }
+      }
       timing() {
         timing_sense : positive_unate;
         timing_type : min_clock_tree_path;
