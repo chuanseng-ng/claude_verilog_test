@@ -214,6 +214,45 @@ Filed after GH #96 (run 23 vs. run 14) surfaced `Macro = 0.00 W` in
 `claude_verilog_test-ew3`. This section is the authoritative statement — every
 inline ⚠️ mark above points here.
 
+> **UPDATE 2026-09-09 (bead `86a`) — the macros are now characterized. The
+> figures in this document remain fabric-only and are NOT retro-edited; the
+> macro-inclusive numbers below are NEW and carry different assumptions.**
+>
+> `pnr/scripts/asap7_macro_power.tcl` + `asap7_macro_power_inject.py` (commit
+> `7b7dbae`) run `report_power` on each macro's own gate-level netlist and inject
+> `cell_leakage_power` / `internal_power` into the tracked macro Liberty. Round-
+> tripped against run 23's signed-off flat netlist, the **Macro row goes from
+> 0.00 W to 222.545 mW** (internal 217.089 + leakage 5.456), for a whole-SoC
+> total of **306.264 mW**.
+>
+> **Read those two numbers differently:**
+> - **306.264 mW** is the cleaner figure — one methodology, everything at the
+>   same flat 0.20/0.5 activity.
+> - **51.9 mW (fabric, run 23) + 222.5 mW (macros) ≈ 274.4 mW** MIXES
+>   methodologies: real post-route parasitics on the fabric, flat vectorless
+>   activity and no wire RC on the macros. Quote it only with that caveat, never
+>   as a measured total.
+>
+> **Two assumptions, both stacked, both disclosed in the generated `.lib`:**
+> 1. Flat vectorless activity (`set_power_activity -global -activity 0.20
+>    -duty 0.5`) — this repo's own existing convention from
+>    `pnr/scripts/08_power.tcl`, not invented for the task. No VCD or SAIF exists
+>    for either macro.
+> 2. No post-route SPEF/DEF was available (the CPU run directories had been
+>    pruned), so this is Liberty-table power from gate input-pin capacitance
+>    only, with **no wire RC**.
+>
+> Magnitude was sanity-checked rather than assumed: CPU macro leakage matches
+> 10 × 128.9 µW of real vendor SRAM Liberty leakage to five digits, and the
+> Liberty `internal_power` scalar unit was derived *empirically* with a
+> single-cell test library (`capacitive_load_unit × voltage_unit²` = 1 fJ), not
+> guessed.
+>
+> Still outstanding before `86a` closes: re-run SoC `report_power` inside a real
+> flow rather than the standalone round-trip. Do **not** use the LibreLane 3.0.14
+> shell for that — its `sta` is OpenSTA 2.7.0, which corrupts `report_power` to
+> inf/NaN on this design (bead `zwc`).
+
 **Finding 1 — the macro Liberty files have no power tables at all, by
 construction.** `pnr/asap7/{cpu,gpu}/macro/*__nom_tt_025C_0p7V.lib` (the
 tracked source of truth; `pnr/asap7/soc/macro/*` are gitignored copies of the
