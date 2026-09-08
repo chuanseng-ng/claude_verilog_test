@@ -273,6 +273,39 @@ async def _count_beats_until_full(dut, ready_attr, clock, max_iters):
     return count
 
 
+class _HandshakeCounter:
+    """Mutable box for a running handshake count, updated by a background
+    task and read by the caller — plain closures can't rebind an int."""
+
+    def __init__(self) -> None:
+        self.count = 0
+
+
+async def _count_handshakes_bg(clock, vsig, rsig, counter: _HandshakeCounter) -> None:
+    """Background task: increment `counter.count` once for every completed
+    VALID&&READY handshake on (vsig, rsig), sampled at ReadOnly every rising
+    edge of `clock`. Runs forever — caller kills it via _active_tasks.
+
+    This exists so "all N transactions have completed" can be gated on an
+    explicit count of real handshakes rather than on a momentary snapshot of
+    idle-looking control signals (bead claude_verilog_test-5ej): a
+    sequentially-processed multi-beat drain can present a genuinely idle
+    snapshot (VALID deasserted) in the GAP between two completions while
+    further completions are still in flight, so "not VALID right now" is not
+    a valid proxy for "no more completions are coming." Counting real
+    handshakes as they happen is immune to that gap because it never asks
+    "are we idle at this instant" — it only ever adds to a monotonic total
+    when a handshake actually completes, so the caller's completion
+    condition (`count == expected`) can only become true once every
+    expected handshake has truly occurred, regardless of how many idle gaps
+    preceded it."""
+    while True:
+        await RisingEdge(clock)
+        await ReadOnly()
+        if int(vsig.value) and int(rsig.value):
+            counter.count += 1
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -810,6 +843,20 @@ async def _no_deadlock_all_fifos_full_body(dut):
     dut.s_bready.value = 0
     dut.s_rready.value = 0
 
+    # Explicit handshake-based completion tracking (bead
+    # claude_verilog_test-5ej fix). Started before any stimulus so every B/R
+    # completion is counted regardless of when s_bready/s_rready happen to
+    # be raised. See _count_handshakes_bg for why a running count, not an
+    # idle-signal snapshot, is the correct way to know "all N transactions
+    # have completed."
+    b_counter = _HandshakeCounter()
+    r_counter = _HandshakeCounter()
+    b_count_task = cocotb.start_soon(
+        _count_handshakes_bg(dut.s_clk, dut.s_bvalid, dut.s_bready, b_counter))
+    r_count_task = cocotb.start_soon(
+        _count_handshakes_bg(dut.s_clk, dut.s_rvalid, dut.s_rready, r_counter))
+    _active_tasks.extend([b_count_task, r_count_task])
+
     aw_depth = int(dut.aw_depth_o.value)
     b_depth = int(dut.b_depth_o.value)
     ar_depth = int(dut.ar_depth_o.value)
@@ -846,17 +893,61 @@ async def _no_deadlock_all_fifos_full_body(dut):
     # actual "no deadlock" claim: saturation is normal backpressure, a
     # permanent wedge after release would be a real deadlock, and the
     # outer with_timeout(50us) is the ultimate detector for that.
+    #
+    # bead claude_verilog_test-5ej: completion is gated on the explicit B/R
+    # handshake COUNTS reaching their expected totals, NOT on a one-shot
+    # snapshot of "everything looks idle right now". A sequentially-
+    # processed drain of aw_depth/ar_depth queued transactions has real idle
+    # gaps between successive B/R completions (each takes several cycles of
+    # slave-model + CDC latency) -- a snapshot predicate can and reliably
+    # does fire true in one of those gaps, well before the remaining queued
+    # transactions have actually completed (confirmed: the old
+    # ready-signal-snapshot predicate here sampled true 2 transactions
+    # early, every single run, with AW_DEPTH=4/B_DEPTH=4 -- not a rare
+    # flake). Counting real handshakes has no such gap: `count == expected`
+    # can only become true once every expected handshake has truly happened.
     dut.s_bready.value = 1
     dut.s_rready.value = 1
     await _poll_until(
         dut.s_clk,
-        lambda: (dut.s_awready.value and dut.s_wready.value and dut.m_bready.value
-                  and dut.m_rready.value and not dut.s_bvalid.value and not dut.s_rvalid.value),
-        max_cycles=500, msg="bridge never fully drained after releasing s_bready/s_rready",
+        lambda: b_counter.count >= n_wr and r_counter.count >= n_rd,
+        max_cycles=500,
+        msg=(f"bridge never delivered all B/R completions after releasing "
+             f"s_bready/s_rready (target b={n_wr} r={n_rd})"),
     )
+    assert b_counter.count == n_wr, f"B channel over-delivered: {b_counter.count} completions for {n_wr} pushes"
+    assert r_counter.count == n_rd, f"R channel over-delivered: {r_counter.count} completions for {n_rd} pushes"
+
+    # Now that every completion is accounted for, the bridge and slave model
+    # must also be settled/idle (belt-and-suspenders on top of the count
+    # gate above, not a substitute for it).
+    await ClockCycles(dut.s_clk, 2)
+    assert dut.s_awready.value and dut.s_wready.value, "AW/W fifos not idle after full drain"
+    assert dut.m_bready.value and dut.m_rready.value, "B/R fifos not idle after full drain"
+    assert not dut.s_bvalid.value and not dut.s_rvalid.value, "B/R still presenting VALID after full drain"
+
     dut._log.info(
         f"no-deadlock-all-full OK: saturated (wr pushes={n_wr}, rd pushes={n_rd}) then fully drained with no wedge"
     )
+
+    # Per-beat write-data integrity check (bead claude_verilog_test-5ej):
+    # this is the check that originally exposed the settle-timing race, and
+    # it is kept permanently -- it is the only thing in this test (or
+    # anywhere else in the suite) that verifies EVERY pushed write actually
+    # landed with the correct data, as opposed to merely "the handshake
+    # counts add up and nothing hung". It is only safe to run now, after the
+    # count-based completion gate above proves every B has truly been
+    # observed (mem writes in axi4_slave_model.py's _write_loop happen
+    # strictly before the corresponding bvalid assert, so count-complete
+    # implies mem-complete).
+    missing = []
+    for i in range(n_wr):
+        addr = 0x2A000 + i * 4
+        expected = 0xD0000000 + i
+        got = ctx.m_slave.mem.get(addr)
+        if got != expected:
+            missing.append((i, hex(addr), hex(expected), got))
+    assert not missing, f"missing/incorrect writes after full drain: {missing}"
 
 
 @cocotb.test()
