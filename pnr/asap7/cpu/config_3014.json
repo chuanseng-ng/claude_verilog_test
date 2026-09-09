@@ -85,6 +85,10 @@
     "// LAYERS_RC_NOTE": "Converted from the 2.4.13 flat-string form by tools/setup/librelane3_config.py. Old order was '<layer> <cap> <res>'; 3.0.14 wants a per-IPVT-corner nested mapping with explicit res/cap keys. Values are unchanged ORFS-calibrated ASAP7 numbers.",
     "LAYERS_RC": {
         "*": {
+            "M1": {
+                "res": 0.0704175,
+                "cap": 1e-10
+            },
             "M2": {
                 "res": 0.0462311,
                 "cap": 0.184542
@@ -203,5 +207,6 @@
     "// DRT_THREADS_NOTE": "Set to 1 for the bead-ocm bring-up experiment. Every attempt so far reported EXACTLY 16 DRT-0255 errors regardless of channel width, macro position or the M4 obstruction, always confined to one worker routeBox column. 16 = 2 x DRT_THREADS(8), so the count may be an artifact of in-flight parallel workers at abort rather than 16 genuinely unroutable nets. Single-threaded should collapse it to the real number.",
     "// DENSITY_NOTE": "Attempt 10: PL_TARGET_DENSITY_PCT 50 -> 40. Every earlier experiment moved MACROS (channel width, half-worker shift) or changed the abstract; none changed standard-cell density near the macro pins. DRT_THREADS restored to 8 -- single-threaded gave the identical 16 failures, so the count is real and not a parallel-abort artifact.",
     "// DRT_OPT_ITERS_NOTE": "Raised 12 -> 30 for the DRC-reduction run (2026-09-09 night). Measured trade-off: DRT_OPT_ITERS=12 gave 12 GiB peak / 3h25m / 2045 DRC and completed write_views; the unbounded 64 gave 13 GiB peak / 8h41m / 43 DRC but died before write_views. At 12 the violation trajectory was still FALLING, not plateaued, so more iterations should buy real DRC reduction. 30 is chosen to stay inside the ~7 h window available and, on the 12-iteration memory curve, to stay under the 13 GiB ceiling that killed the unbounded run. Goal: drive 2045 down while still reaching write_views, so the result is a COMPLETE run.",
-    "DRT_OPT_ITERS": 30
+    "DRT_OPT_ITERS": 30,
+    "// LAYERS_RC_M1_NOTE": "M1 added 2026-09-09 (bead gyx). LAYERS_RC previously started at M2, so M1 had NO resistance or capacitance on any path -- the ASAP7 tech LEF carries neither attribute for ANY routing layer, and the set_rc.tcl fallback that does include M1 is guarded by ![info exist ::env(LAYERS_RC)] and therefore never fires once LAYERS_RC is set. librelane's irdrop.tcl sources set_rc.tcl (line 19), so LAYERS_RC is exactly what feeds PSM -- which is why analyze_power_grid reported PSM-0021 zero-resistance on M1. Values are ORFS's own (flow/platforms/asap7/setRC.tcl), identical to the other layers' source. NOTE ORFS also has no RESISTANCE in its ASAP7 tech LEF, so supplying R via set_layer_rc is the UPSTREAM-CONSISTENT approach -- do NOT inject resistance into the LEF."
 }
