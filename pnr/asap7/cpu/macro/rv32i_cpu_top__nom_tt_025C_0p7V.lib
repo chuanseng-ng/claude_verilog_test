@@ -1,4 +1,61 @@
 library (rv32i_cpu_top) {
+  /* === asap7_macro_power_inject.py: BEGIN injected power characterization ===
+   * Generated 2026-09-08T23:19:06Z by pnr/scripts/asap7_macro_power_inject.py
+   * (bead claude_verilog_test-86a — write_timing_model has no power path;
+   *  this backfills cell_leakage_power / internal_power onto the macro
+   *  view it produced, from a SEPARATE report_power characterization run
+   *  in pnr/scripts/asap7_macro_power.tcl. Neither script modifies the other.)
+   *
+   * SOURCE: rv32i_cpu_top's own flat post-route netlist
+   *   netlist : pnr/asap7/cpu/macro/rv32i_cpu_top.nl.v.gz
+   *   sdc     : pnr/asap7/cpu/constraints/asap7.sdc  (period 780.0 ps, 1282.0513 MHz)
+   *   report  : /tmp/claude-1000/-home-neuromorphic-Downloads-Github-claude-verilog-test/8cd410b9-0a95-4c88-80b9-46b6d8c6e29b/scratchpad/pwr/rv32i_cpu_top.power.rpt
+   *   instances: 74175 standard cells + 10 sram_1rw_256x32_asap7 (I$+D$ banks/tag)
+   *
+   * ACTIVITY ASSUMPTION (read this before trusting these numbers):
+   *   report_power was run with ONE FLAT, UNMEASURED toggle-rate
+   *   assumption applied uniformly to every internal net:
+   *     set_power_activity -global -activity 0.2 -duty 0.5
+   *   This is NOT derived from a workload trace, VCD, or SAIF for this
+   *   design -- no gate-level switching capture exists for this macro.
+   *   0.2/0.5 matches this repo's own established
+   *   'no VCD available' default (pnr/scripts/08_power.tcl, Sky130 Phase 3:
+   *   deliberately conservative, errs toward overestimating dynamic power).
+   *   Treat every number below as ESTIMATED UNDER AN ASSUMED ACTIVITY,
+   *   not measured under real firmware/workload switching.
+   *
+   *   Also: no post-route SPEF/DEF was available for this characterization
+   *   (the signed-off run directory this macro came from was pruned by
+   *   ASAP7_MAX_RUNS before this ran -- see bead 86a session notes), so
+   *   report_power used gate input-pin capacitance only, with NO wire RC.
+   *   That tends to UNDERESTIMATE switching power somewhat, partially
+   *   offsetting the 0.2 activity rate's deliberate conservatism
+   *   in the other direction. Net effect on accuracy is not separately
+   *   quantified here.
+   *
+   * report_power totals at this activity (Watts):
+   *   Internal=4.972527e-02  Switching=5.488537e-03
+   *   Leakage=1.291750e-03  Dynamic(Int+Sw)=5.521381e-02
+   *
+   * INJECTED VALUES:
+   *   cell_leakage_power = 1.29175e+09 (in this file's own leakage_power_unit)
+   *     = 1.291750 mW lumped macro leakage (includes any internal
+   *       hard macro's own real, vendor-Liberty-sourced leakage).
+   *   internal_power on clock pin "clk_i": rise_power=fall_power=
+   *     21533.4 raw units each (unit = capacitive_load_unit x voltage_unit^2
+   *     = 1 fJ per this file's own header, verified empirically
+   *     against this project's OpenSTA build -- see this script's module docstring).
+   *     rise+fall reproduces 55.213807 mW dynamic power at 1282.0513 MHz
+   *     (780.0 ps period), i.e. energy_per_cycle = dynamic_W x period.
+   *     No other pin carries an internal_power entry -- see this script's
+   *     module docstring, "Why the clock pin only".
+   *
+   * Macro-inclusive total for THIS macro alone at this activity:
+   *   56.505557 mW. This is a NEW figure, not a
+   *   replacement for any existing fabric-only sign-off number in
+   *   docs/PHASE5_RUN_HISTORY.md -- those remain correctly-reported
+   *   fabric-only figures and are not retro-edited by this injection.
+  === asap7_macro_power_inject.py: END injected power characterization === */
   comment                        : "";
   delay_model                    : table_lookup;
   simulation                     : false;
@@ -187,6 +244,7 @@ library (rv32i_cpu_top) {
   cell ("rv32i_cpu_top") {
     area : 7735.482 
     is_macro_cell : true;
+    cell_leakage_power : 1.29175e+09;
     pin("apb_penable_i") {
       direction : input;
       capacitance : 0.7218;
@@ -529,6 +587,10 @@ library (rv32i_cpu_top) {
       direction : input;
       clock : true;
       capacitance : 2.3419;
+      internal_power () {
+        rise_power (scalar) { values("21533.4"); }
+        fall_power (scalar) { values("21533.4"); }
+      }
       timing() {
         timing_sense : positive_unate;
         timing_type : min_clock_tree_path;

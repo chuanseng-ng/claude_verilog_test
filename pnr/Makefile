@@ -111,6 +111,76 @@ ASAP7_MAX_RUNS          ?= 10
 DRT_THREADS         ?= 4
 
 #----------------------------------------------------------------
+# OpenROAD binary override for ASAP7 (bead claude_verilog_test-ocm)
+#----------------------------------------------------------------
+# LibreLane's own nix-shell provides OpenROAD edf00dff99f6c40d67a30c0e22a8191c5d2ed9d6,
+# which CANNOT grant pin access to any ASAP7 pin. Measured matrix (bead ocm):
+#
+#                                        edf00dff        26Q2
+#   ASAP7 minimal 0-instance repro       FAIL DRT-0074   PASS
+#   ASAP7 real CPU checkpoint, 401 pins  FAIL 401/401    PASS
+#   Sky130 SoC known-good, 6562 pins     PASS 158/158    PASS
+#
+# That single failing cell is why every ASAP7 run in this project's history
+# committed ZERO routed wires (bead xy6) and why every "0 DRC / 0 antenna"
+# claim was withdrawn. Prepending a working OpenROAD to PATH inside LibreLane's
+# shell is the whole fix -- no PDK swap, no RTL change.
+#
+# Sky130 and FreePDK45 targets are deliberately NOT overridden: they route
+# correctly under LibreLane's own build, and changing their tool would
+# invalidate the Sky130 real-DRC/LVS sign-off (GH #102) for no benefit.
+#
+# Hardcoding a /nix/store path follows the existing SV2V precedent above. It is
+# a GC root risk, so check-asap7-openroad fails loudly if it disappears; to
+# re-resolve, run:  nix build --no-link --print-out-paths nixpkgs#openroad
+ASAP7_OPENROAD_BIN  ?= /nix/store/hgqrwa4687mf7n0y2x6lcgx1kj42sfga-openroad-26Q2/bin/openroad
+
+# bead claude_verilog_test-zwc: the LibreLane 3.0.14 devshell (used for the
+# ocm ASAP7 routing bring-up) resolves the standalone `sta` binary it shells
+# out to (OpenROAD.STAPrePNR / STAMidPNR / STAPostPNR each invoke
+# `sta -no_splash -exit corner.tcl`, not just openroad's built-in STA) to
+# OpenSTA 2.7.0, which corrupts report_power to inf/NaN on this design.
+# 2.6.0 is clean -- confirmed independently by beads 86a and ocm on the same
+# inputs. This pins it to the known-good 2.6.0 store build, same GC-root
+# posture as ASAP7_OPENROAD_BIN above: re-resolve with
+#   nix build --no-link --print-out-paths nixpkgs#opensta
+# and confirm `<path>/bin/sta -version` prints 2.6.0 before repointing.
+ASAP7_STA_BIN       ?= /nix/store/q5ycjmn0d9awbcq05c75z2rmgwjgbc9g-opensta/bin/sta
+
+# We must override ONLY the openroad and sta binaries, each via its own
+# single-file symlink. The 26Q2 openroad store path's bin/ also contains a
+# `sta` (a *different* bad build than the 2.7.0 above), and putting that
+# whole directory on PATH silently replaces LibreLane's OpenSTA too -- which
+# fails every STA step with
+#   Error: corner.tcl, 47 invalid command name "sta::corners"
+# because that bin/'s OpenSTA does not define it. So check-asap7-openroad
+# builds a shim directory holding one symlink per binary (openroad, sta),
+# and that shim directory is what goes on PATH. Never prepend a store bin/
+# directly -- that is the trap both symlinks exist to avoid.
+#
+# PYTHONPATH: LibreLane's Odb.* steps run `openroad -python <script>`, and
+# 26Q2 embeds Python 3.13 where LibreLane's own is 3.11. A nix python env
+# exposes its packages through the interpreter's own prefix, not through
+# PYTHONPATH, so 26Q2's 3.13 sees none of them and every odbpy step dies
+# with ModuleNotFoundError: click. Adding the 3.11 site-packages directory
+# to PYTHONPATH fixes it -- click, rich and yaml are pure Python and import
+# cleanly under 3.13 (verified). ioplace_parser needs nothing: LibreLane
+# vendors it in scripts/odbpy/ and prepends that directory itself.
+# The path is derived from click at runtime rather than hardcoded, so it
+# follows whatever python the devshell actually provides.
+ASAP7_OR_SHIM_DIR   := $(abspath .openroad-shim)
+
+# Empty by default, so every non-ASAP7 flow keeps LibreLane's own OpenROAD.
+# Set per-target below. Two traps, both of which silently fall back to the
+# HOST python3.10 and kill librelane with ModuleNotFoundError: cloup:
+#   1. It must be an `export ...;` STATEMENT, not a `PATH=x cmd`
+#      command-prefix assignment.
+#   2. $PATH must be escaped (\$$PATH) so the INNER nix-shell expands it.
+#      Unescaped, make's own shell expands it first and nix-shell receives
+#      the host PATH, discarding the devshell's entirely.
+OR_PATH_PREFIX      :=
+
+#----------------------------------------------------------------
 # Phony Targets
 #----------------------------------------------------------------
 
@@ -120,7 +190,7 @@ DRT_THREADS         ?= 4
 .PHONY: docker-pull docker-check docker-pdk docker-run docker-synth docker-results
 SV2V                ?= /nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1/bin/sv2v
 
-.PHONY: install-asap7-rcx-rules check-asap7-rcx-rules
+.PHONY: install-asap7-rcx-rules check-asap7-rcx-rules check-asap7-openroad
 .PHONY: librelane-sky130 librelane-sky130-cpu librelane-nangate45 librelane-asap7 librelane-asap7-gpu librelane-asap7-soc
 .PHONY: librelane-asap7-soc-multiclock
 .PHONY: check-cdc-timing-asap7-soc
@@ -593,7 +663,7 @@ librelane-sky130:
 	@if [ ! -f "$(LIBRELANE_SKY130_DIR)/config.json" ]; then \
 		echo "ERROR: $(LIBRELANE_SKY130_DIR)/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 $(abspath $(LIBRELANE_SKY130_DIR))/config.json"
 
 librelane-sky130-results:
@@ -612,7 +682,7 @@ librelane-sky130-cpu:
 	@if [ ! -f "$(LIBRELANE_SKY130_CPU_DIR)/config.json" ]; then \
 		echo "ERROR: $(LIBRELANE_SKY130_CPU_DIR)/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 $(abspath $(LIBRELANE_SKY130_CPU_DIR))/config.json"
 
 librelane-sky130-cpu-results:
@@ -814,7 +884,7 @@ librelane-nangate45:
 	@if [ ! -f "$(LIBRELANE_NANGATE45_DIR)/config.json" ]; then \
 		echo "ERROR: $(LIBRELANE_NANGATE45_DIR)/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --skip Checker.LintTimingConstructs \
@@ -830,6 +900,61 @@ librelane-nangate45:
 
 librelane-nangate45-results:
 	$(call librelane_results,$(LIBRELANE_NANGATE45_DIR))
+
+# Every ASAP7 target runs with ASAP7_OPENROAD_BIN prepended to PATH. Target-
+# specific variables apply to the whole recipe, so this is the only place the
+# override is enumerated -- the invocation strings themselves are uniform and
+# expand to nothing for non-ASAP7 flows. See the ASAP7_OPENROAD_BIN block above
+# and bead claude_verilog_test-ocm.
+librelane-asap7 librelane-asap7-gpu librelane-asap7-soc \
+librelane-asap7-soc-synth librelane-asap7-soc-synth-only \
+librelane-asap7-soc-multiclock macro-views-asap7 \
+librelane-asap7-coalescer-rtl librelane-asap7-coalescer-hls \
+librelane-asap7-hazard-rtl librelane-asap7-hazard-hls \
+librelane-asap7-valu-rtl librelane-asap7-valu-hls: \
+	OR_PATH_PREFIX := export PATH=$(ASAP7_OR_SHIM_DIR):\$$PATH; export PYTHONPATH=\$$(python3 -c 'import click,os;print(os.path.dirname(os.path.dirname(click.__file__)))')\$${PYTHONPATH:+:\$$PYTHONPATH};
+
+# Fails loudly if the pinned OpenROAD is gone (nix GC) or is the known-bad
+# build. A silent fallback to LibreLane's own OpenROAD would silently restore
+# the zero-wire behaviour, which is exactly the failure mode bead xy6 exists to
+# prevent -- so this refuses rather than warns.
+check-asap7-openroad:
+	@if [ ! -x "$(ASAP7_OPENROAD_BIN)" ]; then \
+	  echo "ERROR: ASAP7_OPENROAD_BIN not executable: $(ASAP7_OPENROAD_BIN)"; \
+	  echo "       Re-resolve with: nix build --no-link --print-out-paths nixpkgs#openroad"; \
+	  echo "       then set ASAP7_OPENROAD_BIN=<path>/bin/openroad"; \
+	  exit 1; fi
+	@v=$$("$(ASAP7_OPENROAD_BIN)" -version 2>&1 | head -1); \
+	  case "$$v" in \
+	    *edf00dff*) echo "ERROR: ASAP7_OPENROAD_BIN is the known-bad build ($$v)."; \
+	                echo "       It cannot grant pin access on ASAP7 -- see bead ocm."; \
+	                exit 1 ;; \
+	  esac; \
+	  echo "  ok: ASAP7 OpenROAD = $$v  ($(ASAP7_OPENROAD_BIN))"
+	@if [ ! -x "$(ASAP7_STA_BIN)" ]; then \
+	  echo "ERROR: ASAP7_STA_BIN not executable: $(ASAP7_STA_BIN)"; \
+	  echo "       Re-resolve with: nix build --no-link --print-out-paths nixpkgs#opensta"; \
+	  echo "       then set ASAP7_STA_BIN=<path>/bin/sta"; \
+	  exit 1; fi
+	@v=$$("$(ASAP7_STA_BIN)" -version 2>&1 | head -1); \
+	  case "$$v" in \
+	    2.7.0*) echo "ERROR: ASAP7_STA_BIN is the known-bad build ($$v)."; \
+	            echo "       It corrupts report_power to inf/NaN -- see bead zwc."; \
+	            exit 1 ;; \
+	  esac; \
+	  echo "  ok: ASAP7 sta = $$v  ($(ASAP7_STA_BIN))"
+	@mkdir -p $(ASAP7_OR_SHIM_DIR)
+	@ln -sf $(ASAP7_OPENROAD_BIN) $(ASAP7_OR_SHIM_DIR)/openroad
+	@echo "  ok: shim $(ASAP7_OR_SHIM_DIR)/openroad -> $(ASAP7_OPENROAD_BIN)"
+	@ln -sf $(ASAP7_STA_BIN) $(ASAP7_OR_SHIM_DIR)/sta
+	@echo "  ok: shim $(ASAP7_OR_SHIM_DIR)/sta -> $(ASAP7_STA_BIN)"
+	@# Non-vacuous: prove odbpy's third-party imports actually resolve under the
+	@# chosen openroad's embedded interpreter. Without this, the flow runs all the
+	@# way to Odb.SetPowerConnections before failing.
+	@cd $(LIBRELANE_DIR) && nix-shell --run "export PYTHONPATH=\$$(python3 -c 'import click,os;print(os.path.dirname(os.path.dirname(click.__file__)))'):$(LIBRELANE_DIR)/librelane/scripts/odbpy; $(ASAP7_OPENROAD_BIN) -python -c 'import click, rich, yaml, ioplace_parser'" >/dev/null 2>&1 \
+	  || { echo "ERROR: odbpy imports do not resolve under $(ASAP7_OPENROAD_BIN)."; \
+	       echo "       Every Odb.* step would fail with ModuleNotFoundError."; exit 1; }
+	@echo "  ok: odbpy imports (click, rich, yaml, ioplace_parser) resolve"
 
 # Install the real ASAP7 OpenRCX extraction-rules deck, replacing the 0-byte
 # rcx_rules.pex stub the manual PDK tree ships with. ~/pdk/asap7 is NOT a git
@@ -851,7 +976,7 @@ check-asap7-rcx-rules:
 # check-asap7-rcx-rules is a prerequisite ONLY here (the CPU config has
 # RUN_SPEF_EXTRACTION=true) — GPU/SoC configs still have it false and do not
 # need the real ruleset installed (claude_verilog_test-e69).
-librelane-asap7: check-asap7-rcx-rules
+librelane-asap7: check-asap7-rcx-rules check-asap7-openroad
 	@echo "=========================================="
 	@echo "Running LibreLane flow — ASAP7"
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_DIR)/config.json"
@@ -864,7 +989,7 @@ librelane-asap7: check-asap7-rcx-rules
 		echo "       Create pnr/asap7/ with a LibreLane config.json to use this target."; \
 		exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --skip Checker.LintTimingConstructs \
@@ -894,7 +1019,7 @@ librelane-asap7-results:
 	$(call librelane_results,$(LIBRELANE_ASAP7_DIR))
 
 # ASAP7 GPU: uses same PDK and skip-list as librelane-asap7, but targets pnr/asap7/gpu/
-librelane-asap7-gpu:
+librelane-asap7-gpu: check-asap7-openroad
 	@echo "=========================================="
 	@echo "Running LibreLane flow — ASAP7 GPU"
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_GPU_DIR)/config.json"
@@ -907,7 +1032,7 @@ librelane-asap7-gpu:
 		echo "       Create pnr/asap7/gpu/ with a LibreLane config.json to use this target."; \
 		exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --skip Checker.LintTimingConstructs \
@@ -942,7 +1067,7 @@ librelane-asap7-gpu-results:
 #   make librelane-asap7-soc-synth
 # To run the full P&R closure (expect 4–8 h):
 #   make librelane-asap7-soc
-librelane-asap7-soc-synth:
+librelane-asap7-soc-synth: check-asap7-openroad
 	@echo "=========================================="
 	@echo "Running LibreLane SYNTH-ONLY — ASAP7 SoC"
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)"
@@ -953,7 +1078,7 @@ librelane-asap7-soc-synth:
 	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)" ]; then \
 		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG) not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to Yosys.JsonHeader \
@@ -979,7 +1104,7 @@ librelane-asap7-soc-synth:
 		 --skip Checker.MaxCapViolations \
 		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/$(SOC_CONFIG)"
 
-librelane-asap7-soc-synth-only:
+librelane-asap7-soc-synth-only: check-asap7-openroad
 	@echo "=========================================="
 	@echo "Running LibreLane SYNTH-ONLY (skip JsonHeader) — ASAP7 SoC"
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)"
@@ -988,7 +1113,7 @@ librelane-asap7-soc-synth-only:
 	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)" ]; then \
 		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG) not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --from Yosys.Synthesis \
@@ -1166,7 +1291,7 @@ asap7-soc-sv2v:
 	$(SV2V) $(SOC_SV2V_DEFINES) $(SOC_SV_FILES) -w $(SOC_SV2V_OUT)
 	@echo "sv2v complete: $$(wc -l < $(SOC_SV2V_OUT)) lines, $$(grep -c 'always.*posedge\|always.*negedge' $(SOC_SV2V_OUT)) clocked always blocks"
 
-librelane-asap7-soc: asap7-soc-sv2v
+librelane-asap7-soc: asap7-soc-sv2v check-asap7-openroad
 	@echo "=========================================="
 	@echo "Running LibreLane flow — ASAP7 SoC (full P&R)"
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)"
@@ -1179,7 +1304,7 @@ librelane-asap7-soc: asap7-soc-sv2v
 		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG) not found."; exit 1; fi
 	$(call asap7_soc_preflight)
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --skip Checker.LintTimingConstructs \
@@ -1235,7 +1360,7 @@ librelane-asap7-soc: asap7-soc-sv2v
 #                                                             # preflight gate, ~75 min
 #----------------------------------------------------------------
 librelane-asap7-soc-multiclock: SOC_CONFIG = config_multiclock.json
-librelane-asap7-soc-multiclock: asap7-soc-sv2v
+librelane-asap7-soc-multiclock: asap7-soc-sv2v check-asap7-openroad
 	@echo "=========================================="
 	@echo "Running LibreLane flow — ASAP7 SoC MULTICLOCK (GH #96)"
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)"
@@ -1251,7 +1376,7 @@ librelane-asap7-soc-multiclock: asap7-soc-sv2v
 		echo "ERROR: multiclock SDC missing — copy pnr/constraints/phase5_soc_multiclock.sdc"; exit 1; fi
 	$(call asap7_soc_preflight)
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --skip Checker.LintTimingConstructs \
@@ -1390,6 +1515,23 @@ flop-count:
 # Runs are named RUN_YYYY-MM-DD_HH-MM-SS; lexicographic sort == time order.
 #----------------------------------------------------------------
 
+# Deletes old run directories, keeping the newest ASAP7_MAX_RUNS.
+#
+# TWO PROTECTIONS, both added after this macro silently destroyed the ASAP7 CPU
+# sign-off runs (2026-09-09): a 10-run bring-up campaign in one night evicted
+# every pre-September run, including the one CLAUDE.md and
+# docs/PHASE5_RUN_HISTORY.md cite. The macro-view archiving under
+# pnr/asap7/*/macro/ is what saved the netlists and abstracts; the run
+# directories -- step logs, per-step metrics, intermediate ODBs, the STA reports
+# behind the quoted numbers -- were lost and are not reproducible (different
+# LibreLane, different OpenROAD now).
+#
+#  1. A run directory containing a `.signoff` file is NEVER deleted, regardless
+#     of age or run count. Mark a run the moment its numbers are quoted anywhere:
+#         touch pnr/asap7/cpu/runs/RUN_<stamp>/.signoff
+#  2. Every deletion is PRINTED before it happens. The old macro reported only a
+#     count, so an eviction of something irreplaceable looked identical to
+#     cleaning up scratch runs.
 define prune_runs
 	@RUNS_DIR="$(1)/runs"; \
 	if [ ! -d "$$RUNS_DIR" ]; then exit 0; fi; \
@@ -1398,10 +1540,21 @@ define prune_runs
 		echo "$(2): $$COUNT run(s) present (<= $(ASAP7_MAX_RUNS)), nothing to prune."; \
 		exit 0; \
 	fi; \
-	TO_DELETE=$$(ls -dt $$RUNS_DIR/RUN_* 2>/dev/null | tail -n +$$(($(ASAP7_MAX_RUNS)+1))); \
-	NDEL=$$(echo "$$TO_DELETE" | wc -l); \
-	echo "$(2): keeping latest $(ASAP7_MAX_RUNS) of $$COUNT run(s), removing $$NDEL old run(s)."; \
-	echo "$$TO_DELETE" | xargs rm -rf; \
+	CANDIDATES=$$(ls -dt $$RUNS_DIR/RUN_* 2>/dev/null | tail -n +$$(($(ASAP7_MAX_RUNS)+1))); \
+	TO_DELETE=""; KEPT_SIGNOFF=""; \
+	for d in $$CANDIDATES; do \
+		if [ -e "$$d/.signoff" ]; then KEPT_SIGNOFF="$$KEPT_SIGNOFF $$d"; \
+		else TO_DELETE="$$TO_DELETE $$d"; fi; \
+	done; \
+	if [ -n "$$KEPT_SIGNOFF" ]; then \
+		echo "$(2): PROTECTED (.signoff marker), not pruned:"; \
+		for d in $$KEPT_SIGNOFF; do echo "    $$d"; done; \
+	fi; \
+	if [ -z "$$TO_DELETE" ]; then echo "$(2): nothing eligible to prune."; exit 0; fi; \
+	NDEL=$$(echo $$TO_DELETE | wc -w); \
+	echo "$(2): keeping latest $(ASAP7_MAX_RUNS) of $$COUNT run(s); DELETING $$NDEL old run(s):"; \
+	for d in $$TO_DELETE; do echo "    rm -rf $$d"; done; \
+	rm -rf $$TO_DELETE; \
 	echo "Prune complete."
 endef
 
@@ -1488,7 +1641,7 @@ check-asap7-soc-routing:
 
 BLOCK ?= cpu
 
-macro-views-asap7:
+macro-views-asap7: check-asap7-openroad
 	@set -e; \
 	case "$(BLOCK)" in \
 	  cpu) DESIGN="rv32i_cpu_top"; SRAM_LIB_NAME="sram_1rw_256x32_asap7_TT_0p7V_25C.lib"; \
@@ -1520,7 +1673,7 @@ macro-views-asap7:
 	       MACRO_OUT_DIR="$$MACRO_DIR" \
 	       ASAP7_LIBS="$$ASAP7_LD/asap7sc7p5t_AO_RVT_TT_nldm_211120.lib $$ASAP7_LD/asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.lib $$ASAP7_LD/asap7sc7p5t_OA_RVT_TT_nldm_211120.lib $$ASAP7_LD/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib $$ASAP7_LD/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib $$SRAM_LIB"; \
 	(cd $(LIBRELANE_DIR) && nix-shell --run \
-		"openroad -exit $(abspath scripts/asap7_macro_views.tcl)"); \
+		"$(OR_PATH_PREFIX) openroad -exit $(abspath scripts/asap7_macro_views.tcl)"); \
 	cp "$$NL" "$$MACRO_DIR/$$DESIGN.nl.v"; \
 	gzip -f -6 "$$MACRO_DIR/$$DESIGN.nl.v"; \
 	echo ""; \
@@ -1663,7 +1816,7 @@ clean:
 # That asymmetry is a result worth reporting, not something the skip should hide.
 
 .PHONY: librelane-asap7-coalescer-rtl
-librelane-asap7-coalescer-rtl:
+librelane-asap7-coalescer-rtl: check-asap7-openroad
 	@echo "=========================================="
 	@echo "ASAP7 leaf-block PPA (GH #119 r8r) -- memory_coalescer, hand-RTL arm"
 	@echo "  Config   : pnr/asap7/coalescer_rtl/config.json"
@@ -1672,7 +1825,7 @@ librelane-asap7-coalescer-rtl:
 	@if [ ! -f "asap7/coalescer_rtl/config.json" ]; then \
 		echo "ERROR: asap7/coalescer_rtl/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to OpenROAD.STAPrePNR \
@@ -1699,7 +1852,7 @@ librelane-asap7-coalescer-rtl:
 		 $(abspath asap7/coalescer_rtl)/config.json"
 
 .PHONY: librelane-asap7-coalescer-hls
-librelane-asap7-coalescer-hls:
+librelane-asap7-coalescer-hls: check-asap7-openroad
 	@echo "=========================================="
 	@echo "ASAP7 leaf-block PPA (GH #119 r8r) -- memory_coalescer, HLS arm (generated .v + wire-only shim)"
 	@echo "  Config   : pnr/asap7/coalescer_hls/config.json"
@@ -1708,7 +1861,7 @@ librelane-asap7-coalescer-hls:
 	@if [ ! -f "asap7/coalescer_hls/config.json" ]; then \
 		echo "ERROR: asap7/coalescer_hls/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to OpenROAD.STAPrePNR \
@@ -1735,7 +1888,7 @@ librelane-asap7-coalescer-hls:
 		 $(abspath asap7/coalescer_hls)/config.json"
 
 .PHONY: librelane-asap7-hazard-rtl
-librelane-asap7-hazard-rtl:
+librelane-asap7-hazard-rtl: check-asap7-openroad
 	@echo "=========================================="
 	@echo "ASAP7 leaf-block PPA (GH #119 r8r) -- rv32i_hazard_unit, hand-RTL arm (purely combinational, virtual clock)"
 	@echo "  Config   : pnr/asap7/hazard_rtl/config.json"
@@ -1744,7 +1897,7 @@ librelane-asap7-hazard-rtl:
 	@if [ ! -f "asap7/hazard_rtl/config.json" ]; then \
 		echo "ERROR: asap7/hazard_rtl/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to OpenROAD.STAPrePNR \
@@ -1771,7 +1924,7 @@ librelane-asap7-hazard-rtl:
 		 $(abspath asap7/hazard_rtl)/config.json"
 
 .PHONY: librelane-asap7-hazard-hls
-librelane-asap7-hazard-hls:
+librelane-asap7-hazard-hls: check-asap7-openroad
 	@echo "=========================================="
 	@echo "ASAP7 leaf-block PPA (GH #119 r8r) -- rv32i_hazard_unit, HLS arm (generated .v + wire-only shim)"
 	@echo "  Config   : pnr/asap7/hazard_hls/config.json"
@@ -1780,7 +1933,7 @@ librelane-asap7-hazard-hls:
 	@if [ ! -f "asap7/hazard_hls/config.json" ]; then \
 		echo "ERROR: asap7/hazard_hls/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to OpenROAD.STAPrePNR \
@@ -1812,7 +1965,7 @@ librelane-asap7-r8r-all: librelane-asap7-coalescer-rtl librelane-asap7-coalescer
 	@echo "All four GH #119 Stage 2 runs complete."
 
 .PHONY: librelane-asap7-valu-rtl
-librelane-asap7-valu-rtl:
+librelane-asap7-valu-rtl: check-asap7-openroad
 	@echo "=========================================="
 	@echo "ASAP7 leaf-block PPA (GH #119 r8r) -- vector_alu, hand-RTL arm (purely combinational, virtual clock)"
 	@echo "  Config   : pnr/asap7/valu_rtl/config.json"
@@ -1821,7 +1974,7 @@ librelane-asap7-valu-rtl:
 	@if [ ! -f "asap7/valu_rtl/config.json" ]; then \
 		echo "ERROR: asap7/valu_rtl/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to OpenROAD.STAPrePNR \
@@ -1848,7 +2001,7 @@ librelane-asap7-valu-rtl:
 		 $(abspath asap7/valu_rtl)/config.json"
 
 .PHONY: librelane-asap7-valu-hls
-librelane-asap7-valu-hls:
+librelane-asap7-valu-hls: check-asap7-openroad
 	@echo "=========================================="
 	@echo "ASAP7 leaf-block PPA (GH #119 r8r) -- vector_alu, HLS arm (generated .v + wire-only shim)"
 	@echo "  Config   : pnr/asap7/valu_hls/config.json"
@@ -1857,7 +2010,7 @@ librelane-asap7-valu-hls:
 	@if [ ! -f "asap7/valu_hls/config.json" ]; then \
 		echo "ERROR: asap7/valu_hls/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"python3 -m librelane \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to OpenROAD.STAPrePNR \

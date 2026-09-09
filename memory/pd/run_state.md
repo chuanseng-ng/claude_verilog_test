@@ -4796,3 +4796,111 @@ failure_class "tool_error") and memory/pd/experiences.jsonl (run_id
 pd_20260816_xy6_rootcause) hold the structured record. Branch
 fix/asap7-drt-zero-routing-xy6. No P&R run in progress or launched this
 session.
+
+---
+run_id:      pd_20260909_ocm_session2
+design_name: rv32i_cpu_top (ASAP7 CPU standalone)
+pdk:         asap7
+tool:        LibreLane 3.0.14 / OpenROAD dcf36133 (worktree /nobackup/librelane-3.0.14)
+start_time:  2026-09-09T05:08:00+07:00
+last_stage:  routing (DRT-0255, not signed off)
+
+Session 2 on bead `ocm`/`b5a` DRT-0255 investigation (16 maze-route failures at
+detailed routing). Built a standalone ~5 min reproduction harness that loads
+40-openroad-resizertimingpostgrt/rv32i_cpu_top.odb directly and calls
+detailed_route without the full LibreLane flow (see knowledge.md UPDATE
+2026-09-09 session 2 for the exact env vars needed: _TCL_ENV_IN,
+_LIB_CORNER_0, _PNR_EXCLUDED_CELLS). Ran two experiments this session:
+worker-size/thread-count re-confirmation (closed, already answered by
+attempt 6) and OR_SEED 42 vs 7 (byte-identical failure set -- closed, not a
+search-order artifact). Decoded all 16 failing nets against the post-GRT
+netlist: every one is a pin of gen_data_sram[1].u_data_sram, in both
+u_icache and u_dcache. Found an arithmetic correlation (not yet proven
+causal): gen_data_sram[1] is the only one of 4 per-row data macro columns
+whose pins sit within 1-2 DBU of the M4/M5 RIGHTWAYONGRIDONLY track grid;
+the 3 passing columns are 5-19 DBU off-grid. Next session should shift
+gen_data_sram[1] a few DBU in X (not a full worker pitch) and rerun the
+standalone harness to test this directly -- cheapest untried experiment.
+No routing-clean run achieved. check_asap7_routing.py still fails.
+Debug artifacts: /nobackup/asap7_debug/dbg1/{probe.tcl,probe.log,probe_seed.tcl,probe_seed7.log}.
+No P&R run left running; standalone probe processes killed at session end.
+
+---
+run_id:      pd_20260909_ocm_session2_shiftfix
+design_name: rv32i_cpu_top (ASAP7 CPU standalone)
+pdk:         asap7
+tool:        LibreLane 3.0.14 / OpenROAD dcf36133
+start_time:  2026-09-09T06:11:02+07:00
+last_stage:  routing (full-flow verification of DBU point-fix in progress)
+
+Continuation of pd_20260909_ocm_session2. Ran the DBU-shift sweep the coordinator
+requested: DX=0 control confirmed baseline (16 identical DRT-0255). DX=-1,+5,+10,+24
+on gen_data_sram[1] alone (icache+dcache) via direct ODB edit -- -1 fails identically,
++5/+10/+24 all clean. Positive control on gen_data_sram[0] (shifted to match column 1's
+exact failing M5-grid residue class) did NOT reproduce a failure -- refutes "M5 grid
+offset alone is sufficient" as a general rule, even though it is necessary-looking
+across 3 independent floorplan sweeps. Applied a narrow point-fix (not a general rule)
+to pnr/asap7/cpu/macro_placement_3014.cfg: gen_data_sram[1] x 35.09 -> 35.10 (+10 DBU,
+the cleanest tested point). Launched the full LibreLane 3.0.14 flow at 06:11:02
+(RUN_2026-09-09_06-11-06) to check whether this actually reaches a routing-clean
+check_asap7_routing.py result -- in progress at last update, synthesis/ABC stage.
+Full derivation in memory/pd/knowledge.md (UPDATE 2026-09-09 session 2, continued).
+
+---
+run_id:      pd_20260909_session3_zwc_e69_gyx_ocm
+design_name: rv32i_cpu_top (ASAP7 CPU block; GPU/SoC untouched)
+pdk:         asap7
+tool:        LibreLane 3.0.14 / OpenROAD 26Q2 (pinned ASAP7_OPENROAD_BIN)
+start_time:  2026-09-09T20:00:00+07:00
+last_stage:  routing (post-route ECO/debug session against the first passing
+             routing run RUN_2026-09-09_14-56-03; no new full LibreLane flow
+             launched)
+
+Session 3, servicing beads zwc/e69/gyx/ocm now that ocm's routing gate
+passes. Summary (full detail in the UPDATE 2026-09-09 session-3 block in
+this file's sibling knowledge.md):
+- zwc FIXED+verified: pnr/Makefile ASAP7_STA_BIN pinned to opensta 2.6.0,
+  symlinked into .openroad-shim/sta alongside openroad. `make -C pnr
+  check-asap7-openroad` confirms. Nuance: direct inspection of this run's
+  own STAPrePNR/STAPostPNR power.rpt (both ran pre-fix, genuinely resolving
+  sta to 2.7.0) showed NO inf/NaN corruption on the standard corner.tcl
+  flow -- the originally-reported corruption was on a different workflow
+  (standalone macro-power-Liberty round-trip test, bead 86a). Fix stands
+  regardless; "every STA-derived metric is corrupted" does not.
+- e69 CPU block CONFIRMED with hard evidence: 61MB real SPEF
+  (49-openroad-rcx), STAPostPNR consumed it (218 unannotated drivers,
+  filtered to 0 -- not the all-unannotated signature of a missing SPEF).
+  GPU/SoC configs still RUN_SPEF_EXTRACTION=false; not touched this session
+  (each needs its own ~5.5h flow run).
+- gyx: eda-openroad MCP session can't load this ODB (schema 0.126 > 0.91) --
+  used the pinned ASAP7_OPENROAD_BIN standalone instead. Found analyze_power_
+  grid's -outfile flag was renamed -voltage_file in 26Q2. First attempt
+  (no set_layer_rc) looked clean (PSM-0040 "all shapes connected") but this
+  was a FALSE NEGATIVE -- it aborted earlier at PSM-0021 (M1/M4 zero
+  resistance; tech LEF has no RESISTANCE field for either layer, traced in
+  psm/src/ir_solver.cpp). After supplying set_layer_rc for M2-M7 from this
+  project's own LAYERS_RC values, the run proceeds further and DOES hit
+  PSM-0069 "Check connectivity failed on VDD" on the same M1-only tap-
+  cell/filler artifact as before (717 "Unconnected shape ... on Layer M1"
+  entries in the error file). CONCLUSION: PSM-0069 persists; not resolved
+  by the new toolchain. The bead's "2 violations, unconfirmed" reading is a
+  DIFFERENT, coarser in-flow check (checker.PowerGridViolations) that does
+  not probe per-shape M1 connectivity -- reproduced (2, VDD:1/VSS:1) on this
+  run but not equivalent evidence to analyze_power_grid passing.
+- ocm DRC/memory tradeoff quantified: per-iteration DRC trajectory 127153 ->
+  2045 over 12 iterations (still falling, not plateaued); final 2045 triaged
+  by rule (1135 M3.Lef58EolKeepOut, 560 M2.Metal Spacing, 215 M3.Short, 81
+  V2.Cut Spacing, 33 V3.Lef58CutSpacingTable, 12 M2.Lef58SpacingEndOfLine, 5
+  V2.Cut Short, 4 M6.Rect Only -- sums to 2045; 220 are real shorts). Bounded
+  run: 12 GiB peak RSS / 3h25m / completed to write_views. Unbounded run
+  (RUN_2026-09-09_06-11-06): 43 DRC / 13 GiB peak / 8h41m / died before
+  write_views, no final DEF. DRT_THREADS=1 memory experiment NOT run --
+  estimated ~8x wall time from existing thread A/B data (~24-30h), exceeds
+  host reboot cadence (2-8h) with no iteration-level checkpoint/resume.
+- Point-fix durability: no new experiment; session-2's finding (necessary-
+  looking, not sufficient, positive control refuted the general rule) still
+  stands as current. -pa/-pin access-point dump still unresolved.
+- design_state.json updated (pd.asap7_cpu_rcx_e69, pd.asap7_zwc_sta_pin,
+  pd.asap7_gyx_irdrop, pd.asap7_ocm_drc_memory_tradeoff, history[] entry).
+  Not committed/pushed per explicit instruction not to touch git this
+  session -- reported back for the user to land.

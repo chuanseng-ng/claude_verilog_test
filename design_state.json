@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-08-16T00:26:16.058442+00:00",
+  "updated_at": "2026-09-09T14:05:17.405486+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -209,6 +209,23 @@
       ],
       "ci": ".github/workflows/cocotb.yml now runs tb/cocotb/cpu phase2_all as a second job (cpu_phase2_all), alongside the existing soc_all job",
       "checked_at": "2026-08-11T14:50:04.986592+00:00"
+    },
+    "bead_nan_reversed_ratio_investigation": {
+      "status": "NOT A DUT BUG -- testbench release-synchronisation artifact",
+      "bead": "claude_verilog_test-nan",
+      "reason": "Reproduced the reported stall with a temporary diagnostic module (diag_ratio_stall.py, NOT committed, deleted after use) combining the all-5-FIFOs-full saturation pattern from test_no_deadlock_all_fifos_full with a reversed s_clk-slower-than-m_clk ratio (9/4 and 20/4 ns), which the committed suite's own light-workload reversed-ratio tests never combine. Root cause: the release write (dut.s_bready.value=1) is issued asynchronously, right after a trailing m_clk edge inside _poll_until, with no s_clk-edge synchronisation. At a slow s_clk this write can land only nanoseconds before the next s_clk edge while s_bvalid is already high, and cocotb's RisingEdge+ReadOnly sampling of that first post-release edge is one edge out of phase with the value cdc_gray_fifo's own always_ff actually used for that edge's rd_en -- the software _count_handshakes_bg counter permanently undercounts by exactly one real, already-delivered B/R completion, and since the FIFO is then truly drained (no further supply), the test's completion gate (count == target) can never be satisfied -- a software-side stall, not a DUT deadlock.",
+      "evidence": [
+        "Internal FIFO pointer trace (wr_bin_q/rd_bin_q on u_b_fifo, sampled against a confirmed pre-release baseline of 0) shows exactly 9 real writes and 9 real reads for a 9-write saturation workload -- fully self-consistent, no data loss, no overflow, no reset-value-advertises-availability signature (the two prior bugs' signature, commits 4398c2e/7a9f9d4, was explicitly checked for and not found).",
+        "Synchronising the release write to a clean s_clk RisingEdge (instead of the async post-m_clk-edge write) makes the identical 9/4-ratio, all-fifos-full workload pass immediately and exactly (b=9/9, r=13/13, ~180ns after release, no stall) -- isolates the cause to the release-write timing in the test, not the RTL.",
+        "The same async (unsynchronised) release methodology at the REALISTIC direction (s=4 CPU-fast, m=9 fabric-slow) does NOT stall -- reaches the exact target within 2-3 polling windows because the fast s_clk quickly self-corrects any single missed sample; the slow s_clk in the reversed direction has no fast follow-up edge to compensate for the same miscount, which is why the bead's sweep only ever observed the artifact in the reversed direction.",
+        "Reproduced consistently at two reversed ratios (9/4 and 20/4 ns), both showing the identical 8-of-9 / 12-of-13 signature and identical fully-drained internal FIFO state at the point of 'stall'.",
+        "26/26 test_async_axi_fifo baseline regression (including the committed test_clock_ratio_slow_to_fast at 20/4 and test_burst_integrity/test_no_valid_withdrawal_stress at 9/4, all reversed-direction, light-workload) reconfirmed PASS before and unaffected by this investigation -- no RTL or committed test file was changed."
+      ],
+      "conclusion": "async_axi_fifo.sv / cdc_gray_fifo.sv are NOT shown to deadlock in the reversed-ratio direction. No fix_request filed -- no DUT bug found. Bead claude_verilog_test-nan left OPEN (P3, per task instructions git/bead ownership retained by the requester) with this characterisation; recommended next step if anyone wants permanent regression coverage is a committed test that synchronises its release to the read-domain clock edge (as demonstrated) before combining all-fifos-full saturation with a reversed ratio, and/or hardening _count_handshakes_bg or the release pattern itself against this async-write edge ambiguity.",
+      "regression_at_investigation_time": {
+        "test_async_axi_fifo": "26/26 PASS (baseline, unmodified)"
+      },
+      "checked_at": "2026-09-09T14:05:17.405486+00:00"
     }
   },
   "pipeline_session_id": null,
@@ -1489,6 +1506,30 @@
       "suggested_next_step": "loop_back_to:routing",
       "reason": "Root-caused bead xy6: swept every ASAP7 run with recoverable final/ artifacts (SoC run 14/23, both GPU 571 MHz sign-off runs, all 8 CPU pin_order.cfg tuning runs) -- 100% show zero ROUTED net records and route__wirelength__max=0. NOT a run-23-era regression: drt.tcl's catch{} around detailed_route (a local, non-upstream LibreLane patch) aborts the whole routing call on the first pin-access failure (DRT-0073/0074), before track assignment starts; this predates run 23 by months (present since the April Phase-3 CPU PPA campaign). No ASAP7 run in this project has ever been confirmed to have actually routed. Landed the fix-loud gate (tools/verif/check_asap7_routing.py + pnr/Makefile check-asap7-{routing,gpu-routing,soc-routing} targets, wired mandatory post-flow on all full ASAP7 targets) so this can never again pass silently. Did NOT root-cause the underlying DRT-0073/0074 pin-access geometry trigger, and did NOT launch a new P&R run to obtain a genuinely routed design (host rebooted 2026-08-16 06:48 mid a prior 9h run per bead o1i; instructed not to launch a run without saying so first). Docs corrected: docs/PHASE5_RUN_HISTORY.md, docs/ASAP7_RUN_HISTORY.md, CLAUDE.md now carry explicit caveats on every affected DRC/antenna/routing-clean claim; timing/power/area numbers are unaffected (GRT-estimated parasitics, unchanged from before this finding).",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-09T20:51:29.213983+07:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "routing",
+      "decision": "proceed",
+      "confidence": "medium",
+      "failure_class": "power_area",
+      "retry_strategy": "refine",
+      "suggested_next_step": "proceed",
+      "reason": "Session serviced beads e69/gyx/ocm/zwc against the first-ever passing ASAP7 detailed-routing run (RUN_2026-09-09_14-56-03). Fixed+verified zwc (sta pinned to 2.6.0 via pnr/Makefile shim). Confirmed e69 CPU block is real (61MB SPEF, STAPostPNR consumed it) with GPU/SoC still pending their own full runs. Triaged the 2045 residual DRC violations by rule and quantified the DRC-vs-memory/runtime tradeoff (2045@12GiB/3h25m complete vs 43@13GiB/8h41m incomplete). gyx remains OPEN: analyze_power_grid's PSM-0069 connectivity failure persists on the new OpenROAD 26Q2 toolchain (a shallower positive reading was a false negative caused by an earlier, distinct PSM-0021 zero-resistance abort on M1/M4, now root-caused to a tech-LEF/LAYERS_RC gap). No new full LibreLane flow was launched this session.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-09T14:05:17.405486+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Bead claude_verilog_test-nan (async_axi_fifo reversed-ratio stall) investigated via a temporary diagnostic module and internal signal tracing (not committed): root-caused to a testbench release-write synchronisation artifact in the diagnostic harness, not a DUT bug -- synchronising the release to a clean s_clk edge resolves it exactly. No fix_request filed; 26/26 test_async_axi_fifo baseline unaffected.",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
@@ -2246,7 +2287,7 @@
     },
     "asap7_cpu_rcx_e69": {
       "bead": "claude_verilog_test-e69",
-      "status": "partial_validation",
+      "status": "cpu_block_validated_gpu_soc_pending",
       "rcx_rules_installed": true,
       "rcx_rules_source": "OpenROAD-flow-scripts flow/platforms/asap7/rcx_patterns.rules commit 8ad0ff779",
       "rcx_rules_path": "/home/neuromorphic/pdk/asap7/libs.tech/openlane/rcx_rules.pex",
@@ -2254,7 +2295,7 @@
       "cpu_config_run_spef_extraction": true,
       "cpu_config_run_mcsta": true,
       "gpu_soc_config_touched": false,
-      "spef_produced": false,
+      "spef_produced": true,
       "spef_reason": "blocked by claude_verilog_test-xy6 (DRT-0073/0074 pin-access failures leave detailed routing at 0 committed wires on both CPU and SoC recent runs); full-flow CPU validation run RUN_2026-08-15_21-36-49 also lost to a host reboot before reaching routing",
       "ruleset_mechanically_valid": true,
       "ruleset_mechanically_valid_note": "standalone extract_parasitics against a real ASAP7 ODB parsed/consumed the ruleset with zero errors (RCX-0435/0436/0439); only failed to produce output because the reference ODB had zero routed wires",
@@ -2262,7 +2303,80 @@
       "new_beads_filed": [
         "claude_verilog_test-xy6",
         "claude_verilog_test-2wo"
-      ]
+      ],
+      "spef_run_tag": "RUN_2026-09-09_14-56-03",
+      "spef_bytes": 61048456,
+      "spef_evidence": "49-openroad-rcx/nom_tt_025C_0p7V/rv32i_cpu_top.nom_tt_025C_0p7V.spef (61MB); 50-openroad-stapostpnr ran and consumed it -- report_parasitic_annotation shows 218 unannotated drivers (filtered to 0), not the 'everything unannotated' signature of a missing SPEF",
+      "gpu_soc_status": "pnr/asap7/gpu/config.json and pnr/asap7/soc/config.json (+ config_multiclock.json) still have RUN_SPEF_EXTRACTION/RUN_MCSTA = false as of 2026-09-09; each needs its own full LibreLane 3.0.14 flow run (~5.5h) to validate -- NOT run this session (time/host-reboot budget)",
+      "caveat": "LibreLane 3.0.14 removed VIAS_RC with no equivalent; extracted parasitics are not directly comparable to any pre-migration figure"
+    },
+    "asap7_zwc_sta_pin": {
+      "bead": "claude_verilog_test-zwc",
+      "status": "fixed_and_verified",
+      "fix": "pnr/Makefile: ASAP7_STA_BIN pinned to /nix/store/q5ycjmn0d9awbcq05c75z2rmgwjgbc9g-opensta/bin/sta (2.6.0); check-asap7-openroad now symlinks it into .openroad-shim/sta alongside the existing openroad symlink, both on OR_PATH_PREFIX",
+      "verified": "make -C pnr check-asap7-openroad reports 'ok: ASAP7 sta = 2.6.0'; PATH resolution confirmed via `which sta` inside the shim dir",
+      "nuance_found": "Direct comparison on this project's actual STAPostPNR corner.tcl inputs (RUN_2026-09-09_14-56-03, unmodified vendor Liberty, standalone sta resolving to 2.7.0 pre-fix) did NOT show inf/NaN report_power -- output was numerically sane (35.8 mW total). The originally-reported corruption (bead 86a) was observed on a DIFFERENT workflow: standalone round-trip validation of hand-injected macro power tables in a patched Liberty file, not the standard PDK-Liberty corner.tcl flow. Pinning to 2.6.0 is still correct/zero-cost regardless, but 'every STA-derived metric from that shell is corrupted' is broader than what was reproduced this session."
+    },
+    "asap7_gyx_irdrop": {
+      "bead": "claude_verilog_test-gyx",
+      "status": "psm0069_persists_new_blocker_found",
+      "method": "Standalone OpenROAD 26Q2 (ASAP7_OPENROAD_BIN, schema-compatible with the ODB) loading the final routed+filled ODB (48-odb-cellfrequencytables) from RUN_2026-09-09_14-56-03; the eda-openroad MCP session could NOT be used -- its OpenROAD build has ODB schema 0.91 vs this ODB's 0.126 (incompatible, confirmed by read_db error).",
+      "in_flow_checker_reading": "checker.PowerGridViolations (a coarser, different check) reports design__power_grid_violation__count = 2 (VDD:1, VSS:1) on the passing run -- this REPRODUCES the 'OBSERVED, UNCONFIRMED' 2-violation note from the bead for the first time on a completed run.",
+      "analyze_power_grid_finding_1": "OpenROAD 26Q2 renamed analyze_power_grid's output flag from -outfile to -voltage_file (API change vs whatever version the bead's prior notes assumed); command syntax needed updating.",
+      "analyze_power_grid_finding_2": "New blocker before PSM-0069 can even be evaluated: PSM-0021 'Resistance map contains invalid values' -- M1 and M4 report zero resistance. Root cause traced in OpenROAD src (psm/src/ir_solver.cpp getResistanceMap): falls back to the tech LEF's per-layer RESISTANCE property when the parasitics estimator returns 0; grep of asap7_tech_1x_201209.lef confirms NEITHER M1 NOR M4 layer sections declare a RESISTANCE field at all. M4 is normally covered via this project's LAYERS_RC env value, which corner.tcl converts to set_layer_rc via LibreLane's Python-injected _LAYER_RC_N vars -- absent in a standalone script. M1 has NO resistance value anywhere in this project's config (LAYERS_RC only lists M2-M7).",
+      "analyze_power_grid_finding_3": "After manually supplying set_layer_rc for M2-M7 (LAYERS_RC values) and retrying with -source_type STRAPS: the M1/M4 resistance error clears, but the run then proceeds further and DOES hit PSM-0069 'Check connectivity failed on VDD', preceded by >700 PSM-0039 'Unconnected instance ... at (...)' warnings before the 1000-message print limit, on the SAME M1-only tap-cell/filler pattern the bead describes (error_file has 717 recorded 'Unconnected shape ... on Layer M1' entries before the process errors out).",
+      "conclusion": "PSM-0069 is NOT resolved by the new OpenROAD 26Q2 toolchain. The earlier 'All shapes on net VDD are connected' (PSM-0040) reading from a shallower test was a false negative -- it only looked connected because the run aborted at the M1/M4 resistance error before reaching the per-instance connectivity pass. The in-flow checker's '2 violations' number and analyze_power_grid's PSM-0069 failure are measuring DIFFERENT things (coarse net-level opens vs per-shape/per-instance M1 connectivity) and must not be conflated.",
+      "next_steps_not_done": "Either (a) properly source LibreLane's set_rc.tcl with LibreLane-injected _LAYER_RC_N vars (or add M1's true resistance to LAYERS_RC/tech LEF) to get past PSM-0021 cleanly and re-confirm PSM-0069 with high fidelity, or (b) fix tap-cell PDN connectivity at the source per the original bead plan. Neither attempted this session."
+    },
+    "asap7_ocm_drc_memory_tradeoff": {
+      "bead": "claude_verilog_test-ocm",
+      "run_tag": "RUN_2026-09-09_14-56-03 (bounded DRT_OPT_ITERS=12, .signoff, gate PASS)",
+      "drc_violation_trajectory_by_iter": [
+        127153,
+        63962,
+        55284,
+        38441,
+        26298,
+        18538,
+        13692,
+        10610,
+        8450,
+        6438,
+        3904,
+        2761,
+        2045
+      ],
+      "drc_triage_by_rule_at_iter12": {
+        "M3.Lef58EolKeepOut": 1135,
+        "M2.Metal Spacing": 560,
+        "M3.Short": 215,
+        "V2.Cut Spacing": 81,
+        "V3.Lef58CutSpacingTable": 33,
+        "M2.Lef58SpacingEndOfLine": 12,
+        "V2.Cut Short": 5,
+        "M6.Rect Only": 4,
+        "total": 2045,
+        "note": "Sums exactly to route__drc_errors=2045. Real electrical shorts (M3.Short + V2.Cut Short) = 220 (10.8%); the rest (89.2%) are spacing/keepout classes that historically respond to further rip-up-reroute iterations, consistent with the still-decreasing trajectory."
+      },
+      "memory_time_comparison": {
+        "iter12_bounded_run": {
+          "drc_errors": 2045,
+          "peak_rss_gib": 12,
+          "runtime": "3:25:24",
+          "completed_to_write_views": true,
+          "source": "42-openroad-detailedrouting/openroad-detailedrouting.process_stats.json"
+        },
+        "iter45_unbounded_run": {
+          "drc_errors": 43,
+          "peak_rss_gib": 13,
+          "runtime": "8:41:00",
+          "completed_to_write_views": false,
+          "run_tag": "RUN_2026-09-09_06-11-06",
+          "note": "Plateaued ~43 for last ~10 iterations, but died/killed before write_views -- no final DEF, so check_asap7_routing.py could only return ERROR from this run despite the better DRC number."
+        }
+      },
+      "drt_threads1_memory_experiment": "NOT run this session. Estimated cost: the 8-thread iter12 run averaged ~8.2 cores (820% CPU) over 3h25m; a single-threaded full 12-iteration run would plausibly take on the order of 8x wall time (~24-30h), which exceeds the host's 2-8h reboot cadence multiple times over with no iteration-level checkpoint/resume in detailed_route. Flagged as operationally infeasible to measure cleanly without a longer-lived host, rather than attempted and left incomplete.",
+      "host_headroom": "free -h at time of writing: 15Gi total, only ~13Gi available (buff/cache reclaimable). The bounded run's own 12 GiB peak already leaves very little margin on this host."
     }
   },
   "soc_stage2_gh104": {
