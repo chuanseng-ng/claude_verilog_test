@@ -1956,3 +1956,297 @@ Under test: shifting every macro by +1.365 µm (half a worker) to move pin colum
 moves with placement is not a congestion signature, and a geometry theory read off a file is not
 a root cause until a negative control confirms it. Both the M4-OBS and the channel-width
 theories looked convincing on inspection and were killed by a single A/B run each.
+
+#### UPDATE 2026-09-09 (session 2, bead `ocm`) — all 16 failures identified as one macro *column*; OR_SEED ruled out; grid-alignment coincidence found
+
+**Standalone reproduction harness built.** `detailed_route` can be invoked directly on a
+checkpoint ODB (`40-openroad-resizertimingpostgrt/rv32i_cpu_top.odb`) without going through the
+full ~55 min LibreLane flow, by hand-populating three env vars `io.tcl`'s `read_current_odb`
+needs that are normally injected by LibreLane's Python driver and never appear in the on-disk
+`_env.tcl` dump: `_TCL_ENV_IN` (point it at the step's own `_env.tcl`), `_LIB_CORNER_0` (a flat
+Tcl list `{corner_name lib1 lib2 …}` — NOT the nested `LIB` env var's own string form), and
+`_PNR_EXCLUDED_CELLS` (flat list from `PNR_EXCLUDED_CELL_FILE`). `STEP_DIR`/`SCRIPTS_DIR` must
+also be set manually. This reproduces the exact 16 `DRT-0255` failures (same nets, same
+routeBoxes, same access-point coordinates) in **~4-5 min wall / ~4.7 GB peak RSS**, not 55 min —
+use this harness for all future ASAP7 routing debug, not full flow reruns.
+
+**Worker/tile size is not an exposed OpenROAD 3.0.14 Tcl knob.** `help detailed_route`,
+`help global_route`, `help pin_access`, `help detailed_route_debug` were enumerated in full —
+none exposes a tile/box-size parameter. The 2730 DBU worker box is exactly 7× the GRT
+`GCELLGRID` step (390 DBU, logged as `[INFO DRT-0176] GCELLGRID X 0 DO 333 STEP 390`), which
+is itself computed internally by `global_route` with no exposed override either. **However,
+the previously-recorded `DRT_THREADS=1` vs `8` A/B (attempt 6) already answers the load-balancing
+version of this question**: both produce byte-identical routeBox coordinates for all 16
+failures — re-confirmed this session by diffing `RUN_2026-09-09_02-35-01` (threads=1) against
+`RUN_2026-09-09_03-35-25` (threads=8) directly. The worker grid is a deterministic spatial
+tiling anchored at chip origin, invariant to thread count. Do not re-attempt this test; it is
+closed.
+
+**`OR_SEED` tested and RULED OUT (task's step 3, done ahead of step 1).** Reran the standalone
+harness with `-or_seed 7` against the identical checkpoint used for `-or_seed 42` (the value
+hardcoded in `drt.tcl`, not exposed as an env var — patch the script to vary it, do not expect
+an env knob). Result: **byte-identical** — same 16 nets, same routeBoxes, same access-point
+coordinates down to the DBU, confirmed by diffing the two logs' `ERROR`/`Failed to find a
+path`/`Idx` lines (`diff` exit 0). This rules out net-processing-order / tie-breaking as the
+mechanism: the failure is a hard deterministic function of geometry, not a search-order
+artifact. Do not re-attempt seed variation; it is closed. (`OR_K` was not tried — lower
+priority, and seed invariance already argues against an ordering explanation.)
+
+**All 16 failing nets decoded — every one is a pin of the SAME macro instance-column.**
+Cross-referencing the failing net names (several of which log as opaque `netNNNN` with a blank
+pin name) against `40-openroad-resizertimingpostgrt/rv32i_cpu_top.nl.v` shows every one of them
+is a `din0`/`dout0`/`addr0`/`web0`/`clk0` pin of **`gen_data_sram[1].u_data_sram`** — the SAME
+one macro instance in each cache, at both `u_icache` (8 failures) and `u_dcache` (8 failures).
+The "blank pin name" nets (`net6385`, `net6377`, `net5031`, etc.) are not orphan Steiner points
+on some other net — they are ordinary SRAM `din0`/`addr0` bits whose synthesis-assigned net name
+happens not to carry the friendly hierarchical alias. **No other macro (`gen_data_sram[0]`,
+`[2]`, `[3]`, or either `u_tag_sram`) has ever produced a single `DRT-0255` in any run.** This
+narrows the bead's own "single worker column, varies per run" framing one level further: across
+every geometry experiment tried (channel width, macro shift, density, threads, seed), the
+column identified has always corresponded to this same relative macro position (index 1 of 4
+data macros) in the placement order, not a placement-independent absolute chip X.
+
+**`DRT-0419` ruled OUT as a discriminator.** `-verbose 2` surfaces
+`[WARNING DRT-0419] No routing tracks pass through the center of Term <pin>` for individual
+pins. It fires **670 times** across the design, including on `u_tag_sram` and on
+`gen_data_sram[0]/[2]/[3]` pins that route perfectly cleanly — it is evidently routine ("pin
+center doesn't land exactly on a track, AP snapped to nearest one") and carries no correlation
+with the 16 `DRT-0255` failures. Do not chase this warning as a lead.
+
+**Leading hypothesis, arithmetic-supported but NOT confirmed at the TritonRoute-source level:
+`gen_data_sram[1]` is the one macro column whose pins sit almost exactly ON the M4/M5 routing
+grid, not off it.** Both `M4` (`DIRECTION HORIZONTAL`, `PITCH 0.048`, `OFFSET 0.003`) and `M5`
+(`DIRECTION VERTICAL`, `PITCH 0.048`, `OFFSET 0.0`) carry `LEF58_RIGHTWAYONGRIDONLY` in the
+ASAP7 tech LEF — same-direction wires on these layers must land exactly on-grid. Pin X (=
+macro-placement X, since all 77 signal pins sit at local `x=0.000`) exact DBU values from the
+DEF: `20720, 35090, 49450, 63800` for macro columns 0-3. Nearest-legal-M4-track distance
+(`legal ≡ 3 mod 48` DBU): col0 **19 DBU** off, col1 **1 DBU** off, col2 **7 DBU** off, col3
+**5 DBU** off. Nearest-legal-M5-track distance (`legal ≡ 0 mod 48`): col1 is **2 DBU** off.
+**Column 1 — the only failing one — is the only column within a few DBU of exact on-grid
+alignment on both layers; the three passing columns are all meaningfully (5-19 DBU) off-grid.**
+The failure direction is counter-intuitive (near-exact alignment breaking, not helping), which
+is consistent with a router edge case: a pin whose center sits within ~1-2 DBU of a legal track
+(well under the 24 DBU minimum spacing/width) is neither cleanly "on-grid" nor cleanly
+"off-grid enough to trigger normal off-grid access-point search," and may fall into a gap in
+TritonRoute's access-point generation for `RIGHTWAYONGRIDONLY` layers. **This is not proven** —
+it is a single arithmetic correlation (n=5 macro instances per row, 1 hit) with a plausible
+mechanism, not a traced TritonRoute code path or a confirmed fix. It does, however, fit every
+negative result collected so far (seed-invariant, thread-invariant, channel-width-invariant,
+density-invariant, macro-shift-invariant in earlier attempts — because none of those experiments
+changed the macro's absolute X phase relative to the M4/M5 grid) and is falsifiable cheaply: shift
+`gen_data_sram[1]` by a few DBU in X (not a whole worker pitch) to move it off-grid like its
+siblings, rerun the ~5 min standalone harness, and check whether `DRT-0255` disappears from that
+column. **This specific, cheap, high-value experiment was not run this session — do it first
+next session**, before any macro-abstract rewrite or floorplan-scale change.
+
+**Session scoreboard.** PROVEN this session: standalone ~5 min repro harness (use it going
+forward); worker/tile size not exposed and thread-count-invariant (closed); `OR_SEED`-invariant
+(closed, mechanism is not search-order); all 16 failures map onto one macro instance column,
+`gen_data_sram[1]`, in both caches; `DRT-0419` is a non-discriminating routine warning (closed).
+NOT proven: the on-grid-alignment mechanism (arithmetic correlation only); no routing-clean run
+achieved; `check_asap7_routing.py` still fails on every run to date.
+
+#### UPDATE 2026-09-09 (session 2, continued) — DBU-shift experiment: causal confirmation for the specific instance, positive control REFUTES the general grid rule
+
+**Corrected grid arithmetic first.** The session-2 correlation above used the tech LEF's declared
+`M4 PITCH 0.048 / OFFSET 0.003` and `M5 PITCH 0.048 / OFFSET 0.0`. This is **wrong** — LibreLane
+overrides those via `libs.tech/openlane/asap7sc7p5t_SIMPLE/tracks.info`, and the actual DEF
+`TRACKS` differ substantially: `M4 X 18 DO 2407 STEP 54` / `M4 Y 18 DO 4814 STEP 27`, `M5 X 18 DO
+4814 STEP 27` / `M5 Y 18 DO 2407 STEP 54`. Since M5 is `DIRECTION VERTICAL`, the relevant grid for
+a pin's X-position (the via-up target from an M4 pin) is **M5's X track: `x ≡ 18 (mod 27)`**, not
+the tech-LEF's mod-48 grid. Recomputing signed offset (`(x mod 27) - 18`, wrapped to ±13) against
+this correct grid reproduces the same qualitative pattern as before by coincidence of scale, but
+the numbers differ: current run col0/1/2/3 = -7/-1/-5/+8; 2.00 µm sweep = +6/-2/-10/+9; 6.00 µm
+sweep = +10/+6/+2/-2. **In all three independent floorplans, the failing column has the smallest
+|signed offset| in its row, and it is always on the negative side** (col1 at -1, -2; col3 at -2)
+while a same-magnitude positive offset (+2, the 6 µm sweep's `data2`) does NOT fail. This still
+looked like strong support for "near-exact M5-grid alignment, specifically on the negative-offset
+side, causes the failure."
+
+**ODB-edit shift harness built and validated.** Extended the standalone harness (session 2's
+`probe.tcl`) to move a named macro instance directly in the loaded checkpoint ODB
+(`$inst setPlacementStatus PLACED; $inst setLocation $x $y; $inst setPlacementStatus FIRM` —
+note `FIRM`, not `FIXED`; OpenROAD's ODB placement-status enum uses `FIRM` for a DEF `+ FIXED`
+instance, and `setLocation` on a `FIRM` instance throws `[ERROR ODB-0359]` without first
+demoting it to `PLACED`) then rerunning `detailed_route` on the same checkpoint, without
+rerunning floorplan/placement/GRT. This is valid for shifts much smaller than a GCell (390 DBU)
+since the global-routing guide coverage for the moved pins doesn't change. Instance names in
+this design carry a **literal backslash before each bracket** (`u_core.u_icache.gen_data_sram\
+[1\].u_data_sram`, not just DEF-escaping) — in a Tcl double-quoted string this requires
+`\\\[`/`\\\]` (four characters) to produce the literal two-character `\[`/`\]`; `\[` alone is
+consumed as a single-character Tcl escape and silently loses the backslash, and `string match`
+with a literal `[1]` in the pattern is interpreted as a glob character class, not literal text —
+use `string first` for substring checks on names containing brackets.
+
+**Direct causal test on `gen_data_sram[1]` itself — CONFIRMED.** Moving *only* this instance
+(both `u_icache` and `u_dcache`) while holding everything else in the design fixed:
+| dx (DBU) | new x | M5 signed offset | result |
+|---|---|---|---|
+| 0 (control) | 35090 | -1 | FAILS — byte-identical 16 `DRT-0255`, same nets/routeBoxes as every prior run |
+| -1 | 35089 | -2 | FAILS — identical 16, confirms the failure persists through the near-zero window |
+| +5 | 35095 | +4 | CLEAN — 0 `DRT-0255` through 60% (killed early; unrelated DRC-violation count balloons because the ODB-only shift doesn't re-legalize PDN/placement around the new macro edge, a confound, not a routing-failure signal) |
+| +10 | 35100 | +9 (also exactly M4-cross-grid-aligned: 35100 mod 54 = 0) | CLEAN — 0 `DRT-0255`, 0 general violations through 20%, the cleanest result |
+| +24 | 35114 | -4 | CLEAN — 0 `DRT-0255` through 20%. Narrows the failing window to within ±2-3 DBU of the M5 track, not ±4. |
+This is a genuine single-variable causal result (same instance, same everything else, only its
+X changed) — moving `gen_data_sram[1]` off its near-zero M5 offset removes its own failure.
+
+**Positive control on `gen_data_sram[0]` — DOES NOT CONFIRM the general rule.** If "small
+negative M5 offset" were a general, portable predictor, forcing a *different*, always-clean
+macro onto the identical residue class that fails at column 1 should make it fail too.
+`gen_data_sram[0]` (x=20720, signed offset -7, clean in every run to date) was shifted by
+dx=+6 to x=20726 — signed offset **-1**, matching column 1's original failing value exactly
+(and by construction of 54=2×27, also matching column 1's M4-cross-grid remainder mod 54: both
+land on remainder 44). Result: **0 new `DRT-0255` anywhere near column 0's shifted location.**
+The only 16 failures in that run were column 1's own (unchanged, since column 1 wasn't touched
+in this experiment) — confirmed by checking that every failing routeBox in the log is still at
+x=32760 (column 1's box), none near x≈18000-24000 (column 0's new box).
+
+**Conclusion: the M5-grid-offset theory is necessary-looking but NOT sufficient, and therefore
+NOT a validated general rule.** Every failing column across 3 independent floorplan sweeps did
+have the smallest same-sign offset in its row (necessary-looking, still true), and moving the
+failing instance itself off that offset provably cures it (causally confirmed for this instance).
+But reproducing the same offset on a different macro does not reproduce the failure — so offset
+alone is not sufficient, and something else specific to `gen_data_sram[1]`'s context (not shared
+by `gen_data_sram[0]` merely matching its phase) is also required and remains unidentified. Do
+**not** write a general "keep every macro pin column N DBU off the M4/M5 grid" placement rule
+into any config from this evidence — it would be applying a refuted generalization. What *is*
+justified: a narrow, per-instance point-fix, applied only after the same causal A/B test that
+validated it here.
+
+**Fix applied (narrow, evidence-scoped):** `pnr/asap7/cpu/macro_placement_3014.cfg` —
+`gen_data_sram[1]` (both cache rows) moved from x=35.09 to **x=35.10** (+10 DBU), the empirically
+cleanest of the tested clean points, with the full derivation and the failed-generalization
+caveat written inline in the config comment. Full flow launched afterward to check whether this
+actually reaches a routing-clean `check_asap7_routing.py` — see run log / bead `ocm` for the
+result, since the single-instance ODB-edit test cannot rule out some other latent DRT-0255 that
+the original 16 happened to mask (only one macro column has ever been tested this way; the
+other 4 per-row instances have not been probed for their own possible offset-adjacent issues).
+
+#### UPDATE 2026-09-09 (session 3, beads `zwc`/`e69`/`gyx`/`ocm`) — servicing the first passing routing run: sta pinned, SPEF/STAPostPNR confirmed for CPU, IR-drop blocker deepened, DRC/memory tradeoff quantified
+
+Session context: `RUN_2026-09-09_14-56-03` (bounded `DRT_OPT_ITERS=12`, `.signoff`-marked)
+became the first ASAP7 run in project history to pass `check_asap7_routing.py`. This session
+serviced the four beads queued behind that result. No new full LibreLane flow was launched.
+
+**`zwc` (sta pinning) — FIXED and verified.** `pnr/Makefile` gained `ASAP7_STA_BIN` pinned to
+`/nix/store/q5ycjmn0d9awbcq05c75z2rmgwjgbc9g-opensta/bin/sta` (2.6.0). `check-asap7-openroad`
+now fails loudly if that build is missing or is the known-bad 2.7.0, then symlinks it into
+`.openroad-shim/sta` alongside the existing `openroad` symlink — both go on `PATH` via the
+existing `OR_PATH_PREFIX` mechanism, following the exact same single-file-symlink pattern (never
+a `bin/` prepend) that `ASAP7_OPENROAD_BIN` already used. Verified: `make -C pnr
+check-asap7-openroad` prints `ok: ASAP7 sta = 2.6.0`, and `which sta` inside a PATH built from
+the shim dir resolves to the pinned 2.6.0 binary.
+
+**Nuance found while verifying the underlying defect** (report honestly, don't just apply the
+fix and move on): direct inspection of `RUN_2026-09-09_14-56-03`'s own `50-openroad-stapostpnr`
+and `RUN_2026-09-09_06-11-06`'s `11-openroad-staprepnr` — both of which invoked the bare `sta`
+command with no shim on `PATH`, i.e. both genuinely resolved to 2.7.0 pre-fix — show numerically
+sane, non-corrupted `power.rpt` output (~28-36 mW total, plausible internal/switching/leakage
+split, no inf/NaN anywhere in either `sta.log`). The originally-reported corruption (bead `86a`)
+was traced to a *different* workflow: a standalone round-trip test of hand-injected macro power
+tables in a manually patched Liberty file (`asap7_macro_power_inject.py`'s output), not the
+standard PDK-Liberty `corner.tcl` flow every STAPrePNR/STAPostPNR step runs. So "every
+STA-derived metric from that shell is corrupted" (the bead's stated posture) is broader than
+what was actually reproduced this session on the normal flow. The fix stands regardless (it's
+free and closes a real, demonstrated defect on *some* inputs), but do not read this as
+confirmation that every historical 3.0.14-shell number needs distrust — only the macro-Liberty
+characterization path was shown broken.
+
+**`e69` (SPEF/STAPostPNR) — CPU block confirmed with hard evidence.** `RUN_2026-09-09_14-56-03`'s
+`49-openroad-rcx` produced a real 61,048,456-byte SPEF
+(`nom_tt_025C_0p7V/rv32i_cpu_top.nom_tt_025C_0p7V.spef`); `50-openroad-stapostpnr` consumed it —
+`report_parasitic_annotation -report_unannotated` found 218 unannotated drivers (clock-load
+pins etc., filtered to 0 by `filter_unannotated.py`), not the "everything is unannotated"
+signature of a missing/empty SPEF. `resolved.json` confirms `RUN_SPEF_EXTRACTION`/`RUN_MCSTA`
+both `true` for this run. GPU (`pnr/asap7/gpu/config.json`) and SoC
+(`pnr/asap7/soc/config.json`, `config_multiclock.json`) still have both flags `false` as of this
+session — each needs its own full ~5.5h LibreLane 3.0.14 flow to validate, not attempted this
+session (time/host-reboot budget; see the memory-writing entries in `design_state.json` under
+`pd.asap7_cpu_rcx_e69`).
+
+**`gyx` (IR drop / PSM-0069) — root-caused a NEW blocker, then re-confirmed the OLD one
+persists.** The `eda-openroad` MCP session's OpenROAD build cannot load this run's ODB at all
+(`incompatible database schema revision 0.126 > 0.91`) — use the pinned
+`ASAP7_OPENROAD_BIN` (26Q2) directly via a standalone `-no_splash -exit` script instead, loading
+the final routed+filled ODB (`48-odb-cellfrequencytables/rv32i_cpu_top.odb`).
+
+1. API drift: OpenROAD 26Q2's `analyze_power_grid` renamed the output flag from `-outfile` to
+   `-voltage_file` (confirmed by reading `psm/src/pdnsim.tcl` from the pinned build's own nix
+   source derivation, `/nix/store/pi9m3br8ni97dfybd24lldfa185py07x-source/src/psm/src/`). Default
+   `-source_type` is now `BUMPS`, not `FULL`.
+2. First attempt (no `set_layer_rc` calls, `-source_type STRAPS`) reported `[INFO PSM-0040] All
+   shapes on net VDD are connected` — i.e. looked like PSM-0069 was GONE. **This was a false
+   negative.** The run actually aborted one step earlier, at `[ERROR PSM-0021] Resistance map
+   constains invalid values` (M1 and M4 report zero resistance), before the solver ever reached
+   the finer per-instance connectivity check. Root cause, traced in
+   `psm/src/ir_solver.cpp::getResistanceMap`: it first tries the parasitics estimator
+   (populated by `set_layer_rc`, which in the real flow comes from LibreLane's Python-injected
+   `_LAYER_RC_N` env vars feeding `set_rc.tcl` — absent in a bare standalone script), and falls
+   back to the tech LEF's per-layer `RESISTANCE` property if that's zero. `grep` of
+   `asap7_tech_1x_201209.lef` confirms **neither M1 nor M4** declares a `RESISTANCE` field at
+   all. M4 has a value in this project's `LAYERS_RC` env (`res 0.0203083 cap 0.189434`) that
+   just wasn't supplied outside the real flow; **M1 has no resistance value ANYWHERE in this
+   project's config** — `LAYERS_RC` only lists M2 through M7. This is a genuine PDK/config gap,
+   not a tool defect.
+3. Supplying `set_layer_rc` for M2-M7 from the existing `LAYERS_RC` values cleared the M1/M4
+   error and let the solver proceed further — at which point it DID hit `[ERROR PSM-0069] Check
+   connectivity failed on VDD`, preceded by 700+ `[WARNING PSM-0039] Unconnected instance ... `
+   messages (print-capped at 1000) on the same M1-only tap-cell/filler pattern the bead
+   describes (`error_file` recorded 717 `violation type: Unconnected shape ... on Layer M1`
+   entries before the abort).
+
+**Conclusion: PSM-0069 is NOT resolved by OpenROAD 26Q2 / LibreLane 3.0.14.** The "OBSERVED,
+UNCONFIRMED" 2-violation reading in the bead came from a *different, coarser* check
+(`checker.PowerGridViolations`, LibreLane's in-flow step, reporting
+`design__power_grid_violation__count = 2` — VDD:1, VSS:1 — on this same run) that does not probe
+per-shape/per-instance M1 connectivity the way `analyze_power_grid`'s PSM-0069 does. Both
+numbers are real and both are now measured on a completed run, but they are not interchangeable
+evidence — do not let a clean coarse-checker reading stand in for a clean `analyze_power_grid`
+run, and vice versa. Next steps (not attempted this session): either add M1's real resistance to
+this project's config (and properly source `set_rc.tcl` / the `_LAYER_RC_N` mechanism standalone
+for a high-fidelity re-test) and re-confirm PSM-0069 with the M1/M4 confound fully removed, or go
+straight to fixing tap-cell PDN connectivity at the source per the bead's original fallback plan.
+
+**`ocm` (DRC/memory tradeoff) — triaged and quantified with real numbers.**
+`42-openroad-detailedrouting`'s per-iteration metrics on the passing run (`or_metrics_out.json`)
+give the full convergence trajectory: `127153, 63962, 55284, 38441, 26298, 18538, 13692, 10610,
+8450, 6438, 3904, 2761, 2045` (iterations 0-12) — a strong, still-decreasing monotonic trend, not
+a plateau. The DRC XML (`rv32i_cpu_top.drc.xml`) triages the final 2045 by rule for the first
+time:
+
+| Rule | Count | % |
+|---|---|---|
+| M3.Lef58EolKeepOut | 1135 | 55.5% |
+| M2.Metal Spacing | 560 | 27.4% |
+| M3.Short | 215 | 10.5% |
+| V2.Cut Spacing | 81 | 4.0% |
+| V3.Lef58CutSpacingTable | 33 | 1.6% |
+| M2.Lef58SpacingEndOfLine | 12 | 0.6% |
+| V2.Cut Short | 5 | 0.2% |
+| M6.Rect Only | 4 | 0.2% |
+
+Sums exactly to 2045. Real electrical shorts (`M3.Short` + `V2.Cut Short`) = 220 (10.8%); the
+other 89.2% are spacing/keepout classes that respond to further rip-up-reroute, consistent with
+the still-falling trajectory.
+
+Memory/time tradeoff, both numbers now sourced (not assumed): the bounded 12-iteration run
+(`process_stats.json`) peaked at **12 GiB RSS, 3h25m runtime, 8.2 avg cores, and completed to
+`write_views`** (real final DEF, gate PASS). The unbounded run (`RUN_2026-09-09_06-11-06`)
+reached 43 violations by iteration ~45 but peaked at **13 GiB and died before `write_views`**
+(8h41m elapsed, no final DEF, `check_asap7_routing.py` can only return ERROR on it). Host is 16
+cores / ~15Gi total RAM with ~13Gi typically available. A `DRT_THREADS=1` memory experiment (the
+bead's own suggested next lever) was **not run** this session: the existing single-phase
+thread A/B data (pin-access repro harness, byte-identical results at 1 vs 8 threads) implies
+routing is CPU-bound and thread-count-invariant for *correctness*, and 8 threads averaged ~8.2
+cores over 3h25m for 12 iterations — a single-threaded equivalent plausibly costs ~8x wall time
+(~24-30h), which exceeds this host's 2-8h reboot cadence multiple times over with no
+iteration-level checkpoint/resume in `detailed_route`. Flagged as operationally infeasible to
+measure cleanly on this host rather than launched and abandoned mid-run.
+
+**Point-fix durability (`gen_data_sram[1]` +10 DBU shift)** — no new experiment this session;
+carrying forward the session-2 finding as still current: the DBU-shift fix is causally confirmed
+for that one instance (moving it off its near-zero M5-grid offset removes its own DRT-0255s) but
+the positive control (forcing `gen_data_sram[0]` onto the identical residue class) did **not**
+reproduce the failure, so the offset mechanism is necessary-looking but not sufficient, and not
+yet a general placement rule. The outstanding `detailed_route_debug -pa/-pin` access-point dump
+experiment was not attempted this session either — still an open tooling gap.

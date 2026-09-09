@@ -135,13 +135,28 @@ DRT_THREADS         ?= 4
 # re-resolve, run:  nix build --no-link --print-out-paths nixpkgs#openroad
 ASAP7_OPENROAD_BIN  ?= /nix/store/hgqrwa4687mf7n0y2x6lcgx1kj42sfga-openroad-26Q2/bin/openroad
 
-# We must override ONLY the openroad binary. The 26Q2 store path's bin/ also
-# contains `sta`, and putting that directory on PATH silently replaces
-# LibreLane's OpenSTA too -- which fails every STA step with
+# bead claude_verilog_test-zwc: the LibreLane 3.0.14 devshell (used for the
+# ocm ASAP7 routing bring-up) resolves the standalone `sta` binary it shells
+# out to (OpenROAD.STAPrePNR / STAMidPNR / STAPostPNR each invoke
+# `sta -no_splash -exit corner.tcl`, not just openroad's built-in STA) to
+# OpenSTA 2.7.0, which corrupts report_power to inf/NaN on this design.
+# 2.6.0 is clean -- confirmed independently by beads 86a and ocm on the same
+# inputs. This pins it to the known-good 2.6.0 store build, same GC-root
+# posture as ASAP7_OPENROAD_BIN above: re-resolve with
+#   nix build --no-link --print-out-paths nixpkgs#opensta
+# and confirm `<path>/bin/sta -version` prints 2.6.0 before repointing.
+ASAP7_STA_BIN       ?= /nix/store/q5ycjmn0d9awbcq05c75z2rmgwjgbc9g-opensta/bin/sta
+
+# We must override ONLY the openroad and sta binaries, each via its own
+# single-file symlink. The 26Q2 openroad store path's bin/ also contains a
+# `sta` (a *different* bad build than the 2.7.0 above), and putting that
+# whole directory on PATH silently replaces LibreLane's OpenSTA too -- which
+# fails every STA step with
 #   Error: corner.tcl, 47 invalid command name "sta::corners"
-# because 26Q2's OpenSTA does not define it. So check-asap7-openroad builds
-# a shim directory holding a single symlink to openroad, and that is what
-# goes on PATH. Never prepend the store bin/ directly.
+# because that bin/'s OpenSTA does not define it. So check-asap7-openroad
+# builds a shim directory holding one symlink per binary (openroad, sta),
+# and that shim directory is what goes on PATH. Never prepend a store bin/
+# directly -- that is the trap both symlinks exist to avoid.
 #
 # PYTHONPATH: LibreLane's Odb.* steps run `openroad -python <script>`, and
 # 26Q2 embeds Python 3.13 where LibreLane's own is 3.11. A nix python env
@@ -916,9 +931,23 @@ check-asap7-openroad:
 	                exit 1 ;; \
 	  esac; \
 	  echo "  ok: ASAP7 OpenROAD = $$v  ($(ASAP7_OPENROAD_BIN))"
+	@if [ ! -x "$(ASAP7_STA_BIN)" ]; then \
+	  echo "ERROR: ASAP7_STA_BIN not executable: $(ASAP7_STA_BIN)"; \
+	  echo "       Re-resolve with: nix build --no-link --print-out-paths nixpkgs#opensta"; \
+	  echo "       then set ASAP7_STA_BIN=<path>/bin/sta"; \
+	  exit 1; fi
+	@v=$$("$(ASAP7_STA_BIN)" -version 2>&1 | head -1); \
+	  case "$$v" in \
+	    2.7.0*) echo "ERROR: ASAP7_STA_BIN is the known-bad build ($$v)."; \
+	            echo "       It corrupts report_power to inf/NaN -- see bead zwc."; \
+	            exit 1 ;; \
+	  esac; \
+	  echo "  ok: ASAP7 sta = $$v  ($(ASAP7_STA_BIN))"
 	@mkdir -p $(ASAP7_OR_SHIM_DIR)
 	@ln -sf $(ASAP7_OPENROAD_BIN) $(ASAP7_OR_SHIM_DIR)/openroad
 	@echo "  ok: shim $(ASAP7_OR_SHIM_DIR)/openroad -> $(ASAP7_OPENROAD_BIN)"
+	@ln -sf $(ASAP7_STA_BIN) $(ASAP7_OR_SHIM_DIR)/sta
+	@echo "  ok: shim $(ASAP7_OR_SHIM_DIR)/sta -> $(ASAP7_STA_BIN)"
 	@# Non-vacuous: prove odbpy's third-party imports actually resolve under the
 	@# chosen openroad's embedded interpreter. Without this, the flow runs all the
 	@# way to Odb.SetPowerConnections before failing.
