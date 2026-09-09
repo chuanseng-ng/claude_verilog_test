@@ -371,6 +371,42 @@ ASAP7 run with recoverable artifacts on disk (SoC, GPU, and CPU alike) as
 part of root-causing bead `claude_verilog_test-xy6`. This section is the
 authoritative statement — every inline ⚠️ mark above points here.
 
+> **RESOLVED for new runs, 2026-09-09 (bead `ocm`). This section's findings about
+> runs 14, 23 and every other pre-September run REMAIN TRUE and are not
+> rehabilitated — those runs really did commit zero wires.** What changed is that
+> ASAP7 detailed routing now works at all.
+>
+> Root cause: LibreLane 2.4.13's *own pinned* OpenROAD (`edf00dff`) cannot grant
+> pin access to **any** ASAP7 top-level pin — 401/401 BTerms fail — while passing
+> Sky130 cleanly on the identical probe. LibreLane 3.0.14's pin (`dcf36133`)
+> resolves it. A residual 16 `DRT-0255` were traced to a single macro column and
+> cleared by a +10 DBU shift on `gen_data_sram[1]`.
+>
+> First passing run: **`RUN_2026-09-09_14-56-03`**, `tools/verif/check_asap7_routing.py`
+> exit 0 — **33,396 routed net records**, `route__wirelength` 270,938,
+> `route__wirelength__max` 321.17 (0 on every previous run ever recorded),
+> `drt_error_count` 0, 52 steps including `write_views`. Marked `.signoff` so
+> `prune_runs` cannot evict it.
+>
+> ⚠️ **This is NOT physical closure and must not be quoted as one.**
+> `route__drc_errors = 2045` on that run, because `DRT_OPT_ITERS` was capped at 12
+> to fit the host's time and memory; the gate deliberately does **not** check DRC
+> violations. The residual, triaged by rule: 1135 M3.Lef58EolKeepOut, 560 M2 Metal
+> Spacing, 215 M3.Short, 81 V2 Cut Spacing, 33 V3.Lef58CutSpacingTable, 12
+> M2.Lef58SpacingEndOfLine, 5 V2 Cut Short, 4 M6 Rect Only — i.e. 220 real shorts,
+> the rest spacing/keepout. An unbounded run reached 43 violations by iteration ~45
+> but peaked at 13 GiB on a 15.9 GB host and died before `write_views`.
+>
+> ⚠️ **The point fix is a per-instance workaround, not a rule.** Its positive
+> control — moving a *passing* column onto the identical near-grid residue class —
+> did **not** reproduce the failure, so grid alignment is necessary-looking but
+> demonstrably not sufficient. Any re-placement, die-size or macro-count change can
+> drop a different column into the same condition.
+>
+> Consequence for `e69`: the first genuine post-route parasitic extraction in this
+> project now exists — a 61,048,456-byte SPEF consumed by `OpenROAD.STAPostPNR` —
+> for the **CPU block only**. GPU and SoC still have `RUN_SPEF_EXTRACTION` false.
+
 **What "zero wires" means, precisely.** `OpenROAD.DetailedRouting`'s
 `detailed_route` call is wrapped in `catch {}` by a local (uncommitted-to-
 upstream) patch to LibreLane's `librelane/scripts/openroad/drt.tcl`. On
