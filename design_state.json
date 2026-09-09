@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-09-09T20:51:29.213983+07:00",
+  "updated_at": "2026-09-09T14:05:17.405486+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -209,6 +209,23 @@
       ],
       "ci": ".github/workflows/cocotb.yml now runs tb/cocotb/cpu phase2_all as a second job (cpu_phase2_all), alongside the existing soc_all job",
       "checked_at": "2026-08-11T14:50:04.986592+00:00"
+    },
+    "bead_nan_reversed_ratio_investigation": {
+      "status": "NOT A DUT BUG -- testbench release-synchronisation artifact",
+      "bead": "claude_verilog_test-nan",
+      "reason": "Reproduced the reported stall with a temporary diagnostic module (diag_ratio_stall.py, NOT committed, deleted after use) combining the all-5-FIFOs-full saturation pattern from test_no_deadlock_all_fifos_full with a reversed s_clk-slower-than-m_clk ratio (9/4 and 20/4 ns), which the committed suite's own light-workload reversed-ratio tests never combine. Root cause: the release write (dut.s_bready.value=1) is issued asynchronously, right after a trailing m_clk edge inside _poll_until, with no s_clk-edge synchronisation. At a slow s_clk this write can land only nanoseconds before the next s_clk edge while s_bvalid is already high, and cocotb's RisingEdge+ReadOnly sampling of that first post-release edge is one edge out of phase with the value cdc_gray_fifo's own always_ff actually used for that edge's rd_en -- the software _count_handshakes_bg counter permanently undercounts by exactly one real, already-delivered B/R completion, and since the FIFO is then truly drained (no further supply), the test's completion gate (count == target) can never be satisfied -- a software-side stall, not a DUT deadlock.",
+      "evidence": [
+        "Internal FIFO pointer trace (wr_bin_q/rd_bin_q on u_b_fifo, sampled against a confirmed pre-release baseline of 0) shows exactly 9 real writes and 9 real reads for a 9-write saturation workload -- fully self-consistent, no data loss, no overflow, no reset-value-advertises-availability signature (the two prior bugs' signature, commits 4398c2e/7a9f9d4, was explicitly checked for and not found).",
+        "Synchronising the release write to a clean s_clk RisingEdge (instead of the async post-m_clk-edge write) makes the identical 9/4-ratio, all-fifos-full workload pass immediately and exactly (b=9/9, r=13/13, ~180ns after release, no stall) -- isolates the cause to the release-write timing in the test, not the RTL.",
+        "The same async (unsynchronised) release methodology at the REALISTIC direction (s=4 CPU-fast, m=9 fabric-slow) does NOT stall -- reaches the exact target within 2-3 polling windows because the fast s_clk quickly self-corrects any single missed sample; the slow s_clk in the reversed direction has no fast follow-up edge to compensate for the same miscount, which is why the bead's sweep only ever observed the artifact in the reversed direction.",
+        "Reproduced consistently at two reversed ratios (9/4 and 20/4 ns), both showing the identical 8-of-9 / 12-of-13 signature and identical fully-drained internal FIFO state at the point of 'stall'.",
+        "26/26 test_async_axi_fifo baseline regression (including the committed test_clock_ratio_slow_to_fast at 20/4 and test_burst_integrity/test_no_valid_withdrawal_stress at 9/4, all reversed-direction, light-workload) reconfirmed PASS before and unaffected by this investigation -- no RTL or committed test file was changed."
+      ],
+      "conclusion": "async_axi_fifo.sv / cdc_gray_fifo.sv are NOT shown to deadlock in the reversed-ratio direction. No fix_request filed -- no DUT bug found. Bead claude_verilog_test-nan left OPEN (P3, per task instructions git/bead ownership retained by the requester) with this characterisation; recommended next step if anyone wants permanent regression coverage is a committed test that synchronises its release to the read-domain clock edge (as demonstrated) before combining all-fifos-full saturation with a reversed ratio, and/or hardening _count_handshakes_bg or the release pattern itself against this async-write edge ambiguity.",
+      "regression_at_investigation_time": {
+        "test_async_axi_fifo": "26/26 PASS (baseline, unmodified)"
+      },
+      "checked_at": "2026-09-09T14:05:17.405486+00:00"
     }
   },
   "pipeline_session_id": null,
@@ -1500,6 +1517,18 @@
       "retry_strategy": "refine",
       "suggested_next_step": "proceed",
       "reason": "Session serviced beads e69/gyx/ocm/zwc against the first-ever passing ASAP7 detailed-routing run (RUN_2026-09-09_14-56-03). Fixed+verified zwc (sta pinned to 2.6.0 via pnr/Makefile shim). Confirmed e69 CPU block is real (61MB SPEF, STAPostPNR consumed it) with GPU/SoC still pending their own full runs. Triaged the 2045 residual DRC violations by rule and quantified the DRC-vs-memory/runtime tradeoff (2045@12GiB/3h25m complete vs 43@13GiB/8h41m incomplete). gyx remains OPEN: analyze_power_grid's PSM-0069 connectivity failure persists on the new OpenROAD 26Q2 toolchain (a shallower positive reading was a false negative caused by an earlier, distinct PSM-0021 zero-resistance abort on M1/M4, now root-caused to a tech-LEF/LAYERS_RC gap). No new full LibreLane flow was launched this session.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-09T14:05:17.405486+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Bead claude_verilog_test-nan (async_axi_fifo reversed-ratio stall) investigated via a temporary diagnostic module and internal signal tracing (not committed): root-caused to a testbench release-write synchronisation artifact in the diagnostic harness, not a DUT bug -- synchronising the release to a clean s_clk edge resolves it exactly. No fix_request filed; 26/26 test_async_axi_fifo baseline unaffected.",
       "constraint_ref": null
     }
   ],

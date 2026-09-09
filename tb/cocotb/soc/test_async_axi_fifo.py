@@ -298,7 +298,28 @@ async def _count_handshakes_bg(clock, vsig, rsig, counter: _HandshakeCounter) ->
     when a handshake actually completes, so the caller's completion
     condition (`count == expected`) can only become true once every
     expected handshake has truly occurred, regardless of how many idle gaps
-    preceded it."""
+    preceded it.
+    LIMITATION -- release writes must be synchronised to THIS clock (bead `nan`).
+    This counter samples at ReadOnly on each `clock` rising edge. If a test releases
+    backpressure (e.g. `dut.s_bready.value = 1`) from a point that is asynchronous to
+    `clock` -- typically right after an edge of the OTHER domain's clock -- and the
+    counted valid signal is already high, the first post-release edge can be sampled
+    one edge out of phase with what the DUT's own `always_ff` used at that same edge.
+    The count then permanently undercounts by exactly one real, already-delivered
+    completion. A gate built on `count == expected` can never be satisfied, which
+    looks like a DUT deadlock and is not one.
+
+    This only becomes a hard stall when `clock` is SLOW relative to the other domain
+    and the workload has zero slack (exact saturation): a fast `clock` self-corrects,
+    because its rapid follow-up edges recover the miscount before the target is
+    exhausted. That is why bead `nan`'s sweep saw it only at reversed clock ratios.
+    The committed suite does not hit this -- its reversed-ratio tests use light
+    round-trip workloads and the saturation test runs at 10/10 -- so this is latent,
+    not active.
+
+    If you add a test that releases backpressure and then waits on this counter,
+    synchronise the release to a `RisingEdge(clock)` first.
+    """
     while True:
         await RisingEdge(clock)
         await ReadOnly()
