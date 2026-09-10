@@ -1,0 +1,168 @@
+{
+    "// CONFIG_3014_NOTE": "LibreLane 3.0.14 variant of gpu/config.json, generated 2026-09-10. The original config.json is left byte-identical so the existing GPU sign-off stays reproducible -- same discipline as cpu/config_3014.json and soc/config_multiclock.json. GPU-SPECIFIC SETTINGS DELIBERATELY PRESERVED, each the result of a prior failure: SYNTH_STRATEGY 'DELAY 2' (DELAY 3 timed out at 2h48m+ on this 425K-gate design), PL_TIME_DRIVEN false (timing-driven GPL 2nd pass OOM-kills on <=16 GiB hosts), and SYNTH_SHARE_RESOURCES false (yosys 'share' SAT pass hangs on the 8-lane vector_alu shifters). Do not 'clean these up'.",
+    "DESIGN_NAME": "gpu_top",
+    "PDK": "asap7",
+    "STD_CELL_LIBRARY": "asap7sc7p5t_SIMPLE",
+    "VERILOG_FILES": [
+        "dir::../../../rtl/gpu/gpu_pkg.sv",
+        "dir::../sram_1rw_128x32_asap7_stub.v",
+        "dir::../../../rtl/gpu/vector_register_file.sv",
+        "dir::../../../rtl/gpu/vector_alu.sv",
+        "dir::../../../rtl/gpu/gpu_compute_unit.sv",
+        "dir::../../../rtl/gpu/warp_scheduler.sv",
+        "dir::../../../rtl/gpu/gpu_command_queue.sv",
+        "dir::../../../rtl/gpu/gpu_memory_unit.sv",
+        "dir::../../../rtl/gpu/memory_coalescer.sv",
+        "dir::../../../rtl/gpu/shared_memory.sv",
+        "dir::../../../rtl/gpu/gpu_top.sv"
+    ],
+    "CLOCK_PORT": "clk",
+    "CLOCK_NET": "clk",
+    "CLOCK_PERIOD": 1.75,
+    "FP_SIZING": "absolute",
+    "DIE_AREA": "0 0 340 340",
+    "CORE_AREA": "10 10 330 330",
+    "MACRO_PLACEMENT_CFG": "dir::macro_placement.cfg",
+    "PL_TARGET_DENSITY_PCT": 65,
+    "CTS_SINK_CLUSTERING_SIZE": 16,
+    "CTS_SINK_CLUSTERING_MAX_DIAMETER": 20,
+    "PL_TIME_DRIVEN": false,
+    "PL_ROUTABILITY_DRIVEN": true,
+    "FP_PDN_MULTILAYER": true,
+    "FP_PDN_ENABLE_RAILS": true,
+    "PDN_CONNECT_MACROS_TO_GRID": true,
+    "ERROR_ON_PDN_VIOLATIONS": false,
+    "FP_PDN_RAIL_WIDTH": 0.054,
+    "FP_PDN_HWIDTH": 0.09,
+    "FP_PDN_VWIDTH": 0.12,
+    "FP_PDN_HSPACING": 0.09,
+    "FP_PDN_VSPACING": 0.12,
+    "FP_PDN_HPITCH": 4.5,
+    "FP_PDN_VPITCH": 4.5,
+    "FP_PDN_HOFFSET": 0.5,
+    "FP_PDN_VOFFSET": 0.5,
+    "FP_PDN_CORE_RING_HWIDTH": 0.162,
+    "FP_PDN_CORE_RING_VWIDTH": 0.216,
+    "FP_PDN_CORE_RING_HSPACING": 0.162,
+    "FP_PDN_CORE_RING_VSPACING": 0.216,
+    "FP_PDN_CORE_RING_HOFFSET": 0.5,
+    "FP_PDN_CORE_RING_VOFFSET": 0.5,
+    "RT_MAX_LAYER": "M9",
+    "DRT_THREADS": 12,
+    "FP_IO_HLENGTH": 4.0,
+    "FP_IO_VLENGTH": 4.0,
+    "FP_IO_MIN_DISTANCE": 1.0,
+    "FP_IO_HTHICKNESS_MULT": 8,
+    "FP_IO_VTHICKNESS_MULT": 8,
+    "GRT_ADJUSTMENT": 0.1,
+    "GRT_LAYER_ADJUSTMENTS": [
+        0.5,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+    ],
+    "GRT_ALLOW_CONGESTION": true,
+    "// LAYERS_RC_NOTE": "Converted from the flat '<layer> <cap> <res>' string to 3.0.14's nested per-IPVT-corner mapping. NOTE THE OLD ORDER IS CAP-THEN-RES. M1 ADDED (bead gyx): the ASAP7 tech LEF carries no RESISTANCE/CAPACITANCE on ANY routing layer, and librelane's irdrop.tcl sources set_rc.tcl, so LAYERS_RC is what feeds PSM -- without M1 here, analyze_power_grid reports PSM-0021 zero-resistance. Values are ORFS's own.",
+    "LAYERS_RC": {
+        "*": {
+            "M1": {
+                "res": 0.0704175,
+                "cap": 1e-10
+            },
+            "M2": {
+                "res": 0.0462311,
+                "cap": 0.184542
+            },
+            "M3": {
+                "res": 0.0363251,
+                "cap": 0.153955
+            },
+            "M4": {
+                "res": 0.0203083,
+                "cap": 0.189434
+            },
+            "M5": {
+                "res": 0.0193005,
+                "cap": 0.171593
+            },
+            "M6": {
+                "res": 0.0118619,
+                "cap": 0.176146
+            },
+            "M7": {
+                "res": 0.0125311,
+                "cap": 0.14703
+            }
+        }
+    },
+    "USE_SYNLIG": true,
+    "SYNTH_STRATEGY": "DELAY 2",
+    "SYNTH_SHARE_RESOURCES": false,
+    "SYNTH_HIERARCHY_MODE": "keep",
+    "SYNTH_SIZING": true,
+    "SYNTH_ABC_BUFFERING": true,
+    "MAX_FANOUT_CONSTRAINT": 16,
+    "PNR_SDC_FILE": "dir::constraints/asap7_gpu.sdc",
+    "SIGNOFF_SDC_FILE": "dir::constraints/asap7_gpu.sdc",
+    "FALLBACK_SDC_FILE": "dir::constraints/asap7_gpu.sdc",
+    "RUN_POST_GPL_DESIGN_REPAIR": true,
+    "RUN_POST_CTS_RESIZER_TIMING": false,
+    "RUN_POST_GRT_RESIZER_TIMING": true,
+    "RUN_POST_GRT_DESIGN_REPAIR": true,
+    "MAX_TRANSITION_CONSTRAINT": 15.0,
+    "// UNITS_S9F_1": "librelane declares PL/GRT_RESIZER_*_SLACK_MARGIN as units=ns in its schema, but scripts/openroad/rsz_timing_post{cts,grt}.tcl pass the value RAW to OpenROAD, which reads it in the Liberty time_unit. ASAP7 Liberty is time_unit 1ps -- so these are PS values, NOT ns. The old 0.075/0.100 values meant 0.075-0.1 ps (~0 guard band). See claude_verilog_test-s9f.",
+    "// UNITS_S9F_2": "Values below are real ps, sized at 2.5% of the 1750 ps GPU/fabric period for setup / 1.5% for hold, rounded to 5 ps -- the same percentage basis used for the CPU (780 ps) and SoC (1750 ps) configs so all three ASAP7 designs share one policy. Re-validate on the next real ASAP7 GPU PD run -- not exercised here.",
+    "PL_RESIZER_SETUP_SLACK_MARGIN": 45,
+    "GRT_RESIZER_SETUP_SLACK_MARGIN": 45,
+    "PL_RESIZER_HOLD_SLACK_MARGIN": 25,
+    "GRT_RESIZER_HOLD_SLACK_MARGIN": 25,
+    "PL_RESIZER_ALLOW_SETUP_VIOS": true,
+    "HOLD_VIOLATION_CORNERS": [
+        "nom_tt_025C_0p7V"
+    ],
+    "EXTRA_LEFS": [
+        "dir::../sram_1rw_128x32_asap7.lef"
+    ],
+    "EXTRA_LIBS": [
+        "dir::../sram_1rw_128x32_asap7_TT_0p7V_25C.lib"
+    ],
+    "EXTRA_GDS_FILES": [],
+    "PDN_MACRO_CONNECTIONS": [
+        ".*u_bank VDD VSS vdd vss"
+    ],
+    "RUN_ANTENNA_REPAIR": true,
+    "RUN_HEURISTIC_DIODE_INSERTION": true,
+    "GRT_ANTENNA_ITERS": 5,
+    "GRT_ANTENNA_MARGIN": 20,
+    "DIODE_ON_PORTS": "in",
+    "RUN_SPEF_EXTRACTION": true,
+    "RUN_MCSTA": true,
+    "RUN_IRDROP_REPORT": false,
+    "RUN_MAGIC_DRC": false,
+    "RUN_KLAYOUT_DRC": false,
+    "RUN_KLAYOUT_XOR": false,
+    "RUN_LVS": false,
+    "LIB": {
+        "nom_tt_025C_0p7V": [
+            "/home/neuromorphic/pdk/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib/asap7sc7p5t_AO_RVT_TT_nldm_211120.lib",
+            "/home/neuromorphic/pdk/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib/asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.lib",
+            "/home/neuromorphic/pdk/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib/asap7sc7p5t_OA_RVT_TT_nldm_211120.lib",
+            "/home/neuromorphic/pdk/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib",
+            "/home/neuromorphic/pdk/asap7/libs.ref/asap7sc7p5t_SIMPLE/lib/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib"
+        ]
+    },
+    "DEFAULT_CORNER": "nom_tt_025C_0p7V",
+    "STA_CORNERS": [
+        "nom_tt_025C_0p7V"
+    ],
+    "TIMING_VIOLATION_CORNERS": [
+        "*tt*"
+    ],
+    "// PIN_ORDER_NOTE": "FP_PIN_ORDER_CFG pins the macro's boundary pin SIDE AND ORDER. Without it OpenROAD free-floats pin assignment per block run -- measured on the CPU macro (GH #96): two consecutive regenerations moved 393 of 401 pins, which perturbed SoC placement around u_cpu and took cpu_clk setup WNS from -60.66 to -596.00 ps (see pnr/asap7/cpu/README_pin_order.md). This file's side/order was generated from the checked-in, run-23-signed-off pnr/asap7/soc/macro/gpu_top.lef -- it is generated, not hand-tuned, because the GPU has no measured timing problem to tune against. NOTE: pinning side+order does NOT reproduce that LEF's absolute pin coordinates -- io_place distributes pins evenly along each edge, while the checked-in LEF's spacing came from irregular free-floating placement, so the first regeneration under this file will shift the boundary once (measured: median 42.6um / max 223.5um, order-preserving, 0/325 pins land on the old coordinates) before becoming stable forever. See pnr/asap7/gpu/README_pin_order.md for the full measurement and the correct determinism criterion (same cfg -> identical output across runs, not '0 pins moved vs the old LEF'). io_place.py ERRORS if a design pin is missing from the file or vice versa (power/ground are excluded by the tool), so adding a port fails loudly instead of silently reshuffling.",
+    "FP_PIN_ORDER_CFG": "dir::pin_order.cfg",
+    "// DRT_OPT_ITERS_NOTE": "Bounded to 12 (3.0.14 default is 64). On the CPU block the measured trade-off was 12 iters -> 2045 DRC / 12 GiB peak / 3h25m and COMPLETES, versus 64 -> 43 DRC but 13 GiB peak and DIED before write_views. The GPU is ~11x the CPU's instance count (814,908 vs 75,194), so peak memory is the binding risk on this 15.9 GB host -- start bounded and only raise it if the run completes with headroom.",
+    "DRT_OPT_ITERS": 12,
+    "// SPEF_NOTE": "RUN_SPEF_EXTRACTION/RUN_MCSTA enabled for bead e69's GPU half. The real ORFS OpenRCX deck is already installed and CPU-validated; what was missing until 2026-09-09 was a run with actual routed wires to extract from. Validate this block on its own before trusting any extracted number, mirroring the CPU note at pnr/asap7/cpu/config.json:127."
+}
