@@ -2250,3 +2250,36 @@ the positive control (forcing `gen_data_sram[0]` onto the identical residue clas
 reproduce the failure, so the offset mechanism is necessary-looking but not sufficient, and not
 yet a general placement rule. The outstanding `detailed_route_debug -pa/-pin` access-point dump
 experiment was not attempted this session either — still an open tooling gap.
+
+#### UPDATE 2026-09-10 (bead `e69`) — the GPU macro-path separator rule is INVERTED under LibreLane 3.0.14
+
+`pnr/asap7/gpu/macro_placement.cfg`'s own header records that with
+`SYNTH_HIERARCHY_MODE=keep`, LibreLane **2.4.13** names the SRAM bank instances
+`u_sm/g_bank[N].u_bank` — a **slash** between module levels, a **dot** for the leaf inside the
+generate-block array. That asymmetry was itself a hard-won finding.
+
+**LibreLane 3.0.14 emits dots throughout.** Straight from
+`RUN_2026-09-10_09-35-58/05-yosys-synthesis/gpu_top.nl.v`:
+
+```
+sram_1rw_128x32_asap7 \u_sm.g_bank[0].u_bank
+sram_1rw_128x32_asap7 \u_sm.g_bank[10].u_bank
+```
+
+Feeding the 2.4.13 slash form to 3.0.14 makes `Odb.ManualMacroPlacement` list **all 32 macros**
+as unplaceable and kill the flow at **step 16, ~23 minutes in** (`RUN_2026-09-10_09-35-58`). The
+step log is misleading: it prints the macro list and then `Design name: gpu_top` and stops, with
+no "not found" wording, so the cause is not obvious from the tail.
+
+**So the rule is version-specific, and stating it unqualified is now wrong.** Both forms are
+kept side by side:
+
+| config | placement file | separator |
+| --- | --- | --- |
+| `pnr/asap7/gpu/config.json` (2.4.13) | `macro_placement.cfg` | `u_sm/g_bank[N].u_bank` |
+| `pnr/asap7/gpu/config_3014.json` (3.0.14) | `macro_placement_3014.cfg` | `u_sm.g_bank[N].u_bank` |
+
+**Check the netlist, do not trust the rule.** Before any macro-placement run on a new toolchain,
+grep the actual synthesis output for the macro cell name and copy the instance path verbatim —
+one `grep -oE "sram_[a-z0-9_]+ [^ (]+"` on `*/05-yosys-synthesis/*.nl.v` costs seconds and would
+have saved the 23-minute failure.
