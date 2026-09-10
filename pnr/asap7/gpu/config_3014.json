@@ -48,7 +48,7 @@
     "FP_PDN_CORE_RING_HOFFSET": 0.5,
     "FP_PDN_CORE_RING_VOFFSET": 0.5,
     "RT_MAX_LAYER": "M9",
-    "DRT_THREADS": 12,
+    "DRT_THREADS": 2,
     "FP_IO_HLENGTH": 4.0,
     "FP_IO_VLENGTH": 4.0,
     "FP_IO_MIN_DISTANCE": 1.0,
@@ -164,5 +164,6 @@
     "FP_PIN_ORDER_CFG": "dir::pin_order.cfg",
     "// DRT_OPT_ITERS_NOTE": "Bounded to 12 (3.0.14 default is 64). On the CPU block the measured trade-off was 12 iters -> 2045 DRC / 12 GiB peak / 3h25m and COMPLETES, versus 64 -> 43 DRC but 13 GiB peak and DIED before write_views. The GPU is ~11x the CPU's instance count (814,908 vs 75,194), so peak memory is the binding risk on this 15.9 GB host -- start bounded and only raise it if the run completes with headroom.",
     "DRT_OPT_ITERS": 12,
-    "// SPEF_NOTE": "RUN_SPEF_EXTRACTION/RUN_MCSTA enabled for bead e69's GPU half. The real ORFS OpenRCX deck is already installed and CPU-validated; what was missing until 2026-09-09 was a run with actual routed wires to extract from. Validate this block on its own before trusting any extracted number, mirroring the CPU note at pnr/asap7/cpu/config.json:127."
+    "// SPEF_NOTE": "RUN_SPEF_EXTRACTION/RUN_MCSTA enabled for bead e69's GPU half. The real ORFS OpenRCX deck is already installed and CPU-validated; what was missing until 2026-09-09 was a run with actual routed wires to extract from. Validate this block on its own before trusting any extracted number, mirroring the CPU note at pnr/asap7/cpu/config.json:127.",
+    "// DRT_THREADS_NOTE": "Lowered 12 -> 2 on 2026-09-10. MEASURED on the same design and the same post-GRT ODB, changing only this value: 12 threads peaked at 13,949 MB and was killed at 'Start 0th optimization iteration' on this 15.9 GB host; 2 threads peaked at 4,620 MB and ran comfortably. Each TritonRoute worker holds its own routing state, so thread count multiplies the working set -- it is a MEMORY knob, not just a speed knob. Raise it only with headroom to spare, and re-measure."
 }
