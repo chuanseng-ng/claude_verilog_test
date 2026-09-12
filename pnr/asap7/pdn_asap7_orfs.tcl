@@ -64,12 +64,16 @@ add_pdn_stripe -grid top -layer M2 -width 0.018 -pitch 0.54 -offset 0 -followpin
 # larger blocks; on this 130x130 um CPU it spends routing tracks we need. Measured
 # worst-case IR drop on the CPU block, against a typical 5 % budget:
 #   M5 2.16 / M6 4.32  -> 0.18 % VDD / 0.19 % VSS   (27 999 shapes)
-#   M5 4.32 / M6 8.64  -> 0.51 % / 0.52 %           (13 988 shapes)  <- chosen
-#   M5 6.48 / M6 12.96 -> 1.33 % / 1.37 %           ( 9 792 shapes)
+#   M5 4.32 / M6 8.64  -> 0.51 % / 0.52 %           (13 988 shapes)
+#   M5 6.48 / M6 12.96 -> 1.33 % / 1.37 %           ( 9 792 shapes)  <- chosen
 # All three build cleanly (0 channels, check_power_grid PASS, 0 unconnected), so this
-# is purely an IR-vs-routing-headroom trade. Go sparser only if routing still fails.
-add_pdn_stripe -grid top -layer M5 -width 0.12  -spacing 0.072 -pitch 4.32  -offset 1.50
-add_pdn_stripe -grid top -layer M6 -width 0.288 -spacing 0.096 -pitch 8.64  -offset 1.504
+# is purely an IR-vs-routing-headroom trade, and IR has ~4x margin left even at the
+# sparsest setting. The sparsest is what this host can actually route: at ORFS density
+# detailed routing reached 122 121 violations and 13.4 GB at 90 % of iteration 0 (of 12)
+# and was OOM-killed on a 15.9 GB machine -- twice, once taking the terminal scope with
+# it via systemd-oomd. Revisit the density if this ever runs on a larger host.
+add_pdn_stripe -grid top -layer M5 -width 0.12  -spacing 0.072 -pitch 6.48  -offset 1.50
+add_pdn_stripe -grid top -layer M6 -width 0.288 -spacing 0.096 -pitch 12.96 -offset 1.504
 
 add_pdn_connect -grid top -layers {M1 M2}
 add_pdn_connect -grid top -layers {M2 M5}
