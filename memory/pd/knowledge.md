@@ -2440,3 +2440,28 @@ the cheapest result you would not want to recompute, then escalate depth in late
 Result on this design: 276 → **224 unproven, 0 disproven** (64 209 / 64 433 = 99.65 % proven). The
 52 that induction closed were the PMU FSM cones; what remains is 7 × 32 bits of DMA address/count
 registers and the crossbar read-address they drive.
+
+### Prove sv2v output at MODULE level, not flat (bead `q7n`)
+
+sv2v is source-to-source, so module boundaries survive — 28 modules remain in
+`soc_top_sv2v.v`. That makes a per-module miter possible, and it is dramatically cheaper than
+the flat SoC proof:
+
+| | flat `soc_top` | module `dma_engine` |
+| --- | --- | --- |
+| front end | ~90 min | seconds |
+| `equiv_induct` depth that fits | seq 5 only | seq 20 ran to completion |
+| peak | 11.5 GB (seq 5); seq 7/10 die at 12.57 GB | 7.5 GB |
+
+**The flat depth ceiling is a hard wall, not a tunable.** `equiv_simple -seq 20`,
+`equiv_induct -seq 10` and `equiv_induct -seq 7` all die at an identical 12.57–12.59 GB RSS.
+`equiv_purge` before the deep pass does not help — the purged checkpoint is the same 96 MB
+because the unproven cones pull in most of the design regardless.
+
+**But depth was not what the residual needed.** At module level `equiv_induct -seq 20` ran to
+completion and still proved none of the 128 DMA points, so those cones resist induction even
+standalone. Two sv2v transforms sit exactly there — a dropped width cast
+(`min2(words_rem_q, 32'(MAX_BURST_BEATS))` → `min2(words_rem_q, MAX_BURST_BEATS)`) and struct
+fields rewritten as bit slices (`q_mem[q_head].src` → `q_mem[q_head][95-:32]`). Both are
+equivalent only over reachable states, which is what an induction proof lacks an invariant for.
+A wrong field offset would appear as *disproven*; nothing is disproven anywhere.
