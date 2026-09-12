@@ -46,7 +46,7 @@
     "FP_SIZING": "absolute",
     "DIE_AREA": "0 0 130 130",
     "CORE_AREA": "5 5 125 125",
-    "FP_CORE_UTIL": 50,
+    "FP_CORE_UTIL": 45,
     "FP_ASPECT_RATIO": 1,
     "MACRO_PLACEMENT_CFG": "dir::macro_placement_3014.cfg",
     "PL_TARGET_DENSITY_PCT": 40,
@@ -74,7 +74,7 @@
     "FP_PDN_CORE_RING_HOFFSET": 0.5,
     "FP_PDN_CORE_RING_VOFFSET": 0.5,
     "RT_MAX_LAYER": "M7",
-    "DRT_THREADS": 4,
+    "DRT_THREADS": 2,
     "FP_IO_HLENGTH": 4.0,
     "FP_IO_VLENGTH": 4.0,
     "FP_IO_MIN_DISTANCE": 1.0,
@@ -240,5 +240,6 @@
         }
     },
     "// DIODE_NOTE": "ASAP7 SIMPLE HAS NO ANTENNA DIODE. The PDK config sets DIODE_CELL=DECAPx1_ASAP7_75t_R with DIODE_CELL_PIN=\"\" (libs.tech/openlane/asap7sc7p5t_SIMPLE/config.tcl:69-70); DECAPx1 is a decap whose only pins are VDD/VSS. LibreLane 3.0.14 joins the two into 'DECAPx1_ASAP7_75t_R/', and odbpy/diodes.py:248 then does findITerm('') -> None -> AttributeError: 'NoneType' object has no attribute 'connect'. Killed RUN_2026-09-12_10-27-19 at step 42 (odb-diodesonports). Earlier runs never hit it because they were launched with a narrower step set, not because the config differed. Both flags off: there is no cell to insert, so neither step can ever succeed on this PDK. ALSO: repair_antennas itself fails -- antenna_repair.tcl:27 dies with \"can't read 'diode_mterm'\" because OpenROAD needs a diode PORT and DECAPx1 has none. That killed RUN_2026-09-12_11-03-29 at step 43 (openroad-repairantennas). So RUN_ANTENNA_REPAIR=false and DRT_ANTENNA_REPAIR_ITERS=0 too -- the latter matters most: drt.tcl runs the same repair_antennas AFTER detailed routing, which would throw away hours of work. Antenna repair is simply not available on ASAP7 SIMPLE; antenna CHECKING still runs.",
-    "DRT_ANTENNA_REPAIR_ITERS": 0
+    "DRT_ANTENNA_REPAIR_ITERS": 0,
+    "// DRT_MEM_NOTE": "2026-09-12: detailed routing with a REAL power grid does not fit this 15.9 GB host at FP_CORE_UTIL=50. Three attempts were OOM-killed between 70-90%% of DRT iteration 0 (of 12), at every PDN density: ORFS 2.16/4.32 -> 122121 viol / 13.4 GB, 2x-sparse -> killed, 3x-sparse 6.48/12.96 -> 83207 viol / 11.2 GB. For reference the PDN-FREE run peaked 12.4 GB and did converge (1991 DRC), so the gap is narrow rather than fundamental -- a real grid costs roughly 20-30%% more violations and the host has no headroom left. FP_CORE_UTIL 50->45 gives the router more area so congestion and marker memory drop; DRT_THREADS 4->2 cuts per-worker state. Both are host accommodations, not design requirements: restore 50/8 on a machine with >=32 GB."
 }
