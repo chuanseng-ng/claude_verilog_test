@@ -2413,3 +2413,30 @@ makes the flow's own cgroup hit its limit first, so the kill is contained to the
 15.9 GB host, 12 GB is the working value — 14 GB was already close enough to let oomd fire first.
 This is the mitigation for the `project_gpu_grt_congestion` memory's "ask the user to stop oomd"
 note when stopping oomd is not an option.
+
+### Checkpoint before the expensive proof, not after (yosys equiv, bead `q7n`)
+
+`equiv_induct` on the flattened SoC was OOM-killed twice, each time taking the **90-minute front
+end** (`read_slang` → `flatten` → `equiv_make` → `equiv_simple`) with it. The proof is not the
+expensive part; rebuilding the design is. Split it:
+
+```tcl
+# pass 1 (~85 min) — produce the checkpoint and stop
+equiv_make gold gate equiv ; hierarchy -top equiv ; equiv_simple -seq 5 ; equiv_status
+write_rtlil equiv_checkpoint.il          # 96 MB
+
+# pass 2 (12 min, separate process, fresh heap)
+read_rtlil equiv_checkpoint.il ; hierarchy -top equiv ; equiv_induct -seq 5 ; equiv_status
+```
+
+`equiv_induct -seq 5` then completes in **12 minutes at 11.5 GB peak** — the same proof that
+previously died at a 7 GB cap after 81 minutes.
+
+**The mistake to avoid:** my first rewrite put `write_rtlil` *after* a deeper
+`equiv_simple -seq 20`. That pass needs >12.6 GB, was killed at a 12 GiB cap, and the checkpoint
+was therefore never written — the front end was lost a second time. Checkpoint immediately after
+the cheapest result you would not want to recompute, then escalate depth in later passes.
+
+Result on this design: 276 → **224 unproven, 0 disproven** (64 209 / 64 433 = 99.65 % proven). The
+52 that induction closed were the PMU FSM cones; what remains is 7 × 32 bits of DMA address/count
+registers and the crossbar read-address they drive.
