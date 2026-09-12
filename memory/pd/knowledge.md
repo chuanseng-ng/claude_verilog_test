@@ -2283,3 +2283,59 @@ kept side by side:
 grep the actual synthesis output for the macro cell name and copy the instance path verbatim —
 one `grep -oE "sram_[a-z0-9_]+ [^ (]+"` on `*/05-yosys-synthesis/*.nl.v` costs seconds and would
 have saved the 23-minute failure.
+
+---
+
+## UPDATE 2026-09-12 — ASAP7 has never had a power grid (bead `4l8`, found under `gyx`)
+
+**Finding.** Every ASAP7 run in this repo committed **zero** PDN shapes. Counting `dbSWire`
+shapes on each POWER/GROUND net in the post-PDN ODB:
+
+| ODB | shapes |
+| --- | --- |
+| `sky130/soc` `RUN_2026-07-31_05-13-54/17-openroad-generatepdn` | VPWR 65 610 / VGND 65 939 |
+| `asap7/soc` `RUN_2026-08-09_14-36-16/17-openroad-generatepdn` (run 23, accepted #96 sign-off) | **0 / 0** |
+| `asap7/cpu` `RUN_2026-09-10_05-13-18/20-openroad-generatepdn` (3.0.14) | **0 / 0** |
+
+The sky130 row is the positive control — same script, same OpenROAD 26Q2 binary — so the probe
+is sound. Script: `/nobackup/asap7_debug/gyx_pdn/pgcount.tcl`.
+
+**Mechanism.** `pdngen` is `check_setup; build_grids; write_to_db; reset_shapes`. ASAP7 raises
+`[ERROR PDN-0179] Unable to repair all channels` **inside `build_grids`**, before `write_to_db`.
+Our warn-and-continue patch caught the error and continued — with nothing committed.
+
+**Correction to earlier knowledge.** The "~7–8 M benign PDN violations = M1-only tap-cell
+connectivity artifact" story is **wrong**. There were no violations because there were no
+shapes. `PSM-0069`/`0038`/`0039` are downstream of the absent grid, not of tap cells. And every
+ASAP7 routing result was routed with M1/M2/M5 free of PDN metal — those DRC counts are a lower
+bound, not closure.
+
+**Fix applied** (both trees, `librelane/scripts/openroad/pdn.tcl`): decompose `pdngen` so a
+failed `build_grids` still commits:
+
+```tcl
+pdn::check_setup
+if {[catch {pdn::build_grids $_trim} e]} { puts stderr "WARNING: ... $e" }
+if {[catch {pdn::write_to_db 1 ""} e]} { puts stderr "WARNING: ... $e" }
+pdn::reset_shapes
+```
+
+CPU block goes 0 → **16 071 VDD / 17 151 VSS** shapes (M1 rails 222, M2 2493, M3 2466, M5 27,
+spanning the full core). Residual unconnected: 550 VDD / 414 VSS on **M4 — the SRAM macro PG
+pins** — plus 18+18 M1; macro via insertion runs *after* channel repair, so the abort skips it.
+
+**PDN-0179 itself is still open.** 27 channels, all on M1, in the macro-*free* regions
+x 82.188–124.956 and y 104.193–123.417 (macros x 6.37–72.16, y 5–94). Ruled out: PDN halo
+(identical channels at 10/2/0 µm), macro PG pin case in `PDN_MACRO_CONNECTIONS` (all 10 SRAMs
+already connect VDD→VDD / VSS→VSS), M3-as-horizontal (0 channels but rails never connect —
+M1→M5 stack invalid; 1001 unconnected instances), M4-as-horizontal at legal width 0.12
+(`add_pdn_connect -grid macro -layers "M4 M5"` is then redundant → `PDN-0186`).
+`pdn::allow_repair_channels 1` is the wrong signature → `PDN-0233`.
+
+**ASAP7 geometry facts worth keeping.** Layer directions: M1 V, M2 H, M3 V, M4 H, M5 V — but
+std-cell rails sit on **M1 running horizontally** (non-preferred). Legal strap widths:
+M2 `0.0180/0.0900/0.1620/0.2340/0.3060/0.3780`, M4 `0.0240/0.1200/0.2160/0.3120/0.4080`.
+SRAM macro PG pins are **M4**, and the macro OBS covers M1–M4.
+
+**Repro harness** (no run dir touched; every `SAVE_*` redirected):
+`/nobackup/asap7_debug/gyx_pdn/variant.sh <name> [env-extra] [cfg-extra]`.

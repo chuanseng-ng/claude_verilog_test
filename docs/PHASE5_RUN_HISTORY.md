@@ -532,3 +532,37 @@ had just killed a 9-hour in-flight run.
   `claude_verilog_test-g0o`).
 - Timing showed run-to-run variance (run 14 +113 ps vs run 15 −341 ps with the LEF
   change); the +113 ps margin is an indicative single-run result.
+
+## PDN caveat (2026-09-12, beads `gyx` / `4l8`) — every ASAP7 run has an empty power grid
+
+Counting `dbSWire` shapes on the POWER/GROUND nets of each run's post-PDN ODB:
+
+| ODB | PG shapes |
+| --- | --- |
+| `pnr/sky130/soc/runs/RUN_2026-07-31_05-13-54/17-openroad-generatepdn` | VPWR 65 610 / VGND 65 939 |
+| `pnr/asap7/soc/runs/RUN_2026-08-09_14-36-16/17-openroad-generatepdn` — **run 23, the accepted #96 sign-off** | **0 / 0** |
+| `pnr/asap7/cpu/runs/RUN_2026-09-10_05-13-18/20-openroad-generatepdn` — 3.0.14 | **0 / 0** |
+
+The sky130 row is the positive control (same script, same OpenROAD 26Q2 binary), so this is a
+real absence, not a measurement artifact.
+
+**Cause.** `pdngen` = `check_setup; build_grids; write_to_db; reset_shapes`. On ASAP7,
+`[ERROR PDN-0179] Unable to repair all channels` fires *inside* `build_grids`, before
+`write_to_db`. The local warn-and-continue patch in `pdn.tcl` (bead `ocm`) swallowed the error
+and let the flow continue — with nothing written. The flow's "benign PDN-0179" line therefore
+meant "PDN silently absent".
+
+**What this withdraws.** The "PDN = benign tap-cell artifact" note on the CPU/GPU/SoC sign-offs
+is withdrawn: there were no violations because there were no shapes. `analyze_power_grid`'s
+`PSM-0069` was never a tap-cell connectivity problem either — it had no grid to analyse.
+
+**What it does *not* change.** Timing, power and area were always GRT/estimate-based and are
+unaffected in kind. What does change is routing: every ASAP7 route ran with M1/M2/M5 free of
+PDN metal, so all ASAP7 DRC counts (including the 171-DRC CPU result on bead `ocm`) are a
+lower bound, not closure. Re-run the routing gate once the grid actually commits.
+
+**Fix landed in the toolchain** (both LibreLane trees, `librelane/scripts/openroad/pdn.tcl`):
+decompose `pdngen` so a failed `build_grids` still commits what it built. On the CPU block this
+goes 0 → 16 071 VDD / 17 151 VSS shapes. Residual: 550 VDD / 414 VSS unconnected shapes on M4
+(the SRAM macro PG pins, skipped because macro via insertion follows channel repair) + 18+18 on
+M1. Root-causing PDN-0179 itself is tracked on bead `4l8`.
