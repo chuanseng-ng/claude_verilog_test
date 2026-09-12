@@ -607,3 +607,39 @@ shape geometry do not correspond to the same design state. It demonstrates the f
 end-to-end; it is **not** a sign-off IR figure. A full 3.0.14 CPU run with `PDN_CFG` +
 `VIAS_R` + `RUN_IRDROP_REPORT=true` is still required, and routing with a real grid on the
 tracks will be harder than every previous ASAP7 route.
+
+### Routing with a real PDN is host-blocked (2026-09-12, bead `4l8`)
+
+Every ASAP7 routing result in this repo was produced with **no** power grid on the tracks (see the
+PDN caveat above). With the grid fixed and actually committed, detailed routing no longer fits on
+this 15.9 GB host. Four attempts, all on the CPU block:
+
+| PDN density | util / DRT threads | cap | reached | violations | peak |
+| --- | --- | --- | --- | --- | --- |
+| ORFS M5 2.16 / M6 4.32 | 50 / 8 | 12 GiB | 90 % of iter 0 | 122 121 | 13.4 GB |
+| ORFS M5 2.16 / M6 4.32 | 50 / 4 | 14 GiB | 90 % of iter 0 | 122 121 | 13.4 GB |
+| 3× sparse 6.48 / 12.96 | 50 / 4 | 12 GiB | ~75 % of iter 0 | 83 207 | 11.2 GB |
+| 3× sparse 6.48 / 12.96 | 45 / 2 | 13 GiB | 80 % of iter 0 | 112 764 | 12 GB |
+
+All four died inside **iteration 0 of 12**. For reference, the PDN-free run peaked at 12.4 GB and
+did converge, to 1991 DRC — so a real grid costs roughly 20–30 % more violations, and this host has
+no headroom to absorb that.
+
+**What did not work, and is worth not retrying blindly:**
+
+* *Sparser straps.* Three densities were measured (0.18 %, 0.52 %, 1.37 % worst-case IR). Violation
+  counts barely moved — the congestion is driven by the **M2 followpins**, one track per row, not by
+  the M5/M6 mesh. Sparser straps buy IR margin, not routing headroom.
+* *Lower utilization.* `FP_CORE_UTIL` 50→45 produced an identical violation count (44 103 at the
+  same checkpoint) and **more** memory, because the larger die means more area to hold state for.
+* *Fewer DRT threads.* 8→4→2 moved the peak only marginally; memory is dominated by violation
+  markers, not per-worker state.
+* *Avoiding M2 entirely.* Rails on M1 climbing straight to M3 leaves every rail unconnected —
+  pdngen will not stack M1→M3 through M2. M1→M2 followpins are the only legal way up, so the M2
+  cost is structural.
+
+**Conclusion.** PDN-clean routing on this design needs a machine with ≥32 GB, the same gate already
+recorded for the Sky130 GPU stages. The PDN fix itself is verified independently of routing: the
+grid builds and passes `check_power_grid` on CPU, GPU and SoC, and IR drop runs end-to-end. What
+remains unverified is whether this design still closes DRC once the grid occupies the tracks — and
+the honest expectation, given 1991 DRC PDN-free, is that it will need work.
