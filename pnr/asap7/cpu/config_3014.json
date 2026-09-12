@@ -173,10 +173,10 @@
         ".*(u_tag_sram|u_data_sram) VDD VSS vdd vss"
     ],
     "RUN_ANTENNA_REPAIR": true,
-    "RUN_HEURISTIC_DIODE_INSERTION": true,
+    "RUN_HEURISTIC_DIODE_INSERTION": false,
     "GRT_ANTENNA_ITERS": 5,
     "GRT_ANTENNA_MARGIN": 20,
-    "DIODE_ON_PORTS": "in",
+    "DIODE_ON_PORTS": "none",
     "// RUN_SPEF_EXTRACTION_NOTE": "Flipped true 2026-08-15 (claude_verilog_test-e69): rcx_rules.pex was a 0-byte stub in ~/pdk/asap7, blocking OpenROAD.RCX/STAPostPNR on every prior ASAP7 run. Real ORFS OpenRCX rules now vendored via tools/setup/install_asap7_rcx_rules.py -- see that script's docstring and the bead for geometry-equivalence evidence. Validated on this (CPU) block only; GPU/SoC configs deliberately left at false pending their own validation.",
     "RUN_SPEF_EXTRACTION": true,
     "RUN_MCSTA": true,
@@ -238,5 +238,6 @@
                 "res": 0.0063
             }
         }
-    }
+    },
+    "// DIODE_NOTE": "ASAP7 SIMPLE HAS NO ANTENNA DIODE. The PDK config sets DIODE_CELL=DECAPx1_ASAP7_75t_R with DIODE_CELL_PIN=\"\" (libs.tech/openlane/asap7sc7p5t_SIMPLE/config.tcl:69-70); DECAPx1 is a decap whose only pins are VDD/VSS. LibreLane 3.0.14 joins the two into 'DECAPx1_ASAP7_75t_R/', and odbpy/diodes.py:248 then does findITerm('') -> None -> AttributeError: 'NoneType' object has no attribute 'connect'. Killed RUN_2026-09-12_10-27-19 at step 42 (odb-diodesonports). Earlier runs never hit it because they were launched with a narrower step set, not because the config differed. Both flags off: there is no cell to insert, so neither step can ever succeed on this PDK."
 }
