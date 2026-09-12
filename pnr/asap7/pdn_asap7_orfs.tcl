@@ -60,8 +60,16 @@ define_pdn_grid -name top -voltage_domains CORE -pins {M6}
 add_pdn_stripe -grid top -layer M1 -width 0.018 -pitch 0.54 -offset 0 -followpins
 add_pdn_stripe -grid top -layer M2 -width 0.018 -pitch 0.54 -offset 0 -followpins
 
-add_pdn_stripe -grid top -layer M5 -width 0.12  -spacing 0.072 -pitch 2.16  -offset 1.50
-add_pdn_stripe -grid top -layer M6 -width 0.288 -spacing 0.096 -pitch 4.32  -offset 1.504
+# Strap pitches are 2x ORFS's (M5 2.16 / M6 4.32). ORFS's density is aimed at much
+# larger blocks; on this 130x130 um CPU it spends routing tracks we need. Measured
+# worst-case IR drop on the CPU block, against a typical 5 % budget:
+#   M5 2.16 / M6 4.32  -> 0.18 % VDD / 0.19 % VSS   (27 999 shapes)
+#   M5 4.32 / M6 8.64  -> 0.51 % / 0.52 %           (13 988 shapes)  <- chosen
+#   M5 6.48 / M6 12.96 -> 1.33 % / 1.37 %           ( 9 792 shapes)
+# All three build cleanly (0 channels, check_power_grid PASS, 0 unconnected), so this
+# is purely an IR-vs-routing-headroom trade. Go sparser only if routing still fails.
+add_pdn_stripe -grid top -layer M5 -width 0.12  -spacing 0.072 -pitch 4.32  -offset 1.50
+add_pdn_stripe -grid top -layer M6 -width 0.288 -spacing 0.096 -pitch 8.64  -offset 1.504
 
 add_pdn_connect -grid top -layers {M1 M2}
 add_pdn_connect -grid top -layers {M2 M5}
