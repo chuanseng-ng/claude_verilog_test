@@ -619,7 +619,7 @@ this 15.9 GB host. Four attempts, all on the CPU block:
 | ORFS M5 2.16 / M6 4.32 | 50 / 8 | 12 GiB | 90 % of iter 0 | 122 121 | 13.4 GB |
 | ORFS M5 2.16 / M6 4.32 | 50 / 4 | 14 GiB | 90 % of iter 0 | 122 121 | 13.4 GB |
 | 3× sparse 6.48 / 12.96 | 50 / 4 | 12 GiB | ~75 % of iter 0 | 83 207 | 11.2 GB |
-| 3× sparse 6.48 / 12.96 | 45 / 2 | 13 GiB | 80 % of iter 0 | 112 764 | 12 GB |
+| 3× sparse 6.48 / 12.96 | 45 / 2 | 13 GiB | 80 % of iter 0 | 112 764 | 12.8 GB |
 
 All four died inside **iteration 0 of 12**. For reference, the PDN-free run peaked at 12.4 GB and
 did converge, to 1991 DRC — so a real grid costs roughly 20–30 % more violations, and this host has
