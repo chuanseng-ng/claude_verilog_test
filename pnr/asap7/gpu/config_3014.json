@@ -139,7 +139,7 @@
     "DIODE_ON_PORTS": "in",
     "RUN_SPEF_EXTRACTION": true,
     "RUN_MCSTA": true,
-    "RUN_IRDROP_REPORT": false,
+    "RUN_IRDROP_REPORT": true,
     "RUN_MAGIC_DRC": false,
     "RUN_KLAYOUT_DRC": false,
     "RUN_KLAYOUT_XOR": false,
@@ -165,5 +165,34 @@
     "// DRT_OPT_ITERS_NOTE": "Bounded to 12 (3.0.14 default is 64). On the CPU block the measured trade-off was 12 iters -> 2045 DRC / 12 GiB peak / 3h25m and COMPLETES, versus 64 -> 43 DRC but 13 GiB peak and DIED before write_views. The GPU is ~11x the CPU's instance count (814,908 vs 75,194), so peak memory is the binding risk on this 15.9 GB host -- start bounded and only raise it if the run completes with headroom.",
     "DRT_OPT_ITERS": 12,
     "// SPEF_NOTE": "RUN_SPEF_EXTRACTION/RUN_MCSTA enabled for bead e69's GPU half. The real ORFS OpenRCX deck is already installed and CPU-validated; what was missing until 2026-09-09 was a run with actual routed wires to extract from. Validate this block on its own before trusting any extracted number, mirroring the CPU note at pnr/asap7/cpu/config.json:127.",
-    "// DRT_THREADS_NOTE": "2 threads (was 12). Thread count IS a memory multiplier (each TritonRoute worker holds its own routing state) and 2 is kept for that reason -- but it is NOT what killed the GPU runs. ROOT CAUSE (2026-09-11, bead e69): all three GPU detailed-routing deaths (2026-09-10 14:31:43, 20:19:54; 2026-09-11 00:44:20) were systemd-oomd PRESSURE kills of the whole terminal scope, at 'Start 0th optimization iteration'. True peak VmHWM was a flat 14.05 GiB with 32 GiB swap free -- capacity was never the wall. oomd monitors user@1000.service at 50% PSI over 20 s. Stop systemd-oomd (sudo) for the duration of GPU/SoC detailed routing, then restart it."
+    "// DRT_THREADS_NOTE": "2 threads (was 12). Thread count IS a memory multiplier (each TritonRoute worker holds its own routing state) and 2 is kept for that reason -- but it is NOT what killed the GPU runs. ROOT CAUSE (2026-09-11, bead e69): all three GPU detailed-routing deaths (2026-09-10 14:31:43, 20:19:54; 2026-09-11 00:44:20) were systemd-oomd PRESSURE kills of the whole terminal scope, at 'Start 0th optimization iteration'. True peak VmHWM was a flat 14.05 GiB with 32 GiB swap free -- capacity was never the wall. oomd monitors user@1000.service at 50% PSI over 20 s. Stop systemd-oomd (sudo) for the duration of GPU/SoC detailed routing, then restart it.",
+    "PDN_CFG": "dir::pdn_orfs.tcl",
+    "VIAS_R": {
+        "*": {
+            "V1": {
+                "res": 0.0172
+            },
+            "V2": {
+                "res": 0.0172
+            },
+            "V3": {
+                "res": 0.0172
+            },
+            "V4": {
+                "res": 0.0118
+            },
+            "V5": {
+                "res": 0.0118
+            },
+            "V6": {
+                "res": 0.0082
+            },
+            "V7": {
+                "res": 0.0082
+            },
+            "V8": {
+                "res": 0.0063
+            }
+        }
+    }
 }

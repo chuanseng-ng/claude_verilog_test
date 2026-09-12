@@ -2339,3 +2339,43 @@ SRAM macro PG pins are **M4**, and the macro OBS covers M1–M4.
 
 **Repro harness** (no run dir touched; every `SAVE_*` redirected):
 `/nobackup/asap7_debug/gyx_pdn/variant.sh <name> [env-extra] [cfg-extra]`.
+
+### Resolution the same day — the ASAP7 grid topology was wrong, ORFS has the right one
+
+`PDN-0179` was **not** a macro/channel-geometry problem. The old grid connected the M1 followpin
+rails **straight to M5** and used M2 only as a sparse 4.5 µm strap *parallel* to those rails.
+ASAP7 rails run horizontally on M1 (non-preferred direction), so most rails had nothing above
+them to reach and repair was impossible.
+
+**ORFS ASAP7 reference** (`flow/platforms/asap7/openRoad/pdn/BLOCKS_grid_strategy.tcl`) puts
+followpins on **M1 *and* M2** (0.018 µm, 0.54 µm pitch = one per row), then climbs M2→M5→M6:
+
+```tcl
+add_pdn_stripe -grid top -layer M1 -width 0.018 -pitch 0.54 -offset 0 -followpins
+add_pdn_stripe -grid top -layer M2 -width 0.018 -pitch 0.54 -offset 0 -followpins
+add_pdn_stripe -grid top -layer M5 -width 0.12  -spacing 0.072 -pitch 2.16 -offset 1.50
+add_pdn_stripe -grid top -layer M6 -width 0.288 -spacing 0.096 -pitch 4.32 -offset 1.504
+add_pdn_connect -grid top -layers {M1 M2}
+add_pdn_connect -grid top -layers {M2 M5}
+add_pdn_connect -grid top -layers {M5 M6}
+```
+
+Macro grid must add `M4 M5` here (ORFS only needs `M5 M6`) because **our SRAM PG pins are M4**.
+
+Result on the CPU block: 27 channels → **0**; 0 → **27 999 VDD / 27 213 VSS** shapes;
+`check_power_grid` **PASS** on both nets; `[INFO PSM-0040] All shapes on net VDD are connected.`
+Landed as `pnr/asap7/pdn_asap7_orfs.tcl` + per-design `pdn_orfs.tcl` wrappers + `PDN_CFG` in
+both `config_3014.json`.
+
+**Second, independent gap: ASAP7 had no via resistances.** Even with clean connectivity,
+`analyze_power_grid` died with `PSM-0021` because every V1–V6 reported zero resistance. The
+3.0.14 config key is **`VIAS_R`** (`{"*": {"V1": {"res": ...}}}`) — note `VIAS_RC` is the *old*
+name and no longer exists. ORFS values (`flow/platforms/asap7/setRC.tcl`): V1–V3 1.72e-02,
+V4–V5 1.18e-02, V6–V7 8.20e-03, V8 6.30e-03. With those, IR drop reports
+**0.18 % VDD / 0.19 % VSS worst case** on the CPU block.
+
+**Harness gotcha worth remembering:** a step's `_env.tcl` is only a *partial* dump. The computed
+per-corner variables (`_LIB_CORNER_<i>`, `_LAYER_RC_<i>`, `_VIA_R_<i>`, `_PNR_EXCLUDED_CELLS`)
+are injected at runtime and are absent from the file, so any standalone replay must synthesize
+them from `config.json` (`LIB`, `LAYERS_RC`, `VIAS_R`) or OpenROAD fails with `STA-0577` /
+`PSM-0021`.

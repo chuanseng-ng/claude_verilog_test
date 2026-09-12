@@ -566,3 +566,44 @@ decompose `pdngen` so a failed `build_grids` still commits what it built. On the
 goes 0 → 16 071 VDD / 17 151 VSS shapes. Residual: 550 VDD / 414 VSS unconnected shapes on M4
 (the SRAM macro PG pins, skipped because macro via insertion follows channel repair) + 18+18 on
 M1. Root-causing PDN-0179 itself is tracked on bead `4l8`.
+
+### PDN fixed (2026-09-12, same day) — ORFS-style grid builds, and IR drop now runs
+
+Root cause of the `PDN-0179` channel failure: the old grid connected the **M1 followpin rails
+directly to the M5 straps** (a four-layer stack) and used M2 only as a sparse 4.5 µm-pitch strap
+running *parallel* to those rails. ASAP7 std-cell rails sit on M1 running horizontally (M1's
+non-preferred direction), so most rails had nothing reachable above them and channel repair
+could not fix it — 27 unrepairable channels, all on M1, in the macro-free regions
+x 82.19–124.96 µm and y 104.19–123.42 µm.
+
+Fix ported from ORFS `flow/platforms/asap7/openRoad/pdn/BLOCKS_grid_strategy.tcl`: followpins on
+**both M1 and M2** (0.018 µm wide, 0.54 µm pitch — one per row), then M2→M5→M6, with the macro
+grid connecting M4↔M5 because the SRAM PG pins are on M4. Landed as
+`pnr/asap7/pdn_asap7_orfs.tcl` (+ per-design `pdn_orfs.tcl` wrappers, `PDN_CFG` in both
+`config_3014.json`).
+
+Measured on the CPU block (`RUN_2026-09-10_05-13-18` step-18 ODB, standalone harness):
+
+| | old grid | ORFS-style grid |
+| --- | --- | --- |
+| remaining channels | 27 | **0** |
+| PG shapes committed | **0** | 27 999 VDD / 27 213 VSS |
+| `check_power_grid` | `PSM-0069` both nets | **PASS** both nets |
+| unconnected shapes / instances | 964 / 357 (partial-commit build) | **0 / 0** |
+
+IR drop then needed one more thing: ASAP7 shipped **no via resistances**, so PSM aborted with
+`PSM-0021` "Resistance map contains invalid values" even with clean connectivity. Added `VIAS_R`
+to both `config_3014.json` using ORFS's values (`flow/platforms/asap7/setRC.tcl`). With that:
+
+```
+[INFO PSM-0040] All shapes on net VDD are connected.
+Worstcase IR drop: 1.28e-03 V   Percentage drop: 0.18 %   (VDD)
+Worstcase IR drop: 1.31e-03 V   Percentage drop: 0.19 %   (VSS)
+```
+
+⚠️ **Indicative only.** That number came from a standalone harness on a *floorplan-stage* ODB
+(step 18, before placement/CTS/route) combined with the final run's SPEF, so instance power and
+shape geometry do not correspond to the same design state. It demonstrates the flow works
+end-to-end; it is **not** a sign-off IR figure. A full 3.0.14 CPU run with `PDN_CFG` +
+`VIAS_R` + `RUN_IRDROP_REPORT=true` is still required, and routing with a real grid on the
+tracks will be harder than every previous ASAP7 route.

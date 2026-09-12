@@ -180,7 +180,7 @@
     "// RUN_SPEF_EXTRACTION_NOTE": "Flipped true 2026-08-15 (claude_verilog_test-e69): rcx_rules.pex was a 0-byte stub in ~/pdk/asap7, blocking OpenROAD.RCX/STAPostPNR on every prior ASAP7 run. Real ORFS OpenRCX rules now vendored via tools/setup/install_asap7_rcx_rules.py -- see that script's docstring and the bead for geometry-equivalence evidence. Validated on this (CPU) block only; GPU/SoC configs deliberately left at false pending their own validation.",
     "RUN_SPEF_EXTRACTION": true,
     "RUN_MCSTA": true,
-    "RUN_IRDROP_REPORT": false,
+    "RUN_IRDROP_REPORT": true,
     "RUN_MAGIC_DRC": false,
     "RUN_KLAYOUT_DRC": false,
     "RUN_KLAYOUT_XOR": false,
@@ -209,5 +209,34 @@
     "// DRT_OPT_ITERS_NOTE": "Raised 12 -> 30 for the DRC-reduction run (2026-09-09 night). Measured trade-off: DRT_OPT_ITERS=12 gave 12 GiB peak / 3h25m / 2045 DRC and completed write_views; the unbounded 64 gave 13 GiB peak / 8h41m / 43 DRC but died before write_views. At 12 the violation trajectory was still FALLING, not plateaued, so more iterations should buy real DRC reduction. 30 is chosen to stay inside the ~7 h window available and, on the 12-iteration memory curve, to stay under the 13 GiB ceiling that killed the unbounded run. Goal: drive 2045 down while still reaching write_views, so the result is a COMPLETE run.",
     "DRT_OPT_ITERS": 12,
     "// LAYERS_RC_M1_NOTE": "M1 added 2026-09-09 (bead gyx). LAYERS_RC previously started at M2, so M1 had NO resistance or capacitance on any path -- the ASAP7 tech LEF carries neither attribute for ANY routing layer, and the set_rc.tcl fallback that does include M1 is guarded by ![info exist ::env(LAYERS_RC)] and therefore never fires once LAYERS_RC is set. librelane's irdrop.tcl sources set_rc.tcl (line 19), so LAYERS_RC is exactly what feeds PSM -- which is why analyze_power_grid reported PSM-0021 zero-resistance on M1. Values are ORFS's own (flow/platforms/asap7/setRC.tcl), identical to the other layers' source. NOTE ORFS also has no RESISTANCE in its ASAP7 tech LEF, so supplying R via set_layer_rc is the UPSTREAM-CONSISTENT approach -- do NOT inject resistance into the LEF.",
-    "// IR_RUN_NOTE": "RUN_IRDROP_REPORT REVERTED to false 2026-09-10. IRDropReport is step 51 of 52 and is FATAL while PSM-0069 stands: RUN_2026-09-10_05-13-18 died there, so final/ was never written and the run produced no final DEF and no final metrics despite clean routing (0 DRT errors). Cost more than it returned. Run IR STANDALONE against a completed run's ODB until PSM-0069 is fixed (bead gyx). The M1 LAYERS_RC addition DID work -- PSM-0021 is gone."
+    "// IR_RUN_NOTE": "RUN_IRDROP_REPORT REVERTED to false 2026-09-10. IRDropReport is step 51 of 52 and is FATAL while PSM-0069 stands: RUN_2026-09-10_05-13-18 died there, so final/ was never written and the run produced no final DEF and no final metrics despite clean routing (0 DRT errors). Cost more than it returned. Run IR STANDALONE against a completed run's ODB until PSM-0069 is fixed (bead gyx). The M1 LAYERS_RC addition DID work -- PSM-0021 is gone.",
+    "PDN_CFG": "dir::pdn_orfs.tcl",
+    "VIAS_R": {
+        "*": {
+            "V1": {
+                "res": 0.0172
+            },
+            "V2": {
+                "res": 0.0172
+            },
+            "V3": {
+                "res": 0.0172
+            },
+            "V4": {
+                "res": 0.0118
+            },
+            "V5": {
+                "res": 0.0118
+            },
+            "V6": {
+                "res": 0.0082
+            },
+            "V7": {
+                "res": 0.0082
+            },
+            "V8": {
+                "res": 0.0063
+            }
+        }
+    }
 }
