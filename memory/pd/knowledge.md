@@ -2379,3 +2379,37 @@ per-corner variables (`_LIB_CORNER_<i>`, `_LAYER_RC_<i>`, `_VIA_R_<i>`, `_PNR_EX
 are injected at runtime and are absent from the file, so any standalone replay must synthesize
 them from `config.json` (`LIB`, `LAYERS_RC`, `VIAS_R`) or OpenROAD fails with `STA-0577` /
 `PSM-0021`.
+
+### `--from` is a restart point, not a rewind (2026-09-12, cost two OOM kills)
+
+`python3 -m librelane --last-run --from OpenROAD.GeneratePDN <config>` does **not** rewind the
+design state to what that step originally consumed. It feeds the step whatever state the run last
+reached. Verified from the resumed step's own `state_in.json`:
+
+```
+odb : .../42-openroad-resizertimingpostgrt/rv32i_cpu_top.odb
+```
+
+So pdngen was asked to build a grid inside a **placed + globally-routed + resized** database
+rather than the post-tap/endcap floorplan. It exceeded a 12 GB cap and was OOM-killed at
+`GeneratePDN` twice, each time masquerading as "the PDN step is a memory hog" — it is not: the
+same config builds in ~1 min at low memory standalone, and in-flow at step 21 of a fresh run.
+
+**Rule.** Resume only from a step whose *input* state is still correct (e.g. `--from
+OpenROAD.DetailedRouting` immediately after DRT died). To change anything upstream of routing —
+the PDN config included — start a fresh run.
+
+### Cap the flow's cgroup below the oomd threshold
+
+`systemd-oomd` kills by PSI on the whole **terminal scope**, which includes the Claude session:
+at 14:00:39 it killed 233 processes in the `vte-spawn-*.scope` and ended the session. Running the
+flow as
+
+```bash
+systemd-run --user --scope -p MemoryMax=12G -p MemorySwapMax=0 --unit=<name> <script>
+```
+
+makes the flow's own cgroup hit its limit first, so the kill is contained to the flow. On this
+15.9 GB host, 12 GB is the working value — 14 GB was already close enough to let oomd fire first.
+This is the mitigation for the `project_gpu_grt_congestion` memory's "ask the user to stop oomd"
+note when stopping oomd is not an option.
