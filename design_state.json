@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-09-13T21:17:32.997797+00:00",
+  "updated_at": "2026-09-14T05:01:33.666588+07:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -1600,6 +1600,18 @@
       "suggested_next_step": "proceed",
       "reason": "Bead egt: confirmed candidate HLS netlist (sdc_longclk / noreg_in, structurally identical) is purely combinational and functionally correct (14/14 via diagnostic copy, 0-cycle latency); the 0/14 against the unmodified tracked suite is a driver/harness protocol limitation, not a DUT bug -- no fix_request filed, no tracked file changed, nothing committed. UPDATE: tracked driver fix landed in 66db8e5 with 3/3 gates 14/14.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-14T05:01:33.666588+07:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "signoff",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "resource_limit",
+      "retry_strategy": "escalate",
+      "suggested_next_step": "escalate",
+      "reason": "je8 (apb_cdc_bridge CDC budget check) requires a fresh ASAP7 SoC synthesis from current RTL (the run-23-seeded netlist predates bead rfz's protocol rewrite), but fresh synthesis peaks ~13.4GB RSS during ABC on this 15.9GB-RAM host -- host-blocked (bead 2kn), PR #172 open. bead 86a's in-flow macro-power question was answered from the existing (valid) run5 data with a bounded power range.",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
@@ -2447,6 +2459,20 @@
       },
       "drt_threads1_memory_experiment": "NOT run this session. Estimated cost: the 8-thread iter12 run averaged ~8.2 cores (820% CPU) over 3h25m; a single-threaded full 12-iteration run would plausibly take on the order of 8x wall time (~24-30h), which exceeds the host's 2-8h reboot cadence multiple times over with no iteration-level checkpoint/resume in detailed_route. Flagged as operationally infeasible to measure cleanly without a longer-lived host, rather than attempted and left incomplete.",
       "host_headroom": "free -h at time of writing: 15Gi total, only ~13Gi available (buff/cache reclaimable). The bounded run's own 12 GiB peak already leaves very little margin on this host."
+    },
+    "asap7_soc_86a_je8_investigation": {
+      "date": "2026-09-13/14",
+      "goal": "close beads 86a (in-flow macro-inclusive SoC power) and je8 (apb_cdc_bridge CDC rider)",
+      "runs": {
+        "run1": "OOM during Yosys/ABC synthesis at 12G cap (26Q2 shim toolchain, seeded from run23)",
+        "run2/run3": "seeded from run23 (--with-initial-state), 26Q2 shim toolchain; run2 hit a LibreLane YAML-parser crash in get_psm_error_count (fixed by coordinator); run3 hit ioplacer.tcl's unconditional -random_seed causing GPL-0326 zero-pin-placement (fixed by coordinator)",
+        "run4": "seeded from run23, 26Q2 shim toolchain post-fixes; reached OpenROAD.STAMidPNR then hit bead bpp (26Q2 OpenSTA renamed corners->scenes, 4 internal API calls missing: rsz::check_corner_wire_cap, sta::corners, sta::set_cmd_corner, utl::metric_int)",
+        "run5": "seeded from run23, BUNDLED toolchain (OpenROAD edf00dff + OpenSTA 2.6.0) -- completed successfully (exit=0, all 43 steps). Zero wires routed (bead xy6, expected). CDC check on this netlist later found INVALID: seeded netlist predates bead rfz (apb_cdc_bridge req_toggle_q->req_q rename, 2026-08-12) and other functional RTL",
+        "run6/run7": "fresh synthesis from CURRENT RTL (no seed), bundled toolchain, MemoryMax 13500M -- both stopped by the coordinator's PSI-based pressure guard after ABC peaked ~13.4GB and runtime swap allowance pushed system memory pressure over threshold twice. HOST-BLOCKED, not completed."
+      },
+      "bead_86a_finding": "in-flow report_power DOES include macro power once EXTRA_LIBS references the bead-86a-injected macro Liberty files (confirmed: STAPrePNR Macro group jumped from ~0mW fabric-only baseline to 167.33mW, exactly matching the injection). Macro-inclusive SoC total is checkpoint-and-activity-model-sensitive (CPU macro's default vectorless activity ranged 0-10.1mW across checkpoints due to OpenSTA's no-VCD heuristic on a CDC-gated enable signal) -- reported as a bounded range (167.3mW CPU-gated / 177.4mW default-vectorless / ~222.5mW all-on via standalone-CPU proxy), not a single point figure. This part of 86a is answerable from run5's data (unaffected by the pre-rfz netlist issue since it doesn't touch apb_cdc_bridge).",
+      "bead_je8_finding": "run5's CDC check result is INVALID -- its seeded netlist predates bead rfz's apb_cdc_bridge protocol rewrite (2-phase NRZ req_toggle_q/ack_toggle_q, not current 4-phase RZ req_q/ack_q). A fresh resynthesis from current RTL is required but is HOST-BLOCKED: ABC peaks ~13.4GB RSS on this 15.9GB-RAM host, exceeding safe headroom before either the cgroup cap or a PSI-based pressure guard intervenes. Recorded as bead 2kn; PR #172 open with this verdict.",
+      "signoff": false
     }
   },
   "soc_stage2_gh104": {
