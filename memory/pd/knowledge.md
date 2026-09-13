@@ -2595,6 +2595,12 @@ the offending `-random_seed 42` was appended directly on the `place_pins` line, 
 flag-free. Reading that echo led to a wrong conclusion that 26Q2 skips placement even with no flags.
 Always read the script's actual command line, not its args echo.
 
+**Backward compatible, proven on both binaries.** The same patched script on LibreLane's bundled
+OpenROAD `edf00dff` (`RUN_2026-09-13_23-34-16`) logged `PPL-0001 Number of slots 2024`,
+`PPL-0002 Number of I/O 159`, `PPL-0003 159`, no PPL-0113, and zero GPL-0326 in global placement —
+the same result as run 23 and as the 26Q2 run. `-random_seed` only ever mattered to random mode,
+which this flow does not use, so dropping it changes nothing on the older binary.
+
 **Pattern — two incompatibilities in one day (this and the PSM parser above):** the 2.4.13 scripts
 were never updated for 26Q2, and 26Q2 tends to *warn and skip* rather than error. Before trusting
 any 2.4.13 step on 26Q2, grep its log for `obsolete|deprecated|Skipping|not supported`. Steps past
