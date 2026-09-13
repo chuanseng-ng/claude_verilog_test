@@ -2585,6 +2585,16 @@ no random mode. Verified standalone on the failing run's own step-16 ODB with th
 invocation (`place_pins -min_distance 1 -hor_layers M4 -ver_layers M5`): **2/161 → 161/161 ports
 placed**, `PPL-0002 Number of I/O 159` (same as run 23), `apb_paddr_i[0]` PLACED, no PPL-0113.
 
+**Validated in-flow (`RUN_2026-09-13_23-04-18`, started 23:04 after the 23:01 patch):** step 17
+`OpenROAD.IOPlacement` logged `PPL-0001 Number of available slots 2024`, `PPL-0002 Number of I/O 159`,
+`PPL-0003 Number of I/O w/sink 159` and no PPL-0113, and `OpenROAD.GlobalPlacement` then ran its
+initial-placement iterations with no GPL-0326. Slot and I/O counts are identical to run 23.
+
+**Diagnosis trap worth remembering:** 2.4.13's `[INFO] place_pins args: …` echo prints only `$arg_list`;
+the offending `-random_seed 42` was appended directly on the `place_pins` line, so the log *looked*
+flag-free. Reading that echo led to a wrong conclusion that 26Q2 skips placement even with no flags.
+Always read the script's actual command line, not its args echo.
+
 **Pattern — two incompatibilities in one day (this and the PSM parser above):** the 2.4.13 scripts
 were never updated for 26Q2, and 26Q2 tends to *warn and skip* rather than error. Before trusting
 any 2.4.13 step on 26Q2, grep its log for `obsolete|deprecated|Skipping|not supported`. Steps past
