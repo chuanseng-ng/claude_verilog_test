@@ -116,6 +116,42 @@ SRC_FILES=(
     echo "equiv_status"
 } > "$YS"
 
+# BMC mode: a bounded miter instead of equiv_make, for cones induction cannot close.
+#   BMC_DEPTH=<N> RESET_PORT=<name> [RESET_ACTIVE=0] tools/verif/equiv_sv2v_module.sh <module>
+# Reset is asserted at step 1 and step 1 is NOT compared (-prove-skip 1). Both are required:
+# without them a pre-reset artefact reads as a mismatch. Measured on pmu (bead q7n): a plain
+# 20-cycle miter returned "model found: FAIL!" with gold/gate differing only at t=1, and the same
+# miter with reset at step 1 + -prove-skip 1 returned "no model found: SUCCESS!". Asserting reset
+# alone is not enough -- step-1 outputs are combinational from the initial state, which reset
+# cannot change until the next clock edge.
+if [ -n "${BMC_DEPTH:-}" ]; then
+    if [ -z "${RESET_PORT:-}" ]; then
+        echo "ERROR: BMC mode needs RESET_PORT=<reset input name>" >&2
+        exit 3
+    fi
+    BMC_YS="$OUT_DIR/$MODULE.bmc$BMC_DEPTH.ys"
+    BMC_LOG="$OUT_DIR/$MODULE.bmc$BMC_DEPTH.log"
+    n=$(grep -n "design -copy-from gate" "$YS" | cut -d: -f1)
+    {
+        head -"$n" "$YS"
+        echo "miter -equiv -flatten -make_assert gold gate miter"
+        echo "hierarchy -top miter"
+        echo "sat -verify -prove-asserts -seq $BMC_DEPTH -set-init-zero -set-at 1 in_$RESET_PORT ${RESET_ACTIVE:-0} -prove-skip 1 miter"
+    } > "$BMC_YS"
+    "$YOSYS" -l "$BMC_LOG" -s "$BMC_YS" > /dev/null 2>&1
+    if grep -q "no model found: SUCCESS" "$BMC_LOG"; then
+        echo "module=$MODULE result=BMC_PASS depth=$BMC_DEPTH post_reset_cycles=$((BMC_DEPTH - 1)) log=$BMC_LOG"
+        exit 0
+    elif grep -q "model found: FAIL" "$BMC_LOG"; then
+        echo "module=$MODULE result=BMC_COUNTEREXAMPLE depth=$BMC_DEPTH log=$BMC_LOG"
+        echo "  re-run with -make_outputs -show-ports on the miter to see which outputs differ" >&2
+        exit 2
+    fi
+    echo "module=$MODULE result=TOOL_ERROR mode=bmc log=$BMC_LOG" >&2
+    tail -3 "$BMC_LOG" >&2
+    exit 3
+fi
+
 "$YOSYS" -l "$LOG" -s "$YS" > /dev/null 2>&1
 rc=$?
 

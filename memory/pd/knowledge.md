@@ -2465,3 +2465,32 @@ standalone. Two sv2v transforms sit exactly there — a dropped width cast
 fields rewritten as bit slices (`q_mem[q_head].src` → `q_mem[q_head][95-:32]`). Both are
 equivalent only over reachable states, which is what an induction proof lacks an invariant for.
 A wrong field offset would appear as *disproven*; nothing is disproven anywhere.
+
+### Bounded miters need reset at step 1 AND a skipped step-1 comparison (bead `q7n`)
+
+A module-level 20-cycle miter on `pmu` (`sat -verify -prove-asserts -seq 20 -set-init-zero`)
+returned `model found: FAIL!` in 6 s. The trace showed gold/gate differing **only at t=1**
+(`cpu/gpu_clk_en_o`, `cpu/gpu_rst_n_o`: gold 1, gate 0), with no difference at t=2..20.
+
+What did **not** make it go away, and why:
+
+* `-enable_undef -set-def-inputs` — not X-propagation; `pmu.sv` has no `'x` assignments.
+* `-set-at 1 in_rst_n_i 0` alone — step-1 outputs are combinational from the *initial* state,
+  which reset cannot change until the next edge. Reset was in fact already low in the original
+  counterexample.
+
+What did:
+
+```
+sat -verify -prove-asserts -seq 20 -set-init-zero -set-at 1 in_rst_n_i 0 -prove-skip 1 miter
+=> SAT proof finished - no model found: SUCCESS!
+```
+
+Gold and gate outputs are identical for all 19 post-reset cycles; the divergence is purely a
+pre-reset first-cycle artefact of a forced initial state, not a functional difference. **Why**
+the two sides model that initial state differently remains unexplained — the obvious theory
+(gate infers `dom_state_q` as an uninitialised memory) was checked and is wrong: gate shows plain
+flops. The conclusion rests on the post-reset proof, not on a mechanism.
+
+`tools/verif/equiv_sv2v_module.sh` now has a BMC mode that applies both constraints:
+`BMC_DEPTH=<N> RESET_PORT=<name> tools/verif/equiv_sv2v_module.sh <module>`.
