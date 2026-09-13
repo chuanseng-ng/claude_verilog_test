@@ -542,9 +542,24 @@ had just killed a 9-hour in-flight run.
   * A PMU miter first reported a counterexample; it was a **pre-reset first-cycle artefact** —
     identical outputs for all 19 post-reset cycles. Bounded miters here need reset asserted at
     step 1 *and* `-prove-skip 1`; the tool's BMC mode applies both.
-  Still open on `q7n`: two genuine LRM strictness issues in `soc_top.sv` (use-before-declare) and
-  two `__pnr__` shim parameter-type mismatches, which currently require
-  `--allow-use-before-declare --compat vcs` to elaborate.
+  **Strictness issues fixed (2026-09-13, branch `fix/q7n-slang-strict-rtl`).** The SoC now
+  elaborates under yosys-slang in strict LRM mode — no `--allow-use-before-declare`, no
+  `--compat vcs` (4 errors → 0):
+  * `soc_top.sv` used `ext_irq`/`timer_irq` ~190 lines before declaring them; the IRQ `logic`
+    declarations now precede `u_ext_irq_sync`/`u_timer_irq_sync`. Ordering only.
+  * `pll_clkgen_pnr.sv` (ASAP7 **and** Sky130 copies) declared `parameter int unsigned PLL_IMPL`,
+    and `boot_rom.sv`'s `__pnr__` branch declared `parameter int unsigned MEM_INIT_FILE`, while
+    both are driven by `parameter string`. Synlig-era workarounds that only "worked" because sv2v
+    emits untyped parameters; now `parameter string`. Neither shim reads the value.
+  Re-verified: `soc_all` **183/183 PASS** (26 suite runs, including all four multiclock suites
+  that exercise the IRQ synchronisers), Verilator lint clean, both sv2v netlists regenerated, and
+  the equivalence tool now runs strict by default.
+  ⚠️ **Correction to the results above:** the `soc_top_sv2v.v` those numbers were measured against
+  was **stale** — it predated the `RAND_CDC_DELAY_*` parameters added to `cdc_2ff_sync.sv`. The
+  full per-module re-sweep on the freshly regenerated netlist, in strict mode, reproduces them
+  exactly: the same 25 modules proven (including `boot_rom` 79 and `pll_clkgen` 18, the two whose
+  parameters changed), `sram_controller` proven at `MEM_WORDS=16`, and the same `pmu` 39 /
+  `dma_engine` 128 induction residue.
 - **CPU macro LEF lacks AXI4 burst ports** (`awlen`/`wlast`/…) — abstract predates
   the M2 burst upgrade; SoC burst nets dangle at the macro boundary. Indicative-PPA
   acceptable; regenerate the abstract for a clean integration (bead

@@ -604,6 +604,22 @@ module soc_top
         .rst_n_o     (pmu_cpu_rst_n_cpu_sync)
     );
 
+    // =========================================================================
+    // IRQ signals
+    // =========================================================================
+    // Declared here (ahead of u_ext_irq_sync / u_timer_irq_sync below, which
+    // read ext_irq/timer_irq as CDC synchroniser inputs) rather than further
+    // down with the rest of the IRQ signal group, so every use is strictly
+    // after its declaration (yosys-slang strict-mode requirement; no
+    // functional change — see bead q7n).
+    logic uart_irq;
+    logic spi_irq;
+    logic timer_irq;
+    logic dma_irq;
+    // gpu_irq_o is exposed at top-level port; driven by gpu_top
+
+    logic ext_irq;    // interrupt_controller output → CPU ext_irq_i
+
     // ext_irq / timer_irq: level-held sources (see interrupt_controller.sv /
     // timer.sv — irq_o is `|masked` / `irq_en & irq_pending_q`, both sticky
     // until explicitly cleared, never a single-cycle pulse), so a plain 2-FF
@@ -798,17 +814,6 @@ module soc_top
     logic [1:0]      gif_axil_rresp;
     logic            gif_axil_rvalid;
     logic            gif_axil_rready;
-
-    // =========================================================================
-    // IRQ signals
-    // =========================================================================
-    logic uart_irq;
-    logic spi_irq;
-    logic timer_irq;
-    logic dma_irq;
-    // gpu_irq_o is exposed at top-level port; driven by gpu_top
-
-    logic ext_irq;    // interrupt_controller output → CPU ext_irq_i
 
     // =========================================================================
     // CPU debug observability (M7 leaves these unconnected at top — tie off)

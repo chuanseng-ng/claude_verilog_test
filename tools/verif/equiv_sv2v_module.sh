@@ -89,12 +89,13 @@ SRC_FILES=(
     "$ROOT/rtl/soc/soc_top.sv"
 )
 
-# --allow-use-before-declare and --compat vcs are required: soc_top instantiates two IRQ
-# synchronisers ~190 lines above where ext_irq/timer_irq are declared, and the __pnr__ shims
-# redeclare two `parameter string` as `int unsigned`. Both are tracked on bead q7n.
+# Strict LRM mode: no --allow-use-before-declare, no --compat vcs. Both used to be required --
+# soc_top used ext_irq/timer_irq ~190 lines before declaring them, and the __pnr__ shims
+# redeclared two `parameter string` as `int unsigned` -- and both were fixed on bead q7n, so a
+# relaxed flag here would now only hide a regression.
 {
     echo "plugin -i $SLANG_PLUGIN"
-    printf 'read_slang -D USE_ICG_CELL -D __pnr__ --ignore-unknown-modules --allow-use-before-declare --compat vcs'
+    printf 'read_slang -D USE_ICG_CELL -D __pnr__ --ignore-unknown-modules'
     for inc in rtl/soc rtl/soc/cdc rtl/soc/pll rtl/periph rtl/mem; do printf ' -I %s/%s' "$ROOT" "$inc"; done
     printf ' --top %s' "$MODULE"
     # PARAM="NAME=VALUE" overrides one module parameter on BOTH sides, for modules whose default
