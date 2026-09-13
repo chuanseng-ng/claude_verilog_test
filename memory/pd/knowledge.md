@@ -2599,3 +2599,36 @@ Always read the script's actual command line, not its args echo.
 were never updated for 26Q2, and 26Q2 tends to *warn and skip* rather than error. Before trusting
 any 2.4.13 step on 26Q2, grep its log for `obsolete|deprecated|Skipping|not supported`. Steps past
 global placement (CTS, GRT, DRT, post-route STA) had not yet been exercised on this combination.
+
+### LibreLane 2.4.13 STA scripts vs OpenROAD 26Q2: corners → scenes (2026-09-13)
+
+Third mismatch on the 2.4.13 + 26Q2 combination, and the one that ends the "fix it in place"
+approach: `OpenROAD.STAMidPNR` dies with `invalid command name "rsz::check_corner_wire_cap"`.
+
+A sweep of all 28 namespaced internal calls in `librelane/scripts/openroad` against 26Q2's
+`info commands` found exactly four missing, each a rename:
+
+| 2.4.13 | 26Q2 | call sites |
+| --- | --- | --- |
+| `rsz::check_corner_wire_cap` | `est::check_corner_wire_caps` | `sta/corner.tcl:39` |
+| `sta::corners` | `sta::scenes` | `sta/corner.tcl:47`, `common/io.tcl` `write_sdfs` / `write_libs` |
+| `sta::set_cmd_corner` | `sta::set_cmd_scene` | `sta/corner.tcl:48` |
+| `utl::metric_int` | `utl::metric_integer` | `common/io.tcl` `write_metric_int` |
+
+Even LibreLane 3.0.14's singular `est::check_corner_wire_cap` does not exist in 26Q2. Porting is
+feasible but not a blind rename — the returned scene objects' methods (`[$corner name]`,
+`-corner` on `report_checks` / `write_sdf` / `write_timing_model`) must be checked, and
+`est::check_corner_wire_caps` must return 1 after `set_rc.tcl` or placement parasitics are silently
+skipped. Tracked as its own bead.
+
+**Which toolchain to use.** The 26Q2 shim exists for detailed-routing pin access (bead `ocm`). If a
+run cannot reach real routing anyway — every ASAP7 run on this 15.9 GB host (bead `2kn`) — use
+2.4.13's bundled toolchain, **OpenROAD `edf00dff` + OpenSTA 2.6.0**, which is what run 23 used:
+
+```bash
+make -C pnr librelane-asap7-soc-multiclock OR_PATH_PREFIX= LIBRELANE_EXTRA_ARGS="…"
+```
+
+`OR_PATH_PREFIX=` on the command line removes only the PATH shim; `check-asap7-openroad` still
+runs but no longer determines the binary. Expect detailed routing to commit no wires (`xy6`), so
+"post-route" numbers are on GRT parasitics — the same basis as run 23.
