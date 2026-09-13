@@ -2562,3 +2562,30 @@ flow continued; its `state_out.json` records `…count__net:VSS 10692`, `…net:
 re-indents with spaces, but every 3.0.14 run so far produced a *passing* grid (1-byte reports),
 so whether it handles `srcs: net:VSS` followed by a `bbox` line is unverified. Expect the same
 class of crash the first time a 3.0.14 run produces a failing grid.
+
+### LibreLane 2.4.13 `ioplacer.tcl` places NO pins under OpenROAD 26Q2 (2026-09-13)
+
+Symptom: `OpenROAD.GlobalPlacement` dies with
+`[ERROR GPL-0326] apb_paddr_i[0] toplevel port is not placed.` The only clue is one line in the
+earlier `OpenROAD.IOPlacement` step, easy to miss among thousands of STA warnings:
+`[WARNING PPL-0113] -random and -random_seed are obsolete. Skipping random pin placement.`
+
+Cause: 2.4.13's `ioplacer.tcl` calls `place_pins ... -random_seed 42` **unconditionally**, in every
+`FP_PPL_MODE` (this run used `matching`). OpenROAD 26Q2's `place_pins` treats either `-random`
+or `-random_seed` as obsolete and then places nothing — measured 2 of 161 ports placed before and
+after the step. LibreLane 3.0.14's `ioplacer.tcl` never passes either flag.
+
+Why it was latent: the 26Q2 binary is shimmed into the 2.4.13 flow by `check-asap7-openroad`,
+added 2026-09-08. Run 23 (2026-08-09) predates the shim, and its older OpenROAD accepted the flag
+and placed all 159 I/O. No 2.4.13 SoC run had reached global placement on 26Q2 before this.
+
+Fix (`memory/pd/patches/librelane2413_ioplacer_26q2_random_seed.diff`): drop `-random_seed 42`;
+`FP_PPL_MODE=random_equidistant` now warns and falls back to default placement, since 26Q2 has
+no random mode. Verified standalone on the failing run's own step-16 ODB with the exact patched
+invocation (`place_pins -min_distance 1 -hor_layers M4 -ver_layers M5`): **2/161 → 161/161 ports
+placed**, `PPL-0002 Number of I/O 159` (same as run 23), `apb_paddr_i[0]` PLACED, no PPL-0113.
+
+**Pattern — two incompatibilities in one day (this and the PSM parser above):** the 2.4.13 scripts
+were never updated for 26Q2, and 26Q2 tends to *warn and skip* rather than error. Before trusting
+any 2.4.13 step on 26Q2, grep its log for `obsolete|deprecated|Skipping|not supported`. Steps past
+global placement (CTS, GRT, DRT, post-route STA) had not yet been exercised on this combination.
