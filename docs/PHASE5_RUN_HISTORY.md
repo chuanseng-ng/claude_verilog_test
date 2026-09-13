@@ -523,9 +523,28 @@ pursue it further given the 2026-08-16 06:48 host reboot (bead `o1i`) that
 had just killed a 9-hour in-flight run.
 
 ## Known limitations / follow-ups
-- **sv2v ≠ formal-equivalent to source RTL.** Correctness rests on `soc_all` 82/82 (M11-era count; 120/120 as of 2026-08-01)
-  against the original SystemVerilog. A Yosys EQY/LEC of sv2v output vs RTL would
-  add tape-out rigor (not required for indicative ASAP7).
+- **sv2v vs source RTL — now formally checked (2026-09-12/13, bead `q7n`), not fully closed.**
+  Originally correctness rested only on `soc_all` 82/82 (M11-era count; 120/120 as of
+  2026-08-01). Gold is the **source RTL read by yosys-slang** — an independent frontend — and gate
+  is `soc_top_sv2v.v`, so this checks sv2v itself rather than a self-consistency.
+  * **Flat `soc_top`:** 64 209 of 64 433 equivalence points proven (99.65 %), **0 disproven**.
+    Depth is host-capped at `equiv_induct -seq 5`: seq 7, 10 and 20 all die at an identical
+    ~12.57 GB.
+  * **Per module** (`tools/verif/equiv_sv2v_module.sh`, sv2v keeps module boundaries):
+    **25 of 27 modules PROVEN outright** at seq-20 induction, including `axi4_crossbar`,
+    `soc_bus`, `async_axi_fifo`; `sram_controller` at `MEM_WORDS=16` (its 4096-word array is
+    unaffordable at full size; the transform is depth-independent). The flat miter's unproven
+    `m_araddr` group proves cleanly at module level, so it was a flattening artefact.
+  * **Remaining two, bounded evidence only:** `pmu` — 39 FSM-output points induction-unproven, but
+    a 20-cycle **post-reset** bounded miter passes. `dma_engine` — 128 points
+    (`src_q`/`dst_q`/`words_rem_q`/`m_araddr`) unproven even at seq-20 induction; 8-cycle
+    bounded miters pass both from the zero state and after reset.
+  * A PMU miter first reported a counterexample; it was a **pre-reset first-cycle artefact** —
+    identical outputs for all 19 post-reset cycles. Bounded miters here need reset asserted at
+    step 1 *and* `-prove-skip 1`; the tool's BMC mode applies both.
+  Still open on `q7n`: two genuine LRM strictness issues in `soc_top.sv` (use-before-declare) and
+  two `__pnr__` shim parameter-type mismatches, which currently require
+  `--allow-use-before-declare --compat vcs` to elaborate.
 - **CPU macro LEF lacks AXI4 burst ports** (`awlen`/`wlast`/…) — abstract predates
   the M2 burst upgrade; SoC burst nets dangle at the macro boundary. Indicative-PPA
   acceptable; regenerate the abstract for a clean integration (bead
