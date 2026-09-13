@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# equiv_sv2v_module.sh — prove one module of the sv2v netlist equivalent to its source RTL.
+#
+# WHY MODULE LEVEL (bead q7n). sv2v is source-to-source, so module boundaries survive into
+# pnr/asap7/soc/soc_top_sv2v.v (28 modules). Proving per module is dramatically cheaper than
+# the flat soc_top miter, which on a 15.9 GB host cannot go deeper than equiv_induct -seq 5:
+#
+#            front end      deepest induction that fits   peak
+#   flat     ~90 min        -seq 5                        11.5 GB   (seq 7/10/20 all die ~12.57 GB)
+#   module   seconds        -seq 20 ran to completion      7.5 GB
+#
+# Yosys reads the SOURCE RTL through yosys-slang (an independent frontend), so "gold" here is
+# the real RTL and not another sv2v artefact — that is what makes this a genuine check of sv2v
+# rather than a self-consistency test.
+#
+# Usage:  tools/verif/equiv_sv2v_module.sh <module> [induct_depth] [simple_depth]
+# Exit:   0 = all points proven      1 = some unproven (no counterexample)
+#         2 = DISPROVEN (real mismatch — investigate)
+#         3 = tool or input missing
+#
+# Override the toolchain with YOSYS= and SLANG_PLUGIN= if the nix store paths move; they are
+# hardcoded for the same GC-root reason as ASAP7_OPENROAD_BIN in pnr/Makefile, and this script
+# fails loudly rather than silently falling back to a yosys without the slang plugin.
+set -uo pipefail
+
+MODULE="${1:-}"
+INDUCT_DEPTH="${2:-20}"
+SIMPLE_DEPTH="${3:-5}"
+
+if [ -z "$MODULE" ]; then
+    echo "usage: $0 <module> [induct_depth] [simple_depth]" >&2
+    exit 3
+fi
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+YOSYS="${YOSYS:-/nix/store/4bmfi4470w0i3ixcaidfki18d3fyqvva-yosys-with-plugins-0.62/bin/yosys}"
+SLANG_PLUGIN="${SLANG_PLUGIN:-/nix/store/07xn6zd11qvkp8h65gwycfisr3x9hk4f-yosys-slang/share/yosys/plugins/slang.so}"
+SV2V_OUT="${SV2V_OUT:-$ROOT/pnr/asap7/soc/soc_top_sv2v.v}"
+OUT_DIR="${OUT_DIR:-${TMPDIR:-/tmp}/equiv_sv2v}"
+
+for f in "$YOSYS" "$SLANG_PLUGIN" "$SV2V_OUT"; do
+    if [ ! -e "$f" ]; then
+        echo "ERROR: missing '$f'." >&2
+        echo "       Re-resolve the nix store paths (YOSYS=, SLANG_PLUGIN=) or regenerate the" >&2
+        echo "       sv2v netlist with 'make -C pnr asap7-soc-sv2v'." >&2
+        exit 3
+    fi
+done
+
+mkdir -p "$OUT_DIR"
+YS="$OUT_DIR/$MODULE.ys"
+LOG="$OUT_DIR/$MODULE.log"
+
+# Source file list — mirrors SOC_SV_FILES in pnr/Makefile, plus the SRAM stub the SoC needs.
+SRC_FILES=(
+    "$ROOT/pnr/asap7/sram_1rw_256x32_asap7_stub.v"
+    "$ROOT/rtl/soc/axi_pkg.sv"
+    "$ROOT/rtl/soc/soc_addr_map_pkg.sv"
+    "$ROOT/rtl/soc/soc_periph_map_pkg.sv"
+    "$ROOT/pnr/asap7/soc/rv32i_cpu_top_stub.sv"
+    "$ROOT/pnr/asap7/soc/gpu_top_stub.sv"
+    "$ROOT/rtl/soc/pll/pll_clkgen_stub.sv"
+    "$ROOT/pnr/asap7/soc/pll_clkgen_pnr.sv"
+    "$ROOT/rtl/soc/pll/pll_apb_regs.sv"
+    "$ROOT/rtl/soc/pll/pll_subsystem.sv"
+    "$ROOT/rtl/soc/axi4_crossbar.sv"
+    "$ROOT/rtl/soc/axi_lite_register_bank.sv"
+    "$ROOT/rtl/soc/apb4_register_bank.sv"
+    "$ROOT/rtl/soc/pmu.sv"
+    "$ROOT/rtl/soc/axi_lite_interconnect.sv"
+    "$ROOT/rtl/soc/axi4_to_axilite.sv"
+    "$ROOT/rtl/soc/axilite_to_axi4.sv"
+    "$ROOT/rtl/soc/axil_to_apb.sv"
+    "$ROOT/rtl/soc/apb_interconnect.sv"
+    "$ROOT/rtl/soc/soc_bus.sv"
+    "$ROOT/rtl/soc/sram_controller.sv"
+    "$ROOT/rtl/soc/boot_rom.sv"
+    "$ROOT/rtl/periph/dma_engine.sv"
+    "$ROOT/rtl/periph/interrupt_controller.sv"
+    "$ROOT/rtl/periph/timer.sv"
+    "$ROOT/rtl/periph/uart_controller.sv"
+    "$ROOT/rtl/periph/spi_controller.sv"
+    "$ROOT/rtl/mem/rv32i_clock_gate.sv"
+    "$ROOT/rtl/soc/cdc/cdc_2ff_sync.sv"
+    "$ROOT/rtl/soc/cdc/cdc_reset_sync.sv"
+    "$ROOT/rtl/soc/cdc/cdc_gray_fifo.sv"
+    "$ROOT/rtl/soc/async_axi_fifo.sv"
+    "$ROOT/rtl/soc/apb_cdc_bridge.sv"
+    "$ROOT/rtl/soc/soc_top.sv"
+)
+
+# Strict LRM mode: no --allow-use-before-declare, no --compat vcs. Both used to be required --
+# soc_top used ext_irq/timer_irq ~190 lines before declaring them, and the __pnr__ shims
+# redeclared two `parameter string` as `int unsigned` -- and both were fixed on bead q7n, so a
+# relaxed flag here would now only hide a regression.
+{
+    echo "plugin -i $SLANG_PLUGIN"
+    printf 'read_slang -D USE_ICG_CELL -D __pnr__ --ignore-unknown-modules'
+    for inc in rtl/soc rtl/soc/cdc rtl/soc/pll rtl/periph rtl/mem; do printf ' -I %s/%s' "$ROOT" "$inc"; done
+    printf ' --top %s' "$MODULE"
+    # PARAM="NAME=VALUE" overrides one module parameter on BOTH sides, for modules whose default
+    # size makes the proof unaffordable. read_slang elaborates at read time, so the gold side
+    # takes it as a slang -G option; a chparam after read_slang would not reach it. The sv2v side
+    # takes chparam before hierarchy. Measured motivation: sram_controller's
+    # `mem [0:MEM_WORDS-1]` at MEM_WORDS=4096 maps to 4096 x 32-bit flops per side and was
+    # OOM-killed in equiv_simple at 4, 6 and 7 GB. sv2v keeps MEM_WORDS as a real parameter
+    # (IDX_W = $clog2(MEM_WORDS) is derived from it), so a reduced-depth proof checks the same
+    # transform. Prefer a power of two so the $clog2 address decode stays exact.
+    if [ -n "${PARAM:-}" ]; then printf ' -G %s' "$PARAM"; fi
+    printf ' %s' "${SRC_FILES[@]}"
+    printf '\n'
+    echo "hierarchy -top $MODULE; proc; flatten; opt_clean; memory; opt_clean; async2sync"
+    echo "rename $MODULE gold"
+    echo "design -stash gold"
+    echo "read_verilog -sv -D USE_ICG_CELL $SV2V_OUT"
+    if [ -n "${PARAM:-}" ]; then echo "chparam -set ${PARAM%%=*} ${PARAM#*=} $MODULE"; fi
+    echo "hierarchy -top $MODULE; proc; flatten; opt_clean; memory; opt_clean; async2sync"
+    echo "rename $MODULE gate"
+    echo "design -stash gate"
+    echo "design -copy-from gold -as gold gold"
+    echo "design -copy-from gate -as gate gate"
+    echo "equiv_make gold gate equiv"
+    echo "hierarchy -top equiv"
+    echo "equiv_simple -seq $SIMPLE_DEPTH"
+    echo "equiv_status"
+    echo "equiv_induct -seq $INDUCT_DEPTH"
+    echo "equiv_status"
+} > "$YS"
+
+# BMC mode: a bounded miter instead of equiv_make, for cones induction cannot close.
+#   BMC_DEPTH=<N> RESET_PORT=<name> [RESET_ACTIVE=0] tools/verif/equiv_sv2v_module.sh <module>
+# Reset is asserted at step 1 and step 1 is NOT compared (-prove-skip 1). Both are required:
+# without them a pre-reset artefact reads as a mismatch. Measured on pmu (bead q7n): a plain
+# 20-cycle miter returned "model found: FAIL!" with gold/gate differing only at t=1, and the same
+# miter with reset at step 1 + -prove-skip 1 returned "no model found: SUCCESS!". Asserting reset
+# alone is not enough -- step-1 outputs are combinational from the initial state, which reset
+# cannot change until the next clock edge.
+if [ -n "${BMC_DEPTH:-}" ]; then
+    if [ -z "${RESET_PORT:-}" ]; then
+        echo "ERROR: BMC mode needs RESET_PORT=<reset input name>" >&2
+        exit 3
+    fi
+    BMC_YS="$OUT_DIR/$MODULE.bmc$BMC_DEPTH.ys"
+    BMC_LOG="$OUT_DIR/$MODULE.bmc$BMC_DEPTH.log"
+    n=$(grep -n "design -copy-from gate" "$YS" | cut -d: -f1)
+    {
+        head -"$n" "$YS"
+        echo "miter -equiv -flatten -make_assert gold gate miter"
+        echo "hierarchy -top miter"
+        echo "sat -verify -prove-asserts -seq $BMC_DEPTH -set-init-zero -set-at 1 in_$RESET_PORT ${RESET_ACTIVE:-0} -prove-skip 1 miter"
+    } > "$BMC_YS"
+    "$YOSYS" -l "$BMC_LOG" -s "$BMC_YS" > /dev/null 2>&1
+    if grep -q "no model found: SUCCESS" "$BMC_LOG"; then
+        echo "module=$MODULE result=BMC_PASS depth=$BMC_DEPTH post_reset_cycles=$((BMC_DEPTH - 1)) log=$BMC_LOG"
+        exit 0
+    elif grep -q "model found: FAIL" "$BMC_LOG"; then
+        echo "module=$MODULE result=BMC_COUNTEREXAMPLE depth=$BMC_DEPTH log=$BMC_LOG"
+        echo "  re-run with -make_outputs -show-ports on the miter to see which outputs differ" >&2
+        exit 2
+    fi
+    echo "module=$MODULE result=TOOL_ERROR mode=bmc log=$BMC_LOG" >&2
+    tail -3 "$BMC_LOG" >&2
+    exit 3
+fi
+
+"$YOSYS" -l "$LOG" -s "$YS" > /dev/null 2>&1
+rc=$?
+
+unproven=$(grep -oE "Found a total of [0-9]+ unproven" "$LOG" | tail -1 | grep -oE "[0-9]+")
+disproven=$(grep -ciE "^Unproven.*disproven|equiv_status.*disproven|Found a total of [0-9]+ disproven" "$LOG")
+total=$(grep -oE "Found [0-9]+ unproven \\\$equiv cells" "$LOG" | head -1 | grep -oE "[0-9]+")
+
+if [ $rc -ne 0 ] && [ -z "$unproven" ]; then
+    echo "module=$MODULE result=TOOL_ERROR rc=$rc log=$LOG" >&2
+    tail -3 "$LOG" >&2
+    exit 3
+fi
+
+if grep -qiE "Found a total of [0-9]+ disproven|equivalence check failed" "$LOG"; then
+    echo "module=$MODULE result=DISPROVEN log=$LOG"
+    exit 2
+fi
+
+if [ "${unproven:-0}" = "0" ]; then
+    echo "module=$MODULE result=PROVEN points=${total:-?} induct_seq=$INDUCT_DEPTH log=$LOG"
+    exit 0
+fi
+
+echo "module=$MODULE result=UNPROVEN unproven=$unproven of=${total:-?} induct_seq=$INDUCT_DEPTH log=$LOG"
+grep "^Unproven" "$LOG" | grep -oE "\\\\[a-zA-Z0-9_.]+_gold" | sed 's/_gold//;s/^\\//' \
+    | sed -E 's/\[[0-9]+\]$//' | sort | uniq -c | sort -rn | head -10
+exit 1

@@ -16,10 +16,13 @@
 
 module pll_clkgen #(
     // Accepted but ignored for synthesisability — PnR always uses STUB mode.
-    // PLL_IMPL is int unsigned 0 in PnR (soc_top hides parameter string under
-    // __pnr__); accepted here with matching int unsigned type.
+    // Declared parameter string to match soc_top/pll_subsystem's driving
+    // parameter (both are parameter string PLL_IMPL = "STUB"); an earlier
+    // int unsigned type here relied on sv2v's untyped param emission and is
+    // an implicit string->int conversion under strict SV elaboration (bead
+    // q7n).
     /* verilator lint_off UNUSEDPARAM */
-    parameter int unsigned PLL_IMPL        = 0,   // 0 = STUB (only value in PnR)
+    parameter string        PLL_IMPL        = "STUB",   // only value in PnR
     parameter int unsigned STUB_LOCK_CYCLES = 16,
     parameter int unsigned N_DIV_DEFAULT  = 13,
     parameter int unsigned LOCK_PERSIST_CYCLES = 5

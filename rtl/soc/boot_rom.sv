@@ -31,13 +31,17 @@ module boot_rom
     // ROM depth in 32-bit words (must be a power of two; 1024 = 4 KB).
     parameter int unsigned MEM_WORDS    = 1024,
     // Optional hex image.  Empty string → ROM contains 0 after reset.
-    // Hidden under __pnr__: Synlig UHDM emits empty-named RTLIL wires for
-    // parameter string, causing kernel/rtlil.cc:2150 assert.  PnR always
-    // synthesises ROM initialised to zero (no file load in silicon anyway).
+    // Both branches are parameter string (soc_top always drives a parameter
+    // string down regardless of __pnr__; an int unsigned type on the PnR
+    // side was an implicit string->int conversion under strict SV
+    // elaboration, bead q7n). The __pnr__ branch stays split from the sim
+    // branch because PnR never reads MEM_INIT_FILE (see the initial block
+    // below) — ROM is always zero-init in synthesis, no file load in
+    // silicon anyway.
 `ifndef __pnr__
     parameter string       MEM_INIT_FILE = ""
 `else
-    parameter int unsigned MEM_INIT_FILE = 0   // unused in PnR
+    parameter string       MEM_INIT_FILE = ""   // unused in PnR
 `endif
 ) (
     input  logic clk,

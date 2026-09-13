@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-09-09T14:05:17.405486+00:00",
+  "updated_at": "2026-09-13T13:15:40.095815+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -226,6 +226,33 @@
         "test_async_axi_fifo": "26/26 PASS (baseline, unmodified)"
       },
       "checked_at": "2026-09-09T14:05:17.405486+00:00"
+    },
+    "soc_all_regression_q7n_declorder_recheck": {
+      "status": "PASS",
+      "purpose": "Re-verify soc_top.sv IRQ-signal declaration reordering + boot_rom.sv MEM_INIT_FILE PnR-branch string-type fix (bead q7n, yosys-slang strict-mode) introduces no functional change in simulation.",
+      "total_tests": 183,
+      "pass": 183,
+      "fail": 0,
+      "skip": 0,
+      "suites": 26,
+      "note": "soc_all has grown since the 2026-08-02 159/159-across-21-suites baseline (cdc_reset_sync_scan, soc_multiclock_reset, soc_pmu_multiclock, pll_apb_regs since added) -- 183/183 across 26 suites is the current full count, not a regression from 159.",
+      "soc_multiclock": {
+        "status": "PASS",
+        "total_tests": 4,
+        "pass": 4,
+        "fail": 0
+      },
+      "soc_pll_multiclock": {
+        "status": "PASS",
+        "total_tests": 1,
+        "pass": 1,
+        "fail": 0
+      },
+      "sim_build_root": "/nobackup/claude_sim_build/soc_q7n",
+      "raw_log": "/home/neuromorphic/.local/share/rtk/tee/1789305172_make_SIM_a6c074.log",
+      "uvm_fatal_count": 0,
+      "uvm_error_count": 0,
+      "checked_at": "2026-09-13T13:15:40.095815+00:00"
     }
   },
   "pipeline_session_id": null,
@@ -1529,6 +1556,18 @@
       "retry_strategy": "none",
       "suggested_next_step": "proceed",
       "reason": "Bead claude_verilog_test-nan (async_axi_fifo reversed-ratio stall) investigated via a temporary diagnostic module and internal signal tracing (not committed): root-caused to a testbench release-write synchronisation artifact in the diagnostic harness, not a DUT bug -- synchronising the release to a clean s_clk edge resolves it exactly. No fix_request filed; 26/26 test_async_axi_fifo baseline unaffected.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-13T13:15:40.095815+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Re-ran full soc_all cocotb regression (26 suites, incl. soc_multiclock + soc_pll_multiclock) after the parent session's uncommitted bead-q7n RTL edits (soc_top.sv IRQ-signal declaration reordering ahead of first use; boot_rom.sv __pnr__ MEM_INIT_FILE int->string) -- 183/183 PASS, 0 FAIL, 0 UVM_FATAL/ERROR, confirming the changes are functionally inert in simulation as claimed.",
       "constraint_ref": null
     }
   ],

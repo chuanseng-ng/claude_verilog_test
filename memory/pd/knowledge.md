@@ -2250,3 +2250,268 @@ the positive control (forcing `gen_data_sram[0]` onto the identical residue clas
 reproduce the failure, so the offset mechanism is necessary-looking but not sufficient, and not
 yet a general placement rule. The outstanding `detailed_route_debug -pa/-pin` access-point dump
 experiment was not attempted this session either — still an open tooling gap.
+
+#### UPDATE 2026-09-10 (bead `e69`) — the GPU macro-path separator rule is INVERTED under LibreLane 3.0.14
+
+`pnr/asap7/gpu/macro_placement.cfg`'s own header records that with
+`SYNTH_HIERARCHY_MODE=keep`, LibreLane **2.4.13** names the SRAM bank instances
+`u_sm/g_bank[N].u_bank` — a **slash** between module levels, a **dot** for the leaf inside the
+generate-block array. That asymmetry was itself a hard-won finding.
+
+**LibreLane 3.0.14 emits dots throughout.** Straight from
+`RUN_2026-09-10_09-35-58/05-yosys-synthesis/gpu_top.nl.v`:
+
+```
+sram_1rw_128x32_asap7 \u_sm.g_bank[0].u_bank
+sram_1rw_128x32_asap7 \u_sm.g_bank[10].u_bank
+```
+
+Feeding the 2.4.13 slash form to 3.0.14 makes `Odb.ManualMacroPlacement` list **all 32 macros**
+as unplaceable and kill the flow at **step 16, ~23 minutes in** (`RUN_2026-09-10_09-35-58`). The
+step log is misleading: it prints the macro list and then `Design name: gpu_top` and stops, with
+no "not found" wording, so the cause is not obvious from the tail.
+
+**So the rule is version-specific, and stating it unqualified is now wrong.** Both forms are
+kept side by side:
+
+| config | placement file | separator |
+| --- | --- | --- |
+| `pnr/asap7/gpu/config.json` (2.4.13) | `macro_placement.cfg` | `u_sm/g_bank[N].u_bank` |
+| `pnr/asap7/gpu/config_3014.json` (3.0.14) | `macro_placement_3014.cfg` | `u_sm.g_bank[N].u_bank` |
+
+**Check the netlist, do not trust the rule.** Before any macro-placement run on a new toolchain,
+grep the actual synthesis output for the macro cell name and copy the instance path verbatim —
+one `grep -oE "sram_[a-z0-9_]+ [^ (]+"` on `*/05-yosys-synthesis/*.nl.v` costs seconds and would
+have saved the 23-minute failure.
+
+---
+
+## UPDATE 2026-09-12 — ASAP7 has never had a power grid (bead `4l8`, found under `gyx`)
+
+**Finding.** Every ASAP7 run in this repo committed **zero** PDN shapes. Counting `dbSWire`
+shapes on each POWER/GROUND net in the post-PDN ODB:
+
+| ODB | shapes |
+| --- | --- |
+| `sky130/soc` `RUN_2026-07-31_05-13-54/17-openroad-generatepdn` | VPWR 65 610 / VGND 65 939 |
+| `asap7/soc` `RUN_2026-08-09_14-36-16/17-openroad-generatepdn` (run 23, accepted #96 sign-off) | **0 / 0** |
+| `asap7/cpu` `RUN_2026-09-10_05-13-18/20-openroad-generatepdn` (3.0.14) | **0 / 0** |
+
+The sky130 row is the positive control — same script, same OpenROAD 26Q2 binary — so the probe
+is sound. Script: `/nobackup/asap7_debug/gyx_pdn/pgcount.tcl`.
+
+**Mechanism.** `pdngen` is `check_setup; build_grids; write_to_db; reset_shapes`. ASAP7 raises
+`[ERROR PDN-0179] Unable to repair all channels` **inside `build_grids`**, before `write_to_db`.
+Our warn-and-continue patch caught the error and continued — with nothing committed.
+
+**Correction to earlier knowledge.** The "~7–8 M benign PDN violations = M1-only tap-cell
+connectivity artifact" story is **wrong**. There were no violations because there were no
+shapes. `PSM-0069`/`0038`/`0039` are downstream of the absent grid, not of tap cells. And every
+ASAP7 routing result was routed with M1/M2/M5 free of PDN metal — those DRC counts are a lower
+bound, not closure.
+
+**Fix applied** (both trees, `librelane/scripts/openroad/pdn.tcl`): decompose `pdngen` so a
+failed `build_grids` still commits:
+
+```tcl
+pdn::check_setup
+if {[catch {pdn::build_grids $_trim} e]} { puts stderr "WARNING: ... $e" }
+if {[catch {pdn::write_to_db 1 ""} e]} { puts stderr "WARNING: ... $e" }
+pdn::reset_shapes
+```
+
+CPU block goes 0 → **16 071 VDD / 17 151 VSS** shapes (M1 rails 222, M2 2493, M3 2466, M5 27,
+spanning the full core). Residual unconnected: 550 VDD / 414 VSS on **M4 — the SRAM macro PG
+pins** — plus 18+18 M1; macro via insertion runs *after* channel repair, so the abort skips it.
+
+**PDN-0179 itself is still open.** 27 channels, all on M1, in the macro-*free* regions
+x 82.188–124.956 and y 104.193–123.417 (macros x 6.37–72.16, y 5–94). Ruled out: PDN halo
+(identical channels at 10/2/0 µm), macro PG pin case in `PDN_MACRO_CONNECTIONS` (all 10 SRAMs
+already connect VDD→VDD / VSS→VSS), M3-as-horizontal (0 channels but rails never connect —
+M1→M5 stack invalid; 1001 unconnected instances), M4-as-horizontal at legal width 0.12
+(`add_pdn_connect -grid macro -layers "M4 M5"` is then redundant → `PDN-0186`).
+`pdn::allow_repair_channels 1` is the wrong signature → `PDN-0233`.
+
+**ASAP7 geometry facts worth keeping.** Layer directions: M1 V, M2 H, M3 V, M4 H, M5 V — but
+std-cell rails sit on **M1 running horizontally** (non-preferred). Legal strap widths:
+M2 `0.0180/0.0900/0.1620/0.2340/0.3060/0.3780`, M4 `0.0240/0.1200/0.2160/0.3120/0.4080`.
+SRAM macro PG pins are **M4**, and the macro OBS covers M1–M4.
+
+**Repro harness** (no run dir touched; every `SAVE_*` redirected):
+`/nobackup/asap7_debug/gyx_pdn/variant.sh <name> [env-extra] [cfg-extra]`.
+
+### Resolution the same day — the ASAP7 grid topology was wrong, ORFS has the right one
+
+`PDN-0179` was **not** a macro/channel-geometry problem. The old grid connected the M1 followpin
+rails **straight to M5** and used M2 only as a sparse 4.5 µm strap *parallel* to those rails.
+ASAP7 rails run horizontally on M1 (non-preferred direction), so most rails had nothing above
+them to reach and repair was impossible.
+
+**ORFS ASAP7 reference** (`flow/platforms/asap7/openRoad/pdn/BLOCKS_grid_strategy.tcl`) puts
+followpins on **M1 *and* M2** (0.018 µm, 0.54 µm pitch = one per row), then climbs M2→M5→M6:
+
+```tcl
+add_pdn_stripe -grid top -layer M1 -width 0.018 -pitch 0.54 -offset 0 -followpins
+add_pdn_stripe -grid top -layer M2 -width 0.018 -pitch 0.54 -offset 0 -followpins
+add_pdn_stripe -grid top -layer M5 -width 0.12  -spacing 0.072 -pitch 2.16 -offset 1.50
+add_pdn_stripe -grid top -layer M6 -width 0.288 -spacing 0.096 -pitch 4.32 -offset 1.504
+add_pdn_connect -grid top -layers {M1 M2}
+add_pdn_connect -grid top -layers {M2 M5}
+add_pdn_connect -grid top -layers {M5 M6}
+```
+
+Macro grid must add `M4 M5` here (ORFS only needs `M5 M6`) because **our SRAM PG pins are M4**.
+
+Result on the CPU block: 27 channels → **0**; 0 → **27 999 VDD / 27 213 VSS** shapes;
+`check_power_grid` **PASS** on both nets; `[INFO PSM-0040] All shapes on net VDD are connected.`
+Landed as `pnr/asap7/pdn_asap7_orfs.tcl` + per-design `pdn_orfs.tcl` wrappers + `PDN_CFG` in
+both `config_3014.json`.
+
+**Second, independent gap: ASAP7 had no via resistances.** Even with clean connectivity,
+`analyze_power_grid` died with `PSM-0021` because every V1–V6 reported zero resistance. The
+3.0.14 config key is **`VIAS_R`** (`{"*": {"V1": {"res": ...}}}`) — note `VIAS_RC` is the *old*
+name and no longer exists. ORFS values (`flow/platforms/asap7/setRC.tcl`): V1–V3 1.72e-02,
+V4–V5 1.18e-02, V6–V7 8.20e-03, V8 6.30e-03. With those, IR drop reports
+**0.18 % VDD / 0.19 % VSS worst case** on the CPU block.
+
+**Harness gotcha worth remembering:** a step's `_env.tcl` is only a *partial* dump. The computed
+per-corner variables (`_LIB_CORNER_<i>`, `_LAYER_RC_<i>`, `_VIA_R_<i>`, `_PNR_EXCLUDED_CELLS`)
+are injected at runtime and are absent from the file, so any standalone replay must synthesize
+them from `config.json` (`LIB`, `LAYERS_RC`, `VIAS_R`) or OpenROAD fails with `STA-0577` /
+`PSM-0021`.
+
+### `--from` is a restart point, not a rewind (2026-09-12, cost two OOM kills)
+
+`python3 -m librelane --last-run --from OpenROAD.GeneratePDN <config>` does **not** rewind the
+design state to what that step originally consumed. It feeds the step whatever state the run last
+reached. Verified from the resumed step's own `state_in.json`:
+
+```
+odb : .../42-openroad-resizertimingpostgrt/rv32i_cpu_top.odb
+```
+
+So pdngen was asked to build a grid inside a **placed + globally-routed + resized** database
+rather than the post-tap/endcap floorplan. It exceeded a 12 GB cap and was OOM-killed at
+`GeneratePDN` twice, each time masquerading as "the PDN step is a memory hog" — it is not: the
+same config builds in ~1 min at low memory standalone, and in-flow at step 21 of a fresh run.
+
+**Rule.** Resume only from a step whose *input* state is still correct (e.g. `--from
+OpenROAD.DetailedRouting` immediately after DRT died). To change anything upstream of routing —
+the PDN config included — start a fresh run.
+
+### Cap the flow's cgroup below the oomd threshold
+
+`systemd-oomd` kills by PSI on the whole **terminal scope**, which includes the Claude session:
+at 14:00:39 it killed 233 processes in the `vte-spawn-*.scope` and ended the session. Running the
+flow as
+
+```bash
+systemd-run --user --scope -p MemoryMax=12G -p MemorySwapMax=0 --unit=<name> <script>
+```
+
+makes the flow's own cgroup hit its limit first, so the kill is contained to the flow. On this
+15.9 GB host, 12 GB is the working value — 14 GB was already close enough to let oomd fire first.
+This is the mitigation for the `project_gpu_grt_congestion` memory's "ask the user to stop oomd"
+note when stopping oomd is not an option.
+
+### Checkpoint before the expensive proof, not after (yosys equiv, bead `q7n`)
+
+`equiv_induct` on the flattened SoC was OOM-killed twice, each time taking the **90-minute front
+end** (`read_slang` → `flatten` → `equiv_make` → `equiv_simple`) with it. The proof is not the
+expensive part; rebuilding the design is. Split it:
+
+```tcl
+# pass 1 (~85 min) — produce the checkpoint and stop
+equiv_make gold gate equiv ; hierarchy -top equiv ; equiv_simple -seq 5 ; equiv_status
+write_rtlil equiv_checkpoint.il          # 96 MB
+
+# pass 2 (12 min, separate process, fresh heap)
+read_rtlil equiv_checkpoint.il ; hierarchy -top equiv ; equiv_induct -seq 5 ; equiv_status
+```
+
+`equiv_induct -seq 5` then completes in **12 minutes at 11.5 GB peak** — the same proof that
+previously died at a 7 GB cap after 81 minutes.
+
+**The mistake to avoid:** my first rewrite put `write_rtlil` *after* a deeper
+`equiv_simple -seq 20`. That pass needs >12.6 GB, was killed at a 12 GiB cap, and the checkpoint
+was therefore never written — the front end was lost a second time. Checkpoint immediately after
+the cheapest result you would not want to recompute, then escalate depth in later passes.
+
+Result on this design: 276 → **224 unproven, 0 disproven** (64 209 / 64 433 = 99.65 % proven). The
+52 that induction closed were the PMU FSM cones; what remains is 7 × 32 bits of DMA address/count
+registers and the crossbar read-address they drive.
+
+### Prove sv2v output at MODULE level, not flat (bead `q7n`)
+
+sv2v is source-to-source, so module boundaries survive — 28 modules remain in
+`soc_top_sv2v.v`. That makes a per-module miter possible, and it is dramatically cheaper than
+the flat SoC proof:
+
+| | flat `soc_top` | module `dma_engine` |
+| --- | --- | --- |
+| front end | ~90 min | seconds |
+| `equiv_induct` depth that fits | seq 5 only | seq 20 ran to completion |
+| peak | 11.5 GB (seq 5); seq 7/10 die at 12.57 GB | 7.5 GB |
+
+**The flat depth ceiling is a hard wall, not a tunable.** `equiv_simple -seq 20`,
+`equiv_induct -seq 10` and `equiv_induct -seq 7` all die at an identical 12.57–12.59 GB RSS.
+`equiv_purge` before the deep pass does not help — the purged checkpoint is the same 96 MB
+because the unproven cones pull in most of the design regardless.
+
+**But depth was not what the residual needed.** At module level `equiv_induct -seq 20` ran to
+completion and still proved none of the 128 DMA points, so those cones resist induction even
+standalone. Two sv2v transforms sit exactly there — a dropped width cast
+(`min2(words_rem_q, 32'(MAX_BURST_BEATS))` → `min2(words_rem_q, MAX_BURST_BEATS)`) and struct
+fields rewritten as bit slices (`q_mem[q_head].src` → `q_mem[q_head][95-:32]`). Both are
+equivalent only over reachable states, which is what an induction proof lacks an invariant for.
+A wrong field offset would appear as *disproven*; nothing is disproven anywhere.
+
+### Bounded miters need reset at step 1 AND a skipped step-1 comparison (bead `q7n`)
+
+A module-level 20-cycle miter on `pmu` (`sat -verify -prove-asserts -seq 20 -set-init-zero`)
+returned `model found: FAIL!` in 6 s. The trace showed gold/gate differing **only at t=1**
+(`cpu/gpu_clk_en_o`, `cpu/gpu_rst_n_o`: gold 1, gate 0), with no difference at t=2..20.
+
+What did **not** make it go away, and why:
+
+* `-enable_undef -set-def-inputs` — not X-propagation; `pmu.sv` has no `'x` assignments.
+* `-set-at 1 in_rst_n_i 0` alone — step-1 outputs are combinational from the *initial* state,
+  which reset cannot change until the next edge. Reset was in fact already low in the original
+  counterexample.
+
+What did:
+
+```
+sat -verify -prove-asserts -seq 20 -set-init-zero -set-at 1 in_rst_n_i 0 -prove-skip 1 miter
+=> SAT proof finished - no model found: SUCCESS!
+```
+
+Gold and gate outputs are identical for all 19 post-reset cycles; the divergence is purely a
+pre-reset first-cycle artefact of a forced initial state, not a functional difference. **Why**
+the two sides model that initial state differently remains unexplained — the obvious theory
+(gate infers `dom_state_q` as an uninitialised memory) was checked and is wrong: gate shows plain
+flops. The conclusion rests on the post-reset proof, not on a mechanism.
+
+`tools/verif/equiv_sv2v_module.sh` now has a BMC mode that applies both constraints:
+`BMC_DEPTH=<N> RESET_PORT=<name> tools/verif/equiv_sv2v_module.sh <module>`.
+
+### Parameter overrides for equivalence need two different mechanisms (bead `q7n`)
+
+`sram_controller` could not be proven at its real size: `mem [0:MEM_WORDS-1]` with
+`MEM_WORDS=4096` maps to 4096 × 32-bit flops **per side**, and `equiv_simple` was OOM-killed at
+4, 6 and 7 GB. sv2v keeps `MEM_WORDS` as a genuine parameter (`IDX_W = $clog2(MEM_WORDS)` derives
+from it), so proving a small instance checks the same transform.
+
+The trap is that the override must be applied differently on each side:
+
+* **gold (source RTL via yosys-slang):** `read_slang -G MEM_WORDS=16`. Slang elaborates at read
+  time, so a `chparam` issued afterwards silently does not reach the gold design.
+* **gate (sv2v via read_verilog):** `chparam -set MEM_WORDS 16 sram_controller`, before
+  `hierarchy`.
+
+**Verify it took effect on both sides** rather than trusting the command — the `memory` pass log
+line `created 16 $dff cells ... of width 32` must appear exactly twice. A one-sided override
+would compare a 16-word gold against a 4096-word gate and fail for a reason unrelated to sv2v.
+Use a power of two so the `$clog2` address decode stays exact.
+
+Result: PROVEN, 594 points. Tool: `PARAM=MEM_WORDS=16 tools/verif/equiv_sv2v_module.sh sram_controller`.

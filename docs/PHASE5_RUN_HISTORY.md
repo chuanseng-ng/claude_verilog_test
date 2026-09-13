@@ -371,6 +371,42 @@ ASAP7 run with recoverable artifacts on disk (SoC, GPU, and CPU alike) as
 part of root-causing bead `claude_verilog_test-xy6`. This section is the
 authoritative statement — every inline ⚠️ mark above points here.
 
+> **RESOLVED for new runs, 2026-09-09 (bead `ocm`). This section's findings about
+> runs 14, 23 and every other pre-September run REMAIN TRUE and are not
+> rehabilitated — those runs really did commit zero wires.** What changed is that
+> ASAP7 detailed routing now works at all.
+>
+> Root cause: LibreLane 2.4.13's *own pinned* OpenROAD (`edf00dff`) cannot grant
+> pin access to **any** ASAP7 top-level pin — 401/401 BTerms fail — while passing
+> Sky130 cleanly on the identical probe. LibreLane 3.0.14's pin (`dcf36133`)
+> resolves it. A residual 16 `DRT-0255` were traced to a single macro column and
+> cleared by a +10 DBU shift on `gen_data_sram[1]`.
+>
+> First passing run: **`RUN_2026-09-09_14-56-03`**, `tools/verif/check_asap7_routing.py`
+> exit 0 — **33,396 routed net records**, `route__wirelength` 270,938,
+> `route__wirelength__max` 321.17 (0 on every previous run ever recorded),
+> `drt_error_count` 0, 52 steps including `write_views`. Marked `.signoff` so
+> `prune_runs` cannot evict it.
+>
+> ⚠️ **This is NOT physical closure and must not be quoted as one.**
+> `route__drc_errors = 2045` on that run, because `DRT_OPT_ITERS` was capped at 12
+> to fit the host's time and memory; the gate deliberately does **not** check DRC
+> violations. The residual, triaged by rule: 1135 M3.Lef58EolKeepOut, 560 M2 Metal
+> Spacing, 215 M3.Short, 81 V2 Cut Spacing, 33 V3.Lef58CutSpacingTable, 12
+> M2.Lef58SpacingEndOfLine, 5 V2 Cut Short, 4 M6 Rect Only — i.e. 220 real shorts,
+> the rest spacing/keepout. An unbounded run reached 43 violations by iteration ~45
+> but peaked at 13 GiB on a 15.9 GB host and died before `write_views`.
+>
+> ⚠️ **The point fix is a per-instance workaround, not a rule.** Its positive
+> control — moving a *passing* column onto the identical near-grid residue class —
+> did **not** reproduce the failure, so grid alignment is necessary-looking but
+> demonstrably not sufficient. Any re-placement, die-size or macro-count change can
+> drop a different column into the same condition.
+>
+> Consequence for `e69`: the first genuine post-route parasitic extraction in this
+> project now exists — a 61,048,456-byte SPEF consumed by `OpenROAD.STAPostPNR` —
+> for the **CPU block only**. GPU and SoC still have `RUN_SPEF_EXTRACTION` false.
+
 **What "zero wires" means, precisely.** `OpenROAD.DetailedRouting`'s
 `detailed_route` call is wrapped in `catch {}` by a local (uncommitted-to-
 upstream) patch to LibreLane's `librelane/scripts/openroad/drt.tcl`. On
@@ -487,12 +523,157 @@ pursue it further given the 2026-08-16 06:48 host reboot (bead `o1i`) that
 had just killed a 9-hour in-flight run.
 
 ## Known limitations / follow-ups
-- **sv2v ≠ formal-equivalent to source RTL.** Correctness rests on `soc_all` 82/82 (M11-era count; 120/120 as of 2026-08-01)
-  against the original SystemVerilog. A Yosys EQY/LEC of sv2v output vs RTL would
-  add tape-out rigor (not required for indicative ASAP7).
+- **sv2v vs source RTL — now formally checked (2026-09-12/13, bead `q7n`), not fully closed.**
+  Originally correctness rested only on `soc_all` 82/82 (M11-era count; 120/120 as of
+  2026-08-01). Gold is the **source RTL read by yosys-slang** — an independent frontend — and gate
+  is `soc_top_sv2v.v`, so this checks sv2v itself rather than a self-consistency.
+  * **Flat `soc_top`:** 64 209 of 64 433 equivalence points proven (99.65 %), **0 disproven**.
+    Depth is host-capped at `equiv_induct -seq 5`: seq 7, 10 and 20 all die at an identical
+    ~12.57 GB.
+  * **Per module** (`tools/verif/equiv_sv2v_module.sh`, sv2v keeps module boundaries):
+    **25 of 27 modules PROVEN outright** at seq-20 induction, including `axi4_crossbar`,
+    `soc_bus`, `async_axi_fifo`; `sram_controller` at `MEM_WORDS=16` (its 4096-word array is
+    unaffordable at full size; the transform is depth-independent). The flat miter's unproven
+    `m_araddr` group proves cleanly at module level, so it was a flattening artefact.
+  * **Remaining two, bounded evidence only:** `pmu` — 39 FSM-output points induction-unproven, but
+    a 40-cycle **post-reset** bounded miter passes (39 cycles after reset — enough for a full power-down→up through both domains' 9-state sequencers; 20 cycles was not). `dma_engine` — 128 points
+    (`src_q`/`dst_q`/`words_rem_q`/`m_araddr`) unproven even at seq-20 induction; 8-cycle
+    bounded miters pass both from the zero state and after reset.
+  * A PMU miter first reported a counterexample; it was a **pre-reset first-cycle artefact** —
+    identical outputs for all 19 post-reset cycles. Bounded miters here need reset asserted at
+    step 1 *and* `-prove-skip 1`; the tool's BMC mode applies both.
+  **Strictness issues fixed (2026-09-13, branch `fix/q7n-slang-strict-rtl`).** The SoC now
+  elaborates under yosys-slang in strict LRM mode — no `--allow-use-before-declare`, no
+  `--compat vcs` (4 errors → 0):
+  * `soc_top.sv` used `ext_irq`/`timer_irq` ~190 lines before declaring them; the IRQ `logic`
+    declarations now precede `u_ext_irq_sync`/`u_timer_irq_sync`. Ordering only.
+  * `pll_clkgen_pnr.sv` (ASAP7 **and** Sky130 copies) declared `parameter int unsigned PLL_IMPL`,
+    and `boot_rom.sv`'s `__pnr__` branch declared `parameter int unsigned MEM_INIT_FILE`, while
+    both are driven by `parameter string`. Synlig-era workarounds that only "worked" because sv2v
+    emits untyped parameters; now `parameter string`. Neither shim reads the value.
+  Re-verified: `soc_all` **183/183 PASS** (26 suite runs, including all four multiclock suites
+  that exercise the IRQ synchronisers), Verilator lint clean, both sv2v netlists regenerated, and
+  the equivalence tool now runs strict by default.
+  ⚠️ **Correction to the results above:** the `soc_top_sv2v.v` those numbers were measured against
+  was **stale** — it predated the `RAND_CDC_DELAY_*` parameters added to `cdc_2ff_sync.sv`. The
+  full per-module re-sweep on the freshly regenerated netlist, in strict mode, reproduces them
+  exactly: the same 25 modules proven (including `boot_rom` 79 and `pll_clkgen` 18, the two whose
+  parameters changed), `sram_controller` proven at `MEM_WORDS=16`, and the same `pmu` 39 /
+  `dma_engine` 128 induction residue.
 - **CPU macro LEF lacks AXI4 burst ports** (`awlen`/`wlast`/…) — abstract predates
   the M2 burst upgrade; SoC burst nets dangle at the macro boundary. Indicative-PPA
   acceptable; regenerate the abstract for a clean integration (bead
   `claude_verilog_test-g0o`).
 - Timing showed run-to-run variance (run 14 +113 ps vs run 15 −341 ps with the LEF
   change); the +113 ps margin is an indicative single-run result.
+
+## PDN caveat (2026-09-12, beads `gyx` / `4l8`) — every ASAP7 run has an empty power grid
+
+Counting `dbSWire` shapes on the POWER/GROUND nets of each run's post-PDN ODB:
+
+| ODB | PG shapes |
+| --- | --- |
+| `pnr/sky130/soc/runs/RUN_2026-07-31_05-13-54/17-openroad-generatepdn` | VPWR 65 610 / VGND 65 939 |
+| `pnr/asap7/soc/runs/RUN_2026-08-09_14-36-16/17-openroad-generatepdn` — **run 23, the accepted #96 sign-off** | **0 / 0** |
+| `pnr/asap7/cpu/runs/RUN_2026-09-10_05-13-18/20-openroad-generatepdn` — 3.0.14 | **0 / 0** |
+
+The sky130 row is the positive control (same script, same OpenROAD 26Q2 binary), so this is a
+real absence, not a measurement artifact.
+
+**Cause.** `pdngen` = `check_setup; build_grids; write_to_db; reset_shapes`. On ASAP7,
+`[ERROR PDN-0179] Unable to repair all channels` fires *inside* `build_grids`, before
+`write_to_db`. The local warn-and-continue patch in `pdn.tcl` (bead `ocm`) swallowed the error
+and let the flow continue — with nothing written. The flow's "benign PDN-0179" line therefore
+meant "PDN silently absent".
+
+**What this withdraws.** The "PDN = benign tap-cell artifact" note on the CPU/GPU/SoC sign-offs
+is withdrawn: there were no violations because there were no shapes. `analyze_power_grid`'s
+`PSM-0069` was never a tap-cell connectivity problem either — it had no grid to analyse.
+
+**What it does *not* change.** Timing, power and area were always GRT/estimate-based and are
+unaffected in kind. What does change is routing: every ASAP7 route ran with M1/M2/M5 free of
+PDN metal, so all ASAP7 DRC counts (including the 171-DRC CPU result on bead `ocm`) are a
+lower bound, not closure. Re-run the routing gate once the grid actually commits.
+
+**Fix landed in the toolchain** (both LibreLane trees, `librelane/scripts/openroad/pdn.tcl`):
+decompose `pdngen` so a failed `build_grids` still commits what it built. On the CPU block this
+goes 0 → 16 071 VDD / 17 151 VSS shapes. Residual: 550 VDD / 414 VSS unconnected shapes on M4
+(the SRAM macro PG pins, skipped because macro via insertion follows channel repair) + 18+18 on
+M1. Root-causing PDN-0179 itself is tracked on bead `4l8`.
+
+### PDN fixed (2026-09-12, same day) — ORFS-style grid builds, and IR drop now runs
+
+Root cause of the `PDN-0179` channel failure: the old grid connected the **M1 followpin rails
+directly to the M5 straps** (a four-layer stack) and used M2 only as a sparse 4.5 µm-pitch strap
+running *parallel* to those rails. ASAP7 std-cell rails sit on M1 running horizontally (M1's
+non-preferred direction), so most rails had nothing reachable above them and channel repair
+could not fix it — 27 unrepairable channels, all on M1, in the macro-free regions
+x 82.19–124.96 µm and y 104.19–123.42 µm.
+
+Fix ported from ORFS `flow/platforms/asap7/openRoad/pdn/BLOCKS_grid_strategy.tcl`: followpins on
+**both M1 and M2** (0.018 µm wide, 0.54 µm pitch — one per row), then M2→M5→M6, with the macro
+grid connecting M4↔M5 because the SRAM PG pins are on M4. Landed as
+`pnr/asap7/pdn_asap7_orfs.tcl` (+ per-design `pdn_orfs.tcl` wrappers, `PDN_CFG` in both
+`config_3014.json`).
+
+Measured on the CPU block (`RUN_2026-09-10_05-13-18` step-18 ODB, standalone harness):
+
+| | old grid | ORFS-style grid |
+| --- | --- | --- |
+| remaining channels | 27 | **0** |
+| PG shapes committed | **0** | 27 999 VDD / 27 213 VSS |
+| `check_power_grid` | `PSM-0069` both nets | **PASS** both nets |
+| unconnected shapes / instances | 964 / 357 (partial-commit build) | **0 / 0** |
+
+IR drop then needed one more thing: ASAP7 shipped **no via resistances**, so PSM aborted with
+`PSM-0021` "Resistance map contains invalid values" even with clean connectivity. Added `VIAS_R`
+to both `config_3014.json` using ORFS's values (`flow/platforms/asap7/setRC.tcl`). With that:
+
+```
+[INFO PSM-0040] All shapes on net VDD are connected.
+Worstcase IR drop: 1.28e-03 V   Percentage drop: 0.18 %   (VDD)
+Worstcase IR drop: 1.31e-03 V   Percentage drop: 0.19 %   (VSS)
+```
+
+⚠️ **Indicative only.** That number came from a standalone harness on a *floorplan-stage* ODB
+(step 18, before placement/CTS/route) combined with the final run's SPEF, so instance power and
+shape geometry do not correspond to the same design state. It demonstrates the flow works
+end-to-end; it is **not** a sign-off IR figure. A full 3.0.14 CPU run with `PDN_CFG` +
+`VIAS_R` + `RUN_IRDROP_REPORT=true` is still required, and routing with a real grid on the
+tracks will be harder than every previous ASAP7 route.
+
+### Routing with a real PDN is host-blocked (2026-09-12, bead `4l8`)
+
+Every ASAP7 routing result in this repo was produced with **no** power grid on the tracks (see the
+PDN caveat above). With the grid fixed and actually committed, detailed routing no longer fits on
+this 15.9 GB host. Four attempts, all on the CPU block:
+
+| PDN density | util / DRT threads | cap | reached | violations | peak |
+| --- | --- | --- | --- | --- | --- |
+| ORFS M5 2.16 / M6 4.32 | 50 / 8 | 12 GiB | 90 % of iter 0 | 122 121 | 13.4 GB |
+| ORFS M5 2.16 / M6 4.32 | 50 / 4 | 14 GiB | 90 % of iter 0 | 122 121 | 13.4 GB |
+| 3× sparse 6.48 / 12.96 | 50 / 4 | 12 GiB | ~75 % of iter 0 | 83 207 | 11.2 GB |
+| 3× sparse 6.48 / 12.96 | 45 / 2 | 13 GiB | 80 % of iter 0 | 112 764 | 12.8 GB |
+
+All four died inside **iteration 0 of 12**. For reference, the PDN-free run peaked at 12.4 GB and
+did converge, to 1991 DRC — so a real grid costs roughly 20–30 % more violations, and this host has
+no headroom to absorb that.
+
+**What did not work, and is worth not retrying blindly:**
+
+* *Sparser straps.* Three densities were measured (0.18 %, 0.52 %, 1.37 % worst-case IR). Violation
+  counts barely moved — the congestion is driven by the **M2 followpins**, one track per row, not by
+  the M5/M6 mesh. Sparser straps buy IR margin, not routing headroom.
+* *Lower utilization.* `FP_CORE_UTIL` 50→45 produced an identical violation count (44 103 at the
+  same checkpoint) and **more** memory, because the larger die means more area to hold state for.
+* *Fewer DRT threads.* 8→4→2 moved the peak only marginally; memory is dominated by violation
+  markers, not per-worker state.
+* *Avoiding M2 entirely.* Rails on M1 climbing straight to M3 leaves every rail unconnected —
+  pdngen will not stack M1→M3 through M2. M1→M2 followpins are the only legal way up, so the M2
+  cost is structural.
+
+**Conclusion.** PDN-clean routing on this design needs a machine with ≥32 GB, the same gate already
+recorded for the Sky130 GPU stages. The PDN fix itself is verified independently of routing: the
+grid builds and passes `check_power_grid` on CPU, GPU and SoC, and IR drop runs end-to-end. What
+remains unverified is whether this design still closes DRC once the grid occupies the tracks — and
+the honest expectation, given 1991 DRC PDN-free, is that it will need work.

@@ -46,7 +46,7 @@
     "FP_SIZING": "absolute",
     "DIE_AREA": "0 0 130 130",
     "CORE_AREA": "5 5 125 125",
-    "FP_CORE_UTIL": 50,
+    "FP_CORE_UTIL": 45,
     "FP_ASPECT_RATIO": 1,
     "MACRO_PLACEMENT_CFG": "dir::macro_placement_3014.cfg",
     "PL_TARGET_DENSITY_PCT": 40,
@@ -74,7 +74,7 @@
     "FP_PDN_CORE_RING_HOFFSET": 0.5,
     "FP_PDN_CORE_RING_VOFFSET": 0.5,
     "RT_MAX_LAYER": "M7",
-    "DRT_THREADS": 8,
+    "DRT_THREADS": 2,
     "FP_IO_HLENGTH": 4.0,
     "FP_IO_VLENGTH": 4.0,
     "FP_IO_MIN_DISTANCE": 1.0,
@@ -85,6 +85,10 @@
     "// LAYERS_RC_NOTE": "Converted from the 2.4.13 flat-string form by tools/setup/librelane3_config.py. Old order was '<layer> <cap> <res>'; 3.0.14 wants a per-IPVT-corner nested mapping with explicit res/cap keys. Values are unchanged ORFS-calibrated ASAP7 numbers.",
     "LAYERS_RC": {
         "*": {
+            "M1": {
+                "res": 0.0704175,
+                "cap": 1e-10
+            },
             "M2": {
                 "res": 0.0462311,
                 "cap": 0.184542
@@ -168,15 +172,15 @@
     "PDN_MACRO_CONNECTIONS": [
         ".*(u_tag_sram|u_data_sram) VDD VSS vdd vss"
     ],
-    "RUN_ANTENNA_REPAIR": true,
-    "RUN_HEURISTIC_DIODE_INSERTION": true,
+    "RUN_ANTENNA_REPAIR": false,
+    "RUN_HEURISTIC_DIODE_INSERTION": false,
     "GRT_ANTENNA_ITERS": 5,
     "GRT_ANTENNA_MARGIN": 20,
-    "DIODE_ON_PORTS": "in",
+    "DIODE_ON_PORTS": "none",
     "// RUN_SPEF_EXTRACTION_NOTE": "Flipped true 2026-08-15 (claude_verilog_test-e69): rcx_rules.pex was a 0-byte stub in ~/pdk/asap7, blocking OpenROAD.RCX/STAPostPNR on every prior ASAP7 run. Real ORFS OpenRCX rules now vendored via tools/setup/install_asap7_rcx_rules.py -- see that script's docstring and the bead for geometry-equivalence evidence. Validated on this (CPU) block only; GPU/SoC configs deliberately left at false pending their own validation.",
     "RUN_SPEF_EXTRACTION": true,
     "RUN_MCSTA": true,
-    "RUN_IRDROP_REPORT": false,
+    "RUN_IRDROP_REPORT": true,
     "RUN_MAGIC_DRC": false,
     "RUN_KLAYOUT_DRC": false,
     "RUN_KLAYOUT_XOR": false,
@@ -200,8 +204,42 @@
     "// PIN_ORDER_NOTE": "FP_PIN_ORDER_CFG pins the macro's boundary pin layout. Without it OpenROAD free-floats pin assignment per block run: two consecutive regenerations moved 393 of 401 pins, which perturbed SoC placement around u_cpu, doubled post-CTS cpu_clk skew (worst_hold -485.6 -> -922.1 ps), drove hold violations 805 -> 4702 endpoints and 4814 inserted hold buffers, and took cpu_clk WNS from -60.66 to -596.00 ps. The file is generated from the known-good run-21 abstract. io_place.py ERRORS if a design pin is missing from the file or vice versa (power/ground are excluded by the tool), so adding a port fails loudly instead of silently reshuffling.",
     "FP_PIN_ORDER_CFG": "dir::pin_order.cfg",
     "// GRT_ALLOW_CONGESTION_NOTE": "Set false for the 3.0.14 routing bring-up (bead ocm). With true, global routing may hand detailed routing a plan it cannot realise; the first ASAP7 run that ever reached detailed routing failed with 16 DRT-0255 maze-route errors concentrated on SRAM macro pins (data_din0/data_dout0/data_gclk) after successfully routing 33905 nets.",
-    "// DRT_THREADS_NOTE": "Set to 1 for the bead-ocm bring-up experiment. Every attempt so far reported EXACTLY 16 DRT-0255 errors regardless of channel width, macro position or the M4 obstruction, always confined to one worker routeBox column. 16 = 2 x DRT_THREADS(8), so the count may be an artifact of in-flight parallel workers at abort rather than 16 genuinely unroutable nets. Single-threaded should collapse it to the real number.",
+    "// DRT_THREADS_NOTE": "Lowered 8 -> 4 on 2026-09-12. DRT_THREADS is a memory multiplier (each TritonRoute worker holds its own routing state). This design peaks ~12.4 GB at 8 threads -- measured on BOTH the PDN-free RUN_2026-09-10_05-13-18 and the first PDN run RUN_2026-09-12_12-07-32, so the peak is design-driven, not caused by the new power grid. On a 15.9 GB host that leaves no headroom and trips systemd-oomd, which kills the whole terminal scope. 4 threads trades runtime for a peak this host can actually hold.",
     "// DENSITY_NOTE": "Attempt 10: PL_TARGET_DENSITY_PCT 50 -> 40. Every earlier experiment moved MACROS (channel width, half-worker shift) or changed the abstract; none changed standard-cell density near the macro pins. DRT_THREADS restored to 8 -- single-threaded gave the identical 16 failures, so the count is real and not a parallel-abort artifact.",
-    "// DRT_OPT_ITERS_NOTE": "Bounded to 12 for the bring-up (default 64). The unbounded run RUN_2026-09-09_06-11-06 routed cleanly -- 0 [ERROR DRT-*] through 48 iterations, vs every prior run dying inside iteration 0 -- but took 8h41m, peaked at 13 GiB on a 15.9 GB host, and terminated before write_views, so no final DEF existed and the gate could only return ERROR. Ordinary DRC violations converged 127153 -> 43 and plateaued for the last ~10 iterations. Memory grows with iteration count, so bounding iterations bounds both runtime and peak RSS. At iteration 12 the violation count was ~2045: this run is intended to PRODUCE A FINAL DEF and let check_asap7_routing.py return a real verdict, NOT to reach DRC cleanliness.",
-    "DRT_OPT_ITERS": 12
+    "// DRT_OPT_ITERS_NOTE": "Raised 12 -> 30 for the DRC-reduction run (2026-09-09 night). Measured trade-off: DRT_OPT_ITERS=12 gave 12 GiB peak / 3h25m / 2045 DRC and completed write_views; the unbounded 64 gave 13 GiB peak / 8h41m / 43 DRC but died before write_views. At 12 the violation trajectory was still FALLING, not plateaued, so more iterations should buy real DRC reduction. 30 is chosen to stay inside the ~7 h window available and, on the 12-iteration memory curve, to stay under the 13 GiB ceiling that killed the unbounded run. Goal: drive 2045 down while still reaching write_views, so the result is a COMPLETE run.",
+    "DRT_OPT_ITERS": 12,
+    "// LAYERS_RC_M1_NOTE": "M1 added 2026-09-09 (bead gyx). LAYERS_RC previously started at M2, so M1 had NO resistance or capacitance on any path -- the ASAP7 tech LEF carries neither attribute for ANY routing layer, and the set_rc.tcl fallback that does include M1 is guarded by ![info exist ::env(LAYERS_RC)] and therefore never fires once LAYERS_RC is set. librelane's irdrop.tcl sources set_rc.tcl (line 19), so LAYERS_RC is exactly what feeds PSM -- which is why analyze_power_grid reported PSM-0021 zero-resistance on M1. Values are ORFS's own (flow/platforms/asap7/setRC.tcl), identical to the other layers' source. NOTE ORFS also has no RESISTANCE in its ASAP7 tech LEF, so supplying R via set_layer_rc is the UPSTREAM-CONSISTENT approach -- do NOT inject resistance into the LEF.",
+    "// IR_RUN_NOTE": "RUN_IRDROP_REPORT REVERTED to false 2026-09-10. IRDropReport is step 51 of 52 and is FATAL while PSM-0069 stands: RUN_2026-09-10_05-13-18 died there, so final/ was never written and the run produced no final DEF and no final metrics despite clean routing (0 DRT errors). Cost more than it returned. Run IR STANDALONE against a completed run's ODB until PSM-0069 is fixed (bead gyx). The M1 LAYERS_RC addition DID work -- PSM-0021 is gone.",
+    "PDN_CFG": "dir::pdn_orfs.tcl",
+    "VIAS_R": {
+        "*": {
+            "V1": {
+                "res": 0.0172
+            },
+            "V2": {
+                "res": 0.0172
+            },
+            "V3": {
+                "res": 0.0172
+            },
+            "V4": {
+                "res": 0.0118
+            },
+            "V5": {
+                "res": 0.0118
+            },
+            "V6": {
+                "res": 0.0082
+            },
+            "V7": {
+                "res": 0.0082
+            },
+            "V8": {
+                "res": 0.0063
+            }
+        }
+    },
+    "// DIODE_NOTE": "ASAP7 SIMPLE HAS NO ANTENNA DIODE. The PDK config sets DIODE_CELL=DECAPx1_ASAP7_75t_R with DIODE_CELL_PIN=\"\" (libs.tech/openlane/asap7sc7p5t_SIMPLE/config.tcl:69-70); DECAPx1 is a decap whose only pins are VDD/VSS. LibreLane 3.0.14 joins the two into 'DECAPx1_ASAP7_75t_R/', and odbpy/diodes.py:248 then does findITerm('') -> None -> AttributeError: 'NoneType' object has no attribute 'connect'. Killed RUN_2026-09-12_10-27-19 at step 42 (odb-diodesonports). Earlier runs never hit it because they were launched with a narrower step set, not because the config differed. Both flags off: there is no cell to insert, so neither step can ever succeed on this PDK. ALSO: repair_antennas itself fails -- antenna_repair.tcl:27 dies with \"can't read 'diode_mterm'\" because OpenROAD needs a diode PORT and DECAPx1 has none. That killed RUN_2026-09-12_11-03-29 at step 43 (openroad-repairantennas). So RUN_ANTENNA_REPAIR=false and DRT_ANTENNA_REPAIR_ITERS=0 too -- the latter matters most: drt.tcl runs the same repair_antennas AFTER detailed routing, which would throw away hours of work. Antenna repair is simply not available on ASAP7 SIMPLE; antenna CHECKING still runs.",
+    "DRT_ANTENNA_REPAIR_ITERS": 0,
+    "// DRT_MEM_NOTE": "2026-09-12: detailed routing with a REAL power grid does not fit this 15.9 GB host at FP_CORE_UTIL=50. Three attempts were OOM-killed between 70-90%% of DRT iteration 0 (of 12), at every PDN density: ORFS 2.16/4.32 -> 122121 viol / 13.4 GB, 2x-sparse -> killed, 3x-sparse 6.48/12.96 -> 83207 viol / 11.2 GB. For reference the PDN-FREE run peaked 12.4 GB and did converge (1991 DRC), so the gap is narrow rather than fundamental -- a real grid costs roughly 20-30%% more violations and the host has no headroom left. FP_CORE_UTIL 50->45 gives the router more area so congestion and marker memory drop; DRT_THREADS 4->2 cuts per-worker state. Both are host accommodations, not design requirements: restore 50/8 on a machine with >=32 GB."
 }

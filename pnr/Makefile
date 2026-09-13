@@ -193,6 +193,7 @@ SV2V                ?= /nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1
 .PHONY: install-asap7-rcx-rules check-asap7-rcx-rules check-asap7-openroad
 .PHONY: librelane-sky130 librelane-sky130-cpu librelane-nangate45 librelane-asap7 librelane-asap7-gpu librelane-asap7-soc
 .PHONY: librelane-asap7-soc-multiclock
+.PHONY: librelane-asap7-3014 librelane-asap7-gpu-3014
 .PHONY: check-cdc-timing-asap7-soc
 .PHONY: asap7-soc-sv2v
 .PHONY: librelane-sky130-results librelane-sky130-cpu-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results librelane-asap7-soc-results
@@ -1014,6 +1015,68 @@ librelane-asap7: check-asap7-rcx-rules check-asap7-openroad
 		 $(abspath $(LIBRELANE_ASAP7_DIR))/config.json"
 	@$(MAKE) check-asap7-routing
 	@$(MAKE) prune-asap7-runs
+
+# ---------------------------------------------------------------------------
+# LibreLane 3.0.14 runs (config_3014.json)
+#
+# These configs had no Makefile target at all, so every run was launched by
+# hand and the two flags below had to be rediscovered each time. Both are
+# mandatory: without --manual-pdk, 3.0.14 resolves PDKs through ciel and quits
+# with "The PDK asap7 was not found."
+#
+# The --skip list mirrors the proven 2.4.13 list above, minus the diode and
+# antenna steps -- those are now disabled in config_3014.json itself
+# (DIODE_ON_PORTS=none, RUN_HEURISTIC_DIODE_INSERTION=false,
+# RUN_ANTENNA_REPAIR=false, DRT_ANTENNA_REPAIR_ITERS=0), because ASAP7 SIMPLE
+# ships no antenna diode: DIODE_CELL is DECAPx1_ASAP7_75t_R with an empty
+# DIODE_CELL_PIN, and DECAPx1 has only VDD/VSS pins. Relying on --skip alone
+# is what let that bug stay latent (bead 4l8).
+# ---------------------------------------------------------------------------
+LIBRELANE_3014_DIR  ?= /nobackup/librelane-3.0.14
+
+LIBRELANE_3014_SKIPS := \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations
+
+define librelane_3014_run
+	@echo "=========================================="
+	@echo "Running LibreLane 3.0.14 flow — $(2)"
+	@echo "  Config   : pnr/$(1)/config_3014.json"
+	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
+	@echo "  Tool     : $(LIBRELANE_3014_DIR)"
+	@echo "=========================================="
+	@if [ ! -d "$(LIBRELANE_3014_DIR)" ]; then \
+		echo "ERROR: $(LIBRELANE_3014_DIR) not found."; \
+		echo "       The 3.0.14 worktree lives outside the repo; recreate it before running."; \
+		exit 1; fi
+	@if [ ! -f "$(1)/config_3014.json" ]; then \
+		echo "ERROR: pnr/$(1)/config_3014.json not found."; exit 1; fi
+	cd $(LIBRELANE_3014_DIR) && nix develop --command python3 -m librelane \
+		 --manual-pdk \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 $(LIBRELANE_3014_SKIPS) \
+		 $(abspath $(1))/config_3014.json
+endef
+
+librelane-asap7-3014:
+	$(call librelane_3014_run,$(LIBRELANE_ASAP7_DIR),ASAP7 CPU)
+	@$(MAKE) check-asap7-routing
+
+librelane-asap7-gpu-3014:
+	$(call librelane_3014_run,$(LIBRELANE_ASAP7_GPU_DIR),ASAP7 GPU)
+	@$(MAKE) check-asap7-gpu-routing
 
 librelane-asap7-results:
 	$(call librelane_results,$(LIBRELANE_ASAP7_DIR))
