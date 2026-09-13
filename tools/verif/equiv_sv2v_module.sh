@@ -97,12 +97,22 @@ SRC_FILES=(
     printf 'read_slang -D USE_ICG_CELL -D __pnr__ --ignore-unknown-modules --allow-use-before-declare --compat vcs'
     for inc in rtl/soc rtl/soc/cdc rtl/soc/pll rtl/periph rtl/mem; do printf ' -I %s/%s' "$ROOT" "$inc"; done
     printf ' --top %s' "$MODULE"
+    # PARAM="NAME=VALUE" overrides one module parameter on BOTH sides, for modules whose default
+    # size makes the proof unaffordable. read_slang elaborates at read time, so the gold side
+    # takes it as a slang -G option; a chparam after read_slang would not reach it. The sv2v side
+    # takes chparam before hierarchy. Measured motivation: sram_controller's
+    # `mem [0:MEM_WORDS-1]` at MEM_WORDS=4096 maps to 4096 x 32-bit flops per side and was
+    # OOM-killed in equiv_simple at 4, 6 and 7 GB. sv2v keeps MEM_WORDS as a real parameter
+    # (IDX_W = $clog2(MEM_WORDS) is derived from it), so a reduced-depth proof checks the same
+    # transform. Prefer a power of two so the $clog2 address decode stays exact.
+    if [ -n "${PARAM:-}" ]; then printf ' -G %s' "$PARAM"; fi
     printf ' %s' "${SRC_FILES[@]}"
     printf '\n'
     echo "hierarchy -top $MODULE; proc; flatten; opt_clean; memory; opt_clean; async2sync"
     echo "rename $MODULE gold"
     echo "design -stash gold"
     echo "read_verilog -sv -D USE_ICG_CELL $SV2V_OUT"
+    if [ -n "${PARAM:-}" ]; then echo "chparam -set ${PARAM%%=*} ${PARAM#*=} $MODULE"; fi
     echo "hierarchy -top $MODULE; proc; flatten; opt_clean; memory; opt_clean; async2sync"
     echo "rename $MODULE gate"
     echo "design -stash gate"

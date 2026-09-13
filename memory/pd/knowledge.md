@@ -2494,3 +2494,24 @@ flops. The conclusion rests on the post-reset proof, not on a mechanism.
 
 `tools/verif/equiv_sv2v_module.sh` now has a BMC mode that applies both constraints:
 `BMC_DEPTH=<N> RESET_PORT=<name> tools/verif/equiv_sv2v_module.sh <module>`.
+
+### Parameter overrides for equivalence need two different mechanisms (bead `q7n`)
+
+`sram_controller` could not be proven at its real size: `mem [0:MEM_WORDS-1]` with
+`MEM_WORDS=4096` maps to 4096 × 32-bit flops **per side**, and `equiv_simple` was OOM-killed at
+4, 6 and 7 GB. sv2v keeps `MEM_WORDS` as a genuine parameter (`IDX_W = $clog2(MEM_WORDS)` derives
+from it), so proving a small instance checks the same transform.
+
+The trap is that the override must be applied differently on each side:
+
+* **gold (source RTL via yosys-slang):** `read_slang -G MEM_WORDS=16`. Slang elaborates at read
+  time, so a `chparam` issued afterwards silently does not reach the gold design.
+* **gate (sv2v via read_verilog):** `chparam -set MEM_WORDS 16 sram_controller`, before
+  `hierarchy`.
+
+**Verify it took effect on both sides** rather than trusting the command — the `memory` pass log
+line `created 16 $dff cells ... of width 32` must appear exactly twice. A one-sided override
+would compare a 16-word gold against a 4096-word gate and fail for a reason unrelated to sv2v.
+Use a power of two so the `$clog2` address decode stays exact.
+
+Result: PROVEN, 594 points. Tool: `PARAM=MEM_WORDS=16 tools/verif/equiv_sv2v_module.sh sram_controller`.
