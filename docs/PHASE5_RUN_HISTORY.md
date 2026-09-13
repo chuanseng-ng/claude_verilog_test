@@ -536,7 +536,7 @@ had just killed a 9-hour in-flight run.
     unaffordable at full size; the transform is depth-independent). The flat miter's unproven
     `m_araddr` group proves cleanly at module level, so it was a flattening artefact.
   * **Remaining two, bounded evidence only:** `pmu` — 39 FSM-output points induction-unproven, but
-    a 20-cycle **post-reset** bounded miter passes. `dma_engine` — 128 points
+    a 40-cycle **post-reset** bounded miter passes (39 cycles after reset — enough for a full power-down→up through both domains' 9-state sequencers; 20 cycles was not). `dma_engine` — 128 points
     (`src_q`/`dst_q`/`words_rem_q`/`m_araddr`) unproven even at seq-20 induction; 8-cycle
     bounded miters pass both from the zero state and after reset.
   * A PMU miter first reported a counterexample; it was a **pre-reset first-cycle artefact** —
