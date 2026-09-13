@@ -122,29 +122,39 @@ class VectorAluDriver:
                 "branch_taken_o": int(dut.branch_taken_o.value),
             }
 
+        # Latency-agnostic: sample done_o in the ReadOnly phase of the SAME
+        # cycle start_i is asserted, before ever dropping it, then keep
+        # sampling on each subsequent RisingEdge until done_o is seen. Some
+        # HLS arms (e.g. a Bambu single-state FSM) assert done_o
+        # combinationally while start_i is still high -- waiting for a
+        # RisingEdge before the first sample (as a naive handshake would)
+        # misses that and times out even though the DUT is correct. Bounded
+        # so a stuck done_o fails the test instead of hanging the regression.
         dut.start_i.value = 1
-        await RisingEdge(dut.clk)
-        dut.start_i.value = 0
-        # Wait for the Bambu handshake to complete (bounded so a stuck
-        # done_o fails the test instead of hanging the regression).
-        for _ in range(50):
-            await RisingEdge(dut.clk)
+        cycles = 0
+        outputs = None
+        for _ in range(51):
+            await ReadOnly()
             if int(dut.done_o.value):
+                outputs = {
+                    "result_o": int(dut.result_o.value),
+                    "branch_taken_o": int(dut.branch_taken_o.value),
+                }
                 break
+            await RisingEdge(dut.clk)
+            cycles += 1
         else:
             raise TimeoutError("HLS arm: done_o never asserted within 50 cycles")
-        await ReadOnly()
-        outputs = {
-            "result_o": int(dut.result_o.value),
-            "branch_taken_o": int(dut.branch_taken_o.value),
-        }
-        # Step past the read-only sync phase before returning: ReadOnly()
-        # above leaves the scheduler unable to accept writes, and the very
-        # next call to _set_inputs() writes input values with no intervening
-        # await -- without this, that write raises "scheduled during a
-        # read-only sync phase" (same fix as
+        if outputs is None:
+            raise TimeoutError("HLS arm: done_o never asserted within 50 cycles")
+        cocotb.log.info(f"HLS-arm latency: {cycles} cycle(s) from start_i to done_o")
+        # Step past the read-only sync phase BEFORE writing start_i=0:
+        # ReadOnly() above leaves the scheduler unable to accept writes until
+        # a trigger is awaited -- without this, that write raises "scheduled
+        # during a read-only sync phase" (same fix as
         # test_hazard_unit.py's HazardUnitDriver.apply()).
         await RisingEdge(dut.clk)
+        dut.start_i.value = 0
         return outputs
 
 

@@ -2515,3 +2515,126 @@ would compare a 16-word gold against a 4096-word gate and fail for a reason unre
 Use a power of two so the `$clog2` address decode stays exact.
 
 Result: PROVEN, 594 points. Tool: `PARAM=MEM_WORDS=16 tools/verif/equiv_sv2v_module.sh sram_controller`.
+
+### LibreLane 2.4.13's PSM report parser cannot read OpenROAD 26Q2 output (2026-09-13)
+
+Symptom: `OpenROAD.GeneratePDN` dies *after* OpenROAD finished, in Python:
+`yaml.scanner.ScannerError: while scanning for the next token … in "<file>", line 2, column 1`.
+
+Cause: `get_psm_error_count()` in `librelane/steps/openroad.py` rewrites
+`*-grid-errors.rpt` into YAML, and was written for the space-indented layout that `pdn.tcl`'s own
+fallback file still uses (`srcs:` followed by a `- N/A` list item). The OpenROAD **26Q2** binary
+this repo shims into the 2.4.13 flow writes a different layout:
+
+```
+violation type: Unconnected shape
+<TAB>srcs: net:VSS
+<TAB>bbox = (10.0440, 365.0130) - (509.9760, 365.0670) on Layer M1
+```
+
+Tab indentation is illegal YAML, and even re-indented, `srcs: net:VSS` is a scalar, so the
+original `len(violation["srcs"])` would count 7 characters rather than one source.
+
+**Why it was latent.** It only triggers when `check_power_grid` writes a *real* error report.
+Before the `pdn.tcl` patch that commits a partial grid, a failed `pdngen` left no grid, so the
+YAML-valid fallback survived; a passing grid leaves a 1-byte file. The SoC on the old
+`pnr/asap7/soc/pdn.tcl` topology was the first run to produce a partial, failing grid.
+
+**Fix** (patch in `memory/pd/patches/librelane2413_psm_report_parser_26q2_format.diff`): count
+source entries line by line instead of going through YAML. Verified against real reports, with
+the original parser for comparison:
+
+| input | original | patched | expected |
+| --- | --- | --- | --- |
+| empty (grid passed) | 0 | 0 | 0 |
+| `pdn.tcl` fallback | 1 | 1 | 1 |
+| SoC VSS report (32 076 lines) | **crash** | 10 692 | 10 692 |
+| SoC VDD report (33 003 lines) | **crash** | 11 001 | 11 001 |
+
+The count only feeds `design__power_grid_violation__count` metrics; with
+`ERROR_ON_PDN_VIOLATIONS: false` it does not stop the flow.
+
+**Validated in-flow (2026-09-13, `RUN_2026-09-13_22-43-29`):** `GeneratePDN` completed and the
+flow continued; its `state_out.json` records `…count__net:VSS 10692`, `…net:VDD 11001`, total
+`21693` — identical to the offline test and to the reports' entry counts, with no traceback.
+
+**Follow-up, untested:** LibreLane 3.0.14's version of this function already dedents and
+re-indents with spaces, but every 3.0.14 run so far produced a *passing* grid (1-byte reports),
+so whether it handles `srcs: net:VSS` followed by a `bbox` line is unverified. Expect the same
+class of crash the first time a 3.0.14 run produces a failing grid.
+
+### LibreLane 2.4.13 `ioplacer.tcl` places NO pins under OpenROAD 26Q2 (2026-09-13)
+
+Symptom: `OpenROAD.GlobalPlacement` dies with
+`[ERROR GPL-0326] apb_paddr_i[0] toplevel port is not placed.` The only clue is one line in the
+earlier `OpenROAD.IOPlacement` step, easy to miss among thousands of STA warnings:
+`[WARNING PPL-0113] -random and -random_seed are obsolete. Skipping random pin placement.`
+
+Cause: 2.4.13's `ioplacer.tcl` calls `place_pins ... -random_seed 42` **unconditionally**, in every
+`FP_PPL_MODE` (this run used `matching`). OpenROAD 26Q2's `place_pins` treats either `-random`
+or `-random_seed` as obsolete and then places nothing — measured 2 of 161 ports placed before and
+after the step. LibreLane 3.0.14's `ioplacer.tcl` never passes either flag.
+
+Why it was latent: the 26Q2 binary is shimmed into the 2.4.13 flow by `check-asap7-openroad`,
+added 2026-09-08. Run 23 (2026-08-09) predates the shim, and its older OpenROAD accepted the flag
+and placed all 159 I/O. No 2.4.13 SoC run had reached global placement on 26Q2 before this.
+
+Fix (`memory/pd/patches/librelane2413_ioplacer_26q2_random_seed.diff`): drop `-random_seed 42`;
+`FP_PPL_MODE=random_equidistant` now warns and falls back to default placement, since 26Q2 has
+no random mode. Verified standalone on the failing run's own step-16 ODB with the exact patched
+invocation (`place_pins -min_distance 1 -hor_layers M4 -ver_layers M5`): **2/161 → 161/161 ports
+placed**, `PPL-0002 Number of I/O 159` (same as run 23), `apb_paddr_i[0]` PLACED, no PPL-0113.
+
+**Validated in-flow (`RUN_2026-09-13_23-04-18`, started 23:04 after the 23:01 patch):** step 17
+`OpenROAD.IOPlacement` logged `PPL-0001 Number of available slots 2024`, `PPL-0002 Number of I/O 159`,
+`PPL-0003 Number of I/O w/sink 159` and no PPL-0113, and `OpenROAD.GlobalPlacement` then ran its
+initial-placement iterations with no GPL-0326. Slot and I/O counts are identical to run 23.
+
+**Diagnosis trap worth remembering:** 2.4.13's `[INFO] place_pins args: …` echo prints only `$arg_list`;
+the offending `-random_seed 42` was appended directly on the `place_pins` line, so the log *looked*
+flag-free. Reading that echo led to a wrong conclusion that 26Q2 skips placement even with no flags.
+Always read the script's actual command line, not its args echo.
+
+**Backward compatible, proven on both binaries.** The same patched script on LibreLane's bundled
+OpenROAD `edf00dff` (`RUN_2026-09-13_23-34-16`) logged `PPL-0001 Number of slots 2024`,
+`PPL-0002 Number of I/O 159`, `PPL-0003 159`, no PPL-0113, and zero GPL-0326 in global placement —
+the same result as run 23 and as the 26Q2 run. `-random_seed` only ever mattered to random mode,
+which this flow does not use, so dropping it changes nothing on the older binary.
+
+**Pattern — two incompatibilities in one day (this and the PSM parser above):** the 2.4.13 scripts
+were never updated for 26Q2, and 26Q2 tends to *warn and skip* rather than error. Before trusting
+any 2.4.13 step on 26Q2, grep its log for `obsolete|deprecated|Skipping|not supported`. Steps past
+global placement (CTS, GRT, DRT, post-route STA) had not yet been exercised on this combination.
+
+### LibreLane 2.4.13 STA scripts vs OpenROAD 26Q2: corners → scenes (2026-09-13)
+
+Third mismatch on the 2.4.13 + 26Q2 combination, and the one that ends the "fix it in place"
+approach: `OpenROAD.STAMidPNR` dies with `invalid command name "rsz::check_corner_wire_cap"`.
+
+A sweep of all 28 namespaced internal calls in `librelane/scripts/openroad` against 26Q2's
+`info commands` found exactly four missing, each a rename:
+
+| 2.4.13 | 26Q2 | call sites |
+| --- | --- | --- |
+| `rsz::check_corner_wire_cap` | `est::check_corner_wire_caps` | `sta/corner.tcl:39` |
+| `sta::corners` | `sta::scenes` | `sta/corner.tcl:47`, `common/io.tcl` `write_sdfs` / `write_libs` |
+| `sta::set_cmd_corner` | `sta::set_cmd_scene` | `sta/corner.tcl:48` |
+| `utl::metric_int` | `utl::metric_integer` | `common/io.tcl` `write_metric_int` |
+
+Even LibreLane 3.0.14's singular `est::check_corner_wire_cap` does not exist in 26Q2. Porting is
+feasible but not a blind rename — the returned scene objects' methods (`[$corner name]`,
+`-corner` on `report_checks` / `write_sdf` / `write_timing_model`) must be checked, and
+`est::check_corner_wire_caps` must return 1 after `set_rc.tcl` or placement parasitics are silently
+skipped. Tracked as its own bead.
+
+**Which toolchain to use.** The 26Q2 shim exists for detailed-routing pin access (bead `ocm`). If a
+run cannot reach real routing anyway — every ASAP7 run on this 15.9 GB host (bead `2kn`) — use
+2.4.13's bundled toolchain, **OpenROAD `edf00dff` + OpenSTA 2.6.0**, which is what run 23 used:
+
+```bash
+make -C pnr librelane-asap7-soc-multiclock OR_PATH_PREFIX= LIBRELANE_EXTRA_ARGS="…"
+```
+
+`OR_PATH_PREFIX=` on the command line removes only the PATH shim; `check-asap7-openroad` still
+runs but no longer determines the binary. Expect detailed routing to commit no wires (`xy6`), so
+"post-route" numbers are on GRT parasitics — the same basis as run 23.
