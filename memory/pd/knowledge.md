@@ -2515,3 +2515,50 @@ would compare a 16-word gold against a 4096-word gate and fail for a reason unre
 Use a power of two so the `$clog2` address decode stays exact.
 
 Result: PROVEN, 594 points. Tool: `PARAM=MEM_WORDS=16 tools/verif/equiv_sv2v_module.sh sram_controller`.
+
+### LibreLane 2.4.13's PSM report parser cannot read OpenROAD 26Q2 output (2026-09-13)
+
+Symptom: `OpenROAD.GeneratePDN` dies *after* OpenROAD finished, in Python:
+`yaml.scanner.ScannerError: while scanning for the next token … in "<file>", line 2, column 1`.
+
+Cause: `get_psm_error_count()` in `librelane/steps/openroad.py` rewrites
+`*-grid-errors.rpt` into YAML, and was written for the space-indented layout that `pdn.tcl`'s own
+fallback file still uses (`srcs:` followed by a `- N/A` list item). The OpenROAD **26Q2** binary
+this repo shims into the 2.4.13 flow writes a different layout:
+
+```
+violation type: Unconnected shape
+<TAB>srcs: net:VSS
+<TAB>bbox = (10.0440, 365.0130) - (509.9760, 365.0670) on Layer M1
+```
+
+Tab indentation is illegal YAML, and even re-indented, `srcs: net:VSS` is a scalar, so the
+original `len(violation["srcs"])` would count 7 characters rather than one source.
+
+**Why it was latent.** It only triggers when `check_power_grid` writes a *real* error report.
+Before the `pdn.tcl` patch that commits a partial grid, a failed `pdngen` left no grid, so the
+YAML-valid fallback survived; a passing grid leaves a 1-byte file. The SoC on the old
+`pnr/asap7/soc/pdn.tcl` topology was the first run to produce a partial, failing grid.
+
+**Fix** (patch in `memory/pd/patches/librelane2413_psm_report_parser_26q2_format.diff`): count
+source entries line by line instead of going through YAML. Verified against real reports, with
+the original parser for comparison:
+
+| input | original | patched | expected |
+| --- | --- | --- | --- |
+| empty (grid passed) | 0 | 0 | 0 |
+| `pdn.tcl` fallback | 1 | 1 | 1 |
+| SoC VSS report (32 076 lines) | **crash** | 10 692 | 10 692 |
+| SoC VDD report (33 003 lines) | **crash** | 11 001 | 11 001 |
+
+The count only feeds `design__power_grid_violation__count` metrics; with
+`ERROR_ON_PDN_VIOLATIONS: false` it does not stop the flow.
+
+**Validated in-flow (2026-09-13, `RUN_2026-09-13_22-43-29`):** `GeneratePDN` completed and the
+flow continued; its `state_out.json` records `…count__net:VSS 10692`, `…net:VDD 11001`, total
+`21693` — identical to the offline test and to the reports' entry counts, with no traceback.
+
+**Follow-up, untested:** LibreLane 3.0.14's version of this function already dedents and
+re-indents with spaces, but every 3.0.14 run so far produced a *passing* grid (1-byte reports),
+so whether it handles `srcs: net:VSS` followed by a `bbox` line is unverified. Expect the same
+class of crash the first time a 3.0.14 run produces a failing grid.
