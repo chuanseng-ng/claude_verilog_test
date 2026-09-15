@@ -2638,3 +2638,109 @@ make -C pnr librelane-asap7-soc-multiclock OR_PATH_PREFIX= LIBRELANE_EXTRA_ARGS=
 `OR_PATH_PREFIX=` on the command line removes only the PATH shim; `check-asap7-openroad` still
 runs but no longer determines the binary. Expect detailed routing to commit no wires (`xy6`), so
 "post-route" numbers are on GRT parasitics — the same basis as run 23.
+
+#### UPDATE 2026-09-15 (bead `bpp`) — ported and validated; patch ready, not yet applied
+
+Developed in a separate worktree copy (`/nobackup/librelane-bpp`, `git worktree add --detach`
+off the live tree's HEAD, per the "do not edit the live tree" constraint) with the live tree's
+uncommitted local patches carried over (PSM parser, ioplacer `-random_seed`, `pdn.tcl` decomposed
+`build_grids`, plus — discovered necessary to get past an ABC segfault (return code 139) during
+synthesis on this machine's current yosys/ABC build — the Synlig/UHDM `hierarchy -check` removal,
+lib-sort-before-`dfflibmap`, and `SYNTH_SHARE_RESOURCES` gating patches in `synthesize.py` /
+`steps/pyosys.py` / `steps/odb.py`). Without the lib-sort patch, ABC crashes reading the ASAP7
+SIMPLE+AO+OA multi-lib set regardless of 26Q2 vs. bundled OpenROAD — unrelated to this bead but a
+hard prerequisite for reproducing any current ASAP7 baseline.
+
+**Correction, same session**: the coordinator's carryover list (three items — PSM parser,
+ioplacer, pdn.tcl) was not exhaustive. `set_rc.tcl`'s ASAP7 RC-injection fallback (the very first
+entry in this knowledge base, RSZ-0089) is ALSO an uncommitted live-tree local patch and is not
+optional — without it, `OpenROAD.GlobalPlacement` dies immediately with `[ERROR RSZ-0089] Could
+not find a resistance value` (`gpl.tcl:79`), because `set_rc.tcl`'s ASAP7 detection block simply
+isn't there in a pristine checkout. `valu_rtl`'s `--to OpenROAD.STAPrePNR` never exercises this
+path (it stops before `OpenROAD.Floorplan`/`GlobalPlacement`), so the first validation run above
+didn't catch the gap — it only surfaced when the CPU block reached Global Placement. General
+lesson: enumerate a live tree's uncommitted local patches from `git status`/`git diff --stat`
+directly rather than trusting a carryover list assembled from bead descriptions, and don't
+consider a copy's patch set complete until a run has actually exercised every flow stage the
+target validation needs.
+
+Fixed all four renames with `info commands`-guarded wrapper procs (`ol_compat_corners`,
+`ol_compat_set_cmd_corner`, `ol_compat_check_corner_wire_cap` in `common/io.tcl`; `write_metric_int`
+guarded inline) — never a hard version switch. Re-swept all 28 namespaced calls in the copy and
+found no additional breakage beyond the four already known.
+
+**One more incompatibility found, checked as directed by bead ocm's note**: 26Q2's
+`detailed_route` and `pin_access` both turned `-bottom_routing_layer`/`-top_routing_layer` into
+unconditional `utl::error` (DRT-509/DRT-510, confirmed via `info body detailed_route` /
+`info body pin_access` — not a probabilistic warning). 2.4.13's `drt.tcl` uses exactly these
+flags. Fixed with the same guard style, switching to `set_routing_layers -signal <min>-<max>`
+ahead of a flag-free `detailed_route` call when `sta::scenes` exists (used as the version-capability
+proxy, since this is an argument-level deprecation with no namespaced existence check of its own).
+**This drt.tcl fix is NOT validated by an actual detailed-routing run** — both validations below
+stop before `OpenROAD.DetailedRouting`. Also checked bead ocm's `make_tracks`-before-`place_pin`
+note: already correct in 2.4.13's `Classic` flow (`OpenROAD.Floorplan`, which sources
+`TRACKS_INFO_FILE_PROCESSED`, is flow position 53; `OpenROAD.IOPlacement` is position 64) — no fix
+needed.
+
+**Validation — exact reproduction, both toolchains, byte-identical:**
+
+`pnr/asap7/valu_rtl` (`--to OpenROAD.STAPrePNR`) on 26Q2 via the shim:
+`design__instance__count=54634`, `design__instance__area=4655.14614 µm²`,
+`power__total=0.014146882109344006 W`, `timing__setup__ws=-54.29279270097747 ps` — exact match to
+the known-good bundled-toolchain baseline (54634 / 4655.15 / 14.147 mW / WS −54.3 ps). The SAME
+copy re-run on the bundled OpenROAD `edf00dff` + OpenSTA 2.6.0 (no shim) reproduced all four
+numbers to the **last printed digit** — proof the guards are a true no-op on the old toolchain,
+not merely numerically close.
+
+CPU block (`rv32i_cpu_top`, 10 SRAM macro instances) through `OpenROAD.CTS` on 26Q2: hit a
+**second, distinct scenes-API defect** beyond the four renamed commands, found only because this
+run actually exercises `sta/corner.tcl` through the real `openroad` 26Q2 binary (`OpenROAD.STAMidPNR`
+is a plain `OpenROADStep`) — `valu_rtl`'s `--to OpenROAD.STAPrePNR` never does, because
+`STAPrePNR`/`STAPostPNR` (`MultiCornerSTA`) run `corner.tcl` through the *standalone* `sta`
+binary, which the ASAP7 shim pins to OpenSTA 2.6.0 (`ASAP7_STA_BIN`) regardless of
+`ASAP7_OPENROAD_BIN` — so that path always takes the old `sta::corners`/object branch. Under
+26Q2, `sta::scenes` returns plain scene-NAME STRINGS, not command objects — `[$corner name]`
+(45 call sites in `corner.tcl`, 2 in `common/io.tcl`) then fails with `invalid command name
+<scene-name>` because Tcl tries to invoke a command literally named after the scene (e.g.
+`nom_tt_025C_0p7V`). Fixed with an `ol_compat_corner_name` guard (same `info commands
+sta::scenes` style) replacing every `[$corner name]`. Verified with `--only
+OpenROAD.STAMidPNR --last-run` (clean, exit 0) then a full `--from OpenROAD.STAMidPNR --to
+OpenROAD.CTS --last-run` resume: `Flow complete`, ran `RepairDesignPostGPL` /
+`DetailedPlacement` / `CTS` / the post-CTS `STAMidPNR` cleanly (`corner.tcl` re-executed 3 times
+total with no further errors). Mid-flow metrics (not a signed-off PPA number — stops before
+post-CTS/post-GRT resizer repair): 36521 instances (10 macros + 36511 stdcells), 7646.23 µm²,
+WS setup −11972.8 ps / hold −12016.3 ps (expected large-negative, timing repair not yet run).
+
+Also found and fixed mid-session: the coordinator's 3-item carryover list (PSM parser, ioplacer,
+pdn.tcl) omitted `set_rc.tcl`'s ASAP7 RC-injection fallback (knowledge.md's oldest entry, first
+section of this file) — without it, `OpenROAD.GlobalPlacement` dies with `[ERROR RSZ-0089]`.
+`valu_rtl`'s STAPrePNR-only validation never reaches `GlobalPlacement`, so it didn't catch this
+either. **Lesson for any future copy-and-carry-patches task: enumerate a live tree's uncommitted
+local patches directly from `git status`/`git diff --stat`, never trust a list assembled from
+bead prose, and don't call a copy's patch set "complete" until a run has actually exercised every
+flow stage the validation needs** — two different gaps here each hid behind the same blind spot
+(`valu_rtl` stopping at `STAPrePNR`, before `Floorplan`/`GlobalPlacement`/`STAMidPNR`).
+
+Patch diff: `memory/pd/patches/librelane2413_sta_26q2_scenes.diff` (relative to the live tree's
+current dirty state — stacks on the patches above rather than re-supplying them). Verified with
+`git apply --check` against a full `rsync` mirror of the live tree's actual current dirty
+working tree (not a synthetic reconstruction from named carryover diffs — a first attempt at
+that reconstruction itself failed to apply, for an unrelated reason: it omitted `drt.tcl`'s
+existing catch-wrapper local patch, which this bead's own `drt.tcl` fix was never carried
+against — the direct rsync-mirror check sidesteps that ambiguity and is authoritative). **Not
+yet applied to the shared `~/Downloads/Github/librelane` tree** — this bead's constraint is to
+develop and validate in the copy only; the coordinator applies it once no run is active there.
+
+#### Bead `b5a` resolved the same session — SRAM macro LEF pin access confirmed clean under 26Q2
+
+Reused the CPU validation run's `34-openroad-detailedplacement/rv32i_cpu_top.odb` (post-placement,
+tracked SRAM LEF as-is — M4 still in `OBS` across the full footprint, confirmed unmodified via
+`git log`/`git status`). Standalone `openroad -db <odb> -exit` script: `set_routing_layers
+-signal M2-M7` then `pin_access -min_access_points 1` (no full detailed routing). All ~750 SRAM
+pin terms across the 10 macro instances got `DRT-0418`/`DRT-0419` grid-alignment WARNINGS
+(expected, given all pins sit on one edge as 24×24 nm squares) but **zero** of the 56 actual
+`DRT-0085` (access-pattern) failures name an SRAM instance — every one is an anonymous synthesis
+net or placement-tool identifier, unrelated to the macro. Confirms bead `b5a`'s 2026-09-09
+correction via an independent method (a real pin_access run under 26Q2, rather than the earlier
+A/B "drop M4 from OBS" experiment): the LEF's M4-OBS-over-M4-pins condition is latent, not
+defective. No LEF change made; bead closed.
