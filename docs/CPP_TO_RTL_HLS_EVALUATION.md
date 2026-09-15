@@ -517,3 +517,128 @@ all, so the HLS arm scored 1/14 until a runtime protocol branch (the `test_hazar
 was added; expected values and assertions are unchanged, only the sampling point moved into
 `ReadOnly()`. This directed suite does **not** exercise `ASSUMPTIONS.md` items 8 (`result_o` for
 branch opcodes) or 10 (`VMOV_*`), so those two spec-drift candidates remain **unprobed, not cleared**.
+
+---
+
+# GH #119 `egt` follow-up — the combinational-candidate PPA attempt is INVALID (2026-09-15)
+
+**Question asked:** bead `egt` established Bambu 2024.10 *can* emit a functionally-correct,
+zero-register, zero-latency `vector_alu` (`--speculative-sdc-scheduling --clock-period=100`,
+cosim + `test_vector_alu.py` both 14/14 against the pre-synthesis `.v`). The remaining step was to
+re-measure the Stage-2/3 PPA verdict against this "comb" candidate. **Conclusion: do not quote comb
+PPA numbers.** A real synthesis bug was found and fixed; a second, deeper synthesis-correctness bug
+was found and is **not** fixed. `rtl` and `hls` reproduce the Stage 2 (`r8r`) baseline cleanly and
+remain trustworthy.
+
+## Setup
+
+Three ASAP7 `OpenROAD.STAPrePNR`-only runs (`pnr/asap7/valu_{rtl,hls,hls_comb}/`, same 705 ps SDC,
+same corner, driven by `/nobackup/egt_ppa/run_all.sh` under memory-capped `systemd --user` scopes):
+`rtl` = hand-RTL, `hls` = default-flags Bambu baseline (registered, FSM), `hls_comb` = the
+`sdc_longclk` candidate re-synthesised at leaf-block level.
+
+## Bug 1 (found and fixed): `SYNTH_SHARE_RESOURCES` left enabled
+
+`pnr/asap7/valu_hls_comb/config.json` (like `valu_rtl/` and `valu_hls/`) never set
+`SYNTH_SHARE_RESOURCES`, so yosys's SAT-based `share` resource-sharing pass ran unchecked. Its log
+(`05-yosys-synthesis/yosys-synthesis.log`, run `RUN_2026-09-15_14-10-19`) shows it declaring six
+per-lane `$shl` cells **"never active. Sharing is pointless, we simply remove it"** — wrong for a
+fully-parallel, zero-register 8-lane datapath, where `active_mask_i` is a runtime input, not a
+constant, so no lane's shifter is ever provably dead. This is the *exact* failure class already
+documented and fixed in `pnr/asap7/gpu/config.json` (`SYNTH_SHARE_RESOURCES: false`, for the same
+"8-lane vector_alu" shape — see the `project_yosys_share_pass_hang` memory note) but never propagated
+to the leaf-block configs. **Fix applied:** added `"SYNTH_SHARE_RESOURCES": false` to
+`valu_hls_comb/config.json` only (`valu_rtl`/`valu_hls` left untouched — their numbers already match
+the `r8r` baseline, so `share` is not corrupting them). Re-running confirmed the `SHARE pass
+(SAT-based resource sharing)` step no longer appears in the log at all.
+
+## Bug 2 (found, NOT fixed): the post-fix netlist still discards most of `rs2_i`
+
+Re-running after the Bug 1 fix (`RUN_2026-09-15_14-25-30`) produced **byte-for-byte identical**
+metrics to the broken run (1587 instances / 138.7 µm² / 0.085 mW / WS +449 ps / TNS 0) — proving
+`share` was never the dominant cause. Direct inspection of the final gate netlist
+(`05-yosys-synthesis/vector_alu_hls.nl.v`) shows:
+
+- **`rs2_i` collapses to exactly 8 live bits total** (bit 0 of every 32-bit lane: bits
+  `0,32,64,96,128,160,192,224`) out of the 256-bit port — bits `[31:1]` of every lane's second ALU
+  operand are read by **nothing**. `rs1_i` by contrast uses all 256 bits correctly.
+- **Only 22 XOR/XNOR-family cells exist in the whole 1587-cell netlist.** Binary addition
+  structurally requires one XOR per bit for the sum term (a full/half adder cannot be built from
+  AOI-only logic); 22 XOR-family gates cannot implement even one correct 32-bit adder, let alone
+  eight adders, eight subtractors and eight 32×32 multipliers.
+- **`ALUMACC` (`yosys-synthesis.log` step 67) converts only 1 of the 8 `$mul` cells** present
+  earlier in the flow (confirmed independently: a standalone `yosys -sv ... opt -full` pass on the
+  bare candidate module reproduces **8** genuine 32×32 `$mul` cells, all fed directly from
+  `rs1_N`/`rs2_N`, at the RTLIL level) — the other 7 were already eliminated before reaching
+  `ALUMACC`, and even the 1 survivor is gone by the final `techmap` (no `$mul`/`$macc`/`$alu`
+  mapping template is invoked for a multiply anywhere in the log).
+- Bambu's own **pre-synthesis area estimate for this candidate is 11 067 363 units** — 8.5× the
+  registered baseline's own estimate (1 298 853, from `ASSUMPTIONS.md`'s "Measured QoR" section) —
+  i.e. Bambu itself expects the fully-unrolled combinational form to be *larger*, not 30–50×
+  smaller than either baseline arm's final mapped netlist.
+
+Working hypothesis (not verified to completion): three `read_verilog` frontend warnings in the
+candidate's generic Bambu shifter/comparator FU templates (`Range [0:-1] select out of bounds on
+signal 'in2': Setting 1 LSB bits to undef`, at the *unparameterized* module body's default
+`BITSIZE_in2`/computed-bitsize mismatch) inject spurious X-constants that a register-free,
+fully-combinational netlist lets cascade through the whole design during `opt`/`OPT_MUXTREE`
+(no clock-edge boundary contains the damage the way it does in the `rtl`/`hls` arms) — but this was
+not confirmed by formal equivalence or gate-level simulation, and no further fix was attempted this
+session (deep surgery on a 900 KB machine-generated netlist without full re-verification was judged
+higher-risk than reporting the gap). **Tracked next step: bead `claude_verilog_test-gcd`
+(`discovered-from: egt`).**
+
+**Do not quote `hls_comb`/`comb` area, power, WS, TNS, or any derived fmax as if it were the true
+implementation cost of a combinational `vector_alu` — the netlist those numbers were measured on
+does not correctly implement the second ALU operand for most opcodes.**
+
+## Comparison table (`rtl` and `hls` only — `comb` excluded per above)
+
+All four figures reproduced from fresh ASAP7 `OpenROAD.STAPrePNR` runs, 2026-09-15, same SDC/corner
+as the original `r8r` Stage 2 runs; `r8r`'s recorded numbers (`docs/CPP_TO_RTL_HLS_EVALUATION.md`,
+"Stage 2 results" above) are reproduced alongside for drift-checking.
+
+| Metric | `rtl` (this run) | `rtl` (`r8r`, 2026-09-07) | `hls` (this run) | `hls` (`r8r`, 2026-09-07) |
+| :--- | ---: | ---: | ---: | ---: |
+| Instances | 54 634 | 54 634 | 71 480 | 70 895 |
+| Area (µm²) | 4655.15 | 4655.15 | 7254.37 | 7234.0 |
+| Power (mW) | 14.147 | 14.147 | 37.667 | 37.281 |
+| Setup WS (ps) | −54.29 | (n/a — see below) | −996.18 | (n/a) |
+| Setup TNS (ps) | −2465.20 | — | −3 779 683.10 | — |
+| Hold WS (ps) | +8.77 | — | −13.01 | — |
+
+`rtl` reproduces exactly (0.00% drift on all three shared metrics — same `705 ps` combinational
+critical path, `759.29 ps` data arrival, matching to 2 decimal places). `hls` drifts **≤1.1%**
+(instances +0.83%, area +0.28%, power +1.04%) — attributable to environment/tool-version movement
+since the 2026-09-07 `r8r` run, not a structural change; both are within normal run-to-run noise for
+this flow.
+
+### Worst-arc decomposition (mandatory before quoting any fmax ratio, per the
+`asap7-to-openroad-staprepnr-comparisons-stopping-before-the` memory note — `--to
+OpenROAD.STAPrePNR` never runs the resizer, so a single unbuffered high-fanout net can dominate a
+path and the effect is asymmetric between designs)
+
+| Arm | Critical path total | Single worst arc | Arc share | Arc fanout |
+| :--- | ---: | ---: | ---: | ---: |
+| `rtl` | 759.29 ps (combinational, virtual clock) | 60.57 ps (`OAI211`, stage 12/23) | **8.0%** | 6 |
+| `hls` | 1667.84 ps (register-to-register) | 981.02 ps (DFF `QN` → `NOR3`) | **58.8%** | 469 |
+
+`rtl`'s critical path is not dominated by any single unbuffered net — its area/power numbers *and*
+its WS are reasonably representative of the design as-is. `hls`'s critical path is **dominated** by
+one register's 469-fanout, unbuffered fan-out net (58.8% of the total path) — its WS/TNS/derived
+fmax are a lower bound inflated by the absence of a resizer pass, not a clean measurement of the
+FSM's intrinsic speed; only its area and power (resizer-independent) should be quoted with
+confidence. Do not compute an `rtl`-vs-`hls` fmax ratio from these WS figures without carrying this
+caveat.
+
+## Verdict
+
+- **Area/power, `rtl` vs `hls`:** confirms the original Stage 2 (`r8r`) result — HLS's registered,
+  multi-cycle-FSM arm costs **+55.8% area** and **+166.3% power** versus hand-RTL, consistent with
+  (slightly worse than, within noise of) the `r8r`-recorded +55.4%/+163.5%.
+- **The combinational candidate remains unmeasured.** Bead `egt` answered "can Bambu emit a
+  zero-register datapath" with **yes** (functionally, pre-synthesis); this follow-up shows that
+  answer does not yet extend through physical-design synthesis — the ASAP7 flow's default
+  optimization settings do not reliably preserve that datapath's function for this design shape.
+  The datapath half of the pilot's original recommendation is therefore still untested at the PPA
+  level, exactly as Stage 1/2 left it.
