@@ -517,3 +517,284 @@ all, so the HLS arm scored 1/14 until a runtime protocol branch (the `test_hazar
 was added; expected values and assertions are unchanged, only the sampling point moved into
 `ReadOnly()`. This directed suite does **not** exercise `ASSUMPTIONS.md` items 8 (`result_o` for
 branch opcodes) or 10 (`VMOV_*`), so those two spec-drift candidates remain **unprobed, not cleared**.
+
+---
+
+# GH #119 `egt` follow-up — the combinational-candidate PPA attempt is INVALID (2026-09-15)
+
+**Question asked:** bead `egt` established Bambu 2024.10 *can* emit a functionally-correct,
+zero-register, zero-latency `vector_alu` (`--speculative-sdc-scheduling --clock-period=100`,
+cosim + `test_vector_alu.py` both 14/14 against the pre-synthesis `.v`). The remaining step was to
+re-measure the Stage-2/3 PPA verdict against this "comb" candidate. **Conclusion: do not quote comb
+PPA numbers.** A real synthesis bug was found and fixed; a second, deeper synthesis-correctness bug
+was found and is **not** fixed. `rtl` and `hls` reproduce the Stage 2 (`r8r`) baseline cleanly and
+remain trustworthy.
+
+## Setup
+
+Three ASAP7 `OpenROAD.STAPrePNR`-only runs (`pnr/asap7/valu_{rtl,hls,hls_comb}/`, same 705 ps SDC,
+same corner, driven by `/nobackup/egt_ppa/run_all.sh` under memory-capped `systemd --user` scopes):
+`rtl` = hand-RTL, `hls` = default-flags Bambu baseline (registered, FSM), `hls_comb` = the
+`sdc_longclk` candidate re-synthesised at leaf-block level.
+
+## Bug 1 (found and fixed): `SYNTH_SHARE_RESOURCES` left enabled
+
+`pnr/asap7/valu_hls_comb/config.json` (like `valu_rtl/` and `valu_hls/`) never set
+`SYNTH_SHARE_RESOURCES`, so yosys's SAT-based `share` resource-sharing pass ran unchecked. Its log
+(`05-yosys-synthesis/yosys-synthesis.log`, run `RUN_2026-09-15_14-10-19`) shows it declaring six
+per-lane `$shl` cells **"never active. Sharing is pointless, we simply remove it"** — wrong for a
+fully-parallel, zero-register 8-lane datapath, where `active_mask_i` is a runtime input, not a
+constant, so no lane's shifter is ever provably dead. This is the *exact* failure class already
+documented and fixed in `pnr/asap7/gpu/config.json` (`SYNTH_SHARE_RESOURCES: false`, for the same
+"8-lane vector_alu" shape — see the `project_yosys_share_pass_hang` memory note) but never propagated
+to the leaf-block configs. **Fix applied:** added `"SYNTH_SHARE_RESOURCES": false` to
+`valu_hls_comb/config.json` only (`valu_rtl`/`valu_hls` left untouched — their numbers already match
+the `r8r` baseline, so `share` is not corrupting them). Re-running confirmed the `SHARE pass
+(SAT-based resource sharing)` step no longer appears in the log at all.
+
+## Bug 2 (found, NOT fixed): the post-fix netlist still discards most of `rs2_i`
+
+Re-running after the Bug 1 fix (`RUN_2026-09-15_14-25-30`) produced **byte-for-byte identical**
+metrics to the broken run (1587 instances / 138.7 µm² / 0.085 mW / WS +449 ps / TNS 0) — proving
+`share` was never the dominant cause. Direct inspection of the final gate netlist
+(`05-yosys-synthesis/vector_alu_hls.nl.v`) shows:
+
+- **`rs2_i` collapses to exactly 8 live bits total** (bit 0 of every 32-bit lane: bits
+  `0,32,64,96,128,160,192,224`) out of the 256-bit port — bits `[31:1]` of every lane's second ALU
+  operand are read by **nothing**. `rs1_i` by contrast uses all 256 bits correctly.
+- **Only 22 XOR/XNOR-family cells exist in the whole 1587-cell netlist.** Binary addition
+  structurally requires one XOR per bit for the sum term (a full/half adder cannot be built from
+  AOI-only logic); 22 XOR-family gates cannot implement even one correct 32-bit adder, let alone
+  eight adders, eight subtractors and eight 32×32 multipliers.
+- **`ALUMACC` (`yosys-synthesis.log` step 67) converts only 1 of the 8 `$mul` cells** present
+  earlier in the flow (confirmed independently: a standalone `yosys -sv ... opt -full` pass on the
+  bare candidate module reproduces **8** genuine 32×32 `$mul` cells, all fed directly from
+  `rs1_N`/`rs2_N`, at the RTLIL level) — the other 7 were already eliminated before reaching
+  `ALUMACC`, and even the 1 survivor is gone by the final `techmap` (no `$mul`/`$macc`/`$alu`
+  mapping template is invoked for a multiply anywhere in the log).
+- Bambu's own **pre-synthesis area estimate for this candidate is 11 067 363 units** — 8.5× the
+  registered baseline's own estimate (1 298 853, from `ASSUMPTIONS.md`'s "Measured QoR" section) —
+  i.e. Bambu itself expects the fully-unrolled combinational form to be *larger*, not 30–50×
+  smaller than either baseline arm's final mapped netlist.
+
+Working hypothesis (not verified to completion): three `read_verilog` frontend warnings in the
+candidate's generic Bambu shifter/comparator FU templates (`Range [0:-1] select out of bounds on
+signal 'in2': Setting 1 LSB bits to undef`, at the *unparameterized* module body's default
+`BITSIZE_in2`/computed-bitsize mismatch) inject spurious X-constants that a register-free,
+fully-combinational netlist lets cascade through the whole design during `opt`/`OPT_MUXTREE`
+(no clock-edge boundary contains the damage the way it does in the `rtl`/`hls` arms) — but this was
+not confirmed by formal equivalence or gate-level simulation, and no further fix was attempted this
+session (deep surgery on a 900 KB machine-generated netlist without full re-verification was judged
+higher-risk than reporting the gap). **Tracked next step: bead `claude_verilog_test-gcd`
+(`discovered-from: egt`).**
+
+**Do not quote `hls_comb`/`comb` area, power, WS, TNS, or any derived fmax as if it were the true
+implementation cost of a combinational `vector_alu` — the netlist those numbers were measured on
+does not correctly implement the second ALU operand for most opcodes.**
+
+## Comparison table (`rtl` and `hls` only — `comb` excluded per above)
+
+All four figures reproduced from fresh ASAP7 `OpenROAD.STAPrePNR` runs, 2026-09-15, same SDC/corner
+as the original `r8r` Stage 2 runs; `r8r`'s recorded numbers (`docs/CPP_TO_RTL_HLS_EVALUATION.md`,
+"Stage 2 results" above) are reproduced alongside for drift-checking.
+
+| Metric | `rtl` (this run) | `rtl` (`r8r`, 2026-09-07) | `hls` (this run) | `hls` (`r8r`, 2026-09-07) |
+| :--- | ---: | ---: | ---: | ---: |
+| Instances | 54 634 | 54 634 | 71 480 | 70 895 |
+| Area (µm²) | 4655.15 | 4655.15 | 7254.37 | 7234.0 |
+| Power (mW) | 14.147 | 14.147 | 37.667 | 37.281 |
+| Setup WS (ps) | −54.29 | (n/a — see below) | −996.18 | (n/a) |
+| Setup TNS (ps) | −2465.20 | — | −3 779 683.10 | — |
+| Hold WS (ps) | +8.77 | — | −13.01 | — |
+
+`rtl` reproduces exactly (0.00% drift on all three shared metrics — same `705 ps` combinational
+critical path, `759.29 ps` data arrival, matching to 2 decimal places). `hls` drifts **≤1.1%**
+(instances +0.83%, area +0.28%, power +1.04%) — attributable to environment/tool-version movement
+since the 2026-09-07 `r8r` run, not a structural change; both are within normal run-to-run noise for
+this flow.
+
+### Worst-arc decomposition (mandatory before quoting any fmax ratio, per the
+`asap7-to-openroad-staprepnr-comparisons-stopping-before-the` memory note — `--to
+OpenROAD.STAPrePNR` never runs the resizer, so a single unbuffered high-fanout net can dominate a
+path and the effect is asymmetric between designs)
+
+| Arm | Critical path total | Single worst arc | Arc share | Arc fanout |
+| :--- | ---: | ---: | ---: | ---: |
+| `rtl` | 759.29 ps (combinational, virtual clock) | 60.57 ps (`OAI211`, stage 12/23) | **8.0%** | 6 |
+| `hls` | 1667.84 ps (register-to-register) | 981.02 ps (DFF `QN` → `NOR3`) | **58.8%** | 469 |
+
+`rtl`'s critical path is not dominated by any single unbuffered net — its area/power numbers *and*
+its WS are reasonably representative of the design as-is. `hls`'s critical path is **dominated** by
+one register's 469-fanout, unbuffered fan-out net (58.8% of the total path) — its WS/TNS/derived
+fmax are a lower bound inflated by the absence of a resizer pass, not a clean measurement of the
+FSM's intrinsic speed; only its area and power (resizer-independent) should be quoted with
+confidence. Do not compute an `rtl`-vs-`hls` fmax ratio from these WS figures without carrying this
+caveat.
+
+## Verdict
+
+- **Area/power, `rtl` vs `hls`:** confirms the original Stage 2 (`r8r`) result — HLS's registered,
+  multi-cycle-FSM arm costs **+55.8% area** and **+166.3% power** versus hand-RTL, consistent with
+  (slightly worse than, within noise of) the `r8r`-recorded +55.4%/+163.5%.
+- **The combinational candidate remains unmeasured.** Bead `egt` answered "can Bambu emit a
+  zero-register datapath" with **yes** (functionally, pre-synthesis); this follow-up shows that
+  answer does not yet extend through physical-design synthesis — the ASAP7 flow's default
+  optimization settings do not reliably preserve that datapath's function for this design shape.
+  The datapath half of the pilot's original recommendation is therefore still untested at the PPA
+  level, exactly as Stage 1/2 left it.
+
+---
+
+# GH #119 `gcd` follow-up — comb candidate root-caused (Synlig) and fixed (2026-09-15)
+
+**Root cause: the Synlig/UHDM SystemVerilog frontend (`USE_SYNLIG:true`, LibreLane's default),
+not LibreLane's opt passes.** Two other hypotheses were tested and empirically DISPROVED first:
+
+1. `opt_expr -undriven` (gated by `SYNTH_TIE_UNDEFINED`, default `"low"`): setting it `null`
+   reproduced the byte-identical broken 1587-instance netlist. Re-reading `librelane_synth()`
+   (`librelane/scripts/pyosys/synthesize.py`) shows the offending `OPT_MUXTREE` call is inside the
+   *very first* `librelane_opt(d, nodffe=True, nosdff=True)` call, which never receives
+   `undriven=` at all — `SYNTH_TIE_UNDEFINED` cannot affect it regardless of config.
+2. `SYNTH_SHARE_RESOURCES` (already documented as a real, separate hazard for this design shape —
+   see the note in `pnr/asap7/valu_hls_comb/config.json`): real, but re-running with only that fix
+   applied reproduced byte-identical broken metrics, proving it was not the dominant cause.
+
+**Proof of divergence.** A SAT-based miter (yosys 0.46 — the exact binary LibreLane's flow uses —
+with real ASAP7 functional cell models parsed directly from the same liberty files LibreLane
+loads, via `read_liberty -ignore_miss_func`) between the pristine candidate and the broken netlist
+was unconstrained-SAT (a mismatch exists, but includes don't-care states under reset/idle).
+**Constrained to the valid handshake window** (`rst_n=1`, `start_i=1` fixed) it is **still SAT**:
+
+> Counterexample: `opcode_i=VMUL(3)`, `active_mask_i=8'b00000001` (lane 0 only active),
+> `rs1_i`/`rs2_i` nonzero only in **inactive** lanes 2 and 7. The pristine RTL gives
+> `result_o=0` (matches the already-passing `test_partial_mask` spec: "inactive lanes produce
+> 0"); the broken netlist gives `result_o[lane2] = rs1_i[lane2]` (`0x40000000`) leaked straight
+> through, unmasked. `done_o`/`branch_taken_o` match on both sides.
+
+**Localisation.** The corrupted construct is `ui_cond_expr_FU` (a Bambu/PANDA generic IP-library
+module, `assign out1 = in1 != 0 ? in2 : in3;`, `vector_alu_synth.v:330-347`), instantiated
+per-call-site with its own parameterization to implement "output 0 when `active_mask_i[lane]=0`".
+`05-yosys-synthesis.log`'s `OPT_MUXTREE` step deletes 271 of its `$ternary$` cells' mux ports in
+the broken run (only 10, legitimately dead, once fixed) — this is exactly where the masking
+branch gets pruned. Full writeup, the exposure audit of the baseline FSM arm, and the CPU/GPU
+hand-RTL exposure verdict are on bead `claude_verilog_test-b0t` (opened for the general
+`USE_SYNLIG:true` audit) and bead `claude_verilog_test-gcd`.
+
+**Fix.** Bypass Synlig for this leaf: pre-process `gpu_pkg.sv` + the shim through `sv2v` (the
+project's existing Synlig fallback, already used for the SoC ASAP7 flow — see `sky130-soc-sv2v`
+in `pnr/Makefile`) into plain Verilog-2005, point `VERILOG_FILES` at the sv2v output instead of
+the raw `.sv` + `gpu_pkg.sv`, and set `USE_SYNLIG:false`. Made reproducible via
+`make -C pnr egt-valu-hls-comb-sv2v` (auto-run by `librelane-asap7-valu-hls-comb`) — see
+`pnr/asap7/valu_hls_comb/config.json`'s `USE_SYNLIG_NOTE`.
+
+**Fix verification.** A full-width SAT re-proof (fixed netlist vs. RTL candidate) did not converge
+within the 3G/~10min budget — 32×32 multiplier equivalence at full width is classically SAT-hard
+(238K cells / 1.1M variables after `flatten`). A full 14-vector Verilator/cocotb regression against
+the fixed netlist's functional-liberty-modeled Verilog also could not be completed: `flatten`
+exploded the 47,791-cell netlist to ~238K primitive gates before `write_verilog`, and the resulting
+Verilator build did not finish in over 50 minutes wall-clock. The fix was first verified (same
+session) by direct `eval` (yosys, real ASAP7 functional cell models, no SAT) on **5 discriminating
+vectors**: the original counterexample plus VADD/VSLL/VAND with garbage data in inactive lanes and
+VMUL with all 8 lanes active and distinct per-lane operands — all 5 matched the RTL candidate
+exactly, byte-for-byte, on `done_o`/`result_o`/`branch_taken_o`.
+
+**2026-09-15, follow-up (bead `egt`, coordinator-directed): verification widened to 252 vectors.**
+The 5-vector check above is superseded, not retracted, by a much larger independent cross-check
+against the *golden model*, not the RTL candidate: `tools/verif/gls/gen_vector_alu_vectors.py`
+generates 252 vectors (random + corners) computed from the Python expected-value formulas embedded
+directly in `tb/cocotb/gpu/test_vector_alu.py` — every non-branch opcode the suite exercises
+(VADD/VSUB/VMUL/VAND/VOR/VXOR/VSLL/VSRL/VSRA), VADDI/VANDI immediate sweeps, VBEQ/VBLT branch
+corners+random, and a dedicated 12-mask-pattern × 8-op partial-active-mask sweep with garbage
+forced into every inactive lane — the exact corruption class the original SAT-miter counterexample
+exposed. `tools/verif/gls/make_eval_ys.py` batches one yosys `eval` call per vector
+(`read_liberty -ignore_miss_func` over the 5 ASAP7 `asap7sc7p5t_SIMPLE` libs, `read_verilog`,
+`hierarchy`, `proc`, `flatten`, `opt -full`, then 252× `eval -set ... -show done_o -show result_o
+-show branch_taken_o`) against the netlist actually referenced by the **tracked**
+`pnr/asap7/valu_hls_comb/config.json` — run `RUN_2026-09-15_15-06-29`
+(`05-yosys-synthesis/vector_alu_hls.nl.v`, `USE_SYNLIG:false` + sv2v, 47 791 instances; *not* the
+later `RUN_2026-09-15_16-29-18`, a leftover `USE_SYNLIG:true` diagnostic re-run of the
+already-known-broken 1587-instance netlist). All 252 evals completed in one batched yosys
+invocation (~6 minutes wall clock, ~1 GB peak, no SAT, no flatten-to-primitives explosion since only
+`opt -full` runs once and is amortized across all 252 evals). `tools/verif/gls/parse_eval_log.py`
+compared every vector: **252/252 PASS — 0 mismatches, 0 `X` in any output**, on both `done_o` and
+the full `result_o`/`branch_taken_o` vectors, including every garbage-in-inactive-lane partial-mask
+case. Combined with the original SAT-miter proof (which showed *what* the pre-fix netlist got
+wrong) and the 5-vector direct match to the RTL candidate, this closes the fix-verification gap the
+original 5-vector check left open. **The `comb` (fixed) row of the comparison table below is now
+quotable without the earlier caveat** — see the next section. The RTL-candidate side of this
+specific 252-vector run could not be repeated (yosys's own, non-Synlig Verilog frontend does not
+accept the port-adapting shim's `module vector_alu_hls import gpu_pkg::*; (...)` import-in-header
+SystemVerilog syntax); that side still rests on the original 5-vector + 14-vector Verilator/cocotb
+evidence above, which is unaffected.
+
+## Corrected comb metrics (`RUN_2026-09-15_15-06-29`, `USE_SYNLIG:false` + sv2v)
+
+**These numbers are now quotable without caveat** (2026-09-15 update, bead `egt`): the 252-vector
+yosys-`eval` cross-check above confirms this exact run's netlist is functionally correct, so
+`comb` (fixed) = **47 791 instances / 4139.77 µm² / 14.060 mW**, vs. hand-RTL `rtl` = **54 634 /
+4655.15 / 14.147**, is a valid area/power comparison — `comb` is smaller and lower-power than
+hand-RTL. The timing figures (Setup/Hold WS, TNS, and any derived fmax) still carry the worst-arc
+and no-resizer caveats below; only area and power are resizer-independent and safe to quote
+unconditionally. The baseline FSM arm (`hls`, `USE_SYNLIG:true`) remains functionally unresolved —
+see "Baseline FSM arm ... — verdict: INCONCLUSIVE" further down and bead `claude_verilog_test-b0t`
+— so do not compare `comb` against `hls` as if `hls`'s own netlist correctness were settled; the
+`hls` row below is included for reference only, carried over unchanged from the Stage-2 baseline.
+
+| Metric | `comb` (fixed) | `rtl` | `hls` |
+| :--- | ---: | ---: | ---: |
+| Instances | 47 791 | 54 634 | 71 480 |
+| Area (µm²) | 4139.77 | 4655.15 | 7254.37 |
+| Power (mW) | 14.060 | 14.147 | 37.667 |
+| Setup WS (ps) | −190.50 | −54.29 | −996.18 |
+| Setup TNS (ps) | −14 657.70 | −2465.20 | −3 779 683.10 |
+| Hold WS (ps) | −1.01 | +8.77 | −13.01 |
+
+`comb` is the **smallest and lowest-power** of the three arms (−11.1% area, −0.6% power vs. `rtl`;
+−42.9% area, −62.7% power vs. `hls`) — consistent with a zero-register, zero-clock-tree
+combinational datapath. Its setup WS is worse than `rtl`'s (both are pure combinational virtual-clock
+paths, so directly comparable): `comb`'s critical path is a naive one-shot Bambu-generated 8-lane
+datapath with no hand RTL retiming/balancing, `rtl`'s is hand-optimized.
+
+### Worst-arc decomposition (`comb`, mandatory per the
+`asap7-to-openroad-staprepnr-comparisons-stopping-before-the` memory note)
+
+| Arm | Critical path total | Single worst arc | Arc share | Arc fanout |
+| :--- | ---: | ---: | ---: | ---: |
+| `comb` (fixed) | 885.50 ps (combinational, virtual clock, `rs2_i[226]`→`result_o[251]`) | 60.68 ps (`AOI32xp33`) | **6.9%** | 4 |
+
+Unlike `hls`'s FSM arm (58.8% of its critical path on one 469-fanout net — see above), `comb`'s
+worst single arc is a modest 6.9% share at fanout 4: no single unbuffered net dominates, so its
+WNS/TNS are a reasonably representative (if unoptimized) measurement, not a resizer-absence
+artifact. Do not compute a `comb`-vs-`rtl`/`hls` fmax ratio without carrying the "no resizer at
+`--to OpenROAD.STAPrePNR`" caveat regardless.
+
+## Baseline FSM arm (`valu_hls`, `USE_SYNLIG:true`) — verdict: INCONCLUSIVE, not re-fixed
+
+An A/B synthesis (temp config under `/nobackup/pnr_ab_valu_hls/`, tracked
+`pnr/asap7/valu_hls/config.json` left unmodified) reran the SAME baseline candidate through
+`USE_SYNLIG:false` + an sv2v-preprocessed shim: **89 224 instances / 9188.40 µm² / 52.7 mW**, vs.
+the tracked Synlig run's **71 480 / 7254.37 µm² / 37.667 mW** — a **~25–40% gap**, present
+proportionally from the very first synthesis-log cell-count checkpoint onward (43 659 vs. 55 084),
+not the ~1–2% that would indicate no corruption. **This does not by itself prove which side (if
+either) is correct.** A clocked functional cross-check of the baseline (needed because it is a
+registered, multi-cycle FSM, unlike the zero-register `comb` candidate) was attempted and blocked
+by two independent tool/resource walls: yosys 0.46's `sim -set` throws a syntax error despite
+being documented in `help sim` (order-independent, reproduced minimally); a full Verilator/cocotb
+cosim of either baseline gate netlist OOMs at the mandated 3G cap even without `flatten`
+(Verilator's own front-end, not the compile step, on a ~71–89K-cell liberty-functional-model
+netlist). **Do not apply the `comb` arm's fix to the tracked `valu_hls` config** without a
+functional proof of which size is correct — blind reuse could make it worse, not better. Tracked
+on bead `claude_verilog_test-b0t` for follow-up (candidates: get `sim -set` working, possibly via
+the yosys 0.62 build already on this host, or budget a >3G Verilator cosim).
+
+## CPU/GPU hand-RTL exposure verdict: NOT exposed to this specific construct
+
+`grep -rl "ui_cond_expr_FU|_bambu_artificial_|BAMBU/PANDA" rtl/` returns **zero matches** anywhere
+in `rtl/`. The hand-written RTL (`rtl/gpu/vector_alu.sv`, `rtl/cpu/*`) implements the identical
+"inactive lane → 0" masking semantics via a plain `if (active_mask_i[lane])` inside a
+generate/for-loop — a completely different code shape from Bambu's massively
+per-instance-parameterized generic FU template instantiation pattern that Synlig mis-elaborates
+here. The *specific* failure mode proven in this section does not structurally apply to the
+CPU/GPU macros. This is a structural/code-shape argument, not a functional re-verification of the
+CPU/GPU macros — per explicit instruction this session did not re-run those flows, so their
+`USE_SYNLIG:true` configs remain functionally unaudited (tracked on bead `claude_verilog_test-b0t`).

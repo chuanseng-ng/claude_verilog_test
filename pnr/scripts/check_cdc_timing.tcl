@@ -102,6 +102,110 @@ set NETLIST "$RUN_DIR/final/nl/${TOP_MODULE}.nl.v"
 set REPORTS_DIR "reports"
 file mkdir $REPORTS_DIR
 
+# CDC_CHECK_ODB (bead je8, 2026-09-15): opt-in ODB-based loading path for
+# checkpoints that only have GRT (or later) parasitics, e.g. a run
+# stopped/seeded mid-flow before a `final/nl/*.nl.v` signoff netlist
+# exists. Requires OpenROAD (read_db/global_route/estimate_parasitics are
+# OpenROAD-only commands -- this script's default path below works under
+# plain standalone `sta` precisely because it avoids all of them). Run
+# this script with `openroad` instead of `sta` when CDC_CHECK_ODB is set;
+# it is silently ignored -- and the netlist/link_design path below runs
+# unchanged -- otherwise, so every existing `sta
+# pnr/scripts/check_cdc_timing.tcl` invocation (including the tracked
+# check-cdc-timing-asap7-soc Makefile target) is byte-identical to
+# before.
+set CDC_CHECK_ODB [expr {[info exists ::env(CDC_CHECK_ODB)] ? $::env(CDC_CHECK_ODB) : ""}]
+
+# CDC_CHECK_FORCE_GRT (bead je8, 2026-09-15): ODB-mode only, opt-in.
+#
+# CORRECTED 2026-09-15 (same day, later session) -- the claim this
+# comment originally made ("estimate_parasitics -global_routing off the
+# ODB's own persisted guides, tool-verified to work with no warning") was
+# WRONG. "No warning" was mistaken for "succeeded". Rigorous check:
+# `report_parasitic_annotation` after `read_db` + `estimate_parasitics
+# -global_routing`, with NO global_route/read_guides call at all,
+# reports "Found 204195 unannotated drivers" out of ~204196 total on
+# this SoC's step-02 odb -- i.e. essentially the ENTIRE design, including
+# the specific CDC data nets this check targets (verified by name:
+# u_cpu_axi_cdc.u_r_fifo._1424_/Y, u_cpu_axi_cdc.u_ar_fifo._1509_/Y,
+# u_pll_sub._1_/Y all appear in the unannotated list). This reproduces
+# IDENTICALLY whether read_sdc/clock-mode changes happen before or after
+# estimate_parasitics, and whether CDC_CHECK_PROPAGATED_CLOCK is 0 or 1
+# -- it is not an ordering bug, and neither clock mode's results from
+# 2026-09-15 (the original propagated-clock FAIL, or the later ideal-
+# clock PASS) reflect real post-GRT wire delay. Both were computed on
+# essentially unannotated (effectively zero-wire, same order as the
+# plain-netlist STA-only path's default) parasitics.
+# `read_guides <file>` was tried first as a memory-cheap alternative and
+# is ALSO confirmed not usable: OpenROAD prints "[WARNING GRT-0008] The
+# read_guides command does not allow parasitics estimation from the
+# guides file" -- it loads guide geometry for display/DRT purposes only.
+# The only thing that DOES populate annotatable parasitics is a
+# genuinely fresh, in-session `global_route` (CDC_CHECK_FORCE_GRT=1
+# below) -- but that is memory-heavy regardless of layer range: it
+# OOM'd a 3.5G-capped scope on this SoC (520x520um, 138k+ blockages) at
+# the SAME point (right after GRT's per-layer "Routing resources
+# analysis" table, before any congestion iteration) whether run at the
+# full M2-M9 range, 50 congestion iterations, OR restricted to M2-M5
+# with just 1 iteration -- meaning the dominant memory cost is net-
+# topology/Steiner-tree construction across the whole design, not
+# per-layer grid size, and is NOT reducible via these flags.
+# RESOLVED (bead je8, same day, later session still): at a 9.5G cap
+# (scope je8-cdc-grt2) the full M2-M9/50-iteration global_route
+# completed cleanly -- 0 overflow on every layer, 204,072 routed nets,
+# peak ~5.4 GB, ~24 min wall time -- and the subsequent
+# report_parasitic_annotation dropped from 204,195/204,196 (~100%)
+# unannotated to 123/204,196 (0.06%) unannotated: real annotation,
+# confirmed both by that coverage number and by materially different,
+# structurally distinct per-path delay results vs. the unannotated
+# baseline (not just a clock-latency shift, since clocks were ideal in
+# both). So 3.5G is provably insufficient and ~5.4G peak / 9.5G cap is
+# provably sufficient on this SoC; the true minimum lies somewhere
+# between (not bisected). Every ODB-mode run (regardless of
+# CDC_CHECK_FORCE_GRT/CDC_CHECK_PROPAGATED_CLOCK) still prints an
+# explicit annotation-coverage warning (see below, search
+# ANNOTATION-CHECK) rather than silently proceeding -- treat any
+# CDC-CHECK-RESULT alongside a HIGH unannotated count as datapath-
+# shape-only (real cell delay, real logic depth, real fanout, but
+# wireload-model or zero wire RC), not a genuine post-GRT/post-route
+# timing verdict; a near-zero count (as achieved here) means it IS a
+# genuine one. Set CDC_CHECK_FORCE_GRT=1 with at least ~6G of memory
+# headroom for this SoC's fresh global_route to have a realistic chance
+# of completing (5.4G peak observed once; leave margin).
+set CDC_CHECK_FORCE_GRT [expr {[info exists ::env(CDC_CHECK_FORCE_GRT)] && $::env(CDC_CHECK_FORCE_GRT) == "1"}]
+
+# CDC_CHECK_PROPAGATED_CLOCK (bead je8, 2026-09-15): ODB-mode only,
+# opt-in, OFF by default. The budgets in phase5_soc_multiclock_check.sdc
+# are intended as datapath-only bounds (GH #94 intent,
+# phase5_soc_multiclock.sdc header: launch-flop CK->Q plus data wires/
+# logic to the capture D pin, excluding clock-network latency) --
+# `-datapath_only` is the SDC keyword that would normally express that,
+# but this file's own header (see above, "WHY THIS FILE EXISTS" item 1)
+# already tool-verified OpenSTA 2.6.0 / OpenROAD edf00dff do not
+# implement -datapath_only at all (STA-0563 on read_sdc), so it is never
+# passed by cdc_apply_max_delay / cdc_apply_max_delay_capture_fallback --
+# confirmed again by inspection here, both only ever call plain
+# `set_max_delay $val -from ... -to ...`. Given that, the only way this
+# tool can approximate "datapath-only" is by keeping clocks IDEAL (each
+# clock's SDC-declared `set_clock_latency -source 50` instead of a real,
+# walked clock-tree insertion delay) while STILL using GRT-estimated wire
+# parasitics on the DATA path -- clock propagation mode and parasitics
+# annotation are independent in this tool, so this isolates data-path
+# delay without the ~600-900 ps of real sys_clk clock-tree insertion
+# delay a fully propagated launch clock would fold into the same
+# max_delay budget (bead je8, 2026-09-15: exactly what turned 3 real-
+# parasitics groups VIOLATED on run 9 step 02 under
+# CDC_CHECK_PROPAGATED_CLOCK=1). This default matches how every prior
+# ACCEPTED CDC check in this project's history was run (run 23's
+# original post-route check and this bead's own post-CTS early check
+# both used ideal/unpropagated clocks, via the plain-netlist STA-only
+# path that has no clock-tree structure to propagate at all). Set
+# CDC_CHECK_PROPAGATED_CLOCK=1 to get the fdf166b behaviour back (real
+# propagated clock latency folded into the same budget -- useful for
+# separately characterizing how much of a path's margin is clock-latency
+# vs. datapath, as this bead's own notes do).
+set CDC_CHECK_PROPAGATED_CLOCK [expr {[info exists ::env(CDC_CHECK_PROPAGATED_CLOCK)] && $::env(CDC_CHECK_PROPAGATED_CLOCK) == "1"}]
+
 #----------------------------------------------------------------
 # ASAP7 stdcell + macro liberty (paths match pnr/asap7/soc/config.json's
 # LIB/EXTRA_LIBS; override via env if the PDK is installed elsewhere).
@@ -147,16 +251,35 @@ if {[file exists "../sram_1rw_256x32_asap7_TT_0p7V_25C.lib"]} {
 }
 
 #----------------------------------------------------------------
-# Gate-level netlist
+# Gate-level netlist -- ODB (GRT+ parasitics) or plain-verilog (STA-only,
+# no parasitics beyond the check SDC's own ideal clock-latency model).
 #----------------------------------------------------------------
-puts "================================================================"
-puts "Reading gate-level netlist: $NETLIST"
-puts "================================================================"
-if {![file exists $NETLIST]} {
-    cdc_fatal_setup "Netlist not found: $NETLIST -- no CDC re-closure P&R run exists yet (GH #96 scope). Run pnr/asap7/soc/config.json with PNR_SDC_FILE=phase5_soc_multiclock.sdc first, then set CDC_CHECK_RUN_DIR to that run's directory."
+if {$CDC_CHECK_ODB ne ""} {
+    puts "================================================================"
+    puts "Reading OpenROAD database (GRT-parasitics mode): $CDC_CHECK_ODB"
+    puts "================================================================"
+    if {![file exists $CDC_CHECK_ODB]} {
+        cdc_fatal_setup "ODB not found: $CDC_CHECK_ODB"
+    }
+    if {[catch {read_db $CDC_CHECK_ODB} _odb_err]} {
+        cdc_fatal_setup "read_db failed on $CDC_CHECK_ODB -- is this script running under 'openroad', not 'sta'? ($_odb_err)"
+    }
+    # Minimal equivalent of LibreLane's io.tcl set_global_vars (not sourced
+    # here to avoid its other side effects, e.g. read_pnr_libs/
+    # read_current_sdc pulling in PNR_SDC_FILE) -- $::tech is needed below
+    # by the GRT layer-adjustment loop.
+    set ::db [::ord::get_db]
+    set ::tech [$::db getTech]
+} else {
+    puts "================================================================"
+    puts "Reading gate-level netlist: $NETLIST"
+    puts "================================================================"
+    if {![file exists $NETLIST]} {
+        cdc_fatal_setup "Netlist not found: $NETLIST -- no CDC re-closure P&R run exists yet (GH #96 scope). Run pnr/asap7/soc/config.json with PNR_SDC_FILE=phase5_soc_multiclock.sdc first, then set CDC_CHECK_RUN_DIR to that run's directory."
+    }
+    read_verilog $NETLIST
+    link_design $TOP_MODULE
 }
-read_verilog $NETLIST
-link_design $TOP_MODULE
 
 #----------------------------------------------------------------
 # CDC check-only SDC (NOT the implementation SDC -- see file header)
@@ -188,6 +311,136 @@ if {[catch {read_sdc $CHECK_SDC} _sdc_err]} {
     } else {
         cdc_fatal_setup "read_sdc failed on $CHECK_SDC for a reason other than an unmatched CDC exception: $_sdc_err"
     }
+}
+
+#----------------------------------------------------------------
+# GRT-parasitics mode (bead je8, 2026-09-15): once the design+SDC are
+# loaded from the ODB, get the SAME parasitic basis the real flow's
+# rsz_timing_postgrt.tcl uses -- set_propagated_clock (real CTS-built
+# clock-tree insertion delay from the loaded odb, not the check SDC's
+# ideal `set_clock_latency -source 50` fallback), the ASAP7-calibrated
+# per-layer RC values and routing-layer range
+# (librelane/scripts/openroad/common/set_rc.tcl /
+# set_routing_layers.tcl), the same GRT layer adjustments
+# (common/set_layer_adjustments.tcl), then estimate_parasitics
+# -global_routing -- by default off the ODB's own persisted routing
+# guides (memory-cheap, tool-verified 2026-09-15 to need no fresh route),
+# or a genuinely fresh global_route if CDC_CHECK_FORCE_GRT=1 (see that
+# variable's header comment above for why re-routing is the heavier,
+# opt-in path; rsz_timing_postgrt.tcl always takes it, citing
+# https://github.com/The-OpenROAD-Project/OpenROAD/issues/5590, but this
+# script defaults to the cheaper odb-persisted path since it was
+# confirmed to work without that warning). No repair_timing call -- this
+# is a read-only timing snapshot of the checkpoint as routed, never
+# modifies the design.
+#----------------------------------------------------------------
+if {$CDC_CHECK_ODB ne ""} {
+    puts "================================================================"
+    puts "GRT-parasitics mode: estimate_parasitics -global_routing (force_grt=$CDC_CHECK_FORCE_GRT, propagated_clock=$CDC_CHECK_PROPAGATED_CLOCK)"
+    puts "================================================================"
+    if {$CDC_CHECK_PROPAGATED_CLOCK} {
+        puts "  clocks: PROPAGATED (real walked clock-tree insertion delay -- includes clock latency in every max_delay budget below; see CDC_CHECK_PROPAGATED_CLOCK header comment)"
+        set_propagated_clock [all_clocks]
+    } else {
+        puts "  clocks: IDEAL (SDC-declared set_clock_latency -source 50 -- approximates the intended datapath-only budget; see CDC_CHECK_PROPAGATED_CLOCK header comment)"
+        unset_propagated_clock [all_clocks]
+    }
+
+    # ASAP7-calibrated per-layer RC (mirrors common/set_rc.tcl's hard-coded
+    # ORFS-derived values -- the ASAP7 tech LEF itself has no
+    # RESISTANCE/CAPACITANCE attributes).
+    set_layer_rc -layer M1 -resistance 7.04175e-02 -capacitance 1e-10
+    set_layer_rc -layer M2 -resistance 4.62311e-02 -capacitance 1.84542e-01
+    set_layer_rc -layer M3 -resistance 3.63251e-02 -capacitance 1.53955e-01
+    set_layer_rc -layer M4 -resistance 2.03083e-02 -capacitance 1.89434e-01
+    set_layer_rc -layer M5 -resistance 1.93005e-02 -capacitance 1.71593e-01
+    set_layer_rc -layer M6 -resistance 1.18619e-02 -capacitance 1.76146e-01
+    set_layer_rc -layer M7 -resistance 1.25311e-02 -capacitance 1.47030e-01
+    set_layer_rc -via V1 -resistance 1.72e-02
+    set_layer_rc -via V2 -resistance 1.72e-02
+    set_layer_rc -via V3 -resistance 1.72e-02
+    set_layer_rc -via V4 -resistance 1.18e-02
+    set_layer_rc -via V5 -resistance 1.18e-02
+    set_layer_rc -via V6 -resistance 8.20e-03
+    set_layer_rc -via V7 -resistance 8.20e-03
+
+    # RT_MIN_LAYER/RT_MAX_LAYER (mirrors config_multiclock_hier.json --
+    # M2-M9, confirmed against the run's own step config.json).
+    # set_routing_layers takes a dash-joined range string directly
+    # (common/set_routing_layers.tcl); set_wire_rc -layers wants an actual
+    # space-separated LIST of layer names, built the same way
+    # common/set_rc.tcl does (routing-level order, gated on between
+    # RT_MIN_LAYER and RT_MAX_LAYER inclusive).
+    set _rt_min_layer [expr {[info exists ::env(RT_MIN_LAYER)] ? $::env(RT_MIN_LAYER) : "M2"}]
+    set _rt_max_layer [expr {[info exists ::env(RT_MAX_LAYER)] ? $::env(RT_MAX_LAYER) : "M9"}]
+    set_routing_layers -signal ${_rt_min_layer}-${_rt_max_layer} -clock ${_rt_min_layer}-${_rt_max_layer}
+
+    set _wire_rc_layer_names [list]
+    set _adding 0
+    foreach _layer [$::tech getLayers] {
+        if {[$_layer getRoutingLevel] >= 1} {
+            set _lname [$_layer getName]
+            if {$_lname eq $_rt_min_layer} { set _adding 1 }
+            if {$_adding} { lappend _wire_rc_layer_names $_lname }
+            if {$_lname eq $_rt_max_layer} { set _adding 0 }
+        }
+    }
+    if {[llength $_wire_rc_layer_names] > 1} {
+        set_wire_rc -signal -layers "$_wire_rc_layer_names"
+        set_wire_rc -clock  -layers "$_wire_rc_layer_names"
+    } else {
+        set_wire_rc -signal -layer "$_wire_rc_layer_names"
+        set_wire_rc -clock  -layer "$_wire_rc_layer_names"
+    }
+
+    if {!$CDC_CHECK_FORCE_GRT} {
+        puts "================================================================"
+        puts "Using ODB-persisted global-routing guides (no fresh global_route)"
+        puts "================================================================"
+    } else {
+        puts "================================================================"
+        puts "CDC_CHECK_FORCE_GRT=1: re-running global_route from scratch"
+        puts "================================================================"
+        # GRT layer adjustments (mirrors config_multiclock_hier.json's
+        # GRT_ADJUSTMENT / GRT_LAYER_ADJUSTMENTS / GRT_MACRO_EXTENSION,
+        # confirmed against the run's own step config.json).
+        set_global_routing_layer_adjustment * 0.1
+        set _grt_layer_names [list]
+        foreach _layer [$::tech getLayers] {
+            if {[$_layer getRoutingLevel] >= 1} {
+                lappend _grt_layer_names [$_layer getName]
+            }
+        }
+        set _grt_adjustments {0.5 0.0 0.0 0.0 0.0 0.0}
+        for {set _i 0} {$_i < [llength $_grt_adjustments]} {incr _i} {
+            set _lname [lindex $_grt_layer_names $_i]
+            if {$_lname eq ""} { break }
+            set_global_routing_layer_adjustment $_lname [lindex $_grt_adjustments $_i]
+        }
+        set_macro_extension 0
+
+        global_route -congestion_iterations 50 -verbose -allow_congestion
+    }
+    estimate_parasitics -global_routing
+
+    # ANNOTATION-CHECK (bead je8, 2026-09-15): print real annotation
+    # coverage instead of silently trusting "estimate_parasitics printed
+    # no warning" -- that was mistaken for success once already (see the
+    # CDC_CHECK_FORCE_GRT header comment above for the full writeup: a
+    # `read_db`-only load, with no live global_route in this session,
+    # left ~204195/204196 drivers -- effectively the whole design --
+    # unannotated, reproduced identically regardless of SDC/clock-mode
+    # ordering or CDC_CHECK_PROPAGATED_CLOCK). Always print the summary;
+    # never gate on it silently, since a partially-annotated design (some
+    # real runs may legitimately differ from this one) is still useful
+    # to see stated plainly rather than inferred.
+    puts "================================================================"
+    puts "ANNOTATION-CHECK: parasitic annotation coverage after estimate_parasitics -global_routing"
+    puts "================================================================"
+    catch {report_parasitic_annotation}
+    puts "================================================================"
+    puts "ANNOTATION-CHECK WARNING: if the summary above shows a large 'unannotated drivers' count relative to the design's total driver/instance count, treat every slack/delay number in the CDC-CHECK-RESULT below as datapath-SHAPE-only (real cell delay, real logic depth, real fanout loading -- but wireload-model or near-zero wire RC), NOT a genuine post-GRT/post-route timing verdict. See the CDC_CHECK_FORCE_GRT header comment (bead je8, 2026-09-15) for why this script could not obtain real GRT-parasitics annotation within a 3.5G memory budget on this SoC, and what was tried."
+    puts "================================================================"
 }
 
 #----------------------------------------------------------------
@@ -288,8 +541,25 @@ puts "================================================================"
 # longer reported here; it is one of the crossings covered by the
 # domain-wide fallback report below (mirrors
 # phase5_soc_multiclock_check.sdc section 14).
+set _fifo_wr2rd_obj [get_nets -hierarchical -filter {name =~ *u_cpu_axi_cdc*u_wr_ptr_to_rd*d_i*} -quiet]
+if {[llength $_fifo_wr2rd_obj] == 0} {
+    # deferred_flatten fallback (bead je8, 2026-09-15) -- same
+    # cdc_capture_flop_d_pins proc phase5_soc_multiclock_check.sdc's
+    # section 11 uses, available here because read_sdc evaluated that
+    # file's procs in this same interpreter above. Per-instance/per-
+    # direction because this one report spans all 5 fifos but AW/W/AR
+    # (cpu_clk->sys_clk) and B/R (sys_clk->cpu_clk) launch/capture in
+    # opposite directions.
+    set _fifo_wr2rd_obj [concat \
+        [cdc_capture_flop_d_pins {u_cpu_axi_cdc u_aw_fifo u_wr_ptr_to_rd} cpu_clk sys_clk] \
+        [cdc_capture_flop_d_pins {u_cpu_axi_cdc u_w_fifo  u_wr_ptr_to_rd} cpu_clk sys_clk] \
+        [cdc_capture_flop_d_pins {u_cpu_axi_cdc u_ar_fifo u_wr_ptr_to_rd} cpu_clk sys_clk] \
+        [cdc_capture_flop_d_pins {u_cpu_axi_cdc u_b_fifo  u_wr_ptr_to_rd} sys_clk cpu_clk] \
+        [cdc_capture_flop_d_pins {u_cpu_axi_cdc u_r_fifo  u_wr_ptr_to_rd} sys_clk cpu_clk] \
+    ]
+}
 cdc_report_through \
-    [get_nets -hierarchical -filter {name =~ *u_cpu_axi_cdc*u_wr_ptr_to_rd*d_i*} -quiet] \
+    $_fifo_wr2rd_obj \
     "check_cdc_timing.tcl u_wr_ptr_to_rd.d_i report query (all 5 fifos)" \
     $REPORTS_DIR/cdc_fifo_wr2rd.rpt
 cdc_report_through \
@@ -336,7 +606,18 @@ puts "================================================================"
 # before the separator/object-class issues) -- this is why the query below
 # is split into two 2-way-OR get_nets calls and concatenated, rather than
 # one 4-way chain.
-set _pmu_irq_a [get_nets -hierarchical -filter {name =~ *u_cpu_clk_dis_sync*d_i* || name == pmu_cpu_iso_en} -quiet]
+# u_cpu_clk_dis_sync's d_i-name sub-match, split out on its own so a
+# deferred_flatten netlist where that name vanishes (bead je8, 2026-09-15)
+# doesn't silently ride the OR with pmu_cpu_iso_en -- an OR'd collection
+# only needs ONE side non-empty to look "matched" via cdc_report_through's
+# llength check, so a vacuous d_i sub-clause was invisible in this report
+# every time pmu_cpu_iso_en's plain net matched, i.e. always. That masked
+# the exact CDC-EXCEPTION-MISS bead je8's early check on run 8 surfaced.
+set _clk_dis_report_obj [get_nets -hierarchical -filter {name =~ *u_cpu_clk_dis_sync*d_i*} -quiet]
+if {[llength $_clk_dis_report_obj] == 0} {
+    set _clk_dis_report_obj [cdc_capture_flop_d_pins {u_cpu_clk_dis_sync} sys_clk cpu_clk]
+}
+set _pmu_irq_a [concat $_clk_dis_report_obj [get_nets -hierarchical -filter {name == pmu_cpu_iso_en} -quiet]]
 set _pmu_irq_b [get_nets -hierarchical -filter {name == ext_irq || name == timer_irq} -quiet]
 cdc_report_through \
     [concat $_pmu_irq_a $_pmu_irq_b] \

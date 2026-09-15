@@ -371,6 +371,95 @@ proc cdc_apply_max_delay {netc val from_clk to_clk description} {
 }
 
 ###############################################################################
+# CAPTURE-FLOP D-PIN FALLBACK (bead je8, 2026-09-15)
+#
+# Sections 11/13 below match a synchroniser's `d_i` PORT net by name
+# (`*<instance>*d_i*`). Under SYNTH_HIERARCHY_MODE=flatten (run 23 and
+# every prior CDC-closure netlist), that net keeps a clean RTL-derived
+# name. Under SYNTH_HIERARCHY_MODE=deferred_flatten (bead je8/2kn,
+# config_multiclock_hier.json) the SAME crossing can synthesize with the
+# submodule input-port net MERGED into its driver's net instead (here:
+# u_cpu_clk_dis_sync's `.d_i(~pmu_cpu_clk_en)` collapses so no
+# `*u_cpu_clk_dis_sync*d_i*` net exists at all post-CTS -- confirmed
+# 2026-09-15 against run 8 step 31's soc_top.nl.v: only
+# `u_cpu_clk_dis_sync.sync_q[0]`, `pmu_cpu_clk_dis_sync` and anonymous
+# `._0_`.._7_` nets survive). The d_i NAME is gone, but the destination
+# flop CELL always still exists and is always findable without relying on
+# any name at all: it is the unique to_clk-domain register whose D-pin
+# fan-in reaches into from_clk.
+#
+# cdc_capture_flop_d_pins: scope to cells whose full (dot-joined) name
+# contains EVERY substring in $substr_list (Tcl string match, not
+# OpenSTA's own glob -- sidesteps the bracket/dot escaping pitfalls
+# documented throughout this file), restricted to to_clk-domain registers
+# (cdc_filter_by_clock reuse), then keep only those whose D pin's fan-in
+# (get_fanin, -flat, so it walks through any intervening inverter/buffer --
+# same idiom cdc_net_from_to already relies on, since ASAP7 seq cells only
+# expose an inverted Q/QN and almost never drive a clean net directly)
+# actually reaches a from_clk-domain register. That fan-in-crosses-the-
+# boundary test is what picks out the TRUE first-capture flop and
+# excludes a synchroniser's later stages (their D pin only fans in from
+# the same to_clk domain, no boundary crossing) without needing to parse
+# any stage/bit index out of a name.
+proc cdc_capture_flop_d_pins {substr_list from_clk to_clk} {
+    set _to_regs [all_registers -clock [get_clocks $to_clk]]
+    set _pins {}
+    foreach _reg $_to_regs {
+        set _fn [get_full_name $_reg]
+        set _match 1
+        foreach _s $substr_list {
+            if {![string match "*${_s}*" $_fn]} {
+                set _match 0
+                break
+            }
+        }
+        if {!$_match} {
+            continue
+        }
+        set _dpin [get_pins -of_objects $_reg -filter {direction == input && name == D} -quiet]
+        if {[llength $_dpin] == 0} {
+            continue
+        }
+        set _fanin_cells [get_fanin -to $_dpin -startpoints_only -flat -only_cells]
+        set _fanin_from  [cdc_filter_by_clock $_fanin_cells $from_clk]
+        if {[llength $_fanin_from] > 0} {
+            lappend _pins $_dpin
+        }
+    }
+    return $_pins
+}
+
+# cdc_apply_max_delay_capture_fallback: same contract/finding-accumulation
+# as cdc_apply_max_delay (same $::cdc_exception_misses list, same
+# non-vacuous requirement -- an empty result IS a recorded
+# CDC-EXCEPTION-MISS, not a silent skip), but driven by
+# cdc_capture_flop_d_pins instead of a `d_i`-name net collection. Only
+# called when the primary d_i-name match is empty (callers check that
+# themselves) so flat/run-23-style netlists are completely unaffected --
+# they always take the cdc_apply_max_delay path, byte-identical to before.
+proc cdc_apply_max_delay_capture_fallback {substr_list val from_clk to_clk description} {
+    set _pins [cdc_capture_flop_d_pins $substr_list $from_clk $to_clk]
+    if {[llength $_pins] == 0} {
+        puts "ERROR: CDC-EXCEPTION-MISS: ${description} -- capture-flop D-pin fallback (deferred_flatten) ALSO found no ${to_clk}-domain flop under *[join $substr_list {*}]* whose D-pin fan-in reaches ${from_clk}. This CDC timing exception was NOT applied; the boundary is UNCONSTRAINED."
+        lappend ::cdc_exception_misses $description
+        return 0
+    }
+    set _applied 0
+    foreach _dp $_pins {
+        set _cell [get_cells -of_objects $_dp -quiet]
+        set _from_cells [cdc_filter_by_clock [get_fanin -to $_dp -startpoints_only -flat -only_cells] $from_clk]
+        if {[llength $_from_cells] == 0 || [llength $_cell] == 0} {
+            puts "ERROR: CDC-EXCEPTION-MISS: ${description} (capture pin [get_full_name $_dp]) -- driver/load cells on the expected clocks ($from_clk/$to_clk) could not be resolved. This bit's CDC timing exception was NOT applied."
+            lappend ::cdc_exception_misses "${description} (capture pin [get_full_name $_dp])"
+            continue
+        }
+        set_max_delay $val -from $_from_cells -to $_cell
+        incr _applied
+    }
+    return [expr {$_applied > 0}]
+}
+
+###############################################################################
 # 10. Domain-wide fallback budget for name-unmatchable payload crossings
 #     (bead 7l5, 2026-08-06)
 #
@@ -426,6 +515,89 @@ set_max_delay [expr {780 * 0.9}] \
     -from [all_registers -clock sys_clk] -to [all_registers -clock cpu_clk]
 
 ###############################################################################
+# 10a. Exclude cdc_reset_sync's async set/reset pins from the section-10
+#      domain-wide fallback (bead je8, 2026-09-15)
+#
+# WHY: with real GRT parasitics (run 9 step 02, CDC_CHECK_FORCE_GRT=1),
+# section 10's blanket -from/-to swept in a wide-fanout RESET distribution
+# path -- u_pll_sub's pll-lock-derived core_rst_n (rtl/soc/soc_top.sv:260,
+# 252: "core_rst_n = pll_subsystem.core_rst_n (rst_n_i & pll_locked)")
+# ANDed into rst_both_n (rtl/soc/apb_cdc_bridge.sv:343:
+# "assign rst_both_n = s_rst_n_i & m_rst_n_i") and fed to
+# u_apb_dbg_cdc.u_m_rst_sync's async-clear input
+# (rtl/soc/apb_cdc_bridge.sv:358-365: cdc_reset_sync instance u_m_rst_sync,
+# .rst_n_i(rst_both_n)) -- and reported it VIOLATED (-765 ps) as a
+# recovery-time check at the synthesized SETN pin. RTL classification
+# (bead je8, all three confirmed true):
+#   (a) the pin reached IS the flop chain's async assert input: every
+#       always_ff in rtl/soc/cdc/cdc_reset_sync.sv:109,117
+#       ("always_ff @(posedge clk_i or negedge rst_n_async)") uses
+#       rst_n_async as its ASYNCHRONOUS clear, mapped by synthesis to the
+#       cell's RESETN/SETN liberty pin (confirmed empirically: ASAP7
+#       DFFASRHQNx1 exposes CLK/D/RESETN/SETN/QN, no other async control
+#       pin exists).
+#   (b) de-assertion is synchronous: cdc_reset_sync.sv:107-126 shifts a
+#       constant 1 into sync_q through STAGES flops on posedge clk_i once
+#       out of reset ("sync_q[0] <= 1'b1" / "sync_q[g] <= sync_q[g-1]"),
+#       i.e. classic async-assert/sync-deassert -- release of rst_n_o is
+#       re-timed onto the CAPTURE domain's own clock, exactly the pattern
+#       cdc_reset_sync.sv's own header (lines 2-9) documents.
+#   (c) the launching net is reset-class, not data: rst_both_n (source of
+#       u_m_rst_sync's async clear) is the AND of two reset signals
+#       (apb_cdc_bridge.sv:343), and core_rst_n itself is
+#       "rst_n_i & pll_locked" from the u_pll_sub pll_subsystem instance
+#       (soc_top.sv:252,260) -- the ~11-buffer chain observed in the
+#       violating path IS that reset's fanout/distribution buffering
+#       (core_rst_n resets essentially every register in the sys_clk
+#       domain, so it fans out like a small tree, structurally similar to
+#       a clock tree -- not a data path).
+# All three hold, so this is the SAME class as the existing
+# u_cpu_pmu_rst_sync exclusion a few sections below (pmu_cpu_rst_n
+# async-clear reset sync, false_path'd there by net name) -- bead k07
+# precedent. Recovery/removal timing on de-assertion is NOT waived here
+# (it stays the tool's normal, un-excepted check via the synchronous
+# same-domain flop-to-flop paths cdc_reset_sync's chain forms -- this
+# exclusion only removes the SPURIOUS cross-domain recovery check
+# set_max_delay -to [all_registers ...] fabricates against an async
+# CONTROL pin that was never meant to be timed as a data endpoint).
+#
+# STRUCTURAL matching (preferred over a name-derived net, which is
+# exactly the class of thing deferred_flatten/flatten can rename or
+# merge away -- bead je8/c88013d lesson): scope to registers whose
+# instance path contains "rst_sync" (covers every cdc_reset_sync
+# instantiation in this design -- u_s_rst_sync/u_m_rst_sync inside each
+# of the 5 async_axi_fifo instances and both apb_cdc_bridge instances,
+# plus the top-level u_cpu_pmu_rst_sync), then take each such register's
+# RESETN/SETN pins BY LIBERTY PIN NAME (not by tracing any RTL net name
+# at all -- these are the ASAP7 SEQ library's async-control pin names on
+# every flop variant in this design, confirmed against the same liberty
+# used throughout this file). No capture-flop-D-pin fallback is needed
+# here (unlike sections 11/13's d_i fallback): the object being excluded
+# IS the register cell itself, found via all_registers + instance-name
+# match, with no submodule port net in the path at all -- there is
+# nothing for deferred_flatten to rename away.
+proc cdc_reset_sync_async_pins {} {
+    set _pins {}
+    foreach _clk {sys_clk cpu_clk} {
+        foreach _reg [all_registers -clock [get_clocks $_clk]] {
+            if {![string match "*rst_sync*" [get_full_name $_reg]]} {
+                continue
+            }
+            foreach _pn {RESETN SETN} {
+                set _p [get_pins -of_objects $_reg \
+                    -filter "direction == input && name == $_pn" -quiet]
+                foreach _x $_p { lappend _pins $_x }
+            }
+        }
+    }
+    return $_pins
+}
+set _reset_sync_async_pins [cdc_reset_sync_async_pins]
+if {[cdc_require_match $_reset_sync_async_pins "sec.10a cdc_reset_sync async set/reset pins (rst_both_n / pll-lock-derived core_rst_n class, RTL-confirmed bead je8) excluded from domain-wide max_delay fallback"]} {
+    set_false_path -to $_reset_sync_async_pins
+}
+
+###############################################################################
 # 11. CPU<->fabric CDC boundary — async_axi_fifo (instance u_cpu_axi_cdc)
 #
 # GH #94 / bead oa7 item 1; retightened per bead k07 item 1 (OpenTitan +
@@ -463,8 +635,18 @@ set _cdc_fifo_dirs {
 foreach {_fifo_inst _wr_clk _wr_period _rd_clk _rd_period} $_cdc_fifo_dirs {
     # (1) u_wr_ptr_to_rd.d_i: wr_gray_q -> rd domain — 0.5x rd (destination) period
     set _wr2rd [get_nets -hierarchical -filter "name =~ *u_cpu_axi_cdc*${_fifo_inst}*u_wr_ptr_to_rd*d_i*" -quiet]
-    cdc_apply_max_delay $_wr2rd [expr {$_rd_period * 0.5}] $_wr_clk $_rd_clk \
-        "sec.11 u_cpu_axi_cdc.${_fifo_inst}.u_wr_ptr_to_rd.d_i gray-pointer crossing"
+    if {[llength $_wr2rd] > 0} {
+        cdc_apply_max_delay $_wr2rd [expr {$_rd_period * 0.5}] $_wr_clk $_rd_clk \
+            "sec.11 u_cpu_axi_cdc.${_fifo_inst}.u_wr_ptr_to_rd.d_i gray-pointer crossing"
+    } else {
+        # deferred_flatten fallback (bead je8) -- see CAPTURE-FLOP D-PIN
+        # FALLBACK block above. Not exercised on flat/run-23-style netlists
+        # (this branch is only reached when the d_i-name match above is
+        # already empty).
+        cdc_apply_max_delay_capture_fallback [list u_cpu_axi_cdc $_fifo_inst u_wr_ptr_to_rd] \
+            [expr {$_rd_period * 0.5}] $_wr_clk $_rd_clk \
+            "sec.11 u_cpu_axi_cdc.${_fifo_inst}.u_wr_ptr_to_rd.d_i gray-pointer crossing"
+    }
 
     # (2) rd_gray_q (source register for u_rd_ptr_to_wr's vanished d_i):
     #     rd_gray_q -> wr domain — 0.5x wr (destination) period
@@ -574,8 +756,20 @@ if {[cdc_require_match $_rst_sync_pins "sec.13 pmu_cpu_rst_n async-clear reset s
 }
 
 set _clk_dis_di [get_nets -hierarchical -filter {name =~ *u_cpu_clk_dis_sync*d_i*} -quiet]
-cdc_apply_max_delay $_clk_dis_di 780 sys_clk cpu_clk \
-    "sec.13 u_cpu_clk_dis_sync.d_i single-bit CDC crossing"
+if {[llength $_clk_dis_di] > 0} {
+    cdc_apply_max_delay $_clk_dis_di 780 sys_clk cpu_clk \
+        "sec.13 u_cpu_clk_dis_sync.d_i single-bit CDC crossing"
+} else {
+    # deferred_flatten fallback (bead je8, 2026-09-15) -- see CAPTURE-FLOP
+    # D-PIN FALLBACK block above. u_cpu_clk_dis_sync's .d_i(~pmu_cpu_clk_en)
+    # net (real logic -- an inverter -- between source and synchroniser)
+    # does not survive under SYNTH_HIERARCHY_MODE=deferred_flatten; the
+    # capture flop cell always does. Not exercised on flat/run-23-style
+    # netlists (this branch is only reached when the d_i-name match above
+    # is already empty).
+    cdc_apply_max_delay_capture_fallback {u_cpu_clk_dis_sync} 780 sys_clk cpu_clk \
+        "sec.13 u_cpu_clk_dis_sync.d_i single-bit CDC crossing"
+}
 
 set _iso_en_src [get_nets pmu_cpu_iso_en -quiet]
 cdc_apply_max_delay $_iso_en_src 780 sys_clk cpu_clk \

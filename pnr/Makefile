@@ -193,6 +193,7 @@ SV2V                ?= /nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1
 .PHONY: install-asap7-rcx-rules check-asap7-rcx-rules check-asap7-openroad
 .PHONY: librelane-sky130 librelane-sky130-cpu librelane-nangate45 librelane-asap7 librelane-asap7-gpu librelane-asap7-soc
 .PHONY: librelane-asap7-soc-multiclock
+.PHONY: librelane-asap7-soc-multiclock-hier
 .PHONY: librelane-asap7-3014 librelane-asap7-gpu-3014
 .PHONY: check-cdc-timing-asap7-soc
 .PHONY: asap7-soc-sv2v
@@ -912,7 +913,8 @@ librelane-asap7-soc-synth librelane-asap7-soc-synth-only \
 librelane-asap7-soc-multiclock macro-views-asap7 \
 librelane-asap7-coalescer-rtl librelane-asap7-coalescer-hls \
 librelane-asap7-hazard-rtl librelane-asap7-hazard-hls \
-librelane-asap7-valu-rtl librelane-asap7-valu-hls: \
+librelane-asap7-valu-rtl librelane-asap7-valu-hls \
+librelane-asap7-valu-hls-comb: \
 	OR_PATH_PREFIX := export PATH=$(ASAP7_OR_SHIM_DIR):\$$PATH; export PYTHONPATH=\$$(python3 -c 'import click,os;print(os.path.dirname(os.path.dirname(click.__file__)))')\$${PYTHONPATH:+:\$$PYTHONPATH};
 
 # Fails loudly if the pinned OpenROAD is gone (nix GC) or is the known-bad
@@ -1426,6 +1428,69 @@ librelane-asap7-soc-multiclock: SOC_CONFIG = config_multiclock.json
 librelane-asap7-soc-multiclock: asap7-soc-sv2v check-asap7-openroad
 	@echo "=========================================="
 	@echo "Running LibreLane flow — ASAP7 SoC MULTICLOCK (GH #96)"
+	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)"
+	@echo "  SDC      : constraints/phase5_soc_multiclock.sdc (sys_clk 1750 ps / cpu_clk 780 ps)"
+	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
+	@echo "  Runtime  : expect 4-8 h full flow (~75 min to OpenROAD.STAPrePNR)"
+	@echo "  Run dir  : /nobackup/asap7_soc_runs/"
+	@echo "  Extra    : $(LIBRELANE_EXTRA_ARGS)"
+	@echo "=========================================="
+	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)" ]; then \
+		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG) not found."; exit 1; fi
+	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/constraints/phase5_soc_multiclock.sdc" ]; then \
+		echo "ERROR: multiclock SDC missing — copy pnr/constraints/phase5_soc_multiclock.sdc"; exit 1; fi
+	$(call asap7_soc_preflight)
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Checker.LintErrors \
+		 --skip Checker.YosysSynthChecks \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
+		 $(LIBRELANE_EXTRA_ARGS) \
+		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/$(SOC_CONFIG)"
+	@if [ -z "$(LIBRELANE_EXTRA_ARGS)" ]; then \
+		$(MAKE) check-asap7-soc-routing; \
+	else \
+		echo "NOTE: LIBRELANE_EXTRA_ARGS set ($(LIBRELANE_EXTRA_ARGS)) -- this may be a"; \
+		echo "      partial run (e.g. --to before DetailedRouting). Skipping the"; \
+		echo "      routing gate; run 'make check-asap7-soc-routing' by hand once a"; \
+		echo "      full flow (through DetailedRouting) has completed."; \
+	fi
+
+#----------------------------------------------------------------
+# librelane-asap7-soc-multiclock-hier: bead je8/2kn -- same flow as
+# librelane-asap7-soc-multiclock, but driven by config_multiclock_hier.json
+# (SYNTH_HIERARCHY_MODE deferred_flatten instead of flatten) to cut the yosys/
+# ABC peak RAM that OOM'd runs 6/7 (>13.4 GB, 15.9 GB host). Only the config
+# path differs; config_multiclock.json (run 23's sign-off basis) is untouched.
+#
+# Usage:
+#   make librelane-asap7-soc-multiclock-hier                  # full P&R
+#   make librelane-asap7-soc-multiclock-hier LIBRELANE_EXTRA_ARGS='--to OpenROAD.STAPrePNR'
+#----------------------------------------------------------------
+librelane-asap7-soc-multiclock-hier: SOC_CONFIG = config_multiclock_hier.json
+librelane-asap7-soc-multiclock-hier: asap7-soc-sv2v check-asap7-openroad
+	@echo "=========================================="
+	@echo "Running LibreLane flow — ASAP7 SoC MULTICLOCK HIERARCHICAL (bead je8/2kn)"
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)"
 	@echo "  SDC      : constraints/phase5_soc_multiclock.sdc (sys_clk 1750 ps / cpu_clk 780 ps)"
 	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
@@ -2098,3 +2163,77 @@ librelane-asap7-valu-hls: check-asap7-openroad
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
 		 $(abspath asap7/valu_hls)/config.json"
+
+# GH #119 egt Bug 2 (bead gcd): the sdc_longclk combinational candidate's shim
+# (hls/gpu/vector_alu/shim/vector_alu_hls.sv) uses an ANSI-header package
+# import ("module vector_alu_hls import gpu_pkg::*; (...)") that Synlig/UHDM
+# (USE_SYNLIG) mis-elaborates for this design shape -- it silently produces a
+# netlist where the per-lane "output 0 when active_mask_i[lane]=0" select mux
+# (ui_cond_expr_FU, vector_alu_synth.v:346) loses its masking branch, leaking
+# raw rs1_i/rs2_i values into result_o for inactive lanes (proven by SAT miter
+# + eval against the real ASAP7-mapped netlist; see
+# docs/CPP_TO_RTL_HLS_EVALUATION.md and bd show claude_verilog_test-gcd).
+# Root-caused to the Synlig frontend, not LibreLane's opt passes (SHARE and
+# SYNTH_TIE_UNDEFINED were both ruled out empirically). Fix: bypass Synlig for
+# this leaf -- pre-process gpu_pkg.sv + the shim through sv2v (already the
+# project's sanctioned fallback for Synlig-incompatible SV, see
+# sky130-soc-sv2v above) into plain Verilog-2005, then set USE_SYNLIG:false
+# and point valu_hls_comb/config.json's VERILOG_FILES at the sv2v output
+# instead of the raw .sv + gpu_pkg.sv. Deterministic/reproducible via this
+# target -- do not hand-edit the generated .v.
+EGT_VALU_HLS_COMB_SHIM_SV := \
+	$(PROJECT_ROOT)/rtl/gpu/gpu_pkg.sv \
+	$(PROJECT_ROOT)/hls/gpu/vector_alu/shim/vector_alu_hls.sv
+EGT_VALU_HLS_COMB_SV2V_OUT := /nobackup/hls/out/egt/sdc_longclk/vector_alu_hls_sv2v.v
+
+.PHONY: egt-valu-hls-comb-sv2v
+egt-valu-hls-comb-sv2v:
+	@echo "=========================================="
+	@echo "Pre-processing: sv2v SV -> Verilog-2005 (GH #119 egt comb-candidate shim, bead gcd)"
+	@echo "  Input : $(EGT_VALU_HLS_COMB_SHIM_SV)"
+	@echo "  Output: $(EGT_VALU_HLS_COMB_SV2V_OUT)"
+	@echo "=========================================="
+	@if [ ! -f "$(SV2V)" ]; then \
+		echo "ERROR: sv2v not found at $(SV2V)"; \
+		echo "Install via: nix-build '<nixpkgs>' -A haskellPackages.sv2v --no-out-link"; \
+		exit 1; fi
+	@mkdir -p $(dir $(EGT_VALU_HLS_COMB_SV2V_OUT))
+	$(SV2V) $(EGT_VALU_HLS_COMB_SHIM_SV) -w $(EGT_VALU_HLS_COMB_SV2V_OUT)
+	@echo "sv2v complete: $$(wc -l < $(EGT_VALU_HLS_COMB_SV2V_OUT)) lines"
+
+.PHONY: librelane-asap7-valu-hls-comb
+librelane-asap7-valu-hls-comb: check-asap7-openroad egt-valu-hls-comb-sv2v
+	@echo "=========================================="
+	@echo "ASAP7 leaf-block PPA (GH #119 egt) -- vector_alu, HLS combinational-candidate arm"
+	@echo "  (Bambu --speculative-sdc-scheduling --clock-period=100: zero-register, zero-latency)"
+	@echo "  Config   : pnr/asap7/valu_hls_comb/config.json"
+	@echo "  Stopping : OpenROAD.STAPrePNR (area+timing+power; no floorplan/route)"
+	@echo "=========================================="
+	@if [ ! -f "asap7/valu_hls_comb/config.json" ]; then \
+		echo "ERROR: asap7/valu_hls_comb/config.json not found."; exit 1; fi
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 --to OpenROAD.STAPrePNR \
+		 --skip Checker.YosysSynthChecks \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
+		 $(abspath asap7/valu_hls_comb)/config.json"
