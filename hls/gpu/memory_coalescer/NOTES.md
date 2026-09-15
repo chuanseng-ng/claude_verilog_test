@@ -114,7 +114,7 @@ the two coexist.
   (a C driver cannot size a memory space from a decayed pointer; see `hls/README.md`).
 - Generated Verilog is **not committed**. Bambu stamps a timestamp into a header comment, so pin
   the **normalized** digest, which is stable across runs:
-  `verilog_sha256_normalized = 376e64ea719512cfef4cfdac5c12502731dcf9ccef5aa039afcfc52fa61e3b50`
+  `verilog_sha256_normalized = 9def6afd4ecb0052687d6a4225c2d4120700500e3ab04b31799c3d8ad9aea8be`
 
 ### Numbers for Stage 2 (do not treat as PPA)
 
@@ -133,3 +133,15 @@ Bambu cosim reports 119 cycles across 5 vectors, 23 average.
 > Stage 2 with byte-identical inputs reproduced the coalescer but **not** the hazard unit,
 > which exposed it. `tools/eda/wrap-bambu.sh` now blanks both lines; the value above is
 > under the corrected normalisation and was verified stable across two consecutive runs.
+
+> **Digest re-pinned again (bead `wke`, 2026-09-15).** After a `/nobackup` wipe+remount
+> (bead `alq`), the r8r-era pin above stopped reproducing even with the same flake-pinned
+> Bambu binary and unchanged C/tb inputs. Root cause: a third volatile thing the header
+> doesn't show — Bambu's internal net/instance ID counter (e.g.
+> `selector_IN_UNBOUNDED_memory_coalescer_428528_428695`) is environment-sensitive, not
+> C-source-sensitive (its base number was identical — 428532 pre-wipe, 428528 post-wipe —
+> across this block and `rv32i_hazard_unit` alike). Verified non-semantic: with that
+> counter blanked, a full diff between the 2026-09-07 survivor and the 2026-09-15
+> regeneration is empty. `tools/eda/summarize.py` now also blanks
+> `_<5+ digits>_<5+ digits>` pairs; see `hls/PROVENANCE.json`'s `digest_note` for the full
+> writeup. Re-verified stable across two independent 2026-09-15 regenerations.

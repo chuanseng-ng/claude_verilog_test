@@ -77,3 +77,18 @@ suite does not exercise `ASSUMPTIONS.md` items 8 (`result_o` for branch opcodes)
 
 The shim (`shim/vector_alu_hls.sv`) is wire-only — zero registers — so the 9 412
 sequential cells are all Bambu's.
+
+## Reproducibility
+
+- Bambu PandA 2024.10, rev `c2ba6936ca2ed63137095fea0b630a1c66e20e63-main`, pinned by sha256 in
+  `flake.nix`; flags in `hls/bambu.mk`.
+- Generated Verilog is not committed. Pin the **normalized** digest:
+  `verilog_sha256_normalized = 052227f9d9ae4a5f37be3a7125eb4646df978b30926faa4cbb209880e153d5d4`
+
+> **First pin (bead `wke`, 2026-09-15).** Stage 3 (bead `gg8`) recorded this block's PPA
+> and cycle results but never pinned a reproducibility digest — the gap `hls/PROVENANCE.json`
+> found when auditing all three HLS blocks after a `/nobackup` wipe+remount (bead `alq`).
+> Pinned under the normalization that also blanks Bambu's internal net/instance ID-counter
+> pairs (`_<5+ digits>_<5+ digits>`, e.g. `selector_IN_UNBOUNDED_vector_alu_428528_...`) —
+> see `memory_coalescer/NOTES.md` and `hls/PROVENANCE.json`'s `digest_note` for why that
+> normalization was needed and how it was verified non-semantic.
