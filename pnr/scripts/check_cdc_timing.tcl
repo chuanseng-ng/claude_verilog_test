@@ -288,8 +288,25 @@ puts "================================================================"
 # longer reported here; it is one of the crossings covered by the
 # domain-wide fallback report below (mirrors
 # phase5_soc_multiclock_check.sdc section 14).
+set _fifo_wr2rd_obj [get_nets -hierarchical -filter {name =~ *u_cpu_axi_cdc*u_wr_ptr_to_rd*d_i*} -quiet]
+if {[llength $_fifo_wr2rd_obj] == 0} {
+    # deferred_flatten fallback (bead je8, 2026-09-15) -- same
+    # cdc_capture_flop_d_pins proc phase5_soc_multiclock_check.sdc's
+    # section 11 uses, available here because read_sdc evaluated that
+    # file's procs in this same interpreter above. Per-instance/per-
+    # direction because this one report spans all 5 fifos but AW/W/AR
+    # (cpu_clk->sys_clk) and B/R (sys_clk->cpu_clk) launch/capture in
+    # opposite directions.
+    set _fifo_wr2rd_obj [concat \
+        [cdc_capture_flop_d_pins {u_cpu_axi_cdc u_aw_fifo u_wr_ptr_to_rd} cpu_clk sys_clk] \
+        [cdc_capture_flop_d_pins {u_cpu_axi_cdc u_w_fifo  u_wr_ptr_to_rd} cpu_clk sys_clk] \
+        [cdc_capture_flop_d_pins {u_cpu_axi_cdc u_ar_fifo u_wr_ptr_to_rd} cpu_clk sys_clk] \
+        [cdc_capture_flop_d_pins {u_cpu_axi_cdc u_b_fifo  u_wr_ptr_to_rd} sys_clk cpu_clk] \
+        [cdc_capture_flop_d_pins {u_cpu_axi_cdc u_r_fifo  u_wr_ptr_to_rd} sys_clk cpu_clk] \
+    ]
+}
 cdc_report_through \
-    [get_nets -hierarchical -filter {name =~ *u_cpu_axi_cdc*u_wr_ptr_to_rd*d_i*} -quiet] \
+    $_fifo_wr2rd_obj \
     "check_cdc_timing.tcl u_wr_ptr_to_rd.d_i report query (all 5 fifos)" \
     $REPORTS_DIR/cdc_fifo_wr2rd.rpt
 cdc_report_through \
@@ -336,7 +353,18 @@ puts "================================================================"
 # before the separator/object-class issues) -- this is why the query below
 # is split into two 2-way-OR get_nets calls and concatenated, rather than
 # one 4-way chain.
-set _pmu_irq_a [get_nets -hierarchical -filter {name =~ *u_cpu_clk_dis_sync*d_i* || name == pmu_cpu_iso_en} -quiet]
+# u_cpu_clk_dis_sync's d_i-name sub-match, split out on its own so a
+# deferred_flatten netlist where that name vanishes (bead je8, 2026-09-15)
+# doesn't silently ride the OR with pmu_cpu_iso_en -- an OR'd collection
+# only needs ONE side non-empty to look "matched" via cdc_report_through's
+# llength check, so a vacuous d_i sub-clause was invisible in this report
+# every time pmu_cpu_iso_en's plain net matched, i.e. always. That masked
+# the exact CDC-EXCEPTION-MISS bead je8's early check on run 8 surfaced.
+set _clk_dis_report_obj [get_nets -hierarchical -filter {name =~ *u_cpu_clk_dis_sync*d_i*} -quiet]
+if {[llength $_clk_dis_report_obj] == 0} {
+    set _clk_dis_report_obj [cdc_capture_flop_d_pins {u_cpu_clk_dis_sync} sys_clk cpu_clk]
+}
+set _pmu_irq_a [concat $_clk_dis_report_obj [get_nets -hierarchical -filter {name == pmu_cpu_iso_en} -quiet]]
 set _pmu_irq_b [get_nets -hierarchical -filter {name == ext_irq || name == timer_irq} -quiet]
 cdc_report_through \
     [concat $_pmu_irq_a $_pmu_irq_b] \
