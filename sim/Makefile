@@ -986,6 +986,42 @@ gpu_alu_hls:
 		NO_TRACE=1 EXTRA_BUILD_ARGS="" \
 		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_alu_hls
 
+# vector_alu, gate-level sim of a POST-SYNTHESIS ASAP7 netlist (GH #119 beads
+# egt/gcd/b0t -- settling functional correctness between USE_SYNLIG:true and
+# USE_SYNLIG:false+sv2v synthesis frontends). Same unmodified cocotb suite as
+# gpu_alu_hls above; the netlist top module (vector_alu_hls) already exposes
+# the same ports as the pre-synthesis shim, so no separate shim/pkg is needed
+# -- GLS_NETLIST must be a self-contained Verilog file with real gate
+# functionality (e.g. yosys `read_liberty -ignore_miss_func <libs>;
+# read_verilog <nl.v>; hierarchy -top vector_alu_hls; proc; opt_clean;
+# write_verilog`, NOT `flatten`+`opt -full` -- flattening ASAP7 cells to raw
+# yosys primitives explodes a ~50-90K-instance netlist into hundreds of
+# thousands of gates and both Verilator's front end and the g++ build have
+# been observed to not complete; substituting each liberty cell as its own
+# small hierarchical module keeps instance COUNT the same but module TYPE
+# count near ~100, which is what Verilator actually struggles with).
+# GLS_BUILD_TAG picks the SIM_BUILD subdirectory so different netlists don't
+# clobber each other's Verilator build.
+GLS_NETLIST ?=
+GLS_BUILD_TAG ?= default
+
+.PHONY: gpu_alu_hls_gls
+gpu_alu_hls_gls:
+	@test -n "$(GLS_NETLIST)" || { \
+	  echo "ERROR: GLS_NETLIST not set. Usage:"; \
+	  echo "  make gpu_alu_hls_gls GLS_NETLIST=/path/to/functional_netlist.v GLS_BUILD_TAG=<tag>"; \
+	  exit 2; }
+	@test -s "$(GLS_NETLIST)" || { \
+	  echo "ERROR: $(GLS_NETLIST) missing or empty."; exit 2; }
+	@echo "Running Phase 4 vector_alu unit tests against gate-level netlist $(GLS_NETLIST)..."
+	$(MAKE) sim \
+		MODULE=tb.cocotb.gpu.test_vector_alu \
+		TOPLEVEL=vector_alu_hls \
+		VERILOG_SOURCES="$(GLS_NETLIST)" \
+		EXTRA_VERILATOR_FLAGS="-Wno-lint -Wno-style -O0 --output-split 200" \
+		NO_TRACE=1 EXTRA_BUILD_ARGS="" \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_gpu_alu_hls_gls_$(GLS_BUILD_TAG)
+
 # memory_coalescer, HLS arm (GH #119 bead cfi): the SAME cocotb tests as
 # gpu_coalescer above, run against Bambu-generated Verilog wrapped in a
 # port-adapting shim. Running both arms through one unchanged testbench is what

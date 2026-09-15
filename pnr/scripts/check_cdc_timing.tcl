@@ -102,6 +102,40 @@ set NETLIST "$RUN_DIR/final/nl/${TOP_MODULE}.nl.v"
 set REPORTS_DIR "reports"
 file mkdir $REPORTS_DIR
 
+# CDC_CHECK_ODB (bead je8, 2026-09-15): opt-in ODB-based loading path for
+# checkpoints that only have GRT (or later) parasitics, e.g. a run
+# stopped/seeded mid-flow before a `final/nl/*.nl.v` signoff netlist
+# exists. Requires OpenROAD (read_db/global_route/estimate_parasitics are
+# OpenROAD-only commands -- this script's default path below works under
+# plain standalone `sta` precisely because it avoids all of them). Run
+# this script with `openroad` instead of `sta` when CDC_CHECK_ODB is set;
+# it is silently ignored -- and the netlist/link_design path below runs
+# unchanged -- otherwise, so every existing `sta
+# pnr/scripts/check_cdc_timing.tcl` invocation (including the tracked
+# check-cdc-timing-asap7-soc Makefile target) is byte-identical to
+# before.
+set CDC_CHECK_ODB [expr {[info exists ::env(CDC_CHECK_ODB)] ? $::env(CDC_CHECK_ODB) : ""}]
+
+# CDC_CHECK_FORCE_GRT (bead je8, 2026-09-15): ODB-mode only, opt-in. By
+# default (unset) the GRT-parasitics block below relies on the ODB's own
+# already-computed global-routing guides (dbGuide objects a prior
+# GlobalRouting step's `write_db`/`write_views` persisted into the
+# database) and calls `estimate_parasitics -global_routing` directly --
+# tool-verified (2026-09-15) to work with no warning, using far less
+# memory than a fresh re-route. `read_guides <file>` was tried first as
+# the memory-cheap option but is NOT usable here: OpenROAD prints
+# "[WARNING GRT-0008] The read_guides command does not allow parasitics
+# estimation from the guides file" -- it loads guide geometry for display/
+# DRT purposes only, not into whatever internal state
+# estimate_parasitics -global_routing reads. A genuinely fresh
+# `global_route` (congestion-driven resource-grid solve over the whole
+# design) is memory-heavy regardless of tool -- it OOM'd a 3.5G-capped
+# scope on this SoC (520x520um, 138k+ blockages) before completing.
+# Set CDC_CHECK_FORCE_GRT=1 only for a checkpoint odb with no persisted
+# guides (e.g. loaded before any GlobalRouting step ran) and with enough
+# memory headroom for a real global_route.
+set CDC_CHECK_FORCE_GRT [expr {[info exists ::env(CDC_CHECK_FORCE_GRT)] && $::env(CDC_CHECK_FORCE_GRT) == "1"}]
+
 #----------------------------------------------------------------
 # ASAP7 stdcell + macro liberty (paths match pnr/asap7/soc/config.json's
 # LIB/EXTRA_LIBS; override via env if the PDK is installed elsewhere).
@@ -147,16 +181,35 @@ if {[file exists "../sram_1rw_256x32_asap7_TT_0p7V_25C.lib"]} {
 }
 
 #----------------------------------------------------------------
-# Gate-level netlist
+# Gate-level netlist -- ODB (GRT+ parasitics) or plain-verilog (STA-only,
+# no parasitics beyond the check SDC's own ideal clock-latency model).
 #----------------------------------------------------------------
-puts "================================================================"
-puts "Reading gate-level netlist: $NETLIST"
-puts "================================================================"
-if {![file exists $NETLIST]} {
-    cdc_fatal_setup "Netlist not found: $NETLIST -- no CDC re-closure P&R run exists yet (GH #96 scope). Run pnr/asap7/soc/config.json with PNR_SDC_FILE=phase5_soc_multiclock.sdc first, then set CDC_CHECK_RUN_DIR to that run's directory."
+if {$CDC_CHECK_ODB ne ""} {
+    puts "================================================================"
+    puts "Reading OpenROAD database (GRT-parasitics mode): $CDC_CHECK_ODB"
+    puts "================================================================"
+    if {![file exists $CDC_CHECK_ODB]} {
+        cdc_fatal_setup "ODB not found: $CDC_CHECK_ODB"
+    }
+    if {[catch {read_db $CDC_CHECK_ODB} _odb_err]} {
+        cdc_fatal_setup "read_db failed on $CDC_CHECK_ODB -- is this script running under 'openroad', not 'sta'? ($_odb_err)"
+    }
+    # Minimal equivalent of LibreLane's io.tcl set_global_vars (not sourced
+    # here to avoid its other side effects, e.g. read_pnr_libs/
+    # read_current_sdc pulling in PNR_SDC_FILE) -- $::tech is needed below
+    # by the GRT layer-adjustment loop.
+    set ::db [::ord::get_db]
+    set ::tech [$::db getTech]
+} else {
+    puts "================================================================"
+    puts "Reading gate-level netlist: $NETLIST"
+    puts "================================================================"
+    if {![file exists $NETLIST]} {
+        cdc_fatal_setup "Netlist not found: $NETLIST -- no CDC re-closure P&R run exists yet (GH #96 scope). Run pnr/asap7/soc/config.json with PNR_SDC_FILE=phase5_soc_multiclock.sdc first, then set CDC_CHECK_RUN_DIR to that run's directory."
+    }
+    read_verilog $NETLIST
+    link_design $TOP_MODULE
 }
-read_verilog $NETLIST
-link_design $TOP_MODULE
 
 #----------------------------------------------------------------
 # CDC check-only SDC (NOT the implementation SDC -- see file header)
@@ -188,6 +241,111 @@ if {[catch {read_sdc $CHECK_SDC} _sdc_err]} {
     } else {
         cdc_fatal_setup "read_sdc failed on $CHECK_SDC for a reason other than an unmatched CDC exception: $_sdc_err"
     }
+}
+
+#----------------------------------------------------------------
+# GRT-parasitics mode (bead je8, 2026-09-15): once the design+SDC are
+# loaded from the ODB, get the SAME parasitic basis the real flow's
+# rsz_timing_postgrt.tcl uses -- set_propagated_clock (real CTS-built
+# clock-tree insertion delay from the loaded odb, not the check SDC's
+# ideal `set_clock_latency -source 50` fallback), the ASAP7-calibrated
+# per-layer RC values and routing-layer range
+# (librelane/scripts/openroad/common/set_rc.tcl /
+# set_routing_layers.tcl), the same GRT layer adjustments
+# (common/set_layer_adjustments.tcl), then estimate_parasitics
+# -global_routing -- by default off the ODB's own persisted routing
+# guides (memory-cheap, tool-verified 2026-09-15 to need no fresh route),
+# or a genuinely fresh global_route if CDC_CHECK_FORCE_GRT=1 (see that
+# variable's header comment above for why re-routing is the heavier,
+# opt-in path; rsz_timing_postgrt.tcl always takes it, citing
+# https://github.com/The-OpenROAD-Project/OpenROAD/issues/5590, but this
+# script defaults to the cheaper odb-persisted path since it was
+# confirmed to work without that warning). No repair_timing call -- this
+# is a read-only timing snapshot of the checkpoint as routed, never
+# modifies the design.
+#----------------------------------------------------------------
+if {$CDC_CHECK_ODB ne ""} {
+    puts "================================================================"
+    puts "GRT-parasitics mode: propagated clocks + estimate_parasitics -global_routing (force_grt=$CDC_CHECK_FORCE_GRT)"
+    puts "================================================================"
+    set_propagated_clock [all_clocks]
+
+    # ASAP7-calibrated per-layer RC (mirrors common/set_rc.tcl's hard-coded
+    # ORFS-derived values -- the ASAP7 tech LEF itself has no
+    # RESISTANCE/CAPACITANCE attributes).
+    set_layer_rc -layer M1 -resistance 7.04175e-02 -capacitance 1e-10
+    set_layer_rc -layer M2 -resistance 4.62311e-02 -capacitance 1.84542e-01
+    set_layer_rc -layer M3 -resistance 3.63251e-02 -capacitance 1.53955e-01
+    set_layer_rc -layer M4 -resistance 2.03083e-02 -capacitance 1.89434e-01
+    set_layer_rc -layer M5 -resistance 1.93005e-02 -capacitance 1.71593e-01
+    set_layer_rc -layer M6 -resistance 1.18619e-02 -capacitance 1.76146e-01
+    set_layer_rc -layer M7 -resistance 1.25311e-02 -capacitance 1.47030e-01
+    set_layer_rc -via V1 -resistance 1.72e-02
+    set_layer_rc -via V2 -resistance 1.72e-02
+    set_layer_rc -via V3 -resistance 1.72e-02
+    set_layer_rc -via V4 -resistance 1.18e-02
+    set_layer_rc -via V5 -resistance 1.18e-02
+    set_layer_rc -via V6 -resistance 8.20e-03
+    set_layer_rc -via V7 -resistance 8.20e-03
+
+    # RT_MIN_LAYER/RT_MAX_LAYER (mirrors config_multiclock_hier.json --
+    # M2-M9, confirmed against the run's own step config.json).
+    # set_routing_layers takes a dash-joined range string directly
+    # (common/set_routing_layers.tcl); set_wire_rc -layers wants an actual
+    # space-separated LIST of layer names, built the same way
+    # common/set_rc.tcl does (routing-level order, gated on between
+    # RT_MIN_LAYER and RT_MAX_LAYER inclusive).
+    set _rt_min_layer [expr {[info exists ::env(RT_MIN_LAYER)] ? $::env(RT_MIN_LAYER) : "M2"}]
+    set _rt_max_layer [expr {[info exists ::env(RT_MAX_LAYER)] ? $::env(RT_MAX_LAYER) : "M9"}]
+    set_routing_layers -signal ${_rt_min_layer}-${_rt_max_layer} -clock ${_rt_min_layer}-${_rt_max_layer}
+
+    set _wire_rc_layer_names [list]
+    set _adding 0
+    foreach _layer [$::tech getLayers] {
+        if {[$_layer getRoutingLevel] >= 1} {
+            set _lname [$_layer getName]
+            if {$_lname eq $_rt_min_layer} { set _adding 1 }
+            if {$_adding} { lappend _wire_rc_layer_names $_lname }
+            if {$_lname eq $_rt_max_layer} { set _adding 0 }
+        }
+    }
+    if {[llength $_wire_rc_layer_names] > 1} {
+        set_wire_rc -signal -layers "$_wire_rc_layer_names"
+        set_wire_rc -clock  -layers "$_wire_rc_layer_names"
+    } else {
+        set_wire_rc -signal -layer "$_wire_rc_layer_names"
+        set_wire_rc -clock  -layer "$_wire_rc_layer_names"
+    }
+
+    if {!$CDC_CHECK_FORCE_GRT} {
+        puts "================================================================"
+        puts "Using ODB-persisted global-routing guides (no fresh global_route)"
+        puts "================================================================"
+    } else {
+        puts "================================================================"
+        puts "CDC_CHECK_FORCE_GRT=1: re-running global_route from scratch"
+        puts "================================================================"
+        # GRT layer adjustments (mirrors config_multiclock_hier.json's
+        # GRT_ADJUSTMENT / GRT_LAYER_ADJUSTMENTS / GRT_MACRO_EXTENSION,
+        # confirmed against the run's own step config.json).
+        set_global_routing_layer_adjustment * 0.1
+        set _grt_layer_names [list]
+        foreach _layer [$::tech getLayers] {
+            if {[$_layer getRoutingLevel] >= 1} {
+                lappend _grt_layer_names [$_layer getName]
+            }
+        }
+        set _grt_adjustments {0.5 0.0 0.0 0.0 0.0 0.0}
+        for {set _i 0} {$_i < [llength $_grt_adjustments]} {incr _i} {
+            set _lname [lindex $_grt_layer_names $_i]
+            if {$_lname eq ""} { break }
+            set_global_routing_layer_adjustment $_lname [lindex $_grt_adjustments $_i]
+        }
+        set_macro_extension 0
+
+        global_route -congestion_iterations 50 -verbose -allow_congestion
+    }
+    estimate_parasitics -global_routing
 }
 
 #----------------------------------------------------------------
