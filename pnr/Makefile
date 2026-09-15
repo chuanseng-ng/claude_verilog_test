@@ -2164,8 +2164,45 @@ librelane-asap7-valu-hls: check-asap7-openroad
 		 --skip Checker.MaxCapViolations \
 		 $(abspath asap7/valu_hls)/config.json"
 
+# GH #119 egt Bug 2 (bead gcd): the sdc_longclk combinational candidate's shim
+# (hls/gpu/vector_alu/shim/vector_alu_hls.sv) uses an ANSI-header package
+# import ("module vector_alu_hls import gpu_pkg::*; (...)") that Synlig/UHDM
+# (USE_SYNLIG) mis-elaborates for this design shape -- it silently produces a
+# netlist where the per-lane "output 0 when active_mask_i[lane]=0" select mux
+# (ui_cond_expr_FU, vector_alu_synth.v:346) loses its masking branch, leaking
+# raw rs1_i/rs2_i values into result_o for inactive lanes (proven by SAT miter
+# + eval against the real ASAP7-mapped netlist; see
+# docs/CPP_TO_RTL_HLS_EVALUATION.md and bd show claude_verilog_test-gcd).
+# Root-caused to the Synlig frontend, not LibreLane's opt passes (SHARE and
+# SYNTH_TIE_UNDEFINED were both ruled out empirically). Fix: bypass Synlig for
+# this leaf -- pre-process gpu_pkg.sv + the shim through sv2v (already the
+# project's sanctioned fallback for Synlig-incompatible SV, see
+# sky130-soc-sv2v above) into plain Verilog-2005, then set USE_SYNLIG:false
+# and point valu_hls_comb/config.json's VERILOG_FILES at the sv2v output
+# instead of the raw .sv + gpu_pkg.sv. Deterministic/reproducible via this
+# target -- do not hand-edit the generated .v.
+EGT_VALU_HLS_COMB_SHIM_SV := \
+	$(PROJECT_ROOT)/rtl/gpu/gpu_pkg.sv \
+	$(PROJECT_ROOT)/hls/gpu/vector_alu/shim/vector_alu_hls.sv
+EGT_VALU_HLS_COMB_SV2V_OUT := /nobackup/hls/out/egt/sdc_longclk/vector_alu_hls_sv2v.v
+
+.PHONY: egt-valu-hls-comb-sv2v
+egt-valu-hls-comb-sv2v:
+	@echo "=========================================="
+	@echo "Pre-processing: sv2v SV -> Verilog-2005 (GH #119 egt comb-candidate shim, bead gcd)"
+	@echo "  Input : $(EGT_VALU_HLS_COMB_SHIM_SV)"
+	@echo "  Output: $(EGT_VALU_HLS_COMB_SV2V_OUT)"
+	@echo "=========================================="
+	@if [ ! -f "$(SV2V)" ]; then \
+		echo "ERROR: sv2v not found at $(SV2V)"; \
+		echo "Install via: nix-build '<nixpkgs>' -A haskellPackages.sv2v --no-out-link"; \
+		exit 1; fi
+	@mkdir -p $(dir $(EGT_VALU_HLS_COMB_SV2V_OUT))
+	$(SV2V) $(EGT_VALU_HLS_COMB_SHIM_SV) -w $(EGT_VALU_HLS_COMB_SV2V_OUT)
+	@echo "sv2v complete: $$(wc -l < $(EGT_VALU_HLS_COMB_SV2V_OUT)) lines"
+
 .PHONY: librelane-asap7-valu-hls-comb
-librelane-asap7-valu-hls-comb: check-asap7-openroad
+librelane-asap7-valu-hls-comb: check-asap7-openroad egt-valu-hls-comb-sv2v
 	@echo "=========================================="
 	@echo "ASAP7 leaf-block PPA (GH #119 egt) -- vector_alu, HLS combinational-candidate arm"
 	@echo "  (Bambu --speculative-sdc-scheduling --clock-period=100: zero-register, zero-latency)"
