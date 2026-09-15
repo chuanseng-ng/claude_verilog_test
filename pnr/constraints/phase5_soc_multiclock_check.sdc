@@ -515,6 +515,89 @@ set_max_delay [expr {780 * 0.9}] \
     -from [all_registers -clock sys_clk] -to [all_registers -clock cpu_clk]
 
 ###############################################################################
+# 10a. Exclude cdc_reset_sync's async set/reset pins from the section-10
+#      domain-wide fallback (bead je8, 2026-09-15)
+#
+# WHY: with real GRT parasitics (run 9 step 02, CDC_CHECK_FORCE_GRT=1),
+# section 10's blanket -from/-to swept in a wide-fanout RESET distribution
+# path -- u_pll_sub's pll-lock-derived core_rst_n (rtl/soc/soc_top.sv:260,
+# 252: "core_rst_n = pll_subsystem.core_rst_n (rst_n_i & pll_locked)")
+# ANDed into rst_both_n (rtl/soc/apb_cdc_bridge.sv:343:
+# "assign rst_both_n = s_rst_n_i & m_rst_n_i") and fed to
+# u_apb_dbg_cdc.u_m_rst_sync's async-clear input
+# (rtl/soc/apb_cdc_bridge.sv:358-365: cdc_reset_sync instance u_m_rst_sync,
+# .rst_n_i(rst_both_n)) -- and reported it VIOLATED (-765 ps) as a
+# recovery-time check at the synthesized SETN pin. RTL classification
+# (bead je8, all three confirmed true):
+#   (a) the pin reached IS the flop chain's async assert input: every
+#       always_ff in rtl/soc/cdc/cdc_reset_sync.sv:109,117
+#       ("always_ff @(posedge clk_i or negedge rst_n_async)") uses
+#       rst_n_async as its ASYNCHRONOUS clear, mapped by synthesis to the
+#       cell's RESETN/SETN liberty pin (confirmed empirically: ASAP7
+#       DFFASRHQNx1 exposes CLK/D/RESETN/SETN/QN, no other async control
+#       pin exists).
+#   (b) de-assertion is synchronous: cdc_reset_sync.sv:107-126 shifts a
+#       constant 1 into sync_q through STAGES flops on posedge clk_i once
+#       out of reset ("sync_q[0] <= 1'b1" / "sync_q[g] <= sync_q[g-1]"),
+#       i.e. classic async-assert/sync-deassert -- release of rst_n_o is
+#       re-timed onto the CAPTURE domain's own clock, exactly the pattern
+#       cdc_reset_sync.sv's own header (lines 2-9) documents.
+#   (c) the launching net is reset-class, not data: rst_both_n (source of
+#       u_m_rst_sync's async clear) is the AND of two reset signals
+#       (apb_cdc_bridge.sv:343), and core_rst_n itself is
+#       "rst_n_i & pll_locked" from the u_pll_sub pll_subsystem instance
+#       (soc_top.sv:252,260) -- the ~11-buffer chain observed in the
+#       violating path IS that reset's fanout/distribution buffering
+#       (core_rst_n resets essentially every register in the sys_clk
+#       domain, so it fans out like a small tree, structurally similar to
+#       a clock tree -- not a data path).
+# All three hold, so this is the SAME class as the existing
+# u_cpu_pmu_rst_sync exclusion a few sections below (pmu_cpu_rst_n
+# async-clear reset sync, false_path'd there by net name) -- bead k07
+# precedent. Recovery/removal timing on de-assertion is NOT waived here
+# (it stays the tool's normal, un-excepted check via the synchronous
+# same-domain flop-to-flop paths cdc_reset_sync's chain forms -- this
+# exclusion only removes the SPURIOUS cross-domain recovery check
+# set_max_delay -to [all_registers ...] fabricates against an async
+# CONTROL pin that was never meant to be timed as a data endpoint).
+#
+# STRUCTURAL matching (preferred over a name-derived net, which is
+# exactly the class of thing deferred_flatten/flatten can rename or
+# merge away -- bead je8/c88013d lesson): scope to registers whose
+# instance path contains "rst_sync" (covers every cdc_reset_sync
+# instantiation in this design -- u_s_rst_sync/u_m_rst_sync inside each
+# of the 5 async_axi_fifo instances and both apb_cdc_bridge instances,
+# plus the top-level u_cpu_pmu_rst_sync), then take each such register's
+# RESETN/SETN pins BY LIBERTY PIN NAME (not by tracing any RTL net name
+# at all -- these are the ASAP7 SEQ library's async-control pin names on
+# every flop variant in this design, confirmed against the same liberty
+# used throughout this file). No capture-flop-D-pin fallback is needed
+# here (unlike sections 11/13's d_i fallback): the object being excluded
+# IS the register cell itself, found via all_registers + instance-name
+# match, with no submodule port net in the path at all -- there is
+# nothing for deferred_flatten to rename away.
+proc cdc_reset_sync_async_pins {} {
+    set _pins {}
+    foreach _clk {sys_clk cpu_clk} {
+        foreach _reg [all_registers -clock [get_clocks $_clk]] {
+            if {![string match "*rst_sync*" [get_full_name $_reg]]} {
+                continue
+            }
+            foreach _pn {RESETN SETN} {
+                set _p [get_pins -of_objects $_reg \
+                    -filter "direction == input && name == $_pn" -quiet]
+                foreach _x $_p { lappend _pins $_x }
+            }
+        }
+    }
+    return $_pins
+}
+set _reset_sync_async_pins [cdc_reset_sync_async_pins]
+if {[cdc_require_match $_reset_sync_async_pins "sec.10a cdc_reset_sync async set/reset pins (rst_both_n / pll-lock-derived core_rst_n class, RTL-confirmed bead je8) excluded from domain-wide max_delay fallback"]} {
+    set_false_path -to $_reset_sync_async_pins
+}
+
+###############################################################################
 # 11. CPU<->fabric CDC boundary — async_axi_fifo (instance u_cpu_axi_cdc)
 #
 # GH #94 / bead oa7 item 1; retightened per bead k07 item 1 (OpenTitan +
