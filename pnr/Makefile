@@ -193,6 +193,7 @@ SV2V                ?= /nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1
 .PHONY: install-asap7-rcx-rules check-asap7-rcx-rules check-asap7-openroad
 .PHONY: librelane-sky130 librelane-sky130-cpu librelane-nangate45 librelane-asap7 librelane-asap7-gpu librelane-asap7-soc
 .PHONY: librelane-asap7-soc-multiclock
+.PHONY: librelane-asap7-soc-multiclock-hier
 .PHONY: librelane-asap7-3014 librelane-asap7-gpu-3014
 .PHONY: check-cdc-timing-asap7-soc
 .PHONY: asap7-soc-sv2v
@@ -1426,6 +1427,69 @@ librelane-asap7-soc-multiclock: SOC_CONFIG = config_multiclock.json
 librelane-asap7-soc-multiclock: asap7-soc-sv2v check-asap7-openroad
 	@echo "=========================================="
 	@echo "Running LibreLane flow — ASAP7 SoC MULTICLOCK (GH #96)"
+	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)"
+	@echo "  SDC      : constraints/phase5_soc_multiclock.sdc (sys_clk 1750 ps / cpu_clk 780 ps)"
+	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
+	@echo "  Runtime  : expect 4-8 h full flow (~75 min to OpenROAD.STAPrePNR)"
+	@echo "  Run dir  : /nobackup/asap7_soc_runs/"
+	@echo "  Extra    : $(LIBRELANE_EXTRA_ARGS)"
+	@echo "=========================================="
+	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)" ]; then \
+		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG) not found."; exit 1; fi
+	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/constraints/phase5_soc_multiclock.sdc" ]; then \
+		echo "ERROR: multiclock SDC missing — copy pnr/constraints/phase5_soc_multiclock.sdc"; exit 1; fi
+	$(call asap7_soc_preflight)
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Checker.LintErrors \
+		 --skip Checker.YosysSynthChecks \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
+		 $(LIBRELANE_EXTRA_ARGS) \
+		 $(abspath $(LIBRELANE_ASAP7_SOC_DIR))/$(SOC_CONFIG)"
+	@if [ -z "$(LIBRELANE_EXTRA_ARGS)" ]; then \
+		$(MAKE) check-asap7-soc-routing; \
+	else \
+		echo "NOTE: LIBRELANE_EXTRA_ARGS set ($(LIBRELANE_EXTRA_ARGS)) -- this may be a"; \
+		echo "      partial run (e.g. --to before DetailedRouting). Skipping the"; \
+		echo "      routing gate; run 'make check-asap7-soc-routing' by hand once a"; \
+		echo "      full flow (through DetailedRouting) has completed."; \
+	fi
+
+#----------------------------------------------------------------
+# librelane-asap7-soc-multiclock-hier: bead je8/2kn -- same flow as
+# librelane-asap7-soc-multiclock, but driven by config_multiclock_hier.json
+# (SYNTH_HIERARCHY_MODE deferred_flatten instead of flatten) to cut the yosys/
+# ABC peak RAM that OOM'd runs 6/7 (>13.4 GB, 15.9 GB host). Only the config
+# path differs; config_multiclock.json (run 23's sign-off basis) is untouched.
+#
+# Usage:
+#   make librelane-asap7-soc-multiclock-hier                  # full P&R
+#   make librelane-asap7-soc-multiclock-hier LIBRELANE_EXTRA_ARGS='--to OpenROAD.STAPrePNR'
+#----------------------------------------------------------------
+librelane-asap7-soc-multiclock-hier: SOC_CONFIG = config_multiclock_hier.json
+librelane-asap7-soc-multiclock-hier: asap7-soc-sv2v check-asap7-openroad
+	@echo "=========================================="
+	@echo "Running LibreLane flow — ASAP7 SoC MULTICLOCK HIERARCHICAL (bead je8/2kn)"
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)"
 	@echo "  SDC      : constraints/phase5_soc_multiclock.sdc (sys_clk 1750 ps / cpu_clk 780 ps)"
 	@echo "  PDK root : $(MANUAL_PDK_ROOT)"
