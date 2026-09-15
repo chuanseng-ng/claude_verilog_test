@@ -1,0 +1,293 @@
+# bead 8f3 (P1): LibreLane 2.4.13 post-GRT STA (OpenROAD.STAMidPNR-3) runs on unannotated
+# (zero-wire) parasitics, making post-GRT timing/power figures optimistic -- possibly including
+# run 23's accepted post-GRT sign-off. Found under w3a.
+#
+# Root cause: sta/corner.tcl's `if { [grt::have_routes] }` branch calls
+# `estimate_parasitics -global_routing` on a freshly read_current_odb ODB whose routing-guide
+# data is only PERSISTED (from an earlier GlobalRouting step), not live in this process. Per
+# bead je8 (bd memory openroad-grt-parasitics-need-insession-route), OpenROAD cannot recover
+# real GRT parasitics from that persisted state alone -- it needs a live in-session
+# global_route. Confirmed empirically in this bead on a real ASAP7 CPU block: 34272/36290
+# drivers (94.44%) unannotated, and the resulting "post-GRT" STA falsely reports ZERO setup and
+# hold violations everywhere (WNS=0, TNS=0, 0 violators on both).
+#
+# Two independent, backward-compatible pieces:
+#
+#   1. STA_POSTGRT_INSESSION_GRT (bool, default false) -- when true, corner.tcl sources
+#      common/grt.tcl (the SAME routing-layer / layer-adjustment / global_route setup the
+#      GlobalRouting step itself uses) immediately before estimate_parasitics -global_routing.
+#      Unset is BYTE-IDENTICAL to upstream. Declared identically on THREE step classes
+#      (OpenROAD.STAMidPNR, MultiCornerSTA, OpenROAD.ResizerTimingPostGRT) because all three
+#      share the same Classic flow and Flow.get_all_config_variables() raises FlowException on
+#      any same-named Variable with a field mismatch across steps in one flow -- but the
+#      variable is CONSULTED only in corner.tcl (used by OpenROAD.STAMidPNR). It is inert on
+#      MultiCornerSTA-derived steps (STAPrePNR/STAPostPNR run corner.tcl through the standalone
+#      `sta` binary, never `openroad`, so the whole grt::have_routes/-global_routing branch is
+#      unreachable there) and inert on OpenROAD.ResizerTimingPostGRT, which ALREADY sources
+#      common/grt.tcl unconditionally today (a pre-existing "Temporarily always enabled" upstream
+#      workaround, see rsz_timing_postgrt.tcl) -- gating that existing behaviour behind a
+#      default-false variable would be a REGRESSION, so it was deliberately left alone.
+#      `grt_variables` (GRT_ADJUSTMENT, GRT_OVERFLOW_ITERS, GRT_ALLOW_CONGESTION,
+#      GRT_MACRO_EXTENSION, RT_MIN/MAX_LAYER, etc.) also had to be added to STAMidPNR's own
+#      config_vars -- undeclared variables are silently dropped during config resolution, so
+#      `source common/grt.tcl`'s own dependencies would otherwise never reach _env.tcl (a real
+#      failure hit and fixed during this bead's own validation: `can't read
+#      "::env(GRT_ADJUSTMENT)": no such variable`). OpenROAD.GlobalRouting and ResizerStep
+#      (ResizerTimingPostCTS/PostGRT's base) already carry grt_variables for the same reason --
+#      that is WHY rsz_timing_postgrt.tcl's existing re-route already worked.
+#
+#   2. An ALWAYS-ON annotation gate (`ol_check_postgrt_parasitic_annotation`, new proc in
+#      common/io.tcl) -- called from corner.tcl (inside the -global_routing branch ONLY, never
+#      the -placement branch, so placement-stage STA is unaffected) and unconditionally from
+#      rsz_timing_postgrt.tcl (right after its own long-standing estimate_parasitics
+#      -global_routing). Captures `report_parasitic_annotation -report_unannotated`'s output via
+#      Tcl's generic `> file` redirect support (confirmed present in report_parasitic_annotation's
+#      own body on both toolchains), regexes "Found N unannotated drivers.", and computes a
+#      percentage against `[llength [get_cells -hierarchical *]]` as a cheap PROXY for "total
+#      drivers" (multi-output cells make this approximate, not exact -- documented inline).
+#      Prints a loud [WARNING] naming STA_POSTGRT_INSESSION_GRT above
+#      STA_POSTGRT_UNANNOTATED_PCT_MAX (env-read directly, default 1.0%; a secondary tuning knob,
+#      not a declared Variable) or exits 1 if STA_POSTGRT_UNANNOTATED_IS_ERROR=1. This is NOT
+#      gated behind STA_POSTGRT_INSESSION_GRT -- it always runs and always reports, whether or
+#      not the caller has opted into the fix, so a broken run is loud rather than silent.
+#
+# Validation (bead 8f3, 2026-09-16), full run-by-run detail on the bead:
+#   - valu_rtl (never reaches corner.tcl's openroad-binary path) unset: byte-identical to the
+#     pre-8f3 baseline.
+#   - ASAP7 CPU block (rv32i_cpu_top, 10 SRAM macros), fresh full runs to OpenROAD.STAMidPNR-3:
+#       UNSET (bpp-6): Flow complete. 34272/36290 (94.44%) unannotated, gate WARNING fired.
+#         Resulting STA falsely clean: setup/hold WNS=0, TNS=0, 0 violators either direction.
+#       SET STA_POSTGRT_INSESSION_GRT=1 (bpp-7): Flow complete. 619/36290 (1.71%) unannotated --
+#         matches this project's established benign SRAM-stub floor (the same 619 count
+#         ResizerTimingPostGRT already reports every run) rather than a remaining bug. Real,
+#         differing STA: setup WNS -169.722 ps, TNS -70913.1 ps, 1008 violators; hold stays
+#         clean (WNS 15.88 ps, 0 violators). STAMidPNR-3 runtime nearly unchanged (~61s both
+#         ways); peak RSS grew ~515 MiB -> ~810 MiB (+~295 MiB) for the in-session re-route on
+#         this CPU-block-scale design -- far below the "5.4 GB peak / 24 min" quoted for the full
+#         SoC under bead je8, as expected for a much smaller design.
+#   - rsz_timing_postgrt.tcl's own gate (item 3 of the task): 619/36206 (1.71%) unannotated in
+#     BOTH bpp-6 and bpp-7 (unaffected by STA_POSTGRT_INSESSION_GRT, as expected since that
+#     variable is inert there) -- confirms its pre-existing unconditional re-route was already
+#     keeping it correctly annotated; it never had this bead's problem.
+#   - NOT re-validated by this bead: historical accepted post-GRT figures (run 23, earlier 86a)
+#     were produced with the OLD, un-gated corner.tcl and remain unaudited. Follow-up work.
+#
+# Base: relative to the live tree's state immediately before this bead's apply, i.e. AFTER both
+# prior bpp patches (librelane2413_sta_26q2_scenes.diff, librelane2413_resizer_timing_bounds.diff)
+# and all earlier local patches. Apply after those.
+
+diff -u a/librelane/scripts/openroad/common/io.tcl b/librelane/scripts/openroad/common/io.tcl
+--- a/librelane/scripts/openroad/common/io.tcl	2026-09-15 23:41:26.040097496 +0700
++++ b/librelane/scripts/openroad/common/io.tcl	2026-09-16 05:47:38.411576210 +0700
+@@ -51,6 +51,58 @@
+     return [$c name]
+ }
+ 
++# claude_verilog_test local patch (bead 8f3, 2026-09-16): post-GRT parasitic annotation gate.
++# OpenROAD edf00dff (and, per this bead's own re-check, 26Q2 too) cannot recover real GRT
++# parasitics from a saved ODB's persisted routing guides -- estimate_parasitics -global_routing
++# after a fresh read_current_odb leaves almost every driver UNANNOTATED (zero-wire), silently,
++# unless global_route is re-run IN-SESSION first (bead je8 / bd memory
++# openroad-grt-parasitics-need-insession-route). This proc is ALWAYS run (no gating variable)
++# right after any `estimate_parasitics -global_routing` call, so a broken/optimistic post-GRT
++# STA or resizer run is loud rather than silent, regardless of whether the caller has also
++# opted into an in-session re-route. It deliberately does nothing for -placement-based
++# estimates (mid-flow, pre-route STA), which were never claiming GRT-derived parasitics in the
++# first place and are unaffected by this bead.
++#
++# "total drivers" here is a cheap proxy (instance count via `get_cells -hierarchical *`), since
++# report_parasitic_annotation does not itself print a total -- multi-output cells make this an
++# approximation, not an exact driver-pin count, but it is stable and good enough for a percentage
++# threshold gate. STA_POSTGRT_UNANNOTATED_PCT_MAX (default 1.0, i.e. 1%) and
++# STA_POSTGRT_UNANNOTATED_IS_ERROR (default off) are read directly from ::env rather than
++# declared Variables, since they are secondary tuning knobs for this always-on gate, not the
++# primary opt-in behaviour switch (that is STA_POSTGRT_INSESSION_GRT, which IS a declared
++# Variable -- see steps/openroad.py).
++proc ol_check_postgrt_parasitic_annotation {} {
++    set rpt_path [file join $::env(STEP_DIR) "_bead_8f3_parasitic_annotation_check.rpt"]
++    if { [catch {report_parasitic_annotation -report_unannotated > $rpt_path} err] } {
++        puts stderr "\[WARNING\] bead 8f3: report_parasitic_annotation failed, cannot check post-GRT annotation coverage: $err"
++        return
++    }
++    set fp [open $rpt_path r]
++    set txt [read $fp]
++    close $fp
++    puts $txt
++    set unannotated 0
++    regexp {Found\s+(\d+)\s+unannotated drivers\.} $txt -> unannotated
++    set total_drivers [llength [get_cells -hierarchical *]]
++    if { $total_drivers <= 0 || $unannotated <= 0 } {
++        return
++    }
++    set pct [expr { 100.0 * $unannotated / double($total_drivers) }]
++    set threshold 1.0
++    if { [info exists ::env(STA_POSTGRT_UNANNOTATED_PCT_MAX)] && $::env(STA_POSTGRT_UNANNOTATED_PCT_MAX) != "" } {
++        set threshold $::env(STA_POSTGRT_UNANNOTATED_PCT_MAX)
++    }
++    if { $pct > $threshold } {
++        set msg "bead 8f3: $unannotated/$total_drivers drivers (~[format %.2f $pct]%) are UNANNOTATED after estimate_parasitics -global_routing -- post-GRT STA/power numbers are likely zero-wire and optimistic. Set STA_POSTGRT_INSESSION_GRT=1 to force an in-session global_route before parasitics estimation (see memory/pd/knowledge.md)."
++        if { [info exists ::env(STA_POSTGRT_UNANNOTATED_IS_ERROR)] && $::env(STA_POSTGRT_UNANNOTATED_IS_ERROR) == 1 } {
++            puts stderr "\[ERROR\] $msg"
++            exit 1
++        } else {
++            puts stderr "\[WARNING\] $msg"
++        }
++    }
++}
++
+ proc string_in_file {file_path substring} {
+     set f [open $file_path r]
+     set data [read $f]
+
+diff -u a/librelane/scripts/openroad/sta/corner.tcl b/librelane/scripts/openroad/sta/corner.tcl
+--- a/librelane/scripts/openroad/sta/corner.tcl	2026-09-15 23:41:26.043097375 +0700
++++ b/librelane/scripts/openroad/sta/corner.tcl	2026-09-16 05:47:38.413576196 +0700
+@@ -35,7 +35,24 @@
+ 
+     # Internal API- brittle
+     if { [grt::have_routes] } {
++        # claude_verilog_test local patch (bead 8f3, 2026-09-16): grt::have_routes is true
++        # whenever the loaded ODB has PERSISTED routing-guide data from an earlier GlobalRouting
++        # step, but per bead je8 (bd memory openroad-grt-parasitics-need-insession-route),
++        # estimate_parasitics -global_routing cannot actually recover real parasitics from that
++        # persisted state alone -- it needs a live in-session global_route. Optional and
++        # backward-compatible: unset (the default) is BYTE-IDENTICAL to upstream (same
++        # `estimate_parasitics -global_routing` call as always, on whatever GRT state the ODB
++        # already carries). Mirrors common/grt.tcl's own setup exactly by sourcing it directly,
++        # rather than re-deriving routing layers / layer adjustments / GRT_* settings separately.
++        if { [info exists ::env(STA_POSTGRT_INSESSION_GRT)] && $::env(STA_POSTGRT_INSESSION_GRT) == 1 } {
++            source $::env(SCRIPTS_DIR)/openroad/common/grt.tcl
++        }
+         estimate_parasitics -global_routing
++        # claude_verilog_test local patch (bead 8f3, 2026-09-16): always-on annotation gate --
++        # see ol_check_postgrt_parasitic_annotation in common/io.tcl (sourced above). Deliberately
++        # NOT applied to the -placement branch below (per bead 8f3: placement-stage STA is
++        # unaffected and was never claiming GRT-derived parasitics).
++        ol_check_postgrt_parasitic_annotation
+     } elseif { [ol_compat_check_corner_wire_cap] } {
+         estimate_parasitics -placement
+     }
+
+diff -u a/librelane/scripts/openroad/rsz_timing_postgrt.tcl b/librelane/scripts/openroad/rsz_timing_postgrt.tcl
+--- a/librelane/scripts/openroad/rsz_timing_postgrt.tcl	2026-09-15 23:41:26.054096932 +0700
++++ b/librelane/scripts/openroad/rsz_timing_postgrt.tcl	2026-09-16 05:47:38.416576174 +0700
+@@ -30,6 +30,19 @@
+ source $::env(SCRIPTS_DIR)/openroad/common/grt.tcl
+ # }
+ estimate_parasitics -global_routing
++# claude_verilog_test local patch (bead 8f3, 2026-09-16): unlike sta/corner.tcl's post-GRT STA
++# path, this step ALREADY sources common/grt.tcl (an in-session global_route) unconditionally,
++# right above, before estimate_parasitics -global_routing -- so it should not have bead 8f3's
++# zero-wire-parasitics problem in the first place. Deliberately NOT gated behind
++# STA_POSTGRT_INSESSION_GRT (default false): that variable's purpose is to ADD a re-route where
++# none existed before (corner.tcl); making this step's EXISTING always-on re-route conditional
++# on a default-false variable would be a REGRESSION, silently removing behaviour this step
++# already has. STA_POSTGRT_INSESSION_GRT is still declared as an optional Variable on this step
++# (OpenROAD.ResizerTimingPostGRT) for interface consistency with OpenROAD.STAMidPNR, but this
++# script does not consult it. The always-on annotation gate below is added regardless, to
++# confirm empirically (per bead 8f3 item 3) whether the existing re-route is actually keeping
++# this step's resizer calls annotated, or whether it has its own gap.
++ol_check_postgrt_parasitic_annotation
+ 
+ # Resize
+ set setup_args [list]
+
+diff -u a/librelane/steps/openroad.py b/librelane/steps/openroad.py
+--- a/librelane/steps/openroad.py	2026-09-15 23:41:26.058096771 +0700
++++ b/librelane/steps/openroad.py	2026-09-16 05:47:38.418576160 +0700
+@@ -368,6 +368,39 @@
+     inputs = [DesignFormat.ODB]
+     outputs = []
+ 
++    # claude_verilog_test local patch (bead 8f3, 2026-09-16): grt_variables (GRT_ADJUSTMENT,
++    # GRT_OVERFLOW_ITERS, GRT_ALLOW_CONGESTION, GRT_MACRO_EXTENSION, RT_MIN/MAX_LAYER, etc.) must
++    # be declared here so they actually resolve into env vars for this step -- undeclared
++    # variables are silently dropped during config resolution and never reach _env.tcl. Without
++    # this, `source common/grt.tcl` (triggered by STA_POSTGRT_INSESSION_GRT=1 below) fails with
++    # `can't read "::env(GRT_ADJUSTMENT)": no such variable` inside set_layer_adjustments.tcl --
++    # confirmed by a real failing run before this line was added. OpenROAD.GlobalRouting and
++    # ResizerStep (ResizerTimingPostCTS/PostGRT's base) already include grt_variables for the
++    # same reason.
++    config_vars = OpenROADStep.config_vars + grt_variables + [
++        Variable(
++            "STA_POSTGRT_INSESSION_GRT",
++            bool,
++            "claude_verilog_test / bead 8f3 local patch: when the loaded ODB has persisted "
++            "post-GlobalRouting guide data, this step estimates parasitics with "
++            "`estimate_parasitics -global_routing` -- but OpenROAD cannot recover real GRT "
++            "parasitics from that persisted state alone (bead je8 / bd memory "
++            "openroad-grt-parasitics-need-insession-route); it needs a live in-session "
++            "global_route first, or the estimate is silently zero-wire for almost every "
++            "driver. When true, this step re-runs common/grt.tcl (the same routing-layer / "
++            "layer-adjustment / global_route setup the GlobalRouting step itself uses) before "
++            "estimating parasitics. Default false is BYTE-IDENTICAL to upstream. Declared "
++            "identically (same name, type, and description) on OpenROAD.ResizerTimingPostGRT "
++            "for interface consistency, though that step does not consult it -- it already "
++            "always re-routes in-session unconditionally (see rsz_timing_postgrt.tcl) and this "
++            "variable must not change that. Also inert on OpenSTAStep-derived steps (STAPrePNR / "
++            "STAPostPNR / MultiCornerSTA), which run through the standalone `sta` binary and "
++            "never take corner.tcl's estimate_parasitics -global_routing branch at all. See "
++            "memory/pd/knowledge.md.",
++            default=False,
++        ),
++    ]
++
+     def get_script_path(self):
+         return os.path.join(get_script_dir(), "openroad", "sta", "corner.tcl")
+ 
+@@ -553,6 +586,27 @@
+             Optional[int],
+             "The maximum number of STA corners to run in parallel. If unset, this will be equal to your machine's thread count.",
+         ),
++        Variable(
++            "STA_POSTGRT_INSESSION_GRT",
++            bool,
++            "claude_verilog_test / bead 8f3 local patch: when the loaded ODB has persisted "
++            "post-GlobalRouting guide data, this step estimates parasitics with "
++            "`estimate_parasitics -global_routing` -- but OpenROAD cannot recover real GRT "
++            "parasitics from that persisted state alone (bead je8 / bd memory "
++            "openroad-grt-parasitics-need-insession-route); it needs a live in-session "
++            "global_route first, or the estimate is silently zero-wire for almost every "
++            "driver. When true, this step re-runs common/grt.tcl (the same routing-layer / "
++            "layer-adjustment / global_route setup the GlobalRouting step itself uses) before "
++            "estimating parasitics. Default false is BYTE-IDENTICAL to upstream. Declared "
++            "identically (same name, type, and description) on OpenROAD.ResizerTimingPostGRT "
++            "for interface consistency, though that step does not consult it -- it already "
++            "always re-routes in-session unconditionally (see rsz_timing_postgrt.tcl) and this "
++            "variable must not change that. Also inert on OpenSTAStep-derived steps (STAPrePNR / "
++            "STAPostPNR / MultiCornerSTA), which run through the standalone `sta` binary and "
++            "never take corner.tcl's estimate_parasitics -global_routing branch at all. See "
++            "memory/pd/knowledge.md.",
++            default=False,
++        ),
+     ]
+ 
+     def get_script_path(self):
+@@ -2467,6 +2521,27 @@
+             "OpenROAD.ResizerTimingPostGRT (both declarations must stay byte-identical). See "
+             "memory/pd/knowledge.md.",
+         ),
++        Variable(
++            "STA_POSTGRT_INSESSION_GRT",
++            bool,
++            "claude_verilog_test / bead 8f3 local patch: when the loaded ODB has persisted "
++            "post-GlobalRouting guide data, this step estimates parasitics with "
++            "`estimate_parasitics -global_routing` -- but OpenROAD cannot recover real GRT "
++            "parasitics from that persisted state alone (bead je8 / bd memory "
++            "openroad-grt-parasitics-need-insession-route); it needs a live in-session "
++            "global_route first, or the estimate is silently zero-wire for almost every "
++            "driver. When true, this step re-runs common/grt.tcl (the same routing-layer / "
++            "layer-adjustment / global_route setup the GlobalRouting step itself uses) before "
++            "estimating parasitics. Default false is BYTE-IDENTICAL to upstream. Declared "
++            "identically (same name, type, and description) on OpenROAD.ResizerTimingPostGRT "
++            "for interface consistency, though that step does not consult it -- it already "
++            "always re-routes in-session unconditionally (see rsz_timing_postgrt.tcl) and this "
++            "variable must not change that. Also inert on OpenSTAStep-derived steps (STAPrePNR / "
++            "STAPostPNR / MultiCornerSTA), which run through the standalone `sta` binary and "
++            "never take corner.tcl's estimate_parasitics -global_routing branch at all. See "
++            "memory/pd/knowledge.md.",
++            default=False,
++        ),
+     ]
+ 
+     def get_script_path(self):

@@ -2817,3 +2817,77 @@ same session, after backing up the 6 modified files to
 `/nobackup/librelane-bpp-backup-20260915_234121/` and confirming no LibreLane/openroad process
 was using the shared tree (a `w3a-diag3c` systemd scope WAS found actively running `nix-shell`/
 `openroad` against the shared tree mid-session — confirmed ended before the actual file copy).
+
+### LibreLane 2.4.13 post-GRT STA runs on unannotated (zero-wire) parasitics (bead 8f3, 2026-09-16)
+
+Found under w3a: `sta/corner.tcl`'s `if { [grt::have_routes] }` branch calls
+`estimate_parasitics -global_routing` on a freshly `read_current_odb`'d ODB whose routing-guide
+data is only PERSISTED from an earlier `GlobalRouting` step, not live in the current process.
+Per bead je8 (`bd memory openroad-grt-parasitics-need-insession-route`), OpenROAD cannot recover
+real GRT parasitics from that persisted state alone. **Confirmed catastrophic on a real ASAP7
+CPU block (rv32i_cpu_top)**: 34272/36290 drivers (94.44%) unannotated at `OpenROAD.STAMidPNR-3`
+(the post-GRT STA occurrence — the 4th `STAMidPNR` in Classic's step list, after
+`ResizerTimingPostGRT`), and the resulting "post-GRT" STA falsely reports **zero** setup AND
+hold violations everywhere (WNS=0, TNS=0, 0 violators both directions) — an optimistic
+false-clean sign-off, exactly the risk flagged for run 23's accepted post-GRT numbers.
+
+**Fix, two independent pieces, both backward-compatible:**
+
+1. `STA_POSTGRT_INSESSION_GRT` (bool, default false) — when true, `corner.tcl` sources
+   `common/grt.tcl` (the identical routing-layer/layer-adjustment/`global_route` setup
+   `OpenROAD.GlobalRouting` itself uses) immediately before `estimate_parasitics
+   -global_routing`. Unset is byte-identical to upstream. Declared identically on THREE step
+   classes (`OpenROAD.STAMidPNR`, `MultiCornerSTA`, `OpenROAD.ResizerTimingPostGRT` — required
+   since all three share the Classic flow and a same-named `Variable` field mismatch across
+   steps in one flow raises `FlowException`), but only actually consulted by `OpenROAD.STAMidPNR`:
+   - Inert on `MultiCornerSTA`-derived steps (`STAPrePNR`/`STAPostPNR`): they run `corner.tcl`
+     through the standalone `sta` binary, never `openroad`, so `namespace exists ::ord` is false
+     and the whole `grt::have_routes` branch is unreachable.
+   - Inert on `OpenROAD.ResizerTimingPostGRT`: `rsz_timing_postgrt.tcl` **already** sources
+     `common/grt.tcl` unconditionally (a pre-existing "Temporarily always enabled" workaround for
+     upstream OpenROAD issue #5590) — gating that behind a default-false variable would be a
+     REGRESSION, so it was deliberately left alone.
+   - `STAMidPNR` also needed `grt_variables` (`GRT_ADJUSTMENT`, `GRT_OVERFLOW_ITERS`,
+     `GRT_ALLOW_CONGESTION`, `GRT_MACRO_EXTENSION`, `RT_MIN/MAX_LAYER`, etc.) added to its own
+     `config_vars` — undeclared variables are silently dropped during config resolution (same
+     class of bug as `LAYERS_RC` earlier in this file), so `common/grt.tcl`'s own dependencies
+     never reached `_env.tcl` otherwise. Hit and fixed live during this bead's own validation:
+     `Error: set_layer_adjustments.tcl, 14 can't read "::env(GRT_ADJUSTMENT)": no such variable`.
+     `OpenROAD.GlobalRouting` and `ResizerStep` (the `ResizerTimingPostCTS`/`PostGRT` base) already
+     carry `grt_variables` for the same reason — that is WHY `rsz_timing_postgrt.tcl`'s existing
+     re-route already worked without this fix.
+2. An ALWAYS-ON annotation gate (`ol_check_postgrt_parasitic_annotation`, new proc in
+   `common/io.tcl`) — called from `corner.tcl` (inside the `-global_routing` branch only, so
+   `-placement`-based mid-flow STA is unaffected) and unconditionally from
+   `rsz_timing_postgrt.tcl`. Captures `report_parasitic_annotation -report_unannotated`'s output
+   via Tcl's generic `> file` redirect (confirmed supported by that command's own body on both
+   toolchains), regexes the "Found N unannotated drivers." count, and compares its percentage of
+   `[llength [get_cells -hierarchical *]]` (a cheap, approximate proxy for "total drivers" — no
+   exact count is printed by the report itself) against a 1% default threshold
+   (`STA_POSTGRT_UNANNOTATED_PCT_MAX`, env-read directly — a secondary tuning knob, not a
+   declared `Variable`). Prints a loud `[WARNING]` naming the fix variable, or exits 1 if
+   `STA_POSTGRT_UNANNOTATED_IS_ERROR=1`. This is unconditional — it fires whether or not the
+   caller has opted into the fix, so a broken run is loud rather than silent.
+
+**Validated** (real ASAP7 CPU-block runs, `rv32i_cpu_top`, 10 SRAM macros, fresh full flows to
+`OpenROAD.STAMidPNR-3`):
+- Unset: 34272/36290 (94.44%) unannotated, gate fires, STA falsely clean (0/0 violators).
+- `STA_POSTGRT_INSESSION_GRT=1`: 619/36290 (1.71%) unannotated — matches this project's
+  established benign SRAM-stub floor (`ResizerTimingPostGRT` already reports the identical 619
+  every run, unaffected by this variable) rather than a remaining bug. Real, differing STA:
+  setup WNS −169.722 ps / TNS −70913.1 ps / 1008 violators (hold stays clean, WNS +15.88 ps).
+  `STAMidPNR-3` runtime nearly unchanged (~61 s either way); peak RSS grew ~515→~810 MiB
+  (+~295 MiB) for the in-session re-route at CPU-block scale — far below the "5.4 GB peak / 24
+  min" quoted for the full SoC under bead je8, as expected for a much smaller design.
+- `rsz_timing_postgrt.tcl`'s own gate: 619/36206 (1.71%) unannotated in BOTH runs, unaffected by
+  the variable (as expected, since it's inert there) — confirms it never had this bug.
+
+**NOT re-validated by this bead**: historical accepted post-GRT figures (run 23, earlier 86a)
+were produced with the OLD, un-gated `corner.tcl` and remain unaudited — follow-up work, tracked
+separately if pursued.
+
+Patch: `memory/pd/patches/librelane2413_postgrt_annotation_fix.diff`. Applied to the shared
+`~/Downloads/Github/librelane` tree after backing up the 4 modified files to
+`/nobackup/librelane-8f3-backup-20260916_054731/` and confirming no LibreLane/openroad process
+was using the shared tree (re-checked via `systemctl`/`pgrep`/process-cwd immediately before the
+copy — `w3a-rsz-6`, which had been actively running there, was confirmed stopped).
