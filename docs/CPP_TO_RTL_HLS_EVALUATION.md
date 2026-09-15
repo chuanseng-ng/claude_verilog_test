@@ -692,13 +692,53 @@ within the 3G/~10min budget — 32×32 multiplier equivalence at full width is c
 (238K cells / 1.1M variables after `flatten`). A full 14-vector Verilator/cocotb regression against
 the fixed netlist's functional-liberty-modeled Verilog also could not be completed: `flatten`
 exploded the 47,791-cell netlist to ~238K primitive gates before `write_verilog`, and the resulting
-Verilator build did not finish in over 50 minutes wall-clock. Instead, the fix is verified by direct
-`eval` (yosys, real ASAP7 functional cell models, no SAT) on **5 discriminating vectors**: the
-original counterexample plus VADD/VSLL/VAND with garbage data in inactive lanes and VMUL with all
-8 lanes active and distinct per-lane operands — **all 5 match the RTL candidate exactly**,
-byte-for-byte, on `done_o`/`result_o`/`branch_taken_o`.
+Verilator build did not finish in over 50 minutes wall-clock. The fix was first verified (same
+session) by direct `eval` (yosys, real ASAP7 functional cell models, no SAT) on **5 discriminating
+vectors**: the original counterexample plus VADD/VSLL/VAND with garbage data in inactive lanes and
+VMUL with all 8 lanes active and distinct per-lane operands — all 5 matched the RTL candidate
+exactly, byte-for-byte, on `done_o`/`result_o`/`branch_taken_o`.
+
+**2026-09-15, follow-up (bead `egt`, coordinator-directed): verification widened to 252 vectors.**
+The 5-vector check above is superseded, not retracted, by a much larger independent cross-check
+against the *golden model*, not the RTL candidate: `tools/verif/gls/gen_vector_alu_vectors.py`
+generates 252 vectors (random + corners) computed from the Python expected-value formulas embedded
+directly in `tb/cocotb/gpu/test_vector_alu.py` — every non-branch opcode the suite exercises
+(VADD/VSUB/VMUL/VAND/VOR/VXOR/VSLL/VSRL/VSRA), VADDI/VANDI immediate sweeps, VBEQ/VBLT branch
+corners+random, and a dedicated 12-mask-pattern × 8-op partial-active-mask sweep with garbage
+forced into every inactive lane — the exact corruption class the original SAT-miter counterexample
+exposed. `tools/verif/gls/make_eval_ys.py` batches one yosys `eval` call per vector
+(`read_liberty -ignore_miss_func` over the 5 ASAP7 `asap7sc7p5t_SIMPLE` libs, `read_verilog`,
+`hierarchy`, `proc`, `flatten`, `opt -full`, then 252× `eval -set ... -show done_o -show result_o
+-show branch_taken_o`) against the netlist actually referenced by the **tracked**
+`pnr/asap7/valu_hls_comb/config.json` — run `RUN_2026-09-15_15-06-29`
+(`05-yosys-synthesis/vector_alu_hls.nl.v`, `USE_SYNLIG:false` + sv2v, 47 791 instances; *not* the
+later `RUN_2026-09-15_16-29-18`, a leftover `USE_SYNLIG:true` diagnostic re-run of the
+already-known-broken 1587-instance netlist). All 252 evals completed in one batched yosys
+invocation (~6 minutes wall clock, ~1 GB peak, no SAT, no flatten-to-primitives explosion since only
+`opt -full` runs once and is amortized across all 252 evals). `tools/verif/gls/parse_eval_log.py`
+compared every vector: **252/252 PASS — 0 mismatches, 0 `X` in any output**, on both `done_o` and
+the full `result_o`/`branch_taken_o` vectors, including every garbage-in-inactive-lane partial-mask
+case. Combined with the original SAT-miter proof (which showed *what* the pre-fix netlist got
+wrong) and the 5-vector direct match to the RTL candidate, this closes the fix-verification gap the
+original 5-vector check left open. **The `comb` (fixed) row of the comparison table below is now
+quotable without the earlier caveat** — see the next section. The RTL-candidate side of this
+specific 252-vector run could not be repeated (yosys's own, non-Synlig Verilog frontend does not
+accept the port-adapting shim's `module vector_alu_hls import gpu_pkg::*; (...)` import-in-header
+SystemVerilog syntax); that side still rests on the original 5-vector + 14-vector Verilator/cocotb
+evidence above, which is unaffected.
 
 ## Corrected comb metrics (`RUN_2026-09-15_15-06-29`, `USE_SYNLIG:false` + sv2v)
+
+**These numbers are now quotable without caveat** (2026-09-15 update, bead `egt`): the 252-vector
+yosys-`eval` cross-check above confirms this exact run's netlist is functionally correct, so
+`comb` (fixed) = **47 791 instances / 4139.77 µm² / 14.060 mW**, vs. hand-RTL `rtl` = **54 634 /
+4655.15 / 14.147**, is a valid area/power comparison — `comb` is smaller and lower-power than
+hand-RTL. The timing figures (Setup/Hold WS, TNS, and any derived fmax) still carry the worst-arc
+and no-resizer caveats below; only area and power are resizer-independent and safe to quote
+unconditionally. The baseline FSM arm (`hls`, `USE_SYNLIG:true`) remains functionally unresolved —
+see "Baseline FSM arm ... — verdict: INCONCLUSIVE" further down and bead `claude_verilog_test-b0t`
+— so do not compare `comb` against `hls` as if `hls`'s own netlist correctness were settled; the
+`hls` row below is included for reference only, carried over unchanged from the Stage-2 baseline.
 
 | Metric | `comb` (fixed) | `rtl` | `hls` |
 | :--- | ---: | ---: | ---: |
