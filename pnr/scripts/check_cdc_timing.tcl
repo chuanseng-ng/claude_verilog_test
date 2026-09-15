@@ -136,6 +136,38 @@ set CDC_CHECK_ODB [expr {[info exists ::env(CDC_CHECK_ODB)] ? $::env(CDC_CHECK_O
 # memory headroom for a real global_route.
 set CDC_CHECK_FORCE_GRT [expr {[info exists ::env(CDC_CHECK_FORCE_GRT)] && $::env(CDC_CHECK_FORCE_GRT) == "1"}]
 
+# CDC_CHECK_PROPAGATED_CLOCK (bead je8, 2026-09-15): ODB-mode only,
+# opt-in, OFF by default. The budgets in phase5_soc_multiclock_check.sdc
+# are intended as datapath-only bounds (GH #94 intent,
+# phase5_soc_multiclock.sdc header: launch-flop CK->Q plus data wires/
+# logic to the capture D pin, excluding clock-network latency) --
+# `-datapath_only` is the SDC keyword that would normally express that,
+# but this file's own header (see above, "WHY THIS FILE EXISTS" item 1)
+# already tool-verified OpenSTA 2.6.0 / OpenROAD edf00dff do not
+# implement -datapath_only at all (STA-0563 on read_sdc), so it is never
+# passed by cdc_apply_max_delay / cdc_apply_max_delay_capture_fallback --
+# confirmed again by inspection here, both only ever call plain
+# `set_max_delay $val -from ... -to ...`. Given that, the only way this
+# tool can approximate "datapath-only" is by keeping clocks IDEAL (each
+# clock's SDC-declared `set_clock_latency -source 50` instead of a real,
+# walked clock-tree insertion delay) while STILL using GRT-estimated wire
+# parasitics on the DATA path -- clock propagation mode and parasitics
+# annotation are independent in this tool, so this isolates data-path
+# delay without the ~600-900 ps of real sys_clk clock-tree insertion
+# delay a fully propagated launch clock would fold into the same
+# max_delay budget (bead je8, 2026-09-15: exactly what turned 3 real-
+# parasitics groups VIOLATED on run 9 step 02 under
+# CDC_CHECK_PROPAGATED_CLOCK=1). This default matches how every prior
+# ACCEPTED CDC check in this project's history was run (run 23's
+# original post-route check and this bead's own post-CTS early check
+# both used ideal/unpropagated clocks, via the plain-netlist STA-only
+# path that has no clock-tree structure to propagate at all). Set
+# CDC_CHECK_PROPAGATED_CLOCK=1 to get the fdf166b behaviour back (real
+# propagated clock latency folded into the same budget -- useful for
+# separately characterizing how much of a path's margin is clock-latency
+# vs. datapath, as this bead's own notes do).
+set CDC_CHECK_PROPAGATED_CLOCK [expr {[info exists ::env(CDC_CHECK_PROPAGATED_CLOCK)] && $::env(CDC_CHECK_PROPAGATED_CLOCK) == "1"}]
+
 #----------------------------------------------------------------
 # ASAP7 stdcell + macro liberty (paths match pnr/asap7/soc/config.json's
 # LIB/EXTRA_LIBS; override via env if the PDK is installed elsewhere).
@@ -266,9 +298,15 @@ if {[catch {read_sdc $CHECK_SDC} _sdc_err]} {
 #----------------------------------------------------------------
 if {$CDC_CHECK_ODB ne ""} {
     puts "================================================================"
-    puts "GRT-parasitics mode: propagated clocks + estimate_parasitics -global_routing (force_grt=$CDC_CHECK_FORCE_GRT)"
+    puts "GRT-parasitics mode: estimate_parasitics -global_routing (force_grt=$CDC_CHECK_FORCE_GRT, propagated_clock=$CDC_CHECK_PROPAGATED_CLOCK)"
     puts "================================================================"
-    set_propagated_clock [all_clocks]
+    if {$CDC_CHECK_PROPAGATED_CLOCK} {
+        puts "  clocks: PROPAGATED (real walked clock-tree insertion delay -- includes clock latency in every max_delay budget below; see CDC_CHECK_PROPAGATED_CLOCK header comment)"
+        set_propagated_clock [all_clocks]
+    } else {
+        puts "  clocks: IDEAL (SDC-declared set_clock_latency -source 50 -- approximates the intended datapath-only budget; see CDC_CHECK_PROPAGATED_CLOCK header comment)"
+        unset_propagated_clock [all_clocks]
+    }
 
     # ASAP7-calibrated per-layer RC (mirrors common/set_rc.tcl's hard-coded
     # ORFS-derived values -- the ASAP7 tech LEF itself has no
