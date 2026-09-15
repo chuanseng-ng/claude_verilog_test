@@ -913,7 +913,8 @@ librelane-asap7-soc-synth librelane-asap7-soc-synth-only \
 librelane-asap7-soc-multiclock macro-views-asap7 \
 librelane-asap7-coalescer-rtl librelane-asap7-coalescer-hls \
 librelane-asap7-hazard-rtl librelane-asap7-hazard-hls \
-librelane-asap7-valu-rtl librelane-asap7-valu-hls: \
+librelane-asap7-valu-rtl librelane-asap7-valu-hls \
+librelane-asap7-valu-hls-comb: \
 	OR_PATH_PREFIX := export PATH=$(ASAP7_OR_SHIM_DIR):\$$PATH; export PYTHONPATH=\$$(python3 -c 'import click,os;print(os.path.dirname(os.path.dirname(click.__file__)))')\$${PYTHONPATH:+:\$$PYTHONPATH};
 
 # Fails loudly if the pinned OpenROAD is gone (nix GC) or is the known-bad
@@ -2162,3 +2163,40 @@ librelane-asap7-valu-hls: check-asap7-openroad
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
 		 $(abspath asap7/valu_hls)/config.json"
+
+.PHONY: librelane-asap7-valu-hls-comb
+librelane-asap7-valu-hls-comb: check-asap7-openroad
+	@echo "=========================================="
+	@echo "ASAP7 leaf-block PPA (GH #119 egt) -- vector_alu, HLS combinational-candidate arm"
+	@echo "  (Bambu --speculative-sdc-scheduling --clock-period=100: zero-register, zero-latency)"
+	@echo "  Config   : pnr/asap7/valu_hls_comb/config.json"
+	@echo "  Stopping : OpenROAD.STAPrePNR (area+timing+power; no floorplan/route)"
+	@echo "=========================================="
+	@if [ ! -f "asap7/valu_hls_comb/config.json" ]; then \
+		echo "ERROR: asap7/valu_hls_comb/config.json not found."; exit 1; fi
+	cd $(LIBRELANE_DIR) && nix-shell --run \
+		"$(OR_PATH_PREFIX) python3 -m librelane \
+		 --pdk-root $(MANUAL_PDK_ROOT) \
+		 --manual-pdk \
+		 --to OpenROAD.STAPrePNR \
+		 --skip Checker.YosysSynthChecks \
+		 --skip Checker.LintTimingConstructs \
+		 --skip Odb.HeuristicDiodeInsertion \
+		 --skip Odb.DiodesOnPorts \
+		 --skip OpenROAD.RepairAntennas \
+		 --skip Odb.ReportDisconnectedPins \
+		 --skip Checker.DisconnectedPins \
+		 --skip Magic.SpiceExtraction \
+		 --skip Checker.IllegalOverlap \
+		 --skip Odb.CheckDesignAntennaProperties \
+		 --skip Checker.LVS \
+		 --skip OpenROAD.CheckAntennas \
+		 --skip OpenROAD.CheckAntennas-1 \
+		 --skip Magic.StreamOut \
+		 --skip KLayout.StreamOut \
+		 --skip Magic.WriteLEF \
+		 --skip Checker.SetupViolations \
+		 --skip Checker.HoldViolations \
+		 --skip Checker.MaxSlewViolations \
+		 --skip Checker.MaxCapViolations \
+		 $(abspath asap7/valu_hls_comb)/config.json"
