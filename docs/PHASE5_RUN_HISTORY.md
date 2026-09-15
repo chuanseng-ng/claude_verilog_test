@@ -252,6 +252,68 @@ inline ⚠️ mark above points here.
 > flow rather than the standalone round-trip. Do **not** use the LibreLane 3.0.14
 > shell for that — its `sta` is OpenSTA 2.7.0, which corrupts `report_power` to
 > inf/NaN on this design (bead `zwc`).
+>
+> **UPDATE 2026-09-16 (bead `86a` closing) — in-flow figure on CURRENT RTL,
+> honestly annotated, from bead `w3a`'s post-GRT STA close-out. NOT a
+> replacement for any number above — those stay as recorded, on their own
+> RTL vintage and methodology.**
+>
+> Run `w3a-sta-7` (`RUN_2026-09-16_05-52-48`, step `01-openroad-stamidpnr-3`),
+> `config_multiclock_hier_rsz7.json`, `STA_POSTGRT_INSESSION_GRT=true` (bead
+> `8f3`) so the parasitics are a real in-session global-route annotation, not a
+> stale/persisted-guide read. Annotation proven: **1553 unannotated drivers, 0
+> partial, of ~213 464 total (≈0.7%)** — below the CPU block's own 1.71%
+> validated floor, vs. 213 464 (essentially all of them) unannotated on the
+> same design under the unpatched stock STA step. Only quote the numbers below
+> because that gate passed; if it had not, they would be worthless the same
+> way `w3a-rsz-5`'s now-withdrawn `-426.262 ps` / clean-hold figure was.
+>
+> **Fabric + macro power split**, `report_power` at `nom_tt_025C_0p7V`:
+>
+> | Group | Internal | Switching | Leakage | Total | % |
+> |---|---|---|---|---|---|
+> | Macro | 161.875 mW | 0.000 mW | 5.456 mW | **167.331 mW** | 64.7% |
+> | Fabric (Sequential+Combinational+Clock) | 53.449 mW | 37.691 mW | 0.011 mW | **91.151 mW** | 35.3% |
+> | **Total** | 215.325 mW | 37.691 mW | 5.467 mW | **258.483 mW** | 100% |
+>
+> **Vectorless-activity caveat applies exactly as before** (`set_power_activity
+> -global -activity 0.20 -duty 0.5`, this repo's own convention, no VCD/SAIF for
+> either macro): the Macro figure (167.331 mW) lands almost exactly on the
+> previously-established **CPU-domain-gated lower bound (167.3 mW)** from this
+> bead's own earlier operating-point sweep, not the default-vectorless midpoint
+> (177.4 mW) or the all-domains-on upper bound (222.5 mW, using the standalone
+> CPU block's 56.5 mW as the only available full-activity CPU proxy). Mechanism
+> unchanged from the original finding: under default vectorless STA activity,
+> `u_gpu_cg.u_icg`'s enable resolves to a *provable constant* (GPU reproduces
+> its full standalone dynamic power), while `u_cpu_cg.u_icg`'s enable is real
+> PMU→CDC-synchroniser logic that gets derated to ~18% duty, so the CPU macro's
+> *dynamic* power is ~0 here and only its leakage (1.29 mW of the 5.456 mW
+> macro leakage total) shows up. **Report the range, not a single number**:
+> 167.3 mW (CPU-gated, what this run actually measured) .. 177.4 mW (default
+> average) .. 222.5 mW (all domains on) for the macro contribution alone.
+>
+> **This is NOT comparable to run 23's 51.9 mW fabric-only figure or the
+> 306.264 mW standalone round-trip above** — different RTL vintage (current
+> RTL is post-`rfz`/post-CDC-hardening; run 23 predates those changes),
+> different PD flow (deferred_flatten + the `w3a` CTS/repair fixes, vs run
+> 23's flat synthesis), and a genuinely in-flow, honestly-annotated
+> measurement rather than a standalone round-trip or a mixed-methodology sum.
+> Do not average or combine it with the older figures.
+>
+> **Timing is NOT closed at this checkpoint** (tracked in beads `w3a`, `rvb`,
+> and `0ah` — not a power-bead concern, noted here only so this power figure
+> is not read as implying a signed-off design): setup WS −2084.08 ps / TNS
+> −2.19 × 10⁷ ps / 41 864 violators, hold WS −917.23 ps / TNS −392 273 ps /
+> 718 violators.
+>
+> **Bead `0p6` note**: `run 23`'s historical post-GRT timing figures elsewhere
+> in this document (and by extension any power figure derived from run 23's
+> post-GRT state) were measured with the SAME stock, non-re-routing STA step
+> that bead `8f3` proved gives false-clean results on this design (94.44%
+> unannotated on an isolated CPU-block test). They have **not** been
+> re-validated with `STA_POSTGRT_INSESSION_GRT=1` and must be treated as
+> **unvalidated, not confirmed-wrong** — re-validation is bead `0p6`'s own
+> open scope, not retro-edited here.
 
 **Finding 1 — the macro Liberty files have no power tables at all, by
 construction.** `pnr/asap7/{cpu,gpu}/macro/*__nom_tt_025C_0p7V.lib` (the
