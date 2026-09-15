@@ -149,19 +149,29 @@ set CDC_CHECK_ODB [expr {[info exists ::env(CDC_CHECK_ODB)] ? $::env(CDC_CHECK_O
 # full M2-M9 range, 50 congestion iterations, OR restricted to M2-M5
 # with just 1 iteration -- meaning the dominant memory cost is net-
 # topology/Steiner-tree construction across the whole design, not
-# per-layer grid size, and is NOT reducible via these flags. This SoC's
-# real memory requirement for a fresh global_route was not established
-# (never completed under any tested cap); it is known to exceed 3.5G.
-# CONSEQUENCE: within a 3.5G budget, this script's ODB mode CANNOT
-# currently produce annotated GRT parasitics by any means tried. Every
-# ODB-mode run (regardless of CDC_CHECK_FORCE_GRT/CDC_CHECK_PROPAGATED_
-# CLOCK) now prints an explicit annotation-coverage warning (see below,
-# search ANNOTATION-CHECK) rather than silently proceeding -- treat any
-# CDC-CHECK-RESULT alongside that warning as datapath-shape-only
-# (real cell delay, real logic depth, real fanout, but wireload-model or
-# zero wire RC), not as a genuine post-GRT/post-route timing verdict.
-# Set CDC_CHECK_FORCE_GRT=1 only with enough memory headroom (untested
-# how much; start well above 3.5G) for a real global_route.
+# per-layer grid size, and is NOT reducible via these flags.
+# RESOLVED (bead je8, same day, later session still): at a 9.5G cap
+# (scope je8-cdc-grt2) the full M2-M9/50-iteration global_route
+# completed cleanly -- 0 overflow on every layer, 204,072 routed nets,
+# peak ~5.4 GB, ~24 min wall time -- and the subsequent
+# report_parasitic_annotation dropped from 204,195/204,196 (~100%)
+# unannotated to 123/204,196 (0.06%) unannotated: real annotation,
+# confirmed both by that coverage number and by materially different,
+# structurally distinct per-path delay results vs. the unannotated
+# baseline (not just a clock-latency shift, since clocks were ideal in
+# both). So 3.5G is provably insufficient and ~5.4G peak / 9.5G cap is
+# provably sufficient on this SoC; the true minimum lies somewhere
+# between (not bisected). Every ODB-mode run (regardless of
+# CDC_CHECK_FORCE_GRT/CDC_CHECK_PROPAGATED_CLOCK) still prints an
+# explicit annotation-coverage warning (see below, search
+# ANNOTATION-CHECK) rather than silently proceeding -- treat any
+# CDC-CHECK-RESULT alongside a HIGH unannotated count as datapath-
+# shape-only (real cell delay, real logic depth, real fanout, but
+# wireload-model or zero wire RC), not a genuine post-GRT/post-route
+# timing verdict; a near-zero count (as achieved here) means it IS a
+# genuine one. Set CDC_CHECK_FORCE_GRT=1 with at least ~6G of memory
+# headroom for this SoC's fresh global_route to have a realistic chance
+# of completing (5.4G peak observed once; leave margin).
 set CDC_CHECK_FORCE_GRT [expr {[info exists ::env(CDC_CHECK_FORCE_GRT)] && $::env(CDC_CHECK_FORCE_GRT) == "1"}]
 
 # CDC_CHECK_PROPAGATED_CLOCK (bead je8, 2026-09-15): ODB-mode only,
