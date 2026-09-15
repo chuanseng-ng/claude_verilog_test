@@ -116,24 +116,52 @@ file mkdir $REPORTS_DIR
 # before.
 set CDC_CHECK_ODB [expr {[info exists ::env(CDC_CHECK_ODB)] ? $::env(CDC_CHECK_ODB) : ""}]
 
-# CDC_CHECK_FORCE_GRT (bead je8, 2026-09-15): ODB-mode only, opt-in. By
-# default (unset) the GRT-parasitics block below relies on the ODB's own
-# already-computed global-routing guides (dbGuide objects a prior
-# GlobalRouting step's `write_db`/`write_views` persisted into the
-# database) and calls `estimate_parasitics -global_routing` directly --
-# tool-verified (2026-09-15) to work with no warning, using far less
-# memory than a fresh re-route. `read_guides <file>` was tried first as
-# the memory-cheap option but is NOT usable here: OpenROAD prints
-# "[WARNING GRT-0008] The read_guides command does not allow parasitics
-# estimation from the guides file" -- it loads guide geometry for display/
-# DRT purposes only, not into whatever internal state
-# estimate_parasitics -global_routing reads. A genuinely fresh
-# `global_route` (congestion-driven resource-grid solve over the whole
-# design) is memory-heavy regardless of tool -- it OOM'd a 3.5G-capped
-# scope on this SoC (520x520um, 138k+ blockages) before completing.
-# Set CDC_CHECK_FORCE_GRT=1 only for a checkpoint odb with no persisted
-# guides (e.g. loaded before any GlobalRouting step ran) and with enough
-# memory headroom for a real global_route.
+# CDC_CHECK_FORCE_GRT (bead je8, 2026-09-15): ODB-mode only, opt-in.
+#
+# CORRECTED 2026-09-15 (same day, later session) -- the claim this
+# comment originally made ("estimate_parasitics -global_routing off the
+# ODB's own persisted guides, tool-verified to work with no warning") was
+# WRONG. "No warning" was mistaken for "succeeded". Rigorous check:
+# `report_parasitic_annotation` after `read_db` + `estimate_parasitics
+# -global_routing`, with NO global_route/read_guides call at all,
+# reports "Found 204195 unannotated drivers" out of ~204196 total on
+# this SoC's step-02 odb -- i.e. essentially the ENTIRE design, including
+# the specific CDC data nets this check targets (verified by name:
+# u_cpu_axi_cdc.u_r_fifo._1424_/Y, u_cpu_axi_cdc.u_ar_fifo._1509_/Y,
+# u_pll_sub._1_/Y all appear in the unannotated list). This reproduces
+# IDENTICALLY whether read_sdc/clock-mode changes happen before or after
+# estimate_parasitics, and whether CDC_CHECK_PROPAGATED_CLOCK is 0 or 1
+# -- it is not an ordering bug, and neither clock mode's results from
+# 2026-09-15 (the original propagated-clock FAIL, or the later ideal-
+# clock PASS) reflect real post-GRT wire delay. Both were computed on
+# essentially unannotated (effectively zero-wire, same order as the
+# plain-netlist STA-only path's default) parasitics.
+# `read_guides <file>` was tried first as a memory-cheap alternative and
+# is ALSO confirmed not usable: OpenROAD prints "[WARNING GRT-0008] The
+# read_guides command does not allow parasitics estimation from the
+# guides file" -- it loads guide geometry for display/DRT purposes only.
+# The only thing that DOES populate annotatable parasitics is a
+# genuinely fresh, in-session `global_route` (CDC_CHECK_FORCE_GRT=1
+# below) -- but that is memory-heavy regardless of layer range: it
+# OOM'd a 3.5G-capped scope on this SoC (520x520um, 138k+ blockages) at
+# the SAME point (right after GRT's per-layer "Routing resources
+# analysis" table, before any congestion iteration) whether run at the
+# full M2-M9 range, 50 congestion iterations, OR restricted to M2-M5
+# with just 1 iteration -- meaning the dominant memory cost is net-
+# topology/Steiner-tree construction across the whole design, not
+# per-layer grid size, and is NOT reducible via these flags. This SoC's
+# real memory requirement for a fresh global_route was not established
+# (never completed under any tested cap); it is known to exceed 3.5G.
+# CONSEQUENCE: within a 3.5G budget, this script's ODB mode CANNOT
+# currently produce annotated GRT parasitics by any means tried. Every
+# ODB-mode run (regardless of CDC_CHECK_FORCE_GRT/CDC_CHECK_PROPAGATED_
+# CLOCK) now prints an explicit annotation-coverage warning (see below,
+# search ANNOTATION-CHECK) rather than silently proceeding -- treat any
+# CDC-CHECK-RESULT alongside that warning as datapath-shape-only
+# (real cell delay, real logic depth, real fanout, but wireload-model or
+# zero wire RC), not as a genuine post-GRT/post-route timing verdict.
+# Set CDC_CHECK_FORCE_GRT=1 only with enough memory headroom (untested
+# how much; start well above 3.5G) for a real global_route.
 set CDC_CHECK_FORCE_GRT [expr {[info exists ::env(CDC_CHECK_FORCE_GRT)] && $::env(CDC_CHECK_FORCE_GRT) == "1"}]
 
 # CDC_CHECK_PROPAGATED_CLOCK (bead je8, 2026-09-15): ODB-mode only,
@@ -384,6 +412,25 @@ if {$CDC_CHECK_ODB ne ""} {
         global_route -congestion_iterations 50 -verbose -allow_congestion
     }
     estimate_parasitics -global_routing
+
+    # ANNOTATION-CHECK (bead je8, 2026-09-15): print real annotation
+    # coverage instead of silently trusting "estimate_parasitics printed
+    # no warning" -- that was mistaken for success once already (see the
+    # CDC_CHECK_FORCE_GRT header comment above for the full writeup: a
+    # `read_db`-only load, with no live global_route in this session,
+    # left ~204195/204196 drivers -- effectively the whole design --
+    # unannotated, reproduced identically regardless of SDC/clock-mode
+    # ordering or CDC_CHECK_PROPAGATED_CLOCK). Always print the summary;
+    # never gate on it silently, since a partially-annotated design (some
+    # real runs may legitimately differ from this one) is still useful
+    # to see stated plainly rather than inferred.
+    puts "================================================================"
+    puts "ANNOTATION-CHECK: parasitic annotation coverage after estimate_parasitics -global_routing"
+    puts "================================================================"
+    catch {report_parasitic_annotation}
+    puts "================================================================"
+    puts "ANNOTATION-CHECK WARNING: if the summary above shows a large 'unannotated drivers' count relative to the design's total driver/instance count, treat every slack/delay number in the CDC-CHECK-RESULT below as datapath-SHAPE-only (real cell delay, real logic depth, real fanout loading -- but wireload-model or near-zero wire RC), NOT a genuine post-GRT/post-route timing verdict. See the CDC_CHECK_FORCE_GRT header comment (bead je8, 2026-09-15) for why this script could not obtain real GRT-parasitics annotation within a 3.5G memory budget on this SoC, and what was tried."
+    puts "================================================================"
 }
 
 #----------------------------------------------------------------
