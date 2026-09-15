@@ -2744,3 +2744,76 @@ net or placement-tool identifier, unrelated to the macro. Confirms bead `b5a`'s 
 correction via an independent method (a real pin_access run under 26Q2, rather than the earlier
 A/B "drop M4 from OBS" experiment): the LEF's M4-OBS-over-M4-pins condition is latent, not
 defective. No LEF change made; bead closed.
+
+### LibreLane 2.4.13 resizer-timing repair has no bound that works on both toolchains (bead bpp amendment, 2026-09-15)
+
+Motivated by w3a-rsz-2: post-CTS repair on the hierarchically-synthesized SoC looped, reaching
+repair_timing iteration 1040 in 73 min with 27550 violators unchanged, pinned on one
+sram_controller flop. LibreLane 2.4.13 never passes any bound to `repair_timing`.
+
+**`repair_timing` flag comparison** (`info body repair_timing` on each binary):
+
+| | OpenROAD 26Q2 | bundled OpenROAD (edf00dff) |
+| --- | --- | --- |
+| keys | `-setup_margin -hold_margin -slack_margin -libraries -max_utilization -max_buffer_percent -sequence -phases -recover_power -repair_tns -max_passes -max_iterations -max_repairs_per_pass` | `-setup_margin -hold_margin -slack_margin -libraries -max_utilization -max_buffer_percent -recover_power -repair_tns -max_passes` |
+| flags | `-setup -hold -allow_setup_violations -skip_pin_swap -skip_gate_cloning -skip_size_down -skip_buffering -skip_buffer_removal -skip_last_gasp -skip_vt_swap -skip_crit_vt_swap -match_cell_footprint -verbose` | `-setup -hold -allow_setup_violations -skip_pin_swap -skip_gate_cloning -skip_buffering -skip_buffer_removal -verbose` |
+
+26Q2-only: `-sequence -phases -max_iterations -max_repairs_per_pass -skip_size_down
+-skip_last_gasp -skip_vt_swap -skip_crit_vt_swap -match_cell_footprint`. **The bundled toolchain
+has no per-pass-iteration bound at all** — only the coarse `-max_passes` (default 10000 on both)
+and a short `-skip_*` set.
+
+**Why `-max_passes` alone is not sufficient**: the printed `repair_timing` progress table's
+`Iter` column is a MUCH finer-grained counter than "passes" — on a real ASAP7 CPU block
+(rv32i_cpu_top, 27550 initial setup violators) with `-max_passes 1`, `Iter` climbed past 2000
+*within that one pass* before the pass concluded and the step exited cleanly with `[WARNING
+RSZ-0062] Unable to repair all setup violations`. So `-max_passes` bounds the coarse outer sweep
+count, not the inner per-endpoint retry loop — for a design that is genuinely oscillating (never
+converging on a violator, as opposed to genuinely progressing like the CPU-block test), a SINGLE
+pass can itself run for a very long time regardless of `-max_passes`. 26Q2's `-max_iterations`
+is the parameter most likely to bound that inner loop directly (it is threaded into
+`rsz::repair_setup` as a distinct argument from `max_passes`); the bundled toolchain has no
+equivalent.
+
+**Fix**: two opt-in, backward-compatible hooks added to `rsz_timing_postcts.tcl` /
+`rsz_timing_postgrt.tcl` (both no-ops when unset, both declared as `Optional` `Variable`s on
+`OpenROAD.ResizerTimingPostCTS`/`OpenROAD.ResizerTimingPostGRT` in `steps/openroad.py`, with
+byte-identical description text between the two step classes — required, since both are members
+of the same `Classic` flow and `Flow.get_all_config_variables()` raises `FlowException` if two
+steps in the same flow declare a same-named `Variable` with ANY field difference):
+
+- `PL_RESIZER_TIMING_MAX_PASSES` (int) → `-max_passes N` appended to BOTH the setup and hold
+  `repair_timing` calls in both scripts.
+- `PL_RESIZER_TIMING_EXTRA_ARGS` (str) → a Tcl word list spliced verbatim (`{*}$::env(...)`)
+  onto the end of the SETUP `repair_timing` call ONLY, in both scripts. Generic passthrough
+  rather than a named flag, specifically because the useful per-toolchain bound differs
+  (`-max_iterations`/`-max_repairs_per_pass` on 26Q2, nothing equivalent on bundled) — a caller
+  supplies whatever their toolchain actually supports, e.g. `-max_iterations 50` on 26Q2.
+
+**Validated** (bead bpp): real ASAP7 CPU-block runs (36k+ instances, 10 SRAM macros) on the
+bundled toolchain — `-c PL_RESIZER_TIMING_MAX_PASSES=1` alone converged 27550→924 violators
+before the bounded pass ended, `Flow complete`; `-c PL_RESIZER_TIMING_MAX_PASSES=1 -c
+'PL_RESIZER_TIMING_EXTRA_ARGS=-repair_tns 5'` (fresh run) also completed cleanly, with the
+generated `_env.tcl` confirming both values reached the Tcl environment
+(`set ::env(PL_RESIZER_TIMING_EXTRA_ARGS) "-repair_tns 5"`) and no Tcl argument-parse error
+(`-repair_tns` is a recognized `repair_timing` key on both toolchains). `valu_rtl` (never
+reaches either resizer step) re-confirmed byte-identical with both variables unset. **NOT
+separately proven**: that either hook bounds w3a's actual stuck SoC design (the pinned
+sram_controller flop) — all of this bead's evidence is on the isolated CPU block, which did not
+reproduce that specific oscillation; treat this as a general-purpose bound, not a guaranteed fix.
+
+**Recommendation for w3a attempt 3**: since the bundled toolchain has no per-iteration bound,
+start with `PL_RESIZER_TIMING_MAX_PASSES=1` (or 2) to force the earliest possible graceful stop
+of the outer sweep, and consider `PL_RESIZER_TIMING_EXTRA_ARGS` set to `-repair_tns <pct>` (caps
+the total-negative-slack repair target percentage, may terminate a pass earlier if TNS stops
+improving) or `-skip_gate_cloning -skip_pin_swap` (removes two repair strategies that could be
+the specific ones cycling on the pinned flop, cutting per-endpoint retry work within the pass).
+If w3a's shared tree run ever uses 26Q2 instead, `-max_iterations <N>` is the more targeted
+option and should be preferred.
+
+Patch: `memory/pd/patches/librelane2413_resizer_timing_bounds.diff`. Applied to the shared
+`~/Downloads/Github/librelane` tree together with `librelane2413_sta_26q2_scenes.diff` in the
+same session, after backing up the 6 modified files to
+`/nobackup/librelane-bpp-backup-20260915_234121/` and confirming no LibreLane/openroad process
+was using the shared tree (a `w3a-diag3c` systemd scope WAS found actively running `nix-shell`/
+`openroad` against the shared tree mid-session — confirmed ended before the actual file copy).
