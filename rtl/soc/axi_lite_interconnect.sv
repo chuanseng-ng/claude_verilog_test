@@ -223,6 +223,49 @@ module axi_lite_interconnect #(
     assign ar_hs = m_axil_arvalid && m_axil_arready;
     assign r_hs  = m_axil_rvalid  && m_axil_rready;
 
+    // bead rvb (fan-out fix, Path B / RVB_FANOUT_FIX_PROPOSAL.md §A.2/§B.1
+    // option B2): the ring's read-data mux output used to drive
+    // m_axil_rdata/rvalid/rresp straight through combinationally (no
+    // register between this rsel-based mux and the GPU's own unregistered
+    // s_axil_rdata case-mux at the other end of a long macro-to-fabric
+    // net — two chained combinational muxes with zero pipeline stages in
+    // between, the root cause of the reported buffer-chain-depth/GRT
+    // timing blowup on this path). r_d*_d below are the mux's outputs;
+    // they are captured into r_d*_q one cycle later purely inside this
+    // module, giving CTS/the resizer a real register boundary here instead
+    // of a raw combinational output. This adds exactly one cycle of
+    // AXI-Lite read latency on the ring->master leg (RVALID/RDATA appear
+    // one cycle later than the old passthrough) -- AXI4-Lite's VALID/READY
+    // handshake has no fixed-latency requirement, so this is protocol
+    // legal; every master on this ring (CPU only, single-master control
+    // bus) already tolerates arbitrary RVALID latency by definition of the
+    // handshake. r_dreg_ready is the accept-into-register qualifier: it
+    // depends only on the registered r_dvalid_q and the external
+    // m_axil_rready input, never combinationally on its own output, so
+    // there is no READY->VALID loop.
+    logic          r_dvalid_d, r_dvalid_q;
+    logic [DW-1:0] r_ddata_d,  r_ddata_q;
+    logic [1:0]    r_dresp_d,  r_dresp_q;
+    logic          r_dreg_ready;
+
+    assign r_dreg_ready = !r_dvalid_q || m_axil_rready;
+
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            r_dvalid_q <= 1'b0;
+            r_ddata_q  <= '0;
+            r_dresp_q  <= AXI_RESP_OKAY;
+        end else if (r_dreg_ready) begin
+            r_dvalid_q <= r_dvalid_d;
+            r_ddata_q  <= r_ddata_d;
+            r_dresp_q  <= r_dresp_d;
+        end
+    end
+
+    assign m_axil_rvalid = r_dvalid_q;
+    assign m_axil_rdata  = r_ddata_q;
+    assign m_axil_rresp  = r_dresp_q;
+
     // Slave-side read drive + master-side read handshakes.
     // Drives _s_ar*/_s_rready intermediates (not port arrays) to avoid Synlig RTLIL bug.
     always_comb begin
@@ -233,9 +276,9 @@ module axi_lite_interconnect #(
             _s_rready [s] = 1'b0;
         end
         m_axil_arready = 1'b0;
-        m_axil_rvalid  = 1'b0;
-        m_axil_rdata   = '0;
-        m_axil_rresp   = AXI_RESP_OKAY;
+        r_dvalid_d     = 1'b0;
+        r_ddata_d      = '0;
+        r_dresp_d      = AXI_RESP_OKAY;
 
         unique case (rstate)
             R_AR: begin
@@ -250,14 +293,14 @@ module axi_lite_interconnect #(
             end
             R_DATA: begin
                 if (!r_dec) begin
-                    m_axil_rvalid    = s_axil_rvalid[rsel];
-                    m_axil_rdata     = s_axil_rdata [rsel];
-                    m_axil_rresp     = s_axil_rresp [rsel];
-                    _s_rready[rsel]  = m_axil_rready;
+                    r_dvalid_d       = s_axil_rvalid[rsel];
+                    r_ddata_d        = s_axil_rdata [rsel];
+                    r_dresp_d        = s_axil_rresp [rsel];
+                    _s_rready[rsel]  = r_dreg_ready;
                 end else begin
-                    m_axil_rvalid = 1'b1;
-                    m_axil_rdata  = '0;
-                    m_axil_rresp  = AXI_RESP_DECERR;
+                    r_dvalid_d = 1'b1;
+                    r_ddata_d  = '0;
+                    r_dresp_d  = AXI_RESP_DECERR;
                 end
             end
             default: ;

@@ -159,10 +159,38 @@ module sram_controller
             return base;
     endfunction
 
+`ifndef SRAM_SKY130
+    // bead rvb (fan-out fix, Path A / RVB_FANOUT_FIX_PROPOSAL.md §A.2 option
+    // A2): one-hot decode of a word index, registered by the caller during
+    // the address phase (see word_sel_q below) instead of being re-decoded
+    // combinationally from s_wvalid every cycle.
+    function automatic logic [MEM_WORDS-1:0] word_onehot(input logic [IDX_W-1:0] idx);
+        logic [MEM_WORDS-1:0] oh;
+        oh      = '0;
+        oh[idx] = 1'b1;
+        return oh;
+    endfunction
+`endif
+
     // ── Write FSM ────────────────────────────────────────────────────────────
     typedef enum logic [1:0] {W_IDLE, W_DATA, W_RESP} wstate_e;
     wstate_e          wstate;
+`ifdef SRAM_SKY130
     logic [IDX_W-1:0] w_idx;
+`else
+    // bead rvb (fan-out fix, Path A): registered one-hot word-select,
+    // replacing the indexed `mem[w_idx][...]` assignment that used to
+    // synthesize a per-storage-bit compare gated directly by s_wvalid (an
+    // ~MEM_WORDS*DW-wide, ~18.5k-endpoint fan-out cone off s_wvalid on the
+    // ASAP7 deferred_flatten netlist — see docs/design/RVB_FANOUT_FIX_PROPOSAL.md
+    // §A.1). word_sel_q is decoded once during the address phase (W_IDLE,
+    // a cycle that already exists ahead of W_DATA) and reused unchanged
+    // across a burst's byte lanes; s_wvalid then only needs to reach the
+    // MEM_WORDS word_we AND2 gates below (see w_commit/word_we), not every
+    // individual storage bit. Zero added write latency: the decode reuses
+    // an address-phase cycle that already existed before this fix.
+    logic [MEM_WORDS-1:0] word_sel_q;
+`endif
     logic [IW-1:0]    bid_q;
     logic             w_err;
     logic             w_incr;
@@ -172,11 +200,18 @@ module sram_controller
             wstate <= W_IDLE;
             w_err  <= 1'b0;
             w_incr <= 1'b0;
+`ifndef SRAM_SKY130
+            word_sel_q <= '0;
+`endif
         end else begin
             unique case (wstate)
                 W_IDLE: begin
                     if (s_awvalid) begin
+`ifdef SRAM_SKY130
                         w_idx  <= word_index(s_awaddr);
+`else
+                        word_sel_q <= word_onehot(word_index(s_awaddr));
+`endif
                         bid_q  <= s_awid;
                         w_err  <= ~in_range(s_awaddr)
                                   || ~in_range(last_addr(s_awaddr, s_awlen, s_awburst))
@@ -187,17 +222,16 @@ module sram_controller
                 end
                 W_DATA: begin
                     if (s_wvalid) begin
-`ifndef SRAM_SKY130
-                        if (!w_err) begin
-                            for (int b = 0; b < SW; b++) begin
-                                if (s_wstrb[b]) begin
-                                    mem[w_idx][b*8 +: 8] <= s_wdata[b*8 +: 8];
-                                end
-                            end
-                        end
-`endif
                         if (!w_err && w_incr) begin
+`ifdef SRAM_SKY130
                             w_idx <= w_idx + 1'b1;
+`else
+                            // Index +1 mod MEM_WORDS == a 1-position rotate
+                            // of the one-hot select vector (MEM_WORDS is
+                            // required to be a power of two, see the
+                            // MEM_WORDS parameter comment above).
+                            word_sel_q <= {word_sel_q[MEM_WORDS-2:0], word_sel_q[MEM_WORDS-1]};
+`endif
                         end
                         if (s_wlast) begin
                             wstate <= W_RESP;
@@ -219,6 +253,35 @@ module sram_controller
     assign s_bvalid  = (wstate == W_RESP);
     assign s_bid     = bid_q;
     assign s_bresp   = w_err ? AXI_RESP_SLVERR : AXI_RESP_OKAY;
+
+`ifndef SRAM_SKY130
+    // bead rvb (fan-out fix, Path A): the actual mem[] write, moved out of
+    // the FSM always_ff above and re-expressed as MEM_WORDS explicit,
+    // independently-timed word_we[i]-gated always_ff blocks. w_commit fans
+    // out to MEM_WORDS AND2 gates (word_we) instead of directly reaching
+    // every one of the MEM_WORDS*DW storage bits, giving CTS/resizer
+    // MEM_WORDS separately-timed branches instead of one shared tree.
+    // w_err/wstrb/wlast semantics are unchanged from the original indexed
+    // assignment (`mem[w_idx][b*8+:8] <= s_wdata[b*8+:8] if s_wstrb[b] &&
+    // !w_err`, gated by s_wvalid while wstate==W_DATA).
+    logic w_commit;
+    assign w_commit = (wstate == W_DATA) && s_wvalid && !w_err;
+
+    logic [MEM_WORDS-1:0] word_we;
+    assign word_we = word_sel_q & {MEM_WORDS{w_commit}};
+
+    for (genvar gw = 0; gw < MEM_WORDS; gw++) begin : g_mem_word_we
+        always_ff @(posedge clk) begin
+            if (word_we[gw]) begin
+                for (int b = 0; b < SW; b++) begin
+                    if (s_wstrb[b]) begin
+                        mem[gw][b*8 +: 8] <= s_wdata[b*8 +: 8];
+                    end
+                end
+            end
+        end
+    end
+`endif
 
 `ifdef SRAM_SKY130
     // ── SRAM macro — port 0 (RW, write-only in this controller) ─────────────
