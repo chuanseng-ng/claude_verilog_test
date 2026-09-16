@@ -1,0 +1,70 @@
+# bead 0ah follow-up investigation (2026-09-16): does OpenROAD.RepairDesignPostGRT (the step
+# immediately after GlobalRouting, before ResizerTimingPostGRT/STAMidPNR-3) also have bead 8f3's
+# zero-wire-parasitics defect? 0ah's diagnosis attributed ~786ps of a ~865ps post-GRT cpu_clk
+# hold-skew regression to "the flow's post-GRT repair steps optimizing against unannotated
+# parasitics, generalized from resizer to repair_design" -- i.e. suspected RepairDesignPostGRT
+# as a second instance of the 8f3 class of bug.
+#
+# READ-ONLY FINDING (no runs launched, per the coordinator's explicit hold on new CPU/SoC
+# validation while other heavy diagnostics were running): RepairDesignPostGRT does NOT appear to
+# have the defect.
+#
+#   - Its script, repair_design_postgrt.tcl, is structurally near-identical to
+#     rsz_timing_postgrt.tcl (which bead 8f3 empirically measured at ~1.71% unannotated -- the
+#     project's established benign floor, not a bug) for the parasitics-basis question: both
+#     source common/grt.tcl UNCONDITIONALLY (the "Temporarily always enabled" comment / upstream
+#     OpenROAD issue #5590 workaround, present in BOTH scripts identically) immediately before
+#     their estimate_parasitics -global_routing call. repair_design_postgrt.tcl additionally
+#     re-routes a SECOND time after repair_design runs (the "Re-DPL and GRT" block), which
+#     rsz_timing_postgrt.tcl does not do.
+#   - Direct log evidence from attempt4's actual run
+#     (/nobackup/asap7_soc_runs/RUN_2026-09-16_01-13-02/09-openroad-repairdesignpostgrt/
+#     openroad-repairdesignpostgrt.log): a real global_route occurred before repair_design ran
+#     (GRT-0018 "Total wirelength: 2164305 um", 138056 blockages, 2 macros -- consistent with a
+#     genuine full-chip SoC route, not a degenerate/skipped one), and repair_design did real work
+#     against it (RSZ-0038 "Inserted 535 buffers in 1996 nets", RSZ-0039 "Resized 430 instances").
+#     No annotation-gate output is present in this log because the gate (bead 8f3) was only
+#     added to rsz_timing_postgrt.tcl at the time, not here -- this patch closes that gap so the
+#     next run can confirm the finding numerically rather than by code reading + log inference.
+#
+# CONSEQUENCE for bead 0ah: the ~786ps effect is likely NOT a parasitics-annotation-basis
+# artifact in RepairDesignPostGRT specifically. Two things worth the coordinator's attention,
+# recorded on bead 0ah directly rather than re-derived here:
+#   1. The effect may be a genuine physical consequence of repair_design's real (correctly
+#      annotated) changes -- buffers/resizes that measurably worsen cpu_clk skew even though they
+#      were sized against honest parasitics, which would make it a design/CTS-interaction issue,
+#      not a tooling gap.
+#   2. w3a-sta-7's own -1687.92 ps measurement (bead 8f3's headline "post-GRT" comparison point)
+#      was fed from RepairDesignPostGRT's OWN output ODB (09-openroad-repairdesignpostgrt/
+#      soc_top.odb, confirmed via CURRENT_ODB in that run's _env.tcl) -- it SKIPPED
+#      OpenROAD.ResizerTimingPostGRT (step 10 in the same attempt4 run directory) entirely. The
+#      real Classic flow always runs ResizerTimingPostGRT before STAMidPNR-3, so this figure may
+#      not represent the true accepted-signoff path's post-GRT STA. Worth re-measuring through
+#      the full step sequence before finalizing the ~786ps attribution.
+#
+# This is a report-only addition (no new Variable, no behaviour change beyond an always-on print/
+# warn using the SAME already-declared gate infrastructure bead 8f3 shipped) -- safe to apply
+# independent of whether 0ah's hypothesis is later confirmed or revised.
+#
+# Base: relative to the live tree's state after bead 8f3's patch (librelane2413_postgrt_
+# annotation_fix.diff), which already added ol_check_postgrt_parasitic_annotation to common/io.tcl.
+
+diff -u a/librelane/scripts/openroad/repair_design_postgrt.tcl b/librelane/scripts/openroad/repair_design_postgrt.tcl
+--- a/librelane/scripts/openroad/repair_design_postgrt.tcl	2026-03-14 10:53:58.510115756 +0700
++++ b/librelane/scripts/openroad/repair_design_postgrt.tcl	2026-09-16 19:12:47.033654978 +0700
+@@ -30,6 +30,15 @@
+ source $::env(SCRIPTS_DIR)/openroad/common/grt.tcl
+ #}
+ estimate_parasitics -global_routing
++# claude_verilog_test local patch (bead 0ah, 2026-09-16): always-on annotation gate -- see
++# ol_check_postgrt_parasitic_annotation in common/io.tcl (bead 8f3). This step already sources
++# common/grt.tcl unconditionally (identically to rsz_timing_postgrt.tcl, which bead 8f3 proved
++# is well-annotated, ~1.71% unannotated) immediately before this estimate_parasitics call, so it
++# is NOT expected to have bead 8f3's zero-wire-parasitics defect -- this call exists to confirm
++# that empirically on each run (report_design's repair_design command sizes its fixes against
++# exactly these parasitics) rather than relying on static code reading, and to catch a future
++# regression if grt.tcl's sourcing here is ever removed or short-circuited.
++ol_check_postgrt_parasitic_annotation
+ 
+ # Repair design
+ repair_design -verbose \

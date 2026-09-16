@@ -2891,3 +2891,55 @@ Patch: `memory/pd/patches/librelane2413_postgrt_annotation_fix.diff`. Applied to
 `/nobackup/librelane-8f3-backup-20260916_054731/` and confirming no LibreLane/openroad process
 was using the shared tree (re-checked via `systemctl`/`pgrep`/process-cwd immediately before the
 copy — `w3a-rsz-6`, which had been actively running there, was confirmed stopped).
+
+### Bead 0ah follow-up: RepairDesignPostGRT does NOT appear to share bead 8f3's defect (2026-09-16, read-only)
+
+Bead 0ah's diagnosis attributed ~786 ps of a post-GRT `cpu_clk` hold-skew regression to "post-GRT
+repair steps optimizing against unannotated parasitics" and suspected `OpenROAD.RepairDesignPostGRT`
+as a second instance of bead 8f3's class of bug. A read-only investigation (no new runs — other
+heavy diagnostics were active) found otherwise:
+
+**Every script between `OpenROAD.GlobalRouting` and `OpenROAD.STAMidPNR-3` already re-routes
+in-session before `estimate_parasitics -global_routing`, except `sta/corner.tcl` itself (the
+step bead 8f3 already fixed):**
+
+| Step | Script | Re-routes in-session before `estimate_parasitics`? |
+| --- | --- | --- |
+| `OpenROAD.GlobalRouting` | `openroad/grt.tcl` | Yes — it IS the first route (sources `common/grt.tcl`, then `check_antennas`, then estimates) |
+| `OpenROAD.CheckAntennas` | `antenna_check.tcl` | N/A — no `estimate_parasitics` call (pure antenna/DRC check) |
+| `OpenROAD.RepairDesignPostGRT` | `repair_design_postgrt.tcl` | **Yes** — sources `common/grt.tcl` unconditionally (same "Temporarily always enabled" / upstream OpenROAD #5590 workaround as `rsz_timing_postgrt.tcl`) immediately before its one `estimate_parasitics -global_routing` call, AND re-routes a SECOND time after `repair_design` runs |
+| `Odb.DiodesOnPorts` / `Odb.HeuristicDiodeInsertion` | Python/Odb steps | N/A — not OpenROAD Tcl STA/timing steps |
+| `OpenROAD.RepairAntennas` (`_DiodeInsertion` + `CheckAntennas`) | `antenna_repair.tcl` | Yes — sources `common/grt.tcl` twice (before and after `repair_antennas`) |
+| `OpenROAD.ResizerTimingPostGRT` | `rsz_timing_postgrt.tcl` | Yes — confirmed empirically in bead 8f3 (~1.71% unannotated) |
+| `OpenROAD.STAMidPNR` (post-GRT, `-3`) | `sta/corner.tcl` | **Was NO** — fixed by bead 8f3 (`STA_POSTGRT_INSESSION_GRT`) |
+
+**Direct log evidence** (attempt4's `/nobackup/asap7_soc_runs/RUN_2026-09-16_01-13-02/
+09-openroad-repairdesignpostgrt/openroad-repairdesignpostgrt.log`): a real global_route ran
+before `repair_design` (`GRT-0018 Total wirelength: 2164305 um`, 138056 blockages, 2 macros —
+consistent with a genuine full-chip SoC route), and `repair_design` did real work against it
+(`RSZ-0038 Inserted 535 buffers in 1996 nets`, `RSZ-0039 Resized 430 instances`). No annotation-
+gate output was present because the gate (bead 8f3) had only been added to
+`rsz_timing_postgrt.tcl` — **fixed by this follow-up**: added the same
+`ol_check_postgrt_parasitic_annotation` call (report-only, no new Variable, no behaviour change)
+to `repair_design_postgrt.tcl` too, so the next run confirms this numerically.
+
+**Also found**: `w3a-sta-7`'s own `-1687.92 ps` measurement (bead 8f3's headline "post-GRT"
+comparison point) was fed from `RepairDesignPostGRT`'s own output ODB (`CURRENT_ODB` in that
+run's `_env.tcl` points at `09-openroad-repairdesignpostgrt/soc_top.odb`) — it **skipped
+`OpenROAD.ResizerTimingPostGRT`** (step 10 in the same attempt4 run directory) entirely. The real
+Classic flow always runs `ResizerTimingPostGRT` before `STAMidPNR-3`, so this figure may not
+represent the true accepted-signoff path. Recorded on bead 0ah for the coordinator to weigh.
+
+**Conclusion**: no additional `STA_POSTGRT_INSESSION_GRT`-style re-route variable was added —
+there is no evidence any step in this chain lacks in-session re-routing. The ~786 ps effect is
+more likely either a genuine physical consequence of `repair_design`'s real (honestly-annotated)
+changes on `cpu_clk` skew, or partly an artifact of the `ResizerTimingPostGRT`-skipping
+measurement methodology above — not a parasitics-annotation tooling gap of bead 8f3's kind.
+
+Patch: `memory/pd/patches/librelane2413_repairdesignpostgrt_annotation_gate.diff`. **Applied to
+the shared `~/Downloads/Github/librelane` tree 2026-09-16** after confirming no
+LibreLane/OpenROAD process was using it (`systemctl`/`pgrep`/process-cwd all clear), backing up
+the single changed file to `/nobackup/librelane-gate-backup-20260916_191609/`, and verifying
+`git diff --stat` shows only the expected 9-line addition and `tclsh`'s `info complete` confirms
+the script still parses. The upcoming combined SoC re-run's `RepairDesignPostGRT` step will now
+print its own unannotated-driver count directly, closing the evidence gap above.

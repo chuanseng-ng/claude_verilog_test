@@ -4,7 +4,7 @@ Last updated: 2026-08-10
 
 ## Current Phase
 
-**Phase 5: SoC Integration** - ✅ COMPLETE (2026-06-24) — M1–M12 done. M10 L2 gate → NO-GO (`docs/M10_L2_DECISION_ANALYSIS.md`); M11 ASAP7 SoC P&R signed off **571 MHz / 62.9 mW / 520×520 µm / 65.6 % util / 0 DRC / 0 antenna** (sv2v frontend; `docs/PHASE5_RUN_HISTORY.md`). Indicative ASAP7 (predictive PDK).
+**Phase 5: SoC Integration** - ✅ COMPLETE (2026-06-24) — M1–M12 done. M10 L2 gate → NO-GO (`docs/M10_L2_DECISION_ANALYSIS.md`); M11 ASAP7 SoC P&R signed off **571 MHz / 62.9 mW / 520×520 µm / 65.6 % util / 0 DRC / 0 antenna** (sv2v frontend; `docs/PHASE5_RUN_HISTORY.md`). Indicative ASAP7 (predictive PDK). ⚠️ **Timing/power now also unvalidated** (bead `8f3`/`0p6`, 2026-09-16): produced by `OpenROAD.STAMidPNR-3` without an in-session re-route, a defect proven to give false-clean zero-wire STA; run 14's artifacts are wiped and cannot be re-checked, but the honest current-RTL replacement point is 258.5 mW / setup WNS −2084 ps / 41,864 violators — `docs/PHASE5_RUN_HISTORY.md` §"Power figure caveat".
 
 **Phase 7: Mixed-Signal PLL Clock Generator** - 🚧 IN PROGRESS — M-a/M-b1/M-b2/M-c ✅ complete (2026-06-20); M-d = documentation (this update). Dual-PDK charge-pump PLL via analog-design agents (ASAP7 indicative + Sky130 real CP-block DRC/LVS), AMS RNM integrated as SoC clock source. See `docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md`. (Phase 7 ran alongside the in-progress Phase 5 PD/sign-off tail.)
 
@@ -24,6 +24,7 @@ Last updated: 2026-08-10
 - **RTL** (#91/#92/#93): `rtl/soc/async_axi_fifo.sv` (dual-clock AXI4 bridge on new `rtl/soc/cdc/` primitives), a second `pll_subsystem` + `APB_PLL2` slot, and `rtl/soc/apb_cdc_bridge.sv`. `soc_all` 159/159; `soc_multiclock` 4/4 at a **7 ns / 3 ns coprime ratio** — the first real CDC coverage in this repo, and it found two RTL bugs invisible to every 1:1 suite (both a *reset value that advertises availability*).
 - **Two PD root causes, both now fixed and documented**: the CPU macro Liberty exported ~600–800 ps combinational in→out arcs on its APB outputs (fixed by making all three outputs pure registered), and the macro's boundary pins free-floated between regenerations — **393 of 401 moved**, worth 535 ps of setup — fixed by `pnr/asap7/cpu/pin_order.cfg` (`pnr/asap7/cpu/README_pin_order.md`).
 - ⚠️ **Do not quote 62.9 → 51.9 mW as a multi-clock power win.** `report_power` attributes 0.00 W to the macros, and the drop coincides with the first-ever ICG insertion (`USE_ICG_CELL`). ASAP7 IR drop remains unobtainable — `analyze_power_grid` fails `PSM-0069` on both rails from the M1-only tap-cell connectivity artifact. Both tracked as beads.
+- ⚠️ **The run-23 timing figures above (both domains MET) are also unvalidated** (bead `8f3`/`0p6`): produced by the stock, non-re-routing `OpenROAD.STAMidPNR-3` step, proven elsewhere to report false-clean zero-wire STA. Run 23's artifacts are wiped; not re-verifiable directly. See `docs/PHASE5_RUN_HISTORY.md` §"Power figure caveat" for the honest current-RTL point.
 - Full record: [`docs/PHASE5_RUN_HISTORY.md`](PHASE5_RUN_HISTORY.md) and [`docs/3PLL_CDC_EVALUATION.md`](3PLL_CDC_EVALUATION.md).
 
 **Sky130 real DRC/LVS sign-off (GH epic #102)** — Stages 1–2 ✅ complete (2026-07-31); Stages 3–4 ⏸️ host-gated.
@@ -180,7 +181,7 @@ Last updated: 2026-08-10
 - ✅ Backend flow: **75 MHz achieved on Sky130 130nm** (200 MHz target not met due to PDK limitations)
   - SDC constraints: `pnr/constraints/phase2_cpu.sdc`
   - UPF power intent: `pnr/constraints/phase2_cpu.upf`
-- ✅ ASAP7 backend flow: **1418 MHz achieved at Run 43 (2026-05-20)** — 27.27 mW, 3 844 µm² stdcell, 0 DRC/antenna/timing violations
+- ✅ ASAP7 backend flow: **1418 MHz achieved at Run 43 (2026-05-20)** — 27.27 mW, 3 844 µm² stdcell, 0 DRC/antenna/timing violations ⚠️ unvalidated, STA-zero-wire (bead `8f3`/`0p6`); artifacts wiped, not re-checkable — `docs/ASAP7_RUN_HISTORY.md`
   - Run directory: `pnr/asap7/runs/RUN_2026-05-20_06-27-10/`
   - Config: `pnr/asap7/config.json` (CLOCK_PERIOD 0.705, CTS clustering 8/10)
   - Constraints: `pnr/asap7/constraints/asap7.sdc`
@@ -267,7 +268,7 @@ Last updated: 2026-08-10
 | GPU random regression (`make gpu_random`) | 1,000 kernels | ✅ PASS |
 
 **Physical Design** (2026-05-28):
-- ✅ ASAP7 sign-off: **571 MHz (1.75 ns) / 262 mW / 115,600 µm² die / 60,500 µm² stdcell / 70% util**
+- ✅ ASAP7 sign-off: **571 MHz (1.75 ns) / 262 mW / 115,600 µm² die / 60,500 µm² stdcell / 70% util** ⚠️ unvalidated, STA-zero-wire (bead `8f3`/`0p6`); GPU run artifacts wiped, re-validation deferred (host cost estimate: several hours / 9–14+ GiB) — `docs/GPU_ASAP7_RUN_HISTORY.md`
 - ✅ Setup WS +197.3 ps (0 violations), Hold WS +16.3 ps (0 violations), slew/cap/fanout 0, antenna 0
 - ✅ Run: `pnr/asap7/gpu/runs/RUN_2026-05-28_06-29-48/` (supersedes 500 MHz `RUN_2026-05-27_11-16-37`)
 - ✅ Constraints: `pnr/asap7/gpu/constraints/asap7_gpu.sdc`; full history: `docs/GPU_ASAP7_RUN_HISTORY.md`
@@ -282,7 +283,7 @@ Last updated: 2026-08-10
 
 ### Phase 5: SoC Integration ✅
 
-**Status**: COMPLETE (2026-06-24) — M1–M12 done. M11 ASAP7 SoC P&R signed off 571 MHz / 62.9 mW / 520×520 µm / 65.6 % util / 0 DRC / 0 antenna (`docs/PHASE5_RUN_HISTORY.md`). Milestone detail in `docs/PHASE5_SOC_INTEGRATION_PLAN.md` (golden spec)
+**Status**: COMPLETE (2026-06-24) — M1–M12 done. M11 ASAP7 SoC P&R signed off 571 MHz / 62.9 mW / 520×520 µm / 65.6 % util / 0 DRC / 0 antenna ⚠️ timing/power unvalidated post-bead-`8f3` (see top of this file) (`docs/PHASE5_RUN_HISTORY.md`). Milestone detail in `docs/PHASE5_SOC_INTEGRATION_PLAN.md` (golden spec)
 
 | Milestone | Scope | Status |
 | :-------- | :---- | :----- |
