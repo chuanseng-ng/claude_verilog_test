@@ -26,9 +26,43 @@
 > table, and the fail-loud gate that now catches this:
 > `docs/PHASE5_RUN_HISTORY.md` § "Routing / physical-closure caveat".
 
+> ⚠️ **Every setup/hold WNS/TNS/violator-count figure in this document that was
+> read off LibreLane 2.4.13's final `metrics.json` (i.e. every run below that
+> never reached a real `OpenROAD.STAPostPNR` with an extracted SPEF) is
+> `OpenROAD.STAMidPNR-3` output — the stock post-GRT STA step. Bead
+> `claude_verilog_test-8f3` (found/fixed 2026-09-16) proved that step's
+> `sta/corner.tcl` calls `estimate_parasitics -global_routing` on a loaded ODB
+> **without an in-session `global_route`**, and OpenROAD does not recover GRT
+> parasitics from a saved ODB — so the reported timing runs on **zero-wire /
+> unannotated** parasitics (measured 94.44% of drivers unannotated on a fresh
+> CPU-block run of the *exact same config family* as the Run 43 / M7 rows
+> below, falsely reporting 0/0/0 setup and hold violations). The fix
+> (`STA_POSTGRT_INSESSION_GRT=1`, opt-in, now applied to the shared LibreLane
+> tree) re-routes in-session before the STA read; every WNS/TNS number below
+> predates that fix and was never re-measured with it. This is **separate**
+> from the `xy6` routing caveat above — `xy6` is about detailed routing
+> committing no wires (a DRT pin-access failure); `8f3` is about the STA step
+> itself not re-deriving parasitics from whatever GRT guides *do* exist.
+> Re-validation status, honest current-RTL replacement figures, and per-run
+> classification: bead `claude_verilog_test-0p6`, inline notes below, and
+> `docs/PHASE5_RUN_HISTORY.md` § "Power figure caveat" (bead `ew3`) for the
+> SoC side.
+
 ---
 
 ## ✅ FINAL SIGNOFF — Run 43 (2026-05-20)
+
+> ⚠️ **Bead `0p6` (2026-09-16): affected by bead `8f3`, not re-verifiable.**
+> This run's WNS/TNS/hold/DRC/antenna figures are `OpenROAD.STAMidPNR-3`
+> output (the flow never ran `OpenROAD.STAPostPNR` with a real SPEF —
+> `RUN_MCSTA`/`RUN_SPEF_EXTRACTION` were not enabled at the time), so per the
+> caveat above they are optimistic / zero-wire, not confirmed-wrong. The run
+> directory `pnr/asap7/runs/RUN_2026-05-20_06-27-10` no longer exists on disk
+> (`/nobackup` wipe, bead `alq`, 2026-09-15) and the RTL has changed
+> materially since (M7 perf-counter CSRs and later CDC/reset hardening), so
+> an identical re-run to get an honest number at this exact 705 ps / no-M7
+> point is not possible. The closest honest current-RTL data point is the M7
+> CPU sign-off section immediately below, which *is* re-validated.
 
 **This stage (Phase 2+3 ASAP7 RTL timing closure) is closed at Run 43.**
 
@@ -66,6 +100,34 @@ Phase 5 M7 added CPU performance-monitoring CSRs (mcycle/minstret 64-bit, mhpmco
 | Stdcell area | 4 058 µm² |
 | Slew / cap / antenna | 0 / 0 / 0 ✓ |
 | STA stage | post-GRT estimated (STAPostPNR gated off — same caveat as GPU run) |
+
+> ⚠️ **Bead `0p6` (2026-09-16): SUPERSEDED for current RTL by a re-validated,
+> honest post-GRT run.** This table's row is exactly the `8f3` failure mode:
+> `OpenROAD.STAMidPNR-3` without an in-session re-route, reporting a falsely
+> clean +24.01 ps / 0-violator setup result. `pnr/asap7/cpu/runs/RUN_2026-06-02_20-37-12`
+> no longer exists on disk to re-check directly (`/nobackup` wipe, bead `alq`),
+> but a fresh run at the **same config** (`pnr/asap7/cpu/config.json`,
+> `CLOCK_PERIOD=0.78` = 780 ps = 1282 MHz target, current RTL as of
+> 2026-09-16) with `STA_POSTGRT_INSESSION_GRT=1` was completed as part of
+> closing bead `8f3` itself (run tag `bpp7_postgrt_set`,
+> `pnr/asap7/cpu/runs/bpp7_postgrt_set/final/metrics.json`, still on disk):
+>
+> | Metric | This table (optimistic, zero-wire) | `bpp7_postgrt_set` (honest, in-session GRT) |
+> | --- | --- | --- |
+> | Setup WNS | +24.01 ps | **−169.722 ps** |
+> | Setup TNS | 0 | **−70,913.1 ps** |
+> | Setup violators | 0 | **1008** |
+> | Hold WNS / TNS / violators | +28.14 ps / 0 / 0 | 0 / 0 / 0 (clean, unaffected) |
+> | Power (total) | 24.38 mW | 39.28 mW (internal 33.01 / switching 4.98 / leakage 1.29) |
+> | Unannotated drivers | not measured (pre-`8f3`) | 619/36,290 (1.71% — the project's established benign floor) |
+>
+> Hold and power-methodology were not the bug (`ResizerTimingPostGRT` already
+> re-routes in-session unconditionally and was never affected); setup is the
+> real finding — **this design has 1008 real setup violations at 780 ps that
+> were completely invisible in the accepted M7 sign-off.** Do not quote "1282
+> MHz MET" for current RTL without this caveat. Re-closing this honestly
+> (repair or a relaxed period) is open follow-up work, not part of bead `0p6`
+> (bead `0p6`'s scope was re-validation and documentation, not re-closure).
 
 ### Why 1418 MHz no longer holds, and what was tried
 

@@ -45,6 +45,41 @@
    so the run-to-run comparison is apples-to-apples. A confirmation re-run with
    `STAPostPNR` + `RCX` enabled is the recommended next step before locking the number.
 
+> ⚠️ **Bead `0p6` (2026-09-16): this is worse than "optimistic" — it is
+> `OpenROAD.STAMidPNR-3` with the specific zero-wire defect found by bead
+> `claude_verilog_test-8f3`.** That step's `sta/corner.tcl` calls
+> `estimate_parasitics -global_routing` on a loaded ODB **without an
+> in-session `global_route`**, and a fresh CPU-block measurement (same
+> LibreLane 2.4.13 toolchain family) showed 94.44% of drivers unannotated
+> under this exact failure mode, with the resulting STA falsely reporting
+> 0/0/0 setup and hold violations everywhere — matching this run's own
+> "0 vios" rows above. The fix, `STA_POSTGRT_INSESSION_GRT=1`, is now applied
+> to the shared LibreLane tree, but **this GPU run's own artifacts are gone**
+> (`pnr/asap7/gpu/runs/` and `/nobackup/asap7_gpu_runs/` are both empty —
+> `/nobackup` wipe, bead `alq`, 2026-09-15), so it cannot be re-measured
+> directly; a fresh run is required to get an honest number.
+>
+> **Not re-run as part of bead `0p6`** — explicitly deferred pending
+> authorization, per that bead's own scope constraint (another agent, bead
+> `0ah`, runs concurrent jobs up to 9.5 GB on this 15.9 GB host). Cost
+> estimate, extrapolated from this project's own GPU-block history rather
+> than assumed: the GPU is the largest ASAP7 block in this repo (~485,842
+> stdcells vs the CPU block's ~36,290-instance scale that bead `8f3`'s
+> CPU-block validation cost ~295 MiB / +0.5 s extra for the in-session
+> re-route alone), it needed **13.5+ hours** for global routing to even
+> converge in an earlier campaign (`memory/pd/knowledge.md` §GPU ASAP7,
+> `RUN_2026-05-26_20-00-11`) before the M8/M9-layer + `GRT_ADJUSTMENT` fix
+> landed, and detailed-routing/repair passes on this design have peaked at
+> **14+ GiB VmHWM** and were repeatedly killed by `systemd-oomd`'s
+> 50%/20s memory-pressure policy even after the true cause (pressure, not
+> capacity) was root-caused. A full fresh run to `OpenROAD.STAMidPNR-3` with
+> `STA_POSTGRT_INSESSION_GRT=1` — which adds a second in-session
+> `global_route` invocation on top of the flow's own — should be expected to
+> cost **several hours wall-clock and 9–14+ GiB peak RSS**, i.e. it does not
+> comfortably fit this host's stated concurrent-job budget and needs
+> dedicated, oomd-quiesced host time scheduled separately from bead `0ah`'s
+> work. **Remains an open follow-up**, not closed by `0p6`.
+
 ---
 
 ## Campaign Context

@@ -261,6 +261,7 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 - ✅ Phase 2+3 RTL signed off on ASAP7 7nm — **Run 43 (2026-05-20)**:
   - **1418 MHz fmax**, 27.27 mW power, 3,844 µm² stdcell area
   - **0 DRC, 0 antenna violations**, +5.97 ps setup slack, +22.54 ps hold slack
+  - ⚠️ Timing/power unvalidated post-bead-`8f3` (STA-zero-wire defect, 2026-09-16); Run 43 artifacts wiped, not re-checkable — bead `0p6`
   - Full run history: `docs/ASAP7_RUN_HISTORY.md`
 - Sky130 realistic ceiling: 75–120 MHz (PDK-limited; Phase 2 achieved 75 MHz)
 
@@ -330,7 +331,7 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 - **Timing closure for compute datapath**
 - **Power consumption validated per warp**
 
-### Phase 5 — SoC integration (AI shines again) — ✅ COMPLETE 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW sign-off; `docs/PHASE5_RUN_HISTORY.md`)
+### Phase 5 — SoC integration (AI shines again) — ✅ COMPLETE 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW sign-off ⚠️ timing/power unvalidated post-bead-`8f3`, see `docs/PHASE5_RUN_HISTORY.md`)
 
 - Components
   - CPU + GPU-lite
@@ -452,7 +453,7 @@ INT8 MAC critical path: ~10–13 logic levels. Full NPU (INT4/tiling/sparsity) r
 - Cells: 26,038 standard cells, SRAM macros: 164,286 µm²
 - PDN: SRAM macros not connected to grid (PDN_CONNECT_MACROS_TO_GRID=false) — known limitation for predictive PDK
 
-**ASAP7 sign-off** ✅ (Run 43, 2026-05-20): 1418 MHz / 27.27 mW / 3 844 µm² stdcell, 0 DRC / 0 antenna / 0 setup-hold violations. RVT TT @ 0.7 V / 25 °C. SRAM via FF-array stub (`sram_1rw_256x32_asap7_stub.v` + Liberty/LEF). Config at `pnr/asap7/`. Full campaign history: `docs/ASAP7_RUN_HISTORY.md`.
+**ASAP7 sign-off** ✅ (Run 43, 2026-05-20): 1418 MHz / 27.27 mW / 3 844 µm² stdcell, 0 DRC / 0 antenna / 0 setup-hold violations. RVT TT @ 0.7 V / 25 °C. SRAM via FF-array stub (`sram_1rw_256x32_asap7_stub.v` + Liberty/LEF). Config at `pnr/asap7/`. Full campaign history: `docs/ASAP7_RUN_HISTORY.md`. ⚠️ Timing/power unvalidated post-bead-`8f3` (STA-zero-wire, 2026-09-16); Run 43 artifacts wiped, not re-checkable — bead `0p6`.
 
 **Sky130 real DRC/LVS sign-off** (GH epic #102) — the only PDK in this project with genuine physical verification; ASAP7 skips Magic/KLayout/Netgen entirely, and FreePDK45 has them permanently blocked. Stages 1–2 ✅ complete 2026-07-31, Stages 3–4 ⏸️ host-gated.
 

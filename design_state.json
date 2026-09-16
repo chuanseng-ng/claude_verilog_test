@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-09-14T05:01:33.666588+07:00",
+  "updated_at": "2026-09-16T11:42:31.051378+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -1611,6 +1611,18 @@
       "retry_strategy": "escalate",
       "suggested_next_step": "escalate",
       "reason": "je8 (apb_cdc_bridge CDC budget check) requires a fresh ASAP7 SoC synthesis from current RTL (the run-23-seeded netlist predates bead rfz's protocol rewrite), but fresh synthesis peaks ~13.4GB RSS during ABC on this 15.9GB-RAM host -- host-blocked (bead 2kn), PR #172 open. bead 86a's in-flow macro-power question was answered from the existing (valid) run5 data with a bounded power range.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-16T11:42:31.051378+00:00",
+      "agent": "physical-design-orchestrator",
+      "stage": "signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Bead 0p6: inventoried every quoted ASAP7 timing/power sign-off figure for bead-8f3 (zero-wire STAMidPNR-3 parasitics) exposure. CPU block and SoC already had honest current-RTL re-validation on disk (bpp7_postgrt_set, w3a-sta-7) from beads 8f3/w3a/86a; cited them with dated inline caveats across ASAP7_RUN_HISTORY.md, GPU_ASAP7_RUN_HISTORY.md, PHASE5_RUN_HISTORY.md, CLAUDE.md, PHASE_STATUS.md, ROADMAP.md, README.md. Confirmed Sky130 unaffected (real STAPostPNR/SPEF). GPU re-validation deferred pending authorization (host cost ~several hours / 9-14+ GiB, bead 0ah concurrency constraint) -- not launched.",
       "constraint_ref": null
     }
   ],

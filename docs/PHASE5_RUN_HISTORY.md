@@ -27,6 +27,28 @@ synthesized flat. Branch `feature/phase7-mixed-signal-pll`.
 > `xy6`)](#routing--physical-closure-caveat-detailed-routing-committed-zero-wires-bead-xy6)**
 > for the full table and what remains valid.
 
+> ⚠️ **Every setup/hold WNS/TNS number in this document from before
+> 2026-09-16 is `OpenROAD.STAMidPNR-3` output, produced WITHOUT an in-session
+> `global_route`** (bead `claude_verilog_test-8f3`, found/fixed 2026-09-16).
+> `sta/corner.tcl` calls `estimate_parasitics -global_routing` on a loaded
+> ODB, and OpenROAD does not recover GRT parasitics from a saved ODB alone —
+> so these numbers run on largely zero-wire / unannotated parasitics. Proven
+> on an isolated CPU-block run of this same design family: 94.44% of drivers
+> unannotated, falsely reporting 0/0/0 setup and hold violations. Every run
+> in this document (14, 23, and the whole #96 campaign) predates the fix
+> (`STA_POSTGRT_INSESSION_GRT=1`, now applied to the shared LibreLane tree)
+> and has **not** been re-measured with it — treat as **unvalidated, not
+> confirmed-wrong**. The one exception: the honest, in-session-GRT current-RTL
+> figure from run `w3a-sta-7` documented in **[§ Power figure caveat, "UPDATE
+> 2026-09-16 (bead `86a` closing)"](#power-figure-caveat-macro-power-omitted-from-every-figure-bead-ew3)**
+> — read that block for the replacement timing numbers (setup WNS −2084.08 ps
+> / TNS −2.19×10⁷ ps / 41,864 violators; hold WNS −917.23 ps / 718
+> violators), which is the current-RTL basis, not a re-run of run 14/23
+> themselves (their run directories and RTL vintage are gone — see the "Bead
+> `0p6` note" in that same section). Full re-validation inventory, run-by-run
+> classification, and what is/isn't recoverable: bead
+> `claude_verilog_test-0p6`.
+
 ## Sign-off result (run 14 — accepted)
 
 Run `RUN_2026-06-23_18-05-38`, sv2v synthesis frontend, single-clock 1750 ps.

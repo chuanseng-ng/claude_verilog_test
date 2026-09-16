@@ -25,9 +25,9 @@ Phase 5 (SoC Integration) in progress; Phases 0–4 complete.
 | 0 — Specs & reference models | ✅ | 2026-01-18 | 66/66 model tests passing |
 | 1 — Minimal RV32I CPU | ✅ | 2026-02-13 | 9/9 exit criteria; 37/37 ISA; 10k random, 0 fail |
 | 2 — Pipelined CPU + interrupts | ✅ | 2026-03-08 | 111/111 tests; 50k random; 75 MHz Sky130 |
-| 3 — L1 I/D caches | ✅ | 2026-05-21 | 139/139 regression; ASAP7 **1418 MHz / 27.27 mW / 3,844 µm²** |
-| 4 — GPU-Lite SIMT | ✅ | 2026-05-27 | GPU+CPU regression green; ASAP7 **571 MHz / 262 mW** |
-| 5 — SoC integration | 🚧 | — | M1–M8 done; M9 SoC verification in progress |
+| 3 — L1 I/D caches | ✅ | 2026-05-21 | 139/139 regression; ASAP7 **1418 MHz / 27.27 mW / 3,844 µm²** ⚠️ unvalidated (bead `8f3`/`0p6`) |
+| 4 — GPU-Lite SIMT | ✅ | 2026-05-27 | GPU+CPU regression green; ASAP7 **571 MHz / 262 mW** ⚠️ unvalidated (bead `8f3`/`0p6`) |
+| 5 — SoC integration | ✅ | 2026-06-24 | M1–M12 done; ASAP7 SoC 571 MHz / 62.9 mW ⚠️ unvalidated (bead `8f3`/`0p6`) |
 
 Full per-phase records and feature lists → [`docs/readme/PHASE_HISTORY.md`](docs/readme/PHASE_HISTORY.md).
 
