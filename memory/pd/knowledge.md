@@ -2936,6 +2936,10 @@ more likely either a genuine physical consequence of `repair_design`'s real (hon
 changes on `cpu_clk` skew, or partly an artifact of the `ResizerTimingPostGRT`-skipping
 measurement methodology above — not a parasitics-annotation tooling gap of bead 8f3's kind.
 
-Patch: `memory/pd/patches/librelane2413_repairdesignpostgrt_annotation_gate.diff`. **Not applied
-to the shared tree** — awaiting the coordinator's go-ahead (it is a low-risk report-only addition
-independent of 0ah's CTS-fix validation, but applying it was not authorised in this pass).
+Patch: `memory/pd/patches/librelane2413_repairdesignpostgrt_annotation_gate.diff`. **Applied to
+the shared `~/Downloads/Github/librelane` tree 2026-09-16** after confirming no
+LibreLane/OpenROAD process was using it (`systemctl`/`pgrep`/process-cwd all clear), backing up
+the single changed file to `/nobackup/librelane-gate-backup-20260916_191609/`, and verifying
+`git diff --stat` shows only the expected 9-line addition and `tclsh`'s `info complete` confirms
+the script still parses. The upcoming combined SoC re-run's `RepairDesignPostGRT` step will now
+print its own unannotated-driver count directly, closing the evidence gap above.
