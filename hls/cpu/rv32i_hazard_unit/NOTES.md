@@ -116,7 +116,7 @@ zero-extension of the 26 inputs (5-bit and 1-bit → 32-bit), truncation of the 
   x0 case and 13 randomised): **PASS**, 203 cycles / 6 average.
 - Generated Verilog is not committed. Pin the **normalized** digest (Bambu stamps a timestamp into
   a header comment, so the raw digest changes every run):
-  `verilog_sha256_normalized = 72dde9f0179c8c1a114258ec128a9642cd77b747a6b10fcecb0f148821a6e146`
+  `verilog_sha256_normalized = 4299bf6112a338c575f451f4752eaff0f1faf406786e95d6c76e2deac3745b3f`
 
 ### Numbers for Stage 2 (do not treat as PPA)
 
@@ -132,3 +132,20 @@ block the spec describes as combinational.
 > Stage 2 with byte-identical inputs reproduced the coalescer but **not** the hazard unit,
 > which exposed it. `tools/eda/wrap-bambu.sh` now blanks both lines; the value above is
 > under the corrected normalisation and was verified stable across two consecutive runs.
+
+> **Digest re-pinned again (bead `wke`, 2026-09-15).** After a `/nobackup` wipe+remount
+> (bead `alq`), the r8r-era pin above stopped reproducing even with the same flake-pinned
+> Bambu binary and unchanged C/tb inputs. Root cause: a third volatile thing the header
+> doesn't show — Bambu's internal net/instance ID counter (e.g.
+> `fu_rv32i_hazard_unit_428528_428733`) is environment-sensitive, not C-source-sensitive
+> (its base number was identical — 428532 pre-wipe, 428528 post-wipe — across this block
+> and `memory_coalescer` alike). This block additionally showed a second effect: the
+> emission order of functionally-interchangeable resource-shared FU instances (e.g. the
+> `truth_not_expr_FU`/`UUdata_converter_FU` pools) also permutes across environments —
+> same instance count/type distribution, different order — which a text-normalization
+> regex cannot canonicalise. Bambu's own reported flip-flops/area/cycles and the leg-1
+> cosim PASS were unchanged from the pin era throughout. `tools/eda/summarize.py` now
+> also blanks `_<5+ digits>_<5+ digits>` pairs; re-verified stable across two independent
+> 2026-09-15 regenerations separated in time. See `hls/PROVENANCE.json`'s `digest_note`
+> for the full writeup, including why the reordering effect does not indicate a logic
+> change.

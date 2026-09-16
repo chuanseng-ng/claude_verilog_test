@@ -2638,3 +2638,256 @@ make -C pnr librelane-asap7-soc-multiclock OR_PATH_PREFIX= LIBRELANE_EXTRA_ARGS=
 `OR_PATH_PREFIX=` on the command line removes only the PATH shim; `check-asap7-openroad` still
 runs but no longer determines the binary. Expect detailed routing to commit no wires (`xy6`), so
 "post-route" numbers are on GRT parasitics — the same basis as run 23.
+
+#### UPDATE 2026-09-15 (bead `bpp`) — ported and validated; patch ready, not yet applied
+
+Developed in a separate worktree copy (`/nobackup/librelane-bpp`, `git worktree add --detach`
+off the live tree's HEAD, per the "do not edit the live tree" constraint) with the live tree's
+uncommitted local patches carried over (PSM parser, ioplacer `-random_seed`, `pdn.tcl` decomposed
+`build_grids`, plus — discovered necessary to get past an ABC segfault (return code 139) during
+synthesis on this machine's current yosys/ABC build — the Synlig/UHDM `hierarchy -check` removal,
+lib-sort-before-`dfflibmap`, and `SYNTH_SHARE_RESOURCES` gating patches in `synthesize.py` /
+`steps/pyosys.py` / `steps/odb.py`). Without the lib-sort patch, ABC crashes reading the ASAP7
+SIMPLE+AO+OA multi-lib set regardless of 26Q2 vs. bundled OpenROAD — unrelated to this bead but a
+hard prerequisite for reproducing any current ASAP7 baseline.
+
+**Correction, same session**: the coordinator's carryover list (three items — PSM parser,
+ioplacer, pdn.tcl) was not exhaustive. `set_rc.tcl`'s ASAP7 RC-injection fallback (the very first
+entry in this knowledge base, RSZ-0089) is ALSO an uncommitted live-tree local patch and is not
+optional — without it, `OpenROAD.GlobalPlacement` dies immediately with `[ERROR RSZ-0089] Could
+not find a resistance value` (`gpl.tcl:79`), because `set_rc.tcl`'s ASAP7 detection block simply
+isn't there in a pristine checkout. `valu_rtl`'s `--to OpenROAD.STAPrePNR` never exercises this
+path (it stops before `OpenROAD.Floorplan`/`GlobalPlacement`), so the first validation run above
+didn't catch the gap — it only surfaced when the CPU block reached Global Placement. General
+lesson: enumerate a live tree's uncommitted local patches from `git status`/`git diff --stat`
+directly rather than trusting a carryover list assembled from bead descriptions, and don't
+consider a copy's patch set complete until a run has actually exercised every flow stage the
+target validation needs.
+
+Fixed all four renames with `info commands`-guarded wrapper procs (`ol_compat_corners`,
+`ol_compat_set_cmd_corner`, `ol_compat_check_corner_wire_cap` in `common/io.tcl`; `write_metric_int`
+guarded inline) — never a hard version switch. Re-swept all 28 namespaced calls in the copy and
+found no additional breakage beyond the four already known.
+
+**One more incompatibility found, checked as directed by bead ocm's note**: 26Q2's
+`detailed_route` and `pin_access` both turned `-bottom_routing_layer`/`-top_routing_layer` into
+unconditional `utl::error` (DRT-509/DRT-510, confirmed via `info body detailed_route` /
+`info body pin_access` — not a probabilistic warning). 2.4.13's `drt.tcl` uses exactly these
+flags. Fixed with the same guard style, switching to `set_routing_layers -signal <min>-<max>`
+ahead of a flag-free `detailed_route` call when `sta::scenes` exists (used as the version-capability
+proxy, since this is an argument-level deprecation with no namespaced existence check of its own).
+**This drt.tcl fix is NOT validated by an actual detailed-routing run** — both validations below
+stop before `OpenROAD.DetailedRouting`. Also checked bead ocm's `make_tracks`-before-`place_pin`
+note: already correct in 2.4.13's `Classic` flow (`OpenROAD.Floorplan`, which sources
+`TRACKS_INFO_FILE_PROCESSED`, is flow position 53; `OpenROAD.IOPlacement` is position 64) — no fix
+needed.
+
+**Validation — exact reproduction, both toolchains, byte-identical:**
+
+`pnr/asap7/valu_rtl` (`--to OpenROAD.STAPrePNR`) on 26Q2 via the shim:
+`design__instance__count=54634`, `design__instance__area=4655.14614 µm²`,
+`power__total=0.014146882109344006 W`, `timing__setup__ws=-54.29279270097747 ps` — exact match to
+the known-good bundled-toolchain baseline (54634 / 4655.15 / 14.147 mW / WS −54.3 ps). The SAME
+copy re-run on the bundled OpenROAD `edf00dff` + OpenSTA 2.6.0 (no shim) reproduced all four
+numbers to the **last printed digit** — proof the guards are a true no-op on the old toolchain,
+not merely numerically close.
+
+CPU block (`rv32i_cpu_top`, 10 SRAM macro instances) through `OpenROAD.CTS` on 26Q2: hit a
+**second, distinct scenes-API defect** beyond the four renamed commands, found only because this
+run actually exercises `sta/corner.tcl` through the real `openroad` 26Q2 binary (`OpenROAD.STAMidPNR`
+is a plain `OpenROADStep`) — `valu_rtl`'s `--to OpenROAD.STAPrePNR` never does, because
+`STAPrePNR`/`STAPostPNR` (`MultiCornerSTA`) run `corner.tcl` through the *standalone* `sta`
+binary, which the ASAP7 shim pins to OpenSTA 2.6.0 (`ASAP7_STA_BIN`) regardless of
+`ASAP7_OPENROAD_BIN` — so that path always takes the old `sta::corners`/object branch. Under
+26Q2, `sta::scenes` returns plain scene-NAME STRINGS, not command objects — `[$corner name]`
+(45 call sites in `corner.tcl`, 2 in `common/io.tcl`) then fails with `invalid command name
+<scene-name>` because Tcl tries to invoke a command literally named after the scene (e.g.
+`nom_tt_025C_0p7V`). Fixed with an `ol_compat_corner_name` guard (same `info commands
+sta::scenes` style) replacing every `[$corner name]`. Verified with `--only
+OpenROAD.STAMidPNR --last-run` (clean, exit 0) then a full `--from OpenROAD.STAMidPNR --to
+OpenROAD.CTS --last-run` resume: `Flow complete`, ran `RepairDesignPostGPL` /
+`DetailedPlacement` / `CTS` / the post-CTS `STAMidPNR` cleanly (`corner.tcl` re-executed 3 times
+total with no further errors). Mid-flow metrics (not a signed-off PPA number — stops before
+post-CTS/post-GRT resizer repair): 36521 instances (10 macros + 36511 stdcells), 7646.23 µm²,
+WS setup −11972.8 ps / hold −12016.3 ps (expected large-negative, timing repair not yet run).
+
+Also found and fixed mid-session: the coordinator's 3-item carryover list (PSM parser, ioplacer,
+pdn.tcl) omitted `set_rc.tcl`'s ASAP7 RC-injection fallback (knowledge.md's oldest entry, first
+section of this file) — without it, `OpenROAD.GlobalPlacement` dies with `[ERROR RSZ-0089]`.
+`valu_rtl`'s STAPrePNR-only validation never reaches `GlobalPlacement`, so it didn't catch this
+either. **Lesson for any future copy-and-carry-patches task: enumerate a live tree's uncommitted
+local patches directly from `git status`/`git diff --stat`, never trust a list assembled from
+bead prose, and don't call a copy's patch set "complete" until a run has actually exercised every
+flow stage the validation needs** — two different gaps here each hid behind the same blind spot
+(`valu_rtl` stopping at `STAPrePNR`, before `Floorplan`/`GlobalPlacement`/`STAMidPNR`).
+
+Patch diff: `memory/pd/patches/librelane2413_sta_26q2_scenes.diff` (relative to the live tree's
+current dirty state — stacks on the patches above rather than re-supplying them). Verified with
+`git apply --check` against a full `rsync` mirror of the live tree's actual current dirty
+working tree (not a synthetic reconstruction from named carryover diffs — a first attempt at
+that reconstruction itself failed to apply, for an unrelated reason: it omitted `drt.tcl`'s
+existing catch-wrapper local patch, which this bead's own `drt.tcl` fix was never carried
+against — the direct rsync-mirror check sidesteps that ambiguity and is authoritative). **Not
+yet applied to the shared `~/Downloads/Github/librelane` tree** — this bead's constraint is to
+develop and validate in the copy only; the coordinator applies it once no run is active there.
+
+#### Bead `b5a` resolved the same session — SRAM macro LEF pin access confirmed clean under 26Q2
+
+Reused the CPU validation run's `34-openroad-detailedplacement/rv32i_cpu_top.odb` (post-placement,
+tracked SRAM LEF as-is — M4 still in `OBS` across the full footprint, confirmed unmodified via
+`git log`/`git status`). Standalone `openroad -db <odb> -exit` script: `set_routing_layers
+-signal M2-M7` then `pin_access -min_access_points 1` (no full detailed routing). All ~750 SRAM
+pin terms across the 10 macro instances got `DRT-0418`/`DRT-0419` grid-alignment WARNINGS
+(expected, given all pins sit on one edge as 24×24 nm squares) but **zero** of the 56 actual
+`DRT-0085` (access-pattern) failures name an SRAM instance — every one is an anonymous synthesis
+net or placement-tool identifier, unrelated to the macro. Confirms bead `b5a`'s 2026-09-09
+correction via an independent method (a real pin_access run under 26Q2, rather than the earlier
+A/B "drop M4 from OBS" experiment): the LEF's M4-OBS-over-M4-pins condition is latent, not
+defective. No LEF change made; bead closed.
+
+### LibreLane 2.4.13 resizer-timing repair has no bound that works on both toolchains (bead bpp amendment, 2026-09-15)
+
+Motivated by w3a-rsz-2: post-CTS repair on the hierarchically-synthesized SoC looped, reaching
+repair_timing iteration 1040 in 73 min with 27550 violators unchanged, pinned on one
+sram_controller flop. LibreLane 2.4.13 never passes any bound to `repair_timing`.
+
+**`repair_timing` flag comparison** (`info body repair_timing` on each binary):
+
+| | OpenROAD 26Q2 | bundled OpenROAD (edf00dff) |
+| --- | --- | --- |
+| keys | `-setup_margin -hold_margin -slack_margin -libraries -max_utilization -max_buffer_percent -sequence -phases -recover_power -repair_tns -max_passes -max_iterations -max_repairs_per_pass` | `-setup_margin -hold_margin -slack_margin -libraries -max_utilization -max_buffer_percent -recover_power -repair_tns -max_passes` |
+| flags | `-setup -hold -allow_setup_violations -skip_pin_swap -skip_gate_cloning -skip_size_down -skip_buffering -skip_buffer_removal -skip_last_gasp -skip_vt_swap -skip_crit_vt_swap -match_cell_footprint -verbose` | `-setup -hold -allow_setup_violations -skip_pin_swap -skip_gate_cloning -skip_buffering -skip_buffer_removal -verbose` |
+
+26Q2-only: `-sequence -phases -max_iterations -max_repairs_per_pass -skip_size_down
+-skip_last_gasp -skip_vt_swap -skip_crit_vt_swap -match_cell_footprint`. **The bundled toolchain
+has no per-pass-iteration bound at all** — only the coarse `-max_passes` (default 10000 on both)
+and a short `-skip_*` set.
+
+**Why `-max_passes` alone is not sufficient**: the printed `repair_timing` progress table's
+`Iter` column is a MUCH finer-grained counter than "passes" — on a real ASAP7 CPU block
+(rv32i_cpu_top, 27550 initial setup violators) with `-max_passes 1`, `Iter` climbed past 2000
+*within that one pass* before the pass concluded and the step exited cleanly with `[WARNING
+RSZ-0062] Unable to repair all setup violations`. So `-max_passes` bounds the coarse outer sweep
+count, not the inner per-endpoint retry loop — for a design that is genuinely oscillating (never
+converging on a violator, as opposed to genuinely progressing like the CPU-block test), a SINGLE
+pass can itself run for a very long time regardless of `-max_passes`. 26Q2's `-max_iterations`
+is the parameter most likely to bound that inner loop directly (it is threaded into
+`rsz::repair_setup` as a distinct argument from `max_passes`); the bundled toolchain has no
+equivalent.
+
+**Fix**: two opt-in, backward-compatible hooks added to `rsz_timing_postcts.tcl` /
+`rsz_timing_postgrt.tcl` (both no-ops when unset, both declared as `Optional` `Variable`s on
+`OpenROAD.ResizerTimingPostCTS`/`OpenROAD.ResizerTimingPostGRT` in `steps/openroad.py`, with
+byte-identical description text between the two step classes — required, since both are members
+of the same `Classic` flow and `Flow.get_all_config_variables()` raises `FlowException` if two
+steps in the same flow declare a same-named `Variable` with ANY field difference):
+
+- `PL_RESIZER_TIMING_MAX_PASSES` (int) → `-max_passes N` appended to BOTH the setup and hold
+  `repair_timing` calls in both scripts.
+- `PL_RESIZER_TIMING_EXTRA_ARGS` (str) → a Tcl word list spliced verbatim (`{*}$::env(...)`)
+  onto the end of the SETUP `repair_timing` call ONLY, in both scripts. Generic passthrough
+  rather than a named flag, specifically because the useful per-toolchain bound differs
+  (`-max_iterations`/`-max_repairs_per_pass` on 26Q2, nothing equivalent on bundled) — a caller
+  supplies whatever their toolchain actually supports, e.g. `-max_iterations 50` on 26Q2.
+
+**Validated** (bead bpp): real ASAP7 CPU-block runs (36k+ instances, 10 SRAM macros) on the
+bundled toolchain — `-c PL_RESIZER_TIMING_MAX_PASSES=1` alone converged 27550→924 violators
+before the bounded pass ended, `Flow complete`; `-c PL_RESIZER_TIMING_MAX_PASSES=1 -c
+'PL_RESIZER_TIMING_EXTRA_ARGS=-repair_tns 5'` (fresh run) also completed cleanly, with the
+generated `_env.tcl` confirming both values reached the Tcl environment
+(`set ::env(PL_RESIZER_TIMING_EXTRA_ARGS) "-repair_tns 5"`) and no Tcl argument-parse error
+(`-repair_tns` is a recognized `repair_timing` key on both toolchains). `valu_rtl` (never
+reaches either resizer step) re-confirmed byte-identical with both variables unset. **NOT
+separately proven**: that either hook bounds w3a's actual stuck SoC design (the pinned
+sram_controller flop) — all of this bead's evidence is on the isolated CPU block, which did not
+reproduce that specific oscillation; treat this as a general-purpose bound, not a guaranteed fix.
+
+**Recommendation for w3a attempt 3**: since the bundled toolchain has no per-iteration bound,
+start with `PL_RESIZER_TIMING_MAX_PASSES=1` (or 2) to force the earliest possible graceful stop
+of the outer sweep, and consider `PL_RESIZER_TIMING_EXTRA_ARGS` set to `-repair_tns <pct>` (caps
+the total-negative-slack repair target percentage, may terminate a pass earlier if TNS stops
+improving) or `-skip_gate_cloning -skip_pin_swap` (removes two repair strategies that could be
+the specific ones cycling on the pinned flop, cutting per-endpoint retry work within the pass).
+If w3a's shared tree run ever uses 26Q2 instead, `-max_iterations <N>` is the more targeted
+option and should be preferred.
+
+Patch: `memory/pd/patches/librelane2413_resizer_timing_bounds.diff`. Applied to the shared
+`~/Downloads/Github/librelane` tree together with `librelane2413_sta_26q2_scenes.diff` in the
+same session, after backing up the 6 modified files to
+`/nobackup/librelane-bpp-backup-20260915_234121/` and confirming no LibreLane/openroad process
+was using the shared tree (a `w3a-diag3c` systemd scope WAS found actively running `nix-shell`/
+`openroad` against the shared tree mid-session — confirmed ended before the actual file copy).
+
+### LibreLane 2.4.13 post-GRT STA runs on unannotated (zero-wire) parasitics (bead 8f3, 2026-09-16)
+
+Found under w3a: `sta/corner.tcl`'s `if { [grt::have_routes] }` branch calls
+`estimate_parasitics -global_routing` on a freshly `read_current_odb`'d ODB whose routing-guide
+data is only PERSISTED from an earlier `GlobalRouting` step, not live in the current process.
+Per bead je8 (`bd memory openroad-grt-parasitics-need-insession-route`), OpenROAD cannot recover
+real GRT parasitics from that persisted state alone. **Confirmed catastrophic on a real ASAP7
+CPU block (rv32i_cpu_top)**: 34272/36290 drivers (94.44%) unannotated at `OpenROAD.STAMidPNR-3`
+(the post-GRT STA occurrence — the 4th `STAMidPNR` in Classic's step list, after
+`ResizerTimingPostGRT`), and the resulting "post-GRT" STA falsely reports **zero** setup AND
+hold violations everywhere (WNS=0, TNS=0, 0 violators both directions) — an optimistic
+false-clean sign-off, exactly the risk flagged for run 23's accepted post-GRT numbers.
+
+**Fix, two independent pieces, both backward-compatible:**
+
+1. `STA_POSTGRT_INSESSION_GRT` (bool, default false) — when true, `corner.tcl` sources
+   `common/grt.tcl` (the identical routing-layer/layer-adjustment/`global_route` setup
+   `OpenROAD.GlobalRouting` itself uses) immediately before `estimate_parasitics
+   -global_routing`. Unset is byte-identical to upstream. Declared identically on THREE step
+   classes (`OpenROAD.STAMidPNR`, `MultiCornerSTA`, `OpenROAD.ResizerTimingPostGRT` — required
+   since all three share the Classic flow and a same-named `Variable` field mismatch across
+   steps in one flow raises `FlowException`), but only actually consulted by `OpenROAD.STAMidPNR`:
+   - Inert on `MultiCornerSTA`-derived steps (`STAPrePNR`/`STAPostPNR`): they run `corner.tcl`
+     through the standalone `sta` binary, never `openroad`, so `namespace exists ::ord` is false
+     and the whole `grt::have_routes` branch is unreachable.
+   - Inert on `OpenROAD.ResizerTimingPostGRT`: `rsz_timing_postgrt.tcl` **already** sources
+     `common/grt.tcl` unconditionally (a pre-existing "Temporarily always enabled" workaround for
+     upstream OpenROAD issue #5590) — gating that behind a default-false variable would be a
+     REGRESSION, so it was deliberately left alone.
+   - `STAMidPNR` also needed `grt_variables` (`GRT_ADJUSTMENT`, `GRT_OVERFLOW_ITERS`,
+     `GRT_ALLOW_CONGESTION`, `GRT_MACRO_EXTENSION`, `RT_MIN/MAX_LAYER`, etc.) added to its own
+     `config_vars` — undeclared variables are silently dropped during config resolution (same
+     class of bug as `LAYERS_RC` earlier in this file), so `common/grt.tcl`'s own dependencies
+     never reached `_env.tcl` otherwise. Hit and fixed live during this bead's own validation:
+     `Error: set_layer_adjustments.tcl, 14 can't read "::env(GRT_ADJUSTMENT)": no such variable`.
+     `OpenROAD.GlobalRouting` and `ResizerStep` (the `ResizerTimingPostCTS`/`PostGRT` base) already
+     carry `grt_variables` for the same reason — that is WHY `rsz_timing_postgrt.tcl`'s existing
+     re-route already worked without this fix.
+2. An ALWAYS-ON annotation gate (`ol_check_postgrt_parasitic_annotation`, new proc in
+   `common/io.tcl`) — called from `corner.tcl` (inside the `-global_routing` branch only, so
+   `-placement`-based mid-flow STA is unaffected) and unconditionally from
+   `rsz_timing_postgrt.tcl`. Captures `report_parasitic_annotation -report_unannotated`'s output
+   via Tcl's generic `> file` redirect (confirmed supported by that command's own body on both
+   toolchains), regexes the "Found N unannotated drivers." count, and compares its percentage of
+   `[llength [get_cells -hierarchical *]]` (a cheap, approximate proxy for "total drivers" — no
+   exact count is printed by the report itself) against a 1% default threshold
+   (`STA_POSTGRT_UNANNOTATED_PCT_MAX`, env-read directly — a secondary tuning knob, not a
+   declared `Variable`). Prints a loud `[WARNING]` naming the fix variable, or exits 1 if
+   `STA_POSTGRT_UNANNOTATED_IS_ERROR=1`. This is unconditional — it fires whether or not the
+   caller has opted into the fix, so a broken run is loud rather than silent.
+
+**Validated** (real ASAP7 CPU-block runs, `rv32i_cpu_top`, 10 SRAM macros, fresh full flows to
+`OpenROAD.STAMidPNR-3`):
+- Unset: 34272/36290 (94.44%) unannotated, gate fires, STA falsely clean (0/0 violators).
+- `STA_POSTGRT_INSESSION_GRT=1`: 619/36290 (1.71%) unannotated — matches this project's
+  established benign SRAM-stub floor (`ResizerTimingPostGRT` already reports the identical 619
+  every run, unaffected by this variable) rather than a remaining bug. Real, differing STA:
+  setup WNS −169.722 ps / TNS −70913.1 ps / 1008 violators (hold stays clean, WNS +15.88 ps).
+  `STAMidPNR-3` runtime nearly unchanged (~61 s either way); peak RSS grew ~515→~810 MiB
+  (+~295 MiB) for the in-session re-route at CPU-block scale — far below the "5.4 GB peak / 24
+  min" quoted for the full SoC under bead je8, as expected for a much smaller design.
+- `rsz_timing_postgrt.tcl`'s own gate: 619/36206 (1.71%) unannotated in BOTH runs, unaffected by
+  the variable (as expected, since it's inert there) — confirms it never had this bug.
+
+**NOT re-validated by this bead**: historical accepted post-GRT figures (run 23, earlier 86a)
+were produced with the OLD, un-gated `corner.tcl` and remain unaudited — follow-up work, tracked
+separately if pursued.
+
+Patch: `memory/pd/patches/librelane2413_postgrt_annotation_fix.diff`. Applied to the shared
+`~/Downloads/Github/librelane` tree after backing up the 4 modified files to
+`/nobackup/librelane-8f3-backup-20260916_054731/` and confirming no LibreLane/openroad process
+was using the shared tree (re-checked via `systemctl`/`pgrep`/process-cwd immediately before the
+copy — `w3a-rsz-6`, which had been actively running there, was confirmed stopped).

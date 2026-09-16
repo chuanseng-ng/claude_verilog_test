@@ -422,6 +422,49 @@ def test_bambu_normalized_hash_ignores_the_generation_timestamp(tmp_path: Path) 
     assert sum_a["verilog_sha256_normalized"] == sum_b["verilog_sha256_normalized"]
 
 
+def test_bambu_normalized_hash_ignores_the_internal_id_counter(tmp_path: Path) -> None:
+    """Bambu's internal net/instance ID counter is environment-sensitive, not
+    C-source-sensitive, and must not leak into the pinned digest (GH #119 bead
+    wke). Measured on real regenerations: memory_coalescer and
+    rv32i_hazard_unit both carried base ID 428532 in the 2026-09-07 pin-era
+    output and 428528 after a 2026-09-15 /nobackup wipe+remount -- the same
+    constant shift on two unrelated designs, with Bambu's own reported
+    flip-flop/area/cycle counts and the surrounding RTL text unchanged. Two
+    files differing ONLY in that counter must normalize identically.
+    """
+    body_a = (
+        "  selector_IN_UNBOUNDED_memory_coalescer_428532_428695,\n"
+        "  fu_memory_coalescer_428532_428737 (.out1(x));\n"
+    )
+    body_b = (
+        "  selector_IN_UNBOUNDED_memory_coalescer_428528_428691,\n"
+        "  fu_memory_coalescer_428528_428733 (.out1(x));\n"
+    )
+    a = tmp_path / "a.v"
+    a.write_text(body_a, encoding="utf-8")
+    b = tmp_path / "b.v"
+    b.write_text(body_b, encoding="utf-8")
+
+    _, sum_a = summarize.parse_bambu(_bambu_log(simulate=True), 0, a)
+    _, sum_b = summarize.parse_bambu(_bambu_log(simulate=True), 0, b)
+
+    assert sum_a["verilog_sha256"] != sum_b["verilog_sha256"]
+    assert sum_a["verilog_sha256_normalized"] == sum_b["verilog_sha256_normalized"]
+
+
+def test_bambu_normalized_hash_still_catches_a_real_content_change(tmp_path: Path) -> None:
+    """The ID-pair blanking must not be so broad it hides an actual logic diff."""
+    a = tmp_path / "a.v"
+    a.write_text("assign out1 = in1 & in2;\n", encoding="utf-8")
+    b = tmp_path / "b.v"
+    b.write_text("assign out1 = in1 | in2;\n", encoding="utf-8")
+
+    _, sum_a = summarize.parse_bambu(_bambu_log(simulate=True), 0, a)
+    _, sum_b = summarize.parse_bambu(_bambu_log(simulate=True), 0, b)
+
+    assert sum_a["verilog_sha256_normalized"] != sum_b["verilog_sha256_normalized"]
+
+
 def test_bambu_empty_verilog_is_error_not_pass(tmp_path: Path) -> None:
     """A zero-byte .v is the exit-0-empty-report shape and must not be PASS."""
     status, summary = summarize.parse_bambu(_bambu_log(simulate=True), 0, _v(tmp_path, ""))

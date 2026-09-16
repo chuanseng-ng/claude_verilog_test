@@ -280,6 +280,24 @@ _BAMBU_DATE_RE = re.compile(rb"(// Code created using PandA .* - Date )\S+")
 # "normalized" is not actually normalized. (Stage 1 stripped only the date and
 # missed this; see GH #119 bead r8r.)
 _BAMBU_CMDLINE_HDR_RE = re.compile(rb"(// Bambu executed with: ).*")
+# Bambu stamps a THIRD volatile thing, found only by diffing two environments
+# (GH #119 bead wke): every auto-generated net/instance name carries a pair of
+# decimal-digit IDs from Bambu's own internal node-numbering counter, e.g.
+#   selector_IN_UNBOUNDED_memory_coalescer_428528_428695
+#   fu_rv32i_hazard_unit_428528_428733
+# The FIRST number is a per-invocation base that is IDENTICAL across unrelated
+# top functions compiled back-to-back in one environment (measured: both
+# memory_coalescer and rv32i_hazard_unit read 428532 in the 2026-09-07 pin-era
+# survivors and 428528 in 2026-09-15 regenerations -- a constant -4 shift, not
+# a per-design value), so it tracks something in Bambu's own startup/library
+# loading, not the C source. It is stable across repeated runs WITHIN one
+# environment (verified: three separate bambu invocations on 2026-09-15, two
+# designs, all reproduced their own digest exactly) but drifts across a
+# /nobackup wipe+remount. Blanking every `_<5+ digits>_<5+ digits>` pair is
+# safe: it is the only place in the emitted .v where a bare run of 5+ decimal
+# digits appears outside a `'b`/`'h` literal (checked exhaustively on the
+# memory_coalescer and rv32i_hazard_unit pin-era arms).
+_BAMBU_ID_PAIR_RE = re.compile(rb"_[0-9]{5,}_[0-9]{5,}")
 
 
 def parse_bambu(text: str, exit_code: int, verilog: Path | None) -> tuple[int, dict]:
@@ -363,6 +381,7 @@ def parse_bambu(text: str, exit_code: int, verilog: Path | None) -> tuple[int, d
         summary["verilog_bytes"] = len(data)
         normalized = _BAMBU_DATE_RE.sub(rb"\1<normalized>", data)
         normalized = _BAMBU_CMDLINE_HDR_RE.sub(rb"\1<normalized>", normalized)
+        normalized = _BAMBU_ID_PAIR_RE.sub(rb"_<ID>_<ID>", normalized)
         summary["verilog_sha256_normalized"] = hashlib.sha256(normalized).hexdigest()
 
     return PASS, summary
