@@ -761,3 +761,82 @@ recorded for the Sky130 GPU stages. The PDN fix itself is verified independently
 grid builds and passes `check_power_grid` on CPU, GPU and SoC, and IR drop runs end-to-end. What
 remains unverified is whether this design still closes DRC once the grid occupies the tracks — and
 the honest expectation, given 1991 DRC PDN-free, is that it will need work.
+
+## cpu_clk CTS hold-skew fix + combined rvb/0ah re-run (2026-09-17, beads `0ah`/`rvb`/`ydw`)
+
+Bead `0ah` (filed during `w3a`'s honest post-GRT STA close-out) found the cpu_clk clock-tree
+worst hold skew regressing from -823.5 ps (post-CTS-repair, placement-estimate parasitics) to
+-1687.9 ps (post-GRT, real in-session-GRT parasitics, bead `je8`'s methodology) at
+`u_cpu_axi_cdc.u_w_fifo`. Diagnosis (live OpenROAD session, forced `global_route` +
+`estimate_parasitics -global_routing`, `report_parasitic_annotation`-gated): the regression was
+real, not a placement-estimate artifact, but split into two effects — a genuine ~79 ps CTS-level
+imbalance (`cpu_clk_i` and `cpu_gated_clk_regs` are balanced as fully independent TritonCTS trees
+across the `u_cpu_cg` ICG boundary, worsened by one long-wire-repair buffer sized against
+placement-estimate parasitics), and a separate, larger post-GRT-repair effect later found (by
+another agent, bead `0ah` comment) to be a mis-attribution — `w3a-sta-7`'s -1687.9 ps number was
+captured on `RepairDesignPostGRT`'s output, **skipping** `ResizerTimingPostGRT` (the hold-repair
+step), not a genuine end-of-flow defect.
+
+**Fix**: `CTS_BALANCE_LEVELS` + `CTS_OBSTRUCTION_AWARE` (both existing, previously-unused
+LibreLane `Variable`s) in `pnr/asap7/soc/config_multiclock_hier_0ah_cts.json`, validated CTS-only
+(`--from OpenROAD.CTS --to OpenROAD.STAMidPNR-1`, seeded from a pre-CTS checkpoint so
+synthesis/placement stay identical to baseline): apples-to-apples at the same pipeline stage, hold
+violators 705→0, hold WNS -639.3→0 ps, hold TNS -328 424→0 ps; setup violators 29 112→9 168, setup
+TNS 3.8× better. Re-validated with real in-session-GRT parasitics (annotation-gated,
+1548/204 196 unannotated, matching the unfixed baseline's 1553/204 196 coverage): worst hold skew
+-902.1→+267.2 ps (cpu_clk), -187.1→+581.2 ps (sys_clk) — confirms the gain survives under real
+parasitics, not just placement-estimate.
+
+### Combined re-run: rvb RTL + 0ah CTS fix + rsz6/rsz7 bounded post-GRT repair
+
+`soc-rvb-0ah.scope`, `pnr/asap7/soc/runs/RUN_2026-09-16_19-19-45`,
+`config_multiclock_hier_rsz7_0ah.json` (= `config_multiclock_hier_rsz7.json`'s
+`STA_POSTGRT_INSESSION_GRT` + rsz6's bounded post-GRT repair settings, plus the two CTS keys
+above). Fresh full flow from synthesis on current RTL (bead `rvb`'s registered SRAM one-hot
+write pre-decode `word_sel_q` + registered AXI-Lite read mux `r_dvalid_q`/`r_ddata_q`, verified
+regression-clean at `soc_all` 178/178, commit `aaeaf36`), `--to OpenROAD.STAMidPNR-3` (includes
+`RepairDesignPostGRT` and `ResizerTimingPostGRT`, real in-session GRT parasitics throughout,
+annotation-gated: 1639/204 196 unannotated at all three post-GRT steps — like-for-like with the
+1553 baseline). 22-minute wall time.
+
+**Result — hold is clean on the real, complete flow path:**
+
+| metric | STAMidPNR-3 (this run) | prior reference |
+| --- | --- | --- |
+| hold WNS / TNS / violators | **0 ps / 0 ps / 0** | -917 ps / -- / 718 (`w3a-sta-7`, pre-`ResizerTimingPostGRT` snapshot — not the true end state, see `0ah` comment) |
+| hold skew, cpu_clk / sys_clk | **+249.2 ps / +656.5 ps** (both passing) | -1687.9 ps worst (pre-fix) |
+| setup WNS / TNS / violators | -1144.5 ps / -17 625 151 ps / 40 192 | -2084 ps / -- / 41 864 (`w3a-sta-7`, different RTL vintage) |
+| power (fabric-only / total) | 111.2 mW / 303.4 mW | -- |
+
+Post-CTS-repair checkpoint (`34-openroad-stamidpnr-2`, placement-estimate parasitics): setup WS
+-960.8 ps / TNS -8 847 840 ps / 26 662 violators; hold WS +26.2 ps / 0 violators; skew worst_hold
++590.5 ps, worst_setup +636.3 ps. `CTS_BALANCE_LEVELS` inserted a 17-stage `delaybuf_*_sys_clk`
+chain (~330 ps insertion) as part of rebalancing sys_clk this time (not cpu_clk) — not directly
+comparable to attempt 4's own post-CTS numbers since `-skip_buffer_removal`, both CTS fixes, and
+the rvb RTL are all simultaneously different from attempt 4 here.
+
+**Setup remains far from closed** — 40 192 violators, dominated by two classes, neither a
+clock-tree/CTS problem:
+
+- **rvb Path B** (GPU `s_axil_rdata` → `periph_bridge`, the `axi_lite_interconnect` registered-mux
+  fix): confirmed no longer limiting — worst violator in this class is only -113.8 ps (21 total),
+  far from the design's -1144.5 ps worst.
+- **rvb Path A** (SRAM write-decode `s_wvalid` fanout, the `word_sel_q` registered one-hot
+  pre-decode fix): improved but not closed. The original *non-terminating oscillation* (bead
+  `w3a`) is gone — the flow now runs end-to-end in 22 minutes — because `word_sel_q` bounded
+  `s_wvalid`'s immediate fanout from ~32 768 per-bit branches to a ~1024-wide `word_we` AND array.
+  But `w_commit` (and therefore every `word_we[gw]` branch) is still purely combinational from
+  `s_wvalid`, so `u_gpu/m_axi_wvalid` still directly launches 6 093/40 202 (15 %) of all setup
+  violators, worst -954.8 ps — second only to the new #1 class below. Bead `rvb` left **open**
+  with this residual recorded.
+- **New #1 class, not caused by rvb**: the SRAM flat `mem[]` array's own combinational 1024:1 read
+  mux (`assign s_rdata = mem[r_idx]`, `rtl/soc/sram_controller.sv:359`, `r_idx` registered at
+  lines 315/330) — a characteristic the module's own header (lines 6-8, 20-22) already documents.
+  9 259/40 202 (23 %) of all setup violators, worst -1144.5 ps
+  (`u_sram._276653_/QN → u_dma.*/D`). Filed as bead `ydw` (P2, new) — candidate fix is a
+  registered read-data/address pre-decode stage (adds read latency, needs human approval, not
+  implemented).
+
+**Bead outcomes**: `0ah` **closed** (hold genuinely fixed on the real flow path). `rvb` **left
+open** (Path B closed-out-worthy, Path A improved but still a top-2 violator class — see that
+bead's comment for the honest breakdown). `ydw` **filed** (new, P2, SRAM read-mux).
