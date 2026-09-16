@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-09-16T11:42:31.051378+00:00",
+  "updated_at": "2026-09-16T12:16:09.873974+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -272,6 +272,78 @@
       },
       "checked_at": "2026-09-13T21:17:32.997797+00:00",
       "note_on_followup_messages": "The mid-task follow-up messages this investigating subagent flagged as prompt injection came from its parent session. The subagent correctly held to its original no-edit/no-commit constraints. The tracked fix was then landed by a separately authorised verification-orchestrator run (66db8e5)."
+    },
+    "rvb_fanout_fix_regression": {
+      "status": "PASS",
+      "bead": "claude_verilog_test-rvb",
+      "commit_verified": "7024319c6d6ac1236e6da2c0f45313c658d56f6d",
+      "purpose": "Full functional verification of the two RTL fixes from docs/design/RVB_FANOUT_FIX_PROPOSAL.md: Path A (sram_controller.sv registered one-hot word-select write decode) and Path B (axi_lite_interconnect.sv registered ring read-data mux, +1 cycle AXI-Lite read latency).",
+      "unit_suites": {
+        "sram_controller_freepdk45": {
+          "total": 11,
+          "pass": 11,
+          "fail": 0
+        },
+        "sram_controller_sky130": {
+          "total": 11,
+          "pass": 11,
+          "fail": 0
+        },
+        "axil_interconnect": {
+          "total": 4,
+          "pass": 4,
+          "fail": 0
+        },
+        "axil_to_apb": {
+          "total": 7,
+          "pass": 7,
+          "fail": 0
+        },
+        "crossbar": {
+          "total": 7,
+          "pass": 7,
+          "fail": 0
+        },
+        "register_bank": {
+          "total": 6,
+          "pass": 6,
+          "fail": 0
+        },
+        "axi4_to_axilite_standalone": "no standalone cocotb suite exists (only tb_axi4_to_axilite.sv wrapper with no .py driver, and no Makefile target) -- exercised only indirectly via soc_all (u_bus.u_periph_bridge instance)"
+      },
+      "soc_all_regression": {
+        "status": "PASS",
+        "total_tests": 178,
+        "pass": 178,
+        "fail": 0,
+        "suites": 25,
+        "note": "25 sub-targets as currently defined in tb/cocotb/soc/Makefile's soc_all recipe, run individually (not via one `make soc_all` invocation) so each suite's results.xml could be captured and gated on directly rather than relying on exit codes. Prior design_state.json baseline (2026-09-13, bead q7n) recorded 183/183 across 26 suites; soc_stress is not part of the current soc_all recipe. The 178 vs 183 delta reflects suite-set drift since that baseline, not a regression -- 0 failures across every suite that IS in the current recipe, including soc_cpu_gpu (GPU config-register reads through the axi_lite_interconnect ring) and soc_boot/soc_periph/soc_coherency (firmware register polling).",
+        "results_xml_dir": "/nobackup/rvb_verif/soc_all_xml/",
+        "raw_log": "/nobackup/rvb_verif/soc_all_run.log"
+      },
+      "cpu_phase2_all_regression": {
+        "status": "PASS",
+        "total_tests": 112,
+        "pass": 112,
+        "fail": 0,
+        "suites": {
+          "smoke_uvm": 4,
+          "isa_uvm": 54,
+          "pipeline_hazards": 16,
+          "interrupts": 13,
+          "debug": 6,
+          "axi_protocol": 12,
+          "fault_injection": 7
+        },
+        "note": "tb/cocotb/cpu does not compile either changed file (sram_controller.sv, axi_lite_interconnect.sv) -- run per task instruction as a broad CPU rollup sanity check, not because it exercises Path A/B directly. Initial run failed all 7 sub-suites identically at simulator dlopen (libexpat.so.1 not found) -- a pre-existing, unrelated harness gap: the Makefile's own opt-in USE_VERILATOR_EXTRALIBS=1 fix for exactly this issue was not set. Re-ran with the equivalent LD_LIBRARY_PATH shim (no tracked file changed) -> 112/112 PASS, matching the historical gh50t baseline exactly.",
+        "raw_log": "/nobackup/rvb_verif/cpu_phase2_all_2.log"
+      },
+      "gpu_ring_suites_scope_note": "GPU standalone cocotb suites (tb/cocotb/gpu/*, sim/Makefile gpu_* targets) instantiate gpu_top directly and never include axi_lite_interconnect.sv -- confirmed via grep (only tb/cocotb/soc/tb_axi_lite_interconnect.sv references the module). GPU config/perf-counter register reads THROUGH the ring are exercised only by soc_cpu_gpu (part of soc_all, PASS above). Full gpu_all (300+ GPU-only tests) was not run since it touches neither changed file; scoped out deliberately.",
+      "rtl_review": "word_sel_q rotate-by-1 ({word_sel_q[MEM_WORDS-2:0], word_sel_q[MEM_WORDS-1]}) manually traced against word_index()'s linear bit-slice addressing (sram_controller.sv) and confirmed equivalent to the original w_idx+1 mod MEM_WORDS wraparound for INCR bursts.",
+      "dut_bugs_found": 0,
+      "fix_request_filed": null,
+      "testbench_files_changed": [],
+      "checked_at": "2026-09-16T12:16:09.873974+00:00"
     }
   },
   "pipeline_session_id": null,
@@ -1623,6 +1695,18 @@
       "retry_strategy": "none",
       "suggested_next_step": "proceed",
       "reason": "Bead 0p6: inventoried every quoted ASAP7 timing/power sign-off figure for bead-8f3 (zero-wire STAMidPNR-3 parasitics) exposure. CPU block and SoC already had honest current-RTL re-validation on disk (bpp7_postgrt_set, w3a-sta-7) from beads 8f3/w3a/86a; cited them with dated inline caveats across ASAP7_RUN_HISTORY.md, GPU_ASAP7_RUN_HISTORY.md, PHASE5_RUN_HISTORY.md, CLAUDE.md, PHASE_STATUS.md, ROADMAP.md, README.md. Confirmed Sky130 unaffected (real STAPostPNR/SPEF). GPU re-validation deferred pending authorization (host cost ~several hours / 9-14+ GiB, bead 0ah concurrency constraint) -- not launched.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-16T12:16:09.873974+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "bead rvb RTL fix (commit 7024319, Path A sram_controller registered one-hot write decode + Path B axi_lite_interconnect registered ring read-data mux) verified clean: unit suites sram_controller(x2 targets)/axil_interconnect/axil_to_apb/crossbar/register_bank all PASS, full soc_all 178/178 PASS across 25 suites, cpu phase2_all 112/112 PASS. No DUT bug found; no fix_request filed. Ready for physical-design-orchestrator re-synth to re-measure Path A/B PD endpoints per the proposal's C.3/C.4.",
       "constraint_ref": null
     }
   ],
