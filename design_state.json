@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-09-16T12:16:09.873974+00:00",
+  "updated_at": "2026-09-16T22:26:35.390824+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -1707,6 +1707,18 @@
       "retry_strategy": "none",
       "suggested_next_step": "proceed",
       "reason": "bead rvb RTL fix (commit 7024319, Path A sram_controller registered one-hot write decode + Path B axi_lite_interconnect registered ring read-data mux) verified clean: unit suites sram_controller(x2 targets)/axil_interconnect/axil_to_apb/crossbar/register_bank all PASS, full soc_all 178/178 PASS across 25 suites, cpu phase2_all 112/112 PASS. No DUT bug found; no fix_request filed. Ready for physical-design-orchestrator re-synth to re-measure Path A/B PD endpoints per the proposal's C.3/C.4.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-16T22:26:35.390824+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "bead claude_verilog_test-ydw (human-approved Option A) implemented: registered the flat-array sram_controller.sv read-data mux (mem[r_idx]) into a single head register (r_data_q/r_valid_q/r_last_q) with prefetch, breaking the 1024:1-mux post-GRT critical path flagged by bead ydw's root-cause analysis (worst slack -1144.52 ps, 23% of setup violators). +1 cycle burst-start latency (first beat only); sustained throughput unchanged at 1 beat/cycle. Verified: lint_soc + lint_soc_sky130 0 errors, asap7-soc-sv2v regenerated with new registers confirmed present, tb/cocotb/soc sram_controller (flat array) 11/11 PASS. SRAM_SKY130 branch/write FSM/ports/soc_top untouched. Commit 339f83a on feat/ydw-sram-registered-read (pushed). Re-measurement of the ASAP7 SoC worst-path list (PD/STA) is a follow-up for physical-design-orchestrator, not performed in this session.",
       "constraint_ref": null
     }
   ],
