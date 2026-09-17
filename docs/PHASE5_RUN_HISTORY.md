@@ -840,3 +840,61 @@ clock-tree/CTS problem:
 **Bead outcomes**: `0ah` **closed** (hold genuinely fixed on the real flow path). `rvb` **left
 open** (Path B closed-out-worthy, Path A improved but still a top-2 violator class — see that
 bead's comment for the honest breakdown). `ydw` **filed** (new, P2, SRAM read-mux).
+
+### CORRECTION (2026-09-17): the CTS fix above was a no-op; reference numbers stand but are not reproducible from config
+
+The `CTS_BALANCE_LEVELS` / `CTS_OBSTRUCTION_AWARE` config keys used in the section above are
+**not real LibreLane 2.4.13 variables** in this project's runtime tree
+(`~/Downloads/Github/librelane`, git commit `3562a8d`, 2026-02-27, unmodified). Both
+`/nobackup/asap7_soc_runs/soc_rvb_0ah.log` and a later `soc-ydw` run's log print `WARNING An
+unknown key 'CTS_BALANCE_LEVELS' / 'CTS_OBSTRUCTION_AWARE' / 'CTS_CLK_NET_BUFFER' was provided`,
+and a direct read of `librelane/scripts/openroad/cts.tcl` confirms it builds its
+`clock_tree_synthesis` argument list from only `CTS_CLK_BUFFERS`, `CTS_ROOT_BUFFER`,
+`CTS_SINK_CLUSTERING_SIZE`, `CTS_SINK_CLUSTERING_MAX_DIAMETER`, `CTS_DISTANCE_BETWEEN_BUFFERS`,
+`CTS_DISABLE_POST_PROCESSING`, and `CTS_CLK_MAX_WIRE_LENGTH` — never the two "fix" keys (nor the
+pre-existing, also-unused `CTS_CLK_NET_BUFFER`, which predates bead `0ah`). **The config change
+in `78c5051`/`f80cb92` was silently ignored by the tool; it did not cause the clean-hold result.**
+
+Re-investigated (read-only, no OpenROAD sessions or PD runs launched) by diffing the reference
+run (`RUN_2026-09-16_19-19-45`) against a same-config, RTL-updated run
+(`RUN_2026-09-17_06-25-54`, bead `ydw`'s +36 sys_clk registered-read flops). Macro placement is
+byte-identical in both (`u_cpu`/`u_gpu` FIXED at the same DEF coordinates), ruling out macro
+movement. `clk_i`'s sink count grew 45305→45340 (consistent with the +36 flops) and its
+macro/register split disappeared; but `cpu_clk_i`'s sink count is **unchanged** (172 in both
+runs) and its split *also* disappeared — ruling out "this net's own sinks changed" as the
+per-net trigger and pointing to a session-wide, not per-net, internal mode selection. Direct
+evidence of two different internal code paths: the reference run's CTS log prints "blockages
+from hard placement blockages and placed macros will be used" (`CTS-0201`) six times and never
+prints `CTS-0200`; the `ydw` run's log prints a *different* message pair, `CTS-0200` ("0
+placement blockages have been identified") plus `CTS-0201` ("placed hard macros will be treated
+like blockages"), four times — the same message ID with two different strings, on the identical
+bundled OpenROAD 26Q2 binary.
+
+**Best-supported hypothesis (medium confidence, log-evidence-based, not confirmed against
+TritonCTS source, which is unavailable for this closed-source-packaged nix build; no bisection
+run was performed)**: TritonCTS in this OpenROAD build auto-selects between two internal
+macro/blockage handling paths based on an undocumented, likely sink-count/density-driven
+threshold evaluated once per `clock_tree_synthesis` invocation (not per net) — `clk_i`'s
+sink-count growth from bead `ydw`'s RTL crossed that threshold and changed behaviour for *all*
+clocks in that invocation, including the unrelated `cpu_clk_i`. The tool itself has no seed or
+randomization flag in its help text, so it is very likely deterministic given fixed inputs; the
+observed run-to-run difference reflects a real netlist/placement difference, not tool
+non-determinism.
+
+**Real, deterministic fix (proposed, not applied — requires human approval to edit the shared
+`librelane` tree)**: `openroad` help text confirms `clock_tree_synthesis` in this 26Q2 build
+genuinely supports a level-balancing toggle, an obstruction-awareness toggle, and macro
+clustering size/diameter settings. Patch `cts.tcl` to translate four new env vars
+(`CTS_BALANCE_LEVELS`, `CTS_OBSTRUCTION_AWARE`, `CTS_MACRO_CLUSTERING_SIZE`,
+`CTS_MACRO_CLUSTERING_MAX_DIAMETER`) into the corresponding `clock_tree_synthesis` arguments, and
+register matching `Variable` declarations (mirroring the existing
+`CTS_SINK_CLUSTERING_SIZE`/`CTS_SINK_CLUSTERING_MAX_DIAMETER` pattern) so the config validator
+accepts them instead of silently dropping them. Explicitly forcing obstruction-awareness plus
+macro clustering size/diameter matched to the existing sink-clustering values (8/10) would make
+the reference run's good behaviour reproducible by design rather than incidental.
+
+**Net effect**: the reference run's numbers (hold WNS 0 ps / 0 violators at `STAMidPNR-3`) are
+real measurements and are **not retracted** — but they are **not reproducible from the config
+alone**; they depended on TritonCTS's own undocumented, netlist-sensitive behaviour on that
+specific run. Bead `0ah` has been **reopened**. Beads `rvb` and `ydw` and their findings in the
+section above are unaffected by this correction.
