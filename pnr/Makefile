@@ -910,7 +910,8 @@ librelane-nangate45-results:
 # and bead claude_verilog_test-ocm.
 librelane-asap7 librelane-asap7-gpu librelane-asap7-soc \
 librelane-asap7-soc-synth librelane-asap7-soc-synth-only \
-librelane-asap7-soc-multiclock macro-views-asap7 \
+librelane-asap7-soc-multiclock librelane-asap7-soc-multiclock-hier \
+macro-views-asap7 \
 librelane-asap7-coalescer-rtl librelane-asap7-coalescer-hls \
 librelane-asap7-hazard-rtl librelane-asap7-hazard-hls \
 librelane-asap7-valu-rtl librelane-asap7-valu-hls \
@@ -958,6 +959,28 @@ check-asap7-openroad:
 	  || { echo "ERROR: odbpy imports do not resolve under $(ASAP7_OPENROAD_BIN)."; \
 	       echo "       Every Odb.* step would fail with ModuleNotFoundError."; exit 1; }
 	@echo "  ok: odbpy imports (click, rich, yaml, ioplace_parser) resolve"
+	@# Non-vacuous, bead claude_verilog_test-djm: everything above only proves
+	@# ASAP7_OPENROAD_BIN itself is a valid, non-known-bad 26Q2 binary -- it does
+	@# NOT prove the calling target's actual invocation ("openroad" resolved via
+	@# bare PATH inside nix-shell) uses it. That requires the calling target to be
+	@# in the OR_PATH_PREFIX list at pnr/Makefile:911-918; that list is manually
+	@# maintained per-target, so a newly-added target that depends on this rule
+	@# but forgets to join the list silently falls back to nix-shell's own
+	@# bundled OpenROAD (OR_PATH_PREFIX defaults to empty at line 181) -- the
+	@# exact failure this whole check exists to prevent, just one hop further.
+	@# Target-specific variables propagate to prerequisites, so $(OR_PATH_PREFIX)
+	@# is non-empty here whenever this runs as a prerequisite of a properly-
+	@# listed target, and empty otherwise -- making this a direct test of the gap.
+	@resolved=$$(cd $(LIBRELANE_DIR) && nix-shell --run "$(OR_PATH_PREFIX) command -v openroad" 2>/dev/null); \
+	  case "$$resolved" in \
+	    */.openroad-shim/openroad) echo "  ok: 'openroad' resolves to pinned shim ($$resolved)" ;; \
+	    *) echo "ERROR: 'openroad' resolves to '$$resolved', not the pinned 26Q2 shim"; \
+	       echo "       ($(ASAP7_OR_SHIM_DIR)/openroad)."; \
+	       echo "       The calling target depends on check-asap7-openroad but is"; \
+	       echo "       missing from the OR_PATH_PREFIX target list at"; \
+	       echo "       pnr/Makefile:911-918 -- see bead claude_verilog_test-djm."; \
+	       exit 1 ;; \
+	  esac
 
 # Install the real ASAP7 OpenRCX extraction-rules deck, replacing the 0-byte
 # rcx_rules.pex stub the manual PDK tree ships with. ~/pdk/asap7 is NOT a git

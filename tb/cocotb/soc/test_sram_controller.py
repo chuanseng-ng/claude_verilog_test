@@ -13,6 +13,8 @@
 # The BFM drives no AxID fields (the crossbar tags them internally).  ID-echo
 # tests use the manual _write_with_id / _read_with_id helpers below.
 
+import random
+
 import cocotb
 from bfm.axi4_master import RESP_OKAY, AXI4Master
 from cocotb.clock import Clock
@@ -22,6 +24,7 @@ from cocotb.utils import get_sim_time
 CLK_PERIOD_NS = 2
 RESP_SLVERR = 0b10
 SIZE_4B = 0b010
+BURST_FIXED = 0b00
 BURST_INCR = 0b01
 
 SRAM_BASE  = 0x0000_2000
@@ -534,13 +537,19 @@ async def test_burst_read_throughput_1_beat_per_cycle(dut):
     got = []
     cyc = 0
     timeout_cycles = 200
-    # Check-before-advance (ReadOnly() first, THEN RisingEdge): RVALID can
-    # already be true for the very cycle RREADY is asserted -- e.g. on the
-    # default flat array, RVALID/RDATA for the first beat become valid in
-    # the same cycle the AR-accept edge lands, before this loop ever runs.
-    # Checking only *after* crossing a RisingEdge first (as an earlier
-    # revision of this test did) misses that already-valid first beat --
-    # a testbench bug (silently dropping the first beat), not an RTL one.
+    # Check-before-advance (ReadOnly() first, THEN RisingEdge): this loop makes
+    # no assumption about how many cycles elapse between the AR-accept edge
+    # and the first RVALID -- burst-start latency is an implementation detail
+    # of the read FSM, not a protocol guarantee (bead ydw, 2026-09-17:
+    # registering the flat array's read mux raised the default build's
+    # burst-start latency from 1 cycle to 2; SRAM_SKY130 pays 3 for its own,
+    # unrelated, macro-latency reason -- see sram_controller.sv's read-FSM
+    # header comment for both timing diagrams). Checking via ReadOnly()
+    # *before* advancing to a new RisingEdge (rather than
+    # RisingEdge-then-ReadOnly, as an earlier revision of this test did)
+    # guarantees the very first cycle RVALID becomes true is sampled no
+    # matter which cycle that turns out to be -- an off-by-one here would
+    # silently drop whichever beat lands first.
     while len(got) < length and cyc < timeout_cycles:
         await ReadOnly()
         if dut.s_rvalid.value:
@@ -573,3 +582,272 @@ async def test_burst_read_throughput_1_beat_per_cycle(dut):
         f"test_burst_read_throughput_1_beat_per_cycle PASS: {length} beats, "
         f"all inter-beat gaps == {CLK_PERIOD_NS} ns (1 beat/cycle)"
     )
+
+
+# ── Test 12: FIXED burst read -- address never advances ─────────────────────
+# bead ydw follow-up (verification-orchestrator targeted-coverage task): every
+# prior burst test uses BURST_INCR only. AXI_BURST_FIXED (2'b00) is a
+# supported burst type per both the write and read FSMs (`w_incr`/`r_incr`
+# gate the index increment on `s_awburst`/`s_arburst == AXI_BURST_INCR`) and
+# was never exercised. The BFM's write()/read() hardcode INCR, so this test
+# drives AR manually.
+
+@cocotb.test()
+async def test_fixed_burst_read(dut):
+    """FIXED burst re-reads the same address every beat -- AxADDR never
+    advances, so every beat returns the one word stored there."""
+    m = await _setup(dut)
+    addr = SRAM_BASE + 0x900
+    bresp = await m.write(addr, [0xF00D_CAFE])
+    assert bresp == RESP_OKAY, f"seed write resp {bresp:#x}"
+
+    length = 4
+    dut.s_arid.value    = 0
+    dut.s_araddr.value  = addr
+    dut.s_arlen.value   = length - 1
+    dut.s_arsize.value  = SIZE_4B
+    dut.s_arburst.value = BURST_FIXED
+    dut.s_arvalid.value = 1
+    while True:
+        await ReadOnly()
+        if dut.s_arready.value:
+            break
+        await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+    dut.s_arvalid.value = 0
+
+    dut.s_rready.value = 1
+    got = []
+    cyc = 0
+    timeout_cycles = 200
+    while len(got) < length and cyc < timeout_cycles:
+        await ReadOnly()
+        if dut.s_rvalid.value:
+            assert int(dut.s_rresp.value) == RESP_OKAY, (
+                f"cyc={cyc}: rresp {int(dut.s_rresp.value):#x}"
+            )
+            got.append(int(dut.s_rdata.value))
+            if len(got) == length:
+                assert int(dut.s_rlast.value) == 1, "RLAST missing on final FIXED beat"
+            else:
+                assert int(dut.s_rlast.value) == 0, f"early RLAST at beat {len(got)}"
+        await RisingEdge(dut.clk)
+        cyc += 1
+    dut.s_rready.value = 0
+
+    assert len(got) == length, (
+        f"timeout after {cyc} cycles: only {len(got)}/{length} FIXED beats captured"
+    )
+    assert got == [0xF00D_CAFE] * length, (
+        f"FIXED burst must re-read the same address every beat: got "
+        f"{[hex(d) for d in got]}, expected 4x 0xf00dcafe"
+    )
+    dut._log.info("test_fixed_burst_read PASS")
+
+
+# ── Test 13: FIXED burst write -- only the last beat's data survives ────────
+
+@cocotb.test()
+async def test_fixed_burst_write(dut):
+    """FIXED burst write re-targets the same address every beat -- each beat
+    overwrites the previous one, so only the LAST beat's data survives."""
+    m = await _setup(dut)
+    addr = SRAM_BASE + 0xA00
+    beats = [0x1111_1111, 0x2222_2222, 0x3333_3333, 0x4444_4444]
+
+    dut.s_awid.value    = 0
+    dut.s_awaddr.value  = addr
+    dut.s_awlen.value   = len(beats) - 1
+    dut.s_awsize.value  = SIZE_4B
+    dut.s_awburst.value = BURST_FIXED
+    dut.s_awvalid.value = 1
+    while True:
+        await ReadOnly()
+        if dut.s_awready.value:
+            break
+        await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+    dut.s_awvalid.value = 0
+
+    for i, beat in enumerate(beats):
+        dut.s_wdata.value  = beat
+        dut.s_wstrb.value  = 0xF
+        dut.s_wlast.value  = 1 if i == len(beats) - 1 else 0
+        dut.s_wvalid.value = 1
+        while True:
+            await ReadOnly()
+            if dut.s_wready.value:
+                break
+            await RisingEdge(dut.clk)
+        await RisingEdge(dut.clk)
+    dut.s_wvalid.value = 0
+    dut.s_wlast.value  = 0
+
+    dut.s_bready.value = 1
+    while True:
+        await ReadOnly()
+        if dut.s_bvalid.value:
+            break
+        await RisingEdge(dut.clk)
+    bresp = int(dut.s_bresp.value)
+    await RisingEdge(dut.clk)
+    dut.s_bready.value = 0
+    assert bresp == RESP_OKAY, f"FIXED burst write resp {bresp:#x}"
+
+    data, rresp = await m.read(addr, length=1)
+    assert rresp == RESP_OKAY
+    assert data[0] == beats[-1], (
+        f"FIXED burst write must leave only the LAST beat's data at the "
+        f"address: got {data[0]:#010x}, expected {beats[-1]:#010x}"
+    )
+    dut._log.info("test_fixed_burst_write PASS")
+
+
+# ── Test 14: burst spanning the MEM_WORDS index wraparound ──────────────────
+# word_index() masks the byte offset to IDX_W = $clog2(MEM_WORDS) bits, so the
+# realised backing store aliases every 2**IDX_W words -- a burst whose index
+# crosses that boundary must wrap cleanly (word MEM_WORDS-1 -> word 0), not
+# corrupt or drop the wrapped beats. Uses a byte offset of -2 words (mod any
+# power-of-two MEM_WORDS) so the SAME hardcoded address exercises the wrap
+# identically for both the flat-array default build (MEM_WORDS=4096) and the
+# SRAM_SKY130 build (MEM_WORDS=1024, via -GMEM_WORDS=1024) -- 1024 divides
+# 4096, so offset -2 mod 4096 is also -2 mod 1024; no reflection on the
+# DUT's MEM_WORDS parameter is needed.
+
+@cocotb.test()
+async def test_mem_words_wraparound_burst(dut):
+    """A 4-beat INCR burst starting 2 words before the backing store's
+    index wraparound must land its last 2 beats at word index 0/1, not
+    corrupt/drop them and not alias onto the wrong words."""
+    m = await _setup(dut)
+    wrap_off_words = 4094  # == -2 mod 4096 == -2 mod 1024 == -2 mod 2**k for any k<=12
+    base = SRAM_BASE + wrap_off_words * 4
+
+    # Sentinel writes to the two low-index words BEFORE the wrapped burst --
+    # if the wrap silently missed (dropped the beat instead of writing word
+    # 0/1), the readback below would still see these sentinels, not garbage.
+    sentinel = 0xBAD0_0000
+    assert await m.write(SRAM_BASE + 0 * 4, [sentinel | 0]) == RESP_OKAY
+    assert await m.write(SRAM_BASE + 1 * 4, [sentinel | 1]) == RESP_OKAY
+
+    words = [0xFEED_0000 + i for i in range(4)]
+    bresp = await m.write(base, words)
+    assert bresp == RESP_OKAY, f"wraparound burst write resp {bresp:#x}"
+
+    data, rresp = await m.read(base, length=4)
+    assert rresp == RESP_OKAY, f"wraparound burst read resp {rresp:#x}"
+    assert data == words, (
+        f"wraparound burst readback mismatch:\n  got {[hex(d) for d in data]}\n"
+        f"  exp {[hex(w) for w in words]}"
+    )
+
+    # Direct, non-wrapped single-beat reads of the two low-index words must
+    # now show the wrapped burst's beats 2/3 -- confirms the wrapped write
+    # really landed at word index 0/1 (not silently dropped or misaliased).
+    d0, r0 = await m.read(SRAM_BASE + 0 * 4, length=1)
+    d1, r1 = await m.read(SRAM_BASE + 1 * 4, length=1)
+    assert r0 == RESP_OKAY and r1 == RESP_OKAY
+    assert d0[0] == words[2], (
+        f"wrapped word index 0: got {d0[0]:#010x}, expected {words[2]:#010x} "
+        f"(seeing the sentinel {sentinel:#010x} would mean the wrap missed)"
+    )
+    assert d1[0] == words[3], (
+        f"wrapped word index 1: got {d1[0]:#010x}, expected {words[3]:#010x}"
+    )
+    dut._log.info("test_mem_words_wraparound_burst PASS")
+
+
+# ── Test 15: randomised R-channel backpressure, scoreboard-checked ──────────
+# Generalises test_read_backpressure_no_drop_no_dup's single fixed RREADY
+# pattern to genuinely randomised stimulus across multiple burst lengths and
+# seeds, per the V-plan's constrained-random guidance (>= several distinct
+# seeds before declaring a class covered). Same protocol invariants checked
+# per cycle: VALID-stability while pending, no drop/dup, RLAST exactly on the
+# final beat -- plus a full-burst scoreboard compare against the written data.
+
+@cocotb.test()
+async def test_read_backpressure_random(dut):
+    """Randomised RREADY (8 seeds, burst lengths 2..8) must never drop,
+    duplicate, or early-terminate a beat; RVALID/RDATA must hold stable
+    while a beat is pending; final data must match a per-seed scoreboard."""
+    m = await _setup(dut)
+    base = SRAM_BASE + 0xC00
+
+    for seed in range(8):
+        length = 2 + (seed % 7)   # burst lengths 2..8
+        addr = base + seed * 0x40
+        words = [0xE000_0000 + (seed << 8) + i for i in range(length)]
+        bresp = await m.write(addr, words)
+        assert bresp == RESP_OKAY, f"seed={seed}: seed write resp {bresp:#x}"
+
+        rng = random.Random(seed)
+
+        dut.s_arid.value    = 0
+        dut.s_araddr.value  = addr
+        dut.s_arlen.value   = length - 1
+        dut.s_arsize.value  = SIZE_4B
+        dut.s_arburst.value = BURST_INCR
+        dut.s_arvalid.value = 1
+        while True:
+            await ReadOnly()
+            if dut.s_arready.value:
+                break
+            await RisingEdge(dut.clk)
+        await RisingEdge(dut.clk)
+        dut.s_arvalid.value = 0
+
+        got = []
+        pending = False
+        pending_data = None
+        cyc = 0
+        timeout_cycles = 300
+        while len(got) < length and cyc < timeout_cycles:
+            rr = rng.random() < 0.6
+            dut.s_rready.value = int(rr)
+            await RisingEdge(dut.clk)
+            rvalid = int(dut.s_rvalid.value)
+            rdata  = int(dut.s_rdata.value)
+            rlast  = int(dut.s_rlast.value)
+            rresp  = int(dut.s_rresp.value)
+
+            if pending:
+                assert rvalid == 1, (
+                    f"seed={seed} cyc={cyc}: RVALID dropped a pending "
+                    f"(unconsumed) beat under random backpressure"
+                )
+                assert rdata == pending_data, (
+                    f"seed={seed} cyc={cyc}: RDATA changed ({rdata:#010x} != "
+                    f"{pending_data:#010x}) while a pending beat was held"
+                )
+
+            transfer_now = bool(rvalid) and rr
+            if transfer_now:
+                assert rresp == RESP_OKAY, f"seed={seed} cyc={cyc}: rresp {rresp:#x}"
+                got.append(rdata)
+                if len(got) == length:
+                    assert rlast == 1, (
+                        f"seed={seed} cyc={cyc}: RLAST missing on final beat"
+                    )
+                else:
+                    assert rlast == 0, (
+                        f"seed={seed} cyc={cyc}: early RLAST at beat "
+                        f"{len(got)}/{length}"
+                    )
+
+            pending = bool(rvalid) and not rr
+            pending_data = rdata
+            cyc += 1
+
+        dut.s_rready.value = 0
+        assert len(got) == length, (
+            f"seed={seed}: timeout after {cyc} cycles, only {len(got)}/{length} "
+            f"beats captured"
+        )
+        assert got == words, (
+            f"seed={seed}: random-backpressure readback mismatch (dropped/"
+            f"duplicated/reordered beats):\n  got {[hex(d) for d in got]}\n"
+            f"  exp {[hex(w) for w in words]}"
+        )
+        await RisingEdge(dut.clk)   # let the FSM settle back to IDLE before the next seed
+
+    dut._log.info("test_read_backpressure_random PASS (8 seeds, lengths 2..8)")

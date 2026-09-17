@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-09-16T12:16:09.873974+00:00",
+  "updated_at": "2026-09-16T23:17:45.806257+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -344,6 +344,76 @@
       "fix_request_filed": null,
       "testbench_files_changed": [],
       "checked_at": "2026-09-16T12:16:09.873974+00:00"
+    },
+    "ydw_registered_sram_read_regression": {
+      "status": "PASS",
+      "bead": "claude_verilog_test-ydw",
+      "commit_verified": "339f83a",
+      "purpose": "Full regression re-run for the registered flat-array SRAM read fix (burst-start latency 1->2 cycles) landed on feat/ydw-sram-registered-read.",
+      "sram_controller_flat": {
+        "total": 15,
+        "pass": 15,
+        "fail": 0,
+        "note": "11 pre-existing + 4 new (FIXED read/write, MEM_WORDS wraparound, randomised backpressure)"
+      },
+      "sram_controller_sky130": {
+        "total": 15,
+        "pass": 15,
+        "fail": 0,
+        "note": "same 4 new tests re-verified unchanged against SRAM_SKY130 (MEM_WORDS=1024)"
+      },
+      "soc_all_regression": {
+        "status": "PASS",
+        "total_tests": 186,
+        "pass": 186,
+        "fail": 0,
+        "skip": 0,
+        "suites": 25,
+        "note": "was 178/178 at commit 7024319 (bead rvb baseline); +8 delta is exactly the 4 new sram_controller tests x 2 builds (flat+sky130) that soc_all runs -- no other suite's count changed.",
+        "results_xml_dir": "/nobackup/ydw_soc_all_results/"
+      },
+      "cpu_phase2_all_regression": {
+        "status": "PASS",
+        "total_tests": 112,
+        "pass": 112,
+        "fail": 0,
+        "note": "matches historical gh50t/rvb baseline exactly; no libexpat dlopen error this run.",
+        "results_xml_dir": "/nobackup/ydw_cpu_phase2_results/"
+      },
+      "soc_stress": {
+        "status": "PASS",
+        "total_tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "sim_cycles": 1104324,
+        "stress_iterations": "10/10",
+        "wall_clock_s": 549.48,
+        "note": "excluded from soc_all by design (long runtime); run separately, well under the 1.5h budget. Comparable to prior 1,079,867-cycle M9 baseline.",
+        "log": "/nobackup/ydw_soc_stress/run.log"
+      },
+      "lint": {
+        "lint_soc": "RC=0, 0 errors",
+        "lint_soc_sky130": "RC=0, 0 errors",
+        "note": "only 3 pre-existing UNUSEDPARAM warnings (rv32i_cache_pkg.sv), unrelated"
+      },
+      "gpu_axi4_master_vs_sram_scope": "soc_coherency (3/3) and soc_cpu_gpu (2/2), both part of soc_all, are the suites that exercise the GPU AXI4 master through axi4_crossbar against this sram_controller.sv (GPU standalone cocotb suites instantiate gpu_top directly against a separate GPU_SRAM_SIM model, never sram_controller.sv -- confirmed via grep, not assumed). soc_multiclock (4/4) / soc_pll_multiclock (1/1), the 7ns/3ns coprime-ratio CDC suites, also reused and green.",
+      "mutation_check": {
+        "targeted_tests": [
+          "test_burst_read_throughput_1_beat_per_cycle",
+          "test_read_backpressure_no_drop_no_dup"
+        ],
+        "mutant": "sram_controller.sv:454 (ifndef SRAM_SKY130 read FSM) r_idx <= r_idx + 1'b1 changed to (r_idx + 1'b1) + 1'b1 -- double index increment, drops every other beat",
+        "result": "both targeted tests FAILED against the mutant (TESTS=2 PASS=0 FAIL=2, readback showed skipped words)",
+        "revert_verified": "git diff empty after restoring the backup; re-ran same 2 tests post-revert: TESTS=2 PASS=2 FAIL=0"
+      },
+      "doc_fix": "tb/cocotb/soc/test_sram_controller.py ~line 537-543 stale comment (described old 0-extra-latency/same-cycle RVALID) rewritten to describe the new 2-cycle(flat)/3-cycle(sky130) burst-start latency, latency-agnostic; comment-only, no assertion changed.",
+      "dut_bugs_found": 0,
+      "fix_request_filed": null,
+      "testbench_files_changed": [
+        "tb/cocotb/soc/test_sram_controller.py"
+      ],
+      "rtl_files_changed": [],
+      "checked_at": "2026-09-16T23:17:45.806257+00:00"
     }
   },
   "pipeline_session_id": null,
@@ -1707,6 +1777,30 @@
       "retry_strategy": "none",
       "suggested_next_step": "proceed",
       "reason": "bead rvb RTL fix (commit 7024319, Path A sram_controller registered one-hot write decode + Path B axi_lite_interconnect registered ring read-data mux) verified clean: unit suites sram_controller(x2 targets)/axil_interconnect/axil_to_apb/crossbar/register_bank all PASS, full soc_all 178/178 PASS across 25 suites, cpu phase2_all 112/112 PASS. No DUT bug found; no fix_request filed. Ready for physical-design-orchestrator re-synth to re-measure Path A/B PD endpoints per the proposal's C.3/C.4.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-16T22:26:35.390824+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "bead claude_verilog_test-ydw (human-approved Option A) implemented: registered the flat-array sram_controller.sv read-data mux (mem[r_idx]) into a single head register (r_data_q/r_valid_q/r_last_q) with prefetch, breaking the 1024:1-mux post-GRT critical path flagged by bead ydw's root-cause analysis (worst slack -1144.52 ps, 23% of setup violators). +1 cycle burst-start latency (first beat only); sustained throughput unchanged at 1 beat/cycle. Verified: lint_soc + lint_soc_sky130 0 errors, asap7-soc-sv2v regenerated with new registers confirmed present, tb/cocotb/soc sram_controller (flat array) 11/11 PASS. SRAM_SKY130 branch/write FSM/ports/soc_top untouched. Commit 339f83a on feat/ydw-sram-registered-read (pushed). Re-measurement of the ASAP7 SoC worst-path list (PD/STA) is a follow-up for physical-design-orchestrator, not performed in this session.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-16T23:17:45.806257+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Full regression re-run for bead ydw's registered-SRAM-read RTL fix (commit 339f83a): sram_controller 15/15 both builds (4 new FIXED/wraparound/random-backpressure tests), soc_all 186/186 (25 suites, +8 vs 178 baseline explained by the 4 new tests x 2 builds), cpu phase2_all 112/112 (baseline match), soc_stress 1/1 (1.1M cycles). Mutation check confirmed the two targeted throughput/backpressure tests are real beat-drop detectors. Doc-only stale-comment fix applied. 0 DUT bugs found.",
       "constraint_ref": null
     }
   ],

@@ -4904,3 +4904,124 @@ this file's sibling knowledge.md):
   pd.asap7_gyx_irdrop, pd.asap7_ocm_drc_memory_tradeoff, history[] entry).
   Not committed/pushed per explicit instruction not to touch git this
   session -- reported back for the user to land.
+
+---
+
+run_id:      pd_20260917_062542
+design_name: soc_top (ASAP7 SoC, multiclock hierarchical)
+pdk:         asap7 (predictive)
+tool:        LibreLane (bundled, /home/neuromorphic/Downloads/Github/librelane)
+start_time:  2026-09-17T06:25:42+07:00
+last_stage:  routing (launched, in progress -- launch-only task, not monitored to completion)
+purpose:     Measure bead claude_verilog_test-ydw's fix (commit 339f83a, registered
+             sram_controller flat-array read data r_data_q/r_valid_q/r_last_q via
+             r_issue_now) against reference run soc-rvb-0ah
+             (pnr/asap7/soc/runs/RUN_2026-09-16_19-19-45), which found the SRAM
+             flat mem[] 1024:1 read mux as the #1 setup violator class
+             (worst -1144.5 ps, 9259/40192 violators).
+config:      pnr/asap7/soc/config_multiclock_hier_rsz7_0ah.json (unchanged,
+             like-for-like with reference)
+launch_cmd:  systemd-run --user --scope --unit=soc-ydw -p MemoryMax=11500M
+             -p MemorySwapMax=0 bash -c 'cd .../pnr && make
+             librelane-asap7-soc-multiclock-hier
+             SOC_CONFIG=config_multiclock_hier_rsz7_0ah.json
+             LIBRELANE_EXTRA_ARGS="--to OpenROAD.STAMidPNR-3"'
+run_dir:     pnr/asap7/soc/runs/RUN_2026-09-17_06-25-54
+log:         /nobackup/asap7_soc_runs/soc_ydw.log
+branch:      feat/ydw-sram-registered-read (not switched)
+sv2v_regen:  make -C pnr asap7-soc-sv2v re-run before launch; confirmed
+             r_data_q, r_issue_now, r_dvalid_q, word_sel_q all present in
+             pnr/asap7/soc/soc_top_sv2v.v (gitignored, not tracked -- no
+             commit needed/possible for this artifact)
+status:      Scope confirmed active at launch (~15s in): Yosys synthesis
+             completed, flow past Lint/Checker steps into
+             OpenROAD.STAMidPNR-3 pipeline. Not monitored further --
+             coordinator watches the scope and resumes for analysis at
+             completion.
+INVALIDATED: this run (soc-ydw, RUN_2026-09-17_06-25-54) silently used the
+             bundled edf00dff OpenROAD, not 26Q2 -- see bead
+             claude_verilog_test-djm. librelane-asap7-soc-multiclock-hier
+             was missing from the target-specific OR_PATH_PREFIX list at
+             pnr/Makefile:911-918, so OR_PATH_PREFIX defaulted to empty
+             (line 181) and the bare `openroad` inside nix-shell resolved
+             to nix-shell's own bundled build instead of the pinned shim.
+             check-asap7-openroad (a real prerequisite of this target) only
+             validated ASAP7_OPENROAD_BIN's value, not that the flow's
+             actual invocation used it -- so the preflight passed while the
+             flow ran the wrong tool. Not a like-for-like comparison
+             against reference RUN_2026-09-16_19-19-45 (which used 26Q2 via
+             a hand-rolled script bypassing this Makefile target). Scope
+             stopped by coordinator; do not draw conclusions from this
+             run's results.
+
+---
+
+run_id:      pd_20260917_090142
+design_name: soc_top (ASAP7 SoC, multiclock hierarchical)
+pdk:         asap7 (predictive)
+tool:        LibreLane (bundled, /home/neuromorphic/Downloads/Github/librelane),
+             pinned OpenROAD 26Q2 via fixed OR_PATH_PREFIX
+start_time:  2026-09-17T09:01:25+07:00
+last_stage:  STAMidPNR-3 (COMPLETE, EXIT_CODE=0, 2026-09-17 13:20)
+purpose:     Re-measure bead claude_verilog_test-ydw's fix (commit 339f83a,
+             registered sram_controller flat-array read data) against
+             reference soc-rvb-0ah (RUN_2026-09-16_19-19-45), now that bead
+             claude_verilog_test-djm's Makefile gap is fixed -- this is the
+             first ydw measurement confirmed to run on the correct (26Q2)
+             OpenROAD toolchain via the standard Makefile target.
+fix_applied: commit eb7f4be (pushed, feat/ydw-sram-registered-read):
+             librelane-asap7-soc-multiclock-hier added to the OR_PATH_PREFIX
+             target list (pnr/Makefile ~911-918); check-asap7-openroad
+             hardened with a fail-loud check that resolves `command -v
+             openroad` under the caller's OR_PATH_PREFIX inside nix-shell
+             and errors if it doesn't land on the pinned shim. Audit of all
+             other check-asap7-openroad-dependent ASAP7 targets found no
+             further gaps.
+config:      pnr/asap7/soc/config_multiclock_hier_rsz7_0ah.json (unchanged,
+             like-for-like with reference)
+launch_cmd:  systemd-run --user --scope --unit=soc-ydw2 -p MemoryMax=11500M
+             -p MemorySwapMax=0 bash -c 'cd .../pnr && make
+             librelane-asap7-soc-multiclock-hier
+             SOC_CONFIG=config_multiclock_hier_rsz7_0ah.json
+             LIBRELANE_EXTRA_ARGS="--to OpenROAD.STAMidPNR-3"'
+run_dir:     pnr/asap7/soc/runs/RUN_2026-09-17_09-01-42
+log:         /nobackup/asap7_soc_runs/soc_ydw2.log
+branch:      feat/ydw-sram-registered-read (not switched)
+sv2v_regen:  not re-run this launch -- soc_top_sv2v.v from the prior soc-ydw
+             prep (r_data_q/r_issue_now/r_dvalid_q/word_sel_q confirmed
+             present) reused; RTL unchanged since then.
+binary_check: CONFIRMED ~25 min in, at Floorplan/GeneratePDN stage: live
+             openroad process PID 1073282's /proc/PID/exe resolves to
+             /nix/store/hgqrwa4687mf7n0y2x6lcgx1kj42sfga-openroad-26Q2/bin/.openroad-wrapped
+             -- the pinned 26Q2 binary, not edf00dff. djm's fix verified
+             working on a live run.
+status:      COMPLETE. soc-ydw2 finished with EXIT_CODE=0 at 2026-09-17 13:20.
+
+FINAL RESULT (STAMidPNR-3, nom_tt_025C_0p7V) vs reference RUN_2026-09-16_19-19-45:
+  setup WNS -1050.16 ps (ref -1144.5, +8.2%), TNS -14,423,700 ps (ref
+  -17,625,151, +18.2%), 33,196 violators (ref 40,192, -17.4%). Hold clean
+  (WNS 0 / TNS 0 / WS +38.01 ps / 0 viol), same as reference. cpu_clk skew
+  hold +236.29 ps / setup +285.26 ps; sys_clk skew hold +640.42 ps / setup
+  +695.55 ps (ref hold +249.2/+656.5 ps -- within ~13-16 ps, confirms 26Q2
+  CTS behaviour reproduces via the standard Makefile target). Power 293.2 mW
+  total / 100.7 mW fabric-only (ref 303.4/111.2). Annotation 1426
+  unannotated / 0 partial (ref 1639).
+
+Violator class breakdown (violator_list.rpt, 33,206 lines): SRAM read-mux
+class (u_sram mem[] QN -> u_dma/u_xbar, was reference's #1 at 9259/-1144.5)
+is CONFIRMED GONE (0 matches). New confined internal class u_sram->u_sram
+(mem[]->r_data_q head register): 32 violators, worst -947.29 ps -- the key
+ydw measurement, worse than the ~-300ps estimate but no longer the critical
+path. New #1 overall: u_gpu/m_axi_wvalid -> u_sram (rvb Path A residual),
+16,400 violators, worst -1050.16 ps (= new overall WNS). #2: u_dma ->
+u_sram (DMA analog of Path A), 14,392 violators, worst -975.65 ps. These
+two classes are 92.7% of all violators.
+
+Bead outcomes: ydw CLOSED (read-mux class eliminated and verified on real
+post-route STA; residual mem->r_data_q and 2-stage-mux-split assessment
+recorded, not implemented). rvb left OPEN (Path A residual is now the #1
+class, not gone). 0ah CLOSED (resolved by pinning 26Q2/djm; hold clean
+end-to-end, both clocks' skew within ~13-16 ps of the reference,
+reproduced via the standard Makefile target -- satisfies 0ah's own reopen
+condition). Full detail: docs/PHASE5_RUN_HISTORY.md dated section
+2026-09-17, "bead djm fixed, clean 26Q2 re-run".

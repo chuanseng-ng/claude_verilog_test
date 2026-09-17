@@ -840,3 +840,194 @@ clock-tree/CTS problem:
 **Bead outcomes**: `0ah` **closed** (hold genuinely fixed on the real flow path). `rvb` **left
 open** (Path B closed-out-worthy, Path A improved but still a top-2 violator class — see that
 bead's comment for the honest breakdown). `ydw` **filed** (new, P2, SRAM read-mux).
+
+### CORRECTION (2026-09-17): the CTS fix above was a no-op; reference numbers stand but are not reproducible from config
+
+The `CTS_BALANCE_LEVELS` / `CTS_OBSTRUCTION_AWARE` config keys used in the section above are
+**not real LibreLane 2.4.13 variables** in this project's runtime tree
+(`~/Downloads/Github/librelane`, git commit `3562a8d`, 2026-02-27, unmodified). Both
+`/nobackup/asap7_soc_runs/soc_rvb_0ah.log` and a later `soc-ydw` run's log print `WARNING An
+unknown key 'CTS_BALANCE_LEVELS' / 'CTS_OBSTRUCTION_AWARE' / 'CTS_CLK_NET_BUFFER' was provided`,
+and a direct read of `librelane/scripts/openroad/cts.tcl` confirms it builds its
+`clock_tree_synthesis` argument list from only `CTS_CLK_BUFFERS`, `CTS_ROOT_BUFFER`,
+`CTS_SINK_CLUSTERING_SIZE`, `CTS_SINK_CLUSTERING_MAX_DIAMETER`, `CTS_DISTANCE_BETWEEN_BUFFERS`,
+`CTS_DISABLE_POST_PROCESSING`, and `CTS_CLK_MAX_WIRE_LENGTH` — never the two "fix" keys (nor the
+pre-existing, also-unused `CTS_CLK_NET_BUFFER`, which predates bead `0ah`). **The config change
+in `78c5051`/`f80cb92` was silently ignored by the tool; it did not cause the clean-hold result.**
+
+Re-investigated (read-only, no OpenROAD sessions or PD runs launched) by diffing the reference
+run (`RUN_2026-09-16_19-19-45`) against a same-config, RTL-updated run
+(`RUN_2026-09-17_06-25-54`, bead `ydw`'s +36 sys_clk registered-read flops). Macro placement is
+byte-identical in both (`u_cpu`/`u_gpu` FIXED at the same DEF coordinates), ruling out macro
+movement. `clk_i`'s sink count grew 45305→45340 (consistent with the +36 flops) and its
+macro/register split disappeared; but `cpu_clk_i`'s sink count is **unchanged** (172 in both
+runs) and its split *also* disappeared — ruling out "this net's own sinks changed" as the
+per-net trigger and pointing to a session-wide, not per-net, internal mode selection. Direct
+evidence of two different internal code paths: the reference run's CTS log prints "blockages
+from hard placement blockages and placed macros will be used" (`CTS-0201`) six times and never
+prints `CTS-0200`; the `ydw` run's log prints a *different* message pair, `CTS-0200` ("0
+placement blockages have been identified") plus `CTS-0201` ("placed hard macros will be treated
+like blockages"), four times — the same message ID with two different strings, on the identical
+bundled OpenROAD 26Q2 binary.
+
+**Best-supported hypothesis (medium confidence, log-evidence-based, not confirmed against
+TritonCTS source, which is unavailable for this closed-source-packaged nix build; no bisection
+run was performed)**: TritonCTS in this OpenROAD build auto-selects between two internal
+macro/blockage handling paths based on an undocumented, likely sink-count/density-driven
+threshold evaluated once per `clock_tree_synthesis` invocation (not per net) — `clk_i`'s
+sink-count growth from bead `ydw`'s RTL crossed that threshold and changed behaviour for *all*
+clocks in that invocation, including the unrelated `cpu_clk_i`. The tool itself has no seed or
+randomization flag in its help text, so it is very likely deterministic given fixed inputs; the
+observed run-to-run difference reflects a real netlist/placement difference, not tool
+non-determinism.
+
+**Real, deterministic fix (proposed, not applied — requires human approval to edit the shared
+`librelane` tree)**: `openroad` help text confirms `clock_tree_synthesis` in this 26Q2 build
+genuinely supports a level-balancing toggle, an obstruction-awareness toggle, and macro
+clustering size/diameter settings. Patch `cts.tcl` to translate four new env vars
+(`CTS_BALANCE_LEVELS`, `CTS_OBSTRUCTION_AWARE`, `CTS_MACRO_CLUSTERING_SIZE`,
+`CTS_MACRO_CLUSTERING_MAX_DIAMETER`) into the corresponding `clock_tree_synthesis` arguments, and
+register matching `Variable` declarations (mirroring the existing
+`CTS_SINK_CLUSTERING_SIZE`/`CTS_SINK_CLUSTERING_MAX_DIAMETER` pattern) so the config validator
+accepts them instead of silently dropping them. Explicitly forcing obstruction-awareness plus
+macro clustering size/diameter matched to the existing sink-clustering values (8/10) would make
+the reference run's good behaviour reproducible by design rather than incidental.
+
+**Net effect**: the reference run's numbers (hold WNS 0 ps / 0 violators at `STAMidPNR-3`) are
+real measurements and are **not retracted** — but they are **not reproducible from the config
+alone**; they depended on TritonCTS's own undocumented, netlist-sensitive behaviour on that
+specific run. Bead `0ah` has been **reopened**. Beads `rvb` and `ydw` and their findings in the
+section above are unaffected by this correction.
+
+### FURTHER CORRECTION (2026-09-17, second pass): the "identical binary" premise above was also wrong
+
+The correction section above assumed the reference run and `soc-ydw` used the same OpenROAD
+26Q2 binary and differed only in RTL/netlist. That premise is wrong. Confirmed from artifacts
+(read-only: log/config reads plus two cheap, no-design `-version`/`help` queries on already-
+resident binaries — no new PD runs launched):
+
+- **Attempt 4** (`RUN_2026-09-16_01-13-02`, the original bead `0ah` baseline, -823.5 ps
+  post-CTS) and **`w3a-sta-7`** (`RUN_2026-09-16_05-52-48`, the original -1687.9 ps "post-GRT"
+  number): `memory/pd/run_state.md`'s own header for that campaign states "tool: LibreLane
+  2.4.13 ... bundled OpenROAD edf00dff / OpenSTA 2.6.0 (`OR_PATH_PREFIX=`)" — the **bundled**
+  `edf00dff` build, not the pinned 26Q2 shim.
+- The **reference run** (`RUN_2026-09-16_19-19-45`, this bead's closure basis): launched by a
+  hand-rolled script that explicitly set `PATH` to the 26Q2 shim inside `nix-shell` — confirmed
+  **26Q2** by its 1639-unannotated-driver count and a repair-progress table with Area/StTNS/EnTNS
+  columns.
+- **`soc-ydw`** (`RUN_2026-09-17_06-25-54`): launched via `make librelane-asap7-soc-multiclock-hier`,
+  which never sets `OR_PATH_PREFIX` (new bead `djm`) — confirmed **`edf00dff`** by its
+  4663-unannotated-driver count, a repair-progress table lacking the Area/StTNS/EnTNS columns
+  (single TNS column instead), and the live process binary itself reporting version
+  `edf00dff99f6c40d67a30c0e22a8191c5d2ed9d6`.
+
+So the real comparison this whole investigation made was **bundled `edf00dff` (attempt 4,
+`w3a-sta-7`, `soc-ydw`) vs the pinned 26Q2 (the one reference run)** — a tool-version difference,
+not a config or session-state difference. `clock_tree_synthesis` help text differs between the
+two binaries: 26Q2 adds `macro_clustering_size`/`macro_clustering_max_diameter` and a
+`no_obstruction_aware` complement that `edf00dff` lacks entirely. Since the shared `cts.tcl`
+never passes any macro-specific flag explicitly, the two binaries' own different built-in
+defaults for a clock net mixing macro and register sinks is the simplest, best-supported
+explanation for the macro/register split and latency-balancing difference — superseding the
+"session-wide TritonCTS mode" hypothesis in the correction above (whose underlying log
+observations remain accurate, just better explained this way).
+
+**Revised conclusion**: bead `0ah`'s apparent "fix" was most likely the pinned 26Q2 build's
+TritonCTS macro-aware clustering, reached by accident because the validating script bypassed a
+buggy Makefile target — not any config key (already confirmed a no-op) and not a documented,
+controllable CTS setting.
+
+**New Makefile gap found (bead `claude_verilog_test-djm`, P1, filed, not fixed)**:
+`librelane-asap7-soc-multiclock-hier` — the target this entire campaign (`w3a`/`rvb`/`0ah`/`ydw`)
+has used — is missing from `pnr/Makefile`'s target-specific `OR_PATH_PREFIX` assignment
+(~line 918), even though `librelane-asap7-soc-multiclock` (without `-hier`) is present. Its
+prerequisite `check-asap7-openroad` correctly verifies `ASAP7_OPENROAD_BIN` points at a valid
+26Q2 build and explicitly rejects `edf00dff` — but only checks the *variable's value*, not that
+the flow's actual bare `openroad` invocation resolves to it. The preflight passes while the flow
+silently uses the rejected build anyway: precisely the "silent fallback to LibreLane's own
+OpenROAD" failure mode (bead `xy6`) this check exists to prevent, via an untested code path.
+One-line fix (add the target to the existing list) described in bead `djm`; not applied yet.
+
+**Revised fix recommendation**: the `cts.tcl` passthrough proposed in the correction above is
+most likely **unnecessary**. If bead `djm`'s Makefile fix is applied and the flow consistently
+runs on the pinned 26Q2 build, 26Q2's own default TritonCTS macro-clustering behaviour may
+already reproduce the clean-hold result with no new config knobs — the passthrough should be
+treated as a fallback only if a properly-pinned 26Q2 re-run does *not* reproduce it on its own.
+
+Bead `0ah` remains open. The full `0ah`/`rvb`/`ydw` comparison chain needs re-running on a
+consistently-pinned 26Q2 build (after `djm`'s fix) before this bead can be honestly closed.
+
+### 2026-09-17: bead `djm` fixed, clean 26Q2 re-run (`soc-ydw2`, `RUN_2026-09-17_09-01-42`) — `ydw` closed, `0ah` closed, `rvb` remains open
+
+**`djm` fix** (commit `eb7f4be`): `pnr/Makefile`'s target-specific `OR_PATH_PREFIX` list
+(~line 911-918) now includes `librelane-asap7-soc-multiclock-hier`. `check-asap7-openroad`
+(the shared preflight) was also hardened: it now resolves a bare `openroad` inside `nix-shell`
+under the *caller's* `OR_PATH_PREFIX` (propagated to prerequisites by GNU Make) and fails the
+build if it does not land on the pinned shim — so a future target that forgets to join the list
+fails loudly at preflight instead of silently mis-running on the bundled build. An audit of
+every other ASAP7 target depending on `check-asap7-openroad` found no further gaps.
+
+**Re-run**: `make librelane-asap7-soc-multiclock-hier SOC_CONFIG=config_multiclock_hier_rsz7_0ah.json
+LIBRELANE_EXTRA_ARGS="--to OpenROAD.STAMidPNR-3"`, unit `soc-ydw2`, run dir
+`pnr/asap7/soc/runs/RUN_2026-09-17_09-01-42`, `EXIT_CODE=0`. Binary confirmed live via
+`/proc/PID/exe` at the Floorplan/PDN stage: `/nix/store/hgqrwa4687mf7n0y2x6lcgx1kj42sfga-openroad-26Q2/bin/.openroad-wrapped`
+— the pinned 26Q2 build, launched through the **standard** Makefile target for the first time
+in this campaign (not a hand-rolled `PATH`-override script).
+
+**STAMidPNR-3 final (nom_tt_025C_0p7V) vs. reference `RUN_2026-09-16_19-19-45` (26Q2, rvb RTL, same config):**
+
+| Metric | Reference (rvb RTL) | `soc-ydw2` (ydw RTL) | Δ |
+| --- | --- | --- | --- |
+| Setup WNS | -1144.5 ps | -1050.16 ps | +94.4 ps (+8.2%) |
+| Setup TNS | -17,625,151 ps | -14,423,700 ps | +18.2% |
+| Setup violators | 40,192 | 33,196 | -17.4% |
+| Hold WNS / TNS / violators | 0 / 0 / 0 | 0 / 0 / 0 (WS +38.01 ps) | clean, both |
+| cpu_clk hold skew | +249.2 ps | +236.29 ps | within ~13 ps |
+| sys_clk hold skew | +656.5 ps | +640.42 ps | within ~16 ps |
+| Power total / fabric-only | 303.4 / 111.2 mW | 293.2 / 100.7 mW | ~-3% |
+| Unannotated / partial drivers | 1639 / — | 1426 / 0 | fewer (RTL-size delta) |
+
+**Bead `ydw` — CLOSED.** Violator-class analysis of `violator_list.rpt` (33,206 lines):
+
+- The SRAM flat-array read-mux class (startpoint `u_sram` mem[] `QN` → endpoint `u_dma` or
+  `u_bus.u_xbar`; reference's #1 class, 9,259 violators, worst -1144.5 ps) is **completely gone**
+  — 0 matches for `u_sram.*→u_dma` or `u_sram.*→u_bus.u_xbar` in the final violator list.
+- It is replaced by a much smaller, module-internal class, `u_sram → u_sram` (the mem[]→
+  `r_data_q` head-register segment ydw's design intentionally confines the mux's fan-out to):
+  **32 violators** (matches the 32-bit read-data width), **worst slack -947.29 ps**. This is
+  worse than the pre-measurement estimate of ~-300 ps (about 3x), a real and substantial
+  residual, but it no longer propagates outside `sram_controller.sv` and is no longer the
+  design's critical path. Post-synthesis instance names are fully anonymized (the flat 4096×32
+  array is fully deduped/optimized by yosys), so the exact bit/word cannot be cited by RTL name.
+- The new #1 class overall (by count and by worst slack) is **not** a read-side effect at all:
+  `u_gpu/m_axi_wvalid → u_sram` (rvb's Path A write-decode residual), 16,400 violators, worst
+  -1050.16 ps = the run's new overall setup WNS. `u_dma → u_sram` (DMA's own analog of the same
+  pattern) is a close second: 14,392 violators, worst -975.65 ps. Together these two classes are
+  92.7% of all setup violators.
+- A 2-stage mux split (e.g. 32:1×32:1 instead of flat 1024:1) for the residual mem[]→`r_data_q`
+  path was assessed as a plausible future improvement given the -947 ps residual, but judged
+  **not urgent**: the write-path classes are ~100 ps worse and >500x more numerous, making them
+  the higher-leverage target for the next PD iteration. Not implemented.
+
+**Bead `rvb` — remains OPEN.** Path A (`u_gpu/m_axi_wvalid` → flat write decode) is not gone;
+it is now the design's #1 class (16,400 violators / -1050.16 ps vs. the reference measurement's
+6,093 / -954.8 ps). A DMA-side analog of the same pattern (`u_dma → u_sram`, 14,392 / -975.65 ps)
+also appears. Whether Path A's own severity truly regressed, or the count/attention simply
+redistributed onto it once the read-mux class (ydw) was removed, is not isolated by this
+measurement — recorded on the bead as an open question. Recommended as the next PD target given
+it is now >90% of all setup violators combined with its DMA analog.
+
+**Bead `0ah` — CLOSED**, resolved by pinning 26Q2 (`djm`). Hold is clean end-to-end and clean
+*before* dedicated hold repair even runs (0 violators already at the post-CTS checkpoint,
+`32-openroad-stamidpnr-1`, WS +36.64 ps). Both clocks' skew is healthy positive and within
+~13-16 ps of the original (accidental) reference-run measurement, now reproduced through the
+**standard** Makefile path. This confirms the bead's own final root-cause conclusion — 26Q2's
+TritonCTS macro-aware clustering default, not the confirmed-no-op `CTS_BALANCE_LEVELS`/
+`CTS_OBSTRUCTION_AWARE` config keys — and satisfies the bead's own stated reopen condition (a
+clean re-run of the full `0ah`/`rvb`/`ydw` chain on a consistently-pinned 26Q2 build via the
+fixed Makefile target). No `cts.tcl` passthrough patch is needed.
+
+Note: this run stopped at `--to OpenROAD.STAMidPNR-3` (no detailed routing / DRC / antenna / LVS
+steps ran), so it is a timing-only measurement, not a routing sign-off; the power figures above
+include the `Macro` power group (192.5 mW), unlike some earlier ASAP7 sign-offs in this document
+that reported fabric-only figures as the headline number.

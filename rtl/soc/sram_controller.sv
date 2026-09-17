@@ -18,8 +18,15 @@
 //     depth-1 AXI4 master BFM and the M3 crossbar's per-slave lock.
 //   * INCR and FIXED bursts supported; WRAP / out-of-range -> SLVERR response.
 //   * WSTRB byte enables honoured on writes.  BID/RID echo AWID/ARID.
-//   * Default (flat array): reads are combinational, registered index —
-//     RDATA is valid the cycle RVALID is asserted (0 extra latency).
+//   * Default (flat array): reads are REGISTERED (bead ydw, 2026-09-17) —
+//     `mem[r_idx]` (a 1024:1 read mux) feeds a single head register
+//     (r_data_q/r_valid_q/r_last_q) and nothing else, so the crossbar/
+//     consumer segment downstream of s_rdata never sees the mux. Burst-start
+//     latency is 2 cycles (was 1 / "0 extra"): only the FIRST beat costs the
+//     extra cycle — once primed, continuous RREADY still sustains 1
+//     beat/cycle. See the read FSM comment below (sram_controller.sv read
+//     FSM, `ifndef SRAM_SKY130` branch) for the full timing diagram and the
+//     read-after-write hazard analysis.
 //   * SRAM_SKY130 (hard macro): writes go to the macro's port 0 (RW, used
 //     write-only here); reads go to the macro's port 1 (dedicated read-only
 //     port). The macro's dout1 is NEGEDGE-launched (addr1/csb1 presented in
@@ -36,8 +43,8 @@
 //     beat is ever dropped, duplicated, or exposed before its data is
 //     genuinely valid. Burst *start* latency is 3 cycles (R_IDLE->R_BUSY,
 //     1 cycle to land in the macro, 1 cycle to land in the buffer) versus
-//     the flat array's immediate first beat; sustained throughput is
-//     unaffected.
+//     the flat array's 2-cycle registered first beat; sustained throughput
+//     is unaffected either way.
 //
 // Ports are the slave-side mirror of the crossbar's `s1_*` (SRAM) port group
 // in tb_axi4_crossbar.sv; all widths come from axi_pkg.  Flat per-channel
@@ -307,46 +314,152 @@ module sram_controller
 
     // ── Read FSM ─────────────────────────────────────────────────────────────
 `ifndef SRAM_SKY130
-    // ---- Default: flat behavioral array, combinational read (0-cycle
-    // additional latency beyond the R_IDLE->R_DATA state transition already
-    // present here). ----
-    typedef enum logic [0:0] {R_IDLE, R_DATA} rstate_e;
+    // ---- Default: flat behavioral array, REGISTERED read (bead ydw). ----
+    //
+    // claude_verilog_test-ydw: the previous `assign s_rdata = mem[r_idx]`
+    // was a *live combinational* 1024:1 read mux — MEM_WORDS storage-flop
+    // outputs into a DW-wide mux, straight out to s_rdata and on into
+    // u_bus.u_xbar / the consuming master. On the ASAP7 SoC post-GRT STA
+    // this was the dominant worst-path class: u_sram's mem[] storage flop
+    // -> ~1050 ps of buffer/wire spread -> ~900 ps of mux -> s_rdata ->
+    // crossbar -> u_dma.D, worst slack -1144.52 ps, 23% of all setup
+    // violators. Fix: register the mux's output directly, one cycle after
+    // the address is issued, so nothing downstream of s_rdata ever sees the
+    // mux — only a flip-flop.
+    //
+    // Select-path note: `r_idx` (the mux select) is a plain register, set
+    // once on AR-accept and incremented in place by the sequential block
+    // below. The select is never a live `rready ? r_idx+1 : r_idx`
+    // combinational expression in front of the 1024:1 mux — r_idx already
+    // *is* next-address-or-current, decided a cycle earlier, so the mux's
+    // only fan-in beyond mem[] is that one register.
+    //
+    // Timing (R_IDLE -> R_BUSY, then steady-state streaming):
+    //   R_IDLE : wait for ARVALID; on accept, latch idx/cnt/id/err/incr,
+    //            set r_active, move to R_BUSY. No mem[] read is issued this
+    //            cycle (mirrors the R_IDLE->R_BUSY latency the SRAM_SKY130
+    //            branch already pays for its own, unrelated, reason).
+    //   R_BUSY : `r_issue_now` reads mem[r_idx] into the head register
+    //            (r_data_q/r_last_q/r_valid_q, exposed directly as
+    //            s_rdata/s_rlast/s_rvalid) whenever the head has room, or is
+    //            about to: `r_active && (!r_valid_q || s_rready)`.
+    //              - Head empty (!r_valid_q): fetch immediately.
+    //              - Head full but consumed this cycle (RVALID && RREADY):
+    //                the just-fetched word replaces the outgoing one on the
+    //                very next edge — no bubble, so continuous RREADY
+    //                sustains 1 beat/cycle indefinitely once primed.
+    //              - Head full, RVALID && !RREADY (backpressure): r_issue_now
+    //                is low, no new mem[] read happens, and r_data_q/
+    //                r_last_q/r_valid_q simply hold — RDATA/RLAST/RVALID
+    //                stay stable under backpressure and no beat is ever
+    //                skipped or duplicated.
+    //            Returns to R_IDLE once every beat has been fetched
+    //            (!r_active) and the head has drained (!r_valid_q, or it
+    //            drains this very cycle).
+    //
+    // Latency: burst-start latency is 2 cycles (R_IDLE->R_BUSY, then one
+    // cycle for the registered mem[] read to land in the head) versus the
+    // previous 1-cycle / "0 extra latency" combinational design — a +1-cycle
+    // cost on the FIRST beat only. Sustained throughput, INCR vs FIXED
+    // addressing, SLVERR (r_err) behaviour, and MEM_WORDS wraparound (still
+    // the same `r_idx + 1'b1`, unaffected by the power-of-two width) are all
+    // unchanged from the previous design.
+    //
+    // Read-after-write hazard analysis: while the head is held across a
+    // multi-cycle stall (RVALID && !RREADY), a write landing at the same
+    // word address that is already sitting in r_data_q is NOT reflected —
+    // the head keeps presenting the pre-write snapshot for the rest of the
+    // stall. The previous combinational design re-read mem[] live every
+    // cycle and so *could* pick up such a write mid-stall. This is a change
+    // within an already-unspecified corner, not a new class of bug:
+    // axi4_crossbar.sv gives each slave independent, depth-1-outstanding
+    // write and read engines (axi4_crossbar.sv:9) and explicitly does NOT
+    // interlock a concurrent AR against an in-flight AW to the same slave —
+    // "A master that requires read-after-write ordering to the same slave
+    // must wait for B before AR" (axi4_crossbar.sv:22-27). So no fabric
+    // interlock rules this race out, but AXI4 itself defines no ordering
+    // here either way, and this SoC's coherency model is entirely
+    // software-managed (CLAUDE.md: the CPU explicitly flushes/invalidates
+    // its D-cache around GPU launches; no master is expected to write and
+    // read the same live address without an intervening BRESP). No RTL
+    // bypass is added for it: a same-address forwarding compare would have
+    // to index the MEM_WORDS-wide one-hot write-select vector (word_sel_q)
+    // by the held read index, reintroducing exactly the class of wide
+    // indexed mux this fix removes. If a future master needs a hardware-
+    // guaranteed same-cycle RAW bypass to this SRAM, prefer a narrow one-hot
+    // AND/OR-reduce compare (`|(word_sel_q & word_onehot(r_held_idx_q))`)
+    // over a binary index compare.
+    typedef enum logic [0:0] {R_IDLE, R_BUSY} rstate_e;
     rstate_e          rstate;
-    logic [IDX_W-1:0] r_idx;
-    logic [LENW-1:0]  r_cnt;
+    logic [IDX_W-1:0] r_idx;    // next address to fetch from mem[]
+    logic [LENW-1:0]  r_cnt;    // beats remaining to fetch (arlen down to 0)
+    logic             r_active; // 1 from AR-accept until the final beat has
+                                 // been fetched
     logic [IW-1:0]    rid_q;
     logic             r_err;
     logic             r_incr;
 
+    // ---- Head register: one prefetched beat, exposed directly to AXI. ----
+    logic             r_valid_q;
+    logic             r_last_q;
+    logic [DW-1:0]    r_data_q;
+
+    // Fetch a new word into the head whenever the head is empty, or is being
+    // drained this very cycle (guaranteeing it room for the incoming word) —
+    // see the Timing note above.
+    logic r_issue_now;
+    assign r_issue_now = r_active && (!r_valid_q || s_rready);
+
+    // The head is (or is about to become) empty this cycle — used only to
+    // decide the R_BUSY -> R_IDLE transition, never on the mux/select path.
+    logic r_head_clearing;
+    assign r_head_clearing = !r_valid_q || s_rready;
+
     always_ff @(posedge clk) begin
         if (!rst_n) begin
-            rstate <= R_IDLE;
-            r_err  <= 1'b0;
-            r_incr <= 1'b0;
+            rstate    <= R_IDLE;
+            r_active  <= 1'b0;
+            r_err     <= 1'b0;
+            r_incr    <= 1'b0;
+            r_valid_q <= 1'b0;
+            r_last_q  <= 1'b0;
+            r_data_q  <= '0;
         end else begin
             unique case (rstate)
                 R_IDLE: begin
                     if (s_arvalid) begin
-                        r_idx  <= word_index(s_araddr);
-                        r_cnt  <= s_arlen;
-                        rid_q  <= s_arid;
-                        r_err  <= ~in_range(s_araddr)
-                                  || ~in_range(last_addr(s_araddr, s_arlen, s_arburst))
-                                  || (s_arburst == AXI_BURST_WRAP);
-                        r_incr <= (s_arburst == AXI_BURST_INCR);
-                        rstate <= R_DATA;
+                        r_idx    <= word_index(s_araddr);
+                        r_cnt    <= s_arlen;
+                        rid_q    <= s_arid;
+                        r_err    <= ~in_range(s_araddr)
+                                    || ~in_range(last_addr(s_araddr, s_arlen, s_arburst))
+                                    || (s_arburst == AXI_BURST_WRAP);
+                        r_incr   <= (s_arburst == AXI_BURST_INCR);
+                        r_active <= 1'b1;
+                        rstate   <= R_BUSY;
                     end
                 end
-                R_DATA: begin
-                    if (s_rready) begin
+                R_BUSY: begin
+                    if (r_issue_now) begin
+                        // The 1024:1 read mux — its only consumer is this
+                        // one register.
+                        r_data_q  <= mem[r_idx];
+                        r_last_q  <= (r_cnt == '0);
+                        r_valid_q <= 1'b1;
                         if (r_cnt == '0) begin
-                            rstate <= R_IDLE;
+                            r_active <= 1'b0;
                         end else begin
+                            r_cnt <= r_cnt - 1'b1;
                             if (r_incr) begin
                                 r_idx <= r_idx + 1'b1;
                             end
-                            r_cnt <= r_cnt - 1'b1;
                         end
+                    end else if (s_rready) begin
+                        // Head consumed with nothing to replace it -> empty.
+                        r_valid_q <= 1'b0;
+                    end
+                    if (!r_active && r_head_clearing) begin
+                        rstate <= R_IDLE;
                     end
                 end
                 default: rstate <= R_IDLE;
@@ -355,11 +468,11 @@ module sram_controller
     end
 
     assign s_arready = (rstate == R_IDLE);
-    assign s_rvalid  = (rstate == R_DATA);
-    assign s_rdata   = mem[r_idx];
+    assign s_rvalid  = r_valid_q;
+    assign s_rdata   = r_data_q;
     assign s_rid     = rid_q;
     assign s_rresp   = r_err ? AXI_RESP_SLVERR : AXI_RESP_OKAY;
-    assign s_rlast   = (r_cnt == '0);
+    assign s_rlast   = r_last_q;
 
 `else
     // ---- SRAM_SKY130: hard macro, port 1 (dedicated read-only port). ----
