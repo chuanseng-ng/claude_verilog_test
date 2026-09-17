@@ -956,3 +956,78 @@ treated as a fallback only if a properly-pinned 26Q2 re-run does *not* reproduce
 
 Bead `0ah` remains open. The full `0ah`/`rvb`/`ydw` comparison chain needs re-running on a
 consistently-pinned 26Q2 build (after `djm`'s fix) before this bead can be honestly closed.
+
+### 2026-09-17: bead `djm` fixed, clean 26Q2 re-run (`soc-ydw2`, `RUN_2026-09-17_09-01-42`) — `ydw` closed, `0ah` closed, `rvb` remains open
+
+**`djm` fix** (commit `eb7f4be`): `pnr/Makefile`'s target-specific `OR_PATH_PREFIX` list
+(~line 911-918) now includes `librelane-asap7-soc-multiclock-hier`. `check-asap7-openroad`
+(the shared preflight) was also hardened: it now resolves a bare `openroad` inside `nix-shell`
+under the *caller's* `OR_PATH_PREFIX` (propagated to prerequisites by GNU Make) and fails the
+build if it does not land on the pinned shim — so a future target that forgets to join the list
+fails loudly at preflight instead of silently mis-running on the bundled build. An audit of
+every other ASAP7 target depending on `check-asap7-openroad` found no further gaps.
+
+**Re-run**: `make librelane-asap7-soc-multiclock-hier SOC_CONFIG=config_multiclock_hier_rsz7_0ah.json
+LIBRELANE_EXTRA_ARGS="--to OpenROAD.STAMidPNR-3"`, unit `soc-ydw2`, run dir
+`pnr/asap7/soc/runs/RUN_2026-09-17_09-01-42`, `EXIT_CODE=0`. Binary confirmed live via
+`/proc/PID/exe` at the Floorplan/PDN stage: `/nix/store/hgqrwa4687mf7n0y2x6lcgx1kj42sfga-openroad-26Q2/bin/.openroad-wrapped`
+— the pinned 26Q2 build, launched through the **standard** Makefile target for the first time
+in this campaign (not a hand-rolled `PATH`-override script).
+
+**STAMidPNR-3 final (nom_tt_025C_0p7V) vs. reference `RUN_2026-09-16_19-19-45` (26Q2, rvb RTL, same config):**
+
+| Metric | Reference (rvb RTL) | `soc-ydw2` (ydw RTL) | Δ |
+| --- | --- | --- | --- |
+| Setup WNS | -1144.5 ps | -1050.16 ps | +94.4 ps (+8.2%) |
+| Setup TNS | -17,625,151 ps | -14,423,700 ps | +18.2% |
+| Setup violators | 40,192 | 33,196 | -17.4% |
+| Hold WNS / TNS / violators | 0 / 0 / 0 | 0 / 0 / 0 (WS +38.01 ps) | clean, both |
+| cpu_clk hold skew | +249.2 ps | +236.29 ps | within ~13 ps |
+| sys_clk hold skew | +656.5 ps | +640.42 ps | within ~16 ps |
+| Power total / fabric-only | 303.4 / 111.2 mW | 293.2 / 100.7 mW | ~-3% |
+| Unannotated / partial drivers | 1639 / — | 1426 / 0 | fewer (RTL-size delta) |
+
+**Bead `ydw` — CLOSED.** Violator-class analysis of `violator_list.rpt` (33,206 lines):
+
+- The SRAM flat-array read-mux class (startpoint `u_sram` mem[] `QN` → endpoint `u_dma` or
+  `u_bus.u_xbar`; reference's #1 class, 9,259 violators, worst -1144.5 ps) is **completely gone**
+  — 0 matches for `u_sram.*→u_dma` or `u_sram.*→u_bus.u_xbar` in the final violator list.
+- It is replaced by a much smaller, module-internal class, `u_sram → u_sram` (the mem[]→
+  `r_data_q` head-register segment ydw's design intentionally confines the mux's fan-out to):
+  **32 violators** (matches the 32-bit read-data width), **worst slack -947.29 ps**. This is
+  worse than the pre-measurement estimate of ~-300 ps (about 3x), a real and substantial
+  residual, but it no longer propagates outside `sram_controller.sv` and is no longer the
+  design's critical path. Post-synthesis instance names are fully anonymized (the flat 4096×32
+  array is fully deduped/optimized by yosys), so the exact bit/word cannot be cited by RTL name.
+- The new #1 class overall (by count and by worst slack) is **not** a read-side effect at all:
+  `u_gpu/m_axi_wvalid → u_sram` (rvb's Path A write-decode residual), 16,400 violators, worst
+  -1050.16 ps = the run's new overall setup WNS. `u_dma → u_sram` (DMA's own analog of the same
+  pattern) is a close second: 14,392 violators, worst -975.65 ps. Together these two classes are
+  92.7% of all setup violators.
+- A 2-stage mux split (e.g. 32:1×32:1 instead of flat 1024:1) for the residual mem[]→`r_data_q`
+  path was assessed as a plausible future improvement given the -947 ps residual, but judged
+  **not urgent**: the write-path classes are ~100 ps worse and >500x more numerous, making them
+  the higher-leverage target for the next PD iteration. Not implemented.
+
+**Bead `rvb` — remains OPEN.** Path A (`u_gpu/m_axi_wvalid` → flat write decode) is not gone;
+it is now the design's #1 class (16,400 violators / -1050.16 ps vs. the reference measurement's
+6,093 / -954.8 ps). A DMA-side analog of the same pattern (`u_dma → u_sram`, 14,392 / -975.65 ps)
+also appears. Whether Path A's own severity truly regressed, or the count/attention simply
+redistributed onto it once the read-mux class (ydw) was removed, is not isolated by this
+measurement — recorded on the bead as an open question. Recommended as the next PD target given
+it is now >90% of all setup violators combined with its DMA analog.
+
+**Bead `0ah` — CLOSED**, resolved by pinning 26Q2 (`djm`). Hold is clean end-to-end and clean
+*before* dedicated hold repair even runs (0 violators already at the post-CTS checkpoint,
+`32-openroad-stamidpnr-1`, WS +36.64 ps). Both clocks' skew is healthy positive and within
+~13-16 ps of the original (accidental) reference-run measurement, now reproduced through the
+**standard** Makefile path. This confirms the bead's own final root-cause conclusion — 26Q2's
+TritonCTS macro-aware clustering default, not the confirmed-no-op `CTS_BALANCE_LEVELS`/
+`CTS_OBSTRUCTION_AWARE` config keys — and satisfies the bead's own stated reopen condition (a
+clean re-run of the full `0ah`/`rvb`/`ydw` chain on a consistently-pinned 26Q2 build via the
+fixed Makefile target). No `cts.tcl` passthrough patch is needed.
+
+Note: this run stopped at `--to OpenROAD.STAMidPNR-3` (no detailed routing / DRC / antenna / LVS
+steps ran), so it is a timing-only measurement, not a routing sign-off; the power figures above
+include the `Macro` power group (192.5 mW), unlike some earlier ASAP7 sign-offs in this document
+that reported fabric-only figures as the headline number.
