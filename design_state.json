@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-09-16T23:17:45.806257+00:00",
+  "updated_at": "2026-09-17T11:33:13.416943+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -1801,6 +1801,18 @@
       "retry_strategy": "none",
       "suggested_next_step": "proceed",
       "reason": "Full regression re-run for bead ydw's registered-SRAM-read RTL fix (commit 339f83a): sram_controller 15/15 both builds (4 new FIXED/wraparound/random-backpressure tests), soc_all 186/186 (25 suites, +8 vs 178 baseline explained by the 4 new tests x 2 builds), cpu phase2_all 112/112 (baseline match), soc_stress 1/1 (1.1M cycles). Mutation check confirmed the two targeted throughput/backpressure tests are real beat-drop detectors. Doc-only stale-comment fix applied. 0 DUT bugs found.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-17T11:33:13.416943+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "bead claude_verilog_test-rvb Path A residual fix implemented (commit 23bacae, branch feat/rvb-sram-write-path): replaced the first rvb iteration's word_sel_q one-hot register (still a same-cycle s_wvalid fan-out cone, confirmed the #1 post-route setup-violator class at RUN_2026-09-17_09-01-42, 16400 violators, worst -1050.16 ps) with a 3-stage registered, group-distributed write pipeline in sram_controller.sv (ifndef SRAM_SKY130 branch only): stage 1 input register, stage 2 per-group (32-word) we/data registers structurally distinguished via a self-holding grp_wdata_q to defeat Yosys opt_merge, stage 3 per-group mem[] write. +2 cycle write-commit latency, 1 beat/cycle throughput preserved, BVALID delayed (new W_DRAIN state) until the burst's last beat has landed so B-respecting masters always read fresh data. Verified: lint_soc + lint_soc_sky130 0 errors; standalone verilator elaboration clean at MEM_WORDS=1024/4096/65536; asap7-soc-sv2v regenerates cleanly (6821->6921 lines, 51->53 clocked always blocks); yosys synth + opt_merge -share_all on the standalone module confirms 0 cells removed (no group-register collapse); tb/cocotb/soc sram_controller 15/15 PASS on both SRAM_TARGET=freepdk45 and SRAM_TARGET=sky130 (sky130/SRAM_SKY130 branch untouched, confirmed zero regression). CPU D-cache, GPU memory_coalescer, and DMA engine verified safe-by-construction against the new in-flight RAW window (none issue a same-address read before observing the preceding write's B). Full soc_all regression and a fresh ASAP7 SoC PD re-run are follow-ups for verification-orchestrator and physical-design-orchestrator respectively, not performed in this session per task scope.",
       "constraint_ref": null
     }
   ],
