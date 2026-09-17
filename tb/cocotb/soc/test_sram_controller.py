@@ -26,6 +26,7 @@ RESP_SLVERR = 0b10
 SIZE_4B = 0b010
 BURST_FIXED = 0b00
 BURST_INCR = 0b01
+BURST_WRAP = 0b10
 
 SRAM_BASE  = 0x0000_2000
 SRAM_LIMIT = 0x0FFF_FFFF   # inclusive top of SRAM window
@@ -153,6 +154,81 @@ async def _read_with_id(dut, addr, axid):
     dut.s_rready.value = 0
     assert rlast == 1, "single-beat read must assert RLAST"
     return data, rresp, rid
+
+
+def _apply_strb(old, new, strb):
+    """Byte-merge `old` and `new` per a 4-bit WSTRB mask (bit i -> byte i,
+    LSB-first) -- the same semantics as sram_controller.sv's stage-3 write
+    (`mem[GIDX][b*8 +: 8] <= grp_wdata_q[...][b*8 +: 8]` gated per-byte by
+    grp_we_q[...][b]). Used to compute expected readback values without
+    hand-deriving bitmasks per test (a frequent source of test-authoring
+    bugs, not DUT bugs)."""
+    result = 0
+    for b in range(4):
+        byte = (new >> (b * 8)) & 0xFF if (strb >> b) & 1 else (old >> (b * 8)) & 0xFF
+        result |= byte << (b * 8)
+    return result
+
+
+async def _manual_write_burst(dut, base_addr, beats, burst=BURST_INCR, awid=0):
+    """Manual burst write with independent per-beat WSTRB and optional WVALID
+    idle gaps between beats. `beats` is a list of (data, strb) or (data,
+    strb, gap_cycles) tuples -- `gap_cycles` idle (WVALID=0) cycles are
+    driven immediately before that beat's data is presented. Returns
+    (bresp, bid).
+
+    WREADY is unconditional whenever wstate==W_DATA (never gated on this
+    pipeline's own occupancy -- see sram_controller.sv's write-pipeline
+    header comment), so there is never a "beat presented but not yet
+    accepted" case to model here: once WVALID is asserted for a beat it is
+    accepted on that same cycle, exactly like every other manual write
+    helper in this file (_write_with_id, test_fixed_burst_write).
+    """
+    n = len(beats)
+    dut.s_awid.value    = awid
+    dut.s_awaddr.value  = base_addr
+    dut.s_awlen.value   = n - 1
+    dut.s_awsize.value  = SIZE_4B
+    dut.s_awburst.value = burst
+    dut.s_awvalid.value = 1
+    while True:
+        await ReadOnly()
+        if dut.s_awready.value:
+            break
+        await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+    dut.s_awvalid.value = 0
+
+    for i, beat in enumerate(beats):
+        data, strb = beat[0], beat[1]
+        gap = beat[2] if len(beat) > 2 else 0
+        for _ in range(gap):
+            dut.s_wvalid.value = 0
+            await RisingEdge(dut.clk)
+        dut.s_wdata.value  = data
+        dut.s_wstrb.value  = strb
+        dut.s_wlast.value  = 1 if i == n - 1 else 0
+        dut.s_wvalid.value = 1
+        while True:
+            await ReadOnly()
+            if dut.s_wready.value:
+                break
+            await RisingEdge(dut.clk)
+        await RisingEdge(dut.clk)
+    dut.s_wvalid.value = 0
+    dut.s_wlast.value  = 0
+
+    dut.s_bready.value = 1
+    while True:
+        await ReadOnly()
+        if dut.s_bvalid.value:
+            break
+        await RisingEdge(dut.clk)
+    bresp = int(dut.s_bresp.value)
+    bid   = int(dut.s_bid.value)
+    await RisingEdge(dut.clk)
+    dut.s_bready.value = 0
+    return bresp, bid
 
 
 # ── Test 1: single-beat write then read-back ─────────────────────────────────
@@ -851,3 +927,371 @@ async def test_read_backpressure_random(dut):
         await RisingEdge(dut.clk)   # let the FSM settle back to IDLE before the next seed
 
     dut._log.info("test_read_backpressure_random PASS (8 seeds, lengths 2..8)")
+
+
+# ── Test 16: BVALID must never precede the write's actual landing in mem[] ──
+# bead rvb targeted coverage (verification-orchestrator, full regression task):
+# pins the write pipeline's central ordering guarantee as a regression, not
+# just a design-review claim.
+#
+# Two checks, for two different reasons:
+#
+#  1. A WHITEBOX check (only meaningful on the flat-array build, guarded by
+#     `hasattr(dut, "mem")`): the very cycle BVALID is first observed,
+#     directly peek `dut.mem[]` at the burst's last-beat word and require it
+#     already equals the NEW data. This is the check that is actually
+#     DECISIVE for this specific DUT: a black-box AR-based check (below)
+#     turns out to be structurally unable to distinguish correct W_DRAIN
+#     timing from a "skip W_DRAIN, assert BVALID immediately" mutation for
+#     this particular design, because of a coincidence of latencies --
+#     worked out below -- so the whitebox check is what actually makes the
+#     bead rvb mutation check ("mutate B to skip W_DRAIN... confirm test (a)
+#     fails") meaningful. It is skipped (not failed) on the SRAM_SKY130
+#     build, where `mem` does not exist as a flat array and where the
+#     property does not apply in the same form (that FSM never enters
+#     W_DRAIN at all -- see sram_controller.sv's write-FSM header comment).
+#
+#  2. A BLACK-BOX check via an actual AR/R transaction, issued at the
+#     earliest opportunity a cocotb driver can react to observing BVALID
+#     (one clock edge of reaction lag is unavoidable: a registered response
+#     to a just-sampled registered signal always costs >=1 additional edge,
+#     and this codebase's cocotb version forbids writing a signal while
+#     parked in the ReadOnly() phase -- see test_read_backpressure_no_drop_
+#     no_dup's header note). For THIS DUT specifically, the reactive lag
+#     (1 cycle) plus the flat-array read FSM's own AR-accept-to-fetch
+#     latency (2 cycles) sum to exactly the write pipeline's own
+#     WLAST-accept-to-landing latency (3 cycles) -- so a read issued this
+#     way can never observe the in-flight window regardless of whether
+#     BVALID's timing is correct or mutated 2 cycles early; it fetches
+#     mem[] on a LATER clock edge than either landing edge in both cases.
+#     Confirmed empirically: this check alone still PASSED against the
+#     "skip W_DRAIN" mutant. It is kept anyway -- as protocol-level
+#     regression coverage for the general read-after-write path (it would
+#     still catch e.g. a shortened read-FSM latency, or a write landing
+#     later than documented) -- but check 1 above is what the mutation
+#     check in this session's task actually depends on.
+
+@cocotb.test()
+async def test_bvalid_never_precedes_write_landing(dut):
+    """Peek mem[] (flat-array build only) at the cycle BVALID is first
+    observed -- must already hold the NEW data. Also issue AR to the
+    burst's last-beat address at the earliest reactive opportunity after
+    BVALID is first observed, as general read-after-write protocol
+    coverage (see the module-level analysis above for why this second
+    check is not, by itself, sufficient to catch a "BVALID too early"
+    class of bug in this specific design)."""
+    m = await _setup(dut)
+    base = SRAM_BASE + 0xE00
+    last_addr = base + 4
+    last_word_idx = (last_addr - SRAM_BASE) // 4
+    old_vals = [0xAAAA_AAAA, 0xBBBB_BBBB]
+    new_vals = [0x1234_5678, 0xDEAD_BEEF]
+    for i, v in enumerate(old_vals):
+        assert await m.write(base + i * 4, [v]) == RESP_OKAY
+
+    # Manual AW.
+    dut.s_awid.value    = 0
+    dut.s_awaddr.value  = base
+    dut.s_awlen.value   = len(new_vals) - 1
+    dut.s_awsize.value  = SIZE_4B
+    dut.s_awburst.value = BURST_INCR
+    dut.s_awvalid.value = 1
+    while True:
+        await ReadOnly()
+        if dut.s_awready.value:
+            break
+        await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+    dut.s_awvalid.value = 0
+
+    # Manual W beats.
+    for i, v in enumerate(new_vals):
+        dut.s_wdata.value  = v
+        dut.s_wstrb.value  = 0xF
+        dut.s_wlast.value  = 1 if i == len(new_vals) - 1 else 0
+        dut.s_wvalid.value = 1
+        while True:
+            await ReadOnly()
+            if dut.s_wready.value:
+                break
+            await RisingEdge(dut.clk)
+        await RisingEdge(dut.clk)
+    dut.s_wvalid.value = 0
+    dut.s_wlast.value  = 0
+
+    # BREADY deliberately held LOW: s_bvalid == (wstate == W_RESP) is
+    # unconditional on bready (sram_controller.sv), so BVALID's assertion
+    # timing is observed independent of our own response-channel handshake,
+    # and it stays stably asserted (wstate cannot leave W_RESP) until we
+    # choose to drain it below.
+    dut.s_bready.value = 0
+
+    dut.s_arid.value    = 0
+    dut.s_araddr.value  = last_addr
+    dut.s_arlen.value   = 0
+    dut.s_arsize.value  = SIZE_4B
+    dut.s_arburst.value = BURST_INCR
+
+    # Poll for the FIRST cycle BVALID is observed. No explicit ReadOnly()
+    # here (matching test_read_backpressure_no_drop_no_dup's convention) --
+    # Verilator has already settled the combinational fixpoint by the time
+    # RisingEdge returns control, and this loop must be able to write
+    # s_arvalid on the very same iteration it detects s_bvalid, which cocotb
+    # forbids while parked in ReadOnly. Arming ARVALID immediately after
+    # detecting BVALID (rather than after crossing another edge) is the
+    # earliest a cocotb driver can react -- functionally "the same cycle
+    # BVALID is first seen" for the purposes of this ordering check.
+    has_mem = hasattr(dut, "mem")
+    bvalid_seen = False
+    cyc = 0
+    while not bvalid_seen and cyc < 200:
+        await RisingEdge(dut.clk)
+        cyc += 1
+        if int(dut.s_bvalid.value) == 1:
+            bvalid_seen = True
+            # Decisive whitebox check (see the module-level note above):
+            # right now, the cycle BVALID is first seen, mem[] at the
+            # burst's last-beat word must already hold the NEW data.
+            if has_mem:
+                peeked = int(dut.mem[last_word_idx].value)
+                assert peeked == new_vals[-1], (
+                    f"mem[{last_word_idx}] read {peeked:#010x} at the exact "
+                    f"cycle BVALID was first observed, expected the NEW "
+                    f"value {new_vals[-1]:#010x} -- BVALID asserted before "
+                    f"the write actually landed in mem[]"
+                )
+            dut.s_arvalid.value = 1
+    assert bvalid_seen, "BVALID never asserted within 200 cycles"
+
+    while True:
+        await ReadOnly()
+        if dut.s_arready.value:
+            break
+        await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+    dut.s_arvalid.value = 0
+
+    # Drain B now -- harmless, BVALID has been held stably asserted since
+    # the polling loop first observed it.
+    dut.s_bready.value = 1
+
+    dut.s_rready.value = 1
+    got = None
+    cyc = 0
+    while got is None and cyc < 200:
+        await ReadOnly()
+        if dut.s_rvalid.value:
+            got = int(dut.s_rdata.value)
+            assert int(dut.s_rresp.value) == RESP_OKAY, (
+                f"read resp {int(dut.s_rresp.value):#x}"
+            )
+            assert int(dut.s_rlast.value) == 1, "single-beat read must assert RLAST"
+        await RisingEdge(dut.clk)
+        cyc += 1
+    dut.s_rready.value = 0
+    dut.s_bready.value = 0
+    assert got is not None, "read never completed within 200 cycles"
+    assert got == new_vals[-1], (
+        f"read issued at the earliest opportunity after BVALID was first "
+        f"seen returned {got:#010x}, expected the NEW value "
+        f"{new_vals[-1]:#010x} -- BVALID asserted before the write actually "
+        f"landed in mem[]"
+    )
+    dut._log.info("test_bvalid_never_precedes_write_landing PASS")
+
+
+# ── Test 17: write burst crossing the GROUP_WORDS boundary and the ──────────
+# ── MEM_WORDS wraparound, both with per-beat partial WSTRB ──────────────────
+# bead rvb targeted coverage: the stage-2 write pipeline splits MEM_WORDS
+# into NGROUPS groups of GROUP_WORDS=32 words, each with its own
+# grp_we_q/grp_wdata_q registers (sram_controller.sv). A burst whose beats
+# land in two different groups is the one scenario that could expose a
+# group-selection bug (e.g. an off-by-one in grp1_sel / local1_onehot)
+# that a single-group burst could never surface. Combined with per-beat
+# WSTRB (not previously exercised on any multi-group or wraparound burst),
+# and combined again with the pre-existing MEM_WORDS index wraparound
+# (test_mem_words_wraparound_burst, which never used partial WSTRB).
+
+@cocotb.test()
+async def test_write_burst_group_and_wrap_boundary_partial_strb(dut):
+    """Group-boundary-crossing and MEM_WORDS-wraparound write bursts, both
+    using distinct per-beat WSTRB, must land exactly the selected bytes at
+    exactly the selected words and must not disturb neighbouring words."""
+    m = await _setup(dut)
+    sentinel = 0x5A5A_5A5A
+
+    # ---- Part 1: group-boundary crossing burst (words 30..33) ----
+    # GROUP_WORDS=32 -> group 0 is words 0..31, group 1 is words 32..63.
+    # This burst's beats land at words 30,31 (group 0) then 32,33 (group 1).
+    base_word = 30
+    base_addr = SRAM_BASE + base_word * 4
+    for w in range(base_word - 1, base_word + 6):
+        assert await m.write(SRAM_BASE + w * 4, [sentinel]) == RESP_OKAY
+
+    beats = [
+        (0x1111_2222, 0b0011),
+        (0x3333_4444, 0b1100),
+        (0x0000_00AA, 0b0001),
+        (0xFFFF_FFFF, 0b1111),
+    ]
+    bresp, _ = await _manual_write_burst(dut, base_addr, beats)
+    assert bresp == RESP_OKAY, f"group-boundary burst write resp {bresp:#x}"
+
+    for i, (data, strb) in enumerate(beats):
+        exp = _apply_strb(sentinel, data, strb)
+        got, rresp = await m.read(SRAM_BASE + (base_word + i) * 4, length=1)
+        assert rresp == RESP_OKAY
+        assert got[0] == exp, (
+            f"word{base_word + i}: got {got[0]:#010x}, expected {exp:#010x}"
+        )
+    # Neighbours outside the burst must be untouched.
+    d_lo, _ = await m.read(SRAM_BASE + (base_word - 1) * 4, length=1)
+    d_hi, _ = await m.read(SRAM_BASE + (base_word + 5) * 4, length=1)
+    assert d_lo[0] == sentinel and d_hi[0] == sentinel, (
+        f"group-boundary burst disturbed a neighbouring word outside the "
+        f"burst: below={d_lo[0]:#010x} above={d_hi[0]:#010x} (expected "
+        f"sentinel {sentinel:#010x} for both)"
+    )
+
+    # ---- Part 2: MEM_WORDS wraparound burst, partial WSTRB ----
+    # Same wrap offset as test_mem_words_wraparound_burst: -2 mod any
+    # power-of-two MEM_WORDS >= 4 (valid for both the default flat-array
+    # build, MEM_WORDS=4096, and the SRAM_SKY130 build, MEM_WORDS=1024).
+    wrap_off_words = 4094
+    wbase = SRAM_BASE + wrap_off_words * 4
+    assert await m.write(SRAM_BASE + 0 * 4, [sentinel]) == RESP_OKAY
+    assert await m.write(SRAM_BASE + 1 * 4, [sentinel]) == RESP_OKAY
+
+    wbeats = [
+        (0xCAFE_0000, 0b1111),
+        (0xF000_000D, 0b0001),
+        (0x0000_BEEF, 0b0011),  # lands at wrapped word index 0
+        (0xABCD_1234, 0b1100),  # lands at wrapped word index 1
+    ]
+    bresp, _ = await _manual_write_burst(dut, wbase, wbeats)
+    assert bresp == RESP_OKAY, f"wrap burst write resp {bresp:#x}"
+
+    exp0 = _apply_strb(sentinel, wbeats[2][0], wbeats[2][1])
+    exp1 = _apply_strb(sentinel, wbeats[3][0], wbeats[3][1])
+    d0, r0 = await m.read(SRAM_BASE + 0 * 4, length=1)
+    d1, r1 = await m.read(SRAM_BASE + 1 * 4, length=1)
+    assert r0 == RESP_OKAY and r1 == RESP_OKAY
+    assert d0[0] == exp0, f"wrapped word0: got {d0[0]:#010x}, expected {exp0:#010x}"
+    assert d1[0] == exp1, f"wrapped word1: got {d1[0]:#010x}, expected {exp1:#010x}"
+    dut._log.info("test_write_burst_group_and_wrap_boundary_partial_strb PASS")
+
+
+# ── Test 18: back-to-back write bursts, no idle gap, interleaved with a ─────
+# ── concurrent read on an unrelated address ──────────────────────────────────
+# bead rvb targeted coverage: the write and read FSMs are fully independent
+# (disjoint AW/W/B vs AR/R signal groups), and the write pipeline's own
+# throughput is governed by the W_IDLE <- W_RESP <- W_DRAIN chain -- this
+# test drives two write bursts back-to-back (zero added idle cycles, same
+# convention as test_back_to_back_bursts) while a concurrent read of a
+# THIRD, unrelated, pre-written address runs interleaved on the independent
+# AR/R channel, to catch any accidental cross-FSM interference.
+
+@cocotb.test()
+async def test_back_to_back_write_bursts_with_interleaved_read(dut):
+    """Two zero-gap back-to-back write bursts plus a concurrent read of an
+    unrelated address must all complete correctly with no cross-FSM
+    interference."""
+    m = await _setup(dut)
+    a0 = SRAM_BASE + 0x1000
+    a1 = SRAM_BASE + 0x1100
+    a2 = SRAM_BASE + 0x1200  # read target, primed beforehand
+    w0 = [0xC0FF_EE00 + i for i in range(3)]
+    w1 = [0xFACE_B000 + i for i in range(3)]
+    r2_expected = [0x1CE0_FF00 + i for i in range(5)]
+
+    assert await m.write(a2, r2_expected) == RESP_OKAY
+
+    async def _writes():
+        assert await m.write(a0, w0) == RESP_OKAY, "burst0 write SLVERR"
+        assert await m.write(a1, w1) == RESP_OKAY, "burst1 write SLVERR"
+
+    write_task = cocotb.start_soon(_writes())
+    read_task = cocotb.start_soon(m.read(a2, length=len(r2_expected)))
+
+    await write_task
+    r2_data, r2_resp = await read_task
+    assert r2_resp == RESP_OKAY, f"interleaved read resp {r2_resp:#x}"
+    assert r2_data == r2_expected, (
+        f"interleaved read mismatch:\n  got {[hex(d) for d in r2_data]}\n"
+        f"  exp {[hex(w) for w in r2_expected]}"
+    )
+
+    d0, r0 = await m.read(a0, length=len(w0))
+    d1, r1 = await m.read(a1, length=len(w1))
+    assert r0 == RESP_OKAY and r1 == RESP_OKAY
+    assert d0 == w0, f"burst0 mismatch {[hex(d) for d in d0]}"
+    assert d1 == w1, f"burst1 mismatch {[hex(d) for d in d1]}"
+    dut._log.info("test_back_to_back_write_bursts_with_interleaved_read PASS")
+
+
+# ── Test 19: SLVERR write burst writes nothing, B arrives correctly ─────────
+# bead rvb targeted coverage: BRESP-SLVERR is driven directly off w_err
+# (combinational, unaffected by the write pipeline), but the stage-1 write
+# pipeline is ALSO gated by `!w_err` (wr_valid1_q <= beat_accept && !w_err,
+# sram_controller.sv) -- an independent gate that could regress separately
+# from the response code. Uses a WRAP-type burst (rejected unconditionally,
+# regardless of address -- see w_err's `s_awburst == AXI_BURST_WRAP` term)
+# at an address well inside the SRAM window, so a bug that let the pipeline
+# fire anyway would corrupt data a subsequent in-range read could actually
+# observe (an out-of-range address would not give this test anything
+# meaningful to read back).
+
+@cocotb.test()
+async def test_slverr_write_burst_writes_nothing(dut):
+    """A WRAP-type burst must return SLVERR on B and must not modify memory
+    at any of its beats' addresses."""
+    m = await _setup(dut)
+    base = SRAM_BASE + 0x1300
+    sentinel = 0x5EED_0000
+    words = [sentinel + i for i in range(4)]
+    for i in range(4):
+        assert await m.write(base + i * 4, [words[i]]) == RESP_OKAY
+
+    new_vals = [0xBAD0_0000 + i for i in range(4)]
+    bresp, _ = await _manual_write_burst(
+        dut, base, [(v, 0xF) for v in new_vals], burst=BURST_WRAP
+    )
+    assert bresp == RESP_SLVERR, f"WRAP burst write resp {bresp:#x} != SLVERR"
+
+    for i in range(4):
+        data, rresp = await m.read(base + i * 4, length=1)
+        assert rresp == RESP_OKAY
+        assert data[0] == words[i], (
+            f"word{i}: SLVERR burst must write nothing -- got {data[0]:#010x}, "
+            f"expected untouched sentinel {words[i]:#010x}"
+        )
+    dut._log.info("test_slverr_write_burst_writes_nothing PASS")
+
+
+# ── Test 20: WVALID gaps within a burst (non-contiguous beats) ──────────────
+# bead rvb targeted coverage: every prior write-burst test drives WVALID
+# contiguously across all beats. WREADY is unconditional in W_DATA (never
+# gated on the write pipeline's own occupancy), so the FSM must simply wait
+# for WVALID rather than assume back-to-back beats -- this was never
+# exercised.
+
+@cocotb.test()
+async def test_write_burst_wvalid_gaps(dut):
+    """WVALID idle gaps between beats must not corrupt, drop, or reorder
+    beats."""
+    m = await _setup(dut)
+    base = SRAM_BASE + 0x1400
+    words = [0x9009_0000 + i for i in range(5)]
+    gaps = [0, 3, 0, 5, 1]  # idle WVALID=0 cycles immediately before each beat
+    beats = [(w, 0xF, g) for w, g in zip(words, gaps)]
+
+    bresp, _ = await _manual_write_burst(dut, base, beats)
+    assert bresp == RESP_OKAY, f"gapped burst write resp {bresp:#x}"
+
+    data, rresp = await m.read(base, length=len(words))
+    assert rresp == RESP_OKAY
+    assert data == words, (
+        f"gapped-WVALID burst readback mismatch:\n  got {[hex(d) for d in data]}\n"
+        f"  exp {[hex(w) for w in words]}"
+    )
+    dut._log.info("test_write_burst_wvalid_gaps PASS")

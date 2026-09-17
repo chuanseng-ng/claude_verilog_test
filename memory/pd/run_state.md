@@ -5025,3 +5025,95 @@ end-to-end, both clocks' skew within ~13-16 ps of the reference,
 reproduced via the standard Makefile target -- satisfies 0ah's own reopen
 condition). Full detail: docs/PHASE5_RUN_HISTORY.md dated section
 2026-09-17, "bead djm fixed, clean 26Q2 re-run".
+
+---
+
+run_id:      pd_20260917_204111
+design_name: soc_top (ASAP7 SoC, multiclock hierarchical)
+pdk:         asap7 (predictive)
+tool:        LibreLane (bundled, /home/neuromorphic/Downloads/Github/librelane),
+             pinned OpenROAD 26Q2 via fixed OR_PATH_PREFIX (bead djm)
+start_time:  2026-09-17T20:41:11+07:00
+last_stage:  STAMidPNR-3 (COMPLETE, EXIT_CODE=0, 2026-09-18 01:06)
+purpose:     Measure bead claude_verilog_test-rvb's 2-stage registered,
+             group-distributed SRAM write pipeline (commit 23bacae) against
+             reference soc-ydw2 (RUN_2026-09-17_09-01-42), which found
+             u_gpu/m_axi_wvalid -> flat SRAM write-decode fanout (Path A) as
+             the #1 setup-violator class (16,400 violators, worst -1050.16
+             ps) with a DMA analog (u_dma -> u_sram, 14,392, worst -975.65
+             ps).
+config:      pnr/asap7/soc/config_multiclock_hier_rsz7_0ah.json (unchanged,
+             like-for-like with reference)
+launch_cmd:  systemd-run --user --scope --unit=soc-rvb2 -p MemoryMax=11500M
+             -p MemorySwapMax=0 bash -c 'cd .../pnr && make
+             librelane-asap7-soc-multiclock-hier
+             SOC_CONFIG=config_multiclock_hier_rsz7_0ah.json
+             LIBRELANE_EXTRA_ARGS="--to OpenROAD.STAMidPNR-3"'
+run_dir:     pnr/asap7/soc/runs/RUN_2026-09-17_20-41-11
+log:         /nobackup/asap7_soc_runs/soc_rvb2.log
+branch:      feat/rvb-sram-write-path (not switched)
+sv2v_regen:  make -C pnr asap7-soc-sv2v re-run before launch; confirmed
+             wr_valid1_q, grp_we_q, grp_wdata_q, drain_cnt, r_data_q all
+             present in pnr/asap7/soc/soc_top_sv2v.v (6921 lines, 53
+             clocked always blocks). W_DRAIN itself does not appear by
+             name -- sv2v encodes the wstate_e enum numerically, expected.
+preflight:   'ok: ASAP7 OpenROAD = 26Q2', 'ok: shim ... -> 26Q2', 'ok:
+             'openroad' resolves to pinned shim' all passed. Binary use
+             reconfirmed live by the coordinator via /proc/PID/exe.
+status:      COMPLETE. soc-rvb2 finished with EXIT_CODE=0 at 2026-09-18 01:06.
+
+FINAL RESULT (STAMidPNR-3, nom_tt_025C_0p7V) vs reference RUN_2026-09-17_09-01-42:
+  setup WNS -727.37 ps (ref -1050.16, +30.7%), TNS -60,665 ps (ref
+  -14,423,700, -99.6%), 781 violators (ref 33,196, -97.6%). Hold clean
+  (WNS 0 / TNS 0 / WS +31.26 ps), same as reference. cpu_clk skew
+  setup/hold 281.10/230.27 ps (ref 285.26/236.29, ~flat -- CPU domain
+  untouched). sys_clk skew setup/hold 882.40/818.97 ps (ref 695.55/640.42
+  -- WORSE, +27-28%, larger/redistributed clock tree from ~4,155 net new
+  sequential cells). Power 283.6 mW total / 89.6 mW fabric-only (ref
+  293.2/100.7 -- DOWN despite added flops, switching power fell 24% from
+  13,181 fewer timing-repair buffers). Instance area/utilization
+  essentially flat (166,811 vs 166,960 um^2, 66.80% vs 66.86%). Annotation
+  3,156 unannotated / 0 partial (ref 1,426/0) -- all clkload dummy cells
+  (3,073, up from CTS balancing a bigger tree) + the same 83 u_cpu tied/
+  debug macro pins in both runs; no real signal driver unannotated in
+  either run.
+
+Violator class breakdown (violator_list.rpt, 781 lines): u_gpu -> u_sram
+(reference's #1, 16,400/-1050.16) is GONE (0 matches). u_dma -> u_sram
+(reference's #2, 14,392/-975.65) reduced to 32 violators, worst -349.60 ps
+(-99.8% count, -64% slack) -- no longer close to critical. New worst class
+u_sram -> u_sram (32 violators, worst -727.37 ps = design WNS): traced via
+final/nl/soc_top.nl.v structural fingerprint (8 unique startpoints -> 32
+unique endpoints, i.e. few-drivers-to-many) -- this is rvb's OWN stage-2
+grp_wdata_q[gk] (32-bit, shared per GROUP_WORDS=32 group) fanning into up
+to 32 mem[] endpoints within its group, NOT ydw's read-mux segment (which
+would show the opposite cardinality: many candidate mem-word startpoints
+converging 1:1 onto each r_data_q bit). ydw's read class does not appear
+anywhere in this violator list (0 matches) -- no reopen needed. New small
+class u_pll_sub -> u_sram (15/-76.01) and a since-repaired u_pll_sub ->
+u_dma (18/-140.39 at STAMidPNR-1 only) appear, absent from the reference
+run's classes entirely -- likely an incidental floorplan/CTS side effect
+of the added flops, not a functional connection (u_pll_sub has no RTL
+link to sram_controller.sv). New largest-by-COUNT class: u_cpu ->
+u_cpu_axi_cdc (504/-190.37), a CPU-domain-internal CDC-bridge path
+unrelated to Path A.
+
+Cost: RTL adds 5,168 raw register bits (32 groups x (32x4 grp_we_q + 32
+grp_wdata_q) + 48 stage-1/drain bits), replacing the prior iteration's
+1,024-bit word_sel_q (net raw delta ~+4,144, matching the measured placed
+sequential_cell delta of +4,155). Area/power essentially flat-to-improved
+despite this because RSZ needed 13,181 fewer timing-repair buffers
+overall. RepairDesignPostGPL (stage 28) took 1h30m42s vs reference's
+35m45s (2.5x slower) despite inserting FEWER buffers at that stage
+(48,047 vs 61,720) -- attributed to per-iteration legalization overhead
+scaling with +19,112 total design instances at a pre-route stage, not
+more repair work. Total flow wall time to STAMidPNR-3 comparable overall
+(~4h25m vs ~4h18m) since ResizerTimingPostGRT converged much faster this
+run.
+
+Bead outcomes: rvb CLOSED (both Path A write classes no longer limiting;
+new bounded stage-2/stage-3 group-fanout residual and CPU-CDC-bridge
+class recorded honestly as follow-up candidates, not reopened against
+this bead). ydw unchanged/closed (its read-mux class does not resurface
+here). Full detail: docs/PHASE5_RUN_HISTORY.md dated section
+2026-09-18, "2-stage group-distributed write pipeline".

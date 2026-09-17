@@ -27,6 +27,18 @@
 //     beat/cycle. See the read FSM comment below (sram_controller.sv read
 //     FSM, `ifndef SRAM_SKY130` branch) for the full timing diagram and the
 //     read-after-write hazard analysis.
+//   * Default (flat array), WRITES: bead rvb Path A residual fix
+//     (2026-09-17) — a 2-stage registered, group-distributed write pipeline
+//     (stage 1 input register -> stage 2 per-group registers -> stage 3
+//     mem[] write; see the `ifndef SRAM_SKY130` block after the write-FSM
+//     channel assigns for the full design). A word lands in mem[] at the
+//     clock edge ending 2 cycles after its W handshake; WREADY still
+//     asserts every cycle in W_DATA (no throughput loss, 1 beat/cycle
+//     sustained). BVALID is held off (new W_DRAIN FSM state) until the
+//     burst's last beat has actually landed, so a master that waits for B
+//     before issuing a same-address AR always reads the new data — see the
+//     read FSM's read-after-write hazard analysis below for masters that
+//     do NOT wait for B.
 //   * SRAM_SKY130 (hard macro): writes go to the macro's port 0 (RW, used
 //     write-only here); reads go to the macro's port 1 (dedicated read-only
 //     port). The macro's dout1 is NEGEDGE-launched (addr1/csb1 presented in
@@ -166,37 +178,32 @@ module sram_controller
             return base;
     endfunction
 
-`ifndef SRAM_SKY130
-    // bead rvb (fan-out fix, Path A / RVB_FANOUT_FIX_PROPOSAL.md §A.2 option
-    // A2): one-hot decode of a word index, registered by the caller during
-    // the address phase (see word_sel_q below) instead of being re-decoded
-    // combinationally from s_wvalid every cycle.
-    function automatic logic [MEM_WORDS-1:0] word_onehot(input logic [IDX_W-1:0] idx);
-        logic [MEM_WORDS-1:0] oh;
-        oh      = '0;
-        oh[idx] = 1'b1;
-        return oh;
-    endfunction
-`endif
-
     // ── Write FSM ────────────────────────────────────────────────────────────
-    typedef enum logic [1:0] {W_IDLE, W_DATA, W_RESP} wstate_e;
+    // bead rvb Path A residual fix (2026-09-17): W_DRAIN is a new state used
+    // only by the flat-array (`ifndef SRAM_SKY130`) branch below, to hold off
+    // BVALID until the write pipeline (see the stage 1/2/3 block after the
+    // channel assigns) has actually landed the burst's last beat in mem[].
+    // The SRAM_SKY130 branch never transitions into W_DRAIN — its W_DATA
+    // case arm still goes straight to W_RESP, unchanged. Adding this state
+    // shifts W_RESP's synthesized encoding but not its behavior; wstate_e
+    // stays a 2-bit type (4 states now instead of 3), identical simulated/
+    // synthesized functional behavior for the SRAM_SKY130 branch either way.
+    typedef enum logic [1:0] {W_IDLE, W_DATA, W_DRAIN, W_RESP} wstate_e;
     wstate_e          wstate;
 `ifdef SRAM_SKY130
     logic [IDX_W-1:0] w_idx;
 `else
-    // bead rvb (fan-out fix, Path A): registered one-hot word-select,
-    // replacing the indexed `mem[w_idx][...]` assignment that used to
-    // synthesize a per-storage-bit compare gated directly by s_wvalid (an
-    // ~MEM_WORDS*DW-wide, ~18.5k-endpoint fan-out cone off s_wvalid on the
-    // ASAP7 deferred_flatten netlist — see docs/design/RVB_FANOUT_FIX_PROPOSAL.md
-    // §A.1). word_sel_q is decoded once during the address phase (W_IDLE,
-    // a cycle that already exists ahead of W_DATA) and reused unchanged
-    // across a burst's byte lanes; s_wvalid then only needs to reach the
-    // MEM_WORDS word_we AND2 gates below (see w_commit/word_we), not every
-    // individual storage bit. Zero added write latency: the decode reuses
-    // an address-phase cycle that already existed before this fix.
-    logic [MEM_WORDS-1:0] word_sel_q;
+    // bead rvb: binary word index (unlike the ifdef branch above, this is a
+    // separate declaration so the SRAM_SKY130 branch's own w_idx text is
+    // untouched). The MEM_WORDS-wide one-hot `word_sel_q` register from the
+    // first rvb iteration (2026-09-16) is removed here — it was still a
+    // same-cycle function of s_wvalid gating a MEM_WORDS-wide AND array
+    // directly off the address-phase decode, and post-route measurement
+    // (RUN_2026-09-17_09-01-42) showed the fan-out cone through mem[] was
+    // still the #1 setup-violator class (16,400 violators, worst -1050 ps).
+    // See the stage 1/2/3 write pipeline below for the actual fix.
+    logic [IDX_W-1:0] w_idx;
+    logic             drain_cnt;  // W_DRAIN: 1 => one more full cycle to wait
 `endif
     logic [IW-1:0]    bid_q;
     logic             w_err;
@@ -208,17 +215,13 @@ module sram_controller
             w_err  <= 1'b0;
             w_incr <= 1'b0;
 `ifndef SRAM_SKY130
-            word_sel_q <= '0;
+            drain_cnt <= 1'b0;
 `endif
         end else begin
             unique case (wstate)
                 W_IDLE: begin
                     if (s_awvalid) begin
-`ifdef SRAM_SKY130
                         w_idx  <= word_index(s_awaddr);
-`else
-                        word_sel_q <= word_onehot(word_index(s_awaddr));
-`endif
                         bid_q  <= s_awid;
                         w_err  <= ~in_range(s_awaddr)
                                   || ~in_range(last_addr(s_awaddr, s_awlen, s_awburst))
@@ -230,21 +233,33 @@ module sram_controller
                 W_DATA: begin
                     if (s_wvalid) begin
                         if (!w_err && w_incr) begin
-`ifdef SRAM_SKY130
                             w_idx <= w_idx + 1'b1;
-`else
-                            // Index +1 mod MEM_WORDS == a 1-position rotate
-                            // of the one-hot select vector (MEM_WORDS is
-                            // required to be a power of two, see the
-                            // MEM_WORDS parameter comment above).
-                            word_sel_q <= {word_sel_q[MEM_WORDS-2:0], word_sel_q[MEM_WORDS-1]};
-`endif
                         end
                         if (s_wlast) begin
+`ifdef SRAM_SKY130
                             wstate <= W_RESP;
+`else
+                            // bead rvb: BVALID must not assert until this
+                            // beat (the burst's last) has landed in mem[] —
+                            // see the write-pipeline latency note below.
+                            // The pipeline takes 2 clock edges past this
+                            // accept edge to land the word, so W_DRAIN must
+                            // hold for 2 cycles before W_RESP is entered.
+                            wstate    <= W_DRAIN;
+                            drain_cnt <= 1'b1;
+`endif
                         end
                     end
                 end
+`ifndef SRAM_SKY130
+                W_DRAIN: begin
+                    if (drain_cnt == 1'b0) begin
+                        wstate <= W_RESP;
+                    end else begin
+                        drain_cnt <= 1'b0;
+                    end
+                end
+`endif
                 W_RESP: begin
                     if (s_bready) begin
                         wstate <= W_IDLE;
@@ -262,27 +277,165 @@ module sram_controller
     assign s_bresp   = w_err ? AXI_RESP_SLVERR : AXI_RESP_OKAY;
 
 `ifndef SRAM_SKY130
-    // bead rvb (fan-out fix, Path A): the actual mem[] write, moved out of
-    // the FSM always_ff above and re-expressed as MEM_WORDS explicit,
-    // independently-timed word_we[i]-gated always_ff blocks. w_commit fans
-    // out to MEM_WORDS AND2 gates (word_we) instead of directly reaching
-    // every one of the MEM_WORDS*DW storage bits, giving CTS/resizer
-    // MEM_WORDS separately-timed branches instead of one shared tree.
-    // w_err/wstrb/wlast semantics are unchanged from the original indexed
-    // assignment (`mem[w_idx][b*8+:8] <= s_wdata[b*8+:8] if s_wstrb[b] &&
-    // !w_err`, gated by s_wvalid while wstate==W_DATA).
-    logic w_commit;
-    assign w_commit = (wstate == W_DATA) && s_wvalid && !w_err;
+    // bead rvb Path A residual fix (2026-09-17): 2-stage registered,
+    // group-distributed write pipeline. Replaces the first rvb iteration's
+    // word_sel_q-gated per-word always_ff (2026-09-16), which still made
+    // every mem[] write-enable a same-cycle combinational function of
+    // s_wvalid (via w_commit, gating a MEM_WORDS-wide AND array directly
+    // off the address-phase one-hot decode) — confirmed still the #1
+    // post-route setup-violator class on 26Q2 RUN_2026-09-17_09-01-42
+    // (16,400 violators, worst -1050.16 ps). See
+    // docs/design/RVB_FANOUT_FIX_PROPOSAL.md for the original root-cause
+    // analysis this second iteration builds on.
+    //
+    //   Stage 1 (input register slice): registers the accepted W beat's
+    //   commit/data/strobe/index. This is the ONLY register anywhere in
+    //   this pipeline whose D-input is a same-cycle function of an
+    //   s_w*/crossbar signal — nothing past this point is.
+    //
+    //   Stage 2 (per-group local registers): MEM_WORDS is split into
+    //   NGROUPS contiguous groups of GROUP_WORDS words each. Each group has
+    //   its OWN we/data registers, loaded ONLY when that group is the
+    //   target of the stage-1 beat. grp_wdata_q[k] explicitly HOLDS
+    //   (self-feedback) when group k is not selected, rather than always
+    //   capturing wdata1_q — this makes every group's registers
+    //   structurally distinct (a different D-input mux/compare term per
+    //   group), which is what stops Yosys `opt_merge` from recognising the
+    //   NGROUPS replicas as identical and collapsing them back into one
+    //   high-fanout register. grp_we_q[k], by contrast, is a genuine
+    //   1-cycle write-enable PULSE (explicitly driven to '0 when not
+    //   selected, not held) — it must clear every cycle it isn't the
+    //   target, or stage 3 would keep re-committing a stale write forever.
+    //
+    //   Stage 3 (mem[] write): each group's registered we/data gates only
+    //   that group's own GROUP_WORDS words. The fan-out of any one stage-2
+    //   register is local to one group (<= GROUP_WORDS*SW endpoints), and
+    //   the fan-out of any stage-1 register is local to NGROUPS compare
+    //   terms (<= MEM_WORDS/GROUP_WORDS, e.g. 128 for the default
+    //   MEM_WORDS=4096) — never the whole MEM_WORDS*DW array in one hop.
+    //
+    // Write latency: a word lands in mem[] (updated by the always_ff below)
+    // at the clock edge ending 2 cycles after its W handshake cycle — i.e.
+    // handshake in cycle N, stage 1 valid in N+1, stage 2 valid in N+2 and
+    // mem[] updated by the edge ending N+2, visible from N+3. WREADY
+    // (`s_wready`, above) is `(wstate == W_DATA)` unconditionally — it
+    // never depends on this pipeline's occupancy, so 1 beat/cycle write
+    // throughput is preserved; a new beat can be captured into stage 1
+    // every single cycle regardless of what stage 2/3 are doing with the
+    // previous beat(s).
+    //
+    // B channel: BVALID must not assert before the burst's LAST beat has
+    // actually landed in mem[], so a master that waits for B before issuing
+    // a same-address AR (the fabric's documented ordering contract —
+    // axi4_crossbar.sv:22-27 — "a master that requires read-after-write
+    // ordering to the same slave must wait for B before AR") is guaranteed
+    // to read the new data. W_DRAIN (see the write FSM above) holds for
+    // exactly the 2 cycles needed so that wstate reaches W_RESP (BVALID=1)
+    // no earlier than cycle N+3 — the SAME cycle the last beat's data
+    // becomes visible in mem[], not before.
+    //
+    // Error bursts: wr_valid1_q is gated by `!w_err`, so stage 2/3 never
+    // fire for a beat belonging to an error burst — BRESP is still SLVERR
+    // (driven off w_err directly, unchanged) and nothing is ever written.
+    //
+    // Read-after-write window: see the read FSM's "Read-after-write hazard
+    // analysis" comment below for the full analysis, now updated for this
+    // 2-cycle pipeline.
+    localparam int unsigned GROUP_WORDS = 32;
+    localparam int unsigned NGROUPS     = MEM_WORDS / GROUP_WORDS;
+    localparam int unsigned LOCAL_W     = $clog2(GROUP_WORDS);
+    localparam int unsigned GROUP_SEL_W = IDX_W - LOCAL_W;
 
-    logic [MEM_WORDS-1:0] word_we;
-    assign word_we = word_sel_q & {MEM_WORDS{w_commit}};
+    if (((MEM_WORDS % GROUP_WORDS) != 0) || (MEM_WORDS <= GROUP_WORDS)) begin : g_group_words_check
+        // Elaboration-time check (see the SRAM_SKY130 MEM_WORDS guard above
+        // for why a bare $fatal in a generate scope, not wrapped in
+        // `initial`, is used here). MEM_WORDS must be an exact, strictly
+        // larger multiple of GROUP_WORDS: NGROUPS==1 (MEM_WORDS==GROUP_WORDS)
+        // would make GROUP_SEL_W a zero-width type (idx1_q[IDX_W-1:LOCAL_W]
+        // with IDX_W==LOCAL_W), which is not legal SystemVerilog.
+        $fatal(1, "sram_controller: MEM_WORDS=%0d must be an exact multiple of, and strictly greater than, GROUP_WORDS=%0d for the rvb write-pipeline grouping", MEM_WORDS, GROUP_WORDS);
+    end
 
-    for (genvar gw = 0; gw < MEM_WORDS; gw++) begin : g_mem_word_we
+    // Local one-hot decode of a beat's word index within its GROUP_WORDS
+    // group — narrow (GROUP_WORDS wide, not MEM_WORDS wide), shared
+    // (broadcast, not replicated) across all NGROUPS stage-2 group blocks.
+    function automatic logic [GROUP_WORDS-1:0] word_onehot_local(input logic [LOCAL_W-1:0] idx);
+        logic [GROUP_WORDS-1:0] oh;
+        oh      = '0;
+        oh[idx] = 1'b1;
+        return oh;
+    endfunction
+
+    // ---- Stage 1: input register slice. ----
+    logic             wr_valid1_q;  // 1-cycle pulse: a real (non-error) write beat was captured last cycle
+    logic [DW-1:0]    wdata1_q;
+    logic [SW-1:0]    wstrb1_q;
+    logic [IDX_W-1:0] idx1_q;
+
+    logic beat_accept;
+    assign beat_accept = (wstate == W_DATA) && s_wvalid;
+
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            wr_valid1_q <= 1'b0;
+        end else begin
+            wr_valid1_q <= beat_accept && !w_err;
+            if (beat_accept) begin
+                wdata1_q <= s_wdata;
+                wstrb1_q <= s_wstrb;
+                idx1_q   <= w_idx;
+            end
+        end
+    end
+
+    // ---- Stage 2: per-group local registers. ----
+    logic [GROUP_SEL_W-1:0] grp1_sel;
+    logic [LOCAL_W-1:0]     local1_idx;
+    assign grp1_sel   = idx1_q[IDX_W-1:LOCAL_W];
+    assign local1_idx = idx1_q[LOCAL_W-1:0];
+
+    logic [GROUP_WORDS-1:0] local1_onehot;
+    assign local1_onehot = word_onehot_local(local1_idx);
+
+    logic [SW-1:0] grp_we_q    [NGROUPS][GROUP_WORDS];
+    logic [DW-1:0] grp_wdata_q [NGROUPS];
+
+    for (genvar gk = 0; gk < NGROUPS; gk++) begin : g_stage2_group
+        logic grp_sel_k;
+        assign grp_sel_k = wr_valid1_q && (grp1_sel == GROUP_SEL_W'(gk));
+
         always_ff @(posedge clk) begin
-            if (word_we[gw]) begin
+            if (!rst_n) begin
+                for (int gw = 0; gw < GROUP_WORDS; gw++) begin
+                    grp_we_q[gk][gw] <= '0;
+                end
+                grp_wdata_q[gk] <= '0;
+            end else if (grp_sel_k) begin
+                for (int gw = 0; gw < GROUP_WORDS; gw++) begin
+                    grp_we_q[gk][gw] <= local1_onehot[gw] ? wstrb1_q : '0;
+                end
+                grp_wdata_q[gk] <= wdata1_q;
+            end else begin
+                for (int gw = 0; gw < GROUP_WORDS; gw++) begin
+                    grp_we_q[gk][gw] <= '0;
+                end
+                // grp_wdata_q[gk] deliberately NOT assigned in this branch
+                // (holds its previous value) — see the header comment
+                // above: this self-hold is what keeps this register's
+                // D-input structurally distinct from every other group's.
+            end
+        end
+    end
+
+    // ---- Stage 3: mem[] write — one always_ff per word, gated only by its
+    // own group's registered, already-qualified write-enable. ----
+    for (genvar wk = 0; wk < NGROUPS; wk++) begin : g_stage3_group
+        for (genvar ww = 0; ww < GROUP_WORDS; ww++) begin : g_stage3_word
+            localparam int unsigned GIDX = wk * GROUP_WORDS + ww;
+            always_ff @(posedge clk) begin
                 for (int b = 0; b < SW; b++) begin
-                    if (s_wstrb[b]) begin
-                        mem[gw][b*8 +: 8] <= s_wdata[b*8 +: 8];
+                    if (grp_we_q[wk][ww][b]) begin
+                        mem[GIDX][b*8 +: 8] <= grp_wdata_q[wk][b*8 +: 8];
                     end
                 end
             end
@@ -365,30 +518,63 @@ module sram_controller
     // the same `r_idx + 1'b1`, unaffected by the power-of-two width) are all
     // unchanged from the previous design.
     //
-    // Read-after-write hazard analysis: while the head is held across a
-    // multi-cycle stall (RVALID && !RREADY), a write landing at the same
-    // word address that is already sitting in r_data_q is NOT reflected —
-    // the head keeps presenting the pre-write snapshot for the rest of the
-    // stall. The previous combinational design re-read mem[] live every
-    // cycle and so *could* pick up such a write mid-stall. This is a change
-    // within an already-unspecified corner, not a new class of bug:
-    // axi4_crossbar.sv gives each slave independent, depth-1-outstanding
-    // write and read engines (axi4_crossbar.sv:9) and explicitly does NOT
-    // interlock a concurrent AR against an in-flight AW to the same slave —
-    // "A master that requires read-after-write ordering to the same slave
-    // must wait for B before AR" (axi4_crossbar.sv:22-27). So no fabric
-    // interlock rules this race out, but AXI4 itself defines no ordering
-    // here either way, and this SoC's coherency model is entirely
-    // software-managed (CLAUDE.md: the CPU explicitly flushes/invalidates
-    // its D-cache around GPU launches; no master is expected to write and
-    // read the same live address without an intervening BRESP). No RTL
-    // bypass is added for it: a same-address forwarding compare would have
-    // to index the MEM_WORDS-wide one-hot write-select vector (word_sel_q)
-    // by the held read index, reintroducing exactly the class of wide
-    // indexed mux this fix removes. If a future master needs a hardware-
-    // guaranteed same-cycle RAW bypass to this SRAM, prefer a narrow one-hot
-    // AND/OR-reduce compare (`|(word_sel_q & word_onehot(r_held_idx_q))`)
-    // over a binary index compare.
+    // Read-after-write hazard analysis (updated 2026-09-17 for the bead rvb
+    // Path A residual fix's 2-stage write pipeline — see the write FSM's
+    // `ifndef SRAM_SKY130` block above for the pipeline itself):
+    //
+    // In-flight window: a write whose W handshake has been accepted but
+    // whose 2-cycle pipeline has not yet landed it in mem[] (i.e. a read of
+    // the same word issued anywhere from the handshake cycle through the
+    // following 2 cycles) returns the OLD value — mem[] is a genuine flop
+    // array and this read FSM has no forwarding/bypass path into the write
+    // pipeline. This is the SAME accepted residual class bead ydw already
+    // documented for the read side (a write landing while a stalled read
+    // head holds stale data is not reflected either) — this fix widens that
+    // pre-existing "no live RAW forwarding" property from 0 cycles to a
+    // bounded 2-cycle window, it does not introduce a new hazard class.
+    //
+    // Ordering-respecting masters are safe by construction: BVALID for a
+    // burst is held off (W_DRAIN) until its last beat has actually landed
+    // in mem[] (see the write pipeline's B-channel note above), so any
+    // master that waits for BVALID&&BREADY before issuing a same-address AR
+    // is guaranteed the read returns the new data — the in-flight window
+    // above is entirely contained between the W handshake and the (later)
+    // BVALID, never after it.
+    //
+    // Masters checked this session for a same-address read issued WITHOUT
+    // waiting for the preceding write's B (i.e. actually exposed to the
+    // in-flight window above), all found SAFE-by-construction:
+    //   - CPU D-cache (rtl/mem/rv32i_dcache.sv): CS_WRITEBACK only
+    //     transitions to CS_REFILL on axi_bvalid_i && bresp==OKAY
+    //     (rv32i_dcache.sv:749-751), and axi_arvalid_o is only driven from
+    //     CS_REFILL (rv32i_dcache.sv:390) — no refill AR before the
+    //     writeback's B is observed.
+    //   - GPU memory_coalescer.sv: a single unified FSM handles one
+    //     transaction (read XOR write) at a time; S_B only advances to
+    //     S_DONE on m_bvalid_i (memory_coalescer.sv:192-198), and a new
+    //     start_i (hence a new S_AR, memory_coalescer.sv:128) can only be
+    //     issued after done_o, itself gated on S_DONE. NOT re-verified this
+    //     session: whether gpu_top.sv/gpu_memory_unit.sv ever run multiple
+    //     coalescer instances that could race an independent read engine
+    //     against a different instance's in-flight write to the same SRAM
+    //     word — only single-coalescer internal sequencing was checked.
+    //   - DMA engine (rtl/periph/dma_engine.sv): single sequential FSM;
+    //     S_B only advances to S_CALC/S_DESC_DONE on m_bvalid
+    //     (dma_engine.sv:508-524), and S_CALC unconditionally moves to S_AR
+    //     (dma_engine.sv:478-482) — no read state is reachable except
+    //     through this B-gated path, including for an overlapping-address
+    //     src/dst descriptor.
+    //
+    // No RTL bypass/forwarding path is added into the write pipeline for
+    // the in-flight window itself: a same-address forwarding compare would
+    // have to reach into the per-group stage-2 registers from the read
+    // FSM's held index, reintroducing a comparison that spans the very
+    // group boundaries this fix was designed to keep separate. If a future
+    // master needs a hardware-guaranteed same-cycle (or in-flight-window)
+    // RAW bypass to this SRAM, prefer comparing the read's held index
+    // against `idx1_q`/`grp1_sel`+`local1_onehot` (the pipeline's own
+    // already-narrow per-stage state) over reintroducing any MEM_WORDS-wide
+    // structure.
     typedef enum logic [0:0] {R_IDLE, R_BUSY} rstate_e;
     rstate_e          rstate;
     logic [IDX_W-1:0] r_idx;    // next address to fetch from mem[]

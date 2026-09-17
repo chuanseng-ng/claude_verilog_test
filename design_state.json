@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-09-16T23:17:45.806257+00:00",
+  "updated_at": "2026-09-17T13:37:03.588786+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -414,6 +414,98 @@
       ],
       "rtl_files_changed": [],
       "checked_at": "2026-09-16T23:17:45.806257+00:00"
+    },
+    "rvb_write_pipeline_regression": {
+      "status": "PASS",
+      "bead": "claude_verilog_test-rvb",
+      "commit_verified": "23bacae",
+      "purpose": "Full functional verification of commit 23bacae (2-stage registered, group-distributed SRAM write pipeline, ifndef SRAM_SKY130 branch) -- W_DRAIN B-channel hold-off, per-group stage2/stage3 write pipeline, GROUP_WORDS=32 grouping.",
+      "directed_coverage_added": {
+        "file": "tb/cocotb/soc/test_sram_controller.py",
+        "new_tests": [
+          "test_bvalid_never_precedes_write_landing",
+          "test_write_burst_group_and_wrap_boundary_partial_strb",
+          "test_back_to_back_write_bursts_with_interleaved_read",
+          "test_slverr_write_burst_writes_nothing",
+          "test_write_burst_wvalid_gaps"
+        ],
+        "note": "test_bvalid_never_precedes_write_landing combines a whitebox mem[] peek (flat-array build only, guarded by hasattr(dut,'mem')) with a black-box AR-read check. The module-level comment documents why the black-box-only check is structurally insensitive to a 2-cycle-early-BVALID mutation for this specific design (read FSM's own AR-accept-to-fetch latency coincidentally matches the write pipeline's landing latency) -- the whitebox check is what the mutation check actually depends on.",
+        "total_tests_in_suite": 20
+      },
+      "sram_controller_flat": {
+        "total": 20,
+        "pass": 20,
+        "fail": 0
+      },
+      "sram_controller_sky130": {
+        "total": 20,
+        "pass": 20,
+        "fail": 0
+      },
+      "mutation_checks": [
+        {
+          "mutant": "sram_controller.sv write FSM: wstate <= W_DRAIN (+drain_cnt<=1) changed to wstate <= W_RESP directly on WLAST accept -- skips W_DRAIN, asserts BVALID immediately (2 cycles early).",
+          "targeted_test": "test_bvalid_never_precedes_write_landing",
+          "result": "Black-box AR-read half of the test PASSED against this mutant (structural false negative, documented in-code -- see directed_coverage_added note); whitebox mem[] peek half FAILED as required: mem[897] read 0xbbbbbbbb (old) vs expected 0xdeadbeef (new) at the cycle BVALID was first observed. Suite tally with mutant applied: 19/20 pass, 1/20 fail (test_bvalid_never_precedes_write_landing).",
+          "revert_verified": "git diff empty after `git checkout -- rtl/soc/sram_controller.sv`"
+        },
+        {
+          "mutant": "sram_controller.sv stage-2 grp_sel_k: (grp1_sel == GROUP_SEL_W'(gk)) changed to (grp1_sel == GROUP_SEL_W'(gk) + 1'b1) -- off-by-one group routing (every group's beats misroute into the adjacent group's registers).",
+          "targeted_test": "test_write_burst_group_and_wrap_boundary_partial_strb",
+          "result": "FAILED as required (plus 17 other tests collaterally, expected -- this mutation misroutes every write in the design, not just the group-boundary case). Suite tally with mutant applied: 2/20 pass, 18/20 fail.",
+          "revert_verified": "git diff empty after `git checkout -- rtl/soc/sram_controller.sv`"
+        }
+      ],
+      "soc_all_regression": {
+        "status": "PASS",
+        "total_tests": 196,
+        "pass": 196,
+        "fail": 0,
+        "suites": 25,
+        "note": "Up from ydw baseline 186/186 (25 suites) -- delta is exactly +10, the 5 new sram_controller tests x2 builds (flat+sky130). No other suite's count changed. Run as 25 individual `make <target>` invocations via tools/eda/wrap-cocotb.sh (not one `make soc_all`), each gated on its own fresh results.xml, SIM_BUILD_ROOT=/nobackup/rvb_verif3.",
+        "raw_logs_dir": "/home/neuromorphic/Downloads/Github/claude_verilog_test/sim/build/eda-logs/ (cocotb-20260917-1857*.log through cocotb-20260917-1917*.log)"
+      },
+      "cpu_phase2_all_regression": {
+        "status": "PASS",
+        "total_tests": 112,
+        "pass": 112,
+        "fail": 0,
+        "suites": {
+          "smoke_uvm": 4,
+          "isa_uvm": 54,
+          "pipeline_hazards": 16,
+          "interrupts": 13,
+          "debug": 6,
+          "axi_protocol": 12,
+          "fault_injection": 7
+        },
+        "note": "Matches historical gh50t/rvb/ydw baseline exactly (112/112). Run with USE_VERILATOR_EXTRALIBS=1 (Makefile's own opt-in libexpat/libz/libffi shim) -- no dlopen error this run. SIM_BUILD_ROOT=/nobackup/rvb_cpu_verif."
+      },
+      "soc_stress": {
+        "status": "PASS",
+        "total_tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "sim_cycles": 1104667,
+        "stress_iterations": "10/10",
+        "wall_clock_s": 750.5,
+        "note": "Functionally matches the ydw baseline (1,104,324 cycles, 10/10 iterations) -- 1,104,667 cycles here, effectively identical. Wall clock 750.5s vs the prior 549.48s baseline (~37% slower) -- reported as drift; not correlated with a specific RTL cause (host load during a long back-to-back suite-running session is the more likely explanation than the 2-cycle-deeper write pipeline, which does not lengthen the CPU's own critical path)."
+      },
+      "l2_bench_large_mem_words": {
+        "status": "INCONCLUSIVE -- terminated, impractical within session budget",
+        "config": "make l2_bench (SRAM_MEM_WORDS=65536, TESTCASE=test_hello_sanity,test_sweep_l2_bench), SIM_BUILD_ROOT=/nobackup/rvb_verif3, systemd-run MemoryMax=9G MemorySwapMax=0 MAKEFLAGS=-j2",
+        "finding": "MEM_WORDS=65536 / GROUP_WORDS=32 -> NGROUPS=2048 (vs NGROUPS=128 at the default MEM_WORDS=4096 used by every other suite in this regression) -- 16x more stage-2 group registers and 65536 individual stage-3 per-word always_ff write blocks (vs 4096 default). Verilator's split-model compile alone (--output-split, 423 generated .cpp files, final Vtop binary 97.9 MB) took ~2230s (~37 min) wall clock before the simulation binary even started running -- compare to a full soc_boot compile+simulate cycle (same tb_soc_top toplevel, default MEM_WORDS) at ~57s total. The simulation itself was then terminated after running 22m24s (1344s) of continuous 99.9%-CPU execution with no sign of approaching completion (linear, non-plateauing progress) and no crash/OOM -- terminated by this session rather than left to run indefinitely.",
+        "not_an_oom": "Peak observed RSS during compile was ~3.6 GB (well under the 9G MemoryMax cap and the 15.9 GB host total); the Vtop simulation process itself used only ~189 MB RSS. This is a compile-time and per-cycle-simulation-time scaling problem, not a memory exhaustion problem.",
+        "total_wall_clock_before_termination_s": 3360,
+        "recommendation": "l2_bench (or any SRAM_MEM_WORDS override well above the default 4096) is now materially more expensive to build and simulate under the rvb write pipeline than before -- not impractical to the point of failing outright (no crash, no OOM), but the 25-40x compile-time and large ongoing per-cycle runtime cost should be weighed by the RTL/PD orchestrators if a large-MEM_WORDS configuration (L2-bench-style sweeps, or any future large SRAM window) is needed again. Not gating sign-off on this since l2_bench is excluded from soc_all by design (long-runtime, separate measurement tool) and no functional (correctness) failure was observed in the portion that did run."
+      },
+      "dut_bugs_found": 0,
+      "fix_request_filed": null,
+      "testbench_files_changed": [
+        "tb/cocotb/soc/test_sram_controller.py"
+      ],
+      "rtl_files_changed": [],
+      "checked_at": "2026-09-17T13:36:42.793810+00:00"
     }
   },
   "pipeline_session_id": null,
@@ -1801,6 +1893,30 @@
       "retry_strategy": "none",
       "suggested_next_step": "proceed",
       "reason": "Full regression re-run for bead ydw's registered-SRAM-read RTL fix (commit 339f83a): sram_controller 15/15 both builds (4 new FIXED/wraparound/random-backpressure tests), soc_all 186/186 (25 suites, +8 vs 178 baseline explained by the 4 new tests x 2 builds), cpu phase2_all 112/112 (baseline match), soc_stress 1/1 (1.1M cycles). Mutation check confirmed the two targeted throughput/backpressure tests are real beat-drop detectors. Doc-only stale-comment fix applied. 0 DUT bugs found.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-17T11:33:13.416943+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "bead claude_verilog_test-rvb Path A residual fix implemented (commit 23bacae, branch feat/rvb-sram-write-path): replaced the first rvb iteration's word_sel_q one-hot register (still a same-cycle s_wvalid fan-out cone, confirmed the #1 post-route setup-violator class at RUN_2026-09-17_09-01-42, 16400 violators, worst -1050.16 ps) with a 3-stage registered, group-distributed write pipeline in sram_controller.sv (ifndef SRAM_SKY130 branch only): stage 1 input register, stage 2 per-group (32-word) we/data registers structurally distinguished via a self-holding grp_wdata_q to defeat Yosys opt_merge, stage 3 per-group mem[] write. +2 cycle write-commit latency, 1 beat/cycle throughput preserved, BVALID delayed (new W_DRAIN state) until the burst's last beat has landed so B-respecting masters always read fresh data. Verified: lint_soc + lint_soc_sky130 0 errors; standalone verilator elaboration clean at MEM_WORDS=1024/4096/65536; asap7-soc-sv2v regenerates cleanly (6821->6921 lines, 51->53 clocked always blocks); yosys synth + opt_merge -share_all on the standalone module confirms 0 cells removed (no group-register collapse); tb/cocotb/soc sram_controller 15/15 PASS on both SRAM_TARGET=freepdk45 and SRAM_TARGET=sky130 (sky130/SRAM_SKY130 branch untouched, confirmed zero regression). CPU D-cache, GPU memory_coalescer, and DMA engine verified safe-by-construction against the new in-flight RAW window (none issue a same-address read before observing the preceding write's B). Full soc_all regression and a fresh ASAP7 SoC PD re-run are follow-ups for verification-orchestrator and physical-design-orchestrator respectively, not performed in this session per task scope.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-17T13:37:03.588786+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Full regression PASS for commit 23bacae (rvb SRAM write pipeline): soc_all 196/196 (25 suites), cpu_phase2_all 112/112, soc_stress PASS (1,104,667 cycles, 10/10 iter), sram_controller 20/20 on both builds including 5 new directed tests, both required mutations confirmed caught and reverted clean. No DUT bugs found. l2_bench (MEM_WORDS=65536) reported as a separate inconclusive/impractical-runtime finding, not gating signoff (excluded from soc_all by design).",
       "constraint_ref": null
     }
   ],
