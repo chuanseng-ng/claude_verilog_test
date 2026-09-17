@@ -898,3 +898,61 @@ real measurements and are **not retracted** — but they are **not reproducible 
 alone**; they depended on TritonCTS's own undocumented, netlist-sensitive behaviour on that
 specific run. Bead `0ah` has been **reopened**. Beads `rvb` and `ydw` and their findings in the
 section above are unaffected by this correction.
+
+### FURTHER CORRECTION (2026-09-17, second pass): the "identical binary" premise above was also wrong
+
+The correction section above assumed the reference run and `soc-ydw` used the same OpenROAD
+26Q2 binary and differed only in RTL/netlist. That premise is wrong. Confirmed from artifacts
+(read-only: log/config reads plus two cheap, no-design `-version`/`help` queries on already-
+resident binaries — no new PD runs launched):
+
+- **Attempt 4** (`RUN_2026-09-16_01-13-02`, the original bead `0ah` baseline, -823.5 ps
+  post-CTS) and **`w3a-sta-7`** (`RUN_2026-09-16_05-52-48`, the original -1687.9 ps "post-GRT"
+  number): `memory/pd/run_state.md`'s own header for that campaign states "tool: LibreLane
+  2.4.13 ... bundled OpenROAD edf00dff / OpenSTA 2.6.0 (`OR_PATH_PREFIX=`)" — the **bundled**
+  `edf00dff` build, not the pinned 26Q2 shim.
+- The **reference run** (`RUN_2026-09-16_19-19-45`, this bead's closure basis): launched by a
+  hand-rolled script that explicitly set `PATH` to the 26Q2 shim inside `nix-shell` — confirmed
+  **26Q2** by its 1639-unannotated-driver count and a repair-progress table with Area/StTNS/EnTNS
+  columns.
+- **`soc-ydw`** (`RUN_2026-09-17_06-25-54`): launched via `make librelane-asap7-soc-multiclock-hier`,
+  which never sets `OR_PATH_PREFIX` (new bead `djm`) — confirmed **`edf00dff`** by its
+  4663-unannotated-driver count, a repair-progress table lacking the Area/StTNS/EnTNS columns
+  (single TNS column instead), and the live process binary itself reporting version
+  `edf00dff99f6c40d67a30c0e22a8191c5d2ed9d6`.
+
+So the real comparison this whole investigation made was **bundled `edf00dff` (attempt 4,
+`w3a-sta-7`, `soc-ydw`) vs the pinned 26Q2 (the one reference run)** — a tool-version difference,
+not a config or session-state difference. `clock_tree_synthesis` help text differs between the
+two binaries: 26Q2 adds `macro_clustering_size`/`macro_clustering_max_diameter` and a
+`no_obstruction_aware` complement that `edf00dff` lacks entirely. Since the shared `cts.tcl`
+never passes any macro-specific flag explicitly, the two binaries' own different built-in
+defaults for a clock net mixing macro and register sinks is the simplest, best-supported
+explanation for the macro/register split and latency-balancing difference — superseding the
+"session-wide TritonCTS mode" hypothesis in the correction above (whose underlying log
+observations remain accurate, just better explained this way).
+
+**Revised conclusion**: bead `0ah`'s apparent "fix" was most likely the pinned 26Q2 build's
+TritonCTS macro-aware clustering, reached by accident because the validating script bypassed a
+buggy Makefile target — not any config key (already confirmed a no-op) and not a documented,
+controllable CTS setting.
+
+**New Makefile gap found (bead `claude_verilog_test-djm`, P1, filed, not fixed)**:
+`librelane-asap7-soc-multiclock-hier` — the target this entire campaign (`w3a`/`rvb`/`0ah`/`ydw`)
+has used — is missing from `pnr/Makefile`'s target-specific `OR_PATH_PREFIX` assignment
+(~line 918), even though `librelane-asap7-soc-multiclock` (without `-hier`) is present. Its
+prerequisite `check-asap7-openroad` correctly verifies `ASAP7_OPENROAD_BIN` points at a valid
+26Q2 build and explicitly rejects `edf00dff` — but only checks the *variable's value*, not that
+the flow's actual bare `openroad` invocation resolves to it. The preflight passes while the flow
+silently uses the rejected build anyway: precisely the "silent fallback to LibreLane's own
+OpenROAD" failure mode (bead `xy6`) this check exists to prevent, via an untested code path.
+One-line fix (add the target to the existing list) described in bead `djm`; not applied yet.
+
+**Revised fix recommendation**: the `cts.tcl` passthrough proposed in the correction above is
+most likely **unnecessary**. If bead `djm`'s Makefile fix is applied and the flow consistently
+runs on the pinned 26Q2 build, 26Q2's own default TritonCTS macro-clustering behaviour may
+already reproduce the clean-hold result with no new config knobs — the passthrough should be
+treated as a fallback only if a properly-pinned 26Q2 re-run does *not* reproduce it on its own.
+
+Bead `0ah` remains open. The full `0ah`/`rvb`/`ydw` comparison chain needs re-running on a
+consistently-pinned 26Q2 build (after `djm`'s fix) before this bead can be honestly closed.
