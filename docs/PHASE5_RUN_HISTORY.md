@@ -49,6 +49,36 @@ synthesized flat. Branch `feature/phase7-mixed-signal-pll`.
 > classification, and what is/isn't recoverable: bead
 > `claude_verilog_test-0p6`.
 
+> ✅ **UPDATE 2026-09-18 (bead `claude_verilog_test-0d0`) — the SoC HAS since
+> been re-measured on the fixed flow; the `w3a-sta-7` replacement figures above
+> are themselves superseded.** Three full ASAP7 SoC flows have now run
+> end-to-end with `STA_POSTGRT_INSESSION_GRT=1`, in-session GRT parasitics and
+> a proven annotation gate. The current honest current-RTL basis is the latest
+> of them, `pnr/asap7/soc/runs/RUN_2026-09-17_20-41-11` (pinned OpenROAD 26Q2):
+> **setup WNS −727.37 ps / TNS −60 665 ps / 781 violators; hold CLEAN
+> (0 violators, WS +31.26 ps); 283.6 mW total / 89.6 mW fabric-only;
+> 166 811 µm² / 66.80 % util**; annotation 3 156 unannotated drivers / 0
+> partial, all `clkload<N>/Y` CTS dummy loads plus 83 `u_cpu` macro debug pins
+> — **zero real signal drivers unannotated**. Progression across the three
+> fixed-flow runs: −1144.5 ps / 40 192 violators (`RUN_2026-09-16_19-19-45`,
+> bead `rvb` Path A/B fixes) → −1050.2 ps / 33 196 (`RUN_2026-09-17_09-01-42`,
+> bead `ydw` registered SRAM read) → **−727.4 ps / 781**
+> (`RUN_2026-09-17_20-41-11`, bead `rvb` write pipeline).
+>
+> **Scope of this update — what it does and does not validate:**
+> - **Validated**: the ASAP7 SoC on *current* RTL, on the fixed flow, is
+>   measured honestly. Timing is *still not closed* at 1750 ps (−727 ps, 781
+>   endpoints, all internal to the SRAM array's own bounded group fan-out).
+> - **NOT validated, unchanged by this update**: run 14 (571 MHz / 62.9 mW),
+>   run 23 (both domains met), CPU run 43 (1418 MHz), CPU M7 (1282 MHz) and the
+>   GPU block (571 MHz / 262 mW). Their artifacts were wiped (bead `alq`) and
+>   their RTL vintage differs, so they cannot be re-measured — they stay
+>   unvalidated-not-confirmed-wrong. GPU re-validation remains deferred to bead
+>   `claude_verilog_test-2kh` (host-gated on `2kn`).
+> - **Unaffected by this update**: the zero-routed-wire caveat (`xy6`) and the
+>   macro-power-excluded caveat (`86a`/`ew3`) both still stand — these figures
+>   use annotated GRT parasitics, not SPEF, and exclude both hard macros.
+
 ## Sign-off result (run 14 — accepted)
 
 Run `RUN_2026-06-23_18-05-38`, sv2v synthesis frontend, single-clock 1750 ps.
@@ -327,6 +357,15 @@ inline ⚠️ mark above points here.
 > is not read as implying a signed-off design): setup WS −2084.08 ps / TNS
 > −2.19 × 10⁷ ps / 41 864 violators, hold WS −917.23 ps / TNS −392 273 ps /
 > 718 violators.
+>
+> ✅ **Superseded 2026-09-18 (bead `0d0`)**: those numbers are the
+> 2026-09-16 `w3a-sta-7` snapshot, which was additionally captured *before*
+> `ResizerTimingPostGRT` ran (see bead `0ah`). Three later full fixed-flow runs
+> supersede them; current basis `RUN_2026-09-17_20-41-11`: setup WNS
+> **−727.37 ps** / TNS −60 665 ps / **781** violators, hold **CLEAN**,
+> **283.6 mW** total / 89.6 mW fabric-only. Timing is still not closed. See the
+> dated 2026-09-18 update block near the top of this document for the full
+> scope of what that does and does not validate.
 >
 > **Bead `0p6` note**: `run 23`'s historical post-GRT timing figures elsewhere
 > in this document (and by extension any power figure derived from run 23's
