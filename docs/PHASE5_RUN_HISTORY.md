@@ -1173,3 +1173,101 @@ matches) and needs no action.
 Note: like the `ydw`/`0ah` measurements above, this run stopped at `--to OpenROAD.STAMidPNR-3`
 (no detailed routing / DRC / antenna / LVS), so it is a timing-only measurement, not a routing
 sign-off, and the power figures include the `Macro` group unless stated as "fabric-only" above.
+
+### 2026-09-18: sys_clk CTS skew growth investigation (bead `ea0`, read-only, no re-run)
+
+Filed after the `rvb2` re-run above (`RUN_2026-09-17_20-41-11`) showed `sys_clk` CTS skew rise
+27% versus the `ydw2` reference (`RUN_2026-09-17_09-01-42`): setup/hold 695.55/640.42 →
+882.40/818.97 ps, while `cpu_clk` skew stayed flat (285.26/236.29 → 281.10/230.27 ps), hold
+stayed clean, and setup improved overall. Investigated read-only against both run directories'
+`31-openroad-cts/` logs, `cts.rpt`, and `38-openroad-stamidpnr-3/{skew.max,skew.min,ws.min,
+violator_list}.rpt` — no PD run launched.
+
+**CTS numbers, `sys_clk` (`clk_i_regs`)**, from `openroad-cts.log`:
+
+| Metric | ydw2 (ref) | rvb2 | Δ |
+| :----- | ---------: | ---: | :- |
+| Raw sinks before clustering | 45,339 | 49,494 | **+4,155 — exactly the placed `sequential_cell` delta reported for the rvb RTL fix** |
+| Sinks after clustering | 5,728 | 6,254 | +526 (+9.2%) |
+| Final tree sinks (incl. dummy/clk buffers) | 46,637 | 52,525 | +5,888 (+12.6%) |
+| Leaf buffers | 5,720 | 6,237 | +517 (+9.0%) |
+| Path depth | 12–13 | 12–13 | **unchanged** |
+| Max clock-tree level | 9 | 9 | **unchanged** |
+| Dummy loads inserted | 1,298 | 3,031 | **+1,733 (+133%) — the dominant delta** |
+| Delay-balancing buffers (`CTS-0036`) | 16 (of 37 total) | 22 (of 45 total) | +6 (+37.5%) |
+
+`CTS_SINK_CLUSTERING_SIZE`=8 and `CTS_SINK_CLUSTERING_MAX_DIAMETER`=10 µm (both already
+tightened from LibreLane defaults 25/50 µm by the Run-19 `cpu_clk` fix recorded earlier in this
+file) are identical config in both runs, and clock-root count (6) and tree depth are unchanged.
+The entire skew story is a genuinely larger, more heavily-loaded `sys_clk` sink population (an
+exact +4,155-sink match to the RTL delta) needing 2.3× more dummy-load balancing and 6 more
+explicit delay-balancing buffers to stay latency-matched — not a deeper or differently-shaped
+tree.
+
+**Where the skew lives.** `report_clock_skew`'s worst-case pair is the *same role* in both runs:
+
+- Source (latest arrival): `u_pmu._20{7,8}_/CLK` — a PMU reset-sync flop. `pmu.sv` has been
+  untouched since commit `17b18ec`, long before rvb's `23bacae` (which only touches
+  `sram_controller.sv`). Latency 820.97 → 1018.87 ps setup (+197.9 ps), 794.71 → 984.67 ps hold
+  (+189.96 ps).
+- Target (earliest arrival): `u_gpu_cg.u_icg/CLK` — the GPU clock-gate cell. Latency
+  −140.43 → −151.47 ps setup (+11.0 ps magnitude), −144.29 → −155.70 ps hold (+11.4 ps).
+
+~95% of the skew growth is the *source* side getting later (197.9 of 186.9 ps setup net delta,
+partly offset by the target's own 11.0 ps move), not the write-pipeline registers themselves.
+Neither `u_pmu` nor `u_gpu_cg` is part of the rvb write pipeline (`grp_we_q`/`grp_wdata_q` live
+in `u_sram`). Cross-referenced against `38-openroad-stamidpnr-3/violator_list.rpt` (781 setup
+entries in rvb2): **0 matches for `u_pmu` or `u_gpu_cg`**. Every violator is a `u_sram`-rooted
+class already tracked against bead `rvb` separately (worst `u_sram → u_sram`, −727.37 ps).
+Conclusion: `report_clock_skew` reports a global (max sink latency − min sink latency) bound
+across the whole clock net, not a real launch/capture timing arc. `u_pmu`'s branch is wherever
+TritonCTS's own latency-balancing step (`CTS-0033`/`CTS-0036`) pads delay to match the tree's
+new, higher max latency, driven by needing to buffer +4,155 real sinks and 2.3× more dummy
+loads elsewhere in the same 6-root, unchanged-depth tree; `u_gpu_cg.u_icg` is a small, shallow
+subtree mostly untouched by that rebalancing, so it anchors the "early" end and the gap widens.
+
+**Risk verdict:**
+
+- **(a) Insertion-delay growth** — real, and it is the whole story: same tree depth (12–13),
+  same 6 roots, +12.6% final sinks, +133% dummy-load cells. Benign by construction — TritonCTS
+  padding fast branches up to match a genuinely slower one, not failing to balance.
+- **(b) Real-path impact** — none found. 0/781 `violator_list.rpt` matches for either skew-report
+  instance. Overall setup timing improved sharply in the same run despite the skew growth
+  (WNS −1050.16 → −727.37 ps, TNS −14,423,700 → −60,665 ps, violators 33,196 → 781) — the skew
+  metric and real critical-path health are decoupled here.
+- **(c) Hold margin** — thinned but stayed clean: WS 38.01 → 31.26 ps (−6.75 ps, −17.8%),
+  WNS/TNS still 0/0 in both runs. The worst hold path changed **domain**, not just magnitude:
+  ref's worst hold path is on `sys_clk` (`u_irq_ctrl._145_` → `u_irq_ctrl._140_`); rvb2's is on
+  `cpu_clk` (`u_cpu_axi_cdc.u_b_fifo.u_wr_ptr_to_rd._18_` → `._21_`, a pre-existing async-FIFO
+  pointer CDC path). `cpu_clk`'s own skew stayed flat (285/236 → 281/230 ps) across the two
+  runs, so this hold thinning is **not** downstream of the `sys_clk` skew growth investigated
+  here — it is a separate, minor, `cpu_clk`-side CTS-rebalancing side effect. Worth watching in
+  future runs (`cpu_clk` hold WS, 31.26 ps, is now the thinner of the two margins, and its worst
+  path is a CDC pointer-sync chain — exactly the path class most sensitive to hold erosion), but
+  out of scope for this investigation.
+
+**Mitigation considered, not applied.** LibreLane 2.4.13's `OpenROAD.CTS` step
+(`librelane/scripts/openroad/cts.tcl`, cross-checked against the `config_vars` list in
+`librelane/librelane/steps/openroad.py`) exposes only *global* (all-clock) knobs:
+`CTS_SINK_CLUSTERING_SIZE` (default 25, already 8 here), `CTS_SINK_CLUSTERING_MAX_DIAMETER`
+(default 50 µm, already 10 µm here), `CTS_DISTANCE_BETWEEN_BUFFERS` (default 0/off),
+`CTS_CLK_MAX_WIRE_LENGTH` (default 0/off), `CTS_MAX_CAP`/`CTS_MAX_SLEW` (unset). Re-confirmed
+(consistent with bead `0ah`'s own finding) that `CTS_BALANCE_LEVELS` and `CTS_OBSTRUCTION_AWARE`
+— present as historical comments in `config_multiclock_hier_rsz7_0ah.json` — are not read by
+`cts.tcl` and remain no-ops; this investigation found no evidence to revise that conclusion.
+There is **no per-clock CTS override** in this LibreLane version (the config file's own
+`AH_0AH_COMMENT_4` note already flags this). A candidate mitigation — tighten
+`CTS_SINK_CLUSTERING_MAX_DIAMETER` further (10 µm → ~5 µm) to force finer, more uniform sink
+clustering and reduce the dummy-load/delay-buffer disparity — is credible but **global**: it
+would also perturb `cpu_clk`'s tree, which per (c) above now carries the thinner hold margin
+(31.26 ps). Validation cost: a full `CTS`-through-`STAMidPNR-3` re-run (~4–4.5 h, matching the
+two runs measured here) checking `sys_clk` setup skew, `cpu_clk` hold WS (must stay positive),
+and overall setup WNS/TNS (must not regress from −727.37 ps / −60,665 ps). **Not run this
+session** — read-only investigation, no PD run permitted while another agent's Verilator
+regression is in flight.
+
+**Bead `ea0` — CLOSED.** Explained and benign, monitored: the skew growth is a real, exactly
+RTL-delta-matched consequence of TritonCTS balancing a genuinely larger `sys_clk` sink
+population, it does not touch any real violating timing path, and it does not explain the small,
+separately-rooted `cpu_clk`-domain hold-margin thinning noted in (c) above (recorded here as a
+forward watch-item, not reopened as a new bead).

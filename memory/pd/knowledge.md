@@ -2943,3 +2943,44 @@ the single changed file to `/nobackup/librelane-gate-backup-20260916_191609/`, a
 `git diff --stat` shows only the expected 9-line addition and `tclsh`'s `info complete` confirms
 the script still parses. The upcoming combined SoC re-run's `RepairDesignPostGRT` step will now
 print its own unannotated-driver count directly, closing the evidence gap above.
+
+## report_clock_skew growth is a global max/min insertion-delay bound, not a per-path metric (bead ea0, 2026-09-18)
+
+When comparing two ASAP7 SoC runs across a register-count-adding RTL change (rvb's SRAM write
+pipeline, +4,155 flops), `sys_clk` CTS skew (`report_clock_skew`, `skew.max.rpt`/`skew.min.rpt`)
+grew 27% (695.55/640.42 -> 882.40/818.97 ps setup/hold) while `cpu_clk` skew stayed flat and
+overall setup timing improved. Root cause, confirmed from `31-openroad-cts/openroad-cts.log` +
+`38-openroad-stamidpnr-3/violator_list.rpt`:
+
+- The reported "skew" is `(latest sink insertion delay) - (earliest sink insertion delay)`
+  across the WHOLE clock net (`report_clock_skew`'s worst source/target pair), not a real
+  launch-to-capture arc on any actual timing path. **Always check the source/target instance
+  names against the run's `violator_list.rpt` before attributing skew growth to new logic** — if
+  neither instance appears there, the skew number is decoupled from real critical-path health.
+- Adding N sequential cells that widen a clock net's sink population shows up almost 1:1 in
+  TritonCTS's `Total number of sinks` for that net (exact match observed: +4,155 sinks for
+  +4,155 placed `sequential_cell`s) and drives up **dummy loads inserted** (`CTS-0207`,
+  +133% here) and **delay-balancing buffers** (`CTS-0036`, +37.5% here) far more than it changes
+  tree depth (`Path depth`, unchanged 12-13 here) — TritonCTS pads every branch's latency UP to
+  match a new, higher tree-wide max, so a totally unrelated, pre-existing flop (here, a PMU
+  reset-sync register untouched by the RTL diff) can become the new "worst" skew source purely
+  because it's whatever the balancing algorithm didn't need to touch.
+- Cheap diagnostic recipe for this class of question: (1) diff `cts.rpt` + `openroad-cts.log`
+  `Total number of sinks` / `Dummy loads inserted` / `Balancing latency ... inserted N delay
+  buffers` per clock net between the two runs; (2) check whether the sink delta matches the
+  RTL's placed `sequential_cell` delta; (3) grep the final `violator_list.rpt` for the two
+  instance names named in `skew.max.rpt`/`skew.min.rpt` — 0 matches means the skew growth is a
+  global bound artifact, not a real timing regression.
+- LibreLane 2.4.13's `OpenROAD.CTS` step (`librelane/scripts/openroad/cts.tcl`) has **no
+  per-clock override** — `CTS_SINK_CLUSTERING_SIZE`, `CTS_SINK_CLUSTERING_MAX_DIAMETER`,
+  `CTS_DISTANCE_BETWEEN_BUFFERS`, `CTS_CLK_MAX_WIRE_LENGTH`, `CTS_MAX_CAP`, `CTS_MAX_SLEW` all
+  apply to every `clock_tree_synthesis` net in the design. Tuning one clock's tree balance risks
+  perturbing every other clock's tree in the same run; validate any such change against ALL
+  clocks' skew AND hold WS, not just the one being targeted. Reconfirms bead 0ah's finding that
+  `CTS_BALANCE_LEVELS`/`CTS_OBSTRUCTION_AWARE` are unrecognized-key no-ops in this LibreLane
+  tree — do not reintroduce them expecting an effect.
+- Separately: hold WS can thin (here 38.01->31.26ps, still clean 0/0 WNS/TNS) via the worst-hold
+  -path DOMAIN shifting to a different clock (here sys_clk's `u_irq_ctrl` -> cpu_clk's
+  `u_cpu_axi_cdc` CDC pointer-sync path) even when the clock whose skew you're investigating
+  stayed flat — don't assume a hold-margin change is attributable to the clock net you're
+  currently diffing without checking which clock's path is actually now worst.

@@ -5117,3 +5117,31 @@ class recorded honestly as follow-up candidates, not reopened against
 this bead). ydw unchanged/closed (its read-mux class does not resurface
 here). Full detail: docs/PHASE5_RUN_HISTORY.md dated section
 2026-09-18, "2-stage group-distributed write pipeline".
+
+---
+
+investigation: bead claude_verilog_test-ea0 (2026-09-18, read-only, no PD run launched)
+question:    Why did sys_clk CTS skew grow ~27% (695.55/640.42 -> 882.40/818.97 ps setup/hold)
+             between RUN_2026-09-17_09-01-42 (ydw2 ref) and RUN_2026-09-17_20-41-11 (rvb2)?
+finding:     Real, exact-match sink-count growth on sys_clk (+4,155 sinks == the placed
+             sequential_cell delta from the rvb write-pipeline RTL), same tree depth (12-13),
+             same 6 roots, but +133% dummy loads (1298->3031) and +6 delay-balancing buffers
+             (16->22) needed to keep the larger tree latency-matched. report_clock_skew's
+             worst-case pair (source u_pmu._20{7,8}_/CLK, target u_gpu_cg.u_icg/CLK) is
+             UNRELATED to the write pipeline (pmu.sv untouched since 17b18ec) and does not
+             appear anywhere in the 781-line violator_list.rpt (0 matches) -- it is a global
+             max-latency/min-latency bound, not a real timing arc. Overall setup timing improved
+             sharply in the same run (WNS -1050.16->-727.37ps). Hold stayed clean (0/0) with a
+             modest WS thinning (38.01->31.26ps) traced to a SEPARATE, cpu_clk-domain path shift
+             (worst hold path moved from sys_clk's u_irq_ctrl to cpu_clk's
+             u_cpu_axi_cdc.u_b_fifo CDC pointer-sync path) -- not caused by the sys_clk skew.
+verdict:     Explained and benign, monitored. Bead ea0 CLOSED. Watch cpu_clk hold WS (now the
+             thinner margin at 31.26ps) in future runs -- not yet its own bead.
+mitigation:  No per-clock CTS override exists in LibreLane 2.4.13 (all CTS_* knobs in
+             librelane/scripts/openroad/cts.tcl are global). CTS_SINK_CLUSTERING_SIZE=8 /
+             CTS_SINK_CLUSTERING_MAX_DIAMETER=10um are already tightened from defaults (25/50).
+             Re-confirmed CTS_BALANCE_LEVELS/CTS_OBSTRUCTION_AWARE remain no-ops (bead 0ah).
+             A further MAX_DIAMETER cut (10->~5um) is credible but global -- would also touch
+             cpu_clk's already-thinner hold margin -- and needs a full CTS->STAMidPNR-3 re-run
+             (~4-4.5h) to validate on both clocks. NOT applied this session.
+detail:      docs/PHASE5_RUN_HISTORY.md dated 2026-09-18, "sys_clk CTS skew growth investigation"
