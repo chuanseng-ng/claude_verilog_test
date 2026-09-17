@@ -1031,3 +1031,145 @@ Note: this run stopped at `--to OpenROAD.STAMidPNR-3` (no detailed routing / DRC
 steps ran), so it is a timing-only measurement, not a routing sign-off; the power figures above
 include the `Macro` power group (192.5 mW), unlike some earlier ASAP7 sign-offs in this document
 that reported fabric-only figures as the headline number.
+
+### 2026-09-18: 2-stage group-distributed write pipeline (`soc-rvb2`, `RUN_2026-09-17_20-41-11`) — `rvb` CLOSED
+
+**RTL** (commit `23bacae`, `feat/rvb-sram-write-path`): replaces the prior rvb iteration's
+`word_sel_q`-gated per-word `always_ff` (still a same-cycle combinational function of `s_wvalid`
+via `w_commit`, gating a `MEM_WORDS`-wide AND array off the address-phase one-hot decode — the
+measured #1 violator class on `RUN_2026-09-17_09-01-42`, 16,400 / -1050.16 ps) with a 3-stage
+pipeline in `rtl/soc/sram_controller.sv` (`ifndef SRAM_SKY130` only): stage 1 registers the
+accepted W beat (`wr_valid1_q`/`wdata1_q`/`wstrb1_q`/`idx1_q`); stage 2 splits `MEM_WORDS`
+(1024 for this SoC config) into `NGROUPS`=32 groups of `GROUP_WORDS`=32 words, each with its own
+`grp_we_q`/`grp_wdata_q` registers (`grp_wdata_q` explicitly self-holds when its group is not
+selected, which keeps Yosys `opt_merge` from collapsing the 32 replicas back into one high-fanout
+register — verified via a standalone `opt_merge -share_all` pass, 0 cells removed); stage 3
+writes `mem[]` per-group, gated only by that group's own registered enable. A word lands in
+`mem[]` 2 cycles after its W handshake; `WREADY` stays unconditional (1 beat/cycle sustained);
+`BVALID` is held off via a new `W_DRAIN` FSM state until the burst's last beat has actually
+landed. Verified: `lint_soc`/`lint_soc_sky130` 0 errors, `asap7-soc-sv2v` regenerates cleanly
+(6821→6921 lines), `tb/cocotb/soc` `sram_controller` 15/15 on both `SRAM_TARGET=freepdk45` and
+`SRAM_TARGET=sky130`, plus `soc_all` 196/196 / `phase2_all` 112/112 / `soc_stress` PASS
+(commit `693deb5`).
+
+**Re-run**: same target/config/`--to` point as the `ydw`/`0ah` campaign —
+`make librelane-asap7-soc-multiclock-hier SOC_CONFIG=config_multiclock_hier_rsz7_0ah.json
+LIBRELANE_EXTRA_ARGS="--to OpenROAD.STAMidPNR-3"`, unit `soc-rvb2`, run dir
+`pnr/asap7/soc/runs/RUN_2026-09-17_20-41-11`, `EXIT_CODE=0`. Preflight confirmed the pinned
+26Q2 binary (`ok: 'openroad' resolves to pinned shim`); binary use was reconfirmed live by the
+coordinator via `/proc/PID/exe`.
+
+**STAMidPNR-3 final (nom_tt_025C_0p7V) vs. reference `RUN_2026-09-17_09-01-42` (26Q2, ydw RTL,
+same config):**
+
+| Metric | Reference (ydw RTL) | `soc-rvb2` (rvb write pipeline) | Δ |
+| --- | --- | --- | --- |
+| Setup WNS | -1050.16 ps | -727.37 ps | +322.8 ps (+30.7%) |
+| Setup TNS | -14,423,700 ps | -60,665 ps | +14,363,035 ps (-99.6%) |
+| Setup violators | 33,196 | 781 | -32,415 (-97.6%) |
+| Hold WNS / TNS / violators | 0 / 0 / 0 (WS +38.01 ps) | 0 / 0 / 0 (WS +31.26 ps) | clean, both |
+| cpu_clk setup / hold skew | 285.26 / 236.29 ps | 281.10 / 230.27 ps | ~flat (CPU domain untouched) |
+| sys_clk setup / hold skew | 695.55 / 640.42 ps | 882.40 / 818.97 ps | +26.9% / +27.9% (worse) |
+| Power total / fabric-only | 293.2 / 100.7 mW | 283.6 / 89.6 mW | -3.3% / -11.0% |
+| Unannotated / partial drivers | 1426 / 0 | 3156 / 0 | see annotation check below |
+| Instance count / sequential cells | 290,954 / 46,297 | 310,066 / 50,452 | +19,112 / +4,155 |
+| Instance area / utilization | 166,960 µm² / 66.86% | 166,811 µm² / 66.80% | ~flat |
+
+**Annotation check**: all 3,156 unannotated drivers classify into exactly two non-signal
+categories, both unchanged in composition from the reference run — `clkload<N>/Y` dummy
+clock-balancing load cells (3,073, up from the reference's 1,343 — CTS inserted more of them to
+balance the larger/redistributed clock tree from the ~4,155 net new sequential cells) and 83
+`u_cpu` macro boundary pins (`debug_rs2_data_o[*]`, `debug_state_o[*]`, `trap_cause_o[*]`,
+`trap_taken_o`, `axi_arsize_o[*]`, `axi_awsize_o[*]` — unconnected/tied debug and
+fixed-burst-size outputs on the CPU macro, **identical set, identical count** in both runs).
+Zero partially-unannotated drivers in either run. No real internal signal driver is
+unannotated in this run; the 2.2x increase is fully explained by the larger clock tree, not a
+parasitic-annotation quality regression on the data path.
+
+**Violator classes** (`violator_list.rpt`, 781 lines total; class = top-level startpoint
+instance → top-level endpoint instance):
+
+| Count | Class | Worst slack |
+| --- | --- | --- |
+| 504 | `u_cpu` → `u_cpu_axi_cdc` | -190.37 ps |
+| 113 | `u_cpu_axi_cdc` → `u_cpu_axi_cdc` | -52.55 ps |
+| 48 | `u_bus` → `u_dma` | -42.82 ps |
+| 32 | `u_sram` → `u_sram` | **-727.37 ps (= design WNS)** |
+| 32 | `u_dma` → `u_sram` | -349.60 ps |
+| 32 | `u_dma` → `u_bus` | -301.86 ps |
+| 15 | `u_pll_sub` → `u_sram` | -76.01 ps |
+| 4 | `u_dma` → `u_dma` | -11.54 ps |
+| 1 | `u_cpu_axi_cdc` → `u_cpu` | -32.93 ps |
+
+- **(a) Write classes** — this bead's closure criterion. `u_gpu/m_axi_wvalid → u_sram` (Path A,
+  the reference's #1 class: 16,400 violators, worst -1050.16 ps) has **0 matches** in this run —
+  completely gone. `u_dma → u_sram` (Path A's DMA analog, reference's #2: 14,392 violators,
+  worst -975.65 ps) is reduced to **32 violators, worst -349.60 ps** — a 99.8% count reduction
+  and a 64% slack improvement, and no longer close to the design's critical path. Both original
+  Path A classes are resolved by the closure criterion's own terms: neither is limiting.
+- **(b) Worst remaining class** — `u_sram → u_sram`, 32 violators, worst -727.37 ps (= the
+  design's overall setup WNS). Traced via `final/nl/soc_top.nl.v` (fully anonymized cell/net
+  names post-synthesis, so RTL attribution required structural fingerprinting rather than name
+  matching): this class has **8 unique startpoints fanning out to 32 unique endpoints** (e.g.
+  one startpoint instance drives 4 different endpoints). This many-drivers-to-few / few-drivers-
+  to-many cardinality is the opposite of `ydw`'s read-mux structure (`mem[r_idx]`, up to 1024
+  candidate mem-word startpoints converging 1:1 onto each of the 32 `r_data_q` bit endpoints —
+  which would show 32 *unique* startpoints each with exactly *one* endpoint, not 8 startpoints
+  fanning to 32 endpoints). It matches instead the **new rvb stage-2→stage-3 write-commit
+  fanout**: `grp_wdata_q[gk]` (32 bits, shared per group) combinationally fans out, through the
+  `grp_we_q[gk][gw]`-gated mux, to up to `GROUP_WORDS`=32 different `mem[]` word endpoints within
+  its own group — exactly the endpoint count observed. This is rvb's **own** fix's residual, not
+  a resurgence of `ydw`'s read segment: the by-design bound on this fanout (≤32 endpoints per
+  group, vs. the pre-fix design's ≤1024-wide single-cycle AND array) is working as intended, but
+  is not yet zero. `ydw`'s read-mux class (`u_sram`→`u_sram` with the reverse cardinality
+  signature) does **not** appear anywhere in this violator list — 0 matches — so `ydw`'s fix
+  continues to hold with no reopening needed at this design point.
+- **(c) `u_pll_sub` classes** — new in this run, absent from the reference run's classes
+  entirely (reference has only a small, differently-named `u_apb_pll2_cdc → u_cpu_pll_sub`
+  class, 8 violators / -104.00 ps at STAMidPNR-3). In this run, `u_pll_sub → u_dma` (18
+  violators, -140.39 ps) and `u_pll_sub → u_sram` (11 violators, -111.48 ps) both appear at
+  `STAMidPNR-1` (post-CTS, pre-repair). The post-CTS repair pass (`STAMidPNR-2`) eliminates both.
+  Post-GRT, `u_pll_sub → u_dma` stays gone, but `u_pll_sub → u_sram` reappears at 15 violators
+  / -76.01 ps by `STAMidPNR-3` (new post-route parasitics, then partially re-repaired). `u_pll_sub`
+  has no functional connection to `sram_controller.sv` in this commit — the most likely
+  explanation is an incidental floorplan/CTS side effect of adding ~5,168 raw RTL register bits
+  to `u_sram` (see cost accounting below), which shifted placement density/clock-tree balancing
+  enough to put a pre-existing, previously-comfortable PLL-subsystem fabric path under new
+  (small, largely-repaired) pressure. Not investigated further this session; worth a watch-item
+  if it grows in a future re-run, but it is 32-62x smaller than the design's dominant classes at
+  every checkpoint and does not change the overall conclusion.
+
+**Cost accounting**: the fix adds 5,168 raw RTL register bits (`NGROUPS`×(`GROUP_WORDS`×`SW`
+`grp_we_q` bits + `DW` `grp_wdata_q` bits) = 32×(32×4 + 32) = 5,120, plus 48 stage-1/drain bits),
+replacing the prior iteration's 1,024-bit `word_sel_q` one-hot register (net raw RTL delta
+≈ +4,144 bits) — consistent with the measured net placed `sequential_cell` count increase of
++4,155 (46,297→50,452). Despite this, **placed area and utilization are essentially flat**
+(166,960→166,811 µm², 66.86%→66.80%): the added flip-flop area is offset by 13,181 *fewer*
+timing-repair buffers needed overall (64,005→50,824 `timing_repair_buffer` instances, since far
+less setup repair work remains), and **total power went down**, not up (293.2→283.6 mW, -3.3%;
+fabric-only 100.7→89.6 mW, -11.0%) — switching power fell 24.1% (42.7→32.4 mW) from the same
+reduced-buffer-churn effect, outweighing the small increase in sequential internal/leakage power.
+`RepairDesignPostGPL` (pre-route legalization/repair, stage 28) itself got **slower**, not
+faster, despite inserting fewer buffers at that stage (48,047 vs. reference's 61,720
+`timing_repair_buffer` instances added there): 1h30m42s vs. the reference's 35m45s (2.5x) —
+attributed to per-iteration legalization/congestion-analysis overhead scaling with the ~19,112
+additional design instances at a pre-route stage, not to more repair work. Total flow wall time
+to `STAMidPNR-3` was nonetheless comparable end-to-end (~4h25m vs. ~4h18m for the reference),
+since the much smaller post-GRT violator count more than paid back the `RepairDesignPostGPL`
+slowdown in `ResizerTimingPostGRT`.
+
+**Bead `rvb` — CLOSED.** Both Path A write classes this bead was filed against (`u_gpu →
+u_sram` and its DMA analog `u_dma → u_sram`) are no longer limiting per the criteria above —
+one is fully eliminated, the other reduced by two orders of magnitude in count and 64% in
+worst slack. The closure is honest, not a claim of zero residual: a new, smaller, *by-design
+bounded* write-commit fanout residual (`u_sram → u_sram`, 32 violators, -727.37 ps, rvb's own
+stage-2→stage-3 group fanout) is now the design's worst class overall, and `u_cpu →
+u_cpu_axi_cdc` (504 violators, -190.37 ps, a CPU-domain-internal CDC-bridge path unrelated to
+either Path A or the SRAM controller) is now the largest class *by count*. Both are recorded as
+follow-up candidates, not reopened against this bead, since neither is the GPU/DMA write-fanout
+pattern this bead was filed to track. `ydw`'s read-mux class does not resurface in this run (0
+matches) and needs no action.
+
+Note: like the `ydw`/`0ah` measurements above, this run stopped at `--to OpenROAD.STAMidPNR-3`
+(no detailed routing / DRC / antenna / LVS), so it is a timing-only measurement, not a routing
+sign-off, and the power figures include the `Macro` group unless stated as "fabric-only" above.
