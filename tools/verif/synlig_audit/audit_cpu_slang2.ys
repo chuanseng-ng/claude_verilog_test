@@ -1,0 +1,84 @@
+plugin -i /nix/store/07xn6zd11qvkp8h65gwycfisr3x9hk4f-yosys-slang/share/yosys/plugins/slang.so
+read_slang -D SRAM_ASAP7 -D USE_ICG_CELL -D __pnr__ -D __librelane__ --ignore-unknown-modules --top rv32i_cpu_top \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/pnr/asap7/sram_1rw_256x32_asap7_stub.v \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/pnr/asap7/icg_asap7_stub.v \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/soc/axi_pkg.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/soc/soc_addr_map_pkg.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/rv32i_pipeline_pkg.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/mem/rv32i_cache_pkg.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/mem/rv32i_clock_gate.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/rv32i_alu.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/rv32i_branch_comp.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/rv32i_imm_gen.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/rv32i_regfile.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/rv32i_decode.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/rv32i_forwarding_unit.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/rv32i_hazard_unit.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/rv32i_interrupt_ctrl.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/rv32i_csr_file.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_if.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_id.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/mem/rv32i_icache.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/mem/rv32i_dcache.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/mem/rv32i_cache_arbiter.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/cpu/rv32i_cpu_top.sv
+
+hierarchy -top rv32i_cpu_top -nokeep_prints -nokeep_asserts
+proc_clean
+proc_rmdead
+proc_prune
+proc_init
+proc_arst
+proc_rom
+proc_mux
+proc_dff
+proc_memwr
+proc_clean
+opt_expr
+flatten
+opt_expr
+opt_clean
+tee -o /nobackup/b0t_audit/cpu_slang_prenodffe.stat.txt stat
+# --- librelane_opt(nodffe=True, nosdff=True) replicated exactly ---
+opt_expr
+opt_merge -nomux
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_clean
+check
+tee -o /nobackup/b0t_audit/cpu_slang_postnodffe.stat.txt stat

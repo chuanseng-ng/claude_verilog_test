@@ -1,0 +1,56 @@
+plugin -i synlig-sv
+read_systemverilog -sverilog -top shared_memory \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/gpu/gpu_pkg.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/pnr/asap7/sram_1rw_128x32_asap7_stub.v \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/gpu/shared_memory.sv
+
+hierarchy -top shared_memory -nokeep_prints -nokeep_asserts
+proc_clean
+proc_rmdead
+proc_prune
+proc_init
+proc_arst
+proc_rom
+proc_mux
+proc_dff
+proc_memwr
+proc_clean
+opt_expr
+opt_clean
+opt_expr
+opt_merge -nomux
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_clean
+check
+stat
+rename shared_memory shared_memory_gate
+write_verilog -noattr /nobackup/b0t_audit/shared_memory_synlig_gate.v
