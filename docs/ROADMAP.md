@@ -331,7 +331,7 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 - **Timing closure for compute datapath**
 - **Power consumption validated per warp**
 
-### Phase 5 — SoC integration (AI shines again) — ✅ COMPLETE 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW sign-off ⚠️ timing/power unvalidated post-bead-`8f3`, see `docs/PHASE5_RUN_HISTORY.md`)
+### Phase 5 — SoC integration (AI shines again) — ✅ COMPLETE 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW sign-off ⚠️ timing/power unvalidated post-bead-`8f3`; current RTL re-measured on the fixed flow 2026-09-18, bead `0d0`: −727 ps / 781 violators / hold clean / 283.6 mW, still not closed — see `docs/PHASE5_RUN_HISTORY.md`)
 
 - Components
   - CPU + GPU-lite
