@@ -710,3 +710,33 @@ Synlig-built, `u99`/`ma7`-proven-corrupt views — per the servicing instruction
 completed run may overwrite them, and none of these three did. `ma7` stays OPEN. GPU macro
 re-harden remains fully deferred (host-gated), unchanged from `ma7`'s prior notes; GPU configs
 were switched to `USE_SYNLIG:false` for consistency only, with no run attempted.
+
+### Two single-variable experiments, both refuted — status: BLOCKED (2026-09-19, bead `lxv`)
+
+Both attempts changed exactly one config key against the failed `RUN_2026-09-19_15-42-11`
+baseline, so each outcome is interpretable on its own:
+
+| # | Change | Hypothesis | Run | Result |
+|---|---|---|---|---|
+| 1 | `PL_MACRO_HALO` `"2 2"` → `"4 4"` (the GPU's working value) | stdcell clearance around the SRAM macro pins is starving detailed routing | `RUN_2026-09-19_16-41-39` | **REFUTED** — byte-identical **108 716** violations, *same* failing net names, pins and coordinates. Macro-pin clearance is not the bottleneck. Reverted. |
+| 2 | add `GRT_LAYER_ADJUSTMENTS = [0.5,0,0,0,0,0]` (copied byte-for-byte from the working GPU config) | global routing under-reserves M1 capacity near the SRAM pins, handing DRT an unrealizable plan | `RUN_2026-09-19_17-29-17` | **REFUTED, AND WORSE** — **126 999** violations vs. 108 716 unmodified. Reserving M1 capacity aggravates congestion rather than relieving it. Key removed (it was absent before the experiment). |
+
+Experiment 2's routing stalled the same way (`Completing 50% with 68951` → `60%/70% with
+126999`), then `STAPostPNR` failed identically: RCX extracted nothing → empty SPEF →
+`corner.tcl` non-zero exit.
+
+**Why the flow was not simply truncated to force a "pass":** this block's own last real routed
+run (`RUN_2026-09-09_14-56-03`, bead `e69`) ran `STAPostPNR` to completion on a real 61 MB
+extracted SPEF even with 2 045 DRC violations outstanding. Disabling `RUN_SPEF_EXTRACTION` /
+`RUN_MCSTA` here would not have matched that reference methodology — it would have reintroduced
+exactly the zero-wire-STA defect (`xy6`/`8f3`) this project spent significant effort escaping.
+A truncated run was therefore rejected as a false "clean".
+
+**Next-session candidates (none attempted), in order:** (1) diff the Synlig-built vs sv2v-built
+netlists around `u_core.u_dcache.gen_data_sram[*].u_data_sram` — the failing pins are always that
+SRAM's `clk0`/`csb0`/`addr0`/`din0`, so a structural difference in naming, connectivity or an
+extra buffer layer at that boundary is the strongest lead; (2) compare stdcell placement density
+in the SRAM pin-access corridors between the old good run and this one; (3) re-run at a relaxed
+target period (currently 780 ps) to test whether the regression is resizer-driven cell bloat in
+the SRAM fanin/fanout cones; (4) only then consider giving the CPU macro its own pin-access
+treatment. Full trail on bead `lxv`.
