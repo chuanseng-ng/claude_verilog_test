@@ -666,3 +666,77 @@ Run 44:   705 ps period  WNS  +6.0 ps → ⚠ NEGATIVE RESULT (resizer margin 10
 ---
 
 *Last updated: 2026-05-20. Run 43 is the ASAP7 signoff: 1418 MHz, 27.27 mW, 3844 µm² stdcell area. Run 44 (resizer margin cut) is a clean negative result; config.json reverted to Run 43 values. 3-phase optimisation plan complete.*
+
+## Addendum 2026-09-19: bead `ma7` sv2v re-harden attempts (config.json, USE_SYNLIG:false) — BLOCKED, not signed off
+
+Out of scope for the Run 1–44 series above (that campaign is unaffected and its own numbers stand
+as recorded), but recorded here since it exercises the same `pnr/asap7/cpu/config.json` family.
+Bead `u99`/`ma7` proved the `USE_SYNLIG:true` frontend used through Run 44 miscompiles this
+macro's regfile read ports (see `CLAUDE.md`'s 🔴 block); the approved remedy is `USE_SYNLIG:false`
++ sv2v. Three re-harden attempts this session, none completed clean:
+
+1. `RUN_2026-09-19_14-59-15` — failed at `Checker.LintErrors`: sv2v strips the inline
+   `/* verilator lint_off/on BLKLOOPINIT */` pragma `rv32i_icache.sv`/`rv32i_dcache.sv` rely on
+   for their `for(j) valid_array[j] <= ...` reset loops. Fixed: `asap7-cpu-sv2v` Makefile target
+   now re-inserts an equivalent pragma into the generated file (verified via a standalone
+   `verilator --lint-only` run matching LibreLane's exact invocation args).
+2. (no run directory kept) — passed lint/synth, then `OpenROAD.ResizerTimingPostCTS` oscillated
+   at ~-142..-146 ps WNS / 3240 endpoints for 1650+ `Iter` over 35+ min with no convergence — the
+   documented LibreLane 2.4.13 unbounded-`repair_timing` defect (bead `bpp`, see
+   `memory/pd/knowledge.md`). Fixed: added `PL_RESIZER_TIMING_MAX_PASSES=2` (the project's own
+   validated opt-in bound) to `config.json`/`config_3014.json`.
+3. `RUN_2026-09-19_15-42-11` (kept for investigation, not pruned) — got through synth, floorplan,
+   GPL, repair, detailed placement, CTS, GRT and the now-bounded resizer cleanly, reaching
+   `OpenROAD.DetailedRouting`. DRT then produced **108716 DRC violations** at 70% completion —
+   ~53x this block's own best-ever prior routed baseline (2045 violations,
+   `RUN_2026-09-09_14-56-03`, bead `e69`) — concentrated as `DRT-0255` "Maze Route cannot find
+   path" failures on SRAM macro pins (`u_core.u_dcache.gen_data_sram[N].u_data_sram/clk0`,
+   `/addr0`, `/data_gclk`; same failure class as bead `ocm`, much larger magnitude). LibreLane's
+   catch-and-continue DRT patch let the flow limp forward, but `OpenROAD.RCX` then extracted
+   **zero** parasitics ("Nothing is extracted out of 35390 nets") and `OpenROAD.STAPostPNR`
+   hard-failed on the resulting empty SPEF.
+
+Ruled out: wrong OpenROAD binary (26Q2 pin-access fix confirmed active via
+`check-asap7-openroad`); simple netlist-size growth (`design__instance__count__stdcell` = 37575,
+only ~+9% vs. the historical ~75194-instance total, not the ~+25% `valu_hls` saw). Root cause NOT
+pinned down — see bead `claude_verilog_test-lxv` for the full diagnostic trail (including a
+utilization-based lead that was raised and then substantially caveated: overall
+`design__instance__utilization` is 54.8% but the stdcell-only figure is 40.2%, inside this
+project's own documented 35–45% safe range, so a global-density explanation looks unlikely; the
+localized macro-pin failure signature still points at bead `ocm`'s class instead).
+
+**No macro views were regenerated.** `pnr/asap7/soc/macro/rv32i_cpu_top.*` remain the old,
+Synlig-built, `u99`/`ma7`-proven-corrupt views — per the servicing instructions, only a clean
+completed run may overwrite them, and none of these three did. `ma7` stays OPEN. GPU macro
+re-harden remains fully deferred (host-gated), unchanged from `ma7`'s prior notes; GPU configs
+were switched to `USE_SYNLIG:false` for consistency only, with no run attempted.
+
+### Two single-variable experiments, both refuted — status: BLOCKED (2026-09-19, bead `lxv`)
+
+Both attempts changed exactly one config key against the failed `RUN_2026-09-19_15-42-11`
+baseline, so each outcome is interpretable on its own:
+
+| # | Change | Hypothesis | Run | Result |
+|---|---|---|---|---|
+| 1 | `PL_MACRO_HALO` `"2 2"` → `"4 4"` (the GPU's working value) | stdcell clearance around the SRAM macro pins is starving detailed routing | `RUN_2026-09-19_16-41-39` | **REFUTED** — byte-identical **108 716** violations, *same* failing net names, pins and coordinates. Macro-pin clearance is not the bottleneck. Reverted. |
+| 2 | add `GRT_LAYER_ADJUSTMENTS = [0.5,0,0,0,0,0]` (copied byte-for-byte from the working GPU config) | global routing under-reserves M1 capacity near the SRAM pins, handing DRT an unrealizable plan | `RUN_2026-09-19_17-29-17` | **REFUTED, AND WORSE** — **126 999** violations vs. 108 716 unmodified. Reserving M1 capacity aggravates congestion rather than relieving it. Key removed (it was absent before the experiment). |
+
+Experiment 2's routing stalled the same way (`Completing 50% with 68951` → `60%/70% with
+126999`), then `STAPostPNR` failed identically: RCX extracted nothing → empty SPEF →
+`corner.tcl` non-zero exit.
+
+**Why the flow was not simply truncated to force a "pass":** this block's own last real routed
+run (`RUN_2026-09-09_14-56-03`, bead `e69`) ran `STAPostPNR` to completion on a real 61 MB
+extracted SPEF even with 2 045 DRC violations outstanding. Disabling `RUN_SPEF_EXTRACTION` /
+`RUN_MCSTA` here would not have matched that reference methodology — it would have reintroduced
+exactly the zero-wire-STA defect (`xy6`/`8f3`) this project spent significant effort escaping.
+A truncated run was therefore rejected as a false "clean".
+
+**Next-session candidates (none attempted), in order:** (1) diff the Synlig-built vs sv2v-built
+netlists around `u_core.u_dcache.gen_data_sram[*].u_data_sram` — the failing pins are always that
+SRAM's `clk0`/`csb0`/`addr0`/`din0`, so a structural difference in naming, connectivity or an
+extra buffer layer at that boundary is the strongest lead; (2) compare stdcell placement density
+in the SRAM pin-access corridors between the old good run and this one; (3) re-run at a relaxed
+target period (currently 780 ps) to test whether the regression is resizer-driven cell bloat in
+the SRAM fanin/fanout cones; (4) only then consider giving the CPU macro its own pin-access
+treatment. Full trail on bead `lxv`.
