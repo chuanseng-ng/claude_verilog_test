@@ -768,7 +768,42 @@ WNS/TNS are a reasonably representative (if unoptimized) measurement, not a resi
 artifact. Do not compute a `comb`-vs-`rtl`/`hls` fmax ratio without carrying the "no resizer at
 `--to OpenROAD.STAPrePNR`" caveat regardless.
 
-## Baseline FSM arm (`valu_hls`, `USE_SYNLIG:true`) — verdict: INCONCLUSIVE, not re-fixed
+## Baseline FSM arm (`valu_hls`, `USE_SYNLIG:true`) — ⚠️ RESOLVED 2026-09-18: **CONFIRMED CORRUPT**
+
+> ⚠️ **The "INCONCLUSIVE" verdict below is SUPERSEDED (bead `b0t`, 2026-09-18).** A gate-level
+> simulation of both netlists settled it: the tracked **`USE_SYNLIG:true` netlist is CORRUPT** and
+> the `USE_SYNLIG:false` + sv2v candidate is **CLEAN**. Three independent golden vectors (VMUL
+> partial-mask, VADD full-mask, VAND alternating-mask) were driven through both 43-cycle
+> simulations: HLS-SYNLIG produced garbage on **all three** (no match in either lane order),
+> HLS-SV2V matched the golden model **bit-exact on all three, all 8 lanes**. Same Synlig/UHDM
+> defect class already root-caused for the `comb` arm — it corrupts the FSM/registered arm too.
+>
+> **What broke the three prior sessions' tooling wall:** `flatten` *before* yosys `sim -r` (not
+> `opt -full`), using the committed hand SEQ-cell models `tools/verif/gls/asap7_seq_cell_models.v`.
+> Both full 43-cycle simulations then complete in **under 2 minutes each at ~1 GB peak**, inside a
+> 4 GB cap — versus the earlier `sat -seq` 3 GB OOM on a single unrolled timestep and the
+> 560 s+ wire-matching timeout on the unflattened netlist. Driver:
+> `tools/verif/gls/run_hls_seq_check.py`.
+>
+> **Consequence for the numbers in this document:** every `valu_hls` PPA figure quoted here
+> (**71 480 instances / 7254.37 µm² / 37.667 mW**) was measured on the **corrupt** netlist and is
+> therefore not a valid PPA point for a working design. The honest figure for a functionally
+> correct `valu_hls` is the sv2v candidate's **89 224 instances / 9188.40 µm² / 52.7 mW**. Any
+> `rtl`-vs-`hls` comparison in this document that uses the 7254 µm² / 37.667 mW column
+> **understates HLS area and power by ~25–40 %**. The historical numbers are left unaltered above
+> for provenance; treat them as measurements of a broken netlist.
+>
+> **Remedy NOT applied, pending approval:** switching `pnr/asap7/valu_hls/config.json` to
+> `USE_SYNLIG:false` + the sv2v shim (the same fix already applied to `valu_hls_comb`) would make
+> the block correct at the cost of materially worse headline PPA, because the current sign-off
+> numbers reflect the smaller, broken netlist. `valu_hls` is an isolated HLS experiment block and
+> is **not** part of the signed-off SoC.
+>
+> Evidence: netlists `/nobackup/asap7_valu_hls_runs/RUN_2026-09-15_14-05-40/final/nl/vector_alu_hls.nl.v`
+> (corrupt) and `/nobackup/pnr_ab_valu_hls/runs/RUN_2026-09-15_16-34-19/final/nl/vector_alu_hls.nl.v`
+> (clean); logs/VCDs under `/nobackup/b0t_partB/`. Full detail on bead `claude_verilog_test-b0t`.
+
+### Original (superseded) verdict: INCONCLUSIVE, not re-fixed
 
 An A/B synthesis (temp config under `/nobackup/pnr_ab_valu_hls/`, tracked
 `pnr/asap7/valu_hls/config.json` left unmodified) reran the SAME baseline candidate through
@@ -788,6 +823,19 @@ on bead `claude_verilog_test-b0t` for follow-up (candidates: get `sim -set` work
 the yosys 0.62 build already on this host, or budget a >3G Verilator cosim).
 
 ## CPU/GPU hand-RTL exposure verdict: NOT exposed to this specific construct
+
+> ✅ **UPDATE 2026-09-18 (bead `b0t` part A)**: the code-shape argument below has since been backed
+> by a real frontend **differential** — replaying LibreLane's exact `librelane_opt(nodffe=True,
+> nosdff=True)` sequence through two independent frontends on the same RTL and comparing
+> mux-port removal. **CPU macro (`rv32i_cpu_top`): clean** — the real Synlig run removes *fewer*
+> mux ports than an independent slang differential (800 vs 1358), matching 1:1 by register name on
+> sampled branches: the opposite signature from the corruption proven above. **GPU macro
+> (`gpu_top`): clean on every point investigated** — `vector_alu` matches exactly (16/16) across
+> frontends, and `shared_memory`'s large raw divergence (1001 vs 1) resolved to **0 disproven
+> points** under a direct EQY, with all 256 unproven points being SRAM-blackbox read-data bits.
+> Still unproven: no full gate-level check of either complete macro, and three smaller GPU
+> divergences (`gpu_compute_unit`, `memory_coalescer`, `gpu_top` glue) are differential-only.
+> Scripts: `tools/verif/synlig_audit/`.
 
 `grep -rl "ui_cond_expr_FU|_bambu_artificial_|BAMBU/PANDA" rtl/` returns **zero matches** anywhere
 in `rtl/`. The hand-written RTL (`rtl/gpu/vector_alu.sv`, `rtl/cpu/*`) implements the identical

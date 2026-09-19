@@ -1,0 +1,63 @@
+plugin -i /nix/store/07xn6zd11qvkp8h65gwycfisr3x9hk4f-yosys-slang/share/yosys/plugins/slang.so
+read_slang --ignore-unknown-modules --best-effort-hierarchy --top gpu_top \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/gpu/gpu_pkg.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/pnr/asap7/sram_1rw_128x32_asap7_stub.v \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/gpu/vector_register_file.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/gpu/vector_alu.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/gpu/gpu_compute_unit.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/gpu/warp_scheduler.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/gpu/gpu_command_queue.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/gpu/gpu_memory_unit.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/gpu/memory_coalescer.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/gpu/shared_memory.sv \
+  /home/neuromorphic/Downloads/Github/claude_verilog_test/rtl/gpu/gpu_top.sv
+
+hierarchy -top gpu_top -nokeep_prints -nokeep_asserts
+proc_clean
+proc_rmdead
+proc_prune
+proc_init
+proc_arst
+proc_rom
+proc_mux
+proc_dff
+proc_memwr
+proc_clean
+opt_expr
+opt_clean
+tee -o /nobackup/b0t_audit/gpu_slang_prenodffe.stat.txt stat
+opt_expr
+opt_merge -nomux
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_clean
+check
+tee -o /nobackup/b0t_audit/gpu_slang_postnodffe.stat.txt stat
