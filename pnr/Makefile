@@ -2151,10 +2151,43 @@ librelane-asap7-valu-rtl: check-asap7-openroad
 		 --skip Checker.MaxCapViolations \
 		 $(abspath asap7/valu_rtl)/config.json"
 
-.PHONY: librelane-asap7-valu-hls
-librelane-asap7-valu-hls: check-asap7-openroad
+# GH #119 r8r bead b0t remedy (2026-09-19, user-approved): the baseline FSM-arm
+# shim (hls/gpu/vector_alu/shim/vector_alu_hls.sv) uses the same ANSI-header
+# package-import module form that Synlig/UHDM (USE_SYNLIG) mis-elaborates for
+# the sdc_longclk combinational candidate (bead gcd). A gate-level simulation
+# (tools/verif/gls/run_hls_seq_check.py, bead b0t part B) proved the tracked
+# USE_SYNLIG:true netlist for THIS arm is also corrupt: it fails all 3 golden
+# vectors (VMUL partial-mask, VADD full-mask, VAND alternating-mask), while a
+# USE_SYNLIG:false + sv2v-preprocessed netlist of the identical RTL passes all
+# 3 bit-exact. Fix: bypass Synlig here too -- pre-process gpu_pkg.sv + the
+# shim through sv2v into plain Verilog-2005, then set USE_SYNLIG:false and
+# point valu_hls/config.json's VERILOG_FILES at the sv2v output instead of the
+# raw .sv + gpu_pkg.sv. Deterministic/reproducible via this target -- do not
+# hand-edit the generated .v. Mirrors egt-valu-hls-comb-sv2v above.
+R8R_VALU_HLS_SHIM_SV := \
+	$(PROJECT_ROOT)/rtl/gpu/gpu_pkg.sv \
+	$(PROJECT_ROOT)/hls/gpu/vector_alu/shim/vector_alu_hls.sv
+R8R_VALU_HLS_SV2V_OUT := /nobackup/hls/out/vector_alu/vector_alu_hls_sv2v.v
+
+.PHONY: r8r-valu-hls-sv2v
+r8r-valu-hls-sv2v:
 	@echo "=========================================="
-	@echo "ASAP7 leaf-block PPA (GH #119 r8r) -- vector_alu, HLS arm (generated .v + wire-only shim)"
+	@echo "Pre-processing: sv2v SV -> Verilog-2005 (GH #119 r8r baseline shim, bead b0t)"
+	@echo "  Input : $(R8R_VALU_HLS_SHIM_SV)"
+	@echo "  Output: $(R8R_VALU_HLS_SV2V_OUT)"
+	@echo "=========================================="
+	@if [ ! -f "$(SV2V)" ]; then \
+		echo "ERROR: sv2v not found at $(SV2V)"; \
+		echo "Install via: nix-build '<nixpkgs>' -A haskellPackages.sv2v --no-out-link"; \
+		exit 1; fi
+	@mkdir -p $(dir $(R8R_VALU_HLS_SV2V_OUT))
+	$(SV2V) $(R8R_VALU_HLS_SHIM_SV) -w $(R8R_VALU_HLS_SV2V_OUT)
+	@echo "sv2v complete: $$(wc -l < $(R8R_VALU_HLS_SV2V_OUT)) lines"
+
+.PHONY: librelane-asap7-valu-hls
+librelane-asap7-valu-hls: check-asap7-openroad r8r-valu-hls-sv2v
+	@echo "=========================================="
+	@echo "ASAP7 leaf-block PPA (GH #119 r8r) -- vector_alu, HLS arm (generated .v + wire-only shim, USE_SYNLIG:false + sv2v per bead b0t)"
 	@echo "  Config   : pnr/asap7/valu_hls/config.json"
 	@echo "  Stopping : OpenROAD.STAPrePNR (area+timing+power; no floorplan/route)"
 	@echo "=========================================="
