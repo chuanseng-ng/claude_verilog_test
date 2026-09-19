@@ -3,9 +3,8 @@
     "PDK": "asap7",
     "STD_CELL_LIBRARY": "asap7sc7p5t_SIMPLE",
     "VERILOG_FILES": [
-        "dir::../../../rtl/gpu/gpu_pkg.sv",
         "/nobackup/hls/out/vector_alu/vector_alu_synth.v",
-        "dir::../../../hls/gpu/vector_alu/shim/vector_alu_hls.sv"
+        "/nobackup/hls/out/vector_alu/vector_alu_hls_sv2v.v"
     ],
     "CLOCK_PORT": "clk",
     "CLOCK_NET": "clk",
@@ -50,7 +49,8 @@
     "GRT_ALLOW_CONGESTION": true,
     "LAYERS_RC": "M2 1.84542e-01 4.62311e-02, M3 1.53955e-01 3.63251e-02, M4 1.89434e-01 2.03083e-02, M5 1.71593e-01 1.93005e-02, M6 1.76146e-01 1.18619e-02, M7 1.47030e-01 1.25311e-02",
     "VIAS_RC": "V1 1.72e-02, V2 1.72e-02, V3 1.72e-02, V4 1.18e-02, V5 1.18e-02, V6 8.20e-03, V7 8.20e-03",
-    "USE_SYNLIG": true,
+    "// USE_SYNLIG_NOTE": "GH #119 r8r bead b0t remedy (2026-09-19, user-approved): the baseline FSM-arm shim (hls/gpu/vector_alu/shim/vector_alu_hls.sv) uses the same ANSI-header package-import module form ('module vector_alu_hls import gpu_pkg::*; (...)') that Synlig/UHDM (USE_SYNLIG:true, LibreLane's default) mis-elaborates for the sdc_longclk combinational candidate (bead gcd, see valu_hls_comb/config.json's USE_SYNLIG_NOTE for that proof). bead b0t part B settled this arm too, by gate-level simulation rather than the SAT/eval techniques used for the comb arm (this is a registered, multi-cycle FSM, so SAT/eval on the flattened netlist hit repeated memory/tool walls -- see bd show claude_verilog_test-b0t for the full trail): tools/verif/gls/run_hls_seq_check.py replayed 3 golden vectors (VMUL partial-mask, VADD full-mask, VAND alternating-mask) through a full 43-cycle flatten+sim -r simulation (hand SEQ-cell models tools/verif/gls/asap7_seq_cell_models.v) of both the tracked USE_SYNLIG:true netlist and a USE_SYNLIG:false+sv2v candidate of the SAME RTL. Result: the tracked netlist produced garbage on ALL 3 vectors (no match in either lane order); the sv2v candidate matched the golden model bit-exact on all 3, all 8 lanes. An earlier A/B synthesis-only comparison (temp config /nobackup/pnr_ab_valu_hls/, RUN_2026-09-15_16-34-19) had already found a ~25-40% instance/area/power gap between the two frontends for this arm but could not settle which side was correct until the GLS proof; this config now applies that proven-correct fix. Old (corrupt) tracked PPA: 71480 instances / 7254.37 um^2 / 37.667 mW. New (verified) PPA, reusing RUN_2026-09-15_16-34-19's numbers since its config differs from this one only in VERILOG_FILES/USE_SYNLIG (diff-verified, not re-run): 89224 instances / 9188.40 um^2 / 52.7 mW, setup WNS -1507.04 ps / TNS -7942937.4 ps, hold WNS -11.95 ps. Reproduce the sv2v shim via `make -C pnr r8r-valu-hls-sv2v` (auto-run by librelane-asap7-valu-hls) -- do not hand-edit the generated .v. Full detail: docs/CPP_TO_RTL_HLS_EVALUATION.md 'Baseline FSM arm' section and bead claude_verilog_test-b0t.",
+    "USE_SYNLIG": false,
     "SYNTH_STRATEGY": "DELAY 3",
     "SYNTH_SIZING": true,
     "SYNTH_ABC_BUFFERING": true,
