@@ -740,3 +740,115 @@ in the SRAM pin-access corridors between the old good run and this one; (3) re-r
 target period (currently 780 ps) to test whether the regression is resizer-driven cell bloat in
 the SRAM fanin/fanout cones; (4) only then consider giving the CPU macro its own pin-access
 treatment. Full trail on bead `lxv`.
+
+### Candidates 1+2 executed, read-only, no PD run — NARROWED, not closed (2026-09-19, bead `lxv`)
+
+No `e69` (`RUN_2026-09-09_14-56-03`, 2045-violation baseline) artifacts survive on disk or
+`/nobackup`. `RUN_2026-09-15_21-27-12` (`USE_SYNLIG:true`, same config family, truncated at CTS —
+no completed route) was used instead as the best available Synlig-side comparator against the
+failing `RUN_2026-09-19_15-42-11`, at matching pipeline stages (`05-yosys-synthesis`, post-CTS DEF).
+Diagnostic script: `tools/verif/gls/diff_asap7_sram_boundary.py`.
+
+**Candidate 1 (netlist structural difference at the SRAM boundary) — REFUTED.** Compared
+post-synthesis gate netlists for `u_core.u_dcache.gen_data_sram[0].u_data_sram`'s `clk0`/`csb0`/
+`din0[0]` drivers: `clk0` is driven directly by `ICGx1_ASAP7_75t_R.GCLK` in both (no intermediate
+buffer); `csb0` by an identical `NAND3xp33_ASAP7_75t_R` → `INVxp67_ASAP7_75t_R` two-gate chain in
+both; `din0[0][0]` by an identical `OAI32xp33_ASAP7_75t_R` with the same 5-input fanin arity in
+both. Only auto-generated net numbers differ, exactly as expected between two independent Yosys
+runs of structurally-identical logic. 10 SRAM macro instances in both; instance count 36521 (good,
+truncated at CTS) vs. 36775 (bad, CTS) is +0.7%, not the ~9% figure quoted pre-session. The
+`u99`/`ma7` `OPT_MUXTREE` corruption (runtime-indexed regfile/`div_depth` muxes) and this routing
+regression are almost certainly unrelated — the corruption is narrow (indexed-array muxes only)
+and does not touch the SRAM control/data cones, which use static bit-sliced combinational logic.
+
+**Candidate 2 (local placement density in the SRAM pin-access corridor) — REFUTED.** The
+`PL_MACRO_HALO=2` keepout zone has 0 stdcells across the entire D-cache macro row band
+(x:0–60, y:47–99) in both builds at post-CTS DEF (byte-identical: 0 vs. 0). The per-macro ICG
+clock-gate cells that directly drive `clk0` (stable hierarchical names) sit at an average Manhattan
+distance of 29.37 µm from their macro's `clk0` pin in the good build (sum 234.9 µm over 8
+data-SRAMs) vs. 29.11 µm in the bad build (sum 232.9 µm) — under 1% delta, no systematic bias.
+Standard-cell placement immediately around the SRAM macros is essentially identical between builds.
+
+**New data point (not one of the four original candidates): GRT itself is clean on the failing
+run.** `37-openroad-globalrouting/openroad-globalrouting.log` on `RUN_2026-09-19_15-42-11` reports
+11.86% total usage, 30.76% max per-layer (M3), and explicit `0 / 0 / 0` (Max H / Max V / Total
+Overflow) on every layer M1–M7, including the SRAM row region. The same run's DRT then produces
+108716 violations. This rules out a general capacity/demand explanation and confirms the failure is
+detailed-routing-only, localized to the macro pin boundary. Inspecting actual `DRT-0255` lines shows
+failures are not confined to `clk0`/`csb0`/`addr0`/`din0` as originally scoped — `dout0` pins fail
+too (e.g. `u_core.u_icache.gen_data_sram[1].u_data_sram/dout0[23]`), all inside extremely narrow
+(2.73 µm × 2.73 µm) `routeBox` tiles straddling the macro's pin-bearing left edge. LEF inspection
+confirms every signal pin on `sram_1rw_256x32_asap7.lef` (~74 total: `dout0`/`din0`/`addr0`/`csb0`/
+`clk0`) is `SHAPE ABUTMENT` at local `x=[0.000,0.024]` — all crammed onto one macro edge, a geometry
+meant for direct macro-to-macro abutment rather than side-channel detailed-routing access through
+the fixed 2 µm `macro_placement.cfg` gap. This access difficulty is pre-existing and
+geometry-identical in both builds (same LEF, same `macro_placement.cfg`), consistent with `e69`'s
+own non-zero 2045-violation baseline on the identical geometry — the sv2v build's ~53× worse count
+is a matter of degree in an already-marginal detailed-routing situation, not a newly-introduced
+structural or placement defect.
+
+**Verdict: narrowed, not closed.** Cumulative exclusions: wrong OpenROAD binary; netlist-size
+growth; global density; `PL_MACRO_HALO` (exp 1); GRT M1 capacity (exp 2); structural netlist
+difference at the failing pins (this session); placement-clearance/distance difference around the
+macros (this session); a genuine global routing capacity/congestion problem (this session — GRT is
+clean on the failing run). Remaining, unexcluded explanation for the *magnitude* jump
+(2045 → 108716): DRT's maze router in these inherently marginal 2.73 µm pin-access tiles is
+sensitive to fine-grained differences invisible to structural/averaged comparison — per-net
+track/access-point assignment order (can legitimately differ between two independent synth runs'
+net-name hashing with identical logic), and/or `PL_RESIZER_TIMING_MAX_PASSES=2` (added only to this
+sv2v run to dodge the unrelated resizer-oscillation defect, bead `bpp`; absent from the historical
+`e69`/`USE_SYNLIG:true` baseline) leaving a different residual buffer distribution that marginally
+tips local track demand over the edge in these tiles.
+
+**Next step (not attempted — costs a bounded run):** candidate 3, relaxed `CLOCK_PERIOD`
+(e.g. 900–1000 ps) with the resizer pass cap raised/removed, to test whether reducing
+resizer-driven cell pressure reduces the `DRT-0255` count. A substantial (order-of-magnitude) drop
+would confirm the resizer-cap hypothesis; violations staying ~100k+ regardless of period would
+implicate the SRAM LEF/geometry itself (candidate 4, macro-specific pin-access treatment) as the
+real fix, independent of the frontend swap.
+
+### Candidate 3 executed as two bounded PD runs — both REFUTED (2026-09-19, bead `lxv`)
+
+Two single-variable runs, each under `systemd-run --scope -p MemoryMax=11500M -p
+MemorySwapMax=0`, foreground, logs/scratch on `/nobackup`. Ordering rationale: the relaxed-period
+experiment was run first because raising `PL_RESIZER_TIMING_MAX_PASSES` risks reproducing the
+exact unbounded `repair_timing` oscillation (bead `bpp`: 35+ min/pass, no convergence) that made
+the cap necessary in the first place — a real risk of exhausting the session on one
+non-terminating experiment. Relaxing the period instead reduces resizer pressure, so it was
+expected to be both safer and a direct test of the same hypothesis.
+
+**Experiment A — `CLOCK_PERIOD` 780 → 1000 ps** (`config.json` `CLOCK_PERIOD` and
+`constraints/asap7.sdc`'s `create_clock -period`, single variable, all else identical to
+`RUN_2026-09-19_15-42-11`). Confirms if DRC drops materially below 108716; refutes if unchanged
+despite reduced resizer activity. Run `RUN_2026-09-19_19-48-00`, ~36 min wall clock, completed
+through DRT/RCX. **Result: 109,687 DRC violations** (+0.9% vs. the 108716 baseline) — same
+`RCX-0107`/`DRT-0418`/`DRT-0419`/`STAPostPNR` failure signature. Cell-count check (post-DRT "Cell
+type report"): Timing Repair Buffer 7189 → 6486 (−9.8%), total instances 37585 → 36900 (−1.8%) —
+resizer activity dropped exactly as expected from looser timing, but the DRC count did not follow.
+**REFUTED.**
+
+**Experiment B — `PL_RESIZER_TIMING_MAX_PASSES` 2 → 4** (`config.json` only; `CLOCK_PERIOD`/
+`asap7.sdc` restored to the committed 780 ps baseline first, confirmed via an empty `git diff`
+before launch). Tests the delta actually introduced by this re-harden effort (the pass cap did not
+exist in the historical `e69` baseline). Used a modest +2 rather than unbounded, to bound the
+oscillation risk. Run `RUN_2026-09-19_20-26-19`, ~48 min wall clock, **no oscillation/hang observed**
+at this bound. **Result: 109,562 DRC violations** (+0.8% vs. baseline) — same failure signature.
+Cell-count check: Timing Repair Buffer 7189 → 7341 (+2.1%), total instances 37585 → 37737 (+0.4%) —
+more resizer passes inserted slightly more buffers, again with no material effect on the DRC count.
+**REFUTED.** Config reverted to `PL_RESIZER_TIMING_MAX_PASSES: 2` post-experiment; `git diff` on
+both files confirmed empty before commit.
+
+**Cumulative verdict: both candidate-3 sub-experiments refuted.** DRC violation count is invariant
+to resizer-driven cell-count changes in either direction (−9.8% buffers → +0.9% DRC; +2.1% buffers
+→ +0.8% DRC) — both land within ~1% of the 108716 baseline and ~53× the historical 2045-violation
+reference. This cleanly excludes resizer pressure/cell bloat as the causal driver, on top of the
+prior session's exclusions (netlist structural difference, placement clearance, global routing
+congestion). The CPU sv2v re-harden **remains blocked**. The only unexcluded explanation is the
+SRAM hard-macro's own pin-access geometry (`sram_1rw_256x32_asap7.lef`: all ~74 signal pins
+`SHAPE ABUTMENT` on a single edge) — pre-existing and marginal in both frontends (consistent with
+`e69`'s own non-zero 2045-violation baseline on identical geometry), with the sv2v build's larger
+netlist tipping it over a cliff-edge that timing/resizer tuning cannot walk back. **A fix at this
+point most plausibly requires a hard-macro LEF/pin-layout change (redistributing pins across
+multiple edges, or widening the macro's routing-access apron) — this needs explicit human approval
+before any macro view is touched, per this project's standing convention.** No macro view or LEF
+was modified this session.
