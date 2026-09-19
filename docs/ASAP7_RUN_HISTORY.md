@@ -732,6 +732,23 @@ extracted SPEF even with 2 045 DRC violations outstanding. Disabling `RUN_SPEF_E
 exactly the zero-wire-STA defect (`xy6`/`8f3`) this project spent significant effort escaping.
 A truncated run was therefore rejected as a false "clean".
 
+### ⏸️ DECISION 2026-09-20: shelved until a ≥32 GB host (beads `lxv`/`ma7` → `2kn`)
+
+After five single-variable experiments refuted every config-level hypothesis, the user chose to
+**defer** rather than authorise a hard-macro LEF/pin-layout edit or re-baseline against the
+pre-existing 2 045-violation routing baseline. `lxv` and `ma7` are now formally blocked on `2kn`
+(the ≥32 GB host gate).
+
+**Carry-forward risk:** the ASAP7 CPU and GPU macro views remain the Synlig-built netlists that
+`u99`/`ma7` proved **mis-execute a branch**, so every ASAP7 CPU/GPU/SoC PPA figure rests on a
+netlist with a proven functional miscompile. The correctness fix *is* applied in the configs
+(`USE_SYNLIG:false` + sv2v); only a completed PD run to regenerate the views is missing.
+
+**Do not** resume with further config knob sweeps on this host — the exclusion list is exhaustive
+for config variables. On obtaining the host, re-run the sv2v CPU re-harden **with the real power
+grid first**: a PDN-bearing route has never been attempted on this block and may change the
+detailed-routing picture on its own, before any macro-geometry work is considered.
+
 **Next-session candidates (none attempted), in order:** (1) diff the Synlig-built vs sv2v-built
 netlists around `u_core.u_dcache.gen_data_sram[*].u_data_sram` — the failing pins are always that
 SRAM's `clk0`/`csb0`/`addr0`/`din0`, so a structural difference in naming, connectivity or an
