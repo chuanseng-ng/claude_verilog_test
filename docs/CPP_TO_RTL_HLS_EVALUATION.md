@@ -942,6 +942,19 @@ the yosys 0.62 build already on this host, or budget a >3G Verilator cosim).
 > not one bug already fully characterized by `u99`. `ma7` stays OPEN — GPU untested, remedy not
 > applied, both still need a human decision. Full write-up: bead `ma7` notes.
 
+> 🔴 **UPDATE 2026-09-19 (bead `ma7` remedy, PARTIALLY APPLIED — CPU re-harden BLOCKED).** The
+> `USE_SYNLIG:false` + sv2v remedy (same fix already applied to `valu_hls`) was applied to
+> `pnr/asap7/cpu/config.json`/`config_3014.json`, but the CPU macro's own re-harden PD run has
+> **not completed cleanly**: it reaches `OpenROAD.DetailedRouting` (synth/floorplan/CTS/GRT/
+> resizer all pass) and then hits a new, unresolved routing-congestion regression — 108716 DRC
+> violations vs. this block's own best-ever prior routed baseline of 2045, `DRT-0255` failures on
+> SRAM macro pins, zero parasitics extracted, `STAPostPNR` failure. `pnr/asap7/soc/macro/
+> rv32i_cpu_top.*` therefore remain the OLD, Synlig-built, proven-corrupt views — nothing was
+> regenerated. GPU config was switched (`USE_SYNLIG:false`) for consistency only; the GPU
+> re-harden itself remains fully deferred (host-gated). Full attempt history, ruled-out causes,
+> and the open decision point: bead `ma7` notes, bead `claude_verilog_test-lxv`,
+> `docs/ASAP7_RUN_HISTORY.md`'s 2026-09-19 addendum.
+
 > ✅ **UPDATE 2026-09-18 (bead `b0t` part A)**: the code-shape argument below has since been backed
 > by a real frontend **differential** — replaying LibreLane's exact `librelane_opt(nodffe=True,
 > nosdff=True)` sequence through two independent frontends on the same RTL and comparing

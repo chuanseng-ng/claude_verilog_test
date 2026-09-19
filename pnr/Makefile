@@ -997,12 +997,108 @@ check-asap7-rcx-rules:
 	@python3 $(abspath ../tools/setup/install_asap7_rcx_rules.py) \
 		--pdk-root $(MANUAL_PDK_ROOT) --check-only
 
+###############################################################################
+# sv2v CPU macro pre-processing step (bead claude_verilog_test-ma7, 2026-09-19)
+#
+# Beads u99+ma7 PROVED USE_SYNLIG:true (Synlig/UHDM) mis-elaborates
+# rv32i_cpu_top's runtime-indexed regfile read mux (OPT_MUXTREE, same class as
+# beads gcd/b0t) -- corruption reaches the APB debug-read port (u99) AND the
+# ID-stage rs1/rs2 reads that feed EX (ma7's branch-dependent-program GLS
+# proof). User-approved remedy: bypass Synlig for this macro too, mirroring
+# valu_hls (commit f2445ad) and the SoC's own asap7-soc-sv2v target. Converts
+# every SV file in rv32i_cpu_top's cone (packages, pipeline stages, caches,
+# core, top) to plain Verilog-2005 in one pass so Yosys read_verilog handles
+# it without Synlig. The two blackbox stub .v files (SRAM, ICG) are already
+# plain Verilog and stay OUT of this list, same split as the SoC target keeps
+# for its own macro stubs.
+#
+# Defines mirror config.json's VERILOG_DEFINES, but sv2v resolves `ifdef
+# ITSELF before Yosys ever runs (see asap7-soc-sv2v's SOC_SV2V_DEFINES note
+# above) -- so they MUST be passed here, not just left in config.json's
+# VERILOG_DEFINES, or sv2v bakes in the wrong branch:
+#   SRAM_ASAP7   -- selects the ASAP7 SRAM macro instantiation (rv32i_icache.sv
+#                   / rv32i_dcache.sv `elsif SRAM_ASAP7) over the sky130/
+#                   freepdk45 behavioural alternatives.
+#   USE_ICG_CELL -- selects the real ICGx1_ASAP7_75t_R clock-gate cell
+#                   (rv32i_clock_gate.sv `ifdef USE_ICG_CELL) over the
+#                   behavioural always_latch model, which Yosys cannot map to
+#                   any ASAP7 standard cell.
+# __pnr__ is NOT needed here (unlike the SoC target): grep confirms no file in
+# CPU_SV_FILES branches on it -- that macro only affects rtl/soc/* files
+# (boot_rom.sv etc.) which are not part of this macro's cone.
+#
+# Output: pnr/asap7/cpu/rv32i_cpu_top_sv2v.v (generated, gitignored). Do not
+# hand-edit -- regenerate via this target.
+###############################################################################
+CPU_SV_FILES := \
+	$(PROJECT_ROOT)/rtl/soc/axi_pkg.sv \
+	$(PROJECT_ROOT)/rtl/soc/soc_addr_map_pkg.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_pipeline_pkg.sv \
+	$(PROJECT_ROOT)/rtl/mem/rv32i_cache_pkg.sv \
+	$(PROJECT_ROOT)/rtl/mem/rv32i_clock_gate.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_alu.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_branch_comp.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_imm_gen.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_regfile.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_decode.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_forwarding_unit.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_hazard_unit.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_interrupt_ctrl.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_csr_file.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_if.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_id.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv \
+	$(PROJECT_ROOT)/rtl/mem/rv32i_icache.sv \
+	$(PROJECT_ROOT)/rtl/mem/rv32i_dcache.sv \
+	$(PROJECT_ROOT)/rtl/mem/rv32i_cache_arbiter.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_core.sv \
+	$(PROJECT_ROOT)/rtl/cpu/rv32i_cpu_top.sv
+
+CPU_SV2V_DEFINES := --define=SRAM_ASAP7 --define=USE_ICG_CELL
+CPU_SV2V_OUT      := $(abspath $(LIBRELANE_ASAP7_DIR)/rv32i_cpu_top_sv2v.v)
+
+.PHONY: asap7-cpu-sv2v
+asap7-cpu-sv2v:
+	@echo "=========================================="
+	@echo "Pre-processing: sv2v SV -> Verilog-2005 (ASAP7 CPU macro, bead ma7)"
+	@echo "  Input : $(words $(CPU_SV_FILES)) SV files"
+	@echo "  Output: $(CPU_SV2V_OUT)"
+	@echo "=========================================="
+	@if [ ! -f "$(SV2V)" ]; then \
+		echo "ERROR: sv2v not found at $(SV2V)"; \
+		echo "Install via: nix-build '<nixpkgs>' -A haskellPackages.sv2v --no-out-link"; \
+		exit 1; fi
+	$(SV2V) $(CPU_SV2V_DEFINES) $(CPU_SV_FILES) -w $(CPU_SV2V_OUT)
+	@# sv2v strips inline comments, including the
+	@# `/* verilator lint_off/on BLKLOOPINIT */` pair that
+	@# rtl/mem/rv32i_icache.sv and rv32i_dcache.sv wrap around their
+	@# reset-loop `for (j...) valid_array[j] <= ...;` pattern (a KNOWN,
+	@# already-accepted-by-this-project Verilator limitation on non-blocking
+	@# array-element assignment inside a for loop -- the RTL comment is proof
+	@# it was already anticipated for direct SV linting). Without the pragma,
+	@# LibreLane's Checker.LintErrors (Verilator, plain-Verilog-2005 mode on
+	@# the flattened output) hard-fails with 3 BLKLOOPINIT errors at the two
+	@# loop sites, even though the design is otherwise unchanged. A single
+	@# lint_off with no matching lint_on suppresses BLKLOOPINIT for the rest
+	@# of the file (documented Verilator behaviour), which is safe here since
+	@# these are the only two occurrences of the pattern in this design.
+	@# Verified 2026-09-19: `verilator --lint-only` on the patched output
+	@# exits 0 with only benign UNUSEDSIGNAL/UNDRIVEN warnings on stub
+	@# blackbox pins (same ones LibreLane's own _deps.vlt already waives).
+	sed -i '1i /* verilator lint_off BLKLOOPINIT */' $(CPU_SV2V_OUT)
+	@echo "sv2v complete: $$(wc -l < $(CPU_SV2V_OUT)) lines"
+
 # ASAP7: uses manually structured PDK under MANUAL_PDK_ROOT
 # Config directory pnr/asap7/ must exist with a valid config.json.
 # check-asap7-rcx-rules is a prerequisite ONLY here (the CPU config has
 # RUN_SPEF_EXTRACTION=true) — GPU/SoC configs still have it false and do not
 # need the real ruleset installed (claude_verilog_test-e69).
-librelane-asap7: check-asap7-rcx-rules check-asap7-openroad
+librelane-asap7: check-asap7-rcx-rules check-asap7-openroad asap7-cpu-sv2v
 	@echo "=========================================="
 	@echo "Running LibreLane flow — ASAP7"
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_DIR)/config.json"
@@ -1106,8 +1202,59 @@ librelane-asap7-gpu-3014:
 librelane-asap7-results:
 	$(call librelane_results,$(LIBRELANE_ASAP7_DIR))
 
+###############################################################################
+# sv2v GPU macro pre-processing step (bead claude_verilog_test-ma7, 2026-09-19)
+#
+# Config-switch companion to asap7-cpu-sv2v above -- see that target's header
+# comment for the full u99/ma7 rationale. warp_scheduler.sv:152
+# (`div_depth[exec_warp_id_i]`) uses the SAME runtime-indexed-mux idiom already
+# PROVEN corrupt under USE_SYNLIG:true for the CPU macro, untested for GPU but
+# same risk class, so the GPU config is switched for consistency. Unlike the
+# CPU, THE GPU RE-HARDEN ITSELF IS DEFERRED (host-gated: ~13.5h+ GRT, 14+ GiB
+# peak RSS, this host is 15.9 GB with no swap) -- this target exists so
+# `librelane-asap7-gpu` is ready to run correctly whenever someone has the
+# host budget, not because a GPU re-harden has happened.
+#
+# No `ifdef in any GPU RTL file (verified 2026-09-19: grep for ifdef/ifndef/
+# __pnr__/SRAM_ASAP7/USE_ICG_CELL across the whole gpu_pkg.sv..gpu_top.sv cone
+# returns zero hits), so no --define flags are needed, unlike the CPU/SoC
+# targets. gpu_pkg.sv is included so sv2v resolves the package import itself.
+# The SRAM blackbox stub (sram_1rw_128x32_asap7_stub.v) is already plain
+# Verilog and stays OUT of this list, same split as asap7-cpu-sv2v.
+#
+# Output: pnr/asap7/gpu/gpu_top_sv2v.v (generated, gitignored). Do not
+# hand-edit -- regenerate via this target.
+###############################################################################
+GPU_SV_FILES := \
+	$(PROJECT_ROOT)/rtl/gpu/gpu_pkg.sv \
+	$(PROJECT_ROOT)/rtl/gpu/vector_register_file.sv \
+	$(PROJECT_ROOT)/rtl/gpu/vector_alu.sv \
+	$(PROJECT_ROOT)/rtl/gpu/gpu_compute_unit.sv \
+	$(PROJECT_ROOT)/rtl/gpu/warp_scheduler.sv \
+	$(PROJECT_ROOT)/rtl/gpu/gpu_command_queue.sv \
+	$(PROJECT_ROOT)/rtl/gpu/gpu_memory_unit.sv \
+	$(PROJECT_ROOT)/rtl/gpu/memory_coalescer.sv \
+	$(PROJECT_ROOT)/rtl/gpu/shared_memory.sv \
+	$(PROJECT_ROOT)/rtl/gpu/gpu_top.sv
+
+GPU_SV2V_OUT := $(abspath $(LIBRELANE_ASAP7_GPU_DIR)/gpu_top_sv2v.v)
+
+.PHONY: asap7-gpu-sv2v
+asap7-gpu-sv2v:
+	@echo "=========================================="
+	@echo "Pre-processing: sv2v SV -> Verilog-2005 (ASAP7 GPU macro, bead ma7 -- config switch only, re-harden deferred)"
+	@echo "  Input : $(words $(GPU_SV_FILES)) SV files"
+	@echo "  Output: $(GPU_SV2V_OUT)"
+	@echo "=========================================="
+	@if [ ! -f "$(SV2V)" ]; then \
+		echo "ERROR: sv2v not found at $(SV2V)"; \
+		echo "Install via: nix-build '<nixpkgs>' -A haskellPackages.sv2v --no-out-link"; \
+		exit 1; fi
+	$(SV2V) $(GPU_SV_FILES) -w $(GPU_SV2V_OUT)
+	@echo "sv2v complete: $$(wc -l < $(GPU_SV2V_OUT)) lines"
+
 # ASAP7 GPU: uses same PDK and skip-list as librelane-asap7, but targets pnr/asap7/gpu/
-librelane-asap7-gpu: check-asap7-openroad
+librelane-asap7-gpu: check-asap7-openroad asap7-gpu-sv2v
 	@echo "=========================================="
 	@echo "Running LibreLane flow — ASAP7 GPU"
 	@echo "  Config   : pnr/$(LIBRELANE_ASAP7_GPU_DIR)/config.json"
