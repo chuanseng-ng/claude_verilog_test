@@ -879,6 +879,30 @@ the yosys 0.62 build already on this host, or budget a >3G Verilator cosim).
 
 ## CPU/GPU hand-RTL exposure verdict: NOT exposed to this specific construct
 
+> 🔴 **UPDATE 2026-09-19 (bead `u99` → `ma7`): the "NOT exposed" verdict below is WRONG for the CPU
+> macro.** A differential — the *same* testbench, ROM and cycle sequencing run against the Synlig
+> gate netlist (`pnr/asap7/soc/macro/rv32i_cpu_top.nl.v.gz`, sha256-verified) and against RTL
+> simulation — showed the gate netlist returns **0x30** for an APB debug read of `DBG_GPR[4]` where
+> RTL returns the correct **0x0c**. Since only the Synlig-built netlist diverges, harness error,
+> timing races and debug-register-semantics explanations are all excluded. Mechanism is the same
+> class as `gcd`/`b0t` part B: `OPT_MUXTREE` mis-elaborating a **runtime-indexed mux**.
+>
+> The code-shape argument failed because it searched for Bambu's *specific* `ui_cond_expr_FU`
+> template. The actual trigger is more general — a plain runtime-indexed read. `rtl/cpu/core/rv32i_regfile.sv`
+> uses that idiom on **all three** read ports: `rd_data1 = regs[rd_addr1]` and
+> `rd_data2 = regs[rd_addr2]` (both feed ID/execute) and `dbg_rd_data = regs[dbg_rd_addr]`
+> (proven corrupt). `rtl/gpu/warp_scheduler.sv:152` (`div_depth[exec_warp_id_i]`) is the same
+> class, untested.
+>
+> ⚠️ **Do not read this as "only the debug path is affected."** The `u99` run verified instruction
+> words and PC retire *order* over a 6-instruction straight-line program — it did **not** verify
+> architectural register *values*, and corrupted main read ports would not necessarily perturb PC
+> order on straight-line code. The execute read ports are **UNVERIFIED, not proven clean**.
+> Bounding that exposure, and the remedy (switch the CPU/GPU configs to `USE_SYNLIG:false` + sv2v,
+> which forces a re-harden of both macros and a SoC re-run, and will likely worsen PPA the way
+> `valu_hls` did) are tracked on bead **`ma7`** (P1). Until then, every ASAP7 CPU/GPU macro PPA
+> figure rests on a netlist from a frontend with a **proven** miscompile in this repo.
+
 > ✅ **UPDATE 2026-09-18 (bead `b0t` part A)**: the code-shape argument below has since been backed
 > by a real frontend **differential** — replaying LibreLane's exact `librelane_opt(nodffe=True,
 > nosdff=True)` sequence through two independent frontends on the same RTL and comparing
