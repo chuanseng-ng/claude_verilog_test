@@ -806,3 +806,49 @@ resizer-driven cell pressure reduces the `DRT-0255` count. A substantial (order-
 would confirm the resizer-cap hypothesis; violations staying ~100k+ regardless of period would
 implicate the SRAM LEF/geometry itself (candidate 4, macro-specific pin-access treatment) as the
 real fix, independent of the frontend swap.
+
+### Candidate 3 executed as two bounded PD runs — both REFUTED (2026-09-19, bead `lxv`)
+
+Two single-variable runs, each under `systemd-run --scope -p MemoryMax=11500M -p
+MemorySwapMax=0`, foreground, logs/scratch on `/nobackup`. Ordering rationale: the relaxed-period
+experiment was run first because raising `PL_RESIZER_TIMING_MAX_PASSES` risks reproducing the
+exact unbounded `repair_timing` oscillation (bead `bpp`: 35+ min/pass, no convergence) that made
+the cap necessary in the first place — a real risk of exhausting the session on one
+non-terminating experiment. Relaxing the period instead reduces resizer pressure, so it was
+expected to be both safer and a direct test of the same hypothesis.
+
+**Experiment A — `CLOCK_PERIOD` 780 → 1000 ps** (`config.json` `CLOCK_PERIOD` and
+`constraints/asap7.sdc`'s `create_clock -period`, single variable, all else identical to
+`RUN_2026-09-19_15-42-11`). Confirms if DRC drops materially below 108716; refutes if unchanged
+despite reduced resizer activity. Run `RUN_2026-09-19_19-48-00`, ~36 min wall clock, completed
+through DRT/RCX. **Result: 109,687 DRC violations** (+0.9% vs. the 108716 baseline) — same
+`RCX-0107`/`DRT-0418`/`DRT-0419`/`STAPostPNR` failure signature. Cell-count check (post-DRT "Cell
+type report"): Timing Repair Buffer 7189 → 6486 (−9.8%), total instances 37585 → 36900 (−1.8%) —
+resizer activity dropped exactly as expected from looser timing, but the DRC count did not follow.
+**REFUTED.**
+
+**Experiment B — `PL_RESIZER_TIMING_MAX_PASSES` 2 → 4** (`config.json` only; `CLOCK_PERIOD`/
+`asap7.sdc` restored to the committed 780 ps baseline first, confirmed via an empty `git diff`
+before launch). Tests the delta actually introduced by this re-harden effort (the pass cap did not
+exist in the historical `e69` baseline). Used a modest +2 rather than unbounded, to bound the
+oscillation risk. Run `RUN_2026-09-19_20-26-19`, ~48 min wall clock, **no oscillation/hang observed**
+at this bound. **Result: 109,562 DRC violations** (+0.8% vs. baseline) — same failure signature.
+Cell-count check: Timing Repair Buffer 7189 → 7341 (+2.1%), total instances 37585 → 37737 (+0.4%) —
+more resizer passes inserted slightly more buffers, again with no material effect on the DRC count.
+**REFUTED.** Config reverted to `PL_RESIZER_TIMING_MAX_PASSES: 2` post-experiment; `git diff` on
+both files confirmed empty before commit.
+
+**Cumulative verdict: both candidate-3 sub-experiments refuted.** DRC violation count is invariant
+to resizer-driven cell-count changes in either direction (−9.8% buffers → +0.9% DRC; +2.1% buffers
+→ +0.8% DRC) — both land within ~1% of the 108716 baseline and ~53× the historical 2045-violation
+reference. This cleanly excludes resizer pressure/cell bloat as the causal driver, on top of the
+prior session's exclusions (netlist structural difference, placement clearance, global routing
+congestion). The CPU sv2v re-harden **remains blocked**. The only unexcluded explanation is the
+SRAM hard-macro's own pin-access geometry (`sram_1rw_256x32_asap7.lef`: all ~74 signal pins
+`SHAPE ABUTMENT` on a single edge) — pre-existing and marginal in both frontends (consistent with
+`e69`'s own non-zero 2045-violation baseline on identical geometry), with the sv2v build's larger
+netlist tipping it over a cliff-edge that timing/resizer tuning cannot walk back. **A fix at this
+point most plausibly requires a hard-macro LEF/pin-layout change (redistributing pins across
+multiple edges, or widening the macro's routing-access apron) — this needs explicit human approval
+before any macro view is touched, per this project's standing convention.** No macro view or LEF
+was modified this session.
