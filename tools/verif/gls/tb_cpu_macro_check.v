@@ -52,7 +52,16 @@
 // simulation time at all (confirmed: only a single t=0 event was ever
 // recorded for clk_i in the output VCD) -- the documented, working usage
 // model is top-level clock/reset PORTS driven by `-clock`/`-resetn`.
-module tb_cpu_macro_check (clk_i, rst_n_i);
+// HALT_START_CYC/READ_START_CYC are module parameters (bead ma7 step 1)
+// so a longer program (e.g. one with a taken-branch icache-miss redirect)
+// can push the one-shot APB halt/read sequencer out far enough to not fire
+// mid-flight -- defaults (40/80) are UNCHANGED from the original values, so
+// every existing caller (run_cpu_macro_check.sh, the u99/b0t straight-line
+// check) that does not override them behaves byte-identically to before.
+module tb_cpu_macro_check #(
+  parameter HALT_START_CYC = 40,
+  parameter READ_START_CYC = 80
+) (clk_i, rst_n_i);
   input clk_i;
   input rst_n_i;
   localparam ROM_WORDS = 64;
@@ -232,8 +241,6 @@ module tb_cpu_macro_check (clk_i, rst_n_i);
   // D$ is write-back per docs/design/PHASE3_ARCHITECTURE_SPEC.md, so a
   // single SW does not itself generate an AXI write, only a cache-line
   // dirty mark).
-  localparam HALT_START_CYC = 40;
-  localparam READ_START_CYC = 80;
   localparam [11:0] DBG_CTRL_ADDR = 12'h000;
   localparam [11:0] DBG_GPR4_ADDR = 12'h020;
   reg [31:0] cyc_cnt;

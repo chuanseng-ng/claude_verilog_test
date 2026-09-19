@@ -902,6 +902,45 @@ the yosys 0.62 build already on this host, or budget a >3G Verilator cosim).
 > which forces a re-harden of both macros and a SoC re-run, and will likely worsen PPA the way
 > `valu_hls` did) are tracked on bead **`ma7`** (P1). Until then, every ASAP7 CPU/GPU macro PPA
 > figure rests on a netlist from a frontend with a **proven** miscompile in this repo.
+>
+> 🔴 **UPDATE 2026-09-19 (bead `ma7` step 1): CONFIRMED — the corruption reaches the execute
+> datapath, not just the debug port.** Method: extended the same `tools/verif/gls/tb_cpu_macro_check.v`
+> two-arm harness (arm 1 = Synlig gate netlist, arm 3 = RTL/Verilator, same testbench file, same
+> netlist — decompressed sha256 `a416d23f0380...`, exact match to `u99`'s originally-verified copy)
+> with a new BRANCH-DEPENDENT program (`tools/verif/gls/gen_cpu_check_rom_branch.py`, verified
+> bit-exact against `tb/models/rv32i_model.py` first): `x1=5; x2=9; x3=9; x4=x1+x2; BEQ x2,x3 -> PASS
+> if taken (x2==x3, must be TAKEN) else WRONG marker; ...`. This makes an ID-stage regfile read
+> corruption (`rd_data1`/`rd_data2`, which feed EX — **not** the known-bad debug port) observable
+> through `commit_pc_o`/`commit_insn_o`, the channel `u99` already showed is reliable.
+>
+> Result: **both arms retire an identical trace through the BEQ instruction's own fetch**
+> (`0x00,0x04,0x08,0x0c,0x10`, same insn words) and **diverge exactly at that instruction's
+> commit**. Arm 3 (RTL) continues `0x10,0x20,0x24,0x28` and parks at PASS — BEQ correctly TAKEN,
+> matching the Python reference model bit-exact. Arm 1 (the same Synlig netlist `u99` used)
+> continues `0x10,0x14,0x18` and parks at the dead WRONG marker — BEQ **incorrectly evaluated
+> NOT-TAKEN**. 0 yosys ERRORs in the run. Since fetch/decode are proven identical up to and
+> including the branch instruction itself, the divergence is isolated to the branch comparator's
+> consumption of the ID-stage read-port values for x2/x3 — a genuinely different signal than
+> `u99`'s `dbg_rd_data`.
+>
+> **Exact coverage claim (not a general proof):** proven corrupt for register indices x2 (value 9)
+> and/or x3 (value 9) as read by the branch comparator's rs1/rs2 ports in this specific access
+> pattern; cannot distinguish which port (or both) is wrong. The preceding `ADD x4,x1,x2` fetched
+> identically in both arms but x4 is a dead value in this program (never read back), so that
+> instruction's own operand-read correctness is **unproven** by this experiment. Not proven: other
+> register indices, other instruction types (loads/stores/JALR), or repeated/back-to-back-branch
+> access patterns.
+>
+> **Read-port cone-sharing (RTL source, not confirmed in netlist):** `rv32i_regfile.sv` has three
+> independent `always_comb` blocks (`rd_data1`, `rd_data2`, `dbg_rd_data`), each its own
+> runtime-indexed mux keyed by an independent address signal (ID-stage rs1/rs2 vs. APB-derived
+> `dbg_rd_addr`) — no shared select logic at RTL, only the underlying storage flops are shared.
+> The post-synthesis netlist is fully flattened with anonymous net names (grep for
+> `rd_data1`/`rd_data2`/`dbg_rd_addr`/`regfile` returns zero hits), so cone-sharing could not be
+> confirmed by netlist inspection without a hierarchy-preserving resynthesis (not attempted here).
+> This is consistent with independent per-port instances of the same `OPT_MUXTREE` defect class,
+> not one bug already fully characterized by `u99`. `ma7` stays OPEN — GPU untested, remedy not
+> applied, both still need a human decision. Full write-up: bead `ma7` notes.
 
 > ✅ **UPDATE 2026-09-18 (bead `b0t` part A)**: the code-shape argument below has since been backed
 > by a real frontend **differential** — replaying LibreLane's exact `librelane_opt(nodffe=True,
