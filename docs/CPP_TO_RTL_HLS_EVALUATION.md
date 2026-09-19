@@ -598,7 +598,7 @@ All four figures reproduced from fresh ASAP7 `OpenROAD.STAPrePNR` runs, 2026-09-
 as the original `r8r` Stage 2 runs; `r8r`'s recorded numbers (`docs/CPP_TO_RTL_HLS_EVALUATION.md`,
 "Stage 2 results" above) are reproduced alongside for drift-checking.
 
-| Metric | `rtl` (this run) | `rtl` (`r8r`, 2026-09-07) | `hls` (this run) | `hls` (`r8r`, 2026-09-07) |
+| Metric | `rtl` (this run) | `rtl` (`r8r`, 2026-09-07) | `hls` (this run)[^hls-corrupt] | `hls` (`r8r`, 2026-09-07)[^hls-corrupt] |
 | :--- | ---: | ---: | ---: | ---: |
 | Instances | 54 634 | 54 634 | 71 480 | 70 895 |
 | Area (µm²) | 4655.15 | 4655.15 | 7254.37 | 7234.0 |
@@ -611,7 +611,9 @@ as the original `r8r` Stage 2 runs; `r8r`'s recorded numbers (`docs/CPP_TO_RTL_H
 critical path, `759.29 ps` data arrival, matching to 2 decimal places). `hls` drifts **≤1.1%**
 (instances +0.83%, area +0.28%, power +1.04%) — attributable to environment/tool-version movement
 since the 2026-09-07 `r8r` run, not a structural change; both are within normal run-to-run noise for
-this flow.
+this flow. ⚠️ Both `hls` columns were later proven to be measurements of a **corrupt** netlist
+(bead `b0t`, see footnote); the fixed, GLS-verified figure is the "REMEDY APPLIED" block under
+"Baseline FSM arm" further down.
 
 ### Worst-arc decomposition (mandatory before quoting any fmax ratio, per the
 `asap7-to-openroad-staprepnr-comparisons-stopping-before-the` memory note — `--to
@@ -735,12 +737,19 @@ yosys-`eval` cross-check above confirms this exact run's netlist is functionally
 4655.15 / 14.147**, is a valid area/power comparison — `comb` is smaller and lower-power than
 hand-RTL. The timing figures (Setup/Hold WS, TNS, and any derived fmax) still carry the worst-arc
 and no-resizer caveats below; only area and power are resizer-independent and safe to quote
-unconditionally. The baseline FSM arm (`hls`, `USE_SYNLIG:true`) remains functionally unresolved —
+unconditionally.
+> ⚠️ **Update 2026-09-19 (bead `b0t`):** the "`hls` remains functionally unresolved" sentence
+> below is superseded — the baseline FSM arm was proven **corrupt** by gate-level simulation
+> (bead `b0t` part B) and the tracked config has since been fixed (`USE_SYNLIG:false` + sv2v). The
+> `hls` column in the table immediately below is the **pre-fix, corrupt-netlist** measurement; see
+> the footnote on that column and the "Baseline FSM arm" §"REMEDY APPLIED" block further down for
+> the corrected, functionally-verified figures.
+The baseline FSM arm (`hls`, `USE_SYNLIG:true`) remains functionally unresolved —
 see "Baseline FSM arm ... — verdict: INCONCLUSIVE" further down and bead `claude_verilog_test-b0t`
 — so do not compare `comb` against `hls` as if `hls`'s own netlist correctness were settled; the
 `hls` row below is included for reference only, carried over unchanged from the Stage-2 baseline.
 
-| Metric | `comb` (fixed) | `rtl` | `hls` |
+| Metric | `comb` (fixed) | `rtl` | `hls`[^hls-corrupt] |
 | :--- | ---: | ---: | ---: |
 | Instances | 47 791 | 54 634 | 71 480 |
 | Area (µm²) | 4139.77 | 4655.15 | 7254.37 |
@@ -748,6 +757,14 @@ see "Baseline FSM arm ... — verdict: INCONCLUSIVE" further down and bead `clau
 | Setup WS (ps) | −190.50 | −54.29 | −996.18 |
 | Setup TNS (ps) | −14 657.70 | −2465.20 | −3 779 683.10 |
 | Hold WS (ps) | −1.01 | +8.77 | −13.01 |
+
+[^hls-corrupt]: This `hls` column was measured on the netlist later proven **corrupt** by
+    gate-level simulation (bead `b0t` part B, 2026-09-18) and superseded 2026-09-19 when the
+    remedy (`USE_SYNLIG:false` + sv2v) was applied to `pnr/asap7/valu_hls/config.json`. The
+    corrected, GLS-verified figures are **89 224 instances / 9188.40 µm² / 52.7 mW / Setup WNS
+    −1507.04 ps / Setup TNS −7 942 937.40 ps / Hold WNS −11.95 ps** — see the "REMEDY APPLIED"
+    block under "Baseline FSM arm" below. This column is left unaltered for provenance; treat it
+    as a measurement of a broken netlist, not a valid `hls`-arm PPA point.
 
 `comb` is the **smallest and lowest-power** of the three arms (−11.1% area, −0.6% power vs. `rtl`;
 −42.9% area, −62.7% power vs. `hls`) — consistent with a zero-register, zero-clock-tree
@@ -802,6 +819,44 @@ artifact. Do not compute a `comb`-vs-`rtl`/`hls` fmax ratio without carrying the
 > Evidence: netlists `/nobackup/asap7_valu_hls_runs/RUN_2026-09-15_14-05-40/final/nl/vector_alu_hls.nl.v`
 > (corrupt) and `/nobackup/pnr_ab_valu_hls/runs/RUN_2026-09-15_16-34-19/final/nl/vector_alu_hls.nl.v`
 > (clean); logs/VCDs under `/nobackup/b0t_partB/`. Full detail on bead `claude_verilog_test-b0t`.
+
+> ✅ **REMEDY APPLIED 2026-09-19 (user-approved, bead `b0t`).** `pnr/asap7/valu_hls/config.json` is
+> now `USE_SYNLIG:false` + the sv2v-preprocessed shim (mirroring `valu_hls_comb/config.json`'s
+> `USE_SYNLIG_NOTE`/fix exactly), reproducible via the new `make -C pnr r8r-valu-hls-sv2v` target
+> (auto-run by `librelane-asap7-valu-hls`). The sv2v output was regenerated and confirmed
+> byte-for-byte identical (`sha256sum`, not a filtered `diff` — see the RTK `diff`-exit-code caveat
+> elsewhere in this repo) to the file already used by the 2026-09-15 A/B run.
+>
+> **Reused, not re-run:** the tracked config now differs from the A/B candidate run
+> (`RUN_2026-09-15_16-34-19`) in **zero** functional keys — a programmatic key-by-key diff of both
+> `config.json`s (ignoring `//`-comment keys) found only the two intentional changes
+> (`VERILOG_FILES`, `USE_SYNLIG`) and no others (same SDC, same `CLOCK_PERIOD`, same
+> `FP_CORE_UTIL`/density, same everything else). Per the coordinator's explicit reuse condition,
+> that run's numbers are adopted directly rather than re-running LibreLane:
+>
+> | Metric | Corrupt (tracked pre-fix) | **Fixed (now tracked)** |
+> | :--- | ---: | ---: |
+> | Instances | 71 480 | **89 224** |
+> | Area (µm²) | 7254.37 | **9188.40** |
+> | Power (mW) | 37.667 | **52.7** |
+> | Setup WNS (ps) | −996.18 | **−1507.04** |
+> | Setup TNS (ps) | −3 779 683.10 | **−7 942 937.40** |
+> | Hold WNS (ps) | −13.01 | **−11.95** |
+>
+> **Functional verification of the certified netlist:** `tools/verif/gls/run_hls_seq_check.py` was
+> re-run (fresh, this session, not reusing the earlier session's ad-hoc logs) against
+> `RUN_2026-09-15_16-34-19/final/nl/vector_alu_hls.nl.v` — the exact netlist whose PPA is now
+> adopted above — for all 3 golden vectors used to originally confirm corruption:
+>
+> | Vector | Tag | Result |
+> | :--- | :--- | :--- |
+> | 109 | `VADD_mask01_0xff` (full mask) | **PASS**, bit-exact, forward lane order |
+> | 134 | `VMUL_mask02_0x01` (partial mask) | **PASS**, bit-exact, forward lane order |
+> | 148 | `VAND_mask04_0x55` (alternating mask) | **PASS**, bit-exact, forward lane order |
+>
+> 3/3 PASS. Commit applying this remedy: `f2445ad` ("[PD] b0t: apply approved Synlig fix to
+> valu_hls baseline FSM arm" — `pnr/Makefile` + `pnr/asap7/valu_hls/config.json`). The historical
+> "corrupt" figures above are left unaltered for provenance.
 
 ### Original (superseded) verdict: INCONCLUSIVE, not re-fixed
 
