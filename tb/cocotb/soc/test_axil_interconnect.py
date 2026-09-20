@@ -3,16 +3,16 @@ Phase 5 (M3) — AXI4-Lite control-interconnect unit tests.
 
 APB migration PR-7 update: the AXI-Lite ring now has 3 slaves, not 6.
   s0 GPU         0x2000_1000 (register bank slot 0)
-  s1 APB bridge  0x2000_2000 .. 0x2000_9FFF (register bank slot 1, proxy)
+  s1 APB bridge  0x2000_2000 .. 0x2000_AFFF (register bank slot 1, proxy)
   s2 DMA         0x2000_5000 (register bank slot 2, last-match over bridge)
 
-GH #92 update: the APB bridge window was extended
-from 0x2000_8FFF to 0x2000_9FFF (soc_periph_map_pkg.sv AXIL_APB_LIMIT /
-soc_addr_map_pkg.sv PERIPH_LIMIT) to add the PLL2 slot at 0x2000_9000-9FFF,
-following the exact same pattern as the earlier PMU- and PLL-slot
-extensions. The next person who extends this window again should update
-BAD_HIGH below (and the docstrings that reference the current limit) the
-same way.
+Phase 6a update (bead claude_verilog_test-ckc): the APB bridge window was
+extended from 0x2000_9FFF to 0x2000_AFFF (soc_periph_map_pkg.sv
+AXIL_APB_LIMIT / soc_addr_map_pkg.sv PERIPH_LIMIT) to add the GPIO slot at
+0x2000_A000-AFFF, following the exact same pattern as the earlier PLL2-, PMU-
+and PLL-slot extensions. The next person who extends this window again should
+update BAD_HIGH below (and the docstrings that reference the current limit)
+the same way.
 
 Verifies rtl/soc/axi_lite_interconnect.sv + rtl/soc/axi_lite_register_bank.sv
 together: per-slave routing, cross-slave isolation, DECERR on unmapped
@@ -20,7 +20,7 @@ addresses, and master-side backpressure.
 
 Unmapped addresses (DECERR):
     0x2000_0000 — below GPU base (CPU-debug APB gap)
-    0x2000_A000 — above the APB bridge limit (0x2000_9FFF, PLL2 slot included)
+    0x2000_B000 — above the APB bridge limit (0x2000_AFFF, GPIO slot included)
 """
 
 import cocotb
@@ -44,16 +44,17 @@ SLAVES = {
     "dma":        0x2000_5000,   # slot 2 (last-match over bridge window)
 }
 BAD_LOW  = 0x2000_0000   # below GPU base — gap before ring
-# GH #92: bridge window now extends through the PLL2 slot
-# (soc_periph_map_pkg.AXIL_APB_LIMIT = 0x2000_9FFF), so 0x2000_9000 --
-# the old BAD_HIGH -- is now legitimately mapped (OKAY) rather than
-# DECERR. (Same thing happened at GH #100/#101 for the PMU slot, and
-# before that for the PLL slot.) BAD_HIGH must stay one slot above
-# whatever AXIL_APB_LIMIT currently is; kept hardcoded rather than
-# derived from the SV package (see test_decerr_unmapped docstring for
-# why) so bump this by hand, matching this same edit, the next time the
-# APB window grows.
-BAD_HIGH = 0x2000_A000   # above APB bridge limit 0x2000_9FFF (PLL2 slot included)
+# Phase 6a / bead claude_verilog_test-ckc: bridge window now extends
+# through the GPIO slot (soc_periph_map_pkg.AXIL_APB_LIMIT =
+# 0x2000_AFFF), so 0x2000_A000 -- the old BAD_HIGH -- is now
+# legitimately mapped (OKAY) rather than DECERR. (Same thing happened at
+# GH #92 for the PLL2 slot, at GH #100/#101 for the PMU slot, and before
+# that for the PLL slot.) BAD_HIGH must stay one slot above whatever
+# AXIL_APB_LIMIT currently is; kept hardcoded rather than derived from
+# the SV package (see test_decerr_unmapped docstring for why) so bump
+# this by hand, matching this same edit, the next time the APB window
+# grows.
+BAD_HIGH = 0x2000_B000   # above APB bridge limit 0x2000_AFFF (GPIO slot included)
 
 
 async def _setup(dut):
@@ -120,11 +121,12 @@ async def test_decerr_unmapped(dut):
 
     PR-7 unmapped regions:
       BAD_LOW  = 0x2000_0000 — below GPU base (CPU-debug APB gap)
-      BAD_HIGH = 0x2000_A000 — above APB bridge limit 0x2000_9FFF
-    Note: 0x2000_9000 is now INSIDE the APB bridge window (PLL2 slot,
-    GH #92) and returns OKAY -- same pattern as 0x2000_8000 becoming
-    mapped when the PMU slot was added (GH #100/#101), and 0x2000_7000
-    before that when the PLL slot was added.
+      BAD_HIGH = 0x2000_B000 — above APB bridge limit 0x2000_AFFF
+    Note: 0x2000_A000 is now INSIDE the APB bridge window (GPIO slot,
+    Phase 6a / bead ckc) and returns OKAY -- same pattern as 0x2000_9000
+    becoming mapped when the PLL2 slot was added (GH #92), 0x2000_8000
+    when the PMU slot was added (GH #100/#101), and 0x2000_7000 before
+    that when the PLL slot was added.
 
     On deriving BAD_HIGH from soc_periph_map_pkg.AXIL_APB_LIMIT instead of
     hardcoding it: tb_axi_lite_interconnect.sv already `import

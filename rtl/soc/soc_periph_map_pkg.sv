@@ -4,15 +4,15 @@
 // APB migration PR-7 topology (GH #92: +PLL2 slot, dual-PLL clock seam):
 //   AXI-Lite ring (3 slaves): GPU, DMA, APB-bridge window
 //     Slave 0: GPU ctrl    0x2000_1000 .. 0x2000_1FFF
-//     Slave 1: APB bridge  0x2000_2000 .. 0x2000_9FFF  (covers 7 APB perips)
+//     Slave 1: APB bridge  0x2000_2000 .. 0x2000_AFFF  (covers 8 APB perips)
 //     Slave 2: DMA ctrl    0x2000_5000 .. 0x2000_5FFF
 //
 //   Note on overlapping window: DMA (index 2) overlaps the APB-bridge window.
 //   axi_lite_interconnect's decode() iterates 0→N-1 and takes the LAST match,
 //   so DMA (highest index) wins for 0x2000_5000-5FFF.  All other addresses in
-//   _2000-_9FFF route to APB_BRIDGE (index 1).
+//   _2000-_AFFF route to APB_BRIDGE (index 1).
 //
-//   APB sub-map (7 slaves, decoded by apb_interconnect):
+//   APB sub-map (8 slaves, decoded by apb_interconnect):
 //     APB_UART  0: 0x2000_2000 .. 0x2000_2FFF
 //     APB_SPI   1: 0x2000_3000 .. 0x2000_3FFF
 //     APB_TIMER 2: 0x2000_4000 .. 0x2000_4FFF
@@ -20,6 +20,7 @@
 //     APB_PLL   4: 0x2000_7000 .. 0x2000_7FFF
 //     APB_PMU   5: 0x2000_8000 .. 0x2000_8FFF
 //     APB_PLL2  6: 0x2000_9000 .. 0x2000_9FFF  (GH #92 — CPU-domain PLL config)
+//     APB_GPIO  7: 0x2000_A000 .. 0x2000_AFFF
 //
 //   All global MMIO addresses are UNCHANGED from the original 7-slave ring.
 
@@ -42,12 +43,13 @@ package soc_periph_map_pkg;
     // ── AXI-Lite region bounds ───────────────────────────────────────────────
     localparam logic [31:0] AXIL_GPU_BASE    = 32'h2000_1000;
     localparam logic [31:0] AXIL_GPU_LIMIT   = 32'h2000_1FFF;
-    // APB bridge window — covers all APB peripheral slots (7 × 4 KB).
+    // APB bridge window — covers all APB peripheral slots (8 × 4 KB).
     // DMA (index 2, checked last) takes priority for 0x2000_5000-5FFF.
     // Pre-Phase-6 #5 / GH #100: extended 0x2000_7FFF -> 0x2000_8FFF for PMU.
     // GH #92: extended 0x2000_8FFF -> 0x2000_9FFF for the second (CPU-domain) PLL.
+    // Phase 6a / bead claude_verilog_test-ckc: extended 0x2000_9FFF -> 0x2000_AFFF for GPIO.
     localparam logic [31:0] AXIL_APB_BASE    = 32'h2000_2000;
-    localparam logic [31:0] AXIL_APB_LIMIT   = 32'h2000_9FFF;
+    localparam logic [31:0] AXIL_APB_LIMIT   = 32'h2000_AFFF;
     localparam logic [31:0] AXIL_DMA_BASE    = 32'h2000_5000;
     localparam logic [31:0] AXIL_DMA_LIMIT   = 32'h2000_5FFF;
 
@@ -73,8 +75,9 @@ package soc_periph_map_pkg;
     localparam int unsigned APB_PLL   = 4;
     localparam int unsigned APB_PMU   = 5;  // Pre-Phase-6 #5 / GH #100
     localparam int unsigned APB_PLL2  = 6;  // GH #92 — CPU-domain PLL config
+    localparam int unsigned APB_GPIO  = 7;  // Phase 6a — bead claude_verilog_test-ckc
     /* verilator lint_on  UNUSEDPARAM */
-    localparam int unsigned APB_N_SLAVES = 7;
+    localparam int unsigned APB_N_SLAVES = 8;
 
     // ── APB region bounds (preserving original global MMIO addresses) ─────────
     localparam logic [31:0] APB_UART_BASE   = 32'h2000_2000;
@@ -93,14 +96,17 @@ package soc_periph_map_pkg;
     // PLL2 — GH #92 (second pll_subsystem instance, CPU-domain reference clock).
     localparam logic [31:0] APB_PLL2_BASE   = 32'h2000_9000;
     localparam logic [31:0] APB_PLL2_LIMIT  = 32'h2000_9FFF;
+    // GPIO — Phase 6a (bead claude_verilog_test-ckc).
+    localparam logic [31:0] APB_GPIO_BASE   = 32'h2000_A000;
+    localparam logic [31:0] APB_GPIO_LIMIT  = 32'h2000_AFFF;
 
     // Packed arrays for apb_interconnect instantiation.
     localparam logic [31:0] APB_SLV_BASE  [APB_N_SLAVES] = '{
         APB_UART_BASE,  APB_SPI_BASE,  APB_TIMER_BASE,
-        APB_IRQ_BASE,   APB_PLL_BASE,  APB_PMU_BASE,  APB_PLL2_BASE};
+        APB_IRQ_BASE,   APB_PLL_BASE,  APB_PMU_BASE,  APB_PLL2_BASE, APB_GPIO_BASE};
     localparam logic [31:0] APB_SLV_LIMIT [APB_N_SLAVES] = '{
         APB_UART_LIMIT, APB_SPI_LIMIT, APB_TIMER_LIMIT,
-        APB_IRQ_LIMIT,  APB_PLL_LIMIT, APB_PMU_LIMIT, APB_PLL2_LIMIT};
+        APB_IRQ_LIMIT,  APB_PLL_LIMIT, APB_PMU_LIMIT, APB_PLL2_LIMIT, APB_GPIO_LIMIT};
 
     // =========================================================================
     // Legacy address constants — kept for testbench / firmware compatibility.

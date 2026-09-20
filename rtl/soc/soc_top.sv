@@ -17,7 +17,7 @@
 //     AXIL_DMA=2        @ 0x2000_5000–5FFF  (AXI-Lite direct; last-match wins
 //                                             over APB_BRIDGE window overlap)
 //
-//   APB sub-tree (7 slaves behind axil_to_apb bridge):
+//   APB sub-tree (8 slaves behind axil_to_apb bridge):
 //     APB_UART=0  @ 0x2000_2000–2FFF  uart_controller
 //     APB_SPI=1   @ 0x2000_3000–3FFF  spi_controller
 //     APB_TIMER=2 @ 0x2000_4000–4FFF  timer
@@ -28,6 +28,7 @@
 //     APB_PMU=5   @ 0x2000_8000–8FFF  pmu (core_clk domain; GH #99/#100)
 //     APB_PLL2=6  @ 0x2000_9000–9FFF  pll_apb_regs (cpu_clk_i domain — CPU-domain
 //                                      PLL, GH #92; output unconsumed until GH #93)
+//     APB_GPIO=7  @ 0x2000_A000–AFFF  gpio_controller (core_clk domain; Phase 6a, bead claude_verilog_test-ckc)
 //
 //   Debug plane   : APB3 debug slave exposed at top-level ports, bridged into
 //     the CPU domain by apb_cdc_bridge (u_apb_dbg_cdc, GH #95) — see the
@@ -143,7 +144,7 @@
 //     out of scope (UPF-sim-tooling gated) — see pmu.sv header.
 //
 //   IRQ routing:
-//     irq_src_i = {gpu_irq_o[4], dma_irq[3], timer_irq[2], spi_irq[1], uart_irq[0]}
+//     irq_src_i = {gpio_irq[5], gpu_irq_o[4], dma_irq[3], timer_irq[2], spi_irq[1], uart_irq[0]}
 //     interrupt_controller.irq_o → CPU ext_irq_i (MEIP)
 //     timer.irq_o                → CPU timer_irq_i (MTIP, direct)
 //
@@ -206,6 +207,11 @@ module soc_top
     output logic spi_mosi_o,
     input  logic spi_miso_i,
     output logic spi_cs_n_o,
+
+    // ── GPIO ─────────────────────────────────────────────────────────────────
+    output logic [31:0] gpio_out_o,
+    output logic [31:0] gpio_oe_o,
+    input  logic [31:0] gpio_in_i,
 
     // ── Observability (subset; M7 perf counters added later) ─────────────────
     output logic        commit_valid_o,
@@ -616,6 +622,7 @@ module soc_top
     logic spi_irq;
     logic timer_irq;
     logic dma_irq;
+    logic gpio_irq;
     // gpu_irq_o is exposed at top-level port; driven by gpu_top
 
     logic ext_irq;    // interrupt_controller output → CPU ext_irq_i
@@ -1671,14 +1678,38 @@ module soc_top
     );
 
     // =========================================================================
+    // GPIO — APB slave (apb_psel[APB_GPIO])
+    // =========================================================================
+    gpio_controller #(
+        .ADDR_W (12),
+        .N_PINS (32)
+    ) u_gpio (
+        .clk        (core_clk),
+        .rst_n      (core_rst_n),
+        .psel       (apb_psel    [APB_GPIO]),
+        .penable    (apb_penable [APB_GPIO]),
+        .pwrite     (apb_pwrite  [APB_GPIO]),
+        .paddr      (apb_paddr   [APB_GPIO][11:0]),
+        .pwdata     (apb_pwdata  [APB_GPIO]),
+        .pstrb      (apb_pstrb   [APB_GPIO]),
+        .prdata     (apb_prdata  [APB_GPIO]),
+        .pready     (apb_pready  [APB_GPIO]),
+        .pslverr    (apb_pslverr [APB_GPIO]),
+        .gpio_out_o (gpio_out_o),
+        .gpio_oe_o  (gpio_oe_o),
+        .gpio_in_i  (gpio_in_i),
+        .irq_o      (gpio_irq)
+    );
+
+    // =========================================================================
     // Interrupt controller — APB slave (apb_psel[APB_IRQ])
-    // irq_src_i[4:0] = {GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}
+    // irq_src_i[5:0] = {GPIO[5], GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}
     // TIMER slot tied 0: timer IRQ goes directly to CPU MTIP; routing it here
     // too would double-count the event.
     // =========================================================================
     interrupt_controller #(
         .ADDR_W    (12),
-        .N_SOURCES (5)
+        .N_SOURCES (6)
     ) u_irq_ctrl (
         .clk        (core_clk),
         .rst_n      (core_rst_n),
@@ -1691,7 +1722,7 @@ module soc_top
         .prdata     (apb_prdata  [APB_IRQ]),
         .pready     (apb_pready  [APB_IRQ]),
         .pslverr    (apb_pslverr [APB_IRQ]),
-        .irq_src_i  ({gpu_irq_o, dma_irq, 1'b0, spi_irq, uart_irq}),
+        .irq_src_i  ({gpio_irq, gpu_irq_o, dma_irq, 1'b0, spi_irq, uart_irq}),
         .irq_o      (ext_irq)
     );
 

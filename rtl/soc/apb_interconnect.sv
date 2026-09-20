@@ -50,16 +50,29 @@ module apb_interconnect #(
     // ── Address decode ───────────────────────────────────────────────────────
     // sel_idx: index of the selected slave, or N_SLAVES when no match.
     // First-match (lowest index wins) — iterate up and stop on first hit.
-    logic [$clog2(N_SLAVES+1)-1:0] sel_idx;
+    //
+    // Two widths are needed and they are NOT the same number:
+    //   SEL_W — wide enough to also hold the N_SLAVES "no match" sentinel.
+    //   IDXW  — wide enough to index the [N_SLAVES] port arrays, and no wider.
+    // They differ exactly when N_SLAVES is a power of two (e.g. N_SLAVES=8:
+    // SEL_W=4, IDXW=3), which is what made the response mux trip WIDTHTRUNC
+    // when Phase 6a took the APB sub-tree from 7 slaves to 8. The `> 1` guard
+    // on IDXW mirrors apb4_register_bank.sv's own IDXW localparam and keeps
+    // N_SLAVES==1 (this module's default) legal — $clog2(1) is 0, and a bare
+    // $clog2(N_SLAVES)-1:0 slice would be [-1:0].
+    localparam int unsigned SEL_W = $clog2(N_SLAVES + 1);
+    localparam int unsigned IDXW  = (N_SLAVES > 1) ? $clog2(N_SLAVES) : 1;
+
+    logic [SEL_W-1:0] sel_idx;
     logic                          sel_valid;  // 1 when a slave matched
 
     always_comb begin
-        sel_idx   = N_SLAVES[$clog2(N_SLAVES+1)-1:0];
+        sel_idx   = N_SLAVES[SEL_W-1:0];
         sel_valid = 1'b0;
         for (int unsigned i = 0; i < N_SLAVES; i++) begin
             if (!sel_valid &&
                 paddr_i >= SLV_BASE[i] && paddr_i <= SLV_LIMIT[i]) begin
-                sel_idx   = i[$clog2(N_SLAVES+1)-1:0];
+                sel_idx   = i[SEL_W-1:0];
                 sel_valid = 1'b1;
             end
         end
@@ -92,10 +105,12 @@ module apb_interconnect #(
             pready_o  = 1'b1;
             pslverr_o = 1'b1;
         end else begin
-            // Mux from the selected slave.
-            prdata_o  = prdata_i [sel_idx];
-            pready_o  = pready_i [sel_idx];
-            pslverr_o = pslverr_i[sel_idx];
+            // Mux from the selected slave. This branch is only reached when
+            // sel_valid, so sel_idx is guaranteed < N_SLAVES and its low IDXW
+            // bits are an exact array index (see the SEL_W/IDXW note above).
+            prdata_o  = prdata_i [sel_idx[IDXW-1:0]];
+            pready_o  = pready_i [sel_idx[IDXW-1:0]];
+            pslverr_o = pslverr_i[sel_idx[IDXW-1:0]];
         end
     end
 

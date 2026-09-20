@@ -1,6 +1,6 @@
 # Project Phase Status
 
-Last updated: 2026-08-10
+Last updated: 2026-09-20
 
 ## Current Phase
 
@@ -10,6 +10,15 @@ Last updated: 2026-08-10
 
 - M1–M8 ✅: AXI4 crossbar + AXI-Lite ring, cache burst upgrade, peripherals (UART/SPI/timer/IRQ), DMA, behavioral SRAM, perf counters, SoC top.
 - M9 ✅ SoC verification: boot 100/100; DMA+UART+SPI loopback; SW coherency (D$ flush→GPU→D$ inval); CPU-GPU IRQ integration; DUT-side boot SRAM check. `soc_all` 73/73 at M9 (now 120/120 — see the PMU entry below); 1M+ cycle stress (1,079,867 cyc, 0 fail). Two RTL bugs found+fixed: D-cache MMIO caching (`go9`) and axi4_crossbar AR/AW handshake+arbitration (`7fs`).
+
+**Phase 6a: GPIO controller (bead `ckc`)** - 🚧 IN PROGRESS (2026-09-20). First Phase 6 peripheral. New `rtl/periph/gpio_controller.sv` — APB4 slave on `apb4_register_bank`, 32 pins.
+
+- **Bus**: APB4, per `docs/PERIPHERAL_BUS_EVALUATION.md` ("Phase 6 peripherals become trivial APB drop-ins"). The "AXI4-Lite" wording in `docs/ROADMAP.md` and `CLAUDE.md` was stale and has been corrected.
+- **Integration**: APB slave index 7 at `0x2000_A000–AFFF`; `APB_N_SLAVES` 7 → 8; `AXIL_APB_LIMIT` and `PERIPH_LIMIT` both extended `0x2000_9FFF` → `0x2000_AFFF` — the same two-edit pattern used for PLL, PMU and PLL2. New IRQ source at `interrupt_controller` bit 5 (`N_SOURCES` 5 → 6).
+- **Pins**: unidirectional triplet `gpio_out_o[31:0]` / `gpio_oe_o[31:0]` / `gpio_in_i[31:0]` on `soc_top`. There is **no tristate anywhere in this RTL tree** and the Sky130 SoC hardens as a core macro with no pad ring, so the bidirectional merge is deliberately a pad-ring integration concern. `gpio_in_i` is asynchronous and is synchronised per pin by `N_PINS` separate `cdc_2ff_sync #(.WIDTH(1))` instances — not one wide instance, because that primitive's scope warning forbids multi-bit binary buses.
+- **Interrupts**: per-pin level/edge with polarity. `GPIO_IRQ_STAT` is **edge-sticky / level-live** (ARM PL061 semantics): edge-mode bits latch until a `GPIO_IRQ_CLR` write, with a set beating a same-cycle clear so an edge is never lost to a racing clear; level-mode bits track their condition live and ignore `GPIO_IRQ_CLR` entirely. A fully sticky raw register was rejected because the reset defaults (level, active-low, pins low) make every pin's condition true, latching all-ones out of reset. `GPIO_IRQ_EN` masks the output only. `irq_o` is level-held, which the 2-FF CPU-domain crossing at `soc_top.sv:623-627` requires.
+- **Verification**: `test_gpio` **16/16** (reset defaults incl. the deliberate all-ones `GPIO_IRQ_STAT` at level/active-low defaults, RW round-trip, output/OE mirroring, the cycle-exact 3-edge input-sync latency, rising/falling edge capture, level tracking, edge stickiness + clear, set-beats-same-cycle-clear, clear-no-effect-on-level, `pstrb` partial-word clear, `GPIO_IRQ_EN` masking the output only, `irq_o` held 50 cycles, `GPIO_IRQ_CLR` reads-as-0, out-of-range access). `soc_all` **217/217** across 27 suites, up from 201. Extending the APB window broke `test_axil_interconnect.test_decerr_unmapped`, which probed `0x2000_A000` expecting DECERR — now the GPIO slot; `BAD_HIGH` bumped to `0x2000_B000`, the maintenance step that test's own comment prescribes for each window growth.
+- **Not hardened**: no Sky130 P&R run has been made with the block in place. The ROADMAP's 75 MHz Sky130 figure for GPIO remains a projection. Sky130 SoC headroom at the last sign-off was 37.9 % utilisation on a 6700 × 3100 µm die, with the tightest margin max_tt setup +0.339 ns.
 
 **Pre-Phase-6 #5: behavioral PMU (GH epic #98)** - ✅ COMPLETE (2026-08-01). New `rtl/soc/pmu.sv` — APB4 slave (reusing `apb4_register_bank`) + a per-domain sequencer FSM encoding the 4 PST states from `pnr/constraints/phase5_soc.upf` (NORMAL/CPU_OFF/GPU_OFF/IDLE).
 

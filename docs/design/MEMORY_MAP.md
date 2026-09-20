@@ -3,7 +3,7 @@
 Complete address space allocation for RV32I SoC
 
 Document status: Frozen
-Last updated: 2026-01-17
+Last updated: 2026-09-20
 
 ## Overview
 
@@ -37,16 +37,17 @@ This restriction is due to Ubuntu's page size being 4 KB
 | 0x2000_7000 - 0x2000_7FFF  | 4 KB    | PLL Control (APB4)  | PLL subsystem config/status (`pll_apb_regs`) |
 | 0x2000_8000 - 0x2000_8FFF  | 4 KB    | PMU Control (APB4)  | Power-mode sequencer registers (`pmu.sv`, GH #98/#99/#100) |
 | 0x2000_9000 - 0x2000_9FFF  | 4 KB    | PLL2 Control (APB4) | Second PLL subsystem config/status, CPU-domain reference clock (`pll_apb_regs`, GH #92) |
-| 0x2000_A000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
+| 0x2000_A000 - 0x2000_AFFF  | 4 KB    | GPIO (APB4)         | 32-pin GPIO controller (`gpio_controller.sv`, Phase 6a) |
+| 0x2000_B000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
 | 0x3000_0000 - 0x7FFF_FFFF  | 1.25 GB | Reserved            | Future use                  |
 | 0x8000_0000 - 0xFFFF_FFFF  | 2 GB    | External Memory     | Off-chip memory/devices     |
 
 > **Phase 5 peripheral ring (APB migration PR-7, updated GH #92):**
 > peripherals attach to a CPU-driven **AXI4-Lite control interconnect**
 > (`rtl/soc/axi_lite_interconnect.sv`) whose APB-bridge ring slot (slave 1,
-> `0x2000_2000-0x2000_9FFF`) fans out through `axil_to_apb` + `apb_interconnect`
-> into a genuine **APB4 sub-tree of 7 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2;
-> `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_PLL2). GPU/DMA control remain
+> `0x2000_2000-0x2000_AFFF`) fans out through `axil_to_apb` + `apb_interconnect`
+> into a genuine **APB4 sub-tree of 8 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2,
+> GPIO; `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_GPIO). GPU/DMA control remain
 > AXI-Lite-direct ring slaves (0 and 2). APB3 also survives standalone on the
 > CPU debug slot (0x2000_0000–0FFF), unrelated to this APB4 sub-tree. Address
 > map is frozen in `rtl/soc/soc_periph_map_pkg.sv` (`decode_axil_slave()`);
@@ -278,6 +279,39 @@ See Global Memory Map above.
 | 0x008  | TMR_CTRL     | RW     | Timer control                            |
 | 0x00C  | TMR_PRESCALE | RW     | Clock prescaler                          |
 
+#### GPIO Registers (Phase 6a)
+
+**Base address**: 0x2000_A000 — `rtl/periph/gpio_controller.sv`, APB4, 32 pins.
+
+| Offset | Name          | Access | Description                                        |
+|:------:|:-------------:|:------:|:--------------------------------------------------:|
+| 0x000  | GPIO_DATA_IN  | RO     | Synchronised pin state (2-FF, one per pin)         |
+| 0x004  | GPIO_DATA_OUT | RW     | Output drive value                                 |
+| 0x008  | GPIO_DIR      | RW     | Direction: 1 = output enable (`gpio_oe_o`)         |
+| 0x00C  | GPIO_IRQ_EN   | RW     | Per-pin interrupt enable (masks `irq_o` only)      |
+| 0x010  | GPIO_IRQ_TYPE | RW     | 0 = level-sensitive, 1 = edge-sensitive            |
+| 0x014  | GPIO_IRQ_POL  | RW     | 0 = low / falling, 1 = high / rising               |
+| 0x018  | GPIO_IRQ_STAT | RO     | Pending: sticky in edge mode, live in level mode   |
+| 0x01C  | GPIO_IRQ_CLR  | WO     | Write 1 to clear the matching `GPIO_IRQ_STAT` bit (edge pins only); reads 0 |
+
+Pins are exposed as an unidirectional triplet on `soc_top` —
+`gpio_out_o[31:0]` / `gpio_oe_o[31:0]` / `gpio_in_i[31:0]`. There is no tristate
+anywhere in this RTL tree and the Sky130 SoC hardens as a core macro with no pad
+ring, so the bidirectional merge is deliberately left to pad-ring integration.
+
+`GPIO_IRQ_STAT` captures events regardless of `GPIO_IRQ_EN` — that register masks
+`irq_o` only. Status is **edge-sticky / level-live**, following ARM PL061: an
+edge-mode bit latches until software writes the matching bit of `GPIO_IRQ_CLR`,
+and a set beats a same-cycle clear so an edge is never lost to a racing clear; a
+level-mode bit tracks its condition live and ignores `GPIO_IRQ_CLR` entirely, so
+a live level interrupt is silenced at the source or via `GPIO_IRQ_EN`, never by
+clearing status.
+
+Note the reset-default reading: with `GPIO_IRQ_TYPE` = 0 (level) and
+`GPIO_IRQ_POL` = 0 (active-low) and pins undriven low, every pin's condition is
+true, so `GPIO_IRQ_STAT` reads all-ones (masked to the implemented pins) a couple
+of cycles out of reset. `GPIO_IRQ_EN` = 0 at reset keeps `irq_o` low regardless.
+
 ## Reset and Trap Vectors
 
 ### Reset Vector
@@ -341,7 +375,7 @@ As implemented in `rtl/soc/soc_top.sv` (M8):
 | M3 | DMA engine |
 | S0 | Boot ROM (0x0000_1000 – 0x0000_1FFF) |
 | S1 | SRAM controller (0x0000_2000 – 0x0FFF_FFFF) |
-| S2 | Peripheral bridge → AXI-Lite ring (0x2000_1000 – 0x2000_6FFF) |
+| S2 | Peripheral bridge → AXI-Lite ring (0x2000_1000 – 0x2000_AFFF) |
 
 **Control plane** — `axi4_to_axilite` → `axi_lite_interconnect`, 6 AXI-Lite slaves:
 GPU(0), UART(1), SPI(2), TIMER(3), DMA(4), IRQ(5).
@@ -368,7 +402,7 @@ Two interrupt lines reach the CPU (priority: **MEIP > MTIP**, per
 | `ext_irq_i` (MEIP) | 0x8000_000B | `interrupt_controller.irq_o` — aggregated, 2-FF-synchronised, mask/status registers at 0x2000_6000 |
 | `timer_irq_i` (MTIP) | 0x8000_0007 | Timer `irq_o`, wired **directly** (not via the IRQ controller; its bit 2 is tied 0) |
 
-IRQ controller source bits: `{GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}`.
+IRQ controller source bits: `{GPIO[5], GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}`.
 On a MEIP trap, software reads `IRQ_STATUS` (0x2000_6000 block) to disambiguate
 the peripheral source; bit priority within the controller does not reorder
 delivery — all enabled sources share the single MEIP line.

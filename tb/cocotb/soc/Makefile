@@ -154,6 +154,15 @@ PMU_SOURCES = \
 	$(RTL)/soc/pmu.sv \
 	$(SOC_DIR)/tb_pmu.sv
 
+# Phase 6a (bead claude_verilog_test-ckc): standalone gpio_controller unit-test sources.
+# apb4_register_bank (register file) + cdc_2ff_sync (N_PINS independent single-bit input
+# synchronisers, one per pin -- see gpio_controller.sv header) + gpio_controller + standalone TB.
+GPIO_SOURCES = \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/periph/gpio_controller.sv \
+	$(SOC_DIR)/tb_gpio.sv
+
 # GH #91: standalone async_axi_fifo (dual-clock AXI4 CDC bridge) unit-test
 # sources. axi_pkg (bus geometry defaults) + the 3 cdc/ primitives +
 # async_axi_fifo + standalone TB wrapper. No bus-bridge or full SoC required.
@@ -240,6 +249,7 @@ PLL_SOURCES = \
 	$(RTL)/periph/spi_controller.sv \
 	$(RTL)/periph/timer.sv \
 	$(RTL)/periph/interrupt_controller.sv \
+	$(RTL)/periph/gpio_controller.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
@@ -309,6 +319,7 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/periph/spi_controller.sv \
 	$(RTL)/periph/timer.sv \
 	$(RTL)/periph/interrupt_controller.sv \
+	$(RTL)/periph/gpio_controller.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
@@ -438,7 +449,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -595,6 +606,22 @@ pmu_lint:
 pmu: pmu_lint
 	$(MAKE) MODULE=test_pmu TOPLEVEL=tb_pmu \
 		VERILOG_SOURCES="$(PMU_SOURCES)" \
+		$(BUILD_ARGS)
+
+# Phase 6a (bead claude_verilog_test-ckc): gpio_controller lint + sim.
+# lint only: apb4_register_bank + cdc_2ff_sync + gpio_controller + standalone TB wrapper.
+# -Wno-SYNCASYNCNET: same rationale as spi_lint above -- cdc_2ff_sync's own flops are
+# asynchronous-reset while gpio_controller's are synchronous-reset, and both are flopped off the
+# same rst_n at this lint ROOT (gpio_controller instantiates cdc_2ff_sync directly).
+gpio_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
+		--top-module tb_gpio \
+		$(GPIO_SOURCES)
+
+gpio: gpio_lint
+	$(MAKE) MODULE=test_gpio TOPLEVEL=tb_gpio \
+		VERILOG_SOURCES="$(GPIO_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
 # GH #91: async_axi_fifo lint + sim.
@@ -829,6 +856,7 @@ soc_all: check-space
 	$(MAKE) apb4_register_bank
 	$(MAKE) axil_to_apb
 	$(MAKE) pmu
+	$(MAKE) gpio
 	$(MAKE) async_axi_fifo
 	$(MAKE) apb_cdc_bridge
 	$(MAKE) cdc_reset_sync_scan
