@@ -185,8 +185,8 @@ module soc_bus
     output logic                      axil_dma_rready,
 
     // =========================================================================
-    // APB peripheral ports [N_APB_SLV=7]: from apb_interconnect to peripherals
-    //   APB_UART=0  APB_SPI=1  APB_TIMER=2  APB_IRQ=3  APB_PLL=4  APB_PMU=5  APB_PLL2=6
+    // APB peripheral ports [N_APB_SLV=8]: from apb_interconnect to peripherals
+    //   APB_UART=0  APB_SPI=1  APB_TIMER=2  APB_IRQ=3  APB_PLL=4  APB_PMU=5  APB_PLL2=6  APB_GPIO=7
     // =========================================================================
     output logic        apb_psel    [APB_N_SLAVES],
     output logic        apb_penable [APB_N_SLAVES],
@@ -644,8 +644,8 @@ module soc_bus
     );
 
     // =========================================================================
-    // 5. APB interconnect: 1 APB master → 7 APB peripheral slaves
-    //   APB_UART=0  APB_SPI=1  APB_TIMER=2  APB_IRQ=3  APB_PLL=4  APB_PMU=5  APB_PLL2=6
+    // 5. APB interconnect: 1 APB master → 8 APB peripheral slaves
+    //   APB_UART=0  APB_SPI=1  APB_TIMER=2  APB_IRQ=3  APB_PLL=4  APB_PMU=5  APB_PLL2=6  APB_GPIO=7
     // =========================================================================
     apb_interconnect #(
         .N_SLAVES  (N_APB_SLV),

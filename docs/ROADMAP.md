@@ -395,17 +395,34 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 
 **Prerequisites**: Phase 5 complete (full SoC validated)
 
-#### 6a. Additional Peripherals (AXI4-Lite slaves on Phase 5 interconnect)
+#### 6a. Additional Peripherals (APB4 slaves on the Phase 5 APB sub-tree)
+
+> **Bus correction (2026-09-20):** this heading previously read "AXI4-Lite slaves".
+> `docs/PERIPHERAL_BUS_EVALUATION.md` settled the peripheral-bus standard as **APB4**
+> behind `apb4_register_bank` — "Phase 6 peripherals become trivial APB drop-ins".
+> The per-node frequency columns below are *projections*, not measured results.
 
 | IP | RTL file | Sky130 | FreePDK45 | ASAP7 |
 |----|----------|--------|-----------|-------|
-| GPIO controller | `rtl/periph/gpio_controller.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |
+| GPIO controller | `rtl/periph/gpio_controller.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |  ← **RTL landed** (bead `ckc`)
 | I2C controller | `rtl/periph/i2c_controller.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |
 | PWM controller | `rtl/periph/pwm_controller.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |
 | Watchdog timer | `rtl/periph/watchdog_timer.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |
 | TRNG | `rtl/periph/trng.sv` | ✅ Sky130 analog only | ❌ Not portable | ❌ Not portable |
 
 Note: TRNG uses Sky130 ring-oscillator analog cells — **Sky130-exclusive** for tapeout.
+
+**GPIO controller — status (Phase 6a, bead `ckc`, 2026-09-20).** RTL + SoC integration +
+cocotb suite landed: `test_gpio` **16/16**, `soc_all` **217/217** across 27 suites (was
+201 pre-GPIO; CI `PASS_FLOOR` raised 170 → 210). APB4 slave at
+`0x2000_A000–AFFF` (APB index 7, `APB_N_SLAVES`
+7 → 8); `AXIL_APB_LIMIT` and `PERIPH_LIMIT` extended to `0x2000_AFFF`. 32 pins exposed as
+the unidirectional triplet `gpio_out_o` / `gpio_oe_o` / `gpio_in_i` — this RTL tree contains
+no tristate and the Sky130 SoC hardens as a core macro with no pad ring, so the
+bidirectional merge is left to pad-ring integration. Per-pin level/edge interrupt with
+polarity; new `interrupt_controller` source bit 5 (`N_SOURCES` 5 → 6). Wired into the
+Sky130 and ASAP7 sv2v file lists. **Not yet hardened** — no Sky130 P&R run has been made
+with the block in place, so the 75 MHz column above remains a projection.
 
 #### 6b. AES-128 + SHA-256 Accelerator
 

@@ -48,6 +48,11 @@ module soc_top #(
     input  wire        spi_miso_i,
     output wire        spi_cs_n_o,
 
+    // GPIO
+    output wire [31:0] gpio_out_o,
+    output wire [31:0] gpio_oe_o,
+    input  wire [31:0] gpio_in_i,
+
     // Observability
     output wire        commit_valid_o,
     output wire [31:0] commit_pc_o,
