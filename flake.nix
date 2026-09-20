@@ -164,6 +164,7 @@
             packages = with pkgs; [
               verilator   # >= 5.036 (5.048 on the pinned rev)
               iverilog    # Icarus Verilog (alternate SIM=icarus path)
+              verible     # verible-verilog-lint + -format (see note below)
               gcc         # g++ for Verilator-generated C++ (via sim/cxx_shim.sh)
               gnumake
               ccache
@@ -171,13 +172,49 @@
               git
             ];
 
+            # ── Verible (bead claude_verilog_test-i7vj) ────────────────────────
+            # docs/development/CODING_GUIDELINES.md 1.7 defines the pre-commit gate
+            # as `cd sim && make lint && make lint_soc && make verible`. Before this
+            # was added, neither verible-verilog-lint nor verible-verilog-format
+            # existed on PATH or in this flake, so that documented chain could not
+            # complete locally and RTL style/format deviations only ever surfaced in
+            # CI. The sim/Makefile targets did fail loudly (`command -v ... || exit
+            # 1`), so this was a blocked gate, not a silent one.
+            #
+            # ⚠️ VERSION DRIFT. nixpkgs on the pinned rev carries verible 0.0.4023;
+            # .github/workflows/rtl-checks.yml:33 pins VERIBLE_VERSION=v0.0-4063-
+            # gf831ec18 and installs the upstream static release. ~40 builds apart,
+            # and nixpkgs cannot currently supply 4063. Closing the gap means either
+            # nixpkgs catching up or CI moving to this flake's binary -- a deliberate
+            # bump either way, matching the "bump deliberately" note on the CI pin.
+            #
+            # ⚠️ NEITHER SIDE IS A GATE TODAY, so do not read a green CI Verible job
+            # as "the tree is Verible-clean". Both Verible steps in rtl-checks.yml
+            # carry `continue-on-error: true` ("Non-blocking during initial adoption
+            # (gradual rollout)"), so that job reports success regardless of findings.
+            # Measured 2026-09-20 on 0.0.4023: `make -C sim lint-verible` over the
+            # whole tree FAILS on pre-existing grandfathered RTL -- always-ff-non-
+            # blocking in rtl/cpu/core/rv32i_csr_file.sv and case-missing-default in
+            # the pipeline stages. That is the known adoption backlog, not a
+            # regression and not an artifact of the version drift.
+            #
+            # Consequence for docs/development/CODING_GUIDELINES.md 1.7: the gate it
+            # documents (`make lint && make lint_soc && make verible`) still cannot
+            # pass, because `verible` = lint-verible + format-verible-check and BOTH
+            # halves fail on the existing tree (format defaults to the whole tree,
+            # which the sim/Makefile comment already notes "would always fail").
+            # Installing the binary unblocks running the tool; it does not make that
+            # chain green. Use `make lint-verible` / `make format-verible-check
+            # VERIBLE_CHECK_FILES=...` on your own changed files instead. Tracked as
+            # bead claude_verilog_test-i7vj.
+
             # Only greet an interactive shell. `nix develop --command <cmd>` is how the
             # test/lint flows are driven, and these two lines otherwise prepend to every
             # captured command output (they are emitted by the shell before the command
             # runs, so no downstream output filter can remove them).
             shellHook = ''
               if [[ $- == *i* ]]; then
-                echo "soc sim+lint env ready — Verilator $(verilator --version | head -1 | awk '{print $2}')"
+                echo "soc sim+lint env ready — Verilator $(verilator --version | head -1 | awk '{print $2}'), Verible $(verible-verilog-lint --version 2>/dev/null | head -1 | awk '{print $2}')"
                 echo "Python/cocotb come from system + pip: 'pip install -r requirements.txt cocotb-bus cocotbext-axi'"
               fi
             '';
