@@ -298,6 +298,29 @@ set_output_delay [expr $clock_period * 0.05] -clock core_clk -min [all_outputs]
 ###############################################################################
 set_false_path -from [get_ports rst_n_i]
 
+# Second-domain reference reset (GH #92/#93). Same class as rst_n_i above: an
+# asynchronous reset feeding a cdc_reset_sync, so timing it against core_clk is
+# meaningless. This line was MISSING from 2026-08-02 (when cpu_rst_n_i became a
+# real top-level port) until 2026-09-26, and the gap was visible: two
+# cpu_rst_n_i recovery/removal hold violations appeared at the ss corners in
+# RUN_2026-09-20_19-46-05. They no longer appear once the resizer hold margins
+# were raised, but the constraint gap was real and is closed here so it cannot
+# resurface.
+set_false_path -from [get_ports cpu_rst_n_i]
+
+# GPIO inputs (Phase 6a, bead claude_verilog_test-ckc) — asynchronous external
+# pins. Same class as uart_rx_i / spi_miso_i below: gpio_controller.sv
+# synchronises EVERY pin through its own per-pin cdc_2ff_sync before anything
+# in core_clk uses it, so a setup/hold check from the pad against core_clk has
+# no physical meaning.
+#
+# Measured, not assumed: this was the LAST remaining hold violation in the
+# design. RUN_2026-09-25_22-02-12 closed 68 of 71 hold violations via the
+# resizer hold-margin raise, and the 3 survivors were all the same path --
+# gpio_in_i[31] -> _60250_ (a cdc_2ff_sync stage-1 flop) at max_ss/nom_ss/
+# min_ss, worst -0.2456 ns. Every tt and ff corner was already clean.
+set_false_path -from [get_ports gpio_in_i]
+
 # UART I/O (asynchronous serial)
 set_false_path -from [get_ports uart_rx_i]
 set_false_path -to   [get_ports uart_tx_o]
