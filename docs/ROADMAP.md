@@ -421,9 +421,8 @@ the unidirectional triplet `gpio_out_o` / `gpio_oe_o` / `gpio_in_i` — this RTL
 no tristate and the Sky130 SoC hardens as a core macro with no pad ring, so the
 bidirectional merge is left to pad-ring integration. Per-pin level/edge interrupt with
 polarity; new `interrupt_controller` source bit 5 (`N_SOURCES` 5 → 6). Wired into the
-Sky130 and ASAP7 sv2v file lists. **Hardened on Sky130 2026-09-26** (`RUN_2026-09-25_22-02-12`,
-bead `00ef`): Netgen LVS PASSED, routing DRC 0, setup clean at all 9 corners, hold clean at every
-tt/ff corner. ⚠️ The SoC clock is **25 ns / 40 MHz** (`pnr/sky130/soc/config.json`), so this measures
+Sky130 and ASAP7 sv2v file lists. **Hardened on Sky130 2026-09-26** (`RUN_2026-09-26_00-07-59`,
+bead `00ef`): Netgen LVS PASSED, routing DRC 0, setup AND hold both clean at all 9 corners. ⚠️ The SoC clock is **25 ns / 40 MHz** (`pnr/sky130/soc/config.json`), so this measures
 GPIO *inside a 40 MHz SoC* — the 75 MHz column above is a per-peripheral projection and is still
 NOT a measurement. Detail: `docs/SKY130_REAL_DRC_LVS_EVALUATION.md`.
 

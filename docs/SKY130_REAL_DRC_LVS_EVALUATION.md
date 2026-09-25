@@ -67,23 +67,27 @@ Adopted run `RUN_2026-07-30_06-42-17` at 25.0 ns / 40 MHz:
 
 Power (per corner, from `51-openroad-stapostpnr/<corner>/power.rpt`): **nom_tt 37.63 mW**, worst corner max_ff 44.13 mW. 37.9 % utilization, 226,952 stdcells, die 6700 × 3100 µm.
 
-### Stage 2 re-harden with Phase 6a GPIO — `RUN_2026-09-25_22-02-12` (2026-09-26, bead `00ef`)
+### Stage 2 re-harden with Phase 6a GPIO — `RUN_2026-09-26_00-07-59` (2026-09-26, bead `00ef`)
 
 First Sky130 SoC hardening since 2026-07-30. ⚠️ **Not a single-variable comparison against the run
 above**: 33 RTL commits landed in between, 13 touching `soc_top.sv`, including the `rvb`/`ydw` SRAM
 read/write pipelining, the `apb_cdc_bridge` debug-port bridge (GH #93/#95) and Phase 6a GPIO (`ckc`).
 
-| Gate | 2026-07-30 | This run |
+| Gate | 2026-07-30 | Final run |
 |---|---|---|
 | Netgen LVS | PASSED | **PASSED** — "Circuits match uniquely", 0 errors |
 | Routing DRC | 0 | **0** |
-| Setup, all 9 corners | ss **FAIL** −4.6432 ns | **0 violations**, worst slack **+6.95 ns** |
-| Hold | 0, worst +0.0274 ns | **3 violations**, worst −0.2456 ns (ss only; all tt/ff clean) |
-| Antenna | 140 pin / 120 net | 256 pin / 169 net — bead `58q` class |
-| Magic DRC | 9,081 | 9,081 — unchanged, bead `45a` waiver |
+| Setup, all 9 corners | ss **FAIL** −4.6432 ns | **0 violations**, worst slack **+7.08 ns** |
+| Hold, all 9 corners | 0, worst +0.0274 ns | **0 violations**, worst **+0.1413 ns** |
+| Antenna | 140 pin / 120 net | 191 pin / 132 net — bead `58q` class |
+| Magic DRC | 9,081 | 9,081 — unchanged, bead `45a` waiver; the ONLY deferred error |
 | KLayout DRC | 4 | **not run** — deliberately skipped, see below |
-| Power (total) | 37.63 mW nom_tt | 48.27 mW |
-| Utilization | 37.9 % | 38.99 % |
+| Power (total) | 37.63 mW nom_tt | 48.25 mW |
+| Utilization | 37.9 % | 38.98 % |
+
+Timing is fully closed: setup AND hold clean at all nine corners. Two intermediate runs got here —
+`RUN_2026-09-25_22-02-12` (resizer hold margins, 71 → 3 violations) and this one (SDC false path on
+`gpio_in_i`, 3 → 0).
 
 **The ss setup failure is gone.** Bead `ujv` was deferred as host-blocked on the premise that closing
 ss needed SRAM re-characterization; on current RTL, setup now passes at all nine corners with +6.95 ns
@@ -97,17 +101,19 @@ is not on the path to it. `make librelane-sky130-soc-noklayout` passes `--skip K
 Checker.KLayoutDRC` on the command line; `config.json` still says `RUN_KLAYOUT_DRC: true`. Re-run the
 plain target on a larger host to recover it.
 
-**Hold: 71 → 3.** The preceding attempt showed 71 hold violations including 2 at the gated `max_tt`
+**Hold: 71 → 3 → 0.** The first attempt showed 71 hold violations including 2 at the gated `max_tt`
 corner. Root cause (bead `00ef`): every violation was a boundary-port path — `timing__hold_r2r_vio__count`
 = 0 at all nine corners — and all design repair runs on GRT-*estimated* parasitics, with no repair step
 after RCX, so real-route erosion lands where nothing can react. Raising `GRT_RESIZER_HOLD_SLACK_MARGIN`
 0.05 → 0.3 and adding `PL_RESIZER_HOLD_SLACK_MARGIN: 0.3` closed 68 of 71. The 3 survivors were all the
-same path, `gpio_in_i[31]` → a `cdc_2ff_sync` stage-1 flop, now closed by `set_false_path -from
+same path, `gpio_in_i[31]` → a `cdc_2ff_sync` stage-1 flop, closed by `set_false_path -from
 [get_ports gpio_in_i]` in `sky130_soc.sdc` — the same treatment `uart_rx_i` and `spi_miso_i` already had,
-and correct because `gpio_controller.sv` synchronises every pin internally.
+and correct because `gpio_controller.sv` synchronises every pin internally. Verified: hold reaches
+**0 violations at all nine corners**, worst slack +0.1413 ns.
 
-**Max-slew 8402 / max-cap 337 are NOT new and NOT a macro artifact** — see bead `e45j`. They were 8357/329
-before the hold change (so the margin raise did not cause them), they are 0 at every pre-RCX stage, and
+**Max-slew 8623 / max-cap 346 are NOT new and NOT a macro artifact** — see bead `e45j`. They were 8357/329 before the
+hold change and 8402/337 after it (so neither the margin raise nor the SDC false paths caused them;
+the residual drift is ordinary run-to-run placement variation), they are 0 at every pre-RCX stage, and
 only 0.29 % touch the SRAM macro. Both checkers are `--skip`-ped and do not gate. Note also that
 "max fanout violations = 0" is **vacuous** here: there is no `set_max_fanout` in the SDC at all.
 
