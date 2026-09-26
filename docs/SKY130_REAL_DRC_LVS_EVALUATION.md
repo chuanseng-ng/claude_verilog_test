@@ -111,7 +111,17 @@ same path, `gpio_in_i[31]` → a `cdc_2ff_sync` stage-1 flop, closed by `set_fal
 and correct because `gpio_controller.sv` synchronises every pin internally. Verified: hold reaches
 **0 violations at all nine corners**, worst slack +0.1413 ns.
 
-**Max-slew 8623 / max-cap 346 are NOT new and NOT a macro artifact** — see bead `e45j`. They were 8357/329 before the
+**Max-slew / max-cap — reduced 72 % / 80 % on 2026-09-26 (bead `e45j`).** `RUN_2026-09-26_07-34-03`
+raised the pre-route design-repair margins (`GRT_DESIGN_REPAIR_MAX_{SLEW,CAP}_PCT` 10 → 30,
+`DESIGN_REPAIR_MAX_{SLEW,CAP}_PCT` 20 → 40) and took **slew 8623 → 2380, cap 346 → 70**, with setup
+and hold both still 0 violations at all nine corners and their slacks *improving* (+7.08 → +8.40 ns,
++0.141 → +0.293 ns), LVS still PASSED and routing DRC still 0. Cost: **antenna 132 → 182 nets /
+191 → 263 pins**, the trade-off `sky130_soc.sdc:144-149` already documented for this design. A
+genuine post-RCX repair step is *not* possible without modifying the shared external librelane
+install, so over-repairing before routing is the available substitute — it recovers most of the
+benefit but does not reach zero. The figures below describe the pre-fix 8623/346 population.
+
+**Max-slew / max-cap are NOT a macro artifact** — see bead `e45j`. They were 8357/329 before the
 hold change and 8402/337 after it (so neither the margin raise nor the SDC false paths caused them;
 the residual drift is ordinary run-to-run placement variation), they are 0 at every pre-RCX stage, and
 only 0.29 % touch the SRAM macro. Both checkers are `--skip`-ped and do not gate. Note also that
