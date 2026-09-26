@@ -7,18 +7,41 @@ Multi-phase project building a complete SoC with RV32I RISC-V CPU, GPU-lite comp
 
 ## Project Vision
 
-This project incrementally builds a fully functional SoC through 6 phases:
+This project incrementally builds a fully functional SoC:
 
 1. **Phase 0**: Specification & Reference Models ✅ **COMPLETE** (2026-01-18)
 2. **Phase 1**: Minimal RV32I CPU (single-cycle) ✅ **COMPLETE** (2026-02-13)
 3. **Phase 2**: Pipelined CPU (5-stage + interrupts) ✅ **COMPLETE** (2026-03-08)
 4. **Phase 3**: Memory System (I-cache + D-cache) ✅ **COMPLETE** (2026-05-21)
 5. **Phase 4**: GPU-Lite Compute Engine (SIMT) ✅ **COMPLETE** (2026-05-27)
-6. **Phase 5**: SoC Integration (peripherals, boot ROM) 🚧 In Progress
+6. **Phase 5**: SoC Integration (peripherals, boot ROM) ✅ **COMPLETE** (2026-06-24)
+7. **Phase 6**: IP expansion — GPIO/I2C/PWM/WDT/TRNG/AES-SHA, INT8 NPU 🚧 **6a GPIO done**
+8. **Phase 7**: Mixed-signal charge-pump PLL (dual-PDK, AMS RNM) ✅ M-a–M-c complete
 
 ## Current Status
 
-Phase 5 (SoC Integration) in progress; Phases 0–4 complete.
+Phases 0–5 complete. Phase 6 underway: **6a GPIO landed and hardened on Sky130**.
+
+**The strongest result in this project is the Sky130 SoC**, because Sky130 is the only node here with
+genuine physical verification (ASAP7 and FreePDK45 skip Magic/KLayout/Netgen entirely). As of
+2026-09-26, `RUN_2026-09-26_00-07-59` onward:
+
+| Sky130 SoC gate | Result |
+| :-------------- | :----- |
+| Netgen LVS | **PASSED** — "Circuits match uniquely", 0 errors |
+| Setup, all 9 corners | **0 violations** (worst +7.08 ns) |
+| Hold, all 9 corners | **0 violations** (worst +0.14 ns) |
+| Routing DRC | **0** |
+| Frequency / power / util | 40 MHz · ~48 mW · ~39 % |
+
+⚠️ Caveats that matter: the SRAM macro is characterized at **TT only**, so "9 corners" means 9 corner
+*labels* backed by one macro model; Magic DRC reports 9,081 violations, a waived PDK artifact
+(bead `45a`); and KLayout DRC is currently **deferred, not waived** (it OOM-killed an 8.5 GB step on a
+15 GB host). Detail → [`docs/SKY130_REAL_DRC_LVS_EVALUATION.md`](docs/SKY130_REAL_DRC_LVS_EVALUATION.md).
+
+⚠️ **Every ASAP7 figure below is unvalidated**, and the ASAP7 CPU/GPU macros additionally rest on a
+netlist with a **proven frontend miscompile** (beads `u99`/`ma7` — a Synlig-built netlist mis-executes
+a branch). Those are shelved pending a ≥32 GB host. See `CLAUDE.md` for the full exposure.
 
 | Phase | Status | Date | Headline result |
 | :---- | :----- | :--- | :-------------- |
@@ -28,6 +51,7 @@ Phase 5 (SoC Integration) in progress; Phases 0–4 complete.
 | 3 — L1 I/D caches | ✅ | 2026-05-21 | 139/139 regression; ASAP7 **1418 MHz / 27.27 mW / 3,844 µm²** ⚠️ unvalidated (bead `8f3`/`0p6`) |
 | 4 — GPU-Lite SIMT | ✅ | 2026-05-27 | GPU+CPU regression green; ASAP7 **571 MHz / 262 mW** ⚠️ unvalidated (bead `8f3`/`0p6`) |
 | 5 — SoC integration | ✅ | 2026-06-24 | M1–M12 done; ASAP7 SoC 571 MHz / 62.9 mW ⚠️ unvalidated (bead `8f3`/`0p6`). Current RTL re-measured on the fixed flow (bead `0d0`): −727 ps / 781 violators / hold clean / 283.6 mW — not closed |
+| 6a — GPIO controller | ✅ | 2026-09-26 | APB4, 32-pin, `0x2000_A000`; `test_gpio` 16/16, `soc_all` 217/217. **Sky130: LVS PASSED, setup + hold both clean at all 9 corners** |
 
 Full per-phase records and feature lists → [`docs/readme/PHASE_HISTORY.md`](docs/readme/PHASE_HISTORY.md).
 
@@ -80,6 +104,8 @@ Core specifications in `docs/`:
 | `design/RTL_DEFINITION.md` | Interface signal definitions |
 | `design/MEMORY_MAP.md` | Address space and register map |
 | `design/REFERENCE_MODEL_SPEC.md` | Python reference model API |
+| `SKY130_REAL_DRC_LVS_EVALUATION.md` | Sky130 real DRC/LVS sign-off — the only genuinely verified node |
+| `LIBRELANE_PATCHING_EVALUATION.md` | Whether/how to patch the shared LibreLane install |
 | `verification/VERIFICATION_PLAN.md` | Verification strategy by phase |
 | `development/CODING_GUIDELINES.md` | Coding practices & style guidelines (RTL + Python + shell) |
 | `development/CODING_COMPLIANCE_AUDIT.md` | Guidelines compliance audit and remediation backlog |
@@ -109,7 +135,7 @@ complete definitions in [`docs/design/MEMORY_MAP.md`](docs/design/MEMORY_MAP.md)
 
 This is a specification-driven project with clear phase boundaries. Contributions should:
 
-1. Follow the current phase's scope (Phase 5 — SoC integration)
+1. Follow the current phase's scope (Phase 6 — IP expansion; 6a GPIO complete)
 2. Maintain consistency with specifications in `docs/`
 3. Include appropriate tests (pytest for Phase 0, cocotb for Phase 1+)
 

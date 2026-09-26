@@ -1,6 +1,6 @@
 # Project Phase Status
 
-Last updated: 2026-09-20
+Last updated: 2026-09-26
 
 ## Current Phase
 
@@ -11,14 +11,53 @@ Last updated: 2026-09-20
 - M1–M8 ✅: AXI4 crossbar + AXI-Lite ring, cache burst upgrade, peripherals (UART/SPI/timer/IRQ), DMA, behavioral SRAM, perf counters, SoC top.
 - M9 ✅ SoC verification: boot 100/100; DMA+UART+SPI loopback; SW coherency (D$ flush→GPU→D$ inval); CPU-GPU IRQ integration; DUT-side boot SRAM check. `soc_all` 73/73 at M9 (now 120/120 — see the PMU entry below); 1M+ cycle stress (1,079,867 cyc, 0 fail). Two RTL bugs found+fixed: D-cache MMIO caching (`go9`) and axi4_crossbar AR/AW handshake+arbitration (`7fs`).
 
-**Phase 6a: GPIO controller (bead `ckc`)** - 🚧 IN PROGRESS (2026-09-20). First Phase 6 peripheral. New `rtl/periph/gpio_controller.sv` — APB4 slave on `apb4_register_bank`, 32 pins.
+**Phase 6a: GPIO controller (bead `ckc`)** - ✅ COMPLETE (2026-09-26; RTL 2026-09-20, Sky130 harden 2026-09-26). First Phase 6 peripheral. New `rtl/periph/gpio_controller.sv` — APB4 slave on `apb4_register_bank`, 32 pins.
 
 - **Bus**: APB4, per `docs/PERIPHERAL_BUS_EVALUATION.md` ("Phase 6 peripherals become trivial APB drop-ins"). The "AXI4-Lite" wording in `docs/ROADMAP.md` and `CLAUDE.md` was stale and has been corrected.
 - **Integration**: APB slave index 7 at `0x2000_A000–AFFF`; `APB_N_SLAVES` 7 → 8; `AXIL_APB_LIMIT` and `PERIPH_LIMIT` both extended `0x2000_9FFF` → `0x2000_AFFF` — the same two-edit pattern used for PLL, PMU and PLL2. New IRQ source at `interrupt_controller` bit 5 (`N_SOURCES` 5 → 6).
 - **Pins**: unidirectional triplet `gpio_out_o[31:0]` / `gpio_oe_o[31:0]` / `gpio_in_i[31:0]` on `soc_top`. There is **no tristate anywhere in this RTL tree** and the Sky130 SoC hardens as a core macro with no pad ring, so the bidirectional merge is deliberately a pad-ring integration concern. `gpio_in_i` is asynchronous and is synchronised per pin by `N_PINS` separate `cdc_2ff_sync #(.WIDTH(1))` instances — not one wide instance, because that primitive's scope warning forbids multi-bit binary buses.
 - **Interrupts**: per-pin level/edge with polarity. `GPIO_IRQ_STAT` is **edge-sticky / level-live** (ARM PL061 semantics): edge-mode bits latch until a `GPIO_IRQ_CLR` write, with a set beating a same-cycle clear so an edge is never lost to a racing clear; level-mode bits track their condition live and ignore `GPIO_IRQ_CLR` entirely. A fully sticky raw register was rejected because the reset defaults (level, active-low, pins low) make every pin's condition true, latching all-ones out of reset. `GPIO_IRQ_EN` masks the output only. `irq_o` is level-held, which the 2-FF CPU-domain crossing at `soc_top.sv:623-627` requires.
 - **Verification**: `test_gpio` **16/16** (reset defaults incl. the deliberate all-ones `GPIO_IRQ_STAT` at level/active-low defaults, RW round-trip, output/OE mirroring, the cycle-exact 3-edge input-sync latency, rising/falling edge capture, level tracking, edge stickiness + clear, set-beats-same-cycle-clear, clear-no-effect-on-level, `pstrb` partial-word clear, `GPIO_IRQ_EN` masking the output only, `irq_o` held 50 cycles, `GPIO_IRQ_CLR` reads-as-0, out-of-range access). `soc_all` **217/217** across 27 suites, up from 201. Extending the APB window broke `test_axil_interconnect.test_decerr_unmapped`, which probed `0x2000_A000` expecting DECERR — now the GPIO slot; `BAD_HIGH` bumped to `0x2000_B000`, the maintenance step that test's own comment prescribes for each window growth.
-- **Hardened 2026-09-26** (`RUN_2026-09-26_00-07-59`, bead `00ef`): **Netgen LVS PASSED** ("Circuits match uniquely", 0 errors), routing DRC 0, **setup AND hold both clean at all 9 corners** (+7.08 ns / +0.1413 ns), 48.25 mW, 38.98 % util, die unchanged 6700 × 3100 µm. Magic DRC 9,081 is the only remaining deferred error (bead `45a` waiver). First Sky130 SoC hardening since 2026-07-30 — ⚠️ NOT single-variable vs. that baseline (33 RTL commits between, 13 touching `soc_top.sv`). **The ss setup failure that bead `ujv` was deferred on is gone** on current RTL. KLayout DRC deliberately skipped (8.5 GB OOM on this 15 GB host, and it sits before LVS in the flow) — deferred, not waived. Hold went **71 → 3 → 0**: resizer hold margins 0.05 → 0.3 closed 68, and `set_false_path -from [get_ports gpio_in_i]` closed the 3 survivors (all one path, `gpio_in_i[31]` → a `cdc_2ff_sync` stage-1 flop). Detail: `docs/SKY130_REAL_DRC_LVS_EVALUATION.md`. The ROADMAP's 75 MHz Sky130 figure for GPIO remains a projection. Sky130 SoC headroom at the last sign-off was 37.9 % utilisation on a 6700 × 3100 µm die, with the tightest margin max_tt setup +0.339 ns.
+- **Hardened 2026-09-26** (`RUN_2026-09-26_00-07-59`, bead `00ef`): **Netgen LVS PASSED** ("Circuits match uniquely", 0 errors), routing DRC 0, **setup AND hold both clean at all 9 corners** (+7.08 ns / +0.1413 ns), 48.25 mW, 38.98 % util, die unchanged 6700 × 3100 µm. Magic DRC 9,081 is the only remaining deferred error (bead `45a` waiver). First Sky130 SoC hardening since 2026-07-30 — ⚠️ NOT single-variable vs. that baseline (33 RTL commits between, 13 touching `soc_top.sv`). **The ss setup failure that bead `ujv` was deferred on is gone** on current RTL. KLayout DRC deliberately skipped (8.5 GB OOM on this 15 GB host, and it sits before LVS in the flow) — deferred, not waived. Hold went **71 → 3 → 0**: resizer hold margins 0.05 → 0.3 closed 68, and `set_false_path -from [get_ports gpio_in_i]` closed the 3 survivors (all one path, `gpio_in_i[31]` → a `cdc_2ff_sync` stage-1 flop). Detail: `docs/SKY130_REAL_DRC_LVS_EVALUATION.md`.
+
+**Sky130 PD quality campaign, 2026-09-26** — four runs after the GPIO harden, each single-variable:
+
+| Bead | Change | Result | Cost |
+| :--- | :----- | :----- | :--- |
+| `00ef` | `set_false_path` on `gpio_in_i` + `cpu_rst_n_i` | hold 3 → **0** at all 9 corners | — |
+| `e45j` | design-repair margins 10→30 / 20→40 % | max-slew 8623 → **2380**, cap 346 → **70** | antenna 191 → 263 pins |
+| `58q` | `GRT_ANTENNA_ITERS` 8→20, `MARGIN` 25→50 | antenna 263 → **182** pins, 182 → **114** nets | max-slew 2380 → 3199 |
+
+⚠️ **The slew and antenna knobs pull against each other** — repair buffers cut slew and raise antenna;
+antenna diodes cut antenna and raise slew, each diode being another load pin. Both current points are
+**single-axis optima**; the Pareto frontier is demonstrated but has never been swept jointly.
+
+Two structural findings from that campaign, both recorded rather than fixed:
+
+- **No post-RCX repair stage exists in LibreLane.** Every repair/resizer step is pre-route on
+  GRT-*estimated* parasitics, so real-parasitic erosion appears first at post-route STA and last at a
+  point where nothing can act on it (slew/cap 0 at steps 33/40/41 → thousands at step 51). The same gap
+  explains the hold regression. Adding a stage needs a shared-LibreLane edit — evaluated, and
+  recommended *not yet*, in [`docs/LIBRELANE_PATCHING_EVALUATION.md`](LIBRELANE_PATCHING_EVALUATION.md).
+- **`max fanout violations = 0` is vacuous** — `sky130_soc.sdc` has no `set_max_fanout` at all, so a
+  211-fanout net reports clean. Do not cite that metric until a real constraint exists.
+
+**LibreLane install state captured 2026-09-26** (`pnr/librelane_patches/`). The shared install carried
+15 modified files (+641/−89) as *uncommitted* edits, and the pre-existing patch archive lived under the
+**gitignored** `memory/` — so no PD figure in this repo was reproducible from a clean checkout, and the
+exact tool state behind every number existed on one disk, unbacked-up. Now tracked, with sha256s and a
+verified (`git apply --check --reverse`) full diff. ⚠️ One patch in that set, `drt.tcl`'s
+catch-and-continue around `detailed_route`, is why every ASAP7 "0 DRC / 0 antenna" claim was withdrawn
+(bead `xy6`); re-examining it is the next step.
+
+**Bead `ujv` re-examined 2026-09-26 — its ss setup failure NO LONGER REPRODUCES.** At an unchanged
+25.0 ns period, max_ss went **−4.328 ns FAIL → +8.097 ns PASS** (nom_ss −2.885 → +9.232, min_ss −1.120
+→ +10.069), a +12.4 ns swing. Its parking condition ("do not chase ss until hold is green at all 9
+corners") is also now satisfied. ⚠️ But the **root cause is bypassed, not fixed**: `ujv` blamed the CPU
+macro's 8.155 ns ss clk→Q, and `u_cpu` now appears **zero times** in max_ss's 1000 worst paths while the
+macro views are unchanged since 2026-07-27 — so that weakness is latent and would resurface at a shorter
+period. **Opportunity:** +8.1 ns of ss margin now exists where −4.3 ns did, so real frequency headroom
+above 40 MHz is likely and has never been swept. The ROADMAP's 75 MHz Sky130 figure for GPIO remains a projection. Sky130 SoC headroom at the last sign-off was 37.9 % utilisation on a 6700 × 3100 µm die, with the tightest margin max_tt setup +0.339 ns.
 
 **Pre-Phase-6 #5: behavioral PMU (GH epic #98)** - ✅ COMPLETE (2026-08-01). New `rtl/soc/pmu.sv` — APB4 slave (reusing `apb4_register_bank`) + a per-domain sequencer FSM encoding the 4 PST states from `pnr/constraints/phase5_soc.upf` (NORMAL/CPU_OFF/GPU_OFF/IDLE).
 
