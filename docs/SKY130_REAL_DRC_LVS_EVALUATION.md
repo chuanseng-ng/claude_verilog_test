@@ -116,7 +116,20 @@ raised the pre-route design-repair margins (`GRT_DESIGN_REPAIR_MAX_{SLEW,CAP}_PC
 `DESIGN_REPAIR_MAX_{SLEW,CAP}_PCT` 20 → 40) and took **slew 8623 → 2380, cap 346 → 70**, with setup
 and hold both still 0 violations at all nine corners and their slacks *improving* (+7.08 → +8.40 ns,
 +0.141 → +0.293 ns), LVS still PASSED and routing DRC still 0. Cost: **antenna 132 → 182 nets /
-191 → 263 pins**, the trade-off `sky130_soc.sdc:144-149` already documented for this design. A
+191 → 263 pins**, the trade-off `sky130_soc.sdc:144-149` already documented for this design.
+
+**Antenna then recovered on 2026-09-26 (bead `58q`, `RUN_2026-09-26_10-08-35`)** by raising
+`GRT_ANTENNA_ITERS` 8 → 20 and `GRT_ANTENNA_MARGIN` 25 → 50 (tool defaults 3 / 10), inserting 10,619
+diodes: **antenna 263 → 182 pins, 182 → 114 nets** — nets now better than the 120 this bead originally
+accepted. Hold, setup, LVS and routing DRC all unchanged and clean. Cost: **max-slew 2380 → 3199,
+max-cap 70 → 77**, the exact mirror of the trade above.
+
+⚠️ **These two knobs pull against each other.** Repair buffers reduce slew and raise antenna; antenna
+diodes reduce antenna and raise slew, because each diode is another load pin on an existing net. The
+Pareto frontier is now demonstrated but has never been characterised — nobody has swept the two knob
+pairs jointly, so the current point is a single-axis optimum, not a joint one. Relative to where this
+campaign started (8623 slew, 140/120 antenna at a *failing* ss setup corner), the combined position is
+better on every axis except antenna pins. A
 genuine post-RCX repair step is *not* possible without modifying the shared external librelane
 install, so over-repairing before routing is the available substitute — it recovers most of the
 benefit but does not reach zero. The figures below describe the pre-fix 8623/346 population.
