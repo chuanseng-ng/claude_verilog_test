@@ -785,6 +785,36 @@ sky130-soc-sv2v:
 # Requires:  make sky130-soc-sv2v   (generates soc_top_sv2v.v)
 # Requires:  pnr/sky130/cpu/macro/rv32i_cpu_top.{lef,gds,spice,lib}  (Stage-1 outputs)
 # Outputs:   pnr/sky130/soc/runs/<RUN>/
+# ── Design-repair margins (bead claude_verilog_test-e45j) ─────────────────────
+# config.json raises GRT_DESIGN_REPAIR_MAX_{SLEW,CAP}_PCT 10 -> 30 and
+# DESIGN_REPAIR_MAX_{SLEW,CAP}_PCT 20 -> 40 (tool defaults 10/10 and 20/20).
+# Recorded here because config.json cannot carry comments -- librelane rejects
+# any unrecognised key outright ("Unknown key '...' provided", __main__.py:163).
+#
+# Why: every repair/resizer step librelane has is PRE-ROUTE
+# (RepairDesignPostGPL, RepairDesignPostGRT, ResizerTimingPostCTS/PostGRT), and
+# repair_design_postgrt.tcl uses `estimate_parasitics -global_routing` -- the GRT
+# estimate, never RCX's extracted parasitics. There is no post-RCX repair step at
+# all, so post-route STA is the first place real-parasitic slew/cap erosion is
+# visible and the last place nothing can act on it: measured 0/0 slew/cap at
+# steps 33/40/41, then 8623/346 at step 51.
+#
+# Adding a real post-RCX repair step would mean editing the SHARED external
+# librelane install, which every other flow here also uses -- rejected. The
+# Odb.InsertECOBuffers route (examples/hold_eco_demo) does do a genuine
+# route -> insert -> re-route, but it targets pins BY NAME and the offenders are
+# synthesis-generated (_49205_/D, net805, _12721_), so any committed list is
+# stale after the next re-synthesis.
+#
+# So instead: over-repair BEFORE routing so headroom survives extraction. Same
+# strategy that took hold 71 -> 3 via the hold margins (bead 00ef).
+#
+# Not yet tried, deliberately kept separate to preserve single-variable
+# attribution: DESIGN_REPAIR_MAX_WIRE_LENGTH (defaults to 0, which openroad.py
+# documents as "no buffers will be inserted"), and a real set_max_fanout in
+# sky130_soc.sdc -- absent today, which is why "max fanout violations = 0" is
+# VACUOUS rather than meaningful.
+
 # Extra --skip flags appended to the Sky130 SoC invocation. Empty by default, so
 # `librelane-sky130-soc` is unchanged and the adopted sign-off stays reproducible.
 SKY130_SOC_EXTRA_SKIP ?=
