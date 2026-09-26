@@ -67,6 +67,56 @@ Adopted run `RUN_2026-07-30_06-42-17` at 25.0 ns / 40 MHz:
 
 Power (per corner, from `51-openroad-stapostpnr/<corner>/power.rpt`): **nom_tt 37.63 mW**, worst corner max_ff 44.13 mW. 37.9 % utilization, 226,952 stdcells, die 6700 × 3100 µm.
 
+### Stage 2 re-harden with Phase 6a GPIO — `RUN_2026-09-26_00-07-59` (2026-09-26, bead `00ef`)
+
+First Sky130 SoC hardening since 2026-07-30. ⚠️ **Not a single-variable comparison against the run
+above**: 33 RTL commits landed in between, 13 touching `soc_top.sv`, including the `rvb`/`ydw` SRAM
+read/write pipelining, the `apb_cdc_bridge` debug-port bridge (GH #93/#95) and Phase 6a GPIO (`ckc`).
+
+| Gate | 2026-07-30 | Final run |
+|---|---|---|
+| Netgen LVS | PASSED | **PASSED** — "Circuits match uniquely", 0 errors |
+| Routing DRC | 0 | **0** |
+| Setup, all 9 corners | ss **FAIL** −4.6432 ns | **0 violations**, worst slack **+7.08 ns** |
+| Hold, all 9 corners | 0, worst +0.0274 ns | **0 violations**, worst **+0.1413 ns** |
+| Antenna | 140 pin / 120 net | 191 pin / 132 net — bead `58q` class |
+| Magic DRC | 9,081 | 9,081 — unchanged, bead `45a` waiver; the ONLY deferred error |
+| KLayout DRC | 4 | **not run** — deliberately skipped, see below |
+| Power (total) | 37.63 mW nom_tt | 48.25 mW |
+| Utilization | 37.9 % | 38.98 % |
+
+Timing is fully closed: setup AND hold clean at all nine corners. Two intermediate runs got here —
+`RUN_2026-09-25_22-02-12` (resizer hold margins, 71 → 3 violations) and this one (SDC false path on
+`gpio_in_i`, 3 → 0).
+
+**The ss setup failure is gone.** Bead `ujv` was deferred as host-blocked on the premise that closing
+ss needed SRAM re-characterization; on current RTL, setup now passes at all nine corners with +6.95 ns
+of margin. The SRAM-model caveat below still applies to how much that ss number can be *trusted*, but
+the design is no longer failing it. `ujv` should be revisited against this result.
+
+**KLayout DRC was skipped, not waived.** `KLayout.DRC` peaked at 8.5 GB and was OOM-killed on this
+15 GB host in the preceding attempt (`RUN_2026-09-20_19-46-05`), and it sits *before* `Netgen.LVS` in
+librelane's Classic flow — so the kill cost LVS, the most valuable gate this node has, for a check that
+is not on the path to it. `make librelane-sky130-soc-noklayout` passes `--skip KLayout.DRC --skip
+Checker.KLayoutDRC` on the command line; `config.json` still says `RUN_KLAYOUT_DRC: true`. Re-run the
+plain target on a larger host to recover it.
+
+**Hold: 71 → 3 → 0.** The first attempt showed 71 hold violations including 2 at the gated `max_tt`
+corner. Root cause (bead `00ef`): every violation was a boundary-port path — `timing__hold_r2r_vio__count`
+= 0 at all nine corners — and all design repair runs on GRT-*estimated* parasitics, with no repair step
+after RCX, so real-route erosion lands where nothing can react. Raising `GRT_RESIZER_HOLD_SLACK_MARGIN`
+0.05 → 0.3 and adding `PL_RESIZER_HOLD_SLACK_MARGIN: 0.3` closed 68 of 71. The 3 survivors were all the
+same path, `gpio_in_i[31]` → a `cdc_2ff_sync` stage-1 flop, closed by `set_false_path -from
+[get_ports gpio_in_i]` in `sky130_soc.sdc` — the same treatment `uart_rx_i` and `spi_miso_i` already had,
+and correct because `gpio_controller.sv` synchronises every pin internally. Verified: hold reaches
+**0 violations at all nine corners**, worst slack +0.1413 ns.
+
+**Max-slew 8623 / max-cap 346 are NOT new and NOT a macro artifact** — see bead `e45j`. They were 8357/329 before the
+hold change and 8402/337 after it (so neither the margin raise nor the SDC false paths caused them;
+the residual drift is ordinary run-to-run placement variation), they are 0 at every pre-RCX stage, and
+only 0.29 % touch the SRAM macro. Both checkers are `--skip`-ped and do not gate. Note also that
+"max fanout violations = 0" is **vacuous** here: there is no `set_max_fanout` in the SDC at all.
+
 **⚠️ SCOPE — this is a TYPICAL-CORNER (nom_tt) TIMING SIGN-OFF, not a validated multi-corner one.** The nine reported corners are nine *labels*. The SRAM macro `sky130_sram_4kbyte_1rw1r_32x1024_8` is characterized at TT only, so its internal timing arcs are identical in all nine; ss/ff results carry macro-model error of unknown sign. The CPU macro *is* genuinely per-corner (9 distinct Liberty views, fixed 2026-07-25), and paths entirely within flat `sky130_fd_sc_hd` logic are corner-accurate. The physical gates — LVS, routing DRC, PDN, KLayout DRC — are **not** subject to this caveat and stand as real results. See the `pnr/sky130/soc/constraints/sky130_soc.sdc` header.
 
 **Why Stage 2 stops here.** Closing ss honestly requires SPICE characterization of the SRAM macro at ss/ff. Bead `o1i` measured this as ~26–31 h **per corner** (~80–95 h for three) from Xyce's own progress meter, against a host that reboots every 2–8 h. Both `ujv` (ss setup) and `o1i` (SRAM characterization) are therefore **deferred as host-blocked**, not open work — `ujv` is not a PD-tuning problem, and relaxing frequency does not fix it (path delay scales with period at ≈0.52 ns/ns, so extrapolated closure is ~29 MHz and even that is a two-point lower bound).

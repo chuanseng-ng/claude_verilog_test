@@ -785,6 +785,35 @@ sky130-soc-sv2v:
 # Requires:  make sky130-soc-sv2v   (generates soc_top_sv2v.v)
 # Requires:  pnr/sky130/cpu/macro/rv32i_cpu_top.{lef,gds,spice,lib}  (Stage-1 outputs)
 # Outputs:   pnr/sky130/soc/runs/<RUN>/
+# Extra --skip flags appended to the Sky130 SoC invocation. Empty by default, so
+# `librelane-sky130-soc` is unchanged and the adopted sign-off stays reproducible.
+SKY130_SOC_EXTRA_SKIP ?=
+
+# ── KLayout-DRC-free variant (bead claude_verilog_test-00ef) ──────────────────
+# RUN_2026-09-20_19-46-05 was killed by the host's memory reaper inside
+# 56-klayout-drc, which was holding 8.5 GB on a 15 GB machine. Steps 1-55 had
+# completed, but KLayout.DRC sits BEFORE Netgen.LVS in librelane's Classic flow
+# (librelane/flows/classic.py:106 KLayout.DRC -> :108 Checker.KLayoutDRC ->
+# :111 Netgen.LVS -> :112 Checker.LVS), so the kill cost us LVS -- the single
+# most important physical gate this node has -- for a check that is not on the
+# critical path to it.
+#
+# This target skips both KLayout steps so the flow reaches LVS on this host.
+# It does NOT touch pnr/sky130/soc/config.json: RUN_KLAYOUT_DRC stays true there
+# and the sign-off config remains byte-identical, so the skip is visible in the
+# command line rather than hidden in config state. KLayout DRC is then a
+# separate pass, not a silently dropped gate -- re-run plain
+# `librelane-sky130-soc` on a larger host to get it.
+librelane-sky130-soc-noklayout:
+	@echo "=========================================="
+	@echo "Sky130 SoC WITHOUT KLayout DRC (bead 00ef)"
+	@echo "  Skipping: KLayout.DRC + Checker.KLayoutDRC"
+	@echo "  Reason  : 8.5 GB peak OOM-killed the full run before Netgen.LVS"
+	@echo "  NOTE    : KLayout DRC is DEFERRED, not waived."
+	@echo "=========================================="
+	@$(MAKE) librelane-sky130-soc \
+		SKY130_SOC_EXTRA_SKIP="--skip KLayout.DRC --skip Checker.KLayoutDRC"
+
 # Run dir:   /nobackup/sky130_soc_runs/
 librelane-sky130-soc: sky130-soc-sv2v
 	@echo "=========================================="
@@ -870,6 +899,7 @@ librelane-sky130-soc: sky130-soc-sv2v
 		 --skip Checker.MaxSlewViolations \
 		 --skip Checker.MaxCapViolations \
 		 --skip Magic.WriteLEF \
+		 $(SKY130_SOC_EXTRA_SKIP) \
 		 $(abspath $(LIBRELANE_SKY130_SOC_DIR))/config.json"
 
 librelane-sky130-soc-results:
