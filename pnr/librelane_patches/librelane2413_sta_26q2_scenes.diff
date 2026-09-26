@@ -1,0 +1,460 @@
+# bead bpp: port LibreLane 2.4.13's OpenROAD Tcl scripts to run on the OpenROAD 26Q2
+# binary shimmed onto PATH by pnr/Makefile's check-asap7-openroad (bead ocm).
+#
+# Scope: the "corners -> scenes" API rename family (rsz::check_corner_wire_cap ->
+# est::check_corner_wire_caps, sta::corners -> sta::scenes, sta::set_cmd_corner ->
+# sta::set_cmd_scene, utl::metric_int -> utl::metric_integer); a related but separate
+# defect found only by an actual PnR-stage run, not by the namespace sweep -- under
+# 26Q2, [sta::scenes] returns plain NAME STRINGS, not command objects, so every
+# `[$corner name]` method call (45x in corner.tcl, 2x in common/io.tcl) fails with
+# "invalid command name <scene-name>"; and one related argument-level deprecation
+# (detailed_route / pin_access -bottom_routing_layer / -top_routing_layer ->
+# set_routing_layers), checked by reading 26Q2's proc bodies but not run end-to-end.
+#
+# Every guard keys off `[info commands <new-name>]` (or, for the corner-name and
+# drt.tcl fixes, off `[info commands sta::scenes]` as a version-capability proxy,
+# since those are argument/return-shape changes with no namespaced existence check of
+# their own) so the SAME scripts run unmodified on BOTH the bundled OpenROAD
+# (edf00dff) + OpenSTA 2.6.0 in LibreLane 2.4.13's own nix-shell, AND on the 26Q2
+# binary shimmed in by check-asap7-openroad. No hard version-string switch anywhere.
+#
+# Base: this diff is relative to the LIVE ~/Downloads/Github/librelane tree's state AS
+# OF 2026-09-15 (i.e. it stacks on top of the already-applied bead-ocm/xy6/4l8/58q
+# local patches -- PSM parser, ioplacer -random_seed, pdn.tcl decomposed build_grids,
+# set_rc.tcl ASAP7 RC-injection fallback for RSZ-0089, drt.tcl catch-wrapper, and the
+# Synlig/UHDM hierarchy-check + lib-sort + SYNTH_SHARE_RESOURCES fixes in
+# synthesize.py/steps/pyosys.py/steps/odb.py -- it does not re-supply any of those).
+# Apply after those, or directly to the live tree in its current (dirty) state.
+# NOTE: set_rc.tcl is NOT included in this diff (it is an unrelated, already-existing
+# local patch, not part of this bead's changes) but IS a hard prerequisite for any
+# ASAP7 run past Global Placement -- see bead bpp notes for how it was rediscovered
+# mid-session after being left off an initial three-item carryover list.
+#
+# Validation (bead bpp, 2026-09-15), full detail in bead bpp notes and knowledge.md:
+#   1. pnr/asap7/valu_rtl (--to OpenROAD.STAPrePNR) on 26Q2 via the copy: exact match
+#      to the known-good bundled-toolchain baseline (54634 inst / 4655.15 um^2 /
+#      14.147 mW / WS -54.3 ps). NOTE: STAPrePNR/STAPostPNR (MultiCornerSTA) run
+#      sta/corner.tcl through the standalone `sta` binary, which the ASAP7 shim pins
+#      to OpenSTA 2.6.0 (NOT 26Q2) regardless of ASAP7_OPENROAD_BIN -- so this run
+#      validated corner.tcl's *old*-toolchain path only, not the scenes path. It does
+#      not by itself prove the scenes-side fixes; item 3 below does.
+#   2. The SAME copy, SAME config, run again with no shim on PATH at all (LibreLane's
+#      own OpenROAD edf00dff + OpenSTA 2.6.0): metrics BYTE-IDENTICAL to (1). Confirms
+#      the guards are a true no-op on the old toolchain.
+#   3. ASAP7 CPU block (rv32i_cpu_top, 10 SRAM macro instances), detached
+#      (systemd-run --user --scope, MemoryMax=6G): OpenROAD.STAMidPNR (a plain
+#      OpenROADStep run through the `openroad` binary itself -- 26Q2, real `ord`
+#      namespace, real `sta::scenes`) first FAILED with exactly the `[$corner name]`
+#      defect above; fixed with the ol_compat_corner_name guard; re-run of just that
+#      step (--only OpenROAD.STAMidPNR --last-run) then PASSED cleanly (exit 0). Full
+#      flow resumed --from OpenROAD.STAMidPNR --to OpenROAD.CTS to complete the CTS
+#      validation -- see bead bpp notes for the final outcome/metrics.
+#   4. drt.tcl's set_routing_layers / detailed_route argument fix is NOT validated by
+#      an actual full-routing run in this session (out of scope: none of the runs
+#      above reach OpenROAD.DetailedRouting). Checked only via `info body
+#      detailed_route` / `info body pin_access` on the 26Q2 binary, which show
+#      -bottom_routing_layer/-top_routing_layer raising unconditional utl::error
+#      DRT-509/DRT-510 ("... is deprecated. Use set_routing_layers command instead.").
+#      Re-validate with a real DRT run before relying on it.
+#
+# Also checked per bead ocm's other two notes, no defect found / no fix needed:
+#   - "make_tracks must precede place_pin": already true in 2.4.13's Classic flow --
+#     OpenROAD.Floorplan (which sources TRACKS_INFO_FILE_PROCESSED, containing the
+#     make_tracks calls) runs at flow position 53, OpenROAD.IOPlacement at position 64.
+#   - A full sweep of every `<namespace>::<proc>` call under librelane/scripts/openroad/
+#     (28 distinct names) against 26Q2's `info commands` found exactly the same four
+#     missing commands already tracked in bead bpp -- no additional MISSING-COMMAND
+#     breakage beyond those four (the corner-name and routing-layer-argument defects
+#     above are argument/return-shape changes on commands that still exist under both
+#     names, so a plain `info commands` sweep cannot find them by itself).
+
+--- a/librelane/scripts/openroad/common/io.tcl	2026-03-14 10:53:58.508115009 +0700
++++ b/librelane/scripts/openroad/common/io.tcl	2026-09-15 21:42:46.373851229 +0700
+@@ -14,6 +14,43 @@
+ source $::env(_TCL_ENV_IN)
+ source $::env(SCRIPTS_DIR)/openroad/common/set_global_connections.tcl
+ 
++# claude_verilog_test local patch (bead bpp, 2026-09-15): OpenROAD 26Q2 renamed several
++# internal Tcl APIs that LibreLane 2.4.13's scripts call directly (corners -> scenes).
++# These wrappers pick the available command at runtime via `info commands` so the SAME
++# scripts run unmodified on both the bundled OpenROAD (edf00dff) + OpenSTA 2.6.0 AND on
++# 26Q2 -- never a hard version switch. See memory/pd/knowledge.md and bead bpp.
++proc ol_compat_corners {} {
++    if { [llength [info commands sta::scenes]] } {
++        return [sta::scenes]
++    }
++    return [sta::corners]
++}
++proc ol_compat_set_cmd_corner {c} {
++    if { [llength [info commands sta::set_cmd_scene]] } {
++        sta::set_cmd_scene $c
++    } else {
++        sta::set_cmd_corner $c
++    }
++}
++proc ol_compat_check_corner_wire_cap {} {
++    if { [llength [info commands est::check_corner_wire_caps]] } {
++        return [est::check_corner_wire_caps]
++    }
++    return [rsz::check_corner_wire_cap]
++}
++# claude_verilog_test local patch (bead bpp, 2026-09-15): under 26Q2, [sta::scenes] returns
++# plain scene-name STRINGS, not command objects -- unlike [sta::corners]'s corner objects,
++# which support method-call syntax (`$corner name`). Calling `$c name` on a 26Q2 scene string
++# fails with "invalid command name <the-scene-name>" (confirmed live on the ASAP7 CPU block,
++# OpenROAD.STAMidPNR, corner.tcl's report_checks -corner clause): Tcl tries to invoke a command
++# literally named after the scene, e.g. "nom_tt_025C_0p7V", which does not exist.
++proc ol_compat_corner_name {c} {
++    if { [llength [info commands sta::scenes]] } {
++        return $c
++    }
++    return [$c name]
++}
++
+ proc string_in_file {file_path substring} {
+     set f [open $file_path r]
+     set data [read $f]
+@@ -460,7 +497,7 @@
+     }
+ 
+     if { [info exists ::env(SAVE_SDF)] } {
+-        set corners [sta::corners]
++        set corners [ol_compat_corners]
+         if { [llength $corners] > 1 } {
+         } else {
+             puts "Writing SDF to '$::env(SAVE_SDF)'…"
+@@ -471,11 +508,11 @@
+ 
+ proc write_sdfs {} {
+     if { [info exists ::env(_SDF_SAVE_DIR)] } {
+-        set corners [sta::corners]
++        set corners [ol_compat_corners]
+ 
+         puts "Writing SDF files for all corners…"
+         foreach corner $corners {
+-            set corner_name [$corner name]
++            set corner_name [ol_compat_corner_name $corner]
+             set target $::env(_SDF_SAVE_DIR)/$::env(DESIGN_NAME)__$corner_name.sdf
+             write_sdf -include_typ -divider . -corner $corner_name $target
+         }
+@@ -488,10 +525,10 @@
+         # This is to avoid OpenSTA writing a context-dependent timing model
+         set_clock_latency -source -max 0 [all_clocks]
+         set_clock_latency -source -min 0 [all_clocks]
+-        set corners [sta::corners]
++        set corners [ol_compat_corners]
+         puts "Writing timing models for all corners…"
+         foreach corner $corners {
+-            set corner_name [$corner name]
++            set corner_name [ol_compat_corner_name $corner]
+             set target $::env(_LIB_SAVE_DIR)/$::env(DESIGN_NAME)__$corner_name.lib
+             puts "Writing timing models for the $corner_name corner to $target…"
+             write_timing_model -corner $corner_name $target
+@@ -516,7 +553,13 @@
+     }
+     proc write_metric_int {metric value} {
+         puts "Writing metric $metric: $value"
+-        utl::metric_int $metric $value
++        # claude_verilog_test local patch (bead bpp): utl::metric_int -> utl::metric_integer
++        # on OpenROAD 26Q2; guarded so this works on the bundled OpenROAD too.
++        if { [llength [info commands utl::metric_integer]] } {
++            utl::metric_integer $metric $value
++        } else {
++            utl::metric_int $metric $value
++        }
+     }
+     proc write_metric_num {metric value} {
+         puts "Writing metric $metric: $value"
+--- a/librelane/scripts/openroad/sta/corner.tcl	2026-03-14 10:53:58.510115756 +0700
++++ b/librelane/scripts/openroad/sta/corner.tcl	2026-09-15 21:42:36.652870648 +0700
+@@ -36,7 +36,7 @@
+     # Internal API- brittle
+     if { [grt::have_routes] } {
+         estimate_parasitics -global_routing
+-    } elseif { [rsz::check_corner_wire_cap] } {
++    } elseif { [ol_compat_check_corner_wire_cap] } {
+         estimate_parasitics -placement
+     }
+ } else {
+@@ -44,8 +44,12 @@
+ }
+ read_spefs
+ 
+-set corner [lindex [sta::corners] 0]
+-sta::set_cmd_corner $corner
++# claude_verilog_test local patch (bead bpp, 2026-09-15): sta::corners -> sta::scenes and
++# sta::set_cmd_corner -> sta::set_cmd_scene on OpenROAD 26Q2. ol_compat_corners /
++# ol_compat_set_cmd_corner (defined in common/io.tcl, sourced above) pick the available
++# command at runtime so this script is unchanged on both toolchains.
++set corner [lindex [ol_compat_corners] 0]
++ol_compat_set_cmd_corner $corner
+ 
+ set clocks [sta::sort_by_name [sta::all_clocks]]
+ 
+@@ -53,8 +57,8 @@
+ puts "\n==========================================================================="
+ puts "report_checks -path_delay min (Hold)"
+ puts "============================================================================"
+-puts "======================= [$corner name] Corner ===================================\n"
+-report_checks -sort_by_slack -path_delay min -fields {slew cap input nets fanout} -format full_clock_expanded -group_count 1000 -corner [$corner name]
++puts "======================= [ol_compat_corner_name $corner] Corner ===================================\n"
++report_checks -sort_by_slack -path_delay min -fields {slew cap input nets fanout} -format full_clock_expanded -group_count 1000 -corner [ol_compat_corner_name $corner]
+ puts ""
+ puts "%OL_END_REPORT"
+ 
+@@ -63,8 +67,8 @@
+ puts "\n==========================================================================="
+ puts "report_checks -path_delay max (Setup)"
+ puts "============================================================================"
+-puts "======================= [$corner name] Corner ===================================\n"
+-report_checks -sort_by_slack -path_delay max -fields {slew cap input nets fanout} -format full_clock_expanded -group_count 1000 -corner [$corner name]
++puts "======================= [ol_compat_corner_name $corner] Corner ===================================\n"
++report_checks -sort_by_slack -path_delay max -fields {slew cap input nets fanout} -format full_clock_expanded -group_count 1000 -corner [ol_compat_corner_name $corner]
+ puts ""
+ puts "%OL_END_REPORT"
+ 
+@@ -73,23 +77,23 @@
+ puts "\n==========================================================================="
+ puts "report_checks -unconstrained"
+ puts "==========================================================================="
+-puts "======================= [$corner name] Corner ===================================\n"
+-report_checks -unconstrained -fields {slew cap input nets fanout} -format full_clock_expanded -corner [$corner name]
++puts "======================= [ol_compat_corner_name $corner] Corner ===================================\n"
++report_checks -unconstrained -fields {slew cap input nets fanout} -format full_clock_expanded -corner [ol_compat_corner_name $corner]
+ puts ""
+ 
+ 
+ puts "\n==========================================================================="
+ puts "report_checks --slack_max -0.01"
+ puts "============================================================================"
+-puts "======================= [$corner name] Corner ===================================\n"
+-report_checks -slack_max -0.01 -fields {slew cap input nets fanout} -format full_clock_expanded -corner [$corner name]
++puts "======================= [ol_compat_corner_name $corner] Corner ===================================\n"
++report_checks -slack_max -0.01 -fields {slew cap input nets fanout} -format full_clock_expanded -corner [ol_compat_corner_name $corner]
+ puts ""
+ 
+ puts "\n==========================================================================="
+ puts " report_check_types -max_slew -max_cap -max_fanout -violators"
+ puts "============================================================================"
+-puts "======================= [$corner name] Corner ===================================\n"
+-report_check_types -max_slew -max_capacitance -max_fanout -violators -corner [$corner name]
++puts "======================= [ol_compat_corner_name $corner] Corner ===================================\n"
++report_check_types -max_slew -max_capacitance -max_fanout -violators -corner [ol_compat_corner_name $corner]
+ puts ""
+ 
+ puts "\n==========================================================================="
+@@ -99,11 +103,11 @@
+ 
+ puts "\n==========================================================================="
+ puts "max slew violation count [sta::max_slew_violation_count]"
+-write_metric_int "design__max_slew_violation__count__corner:[$corner name]" [sta::max_slew_violation_count]
++write_metric_int "design__max_slew_violation__count__corner:[ol_compat_corner_name $corner]" [sta::max_slew_violation_count]
+ puts "max fanout violation count [sta::max_fanout_violation_count]"
+-write_metric_int "design__max_fanout_violation__count__corner:[$corner name]" [sta::max_fanout_violation_count]
++write_metric_int "design__max_fanout_violation__count__corner:[ol_compat_corner_name $corner]" [sta::max_fanout_violation_count]
+ puts "max cap violation count [sta::max_capacitance_violation_count]"
+-write_metric_int "design__max_cap_violation__count__corner:[$corner name]" [sta::max_capacitance_violation_count]
++write_metric_int "design__max_cap_violation__count__corner:[ol_compat_corner_name $corner]" [sta::max_capacitance_violation_count]
+ puts "============================================================================"
+ 
+ puts "\n==========================================================================="
+@@ -118,8 +122,8 @@
+ puts "\n==========================================================================="
+ puts " report_power"
+ puts "============================================================================"
+-puts "======================= [$corner name] Corner ===================================\n"
+-report_power -corner [$corner name]
++puts "======================= [ol_compat_corner_name $corner] Corner ===================================\n"
++report_power -corner [ol_compat_corner_name $corner]
+ 
+ set power_result [sta::design_power $corner]
+ set totals       [lrange $power_result  0  3]
+@@ -139,10 +143,10 @@
+ puts "Clock Skew (Hold)"
+ puts "============================================================================"
+ set skew_corner [worst_clock_skew -hold]
+-write_metric_num "clock__skew__worst_hold__corner:[$corner name]" $skew_corner
++write_metric_num "clock__skew__worst_hold__corner:[ol_compat_corner_name $corner]" $skew_corner
+ 
+-puts "======================= [$corner name] Corner ===================================\n"
+-report_clock_skew -corner [$corner name] -hold
++puts "======================= [ol_compat_corner_name $corner] Corner ===================================\n"
++report_clock_skew -corner [ol_compat_corner_name $corner] -hold
+ 
+ puts "%OL_END_REPORT"
+ 
+@@ -151,10 +155,10 @@
+ puts "Clock Skew (Setup)"
+ puts "============================================================================"
+ set skew_corner [worst_clock_skew -setup]
+-write_metric_num "clock__skew__worst_setup__corner:[$corner name]" $skew_corner
++write_metric_num "clock__skew__worst_setup__corner:[ol_compat_corner_name $corner]" $skew_corner
+ 
+-puts "======================= [$corner name] Corner ===================================\n"
+-report_clock_skew -corner [$corner name] -setup
++puts "======================= [ol_compat_corner_name $corner] Corner ===================================\n"
++report_clock_skew -corner [ol_compat_corner_name $corner] -setup
+ 
+ puts "%OL_END_REPORT"
+ 
+@@ -162,9 +166,9 @@
+ puts "\n==========================================================================="
+ puts "Worst Slack (Hold)"
+ puts "============================================================================"
+-set ws [worst_slack -corner [$corner name] -min]
+-write_metric_num "timing__hold__ws__corner:[$corner name]" $ws
+-puts "[$corner name]: $ws"
++set ws [worst_slack -corner [ol_compat_corner_name $corner] -min]
++write_metric_num "timing__hold__ws__corner:[ol_compat_corner_name $corner]" $ws
++puts "[ol_compat_corner_name $corner]: $ws"
+ puts "%OL_END_REPORT"
+ 
+ puts "%OL_CREATE_REPORT ws.max.rpt"
+@@ -172,9 +176,9 @@
+ puts "Worst Slack (Setup)"
+ puts "============================================================================"
+ 
+-set ws [worst_slack -corner [$corner name] -max]
+-write_metric_num "timing__setup__ws__corner:[$corner name]" $ws
+-puts "[$corner name]: $ws"
++set ws [worst_slack -corner [ol_compat_corner_name $corner] -max]
++write_metric_num "timing__setup__ws__corner:[ol_compat_corner_name $corner]" $ws
++puts "[ol_compat_corner_name $corner]: $ws"
+ puts "%OL_END_REPORT"
+ 
+ puts "%OL_CREATE_REPORT tns.min.rpt"
+@@ -182,18 +186,18 @@
+ puts "Total Negative Slack (Hold)"
+ puts "============================================================================"
+ 
+-set tns [total_negative_slack -corner [$corner name] -min]
+-write_metric_num "timing__hold__tns__corner:[$corner name]" $tns
+-puts "[$corner name]: $tns"
++set tns [total_negative_slack -corner [ol_compat_corner_name $corner] -min]
++write_metric_num "timing__hold__tns__corner:[ol_compat_corner_name $corner]" $tns
++puts "[ol_compat_corner_name $corner]: $tns"
+ puts "%OL_END_REPORT"
+ 
+ puts "%OL_CREATE_REPORT tns.max.rpt"
+ puts "\n==========================================================================="
+ puts "Total Negative Slack (Setup)"
+ puts "============================================================================"
+-set tns [total_negative_slack -corner [$corner name] -max]
+-write_metric_num "timing__setup__tns__corner:[$corner name]" $tns
+-puts "[$corner name]: $tns"
++set tns [total_negative_slack -corner [ol_compat_corner_name $corner] -max]
++write_metric_num "timing__setup__tns__corner:[ol_compat_corner_name $corner]" $tns
++puts "[ol_compat_corner_name $corner]: $tns"
+ puts "%OL_END_REPORT"
+ 
+ puts "%OL_CREATE_REPORT wns.min.rpt"
+@@ -201,13 +205,13 @@
+ puts "Worst Negative Slack (Hold)"
+ puts "============================================================================"
+ 
+-set ws [worst_slack -corner [$corner name] -min]
++set ws [worst_slack -corner [ol_compat_corner_name $corner] -min]
+ set wns 0
+ if { $ws < 0 } {
+     set wns $ws
+ }
+-write_metric_num "timing__hold__wns__corner:[$corner name]" $wns
+-puts "[$corner name]: $wns"
++write_metric_num "timing__hold__wns__corner:[ol_compat_corner_name $corner]" $wns
++puts "[ol_compat_corner_name $corner]: $wns"
+ puts "%OL_END_REPORT"
+ 
+ puts "%OL_CREATE_REPORT wns.max.rpt"
+@@ -215,13 +219,13 @@
+ puts "Worst Negative Slack (Setup)"
+ puts "============================================================================"
+ 
+-set ws [worst_slack -corner [$corner name] -max]
++set ws [worst_slack -corner [ol_compat_corner_name $corner] -max]
+ set wns 0.0
+ if { $ws < 0 } {
+     set wns $ws
+ }
+-write_metric_num "timing__setup__wns__corner:[$corner name]" $wns
+-puts "[$corner name]: $wns"
++write_metric_num "timing__setup__wns__corner:[ol_compat_corner_name $corner]" $wns
++puts "[ol_compat_corner_name $corner]: $wns"
+ puts "%OL_END_REPORT"
+ 
+ proc check_if_terminal {pin_object} {
+@@ -329,12 +333,12 @@
+     }
+ }
+ 
+-write_metric_int "timing__hold_vio__count__corner:[$corner name]" $total_hold_vios
+-write_metric_num "timing__hold_r2r__ws__corner:[$corner name]" $worst_r2r_hold_slack
+-write_metric_int "timing__hold_r2r_vio__count__corner:[$corner name]" $r2r_hold_vios
+-write_metric_int "timing__setup_vio__count__corner:[$corner name]" $total_setup_vios
+-write_metric_num "timing__setup_r2r__ws__corner:[$corner name]" $worst_r2r_setup_slack
+-write_metric_int "timing__setup_r2r_vio__count__corner:[$corner name]" $r2r_setup_vios
++write_metric_int "timing__hold_vio__count__corner:[ol_compat_corner_name $corner]" $total_hold_vios
++write_metric_num "timing__hold_r2r__ws__corner:[ol_compat_corner_name $corner]" $worst_r2r_hold_slack
++write_metric_int "timing__hold_r2r_vio__count__corner:[ol_compat_corner_name $corner]" $r2r_hold_vios
++write_metric_int "timing__setup_vio__count__corner:[ol_compat_corner_name $corner]" $total_setup_vios
++write_metric_num "timing__setup_r2r__ws__corner:[ol_compat_corner_name $corner]" $worst_r2r_setup_slack
++write_metric_int "timing__setup_r2r_vio__count__corner:[ol_compat_corner_name $corner]" $r2r_setup_vios
+ puts "%OL_END_REPORT"
+ 
+ puts "%OL_CREATE_REPORT unpropagated.rpt"
+--- a/librelane/scripts/openroad/drt.tcl	2026-04-25 08:05:35.346003825 +0700
++++ b/librelane/scripts/openroad/drt.tcl	2026-09-15 21:23:32.072526884 +0700
+@@ -26,16 +26,43 @@
+     set max_layer $::env(DRT_MAX_LAYER)
+ }
+ 
+-if {[catch {
+-    detailed_route\
+-        -bottom_routing_layer $min_layer\
+-        -top_routing_layer $max_layer\
+-        -output_drc $::env(STEP_DIR)/$::env(DESIGN_NAME).drc\
+-        -droute_end_iter $::env(DRT_OPT_ITERS)\
+-        -or_seed 42\
+-        -verbose 1
+-} errmsg]} {
+-    puts stderr "WARNING: detailed_route reported errors; continuing (DRT may be incomplete): $errmsg"
++# claude_verilog_test local patch (bead bpp, 2026-09-15, NOT independently validated by a
++# full detailed-routing run in this session -- checked only against 26Q2's detailed_route /
++# pin_access proc bodies via `info body`). OpenROAD 26Q2 made -bottom_routing_layer /
++# -top_routing_layer on both detailed_route and pin_access hard errors:
++#   [ERROR DRT-0509] -bottom_routing_layer is deprecated. Use set_routing_layers instead.
++#   [ERROR DRT-0510] -top_routing_layer is deprecated. Use set_routing_layers instead.
++# (confirmed via bead ocm). set_routing_layers is the same command common/set_routing_layers.tcl
++# already uses ahead of global routing, and each LibreLane OpenROAD step runs in its own fresh
++# `openroad -exit` process (drt.tcl calls read_current_odb above), so any set_routing_layers
++# call made by an earlier step's process does not carry over -- it must be (re)issued here.
++# Gate on [info commands sta::scenes] as the same "is this 26Q2-class OpenROAD" signal used
++# for the corners->scenes rename elsewhere in this patch, since both changes ship together in
++# the same OpenROAD vintage and detailed_route/pin_access do not offer their own namespaced
++# existence check for this argument-level deprecation.
++if { [llength [info commands sta::scenes]] } {
++    set_routing_layers -signal [subst $min_layer]-[subst $max_layer]
++    if {[catch {
++        detailed_route\
++            -output_drc $::env(STEP_DIR)/$::env(DESIGN_NAME).drc\
++            -droute_end_iter $::env(DRT_OPT_ITERS)\
++            -or_seed 42\
++            -verbose 1
++    } errmsg]} {
++        puts stderr "WARNING: detailed_route reported errors; continuing (DRT may be incomplete): $errmsg"
++    }
++} else {
++    if {[catch {
++        detailed_route\
++            -bottom_routing_layer $min_layer\
++            -top_routing_layer $max_layer\
++            -output_drc $::env(STEP_DIR)/$::env(DESIGN_NAME).drc\
++            -droute_end_iter $::env(DRT_OPT_ITERS)\
++            -or_seed 42\
++            -verbose 1
++    } errmsg]} {
++        puts stderr "WARNING: detailed_route reported errors; continuing (DRT may be incomplete): $errmsg"
++    }
+ }
+ 
+ write_views
+\ No newline at end of file

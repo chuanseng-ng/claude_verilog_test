@@ -1,0 +1,245 @@
+# bead bpp (amendment, coordinator-requested 2026-09-15): give w3a-rsz-2 a bounded post-CTS /
+# post-GRT resizer-timing repair, so a stuck design (one unfixable violator that repair keeps
+# retrying without progress) cannot loop near-indefinitely and block the flow. Motivated by
+# w3a's attempt 2, which reached repair_timing iteration 1040 in 73 min with 27550 violators
+# unchanged, pinned on one sram_controller flop.
+#
+# Two opt-in hooks, both byte-identical to upstream when unset:
+#
+#   PL_RESIZER_TIMING_MAX_PASSES (int, optional) -- appended as `-max_passes N` to BOTH the
+#   setup and hold repair_timing calls in rsz_timing_postcts.tcl and rsz_timing_postgrt.tcl.
+#   Confirmed present with identical semantics (bounds the coarse outer sweep count passed to
+#   rsz::repair_setup / rsz::repair_hold; default 10000 either way) on both the bundled OpenROAD
+#   (edf00dff) and OpenROAD 26Q2.
+#
+#   PL_RESIZER_TIMING_EXTRA_ARGS (str, optional) -- a Tcl word list spliced verbatim onto the
+#   end of the SETUP repair_timing call ONLY (not hold), via `{*}$::env(...)`. Added because
+#   -max_passes alone does not bound WALL-CLOCK time for an oscillating design: a "pass" is a
+#   coarse unit, and a single pass over a design that never converges can itself run for a very
+#   long time (confirmed empirically -- see below). repair_timing's finer per-pass bounds
+#   (-max_iterations, -max_repairs_per_pass) exist ONLY on OpenROAD 26Q2, NOT on the bundled
+#   OpenROAD (edf00dff) -- see the full per-toolchain repair_timing flag comparison in
+#   memory/pd/knowledge.md. Rather than hardcode a flag only one toolchain supports, this
+#   passthrough lets the caller supply whatever flag(s) their toolchain actually offers.
+#
+# Both variables are declared IDENTICALLY (byte-for-byte, including description text) on
+# OpenROAD.ResizerTimingPostCTS and OpenROAD.ResizerTimingPostGRT in steps/openroad.py, because
+# both steps are members of the same Classic flow and Flow.get_all_config_variables() raises
+# FlowException if two steps in the same flow declare a same-named Variable with any field
+# difference (see librelane/flows/flow.py's get_all_config_variables).
+#
+# Base: relative to the live tree's state immediately before this bead's apply (i.e. AFTER the
+# pre-existing local patches -- PSM parser, ioplacer, pdn.tcl, set_rc.tcl, drt.tcl catch-wrapper,
+# Synlig/UHDM fixes -- and BEFORE librelane2413_sta_26q2_scenes.diff, though both patches were
+# applied together in the same session and neither depends on the other's file regions).
+#
+# Validation (bead bpp, 2026-09-15):
+#   - Tcl scripts execute without error on the bundled toolchain (edf00dff) -- proven by two
+#     real ASAP7 CPU-block runs (rv32i_cpu_top, 36k+ instances, 10 SRAM macros), not a synthetic
+#     syntax check:
+#       1. `-c PL_RESIZER_TIMING_MAX_PASSES=1` alone: repair_timing's setup call (27550 initial
+#          violators) printed WNS/TNS/violator-count rows past "Iter 2000" WITHIN that ONE pass
+#          (confirming "Iter" in the printed progress table is a finer-grained counter than
+#          "passes" -- NOT bounded by -max_passes), but the pass itself completed and the
+#          overall step then exited 0 with `[WARNING RSZ-0062] Unable to repair all setup
+#          violations` -- exactly the graceful bounded-stop behaviour wanted, in ~4.5 minutes
+#          wall-clock on a design whose repair WAS making genuine progress (27550 -> 924
+#          violators before the pass ended).
+#       2. `-c PL_RESIZER_TIMING_MAX_PASSES=1 -c 'PL_RESIZER_TIMING_EXTRA_ARGS=-repair_tns 5'`
+#          (fresh full run --to OpenROAD.ResizerTimingPostCTS, run bpp5_extraargs_fresh):
+#          `Flow complete`, RSZ-0062 bounded stop again (2761 initial violators -> 2219 remaining
+#          when the pass ended), hold repair converged separately (WNS +10.675 ps), confirmed via
+#          the step's generated _env.tcl: `set ::env(PL_RESIZER_TIMING_MAX_PASSES) 1` and
+#          `set ::env(PL_RESIZER_TIMING_EXTRA_ARGS) "-repair_tns 5"` -- and no Tcl argument-parse
+#          error (repair_timing's own sta::parse_key_args would raise loudly on an unrecognized
+#          key; -repair_tns is a recognized key on BOTH toolchains).
+#   - valu_rtl (does not reach either resizer step) re-run with both variables unset: byte-
+#     identical metrics to the pre-amendment baseline (54634 inst / 4655.14614 um^2 / WS
+#     -54.29279270097747 ps), confirming the two new Variable declarations do not collide at
+#     Flow-init time and the guards are true no-ops when unset.
+#   - NOT separately proven: that -max_passes / EXTRA_ARGS bounds w3a's ACTUAL stuck design
+#     (the SoC with the pinned sram_controller flop) -- this bead's evidence is all on the
+#     isolated ASAP7 CPU block, which does not reproduce that specific oscillation. w3a should
+#     treat this as a general-purpose bound, not a guaranteed fix for that specific flop.
+#
+# repair_timing flag comparison (from `info body repair_timing` on each binary; recorded in full
+# in memory/pd/knowledge.md):
+#   26Q2 keys:  -setup_margin -hold_margin -slack_margin -libraries -max_utilization
+#               -max_buffer_percent -sequence -phases -recover_power -repair_tns -max_passes
+#               -max_iterations -max_repairs_per_pass
+#   26Q2 flags: -setup -hold -allow_setup_violations -skip_pin_swap -skip_gate_cloning
+#               -skip_size_down -skip_buffering -skip_buffer_removal -skip_last_gasp
+#               -skip_vt_swap -skip_crit_vt_swap -match_cell_footprint -verbose
+#   bundled (edf00dff) keys:  -setup_margin -hold_margin -slack_margin -libraries
+#               -max_utilization -max_buffer_percent -recover_power -repair_tns -max_passes
+#   bundled (edf00dff) flags: -setup -hold -allow_setup_violations -skip_pin_swap
+#               -skip_gate_cloning -skip_buffering -skip_buffer_removal -verbose
+#   26Q2-only: -sequence -phases -max_iterations -max_repairs_per_pass -skip_size_down
+#              -skip_last_gasp -skip_vt_swap -skip_crit_vt_swap -match_cell_footprint
+
+diff -u a/librelane/scripts/openroad/rsz_timing_postcts.tcl b/librelane/scripts/openroad/rsz_timing_postcts.tcl
+--- a/librelane/scripts/openroad/rsz_timing_postcts.tcl	2026-03-14 10:53:58.510115756 +0700
++++ b/librelane/scripts/openroad/rsz_timing_postcts.tcl	2026-09-15 23:41:26.051097053 +0700
+@@ -37,6 +37,29 @@
+ if { $::env(PL_RESIZER_GATE_CLONING) != 1 } {
+     lappend setup_args -skip_gate_cloning
+ }
++# claude_verilog_test local patch (bead bpp, 2026-09-15): bound repair_timing's pass count so a
++# stuck design (e.g. an unfixable violator that never converges) cannot loop indefinitely and
++# block the flow. Optional -- unset (the default) is BYTE-IDENTICAL to upstream: repair_timing's
++# own default is -max_passes 10000 either way, this only lets a caller override it lower.
++# Confirmed present with identical semantics (bounds rsz::repair_setup/repair_hold's pass count,
++# same default of 10000) on both the bundled OpenROAD (edf00dff) and OpenROAD 26Q2 -- see bead
++# bpp / memory/pd/knowledge.md.
++if { [info exists ::env(PL_RESIZER_TIMING_MAX_PASSES)] && $::env(PL_RESIZER_TIMING_MAX_PASSES) != "" } {
++    lappend setup_args -max_passes $::env(PL_RESIZER_TIMING_MAX_PASSES)
++}
++# claude_verilog_test local patch (bead bpp, 2026-09-15, amendment): -max_passes alone is not
++# sufficient -- a "pass" is a coarse unit, and a design oscillating without progress (e.g. one
++# unfixable violator that repair keeps retrying) can make a SINGLE pass run for a very long time
++# regardless of -max_passes. repair_timing's finer per-pass bounds (-max_iterations,
++# -max_repairs_per_pass) exist ONLY on OpenROAD 26Q2, not on the bundled OpenROAD (edf00dff) --
++# see memory/pd/knowledge.md for the full per-toolchain repair_timing flag comparison. Rather
++# than hardcode a flag only one toolchain supports, this is a GENERIC opt-in passthrough: the
++# env var's value is spliced verbatim (as a Tcl word list) onto the end of the setup repair_timing
++# call, so a caller can pass whatever flag(s) their toolchain actually offers (e.g.
++# "-max_iterations 50" on 26Q2). Optional -- unset (the default) is BYTE-IDENTICAL to upstream.
++if { [info exists ::env(PL_RESIZER_TIMING_EXTRA_ARGS)] && $::env(PL_RESIZER_TIMING_EXTRA_ARGS) != "" } {
++    lappend setup_args {*}$::env(PL_RESIZER_TIMING_EXTRA_ARGS)
++}
+ 
+ set hold_args [list]
+ lappend hold_args -verbose
+@@ -47,6 +70,12 @@
+ if { $::env(PL_RESIZER_ALLOW_SETUP_VIOS) == 1 } {
+     lappend hold_args -allow_setup_violations
+ }
++# claude_verilog_test local patch (bead bpp, 2026-09-15): see the matching setup_args comment
++# above -- same optional, backward-compatible bound applied to the hold-repair call too, since
++# either direction can be the one that loops.
++if { [info exists ::env(PL_RESIZER_TIMING_MAX_PASSES)] && $::env(PL_RESIZER_TIMING_MAX_PASSES) != "" } {
++    lappend hold_args -max_passes $::env(PL_RESIZER_TIMING_MAX_PASSES)
++}
+ 
+ if { $::env(PL_RESIZER_FIX_HOLD_FIRST) == 1 } {
+     repair_timing {*}$hold_args
+
+diff -u a/librelane/scripts/openroad/rsz_timing_postgrt.tcl b/librelane/scripts/openroad/rsz_timing_postgrt.tcl
+--- a/librelane/scripts/openroad/rsz_timing_postgrt.tcl	2026-03-14 10:53:58.510115756 +0700
++++ b/librelane/scripts/openroad/rsz_timing_postgrt.tcl	2026-09-15 23:41:26.054096932 +0700
+@@ -40,6 +40,21 @@
+ if { $::env(GRT_RESIZER_GATE_CLONING) != 1 } {
+     lappend setup_args -skip_gate_cloning
+ }
++# claude_verilog_test local patch (bead bpp, 2026-09-15): same PL_RESIZER_TIMING_MAX_PASSES
++# knob as rsz_timing_postcts.tcl (one variable covers both the post-CTS and post-GRT repair
++# scripts, per the bpp task spec) -- bounds repair_timing's pass count so a stuck design cannot
++# loop indefinitely. Optional -- unset is BYTE-IDENTICAL to upstream (repair_timing's own
++# default is -max_passes 10000 regardless). Confirmed present with identical semantics on both
++# the bundled OpenROAD (edf00dff) and OpenROAD 26Q2.
++if { [info exists ::env(PL_RESIZER_TIMING_MAX_PASSES)] && $::env(PL_RESIZER_TIMING_MAX_PASSES) != "" } {
++    lappend setup_args -max_passes $::env(PL_RESIZER_TIMING_MAX_PASSES)
++}
++# claude_verilog_test local patch (bead bpp, 2026-09-15, amendment): see the matching comment in
++# rsz_timing_postcts.tcl -- same generic, opt-in PL_RESIZER_TIMING_EXTRA_ARGS passthrough,
++# spliced verbatim onto the setup repair_timing call. Unset is BYTE-IDENTICAL to upstream.
++if { [info exists ::env(PL_RESIZER_TIMING_EXTRA_ARGS)] && $::env(PL_RESIZER_TIMING_EXTRA_ARGS) != "" } {
++    lappend setup_args {*}$::env(PL_RESIZER_TIMING_EXTRA_ARGS)
++}
+ 
+ set hold_args [list]
+ lappend hold_args -verbose
+@@ -50,6 +65,11 @@
+ if { $::env(GRT_RESIZER_ALLOW_SETUP_VIOS) == 1 } {
+     lappend hold_args -allow_setup_violations
+ }
++# claude_verilog_test local patch (bead bpp, 2026-09-15): see the matching setup_args comment
++# above -- same optional, backward-compatible bound applied to the hold-repair call too.
++if { [info exists ::env(PL_RESIZER_TIMING_MAX_PASSES)] && $::env(PL_RESIZER_TIMING_MAX_PASSES) != "" } {
++    lappend hold_args -max_passes $::env(PL_RESIZER_TIMING_MAX_PASSES)
++}
+ 
+ if { $::env(GRT_RESIZER_FIX_HOLD_FIRST) == 1 } {
+     repair_timing {*}$hold_args
+
+diff -u a/librelane/steps/openroad.py b/librelane/steps/openroad.py
+--- a/librelane/steps/openroad.py	2026-09-13 22:41:24.131680593 +0700
++++ b/librelane/steps/openroad.py	2026-09-15 23:41:26.058096771 +0700
+@@ -2324,6 +2324,38 @@
+             "Experimental: attempt to fix hold violations before setup violations, which may lead to better timing results.",
+             default=False,
+         ),
++        Variable(
++            "PL_RESIZER_TIMING_MAX_PASSES",
++            Optional[int],
++            "claude_verilog_test / bead bpp local patch: caps the number of repair passes "
++            "repair_timing runs (via its own -max_passes) for both the setup and hold repair "
++            "calls in this step. repair_timing's own default (10000) applies whether or not "
++            "this is set, so leaving it unset is a no-op -- use this only to force an earlier, "
++            "bounded exit for a design whose repair loop is not converging (e.g. stuck on an "
++            "unfixable violator), so the flow can proceed rather than run near-indefinitely. "
++            "Shared verbatim by OpenROAD.ResizerTimingPostCTS and OpenROAD.ResizerTimingPostGRT "
++            "(kept PL_RESIZER_*-named rather than split into a GRT_RESIZER_* variant so one "
++            "config key bounds both repair steps; both declarations of this Variable must stay "
++            "byte-identical or Flow.get_all_config_variables raises FlowException). See "
++            "memory/pd/knowledge.md.",
++        ),
++        Variable(
++            "PL_RESIZER_TIMING_EXTRA_ARGS",
++            Optional[str],
++            "claude_verilog_test / bead bpp local patch (amendment): a Tcl word list, spliced "
++            "verbatim onto the end of the SETUP repair_timing call only (not the hold call) in "
++            "this step. -max_passes alone does not bound wall-clock time for a design whose "
++            "repair is oscillating (a single pass can itself run for a very long time), and "
++            "repair_timing's finer per-pass bounds differ by toolchain -- -max_iterations and "
++            "-max_repairs_per_pass exist on OpenROAD 26Q2 but NOT on the bundled OpenROAD "
++            "(edf00dff), which only has -max_passes, -repair_tns, -max_buffer_percent, and a "
++            "shorter -skip_* set. This passthrough lets a caller supply whatever flag(s) their "
++            "toolchain actually offers (e.g. \"-max_iterations 50\") instead of a variable that "
++            "would be silently unsupported on one toolchain. Optional -- unset is BYTE-IDENTICAL "
++            "to upstream. Shared verbatim by OpenROAD.ResizerTimingPostCTS and "
++            "OpenROAD.ResizerTimingPostGRT (both declarations must stay byte-identical). See "
++            "memory/pd/knowledge.md.",
++        ),
+     ]
+ 
+     def get_script_path(self):
+@@ -2403,6 +2435,38 @@
+             "Experimental: attempt to fix hold violations before setup violations, which may lead to better timing results.",
+             default=False,
+         ),
++        Variable(
++            "PL_RESIZER_TIMING_MAX_PASSES",
++            Optional[int],
++            "claude_verilog_test / bead bpp local patch: caps the number of repair passes "
++            "repair_timing runs (via its own -max_passes) for both the setup and hold repair "
++            "calls in this step. repair_timing's own default (10000) applies whether or not "
++            "this is set, so leaving it unset is a no-op -- use this only to force an earlier, "
++            "bounded exit for a design whose repair loop is not converging (e.g. stuck on an "
++            "unfixable violator), so the flow can proceed rather than run near-indefinitely. "
++            "Shared verbatim by OpenROAD.ResizerTimingPostCTS and OpenROAD.ResizerTimingPostGRT "
++            "(kept PL_RESIZER_*-named rather than split into a GRT_RESIZER_* variant so one "
++            "config key bounds both repair steps; both declarations of this Variable must stay "
++            "byte-identical or Flow.get_all_config_variables raises FlowException). See "
++            "memory/pd/knowledge.md.",
++        ),
++        Variable(
++            "PL_RESIZER_TIMING_EXTRA_ARGS",
++            Optional[str],
++            "claude_verilog_test / bead bpp local patch (amendment): a Tcl word list, spliced "
++            "verbatim onto the end of the SETUP repair_timing call only (not the hold call) in "
++            "this step. -max_passes alone does not bound wall-clock time for a design whose "
++            "repair is oscillating (a single pass can itself run for a very long time), and "
++            "repair_timing's finer per-pass bounds differ by toolchain -- -max_iterations and "
++            "-max_repairs_per_pass exist on OpenROAD 26Q2 but NOT on the bundled OpenROAD "
++            "(edf00dff), which only has -max_passes, -repair_tns, -max_buffer_percent, and a "
++            "shorter -skip_* set. This passthrough lets a caller supply whatever flag(s) their "
++            "toolchain actually offers (e.g. \"-max_iterations 50\") instead of a variable that "
++            "would be silently unsupported on one toolchain. Optional -- unset is BYTE-IDENTICAL "
++            "to upstream. Shared verbatim by OpenROAD.ResizerTimingPostCTS and "
++            "OpenROAD.ResizerTimingPostGRT (both declarations must stay byte-identical). See "
++            "memory/pd/knowledge.md.",
++        ),
+     ]
+ 
+     def get_script_path(self):
