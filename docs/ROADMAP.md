@@ -391,7 +391,7 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 - **DRC/LVS clean**
 - **Tape-out ready (if target technology selected)**
 
-### Phase 6+ — IP Expansion & Technology Node Exploration (Planned)
+### Phase 6+ — IP Expansion & Technology Node Exploration (🚧 6a done, rest planned)
 
 **Prerequisites**: Phase 5 complete (full SoC validated)
 
