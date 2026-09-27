@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-09-19T09:39:09.038856+00:00",
+  "updated_at": "2026-09-27T01:06:25.097269+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -506,6 +506,27 @@
       ],
       "rtl_files_changed": [],
       "checked_at": "2026-09-17T13:36:42.793810+00:00"
+    },
+    "soc_gpio_regression_8qn4": {
+      "status": "PASS",
+      "total_tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skip": 0,
+      "test": "test_soc_gpio",
+      "purpose": "First SoC-level (fabric-path) test of gpio_controller (bead claude_verilog_test-8qn4 item 1): CPU -> axi4_crossbar -> axi4_to_axilite -> axi_lite_interconnect -> axil_to_apb -> apb_interconnect -> APB slave 7 (0x2000_A000). Covers output path (GPIO_DIR/GPIO_DATA_OUT reach gpio_oe_o/gpio_out_o at the SoC boundary), input path (gpio_in_i -> GPIO_DATA_IN respecting the 3-clock-edge sync latency), and the GPIO -> interrupt_controller[5] -> CPU MEIP interrupt end to end (CPU actually takes the trap via commit_pc_o == ISR_PC watch; gpio_irq/ext_irq sampled asserted at trap entry and deasserted ~50 cycles after GPIO_IRQ_CLR); plus GPIO_IRQ_CLR-always-reads-0 and out-of-range-read-returns-0 register-bank policy checks. No RTL defects found -- unit-level test_gpio (tb_gpio.sv) already covered gpio_controller's own logic; this closes the fabric-integration gap only.",
+      "soc_all_regression": {
+        "status": "PASS",
+        "total_tests": 218,
+        "pass": 218,
+        "fail": 0,
+        "skip": 0,
+        "suites": 28,
+        "note": "217/217 over 27 suites (2026-09-20) + 1/1 new soc_gpio suite. First soc_all attempt after adding gpio_out_o/gpio_oe_o/gpio_in_i ports to tb_soc_top.sv crashed in soc_boot (VPI 'Toplevel instances: tb_soc_top != <garbage>', double-free, core dump) -- root-caused to STALE Verilator/cocotb build-cache directories (sim_build_soc_boot and 5 siblings sharing tb_soc_top.sv) left over from before the port-list edit, not an RTL/DUT defect. Confirmed by a clean rebuild of soc_boot alone (3/3 PASS); clearing the stale caches and re-running soc_all produced this clean 218/218 result. lint_soc unaffected (0 errors, 4 pre-existing warnings, unchanged -- it lints soc_top RTL, which was not modified).",
+        "log": "~/.local/share/rtk/tee/1790471035_make_-C__2b5496.log",
+        "checked_at": "2026-09-27T01:06:25.097269+00:00"
+      },
+      "checked_at": "2026-09-27T01:06:25.097269+00:00"
     }
   },
   "pipeline_session_id": null,
@@ -1929,6 +1950,18 @@
       "retry_strategy": "escalate",
       "suggested_next_step": "escalate",
       "reason": "Bead ma7 config-switch remedy (USE_SYNLIG:false + sv2v) applied and committed for pnr/asap7/cpu/{config.json,config_3014.json} and pnr/asap7/gpu/{config.json,config_3014.json} (GPU config-switch only, re-harden deferred, host-gated). CPU macro re-harden PD run blocked: 3 attempts, 2 real defects found and fixed (sv2v-stripped verilator lint pragma; unbounded LibreLane repair_timing loop, bead bpp), but the 3rd attempt hit a new unresolved DetailedRouting congestion regression (108716 DRC vs. this block's 2045-violation prior baseline, DRT-0255 on SRAM macro pins, zero SPEF extracted, STAPostPNR failure) tracked as bead claude_verilog_test-lxv (P1). No macro views regenerated; pnr/asap7/soc/macro/rv32i_cpu_top.* remain the old Synlig-built, proven-corrupt views referenced by bead ma7 (which stays open).",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-27T01:06:25.097269+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "regression_signoff",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Added SoC-level GPIO fabric test (soc_gpio/test_soc_gpio.py, bead claude_verilog_test-8qn4 item 1) exercising gpio_controller through the real crossbar->axi4_to_axilite->axi_lite_interconnect->axil_to_apb->apb_interconnect path for the first time (output, input w/ sync latency, and end-to-end interrupt path with trap-take + deassertion proof). No RTL defects found. Root-caused and fixed a stale-build-cache regression in soc_all (tool_error class, resolved by rebuild, not an RTL issue) discovered while verifying the new suite. Final: soc_all 218/218 across 28 suites, lint_soc 0 errors / 4 pre-existing warnings (unchanged). CI PASS_FLOOR raised 210->215.",
       "constraint_ref": null
     }
   ],

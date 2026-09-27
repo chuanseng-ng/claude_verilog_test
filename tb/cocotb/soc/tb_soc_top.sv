@@ -8,7 +8,7 @@
 //      (boot_rom.MEM_INIT_FILE is re-exposed as a top-level parameter so
 //       each cocotb test can supply its own hex image at elaboration time).
 //   2. Flat scalar ports with the signal names that the cocotb BFMs expect
-//      (clk_i, rst_n_i, apb_*, uart_*, spi_*, commit_*, gpu_irq_o).
+//      (clk_i, rst_n_i, apb_*, uart_*, spi_*, gpio_*, commit_*, gpu_irq_o).
 //
 // All signals are direct renames of soc_top ports — zero logic, exactly
 // the pattern of tb_axi4_crossbar.sv.
@@ -68,6 +68,11 @@ module tb_soc_top #(
     input  logic        spi_miso_i,
     output logic        spi_cs_n_o,
 
+    // ── GPIO (Phase 6a, bead claude_verilog_test-8qn4) ────────────────────────
+    output logic [31:0] gpio_out_o,
+    output logic [31:0] gpio_oe_o,
+    input  logic [31:0] gpio_in_i,
+
     // ── Observability bus ─────────────────────────────────────────────────────
     output logic        commit_valid_o,
     output logic [31:0] commit_pc_o,
@@ -113,6 +118,10 @@ module tb_soc_top #(
         .spi_mosi_o     (spi_mosi_o),
         .spi_miso_i     (spi_miso_i),
         .spi_cs_n_o     (spi_cs_n_o),
+
+        .gpio_out_o     (gpio_out_o),
+        .gpio_oe_o      (gpio_oe_o),
+        .gpio_in_i      (gpio_in_i),
 
         .commit_valid_o (commit_valid_o),
         .commit_pc_o    (commit_pc_o),
