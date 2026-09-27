@@ -103,15 +103,28 @@ jobs:
           pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
           pip list
 
-      # soc_all is the maintained regression (21 suites). It builds its own
-      # source list, so it is unaffected by the tb/cocotb/cpu breakage above.
+      # soc_all_ci is the CI-runnable regression: every suite that needs nothing
+      # beyond this repo + the nix sim devshell. It builds its own source list, so
+      # it is unaffected by the tb/cocotb/cpu breakage above.
+      #
+      # It is soc_all_ci and NOT soc_all on purpose. soc_all additionally runs
+      # suites that need the riscv32-none-elf cross toolchain to have produced
+      # sw/bench/build/*.hex (currently gpio_driver); this job installs no cross
+      # toolchain, so those suites die in _parse_hex() with FileNotFoundError --
+      # which is what failed on PR #195. soc_all remains the full local gate and
+      # should be run before pushing. See the split's rationale on the soc_all
+      # target in tb/cocotb/soc/Makefile.
+      #
+      # The step and job NAMES still say soc_all deliberately: the check name
+      # "cocotb soc_all (SoC regression)" may be a required status check in branch
+      # protection, and renaming it would make that requirement unsatisfiable.
       # No `|| true` and no `continue-on-error`: this is a gate.
       # pipefail matters: without it the tee would mask make's exit status and
       # the gate would pass on a failing regression.
       - name: Run soc_all
         run: |
           set -o pipefail
-          echo "::group::make -C tb/cocotb/soc soc_all"
+          echo "::group::make -C tb/cocotb/soc soc_all_ci"
           # SIM_PYTHON3 must be the SAME interpreter cocotb runs on. The Makefile
           # defaults to /usr/bin/python3, which is right locally but wrong here:
           # setup-python puts a hostedtoolcache interpreter on PATH and points
@@ -119,7 +132,7 @@ jobs:
           # own. Verilator's verilator_includer then loads a mismatched stdlib and
           # dies with "ModuleNotFoundError: No module named 'encodings'".
           echo "SIM_PYTHON3=$(command -v python3) ($(python3 -V))"
-          make -C tb/cocotb/soc soc_all SIM_PYTHON3="$(command -v python3)" 2>&1 | tee cocotb_soc.log
+          make -C tb/cocotb/soc soc_all_ci SIM_PYTHON3="$(command -v python3)" 2>&1 | tee cocotb_soc.log
           echo "::endgroup::"
 
       # Belt-and-braces on top of make's exit code, same rationale as bead dwp
@@ -136,10 +149,16 @@ jobs:
       # PASS_FLOOR guards the "regression collapsed to a handful of suites"
       # failure mode, where make still exits 0. Measured 218 passing tests on
       # 2026-09-27 (soc_all, 28 suites, after the SoC-level GPIO fabric test
-      # `soc_gpio` landed -- was 217 over 27 suites on 2026-09-20, itself after
-      # the Phase 6a unit-level GPIO suite; 178 over 21 suites on 2026-08-07);
-      # the floor is set just under that so a dropped suite trips it rather
-      # than passing unnoticed. Raise it deliberately as suites are added.
+      # `soc_gpio` landed; 217 over 27 suites on 2026-09-20, itself after the
+      # Phase 6a unit-level GPIO suite; 178 over 21 suites on 2026-08-07); the
+      # floor is set just under that so a dropped suite trips it rather than
+      # passing unnoticed. Raise it deliberately as suites are added.
+      #
+      # NOTE this floor is measured against soc_all_ci, which is what this job
+      # runs. The `gpio_driver` suite is in soc_all (the full local gate) but not
+      # in soc_all_ci, because it needs sw/bench/build/*.hex from the riscv32
+      # cross toolchain that this job does not install. l2_bench is in neither --
+      # it is a benchmark harness, not a regression. See tb/cocotb/soc/Makefile.
       - name: Verify regression actually ran
         if: always()
         env:
