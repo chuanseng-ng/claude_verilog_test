@@ -449,7 +449,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -760,6 +760,31 @@ soc_gpio: soc_boot_lint
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
+# GPIO DRIVER test (bead claude_verilog_test-8qn4 item 2). Unlike soc_gpio
+# above (hand-assembled gpio_fw firmware proving the RTL through the
+# fabric), this suite proves sw/drivers/gpio.h -- the first GPIO driver
+# layer in this repo -- by RUNNING a normal compiled C program
+# (sw/bench/gpio_demo.c) built through the existing sw/bench toolchain.
+# gpio_controller.sv is already part of SOC_BOOT_SOURCES and tb_soc_top.sv
+# already exposes gpio_out_o/gpio_oe_o/gpio_in_i (see soc_gpio's own
+# comment), so this reuses soc_boot_lint as its hard lint prerequisite
+# exactly like soc_gpio/soc_periph/soc_coherency/soc_cpu_gpu do -- no
+# separate gpio_driver_lint alias, for the same reason none of those four
+# have one either (one shared tb_soc_top lint gate for the whole family).
+# SRAM_MEM_WORDS=65536 override matches l2_bench: gpio_demo.c links via the
+# shared sw/bench/rv32i.ld, whose stack top (0x41C00) assumes that window.
+# Firmware is pre-built by
+#   nix develop ~/Downloads/Github/claude_verilog_test#bench --command make -C sw/bench
+# this target consumes sw/bench/build/gpio_demo.{hex,sym,dis} -- it does NOT
+# rebuild the C code (same contract as l2_bench).
+gpio_driver: soc_boot_lint
+	$(MAKE) MODULE=test_gpio_driver TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET \
+		  -GSRAM_MEM_WORDS=65536" \
+		$(BUILD_ARGS)
+
 # GH #93 multiclock SoC CDC exercise (bead: feat/cpu-domain-cdc-gh93 verif task).
 # Drives clk_i (fabric) / cpu_clk_i (CPU) at a genuinely asynchronous 7 ns /
 # 3 ns ratio (see test_soc_multiclock.py's module docstring for the full
@@ -885,6 +910,7 @@ soc_all: check-space
 	$(MAKE) soc_coherency
 	$(MAKE) soc_cpu_gpu
 	$(MAKE) soc_gpio
+	$(MAKE) gpio_driver
 	$(MAKE) soc_pll
 	$(MAKE) soc_multiclock
 	$(MAKE) soc_multiclock_reset

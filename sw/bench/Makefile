@@ -17,7 +17,7 @@ NM      := $(CROSS)nm
 ARCH    := -march=rv32i_zicsr -mabi=ilp32   # CPU is RV32I + Zicsr (Phase 2); csrr needs zicsr
 # Freestanding bare-metal; -O2 for representative code; keep frame for clarity.
 CFLAGS  := $(ARCH) -O2 -ffreestanding -nostdlib -fno-builtin -Wall -Wextra \
-           -ffunction-sections -fdata-sections -I.
+           -ffunction-sections -fdata-sections -I. -I../drivers
 LDFLAGS := $(ARCH) -nostdlib -nostartfiles -Wl,--gc-sections -Wl,-T,rv32i.ld \
            -Wl,--no-warn-mismatch
 # libgcc provides __mulsi3/__divsi3/etc. for RV32I (no M-ext); must come AFTER

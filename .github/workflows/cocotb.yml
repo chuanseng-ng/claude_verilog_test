@@ -134,16 +134,18 @@ jobs:
       # yields zero.)
       #
       # PASS_FLOOR guards the "regression collapsed to a handful of suites"
-      # failure mode, where make still exits 0. Measured 218 passing tests on
-      # 2026-09-27 (soc_all, 28 suites, after the SoC-level GPIO fabric test
-      # `soc_gpio` landed -- was 217 over 27 suites on 2026-09-20, itself after
-      # the Phase 6a unit-level GPIO suite; 178 over 21 suites on 2026-08-07);
-      # the floor is set just under that so a dropped suite trips it rather
-      # than passing unnoticed. Raise it deliberately as suites are added.
+      # failure mode, where make still exits 0. Measured 219 passing tests on
+      # 2026-09-27 (soc_all, 29 suites, after the GPIO DRIVER test
+      # `gpio_driver` landed -- was 218 over 28 suites earlier the same day,
+      # after the SoC-level GPIO fabric test `soc_gpio`; 217 over 27 suites on
+      # 2026-09-20, itself after the Phase 6a unit-level GPIO suite; 178 over
+      # 21 suites on 2026-08-07); the floor is set just under that so a
+      # dropped suite trips it rather than passing unnoticed. Raise it
+      # deliberately as suites are added.
       - name: Verify regression actually ran
         if: always()
         env:
-          PASS_FLOOR: '215'
+          PASS_FLOOR: '216'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."
