@@ -449,7 +449,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -740,6 +740,26 @@ soc_cpu_gpu: soc_boot_lint
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
+# SoC-level GPIO test (bead claude_verilog_test-8qn4 item 1). Exercises
+# gpio_controller (APB slave 7, 0x2000_A000) through the real fabric path —
+# CPU -> axi4_crossbar -> axi4_to_axilite -> axi_lite_interconnect ->
+# axil_to_apb -> apb_interconnect -- for the first time (test_gpio/tb_gpio.sv
+# drives the APB4 face directly). gpio_controller.sv is already part of
+# SOC_BOOT_SOURCES (no new source-list variable needed) and tb_soc_top.sv
+# already lints clean with the new gpio_out_o/gpio_oe_o/gpio_in_i ports, so
+# this reuses soc_boot_lint as its hard prerequisite exactly like
+# soc_periph/soc_coherency/soc_cpu_gpu above.
+# Tests: output path (GPIO_DIR/GPIO_DATA_OUT reach gpio_oe_o/gpio_out_o),
+# input path (gpio_in_i -> GPIO_DATA_IN, respecting the 3-clock-edge sync
+# latency), and the GPIO -> interrupt_controller[5] -> CPU MEIP interrupt
+# path end to end (CPU actually takes the trap; GPIO_IRQ_CLR deasserts it).
+soc_gpio: soc_boot_lint
+	$(MAKE) MODULE=test_soc_gpio TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
 # GH #93 multiclock SoC CDC exercise (bead: feat/cpu-domain-cdc-gh93 verif task).
 # Drives clk_i (fabric) / cpu_clk_i (CPU) at a genuinely asynchronous 7 ns /
 # 3 ns ratio (see test_soc_multiclock.py's module docstring for the full
@@ -864,6 +884,7 @@ soc_all: check-space
 	$(MAKE) soc_periph
 	$(MAKE) soc_coherency
 	$(MAKE) soc_cpu_gpu
+	$(MAKE) soc_gpio
 	$(MAKE) soc_pll
 	$(MAKE) soc_multiclock
 	$(MAKE) soc_multiclock_reset
