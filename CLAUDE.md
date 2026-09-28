@@ -28,7 +28,7 @@ See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for
 | 3 — Memory system | L1 I$ + D$ (4 KB each, direct-mapped, write-back); FENCE.I | ✅ 2026-05-21 (ASAP7 1418 MHz) |
 | 4 — GPU-Lite SIMT | 8-lane warps, single CU, round-robin, 1-level divergence, 16 KB shared mem | ✅ 2026-05-27 (ASAP7 571 MHz) |
 | 5 — SoC integration | CPU + GPU + DMA + AXI4 crossbar + UART/SPI/timer/IRQ + behavioral SRAM | ✅ 2026-06-24 (ASAP7 SoC 571 MHz / 62.9 mW ⚠️ fabric-only sign-off) |
-| 6+ — IP expansion | GPIO/I2C/PWM/WDT/TRNG/AES-SHA peripherals; INT8 NPU; tech-node exploration | 🚧 **6a GPIO ✅ done + Sky130-hardened** (beads `ckc`/`00ef`); 6b+ not started |
+| 6+ — IP expansion | GPIO/I2C/PWM/WDT/TRNG/AES-SHA peripherals; INT8 NPU; tech-node exploration | 🚧 **6a GPIO ✅ done + Sky130-hardened** (beads `ckc`/`00ef`); 6a remainder (PWM/WDT/TRNG/I2C) + 6b + 6c planned — golden spec `docs/PHASE6_IP_EXPANSION_PLAN.md`, epic `f7vs` |
 | 7 — Mixed-Signal PLL | Dual-PDK charge-pump PLL (ASAP7 indicative + Sky130 real DRC/LVS) via analog-design agents; AMS RNM integrated as SoC clock source | done (M-a..M-c) |
 
 ### Phase 4: GPU-Lite SIMT Engine (frozen)
@@ -72,6 +72,7 @@ See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for
 | `docs/design/PHASE4_GPU_ARCHITECTURE_SPEC.md` | GPU architecture spec (Phase 4) — frozen ISA/execution model |
 | `docs/PHASE3_CLOSURE_AND_PHASE4_PLAN.md` | Phase 3 closure + Phase 4 implementation plan (golden spec) |
 | `docs/PHASE5_SOC_INTEGRATION_PLAN.md` | Phase 5 SoC integration roadmap — 12 milestones M1–M12 (golden spec) |
+| `docs/PHASE6_IP_EXPANSION_PLAN.md` | Phase 6 IP expansion — remaining 6a peripherals + 6b crypto + 6c NPU (golden spec) |
 | `docs/design/RTL_DEFINITION.md` | Interface signal definitions |
 | `docs/design/MEMORY_MAP.md` | Address space and register map |
 | `docs/design/REFERENCE_MODEL_SPEC.md` | Python reference model API |
