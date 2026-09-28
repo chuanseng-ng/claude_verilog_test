@@ -321,6 +321,36 @@ set_false_path -from [get_ports cpu_rst_n_i]
 # min_ss, worst -0.2456 ns. Every tt and ff corner was already clean.
 set_false_path -from [get_ports gpio_in_i]
 
+# ---------------------------------------------------------------------------
+# Phase 6 pre-allocated peripheral pins (bead claude_verilog_test-f7vs.3).
+#
+# These ports exist on soc_top NOW, tied off, so that the Verilator cache-stale
+# hazard from growing tb_soc_top.sv's port list fires exactly once instead of
+# three times. Their SDC exceptions are added at the same time, for the same
+# reason: a constraint naming a port that is currently tied off is inert,
+# whereas discovering a missing exception during a 4-10 h Sky130 harden is not.
+#
+# Same class as gpio_in_i above (async external pin -> cdc_2ff_sync) for the
+# inputs, and as uart_tx_o below (async sink, nothing timed against core_clk)
+# for the outputs.
+#
+# i2c_*_i  : asynchronous open-drain bus lines, each synchronised by its own
+#            single-bit cdc_2ff_sync inside i2c_controller.sv (6a-5).
+# pwm_o    : push-pull outputs, no receiver in this timing scope (6a-2).
+# wdt_rst_req_o : level-held reset request consumed off-chip / by the pad ring;
+#            the CPU-domain reset path it also feeds is a cdc_reset_sync, i.e.
+#            an async-clear path rather than a setup-checked datapath (6a-3).
+#
+# TRNG, CRYPTO and NPU add no top-level pins at all, so they need nothing here.
+set_false_path -from [get_ports i2c_scl_i]
+set_false_path -from [get_ports i2c_sda_i]
+set_false_path -to   [get_ports pwm_o]
+set_false_path -to   [get_ports i2c_scl_o]
+set_false_path -to   [get_ports i2c_scl_oe_o]
+set_false_path -to   [get_ports i2c_sda_o]
+set_false_path -to   [get_ports i2c_sda_oe_o]
+set_false_path -to   [get_ports wdt_rst_req_o]
+
 # UART I/O (asynchronous serial)
 set_false_path -from [get_ports uart_rx_i]
 set_false_path -to   [get_ports uart_tx_o]
