@@ -144,7 +144,11 @@
 //     out of scope (UPF-sim-tooling gated) — see pmu.sv header.
 //
 //   IRQ routing:
-//     irq_src_i = {gpio_irq[5], gpu_irq_o[4], dma_irq[3], timer_irq[2], spi_irq[1], uart_irq[0]}
+//     irq_src_i = {npu_irq[11], crypto_irq[10], i2c_irq[9], trng_irq[8], wdt_irq[7],
+//                  pwm_irq[6], gpio_irq[5], gpu_irq_o[4], dma_irq[3], timer_irq[2],
+//                  spi_irq[1], uart_irq[0]}
+//     bits 6-11 pre-allocated (Phase 6, bead claude_verilog_test-f7vs.2) and tied
+//     1'b0 until PWM/WDT/TRNG/I2C/CRYPTO/NPU land, respectively.
 //     interrupt_controller.irq_o → CPU ext_irq_i (MEIP)
 //     timer.irq_o                → CPU timer_irq_i (MTIP, direct)
 //
@@ -624,6 +628,23 @@ module soc_top
     logic dma_irq;
     logic gpio_irq;
     // gpu_irq_o is exposed at top-level port; driven by gpu_top
+
+    // Phase 6 (bead claude_verilog_test-f7vs.2): interrupt-source pre-allocation for
+    // bits 6-11 (PWM/WDT/TRNG/I2C/CRYPTO/NPU). Each is tied 1'b0 here — no peripheral
+    // instance exists yet — and the tie is replaced with the real IRQ output when that
+    // peripheral lands, matching the existing TIMER-tied-0 idiom below.
+    logic pwm_irq;
+    logic wdt_irq;
+    logic trng_irq;
+    logic i2c_irq;
+    logic crypto_irq;
+    logic npu_irq;
+    assign pwm_irq    = 1'b0;  // tie removed when PWM lands (6a-2)
+    assign wdt_irq    = 1'b0;  // tie removed when WDT lands (6a-3)
+    assign trng_irq   = 1'b0;  // tie removed when TRNG lands (6a-4)
+    assign i2c_irq    = 1'b0;  // tie removed when I2C lands (6a-5)
+    assign crypto_irq = 1'b0;  // tie removed when CRYPTO lands (6b)
+    assign npu_irq    = 1'b0;  // tie removed when NPU lands (6c)
 
     logic ext_irq;    // interrupt_controller output → CPU ext_irq_i
 
@@ -1703,13 +1724,17 @@ module soc_top
 
     // =========================================================================
     // Interrupt controller — APB slave (apb_psel[APB_IRQ])
-    // irq_src_i[5:0] = {GPIO[5], GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}
+    // irq_src_i[11:0] = {NPU[11], CRYPTO[10], I2C[9], TRNG[8], WDT[7], PWM[6],
+    //                     GPIO[5], GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}
     // TIMER slot tied 0: timer IRQ goes directly to CPU MTIP; routing it here
     // too would double-count the event.
+    // Phase 6 (bead claude_verilog_test-f7vs.2): N_SOURCES pre-allocated 6 -> 12;
+    // bits 6-11 (PWM/WDT/TRNG/I2C/CRYPTO/NPU) are tied 1'b0 above until each
+    // peripheral lands (6a-2 .. 6c).
     // =========================================================================
     interrupt_controller #(
         .ADDR_W    (12),
-        .N_SOURCES (6)
+        .N_SOURCES (12)
     ) u_irq_ctrl (
         .clk        (core_clk),
         .rst_n      (core_rst_n),
@@ -1722,7 +1747,8 @@ module soc_top
         .prdata     (apb_prdata  [APB_IRQ]),
         .pready     (apb_pready  [APB_IRQ]),
         .pslverr    (apb_pslverr [APB_IRQ]),
-        .irq_src_i  ({gpio_irq, gpu_irq_o, dma_irq, 1'b0, spi_irq, uart_irq}),
+        .irq_src_i  ({npu_irq, crypto_irq, i2c_irq, trng_irq, wdt_irq, pwm_irq,
+                      gpio_irq, gpu_irq_o, dma_irq, 1'b0, spi_irq, uart_irq}),
         .irq_o      (ext_irq)
     );
 

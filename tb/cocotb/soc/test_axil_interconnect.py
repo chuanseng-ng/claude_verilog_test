@@ -10,7 +10,17 @@ Phase 6a update (bead claude_verilog_test-ckc): the APB bridge window was
 extended from 0x2000_9FFF to 0x2000_AFFF (soc_periph_map_pkg.sv
 AXIL_APB_LIMIT / soc_addr_map_pkg.sv PERIPH_LIMIT) to add the GPIO slot at
 0x2000_A000-AFFF, following the exact same pattern as the earlier PLL2-, PMU-
-and PLL-slot extensions. The next person who extends this window again should
+and PLL-slot extensions.
+
+Phase 6 update (bead claude_verilog_test-f7vs.2): the APB bridge window was
+extended again, from 0x2000_AFFF to 0x2001_0FFF (soc_periph_map_pkg.sv
+AXIL_APB_LIMIT / soc_addr_map_pkg.sv PERIPH_LIMIT), pre-allocating the full
+14-slot APB sub-map in one commit (docs/PHASE6_IP_EXPANSION_PLAN.md §4):
+PWM/WDT/TRNG/I2C/CRYPTO/NPU at 0x2000_B000-0x2001_0FFF. Only the first 8 APB
+slots (through GPIO) are wired to real slaves — APB_N_SLAVES stays 8 — so an
+address in the new reserved range (e.g. 0x2000_B000, PWM's slot) is now
+in-window at the AXI-Lite ring level and routes to the APB-bridge proxy slave
+without DECERR-ing. The next person who extends this window again should
 update BAD_HIGH below (and the docstrings that reference the current limit)
 the same way.
 
@@ -20,7 +30,20 @@ addresses, and master-side backpressure.
 
 Unmapped addresses (DECERR):
     0x2000_0000 — below GPU base (CPU-debug APB gap)
-    0x2000_B000 — above the APB bridge limit (0x2000_AFFF, GPIO slot included)
+    0x2001_1000 — above the APB bridge limit (0x2001_0FFF, full 14-slot
+                  reserved window included)
+
+In-window-but-reserved addresses (OKAY at this ring level, NOT SLVERR):
+    0x2000_B000 — PWM's reserved APB slot. Note: apb_interconnect.sv's own
+                  default-SLVERR-for-unclaimed-slot behaviour (the real APB
+                  sub-decode) is NOT exercised by this testbench — this DUT
+                  (tb_axi_lite_interconnect) never instantiates
+                  apb_interconnect.sv or axil_to_apb.sv; the "apb_bridge"
+                  slot here is a generic axi_lite_register_bank stub that
+                  always returns OKAY for any in-window address (see that
+                  module's own header comment: "Out-of-range word addresses
+                  complete with OKAY"). See test_reserved_slot_in_window
+                  below.
 """
 
 import cocotb
@@ -44,17 +67,22 @@ SLAVES = {
     "dma":        0x2000_5000,   # slot 2 (last-match over bridge window)
 }
 BAD_LOW  = 0x2000_0000   # below GPU base — gap before ring
-# Phase 6a / bead claude_verilog_test-ckc: bridge window now extends
-# through the GPIO slot (soc_periph_map_pkg.AXIL_APB_LIMIT =
-# 0x2000_AFFF), so 0x2000_A000 -- the old BAD_HIGH -- is now
-# legitimately mapped (OKAY) rather than DECERR. (Same thing happened at
-# GH #92 for the PLL2 slot, at GH #100/#101 for the PMU slot, and before
-# that for the PLL slot.) BAD_HIGH must stay one slot above whatever
-# AXIL_APB_LIMIT currently is; kept hardcoded rather than derived from
-# the SV package (see test_decerr_unmapped docstring for why) so bump
-# this by hand, matching this same edit, the next time the APB window
-# grows.
-BAD_HIGH = 0x2000_B000   # above APB bridge limit 0x2000_AFFF (GPIO slot included)
+# Phase 6 / bead claude_verilog_test-f7vs.2: bridge window now extends
+# through the full 14-slot reserved APB sub-map (soc_periph_map_pkg.
+# AXIL_APB_LIMIT = 0x2001_0FFF), so 0x2000_B000 -- the old BAD_HIGH -- is
+# now legitimately in-window (OKAY at this ring level) rather than DECERR.
+# (Same thing happened at Phase 6a / bead ckc for the GPIO slot, at GH #92
+# for the PLL2 slot, at GH #100/#101 for the PMU slot, and before that for
+# the PLL slot.) BAD_HIGH must stay one slot above whatever AXIL_APB_LIMIT
+# currently is; kept hardcoded rather than derived from the SV package
+# (see test_decerr_unmapped docstring for why) so bump this by hand,
+# matching this same edit, the next time the APB window grows.
+BAD_HIGH = 0x2001_1000   # above APB bridge limit 0x2001_0FFF (full 14-slot window included)
+
+# In-window-but-reserved: PWM's slot (index 8 of the 14-slot APB sub-map) has
+# no APB slave built yet, but is inside AXIL_APB_LIMIT, so it must NOT DECERR
+# at this ring level. See test_reserved_slot_in_window.
+RESERVED_UNBUILT = 0x2000_B000   # PWM slot — reserved, not yet a real APB slave
 
 
 async def _setup(dut):
@@ -121,12 +149,14 @@ async def test_decerr_unmapped(dut):
 
     PR-7 unmapped regions:
       BAD_LOW  = 0x2000_0000 — below GPU base (CPU-debug APB gap)
-      BAD_HIGH = 0x2000_B000 — above APB bridge limit 0x2000_AFFF
-    Note: 0x2000_A000 is now INSIDE the APB bridge window (GPIO slot,
-    Phase 6a / bead ckc) and returns OKAY -- same pattern as 0x2000_9000
-    becoming mapped when the PLL2 slot was added (GH #92), 0x2000_8000
-    when the PMU slot was added (GH #100/#101), and 0x2000_7000 before
-    that when the PLL slot was added.
+      BAD_HIGH = 0x2001_1000 — above APB bridge limit 0x2001_0FFF
+    Note: 0x2000_B000 (PWM slot) is now INSIDE the APB bridge window (full
+    14-slot reserved sub-map, Phase 6 / bead f7vs.2) and returns OKAY at
+    this ring level -- see test_reserved_slot_in_window -- same pattern as
+    0x2000_A000 becoming mapped when the GPIO slot was added (Phase 6a /
+    bead ckc), 0x2000_9000 when the PLL2 slot was added (GH #92),
+    0x2000_8000 when the PMU slot was added (GH #100/#101), and
+    0x2000_7000 before that when the PLL slot was added.
 
     On deriving BAD_HIGH from soc_periph_map_pkg.AXIL_APB_LIMIT instead of
     hardcoding it: tb_axi_lite_interconnect.sv already `import
@@ -152,6 +182,44 @@ async def test_decerr_unmapped(dut):
     data, _ = await m.read(SLAVES["dma"])
     assert data == 0xBEEF
     dut._log.info("DECERR unmapped OK")
+
+
+@cocotb.test()
+async def test_reserved_slot_in_window(dut):
+    """PWM's reserved-but-unbuilt APB slot (0x2000_B000) must not DECERR or hang.
+
+    apb_interconnect.sv:104-110 defines the real APB sub-decode: psel_i=1 but
+    no slave claims the address returns pslverr_o=1 (SLVERR-equivalent), not
+    DECERR. That module is NOT part of this testbench's build, though
+    (tb_axi_lite_interconnect / AXIL_SOURCES in Makefile instantiate only
+    axi_lite_interconnect + axi_lite_register_bank stubs -- apb_interconnect.sv
+    and axil_to_apb.sv are pulled in only by the full-SoC source lists). At
+    this ring level, RESERVED_UNBUILT is simply an in-window address for the
+    "apb_bridge" proxy slot (slot 1, base 0x2000_2000, limit now
+    AXIL_APB_LIMIT=0x2001_0FFF): the interconnect routes it straight to the
+    stub axi_lite_register_bank, which always completes with OKAY for any
+    in-window address (see that module's header: "Out-of-range word addresses
+    complete with OKAY: writes are dropped, reads return 0."). So the
+    assertion this test can honestly make at this level is response==OKAY and
+    completion without a hang -- confirming the address is correctly inside
+    AXIL_APB_LIMIT and does not spuriously DECERR. The real apb_interconnect
+    SLVERR-for-unclaimed-slot behaviour needs a DUT that actually instantiates
+    apb_interconnect.sv (e.g. an SoC-level or axil_to_apb+apb_interconnect
+    test), which this file's DUT does not.
+    """
+    m = await _setup(dut)
+    resp = await m.write(RESERVED_UNBUILT, 0xCAFE)
+    assert resp == RESP_OKAY, (
+        f"write {RESERVED_UNBUILT:#x} resp {resp}; expected OKAY at the "
+        f"AXI-Lite ring level (in-window, routed to the apb_bridge proxy stub)"
+    )
+    data, rresp = await m.read(RESERVED_UNBUILT)
+    assert rresp == RESP_OKAY, f"read {RESERVED_UNBUILT:#x} resp {rresp}"
+    # A good transaction on another slave still works afterwards (no stuck state).
+    assert await m.write(SLAVES["dma"], 0xF00D) == RESP_OKAY
+    data, _ = await m.read(SLAVES["dma"])
+    assert data == 0xF00D
+    dut._log.info("reserved-slot in-window (no DECERR, no hang) OK")
 
 
 @cocotb.test()

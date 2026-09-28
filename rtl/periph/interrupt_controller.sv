@@ -8,8 +8,10 @@
 //   2  IRQ_PENDING_MASKED RO  [N_SOURCES-1:0] = IRQ_STATUS & IRQ_MASK
 //
 // irq_src_i bit assignments (module default N_SOURCES=5; soc_top.sv instantiates
-// with N_SOURCES=6 as of Phase 6a, bead claude_verilog_test-ckc):
-//   [0] UART  [1] SPI  [2] TIMER  [3] DMA  [4] GPU  [5] GPIO (soc_top.sv only)
+// with N_SOURCES=12 as of Phase 6, bead claude_verilog_test-f7vs.2 — bits 6-11 are
+// pre-allocated and tied 1'b0 in soc_top.sv until their peripheral lands):
+//   [0] UART  [1] SPI  [2] TIMER  [3] DMA  [4] GPU  [5] GPIO  [6] PWM  [7] WDT
+//   [8] TRNG  [9] I2C  [10] CRYPTO  [11] NPU  (soc_top.sv only)
 //
 // irq_o → CPU ext_irq_i (MEIP in RISC-V M-mode).
 // Sources are level-sensitive; no W1C.  SW clears by masking at IRQ_MASK
