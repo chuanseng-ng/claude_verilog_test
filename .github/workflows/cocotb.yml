@@ -103,6 +103,18 @@ jobs:
           pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
           pip list
 
+      # Static, dependency-free gate: every rtl/periph and rtl/npu module must
+      # appear in all five build source lists. This exists because a module
+      # missing from a *PD* list is silently BLACKBOXED by sv2v -- the flow
+      # completes with a wrong netlist and no cocotb suite below can detect it,
+      # since cocotb never runs the PD flow. Needs no nix shell and no Verilator,
+      # so it runs before the expensive regression and fails fast.
+      # Complements check_source_closure.py, which checks a different property
+      # (does a list close over its own `import pkg::*`), and which passes
+      # happily when a module is absent from a list entirely.
+      - name: Check peripheral file-list membership
+        run: python3 tools/verif/check_periph_filelists.py
+
       # soc_all_ci is the CI-runnable regression: every suite that needs nothing
       # beyond this repo + the nix sim devshell. It builds its own source list, so
       # it is unaffected by the tb/cocotb/cpu breakage above.
@@ -147,12 +159,14 @@ jobs:
       # yields zero.)
       #
       # PASS_FLOOR guards the "regression collapsed to a handful of suites"
-      # failure mode, where make still exits 0. Measured 218 passing tests on
-      # 2026-09-27 (soc_all, 28 suites, after the SoC-level GPIO fabric test
-      # `soc_gpio` landed; 217 over 27 suites on 2026-09-20, itself after the
-      # Phase 6a unit-level GPIO suite; 178 over 21 suites on 2026-08-07); the
-      # floor is set just under that so a dropped suite trips it rather than
-      # passing unnoticed. Raise it deliberately as suites are added.
+      # failure mode, where make still exits 0. Measured 262 passing tests on
+      # 2026-09-28 (soc_all_ci, after the Phase 6 groundwork added the
+      # apb_interconnect suite: +43 from its N_SLAVES sweep, +1 from
+      # test_axil_interconnect's new reserved-slot test; 218 over 28 suites on
+      # 2026-09-27 after the SoC-level GPIO fabric test `soc_gpio`; 217 over 27
+      # suites on 2026-09-20; 178 over 21 suites on 2026-08-07); the floor is
+      # set just under that so a dropped suite trips it rather than passing
+      # unnoticed. Raise it deliberately as suites are added.
       #
       # NOTE this floor is measured against soc_all_ci, which is what this job
       # runs. The `gpio_driver` suite is in soc_all (the full local gate) but not
@@ -162,7 +176,7 @@ jobs:
       - name: Verify regression actually ran
         if: always()
         env:
-          PASS_FLOOR: '215'
+          PASS_FLOOR: '259'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."

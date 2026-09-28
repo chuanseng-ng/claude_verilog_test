@@ -163,6 +163,13 @@ GPIO_SOURCES = \
 	$(RTL)/periph/gpio_controller.sv \
 	$(SOC_DIR)/tb_gpio.sv
 
+# Phase 6 groundwork (bead claude_verilog_test-f7vs.4): standalone apb_interconnect
+# unit-test sources. apb_interconnect is a single, self-contained combinational module --
+# no other RTL package or CDC primitive needed.
+APB_INTERCONNECT_SOURCES = \
+	$(RTL)/soc/apb_interconnect.sv \
+	$(SOC_DIR)/tb_apb_interconnect.sv
+
 # GH #91: standalone async_axi_fifo (dual-clock AXI4 CDC bridge) unit-test
 # sources. axi_pkg (bus geometry defaults) + the 3 cdc/ primitives +
 # async_axi_fifo + standalone TB wrapper. No bus-bridge or full SoC required.
@@ -449,7 +456,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -623,6 +630,48 @@ gpio: gpio_lint
 		VERILOG_SOURCES="$(GPIO_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
+
+# Phase 6 groundwork (bead claude_verilog_test-f7vs.4): apb_interconnect lint + sim.
+# lint only: apb_interconnect + standalone TB wrapper, at the wrapper's default N_SLAVES.
+# -Wno-SYNCASYNCNET: matches the gpio/spi targets' convention above, even though this DUT has
+# no clock/reset of its own to trip it -- kept for consistency with the rest of this file's
+# per-target EXTRA_ARGS.
+apb_interconnect_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
+		--top-module tb_apb_interconnect \
+		$(APB_INTERCONNECT_SOURCES)
+
+# apb_interconnect is a real N_SLAVES sweep, not a single build+run like every other target in
+# this file: N_SLAVES is a SystemVerilog elaboration-time parameter (it changes SEL_W/IDXW and
+# the generated decode-window array sizes -- see tb_apb_interconnect.sv), so Verilator must
+# re-elaborate the whole design once per value; a single cocotb process cannot change it at
+# runtime. Each point gets ITS OWN SIM_BUILD directory -- reusing one across different N_SLAVES
+# values is exactly the stale-Verilator-cache / corrupt-Vtop hazard this phase's groundwork
+# (bead f7vs.3) exists to avoid (docs/PHASE6_IP_EXPANSION_PLAN.md Sec.10 "Operational hazards").
+# test_apb_interconnect.py reads back which N_SLAVES / OVERLAP_TEST this build used via the
+# APB_IC_N_SLAVES / APB_IC_OVERLAP environment variables set below, so the same test module
+# runs unmodified at every sweep point plus the dedicated first-match-wins overlap build.
+# `set -e` (in a single multi-line shell recipe, note the trailing `\` continuations) so a
+# failure at any sweep point aborts the target with a non-zero exit instead of being masked by
+# a later point's success.
+apb_interconnect: apb_interconnect_lint
+	@set -e; \
+	for n in 1 2 7 8 9 13 14 15 16 17; do \
+		echo "=== apb_interconnect sweep: N_SLAVES=$$n ==="; \
+		APB_IC_N_SLAVES=$$n APB_IC_OVERLAP=0 \
+		$(MAKE) MODULE=test_apb_interconnect TOPLEVEL=tb_apb_interconnect \
+			VERILOG_SOURCES="$(APB_INTERCONNECT_SOURCES)" \
+			EXTRA_ARGS="-Wno-SYNCASYNCNET -GN_SLAVES=$$n" \
+			SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_apb_interconnect_n$$n \
+			sim; \
+	done; \
+	echo "=== apb_interconnect overlap test: N_SLAVES=2 OVERLAP_TEST=1 ==="; \
+	APB_IC_N_SLAVES=2 APB_IC_OVERLAP=1 \
+	$(MAKE) MODULE=test_apb_interconnect TOPLEVEL=tb_apb_interconnect \
+		VERILOG_SOURCES="$(APB_INTERCONNECT_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET -GN_SLAVES=2 -GOVERLAP_TEST=1" \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_apb_interconnect_overlap \
+		sim
 
 # GH #91: async_axi_fifo lint + sim.
 # lint only: axi_pkg + 3 cdc/ primitives + async_axi_fifo + standalone TB wrapper.
@@ -943,6 +992,7 @@ soc_all_ci: check-space
 	$(MAKE) axil_to_apb
 	$(MAKE) pmu
 	$(MAKE) gpio
+	$(MAKE) apb_interconnect
 	$(MAKE) async_axi_fifo
 	$(MAKE) apb_cdc_bridge
 	$(MAKE) cdc_reset_sync_scan

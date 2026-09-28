@@ -73,6 +73,20 @@ module tb_soc_top #(
     output logic [31:0] gpio_oe_o,
     input  logic [31:0] gpio_in_i,
 
+    // ── PWM (Phase 6a-2, bead f7vs.6 — tied off until the peripheral lands) ──
+    output logic [3:0]  pwm_o,
+
+    // ── Watchdog (Phase 6a-3, bead f7vs.7 — tied off until the peripheral lands) ──
+    output logic        wdt_rst_req_o,
+
+    // ── I2C (Phase 6a-5, bead f7vs.9 — tied off until the peripheral lands) ──
+    output logic        i2c_scl_o,
+    output logic        i2c_scl_oe_o,
+    input  logic        i2c_scl_i,
+    output logic        i2c_sda_o,
+    output logic        i2c_sda_oe_o,
+    input  logic        i2c_sda_i,
+
     // ── Observability bus ─────────────────────────────────────────────────────
     output logic        commit_valid_o,
     output logic [31:0] commit_pc_o,
@@ -122,6 +136,17 @@ module tb_soc_top #(
         .gpio_out_o     (gpio_out_o),
         .gpio_oe_o      (gpio_oe_o),
         .gpio_in_i      (gpio_in_i),
+
+        .pwm_o          (pwm_o),
+
+        .wdt_rst_req_o  (wdt_rst_req_o),
+
+        .i2c_scl_o      (i2c_scl_o),
+        .i2c_scl_oe_o   (i2c_scl_oe_o),
+        .i2c_scl_i      (i2c_scl_i),
+        .i2c_sda_o      (i2c_sda_o),
+        .i2c_sda_oe_o   (i2c_sda_oe_o),
+        .i2c_sda_i      (i2c_sda_i),
 
         .commit_valid_o (commit_valid_o),
         .commit_pc_o    (commit_pc_o),

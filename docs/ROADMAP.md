@@ -395,6 +395,10 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 
 **Prerequisites**: Phase 5 complete (full SoC validated)
 
+> **Golden spec:** [`docs/PHASE6_IP_EXPANSION_PLAN.md`](PHASE6_IP_EXPANSION_PLAN.md) —
+> full register maps, address/IRQ allocation, per-item acceptance criteria and non-goals.
+> This section is the roadmap-level summary; the plan is authoritative where they differ.
+
 #### 6a. Additional Peripherals (APB4 slaves on the Phase 5 APB sub-tree)
 
 > **Bus correction (2026-09-20):** this heading previously read "AXI4-Lite slaves".
@@ -408,9 +412,15 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 | I2C controller | `rtl/periph/i2c_controller.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |
 | PWM controller | `rtl/periph/pwm_controller.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |
 | Watchdog timer | `rtl/periph/watchdog_timer.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |
-| TRNG | `rtl/periph/trng.sv` | ✅ Sky130 analog only | ❌ Not portable | ❌ Not portable |
+| TRNG | `rtl/periph/trng.sv` | ✅ RTL portable | ✅ RTL portable | ✅ RTL portable |
 
-Note: TRNG uses Sky130 ring-oscillator analog cells — **Sky130-exclusive** for tapeout.
+Note (corrected 2026-09-28, bead `f7vs.1`): the TRNG **RTL is fully portable**. Sky130-exclusivity
+is confined to a swappable entropy sub-module selected by `` `ifdef `` —
+`trng_ro_sky130.sv` (ring oscillator) vs. the default `trng_lfsr_entropy.sv`, which is
+deterministic and **explicitly not cryptographic** (it forces `TRNG_STATUS.INSECURE = 1`).
+What is Sky130-exclusive is the **entropy-quality claim**, not the RTL, so `trng.sv` has zero
+top-level ports and sits in every file list and every PD flow.
+See [`docs/PHASE6_IP_EXPANSION_PLAN.md`](PHASE6_IP_EXPANSION_PLAN.md) §7.
 
 **GPIO controller — status (Phase 6a, bead `ckc`, 2026-09-20).** RTL + SoC integration +
 cocotb suite landed: `test_gpio` **16/16**, `soc_all` **217/217** across 27 suites (was
@@ -428,9 +438,21 @@ NOT a measurement. Detail: `docs/SKY130_REAL_DRC_LVS_EVALUATION.md`.
 
 #### 6b. AES-128 + SHA-256 Accelerator
 
-- AXI4-Lite slave (control/status, key/IV/digest registers)
-- AXI4 master/slave for bulk DMA
+> **Bus correction (2026-09-28, bead `f7vs.1`):** this section previously said "AXI4-Lite slave".
+> The peripheral-bus standard is **APB4** behind `apb4_register_bank`
+> (`docs/PERIPHERAL_BUS_EVALUATION.md:5,43` names AES-SHA explicitly). The 2026-09-20 correction
+> reached the 6a heading only and never propagated here. Golden spec:
+> [`docs/PHASE6_IP_EXPANSION_PLAN.md`](PHASE6_IP_EXPANSION_PLAN.md) §2.
+
+- **APB4 slave** (control/status, key/IV/digest registers), one 4 KB slot at `0x2000_F000`
+- Bulk data by **programmed I/O over APB**. An AXI4 master/slave path is an explicit
+  **non-goal of Phase 6b** — it would need `SOC_N_SLAVES` 3 → 4 and a change to `axi4_crossbar`.
+  Tracked as Phase 6b-2, not scheduled.
 - AES-128 round function: ~6 LUT levels → fits 75 MHz on Sky130
+
+⚠️ **The throughput table below describes the DEFERRED AXI4-master version, not what Phase 6b
+lands.** An APB single-beat register feed is far slower. Do not quote these figures against the
+delivered RTL. (Bead `f7vs.1`.)
 
 | Node | AES throughput | Notes |
 |------|---------------|-------|

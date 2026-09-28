@@ -1,26 +1,46 @@
 // soc_periph_map_pkg.sv
 // Phase 5 (M1/M3) — AXI-Lite control-ring + APB peripheral sub-map.
 //
+// Phase 6 (bead claude_verilog_test-f7vs.2): the full 14-slave APB sub-tree is
+// pre-allocated in this one commit, per docs/PHASE6_IP_EXPANSION_PLAN.md §4.
+// Slots 8-13 (PWM/WDT/TRNG/I2C/CRYPTO/NPU) are BASE/LIMIT constants only —
+// reserved-but-unbuilt, not yet in APB_N_SLAVES or the APB_SLV_BASE/LIMIT
+// arrays. Each is promoted to a real slave (index constant + array entry +
+// module instance) one at a time as its peripheral lands (6a-2 .. 6c).
+//
 // APB migration PR-7 topology (GH #92: +PLL2 slot, dual-PLL clock seam):
 //   AXI-Lite ring (3 slaves): GPU, DMA, APB-bridge window
 //     Slave 0: GPU ctrl    0x2000_1000 .. 0x2000_1FFF
-//     Slave 1: APB bridge  0x2000_2000 .. 0x2000_AFFF  (covers 8 APB perips)
+//     Slave 1: APB bridge  0x2000_2000 .. 0x2001_0FFF  (covers the full 14-slot APB window)
 //     Slave 2: DMA ctrl    0x2000_5000 .. 0x2000_5FFF
 //
 //   Note on overlapping window: DMA (index 2) overlaps the APB-bridge window.
 //   axi_lite_interconnect's decode() iterates 0→N-1 and takes the LAST match,
 //   so DMA (highest index) wins for 0x2000_5000-5FFF.  All other addresses in
-//   _2000-_AFFF route to APB_BRIDGE (index 1).
+//   _2000-_0FFF route to APB_BRIDGE (index 1).
 //
-//   APB sub-map (8 slaves, decoded by apb_interconnect):
-//     APB_UART  0: 0x2000_2000 .. 0x2000_2FFF
-//     APB_SPI   1: 0x2000_3000 .. 0x2000_3FFF
-//     APB_TIMER 2: 0x2000_4000 .. 0x2000_4FFF
-//     APB_IRQ   3: 0x2000_6000 .. 0x2000_6FFF
-//     APB_PLL   4: 0x2000_7000 .. 0x2000_7FFF
-//     APB_PMU   5: 0x2000_8000 .. 0x2000_8FFF
-//     APB_PLL2  6: 0x2000_9000 .. 0x2000_9FFF  (GH #92 — CPU-domain PLL config)
-//     APB_GPIO  7: 0x2000_A000 .. 0x2000_AFFF
+//   APB sub-map, final 14-slot allocation (decoded by apb_interconnect; only the
+//   first 8 are live slaves today — APB_N_SLAVES stays 8 until a slot lands):
+//     APB_UART    0: 0x2000_2000 .. 0x2000_2FFF                        (Phase 5)
+//     APB_SPI     1: 0x2000_3000 .. 0x2000_3FFF                        (Phase 5)
+//     APB_TIMER   2: 0x2000_4000 .. 0x2000_4FFF                        (Phase 5)
+//     APB_IRQ     3: 0x2000_6000 .. 0x2000_6FFF                        (Phase 5)
+//     APB_PLL     4: 0x2000_7000 .. 0x2000_7FFF                        (Phase 7 M-c)
+//     APB_PMU     5: 0x2000_8000 .. 0x2000_8FFF                        (GH #100)
+//     APB_PLL2    6: 0x2000_9000 .. 0x2000_9FFF  (CPU-domain PLL config, GH #92)
+//     APB_GPIO    7: 0x2000_A000 .. 0x2000_AFFF                        (6a, bead ckc)
+//     PWM         8: 0x2000_B000 .. 0x2000_BFFF  reserved              (6a-2)
+//     WDT         9: 0x2000_C000 .. 0x2000_CFFF  reserved              (6a-3)
+//     TRNG       10: 0x2000_D000 .. 0x2000_DFFF  reserved              (6a-4)
+//     I2C        11: 0x2000_E000 .. 0x2000_EFFF  reserved              (6a-5)
+//     CRYPTO     12: 0x2000_F000 .. 0x2000_FFFF  reserved              (6b)
+//     NPU        13: 0x2001_0000 .. 0x2001_0FFF  reserved              (6c)
+//
+//   The window deliberately crosses out of 0x2000_xxxx into 0x2001_0FFF at the
+//   14th slave (NPU). Verified inert: paddr is 32 bits end to end — both
+//   axil_to_apb and apb_interconnect are instantiated with .ADDR_W(32)
+//   (rtl/soc/soc_bus.sv:608,652) — and each peripheral consumes only
+//   paddr[11:0], so the upper-byte rollover carries no decode meaning.
 //
 //   All global MMIO addresses are UNCHANGED from the original 7-slave ring.
 
@@ -48,8 +68,11 @@ package soc_periph_map_pkg;
     // Pre-Phase-6 #5 / GH #100: extended 0x2000_7FFF -> 0x2000_8FFF for PMU.
     // GH #92: extended 0x2000_8FFF -> 0x2000_9FFF for the second (CPU-domain) PLL.
     // Phase 6a / bead claude_verilog_test-ckc: extended 0x2000_9FFF -> 0x2000_AFFF for GPIO.
+    // Phase 6 / bead claude_verilog_test-f7vs.2: extended 0x2000_AFFF -> 0x2001_0FFF, the
+    // final value — pre-allocates the full 14-slot APB window (PWM/WDT/TRNG/I2C/CRYPTO/NPU)
+    // in one commit per docs/PHASE6_IP_EXPANSION_PLAN.md §4.
     localparam logic [31:0] AXIL_APB_BASE    = 32'h2000_2000;
-    localparam logic [31:0] AXIL_APB_LIMIT   = 32'h2000_AFFF;
+    localparam logic [31:0] AXIL_APB_LIMIT   = 32'h2001_0FFF;
     localparam logic [31:0] AXIL_DMA_BASE    = 32'h2000_5000;
     localparam logic [31:0] AXIL_DMA_LIMIT   = 32'h2000_5FFF;
 
@@ -99,6 +122,25 @@ package soc_periph_map_pkg;
     // GPIO — Phase 6a (bead claude_verilog_test-ckc).
     localparam logic [31:0] APB_GPIO_BASE   = 32'h2000_A000;
     localparam logic [31:0] APB_GPIO_LIMIT  = 32'h2000_AFFF;
+
+    // Reserved-but-unbuilt slots 8-13 — pre-allocated by bead claude_verilog_test-f7vs.2
+    // (docs/PHASE6_IP_EXPANSION_PLAN.md §4). Not yet in APB_N_SLAVES or the
+    // APB_SLV_BASE/LIMIT arrays below; each is wired in one at a time as its
+    // peripheral lands. Unused until then, so guarded against UNUSEDPARAM.
+    /* verilator lint_off UNUSEDPARAM */
+    localparam logic [31:0] APB_PWM_BASE    = 32'h2000_B000;  // 6a-2
+    localparam logic [31:0] APB_PWM_LIMIT   = 32'h2000_BFFF;
+    localparam logic [31:0] APB_WDT_BASE    = 32'h2000_C000;  // 6a-3
+    localparam logic [31:0] APB_WDT_LIMIT   = 32'h2000_CFFF;
+    localparam logic [31:0] APB_TRNG_BASE   = 32'h2000_D000;  // 6a-4
+    localparam logic [31:0] APB_TRNG_LIMIT  = 32'h2000_DFFF;
+    localparam logic [31:0] APB_I2C_BASE    = 32'h2000_E000;  // 6a-5
+    localparam logic [31:0] APB_I2C_LIMIT   = 32'h2000_EFFF;
+    localparam logic [31:0] APB_CRYPTO_BASE = 32'h2000_F000;  // 6b
+    localparam logic [31:0] APB_CRYPTO_LIMIT = 32'h2000_FFFF;
+    localparam logic [31:0] APB_NPU_BASE    = 32'h2001_0000;  // 6c
+    localparam logic [31:0] APB_NPU_LIMIT   = 32'h2001_0FFF;
+    /* verilator lint_on  UNUSEDPARAM */
 
     // Packed arrays for apb_interconnect instantiation.
     localparam logic [31:0] APB_SLV_BASE  [APB_N_SLAVES] = '{

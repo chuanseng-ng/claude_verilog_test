@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-09-27T01:06:25.097269+00:00",
+  "updated_at": "2026-09-28T11:01:38.822156+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -1962,6 +1962,30 @@
       "retry_strategy": "none",
       "suggested_next_step": "proceed",
       "reason": "Added SoC-level GPIO fabric test (soc_gpio/test_soc_gpio.py, bead claude_verilog_test-8qn4 item 1) exercising gpio_controller through the real crossbar->axi4_to_axilite->axi_lite_interconnect->axil_to_apb->apb_interconnect path for the first time (output, input w/ sync latency, and end-to-end interrupt path with trap-take + deassertion proof). No RTL defects found. Root-caused and fixed a stale-build-cache regression in soc_all (tool_error class, resolved by rebuild, not an RTL issue) discovered while verifying the new suite. Final: soc_all 218/218 across 28 suites, lint_soc 0 errors / 4 pre-existing warnings (unchanged). CI PASS_FLOOR raised 210->215.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-28T11:01:38.822156+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Bead claude_verilog_test-f7vs.2: pre-allocated the full Phase 6 APB address window (14 slaves, up to 0x2001_0FFF) and interrupt-source budget (N_SOURCES 6->12) as reserved-but-unbuilt constants/ties across soc_periph_map_pkg.sv, soc_addr_map_pkg.sv, soc_top.sv, and interrupt_controller.sv header only -- mechanical integration edit, no new modules instantiated, APB_N_SLAVES stays 8.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-09-28T11:01:38.822156+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "nix develop --command make -C sim lint: exit 0, 0 errors. 4 pre-existing warnings (rv32i_cache_pkg.sv UNUSEDPARAM x3, sram_1rw_256x32_verilator.v DECLFILENAME) unchanged vs. pre-edit baseline (verified via git stash A/B comparison) -- no new warnings introduced by this pass's 4-file edit.",
       "constraint_ref": null
     }
   ],
