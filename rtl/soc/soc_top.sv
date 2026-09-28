@@ -217,6 +217,28 @@ module soc_top
     output logic [31:0] gpio_oe_o,
     input  logic [31:0] gpio_in_i,
 
+    // ── PWM (Phase 6a-2, bead f7vs.6 — tied off until the peripheral lands) ──
+    output logic [3:0]  pwm_o,
+
+    // ── Watchdog (Phase 6a-3, bead f7vs.7 — tied off until the peripheral lands) ──
+    output logic        wdt_rst_req_o,
+
+    // ── I2C (Phase 6a-5, bead f7vs.9 — tied off until the peripheral lands) ──
+    // Open-drain triplet, same convention as GPIO: there is no tristate anywhere
+    // in this RTL tree, so `_o` is hard-tied 0 and `_oe_o` is the real control
+    // (drive-low = oe 1; release = oe 0 and the external pull-up makes it high).
+    // The real open-drain buffer + pull-up is a pad-ring integration concern.
+    output logic        i2c_scl_o,
+    output logic        i2c_scl_oe_o,
+    /* verilator lint_off UNUSEDSIGNAL */
+    input  logic        i2c_scl_i,
+    /* verilator lint_on  UNUSEDSIGNAL */
+    output logic        i2c_sda_o,
+    output logic        i2c_sda_oe_o,
+    /* verilator lint_off UNUSEDSIGNAL */
+    input  logic        i2c_sda_i,
+    /* verilator lint_on  UNUSEDSIGNAL */
+
     // ── Observability (subset; M7 perf counters added later) ─────────────────
     output logic        commit_valid_o,
     output logic [31:0] commit_pc_o,
@@ -645,6 +667,22 @@ module soc_top
     assign i2c_irq    = 1'b0;  // tie removed when I2C lands (6a-5)
     assign crypto_irq = 1'b0;  // tie removed when CRYPTO lands (6b)
     assign npu_irq    = 1'b0;  // tie removed when NPU lands (6c)
+
+    // Phase 6 (bead claude_verilog_test-f7vs.3): top-level port pre-allocation for
+    // PWM/WDT/I2C (the three Phase 6 items that add pins at all — TRNG's entropy
+    // source is an `ifdef`-swapped sub-module, CRYPTO/NPU are register-only). Each
+    // output is tied to its inert value here; the tie is replaced with the real
+    // peripheral connection when that peripheral lands, matching the IRQ-tie idiom
+    // above. The two I2C inputs are unused until I2C lands.
+    assign pwm_o         = 4'b0;      // tie removed when PWM lands (6a-2)
+    assign wdt_rst_req_o = 1'b0;      // tie removed when WDT lands (6a-3)
+    assign i2c_scl_o     = 1'b0;      // tie removed when I2C lands (6a-5)
+    assign i2c_scl_oe_o  = 1'b0;      // tie removed when I2C lands (6a-5)
+    assign i2c_sda_o     = 1'b0;      // tie removed when I2C lands (6a-5)
+    assign i2c_sda_oe_o  = 1'b0;      // tie removed when I2C lands (6a-5)
+    // i2c_scl_i / i2c_sda_i are unused until I2C lands (6a-5) — see the
+    // `lint_off`/`lint_on` UNUSEDSIGNAL bracket around their port
+    // declarations above.
 
     logic ext_irq;    // interrupt_controller output → CPU ext_irq_i
 
