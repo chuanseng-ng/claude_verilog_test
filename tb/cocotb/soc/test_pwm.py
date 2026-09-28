@@ -577,6 +577,13 @@ async def test_pwm_polarity_inversion(dut):
     assert ok6
 
     await _wait_for_irq_stat(dut, mask)  # phase-align: steady-state periodic behaviour confirmed
+    # Settle before sampling. _wait_for_irq_stat ends in _peek()'s Timer(1, "step"),
+    # and pwm_o is COMBINATIONAL off tick_count_q, so a bare int(dut.pwm_o.value)
+    # read here returns the pre-edge value -- the first two samples come back
+    # identical and the window loses one real sample at the far end. One real clock
+    # edge puts sampling on a settled, known boundary. Same class as the settle
+    # _peek() itself documents; the expected counts below are UNCHANGED.
+    await RisingEdge(dut.clk)
 
     on_count = 0
     for _ in range(period):
@@ -622,6 +629,10 @@ async def test_pwm_per_channel_independence(dut):
     assert ok7
 
     await _wait_for_irq_stat(dut, ALL_CH_MASK)  # any enabled channel wraps together (shared period)
+    # Settle before sampling -- see the note in test_pwm_polarity_inversion.
+    # pwm_o is combinational off tick_count_q, so a bare read straight after
+    # _wait_for_irq_stat returns the pre-edge value. Expected counts UNCHANGED.
+    await RisingEdge(dut.clk)
 
     on_counts = {ch: 0 for ch in duties}
     for _ in range(period):
