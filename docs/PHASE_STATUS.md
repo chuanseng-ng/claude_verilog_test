@@ -344,10 +344,44 @@ above 40 MHz is likely and has never been swept. The ROADMAP's 75 MHz Sky130 fig
 | M7 | Performance counters (CSR + AXI-Lite GPU stats) | ✅ 2026-06-02 (CPU re-sign-off 1282 MHz) |
 | M8 | SoC top integration (`rtl/soc/soc_top.sv`) | ✅ 2026-06-02 (lint-clean) |
 | M9 | SoC verification — foundation slice (boot 100/100) | ✅ 2026-06-03 (PR #65) |
-| M9 | Fast-follows: CPU→GPU kernel launch, SW coherency, DMA/peripheral loopback, SRAM readback, 1M-cycle random, benchmarks | ⏸️ Open |
-| M10 | L2 cache decision gate (needs M9 benchmarks) | ⏸️ Not started |
-| M11 | SoC P&R + STA (`phase5_soc.sdc`/`.upf`) | ⏸️ Not started |
-| M12 | Sign-off + documentation | ⏸️ Not started |
+| M9 | Fast-follows: CPU→GPU kernel launch, SW coherency, DMA/peripheral loopback, SRAM readback, 1M-cycle random, benchmarks | ✅ 2026-06-24 (1,079,867 cyc, 0 fail) |
+| M10 | L2 cache decision gate (needs M9 benchmarks) | ✅ 2026-06-21 — **NO-GO** (`docs/M10_L2_DECISION_ANALYSIS.md`) |
+| M11 | SoC P&R + STA (`phase5_soc.sdc`/`.upf`) | ✅ 2026-06-24 ⚠️ figures unvalidated, bead `0p6` |
+| M12 | Sign-off + documentation | ✅ 2026-06-24 |
+
+### Phase 6: IP Expansion 🚧
+
+**Golden spec**: `docs/PHASE6_IP_EXPANSION_PLAN.md` (added 2026-09-28, bead `f7vs.1`).
+**Tracking**: bead epic `claude_verilog_test-f7vs`.
+**Definition of done, per item**: RTL + cocotb verification + SoC integration. Physical design is
+a separately batched gate (Gate A synthesis probe per item; Gate B one Sky130 harden), not
+per-item.
+
+| Item | Scope | APB idx / IRQ bit | Bead | Status |
+| :--- | :---- | :---------------- | :--- | :----- |
+| 6a-1 | GPIO controller, 32 pins | 7 / 5 | `ckc`, `00ef` | ✅ 2026-09-26 (Sky130-hardened; LVS PASS, DRC 0, setup+hold clean 9/9) |
+| G1 | Golden spec + ROADMAP bus/numbering corrections | — | `f7vs.1` | ✅ 2026-09-28 |
+| G2 | APB window + IRQ source pre-allocation | — | `f7vs.2` | 🚧 In progress |
+| G3 | `tb_soc_top.sv` ports + SDC exceptions, one forced clean | — | `f7vs.3` | ⏸️ Not started |
+| G4 | File-list checker + first `apb_interconnect` unit suite | — | `f7vs.4` | 🚧 In progress |
+| G5 | This section + de-staled Next Actions | — | `f7vs.5` | 🚧 In progress |
+| 6a-2 | PWM controller, 4 channels | 8 / 6 | `f7vs.6` | ⏸️ Not started |
+| 6a-3 | Watchdog timer | 9 / 7 | `f7vs.7` | ⏸️ Not started |
+| 6a-4 | TRNG (portable LFSR entropy; RO source Sky130-only) | 10 / 8 | `f7vs.8` | ⏸️ Not started |
+| 6a-5 | I2C master controller | 11 / 9 | `f7vs.9` | ⏸️ Not started |
+| 6b | CRYPTO — AES-128 (ECB+CTR) + SHA-256 | 12 / 10 | `f7vs.10` | ⏸️ Not started |
+| 6c | INT8 NPU, 4×4 systolic, 4 KB weight SRAM | 13 / 11 | `f7vs.11` | ⏸️ Not started |
+
+Three documentation defects were corrected when the golden spec landed: AES/SHA is **APB4**, not
+AXI4-Lite (`ROADMAP.md:431` was a survivor of the pre-2026-09-20 text); the AES throughput figures
+describe a **deferred AXI4-master version**, not what 6b lands; and the TRNG **RTL is portable** —
+only its ring-oscillator entropy source is Sky130-exclusive.
+
+⚠️ **ASAP7 is out of scope for all of Phase 6**, triple-blocked on beads `ma7` (proven Synlig
+`OPT_MUXTREE` miscompile in the CPU/GPU macro netlists), `lxv` (routing-congestion regression) and
+`2kn` (needs a ≥32 GB host; this one has ~15 GB). Every peripheral still goes into the ASAP7 sv2v
+file list, enforced by `tools/verif/check_periph_filelists.py`, so unblocking is a re-run rather
+than a porting exercise.
 
 ### Phase 7: Mixed-Signal PLL Clock Generator 🚧
 
@@ -556,35 +590,40 @@ All previous specification issues have been resolved:
 
 ## Next Actions
 
-### Immediate — Phase 5 SoC Integration
+### Immediate — Phase 6 IP Expansion
 
-**Phase 4 COMPLETE** ✅ all GPU tests green, 1,000-kernel random regression pass, ASAP7 571 MHz PD sign-off (2026-05-27). See Phase 4 section above and `docs/GPU_ASAP7_RUN_HISTORY.md`.
+**Phases 0-5 are complete.** Phase 5 signed off 2026-06-24 (M1-M12); Phase 6a's first peripheral
+(GPIO) landed and hardened on Sky130 2026-09-26; Phase 7 M-a..M-c complete 2026-06-20.
 
-**Current Priority**: Phase 5 SoC integration (CPU + GPU + DMA + AXI4 crossbar + peripherals).
-See `docs/PHASE5_SOC_INTEGRATION_PLAN.md` for the full M1–M12 milestone roadmap (golden spec).
-Key decisions: AXI4 crossbar data fabric + AXI-Lite control bus, Phase 3 cache refill FSMs upgraded to AXI4 burst, behavioral AXI4-slave SRAM, ASAP7 SoC PD sign-off required.
+**Current priority**: Phase 6 groundwork, then the four remaining 6a peripherals.
+Golden spec: `docs/PHASE6_IP_EXPANSION_PLAN.md`. Tracking: bead epic `claude_verilog_test-f7vs`.
 
-1. **AXI4 Interconnect** (M1–M3) — ✅ complete 2026-05-31:
-   - ✅ `rtl/soc/axi4_crossbar.sv` — N-master M-slave data fabric
-   - ✅ `rtl/soc/axi_lite_interconnect.sv` — control bus
-   - ✅ `rtl/soc/axi_lite_register_bank.sv` — GPU + DMA config registers
-   - ✅ Phase 3 refill FSMs upgraded from 4 sequential AXI4-Lite beats to AXI4 burst mode
+1. **Groundwork** (G1-G5) — front-loads the risk so each later peripheral is near-pure RTL + test:
+   - ✅ G1 golden spec + ROADMAP bus/numbering corrections
+   - G2 pre-allocate the APB window to `0x2001_0FFF` and `N_SOURCES` 6 → 12, in one commit
+   - G3 pre-add every planned `tb_soc_top.sv` port and SDC exception, one forced clean
+   - G4 `check_periph_filelists.py` + the first-ever `apb_interconnect` unit suite
+   - G5 this status section
 
-2. **Peripherals + DMA + SRAM + SoC top** (M4–M8) — ✅ complete 2026-06-02:
-   - ✅ `rtl/periph/dma_engine.sv`, `uart_controller.sv`, `spi_controller.sv`, `timer.sv`, `interrupt_controller.sv`
-   - ✅ `rtl/soc/sram_controller.sv` — behavioral AXI4-slave SRAM (no DRAM refresh)
-   - ✅ `rtl/soc/soc_top.sv` — full SoC top-level; CSR-mapped performance counters (M7)
+2. **6a peripherals**, derisk-first: PWM → WDT → TRNG → I2C. Each is RTL + L1 unit suite + L2
+   SoC-fabric suite + SoC integration, with tests written **before** the RTL.
 
-3. **Verification** (M9 — current focus):
-   - ✅ Boot foundation slice: 100/100 boot-stability gate (2026-06-03, PR #65)
-   - ⏸️ CPU-GPU integration: kernel launch → interrupt → result read
-   - ⏸️ Software coherency: CPU D-cache flush → GPU kernel → CPU D-cache invalidate
-   - ⏸️ DMA transfer tests; full CPU + GPU benchmark suite; 1M-cycle random SoC stress
-   - ⏸️ L2 cache decision (M10) — add `rtl/mem/l2_cache.sv` only if L1 miss rates justify it
+3. **Gate B** — one batched Sky130 harden after all of 6a
+   (`make librelane-sky130-soc-noklayout`; the full target OOMs in KLayout DRC on this host,
+   which sits before Netgen LVS in LibreLane's Classic flow).
 
-4. **Physical Design**:
-   - ⏸️ Full SoC synthesis + P&R + STA; `pnr/constraints/phase5_soc.sdc`, `phase5_soc.upf`
-   - ⏸️ Power domain validation (PD_CPU, PD_GPU, PD_SRAM, PD_PERIPH)
+4. **6b CRYPTO**, then **6c NPU** — the NPU warrants its own planning pass.
+
+### Deferred / host-blocked (not Phase 6 work)
+
+| Bead | Item | Blocker |
+| :--- | :--- | :------ |
+| `ma7` | ASAP7 CPU/GPU macros are Synlig-built with a proven branch miscompile | ≥32 GB host (`2kn`) |
+| `lxv` | ASAP7 CPU sv2v re-harden: routing-congestion regression | ≥32 GB host (`2kn`) |
+| `8qn4` | ASAP7 SoC has never been run with GPIO | chained to `ma7`/`lxv` |
+| `e45j` | Sky130 post-RCX max-slew/max-cap; no post-RCX repair stage exists in LibreLane | re-measured at Gate B; **not** a Phase 6 exit criterion |
+| `o1i` | Per-corner SRAM SPICE characterization (~80-95 h) | host stability |
+| GH #105/#106 | Sky130 GPU stages 3-4 | ≥32 GB RAM + ~500 GB scratch |
 
 ## Documentation Structure
 
