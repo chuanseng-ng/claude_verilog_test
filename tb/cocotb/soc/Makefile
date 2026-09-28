@@ -163,6 +163,17 @@ GPIO_SOURCES = \
 	$(RTL)/periph/gpio_controller.sv \
 	$(SOC_DIR)/tb_gpio.sv
 
+# Phase 6a-2 (bead claude_verilog_test-f7vs.6): standalone pwm_controller unit-test sources.
+# apb4_register_bank (register file) + pwm_controller + standalone TB. Unlike GPIO_SOURCES above,
+# there is no cdc_2ff_sync here -- PWM has no async input pins at all (push-pull pwm_o only, no
+# oe, no CDC -- docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-2 -- PWM"). pwm_controller.sv does not
+# exist yet as of this line's authorship (strict TDD, step 2 of Sec.9's workflow); the pwm/
+# pwm_lint targets below are expected to fail to elaborate until it does.
+PWM_SOURCES = \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/periph/pwm_controller.sv \
+	$(SOC_DIR)/tb_pwm.sv
+
 # Phase 6 groundwork (bead claude_verilog_test-f7vs.4): standalone apb_interconnect
 # unit-test sources. apb_interconnect is a single, self-contained combinational module --
 # no other RTL package or CDC primitive needed.
@@ -456,7 +467,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -628,6 +639,21 @@ gpio_lint:
 gpio: gpio_lint
 	$(MAKE) MODULE=test_gpio TOPLEVEL=tb_gpio \
 		VERILOG_SOURCES="$(GPIO_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
+# Phase 6a-2 (bead claude_verilog_test-f7vs.6): pwm_controller lint + sim.
+# lint only: apb4_register_bank + pwm_controller + standalone TB wrapper.
+# -Wno-SYNCASYNCNET: matches the gpio targets' convention above, for consistency with the rest of
+# this file's per-target EXTRA_ARGS, even though PWM has no cdc_2ff_sync / async input of its own.
+pwm_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
+		--top-module tb_pwm \
+		$(PWM_SOURCES)
+
+pwm: pwm_lint
+	$(MAKE) MODULE=test_pwm TOPLEVEL=tb_pwm \
+		VERILOG_SOURCES="$(PWM_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -992,6 +1018,7 @@ soc_all_ci: check-space
 	$(MAKE) axil_to_apb
 	$(MAKE) pmu
 	$(MAKE) gpio
+	$(MAKE) pwm
 	$(MAKE) apb_interconnect
 	$(MAKE) async_axi_fifo
 	$(MAKE) apb_cdc_bridge
