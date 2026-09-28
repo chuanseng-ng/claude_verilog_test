@@ -17,7 +17,7 @@
 //     AXIL_DMA=2        @ 0x2000_5000–5FFF  (AXI-Lite direct; last-match wins
 //                                             over APB_BRIDGE window overlap)
 //
-//   APB sub-tree (8 slaves behind axil_to_apb bridge):
+//   APB sub-tree (9 slaves behind axil_to_apb bridge):
 //     APB_UART=0  @ 0x2000_2000–2FFF  uart_controller
 //     APB_SPI=1   @ 0x2000_3000–3FFF  spi_controller
 //     APB_TIMER=2 @ 0x2000_4000–4FFF  timer
@@ -29,6 +29,7 @@
 //     APB_PLL2=6  @ 0x2000_9000–9FFF  pll_apb_regs (cpu_clk_i domain — CPU-domain
 //                                      PLL, GH #92; output unconsumed until GH #93)
 //     APB_GPIO=7  @ 0x2000_A000–AFFF  gpio_controller (core_clk domain; Phase 6a, bead claude_verilog_test-ckc)
+//     APB_PWM=8   @ 0x2000_B000–BFFF  pwm_controller (core_clk domain; Phase 6a-2, bead claude_verilog_test-f7vs.6)
 //
 //   Debug plane   : APB3 debug slave exposed at top-level ports, bridged into
 //     the CPU domain by apb_cdc_bridge (u_apb_dbg_cdc, GH #95) — see the
@@ -147,8 +148,9 @@
 //     irq_src_i = {npu_irq[11], crypto_irq[10], i2c_irq[9], trng_irq[8], wdt_irq[7],
 //                  pwm_irq[6], gpio_irq[5], gpu_irq_o[4], dma_irq[3], timer_irq[2],
 //                  spi_irq[1], uart_irq[0]}
-//     bits 6-11 pre-allocated (Phase 6, bead claude_verilog_test-f7vs.2) and tied
-//     1'b0 until PWM/WDT/TRNG/I2C/CRYPTO/NPU land, respectively.
+//     bit 6 (PWM) is now live (Phase 6a-2, bead claude_verilog_test-f7vs.6).
+//     bits 7-11 remain pre-allocated (Phase 6, bead claude_verilog_test-f7vs.2) and
+//     tied 1'b0 until WDT/TRNG/I2C/CRYPTO/NPU land, respectively.
 //     interrupt_controller.irq_o → CPU ext_irq_i (MEIP)
 //     timer.irq_o                → CPU timer_irq_i (MTIP, direct)
 //
@@ -652,16 +654,17 @@ module soc_top
     // gpu_irq_o is exposed at top-level port; driven by gpu_top
 
     // Phase 6 (bead claude_verilog_test-f7vs.2): interrupt-source pre-allocation for
-    // bits 6-11 (PWM/WDT/TRNG/I2C/CRYPTO/NPU). Each is tied 1'b0 here — no peripheral
-    // instance exists yet — and the tie is replaced with the real IRQ output when that
-    // peripheral lands, matching the existing TIMER-tied-0 idiom below.
+    // bits 6-11 (PWM/WDT/TRNG/I2C/CRYPTO/NPU). Each was tied 1'b0 here until its
+    // peripheral instance existed, and the tie is replaced with the real IRQ output
+    // when that peripheral lands, matching the existing TIMER-tied-0 idiom below.
+    // pwm_irq (bit 6) landed in Phase 6a-2 (bead claude_verilog_test-f7vs.6) — it is
+    // now driven by u_pwm below, not tied here.
     logic pwm_irq;
     logic wdt_irq;
     logic trng_irq;
     logic i2c_irq;
     logic crypto_irq;
     logic npu_irq;
-    assign pwm_irq    = 1'b0;  // tie removed when PWM lands (6a-2)
     assign wdt_irq    = 1'b0;  // tie removed when WDT lands (6a-3)
     assign trng_irq   = 1'b0;  // tie removed when TRNG lands (6a-4)
     assign i2c_irq    = 1'b0;  // tie removed when I2C lands (6a-5)
@@ -671,10 +674,11 @@ module soc_top
     // Phase 6 (bead claude_verilog_test-f7vs.3): top-level port pre-allocation for
     // PWM/WDT/I2C (the three Phase 6 items that add pins at all — TRNG's entropy
     // source is an `ifdef`-swapped sub-module, CRYPTO/NPU are register-only). Each
-    // output is tied to its inert value here; the tie is replaced with the real
+    // output was tied to its inert value here; the tie is replaced with the real
     // peripheral connection when that peripheral lands, matching the IRQ-tie idiom
     // above. The two I2C inputs are unused until I2C lands.
-    assign pwm_o         = 4'b0;      // tie removed when PWM lands (6a-2)
+    // pwm_o landed in Phase 6a-2 (bead claude_verilog_test-f7vs.6) — it is now
+    // driven by u_pwm below, not tied here.
     assign wdt_rst_req_o = 1'b0;      // tie removed when WDT lands (6a-3)
     assign i2c_scl_o     = 1'b0;      // tie removed when I2C lands (6a-5)
     assign i2c_scl_oe_o  = 1'b0;      // tie removed when I2C lands (6a-5)
@@ -1761,14 +1765,37 @@ module soc_top
     );
 
     // =========================================================================
+    // PWM — APB slave (apb_psel[APB_PWM]), Phase 6a-2 (bead claude_verilog_test-f7vs.6)
+    // =========================================================================
+    pwm_controller #(
+        .ADDR_W (12),
+        .N_CH   (4)
+    ) u_pwm (
+        .clk     (core_clk),
+        .rst_n   (core_rst_n),
+        .psel    (apb_psel    [APB_PWM]),
+        .penable (apb_penable [APB_PWM]),
+        .pwrite  (apb_pwrite  [APB_PWM]),
+        .paddr   (apb_paddr   [APB_PWM][11:0]),
+        .pwdata  (apb_pwdata  [APB_PWM]),
+        .pstrb   (apb_pstrb   [APB_PWM]),
+        .prdata  (apb_prdata  [APB_PWM]),
+        .pready  (apb_pready  [APB_PWM]),
+        .pslverr (apb_pslverr [APB_PWM]),
+        .pwm_o   (pwm_o),
+        .irq_o   (pwm_irq)
+    );
+
+    // =========================================================================
     // Interrupt controller — APB slave (apb_psel[APB_IRQ])
     // irq_src_i[11:0] = {NPU[11], CRYPTO[10], I2C[9], TRNG[8], WDT[7], PWM[6],
     //                     GPIO[5], GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}
     // TIMER slot tied 0: timer IRQ goes directly to CPU MTIP; routing it here
     // too would double-count the event.
     // Phase 6 (bead claude_verilog_test-f7vs.2): N_SOURCES pre-allocated 6 -> 12;
-    // bits 6-11 (PWM/WDT/TRNG/I2C/CRYPTO/NPU) are tied 1'b0 above until each
-    // peripheral lands (6a-2 .. 6c).
+    // bit 6 (PWM) is now driven by u_pwm above (Phase 6a-2, bead
+    // claude_verilog_test-f7vs.6); bits 7-11 (WDT/TRNG/I2C/CRYPTO/NPU) remain
+    // tied 1'b0 above until each peripheral lands (6a-3 .. 6c).
     // =========================================================================
     interrupt_controller #(
         .ADDR_W    (12),

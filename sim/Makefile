@@ -367,6 +367,7 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/periph/timer.sv \
 	$(RTL_DIR)/periph/interrupt_controller.sv \
 	$(RTL_DIR)/periph/gpio_controller.sv \
+	$(RTL_DIR)/periph/pwm_controller.sv \
 	$(RTL_DIR)/periph/dma_engine.sv \
 	$(RTL_DIR)/soc/axi4_crossbar.sv \
 	$(RTL_DIR)/soc/axi_lite_interconnect.sv \

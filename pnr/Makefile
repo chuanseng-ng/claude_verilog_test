@@ -752,6 +752,7 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/periph/uart_controller.sv \
 	$(PROJECT_ROOT)/rtl/periph/spi_controller.sv \
 	$(PROJECT_ROOT)/rtl/periph/gpio_controller.sv \
+	$(PROJECT_ROOT)/rtl/periph/pwm_controller.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_clock_gate.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_2ff_sync.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_reset_sync.sv \
@@ -1469,6 +1470,7 @@ SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/periph/uart_controller.sv \
 	$(PROJECT_ROOT)/rtl/periph/spi_controller.sv \
 	$(PROJECT_ROOT)/rtl/periph/gpio_controller.sv \
+	$(PROJECT_ROOT)/rtl/periph/pwm_controller.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_clock_gate.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_2ff_sync.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_reset_sync.sv \

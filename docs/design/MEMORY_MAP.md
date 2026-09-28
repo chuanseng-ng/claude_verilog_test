@@ -38,7 +38,8 @@ This restriction is due to Ubuntu's page size being 4 KB
 | 0x2000_8000 - 0x2000_8FFF  | 4 KB    | PMU Control (APB4)  | Power-mode sequencer registers (`pmu.sv`, GH #98/#99/#100) |
 | 0x2000_9000 - 0x2000_9FFF  | 4 KB    | PLL2 Control (APB4) | Second PLL subsystem config/status, CPU-domain reference clock (`pll_apb_regs`, GH #92) |
 | 0x2000_A000 - 0x2000_AFFF  | 4 KB    | GPIO (APB4)         | 32-pin GPIO controller (`gpio_controller.sv`, Phase 6a) |
-| 0x2000_B000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
+| 0x2000_B000 - 0x2000_BFFF  | 4 KB    | PWM (APB4)          | 4-channel PWM controller (`pwm_controller.sv`, Phase 6a-2) |
+| 0x2000_C000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
 | 0x3000_0000 - 0x7FFF_FFFF  | 1.25 GB | Reserved            | Future use                  |
 | 0x8000_0000 - 0xFFFF_FFFF  | 2 GB    | External Memory     | Off-chip memory/devices     |
 
@@ -46,8 +47,8 @@ This restriction is due to Ubuntu's page size being 4 KB
 > peripherals attach to a CPU-driven **AXI4-Lite control interconnect**
 > (`rtl/soc/axi_lite_interconnect.sv`) whose APB-bridge ring slot (slave 1,
 > `0x2000_2000-0x2000_AFFF`) fans out through `axil_to_apb` + `apb_interconnect`
-> into a genuine **APB4 sub-tree of 8 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2,
-> GPIO; `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_GPIO). GPU/DMA control remain
+> into a genuine **APB4 sub-tree of 9 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2,
+> GPIO, PWM; `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_PWM). GPU/DMA control remain
 > AXI-Lite-direct ring slaves (0 and 2). APB3 also survives standalone on the
 > CPU debug slot (0x2000_0000–0FFF), unrelated to this APB4 sub-tree. Address
 > map is frozen in `rtl/soc/soc_periph_map_pkg.sv` (`decode_axil_slave()`);
@@ -312,6 +313,28 @@ Note the reset-default reading: with `GPIO_IRQ_TYPE` = 0 (level) and
 true, so `GPIO_IRQ_STAT` reads all-ones (masked to the implemented pins) a couple
 of cycles out of reset. `GPIO_IRQ_EN` = 0 at reset keeps `irq_o` low regardless.
 
+#### PWM Registers (Phase 6a-2)
+
+**Base address**: 0x2000_B000 — `rtl/periph/pwm_controller.sv`, APB4, 4 channels.
+
+| Offset | Name          | Access | Description                                        |
+|:------:|:-------------:|:------:|:--------------------------------------------------:|
+| 0x000  | PWM_CTRL      | RW     | [3:0] per-channel enable, [7:4] per-channel output polarity (0 = active-high, 1 = inverted) |
+| 0x004  | PWM_PERIOD    | RW     | [15:0] shared period, in prescaled ticks           |
+| 0x008  | PWM_PRESCALE  | RW     | [15:0] `core_clk` divider; one tick = (PRESCALE+1) `core_clk` cycles |
+| 0x00C  | PWM_DUTY01    | RW     | [15:0] ch0 duty, [31:16] ch1 duty (prescaled ticks) |
+| 0x010  | PWM_DUTY23    | RW     | [15:0] ch2 duty, [31:16] ch3 duty (prescaled ticks) |
+| 0x014  | PWM_IRQ_EN    | RW     | [3:0] per-channel period-wrap interrupt enable (masks `irq_o` only) |
+| 0x018  | PWM_IRQ_STAT  | RO     | [3:0] sticky per-channel period-wrap status        |
+| 0x01C  | PWM_IRQ_CLR   | W1C    | Write 1 to clear the matching `PWM_IRQ_STAT` bit; always reads 0 |
+
+`pwm_o[3:0]` is a push-pull output only (no output-enable, no async input, no
+CDC). A channel's active condition is `tick_count < DUTY[ch]` while the channel
+is enabled; `pwm_o[ch] = active_condition ^ PWM_CTRL[4+ch]`. Left/edge-aligned
+only. `DUTY == 0` gives true 0%, `DUTY >= PERIOD` gives true 100%, and
+`PERIOD == 0` forces the output inactive and suppresses the period-wrap event
+entirely — see `rtl/periph/pwm_controller.sv` header for the full rationale.
+
 ## Reset and Trap Vectors
 
 ### Reset Vector
@@ -402,8 +425,11 @@ Two interrupt lines reach the CPU (priority: **MEIP > MTIP**, per
 | `ext_irq_i` (MEIP) | 0x8000_000B | `interrupt_controller.irq_o` — aggregated, 2-FF-synchronised, mask/status registers at 0x2000_6000 |
 | `timer_irq_i` (MTIP) | 0x8000_0007 | Timer `irq_o`, wired **directly** (not via the IRQ controller; its bit 2 is tied 0) |
 
-IRQ controller source bits: `{GPIO[5], GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}`.
-On a MEIP trap, software reads `IRQ_STATUS` (0x2000_6000 block) to disambiguate
+IRQ controller source bits (`N_SOURCES=12`, Phase 6, bead claude_verilog_test-f7vs.2):
+`{NPU[11], CRYPTO[10], I2C[9], TRNG[8], WDT[7], PWM[6], GPIO[5], GPU[4], DMA[3],
+TIMER[2]=0, SPI[1], UART[0]}`. Bit 6 (PWM) is live as of Phase 6a-2 (bead
+claude_verilog_test-f7vs.6); bits 7-11 remain tied 0 until their peripheral
+lands. On a MEIP trap, software reads `IRQ_STATUS` (0x2000_6000 block) to disambiguate
 the peripheral source; bit priority within the controller does not reorder
 delivery — all enabled sources share the single MEIP line.
 
