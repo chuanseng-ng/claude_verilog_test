@@ -361,11 +361,11 @@ per-item.
 | :--- | :---- | :---------------- | :--- | :----- |
 | 6a-1 | GPIO controller, 32 pins | 7 / 5 | `ckc`, `00ef` | ✅ 2026-09-26 (Sky130-hardened; LVS PASS, DRC 0, setup+hold clean 9/9) |
 | G1 | Golden spec + ROADMAP bus/numbering corrections | — | `f7vs.1` | ✅ 2026-09-28 |
-| G2 | APB window + IRQ source pre-allocation | — | `f7vs.2` | 🚧 In progress |
-| G3 | `tb_soc_top.sv` ports + SDC exceptions, one forced clean | — | `f7vs.3` | ⏸️ Not started |
-| G4 | File-list checker + first `apb_interconnect` unit suite | — | `f7vs.4` | 🚧 In progress |
-| G5 | This section + de-staled Next Actions | — | `f7vs.5` | 🚧 In progress |
-| 6a-2 | PWM controller, 4 channels | 8 / 6 | `f7vs.6` | ⏸️ Not started |
+| G2 | APB window + IRQ source pre-allocation | — | `f7vs.2` | ✅ 2026-09-28 (PR #197) |
+| G3 | `tb_soc_top.sv` ports + SDC exceptions, one forced clean | — | `f7vs.3` | ✅ 2026-09-28 (PR #197) |
+| G4 | File-list checker + first `apb_interconnect` unit suite | — | `f7vs.4` | ✅ 2026-09-28 (PR #197) |
+| G5 | This section + de-staled Next Actions | — | `f7vs.5` | ✅ 2026-09-28 (PR #197) |
+| 6a-2 | PWM controller, 4 channels | 8 / 6 | `f7vs.6` | ✅ 2026-09-28 (RTL + 16/16 L1 + soc_pwm L2; `soc_all_ci` 279) |
 | 6a-3 | Watchdog timer | 9 / 7 | `f7vs.7` | ⏸️ Not started |
 | 6a-4 | TRNG (portable LFSR entropy; RO source Sky130-only) | 10 / 8 | `f7vs.8` | ⏸️ Not started |
 | 6a-5 | I2C master controller | 11 / 9 | `f7vs.9` | ⏸️ Not started |

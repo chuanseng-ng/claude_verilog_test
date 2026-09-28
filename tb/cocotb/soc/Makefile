@@ -268,6 +268,7 @@ PLL_SOURCES = \
 	$(RTL)/periph/timer.sv \
 	$(RTL)/periph/interrupt_controller.sv \
 	$(RTL)/periph/gpio_controller.sv \
+	$(RTL)/periph/pwm_controller.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
@@ -338,6 +339,7 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/periph/timer.sv \
 	$(RTL)/periph/interrupt_controller.sv \
 	$(RTL)/periph/gpio_controller.sv \
+	$(RTL)/periph/pwm_controller.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
@@ -467,7 +469,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -835,6 +837,25 @@ soc_gpio: soc_boot_lint
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
+# SoC-level PWM test (bead claude_verilog_test-f7vs.6 item 5). Exercises
+# pwm_controller (APB slave 8, 0x2000_B000) through the real fabric path —
+# CPU -> axi4_crossbar -> axi4_to_axilite -> axi_lite_interconnect ->
+# axil_to_apb -> apb_interconnect -- for the first time (test_pwm/tb_pwm.sv
+# drives the APB4 face directly). pwm_controller.sv is already part of
+# SOC_BOOT_SOURCES (no new source-list variable needed) and tb_soc_top.sv
+# already lints clean with the existing pwm_o port, so this reuses
+# soc_boot_lint as its hard prerequisite exactly like soc_gpio above.
+# Tests: boundary toggle (pwm_o free-runs at the configured period/duty once
+# channel 0 is enabled — no cocotb stimulus needed, unlike soc_gpio) and the
+# PWM -> interrupt_controller[6] -> CPU MEIP interrupt path end to end (CPU
+# actually takes the trap; PWM_IRQ_CLR + PWM_IRQ_EN=0 deassert it).
+soc_pwm: soc_boot_lint
+	$(MAKE) MODULE=test_soc_pwm TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
 # GPIO DRIVER test (bead claude_verilog_test-8qn4 item 2). Unlike soc_gpio
 # above (hand-assembled gpio_fw firmware proving the RTL through the
 # fabric), this suite proves sw/drivers/gpio.h -- the first GPIO driver
@@ -1028,6 +1049,7 @@ soc_all_ci: check-space
 	$(MAKE) soc_coherency
 	$(MAKE) soc_cpu_gpu
 	$(MAKE) soc_gpio
+	$(MAKE) soc_pwm
 	$(MAKE) soc_pll
 	$(MAKE) soc_multiclock
 	$(MAKE) soc_multiclock_reset
