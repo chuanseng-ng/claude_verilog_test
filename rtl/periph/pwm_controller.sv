@@ -329,12 +329,26 @@ module pwm_controller
             strb_expand[8*b +: 8] = strb[b] ? 8'hFF : 8'h00;
     endfunction
 
-    // Sliced to N_CH bits directly (rather than a full 32-bit temp) -- PWM_IRQ_STAT/CLR only
-    // ever carry N_CH meaningful bits, and a 32-bit clr_w would leave bits [31:N_CH] structurally
-    // unused, which Verilator -Wall flags (UNUSEDSIGNAL).
+    // The expanded strobe MUST land in a named net before being sliced.
+    //
+    // Writing `strb_expand(pstrb)[N_CH-1:0]` -- a part-select applied directly to a function
+    // call -- is legal SystemVerilog and Verilator accepts it, but it is NOT legal
+    // Verilog-2005. sv2v passes the construct through verbatim rather than lowering it, and
+    // yosys then rejects the generated file with "syntax error, unexpected '['". That breaks
+    // the CDC flow AND both PD flows (Sky130 and ASAP7 are both sv2v-fronted), while no cocotb
+    // suite can catch it, since Verilator consumes the SystemVerilog and never sees sv2v output.
+    //
+    // The 32-bit temp costs a local UNUSEDSIGNAL waiver for bits [31:N_CH] -- deliberately
+    // preferred over a portability break. strb_expand stays byte-for-byte identical to
+    // apb4_register_bank.sv / gpio_controller.sv rather than being narrowed to N_CH.
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic [31:0] strb_mask_w;
+    /* verilator lint_on  UNUSEDSIGNAL */
+    assign strb_mask_w = strb_expand(pstrb);
+
     logic [N_CH-1:0] clr_w;
     assign clr_w = (access_w && pwrite && is_irq_clr_addr_w) ?
-                   (pwdata[N_CH-1:0] & strb_expand(pstrb)[N_CH-1:0]) : {N_CH{1'b0}};
+                   (pwdata[N_CH-1:0] & strb_mask_w[N_CH-1:0]) : {N_CH{1'b0}};
 
     // =========================================================================
     // PWM_IRQ_STAT next-state — sticky per channel, SET WINS over a same-cycle
