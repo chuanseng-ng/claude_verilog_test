@@ -39,7 +39,8 @@ This restriction is due to Ubuntu's page size being 4 KB
 | 0x2000_9000 - 0x2000_9FFF  | 4 KB    | PLL2 Control (APB4) | Second PLL subsystem config/status, CPU-domain reference clock (`pll_apb_regs`, GH #92) |
 | 0x2000_A000 - 0x2000_AFFF  | 4 KB    | GPIO (APB4)         | 32-pin GPIO controller (`gpio_controller.sv`, Phase 6a) |
 | 0x2000_B000 - 0x2000_BFFF  | 4 KB    | PWM (APB4)          | 4-channel PWM controller (`pwm_controller.sv`, Phase 6a-2) |
-| 0x2000_C000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
+| 0x2000_C000 - 0x2000_CFFF  | 4 KB    | WDT (APB4)          | Watchdog timer with bark/bite (`watchdog_timer.sv`, Phase 6a-3) |
+| 0x2000_D000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
 | 0x3000_0000 - 0x7FFF_FFFF  | 1.25 GB | Reserved            | Future use                  |
 | 0x8000_0000 - 0xFFFF_FFFF  | 2 GB    | External Memory     | Off-chip memory/devices     |
 
@@ -47,8 +48,8 @@ This restriction is due to Ubuntu's page size being 4 KB
 > peripherals attach to a CPU-driven **AXI4-Lite control interconnect**
 > (`rtl/soc/axi_lite_interconnect.sv`) whose APB-bridge ring slot (slave 1,
 > `0x2000_2000-0x2000_AFFF`) fans out through `axil_to_apb` + `apb_interconnect`
-> into a genuine **APB4 sub-tree of 9 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2,
-> GPIO, PWM; `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_PWM). GPU/DMA control remain
+> into a genuine **APB4 sub-tree of 10 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2,
+> GPIO, PWM, WDT; `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_WDT). GPU/DMA control remain
 > AXI-Lite-direct ring slaves (0 and 2). APB3 also survives standalone on the
 > CPU debug slot (0x2000_0000–0FFF), unrelated to this APB4 sub-tree. Address
 > map is frozen in `rtl/soc/soc_periph_map_pkg.sv` (`decode_axil_slave()`);
@@ -335,6 +336,42 @@ only. `DUTY == 0` gives true 0%, `DUTY >= PERIOD` gives true 100%, and
 `PERIOD == 0` forces the output inactive and suppresses the period-wrap event
 entirely — see `rtl/periph/pwm_controller.sv` header for the full rationale.
 
+#### WDT Registers (Phase 6a-3)
+
+**Base address**: 0x2000_C000 — `rtl/periph/watchdog_timer.sv`, APB4, 32-bit down-counter.
+
+| Offset | Name          | Access | Description                                        |
+|:------:|:-------------:|:------:|:--------------------------------------------------:|
+| 0x000  | WDT_CTRL      | RW     | [0] enable, [1] `RST_EN` (reset value 0), [2] window-mode enable |
+| 0x004  | WDT_RELOAD    | RW     | Counter reload value, in prescaled ticks           |
+| 0x008  | WDT_COUNT     | RO     | Live down-counter; stores are ignored              |
+| 0x00C  | WDT_WINDOW    | RW     | Closed-window threshold; 0 disables the window check |
+| 0x010  | WDT_FEED      | WO     | Write `0x5A5A_C0DE` (all four byte strobes) to feed; any other value is rejected; reads 0 |
+| 0x014  | WDT_PRESCALE  | RW     | [15:0] `core_clk` divider; one tick = (PRESCALE+1) `core_clk` cycles |
+| 0x018  | WDT_STATUS    | RO     | [0] bark, [1] bite, [2] window violation — all sticky |
+| 0x01C  | WDT_IRQ_CLR   | W1C    | Write 1 to clear the matching `WDT_STATUS` bit; always reads 0 |
+
+**Bark and bite.** The first timeout is the *bark*: `WDT_STATUS[0]` sets, `irq_o` (level-held,
+`|WDT_STATUS[2:0]`) asserts into interrupt-controller bit 7, and the counter reloads for a second
+full period. A second timeout with no valid feed is the *bite*: the top-level output
+`wdt_rst_req_o` asserts and is **level-held until external reset** (W1C of `WDT_STATUS[1]` does not
+drop it, and bite is terminal — a later feed or enable does not revive it). A valid feed reloads the
+counter and clears the bark-to-bite escalation. Bark-to-bite is exactly `(PRESCALE+1)*RELOAD + 1`
+`core_clk` edges. `RELOAD == 0` while enabled fails toward firing (bark within a couple of edges).
+A window violation (valid feed while `COUNT > WINDOW`, with `CTRL[2]` set and `WINDOW != 0`) is a
+status bit only and never escalates to a bite.
+
+**`RST_EN` and the CPU-domain reset.** `wdt_rst_req_o` is asserted by a bite *regardless* of
+`WDT_CTRL.RST_EN`. `RST_EN` (reset value 0) gates only the internal reset path: when set, a bite
+also asserts `cpu_domain_rst_n`, through `cdc_reset_sync` (`u_cpu_wdt_rst_sync`, `core_clk` to
+`cpu_core_clk`), mirroring the PMU's `u_cpu_pmu_rst_sync`. It resets the **CPU domain only** —
+not the whole SoC, which would also reset the WDT itself and tear down the APB fabric
+mid-transaction — and it does **not** go through `pmu.sv`. The CPU stays in reset until an external
+reset, because the request is level-held. With `RST_EN == 0` (the default) the path is inert.
+
+Limitation: the WDT is clocked from `core_clk` through its prescaler. This SoC has no independent
+always-on oscillator, so a stuck or dead PLL cannot be barked at.
+
 ## Reset and Trap Vectors
 
 ### Reset Vector
@@ -428,7 +465,8 @@ Two interrupt lines reach the CPU (priority: **MEIP > MTIP**, per
 IRQ controller source bits (`N_SOURCES=12`, Phase 6, bead claude_verilog_test-f7vs.2):
 `{NPU[11], CRYPTO[10], I2C[9], TRNG[8], WDT[7], PWM[6], GPIO[5], GPU[4], DMA[3],
 TIMER[2]=0, SPI[1], UART[0]}`. Bit 6 (PWM) is live as of Phase 6a-2 (bead
-claude_verilog_test-f7vs.6); bits 7-11 remain tied 0 until their peripheral
+claude_verilog_test-f7vs.6) and bit 7 (WDT, bark and bite) as of Phase 6a-3 (bead
+claude_verilog_test-f7vs.7); bits 8-11 remain tied 0 until their peripheral
 lands. On a MEIP trap, software reads `IRQ_STATUS` (0x2000_6000 block) to disambiguate
 the peripheral source; bit priority within the controller does not reorder
 delivery — all enabled sources share the single MEIP line.

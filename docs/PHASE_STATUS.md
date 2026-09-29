@@ -366,7 +366,7 @@ per-item.
 | G4 | File-list checker + first `apb_interconnect` unit suite | — | `f7vs.4` | ✅ 2026-09-28 (PR #197) |
 | G5 | This section + de-staled Next Actions | — | `f7vs.5` | ✅ 2026-09-28 (PR #197) |
 | 6a-2 | PWM controller, 4 channels | 8 / 6 | `f7vs.6` | ✅ 2026-09-28 (RTL + 16/16 L1 + soc_pwm L2; `soc_all_ci` 279) |
-| 6a-3 | Watchdog timer | 9 / 7 | `f7vs.7` | ⏸️ Not started |
+| 6a-3 | Watchdog timer | 9 / 7 | `f7vs.7` | ✅ 2026-09-29 (RTL + 22/22 L1 + soc_wdt L2 incl. RST_EN reset path; `soc_all_ci` 303) |
 | 6a-4 | TRNG (portable LFSR entropy; RO source Sky130-only) | 10 / 8 | `f7vs.8` | ⏸️ Not started |
 | 6a-5 | I2C master controller | 11 / 9 | `f7vs.9` | ⏸️ Not started |
 | 6b | CRYPTO — AES-128 (ECB+CTR) + SHA-256 | 12 / 10 | `f7vs.10` | ⏸️ Not started |
