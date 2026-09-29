@@ -174,6 +174,18 @@ PWM_SOURCES = \
 	$(RTL)/periph/pwm_controller.sv \
 	$(SOC_DIR)/tb_pwm.sv
 
+# Phase 6a-3 (bead claude_verilog_test-f7vs.7): standalone watchdog_timer unit-test sources.
+# apb4_register_bank (register file) + watchdog_timer + standalone TB. Like PWM there is no
+# cdc_2ff_sync here -- the WDT has no async input pins (clk/rst_n/APB4 only; irq_o and
+# wdt_rst_req_o are outputs), so no CDC in this module -- docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7
+# "6a-3 -- WDT". watchdog_timer.sv does not exist yet as of this line's authorship (strict TDD,
+# step 2 of Sec.9's workflow); the wdt/wdt_lint targets below are expected to fail to elaborate
+# until it does.
+WDT_SOURCES = \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/periph/watchdog_timer.sv \
+	$(SOC_DIR)/tb_wdt.sv
+
 # Phase 6 groundwork (bead claude_verilog_test-f7vs.4): standalone apb_interconnect
 # unit-test sources. apb_interconnect is a single, self-contained combinational module --
 # no other RTL package or CDC primitive needed.
@@ -469,7 +481,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -656,6 +668,20 @@ pwm_lint:
 pwm: pwm_lint
 	$(MAKE) MODULE=test_pwm TOPLEVEL=tb_pwm \
 		VERILOG_SOURCES="$(PWM_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
+# Phase 6a-3 (bead claude_verilog_test-f7vs.7): watchdog_timer lint + sim.
+# lint only: apb4_register_bank + watchdog_timer + standalone TB wrapper.
+# -Wno-SYNCASYNCNET: same per-target convention as the gpio/pwm targets above.
+wdt_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
+		--top-module tb_wdt \
+		$(WDT_SOURCES)
+
+wdt: wdt_lint
+	$(MAKE) MODULE=test_wdt TOPLEVEL=tb_wdt \
+		VERILOG_SOURCES="$(WDT_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1040,6 +1066,7 @@ soc_all_ci: check-space
 	$(MAKE) pmu
 	$(MAKE) gpio
 	$(MAKE) pwm
+	$(MAKE) wdt
 	$(MAKE) apb_interconnect
 	$(MAKE) async_axi_fifo
 	$(MAKE) apb_cdc_bridge
