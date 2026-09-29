@@ -56,7 +56,10 @@ module tb_wdt #(
 
     // -- Interrupt and reset-request outputs (both level-held, never pulses) -----
     output logic irq_o,
-    output logic wdt_rst_req_o
+    output logic wdt_rst_req_o,
+    // RST_EN (WDT_CTRL[1]) exported by the DUT for soc_top's CPU-domain reset
+    // AND-in. Re-exported here so the suite can observe it directly.
+    output logic rst_en_o
 );
 
     watchdog_timer #(
@@ -78,7 +81,8 @@ module tb_wdt #(
 
         // Outputs
         .irq_o        (irq_o),
-        .wdt_rst_req_o(wdt_rst_req_o)
+        .wdt_rst_req_o(wdt_rst_req_o),
+        .rst_en_o     (rst_en_o)
     );
 
 endmodule : tb_wdt

@@ -96,7 +96,16 @@ module watchdog_timer
     // Interrupt and reset request -- both level-held, never pulses
     // =========================================================================
     output logic irq_o,
-    output logic wdt_rst_req_o
+    output logic wdt_rst_req_o,
+
+    // WDT_CTRL[1] (RST_EN), exported for the SoC-level CPU-domain reset AND-in
+    // in soc_top. It is NOT consumed inside this module: a bite asserts
+    // wdt_rst_req_o regardless of RST_EN, and RST_EN gates only that integration
+    // path. Exported as a real port because cross-module hierarchical references
+    // are not synthesisable through sv2v/yosys, and the alternative -- soc_top
+    // reconstructing this bit by snooping our own APB face -- is duplicated state
+    // with no structural link to the register it mirrors.
+    output logic rst_en_o
 );
 
     // Elaboration-time guard: eight registers need at least 3 word-address bits, and the
@@ -206,11 +215,12 @@ module watchdog_timer
 
     // CTRL[1] (RST_EN) is stored and read back, but consumed only by the SoC-level reset AND-in
     // in soc_top (a later integration step); nothing in this module reads it.
-    /* verilator lint_off UNUSEDSIGNAL */
     logic rst_en_w;
-    /* verilator lint_on  UNUSEDSIGNAL */
     assign en_w        = regs_o[REG_WDT_CTRL][0];
     assign rst_en_w    = regs_o[REG_WDT_CTRL][1];
+    // Exported rather than stranded: the UNUSEDSIGNAL waiver this declaration
+    // used to carry existed only because rst_en_w had no way out of the module.
+    assign rst_en_o    = rst_en_w;
     assign win_en_w    = regs_o[REG_WDT_CTRL][2];
     assign reload_w    = regs_o[REG_WDT_RELOAD];
     assign window_w    = regs_o[REG_WDT_WINDOW];

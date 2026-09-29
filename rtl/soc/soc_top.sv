@@ -30,6 +30,7 @@
 //                                      PLL, GH #92; output unconsumed until GH #93)
 //     APB_GPIO=7  @ 0x2000_A000–AFFF  gpio_controller (core_clk domain; Phase 6a, bead claude_verilog_test-ckc)
 //     APB_PWM=8   @ 0x2000_B000–BFFF  pwm_controller (core_clk domain; Phase 6a-2, bead claude_verilog_test-f7vs.6)
+//     APB_WDT=9   @ 0x2000_C000–CFFF  watchdog_timer (core_clk domain; Phase 6a-3, bead claude_verilog_test-f7vs.7)
 //
 //   Debug plane   : APB3 debug slave exposed at top-level ports, bridged into
 //     the CPU domain by apb_cdc_bridge (u_apb_dbg_cdc, GH #95) — see the
@@ -92,6 +93,10 @@
 //           detailed ordering note above u_cpu_clk_dis_sync below.
 //         * pmu_cpu_rst_n (core_clk, ANDed into cpu_domain_rst_n): cdc_reset_sync
 //           clocked by cpu_core_clk.
+//         * wdt_cpu_rst_req (core_clk, bite AND WDT_CTRL.RST_EN, ANDed into
+//           cpu_domain_rst_n ONLY): cdc_reset_sync clocked by cpu_core_clk, the
+//           same structure as pmu_cpu_rst_n above. Phase 6a-3, bead
+//           claude_verilog_test-f7vs.7 — see the WDT reset-path block below.
 //         * pmu_cpu_iso_en (core_clk, clamps the CPU->fabric handshake):
 //           cdc_2ff_sync clocked by cpu_core_clk; the clamp itself now lives
 //           at the async_axi_fifo s_* (CPU-domain) face — see clamp-scope
@@ -149,8 +154,9 @@
 //                  pwm_irq[6], gpio_irq[5], gpu_irq_o[4], dma_irq[3], timer_irq[2],
 //                  spi_irq[1], uart_irq[0]}
 //     bit 6 (PWM) is now live (Phase 6a-2, bead claude_verilog_test-f7vs.6).
-//     bits 7-11 remain pre-allocated (Phase 6, bead claude_verilog_test-f7vs.2) and
-//     tied 1'b0 until WDT/TRNG/I2C/CRYPTO/NPU land, respectively.
+//     bit 7 (WDT) is now live (Phase 6a-3, bead claude_verilog_test-f7vs.7).
+//     bits 8-11 remain pre-allocated (Phase 6, bead claude_verilog_test-f7vs.2) and
+//     tied 1'b0 until TRNG/I2C/CRYPTO/NPU land, respectively.
 //     interrupt_controller.irq_o → CPU ext_irq_i (MEIP)
 //     timer.irq_o                → CPU timer_irq_i (MTIP, direct)
 //
@@ -222,7 +228,7 @@ module soc_top
     // ── PWM (Phase 6a-2, bead f7vs.6 — tied off until the peripheral lands) ──
     output logic [3:0]  pwm_o,
 
-    // ── Watchdog (Phase 6a-3, bead f7vs.7 — tied off until the peripheral lands) ──
+    // ── Watchdog (Phase 6a-3, bead f7vs.7) — level-held bite request ──
     output logic        wdt_rst_req_o,
 
     // ── I2C (Phase 6a-5, bead f7vs.9 — tied off until the peripheral lands) ──
@@ -639,6 +645,66 @@ module soc_top
     );
 
     // =========================================================================
+    // Phase 6a-3 (bead claude_verilog_test-f7vs.7): WDT bite -> CPU-domain reset.
+    //
+    // The first peripheral output in this SoC that feeds a RESET. Per
+    // docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 (6a-3), when WDT_CTRL.RST_EN == 1 a
+    // bite asserts the CPU-domain reset, and ONLY the CPU-domain reset:
+    //   * NOT the whole SoC — that would also reset the WDT itself (a
+    //     self-clearing pulse no cocotb test can scoreboard) and tear down the
+    //     APB fabric mid-transaction. The CPU is what hung.
+    //   * NOT through pmu.sv — its per-domain FSM only re-samples its target
+    //     while settled at ON/OFF, so an emergency request would need a new
+    //     priority path through verified, UPF-sequenced RTL (see the bead 2k8
+    //     rationale above). Instead it takes the same soc_top-level AND-in point
+    //     the PMU reset uses, through its own cdc_reset_sync.
+    //
+    // RST_EN resets to 0 => wdt_cpu_rst_req_q is constant 0 => the sync's
+    // rst_n_i is constant 1 => wdt_cpu_rst_n_cpu_sync is constant 1 after its
+    // 2-edge fill following the (synchronous) reset of wdt_cpu_rst_req_q, so
+    // cpu_domain_rst_n degenerates to its pre-WDT value.
+    // wdt_rst_req_o (the top-level pin) is NOT gated by RST_EN: a bite asserts it
+    // regardless; RST_EN gates only this internal path.
+    //
+    // wdt_cpu_rst_req_q is a REGISTERED AND (not a bare `bite & rst_en`): it is
+    // the async-assert source of a cdc_reset_sync, so it must be glitch-free, and
+    // a combinational AND of two flops is not. Cost: one core_clk of latency on a
+    // once-per-lifetime, level-held (until external reset) event.
+    //
+    // The CPU clock must keep running while this reset is asserted, otherwise
+    // u_cpu's synchronous reset never executes. It does: cpu_gated_clk_en
+    // (below) is gated only by the PMU terms, deliberately NOT by this one.
+    //
+    // ---- RST_EN comes from a real port ---------------------------------------
+    // watchdog_timer exports WDT_CTRL[1] as rst_en_o, and this block consumes
+    // that port directly. An earlier revision reconstructed the bit here by
+    // snooping the WDT's own APB face, which was correct but was duplicated
+    // state with no structural link to the register it mirrored: the two could
+    // only stay in step for as long as someone kept the snoop aligned with
+    // apb4_register_bank's write rule by hand, nothing tested the equivalence,
+    // and a silent divergence would mis-arm a CPU-domain reset. Bead 6o8w's
+    // proposed change to that shared write rule would have altered it for all
+    // ten APB peripherals at once. Replaced with the port (bead f7vs.14).
+    // =========================================================================
+    logic wdt_rst_en_w;      // driven by u_wdt.rst_en_o (real port, not a shadow)
+    logic wdt_cpu_rst_req_q;
+    always_ff @(posedge core_clk) begin
+        if (!core_rst_n) wdt_cpu_rst_req_q <= 1'b0;
+        else             wdt_cpu_rst_req_q <= wdt_rst_req_o & wdt_rst_en_w;
+    end
+
+    logic wdt_cpu_rst_n_cpu_sync;
+    cdc_reset_sync #(
+        .STAGES (2)
+    ) u_cpu_wdt_rst_sync (
+        .clk_i       (cpu_core_clk),
+        .rst_n_i     (~wdt_cpu_rst_req_q),
+        .scanmode_i  (SCAN_MODE_TIE_OFF),
+        .scan_rst_ni (SCAN_RST_TIE_OFF),
+        .rst_n_o     (wdt_cpu_rst_n_cpu_sync)
+    );
+
+    // =========================================================================
     // IRQ signals
     // =========================================================================
     // Declared here (ahead of u_ext_irq_sync / u_timer_irq_sync below, which
@@ -665,7 +731,8 @@ module soc_top
     logic i2c_irq;
     logic crypto_irq;
     logic npu_irq;
-    assign wdt_irq    = 1'b0;  // tie removed when WDT lands (6a-3)
+    // wdt_irq (bit 7) landed in Phase 6a-3 (bead claude_verilog_test-f7vs.7) — it is
+    // now driven by u_wdt below, not tied here.
     assign trng_irq   = 1'b0;  // tie removed when TRNG lands (6a-4)
     assign i2c_irq    = 1'b0;  // tie removed when I2C lands (6a-5)
     assign crypto_irq = 1'b0;  // tie removed when CRYPTO lands (6b)
@@ -679,7 +746,8 @@ module soc_top
     // above. The two I2C inputs are unused until I2C lands.
     // pwm_o landed in Phase 6a-2 (bead claude_verilog_test-f7vs.6) — it is now
     // driven by u_pwm below, not tied here.
-    assign wdt_rst_req_o = 1'b0;      // tie removed when WDT lands (6a-3)
+    // wdt_rst_req_o landed in Phase 6a-3 (bead claude_verilog_test-f7vs.7) — it is
+    // now driven by u_wdt below, not tied here.
     assign i2c_scl_o     = 1'b0;      // tie removed when I2C lands (6a-5)
     assign i2c_scl_oe_o  = 1'b0;      // tie removed when I2C lands (6a-5)
     assign i2c_sda_o     = 1'b0;      // tie removed when I2C lands (6a-5)
@@ -721,7 +789,8 @@ module soc_top
     // CPU domain: recomposed entirely from CPU-domain-synchronised sources —
     // cpu_core_rst_n (this domain's own PLL-lock reset) ANDed with
     // pmu_cpu_rst_n_cpu_sync (the PMU's per-domain reset, synchronised
-    // above). core_rst_n does NOT appear in this expression any more; the CPU
+    // above) and wdt_cpu_rst_n_cpu_sync (the WDT bite, gated by RST_EN and
+    // synchronised above; Phase 6a-3, bead claude_verilog_test-f7vs.7). core_rst_n does NOT appear in this expression any more; the CPU
     // domain reset is now fully rooted in its own clock domain.
     //
     // GPU/fabric domain: left UNCHANGED (core_rst_n & pmu_gpu_rst_n, no new
@@ -750,7 +819,7 @@ module soc_top
     // instantiation below.
     // =========================================================================
     logic cpu_domain_rst_n, gpu_domain_rst_n;
-    assign cpu_domain_rst_n = cpu_core_rst_n & pmu_cpu_rst_n_cpu_sync;
+    assign cpu_domain_rst_n = cpu_core_rst_n & pmu_cpu_rst_n_cpu_sync & wdt_cpu_rst_n_cpu_sync;
     assign gpu_domain_rst_n = core_rst_n & pmu_gpu_rst_n;
 
     // ISO_CPU / ISO_GPU clamp scope (functional isolation, `-location parent`,
@@ -1787,6 +1856,31 @@ module soc_top
     );
 
     // =========================================================================
+    // WDT — APB slave (apb_psel[APB_WDT]), Phase 6a-3 (bead claude_verilog_test-f7vs.7)
+    // core_clk domain. irq_o -> interrupt_controller bit 7; wdt_rst_req_o is the
+    // top-level bite pin AND (via RST_EN) the CPU-domain reset source, see
+    // u_cpu_wdt_rst_sync above.
+    // =========================================================================
+    watchdog_timer #(
+        .ADDR_W (12)
+    ) u_wdt (
+        .clk           (core_clk),
+        .rst_n         (core_rst_n),
+        .psel          (apb_psel    [APB_WDT]),
+        .penable       (apb_penable [APB_WDT]),
+        .pwrite        (apb_pwrite  [APB_WDT]),
+        .paddr         (apb_paddr   [APB_WDT][11:0]),
+        .pwdata        (apb_pwdata  [APB_WDT]),
+        .pstrb         (apb_pstrb   [APB_WDT]),
+        .prdata        (apb_prdata  [APB_WDT]),
+        .pready        (apb_pready  [APB_WDT]),
+        .pslverr       (apb_pslverr [APB_WDT]),
+        .irq_o         (wdt_irq),
+        .wdt_rst_req_o (wdt_rst_req_o),
+        .rst_en_o      (wdt_rst_en_w)
+    );
+
+    // =========================================================================
     // Interrupt controller — APB slave (apb_psel[APB_IRQ])
     // irq_src_i[11:0] = {NPU[11], CRYPTO[10], I2C[9], TRNG[8], WDT[7], PWM[6],
     //                     GPIO[5], GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}
@@ -1794,8 +1888,9 @@ module soc_top
     // too would double-count the event.
     // Phase 6 (bead claude_verilog_test-f7vs.2): N_SOURCES pre-allocated 6 -> 12;
     // bit 6 (PWM) is now driven by u_pwm above (Phase 6a-2, bead
-    // claude_verilog_test-f7vs.6); bits 7-11 (WDT/TRNG/I2C/CRYPTO/NPU) remain
-    // tied 1'b0 above until each peripheral lands (6a-3 .. 6c).
+    // claude_verilog_test-f7vs.6); bit 7 (WDT) by u_wdt above (Phase 6a-3, bead
+    // claude_verilog_test-f7vs.7); bits 8-11 (TRNG/I2C/CRYPTO/NPU) remain
+    // tied 1'b0 above until each peripheral lands (6a-4 .. 6c).
     // =========================================================================
     interrupt_controller #(
         .ADDR_W    (12),
