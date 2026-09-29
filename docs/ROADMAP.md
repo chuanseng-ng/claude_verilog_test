@@ -411,7 +411,7 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 | GPIO controller | `rtl/periph/gpio_controller.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |  ← **RTL landed** (bead `ckc`)
 | I2C controller | `rtl/periph/i2c_controller.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |
 | PWM controller | `rtl/periph/pwm_controller.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |  ← **RTL landed** (bead `f7vs.6`)
-| Watchdog timer | `rtl/periph/watchdog_timer.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |
+| Watchdog timer | `rtl/periph/watchdog_timer.sv` | ✅ 75 MHz | ✅ 400 MHz | ✅ 1 GHz |  ← **RTL landed** (bead `f7vs.7`)
 | TRNG | `rtl/periph/trng.sv` | ✅ RTL portable | ✅ RTL portable | ✅ RTL portable |
 
 Note (corrected 2026-09-28, bead `f7vs.1`): the TRNG **RTL is fully portable**. Sky130-exclusivity
