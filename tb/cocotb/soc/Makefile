@@ -299,6 +299,8 @@ PLL_SOURCES = \
 	$(RTL)/periph/gpio_controller.sv \
 	$(RTL)/periph/pwm_controller.sv \
 	$(RTL)/periph/watchdog_timer.sv \
+	$(RTL)/periph/trng_lfsr_entropy.sv \
+	$(RTL)/periph/trng.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
@@ -371,6 +373,8 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/periph/gpio_controller.sv \
 	$(RTL)/periph/pwm_controller.sv \
 	$(RTL)/periph/watchdog_timer.sv \
+	$(RTL)/periph/trng_lfsr_entropy.sv \
+	$(RTL)/periph/trng.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
@@ -500,7 +504,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -933,6 +937,22 @@ soc_wdt: soc_boot_lint
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
+# SoC-level TRNG test (bead claude_verilog_test-f7vs.8 step 5). Exercises trng (APB slave 10,
+# 0x2000_D000) through the real fabric path — CPU -> axi4_crossbar -> axi4_to_axilite ->
+# axi_lite_interconnect -> axil_to_apb -> apb_interconnect -- for the first time (test_trng/
+# tb_trng.sv drives the APB4 face directly), plus the trng -> interrupt_controller[8] -> CPU MEIP
+# interrupt path. One test / one hand-assembled image (trng_fw/gen_trng_hex.py, no cross
+# toolchain — CI-safe): polled phase with the popped words checked value-exact against
+# tb/models/trng_lfsr_model.py and TRNG_STATUS[3] (INSECURE) read back, then an interrupt-driven
+# phase. trng.sv + trng_lfsr_entropy.sv are already in SOC_BOOT_SOURCES and tb_soc_top.sv is
+# unchanged (TRNG adds no top-level pins), so this reuses soc_boot_lint exactly like soc_wdt above.
+soc_trng: soc_boot_lint
+	$(MAKE) MODULE=test_soc_trng TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
 # GPIO DRIVER test (bead claude_verilog_test-8qn4 item 2). Unlike soc_gpio
 # above (hand-assembled gpio_fw firmware proving the RTL through the
 # fabric), this suite proves sw/drivers/gpio.h -- the first GPIO driver
@@ -1130,6 +1150,7 @@ soc_all_ci: check-space
 	$(MAKE) soc_gpio
 	$(MAKE) soc_pwm
 	$(MAKE) soc_wdt
+	$(MAKE) soc_trng
 	$(MAKE) soc_pll
 	$(MAKE) soc_multiclock
 	$(MAKE) soc_multiclock_reset

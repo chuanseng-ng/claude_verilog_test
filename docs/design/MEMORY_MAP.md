@@ -40,16 +40,17 @@ This restriction is due to Ubuntu's page size being 4 KB
 | 0x2000_A000 - 0x2000_AFFF  | 4 KB    | GPIO (APB4)         | 32-pin GPIO controller (`gpio_controller.sv`, Phase 6a) |
 | 0x2000_B000 - 0x2000_BFFF  | 4 KB    | PWM (APB4)          | 4-channel PWM controller (`pwm_controller.sv`, Phase 6a-2) |
 | 0x2000_C000 - 0x2000_CFFF  | 4 KB    | WDT (APB4)          | Watchdog timer with bark/bite (`watchdog_timer.sv`, Phase 6a-3) |
-| 0x2000_D000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
+| 0x2000_D000 - 0x2000_DFFF  | 4 KB    | TRNG (APB4)         | True-random-number generator; LFSR entropy arm by default, always flags `INSECURE` (`trng.sv`, Phase 6a-4) |
+| 0x2000_E000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
 | 0x3000_0000 - 0x7FFF_FFFF  | 1.25 GB | Reserved            | Future use                  |
 | 0x8000_0000 - 0xFFFF_FFFF  | 2 GB    | External Memory     | Off-chip memory/devices     |
 
 > **Phase 5 peripheral ring (APB migration PR-7, updated GH #92):**
 > peripherals attach to a CPU-driven **AXI4-Lite control interconnect**
 > (`rtl/soc/axi_lite_interconnect.sv`) whose APB-bridge ring slot (slave 1,
-> `0x2000_2000-0x2000_AFFF`) fans out through `axil_to_apb` + `apb_interconnect`
-> into a genuine **APB4 sub-tree of 10 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2,
-> GPIO, PWM, WDT; `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_WDT). GPU/DMA control remain
+> `0x2000_2000-0x2001_0FFF`) fans out through `axil_to_apb` + `apb_interconnect`
+> into a genuine **APB4 sub-tree of 11 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2,
+> GPIO, PWM, WDT, TRNG; `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_TRNG). GPU/DMA control remain
 > AXI-Lite-direct ring slaves (0 and 2). APB3 also survives standalone on the
 > CPU debug slot (0x2000_0000–0FFF), unrelated to this APB4 sub-tree. Address
 > map is frozen in `rtl/soc/soc_periph_map_pkg.sv` (`decode_axil_slave()`);
@@ -372,6 +373,42 @@ reset, because the request is level-held. With `RST_EN == 0` (the default) the p
 Limitation: the WDT is clocked from `core_clk` through its prescaler. This SoC has no independent
 always-on oscillator, so a stuck or dead PLL cannot be barked at.
 
+#### TRNG Registers (Phase 6a-4)
+
+**Base address**: 0x2000_D000 — `rtl/periph/trng.sv`, APB4, 4-deep entropy FIFO. **No top-level
+pins**: the entropy source is an `` `ifdef``-swapped sub-module (`trng_lfsr_entropy.sv` by default,
+`trng_ro_sky130.sv` under `TRNG_RO_SKY130`), not a port.
+
+| Offset | Name          | Access | Description                                        |
+|:------:|:-------------:|:------:|:--------------------------------------------------:|
+| 0x000  | TRNG_CTRL     | RW     | [0] enable, [1] IRQ enable, [5:2] FIFO threshold   |
+| 0x004  | TRNG_STATUS   | RO     | [0] data ready, [1] FIFO full, [2] `health_fail` (sticky), [3] `INSECURE` |
+| 0x008  | TRNG_DATA     | RO     | Head of the entropy FIFO; a read **pops** one 32-bit word (read-snoop) |
+| 0x00C  | TRNG_SEED     | RW     | LFSR seed, reset `0xACE1_2345`; sampled at the `CTRL.EN` 0-to-1 edge |
+| 0x010  | TRNG_IRQ_CLR  | WO     | Write 1 to bit 2 to clear `STATUS.health_fail`; reads 0 |
+
+`N_REGS = 8`; 0x014-0x01C are reserved and read 0. Stores to `TRNG_STATUS` and `TRNG_DATA` are
+ignored.
+
+**`INSECURE` (`STATUS[3]`).** The default build is a deterministic generator: three LFSRs
+(31/29/23-bit) XORed into a raw sample, then a von Neumann debiaser. Every word is a pure function
+of `TRNG_SEED` (`tb/models/trng_lfsr_model.py` is the bit-exact model), so it is **not
+cryptographic**. `STATUS[3]` reads 1 in that build and cannot be cleared or masked; it is the only
+marker that distinguishes it from real entropy behind a register named TRNG. Under
+`TRNG_RO_SKY130` it reads 0.
+
+**Sessions and the FIFO.** A `CTRL.EN` 0-to-1 edge starts a session: the LFSRs load from
+`TRNG_SEED`, the FIFO is cleared. Writing `TRNG_SEED` at any other time only updates the register.
+Reading `TRNG_DATA` on an empty FIFO returns 0 with no error; `STATUS.data_ready` is the only
+validity indicator. Backpressure is a stall, not a drop: while the FIFO is full the entropy arm is
+not clocked, so the popped sequence depends on the seed alone, not on read timing.
+
+**Health test and IRQ.** A NIST SP 800-90B repetition-count test (cutoff 21) runs on the raw,
+pre-debias samples. A trip sets sticky `STATUS[2]`, flushes the FIFO and halts production until a
+W1C of `TRNG_IRQ_CLR[2]`. `irq_o = CTRL[1] & ((fifo_level >= max(CTRL[5:2],1)) | health_fail)` and is
+level-held into interrupt-controller bit 8; it drops by itself once software pops the FIFO below
+the threshold.
+
 ## Reset and Trap Vectors
 
 ### Reset Vector
@@ -465,8 +502,9 @@ Two interrupt lines reach the CPU (priority: **MEIP > MTIP**, per
 IRQ controller source bits (`N_SOURCES=12`, Phase 6, bead claude_verilog_test-f7vs.2):
 `{NPU[11], CRYPTO[10], I2C[9], TRNG[8], WDT[7], PWM[6], GPIO[5], GPU[4], DMA[3],
 TIMER[2]=0, SPI[1], UART[0]}`. Bit 6 (PWM) is live as of Phase 6a-2 (bead
-claude_verilog_test-f7vs.6) and bit 7 (WDT, bark and bite) as of Phase 6a-3 (bead
-claude_verilog_test-f7vs.7); bits 8-11 remain tied 0 until their peripheral
+claude_verilog_test-f7vs.6), bit 7 (WDT, bark and bite) as of Phase 6a-3 (bead
+claude_verilog_test-f7vs.7) and bit 8 (TRNG) as of Phase 6a-4 (bead
+claude_verilog_test-f7vs.8); bits 9-11 remain tied 0 until their peripheral
 lands. On a MEIP trap, software reads `IRQ_STATUS` (0x2000_6000 block) to disambiguate
 the peripheral source; bit priority within the controller does not reorder
 delivery — all enabled sources share the single MEIP line.
