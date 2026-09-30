@@ -501,6 +501,29 @@ CDC_STRICT  ?= 0
 # list; $(sort) also de-dupes if a future edit reintroduces an overlap.
 CDC_SOURCES := $(sort $(SOC_TOP_SOURCES))
 
+# sv2v-parse: Verilog-2005 portability gate (bead f7vs.12).
+# Converts the SoC sources with sv2v and parses + elaborates the result with
+# yosys. No CDC analysis, no synthesis -- seconds once the tools are cached.
+#
+# Exists because Verilator accepts constructs sv2v mistranslates, so the entire
+# cocotb regression can be green while the design is unsynthesisable. A real
+# instance shipped in PWM and broke CI (PR #198, fixed in 2c5f351); it would
+# equally have broken both PD flows, which are sv2v-fronted.
+#
+# The flist is regenerated from $(CDC_SOURCES) on every run, deliberately: a
+# stale list silently omits new modules and the check then passes without
+# examining them.
+.PHONY: sv2v-parse
+sv2v-parse:
+	@bash $(PROJ_ROOT)/tools/cdc/fetch_cdc_tools.sh --with-yosys
+	@mkdir -p $(CDC_DIR)
+	@printf '%s\n' $(CDC_SOURCES) > $(CDC_DIR)/soc_top.flist
+	@CDC_CACHE="$(CDC_DIR)" \
+	 CDC_FLIST="$(CDC_DIR)/soc_top.flist" \
+	 CDC_INCDIRS="$(RTL_DIR)/cpu/core $(RTL_DIR)/mem $(RTL_DIR)/soc $(RTL_DIR)/gpu $(RTL_DIR)/periph" \
+	 CDC_TOP=soc_top \
+	 bash $(PROJ_ROOT)/tools/cdc/run_sv2v_parse.sh
+
 .PHONY: cdc
 cdc:
 	@bash $(PROJ_ROOT)/tools/cdc/fetch_cdc_tools.sh

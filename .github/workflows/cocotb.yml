@@ -115,6 +115,24 @@ jobs:
       - name: Check peripheral file-list membership
         run: python3 tools/verif/check_periph_filelists.py
 
+      # Verilog-2005 portability gate (bead f7vs.12). Converts the SoC sources
+      # with sv2v and parses + elaborates the result with yosys -- no CDC
+      # analysis, no synthesis.
+      #
+      # This class is INVISIBLE to the cocotb regression below: Verilator reads
+      # the SystemVerilog directly and never sees sv2v's output, so the whole
+      # suite can be green while the design is unsynthesisable. A real instance
+      # shipped in PWM and broke CI (PR #198, fixed in 2c5f351); it would
+      # equally have broken both PD flows, which are sv2v-fronted.
+      #
+      # The "CDC check" job already catches this incidentally, but it costs ~5
+      # minutes and reports a syntax error under a job named for clock domains.
+      # This fails in seconds and says what is actually wrong.
+      #
+      # Negative-controlled: reintroducing the PWM construct makes this exit 2.
+      - name: sv2v / Verilog-2005 portability gate
+        run: nix develop --command make -C sim sv2v-parse
+
       # soc_all_ci is the CI-runnable regression: every suite that needs nothing
       # beyond this repo + the nix sim devshell. It builds its own source list, so
       # it is unaffected by the tb/cocotb/cpu breakage above.
