@@ -889,6 +889,14 @@ async def test_trng_seed_write_while_enabled(dut):
     )
 
     # (b) disable retains, enable flushes + reseeds
+    #
+    # PRECONDITION: _collect() above drained every word it produced, so the FIFO
+    # is empty right now. Asserting "disable retains buffered words" against an
+    # empty FIFO tests nothing and cannot pass -- the next word does not complete
+    # for ~90 more raw samples. Wait for a word to actually be BUFFERED first,
+    # then disable, then assert it survived. The assertion itself is unchanged;
+    # this only establishes the precondition it always needed.
+    await _wait_status(dut, ST_READY, ST_READY, 4000)
     await _write(bfm, TRNG_CTRL, _ctrl(en=0))
     await ClockCycles(dut.clk, 20)
     assert (await _peek(dut, TRNG_STATUS)) & ST_READY, "D6: disabling must retain buffered words"
