@@ -186,6 +186,23 @@ WDT_SOURCES = \
 	$(RTL)/periph/watchdog_timer.sv \
 	$(SOC_DIR)/tb_wdt.sv
 
+# Phase 6a-4 (bead claude_verilog_test-f7vs.8): standalone trng unit-test sources.
+# apb4_register_bank (register file) + trng + its DEFAULT (LFSR) entropy sub-module + standalone
+# TB. trng.sv selects its entropy source with `ifdef TRNG_RO_SKY130 INSIDE the module; this target
+# does NOT define that macro, so trng_lfsr_entropy.sv is the arm under test and
+# trng_ro_sky130.sv is deliberately absent (it is a Sky130-only analog stub, exempted in
+# tools/verif/check_periph_filelists.py's EXEMPT map -- never add it to a file list). No
+# cdc_2ff_sync here: the LFSR arm has no asynchronous input (clk/rst_n/APB4 only; irq_o is an
+# output) -- docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-4 -- TRNG". trng.sv and
+# trng_lfsr_entropy.sv do not exist yet as of this line's authorship (strict TDD, step 2 of
+# Sec.9's workflow); the trng/trng_lint targets below are expected to fail to elaborate until they
+# do.
+TRNG_SOURCES = \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/periph/trng_lfsr_entropy.sv \
+	$(RTL)/periph/trng.sv \
+	$(SOC_DIR)/tb_trng.sv
+
 # Phase 6 groundwork (bead claude_verilog_test-f7vs.4): standalone apb_interconnect
 # unit-test sources. apb_interconnect is a single, self-contained combinational module --
 # no other RTL package or CDC primitive needed.
@@ -483,7 +500,7 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -684,6 +701,20 @@ wdt_lint:
 wdt: wdt_lint
 	$(MAKE) MODULE=test_wdt TOPLEVEL=tb_wdt \
 		VERILOG_SOURCES="$(WDT_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
+# Phase 6a-4 (bead claude_verilog_test-f7vs.8): trng lint + sim.
+# lint only: apb4_register_bank + trng_lfsr_entropy + trng + standalone TB wrapper.
+# -Wno-SYNCASYNCNET: same per-target convention as the gpio/pwm/wdt targets above.
+trng_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
+		--top-module tb_trng \
+		$(TRNG_SOURCES)
+
+trng: trng_lint
+	$(MAKE) MODULE=test_trng TOPLEVEL=tb_trng \
+		VERILOG_SOURCES="$(TRNG_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1087,6 +1118,7 @@ soc_all_ci: check-space
 	$(MAKE) gpio
 	$(MAKE) pwm
 	$(MAKE) wdt
+	$(MAKE) trng
 	$(MAKE) apb_interconnect
 	$(MAKE) async_axi_fifo
 	$(MAKE) apb_cdc_bridge
