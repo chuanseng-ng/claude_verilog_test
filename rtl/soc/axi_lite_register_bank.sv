@@ -13,7 +13,9 @@
 //     a register read-only to software (status registers).
 //   * HW writes (hw_wen_i / hw_wdata_i) bypass WMASK entirely — peripheral logic
 //     pushes status (e.g. UART RX data, FIFO levels, IRQ pending) directly.  On a
-//     same-cycle SW+HW collision the SW write wins (control intent is explicit).
+//     same-cycle SW+HW collision SW wins on the bits inside WMASK and HW wins on the
+//     bits outside it (bead 6o8w), so a fully-masked (WMASK=0) register is HW-owned
+//     and a store to it cannot drop a same-cycle HW update.
 //   * regs_o exposes current values so peripheral logic reads control bits.
 //   * Out-of-range word addresses complete with OKAY: writes are dropped, reads
 //     return 0.  (A 4 KB slot holds far more words than N_REGS.)
@@ -153,7 +155,12 @@ module axi_lite_register_bank #(
                                 w_now ? s_axil_wstrb : wstrb_q;
                             automatic logic [31:0]     m  =
                                 WMASK[ci] & strb_expand(ws);
-                            regs[ci] <= (regs[ci] & ~m) | (wd & m);
+                            // SW owns the WMASK bits; HW owns the rest.  Folding this
+                            // cycle's HW write into the base keeps a same-edge HW update
+                            // from being clobbered with stale data (bead 6o8w).
+                            automatic logic [31:0]     base =
+                                hw_wen_i[ci] ? hw_wdata_i[ci] : regs[ci];
+                            regs[ci] <= (base & ~m) | (wd & m);
                         end
                         wr_state    <= WR_RESP;
                         aw_captured <= 1'b0;

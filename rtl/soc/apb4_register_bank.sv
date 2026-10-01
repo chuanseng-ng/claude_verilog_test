@@ -5,7 +5,9 @@
 //   * Same parameters (N_REGS, ADDR_W, DW, SW, RESET_VAL, WMASK).
 //   * Same hw_wen_i / hw_wdata_i per-register HW-write bypass (bypasses WMASK).
 //   * Same regs_o output array.
-//   * Same write priority: SW write wins over HW write on the same clock edge.
+//   * Same-edge SW/HW collision (bead 6o8w): SW wins on the bits inside WMASK, HW wins
+//     on the bits outside it.  A fully-masked (WMASK=0) register is therefore HW-owned
+//     and a store to it cannot drop a same-cycle HW update.
 //   * Same out-of-range policy: writes dropped (pslverr=0), reads return 0 (pslverr=0).
 //   * Same strb_expand / WMASK masking logic — ported verbatim.
 //
@@ -96,14 +98,19 @@ module apb4_register_bank #(
                 if (hw_wen_i[r]) regs[r] <= hw_wdata_i[r];
 
             // 2. SW write on ACCESS phase of a write transfer.
-            //    SW write priority: overrides HW write on same-cycle collision.
+            //    Same-cycle collision: SW wins inside WMASK, HW wins outside it.
             //    GH #87: zero-extend addr_word to 32 b before comparing with N_REGS
             //    so that N_REGS == 2**WORDW does not wrap to 0 (truncating cast bug).
             if (access && pwrite) begin
                 if ({{(32-WORDW){1'b0}}, addr_word} < N_REGS) begin
                     automatic logic [IDXW-1:0] ci = addr_word[IDXW-1:0];
                     automatic logic [31:0]     m  = WMASK[ci] & strb_expand(pstrb);
-                    regs[ci] <= (regs[ci] & ~m) | (pwdata & m);
+                    // SW owns the WMASK bits; HW owns the rest.  Folding this
+                    // cycle's HW write into the base keeps a same-edge HW update
+                    // from being clobbered with stale data (bead 6o8w).
+                    automatic logic [31:0]     base =
+                        hw_wen_i[ci] ? hw_wdata_i[ci] : regs[ci];
+                    regs[ci] <= (base & ~m) | (pwdata & m);
                 end
                 // Out-of-range: write silently dropped, pslverr=0.
             end

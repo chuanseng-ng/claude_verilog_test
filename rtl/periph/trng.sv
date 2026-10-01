@@ -41,10 +41,12 @@
 // soc_top.sv, which can miss a pulse. Threshold 0 behaves as 1; 5..15 never fire on the level.
 //   health_fail next = (health_fail & ~clr) | trip   -- SET WINS over a same-cycle clear.
 //
-// RO-register hazard (bead 6o8w): apb4_register_bank lets a SW write win over a same-cycle HW
-// write even when WMASK == 0 (it writes the old value back). STATUS and DATA are HW-owned every
-// cycle, so a stray APB store would swallow a FIFO update or a health set. Stores to those two
-// words are therefore presented to the bank as reads (bank_pwrite_w), as in watchdog_timer.sv.
+// RO-register hazard (historical, bead 6o8w): apb4_register_bank used to let a SW write win over a
+// same-cycle HW write even when WMASK == 0 (it wrote the old value back), so a stray APB store to
+// STATUS or DATA could swallow a FIFO update or a health set. The bank is now race-free (SW wins
+// inside WMASK, HW wins outside it). Stores to those two words are still presented to the bank as
+// reads (bank_pwrite_w), retained as belt-and-braces with the same observable behaviour, as in
+// watchdog_timer.sv. New peripherals do not need this pattern.
 //
 // Reset: synchronous, active-low throughout (no `negedge rst_n`), matching the other periph/.
 // No CDC: single clock domain (core_clk), no asynchronous inputs.
