@@ -17,7 +17,7 @@
 //     AXIL_DMA=2        @ 0x2000_5000–5FFF  (AXI-Lite direct; last-match wins
 //                                             over APB_BRIDGE window overlap)
 //
-//   APB sub-tree (9 slaves behind axil_to_apb bridge):
+//   APB sub-tree (11 slaves behind axil_to_apb bridge):
 //     APB_UART=0  @ 0x2000_2000–2FFF  uart_controller
 //     APB_SPI=1   @ 0x2000_3000–3FFF  spi_controller
 //     APB_TIMER=2 @ 0x2000_4000–4FFF  timer
@@ -31,6 +31,7 @@
 //     APB_GPIO=7  @ 0x2000_A000–AFFF  gpio_controller (core_clk domain; Phase 6a, bead claude_verilog_test-ckc)
 //     APB_PWM=8   @ 0x2000_B000–BFFF  pwm_controller (core_clk domain; Phase 6a-2, bead claude_verilog_test-f7vs.6)
 //     APB_WDT=9   @ 0x2000_C000–CFFF  watchdog_timer (core_clk domain; Phase 6a-3, bead claude_verilog_test-f7vs.7)
+//     APB_TRNG=10 @ 0x2000_D000–DFFF  trng (core_clk domain; Phase 6a-4, bead claude_verilog_test-f7vs.8)
 //
 //   Debug plane   : APB3 debug slave exposed at top-level ports, bridged into
 //     the CPU domain by apb_cdc_bridge (u_apb_dbg_cdc, GH #95) — see the
@@ -155,8 +156,9 @@
 //                  spi_irq[1], uart_irq[0]}
 //     bit 6 (PWM) is now live (Phase 6a-2, bead claude_verilog_test-f7vs.6).
 //     bit 7 (WDT) is now live (Phase 6a-3, bead claude_verilog_test-f7vs.7).
-//     bits 8-11 remain pre-allocated (Phase 6, bead claude_verilog_test-f7vs.2) and
-//     tied 1'b0 until TRNG/I2C/CRYPTO/NPU land, respectively.
+//     bit 8 (TRNG) is now live (Phase 6a-4, bead claude_verilog_test-f7vs.8).
+//     bits 9-11 remain pre-allocated (Phase 6, bead claude_verilog_test-f7vs.2) and
+//     tied 1'b0 until I2C/CRYPTO/NPU land, respectively.
 //     interrupt_controller.irq_o → CPU ext_irq_i (MEIP)
 //     timer.irq_o                → CPU timer_irq_i (MTIP, direct)
 //
@@ -733,7 +735,8 @@ module soc_top
     logic npu_irq;
     // wdt_irq (bit 7) landed in Phase 6a-3 (bead claude_verilog_test-f7vs.7) — it is
     // now driven by u_wdt below, not tied here.
-    assign trng_irq   = 1'b0;  // tie removed when TRNG lands (6a-4)
+    // trng_irq (bit 8) landed in Phase 6a-4 (bead claude_verilog_test-f7vs.8) — it is
+    // now driven by u_trng below, not tied here.
     assign i2c_irq    = 1'b0;  // tie removed when I2C lands (6a-5)
     assign crypto_irq = 1'b0;  // tie removed when CRYPTO lands (6b)
     assign npu_irq    = 1'b0;  // tie removed when NPU lands (6c)
@@ -1881,6 +1884,30 @@ module soc_top
     );
 
     // =========================================================================
+    // TRNG — APB slave (apb_psel[APB_TRNG]), Phase 6a-4 (bead claude_verilog_test-f7vs.8)
+    // core_clk domain, no top-level pins: the entropy source is an `ifdef-swapped
+    // sub-module (trng_lfsr_entropy by default, trng_ro_sky130 under TRNG_RO_SKY130),
+    // not a port. irq_o -> interrupt_controller bit 8. The default build is a
+    // deterministic LFSR and advertises that via TRNG_STATUS[3] (INSECURE) = 1.
+    // =========================================================================
+    trng #(
+        .ADDR_W (12)
+    ) u_trng (
+        .clk     (core_clk),
+        .rst_n   (core_rst_n),
+        .psel    (apb_psel    [APB_TRNG]),
+        .penable (apb_penable [APB_TRNG]),
+        .pwrite  (apb_pwrite  [APB_TRNG]),
+        .paddr   (apb_paddr   [APB_TRNG][11:0]),
+        .pwdata  (apb_pwdata  [APB_TRNG]),
+        .pstrb   (apb_pstrb   [APB_TRNG]),
+        .prdata  (apb_prdata  [APB_TRNG]),
+        .pready  (apb_pready  [APB_TRNG]),
+        .pslverr (apb_pslverr [APB_TRNG]),
+        .irq_o   (trng_irq)
+    );
+
+    // =========================================================================
     // Interrupt controller — APB slave (apb_psel[APB_IRQ])
     // irq_src_i[11:0] = {NPU[11], CRYPTO[10], I2C[9], TRNG[8], WDT[7], PWM[6],
     //                     GPIO[5], GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}
@@ -1889,8 +1916,9 @@ module soc_top
     // Phase 6 (bead claude_verilog_test-f7vs.2): N_SOURCES pre-allocated 6 -> 12;
     // bit 6 (PWM) is now driven by u_pwm above (Phase 6a-2, bead
     // claude_verilog_test-f7vs.6); bit 7 (WDT) by u_wdt above (Phase 6a-3, bead
-    // claude_verilog_test-f7vs.7); bits 8-11 (TRNG/I2C/CRYPTO/NPU) remain
-    // tied 1'b0 above until each peripheral lands (6a-4 .. 6c).
+    // claude_verilog_test-f7vs.7); bit 8 (TRNG) by u_trng above (Phase 6a-4, bead
+    // claude_verilog_test-f7vs.8); bits 9-11 (I2C/CRYPTO/NPU) remain
+    // tied 1'b0 above until each peripheral lands (6a-5 .. 6c).
     // =========================================================================
     interrupt_controller #(
         .ADDR_W    (12),

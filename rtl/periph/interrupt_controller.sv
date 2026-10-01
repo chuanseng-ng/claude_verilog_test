@@ -10,7 +10,8 @@
 // irq_src_i bit assignments (module default N_SOURCES=5; soc_top.sv instantiates
 // with N_SOURCES=12 as of Phase 6, bead claude_verilog_test-f7vs.2 — bit 6 (PWM) is
 // live as of Phase 6a-2 (bead claude_verilog_test-f7vs.6), bit 7 (WDT) as of Phase 6a-3
-// (bead claude_verilog_test-f7vs.7); bits 8-11 remain
+// (bead claude_verilog_test-f7vs.7), bit 8 (TRNG) as of Phase 6a-4
+// (bead claude_verilog_test-f7vs.8); bits 9-11 remain
 // pre-allocated and tied 1'b0 in soc_top.sv until their peripheral lands):
 //   [0] UART  [1] SPI  [2] TIMER  [3] DMA  [4] GPU  [5] GPIO  [6] PWM  [7] WDT
 //   [8] TRNG  [9] I2C  [10] CRYPTO  [11] NPU  (soc_top.sv only)

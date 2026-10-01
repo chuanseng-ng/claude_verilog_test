@@ -3,9 +3,9 @@
 //
 // Phase 6 (bead claude_verilog_test-f7vs.2): the full 14-slave APB sub-tree is
 // pre-allocated in this one commit, per docs/PHASE6_IP_EXPANSION_PLAN.md §4.
-// Slots 10-13 (TRNG/I2C/CRYPTO/NPU) are BASE/LIMIT constants only —
+// Slots 11-13 (I2C/CRYPTO/NPU) are BASE/LIMIT constants only —
 // reserved-but-unbuilt, not yet in APB_N_SLAVES or the APB_SLV_BASE/LIMIT
-// arrays. Slots 8-9 (PWM, WDT) are live. Each reserved slot is promoted to a
+// arrays. Slots 8-10 (PWM, WDT, TRNG) are live. Each reserved slot is promoted to a
 // real slave (index constant + array entry + module instance) one at a time as
 // its peripheral lands (6a-4 .. 6c).
 //
@@ -21,7 +21,7 @@
 //   _2000-_0FFF route to APB_BRIDGE (index 1).
 //
 //   APB sub-map, final 14-slot allocation (decoded by apb_interconnect; only the
-//   first 10 are live slaves today — APB_N_SLAVES stays 10 until the next slot lands):
+//   first 11 are live slaves today — APB_N_SLAVES stays 11 until the next slot lands):
 //     APB_UART    0: 0x2000_2000 .. 0x2000_2FFF                        (Phase 5)
 //     APB_SPI     1: 0x2000_3000 .. 0x2000_3FFF                        (Phase 5)
 //     APB_TIMER   2: 0x2000_4000 .. 0x2000_4FFF                        (Phase 5)
@@ -32,7 +32,7 @@
 //     APB_GPIO    7: 0x2000_A000 .. 0x2000_AFFF                        (6a, bead ckc)
 //     APB_PWM     8: 0x2000_B000 .. 0x2000_BFFF                        (6a-2, bead f7vs.6)
 //     APB_WDT     9: 0x2000_C000 .. 0x2000_CFFF                        (6a-3, bead f7vs.7)
-//     TRNG       10: 0x2000_D000 .. 0x2000_DFFF  reserved              (6a-4)
+//     APB_TRNG   10: 0x2000_D000 .. 0x2000_DFFF                        (6a-4, bead f7vs.8)
 //     I2C        11: 0x2000_E000 .. 0x2000_EFFF  reserved              (6a-5)
 //     CRYPTO     12: 0x2000_F000 .. 0x2000_FFFF  reserved              (6b)
 //     NPU        13: 0x2001_0000 .. 0x2001_0FFF  reserved              (6c)
@@ -102,8 +102,9 @@ package soc_periph_map_pkg;
     localparam int unsigned APB_GPIO  = 7;  // Phase 6a — bead claude_verilog_test-ckc
     localparam int unsigned APB_PWM   = 8;  // Phase 6a-2 — bead claude_verilog_test-f7vs.6
     localparam int unsigned APB_WDT   = 9;  // Phase 6a-3 — bead claude_verilog_test-f7vs.7
+    localparam int unsigned APB_TRNG  = 10; // Phase 6a-4 — bead claude_verilog_test-f7vs.8
     /* verilator lint_on  UNUSEDPARAM */
-    localparam int unsigned APB_N_SLAVES = 10;
+    localparam int unsigned APB_N_SLAVES = 11;
 
     // ── APB region bounds (preserving original global MMIO addresses) ─────────
     localparam logic [31:0] APB_UART_BASE   = 32'h2000_2000;
@@ -131,17 +132,18 @@ package soc_periph_map_pkg;
     // WDT — Phase 6a-3 (bead claude_verilog_test-f7vs.7).
     localparam logic [31:0] APB_WDT_BASE    = 32'h2000_C000;
     localparam logic [31:0] APB_WDT_LIMIT   = 32'h2000_CFFF;
+    // TRNG — Phase 6a-4 (bead claude_verilog_test-f7vs.8).
+    localparam logic [31:0] APB_TRNG_BASE   = 32'h2000_D000;
+    localparam logic [31:0] APB_TRNG_LIMIT  = 32'h2000_DFFF;
 
-    // Reserved-but-unbuilt slots 10-13 — pre-allocated by bead claude_verilog_test-f7vs.2
+    // Reserved-but-unbuilt slots 11-13 — pre-allocated by bead claude_verilog_test-f7vs.2
     // (docs/PHASE6_IP_EXPANSION_PLAN.md §4). Not yet in APB_N_SLAVES or the
     // APB_SLV_BASE/LIMIT arrays below; each is wired in one at a time as its
     // peripheral lands. Unused until then, so guarded against UNUSEDPARAM.
-    // PWM (was slot 8) and WDT (was slot 9) promoted to live slaves by beads
-    // claude_verilog_test-f7vs.6 / f7vs.7 — their BASE/LIMIT constants moved above,
+    // PWM (was slot 8), WDT (was slot 9) and TRNG (was slot 10) promoted to live slaves by
+    // beads claude_verilog_test-f7vs.6 / f7vs.7 / f7vs.8 — their BASE/LIMIT constants moved above,
     // out of this reserved block.
     /* verilator lint_off UNUSEDPARAM */
-    localparam logic [31:0] APB_TRNG_BASE   = 32'h2000_D000;  // 6a-4
-    localparam logic [31:0] APB_TRNG_LIMIT  = 32'h2000_DFFF;
     localparam logic [31:0] APB_I2C_BASE    = 32'h2000_E000;  // 6a-5
     localparam logic [31:0] APB_I2C_LIMIT   = 32'h2000_EFFF;
     localparam logic [31:0] APB_CRYPTO_BASE = 32'h2000_F000;  // 6b
@@ -154,11 +156,11 @@ package soc_periph_map_pkg;
     localparam logic [31:0] APB_SLV_BASE  [APB_N_SLAVES] = '{
         APB_UART_BASE,  APB_SPI_BASE,  APB_TIMER_BASE,
         APB_IRQ_BASE,   APB_PLL_BASE,  APB_PMU_BASE,  APB_PLL2_BASE, APB_GPIO_BASE, APB_PWM_BASE,
-        APB_WDT_BASE};
+        APB_WDT_BASE, APB_TRNG_BASE};
     localparam logic [31:0] APB_SLV_LIMIT [APB_N_SLAVES] = '{
         APB_UART_LIMIT, APB_SPI_LIMIT, APB_TIMER_LIMIT,
         APB_IRQ_LIMIT,  APB_PLL_LIMIT, APB_PMU_LIMIT, APB_PLL2_LIMIT, APB_GPIO_LIMIT, APB_PWM_LIMIT,
-        APB_WDT_LIMIT};
+        APB_WDT_LIMIT, APB_TRNG_LIMIT};
 
     // =========================================================================
     // Legacy address constants — kept for testbench / firmware compatibility.
