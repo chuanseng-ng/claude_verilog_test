@@ -9,7 +9,8 @@
 // Register layout (N_REGS = 8):
 //   reg0..reg5 : fully SW-writable  (WMASK = 0xFFFFFFFF)
 //   reg6       : SW read-only/status (WMASK = 0x00000000), HW-writable
-//   reg7       : low-byte writable   (WMASK = 0x000000FF)
+//   reg7       : low-byte writable   (WMASK = 0x000000FF), HW-writable via
+//                hw_aux_wen / hw_aux_wdata (bead 6o8w: partial-WMASK HW path)
 
 module tb_axi_lite_register_bank #(
     parameter int unsigned ADDR_W = 12,
@@ -42,7 +43,11 @@ module tb_axi_lite_register_bank #(
 
     // Hardware status injection -> register index 6.
     input  logic              hw_status_wen,
-    input  logic [31:0]       hw_status_wdata
+    input  logic [31:0]       hw_status_wdata,
+
+    // Hardware injection -> register index 7 (partial WMASK 0x000000FF).
+    input  logic              hw_aux_wen,
+    input  logic [31:0]       hw_aux_wdata
 );
 
     localparam logic [31:0] WM [N_REGS] = '{
@@ -59,6 +64,8 @@ module tb_axi_lite_register_bank #(
         end
         hw_wen  [6] = hw_status_wen;
         hw_wdata[6] = hw_status_wdata;
+        hw_wen  [7] = hw_aux_wen;
+        hw_wdata[7] = hw_aux_wdata;
     end
 
     /* verilator lint_off UNUSEDSIGNAL */

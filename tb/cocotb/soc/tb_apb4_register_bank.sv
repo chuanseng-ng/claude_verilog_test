@@ -12,7 +12,10 @@
 //
 // APB4 ports are exposed flat (psel/penable/pwrite/paddr/pwdata/pstrb/
 // prdata/pready/pslverr) — the APB4Master BFM drives them directly.
-// Hardware injection port: hw_status_wen / hw_status_wdata -> reg6.
+// Hardware injection ports: hw_status_wen / hw_status_wdata -> reg6 (WMASK=0),
+//                           hw_aux_wen    / hw_aux_wdata    -> reg7 (WMASK=0xFF).
+// The reg7 port exists so tests can drive a HW write into a register whose
+// WMASK is partial (SW owns [7:0], HW owns [31:8]) -- bead 6o8w.
 
 `default_nettype none
 
@@ -38,7 +41,11 @@ module tb_apb4_register_bank #(
 
     // Hardware status injection -> register index 6.
     input  logic              hw_status_wen,
-    input  logic [31:0]       hw_status_wdata
+    input  logic [31:0]       hw_status_wdata,
+
+    // Hardware injection -> register index 7 (partial WMASK 0x000000FF).
+    input  logic              hw_aux_wen,
+    input  logic [31:0]       hw_aux_wdata
 );
 
     localparam logic [31:0] WM [N_REGS] = '{
@@ -55,6 +62,8 @@ module tb_apb4_register_bank #(
         end
         hw_wen  [6] = hw_status_wen;
         hw_wdata[6] = hw_status_wdata;
+        hw_wen  [7] = hw_aux_wen;
+        hw_wdata[7] = hw_aux_wdata;
     end
 
     /* verilator lint_off UNUSEDSIGNAL */
