@@ -41,11 +41,12 @@
 // wdt_rst_req_o: it only arms the SoC-level CPU-domain reset AND-in, which is integration and
 // lives in soc_top, not here.
 //
-// RO-register hazard: apb4_register_bank lets a SW write win over a same-cycle HW write even when
-// WMASK is 0 (it writes the old value back). COUNT and STATUS are HW-owned every cycle, so a stray
-// APB store to either would stall the counter or swallow a bark/bite set. Stores to those two
-// words are therefore presented to the bank as reads (bank_pwrite_w), which is exactly the
-// "RO ignores writes" behaviour, made race-free.
+// RO-register hazard (historical, bead 6o8w): apb4_register_bank used to let a SW write win over a
+// same-cycle HW write even when WMASK was 0 (it wrote the old value back), so a stray APB store to
+// COUNT or STATUS could stall the counter or swallow a bark/bite set. The bank is now race-free
+// (SW wins inside WMASK, HW wins outside it). Stores to those two words are still presented to the
+// bank as reads (bank_pwrite_w), retained as belt-and-braces; it gives the same observable
+// behaviour. New peripherals do not need this pattern.
 //
 // irq_o = |STATUS[2:0] -- LEVEL-HELD, never a single-cycle pulse. There is no IRQ_EN register
 // (masking is the interrupt_controller's job). Required, not stylistic: every IRQ source crosses

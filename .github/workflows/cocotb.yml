@@ -177,8 +177,11 @@ jobs:
       # yields zero.)
       #
       # PASS_FLOOR guards the "regression collapsed to a handful of suites"
-      # failure mode, where make still exits 0. Measured 326 passing tests on
-      # 2026-10-01 (soc_all_ci, after Phase 6a-4 TRNG: +22 from its L1 unit
+      # failure mode, where make still exits 0. Measured 330 passing tests on
+      # 2026-10-01 (soc_all_ci, after bead 6o8w: +2 from the apb4_register_bank
+      # unit suite and +2 from register_bank, the RO/HW same-edge collision
+      # controls); 326 earlier the same day
+      # (after Phase 6a-4 TRNG: +22 from its L1 unit
       # suite and +1 from the soc_trng fabric test); 303 on
       # 2026-09-29 (soc_all_ci, after Phase 6a-3 WDT: +22 from its L1 unit suite
       # and +2 from the soc_wdt fabric test, which covers both the RST_EN=0 and
@@ -201,7 +204,7 @@ jobs:
       - name: Verify regression actually ran
         if: always()
         env:
-          PASS_FLOOR: '323'
+          PASS_FLOOR: '327'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."

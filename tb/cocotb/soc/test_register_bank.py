@@ -9,12 +9,15 @@ addressing (completes OKAY, write dropped / read 0).
 Register layout (N_REGS = 8, byte addr = idx*4):
     reg0..reg5 : fully SW-writable
     reg6 @0x18 : SW read-only, HW-writable (status)
-    reg7 @0x1C : low-byte writable only (WMASK 0x000000FF)
+    reg7 @0x1C : low-byte writable only (WMASK 0x000000FF), HW-writable via hw_aux_*
+
+Ownership rule (bead 6o8w): SW owns the WMASK bits, HW owns everything else.  The last two
+tests (RO-write vs same-cycle HW update; partial-WMASK merge) pin that rule.
 """
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import FallingEdge, RisingEdge
 
 from bfm.axi4lite_master import AXI4LiteMaster
 
@@ -33,6 +36,8 @@ async def _setup(dut):
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
     dut.hw_status_wen.value = 0
     dut.hw_status_wdata.value = 0
+    dut.hw_aux_wen.value = 0
+    dut.hw_aux_wdata.value = 0
     dut.rst_n.value = 0
     m = AXI4LiteMaster(dut, "s_axil_", dut.clk)
     for _ in range(5):
@@ -121,3 +126,141 @@ async def test_out_of_range(dut):
     data0, _ = await m.read(REG0)
     assert data0 == 0x00000000, f"reg0 disturbed: {data0:#x}"
     dut._log.info("out-of-range OK")
+
+
+# ---------------------------------------------------------------------------
+# Bead 6o8w -- SW commit vs same-cycle HW write
+#
+# Stimulus is applied on the FALLING edge so the DUT samples it on the next RISING
+# edge; the HW ramp acts on RisingEdge and has always finished updating by the next
+# falling edge, so "the HW value presented on the commit edge" is unambiguous.
+#
+# Commit mechanics: the write FSM is in WR_IDLE with awready=wready=1 combinationally,
+# so asserting awvalid+wvalid together makes aw_now && w_now true on the very next
+# rising edge, i.e. that edge IS the commit edge (axi_lite_register_bank.sv wr_commit).
+# ---------------------------------------------------------------------------
+class _HwRamp:
+    """Hold hw_status_wen=1 and present a fresh, strictly increasing value every cycle."""
+
+    def __init__(self, dut, start: int):
+        self._dut = dut
+        self.value = start            # value presented for the NEXT rising edge
+        self._running = False
+
+    def start(self) -> None:
+        self._running = True
+        self._dut.hw_status_wdata.value = self.value
+        self._dut.hw_status_wen.value = 1
+        cocotb.start_soon(self._run())
+
+    async def _run(self) -> None:
+        while self._running:
+            await RisingEdge(self._dut.clk)
+            if not self._running:
+                return
+            self.value += 1
+            self._dut.hw_status_wdata.value = self.value
+
+    def stop(self) -> None:
+        """Drop wen immediately (call at a falling edge: takes effect at the next rising edge)."""
+        self._running = False
+        self._dut.hw_status_wen.value = 0
+
+
+def _axil_issue(dut, addr: int, data: int, strb: int = 0xF) -> None:
+    """Assert AW and W together; both handshake on the next rising edge (= commit edge)."""
+    dut.s_axil_awaddr.value = addr
+    dut.s_axil_awvalid.value = 1
+    dut.s_axil_wdata.value = data
+    dut.s_axil_wstrb.value = strb
+    dut.s_axil_wvalid.value = 1
+
+
+def _axil_release(dut) -> None:
+    dut.s_axil_awvalid.value = 0
+    dut.s_axil_wvalid.value = 0
+
+
+async def _axil_drain(dut) -> None:
+    """Let the write FSM finish WR_RESP and return to WR_IDLE."""
+    for _ in range(4):
+        await FallingEdge(dut.clk)
+
+
+@cocotb.test()
+async def test_ro_write_does_not_drop_hw_update(dut):
+    """
+    Bead 6o8w, WMASK==0 case.  reg6 is SW read-only (WMASK=0) and HW-written.
+
+    SW owns the WMASK bits (none), HW owns everything else, so a write to reg6 is a
+    pure no-op and must not interfere with the HW update landing on the same edge.
+    Defect: the commit computes m = WMASK & wstrb = 0 yet still emits
+    regs[6] <= regs[6] (stale pre-edge value), the textually later NBA, which
+    overrides the HW write and loses that cycle's HW update.
+
+    HW holds hw_status_wen=1 and presents a new value every cycle (0x1000, 0x1001, ...)
+    so a one-cycle stall is visible as reg6 lagging the ramp by one step.
+    Expect reg6 == the HW value presented on the commit edge.  Buggy RTL gives that - 1.
+    """
+    m = await _setup(dut)
+
+    ramp = _HwRamp(dut, start=0x1000)
+    await FallingEdge(dut.clk)
+    ramp.start()
+    for _ in range(4):                       # ramp runs with no SW traffic
+        await FallingEdge(dut.clk)
+
+    _axil_issue(dut, REG6, 0xFFFFFFFF)       # commits on the next rising edge
+    commit_val = ramp.value                  # HW value the DUT samples on that edge
+    await FallingEdge(dut.clk)               # commit edge has now happened
+    _axil_release(dut)
+    ramp.stop()                              # no HW writes after the commit edge
+    await _axil_drain(dut)
+
+    data, rresp = await m.read(REG6)
+    assert rresp == RESP_OKAY
+    assert data == commit_val, (
+        f"write to WMASK=0 reg6 dropped the same-cycle HW update: "
+        f"expected {commit_val:#010x} (HW value on commit edge), got {data:#010x} "
+        f"(previous-cycle value would be {commit_val - 1:#010x})")
+    dut._log.info("RO write left HW update intact: reg6=%#010x", data)
+
+
+@cocotb.test()
+async def test_partial_wmask_hw_keeps_unmasked_bits(dut):
+    """
+    Bead 6o8w, partial-WMASK case.  reg7 has WMASK=0x000000FF: SW owns [7:0], HW owns
+    [31:8].  Same-edge write of 0x00000055 (wstrb=0xF) and HW write of 0xDEADBEEF must
+    yield 0xDEADBE55.
+
+    Defect: the commit writes (regs[7] & ~m) | (wd & m) with the STALE pre-edge regs[7],
+    so the HW-owned bits [31:8] revert instead of taking the HW value.  reg7 is pre-loaded
+    (via HW) with 0xA5A5A5A5 so the failure value 0xA5A5A555 is distinguishable from the
+    expected value and from reset.
+    """
+    m = await _setup(dut)
+
+    await FallingEdge(dut.clk)
+    dut.hw_aux_wdata.value = 0xA5A5A5A5
+    dut.hw_aux_wen.value = 1
+    await FallingEdge(dut.clk)
+    dut.hw_aux_wen.value = 0
+    await FallingEdge(dut.clk)
+    data, _ = await m.read(REG7)
+    assert data == 0xA5A5A5A5, f"HW pre-load of reg7 wrong: {data:#010x}"
+
+    await FallingEdge(dut.clk)
+    _axil_issue(dut, REG7, 0x00000055, strb=0xF)
+    dut.hw_aux_wdata.value = 0xDEADBEEF
+    dut.hw_aux_wen.value = 1
+    await FallingEdge(dut.clk)               # commit edge has happened
+    _axil_release(dut)
+    dut.hw_aux_wen.value = 0
+    await _axil_drain(dut)
+
+    data, rresp = await m.read(REG7)
+    assert rresp == RESP_OKAY
+    assert data == 0xDEADBE55, (
+        f"partial-WMASK collision: expected 0xDEADBE55 (SW owns [7:0]=0x55, "
+        f"HW owns [31:8]=0xDEADBE), got {data:#010x}")
+    dut._log.info("partial WMASK: SW [7:0] + HW [31:8] merged OK (reg7=%#010x)", data)
