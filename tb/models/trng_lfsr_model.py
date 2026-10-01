@@ -240,7 +240,10 @@ def _prime_factors(x: int) -> list[int]:
 
 
 def is_primitive_trinomial(n: int, t: int) -> bool:
-    """True if x^n + x^(n-t) + 1 is primitive over GF(2) (the polynomial our (n, t) LFSR realises)."""
+    """True if x^n + x^(n-t) + 1 is primitive over GF(2).
+
+    That trinomial is the polynomial our (n, t) LFSR realises.
+    """
     poly = (1 << n) | (1 << (n - t)) | 1
     order = (1 << n) - 1
     if _poly_powmod(order, poly, n) != 1:
@@ -249,6 +252,12 @@ def is_primitive_trinomial(n: int, t: int) -> bool:
 
 
 def selftest() -> None:
+    """Self-check the model against independent derivations.
+
+    Verifies the three polynomials are primitive, cross-checks the LFSR step
+    against a separate linear recurrence, and confirms the stuck, late-trip and
+    healthy seeds behave as the suite's docstring claims.
+    """
     # 1. all three polynomials are primitive => maximal length 2**n - 1
     for n, t in LFSR_SPECS:
         assert is_primitive_trinomial(n, t), f"x^{n}+x^{n - t}+1 is not primitive"
