@@ -178,7 +178,11 @@ class TrngLfsrModel:
         `horizon` raw samples; None if it does not trip inside the horizon."""
         while self._consumed < horizon and self.first_trip is None:
             self._consume_one()
-        return self.first_trip if (self.first_trip is not None and self.first_trip <= horizon) else None
+        return (
+            self.first_trip
+            if (self.first_trip is not None and self.first_trip <= horizon)
+            else None
+        )
 
     def words_before_trip(self) -> int:
         """Number of words fully COMPLETED strictly before the health trip (requires that a trip
@@ -315,8 +319,14 @@ def selftest() -> None:
 
 # First words for the reset seed (produced by this model, cross-checked by selftest() step 10).
 KNOWN_ANSWER_DEFAULT_SEED: list[int] = [
-    0x35337491, 0x82CE100F, 0x2C6B394D, 0xDEEA5F92,
-    0xF8DB2FFB, 0xB9198D17, 0x5423CF04, 0xF2D1A411,
+    0x35337491,
+    0x82CE100F,
+    0x2C6B394D,
+    0xDEEA5F92,
+    0xF8DB2FFB,
+    0xB9198D17,
+    0x5423CF04,
+    0xF2D1A411,
 ]
 
 
