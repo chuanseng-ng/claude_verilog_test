@@ -504,7 +504,42 @@ export COCOTB_REDUCED_LOG_FMT=1
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng
+# Bead p6t8 -- make a failing cocotb suite actually fail the make.
+#
+# cocotb 1.9.2's own makefile cannot propagate a test failure as an exit code.  Its
+# Makefile.inc (cocotb/share/makefiles/Makefile.inc:88-90) says so in as many words:
+#     # Check that the COCOTB_RESULTS_FILE was created, since we can't set an exit code
+#     # from cocotb.
+#     define check_for_results_file
+#         @test -f $(COCOTB_RESULTS_FILE) || (echo "ERROR: ... was not written ..." && exit 1)
+#     endef
+# It asserts the file EXISTS, never that it holds no failures, and `$(call
+# check_for_results_file)` is the last line of the $(COCOTB_RESULTS_FILE) recipe in every
+# simulator makefile (Makefile.verilator:76 for us).  Measured: a forced failure gave
+# TESTS=9 PASS=0 FAIL=8, a results.xml with 8 <failure> elements, and sub-make exit 0.
+#
+# The fix is a redefinition HERE, after the include above.  Make expands recipe lines when
+# the rule RUNS, not when the file is parsed, so a definition that appears later in the
+# makefile still reaches every target, every simulator and every build point, with no edit
+# to the ~35 recipes below.  The macro runs at the end of each build point's own recipe, so
+# build points overwriting a shared results.xml does not matter: each is checked before the
+# next one starts.
+#
+# This is what makes the `set -e` in the multi-build-point recipes (register_bank,
+# apb4_register_bank, the apb_interconnect sweep) FUNCTION -- until now a failing point was
+# masked by a later passing one and only the CI PASS_FLOOR log-grep noticed, indirectly.
+#
+# The verdict comes from tools/verif/check_cocotb_results.py, which reuses
+# tools/eda/summarize.py's tested parser (failure / error / no-passing-test / unparsable
+# all count as not clean), deliberately not a grep for "<failure".  The original existence
+# check is kept so a missing file still gets cocotb's own message first.
+# `check-exit-propagation` below is the self-test that proves this stays wired.
+define check_for_results_file
+    @test -f $(COCOTB_RESULTS_FILE) || (echo "ERROR: $(COCOTB_RESULTS_FILE) was not written by the simulation!" >&2 && exit 1)
+    @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
+endef
+
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng check-exit-propagation
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -1231,6 +1266,27 @@ clean-sim-builds:
 	rm -rf $(SIM_BUILD_ROOT)/sim_build $(SIM_BUILD_ROOT)/sim_build_*
 	@# Also clear any stale in-tree dirs/symlinks left by an earlier SIM_BUILD_ROOT.
 	rm -rf ./sim_build ./sim_build_*
+
+# Bead p6t8 self-test: prove a genuinely failing cocotb suite now makes make exit non-zero.
+# Deliberately NOT in soc_all / soc_all_ci -- it fails a suite on purpose.  The failure needs
+# no edit to any committed test: test_register_bank.py's stale-Vtop guard (_setup) asserts
+# the elaborated address-bus width equals REGBANK_ADDR_W, so elaborating -GADDR_W=5 while
+# claiming REGBANK_ADDR_W=12 makes every test fail.  Own SIM_BUILD (the stale-Vtop hazard
+# applies to reuse of a dir across parameter values).  The sub-make is expected to fail;
+# exit 0 from it means the check_for_results_file redefinition has stopped working.
+.PHONY: check-exit-propagation
+check-exit-propagation:
+	@echo "=== check-exit-propagation: a deliberately failing suite MUST make make exit non-zero ==="; \
+	if REGBANK_ADDR_W=12 $(MAKE) MODULE=test_register_bank TOPLEVEL=tb_axi_lite_register_bank \
+		VERILOG_SOURCES="$(REGBANK_SOURCES)" \
+		EXTRA_ARGS="-GADDR_W=5" \
+		$(BUILD_ARGS) \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_check_exit_propagation \
+		sim; then \
+		echo "check-exit-propagation: FAIL -- a failing cocotb suite exited 0 (bead p6t8 regressed)" >&2; \
+		exit 1; \
+	fi; \
+	echo "check-exit-propagation: PASS -- the failing suite exited non-zero"
 
 .PHONY: check-space
 check-space:
