@@ -509,10 +509,28 @@ crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
 
+# Two build points (bead r5hu): the default ADDR_W=12, and ADDR_W=5 where WORDW=3 and
+# N_REGS(8) == 2**WORDW -- the case a truncating `WORDW'(N_REGS)` cast wraps to 0.  ADDR_W is an
+# elaboration parameter, so the second point is its own Verilator build in its OWN SIM_BUILD
+# (reusing one dir across parameter values is the stale-Vtop hazard; test_register_bank.py also
+# checks the elaborated address-bus width against REGBANK_ADDR_W).  $(BUILD_ARGS) is kept for
+# the nix CXX shim / -O0 flags; its SIM_BUILD is overridden by the later, explicit one (the last
+# command-line assignment wins).  `set -e` + trailing `\` so either point failing aborts the target.
 register_bank:
+	@set -e; \
+	echo "=== register_bank: ADDR_W=12 (default) ==="; \
+	REGBANK_ADDR_W=12 \
 	$(MAKE) MODULE=test_register_bank TOPLEVEL=tb_axi_lite_register_bank \
 		VERILOG_SOURCES="$(REGBANK_SOURCES)" \
-		$(BUILD_ARGS)
+		$(BUILD_ARGS); \
+	echo "=== register_bank: ADDR_W=5 (N_REGS == 2**WORDW) ==="; \
+	REGBANK_ADDR_W=5 \
+	$(MAKE) MODULE=test_register_bank TOPLEVEL=tb_axi_lite_register_bank \
+		VERILOG_SOURCES="$(REGBANK_SOURCES)" \
+		EXTRA_ARGS="-GADDR_W=5" \
+		$(BUILD_ARGS) \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_register_bank_aw5 \
+		sim
 
 axil_interconnect:
 	$(MAKE) MODULE=test_axil_interconnect TOPLEVEL=tb_axi_lite_interconnect \
@@ -597,10 +615,24 @@ apb4_register_bank_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
 		--top-module tb_apb4_register_bank $(APB4_REG_SOURCES)
 
+# Two build points (bead r5hu); same scheme as register_bank above.  The ADDR_W=5 point is the
+# POSITIVE CONTROL for the axi_lite_register_bank truncating-cast defect: this module already
+# zero-extends the address (GH #87), so its boundary test must pass.
 apb4_register_bank: apb4_register_bank_lint
+	@set -e; \
+	echo "=== apb4_register_bank: ADDR_W=12 (default) ==="; \
+	REGBANK_ADDR_W=12 \
 	$(MAKE) MODULE=test_apb4_register_bank TOPLEVEL=tb_apb4_register_bank \
 		VERILOG_SOURCES="$(APB4_REG_SOURCES)" \
-		$(BUILD_ARGS)
+		$(BUILD_ARGS); \
+	echo "=== apb4_register_bank: ADDR_W=5 (N_REGS == 2**WORDW) ==="; \
+	REGBANK_ADDR_W=5 \
+	$(MAKE) MODULE=test_apb4_register_bank TOPLEVEL=tb_apb4_register_bank \
+		VERILOG_SOURCES="$(APB4_REG_SOURCES)" \
+		EXTRA_ARGS="-GADDR_W=5" \
+		$(BUILD_ARGS) \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_apb4_register_bank_aw5 \
+		sim
 
 # APB migration PR-1: axil_to_apb bridge lint + sim.
 # clean first: bridge TB uses the same Vtop binary name as other targets.

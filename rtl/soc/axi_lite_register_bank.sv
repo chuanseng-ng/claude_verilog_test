@@ -147,7 +147,10 @@ module axi_lite_register_bank #(
                     if (wr_commit) begin
                         // SW commit obeys WMASK & wstrb; in-range only.
                         // Use this cycle's data if it just arrived, else latched.
-                        if (commit_word < WORDW'(N_REGS)) begin
+                        // GH #87 / bead r5hu: zero-extend commit_word to 32 b before
+                        // comparing with N_REGS so N_REGS == 2**WORDW cannot wrap to 0
+                        // (the old truncating WORDW'(N_REGS) cast made the bank inert).
+                        if ({{(32-WORDW){1'b0}}, commit_word} < N_REGS) begin
                             automatic logic [IDXW-1:0] ci = commit_word[IDXW-1:0];
                             automatic logic [DW-1:0]   wd =
                                 w_now ? s_axil_wdata : wdata_q;
@@ -193,7 +196,9 @@ module axi_lite_register_bank #(
         end else begin
             unique case (rd_state)
                 RD_IDLE: if (s_axil_arvalid && s_axil_arready) begin
-                    rdata_q  <= (araddr_word < WORDW'(N_REGS))
+                    // GH #87 / bead r5hu: zero-extend araddr_word to 32 b before
+                    // comparing with N_REGS so N_REGS == 2**WORDW cannot wrap to 0.
+                    rdata_q  <= ({{(32-WORDW){1'b0}}, araddr_word} < N_REGS)
                                 ? regs[araddr_word[IDXW-1:0]] : '0;
                     rd_state <= RD_RESP;
                 end

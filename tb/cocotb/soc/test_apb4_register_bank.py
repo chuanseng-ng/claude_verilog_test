@@ -27,9 +27,22 @@ Tests:
     T9  test_partial_wmask_hw_keeps_unmasked_bits
                                         — same-cycle SW write + HW write on a partial-WMASK
                                           reg: SW owns the WMASK bits, HW owns the rest
+    T10 test_nregs_equals_wordw_boundary
+                                        — ADDR_W=5 build only (bead r5hu): N_REGS == 2**WORDW
+                                          must not make the range gate wrap to "nothing in range"
 
 Ownership rule under test: SW owns the WMASK bits, HW owns everything else.
+
+Two build points (bead r5hu), selected by the `apb4_register_bank` Makefile target through the
+REGBANK_ADDR_W environment variable that mirrors the Verilator `-GADDR_W=` override:
+  ADDR_W = 12 (default) -- 4 KB slot; N_REGS = 8 << 2**WORDW.
+  ADDR_W =  5           -- WORDW = 3, N_REGS == 2**WORDW.  This module carries the GH #87 fix
+                           (zero-extend the ADDRESS rather than truncating N_REGS), so it is the
+                           positive control for the sibling axi_lite_register_bank defect.
+                           Tests that probe byte address 0x100 run in the default build only.
 """
+
+import os
 
 import cocotb
 from cocotb.clock import Clock
@@ -42,9 +55,26 @@ from bfm.apb4_master import APB4Master
 # ---------------------------------------------------------------------------
 CLK_PERIOD_NS = 2
 
+# Elaboration width of THIS build (set by the Makefile; see module docstring).
+DEFAULT_ADDR_W = 12
+N_REGS = 8                                   # fixed by tb_apb4_register_bank.sv
+ADDR_W = int(os.environ.get("REGBANK_ADDR_W", str(DEFAULT_ADDR_W)))
+# True when N_REGS == 2**(ADDR_W-2): the case where a truncating WORDW'(N_REGS) cast wraps to 0.
+AT_BOUNDARY = (1 << (ADDR_W - 2)) == N_REGS
+WIDE_ONLY = ADDR_W != DEFAULT_ADDR_W         # skip flag for tests that need the 4 KB window
+
+
+def _check_build(dut) -> None:
+    """Stale-Vtop guard: the env var must describe the binary actually being simulated."""
+    assert len(dut.paddr) == ADDR_W, (
+        f"REGBANK_ADDR_W={ADDR_W} but the elaborated DUT has a "
+        f"{len(dut.paddr)}-bit address bus (stale SIM_BUILD?)")
+
+
 # Register byte addresses
 REG0 = 0x00
 REG1 = 0x04
+REG5 = 0x14
 REG6 = 0x18   # SW read-only / HW-writable
 REG7 = 0x1C   # low-byte writable only (WMASK 0x000000FF), HW-writable via hw_aux_*
 OOR  = 0x100  # word 64 >= N_REGS=8  → out of range
@@ -55,6 +85,7 @@ OOR  = 0x100  # word 64 >= N_REGS=8  → out of range
 # ---------------------------------------------------------------------------
 async def _setup(dut):
     """Start clock, reset DUT, init HW-injection inputs, return APB4Master."""
+    _check_build(dut)
     cocotb.start_soon(Clock(dut.pclk, CLK_PERIOD_NS, units="ns").start())
     dut.hw_status_wen.value   = 0
     dut.hw_status_wdata.value = 0
@@ -143,6 +174,7 @@ async def test_apb_setup_access_protocol(dut):
     implementation), but the master must NOT sample prdata/pslverr here.
     In ACCESS (psel=1, penable=1): pready=1, transfer completes.
     """
+    _check_build(dut)
     cocotb.start_soon(Clock(dut.pclk, CLK_PERIOD_NS, units="ns").start())
     dut.hw_status_wen.value   = 0
     dut.hw_status_wdata.value = 0
@@ -239,11 +271,13 @@ async def test_rw_roundtrip(dut):
 # ---------------------------------------------------------------------------
 # T4 — Out-of-range address: write dropped, read 0, pslverr=0
 # ---------------------------------------------------------------------------
-@cocotb.test()
+@cocotb.test(skip=WIDE_ONLY)
 async def test_out_of_range(dut):
     """
     Address OOR (word 64 >= N_REGS=8) must complete OKAY (pslverr=0),
     write silently dropped, read returns 0.  In-range registers untouched.
+
+    Default build only: OOR = 0x100 does not fit in the ADDR_W=5 address bus.
     """
     m = await _setup(dut)
 
@@ -469,3 +503,34 @@ async def test_partial_wmask_hw_keeps_unmasked_bits(dut):
         f"partial-WMASK collision: expected 0xDEADBE55 (SW owns [7:0]=0x55, "
         f"HW owns [31:8]=0xDEADBE), got {data:#010x}")
     dut._log.info("partial WMASK: SW [7:0] + HW [31:8] merged OK (reg7=%#010x)", data)
+
+
+# ---------------------------------------------------------------------------
+# T10 — N_REGS == 2**WORDW boundary (bead r5hu); ADDR_W=5 build only
+# ---------------------------------------------------------------------------
+@cocotb.test(skip=not AT_BOUNDARY)
+async def test_nregs_equals_wordw_boundary(dut):
+    """
+    Bead r5hu positive control.  Runs only in the ADDR_W=5 build, where
+    N_REGS == 2**WORDW (8 == 2**3).
+
+    A truncating `WORDW'(N_REGS)` cast would turn 8 into 0 at WORDW=3, making every address
+    "out of range": writes dropped, reads 0, transactions still OKAY (pslverr=0) -- silent.
+    This module zero-extends the address instead (GH #87), so it must round-trip.  The same
+    stimulus FAILS on the axi_lite_register_bank until that sibling gets the same fix; this
+    passing here shows the test construction discriminates the two idioms.
+    reg0 and reg5 are both checked so a reg0-only special case cannot satisfy it.
+    """
+    assert AT_BOUNDARY and ADDR_W == 5
+    m = await _setup(dut)
+
+    for addr, pattern in ((REG0, 0xDEADBEEF), (REG5, 0xA5C3_1E7B)):
+        ok = await m.write(addr, pattern)
+        assert ok, f"write @{addr:#04x} returned pslverr"
+        data, ok = await m.read(addr)
+        assert ok, f"read @{addr:#04x} returned pslverr"
+        assert data == pattern, (
+            f"N_REGS == 2**WORDW boundary: wrote {pattern:#010x} to byte addr {addr:#04x}, "
+            f"read back {data:#010x} (transaction OKAY both ways -- register file is inert "
+            f"if this is 0: truncating WORDW'(N_REGS) cast wrapped to 0)")
+    dut._log.info("N_REGS == 2**WORDW boundary OK (reg0 + reg5 round-trip)")

@@ -11,9 +11,19 @@ Register layout (N_REGS = 8, byte addr = idx*4):
     reg6 @0x18 : SW read-only, HW-writable (status)
     reg7 @0x1C : low-byte writable only (WMASK 0x000000FF), HW-writable via hw_aux_*
 
-Ownership rule (bead 6o8w): SW owns the WMASK bits, HW owns everything else.  The last two
-tests (RO-write vs same-cycle HW update; partial-WMASK merge) pin that rule.
+Ownership rule (bead 6o8w): SW owns the WMASK bits, HW owns everything else.  The
+RO-write vs same-cycle HW update and partial-WMASK merge tests pin that rule.
+
+Two build points (bead r5hu), selected by the `register_bank` Makefile target through the
+REGBANK_ADDR_W environment variable that mirrors the Verilator `-GADDR_W=` override:
+  ADDR_W = 12 (default) -- 4 KB slot; WORDW = 10, N_REGS = 8 << 2**WORDW.
+  ADDR_W =  5           -- WORDW = 3, so N_REGS == 2**WORDW.  The DUT's range gate must
+                           not wrap N_REGS to 0 here; test_nregs_equals_wordw_boundary
+                           proves it.  Only the byte addresses 0x00..0x1C exist at this
+                           width, so tests that probe 0x100 run in the default build only.
 """
+
+import os
 
 import cocotb
 from cocotb.clock import Clock
@@ -23,7 +33,16 @@ from bfm.axi4lite_master import AXI4LiteMaster
 
 CLK_PERIOD_NS = 2
 
+# Elaboration width of THIS build (set by the Makefile; see module docstring).
+DEFAULT_ADDR_W = 12
+N_REGS = 8                                   # fixed by tb_axi_lite_register_bank.sv
+ADDR_W = int(os.environ.get("REGBANK_ADDR_W", str(DEFAULT_ADDR_W)))
+# True when N_REGS == 2**(ADDR_W-2): the case where a truncating WORDW'(N_REGS) cast wraps to 0.
+AT_BOUNDARY = (1 << (ADDR_W - 2)) == N_REGS
+WIDE_ONLY = ADDR_W != DEFAULT_ADDR_W         # skip flag for tests that need the 4 KB window
+
 REG0 = 0x00
+REG5 = 0x14
 REG6 = 0x18    # read-only / status
 REG7 = 0x1C    # low-byte writable
 OOR  = 0x100   # word 64 >= N_REGS -> out of range
@@ -33,6 +52,10 @@ RESP_OKAY = 0
 
 async def _setup(dut):
     """Start clock, reset, build AXI4-Lite master. Returns the master."""
+    # Stale-Vtop guard: the env var must describe the binary actually being simulated.
+    assert len(dut.s_axil_awaddr) == ADDR_W, (
+        f"REGBANK_ADDR_W={ADDR_W} but the elaborated DUT has a "
+        f"{len(dut.s_axil_awaddr)}-bit address bus (stale SIM_BUILD?)")
     cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
     dut.hw_status_wen.value = 0
     dut.hw_status_wdata.value = 0
@@ -113,9 +136,12 @@ async def test_partial_wmask(dut):
     dut._log.info("partial WMASK OK")
 
 
-@cocotb.test()
+@cocotb.test(skip=WIDE_ONLY)
 async def test_out_of_range(dut):
-    """Address beyond N_REGS completes OKAY: write dropped, read returns 0."""
+    """Address beyond N_REGS completes OKAY: write dropped, read returns 0.
+
+    Default build only: OOR = 0x100 does not fit in the ADDR_W=5 address bus.
+    """
     m = await _setup(dut)
     resp = await m.write(OOR, 0xDEADC0DE)
     assert resp == RESP_OKAY, f"OOR write resp {resp}"
@@ -126,6 +152,33 @@ async def test_out_of_range(dut):
     data0, _ = await m.read(REG0)
     assert data0 == 0x00000000, f"reg0 disturbed: {data0:#x}"
     dut._log.info("out-of-range OK")
+
+
+@cocotb.test(skip=not AT_BOUNDARY)
+async def test_nregs_equals_wordw_boundary(dut):
+    """
+    Bead r5hu.  Runs only in the ADDR_W=5 build, where N_REGS == 2**WORDW (8 == 2**3).
+
+    The write-commit gate and the read mux compare the word address against N_REGS.  A
+    truncating `WORDW'(N_REGS)` cast turns 8 into 0 at WORDW=3, so `word < 0` is false for
+    EVERY address: all SW writes are dropped and all reads return 0, yet every transaction
+    still completes OKAY.  Hence the OKAY assertions below do not detect the bug -- the
+    read-back data does.  reg0 and reg5 are both checked so a reg0-only special case
+    cannot satisfy it.
+    """
+    assert AT_BOUNDARY and ADDR_W == 5
+    m = await _setup(dut)
+
+    for addr, pattern in ((REG0, 0xDEADBEEF), (REG5, 0xA5C3_1E7B)):
+        resp = await m.write(addr, pattern)
+        assert resp == RESP_OKAY, f"write @{addr:#04x} resp {resp}"
+        data, rresp = await m.read(addr)
+        assert rresp == RESP_OKAY, f"read @{addr:#04x} resp {rresp}"
+        assert data == pattern, (
+            f"N_REGS == 2**WORDW boundary: wrote {pattern:#010x} to byte addr {addr:#04x}, "
+            f"read back {data:#010x} (transaction OKAY both ways -- register file is inert "
+            f"if this is 0: truncating WORDW'(N_REGS) cast wrapped to 0)")
+    dut._log.info("N_REGS == 2**WORDW boundary OK (reg0 + reg5 round-trip)")
 
 
 # ---------------------------------------------------------------------------
