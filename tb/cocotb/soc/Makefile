@@ -205,13 +205,14 @@ TRNG_SOURCES = \
 
 # Phase 6a-5 (bead claude_verilog_test-f7vs.9): standalone i2c_controller unit-test sources.
 # apb4_register_bank (register file) + cdc_2ff_sync (i2c_controller instantiates one per pin,
-# like gpio_controller) + i2c_controller + standalone TB. The bus (wired-AND of master, slave and
+# like gpio_controller) + i2c_bit_engine (protocol core) + i2c_controller + standalone TB. The bus (wired-AND of master, slave and
 # pull-up) is modelled by tb/cocotb/bfm/i2c_slave.py, NOT by any RTL file in this list.
 # test_i2c.py also re-lints this exact list with `-GCLKDIV_MIN=2` to prove the DUT's elaboration
 # guard refuses an unsafe prescaler minimum.
 I2C_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
 	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/periph/i2c_bit_engine.sv \
 	$(RTL)/periph/i2c_controller.sv \
 	$(SOC_DIR)/tb_i2c.sv
 
@@ -313,6 +314,7 @@ PLL_SOURCES = \
 	$(RTL)/periph/watchdog_timer.sv \
 	$(RTL)/periph/trng_lfsr_entropy.sv \
 	$(RTL)/periph/trng.sv \
+	$(RTL)/periph/i2c_bit_engine.sv \
 	$(RTL)/periph/i2c_controller.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
@@ -388,6 +390,7 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/periph/watchdog_timer.sv \
 	$(RTL)/periph/trng_lfsr_entropy.sv \
 	$(RTL)/periph/trng.sv \
+	$(RTL)/periph/i2c_bit_engine.sv \
 	$(RTL)/periph/i2c_controller.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \

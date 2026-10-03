@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-10-03T03:43:04.230555+00:00",
+  "updated_at": "2026-10-03T04:13:51.683127+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -44,11 +44,45 @@
       "rtl/soc/soc_bus.sv",
       "rtl/soc/soc_periph_map_pkg.sv",
       "rtl/soc/soc_top.sv",
-      "rtl/soc/sram_controller.sv"
+      "rtl/soc/sram_controller.sv",
+      "rtl/periph/i2c_bit_engine.sv",
+      "rtl/periph/i2c_controller.sv"
     ],
     "lint_clean": true,
     "cdc_clean": false,
-    "signoff": false
+    "signoff": false,
+    "unverified": [
+      {
+        "module": "i2c_bit_engine",
+        "category": "fsm",
+        "claim": "17-state FSM (5-b encoding, 15 unnamed encodings) uses a plain case with a default recovery arm; no concurrent illegal-state assertion and the default arm was never exercised in simulation"
+      },
+      {
+        "module": "i2c_bit_engine",
+        "category": "arithmetic",
+        "claim": "S_BIT_L2 reload CLKDIV+K (max 0x11FFF) fits 17 b and S_BIT_HI1 reload CLKDIV-3-K >= 0 for every CLKDIV 3..65535 - proven by exhaustive Python enumeration of the formula only; the RTL was never simulated above CLKDIV ~250"
+      },
+      {
+        "module": "i2c_bit_engine",
+        "category": "parameter",
+        "claim": "HI1 >= 1 clk relies on CLKDIV_eff >= SYNC_STAGES+1 enforced by the PARENT's g_clkdiv_min_check; the engine re-checks nothing and its K=0-at-N=4 behaviour is exact only for SYNC_STAGES=2"
+      },
+      {
+        "module": "i2c_bit_engine",
+        "category": "protocol",
+        "claim": "Fast-mode tLOW at an exact 400 kHz is missed for N=4..7 and 13..15 (f_clk 6.4-11.2 / 20.8-24 MHz); measured only at CLKDIV=3/62/249 @100 MHz. Pad rise time > ~1 clk and loopback period (4N-2) are analysed, not simulated - the BFM edges are instantaneous"
+      },
+      {
+        "module": "i2c_bit_engine",
+        "category": "protocol",
+        "claim": "Bus-free time between STOP and the next START (Fast-mode tBUF 1.3 us) is S_STP_FREE (one tick = 0.63 us at 400 kHz) plus software latency; not characterised or tested"
+      },
+      {
+        "module": "i2c_controller",
+        "category": "cdc",
+        "claim": "two cdc_2ff_sync pad synchronisers (u_scl_sync/u_sda_sync) never checked by a CDC tool (SpyGlass/JasperGold/Questa NOT RUN); a synchroniser bypass is only caught indirectly via its latency"
+      }
+    ]
   },
   "verification_status": {
     "coverage_pct": 100.0,
@@ -2072,6 +2106,66 @@
       "suggested_next_step": "escalate",
       "reason": "failure_class functional (fix_request class protocol): DUT bug, not a testbench bug -- the i2c_controller bit engine spends 3 timed states per bit instead of the documented 4, so I2C_CLKDIV 249 / 62 give 132.8 kHz / 520.8 kHz and SCL-high is 2.53 us at the Standard-mode setting (min 4.0 us). User/RTL owner must supply: either add the missing 4th timed phase to the bit engine, or amend the header formula and the bead's 100k/400k divisor claims. test_i2c_clkdiv_100k_400k is expect_fail until then; signoff withheld.",
       "constraint_ref": "fr_609b42790e0f_20261003_015343_00"
+    },
+    {
+      "timestamp": "2026-10-03T04:13:51.683127+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Change 1: fourth SCL phase (S_BIT_HI1) + sync-latency compensation + floor(N/8) low-phase skew in i2c_controller.sv; expect_fail marker removed from test_i2c_clkdiv_100k_400k; i2c 46/46 and soc_i2c 1/1 green (CLKDIV 249 -> 100.0 kHz, 62 -> 396.8 kHz). Symmetric 4th tick alone proven insufficient (K=0 negative control: tLOW 1.26 us < 1.3 at CLKDIV=62).",
+      "constraint_ref": "fr_609b42790e0f_20261003_015343_00"
+    },
+    {
+      "timestamp": "2026-10-03T04:13:51.683127+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Change 2: bit engine split into i2c_bit_engine.sv (parent 999->701 lines, engine 539); test_i2c.py engine-internal hierarchy paths re-pointed (u.state_q/tick_q/bitcnt_q/to_q -> u.u_bit_engine.*) and its hidden hard-coded source list gained the new file; L1 46/46 and soc_i2c 1/1 unchanged, identical sim end-times.",
+      "constraint_ref": "fr_609b42790e0f_20261003_015343_00"
+    },
+    {
+      "timestamp": "2026-10-03T04:13:51.683127+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "design_input_check",
+      "decision": "proceed",
+      "confidence": "medium",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "Input set = Makefile source lists (no .f filelist, so check_design_inputs.py was NOT RUN). i2c_bit_engine.sv added to all 7 lists carrying i2c_controller.sv (3 cocotb Makefile, 2 pnr/Makefile, 1 sim/Makefile, 1 hard-coded list inside test_i2c.py - found because the guard test failed with MODMISSING). check_periph_filelists.py exit 0 with a negative control (entry removed -> exit 1, restored byte-identical); sv2v: both modules defined in both sky130 and asap7 outputs.",
+      "constraint_ref": "fr_609b42790e0f_20261003_015343_00"
+    },
+    {
+      "timestamp": "2026-10-03T04:13:51.683127+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "verilator --lint-only -Wall -Wno-SYNCASYNCNET per module (i2c_bit_engine, i2c_controller as top, filelist context): EXIT 0, 0 errors 0 warnings each; make -C sim lint EXIT 0, 0 errors, 8 pre-existing warnings, none in i2c; soc_boot_lint/verilator_lint 0 warnings; soc_pll_lint 11 PINMISSING in tb_soc_pll.sv identical at HEAD. slang NOT RUN (not installed). cdc_rdc_analysis and synth_check NOT RUN; rtl_signoff not attempted.",
+      "constraint_ref": "fr_609b42790e0f_20261003_015343_00"
+    },
+    {
+      "timestamp": "2026-10-03T04:13:51.683127+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "fix_request fr_609b42790e0f_20261003_015343_00 closed as fixed (not verified_fixed); signoff stays false: cdc_rdc_analysis/synth_check NOT RUN and rtl.unverified is non-empty. Next: verification-orchestrator re-validation (soc_all_ci run by the user).",
+      "constraint_ref": "fr_609b42790e0f_20261003_015343_00"
     }
   ],
   "fix_requests": [
@@ -2428,7 +2522,7 @@
     {
       "id": "fr_609b42790e0f_20261003_015343_00",
       "created_at": "2026-10-03T03:43:04.230555+00:00",
-      "updated_at": "2026-10-03T03:43:04.230555+00:00",
+      "updated_at": "2026-10-03T04:13:51.683127+00:00",
       "created_by": "verification-orchestrator",
       "failure_class": "protocol",
       "test_name": "test_i2c_clkdiv_100k_400k",
@@ -2450,9 +2544,27 @@
       "expected_behavior": "rtl/periph/i2c_controller.sv header lines 26-27: 'One bit = 4 ticks, a tick is (CLKDIV+1) clk cycles, so f_scl = f_clk / (4*(CLKDIV+1)) with no stretching'; bead f7vs.9 / PHASE6 plan: Standard 100 kHz and Fast 400 kHz via I2C_CLKDIV. I2C spec minimums: Standard tHIGH >= 4.0 us, tLOW >= 4.7 us; Fast tHIGH >= 0.6 us, tLOW >= 1.3 us.",
       "observed_behavior": "Traced on state_q at CLKDIV=249: S_BIT_L1 = 250 clk, S_BIT_L2 = 250, S_BIT_WAIT = 3, S_BIT_HI = 250 (one tick each, three timed states per bit). Measured on the bus at a 100 MHz clk: period 753 clk = 132.8 kHz (documented 100 kHz), tLOW 5.00 us, tHIGH 2.53 us (Standard-mode minimum 4.0 us). CLKDIV=62: period 192 clk = 520.8 kHz (documented 396.8 kHz), tLOW 1.26 us (Fast-mode minimum 1.3 us), tHIGH 0.66 us. A driver that computes CLKDIV from the documented formula overclocks the bus by 33 %. Either add the missing fourth timed phase (e.g. a second SCL-high tick, giving ~50 % duty) or correct the header; the former is what the I2C timing limits require. Reproduce: nix develop --command make -C tb/cocotb/soc i2c (the test is marked expect_fail until this is fixed; removing the marker turns it into the regression check).",
       "session_id": null,
-      "status": "open",
-      "rtl_response": null,
-      "history": []
+      "status": "fixed",
+      "rtl_response": {
+        "diff_summary": "Added the missing fourth timed SCL phase (new S_BIT_HI1, encoding 5'd16; the 16 original state encodings are unchanged, state_q widened 4->5 b; tick_q widened 16->17 b because the S_BIT_L2 reload CLKDIV+K reaches 0x11FFF). Per bit: L1=N, L2=N+K, WAIT=3 (SYNC_STAGES+1, counted inside the high phase), HI1=N-3-K, HI=N with N=CLKDIV+1, K=floor(N/8): period is exactly 4N, so f_scl = f_clk/(4*(CLKDIV+1)). The K skew is REQUIRED beyond the fourth phase: a symmetric 2N/2N split measured tLOW 1.26 us at CLKDIV=62 (min 1.3). Measured @100 MHz after fix: CLKDIV=249 -> 1000 clk = 100.0 kHz, tLOW 5.31 us (min 4.7), tHIGH 4.69 us (min 4.0); CLKDIV=62 -> 252 clk = 396.8 kHz, tLOW 1.33 us (min 1.3), tHIGH 1.19 us (min 0.6); CLKDIV=3 -> 16 clk. CLKDIV_MIN guard re-checked: still exactly SYNC_STAGES+1 (HI1 reload = CLKDIV-3-K is 0 at CLKDIV=3). Then split the bit engine into rtl/periph/i2c_bit_engine.sv (i2c_controller.sv 999->701 lines, engine 539), behaviour-preserving: identical measured SCL timing and identical sim end-time before/after (863100.09 ns L1, 130628.00 ns L2). Post-fix lint: verilator --lint-only -Wall -Wno-SYNCASYNCNET, each of i2c_bit_engine and i2c_controller as top in filelist context: 0 errors 0 warnings (EXIT 0); make -C sim lint EXIT 0, 0 errors, 8 pre-existing warnings (sram_1rw_256x32_verilator.v DECLFILENAME x2, rv32i_cache_pkg.sv UNUSEDPARAM x6 counted per-pass), none in i2c. slang NOT RUN (not installed). Tests: make -C tb/cocotb/soc i2c TESTS=46 PASS=46 FAIL=0 SKIP=0 with test_i2c_clkdiv_100k_400k's expect_fail marker removed; soc_i2c TESTS=1 PASS=1. Residual limits (documented in headers): exact 4N except pad rise >~1 clk / slave stretch / loopback (4N-2); Fast-mode tLOW at an exact 400 kHz still missed for N=4..7 and 13..15 (f_clk 6.4-11.2 / 20.8-24 MHz).",
+        "files_changed": [
+          "rtl/periph/i2c_controller.sv",
+          "rtl/periph/i2c_bit_engine.sv",
+          "tb/cocotb/soc/test_i2c.py",
+          "tb/cocotb/soc/Makefile",
+          "pnr/Makefile",
+          "sim/Makefile"
+        ],
+        "fixed_at": "2026-10-03T04:13:51.683127+00:00"
+      },
+      "history": [
+        {
+          "timestamp": "2026-10-03T04:13:51.683127+00:00",
+          "agent": "rtl-design-orchestrator",
+          "action": "fixed",
+          "note": "Four-phase bit engine + duty skew + bit-engine split; lint 0 errors/0 warnings per module, i2c 46/46 (expect_fail removed), soc_i2c 1/1, sv2v both modules present in both outputs. Awaiting verification-orchestrator re-validation (status left 'fixed', not 'verified_fixed')."
+        }
+      ]
     }
   ],
   "pd": {

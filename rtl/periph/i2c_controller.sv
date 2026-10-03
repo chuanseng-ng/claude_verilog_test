@@ -24,7 +24,8 @@
 //                        (sticky), [4] timeout (sticky), [5] SCL sensed level, [6] SDA sensed level
 //                        ([4:2] are the SAME flops as IRQ_STAT[3:1]; they clear via IRQ_CLR)
 //   2  I2C_CLKDIV    RW  [15:0] tick divider, reset 0x00FF. One bit = 4 ticks, a tick is
-//                        (CLKDIV+1) clk cycles, so f_scl = f_clk / (4*(CLKDIV+1)) with no stretching.
+//                        (CLKDIV+1) clk cycles, so f_scl = f_clk / (4*(CLKDIV+1)) with no stretching
+//                        (see "Bit timing" for the exact phase split and the residual error).
 //                        Values below CLKDIV_MIN are CLAMPED to CLKDIV_MIN (reads back as written)
 //   3  I2C_ADDR      RW  [6:0] slave address, [7] R/W (0 = write, 1 = read); START sends
 //                        {ADDR[6:0], ADDR[7]}. The engine does not police ADDR[7] against the
@@ -63,6 +64,19 @@
 //     flushes BOTH FIFOs once, on the 1 -> 0 edge. Sticky flags and registers are retained. Change
 //     CTRL.LOOPBACK only while idle.
 //
+// Bit timing (full phase table, derivation and residual-error list: i2c_bit_engine.sv header).
+// N = CLKDIV_eff + 1 clk per tick; one SCL bit is FOUR timed phases and the bus period is 4*N clk,
+// f_scl = f_clk / (4*N), with SCL low = 2N + K and SCL high = 2N - K clk, K = floor(N/8) (the skew
+// buys the Fast-mode tLOW; a symmetric split misses it). The 3 clk it takes the released SCL to come
+// back through the 2-FF synchroniser are counted INSIDE the high phase, so the period is exactly 4*N.
+// Measured (100 MHz clk): CLKDIV 249 -> 1000 clk = 100.0 kHz (tLOW 5.31 us, tHIGH 4.69 us); CLKDIV 62
+// -> 252 clk = 396.8 kHz (tLOW 1.33 us, tHIGH 1.19 us).
+// RESIDUAL ERROR: exactly 4*N unless (a) the SCL pad rises more than ~1 clk after oe_o releases it
+// (the excess is waited out and adds to the period -- bus-capacitance stretching, not compensated);
+// (b) a slave stretches SCL (adds the stretch, bounded by I2C_TIMEOUT); (c) CTRL.LOOPBACK, which has
+// no synchroniser, runs at 4*N - 2 clk. Fast-mode tLOW at an exact 400 kHz is missed for N = 4..7 and
+// 13..15 only (f_clk 6.4..11.2 or 20.8..24 MHz); Standard mode and every other N meet the limits.
+//
 // Clock stretching is MANDATORY: the bit engine releases SCL, then does not advance (and does not
 // start its SCL-high interval) until the SYNCHRONISED scl_i reads high. I2C_TIMEOUT bounds every such
 // wait (bus busy before START, SCL stretched, FIFO starvation). On expiry the sticky `timeout` bit
@@ -87,8 +101,14 @@
 // ticks and the SDA-to-sample distance is at least two ticks, so a tick must comfortably exceed
 // that latency. CLKDIV_MIN (default 3 -> tick = 4 clk, 2x margin over the 4-clk worst case) must be
 // >= SYNC_STAGES + 1; a smaller override FAILS ELABORATION (g_clkdiv_min_check), and CLKDIV below
-// CLKDIV_MIN is clamped in hardware. The same lesson as spi_controller.sv's SPI_CLK_DIV >= 7, but
-// enforced rather than documented (SPI leaves 0..1 unsafe).
+// CLKDIV_MIN is clamped in hardware. With the four-phase bit (see "Bit timing") the SAME bound is
+// also what keeps the shortened S_BIT_HI1 reload (CLKDIV_eff - (SYNC_STAGES+1) - K) non-negative:
+// at CLKDIV_eff = SYNC_STAGES + 1 it is exactly 0 (a 1-clk phase, K = 0), so the minimum is unchanged
+// by the fourth phase and is tight, not conservative. The SCL-low interval is now 2N + K >= two ticks
+// and the SDA-to-sample distance 2N + K - 3 >= two ticks, so the original latency argument holds.
+// The bit engine receives the clamped value and does not re-check it.
+// The same lesson as spi_controller.sv's SPI_CLK_DIV >= 7, but enforced rather than documented (SPI
+// leaves 0..1 unsafe).
 //
 // Loopback (CTRL[1], SPI_CTRL[4] precedent): the sensed lines come from an internal wired-AND of
 // the master's own oe with a tiny internal slave instead of from the synchronised pins; the pad
@@ -378,51 +398,56 @@ module i2c_controller
     );
 
     // =========================================================================
-    // Engine state
+    // Protocol engine -- command FSM, SCL phase generator, arbitration, timeout (i2c_bit_engine.sv).
+    // Everything else in this file is the software-visible shell around it.
     // =========================================================================
-    typedef enum logic [3:0] {
-        S_IDLE      = 4'd0,   // lines released, or SCL held low while txn_active
-        S_BUSWAIT   = 4'd1,   // wait: both synchronised lines high before START
-        S_RS_REL    = 4'd2,   // T: repeated START, SCL low, SDA released
-        S_RS_WAIT   = 4'd3,   // wait: SCL released, synchronised SCL not yet high (stretch)
-        S_RS_HI     = 4'd4,   // T: SCL high, SDA high (setup); SDA sensed low = arbitration lost
-        S_ST_LO     = 4'd5,   // T: START condition, SDA low with SCL high
-        S_BIT_L1    = 4'd6,   // T: SCL low, SDA held (hold time after SCL fall)
-        S_BIT_L2    = 4'd7,   // T: SCL low, SDA at the new bit value
-        S_BIT_WAIT  = 4'd8,   // wait: SCL released, synchronised SCL not yet high (stretch)
-        S_BIT_HI    = 4'd9,   // T: SCL high; sample SDA / arbitration check at the end
-        S_DATA_WAIT = 4'd10,  // wait: SCL low until TX FIFO has a byte / RX FIFO has room
-        S_STP_HOLD  = 4'd11,  // T: SCL low, SDA held
-        S_STP_LO    = 4'd12,  // T: SCL low, SDA low
-        S_STP_WAIT  = 4'd13,  // wait: SCL released, synchronised SCL not yet high (stretch)
-        S_STP_HI    = 4'd14,  // T: SCL high, SDA low
-        S_STP_FREE  = 4'd15   // T: SDA released with SCL high = STOP; bus-free time
-    } state_e;
+    logic       scl_oe_q, sda_oe_q;        // registered open-drain controls from the engine
+    logic       tx_pop_w, rx_push_w;       // engine -> FIFO strobes
+    logic [7:0] rx_byte_w;                 // byte the engine pushes into the RX FIFO
+    logic       done_set_w, nack_set_w, arb_set_w, tout_set_w;   // event pulses (parent owns the sticky)
+    logic       busy_d_w, txn_d_w;         // engine next-state mirrors (STATUS writeback)
+    logic       scl_s_w, sda_s_w;          // lines as the engine sees them (see "Lines" below)
 
-    // FSM case policy (stated per FSM, skill rtl_coding rule 7): plain `case` with a `default` arm
-    // that releases both lines and returns to S_IDLE. All 16 encodings are named, so `default` is
-    // unreachable by construction here; it is kept for SEU/X recovery in silicon.
-    state_e      state_q, state_d;
-    logic        scl_oe_q, scl_oe_d;       // 1 = SCL driven low
-    logic        sda_oe_q, sda_oe_d;       // 1 = SDA driven low
-    logic [7:0]  shreg_q, shreg_d;         // tx: MSB-first out; rx: shifted in
-    logic [3:0]  bitcnt_q, bitcnt_d;       // 0..7 data bits, 8 = ACK slot
-    logic [7:0]  cnt_q, cnt_d;             // data bytes remaining in this command (incl. current)
-    logic        ph_data_q, ph_data_d;     // 0 = address byte, 1 = data byte
-    logic        txn_q, txn_d;             // this master holds the bus (START sent, no STOP yet)
-    logic [15:0] tick_q;                   // engine tick down-counter
-    logic [15:0] to_q;                     // stuck-wait counter, in ticks
-
-    // Latched command context (loaded on accept)
-    logic        stop_q, nack_last_q, do_data_q, rd_cmd_q;
+    i2c_bit_engine #(
+        .SYNC_STAGES (SYNC_STAGES)
+    ) u_bit_engine (
+        .clk           (clk),
+        .rst_n         (rst_n),
+        .en_i          (en_w),
+        .div_eff_i     (div_eff_w),
+        .timeout_i     (timeout_w),
+        .cmd_wr_i      (c_wr_acc_w),
+        .c_start_i     (c_start_w),
+        .c_write_i     (c_write_w),
+        .c_read_i      (c_read_w),
+        .c_stop_i      (c_stop_w),
+        .c_nack_last_i (c_nack_last_w),
+        .c_count_i     (c_count_w),
+        .addr_i        (addr_reg_w),
+        .scl_s_i       (scl_s_w),
+        .sda_s_i       (sda_s_w),
+        .tx_empty_i    (tx_empty_w),
+        .rx_full_i     (rx_full_w),
+        .tx_head_i     (tx_fifo_q[0]),
+        .tx_pop_o      (tx_pop_w),
+        .rx_push_o     (rx_push_w),
+        .rx_byte_o     (rx_byte_w),
+        .scl_oe_o      (scl_oe_q),
+        .sda_oe_o      (sda_oe_q),
+        .done_set_o    (done_set_w),
+        .nack_set_o    (nack_set_w),
+        .arb_set_o     (arb_set_w),
+        .tout_set_o    (tout_set_w),
+        .busy_d_o      (busy_d_w),
+        .txn_d_o       (txn_d_w)
+    );
 
     // Sticky event flags
     logic done_q, nack_q, arb_q, tout_q;
     logic done_d, nack_d, arb_d, tout_d;
 
-    // Lines as the engine sees them: synchronised pins, or the internal loopback wired-AND.
+    // Lines -- as the engine sees them: synchronised pins, or the internal loopback wired-AND.
     logic slv_pull_q;                      // loopback slave pulling SDA low (declared early: used below)
-    logic scl_s_w, sda_s_w;
     assign scl_s_w = loop_w ? ~scl_oe_q                  : scl_ext_s_w;
     assign sda_s_w = loop_w ? (~sda_oe_q & ~slv_pull_q)  : sda_ext_s_w;
 
@@ -450,7 +475,6 @@ module i2c_controller
     assign rx_full_w  = (rx_level_q == 4'(FIFO_DEPTH));
     assign rx_empty_w = (rx_level_q == 4'd0);
 
-    logic tx_pop_w, rx_push_w;             // engine-driven (see FSM)
 
     // Push / pop qualification. A TX push into a full FIFO is dropped; an RX pop on empty is a no-op.
     // RX push is never attempted on a full FIFO (S_DATA_WAIT gates on rx_full_w).
@@ -471,7 +495,7 @@ module i2c_controller
 
             if (rx_pop_w) rx_fifo_d[i] = (i + 1 < FIFO_DEPTH) ? rx_fifo_q[(i + 1) % FIFO_DEPTH] : 8'h0;
             else          rx_fifo_d[i] = rx_fifo_q[i];
-            if (rx_push_w && rx_wr_idx_w == 4'(i)) rx_fifo_d[i] = shreg_q;
+            if (rx_push_w && rx_wr_idx_w == 4'(i)) rx_fifo_d[i] = rx_byte_w;
             if (en_fall_w)                         rx_fifo_d[i] = 8'h0;
         end
 
@@ -504,300 +528,9 @@ module i2c_controller
         end
     end
 
-    // =========================================================================
-    // Command accept
-    // =========================================================================
-    logic busy_q_w;
-    assign busy_q_w = (state_q != S_IDLE);
-
-    logic c_any_op_w, c_legal_w, cmd_accept_w;
-    assign c_any_op_w   = c_start_w | c_write_w | c_read_w | c_stop_w;
-    assign c_legal_w    = c_start_w | txn_q;   // non-START commands need the bus held
-    assign cmd_accept_w = c_wr_acc_w & c_any_op_w & c_legal_w & en_w & ~busy_q_w;
-
-    always_ff @(posedge clk) begin
-        if (!rst_n) begin
-            stop_q      <= 1'b0;
-            nack_last_q <= 1'b0;
-            do_data_q   <= 1'b0;
-            rd_cmd_q    <= 1'b0;
-        end else if (cmd_accept_w) begin
-            stop_q      <= c_stop_w;
-            nack_last_q <= c_nack_last_w;
-            do_data_q   <= c_write_w | c_read_w;
-            rd_cmd_q    <= c_read_w & ~c_write_w;   // WRITE wins if both are set
-        end
-    end
-
-    // =========================================================================
-    // Bit-level helpers
-    // =========================================================================
-    logic tick_w;
-    assign tick_w = (tick_q == 16'h0);
-
-    logic rd_byte_w;                       // current byte is received (read data phase)
-    assign rd_byte_w = ph_data_q & rd_cmd_q;
-
-    logic ack_n_w;                         // read ACK slot: 1 = NACK (only the last byte, on request)
-    assign ack_n_w = nack_last_q & (cnt_q == 8'd1);
-
-    // SDA drive value for the current bit, 1 = release. Applied at S_BIT_L1 -> S_BIT_L2.
-    logic bit_drv_w;
+    // Sticky event flags: SET WINS over a same-cycle W1C clear (an event is never lost to a racing
+    // clear). The engine supplies the one-clock set pulses; the flops live here with the W1C.
     always_comb begin
-        if (bitcnt_q != 4'd8) bit_drv_w = rd_byte_w ? 1'b1 : shreg_q[7];
-        else                  bit_drv_w = rd_byte_w ? ack_n_w : 1'b1;
-    end
-
-    // Arbitration is checked where this master alone is meant to control SDA: transmitted data and
-    // address bits, and the ACK slot of a read. Not on received bits, nor on a write's ACK slot.
-    logic chk_arb_w;
-    assign chk_arb_w = ((bitcnt_q != 4'd8) & ~rd_byte_w) | ((bitcnt_q == 4'd8) & rd_byte_w);
-
-    // Waits in which the stuck-wait (timeout) counter runs.
-    logic in_wait_w;
-    assign in_wait_w = (state_q == S_BUSWAIT) | (state_q == S_RS_WAIT) | (state_q == S_BIT_WAIT) |
-                       (state_q == S_DATA_WAIT) | (state_q == S_STP_WAIT);
-
-    logic tout_hit_w;
-    assign tout_hit_w = in_wait_w & (timeout_w != 16'h0) & (to_q >= timeout_w);
-
-    // =========================================================================
-    // Engine FSM -- next-state logic. Outputs are registered by the always_ff below.
-    // Every interval state lasts exactly one tick (CLKDIV_eff+1 clk); the `_WAIT` states and
-    // S_BUSWAIT/S_DATA_WAIT instead leave on their condition and are bounded by the timeout.
-    // =========================================================================
-    logic done_set_w, nack_set_w, arb_set_w, tout_set_w;
-    logic fin_w;                           // command finished its bytes (ACK or NACK path)
-
-    always_comb begin
-        state_d   = state_q;
-        scl_oe_d  = scl_oe_q;
-        sda_oe_d  = sda_oe_q;
-        shreg_d   = shreg_q;
-        bitcnt_d  = bitcnt_q;
-        cnt_d     = cnt_q;
-        ph_data_d = ph_data_q;
-        txn_d     = txn_q;
-
-        tx_pop_w    = 1'b0;
-        rx_push_w   = 1'b0;
-        done_set_w  = 1'b0;
-        nack_set_w  = 1'b0;
-        arb_set_w   = 1'b0;
-        fin_w       = 1'b0;
-
-        case (state_q)
-            S_IDLE: begin
-                if (cmd_accept_w) begin
-                    cnt_d = (c_count_w == 8'h0) ? 8'd1 : c_count_w;
-                    if (c_start_w) begin
-                        shreg_d   = {addr_reg_w[6:0], addr_reg_w[7]};
-                        bitcnt_d  = 4'd0;
-                        ph_data_d = 1'b0;
-                        if (txn_q) begin
-                            // Repeated START: SCL is held low; release SDA first.
-                            sda_oe_d = 1'b0;
-                            state_d  = S_RS_REL;
-                        end else begin
-                            state_d  = S_BUSWAIT;
-                        end
-                    end else if (c_write_w | c_read_w) begin
-                        ph_data_d = 1'b1;
-                        state_d   = S_DATA_WAIT;
-                    end else begin
-                        state_d   = S_STP_HOLD;
-                    end
-                end
-            end
-
-            S_BUSWAIT: begin
-                // Bus free (both synchronised lines high) -> START: SDA falls while SCL is high.
-                if (scl_s_w && sda_s_w) begin
-                    sda_oe_d = 1'b1;
-                    state_d  = S_ST_LO;
-                end
-            end
-
-            S_RS_REL: begin
-                if (tick_w) begin
-                    scl_oe_d = 1'b0;
-                    state_d  = S_RS_WAIT;
-                end
-            end
-
-            S_RS_WAIT: begin
-                // Clock stretching: do not proceed until the synchronised SCL reads high.
-                if (scl_s_w) state_d = S_RS_HI;
-            end
-
-            S_RS_HI: begin
-                if (tick_w) begin
-                    if (!sda_s_w) begin
-                        arb_set_w = 1'b1;       // SDA held low by someone else: arbitration lost
-                    end else begin
-                        sda_oe_d = 1'b1;
-                        state_d  = S_ST_LO;
-                    end
-                end
-            end
-
-            S_ST_LO: begin
-                if (tick_w) begin
-                    scl_oe_d = 1'b1;
-                    txn_d    = 1'b1;
-                    state_d  = S_BIT_L1;
-                end
-            end
-
-            S_BIT_L1: begin
-                if (tick_w) begin
-                    sda_oe_d = ~bit_drv_w;
-                    state_d  = S_BIT_L2;
-                end
-            end
-
-            S_BIT_L2: begin
-                if (tick_w) begin
-                    scl_oe_d = 1'b0;
-                    state_d  = S_BIT_WAIT;
-                end
-            end
-
-            S_BIT_WAIT: begin
-                // Clock stretching: SCL-high interval starts only when SCL actually reads high.
-                if (scl_s_w) state_d = S_BIT_HI;
-            end
-
-            S_BIT_HI: begin
-                if (tick_w) begin
-                    scl_oe_d = 1'b1;
-                    if (chk_arb_w && bit_drv_w && !sda_s_w) begin
-                        arb_set_w = 1'b1;       // released SDA to send a 1 but it reads 0
-                    end else if (bitcnt_q != 4'd8) begin
-                        shreg_d  = rd_byte_w ? {shreg_q[6:0], sda_s_w} : {shreg_q[6:0], 1'b0};
-                        bitcnt_d = bitcnt_q + 4'd1;
-                        state_d  = S_BIT_L1;
-                    end else begin
-                        // ACK slot complete: a byte is done.
-                        bitcnt_d = 4'd0;
-                        if (!ph_data_q) begin
-                            if (!sda_s_w && do_data_q) begin
-                                ph_data_d = 1'b1;
-                                state_d   = S_DATA_WAIT;
-                            end else begin
-                                fin_w      = 1'b1;
-                                nack_set_w = sda_s_w;   // address byte: tx, SDA high = NACK
-                            end
-                        end else begin
-                            cnt_d = cnt_q - 8'd1;
-                            if (rd_byte_w) rx_push_w = 1'b1;   // pushes shreg_q
-                            if (!rd_byte_w && sda_s_w) begin
-                                fin_w      = 1'b1;          // NACK on write data: abandon the rest
-                                nack_set_w = 1'b1;
-                            end else if (cnt_q > 8'd1) begin
-                                state_d    = S_DATA_WAIT;
-                            end else begin
-                                fin_w      = 1'b1;
-                            end
-                        end
-                        if (fin_w) begin
-                            if (stop_q) begin
-                                state_d    = S_STP_HOLD;
-                            end else begin
-                                done_set_w = 1'b1;          // bus held (txn_active stays 1)
-                                state_d    = S_IDLE;
-                            end
-                        end
-                    end
-                end
-            end
-
-            S_DATA_WAIT: begin
-                // SCL is low: a master may legally pause here. Bounded by the timeout.
-                if (rd_cmd_q) begin
-                    if (!rx_full_w) begin
-                        shreg_d  = 8'h00;
-                        bitcnt_d = 4'd0;
-                        state_d  = S_BIT_L1;
-                    end
-                end else begin
-                    if (!tx_empty_w) begin
-                        shreg_d  = tx_fifo_q[0];
-                        tx_pop_w = 1'b1;
-                        bitcnt_d = 4'd0;
-                        state_d  = S_BIT_L1;
-                    end
-                end
-            end
-
-            S_STP_HOLD: begin
-                if (tick_w) begin
-                    sda_oe_d = 1'b1;
-                    state_d  = S_STP_LO;
-                end
-            end
-
-            S_STP_LO: begin
-                if (tick_w) begin
-                    scl_oe_d = 1'b0;
-                    state_d  = S_STP_WAIT;
-                end
-            end
-
-            S_STP_WAIT: begin
-                if (scl_s_w) state_d = S_STP_HI;
-            end
-
-            S_STP_HI: begin
-                if (tick_w) begin
-                    sda_oe_d = 1'b0;            // SDA rises while SCL is high: STOP
-                    state_d  = S_STP_FREE;
-                end
-            end
-
-            S_STP_FREE: begin
-                if (tick_w) begin
-                    txn_d      = 1'b0;
-                    done_set_w = 1'b1;
-                    state_d    = S_IDLE;
-                end
-            end
-
-            default: begin
-                scl_oe_d = 1'b0;
-                sda_oe_d = 1'b0;
-                txn_d    = 1'b0;
-                state_d  = S_IDLE;
-            end
-        endcase
-
-        // Overrides, highest priority last. tout_set_w and arb_set_w release the bus and drop the
-        // command; neither sets `done`. EN = 0 aborts silently and cancels every side effect.
-        tout_set_w = tout_hit_w;
-        if (tout_set_w || arb_set_w) begin
-            scl_oe_d   = 1'b0;
-            sda_oe_d   = 1'b0;
-            txn_d      = 1'b0;
-            state_d    = S_IDLE;
-            done_set_w = 1'b0;
-            nack_set_w = 1'b0;
-            tx_pop_w   = 1'b0;
-            rx_push_w  = 1'b0;
-        end
-        if (!en_w) begin
-            scl_oe_d   = 1'b0;
-            sda_oe_d   = 1'b0;
-            txn_d      = 1'b0;
-            state_d    = S_IDLE;
-            done_set_w = 1'b0;
-            nack_set_w = 1'b0;
-            arb_set_w  = 1'b0;
-            tout_set_w = 1'b0;
-            tx_pop_w   = 1'b0;
-            rx_push_w  = 1'b0;
-        end
-
-        // Sticky flags: SET WINS over a same-cycle W1C clear.
         done_d = (done_q & ~clr_w[0]) | done_set_w;
         nack_d = (nack_q & ~clr_w[1]) | nack_set_w;
         arb_d  = (arb_q  & ~clr_w[2]) | arb_set_w;
@@ -806,46 +539,16 @@ module i2c_controller
 
     always_ff @(posedge clk) begin
         if (!rst_n) begin
-            state_q   <= S_IDLE;
-            scl_oe_q  <= 1'b0;
-            sda_oe_q  <= 1'b0;
-            shreg_q   <= 8'h00;
-            bitcnt_q  <= 4'd0;
-            cnt_q     <= 8'd0;
-            ph_data_q <= 1'b0;
-            txn_q     <= 1'b0;
-            done_q    <= 1'b0;
-            nack_q    <= 1'b0;
-            arb_q     <= 1'b0;
-            tout_q    <= 1'b0;
+            done_q <= 1'b0;
+            nack_q <= 1'b0;
+            arb_q  <= 1'b0;
+            tout_q <= 1'b0;
         end else begin
-            state_q   <= state_d;
-            scl_oe_q  <= scl_oe_d;
-            sda_oe_q  <= sda_oe_d;
-            shreg_q   <= shreg_d;
-            bitcnt_q  <= bitcnt_d;
-            cnt_q     <= cnt_d;
-            ph_data_q <= ph_data_d;
-            txn_q     <= txn_d;
-            done_q    <= done_d;
-            nack_q    <= nack_d;
-            arb_q     <= arb_d;
-            tout_q    <= tout_d;
+            done_q <= done_d;
+            nack_q <= nack_d;
+            arb_q  <= arb_d;
+            tout_q <= tout_d;
         end
-    end
-
-    // Tick counter: reloaded on every state change and on every tick, so each interval state lasts
-    // exactly CLKDIV_eff+1 clk from entry. In the wait states it free-runs, clocking the timeout.
-    always_ff @(posedge clk) begin
-        if (!rst_n)                          tick_q <= 16'h0;
-        else if (state_d != state_q || tick_w) tick_q <= div_eff_w;
-        else                                 tick_q <= tick_q - 16'h1;
-    end
-
-    // Stuck-wait counter, in ticks. Cleared on any state change; runs only inside a wait state.
-    always_ff @(posedge clk) begin
-        if (!rst_n || state_d != state_q)                  to_q <= 16'h0;
-        else if (in_wait_w && tick_w && to_q != 16'hFFFF)  to_q <= to_q + 16'h1;
     end
 
     // =========================================================================
@@ -973,8 +676,8 @@ module i2c_controller
 
         // I2C_STATUS
         hw_wen_i  [REG_STATUS] = 1'b1;
-        hw_wdata_i[REG_STATUS] = {25'h0, sda_s_w, scl_s_w, tout_d, arb_d, nack_d, txn_d,
-                                  (state_d != S_IDLE)};
+        hw_wdata_i[REG_STATUS] = {25'h0, sda_s_w, scl_s_w, tout_d, arb_d, nack_d, txn_d_w,
+                                  busy_d_w};
 
         // I2C_RX_DATA: FIFO head (0 when empty -- entries above `level` are zero by construction).
         hw_wen_i  [REG_RX_DATA] = 1'b1;

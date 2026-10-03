@@ -1493,6 +1493,7 @@ async def test_i2c_clkdiv_min_guard_rejects_elaboration(dut):
     srcs = [
         str(_PROJ_ROOT / "rtl/soc/apb4_register_bank.sv"),
         str(_PROJ_ROOT / "rtl/soc/cdc/cdc_2ff_sync.sv"),
+        str(_PROJ_ROOT / "rtl/periph/i2c_bit_engine.sv"),
         str(_PROJ_ROOT / "rtl/periph/i2c_controller.sv"),
         str(Path(__file__).resolve().parent / "tb_i2c.sv"),
     ]
@@ -1709,6 +1710,7 @@ async def test_i2c_sticky_set_wins_over_clear(dut):
     (coincidence verified from the DUT's own set/clear nets) and must stay set.
     MUTATION TARGET: a same-cycle W1C beating the set."""
     u = dut.u_dut
+    e = u.u_bit_engine  # protocol core (i2c_bit_engine.sv): state_q/tick_q/bitcnt_q/to_q
     apb, slave = await _setup(dut, timeout=0xFFFF)
     await apb.write(I2C_ADDR, SLAVE_ADDR)
 
@@ -1717,7 +1719,7 @@ async def test_i2c_sticky_set_wins_over_clear(dut):
     await apb.write(I2C_CMD, cmd(start=1, write=1, stop=1, count=1))
     await _clear_coincident(
         dut,
-        lambda d: int(u.state_q.value) == S_STP_FREE and int(u.tick_q.value) == 1,
+        lambda d: int(e.state_q.value) == S_STP_FREE and int(e.tick_q.value) == 1,
         IRQ_DONE,
         u.done_set_w,
         "done",
@@ -1734,9 +1736,9 @@ async def test_i2c_sticky_set_wins_over_clear(dut):
     await _clear_coincident(
         dut,
         lambda d: (
-            int(u.state_q.value) == S_BIT_HI
-            and int(u.bitcnt_q.value) == 8
-            and int(u.tick_q.value) == 1
+            int(e.state_q.value) == S_BIT_HI
+            and int(e.bitcnt_q.value) == 8
+            and int(e.tick_q.value) == 1
         ),
         IRQ_DONE | IRQ_NACK,
         u.nack_set_w,
@@ -1758,9 +1760,9 @@ async def test_i2c_sticky_set_wins_over_clear(dut):
     await _clear_coincident(
         dut,
         lambda d: (
-            int(u.state_q.value) == S_BIT_HI
-            and int(u.bitcnt_q.value) == 2
-            and int(u.tick_q.value) == 1
+            int(e.state_q.value) == S_BIT_HI
+            and int(e.bitcnt_q.value) == 2
+            and int(e.tick_q.value) == 1
         ),
         IRQ_ARB,
         u.arb_set_w,
@@ -1784,9 +1786,9 @@ async def test_i2c_sticky_set_wins_over_clear(dut):
     await _clear_coincident(
         dut,
         lambda d: (
-            int(u.state_q.value) in S_WAITS
-            and int(u.to_q.value) == tmo - 1
-            and int(u.tick_q.value) == 0
+            int(e.state_q.value) in S_WAITS
+            and int(e.to_q.value) == tmo - 1
+            and int(e.tick_q.value) == 0
         ),
         IRQ_TOUT,
         u.tout_set_w,
@@ -1842,7 +1844,7 @@ async def test_i2c_clkdiv_scl_period_linear(dut):
     assert m[3]["low"] < m[62]["low"] < m[249]["low"]
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_i2c_clkdiv_100k_400k(dut):
     """Standard-mode and Fast-mode rates from CLKDIV at the 100 MHz test clock, against the DUT
     header's contract: "One bit = 4 ticks ... f_scl = f_clk / (4*(CLKDIV+1))" and the bead's
@@ -1852,15 +1854,10 @@ async def test_i2c_clkdiv_100k_400k(dut):
       * f_scl never exceeds the mode's maximum and is within 2 % below it;
       * Standard mode: tLOW >= 4.7 us, tHIGH >= 4.0 us;  Fast mode: tLOW >= 1.3 us, tHIGH >= 0.6 us.
 
-    KNOWN FAILING -- RTL DEFECT, marked expect_fail so the suite stays usable while it is open (the
-    marker flips to a hard failure the moment the RTL is fixed, forcing its removal): the bit engine
-    spends only THREE timed states per bit (S_BIT_L1, S_BIT_L2, S_BIT_HI, one tick each) plus the
-    synchroniser wait, not four. Measured on the bus: 132.8 kHz at CLKDIV=249 (the '100 kHz'
-    setting)
-    and 520.8 kHz at CLKDIV=62 (the '400 kHz' setting); SCL-high is 2.53 us at 'Standard mode'
-    (spec minimum 4.0 us) and SCL-low is 1.26 us at 'Fast mode' (spec minimum 1.3 us). A driver that
-    computes CLKDIV from the documented formula overclocks the bus by 33 %.
-    Filed as fix_request fr_609b42790e0f_20261003_015343_00 (failure_class protocol)."""
+    Permanent regression gate for fix_request fr_609b42790e0f_20261003_015343_00: the bit engine
+    used to spend three timed states per bit (132.8 kHz at CLKDIV=249, tHIGH 2.53 us; 520.8 kHz at
+    CLKDIV=62, tLOW 1.26 us). It now has the fourth phase (S_BIT_HI1), with the synchroniser wait
+    counted inside the high phase, so the period is exactly 4*(CLKDIV+1) clk."""
     # (CLKDIV, max kHz, tLOW_min us, tHIGH_min us)
     for div, max_khz, t_low_us, t_high_us in ((249, 100.0, 4.7, 4.0), (62, 400.0, 1.3, 0.6)):
         t = await _measure_scl(dut, div)

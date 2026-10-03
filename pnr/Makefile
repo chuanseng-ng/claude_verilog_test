@@ -756,6 +756,7 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/periph/watchdog_timer.sv \
 	$(PROJECT_ROOT)/rtl/periph/trng_lfsr_entropy.sv \
 	$(PROJECT_ROOT)/rtl/periph/trng.sv \
+	$(PROJECT_ROOT)/rtl/periph/i2c_bit_engine.sv \
 	$(PROJECT_ROOT)/rtl/periph/i2c_controller.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_clock_gate.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_2ff_sync.sv \
@@ -1478,6 +1479,7 @@ SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/periph/watchdog_timer.sv \
 	$(PROJECT_ROOT)/rtl/periph/trng_lfsr_entropy.sv \
 	$(PROJECT_ROOT)/rtl/periph/trng.sv \
+	$(PROJECT_ROOT)/rtl/periph/i2c_bit_engine.sv \
 	$(PROJECT_ROOT)/rtl/periph/i2c_controller.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_clock_gate.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_2ff_sync.sv \
