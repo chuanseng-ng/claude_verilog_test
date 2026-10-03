@@ -585,7 +585,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint check-exit-propagation
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto check-exit-propagation
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -1114,6 +1114,21 @@ soc_i2c: soc_boot_lint
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
+# SoC-level CRYPTO FABRIC test (bead claude_verilog_test-f7vs.10). Exercises crypto_accel (APB slave
+# 12, 0x2000_F000) through the real fabric path -- CPU -> axi4_crossbar -> axi4_to_axilite ->
+# axi_lite_interconnect -> axil_to_apb -> apb_interconnect -- plus the crypto -> interrupt_controller
+# [10] -> CPU MEIP interrupt path. Deliberately CHEAP: a few FIPS-197 / FIPS 180-4 known answers read
+# back over the bus; every behaviour of the peripheral itself is the L1 `crypto` suite. One test / one
+# hand-assembled image (crypto_fw/gen_crypto_hex.py, no cross toolchain -- CI-safe). crypto_accel.sv,
+# aes128_core.sv and sha256_core.sv are already in SOC_BOOT_SOURCES and tb_soc_top.sv needs no new
+# ports (crypto has no pins), so this reuses soc_boot_lint exactly like soc_i2c/soc_trng above.
+soc_crypto: soc_boot_lint
+	$(MAKE) MODULE=test_soc_crypto TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
 # GPIO DRIVER test (bead claude_verilog_test-8qn4 item 2). Unlike soc_gpio
 # above (hand-assembled gpio_fw firmware proving the RTL through the
 # fabric), this suite proves sw/drivers/gpio.h -- the first GPIO driver
@@ -1315,6 +1330,7 @@ soc_all_ci: check-space
 	$(MAKE) soc_wdt
 	$(MAKE) soc_trng
 	$(MAKE) soc_i2c
+	$(MAKE) soc_crypto
 	$(MAKE) soc_pll
 	$(MAKE) soc_multiclock
 	$(MAKE) soc_multiclock_reset
