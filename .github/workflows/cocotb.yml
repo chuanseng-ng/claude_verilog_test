@@ -180,7 +180,11 @@ jobs:
       # failure mode, where make still exits 0 -- note that is literal, not
       # hypothetical: a cocotb target returns exit 0 even with FAIL=7, so this
       # log-grep floor is currently the ONLY thing that catches a red suite in
-      # CI (bead p6t8). Measured 347 passing tests on
+      # CI (bead p6t8). Measured 394 passing tests on
+      # 2026-10-03 (soc_all_ci, after Phase 6a-5 I2C: +46 from its L1 protocol
+      # suite and +1 from the soc_i2c loopback fabric test; the L1 count includes
+      # test_i2c_clkdiv_100k_400k, which was expect_fail against the bit-period
+      # defect until 684d356 fixed it and it became a real pass); 347 on
       # 2026-10-02 (soc_all_ci, after bead r5hu: +8 from register_bank's new
       # -GADDR_W=5 build point and +9 from apb4_register_bank's, the
       # N_REGS == 2**WORDW truncating-cast boundary; both targets now run two
@@ -211,7 +215,7 @@ jobs:
       - name: Verify regression actually ran
         if: always()
         env:
-          PASS_FLOOR: '344'
+          PASS_FLOOR: '391'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."
