@@ -573,6 +573,39 @@ This is the highest-value risk control in the phase: it catches "the 16-parallel
 of the SoC" while the fold-to-4 fallback is still a cheap parameter change, instead of after five
 more items have piled on top. Record the cell delta in the item's bead.
 
+#### Gate A results — CRYPTO, 2026-10-03 (bead `f7vs.10`)
+
+First Gate A probe actually run (it was skipped for PWM/WDT/TRNG/I2C — bead `f7vs.13`). Method:
+`sv2v` + `yosys` from the cache `tools/cdc/fetch_cdc_tools.sh` already populates under
+`sim/build/cdc/`, mapped to `sky130_fd_sc_hd__tt_025C_1v80.lib`, plus OpenSTA at the SoC's real
+`CLOCK_PERIOD 25.0`. No floorplan, placement, routing, RCX or PDN.
+
+| Configuration | Cells | Area µm² | % of SoC stdcell | Setup slack @ ss |
+|:--------------|------:|---------:|-----------------:|-----------------:|
+| `crypto_accel`, `SBOX_PARALLEL=16` (default) | 24 227 | 277 875 | **3.59 %** | **+14.042 ns MET** |
+| `crypto_accel`, `SBOX_PARALLEL=4` (fallback) | 20 569 | 237 279 | 3.06 % | +14.098 ns MET |
+| `crypto_accel`, 16, datapath resets dropped | 23 074 | 265 814 | 3.43 % | — |
+| `aes128_core` @16 | — | 130 320 | 1.68 % | +17.332 ns MET |
+| `aes128_core` @4 | 6 411 | 69 555 | 0.90 % | +17.457 ns MET |
+| `sha256_core` | 8 033 | 88 232 | 1.14 % | +14.065 ns MET |
+| `apb4_register_bank` alone | 7 562 | 88 126 | 1.14 % | — |
+
+Denominator is the Sky130 SoC's own `design__instance__area` = **7 744 600 µm²** at ~38 %
+utilisation (run `RUN_2026-09-26_07-34-03`), *not* the die area. Flop count 3 168
+(`dfxtp_2`).
+
+**Decision: `SBOX_PARALLEL` stays 16.** This gate exists to catch the case quoted above — "the
+16-parallel-S-box AES is 40 % of the SoC". It is **3.59 %**, an order of magnitude away. Folding to
+4 would save 40 596 µm², which is **0.52 percentage points** of the SoC, gain nothing in timing
+(+14.098 vs +14.042 ns at ss is noise), and cost 3.7× the AES latency (11 → 41 cycles/block). The
+pre-documented fallback therefore stays documented and unused, still a one-parameter change if a
+future floorplan ever needs it. The datapath-reset lever would save a further 0.16 pp and is also
+not taken: X-free deterministic reset is worth more than that.
+
+⚠️ These are **pre-layout** numbers by design — the slack is against estimated, not extracted,
+parasitics. 14 ns of margin on a 25 ns period is wide for a block this size, but Gate B remains the
+real physical gate.
+
 ### Gate B — one batched Sky130 harden after all six land
 
 Via `chip-design-pd:physical-design-orchestrator`, using `make librelane-sky130-soc-noklayout`
