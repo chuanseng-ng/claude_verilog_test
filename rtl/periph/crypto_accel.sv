@@ -5,18 +5,43 @@
 //
 // NON-GOALS -- READ BEFORE USING. This is NOT production cryptography.
 //   * NO side-channel or DPA resistance: the S-box is a data-dependent logic network, nothing is
-//     masked, balanced or randomised, and timing is data-independent only by accident of structure.
+//     masked, balanced or randomised. Operation DURATION is fixed by construction -- fixed
+//     iteration counts, no early exit, no data-dependent control, so 11/41/66/2 clk depends only
+//     on mode and SBOX_PARALLEL, never on key or data -- but that is a statement about cycle
+//     count only. NO claim is made about power, EM or glitch behaviour.
 //   * NO fault-injection hardening: no redundancy, no duplicated datapath, no integrity check on
 //     the round count, state or key.
 //   * NOT certified and NOT validated against any scheme (no FIPS 140, Common Criteria, CAVP/ACVP).
 //     Correctness is established by known-answer vectors in simulation only.
-//   * KEYS ARE READABLE BY ANY BUS MASTER IN THIS SoC: the key is written over APB, there is no
-//     privilege or secure/non-secure split, and any master (CPU, DMA, GPU) can write the key,
-//     start an operation and read the result. There is no key lifecycle, no key zeroisation
-//     (other than reset) and no lock bit.
+//   * ANY BUS MASTER CAN WRITE, REPLACE AND USE THE KEY, AND READ THE RESULTS. The key itself is
+//     NOT readable over the bus (KEY0-3 read 0 forever, and key_q reaches no output), but that
+//     buys very little: there is no privilege or secure/non-secure split -- crossbar masters M0
+//     (CPU), M1/M2 (GPU) and M3 (DMA) all decode to the APB ring, and axil_to_apb ignores AxPROT
+//     -- so any master can substitute its OWN key between a victim's key load and its start, then
+//     read DOUT. In CTR mode that yields DOUT = E_attacker(IV) ^ msg_q, from which the attacker
+//     recovers the victim's plaintext even though DIN also reads 0; in SHA mode it yields
+//     H(victim_msg). Treat this block as an unprotected shared oracle, not as key storage.
+//   * NO KEY LIFECYCLE: no zeroisation command, no lock bit, and key_valid never drops once set.
+//     The ONLY clear is core_rst_n (rst_n_i & pll_locked), i.e. a whole-SoC reset -- which also
+//     fires on a PLL unlock -- so "zeroise the key" means "reset the SoC".
+//   * RESIDUAL STATE SURVIVES A CONTEXT SWITCH. key_q, rk_q (the round-10 key, which inverts to
+//     the master key), msg_q, DOUT, DIGEST and IV all persist. A second user that writes fewer
+//     than four KEY words, or uses partial strobes, silently runs on the first user's key or a
+//     mixed key with key_valid still 1; and DOUT/DIGEST remain readable, which in CTR decrypt is
+//     the previous user's PLAINTEXT. Software must rewrite all four KEY words with pstrb=0xF on
+//     every switch. Note also that after an illegal start `done` asserts while DOUT still holds
+//     the PREVIOUS result -- stale data that looks valid.
+//   * NONCE AND IV MANAGEMENT ARE ENTIRELY SOFTWARE'S JOB. IV resets to 0, nothing enforces
+//     uniqueness, and IV is the one register with no busy-time protection (it lives in the bank,
+//     so unlike KEY and DIN there is no shadow-side check to add): a mid-operation write to IV3
+//     re-bases the next counter block, so software can cause counter reuse.
+//   * NO INTEGRITY AND NO DECRYPT DATAPATH. ECB leaks plaintext patterns block-for-block; CTR is
+//     unauthenticated and trivially malleable (flipping a ciphertext bit flips the plaintext bit).
+//     There is no MAC, no AEAD mode and no AES decrypt -- CTR covers decryption instead.
 //   * THE KEY SHADOW REGISTER (key_q, 128 flops) IS FULLY EXPOSED THROUGH SCAN. Once DFT scan
 //     insertion is applied, every flop in this peripheral -- key_q, the AES state s_q and round key
-//     rk_q, the message shadow msg_q -- is observable and controllable through the scan chain.
+//     rk_q, the message shadow msg_q, the SHA working registers (w_q, a..h_q, hin_q) and the bank
+//     flops holding DOUT, DIGEST and IV -- is observable and controllable through the scan chain.
 //     DFT ACCESS MUST THEREFORE BE TREATED AS KEY ACCESS. The same holds for any debug path that
 //     can observe flop state.
 //

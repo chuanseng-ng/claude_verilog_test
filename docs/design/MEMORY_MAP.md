@@ -488,12 +488,34 @@ Register-only: no top-level pins and no asynchronous inputs, so no CDC synchroni
 
 > **NOT PRODUCTION CRYPTOGRAPHY.** No side-channel or DPA resistance, no fault-injection hardening, no
 > certification (no FIPS 140 / Common Criteria / CAVP); correctness is established by known-answer
-> vectors in simulation only. **The key is exposed to every bus master:** it is written over APB with no
-> privilege or secure/non-secure split, so *any* master (CPU, DMA, GPU) can write the key, start an
-> operation and read the result. There is no key lifecycle, no lock bit and no zeroisation other than
-> reset. **The key shadow (`key_q`, 128 flops) is fully exposed through scan** once DFT scan insertion
-> is applied, as are the AES state, round key and message shadow, so **DFT access must be treated as key
-> access**, as must any debug path that can observe flop state.
+> vectors in simulation only. Operation *duration* is fixed by construction (no early exit, no
+> data-dependent control), but no claim is made about power, EM or glitch behaviour.
+>
+> **Any bus master can write, replace and use the key, and read the results.** The key itself is *not*
+> readable over the bus — `KEY0-3` read 0 forever and `key_q` reaches no output — but that buys little:
+> there is no privilege or secure/non-secure split (M0 CPU, M1/M2 GPU and M3 DMA all decode to the APB
+> ring, and `axil_to_apb` ignores `AxPROT`), so any master can substitute its **own** key between a
+> victim's key load and its start and then read `DOUT`. In CTR that gives `E_attacker(IV) ^ msg_q`,
+> recovering the victim's plaintext despite `DIN` also reading 0; in SHA it gives `H(victim_msg)`.
+> Treat this as an unprotected shared oracle, not as key storage.
+>
+> **No key lifecycle:** no zeroisation command, no lock bit, and `key_valid` never drops once set — the
+> only clear is `core_rst_n` (a whole-SoC reset, which also fires on a PLL unlock). **Residual state
+> survives a context switch:** `key_q`, `rk_q` (the round-10 key, which inverts to the master key),
+> `msg_q`, `DOUT`, `DIGEST` and `IV` all persist, so a second user writing fewer than four KEY words —
+> or using partial strobes — silently runs on the first user's key with `key_valid` still 1, and
+> `DOUT`/`DIGEST` stay readable (in CTR decrypt, that is the previous user's *plaintext*). Software must
+> rewrite all four KEY words with `pstrb = 0xF` on every switch.
+>
+> **Nonce/IV management is entirely software's job:** `IV` resets to 0, nothing enforces uniqueness, and
+> `IV` is the one register with no busy-time protection, so a mid-operation write to `IV3` re-bases the
+> next counter block and can cause counter reuse. **No integrity, no decrypt datapath:** ECB leaks
+> plaintext patterns block-for-block, CTR is unauthenticated and malleable, and there is no MAC or AEAD.
+>
+> **Everything in this block is exposed through scan** once DFT insertion is applied — `key_q`, the AES
+> state and round key, the message shadow, the SHA working registers, and the bank flops holding `DOUT`,
+> `DIGEST` and `IV` — so **DFT access must be treated as key access**, as must any debug path that can
+> observe flop state.
 
 **Byte order.** FIPS-197 / FIPS 180-4 big-endian throughout. For a 128-bit block `B[0..15]`, word 0
 carries `B0` in bits [31:24]: `DIN0[31:24] = B0 ... DIN3[7:0] = B15`, and the same for KEY, IV and DOUT.
