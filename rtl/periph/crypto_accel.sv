@@ -46,8 +46,11 @@
 // REGISTER-BANK PATTERN. hw_wen = 1 every cycle <=> the word is a LIVE MIRROR of internal state
 // (STATUS, IRQ_STAT). hw_wen = a pulse <=> the bank word IS the storage element and must hold
 // between events (DOUT, DIGEST, IV3). The second form is why this design has no result registers
-// at all. Every HW write uses the NEXT-state value, so a read one transfer after an event is never
-// stale.
+// at all. STATUS and IRQ_STAT are written every cycle with the value the state flops (state_q,
+// done_q, key_rej_q, key_seen_q) are ABOUT TO TAKE, so after every clock edge each field of those
+// words equals the corresponding state flop's new value, with no lag: a transfer that completes at
+// edge N is already reflected in a read whose ACCESS phase follows it. That is the whole guarantee
+// -- STATUS == f(state flops) after every edge -- and it implies nothing about any other register.
 //
 // START. CTRL[2] is NOT STORED: WMASK[CTRL] has bit 2 clear, so it reads 0 forever and clears
 // itself by construction. start is a write-snoop pulse (psel & penable & pwrite at CTRL, pwdata[2]
@@ -56,7 +59,12 @@
 // collision rule (software wins inside WMASK) would let a software 1 beat the hardware clear anyway.
 // Only one APB transfer completes per cycle, so NO TWO SNOOPS CAN FIRE TOGETHER: in particular a
 // KEY write can never coincide with a start write. START WHILE BUSY IS SILENTLY IGNORED (no status
-// bit, no pslverr). Observed latency from the ACCESS phase of the start write to done: 11 clk
+// bit, no pslverr). SOFTWARE CONTRACT -- MODE THEN START, IN SEPARATE TRANSFERS: mode, SHA_CONT
+// and the legality check all read the bank's CTRL register, which still holds its PRE-write value
+// during the ACCESS cycle of the write that carries START. A single write that both changes the
+// mode (or SHA_CONT) and sets START therefore runs the OLD mode; write the mode first, then START
+// in a later transfer. This single-write case is deliberately not pinned by the test suite.
+// Observed latency from the ACCESS phase of the start write to done: 11 clk
 // (ECB/CTR, SBOX_PARALLEL=16), 41 clk (SBOX_PARALLEL=4), 66 clk (SHA), 2 clk (illegal op).
 //
 // ILLEGAL / DISABLED MODE is hang-free at both levels. op_legal = (mode 0|1 & EN_AES & key_valid)
@@ -74,6 +82,12 @@
 // accepted key write. key_valid is set by writing all four words and cleared ONLY BY RESET; a
 // partial rewrite leaves key_valid = 1 over a mixed key (software's problem; clearing on any
 // single write would break the common "rewrite one word" pattern). THERE IS NO KEY READBACK.
+// A key write with pstrb == 4'h0 selects no byte lane: it is NOT a key write at all -- it changes
+// no key bit, does not count toward key_valid, and, even while busy, latches no key_write_rejected
+// (nothing was attempted). A non-zero strobe, however partial, merges its lanes and counts.
+// key_valid is meaningful only when EN_AES = 1: with EN_AES = 0 the shadow still tracks writes (so
+// STATUS[2] reads 1 once four words are written) but no AES core exists, op_legal rejects modes
+// 0/1 regardless of it, and the bit carries no information.
 //
 // DIN. The DIN window is a 4-WORD APERTURE onto one 512-bit shift register: only the fact that a
 // write hit DIN0..3 matters, not which, and WRITE ORDER IS THE CONTRACT (most significant word
@@ -97,8 +111,16 @@
 // H0 constants, 1 continues from the current DIGEST. Multi-block: write 16 words, start with
 // SHA_CONT=0, poll done, write the next 16, start with SHA_CONT=1, ..., read DIGEST. PADDING AND
 // LENGTH ENCODING ARE SOFTWARE'S JOB. The mode and SHA_CONT are sampled at the start edge; the CTR
-// choice is latched at start for the writeback, so a CTRL write mid-operation cannot corrupt a
-// result (it still must not be relied on).
+// choice is latched at start for the writeback.
+//
+// CTRL WRITTEN WHILE BUSY is not a supported use, but is safe in these respects. GUARANTEED: the
+// operation in flight completes with the mode it STARTED with (the core that was started is the
+// one that completes; the CTR/ECB writeback XOR and the IV3 increment use the start-time latch;
+// SHA_CONT and the chaining value were sampled at the start edge), so DOUT / DIGEST / IV3 for that
+// operation are not corrupted; IRQ enable (CTRL[3]) takes effect immediately on irq_o. NOT
+// GUARANTEED: that the new CTRL value does anything for the operation in flight; and a START bit
+// in such a write is ignored (busy). The new mode / SHA_CONT apply to the NEXT start. IV is not
+// protected while busy at all (see AES MODES).
 //
 // DOUT / DIGEST VALIDITY. A bank word is written on the completion edge of each operation, so it is
 // valid from one completion edge to the next: DOUT / DIGEST ARE NEVER GARBAGE, THEY ARE EITHER
@@ -464,7 +486,8 @@ module crypto_accel
     // =========================================================================
     always_comb begin
         for (int unsigned i = 0; i < 4; i++) begin
-            key_wr_w[i]     = wr_acc_w & is_key_addr_w[i];
+            // A zero strobe selects no byte lane: no write attempted, so neither accepted nor rejected.
+            key_wr_w[i]     = wr_acc_w & is_key_addr_w[i] & (|pstrb);
             key_accept_w[i] = key_wr_w[i] & ~busy_q;
         end
     end
