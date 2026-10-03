@@ -444,19 +444,38 @@ NOT a measurement. Detail: `docs/SKY130_REAL_DRC_LVS_EVALUATION.md`.
 > reached the 6a heading only and never propagated here. Golden spec:
 > [`docs/PHASE6_IP_EXPANSION_PLAN.md`](PHASE6_IP_EXPANSION_PLAN.md) §2.
 
+✅ **LANDED 2026-10-03 (bead `f7vs.10`)** — `rtl/periph/crypto_accel.sv` + `aes128_core.sv` +
+`sha256_core.sv`, APB4 slave index 12 at `0x2000_F000-FFFF`, IRQ bit 10. `test_crypto` 41/41,
+`test_soc_crypto` 1/1.
+
 - **APB4 slave** (control/status, key/IV/digest registers), one 4 KB slot at `0x2000_F000`
 - Bulk data by **programmed I/O over APB**. An AXI4 master/slave path is an explicit
   **non-goal of Phase 6b** — it would need `SOC_N_SLAVES` 3 → 4 and a change to `axi4_crossbar`.
   Tracked as Phase 6b-2, not scheduled.
-- AES-128 round function: ~6 LUT levels → fits 75 MHz on Sky130
+- **AES-128 encrypt-only, exposing ECB *and* CTR.** CTR makes an encrypt-only core a complete
+  cipher in both directions, so there is no inverse S-box and no inverse key schedule. Iterative
+  128-bit datapath, on-the-fly key schedule, `SBOX_PARALLEL=16` → **11 cycles/block** (the
+  documented fold-to-4 fallback is 41 and bit-identical; Gate A measured the default at 3.59 % of
+  SoC stdcell area, so it was not taken).
+- **SHA-256** single block-compress, 64 rounds at 1/cycle → **66 cycles/block**. Padding, length
+  and multi-block chaining are software's job per FIPS 180-4; `CTRL[4] SHA_CONT` chains from the
+  RO `DIGEST` words.
+- **Keys are not bus-readable** (shadow register outside the bank; `KEY0-3` read 0 forever), but
+  any master can substitute its own key and use the block as an oracle — see the security notes in
+  `docs/design/MEMORY_MAP.md`. **Not production cryptography**: no DPA/side-channel resistance, no
+  fault hardening, not certified.
 
 ⚠️ **The throughput table below describes the DEFERRED AXI4-master version, not what Phase 6b
 lands.** An APB single-beat register feed is far slower. Do not quote these figures against the
 delivered RTL. (Bead `f7vs.1`.)
 
+Note the delivered AES is **11 cycles/block**, not the 100 this table assumed, so the per-block
+latency is ~9× better than projected — but the APB register feed, not the round count, is what
+bounds throughput, and nothing in this repo measures it.
+
 | Node | AES throughput | Notes |
 |------|---------------|-------|
-| Sky130 (75 MHz) | ~75 MB/s | 100 cycles/block, tape-out viable |
+| Sky130 (75 MHz) | ~75 MB/s | assumed 100 cycles/block; delivered RTL is 11 |
 | FreePDK45 (400 MHz) | ~400 MB/s | Same pipeline, 5× faster |
 | ASAP7 (1 GHz) | ~1 GB/s | High-throughput secure element |
 

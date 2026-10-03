@@ -368,8 +368,8 @@ per-item.
 | 6a-2 | PWM controller, 4 channels | 8 / 6 | `f7vs.6` | ✅ 2026-09-28 (RTL + 16/16 L1 + soc_pwm L2; `soc_all_ci` 279) |
 | 6a-3 | Watchdog timer | 9 / 7 | `f7vs.7` | ✅ 2026-09-29 (RTL + 22/22 L1 + soc_wdt L2 incl. RST_EN reset path; `soc_all_ci` 303) |
 | 6a-4 | TRNG (portable LFSR entropy; RO source Sky130-only) | 10 / 8 | `f7vs.8` | ✅ 2026-10-01 (RTL bit-exact vs Python model + 22/22 L1 + soc_trng L2; `soc_all_ci` 326) |
-| 6a-5 | I2C master controller | 11 / 9 | `f7vs.9` | ⏸️ Not started |
-| 6b | CRYPTO — AES-128 (ECB+CTR) + SHA-256 | 12 / 10 | `f7vs.10` | ⏸️ Not started |
+| 6a-5 | I2C master controller | 11 / 9 | `f7vs.9` | ✅ 2026-10-03 (RTL + bit engine + `i2c_slave` BFM + 46/46 L1 + soc_i2c L2; PR #208; `soc_all_ci` 394) |
+| 6b | CRYPTO — AES-128 (ECB+CTR) + SHA-256 | 12 / 10 | `f7vs.10` | ✅ 2026-10-03 (RTL 3 files + 41/41 L1 + soc_crypto L2 + **Gate A run**: 3.59 % of SoC stdcell area, +14.04 ns ss @ 25 ns) |
 | 6c | INT8 NPU, 4×4 systolic, 4 KB weight SRAM | 13 / 11 | `f7vs.11` | ⏸️ Not started |
 
 Three documentation defects were corrected when the golden spec landed: AES/SHA is **APB4**, not
@@ -595,7 +595,7 @@ All previous specification issues have been resolved:
 **Phases 0-5 are complete.** Phase 5 signed off 2026-06-24 (M1-M12); Phase 6a's first peripheral
 (GPIO) landed and hardened on Sky130 2026-09-26; Phase 7 M-a..M-c complete 2026-06-20.
 
-**Current priority**: Phase 6 groundwork, then the four remaining 6a peripherals.
+**Current priority**: 6c — the INT8 NPU (bead `f7vs.11`), the last Phase 6 item. 6a and 6b are complete.
 Golden spec: `docs/PHASE6_IP_EXPANSION_PLAN.md`. Tracking: bead epic `claude_verilog_test-f7vs`.
 
 1. **Groundwork** (G1-G5) — front-loads the risk so each later peripheral is near-pure RTL + test:
