@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-09-28T11:01:38.822156+00:00",
+  "updated_at": "2026-10-03T03:43:04.230555+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -52,8 +52,8 @@
   },
   "verification_status": {
     "coverage_pct": 100.0,
-    "sim_signoff": true,
-    "signoff": true,
+    "sim_signoff": false,
+    "signoff": false,
     "sram_sky130_soc_all_regression": {
       "status": "PASS",
       "total_tests": 110,
@@ -527,6 +527,43 @@
         "checked_at": "2026-09-27T01:06:25.097269+00:00"
       },
       "checked_at": "2026-09-27T01:06:25.097269+00:00"
+    },
+    "i2c_f7vs9_verification": {
+      "status": "ESCALATED_DUT_BUG",
+      "fix_request": "fr_609b42790e0f_20261003_015343_00",
+      "l1_i2c": {
+        "tests": 46,
+        "pass": 46,
+        "fail": 0,
+        "skip": 0,
+        "note": "includes 1 expect_fail test (test_i2c_clkdiv_100k_400k, open fix_request)"
+      },
+      "l2_soc_i2c": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skip": 0
+      },
+      "soc_all_ci": {
+        "exit_code": 0,
+        "ci_formula_passed": 393,
+        "ci_formula_failed": 0,
+        "per_suite_pass_sum": 394,
+        "log": "/nobackup/i2c_f7vs9_verification/soc_all_ci.log"
+      },
+      "mutation": {
+        "mutants": 41,
+        "killed": 41,
+        "survivors_after_fix": 0,
+        "results": "/nobackup/i2c_f7vs9_verification/mutation_results.json"
+      },
+      "coverage": {
+        "i2c_controller_line_pct": 91.0,
+        "uncovered_logic": "2 default: arms (dead by construction, waived); remaining % lines are constant-driven port declarations",
+        "functional_coverage_pct": "NOT RUN (no covergroups in the cocotb flow)",
+        "raw": "/nobackup/i2c_f7vs9_verification/i2c_l1_coverage.dat"
+      },
+      "checked_at": "2026-10-03T03:43:04.230555+00:00"
     }
   },
   "pipeline_session_id": null,
@@ -1987,6 +2024,54 @@
       "suggested_next_step": "proceed",
       "reason": "nix develop --command make -C sim lint: exit 0, 0 errors. 4 pre-existing warnings (rv32i_cache_pkg.sv UNUSEDPARAM x3, sram_1rw_256x32_verilator.v DECLFILENAME) unchanged vs. pre-edit baseline (verified via git stash A/B comparison) -- no new warnings introduced by this pass's 4-file edit.",
       "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-10-03T03:43:04.230555+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "tb_architecture",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "I2C L1/L2 testbench architecture fixed: tb_i2c.sv wrapper + tb/cocotb/bfm/i2c_slave.py (wired-AND modelled in the BFM on the clock negedge, register-file slave, stretch/contention hooks, built-in stretch-compliance and dead-*_o checks) + test_i2c.py; L2 via loopback firmware. No constraints.coverage keys in design_state: schema defaults used (functional 100, line 95).",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-10-03T03:43:04.230555+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "test_planning",
+      "decision": "proceed",
+      "confidence": "medium",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "V-plan derived from the i2c_controller.sv header contract (not from the FSM). design_state.rtl.unverified is absent: the RTL flow did not report, so nothing was assumed covered; the cdc entry for the two pad synchronisers cannot be closed by functional simulation and needs a CDC tool run (a synchroniser-bypass mutant was only caught via its latency).",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-10-03T03:43:04.230555+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "uvm_tb_build",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "cocotb/Verilator build (no UVM): i2c_lint 0 warnings; L1 46/46 (45 + 1 expect_fail), L2 soc_i2c 1/1; ruff clean; 41 RTL mutants all killed after two test-suite holes (M3c repeated-START arbitration abort, M30 COUNT=0 read NACK) and one spurious kill (M32 synchroniser bypass) were closed by adding assertions.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-10-03T03:43:04.230555+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "functional",
+      "retry_strategy": "refine",
+      "suggested_next_step": "escalate",
+      "reason": "failure_class functional (fix_request class protocol): DUT bug, not a testbench bug -- the i2c_controller bit engine spends 3 timed states per bit instead of the documented 4, so I2C_CLKDIV 249 / 62 give 132.8 kHz / 520.8 kHz and SCL-high is 2.53 us at the Standard-mode setting (min 4.0 us). User/RTL owner must supply: either add the missing 4th timed phase to the bit engine, or amend the header formula and the bead's 100k/400k divisor claims. test_i2c_clkdiv_100k_400k is expect_fail until then; signoff withheld.",
+      "constraint_ref": "fr_609b42790e0f_20261003_015343_00"
     }
   ],
   "fix_requests": [
@@ -2339,6 +2424,35 @@
           "note": "Gated wr_ready_o on wr_rst_n_i in cdc_gray_fifo.sv. Verilator lint_soc + async_axi_fifo_lint + apb_cdc_bridge_lint all 0 errors (7 known baseline warnings on lint_soc only). async_axi_fifo unit suite: 21/22 (1 pre-existing test now fails due to a testbench timing assumption tied to the old bug, not a new RTL defect -- see rtl_response.diff_summary)."
         }
       ]
+    },
+    {
+      "id": "fr_609b42790e0f_20261003_015343_00",
+      "created_at": "2026-10-03T03:43:04.230555+00:00",
+      "updated_at": "2026-10-03T03:43:04.230555+00:00",
+      "created_by": "verification-orchestrator",
+      "failure_class": "protocol",
+      "test_name": "test_i2c_clkdiv_100k_400k",
+      "property_or_assertion": null,
+      "seed": 0,
+      "waveform_path": null,
+      "log_path": "/nobackup/i2c_f7vs9_verification/dbg.log",
+      "suspected_rtl": {
+        "module": "i2c_controller",
+        "signal": "state_q",
+        "file": "rtl/periph/i2c_controller.sv",
+        "line_range": [
+          652,
+          700
+        ],
+        "basis": "traced"
+      },
+      "summary": "SCL bit period is 3 ticks (+3 clk sync wait), not the documented 4: I2C_CLKDIV 249 gives 132.8 kHz and 62 gives 520.8 kHz, violating the I2C Standard/Fast-mode limits",
+      "expected_behavior": "rtl/periph/i2c_controller.sv header lines 26-27: 'One bit = 4 ticks, a tick is (CLKDIV+1) clk cycles, so f_scl = f_clk / (4*(CLKDIV+1)) with no stretching'; bead f7vs.9 / PHASE6 plan: Standard 100 kHz and Fast 400 kHz via I2C_CLKDIV. I2C spec minimums: Standard tHIGH >= 4.0 us, tLOW >= 4.7 us; Fast tHIGH >= 0.6 us, tLOW >= 1.3 us.",
+      "observed_behavior": "Traced on state_q at CLKDIV=249: S_BIT_L1 = 250 clk, S_BIT_L2 = 250, S_BIT_WAIT = 3, S_BIT_HI = 250 (one tick each, three timed states per bit). Measured on the bus at a 100 MHz clk: period 753 clk = 132.8 kHz (documented 100 kHz), tLOW 5.00 us, tHIGH 2.53 us (Standard-mode minimum 4.0 us). CLKDIV=62: period 192 clk = 520.8 kHz (documented 396.8 kHz), tLOW 1.26 us (Fast-mode minimum 1.3 us), tHIGH 0.66 us. A driver that computes CLKDIV from the documented formula overclocks the bus by 33 %. Either add the missing fourth timed phase (e.g. a second SCL-high tick, giving ~50 % duty) or correct the header; the former is what the I2C timing limits require. Reproduce: nix develop --command make -C tb/cocotb/soc i2c (the test is marked expect_fail until this is fixed; removing the marker turns it into the regression check).",
+      "session_id": null,
+      "status": "open",
+      "rtl_response": null,
+      "history": []
     }
   ],
   "pd": {

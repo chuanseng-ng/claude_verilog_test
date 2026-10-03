@@ -203,6 +203,18 @@ TRNG_SOURCES = \
 	$(RTL)/periph/trng.sv \
 	$(SOC_DIR)/tb_trng.sv
 
+# Phase 6a-5 (bead claude_verilog_test-f7vs.9): standalone i2c_controller unit-test sources.
+# apb4_register_bank (register file) + cdc_2ff_sync (i2c_controller instantiates one per pin,
+# like gpio_controller) + i2c_controller + standalone TB. The bus (wired-AND of master, slave and
+# pull-up) is modelled by tb/cocotb/bfm/i2c_slave.py, NOT by any RTL file in this list.
+# test_i2c.py also re-lints this exact list with `-GCLKDIV_MIN=2` to prove the DUT's elaboration
+# guard refuses an unsafe prescaler minimum.
+I2C_SOURCES = \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/periph/i2c_controller.sv \
+	$(SOC_DIR)/tb_i2c.sv
+
 # Phase 6 groundwork (bead claude_verilog_test-f7vs.4): standalone apb_interconnect
 # unit-test sources. apb_interconnect is a single, self-contained combinational module --
 # no other RTL package or CDC primitive needed.
@@ -541,7 +553,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng check-exit-propagation
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c check-exit-propagation
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -791,6 +803,21 @@ trng: trng_lint
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
+# Phase 6a-5 (bead claude_verilog_test-f7vs.9): i2c_controller lint + sim (L1 protocol suite).
+# lint only: apb4_register_bank + cdc_2ff_sync + i2c_controller + standalone TB wrapper.
+# -Wno-SYNCASYNCNET: same per-target convention as the gpio/pwm/wdt/trng targets above (the
+# async pad inputs feed cdc_2ff_sync flops).
+i2c_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
+		--top-module tb_i2c \
+		$(I2C_SOURCES)
+
+i2c: i2c_lint
+	$(MAKE) MODULE=test_i2c TOPLEVEL=tb_i2c \
+		VERILOG_SOURCES="$(I2C_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
 # Phase 6 groundwork (bead claude_verilog_test-f7vs.4): apb_interconnect lint + sim.
 # lint only: apb_interconnect + standalone TB wrapper, at the wrapper's default N_SLAVES.
 # -Wno-SYNCASYNCNET: matches the gpio/spi targets' convention above, even though this DUT has
@@ -1022,6 +1049,22 @@ soc_trng: soc_boot_lint
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
+# SoC-level I2C FABRIC test (bead claude_verilog_test-f7vs.9). Exercises i2c_controller (APB slave
+# 11, 0x2000_E000) through the real fabric path -- CPU -> axi4_crossbar -> axi4_to_axilite ->
+# axi_lite_interconnect -> axil_to_apb -> apb_interconnect -- plus the i2c -> interrupt_controller
+# [9] -> CPU MEIP interrupt path. Deliberately CHEAP: it uses the DUT's internal loopback
+# (I2C_CTRL[1], the SPI_CTRL[4] precedent) so no bus BFM and no protocol traffic runs at
+# CLK_PERIOD_NS=2; full protocol coverage is the L1 `i2c` suite. One test / one hand-assembled
+# image (i2c_fw/gen_i2c_hex.py, no cross toolchain -- CI-safe). i2c_controller.sv is already in
+# SOC_BOOT_SOURCES and tb_soc_top.sv already exposes the i2c_* pins, so this reuses soc_boot_lint
+# exactly like soc_trng/soc_gpio/soc_wdt above.
+soc_i2c: soc_boot_lint
+	$(MAKE) MODULE=test_soc_i2c TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
 # GPIO DRIVER test (bead claude_verilog_test-8qn4 item 2). Unlike soc_gpio
 # above (hand-assembled gpio_fw firmware proving the RTL through the
 # fabric), this suite proves sw/drivers/gpio.h -- the first GPIO driver
@@ -1208,6 +1251,7 @@ soc_all_ci: check-space
 	$(MAKE) pwm
 	$(MAKE) wdt
 	$(MAKE) trng
+	$(MAKE) i2c
 	$(MAKE) apb_interconnect
 	$(MAKE) async_axi_fifo
 	$(MAKE) apb_cdc_bridge
@@ -1220,6 +1264,7 @@ soc_all_ci: check-space
 	$(MAKE) soc_pwm
 	$(MAKE) soc_wdt
 	$(MAKE) soc_trng
+	$(MAKE) soc_i2c
 	$(MAKE) soc_pll
 	$(MAKE) soc_multiclock
 	$(MAKE) soc_multiclock_reset
