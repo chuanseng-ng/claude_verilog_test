@@ -32,6 +32,7 @@
 //     APB_PWM=8   @ 0x2000_B000–BFFF  pwm_controller (core_clk domain; Phase 6a-2, bead claude_verilog_test-f7vs.6)
 //     APB_WDT=9   @ 0x2000_C000–CFFF  watchdog_timer (core_clk domain; Phase 6a-3, bead claude_verilog_test-f7vs.7)
 //     APB_TRNG=10 @ 0x2000_D000–DFFF  trng (core_clk domain; Phase 6a-4, bead claude_verilog_test-f7vs.8)
+//     APB_I2C=11  @ 0x2000_E000–EFFF  i2c_controller (core_clk domain; Phase 6a-5, bead claude_verilog_test-f7vs.9)
 //
 //   Debug plane   : APB3 debug slave exposed at top-level ports, bridged into
 //     the CPU domain by apb_cdc_bridge (u_apb_dbg_cdc, GH #95) — see the
@@ -157,8 +158,9 @@
 //     bit 6 (PWM) is now live (Phase 6a-2, bead claude_verilog_test-f7vs.6).
 //     bit 7 (WDT) is now live (Phase 6a-3, bead claude_verilog_test-f7vs.7).
 //     bit 8 (TRNG) is now live (Phase 6a-4, bead claude_verilog_test-f7vs.8).
-//     bits 9-11 remain pre-allocated (Phase 6, bead claude_verilog_test-f7vs.2) and
-//     tied 1'b0 until I2C/CRYPTO/NPU land, respectively.
+//     bit 9 (I2C) is now live (Phase 6a-5, bead claude_verilog_test-f7vs.9).
+//     bits 10-11 remain pre-allocated (Phase 6, bead claude_verilog_test-f7vs.2) and
+//     tied 1'b0 until CRYPTO/NPU land, respectively.
 //     interrupt_controller.irq_o → CPU ext_irq_i (MEIP)
 //     timer.irq_o                → CPU timer_irq_i (MTIP, direct)
 //
@@ -233,21 +235,18 @@ module soc_top
     // ── Watchdog (Phase 6a-3, bead f7vs.7) — level-held bite request ──
     output logic        wdt_rst_req_o,
 
-    // ── I2C (Phase 6a-5, bead f7vs.9 — tied off until the peripheral lands) ──
+    // ── I2C (Phase 6a-5, bead f7vs.9 — driven by u_i2c) ──
     // Open-drain triplet, same convention as GPIO: there is no tristate anywhere
     // in this RTL tree, so `_o` is hard-tied 0 and `_oe_o` is the real control
     // (drive-low = oe 1; release = oe 0 and the external pull-up makes it high).
-    // The real open-drain buffer + pull-up is a pad-ring integration concern.
+    // The real open-drain buffer + pull-up is a pad-ring integration concern: an EXTERNAL
+    // PULL-UP on each line is REQUIRED, `_o` is dead (see i2c_controller.sv's PAD-RING CONTRACT).
     output logic        i2c_scl_o,
     output logic        i2c_scl_oe_o,
-    /* verilator lint_off UNUSEDSIGNAL */
     input  logic        i2c_scl_i,
-    /* verilator lint_on  UNUSEDSIGNAL */
     output logic        i2c_sda_o,
     output logic        i2c_sda_oe_o,
-    /* verilator lint_off UNUSEDSIGNAL */
     input  logic        i2c_sda_i,
-    /* verilator lint_on  UNUSEDSIGNAL */
 
     // ── Observability (subset; M7 perf counters added later) ─────────────────
     output logic        commit_valid_o,
@@ -737,7 +736,8 @@ module soc_top
     // now driven by u_wdt below, not tied here.
     // trng_irq (bit 8) landed in Phase 6a-4 (bead claude_verilog_test-f7vs.8) — it is
     // now driven by u_trng below, not tied here.
-    assign i2c_irq    = 1'b0;  // tie removed when I2C lands (6a-5)
+    // i2c_irq (bit 9) landed in Phase 6a-5 (bead claude_verilog_test-f7vs.9) — it is
+    // now driven by u_i2c below, not tied here.
     assign crypto_irq = 1'b0;  // tie removed when CRYPTO lands (6b)
     assign npu_irq    = 1'b0;  // tie removed when NPU lands (6c)
 
@@ -746,18 +746,13 @@ module soc_top
     // source is an `ifdef`-swapped sub-module, CRYPTO/NPU are register-only). Each
     // output was tied to its inert value here; the tie is replaced with the real
     // peripheral connection when that peripheral lands, matching the IRQ-tie idiom
-    // above. The two I2C inputs are unused until I2C lands.
+    // above.
     // pwm_o landed in Phase 6a-2 (bead claude_verilog_test-f7vs.6) — it is now
     // driven by u_pwm below, not tied here.
     // wdt_rst_req_o landed in Phase 6a-3 (bead claude_verilog_test-f7vs.7) — it is
     // now driven by u_wdt below, not tied here.
-    assign i2c_scl_o     = 1'b0;      // tie removed when I2C lands (6a-5)
-    assign i2c_scl_oe_o  = 1'b0;      // tie removed when I2C lands (6a-5)
-    assign i2c_sda_o     = 1'b0;      // tie removed when I2C lands (6a-5)
-    assign i2c_sda_oe_o  = 1'b0;      // tie removed when I2C lands (6a-5)
-    // i2c_scl_i / i2c_sda_i are unused until I2C lands (6a-5) — see the
-    // `lint_off`/`lint_on` UNUSEDSIGNAL bracket around their port
-    // declarations above.
+    // i2c_* pins landed in Phase 6a-5 (bead claude_verilog_test-f7vs.9) — they are now
+    // driven by / feed u_i2c below, not tied here.
 
     logic ext_irq;    // interrupt_controller output → CPU ext_irq_i
 
@@ -1908,6 +1903,37 @@ module soc_top
     );
 
     // =========================================================================
+    // I2C — APB slave (apb_psel[APB_I2C]), Phase 6a-5 (bead claude_verilog_test-f7vs.9)
+    // core_clk domain. Open-drain triplets, NO tristate (same convention as GPIO): `_oe_o` is
+    // the real control (1 = drive low, 0 = release), `_o` is hard-tied 0 inside the module and
+    // dead, `_i` is the asynchronous sensed pad level (synchronised inside u_i2c). External
+    // pull-ups are REQUIRED; the wired-AND bus lives off-chip / in the testbench. irq_o ->
+    // interrupt_controller bit 9 (level-held).
+    // =========================================================================
+    i2c_controller #(
+        .ADDR_W (12)
+    ) u_i2c (
+        .clk          (core_clk),
+        .rst_n        (core_rst_n),
+        .psel         (apb_psel    [APB_I2C]),
+        .penable      (apb_penable [APB_I2C]),
+        .pwrite       (apb_pwrite  [APB_I2C]),
+        .paddr        (apb_paddr   [APB_I2C][11:0]),
+        .pwdata       (apb_pwdata  [APB_I2C]),
+        .pstrb        (apb_pstrb   [APB_I2C]),
+        .prdata       (apb_prdata  [APB_I2C]),
+        .pready       (apb_pready  [APB_I2C]),
+        .pslverr      (apb_pslverr [APB_I2C]),
+        .i2c_scl_o    (i2c_scl_o),
+        .i2c_scl_oe_o (i2c_scl_oe_o),
+        .i2c_scl_i    (i2c_scl_i),
+        .i2c_sda_o    (i2c_sda_o),
+        .i2c_sda_oe_o (i2c_sda_oe_o),
+        .i2c_sda_i    (i2c_sda_i),
+        .irq_o        (i2c_irq)
+    );
+
+    // =========================================================================
     // Interrupt controller — APB slave (apb_psel[APB_IRQ])
     // irq_src_i[11:0] = {NPU[11], CRYPTO[10], I2C[9], TRNG[8], WDT[7], PWM[6],
     //                     GPIO[5], GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}
@@ -1917,8 +1943,9 @@ module soc_top
     // bit 6 (PWM) is now driven by u_pwm above (Phase 6a-2, bead
     // claude_verilog_test-f7vs.6); bit 7 (WDT) by u_wdt above (Phase 6a-3, bead
     // claude_verilog_test-f7vs.7); bit 8 (TRNG) by u_trng above (Phase 6a-4, bead
-    // claude_verilog_test-f7vs.8); bits 9-11 (I2C/CRYPTO/NPU) remain
-    // tied 1'b0 above until each peripheral lands (6a-5 .. 6c).
+    // claude_verilog_test-f7vs.8); bit 9 (I2C) by u_i2c above (Phase 6a-5, bead
+    // claude_verilog_test-f7vs.9); bits 10-11 (CRYPTO/NPU) remain
+    // tied 1'b0 above until each peripheral lands (6b .. 6c).
     // =========================================================================
     interrupt_controller #(
         .ADDR_W    (12),

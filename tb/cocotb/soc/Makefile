@@ -301,6 +301,7 @@ PLL_SOURCES = \
 	$(RTL)/periph/watchdog_timer.sv \
 	$(RTL)/periph/trng_lfsr_entropy.sv \
 	$(RTL)/periph/trng.sv \
+	$(RTL)/periph/i2c_controller.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
@@ -375,6 +376,7 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/periph/watchdog_timer.sv \
 	$(RTL)/periph/trng_lfsr_entropy.sv \
 	$(RTL)/periph/trng.sv \
+	$(RTL)/periph/i2c_controller.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
