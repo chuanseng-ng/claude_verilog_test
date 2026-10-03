@@ -42,7 +42,8 @@ This restriction is due to Ubuntu's page size being 4 KB
 | 0x2000_C000 - 0x2000_CFFF  | 4 KB    | WDT (APB4)          | Watchdog timer with bark/bite (`watchdog_timer.sv`, Phase 6a-3) |
 | 0x2000_D000 - 0x2000_DFFF  | 4 KB    | TRNG (APB4)         | True-random-number generator; LFSR entropy arm by default, always flags `INSECURE` (`trng.sv`, Phase 6a-4) |
 | 0x2000_E000 - 0x2000_EFFF  | 4 KB    | I2C (APB4)          | I2C master controller, open-drain, external pull-ups required (`i2c_controller.sv`, Phase 6a-5) |
-| 0x2000_F000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals (0x2000_F000 CRYPTO and 0x2001_0000 NPU slots pre-allocated, not yet built) |
+| 0x2000_F000 - 0x2000_FFFF  | 4 KB    | CRYPTO (APB4)       | AES-128 (ECB/CTR) + SHA-256 accelerator; **not production cryptography** (`crypto_accel.sv`, Phase 6b) |
+| 0x2001_0000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals (0x2001_0000 NPU slot pre-allocated, not yet built) |
 | 0x3000_0000 - 0x7FFF_FFFF  | 1.25 GB | Reserved            | Future use                  |
 | 0x8000_0000 - 0xFFFF_FFFF  | 2 GB    | External Memory     | Off-chip memory/devices     |
 
@@ -50,8 +51,8 @@ This restriction is due to Ubuntu's page size being 4 KB
 > peripherals attach to a CPU-driven **AXI4-Lite control interconnect**
 > (`rtl/soc/axi_lite_interconnect.sv`) whose APB-bridge ring slot (slave 1,
 > `0x2000_2000-0x2001_0FFF`) fans out through `axil_to_apb` + `apb_interconnect`
-> into a genuine **APB4 sub-tree of 12 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2,
-> GPIO, PWM, WDT, TRNG, I2C; `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_I2C). GPU/DMA control remain
+> into a genuine **APB4 sub-tree of 13 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2,
+> GPIO, PWM, WDT, TRNG, I2C, CRYPTO; `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_CRYPTO). GPU/DMA control remain
 > AXI-Lite-direct ring slaves (0 and 2). APB3 also survives standalone on the
 > CPU debug slot (0x2000_0000–0FFF), unrelated to this APB4 sub-tree. Address
 > map is frozen in `rtl/soc/soc_periph_map_pkg.sv` (`decode_axil_slave()`);
@@ -478,6 +479,91 @@ the pins and forces the pad `oe_o` outputs released so a real bus is undisturbed
 address and every write byte, and a read returns the last byte written (reset `0xA5`). It never
 stretches. Change it only while idle.
 
+#### CRYPTO Registers (Phase 6b)
+
+**Base address**: 0x2000_F000 — `rtl/periph/crypto_accel.sv` (wrapper over `aes128_core.sv` and
+`sha256_core.sv`), APB4 slave index 12, `N_REGS = 32`, `core_clk` domain, interrupt-controller bit 10.
+Register-only: no top-level pins and no asynchronous inputs, so no CDC synchroniser and no SDC
+`set_false_path` apply. The `EN_AES` / `EN_SHA` parameters drop a core from the build (default both 1).
+
+> **NOT PRODUCTION CRYPTOGRAPHY.** No side-channel or DPA resistance, no fault-injection hardening, no
+> certification (no FIPS 140 / Common Criteria / CAVP); correctness is established by known-answer
+> vectors in simulation only. **The key is exposed to every bus master:** it is written over APB with no
+> privilege or secure/non-secure split, so *any* master (CPU, DMA, GPU) can write the key, start an
+> operation and read the result. There is no key lifecycle, no lock bit and no zeroisation other than
+> reset. **The key shadow (`key_q`, 128 flops) is fully exposed through scan** once DFT scan insertion
+> is applied, as are the AES state, round key and message shadow, so **DFT access must be treated as key
+> access**, as must any debug path that can observe flop state.
+
+**Byte order.** FIPS-197 / FIPS 180-4 big-endian throughout. For a 128-bit block `B[0..15]`, word 0
+carries `B0` in bits [31:24]: `DIN0[31:24] = B0 ... DIN3[7:0] = B15`, and the same for KEY, IV and DOUT.
+`DIGEST0[31:24]` is the most significant byte of H0. FIPS-197 App. B/C vectors and `hashlib.sha256`
+therefore line up with no byte swap.
+
+| Offset | Name             | Access | Description                                        |
+|:------:|:----------------:|:------:|:--------------------------------------------------:|
+| 0x000  | CRYPTO_CTRL      | RW     | [1:0] mode (0 ECB, 1 CTR, 2 SHA, 3 reserved), [2] **start (W1P, reads 0)**, [3] IRQ enable, [4] SHA_CONT; [31:5] reserved |
+| 0x004  | CRYPTO_STATUS    | RO     | [0] busy, [1] done (sticky), [2] key_valid, [3] key_write_rejected (sticky) |
+| 0x008  | CRYPTO_KEY0-3    | WO     | AES-128 key, 4 words at 0x008-0x014; **always reads 0** (no readback path exists) |
+| 0x018  | CRYPTO_IV0-3     | RW     | CTR counter block, 0x018-0x024; IV3 (0x024) is the INC32 word |
+| 0x028  | CRYPTO_DIN0-3    | WO     | **4-word aperture** onto one 512-bit shift register, 0x028-0x034; reads 0 |
+| 0x038  | CRYPTO_DOUT0-3   | RO     | AES output block, 0x038-0x044 |
+| 0x048  | CRYPTO_DIGEST0-7 | RO     | SHA-256 digest, 0x048-0x064; **also the SHA chaining value** |
+| 0x068  | CRYPTO_IRQ_STAT  | RO     | [0] sticky done (the same flop as `STATUS[1]`) |
+| 0x06C  | CRYPTO_IRQ_CLR   | WO     | W1C by write-snoop: [0] clears done, [1] clears `STATUS.key_write_rejected`; reads 0 |
+
+0x070-0x07C are reserved and read 0; 0x080-0xFFC are outside the 32-register bank and also read 0.
+
+**Start.** `CTRL[2]` is not stored: it reads 0 forever and acts as a write-snoop pulse. **Start while busy
+is silently ignored** (no status bit, no `pslverr`). **Software contract: write the mode and `SHA_CONT`
+first, then START in a *later* transfer.** Mode, `SHA_CONT` and the legality check read the bank's CTRL
+register, which still holds its pre-write value during the ACCESS cycle of the write carrying START, so a
+single write that both changes the mode and sets START runs the **old** mode. Latency from the start
+write's ACCESS phase to done: 11 clk (ECB/CTR, `SBOX_PARALLEL=16`), 41 clk (`SBOX_PARALLEL=4`), 66 clk
+(SHA), 2 clk (illegal op).
+
+**Illegal or disabled mode is hang-free.** An operation is legal iff (mode 0/1, `EN_AES`, `key_valid`) or
+(mode 2, `EN_SHA`); mode 3 is always illegal. An illegal start completes in 2 clk: busy pulses, `done` /
+`IRQ_STAT` set (and the IRQ fires if enabled), with **no** DOUT / DIGEST / IV writeback. **Done does not
+imply valid data**: software must check `key_valid` and that the requested mode is built.
+
+**Key.** Written word by word in any order; partial byte strobes merge. Key writes are **rejected while
+`STATUS.busy`** and latch the sticky `STATUS[3]` (cleared by reset, `IRQ_CLR[1]`, or an accepted key
+write). A key write with `pstrb == 0` selects no byte lane and is not a key write at all: it counts toward
+neither `key_valid` nor `key_write_rejected`. `key_valid` is set once all four words have been written and
+is cleared **only by reset**, so a partial rewrite leaves it 1 over a mixed key. With `EN_AES = 0` the bit
+carries no information.
+
+**DIN.** Only the fact that a write hit DIN0..3 matters, not which word; **write order is the contract**,
+most significant word first (16 words for SHA, M0 first; 4 words for AES, B0..B3 first). A partial-strobe
+write is **dropped**. Pushes are **rejected while busy**, with no status bit, a deliberate asymmetry with
+`key_write_rejected` because CTR consumes the plaintext at the completion edge.
+
+**AES modes.** ECB: `DOUT = AES(key, DIN)`. CTR: the core encrypts the counter block IV and the XOR with
+DIN happens at writeback. CTR decrypt is bit-identical to CTR encrypt (no decrypt mode, no inverse S-box).
+After each CTR block `IV3` is incremented (SP 800-38A B.1 INC32: low 32 bits only, carry discarded; IV0-2
+are never hardware-written); software must not run one counter past a 2^32-block wrap. IV lives in the
+bank, so a software write to IV during a CTR operation corrupts the counter, and a same-cycle write to IV3
+beats the hardware increment (correct for a re-seed).
+
+**SHA chaining.** `CTRL[4] SHA_CONT = 0` starts from the FIPS 180-4 H0 constants; 1 continues from the
+current DIGEST. Multi-block: write 16 words, start with `SHA_CONT = 0`, poll done, write the next 16,
+start with `SHA_CONT = 1`, ..., read DIGEST. Padding and length encoding are software's job.
+
+**CTRL written while busy** is unsupported but safe in these respects: the operation in flight completes
+with the mode it *started* with (mode, `SHA_CONT`, the CTR choice and the chaining value are latched at the
+start edge), so DOUT / DIGEST / IV3 are not corrupted, and the IRQ enable takes effect immediately. The new
+mode applies to the *next* start, and a START bit in such a write is ignored.
+
+**DOUT / DIGEST validity.** Written on each operation's completion edge, so they are never garbage:
+either current, or one operation stale (a read during a new operation returns the previous result). Gate
+reads on `done` anyway.
+
+**IRQ.** `irq_o = done & CTRL[3]`, **level-held, never a pulse** (every IRQ source crosses `core_clk` to
+`cpu_core_clk` through a plain 2-FF synchroniser that can miss a pulse). The `done` next-state is
+`(done & ~IRQ_CLR[0]) | done_set`, so a **set beats a same-cycle clear** and a completion is never lost to
+a racing W1C. `STATUS[1]` and `IRQ_STAT[0]` are the same flop mirrored into two words.
+
 ## Reset and Trap Vectors
 
 ### Reset Vector
@@ -573,8 +659,9 @@ IRQ controller source bits (`N_SOURCES=12`, Phase 6, bead claude_verilog_test-f7
 TIMER[2]=0, SPI[1], UART[0]}`. Bit 6 (PWM) is live as of Phase 6a-2 (bead
 claude_verilog_test-f7vs.6), bit 7 (WDT, bark and bite) as of Phase 6a-3 (bead
 claude_verilog_test-f7vs.7) and bit 8 (TRNG) as of Phase 6a-4 (bead
-claude_verilog_test-f7vs.8); bits 9-11 remain tied 0 until their peripheral
-lands. On a MEIP trap, software reads `IRQ_STATUS` (0x2000_6000 block) to disambiguate
+claude_verilog_test-f7vs.8), bit 9 (I2C) as of Phase 6a-5 (bead
+claude_verilog_test-f7vs.9) and bit 10 (CRYPTO, done) as of Phase 6b (bead
+claude_verilog_test-f7vs.10); bit 11 remains tied 0 until the NPU lands. On a MEIP trap, software reads `IRQ_STATUS` (0x2000_6000 block) to disambiguate
 the peripheral source; bit priority within the controller does not reorder
 delivery — all enabled sources share the single MEIP line.
 

@@ -339,6 +339,9 @@ PLL_SOURCES = \
 	$(RTL)/periph/trng.sv \
 	$(RTL)/periph/i2c_bit_engine.sv \
 	$(RTL)/periph/i2c_controller.sv \
+	$(RTL)/periph/aes128_core.sv \
+	$(RTL)/periph/sha256_core.sv \
+	$(RTL)/periph/crypto_accel.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
@@ -415,6 +418,9 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/periph/trng.sv \
 	$(RTL)/periph/i2c_bit_engine.sv \
 	$(RTL)/periph/i2c_controller.sv \
+	$(RTL)/periph/aes128_core.sv \
+	$(RTL)/periph/sha256_core.sv \
+	$(RTL)/periph/crypto_accel.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
