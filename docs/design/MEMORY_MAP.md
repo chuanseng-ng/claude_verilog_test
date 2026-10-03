@@ -41,7 +41,8 @@ This restriction is due to Ubuntu's page size being 4 KB
 | 0x2000_B000 - 0x2000_BFFF  | 4 KB    | PWM (APB4)          | 4-channel PWM controller (`pwm_controller.sv`, Phase 6a-2) |
 | 0x2000_C000 - 0x2000_CFFF  | 4 KB    | WDT (APB4)          | Watchdog timer with bark/bite (`watchdog_timer.sv`, Phase 6a-3) |
 | 0x2000_D000 - 0x2000_DFFF  | 4 KB    | TRNG (APB4)         | True-random-number generator; LFSR entropy arm by default, always flags `INSECURE` (`trng.sv`, Phase 6a-4) |
-| 0x2000_E000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
+| 0x2000_E000 - 0x2000_EFFF  | 4 KB    | I2C (APB4)          | I2C master controller, open-drain, external pull-ups required (`i2c_controller.sv`, Phase 6a-5) |
+| 0x2000_F000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals (0x2000_F000 CRYPTO and 0x2001_0000 NPU slots pre-allocated, not yet built) |
 | 0x3000_0000 - 0x7FFF_FFFF  | 1.25 GB | Reserved            | Future use                  |
 | 0x8000_0000 - 0xFFFF_FFFF  | 2 GB    | External Memory     | Off-chip memory/devices     |
 
@@ -49,8 +50,8 @@ This restriction is due to Ubuntu's page size being 4 KB
 > peripherals attach to a CPU-driven **AXI4-Lite control interconnect**
 > (`rtl/soc/axi_lite_interconnect.sv`) whose APB-bridge ring slot (slave 1,
 > `0x2000_2000-0x2001_0FFF`) fans out through `axil_to_apb` + `apb_interconnect`
-> into a genuine **APB4 sub-tree of 11 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2,
-> GPIO, PWM, WDT, TRNG; `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_TRNG). GPU/DMA control remain
+> into a genuine **APB4 sub-tree of 12 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2,
+> GPIO, PWM, WDT, TRNG, I2C; `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_I2C). GPU/DMA control remain
 > AXI-Lite-direct ring slaves (0 and 2). APB3 also survives standalone on the
 > CPU debug slot (0x2000_0000–0FFF), unrelated to this APB4 sub-tree. Address
 > map is frozen in `rtl/soc/soc_periph_map_pkg.sv` (`decode_axil_slave()`);
@@ -408,6 +409,74 @@ pre-debias samples. A trip sets sticky `STATUS[2]`, flushes the FIFO and halts p
 W1C of `TRNG_IRQ_CLR[2]`. `irq_o = CTRL[1] & ((fifo_level >= max(CTRL[5:2],1)) | health_fail)` and is
 level-held into interrupt-controller bit 8; it drops by itself once software pops the FIFO below
 the threshold.
+
+#### I2C Registers (Phase 6a-5)
+
+**Base address**: 0x2000_E000 — `rtl/periph/i2c_controller.sv`, APB4, master-only, 7-bit addressing,
+repeated START, mandatory clock stretching, arbitration-loss *detection*, 8-byte TX and RX FIFOs.
+
+> **PAD-RING CONTRACT — open-drain, external pull-up REQUIRED.** There is **no tristate** anywhere in
+> this RTL tree. Each line is the GPIO-style unidirectional triplet
+> `i2c_scl_o` / `i2c_scl_oe_o` / `i2c_scl_i` and `i2c_sda_o` / `i2c_sda_oe_o` / `i2c_sda_i`
+> (top-level ports of `soc_top`).
+>
+> - `*_oe_o` is the real control: **1 drives the line low, 0 releases it.** Nothing on-chip ever drives
+>   a line high; a released line is high only because the **external pull-up** makes it so. Integration
+>   must provide one pull-up per line.
+> - `*_o` is **hard-tied 1'b0 and dead.** It exists only for pad-ring symmetry with
+>   `gpio_out_o`/`gpio_oe_o`/`gpio_in_i`. The pad cell must drive 0 when `oe = 1` and be high-Z when
+>   `oe = 0`; do not use `*_o` as data.
+> - The wired-AND of master and slaves lives **off-chip** (the physical bus). It is not modelled in the
+>   RTL; a testbench must model it. (The internal loopback models it for its one internal slave only.)
+> - `*_i` are the sensed pad levels and are **asynchronous**; each is synchronised inside the block by
+>   its own single-bit `cdc_2ff_sync`.
+
+| Offset | Name           | Access | Description                                        |
+|:------:|:--------------:|:------:|:--------------------------------------------------:|
+| 0x000  | I2C_CTRL       | RW     | [0] EN, [1] LOOPBACK, [11:8] RX_THR (0 behaves as 1; 9..15 never fire) |
+| 0x004  | I2C_STATUS     | RO     | [0] busy, [1] txn_active, [2] nack, [3] arb_lost, [4] timeout (sticky), [5] SCL level, [6] SDA level |
+| 0x008  | I2C_CLKDIV     | RW     | [15:0] tick divider, reset `0x00FF`; `f_scl = f_clk / (4*(CLKDIV+1))`; values below 3 are clamped to 3 |
+| 0x00C  | I2C_ADDR       | RW     | [6:0] 7-bit slave address, [7] R/W (0 write, 1 read) |
+| 0x010  | I2C_TX_DATA    | WO     | Write (pstrb[0]) pushes `pwdata[7:0]` into the TX FIFO; push into a full FIFO is dropped; reads 0 |
+| 0x014  | I2C_RX_DATA    | RO     | RX FIFO head; a read **pops** it; empty returns 0 with no error |
+| 0x018  | I2C_CMD        | WO     | [0] START, [1] WRITE, [2] READ, [3] STOP, [4] NACK_LAST, [15:8] COUNT; reads 0 |
+| 0x01C  | I2C_FIFO_STAT  | RO     | [3:0] tx_level, [7:4] rx_level, [8] tx_full, [9] tx_empty, [10] rx_full, [11] rx_empty |
+| 0x020  | I2C_TIMEOUT    | RW     | [15:0] stuck-wait limit in engine ticks, reset `0xFFFF`; 0 disables |
+| 0x024  | I2C_IRQ_EN     | RW     | [4:0] masks `irq_o` only |
+| 0x028  | I2C_IRQ_STAT   | RO     | [0] done, [1] nack, [2] arb_lost, [3] timeout (sticky); [4] rx_threshold (live level) |
+| 0x02C  | I2C_IRQ_CLR    | WO     | W1C against `IRQ_STAT[3:0]`; reads 0 |
+
+`N_REGS = 12`; 0x030-0xFFC read 0.
+
+**Commands.** One `I2C_CMD` write runs one command in a fixed order: START (a *repeated* START if
+`STATUS.txn_active`) plus the address byte `{ADDR[6:0], ADDR[7]}`, then `COUNT` data bytes (0 means 1;
+WRITE wins if both WRITE and READ are set), then STOP. WRITE pops the TX FIFO, READ pushes the RX FIFO;
+READ ACKs every byte except the last, which is NACKed iff `NACK_LAST`. A command is accepted only when
+`CTRL.EN = 1`, the engine is idle (`STATUS.busy = 0`) and the command is legal (START, or `txn_active`
+for WRITE/READ/STOP-only); otherwise the write is **ignored silently**. Software keeps `ADDR[7]`
+consistent with the data op; the engine does not police it. Clearing `CTRL.EN` aborts the engine at
+once (lines released, no event bit) and flushes both FIFOs on the 1-to-0 edge.
+
+**Errors.** A NACK sets sticky `nack`, abandons the remaining data bytes and still sends STOP if
+requested (otherwise the bus is held so software can STOP or repeated-START); `done` then sets.
+**Arbitration loss** (this master released SDA to send a 1 but sensed 0) and **timeout** (any wait —
+bus busy before START, stretched SCL, FIFO starvation — exceeded `I2C_TIMEOUT` ticks) each set their own
+sticky bit, release both lines and return the engine to idle **instead of** `done`. There is no retry:
+software re-issues. Clock stretching is mandatory: the engine does not advance out of SCL-high until the
+*synchronised* `scl_i` reads high.
+
+**Prescaler minimum.** The engine samples the synchronised lines (2-FF latency plus the oe register), so
+a tick must exceed that latency. `CLKDIV_MIN = 3` is an elaboration-guarded parameter
+(`CLKDIV_MIN >= SYNC_STAGES + 1`, a smaller override fails elaboration) and a smaller `CLKDIV` is clamped
+in hardware; compare `SPI_CLK_DIV >= 7`, which SPI only documents.
+
+**IRQ.** `irq_o = |(IRQ_STAT & IRQ_EN)`, level-held into interrupt-controller bit 9. The four event
+bits are sticky with SET winning over a same-cycle clear; `rx_threshold` follows the RX FIFO level.
+
+**Loopback (`CTRL[1]`).** Folds the master's own `oe` back through an internal ACKing slave instead of
+the pins and forces the pad `oe_o` outputs released so a real bus is undisturbed. The slave ACKs any
+address and every write byte, and a read returns the last byte written (reset `0xA5`). It never
+stretches. Change it only while idle.
 
 ## Reset and Trap Vectors
 

@@ -371,6 +371,8 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/periph/watchdog_timer.sv \
 	$(RTL_DIR)/periph/trng_lfsr_entropy.sv \
 	$(RTL_DIR)/periph/trng.sv \
+	$(RTL_DIR)/periph/i2c_bit_engine.sv \
+	$(RTL_DIR)/periph/i2c_controller.sv \
 	$(RTL_DIR)/periph/dma_engine.sv \
 	$(RTL_DIR)/soc/axi4_crossbar.sv \
 	$(RTL_DIR)/soc/axi_lite_interconnect.sv \
