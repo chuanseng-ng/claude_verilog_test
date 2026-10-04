@@ -1538,15 +1538,25 @@ SOC_SV2V_OUT := $(abspath $(LIBRELANE_ASAP7_SOC_DIR)/soc_top_sv2v.v)
 # enabling it here drops those too. Measured delta on the 2026-08-15
 # regeneration: 43 lines. Do not attribute the whole change to the boot ROM.
 #
-# SRAM_ASAP7 remains deliberately NOT passed here: no file in SOC_SV_FILES
-# branches on it; it only matters to Yosys, which does get it from
-# config.json's VERILOG_DEFINES.
+# SRAM_ASAP7 IS passed here, as of Phase 6c (bead claude_verilog_test-f7vs.11).
+# It used to be deliberately omitted on the grounds that no file in
+# SOC_SV_FILES branched on it, so it mattered only to Yosys, which gets it
+# from config.json's VERILOG_DEFINES. rtl/npu/npu_weight_mem.sv is the first
+# file in this list that DOES branch on it: its 3-way `ifdef SRAM_SKY130 /
+# `elsif SRAM_ASAP7 / `else chain selects 1x sky130_sram_4kbyte_1rw1r_32x1024_8,
+# 4x sram_1rw_256x32_asap7, or 4x sram_1rw_256x32_freepdk45 respectively.
+# Because sv2v resolves `ifdef ITSELF, before Yosys ever runs, leaving this
+# define off would make the ASAP7 SoC netlist instantiate the FreePDK45
+# module -- which has no ASAP7 LEF, so sv2v+Yosys would SILENTLY BLACKBOX it:
+# unplaced, unconstrained, and undetectable by any cocotb suite. The ASAP7
+# stub/LEF/LIB were already registered in every ASAP7 SoC config
+# (VERILOG_FILES + EXTRA_LEFS + EXTRA_LIBS) and merely unused until now.
 #
 # The sky130 SoC target deliberately does NOT get USE_ICG_CELL: ICGx1 is an
 # ASAP7 cell, and sky130 has real latch cells for the behavioural model to
 # map onto.
 #----------------------------------------------------------------
-SOC_SV2V_DEFINES := --define=USE_ICG_CELL --define=__pnr__
+SOC_SV2V_DEFINES := --define=USE_ICG_CELL --define=__pnr__ --define=SRAM_ASAP7
 
 #----------------------------------------------------------------
 # asap7_soc_preflight: shared launch guards for every ASAP7 SoC P&R target.

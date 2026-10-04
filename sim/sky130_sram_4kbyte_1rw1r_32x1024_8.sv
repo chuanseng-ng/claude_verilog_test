@@ -24,8 +24,12 @@
 //   - No $display diagnostics.
 //
 // This file is SIMULATION ONLY. Do not use for synthesis — the real physical
-// view is the OpenRAM-generated LEF/LIB/GDS at
-// /nobackup/openram_sky130_4kb/macro/sky130_sram_4kbyte_1rw1r_32x1024_8/.
+// views are committed at
+// pnr/sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8.{lef,lib,gds,sp},
+// and the synthesis face is the (* blackbox *) stub beside them. (The
+// OpenRAM compile directory /nobackup/openram_sky130_4kb/ that this comment
+// used to point at was wiped in the 2026-09-15 drive reorganisation; the
+// views themselves are in-repo and unaffected.)
 
 /* verilator lint_off UNUSEDSIGNAL */
 module sky130_sram_4kbyte_1rw1r_32x1024_8 (
