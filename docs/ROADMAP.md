@@ -455,8 +455,10 @@ NOT a measurement. Detail: `docs/SKY130_REAL_DRC_LVS_EVALUATION.md`.
 - **AES-128 encrypt-only, exposing ECB *and* CTR.** CTR makes an encrypt-only core a complete
   cipher in both directions, so there is no inverse S-box and no inverse key schedule. Iterative
   128-bit datapath, on-the-fly key schedule, `SBOX_PARALLEL=16` → **11 cycles/block** (the
-  documented fold-to-4 fallback is 41 and bit-identical; Gate A measured the default at 3.59 % of
-  SoC stdcell area, so it was not taken).
+  documented fold-to-4 fallback is 41 and bit-identical; Gate A measured the default at 277 875 µm²
+  — ~28 % of the SoC's stdcell area, not the 3.59 % first recorded, which divided by stdcell
+  **plus** macro area; core utilisation only moves 39.0 % → ~43.7 % with CRYPTO + NPU, so the
+  fallback was still not taken. See plan §8's correction).
 - **SHA-256** single block-compress, 64 rounds at 1/cycle → **66 cycles/block**. Padding, length
   and multi-block chaining are software's job per FIPS 180-4; `CTRL[4] SHA_CONT` chains from the
   RO `DIGEST` words.

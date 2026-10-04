@@ -369,7 +369,7 @@ per-item.
 | 6a-3 | Watchdog timer | 9 / 7 | `f7vs.7` | ✅ 2026-09-29 (RTL + 22/22 L1 + soc_wdt L2 incl. RST_EN reset path; `soc_all_ci` 303) |
 | 6a-4 | TRNG (portable LFSR entropy; RO source Sky130-only) | 10 / 8 | `f7vs.8` | ✅ 2026-10-01 (RTL bit-exact vs Python model + 22/22 L1 + soc_trng L2; `soc_all_ci` 326) |
 | 6a-5 | I2C master controller | 11 / 9 | `f7vs.9` | ✅ 2026-10-03 (RTL + bit engine + `i2c_slave` BFM + 46/46 L1 + soc_i2c L2; PR #208; `soc_all_ci` 394) |
-| 6b | CRYPTO — AES-128 (ECB+CTR) + SHA-256 | 12 / 10 | `f7vs.10` | ✅ 2026-10-03 (RTL 3 files + 41/41 L1 + soc_crypto L2 + **Gate A run**: 3.59 % of SoC stdcell area, +14.04 ns ss @ 25 ns) |
+| 6b | CRYPTO — AES-128 (ECB+CTR) + SHA-256 | 12 / 10 | `f7vs.10` | ✅ 2026-10-03 (RTL 3 files + 41/41 L1 + soc_crypto L2 + **Gate A run**: 277 875 µm² ≈ 28 % of SoC stdcell area — first recorded as 3.59 % against a stdcell+macro denominator, corrected 2026-10-04 — +14.04 ns ss @ 25 ns) |
 | 6c | INT8 NPU, 4×4 systolic, 4 KB weight SRAM | 13 / 11 | `f7vs.11` | ⏸️ Not started |
 
 Three documentation defects were corrected when the golden spec landed: AES/SHA is **APB4**, not

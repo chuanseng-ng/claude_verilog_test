@@ -750,7 +750,7 @@ First Gate A probe actually run (it was skipped for PWM/WDT/TRNG/I2C — bead `f
 `sim/build/cdc/`, mapped to `sky130_fd_sc_hd__tt_025C_1v80.lib`, plus OpenSTA at the SoC's real
 `CLOCK_PERIOD 25.0`. No floorplan, placement, routing, RCX or PDN.
 
-| Configuration | Cells | Area µm² | % of SoC stdcell | Setup slack @ ss |
+| Configuration | Cells | Area µm² | % of SoC stdcell ⚠️ **wrong ~10×, see correction below** | Setup slack @ ss |
 |:--------------|------:|---------:|-----------------:|-----------------:|
 | `crypto_accel`, `SBOX_PARALLEL=16` (default) | 24 227 | 277 875 | **3.59 %** | **+14.042 ns MET** |
 | `crypto_accel`, `SBOX_PARALLEL=4` (fallback) | 20 569 | 237 279 | 3.06 % | +14.098 ns MET |
@@ -775,6 +775,82 @@ not taken: X-free deterministic reset is worth more than that.
 ⚠️ These are **pre-layout** numbers by design — the slack is against estimated, not extracted,
 parasitics. 14 ns of margin on a 25 ns period is wide for a block this size, but Gate B remains the
 real physical gate.
+
+#### ⚠️ Correction — the CRYPTO denominator above was stdcell **plus macro** area (found 2026-10-04, bead `f7vs.11`)
+
+`design__instance__area` is **not** a stdcell figure. Read from the same run's own metrics
+(`RUN_2026-09-26_07-34-03`, final stage `62-misc-reportmanufacturability`):
+
+| Metric | µm² |
+|:-------|----:|
+| `design__instance__area` (final) | 7 945 080 |
+| `design__instance__area__stdcell` | **992 638** |
+| `design__instance__area__macros` | 6 952 440 (CPU macro + the 4 KB SRAM) |
+| `design__core__area` | 20 359 700 |
+
+The 7 744 600 used above is the same sum at the post-tap stage (792 157 stdcell + 6 952 440
+macro). Hard macros are **88 %** of it, so every "% of SoC stdcell" in the CRYPTO table is
+understated roughly **10×**. Restated against stdcell alone, `crypto_accel` at
+`SBOX_PARALLEL=16` is **~28 %** of the final stdcell area (35 % of the post-tap figure), not 3.59 %.
+
+**The decision survives; its stated reason does not.** "An order of magnitude away from 40 %" was
+false. What actually decides fit on a macro-dominated die is **core utilisation**, and that is
+comfortable: the run sits at 7 945 080 / 20 359 700 = **39.0 %**, and adding CRYPTO (277 875) plus
+the NPU's stdcells (203 179) and its 4 KB macro (472 439) gives ~8 899 000 = **~43.7 %**. The
+fold-to-4 fallback would save 40 596 µm² = **0.2 pp of core utilisation**, still nowhere near worth
+3.7× the AES latency. `SBOX_PARALLEL` stays 16.
+
+What the corrected number *does* change: Phase 6b + 6c together grow the SoC's **stdcell** logic by
+~**48 %** (992 638 → ~1 474 000), all in the `core_clk` domain. That is the honest input to Gate B,
+in particular to bead `e45j`'s post-RCX slew/cap counts, which scale with stdcell count and net
+length rather than with die utilisation.
+
+#### Gate A results — NPU, 2026-10-04 (bead `f7vs.11`; discharges `f7vs.13`'s NPU obligation)
+
+Same tools as CRYPTO, plus one method fix: synthesis mirrors the SoC flow's own
+`04-yosys-synthesis` step — its `no_synth.cells` exclusions plus `*lpflow*`/`*edfxtp*`, the run's
+`DELAY_0.abc` script and `synthesis.abc.sdc`, `-D 25000`. **The OOM guard was checked before any
+number was read**: sv2v with `--define=SRAM_SKY130`, the `(* blackbox *)` stub read first, and the
+mapped netlist contains **exactly 1** `sky130_sram_4kbyte_1rw1r_32x1024_8` and **1 105 flops** —
+not ~33 000. Stdcells at ss (`sky130_fd_sc_hd__ss_100C_1v60`), macro timing from its TT-only
+`.lib` (the single-corner limitation of bead `o1i`).
+
+| Configuration | Cells | Stdcell µm² | Flops | % of final SoC stdcell (992 638) | Setup slack @ ss, 25 ns |
+|:--------------|------:|------------:|------:|------:|-----------------:|
+| `npu_top`, flow-faithful mapping (**primary**) | 19 603 | **203 179** | 1 105 | **20.5 %** | **+1.841 ns MET** |
+| `npu_top`, plain `abc -liberty`, no exclusions | 12 641 | 109 803 | 1 105 | 11.1 % | −5.013 ns VIOLATED |
+| `npu_top`, plain + `*lpflow*` excluded | 12 660 | 110 569 | 1 105 | 11.1 % | −5.280 ns VIOLATED |
+| `npu_top`, `EN_NPU = 0` | 2 (`conb_1`) | 7.5 | 0 | ~0 % | — |
+| 4 KB weight-SRAM macro (separate, from the LEF) | 1 | 472 439 | — | *(macro, not stdcell)* | — |
+
+Hierarchical breakdown (unflattened, so its 225 k total exceeds the flat 203 k): `npu_mac_array`
+137 881, `npu_top` remainder (requantizer, FIFOs, control) 58 261, `apb4_register_bank` 28 388,
+`npu_weight_mem` 848.
+
+**Critical path — the MAC array, not the requantizer.** `ain_q[0][8]` (AIN FIFO head, a
+fanout-129 unbuffered launch flop, 2.847 ns clk→Q) → INT8 multiply → column adder tree → 32-bit
+accumulate → `acc_w[31]`, all in one cycle: arrival 22.177 ns vs. required 24.018 ns. The
+requantizer's 16×32 → 49-bit multiply has +5.888 ns; every other endpoint group is above +4.5 ns.
+
+**Decision: ship as is, and name the Gate B watch item.** +1.84 ns pre-layout is thin next to
+CRYPTO's +14, and the two plain-mapping rows show the slack depends heavily on ABC restructuring
+the ripple-carry chains (~35 `maj3_1` in series otherwise). Two reasons it is still acceptable now:
+the primary row uses the SoC flow's own synthesis recipe, so it is the one Gate B will actually
+see; and the fanout-129 launch flop is exactly what placement-stage repair buffers. **If Gate B goes
+negative here**, the pre-identified fallback is to register the column sums before the accumulate —
+4 × 18 flops and one cycle of latency, no interface change. Not taken pre-emptively, because Gate A
+cannot price it against real wires.
+
+⚠️ CRYPTO's +14.042 ns did not record its ABC recipe, so it is **not** directly comparable with
+the NPU's primary row: the same NPU netlist moves from +1.8 ns to −5.0 ns on recipe alone.
+Future Gate A probes should use the flow-faithful recipe above and state it.
+
+Reproduction: `sv2v --define=__pnr__ --define=SRAM_SKY130` over the blackbox stub,
+`rv32i_clock_gate.sv`, `apb4_register_bank.sv` and the three `rtl/npu` files; yosys
+`synth -flatten -top npu_top; dfflibmap; abc -script DELAY_0.abc -constr synthesis.abc.sdc
+-D 25000` with the exclusions above; OpenSTA 2.7.0 against the ss liberty plus the macro `.lib`,
+25.0 ns ideal clock, 0.300/0.150 ns setup/hold uncertainty, 20 %/5 % I/O delays, mirroring
+`pnr/sky130/soc/constraints/`.
 
 ### Gate B — one batched Sky130 harden after all six land
 
