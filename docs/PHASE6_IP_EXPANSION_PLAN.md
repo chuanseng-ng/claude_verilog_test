@@ -867,6 +867,47 @@ both checkers `--skip`-ped and no post-RCX repair stage existing in LibreLane. G
 new numbers. **Closing `e45j` is explicitly not a Phase 6 exit criterion**, but shipping six more
 peripherals on top of skipped checkers without a number is not acceptable either.
 
+#### Gate B results — first run, 2026-10-04 (bead `f7vs.15`) — ⚠️ NOT a sign-off
+
+`RUN_2026-10-04_17-02-18`, `make librelane-sky130-soc-noklayout`, all 62 steps completed. Baseline is
+**`RUN_2026-09-26_10-08-35`**, the run whose `resolved.json` matches today's `config.json` (the newer
+`19-25-08` was a `RUN_HEURISTIC_DIODE_INSERTION=True` experiment and would have made the ss failures
+look pre-existing). Not a single-variable comparison: five Phase 6 IP blocks, one new hard macro, and
+33 intervening RTL commits. Every number below is read from the two runs' `state_out.json`.
+
+| Metric | Baseline | Gate B | Δ |
+|:-------|---------:|-------:|--:|
+| Netgen LVS | pass | **pass** ("Circuits match uniquely") | — |
+| Routing DRC | 0 | **0** | 0 |
+| Hold violators, all 9 corners | 0 | **0** | 0 |
+| Setup WS nom_tt (ns) | +11.05 | +10.34 | −0.71 |
+| Setup WS nom_ss / min_ss / max_ss (ns) | +9.23 / +10.07 / +8.10 | **−0.97 / −0.26 / −2.18** | regression |
+| Setup violators nom_ss / min_ss / max_ss | 0 / 0 / 0 | **3 / 1 / 1 556** | regression |
+| Antenna violating nets / pins | 114 / 182 | **218 / 297** | +104 / +115 |
+| Magic DRC | 9 081 | 8 984 | −97 |
+| `design__instance__area__stdcell` (µm²) | 1 005 050 | 1 715 210 | **+70.7 %** |
+| Macro area (µm²) | 6 952 440 | 7 424 880 | +472 440 (the NPU SRAM) |
+| Utilisation | 39.1 % | 44.9 % | +5.8 pp — no `DIE_AREA` bump needed |
+| Power, total | 48.2 mW | 85.8 mW | +37.6 mW |
+| `e45j` max-slew / max-cap (max_ss) | 3 199 / 77 | 7 048 / 138 | +3 849 / +61 |
+
+**Passed:**
+- **The second macro.** The placement line was read from a synth probe, and its origins are exact 6.9 µm multiples. The existing `PDN_MACRO_CONNECTIONS` regex binds it with no config change: vccd1/vssd1 are on VPWR/VGND, PSM-0040 reports all shapes connected, and worst IR drop is 0.613 mV.
+- **The NPU MAC path that Gate A flagged.** Post-route it is **+3.56 ns at max_ss** (Gate A predicted +1.84 ns), +4.11 ns at nom_ss, and +13.87 ns at nom_tt. It is not the worst path at any corner, so the register-the-column-sums fallback is **not needed**.
+- **G3's `set_false_path` lines.** 6 of 8 bind to real paths. The two `i2c_*_i` input exceptions are load-bearing: stripping them gives hold −0.707 / −0.603 ns. The two `i2c_*_o` lines are inert because the RTL hard-ties those outputs to 0. They are harmless.
+
+**Failed — the ss setup corners, a regression against a clean baseline.**
+- **max_ss.** 984 of the top 1 000 paths run from `pll_locked_o` through the `core_rst_n` distribution tree into `u_dma.linebuf`. They take 98 stages and 30.8 ns, against 58 stages and 19.3 ns in the baseline. The DMA engine is not new; its reset/clear fanout got longer as ~71 % more stdcell logic spread the placement.
+- **nom_ss and min_ss.** The worst path is `apb_paddr` into `u_crypto.g_aes`, at −0.97 ns.
+- ⚠️ **The flow's own setup checker passes despite this.** `SETUP_VIOLATION_CORNERS` is unset, so it gates on the PDK's tt-only default. Read the per-corner metrics, never the checker's pass line.
+- ⚠️ **Same caveat as the Stage 2 sign-off.** The SRAM macro is characterised at TT only (bead `o1i`), so every ss figure is backed by a TT macro model.
+
+**Also worse: antenna.** Violating nets went from 114 to 218. The available knobs (`GRT_ANTENNA_ITERS` / `GRT_ANTENNA_MARGIN`) are already at the `58q` frontier and trade against slew (`e45j`).
+
+**Magic DRC is not a macro-footprint artifact.** 64 `met4.4a` sit inside the two SRAM footprints, 32 each, so the new macro adds exactly 32. But 8 836 of the 8 920 `nwell.4` lie *outside* every macro box, a periodic pattern across the stdcell fabric. The same structure is present in the baseline. The bead-`45a` wording "100 % inside SRAM macro footprints" therefore does not describe this residual.
+
+Gate B is open pending a decision on the ss regression and the antenna count.
+
 ### ASAP7 is out of scope for all of Phase 6
 
 Triple-blocked: bead `ma7` (proven Synlig `OPT_MUXTREE` miscompile; the macro views in
