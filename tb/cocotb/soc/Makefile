@@ -239,6 +239,37 @@ CRYPTO_SOURCES = \
 	$(RTL)/periph/crypto_accel.sv \
 	$(SOC_DIR)/tb_crypto.sv
 
+# Phase 6c (bead claude_verilog_test-f7vs.11): standalone npu_top unit-test sources.
+# apb4_register_bank (register file; npu_top's STATUS / AOUT / IRQ_STAT / WADDR are hardware-written
+# bank words, so the bank IS the storage -- same pattern as crypto_accel) + the three npu RTL files
+# (npu_weight_mem and npu_mac_array listed BEFORE the npu_top that instantiates them, the same
+# sub-modules-first convention as CRYPTO_SOURCES) + the standalone TB. tb_npu.sv instantiates TWO
+# npu_top configurations side by side (defaults, and EN_NPU=0) so one simulation build reaches both
+# generate arms; test_npu.py also re-lints this exact list (read back through
+# tools/verif/check_source_closure.py's parser, not hand-copied) with a -G override to prove the
+# WEIGHT_WORDS elaboration guard refuses anything but 1024.
+# The weight memory is a hard-macro wrapper with a 3-way ifdef (plan Sec.7 "Weight-SRAM
+# instantiation"): the SIMULATION build defines neither SRAM_SKY130 nor SRAM_ASAP7 and so takes the
+# FreePDK45 `else` arm, which instantiates 4 banks of sram_1rw_256x32_freepdk45 -- that behavioural
+# model lives in sim/sram_1rw_256x32_verilator.v (same file SRAM_SIM_MODEL / the SoC lists use) and
+# MUST be in this list or Verilator reports a missing module. rv32i_clock_gate is listed because the
+# ASAP7 arm instantiates it per bank (en = !csb0); under the default define set that arm is not
+# elaborated, so the file is dead weight at sim time but keeps the list a faithful superset of every
+# arm and costs nothing (an `ifdef`-pruned module is never an unused-module lint warning).
+# NO cdc/cdc_2ff_sync.sv, deliberately: npu_top has NO asynchronous input (clk / rst_n / APB4 in,
+# irq_o out), so there is nothing to synchronise -- do not "add it for safety". The three rtl/npu
+# files did not exist when this list was written (strict TDD): npu / npu_lint are expected to fail
+# to elaborate until the RTL lands. rtl/npu/ must not be created by the verification step because
+# tools/verif/check_periph_filelists.py already scans it and would demand five file-list entries.
+NPU_SOURCES = \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/mem/rv32i_clock_gate.sv \
+	$(PROJ_ROOT)/sim/sram_1rw_256x32_verilator.v \
+	$(RTL)/npu/npu_weight_mem.sv \
+	$(RTL)/npu/npu_mac_array.sv \
+	$(RTL)/npu/npu_top.sv \
+	$(SOC_DIR)/tb_npu.sv
+
 # Phase 6 groundwork (bead claude_verilog_test-f7vs.4): standalone apb_interconnect
 # unit-test sources. apb_interconnect is a single, self-contained combinational module --
 # no other RTL package or CDC primitive needed.
@@ -585,7 +616,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto check-exit-propagation
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint check-exit-propagation
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -864,6 +895,28 @@ crypto_lint:
 crypto: crypto_lint
 	$(MAKE) MODULE=test_crypto TOPLEVEL=tb_crypto \
 		VERILOG_SOURCES="$(CRYPTO_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
+# Phase 6c (bead claude_verilog_test-f7vs.11): npu_top lint + sim (L1 INT8 NPU suite).
+# lint only: apb4_register_bank + the weight-SRAM behavioural model + the three npu RTL files +
+# standalone TB wrapper (which holds both configurations, so this lint also covers EN_NPU=0).
+# Contract: 0 errors, 0 warnings.  Default define set => the FreePDK45 SRAM arm (see NPU_SOURCES).
+# -Wno-SYNCASYNCNET: same per-target convention as the gpio/pwm/wdt/trng/i2c/crypto targets above,
+# kept for consistency although npu_top has no asynchronous input to trip it.
+# -Wno-DECLFILENAME: sim/sram_1rw_256x32_verilator.v defines module sram_1rw_256x32_freepdk45, so
+# `-Wall` reports DECLFILENAME on a file this target does not own (measured, Verilator 5.048);
+# soc_boot_lint disables it for the same file. Every npu RTL file is named after its module, so
+# nothing of ours is hidden by it. test_npu.py's single-instance lint passes the same flag.
+# RED until the RTL lands: with rtl/npu/ absent both targets stop at "Cannot find file".
+npu_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET -Wno-DECLFILENAME \
+		--top-module tb_npu \
+		$(NPU_SOURCES)
+
+npu: npu_lint
+	$(MAKE) MODULE=test_npu TOPLEVEL=tb_npu \
+		VERILOG_SOURCES="$(NPU_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1317,6 +1370,7 @@ soc_all_ci: check-space
 	$(MAKE) trng
 	$(MAKE) i2c
 	$(MAKE) crypto
+	$(MAKE) npu
 	$(MAKE) apb_interconnect
 	$(MAKE) async_axi_fifo
 	$(MAKE) apb_cdc_bridge
