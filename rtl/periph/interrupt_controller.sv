@@ -13,8 +13,8 @@
 // (bead claude_verilog_test-f7vs.7), bit 8 (TRNG) as of Phase 6a-4
 // (bead claude_verilog_test-f7vs.8), bit 9 (I2C) as of Phase 6a-5 (bead
 // claude_verilog_test-f7vs.9), bit 10 (CRYPTO) as of Phase 6b (bead
-// claude_verilog_test-f7vs.10); bit 11 remains pre-allocated and tied 1'b0 in
-// soc_top.sv until the NPU lands):
+// claude_verilog_test-f7vs.10), bit 11 (NPU) as of Phase 6c (bead
+// claude_verilog_test-f7vs.11)):
 //   [0] UART  [1] SPI  [2] TIMER  [3] DMA  [4] GPU  [5] GPIO  [6] PWM  [7] WDT
 //   [8] TRNG  [9] I2C  [10] CRYPTO  [11] NPU  (soc_top.sv only)
 //

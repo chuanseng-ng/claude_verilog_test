@@ -21,7 +21,7 @@ sub-phase letters below are now the only ones used:
 |:---------:|:------|:-------|
 | **6a** | All APB4 register peripherals: GPIO, PWM, WDT, TRNG, I2C | ✅ complete 2026-10-03 |
 | **6b** | AES-128 + SHA-256 accelerator (`crypto_accel`) | ✅ 2026-10-03 (`f7vs.10`) |
-| **6c** | Minimal INT8 NPU | Not started |
+| **6c** | Minimal INT8 NPU (`npu_top`) | ✅ 2026-10-04 (`f7vs.11`) |
 
 `docs/ROADMAP.md:398` already used this reading. `CLAUDE.md:31`'s "6a GPIO ✅ done; 6b+ not
 started" treated 6a as GPIO-only; that wording is corrected to "6a GPIO done, 6a remainder +
@@ -555,6 +555,176 @@ that is a config change rather than a rewrite.
 **Non-goals:** INT4, sparsity, tiling, the 16 KB weight SRAM, keyword-spotting demo firmware, and
 an L3 software driver.
 
+#### Register map — NPU, base `0x2001_0000`, `N_REGS = 16`, `ADDR_W = 12`
+
+PIO only: **no memory-mapped SRAM aperture**, same philosophy as CRYPTO. The weight SRAM is
+reachable exclusively through `WADDR`/`WDATA`.
+
+| Off | Name | Access | Contents |
+|:----|:-----|:-------|:---------|
+| `0x00` | `CTRL` | RW + W1P | `[0]` `RELU_EN`; `[2]` `START` (**W1P, reads 0** — decoded as a write-snoop pulse); `[3]` `IRQ_EN` |
+| `0x04` | `STATUS` | RO, live mirror | `[0]` `busy`, `[1]` `done`, `[2]` `ain_full`, `[3]` `ain_empty`, `[4]` `aout_valid`, `[5]` `aout_full`, `[6]` `cfg_rejected` (sticky) |
+| `0x08` | `WADDR` | RW | `[9:0]` weight-SRAM word address; **auto-increments on every `WDATA` write** |
+| `0x0C` | `WDATA` | WO (snoop) | 4 packed INT8 weights → SRAM`[WADDR]`. Reads 0 forever |
+| `0x10` | `TILEBASE` | RW | `[9:0]` SRAM word address of the first weight word of the next inference |
+| `0x14` | `KLEN` | RW | `[5:0]` number of 4-element chunks, **1..63** (see below). Each chunk consumes 4 SRAM words + 1 `AIN` word |
+| `0x18` | `SCALE` | RW | `[15:0]` requantize multiplier, `[20:16]` right shift |
+| `0x1C` | `AIN` | WO (snoop) | 4 packed INT8 activations → AIN FIFO. Reads 0 forever |
+| `0x20` | `AOUT` | RO + pop-on-read | Live mirror of the AOUT FIFO head (4 packed INT8 results). **A read pops** |
+| `0x24` | `IRQ_STAT` | RO, sticky | `[0]` `done` |
+| `0x28` | `IRQ_CLR` | WO W1C (snoop) | `[0]` clears `done`; `[1]` clears `cfg_rejected` |
+| `0x2C`–`0x3C` | *reserved* | RO 0 | `WMASK = 0` and never HW-written |
+
+`WMASK`: `CTRL` = `32'h0000_0009` — **bit 2 is masked out**, because a stored `START` cleared by a
+same-cycle `hw_wen` is exactly the §3 one-cycle window, and the bead-`6o8w` collision rule would
+let a software `1` beat the hardware clear. `WADDR`/`TILEBASE` = `32'h0000_03FF`, `KLEN` =
+`32'h0000_003F`, `SCALE` = `32'h001F_FFFF`; every other word is `32'h0000_0000`.
+
+`hw_wen` discipline follows `crypto_accel.sv:71-79`: **always-1 = live mirror** (`STATUS`, `AOUT`,
+`IRQ_STAT`); **pulse = the bank word *is* the storage element** (`WADDR` auto-increment). So, as
+with CRYPTO, the NPU has **no result register of its own** — the bank word is the result register.
+
+**Dataflow, concretely.** `y[j] = requant(Σ_chunks Σ_{i=0..3} W[chunk][i][j] × a[chunk][i])` for
+`j = 0..3`. One chunk = one `AIN` word (4 INT8 activations) plus 4 consecutive SRAM words (the
+4×4 INT8 weight tile, one word per row). `TILEBASE` is the first tile's word address and advances
+by 4 per chunk; the 4 INT32 accumulators are cleared at `START` and accumulate across all `KLEN`
+chunks. On the final chunk the shared requantizer drains **one lane per cycle** over 4 cycles,
+packs the 4 INT8 results into one word, pushes it to `AOUT`, and sets `done`.
+
+⚠️ **Spec defect found and fixed during step 2 (bead `f7vs.11`): `KLEN` is 1..63, not 1..64.**
+A 6-bit field holds 0..63, so a written 64 stores 0, which is an illegal start. The alternative —
+encoding `KLEN-1` so the field spans 1..64 — was rejected: it buys one extra chunk, makes `KLEN = 0`
+mean "1 chunk" and so destroys the natural illegal-start check, and every driver would have to
+remember the bias. 63 chunks is 252 activations against a 4×4 grid, far past anything this block is
+for. The field is therefore a plain count with maximum 63.
+
+⚠️ **The weight memory must not hardcode a read latency.** The committed behavioural models
+disagree: `sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv` registers its inputs at `posedge` and reads
+at `negedge` (2 edges to a posedge consumer), while `sim/sram_1rw_256x32_verilator.v` — the
+FreePDK45 model every default cocotb build uses — reads on the `posedge` itself (1 cycle). The
+wrapper must present one timing to `npu_top` across all three arms, so `npu_weight_mem.sv` owns
+that normalisation (register the Sky130/ASAP7 `dout` once more, or hold the address an extra cycle)
+and `npu_top` must consume a single declared latency. This is exactly the `CS_SRAM_LATCH` problem
+`rv32i_icache.sv` already solves for itself.
+
+**Software contract — hard guarantees:**
+
+1. An **illegal `START`** (`KLEN == 0`, or `TILEBASE + 4×KLEN > 1024`) takes a **2-cycle
+   zero-length path** that sets `done` with no writeback and latches `STATUS[6]`, so a
+   `while (!done);` driver can never hang — but **`done` does not imply valid data**, exactly as
+   for CRYPTO.
+2. A `WADDR` or `WDATA` write **while `STATUS.busy`** is rejected and latches `STATUS[6]`.
+   `STATUS[6]` clears on reset, on `IRQ_CLR[1]`, or on an accepted weight write.
+3. `irq_o = done_q & CTRL[3]`, **level-held, never a pulse** — every IRQ crosses
+   `core_clk → cpu_core_clk` through a plain `cdc_2ff_sync` in `soc_top.sv`, which can miss a
+   pulse. `done_d = (done_q & ~clr) | set`, so a **set beats a same-cycle `IRQ_CLR` W1C** and a
+   completion is never lost to a racing clear. `STATUS[1]` and `IRQ_STAT[0]` are the same flop
+   mirrored into two words.
+4. **No CDC anywhere in this block** — stated on purpose rather than omitted. **No top-level
+   pins**: the NPU is register-only, like CRYPTO, so `f7vs.3` correctly pre-allocated none.
+
+#### Weight-SRAM instantiation — 3-way, all-macro
+
+⚠️ Correction to the paragraph above: the `ifdef` *pattern* comes from `rv32i_icache.sv:78-116`,
+but that file's Sky130 arm uses the **1 KB** `sky130_sram_1kbyte_1rw1r_32x256_8`. The 4 KB macro
+this block wants is the one wired up by `rtl/soc/sram_controller.sv:856-881`.
+
+```systemverilog
+`ifdef SRAM_SKY130
+    sky130_sram_4kbyte_1rw1r_32x1024_8 u_sram_macro ( /* 1 x 1024x32 */ );
+`elsif SRAM_ASAP7
+    rv32i_clock_gate u_cg ( ... );                      // per bank, en = !csb0
+    sram_1rw_256x32_asap7     u_sram_macro ( /* 4 banks of 256x32 */ );
+`else
+    sram_1rw_256x32_freepdk45 u_sram_macro ( /* 4 banks of 256x32 */ );
+`endif
+```
+
+**Every arm is a hard macro; there is no behavioural array in the RTL at all**, so no branch can
+infer flops. The `sram_controller.sv` 2-way shape (`ifdef SRAM_SKY130` / `else` flat array) is
+deliberately **not** copied: it would give the non-Sky130 nodes a *second* 32 768-flop array on top
+of the one bead `rvb` proved makes the ASAP7 post-CTS resizer non-terminating.
+
+Consequences, all verified:
+
+- **No new PD asset.** `MACROS` in `pnr/sky130/soc/config.json:66-73` is keyed by **module**, not
+  instance, and the views are committed at `pnr/sky130/soc/macro/` (`.lef`, `.lib` TT_1p8V_25C,
+  `.gds`, `.sp`). A second *instance* needs no `MACROS`/`EXTRA_LEFS`/`EXTRA_LIBS`/`EXTRA_GDS_FILES`
+  edit. The ASAP7 stub, LEF and LIB are likewise already registered (and until now unused).
+- **One Makefile edit is required.** `pnr/Makefile:1549`'s `SOC_SV2V_DEFINES` must gain
+  `--define=SRAM_ASAP7`, and the comment at `:1541-1543` ("no file in `SOC_SV_FILES` branches on
+  it") must be corrected — the NPU makes it the first file that does. sv2v resolves `ifdef`
+  **itself, before Yosys**, so `config.json`'s `VERILOG_DEFINES` is too late: without this edit the
+  ASAP7 SoC netlist would instantiate `sram_1rw_256x32_freepdk45`, which has no ASAP7 LEF, and
+  would be **silently blackboxed** — unplaced, unconstrained, and invisible to every cocotb suite.
+- **Port 0 only**; port 1 is tied off (`csb1=1'b1, addr1='0, dout1=()`) as `rv32i_icache.sv:91-94`
+  does, so all three arms present the same single-ported 1024×32 face. **Read latency is 2 clocks**
+  on every arm (inputs registered at `posedge`, array accessed at `negedge`), absorbed by a latch
+  state the way the icache uses `CS_SRAM_LATCH` + `tag_dout_r`. `USE_POWER_PINS` stays undefined —
+  PG comes from the LEF plus `PDN_MACRO_CONNECTIONS`.
+- **The macro instance must be named `u_sram_macro`.** `PDN_MACRO_CONNECTIONS`'s second entry is
+  the regex `.*u_sram_macro.*`, matched against the leaf instance name, so reusing the name means
+  **zero config change**; any other name silently leaves vccd1/vssd1 unconnected, which is the
+  PSM-0069 class this flow already fought.
+- **Elaboration guard**, mirroring `sram_controller.sv:129-148`: a bare `$fatal` in a generate
+  scope (fires under `--lint-only`, unlike `initial $error`) unless `WEIGHT_WORDS == 1024`, so a
+  parameter sweep cannot silently fall back to flops.
+- **Gate A must be run with `SRAM_SKY130` defined** plus the blackbox stub, or the probe itself
+  infers 32 768 flops and reports a meaningless number.
+
+Deferred to **Gate B** (§8), documented here so they are not rediscovered: one new
+`macro_placement.cfg` line, whose x/y origins must be exact multiples of **6.9 µm** (the GRT GCell
+pitch — the discipline that fixed GRT-0118) and whose dot-separated instance path must be **read
+from a `Yosys.Synthesis`-only probe, not guessed**. Free span right of the existing SRAM is
+x ∈ [4910.64, 6680], i.e. 1769 µm for a 701.64 × 673.335 µm macro.
+
+#### Behaviours fixed during implementation (step 3)
+
+Not stated in the register map above; chosen by the RTL, ratified here so they are decisions rather
+than accidents:
+
+- A result that completes into a **full `AOUT` FIFO is dropped silently** (as an `AIN` write into a
+  full FIFO already is, test D-series).
+- **Only an accepted `WDATA` write** clears `STATUS[6] cfg_rejected` — an accepted `WADDR` write
+  does not.
+- **Partial-strobe** `WDATA` and `AIN` writes (`pstrb != 4'hF`) are dropped.
+- `SCALE` and `CTRL[0] RELU_EN` are sampled **live during the drain**, not latched at `START`;
+  software must not change them while `busy`.
+- A `WADDR` write while `busy` is blocked by gating `penable` into the bank for that single
+  transfer, because `apb4_register_bank` cannot protect a word dynamically; `WADDR`'s `WMASK`
+  therefore stays `32'h0000_03FF` as written.
+- **Read latency is 2 cycles on every SRAM arm**, normalised by one capture flop in
+  `npu_weight_mem.sv`; `npu_top` depends only on that.
+
+#### Acceptance criteria — 6c NPU
+
+1. **No new runtime-indexed mux**, proven not asserted, on the **coarse-grain** netlist
+   (`synth -run :fine`, before `techmap` lowers `$shiftx`/`$pmux` and makes any count read zero):
+   **zero `$shiftx`, zero `$pmux`, zero `$mem*` in the three `rtl/npu` modules** when synthesised
+   *without* `-flatten`. The flat count is not the criterion and cannot be 0 — `apb4_register_bank`
+   contributes 4 `$shiftx` + 2 `$shift` of its own and is already in every netlist. Note also that a
+   constant-label `case` is **not** sufficient — yosys `proc` turns every `case` into a `$pmux` — so
+   the runtime selects use 2:1 ternary trees and one-hot AND-OR instead. The grid is genvar
+   structural, the requantizer's lane select and the non-Sky130 banks' read mux are
+   constant-label `case`, the AIN/AOUT FIFOs are **depth-4 positional shift registers** (a
+   pointer-indexed FIFO is `array[runtime_ptr]`, precisely the `ma7` idiom), and the only read
+   multiplexer is `apb4_register_bank`'s, already in every netlist.
+2. **`tb/models/npu_model.py` exists**, standard-library only with `requirements.txt` untouched,
+   models the arithmetic and not the handshake, has an explicit byte-order and saturation
+   contract, and carries its own pytest self-test under `tb/tests/`.
+3. **Both generate arms elaborate and lint clean**: `EN_NPU = 0` builds and constant-folds away.
+4. **All three SRAM arms elaborate**: `make -C sim lint_soc` (FreePDK45) and
+   `make -C sim lint_soc_sky130` (`SRAM_SKY130`, the 4 KB macro) are both clean, and both
+   `sky130-soc-sv2v` and `asap7-soc-sv2v` regenerate with the NPU present and the *right* SRAM
+   module instantiated in each.
+5. **`irq_o` is level-held** and `IRQ_STAT.done` is sticky with set winning over a same-cycle
+   `IRQ_CLR`; the SoC test proves `irq_src_i == npu_irq << 11` **exclusively**, per cycle.
+6. **An illegal `START` cannot hang the bus** — the 2-cycle zero-length path is tested directly.
+7. **Gate A (§8) has been run** with `SRAM_SKY130` defined, and its cell count / area / % of SoC /
+   setup slack at ss are recorded in bead `f7vs.11`.
+8. **A mutation campaign has run** on the RTL, as `f7vs.10` did, with every survivor shown to be
+   provably equivalent.
+
 ---
 
 ## 8. Physical design — two gates, not one
@@ -580,7 +750,7 @@ First Gate A probe actually run (it was skipped for PWM/WDT/TRNG/I2C — bead `f
 `sim/build/cdc/`, mapped to `sky130_fd_sc_hd__tt_025C_1v80.lib`, plus OpenSTA at the SoC's real
 `CLOCK_PERIOD 25.0`. No floorplan, placement, routing, RCX or PDN.
 
-| Configuration | Cells | Area µm² | % of SoC stdcell | Setup slack @ ss |
+| Configuration | Cells | Area µm² | % of SoC stdcell ⚠️ **wrong ~10×, see correction below** | Setup slack @ ss |
 |:--------------|------:|---------:|-----------------:|-----------------:|
 | `crypto_accel`, `SBOX_PARALLEL=16` (default) | 24 227 | 277 875 | **3.59 %** | **+14.042 ns MET** |
 | `crypto_accel`, `SBOX_PARALLEL=4` (fallback) | 20 569 | 237 279 | 3.06 % | +14.098 ns MET |
@@ -605,6 +775,82 @@ not taken: X-free deterministic reset is worth more than that.
 ⚠️ These are **pre-layout** numbers by design — the slack is against estimated, not extracted,
 parasitics. 14 ns of margin on a 25 ns period is wide for a block this size, but Gate B remains the
 real physical gate.
+
+#### ⚠️ Correction — the CRYPTO denominator above was stdcell **plus macro** area (found 2026-10-04, bead `f7vs.11`)
+
+`design__instance__area` is **not** a stdcell figure. Read from the same run's own metrics
+(`RUN_2026-09-26_07-34-03`, final stage `62-misc-reportmanufacturability`):
+
+| Metric | µm² |
+|:-------|----:|
+| `design__instance__area` (final) | 7 945 080 |
+| `design__instance__area__stdcell` | **992 638** |
+| `design__instance__area__macros` | 6 952 440 (CPU macro + the 4 KB SRAM) |
+| `design__core__area` | 20 359 700 |
+
+The 7 744 600 used above is the same sum at the post-tap stage (792 157 stdcell + 6 952 440
+macro). Hard macros are **88 %** of it, so every "% of SoC stdcell" in the CRYPTO table is
+understated roughly **10×**. Restated against stdcell alone, `crypto_accel` at
+`SBOX_PARALLEL=16` is **~28 %** of the final stdcell area (35 % of the post-tap figure), not 3.59 %.
+
+**The decision survives; its stated reason does not.** "An order of magnitude away from 40 %" was
+false. What actually decides fit on a macro-dominated die is **core utilisation**, and that is
+comfortable: the run sits at 7 945 080 / 20 359 700 = **39.0 %**, and adding CRYPTO (277 875) plus
+the NPU's stdcells (203 179) and its 4 KB macro (472 439) gives ~8 899 000 = **~43.7 %**. The
+fold-to-4 fallback would save 40 596 µm² = **0.2 pp of core utilisation**, still nowhere near worth
+3.7× the AES latency. `SBOX_PARALLEL` stays 16.
+
+What the corrected number *does* change: Phase 6b + 6c together grow the SoC's **stdcell** logic by
+~**48 %** (992 638 → ~1 474 000), all in the `core_clk` domain. That is the honest input to Gate B,
+in particular to bead `e45j`'s post-RCX slew/cap counts, which scale with stdcell count and net
+length rather than with die utilisation.
+
+#### Gate A results — NPU, 2026-10-04 (bead `f7vs.11`; discharges `f7vs.13`'s NPU obligation)
+
+Same tools as CRYPTO, plus one method fix: synthesis mirrors the SoC flow's own
+`04-yosys-synthesis` step — its `no_synth.cells` exclusions plus `*lpflow*`/`*edfxtp*`, the run's
+`DELAY_0.abc` script and `synthesis.abc.sdc`, `-D 25000`. **The OOM guard was checked before any
+number was read**: sv2v with `--define=SRAM_SKY130`, the `(* blackbox *)` stub read first, and the
+mapped netlist contains **exactly 1** `sky130_sram_4kbyte_1rw1r_32x1024_8` and **1 105 flops** —
+not ~33 000. Stdcells at ss (`sky130_fd_sc_hd__ss_100C_1v60`), macro timing from its TT-only
+`.lib` (the single-corner limitation of bead `o1i`).
+
+| Configuration | Cells | Stdcell µm² | Flops | % of final SoC stdcell (992 638) | Setup slack @ ss, 25 ns |
+|:--------------|------:|------------:|------:|------:|-----------------:|
+| `npu_top`, flow-faithful mapping (**primary**) | 19 603 | **203 179** | 1 105 | **20.5 %** | **+1.841 ns MET** |
+| `npu_top`, plain `abc -liberty`, no exclusions | 12 641 | 109 803 | 1 105 | 11.1 % | −5.013 ns VIOLATED |
+| `npu_top`, plain + `*lpflow*` excluded | 12 660 | 110 569 | 1 105 | 11.1 % | −5.280 ns VIOLATED |
+| `npu_top`, `EN_NPU = 0` | 2 (`conb_1`) | 7.5 | 0 | ~0 % | — |
+| 4 KB weight-SRAM macro (separate, from the LEF) | 1 | 472 439 | — | *(macro, not stdcell)* | — |
+
+Hierarchical breakdown (unflattened, so its 225 k total exceeds the flat 203 k): `npu_mac_array`
+137 881, `npu_top` remainder (requantizer, FIFOs, control) 58 261, `apb4_register_bank` 28 388,
+`npu_weight_mem` 848.
+
+**Critical path — the MAC array, not the requantizer.** `ain_q[0][8]` (AIN FIFO head, a
+fanout-129 unbuffered launch flop, 2.847 ns clk→Q) → INT8 multiply → column adder tree → 32-bit
+accumulate → `acc_w[31]`, all in one cycle: arrival 22.177 ns vs. required 24.018 ns. The
+requantizer's 16×32 → 49-bit multiply has +5.888 ns; every other endpoint group is above +4.5 ns.
+
+**Decision: ship as is, and name the Gate B watch item.** +1.84 ns pre-layout is thin next to
+CRYPTO's +14, and the two plain-mapping rows show the slack depends heavily on ABC restructuring
+the ripple-carry chains (~35 `maj3_1` in series otherwise). Two reasons it is still acceptable now:
+the primary row uses the SoC flow's own synthesis recipe, so it is the one Gate B will actually
+see; and the fanout-129 launch flop is exactly what placement-stage repair buffers. **If Gate B goes
+negative here**, the pre-identified fallback is to register the column sums before the accumulate —
+4 × 18 flops and one cycle of latency, no interface change. Not taken pre-emptively, because Gate A
+cannot price it against real wires.
+
+⚠️ CRYPTO's +14.042 ns did not record its ABC recipe, so it is **not** directly comparable with
+the NPU's primary row: the same NPU netlist moves from +1.8 ns to −5.0 ns on recipe alone.
+Future Gate A probes should use the flow-faithful recipe above and state it.
+
+Reproduction: `sv2v --define=__pnr__ --define=SRAM_SKY130` over the blackbox stub,
+`rv32i_clock_gate.sv`, `apb4_register_bank.sv` and the three `rtl/npu` files; yosys
+`synth -flatten -top npu_top; dfflibmap; abc -script DELAY_0.abc -constr synthesis.abc.sdc
+-D 25000` with the exclusions above; OpenSTA 2.7.0 against the ss liberty plus the macro `.lib`,
+25.0 ns ideal clock, 0.300/0.150 ns setup/hold uncertainty, 20 %/5 % I/O delays, mirroring
+`pnr/sky130/soc/constraints/`.
 
 ### Gate B — one batched Sky130 harden after all six land
 

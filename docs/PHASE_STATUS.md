@@ -369,8 +369,8 @@ per-item.
 | 6a-3 | Watchdog timer | 9 / 7 | `f7vs.7` | ✅ 2026-09-29 (RTL + 22/22 L1 + soc_wdt L2 incl. RST_EN reset path; `soc_all_ci` 303) |
 | 6a-4 | TRNG (portable LFSR entropy; RO source Sky130-only) | 10 / 8 | `f7vs.8` | ✅ 2026-10-01 (RTL bit-exact vs Python model + 22/22 L1 + soc_trng L2; `soc_all_ci` 326) |
 | 6a-5 | I2C master controller | 11 / 9 | `f7vs.9` | ✅ 2026-10-03 (RTL + bit engine + `i2c_slave` BFM + 46/46 L1 + soc_i2c L2; PR #208; `soc_all_ci` 394) |
-| 6b | CRYPTO — AES-128 (ECB+CTR) + SHA-256 | 12 / 10 | `f7vs.10` | ✅ 2026-10-03 (RTL 3 files + 41/41 L1 + soc_crypto L2 + **Gate A run**: 3.59 % of SoC stdcell area, +14.04 ns ss @ 25 ns) |
-| 6c | INT8 NPU, 4×4 systolic, 4 KB weight SRAM | 13 / 11 | `f7vs.11` | ⏸️ Not started |
+| 6b | CRYPTO — AES-128 (ECB+CTR) + SHA-256 | 12 / 10 | `f7vs.10` | ✅ 2026-10-03 (RTL 3 files + 41/41 L1 + soc_crypto L2 + **Gate A run**: 277 875 µm² ≈ 28 % of SoC stdcell area — first recorded as 3.59 % against a stdcell+macro denominator, corrected 2026-10-04 — +14.04 ns ss @ 25 ns) |
+| 6c | INT8 NPU, 4×4 weight-stationary, 4 KB weight SRAM | 13 / 11 | `f7vs.11` | ✅ 2026-10-04 (RTL 3 files + 39/39 L1 + soc_npu L2 + mutation 65 mutants: 55 killed, 10 provably equivalent, 0 gaps + **Gate A**: 203 179 µm² stdcell ≈ 20 % of SoC stdcell + 4 KB macro, +1.84 ns ss @ 25 ns) |
 
 Three documentation defects were corrected when the golden spec landed: AES/SHA is **APB4**, not
 AXI4-Lite (`ROADMAP.md:431` was a survivor of the pre-2026-09-20 text); the AES throughput figures
@@ -595,7 +595,7 @@ All previous specification issues have been resolved:
 **Phases 0-5 are complete.** Phase 5 signed off 2026-06-24 (M1-M12); Phase 6a's first peripheral
 (GPIO) landed and hardened on Sky130 2026-09-26; Phase 7 M-a..M-c complete 2026-06-20.
 
-**Current priority**: 6c — the INT8 NPU (bead `f7vs.11`), the last Phase 6 item. 6a and 6b are complete.
+**Current priority**: Phase 6 is complete (6a, 6b and 6c). Next is Gate B — the one batched Sky130 harden after all Phase 6 items (`docs/PHASE6_IP_EXPANSION_PLAN.md` §8), whose watch items are the NPU MAC path's +1.84 ns pre-layout slack, the second 4 KB SRAM macro's placement, and bead `e45j`'s slew/cap counts on ~48 % more stdcell logic.
 Golden spec: `docs/PHASE6_IP_EXPANSION_PLAN.md`. Tracking: bead epic `claude_verilog_test-f7vs`.
 
 1. **Groundwork** (G1-G5) — front-loads the risk so each later peripheral is near-pure RTL + test:

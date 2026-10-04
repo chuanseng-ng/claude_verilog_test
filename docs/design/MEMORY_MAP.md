@@ -43,7 +43,8 @@ This restriction is due to Ubuntu's page size being 4 KB
 | 0x2000_D000 - 0x2000_DFFF  | 4 KB    | TRNG (APB4)         | True-random-number generator; LFSR entropy arm by default, always flags `INSECURE` (`trng.sv`, Phase 6a-4) |
 | 0x2000_E000 - 0x2000_EFFF  | 4 KB    | I2C (APB4)          | I2C master controller, open-drain, external pull-ups required (`i2c_controller.sv`, Phase 6a-5) |
 | 0x2000_F000 - 0x2000_FFFF  | 4 KB    | CRYPTO (APB4)       | AES-128 (ECB/CTR) + SHA-256 accelerator; **not production cryptography** (`crypto_accel.sv`, Phase 6b) |
-| 0x2001_0000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals (0x2001_0000 NPU slot pre-allocated, not yet built) |
+| 0x2001_0000 - 0x2001_0FFF  | 4 KB    | NPU (APB4)          | INT8 4×4 weight-stationary inference engine, 4 KB weight SRAM behind PIO (`npu_top.sv`, Phase 6c) |
+| 0x2001_1000 - 0x2FFF_FFFF  | ~256 MB | Reserved            | Future peripherals          |
 | 0x3000_0000 - 0x7FFF_FFFF  | 1.25 GB | Reserved            | Future use                  |
 | 0x8000_0000 - 0xFFFF_FFFF  | 2 GB    | External Memory     | Off-chip memory/devices     |
 
@@ -51,8 +52,8 @@ This restriction is due to Ubuntu's page size being 4 KB
 > peripherals attach to a CPU-driven **AXI4-Lite control interconnect**
 > (`rtl/soc/axi_lite_interconnect.sv`) whose APB-bridge ring slot (slave 1,
 > `0x2000_2000-0x2001_0FFF`) fans out through `axil_to_apb` + `apb_interconnect`
-> into a genuine **APB4 sub-tree of 13 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2,
-> GPIO, PWM, WDT, TRNG, I2C, CRYPTO; `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_CRYPTO). GPU/DMA control remain
+> into a genuine **APB4 sub-tree of 14 slaves** (UART, SPI, Timer, IRQ, PLL, PMU, PLL2,
+> GPIO, PWM, WDT, TRNG, I2C, CRYPTO, NPU; `rtl/soc/soc_periph_map_pkg.sv` APB_UART..APB_NPU). GPU/DMA control remain
 > AXI-Lite-direct ring slaves (0 and 2). APB3 also survives standalone on the
 > CPU debug slot (0x2000_0000–0FFF), unrelated to this APB4 sub-tree. Address
 > map is frozen in `rtl/soc/soc_periph_map_pkg.sv` (`decode_axil_slave()`);
@@ -586,6 +587,66 @@ reads on `done` anyway.
 `(done & ~IRQ_CLR[0]) | done_set`, so a **set beats a same-cycle clear** and a completion is never lost to
 a racing W1C. `STATUS[1]` and `IRQ_STAT[0]` are the same flop mirrored into two words.
 
+#### NPU Registers (Phase 6c)
+
+**Base address**: 0x2001_0000 — `rtl/npu/npu_top.sv` (over `npu_mac_array.sv` and `npu_weight_mem.sv`),
+APB4 slave index 13, `N_REGS = 16`, `core_clk` domain, interrupt-controller bit 11. Register-only: no
+top-level pins and no asynchronous inputs, so no CDC synchroniser and no SDC `set_false_path` apply.
+`EN_NPU = 0` folds the block to two tie cells while still terminating APB (`pready = 1`, reads 0).
+
+**Function.** Weight-stationary 4×4 INT8 array: `y[j] = requant(Σ_c Σ_i W[c][i][j] × a[c][i])` for
+`j = 0..3`, INT8 × INT8 → INT32 accumulate, then a shared requantizer `sat_int8((acc × SCALE[15:0]) >>>
+SCALE[20:16])` with optional ReLU, draining one lane per cycle. One *chunk* `c` = one `AIN` word plus four
+consecutive weight-SRAM words (the 4×4 tile, one word per row `i`); `TILEBASE` advances by 4 per chunk.
+
+**Weight SRAM.** 1024 × 32 (4 KB), reachable **only** through `WADDR`/`WDATA` — there is no memory-mapped
+aperture. It is a hard macro on every node (1× `sky130_sram_4kbyte_1rw1r_32x1024_8` under `SRAM_SKY130`,
+4× `sram_1rw_256x32_asap7` under `SRAM_ASAP7`, 4× `sram_1rw_256x32_freepdk45` otherwise); it is never
+synthesised as flops.
+
+**Byte order.** Little-endian lanes everywhere: lane 0 is bits [7:0], lane 3 is [31:24], each a
+two's-complement INT8, so `pack([1, -2, 3, -4]) == 0xFC03FE01`. Weight word `TILEBASE + 4c + i` holds
+`W[c][i][j]` in byte `j`.
+
+| Offset | Name         | Access | Description |
+|:------:|:------------:|:------:|:------------|
+| 0x000  | NPU_CTRL     | RW     | [0] RELU_EN, [2] **START (W1P, reads 0)**, [3] IRQ enable; others reserved |
+| 0x004  | NPU_STATUS   | RO     | [0] busy, [1] done (sticky), [2] ain_full, [3] ain_empty, [4] aout_valid, [5] aout_full, [6] cfg_rejected (sticky) |
+| 0x008  | NPU_WADDR    | RW     | [9:0] weight word address; **auto-increments** on each WDATA write, wraps 1023 → 0 |
+| 0x00C  | NPU_WDATA    | WO     | 4 packed INT8 weights → SRAM[WADDR]; reads 0 |
+| 0x010  | NPU_TILEBASE | RW     | [9:0] word address of the first weight row of the next inference |
+| 0x014  | NPU_KLEN     | RW     | [5:0] chunk count, **1..63** |
+| 0x018  | NPU_SCALE    | RW     | [15:0] unsigned multiplier, [20:16] arithmetic right shift |
+| 0x01C  | NPU_AIN      | WO     | 4 packed INT8 activations → depth-4 input FIFO; reads 0 |
+| 0x020  | NPU_AOUT     | RO     | head of the depth-4 result FIFO (4 packed INT8); **a read pops**; empty reads 0 and pops nothing |
+| 0x024  | NPU_IRQ_STAT | RO     | [0] sticky done (the same flop as `STATUS[1]`) |
+| 0x028  | NPU_IRQ_CLR  | WO     | W1C by write-snoop: [0] clears done, [1] clears cfg_rejected; reads 0 |
+
+0x02C-0x03C are reserved and read 0; 0x040-0xFFC are outside the 16-register bank and also read 0.
+
+**Rounding.** The right shift is **arithmetic, so rounding is floor** (`-1 >> 1 = -1`, `-3 >> 1 = -2`), not
+round-half-up and not toward zero. The product is kept at full width (49 bits) before the shift.
+Saturation to [-128, 127] happens on the shifted value, then ReLU. Accumulator overflow is unreachable:
+the worst case (all −128 at KLEN 63) is below 2^22.
+
+**Start.** `CTRL[2]` is not stored; a write carrying it is a pulse. A START with fewer than KLEN `AIN`
+words queued **waits** for them rather than failing. An **illegal START** (`KLEN == 0`, or
+`TILEBASE + 4·KLEN > 1024`) completes in 2 clk: `done` sets, `cfg_rejected` latches, and **no result is
+pushed** — **done does not imply valid data**.
+
+**Writes while busy.** A `WADDR` or `WDATA` write while `busy` is rejected and latches `cfg_rejected`
+(cleared by reset, `IRQ_CLR[1]`, or an accepted WDATA write). `SCALE` and `RELU_EN` are read **live during
+the drain**, so software must not change them while `busy`.
+
+**Silent drops.** A partial-strobe (`pstrb != 0xF`) WDATA or AIN write is dropped; an AIN write into a
+full FIFO is dropped; a result completing into a full AOUT FIFO is dropped. Software should drain AOUT
+before starting a fifth inference.
+
+**IRQ.** `irq_o = done & CTRL[3]`, **level-held, never a pulse** (every IRQ source crosses `core_clk` →
+`cpu_core_clk` through a plain 2-FF synchroniser that can miss a pulse). The `done` next-state is
+`(done & ~IRQ_CLR[0]) | done_set`, so a **set beats a same-cycle clear**. STATUS and IRQ_STAT are written
+with **next-state** values, so a read one transfer after completion is never stale.
+
 ## Reset and Trap Vectors
 
 ### Reset Vector
@@ -683,7 +744,8 @@ claude_verilog_test-f7vs.6), bit 7 (WDT, bark and bite) as of Phase 6a-3 (bead
 claude_verilog_test-f7vs.7) and bit 8 (TRNG) as of Phase 6a-4 (bead
 claude_verilog_test-f7vs.8), bit 9 (I2C) as of Phase 6a-5 (bead
 claude_verilog_test-f7vs.9) and bit 10 (CRYPTO, done) as of Phase 6b (bead
-claude_verilog_test-f7vs.10); bit 11 remains tied 0 until the NPU lands. On a MEIP trap, software reads `IRQ_STATUS` (0x2000_6000 block) to disambiguate
+claude_verilog_test-f7vs.10) and bit 11 (NPU, done) as of Phase 6c (bead
+claude_verilog_test-f7vs.11) — all twelve sources are now live. On a MEIP trap, software reads `IRQ_STATUS` (0x2000_6000 block) to disambiguate
 the peripheral source; bit priority within the controller does not reorder
 delivery — all enabled sources share the single MEIP line.
 

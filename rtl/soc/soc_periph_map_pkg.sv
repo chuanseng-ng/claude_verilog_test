@@ -20,8 +20,8 @@
 //   so DMA (highest index) wins for 0x2000_5000-5FFF.  All other addresses in
 //   _2000-_0FFF route to APB_BRIDGE (index 1).
 //
-//   APB sub-map, final 14-slot allocation (decoded by apb_interconnect; only the
-//   first 13 are live slaves today — APB_N_SLAVES stays 13 until the next slot lands):
+//   APB sub-map, final 14-slot allocation (decoded by apb_interconnect; all 14 are
+//   live slaves — APB_N_SLAVES = 14 as of the NPU, bead f7vs.11):
 //     APB_UART    0: 0x2000_2000 .. 0x2000_2FFF                        (Phase 5)
 //     APB_SPI     1: 0x2000_3000 .. 0x2000_3FFF                        (Phase 5)
 //     APB_TIMER   2: 0x2000_4000 .. 0x2000_4FFF                        (Phase 5)
@@ -35,7 +35,7 @@
 //     APB_TRNG   10: 0x2000_D000 .. 0x2000_DFFF                        (6a-4, bead f7vs.8)
 //     APB_I2C    11: 0x2000_E000 .. 0x2000_EFFF                        (6a-5, bead f7vs.9)
 //     APB_CRYPTO 12: 0x2000_F000 .. 0x2000_FFFF                        (6b, bead f7vs.10)
-//     NPU        13: 0x2001_0000 .. 0x2001_0FFF  reserved              (6c)
+//     APB_NPU    13: 0x2001_0000 .. 0x2001_0FFF                        (6c, bead f7vs.11)
 //
 //   The window deliberately crosses out of 0x2000_xxxx into 0x2001_0FFF at the
 //   14th slave (NPU). Verified inert: paddr is 32 bits end to end — both
@@ -105,8 +105,9 @@ package soc_periph_map_pkg;
     localparam int unsigned APB_TRNG  = 10; // Phase 6a-4 — bead claude_verilog_test-f7vs.8
     localparam int unsigned APB_I2C   = 11; // Phase 6a-5 — bead claude_verilog_test-f7vs.9
     localparam int unsigned APB_CRYPTO = 12; // Phase 6b — bead claude_verilog_test-f7vs.10
+    localparam int unsigned APB_NPU    = 13; // Phase 6c — bead claude_verilog_test-f7vs.11
     /* verilator lint_on  UNUSEDPARAM */
-    localparam int unsigned APB_N_SLAVES = 13;
+    localparam int unsigned APB_N_SLAVES = 14;
 
     // ── APB region bounds (preserving original global MMIO addresses) ─────────
     localparam logic [31:0] APB_UART_BASE   = 32'h2000_2000;
@@ -143,28 +144,19 @@ package soc_periph_map_pkg;
     // CRYPTO — Phase 6b (bead claude_verilog_test-f7vs.10).
     localparam logic [31:0] APB_CRYPTO_BASE = 32'h2000_F000;
     localparam logic [31:0] APB_CRYPTO_LIMIT = 32'h2000_FFFF;
-
-    // Reserved-but-unbuilt slot 13 — pre-allocated by bead claude_verilog_test-f7vs.2
-    // (docs/PHASE6_IP_EXPANSION_PLAN.md §4). Not yet in APB_N_SLAVES or the
-    // APB_SLV_BASE/LIMIT arrays below; each is wired in one at a time as its
-    // peripheral lands. Unused until then, so guarded against UNUSEDPARAM.
-    // PWM (was slot 8), WDT (was slot 9), TRNG (was slot 10), I2C (was slot 11) and CRYPTO (was slot 12)
-    // promoted to live slaves by beads claude_verilog_test-f7vs.6 / f7vs.7 / f7vs.8 / f7vs.9 / f7vs.10 —
-    // their BASE/LIMIT constants moved above, out of this reserved block.
-    /* verilator lint_off UNUSEDPARAM */
-    localparam logic [31:0] APB_NPU_BASE    = 32'h2001_0000;  // 6c
+    // NPU — Phase 6c (bead claude_verilog_test-f7vs.11).
+    localparam logic [31:0] APB_NPU_BASE    = 32'h2001_0000;
     localparam logic [31:0] APB_NPU_LIMIT   = 32'h2001_0FFF;
-    /* verilator lint_on  UNUSEDPARAM */
 
     // Packed arrays for apb_interconnect instantiation.
     localparam logic [31:0] APB_SLV_BASE  [APB_N_SLAVES] = '{
         APB_UART_BASE,  APB_SPI_BASE,  APB_TIMER_BASE,
         APB_IRQ_BASE,   APB_PLL_BASE,  APB_PMU_BASE,  APB_PLL2_BASE, APB_GPIO_BASE, APB_PWM_BASE,
-        APB_WDT_BASE, APB_TRNG_BASE, APB_I2C_BASE, APB_CRYPTO_BASE};
+        APB_WDT_BASE, APB_TRNG_BASE, APB_I2C_BASE, APB_CRYPTO_BASE, APB_NPU_BASE};
     localparam logic [31:0] APB_SLV_LIMIT [APB_N_SLAVES] = '{
         APB_UART_LIMIT, APB_SPI_LIMIT, APB_TIMER_LIMIT,
         APB_IRQ_LIMIT,  APB_PLL_LIMIT, APB_PMU_LIMIT, APB_PLL2_LIMIT, APB_GPIO_LIMIT, APB_PWM_LIMIT,
-        APB_WDT_LIMIT, APB_TRNG_LIMIT, APB_I2C_LIMIT, APB_CRYPTO_LIMIT};
+        APB_WDT_LIMIT, APB_TRNG_LIMIT, APB_I2C_LIMIT, APB_CRYPTO_LIMIT, APB_NPU_LIMIT};
 
     // =========================================================================
     // Legacy address constants — kept for testbench / firmware compatibility.

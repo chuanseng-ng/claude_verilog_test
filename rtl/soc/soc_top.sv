@@ -17,7 +17,7 @@
 //     AXIL_DMA=2        @ 0x2000_5000–5FFF  (AXI-Lite direct; last-match wins
 //                                             over APB_BRIDGE window overlap)
 //
-//   APB sub-tree (13 slaves behind axil_to_apb bridge):
+//   APB sub-tree (14 slaves behind axil_to_apb bridge):
 //     APB_UART=0  @ 0x2000_2000–2FFF  uart_controller
 //     APB_SPI=1   @ 0x2000_3000–3FFF  spi_controller
 //     APB_TIMER=2 @ 0x2000_4000–4FFF  timer
@@ -34,6 +34,7 @@
 //     APB_TRNG=10 @ 0x2000_D000–DFFF  trng (core_clk domain; Phase 6a-4, bead claude_verilog_test-f7vs.8)
 //     APB_I2C=11  @ 0x2000_E000–EFFF  i2c_controller (core_clk domain; Phase 6a-5, bead claude_verilog_test-f7vs.9)
 //     APB_CRYPTO=12 @ 0x2000_F000–FFFF  crypto_accel (core_clk domain; Phase 6b, bead claude_verilog_test-f7vs.10)
+//     APB_NPU=13  @ 0x2001_0000–0FFF  npu_top (core_clk domain; Phase 6c, bead claude_verilog_test-f7vs.11)
 //
 //   Debug plane   : APB3 debug slave exposed at top-level ports, bridged into
 //     the CPU domain by apb_cdc_bridge (u_apb_dbg_cdc, GH #95) — see the
@@ -161,8 +162,7 @@
 //     bit 8 (TRNG) is now live (Phase 6a-4, bead claude_verilog_test-f7vs.8).
 //     bit 9 (I2C) is now live (Phase 6a-5, bead claude_verilog_test-f7vs.9).
 //     bit 10 (CRYPTO) is now live (Phase 6b, bead claude_verilog_test-f7vs.10).
-//     bit 11 remains pre-allocated (Phase 6, bead claude_verilog_test-f7vs.2) and
-//     tied 1'b0 until the NPU lands.
+//     bit 11 (NPU) is now live (Phase 6c, bead claude_verilog_test-f7vs.11).
 //     interrupt_controller.irq_o → CPU ext_irq_i (MEIP)
 //     timer.irq_o                → CPU timer_irq_i (MTIP, direct)
 //
@@ -419,7 +419,7 @@ module soc_top
     // APB nets: soc_bus apb_* ports → 5 APB peripherals
     // (previously apb_interconnect → peripherals; now routed through soc_bus)
     // =========================================================================
-    localparam int unsigned N_APB_SLV = APB_N_SLAVES; // 7
+    localparam int unsigned N_APB_SLV = APB_N_SLAVES; // 14
 
     // Per-slave APB nets from soc_bus to each peripheral
     logic        apb_psel    [N_APB_SLV];
@@ -742,7 +742,8 @@ module soc_top
     // now driven by u_i2c below, not tied here.
     // crypto_irq (bit 10) landed in Phase 6b (bead claude_verilog_test-f7vs.10) — it is
     // now driven by u_crypto below, not tied here.
-    assign npu_irq    = 1'b0;  // tie removed when NPU lands (6c)
+    // npu_irq (bit 11) landed in Phase 6c (bead claude_verilog_test-f7vs.11) — it is
+    // now driven by u_npu below, not tied here.
 
     // Phase 6 (bead claude_verilog_test-f7vs.3): top-level port pre-allocation for
     // PWM/WDT/I2C (the three Phase 6 items that add pins at all — TRNG's entropy
@@ -1963,6 +1964,30 @@ module soc_top
     );
 
     // =========================================================================
+    // NPU — INT8 4x4 weight-stationary MAC array, APB slave (apb_psel[APB_NPU]),
+    // Phase 6c (bead claude_verilog_test-f7vs.11). core_clk domain, single clock, NO asynchronous
+    // inputs and NO top-level pins (register-only), so no cdc_2ff_sync and no SDC false-path apply.
+    // npu_mac_array / npu_weight_mem are instantiated inside npu_top; the weight store is one
+    // 4 KB SRAM macro. Default EN_NPU = 1. irq_o -> interrupt_controller bit 11 (level-held).
+    // =========================================================================
+    npu_top #(
+        .ADDR_W (12)
+    ) u_npu (
+        .clk     (core_clk),
+        .rst_n   (core_rst_n),
+        .psel    (apb_psel    [APB_NPU]),
+        .penable (apb_penable [APB_NPU]),
+        .pwrite  (apb_pwrite  [APB_NPU]),
+        .paddr   (apb_paddr   [APB_NPU][11:0]),
+        .pwdata  (apb_pwdata  [APB_NPU]),
+        .pstrb   (apb_pstrb   [APB_NPU]),
+        .prdata  (apb_prdata  [APB_NPU]),
+        .pready  (apb_pready  [APB_NPU]),
+        .pslverr (apb_pslverr [APB_NPU]),
+        .irq_o   (npu_irq)
+    );
+
+    // =========================================================================
     // Interrupt controller — APB slave (apb_psel[APB_IRQ])
     // irq_src_i[11:0] = {NPU[11], CRYPTO[10], I2C[9], TRNG[8], WDT[7], PWM[6],
     //                     GPIO[5], GPU[4], DMA[3], TIMER[2]=0, SPI[1], UART[0]}
@@ -1974,7 +1999,8 @@ module soc_top
     // claude_verilog_test-f7vs.7); bit 8 (TRNG) by u_trng above (Phase 6a-4, bead
     // claude_verilog_test-f7vs.8); bit 9 (I2C) by u_i2c above (Phase 6a-5, bead
     // claude_verilog_test-f7vs.9); bit 10 (CRYPTO) by u_crypto above (Phase 6b, bead
-    // claude_verilog_test-f7vs.10); bit 11 (NPU) remains tied 1'b0 above until it lands (6c).
+    // claude_verilog_test-f7vs.10); bit 11 (NPU) by u_npu above (Phase 6c, bead
+    // claude_verilog_test-f7vs.11).
     // =========================================================================
     interrupt_controller #(
         .ADDR_W    (12),

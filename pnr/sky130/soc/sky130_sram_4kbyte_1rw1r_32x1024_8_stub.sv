@@ -3,10 +3,16 @@
 // macro at SoC-top synthesis (GH #104 Sky130 SoC Stage-2). Yosys treats
 // (* blackbox *) modules as externally-defined cells; the port interface
 // is preserved for netlist connectivity but no logic is synthesised.
-// The real implementation (GDS/LEF/LIB/SPICE) is in
-// pnr/sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8.{lef,lib} and
-// /nobackup/openram_sky130_4kb/macro/sky130_sram_4kbyte_1rw1r_32x1024_8/
-// (GDS/SPICE — local/nobackup only, not committed).
+// The real implementation is committed in-repo: all four views
+// (pnr/sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8.{lef,lib,gds,sp})
+// are what pnr/sky130/soc/config.json's MACROS entry resolves, and are what
+// the 2026-09-26 Sky130 SoC harden (RUN_2026-09-26_00-07-59, Netgen LVS
+// PASSED) actually used. The OpenRAM compile directory that generated them,
+// /nobackup/openram_sky130_4kb/, no longer exists -- it was wiped in the
+// 2026-09-15 drive reorganisation. That loss is inert: nothing in the flow
+// reads it, and the generator config is kept at
+// pnr/sky130/soc/openram_sram4k/config_sky130_sram_4kbyte_1rw1r_32x1024_8.py
+// should the macro ever need recompiling.
 //
 // Port list must exactly match the OpenRAM-generated
 // sky130_sram_4kbyte_1rw1r_32x1024_8.v behavioural model: 1024 words x 32
