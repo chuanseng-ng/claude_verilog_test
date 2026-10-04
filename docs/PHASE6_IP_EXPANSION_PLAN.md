@@ -678,10 +678,33 @@ pitch — the discipline that fixed GRT-0118) and whose dot-separated instance p
 from a `Yosys.Synthesis`-only probe, not guessed**. Free span right of the existing SRAM is
 x ∈ [4910.64, 6680], i.e. 1769 µm for a 701.64 × 673.335 µm macro.
 
+#### Behaviours fixed during implementation (step 3)
+
+Not stated in the register map above; chosen by the RTL, ratified here so they are decisions rather
+than accidents:
+
+- A result that completes into a **full `AOUT` FIFO is dropped silently** (as an `AIN` write into a
+  full FIFO already is, test D-series).
+- **Only an accepted `WDATA` write** clears `STATUS[6] cfg_rejected` — an accepted `WADDR` write
+  does not.
+- **Partial-strobe** `WDATA` and `AIN` writes (`pstrb != 4'hF`) are dropped.
+- `SCALE` and `CTRL[0] RELU_EN` are sampled **live during the drain**, not latched at `START`;
+  software must not change them while `busy`.
+- A `WADDR` write while `busy` is blocked by gating `penable` into the bank for that single
+  transfer, because `apb4_register_bank` cannot protect a word dynamically; `WADDR`'s `WMASK`
+  therefore stays `32'h0000_03FF` as written.
+- **Read latency is 2 cycles on every SRAM arm**, normalised by one capture flop in
+  `npu_weight_mem.sv`; `npu_top` depends only on that.
+
 #### Acceptance criteria — 6c NPU
 
-1. **No new runtime-indexed mux**, proven not asserted: `synth -flatten` on `npu_top` shows **no
-   `$shiftx` and no `$pmux`**, and no memory cell beyond the blackbox. The grid is genvar
+1. **No new runtime-indexed mux**, proven not asserted, on the **coarse-grain** netlist
+   (`synth -run :fine`, before `techmap` lowers `$shiftx`/`$pmux` and makes any count read zero):
+   **zero `$shiftx`, zero `$pmux`, zero `$mem*` in the three `rtl/npu` modules** when synthesised
+   *without* `-flatten`. The flat count is not the criterion and cannot be 0 — `apb4_register_bank`
+   contributes 4 `$shiftx` + 2 `$shift` of its own and is already in every netlist. Note also that a
+   constant-label `case` is **not** sufficient — yosys `proc` turns every `case` into a `$pmux` — so
+   the runtime selects use 2:1 ternary trees and one-hot AND-OR instead. The grid is genvar
    structural, the requantizer's lane select and the non-Sky130 banks' read mux are
    constant-label `case`, the AIN/AOUT FIFOs are **depth-4 positional shift registers** (a
    pointer-indexed FIFO is `array[runtime_ptr]`, precisely the `ma7` idiom), and the only read
