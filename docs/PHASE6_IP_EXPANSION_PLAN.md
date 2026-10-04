@@ -19,8 +19,8 @@ sub-phase letters below are now the only ones used:
 
 | Sub-phase | Scope | Status |
 |:---------:|:------|:-------|
-| **6a** | All APB4 register peripherals: GPIO, PWM, WDT, TRNG, I2C | GPIO ✅ (`ckc`/`00ef`); rest planned |
-| **6b** | AES-128 + SHA-256 accelerator (`crypto_accel`) | Not started |
+| **6a** | All APB4 register peripherals: GPIO, PWM, WDT, TRNG, I2C | ✅ complete 2026-10-03 |
+| **6b** | AES-128 + SHA-256 accelerator (`crypto_accel`) | ✅ 2026-10-03 (`f7vs.10`) |
 | **6c** | Minimal INT8 NPU | Not started |
 
 `docs/ROADMAP.md:398` already used this reading. `CLAUDE.md:31`'s "6a GPIO ✅ done; 6b+ not
@@ -432,15 +432,15 @@ protection the bank cannot express, hence also a shadow-side check.
 
 | Offset | Name | Access | Description |
 |:------:|:-----|:------:|:------------|
-| 0x000 | CRYPTO_CTRL | RW | `[1:0]` mode (0 ECB, 1 CTR, 2 SHA), `[2]` start, `[3]` IRQ enable |
+| 0x000 | CRYPTO_CTRL | RW | `[1:0]` mode (0 ECB, 1 CTR, 2 SHA, 3 reserved), `[2]` start (**W1P, reads 0**), `[3]` IRQ enable, `[4]` SHA_CONT |
 | 0x004 | CRYPTO_STATUS | RO | `[0]` busy, `[1]` done, `[2]` key_valid, `[3]` key_write_rejected |
 | 0x008-0x014 | CRYPTO_KEY0-3 | WO | AES-128 key, shadow-registered; **always reads 0** |
 | 0x018-0x024 | CRYPTO_IV0-3 | RW | CBC IV / CTR counter block |
-| 0x028-0x034 | CRYPTO_DIN0-3 | WO | Input block, write-snoop push |
+| 0x028-0x034 | CRYPTO_DIN0-3 | WO | **4-word aperture onto one 512-bit shift register**; write-snoop push, order is the contract |
 | 0x038-0x044 | CRYPTO_DOUT0-3 | RO | Output block |
 | 0x048-0x064 | CRYPTO_DIGEST0-7 | RO | SHA-256 digest |
 | 0x068 | CRYPTO_IRQ_STAT | RO | Sticky done |
-| 0x06C | CRYPTO_IRQ_CLR | WO | W1C; reads 0 |
+| 0x06C | CRYPTO_IRQ_CLR | WO | W1C; reads 0. `[0]` clears sticky done, `[1]` clears `STATUS.key_write_rejected` |
 
 `N_REGS = 32` (one 128-byte window; remainder reserved). A power-of-two `N_REGS` is fine —
 `apb4_register_bank.sv:66`'s `IDXW` idiom already handles it, and GPIO proves the `N_REGS = 8`
@@ -454,6 +454,65 @@ untouched.
 ⚠️ **Mandatory `security-reviewer` pass**, and the module header must state the non-goals outright:
 **no side-channel or DPA resistance, no fault-injection hardening, not certified, not validated
 against any scheme.** Without that, someone will eventually treat this as production crypto.
+
+**Register-map corrections (2026-10-03, bead `f7vs.10` microarchitecture review).** Four entries in
+the table above are not implementable against `apb4_register_bank`'s actual semantics as literally
+written. All four resolutions stay inside fields the table left reserved, so none of them changes
+the address map, the slot, the IRQ bit or `N_REGS`:
+
+1. **`CTRL[2]` start cannot be a stored RW bit.** Clearing it with a same-cycle `hw_wen` writeback
+   is exactly the "one-cycle window in which the protected value is wrong" failure of §3
+   consequence 1 — and the collision rule makes the SW `1` beat the HW clear anyway
+   (`apb4_register_bank.sv:91-118`). It is therefore **masked out of `WMASK` and decoded as a
+   write-snoop pulse**: W1P, reads 0 forever, self-clearing by construction with no window.
+2. **DIN cannot hold a SHA block.** SHA-256 needs 512 bits and the map provides four words, so
+   `DIN0-3` are a **4-word aperture onto a single 512-bit shift register**: which of the four
+   addresses is written is irrelevant, the **write order** is the contract (16 words for SHA, 4 for
+   AES, most-significant first). A partial-strobe write is dropped, and pushes are rejected while
+   busy because CTR consumes the plaintext at the *completion* edge.
+3. **Multi-block SHA chaining was impossible as specified** — `DIGEST0-7` are RO and no `H` input
+   register exists, so software had no way to supply the chaining value. Resolved with
+   **`CTRL[4] = SHA_CONT`** (0 = start from the FIPS-180-4 `H0` constants, 1 = continue from the
+   current `DIGEST` contents). Because the `DIGEST` words are `WMASK = 0` and HW-written only, they
+   *are* the chain register — `DIGEST` stays RO exactly as the table says and no 256-bit register is
+   added. Making `DIGEST` RW was rejected: it contradicts a stated access type and lets a stray
+   store corrupt a hash in progress.
+4. **`STATUS[3] key_write_rejected` had no documented clear.** It clears on reset, on `IRQ_CLR[1]`,
+   and on an accepted key write, so the natural recovery sequence (see rejected → wait idle →
+   rewrite the key) needs no extra register access.
+
+Also recorded rather than left implicit: **`STATUS[1] done` and `IRQ_STAT[0]` are the same flop**
+mirrored into two words (the `i2c_controller.sv:680-695` pattern), not two pieces of state; and
+**`IV` is the one register whose busy-time protection cannot be enforced** — it lives inside the
+bank, so unlike KEY and DIN there is no shadow-side check to add, and writing it mid-operation
+corrupts the CTR counter. That is software's responsibility and is documented as such, which
+satisfies §3's review-checklist item because nothing claims the bank enforces it.
+
+**Acceptance criteria** (bead `f7vs.10`; this list is what the PR is reviewed against):
+
+1. **No new runtime-indexed mux**, the same explicit criterion 6c carries below. The AES S-box is a
+   constant-index `case`/ROM, the SHA-256 `K` table a constant-index lookup, and the message
+   schedule a shift register — so the proven Synlig `OPT_MUXTREE` miscompile class (bead `ma7`) is
+   side-stepped by construction rather than by luck. An RTL-review gate.
+2. **ECB bit-exact against the FIPS-197 Appendix B and C known-answer vectors**, asserted both in
+   `tb/models/aes128_model.py`'s own `selftest()` and again in the cocotb suite — the double-pin
+   `tb/models/trng_lfsr_model.py` / `test_trng.py:787` established, so a silent model edit cannot
+   move the target the suite chases.
+3. **CTR round-trip bit-exact**: encrypting a block and then re-running the ciphertext through the
+   same keystream returns the plaintext, cross-checked against the model. This is what makes an
+   encrypt-only datapath a complete cipher in both directions.
+4. **SHA-256 digests bit-exact against `hashlib.sha256`** over multiple chained blocks, with
+   padding and message length supplied by the testbench (software's job, per the standard).
+5. **`KEY0-3` read 0 forever** — bank words at `WMASK = 32'h0` and never HW-written — and a key
+   write attempted while `STATUS.busy` is rejected and latches `STATUS[3]`.
+6. **`irq_o` is level-held**, `IRQ_STAT.done` is sticky with set winning over a same-cycle
+   `IRQ_CLR` W1C, and `IRQ_STAT` is HW-written with the next-state value so a read one transfer
+   after completion is not stale.
+7. **Both generate arms elaborate and lint clean**: `EN_AES = 0` and `EN_SHA = 0` each build, and a
+   mode selecting an absent core reports cleanly instead of hanging the FSM.
+8. **Gate A (§8) has been run and its cell count / area recorded in the bead**, with
+   `SBOX_PARALLEL` set from that measurement rather than assumed.
+9. **`security-reviewer` has passed** and the module header carries the non-goals paragraph above.
 
 ### 6c — NPU (`rtl/npu/npu_top.sv`, `npu_mac_array.sv`, `npu_weight_mem.sv`)
 
@@ -513,6 +572,39 @@ placement, routing or RCX. Minutes, not hours.
 This is the highest-value risk control in the phase: it catches "the 16-parallel-S-box AES is 40 %
 of the SoC" while the fold-to-4 fallback is still a cheap parameter change, instead of after five
 more items have piled on top. Record the cell delta in the item's bead.
+
+#### Gate A results — CRYPTO, 2026-10-03 (bead `f7vs.10`)
+
+First Gate A probe actually run (it was skipped for PWM/WDT/TRNG/I2C — bead `f7vs.13`). Method:
+`sv2v` + `yosys` from the cache `tools/cdc/fetch_cdc_tools.sh` already populates under
+`sim/build/cdc/`, mapped to `sky130_fd_sc_hd__tt_025C_1v80.lib`, plus OpenSTA at the SoC's real
+`CLOCK_PERIOD 25.0`. No floorplan, placement, routing, RCX or PDN.
+
+| Configuration | Cells | Area µm² | % of SoC stdcell | Setup slack @ ss |
+|:--------------|------:|---------:|-----------------:|-----------------:|
+| `crypto_accel`, `SBOX_PARALLEL=16` (default) | 24 227 | 277 875 | **3.59 %** | **+14.042 ns MET** |
+| `crypto_accel`, `SBOX_PARALLEL=4` (fallback) | 20 569 | 237 279 | 3.06 % | +14.098 ns MET |
+| `crypto_accel`, 16, datapath resets dropped | 23 074 | 265 814 | 3.43 % | — |
+| `aes128_core` @16 | — | 130 320 | 1.68 % | +17.332 ns MET |
+| `aes128_core` @4 | 6 411 | 69 555 | 0.90 % | +17.457 ns MET |
+| `sha256_core` | 8 033 | 88 232 | 1.14 % | +14.065 ns MET |
+| `apb4_register_bank` alone | 7 562 | 88 126 | 1.14 % | — |
+
+Denominator is the Sky130 SoC's own `design__instance__area` = **7 744 600 µm²** at ~38 %
+utilisation (run `RUN_2026-09-26_07-34-03`), *not* the die area. Flop count 3 168
+(`dfxtp_2`).
+
+**Decision: `SBOX_PARALLEL` stays 16.** This gate exists to catch the case quoted above — "the
+16-parallel-S-box AES is 40 % of the SoC". It is **3.59 %**, an order of magnitude away. Folding to
+4 would save 40 596 µm², which is **0.52 percentage points** of the SoC, gain nothing in timing
+(+14.098 vs +14.042 ns at ss is noise), and cost 3.7× the AES latency (11 → 41 cycles/block). The
+pre-documented fallback therefore stays documented and unused, still a one-parameter change if a
+future floorplan ever needs it. The datapath-reset lever would save a further 0.16 pp and is also
+not taken: X-free deterministic reset is worth more than that.
+
+⚠️ These are **pre-layout** numbers by design — the slack is against estimated, not extracted,
+parasitics. 14 ns of margin on a 25 ns period is wide for a block this size, but Gate B remains the
+real physical gate.
 
 ### Gate B — one batched Sky130 harden after all six land
 

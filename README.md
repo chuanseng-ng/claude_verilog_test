@@ -15,12 +15,12 @@ This project incrementally builds a fully functional SoC:
 4. **Phase 3**: Memory System (I-cache + D-cache) ✅ **COMPLETE** (2026-05-21)
 5. **Phase 4**: GPU-Lite Compute Engine (SIMT) ✅ **COMPLETE** (2026-05-27)
 6. **Phase 5**: SoC Integration (peripherals, boot ROM) ✅ **COMPLETE** (2026-06-24)
-7. **Phase 6**: IP expansion — GPIO/I2C/PWM/WDT/TRNG/AES-SHA, INT8 NPU 🚧 **6a GPIO done**
+7. **Phase 6**: IP expansion — GPIO/I2C/PWM/WDT/TRNG/AES-SHA, INT8 NPU 🚧 **6a + 6b done**
 8. **Phase 7**: Mixed-signal charge-pump PLL (dual-PDK, AMS RNM) ✅ M-a–M-c complete
 
 ## Current Status
 
-Phases 0–5 complete. Phase 6 underway: **6a GPIO landed and hardened on Sky130**.
+Phases 0–5 complete. Phase 6 underway: **6a complete** (GPIO — also hardened on Sky130 — plus PWM, WDT, TRNG, I2C) and **6b complete** (AES-128 + SHA-256 crypto accelerator). 6c (INT8 NPU) is the remaining item.
 
 **The strongest result in this project is the Sky130 SoC**, because Sky130 is the only node here with
 genuine physical verification (ASAP7 and FreePDK45 skip Magic/KLayout/Netgen entirely). As of
@@ -135,7 +135,7 @@ complete definitions in [`docs/design/MEMORY_MAP.md`](docs/design/MEMORY_MAP.md)
 
 This is a specification-driven project with clear phase boundaries. Contributions should:
 
-1. Follow the current phase's scope (Phase 6 — IP expansion; 6a GPIO complete)
+1. Follow the current phase's scope (Phase 6 — IP expansion; 6a and 6b complete, 6c NPU remaining)
 2. Maintain consistency with specifications in `docs/`
 3. Include appropriate tests (pytest for Phase 0, cocotb for Phase 1+)
 

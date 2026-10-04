@@ -216,6 +216,29 @@ I2C_SOURCES = \
 	$(RTL)/periph/i2c_controller.sv \
 	$(SOC_DIR)/tb_i2c.sv
 
+# Phase 6b (bead claude_verilog_test-f7vs.10): standalone crypto_accel unit-test sources.
+# apb4_register_bank (register file; crypto_accel's DOUT / DIGEST / IV3 / STATUS / IRQ_STAT are
+# hardware-written bank words, so the bank IS the result storage) + the two sub-cores
+# (aes128_core, sha256_core -- listed BEFORE the wrapper that instantiates them, same ordering
+# convention as trng_lfsr_entropy before trng and i2c_bit_engine before i2c_controller) +
+# crypto_accel + the standalone TB. tb_crypto.sv instantiates FOUR crypto_accel configurations
+# side by side (default, SBOX_PARALLEL=4, EN_AES=0, EN_SHA=0) so one simulation build reaches both
+# generate arms and both fold factors; test_crypto.py also re-lints this exact list (read back
+# through tools/verif/check_source_closure.py's parser, not hand-copied) with -G overrides to
+# prove the elaboration guards refuse an illegal SBOX_PARALLEL / ADDR_W / EN_AES=EN_SHA=0.
+# NO cdc/cdc_2ff_sync.sv here, deliberately and unlike gpio / i2c: crypto_accel has NO
+# asynchronous input at all (clk / rst_n / APB4 in, irq_o out), so there is nothing to
+# synchronise, and no SDC set_false_path applies either -- the crypto_accel header says so
+# explicitly. Do not "add it for safety": an unused module in the list is dead weight that would
+# also hide a genuinely missing one. The three RTL files did not exist when this list was written
+# (strict TDD): crypto / crypto_lint are expected to fail to elaborate until the RTL lands.
+CRYPTO_SOURCES = \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/periph/aes128_core.sv \
+	$(RTL)/periph/sha256_core.sv \
+	$(RTL)/periph/crypto_accel.sv \
+	$(SOC_DIR)/tb_crypto.sv
+
 # Phase 6 groundwork (bead claude_verilog_test-f7vs.4): standalone apb_interconnect
 # unit-test sources. apb_interconnect is a single, self-contained combinational module --
 # no other RTL package or CDC primitive needed.
@@ -316,6 +339,9 @@ PLL_SOURCES = \
 	$(RTL)/periph/trng.sv \
 	$(RTL)/periph/i2c_bit_engine.sv \
 	$(RTL)/periph/i2c_controller.sv \
+	$(RTL)/periph/aes128_core.sv \
+	$(RTL)/periph/sha256_core.sv \
+	$(RTL)/periph/crypto_accel.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
@@ -392,6 +418,9 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/periph/trng.sv \
 	$(RTL)/periph/i2c_bit_engine.sv \
 	$(RTL)/periph/i2c_controller.sv \
+	$(RTL)/periph/aes128_core.sv \
+	$(RTL)/periph/sha256_core.sv \
+	$(RTL)/periph/crypto_accel.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
@@ -556,7 +585,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c check-exit-propagation
+.PHONY: crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto check-exit-propagation
 crossbar:
 	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -821,6 +850,23 @@ i2c: i2c_lint
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
+# Phase 6b (bead claude_verilog_test-f7vs.10): crypto_accel lint + sim (L1 AES / SHA suite).
+# lint only: apb4_register_bank + aes128_core + sha256_core + crypto_accel + standalone TB wrapper
+# (which holds all four configurations, so this lint also covers EN_AES=0 / EN_SHA=0 /
+# SBOX_PARALLEL=4). Contract: 0 errors, 0 warnings.
+# -Wno-SYNCASYNCNET: same per-target convention as the gpio/pwm/wdt/trng/i2c targets above, kept
+# for consistency although crypto_accel has no asynchronous input to trip it.
+crypto_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
+		--top-module tb_crypto \
+		$(CRYPTO_SOURCES)
+
+crypto: crypto_lint
+	$(MAKE) MODULE=test_crypto TOPLEVEL=tb_crypto \
+		VERILOG_SOURCES="$(CRYPTO_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
 # Phase 6 groundwork (bead claude_verilog_test-f7vs.4): apb_interconnect lint + sim.
 # lint only: apb_interconnect + standalone TB wrapper, at the wrapper's default N_SLAVES.
 # -Wno-SYNCASYNCNET: matches the gpio/spi targets' convention above, even though this DUT has
@@ -1068,6 +1114,21 @@ soc_i2c: soc_boot_lint
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
+# SoC-level CRYPTO FABRIC test (bead claude_verilog_test-f7vs.10). Exercises crypto_accel (APB slave
+# 12, 0x2000_F000) through the real fabric path -- CPU -> axi4_crossbar -> axi4_to_axilite ->
+# axi_lite_interconnect -> axil_to_apb -> apb_interconnect -- plus the crypto -> interrupt_controller
+# [10] -> CPU MEIP interrupt path. Deliberately CHEAP: a few FIPS-197 / FIPS 180-4 known answers read
+# back over the bus; every behaviour of the peripheral itself is the L1 `crypto` suite. One test / one
+# hand-assembled image (crypto_fw/gen_crypto_hex.py, no cross toolchain -- CI-safe). crypto_accel.sv,
+# aes128_core.sv and sha256_core.sv are already in SOC_BOOT_SOURCES and tb_soc_top.sv needs no new
+# ports (crypto has no pins), so this reuses soc_boot_lint exactly like soc_i2c/soc_trng above.
+soc_crypto: soc_boot_lint
+	$(MAKE) MODULE=test_soc_crypto TOPLEVEL=tb_soc_top \
+		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
 # GPIO DRIVER test (bead claude_verilog_test-8qn4 item 2). Unlike soc_gpio
 # above (hand-assembled gpio_fw firmware proving the RTL through the
 # fabric), this suite proves sw/drivers/gpio.h -- the first GPIO driver
@@ -1255,6 +1316,7 @@ soc_all_ci: check-space
 	$(MAKE) wdt
 	$(MAKE) trng
 	$(MAKE) i2c
+	$(MAKE) crypto
 	$(MAKE) apb_interconnect
 	$(MAKE) async_axi_fifo
 	$(MAKE) apb_cdc_bridge
@@ -1268,6 +1330,7 @@ soc_all_ci: check-space
 	$(MAKE) soc_wdt
 	$(MAKE) soc_trng
 	$(MAKE) soc_i2c
+	$(MAKE) soc_crypto
 	$(MAKE) soc_pll
 	$(MAKE) soc_multiclock
 	$(MAKE) soc_multiclock_reset

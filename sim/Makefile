@@ -373,6 +373,9 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/periph/trng.sv \
 	$(RTL_DIR)/periph/i2c_bit_engine.sv \
 	$(RTL_DIR)/periph/i2c_controller.sv \
+	$(RTL_DIR)/periph/aes128_core.sv \
+	$(RTL_DIR)/periph/sha256_core.sv \
+	$(RTL_DIR)/periph/crypto_accel.sv \
 	$(RTL_DIR)/periph/dma_engine.sv \
 	$(RTL_DIR)/soc/axi4_crossbar.sv \
 	$(RTL_DIR)/soc/axi_lite_interconnect.sv \
