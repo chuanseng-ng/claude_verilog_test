@@ -761,6 +761,9 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/periph/aes128_core.sv \
 	$(PROJECT_ROOT)/rtl/periph/sha256_core.sv \
 	$(PROJECT_ROOT)/rtl/periph/crypto_accel.sv \
+	$(PROJECT_ROOT)/rtl/npu/npu_mac_array.sv \
+	$(PROJECT_ROOT)/rtl/npu/npu_weight_mem.sv \
+	$(PROJECT_ROOT)/rtl/npu/npu_top.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_clock_gate.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_2ff_sync.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_reset_sync.sv \
@@ -1487,6 +1490,9 @@ SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/periph/aes128_core.sv \
 	$(PROJECT_ROOT)/rtl/periph/sha256_core.sv \
 	$(PROJECT_ROOT)/rtl/periph/crypto_accel.sv \
+	$(PROJECT_ROOT)/rtl/npu/npu_mac_array.sv \
+	$(PROJECT_ROOT)/rtl/npu/npu_weight_mem.sv \
+	$(PROJECT_ROOT)/rtl/npu/npu_top.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_clock_gate.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_2ff_sync.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_reset_sync.sv \

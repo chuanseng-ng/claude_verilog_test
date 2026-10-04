@@ -11,7 +11,7 @@
 //   Periph   : 0x2000_1000 .. 0x2001_0FFF   (AXI4→AXI-Lite bridge; Phase 7 M-c extended +PLL;
 //              GH #92 extended again +PLL2; Phase 6a / bead ckc extended again +GPIO;
 //              Phase 6 / bead f7vs.2 extended again to the final size, pre-allocating the
-//              reserved-but-unbuilt PWM/WDT/TRNG/I2C/CRYPTO/NPU slots)
+//              PWM/WDT/TRNG/I2C/CRYPTO/NPU slots; all six are live slaves as of bead f7vs.11)
 //
 // The crossbar itself is parameterized with SLV_BASE / SLV_LIMIT arrays so it
 // stays reusable; the SoC top-level passes the constants below.  decode_slave()

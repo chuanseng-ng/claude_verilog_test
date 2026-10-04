@@ -376,6 +376,9 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/periph/aes128_core.sv \
 	$(RTL_DIR)/periph/sha256_core.sv \
 	$(RTL_DIR)/periph/crypto_accel.sv \
+	$(RTL_DIR)/npu/npu_mac_array.sv \
+	$(RTL_DIR)/npu/npu_weight_mem.sv \
+	$(RTL_DIR)/npu/npu_top.sv \
 	$(RTL_DIR)/periph/dma_engine.sv \
 	$(RTL_DIR)/soc/axi4_crossbar.sv \
 	$(RTL_DIR)/soc/axi_lite_interconnect.sv \

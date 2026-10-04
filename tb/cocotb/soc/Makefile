@@ -373,6 +373,9 @@ PLL_SOURCES = \
 	$(RTL)/periph/aes128_core.sv \
 	$(RTL)/periph/sha256_core.sv \
 	$(RTL)/periph/crypto_accel.sv \
+	$(RTL)/npu/npu_mac_array.sv \
+	$(RTL)/npu/npu_weight_mem.sv \
+	$(RTL)/npu/npu_top.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
@@ -452,6 +455,9 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/periph/aes128_core.sv \
 	$(RTL)/periph/sha256_core.sv \
 	$(RTL)/periph/crypto_accel.sv \
+	$(RTL)/npu/npu_mac_array.sv \
+	$(RTL)/npu/npu_weight_mem.sv \
+	$(RTL)/npu/npu_top.sv \
 	$(RTL)/periph/dma_engine.sv \
 	$(RTL)/soc/axi4_crossbar.sv \
 	$(RTL)/soc/axi_lite_interconnect.sv \
