@@ -21,7 +21,7 @@ sub-phase letters below are now the only ones used:
 |:---------:|:------|:-------|
 | **6a** | All APB4 register peripherals: GPIO, PWM, WDT, TRNG, I2C | ✅ complete 2026-10-03 |
 | **6b** | AES-128 + SHA-256 accelerator (`crypto_accel`) | ✅ 2026-10-03 (`f7vs.10`) |
-| **6c** | Minimal INT8 NPU | Not started |
+| **6c** | Minimal INT8 NPU (`npu_top`) | ✅ 2026-10-04 (`f7vs.11`) |
 
 `docs/ROADMAP.md:398` already used this reading. `CLAUDE.md:31`'s "6a GPIO ✅ done; 6b+ not
 started" treated 6a as GPIO-only; that wording is corrected to "6a GPIO done, 6a remainder +

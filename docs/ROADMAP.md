@@ -483,13 +483,28 @@ bounds throughput, and nothing in this repo measures it.
 
 #### 6c. NPU — Minimal INT8 Inference Engine
 
-- 4×4 INT8 systolic MAC array (16 MACs, 64 ops/cycle)
-- 16 KB weight SRAM (one OpenRAM-compiled macro on FreePDK45/ASAP7; 8× stacked Sky130 macros)
-- Target: keyword spotting / gesture detection class workloads
+✅ **LANDED 2026-10-04 (bead `f7vs.11`)** — `rtl/npu/npu_top.sv` + `npu_mac_array.sv` +
+`npu_weight_mem.sv`, APB4 slave index 13 at `0x2001_0000-0FFF`, IRQ bit 11. `test_npu` 39/39,
+`test_soc_npu` 1/1, mutation campaign 65 mutants: 55 killed, 10 provably equivalent, 0 gaps. Phase 6 is complete.
+
+- **4×4 INT8 weight-stationary array** (16 MACs), INT8 × INT8 → INT32 accumulate, plus a shared
+  requantizer (×16-bit scale, arithmetic floor shift, INT8 saturation, optional ReLU, one lane per
+  cycle). PIO over APB4 only — weights via `WADDR`/`WDATA`, activations via a depth-4 `AIN` FIFO,
+  results via a depth-4 `AOUT` FIFO.
+- **4 KB weight SRAM, not 16 KB** — exactly one `sky130_sram_4kbyte_1rw1r_32x1024_8`, a macro
+  already in the Sky130 SoC flow. Every `ifdef` arm is a hard macro (4× `sram_1rw_256x32_*` on
+  ASAP7/FreePDK45), so the weight memory can never be synthesised as the 32 768 flops that OOM this
+  host. 16 KB stays a parameter bump plus three more macros.
+- **No new runtime-indexed mux** (the `ma7` Synlig `OPT_MUXTREE` defect class): proven on the
+  coarse-grain netlist, zero `$shiftx`/`$pmux`/`$mem*` in the three `rtl/npu` modules.
+- **Gate A:** 203 179 µm² stdcell (≈20 % of the SoC's stdcell area) + the 472 439 µm² macro,
+  **+1.84 ns** setup at ss on 25 ns. Thin: the limiter is the MAC array's single-cycle multiply +
+  adder tree + accumulate, and the pre-identified Gate B fallback is registering the column sums.
+- Target: keyword spotting / gesture detection class workloads — **demo firmware is a non-goal**.
 
 | Node | NPU clock | Peak throughput | INT4/sparsity |
 |------|-----------|-----------------|---------------|
-| Sky130 (50–60 MHz) | 50–60 MHz | 3.2–3.8 GOPS | ❌ Too slow |
+| Sky130 (40 MHz, as built) | 40 MHz | 1.28 GOPS (16 MAC × 2 op × 40 MHz) | ❌ Too slow |
 | FreePDK45 (300–400 MHz) | 300–400 MHz | ~20 GOPS | ✅ Feasible |
 | ASAP7 (800 MHz–1 GHz) | 800 MHz+ | ~50 GOPS | ✅ Preferred |
 
