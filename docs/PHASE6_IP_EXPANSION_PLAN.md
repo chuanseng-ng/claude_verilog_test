@@ -567,7 +567,7 @@ reachable exclusively through `WADDR`/`WDATA`.
 | `0x08` | `WADDR` | RW | `[9:0]` weight-SRAM word address; **auto-increments on every `WDATA` write** |
 | `0x0C` | `WDATA` | WO (snoop) | 4 packed INT8 weights → SRAM`[WADDR]`. Reads 0 forever |
 | `0x10` | `TILEBASE` | RW | `[9:0]` SRAM word address of the first weight word of the next inference |
-| `0x14` | `KLEN` | RW | `[5:0]` number of 4-element chunks, 1..64. Each chunk consumes 4 SRAM words + 1 `AIN` word |
+| `0x14` | `KLEN` | RW | `[5:0]` number of 4-element chunks, **1..63** (see below). Each chunk consumes 4 SRAM words + 1 `AIN` word |
 | `0x18` | `SCALE` | RW | `[15:0]` requantize multiplier, `[20:16]` right shift |
 | `0x1C` | `AIN` | WO (snoop) | 4 packed INT8 activations → AIN FIFO. Reads 0 forever |
 | `0x20` | `AOUT` | RO + pop-on-read | Live mirror of the AOUT FIFO head (4 packed INT8 results). **A read pops** |
@@ -590,6 +590,22 @@ with CRYPTO, the NPU has **no result register of its own** — the bank word is 
 by 4 per chunk; the 4 INT32 accumulators are cleared at `START` and accumulate across all `KLEN`
 chunks. On the final chunk the shared requantizer drains **one lane per cycle** over 4 cycles,
 packs the 4 INT8 results into one word, pushes it to `AOUT`, and sets `done`.
+
+⚠️ **Spec defect found and fixed during step 2 (bead `f7vs.11`): `KLEN` is 1..63, not 1..64.**
+A 6-bit field holds 0..63, so a written 64 stores 0, which is an illegal start. The alternative —
+encoding `KLEN-1` so the field spans 1..64 — was rejected: it buys one extra chunk, makes `KLEN = 0`
+mean "1 chunk" and so destroys the natural illegal-start check, and every driver would have to
+remember the bias. 63 chunks is 252 activations against a 4×4 grid, far past anything this block is
+for. The field is therefore a plain count with maximum 63.
+
+⚠️ **The weight memory must not hardcode a read latency.** The committed behavioural models
+disagree: `sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv` registers its inputs at `posedge` and reads
+at `negedge` (2 edges to a posedge consumer), while `sim/sram_1rw_256x32_verilator.v` — the
+FreePDK45 model every default cocotb build uses — reads on the `posedge` itself (1 cycle). The
+wrapper must present one timing to `npu_top` across all three arms, so `npu_weight_mem.sv` owns
+that normalisation (register the Sky130/ASAP7 `dout` once more, or hold the address an extra cycle)
+and `npu_top` must consume a single declared latency. This is exactly the `CS_SRAM_LATCH` problem
+`rv32i_icache.sv` already solves for itself.
 
 **Software contract — hard guarantees:**
 
