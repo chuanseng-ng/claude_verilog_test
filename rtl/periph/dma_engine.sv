@@ -298,6 +298,41 @@ module dma_engine
     // Unpacked to avoid memory blowup in synthesis
     logic [31:0] linebuf [MAX_BURST_BEATS];
 
+    // linebuf has NO reset and NO soft-reset term, deliberately (bead f7vs.15, Gate B).
+    // It used to be written from inside the big FSM always_ff, i.e. under `if (!rst_n) ... else`
+    // and `if (srst_pulse) ... else`, so rst_n (core_rst_n in soc_top) sat in the write-enable
+    // cone of all MAX_BURST_BEATS*32 = 8192 flops. Gate B (Sky130 ss) measured that distribution at
+    // 98 stages / 30.8 ns. Giving the array its own always_ff keeps the same flop count (it was never
+    // in the reset list) and removes core_rst_n from every one of those enables.
+    //
+    // PROOF that writing linebuf during reset / soft-reset is unobservable.
+    // linebuf is read in exactly one place: m_wdata = linebuf[wr_idx_q] in state S_W.
+    //   1. S_W is entered only from S_AW (S_AW -> S_W on m_awready); S_AW is entered only from S_R
+    //      on (m_rvalid && m_rresp == OKAY && m_rlast). Every other path out of S_R is S_ERR, and
+    //      S_ERR goes to S_IDLE (halted_q), never to S_AW/S_W. So an S_W burst is always preceded,
+    //      in the same transfer, by one complete run of S_R.
+    //   2. Every run of S_R is preceded by S_CALC, which sets rd_idx_q <= 0 (the only other writer of
+    //      rd_idx_q is the S_R increment and reset); the first S_R beat therefore writes linebuf[0],
+    //      the next linebuf[1], and so on, one word per accepted m_rvalid, before S_AW can start.
+    //      S_W then reads wr_idx_q = 0 .. beats_q-1 against those same indices.
+    //   3. Reset (rst_n low) and soft-reset (srst_pulse) both force state_q to S_IDLE. From S_IDLE
+    //      the only way back to S_W is S_IDLE -> S_CALC -> S_AR -> S_R -> S_AW -> S_W, i.e. through
+    //      point 2 again, which rewrites linebuf[0..beats-1] before any of it is read.
+    //      Whatever the array held when reset/soft-reset hit -- including a word written on the very
+    //      edge that state_q was forced to S_IDLE (state_q still reads S_R on that edge, so the new
+    //      enable below fires where the old one was suppressed) -- is dead data.
+    //   4. Error path: S_R writes the beat that carries the non-OKAY m_rresp (same as before), then
+    //      S_ERR -> S_IDLE with halted_q set. No S_W follows; the next transfer restarts at S_CALC.
+    // The enable below is therefore the minimum that preserves the old behaviour on every
+    // reachable S_W read: (state_q == S_R) && m_rvalid. It has no rst_n and no srst_pulse term.
+    //
+    // KNOWN, PRE-EXISTING, NOT CHANGED HERE: nothing checks m_rlast against beats_q. An AXI-
+    // non-compliant read slave that asserts RLAST early would let S_W read words this transfer did
+    // not write. That hazard is independent of reset and identical before and after this change.
+    always_ff @(posedge clk) begin
+        if (state_q == S_R && m_rvalid) linebuf[8'(rd_idx_q)] <= m_rdata;
+    end
+
     // =========================================================================
     // Burst beat calculation (combinational)
     // Limit: min(words_rem, MAX_BURST_BEATS, src_to_4k, dst_to_4k)
@@ -470,7 +505,6 @@ module dma_engine
                     // --------------------------------------------------------
                     S_R: begin
                         if (m_rvalid) begin
-                            linebuf[8'(rd_idx_q)] <= m_rdata;
                             rd_idx_q          <= rd_idx_q + 9'h1;
                             last_resp_q       <= m_rresp;
                             if (m_rresp != AXI_RESP_OKAY) begin

@@ -24,8 +24,9 @@
 //   * NO KEY LIFECYCLE: no zeroisation command, no lock bit, and key_valid never drops once set.
 //     The ONLY clear is core_rst_n (rst_n_i & pll_locked), i.e. a whole-SoC reset -- which also
 //     fires on a PLL unlock -- so "zeroise the key" means "reset the SoC".
-//   * RESIDUAL STATE SURVIVES A CONTEXT SWITCH. key_q, rk_q (the round-10 key, which inverts to
-//     the master key), msg_q, DOUT, DIGEST and IV all persist. A second user that writes fewer
+//   * RESIDUAL STATE SURVIVES A CONTEXT SWITCH. key_q, msg_q, DOUT, DIGEST and IV all persist (the
+//     AES core's rk_q holds the round-10 key, which inverts to the master key, for one cycle after
+//     an operation and then re-tracks key_q while idle). A second user that writes fewer
 //     than four KEY words, or uses partial strobes, silently runs on the first user's key or a
 //     mixed key with key_valid still 1; and DOUT/DIGEST remain readable, which in CTR decrypt is
 //     the previous user's PLAINTEXT. Software must rewrite all four KEY words with pstrb=0xF on
