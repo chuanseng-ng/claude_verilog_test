@@ -93,9 +93,14 @@ pins them, so they are asserted HERE and the RTL implements what this file asser
       never SW + 1), and the next WDATA goes to that address.  test_npu_waddr_sw_write_wins.
   D12. THE WEIGHT_WORDS ELABORATION GUARD: any value other than 1024 is a $fatal naming
       WEIGHT_WORDS (plan Sec.7, "a parameter sweep cannot silently fall back to flops").  Lint-only.
-  D13. Partial-strobe WDATA / AIN / START writes, START while busy, AOUT-FIFO overflow (a fifth
-      unpopped result), and done being sticky across a new START are NOT pinned.  The helpers
-      always clear done before a START and pop every result they do not deliberately queue.
+  D13. Partial-strobe WDATA / AIN / START writes, START while busy (legal and illegal), a
+      zero-strobe weight write while busy, done being sticky across a new START, and AOUT-FIFO
+      overflow (a fifth unpopped result) ARE pinned, each by its own test (start_partial_strobe_
+      ignored, partial_strobe_wdata_ain_dropped, start_while_busy_ignored, zero_strobe_weight_
+      write_while_busy_not_rejected, done_sticky_across_start, aout_overflow_drops_fifth).  The
+      shared helpers still clear done before a START and pop every result they do not
+      deliberately queue, so these tests deliberately bypass that convention.  They were added
+      after a 65-mutant campaign on rtl/npu left exactly these behaviours unkilled.
 
 CYCLE-SAMPLING HAZARD (learned on PWM / WDT / TRNG / I2C / CRYPTO): a value read straight after
 `await RisingEdge` is the PRE-edge value.  Every internal-state sample therefore goes RisingEdge
@@ -117,8 +122,12 @@ Tests (grouped; the name states the behaviour):
                   reset_mid_operation
   illegal / reject illegal_start_is_hang_free, legal_boundaries_accepted, cfg_rejected_clear_paths,
                   weight_write_while_busy_is_rejected
+  strobes / START start_partial_strobe_ignored, partial_strobe_wdata_ain_dropped,
+                  start_while_busy_ignored, zero_strobe_weight_write_while_busy_not_rejected,
+                  done_sticky_across_start, aout_overflow_drops_fifth
   EN_NPU = 0      en_npu_off_terminates_cleanly
   elaboration     elaboration_guard_rejects_bad_weight_words, elaboration_legal_configs_pass
+39 tests in all.
 """
 
 import random
@@ -1402,6 +1411,178 @@ async def test_npu_weight_write_while_busy_is_rejected(dut):
     await d.w(WDATA, _pack(DENSE_ROWS[1]))  # idle again: accepted (rewrites row 1 verbatim)
     assert await d.peek(WADDR) == 2, "idle WDATA write was not accepted"
     assert not await d.peek(STATUS) & ST_REJ, "accepted WDATA write did not clear cfg_rejected"
+
+
+# ===========================================================================
+# Strobes, START-while-busy, sticky done, AOUT overflow (closes the former D13 gaps)
+# ===========================================================================
+async def _starved_busy_window(d: _Dev, tilebase: int, klen: int) -> None:
+    """START with an EMPTY AIN FIFO and wait it out: a deterministic busy window (the engine
+    fetches its first chunk's rows, then sits starved on the AIN FIFO; done stays 0)."""
+    await d.configure(tilebase, klen, _scale(1, 0))
+    await d.clear_done()
+    await d.clear_rej()
+    await d.start()
+    for _ in range(15):
+        await d.next_cycle()
+    st = await d.peek(STATUS)
+    assert st & ST_BUSY and not st & ST_DONE, f"not in the starved busy window: 0x{st:02x}"
+
+
+@npu_test
+async def test_npu_start_partial_strobe_ignored(dut):
+    """D13a: START is decoded from byte lane 0 only.  A CTRL write of 0x4 with pstrb 1110 (lane 0
+    not selected) or 0000 starts nothing: no busy, no done, no AOUT result, and the queued AIN word
+    is NOT consumed.  A normal START afterwards runs the inference.
+    MUTATION TARGET: `& pstrb[0]` dropped from the START snoop."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await d.load_tile(0, IDENT_ROWS)
+    a = _pack(IDENT_A)
+    await d.configure(0, 1, _scale(1, 0))
+    await d.clear_done()
+    await d.push_ain([a])
+    for strb in (0b1110, 0b0000):
+        await d.w(CTRL, CTRL_START, strb=strb)
+        for _ in range(30):
+            await d.next_cycle()
+        st = await d.peek(STATUS)
+        assert not st & (ST_BUSY | ST_DONE | ST_AOUT_VALID), f"strb={strb:04b}: STATUS=0x{st:02x}"
+        assert not st & ST_AIN_EMPTY, f"strb={strb:04b}: the AIN word was consumed"
+    await d.start()
+    await d.wait_done([])
+    assert await d.r(AOUT) == IDENT_Y_WORD
+
+
+@npu_test
+async def test_npu_partial_strobe_wdata_ain_dropped(dut):
+    """D13b: a WDATA or AIN write needs a FULL strobe.  Partial strobes (0001, 0011, 0111, 1110,
+    1000) on WDATA leave WADDR where it was, latch no cfg_rejected and never reach the SRAM; on AIN
+    they queue nothing (ain_empty stays set).  The identity-tile inference afterwards is exact.
+    MUTATION TARGETS: `pstrb == 4'hF` relaxed to `|pstrb` on the WDATA accept or the AIN push."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await d.load_tile(0, IDENT_ROWS)
+    await d.w(WADDR, 0)
+    strobes = (0b0001, 0b0011, 0b0111, 0b1110, 0b1000)
+    for strb in strobes:
+        await d.w(WDATA, 0xFFFFFFFF, strb=strb)
+        assert await d.peek(WADDR) == 0, f"WDATA strb={strb:04b} advanced WADDR"
+        assert not await d.peek(STATUS) & ST_REJ, f"WDATA strb={strb:04b} latched cfg_rejected"
+    for strb in strobes:
+        await d.w(AIN, 0x7F7F7F7F, strb=strb)
+        st = await d.peek(STATUS)
+        assert st & ST_AIN_EMPTY, f"AIN strb={strb:04b} queued a word: STATUS=0x{st:02x}"
+    got = await d.infer(0, [_pack(IDENT_A)], _scale(1, 0))
+    assert got == IDENT_Y_WORD, f"a partial-strobe write reached the SRAM or AIN: 0x{got:08x}"
+
+
+@npu_test
+async def test_npu_start_while_busy_ignored(dut):
+    """D13c: START while busy is ignored, legal or not.  Inside a starved busy window TILEBASE and
+    KLEN are rewritten (both are writable while busy) and START is written again, first legal and
+    then with KLEN = 0.  Neither may restart the run (a restart would reload KLEN / TILEBASE and
+    consume a different tile), complete it early (done) or latch cfg_rejected (the illegal-START
+    path).  The original two-chunk run then finishes with the original result, consumes both AIN
+    words, and queues exactly one result.
+    MUTATION TARGETS: `~busy_q` dropped from start_accept_w (C20) or from start_ill_w (C28)."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await d.load_tile(0, DENSE_ROWS)
+    await d.load_tile(4, DENSE_ROWS)
+    await d.load_tile(16, IDENT_ROWS)
+    a0, a1 = _pack(DENSE_A), _pack([1, 0, 0, 0])
+    want = d.expect(0, [a0, a1], _scale(1, 0), 0)
+    assert want == TWO_CHUNK_Y_WORD
+    await _starved_busy_window(d, 0, 2)
+    await d.w(TILEBASE, 16)
+    await d.w(KLEN, 1)
+    await d.start()  # legal START while busy
+    for _ in range(5):
+        await d.next_cycle()
+    st = await d.peek(STATUS)
+    assert st & ST_BUSY and not st & (ST_DONE | ST_REJ), f"legal START while busy: 0x{st:02x}"
+    await d.w(KLEN, 0)
+    await d.start()  # illegal START while busy
+    for _ in range(5):
+        await d.next_cycle()
+    st = await d.peek(STATUS)
+    assert st & ST_BUSY and not st & (ST_DONE | ST_REJ), f"illegal START while busy: 0x{st:02x}"
+    await d.push_ain([a0, a1])
+    _n, st = await d.wait_done([])
+    assert st & ST_AIN_EMPTY, "the original run did not consume both AIN words"
+    got = await d.r(AOUT)
+    assert got == want, f"result 0x{got:08x} != the original run's 0x{want:08x}"
+    assert not await d.peek(STATUS) & ST_AOUT_VALID, "a second result was queued"
+
+
+@npu_test
+async def test_npu_zero_strobe_weight_write_while_busy_not_rejected(dut):
+    """D13d: a zero-strobe WDATA / WADDR write selects no byte lane, so it is not a write attempt:
+    while busy it latches no cfg_rejected.  (A partial-strobe attempt while busy IS an attempt and
+    does latch it -- checked last, so the zero-strobe result cannot be a stuck-low flag.)
+    MUTATION TARGET: `& (|pstrb)` dropped from wt_attempt_w."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await d.load_tile(0, IDENT_ROWS)
+    await _starved_busy_window(d, 0, 1)
+    await d.w(WDATA, 0xFFFFFFFF, strb=0)
+    await d.w(WADDR, 5, strb=0)
+    st = await d.peek(STATUS)
+    assert not st & ST_REJ, f"a zero-strobe write latched cfg_rejected: STATUS=0x{st:02x}"
+    await d.w(WDATA, 0xFFFFFFFF, strb=0b0001)
+    assert await d.peek(STATUS) & ST_REJ, "a partial-strobe write while busy was not rejected"
+    await d.push_ain([_pack(IDENT_A)])
+    await d.wait_done([])
+    assert await d.r(AOUT) == IDENT_Y_WORD
+
+
+@npu_test
+async def test_npu_done_sticky_across_start(dut):
+    """D13e: done is sticky until IRQ_CLR[0]; an accepted START does not clear it.  After one
+    finished run, START the next WITHOUT clearing done: STATUS shows busy AND done together right
+    after the START, and done is still set when the run ends.
+    MUTATION TARGET: `& ~start_accept_w` added to the done hold term."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await d.load_tile(0, IDENT_ROWS)
+    a = _pack(IDENT_A)
+    await d.infer(0, [a], _scale(1, 0))  # leaves done set
+    assert await d.peek(STATUS) & ST_DONE
+    await d.push_ain([a])
+    await d.start()  # no clear_done first
+    await d.next_cycle()
+    st = await d.peek(STATUS)
+    assert st & ST_BUSY and st & ST_DONE, f"done not sticky across START: STATUS=0x{st:02x}"
+    for _ in range(60):
+        await d.next_cycle()
+    st = await d.peek(STATUS)
+    assert not st & ST_BUSY and st & ST_DONE, f"STATUS=0x{st:02x} after the second run"
+
+
+@npu_test
+async def test_npu_aout_overflow_drops_fifth(dut):
+    """D13f: a result that finishes into a FULL AOUT FIFO is dropped and the older, unpopped
+    results are preserved.  Five inferences with no pop in between: aout_full is set, four reads
+    return results 0..3 in order, and the FIFO is then empty (no fifth entry, no overwrite).
+    MUTATION TARGET: the `~aout_vp_w[3]` full guard on the AOUT push position."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await d.load_tile(0, IDENT_ROWS)
+    words = [_pack([k + 1, -(k + 1), 2 * k, 3]) for k in range(AOUT_DEPTH + 1)]
+    for k in range(AOUT_DEPTH + 1):
+        await d.infer(0, [words[k]], _scale(1, 0), pop=False)
+    assert await d.peek(STATUS) & ST_AOUT_FULL
+    for k in range(AOUT_DEPTH):
+        assert await d.r(AOUT) == words[k], f"pop {k}: the older results must be preserved"
+    st = await d.peek(STATUS)
+    assert not st & (ST_AOUT_VALID | ST_AOUT_FULL), f"a fifth result leaked: STATUS=0x{st:02x}"
 
 
 # ===========================================================================
