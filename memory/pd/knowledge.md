@@ -2984,3 +2984,220 @@ overall setup timing improved. Root cause, confirmed from `31-openroad-cts/openr
   `u_cpu_axi_cdc` CDC pointer-sync path) even when the clock whose skew you're investigating
   stayed flat — don't assume a hold-margin change is attributable to the clock net you're
   currently diffing without checking which clock's path is actually now worst.
+
+---
+
+## XDG-era distillation (2026-10-06) — 11 records, 2026-08-09 → 2026-10-04
+
+These records were written to the XDG root (`~/.local/share/chip-design-agents/digital/memory`)
+instead of the repo and were appended to `experiences.jsonl` on 2026-10-06. Many of their findings
+were already written into the sections above by the agents themselves. Those are only
+cross-referenced here (see the end of this section). Only the lessons that were missing are written
+out in full below. Nothing above was deleted.
+
+### Macro boundary pins must be pinned with `FP_PIN_ORDER_CFG` (GH #96 / beads `cyb`, `606`, `buw`)
+
+- **Symptom:** GH #96 run 21→22 `cpu_clk` setup collapsed from −60.66 ps (1189.5 MHz) to
+  −596.00 ps (726.8 MHz), TNS −314 221 ps, 690 endpoints. The only differing input was the
+  regenerated CPU macro. Post-CTS `cpu_clk` skew went −485.6 → −922.1 ps (hold) and −436.2 →
+  −865.2 ps (setup). Hold endpoints went 805 → 4702 and hold buffers 680 → 4814. A new
+  `delaybuf_0_cpu_clk` appeared. **393 of 401 macro boundary pins had moved**; only `clk_i` stayed.
+- **Root cause:** `pnr/asap7/cpu/config.json` had no `FP_PIN_ORDER_CFG`, so io placement was
+  unconstrained and changed on every regeneration. The user's hypothesis (registered
+  `apb_pready_o`/`apb_pslverr_o` giving faster clk-to-Q) was checked against Liberty arcs and found
+  real but secondary: only ~9–14 ps. The 25 ps hold margin (bead `s9f`) was ruled out as an
+  amplifier. Diagnosis needed no new P&R run: OpenSTA/OpenROAD re-timing of the existing
+  artifacts (eda-openroad MCP) plus git archaeology was enough.
+- **Fix:** `pnr/asap7/cpu/pin_order.cfg` (see the run-23 notes in CLAUDE.md #96). The GPU macro
+  had the same latent defect and its `sys_clk` margin was thinner (+74.8 ps). The checked-in
+  generator `pnr/scripts/gen_pin_order.py` (bead `606`, commits `2c634b5`/`d36ebed`) works like
+  this:
+  - It classifies each LEF PIN by its first RECT: `y1==0`→S, `y2==SIZE_Y`→N, `x1==0`→W, else E.
+  - It sorts each side low→high, escapes `[ ]` for the anchored-regex parser and skips POWER/GROUND.
+  - It emits **no comment lines**: any `#` line that is not a marker fails LibreLane's ioplace
+    parser.
+  - Self-test: it reproduces the hand-tuned CPU cfg exactly (401/401 pins, N=126 E=126 S=81 W=68).
+    The GPU cfg has 325 signal pins (N=9 E=143 S=170 W=3).
+- ⚠️ **A side+order cfg cannot reproduce absolute pin coordinates.** io_place spreads pins evenly
+  along each edge. "0 of 327 pins moved vs the checked-in LEF" was therefore an impossible pass
+  criterion. The correct determinism criterion is **same cfg → identical output across
+  regenerations**. GPU validation from the post-io_place DEF (`24-odb-customioplacement`) showed
+  side+order matching on all 4 sides with 0 mismatches. The one-time coordinate shift against the
+  old LEF was median 42.6 µm, p90 ~117 µm, max 223.5 µm on a 340 µm die. **Bead `buw`:** the next
+  `gpu_top` regeneration moves the boundary once, so `pnr/asap7/soc/macro/gpu_top.*` and the SoC
+  baseline need a deliberate refresh before that regeneration is folded into an SoC build.
+- Ops notes from the same session:
+  - `make librelane-asap7-gpu` auto-runs `prune-asap7-gpu-runs` at the end. Call the underlying
+    `python3 -m librelane` directly if the run must be kept.
+  - The GPU validation run stalled in `OpenROAD.RepairDesignPostGRT` for 7 h of an 11.8 h run. It
+    was still computing (confirmed by `/proc` CPU-time deltas, no OOM) and was SIGTERM'd once the
+    determinism question had been answered from an intermediate artifact.
+  - When a question can be answered from an intermediate DEF/ODB, answer it there instead of
+    waiting for the whole flow.
+
+### sv2v define parity across PDK flows (beads `61v`, `135`)
+
+- **Fact:** `sky130-soc-sv2v` passed `--define=__pnr__` but `asap7-soc-sv2v`
+  (`SOC_SV2V_DEFINES`) did not, so the two flows elaborated different `boot_rom.sv`. ASAP7 kept
+  `$readmemh`; sky130 got the zero-fill stub. The define had been withheld to protect the run-14
+  baseline, and that reason expired once run 23 (`config_multiclock.json`) became the baseline. It
+  was added on 2026-08-15 (`e4b7af6`).
+- **Side effect:** PR #152/GH #116 had also put `__pnr__` around non-synthesizable
+  `initial`/`$fatal` param checks in `axi_lite_register_bank.sv`, `apb4_register_bank.sv` and
+  `axil_to_apb.sv`. The define therefore strips those too (netlist diff: 43 lines across 4 sites).
+  Before adding or removing a global define, grep for **every** use of it.
+- **Fact:** `pnr/freepdk45/config.json` lacked `axi_pkg.sv`/`soc_addr_map_pkg.sv`. They were
+  inserted ahead of `rv32i_pipeline_pkg.sv` (`8a9f9c6`). `pnr/asap7/template/config.json` is a
+  copy-me template whose relative `dir::` paths only resolve after copying, so it is in
+  `check_source_closure.py`'s SKIP_TARGETS. `pnr/librelane/` and `pnr/openlane1/` remain the
+  expected `[GAP]` entries (superseded). Verified with byte-identical `make -C sim lint` and a
+  byte-identical sky130 sv2v regeneration.
+- **Related (bead `ma7`, 2026-09-19): sv2v strips inline `verilator lint_off/on BLKLOOPINIT`
+  pragmas.** `rv32i_icache.sv`/`rv32i_dcache.sv` rely on them, so `Checker.LintErrors` hard-fails
+  on the sv2v output. Fix: the `asap7-cpu-sv2v` Makefile target sed-injects the pragma after sv2v.
+  It is compounded by **bead `2wo`**: the LibreLane nix-shell pins **Verilator 5.018**, which flags
+  those loops as BLKLOOPINIT even though the repo's Verilator 5.048 lints them clean.
+
+### Deferred-flatten SoC flow: four compounding gaps fixed under bead `w3a` (2026-09-15/16)
+
+- **`pll_clkgen_stub` boundary `assign` became a real buffer under hierarchical-first
+  (`deferred_flatten`) synthesis.** TritonCTS took `core_clk` for already buffered and **built no
+  `sys_clk` tree at all**: only 2 clock nets / 788 sinks, all `cpu_clk`. The visible symptom was a
+  non-terminating `ResizerTimingPostCTS` oscillation. **Fix: `DESIGN_REPAIR_REMOVE_BUFFERS=true`**,
+  an existing LibreLane variable that removes the buffer before repair_design/CTS and restores the
+  direct wire that flat synthesis produces. Diagnose by grepping the netlist for clock-buffer
+  naming (`clkbuf_*`/`clknet_*` vs `load_slew*`/`wire*`) and checking CTS's clock-net and sink
+  counts.
+- **Post-GRT `repair_timing` buffer removal caused a 5× WNS blowup (−2084 → −10389 ps).** It
+  stripped load-bearing buffers off the GPU `s_axil_rdata`→`u_periph_bridge` fanout. **Fix:
+  `-skip_buffer_removal` in `PL_RESIZER_TIMING_EXTRA_ARGS`** for the post-GRT call.
+- **Bounding the stuck resizer:** `PL_RESIZER_TIMING_MAX_PASSES=1` plus
+  `PL_RESIZER_TIMING_EXTRA_ARGS="-repair_tns 5"`. The `bpp` hook is described above.
+- **Honest post-GRT STA** needs `STA_POSTGRT_INSESSION_GRT=true` (bead `8f3`, above).
+- Outcome: for the first time, the flow terminated end to end on the deferred-flatten netlist at
+  honestly annotated post-GRT STA. The acceptance criterion was termination plus honest
+  measurement, not closure. The recorded point was setup −2.084 ns / 41 864 violators, hold
+  −0.917 ns / 718, and 258.5 mW total (167.3 mW macro + 91.2 mW fabric). ⚠️ **Superseded** as the
+  current basis by bead `0d0`: −727.37 ps / 781 violators / hold clean / 283.6 mW at
+  `RUN_2026-09-17_20-41-11`, per CLAUDE.md.
+- Most effective technique, per the record: correlate a WNS change with a specific
+  repair-table column incrementing in the tool log.
+
+### Bead `0ah` record vs. later evidence — ⚠️ CONTRADICTION, not silently resolved
+
+- The `pd_20260917_0ah_combined` record credits the hold fix (0 hold violators, positive skew on
+  both clocks) to `CTS_BALANCE_LEVELS=true` + `CTS_OBSTRUCTION_AWARE=true`.
+- The bead `ea0` section above (2026-09-18) states that both are **unrecognized-key no-ops** in
+  this LibreLane 2.4.13 tree, and calls that "bead 0ah's finding". The same record also concedes
+  that the −1687.9 ps regression it set out to fix was a **mis-measurement**: it was taken on
+  `RepairDesignPostGRT` output and skipped `ResizerTimingPostGRT` hold repair (consistent with the
+  "Bead 0ah follow-up" section above).
+- **Treat the clean hold result as coming from measuring at the correct step (plus the
+  same-run rvb RTL and rsz6/rsz7 settings), not from the two CTS keys.** Do not reintroduce them
+  expecting an effect. The remaining setup classes were the SRAM read mux (bead `ydw`) and the
+  residual rvb GPU write-decode fanout. Setup at that point: −1144.5 ps / 40 192 violators.
+
+### Macro power, stale seeded netlists, and the synthesis RAM ceiling (beads `86a`, `je8`, `2kn`, 2026-09-13/14)
+
+- **In-flow `report_power` DOES include injected macro Liberty power.** The `STAPrePNR` Macro
+  group was 167.33 mW against a 30.7 mW fabric-only baseline. `write_timing_model` omits macro
+  power tables, which is why injection is needed.
+- **Report the macro-inclusive total as a range, not a point.** The CPU macro's vectorless
+  activity varied 0 → 10.1 mW across checkpoints, depending on how OpenSTA's no-VCD heuristic
+  treated a CDC-gated enable.
+- ⚠️ **A netlist seeded with `--with-initial-state` from an old run carries that run's RTL
+  vintage.** Run 23 predates bead `rfz` (2026-08-12, the `apb_cdc_bridge` rewrite to 4-phase RZ
+  `req_q`/`ack_q`) and commits `f69ed3e`/`9ba7ae7`/`68c4c08`. So a `je8` CDC check on a netlist
+  seeded from run 23 is **invalid**. Before seeding, verify the netlist against current RTL by
+  grepping for signals that must and must not exist.
+- **Bead `2kn`:** fresh SoC synthesis from current RTL peaks at **~13.4 GB RSS in ABC** on this
+  15.9 GB host. A PSI-based pressure guard stopped it twice (12 G cap, then 13.5 G plus swap
+  allowance) before oomd could act. `je8` is recorded as host-blocked.
+- Reusable method for per-domain/CDC violator attribution: `query_property` on a pin's clocks,
+  cross-referenced against hierarchical instance names that survive the Yosys flatten.
+
+### `valu_hls` remedy applied — reusing a run safely (bead `b0t`, 2026-09-19)
+
+- `pnr/asap7/valu_hls/config.json` was switched `USE_SYNLIG:true→false` with an sv2v shim
+  (`r8r-valu-hls-sv2v` target). The Synlig netlist had failed 3/3 golden GLS vectors.
+- **Before reusing an existing A/B run's PPA, prove the configs are identical.** Do a
+  programmatic key-by-key diff that ignores `//` comment keys: 0 differences beyond
+  `VERILOG_FILES`/`USE_SYNLIG`. Then prove sv2v output reproducible with `sha256sum`, not filtered
+  `diff`. Then re-run GLS on that exact netlist: `run_hls_seq_check.py` passed 3/3 bit-exact.
+- New, honest figures (isolated HLS leaf, not part of the SoC): 89 224 instances / 9188.4 µm² /
+  52.70 mW / setup WNS −1507 ps. They supersede the corrupt 71 480 / 7254.37 µm² / 37.667 mW /
+  −996.18 ps. The only `signoff_achieved: true` among these 11 records.
+
+### CPU macro re-harden after the Synlig miscompile — BLOCKED (beads `ma7`, `bpp`, `lxv`, 2026-09-19)
+
+- The config remedy is applied: CPU and GPU `config.json` + `config_3014.json` set to
+  `USE_SYNLIG:false` plus sv2v targets `asap7-cpu-sv2v`/`asap7-gpu-sv2v`. CPU configs also get
+  `PL_RESIZER_TIMING_MAX_PASSES=2` (unbounded `ResizerTimingPostCTS`, 1650+ iterations).
+- The third attempt, `RUN_2026-09-19_15-42-11`, got through CTS, GRT and the resizer, then hit
+  **108 716 DRC** in DetailedRouting (vs the 2045 baseline). The errors are `DRT-0255` on SRAM
+  macro pins. RCX extracted nothing and `STAPostPNR` failed. Ruled out in-session: wrong OpenROAD
+  binary, and netlist growth (+9 % only).
+- **Disabling `RUN_SPEF_EXTRACTION`/`RUN_MCSTA` to force completion was considered and rejected.**
+  The block's reference run (`RUN_2026-09-09_14-56-03`, bead `e69`) completed STAPostPNR on real
+  SPEF, and disabling extraction would bring back the zero-wire STA problem (`xy6`/`8f3`).
+- ⚠️ **Superseded next step:** the record's "leading candidate" `PL_MACRO_HALO 2 2 → 4 4` was later
+  **refuted**. Per CLAUDE.md, bead `lxv` excluded 10 config hypotheses across 5 single-variable
+  experiments, including halo, `GRT_LAYER_ADJUSTMENTS`, `CLOCK_PERIOD` and resizer passes. The
+  remaining suspect is the SRAM LEF's single-edge `SHAPE ABUTMENT` pin access, and the work is
+  **shelved on bead `2kn`** (needs a ≥32 GB host). The first thing to try on that host is a run
+  WITH the real power grid. `pnr/asap7/soc/macro/rv32i_cpu_top.*` and `gpu_top.*` are still the
+  Synlig-built views.
+
+### Sky130 SoC Phase 6 Gate B harden (2026-10-04, `RUN_2026-10-04_17-02-18`)
+
+- Result: 62 steps; LVS 0 diffs; DRT 0; GRT 0 overflow; PSM-0040 clean on both nets; hold clean at
+  9 corners; tt+ff setup met; 44.89 % util. **Not signoff:** ss setup −2.176 ns max_ss with 1556
+  violators; antenna 218 nets / 297 pins; Magic DRC 8984; KLayout skipped.
+- ⚠️ **`Checker.SetupViolations` passed while ss was violating.** `SETUP_VIOLATION_CORNERS` is null,
+  so the gate falls back to the PDK's tt-only default. Read the per-corner metrics; never trust
+  the checker verdict for ss/ff.
+- ss regression against the true baseline (+8.1 → −2.18 ns): `pll_locked_o`→`core_rst_n`
+  tree→`u_dma.linebuf` (98 stages, arrival 30.8 vs 19.3 ns), and `apb_paddr`→`u_crypto` AES. The
+  NPU MAC path was not the worst: +13.868 nom_tt / +4.105 nom_ss / +3.555 max_ss.
+- **Pick the comparison baseline by config-key match, not by recency.** `RUN_2026-09-26_19-25-08`
+  had `RUN_HEURISTIC_DIODE_INSERTION=True`, so it is not the `config.json` baseline;
+  `RUN_2026-09-26_10-08-35` matches every key.
+- **Macro x/y must be multiples of 6.9 µm** (GCell). A proposed x=5078.1 was not; it became
+  `u_npu.g_on.u_wmem.u_sram_macro 5078.4 207.0 N` (6.9 × 736). Read the instance path from a synth
+  probe netlist (`GATEB_NPU_SRAM_PROBE`) rather than guessing it.
+- `e45j` got worse as predicted: antenna 114→218 nets, max-slew 3199→7048, max-cap 77→138. Of the
+  G3 SDC lines, 6 of 8 bind; 2 are inert because `i2c_scl_o`/`i2c_sda_o` are hard-tied to 0.
+- **Annotation on bead `45a` wording:** 8836 of the 8984 Magic violations are `nwell.4` lying
+  **outside every macro bbox**, the same class as the baseline (8965/9081). This matches the
+  "SoC-level nwell.4 = DEF+LEF-abstract artifact, full die" finding in the Sky130 Magic DRC section
+  above. But the shorthand "100 % inside SRAM macro footprints (45a)", which is true for the
+  Stage-1 CPU li.3 case, does **not** describe the Stage-2 SoC residual. Do not cite it as the
+  waiver rationale there.
+
+### Already captured above (cross-reference only; confirmed by the XDG-era records)
+
+- `rcx_rules.pex` 0-byte stub → vendored ORFS ruleset plus `install-asap7-rcx-rules` (bead `e69`):
+  section "RCX_RULESETS 0-byte stub — FIXED 2026-08-16".
+- Detailed routing commits zero wires (`xy6`) and its 26Q2 root cause (`ocm`): the `xy6` section
+  and its UPDATEs.
+- `ASAP7_STA_BIN` pinned to OpenSTA 2.6.0 (`zwc`); PSM-0021 missing M1/M4 RESISTANCE (`gyx`); 2045
+  DRC vs ~13 GiB unbounded-DRT tradeoff (`ocm`): "UPDATE 2026-09-09 (session 3 …)".
+- LibreLane 2.4.13 vs OpenROAD 26Q2: the PSM report parser (`get_psm_error_count`), `ioplacer.tcl`
+  `-random_seed` placing no pins, corners→scenes renames (`bpp`): the 2026-09-13 sections.
+- Post-GRT STA on unannotated parasitics (`8f3`): its own section. These records confirm it
+  across 3 runs (w3a, 0ah, ma7 rationale).
+
+**Signoff rate, these 11 records: 9 % (1 of 11, `valu_hls`).** Most were diagnostic, config or
+bead-servicing sessions with no full flow. The full-flow attempts failed for reasons that recur
+across the set:
+- host RAM: `2kn` ABC 13.4 GB, GPU GRT, the 7 h `RepairDesignPostGRT` stall;
+- ASAP7 routing: `xy6` zero wires, `lxv` 108 716 DRC;
+- ASAP7 SoC setup not closed;
+- Sky130 ss setup / antenna / Magic `nwell.4`.
+
+JSONL note: `pd_20260809_diag01` appears twice in `experiences.jsonl` (lines 50 and 56, written to
+both roots 14 s apart). It is an intentional duplicate of provenance, not two runs.
+
+_Last distilled: 2026-10-06 from the 11 XDG-era experience records (2026-08-09 → 2026-10-04,
+the last 11 of 66 lines in `experiences.jsonl`). Records 1–55 were not re-audited in this pass;
+most 2026-08 → 2026-09 lessons were already hand-written into the sections above._

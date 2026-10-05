@@ -243,6 +243,17 @@ See `docs/verification/VERIFICATION_PLAN.md` for the phase-by-phase plan. Per-ph
 
 Do NOT hand-write RTL or run PD/verif inline when a matching orchestrator exists.
 
+**Agent memory (2026-10-06).** The chip-design agents' memory root is this repo's `memory/`, selected by
+`CHIP_DESIGN_MEMORY_ROOT` (set in `.claude/settings.local.json`, which is untracked — set it per clone).
+Without it the 1.9.x plugins silently fall back to `~/.local/share/chip-design-agents/digital/memory`,
+which is where every record from 2026-07-30 to 2026-10-04 went while the repo `knowledge.md` files
+(e.g. the 191 KB `memory/pd/knowledge.md`) went unread; those records were merged back on 2026-10-06.
+`memory/` is gitignored with its curated files force-tracked, so `git add -f` new knowledge files.
+Every delegation prompt must require: **write an experience record to `<MEM>/<domain>/experiences.jsonl`
+at the end of EVERY task, scoped steps included** (agents otherwise classify a scoped step as "not a
+flow termination" and skip it), and **append a superseding record** when a later result invalidates an
+earlier one in the same task.
+
 ## Current Workflow (Phase 5 — SoC Integration)
 
 Legend: ✅ done · 🚧 in progress · ⏸️ not started. Milestone status (M1–M12) tracked in `docs/PHASE5_SOC_INTEGRATION_PLAN.md`.
