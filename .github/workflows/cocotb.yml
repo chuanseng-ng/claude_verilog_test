@@ -180,8 +180,10 @@ jobs:
       # failure mode, where make still exits 0 -- note that is literal, not
       # hypothetical: a cocotb target returns exit 0 even with FAIL=7, so this
       # log-grep floor is currently the ONLY thing that catches a red suite in
-      # CI (bead p6t8). Measured 476 passing tests, 0 failed, 16 skipped on
-      # 2026-10-04 (soc_all_ci from clean, after Phase 6c NPU: +39 from the
+      # CI (bead p6t8). Measured 480 passing tests, 0 failed, 16 skipped on
+      # 2026-10-05 (soc_all_ci from clean, after bead wdmo's DMA read-error fix:
+      # +4 from test_dma; reconciles exactly against the prior 476; 53 blocks).
+      # Measured 476 passing tests on 2026-10-04 (soc_all_ci from clean, after Phase 6c NPU: +39 from the
       # test_npu L1 suite and +1 from the soc_npu fabric test; reconciles
       # exactly against the prior 436; 53 TESTS= blocks, +2 suites). Measured
       # 436 passing tests on 2026-10-04 (soc_all_ci from clean, after Phase 6b CRYPTO: +41 from the
@@ -227,7 +229,7 @@ jobs:
       - name: Verify regression actually ran
         if: always()
         env:
-          PASS_FLOOR: '473'
+          PASS_FLOOR: '477'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."
