@@ -867,6 +867,86 @@ both checkers `--skip`-ped and no post-RCX repair stage existing in LibreLane. G
 new numbers. **Closing `e45j` is explicitly not a Phase 6 exit criterion**, but shipping six more
 peripherals on top of skipped checkers without a number is not acceptable either.
 
+#### Gate B results — first run, 2026-10-04 (bead `f7vs.15`) — ⚠️ NOT a sign-off
+
+`RUN_2026-10-04_17-02-18`, `make librelane-sky130-soc-noklayout`, all 62 steps completed. Baseline is
+**`RUN_2026-09-26_10-08-35`**, the run whose `resolved.json` matches today's `config.json` (the newer
+`19-25-08` was a `RUN_HEURISTIC_DIODE_INSERTION=True` experiment and would have made the ss failures
+look pre-existing). Not a single-variable comparison: five Phase 6 IP blocks, one new hard macro, and
+33 intervening RTL commits. Every number below is read from the two runs' `state_out.json`.
+
+| Metric | Baseline | Gate B | Δ |
+|:-------|---------:|-------:|--:|
+| Netgen LVS | pass | **pass** ("Circuits match uniquely") | — |
+| Routing DRC | 0 | **0** | 0 |
+| Hold violators, all 9 corners | 0 | **0** | 0 |
+| Setup WS nom_tt (ns) | +11.05 | +10.34 | −0.71 |
+| Setup WS nom_ss / min_ss / max_ss (ns) | +9.23 / +10.07 / +8.10 | **−0.97 / −0.26 / −2.18** | regression |
+| Setup violators nom_ss / min_ss / max_ss | 0 / 0 / 0 | **3 / 1 / 1 556** | regression |
+| Antenna violating nets / pins | 114 / 182 | **218 / 297** | +104 / +115 |
+| Magic DRC | 9 081 | 8 984 | −97 |
+| `design__instance__area__stdcell` (µm²) | 1 005 050 | 1 715 210 | **+70.7 %** |
+| Macro area (µm²) | 6 952 440 | 7 424 880 | +472 440 (the NPU SRAM) |
+| Utilisation | 39.1 % | 44.9 % | +5.8 pp — no `DIE_AREA` bump needed |
+| Power, total | 48.2 mW | 85.8 mW | +37.6 mW |
+| `e45j` max-slew / max-cap (max_ss) | 3 199 / 77 | 7 048 / 138 | +3 849 / +61 |
+
+**Passed:**
+- **The second macro.** The placement line was read from a synth probe, and its origins are exact 6.9 µm multiples. The existing `PDN_MACRO_CONNECTIONS` regex binds it with no config change: vccd1/vssd1 are on VPWR/VGND, PSM-0040 reports all shapes connected, and worst IR drop is 0.613 mV.
+- **The NPU MAC path that Gate A flagged.** Post-route it is **+3.56 ns at max_ss** (Gate A predicted +1.84 ns), +4.11 ns at nom_ss, and +13.87 ns at nom_tt. It is not the worst path at any corner, so the register-the-column-sums fallback is **not needed**.
+- **G3's `set_false_path` lines.** 6 of 8 bind to real paths. The two `i2c_*_i` input exceptions are load-bearing: stripping them gives hold −0.707 / −0.603 ns. The two `i2c_*_o` lines are inert because the RTL hard-ties those outputs to 0. They are harmless.
+
+**Failed — the ss setup corners, a regression against a clean baseline.**
+- **max_ss.** 984 of the top 1 000 paths run from `pll_locked_o` through the `core_rst_n` distribution tree into `u_dma.linebuf`. They take 98 stages and 30.8 ns, against 58 stages and 19.3 ns in the baseline. The DMA engine is not new; its reset/clear fanout got longer as ~71 % more stdcell logic spread the placement.
+- **nom_ss and min_ss.** The worst path is `apb_paddr` into `u_crypto.g_aes`, at −0.97 ns.
+- ⚠️ **The flow's own setup checker passes despite this.** `SETUP_VIOLATION_CORNERS` is unset, so it gates on the PDK's tt-only default. Read the per-corner metrics, never the checker's pass line.
+- ⚠️ **Same caveat as the Stage 2 sign-off.** The SRAM macro is characterised at TT only (bead `o1i`), so every ss figure is backed by a TT macro model.
+
+**Also worse: antenna.** Violating nets went from 114 to 218. The available knobs (`GRT_ANTENNA_ITERS` / `GRT_ANTENNA_MARGIN`) are already at the `58q` frontier and trade against slew (`e45j`).
+
+**Magic DRC is not a macro-footprint artifact.** 64 `met4.4a` sit inside the two SRAM footprints, 32 each, so the new macro adds exactly 32. But 8 836 of the 8 920 `nwell.4` lie *outside* every macro box, a periodic pattern across the stdcell fabric. The same structure is present in the baseline. The bead-`45a` wording "100 % inside SRAM macro footprints" therefore does not describe this residual.
+
+Gate B was left open pending a decision on the ss regression and the antenna count. Both were resolved: an RTL fix, and the antenna count accepted. See run 2 below.
+
+#### Gate B results — run 2, 2026-10-05 (bead `f7vs.15`) — ✅ timing closed at all 9 corners
+
+`RUN_2026-10-05_06-50-11`, all 62 steps. **Single-variable against run 1**: the only change is the RTL fix
+in commit `23be98c`. It moved the DMA `linebuf` write (8 192 flops) out of the `core_rst_n`-gated
+`always_ff`, and stopped the AES datapath registers from depending on the `apb_paddr` start decode. No
+config, SDC or placement edit.
+
+| Corner | Baseline WS (ns) | Run 1 WS | **Run 2 WS** | Run 1 → run 2 violators |
+|:-------|-----------------:|---------:|-------------:|------------------------:|
+| nom_tt | +11.046 | +10.337 | **+10.258** | 0 → 0 |
+| min_tt | +11.059 | +10.445 | **+10.362** | 0 → 0 |
+| max_tt | +11.040 | +8.438 | **+10.169** | 0 → 0 |
+| nom_ss | +9.232 | −0.972 | **+1.701** | 3 → **0** |
+| min_ss | +10.069 | −0.264 | **+2.571** | 1 → **0** |
+| max_ss | +8.097 | −2.176 | **+0.579** | 1 556 → **0** |
+| nom_ff / min_ff / max_ff | +11.37 / +11.39 / +11.36 | +10.79 / +10.88 / +10.72 | **+10.75 / +10.84 / +10.68** | 0 → 0 |
+
+Hold: **0 violators at all 9 corners**. Netgen LVS: **clear**. Routing DRC: **0**. Power grid: PSM-0040
+"all shapes connected" on VPWR and VGND at both the PDN and the IR-drop steps.
+
+| Metric | Baseline | Run 1 | Run 2 |
+|:-------|---------:|------:|------:|
+| `design__instance__area__stdcell` (µm²) | 1 005 050 | 1 715 210 | 1 703 620 |
+| Utilisation | 39.1 % | 44.9 % | 44.8 % |
+| Power, total | 48.2 mW | 85.8 mW | 81.0 mW |
+| Antenna nets / pins (accepted, `58q` class) | 114 / 182 | 218 / 297 | 210 / 305 |
+| Max-slew / max-cap at max_ss (`e45j`, record only) | 3 199 / 77 | 7 048 / 138 | 7 622 / 140 |
+| Magic DRC (not a macro-footprint artifact, see run 1) | 9 081 | 8 984 | 8 984 |
+
+**Gate B passes on its gates:**
+- LVS clean, routing DRC 0 and hold clean.
+- Setup met at every corner. ss is no longer excused: the failing paths were stdcell→stdcell, so the bead-`o1i` TT-only SRAM caveat never applied to them.
+- Antenna accepted by user decision (2026-10-05) and recorded.
+- KLayout DRC skipped, not waived, as in every Sky130 SoC run on this host.
+
+⚠️ **max_ss margin is thin at +0.579 ns.** That is the first corner to watch on any future growth of this
+SoC. The flow's own setup checker still gates only on tt (`SETUP_VIOLATION_CORNERS` unset), so read the
+per-corner metrics, never the checker's pass line.
+
 ### ASAP7 is out of scope for all of Phase 6
 
 Triple-blocked: bead `ma7` (proven Synlig `OPT_MUXTREE` miscompile; the macro views in

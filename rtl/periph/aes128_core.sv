@@ -50,12 +50,14 @@
 // Port contract with crypto_accel.sv (the parent). Single clock (clk); no CDC in this module.
 //   start_i       1-cycle strobe. Ignored (silently) unless the core is idle; the parent never
 //                 asserts it while busy_o.
-//   key_i         128-bit AES key; sampled ONLY on the accepted start edge. The on-the-fly
+//   key_i         128-bit AES key; the value present on the accepted start edge is the one used
+//                 (the datapath pre-loads from it every idle cycle, see the A_IDLE branch, but only
+//                 the start-edge sample is ever consumed). The on-the-fly
 //                 schedule does NOT need key_i held during the operation. The parent's busy-time
 //                 key-write rejection is a spec/determinism requirement, not a datapath one: do
 //                 not "optimise" it away as redundant, and do not add a key hold register here.
-//   block_i       128-bit plaintext (ECB) or counter block (CTR); sampled ONLY on the accepted
-//                 start edge.
+//   block_i       128-bit plaintext (ECB) or counter block (CTR); the value present on the
+//                 accepted start edge is the one used (pre-loaded every idle cycle, as key_i).
 //   busy_o        state != A_IDLE (flop output).
 //   done_set_o    one-cycle COMBINATIONAL pulse asserted in the final round cycle (round 10, and
 //                 phase 3 at SBOX_PARALLEL=4). The parent owns the sticky flop and the W1C.
@@ -484,13 +486,23 @@ module aes128_core
             s_q     <= 128'h0;
             rk_q    <= 128'h0;
         end else if (state_q == A_IDLE) begin
-            if (start_i) begin
-                s_q     <= block_i ^ key_i;    // initial AddRoundKey (whitening)
-                rk_q    <= key_i;
-                rcon_q  <= 8'h01;
-                round_q <= 4'd1;
-                state_q <= A_ROUND;
-            end
+            // PRE-LOAD WHILE IDLE (bead f7vs.15, Gate B). The whitening value and the round-1
+            // key/counters are loaded on EVERY idle cycle; start_i only advances state_q. The
+            // values captured on the start edge are exactly the ones the old `if (start_i)` load
+            // captured (same block_i ^ key_i, key_i, 8'h01, 4'd1 sampled at that same edge), so the
+            // cycle count and every result are unchanged: 11 / 41 clk from the start edge. What
+            // changes is the cone: start_i is the APB decode (paddr -> start_pulse_w) and used to
+            // gate the D-input of all 128 + 128 + 8 + 4 datapath flops, and yosys' sbox ROM
+            // inference (proc_rom + memory_dff) merged the S-box address flops, so that decode
+            // also sat in front of an 8-bit S-box network. Now it fans out to state_q only.
+            // None of s_q/rk_q/rcon_q/round_q is observable while idle (busy_o, done_set_o need
+            // state_q == A_ROUND; dout_o is consumed only with done_set_o), and they hold no secret
+            // that block_i/key_i do not already hold in the parent's msg_q/key_q.
+            s_q     <= block_i ^ key_i;    // initial AddRoundKey (whitening)
+            rk_q    <= key_i;
+            rcon_q  <= 8'h01;
+            round_q <= 4'd1;
+            if (start_i) state_q <= A_ROUND;
         end else begin
             s_q <= s_adv_w;
             if (rnd_end_w) begin
