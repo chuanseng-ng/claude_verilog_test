@@ -24,6 +24,24 @@
 // src_to_4k_words, dst_to_4k_words) to respect the AXI4 4 KB boundary rule
 // on both source and destination addresses simultaneously.
 //
+// Read-error handling (bead wdmo).  A read burst is an error if ANY of:
+//   - a beat carries RRESP != OKAY;
+//   - RLAST arrives on a beat other than beat beats_q-1 (early RLAST); or
+//   - beat beats_q-1 arrives without RLAST (late / over-running RLAST).
+// All three take the same exit: ERR_INFO.err_on_read, ERR_INFO[1:0] = the FIRST error beat's
+// RRESP (held across the drain), STATUS.error, IRQ_STATUS.err_irq, then S_ERR and halted until
+// soft_reset.  No AW/W is ever issued for a descriptor that failed on read.  On every read-error
+// exit the R channel is DRAINED first: m_rready stays high and beats are discarded until the beat
+// carrying RLAST has been accepted (S_RDRAIN), and only then does S_ERR raise the error/IRQ.  An
+// error on the RLAST beat itself needs no drain and goes straight to S_ERR.
+//
+// AXI protocol precondition: the read slave must eventually assert RLAST on every burst it has
+// accepted.  The drain waits for it, so a slave that never asserts RLAST wedges the DMA in
+// S_RDRAIN by definition (as it would wedge any AXI master).  There is deliberately no timeout.
+// soft_reset during S_RDRAIN abandons the drain exactly as it abandons any in-flight transfer
+// (see the srst_pulse branch): STATUS.busy stays high until the drain ends, so software that
+// waits for busy=0 / error before soft_reset never hits this.
+//
 // Flat per-channel AXI ports (no SV interfaces) per Phase 5 RTL convention.
 // Lint target: verilator -Wall 0 errors 0 warnings.
 
@@ -270,7 +288,8 @@ module dma_engine
         S_W         = 4'd5,
         S_B         = 4'd6,
         S_DESC_DONE = 4'd7,
-        S_ERR       = 4'd8
+        S_ERR       = 4'd8,
+        S_RDRAIN    = 4'd9    // read error seen mid-burst: discard beats until RLAST accepted
     } dma_state_t;
 
     dma_state_t state_q;
@@ -308,27 +327,38 @@ module dma_engine
     // PROOF that writing linebuf during reset / soft-reset is unobservable.
     // linebuf is read in exactly one place: m_wdata = linebuf[wr_idx_q] in state S_W.
     //   1. S_W is entered only from S_AW (S_AW -> S_W on m_awready); S_AW is entered only from S_R
-    //      on (m_rvalid && m_rresp == OKAY && m_rlast). Every other path out of S_R is S_ERR, and
-    //      S_ERR goes to S_IDLE (halted_q), never to S_AW/S_W. So an S_W burst is always preceded,
-    //      in the same transfer, by one complete run of S_R.
+    //      on (m_rvalid && m_rresp == OKAY && m_rlast && rd_idx_q == beats_q-1), i.e. the one
+    //      OKAY, exactly-beats_q-long burst. Every other path out of S_R is S_ERR or S_RDRAIN; S_RDRAIN
+    //      exits only to S_ERR, and S_ERR goes to S_IDLE (halted_q), never to S_AW/S_W. So an S_W
+    //      burst is always preceded, in the same transfer, by one complete, in-count run of S_R.
     //   2. Every run of S_R is preceded by S_CALC, which sets rd_idx_q <= 0 (the only other writer of
     //      rd_idx_q is the S_R increment and reset); the first S_R beat therefore writes linebuf[0],
     //      the next linebuf[1], and so on, one word per accepted m_rvalid, before S_AW can start.
-    //      S_W then reads wr_idx_q = 0 .. beats_q-1 against those same indices.
+    //      S_W then reads wr_idx_q = 0 .. beats_q-1 against those same indices. Because S_AW needs
+    //      RLAST on beat beats_q-1 exactly (point 1), all beats_q words were written this transfer.
     //   3. Reset (rst_n low) and soft-reset (srst_pulse) both force state_q to S_IDLE. From S_IDLE
     //      the only way back to S_W is S_IDLE -> S_CALC -> S_AR -> S_R -> S_AW -> S_W, i.e. through
     //      point 2 again, which rewrites linebuf[0..beats-1] before any of it is read.
     //      Whatever the array held when reset/soft-reset hit -- including a word written on the very
     //      edge that state_q was forced to S_IDLE (state_q still reads S_R on that edge, so the new
     //      enable below fires where the old one was suppressed) -- is dead data.
-    //   4. Error path: S_R writes the beat that carries the non-OKAY m_rresp (same as before), then
-    //      S_ERR -> S_IDLE with halted_q set. No S_W follows; the next transfer restarts at S_CALC.
+    //   4. Error path: S_R writes the beat that carries the error (it is still a beat inside the
+    //      burst, see below), then goes to S_ERR, or to S_RDRAIN when that beat was not RLAST. S_RDRAIN
+    //      is NOT S_R, so the enable below is low for every drained beat: the drain writes nothing.
+    //      The array content after an error is therefore dead data; the error path ends S_ERR ->
+    //      S_IDLE with halted_q set, no S_W follows, and the next transfer restarts at S_CALC.
+    //   5. In-range: the enable is state_q == S_R && m_rvalid and nothing else, with no beats_q
+    //      comparator, because rd_idx_q < beats_q holds on every S_R cycle. S_CALC loads rd_idx_q = 0
+    //      and beats_q >= 1; rd_idx_q increments only on an S_R beat that stays in S_R, and a beat
+    //      stays in S_R only if it was error-free, which requires m_rlast == (rd_idx_q == beats_q-1),
+    //      so a non-RLAST beat has rd_idx_q < beats_q-1 and the incremented index is <= beats_q-1. Any
+    //      beat at index beats_q-1 leaves S_R (to S_AW, S_ERR or S_RDRAIN). An over-long burst's
+    //      surplus beats are therefore taken in S_RDRAIN and cannot wrap rd_idx_q onto linebuf[0..].
+    //      (rd_idx_q <= beats_q-1 <= MAX_BURST_BEATS-1 = 255 also keeps the 8-bit index in range.)
     // The enable below is therefore the minimum that preserves the old behaviour on every
-    // reachable S_W read: (state_q == S_R) && m_rvalid. It has no rst_n and no srst_pulse term.
-    //
-    // KNOWN, PRE-EXISTING, NOT CHANGED HERE: nothing checks m_rlast against beats_q. An AXI-
-    // non-compliant read slave that asserts RLAST early would let S_W read words this transfer did
-    // not write. That hazard is independent of reset and identical before and after this change.
+    // reachable S_W read: (state_q == S_R) && m_rvalid. It has no rst_n and no srst_pulse term,
+    // and the wdmo drain/in-range qualification is carried entirely by state_q and the
+    // FSM's own transitions, so it adds no new term to the enable cone either.
     always_ff @(posedge clk) begin
         if (state_q == S_R && m_rvalid) linebuf[8'(rd_idx_q)] <= m_rdata;
     end
@@ -400,7 +430,7 @@ module dma_engine
                 m_arlen   = AXI_LEN_WIDTH'(beats_q - 9'h1);
                 m_arvalid = 1'b1;
             end
-            S_R: begin
+            S_R, S_RDRAIN: begin
                 m_rready = 1'b1;
             end
             S_AW: begin
@@ -420,6 +450,20 @@ module dma_engine
             default: ;
         endcase
     end
+
+    // =========================================================================
+    // Read-beat check (combinational): is the beat now on R an error?
+    // Error = non-OKAY RRESP, OR RLAST disagrees with this beat being beat beats_q-1
+    // (RLAST early: m_rlast && !last; RLAST late: !m_rlast && last).
+    // =========================================================================
+    logic r_is_last_beat;
+    logic r_beat_err;
+
+    // 8-bit compare, matching the 8-bit linebuf index: in S_R rd_idx_q <= beats_q-1 <= 255 (see the
+    // linebuf proof, point 5), so bit 8 is never set there. Comparing 9 bits would make rd_idx_q[8]
+    // live and cost one extra flop for no behavioural difference.
+    assign r_is_last_beat = (rd_idx_q[7:0] == 8'(beats_q - 9'h1));
+    assign r_beat_err     = (m_rresp != AXI_RESP_OKAY) || (m_rlast != r_is_last_beat);
 
     // =========================================================================
     // FSM sequencer
@@ -507,13 +551,24 @@ module dma_engine
                         if (m_rvalid) begin
                             rd_idx_q          <= rd_idx_q + 9'h1;
                             last_resp_q       <= m_rresp;
-                            if (m_rresp != AXI_RESP_OKAY) begin
+                            if (r_beat_err) begin
+                                // First error beat: capture its RRESP (last_resp_q above) and
+                                // flag a read error. Drain the rest of the burst unless this
+                                // beat already carries RLAST.
                                 err_on_read_q <= 1'b1;
-                                state_q       <= S_ERR;
+                                state_q       <= m_rlast ? S_ERR : S_RDRAIN;
                             end else if (m_rlast) begin
                                 state_q <= S_AW;
                             end
                         end
+                    end
+
+                    // --------------------------------------------------------
+                    // Discard beats (rready is high, see the output mux) until the
+                    // RLAST beat is accepted; the error becomes final only then.
+                    // last_resp_q is NOT updated: the first error response is kept.
+                    S_RDRAIN: begin
+                        if (m_rvalid && m_rlast) state_q <= S_ERR;
                     end
 
                     // --------------------------------------------------------
