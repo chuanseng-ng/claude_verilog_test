@@ -13,39 +13,39 @@
 # Clock 2 ns, reset 5 cycles low, 2 idle cycles after release (matches soc pattern).
 
 import cocotb
+from axi4_slave_model import AXI4SlaveModel
+from bfm.axi4lite_master import AXI4LiteMaster
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 
-from bfm.axi4lite_master import AXI4LiteMaster
-from axi4_slave_model import AXI4SlaveModel
-
 # ── Register byte addresses ───────────────────────────────────────────────────
-REG_SRC_ADDR   = 0x00
-REG_DST_ADDR   = 0x04
-REG_LENGTH     = 0x08
-REG_CTRL       = 0x0C
-REG_STATUS     = 0x10
+REG_SRC_ADDR = 0x00
+REG_DST_ADDR = 0x04
+REG_LENGTH = 0x08
+REG_CTRL = 0x0C
+REG_STATUS = 0x10
 REG_IRQ_STATUS = 0x14
-REG_ERR_INFO   = 0x18
+REG_ERR_INFO = 0x18
 
 # STATUS bit positions
-STATUS_BUSY    = (1 << 0)
-STATUS_DONE    = (1 << 1)
-STATUS_ERROR   = (1 << 2)
-STATUS_Q_FULL  = (1 << 3)
-STATUS_Q_EMPTY = (1 << 4)
+STATUS_BUSY = 1 << 0
+STATUS_DONE = 1 << 1
+STATUS_ERROR = 1 << 2
+STATUS_Q_FULL = 1 << 3
+STATUS_Q_EMPTY = 1 << 4
 
 # CTRL bit positions
-CTRL_START     = (1 << 0)
-CTRL_IRQ_EN    = (1 << 1)
-CTRL_SRST      = (1 << 2)
+CTRL_START = 1 << 0
+CTRL_IRQ_EN = 1 << 1
+CTRL_SRST = 1 << 2
 
 # AXI response codes
-RESP_OKAY   = 0b00
+RESP_OKAY = 0b00
 RESP_SLVERR = 0b10
 
 CLK_PERIOD_NS = 2
 POLL_TIMEOUT_CYCLES = 5000
+
 
 class BoundaryCheckSlave(AXI4SlaveModel):
     """Slave model that fails the test if any AR/AW crosses a 4 KB page.
@@ -73,6 +73,7 @@ _active_slave_tasks = []
 
 # ── Setup helper ─────────────────────────────────────────────────────────────
 
+
 async def _setup(dut, mem=None, slave_delays=None, slave_class=None):
     """Start clock, apply reset, return (axil_master, axi4_slave_model).
 
@@ -97,7 +98,7 @@ async def _setup(dut, mem=None, slave_delays=None, slave_class=None):
 
     # AXI4 slave model responds to the DMA's AXI4 master port.
     kwargs = slave_delays if slave_delays is not None else {}
-    cls   = slave_class if slave_class is not None else AXI4SlaveModel
+    cls = slave_class if slave_class is not None else AXI4SlaveModel
     slave = cls(dut, "m", dut.clk, mem=mem, **kwargs)
 
     # Monkey-patch start() to record tasks so we can cancel them later.
@@ -122,11 +123,12 @@ async def _setup(dut, mem=None, slave_delays=None, slave_class=None):
 
 # ── Programming helpers ───────────────────────────────────────────────────────
 
+
 async def _program_descriptor(axil, src, dst, length):
     """Write SRC_ADDR / DST_ADDR / LENGTH without pulsing start."""
     await axil.write(REG_SRC_ADDR, src)
     await axil.write(REG_DST_ADDR, dst)
-    await axil.write(REG_LENGTH,   length)
+    await axil.write(REG_LENGTH, length)
 
 
 async def _launch(axil, src, dst, length, irq_en=False):
@@ -151,8 +153,7 @@ async def _poll_done(dut, axil, timeout=POLL_TIMEOUT_CYCLES, wait_idle=False):
         if triggered and (not wait_idle or not (status & STATUS_BUSY)):
             return status
     raise AssertionError(
-        f"DMA did not complete within {timeout} cycles; "
-        f"final STATUS={status:#010x}"
+        f"DMA did not complete within {timeout} cycles; final STATUS={status:#010x}"
     )
 
 
@@ -162,6 +163,7 @@ async def _soft_reset(axil):
 
 
 # ── Test 1: single burst copy (4 words / 16 bytes) ───────────────────────────
+
 
 @cocotb.test()
 async def test_mem_copy_single_burst(dut):
@@ -176,25 +178,26 @@ async def test_mem_copy_single_burst(dut):
     await _launch(axil, SRC, DST, LEN)
     status = await _poll_done(dut, axil)
 
-    assert status & STATUS_DONE,  f"STATUS.done not set: {status:#010x}"
+    assert status & STATUS_DONE, f"STATUS.done not set: {status:#010x}"
     assert not (status & STATUS_ERROR), f"STATUS.error set unexpectedly: {status:#010x}"
-    assert not (status & STATUS_BUSY),  f"STATUS.busy still set after done: {status:#010x}"
+    assert not (status & STATUS_BUSY), f"STATUS.busy still set after done: {status:#010x}"
 
     for i in range(4):
-        got      = slave.mem.get(DST + i * 4, None)
+        got = slave.mem.get(DST + i * 4, None)
         expected = seed[SRC + i * 4]
         assert got == expected, (
-            f"word[{i}] at DST+{i*4:#x}: got {got:#010x}, expected {expected:#010x}"
+            f"word[{i}] at DST+{i * 4:#x}: got {got:#010x}, expected {expected:#010x}"
         )
     dut._log.info("test_mem_copy_single_burst PASS")
 
 
 # ── Test 2: multi-burst copy (256 words = 1 max burst; then >= 2 bursts) ─────
 
+
 @cocotb.test()
 async def test_mem_copy_multi_burst(dut):
     """LEN=1024 (256 words, exactly one max burst) and LEN=2048 (two bursts)."""
-    for (label, LEN, N_WORDS) in [("1-burst", 1024, 256), ("2-burst", 2048, 512)]:
+    for label, LEN, N_WORDS in [("1-burst", 1024, 256), ("2-burst", 2048, 512)]:
         SRC = 0x0001_0000
         DST = 0x0002_0000
 
@@ -204,14 +207,12 @@ async def test_mem_copy_multi_burst(dut):
         await _launch(axil, SRC, DST, LEN)
         status = await _poll_done(dut, axil, timeout=20000)
 
-        assert status & STATUS_DONE, \
-            f"[{label}] STATUS.done not set: {status:#010x}"
-        assert not (status & STATUS_ERROR), \
-            f"[{label}] STATUS.error set: {status:#010x}"
+        assert status & STATUS_DONE, f"[{label}] STATUS.done not set: {status:#010x}"
+        assert not (status & STATUS_ERROR), f"[{label}] STATUS.error set: {status:#010x}"
 
         mismatches = []
         for i in range(N_WORDS):
-            got      = slave.mem.get(DST + i * 4, None)
+            got = slave.mem.get(DST + i * 4, None)
             expected = seed[SRC + i * 4]
             if got != expected:
                 mismatches.append((i, got, expected))
@@ -227,6 +228,7 @@ async def test_mem_copy_multi_burst(dut):
 
 # ── Test 3: 4 KB boundary split ───────────────────────────────────────────────
 
+
 @cocotb.test()
 async def test_4kb_boundary_split(dut):
     """Transfer spanning a 4 KB page boundary is correctly split.
@@ -236,8 +238,8 @@ async def test_4kb_boundary_split(dut):
     DST is page-aligned so the dst constraint does not further restrict.
     Verify no issued burst crosses a 4K boundary and all data lands correctly.
     """
-    SRC = 0x0003_0F00   # addr[11:0] = 0xF00
-    DST = 0x0005_0000   # page-aligned → dst_to_4k = 1024 words, not binding
+    SRC = 0x0003_0F00  # addr[11:0] = 0xF00
+    DST = 0x0005_0000  # page-aligned → dst_to_4k = 1024 words, not binding
     N_WORDS = 128
     LEN = N_WORDS * 4
 
@@ -256,7 +258,7 @@ async def test_4kb_boundary_split(dut):
     # Verify data correctness
     mismatches = []
     for i in range(N_WORDS):
-        got      = slave.mem.get(DST + i * 4, None)
+        got = slave.mem.get(DST + i * 4, None)
         expected = seed[SRC + i * 4]
         if got != expected:
             mismatches.append((i, got, expected))
@@ -278,18 +280,19 @@ async def test_4kb_boundary_split(dut):
     expected_second_burst_start_dst = DST + 64 * 4
     # Words 64..127 should be at DST+64*4 .. DST+127*4
     for i in range(64, 128):
-        got      = slave.mem.get(DST + i * 4, None)
+        got = slave.mem.get(DST + i * 4, None)
         expected = seed[SRC + i * 4]
         assert got == expected, (
-            f"Post-split word[{i}] at {DST+i*4:#010x}: "
-            f"got {got:#010x} exp {expected:#010x}"
+            f"Post-split word[{i}] at {DST + i * 4:#010x}: got {got:#010x} exp {expected:#010x}"
         )
 
-    dut._log.info(f"test_4kb_boundary_split PASS "
-                  f"(split at DST+{expected_second_burst_start_dst:#010x})")
+    dut._log.info(
+        f"test_4kb_boundary_split PASS (split at DST+{expected_second_burst_start_dst:#010x})"
+    )
 
 
 # ── Test 4: IRQ on completion ─────────────────────────────────────────────────
+
 
 @cocotb.test()
 async def test_irq_on_complete(dut):
@@ -312,34 +315,34 @@ async def test_irq_on_complete(dut):
 
     # Allow one extra cycle for IRQ flop to propagate.
     await RisingEdge(dut.clk)
-    assert int(dut.irq_o.value) == 1, \
-        "irq_o not raised after completion with IRQ_EN=1"
+    assert int(dut.irq_o.value) == 1, "irq_o not raised after completion with IRQ_EN=1"
 
     # IRQ_STATUS.done_irq should be set.
     irq_status, _ = await axil.read(REG_IRQ_STATUS)
-    assert irq_status & 0x1, \
-        f"IRQ_STATUS.done_irq not set: {irq_status:#010x}"
+    assert irq_status & 0x1, f"IRQ_STATUS.done_irq not set: {irq_status:#010x}"
 
     # Soft reset: irq_o must drop, STATUS.done must clear.
     await _soft_reset(axil)
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
 
-    assert int(dut.irq_o.value) == 0, \
-        "irq_o still high after soft_reset"
+    assert int(dut.irq_o.value) == 0, "irq_o still high after soft_reset"
 
     status_after, _ = await axil.read(REG_STATUS)
-    assert not (status_after & STATUS_DONE), \
+    assert not (status_after & STATUS_DONE), (
         f"STATUS.done still set after soft_reset: {status_after:#010x}"
+    )
 
     irq_status_after, _ = await axil.read(REG_IRQ_STATUS)
-    assert not (irq_status_after & 0x1), \
+    assert not (irq_status_after & 0x1), (
         f"IRQ_STATUS.done_irq still set after soft_reset: {irq_status_after:#010x}"
+    )
 
     dut._log.info("test_irq_on_complete PASS")
 
 
 # ── Test 5: descriptor queue (3 back-to-back descriptors) ─────────────────────
+
 
 @cocotb.test()
 async def test_descriptor_queue(dut):
@@ -360,7 +363,7 @@ async def test_descriptor_queue(dut):
     BASE_SRC = 0x0010_0000
     BASE_DST = 0x0020_0000
     WORDS_EACH = 8
-    LEN_EACH   = WORDS_EACH * 4
+    LEN_EACH = WORDS_EACH * 4
 
     # Seed source regions for all 3 descriptors.
     seed = {}
@@ -377,10 +380,7 @@ async def test_descriptor_queue(dut):
     # Enqueue all 3 descriptors back-to-back.
     for d in range(3):
         await _program_descriptor(
-            axil,
-            src=BASE_SRC + d * 0x1000,
-            dst=BASE_DST + d * 0x1000,
-            length=LEN_EACH
+            axil, src=BASE_SRC + d * 0x1000, dst=BASE_DST + d * 0x1000, length=LEN_EACH
         )
         await axil.write(REG_CTRL, CTRL_START)
 
@@ -388,19 +388,16 @@ async def test_descriptor_queue(dut):
     # wait_idle=True prevents early return when descriptor 0 sets done_sticky
     # while descriptors 1/2 are still executing.
     status = await _poll_done(dut, axil, timeout=30000, wait_idle=True)
-    assert status & STATUS_DONE, \
-        f"STATUS.done not set after 3 descriptors: {status:#010x}"
-    assert not (status & STATUS_ERROR), \
-        f"STATUS.error set: {status:#010x}"
-    assert not (status & STATUS_BUSY), \
-        f"STATUS.busy still set: {status:#010x}"
+    assert status & STATUS_DONE, f"STATUS.done not set after 3 descriptors: {status:#010x}"
+    assert not (status & STATUS_ERROR), f"STATUS.error set: {status:#010x}"
+    assert not (status & STATUS_BUSY), f"STATUS.busy still set: {status:#010x}"
 
     # Verify all 3 destination regions.
     for d in range(3):
         for i in range(WORDS_EACH):
             src_addr = BASE_SRC + d * 0x1000 + i * 4
             dst_addr = BASE_DST + d * 0x1000 + i * 4
-            got      = slave.mem.get(dst_addr, None)
+            got = slave.mem.get(dst_addr, None)
             expected = seed[src_addr]
             assert got == expected, (
                 f"descriptor[{d}] word[{i}]: "
@@ -412,6 +409,7 @@ async def test_descriptor_queue(dut):
 
 
 # ── Test 6: SLVERR on read halts DMA, sets error status ──────────────────────
+
 
 class _ErrorSlaveModel(AXI4SlaveModel):
     """AXI4SlaveModel subclass that returns SLVERR on accesses to err_addrs."""
@@ -431,8 +429,8 @@ class _ErrorSlaveModel(AXI4SlaveModel):
             while True:
                 await RisingEdge(self.clock)
                 if s("awvalid").value:
-                    awid  = int(s("awid").value)
-                    addr  = int(s("awaddr").value)
+                    awid = int(s("awid").value)
+                    addr = int(s("awaddr").value)
                     awlen = int(s("awlen").value)
                     break
             s("awready").value = 0
@@ -462,8 +460,8 @@ class _ErrorSlaveModel(AXI4SlaveModel):
 
             for _ in range(self.b_delay):
                 await RisingEdge(self.clock)
-            s("bid").value    = awid
-            s("bresp").value  = RESP_SLVERR if slverr else 0
+            s("bid").value = awid
+            s("bresp").value = RESP_SLVERR if slverr else 0
             s("bvalid").value = 1
             while True:
                 await RisingEdge(self.clock)
@@ -482,8 +480,8 @@ class _ErrorSlaveModel(AXI4SlaveModel):
             while True:
                 await RisingEdge(self.clock)
                 if s("arvalid").value:
-                    arid  = int(s("arid").value)
-                    addr  = int(s("araddr").value)
+                    arid = int(s("arid").value)
+                    addr = int(s("araddr").value)
                     arlen = int(s("arlen").value)
                     break
             s("arready").value = 0
@@ -494,10 +492,10 @@ class _ErrorSlaveModel(AXI4SlaveModel):
                 for _ in range(self.r_delay):
                     await RisingEdge(self.clock)
                 await RisingEdge(self.clock)
-                s("rid").value    = arid
-                s("rdata").value  = self.mem.get(addr + i * 4, 0)
-                s("rresp").value  = RESP_SLVERR if slverr else 0
-                s("rlast").value  = 1 if i == arlen else 0
+                s("rid").value = arid
+                s("rdata").value = self.mem.get(addr + i * 4, 0)
+                s("rresp").value = RESP_SLVERR if slverr else 0
+                s("rlast").value = 1 if i == arlen else 0
                 s("rvalid").value = 1
                 while True:
                     await RisingEdge(self.clock)
@@ -505,7 +503,7 @@ class _ErrorSlaveModel(AXI4SlaveModel):
                         break
             await RisingEdge(self.clock)
             s("rvalid").value = 0
-            s("rlast").value  = 0
+            s("rlast").value = 0
 
 
 @cocotb.test()
@@ -513,7 +511,7 @@ async def test_error_slverr(dut):
     """SLVERR on DMA read: STATUS.error set, ERR_INFO correct, IRQ raised,
     queue halts until soft_reset.
     """
-    SRC = 0x0006_0000   # This address will trigger SLVERR on read
+    SRC = 0x0006_0000  # This address will trigger SLVERR on read
     DST = 0x0007_0000
     LEN = 16  # 4 words
 
@@ -521,8 +519,7 @@ async def test_error_slverr(dut):
 
     # Build the error slave via _setup so stale tasks are cancelled first.
     def _make_err_slave(dut_arg, prefix, clock, mem=None, **kwargs):
-        return _ErrorSlaveModel(dut_arg, prefix, clock, mem=mem,
-                                err_addrs={SRC}, **kwargs)
+        return _ErrorSlaveModel(dut_arg, prefix, clock, mem=mem, err_addrs={SRC}, **kwargs)
 
     axil, err_slave = await _setup(
         dut,
@@ -535,27 +532,25 @@ async def test_error_slverr(dut):
     status = await _poll_done(dut, axil)
 
     # STATUS.error must be set; STATUS.done must NOT be set.
-    assert status & STATUS_ERROR, \
-        f"STATUS.error not set after SLVERR: {status:#010x}"
-    assert not (status & STATUS_DONE), \
+    assert status & STATUS_ERROR, f"STATUS.error not set after SLVERR: {status:#010x}"
+    assert not (status & STATUS_DONE), (
         f"STATUS.done should not be set on error path: {status:#010x}"
+    )
 
     # ERR_INFO: resp should be SLVERR (0b10), err_on_read should be 1 (bit2).
     err_info, _ = await axil.read(REG_ERR_INFO)
-    axi_resp    = err_info & 0x3
+    axi_resp = err_info & 0x3
     err_on_read = (err_info >> 2) & 0x1
-    assert axi_resp == RESP_SLVERR, \
+    assert axi_resp == RESP_SLVERR, (
         f"ERR_INFO[1:0] = {axi_resp:#x}, expected SLVERR ({RESP_SLVERR:#x})"
-    assert err_on_read == 1, \
-        f"ERR_INFO.err_on_read = {err_on_read}, expected 1 (error on read)"
+    )
+    assert err_on_read == 1, f"ERR_INFO.err_on_read = {err_on_read}, expected 1 (error on read)"
 
     # IRQ_STATUS.err_irq (bit1) should be set; irq_o should be high.
     await RisingEdge(dut.clk)
     irq_status, _ = await axil.read(REG_IRQ_STATUS)
-    assert irq_status & 0x2, \
-        f"IRQ_STATUS.err_irq not set: {irq_status:#010x}"
-    assert int(dut.irq_o.value) == 1, \
-        "irq_o not raised after error with IRQ_EN=1"
+    assert irq_status & 0x2, f"IRQ_STATUS.err_irq not set: {irq_status:#010x}"
+    assert int(dut.irq_o.value) == 1, "irq_o not raised after error with IRQ_EN=1"
 
     # Queue must be halted: a new start pulse must be ignored.
     await _program_descriptor(axil, 0x0008_0000, 0x0009_0000, 16)
@@ -563,18 +558,17 @@ async def test_error_slverr(dut):
     for _ in range(10):
         await RisingEdge(dut.clk)
     status_halted, _ = await axil.read(REG_STATUS)
-    assert status_halted & STATUS_ERROR, \
-        "DMA accepted new descriptor while in halted/error state"
+    assert status_halted & STATUS_ERROR, "DMA accepted new descriptor while in halted/error state"
 
     # Soft reset: clears error, IRQ, halted state.
     await _soft_reset(axil)
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
 
-    assert int(dut.irq_o.value) == 0, \
-        "irq_o still high after soft_reset"
+    assert int(dut.irq_o.value) == 0, "irq_o still high after soft_reset"
     status_cleared, _ = await axil.read(REG_STATUS)
-    assert not (status_cleared & STATUS_ERROR), \
+    assert not (status_cleared & STATUS_ERROR), (
         f"STATUS.error still set after soft_reset: {status_cleared:#010x}"
+    )
 
     dut._log.info("test_error_slverr PASS")
