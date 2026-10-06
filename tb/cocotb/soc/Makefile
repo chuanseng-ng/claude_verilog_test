@@ -106,6 +106,20 @@ SRAM_SOURCES = \
 	$(SRAM_CTRL_SIM_MODEL) \
 	$(RTL)/soc/sram_controller.sv
 
+# Bead ej6j: standalone AXI4-fabric bridge / ROM unit suites (the DUT is the toplevel, like sram_controller).
+A2L_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/axi4_to_axilite.sv
+
+L2A_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/axilite_to_axi4.sv
+
+BOOTROM_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/soc_addr_map_pkg.sv \
+	$(RTL)/soc/boot_rom.sv
+
 DMA_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
 	$(RTL)/soc/axi_lite_register_bank.sv \
@@ -658,9 +672,9 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
+.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
 crossbar:
-	$(MAKE) MODULE=test_crossbar TOPLEVEL=tb_axi4_crossbar \
+	$(MAKE) MODULE=test_crossbar,test_crossbar_errors TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
 
 # Two build points (bead r5hu): the default ADDR_W=12, and ADDR_W=5 where WORDW=3 and
@@ -723,6 +737,34 @@ sram_controller: verilator_lint
 		VERILOG_SOURCES="$(SRAM_SOURCES)" \
 		EXTRA_ARGS="$(if $(filter sky130,$(SRAM_TARGET)),-GMEM_WORDS=1024)" \
 		$(BUILD_ARGS)
+
+# Bead ej6j.  boot_rom runs as two build points: the default (empty MEM_INIT_FILE -> zero-fill arm)
+# and one with MEM_INIT_FILE set to a hex image (the $$readmemh arm no other suite takes -- they all
+# backdoor-load).  The parameter is an elaboration parameter, so the second point is its own
+# Verilator build in its OWN SIM_BUILD (the stale-Vtop hazard documented above).
+axi4_to_axilite:
+	$(MAKE) MODULE=test_axi4_to_axilite TOPLEVEL=axi4_to_axilite \
+		VERILOG_SOURCES="$(A2L_SOURCES)" \
+		$(BUILD_ARGS)
+
+axilite_to_axi4:
+	$(MAKE) MODULE=test_axilite_to_axi4 TOPLEVEL=axilite_to_axi4 \
+		VERILOG_SOURCES="$(L2A_SOURCES)" \
+		$(BUILD_ARGS)
+
+boot_rom:
+	@set -e; \
+	echo "=== boot_rom: MEM_INIT_FILE empty (default) ==="; \
+	$(MAKE) MODULE=test_boot_rom TOPLEVEL=boot_rom \
+		VERILOG_SOURCES="$(BOOTROM_SOURCES)" \
+		$(BUILD_ARGS); \
+	echo "=== boot_rom: MEM_INIT_FILE=boot_rom_init.hex ==="; \
+	$(MAKE) MODULE=test_boot_rom_init TOPLEVEL=boot_rom \
+		VERILOG_SOURCES="$(BOOTROM_SOURCES)" \
+		EXTRA_ARGS='-GMEM_INIT_FILE=\"$(SOC_DIR)/boot_rom_init.hex\"' \
+		$(BUILD_ARGS) \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_boot_rom_init$(COV_SFX) \
+		sim
 
 dma_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
@@ -1427,6 +1469,9 @@ soc_all_ci: check-space
 	$(MAKE) axil_apb_fabric
 	$(MAKE) sram_controller
 	$(MAKE) sram_controller SRAM_TARGET=sky130
+	$(MAKE) axi4_to_axilite
+	$(MAKE) axilite_to_axi4
+	$(MAKE) boot_rom
 	$(MAKE) dma
 	$(MAKE) irq
 	$(MAKE) timer

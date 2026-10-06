@@ -174,6 +174,34 @@ describe those blocks' real coverage.
 | rv32i_icache | rtl/mem | 94.7 | 72/76 | 61.1 | 1705/2792 | 0/0 |
 | **Total (32 modules)** | | **71.8** | 819/1140 | **37.3** | 19316/51824 | |
 
+## ej6j AXI4-fabric re-measurement (2026-10-07)
+
+Bead `ej6j` added directed suites: `test_crossbar_errors.py` (+7, run by `make crossbar`), `test_axi4_to_axilite.py` (10),
+`test_axilite_to_axi4.py` (7), `test_boot_rom.py` (7) + `test_boot_rom_init.py` (2, a second build with `MEM_INIT_FILE`), one
+`sram_controller` WRAP test (+1 per build) and two `async_axi_fifo` error-response tests, all on a new cycle-accurate BFM
+(`axi4_fabric_bfm.py`). **No RTL bug was found.**
+
+Scope of the numbers below: an instrumented run of ONLY these unit suites merged on their own
+(`COVERAGE=1`, 6 `.dat`), not the full `soc_coverage` merge -- the SoC-level suites contribute nothing to these points, so the
+ej6j-listed points are directly comparable; the module totals in the main table above are NOT yet re-measured (full run pending).
+
+| Module | ej6j point (before: uncovered) | After (unit suites only) |
+| :----- | :----------------------------- | :----------------------- |
+| `axi4_crossbar` | L439, L478, L479, L515, L517; `dr_len`/`dr_cnt`/`slv_bresp`/`slv_rresp`/`s_rresp` never toggle | **0 uncovered lines (124/124 after waivers); no never-toggling signal** |
+| `axi4_to_axilite` | L182, L205, L214, L288, L291; 13 never-toggling (`w_rem_q`, `r_rem_q`, `m_axil_bresp/rresp`, `w_resp_q`, ...) | L182/205/214/288/291 hit; **no never-toggling signal**; L150/152/155 waived (Verilator function-arm counter limitation, see waivers) |
+| `axilite_to_axi4` | L131, L149, L152 (skid hold); `ar_hold_q`/`ar_addr_q`/`m_axi_rresp` never toggle | **10/10 lines**, no never-toggling signal |
+| `boot_rom` | L107, L141-L157 (whole write path), L205; 19 never-toggling write-path signals | **29/29 lines**; `s_rresp` waived (constant OKAY) |
+| `sram_controller` | L175/L178 (`last_addr`) | still shown uncovered by the instrument although INCR, FIXED and the range check run -- waived as the same function-arm counter limitation; WRAP rejection now tested |
+| `async_axi_fifo` | `s_rresp_o` never non-OKAY | toggles; SLVERR/DECERR cross the CDC per beat (both clock ratios) |
+
+Non-vacuity: 17 single-fault mutants (response accumulator, address increment, early B, skid-buffer capture/clear, ROM write
+response/corruption/rlast, crossbar DECERR rlast/W-sink/R-advance, steered slave responses, WRAP check, FIFO bresp/rresp) were
+each killed by the new suites. Kills were real test failures, not build errors.
+
+**Not yet measured**: the full `make soc_coverage` / `soc_all_ci` (a Sky130 `librelane` run was active on the host, which this
+15 GB machine cannot share with a SoC simulation). CI `PASS_FLOOR` was raised 477 -> 514 as a *derived* figure (477 + the 37
+tests above); re-measure and tighten it on the next full run.
+
 ## Triage
 
 Every uncovered line/branch point in the triaged trees, and every never-toggling control signal on a port,
@@ -188,7 +216,7 @@ was classified (the full per-module list is in `coverage_report.md` / `.json`):
 | (b) waiver | FSM / `case` `default:` recovery arms (34 line points: 32 FSM arms across dma, i2c, spi, uart, crypto, apb_cdc_bridge, crossbar, axi4_to_axilite, axi-lite blocks, axil_to_apb, boot_rom, pmu, sram_controller, sha256, plus the 2 dead `sbox()` / `sha_k()` defaults) | state registers only hold named encodings in simulation |
 | (b) waiver | unused reference decode helpers in `soc_addr_map_pkg` / `soc_periph_map_pkg` (8 line points) | no caller in RTL or tb |
 | (b) waiver | `pslverr` tie-off on 15 APB modules and its soc_top/soc_bus fan-out; `AxPROT` (not decoded anywhere); constant DMA IDs; `*_unused` nets; `scanmode_i`; I2C `i2c_scl_o`/`i2c_sda_o` (dead open-drain outputs); `axilite_to_axi4` write channel tie-offs | constants by design |
-| (a) bead `ej6j` | AXI4 fabric: crossbar decode-error bursts, `axi4_to_axilite` bursts/errors (78.7 % raw, the weakest triaged bridge), `axilite_to_axi4` AR skid, `boot_rom` write path (58 % raw), `sram_controller` FIXED/WRAP, `async_axi_fifo` error response | |
+| (a) bead `ej6j` (**tests added 2026-10-07, see "ej6j AXI4-fabric re-measurement" below; full-run table above not yet re-measured**) | AXI4 fabric: crossbar decode-error bursts, `axi4_to_axilite` bursts/errors, `axilite_to_axi4` AR skid, `boot_rom` write path, `sram_controller` WRAP, `async_axi_fifo` error response | |
 | (a) bead `8riq` -> **closed for the unit-level fabric** (2026-10-07, PR for `test/axil-apb-coverage-8riq`) | `axi_lite_interconnect` / `axi_lite_register_bank` / `axil_to_apb` / `apb_interconnect` are now **100 % line** (were 95.0 / 93.3 / 95.3 / 100 %). New suite `axil_apb_fabric` (14 tests: ring AW/W/AR stalls, B/R stalls, SLVERR/DECERR end to end, APB wait states, unclaimed APB slot -> SLVERR) plus register-bank, bridge and `apb_interconnect` additions. **Still open, now tracked separately:** SoC-level `soc_bus`/`soc_top` response signals (`periph_axil_*resp`, `axil_gpu/dma_*resp`, `mem_*resp`, `m_*resp`) need CPU firmware to reach an unmapped ring address, and `apb_m_pslverr` is unreachable through the current map (see below). RTL bug found: bead `3xtv` (phantom second DECERR read beat), pinned by an `expect_fail` guard | |
 | (a) bead `bq2o` | `dma_engine`: max-burst saturation, AR/AW stall, write-response error, queue full | |
 | (a) bead `05wf` | `uart_controller` / `spi_controller`: byte lanes 2/3, FIFO full, RX false-start, os_tick gaps | |
@@ -196,7 +224,7 @@ was classified (the full per-module list is in `coverage_report.md` / `.json`):
 | (a) bead `pnfw` (existing) | I2C: slave-mode bit-counter arms L617/L645, SoC-level pad drive | notes appended |
 | (a) bead `2k8` (existing) | GPU-domain PMU path (`pmu_gpu_iso_en` etc.) | note appended |
 
-Waiver summary: 54 entries (20 line, 34 toggle), all category `b`, all with a justification
+Waiver summary: 57 entries (22 line, 35 toggle), all category `b`, all with a justification
 and a file:line reference. The report flags a waiver that matches no uncovered point as stale, and the unit
 tests pin that a waiver can only remove an uncovered point from the denominator (raw % stays visible).
 

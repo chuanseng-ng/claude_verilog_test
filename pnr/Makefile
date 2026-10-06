@@ -831,6 +831,15 @@ sky130-soc-sv2v:
 # `librelane-sky130-soc` is unchanged and the adopted sign-off stays reproducible.
 SKY130_SOC_EXTRA_SKIP ?=
 
+# ── RC-calibrated pre-route repair variant (bead claude_verilog_test-e45j) ────
+# Same flow, but the four pre-route repair/resizer steps are replaced by the CVT.* steps of the
+# project-local plugin pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130 (picked up because
+# LibreLane imports every librelane_plugin_* on PYTHONPATH), which scale the GRT/placement wire-RC
+# estimate to what OpenRCX later extracts. The shared LibreLane install is NOT modified.
+# config.json (the adopted sign-off) is untouched; this selects config_rccal.json instead.
+SKY130_SOC_CONFIG ?= config.json
+SKY130_SOC_PLUGIN_DIR := $(abspath $(LIBRELANE_SKY130_SOC_DIR)/plugin)
+
 # ── KLayout-DRC-free variant (bead claude_verilog_test-00ef) ──────────────────
 # RUN_2026-09-20_19-46-05 was killed by the host's memory reaper inside
 # 56-klayout-drc, which was holding 8.5 GB on a 15 GB machine. Steps 1-55 had
@@ -929,7 +938,7 @@ librelane-sky130-soc: sky130-soc-sv2v
 	@[ -L $(LIBRELANE_SKY130_SOC_DIR)/runs ] || \
 		ln -sfn /nobackup/sky130_soc_runs $(LIBRELANE_SKY130_SOC_DIR)/runs
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"PYTHONPATH=$(LIBRELANE_DIR) \
+		"PYTHONPATH=$(LIBRELANE_DIR):$(SKY130_SOC_PLUGIN_DIR) \
 		 python3 -m librelane \
 		 --skip Checker.LintTimingConstructs \
 		 --skip Checker.LintErrors \
@@ -942,7 +951,12 @@ librelane-sky130-soc: sky130-soc-sv2v
 		 --skip Checker.MaxCapViolations \
 		 --skip Magic.WriteLEF \
 		 $(SKY130_SOC_EXTRA_SKIP) \
-		 $(abspath $(LIBRELANE_SKY130_SOC_DIR))/config.json"
+		 $(abspath $(LIBRELANE_SKY130_SOC_DIR))/$(SKY130_SOC_CONFIG)"
+
+# e45j: RC-calibrated variant, KLayout DRC skipped (same host reason as -noklayout).
+librelane-sky130-soc-rccal-noklayout:
+	@$(MAKE) librelane-sky130-soc SKY130_SOC_CONFIG=config_rccal.json \
+		SKY130_SOC_EXTRA_SKIP="--skip KLayout.DRC --skip Checker.KLayoutDRC"
 
 librelane-sky130-soc-results:
 	$(call librelane_results,$(LIBRELANE_SKY130_SOC_DIR))
