@@ -1,0 +1,70 @@
+# Coverage waivers for tools/verif/coverage_report.py (GH #216, bead nkj7).
+#
+# One entry per line:   module | kind | regex | category | justification
+#
+#   module        RTL module name (parameter specialisations are folded into the base name)
+#   kind          line   -> line + branch points, matched against "L<line>" or "L<line> <arm>"
+#                 toggle -> toggle points, matched against "<signal>[<bit>]:<from>-><to>"
+#                 any    -> either
+#   regex         Python re.search pattern; ' | ' (spaces around the bar) separates fields, so a
+#                 regex may contain a bare alternation bar such as ^L(20|31)$
+#   category      b = unreachable BY DESIGN (tie-off, EN_*=0 generate arm, elaboration guard).
+#                 Test gaps (a) and bugs (c) are beads, never waivers.
+#   justification mandatory; say WHY the point cannot be reached, with a file:line reference.
+#
+# A waiver removes only UNCOVERED points from the denominator; the report keeps the raw % beside
+# the adjusted one and flags a waiver that matches nothing as stale.  No pragma edits to RTL.
+
+aes128_core | line | ^L363\b | b | sbox() case default: the 8-bit select is fully enumerated by 256 constant labels, so the default is dead (aes128_core.sv:363)
+sha256_core | line | ^L144\b | b | sha_k() case default: the 6-bit round index is fully enumerated by 64 constant labels, so the default is dead (sha256_core.sv:144)
+sha256_core | line | ^L(242)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (sha256_core.sv:242)
+crypto_accel | line | ^L(468)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (crypto_accel.sv:468)
+dma_engine | line | ^L(630)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (dma_engine.sv:630)
+i2c_bit_engine | line | ^L(440)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (i2c_bit_engine.sv:440)
+i2c_controller | line | ^L(655)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (i2c_controller.sv:655)
+spi_controller | line | ^L(456)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (spi_controller.sv:456)
+uart_controller | line | ^L(343|384|591)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (uart_controller.sv:343, 384, 591)
+apb_cdc_bridge | line | ^L(545|645)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (apb_cdc_bridge.sv:545, 645)
+axi4_crossbar | line | ^L(376|442|467|480|497|519)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (axi4_crossbar.sv:376, 442, 467, 480, 497, 519)
+axi4_to_axilite | line | ^L(218|298)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (axi4_to_axilite.sv:218, 298)
+axi_lite_interconnect | line | ^L(209|328)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (axi_lite_interconnect.sv:209, 328)
+axi_lite_register_bank | line | ^L(174|206)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (axi_lite_register_bank.sv:174, 206)
+axil_to_apb | line | ^L(178)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (axil_to_apb.sv:178)
+boot_rom | line | ^L(161|215)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (boot_rom.sv:161, 215)
+pmu | line | ^L(262|277)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (pmu.sv:262, 277) (L277 is Verilator's attribution of the per-domain generate-case default arms at pmu.sv:294 and :365-370)
+sram_controller | line | ^L(268|651|824)\b | b | FSM 'default:' recovery arm: the state register only ever holds a named encoding in simulation (reset value plus enumerated transitions), so the arm is reachable only through state corruption or X-injection, which 2-state Verilator cannot produce (sram_controller.sv:268, 651, 824)
+soc_addr_map_pkg | line | ^L(70|72|73)\b | b | decode_slave() is a reference helper that no RTL or testbench calls (grep over rtl/ and tb/cocotb/soc finds no caller); the crossbar decodes with its own logic, so the body can never execute (soc_addr_map_pkg.sv:70-73)
+soc_periph_map_pkg | line | ^L(181|185|186)\b | b | decode_axil_slave() is a reference helper that no RTL or testbench calls; the AXI-Lite interconnect decodes with its own logic (soc_periph_map_pkg.sv:181-186)
+apb4_register_bank | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+crypto_accel | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+gpio_controller | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+i2c_controller | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+interrupt_controller | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+pwm_controller | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+spi_controller | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+timer | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+trng | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+uart_controller | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+watchdog_timer | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+pmu | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+pll_apb_regs | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+pll_subsystem | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+npu_top | toggle | ^pslverr: | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle
+soc_top | toggle | ^(apb_pslverr|apb_pslverr_o|dbg_bridge_m_pslverr|pll_m_pslverr|pll2_m_pslverr)[\[:] | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle (soc_top fan-out of the same constant)
+soc_bus | toggle | ^(apb_pslverr|apb_m_pslverr)[\[:] | b | pslverr is hard-wired 1'b0 by apb4_register_bank (apb4_register_bank.sv:89: out-of-range = OKAY + drop/0), so the port can never toggle (soc_bus fan-out of the same constant)
+axi_lite_interconnect | toggle | (aw|ar)prot[\[:] | b | AxPROT is not decoded anywhere in this SoC (no privilege split; axil_to_apb ignores AxPROT) and every master drives it constant 0, so there is nothing for a test to cover
+axi_lite_register_bank | toggle | (aw|ar)prot[\[:] | b | AxPROT is not decoded anywhere in this SoC (no privilege split; axil_to_apb ignores AxPROT) and every master drives it constant 0, so there is nothing for a test to cover
+axil_to_apb | toggle | (aw|ar)prot[\[:] | b | AxPROT is not decoded anywhere in this SoC (no privilege split; axil_to_apb ignores AxPROT) and every master drives it constant 0, so there is nothing for a test to cover
+dma_engine | toggle | (aw|ar)prot[\[:] | b | AxPROT is not decoded anywhere in this SoC (no privilege split; axil_to_apb ignores AxPROT) and every master drives it constant 0, so there is nothing for a test to cover
+soc_top | toggle | (aw|ar)prot[\[:] | b | AxPROT is not decoded anywhere in this SoC (no privilege split; axil_to_apb ignores AxPROT) and every master drives it constant 0, so there is nothing for a test to cover
+soc_bus | toggle | (aw|ar)prot[\[:] | b | AxPROT is not decoded anywhere in this SoC (no privilege split; axil_to_apb ignores AxPROT) and every master drives it constant 0, so there is nothing for a test to cover
+axi4_to_axilite | toggle | ^m_axil_(aw|ar)prot[\[:] | b | AxPROT is not decoded anywhere in this SoC (no privilege split; axil_to_apb ignores AxPROT) and every master drives it constant 0, so there is nothing for a test to cover
+dma_engine | toggle | ^(m_arid|m_awid|m_bid|m_rid)[\[:] | b | the DMA issues every AXI4 transaction with a constant ID 0 (the *_unused id ports in soc_top.sv confirm the ID is not used), so the ID ports cannot toggle
+soc_top | toggle | _unused[\[:] | b | ports named *_unused are deliberately unused nets in soc_top.sv
+sram_controller | toggle | ^mem_dout0_unused[\[:] | b | deliberately unused second read port of the SRAM macro (name says so)
+apb_cdc_bridge | toggle | ^scanmode_i: | b | DFT scan-mode pin: every instantiation ties scanmode_i=1'b0 (apb_cdc_bridge.sv:301), scan is never enabled in functional simulation
+async_axi_fifo | toggle | ^scanmode_i: | b | DFT scan-mode pin tied 1'b0 at every instantiation, scan never enabled in functional simulation
+i2c_controller | toggle | ^(i2c_scl_o|i2c_sda_o): | b | hard-tied 1'b0 and marked DEAD: the pads are open-drain and are driven low only through i2c_*_oe_o (found by Gate B's SDC binding check)
+soc_top | toggle | ^(i2c_scl_o|i2c_sda_o): | b | same hard-tied 1'b0 DEAD open-drain outputs as in i2c_controller
+axilite_to_axi4 | toggle | ^m_axi_(aw|w|b|arid|arlen|rid) | b | write channels of this adapter are tied off by design (axilite_to_axi4.sv header: awvalid=0, wvalid=0, bready=1, awid/awaddr/awlen/awsize/awburst/wdata/wstrb/wlast tied 0; arid=0, arlen=0 single beat), so these signals are constant (ID 0 is constant so rid never toggles)
+soc_top | toggle | ^gif_axi_(aw|w|b|arid|arlen|rid) | b | write channels of this adapter are tied off by design (axilite_to_axi4.sv header: awvalid=0, wvalid=0, bready=1, awid/awaddr/awlen/awsize/awburst/wdata/wstrb/wlast tied 0; arid=0, arlen=0 single beat), so these signals are constant (seen at the soc_top 'gif' wiring of the same adapter)
