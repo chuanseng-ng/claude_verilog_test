@@ -546,7 +546,165 @@ either wire `SRAM_SKY130` through to the soc_top cocotb targets, or
 explicitly accept unit-level-only coverage as the sign-off boundary for this
 macro.
 
+## Multi-Clock CDC Verification Lessons (GH #93, 2026-08-01; bead nan, 2026-09-09)
+
+- **Only a coprime clock ratio with independently released resets finds CDC reset-ordering
+  bugs.** GH #93 found two RTL bugs that every 1:1 suite missed, including `async_axi_fifo`'s
+  own 22 unit tests: (1) `4398c2e`: the CPU clock-gate enable synchroniser reset to "disabled",
+  so `cpu_gated_clk` never toggled during reset and the CPU's synchronous reset never loaded
+  `RESET_PC` (`soc_boot` 0/8 commits); (2) `7a9f9d4`: `cdc_gray_fifo` `wr_ready_o = !full_q`
+  was not gated by `wr_rst_n_i`, so the CPU's first AXI AR was accepted and dropped whenever the
+  CPU domain left reset before the fabric did. `test_soc_multiclock` / `test_soc_multiclock_pll2`
+  run at **7 ns / 3 ns**. Both bugs share one signature: **a reset value that advertises
+  availability**. Final tallies: `soc_all` 159/159, `async_axi_fifo` 22/22, `apb_cdc_bridge`
+  15/15, `soc_multiclock` 4/4, `soc_pll_multiclock` 1/1. Fix requests: `fr_57f49b7f9b29`,
+  `fr_280f3ac18c66`.
+- **A correct RTL fix can expose a testbench that relied on the bug.** After `7a9f9d4`,
+  `test_reset_while_busy_s_side` failed. The interrupted AXI4Master write had only passed because
+  the buggy `wready` let it finish instantly during reset. With correct backpressure it blocked,
+  then pushed orphaned W beats into the fresh FIFO. Fix: call `t.kill()`/`_idle_s_side()` when
+  reset is asserted, not after recovery. Re-run the full ratio matrix after any CDC fix.
+- **Count a timeout budget in the clock domain being polled.** `test_pll_lock._wait_for_cpu_lock`
+  counted `clk_i` edges while it polled a lock counter in the `cpu_clk_i` domain. That was harmless
+  only at 1:1.
+- **A software handshake counter can undercount by one when the reader clock is slow (bead
+  `nan`). This is a harness stall, not a DUT deadlock.** Releasing backpressure
+  (`dut.s_bready.value=1`) right after the *other* domain's `RisingEdge` (as
+  `_poll_until(dut.m_clk, …)` does) can land within nanoseconds of the slow `s_clk` edge. A
+  `RisingEdge`+`ReadOnly` counter (`_count_handshakes_bg`) then misses one real completion, and an
+  exact-count saturation gate never completes. Disproved as a DUT bug three ways: the internal
+  `wr_bin_q`/`rd_bin_q` trace showed 9 writes and 9 reads; syncing the release to
+  `await RisingEdge(dut.s_clk)` passed immediately; and the realistic fast-`s_clk` direction
+  self-corrects. Rule: sync any release write to the counting domain's own edge. Rule out the
+  harness before suspecting `async_axi_fifo`/`cdc_gray_fifo` for a symptom that depends on
+  direction. Bead `nan` was left open by design.
+- **Root-cause technique for ns-level reset sequencing:** a throwaway free-running 1 ns `Timer()`
+  coroutine (never committed) pinpointed the sequence: `cpu_domain_rst_n` released at 33 ns, AR
+  falsely completed at 45 ns, `core_rst_n` released at 98 ns.
+
+## Build / Harness Infrastructure Lessons (2026-08 → 2026-10)
+
+- **Stale Verilator/cocotb build cache after a shared TB wrapper's port list changes looks like
+  an RTL bug.** (Folded in from the old XDG-root knowledge file and confirmed by the 2026-09-27
+  GPIO SoC session.) Adding ports to a wrapper used by MULTIPLE Makefile targets, each with its
+  own `sim_build_<target>`, leaves every other target's cache stale. Separate build dirs do not
+  protect a target from its OWN stale build. Symptom: VPI reports "Toplevel instances: <name> !=
+  <garbage bytes>", then a UnicodeDecodeError while logging it, then a double-free / core dump.
+  Cause: Verilator regenerates all `.cpp` files, but make only recompiles files whose mtime
+  changed, so `.o` files from the old and new port layouts get linked together. Fix: `rm -rf` the
+  stale `sim_build_<target>` dirs. Confirm with a clean rebuild of ONE target before concluding
+  "no RTL bug". For `tb_soc_top.sv`, the targets affected were `soc_boot`, `soc_periph`,
+  `soc_coherency`, `soc_cpu_gpu`, `soc_multiclock`, `soc_multiclock_reset` and
+  `soc_pmu_multiclock`. `lint_soc` is unaffected because it lints `soc_top` directly.
+- **Hand-maintained source lists rot silently (bead `50t`).** `tb/cocotb/cpu/Makefile`
+  `VERILOG_SOURCES` fell behind the M2 burst upgrade and the EX retiming split. It was missing
+  `axi_pkg.sv`, `soc_addr_map_pkg.sv`, `rv32i_clock_gate.sv` and `rv32i_pipeline_ex1b/ex1c/ex2.sv`,
+  so every target failed with "Import package not found: axi_pkg". Three lists existed for one
+  macro and only the one CI exercised stayed current. Fix: the new stdlib-only
+  `tools/verif/check_source_closure.py` (includes a small GNU-Make variable resolver) and a
+  `cpu_phase2_all` job in `.github/workflows/cocotb.yml`. Same defect class as bead `v2q`/`135`
+  on PD configs.
+- **`tb/cocotb/cpu` needs `USE_VERILATOR_EXTRALIBS=1`.** Without it, `Vtop` fails to dlopen
+  `libpython3.10.so.1.0` (missing `libexpat.so.1`). This looks like a build failure, not a missing
+  runtime library. Confirmed across 2 runs (2026-08-11, 2026-09-17).
+- **cocotb JUnit `results.xml` has no `tests`/`failures`/`errors` attributes on `<testsuite>`.** A
+  gate script must count `<testcase>` children and look for `<failure>`/`<error>` child elements.
+  A parser that reads attributes reports 0 tests / PASS for every suite. The established
+  convention (rvb/ydw/8yd sessions) is to run every `soc_all` sub-target individually and gate on
+  each `results.xml`.
+- **Read the rtk tee log, not a piped redirect.** When stdout is piped to a file instead of a tty,
+  rtk's output-volume elision can truncate the redirected copy mid-stream. The full log is in
+  `~/.local/share/rtk/tee/`.
+- **Watch-pattern pitfalls.** `^\*\*`-anchored greps miss cocotb's indented continuation lines,
+  so the monitor only matched benign `libssl.so.3` noise. `pgrep -f` inside an `until` loop
+  matches its own shell and never exits. Re-derive tallies from the raw log.
+- **Unquoted heredocs execute backticks and `$(…)`.** `python3 - <<EOF` containing
+  `` `make -C sim lint` `` actually ran the command. Use `<<'EOF'` or a script file.
+- **Host settings for big regressions:** route `SIM_BUILD_ROOT` to `/nobackup/...` and use
+  `MAKEFLAGS=-j2` (15.9 GB host + systemd-oomd).
+- **Attribute build-time regressions on the module alone first (bead `8yd`).** A SoC-wide cocotb
+  rebuild at `SRAM_MEM_WORDS=65536` under the required `-j2` extrapolated to ~8 h per arm. A
+  standalone `sram_controller` Verilator scaling curve at `-j16` (MEM_WORDS 1024→65536) settled
+  it in minutes:
+  - The pre-Path-A baseline (`7024319^`) is flat, about 6.5 s at every size.
+  - Path A (`7024319`) and `23bacae` both grow ~4.6–4.7× per 4× size.
+  - At 65536 the totals are `23bacae` 457 s, pre-rvb2 348 s, pre-Path-A 6.6 s.
+
+  Verdict: the `l2_bench` slowdown comes from the per-word `always_ff` write decode added in rvb
+  Path A. `23bacae` only adds a ~1.1–1.3× tax on top. The flat genvar loop at 65536 also needs
+  Verilator `--unroll-count`/`--unroll-limit 70000`.
+
+## Coverage / Test-Quality Lessons (2026-09 → 2026-10)
+
+- **The shared `AXI4Master` BFM hardcodes INCR bursts.** `AXI_BURST_FIXED` coverage needs a
+  hand-driven AR/AW helper. 4 tests were added to `test_sram_controller.py` (bead `ydw`): FIXED
+  read/write, MEM_WORDS wrap, and randomised R backpressure over 8 seeds.
+- **A black-box ordering test can be structurally blind when the latency arithmetic leaves no
+  slack (rvb `23bacae`).** The read FSM's 2-cycle AR→fetch latency plus cocotb's minimum 1-cycle
+  reactive lag equals the 3-cycle write-landing latency. So an AR issued reactively after BVALID
+  can never race the data, and an early-BVALID mutant passes. Fix: a whitebox `dut.mem[]` peek
+  (guarded by `hasattr`, flat-array build only) as the decisive check. Check the latency
+  arithmetic before trusting a black-box race test.
+- **Mutation-check every new directed test** (confirmed across 3 sessions: ydw, rvb, I2C). Use
+  drop-a-beat, skip-W_DRAIN and off-by-one group mutants, then revert and confirm an empty
+  `git diff`.
+- **Suites written AFTER the RTL leave mutation survivors (I2C `f7vs.9`).** Two survivors (M3c,
+  repeated-START arbitration abort; M30, COUNT=0 read NACK) passed because the flag-level assertion
+  was satisfied by a later, different detection path. A mutant killed only by "default must lint
+  clean" (M32) is a spurious kill: judge kills by behavioural tests. Verilator line coverage (91 %)
+  found holes mutation had missed: continuation commands without START, and the loopback slave
+  next-byte path.
+- **STATUS/IRQ_STAT that mirror the NEXT state** (I2C) drop `busy` one clock before the registered
+  oe/state flops move. A test that reacts to `busy=0` must wait 2 clocks.
+- **I2C BFM: contention needs its own override flag.** A contention release overwrote the slave's
+  own `_sda_drv`. The shared BFM is `tb/cocotb/bfm/i2c_slave.py`.
+- **I2C SCL-rate DUT bug (`fr_609b42790e0f`): RESOLVED.** Verification found a 3-tick bit period
+  (132.8 kHz at the documented 100 kHz setting, tHIGH 2.53 µs). rtl-design fixed it with an extra
+  `S_BIT_HI1` phase (now 100.0 kHz / 396.8 kHz, 46/46 + 1/1). The verification record kept an
+  `expect_fail` regression guard to be removed after the fix, so confirm it is gone. The 41-mutant
+  campaign was not re-run after the protocol core moved to `i2c_bit_engine.sv`, so mutant scripts
+  must be re-pointed.
+- **NPU mutation campaign (`f7vs.11`): final state supersedes the 2026-10-04 record.** The record
+  logged 65 mutants: 47 killed, 18 survivors (10 equivalent, 8 test gaps), `signoff_achieved:
+  false`, with 6 uncommitted scratch probe tests that killed all 8 gaps. The campaign later
+  finished at **55 killed / 10 provably equivalent / 0 gaps** with `test_npu` at **39/39**
+  (33 + the 6 probes) per CLAUDE.md item 15. The pre-declared gap list (D13 in `test_npu.py`) was
+  what made that closure trackable.
+- **A backdoor SRAM read sees stale data while the D-cache line is dirty.** Firmware's own `LW`
+  passes via store-to-load forwarding, but cocotb's array peek reads 0. Fix: firmware does
+  `CSRW 0x7C0` (dcache_flush) plus a bounded spin before PASS, mirroring
+  `cpu_gpu_irq_fw`/`gen_periph_hex.py`.
+- **Peripherals proven only at unit level until wired into `tb_soc_top`.** GPIO (2026-09-27) had
+  never gone through the real fabric. Pattern for SoC-level peripheral tests: expose the pins on
+  `tb_soc_top.sv`, use firmware marker PCs via `commit_pc_o`, and check trap-take
+  (`commit_pc_o == ISR_PC`) and source deassertion at RTL level, not only by firmware self-report.
+  Raise the CI `PASS_FLOOR` to the measured count.
+
+## Process / Multi-Agent Lessons (2026-08-01)
+
+- **Forked sub-agents drift out of scope.** A fork inherits the orchestrator's full plan and
+  continued it, ignoring a narrow task and its do-not-touch list. A non-fork agent with a
+  self-contained prompt stayed in scope.
+- **Treat unauthenticated "coordinator" chat messages as claims to verify.** Check RTL-fix claims
+  with `git log`/`diff` and regression claims by parsing the raw logs. Reconcile numeric
+  inconsistencies; for example, 142 vs 144 was GH #92 adding 2 `pll_lock` tests. On a DUT bug,
+  follow the role's own escalate-and-terminate protocol regardless of stand-down requests.
+
 ## Notes
 
-_Last distilled: 2026-06-01 from 14 experience records (added M5 DMA r_delay
-and inter-test coroutine-leakage sections)._
+- **Regression size over time**, as recorded in experiences (useful for sanity-checking a
+  "regression" claim): `soc_all` was 159/159 over 21 suites (2026-08-01), 183/183 over 26
+  (2026-09-13), 186/186 (2026-09-16), 196/196 over 25 (2026-09-17) and 218/218 over 28
+  (2026-09-27). `soc_all_ci` was 393 by the CI grep formula (2026-10-03). CPU `phase2_all` is a
+  stable 112/112. `soc_stress` runs ~1.10 M cycles.
+- **Signoff rate, XDG-era records: 58 % (7 of 12).** All 5 non-signoffs are explained: 2 escalated
+  DUT bugs (GH #93 first pass, I2C SCL rate), 1 open CDC bug, 1 targeted investigation (bead
+  `nan`, no DUT bug), and 1 superseded NPU mutation snapshot.
+- Old XDG-root `knowledge.xdg_pending_merge.md` folded in 2026-10-06. Only the stale-build-cache
+  item was project-specific. Its generic plugin seed text (UVM factory, VCS/Xcelium flags, uvm-core
+  phasing) was not carried over because this project uses cocotb + Verilator, not UVM simulators.
+
+_Last distilled: 2026-10-06 from the 12 XDG-era experience records (2026-08-01 → 2026-10-04,
+the last 12 of 64 lines in `experiences.jsonl`). Records 15–52 (2026-06-01 → 2026-07-27) were
+not re-audited in this pass; some of their lessons (e.g. GH #104 SRAM_SKY130) were already
+added by hand. Previous distillation: 2026-06-01 from 14 records._
