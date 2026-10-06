@@ -1349,3 +1349,51 @@ async def test_reset_asym_staggered_s_then_m_coprime(dut):
 async def test_reset_asym_staggered_m_then_s_coprime(dut):
     # Mirror ordering: m releases first, s held.
     await with_timeout(_reset_asym_staggered_body(dut, 10, 11, order="m_first"), 100, "us")
+
+
+# --- bead ej6j: error responses must cross the CDC intact ---------------------
+
+async def _error_response_crossing_body(dut, s_ns, m_ns):
+    """Every other test here has an always-OKAY fabric slave, so s_bresp/s_rresp could never leave
+    OKAY -- a CDC FIFO that dropped, widened or hard-wired the response field would pass.  Drive
+    SLVERR/DECERR from the fabric side and require the exact per-beat code on the CPU side."""
+    from axi4_fabric_bfm import DECERR, OKAY, SLVERR, AxiMaster, AxiSlave
+
+    ctx = await _setup(dut, s_ns, m_ns, start_slave_loops=False, monitors=True)
+
+    def resp(kind, addr):
+        if kind == "w":
+            return {0x2000: SLVERR, 0x3000: DECERR}.get(addr, OKAY)
+        return {0x2008: SLVERR, 0x2010: DECERR, 0x4000: DECERR}.get(addr, OKAY)
+
+    slave = AxiSlave(dut, "m_", dut.m_clk, resp_fn=resp)
+    slave.start()
+    _active_tasks.append(slave._task)
+    m = AxiMaster(dut, "s_", dut.s_clk)
+    for i in range(4):
+        slave.mem[0x2000 + 4 * i] = 0xE000_0000 + i
+
+    t = await m.write(0x2000, [1, 2, 3, 4])
+    assert t.bresp == SLVERR, f"SLVERR lost across the CDC: {t.bresp}"
+    t = await m.write(0x3000, [5])
+    assert t.bresp == DECERR, f"DECERR lost across the CDC: {t.bresp}"
+    t = await m.write(0x5000, [6, 7])
+    assert t.bresp == OKAY, f"OKAY response polluted by the previous error: {t.bresp}"
+
+    t = await m.read(0x2000, 6)       # beats at 0x2000..0x2014: errors on beats 2 (0x2008) and 4 (0x2010)
+    assert t.resps == [OKAY, OKAY, SLVERR, OKAY, DECERR, OKAY], t.resps
+    assert t.data[:4] == [0xE000_0000 + i for i in range(4)], [hex(d) for d in t.data]
+    assert [b[2] for b in t.beats] == [0, 0, 0, 0, 0, 1] and not t.viol
+    t = await m.read(0x4000, 1)
+    assert t.resps == [DECERR], t.resps
+    assert not slave.viol, slave.viol
+
+
+@cocotb.test()
+async def test_error_response_crossing_fast_to_slow(dut):
+    await with_timeout(_error_response_crossing_body(dut, 4, 9), 50, "us")
+
+
+@cocotb.test()
+async def test_error_response_crossing_coprime(dut):
+    await with_timeout(_error_response_crossing_body(dut, 10, 11), 50, "us")

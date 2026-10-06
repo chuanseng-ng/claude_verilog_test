@@ -54,7 +54,10 @@ jobs:
     env:
       # Build dirs, per-simulation .dat files, merged.dat and the report all live here.
       SOC_COV_ROOT: /home/runner/soc_cov
-      PASS_FLOOR: '477'
+      # 2026-10-07 (bead ej6j): 477 -> 514 = previous floor + 37 tests added by ej6j (crossbar +7, axi4_to_axilite +10, axilite_to_axi4 +7,
+      # boot_rom +9, sram_controller +1 in each of its 2 builds, async_axi_fifo +2), each measured passing in its own suite run.
+      # DERIVED, not a full soc_all_ci measurement (a Sky130 PD run was active on the host; see PR) -- re-measure and tighten.
+      PASS_FLOOR: '514'
 
     steps:
       - name: Checkout repository

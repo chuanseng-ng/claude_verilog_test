@@ -1295,3 +1295,40 @@ async def test_write_burst_wvalid_gaps(dut):
         f"  exp {[hex(w) for w in words]}"
     )
     dut._log.info("test_write_burst_wvalid_gaps PASS")
+
+
+# ── bead ej6j: WRAP bursts are rejected (SLVERR), FIXED/INCR are not ─────────
+#
+# Header of sram_controller.sv: "INCR and FIXED bursts supported; WRAP / out-of-range -> SLVERR".
+# FIXED is covered above; the WRAP rejection (`s_awburst == AXI_BURST_WRAP` -> w_err / r_err) never ran.
+# A rejected burst must still be FULLY consumed/answered (all W beats sunk, arlen+1 R beats with RLAST
+# on the last) so the master never hangs, must not modify memory, and must not poison the next burst.
+
+@cocotb.test()
+async def test_wrap_burst_is_rejected_with_slverr(dut):
+    from axi4_fabric_bfm import BURST_FIXED, BURST_INCR, BURST_WRAP, SLVERR, AxiMaster
+
+    await _setup(dut)
+    m = AxiMaster(dut, "s_", dut.clk)
+    base = SRAM_BASE + 0x1800        # 16-byte aligned, a legal AXI4 WRAP4 start
+    good = [0xA1A1_0000 + i for i in range(4)]
+    t = await m.write(base, good, wid=1)
+    assert t.bresp == RESP_OKAY
+
+    # WRAP write: every W beat is still accepted, B = SLVERR echoing the id, memory untouched.
+    t = await m.write(base, [0xBAD0_0000 + i for i in range(4)], burst=BURST_WRAP, wid=7)
+    assert t.bresp == SLVERR, f"WRAP write must answer SLVERR, got {t.bresp}"
+    assert t.bid == 7 and len(t.w_cycles) == 4 and not t.viol, (t.bid, t.w_cycles, t.viol)
+
+    # WRAP read: arlen+1 beats, all SLVERR, RLAST only on the last, id echoed.
+    t = await m.read(base, 4, burst=BURST_WRAP, rid=5)
+    assert t.resps == [SLVERR] * 4, t.resps
+    assert [b[2] for b in t.beats] == [0, 0, 0, 1] and all(b[3] == 5 for b in t.beats) and not t.viol
+
+    # The rejected WRAP write did not modify memory, and neither burst poisoned the controller.
+    t = await m.read(base, 4, burst=BURST_INCR)
+    assert t.data == good and t.resps == [RESP_OKAY] * 4, [hex(d) for d in t.data]
+    # FIXED stays supported (re-reads the same word) and is answered OKAY.
+    t = await m.read(base + 8, 3, burst=BURST_FIXED)
+    assert t.data == [good[2]] * 3 and t.resps == [RESP_OKAY] * 3, [hex(d) for d in t.data]
+    dut._log.info("test_wrap_burst_is_rejected_with_slverr PASS")
