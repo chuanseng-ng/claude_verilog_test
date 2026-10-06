@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# Installed by `make setup-beads` (bead 78ld); see beads_hook_wrapper.sh.
+exec "$(dirname -- "$0")/beads_hook_wrapper.sh" pre-commit "$@"
