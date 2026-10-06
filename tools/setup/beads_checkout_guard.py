@@ -26,9 +26,14 @@ the import legitimately advanced (newer ``updated_at``) or created are left
 alone, so issues arriving from elsewhere still enter the DB.
 
 A regression is any of: status closed -> non-closed; notes shorter; fewer
-comments; ``updated_at`` earlier than before. A row carrying the marker
-``beads-reopen-ok`` (shared with check_beads_reopen.py) is accepted as a
-deliberate reopen.
+comments; ``updated_at`` earlier than before. There is deliberately NO
+per-bead exemption here. The first version honoured the CI gate's
+``beads-reopen-ok`` marker as a substring of the notes. 78ld's own notes
+*described* that escape hatch, so on 2026-10-06 a post-checkout import moved
+78ld closed -> in_progress (Dolt commit 22:10:21, inside the guard's window)
+and the guard stayed silent. With a single authoritative DB, an import that
+reopens a bead is never the deliberate path; a deliberate reopen is ``bd
+update``. To let a file-driven reopen through, use BEADS_CHECKOUT_GUARD=off.
 
 Modes (``BEADS_CHECKOUT_GUARD`` in the wrapper, ``--mode`` here):
   restore (default) re-import the pre-hook rows and say so loudly
@@ -55,7 +60,6 @@ from check_beads_reopen import (  # noqa: E402
     CLOSED,
     Row,
     Rows,
-    has_reopen_marker,
     parse_jsonl,
 )
 
@@ -110,10 +114,7 @@ def find_regressions(before: Rows, after: Rows) -> list[Regression]:
     """Beads present in both snapshots whose post-hook row is older; sorted by id."""
     found: list[Regression] = []
     for bead_id in sorted(before.keys() & after.keys()):
-        after_row = after[bead_id]
-        if has_reopen_marker(after_row):
-            continue
-        reasons = _reasons(before[bead_id], after_row)
+        reasons = _reasons(before[bead_id], after[bead_id])
         if reasons:
             title = str(before[bead_id].get("title", ""))
             found.append(Regression(bead_id, title, tuple(reasons)))
