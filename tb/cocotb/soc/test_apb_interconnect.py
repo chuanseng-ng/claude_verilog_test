@@ -56,6 +56,12 @@ Tests:
       bead f7vs.2's test_reserved_slot_in_window (test_axil_interconnect.py) could only reach a
       register-bank stub for; this DUT instantiates the real decode, so this is the first place
       in the tree the SLVERR-not-hang behaviour is verified end-to-end.
+  test_write_fanout_reaches_every_slave
+      Bead 8riq. pwdata / pstrb / pwrite / penable / paddr are broadcast: for each addressed slave i
+      and a set of data / strobe patterns that toggle every bit both ways, EVERY slave index's
+      copy of those signals equals the master's, while psel_o_flat selects slave i alone (a
+      non-selected slave sees the data but must not see psel). SETUP (penable low) is also seen
+      on every copy.
   test_first_match_wins
       Only runs in the OVERLAP_TEST=1 (N_SLAVES=2) build: an address inside slave 1's normal
       window, which OVERLAP_TEST also folds into slave 0's extended window, selects slave 0 (the
@@ -82,6 +88,7 @@ OVERLAP = os.environ.get("APB_IC_OVERLAP", "0") == "1"
 
 ADDR_W = 32
 DW = 32
+SW = 4
 SLV_WINDOW = 0x1000  # must match tb_apb_interconnect.sv's SLV_WINDOW default
 
 def slv_base(i: int) -> int:
@@ -259,3 +266,54 @@ async def test_first_match_wins(dut):
         f"overlapping addr=0x{addr:x} selected psel_o_flat=0b{got:b}, "
         "expected exactly bit 0 (first-match / lowest-index wins)"
     )
+
+
+@cocotb.test(skip=OVERLAP)
+async def test_write_fanout_reaches_every_slave(dut):
+    """pwdata/pstrb/pwrite/penable/paddr are broadcast to all slaves; only psel_o is per-slave.
+
+    The per-slave copies are read straight from the DUT's unpacked output arrays
+    (tb_apb_interconnect.{penable,pwrite,paddr,pwdata,pstrb}_o_arr[i]); the wrapper's scalar ports
+    only show element [0], which would hide a fan-out that stops short of the other slaves.
+    """
+    mask_d = (1 << DW) - 1
+    mask_a = (1 << ADDR_W) - 1
+    patterns = [
+        (0xFFFF_FFFF, 0xF, 1), (0x0000_0000, 0x0, 0), (0xAAAA_AAAA, 0xA, 1),
+        (0x5555_5555, 0x5, 1), (0x8000_0001, 0x9, 0), (0x1234_5678, 0x6, 1),
+    ]
+
+    def copies(arr):
+        return [int(arr[j].value) for j in range(N_SLAVES)]
+
+    _idle(dut)
+    await Timer(1, units="ns")
+    for i in range(N_SLAVES):
+        addr = slv_base(i) + 0x14
+        for data, strb, wr in patterns:
+            # SETUP phase: control present, penable low.
+            dut.psel.value = 1
+            dut.penable.value = 0
+            dut.pwrite.value = wr
+            dut.paddr.value = addr
+            dut.pwdata.value = data
+            dut.pstrb.value = strb
+            await Timer(1, units="ns")
+            assert copies(dut.penable_o_arr) == [0] * N_SLAVES, "penable high on a slave in SETUP"
+            dut.penable.value = 1
+            await Timer(1, units="ns")
+            assert int(dut.psel_o_flat.value) == 1 << i, (
+                f"N_SLAVES={N_SLAVES}: psel_o_flat=0x{int(dut.psel_o_flat.value):x}, "
+                f"expected only slave {i}")
+            assert copies(dut.penable_o_arr) == [1] * N_SLAVES, "penable not on every slave"
+            assert copies(dut.pwrite_o_arr) == [wr] * N_SLAVES, f"pwrite={wr} not on every slave"
+            assert copies(dut.pwdata_o_arr) == [data & mask_d] * N_SLAVES, (
+                f"slave {i} addressed, pwdata 0x{data:x} not on every slave: "
+                f"{[hex(v) for v in copies(dut.pwdata_o_arr)]}")
+            assert copies(dut.pstrb_o_arr) == [strb] * N_SLAVES, "pstrb not on every slave"
+            assert copies(dut.paddr_o_arr) == [addr & mask_a] * N_SLAVES, "paddr not on every slave"
+            # The single-element convenience ports agree with the per-slave copies.
+            assert int(dut.pwdata_o.value) == data & mask_d
+            assert int(dut.pstrb_o.value) == strb
+            _idle(dut)
+            await Timer(1, units="ns")

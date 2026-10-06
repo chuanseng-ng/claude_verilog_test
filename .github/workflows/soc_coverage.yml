@@ -54,7 +54,7 @@ jobs:
     env:
       # Build dirs, per-simulation .dat files, merged.dat and the report all live here.
       SOC_COV_ROOT: /home/runner/soc_cov
-      PASS_FLOOR: '477'
+      PASS_FLOOR: '508'
 
     steps:
       - name: Checkout repository
