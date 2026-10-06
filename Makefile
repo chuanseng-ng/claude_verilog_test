@@ -17,6 +17,13 @@ PYTHON    ?= python3
 RTK       ?= rtk
 MCP_JSON  := $(REPO_ROOT)/.mcp.json
 SESSION_SERVER := $(REPO_ROOT)/tools/eda/mcp/session_server.py
+# Bead 78ld: hook wrappers live in the git COMMON dir so every worktree, and
+# every checkout of an older branch, still runs them.
+BEADS_GUARD_DIR = $(shell git -C $(REPO_ROOT) rev-parse --path-format=absolute --git-common-dir)/beads-guard/hooks
+BEADS_GUARD_FILES := $(wildcard $(REPO_ROOT)/tools/setup/githooks/*) \
+  $(REPO_ROOT)/tools/setup/beads_hook_wrapper.sh \
+  $(REPO_ROOT)/tools/setup/beads_checkout_guard.py \
+  $(REPO_ROOT)/tools/setup/check_beads_reopen.py
 
 .DEFAULT_GOAL := help
 .PHONY: help setup setup-rtk setup-mcp setup-beads verify-tooling mcp-status verify-librelane-lint
@@ -31,6 +38,7 @@ help:
 	@echo "  make verify-librelane-lint - Lint the CPU RTL with LibreLane's own Verilator (bead 2wo)"
 	@echo "  make setup-rtk      - Just the rtk half of setup"
 	@echo "  make setup-mcp      - Just the .mcp.json half of setup"
+	@echo "  make setup-beads    - Just the beads half: merge driver (b1o) + checkout guard hooks (78ld)"
 	@echo ""
 	@echo "Design flows live elsewhere:"
 	@echo "  sim/Makefile        - cocotb suites, Verilator lint, Verible"
@@ -58,6 +66,19 @@ setup-beads:
 	@cd $(REPO_ROOT) && git config merge.beads-export.driver \
 	  "$(REPO_ROOT)/tools/setup/beads_merge_driver.sh %A"
 	@echo "  ok: merge.beads-export -> tools/setup/beads_merge_driver.sh"
+	@echo "==> installing the beads checkout guard as core.hooksPath (bead 78ld)"
+	@# beads' post-checkout/post-merge hooks `bd import` the checked-out
+	@# issues.jsonl, letting an OLDER file overwrite the DB (closed beads reopen,
+	@# post-commit notes vanish). The wrappers delegate every hook to
+	@# .beads/hooks/<name> unchanged and guard those two. They are COPIED into
+	@# the git common dir, not referenced in the tree: a tree-relative hooksPath
+	@# disappears silently on checking out any branch that predates them,
+	@# disabling beads' pre-commit export too. Re-run after editing them;
+	@# verify-tooling fails if the installed copies are stale.
+	@cd $(REPO_ROOT) && dest="$(BEADS_GUARD_DIR)" && mkdir -p "$$dest" && \
+	  cp $(BEADS_GUARD_FILES) "$$dest/" && chmod +x "$$dest"/* && \
+	  git config core.hooksPath "$$dest" && \
+	  echo "  ok: core.hooksPath -> $$dest"
 
 setup-rtk:
 	@echo "==> registering .rtk/filters.toml with rtk"
@@ -104,6 +125,17 @@ verify-tooling:
 	  test -x $(REPO_ROOT)/tools/setup/beads_merge_driver.sh || { \
 	    echo "  driver script missing or not executable"; exit 1; }; \
 	  echo "  ok: $$d"
+	@echo "==> beads checkout guard is installed and current (bead 78ld)"
+	@cd $(REPO_ROOT) && dest="$(BEADS_GUARD_DIR)"; \
+	  hp=$$(git config --get core.hooksPath || true); \
+	  if [ "$$hp" != "$$dest" ]; then \
+	    echo "  core.hooksPath=$$hp, expected $$dest — run: make setup-beads"; exit 1; \
+	  fi; \
+	  for f in $(BEADS_GUARD_FILES); do \
+	    cmp -s "$$f" "$$dest/$$(basename "$$f")" || { \
+	      echo "  missing or stale: $$dest/$$(basename "$$f") — run: make setup-beads"; exit 1; }; \
+	  done; \
+	  echo "  ok: core.hooksPath=$$dest, copies match tools/setup"
 	@echo "==> no hooks stranded outside core.hooksPath (bead o4y)"
 	@cd $(REPO_ROOT) && hp=$$(git config --get core.hooksPath || true); \
 	  if [ -n "$$hp" ]; then \
@@ -112,7 +144,7 @@ verify-tooling:
 	      echo "  core.hooksPath=$$hp, so git IGNORES .git/hooks entirely,"; \
 	      echo "  but these non-sample hooks are installed there and will never run:"; \
 	      for h in $$stranded; do echo "    .git/hooks/$$h"; done; \
-	      echo "  Chain them into $$hp/<name> OUTSIDE the beads markers, or delete them."; \
+	      echo "  Chain them into .beads/hooks/<name> OUTSIDE the beads markers, or delete them."; \
 	      exit 1; \
 	    fi; \
 	    echo "  ok: core.hooksPath=$$hp, nothing stranded in .git/hooks"; \
