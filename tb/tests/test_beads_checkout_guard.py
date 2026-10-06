@@ -106,11 +106,29 @@ def test_bead_missing_after_is_not_restored() -> None:
     assert not guard.find_regressions({"a": _row("a")}, {})
 
 
-def test_marked_reopen_is_accepted() -> None:
-    """Marked reopen is accepted."""
+def test_reopen_marker_never_exempts_a_regression() -> None:
+    """Regression 2026-10-06 (78ld itself): the guard must ignore the CI marker.
+
+    78ld's notes described the escape hatch ("escape hatch 'beads-reopen-ok' in
+    notes/comments"). The old guard exempted any row whose notes contained the
+    marker, so a post-checkout import silently moved 78ld closed -> in_progress
+    (Dolt commit 22:10:21, inside the guard's window) and the guard stayed
+    quiet. A file-driven reopen is never deliberate in a single-DB setup; the
+    escape hatch for the guard is BEADS_CHECKOUT_GUARD=off.
+    """
+    notes = "FIX: CI gate, escape hatch 'beads-reopen-ok' in notes/comments."
+    before = {"a": _row("a", "closed", updated_at=T1, notes=notes)}
+    after = {"a": _row("a", "in_progress", updated_at=T0, notes=notes)}
+    (reg,) = guard.find_regressions(before, after)
+    assert any("closed -> in_progress" in r for r in reg.reasons)
+
+
+def test_even_a_line_anchored_marker_does_not_exempt_the_guard() -> None:
+    """Marker semantics belong to the CI gate only."""
     before = {"a": _row("a", "closed", updated_at=T0)}
     after = {"a": _row("a", "open", updated_at=T1, notes="beads-reopen-ok: reverted")}
-    assert not guard.find_regressions(before, after)
+    (reg,) = guard.find_regressions(before, after)
+    assert any("closed -> open" in r for r in reg.reasons)
 
 
 def test_regressions_sorted_and_carry_title() -> None:

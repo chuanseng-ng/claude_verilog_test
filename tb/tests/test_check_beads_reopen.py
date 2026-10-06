@@ -75,20 +75,45 @@ def test_parse_jsonl_ignores_non_issue_records() -> None:
 # ---------------------------------------------------------------- marker
 
 
-def test_marker_in_notes_is_honoured_case_insensitively() -> None:
-    """Marker in notes is honoured case insensitively."""
-    assert cbr.has_reopen_marker(_row("a", "open", notes="x\nBEADS-REOPEN-OK: regressed"))
+def test_marker_line_in_notes_is_counted_case_insensitively() -> None:
+    """A line starting `beads-reopen-ok:` counts, in any case."""
+    assert cbr.count_reopen_markers(_row("a", "open", notes="x\nBEADS-REOPEN-OK: regressed")) == 1
 
 
-def test_marker_in_a_comment_is_honoured() -> None:
-    """Marker in a comment is honoured."""
-    row = _row("a", "open", comments=[{"text": "beads-reopen-ok because fix reverted"}])
-    assert cbr.has_reopen_marker(row)
+def test_marker_line_in_a_comment_is_counted() -> None:
+    """A comment starting with the marker counts."""
+    row = _row("a", "open", comments=[{"text": "beads-reopen-ok: fix reverted"}])
+    assert cbr.count_reopen_markers(row) == 1
+
+
+def test_marker_mentioned_in_prose_is_not_counted() -> None:
+    """Regression 2026-10-06: 78ld's own notes DESCRIBED the escape hatch.
+
+    "escape hatch 'beads-reopen-ok' in notes/comments" sat mid-line in the
+    bead's notes, matched the old substring test, and exempted the bead from
+    the guard -- so a checkout silently reopened it.
+    """
+    row = _row("a", "open", notes="CI gate; escape hatch 'beads-reopen-ok' in notes/comments.")
+    assert cbr.count_reopen_markers(row) == 0
 
 
 def test_no_marker() -> None:
     """No marker."""
-    assert not cbr.has_reopen_marker(_row("a", "open", notes="reopen it please"))
+    assert cbr.count_reopen_markers(_row("a", "open", notes="reopen it please")) == 0
+
+
+def test_marker_already_on_base_is_not_new() -> None:
+    """An old marker line carried over from the base does not license a new reopen."""
+    base = _row("a", "closed", notes="beads-reopen-ok: an older reopen")
+    head = _row("a", "open", notes="beads-reopen-ok: an older reopen")
+    assert not cbr.has_new_reopen_marker(base, head)
+
+
+def test_marker_added_on_head_is_new() -> None:
+    """A marker line the head added on top of the base's notes is new."""
+    base = _row("a", "closed", notes="history")
+    head = _row("a", "open", notes="history\nbeads-reopen-ok: fix reverted in #300")
+    assert cbr.has_new_reopen_marker(base, head)
 
 
 # ---------------------------------------------------------------- core rule
@@ -135,6 +160,16 @@ def test_marked_reopen_is_allowed_not_flagged() -> None:
     bad, allowed = cbr.find_reopened(base, head)
     assert not bad
     assert [r.bead_id for r in allowed] == ["a"]
+
+
+def test_reopen_of_bead_whose_notes_mention_the_marker_is_flagged() -> None:
+    """The 78ld shape: notes discuss the marker, the reopen is accidental."""
+    notes = "escape hatch 'beads-reopen-ok' in notes/comments"
+    base = {"a": _row("a", "closed", notes=notes)}
+    head = {"a": _row("a", "in_progress", notes=notes)}
+    bad, allowed = cbr.find_reopened(base, head)
+    assert [r.bead_id for r in bad] == ["a"]
+    assert not allowed
 
 
 def test_row_untouched_since_merge_base_is_not_flagged() -> None:

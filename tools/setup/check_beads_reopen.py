@@ -26,9 +26,12 @@ non-closed status on the head, it reports a violation -- unless:
   * the head row is identical to the merge-base row: the PR never touched it,
     so a 3-way merge keeps main's closed row. (This is a branch cut before the
     closure; harmless, and flagging it would fire on most long-lived PRs.)
-  * the head row carries the reopen marker ``beads-reopen-ok`` (any case) in its
-    notes or in a comment. That is the escape hatch for a deliberate reopen,
-    e.g. ``bd update <id> --append-notes "beads-reopen-ok: fix reverted in #N"``.
+  * the head row ADDS a reopen-marker line -- a line of its notes or a comment
+    that starts with ``beads-reopen-ok:`` (any case) -- that the base row did
+    not already have. That is the escape hatch for a deliberate reopen, e.g.
+    ``bd update <id> --append-notes "beads-reopen-ok: fix reverted in #N"``.
+    Mentioning the marker mid-sentence does not count, and neither does an old
+    marker line inherited from main (both were loopholes; see 78ld, 2026-10-06).
 
 In CI the job checks out GitHub's PR merge commit, so ``--base-ref HEAD^1
 --head-ref HEAD`` compares "main after this PR" against "main now", and the
@@ -47,6 +50,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -54,6 +58,9 @@ from pathlib import Path
 
 CLOSED = "closed"
 REOPEN_MARKER = "beads-reopen-ok"
+_MARKER_LINE = re.compile(
+    rf"^[ \t]*{re.escape(REOPEN_MARKER)}[ \t]*:", re.IGNORECASE | re.MULTILINE
+)
 JSONL_PATH = ".beads/issues.jsonl"
 
 Row = dict[str, object]
@@ -96,13 +103,27 @@ def parse_jsonl(text: str, source: str) -> Rows:
     return rows
 
 
-def has_reopen_marker(row: Row) -> bool:
-    """True when the row's notes or any comment text carries REOPEN_MARKER."""
+def count_reopen_markers(row: Row) -> int:
+    """Number of marker LINES (``beads-reopen-ok:`` at line start) in notes + comments.
+
+    Line-anchored with a colon on purpose: a bead's notes may *discuss* the
+    escape hatch in prose (78ld's own notes did), and a substring test turned
+    that discussion into a standing exemption.
+    """
     texts = [str(row.get("notes") or "")]
     comments = row.get("comments")
     if isinstance(comments, list):
         texts.extend(str(c.get("text", "")) for c in comments if isinstance(c, dict))
-    return any(REOPEN_MARKER in t.lower() for t in texts)
+    return sum(len(_MARKER_LINE.findall(t)) for t in texts)
+
+
+def has_new_reopen_marker(base_row: Row, head_row: Row) -> bool:
+    """True when the head added a marker line the base did not already have.
+
+    A marker is a one-shot licence for the reopen it accompanies; an old one
+    carried over from main must not excuse a later, accidental reopen.
+    """
+    return count_reopen_markers(head_row) > count_reopen_markers(base_row)
 
 
 def find_reopened(
@@ -126,7 +147,8 @@ def find_reopened(
         if merge_base is not None and merge_base.get(bead_id) == head_row:
             continue
         hit = Reopen(bead_id, base_status, head_status, str(head_row.get("title", "")))
-        (allowed if has_reopen_marker(head_row) else violations).append(hit)
+        licensed = has_new_reopen_marker(base[bead_id], head_row)
+        (allowed if licensed else violations).append(hit)
     return violations, allowed
 
 
