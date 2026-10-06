@@ -1,0 +1,168 @@
+name: SoC Coverage
+
+# GH #216 (bead nkj7): line + toggle coverage for the whole SoC cocotb regression.
+#
+# Runs `make -C tb/cocotb/soc soc_coverage`, i.e. the entire soc_all_ci regression built with
+# Verilator --coverage-line --coverage-toggle, merges every per-simulation .dat, and renders a
+# per-module table with tools/verif/coverage_report.py.  Method, run command, per-module table,
+# triage and the gating decision: docs/verification/SOC_COVERAGE_REPORT.md.
+#
+# NOT a per-PR gate.  An instrumented -O0 build is far slower than cocotb.yml's soc job, so this
+# runs nightly and on demand.  The pull_request trigger is limited to the files that make up
+# this report, so a change to the script, the waivers or this workflow is validated by a real
+# run before it merges; it does not fire for RTL or testbench edits.
+#
+# Gating: the job fails if the REGRESSION fails (a red suite, a collapsed pass count) or if no
+# coverage data was produced.  It never fails on a coverage PERCENTAGE: the recorded decision is
+# "informational for now", to be revisited once the test-gap beads filed by the triage land.
+#
+# The Verilator pin is the same contract as cocotb.yml: nix-installed (flake-pinned) Verilator
+# compiles the sim, cocotb runs on the setup-python interpreter.  `nix profile install
+# .#verilator` puts verilator AND verilator_coverage on PATH, which is what the merge needs
+# (bead hg2's nix-Verilator-vs-coverage crash is side-stepped by the Makefile's
+# PYTHON3=$(SIM_PYTHON3) override; this job passes SIM_PYTHON3 exactly as cocotb.yml does).
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - '.github/workflows/soc_coverage.yml'
+      - 'tools/verif/coverage_report.py'
+      - 'tools/verif/coverage_waivers.txt'
+
+concurrency:
+  group: soc-coverage-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege: this job only reads the repo, and runs repository-controlled Makefile and
+# Python (same posture as cocotb.yml).
+permissions:
+  contents: read
+
+jobs:
+  soc_coverage:
+    name: SoC line + toggle coverage
+    runs-on: ubuntu-latest
+    # soc_all_ci is ~38 min uninstrumented on a small host; the instrumented build adds a
+    # coverage-point table per module plus per-simulation counting.  Generous headroom, but still
+    # fail rather than burn the 6 h default.
+    timeout-minutes: 300
+
+    env:
+      # Build dirs, per-simulation .dat files, merged.dat and the report all live here.
+      SOC_COV_ROOT: /home/runner/soc_cov
+      PASS_FLOOR: '477'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      # The instrumented build dirs are larger than the plain ones and the Makefile's
+      # check-space gate wants >= 6 GB free.  The hosted image ships several GB of toolchains
+      # this job never uses.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/share/boost
+          df -h /
+
+      - name: Install Nix (pinned Verilator from binary cache)
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Install pinned Verilator (nix profile, system-shell compile)
+        run: |
+          nix profile install .#verilator
+          verilator --version
+          # soc_coverage merges with verilator_coverage; fail here, not 2 hours in, if the
+          # profile did not put it on PATH.
+          command -v verilator_coverage
+          verilator_coverage --version
+
+      - name: Install runtime libs for cocotb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
+          pip list
+
+      # Cheap, runs first: the report script's own tests.  This is what the pull_request
+      # trigger is really validating before the long run starts.
+      - name: Unit-test the coverage report script
+        run: python3 -m pytest tb/tests/test_coverage_report.py -q
+
+      # pipefail so tee cannot mask make's exit status.  No `|| true`: a failing regression
+      # fails this job (the Makefile target also refuses to render a report from no data).
+      - name: Run soc_coverage
+        run: |
+          set -o pipefail
+          echo "SIM_PYTHON3=$(command -v python3) ($(python3 -V))"
+          make -C tb/cocotb/soc soc_coverage \
+            SIM_BUILD_ROOT="${SOC_COV_ROOT}" \
+            SIM_PYTHON3="$(command -v python3)" 2>&1 | tee soc_coverage.log
+
+      # Same log-grep floor as cocotb.yml, for the same reason (bead p6t8, dwp): a cocotb
+      # target can exit 0 over a red or missing suite, and an instrumented run that silently
+      # lost suites would report coverage of a smaller regression as if it were the whole one.
+      - name: Check the instrumented regression is the whole regression
+        run: |
+          if [ ! -s soc_coverage.log ]; then
+            echo "FAIL: no log produced - the regression did not run."
+            exit 1
+          fi
+          passed=$(grep -cE 'cocotb\.regression .* passed$' soc_coverage.log || true)
+          failed=$(grep -cE 'cocotb\.regression .* (failed|FAILED)$' soc_coverage.log || true)
+          echo "cocotb (instrumented): ${passed} passed, ${failed} failed (floor ${PASS_FLOOR})"
+          if [ "${failed}" -ne 0 ]; then
+            echo "FAIL: ${failed} test(s) reported failed."
+            grep -E 'cocotb\.regression .* (failed|FAILED)$' soc_coverage.log | head -40
+            exit 1
+          fi
+          if [ "${passed}" -lt "${PASS_FLOOR}" ]; then
+            echo "FAIL: only ${passed} tests passed, expected >= ${PASS_FLOOR}."
+            exit 1
+          fi
+          test -s "${SOC_COV_ROOT}/coverage/merged.dat" \
+            || { echo "FAIL: merged.dat is missing or empty - no coverage was produced."; exit 1; }
+          test -s "${SOC_COV_ROOT}/coverage/coverage_report.md" \
+            || { echo "FAIL: coverage_report.md is missing or empty."; exit 1; }
+
+      - name: Publish coverage table to the job summary
+        if: always()
+        run: |
+          report="${SOC_COV_ROOT}/coverage/coverage_report.md"
+          if [ -s "${report}" ]; then
+            cat "${report}" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "No coverage report was produced (see the run log)." >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Upload coverage data and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soc-coverage
+          path: |
+            ${{ env.SOC_COV_ROOT }}/coverage/merged.dat
+            ${{ env.SOC_COV_ROOT }}/coverage/coverage_report.md
+            ${{ env.SOC_COV_ROOT }}/coverage/coverage_report.json
+            soc_coverage.log
+          if-no-files-found: warn
+          retention-days: 30

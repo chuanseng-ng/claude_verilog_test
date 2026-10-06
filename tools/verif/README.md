@@ -83,3 +83,30 @@ nightly.
 | `pnr/asap7/template/config.json` | reports a gap in place — expected, see above |
 
 Run `python3 tools/verif/check_source_closure.py` to reproduce.
+
+## `coverage_report.py`
+
+Per-module **line + toggle** coverage table from a merged Verilator `coverage.dat`
+(GH #216, bead `nkj7`). Driven by `make -C tb/cocotb/soc soc_coverage`, which runs the whole
+`soc_all_ci` regression instrumented (`COVERAGE=1`), merges the per-simulation `.dat` files and
+calls this script; CI reproduces it nightly in `.github/workflows/soc_coverage.yml`.
+
+```bash
+nix develop --command make -C tb/cocotb/soc soc_coverage SIM_BUILD_ROOT=/nobackup/claude_sim_build/soc_cov
+# or, on an existing merged.dat:
+python3 tools/verif/coverage_report.py --dat merged.dat \
+    --waivers tools/verif/coverage_waivers.txt --out-md report.md --out-json report.json
+```
+
+- A point is the same point in every instance and testbench (the hierarchy is dropped) and is
+  hit if **any** instance hit it; `<module>__<params>` specialisations fold into the base module.
+- Line % = `v_line` + `v_branch`; toggle % = `v_toggle` (per bit, per direction). Never mixed.
+- Triaged trees `rtl/soc`, `rtl/periph`, `rtl/npu`; informational `rtl/cpu`, `rtl/mem`, `rtl/gpu`;
+  `tb/`, `sim/` and the behavioural SRAM models are excluded.
+- `coverage_waivers.txt` lists points unreachable **by design** (category `b` only; a
+  justification is mandatory; no pragma edits to RTL). Raw % stays visible beside the adjusted
+  %, and a waiver that matches nothing is flagged stale.
+- Exit 0 at any coverage level (the gate is informational, see
+  `docs/verification/SOC_COVERAGE_REPORT.md`); exit 2 on a missing/malformed/empty `.dat`, a bad
+  waiver file, or when nothing in the triaged trees was measured -- never a vacuous pass.
+- Tests: `python3 -m pytest tb/tests/test_coverage_report.py`.

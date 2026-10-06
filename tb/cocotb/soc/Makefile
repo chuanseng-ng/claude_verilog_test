@@ -26,6 +26,12 @@ ifeq ($(strip $(SIM_BUILD_ROOT)),)
   $(error SIM_BUILD_ROOT is empty -- refusing to build or clean at the filesystem root)
 endif
 
+# GH #216 / bead nkj7: where `make soc_coverage` collects per-simulation coverage .dat files, the
+# merged.dat and the report.  Absolute, because every sub-make and every simulator process runs
+# from this directory but a relative path would silently follow a future `-C`.
+COV_DIR ?= $(SIM_BUILD_ROOT)/coverage
+override COV_DIR := $(abspath $(COV_DIR))
+
 # Bead claude_verilog_test-f97: pre-flight free-space gate.  A full soc_all
 # rebuild writes ~5 GB of Verilator objects; running out mid-flight surfaces as
 # a post-PASS `results.xml was not written` error that reads like flaky infra.
@@ -503,6 +509,26 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += --timescale 1ns/1ps
 	COMPILE_ARGS += --public-flat-rw
 	COMPILE_ARGS += --no-timing
+# GH #216 / bead nkj7: opt-in line + toggle coverage.  `make soc_coverage` (below) runs the whole
+# soc_all_ci regression with COVERAGE=1; nothing here changes an ordinary (uninstrumented) run.
+#  * The flags go in COMPILE_ARGS, not EXTRA_ARGS: most targets pass EXTRA_ARGS= on the command
+#    line, which would override a makefile-level `+=`; none pass COMPILE_ARGS=.
+#  * COV_SFX is appended to EVERY SIM_BUILD (the generic one and the hardcoded per-variant ones),
+#    so an instrumented build can never reuse an uninstrumented Vtop (or vice versa) -- the same
+#    stale-Vtop false-pass class as PR #142.
+#  * Each simulation writes its own .dat through the runtime plusarg +verilator+coverage+file+,
+#    which cocotb 1.9.2's verilator.cpp honours when it calls VerilatedCov::write().  The name
+#    carries MODULE as well as SIM_BUILD because soc_integration_batch shares one SIM_BUILD
+#    across four MODULEs.
+#  * --coverage-max-width 256 keeps wide datapath arrays (the DMA's 8192-bit linebuf, SRAM model
+#    arrays) out of toggle coverage, where they would only add noise and memory.
+ifdef COVERAGE
+	COV_SFX := _cov
+	# Verilator will not create the directory itself; make a direct `make gpio COVERAGE=1` work too.
+	COV_MKDIR := $(shell mkdir -p $(COV_DIR))
+	COMPILE_ARGS += --coverage-line --coverage-toggle --coverage-max-width 256
+	override PLUSARGS += +verilator+coverage+file+$(COV_DIR)/$(notdir $(SIM_BUILD))__$(MODULE).dat
+endif
 	# Override PYTHON3: nix verilator hardcodes nix Python 3.11 but PYTHONHOME=/usr
 	# points to Python 3.10 stdlib — mismatch crashes verilator_includer.
 	#
@@ -547,7 +573,7 @@ ifeq ($(SIM),verilator)
 # while the suite still reported 11/11 PASS. That is a false pass, strictly
 # worse than the VPI crash this bead started from, and it is only invisible
 # because TOPLEVEL happens to match. (Caught in review of PR #142.)
-BUILD_ARGS += SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_$@$(if $(filter-out freepdk45,$(SRAM_TARGET)),_$(SRAM_TARGET))
+BUILD_ARGS += SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_$@$(if $(filter-out freepdk45,$(SRAM_TARGET)),_$(SRAM_TARGET))$(COV_SFX)
 ifneq ($(wildcard /nix/store),)
 	# Nix environment: nix ld.so cannot find system libs when cocotb dlopen's
 	# libpython3.10.so.1.0.  Create a compat dir with symlinks to system libs.
@@ -647,7 +673,7 @@ register_bank:
 		VERILOG_SOURCES="$(REGBANK_SOURCES)" \
 		EXTRA_ARGS="-GADDR_W=5" \
 		$(BUILD_ARGS) \
-		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_register_bank_aw5 \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_register_bank_aw5$(COV_SFX) \
 		sim
 
 axil_interconnect:
@@ -749,7 +775,7 @@ apb4_register_bank: apb4_register_bank_lint
 		VERILOG_SOURCES="$(APB4_REG_SOURCES)" \
 		EXTRA_ARGS="-GADDR_W=5" \
 		$(BUILD_ARGS) \
-		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_apb4_register_bank_aw5 \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_apb4_register_bank_aw5$(COV_SFX) \
 		sim
 
 # APB migration PR-1: axil_to_apb bridge lint + sim.
@@ -957,7 +983,7 @@ apb_interconnect: apb_interconnect_lint
 		$(MAKE) MODULE=test_apb_interconnect TOPLEVEL=tb_apb_interconnect \
 			VERILOG_SOURCES="$(APB_INTERCONNECT_SOURCES)" \
 			EXTRA_ARGS="-Wno-SYNCASYNCNET -GN_SLAVES=$$n" \
-			SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_apb_interconnect_n$$n \
+			SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_apb_interconnect_n$${n}$(COV_SFX) \
 			sim; \
 	done; \
 	echo "=== apb_interconnect overlap test: N_SLAVES=2 OVERLAP_TEST=1 ==="; \
@@ -965,7 +991,7 @@ apb_interconnect: apb_interconnect_lint
 	$(MAKE) MODULE=test_apb_interconnect TOPLEVEL=tb_apb_interconnect \
 		VERILOG_SOURCES="$(APB_INTERCONNECT_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET -GN_SLAVES=2 -GOVERLAP_TEST=1" \
-		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_apb_interconnect_overlap \
+		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_apb_interconnect_overlap$(COV_SFX) \
 		sim
 
 # GH #91: async_axi_fifo lint + sim.
@@ -1492,3 +1518,25 @@ check-space:
 	  exit 1; \
 	fi; \
 	echo "check-space: $${free_mb} MB free at $(SIM_BUILD_ROOT) (floor $(SIM_BUILD_MIN_FREE_MB) MB) -- OK"
+
+# GH #216 / bead nkj7: whole-SoC line + toggle coverage.  Runs the ENTIRE soc_all_ci regression
+# with COVERAGE=1 (instrumented Vtop in its own sim_build_*_cov dirs, one .dat per simulation in
+# $(COV_DIR)), merges them, and renders a per-module report.  Deliberately NOT a prerequisite of
+# soc_all_ci / soc_all: an instrumented -O0 build is much slower and is run nightly / on demand
+# (.github/workflows/soc_coverage.yml), never per PR.  Defined down here for the same reason as
+# check-space: a target above the cocotb include would become the default goal.
+#   make SIM_BUILD_ROOT=/nobackup/claude_sim_build/soc_cov soc_coverage
+# Outputs in $(COV_DIR): <build>__<module>.dat (per simulation), merged.dat,
+# coverage_report.md, coverage_report.json.  The target fails if the regression fails or if no
+# coverage data was produced (a vacuous "report" would otherwise look like a clean one).
+.PHONY: soc_coverage
+soc_coverage:
+	@mkdir -p $(COV_DIR)
+	rm -f $(COV_DIR)/*.dat $(COV_DIR)/coverage_report.md $(COV_DIR)/coverage_report.json
+	$(MAKE) soc_all_ci COVERAGE=1
+	@ls $(COV_DIR)/*.dat >/dev/null 2>&1 || { echo "ERROR: soc_coverage: no .dat written to $(COV_DIR) -- coverage was not collected" >&2; exit 1; }
+	verilator_coverage --write $(COV_DIR)/merged.dat $(COV_DIR)/*.dat
+	$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/coverage_report.py \
+		--dat $(COV_DIR)/merged.dat --root $(PROJ_ROOT) \
+		--waivers $(PROJ_ROOT)/tools/verif/coverage_waivers.txt \
+		--out-md $(COV_DIR)/coverage_report.md --out-json $(COV_DIR)/coverage_report.json
