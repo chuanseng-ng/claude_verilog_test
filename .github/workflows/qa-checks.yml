@@ -19,6 +19,21 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # 2, not the default 1: the beads reopen gate below needs HEAD^1.
+          fetch-depth: 2
+
+      # Bead 78ld. On a pull_request event HEAD is GitHub's PR merge commit and
+      # HEAD^1 is the base-branch tip, so this asks "would merging this PR move a
+      # bead closed on main back to open?". That happens when a checkout's
+      # `bd import` replayed an older .beads/issues.jsonl into the Dolt DB and the
+      # branch's commits then exported the reverted state. Rows the PR never
+      # touched are ignored (the merge keeps main's row). Escape hatch for a
+      # deliberate reopen: a note containing `beads-reopen-ok`. Stdlib only, so
+      # it runs before the dependency install.
+      - name: Beads reopen gate (no closed bead reopened by this PR)
+        if: github.event_name == 'pull_request' && matrix.python-version == '3.12'
+        run: python3 tools/setup/check_beads_reopen.py --base-ref HEAD^1 --head-ref HEAD
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
