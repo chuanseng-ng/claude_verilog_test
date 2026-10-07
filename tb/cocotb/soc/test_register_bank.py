@@ -26,10 +26,10 @@ REGBANK_ADDR_W environment variable that mirrors the Verilator `-GADDR_W=` overr
 import os
 
 import cocotb
+from axil_stall_bfm import StallMaster
+from bfm.axi4lite_master import AXI4LiteMaster
 from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, RisingEdge
-
-from bfm.axi4lite_master import AXI4LiteMaster
 
 CLK_PERIOD_NS = 2
 
@@ -317,3 +317,91 @@ async def test_partial_wmask_hw_keeps_unmasked_bits(dut):
         f"partial-WMASK collision: expected 0xDEADBE55 (SW owns [7:0]=0x55, "
         f"HW owns [31:8]=0xDEADBE), got {data:#010x}")
     dut._log.info("partial WMASK: SW [7:0] + HW [31:8] merged OK (reg7=%#010x)", data)
+
+
+# ---------------------------------------------------------------------------
+# Bead 8riq (GH #216 coverage gap): AW/W arrival order and response backpressure.
+# Uses the stall-capable master in axil_stall_bfm.py -- the shared AXI4LiteMaster keeps AW and W
+# together and bready/rready high, so it can never reach these paths.
+# ---------------------------------------------------------------------------
+async def _monitor(dut, samples):
+    """Record (awready, wready, bvalid, arready, rvalid) as sampled at every rising edge."""
+    while True:
+        await RisingEdge(dut.clk)
+        samples.append((int(dut.s_axil_awready.value), int(dut.s_axil_wready.value),
+                        int(dut.s_axil_bvalid.value), int(dut.s_axil_arready.value),
+                        int(dut.s_axil_rvalid.value)))
+
+
+def _longest_run(samples, pred):
+    best = cur = 0
+    for s in samples:
+        cur = cur + 1 if pred(s) else 0
+        best = max(best, cur)
+    return best
+
+
+@cocotb.test()
+async def test_w_before_aw_uses_latched_data(dut):
+    """W arrives six cycles before AW.  The bank must capture W once (wready drops), keep awready
+    up, raise no response before the AW lands, and then commit the LATCHED data and byte strobes
+    to the address that arrives late (the master drives garbage on the W bus afterwards)."""
+    await _setup(dut)
+    m = StallMaster(dut, "s_axil_", dut.clk)
+    t0 = await m.write(REG0 + 0x0C, 0xFFFF_FFFF)
+    assert t0.resp == RESP_OKAY
+    samples = []
+    mon = cocotb.start_soon(_monitor(dut, samples))
+    t = await m.write(REG0 + 0x0C, 0x1122_3344, strb=0b0101, aw_delay=6, w_delay=0)
+    mon.kill()
+    assert t.resp == RESP_OKAY
+    # While W is held and AW has not arrived: wready low, awready high, no bvalid.
+    window = _longest_run(samples, lambda s: s[1] == 0 and s[0] == 1 and s[2] == 0)
+    assert window >= 4, f"W-captured / AW-pending window only {window} edges ({samples[:14]})"
+    data = await m.read(REG0 + 0x0C)
+    # strobes 0b0101 keep bytes 1 and 3 of the old 0xFFFFFFFF, take bytes 0 and 2 of the new data.
+    assert data.data == 0xFF22_FF44, f"latched wdata/wstrb commit gave {data.data:#010x}"
+    assert data.resp == RESP_OKAY
+
+
+@cocotb.test()
+async def test_aw_before_w_uses_latched_address(dut):
+    """Mirror case: AW first, W six cycles later.  awready drops after the capture, no response
+    before W, and the write lands at the latched address (garbage on the bus afterwards)."""
+    await _setup(dut)
+    m = StallMaster(dut, "s_axil_", dut.clk)
+    samples = []
+    mon = cocotb.start_soon(_monitor(dut, samples))
+    t = await m.write(REG0 + 0x08, 0xA1B2_C3D4, aw_delay=0, w_delay=6)
+    mon.kill()
+    assert t.resp == RESP_OKAY
+    window = _longest_run(samples, lambda s: s[0] == 0 and s[1] == 1 and s[2] == 0)
+    assert window >= 4, f"AW-captured / W-pending window only {window} edges"
+    rd = await m.read(REG0 + 0x08)
+    assert rd.data == 0xA1B2_C3D4
+    other = await m.read(REG0 + 0x0C)
+    assert other.data == 0, f"write leaked into the neighbouring register: {other.data:#x}"
+
+
+@cocotb.test()
+async def test_response_backpressure_blocks_new_requests(dut):
+    """bready / rready held low: bvalid / rvalid and their payload stay stable, and the bank accepts
+    no new AW / W / AR until the response is taken (single outstanding per direction)."""
+    await _setup(dut)
+    m = StallMaster(dut, "s_axil_", dut.clk)
+    samples = []
+    mon = cocotb.start_soon(_monitor(dut, samples))
+    t = await m.write(REG0 + 4, 0x600D_F00D, b_stall=5)
+    assert t.resp == RESP_OKAY and t.resp_wait >= 5 and not t.resp_unstable, t.resp_unstable
+    held = [s for s in samples if s[2] == 1]
+    assert len(held) >= 5
+    assert all(s[0] == 0 and s[1] == 0 for s in held), \
+        "AW/W accepted while the B response was still pending"
+    samples.clear()
+    t = await m.read(REG0 + 4, r_stall=5)
+    mon.kill()
+    assert (t.resp, t.data) == (RESP_OKAY, 0x600D_F00D)
+    assert t.resp_wait >= 5 and not t.resp_unstable, t.resp_unstable
+    held = [s for s in samples if s[4] == 1]
+    assert len(held) >= 5
+    assert all(s[3] == 0 for s in held), "AR accepted while the R response was still pending"

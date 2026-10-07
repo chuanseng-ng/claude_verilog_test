@@ -21,10 +21,10 @@ Tests:
 """
 
 import cocotb
+from axil_stall_bfm import StallMaster
+from bfm.axi4lite_master import AXI4LiteMaster
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
-
-from bfm.axi4lite_master import AXI4LiteMaster
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -396,3 +396,66 @@ async def test_concurrent_ar_aw_w_write_priority(dut):
         f"GH #85 concurrent AR+AW+W: write priority correct, "
         f"AR deferred, rdata={rdata:#010x}  PASS"
     )
+
+
+# ---------------------------------------------------------------------------
+# Bead 8riq (GH #216 coverage gap): S_WRESP / S_RRESP held by a stalled master.
+# The shared AXI4LiteMaster keeps bready/rready high, so these states were never held.
+# ---------------------------------------------------------------------------
+async def _watch(dut, samples):
+    """Per-edge (awready, wready, arready, bvalid, rvalid, psel) as sampled at the edge."""
+    while True:
+        await RisingEdge(dut.clk)
+        samples.append((int(dut.s_axil_awready.value), int(dut.s_axil_wready.value),
+                        int(dut.s_axil_arready.value), int(dut.s_axil_bvalid.value),
+                        int(dut.s_axil_rvalid.value), int(dut.u_bridge.psel.value)))
+
+
+@cocotb.test()
+async def test_bresp_held_while_bready_low(dut):
+    """bready low for several cycles: bvalid and bresp stay stable, the APB side is already idle
+    (the transfer finished), and the bridge accepts no AW / W / AR until the response is taken.
+    Repeated with pslverr so a held SLVERR is also stable."""
+    await _setup(dut)
+    m = StallMaster(dut, "s_axil_", dut.clk)
+    for force, exp in ((0, RESP_OKAY), (1, RESP_SLVERR)):
+        dut.force_slverr.value = force
+        samples = []
+        mon = cocotb.start_soon(_watch(dut, samples))
+        t = await m.write(REG0, 0x600D_C0DE, b_stall=5)
+        mon.kill()
+        dut.force_slverr.value = 0
+        assert t.resp == exp, f"force_slverr={force}: bresp {t.resp}, expected {exp}"
+        assert t.resp_wait >= 5 and not t.resp_unstable, t.resp_unstable
+        held = [s for s in samples if s[3] == 1]
+        assert len(held) >= 5
+        assert all(s[0] == 0 and s[1] == 0 and s[2] == 0 for s in held), \
+            "bridge accepted a new request while the B response was pending"
+        assert all(s[5] == 0 for s in held), "APB psel still high while only waiting for bready"
+    data, rresp = await AXI4LiteMaster(dut, "s_axil_", dut.clk).read(REG0)
+    # (The TB's force_slverr overrides only pready/pslverr; the bank still sees both writes.)
+    assert (data, rresp) == (0x600D_C0DE, RESP_OKAY), f"final read {data:#x} resp {rresp}"
+
+
+@cocotb.test()
+async def test_rresp_held_while_rready_low(dut):
+    """rready low for several cycles: rvalid / rdata / rresp stay stable, no new request is
+    accepted, and the held data is the register's value."""
+    await _setup(dut)
+    m = StallMaster(dut, "s_axil_", dut.clk)
+    await m.write(REG1, 0x1357_2468)
+    for force, exp in ((0, RESP_OKAY), (1, RESP_SLVERR)):
+        dut.force_slverr.value = force
+        samples = []
+        mon = cocotb.start_soon(_watch(dut, samples))
+        t = await m.read(REG1, r_stall=5)
+        mon.kill()
+        dut.force_slverr.value = 0
+        assert t.resp == exp, f"force_slverr={force}: rresp {t.resp}, expected {exp}"
+        if not force:
+            assert t.data == 0x1357_2468, f"held rdata {t.data:#x}"
+        assert t.resp_wait >= 5 and not t.resp_unstable, t.resp_unstable
+        held = [s for s in samples if s[4] == 1]
+        assert len(held) >= 5
+        assert all(s[0] == 0 and s[1] == 0 and s[2] == 0 for s in held), \
+            "bridge accepted a new request while the R response was pending"

@@ -90,6 +90,16 @@ AXIL_SOURCES = \
 	$(RTL)/soc/axi_lite_interconnect.sv \
 	$(SOC_DIR)/tb_axi_lite_interconnect.sv
 
+# Bead claude_verilog_test-8riq: the real ring -> axil_to_apb -> apb_interconnect -> apb4_register_bank
+# chain with scripted AXI-Lite / APB slaves (stalls + error responses), see tb_axil_apb_fabric.sv.
+AXIL_APB_FABRIC_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/axi_lite_interconnect.sv \
+	$(RTL)/soc/axil_to_apb.sv \
+	$(RTL)/soc/apb_interconnect.sv \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(SOC_DIR)/tb_axil_apb_fabric.sv
+
 SRAM_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
 	$(RTL)/soc/soc_addr_map_pkg.sv \
@@ -662,7 +672,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
+.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
 crossbar:
 	$(MAKE) MODULE=test_crossbar,test_crossbar_errors TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -693,6 +703,18 @@ register_bank:
 axil_interconnect:
 	$(MAKE) MODULE=test_axil_interconnect TOPLEVEL=tb_axi_lite_interconnect \
 		VERILOG_SOURCES="$(AXIL_SOURCES)" \
+		$(BUILD_ARGS)
+
+# Bead 8riq: fabric chain with stalls / SLVERR / DECERR.  -Wno-SYNCASYNCNET kept for consistency
+# with the other SoC-level targets; the wrapper has no async paths of its own.
+axil_apb_fabric_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
+		--top-module tb_axil_apb_fabric $(AXIL_APB_FABRIC_SOURCES)
+
+axil_apb_fabric: axil_apb_fabric_lint
+	$(MAKE) MODULE=test_axil_apb_fabric TOPLEVEL=tb_axil_apb_fabric \
+		VERILOG_SOURCES="$(AXIL_APB_FABRIC_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
 verilator_lint:
@@ -1444,6 +1466,7 @@ soc_all_ci: check-space
 	$(MAKE) crossbar
 	$(MAKE) register_bank
 	$(MAKE) axil_interconnect
+	$(MAKE) axil_apb_fabric
 	$(MAKE) sram_controller
 	$(MAKE) sram_controller SRAM_TARGET=sky130
 	$(MAKE) axi4_to_axilite

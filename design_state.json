@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-10-03T04:13:51.683127+00:00",
+  "updated_at": "2026-10-06T17:09:41.030107+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -2166,6 +2166,18 @@
       "suggested_next_step": "proceed",
       "reason": "fix_request fr_609b42790e0f_20261003_015343_00 closed as fixed (not verified_fixed); signoff stays false: cdc_rdc_analysis/synth_check NOT RUN and rtl.unverified is non-empty. Next: verification-orchestrator re-validation (soc_all_ci run by the user).",
       "constraint_ref": "fr_609b42790e0f_20261003_015343_00"
+    },
+    {
+      "timestamp": "2026-10-06T17:09:41.030107+00:00",
+      "agent": "verification-orchestrator",
+      "stage": "directed_tests",
+      "decision": "escalate",
+      "confidence": "high",
+      "failure_class": "functional",
+      "retry_strategy": "refine",
+      "suggested_next_step": "escalate",
+      "reason": "bead 8riq directed tests found a DUT protocol bug (phantom second DECERR R beat in axi_lite_interconnect, traced); RTL not touched, regression guard pinned as expect_fail; the 8riq coverage tests themselves are green. RTL fix is owned by the RTL orchestrator via the pipeline-orchestrator; the user must route fix_request fr_null_20261006_170941_00.",
+      "constraint_ref": "fr_null_20261006_170941_00"
     }
   ],
   "fix_requests": [
@@ -2565,6 +2577,35 @@
           "note": "Four-phase bit engine + duty skew + bit-engine split; lint 0 errors/0 warnings per module, i2c 46/46 (expect_fail removed), soc_i2c 1/1, sv2v both modules present in both outputs. Awaiting verification-orchestrator re-validation (status left 'fixed', not 'verified_fixed')."
         }
       ]
+    },
+    {
+      "id": "fr_null_20261006_170941_00",
+      "created_at": "2026-10-06T17:09:41.030107+00:00",
+      "updated_at": "2026-10-06T17:09:41.030107+00:00",
+      "created_by": "verification-orchestrator",
+      "failure_class": "protocol",
+      "test_name": "test_axil_apb_fabric.test_ring_unmapped_read_single_beat",
+      "property_or_assertion": null,
+      "seed": 0,
+      "waveform_path": null,
+      "log_path": "/nobackup/claude_sim_build/8riq/fabric.log",
+      "suspected_rtl": {
+        "module": "axi_lite_interconnect",
+        "signal": "r_dvalid_d",
+        "file": "rtl/soc/axi_lite_interconnect.sv",
+        "line_range": [
+          291,
+          302
+        ],
+        "basis": "traced"
+      },
+      "summary": "axi_lite_interconnect returns the DECERR R beat twice for one unmapped read when rready is high; the phantom beat answers the master's next read (bead claude_verilog_test-3xtv)",
+      "expected_behavior": "AXI4-Lite: exactly one R response per AR; rtl/soc/axi_lite_interconnect.sv header: unmapped address -> the interconnect itself returns a DECERR response and completes the transfer",
+      "observed_behavior": "Per-cycle trace of u_ring with rready=1, one AR to 0x2000_0000: cyc3 rstate=R_DATA r_dvalid_d=1 q=1 rvalid=1 rresp=3 (beat 1); cyc4 rstate=R_IDLE q=1 rvalid=1 rresp=3 (beat 2, no AR outstanding). Cause: the R_DATA unmapped branch holds r_dvalid_d=1 until r_hs, one cycle after r_dvalid_q loaded, and r_dreg_ready=1 in that cycle reloads q. A following legal read then returns resp=3 data=0.",
+      "session_id": null,
+      "status": "open",
+      "rtl_response": null,
+      "history": []
     }
   ],
   "pd": {
