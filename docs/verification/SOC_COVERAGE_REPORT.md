@@ -69,7 +69,9 @@ full regression, and the reason is the memory map, not a missing test: the only 
 `axi_lite_interconnect`), so no ring access can ever reach an unclaimed APB offset in the integrated SoC, and every APB slave ties
 `pslverr` to 0. The same `apb_interconnect` -> `axil_to_apb` -> SLVERR path is covered in `axil_apb_fabric`,
 which instantiates the real modules with a hole in the APB window. Making `soc_bus.apb_m_pslverr` toggle would need either a map change
-or an unmapped-APB stimulus injected below the ring; that decision is left open.
+or an unmapped-APB stimulus injected below the ring; **Decided 2026-10-07 (user): waive, do not change the map** -- `apb_m_pslverr` is now waived in
+`soc_bus` with this map-based justification (W1 closed). Validated against PR #226's CI coverage data: the waiver matches,
+no waiver is stale, and `apb_m_pslverr` no longer appears as uncovered.
 
 Non-vacuity: the known gaps show up in the raw (pre-waiver) report: `timer_irq` never toggles, `i2c_scl_o` /
 `i2c_sda_o` never toggle, and the DMA early-RLAST branch is not in the uncovered list (covered since bead
@@ -224,7 +226,7 @@ was classified (the full per-module list is in `coverage_report.md` / `.json`):
 | (a) bead `pnfw` (existing) | I2C: slave-mode bit-counter arms L617/L645, SoC-level pad drive | notes appended |
 | (a) bead `2k8` (existing) | GPU-domain PMU path (`pmu_gpu_iso_en` etc.) | note appended |
 
-Waiver summary: 57 entries (22 line, 35 toggle), all category `b`, all with a justification
+Waiver summary: 58 entries (22 line, 36 toggle), all category `b`, all with a justification
 and a file:line reference. The report flags a waiver that matches no uncovered point as stale, and the unit
 tests pin that a waiver can only remove an uncovered point from the denominator (raw % stays visible).
 
