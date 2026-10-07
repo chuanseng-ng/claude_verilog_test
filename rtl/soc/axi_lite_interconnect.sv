@@ -298,7 +298,14 @@ module axi_lite_interconnect #(
                     r_dresp_d        = s_axil_rresp [rsel];
                     _s_rready[rsel]  = r_dreg_ready;
                 end else begin
-                    r_dvalid_d = 1'b1;
+                    // bead 3xtv: the DECERR response is one-shot.  rstate only
+                    // leaves R_DATA on r_hs, one cycle AFTER r_dvalid_q captured
+                    // the beat, so an unconditional 1 here reloaded r_dvalid_q in
+                    // the handshake cycle (r_dreg_ready=1) and emitted a phantom
+                    // second DECERR beat.  Offer the beat only while the output
+                    // register is empty; depends on the registered r_dvalid_q
+                    // only (no READY->VALID loop, no mapped-slave path change).
+                    r_dvalid_d = !r_dvalid_q;
                     r_ddata_d  = '0;
                     r_dresp_d  = AXI_RESP_DECERR;
                 end

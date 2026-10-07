@@ -23,6 +23,7 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 | [TEST_FIX_SUMMARY.md](#6-test-fix-summary) | 2026-01-25 | Test | LOW | ✅ Fixed |
 | [EBREAK_BUG_FIX.md](#7-ebreak-halt-detection-fix) | 2026-01-28 | Debug | MEDIUM | ✅ Fixed |
 | [PC_MISMATCH_FIX.md](#8-pc-mismatch-logging-fix) | 2026-01-28 | Test | LOW | ✅ Fixed |
+| [Section 9 (below)](#9-axi-lite-ring-phantom-decerr-r-beat-bead-3xtv) | 2026-10-07 | AXI-Lite Protocol | MEDIUM (P2) | ✅ Fixed |
 
 ---
 
@@ -227,6 +228,21 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 ### Validation
 - ✅ Clean logs with 0 false PC mismatch errors
 - ✅ Scoreboard still validates correctly
+
+---
+
+## 9. AXI-Lite Ring Phantom DECERR R Beat (bead 3xtv)
+
+**File**: `rtl/soc/axi_lite_interconnect.sv` (read engine, `R_DATA`, unmapped branch)
+**Date**: 2026-10-07
+**Severity**: P2 (error path only; legal accesses unaffected)
+**Fix request**: `fr_null_20261006_170941_00` (found by bead 8riq stall tests)
+
+### Issue Fixed
+- **Problem**: one read to an unmapped address (AXI-Lite ring window gap or above the APB limit) returned TWO DECERR R beats whenever `rready` was high. The unmapped branch drove `r_dvalid_d = 1` for as long as `rstate == R_DATA`, but the state only leaves `R_DATA` on `r_hs`, one cycle after `r_dvalid_q` captured the beat. In that handshake cycle `r_dreg_ready = 1`, so `r_dvalid_q` reloaded a second time.
+- **Impact**: a response with no outstanding request (protocol violation); the phantom beat was consumed as the reply to the master's NEXT read (resp=DECERR, data=0 instead of its data). Mapped reads and the unmapped write path were never affected.
+- **Fix**: `r_dvalid_d = !r_dvalid_q` in the unmapped branch, so the beat is offered only while the output register is empty. Depends on the registered `r_dvalid_q` only: no READY->VALID loop, no runtime-indexed mux, mapped-slave timing (bead rvb fan-out register) unchanged.
+- **Tests**: `test_axil_apb_fabric.test_ring_unmapped_read_single_beat` (was `expect_fail=True`) now passes; the `_drain_r` stray-beat workaround was removed from `test_ring_decerr_with_master_stalls`.
 
 ---
 

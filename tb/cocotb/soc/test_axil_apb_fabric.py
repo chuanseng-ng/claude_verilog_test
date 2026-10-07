@@ -68,21 +68,6 @@ async def _setup(dut):
     return m, ext, apb
 
 
-async def _drain_r(dut, cycles=3):
-    """Hold rready high for a few edges so a stray R beat is consumed.
-
-    Known RTL bug claude_verilog_test-3xtv: every unmapped read makes axi_lite_interconnect return a
-    second, phantom DECERR beat.  The tests that are about something ELSE (DECERR payload, stall
-    stability, no leak to slaves) drain it so the phantom cannot be mistaken for the next
-    transaction's response; the bug itself is pinned, unweakened, by
-    test_ring_unmapped_read_single_beat (expect_fail until the RTL is fixed).
-    """
-    dut.m_axil_rready.value = 1
-    for _ in range(cycles):
-        await RisingEdge(dut.clk)
-    dut.m_axil_rready.value = 0
-
-
 def _no_violations(*objs):
     for o in objs:
         assert not o.violations, f"{type(o).__name__} protocol violations: {o.violations}"
@@ -216,7 +201,6 @@ async def test_ring_decerr_with_master_stalls(dut):
         t = await m.read(bad, r_stall=4)
         assert (t.resp, t.data) == (DECERR, 0), f"read {bad:#x}: resp {t.resp} data {t.data:#x}"
         assert t.resp_wait >= 4 and not t.resp_unstable, t.resp_unstable
-        await _drain_r(dut)          # phantom second beat, bead 3xtv (see _drain_r)
     # AW and W arriving far apart at an unmapped address: engine absorbs both, then answers.
     t = await m.write(UNMAPPED_HIGH, 0x1, aw_delay=0, w_delay=7)
     assert t.resp == DECERR
@@ -366,16 +350,15 @@ async def test_ring_engines_independent(dut):
     _no_violations(ext)
 
 
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_ring_unmapped_read_single_beat(dut):
-    """REGRESSION GUARD for RTL bug claude_verilog_test-3xtv (expect_fail until the RTL is fixed).
+    """REGRESSION GUARD for fixed RTL bug claude_verilog_test-3xtv.
 
     One AR to an unmapped address with rready tied high must produce exactly ONE R beat (DECERR,
-    data 0), and the next legal read must return its own data.  Today axi_lite_interconnect returns
-    the DECERR beat twice (rvalid high on two consecutive cycles with no second request), and the
-    phantom beat answers the next read.  The assertions below are the spec; do NOT weaken them.
-    When the RTL is fixed this test will start passing, cocotb will report it as a failure
-    (unexpected pass): delete `expect_fail=True` then.
+    data 0), and the next legal read must return its own data.  Before the 3xtv fix
+    axi_lite_interconnect returned the DECERR beat twice (rvalid high on two consecutive cycles
+    with no second request), and the phantom beat answered the next read.  The assertions below
+    are the spec; do NOT weaken them.
     """
     m, ext, _ = await _setup(dut)
     ext.rdata_value = 0x5AFE_C0DE
