@@ -659,3 +659,394 @@ async def test_byte_lane_snoop(dut):
         f"[wstrb=0] rx_valid must be 0 after zero-strobe write: STATUS={status:#010x}"
     )
     dut._log.info("test_byte_lane_snoop wstrb=0 no-op PASS")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Bead 05wf — directed gap-closure tests (byte lanes 2/3, FIFO full, RX false
+# start, slow-baud os_tick gaps).  Everything below checks documented behaviour
+# (UART_STATUS flags, frame timing, FIFO order / drop-newest semantics), not just
+# that a line was reached.
+# ═════════════════════════════════════════════════════════════════════════════
+
+def _frame_levels(byte_val, bit_clocks, stop_bit=1, invert=()):
+    """Per-clock line levels of one 8N1 frame (START, D0..D7 LSB-first, STOP).
+
+    `invert` is a set of absolute clock indices (0 = first START clock) whose
+    level is flipped, used to inject 1-clock glitches at an exact position.
+    """
+    bits = [0] + [(byte_val >> i) & 1 for i in range(8)] + [stop_bit]
+    levels = []
+    for b in bits:
+        levels.extend([b] * bit_clocks)
+    return [(1 - v) if i in invert else v for i, v in enumerate(levels)]
+
+
+async def _drive_levels(dut, levels):
+    """Drive `levels` on uart_rx_i, one entry per clock."""
+    for v in levels:
+        dut.uart_rx_i.value = v
+        await RisingEdge(dut.clk)
+    dut.uart_rx_i.value = 1
+
+
+async def _capture_tx_frame(dut, bit_clocks, timeout):
+    """Wait for the START falling edge on uart_tx_o, then return the per-clock
+    line levels covering exactly one 10-bit frame (index 0 = first low clock)."""
+    prev = int(dut.uart_tx_o.value)
+    for _ in range(timeout):
+        await RisingEdge(dut.clk)
+        cur = int(dut.uart_tx_o.value)
+        if prev == 1 and cur == 0:
+            break
+        prev = cur
+    else:
+        raise AssertionError(f"uart_tx_o never fell within {timeout} clocks")
+    levels = [0]
+    for _ in range(10 * bit_clocks - 1):
+        await RisingEdge(dut.clk)
+        levels.append(int(dut.uart_tx_o.value))
+    return levels
+
+
+def _check_tx_frame(levels, byte_val, bit_clocks, tag):
+    """Every bit window must be exactly `bit_clocks` wide and hold the 8N1 value."""
+    expect = [0] + [(byte_val >> i) & 1 for i in range(8)] + [1]
+    for k, want in enumerate(expect):
+        win = levels[k * bit_clocks:(k + 1) * bit_clocks]
+        assert win == [want] * bit_clocks, (
+            f"[{tag}] bit window {k} (0=START, 9=STOP) expected {want} x{bit_clocks}, "
+            f"got {win}")
+
+
+async def _status(m):
+    s, _ = await m.read(REG_UART_STATUS)
+    return s
+
+
+# ── 05wf-1: byte lanes 2 and 3 of the UART_TX push (and lowest-lane priority) ─
+
+@cocotb.test()
+async def test_byte_lane_2_3_priority(dut):
+    """UART_TX push picks the byte from the LOWEST asserted pstrb lane.  Lanes 2
+    and 3 were never driven.  Each case carries four distinct decoy bytes so a
+    wrong lane is visible; checked end-to-end through loopback and, for the
+    lane-3 case, on the uart_tx_o pin itself (framing, LSB-first)."""
+    m = await _setup(dut)
+    await m.write(REG_UART_BAUD, BAUD_D0)
+    await m.write(REG_UART_CTRL, CTRL_TX_EN | CTRL_RX_EN | CTRL_LOOPBACK)
+
+    # (pstrb, [lane0, lane1, lane2, lane3]) -> expected = lowest set lane
+    cases = [
+        (0b0100, [0x11, 0x22, 0xB2, 0x44]),   # lane 2 only
+        (0b1000, [0x11, 0x22, 0x33, 0xC9]),   # lane 3 only
+        (0b1100, [0x55, 0x66, 0x3E, 0x99]),   # lanes 2+3 -> lane 2 wins
+        (0b1010, [0x77, 0xD4, 0x88, 0x1B]),   # lanes 1+3 -> lane 1 wins
+        (0b0110, [0xAA, 0x6D, 0x2F, 0xEE]),   # lanes 1+2 -> lane 1 wins
+        (0b0111, [0x81, 0x42, 0x24, 0x18]),   # lanes 0..2 -> lane 0 wins
+        (0b1111, [0x5C, 0xA3, 0x0F, 0xF0]),   # full word -> lane 0
+    ]
+    for strb, lanes in cases:
+        word = lanes[0] | (lanes[1] << 8) | (lanes[2] << 16) | (lanes[3] << 24)
+        want = lanes[(strb & -strb).bit_length() - 1]
+        assert await m.write(REG_UART_TX, word, strb=strb) == RESP_OKAY
+        await ClockCycles(dut.clk, WAIT_LOOPBACK_D0)
+        st = await _status(m)
+        assert st & STATUS_RX_VALID, f"[strb={strb:04b}] rx_valid=0: STATUS={st:#010x}"
+        data, _ = await m.read(REG_UART_RX)
+        assert data == want, (
+            f"[strb={strb:04b} wdata={word:#010x}] expected lane byte 0x{want:02X}, "
+            f"got {data:#010x}")
+        st = await _status(m)
+        assert st & STATUS_RX_EMPTY, f"[strb={strb:04b}] exactly one byte expected"
+
+    # Lane 3 again, now observed on the pin (loopback off, TX only).
+    await m.write(REG_UART_CTRL, CTRL_TX_EN)
+    mon = cocotb.start_soon(_capture_tx_frame(dut, 16, 100))
+    assert await m.write(REG_UART_TX, 0x6B << 24 | 0x00123456, strb=0b1000) == RESP_OKAY
+    _check_tx_frame(await mon, 0x6B, 16, "lane3-pin")
+    await ClockCycles(dut.clk, 40)
+    st = await _status(m)
+    assert st & STATUS_TX_EMPTY and not st & STATUS_TX_BUSY, f"STATUS={st:#010x}"
+
+
+# ── 05wf-2: byte-strobe writes to RW registers land in the right lanes ───────
+
+@cocotb.test()
+async def test_rw_reg_partial_strobe(dut):
+    """BAUD/CTRL partial-strobe writes merge into the right byte lane and leave
+    the other lanes alone; lanes outside WMASK (BAUD[31:16], CTRL[31:5]) never
+    store.  Also proves a strobe-0 write does not modify a register."""
+    m = await _setup(dut)
+
+    await m.write(REG_UART_BAUD, 0x0000_00AB)
+    await m.write(REG_UART_BAUD, 0x0000_CD00, strb=0b0010)      # lane 1 only
+    d, _ = await m.read(REG_UART_BAUD)
+    assert d == 0x0000_CDAB, f"BAUD lane-1 merge: {d:#010x}"
+    await m.write(REG_UART_BAUD, 0xEEFF_0000, strb=0b1100)      # lanes 2/3: masked
+    d, _ = await m.read(REG_UART_BAUD)
+    assert d == 0x0000_CDAB, f"BAUD lanes 2/3 must not store: {d:#010x}"
+    await m.write(REG_UART_BAUD, 0x0000_0000, strb=0b0000)      # no strobe: no-op
+    d, _ = await m.read(REG_UART_BAUD)
+    assert d == 0x0000_CDAB, f"BAUD strobe=0 must be a no-op: {d:#010x}"
+    await m.write(REG_UART_BAUD, 0x0000_0012, strb=0b0001)      # lane 0 only
+    d, _ = await m.read(REG_UART_BAUD)
+    assert d == 0x0000_CD12, f"BAUD lane-0 merge: {d:#010x}"
+
+    await m.write(REG_UART_CTRL, 0x1F)
+    await m.write(REG_UART_CTRL, 0xFFFF_FF00, strb=0b1110)      # lanes 1-3: outside WMASK
+    d, _ = await m.read(REG_UART_CTRL)
+    assert d == 0x1F, f"CTRL lanes 1-3 must not store, lane 0 untouched: {d:#010x}"
+    await m.write(REG_UART_CTRL, 0x0000_0005, strb=0b0001)
+    d, _ = await m.read(REG_UART_CTRL)
+    assert d == 0x05, f"CTRL lane-0 write: {d:#010x}"
+
+
+# ── 05wf-3: RX FIFO full, drop-newest, pointer wrap, IRQ ─────────────────────
+
+@cocotb.test()
+async def test_rx_fifo_full_drop_wrap(dut):
+    """Receive 5 raw frames without reading.  FIFO depth is 4: rx_full sets only
+    on the 4th byte, the 5th is dropped (oldest data preserved, no error flag),
+    the first read clears rx_full, a further frame is then accepted (pointer
+    wrap) and everything reads back in order.  irq_rx_valid follows rx_valid."""
+    m = await _setup(dut)
+    await m.write(REG_UART_BAUD, BAUD_D0)
+    await m.write(REG_UART_CTRL, CTRL_RX_EN | CTRL_IRQ_RX_VALID)
+    await ClockCycles(dut.clk, 20)
+    assert dut.irq_o.value == 0
+
+    async def rx_frame(b):
+        await _drive_rx_frame(dut, b, bit_clocks=16)
+        dut.uart_rx_i.value = 1
+        await ClockCycles(dut.clk, 24)
+
+    first4 = [0xFF, 0x00, 0xA5, 0x5A]
+    for i, b in enumerate(first4):
+        await rx_frame(b)
+        st = await _status(m)
+        assert st & STATUS_RX_VALID and not st & STATUS_RX_EMPTY, f"#{i}: {st:#010x}"
+        assert bool(st & STATUS_RX_FULL) == (i == 3), (
+            f"rx_full must be set only once 4 bytes are queued (#{i}): {st:#010x}")
+        assert not st & STATUS_FRAMING_ERROR
+    assert dut.irq_o.value == 1
+
+    await rx_frame(0x3C)                       # 5th: FIFO full -> dropped
+    st = await _status(m)
+    assert st & STATUS_RX_FULL and st & STATUS_RX_VALID, f"{st:#010x}"
+    assert not st & STATUS_FRAMING_ERROR, "overflow must not raise framing_error"
+
+    d, _ = await m.read(REG_UART_RX)           # pop #1
+    assert d == first4[0], f"oldest byte must survive the overflow: {d:#010x}"
+    await RisingEdge(dut.clk)
+    st = await _status(m)
+    assert not st & STATUS_RX_FULL and st & STATUS_RX_VALID, f"{st:#010x}"
+
+    await rx_frame(0x81)                       # accepted: space was freed, wptr wraps
+    st = await _status(m)
+    assert st & STATUS_RX_FULL, f"FIFO should be full again: {st:#010x}"
+
+    for want in first4[1:] + [0x81]:
+        d, _ = await m.read(REG_UART_RX)
+        assert d == want, f"FIFO order: expected 0x{want:02X}, got {d:#010x}"
+        await RisingEdge(dut.clk)
+    st = await _status(m)
+    assert st & STATUS_RX_EMPTY and not st & STATUS_RX_VALID, (
+        f"5th byte (0x3C) must not be queued: {st:#010x}")
+    assert dut.irq_o.value == 0
+
+
+# ── 05wf-4: TX FIFO full, drop-newest, gating by tx_en, IRQ semantics ────────
+
+@cocotb.test()
+async def test_tx_fifo_full_drop_drain(dut):
+    """With tx_en=0 nothing is transmitted: 4 pushes fill the FIFO (tx_full,
+    !tx_empty), the 5th is dropped.  Enabling TX then sends exactly the 4
+    accepted bytes, in order (checked via loopback), clears tx_full on the first
+    pop and finally raises the tx-empty IRQ."""
+    m = await _setup(dut)
+    await m.write(REG_UART_BAUD, BAUD_D0)
+    await m.write(REG_UART_CTRL, CTRL_RX_EN | CTRL_LOOPBACK | CTRL_IRQ_TX_EMPTY)
+
+    sent = [0xFF, 0x00, 0xA5, 0x5A]
+    for b in sent:
+        assert await m.write(REG_UART_TX, b) == RESP_OKAY
+    st = await _status(m)
+    assert st & STATUS_TX_FULL and not st & STATUS_TX_EMPTY, f"{st:#010x}"
+    assert not st & STATUS_TX_BUSY
+    await m.write(REG_UART_TX, 0x3C)           # 5th: dropped
+    assert dut.irq_o.value == 0, "tx-empty IRQ must stay low while bytes are queued"
+
+    await ClockCycles(dut.clk, 400)            # tx_en=0: no frame may start
+    st = await _status(m)
+    assert st & STATUS_TX_FULL and not st & STATUS_TX_BUSY and st & STATUS_RX_EMPTY, (
+        f"TX engine must be gated by tx_en: {st:#010x}")
+
+    await m.write(REG_UART_CTRL, CTRL_TX_EN | CTRL_RX_EN | CTRL_LOOPBACK | CTRL_IRQ_TX_EMPTY)
+    await ClockCycles(dut.clk, 40)
+    st = await _status(m)
+    assert st & STATUS_TX_BUSY, f"engine should be mid-frame: {st:#010x}"
+    assert not st & STATUS_TX_FULL, f"first pop must clear tx_full: {st:#010x}"
+
+    await ClockCycles(dut.clk, 4 * WAIT_LOOPBACK_D0)
+    st = await _status(m)
+    assert st & STATUS_TX_EMPTY and not st & STATUS_TX_BUSY, f"{st:#010x}"
+    assert st & STATUS_RX_FULL, f"exactly 4 bytes should have looped back: {st:#010x}"
+    assert dut.irq_o.value == 1, "tx-empty IRQ after drain"
+    for want in sent:
+        d, _ = await m.read(REG_UART_RX)
+        assert d == want, f"TX order / drop: expected 0x{want:02X}, got {d:#010x}"
+        await RisingEdge(dut.clk)
+    st = await _status(m)
+    assert st & STATUS_RX_EMPTY, f"a 5th byte was transmitted: {st:#010x}"
+
+
+# ── 05wf-5: RX false-start rejection ─────────────────────────────────────────
+
+@cocotb.test()
+async def test_rx_false_start_rejected(dut):
+    """A START whose mid-bit samples (phases 7/8/9) are majority HIGH is a noise
+    glitch: the receiver must return to idle without queuing a byte or raising
+    framing_error, then receive the next genuine frame correctly.  A START with
+    ONE high glitch inside the vote window must still be accepted (2-of-3)."""
+    m = await _setup(dut)
+    await m.write(REG_UART_BAUD, BAUD_D0)
+    await m.write(REG_UART_CTRL, CTRL_RX_EN | CTRL_IRQ_RX_VALID)
+    await ClockCycles(dut.clk, 20)
+
+    for width in (1, 2, 4):                    # low pulses of N clocks, then idle
+        dut.uart_rx_i.value = 0
+        for _ in range(width):
+            await RisingEdge(dut.clk)
+        dut.uart_rx_i.value = 1
+        await ClockCycles(dut.clk, 48)         # > one bit period of RX_START
+        st = await _status(m)
+        assert st & STATUS_RX_EMPTY and not st & STATUS_FRAMING_ERROR, (
+            f"glitch width {width}: false start must be rejected: STATUS={st:#010x}")
+        assert dut.irq_o.value == 0
+
+    # Receiver recovered: a real frame is still received.
+    await _drive_levels(dut, _frame_levels(0xC6, 16))
+    await ClockCycles(dut.clk, 24)
+    d, _ = await m.read(REG_UART_RX)
+    assert d == 0xC6, f"post-glitch frame: {d:#010x}"
+    st = await _status(m)
+    assert not st & STATUS_FRAMING_ERROR and st & STATUS_RX_EMPTY
+
+    # 2-of-3 vote: a single-clock high glitch anywhere in the START bit, after
+    # detection, hits at most one of the three consecutive vote samples at D=0.
+    for pos in range(3, 16):
+        byte_val = (0x35 + 37 * pos) & 0xFF
+        await _drive_levels(dut, _frame_levels(byte_val, 16, invert={pos}))
+        await ClockCycles(dut.clk, 24)
+        d, _ = await m.read(REG_UART_RX)
+        assert d == byte_val, f"START glitch@{pos}: expected 0x{byte_val:02X}, got {d:#010x}"
+        st = await _status(m)
+        assert not st & STATUS_FRAMING_ERROR and st & STATUS_RX_EMPTY, (
+            f"START glitch@{pos}: {st:#010x}")
+
+
+# ── 05wf-6: stop-bit glitch tolerance ────────────────────────────────────────
+
+@cocotb.test()
+async def test_stop_bit_glitch_no_framing_error(dut):
+    """A single-clock low glitch in the STOP bit vote window is outvoted (2-of-3)
+    and must not set framing_error; the byte is still delivered intact."""
+    m = await _setup(dut)
+    await m.write(REG_UART_BAUD, BAUD_D0)
+    await m.write(REG_UART_CTRL, CTRL_RX_EN)
+    await ClockCycles(dut.clk, 20)
+    for pos in range(5, 13):
+        stop_clk = 9 * 16 + pos
+        byte_val = (0x4D + 29 * pos) & 0xFF
+        await _drive_levels(dut, _frame_levels(byte_val, 16, invert={stop_clk}))
+        await ClockCycles(dut.clk, 24)
+        st = await _status(m)
+        assert not st & STATUS_FRAMING_ERROR, f"STOP glitch@{pos}: {st:#010x}"
+        d, _ = await m.read(REG_UART_RX)
+        assert d == byte_val, f"STOP glitch@{pos}: expected 0x{byte_val:02X}, got {d:#010x}"
+
+
+# ── 05wf-7: slow baud — os_tick low in RX_START / RX_DATA / RX_STOP ──────────
+
+@cocotb.test()
+async def test_slow_baud_tx_timing(dut):
+    """BAUD=D => 1 bit = 16*(D+1) clocks.  Capture the TX pin and require every
+    bit window to be exactly that wide for D = 1, 3, 4."""
+    m = await _setup(dut)
+    await m.write(REG_UART_CTRL, CTRL_TX_EN)
+    for d_val, byte_val in ((1, 0xA5), (3, 0xD3), (4, 0x01)):
+        bc = 16 * (d_val + 1)
+        await m.write(REG_UART_BAUD, d_val)
+        await ClockCycles(dut.clk, 2 * bc)     # let a stale phase wrap before the push
+        mon = cocotb.start_soon(_capture_tx_frame(dut, bc, 4 * bc))
+        assert await m.write(REG_UART_TX, byte_val) == RESP_OKAY
+        _check_tx_frame(await mon, byte_val, bc, f"D={d_val}")
+        await ClockCycles(dut.clk, 3 * bc)
+        st = await _status(m)
+        assert st & STATUS_TX_EMPTY and not st & STATUS_TX_BUSY, f"D={d_val}: {st:#010x}"
+
+
+@cocotb.test()
+async def test_slow_baud_rx_raw_and_framing(dut):
+    """Raw-pin RX at D=1 and D=3 (os_tick only every 2 / 4 clocks): data, STOP
+    framing error + read-to-clear, a false START (>=1 os_tick long), and
+    1-clock glitches swept across one os_tick period of a data bit and the STOP
+    bit -- a 1-clock glitch can hit at most one of the 3 spaced vote samples."""
+    m = await _setup(dut)
+    await m.write(REG_UART_CTRL, CTRL_RX_EN)
+    for d_val in (1, 3):
+        bc = 16 * (d_val + 1)
+        await m.write(REG_UART_BAUD, d_val)
+        await ClockCycles(dut.clk, 2 * bc)
+
+        async def rx(levels):
+            await _drive_levels(dut, levels)
+            await ClockCycles(dut.clk, 2 * bc)
+
+        await rx(_frame_levels(0x96, bc))
+        d, _ = await m.read(REG_UART_RX)
+        assert d == 0x96, f"D={d_val}: {d:#010x}"
+        assert not (await _status(m)) & STATUS_FRAMING_ERROR
+
+        await rx(_frame_levels(0x69, bc, stop_bit=0))
+        st = await _status(m)
+        assert st & STATUS_FRAMING_ERROR and st & STATUS_RX_VALID, f"D={d_val}: {st:#010x}"
+        d, _ = await m.read(REG_UART_RX)
+        assert d == 0x69
+        assert not (await _status(m)) & STATUS_FRAMING_ERROR, "read-to-clear"
+
+        # False START: low long enough to span an os_tick, then high.
+        dut.uart_rx_i.value = 0
+        await ClockCycles(dut.clk, d_val + 2)
+        dut.uart_rx_i.value = 1
+        await ClockCycles(dut.clk, 2 * bc)
+        st = await _status(m)
+        assert st & STATUS_RX_EMPTY and not st & STATUS_FRAMING_ERROR, (
+            f"D={d_val}: false start accepted: {st:#010x}")
+
+        for off in range(d_val + 1):           # one full os_tick period of offsets
+            data_clk = (1 + 2) * bc + bc // 2 + off      # mid of data bit 2
+            stop_clk = 9 * bc + bc // 2 + off
+            byte_val = (0xB1 + 53 * off + d_val) & 0xFF
+            await rx(_frame_levels(byte_val, bc, invert={data_clk, stop_clk}))
+            st = await _status(m)
+            assert not st & STATUS_FRAMING_ERROR, f"D={d_val} off={off}: {st:#010x}"
+            d, _ = await m.read(REG_UART_RX)
+            assert d == byte_val, (
+                f"D={d_val} off={off}: expected 0x{byte_val:02X}, got {d:#010x}")
+
+
+@cocotb.test()
+async def test_slow_baud_loopback(dut):
+    """Full TX->RX loopback at D=3 (64 clocks/bit): the shared os_tick generator
+    keeps both engines aligned when os_tick is NOT high every clock."""
+    m = await _setup(dut)
+    await m.write(REG_UART_BAUD, 3)
+    await m.write(REG_UART_CTRL, CTRL_TX_EN | CTRL_RX_EN | CTRL_LOOPBACK)
+    for byte_val in (0xE1, 0x1E):
+        await m.write(REG_UART_TX, byte_val)
+        await ClockCycles(dut.clk, 14 * 64)
+        d, _ = await m.read(REG_UART_RX)
+        assert d == byte_val, f"expected 0x{byte_val:02X}, got {d:#010x}"
+        st = await _status(m)
+        assert st & STATUS_RX_EMPTY and not st & STATUS_FRAMING_ERROR, f"{st:#010x}"
