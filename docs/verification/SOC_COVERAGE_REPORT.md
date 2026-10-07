@@ -69,7 +69,9 @@ full regression, and the reason is the memory map, not a missing test: the only 
 `axi_lite_interconnect`), so no ring access can ever reach an unclaimed APB offset in the integrated SoC, and every APB slave ties
 `pslverr` to 0. The same `apb_interconnect` -> `axil_to_apb` -> SLVERR path is covered in `axil_apb_fabric`,
 which instantiates the real modules with a hole in the APB window. Making `soc_bus.apb_m_pslverr` toggle would need either a map change
-or an unmapped-APB stimulus injected below the ring; that decision is left open.
+or an unmapped-APB stimulus injected below the ring; **Decided 2026-10-07 (user): waive, do not change the map** -- `apb_m_pslverr` is now waived in
+`soc_bus` with this map-based justification (W1 closed). Validated against PR #226's CI coverage data: the waiver matches,
+no waiver is stale, and `apb_m_pslverr` no longer appears as uncovered.
 
 Non-vacuity: the known gaps show up in the raw (pre-waiver) report: `timer_irq` never toggles, `i2c_scl_o` /
 `i2c_sda_o` never toggle, and the DMA early-RLAST branch is not in the uncovered list (covered since bead
@@ -77,11 +79,16 @@ Non-vacuity: the known gaps show up in the raw (pre-waiver) report: `timer_irq` 
 
 ## Results
 
-### Triaged trees (after 54 waivers: 42 line and 878 toggle points removed from the denominator)
+Basis (re-rendered 2026-10-08 for GH #222, bead `kp61`): the `soc-coverage` artifact of CI run
+37539378647 (PR #226, `test/axil-apb-coverage-8riq`, merged `merged.dat`) **plus** the instrumented
+`axil_interconnect` suite run locally with the new AxPROT test (its `.dat` appended with the path prefix
+rewritten to the runner root; points are identified by module/file/line/column/object so the union is exact).
+The report script is the T1-fixed one and the waiver file is the final #222 one; the PR's own `soc_coverage` run
+supersedes these numbers. An earlier revision of this section held the first (pre-`ej6j`/`8riq`) run's tables.
 
-Totals: line **97.0 %** (1624/1675), toggle **62.7 %**
-(37456/59728), 6 of 42 modules below the
-95 % line floor. Before waivers the line total was 94.6 % (1624/1717) and 10 modules were below the floor.
+### Triaged trees (after 57 waivers: 47 line and 812 toggle points removed from the denominator)
+
+Totals: line **98.7 %** (1649/1670), toggle **65.0 %** (38891/59794), 3 of 42 modules below the 95 % line floor (dma_engine, uart_controller, soc_top). Before waivers the line total was 96.0 % (1649/1717).
 
 | Module | Tree | Line % | Line hit/total | Toggle % | Toggle hit/total | Waived (line/toggle) |
 | :----- | :--- | -----: | -------------: | -------: | ---------------: | -------------------: |
@@ -106,16 +113,16 @@ Totals: line **97.0 %** (1624/1675), toggle **62.7 %**
 | apb4_register_bank | rtl/soc | 100.0 | 23/23 | 75.7 | 1419/1874 | 0/2 |
 | apb_cdc_bridge | rtl/soc | 100.0 | 47/47 | 98.7 | 705/714 | 2/2 |
 | apb_interconnect | rtl/soc | 100.0 | 10/10 | 76.5 | 1578/2064 | 0/0 |
-| async_axi_fifo | rtl/soc | - | 0/0 | 72.1 | 987/1368 | 0/2 |
-| axi4_crossbar | rtl/soc | 96.0 | 119/124 | 43.2 | 1836/4252 | 6/0 |
-| axi4_to_axilite | rtl/soc | 82.2 | 37/45 | 61.0 | 616/1010 | 2/12 |
-| axi_lite_interconnect | rtl/soc | 100.0 | 60/60 | 69.3 | 1020/1472 | 2/48 |
-| axi_lite_register_bank | rtl/soc | 100.0 | 45/45 | 61.5 | 1212/1970 | 2/20 |
+| async_axi_fifo | rtl/soc | - | 0/0 | 81.5 | 1115/1368 | 0/2 |
+| axi4_crossbar | rtl/soc | 100.0 | 124/124 | 57.7 | 2453/4252 | 6/0 |
+| axi4_to_axilite | rtl/soc | 100.0 | 42/42 | 80.4 | 812/1010 | 5/12 |
+| axi_lite_interconnect | rtl/soc | 100.0 | 60/60 | 71.2 | 1083/1520 | 2/0 |
+| axi_lite_register_bank | rtl/soc | 100.0 | 45/45 | 61.8 | 1224/1982 | 2/8 |
 | axil_to_apb | rtl/soc | 100.0 | 43/43 | 90.7 | 660/728 | 1/12 |
-| axilite_to_axi4 | rtl/soc | 60.0 | 6/10 | 41.0 | 150/366 | 0/226 |
-| boot_rom | rtl/soc | 62.1 | 18/29 | 27.8 | 146/526 | 2/0 |
+| axilite_to_axi4 | rtl/soc | 100.0 | 10/10 | 66.8 | 250/374 | 0/218 |
+| boot_rom | rtl/soc | 100.0 | 29/29 | 79.9 | 417/522 | 2/4 |
 | cdc_2ff_sync | rtl/soc | 100.0 | 5/5 | 100.0 | 44/44 | 0/0 |
-| cdc_gray_fifo | rtl/soc | 100.0 | 15/15 | 65.4 | 421/644 | 0/0 |
+| cdc_gray_fifo | rtl/soc | 100.0 | 15/15 | 67.9 | 437/644 | 0/0 |
 | cdc_reset_sync | rtl/soc | 100.0 | 8/8 | 100.0 | 16/16 | 0/0 |
 | pll_apb_regs | rtl/soc | - | 0/0 | 19.7 | 114/578 | 0/2 |
 | pll_clkgen | rtl/soc | - | 0/0 | 40.0 | 8/20 | 0/0 |
@@ -123,11 +130,11 @@ Totals: line **97.0 %** (1624/1675), toggle **62.7 %**
 | pll_subsystem | rtl/soc | - | 0/0 | 15.3 | 30/196 | 0/2 |
 | pmu | rtl/soc | 100.0 | 31/31 | 36.6 | 231/632 | 3/2 |
 | soc_addr_map_pkg | rtl/soc | - | 0/0 | - | 0/0 | 4/0 |
-| soc_bus | rtl/soc | - | 0/0 | 44.5 | 2439/5482 | 0/100 |
+| soc_bus | rtl/soc | - | 0/0 | 44.5 | 2439/5480 | 0/102 |
 | soc_periph_map_pkg | rtl/soc | - | 0/0 | - | 0/0 | 4/0 |
-| soc_top | rtl/soc | 75.9 | 22/29 | 37.4 | 1828/4886 | 0/314 |
-| sram_controller | rtl/soc | 97.9 | 92/94 | 74.1 | 1137/1534 | 3/64 |
-| **Total (42 modules)** | | **97.0** | 1624/1675 | **62.7** | 37456/59728 | |
+| soc_top | rtl/soc | 75.9 | 22/29 | 37.4 | 1828/4890 | 0/310 |
+| sram_controller | rtl/soc | 100.0 | 92/92 | 76.2 | 1169/1534 | 5/64 |
+| **Total (42 modules)** | | **98.7** | 1649/1670 | **65.0** | 38891/59794 | |
 
 A dash means the module has no point of that kind (`soc_bus`, the `pll_*` wrappers and `async_axi_fifo` are
 wiring or have no procedural line points; the two address-map packages are fully waived).
@@ -136,7 +143,7 @@ wiring or have no procedural line points; the two address-map packages are fully
 
 These numbers come only from the SoC regression. The CPU, caches and GPU have their own dedicated suites
 (`sim/Makefile`, `tb/cocotb/cpu`, `tb/cocotb/gpu`) that are not part of this run, so low figures here do not
-describe those blocks' real coverage.
+indicate a verification hole in those blocks.
 
 | Module | Tree | Line % | Line hit/total | Toggle % | Toggle hit/total | Waived (line/toggle) |
 | :----- | :--- | -----: | -------------: | -------: | ---------------: | -------------------: |
@@ -202,6 +209,40 @@ each killed by the new suites. Kills were real test failures, not build errors.
 15 GB machine cannot share with a SoC simulation). CI `PASS_FLOOR` was raised 477 -> 514 as a *derived* figure (477 + the 37
 tests above); re-measure and tighten it on the next full run.
 
+## GH #222 waiver audit (bead `kp61`, 2026-10-08)
+
+Audit of the #220 waiver file against the RTL. Everything below was verified against the PR #226 CI data
+(`merged.dat`, run 37539378647) with the fixed report; no waiver is stale.
+
+| Item | Change |
+| :--- | :----- |
+| **T1** report line labels | `coverage_report.py` labelled a line point with the first line of Verilator's `S` span; inside a generate loop that is the `for` header (`pmu` points `l=294`/`l=365` came out as `L277`). Now labelled with the point's own `l` key; a gap whose span starts on another line shows it (`L294 (span 277,294)`). Branch arms are labelled by their own `l` too: Verilator writes an `else` arm with the `if` line (`l=152`, `S=155`), so it is now `L152 else`, not `L155 else`. Three new pytest cases with a generate-loop fixture (RED before, GREEN after); the two existing fixture tests moved to the `l` convention. Triaged-tree gap labels were otherwise unchanged by the fix; only informational CPU/GPU labels shifted (e.g. `rv32i_dcache` `L756 else` -> `L743 else`). |
+| **W1** `soc_bus apb_m_pslverr` | already on this PR: waived, map-based justification (user decision 2026-10-07). |
+| **W2** `soc_top` pslverr | `apb_pslverr_o` and `dbg_bridge_m_pslverr` removed from the waiver (reachable: CPU debug pslverr on writes to RO debug regs `rv32i_cpu_top.sv:64,330`; `apb_cdc_bridge` force-completes with pslverr when the destination is in reset, `apb_cdc_bridge.sv:214-230`). Kept: `apb_pslverr`, `pll_m_pslverr`, `pll2_m_pslverr` (bank-backed). The two are now uncovered test gaps tracked in bead `oez2` (+4 toggle points). |
+| **W3** `pmu` | `^L(262\|277)` became two entries. L262 is the `default:` of `case (pmu_mode_req)`, a software-written 2-bit CTRL field whose 4 labels enumerate every value: reworded as exhaustive-enumeration dead default, not an FSM recovery arm. `^L(294\|365)` are the real per-domain generate-case recovery arms (verified against raw `l=` keys: both 0 in every instance). |
+| **W4** `apb_cdc_bridge scanmode_i` | reference fixed: the ties are `soc_top.sv` `SCAN_MODE_TIE_OFF` at the instantiations (645, 705, 1019, 1246, 2074, 2180) and `tb_apb_cdc_bridge.sv:76`; `apb_cdc_bridge.sv:301` is only a comment. |
+| **W5** AxPROT | Decision: test, not waiver, for the interconnect. New `test_axprot_routed_to_selected_slave_only` in `test_axil_interconnect.py` drives non-zero AWPROT/ARPROT (5 values x 3 slaves, write and read, plus an unmapped address) and checks the value arrives unchanged at the selected slave and never on another lane (`axi_lite_interconnect.sv:159,287`). Non-vacuity: dropping `_s_awprot[wsel]` and mis-routing `_s_arprot` to lane 0 are each caught (one failing assertion each); RTL reverted. The `axi_lite_interconnect` AxPROT waiver (48 points) is removed, and so is the `axi_lite_register_bank` one: its AxPROT ports (declared, never read) now toggle through the same test (12 points hit), so the waiver would have been stale. Kept, reworded ("at SoC level the only AXI-Lite master, `axi4_to_axilite`, ties AxPROT to 0, `axi4_to_axilite.sv:132,245`"): `axil_to_apb`, `dma_engine`, `soc_top`, `soc_bus`, `axi4_to_axilite`. |
+| **W6** decode helpers | `decode_slave()` / `decode_axil_slave()` are kept uncalled reference helpers (`grep -rn` over `rtl tb sim tools sw`: only their definitions; docs cite them). No RTL deleted. Waivers reworded as "dead by intent", noting that under the #216 taxonomy this is closer to (c) dead code kept on purpose than to (b). |
+| **ej6j function-arm waivers** | Claim checked and found **only partly true**. Raw `merged.dat`: `worse_resp` entry block L149 = 77 hits while the L150 elsif and both L152 arm points are 0; `last_addr` L175 if/else both 0. But arms of other functions are counted (`axi4_crossbar` `decode` L142, `axi_lite_interconnect` `decode` L95, `rv32i_csr_file` `apply_csr_op` L260). A 4-input micro-repro (Verilator 5.048, `tools/verif/repro/verilator_return_arm.sv`) isolates it: an if/else-if/else chain of `return` statements in a function reads 0 on every arm although called with all inputs, while the same chain assigning the function name counts. So the waivers are kept as a **tool limitation scoped to `return` arms** (the only two functions in the tree with that shape), reworded, and narrowed to `^L(150\|152)` (the report no longer produces an `L155`) and `^L175`. |
+
+Cross-check of the open coverage-gap beads against the fixed labels: every line cited in `05wf` (uart L191/192/520/535/544/572,
+spi L187/188), `bq2o` (dma L393/546/576/596) and `oez2` (`soc_top` L1450-L1456) is still the correct source line (re-read against
+the RTL); no correction needed.
+
+### Adjusted totals, before / after (triaged trees, PR #226 data)
+
+| State | Line | Toggle |
+| :---- | ---: | -----: |
+| Before (HEAD of PR #230 with W1, old report script) | 98.74 % (1649/1670) | 64.99 % (38816/59730) |
+| After waivers only (no new test) | 98.74 % (1649/1670) | **64.92 %** (38816/59794) |
+| After waivers + AxPROT test (final) | 98.74 % (1649/1670) | 65.04 % (38891/59794) |
+
+The honest effect of the waiver changes alone is a small drop in adjusted toggle coverage (64 points move back into the denominator:
+48 `axi_lite_interconnect` AxPROT, 12 `axi_lite_register_bank` AxPROT, 4 `soc_top` debug-path pslverr); the new test recovers 75 hit points
+(`axi_lite_interconnect` 1020 -> 1083, `axi_lite_register_bank` 1212 -> 1224). Line coverage is unchanged because the `pmu` waiver was retargeted,
+not removed. Waiver file: 57 entries (23 line, 34 toggle), down from 58. Not run locally: the full `soc_all_ci`
+/ `soc_coverage` (another agent's SoC simulation was active on this 15 GB host); PR CI covers it. `PASS_FLOOR` 545 -> 546.
+
 ## Triage
 
 Every uncovered line/branch point in the triaged trees, and every never-toggling control signal on a port,
@@ -215,7 +256,7 @@ was classified (the full per-module list is in `coverage_report.md` / `.json`):
 | (c) bug | none | no uncovered point was dead logic that should not be |
 | (b) waiver | FSM / `case` `default:` recovery arms (34 line points: 32 FSM arms across dma, i2c, spi, uart, crypto, apb_cdc_bridge, crossbar, axi4_to_axilite, axi-lite blocks, axil_to_apb, boot_rom, pmu, sram_controller, sha256, plus the 2 dead `sbox()` / `sha_k()` defaults) | state registers only hold named encodings in simulation |
 | (b) waiver | unused reference decode helpers in `soc_addr_map_pkg` / `soc_periph_map_pkg` (8 line points) | no caller in RTL or tb |
-| (b) waiver | `pslverr` tie-off on 15 APB modules and its soc_top/soc_bus fan-out; `AxPROT` (not decoded anywhere); constant DMA IDs; `*_unused` nets; `scanmode_i`; I2C `i2c_scl_o`/`i2c_sda_o` (dead open-drain outputs); `axilite_to_axi4` write channel tie-offs | constants by design |
+| (b) waiver | `pslverr` tie-off on 15 APB modules and its soc_top/soc_bus fan-out; `AxPROT` on modules that ignore it (the interconnect's routing is tested, GH #222 W5); constant DMA IDs; `*_unused` nets; `scanmode_i`; I2C `i2c_scl_o`/`i2c_sda_o` (dead open-drain outputs); `axilite_to_axi4` write channel tie-offs | constants by design |
 | (a) bead `ej6j` (**tests added 2026-10-07, see "ej6j AXI4-fabric re-measurement" below; full-run table above not yet re-measured**) | AXI4 fabric: crossbar decode-error bursts, `axi4_to_axilite` bursts/errors, `axilite_to_axi4` AR skid, `boot_rom` write path, `sram_controller` WRAP, `async_axi_fifo` error response | |
 | (a) bead `8riq` -> **closed for the unit-level fabric** (2026-10-07, PR for `test/axil-apb-coverage-8riq`) | `axi_lite_interconnect` / `axi_lite_register_bank` / `axil_to_apb` / `apb_interconnect` are now **100 % line** (were 95.0 / 93.3 / 95.3 / 100 %). New suite `axil_apb_fabric` (14 tests: ring AW/W/AR stalls, B/R stalls, SLVERR/DECERR end to end, APB wait states, unclaimed APB slot -> SLVERR) plus register-bank, bridge and `apb_interconnect` additions. **Still open, now tracked separately:** SoC-level `soc_bus`/`soc_top` response signals (`periph_axil_*resp`, `axil_gpu/dma_*resp`, `mem_*resp`, `m_*resp`) need CPU firmware to reach an unmapped ring address, and `apb_m_pslverr` is unreachable through the current map (see below). RTL bug found: bead `3xtv` (phantom second DECERR read beat), pinned by an `expect_fail` guard | |
 | (a) bead `bq2o` | `dma_engine`: max-burst saturation, AR/AW stall, write-response error, queue full | |
@@ -224,7 +265,7 @@ was classified (the full per-module list is in `coverage_report.md` / `.json`):
 | (a) bead `pnfw` (existing) | I2C: slave-mode bit-counter arms L617/L645, SoC-level pad drive | notes appended |
 | (a) bead `2k8` (existing) | GPU-domain PMU path (`pmu_gpu_iso_en` etc.) | note appended |
 
-Waiver summary: 57 entries (22 line, 35 toggle), all category `b`, all with a justification
+Waiver summary: 57 entries (23 line, 34 toggle; GH #222 audit above), all category `b`, all with a justification
 and a file:line reference. The report flags a waiver that matches no uncovered point as stale, and the unit
 tests pin that a waiver can only remove an uncovered point from the denominator (raw % stays visible).
 
@@ -235,7 +276,7 @@ IRQ lines, debug port, PLL registers, ROM write channel). They are listed under 
 
 **Informational for now** (user decision, 2026-10-05): `soc_coverage` and its CI job never fail on a coverage
 percentage; they fail only if the regression itself fails, the instrumented pass count drops below the
-`PASS_FLOOR` (see `.github/workflows/cocotb.yml`, 508 as of 2026-10-07), or no coverage data is produced. Revisit once the (a) beads above land. Candidate floors
+`PASS_FLOOR` (see `.github/workflows/cocotb.yml`, 546 as of 2026-10-08), or no coverage data is produced. Revisit once the (a) beads above land. Candidate floors
 for that revisit:
 
 - **Line**: 95 % per module in the triaged trees (the `VERIFICATION_PLAN.md:362` criterion), after waivers.

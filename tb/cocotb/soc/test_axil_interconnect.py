@@ -285,3 +285,95 @@ async def test_backpressure(dut):
     await RisingEdge(dut.clk)
     dut.m_axil_rready.value = 0
     dut._log.info("backpressure OK")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# GH #222 W5 (bead kp61): AxPROT routing.
+#
+# axi_lite_interconnect forwards AWPROT/ARPROT to the selected slave only
+# (axi_lite_interconnect.sv:159 `_s_awprot[wsel] = m_axil_awprot`, :287 `_s_arprot[rsel] =
+# m_axil_arprot`).  Nothing in the SoC decodes AxPROT, so before this test a mis-routed or
+# dropped AxPROT could not be seen by any suite -- and the toggle coverage of the field was
+# waived as "never driven".  The tb wrapper exposes the per-slave buses (s_awprot/s_arprot,
+# packed [slave][2:0]) and --public-flat-rw makes them visible to cocotb.
+# ──────────────────────────────────────────────────────────────────────────────
+
+PROT_VALUES = (0b001, 0b010, 0b100, 0b111, 0b101)  # privileged, non-secure, instruction, all, mix
+
+
+def _lane(bus_value, slave_idx, width=3):
+    """Slice slave ``slave_idx`` out of a packed [N][width-1:0] bus."""
+    return (int(bus_value) >> (width * slave_idx)) & ((1 << width) - 1)
+
+
+async def _prot_monitor(dut, samples):
+    """Every cycle, record (aw_valid_mask, aw_lanes, ar_valid_mask, ar_lanes) of the slave side."""
+    n = len(SLAVES)
+    while True:
+        await RisingEdge(dut.clk)
+        samples.append(
+            (
+                int(dut.s_awvalid.value),
+                [_lane(dut.s_awprot.value, k) for k in range(n)],
+                int(dut.s_arvalid.value),
+                [_lane(dut.s_arprot.value, k) for k in range(n)],
+            )
+        )
+
+
+@cocotb.test()
+async def test_axprot_routed_to_selected_slave_only(dut):
+    """Non-zero AWPROT/ARPROT reaches the addressed slave unchanged and no other slave.
+
+    For every slave and every PROT value: write + read through the BFM with that PROT.
+    While the slave-side valid of slave k is up, lane k must carry exactly the master's value;
+    every other lane must stay 0 on every cycle (a mis-routed prot would show up there).  An
+    unmapped address (DECERR, request dropped) must leak PROT to no slave at all.
+    """
+    m = await _setup(dut)
+    samples = []
+    cocotb.start_soon(_prot_monitor(dut, samples))
+    await RisingEdge(dut.clk)
+
+    n = len(SLAVES)
+    for k, (name, base) in enumerate(SLAVES.items()):
+        for prot in PROT_VALUES:
+            samples.clear()
+            resp = await m.write(base + 0x0, 0xC0DE0000 | (k << 8) | prot, prot=prot)
+            assert resp == RESP_OKAY, f"{name} write prot={prot:#05b} resp {resp}"
+            _, rresp = await m.read(base + 0x0, prot=prot)
+            assert rresp == RESP_OKAY, f"{name} read prot={prot:#05b} resp {rresp}"
+            await RisingEdge(dut.clk)
+
+            aw_seen = ar_seen = 0
+            for awv, awp, arv, arp in samples:
+                for j in range(n):
+                    if (awv >> j) & 1:
+                        assert j == k, f"{name}: awvalid raised on slave {j}"
+                        assert awp[j] == prot, f"{name}: awprot {awp[j]:#05b} != {prot:#05b}"
+                        aw_seen += 1
+                    elif j != k:
+                        assert awp[j] == 0, f"{name}: awprot leaked {awp[j]:#05b} to slave {j}"
+                    if (arv >> j) & 1:
+                        assert j == k, f"{name}: arvalid raised on slave {j}"
+                        assert arp[j] == prot, f"{name}: arprot {arp[j]:#05b} != {prot:#05b}"
+                        ar_seen += 1
+                    elif j != k:
+                        assert arp[j] == 0, f"{name}: arprot leaked {arp[j]:#05b} to slave {j}"
+            # not vacuous: the selected slave really saw both requests
+            assert aw_seen > 0, f"{name}: slave never saw awvalid (prot={prot:#05b})"
+            assert ar_seen > 0, f"{name}: slave never saw arvalid (prot={prot:#05b})"
+
+    # Unmapped address: the interconnect accepts and drops the request -- DECERR, and PROT
+    # must not appear on any slave lane.
+    samples.clear()
+    resp = await m.write(BAD_LOW, 0xDEAD_BEEF, prot=0b111)
+    assert resp == RESP_DECERR, f"unmapped write resp {resp}"
+    _, rresp = await m.read(BAD_LOW, prot=0b111)
+    assert rresp == RESP_DECERR, f"unmapped read resp {rresp}"
+    await RisingEdge(dut.clk)
+    for awv, awp, arv, arp in samples:
+        assert awv == 0 and arv == 0, "unmapped access reached a slave"
+        assert awp == [0] * n and arp == [0] * n, "PROT leaked to a slave on an unmapped access"
+
+    dut._log.info("AxPROT routing OK")

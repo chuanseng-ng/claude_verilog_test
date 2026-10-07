@@ -360,8 +360,10 @@ def build_report(points: list[Point], root: Path, waivers: list[Waiver]) -> Repo
         row = rows.setdefault((module, rel), ModuleRow(module, rel, tree, triaged))
         is_line = kind in ("line", "branch")
         if is_line:
-            first = _first_src_line(src, line)
-            label = f"L{first}" if kind == "line" else f"L{first} {name}"
+            # Label with the point's OWN line (``l``), never the start of its ``S`` span: inside a
+            # generate loop Verilator writes ``l=294`` with ``S=277,294``, and the first number of
+            # ``S`` is the ``for`` header, not the point (GH #222 T1).
+            label = f"L{line}" if kind == "line" else f"L{line} {name}"
         else:
             label = name
 
@@ -380,7 +382,7 @@ def build_report(points: list[Point], root: Path, waivers: list[Waiver]) -> Repo
             row.line_total += 1
             row.line_hit += int(hit)
             if not hit:
-                row.uncovered_lines.append(LineGap(label, kind, first, src))
+                row.uncovered_lines.append(LineGap(label, kind, line, src))
         else:
             row.toggle_total += 1
             row.toggle_hit += int(hit)
@@ -452,6 +454,12 @@ def _table(rows: list[ModuleRow]) -> list[str]:
     return out
 
 
+def _gap_text(gap: LineGap) -> str:
+    """Label, plus the ``S`` span when it starts on another line (a generate-loop body)."""
+    start = _first_src_line(gap.span, gap.line)
+    return gap.label if start == gap.line else f"{gap.label} (span {gap.span})"
+
+
 def _gaps(rows: list[ModuleRow]) -> list[str]:
     out: list[str] = []
     for r in rows:
@@ -460,7 +468,9 @@ def _gaps(rows: list[ModuleRow]) -> list[str]:
         out.append(f"### {r.module} (`{r.file}`)")
         out.append("")
         if r.uncovered_lines:
-            labels = ", ".join(g.label for g in sorted(r.uncovered_lines, key=lambda g: g.line))
+            labels = ", ".join(
+                _gap_text(g) for g in sorted(r.uncovered_lines, key=lambda g: g.line)
+            )
             out.append(f"- Uncovered line/branch points ({len(r.uncovered_lines)}): {labels}")
         never = [g for g in r.uncovered_toggles if g.never_toggles]
         partial = [g for g in r.uncovered_toggles if not g.never_toggles]

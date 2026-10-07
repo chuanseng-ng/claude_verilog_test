@@ -330,9 +330,11 @@ def test_waiver_removes_points_from_denominator_but_keeps_raw(tmp_path: Path) ->
 
 def test_waiver_matches_line_items_by_line_number(tmp_path: Path) -> None:
     dat = write_dat(tmp_path, *periph_records())
-    waivers = [cr.Waiver("foo", "line", r"^L(20|31)\b", "b", "elaboration guard", 1)]
+    waivers = [cr.Waiver("foo", "line", r"^L(20|30 else)$", "b", "elaboration guard", 1)]
     (row,) = cr.build_report(cr.parse_dat(dat), Path(ROOT), waivers).modules
-    # line 20 block (not hit) and the line-31 else branch (not hit) are waived
+    # line 20 block (not hit) and the else arm of the line-30 branch (not hit) are waived.  The
+    # else arm is labelled by its own ``l`` (the ``if`` line, as Verilator writes it), with the
+    # arm name; its body line (31) only appears in the span.
     assert row.line_waived == 2
     assert (row.line_hit, row.line_total) == (2, 2)
 
@@ -364,12 +366,87 @@ def test_waiver_for_other_module_does_not_apply(tmp_path: Path) -> None:
 def test_uncovered_lists_are_precise(tmp_path: Path) -> None:
     dat = write_dat(tmp_path, *periph_records())
     (row,) = cr.build_report(cr.parse_dat(dat), Path(ROOT), []).modules
-    assert sorted(i.label for i in row.uncovered_lines) == ["L20", "L31 else"]
+    assert sorted(i.label for i in row.uncovered_lines) == ["L20", "L30 else"]
     # Toggle items are grouped per signal; a signal with zero hit points is "never toggles".
     (sig,) = row.uncovered_toggles
     assert sig.signal == "dead"
     assert (sig.hit, sig.total) == (0, 2)
     assert sig.never_toggles is True
+
+
+def generate_loop_records(hier: str = "tb.u_dut") -> list[str]:
+    """Points inside a generate loop, as Verilator 5.048 writes them (pmu.sv, GH #222 T1).
+
+    Every point in the loop body carries ``S=<loop header line>,<own line>`` while its ``l`` key is
+    its OWN line, so the first number of ``S`` is the ``for`` header, not where the point is.
+    """
+    f = "rtl/soc/gen.sv"
+    return [
+        point(
+            kind="line",
+            module="gen",
+            file=f,
+            line=290,
+            obj="case",
+            src="277,290",
+            count=4,
+            hier=hier,
+        ),
+        point(
+            kind="line",
+            module="gen",
+            file=f,
+            line=294,
+            obj="case",
+            src="277,294",
+            count=0,
+            hier=hier,
+        ),
+        point(
+            kind="line",
+            module="gen",
+            file=f,
+            line=365,
+            obj="case",
+            src="277,365-370",
+            count=0,
+            hier=hier,
+        ),
+    ]
+
+
+def test_line_label_uses_the_points_own_line_not_the_span_start(tmp_path: Path) -> None:
+    """GH #222 T1: a generate-loop point is labelled L294, not the loop header L277."""
+    dat = write_dat(tmp_path, *generate_loop_records())
+    (row,) = cr.build_report(cr.parse_dat(dat), Path(ROOT), []).modules
+    assert sorted(g.label for g in row.uncovered_lines) == ["L294", "L365"]
+    assert sorted(g.line for g in row.uncovered_lines) == [294, 365]
+    # the span is kept, so the report can still show where the enclosing loop starts
+    assert {g.span for g in row.uncovered_lines} == {"277,294", "277,365-370"}
+
+
+def test_generate_loop_waiver_targets_the_own_line(tmp_path: Path) -> None:
+    dat = write_dat(tmp_path, *generate_loop_records())
+    stale = [cr.Waiver("gen", "line", r"^L277\b", "b", "header line, no such point", 1)]
+    right = [cr.Waiver("gen", "line", r"^L(294|365)\b", "b", "own lines", 2)]
+    (row,) = cr.build_report(cr.parse_dat(dat), Path(ROOT), stale).modules
+    assert row.line_waived == 0  # the old span-start label no longer exists
+    report = cr.build_report(cr.parse_dat(dat), Path(ROOT), right)
+    assert report.modules[0].line_waived == 2
+    assert (report.modules[0].line_hit, report.modules[0].line_total) == (1, 1)
+    assert report.unused_waivers == []
+
+
+def test_generate_loop_gap_shows_the_span_in_markdown(tmp_path: Path) -> None:
+    dat = write_dat(tmp_path, *generate_loop_records())
+    md = cr.render_markdown(cr.build_report(cr.parse_dat(dat), Path(ROOT), []))
+    assert "L294 (span 277,294)" in md
+    assert "L365 (span 277,365-370)" in md
+    # a plain block whose span starts at its own line stays bare
+    dat2 = write_dat(tmp_path, *periph_records(), name="p.dat")
+    md2 = cr.render_markdown(cr.build_report(cr.parse_dat(dat2), Path(ROOT), []))
+    assert "L20," in md2 or "L20 " in md2
+    assert "(span 20" not in md2
 
 
 def test_partially_toggled_signal_is_listed_but_not_flagged_never(tmp_path: Path) -> None:
