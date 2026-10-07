@@ -1037,14 +1037,17 @@ async def test_dma_recovers_after_read_error(dut):
 # always-ready AXI4SlaveModel.
 #
 # Specification pinned here (dma_engine.sv header + FSM):
-#   * Burst split: each burst is min(words_rem, MAX_BURST_BEATS, words-to-4KB(src), words-to-4KB(dst)).
-#   * The FSM is strictly serial per burst: AR -> R(all beats) -> AW -> W(all beats) -> B -> next burst.
+#   * Burst split: each burst is min(words_rem, MAX_BURST_BEATS, words-to-4KB(src),
+#     words-to-4KB(dst)).
+#   * The FSM is strictly serial per burst: AR -> R(all beats) -> AW -> W(all beats) -> B ->
+#     next burst.
 #     No channel may raise valid out of that order, and a stalled VALID must stay asserted with a
 #     stable payload until the matching READY.
 #   * A B response != OKAY is a WRITE error: STATUS.error (not done), ERR_INFO[1:0] = BRESP,
-#     ERR_INFO[2] (err_on_read) = 0, IRQ_STATUS.err_irq, halt until soft_reset, nothing after it issued.
-#   * start while the descriptor queue is full is DROPPED SILENTLY (no error, no done); CTRL.start still
-#     self-clears.  start while halted is likewise ignored.
+#     ERR_INFO[2] (err_on_read) = 0, IRQ_STATUS.err_irq, halt until soft_reset, nothing
+#     after it issued.
+#   * start while the descriptor queue is full is DROPPED SILENTLY (no error, no done);
+#     CTRL.start still self-clears.  start while halted is likewise ignored.
 # ═════════════════════════════════════════════════════════════════════════════
 
 RESP_DECERR = 0b11
@@ -1117,7 +1120,7 @@ class _SerialMon:
 
 
 async def _setup_fabric(dut, mem=None, check_serial=True, **slave_kw):
-    """Clock + reset + cycle-accurate AxiSlave on m_* + AXI-Lite master on s_axil_* + serial monitor."""
+    """Clock + reset + cycle-accurate AxiSlave (m_*) + AXI-Lite master (s_axil_*) + monitor."""
     global _active_slave_tasks
     for task in _active_slave_tasks:
         task.kill()
@@ -1176,10 +1179,10 @@ async def _quiesce(dut, axil, timeout=POLL_TIMEOUT_CYCLES):
 
 @cocotb.test()
 async def test_dma_max_burst_clamp(dut):
-    """Lengths around MAX_BURST_BEATS: the clamp is exactly 256 beats, remainder goes in the next burst.
+    """Lengths around MAX_BURST_BEATS: clamp is exactly 256 beats, remainder in the next burst.
 
     255 words -> [255]; 256 -> [256]; 257 -> [256, 1]; 293 -> [256, 37].  Checked on the real AR/AW
-    len fields (not just on the copied data), plus all data, WLAST placement and serial AXI ordering.
+    len fields (not just on the copied data), plus all data, WLAST placement and AXI ordering.
     """
     SRC, DST = 0x0001_0000, 0x0002_0000
     for words in (255, 256, 257, 293):
@@ -1207,7 +1210,7 @@ async def test_dma_max_burst_clamp(dut):
 
 @cocotb.test()
 async def test_dma_ar_stall(dut):
-    """arready held low for 9 edges per burst: ARVALID/payload stay stable, nothing else moves, data intact."""
+    """arready low 9 edges per burst: ARVALID/payload stable, nothing else moves, data intact."""
     SRC, DST, WORDS, DELAY = 0x0003_0000, 0x0004_0000, 300, 9  # 2 bursts (256 + 44)
     seed = {SRC + 4 * i: _pattern(i, 1) for i in range(WORDS)}
     axil, slave, mon = await _setup_fabric(dut, mem=dict(seed), ar_delay=DELAY)
@@ -1226,7 +1229,7 @@ async def test_dma_ar_stall(dut):
     _assert_plan(slave, plan, "ar_stall")
     _assert_copied(slave, seed, SRC, DST, WORDS, "ar_stall")
     assert slave.arvalid_edges >= len(plan) * DELAY, (
-        f"arvalid seen high {slave.arvalid_edges} edges, expected >= {len(plan) * DELAY} (stall not held)"
+        f"arvalid high {slave.arvalid_edges} edges, expected >= {len(plan) * DELAY}"
     )
     _assert_clean(slave, mon, "ar_stall")
     dut._log.info("test_dma_ar_stall PASS")
@@ -1234,7 +1237,7 @@ async def test_dma_ar_stall(dut):
 
 @cocotb.test()
 async def test_dma_aw_stall(dut):
-    """awready held low for 11 edges per burst: AWVALID/payload stable, W only after AW is accepted."""
+    """awready low for 11 edges per burst: AWVALID/payload stable, W only after AW accepted."""
     SRC, DST, WORDS, DELAY = 0x0005_0000, 0x0006_0000, 300, 11
     seed = {SRC + 4 * i: _pattern(i, 2) for i in range(WORDS)}
     axil, slave, mon = await _setup_fabric(dut, mem=dict(seed), aw_delay=DELAY)
@@ -1264,13 +1267,27 @@ async def test_dma_aw_stall(dut):
 
 @cocotb.test()
 async def test_dma_w_and_b_stalls(dut):
-    """wready low 3 edges per beat and bvalid delayed 8 cycles: wdata/wlast stable, FSM waits for B."""
+    """wready low 3 edges per beat, bvalid delayed 30 cycles: FSM waits for B."""
     SRC, DST, WORDS = 0x0007_0000, 0x0008_0000, 40
     seed = {SRC + 4 * i: _pattern(i, 3) for i in range(WORDS)}
-    axil, slave, mon = await _setup_fabric(dut, mem=dict(seed), w_delay=3, b_delay=8)
+    axil, slave, mon = await _setup_fabric(dut, mem=dict(seed), w_delay=3, b_delay=30)
     await _launch(axil, SRC, DST, WORDS * 4)
-    status = await _quiesce(dut, axil, timeout=20000)
+    # While the last W beat is accepted but B has not been handshaken, the descriptor is NOT done.
+    saw_b_wait, status = 0, 0
+    for _ in range(20000):
+        await RisingEdge(dut.clk)
+        waiting_before = mon.w_done > mon.b
+        status, _ = await axil.read(REG_STATUS)
+        if waiting_before and mon.w_done > mon.b:  # B still outstanding across the whole read
+            saw_b_wait += 1
+            assert status & STATUS_BUSY and not (status & STATUS_DONE), (
+                f"descriptor reported done/idle before its B response: {status:#010x}"
+            )
+        if status & STATUS_DONE and not (status & STATUS_BUSY):
+            break
+    assert saw_b_wait, "never observed the B-wait window (stall not exercised)"
     assert status & STATUS_DONE and not (status & STATUS_ERROR), f"{status:#010x}"
+    assert mon.b == mon.aw == 1, f"done with B handshakes={mon.b}, AW={mon.aw}"
     _assert_plan(slave, _burst_plan(SRC, DST, WORDS), "w/b stall")
     _assert_copied(slave, seed, SRC, DST, WORDS, "w/b stall")
     # Each W beat took at least w_delay+1 edges (wvalid held while wready was low).
@@ -1282,7 +1299,7 @@ async def test_dma_w_and_b_stalls(dut):
 
 @cocotb.test()
 async def test_dma_all_stalls_split_plan(dut):
-    """Every channel stalled together over a transfer that needs both the 4 KB split and the 256 clamp."""
+    """All channels stalled over a transfer needing both the 4 KB split and the 256 clamp."""
     SRC, DST, WORDS = 0x0009_0F00, 0x000A_0F80, 420  # src 64 words to page end, dst 32
     seed = {SRC + 4 * i: _pattern(i, 4) for i in range(WORDS)}
     axil, slave, mon = await _setup_fabric(
@@ -1331,7 +1348,7 @@ async def _check_write_error(dut, axil, slave, mon, *, resp, irq_en, what):
     assert not (status & STATUS_BUSY), f"[{what}] STATUS.busy stuck: {status:#010x}"
     err_info, _ = await axil.read(REG_ERR_INFO)
     assert err_info == resp, (
-        f"[{what}] ERR_INFO={err_info:#x}: expected resp={resp:#x} and err_on_read=0 (a WRITE error)"
+        f"[{what}] ERR_INFO={err_info:#x}: expected resp={resp:#x}, err_on_read=0 (WRITE error)"
     )
     irq, _ = await axil.read(REG_IRQ_STATUS)
     assert irq == 0b10, f"[{what}] IRQ_STATUS={irq:#x}: expected err_irq only"
@@ -1341,7 +1358,7 @@ async def _check_write_error(dut, axil, slave, mon, *, resp, irq_en, what):
 
 @cocotb.test()
 async def test_dma_write_slverr_halts_and_recovers(dut):
-    """SLVERR on the write response: write-error status, IRQ, halt; soft_reset then a clean re-copy."""
+    """SLVERR on the write response: error status, IRQ, halt; soft_reset then a clean re-copy."""
     SRC, DST, WORDS = 0x000B_0000, 0x000C_0000, 8
     seed = {SRC + 4 * i: _pattern(i, 5) for i in range(WORDS)}
     bad = {DST}
@@ -1349,7 +1366,9 @@ async def test_dma_write_slverr_halts_and_recovers(dut):
         dut, mem=dict(seed), resp_fn=_bad_resp_fn(bad_w=bad, w_resp=RESP_SLVERR)
     )
     await _launch(axil, SRC, DST, WORDS * 4, irq_en=True)
-    await _check_write_error(dut, axil, slave, mon, resp=RESP_SLVERR, irq_en=True, what="write SLVERR")
+    await _check_write_error(
+        dut, axil, slave, mon, resp=RESP_SLVERR, irq_en=True, what="write SLVERR"
+    )
 
     # The whole burst was presented (8 W beats) but the failing slave committed nothing, and the
     # DMA issued exactly one AR / AW and nothing after the error.
@@ -1382,11 +1401,12 @@ async def test_dma_write_slverr_halts_and_recovers(dut):
 
 @cocotb.test()
 async def test_dma_write_decerr_second_burst_and_err_on_read_cleared(dut):
-    """DECERR on burst 2's write; and ERR_INFO.err_on_read from an EARLIER read error must read 0 again.
+    """DECERR on burst 2's write; ERR_INFO.err_on_read left by an EARLIER read error must clear.
 
-    Step 1 provokes a read SLVERR (ERR_INFO = 0b110) and soft-resets.  Step 2 copies 272 words (bursts
-    256 + 16): burst 1 must land intact, burst 2's B returns DECERR.  ERR_INFO must then be exactly
-    resp=3 / err_on_read=0 (the stale read-error flag cleared), done stays 0, only 2 AW were issued.
+    Step 1 provokes a read SLVERR (ERR_INFO = 0b110) and soft-resets.  Step 2 copies 272 words
+    (bursts 256 + 16): burst 1 must land intact, burst 2's B returns DECERR.  ERR_INFO must
+    then be exactly resp=3 / err_on_read=0 (stale read-error flag cleared), done stays 0, and
+    only 2 AW were issued.
     """
     SRC, DST = 0x000D_0000, 0x000E_0000
     BAD_SRC = 0x000F_0000
@@ -1419,7 +1439,7 @@ async def test_dma_write_decerr_second_burst_and_err_on_read_cleared(dut):
     assert status & STATUS_ERROR and not (status & STATUS_DONE), f"{status:#010x}"
     err_info, _ = await axil.read(REG_ERR_INFO)
     assert err_info == RESP_DECERR, (
-        f"ERR_INFO={err_info:#x}: expected resp=DECERR, err_on_read=0 (stale read-error flag must clear)"
+        f"ERR_INFO={err_info:#x}: expected resp=DECERR, err_on_read=0 (stale flag must clear)"
     )
     irq, _ = await axil.read(REG_IRQ_STATUS)
     assert irq == 0b10, f"IRQ_STATUS={irq:#x}"
@@ -1438,12 +1458,13 @@ async def test_dma_write_decerr_second_burst_and_err_on_read_cleared(dut):
 
 @cocotb.test()
 async def test_dma_queue_full_drops_start_silently(dut):
-    """Fill the 4-deep queue behind a stalled in-flight descriptor; the 6th start is dropped, in order.
+    """Fill the 4-deep queue behind a stalled in-flight descriptor; the 6th start is dropped.
 
-    ar_delay=400 parks descriptor 0 in S_AR (its AR is not accepted for 400 edges, asserted below) while
-    descriptors 1..4 fill the queue: STATUS.q_full=1, q_empty=0, q_count=4.  A further start must be
-    dropped silently: q_count unchanged, no error, CTRL.start still self-clears, and that descriptor is
-    NEVER executed.  After the drain exactly D0..D4 ran, in FIFO order; a retried start is then accepted.
+    ar_delay=400 parks descriptor 0 in S_AR (its AR is not accepted for 400 edges, asserted
+    below) while descriptors 1..4 fill the queue: STATUS.q_full=1, q_empty=0, q_count=4.  A
+    further start must be dropped silently: q_count unchanged, no error, CTRL.start still
+    self-clears, and that descriptor is NEVER executed.  After the drain exactly D0..D4 ran,
+    in FIFO order; a retried start is then accepted.
     """
     N = 4
     descs = [(0x0010_0000 + 0x1000 * d, 0x0020_0000 + 0x1000 * d) for d in range(QDEPTH + 2)]
@@ -1464,7 +1485,9 @@ async def test_dma_queue_full_drops_start_silently(dut):
     for _ in range(6):  # STATUS is a registered mirror: let the last enqueue show up
         await RisingEdge(dut.clk)
     status, _ = await axil.read(REG_STATUS)
-    assert not slave.ar_log, "descriptor 0 already progressed: FSM not stalled, queue test is vacuous"
+    assert not slave.ar_log, (
+        "descriptor 0 already progressed: FSM not stalled, queue test is vacuous"
+    )
     assert status & STATUS_BUSY
     assert status & STATUS_Q_FULL, f"q_full not set with {QDEPTH} queued: {status:#010x}"
     assert not (status & STATUS_Q_EMPTY)
@@ -1480,7 +1503,9 @@ async def test_dma_queue_full_drops_start_silently(dut):
     )
     assert not (status & STATUS_ERROR), "dropping a start while full must not raise an error"
     ctrl, _ = await axil.read(REG_CTRL)
-    assert not (ctrl & CTRL_START), f"CTRL.start did not self-clear after a dropped start: {ctrl:#x}"
+    assert not (ctrl & CTRL_START), (
+        f"CTRL.start did not self-clear after a dropped start: {ctrl:#x}"
+    )
 
     status = await _quiesce(dut, axil, timeout=30000)
     assert status & STATUS_DONE and not (status & STATUS_ERROR), f"{status:#010x}"

@@ -97,7 +97,7 @@ Totals: line **98.7 %** (1649/1670), toggle **65.0 %** (38891/59794), 3 of 42 mo
 | npu_weight_mem | rtl/npu | 100.0 | 12/12 | 100.0 | 530/530 | 0/0 |
 | aes128_core | rtl/periph | 100.0 | 281/281 | 100.0 | 2348/2348 | 1/0 |
 | crypto_accel | rtl/periph | 100.0 | 48/48 | 97.5 | 3349/3434 | 1/2 |
-| dma_engine | rtl/periph | 94.1 | 64/68 | 31.6 | 752/2376 | 1/44 |
+| dma_engine | rtl/periph | 100.0 † | 67/67 † | 37.5 † | 887/2368 † | 2/52 |
 | gpio_controller | rtl/periph | 100.0 | 11/11 | 51.2 | 1092/2134 | 0/2 |
 | i2c_bit_engine | rtl/periph | 100.0 | 113/113 | 88.6 | 434/490 | 1/0 |
 | i2c_controller | rtl/periph | 97.6 | 83/85 | 91.0 | 1146/1260 | 1/6 |
@@ -135,6 +135,8 @@ Totals: line **98.7 %** (1649/1670), toggle **65.0 %** (38891/59794), 3 of 42 mo
 | soc_top | rtl/soc | 75.9 | 22/29 | 37.4 | 1828/4890 | 0/310 |
 | sram_controller | rtl/soc | 100.0 | 92/92 | 76.2 | 1169/1534 | 5/64 |
 | **Total (42 modules)** | | **98.7** | 1649/1670 | **65.0** | 38891/59794 | |
+
+† `dma_engine` row: **unit-level** numbers (`make dma COVERAGE=1`, `test_dma` only, 18 tests, 2026-10-08, bead `bq2o`; previous row was 94.1 / 64/68 / 31.6 / 752/2376 / 1/44 from the CI merged data). The module is not re-measured through the full `soc_coverage` merge until this PR's own CI run; the SoC-level DMA tests only add points, so the merged figure is expected to be at least this.
 
 A dash means the module has no point of that kind (`soc_bus`, the `pll_*` wrappers and `async_axi_fifo` are
 wiring or have no procedural line points; the two address-map packages are fully waived).
@@ -259,13 +261,13 @@ was classified (the full per-module list is in `coverage_report.md` / `.json`):
 | (b) waiver | `pslverr` tie-off on 15 APB modules and its soc_top/soc_bus fan-out; `AxPROT` on modules that ignore it (the interconnect's routing is tested, GH #222 W5); constant DMA IDs; `*_unused` nets; `scanmode_i`; I2C `i2c_scl_o`/`i2c_sda_o` (dead open-drain outputs); `axilite_to_axi4` write channel tie-offs | constants by design |
 | (a) bead `ej6j` (**tests added 2026-10-07, see "ej6j AXI4-fabric re-measurement" below; full-run table above not yet re-measured**) | AXI4 fabric: crossbar decode-error bursts, `axi4_to_axilite` bursts/errors, `axilite_to_axi4` AR skid, `boot_rom` write path, `sram_controller` WRAP, `async_axi_fifo` error response | |
 | (a) bead `8riq` -> **closed for the unit-level fabric** (2026-10-07, PR for `test/axil-apb-coverage-8riq`) | `axi_lite_interconnect` / `axi_lite_register_bank` / `axil_to_apb` / `apb_interconnect` are now **100 % line** (were 95.0 / 93.3 / 95.3 / 100 %). New suite `axil_apb_fabric` (14 tests: ring AW/W/AR stalls, B/R stalls, SLVERR/DECERR end to end, APB wait states, unclaimed APB slot -> SLVERR) plus register-bank, bridge and `apb_interconnect` additions. **Still open, now tracked separately:** SoC-level `soc_bus`/`soc_top` response signals (`periph_axil_*resp`, `axil_gpu/dma_*resp`, `mem_*resp`, `m_*resp`) need CPU firmware to reach an unmapped ring address, and `apb_m_pslverr` is unreachable through the current map (see below). RTL bug found: bead `3xtv` (phantom second DECERR read beat), pinned by an `expect_fail` guard | |
-| (a) bead `bq2o` | `dma_engine`: max-burst saturation, AR/AW stall, write-response error, queue full | |
+| (a) bead `bq2o` -> **closed at unit level** (2026-10-08, PR `test/dma-coverage-bq2o`; unit-measured, CI re-measure pending) | `dma_engine` is **100 % line (67/67 after waivers)**, was 91.2 % (62/68) at unit level with the pre-PR 10-test `test_dma` (raw 98.5 %, 67/68, before the L393 waiver). 8 new tests: burst clamp 255/256/257/293 words, AR / AW / W / B stalls (`arready`/`awready` low for 9/11 edges, `wready` low 3 edges per beat, B delayed 8 cycles), all channels stalled over a 4 KB-split + 256-clamp plan, write SLVERR and DECERR (second burst), stale `err_on_read` clear, descriptor queue full with silent drop. Beyond the bead's lines, **L584 (S_W `wready` stall) and L594 (S_B bvalid wait) were also uncovered** and are now hit. **L393 is waived (b), not tested**: it is dead (`beats_raw` is already clamped by `min2(.., MAX_BURST_BEATS)`), so the bead's "saturation never taken" was a misreading; the real clamp (min2) is tested and a `MAX-1` mutant is killed. `m_bresp` and `q_full` now toggle; `s_axil_bresp`/`s_axil_rresp` (8 points) are waived: tied OKAY in `axi_lite_register_bank`. Unit-level toggle 28.8 -> 37.5 % (the rest is datapath address/data bits and constant `m_arburst`/`m_*size`). Non-vacuity: 9 hand mutants of `dma_engine.sv` each killed (RTL reverted, `git diff --stat rtl/` empty): clamp MAX-1 (5 tests fail), DECERR ignored on B, stale `err_on_read` not cleared, queue-full guard removed, `arready` / `wready` / `awready` / `bvalid` ignored, `last_resp_q` not captured on B. No RTL bug found. | |
 | (a) bead `05wf` | `uart_controller` / `spi_controller`: byte lanes 2/3, FIFO full, RX false-start, os_tick gaps | |
 | (a) bead `oez2` | `soc_top`: `timer_irq`/`uart_irq`/`spi_irq`/`dma_irq`, GPU isolation, debug APB, PLL programming, SPI MISO | |
 | (a) bead `pnfw` (existing) | I2C: slave-mode bit-counter arms L617/L645, SoC-level pad drive | notes appended |
 | (a) bead `2k8` (existing) | GPU-domain PMU path (`pmu_gpu_iso_en` etc.) | note appended |
 
-Waiver summary: 57 entries (23 line, 34 toggle; GH #222 audit above), all category `b`, all with a justification
+Waiver summary: 59 entries (24 line, 35 toggle; +2 for bead `bq2o`: `dma_engine` L393 dead saturate, `s_axil_bresp`/`s_axil_rresp` tied OKAY; GH #222 audit above), all category `b`, all with a justification
 and a file:line reference. The report flags a waiver that matches no uncovered point as stale, and the unit
 tests pin that a waiver can only remove an uncovered point from the denominator (raw % stays visible).
 
