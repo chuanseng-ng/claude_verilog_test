@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-10-06T17:09:41.030107+00:00",
+  "updated_at": "2026-10-07T13:01:37.861610+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -2178,6 +2178,18 @@
       "suggested_next_step": "escalate",
       "reason": "bead 8riq directed tests found a DUT protocol bug (phantom second DECERR R beat in axi_lite_interconnect, traced); RTL not touched, regression guard pinned as expect_fail; the 8riq coverage tests themselves are green. RTL fix is owned by the RTL orchestrator via the pipeline-orchestrator; the user must route fix_request fr_null_20261006_170941_00.",
       "constraint_ref": "fr_null_20261006_170941_00"
+    },
+    {
+      "timestamp": "2026-10-07T13:01:37.861610+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "rtl_coding",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "fix_request fr_null_20261006_170941_00 (bead 3xtv) closed: unmapped DECERR R beat made one-shot in axi_lite_interconnect; lint 0 errors; axil_apb_fabric 14/14, expect_fail removed.",
+      "constraint_ref": "fr_null_20261006_170941_00"
     }
   ],
   "fix_requests": [
@@ -2581,7 +2593,7 @@
     {
       "id": "fr_null_20261006_170941_00",
       "created_at": "2026-10-06T17:09:41.030107+00:00",
-      "updated_at": "2026-10-06T17:09:41.030107+00:00",
+      "updated_at": "2026-10-07T13:01:37.861610+00:00",
       "created_by": "verification-orchestrator",
       "failure_class": "protocol",
       "test_name": "test_axil_apb_fabric.test_ring_unmapped_read_single_beat",
@@ -2603,9 +2615,24 @@
       "expected_behavior": "AXI4-Lite: exactly one R response per AR; rtl/soc/axi_lite_interconnect.sv header: unmapped address -> the interconnect itself returns a DECERR response and completes the transfer",
       "observed_behavior": "Per-cycle trace of u_ring with rready=1, one AR to 0x2000_0000: cyc3 rstate=R_DATA r_dvalid_d=1 q=1 rvalid=1 rresp=3 (beat 1); cyc4 rstate=R_IDLE q=1 rvalid=1 rresp=3 (beat 2, no AR outstanding). Cause: the R_DATA unmapped branch holds r_dvalid_d=1 until r_hs, one cycle after r_dvalid_q loaded, and r_dreg_ready=1 in that cycle reloads q. A following legal read then returns resp=3 data=0.",
       "session_id": null,
-      "status": "open",
-      "rtl_response": null,
-      "history": []
+      "status": "fixed",
+      "rtl_response": {
+        "diff_summary": "axi_lite_interconnect.sv R_DATA unmapped branch: r_dvalid_d = 1'b1 -> r_dvalid_d = !r_dvalid_q (one-shot: offer the DECERR beat only while the output register is empty, so the handshake-cycle reload of r_dvalid_q no longer emits a phantom second beat). Depends on registered r_dvalid_q only; mapped-slave path (rvb fan-out register) and write engine untouched; no runtime-indexed mux. Tests: test_axil_apb_fabric.test_ring_unmapped_read_single_beat expect_fail removed (now passes, beats [(3,0)]); _drain_r stray-beat workaround removed from test_ring_decerr_with_master_stalls; axil_apb_fabric 14/14. Post-fix lint: make -C sim lint_soc (verilator --lint-only -Wall) 0 errors, 4 pre-existing warnings (sram_1rw_256x32_verilator DECLFILENAME, rv32i_cache_pkg UNUSEDPARAM x3), none in axi_lite_interconnect.sv. sv2v: make -C pnr sky130-soc-sv2v and asap7-soc-sv2v regenerate with axi_lite_interconnect present and the fix in both outputs. slang NOT RUN.",
+        "files_changed": [
+          "rtl/soc/axi_lite_interconnect.sv",
+          "tb/cocotb/soc/test_axil_apb_fabric.py",
+          "fixes/FIXES_INDEX.md"
+        ],
+        "fixed_at": "2026-10-07T13:01:37.861610+00:00"
+      },
+      "history": [
+        {
+          "timestamp": "2026-10-07T13:01:37.861610+00:00",
+          "agent": "rtl-design-orchestrator",
+          "action": "fixed",
+          "note": "One-shot unmapped R response; lint 0 errors; axil_apb_fabric 14/14. Awaiting verification-orchestrator re-validation (status left 'fixed', not 'verified_fixed')."
+        }
+      ]
     }
   ],
   "pd": {
