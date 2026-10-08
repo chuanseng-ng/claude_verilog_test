@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from functools import partial
 
 import cocotb
+from axi4_fabric_bfm import AxiSlave
 from axi4_slave_model import AXI4SlaveModel
 from bfm.axi4lite_master import AXI4LiteMaster
 from cocotb.clock import Clock
@@ -1027,3 +1028,503 @@ async def test_dma_recovers_after_read_error(dut):
 
     await _run_cases([(label, case(plan)) for label, plan in classes])
     dut._log.info("test_dma_recovers_after_read_error PASS")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Directed coverage closure (bead bq2o, GH #216 / nkj7): burst clamp, channel stalls, write-response
+# errors and descriptor-queue back-pressure.  These use the cycle-accurate AxiSlave of
+# axi4_fabric_bfm.py (ready/valid stalls, scripted responses, protocol-violation log) instead of the
+# always-ready AXI4SlaveModel.
+#
+# Specification pinned here (dma_engine.sv header + FSM):
+#   * Burst split: each burst is min(words_rem, MAX_BURST_BEATS, words-to-4KB(src),
+#     words-to-4KB(dst)).
+#   * The FSM is strictly serial per burst: AR -> R(all beats) -> AW -> W(all beats) -> B ->
+#     next burst.
+#     No channel may raise valid out of that order, and a stalled VALID must stay asserted with a
+#     stable payload until the matching READY.
+#   * A B response != OKAY is a WRITE error: STATUS.error (not done), ERR_INFO[1:0] = BRESP,
+#     ERR_INFO[2] (err_on_read) = 0, IRQ_STATUS.err_irq, halt until soft_reset, nothing
+#     after it issued.
+#   * start while the descriptor queue is full is DROPPED SILENTLY (no error, no done);
+#     CTRL.start still self-clears.  start while halted is likewise ignored.
+# ═════════════════════════════════════════════════════════════════════════════
+
+RESP_DECERR = 0b11
+MAX_BEATS = 256  # dma_engine MAX_BURST_BEATS default
+QDEPTH = 4  # dma_engine QDEPTH default
+STATUS_Q_COUNT_SHIFT = 8
+ERR_INFO_ON_READ = 1 << 2
+
+
+def _burst_plan(src, dst, words, max_beats=MAX_BEATS):
+    """Reference burst split from the documented rule (independent of the RTL's arithmetic)."""
+    plan = []
+    while words:
+        src_4k = (0x1000 - (src & 0xFFF)) >> 2
+        dst_4k = (0x1000 - (dst & 0xFFF)) >> 2
+        n = max(1, min(words, max_beats, src_4k, dst_4k))
+        plan.append((src, dst, n))
+        src, dst, words = src + 4 * n, dst + 4 * n, words - n
+    return plan
+
+
+def _pattern(i, salt=0):
+    return (0x1234_5678 + salt + i * 0x0101_0101) & 0xFFFF_FFFF
+
+
+class _SerialMon:
+    """Passive monitor of the DMA's AXI master ports: per-burst serial ordering invariants.
+
+    Sampled right after each rising edge, i.e. the values the RTL saw at that edge.  Violations are
+    collected, never raised, so the test asserts on the list and names every one.
+    """
+
+    def __init__(self, dut, check_serial=True):
+        self.dut, self.check_serial = dut, check_serial
+        self.ar = self.aw = self.rlast = self.w_done = self.b = 0
+        self.viol = []
+        self.cyc = 0
+        task = cocotb.start_soon(self._run())
+        _active_slave_tasks.append(task)
+
+    def _v(self, name):
+        return int(getattr(self.dut, name).value)
+
+    async def _run(self):
+        v = self._v
+        while True:
+            await RisingEdge(self.dut.clk)
+            self.cyc += 1
+            if not v("rst_n"):
+                continue
+            if self.check_serial:
+                if v("m_arvalid") and self.ar != self.b:
+                    self.viol.append(f"edge {self.cyc}: arvalid before burst {self.ar} got its B")
+                if v("m_awvalid") and self.rlast <= self.aw:
+                    self.viol.append(f"edge {self.cyc}: awvalid before the last R beat was taken")
+                if v("m_wvalid") and self.aw <= self.w_done:
+                    self.viol.append(f"edge {self.cyc}: wvalid before its AW was accepted")
+                if v("m_bready") and not self.w_done > self.b:
+                    self.viol.append(f"edge {self.cyc}: bready before the last W beat")
+            if v("m_arvalid") and v("m_arready"):
+                self.ar += 1
+            if v("m_rvalid") and v("m_rready") and v("m_rlast"):
+                self.rlast += 1
+            if v("m_awvalid") and v("m_awready"):
+                self.aw += 1
+            if v("m_wvalid") and v("m_wready") and v("m_wlast"):
+                self.w_done += 1
+            if v("m_bvalid") and v("m_bready"):
+                self.b += 1
+
+
+async def _setup_fabric(dut, mem=None, check_serial=True, **slave_kw):
+    """Clock + reset + cycle-accurate AxiSlave (m_*) + AXI-Lite master (s_axil_*) + monitor."""
+    global _active_slave_tasks
+    for task in _active_slave_tasks:
+        task.kill()
+    _active_slave_tasks = []
+
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
+    axil = AXI4LiteMaster(dut, "s_axil_", dut.clk)
+    slave = AxiSlave(dut, "m_", dut.clk, mem=mem, **slave_kw)
+    slave.start()
+    _active_slave_tasks.append(slave._task)
+    mon = _SerialMon(dut, check_serial=check_serial)
+
+    dut.rst_n.value = 0
+    for _ in range(5):
+        await RisingEdge(dut.clk)
+    dut.rst_n.value = 1
+    for _ in range(2):
+        await RisingEdge(dut.clk)
+    return axil, slave, mon
+
+
+def _assert_clean(slave, mon, what):
+    assert not slave.viol, f"[{what}] slave saw AXI protocol violations: {slave.viol}"
+    assert not mon.viol, f"[{what}] DMA master ordering violations: {mon.viol[:5]}"
+
+
+def _assert_plan(slave, plan, what):
+    """AR and AW bursts issued match the reference split, in order."""
+    exp = [(s, n - 1) for s, _, n in plan]
+    got_r = [(r["addr"], r["len"]) for r in slave.ar_log]
+    assert got_r == exp, f"[{what}] AR bursts {got_r} != reference {exp}"
+    exp_w = [(d, n - 1) for _, d, n in plan]
+    got_w = [(w["addr"], w["len"]) for w in slave.aw_log]
+    assert got_w == exp_w, f"[{what}] AW bursts {got_w} != reference {exp_w}"
+
+
+def _assert_copied(slave, seed, src, dst, words, what):
+    bad = [
+        (i, slave.mem.get(dst + 4 * i), seed[src + 4 * i])
+        for i in range(words)
+        if slave.mem.get(dst + 4 * i) != seed[src + 4 * i]
+    ]
+    assert not bad, (
+        f"[{what}] {len(bad)} of {words} words wrong; first word[{bad[0][0]}] "
+        f"got {bad[0][1]!r} exp {seed[src + 4 * bad[0][0]]:#010x}"
+    )
+
+
+async def _quiesce(dut, axil, timeout=POLL_TIMEOUT_CYCLES):
+    """Wait for done|error AND busy clear; return STATUS."""
+    return await _poll_done(dut, axil, timeout=timeout, wait_idle=True)
+
+
+# ── max-burst clamp ──────────────────────────────────────────────────────────
+
+
+@cocotb.test()
+async def test_dma_max_burst_clamp(dut):
+    """Lengths around MAX_BURST_BEATS: clamp is exactly 256 beats, remainder in the next burst.
+
+    255 words -> [255]; 256 -> [256]; 257 -> [256, 1]; 293 -> [256, 37].  Checked on the real AR/AW
+    len fields (not just on the copied data), plus all data, WLAST placement and AXI ordering.
+    """
+    SRC, DST = 0x0001_0000, 0x0002_0000
+    for words in (255, 256, 257, 293):
+        seed = {SRC + 4 * i: _pattern(i, words) for i in range(words)}
+        axil, slave, mon = await _setup_fabric(dut, mem=dict(seed))
+        await _launch(axil, SRC, DST, words * 4)
+        status = await _quiesce(dut, axil, timeout=20000)
+        what = f"{words} words"
+        assert status & STATUS_DONE and not (status & STATUS_ERROR), f"[{what}] {status:#010x}"
+        plan = _burst_plan(SRC, DST, words)
+        assert max(n for _, _, n in plan) <= MAX_BEATS
+        _assert_plan(slave, plan, what)
+        _assert_copied(slave, seed, SRC, DST, words, what)
+        assert len(slave.w_log) == words, f"[{what}] {len(slave.w_log)} W beats, expected {words}"
+        lasts = [w["beat"] for w in slave.w_log if w["last"]]
+        assert lasts == [n - 1 for _, _, n in plan], f"[{what}] wlast beats {lasts}"
+        _assert_clean(slave, mon, what)
+        extra = [a for a in slave.mem if DST + 4 * words <= a < DST + 4 * words + 0x100]
+        assert not extra, f"[{what}] stray writes past the end of the destination: {extra[:4]}"
+    dut._log.info("test_dma_max_burst_clamp PASS")
+
+
+# ── channel stalls ───────────────────────────────────────────────────────────
+
+
+@cocotb.test()
+async def test_dma_ar_stall(dut):
+    """arready low 9 edges per burst: ARVALID/payload stable, nothing else moves, data intact."""
+    SRC, DST, WORDS, DELAY = 0x0003_0000, 0x0004_0000, 300, 9  # 2 bursts (256 + 44)
+    seed = {SRC + 4 * i: _pattern(i, 1) for i in range(WORDS)}
+    axil, slave, mon = await _setup_fabric(dut, mem=dict(seed), ar_delay=DELAY)
+    await _launch(axil, SRC, DST, WORDS * 4)
+    # While the first AR is stalled the DMA must be busy and must not have started a write.
+    for _ in range(4):
+        await RisingEdge(dut.clk)
+    assert not slave.ar_log, "first AR accepted before the stall elapsed"
+    status, _ = await axil.read(REG_STATUS)
+    assert status & STATUS_BUSY, f"DMA not busy while waiting for arready: {status:#010x}"
+    assert not (status & (STATUS_DONE | STATUS_ERROR)), f"{status:#010x}"
+    assert int(dut.m_arvalid.value) == 1 and int(dut.m_awvalid.value) == 0
+    status = await _quiesce(dut, axil, timeout=20000)
+    assert status & STATUS_DONE and not (status & STATUS_ERROR), f"{status:#010x}"
+    plan = _burst_plan(SRC, DST, WORDS)
+    _assert_plan(slave, plan, "ar_stall")
+    _assert_copied(slave, seed, SRC, DST, WORDS, "ar_stall")
+    assert slave.arvalid_edges >= len(plan) * DELAY, (
+        f"arvalid high {slave.arvalid_edges} edges, expected >= {len(plan) * DELAY}"
+    )
+    _assert_clean(slave, mon, "ar_stall")
+    dut._log.info("test_dma_ar_stall PASS")
+
+
+@cocotb.test()
+async def test_dma_aw_stall(dut):
+    """awready low for 11 edges per burst: AWVALID/payload stable, W only after AW accepted."""
+    SRC, DST, WORDS, DELAY = 0x0005_0000, 0x0006_0000, 300, 11
+    seed = {SRC + 4 * i: _pattern(i, 2) for i in range(WORDS)}
+    axil, slave, mon = await _setup_fabric(dut, mem=dict(seed), aw_delay=DELAY)
+    await _launch(axil, SRC, DST, WORDS * 4)
+    # Wait until the read phase has finished and the DMA is parked on AW.
+    for _ in range(2000):
+        await RisingEdge(dut.clk)
+        if int(dut.m_awvalid.value):
+            break
+    assert int(dut.m_awvalid.value), "DMA never raised awvalid"
+    for _ in range(DELAY - 3):
+        await RisingEdge(dut.clk)
+        assert int(dut.m_awvalid.value) == 1, "awvalid dropped while awready was low"
+        assert int(dut.m_wvalid.value) == 0, "wvalid raised before AW was accepted"
+    assert not slave.aw_log, "AW accepted before the stall elapsed"
+    status = await _quiesce(dut, axil, timeout=20000)
+    assert status & STATUS_DONE and not (status & STATUS_ERROR), f"{status:#010x}"
+    plan = _burst_plan(SRC, DST, WORDS)
+    _assert_plan(slave, plan, "aw_stall")
+    _assert_copied(slave, seed, SRC, DST, WORDS, "aw_stall")
+    assert slave.awvalid_edges >= len(plan) * DELAY, (
+        f"awvalid seen high {slave.awvalid_edges} edges, expected >= {len(plan) * DELAY}"
+    )
+    _assert_clean(slave, mon, "aw_stall")
+    dut._log.info("test_dma_aw_stall PASS")
+
+
+@cocotb.test()
+async def test_dma_w_and_b_stalls(dut):
+    """wready low 3 edges per beat, bvalid delayed 30 cycles: FSM waits for B."""
+    SRC, DST, WORDS = 0x0007_0000, 0x0008_0000, 40
+    seed = {SRC + 4 * i: _pattern(i, 3) for i in range(WORDS)}
+    axil, slave, mon = await _setup_fabric(dut, mem=dict(seed), w_delay=3, b_delay=30)
+    await _launch(axil, SRC, DST, WORDS * 4)
+    # While the last W beat is accepted but B has not been handshaken, the descriptor is NOT done.
+    saw_b_wait, status = 0, 0
+    for _ in range(20000):
+        await RisingEdge(dut.clk)
+        waiting_before = mon.w_done > mon.b
+        status, _ = await axil.read(REG_STATUS)
+        if waiting_before and mon.w_done > mon.b:  # B still outstanding across the whole read
+            saw_b_wait += 1
+            assert status & STATUS_BUSY and not (status & STATUS_DONE), (
+                f"descriptor reported done/idle before its B response: {status:#010x}"
+            )
+        if status & STATUS_DONE and not (status & STATUS_BUSY):
+            break
+    assert saw_b_wait, "never observed the B-wait window (stall not exercised)"
+    assert status & STATUS_DONE and not (status & STATUS_ERROR), f"{status:#010x}"
+    assert mon.b == mon.aw == 1, f"done with B handshakes={mon.b}, AW={mon.aw}"
+    _assert_plan(slave, _burst_plan(SRC, DST, WORDS), "w/b stall")
+    _assert_copied(slave, seed, SRC, DST, WORDS, "w/b stall")
+    # Each W beat took at least w_delay+1 edges (wvalid held while wready was low).
+    gaps = [b["cycle"] - a["cycle"] for a, b in zip(slave.w_log, slave.w_log[1:])]
+    assert gaps and min(gaps) >= 3, f"W beats spaced {min(gaps)} edges apart, stall not applied"
+    _assert_clean(slave, mon, "w/b stall")
+    dut._log.info("test_dma_w_and_b_stalls PASS")
+
+
+@cocotb.test()
+async def test_dma_all_stalls_split_plan(dut):
+    """All channels stalled over a transfer needing both the 4 KB split and the 256 clamp."""
+    SRC, DST, WORDS = 0x0009_0F00, 0x000A_0F80, 420  # src 64 words to page end, dst 32
+    seed = {SRC + 4 * i: _pattern(i, 4) for i in range(WORDS)}
+    axil, slave, mon = await _setup_fabric(
+        dut, mem=dict(seed), ar_delay=3, aw_delay=4, w_delay=2, b_delay=5, r_delay=2
+    )
+    await _launch(axil, SRC, DST, WORDS * 4, irq_en=True)
+    status = await _quiesce(dut, axil, timeout=30000)
+    assert status & STATUS_DONE and not (status & STATUS_ERROR), f"{status:#010x}"
+    plan = _burst_plan(SRC, DST, WORDS)
+    assert len(plan) >= 3 and plan[0][2] == 32, f"reference plan unexpected: {plan}"
+    _assert_plan(slave, plan, "all stalls")
+    _assert_copied(slave, seed, SRC, DST, WORDS, "all stalls")
+    irq, _ = await axil.read(REG_IRQ_STATUS)
+    assert irq == 0b01, f"IRQ_STATUS {irq:#x}: expected done_irq only"
+    assert int(dut.irq_o.value) == 1
+    _assert_clean(slave, mon, "all stalls")
+    dut._log.info("test_dma_all_stalls_split_plan PASS")
+
+
+# ── write-response errors ────────────────────────────────────────────────────
+
+
+def _bad_resp_fn(bad_w=None, bad_r=None, w_resp=RESP_SLVERR, r_resp=RESP_SLVERR):
+    """resp_fn for AxiSlave: error on write bursts based at an address in bad_w / reads in bad_r.
+
+    The sets are held by reference, so a test can change them mid-run.
+    """
+    bad_w = bad_w if bad_w is not None else set()
+    bad_r = bad_r if bad_r is not None else set()
+
+    def fn(kind, addr):
+        if kind == "w" and addr in bad_w:
+            return w_resp
+        if kind == "r" and addr in bad_r:
+            return r_resp
+        return RESP_OKAY
+
+    return fn
+
+
+async def _check_write_error(dut, axil, slave, mon, *, resp, irq_en, what):
+    """Shared post-condition for a write-response error: status, ERR_INFO, IRQ."""
+    status = await _quiesce(dut, axil)
+    assert status & STATUS_ERROR, f"[{what}] STATUS.error not set: {status:#010x}"
+    assert not (status & STATUS_DONE), f"[{what}] STATUS.done set on an error path: {status:#010x}"
+    assert not (status & STATUS_BUSY), f"[{what}] STATUS.busy stuck: {status:#010x}"
+    err_info, _ = await axil.read(REG_ERR_INFO)
+    assert err_info == resp, (
+        f"[{what}] ERR_INFO={err_info:#x}: expected resp={resp:#x}, err_on_read=0 (WRITE error)"
+    )
+    irq, _ = await axil.read(REG_IRQ_STATUS)
+    assert irq == 0b10, f"[{what}] IRQ_STATUS={irq:#x}: expected err_irq only"
+    assert int(dut.irq_o.value) == (1 if irq_en else 0), f"[{what}] irq_o != irq_en"
+    _assert_clean(slave, mon, what)
+
+
+@cocotb.test()
+async def test_dma_write_slverr_halts_and_recovers(dut):
+    """SLVERR on the write response: error status, IRQ, halt; soft_reset then a clean re-copy."""
+    SRC, DST, WORDS = 0x000B_0000, 0x000C_0000, 8
+    seed = {SRC + 4 * i: _pattern(i, 5) for i in range(WORDS)}
+    bad = {DST}
+    axil, slave, mon = await _setup_fabric(
+        dut, mem=dict(seed), resp_fn=_bad_resp_fn(bad_w=bad, w_resp=RESP_SLVERR)
+    )
+    await _launch(axil, SRC, DST, WORDS * 4, irq_en=True)
+    await _check_write_error(
+        dut, axil, slave, mon, resp=RESP_SLVERR, irq_en=True, what="write SLVERR"
+    )
+
+    # The whole burst was presented (8 W beats) but the failing slave committed nothing, and the
+    # DMA issued exactly one AR / AW and nothing after the error.
+    assert (len(slave.ar_log), len(slave.aw_log), len(slave.w_log)) == (1, 1, WORDS)
+    assert not any(a in slave.mem for a in range(DST, DST + 4 * WORDS, 4))
+
+    # Halted: a new descriptor is ignored (no AR, queue stays empty, error stays).
+    await _launch(axil, SRC, DST + 0x1000, WORDS * 4)
+    for _ in range(40):
+        await RisingEdge(dut.clk)
+    status, _ = await axil.read(REG_STATUS)
+    assert len(slave.ar_log) == 1, "DMA accepted a descriptor while halted after a write error"
+    assert status & STATUS_Q_EMPTY and status & STATUS_ERROR, f"{status:#010x}"
+
+    # soft_reset clears error/IRQ/halt; the same descriptor now completes against a healthy slave.
+    await _soft_reset(axil)
+    for _ in range(3):
+        await RisingEdge(dut.clk)
+    assert int(dut.irq_o.value) == 0
+    status, _ = await axil.read(REG_STATUS)
+    assert not (status & (STATUS_ERROR | STATUS_DONE | STATUS_BUSY)), f"{status:#010x}"
+    bad.clear()
+    await _launch(axil, SRC, DST, WORDS * 4)
+    status = await _quiesce(dut, axil)
+    assert status & STATUS_DONE and not (status & STATUS_ERROR), f"{status:#010x}"
+    _assert_copied(slave, seed, SRC, DST, WORDS, "re-copy after write error")
+    assert slave.viol == [] and mon.viol == []
+    dut._log.info("test_dma_write_slverr_halts_and_recovers PASS")
+
+
+@cocotb.test()
+async def test_dma_write_decerr_second_burst_and_err_on_read_cleared(dut):
+    """DECERR on burst 2's write; ERR_INFO.err_on_read left by an EARLIER read error must clear.
+
+    Step 1 provokes a read SLVERR (ERR_INFO = 0b110) and soft-resets.  Step 2 copies 272 words
+    (bursts 256 + 16): burst 1 must land intact, burst 2's B returns DECERR.  ERR_INFO must
+    then be exactly resp=3 / err_on_read=0 (stale read-error flag cleared), done stays 0, and
+    only 2 AW were issued.
+    """
+    SRC, DST = 0x000D_0000, 0x000E_0000
+    BAD_SRC = 0x000F_0000
+    WORDS = 272
+    seed = {SRC + 4 * i: _pattern(i, 6) for i in range(WORDS)}
+    seed.update({BAD_SRC + 4 * i: _pattern(i, 7) for i in range(4)})
+    bad_w, bad_r = set(), {BAD_SRC}
+    axil, slave, mon = await _setup_fabric(
+        dut,
+        mem=dict(seed),
+        check_serial=False,  # the read-error step abandons a burst by design
+        resp_fn=_bad_resp_fn(bad_w=bad_w, bad_r=bad_r, w_resp=RESP_DECERR),
+    )
+    # Step 1: read error.
+    await _launch(axil, BAD_SRC, DST, 16)
+    status = await _quiesce(dut, axil)
+    assert status & STATUS_ERROR
+    err_info, _ = await axil.read(REG_ERR_INFO)
+    assert err_info == (ERR_INFO_ON_READ | RESP_SLVERR), f"read error ERR_INFO={err_info:#x}"
+    await _soft_reset(axil)
+    for _ in range(3):
+        await RisingEdge(dut.clk)
+
+    # Step 2: write DECERR on the second burst only.
+    bad_r.clear()
+    bad_w.add(DST + 4 * MAX_BEATS)
+    n_aw0, n_ar0 = len(slave.aw_log), len(slave.ar_log)
+    await _launch(axil, SRC, DST, WORDS * 4)  # no irq_en -> irq_o must stay low
+    status = await _quiesce(dut, axil)
+    assert status & STATUS_ERROR and not (status & STATUS_DONE), f"{status:#010x}"
+    err_info, _ = await axil.read(REG_ERR_INFO)
+    assert err_info == RESP_DECERR, (
+        f"ERR_INFO={err_info:#x}: expected resp=DECERR, err_on_read=0 (stale flag must clear)"
+    )
+    irq, _ = await axil.read(REG_IRQ_STATUS)
+    assert irq == 0b10, f"IRQ_STATUS={irq:#x}"
+    assert int(dut.irq_o.value) == 0, "irq_o high with CTRL.irq_en=0"
+    assert len(slave.ar_log) - n_ar0 == 2 and len(slave.aw_log) - n_aw0 == 2
+    _assert_copied(slave, seed, SRC, DST, MAX_BEATS, "burst 1 before the failing burst")
+    assert not any(DST + 4 * (MAX_BEATS + i) in slave.mem for i in range(16)), (
+        "failing burst's words were committed by the slave"
+    )
+    assert slave.viol == []
+    dut._log.info("test_dma_write_decerr_second_burst_and_err_on_read_cleared PASS")
+
+
+# ── descriptor queue full ────────────────────────────────────────────────────
+
+
+@cocotb.test()
+async def test_dma_queue_full_drops_start_silently(dut):
+    """Fill the 4-deep queue behind a stalled in-flight descriptor; the 6th start is dropped.
+
+    ar_delay=400 parks descriptor 0 in S_AR (its AR is not accepted for 400 edges, asserted
+    below) while descriptors 1..4 fill the queue: STATUS.q_full=1, q_empty=0, q_count=4.  A
+    further start must be dropped silently: q_count unchanged, no error, CTRL.start still
+    self-clears, and that descriptor is NEVER executed.  After the drain exactly D0..D4 ran,
+    in FIFO order; a retried start is then accepted.
+    """
+    N = 4
+    descs = [(0x0010_0000 + 0x1000 * d, 0x0020_0000 + 0x1000 * d) for d in range(QDEPTH + 2)]
+    seed = {
+        s + 4 * i: _pattern(i, 0x100 * (d + 1)) for d, (s, _) in enumerate(descs) for i in range(N)
+    }
+    sentinel = 0x5E5E_5E5E
+    mem = dict(seed)
+    mem[descs[5][1]] = sentinel
+    axil, slave, mon = await _setup_fabric(dut, mem=mem, ar_delay=400)
+
+    # D0 is popped into the (stalled) FSM; D1..D4 then fill the queue.
+    for d in range(QDEPTH + 1):
+        await _launch(axil, descs[d][0], descs[d][1], N * 4)
+        if d == 0:
+            for _ in range(6):
+                await RisingEdge(dut.clk)
+    for _ in range(6):  # STATUS is a registered mirror: let the last enqueue show up
+        await RisingEdge(dut.clk)
+    status, _ = await axil.read(REG_STATUS)
+    assert not slave.ar_log, (
+        "descriptor 0 already progressed: FSM not stalled, queue test is vacuous"
+    )
+    assert status & STATUS_BUSY
+    assert status & STATUS_Q_FULL, f"q_full not set with {QDEPTH} queued: {status:#010x}"
+    assert not (status & STATUS_Q_EMPTY)
+    assert (status >> STATUS_Q_COUNT_SHIFT) & 0x7 == QDEPTH, f"q_count != {QDEPTH}: {status:#010x}"
+
+    # 6th start with the queue full: dropped.
+    await _launch(axil, descs[5][0], descs[5][1], N * 4)
+    for _ in range(8):
+        await RisingEdge(dut.clk)
+    status, _ = await axil.read(REG_STATUS)
+    assert (status >> STATUS_Q_COUNT_SHIFT) & 0x7 == QDEPTH and status & STATUS_Q_FULL, (
+        f"queue count changed on a dropped start: {status:#010x}"
+    )
+    assert not (status & STATUS_ERROR), "dropping a start while full must not raise an error"
+    ctrl, _ = await axil.read(REG_CTRL)
+    assert not (ctrl & CTRL_START), (
+        f"CTRL.start did not self-clear after a dropped start: {ctrl:#x}"
+    )
+
+    status = await _quiesce(dut, axil, timeout=30000)
+    assert status & STATUS_DONE and not (status & STATUS_ERROR), f"{status:#010x}"
+    assert status & STATUS_Q_EMPTY, f"{status:#010x}"
+    ran = [r["addr"] for r in slave.ar_log]
+    assert ran == [descs[d][0] for d in range(QDEPTH + 1)], f"descriptors ran as {ran}, want D0..D4"
+    for d in range(QDEPTH + 1):
+        _assert_copied(slave, seed, descs[d][0], descs[d][1], N, f"D{d}")
+    assert slave.mem[descs[5][1]] == sentinel and descs[5][1] + 4 not in slave.mem, (
+        "dropped descriptor executed"
+    )
+
+    # The queue has space again: the retried start is accepted and runs.
+    await _launch(axil, descs[5][0], descs[5][1], N * 4)
+    for _ in range(10):
+        await RisingEdge(dut.clk)
+    status = await _quiesce(dut, axil, timeout=30000)
+    assert not (status & STATUS_ERROR), f"{status:#010x}"
+    _assert_copied(slave, seed, descs[5][0], descs[5][1], N, "retried D5")
+    assert [r["addr"] for r in slave.ar_log][-1] == descs[5][0]
+    _assert_clean(slave, mon, "queue full")
+    dut._log.info("test_dma_queue_full_drops_start_silently PASS")
