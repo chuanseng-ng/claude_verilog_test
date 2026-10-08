@@ -1,7 +1,7 @@
 # Sky130 SoC max-slew / max-cap: root cause and the RC-calibrated repair (bead `e45j`)
 
-**Status 2026-10-07.** Mechanism found, fix measured on one full run, bead left **open** (max_ss slew
-295, not 0). Everything here is measured from run artifacts unless marked *inference*.
+**Status 2026-10-08.** Mechanism found, fix measured on two full runs (section 5: confirmation on current RTL failed the max-cap gate on one net, so NOT adopted as default), bead left **open** (max_ss slew
+295 on the pinned-DMA run, 423 on current RTL; not 0). Everything here is measured from run artifacts unless marked *inference*.
 
 ## 1. The earlier root cause was only half right
 
@@ -111,3 +111,55 @@ in the PnR SDC (changes repair behaviour: 5 839 nets exceed 10). A post-RCX ECO 
 
 Single-run caveat: one full run per arm; no repeat was made, so run-to-run noise on the slew counts is not
 characterised (the antenna and setup differences are large against the historical drift on this design).
+
+## 5. Confirmation run on current RTL (2026-10-08): NOT adopted
+
+User decision 2026-10-08: adopt the RC-calibrated flow as the default Sky130 SoC flow and un-skip
+`Checker.MaxCapViolations` **if** a confirmation run on current `main` RTL matches section 3. Run:
+`RUN_2026-10-08_05-21-39` (`make -C pnr librelane-sky130-soc-rccal-noklayout`, `origin/main` at `3ad22f8`, no
+`dma_engine.sv` pin, so it carries the `wdmo` DMA fix and the `3xtv` `axi_lite_interconnect` fix; all 62 steps
+ran, sole deferred error is the 8 984 Magic DRC of bead `45a`). **Acceptance failed on max-cap**, so no default
+was changed and `Checker.MaxCapViolations` stays skipped.
+
+| (violating pins unless noted) | Gate B `RUN_2026-10-05_06-50-11` | rccal `RUN_2026-10-06_22-43-34` (pinned DMA) | rccal confirm `RUN_2026-10-08_05-21-39` (current RTL) |
+|---|---|---|---|
+| max_ss slew / cap | 7622 / 140 | 295 / 0 | **423 / 1** |
+| nom_ss | 2648 / 78 | 143 / 0 | 189 / **1** |
+| min_ss | 1669 / 33 | 5 / 0 | 16 / **1** |
+| max_tt | 2331 / 3 | 209 / 0 | 257 / **1** |
+| nom_tt | 1016 / 1 | 64 / 0 | 95 / **1** |
+| min_tt | 876 / 0 | 0 / 0 | 12 / **1** |
+| max_ff / nom_ff / min_ff slew | 1661 / 944 / 753 | 122 / 53 / 0 | 254 / 46 / 11 (cap 0) |
+| max_ss slew ANT / other / SRAM | 1983 / 5609 / 30 | 198 / 81 / 16 | 304 / 102 / 18 |
+| antenna nets / pins | 210 / 305 | 184 / 259 | 205 / 273 |
+| setup worst slack / violators | +0.579 ns / 0 | +3.276 ns / 0 | +3.329 ns / 0 |
+| hold worst slack / violators | +0.279 ns / 0 | +0.275 ns / 0 | +0.282 ns / 0 |
+| Netgen LVS / routing DRC | PASSED / 0 | PASSED / 0 | PASSED / 0 |
+| Magic DRC (bead 45a) | 8984 | 8984 | 8984 |
+| stdcell area / utilisation | 1 703 620 um2 / 44.84 % | 1 778 150 um2 / 45.20 % | 1 780 450 um2 / 45.21 % |
+| instances | 315 038 | 314 625 | 312 320 |
+| power | 81.0 mW | 80.9 mW | 84.9 mW |
+
+**The single cap violation.** All six tt/ss corners fail on the same driver, `_078722_/X`, a
+`sky130_fd_sc_hd__o22a_4` that drives `cpu_bridge_s_rdata[12]` (the `cdc_gray_fifo` R-channel read mux,
+`cdc_gray_fifo.sv` `mem_q[rd_bin_q]`, bead `7ohm`): 0.614 pF against a 0.530 pF limit at nom_tt (+16 %) and
+0.643 pF against 0.333 pF at max_ss; ff corners have no cap violation (the same driver also appears in the nom_tt slew list, 1.63 ns against 1.50 ns). `RepairDesignPostGRT`
+(step 37) logged "Found 296 slew violations / 18 capacitance violations ... Inserted 34 buffers in 148 nets"
+and the estimate-side `nom_tt` metric was 0 afterwards, so this net was inside the repair target on the
+calibrated GRT estimate and exceeded it only after RCX (*inference*: a detour or an unbuffered long wire that
+the calibrated estimate under-counts on this one net; not traced to a route length in this run).
+
+**Reading.** Max-cap 0 at nine corners was *not* a stable property: it held on the pinned-DMA run and failed on
+one net on current RTL. Un-skipping would therefore turn `librelane-sky130-soc` into a failing flow (from
+`checker.py` `TimingViolations.check_timing_violations`: any violating corner matched by
+`TIMING_VIOLATION_CORNERS = ['*']` raises a `DeferredStepError`; read from source, the checker was not
+executed). Slew and antenna moved the wrong way against the previous rccal run, by 43 % (max_ss 295 -> 423),
+2.1x (max_ff 122 -> 254), +11 % antenna nets, but remain about 18x better than Gate B on max_ss. Noise
+reasoning: the netlist is different (312 320 vs 314 625 instances, -0.7 %, different DMA and interconnect RTL),
+so placement and routing are a different random draw; one run per arm cannot separate that from a real
+effect. The deltas in slew and antenna are therefore uncharacterised, not evidence of a regression in the
+flow; the cap violation is a hard fail of the stated acceptance gate regardless of cause.
+
+**Not done.** No default, `Makefile`, `config.json` or checker skip was changed. The recommended next step is
+one more single-variable run toward cap 0 (the +10 % C multipliers, or `GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH`),
+and a repeat of the *same* config on the same RTL to measure run-to-run noise before adopting anything.
