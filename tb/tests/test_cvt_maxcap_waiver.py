@@ -16,7 +16,7 @@ import pytest
 PLUGIN_DIR = Path(__file__).resolve().parents[2] / "pnr" / "sky130" / "soc" / "plugin"
 sys.path.insert(0, str(PLUGIN_DIR))
 
-import cvt_maxcap_waiver as mw  # noqa: E402
+import cvt_maxcap_waiver as mw  # type: ignore[import-not-found]  # noqa: E402
 
 CORNERS = ("nom_tt_025C_1v80", "max_ss_100C_1v60", "min_ff_n40C_1v95")
 
