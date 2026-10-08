@@ -35,11 +35,16 @@ IMAGE 2  pll_prog.hex -- both PLLs' divider fields programmed through the real f
 
 IMAGE 3  gpu_iso.hex -- GPU power-down/up with a level-held gpu_irq_o
   Launches the existing cpu_gpu_irq kernel with GPU_CTRL.irq_enable but interrupts masked,
-  so gpu_irq_o is HIGH and stays high.  PMU CTRL=GPU_OFF (0x2000_8000) then isolates it:
-  gpu_irq_raw stays 1 (state kept: the domain's clock is gated before its reset asserts)
-  while gpu_irq_o must read 0.  PMU CTRL=NORMAL un-isolates it and gpu_irq_o must come
-  back.  GPU registers are never touched while isolated (gif_axil_arvalid is clamped, a
-  read would hang).
+  so gpu_irq_o is HIGH and stays high.  PMU CTRL=GPU_OFF (0x2000_8000) walks ret_save ->
+  iso_en -> clock gate -> reset; PMU CTRL=NORMAL walks the reverse.  GPU registers are
+  never touched while isolated (gif_axil_arvalid is clamped, a read would hang).
+  FINDING: the GPU's flops are async-reset, so the domain reset clears ALL GPU state (irq
+  latch, irq_enable, done) even though its clock is gated -- unlike the CPU, the GPU does
+  not "survive by construction" as pmu.sv's header claims.  The image therefore checks
+  state-LOSS (irq_enable and done read 0 after power-up) and then proves the GPU works
+  again: a second launch on new data completes and gpu_irq_o rises through the released
+  isolation.  The clamp itself is observable only in the window between iso_en rising and
+  the reset asserting, where gpu_irq_raw is still 1.
 
 Registers: IMAGE 1 MAIN uses x1-x23 (x2=VAR_BASE x3=TIMER x4=UART x5=SPI x6=DMA x7=IRQ);
 the ISR uses only x24-x31.
@@ -337,23 +342,22 @@ def build_gpu_iso(asm):
     li(asm, 6, GPU_BASE)
     li(asm, 9, PMU_BASE)
     # NOTE: no mtvec / mie / mstatus / IRQ_MASK -- gpu_irq_o must just sit high.
-    for i in range(gpuirq.N_SRC_WORDS):
-        asm.emit(ADDI(7, 0, (i + 1) * 0x10))
-        asm.emit(SW(7, 3, i * 4))
-    flush_dcache(asm, "FL1")
-    for i, kw in enumerate(gpuirq.build_gpu_kernel()):
-        li(asm, 7, kw)
-        asm.emit(SW(7, 5, i * 4))
-    flush_dcache(asm, "FL2")
-    asm.emit(SW(5, 6, gpuirq.GPU_OFF_KERNEL_PC))
-    asm.emit(ADDI(7, 0, 1))
-    for off in (gpuirq.GPU_OFF_GRID_X, gpuirq.GPU_OFF_GRID_Y, gpuirq.GPU_OFF_GRID_Z,
-                gpuirq.GPU_OFF_BLOCK_Y, gpuirq.GPU_OFF_BLOCK_Z):
-        asm.emit(SW(7, 6, off))
-    asm.emit(ADDI(7, 0, 8))
-    asm.emit(SW(7, 6, gpuirq.GPU_OFF_BLOCK_X))
-    asm.emit(ADDI(7, 0, 0x05))                     # irq_enable | launch
-    asm.emit(SW(7, 6, gpuirq.GPU_OFF_CTRL))
+
+    def write_src(scale):
+        for i in range(gpuirq.N_SRC_WORDS):
+            asm.emit(ADDI(7, 0, (i + 1) * scale))
+            asm.emit(SW(7, 3, i * 4))
+
+    def launch():
+        asm.emit(SW(5, 6, gpuirq.GPU_OFF_KERNEL_PC))
+        asm.emit(ADDI(7, 0, 1))
+        for off in (gpuirq.GPU_OFF_GRID_X, gpuirq.GPU_OFF_GRID_Y, gpuirq.GPU_OFF_GRID_Z,
+                    gpuirq.GPU_OFF_BLOCK_Y, gpuirq.GPU_OFF_BLOCK_Z):
+            asm.emit(SW(7, 6, off))
+        asm.emit(ADDI(7, 0, 8))
+        asm.emit(SW(7, 6, gpuirq.GPU_OFF_BLOCK_X))
+        asm.emit(ADDI(7, 0, 0x05))                 # irq_enable | launch
+        asm.emit(SW(7, 6, gpuirq.GPU_OFF_CTRL))
 
     def poll(tag, status_reg_base, off, mask, extra_eq=None):
         li(asm, 20, POLL_LIMIT)
@@ -371,6 +375,14 @@ def build_gpu_iso(asm):
         jmp(asm, "FAIL")
         asm.label(f"{tag}_GOT")
 
+    write_src(0x10)
+    flush_dcache(asm, "FL1")
+    for i, kw in enumerate(gpuirq.build_gpu_kernel()):
+        li(asm, 7, kw)
+        asm.emit(SW(7, 5, i * 4))
+    flush_dcache(asm, "FL2")
+    asm.emit(LW(7, 6, gpuirq.GPU_OFF_CTRL))        # irq_enable not yet set
+    launch()
     poll("GDONE", 6, gpuirq.GPU_OFF_STATUS, 2)
     asm.label("GPU_DONE")
     asm.emit(NOP)
@@ -391,13 +403,29 @@ def build_gpu_iso(asm):
     asm.label("GPU_ON")
     asm.emit(NOP)
 
-    asm.emit(LW(7, 6, gpuirq.GPU_OFF_STATUS))      # done bit survived the power cycle
+    # The GPU's flops use ASYNC reset (posedge clk or negedge rst_n), so asserting the
+    # domain reset clears its state even with the clock gated: unlike the CPU, nothing
+    # survives a PMU power cycle.  Prove it from software: GPU_CTRL.irq_enable (was 1),
+    # and GPU_STATUS.done (was 1) both read back 0.
+    asm.emit(LW(7, 6, gpuirq.GPU_OFF_CTRL))
+    asm.emit(ANDI(7, 7, 4))
+    br(asm, BNE, 7, 0, "FAIL")
+    asm.emit(LW(7, 6, gpuirq.GPU_OFF_STATUS))
     asm.emit(ANDI(7, 7, 2))
-    br(asm, BEQ, 7, 0, "FAIL")
+    br(asm, BNE, 7, 0, "FAIL")
+
+    # ... and the GPU is fully functional again, through the released isolation: a second
+    # kernel on new source data completes and its level-held irq reaches gpu_irq_o.
+    write_src(0x20)
+    flush_dcache(asm, "FL3")
+    launch()
+    poll("GDONE2", 6, gpuirq.GPU_OFF_STATUS, 2)
+    asm.label("GPU_RELAUNCHED")
+    asm.emit(NOP)
     asm.emit(ADDI(7, 0, 1))
     asm.label("IRQ_CLR")
     asm.emit(SW(7, 6, gpuirq.GPU_OFF_IRQ_CLR))
-    flush_dcache(asm, "FL3")
+    flush_dcache(asm, "FL4")
     jmp(asm, "PASS")
     tail(asm)
 
@@ -407,7 +435,7 @@ IMAGES = {
     "pll_prog": (build_pll_prog, ("MAIN", "PASS", "FAIL", "PLL_RESET_OK", "PLL1_A",
                                   "PLL2_PROGRAMMED", "PLL1_B")),
     "gpu_iso": (build_gpu_iso, ("MAIN", "PASS", "FAIL", "GPU_DONE", "GPU_OFF", "GPU_ON",
-                                "IRQ_CLR")),
+                                "GPU_RELAUNCHED", "IRQ_CLR")),
 }
 
 

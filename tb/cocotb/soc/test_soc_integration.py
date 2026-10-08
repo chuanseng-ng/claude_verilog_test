@@ -22,7 +22,8 @@ Each gap is exercised end to end with a BEHAVIOURAL check, not just a toggle:
   test_soc_gpu_isolation_via_pmu    firmware (gpu_iso.hex) leaves gpu_irq_o level-high, the
       PMU powers the GPU domain off then on; the testbench checks the PMU sequence order,
       the isolation clamp (gpu_irq_o == gpu_irq_raw & !gpu_iso_en on EVERY cycle, with
-      raw=1 / out=0 while isolated) and that the GPU state survives the cycle.
+      raw=1 / out=0 in the iso-before-reset window), that the GPU loses its state (async
+      reset flops -- see the FINDING in gen_integ_hex.py) and that a relaunch works.
   test_soc_debug_apb_halt_gpr_step  the external APB debug master (tb_soc_top apb_* ports)
       halts the CPU, reads / writes GPRs, the PC and breakpoint registers, single-steps and
       resumes, all through u_apb_dbg_cdc.
@@ -337,21 +338,28 @@ async def test_soc_gpu_isolation_via_pmu(dut):
             assert (raw, out, iso) == (1, 1, 0), "after the kernel: gpu_irq must be high, un-isolated"
         elif pc == A.GPU_ISO_GPU_OFF:
             markers_seen["off"] = (raw, out, iso, cur["pmu_gpu_clk_en"], cur["pmu_gpu_rst_n"])
-            assert (raw, out, iso, cur["pmu_gpu_clk_en"], cur["pmu_gpu_rst_n"]) == (1, 0, 1, 0, 0), (
-                "GPU domain off: expected raw irq still 1, clamped output 0, iso=1, clk_en=0, rst_n=0, "
-                f"got {markers_seen['off']}")
+            assert markers_seen["off"] == (0, 0, 1, 0, 0), (
+                "GPU domain off: expected iso=1, clk_en=0, rst_n=0 and (state lost to the async "
+                f"domain reset) raw irq 0, got {markers_seen['off']}")
         elif pc == A.GPU_ISO_GPU_ON:
             markers_seen["on"] = (raw, out, iso)
+            assert (raw, out, iso) == (0, 0, 0), (
+                "GPU back on: un-isolated and (reset state) irq low")
+        elif pc == A.GPU_ISO_GPU_RELAUNCHED:
+            markers_seen["relaunched"] = (raw, out, iso)
             assert (raw, out, iso) == (1, 1, 0), (
-                "GPU back on: the (retained) level-held irq must reappear once un-isolated")
+                "second kernel after the power cycle: irq must reach gpu_irq_o through the "
+                "released isolation")
         elif pc == A.GPU_ISO_IRQ_CLR:
             markers_seen["clr"] = cycle
         elif pc == A.GPU_ISO_PASS:
             saw_pass = True
             break
     assert saw_pass, f"PASS_PC never committed; markers {markers_seen}"
-    assert set(markers_seen) == {"done", "off", "on", "clr"}, markers_seen
-    assert clamped_cycles > 200, f"only {clamped_cycles} clamped cycles observed (dwell is 200 iterations)"
+    assert set(markers_seen) == {"done", "off", "on", "relaunched", "clr"}, markers_seen
+    # The clamp is only observable between iso_en rising and the reset asserting (the GPU's
+    # async-reset flops then drop the level-held irq): require it actually acted.
+    assert clamped_cycles >= 1, "gpu_irq_raw=1 with iso_en=1 was never observed: clamp never acted"
 
     # Power-down order: ret_save -> iso_en -> clk gate -> reset.  Power-up: the reverse
     # (reset release -> clk ungate -> ret_restore -> iso release).  (pmu.sv header.)
@@ -379,7 +387,7 @@ async def test_soc_gpu_isolation_via_pmu(dut):
     sram = dut.u_soc.u_sram.mem
     for lane in range(8):
         got = int(sram[112 + lane].value)
-        assert got == (lane + 1) * 0x10 + 1, f"GPU result lane {lane}: 0x{got:x}"
+        assert got == (lane + 1) * 0x20 + 1, f"GPU result lane {lane}: 0x{got:x}"
 
 
 # ---------------------------------------------------------------------------
