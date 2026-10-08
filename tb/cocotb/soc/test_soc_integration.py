@@ -482,6 +482,14 @@ async def test_soc_debug_apb_halt_gpr_step(dut):
     x0, _ = await dbg_read(dut, _gpr_addr(0))
     assert x0 == 0, "x0 must stay 0 after a debug write"
 
+    # full-width data patterns survive the CDC bridge both ways
+    for reg, pat in ((8, 0xAAAA_AAAA), (9, 0x5555_5555), (10, 0xFFFF_FFFF), (11, 0)):
+        assert not await dbg_write(dut, _gpr_addr(reg), pat)
+        for _ in range(4):
+            await RisingEdge(dut.clk_i)
+        got, _ = await dbg_read(dut, _gpr_addr(reg))
+        assert got == pat, f"x{reg}: wrote 0x{pat:08x}, read 0x{got:08x}"
+
     # breakpoint registers read back what was written (halted), then are cleared again
     assert not await dbg_write(dut, DBG_BP0_ADDR, 0x1234_5678)
     bp, _ = await dbg_read(dut, DBG_BP0_ADDR)
@@ -531,6 +539,15 @@ async def test_soc_debug_apb_ro_write_pslverr(dut):
     for a in CSR_DBG_REGS:                       # ... and must not have changed it
         v, _ = await dbg_read(dut, a)
         assert v == before[a], f"RO register 0x{a:03x} changed: 0x{before[a]:x} -> 0x{v:x}"
+    # address / data walking sweep with the CPU running (writes to PC / GPR / breakpoint
+    # registers are dropped when not halted): only the RO CSR window may raise PSLVERR.
+    for k in range(12):
+        a = 1 << k
+        for pat in (0xFFFF_FFFF, 0xAAAA_AAAA, 0x5555_5555, 0):
+            err = await dbg_write(dut, a, pat)
+            assert err == (0x200 <= a <= 0x214 and a % 4 == 0), (
+                f"write 0x{a:03x}: pslverr={err}")
+        await dbg_read(dut, a)
     # negative controls: legal writes and addresses outside 0x200-0x214 do not error
     assert not await dbg_write(dut, DBG_CTRL, 0)
     assert not await dbg_write(dut, 0x218, 0x1)

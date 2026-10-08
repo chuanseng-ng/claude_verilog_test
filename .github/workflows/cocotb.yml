@@ -242,7 +242,10 @@ jobs:
           # 2026-10-08 (bead bq2o): 554 = 546 + 8 (dma_engine directed tests in test_dma.py: max_burst_clamp, ar_stall, aw_stall,
           # w_and_b_stalls, all_stalls_split_plan, write_slverr_halts_and_recovers, write_decerr_second_burst_and_err_on_read_cleared,
           # queue_full_drops_start_silently). DERIVED (546 + 8) -- tighten to (measured - 3) from this PR's soc_all CI log.
-          PASS_FLOOR: '554'
+          # 2026-10-08 (bead oez2): 560 = 554 + 6 (new suite soc_integration / test_soc_integration.py: irq_traps_and_spi_miso,
+          # pll_register_programming, gpu_isolation_via_pmu, debug_apb_halt_gpr_step, debug_apb_ro_write_pslverr,
+          # debug_apb_dest_reset_pslverr). DERIVED (554 + 6; measured 6/6 locally) -- if PR #234 (05wf) merges first, rebase onto its floor + 6.
+          PASS_FLOOR: '560'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."

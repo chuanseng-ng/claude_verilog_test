@@ -320,6 +320,21 @@ def build_pll_prog(asm):
         asm.label(marker)
         asm.emit(NOP)
 
+    # Data-pattern + address sweep through the whole fabric path (pwdata / paddr / prdata
+    # bits of the pll APB nets).  CONTROL's WMASK is 0x3F0 (bit0 pll_enable is non-clearable,
+    # GH #89), so the readback of every pattern is (pattern & 0x3F0) | 1; offsets beyond the
+    # two registers read 0 (apb4_register_bank out-of-range policy).
+    for base in (2, 3):
+        for pat in (0xFFFFFFFF, 0xAAAAAAAA, 0x55555555, 0x0):
+            li(asm, 5, pat)
+            asm.emit(SW(5, base, 0x00))
+            expect_word(asm, base, 0x00, (pat & 0x3F0) | 1)
+        for sh in range(3, 11):
+            asm.emit(LW(10, base, 1 << sh))
+            br(asm, BNE, 10, 0, "FAIL")
+        asm.emit(ADDI(8, base, 0x7FF))             # +0x800 does not fit a signed imm12
+        asm.emit(LW(10, 8, 1))
+        br(asm, BNE, 10, 0, "FAIL")
     for base in (2, 3):                            # reset state, both
         expect_word(asm, base, 0x00, PLL_RESET_VAL)
     asm.label("PLL_RESET_OK")
