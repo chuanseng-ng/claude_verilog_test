@@ -945,6 +945,41 @@ async def test_rx_false_start_rejected(dut):
             f"START glitch@{pos}: {st:#010x}")
 
 
+# ── rqvo: genuine START inside the rejected-false-start window ───────────────
+
+@cocotb.test()
+async def test_rx_false_start_then_real_start(dut):
+    """Bead rqvo: a rejected false start must return the receiver to idle at the
+    mid-bit check (os_phase 10), not at the end of the bit period, so a genuine
+    START falling edge landing in the remainder of that bit period is still
+    framed from its own edge.  At D=0 (16 clocks/bit): a 2-clock low glitch,
+    then the line is high for `gap` clocks (samples at phases 7/8/9 majority
+    HIGH => reject), then a full 8N1 frame.  Before the fix the FSM sat in
+    RX_START until the bit period ended and the real START was picked up late
+    (misframed byte / spurious framing error); after the fix the byte is exact.
+    """
+    m = await _setup(dut)
+    await m.write(REG_UART_BAUD, BAUD_D0)
+    await m.write(REG_UART_CTRL, CTRL_RX_EN)
+    await ClockCycles(dut.clk, 20)
+
+    # `gap` = clocks from the glitch's first low clock to the real START edge.
+    # 9..15 spans the window between the vote samples and the end of the bit.
+    for gap in range(9, 16):
+        byte_val = (0xA5 + 29 * gap) & 0xFF
+        levels = [0, 0] + [1] * (gap - 2) + _frame_levels(byte_val, 16)
+        await _drive_levels(dut, levels)
+        await ClockCycles(dut.clk, 24)
+        st = await _status(m)
+        assert st & STATUS_RX_VALID and not st & STATUS_FRAMING_ERROR, (
+            f"gap {gap}: real frame lost or misframed: STATUS={st:#010x}")
+        d, _ = await m.read(REG_UART_RX)
+        assert d == byte_val, f"gap {gap}: expected 0x{byte_val:02X}, got {d:#010x}"
+        st = await _status(m)
+        assert st & STATUS_RX_EMPTY and not st & STATUS_FRAMING_ERROR, (
+            f"gap {gap}: spurious extra byte / framing error: STATUS={st:#010x}")
+
+
 # ── 05wf-6: stop-bit glitch tolerance ────────────────────────────────────────
 
 @cocotb.test()

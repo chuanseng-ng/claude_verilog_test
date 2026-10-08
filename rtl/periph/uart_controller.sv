@@ -512,9 +512,11 @@ module uart_controller #(
                 end
 
                 // -----------------------------------------------------------------
-                // RX_START: absorb the START bit period; mid-bit sample at phase 8
-                // just verifies the line is still low (noise guard).  Advance to
-                // RX_DATA on bit_tick (phase 15 wrap).
+                // RX_START: absorb the START bit period; mid-bit samples at
+                // phases 7/8/9 verify the line is low (noise guard).  Advance to
+                // RX_DATA on bit_tick (phase 15 wrap).  A false start is rejected
+                // as soon as the vote is complete (phase 10, as in RX_STOP) so a
+                // genuine START edge in the rest of the bit period is not missed.
                 // -----------------------------------------------------------------
                 RX_START: begin
                     if (os_tick) begin
@@ -522,17 +524,26 @@ module uart_controller #(
                         if (os_phase_q == 4'd7) rx_s7_q <= rx_serial;
                         if (os_phase_q == 4'd8) rx_s8_q <= rx_serial;
                         if (os_phase_q == 4'd9) rx_s9_q <= rx_serial;
+                        // Reject a false start (noise glitch): a valid START is
+                        // majority-LOW across phases 7/8/9 (rx_maj==0).  If
+                        // rx_maj==1 the line was not genuinely low mid-bit, so
+                        // return to IDLE now (bead rqvo) and re-arm START
+                        // detection without collecting a bogus byte.  rx_s9_q
+                        // was captured one os_tick ago, so rx_maj is valid here.
+                        if (os_phase_q == 4'd10 && rx_maj) begin
+                            rx_s7_q    <= 1'b0;
+                            rx_s8_q    <= 1'b0;
+                            rx_s9_q    <= 1'b0;
+                            rx_state_q <= RX_IDLE;
+                        end
                     end
                     if (bit_tick) begin
-                        // START period complete.  Reject a false start (noise
-                        // glitch): a valid START is majority-LOW across phases
-                        // 7/8/9 (rx_maj==0).  If rx_maj==1 the line was not
-                        // genuinely low mid-bit, so abandon and return to IDLE
-                        // without collecting a bogus byte.
+                        // START period complete; rx_maj==0 here (a majority-HIGH
+                        // vote was already rejected at phase 10).
                         rx_s7_q    <= 1'b0;
                         rx_s8_q    <= 1'b0;
                         rx_s9_q    <= 1'b0;
-                        rx_state_q <= rx_maj ? RX_IDLE : RX_DATA;
+                        rx_state_q <= RX_DATA;
                     end
                 end
 

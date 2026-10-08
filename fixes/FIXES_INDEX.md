@@ -24,6 +24,7 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 | [EBREAK_BUG_FIX.md](#7-ebreak-halt-detection-fix) | 2026-01-28 | Debug | MEDIUM | ✅ Fixed |
 | [PC_MISMATCH_FIX.md](#8-pc-mismatch-logging-fix) | 2026-01-28 | Test | LOW | ✅ Fixed |
 | [Section 9 (below)](#9-axi-lite-ring-phantom-decerr-r-beat-bead-3xtv) | 2026-10-07 | AXI-Lite Protocol | MEDIUM (P2) | ✅ Fixed |
+| [Section 10 (below)](#10-uart-rx-false-start-window-bead-rqvo) | 2026-10-09 | UART RX | LOW (P3) | ✅ Fixed |
 
 ---
 
@@ -243,6 +244,21 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 - **Impact**: a response with no outstanding request (protocol violation); the phantom beat was consumed as the reply to the master's NEXT read (resp=DECERR, data=0 instead of its data). Mapped reads and the unmapped write path were never affected.
 - **Fix**: `r_dvalid_d = !r_dvalid_q` in the unmapped branch, so the beat is offered only while the output register is empty. Depends on the registered `r_dvalid_q` only: no READY->VALID loop, no runtime-indexed mux, mapped-slave timing (bead rvb fan-out register) unchanged.
 - **Tests**: `test_axil_apb_fabric.test_ring_unmapped_read_single_beat` (was `expect_fail=True`) now passes; the `_drain_r` stray-beat workaround was removed from `test_ring_decerr_with_master_stalls`.
+
+---
+
+## 10. UART RX False-Start Window (bead rqvo)
+
+**File**: `rtl/periph/uart_controller.sv` (RX FSM, `RX_START`)
+**Date**: 2026-10-09
+**Severity**: P3 (only after line glitches / noise; normal traffic unaffected)
+**Found by**: bead 05wf coverage agent (PR #234); fix approved by the user 2026-10-08
+
+### Issue Fixed
+- **Problem**: a false start (line low at the START edge, majority HIGH at the mid-bit samples, os_phase 7/8/9) was only rejected at `bit_tick` (phase 15 wrap), so the FSM sat in `RX_START` for the rest of the bit period.
+- **Impact**: a genuine START falling edge landing in that window (phases ~10-15 after the glitch) was not framed from its own edge. The receiver returned to idle up to ~6 oversample ticks late, re-aligned on the already-low line, and sampled every following bit off-centre: lost or mis-framed byte.
+- **Fix**: reject at the os_tick with `os_phase_q == 10 && rx_maj` (the same point `RX_STOP` uses, since `rx_s9_q` is registered one tick earlier) and return to `RX_IDLE`, which re-arms level-based START detection on the next os_tick. The `bit_tick` branch now goes unconditionally to `RX_DATA` (a majority-HIGH vote can no longer reach it). Accepted-START timing is unchanged.
+- **Tests**: new `test_uart.test_rx_false_start_then_real_start` (2-clock glitch, then a real 8N1 frame starting 9..15 clocks after the glitch, byte-exact, no framing error, no spurious extra byte). Failed on the old RTL at gap 10; passes after. `test_rx_false_start_rejected` (05wf-5) did not encode the buggy timing and is unchanged.
 
 ---
 
