@@ -1,9 +1,10 @@
 """Unit tests for the Sky130 SoC named max-cap waiver check (bead e45j).
 
 The module under test (pnr/sky130/soc/plugin/cvt_maxcap_waiver.py) is pure Python with no LibreLane
-dependency, so these tests run outside the nix-shell.  Fixtures are synthetic: a miniature run directory
-with per-corner ``checks.rpt`` files in OpenSTA's ``report_check_types -violators`` layout and a
-miniature structural netlist in the layout OpenROAD writes (escaped names, concatenated bus ports).
+dependency, so these tests run outside the nix-shell.  Fixtures are synthetic: a miniature
+run directory with per-corner ``checks.rpt`` files in OpenSTA's
+``report_check_types -violators`` layout and a miniature structural netlist in the layout
+OpenROAD writes (escaped names, concatenated bus ports).
 """
 
 import json
@@ -112,7 +113,9 @@ WAIVER_JSON = {
             "load_pin": {"instance": "u_cpu*", "pin": "axi_rdata_i[2]"},
             "max_cap_pf": 0.70,
             "bead": "e45j",
-            "justification": "Macro Liberty pin cap 0.2464 pF vs 0.0083 pF median; long wire; tracked in e45j.",
+            "justification": (
+                "Macro Liberty pin cap 0.2464 pF vs 0.0083 pF median; long wire; tracked in e45j."
+            ),
         }
     ],
 }
@@ -124,7 +127,10 @@ def write_run(
     netlist: str = NETLIST,
     metrics: bool = True,
 ) -> Path:
-    """Build a miniature run dir. rows_by_corner maps corner -> list of violation rows ([] = clean)."""
+    """Build a miniature run dir.
+
+    rows_by_corner maps corner -> list of violation rows ([] = clean).
+    """
     run = root / "RUN_synthetic"
     sta = run / "51-openroad-stapostpnr"
     counts = {}
