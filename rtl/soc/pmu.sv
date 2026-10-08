@@ -40,10 +40,23 @@
 // ever asserted while its clock is already gated (DOM_PD_GATE precedes DOM_OFF)
 // and is always released before the clock is ungated (DOM_PU_RST precedes
 // DOM_PU_CLK), the domain's own flops never see an active clock edge while
-// held in reset -- architectural state (e.g. CPU MSTATUS/MTVEC/PC) survives an
-// off->on cycle by construction, without needing real retention hardware.
-// This matches the documented model: state is rebuilt/preserved because the
-// domain is clock-gated, not because retention cells restored it.
+// held in reset. What that buys depends on the domain's reset style (bead
+// 4a7i):
+//   - CPU domain (SYNCHRONOUS reset, `always_ff @(posedge clk)`): a reset
+//     that is asserted and released entirely while the clock is gated never
+//     takes effect, so CPU flop state (e.g. MSTATUS/MTVEC/PC) survives a PMU
+//     off->on cycle. This is a BEHAVIOURAL-MODEL ARTIFACT of clock-gating
+//     instead of supply removal, not retention.
+//   - GPU domain (ASYNCHRONOUS reset, `always_ff @(posedge clk or negedge
+//     rst_n)` in gpu_top / gpu_compute_unit / warp_scheduler / ...): asserting
+//     pmu_gpu_rst_n clears the flops immediately despite the gated clock, so
+//     GPU state (irq latch, GPU_CTRL.irq_enable, STATUS.done, ...) is LOST
+//     across a PMU off->on cycle. Repro: tb/cocotb/soc/test_soc_integration.py
+//     ::test_soc_gpu_isolation_via_pmu.
+// Neither domain models real retention. Real silicon with no retention cells
+// (the Phase 5 case) loses state in both domains on supply-off, so the GPU
+// behaviour is the realistic one. Software must re-initialise the GPU after
+// every PMU power-up and must not rely on CPU state surviving either.
 //
 // Isolation: cpu_iso_en_o / gpu_iso_en_o are ACTIVE-HIGH (phase5_soc.upf
 // ISO_CPU/ISO_GPU, `-isolation_sense high`, `-clamp_value 0`, `-applies_to
