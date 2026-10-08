@@ -594,3 +594,191 @@ async def test_byte_lane_snoop(dut):
         f"[wstrb=0] rx_valid must be 0 after zero-strobe write: STATUS={status:#010x}"
     )
     dut._log.info("test_byte_lane_snoop wstrb=0 no-op PASS")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Bead 05wf — directed gap-closure tests (byte lanes 2/3, TX FIFO full).
+# These check documented behaviour (lowest-asserted-lane priority, drop-newest
+# FIFO semantics, STATUS flags, MSB-first MOSI on the pin), not just line hits.
+# ═════════════════════════════════════════════════════════════════════════════
+
+async def _spi_status(m):
+    s, _ = await m.read(REG_SPI_STATUS)
+    return s
+
+
+async def _capture_mosi_mode0(dut, timeout):
+    """Mode 0 (CPOL=0/CPHA=0): sample spi_mosi_o on each SCLK rising edge and
+    return the 8 captured bits as an MSB-first byte."""
+    prev = int(dut.spi_sclk_o.value)
+    bits = []
+    for _ in range(timeout):
+        await RisingEdge(dut.clk)
+        cur = int(dut.spi_sclk_o.value)
+        if prev == 0 and cur == 1:
+            bits.append(int(dut.spi_mosi_o.value))
+            if len(bits) == 8:
+                break
+        prev = cur
+    assert len(bits) == 8, f"only {len(bits)} SCLK rising edges seen within {timeout} clocks"
+    byte_val = 0
+    for b in bits:
+        byte_val = (byte_val << 1) | b
+    return byte_val
+
+
+# ── 05wf-1: byte lanes 2 and 3 of the SPI_TX push (and lowest-lane priority) ─
+
+@cocotb.test()
+async def test_byte_lane_2_3_priority(dut):
+    """SPI_TX push picks the byte from the LOWEST asserted pstrb lane.  Lanes 2
+    and 3 were never driven (spi_controller.sv L187/L188).  Distinct decoy bytes
+    per lane make a wrong-lane pick visible; verified through loopback and, for
+    lane 3, on the MOSI pin (MSB first, mode 0, external MISO low)."""
+    m = await _setup(dut)
+    await m.write(REG_SPI_CLK_DIV, 0)
+    await m.write(REG_SPI_CTRL, CTRL_ENABLE | CTRL_LOOPBACK)
+
+    cases = [
+        (0b0100, [0x11, 0x22, 0xB2, 0x44]),   # lane 2 only
+        (0b1000, [0x11, 0x22, 0x33, 0xC9]),   # lane 3 only
+        (0b1100, [0x55, 0x66, 0x3E, 0x99]),   # lanes 2+3 -> lane 2 wins
+        (0b1010, [0x77, 0xD4, 0x88, 0x1B]),   # lanes 1+3 -> lane 1 wins
+        (0b0110, [0xAA, 0x6D, 0x2F, 0xEE]),   # lanes 1+2 -> lane 1 wins
+        (0b0111, [0x81, 0x42, 0x24, 0x18]),   # lanes 0..2 -> lane 0 wins
+        (0b1111, [0x5C, 0xA3, 0x0F, 0xF0]),   # full word -> lane 0
+    ]
+    for strb, lanes in cases:
+        word = lanes[0] | (lanes[1] << 8) | (lanes[2] << 16) | (lanes[3] << 24)
+        want = lanes[(strb & -strb).bit_length() - 1]
+        assert await m.write(REG_SPI_TX, word, strb=strb) == RESP_OKAY
+        await ClockCycles(dut.clk, TRANSFER_WAIT_DIV0)
+        st = await _spi_status(m)
+        assert st & STATUS_RX_VALID, f"[strb={strb:04b}] rx_valid=0: STATUS={st:#010x}"
+        data, _ = await m.read(REG_SPI_RX)
+        assert data == want, (
+            f"[strb={strb:04b} wdata={word:#010x}] expected lane byte 0x{want:02X}, "
+            f"got {data:#010x}")
+        st = await _spi_status(m)
+        assert st & STATUS_RX_EMPTY, f"[strb={strb:04b}] exactly one byte expected"
+
+    # Lane 3 on the MOSI pin, loopback off.
+    await m.write(REG_SPI_CLK_DIV, 1)
+    await m.write(REG_SPI_CTRL, CTRL_ENABLE)
+    mon = cocotb.start_soon(_capture_mosi_mode0(dut, 200))
+    assert await m.write(REG_SPI_TX, 0x6B << 24 | 0x00123456, strb=0b1000) == RESP_OKAY
+    got = await mon
+    assert got == 0x6B, f"MOSI pin carried 0x{got:02X}, expected lane-3 byte 0x6B (MSB first)"
+
+
+# ── 05wf-2: byte-strobe writes to RW registers land in the right lanes ───────
+
+@cocotb.test()
+async def test_rw_reg_partial_strobe(dut):
+    """CLK_DIV/CTRL/CS_CTRL partial-strobe writes merge into the right byte lane
+    and leave other lanes alone; lanes outside WMASK never store; a strobe-0
+    write is a no-op."""
+    m = await _setup(dut)
+
+    await m.write(REG_SPI_CLK_DIV, 0x0000_00AB)
+    await m.write(REG_SPI_CLK_DIV, 0x0000_CD00, strb=0b0010)
+    d, _ = await m.read(REG_SPI_CLK_DIV)
+    assert d == 0x0000_CDAB, f"CLK_DIV lane-1 merge: {d:#010x}"
+    await m.write(REG_SPI_CLK_DIV, 0xEEFF_0000, strb=0b1100)
+    d, _ = await m.read(REG_SPI_CLK_DIV)
+    assert d == 0x0000_CDAB, f"CLK_DIV lanes 2/3 must not store: {d:#010x}"
+    await m.write(REG_SPI_CLK_DIV, 0x0000_0000, strb=0b0000)
+    d, _ = await m.read(REG_SPI_CLK_DIV)
+    assert d == 0x0000_CDAB, f"CLK_DIV strobe=0 must be a no-op: {d:#010x}"
+    await m.write(REG_SPI_CLK_DIV, 0x0000_0012, strb=0b0001)
+    d, _ = await m.read(REG_SPI_CLK_DIV)
+    assert d == 0x0000_CD12, f"CLK_DIV lane-0 merge: {d:#010x}"
+
+    await m.write(REG_SPI_CTRL, 0x1F)
+    await m.write(REG_SPI_CTRL, 0xFFFF_FF00, strb=0b1110)
+    d, _ = await m.read(REG_SPI_CTRL)
+    assert d == 0x1F, f"CTRL lanes 1-3 must not store, lane 0 untouched: {d:#010x}"
+
+    d, _ = await m.read(REG_SPI_CS_CTRL)
+    assert d == 1, f"CS_CTRL reset value (cs_n deasserted): {d:#010x}"
+    await m.write(REG_SPI_CS_CTRL, 0xFFFF_FF00, strb=0b1110)    # outside lane 0: ignored
+    await RisingEdge(dut.clk)
+    assert int(dut.spi_cs_n_o.value) == 1, "cs_n must ignore writes to lanes 1-3"
+    await m.write(REG_SPI_CS_CTRL, 0x0000_0000, strb=0b0001)
+    await RisingEdge(dut.clk)
+    assert int(dut.spi_cs_n_o.value) == 0, "lane-0 write must assert cs_n"
+    await m.write(REG_SPI_CS_CTRL, 0xFFFF_FFFF, strb=0b0000)
+    await RisingEdge(dut.clk)
+    assert int(dut.spi_cs_n_o.value) == 0, "strobe=0 must not change cs_n"
+
+
+# ── 05wf-3: TX FIFO full, drop-newest, enable gating, order, IRQ ─────────────
+
+@cocotb.test()
+async def test_tx_fifo_full_drop_drain(dut):
+    """With enable=0 no transfer starts: 4 pushes fill the TX FIFO (tx_full,
+    !tx_empty), the 5th push is dropped.  Enabling then shifts exactly the 4
+    accepted bytes in order (loopback, mode 3), tx_full clears on the first
+    pop, RX FIFO ends full, and irq_done follows rx_valid."""
+    m = await _setup(dut)
+    await m.write(REG_SPI_CLK_DIV, 0)
+    ctrl = CTRL_CPOL | CTRL_CPHA | CTRL_LOOPBACK | CTRL_IRQ_DONE
+    await m.write(REG_SPI_CTRL, ctrl)            # enable=0
+
+    sent = [0xFF, 0x00, 0xA5, 0x5A]
+    for b in sent:
+        assert await m.write(REG_SPI_TX, b) == RESP_OKAY
+    st = await _spi_status(m)
+    assert st & STATUS_TX_FULL and not st & STATUS_TX_EMPTY, f"{st:#010x}"
+    assert not st & STATUS_BUSY
+    await m.write(REG_SPI_TX, 0x3C)              # 5th: dropped
+
+    await ClockCycles(dut.clk, 200)              # enable=0: engine must stay idle
+    st = await _spi_status(m)
+    assert st & STATUS_TX_FULL and not st & STATUS_BUSY and st & STATUS_RX_EMPTY, (
+        f"engine must be gated by enable: {st:#010x}")
+    assert int(dut.spi_sclk_o.value) == 1, "SCLK idles at CPOL=1"
+    assert dut.irq_o.value == 0
+
+    await m.write(REG_SPI_CTRL, ctrl | CTRL_ENABLE)
+    await ClockCycles(dut.clk, 8)
+    st = await _spi_status(m)
+    assert st & STATUS_BUSY, f"transfer should be running: {st:#010x}"
+    assert not st & STATUS_TX_FULL, f"first pop must clear tx_full: {st:#010x}"
+
+    await ClockCycles(dut.clk, 4 * TRANSFER_WAIT_DIV0)
+    st = await _spi_status(m)
+    assert st & STATUS_TX_EMPTY and not st & STATUS_BUSY, f"{st:#010x}"
+    assert st & STATUS_RX_FULL, f"exactly 4 bytes should have been received: {st:#010x}"
+    assert dut.irq_o.value == 1
+    for want in sent:
+        d, _ = await m.read(REG_SPI_RX)
+        assert d == want, f"TX order / drop: expected 0x{want:02X}, got {d:#010x}"
+        await RisingEdge(dut.clk)
+    st = await _spi_status(m)
+    assert st & STATUS_RX_EMPTY, f"a 5th byte was shifted out: {st:#010x}"
+    assert dut.irq_o.value == 0
+
+
+# ── 05wf-4: wide divider — first SCLK edge arrives after (DIV+1) clocks ──────
+
+@cocotb.test()
+async def test_clk_div_wide_first_edge(dut):
+    """CLK_DIV=0x8000 exercises the upper bits of the 16-bit divider (the small
+    divisors used elsewhere never leave bits [15:3] alone).  The first SCLK
+    toggle must land (DIV+1) clocks after the transfer starts: with a loose
+    +/-6 clock window for the push / IDLE->ACTIVE latency."""
+    m = await _setup(dut)
+    DIV = 0x8000
+    await m.write(REG_SPI_CLK_DIV, DIV)
+    await m.write(REG_SPI_CTRL, CTRL_ENABLE | CTRL_LOOPBACK)   # CPOL=0: idle low
+    assert await m.write(REG_SPI_TX, 0x96) == RESP_OKAY
+    n = 0
+    for n in range(1, DIV + 40):
+        await RisingEdge(dut.clk)
+        if int(dut.spi_sclk_o.value) == 1:
+            break
+    else:
+        raise AssertionError("SCLK never rose")
+    assert (DIV + 1) - 2 <= n <= (DIV + 1) + 6, (
+        f"first SCLK edge after {n} clocks, expected ~{DIV + 1} (half-period = DIV+1)")

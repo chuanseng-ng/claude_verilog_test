@@ -153,11 +153,11 @@ Totals: line **98.7 %** (1649/1670), toggle **65.0 %** (38891/59794), 3 of 42 mo
 | interrupt_controller | rtl/periph | 100.0 | 5/5 | 50.2 | 331/660 | 0/2 |
 | pwm_controller | rtl/periph | 100.0 | 15/15 | 40.5 | 658/1626 | 0/2 |
 | sha256_core | rtl/periph | 100.0 | 84/84 | 100.0 | 2268/2268 | 2/0 |
-| spi_controller | rtl/periph | 96.2 | 51/53 | 35.9 | 475/1322 | 1/2 |
+| spi_controller † | rtl/periph | 100.0 | 53/53 | 42.4 | 561/1322 | 1/2 |
 | timer | rtl/periph | 100.0 | 22/22 | 38.7 | 361/934 | 0/2 |
 | trng | rtl/periph | 100.0 | 39/39 | 59.6 | 1215/2040 | 0/2 |
 | trng_lfsr_entropy | rtl/periph | 100.0 | 18/18 | 100.0 | 396/396 | 0/0 |
-| uart_controller | rtl/periph | 94.6 | 106/112 | 43.3 | 527/1216 | 3/2 |
+| uart_controller † | rtl/periph | 100.0 | 112/112 | 49.5 | 602/1216 | 3/2 |
 | watchdog_timer | rtl/periph | 100.0 | 23/23 | 44.7 | 771/1724 | 0/2 |
 | apb4_register_bank | rtl/soc | 100.0 | 23/23 | 75.7 | 1419/1874 | 0/2 |
 | apb_cdc_bridge | rtl/soc | 100.0 | 47/47 | 98.7 | 705/714 | 2/2 |
@@ -280,6 +280,32 @@ Cross-check of the open coverage-gap beads against the fixed labels: every line 
 spi L187/188), `bq2o` (dma L393/546/576/596) and `oez2` (`soc_top` L1450-L1456) is still the correct source line (re-read against
 the RTL); no correction needed.
 
+### 05wf re-measurement: `uart_controller` / `spi_controller` (unit level, 2026-10-08)
+
+† rows in the table above. Measured with `make uart spi COVERAGE=1` (the two unit suites only, merged `.dat`,
+`tools/verif/coverage_report.py` with the unchanged waiver file; no waiver added or removed). The unit-only
+baseline before the new tests reproduced the full-SoC figures exactly on line coverage (uart 106/112, spi 51/53),
+so the SoC-level numbers will be at least these; the full `soc_coverage` run supersedes them.
+
+| Module | Line before | Line after | Toggle before (unit) | Toggle after (unit) |
+| :----- | ----------: | ---------: | -------------------: | ------------------: |
+| uart_controller | 94.6 % (106/112) | **100.0 % (112/112)** | 519/1216 (42.7 %) | 602/1216 (49.5 %) |
+| spi_controller | 96.2 % (51/53) | **100.0 % (53/53)** | 461/1322 (34.9 %) | 561/1322 (42.4 %) |
+
+Points closed: uart L191/L192 (lanes 2/3), L520/L544/L572 `else` (os_tick low in RX_START/DATA/STOP, slow-baud
+runs at D = 1/3/4), L535 `cond_then` (false-start rejection); spi L187/L188 (lanes 2/3); `uart_controller.rx_full` and
+`spi_controller.tx_full` now toggle (and `spi sclk_div_cnt_q` upper bits via `CLK_DIV = 0x8000`). Nothing waived
+and no RTL change; remaining waivers on these two modules are the FSM `default:` arms and `pslverr` tie-off.
+Tests added (13): uart 9 (`byte_lane_2_3_priority`, `rw_reg_partial_strobe`, `rx_fifo_full_drop_wrap`,
+`tx_fifo_full_drop_drain`, `rx_false_start_rejected`, `stop_bit_glitch_no_framing_error`, `slow_baud_tx_timing`,
+`slow_baud_rx_raw_and_framing`, `slow_baud_loopback`); spi 4 (`byte_lane_2_3_priority`, `rw_reg_partial_strobe`,
+`tx_fifo_full_drop_drain`, `clk_div_wide_first_edge`). Behaviours pinned: lowest-asserted-`pstrb`-lane priority,
+drop-newest FIFO semantics at depth 4 (flags, order, pointer wrap, IRQ), `tx_en`/`enable` gating, exact
+`16*(D+1)`-clock bit windows on the TX pin, START majority-vote (single-clock glitch anywhere tolerated, majority-high
+START rejected), STOP-bit vote tolerance. Hand mutants (14 + 3 re-runs): all killed except one provably equivalent
+(`bit_tick` at phase 14 instead of 15 only shifts the phase, not the period). Residual toggle gaps are datapath/address
+bits of the APB bus and register banks (`paddr`, `pwdata`, `prdata`, `regs_o`, `hw_wdata_i`), not control signals.
+
 ### Adjusted totals, before / after (triaged trees, PR #226 data)
 
 | State | Line | Toggle |
@@ -311,8 +337,8 @@ was classified (the full per-module list is in `coverage_report.md` / `.json`):
 | (a) bead `ej6j` (**tests added 2026-10-07, see "ej6j AXI4-fabric re-measurement" below; full-run table above not yet re-measured**) | AXI4 fabric: crossbar decode-error bursts, `axi4_to_axilite` bursts/errors, `axilite_to_axi4` AR skid, `boot_rom` write path, `sram_controller` WRAP, `async_axi_fifo` error response | |
 | (a) bead `8riq` -> **closed for the unit-level fabric** (2026-10-07, PR for `test/axil-apb-coverage-8riq`) | `axi_lite_interconnect` / `axi_lite_register_bank` / `axil_to_apb` / `apb_interconnect` are now **100 % line** (were 95.0 / 93.3 / 95.3 / 100 %). New suite `axil_apb_fabric` (14 tests: ring AW/W/AR stalls, B/R stalls, SLVERR/DECERR end to end, APB wait states, unclaimed APB slot -> SLVERR) plus register-bank, bridge and `apb_interconnect` additions. **Still open, now tracked separately:** SoC-level `soc_bus`/`soc_top` response signals (`periph_axil_*resp`, `axil_gpu/dma_*resp`, `mem_*resp`, `m_*resp`) need CPU firmware to reach an unmapped ring address, and `apb_m_pslverr` is unreachable through the current map (see below). RTL bug found: bead `3xtv` (phantom second DECERR read beat), pinned by an `expect_fail` guard | |
 | (a) bead `bq2o` -> **closed at unit level** (2026-10-08, PR `test/dma-coverage-bq2o`; unit-measured, CI re-measure pending) | `dma_engine` is **100 % line (67/67 after waivers)**, was 91.2 % (62/68) at unit level with the pre-PR 10-test `test_dma` (raw 98.5 %, 67/68, before the L393 waiver). 8 new tests: burst clamp 255/256/257/293 words, AR / AW / W / B stalls (`arready`/`awready` low for 9/11 edges, `wready` low 3 edges per beat, B delayed 8 cycles), all channels stalled over a 4 KB-split + 256-clamp plan, write SLVERR and DECERR (second burst), stale `err_on_read` clear, descriptor queue full with silent drop. Beyond the bead's lines, **L584 (S_W `wready` stall) and L594 (S_B bvalid wait) were also uncovered** and are now hit. **L393 is waived (b), not tested**: it is dead (`beats_raw` is already clamped by `min2(.., MAX_BURST_BEATS)`), so the bead's "saturation never taken" was a misreading; the real clamp (min2) is tested and a `MAX-1` mutant is killed. `m_bresp` and `q_full` now toggle; `s_axil_bresp`/`s_axil_rresp` (8 points) are waived: tied OKAY in `axi_lite_register_bank`. Unit-level toggle 28.8 -> 37.5 % (the rest is datapath address/data bits and constant `m_arburst`/`m_*size`). Non-vacuity: 9 hand mutants of `dma_engine.sv` each killed (RTL reverted, `git diff --stat rtl/` empty): clamp MAX-1 (5 tests fail), DECERR ignored on B, stale `err_on_read` not cleared, queue-full guard removed, `arready` / `wready` / `awready` / `bvalid` ignored, `last_resp_q` not captured on B. No RTL bug found. | |
-| (a) bead `05wf` | `uart_controller` / `spi_controller`: byte lanes 2/3, FIFO full, RX false-start, os_tick gaps | |
-| (a) bead `oez2` | `soc_top`: `timer_irq`/`uart_irq`/`spi_irq`/`dma_irq`, GPU isolation, debug APB, PLL programming, SPI MISO | |
+| (a) bead `05wf` -> **closed at unit level** (2026-10-08, branch `test/uart-spi-coverage-05wf`) | `uart_controller` / `spi_controller`: byte lanes 2/3, FIFO full, RX false-start, os_tick gaps — see "05wf re-measurement" below. SoC-level numbers in the table are marked † and are unit-suite figures until the next full `soc_coverage` run | |
+| (a) bead `oez2` -> **closed** (2026-10-08, PR #236, see "Re-measured 2026-10-08 after bead `oez2`" above) | `soc_top`: `timer_irq`/`uart_irq`/`spi_irq`/`dma_irq`, GPU isolation, debug APB, PLL programming, SPI MISO | |
 | (a) bead `pnfw` (existing) | I2C: slave-mode bit-counter arms L617/L645, SoC-level pad drive | notes appended |
 | (a) bead `2k8` (existing) | GPU-domain PMU path (`pmu_gpu_iso_en` etc.) | note appended |
 
@@ -327,7 +353,7 @@ IRQ lines, debug port, PLL registers, ROM write channel). They are listed under 
 
 **Informational for now** (user decision, 2026-10-05): `soc_coverage` and its CI job never fail on a coverage
 percentage; they fail only if the regression itself fails, the instrumented pass count drops below the
-`PASS_FLOOR` (see `.github/workflows/cocotb.yml`, 546 as of 2026-10-08), or no coverage data is produced. Revisit once the (a) beads above land. Candidate floors
+`PASS_FLOOR` (see `.github/workflows/cocotb.yml`, 574 as of 2026-10-09, bead `oez2`), or no coverage data is produced. Revisit once the (a) beads above land. Candidate floors
 for that revisit:
 
 - **Line**: 95 % per module in the triaged trees (the `VERIFICATION_PLAN.md:362` criterion), after waivers.

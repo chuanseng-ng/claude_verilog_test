@@ -239,13 +239,12 @@ jobs:
           # 2026-10-07 (merge of beads 8riq + ej6j): 545 = 477 + 31 (8riq, measured 511 on its own branch) + 37 (ej6j, derived).
           # DERIVED for the merge -- tighten to (measured - 3) from this PR's soc_all CI log.
           # 2026-10-08 (GH #222 W5 / bead kp61): 546 = 545 + 1 (test_axprot_routed_to_selected_slave_only in test_axil_interconnect.py); measured 548 on main.
-          # 2026-10-08 (bead bq2o): 554 = 546 + 8 (dma_engine directed tests in test_dma.py: max_burst_clamp, ar_stall, aw_stall,
-          # w_and_b_stalls, all_stalls_split_plan, write_slverr_halts_and_recovers, write_decerr_second_burst_and_err_on_read_cleared,
-          # queue_full_drops_start_silently). DERIVED (546 + 8) -- tighten to (measured - 3) from this PR's soc_all CI log.
-          # 2026-10-08 (bead oez2): 560 = 554 + 6 (new suite soc_integration / test_soc_integration.py: irq_traps_and_spi_miso,
-          # pll_register_programming, gpu_isolation_via_pmu, debug_apb_halt_gpr_step, debug_apb_ro_write_pslverr,
-          # debug_apb_dest_reset_pslverr). DERIVED (554 + 6; measured 6/6 locally) -- if PR #234 (05wf) merges first, rebase onto its floor + 6.
-          PASS_FLOOR: '560'
+          # 2026-10-08 (merge of beads bq2o + 05wf): 568 = 558 measured on PR #233's soc_all CI + 13 new 05wf tests
+          # (9 test_uart.py + 4 test_spi.py) - 3. Measured 571 on PR #234's CI (568 confirmed).
+          # 2026-10-09 (bead oez2): 574 = 571 measured (PR #234 CI) + 6 (new suite soc_integration / test_soc_integration.py:
+          # irq_traps_and_spi_miso, pll_register_programming, gpu_isolation_via_pmu, debug_apb_halt_gpr_step,
+          # debug_apb_ro_write_pslverr, debug_apb_dest_reset_pslverr) - 3. Tighten from this PR's CI if it differs.
+          PASS_FLOOR: '574'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."
