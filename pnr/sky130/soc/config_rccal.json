@@ -6,7 +6,8 @@
             "OpenROAD.RepairDesignPostGPL": "CVT.RepairDesignPostGPL",
             "OpenROAD.ResizerTimingPostCTS": "CVT.ResizerTimingPostCTS",
             "OpenROAD.RepairDesignPostGRT": "CVT.RepairDesignPostGRT",
-            "OpenROAD.ResizerTimingPostGRT": "CVT.ResizerTimingPostGRT"
+            "OpenROAD.ResizerTimingPostGRT": "CVT.ResizerTimingPostGRT",
+            "Checker.MaxCapViolations": "CVT.MaxCapViolations"
         }
     },
     "DESIGN_NAME": "soc_top",
@@ -150,5 +151,6 @@
     "RUN_HEURISTIC_DIODE_INSERTION": false,
     "GRT_ANTENNA_ITERS": 20,
     "GRT_ANTENNA_MARGIN": 50,
-    "CVT_RC_CALIBRATION": "nom=1.88,1.02 min=1.69,0.62 max=2.04,1.91"
+    "CVT_RC_CALIBRATION": "nom=1.88,1.02 min=1.69,0.62 max=2.04,1.91",
+    "CVT_MAXCAP_WAIVERS": "dir::constraints/max_cap_waivers.json"
 }
