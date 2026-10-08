@@ -239,10 +239,9 @@ jobs:
           # 2026-10-07 (merge of beads 8riq + ej6j): 545 = 477 + 31 (8riq, measured 511 on its own branch) + 37 (ej6j, derived).
           # DERIVED for the merge -- tighten to (measured - 3) from this PR's soc_all CI log.
           # 2026-10-08 (GH #222 W5 / bead kp61): 546 = 545 + 1 (test_axprot_routed_to_selected_slave_only in test_axil_interconnect.py); measured 548 on main.
-          # 2026-10-08 (bead bq2o): 554 = 546 + 8 (dma_engine directed tests in test_dma.py: max_burst_clamp, ar_stall, aw_stall,
-          # w_and_b_stalls, all_stalls_split_plan, write_slverr_halts_and_recovers, write_decerr_second_burst_and_err_on_read_cleared,
-          # queue_full_drops_start_silently). DERIVED (546 + 8) -- tighten to (measured - 3) from this PR's soc_all CI log.
-          PASS_FLOOR: '554'
+          # 2026-10-08 (merge of beads bq2o + 05wf): 568 = 558 measured on PR #233's soc_all CI + 13 new 05wf tests
+          # (9 test_uart.py + 4 test_spi.py) - 3. Derived for the merge -- tighten to (measured - 3) from this PR's CI.
+          PASS_FLOOR: '568'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."
