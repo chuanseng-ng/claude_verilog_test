@@ -954,6 +954,11 @@ librelane-sky130-soc: sky130-soc-sv2v
 		 $(abspath $(LIBRELANE_SKY130_SOC_DIR))/$(SKY130_SOC_CONFIG)"
 
 # e45j: RC-calibrated variant, KLayout DRC skipped (same host reason as -noklayout).
+# This recipe hard-wires config_rccal.json, so `make <this-target> SKY130_SOC_CONFIG=other.json` is silently
+# ignored. To run another variant (e.g. config_rccal_wl1500.json, section 6 of docs/SKY130_SLEW_CAP_E45J.md):
+#   make librelane-sky130-soc SKY130_SOC_CONFIG=config_rccal_wl1500.json \
+#        SKY130_SOC_EXTRA_SKIP="--skip KLayout.DRC --skip Checker.KLayoutDRC"
+# and confirm the key in <run>/resolved.json.
 librelane-sky130-soc-rccal-noklayout:
 	@$(MAKE) librelane-sky130-soc SKY130_SOC_CONFIG=config_rccal.json \
 		SKY130_SOC_EXTRA_SKIP="--skip KLayout.DRC --skip Checker.KLayoutDRC"
