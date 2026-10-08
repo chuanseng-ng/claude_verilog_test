@@ -1,0 +1,15 @@
+{
+    "version": 1,
+    "waivers": [
+        {
+            "id": "cpu-axi-rdata-i12-pin-cap",
+            "load_pin": {
+                "instance": "u_cpu*",
+                "pin": "axi_rdata_i[12]"
+            },
+            "max_cap_pf": 0.70,
+            "bead": "claude_verilog_test-e45j",
+            "justification": "The only functional load of this net is the CPU macro input axi_rdata_i[12], whose Liberty pin capacitance is 0.2464 pF against a 0.0083 pF median over the macro's 92 input pins (next largest 0.1305 pF). With the 0.358 pF of post-RCX wire (2196 um, rank 54 of 117008 nets) and 12 antenna diodes the net is 0.614 pF against the 0.5301 pF o22a_4 max_capacitance (nom_tt; 0.643 vs 0.333 pF at max_ss). It is not an estimator error and not fixable by the resizer (rccal and wire-length-1500 runs both left it unbuffered); the source fix is an input buffer inside the CPU macro, which edits a hard-macro view and needs separate approval (cf. beads ma7/lxv). User decision 2026-10-09: waive this single net by name, adopt the RC-calibrated flow, gate everything else. The ceiling 0.70 pF is ~10 percent above the worst measured 0.646 pF, so a regression on this net still fails. Keyed on the macro pin, not the synthesis-generated driver name (_078722_ in RUN_2026-10-08_05-21-39)."
+        }
+    ]
+}
