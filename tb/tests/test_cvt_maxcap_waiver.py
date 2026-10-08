@@ -167,7 +167,9 @@ class TestParseChecksReport:
         assert res.violations == ()
 
     def test_single_violation_fields(self):
-        text = WITH_VIOLATION.format(corner="c", rows=row("_078722_/X", PIN_LIMIT, 0.614297), count=1)
+        text = WITH_VIOLATION.format(
+            corner="c", rows=row("_078722_/X", PIN_LIMIT, 0.614297), count=1
+        )
         res = mw.parse_checks_report(text)
         assert res.declared_count == 1
         (v,) = res.violations
@@ -321,7 +323,11 @@ class TestEvaluate:
         assert [u.violation.pin for u in v.unwaived] == ["_000001_/Y"]
 
     def test_unknown_driver_cannot_be_proven_and_fails(self, tmp_path):
-        rows = {"nom_tt_025C_1v80": [row("_ghost_/X", PIN_LIMIT, 0.9)], "max_ss_100C_1v60": [], "min_ff_n40C_1v95": []}
+        rows = {
+            "nom_tt_025C_1v80": [row("_ghost_/X", PIN_LIMIT, 0.9)],
+            "max_ss_100C_1v60": [],
+            "min_ff_n40C_1v95": [],
+        }
         run = write_run(tmp_path, rows)
         v = mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path)))
         assert not v.ok

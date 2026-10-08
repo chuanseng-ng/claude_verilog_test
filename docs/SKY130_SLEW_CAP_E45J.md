@@ -1,10 +1,10 @@
 # Sky130 SoC max-slew / max-cap: root cause and the RC-calibrated repair (bead `e45j`)
 
-**Status 2026-10-09.** Mechanism found, fix measured on four runs. Section 5: confirmation on current RTL failed the
-max-cap gate on one net, so NOT adopted as default. Section 6: the same-config repeat is **bit-identical** (the flow is
-deterministic here, run-to-run noise is zero), and a single-variable wire-length run cut max_ss slew 423 -> 102 but
-left the same one cap violation, so still NOT adopted. Bead left **open** (cap 1, slew 102-423; not 0). Everything here
-is measured from run artifacts unless marked *inference*.
+**Status 2026-10-09 (updated).** Mechanism found, fix measured on four runs. Sections 5-6 record why adoption was
+first refused (one max-cap net, cap 1). **Section 7 supersedes that: by user decision 2026-10-09 the RC-calibrated flow
+(`config_rccal.json` + the project plugin) is now the DEFAULT Sky130 SoC flow and max-cap is gated at all nine corners
+with ONE named single-net waiver.** Bead left **open** (max-slew residual 102-423 is still skipped and tracked).
+Everything here is measured from run artifacts unless marked *inference*.
 
 ## 1. The earlier root cause was only half right
 
@@ -156,7 +156,7 @@ the calibrated estimate under-counts on this one net; not traced to a route leng
 one net on current RTL. Un-skipping would therefore turn `librelane-sky130-soc` into a failing flow (from
 `checker.py` `TimingViolations.check_timing_violations`: any violating corner matched by
 `TIMING_VIOLATION_CORNERS = ['*']` raises a `DeferredStepError`; read from source, the checker was not
-executed). Slew and antenna moved the wrong way against the previous rccal run, by 43 % (max_ss 295 -> 423),
+executed; **this reading is wrong, see 7.1**). Slew and antenna moved the wrong way against the previous rccal run, by 43 % (max_ss 295 -> 423),
 2.1x (max_ff 122 -> 254), +11 % antenna nets, but remain about 18x better than Gate B on max_ss. Noise
 reasoning: the netlist is different (312 320 vs 314 625 instances, -0.7 %, different DMA and interconnect RTL),
 so placement and routing are a different random draw; one run per arm cannot separate that from a real
@@ -253,6 +253,8 @@ rebuffer toward it.)
 
 ### 6.4 Recommendation and next step
 
+*Superseded by section 7: the user chose option (1) below (named waiver) and adopted rccal on 2026-10-09.*
+
 * **Do not adopt yet.** Adoption needs cap 0 and it is 1, so the decision rule is unchanged.
 * The residual is a **single net of a different kind** than the previous 8 623 -> 295 slew story: a cap violation
   caused by one macro input pin characterised at 0.2464 pF. Config-level sweeps are unlikely to fix it (two
@@ -266,3 +268,86 @@ rebuffer toward it.)
 * `GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH = 1500` is independently attractive for **slew** (max_ss 423 -> 102 at no
   measured cost): worth adopting together with rccal when rccal itself is adopted, after one more arm on a different
   RTL vintage to see it is not a one-draw effect. Not adopted now.
+
+## 7. Adoption (2026-10-09): rccal is the default; max-cap gated with a named waiver
+
+**Decision (user, 2026-10-09).** Adopt the RC-calibrated flow as the default Sky130 SoC flow, un-skip the max-cap
+check, waive the one residual net by name, and do **not** adopt `GRT_DESIGN_REPAIR_MAX_WIRE_LENGTH = 1500` (it needs
+one more arm on another RTL vintage). Max-slew stays skipped (102-423 pins at max_ss, tracked here).
+
+**This is a moved target, and it is the user's to move.** The cap gate was "0 at nine corners". It is now "0 except the
+waived net". The justification is in `pnr/sky130/soc/constraints/max_cap_waivers.json` and in section 6.2: the sole
+functional load is a CPU-macro input whose Liberty pin capacitance (0.2464 pF) is ~30x the median of the macro's inputs
+and 46 % of the driver's 0.5301 pF limit, so no repair on the SoC side can fix it. The real fix (an input buffer inside
+the CPU macro) edits a hard-macro view and still needs approval (cf. beads `ma7`/`lxv`).
+
+### 7.1 Un-skipping the stock checker alone would have gated nothing (measured)
+
+Section 5 said the stock checker would fail on any violating corner matched by `TIMING_VIOLATION_CORNERS = ['*']`;
+that was read from source and is **wrong**. `Checker.MaxCapViolations` reads `MAX_CAP_VIOLATION_CORNERS` first, and
+its class sets `corner_override = [""]` (`librelane/steps/checker.py`), which matches no corner. Executed with
+`--only Checker.MaxCapViolations` on the finished run's state (`RUN_2026-10-08_05-21-39`, 6 corners with cap = 1):
+
+* default: **exit 0**, `WARNING Max Cap violations found in the following corners: ... max_ss ... nom_tt` then
+  `VERBOSE No max cap violations found`;
+* with `-c MAX_CAP_VIOLATION_CORNERS=["*"]`: exit 2 (`One or more deferred errors`), but then there is no way to
+  waive one net, because the checker only sees a per-corner count.
+
+So "un-skip" without more work is a silent no-op, and "un-skip with corners" fails every run on the known net.
+
+### 7.2 What was built
+
+* `pnr/sky130/soc/plugin/cvt_maxcap_waiver.py` (pure Python, no LibreLane import; also a CLI): parses the
+  `max capacitance` table of each corner's `checks.rpt`, resolves each violating driver's net in the final netlist,
+  and waives a violation only if that net feeds a **macro pin** named by a waiver (`u_cpu*` / `axi_rdata_i[12]`)
+  **and** its capacitance is at or below the waiver's `max_cap_pf` ceiling (0.70 pF). Keyed on the macro pin, not on
+  the synthesis-generated driver name (`_078722_`), which goes stale at the next re-synthesis. Bus-port bits are
+  taken from the netlist's concatenation order (first element = MSB); for this run that gave `axi_rdata_i[12]`
+  independently of the earlier hand analysis.
+* `CVT.MaxCapViolations` step in the project plugin, substituted for `Checker.MaxCapViolations` in `config_rccal.json`
+  (and `config_rccal_wl1500.json`) via `meta.substituting_steps`, waiver file via `CVT_MAXCAP_WAIVERS`. It gates **all**
+  corners, raises a deferred error (flow finishes, like the other checkers) on any unwaived violation, warns on stale
+  waivers, writes `max_cap_waivers.rpt` in its step dir and emits `design__max_cap_violation__{waived,unwaived}__count`.
+* Fail-closed inputs (each unit-tested): a report without its `max cap violation count N` line, a row count that
+  disagrees with the summary line or with the flow's per-corner metric, a corner with a metric but no report, a
+  violation whose driver is not in the netlist, and violations with no netlist are all errors, never passes. A waiver
+  that waives nothing is reported STALE (`--strict-stale` / `CVT_MAXCAP_STRICT_STALE` makes it fail). A waiver without
+  a justification, with a duplicate id, or with a non-positive ceiling is rejected.
+* `pnr/Makefile`: `SKY130_SOC_CONFIG` now defaults to `config_rccal.json`, so `librelane-sky130-soc` and
+  `-noklayout` run the adopted flow. `-norccal` / `-norccal-noklayout` run the pre-adoption `config.json` (stock
+  max-cap checker skipped there, as it is a no-op anyway). `SKY130_SOC_CONFIG=` is now honoured by every target
+  (`-rccal-noklayout` is an alias of `-noklayout`; the old recipe silently ignored the override). `make -C pnr
+  sky130-soc-maxcap-check [SKY130_SOC_MAXCAP_RUN=<run>] [STRICT_STALE=1]` re-runs the check on any finished run.
+
+### 7.3 Validation (no new full flow was run; see 7.4)
+
+No full flow was run because the finished runs already carry the exact flow inputs for everything except the final
+checker step, and the flow is bit-deterministic here (6.1). The new check was applied to those artifacts:
+
+| run / case | waiver list | result |
+|---|---|---|
+| `RUN_2026-10-08_05-21-39` (rccal, current RTL), CLI | `max_cap_waivers.json`, `--strict-stale` | **PASS**: 9 corners, 6 waived (`_078722_/X`, net `cpu_bridge_s_rdata[12]`, 0.5600-0.6427 pF), 0 unwaived, 0 stale |
+| same run, CLI | **empty** (negative control) | **FAIL**, exit 1: 6 UNWAIVED |
+| `RUN_2026-10-08_21-07-20` (noise repeat) | `max_cap_waivers.json` | PASS (identical numbers; bit-identical flow) |
+| `RUN_2026-10-08_23-12-19` (wl1500) | `max_cap_waivers.json` | PASS: waived caps 0.5874-0.6761 pF, all under the 0.70 pF ceiling |
+| `RUN_2026-10-05_06-50-11` (Gate B, no rccal) | `max_cap_waivers.json` | **FAIL**: 257 unwaived, 1 stale waiver |
+| in-flow, `librelane --only CVT.MaxCapViolations` with `config_rccal.json` on `RUN_2026-10-08_05-21-39`'s state | `max_cap_waivers.json` | **exit 0**, 6 waived / 0 unwaived, metrics `waived=6 unwaived=0` in `state_out.json` |
+| same in-flow run, `-c CVT_MAXCAP_WAIVERS=<empty list>` | empty | **exit 2**, `6 unwaived max-cap violation(s) ... FAIL - deferred` |
+
+Unit tests: `tb/tests/test_cvt_maxcap_waiver.py`, 50 tests written first (RED: module missing), then green. Two
+mutations were applied by hand to prove they bite (reversing the bus-bit order: 9 failures; removing the ceiling
+test: 1 failure), then reverted.
+
+### 7.4 What is NOT validated
+
+* **No full flow has run with the adopted config.** The substituted step was exercised in LibreLane
+  (`--only`, with the finished run's STA directory linked in and its step-61 state as the initial state), not at its
+  natural position at the end of a 62-step flow. Its inputs there are the same artifacts (final netlist from the
+  state, `51-openroad-stapostpnr/*/checks.rpt`), but the first real end-to-end confirmation is the next
+  `librelane-sky130-soc-noklayout` run. *Inference* that it behaves identically in-position.
+* All adopted-flow numbers are one RTL vintage (`3ad22f8`/`944d8c5`). On a new vintage the net name changes, which is
+  why the waiver is keyed on the macro pin, but the cap may move: the ceiling (0.70 pF; 0.2464 pF fixed pin cap + wire)
+  fails loudly if the wire grows by ~25 %, and a STALE warning appears if the net stops violating.
+* Max-slew is still skipped (`Checker.MaxSlewViolations`): 102-423 pins at max_ss, antenna diodes 54-304 of them.
+* Antenna (`Odb.CheckDesignAntennaProperties`) and fanout (no `set_max_fanout` in the SDC, so "0 fanout violations"
+  stays vacuous) are unchanged.

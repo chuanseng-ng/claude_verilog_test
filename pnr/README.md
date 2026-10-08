@@ -62,7 +62,7 @@ make clean
 | :-------- | :----- |
 | `asap7/cpu/`, `asap7/gpu/`, `asap7/soc/` | **LIVE** — the ASAP7 flows (`librelane-asap7`, `-gpu`, `-soc`, `-soc-multiclock`) |
 | `asap7/template/` | Copy-me starting point for a new ASAP7 design; no target of its own. Its `check_source_closure.py` "gap" is a placeholder-path artifact, not a defect |
-| `sky130/cpu/`, `sky130/soc/` | **LIVE** — the only flows with real Magic DRC + Netgen LVS (`librelane-sky130-cpu`, `librelane-sky130-soc`, GH #102/#103/#104) |
+| `sky130/cpu/`, `sky130/soc/` | **LIVE** — the only flows with real Magic DRC + Netgen LVS (`librelane-sky130-cpu`, `librelane-sky130-soc`, GH #102/#103/#104). The SoC target runs the RC-calibrated `config_rccal.json` by default (bead `e45j`, `docs/SKY130_SLEW_CAP_E45J.md` §7); `librelane-sky130-soc-norccal` runs the old `config.json`; `sky130-soc-maxcap-check` re-runs the named max-cap waiver check on a finished run |
 | `freepdk45/` | **DORMANT but intentional** — no per-node replacement exists; `librelane-nangate45` is the only path to that node |
 | `librelane/` | **SUPERSEDED** by `sky130/cpu/`, which was forked from it with DRC/LVS enabled (`docs/SKY130_REAL_DRC_LVS_EVALUATION.md` §Stage 1). Last run 2026-03-25; `librelane-sky130` kept as a fallback |
 | `openlane1/` | **SUPERSEDED** by `sky130/cpu/`. Docker/OL1 path (`docker-run`, `docker-synth`, `docker-results`) kept as a fallback; last run 2026-03-15 |

@@ -42,9 +42,9 @@ import fnmatch
 import json
 import re
 import sys
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, Mapping, Optional, Sequence
 
 WAIVER_FORMAT_VERSION = 1
 STD_CELL_PREFIX = "sky130_fd_sc_"
@@ -148,14 +148,16 @@ class Waiver:
     corners: tuple[str, ...] = ("*",)
 
 
-def load_waivers(path: "str | Path") -> tuple[Waiver, ...]:
+def load_waivers(path: str | Path) -> tuple[Waiver, ...]:
     p = Path(path)
     try:
         data = json.loads(p.read_text())
     except (OSError, ValueError) as exc:
         raise WaiverError(f"cannot read waiver file {p}: {exc}") from exc
     if not isinstance(data, dict) or data.get("version") != WAIVER_FORMAT_VERSION:
-        raise WaiverError(f"{p}: unsupported waiver file version (expected {WAIVER_FORMAT_VERSION})")
+        raise WaiverError(
+            f"{p}: unsupported waiver file version (expected {WAIVER_FORMAT_VERSION})"
+        )
     raw = data.get("waivers")
     if not isinstance(raw, list):
         raise WaiverError(f"{p}: 'waivers' must be a list")
@@ -238,9 +240,9 @@ def _split_top_level(text: str) -> list[str]:
     return [p.strip() for p in parts if p.strip()]
 
 
-def _parse_connections(body: str) -> dict[str, "str | list[str]"]:
+def _parse_connections(body: str) -> dict[str, str | list[str]]:
     """Parse ``.PIN(expr), .PIN({a, b, ...}), ...`` into {pin: net | [msb..lsb nets]}."""
-    conns: dict[str, "str | list[str]"] = {}
+    conns: dict[str, str | list[str]] = {}
     i, n = 0, len(body)
     while i < n:
         if body[i] != ".":
@@ -285,10 +287,10 @@ _HEAD_RE = re.compile(r"^\s*(\\\S+|[A-Za-z_][\w$]*)\s+(\\\S+|[A-Za-z_][\w$]*)\s*
 class NetlistIndex:
     """Driver connections for requested instances and macro (non-std-cell) loads per net."""
 
-    driver_conns: dict[str, dict[str, "str | list[str]"]] = field(default_factory=dict)
+    driver_conns: dict[str, dict[str, str | list[str]]] = field(default_factory=dict)
     _macro_loads: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
 
-    def net_of(self, instance: str, port: str) -> Optional[str]:
+    def net_of(self, instance: str, port: str) -> str | None:
         conns = self.driver_conns.get(_norm_name(instance))
         if conns is None:
             return None
@@ -298,7 +300,7 @@ class NetlistIndex:
     def macro_loads(self, net: str) -> list[tuple[str, str]]:
         return list(self._macro_loads.get(net, ()))
 
-    def _add_macro(self, inst: str, conns: Mapping[str, "str | list[str]"]) -> None:
+    def _add_macro(self, inst: str, conns: Mapping[str, str | list[str]]) -> None:
         for port, expr in conns.items():
             if isinstance(expr, str):
                 self._macro_loads.setdefault(expr, []).append((inst, port))
@@ -312,7 +314,7 @@ class NetlistIndex:
 
 
 def scan_netlist(
-    path: "str | Path", driver_instances: Iterable[str], *, std_cell_prefix: str = STD_CELL_PREFIX
+    path: str | Path, driver_instances: Iterable[str], *, std_cell_prefix: str = STD_CELL_PREFIX
 ) -> NetlistIndex:
     """One streaming pass over a structural Verilog netlist.
 
@@ -324,7 +326,7 @@ def scan_netlist(
     idx = NetlistIndex()
     buf: list[str] = []
     try:
-        fh = open(path, "r", errors="replace")
+        fh = open(path, errors="replace")
     except OSError as exc:
         raise ReportError(f"cannot read netlist {path}: {exc}") from exc
     with fh:
@@ -367,7 +369,7 @@ class WaivedViolation:
 class UnwaivedViolation:
     corner: str
     violation: Violation
-    net: Optional[str]
+    net: str | None
     reason: str
 
 
@@ -400,7 +402,8 @@ class Verdict:
         for s in self.stale_waivers:
             lines.append(
                 f"  STALE    waiver '{s.id}' ({s.instance_glob}/{s.pin}) waived nothing at any corner; "
-                "remove it or re-check it" + (" [strict: counts as failure]" if self.strict_stale else "")
+                "remove it or re-check it"
+                + (" [strict: counts as failure]" if self.strict_stale else "")
             )
         lines.append("max-cap check: " + ("PASS" if self.ok else "FAIL"))
         return "\n".join(lines)
@@ -413,9 +416,9 @@ def find_sta_dir(run_dir: Path) -> Path:
     return candidates[-1]
 
 
-def find_netlist(run_dir: Path) -> Optional[Path]:
+def find_netlist(run_dir: Path) -> Path | None:
     """The netlist of the highest-numbered step that wrote a ``*.nl.v``."""
-    best: Optional[Path] = None
+    best: Path | None = None
     for step in sorted(p for p in Path(run_dir).iterdir() if p.is_dir() and p.name[:2].isdigit()):
         nls = sorted(step.glob("*.nl.v"))
         if nls:
@@ -437,8 +440,8 @@ def _metric_counts(sta_dir: Path) -> dict[str, int]:
 
 
 def evaluate_sta_dir(
-    sta_dir: "str | Path",
-    netlist: "str | Path | None",
+    sta_dir: str | Path,
+    netlist: str | Path | None,
     waivers: Sequence[Waiver],
     *,
     strict_stale: bool = False,
@@ -481,17 +484,23 @@ def evaluate_sta_dir(
             if net is None:
                 unwaived.append(
                     UnwaivedViolation(
-                        corner, v, None, f"driver {v.instance}/{v.port} not found in netlist; cannot prove waiver"
+                        corner,
+                        v,
+                        None,
+                        f"driver {v.instance}/{v.port} not found in netlist; cannot prove waiver",
                     )
                 )
                 continue
             loads = idx.macro_loads(net)
-            decision: Optional[object] = None
+            decision: object | None = None
             reason = f"no waiver covers net {net} (macro loads: {loads or 'none'})"
             for w in waivers:
                 if not any(fnmatch.fnmatchcase(corner, c) for c in w.corners):
                     continue
-                if not any(fnmatch.fnmatchcase(inst, w.instance_glob) and pin == w.pin for inst, pin in loads):
+                if not any(
+                    fnmatch.fnmatchcase(inst, w.instance_glob) and pin == w.pin
+                    for inst, pin in loads
+                ):
                     continue
                 used.add(w.id)
                 if v.cap_pf > w.max_cap_pf:
@@ -513,30 +522,43 @@ def evaluate_sta_dir(
 
 
 def evaluate_run(
-    run_dir: "str | Path",
+    run_dir: str | Path,
     waivers: Sequence[Waiver],
     *,
-    netlist: "str | Path | None" = None,
+    netlist: str | Path | None = None,
     strict_stale: bool = False,
 ) -> Verdict:
     run = Path(run_dir)
     sta = find_sta_dir(run)
     return evaluate_sta_dir(
-        sta, netlist if netlist is not None else find_netlist(run), waivers, strict_stale=strict_stale
+        sta,
+        netlist if netlist is not None else find_netlist(run),
+        waivers,
+        strict_stale=strict_stale,
     )
 
 
 # --------------------------------------------------------------------------- CLI
-def main(argv: Optional[Sequence[str]] = None) -> int:
-    ap = argparse.ArgumentParser(description="Named max-cap waiver check on a finished LibreLane run.")
+def main(argv: Sequence[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(
+        description="Named max-cap waiver check on a finished LibreLane run."
+    )
     ap.add_argument("run_dir", type=Path)
-    ap.add_argument("--waivers", type=Path, default=None, help="waiver JSON; omitted = strict, no waivers")
-    ap.add_argument("--netlist", type=Path, default=None, help="override the netlist (default: latest *.nl.v)")
-    ap.add_argument("--strict-stale", action="store_true", help="a waiver that waives nothing is a failure")
+    ap.add_argument(
+        "--waivers", type=Path, default=None, help="waiver JSON; omitted = strict, no waivers"
+    )
+    ap.add_argument(
+        "--netlist", type=Path, default=None, help="override the netlist (default: latest *.nl.v)"
+    )
+    ap.add_argument(
+        "--strict-stale", action="store_true", help="a waiver that waives nothing is a failure"
+    )
     args = ap.parse_args(argv)
     try:
         waivers = load_waivers(args.waivers) if args.waivers else ()
-        verdict = evaluate_run(args.run_dir, waivers, netlist=args.netlist, strict_stale=args.strict_stale)
+        verdict = evaluate_run(
+            args.run_dir, waivers, netlist=args.netlist, strict_stale=args.strict_stale
+        )
     except (ReportError, WaiverError) as exc:
         print(f"max-cap check: ERROR: {exc}", file=sys.stderr)
         return 2
