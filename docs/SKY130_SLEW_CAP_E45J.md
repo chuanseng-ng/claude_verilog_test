@@ -340,14 +340,68 @@ test: 1 failure), then reverted.
 
 ### 7.4 What is NOT validated
 
-* **No full flow has run with the adopted config.** The substituted step was exercised in LibreLane
-  (`--only`, with the finished run's STA directory linked in and its step-61 state as the initial state), not at its
-  natural position at the end of a 62-step flow. Its inputs there are the same artifacts (final netlist from the
-  state, `51-openroad-stapostpnr/*/checks.rpt`), but the first real end-to-end confirmation is the next
-  `librelane-sky130-soc-noklayout` run. *Inference* that it behaves identically in-position.
+* ~~No full flow has run with the adopted config.~~ **Resolved by 7.5** (end-to-end run 2026-10-09: the substituted
+  step ran in position and gave the same verdict as the `--only` validation).
 * All adopted-flow numbers are one RTL vintage (`3ad22f8`/`944d8c5`). On a new vintage the net name changes, which is
   why the waiver is keyed on the macro pin, but the cap may move: the ceiling (0.70 pF; 0.2464 pF fixed pin cap + wire)
   fails loudly if the wire grows by ~25 %, and a STALE warning appears if the net stops violating.
 * Max-slew is still skipped (`Checker.MaxSlewViolations`): 102-423 pins at max_ss, antenna diodes 54-304 of them.
 * Antenna (`Odb.CheckDesignAntennaProperties`) and fanout (no `set_max_fanout` in the SDC, so "0 fanout violations"
   stays vacuous) are unchanged.
+
+### 7.5 End-to-end confirmation (2026-10-09): the adopted flow completes with `CVT.MaxCapViolations` in position
+
+One full `make -C pnr librelane-sky130-soc-noklayout` (no overrides, so `SKY130_SOC_CONFIG=config_rccal.json`) on
+`origin/main` `6190313` (PR #239 merged), run `RUN_2026-10-09_06-18-39`, 06:18:31 -> 09:44:08 (3 h 26 min wall). RTL is
+**unchanged** since the reference: the last commit touching `rtl/` is `ce2b1fc` (2026-10-07), before reference run
+`RUN_2026-10-08_05-21-39`; the commits since `3ad22f8` are tests, docs and the PD flow files only (the `rqvo` UART fix
+is not on main). Metrics below are the last `state_out.json` of each run (step 63 / step 62).
+
+| metric (all-corner unless stated) | reference `RUN_2026-10-08_05-21-39` | end-to-end `RUN_2026-10-09_06-18-39` |
+|---|---|---|
+| max-slew, max_ss / max_tt / nom_tt (pins) | 423 / 257 / 95 (all nine: 423 254 257 11 16 12 46 189 95) | **identical** at all nine corners |
+| max-cap, raw (6 corners tt/ss) | 1 per corner (`_078722_`, net `cpu_bridge_s_rdata[12]`) | **identical** |
+| max-cap, waived / unwaived | not computable in-flow (stock checker skipped) | **6 waived / 0 unwaived / 0 stale**, `max-cap check: PASS`; waived caps 0.5600-0.6427 pF, all under the 0.70 pF ceiling |
+| antenna (nets / pins) | 205 / 273, 10 918 diodes | **identical** |
+| setup worst slack, per corner | +3.3286 ns (max_ss), +10.0518 (nom_tt); 0 violators | **identical**, 0 violators at all nine corners |
+| hold worst slack, per corner | +0.2822 ns (min_ff), +0.5397 (nom_tt); 0 violators | **identical**, 0 violators at all nine corners |
+| LVS | 0 errors, PASSED | **identical** (all `design__lvs_*` = 0) |
+| routing DRC | 0 (iterations 59021, 21775, 18600, 1095, 67, 2, 0) | **identical**, same iteration trail |
+| Magic DRC | 8 984 (waived PDK artifact, bead `45a`) | 8 984 (**identical**) |
+| KLayout DRC | skipped | skipped (`--skip KLayout.DRC --skip Checker.KLayoutDRC`, deferred, not waived) |
+| util / instances / power | 45.2134 % / 312 320 / 84.89 mW | identical |
+
+**Did `CVT.MaxCapViolations` run in-flow, and what did it say?** Yes. `flow.log` line 650: `Running 'CVT.MaxCapViolations'`
+as step **62**, in the slot the stock `Checker.MaxCapViolations` occupied (after 61 `Checker.HoldViolations`, before 63
+`Misc.ReportManufacturability`); `resolved.json` shows `meta.substituting_steps` `Checker.MaxCapViolations ->
+CVT.MaxCapViolations` and `CVT_MAXCAP_WAIVERS` pointing at `constraints/max_cap_waivers.json`; the stock step does not
+appear. Runtime 4.4 s. Verdict **PASS** (the six violations, all `_078722_/X` -> `cpu_bridge_s_rdata[12]`, are waived by
+`cpu-axi-rdata-i12-pin-cap`; unwaived count 0 in `design__max_cap_violation__unwaived__count`). The step's WARNING is
+re-emitted by `flow.py` and shows up in the manufacturability summary, as designed. This matches the `--only`
+validation of 7.3 (6 waived / 0 unwaived, same caps to four digits), so the 7.4 inference is confirmed.
+
+**Bit-identical to the reference?** Yes, modulo the worktree path. After replacing the embedded `agent-a<hash>` worktree
+path (it appears in sv2v-derived net names) and dropping `//` header lines, the SHA-256 of the final netlist
+(`48-openroad-fillinsertion/soc_top.nl.v`) and of the final DEF (`49-odb-cellfrequencytables/soc_top.def`) are equal
+between the two runs (`746cd83c9917a19b`, `ed09a01574b539c1`); the SDC is byte-equal. Of 292 metrics keys in the last
+state, 289 are equal; the 3 that differ are the two new `design__max_cap_violation__{waived,unwaived}__count` keys
+(absent in the reference, expected) and `design_powergrid__drop__average__net:VGND__corner:nom_tt` (1.63812e-05 vs
+1.63834e-05 V, +0.013 %, an IR-analysis readout; no timing or physical metric moved). Second confirmation of 6.1's
+determinism, now across a third worktree path and with the new step in the flow.
+
+**Exit status.** `make` returned 2 and LibreLane reported `One or more deferred errors were encountered: 8984 Magic DRC
+errors found.` This is the **same deferred error as the reference run** (its `error.log` ends with the same line): the
+Magic DRC count is the waived PDK artifact of bead `45a`, deferred errors let the flow reach step 63. It is not a
+new failure and not caused by `CVT.MaxCapViolations`. Anyone gating on the make exit code needs to know that the
+adopted Sky130 SoC flow exits non-zero until the Magic DRC waiver is turned into a checker-level exemption (not done
+here; untouched).
+
+**Setup finding (worktree runs).** The first launch aborted in ~9 s at config load (`PermissionError: ... cpu/macro/
+rv32i_cpu_top.gds is not located any path readable to LibreLane`) before any run directory existed: the macro
+`*.gds` / `*.spice` views are gitignored (`pnr/sky130/cpu/macro/rv32i_cpu_top.{gds,spice}`,
+`pnr/sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8.{gds,sp}`) and exist only in the primary checkout. A fresh
+worktree needs them copied (`rsync -a --ignore-existing <primary>/pnr/sky130/{cpu,soc}/macro/ ...`) before
+`make` can start. Not a flow defect; the copied files are the same inputs the primary-tree runs use.
+
+Still open (unchanged by this run): max-slew is skipped (423 at max_ss), the waiver is for the one macro-pin net, and a
+new RTL vintage may move the cap (ceiling 0.70 pF; STALE warning if the net stops violating).
