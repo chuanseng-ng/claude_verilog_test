@@ -64,7 +64,10 @@ jobs:
       # debug_apb_ro_write_pslverr, debug_apb_dest_reset_pslverr) - 3. Tighten from this PR's CI if it differs.
       # 2026-10-09 (bead rqvo): 575 = 574 + 1 (test_rx_false_start_then_real_start in test_uart.py; soc_all_ci
       # measured 572 pass on the pre-oez2 base). Derived -- tighten to (measured - 3) from this PR's CI.
-      PASS_FLOOR: '575'
+      # 2026-10-09 (bead 7ovx): 594 = 597 measured (full local soc_coverage run, CI log-grep formula) - 3. The 597
+      # includes this PR's 19 new tests: 13 test_register_walk (one per register-bank peripheral suite), 5 W1C/W1P
+      # semantic tests (gpio, pwm, wdt, npu, crypto) and test_soc_register_walk in soc_integration.
+      PASS_FLOOR: '594'
 
     steps:
       - name: Checkout repository

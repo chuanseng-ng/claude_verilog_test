@@ -128,16 +128,9 @@ behaviour of a power-gated domain with no retention cells is state loss anyway).
 
 ## Results
 
-Basis (re-rendered 2026-10-08 for GH #222, bead `kp61`): the `soc-coverage` artifact of CI run
-37539378647 (PR #226, `test/axil-apb-coverage-8riq`, merged `merged.dat`) **plus** the instrumented
-`axil_interconnect` suite run locally with the new AxPROT test (its `.dat` appended with the path prefix
-rewritten to the runner root; points are identified by module/file/line/column/object so the union is exact).
-The report script is the T1-fixed one and the waiver file is the final #222 one; the PR's own `soc_coverage` run
-supersedes these numbers. An earlier revision of this section held the first (pre-`ej6j`/`8riq`) run's tables.
+Basis (re-measured 2026-10-09, bead `7ovx`): ONE full local `make soc_coverage` on branch `test/register-walk-7ovx` (59 simulation runs, 597 passed / 0 failed / 17 skipped by the CI log-grep formula, 59 `.dat` files merged), rendered with the unchanged `tools/verif/coverage_report.py` and the waiver file after the 7ovx drift fix (below). The tables are therefore a single consistent measurement; the earlier per-bead dagger rows (unit-only `dma_engine`, `uart_controller`, `spi_controller`) are superseded by it. The PR's own CI `soc_coverage` run supersedes these numbers.
 
-### Triaged trees (after 57 waivers: 47 line and 812 toggle points removed from the denominator)
-
-Totals: line **98.7 %** (1649/1670), toggle **65.0 %** (38891/59794), 3 of 42 modules below the 95 % line floor (dma_engine, uart_controller, soc_top). Before waivers the line total was 96.0 % (1649/1717).
+### Triaged trees (after 60 waivers: 48 line and 950 toggle points removed from the denominator)
 
 | Module | Tree | Line % | Line hit/total | Toggle % | Toggle hit/total | Waived (line/toggle) |
 | :----- | :--- | -----: | -------------: | -------: | ---------------: | -------------------: |
@@ -146,46 +139,45 @@ Totals: line **98.7 %** (1649/1670), toggle **65.0 %** (38891/59794), 3 of 42 mo
 | npu_weight_mem | rtl/npu | 100.0 | 12/12 | 100.0 | 530/530 | 0/0 |
 | aes128_core | rtl/periph | 100.0 | 281/281 | 100.0 | 2348/2348 | 1/0 |
 | crypto_accel | rtl/periph | 100.0 | 48/48 | 97.5 | 3349/3434 | 1/2 |
-| dma_engine | rtl/periph | 100.0 † | 67/67 † | 37.5 † | 887/2368 † | 2/52 |
-| gpio_controller | rtl/periph | 100.0 | 11/11 | 51.2 | 1092/2134 | 0/2 |
-| i2c_bit_engine | rtl/periph | 100.0 | 113/113 | 88.6 | 434/490 | 1/0 |
+| dma_engine | rtl/periph | 100.0 | 67/67 | 38.5 | 911/2368 | 2/52 |
+| gpio_controller | rtl/periph | 100.0 | 11/11 | 78.1 | 1667/2134 | 0/2 |
+| i2c_bit_engine | rtl/periph | 100.0 | 113/113 | 91.4 | 448/490 | 1/0 |
 | i2c_controller | rtl/periph | 97.6 | 83/85 | 91.0 | 1146/1260 | 1/6 |
-| interrupt_controller | rtl/periph | 100.0 | 5/5 | 50.2 | 331/660 | 0/2 |
-| pwm_controller | rtl/periph | 100.0 | 15/15 | 40.5 | 658/1626 | 0/2 |
+| interrupt_controller | rtl/periph | 100.0 | 5/5 | 52.6 | 347/660 | 0/2 |
+| pwm_controller | rtl/periph | 100.0 | 15/15 | 47.5 | 772/1626 | 0/2 |
 | sha256_core | rtl/periph | 100.0 | 84/84 | 100.0 | 2268/2268 | 2/0 |
-| spi_controller † | rtl/periph | 100.0 | 53/53 | 42.4 | 561/1322 | 1/2 |
-| timer | rtl/periph | 100.0 | 22/22 | 38.7 | 361/934 | 0/2 |
+| spi_controller | rtl/periph | 100.0 | 53/53 | 45.6 | 603/1322 | 1/2 |
+| timer | rtl/periph | 100.0 | 22/22 | 50.3 | 470/934 | 0/2 |
 | trng | rtl/periph | 100.0 | 39/39 | 59.6 | 1215/2040 | 0/2 |
 | trng_lfsr_entropy | rtl/periph | 100.0 | 18/18 | 100.0 | 396/396 | 0/0 |
-| uart_controller † | rtl/periph | 100.0 | 112/112 | 49.5 | 602/1216 | 3/2 |
-| watchdog_timer | rtl/periph | 100.0 | 23/23 | 44.7 | 771/1724 | 0/2 |
-| apb4_register_bank | rtl/soc | 100.0 | 23/23 | 75.7 | 1419/1874 | 0/2 |
-| apb_cdc_bridge | rtl/soc | 100.0 | 47/47 | 98.7 | 705/714 | 2/2 |
+| uart_controller | rtl/periph | 100.0 | 112/112 | 52.1 | 633/1216 | 3/2 |
+| watchdog_timer | rtl/periph | 100.0 | 23/23 | 46.1 | 795/1724 | 0/2 |
+| apb4_register_bank | rtl/soc | 100.0 | 23/23 | 79.6 | 1491/1874 | 0/2 |
+| apb_cdc_bridge | rtl/soc | 100.0 | 47/47 | 99.9 | 713/714 | 2/2 |
 | apb_interconnect | rtl/soc | 100.0 | 10/10 | 76.5 | 1578/2064 | 0/0 |
-| async_axi_fifo | rtl/soc | - | 0/0 | 81.5 | 1115/1368 | 0/2 |
-| axi4_crossbar | rtl/soc | 100.0 | 124/124 | 57.7 | 2453/4252 | 6/0 |
-| axi4_to_axilite | rtl/soc | 100.0 | 42/42 | 80.4 | 812/1010 | 5/12 |
-| axi_lite_interconnect | rtl/soc | 100.0 | 60/60 | 71.2 | 1083/1520 | 2/0 |
-| axi_lite_register_bank | rtl/soc | 100.0 | 45/45 | 61.8 | 1224/1982 | 2/8 |
+| async_axi_fifo | rtl/soc | - | 0/0 | 82.1 | 1123/1368 | 0/2 |
+| axi4_crossbar | rtl/soc | 100.0 | 124/124 | 59.3 | 2522/4252 | 6/0 |
+| axi4_to_axilite | rtl/soc | 100.0 | 42/42 | 81.2 | 820/1010 | 5/12 |
+| axi_lite_interconnect | rtl/soc | 100.0 | 60/60 | 71.4 | 1085/1520 | 2/0 |
+| axi_lite_register_bank | rtl/soc | 100.0 | 45/45 | 63.4 | 1256/1982 | 2/8 |
 | axil_to_apb | rtl/soc | 100.0 | 43/43 | 90.7 | 660/728 | 1/12 |
 | axilite_to_axi4 | rtl/soc | 100.0 | 10/10 | 66.8 | 250/374 | 0/218 |
-| boot_rom | rtl/soc | 100.0 | 29/29 | 79.9 | 417/522 | 2/4 |
+| boot_rom | rtl/soc | 100.0 | 29/29 | 80.7 | 421/522 | 2/4 |
 | cdc_2ff_sync | rtl/soc | 100.0 | 5/5 | 100.0 | 44/44 | 0/0 |
-| cdc_gray_fifo | rtl/soc | 100.0 | 15/15 | 67.9 | 437/644 | 0/0 |
+| cdc_gray_fifo | rtl/soc | 100.0 | 15/15 | 69.1 | 445/644 | 0/0 |
 | cdc_reset_sync | rtl/soc | 100.0 | 8/8 | 100.0 | 16/16 | 0/0 |
-| pll_apb_regs | rtl/soc | - | 0/0 | 19.7 | 114/578 | 0/2 |
-| pll_clkgen | rtl/soc | - | 0/0 | 40.0 | 8/20 | 0/0 |
-| pll_clkgen_stub | rtl/soc | 100.0 | 5/5 | 62.5 | 20/32 | 0/0 |
-| pll_subsystem | rtl/soc | - | 0/0 | 15.3 | 30/196 | 0/2 |
-| pmu | rtl/soc | 100.0 | 31/31 | 36.6 | 231/632 | 3/2 |
+| pll_apb_regs | rtl/soc | - | 0/0 | 26.0 | 150/578 | 0/2 |
+| pll_clkgen | rtl/soc | - | 0/0 | 100.0 | 20/20 | 0/0 |
+| pll_clkgen_stub | rtl/soc | 100.0 | 5/5 | 100.0 | 32/32 | 0/0 |
+| pll_subsystem | rtl/soc | - | 0/0 | 71.4 | 140/196 | 0/2 |
+| pmu | rtl/soc | 100.0 | 31/31 | 38.1 | 241/632 | 3/2 |
 | soc_addr_map_pkg | rtl/soc | - | 0/0 | - | 0/0 | 4/0 |
-| soc_bus | rtl/soc | - | 0/0 | 44.5 | 2439/5480 | 0/102 |
+| soc_bus | rtl/soc | - | 0/0 | 46.3 | 2538/5480 | 0/102 |
 | soc_periph_map_pkg | rtl/soc | - | 0/0 | - | 0/0 | 4/0 |
-| soc_top | rtl/soc | 75.9 | 22/29 | 37.4 | 1828/4890 | 0/310 |
+| soc_top | rtl/soc | 100.0 | 29/29 | 53.3 | 2536/4760 | 0/440 |
 | sram_controller | rtl/soc | 100.0 | 92/92 | 76.2 | 1169/1534 | 5/64 |
-| **Total (42 modules)** | | **98.7** | 1649/1670 | **65.0** | 38891/59794 | |
+| **Total (42 modules)** | | **99.9** | 1667/1669 | **69.3** | 41334/59656 | |
 
-† `dma_engine` row: **unit-level** numbers (`make dma COVERAGE=1`, `test_dma` only, 18 tests, 2026-10-08, bead `bq2o`; previous row was 94.1 / 64/68 / 31.6 / 752/2376 / 1/44 from the CI merged data). The module is not re-measured through the full `soc_coverage` merge until this PR's own CI run; the SoC-level DMA tests only add points, so the merged figure is expected to be at least this.
 
 A dash means the module has no point of that kind (`soc_bus`, the `pll_*` wrappers and `async_axi_fifo` are
 wiring or have no procedural line points; the two address-map packages are fully waived).
@@ -198,39 +190,130 @@ indicate a verification hole in those blocks.
 
 | Module | Tree | Line % | Line hit/total | Toggle % | Toggle hit/total | Waived (line/toggle) |
 | :----- | :--- | -----: | -------------: | -------: | ---------------: | -------------------: |
-| rv32i_alu | rtl/cpu | 53.8 | 7/13 | 98.6 | 276/280 | 0/0 |
+| rv32i_alu | rtl/cpu | 61.5 | 8/13 | 99.3 | 278/280 | 0/0 |
 | rv32i_branch_comp | rtl/cpu | 57.1 | 4/7 | 98.5 | 134/136 | 0/0 |
-| rv32i_core | rtl/cpu | 88.6 | 31/35 | 51.5 | 2625/5094 | 0/0 |
-| rv32i_cpu_top | rtl/cpu | 44.8 | 43/96 | 23.7 | 475/2006 | 0/0 |
-| rv32i_csr_file | rtl/cpu | 43.2 | 41/95 | 26.7 | 433/1624 | 0/0 |
-| rv32i_decode | rtl/cpu | 34.6 | 27/78 | 83.6 | 179/214 | 0/0 |
-| rv32i_forwarding_unit | rtl/cpu | 95.6 | 43/45 | 69.4 | 1186/1710 | 0/0 |
-| rv32i_hazard_unit | rtl/cpu | 89.7 | 35/39 | 95.1 | 196/206 | 0/0 |
-| rv32i_imm_gen | rtl/cpu | 87.5 | 7/8 | 98.5 | 132/134 | 0/0 |
-| rv32i_interrupt_ctrl | rtl/cpu | 100.0 | 3/3 | 22.6 | 19/84 | 0/0 |
-| rv32i_pipeline_ex | rtl/cpu | 83.3 | 10/12 | 74.8 | 940/1256 | 0/0 |
-| rv32i_pipeline_ex1b | rtl/cpu | 83.3 | 5/6 | 27.7 | 56/202 | 0/0 |
-| rv32i_pipeline_ex1c | rtl/cpu | 52.4 | 11/21 | 68.4 | 26/38 | 0/0 |
+| rv32i_core | rtl/cpu | 88.6 | 31/35 | 56.5 | 2878/5094 | 0/0 |
+| rv32i_cpu_top | rtl/cpu | 84.4 | 81/96 | 46.0 | 923/2006 | 0/0 |
+| rv32i_csr_file | rtl/cpu | 47.4 | 45/95 | 29.6 | 480/1624 | 0/0 |
+| rv32i_decode | rtl/cpu | 42.3 | 33/78 | 88.8 | 190/214 | 0/0 |
+| rv32i_forwarding_unit | rtl/cpu | 100.0 | 45/45 | 72.5 | 1240/1710 | 0/0 |
+| rv32i_hazard_unit | rtl/cpu | 94.9 | 37/39 | 98.1 | 202/206 | 0/0 |
+| rv32i_imm_gen | rtl/cpu | 87.5 | 7/8 | 99.3 | 133/134 | 0/0 |
+| rv32i_interrupt_ctrl | rtl/cpu | 100.0 | 3/3 | 32.1 | 27/84 | 0/0 |
+| rv32i_pipeline_ex | rtl/cpu | 83.3 | 10/12 | 77.1 | 969/1256 | 0/0 |
+| rv32i_pipeline_ex1b | rtl/cpu | 83.3 | 5/6 | 28.7 | 58/202 | 0/0 |
+| rv32i_pipeline_ex1c | rtl/cpu | 71.4 | 15/21 | 78.9 | 30/38 | 0/0 |
 | rv32i_pipeline_ex2 | rtl/cpu | 100.0 | 4/4 | 75.0 | 6/8 | 0/0 |
-| rv32i_pipeline_id | rtl/cpu | 91.7 | 11/12 | 84.0 | 815/970 | 0/0 |
-| rv32i_pipeline_if | rtl/cpu | 90.0 | 18/20 | 51.2 | 344/672 | 0/0 |
-| rv32i_pipeline_mem | rtl/cpu | 45.5 | 20/44 | 57.4 | 624/1088 | 0/0 |
-| rv32i_pipeline_wb | rtl/cpu | 100.0 | 5/5 | 70.4 | 490/696 | 0/0 |
-| rv32i_regfile | rtl/cpu | 88.9 | 16/18 | 60.3 | 228/378 | 0/0 |
+| rv32i_pipeline_id | rtl/cpu | 91.7 | 11/12 | 86.1 | 835/970 | 0/0 |
+| rv32i_pipeline_if | rtl/cpu | 100.0 | 20/20 | 52.8 | 355/672 | 0/0 |
+| rv32i_pipeline_mem | rtl/cpu | 61.4 | 27/44 | 58.5 | 636/1088 | 0/0 |
+| rv32i_pipeline_wb | rtl/cpu | 100.0 | 5/5 | 72.4 | 504/696 | 0/0 |
+| rv32i_regfile | rtl/cpu | 100.0 | 18/18 | 99.5 | 376/378 | 0/0 |
 | gpu_command_queue | rtl/gpu | 100.0 | 7/7 | 8.3 | 72/870 | 0/0 |
-| gpu_compute_unit | rtl/gpu | 73.1 | 49/67 | 24.7 | 1621/6560 | 0/0 |
-| gpu_memory_unit | rtl/gpu | 100.0 | 5/5 | 17.6 | 418/2374 | 0/0 |
-| gpu_top | rtl/gpu | 61.6 | 61/99 | 20.0 | 931/4644 | 0/0 |
-| memory_coalescer | rtl/gpu | 90.0 | 36/40 | 16.8 | 578/3434 | 0/0 |
-| shared_memory | rtl/gpu | 72.4 | 21/29 | 7.5 | 258/3452 | 0/0 |
-| vector_alu | rtl/gpu | 33.3 | 7/21 | 26.2 | 850/3242 | 0/0 |
-| vector_register_file | rtl/gpu | 100.0 | 7/7 | 28.3 | 468/1654 | 0/0 |
+| gpu_compute_unit | rtl/gpu | 73.1 | 49/67 | 25.9 | 1699/6560 | 0/0 |
+| gpu_memory_unit | rtl/gpu | 100.0 | 5/5 | 20.0 | 474/2374 | 0/0 |
+| gpu_top | rtl/gpu | 61.6 | 61/99 | 21.3 | 989/4644 | 0/0 |
+| memory_coalescer | rtl/gpu | 90.0 | 36/40 | 19.0 | 652/3434 | 0/0 |
+| shared_memory | rtl/gpu | 72.4 | 21/29 | 8.0 | 276/3452 | 0/0 |
+| vector_alu | rtl/gpu | 33.3 | 7/21 | 27.6 | 894/3242 | 0/0 |
+| vector_register_file | rtl/gpu | 100.0 | 7/7 | 29.6 | 490/1654 | 0/0 |
 | warp_scheduler | rtl/gpu | 88.9 | 24/27 | 22.7 | 298/1310 | 0/0 |
-| rv32i_cache_arbiter | rtl/mem | 96.3 | 26/27 | 63.9 | 561/878 | 0/0 |
+| rv32i_cache_arbiter | rtl/mem | 96.3 | 26/27 | 65.8 | 578/878 | 0/0 |
 | rv32i_clock_gate | rtl/mem | 100.0 | 3/3 | 100.0 | 8/8 | 0/0 |
-| rv32i_dcache | rtl/mem | 93.6 | 160/171 | 62.0 | 2364/3810 | 0/0 |
-| rv32i_icache | rtl/mem | 94.7 | 72/76 | 61.1 | 1705/2792 | 0/0 |
-| **Total (32 modules)** | | **71.8** | 819/1140 | **37.3** | 19316/51824 | |
+| rv32i_dcache | rtl/mem | 93.6 | 160/171 | 67.8 | 2582/3810 | 0/0 |
+| rv32i_icache | rtl/mem | 94.7 | 72/76 | 62.1 | 1735/2792 | 0/0 |
+| **Total (32 modules)** | | **77.8** | 887/1140 | **40.5** | 21001/51824 | |
+
+## 7ovx register-walk re-measurement (2026-10-09)
+
+Bead `7ovx` (GH #216 follow-up). Most of the remaining toggle gap on the register-bank peripherals and the fabric was upper
+data/address bits that never saw both edges, because tests wrote small values to a few low offsets. New reusable helper
+`tb/cocotb/soc/reg_walk.py` + documented maps `reg_maps.py` (transcribed from the module headers and `MEMORY_MAP.md`, NOT read
+back from the RTL's `RESET_VAL`/`WMASK`) + CPU-firmware generator `soc_reg_fw.py`.
+
+**What a walk checks (behaviour, not just toggles).** Per register: idle/reset value; walking ones (32), walking zeros (32),
+`0xFFFFFFFF`/`0`/`0xA5A5A5A5`/`0x5A5A5A5A`, each read back against `(model & ~wmask) | (written & wmask)` so every RO / reserved /
+WO-reads-0 bit is proven to stay put; per-lane `pstrb` writes and `pstrb=0`; PSLVERR never; restore to reset; a second pass that
+every register still holds its idle value after all the others were written (cross-talk); unmapped words read 0 and writes to
+them disturb nothing (catches a snoop decoding too few address bits). Side-effect bits are removed from the driven pattern
+(`Reg.drive`) rather than the register dropped: WDT `CTRL.enable`, TRNG `CTRL.enable`, PMU `CTRL[1:0]` power-mode request,
+CRYPTO/NPU `CTRL.START`. Skipped registers print their reason: `UART_TX`, `SPI_TX`, `I2C_TX_DATA`, `NPU_AIN` (FIFO push),
+`CRYPTO_KEY0-3`, `CRYPTO_DIN0-3`, `NPU_WDATA` (apertures), `I2C_CMD`, `WDT_FEED` (commands). W1C/W1P are checked
+semantically by `check_w1c` and dedicated tests (below), because they need a pending bit created first.
+
+**Applied at unit level** (a `test_register_walk` added to each existing suite, so no new Vtop build): timer, uart, spi,
+interrupt_controller (N_SOURCES=5), gpio, pwm, wdt, trng, pmu, pll_apb_regs, i2c, crypto, npu = 13 tests. Plus 5 semantic tests:
+GPIO edge-sticky W1C of all 32 pins one at a time and level-mode `GPIO_IRQ_CLR` is a no-op; PWM W1C of 4 wrap bits; WDT W1C of
+bark and bite; NPU `CTRL.START` is W1P (reads 0) and the illegal start's `done`/`cfg_rejected` clear through IRQ_CLR[0]/[1]; CRYPTO
+the same for `done`. `check_w1c` additionally proves a 0, a non-wired bit and a bit with its byte strobe low clear nothing.
+
+**Applied at SoC level** (`test_soc_register_walk` in `test_soc_integration.py`, same Vtop as the other six): generated RV32I firmware
+(no committed binary) walks 160 table entries - 104 registers across 14 peripheral windows (6 32-bit registers get the full set
+and SB byte stores through every lane, the rest the short set) plus 56 unmapped words in the windows - through
+CPU -> crossbar -> `axi4_to_axilite` -> `axi_lite_interconnect` -> `axil_to_apb` -> `apb_interconnect` (-> `apb_cdc_bridge` for
+both PLLs). 104 927 cycles, 74 s. Result is read back independently over the debug APB (x30 = failing checks, x26-x29 = first
+failure: address, written, read, expected). SoC-level exclusions on top of the unit ones: `IRQ_STATUS`/`IRQ_PENDING_MASKED` are
+live (they mirror other peripherals' IRQ lines that the walk itself moves).
+
+**Result: no RTL/doc register-map mismatch found** - every walk passed on the first run against the transcribed maps. That is a
+finding only because the checks are non-vacuous (mutants below); no bead for a map bug was needed.
+
+**Measured delta** (before = scheduled CI run 37910784827 on `main`, 2026-10-09 09:21; after = this branch's full local run;
+rows shown only where toggle points changed; toggle hit/total):
+
+| Module | Toggle before | Toggle after | Delta (points) |
+| :----- | ------------: | -----------: | -------------: |
+| gpio_controller | 52.0 (1110/2134) | **78.1** (1667/2134) | +557 |
+| pwm_controller | 41.5 (674/1626) | 47.5 (772/1626) | +98 |
+| timer | 42.0 (392/934) | 50.3 (470/934) | +78 |
+| apb4_register_bank | 75.7 (1419/1874) | 79.6 (1491/1874) | +72 |
+| soc_top | 50.4 (2401/4760) | 53.3 (2536/4760) | +135 |
+| axi4_crossbar | 58.5 (2486/4252) | 59.3 (2522/4252) | +36 |
+| soc_bus | 45.6 (2497/5480) | 46.3 (2538/5480) | +41 |
+| i2c_bit_engine | 88.6 (434/490) | 91.4 (448/490) | +14 |
+| watchdog_timer | 45.7 (787/1724) | 46.1 (795/1724) | +8 |
+| interrupt_controller | 51.7 (341/660) | 52.6 (347/660) | +6 |
+| spi_controller | 45.2 (597/1322) | 45.6 (603/1322) | +6 |
+| async_axi_fifo / axi4_to_axilite / cdc_gray_fifo / boot_rom / uart_controller | | | +4 / +4 / +4 / +2 / +3 |
+| **Triaged total** | 67.5 (40266/59656) | **69.3** (41334/59656) | **+1068** |
+
+Line coverage is unchanged by the walk, except the informational CPU modules gain from the new instruction mix (SB/XORI/BNE
+loops): `rv32i_pipeline_mem` 20/44 -> 27/44, `rv32i_decode` 27/78 -> 33/78, `rv32i_pipeline_ex1c` 11/21 -> 15/21.
+
+**Why the gain is smaller than the issue's "worst pools" suggest - what is left is structural, not a missing walk.** For every
+register-bank peripheral the surviving uncovered points are `hw_wdata_i` / `hw_wen_i` (the bank's HARDWARE-write port: for RW
+registers it is tied to `regs_o`, for status registers it only carries the few real status bits), `regs_o` / `regs` bits that
+belong to reserved, WO-snoop or RO-constant fields, `pready` (constant 1, zero wait states), `paddr[1:0]` (the banks ignore the byte
+offset; a word-aligned master never toggles it, 4 points per module) and `prdata` bits above the implemented field width. A
+software register walk cannot reach these. They need either waivers with the bank-structure justification (candidate bead) or the
+unaligned-address probe. `soc_bus`/`soc_top`/`axi4_crossbar` residue is dominated by the upper address bits (`m_awaddr` 57/256,
+`m_araddr` 67/256: the 32-bit address never leaves 0x0..0x2001_0FFF), the 128-bit D-cache write-back/refill data lanes
+(`m_wdata` 120/256) and the unmapped ROM write channel (`bus_rom_aw*`/`w*`, bead `ej6j`), none of which are on the AXI-Lite -> APB path.
+
+**Waiver drift fixed in passing (file `tools/verif/coverage_waivers.txt`, no waiver added or loosened).** Three FSM-`default:` waivers
+had gone stale because later RTL edits shifted their lines, which made the report show the default arm as an uncovered line and
+two stale-waiver warnings: `uart_controller` `L591` -> `L602` (bead `rqvo`), `pmu` `L262` -> `L275` and `L294|365` -> `L307|378`
+(bead `4a7i` header edit, including the `pmu.sv:` line references in the justification text), `axi_lite_interconnect` `L328` -> `L335`.
+Each target was re-read in the RTL and is still the `default:` arm it was waived as. After the fix: 0 stale waivers, line
+99.9 % (1667/1669 - the two left are `i2c_controller` L617/L645, bead `pnfw`), 0 modules below the 95 % line floor.
+
+**Non-vacuity (hand mutants, RTL reverted, `git diff --stat rtl/` empty).** Each killed by the named test:
+
+| Mutant | Killed by |
+| :----- | :-------- |
+| `timer` CTRL WMASK `0x7` -> `0x3` (RW bit made RO) | `test_timer.test_register_walk` (35 mismatches) |
+| `pwm_controller` `PWM_IRQ_STAT` made SW-writable | `test_pwm.test_register_walk` (45) |
+| `pll_apb_regs` CONTROL WMASK `0x3F0` -> `0x3F1` (GH #89 self-brick path re-opened) | `test_pll_apb_regs.test_register_walk` (40) |
+| `apb4_register_bank` `strb_expand` ORs lane 0 into every lane | `test_timer.test_register_walk` (4) |
+| `crypto_accel` reserved word 28 SW-writable | `test_crypto.test_register_walk` (36) |
+| `gpio_controller` W1C clear mask forced to 0 (W1C broken) | `test_gpio.test_register_w1c_semantics` (32) |
+| `npu_top` CTRL WMASK `0x9` -> `0xD` (START stored, not W1P) | `test_npu.test_register_w1p_w1c_semantics` |
+| `crypto_accel` CTRL WMASK `0x1B` -> `0x1F` (START stored) | `test_crypto.test_register_w1p_w1c_semantics` |
+| `npu_top` `IRQ_CLR[1]` wired to `pwdata[0]` | `test_npu.test_register_w1p_w1c_semantics` |
+| `axil_to_apb` `pwdata` bit 31 dropped | `test_soc_integration.test_soc_register_walk` (48 failing checks, first `timer.TMR_COMPARE` wrote `0x80000000` read `0`) |
+| `axi4_to_axilite` `wstrb` lane 2 dropped | `test_soc_register_walk` (168 failing checks, first `timer.TMR_COMPARE`) |
+
+Note the walk alone does NOT catch a stored W1P bit (the bit is never driven, by design), which is why the W1P/W1C semantic tests exist.
 
 ## ej6j AXI4-fabric re-measurement (2026-10-07)
 
