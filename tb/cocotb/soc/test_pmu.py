@@ -60,6 +60,8 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from bfm.apb4_master import APB4Master
+import reg_maps  # noqa: E402
+from reg_walk import walk_bank  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -520,3 +522,14 @@ async def test_pmu_mid_sequence_mode_change_no_reversal(dut):
         "mid-sequence mode change confirmed: in-flight power-down completes "
         "unreversed, power-up begins only after settling at OFF"
     )
+
+
+# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+@cocotb.test()
+async def test_register_walk(dut):
+    """Walk every PMU register against the documented map (reg_maps.PMU); the power-mode request field is never driven."""
+    await _start_clock_and_reset(dut)
+    m = _make_apb_bfm(dut)
+    regs, first = reg_maps.BANKS["pmu"]
+    await walk_bank(m, regs, first, log=dut._log)

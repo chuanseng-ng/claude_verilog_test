@@ -30,6 +30,8 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ClockCycles, FallingEdge
 
 from bfm.apb4_master import APB4Master
+import reg_maps  # noqa: E402
+from reg_walk import walk_bank  # noqa: E402
 
 # ── Register byte addresses ───────────────────────────────────────────────────
 REG_UART_TX     = 0x00
@@ -1085,3 +1087,13 @@ async def test_slow_baud_loopback(dut):
         assert d == byte_val, f"expected 0x{byte_val:02X}, got {d:#010x}"
         st = await _status(m)
         assert st & STATUS_RX_EMPTY and not st & STATUS_FRAMING_ERROR, f"{st:#010x}"
+
+
+# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+@cocotb.test()
+async def test_register_walk(dut):
+    """Walk every UART register against the documented map (reg_maps.UART); UART_TX is skipped (FIFO push)."""
+    m = await _setup(dut)
+    regs, first = reg_maps.BANKS["uart"]
+    await walk_bank(m, regs, first, log=dut._log)

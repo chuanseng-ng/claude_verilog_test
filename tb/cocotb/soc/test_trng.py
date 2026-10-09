@@ -182,6 +182,8 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from bfm.apb4_master import APB4Master
+import reg_maps  # noqa: E402
+from reg_walk import walk_bank  # noqa: E402
 
 from tb.models.trng_lfsr_model import (
     DEFAULT_SEED,
@@ -1316,3 +1318,14 @@ async def test_trng_distribution_sanity(dut):
     )
     stat = await _peek(dut, TRNG_STATUS)
     assert not stat & ST_HEALTH
+
+
+# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+@cocotb.test()
+async def test_register_walk(dut):
+    """Walk every TRNG register against the documented map (reg_maps.TRNG); CTRL.enable is never driven."""
+    await _start_clock_and_reset(dut)
+    m = _make_apb_bfm(dut)
+    regs, first = reg_maps.BANKS["trng"]
+    await walk_bank(m, regs, first, log=dut._log)

@@ -54,6 +54,8 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from bfm.apb4_master import APB4Master
+import reg_maps  # noqa: E402
+from reg_walk import walk_bank  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -327,3 +329,14 @@ async def test_pll_apb_regs_decode_and_enable(dut):
         f"Read offset 0x{CTRL_OFFSET:03x}: data=0x{data:08x}, OKAY, "
         f"pll_enable_o={int(dut.pll_enable_o.value)} (non-clearable) — PASS"
     )
+
+
+# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+@cocotb.test()
+async def test_register_walk(dut):
+    """Walk the PLL config registers (reg_maps.PLL); CONTROL[0] pll_enable is set-only, so every zero pattern must leave it 1 (GH #89)."""
+    await _start_clock_and_reset(dut)
+    m = _make_apb_bfm(dut)
+    regs, first = reg_maps.BANKS["pll"]
+    await walk_bank(m, regs, first, log=dut._log)

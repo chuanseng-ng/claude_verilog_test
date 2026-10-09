@@ -30,6 +30,8 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from bfm.apb4_master import APB4Master
+import reg_maps
+from reg_walk import walk_bank
 
 # ── Register byte addresses ───────────────────────────────────────────────────
 REG_TMR_COUNTER  = 0x00
@@ -298,3 +300,14 @@ async def test_disable_freezes_counter(dut):
     )
     assert count_a > 0, "Counter should be non-zero before disable"
     dut._log.info(f"test_disable_freezes_counter PASS  frozen at count={count_a}")
+
+
+# ── Register walk (bead 7ovx): reset values, RO/RW masks, byte lanes, unmapped words ─────────
+
+@cocotb.test()
+async def test_register_walk(dut):
+    """Walking-ones / constant / alternating patterns on every register, checked against the
+    documented map (reg_maps.TIMER); RO TMR_COUNTER stays 0 while the timer is disabled."""
+    m = await _setup(dut)
+    regs, first = reg_maps.BANKS["timer"]
+    await walk_bank(m, regs, first, log=dut._log)

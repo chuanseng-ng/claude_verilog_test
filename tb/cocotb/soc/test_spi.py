@@ -23,6 +23,8 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ClockCycles
 
 from bfm.apb4_master import APB4Master
+import reg_maps  # noqa: E402
+from reg_walk import walk_bank  # noqa: E402
 
 # ── Register byte addresses ───────────────────────────────────────────────────
 REG_SPI_TX      = 0x00
@@ -782,3 +784,13 @@ async def test_clk_div_wide_first_edge(dut):
         raise AssertionError("SCLK never rose")
     assert (DIV + 1) - 2 <= n <= (DIV + 1) + 6, (
         f"first SCLK edge after {n} clocks, expected ~{DIV + 1} (half-period = DIV+1)")
+
+
+# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+@cocotb.test()
+async def test_register_walk(dut):
+    """Walk every SPI register against the documented map (reg_maps.SPI); SPI_TX is skipped (FIFO push)."""
+    m = await _setup(dut)
+    regs, first = reg_maps.BANKS["spi"]
+    await walk_bank(m, regs, first, log=dut._log)
