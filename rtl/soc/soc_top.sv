@@ -520,7 +520,9 @@ module soc_top
     // the domain went quiet. Editing pmu.sv's state order to fix this bead
     // would either violate that documented UPF sequencing or defeat the
     // retention-by-construction trick (see pmu.sv header) — so this fix is
-    // deliberately in soc_top.sv, not pmu.sv.
+    // deliberately in soc_top.sv, not pmu.sv. (That trick is CPU-only and a
+    // behavioural-model artifact: the GPU domain is async-reset, so a PMU
+    // power-cycle DOES clear GPU state — bead 4a7i, pmu.sv header.)
     //
     // Hazard: pmu_cpu_rst_n and pmu_cpu_clk_en are two independently-timed
     // core_clk-domain signals crossing into the asynchronous, independently-

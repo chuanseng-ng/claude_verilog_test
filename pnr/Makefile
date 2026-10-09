@@ -836,9 +836,21 @@ SKY130_SOC_EXTRA_SKIP ?=
 # project-local plugin pnr/sky130/soc/plugin/librelane_plugin_cvt_sky130 (picked up because
 # LibreLane imports every librelane_plugin_* on PYTHONPATH), which scale the GRT/placement wire-RC
 # estimate to what OpenRCX later extracts. The shared LibreLane install is NOT modified.
-# config.json (the adopted sign-off) is untouched; this selects config_rccal.json instead.
-SKY130_SOC_CONFIG ?= config.json
+#
+# ADOPTED AS THE DEFAULT 2026-10-09 (user decision, bead e45j): `make librelane-sky130-soc[-noklayout]` now runs
+# config_rccal.json. config.json is the pre-adoption (non-RC-calibrated) flow, kept for A/B comparison and
+# reached through the -norccal targets below. Override either way with SKY130_SOC_CONFIG=<file>; the override
+# is honoured by every target (the old -rccal-noklayout recipe that ignored it is now just an alias).
+#
+# config_rccal.json also substitutes Checker.MaxCapViolations with the plugin's CVT.MaxCapViolations, which
+# gates max-cap at ALL corners and waives only the named entries of constraints/max_cap_waivers.json (macro
+# load pin, ceiling, justification). The stock checker is skipped only for configs that lack that substitution
+# (config.json): un-skipped alone it is a no-op, because checker.py's corner_override=[""] makes it match no
+# corner, so it only logs a WARNING (measured, docs/SKY130_SLEW_CAP_E45J.md section 7).
+SKY130_SOC_CONFIG ?= config_rccal.json
 SKY130_SOC_PLUGIN_DIR := $(abspath $(LIBRELANE_SKY130_SOC_DIR)/plugin)
+SKY130_SOC_KLAYOUT_SKIP := --skip KLayout.DRC --skip Checker.KLayoutDRC
+SKY130_SOC_STOCK_MAXCAP_SKIP := $(if $(filter config.json,$(SKY130_SOC_CONFIG)),--skip Checker.MaxCapViolations,)
 
 # ── KLayout-DRC-free variant (bead claude_verilog_test-00ef) ──────────────────
 # RUN_2026-09-20_19-46-05 was killed by the host's memory reaper inside
@@ -863,7 +875,14 @@ librelane-sky130-soc-noklayout:
 	@echo "  NOTE    : KLayout DRC is DEFERRED, not waived."
 	@echo "=========================================="
 	@$(MAKE) librelane-sky130-soc \
-		SKY130_SOC_EXTRA_SKIP="--skip KLayout.DRC --skip Checker.KLayoutDRC"
+		SKY130_SOC_EXTRA_SKIP="$(SKY130_SOC_KLAYOUT_SKIP)"
+
+# Pre-adoption flow (config.json, no RC calibration, stock max-cap checker skipped) for A/B comparison.
+librelane-sky130-soc-norccal:
+	@$(MAKE) librelane-sky130-soc SKY130_SOC_CONFIG=config.json
+
+librelane-sky130-soc-norccal-noklayout:
+	@$(MAKE) librelane-sky130-soc-noklayout SKY130_SOC_CONFIG=config.json
 
 # Run dir:   /nobackup/sky130_soc_runs/
 librelane-sky130-soc: sky130-soc-sv2v
@@ -948,20 +967,29 @@ librelane-sky130-soc: sky130-soc-sv2v
 		 --skip Checker.IllegalOverlap \
 		 --skip Odb.CheckDesignAntennaProperties \
 		 --skip Checker.MaxSlewViolations \
-		 --skip Checker.MaxCapViolations \
 		 --skip Magic.WriteLEF \
+		 $(SKY130_SOC_STOCK_MAXCAP_SKIP) \
 		 $(SKY130_SOC_EXTRA_SKIP) \
 		 $(abspath $(LIBRELANE_SKY130_SOC_DIR))/$(SKY130_SOC_CONFIG)"
 
-# e45j: RC-calibrated variant, KLayout DRC skipped (same host reason as -noklayout).
-# This recipe hard-wires config_rccal.json, so `make <this-target> SKY130_SOC_CONFIG=other.json` is silently
-# ignored. To run another variant (e.g. config_rccal_wl1500.json, section 6 of docs/SKY130_SLEW_CAP_E45J.md):
-#   make librelane-sky130-soc SKY130_SOC_CONFIG=config_rccal_wl1500.json \
-#        SKY130_SOC_EXTRA_SKIP="--skip KLayout.DRC --skip Checker.KLayoutDRC"
+# e45j: kept as an alias of the (now rccal-default) -noklayout target for existing notes and scripts.
+# Unlike the pre-adoption recipe it honours SKY130_SOC_CONFIG, e.g. for the wire-length arm of
+# docs/SKY130_SLEW_CAP_E45J.md section 6:
+#   make librelane-sky130-soc-noklayout SKY130_SOC_CONFIG=config_rccal_wl1500.json
 # and confirm the key in <run>/resolved.json.
 librelane-sky130-soc-rccal-noklayout:
-	@$(MAKE) librelane-sky130-soc SKY130_SOC_CONFIG=config_rccal.json \
-		SKY130_SOC_EXTRA_SKIP="--skip KLayout.DRC --skip Checker.KLayoutDRC"
+	@$(MAKE) librelane-sky130-soc-noklayout
+
+# Re-run the named max-cap waiver check on a finished Sky130 SoC run (also done inside the flow by the
+# CVT.MaxCapViolations step). SKY130_SOC_MAXCAP_RUN defaults to the newest run dir; exit 0 pass / 1 unwaived / 2 input error.
+#   make -C pnr sky130-soc-maxcap-check [SKY130_SOC_MAXCAP_RUN=/nobackup/sky130_soc_runs/RUN_...] [STRICT_STALE=1]
+SKY130_SOC_RUNS_DIR ?= /nobackup/sky130_soc_runs
+SKY130_SOC_MAXCAP_RUN ?= $(shell ls -1d $(SKY130_SOC_RUNS_DIR)/RUN_2* 2>/dev/null | tail -1)
+sky130-soc-maxcap-check:
+	@test -d "$(SKY130_SOC_MAXCAP_RUN)" || { echo "ERROR: run dir not found: '$(SKY130_SOC_MAXCAP_RUN)' (set SKY130_SOC_MAXCAP_RUN=...)"; exit 2; }
+	python3 $(LIBRELANE_SKY130_SOC_DIR)/plugin/cvt_maxcap_waiver.py "$(SKY130_SOC_MAXCAP_RUN)" \
+		--waivers $(LIBRELANE_SKY130_SOC_DIR)/constraints/max_cap_waivers.json \
+		$(if $(STRICT_STALE),--strict-stale,)
 
 librelane-sky130-soc-results:
 	$(call librelane_results,$(LIBRELANE_SKY130_SOC_DIR))
@@ -2066,7 +2094,7 @@ macro-views-asap7: check-asap7-openroad
 	echo "=========================================="; \
 	echo "Generating ASAP7 macro views — $$DESIGN"; \
 	echo "=========================================="; \
-	if [ -n "$(RUN)" ]; then CPU_RUN="$(RUN)"; \
+	if [ -n "$(SKY130_SOC_RUN)" ]; then CPU_RUN="$(SKY130_SOC_RUN)"; \
 	else CPU_RUN="$$(ls -td $$BLOCK_DIR/runs/RUN_* 2>/dev/null | head -1)"; fi; \
 	if [ -z "$$CPU_RUN" ]; then \
 		echo "ERROR: No ASAP7 $$BLOCK_LABEL runs found. Run 'make librelane-asap7' first."; exit 1; fi; \

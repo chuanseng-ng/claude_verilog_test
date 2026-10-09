@@ -17,13 +17,24 @@ Activation is opt-in through ``meta.substituting_steps`` in the design config, a
 come from the ``CVT_RC_CALIBRATION`` config variable, e.g.
 ``"nom=1.88,1.02 min=1.69,0.62 max=2.04,1.91"`` (``<rc corner>=<C scale>,<R scale>``).
 An unset / empty variable makes the wrapper a byte-for-byte pass-through.
+
+``CVT.MaxCapViolations`` is a drop-in for ``Checker.MaxCapViolations`` that applies the named, load-pin-keyed
+waivers of ``constraints/max_cap_waivers.json`` (logic in ``cvt_maxcap_waiver.py``, next to this package).
+It is needed because (a) the stock checker cannot waive a single net, and (b) the stock checker is a no-op
+unless ``MAX_CAP_VIOLATION_CORNERS`` is set: ``corner_override = [""]`` in ``librelane/steps/checker.py``
+makes it match no corner, so un-skipping it alone only produces a warning.
 """
 
 import os
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Tuple
 
+import cvt_maxcap_waiver as maxcap
+from librelane.common import Path as ConfigPath  # str subclass LibreLane's Variable type system requires
 from librelane.config import Variable
-from librelane.steps import Step
+from librelane.state import DesignFormat, State
+from librelane.steps import MetricsUpdate, Step, ViewsUpdate
+from librelane.steps.step import DeferredStepError
 from librelane.steps.openroad import (
     RepairDesignPostGPL,
     RepairDesignPostGRT,
@@ -92,3 +103,73 @@ CVTResizerTimingPostGRT = _calibrated(
     "CVT.ResizerTimingPostGRT",
     "Resizer Timing (Post-Global Routing, RC-calibrated)",
 )
+
+
+MAXCAP_VARS = [
+    Variable(
+        "CVT_MAXCAP_WAIVERS",
+        Optional[ConfigPath],
+        "JSON file of named max-capacitance waivers (see constraints/max_cap_waivers.json). Unset / "
+        "missing means strict mode: every max-cap violation at every corner fails the step.",
+        default=None,
+    ),
+    Variable(
+        "CVT_MAXCAP_STRICT_STALE",
+        bool,
+        "Treat a waiver that waives nothing as a failure instead of a warning.",
+        default=False,
+    ),
+]
+
+
+@Step.factory.register()
+class CVTMaxCapViolations(Step):
+    """Max-cap checker with named, load-pin-keyed waivers (replaces ``Checker.MaxCapViolations``).
+
+    Reads the per-corner ``checks.rpt`` of the ``OpenROAD.STAPostPNR`` step of the same run and the final
+    netlist from the incoming state, fails (deferred, so the flow still finishes) on any violation not
+    covered by a waiver, and warns on stale waivers.  All corners are gated, not only
+    ``TIMING_VIOLATION_CORNERS``.
+    """
+
+    id = "CVT.MaxCapViolations"
+    name = "Max Cap Violations Checker (named waivers)"
+    long_name = "Maximum Capacitance Violations Checker with named waivers"
+
+    inputs = [DesignFormat.NETLIST]
+    outputs = []
+    config_vars = MAXCAP_VARS
+
+    def run(self, state_in: State, **kwargs) -> Tuple[ViewsUpdate, MetricsUpdate]:
+        waiver_path = self.config.get("CVT_MAXCAP_WAIVERS")
+        strict_stale = bool(self.config.get("CVT_MAXCAP_STRICT_STALE"))
+        run_dir = Path(self.step_dir).parent
+        try:
+            waivers = maxcap.load_waivers(waiver_path) if waiver_path else ()
+            verdict = maxcap.evaluate_sta_dir(
+                maxcap.find_sta_dir(run_dir),
+                state_in[DesignFormat.NETLIST],
+                waivers,
+                strict_stale=strict_stale,
+            )
+        except (maxcap.ReportError, maxcap.WaiverError) as exc:
+            msg = f"max-cap check could not be completed: {exc}"
+            self.err(f"{msg} - deferred")
+            raise DeferredStepError(msg) from exc
+
+        report = verdict.format()
+        with open(os.path.join(self.step_dir, "max_cap_waivers.rpt"), "w") as f:
+            f.write(report + "\n")
+        for stale in verdict.stale_waivers:
+            self.warn(f"stale max-cap waiver '{stale.id}': it waived no violation at any corner")
+        metrics = {
+            "design__max_cap_violation__waived__count": len(verdict.waived),
+            "design__max_cap_violation__unwaived__count": len(verdict.unwaived),
+        }
+        if not verdict.ok:
+            msg = f"{len(verdict.unwaived)} unwaived max-cap violation(s):\n{report}"
+            self.err(f"{msg} - deferred")
+            raise DeferredStepError(msg)
+        if verdict.waived:
+            self.warn(f"waived max-cap violations (see max_cap_waivers.rpt):\n{report}")
+        return {}, metrics

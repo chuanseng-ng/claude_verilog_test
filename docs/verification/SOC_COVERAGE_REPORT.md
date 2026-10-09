@@ -77,6 +77,55 @@ Non-vacuity: the known gaps show up in the raw (pre-waiver) report: `timer_irq` 
 `i2c_sda_o` never toggle, and the DMA early-RLAST branch is not in the uncovered list (covered since bead
 `wdmo`, PR #217).
 
+**Re-measured 2026-10-08 after bead `oez2`** (SoC-level integration suite `soc_integration`, 6 tests, one Vtop).
+Measurement level: **whole-SoC (`tb_soc_top`), directed firmware + testbench tests**, no unit-level stimulus. Basis
+(not a full local `soc_coverage` run, which is too heavy for the 15 GB host): the `soc-coverage` artifact of the
+scheduled CI run 37755024842 on `main` (merged `soc_all_ci` data) merged with this branch's instrumented
+`soc_integration` run (`make soc_integration COVERAGE=1`, 6/6 PASS) and rendered with the unchanged
+`tools/verif/coverage_report.py`; points are identified by module/file/line/column/object so the union is exact. The
+CI `soc_coverage` run on the PR supersedes these numbers. One new category-b waiver
+(`soc_top` `cpu_debug_{rs1,rs2,branch_taken,state}`, 138 points: `rv32i_core.sv:951-956` ties the CPU's legacy debug
+taps to constants), no stale waiver.
+
+| Module | Line before | Line after | Toggle before | Toggle after |
+| :----- | ----------: | ---------: | ------------: | -----------: |
+| soc_top | 75.9 (22/29) | **100.0 (29/29)** | 37.4 (1828/4890) | 50.4 (2401/4760) |
+| pll_subsystem | - | - | 15.3 (30/196) | **71.4 (140/196)** |
+| pll_apb_regs | - | - | 19.7 (114/578) | 26.0 (150/578) |
+| pll_clkgen | - | - | 40.0 (8/20) | **100.0 (20/20)** |
+| interrupt_controller | 100.0 (5/5) | 100.0 (5/5) | 50.2 (331/660) | 51.7 (341/660) |
+| pmu | 100.0 (31/31) | 100.0 (31/31) | 36.6 (231/632) | 38.1 (241/632) |
+| timer | 100.0 (22/22) | 100.0 (22/22) | 38.7 (361/934) | 42.0 (392/934) |
+| **Triaged total** | 98.9 (1652/1670) | **99.3 (1659/1670)** | 65.5 (39082/59648) | 67.2 (40081/59656) |
+
+Formerly uncovered `soc_top` points now hit (all behaviourally checked, not just toggled):
+- `soc_top.sv` L1450-L1456 (GPU isolation clamps, 7 `cond_then` arms): PMU GPU power cycle with `gpu_irq_o == gpu_irq_raw & !gpu_iso_en`
+  asserted on every cycle and the clamp seen acting (`raw=1, out=0, iso=1`) in the iso-before-reset window; sequence order
+  `ret_save < iso_en < clk gate < reset` down and the reverse up checked from the testbench.
+- `pmu_gpu_iso_en`, `pmu_gpu_ret_save`, `pmu_gpu_ret_restore`, `timer_irq` (+`_cpu_sync`), `uart_irq`, `spi_irq`, `dma_irq`:
+  the CPU takes the trap for each (ISR committed, `mcause` 0x8000_0007 for the timer's direct MTIP and 0x8000_000B for the three
+  routed through `interrupt_controller`, pending bit logged, source nets sampled at trap entry and after the handler).
+- `spi_miso_i`: non-loopback SPI against a testbench slave; firmware reads back 0xA6, the slave checks MOSI 0x3C and CS framing.
+- Debug path `apb_{psel,penable,pwrite,paddr,pwdata}_i`, `dbg_bridge_m_*`, and
+  **`apb_pslverr_o`, `dbg_bridge_m_pslverr`** (un-waived by GH #222 W2): PSLVERR on a write to each RO CSR debug register
+  (`rv32i_cpu_top.sv:64,330`) and the `apb_cdc_bridge` force-complete PSLVERR with the destination (CPU-domain) in reset,
+  both before the request and with the reset asserted 1-6 cycles into it.
+- `pll_m_pwdata`/`pll2_m_pwdata`/`paddr` and `pll_subsystem`/`pll_apb_regs` divider fields: both PLLs' CONTROL written
+  through the fabric (read back, locked flag re-checked), `pll_fb_div`/`pll_post_div` of each instance checked after every
+  write and the other instance proven untouched. `pll_clkgen_stub` is a pass-through by design, so the "output" observed is
+  the divider ports at `pll_clkgen` plus the lock flag, not a frequency change.
+
+Still open in this bead's scope: `i2c_*_oe_o` (pad drive, bead `pnfw`), ROM write channel `bus_rom_aw*/w*/b*` (bead `ej6j`,
+unit level), `uart_rx_i` (bead `rqvo`), `pll_m_prdata`/`pready` partial points. `interrupt_controller` and `pmu` toggle
+gains are small because their uncovered points are register-bank data/address bits, not integration paths.
+
+**Finding (no RTL change made).** The GPU's flops are async-reset, so the PMU's domain reset clears all GPU state (the
+level-held irq latch, `irq_enable`, `done`) even though the clock is gated first. `pmu.sv`'s header and
+`docs/POWER_DOMAIN_EVALUATION.md` claim state survives an off/on cycle "by construction" because reset only asserts under a
+gated clock; that holds for the synchronous-reset CPU but not for the GPU. `test_soc_gpu_isolation_via_pmu` asserts the
+actual (state-lost) behaviour and a successful relaunch; tracked as a documentation/model-fidelity bead (the physical
+behaviour of a power-gated domain with no retention cells is state loss anyway).
+
 ## Results
 
 Basis (re-rendered 2026-10-08 for GH #222, bead `kp61`): the `soc-coverage` artifact of CI run
@@ -289,7 +338,7 @@ was classified (the full per-module list is in `coverage_report.md` / `.json`):
 | (a) bead `8riq` -> **closed for the unit-level fabric** (2026-10-07, PR for `test/axil-apb-coverage-8riq`) | `axi_lite_interconnect` / `axi_lite_register_bank` / `axil_to_apb` / `apb_interconnect` are now **100 % line** (were 95.0 / 93.3 / 95.3 / 100 %). New suite `axil_apb_fabric` (14 tests: ring AW/W/AR stalls, B/R stalls, SLVERR/DECERR end to end, APB wait states, unclaimed APB slot -> SLVERR) plus register-bank, bridge and `apb_interconnect` additions. **Still open, now tracked separately:** SoC-level `soc_bus`/`soc_top` response signals (`periph_axil_*resp`, `axil_gpu/dma_*resp`, `mem_*resp`, `m_*resp`) need CPU firmware to reach an unmapped ring address, and `apb_m_pslverr` is unreachable through the current map (see below). RTL bug found: bead `3xtv` (phantom second DECERR read beat), pinned by an `expect_fail` guard | |
 | (a) bead `bq2o` -> **closed at unit level** (2026-10-08, PR `test/dma-coverage-bq2o`; unit-measured, CI re-measure pending) | `dma_engine` is **100 % line (67/67 after waivers)**, was 91.2 % (62/68) at unit level with the pre-PR 10-test `test_dma` (raw 98.5 %, 67/68, before the L393 waiver). 8 new tests: burst clamp 255/256/257/293 words, AR / AW / W / B stalls (`arready`/`awready` low for 9/11 edges, `wready` low 3 edges per beat, B delayed 8 cycles), all channels stalled over a 4 KB-split + 256-clamp plan, write SLVERR and DECERR (second burst), stale `err_on_read` clear, descriptor queue full with silent drop. Beyond the bead's lines, **L584 (S_W `wready` stall) and L594 (S_B bvalid wait) were also uncovered** and are now hit. **L393 is waived (b), not tested**: it is dead (`beats_raw` is already clamped by `min2(.., MAX_BURST_BEATS)`), so the bead's "saturation never taken" was a misreading; the real clamp (min2) is tested and a `MAX-1` mutant is killed. `m_bresp` and `q_full` now toggle; `s_axil_bresp`/`s_axil_rresp` (8 points) are waived: tied OKAY in `axi_lite_register_bank`. Unit-level toggle 28.8 -> 37.5 % (the rest is datapath address/data bits and constant `m_arburst`/`m_*size`). Non-vacuity: 9 hand mutants of `dma_engine.sv` each killed (RTL reverted, `git diff --stat rtl/` empty): clamp MAX-1 (5 tests fail), DECERR ignored on B, stale `err_on_read` not cleared, queue-full guard removed, `arready` / `wready` / `awready` / `bvalid` ignored, `last_resp_q` not captured on B. No RTL bug found. | |
 | (a) bead `05wf` -> **closed at unit level** (2026-10-08, branch `test/uart-spi-coverage-05wf`) | `uart_controller` / `spi_controller`: byte lanes 2/3, FIFO full, RX false-start, os_tick gaps — see "05wf re-measurement" below. SoC-level numbers in the table are marked † and are unit-suite figures until the next full `soc_coverage` run | |
-| (a) bead `oez2` | `soc_top`: `timer_irq`/`uart_irq`/`spi_irq`/`dma_irq`, GPU isolation, debug APB, PLL programming, SPI MISO | |
+| (a) bead `oez2` -> **closed** (2026-10-08, PR #236, see "Re-measured 2026-10-08 after bead `oez2`" above) | `soc_top`: `timer_irq`/`uart_irq`/`spi_irq`/`dma_irq`, GPU isolation, debug APB, PLL programming, SPI MISO | |
 | (a) bead `pnfw` (existing) | I2C: slave-mode bit-counter arms L617/L645, SoC-level pad drive | notes appended |
 | (a) bead `2k8` (existing) | GPU-domain PMU path (`pmu_gpu_iso_en` etc.) | note appended |
 
@@ -304,7 +353,7 @@ IRQ lines, debug port, PLL registers, ROM write channel). They are listed under 
 
 **Informational for now** (user decision, 2026-10-05): `soc_coverage` and its CI job never fail on a coverage
 percentage; they fail only if the regression itself fails, the instrumented pass count drops below the
-`PASS_FLOOR` (see `.github/workflows/cocotb.yml`, 559 as of 2026-10-08, bead `05wf`), or no coverage data is produced. Revisit once the (a) beads above land. Candidate floors
+`PASS_FLOOR` (see `.github/workflows/cocotb.yml`, 574 as of 2026-10-09, bead `oez2`), or no coverage data is produced. Revisit once the (a) beads above land. Candidate floors
 for that revisit:
 
 - **Line**: 95 % per module in the triaged trees (the `VERIFICATION_PLAN.md:362` criterion), after waivers.

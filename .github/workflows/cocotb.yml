@@ -240,10 +240,13 @@ jobs:
           # DERIVED for the merge -- tighten to (measured - 3) from this PR's soc_all CI log.
           # 2026-10-08 (GH #222 W5 / bead kp61): 546 = 545 + 1 (test_axprot_routed_to_selected_slave_only in test_axil_interconnect.py); measured 548 on main.
           # 2026-10-08 (merge of beads bq2o + 05wf): 568 = 558 measured on PR #233's soc_all CI + 13 new 05wf tests
-          # (9 test_uart.py + 4 test_spi.py) - 3. Derived for the merge -- tighten to (measured - 3) from this PR's CI.
-          # 2026-10-09 (bead rqvo): 569 = 568 + 1 (test_rx_false_start_then_real_start in test_uart.py). Derived;
-          # tighten to (measured - 3) from this PR's CI soc_all log.
-          PASS_FLOOR: '569'
+          # (9 test_uart.py + 4 test_spi.py) - 3. Measured 571 on PR #234's CI (568 confirmed).
+          # 2026-10-09 (bead oez2): 574 = 571 measured (PR #234 CI) + 6 (new suite soc_integration / test_soc_integration.py:
+          # irq_traps_and_spi_miso, pll_register_programming, gpu_isolation_via_pmu, debug_apb_halt_gpr_step,
+          # debug_apb_ro_write_pslverr, debug_apb_dest_reset_pslverr) - 3. Tighten from this PR's CI if it differs.
+          # 2026-10-09 (bead rqvo): 575 = 574 + 1 (test_rx_false_start_then_real_start in test_uart.py; soc_all_ci
+          # measured 572 pass on the pre-oez2 base). Derived -- tighten to (measured - 3) from this PR's CI.
+          PASS_FLOOR: '575'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."
