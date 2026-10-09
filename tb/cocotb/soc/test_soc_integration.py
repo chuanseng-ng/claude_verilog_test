@@ -606,3 +606,55 @@ async def test_soc_debug_apb_dest_reset_pslverr(dut):
     dut._log.info("in-flight reset offset -> pslverr: %s", forced)
     assert forced[0][1] or forced[1][1], (
         f"reset 1-2 cycles into the request must force-complete with PSLVERR, got {forced}")
+
+
+# ---------------------------------------------------------------------------
+# Test: SoC-level register walk (bead 7ovx)
+# ---------------------------------------------------------------------------
+@cocotb.test()
+async def test_soc_register_walk(dut):
+    """CPU firmware walks every safe register of 14 peripheral windows through the real
+    CPU -> crossbar -> AXI-Lite ring -> axil_to_apb -> apb_interconnect path.
+
+    Walking-ones / constant / alternating patterns (full set on the 32-bit registers, short set
+    elsewhere) are written and read back; the firmware checks each read against the documented
+    register map (reset values are proven by the unit walks): writable bits take the value,
+    every RO / reserved / W1C bit keeps its value.  The 32-bit registers are also stored byte by
+    byte (SB) so the AXI wstrb / APB pstrb lanes toggle.  The fabric data/address buses therefore
+    see every bit in both directions, which no other SoC test provides.
+
+    Excluded (reg_maps `skip` / `drive`): FIFO pushes, key/data apertures, command registers,
+    the watchdog feed and enable, the PMU power-mode request and CRYPTO/NPU START -- the
+    peripheral's own suites test those.  The firmware is generated from the same tables as the
+    unit walks (soc_reg_fw.py), so nothing can go stale against the register map."""
+    import soc_reg_fw
+
+    words, lbl, n_entries = soc_reg_fw.build_firmware()
+    await _setup(dut, words)
+    pass_pc, fail_pc = lbl["PASS"], lbl["FAIL"]
+    verdict = None
+    for cycle in range(1_500_000):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        if not int(dut.commit_valid_o.value):
+            continue
+        pc = int(dut.commit_pc_o.value)
+        if pc in (pass_pc, fail_pc):
+            verdict = ("PASS" if pc == pass_pc else "FAIL", cycle)
+            break
+        assert pc != lbl["TRAP"], "register-walk firmware took an unexpected trap"
+    assert verdict is not None, "register-walk firmware never reached PASS or FAIL"
+    await RisingEdge(dut.clk_i)       # leave the ReadOnly phase before driving the debug port
+    dut._log.info("register walk: %s after %d cycles, %d table entries", *verdict, n_entries)
+
+    # Independent of the firmware's own verdict: read its result registers over the debug APB
+    # (EBREAK halted the CPU).  x30 = failing checks; x26..x29 = first failure evidence.
+    res = {}
+    for n in (26, 27, 28, 29, 30, 31):
+        res[n], _err = await dbg_read(dut, _gpr_addr(n))
+    if verdict[0] == "FAIL" or res[30] != 0:
+        raise AssertionError(
+            f"register walk: {res[30]} failing check(s); first at "
+            f"{soc_reg_fw.entry_name_for(res[26])} (0x{res[26]:08x}): wrote 0x{res[27]:08x}, "
+            f"read 0x{res[28]:08x}, expected 0x{res[29]:08x}")
+    assert res[31] == 1, f"PASS marker committed but x31 = 0x{res[31]:x}"
