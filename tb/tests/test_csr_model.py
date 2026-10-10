@@ -17,11 +17,12 @@ from tb.models.csr_model import (
     CSR_MSTATUS,
     CSR_MTVEC,
     CsrModel,
-    IllegalCsr,
+    IllegalCsrError,
 )
 
 
 def test_reset_state():
+    """Reset state."""
     m = CsrModel()
     # MPP is hardwired to 2'b11, so mstatus reads 0x1800 out of reset.
     assert m.read(CSR_MSTATUS) == 0x1800
@@ -31,6 +32,7 @@ def test_reset_state():
 
 
 def test_mstatus_only_mie_mpie_writable():
+    """Mstatus only mie mpie writable."""
     m = CsrModel()
     m.execute("RW", CSR_MSTATUS, 0xFFFFFFFF)
     assert m.read(CSR_MSTATUS) == 0x1800 | 0x88
@@ -39,6 +41,7 @@ def test_mstatus_only_mie_mpie_writable():
 
 
 def test_set_and_clear_with_register_and_immediate():
+    """Set and clear with register and immediate."""
     m = CsrModel()
     assert m.execute("RS", CSR_MIE, 0x80) == 0
     assert m.read(CSR_MIE) == 0x80
@@ -55,6 +58,7 @@ def test_set_and_clear_with_register_and_immediate():
 
 
 def test_rs_rc_with_zero_source_do_not_write():
+    """Rs rc with zero source do not write."""
     m = CsrModel()
     m.execute("RW", CSR_MEPC, 0x1234)
     # rs1 == x0 (register form) or uimm == 0 (immediate form): read-only access.
@@ -68,6 +72,7 @@ def test_rs_rc_with_zero_source_do_not_write():
 
 
 def test_register_form_with_x0_source_vs_nonzero_register_value():
+    """Register form with x0 source vs nonzero register value."""
     m = CsrModel()
     m.execute("RW", CSR_MEPC, 0xFF)
     # A register source that holds 0 but is not x0 still writes (RC of 0 is a no-op by value).
@@ -76,6 +81,7 @@ def test_register_form_with_x0_source_vs_nonzero_register_value():
 
 
 def test_mtvec_mode_forced_to_direct():
+    """Mtvec mode forced to direct."""
     m = CsrModel()
     m.execute("RW", CSR_MTVEC, 0x201)
     assert m.read(CSR_MTVEC) == 0x200
@@ -84,12 +90,14 @@ def test_mtvec_mode_forced_to_direct():
 
 
 def test_mcountinhibit_bit1_reserved_and_upper_bits_zero():
+    """Mcountinhibit bit1 reserved and upper bits zero."""
     m = CsrModel()
     m.execute("RW", CSR_MCOUNTINHIBIT, 0xFFFFFFFF)
     assert m.read(CSR_MCOUNTINHIBIT) == 0x3D
 
 
 def test_read_only_csrs_ignore_writes():
+    """Read only csrs ignore writes."""
     m = CsrModel()
     m.execute("RW", CSR_MIMPID, 0xFFFFFFFF)
     assert m.read(CSR_MIMPID) == 5
@@ -101,6 +109,7 @@ def test_read_only_csrs_ignore_writes():
 
 
 def test_mip_follows_irq_inputs():
+    """Mip follows irq inputs."""
     m = CsrModel()
     assert m.read(CSR_MIP, timer_irq=1) == 0x80
     assert m.read(CSR_MIP, ext_irq=1) == 0x800
@@ -109,6 +118,7 @@ def test_mip_follows_irq_inputs():
 
 
 def test_maintenance_csrs_read_zero_and_record_fire():
+    """Maintenance csrs read zero and record fire."""
     m = CsrModel()
     assert m.execute("RW", 0x7C0, 1) == 0
     assert m.execute("RS", 0x7C1, 1) == 0
@@ -120,14 +130,16 @@ def test_maintenance_csrs_read_zero_and_record_fire():
 
 
 def test_unimplemented_csr_is_illegal():
+    """Unimplemented csr is illegal."""
     m = CsrModel()
-    with pytest.raises(IllegalCsr):
+    with pytest.raises(IllegalCsrError):
         m.read(0xBFF)
-    with pytest.raises(IllegalCsr):
+    with pytest.raises(IllegalCsrError):
         m.execute("RW", 0x7C2, 0)
 
 
 def test_64bit_counters_split_across_low_and_high_words():
+    """64bit counters split across low and high words."""
     m = CsrModel()
     m.execute("RW", CSR_MCYCLEH, 0xDEADBEEF)
     assert m.read(CSR_MCYCLEH) == 0xDEADBEEF

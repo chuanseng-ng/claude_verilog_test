@@ -363,6 +363,8 @@ assert property (@(posedge clk) disable iff (!rst_n)
 | State coverage | 100% (all states visited) |
 
 > SoC / peripheral / NPU line + toggle coverage (GH #216): measured, triaged and enforced as a nightly gate (95 % per-module line floor + control-signal toggle floor, triaged trees only; bead `s1cg`) in [`SOC_COVERAGE_REPORT.md`](SOC_COVERAGE_REPORT.md); reproduce with `make -C tb/cocotb/soc soc_coverage` (nightly CI: `.github/workflows/soc_coverage.yml`).
+>
+> CPU / cache / GPU (`rtl/cpu|mem|gpu`) line coverage is measured in the combined report and being triaged (bead `a5ze`, slice 1 done: waivers + tests, `rv32i_csr_file` 70.5 -> 100 %); it is still **informational** until `gpu_top` reaches the 95 % floor, then it joins the line gate. See [`SOC_COVERAGE_REPORT.md`](SOC_COVERAGE_REPORT.md) section "rtl/cpu | mem | gpu line triage".
 
 ### Debugging Strategy
 

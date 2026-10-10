@@ -80,6 +80,7 @@ class Op:
     operand: int = 0
     imm: bool = False  # CSRR?I form: operand is the 5-bit uimm
     x0: bool = False  # register form with rs1 == x0 (operand is 0)
+    check: bool = True  # False: rd is timing-dependent (a counter's value before it was frozen)
 
     def describe(self) -> str:
         form = "I" if self.imm else ("(x0)" if self.x0 else "")
@@ -152,6 +153,8 @@ async def run_ops(dut, mem, dbg, ops: list[Op], *, timer_irq: int = 0, ext_irq: 
     want = expected_results(ops, timer_irq=timer_irq, ext_irq=ext_irq).results  # type: ignore[attr-defined]
     bad = []
     for i, op in enumerate(ops):
+        if not op.check:
+            continue
         got = await dbg.read_gpr(i + 1)
         if got != want[i]:
             bad.append(f"  op {i} {op.describe()}: rd=x{i + 1} got {got:#010x}, want {want[i]:#010x}")
@@ -276,7 +279,7 @@ async def test_counter_words_frozen(dut):
     freeze = [Op("RW", CSR_MCOUNTINHIBIT, FREEZE_ALL)]
     for csr in (CSR_MCYCLE, CSR_MCYCLEH, CSR_MINSTRET, CSR_MINSTRETH):
         ops = freeze + [
-            Op("RW", csr, 0xA5A5_5A5A),
+            Op("RW", csr, 0xA5A5_5A5A, check=False),  # old value = count before the freeze
             Op("RS", csr, 0x0000_FFFF),
             Op("RC", csr, 0x00FF_00FF),
             Op("RW", csr, 0x13, imm=True),
@@ -288,7 +291,7 @@ async def test_counter_words_frozen(dut):
         await run_ops(dut, mem, dbg, ops)
     for csr in (CSR_MHPMCOUNTER3, CSR_MHPMCOUNTER4, CSR_MHPMCOUNTER5):
         ops = freeze + [
-            Op("RW", csr, 0xFFFF_FFF0),
+            Op("RW", csr, 0xFFFF_FFF0, check=False),
             Op("RC", csr, 0x0000_00F0),
             Op("RS", csr, 0x8000_0001),
             Op("RW", csr, 0x1F, imm=True),
@@ -299,12 +302,12 @@ async def test_counter_words_frozen(dut):
 
     # Both words of one 64-bit counter are independent registers.
     ops = freeze + [
-        Op("RW", CSR_MCYCLE, 0x1111_1111),
-        Op("RW", CSR_MCYCLEH, 0x2222_2222),
+        Op("RW", CSR_MCYCLE, 0x1111_1111, check=False),
+        Op("RW", CSR_MCYCLEH, 0x2222_2222, check=False),
         Op("RS", CSR_MCYCLE, 0, x0=True),
         Op("RS", CSR_MCYCLEH, 0, x0=True),
-        Op("RW", CSR_MINSTRET, 0x3333_3333),
-        Op("RW", CSR_MINSTRETH, 0x4444_4444),
+        Op("RW", CSR_MINSTRET, 0x3333_3333, check=False),
+        Op("RW", CSR_MINSTRETH, 0x4444_4444, check=False),
         Op("RS", CSR_MINSTRET, 0, x0=True),
         Op("RS", CSR_MINSTRETH, 0, x0=True),
         Op("RS", CSR_MCYCLE, 0, x0=True),

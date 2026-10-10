@@ -68,6 +68,7 @@ async def warps_that_ran(dut, block_x: int) -> list[int]:
                 f"warp {w} stored {marker:#x}, expected marker {w + 1}"
             )
             ran.append(w)
+    dut._log.info(f"BLOCK_X={block_x}: warps that ran {ran}")
     return ran
 
 
@@ -87,8 +88,9 @@ async def test_block_sizes_below_cap(dut):
 async def test_block_sizes_57_to_64(dut):
     """BLOCK_X 57..64 is 8 warps (64 threads is the architectural maximum)."""
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    bad = []
     for block_x in (57, 64):
         got = await warps_that_ran(dut, block_x)
-        assert got == list(range(N_WARPS)), (
-            f"BLOCK_X={block_x}: warps that ran {got}, expected all of {list(range(N_WARPS))}"
-        )
+        if got != list(range(N_WARPS)):
+            bad.append(f"BLOCK_X={block_x}: warps that ran {got}")
+    assert not bad, f"expected all of {list(range(N_WARPS))}: " + "; ".join(bad)

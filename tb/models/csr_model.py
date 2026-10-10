@@ -52,7 +52,7 @@ _READ_ONLY = {
 _MAINTENANCE = {CSR_DCACHE_FLUSH: "flush", CSR_DCACHE_INVAL: "inval"}
 
 
-class IllegalCsr(Exception):
+class IllegalCsrError(Exception):
     """Access to an unimplemented CSR address (the RTL raises an illegal-instruction trap)."""
 
 
@@ -71,6 +71,7 @@ class CsrModel:
         self.maintenance: list[str] = []
 
     def read(self, addr: int, *, timer_irq: int = 0, ext_irq: int = 0) -> int:
+        """Architectural value of ``addr``; raises IllegalCsrError if unimplemented."""
         if addr == CSR_MSTATUS:
             return MSTATUS_MPP | self.regs[CSR_MSTATUS]
         if addr == CSR_MIP:
@@ -81,7 +82,7 @@ class CsrModel:
             return 0
         if addr in self.regs:
             return self.regs[addr]
-        raise IllegalCsr(f"CSR {addr:#05x} is not implemented")
+        raise IllegalCsrError(f"CSR {addr:#05x} is not implemented")
 
     def execute(
         self,
