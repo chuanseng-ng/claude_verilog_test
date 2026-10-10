@@ -28,6 +28,7 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 | [Section 11 (below)](#11-i2c-startstop-condition-times-bead-gecv) | 2026-10-10 | I2C bit engine | LOW (P3) | ✅ Fixed |
 | [Section 12 (below)](#12-gpu-warp-count-saturated-at-7-bead-47lf-gh-254) | 2026-10-10 | GPU warp scheduler | MEDIUM (P2) | ✅ Fixed |
 | [Section 13 (below)](#13-hazard-unit-rs-part-select-synlig-frontend-hazard-bead-dud4) | 2026-10-10 | Frontend hazard (Synlig) | HIGH (P1) | ✅ Fixed (RTL workaround) |
+| [Section 14 (below)](#14-performance-counters-freeze-while-a-csr-instruction-is-in-ex-bead-kiit-gh-260) | 2026-10-10 | CSR file / perf counters | MEDIUM (P2) | ✅ Fixed |
 
 ---
 
@@ -323,6 +324,24 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 - **Sweep**: whole `rtl/` tree searched for any `<ident>.<field>[...]` select; these were the only two in port connections of any module (full list in the PR description). The remaining struct-field selects are inside module bodies and elaborate correctly under Synlig (no further "out of bounds" warnings in the Sky130 CPU synthesis log).
 - **Not changed here**: `pnr/sky130/cpu/config.json` (sv2v switch), ASAP7 configs, macro views. The committed CPU macro views remain the defective netlists until the macro is re-hardened (separate PD step under bead dud4).
 - **Verification**: see the PR description (Synlig synthesis-only flop count and `fwd_b_*` presence, lint, cocotb regression, sv2v-converted yosys equivalence with negative control).
+
+---
+
+## 14. Performance Counters Freeze While a CSR Instruction Is in EX (bead kiit, GH #260)
+
+**File**: `rtl/cpu/core/rv32i_csr_file.sv` (counter increment block, `csr_wr_en`)
+**Date**: 2026-10-10
+**Severity**: P2 (every perf-counter reading taken by firmware that executes CSR instructions under-counts; no functional/architectural-state corruption)
+**Found by**: bead a5ze slice 2 (`test_mcycle_counts_every_clock_cycle`, was a strict `expect_fail`)
+
+### Issue Fixed
+- **Problem**: the counter increments were the `else` of `if (csr_access && !csr_illegal)` inside the `trap_entry` / `mret` else-chain, so in ANY cycle a legal CSR instruction was in EX, a trap was taken or MRET executed, NO counter incremented (`mcycle`, `minstret`, `mhpmcounter3..5`), not just the addressed one. The header already said "increment suppressed this cycle for the written register" only. Measured: 10 CSR instructions over 30 real cycles advanced `mcycle` by 20 (one lost cycle per CSR instruction, waveform-sampled: every `csr_access=1` cycle is followed by a +0 step).
+- **Fix**: the increments are now the default non-blocking assignments at the top of the single `always_ff`; the reset branch and a CSR write to that exact register override them (last NBA wins). A new `csr_wr_en` (`CSRRW[I]` always; `CSRRS/RC[I]` only for `rs1 != x0` / `uimm != 0`) gates the counter write cases, so a read-only `CSRRS rd, mcycle, x0` does not write the stale value back over the increment. Rules (RISC-V privileged spec + the project's "write wins" rule): a write replaces only the addressed 32-bit register; a write to the low word of `mcycle`/`minstret` also discards the carry its increment would have made (high word keeps its value); a write to the high word leaves the low word counting (its wrap carry is lost); `mcountinhibit` is sampled at the start of the cycle (a write applies from the next cycle).
+- **Behaviour change beyond the CSR case**: counters also count in trap-entry and MRET cycles now (same defect: the increments sat under that else-chain). `minstret`, `mhpmcounter3` (I$ miss) and the registered redirect strobe land in those cycles, and used to be dropped.
+- **Which counters were actually affected on the unfixed RTL**: `mcycle` (every CSR instruction), `mhpmcounter4` (D$ miss pulse can coincide), and `minstret`/`mhpmcounter3` in trap-entry/MRET cycles. The retire strobe, I$ miss pulse and redirect pulse never share a cycle with an ordinary CSR in EX in this pipeline (instruction EX spacing is >= 3 cycles; retire trails EX by 2), so for those the CSR-in-EX freeze was latent.
+- **Not fixed (separate, pre-existing)**: a pipelined write to `minstret` is applied in EX, so older instructions still in flight and the writing CSR instruction itself retire on top of the written value (the spec says the writing instruction's own retirement must not increment it). Not the same root cause; not changed.
+- **Tests**: `tb/cocotb/cpu/test_csr_access.py` (15 tests): a per-cycle monitor compares the full counter state with `CsrModel.tick()` (`tb/models/csr_model.py`, 12 new unit tests) over random programs, a carry-vs-write alignment sweep, a trap/MRET program and a D$-miss sweep; `test_mcycle_counts_every_clock_cycle` lost its `expect_fail`.
+- **Consequence for recorded numbers**: any cycle count taken from `mcycle` before this fix under-counts by one per CSR instruction executed in the window (see the dated note in `docs/M10_L2_DECISION_ANALYSIS.md`). The Sky130 and ASAP7 CPU hard-macro views are built from the pre-fix RTL and stay behind it until re-hardened; this fix should be on main before the planned Sky130 CPU re-harden (bead `dud4`).
 
 ---
 

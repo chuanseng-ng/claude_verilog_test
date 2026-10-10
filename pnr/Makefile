@@ -180,6 +180,16 @@ ASAP7_OR_SHIM_DIR   := $(abspath .openroad-shim)
 #      the host PATH, discarding the devshell's entirely.
 OR_PATH_PREFIX      :=
 
+# Synthesis undef-elaboration gate (bead gc0y). A project-local LibreLane plugin, activated purely
+# through PYTHONPATH (no edit to the shared LibreLane install, no config.json change): it runs
+# tools/verif/check_synth_undef.py on every Yosys.JsonHeader / Yosys.Synthesis step and aborts the
+# flow on a hit, and gives each Pyosys step a PRIVATE cwd so Surelog's slpp_all cache is never
+# shared with other projects/worktrees. Escape hatch: CVT_SYNTH_GATE=warn (report, do not abort)
+# or =off. Every librelane invocation below carries $(SYNTH_GATE_ENV).
+SYNTH_GATE_PLUGIN_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))plugins)
+SYNTH_GATE_ENV       := PYTHONPATH=$(SYNTH_GATE_PLUGIN_DIR):\$$PYTHONPATH
+
+
 #----------------------------------------------------------------
 # Phony Targets
 #----------------------------------------------------------------
@@ -665,7 +675,7 @@ librelane-sky130:
 	@if [ ! -f "$(LIBRELANE_SKY130_DIR)/config.json" ]; then \
 		echo "ERROR: $(LIBRELANE_SKY130_DIR)/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 $(abspath $(LIBRELANE_SKY130_DIR))/config.json"
 
 librelane-sky130-results:
@@ -684,7 +694,7 @@ librelane-sky130-cpu:
 	@if [ ! -f "$(LIBRELANE_SKY130_CPU_DIR)/config.json" ]; then \
 		echo "ERROR: $(LIBRELANE_SKY130_CPU_DIR)/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 $(abspath $(LIBRELANE_SKY130_CPU_DIR))/config.json"
 
 librelane-sky130-cpu-results:
@@ -974,7 +984,7 @@ librelane-sky130-soc: sky130-soc-sv2v
 	@[ -L $(LIBRELANE_SKY130_SOC_DIR)/runs ] || \
 		ln -sfn /nobackup/sky130_soc_runs $(LIBRELANE_SKY130_SOC_DIR)/runs
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"PYTHONPATH=$(LIBRELANE_DIR):$(SKY130_SOC_PLUGIN_DIR) \
+		"PYTHONPATH=$(LIBRELANE_DIR):$(SKY130_SOC_PLUGIN_DIR):$(SYNTH_GATE_PLUGIN_DIR) \
 		 python3 -m librelane \
 		 --skip Checker.LintTimingConstructs \
 		 --skip Checker.LintErrors \
@@ -1023,7 +1033,7 @@ librelane-nangate45:
 	@if [ ! -f "$(LIBRELANE_NANGATE45_DIR)/config.json" ]; then \
 		echo "ERROR: $(LIBRELANE_NANGATE45_DIR)/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --skip Checker.LintTimingConstructs \
@@ -1248,7 +1258,7 @@ librelane-asap7: check-asap7-rcx-rules check-asap7-openroad asap7-cpu-sv2v
 		echo "       Create pnr/asap7/ with a LibreLane config.json to use this target."; \
 		exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --skip Checker.LintTimingConstructs \
@@ -1321,7 +1331,7 @@ define librelane_3014_run
 		exit 1; fi
 	@if [ ! -f "$(1)/config_3014.json" ]; then \
 		echo "ERROR: pnr/$(1)/config_3014.json not found."; exit 1; fi
-	cd $(LIBRELANE_3014_DIR) && nix develop --command python3 -m librelane \
+	cd $(LIBRELANE_3014_DIR) && nix develop --command env PYTHONPATH=$(SYNTH_GATE_PLUGIN_DIR):$$PYTHONPATH python3 -m librelane \
 		 --manual-pdk \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 $(LIBRELANE_3014_SKIPS) \
@@ -1404,7 +1414,7 @@ librelane-asap7-gpu: check-asap7-openroad asap7-gpu-sv2v
 		echo "       Create pnr/asap7/gpu/ with a LibreLane config.json to use this target."; \
 		exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --skip Checker.LintTimingConstructs \
@@ -1450,7 +1460,7 @@ librelane-asap7-soc-synth: check-asap7-openroad
 	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)" ]; then \
 		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG) not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to Yosys.JsonHeader \
@@ -1485,7 +1495,7 @@ librelane-asap7-soc-synth-only: check-asap7-openroad
 	@if [ ! -f "$(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG)" ]; then \
 		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG) not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --from Yosys.Synthesis \
@@ -1702,7 +1712,7 @@ librelane-asap7-soc: asap7-soc-sv2v check-asap7-openroad
 		echo "ERROR: $(LIBRELANE_ASAP7_SOC_DIR)/$(SOC_CONFIG) not found."; exit 1; fi
 	$(call asap7_soc_preflight)
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --skip Checker.LintTimingConstructs \
@@ -1774,7 +1784,7 @@ librelane-asap7-soc-multiclock: asap7-soc-sv2v check-asap7-openroad
 		echo "ERROR: multiclock SDC missing — copy pnr/constraints/phase5_soc_multiclock.sdc"; exit 1; fi
 	$(call asap7_soc_preflight)
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --skip Checker.LintTimingConstructs \
@@ -1837,7 +1847,7 @@ librelane-asap7-soc-multiclock-hier: asap7-soc-sv2v check-asap7-openroad
 		echo "ERROR: multiclock SDC missing — copy pnr/constraints/phase5_soc_multiclock.sdc"; exit 1; fi
 	$(call asap7_soc_preflight)
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --skip Checker.LintTimingConstructs \
@@ -2286,7 +2296,7 @@ librelane-asap7-coalescer-rtl: check-asap7-openroad
 	@if [ ! -f "asap7/coalescer_rtl/config.json" ]; then \
 		echo "ERROR: asap7/coalescer_rtl/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to OpenROAD.STAPrePNR \
@@ -2322,7 +2332,7 @@ librelane-asap7-coalescer-hls: check-asap7-openroad
 	@if [ ! -f "asap7/coalescer_hls/config.json" ]; then \
 		echo "ERROR: asap7/coalescer_hls/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to OpenROAD.STAPrePNR \
@@ -2358,7 +2368,7 @@ librelane-asap7-hazard-rtl: check-asap7-openroad
 	@if [ ! -f "asap7/hazard_rtl/config.json" ]; then \
 		echo "ERROR: asap7/hazard_rtl/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to OpenROAD.STAPrePNR \
@@ -2394,7 +2404,7 @@ librelane-asap7-hazard-hls: check-asap7-openroad
 	@if [ ! -f "asap7/hazard_hls/config.json" ]; then \
 		echo "ERROR: asap7/hazard_hls/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to OpenROAD.STAPrePNR \
@@ -2435,7 +2445,7 @@ librelane-asap7-valu-rtl: check-asap7-openroad
 	@if [ ! -f "asap7/valu_rtl/config.json" ]; then \
 		echo "ERROR: asap7/valu_rtl/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to OpenROAD.STAPrePNR \
@@ -2504,7 +2514,7 @@ librelane-asap7-valu-hls: check-asap7-openroad r8r-valu-hls-sv2v
 	@if [ ! -f "asap7/valu_hls/config.json" ]; then \
 		echo "ERROR: asap7/valu_hls/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to OpenROAD.STAPrePNR \
@@ -2578,7 +2588,7 @@ librelane-asap7-valu-hls-comb: check-asap7-openroad egt-valu-hls-comb-sv2v
 	@if [ ! -f "asap7/valu_hls_comb/config.json" ]; then \
 		echo "ERROR: asap7/valu_hls_comb/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) python3 -m librelane \
+		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 --pdk-root $(MANUAL_PDK_ROOT) \
 		 --manual-pdk \
 		 --to OpenROAD.STAPrePNR \
