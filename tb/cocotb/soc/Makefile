@@ -537,7 +537,7 @@ ifeq ($(SIM),verilator)
 # soc_all_ci regression with COVERAGE=1; nothing here changes an ordinary (uninstrumented) run.
 #  * The flags go in COMPILE_ARGS, not EXTRA_ARGS: most targets pass EXTRA_ARGS= on the command
 #    line, which would override a makefile-level `+=`; none pass COMPILE_ARGS=.
-#  * COV_SFX is appended to EVERY SIM_BUILD (the generic one and the hardcoded per-variant ones),
+#  * COV_SFX is appended to EVERY SIM_BUILD (the content-keyed one, see the b079 block below),
 #    so an instrumented build can never reuse an uninstrumented Vtop (or vice versa) -- the same
 #    stale-Vtop false-pass class as PR #142.
 #  * Each simulation writes its own .dat through the runtime plusarg +verilator+coverage+file+,

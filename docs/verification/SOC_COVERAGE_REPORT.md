@@ -8,7 +8,8 @@ were instrumented. This report covers the whole `tb/cocotb/soc` regression (`soc
 
 - `COVERAGE=1` in `tb/cocotb/soc/Makefile` adds `--coverage-line --coverage-toggle --coverage-max-width 256`
   to `COMPILE_ARGS` (not `EXTRA_ARGS`: most targets override that on the command line). Every `SIM_BUILD`
-  gets a `_cov` suffix, so an instrumented build can never reuse an uninstrumented `Vtop` (the PR #142
+  (since bead `b079` a content-keyed `sim_build_<TOPLEVEL>_<hash>`, shared by suites with an identical model; the
+  `.dat` name carries MODULE so sharing does not clash) gets a `_cov` suffix, so an instrumented build can never reuse an uninstrumented `Vtop` (the PR #142
   stale-`Vtop` false-pass class). Each simulation writes its own `<build>__<module>.dat` through the runtime
   plusarg `+verilator+coverage+file+` (honoured by cocotb 1.9.2's `verilator.cpp`).
   `--coverage-max-width 256` keeps the DMA's 8192-bit `linebuf` and the SRAM model arrays out of toggle coverage.
