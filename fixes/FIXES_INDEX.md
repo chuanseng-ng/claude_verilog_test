@@ -26,7 +26,8 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 | [Section 9 (below)](#9-axi-lite-ring-phantom-decerr-r-beat-bead-3xtv) | 2026-10-07 | AXI-Lite Protocol | MEDIUM (P2) | ✅ Fixed |
 | [Section 10 (below)](#10-uart-rx-false-start-window-bead-rqvo) | 2026-10-09 | UART RX | LOW (P3) | ✅ Fixed |
 | [Section 11 (below)](#11-i2c-startstop-condition-times-bead-gecv) | 2026-10-10 | I2C bit engine | LOW (P3) | ✅ Fixed |
-| [Section 12 (below)](#12-hazard-unit-rs-part-select-synlig-frontend-hazard-bead-dud4) | 2026-10-10 | Frontend hazard (Synlig) | HIGH (P1) | ✅ Fixed (RTL workaround) |
+| [Section 12 (below)](#12-gpu-warp-count-saturated-at-7-bead-47lf-gh-254) | 2026-10-10 | GPU warp scheduler | MEDIUM (P2) | ✅ Fixed |
+| [Section 13 (below)](#13-hazard-unit-rs-part-select-synlig-frontend-hazard-bead-dud4) | 2026-10-10 | Frontend hazard (Synlig) | HIGH (P1) | ✅ Fixed (RTL workaround) |
 
 ---
 
@@ -282,7 +283,31 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 
 ---
 
-## 12. Hazard-Unit rs Part-Select, Synlig Frontend Hazard (bead dud4)
+## 12. GPU Warp Count Saturated at 7 (bead 47lf, GH #254)
+
+**Files**: `rtl/gpu/gpu_pkg.sv` (new `WARP_CNT_W`), `rtl/gpu/gpu_top.sv` (`n_warps_w`), `rtl/gpu/warp_scheduler.sv` (`n_warps_active_i`, `n_warps_q`, issue compare, `all_done`)
+**Date**: 2026-10-10
+**Severity**: P2 (silent: the kernel completed with `STATUS[done]` set and no error, but 8 of the 64 permitted threads never ran)
+**Found by**: bead a5ze (`kernel_block_warps.py`), root-caused with `n_warps_w` / `u_sched.n_warps_q` sampled in simulation
+
+### Issue Fixed
+- **Problem**: the warp COUNT (0..8) was held in `WARP_W` = 3 bits, the width of a warp ID (0..7). `gpu_top` capped it at `N_WARPS-1` = 7, so `BLOCK_X` 57..64 (true count 8) ran warps 0..6 and warp 7 (threads 56..63) never executed. Measured before the fix: `n_warps_w` = `n_warps_q` = 7 for every `BLOCK_X` in 57..64 and above; 56 lane stores of 64 expected, the 8 missing being exactly lanes 56..63; no wrong values, no extra stores.
+- **Hypothesis confirmed, with one addition**: the representable-range diagnosis in the bead was right (counter width). The cap at 7 was a deliberate-looking guard on top of it, and the same truncation hid in two more places in `warp_scheduler`: the `all_done` compare cast `n_warps_q` back to `WARP_W` bits (so a count of 8 would read as 0 and the kernel would be declared done at once) and the issue compare `cand_i < n_warps_q` was 3 bits against a 3-bit register. Widening only `gpu_top` would have been wrong.
+- **Fix**: `gpu_pkg::WARP_CNT_W = $clog2(N_WARPS + 1)` = 4. `n_warps_w`, `warp_scheduler.n_warps_active_i` and `n_warps_q` are `WARP_CNT_W` wide; the cap is `N_WARPS` (`raw > N_WARPS ? N_WARPS : raw`); the issue and `all_done` compares are done at `WARP_CNT_W` width. Warp IDs, `rr_ptr`, the register file and every `WARP_W` signal are unchanged.
+- **Not changed (decided, not missed)**:
+  - `BLOCK_X` > 64 is still truncated, now to the 8 warps that exist (previously 7). The spec text conflicts with the frozen Phase 4 architecture (`PHASE4_GPU_ARCHITECTURE_SPEC.md:66` says up to 256 threads / 32 warps per block; CLAUDE.md and the 8-deep warp storage say 8 warps / 64 threads). Honouring it needs warp storage or multi-pass block execution, not a width fix. Pinned by `test_block_sizes_above_cap`.
+  - `BLOCK_X` = 0 yields a count of 0: no warp ever issues and `kernel_done_o` requires `n_warps_q != 0`, so STATUS[done] never sets and the launch hangs until CTRL reset. Pre-existing, unchanged, deliberately not pinned by a test.
+  - A partially filled last warp runs all 8 lanes (`init_mask_i` is a constant `0xFF`; `gpu_ref_model.py` and `tb/models/gpu_kernel_model.py` both do the same). Tail lanes are not masked at any `BLOCK_X`, e.g. 9 runs 16 lanes. Not a regression and not the reported defect; follow-up bead.
+  - No run-time-indexed mux was added, and `warp_scheduler.sv` `warp_pc[next_warp]` / `warp_mask[next_warp]` (the `ma7`-class read) is untouched.
+- **Register map / software**: the count is internal. It is not readable through `GPU_STATUS`, the perf counters (`perf_cnt_q[0..13]` count cycles / retires / issues / pushes / AXI requests) or any `sw/` source, so no field width, offset or driver changed.
+- **Python model**: `tb/models/gpu_kernel_model.py` did NOT have the bug (`warps_per_block = ceil(threads/8)`, no cap, a list of warp dicts), nor does `tb/cocotb/gpu/gpu_ref_model.py` (a single-warp interpreter driven once per warp). That is why no model comparison caught it: nothing compared the multi-warp RTL against either model above 56 threads.
+- **Same class elsewhere in `rtl/gpu`**: none found. The other 3-bit quantities are warp IDs (0..7). No 6-bit thread count exists, `BLOCK_Y`/`BLOCK_Z` and the grid dimensions are stored but unused in Phase 4, and there is no active-warps perf counter.
+- **Tests** (red on the old RTL, green after): `kernel_block_warps.py` `test_block_sizes_57_to_64` (`expect_fail` removed, limits unchanged, now every size 57..64 individually), `test_lane_results_match_model` (all lanes of every warp vs `GpuRefModel` at `BLOCK_X` 1, 8, 9, 56, 57, 58, 60, 63, 64), `test_block_sizes_above_cap` (65, 72, 128, 1023); `test_warp_scheduler.py` `test_eight_warps_issue_and_complete`.
+- **Physical design**: `gpu_top` is a hard macro on ASAP7 (`pnr/asap7/soc/macro/gpu_top.*`) and cannot be re-hardened on this host (beads `ma7` / `lxv` / `2kn`). The committed macro views are now functionally behind this RTL (and were already Synlig-built, see `ma7`). No PD run was made. The GPU is not in the Sky130 SoC.
+
+---
+
+## 13. Hazard-Unit rs Part-Select, Synlig Frontend Hazard (bead dud4)
 
 **File**: `rtl/cpu/core/rv32i_core.sv` (`u_hazard` port connections `.if_id_rs1_addr` / `.if_id_rs2_addr`)
 **Date**: 2026-10-10

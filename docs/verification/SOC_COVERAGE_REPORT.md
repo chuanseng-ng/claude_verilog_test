@@ -415,8 +415,8 @@ described above (100 % on the exact CPU/GPU `.dat`).
 | | L566 else, L581 | b | Burst-contract violation (5th R beat without RLAST); FSM `default:`. Waived. |
 | | L498 if | a | Abort in `CS_SRAM_LATCH` on FENCE.I or an address change in exactly that cycle. **Open**, needs a unit-level icache stimulus (slice 2). |
 | `vector_alu` | L63, L65 | a | VBNE and VBGE never run. Closed by `test_branch_vbne`, `test_branch_vbge`. |
-| `gpu_top` | L251 cond_then | c | `BLOCK_X` 57..64: the 3-bit warp count saturates at 7, warp 7 never runs. Bead `47lf` / GH #254, `expect_fail` test. Covered by that test but **not fixed**. |
-| | L268 | b | FSM `default:`. Waived. |
+| `gpu_top` | L251 cond_then | c | `BLOCK_X` 57..64: the 3-bit warp count saturated at 7, warp 7 never ran. **Fixed 2026-10-10** (bead `47lf` / GH #254, `fixes/FIXES_INDEX.md` section 12): the count is now `WARP_CNT_W` = 4 bits and the cap is `N_WARPS`; the `expect_fail` is gone. (The row's line number is from the pre-fix tree; the edit moved the FSM `default:` from L268 to L272.) |
+| | L272 (was L268) | b | FSM `default:`. Waived. |
 | | L143 if, L155, L262, L265 if, L266, L267 (2), L311, L312, L314, L331 | a | Soft-reset bit, write to an unmapped register, `GPS_RUNNING` -> `GPS_ERROR` (divergence-stack overflow at `gpu_top` level), `GPS_DONE`/`GPS_ERROR` -> idle, `BLOCK_Y`/`BLOCK_Z`/`IRQ_STATUS` reads, read of an unmapped register. **Open**, slice 2. |
 
 ### New tests
@@ -426,7 +426,7 @@ described above (100 % on the exact CPU/GPU `.dat`).
 | `tb/cocotb/cpu/test_csr_access.py` (8 tests) | Generated CSR sequences run on `rv32i_cpu_top`; every `rd` is compared with `tb/models/csr_model.py` (spec-derived, unit-tested in `tb/tests/test_csr_model.py`). mstatus / mie / mtvec / mepc / mcause / mcountinhibit under all six op forms incl. WARL masks (MPP 0x1800, mtvec MODE forced 0, mcountinhibit bit 1 RAZ) and the rs1=x0 / uimm=0 write suppression; ID CSRs read their values and ignore writes; `mip` follows `timer_irq_i` / `ext_irq_i` in all four combinations and ignores writes; every counter word written and read back while frozen by `mcountinhibit` (first write after the freeze is not compared: it returns the pre-freeze count); `mcycle` / `minstret` low-word wrap carries into the high word; `dcache_flush` fires (dirty line reaches AXI memory) and `dcache_inval` fires (dirty line discarded) for exactly the non-suppressed forms (12 forms each). |
 | `tb/cocotb/cpu/test_decode_corners.py` (3 tests) | LB/LBU/LH/LHU at every legal offset on words with the sign bit set and clear, against the RISC-V load definition; SYSTEM funct3=100 and three non-canonical FENCE.I encodings trap with mcause 2, `mepc` = the offending PC, and the next instruction does not commit; FENCE retires as a NOP with no trap. |
 | `tb/cocotb/gpu/test_vector_alu.py` (+3) | VBNE and VBGE per lane incl. the sign boundary; branch compare on masked lanes is never taken. Also runs on the Bambu HLS arm. |
-| `tb/cocotb/gpu/kernels/kernel_block_warps.py` (2) | Marker-store kernel: `BLOCK_X` 1..56 runs exactly `ceil(BLOCK_X/8)` warps. `BLOCK_X` 57 and 64 must run all 8: `expect_fail=True` (bead `47lf`), strict full-set check, observed `[0..6]`. |
+| `tb/cocotb/gpu/kernels/kernel_block_warps.py` (2) | Marker-store kernel: `BLOCK_X` 1..56 runs exactly `ceil(BLOCK_X/8)` warps. `BLOCK_X` 57 and 64 had to run all 8 (`expect_fail=True`, observed `[0..6]`) until bead `47lf` was fixed 2026-10-10; now every size 57..64 is checked individually with no `expect_fail`, plus a per-lane comparison against `GpuRefModel` and the above-64 truncation. |
 
 `sim/Makefile`: `test_csr_access` and `test_decode_corners` are in `TEST_MODULES` (so `make test` / `coverage_cpu_gpu` run them), `kernel_block_warps`
 is in `gpu_kernels`. **These CPU suites are not run per-PR**: CI's `phase2_all` does not include `TEST_MODULES`, only the nightly coverage job does.

@@ -289,6 +289,8 @@ above 40 MHz is likely and has never been swept. The ROADMAP's 75 MHz Sky130 fig
 
 **Status**: ✅ COMPLETE (2026-05-27) — all GPU tests green, 1,000-kernel random regression pass, ASAP7 PD sign-off
 
+> **Note 2026-10-10 (bead `47lf`, GH #254)**: the Phase 4 "all GPU tests green" sign-off did not exercise `BLOCK_X` above 56 — no multi-warp test compared RTL against a model, and `gpu_top` silently ran only 7 of 8 warps for `BLOCK_X` 57..64 (warp 7 never executed). Fixed in `rtl/gpu` (`WARP_CNT_W`); 64-thread operation is verified from that date (`kernel_block_warps.py`, all 64 lanes vs `GpuRefModel`). The ASAP7 `gpu_top` macro views were hardened from the pre-fix RTL and are not re-hardened (see `docs/GPU_ASAP7_RUN_HISTORY.md`).
+
 **Prerequisites**: ✅ Phase 3 exit criteria met (2026-05-21)
 
 **RTL Modules** (9/9 complete):
