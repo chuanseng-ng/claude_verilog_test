@@ -59,7 +59,8 @@ Tests (grouped; the name states the behaviour):
   bead pnfw       stop_to_start_gap_is_measured, stop_to_start_bus_free_time_meets_spec,
                   fsm_illegal_state_recovers_to_idle,
                   loopback_slave_idle_fall_arm, clkdiv_ffff_wide_tick_counter
-  bead gecv       start_stop_condition_times_meet_spec, busy_covers_bus_free_time
+  bead gecv       start_stop_condition_times_meet_spec, busy_covers_bus_free_time,
+                  condition_tick_reloads_at_clkdiv_ffff
                   (+ stop_to_start_bus_free_time_meets_spec above)
 """
 
@@ -2341,6 +2342,37 @@ async def test_i2c_status_reflects_bus_levels(dut):
 
 
 # -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+
+# Engine state encodings used below (i2c_bit_engine.state_e).
+S_RS_WAIT, S_RS_HI, S_ST_LO, S_STP_WAIT, S_STP_HI = 3, 4, 5, 13, 14
+
+
+@cocotb.test()
+async def test_i2c_condition_tick_reloads_at_clkdiv_ffff(dut):
+    """Bead gecv at CLKDIV = 0xFFFF (N = 65536): the multi-tick reloads of the START/STOP condition
+    states are 2N - 1 = 0x1FFFF (S_ST_LO, S_RS_HI, S_STP_HI) and 3N - 1 = 0x2FFFF (S_STP_FREE), the
+    latter needing tick_q bit 17 -- a 17-bit counter would wrap it to 0x0FFFF and tBUF would
+    collapse to under one tick.  Each state is entered by depositing its predecessor on the
+    registered state (as the illegal-encoding test does) and reading tick_q the clock after.
+    SCOPE: the reload value at entry only; running the full ~2^18 clk intervals is not done."""
+    e = dut.u_dut.u_bit_engine
+    cases = (  # (predecessor state, entered state, expected tick_q at entry)
+        (1, S_ST_LO, 0x1FFFF),  # S_BUSWAIT (bus idle: both lines high) -> START hold
+        (S_RS_WAIT, S_RS_HI, 0x1FFFF),  # SCL already high -> repeated-START set-up
+        (S_STP_WAIT, S_STP_HI, 0x1FFFF),  # SCL already high -> STOP set-up
+        (S_STP_HI, S_STP_FREE, 0x2FFFF),  # tick_q forced to 0 -> bus-free time
+    )
+    for pred, entered, want in cases:
+        await _setup(dut, clkdiv=LARGE_DIV, timeout=0)
+        e.state_q.value = pred
+        e.tick_q.value = 0
+        await _settled_edge(dut)
+        assert int(e.state_q.value) == entered, (
+            f"state {pred} did not advance to {entered} (got {int(e.state_q.value)})"
+        )
+        got = int(e.tick_q.value)
+        assert got == want, f"state {entered}: tick_q = 0x{got:x} at entry, expected 0x{want:x}"
 
 
 @cocotb.test()
