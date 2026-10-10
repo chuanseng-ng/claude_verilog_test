@@ -186,7 +186,8 @@ wiring or have no procedural line points; the two address-map packages are fully
 
 These numbers come only from the SoC regression. The CPU, caches and GPU have their own dedicated suites
 (`sim/Makefile`, `tb/cocotb/cpu`, `tb/cocotb/gpu`) that are not part of this run, so low figures here do not
-indicate a verification hole in those blocks.
+indicate a verification hole in those blocks. **The combined report below (bead `1eyv`) adds those suites; read
+its numbers, not this table's, for `rtl/cpu`, `rtl/mem` and `rtl/gpu`.**
 
 | Module | Tree | Line % | Line hit/total | Toggle % | Toggle hit/total | Waived (line/toggle) |
 | :----- | :--- | -----: | -------------: | -------: | ---------------: | -------------------: |
@@ -223,6 +224,140 @@ indicate a verification hole in those blocks.
 | rv32i_dcache | rtl/mem | 93.6 | 160/171 | 67.8 | 2582/3810 | 0/0 |
 | rv32i_icache | rtl/mem | 94.7 | 72/76 | 62.1 | 1735/2792 | 0/0 |
 | **Total (32 modules)** | | **77.8** | 887/1140 | **40.5** | 21001/51824 | |
+
+## Combined report: SoC + CPU / cache / GPU suites (bead `1eyv`, 2026-10-10)
+
+The informational rows above reflect only what the `soc_*` suites incidentally hit. The CPU, Phase 3 cache and
+Phase 4 GPU suites were never part of this report (the nightly `rtl-coverage` job measured only the CPU modules,
+and its `make coverage` kept just the last simulation's `sim/coverage.dat`; GPU had no coverage wiring at all).
+This section merges them in.
+
+### Method
+
+1. **Same toolchain, same flags.** `sim/Makefile` now takes `COVERAGE=1` exactly like the SoC Makefile:
+   `--coverage-line --coverage-toggle --coverage-max-width 256` in `COMPILE_ARGS`, a `_cov` suffix on every
+   `SIM_BUILD` (idempotent, because cocotb exports `SIM_BUILD` and a sub-make would otherwise append twice;
+   instrumented and plain `Vtop` can never be reused for each other), and one `<build>__<module>.dat` per
+   simulation through `+verilator+coverage+file+`. It replaces the blanket `--coverage` and the
+   every-simulation-overwrites-`sim/coverage.dat` behaviour. `SIM_PYTHON3` is now overridable (CI needs it).
+2. **`make -C sim coverage_cpu_gpu`** runs the 9 CPU modules + Phase 3 cache suites (`make test`) and `gpu_all`
+   (unit, kernels, handoff, random smoke) instrumented, and merges them into `cpu_gpu_merged.dat`. The existing
+   `make coverage` (nightly `rtl-coverage`, `sim/coverage_merged.dat` artifact) is kept, now also with per-simulation
+   `.dat` files instead of losing the Phase 3 ones.
+3. **Merge at the report level, not with `verilator_coverage --write`.**
+   `tools/verif/coverage_report.py --dat soc/merged.dat --dat cpu_gpu_merged.dat` concatenates the inputs and
+   aggregates them like instances of one run. The report already identified a point as
+   (module, file, kind, line, column, object, source lines) with the hierarchy dropped and "hit if any hit", so a
+   point of `rtl/cpu/...` measured by both flows is one point, hit if either hit it, with nothing new to
+   reconcile. A raw `verilator_coverage --write` would instead need identical absolute paths *and* hierarchy keys
+   to fold points, and the two flows differ in both: the SoC `.dat` records `tb_soc_top.u_soc.u_cpu...`, the CPU
+   one `Vtop.rv32i_cpu_top...`, and the files carry whatever checkout root the run used (a developer worktree
+   such as `.claude/worktrees/agent-xxx/`, `/home/runner/work/...` on CI, `../rtl/...` from `sim/`).
+4. **Path normalisation** (new): a path under `--root` is made repo-relative; any other path is anchored on its
+   `rtl/<soc|periph|npu|cpu|mem|gpu>/` component. Before, a `.dat` from another checkout (including every CI
+   artifact opened locally) silently dropped all RTL as "outside root".
+5. **No vacuous merge** (new): an input contributing zero reportable RTL points is an error naming the input;
+   modules measured by more than one input have their point sets compared and listed under *Cross-input
+   point-set consistency*, flagged `SUSPECT` below 80 % overlap (a union of two disagreeing sets would double the
+   denominator and under-report), and the CLI warns on stderr. The union is never shrunk to the overlap and hits
+   are never credited across non-matching points.
+6. **Versions.** The nightly `rtl-coverage` job builds Verilator **5.036** from source; `soc_coverage` uses the
+   flake-pinned nix **5.048**. Point keys are not guaranteed to match across them (not verifiable here: only 5.048
+   is installed). So the combined CI run does *not* consume the `rtl-coverage-report` artifact: it runs
+   `coverage_cpu_gpu` on the same nix Verilator inside `soc_coverage.yml`. Measured: with both inputs on 5.048,
+   **every module measured by both flows has an identical point set** (consistency section empty), which is the
+   check that the merge is exact rather than assumed. Cost: about 14 min and 1.5 GB for the CPU/cache/GPU
+   half (29 `TESTS=` blocks, 207 tests, 0 failed), against 85 min for the SoC half.
+
+SoC input: the 2026-10-09 `bead 7ovx` full `soc_coverage` run (597 passed by the CI formula, 0 failed), reused
+rather than re-run. `git diff 745574e HEAD -- rtl` is empty, so the RTL it measured is exactly this tree's, and the
+tests are the `soc_all_ci` set at `394db87`. Its `.dat` records another worktree's absolute paths, which is
+itself the path-normalisation case. Triaged-tree numbers from this combined run are identical to the SoC-only
+run (the CPU/GPU suites add nothing to `rtl/soc|periph|npu`): 42 modules, line 1667/1669, toggle 41334/59656.
+
+```bash
+nix develop --command make -C tb/cocotb/soc soc_coverage SIM_BUILD_ROOT=/nobackup/claude_sim_build/soc_cov
+nix develop --command make -C sim coverage_cpu_gpu SIM_BUILD_ROOT=/nobackup/claude_sim_build/cov_cpu_gpu
+python3 tools/verif/coverage_report.py \
+    --dat /nobackup/claude_sim_build/soc_cov/coverage/merged.dat \
+    --dat /nobackup/claude_sim_build/cov_cpu_gpu/coverage/cpu_gpu_merged.dat \
+    --waivers tools/verif/coverage_waivers.txt --out-md combined.md --out-json combined.json
+# or in one go:  make -C sim coverage_combined SOC_DAT=<soc merged.dat> SIM_BUILD_ROOT=...
+```
+
+### Informational trees, before (SoC suites only) / after (combined)
+
+Line % and toggle %, no waivers. "Before" is the 2026-10-09 SoC-only run (the earlier figures quoted in bead
+`1eyv`, `rv32i_decode` 34.6 %, `rv32i_csr_file` 43.2 %, `rv32i_cpu_top` 44.8 %, `vector_alu` 33.3 %, were from
+the first nkj7 run before the `soc_integration` and register-walk suites raised them; `vector_alu` is unchanged).
+
+| Module | Tree | Line % SoC only | Line % combined | Line hit/total | Toggle % SoC only | Toggle % combined | Toggle hit/total |
+| :----- | :--- | --------------: | --------------: | -------------: | ----------------: | ----------------: | ---------------: |
+| rv32i_alu | rtl/cpu | 61.5 | 100.0 | 13/13 | 99.3 | 100.0 | 280/280 |
+| rv32i_branch_comp | rtl/cpu | 57.1 | 100.0 | 7/7 | 98.5 | 100.0 | 136/136 |
+| rv32i_core | rtl/cpu | 88.6 | 100.0 | 35/35 | 56.5 | 70.1 | 3572/5094 |
+| rv32i_cpu_top | rtl/cpu | 84.4 | 96.9 | 93/96 | 46.0 | 54.7 | 1097/2006 |
+| rv32i_csr_file | rtl/cpu | 47.4 | 70.5 | 67/95 | 29.6 | 39.0 | 634/1624 |
+| rv32i_decode | rtl/cpu | 42.3 | 94.9 | 74/78 | 88.8 | 99.1 | 212/214 |
+| rv32i_forwarding_unit | rtl/cpu | 100.0 | 100.0 | 45/45 | 72.5 | 87.1 | 1490/1710 |
+| rv32i_hazard_unit | rtl/cpu | 94.9 | 97.4 | 38/39 | 98.1 | 99.0 | 204/206 |
+| rv32i_imm_gen | rtl/cpu | 87.5 | 100.0 | 8/8 | 99.2 | 100.0 | 134/134 |
+| rv32i_interrupt_ctrl | rtl/cpu | 100.0 | 100.0 | 3/3 | 32.1 | 32.1 | 27/84 |
+| rv32i_pipeline_ex | rtl/cpu | 83.3 | 100.0 | 12/12 | 77.2 | 87.2 | 1095/1256 |
+| rv32i_pipeline_ex1b | rtl/cpu | 83.3 | 83.3 | 5/6 | 28.7 | 50.5 | 102/202 |
+| rv32i_pipeline_ex1c | rtl/cpu | 71.4 | 95.2 | 20/21 | 79.0 | 100.0 | 38/38 |
+| rv32i_pipeline_ex2 | rtl/cpu | 100.0 | 100.0 | 4/4 | 75.0 | 100.0 | 8/8 |
+| rv32i_pipeline_id | rtl/cpu | 91.7 | 100.0 | 12/12 | 86.1 | 99.0 | 960/970 |
+| rv32i_pipeline_if | rtl/cpu | 100.0 | 100.0 | 20/20 | 52.8 | 83.3 | 560/672 |
+| rv32i_pipeline_mem | rtl/cpu | 61.4 | 88.6 | 39/44 | 58.5 | 68.9 | 750/1088 |
+| rv32i_pipeline_wb | rtl/cpu | 100.0 | 100.0 | 5/5 | 72.4 | 85.3 | 594/696 |
+| rv32i_regfile | rtl/cpu | 100.0 | 100.0 | 18/18 | 99.5 | 99.5 | 376/378 |
+| gpu_command_queue | rtl/gpu | 100.0 | 100.0 | 7/7 | 8.3 | 43.9 | 382/870 |
+| gpu_compute_unit | rtl/gpu | 73.1 | 95.5 | 64/67 | 25.9 | 86.0 | 5643/6560 |
+| gpu_memory_unit | rtl/gpu | 100.0 | 100.0 | 5/5 | 20.0 | 95.9 | 2276/2374 |
+| gpu_top | rtl/gpu | 61.6 | 86.9 | 86/99 | 21.3 | 76.8 | 3569/4644 |
+| memory_coalescer | rtl/gpu | 90.0 | 97.5 | 39/40 | 19.0 | 88.0 | 3021/3434 |
+| shared_memory | rtl/gpu | 72.4 | 100.0 | 29/29 | 8.0 | 74.8 | 2582/3452 |
+| vector_alu | rtl/gpu | 33.3 | 90.5 | 19/21 | 27.6 | 99.4 | 3222/3242 |
+| vector_register_file | rtl/gpu | 100.0 | 100.0 | 7/7 | 29.6 | 98.8 | 1634/1654 |
+| warp_scheduler | rtl/gpu | 88.9 | 100.0 | 27/27 | 22.8 | 40.1 | 526/1310 |
+| rv32i_cache_arbiter | rtl/mem | 96.3 | 96.3 | 26/27 | 65.8 | 75.4 | 662/878 |
+| rv32i_clock_gate | rtl/mem | 100.0 | 100.0 | 3/3 | 100.0 | 100.0 | 8/8 |
+| rv32i_dcache | rtl/mem | 93.6 | 96.5 | 165/171 | 67.8 | 68.8 | 2620/3810 |
+| rv32i_icache | rtl/mem | 94.7 | 94.7 | 72/76 | 62.1 | 93.7 | 2617/2792 |
+
+Per tree (sum over modules, no waivers):
+
+| Tree | Line, SoC only | Line, combined | Toggle, SoC only | Toggle, combined | Modules < 95 % line, before to after |
+| :--- | -------------: | -------------: | ---------------: | ---------------: | -----------------------------------: |
+| rtl/cpu (19) | 72.9 % (409/561) | **92.3 %** (518/561) | 61.1 % | **73.0 %** (12269/16796) | 13 to 4 |
+| rtl/mem (4) | 94.2 % (261/277) | **96.0 %** (266/277) | 65.5 % | **78.9 %** (5907/7488) | 2 to 1 |
+| rtl/gpu (9) | 71.9 % (217/302) | **93.7 %** (283/302) | 21.2 % | **83.0 %** (22855/27540) | 6 to 2 |
+
+What the combined numbers say that the SoC-only ones hid: the large "gaps" in `rv32i_decode`, `rv32i_alu`,
+`vector_alu`, `shared_memory` and the GPU toggle figures were just missing suites. What they now show as genuine,
+unwaived gaps (bead `a5ze` tracks the triage): `rv32i_csr_file` (70.5 % line, 39.0 % toggle), `rv32i_pipeline_mem` (88.6 %),
+`rv32i_pipeline_ex1b` (83.3 %, unchanged by every suite), `gpu_top` (86.9 %), `vector_alu` (90.5 %),
+`warp_scheduler` (40.1 % toggle), `rv32i_interrupt_ctrl` (32.1 % toggle, no suite moves it) and
+`gpu_command_queue` (43.9 % toggle). Not yet triaged: some may be unreachable by design and need waivers, none are
+assumed to be.
+
+### CI and recommendation
+
+`.github/workflows/soc_coverage.yml` now runs `make -C sim coverage_cpu_gpu` on the same nix Verilator after the SoC
+run (`continue-on-error`), renders the combined report, appends it to the job summary and uploads it as the
+separate artifact `rtl-combined-coverage`. The existing `soc-coverage` artifact, per-flow report, `PASS_FLOOR`
+and gate are untouched, and the nightly `rtl-coverage` job in `random_tests.yml` is unchanged. Everything stays
+non-gating; `rtl/cpu|mem|gpu` stay **informational** in the report (the recorded user decision: triage covers
+`rtl/soc|periph|npu` only; this change does not alter it).
+
+**Recommendation (not applied): triage `rtl/cpu`, `rtl/mem` and `rtl/gpu` for line coverage, still not gating.**
+The reason the user's decision was sound, that the numbers were an artifact of unrelated suites, no longer
+holds: the combined figures (92.3 / 96.0 / 93.7 % line) are real and only 7 of 32 modules sit below 95 %, a
+list short enough to work through the way the triaged trees were (test-gap bead or category-`b` waiver per
+point). Toggle should stay out of any triage for these trees for now: the CPU's wide CSR/address/data buses
+dominate it exactly as in the triaged trees. Promote only once the three nightly flows run together on the
+same Verilator for a few cycles, so a `SUSPECT` consistency row would show up before anyone triages against it.
 
 ## 7ovx register-walk re-measurement (2026-10-09)
 
