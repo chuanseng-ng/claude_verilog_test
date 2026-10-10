@@ -28,6 +28,7 @@ from cocotb.triggers import RisingEdge
 
 from sim.riscv_encoder import (
     ADDI,
+    BNE,
     CSRRC,
     CSRRCI,
     CSRRS,
@@ -414,3 +415,73 @@ async def test_dcache_inval_op_forms(dut):
             f"{label} on dcache_inval: load returned {got:#010x}, want {want:#010x} "
             f"({'dirty line must be discarded' if fires else 'suppressed, line kept'})"
         )
+
+
+# ---------------------------------------------------------------------------
+# Counter accuracy against the testbench's own cycle count (bead a5ze slice 2)
+# ---------------------------------------------------------------------------
+N_FILLER = 8  # back-to-back legal CSR reads between the two counter samples
+CSR_PC_A, CSR_PC_M = 0x04, 0x08  # first mcycle / minstret sample (loop body start)
+
+
+def _counter_loop_program() -> tuple[list[int], int, int]:
+    """Loop body: sample mcycle (A), sample minstret (M), N CSR reads, sample both again."""
+    body = [
+        CSRRS(1, CSR_MCYCLE, 0),  # A  @0x04
+        CSRRS(3, CSR_MINSTRET, 0),  # M  @0x08
+        *[CSRRS(0, CSR_MIMPID, 0)] * N_FILLER,
+    ]
+    pc_b = 4 + 4 * len(body)
+    body += [CSRRS(2, CSR_MCYCLE, 0), CSRRS(4, CSR_MINSTRET, 0)]  # B, B'
+    bne_pc = 4 + 4 * len(body) + 4  # after the ADDI
+    body += [ADDI(5, 5, -1), BNE(5, 0, 4 - bne_pc)]
+    return [ADDI(5, 0, 2), *body, EBREAK()], pc_b, pc_b + 4
+
+
+async def _sample_counters(dut, mem, dbg):
+    """Run the loop; return (d_mcycle, tb_cycles, d_minstret, tb_commits) for the LAST pass."""
+    program, pc_b, pc_bm = _counter_loop_program()
+    commit_cycle: dict[int, int] = {}
+    commits: list[int] = []  # cycle number of every commit
+    state = {"n": 0}
+
+    async def watch():
+        while True:
+            await RisingEdge(dut.clk_i)
+            state["n"] += 1
+            if int(dut.commit_valid_o.value):
+                commit_cycle[int(dut.commit_pc_o.value)] = state["n"]
+                commits.append(state["n"])
+
+    task = cocotb.start_soon(watch())
+    await fresh_run(dut, mem, dbg, program)
+    task.cancel()
+    d_cycle = (await dbg.read_gpr(2) - await dbg.read_gpr(1)) & 0xFFFF_FFFF
+    d_inst = (await dbg.read_gpr(4) - await dbg.read_gpr(3)) & 0xFFFF_FFFF
+    tb_cycles = commit_cycle[pc_b] - commit_cycle[CSR_PC_A]
+    # Instructions the testbench saw commit between the two minstret samples (CSR instructions
+    # take several cycles each here, so this is not the cycle distance).
+    tb_commits = len([c for c in commits if commit_cycle[CSR_PC_M] < c <= commit_cycle[pc_bm]])
+    return d_cycle, tb_cycles, d_inst, tb_commits
+
+
+# Strict expect_fail (bead kiit / GH #260): rv32i_csr_file.sv:332 freezes every counter in any cycle
+# a CSR instruction is in EX.  Measured: 20 counted over 30 real cycles in a window of 10 CSR
+# instructions.  When the RTL is fixed this XPASSes, which cocotb reports as a failure -- delete
+# expect_fail then; do NOT widen the +-1 tolerance.
+@cocotb.test(expect_fail=True)
+async def test_mcycle_counts_every_clock_cycle(dut):
+    """mcycle is a cycle counter: across a CSR-heavy window it must advance by the number of
+    clocks the testbench saw, not skip the cycles in which a CSR instruction is in EX.
+
+    The window holds 10 CSR instructions in a row.  The reference is the testbench's own count of
+    clocks between the commits of the two samples (same pipeline offset, so equal to the EX-to-EX
+    distance).
+    """
+    mem, dbg = await _setup_test(dut)
+    d_cycle, tb_cycles, d_inst, tb_commits = await _sample_counters(dut, mem, dbg)
+    dut._log.info(f"mcycle delta {d_cycle} vs testbench cycles {tb_cycles}")
+    dut._log.info(f"minstret delta {d_inst} vs testbench commits {tb_commits}")
+    assert abs(d_cycle - tb_cycles) <= 1, (
+        f"mcycle advanced {d_cycle} over {tb_cycles} real clock cycles"
+    )

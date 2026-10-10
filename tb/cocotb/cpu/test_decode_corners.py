@@ -6,8 +6,9 @@ Decode / MEM-stage corner cases for rv32i_cpu_top (bead a5ze).
                                      lane and on one with it clear (rv32i_pipeline_mem
                                      load-data extraction); expected values come from the
                                      RISC-V load definition, computed here in Python
-  test_illegal_encodings_trap        SYSTEM funct3=100 and every non-canonical FENCE.I
-                                     encoding (rd, rs1 or imm non-zero) raise illegal
+  test_illegal_encodings_trap        SYSTEM funct3=100, every non-canonical FENCE.I
+                                     encoding (rd, rs1 or imm non-zero) and reserved MISC-MEM
+                                     funct3 values raise illegal
                                      instruction: mcause 2, mepc = the bad PC, and the
                                      instruction after it never commits
   test_fence_is_a_nop                FENCE (funct3=000) retires without a trap and without
@@ -92,6 +93,9 @@ ILLEGAL_WORDS = [
     ("FENCE.I rd!=0", _fence_i(rd=1)),
     ("FENCE.I rs1!=0", _fence_i(rs1=1)),
     ("FENCE.I imm!=0", _fence_i(imm=1)),
+    # MISC-MEM funct3 other than 000 (FENCE) / 001 (FENCE.I) is reserved: rv32i_decode.sv:510-512
+    ("MISC-MEM funct3=010", (0b010 << 12) | 0b0001111),
+    ("MISC-MEM funct3=111", (0b111 << 12) | 0b0001111),
 ]
 
 
