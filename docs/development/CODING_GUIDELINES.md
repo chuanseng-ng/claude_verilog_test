@@ -75,6 +75,17 @@ Reference: lowRISC Verilog Style Guide, adapted to the house style codified in
 - **Package imports are module-scoped**: `module foo import gpu_pkg::*; (...)`.
   File-scope `import pkg::*;` above the module is **banned** in new code — it pollutes
   the compilation unit and breaks tool-ordering assumptions.
+- **No part/bit-select of a struct field in a port connection.** Writing
+  `.port(sig.field[h:l])` or `.port(sig.field[i])` (or the same inside a concatenation, or a
+  select of a nested/array-element struct field) is legal SystemVerilog but is mis-elaborated by
+  the Synlig/UHDM frontend: it warns `Range select ... out of bounds ... Setting all N result bits
+  to undef` and ties the port to `x`, silently turning downstream compares into don't-cares
+  (bead `dud4`: the CPU hazard-unit `rs1`/`rs2` ports; `rv32i_core.sv`). Lint, LVS and
+  per-module equivalence do not catch it. Assign the struct field to a named full-width signal
+  first, take the select from that signal into a second named signal, and connect the latter.
+  Selects of struct fields inside module bodies are not affected. Any new
+  `Range select ... out of bounds` / `Setting all ... bits to undef` line in a Synlig synthesis
+  log is a build failure, not a warning.
 - **Latches are banned.** All combinational outputs assigned on every path
   (Verilator lint + `case-missing-default` guard this).
 
