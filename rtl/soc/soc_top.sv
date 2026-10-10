@@ -188,7 +188,14 @@ module soc_top
     // PLL implementation selector (Phase 7 M-c).
     //   "STUB" (default) — synthesisable digital stub; out_clk = ref_clk.
     //   "RNM"            — real-number model; use only for M-c AMS co-sim.
-    parameter string PLL_IMPL = "STUB"
+    parameter string PLL_IMPL = "STUB",
+
+    // Number of parallel scan chains at the SoC boundary (DFT, j41m.2).
+    // Proposal and rationale: docs/design/DFT_ARCHITECTURE.md section 14.
+    // 8 = 7 on the clk_i/core_clk domain (~17.5 k scannable flops, ~2.5 k each)
+    //   + 1 on the cpu_clk_i domain (~0.9 k fabric flops outside the CPU macro).
+    // The CPU macro's own chains are a separate follow-up (it has no scan pins).
+    parameter int unsigned SCAN_CHAINS = 8
 ) (
     // clk_i is the SYSTEM/FABRIC reference clock input (100 MHz crystal / XO).
     // Internally the SoC runs on core_clk derived from the PLL.
@@ -258,7 +265,20 @@ module soc_top
 
     // ── PLL status (Phase 7 M-c; GH #92 adds the CPU-domain PLL) ──────────────
     output logic        pll_locked_o,       // 1 when system/fabric PLL has acquired lock
-    output logic        cpu_pll_locked_o    // 1 when CPU-domain PLL has acquired lock
+    output logic        cpu_pll_locked_o,   // 1 when CPU-domain PLL has acquired lock
+
+    // ── DFT test access (bead claude_verilog_test-j41m.2, GH #244) ───────────
+    // Direct (parallel) scan access; the JTAG TAP of Stage 1b (j41m.3) is added
+    // on top and drives the same controls through dft_ctrl_ports. Inactive values
+    // (functional mode, bit-identical to the pre-DFT design): scan_mode_i=0,
+    // scan_en_i=0, scan_rst_ni=1, test_clk_i=0 (any level; never selected).
+    // See docs/design/DFT_ARCHITECTURE.md section 14 for the full contract.
+    input  logic                    scan_mode_i,    // 1 = test mode (quasi-static)
+    input  logic                    scan_en_i,      // 1 = shift, 0 = capture
+    input  logic                    scan_rst_ni,    // scan reset, active low
+    input  logic                    test_clk_i,     // shared shift/capture clock, all domains
+    input  logic [SCAN_CHAINS-1:0]  scan_in_i,      // placeholder until Stage 2 insertion
+    output logic [SCAN_CHAINS-1:0]  scan_out_o      // tied 0 until Stage 2 insertion
 );
 
     // =========================================================================
@@ -271,22 +291,53 @@ module soc_top
     localparam int unsigned IW          = AXI_ID_WIDTH;
     localparam int unsigned LENW        = AXI_LEN_WIDTH;
 
-    // ── DFT scan tie-off — SINGLE CHANGE POINT (bead claude_verilog_test-07n)
-    // No DFT/scan flow exists in this project yet, so every cdc_reset_sync
-    // consumer below (directly, or inside async_axi_fifo / apb_cdc_bridge)
-    // is wired inert through these two constants: scan mode off, scan reset
-    // held inactive, so each internal mux is a pure pass-through of the
-    // functional reset and NOTHING about current behaviour changes. This is
-    // deliberately NOT exposed as a soc_top port — a new boundary port would
-    // perturb the pinned CPU macro (pnr/asap7/cpu/pin_order.cfg, 401 pins)
-    // and the run-23 SoC sign-off (docs/PHASE5_RUN_HISTORY.md) for a DFT
-    // flow that does not exist yet. When a real scan flow is wired up,
-    // change SCAN_MODE_TIE_OFF / SCAN_RST_TIE_OFF here (or replace their
-    // uses below with real scanmode_i/scan_rst_ni top-level ports) — every
-    // consumer already threads the pair through, so that is the only edit
-    // required.
-    localparam logic SCAN_MODE_TIE_OFF = 1'b0;
-    localparam logic SCAN_RST_TIE_OFF  = 1'b1;
+    // ── DFT test controls — SINGLE SOURCE (j41m.2; replaces the 07n tie-offs) ──
+    // Every scan/test consumer in this file takes its control from the five nets
+    // below and from nothing else. They come from ONE dft_ctrl_ports instance,
+    // which in Stage 1a passes the top-level test ports straight through; Stage 1b
+    // (j41m.3) swaps that module for the JTAG-TAP-driven dft_ctrl with the same
+    // port list, so no consumer is touched. With the ports at their inactive
+    // values (scan_mode_i=0, scan_rst_ni=1) every mux and mask below is a pure
+    // pass-through and NOTHING about functional behaviour changes.
+    //
+    // Consumers: the reset overrides (cdc_reset_sync x2 here, inside async_axi_fifo
+    // and apb_cdc_bridge, dft_rst_mux x3 in each pll_subsystem and one on
+    // gpu_domain_rst_n), the test-clock bypass (dft_clk_mux inside pll_subsystem),
+    // the clock-gate test enable (u_cpu_cg, u_gpu_cg), and the crypto key mask.
+    logic dft_scan_mode;
+    logic dft_scan_rst_n;
+    logic dft_test_en;
+    logic dft_test_clk;
+    // scan_en has no RTL consumer until Stage 2 inserts the scan flops (they take
+    // their SE pin from a net the insertion step ties to this port); test_clk is
+    // consumed only through pll_subsystem's own ports below.
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic dft_scan_en;
+    /* verilator lint_on  UNUSEDSIGNAL */
+
+    dft_ctrl_ports u_dft_ctrl (
+        .scan_mode_i (scan_mode_i),
+        .scan_en_i   (scan_en_i),
+        .scan_rst_ni (scan_rst_ni),
+        .test_clk_i  (test_clk_i),
+        .scan_mode_o (dft_scan_mode),
+        .scan_en_o   (dft_scan_en),
+        .scan_rst_no (dft_scan_rst_n),
+        .test_en_o   (dft_test_en),
+        .test_clk_o  (dft_test_clk)
+    );
+
+    // Scan-chain port placeholders. scan_in_i has no consumer and scan_out_o is
+    // driven 0 UNTIL Stage 2 scan insertion (a netlist step, plugin option N in
+    // DFT_ARCHITECTURE.md sec.1.5) stitches the chains: it removes this tie, then
+    // connects chain k's last flop to scan_out_o[k] and scan_in_i[k] to its first.
+    // The tie is intentionally one `assign` on one vector so that step has a single,
+    // unambiguous thing to replace; the lint waivers are scoped to just these two.
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic [SCAN_CHAINS-1:0] dft_scan_in_unused;
+    assign dft_scan_in_unused = scan_in_i;
+    /* verilator lint_on  UNUSEDSIGNAL */
+    assign scan_out_o = '0;  // DFT_PLACEHOLDER: replaced by Stage 2 insertion
 
     // =========================================================================
     // Phase 7 M-c / Pre-Phase-6 #3: PLL subsystem
@@ -302,6 +353,11 @@ module soc_top
     logic core_clk;     // PLL output clock — feeds all child clk ports
     logic core_rst_n;   // gated reset: rst_n_i & pll_locked (from pll_subsystem)
     logic pll_locked;   // raw PLL lock flag — export to top-level port
+    // j41m.2: the reference clock each pll_subsystem actually runs on (clk_i /
+    // cpu_clk_i, or the test clock in scan mode). The APB CDC bridges' destination
+    // faces share that reference and must use it, not the raw port.
+    logic pll_ref_clk;
+    logic cpu_pll_ref_clk;
 
     // =========================================================================
     // GH #92/#93: second (CPU-domain) PLL subsystem — now the CPU's real
@@ -644,8 +700,8 @@ module soc_top
     ) u_cpu_pmu_rst_sync (
         .clk_i       (cpu_core_clk),
         .rst_n_i     (pmu_cpu_rst_n),
-        .scanmode_i  (SCAN_MODE_TIE_OFF),
-        .scan_rst_ni (SCAN_RST_TIE_OFF),
+        .scanmode_i  (dft_scan_mode),
+        .scan_rst_ni (dft_scan_rst_n),
         .rst_n_o     (pmu_cpu_rst_n_cpu_sync)
     );
 
@@ -704,8 +760,8 @@ module soc_top
     ) u_cpu_wdt_rst_sync (
         .clk_i       (cpu_core_clk),
         .rst_n_i     (~wdt_cpu_rst_req_q),
-        .scanmode_i  (SCAN_MODE_TIE_OFF),
-        .scan_rst_ni (SCAN_RST_TIE_OFF),
+        .scanmode_i  (dft_scan_mode),
+        .scan_rst_ni (dft_scan_rst_n),
         .rst_n_o     (wdt_cpu_rst_n_cpu_sync)
     );
 
@@ -824,7 +880,20 @@ module soc_top
     // =========================================================================
     logic cpu_domain_rst_n, gpu_domain_rst_n;
     assign cpu_domain_rst_n = cpu_core_rst_n & pmu_cpu_rst_n_cpu_sync & wdt_cpu_rst_n_cpu_sync;
-    assign gpu_domain_rst_n = core_rst_n & pmu_gpu_rst_n;
+
+    // DFT (j41m.2): cpu_domain_rst_n needs no override of its own -- in scan mode all
+    // three terms equal dft_scan_rst_n (cpu_core_rst_n through pll_subsystem's u_core_rm,
+    // the two syncs through cdc_reset_sync's output mux), so their AND does too.
+    // gpu_domain_rst_n is the exception: pmu_gpu_rst_n is a PMU flop output with no
+    // synchroniser in front of it, so it would toggle while the chains shift.
+    logic gpu_domain_rst_n_func;
+    assign gpu_domain_rst_n_func = core_rst_n & pmu_gpu_rst_n;
+    dft_rst_mux u_gpu_domain_rm (
+        .func_rst_n_i (gpu_domain_rst_n_func),
+        .scan_rst_ni  (dft_scan_rst_n),
+        .scan_mode_i  (dft_scan_mode),
+        .rst_n_o      (gpu_domain_rst_n)
+    );
 
     // ISO_CPU / ISO_GPU clamp scope (functional isolation, `-location parent`,
     // clamp_value 0): the master-side AXI4 request/accept handshake signals
@@ -1018,8 +1087,8 @@ module soc_top
     apb_cdc_bridge #(
         .ADDR_W (12)
     ) u_apb_dbg_cdc (
-        .scanmode_i  (SCAN_MODE_TIE_OFF),
-        .scan_rst_ni (SCAN_RST_TIE_OFF),
+        .scanmode_i  (dft_scan_mode),
+        .scan_rst_ni (dft_scan_rst_n),
 
         .s_clk_i     (core_clk),
         .s_rst_n_i   (core_rst_n),
@@ -1245,8 +1314,8 @@ module soc_top
     // wiring too — the contract is met for the cold-boot/PLL-relock case.
     // =========================================================================
     async_axi_fifo u_cpu_axi_cdc (
-        .scanmode_i  (SCAN_MODE_TIE_OFF),
-        .scan_rst_ni (SCAN_RST_TIE_OFF),
+        .scanmode_i  (dft_scan_mode),
+        .scan_rst_ni (dft_scan_rst_n),
 
         .s_clk_i     (cpu_gated_clk),
         .s_rst_n_i   (cpu_core_rst_n),
@@ -2073,8 +2142,8 @@ module soc_top
     apb_cdc_bridge #(
         .ADDR_W (12)
     ) u_apb_pll_cdc (
-        .scanmode_i  (SCAN_MODE_TIE_OFF),
-        .scan_rst_ni (SCAN_RST_TIE_OFF),
+        .scanmode_i  (dft_scan_mode),
+        .scan_rst_ni (dft_scan_rst_n),
 
         .s_clk_i     (core_clk),
         .s_rst_n_i   (core_rst_n),
@@ -2088,7 +2157,7 @@ module soc_top
         .s_pready_o  (apb_pready  [APB_PLL]),
         .s_pslverr_o (apb_pslverr [APB_PLL]),
 
-        .m_clk_i     (clk_i),
+        .m_clk_i     (pll_ref_clk),
         .m_rst_n_i   (rst_n_i),
         .m_psel_o    (pll_m_psel),
         .m_penable_o (pll_m_penable),
@@ -2127,6 +2196,11 @@ module soc_top
         // Reference clock domain — NOT core_clk (see note above)
         .clk_i       (clk_i),
         .rst_n_i     (rst_n_i),
+        // DFT test controls (j41m.2)
+        .scan_mode_i (dft_scan_mode),
+        .scan_rst_ni (dft_scan_rst_n),
+        .test_clk_i  (dft_test_clk),
+        .ref_clk_o   (pll_ref_clk),
         // APB4 slave ← u_apb_pll_cdc m_* face (clk_i domain — GH #86 fix,
         // see CDC bridge note above)
         .psel        (pll_m_psel),
@@ -2179,8 +2253,8 @@ module soc_top
     apb_cdc_bridge #(
         .ADDR_W (12)
     ) u_apb_pll2_cdc (
-        .scanmode_i  (SCAN_MODE_TIE_OFF),
-        .scan_rst_ni (SCAN_RST_TIE_OFF),
+        .scanmode_i  (dft_scan_mode),
+        .scan_rst_ni (dft_scan_rst_n),
 
         .s_clk_i     (core_clk),
         .s_rst_n_i   (core_rst_n),
@@ -2194,7 +2268,7 @@ module soc_top
         .s_pready_o  (apb_pready  [APB_PLL2]),
         .s_pslverr_o (apb_pslverr [APB_PLL2]),
 
-        .m_clk_i     (cpu_clk_i),
+        .m_clk_i     (cpu_pll_ref_clk),
         .m_rst_n_i   (cpu_rst_n_i),
         .m_psel_o    (pll2_m_psel),
         .m_penable_o (pll2_m_penable),
@@ -2226,6 +2300,11 @@ module soc_top
         // and NOT cpu_core_clk (see bootstrap-deadlock note above).
         .clk_i       (cpu_clk_i),
         .rst_n_i     (cpu_rst_n_i),
+        // DFT test controls (j41m.2)
+        .scan_mode_i (dft_scan_mode),
+        .scan_rst_ni (dft_scan_rst_n),
+        .test_clk_i  (dft_test_clk),
+        .ref_clk_o   (cpu_pll_ref_clk),
         // APB4 slave ← u_apb_pll2_cdc m_* face (cpu_clk_i domain — see CDC
         // bridge note above).
         .psel        (pll2_m_psel),
@@ -2317,7 +2396,11 @@ module soc_top
     logic cpu_gated_clk_en;
     assign cpu_gated_clk_en = ~pmu_cpu_clk_dis_sync & pmu_cpu_rst_n_cpu_sync;
 
-    rv32i_clock_gate u_cpu_cg (.en(cpu_gated_clk_en), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
-    rv32i_clock_gate u_gpu_cg (.en(pmu_gpu_clk_en), .clk(core_clk), .gclk(gpu_gated_clk));
+    // DFT (j41m.2): dft_test_en forces both gates open in test mode so every flop
+    // behind them is clocked by the (test) clock whatever the PMU says. In scan mode
+    // cpu_core_clk / core_clk ARE the test clock (pll_subsystem), so the gated
+    // clocks are too.
+    rv32i_clock_gate u_cpu_cg (.en(cpu_gated_clk_en), .test_en(dft_test_en), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
+    rv32i_clock_gate u_gpu_cg (.en(pmu_gpu_clk_en),   .test_en(dft_test_en), .clk(core_clk),     .gclk(gpu_gated_clk));
 
 endmodule : soc_top

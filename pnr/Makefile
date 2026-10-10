@@ -735,6 +735,9 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/pmu.sv \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_apb_regs.sv \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_subsystem.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_mux.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_rst_mux.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl_ports.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_interconnect.sv \
@@ -1510,6 +1513,9 @@ SOC_SV_FILES := \
 	$(LIBRELANE_ASAP7_SOC_DIR)/pll_clkgen_pnr.sv \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_apb_regs.sv \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_subsystem.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_mux.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_rst_mux.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl_ports.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
 	$(PROJECT_ROOT)/rtl/soc/apb4_register_bank.sv \

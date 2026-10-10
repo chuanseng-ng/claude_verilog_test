@@ -37,6 +37,7 @@
 //
 // Ports:
 //   clk_i       — reference clock input (100 MHz XO)
+//   ref_clk_o   — clk_i, or test_clk_i in scan mode: the reference actually in use
 //   rst_n_i     — top-level active-low reset (synchronous inside sub-modules)
 //   PLL_IMPL    — "STUB" (default) or "RNM" (AMS cosim only)
 //   APB4 slave  — psel/penable/pwrite/paddr/pwdata/pstrb/prdata/pready/pslverr
@@ -45,6 +46,21 @@
 //   core_clk    — PLL output clock; feeds all children of soc_top
 //   core_rst_n  — gated reset: rst_n_i & pll_locked
 //   pll_locked_o — raw PLL lock flag (exported to soc_top port)
+//
+// DFT (bead claude_verilog_test-j41m.2, docs/design/DFT_ARCHITECTURE.md sec.4
+// items 7 and 8): scan_mode_i / scan_rst_ni / test_clk_i make every flop in
+// this module, and the clock and reset it delivers, controllable from ports in
+// test mode.
+//   * clock: the reference is replaced by test_clk_i in scan mode (dft_clk_mux),
+//     so the lock counter, the APB register file and the stub's passthrough core_clk
+//     all run on the test clock. A non-stub PLL's OUTPUT is muxed separately (below)
+//     because its output is not the reference.
+//   * reset: pll_rst_n and core_rst_n are DERIVED from a register (pll_enable) and a
+//     lock counter (pll_locked). Left alone they would toggle as the chains shift and
+//     clear scanned flops mid-shift, so each is overridden by scan_rst_ni at the net
+//     that feeds the flops (dft_rst_mux), as is the reset of the register file.
+// Functional mode (scan_mode_i = 0, scan_rst_ni = 1, test_clk_i = 0): all three
+// muxes are pass-through and the module behaves exactly as before.
 //
 // Coding rules: no logic — structural instantiation + assign only.
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
@@ -61,6 +77,13 @@ module pll_subsystem #(
     // ── Reference clock / reset (this module runs on clk_i) ─────────────────
     input  logic clk_i,
     input  logic rst_n_i,
+
+    // ── DFT test controls (j41m.2). Must be connected at every instantiation
+    //    (no SV port defaults): scan_mode_i=1'b0, scan_rst_ni=1'b1, test_clk_i=1'b0
+    //    where there is no scan-aware parent. ──────────────────────────────────
+    input  logic scan_mode_i,
+    input  logic scan_rst_ni,
+    input  logic test_clk_i,
 
     // ── APB4 slave port (from an apb_cdc_bridge destination face) ───────────
     // soc_top does NOT wire this port straight to the apb_interconnect slot.
@@ -82,7 +105,12 @@ module pll_subsystem #(
     // ── Outputs to soc_top ───────────────────────────────────────────────────
     output logic core_clk,      // PLL output clock; feeds all children
     output logic core_rst_n,    // rst_n_i & pll_locked; holds children in reset
-    output logic pll_locked_o   // raw PLL lock flag (expose for observability)
+    output logic pll_locked_o,  // raw PLL lock flag (expose for observability)
+    // The reference clock this module actually runs on: clk_i, or test_clk_i in
+    // scan mode (j41m.2). Anything the parent clocks from the same reference (the
+    // APB CDC bridge's destination face) must use THIS, not the raw port, or its
+    // flops stay on the functional clock during test.
+    output logic ref_clk_o
 );
 
     // ── Internal signals ─────────────────────────────────────────────────────
@@ -93,11 +121,48 @@ module pll_subsystem #(
     logic pll_rst_n;           // gated PLL reset: de-asserts only when
                                 //   rst_n_i & pll_enable both high
 
+    // ── DFT: test-clock and scan-reset bypass (see the header) ───────────────
+    logic ref_clk_w;        // clk_i, or test_clk_i in scan mode
+    logic rst_n_regs;       // rst_n_i, or scan_rst_ni in scan mode
+    logic pll_rst_n_func;   // functional pll_rst_n before the scan override
+    logic core_rst_n_func;  // functional core_rst_n before the scan override
+    logic pll_clk_w;        // pll_clkgen output, before the optional output mux
+
+    dft_clk_mux u_ref_cm (
+        .func_clk_i (clk_i),
+        .test_clk_i (test_clk_i),
+        .sel_i      (scan_mode_i),
+        .clk_o      (ref_clk_w)
+    );
+
+    assign ref_clk_o = ref_clk_w;
+
+    dft_rst_mux u_regs_rm (
+        .func_rst_n_i (rst_n_i),
+        .scan_rst_ni  (scan_rst_ni),
+        .scan_mode_i  (scan_mode_i),
+        .rst_n_o      (rst_n_regs)
+    );
+
     // PLL reset: firmware can hold PLL in reset via CONTROL[0]=0
-    assign pll_rst_n  = rst_n_i & pll_enable;
+    assign pll_rst_n_func  = rst_n_i & pll_enable;
 
     // Children reset: held until PLL locks
-    assign core_rst_n = rst_n_i & pll_locked;
+    assign core_rst_n_func = rst_n_i & pll_locked;
+
+    dft_rst_mux u_pll_rm (
+        .func_rst_n_i (pll_rst_n_func),
+        .scan_rst_ni  (scan_rst_ni),
+        .scan_mode_i  (scan_mode_i),
+        .rst_n_o      (pll_rst_n)
+    );
+
+    dft_rst_mux u_core_rm (
+        .func_rst_n_i (core_rst_n_func),
+        .scan_rst_ni  (scan_rst_ni),
+        .scan_mode_i  (scan_mode_i),
+        .rst_n_o      (core_rst_n)
+    );
 
     // Export raw lock flag
     assign pll_locked_o = pll_locked;
@@ -107,21 +172,38 @@ module pll_subsystem #(
         .PLL_IMPL        (PLL_IMPL),
         .STUB_LOCK_CYCLES(STUB_LOCK_CYCLES)
     ) u_pll (
-        .ref_clk_i   (clk_i),
+        .ref_clk_i   (ref_clk_w),
         .rst_n_i     (pll_rst_n),
         .feedback_div(pll_fb_div),
         .post_div_sel(pll_post_div),
-        .out_clk_o   (core_clk),
+        .out_clk_o   (pll_clk_w),
         .locked_o    (pll_locked)
     );
+
+    // core_clk in scan mode. The stub is a pure passthrough of its reference
+    // (pll_clkgen_stub: `assign out_clk_o = ref_clk_i`), so pll_clk_w already IS the
+    // test clock in scan mode and a second mux would only add a stage to the clock
+    // path. Any real or modelled PLL has an output that is NOT its reference, so its
+    // output gets its own mux. If the stub ever stops being a passthrough this
+    // generate must change with it (test_soc_dft_scan.py would fail).
+    if (PLL_IMPL == "STUB") begin : g_core_clk_stub
+        assign core_clk = pll_clk_w;
+    end else begin : g_core_clk_pll
+        dft_clk_mux u_core_cm (
+            .func_clk_i (pll_clk_w),
+            .test_clk_i (test_clk_i),
+            .sel_i      (scan_mode_i),
+            .clk_o      (core_clk)
+        );
+    end
 
     // ── pll_apb_regs: APB4 config slave (runs on clk_i — NOT core_clk) ──────
     pll_apb_regs #(
         .ADDR_W (ADDR_W)
     ) u_pll_regs (
         // Reference clock domain — see clock-domain note in module header.
-        .clk_i       (clk_i),
-        .rst_n_i     (rst_n_i),
+        .clk_i       (ref_clk_w),
+        .rst_n_i     (rst_n_regs),
         // APB4 slave
         .psel        (psel),
         .penable     (penable),

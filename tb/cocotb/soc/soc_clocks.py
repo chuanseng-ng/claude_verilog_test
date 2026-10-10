@@ -22,12 +22,34 @@ import cocotb
 from cocotb.clock import Clock
 
 
+def drive_dft_inactive(dut) -> None:
+    """Tie the DFT test-access ports (bead j41m.2) to their inactive values.
+
+    scan_mode_i=0 (functional), scan_en_i=0, scan_rst_ni=1 (scan reset not
+    asserted), test_clk_i=0, scan_in_i=0. With these the scan muxes, the
+    clock-gate test enable and the crypto key mask are all pass-through, so
+    every pre-DFT suite sees bit-identical behaviour. Called by
+    start_soc_clocks() -- the one place every soc_top suite already goes
+    through -- so no suite needs to know the ports exist. Wrappers that do not
+    expose them (unit-test benches) are skipped.
+    """
+    if not hasattr(dut, "scan_mode_i"):
+        return
+    dut.scan_mode_i.value = 0
+    dut.scan_en_i.value = 0
+    dut.scan_rst_ni.value = 1
+    dut.test_clk_i.value = 0
+    dut.scan_in_i.value = 0
+
+
 def start_soc_clocks(dut, period_ns, cpu_period_ns=None):
     """Start clk_i and cpu_clk_i as two independent Clock() coroutines.
 
     cpu_period_ns defaults to period_ns (1:1 ratio — the pre-GH#93 baseline
-    behaviour). Returns (clk_task, cpu_clk_task).
+    behaviour). Also ties the DFT test ports inactive (drive_dft_inactive).
+    Returns (clk_task, cpu_clk_task).
     """
+    drive_dft_inactive(dut)
     if cpu_period_ns is None:
         cpu_period_ns = period_ns
     clk_task = cocotb.start_soon(Clock(dut.clk_i, period_ns, units="ns").start())
