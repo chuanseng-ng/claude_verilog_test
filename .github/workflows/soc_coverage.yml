@@ -99,7 +99,10 @@ jobs:
       # clean, 625 passed / 0 failed / 17 skipped) on the pre-merge tree: 605 on main + 20 new tests (clock_gate_scan 4,
       # dft_muxes 3, soc_dft_scan 8, cdc_reset_sync_scan +3, crypto +2). The merge of origin/main (#255-#257) touched no
       # tb/cocotb/soc file, so the count is carried over, not re-measured on the merged tree.
-      PASS_FLOOR: '622'
+      # 2026-10-10 (bead j41m.9): 624 = 627 - 3, same value as cocotb.yml. 627 MEASURED: soc_all_ci from clean on the merged tree
+      # (main incl. #259/#263 + this PR), 627 passed / 0 failed / 17 skipped over 62 suite summaries = the 625 above + 2 new
+      # soc_dft_scan tests (PMU-held GPU/CPU domain reset in scan mode).
+      PASS_FLOOR: '624'
 
     steps:
       - name: Checkout repository

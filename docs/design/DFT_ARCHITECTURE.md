@@ -635,7 +635,7 @@ already tied 0), the Sky130 macro is bit-for-bit unaffected by this change, and 
 
 ### 14.9 Gap-closure results (2026-10-10, after the implementing agent ran out of turns)
 * **Merge of `origin/main`** (#255-#257): one conflict, `memory/rtl-design/experiences.jsonl` (both sides appended; both kept). No RTL conflict. `PASS_FLOOR` 622 in both `cocotb.yml` and
-  `soc_coverage.yml` (the latter was still 602): 625 measured pre-merge minus 3; the merge touched no `tb/cocotb/soc` file, so the count is carried over, not re-measured.
+  `soc_coverage.yml` (the latter was still 602): 625 measured pre-merge minus 3 (**superseded by j41m.9: 624 = 627 measured minus 3, `soc_all_ci` from clean on the merged tree, 627/0/17 over 62 summaries**); the merge touched no `tb/cocotb/soc` file, so the count is carried over, not re-measured.
 * **sv2v netlists regenerated on the final tree, both PDKs** (`make -C pnr sky130-soc-sv2v asap7-soc-sv2v`; neither is tracked). Real yosys 0.62: Sky130 `hierarchy -check -top soc_top` passes
   with no undefined module; ASAP7 leaves exactly `ICGx1_ASAP7_75t_R` and `sram_1rw_256x32_asap7` (library cell and hard macro, undefined before this change too).
   `dft_clk_mux`, `dft_rst_mux`, `dft_ctrl_ports` are defined in both.
