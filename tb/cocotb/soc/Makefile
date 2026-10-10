@@ -339,6 +339,12 @@ CDC_RESET_SYNC_SCAN_SOURCES = \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(SOC_DIR)/tb_cdc_reset_sync_scan.sv
 
+# Bead claude_verilog_test-j41m.2 (DFT Stage 1a): rv32i_clock_gate test-enable unit test.
+# The gate alone + standalone wrapper; no other RTL needed.
+CLOCK_GATE_SCAN_SOURCES = \
+	$(RTL)/mem/rv32i_clock_gate.sv \
+	$(SOC_DIR)/tb_clock_gate_scan.sv
+
 # Full SoC top-level sources for the boot test (M9).
 # Order: packages first, leaf RTL, adapters, then soc_top + tb wrapper.
 SRAM_SIM_MODEL ?= $(PROJ_ROOT)/sim/sram_1rw_256x32_verilator.v
@@ -672,7 +678,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
+.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint clock_gate_scan clock_gate_scan_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
 crossbar:
 	$(MAKE) MODULE=test_crossbar,test_crossbar_errors TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -1094,6 +1100,19 @@ cdc_reset_sync_scan: cdc_reset_sync_scan_lint
 		VERILOG_SOURCES="$(CDC_RESET_SYNC_SCAN_SOURCES)" \
 		$(BUILD_ARGS)
 
+# Bead claude_verilog_test-j41m.2: rv32i_clock_gate test_en (scan) lint + sim.
+# The gate carries its own lint_off pragmas for the behavioural latch, so the
+# plain -Wall lint below must stay clean.
+clock_gate_scan_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module tb_clock_gate_scan \
+		$(CLOCK_GATE_SCAN_SOURCES)
+
+clock_gate_scan: clock_gate_scan_lint
+	$(MAKE) MODULE=test_clock_gate_scan TOPLEVEL=tb_clock_gate_scan \
+		VERILOG_SOURCES="$(CLOCK_GATE_SCAN_SOURCES)" \
+		$(BUILD_ARGS)
+
 soc_pll: soc_pll_lint
 	$(MAKE) MODULE=test_pll_lock TOPLEVEL=tb_soc_pll \
 		VERILOG_SOURCES="$(PLL_SOURCES)" \
@@ -1505,6 +1524,7 @@ soc_all_ci: check-space
 	$(MAKE) async_axi_fifo
 	$(MAKE) apb_cdc_bridge
 	$(MAKE) cdc_reset_sync_scan
+	$(MAKE) clock_gate_scan
 	$(MAKE) soc_boot
 	$(MAKE) soc_periph
 	$(MAKE) soc_coherency
