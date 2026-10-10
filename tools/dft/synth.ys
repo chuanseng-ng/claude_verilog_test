@@ -1,0 +1,10 @@
+read_verilog -sv timer.v
+hierarchy -top timer
+synth -top timer -flatten
+dfflibmap -liberty LIB
+abc -liberty LIB
+opt_clean -purge
+hilomap -singleton -hicell sky130_fd_sc_hd__conb_1 HI -locell sky130_fd_sc_hd__conb_1 LO
+opt_clean -purge
+tee -o synth_stat.rpt stat -liberty LIB
+write_verilog -noattr -noexpr -nohex -nodec timer_syn.v
