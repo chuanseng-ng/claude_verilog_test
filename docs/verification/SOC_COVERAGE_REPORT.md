@@ -359,6 +359,91 @@ point). Toggle should stay out of any triage for these trees for now: the CPU's 
 dominate it exactly as in the triaged trees. Promote only once the three nightly flows run together on the
 same Verilator for a few cycles, so a `SUSPECT` consistency row would show up before anyone triages against it.
 
+## rtl/cpu | mem | gpu line triage, slice 1 (bead `a5ze`, 2026-10-10)
+
+Scope decision (user, 2026-10-10): triage every uncovered line point of the modules under 95 %, write the missing tests,
+then move `rtl/cpu|mem|gpu` into the line gate. **Tests and waivers only, no RTL edits.** **This slice does not flip the
+gate**: `gpu_top` is still at 88.8 % (see "Remaining"). `rtl/cpu|mem|gpu` therefore stay informational in
+`coverage_report.py` and `soc_coverage.yml`.
+
+**Basis and its limit.** Measured on HEAD `024abfe` with `make -C sim coverage_cpu_gpu` (nix Verilator 5.048) before and after
+the new tests: **207 passed / 0 failed before, 222 passed / 0 failed after** (+15 = 8 + 3 + 3 + 1; the 16th new test is
+the `expect_fail` below, which the CI grep does not count). The SoC half is the `soc-coverage` artifact of the PR #246 run
+38029069277 (RTL `c68f91b`), reused rather than re-run (75 min). `git diff c68f91b HEAD -- rtl` is four lines (the `default:` arms PR #248
+added to `rv32i_pipeline_mem.sv` and `rv32i_pipeline_ex1c.sv`), which **shifts the line numbers of those two files**, so
+the SoC `.dat` cannot be unioned point-for-point with the CPU one for them (the report's consistency section flags
+`rv32i_pipeline_ex1c` 51/69 shared). For those two modules the table uses the CPU/GPU `.dat` alone (exact at HEAD, a lower
+bound because the SoC firmware may add hits); every other module is the exact SoC + CPU/GPU union. The nightly job, which
+runs both halves on one HEAD, is authoritative. Note the cost of dropping the SoC half: `rv32i_cpu_top`,
+`rv32i_forwarding_unit`, `rv32i_hazard_unit` and `rv32i_dcache` fall under 95 % on the CPU/GPU `.dat` alone and are above it
+only because of SoC hits, so **the line gate must be evaluated on the combined data**.
+
+### Per-module result (line %, hit/total; "waived" = category-b points removed from the denominator)
+
+| Module | Before | After waivers only | After tests + waivers | a (test gap) | b (waived) | c (RTL bug) |
+| :----- | -----: | -----------------: | --------------------: | -----------: | ---------: | ----------: |
+| `rv32i_csr_file` | 70.5 (67/95) | 75.3 (67/89) | **100.0** (89/89) | 22, all closed | 6 | 0 |
+| `rv32i_decode` | 94.9 (74/78) | 94.9 | **98.7** (77/78) | 4, 3 closed, `L508` open | 0 | 0 |
+| `rv32i_pipeline_ex1b` | 83.3 (5/6) | 100.0 (5/5) | 100.0 | 0 | 1 | 0 |
+| `rv32i_pipeline_ex1c` (CPU/GPU `.dat`) | 87.0 (20/23) | 100.0 (20/20) | 100.0 | 0 | 3 | 0 |
+| `rv32i_pipeline_mem` (CPU/GPU `.dat`) | 84.8 (39/46) | 90.7 (39/43) | **100.0** (43/43) | 4, all closed | 3 | 0 |
+| `rv32i_icache` | 94.7 (72/76) | 98.6 (72/73) | 98.6 | 1 (`L498`), open | 3 | 0 |
+| `vector_alu` | 90.5 (19/21) | 90.5 | **100.0** (21/21) | 2, all closed | 0 | 0 |
+| `gpu_top` | 86.9 (86/99) | 87.8 (86/98) | **88.8** (87/98) | 11, 0 closed by test | 1 | 1 (`L251`, bead `47lf`) |
+
+Per tree after (sum, with waivers): `rtl/cpu` 96.8 %, `rtl/mem` 97.4 %, `rtl/gpu` 95.0 % in the SoC + CPU/GPU union; the only
+module under 95 % is `gpu_top`, plus `ex1c`/`mem` appearing low in the union only because of the stale-SoC line shift
+described above (100 % on the exact CPU/GPU `.dat`).
+
+### Triage of every uncovered point (HEAD line numbers)
+
+| Module | Points | Class | Disposition |
+| :----- | :----- | :---- | :---------- |
+| `rv32i_csr_file` | L174, L180-183, L185 | a | CSR reads never issued: `mip`, `mcycleh`, `minstreth`, `mvendorid`, `marchid`, `mhartid`. Closed by `test_id_mip_and_readonly_csrs`, `test_counter_words_frozen`. |
+| | L217-221, L225 else, L228-229 | a | `mstatus` written with CSRRS/CSRRC/CSRRWI/CSRRSI/CSRRCI and with a suppressed (x0 / uimm 0) set or clear. Closed by `test_mstatus_all_ops`. |
+| | L255-256, L395, L400 | a | Immediate RS/RC with write suppression; `mcycleh` / `minstreth` writes. Closed by `test_mie_mtvec_mepc_mcause_ops`, `test_counter_words_frozen`. |
+| | L422-423, L434-435 | a | `dcache_flush` / `dcache_inval` CSR via CSRRS/CSRRC and the immediate forms. Closed by `test_dcache_flush_op_forms`, `test_dcache_inval_op_forms`. |
+| | L222, L230, L257, L267, L424, L436 | b | `default:` arms of the `csr_op` decodes; `rv32i_decode` only raises `csr_access` for funct3 001/010/011/101/110/111. Waived. |
+| `rv32i_decode` | L469 | a | SYSTEM funct3=100. Closed by `test_illegal_encodings_trap`. |
+| | L500 else | a | Non-canonical FENCE.I (rd, rs1 or imm non-zero). Closed by `test_illegal_encodings_trap`. |
+| | L508 (2 points) | a | FENCE (funct3=000). One point closed by `test_fence_is_a_nop`; **one `L508` point remains open**, not yet understood (investigate in slice 2). |
+| `rv32i_pipeline_ex1b` | L76 | b | Inner guard `valid && trap && !flush` inside `!valid \|\| flush`: logically unreachable. Waived. |
+| `rv32i_pipeline_ex1c` | L139, L152, L156 | b | Fully enumerated store-lane selects (PR #248 `default:` arms) and the store-size `default:`. Waived. |
+| `rv32i_pipeline_mem` | L70-72, L79 cond_then | a | LBU at byte offsets 1/2/3 and LHU at halfword offset 2. Closed by `test_load_extraction_all_offsets`. |
+| | L73, L80, L86 | b | Fully enumerated load-lane selects (PR #248) and the load-size `default:`. Waived. |
+| `rv32i_icache` | L479 | b | `cancel_wait_r_q` is only ever assigned 0 (legacy). Waived. |
+| | L566 else, L581 | b | Burst-contract violation (5th R beat without RLAST); FSM `default:`. Waived. |
+| | L498 if | a | Abort in `CS_SRAM_LATCH` on FENCE.I or an address change in exactly that cycle. **Open**, needs a unit-level icache stimulus (slice 2). |
+| `vector_alu` | L63, L65 | a | VBNE and VBGE never run. Closed by `test_branch_vbne`, `test_branch_vbge`. |
+| `gpu_top` | L251 cond_then | c | `BLOCK_X` 57..64: the 3-bit warp count saturated at 7, warp 7 never ran. **Fixed 2026-10-10** (bead `47lf` / GH #254, `fixes/FIXES_INDEX.md` section 12): the count is now `WARP_CNT_W` = 4 bits and the cap is `N_WARPS`; the `expect_fail` is gone. (The row's line number is from the pre-fix tree; the edit moved the FSM `default:` from L268 to L272.) |
+| | L272 (was L268) | b | FSM `default:`. Waived. |
+| | L143 if, L155, L262, L265 if, L266, L267 (2), L311, L312, L314, L331 | a | Soft-reset bit, write to an unmapped register, `GPS_RUNNING` -> `GPS_ERROR` (divergence-stack overflow at `gpu_top` level), `GPS_DONE`/`GPS_ERROR` -> idle, `BLOCK_Y`/`BLOCK_Z`/`IRQ_STATUS` reads, read of an unmapped register. **Open**, slice 2. |
+
+### New tests
+
+| Test | What it asserts |
+| :--- | :-------------- |
+| `tb/cocotb/cpu/test_csr_access.py` (8 tests) | Generated CSR sequences run on `rv32i_cpu_top`; every `rd` is compared with `tb/models/csr_model.py` (spec-derived, unit-tested in `tb/tests/test_csr_model.py`). mstatus / mie / mtvec / mepc / mcause / mcountinhibit under all six op forms incl. WARL masks (MPP 0x1800, mtvec MODE forced 0, mcountinhibit bit 1 RAZ) and the rs1=x0 / uimm=0 write suppression; ID CSRs read their values and ignore writes; `mip` follows `timer_irq_i` / `ext_irq_i` in all four combinations and ignores writes; every counter word written and read back while frozen by `mcountinhibit` (first write after the freeze is not compared: it returns the pre-freeze count); `mcycle` / `minstret` low-word wrap carries into the high word; `dcache_flush` fires (dirty line reaches AXI memory) and `dcache_inval` fires (dirty line discarded) for exactly the non-suppressed forms (12 forms each). |
+| `tb/cocotb/cpu/test_decode_corners.py` (3 tests) | LB/LBU/LH/LHU at every legal offset on words with the sign bit set and clear, against the RISC-V load definition; SYSTEM funct3=100 and three non-canonical FENCE.I encodings trap with mcause 2, `mepc` = the offending PC, and the next instruction does not commit; FENCE retires as a NOP with no trap. |
+| `tb/cocotb/gpu/test_vector_alu.py` (+3) | VBNE and VBGE per lane incl. the sign boundary; branch compare on masked lanes is never taken. Also runs on the Bambu HLS arm. |
+| `tb/cocotb/gpu/kernels/kernel_block_warps.py` (2) | Marker-store kernel: `BLOCK_X` 1..56 runs exactly `ceil(BLOCK_X/8)` warps. `BLOCK_X` 57 and 64 had to run all 8 (`expect_fail=True`, observed `[0..6]`) until bead `47lf` was fixed 2026-10-10; now every size 57..64 is checked individually with no `expect_fail`, plus a per-lane comparison against `GpuRefModel` and the above-64 truncation. |
+
+`sim/Makefile`: `test_csr_access` and `test_decode_corners` are in `TEST_MODULES` (so `make test` / `coverage_cpu_gpu` run them), `kernel_block_warps`
+is in `gpu_kernels`. **These CPU suites are not run per-PR**: CI's `phase2_all` does not include `TEST_MODULES`, only the nightly coverage job does.
+No pass floor changes (`PASS_FLOOR` in `cocotb.yml` / `soc_coverage.yml` counts `soc_all`; the `phase2_all` floor of 100 is unaffected).
+
+### Waivers added
+
+12 entries in `tools/verif/coverage_waivers.txt` (`rv32i_csr_file` 3 entries / 6 points, ex1b 1, ex1c 2 / 3 points, mem 2 / 3 points, icache 3, `gpu_top` 1), all category b with file:line
+justification, all bound (no stale waiver). 17 line points removed from the denominators. Line numbers are HEAD `024abfe`.
+
+### Remaining (slice 2) and what is not verified
+
+- `gpu_top` register / ERROR-state paths (12 points) and a nested-divergence kernel that overflows the 4-deep stack at `gpu_top` level; `icache` `L498`; the open `decode` `L508` point.
+- The gate flip itself (`coverage_report.py` `TRIAGED_TREES`, `soc_coverage.yml`: the combined steps lose `continue-on-error` for the part the gate depends on, `if: always()` on artifact upload, the CPU/GPU input becomes a hard requirement) is deliberately **not** done here. It lands only when every module is >= 95 % on a same-HEAD combined measurement.
+- Not verified: a same-HEAD SoC + CPU/GPU union (the SoC half is c68f91b); toggle coverage was not triaged (recommendation: keep the 100 % control-toggle gate off these trees until the line gate has run a few nights); the new CPU suites were not run on the 5.036 nightly Verilator.
+- Observation, not filed: `rv32i_csr_file` increments no counter in any cycle where a legal CSR instruction is in EX (`:332` vs `:444`), not only the written one. The header says only the written register is suppressed. Whether `mcycle` therefore under-counts is **unmeasured**; slice 2 should measure it before deciding on a bead.
+
 ## 7ovx register-walk re-measurement (2026-10-09)
 
 Bead `7ovx` (GH #216 follow-up). Most of the remaining toggle gap on the register-bank peripherals and the fabric was upper

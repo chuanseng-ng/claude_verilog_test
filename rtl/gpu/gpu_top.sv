@@ -244,11 +244,15 @@ module gpu_top
     logic sched_launch;
     assign sched_launch = (state_q == GPS_IDLE) && cq_desc_valid;
 
-    // n_warps: ceil(block_x / N_LANES), capped at N_WARPS-1
-    logic [WARP_W-1:0] n_warps_w;
-    logic [9:0]        n_warps_raw;
+    // n_warps: ceil(block_x / N_LANES), capped at N_WARPS.  This is a COUNT (0..N_WARPS), so it
+    // is WARP_CNT_W bits wide, one more than a warp ID (WARP_W): capping at N_WARPS-1 made
+    // BLOCK_X 57..64 run 7 of 8 warps (bead 47lf).  BLOCK_X > N_WARPS*N_LANES (64) cannot be
+    // honoured -- warp storage is N_WARPS deep -- and is truncated to N_WARPS warps.
+    logic [WARP_CNT_W-1:0] n_warps_w;
+    logic [9:0]            n_warps_raw;
     assign n_warps_raw = {3'b0, cq_desc.block_x[9:3]} + {9'b0, |cq_desc.block_x[2:0]};
-    assign n_warps_w   = |n_warps_raw[9:WARP_W] ? unsigned'(WARP_W'(N_WARPS-1)) : n_warps_raw[WARP_W-1:0];
+    assign n_warps_w   = (n_warps_raw > 10'(N_WARPS)) ? WARP_CNT_W'(N_WARPS)
+                                                       : n_warps_raw[WARP_CNT_W-1:0];
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin

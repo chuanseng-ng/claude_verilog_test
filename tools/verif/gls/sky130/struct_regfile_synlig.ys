@@ -1,0 +1,64 @@
+# dud4 step 6 (structural): rv32i_regfile elaborated by the REAL Synlig frontend
+# (the yosys-0.46 binary LibreLane 2.4.x invokes for USE_SYNLIG:true), run through
+# the same proc sequence + librelane_opt(nodffe,nosdff) x5 as
+# tools/verif/synlig_audit/audit_cpu_slang2.ys, with the COARSE-GRAIN cell
+# census (stat BEFORE any techmap -- a post-techmap census is vacuous because
+# techmap lowers every $shiftx/$pmux) taken at three points.
+#
+# Run (yosys-0.46 + synlig-sv plugin):
+#   RTL=<tree with rtl/>  OUT=<dir>  yosys -c / -s this-file after substituting, or via
+#   run_struct_regfile.sh which does the substitution.
+plugin -i synlig-sv
+read_systemverilog -sverilog -top rv32i_regfile @RTL@/rtl/cpu/core/rv32i_regfile.sv
+hierarchy -top rv32i_regfile -nokeep_prints -nokeep_asserts
+proc_clean
+proc_rmdead
+proc_prune
+proc_init
+proc_arst
+proc_rom
+proc_mux
+proc_dff
+proc_memwr
+proc_clean
+opt_expr
+opt_clean
+tee -o @OUT@/synlig_regfile_coarse_pre_opt.txt stat
+write_rtlil @OUT@/synlig_regfile_pre_opt.il
+# --- librelane_opt(nodffe=True, nosdff=True) replicated exactly ---
+tee -o @OUT@/synlig_regfile_optmuxtree.log opt_expr
+opt_merge -nomux
+tee -a @OUT@/synlig_regfile_optmuxtree.log opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+tee -a @OUT@/synlig_regfile_optmuxtree.log opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+tee -a @OUT@/synlig_regfile_optmuxtree.log opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+tee -a @OUT@/synlig_regfile_optmuxtree.log opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+tee -a @OUT@/synlig_regfile_optmuxtree.log opt_muxtree
+opt_reduce
+opt_merge
+opt_dff -nodffe -nosdff
+opt_clean
+opt_expr
+opt_clean
+check
+tee -o @OUT@/synlig_regfile_coarse_post_opt.txt stat
+write_rtlil @OUT@/synlig_regfile_post_opt.il

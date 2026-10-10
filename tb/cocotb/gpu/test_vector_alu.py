@@ -358,3 +358,47 @@ async def test_branch_vblt(dut):
         assert taken[lane] == exp, \
             f"VBLT lane {lane}: rs1={rs1[lane]:#010x} rs2={rs2[lane]:#010x} " \
             f"expected={exp}, got={taken[lane]}"
+
+
+@cocotb.test()
+async def test_branch_vbne(dut):
+    """VBNE: branch_taken_o[lane]=1 iff rs1[lane]!=rs2[lane] (bead a5ze: never exercised)."""
+    drv = await make_driver(dut)
+    rs1 = [0, 5, 0xFFFF_FFFF, 0x8000_0000, 7, 0, 1, 0x7FFF_FFFF]
+    rs2 = [0, 6, 0xFFFF_FFFF, 0x7FFF_FFFF, 0, 0, 0x1_0000, 0x7FFF_FFFF]
+    _set_inputs(dut, OP["VBNE"], rs1, rs2)
+    out = await drv.settle()
+    taken = _get_taken(out)
+    for lane in range(N_LANES):
+        exp = 1 if rs1[lane] != rs2[lane] else 0
+        assert taken[lane] == exp, \
+            f"VBNE lane {lane}: rs1={rs1[lane]:#010x} rs2={rs2[lane]:#010x} " \
+            f"expected={exp}, got={taken[lane]}"
+
+
+@cocotb.test()
+async def test_branch_vbge(dut):
+    """VBGE: signed greater-or-equal per lane, incl. the equal and sign-boundary cases."""
+    drv = await make_driver(dut)
+    rs1 = [0x8000_0000, 0, 5, 0xFFFF_FFFF, 0, 100, 0, 0x7FFF_FFFF]
+    rs2 = [0x7FFF_FFFF, 0, 3, 0,           1, 100, 0xFFFF_FFFF, 0x8000_0000]
+    _set_inputs(dut, OP["VBGE"], rs1, rs2)
+    out = await drv.settle()
+    taken = _get_taken(out)
+    for lane in range(N_LANES):
+        exp = 1 if _to_s32(rs1[lane]) >= _to_s32(rs2[lane]) else 0
+        assert taken[lane] == exp, \
+            f"VBGE lane {lane}: rs1={rs1[lane]:#010x} rs2={rs2[lane]:#010x} " \
+            f"expected={exp}, got={taken[lane]}"
+
+
+@cocotb.test()
+async def test_branch_masked_lanes_not_taken(dut):
+    """A branch compare on an inactive lane is never taken, whatever the operands say."""
+    drv = await make_driver(dut)
+    rs1 = [1] * N_LANES
+    rs2 = [2] * N_LANES  # VBNE true, VBGE false, VBLT true on every lane
+    for op in ("VBNE", "VBLT"):
+        _set_inputs(dut, OP[op], rs1, rs2, mask=0x0F)
+        taken = _get_taken(await drv.settle())
+        assert taken == [1, 1, 1, 1, 0, 0, 0, 0], f"{op}: masked lanes must not branch: {taken}"

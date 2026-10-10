@@ -50,7 +50,9 @@ TEST_MODULES := \
 	tb.cocotb.cpu.test_fault_injection \
 	tb.cocotb.cpu.test_pipeline_hazards \
 	tb.cocotb.cpu.test_interrupts \
-	tb.cocotb.cpu.test_perf_counters
+	tb.cocotb.cpu.test_perf_counters \
+	tb.cocotb.cpu.test_csr_access \
+	tb.cocotb.cpu.test_decode_corners
 
 # RTL source files (Phase 3: 5-stage pipeline + I-cache + D-cache)
 # Packages must appear first so Verilator can resolve them.
@@ -1203,7 +1205,8 @@ gpu_kernels:
 		tb.cocotb.gpu.kernels.kernel_divergence_basic \
 		tb.cocotb.gpu.kernels.kernel_memory_coalesce \
 		tb.cocotb.gpu.kernels.kernel_shared_mem_pingpong \
-		tb.cocotb.gpu.kernels.kernel_sync; do \
+		tb.cocotb.gpu.kernels.kernel_sync \
+		tb.cocotb.gpu.kernels.kernel_block_warps; do \
 		echo "========================================"; \
 		echo "Running kernel: $$module"; \
 		echo "========================================"; \
