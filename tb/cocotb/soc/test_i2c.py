@@ -56,6 +56,9 @@ Tests (grouped; the name states the behaviour):
                   rx_fifo_fill_drain_and_stat, rx_fifo_full_holds_scl_low, rx_empty_read_is_zero
   IRQ             rx_threshold_irq, irq_sources_and_w1c, sticky_set_wins_over_clear
   rate / loopback clkdiv_100k_400k, loopback_write_then_read, status_reflects_bus_levels
+  bead pnfw       stop_to_start_gap_is_measured, stop_to_start_bus_free_time_meets_spec
+                  (expect_fail, bead gecv), fsm_illegal_state_recovers_to_idle,
+                  loopback_slave_idle_fall_arm, clkdiv_ffff_wide_tick_counter
 """
 
 import subprocess
@@ -1880,6 +1883,273 @@ async def test_i2c_clkdiv_100k_400k(dut):
         assert high_us >= t_high_us, f"CLKDIV={div}: tHIGH {high_us:.2f} us < {t_high_us} us"
 
 
+# ---------------------------------------------------------------------------
+# Bus-free time (tBUF) between a STOP and the next START -- bead pnfw item 3
+# ---------------------------------------------------------------------------
+
+# (CLKDIV, mode, tBUF minimum in us) -- the two standard divisors of test_i2c_clkdiv_100k_400k.
+# I2C-bus specification (UM10204) Table 10: bus free time between a STOP and a START condition,
+# Standard-mode 4.7 us, Fast-mode 1.3 us.
+_TBUF_CASES = ((249, "Standard", 4.7), (62, "Fast", 1.3))
+
+
+async def _measure_tbuf(dut, div: int) -> dict:
+    """Two back-to-back START+WRITE+STOP transactions at CLKDIV=`div`, the second command issued
+    as fast as software can: both TX bytes are pre-loaded, STATUS.busy is polled EVERY clock and the
+    next CMD write is the very next APB access after busy drops.  This is the SHORTEST bus-free
+    time the controller can be driven to produce (any real driver is slower), so a miss here is the
+    hardware's miss, not software's.  Returns the STOP->START gap and the STOP set-up time (SCL
+    rise -> SDA rise at the STOP) in BFM clk ticks."""
+    apb, slave = await _setup(dut, clkdiv=div)
+    await apb.write(I2C_ADDR, SLAVE_ADDR)
+    await _push(apb, [0x3C, 0xC3])  # both bytes queued up front: no TX_DATA write between the txns
+    word = cmd(start=1, write=1, stop=1, count=1)
+    await apb.write(I2C_CMD, word)
+    for _ in range(40000):
+        await _settled_edge(dut)
+        if not await _peek(dut, I2C_STATUS) & ST_BUSY:
+            break
+    else:
+        raise AssertionError("first transaction never finished")
+    await apb.write(I2C_CMD, word)  # back-to-back: next APB access after busy drops
+    await _wait_idle(dut, limit=40000)
+    assert slave.received == [0x3C, 0xC3], f"CLKDIV={div}: wrong data {slave.received}"
+    slave.assert_clean()
+
+    timed = list(zip(slave.events, slave.event_cycles))
+    stops = [c for ev, c in timed if ev == ("STOP",)]
+    starts = [c for ev, c in timed if ev == ("START",)]
+    assert len(stops) == 2 and len(starts) == 2, f"CLKDIV={div}: bus events {slave.events}"
+    last_rise = max(r for r in slave.scl_rise_cycles if r <= stops[0])
+    return {
+        "div": div,
+        "tick": div + 1,
+        "tbuf": starts[1] - stops[0],
+        "t_su_sto": stops[0] - last_rise,
+    }
+
+
+@cocotb.test()
+async def test_i2c_stop_to_start_gap_is_measured(dut):
+    """Harness sanity for the tBUF check below, and the measured numbers in the log.  The bus-free
+    time is observed (one STOP then the next START, in that order) and is at least the
+    one-tick S_STP_FREE interval the engine inserts after the STOP -- the lower bound that holds
+    for any implementation of this engine, so the spec comparison in the next test can only fail
+    on the spec, never on a broken measurement.  Also logs tSU;STO (SCL rise -> STOP), reported in
+    bead pnfw's follow-up and not asserted here."""
+    for div, mode, spec_us in _TBUF_CASES:
+        m = await _measure_tbuf(dut, div)
+        dut._log.info(
+            "%s CLKDIV=%d: tBUF = %d clk = %.2f us (spec min %.1f us); tSU;STO = %d clk = %.2f us",
+            mode,
+            div,
+            m["tbuf"],
+            m["tbuf"] / 100.0,
+            spec_us,
+            m["t_su_sto"],
+            m["t_su_sto"] / 100.0,
+        )
+        assert m["tbuf"] >= m["tick"], f"CLKDIV={div}: STOP->START {m['tbuf']} clk < one tick"
+        assert m["tbuf"] <= 4 * m["tick"], f"CLKDIV={div}: implausible STOP->START {m['tbuf']} clk"
+
+
+# TBUF_EXPECT_FAIL: bead pnfw item 3 MEASURED A REAL SPEC MISS (not fixed here by instruction --
+# RTL is out of scope for pnfw).  The engine's only bus-free interval is S_STP_FREE, ONE tick, so
+# tBUF = tick + ~6 clk of command latency: ~2.6 us at the Standard divisor (min 4.7) and ~0.7 us
+# at the Fast divisor (min 1.3).  Tracked by bug bead claude_verilog_test-gecv;
+# the marker stays until RTL enforces a bus-free time, at which point the test XPASSes loudly --
+# remove expect_fail then and DO NOT weaken the limits below.
+@cocotb.test(expect_fail=True)
+async def test_i2c_stop_to_start_bus_free_time_meets_spec(dut):
+    """STOP-to-START bus-free time against the I2C specification minimum (4.7 us Standard-mode
+    at CLKDIV=249, 1.3 us Fast-mode at CLKDIV=62, 100 MHz clk), measured with the tightest
+    possible back-to-back command issue (see _measure_tbuf).  The limits are the spec's, not the
+    RTL's.  Every divisor is measured before any is asserted, so one failure still reports both."""
+    results = [(await _measure_tbuf(dut, div), mode, spec) for div, mode, spec in _TBUF_CASES]
+    misses = [
+        f"{mode} CLKDIV={m['div']}: tBUF {m['tbuf'] / 100.0:.2f} us < {spec} us"
+        for m, mode, spec in results
+        if m["tbuf"] / 100.0 < spec
+    ]
+    assert not misses, "bus-free time below the I2C minimum: " + "; ".join(misses)
+
+
+# ---------------------------------------------------------------------------
+# FSM default recovery arm -- bead pnfw item 4
+# ---------------------------------------------------------------------------
+
+# i2c_bit_engine.state_e is `enum logic [4:0]` with 17 names (0..16): encodings 17..31 are NOT
+# named, so the `default:` arm is reachable by an upset and is exercised here by forcing every one
+# of them through the simulator handle (a deposit on the registered state, as an SEU would).
+S_BIT_L2 = 7
+_ILLEGAL_STATES = tuple(range(17, 32))
+
+
+@cocotb.test()
+async def test_i2c_fsm_illegal_state_recovers_to_idle(dut):
+    """Every unnamed bit-engine state encoding (17..31) recovers to S_IDLE with the bus RELEASED.
+    Each one is forced MID-BYTE (data byte, bit 3 low phase: SCL and SDA both driven low), so the
+    recovery has real work to do: both open-drain drivers must let go and `txn` must clear.  After
+    the forced encoding the very next clock must show state_q == S_IDLE, scl_oe_q == sda_oe_q ==
+    txn_q == 0 and STATUS.busy == STATUS.txn == 0, the pads must be released, and the controller
+    must then complete a normal transaction (it is usable again, not merely quiet).
+    MUTATION TARGET: the `default:` arm of i2c_bit_engine's state case (it must clear scl_oe,
+    sda_oe and txn and return to S_IDLE)."""
+    u = dut.u_dut
+    e = u.u_bit_engine
+    for bad in _ILLEGAL_STATES:
+        apb, slave = await _setup(dut)
+        await apb.write(I2C_ADDR, SLAVE_ADDR)
+        await _push(apb, [0xA5])  # bit 3 (MSB first) of 0xA5 is 0: SDA is driven low there
+        await apb.write(I2C_CMD, cmd(start=1, write=1, stop=1, count=1))
+        for _ in range(4000):
+            await _settled_edge(dut)
+            if (
+                int(e.state_q.value) == S_BIT_L2
+                and int(e.ph_data_q.value) == 1
+                and int(e.bitcnt_q.value) == 3
+            ):
+                break
+        else:
+            raise AssertionError(f"[{bad}] never reached data bit 3 low phase")
+        assert int(e.scl_oe_q.value) == 1 and int(e.sda_oe_q.value) == 1, (
+            f"[{bad}] precondition: both lines must be driven low when the state is forced"
+        )
+        assert int(e.txn_q.value) == 1
+
+        e.state_q.value = bad  # inject the illegal encoding
+        await _settled_edge(dut)  # the edge that evaluates the `default:` arm
+        assert int(e.state_q.value) == 0, (
+            f"[{bad}] illegal encoding did not recover to S_IDLE (state_q={int(e.state_q.value)})"
+        )
+        assert int(e.scl_oe_q.value) == 0 and int(e.sda_oe_q.value) == 0, (
+            f"[{bad}] recovery did not release the bus (scl_oe={int(e.scl_oe_q.value)}, "
+            f"sda_oe={int(e.sda_oe_q.value)})"
+        )
+        assert int(e.txn_q.value) == 0, f"[{bad}] txn_q still set after recovery"
+        assert int(dut.i2c_scl_oe_o.value) == 0 and int(dut.i2c_sda_oe_o.value) == 0, (
+            f"[{bad}] pad drivers still active"
+        )
+        await _settled_edge(dut)
+        st = await _peek(dut, I2C_STATUS)
+        assert not st & (ST_BUSY | ST_TXN), f"[{bad}] STATUS=0x{st:x}: busy/txn not cleared"
+        await ClockCycles(dut.clk, 6)  # let the released lines reach the pad synchronisers
+        assert slave.scl_bus == 1 and slave.sda_bus == 1, f"[{bad}] bus lines not released"
+
+        # The engine is usable again: a normal transaction completes (BFM reset because the
+        # forced upset left it mid-byte, as after any aborted transfer).
+        slave.reset_state()
+        slave.reset_log()
+        await apb.write(I2C_IRQ_CLR, IRQ_STICKY)
+        await apb.write(I2C_TX_DATA, 0x3C)
+        stat = await _run(dut, apb, cmd(start=1, write=1, stop=1, count=1))
+        assert stat & IRQ_STICKY == IRQ_DONE, f"[{bad}] post-recovery IRQ_STAT=0x{stat:x}"
+        assert slave.received == [0x3C], f"[{bad}] post-recovery data {slave.received}"
+
+
+@cocotb.test()
+async def test_i2c_loopback_slave_idle_fall_arm(dut):
+    """i2c_controller's loopback-slave FSM (slv_mode_e) has all four encodings named, so its
+    `default:` arm in the SCL-fall case is NOT an upset-only arm: it is the SLV_IDLE arm -- an SCL
+    fall seen while the slave is idle.  That happens legitimately when the master NACKs a read
+    (the slave returns to idle and releases the bus) and keeps the bus to write a further byte: the
+    fall that ends bit 0 of that byte finds the slave idle.  The slave must stay deaf (no ACK:
+    SDA reads high in the ACK slot -> NACK, then STOP), exactly as a real slave that has been
+    NACKed behaves.  The real pads stay quiet throughout (loopback contract)."""
+    apb, slave = await _setup(dut, enable=False)
+    await apb.write(I2C_CTRL, CTRL_EN | CTRL_LOOP)
+    await apb.write(I2C_ADDR, 0x2A | 0x80)  # read
+    stat = await _run(dut, apb, cmd(start=1, read=1, nack_last=1, count=1))  # no STOP
+    assert stat & IRQ_STICKY == IRQ_DONE, f"read: IRQ_STAT=0x{stat:x}"
+    assert await _drain_rx(apb) == [0xA5]
+    st = await _rd(apb, I2C_STATUS)
+    assert st & ST_TXN, f"bus must be held after a stop-less read 0x{st:x}"
+
+    await apb.write(I2C_IRQ_CLR, IRQ_STICKY)
+    await apb.write(I2C_TX_DATA, 0x11)
+    stat = await _run(dut, apb, cmd(write=1, stop=1, count=1))  # continuation byte, then STOP
+    assert stat & IRQ_STICKY == IRQ_DONE | IRQ_NACK, (
+        f"an idle (NACKed-out) loopback slave must not ACK a further byte; IRQ_STAT=0x{stat:x}"
+    )
+    assert not await _rd(apb, I2C_STATUS) & ST_TXN, "bus must be released after the STOP"
+    assert slave.events == [], f"real bus saw loopback traffic: {slave.events}"
+
+
+# ---------------------------------------------------------------------------
+# Large CLKDIV -- bead pnfw item 5
+# ---------------------------------------------------------------------------
+
+LARGE_DIV = 0xFFFF  # I2C_CLKDIV maximum: N = 65536 clk per tick, K = floor(N/8) = 8192
+
+
+@cocotb.test()
+async def test_i2c_clkdiv_ffff_wide_tick_counter(dut):
+    """CLKDIV = 0xFFFF, the maximum: the first bit's timing on the bus and the 17-bit tick counter.
+    N = 65536, K = 8192, so the S_BIT_L2 reload is CLKDIV + K = 0x11FFF -- the value that needs
+    tick_q bit 16 (a 16-bit counter would wrap it to 0x1FFF).  Proven directly (tick_q read inside
+    S_BIT_L2: bit 16 set early in the phase and cleared once the count falls below 0x10000) and on
+    the bus: SCL low = L1 + L2 = 2N + K = 139264 clk, SCL high = 2N - K = 122880 clk, fall-to-fall
+    = 4N = 262144 clk, each within +-4 clk of the model.
+    SCOPE: one START and the first address bit at the maximum divisor, then EN=0.  It does NOT
+    run a full byte (9 bits x 262144 clk is ~2.4 M clk) and does not cover CLKDIV between 0x2000
+    and 0xFFFE except as the same arithmetic.  The wait states' tick (to_q) arithmetic is not
+    exercised beyond the first wait."""
+    n = LARGE_DIV + 1
+    k = n >> 3
+    e = dut.u_dut.u_bit_engine
+    apb, slave = await _setup(dut, clkdiv=LARGE_DIV, timeout=0)
+    await apb.write(I2C_ADDR, 0x00)  # first bit 0: SDA low, no arbitration compare
+    await apb.write(I2C_CMD, cmd(start=1, write=1, count=1))
+
+    async def wait_for(pred, what: str, limit: int) -> None:
+        for _ in range(limit // 256):
+            await ClockCycles(dut.clk, 256)
+            if pred():
+                return
+        raise AssertionError(f"timed out waiting for {what}")
+
+    # SCL falls at the end of S_ST_LO (one tick after START): the start of the low phase.
+    await wait_for(lambda: len(slave.scl_fall_cycles) >= 1, "first SCL fall", 4 * n)
+    fall0 = slave.scl_fall_cycles[0]
+    # Inside S_BIT_L2 early: the tick counter holds 0x11FFF - elapsed, bit 16 set.
+    target = fall0 + n + 2048  # past S_BIT_L1 (N clk), 2048 clk into S_BIT_L2
+    while slave.cycle < target:
+        await ClockCycles(dut.clk, 128)
+    await _settled_edge(dut)
+    assert int(e.state_q.value) == S_BIT_L2, f"state {int(e.state_q.value)} != S_BIT_L2"
+    early = int(e.tick_q.value)
+    assert early >> 16 == 1 and early <= 0x11FFF and early >= 0x11FFF - 4096, (
+        f"tick_q=0x{early:x} in early S_BIT_L2: bit 16 must be set, counting down from 0x11FFF"
+    )
+    # Late in S_BIT_L2: the count has fallen below 0x10000 -> bit 16 has toggled back to 0.
+    target = fall0 + n + (n + k) - 2048
+    while slave.cycle < target:
+        await ClockCycles(dut.clk, 128)
+    await _settled_edge(dut)
+    assert int(e.state_q.value) == S_BIT_L2
+    late = int(e.tick_q.value)
+    assert late >> 16 == 0 and late <= 4096 + 8, f"tick_q=0x{late:x} late in S_BIT_L2"
+
+    # Now the bus: rise (end of L2) and the next fall (end of the high phase).
+    await wait_for(lambda: len(slave.scl_fall_cycles) >= 2, "second SCL fall", 6 * n)
+    fall1 = slave.scl_fall_cycles[1]
+    rise0 = [r for r in slave.scl_rise_cycles if r > fall0][0]
+    low, high, period = rise0 - fall0, fall1 - rise0, fall1 - fall0
+    dut._log.info(
+        "CLKDIV=0xFFFF: low %d clk (model %d), high %d (model %d), period %d (model %d)",
+        low,
+        2 * n + k,
+        high,
+        2 * n - k,
+        period,
+        4 * n,
+    )
+    assert abs(low - (2 * n + k)) <= 4, f"SCL low {low} clk, model {2 * n + k}"
+    assert abs(high - (2 * n - k)) <= 4, f"SCL high {high} clk, model {2 * n - k}"
+    assert abs(period - 4 * n) <= 4, f"period {period} clk, model {4 * n}"
+    await apb.write(I2C_CTRL, 0)  # abort: lines released, nothing left running for the next test
+
+
 @cocotb.test()
 async def test_i2c_loopback_write_then_read(dut):
     """Internal loopback (CTRL[1], the SPI_CTRL[4] precedent, used by the SoC fabric test): the
@@ -1962,6 +2232,7 @@ async def test_i2c_status_reflects_bus_levels(dut):
 
 
 # -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
 
 @cocotb.test()
 async def test_register_walk(dut):

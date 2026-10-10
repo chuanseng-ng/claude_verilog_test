@@ -137,3 +137,25 @@ waivers:
       bridge, s_prdata_o drives a top-level port directly, so yosys names the
       net after the port rather than the instance pin.
     ref: GH#93, GH#95, apb_cdc_bridge.sv:558-587, phase5_soc_multiclock.sdc:406
+
+# --- 5. Synchronisers that MUST be present ---------------------------------
+# The BAD/waiver machinery only notices an unsynchronised crossing that is also
+# combined with another domain. A raw sample of a lone asynchronous pin is
+# classified OKX, which never fails the gate -- so a deleted synchroniser on a
+# pad that feeds a single flop would pass silently. Each entry here is a
+# positive check: some register matching `dest` must be classified CDC
+# (single-source crossing carrying (* magic_cdc *), i.e. a cdc_2ff_sync stage).
+# Bead pnfw item 2: both I2C pad inputs (negative control: bypassing the SCL
+# synchroniser in a scratch copy of i2c_controller.sv turned this gate red with
+# 64 unwaived registers AND dropped the CDC count by one).
+required_synchronisers:
+  - id: i2c-scl-pad-sync
+    dest: '^u_i2c\.u_scl_sync\.sync_q\[0\]:D$'
+    reason: >
+      i2c_scl_i is an asynchronous pad input; i2c_controller.sv synchronises it
+      through cdc_2ff_sync u_scl_sync before the bit engine sees it.
+  - id: i2c-sda-pad-sync
+    dest: '^u_i2c\.u_sda_sync\.sync_q\[0\]:D$'
+    reason: >
+      i2c_sda_i is an asynchronous pad input; i2c_controller.sv synchronises it
+      through cdc_2ff_sync u_sda_sync before the bit engine sees it.

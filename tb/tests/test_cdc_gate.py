@@ -324,3 +324,67 @@ def test_repo_config_loads_and_validates():
     cfg = cdc_gate.load_config(_GATE_PATH.with_name("cdc_config.yml"))
     assert "clk_i" in cfg["clock_domains"]
     assert cfg["waivers"], "expected at least one committed waiver"
+
+
+# --------------------------------------------------------------------------
+# required synchronisers (bead pnfw item 2): the positive check
+# --------------------------------------------------------------------------
+
+REQ_CFG = (
+    BASE_CFG
+    + """required_synchronisers:
+  - id: pad-sync
+    dest: '^u_x\\.u_sync\\.sync_q\\[0\\]:D$'
+    reason: pad input must be synchronised
+"""
+)
+
+
+def test_required_synchroniser_present_passes(tmp_path, capsys):
+    """A CDC-classified (magic_cdc) register matching the entry satisfies it."""
+    cfg = write(tmp_path, "cfg.yml", REQ_CFG)
+    rpt = write(
+        tmp_path, "r.txt", line("CDC", "u_x.u_sync.sync_q[0]:D", "clk_i", "1 x pad_i", magic=True)
+    )
+    assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 0
+    assert "PASS" in capsys.readouterr().out
+
+
+def test_required_synchroniser_absent_fails(tmp_path, capsys):
+    """If the synchroniser register is gone from the CDC class the gate must go red, even though
+    nothing is BAD and no waiver is stale."""
+    cfg = write(tmp_path, "cfg.yml", REQ_CFG)
+    rpt = write(tmp_path, "r.txt", line("OK1", "u_x.other:D", "clk_i", "1 x clk_i"))
+    assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 1
+    assert "pad-sync" in capsys.readouterr().out
+
+
+def test_required_synchroniser_not_satisfied_by_a_raw_sample(tmp_path):
+    """A bypassed synchroniser leaves a lone flop sampling the pad: classified OKX, which the BAD
+    machinery alone never fails.  An OKX register of the same name must NOT satisfy the entry."""
+    cfg = write(tmp_path, "cfg.yml", REQ_CFG)
+    rpt = write(tmp_path, "r.txt", line("OKX", "u_x.u_sync.sync_q[0]:D", "clk_i", "1 x pad_i"))
+    assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 1
+
+
+def test_required_synchroniser_in_json_summary(tmp_path):
+    cfg = write(tmp_path, "cfg.yml", REQ_CFG)
+    rpt = write(tmp_path, "r.txt", line("OK1", "u_x.other:D", "clk_i", "1 x clk_i"))
+    out = tmp_path / "gate.json"
+    cdc_gate.main([str(rpt), "-c", str(cfg), "--json", str(out)])
+    data = json.loads(out.read_text())
+    assert data["pass"] is False
+    assert data["missing_synchronisers"] == ["pad-sync"]
+
+
+def test_required_synchroniser_missing_field_is_rejected(tmp_path):
+    bad = BASE_CFG + "required_synchronisers:\n  - id: x\n    dest: 'a'\n"
+    with pytest.raises(cdc_gate.ConfigError):
+        load(tmp_path, bad)
+
+
+def test_repo_config_requires_both_i2c_pad_synchronisers():
+    """The committed config must keep guarding both I2C pad synchronisers (bead pnfw)."""
+    cfg = cdc_gate.load_config(_GATE_PATH.with_name("cdc_config.yml"))
+    ids = {rs["id"] for rs in cfg["required_synchronisers"]}
+    assert {"i2c-scl-pad-sync", "i2c-sda-pad-sync"} <= ids
