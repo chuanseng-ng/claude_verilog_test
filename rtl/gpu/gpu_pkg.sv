@@ -25,7 +25,10 @@ package gpu_pkg;
     localparam int LANE_W  = $clog2(N_LANES);   // 3 (used by shared_memory.sv)
     /* verilator lint_on UNUSEDPARAM */
     /* verilator lint_off UNUSEDPARAM */
-    localparam int WARP_W  = $clog2(N_WARPS);   // 3
+    localparam int WARP_W  = $clog2(N_WARPS);   // 3 (warp ID: 0..N_WARPS-1)
+    // A warp COUNT spans 0..N_WARPS inclusive, so it needs one bit more than a warp ID:
+    // 8 does not fit in 3 bits (bead 47lf / GH #254).
+    localparam int WARP_CNT_W = $clog2(N_WARPS + 1); // 4
     /* verilator lint_on UNUSEDPARAM */
     /* verilator lint_off UNUSEDPARAM */
     localparam int REG_W   = $clog2(N_REGS);    // 5

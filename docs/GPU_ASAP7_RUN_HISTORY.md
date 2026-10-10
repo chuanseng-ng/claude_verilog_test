@@ -6,6 +6,8 @@
 **Target**: Max fmax with 0 setup/hold violations, 0 internal-net DRC, 0 antenna
 **Branch**: `phase-4-pd-enhance`
 
+> **Caveat 2026-10-10 (bead `47lf`, GH #254) — every run below, and the macro views exported from them, predate an RTL fix.** `gpu_top` held its warp count in 3 bits and capped it at 7, so `BLOCK_X` 57..64 ran 7 of 8 warps. Fixed in `rtl/gpu/gpu_pkg.sv`, `gpu_top.sv`, `warp_scheduler.sv` (`WARP_CNT_W` = 4): the scheduler's `n_warps_q` gains one flop (`n_warps_w` is combinational) and the issue / `all_done` compares widen by one bit — a handful of cells, not expected to move the PPA below. **No PD run was made**: the GPU cannot be re-hardened on this host (beads `ma7` / `lxv` / `2kn`), so `pnr/asap7/soc/macro/gpu_top.*` are functionally behind the RTL (in addition to the Synlig-miscompile caveat of `ma7`). Re-harden when the host is available.
+
 ---
 
 ## ✅ FINAL SIGNOFF — RUN_2026-05-28_06-29-48 (2026-05-28)

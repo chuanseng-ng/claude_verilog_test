@@ -22,7 +22,7 @@ module warp_scheduler
     input  logic                    launch_i,         // pulse: load descriptor below
     input  logic [31:0]             kernel_pc_i,      // entry-point PC for all warps
     input  logic [N_LANES-1:0]      init_mask_i,      // initial active mask (all lanes)
-    input  logic [WARP_W-1:0]       n_warps_active_i, // number of warps in this block
+    input  logic [WARP_CNT_W-1:0]   n_warps_active_i, // number of warps in this block (0..N_WARPS)
 
     // -----------------------------------------------------------------------
     // Issue port to gpu_compute_unit
@@ -81,7 +81,7 @@ module warp_scheduler
     // Parameter contract: N_WARPS_P sizes the per-warp arrays below, but the
     // round-robin scan, reset/launch/completion loops and the `% N_WARPS` wrap
     // are all bounded by the package constant N_WARPS, and the warp-id width
-    // WARP_W (and therefore n_warps_active_i) is derived from N_WARPS too.
+    // WARP_W (warp ID) and WARP_CNT_W (n_warps_active_i, 0..N_WARPS) are derived from N_WARPS too.
     // An override BELOW N_WARPS would index these arrays out of range; an
     // override ABOVE it would leave the extra entries permanently unreachable
     // and unrepresentable in WARP_W bits.  Nothing overrides it today
@@ -115,7 +115,7 @@ module warp_scheduler
     logic [WARP_W-1:0] rr_ptr;
 
     // Number of warps in the active block (set on launch)
-    logic [WARP_W-1:0] n_warps_q;
+    logic [WARP_CNT_W-1:0] n_warps_q;
 
     // -----------------------------------------------------------------------
     // Round-robin warp selection — find next non-busy, non-done warp
@@ -129,7 +129,7 @@ module warp_scheduler
         for (int i = 0; i < N_WARPS; i++) begin
             logic [WARP_W-1:0] cand_i;
             cand_i = WARP_W'((int'(rr_ptr) + i) % N_WARPS);
-            if (!found && (cand_i < n_warps_q) &&
+            if (!found && (WARP_CNT_W'(cand_i) < n_warps_q) &&
                 !warp_busy[cand_i] && !warp_done[cand_i]) begin
                 next_warp = cand_i;
                 found     = 1'b1;
@@ -239,7 +239,7 @@ module warp_scheduler
     always_comb begin
         all_done = (n_warps_q != '0);
         for (int w = 0; w < N_WARPS; w++) begin
-            if (WARP_W'(unsigned'(w)) < WARP_W'(unsigned'(n_warps_q)) && !warp_done[w])
+            if (WARP_CNT_W'(unsigned'(w)) < n_warps_q && !warp_done[w])
                 all_done = 1'b0;
         end
     end
