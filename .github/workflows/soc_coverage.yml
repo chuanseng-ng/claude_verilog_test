@@ -95,7 +95,11 @@ jobs:
       # stop_to_start_bus_free_time_meets_spec expect_fail was removed and it now passes for real, count unchanged).
       # COMPUTED, not measured: the i2c suite itself measured 52 -> 55 locally (55/55 pass); the full soc_all_ci was
       # not re-run. Tighten to (measured - 3) from this PR's CI.
-      PASS_FLOOR: '602'
+      # 2026-10-10 (bead j41m.2, DFT Stage 1a): 622 = 625 - 3, same value as cocotb.yml. 625 was MEASURED (soc_all_ci from
+      # clean, 625 passed / 0 failed / 17 skipped) on the pre-merge tree: 605 on main + 20 new tests (clock_gate_scan 4,
+      # dft_muxes 3, soc_dft_scan 8, cdc_reset_sync_scan +3, crypto +2). The merge of origin/main (#255-#257) touched no
+      # tb/cocotb/soc file, so the count is carried over, not re-measured on the merged tree.
+      PASS_FLOOR: '622'
 
     steps:
       - name: Checkout repository
