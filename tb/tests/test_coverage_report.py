@@ -1063,6 +1063,8 @@ def test_ratchet_file_missing_is_an_error(tmp_path: Path) -> None:
 
 def gate_cli(tmp_path: Path, records: list[str], *extra: str) -> subprocess.CompletedProcess[str]:
     dat = write_dat(tmp_path, *records)
+    if "--gate" in extra and "--line-gate-trees" not in extra:
+        extra = (*extra, "--line-gate-trees", "")  # these tests carry SoC-only data
     return run_cli("--dat", str(dat), "--root", ROOT, *extra)
 
 
@@ -1135,3 +1137,149 @@ def test_tracked_waiver_and_ratchet_files_parse() -> None:
     ratchet = cr.load_ratchet(tools / "coverage_toggle_ratchet.txt")
     assert ratchet, "the ratchet file is expected to carry the known soc_bus/soc_top gaps"
     assert all(0.0 <= e.floor < 100.0 for e in ratchet.values())
+
+
+# ------------------------------------------------- line gate on rtl/cpu|mem|gpu (bead a5ze)
+#
+# After the a5ze triage the CPU / cache / GPU trees join the gate for LINE coverage only: the
+# 100 % control-toggle gate stays off them (their wide CSR / address / data buses dominate toggle
+# exactly as in the triaged trees, and the toggle ratchet was never calibrated for them).  They are
+# evaluated on the same combined data, so a gate run that did not measure them is an ERROR, not a
+# pass, and two inputs that disagree on a gated module's point set are a failure.
+
+LINE_TREES = ("rtl/cpu", "rtl/mem", "rtl/gpu")
+
+
+def line_cfg(**kw: Any) -> Any:
+    return cr.GateConfig(toggle_floor=95.0, line_trees=LINE_TREES, **kw)
+
+
+def all_trees(
+    *,
+    cpu: tuple[int, int] = (10, 10),
+    mem: tuple[int, int] = (10, 10),
+    gpu: tuple[int, int] = (10, 10),
+) -> list[str]:
+    return [
+        *gate_module("periph_ok", line_hit=10, line_total=10, ctl_hit=2, ctl_total=2),
+        *gate_module("cpu_m", tree="rtl/cpu", line_hit=cpu[0], line_total=cpu[1]),
+        *gate_module("mem_m", tree="rtl/mem", line_hit=mem[0], line_total=mem[1]),
+        *gate_module("gpu_m", tree="rtl/gpu", line_hit=gpu[0], line_total=gpu[1]),
+    ]
+
+
+def test_line_gated_trees_pass_when_every_module_meets_the_floor(tmp_path: Path) -> None:
+    res = gate_of(tmp_path, *all_trees(), cfg=line_cfg())
+    assert res.passed and res.modules_gated == 4
+
+
+@pytest.mark.parametrize("tree_kw", ["cpu", "mem", "gpu"])
+def test_line_gate_fails_a_cpu_mem_or_gpu_module_below_the_floor(
+    tmp_path: Path, tree_kw: str
+) -> None:
+    res = gate_of(tmp_path, *all_trees(**{tree_kw: (9, 10)}), cfg=line_cfg())
+    assert [(f.module, f.check) for f in res.failures] == [(f"{tree_kw}_m", "line")]
+    assert "L109" in res.failures[0].detail  # the uncovered point is named
+
+
+def test_line_gate_boundary_exactly_at_the_floor_passes(tmp_path: Path) -> None:
+    res = gate_of(tmp_path, *all_trees(cpu=(95, 100)), cfg=line_cfg())
+    assert res.passed
+    res = gate_of(tmp_path, *all_trees(cpu=(94, 100)), cfg=line_cfg())
+    assert not res.passed
+
+
+def test_default_config_does_not_gate_the_line_only_trees() -> None:
+    assert cr.GateConfig().line_trees == ()
+
+
+def test_line_gate_does_not_apply_the_control_toggle_floor_to_those_trees(tmp_path: Path) -> None:
+    recs = [
+        *all_trees()[
+            : len(gate_module("periph_ok", line_hit=10, line_total=10, ctl_hit=2, ctl_total=2))
+        ],
+        *gate_module("cpu_m", tree="rtl/cpu", line_hit=10, line_total=10, ctl_hit=0, ctl_total=4),
+        *gate_module("mem_m", tree="rtl/mem", line_hit=10, line_total=10),
+        *gate_module("gpu_m", tree="rtl/gpu", line_hit=10, line_total=10),
+    ]
+    res = gate_of(tmp_path, *recs, cfg=line_cfg())
+    assert res.passed, [f.detail for f in res.failures]
+
+
+def test_line_gate_honours_waivers_on_the_line_only_trees(tmp_path: Path) -> None:
+    waiver = cr.Waiver("cpu_m", "line", r"^L109\b", "b", "dead default arm", 1)
+    res = gate_of(tmp_path, *all_trees(cpu=(9, 10)), waivers=[waiver], cfg=line_cfg())
+    assert res.passed
+
+
+def test_line_gated_tree_that_was_not_measured_is_an_error_not_a_pass(tmp_path: Path) -> None:
+    only_soc = gate_module("periph_ok", line_hit=10, line_total=10, ctl_hit=2, ctl_total=2)
+    with pytest.raises(cr.CoverageError, match="rtl/cpu"):
+        gate_of(tmp_path, *only_soc, cfg=line_cfg())
+    partial = [*only_soc, *gate_module("cpu_m", tree="rtl/cpu", line_hit=10, line_total=10)]
+    with pytest.raises(cr.CoverageError, match="rtl/mem.*rtl/gpu|rtl/gpu.*rtl/mem"):
+        gate_of(tmp_path, *partial, cfg=line_cfg())
+
+
+def test_line_gate_fails_a_module_whose_inputs_disagree_on_its_point_set(tmp_path: Path) -> None:
+    merged = mismatched_inputs(tmp_path)
+    report = cr.build_report(merged, Path(ROOT), [])
+    cfg = cr.GateConfig(toggle_floor=0.0, line_trees=("rtl/cpu",))
+    res = cr.evaluate_gate(report, cfg)
+    kinds = {(f.module, f.check) for f in res.failures}
+    assert ("dec", "inconsistent") in kinds
+    assert "same commit" in next(f.detail for f in res.failures if f.check == "inconsistent")
+
+
+def test_inconsistent_inputs_on_an_ungated_tree_do_not_fail_the_gate(tmp_path: Path) -> None:
+    report = cr.build_report(mismatched_inputs(tmp_path), Path(ROOT), [])
+    res = cr.evaluate_gate(report, cr.GateConfig(toggle_floor=0.0, line_trees=()))
+    assert not [f for f in res.failures if f.check == "inconsistent"]
+
+
+def test_gate_markdown_and_json_cover_the_line_gated_rows(tmp_path: Path) -> None:
+    recs = all_trees(gpu=(5, 10))
+    report = cr.build_report(cr.parse_dat(write_dat(tmp_path, *recs)), Path(ROOT), [])
+    gate = cr.evaluate_gate(report, line_cfg())
+    md = cr.render_markdown(report, gate)
+    assert "gpu_m" in md.split("## Gate", 1)[1].split("## Uncovered", 1)[0]
+    assert "line-only" in md
+    out = cr.report_to_dict(report, gate)["gate"]
+    assert out["line_trees"] == list(LINE_TREES)
+    assert out["passed"] is False
+
+
+def test_cli_gate_defaults_to_gating_cpu_mem_gpu_and_errors_without_them(tmp_path: Path) -> None:
+    dat = write_dat(tmp_path, *gate_module("a", line_hit=10, line_total=10, ctl_hit=2, ctl_total=2))
+    proc = run_cli("--dat", str(dat), "--root", ROOT, "--gate")
+    assert proc.returncode == 2, proc.stdout
+    assert "rtl/cpu" in proc.stderr and "not measured" in proc.stderr
+
+
+def test_cli_gate_on_combined_data_passes_and_fails_on_a_cpu_regression(tmp_path: Path) -> None:
+    good = write_dat(tmp_path, *all_trees())
+    assert run_cli("--dat", str(good), "--root", ROOT, "--gate").returncode == 0
+    bad = write_dat(tmp_path, *all_trees(cpu=(1, 10)), name="bad.dat")
+    proc = run_cli("--dat", str(bad), "--root", ROOT, "--gate")
+    assert proc.returncode == 1
+    assert "cpu_m" in proc.stderr
+
+
+def test_cli_line_gate_trees_can_be_narrowed_or_disabled(tmp_path: Path) -> None:
+    dat = write_dat(tmp_path, *all_trees(gpu=(0, 10)))
+    args = ("--dat", str(dat), "--root", ROOT, "--gate")
+    assert run_cli(*args).returncode == 1
+    assert run_cli(*args, "--line-gate-trees", "rtl/cpu,rtl/mem").returncode == 0
+    assert run_cli(*args, "--line-gate-trees", "").returncode == 0
+
+
+def test_cli_line_gate_trees_rejects_unknown_trees(tmp_path: Path) -> None:
+    dat = write_dat(tmp_path, *all_trees())
+    proc = run_cli("--dat", str(dat), "--root", ROOT, "--gate", "--line-gate-trees", "rtl/soc")
+    assert proc.returncode == 2 and "rtl/soc" in proc.stderr
+
+
+def test_cli_line_gate_trees_requires_the_gate(tmp_path: Path) -> None:
+    dat = write_dat(tmp_path, *all_trees())
+    proc = run_cli("--dat", str(dat), "--root", ROOT, "--line-gate-trees", "rtl/cpu")
+    assert proc.returncode == 2 and "--gate" in proc.stderr

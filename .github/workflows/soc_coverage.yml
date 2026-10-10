@@ -13,8 +13,9 @@ name: SoC Coverage
 # level (`coverage_report.py --dat soc --dat cpu_gpu`).  One job, not a download of the
 # random_tests.yml rtl-coverage artifact: that job builds Verilator 5.036 from source in another
 # workflow, so its point keys are not guaranteed to match and its run is not ordered against this
-# one.  The combined step is informational and `continue-on-error`: the per-flow soc report, the
-# `soc-coverage` artifact and this job's gate are unchanged.
+# one.  Since bead a5ze the CPU/cache/GPU half is REQUIRED (no `continue-on-error`): the gate
+# evaluates rtl/cpu|mem|gpu on the combined data, so a suite that is red, a collapsed pass count
+# or a missing `cpu_gpu_merged.dat` fails the job instead of silently dropping three trees.
 #
 # NOT a per-PR gate.  An instrumented -O0 build is far slower than cocotb.yml's soc job, so this
 # runs nightly and on demand.  The pull_request trigger is limited to the files that make up
@@ -25,11 +26,13 @@ name: SoC Coverage
 # suite, a collapsed pass count), if no coverage data was produced, or if the "Coverage gate"
 # step below fails: every triaged module (rtl/soc, rtl/periph, rtl/npu) must reach the 95 % line
 # floor (after category-b waivers) and the control-signal toggle floor (1-bit scalar signals; a
-# per-module ratchet in tools/verif/coverage_toggle_ratchet.txt holds the known gaps).  The
-# informational trees (rtl/cpu, rtl/mem, rtl/gpu) and the combined report never gate (bead a5ze).
-# The gate step runs AFTER the combined-report steps and the summary / upload steps are
-# `if: always()`, so a red gate still publishes the report and the data.  Definition of a
-# control signal, floors, how to add a waiver or raise a ratchet: SOC_COVERAGE_REPORT.md.
+# per-module ratchet in tools/verif/coverage_toggle_ratchet.txt holds the known gaps).  Bead a5ze:
+# every module of rtl/cpu, rtl/mem and rtl/gpu must also reach the 95 % LINE floor, evaluated on
+# the COMBINED data (SoC + CPU/cache/GPU, produced at the same commit by this job); the
+# control-signal toggle gate stays off those three trees.  The gate step runs AFTER the
+# CPU/GPU steps and the summary / upload steps are `if: always()`, so a red gate or a red
+# CPU/GPU suite still publishes the report and the data.  Definition of a control signal,
+# floors, how to add a waiver or raise a ratchet: SOC_COVERAGE_REPORT.md.
 #
 # The Verilator pin is the same contract as cocotb.yml: nix-installed (flake-pinned) Verilator
 # compiles the sim, cocotb runs on the setup-python interpreter.  `nix profile install
@@ -48,6 +51,7 @@ on:
       - 'tools/verif/coverage_report.py'
       - 'tools/verif/coverage_waivers.txt'
       - 'tools/verif/coverage_toggle_ratchet.txt'
+      - 'tb/tests/test_coverage_report.py'
 
 concurrency:
   group: soc-coverage-${{ github.ref }}
@@ -96,6 +100,14 @@ jobs:
       # COMPUTED, not measured: the i2c suite itself measured 52 -> 55 locally (55/55 pass); the full soc_all_ci was
       # not re-run. Tighten to (measured - 3) from this PR's CI.
       PASS_FLOOR: '602'
+      # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`), CI log-grep formula (`passed$`; the
+      # expect_fail tests print "passed: failed as expected" and are NOT counted).
+      # 2026-10-10 (bead a5ze slice 2): 229 = 232 - 3.  232 is the count of a full local
+      # coverage_cpu_gpu run on HEAD + this branch (207 at the slice-1 base, +15 slice 1, +10 slice 2:
+      # 2 icache, 5 gpu control-path kernels, 3 other); that run had 1 red line, the then-misdeclared
+      # expect_fail kernel test, fixed and re-run on its own (6/6 pass), so 232 is measured but not from a
+      # single all-green invocation.  Tighten to (measured - 3) from this PR's CI.
+      CPU_PASS_FLOOR: '229'
 
     steps:
       - name: Checkout repository
@@ -185,11 +197,9 @@ jobs:
           test -s "${SOC_COV_ROOT}/coverage/coverage_report.md" \
             || { echo "FAIL: coverage_report.md is missing or empty."; exit 1; }
 
-      # Bead 1eyv, informational: CPU directed + Phase 3 cache + Phase 4 GPU suites, instrumented.
-      # continue-on-error: a red or timed-out suite here must not fail the SoC coverage job.
-      - name: Run CPU / cache / GPU coverage (informational)
-        id: cpu_cov
-        continue-on-error: true
+      # Bead 1eyv / a5ze: CPU directed + Phase 3 cache + Phase 4 GPU suites, instrumented.  REQUIRED:
+      # the gate below reads rtl/cpu|mem|gpu from this data, so no continue-on-error.
+      - name: Run CPU / cache / GPU coverage
         run: |
           set -o pipefail
           # The SoC build dirs (~6 GB) are done with; merged.dat and the report are kept.
@@ -198,15 +208,36 @@ jobs:
           make -C sim coverage_cpu_gpu \
             SIM_BUILD_ROOT="${CPU_COV_ROOT}" \
             SIM_PYTHON3="$(command -v python3)" 2>&1 | tee cpu_gpu_coverage.log
-          test -s "${CPU_COV_ROOT}/coverage/cpu_gpu_merged.dat"
+
+      # Same log-grep floor as the SoC half (bead p6t8, dwp): a make target can exit 0 over a
+      # suite that never ran, and an instrumented run that lost suites would hand the gate a
+      # smaller regression's coverage as if it were the whole one.
+      - name: Check the CPU / cache / GPU regression is the whole regression
+        run: |
+          if [ ! -s cpu_gpu_coverage.log ]; then
+            echo "FAIL: no CPU/GPU log produced - the regression did not run."
+            exit 1
+          fi
+          passed=$(grep -cE 'cocotb\.regression .* passed$' cpu_gpu_coverage.log || true)
+          failed=$(grep -cE 'cocotb\.regression .* (failed|FAILED)$' cpu_gpu_coverage.log || true)
+          echo "cocotb (CPU/cache/GPU, instrumented): ${passed} passed, ${failed} failed (floor ${CPU_PASS_FLOOR})"
+          if [ "${failed}" -ne 0 ]; then
+            echo "FAIL: ${failed} CPU/GPU test(s) reported failed."
+            grep -E 'cocotb\.regression .* (failed|FAILED)$' cpu_gpu_coverage.log | head -40
+            exit 1
+          fi
+          if [ "${passed}" -lt "${CPU_PASS_FLOOR}" ]; then
+            echo "FAIL: only ${passed} CPU/GPU tests passed, expected >= ${CPU_PASS_FLOOR}."
+            exit 1
+          fi
+          test -s "${CPU_COV_ROOT}/coverage/cpu_gpu_merged.dat" \
+            || { echo "FAIL: cpu_gpu_merged.dat is missing or empty - no CPU/GPU coverage was produced."; exit 1; }
 
       # Merge at the report level.  --dat is repeatable; paths are normalised to repo-relative, so
       # the two inputs need not come from the same checkout path.  A module whose point sets
-      # disagree between inputs is listed in the report's consistency section.
+      # disagree between inputs is listed in the report's consistency section (and, for
+      # rtl/cpu|mem|gpu, fails the gate below).
       - name: Combined per-module report (all six RTL trees)
-        id: combined
-        if: steps.cpu_cov.outcome == 'success'
-        continue-on-error: true
         run: |
           python3 tools/verif/coverage_report.py \
             --dat "${SOC_COV_ROOT}/coverage/merged.dat" \
@@ -215,15 +246,18 @@ jobs:
             --out-md "${CPU_COV_ROOT}/coverage/combined_report.md" \
             --out-json "${CPU_COV_ROOT}/coverage/combined_report.json"
 
-      # Bead s1cg: the gate.  NOT continue-on-error.  Re-renders from the same merged.dat the
-      # Makefile report used, so the informational report and the gate can never disagree about
-      # the data; writes gate_report.{md,json} next to it (uploaded below).  Exit 1 = a triaged
-      # module is under a floor, exit 2 = the gate could not be evaluated; both fail the job.
-      - name: Coverage gate (triaged trees)
+      # Beads s1cg + a5ze: the gate.  NOT continue-on-error.  Evaluated on the COMBINED data (both
+      # .dat inputs, produced by this job at one commit with one Verilator): the triaged trees get
+      # the line + control-toggle floors, rtl/cpu|mem|gpu the line floor (the tool's default
+      # --line-gate-trees).  Writes gate_report.{md,json} next to the SoC report (uploaded below).
+      # Exit 1 = a module is under a floor or its inputs disagree, exit 2 = the gate could not be
+      # evaluated (e.g. a line-gated tree was not measured); both fail the job.
+      - name: Coverage gate (triaged trees + line floor on cpu/mem/gpu)
         run: |
           set +e
           python3 tools/verif/coverage_report.py \
             --dat "${SOC_COV_ROOT}/coverage/merged.dat" \
+            --dat "${CPU_COV_ROOT}/coverage/cpu_gpu_merged.dat" \
             --waivers tools/verif/coverage_waivers.txt \
             --gate --toggle-ratchet tools/verif/coverage_toggle_ratchet.txt \
             --out-md "${SOC_COV_ROOT}/coverage/gate_report.md" \
@@ -252,7 +286,7 @@ jobs:
             printf '\n---\n\n## Combined (SoC + CPU/cache/GPU suites)\n\n' >> "${GITHUB_STEP_SUMMARY}"
             cat "${combined}" >> "${GITHUB_STEP_SUMMARY}"
           else
-            echo "No combined report was produced (CPU/GPU step failed or was skipped)." >> "${GITHUB_STEP_SUMMARY}"
+            echo "No combined report was produced (the CPU/GPU half failed or was skipped: the gate is red)." >> "${GITHUB_STEP_SUMMARY}"
           fi
 
       - name: Upload coverage data and report
