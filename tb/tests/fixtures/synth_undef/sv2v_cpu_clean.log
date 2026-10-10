@@ -1,0 +1,30 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2024  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.46 (git sha1 e97731b9dda91fa5fa53ed87df7c34163ba59a41, clang++ 17.0.6 -fPIC -O3)
+Loaded SDC plugin
+
+1. Executing Liberty frontend: /home/neuromorphic/.ciel/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+Imported 428 cell types from liberty file.
+
+
+3. Executing Verilog-2005 frontend: rv32i_cpu_top_sv2v.v
+Warning: Replacing memory \hit_bank_q with list of registers. See /nobackup/claude_sim_build/dud4/synth/sv2v/rv32i_cpu_top_sv2v.v:2905
+Warning: Replacing memory \data_din0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/sv2v/rv32i_cpu_top_sv2v.v:3030
+Warning: Replacing memory \data_addr0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/sv2v/rv32i_cpu_top_sv2v.v:3029
+Warning: Replacing memory \data_web0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/sv2v/rv32i_cpu_top_sv2v.v:3028
+Warning: Replacing memory \data_csb0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/sv2v/rv32i_cpu_top_sv2v.v:3027
+Warning: Replacing memory \data_dout_r with list of registers. See /nobackup/claude_sim_build/dud4/synth/sv2v/rv32i_cpu_top_sv2v.v:2868
+Warning: Replacing memory \refill_addr_bank_q with list of registers. See /nobackup/claude_sim_build/dud4/synth/sv2v/rv32i_cpu_top_sv2v.v:2619
+Warning: Replacing memory \data_din0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/sv2v/rv32i_cpu_top_sv2v.v:2587
+Warning: Replacing memory \data_addr0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/sv2v/rv32i_cpu_top_sv2v.v:2586
+Warning: Replacing memory \data_web0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/sv2v/rv32i_cpu_top_sv2v.v:2585
+Warning: Replacing memory \data_csb0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/sv2v/rv32i_cpu_top_sv2v.v:2584
+Warning: Replacing memory \data_dout_r with list of registers. See /nobackup/claude_sim_build/dud4/synth/sv2v/rv32i_cpu_top_sv2v.v:2481
+
+19. Executing CHECK pass (checking for obvious problems).
+Found and reported 0 problems.
+226. Executing JSON backend.

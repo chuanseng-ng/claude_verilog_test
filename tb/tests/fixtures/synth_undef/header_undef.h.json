@@ -1,0 +1,61 @@
+{
+ "creator": "Yosys 0.46 (git sha1 e97731b9dda91fa5fa53ed87df7c34163ba59a41, clang++ 17.0.6 -fPIC -O3)",
+ "modules": {
+  "rv32i_hazard_unit": {
+   "attributes": {},
+   "ports": {
+    "if_id_rs1_addr": {
+     "direction": "input",
+     "bits": [
+      53,
+      54,
+      55,
+      56,
+      57
+     ]
+    },
+    "if_id_rs2_addr": {
+     "direction": "input",
+     "bits": [
+      58,
+      59,
+      60,
+      61,
+      62
+     ]
+    }
+   },
+   "cells": {},
+   "netnames": {}
+  },
+  "$paramod$c15a9b0344f66ca5b283bcc083319cc2bdcf47c0\\rv32i_core": {
+   "attributes": {},
+   "ports": {},
+   "netnames": {},
+   "cells": {
+    "u_hazard": {
+     "type": "rv32i_hazard_unit",
+     "parameters": {},
+     "attributes": {},
+     "port_directions": {},
+     "connections": {
+      "if_id_rs1_addr": [
+       "x",
+       "x",
+       "x",
+       "x",
+       "x"
+      ],
+      "if_id_rs2_addr": [
+       "x",
+       "x",
+       "x",
+       "x",
+       "x"
+      ]
+     }
+    }
+   }
+  }
+ }
+}

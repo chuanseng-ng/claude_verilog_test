@@ -1,0 +1,14 @@
+ Yosys 0.46 (git sha1 e97731b9dda91fa5fa53ed87df7c34163ba59a41, clang++ 17.0.6 -fPIC -O3)
+-- Executing script file `probe_out46/p16_latch_ctrl.synlig.ys' --
+1. Executing Verilog with UHDM frontend.
+2. Executing HIERARCHY pass (managing design hierarchy).
+3. Executing PROC pass (convert processes to netlists).
+3.1. Executing PROC_CLEAN pass (remove empty switches from decision trees).
+3.2. Executing PROC_RMDEAD pass (remove dead branches from decision trees).
+3.3. Executing PROC_PRUNE pass (remove redundant assignments in processes).
+3.4. Executing PROC_INIT pass (extract init attributes).
+3.5. Executing PROC_ARST pass (detect async resets in processes).
+3.6. Executing PROC_ROM pass (convert switches to ROMs).
+3.7. Executing PROC_MUX pass (convert decision trees to multiplexers).
+3.8. Executing PROC_DLATCH pass (convert process syncs to latches).
+ERROR: Latch inferred for signal `\top.\y' from always_comb process `\top.$proc$probes/p16_latch_ctrl.sv:2$1'.
