@@ -26,6 +26,7 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 | [Section 9 (below)](#9-axi-lite-ring-phantom-decerr-r-beat-bead-3xtv) | 2026-10-07 | AXI-Lite Protocol | MEDIUM (P2) | ✅ Fixed |
 | [Section 10 (below)](#10-uart-rx-false-start-window-bead-rqvo) | 2026-10-09 | UART RX | LOW (P3) | ✅ Fixed |
 | [Section 11 (below)](#11-i2c-startstop-condition-times-bead-gecv) | 2026-10-10 | I2C bit engine | LOW (P3) | ✅ Fixed |
+| [Section 12 (below)](#12-hazard-unit-rs-part-select-synlig-frontend-hazard-bead-dud4) | 2026-10-10 | Frontend hazard (Synlig) | HIGH (P1) | ✅ Fixed (RTL workaround) |
 
 ---
 
@@ -278,6 +279,25 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 - **Not changed**: data-bit timing (period exactly 4N, tLOW/tHIGH) and `K = floor(N/8)` (bead cd15 stays deferred).
 - **Cost**: `tick_q` 17 -> 18 bits (+1 flop; `S_STP_FREE` reload is `0x2FFFF` at CLKDIV=0xFFFF), one 18-bit constant-3 adder in the reload mux, no new states.
 - **Tests**: `test_i2c_stop_to_start_bus_free_time_meets_spec` (was `expect_fail=True`, limits unchanged), new `test_i2c_start_stop_condition_times_meet_spec` (tSU;STO, tHD;STA on START and repeated START, tSU;STA, strict spec limits, both divisors), `test_i2c_busy_covers_bus_free_time`, `test_i2c_condition_tick_reloads_at_clkdiv_ffff`. All red on the old RTL, green after.
+
+---
+
+## 12. Hazard-Unit rs Part-Select, Synlig Frontend Hazard (bead dud4)
+
+**File**: `rtl/cpu/core/rv32i_core.sv` (`u_hazard` port connections `.if_id_rs1_addr` / `.if_id_rs2_addr`)
+**Date**: 2026-10-10
+**Severity**: P1 (committed Sky130 CPU macro netlist executed code incorrectly; ASAP7 CPU macro has the same two lines, inferred, untested)
+**Found by**: bead dud4 (PR #256, `docs/SKY130_CPU_SYNLIG_DUD4.md`) with a synthesis-only follow-up
+
+### Issue Fixed
+- **Problem**: `rv32i_core.sv` connected the hazard unit as `.if_id_rs1_addr(if_id_reg.instruction[19:15])` and `.if_id_rs2_addr(if_id_reg.instruction[24:20])`, a part-select of a packed-struct field written directly in a port connection. The Synlig/Surelog (UHDM) frontend mis-resolves it: `Range select [639:608] out of bounds on signal \if_id_reg: Setting all 32 result bits to undef` (and `[799:768]`), and the RTLIL carries `connect \if_id_rs1_addr 5'x`. Every `rd_addr == if_id_rs?_addr` compare in `rv32i_hazard_unit` (load-use detect and the pre-decoded forwarding selects) became a don't-care, and synthesis merged/deleted the `fwd_b_*` registered selects (Synlig netlist 4,829 flops and no `fwd_b_*`; sv2v netlist 4,834 with 5).
+- **The RTL was always correct per the LRM.** sv2v, Verilator and every cocotb suite elaborate the construct correctly. This is a frontend-hazard workaround, not a functional bug fix, and it changes no behaviour.
+- **Why nothing caught it**: Verilator lint, Yosys synth checks, LVS and per-module SAT equivalence all pass with the defect present; the fault is in a port connection BETWEEN modules and only the Synlig warning (not gated) reports it. Only gate-vs-RTL simulation exposes it.
+- **Fix**: the two selects now go through named signals: `if_id_instr_w = if_id_reg.instruction;` `if_id_rs1_addr_w = if_id_instr_w[19:15];` `if_id_rs2_addr_w = if_id_instr_w[24:20];`, and the port connections use `if_id_rs1_addr_w` / `if_id_rs2_addr_w`. A comment at the declaration names the hazard and bead dud4 so nobody folds them back.
+- **Rule added**: `docs/development/CODING_GUIDELINES.md` section 1.3, "No part/bit-select of a struct field in a port connection".
+- **Sweep**: whole `rtl/` tree searched for any `<ident>.<field>[...]` select; these were the only two in port connections of any module (full list in the PR description). The remaining struct-field selects are inside module bodies and elaborate correctly under Synlig (no further "out of bounds" warnings in the Sky130 CPU synthesis log).
+- **Not changed here**: `pnr/sky130/cpu/config.json` (sv2v switch), ASAP7 configs, macro views. The committed CPU macro views remain the defective netlists until the macro is re-hardened (separate PD step under bead dud4).
+- **Verification**: see the PR description (Synlig synthesis-only flop count and `fwd_b_*` presence, lint, cocotb regression, sv2v-converted yosys equivalence with negative control).
 
 ---
 
