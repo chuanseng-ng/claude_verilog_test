@@ -362,7 +362,7 @@ assert property (@(posedge clk) disable iff (!rst_n)
 | Code coverage | >95% (RTL lines) |
 | State coverage | 100% (all states visited) |
 
-> SoC / peripheral / NPU line + toggle coverage (GH #216): measured, triaged and recorded as an informational gate in [`SOC_COVERAGE_REPORT.md`](SOC_COVERAGE_REPORT.md); reproduce with `make -C tb/cocotb/soc soc_coverage` (nightly CI: `.github/workflows/soc_coverage.yml`).
+> SoC / peripheral / NPU line + toggle coverage (GH #216): measured, triaged and enforced as a nightly gate (95 % per-module line floor + control-signal toggle floor, triaged trees only; bead `s1cg`) in [`SOC_COVERAGE_REPORT.md`](SOC_COVERAGE_REPORT.md); reproduce with `make -C tb/cocotb/soc soc_coverage` (nightly CI: `.github/workflows/soc_coverage.yml`).
 
 ### Debugging Strategy
 

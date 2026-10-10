@@ -977,7 +977,7 @@ def test_gate_floors_are_configurable(tmp_path: Path) -> None:
 # --- ratchet: per-module toggle floor for known control-toggle gaps
 
 
-def ratchet(floor: float, module: str = "a") -> dict[str, Any]:
+def ratchet_for(floor: float, module: str = "a") -> dict[str, Any]:
     return {module: cr.Ratchet(module, floor, "s1cg-gap", "known SoC-level test gap", 1)}
 
 
@@ -986,13 +986,13 @@ def test_ratchet_lowers_the_toggle_floor_for_the_named_module_only(tmp_path: Pat
         *gate_module("a", line_hit=10, line_total=10, ctl_hit=18, ctl_total=20),
         *gate_module("b", line_hit=10, line_total=10, ctl_hit=18, ctl_total=20),
     ]
-    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet(90.0)))
+    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet_for(90.0)))
     assert [(f.module, f.check) for f in res.failures] == [("b", "toggle")]
 
 
 def test_ratchet_fails_when_a_module_regresses_below_its_recorded_floor(tmp_path: Path) -> None:
     recs = gate_module("a", line_hit=10, line_total=10, ctl_hit=17, ctl_total=20)  # 85 %
-    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet(90.0)))
+    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet_for(90.0)))
     (fail,) = res.failures
     assert (fail.module, fail.check) == ("a", "toggle")
     assert "ratchet" in fail.detail and "90" in fail.detail
@@ -1001,25 +1001,25 @@ def test_ratchet_fails_when_a_module_regresses_below_its_recorded_floor(tmp_path
 def test_ratchet_above_the_default_is_a_stricter_floor(tmp_path: Path) -> None:
     recs = gate_module("a", line_hit=10, line_total=10, ctl_hit=19, ctl_total=20)  # 95 %
     assert gate_of(tmp_path, *recs).passed
-    assert not gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet(97.0))).passed
+    assert not gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet_for(97.0))).passed
 
 
 def test_ratchet_with_headroom_warns_that_it_can_be_raised(tmp_path: Path) -> None:
     recs = gate_module("a", line_hit=10, line_total=10, ctl_hit=19, ctl_total=20)  # 95 %
-    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet(80.0)))
+    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet_for(80.0)))
     assert res.passed
     assert any("a" in w and "raise" in w for w in res.warnings)
 
 
 def test_ratchet_for_an_unknown_module_is_reported_stale(tmp_path: Path) -> None:
     recs = gate_module("a", line_hit=10, line_total=10, ctl_hit=2, ctl_total=2)
-    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet(50.0, module="ghost")))
+    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet_for(50.0, module="ghost")))
     assert any("ghost" in w and "stale" in w for w in res.warnings)
 
 
 def test_ratchet_never_relaxes_the_line_gate(tmp_path: Path) -> None:
     recs = gate_module("a", line_hit=1, line_total=10, ctl_hit=2, ctl_total=2)
-    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet(0.0)))
+    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet_for(0.0)))
     assert [(f.module, f.check) for f in res.failures] == [("a", "line")]
 
 

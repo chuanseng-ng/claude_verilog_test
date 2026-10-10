@@ -569,18 +569,74 @@ IRQ lines, debug port, PLL registers, ROM write channel). They are listed under 
 
 ## Gate decision
 
-**Informational for now** (user decision, 2026-10-05): `soc_coverage` and its CI job never fail on a coverage
-percentage; they fail only if the regression itself fails, the instrumented pass count drops below the
-`PASS_FLOOR` (see `.github/workflows/cocotb.yml`, 574 as of 2026-10-09, bead `oez2`), or no coverage data is produced. Revisit once the (a) beads above land. Candidate floors
-for that revisit:
+**Enforced** (user decision, 2026-10-10, bead `s1cg`; it replaces the 2026-10-05 "informational for now"). The
+nightly `soc_coverage` job (`.github/workflows/soc_coverage.yml`) runs `coverage_report.py --gate` as a real,
+non-`continue-on-error` step after the combined-report steps; the summary and upload steps are `if: always()`, so a
+red gate still publishes the report, `merged.dat` and `gate_report.{md,json}`. The PR regression (`cocotb.yml`) and
+its `PASS_FLOOR` are untouched, and the job still fails on a red suite, a collapsed instrumented pass count
+(`PASS_FLOOR`) or missing data as before.
 
-- **Line**: 95 % per module in the triaged trees (the `VERIFICATION_PLAN.md:362` criterion), after waivers.
-  Today 6 modules fail it, all explained by the (a) beads (`axi4_to_axilite`,
-  `axilite_to_axi4`, `boot_rom`, `soc_top`, `uart_controller`, `dma_engine`).
-- **Toggle**: a floor on control signals only (valids, readys, enables, IRQs, FSM state), never on datapath
-  arrays. Raw toggle % is a poor gate (62.7 % overall) because wide data/address buses and per-bit directions
-  dominate; the useful signal is the never-toggling list, which should be empty or waived.
-- **No toggle gating of datapath arrays** (DMA `linebuf`, SRAM models, register-bank storage).
+**Scope.** Triaged trees only (`rtl/soc`, `rtl/periph`, `rtl/npu`; 42 modules). `rtl/cpu`, `rtl/mem` and `rtl/gpu`
+stay informational and can never fail the gate (bead `a5ze`). The combined CPU/cache/GPU report is not gated either;
+the gate reads the SoC `merged.dat` only.
+
+| Check | Floor | Measured on current RTL (42 modules) |
+| :---- | ----: | :----------------------------------- |
+| Line (line + branch points, after waivers), per module | **95 %** | worst module `i2c_controller` 97.65 % (83/85); 1667/1669 overall |
+| Control-signal toggle, per module, after waivers | **100 %**, with a 2-entry ratchet | 40 of 42 modules at exactly 100.0 %; `soc_bus` 89.17 % (107/120), `soc_top` 92.48 % (295/319) |
+
+**What a control signal is.** A 1-bit **scalar** signal: Verilator names its toggle object `sig:0->1` with no `[bit]`
+index, whereas a vector bit, an array element or a `logic [0:0]` net is `sig[3]:0->1`. The rule is mechanical
+(`is_control_toggle()` in `coverage_report.py`: no `[` before the `:`), so there is no signal list to maintain and a new
+`valid`/`ready`/`en`/`irq`/`start`/`done`/`busy` or FSM strobe is gated the day it is written. Datapath is never gated:
+buses, per-bit address/data lanes, FSM state vectors and arrays. That also removes the register-bank residue of bead
+`xkw5` without a waiver (`hw_wdata_i`, `hw_wen_i`, `regs_o`, `paddr[1:0]`, `prdata` bits are all vectors). The
+remaining structural scalars are category-`b` waivers with justifications: `pready:1->0` (hard-wired `1'b1` in
+`apb4_register_bank.sv:88`, 15 modules plus the two `soc_top` fan-outs), `pll_enable:1->0` (non-clearable by design,
+GH #89), `scan_rst_ni:1->0` (DFT reset tied inactive). One consequence worth knowing: an FSM whose state register is a
+vector is gated through its line/branch points, not through toggle.
+
+**Why 100 % and not a lower floor.** After those waivers 40 of 42 modules measure exactly 100.0 %, and the numbers are
+bit-identical between the local run and the independent CI run `38015078972` (same line, control and total-toggle
+counts for all 42 modules), so there is no evidence of run-to-run noise to leave margin for. A control signal that stops
+toggling in one direction is the useful regression signal; a 95 % floor would let a 73-point module such as
+`crypto_accel` silently lose three of them. The cost is zero margin: a new control signal the tests do not toggle turns
+the nightly red until a test lands, a waiver is justified or a ratchet entry is added (below). Two data points are the
+evidence; if a flake ever appears, `--toggle-floor` is the knob and the answer is to find the nondeterministic test, not
+to loosen the floor.
+
+**The ratchet.** `tools/verif/coverage_toggle_ratchet.txt` (`module | floor | bead | justification`) overrides the
+toggle floor for a module whose gap is a real, bead-tracked test gap. Two entries, each at its measured value rounded
+down to 0.1 (zero points of slack, so they cannot regress):
+
+| Module | Floor | Measured | Gap | Bead |
+| :----- | ----: | -------: | :-- | :--- |
+| `soc_bus` | 89.1 % | 89.17 % | boot-ROM write channel never driven at SoC level (13 points) | `0ntg` |
+| `soc_top` | 92.4 % | 92.48 % | the same 13 `bus_rom_*` points plus 11 SoC-level gaps: I2C pads, `uart_rx_i` fall, `wdt_cpu_rst_req_q` fall, cpu/gif `rready` fall | `0ntg`, `4pl8` |
+
+The ratchet never relaxes the line floor, a stale entry (module no longer in the report) is a warning, and a module more
+than 2 points above its entry prints "raise the floor". There is no tooling that makes "only goes up" machine-enforced:
+the file is tracked, so lowering a floor or adding a module is a visible diff that needs a bead and PR review.
+
+**A module with nothing to gate does not pass vacuously.** No line points, no control signals and nothing waived is the
+failure `unmeasured`. A module with no line points but control signals is gated on those alone (pure wiring: `soc_bus`,
+`pll_*`, `async_axi_fifo`); one whose line points are all waived passes with a note (`soc_addr_map_pkg`,
+`soc_periph_map_pkg`). The gate cannot see an RTL file that produced no row at all (today `axi_pkg.sv`, `pll_rnm.sv` and
+`trng_ro_sky130.sv`: constants, a real-number model and a Sky130-only cell); a row that vanished would not be noticed.
+
+### How to
+
+- **Waive an unreachable point** (category `b` only; a test gap is a bead, never a waiver): add one line to
+  `tools/verif/coverage_waivers.txt` (`module | toggle | ^sig:1->0$ | b | why, with a file:line`). The raw percentage
+  stays in the report and a waiver that matches nothing is flagged stale.
+- **Close a gap bead**: land the test, re-run `soc_coverage`, then in the same PR raise the module's ratchet floor to
+  the new measured value, or delete the entry once the module reaches 100 %.
+- **Add a ratchet entry** (a deliberate relaxation): needs a bead and a justification in the file; use it only for a real,
+  tracked test gap.
+- **Re-evaluate without re-simulating**: `python3 tools/verif/coverage_report.py --dat <merged.dat> --waivers
+  tools/verif/coverage_waivers.txt --gate --toggle-ratchet tools/verif/coverage_toggle_ratchet.txt`. Exit 0 pass, 1 a
+  module is under a floor (the failing list is printed), 2 the gate could not be evaluated (bad or empty data, bad waiver
+  or ratchet file). Without `--gate` the script exits 0 for any coverage level, exactly as before.
 
 ## Reproducing
 

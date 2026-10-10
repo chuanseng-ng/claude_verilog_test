@@ -21,9 +21,15 @@ name: SoC Coverage
 # this report, so a change to the script, the waivers or this workflow is validated by a real
 # run before it merges; it does not fire for RTL or testbench edits.
 #
-# Gating: the job fails if the REGRESSION fails (a red suite, a collapsed pass count) or if no
-# coverage data was produced.  It never fails on a coverage PERCENTAGE: the recorded decision is
-# "informational for now", to be revisited once the test-gap beads filed by the triage land.
+# Gating (bead s1cg, user decision 2026-10-10): the job fails if the REGRESSION fails (a red
+# suite, a collapsed pass count), if no coverage data was produced, or if the "Coverage gate"
+# step below fails: every triaged module (rtl/soc, rtl/periph, rtl/npu) must reach the 95 % line
+# floor (after category-b waivers) and the control-signal toggle floor (1-bit scalar signals; a
+# per-module ratchet in tools/verif/coverage_toggle_ratchet.txt holds the known gaps).  The
+# informational trees (rtl/cpu, rtl/mem, rtl/gpu) and the combined report never gate (bead a5ze).
+# The gate step runs AFTER the combined-report steps and the summary / upload steps are
+# `if: always()`, so a red gate still publishes the report and the data.  Definition of a
+# control signal, floors, how to add a waiver or raise a ratchet: SOC_COVERAGE_REPORT.md.
 #
 # The Verilator pin is the same contract as cocotb.yml: nix-installed (flake-pinned) Verilator
 # compiles the sim, cocotb runs on the setup-python interpreter.  `nix profile install
@@ -41,6 +47,7 @@ on:
       - '.github/workflows/soc_coverage.yml'
       - 'tools/verif/coverage_report.py'
       - 'tools/verif/coverage_waivers.txt'
+      - 'tools/verif/coverage_toggle_ratchet.txt'
 
 concurrency:
   group: soc-coverage-${{ github.ref }}
@@ -198,6 +205,29 @@ jobs:
             --out-md "${CPU_COV_ROOT}/coverage/combined_report.md" \
             --out-json "${CPU_COV_ROOT}/coverage/combined_report.json"
 
+      # Bead s1cg: the gate.  NOT continue-on-error.  Re-renders from the same merged.dat the
+      # Makefile report used, so the informational report and the gate can never disagree about
+      # the data; writes gate_report.{md,json} next to it (uploaded below).  Exit 1 = a triaged
+      # module is under a floor, exit 2 = the gate could not be evaluated; both fail the job.
+      - name: Coverage gate (triaged trees)
+        run: |
+          set +e
+          python3 tools/verif/coverage_report.py \
+            --dat "${SOC_COV_ROOT}/coverage/merged.dat" \
+            --waivers tools/verif/coverage_waivers.txt \
+            --gate --toggle-ratchet tools/verif/coverage_toggle_ratchet.txt \
+            --out-md "${SOC_COV_ROOT}/coverage/gate_report.md" \
+            --out-json "${SOC_COV_ROOT}/coverage/gate_report.json"
+          rc=$?
+          set -e
+          if [ -s "${SOC_COV_ROOT}/coverage/gate_report.md" ]; then
+            {
+              printf '## Coverage gate\n\n'
+              awk '/^## Gate$/{f=1;next} /^## /{f=0} f' "${SOC_COV_ROOT}/coverage/gate_report.md"
+            } >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          exit "${rc}"
+
       - name: Publish coverage table to the job summary
         if: always()
         run: |
@@ -224,6 +254,8 @@ jobs:
             ${{ env.SOC_COV_ROOT }}/coverage/merged.dat
             ${{ env.SOC_COV_ROOT }}/coverage/coverage_report.md
             ${{ env.SOC_COV_ROOT }}/coverage/coverage_report.json
+            ${{ env.SOC_COV_ROOT }}/coverage/gate_report.md
+            ${{ env.SOC_COV_ROOT }}/coverage/gate_report.json
             soc_coverage.log
           if-no-files-found: warn
           retention-days: 30
