@@ -616,7 +616,12 @@ already tied 0), the Sky130 macro is bit-for-bit unaffected by this change, and 
 * `tools/dft/check_scan_clk_rst.py`: on the flattened `proc`-ed netlist, every async reset/set cone ends at a pin, a constant or a scan-mode mux (never a
   flop output), and every clock cone passes a scan-mode mux or ends at a gate latch whose enable contains `scan_mode`. On `soc_top_sv2v.v` (Sky130): **0
   violations, 1,640 sequential cells, 240 async pins, 28 scan-mode muxes**; negative controls (clock mux -> wire, reset mux -> wire, `cdc_reset_sync` output mux -> wire)
-  fail with 556, 103 and 117 violations. `make -C pnr dft-scan-check`.
+  fail with 556, 103 and 117 violations. `make -C pnr dft-scan-check`. Re-measured 2026-10-10 on the netlist regenerated from the final merged tree (yosys 0.62): unchanged
+  (1,640 / 240 / 28, 0 violations). Per-instance negative controls (one instance bypassed): `u_core_rm` 99 violations, `u_pll_rm` 4, `u_ref_cm` 556, **`u_gpu_domain_rm` 0 (not detected)**:
+  the GPU is a stub in both PDK builds, so no flop sits behind that mux and the netlist check cannot see it (see 14.9, mutant g).
+  The checker was hardened the same day: it crashed (`KeyError`) on the ASAP7 netlist and would have passed vacuously on any cell with no definition; it now fails on those and
+  takes `--models` (`tools/dft/asap7_cell_models.v`: `ICGx1_ASAP7_75t_R`, `sram_1rw_256x32_asap7`). ASAP7 netlist: 0 violations, 3,726 sequential cells, 240 async pins, 29 muxes
+  (`make -C pnr dft-scan-check-asap7`). `tb/tests/test_dft_scan_check.py` (6 tests, skipped without yosys) holds the negative controls the checker's docstring referred to.
 * `tools/dft/check_scan_exclusions.py` regex follows the renamed Q nets (`u_crypto.key_q`, `u_crypto.g_aes.u_aes.rk_q`) [A: net names of the next synthesis are not yet seen].
 
 ### 14.8 Stage 1a done / not done
@@ -628,3 +633,21 @@ already tied 0), the Sky130 macro is bit-for-bit unaffected by this change, and 
 | Crypto `key_q`/`rk_q` read masks, tested | Scan-entry scrub protocol for crypto residue (Stage 1b/TAP bead) |
 | `check_scan_clk_rst.py` netlist proof + negative controls; both sv2v netlists regenerate | Re-run `make soc_coverage` and prune waivers that the new suite makes stale (coverage bead) |
 
+### 14.9 Gap-closure results (2026-10-10, after the implementing agent ran out of turns)
+* **Merge of `origin/main`** (#255-#257): one conflict, `memory/rtl-design/experiences.jsonl` (both sides appended; both kept). No RTL conflict. `PASS_FLOOR` 622 in both `cocotb.yml` and
+  `soc_coverage.yml` (the latter was still 602): 625 measured pre-merge minus 3; the merge touched no `tb/cocotb/soc` file, so the count is carried over, not re-measured.
+* **sv2v netlists regenerated on the final tree, both PDKs** (`make -C pnr sky130-soc-sv2v asap7-soc-sv2v`; neither is tracked). Real yosys 0.62: Sky130 `hierarchy -check -top soc_top` passes
+  with no undefined module; ASAP7 leaves exactly `ICGx1_ASAP7_75t_R` and `sram_1rw_256x32_asap7` (library cell and hard macro, undefined before this change too).
+  `dft_clk_mux`, `dft_rst_mux`, `dft_ctrl_ports` are defined in both.
+* **SDC**: all four edited SDCs sourced in OpenSTA against a port-only `soc_top` netlist built from the generated netlists. `scan_mode_i`, `scan_en_i`, `scan_rst_ni`, `scan_clk_i` resolve to 1 port
+  each, `scan_in_i` and `scan_out_o` to 8; sky130 (with the hd tt liberty) and `phase5_soc.sdc` source to completion with no new message against the `origin/main` version; the two multiclock SDCs
+  abort at their own pre-existing section 10b guard (CPU macro pins are absent from a port-only netlist), after their DFT block, with identical messages on main and PR.
+* **Formal equivalence (test inputs tied inactive vs `origin/main`, yosys 0.62, capped at 4 GB, finished well under the cap)**: `rv32i_clock_gate`, `cdc_reset_sync` (earlier), `aes128_core`
+  (399/399 `$equiv` cells proven; the same miter with `scan_mode_i` tied 1 leaves 252 unproven, so it is not vacuous) and `pll_subsystem` (140/140, via sv2v because yosys rejects `parameter string`).
+  `crypto_accel` was not run separately: its only change is the `key_q` mask, covered by mutant a.
+* **Mutation checks** (each applied, suite run, restored; diff empty afterwards): a `key_q` mask removed -> `test_crypto` 2 FAIL; b `rk_q` mask removed -> `test_crypto` 2 FAIL; c `u_cpu_cg` `test_en`
+  tied 0 -> `soc_dft_scan.test_cpu_clock_gate_forced_open` FAIL; d `cdc_reset_sync` input-side only -> `cdc_reset_sync_scan` 2 FAIL, `soc_dft_scan` 1 FAIL; e `dft_clk_mux` ignores scan -> `dft_muxes` 1,
+  `soc_dft_scan` 3 FAIL; f1 `dft_rst_mux` ignores scan (all instances) -> `dft_muxes` 1, `soc_dft_scan` 5 FAIL; f2 one instance (`pll_subsystem.u_core_rm`) -> `soc_dft_scan` 2 FAIL.
+  **g `u_gpu_domain_rm` ignores scan: SURVIVED** (`soc_dft_scan` 8/8 pass). The existing reset test cannot tell, because with `pmu_gpu_rst_n` high the functional side already equals
+  `scan_rst_ni`. A test needs the PMU to hold the GPU domain in reset, which `soc_dft_scan` cannot arrange (no APB master; a hierarchical deposit on the assign-driven net is overwritten, tried and
+  rejected after the in-test guard caught it). Open; needs a follow-up bead. Risk is low (one instance) but real.
