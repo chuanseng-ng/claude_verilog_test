@@ -35,7 +35,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, RisingEdge
 from gpu_asm import (
     Kernel, instr_responder, data_responder,
-    vmov_tid_x, vaddi, vsll, vst, vret, vblt, vjmp, N_LANES,
+    vmov_tid_x, vaddi, vsll, vst, vsts, vlds, vret, vblt, vjmp, N_LANES,
 )
 from gpu_ref_model import GpuRefModel
 from kernel_divergence_basic import build_kernel as divergence_kernel, BASE_OUT as DIV_OUT
@@ -290,8 +290,11 @@ def loop_store_kernel(out: int = LOOP_OUT) -> dict:
     k.emit(vsll(3, 1, 2))
     k.emit(vaddi(9, 3, out - 7))
     k.emit(vaddi(7, 1, 0x40))
+    k.emit(vaddi(10, 3, -7))           # shared address = tid*4 (VSTS adds the data-register index 7)
     top = k.pc()
     k.emit(vst(7, 9, 0))
+    k.emit(vsts(7, 10, 0))             # shared-memory traffic too, so a reset can land mid-access
+    k.emit(vlds(11, 10, 7))
     k.emit(vjmp(top - k.pc()))
     return k.instructions()
 
@@ -348,6 +351,7 @@ class BusMonitor:
         self.errors = []
         self.cycle = 0
         self._stuck = {}
+        self.clears = 0
         self.task = None
 
     def start(self):
@@ -370,6 +374,7 @@ class BusMonitor:
                     self.hs[n] += 1
                 elif valid:
                     self._stuck[n] = pay
+            self._check_reset_sequencer()
             for n, (v, r) in self.RSP.items():
                 valid, ready = int(getattr(d, v).value), int(getattr(d, r).value)
                 if valid:
@@ -378,6 +383,22 @@ class BusMonitor:
                         self.hs[n] += 1
                     else:
                         self.errors.append(f"cycle {self.cycle}: orphan {n} beat (offered, not accepted)")
+
+    def _check_reset_sequencer(self):
+        """While a soft reset drains (halt_q): nothing new may start; at the soft_clr pulse:
+        nothing may be outstanding on either master or inside the shared memory."""
+        d = self.dut
+        if int(d.halt_q.value):
+            for what, sig in (("fetch AR", d.m_axil_if_arvalid), ("coalescer start", d.u_mu.coal_start),
+                              ("shared-memory request", d.sm_active)):
+                if int(sig.value):
+                    self.errors.append(f"cycle {self.cycle}: new {what} while a soft reset drains")
+        if int(d.soft_clr.value):
+            self.clears += 1
+            out = (self.hs["ifar"] - self.hs["ifr"], self.hs["ar"] - self.hs["r"],
+                   self.hs["aw"] - self.hs["b"], int(d.u_mu.busy_q.value), int(d.sm_stall.value))
+            if any(out):
+                self.errors.append(f"cycle {self.cycle}: soft_clr with work outstanding {out}")
 
     def check_clean(self, where: str):
         assert not self.errors, f"{where}: AXI protocol errors: {self.errors[:3]}"
@@ -588,3 +609,38 @@ async def test_hardware_reset_clears_error_and_config(dut):
     check_store(mem)
     for t in (instr_task, data_task):
         t.kill()
+
+
+@cocotb.test()
+async def test_start_queued_in_error_does_not_survive_reset(dut):
+    """A START written while the GPU is in ERROR is queued but not run (ERROR ignores it).
+    CTRL.reset must drop the queued descriptor: the GPU stays IDLE instead of launching on its
+    own.  START and RESET in the same write: reset wins, nothing runs."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    await gpu_reset(dut)
+    image = dict(error_then_spin_kernel(SPIN_BASE))
+    image.update(store_kernel())
+    mem: dict = {}
+    bus = BusMonitor(dut)
+    bus.start()
+    instr_task = cocotb.start_soon(instr_responder(dut, image))
+    data_task = cocotb.start_soon(data_responder(dut, mem))
+    await gpu_launch(dut, kernel_pc=SPIN_BASE, block_x=8)
+    await wait_status(dut, ST_ERROR, timeout=6000)
+    await axil_write(dut, GPU_KERNEL_PC, 0)
+    await axil_write(dut, GPU_CTRL, CTRL_LAUNCH)        # queued behind ERROR
+    await axil_write(dut, GPU_CTRL, CTRL_RESET)
+    await wait_status(dut, ST_IDLE, timeout=200)
+    await settle(dut, 100)
+    assert await axil_read(dut, GPU_STATUS) == ST_IDLE, "a START queued behind ERROR launched after reset"
+    assert not mem, f"a kernel stored after the reset: {mem}"
+
+    # START | RESET in one write, from IDLE: reset wins.
+    await axil_write(dut, GPU_CTRL, CTRL_LAUNCH | CTRL_RESET)
+    await settle(dut, 100)
+    assert await axil_read(dut, GPU_STATUS) == ST_IDLE and not mem
+    bus.check_clean("START|RESET")
+    assert bus.clears >= 2
+    for t in (instr_task, data_task):
+        t.kill()
+    bus.stop()
