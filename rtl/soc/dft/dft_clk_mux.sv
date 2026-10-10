@@ -22,11 +22,11 @@
 
 module dft_clk_mux (
     input  logic func_clk_i,
-    input  logic test_clk_i,
-    input  logic sel_i,        // 1 = scan/test mode: use test_clk_i
+    input  logic scan_clk_i,
+    input  logic sel_i,        // 1 = scan/test mode: use scan_clk_i
     output logic clk_o
 );
 
-    assign clk_o = sel_i ? test_clk_i : func_clk_i;
+    assign clk_o = sel_i ? scan_clk_i : func_clk_i;
 
 endmodule : dft_clk_mux

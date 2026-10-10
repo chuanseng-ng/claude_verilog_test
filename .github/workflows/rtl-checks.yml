@@ -1,8 +1,8 @@
 name: RTL Checks
 
 # Two independent RTL gates:
-#   1. Verible style-lint + format check (complements Verilator's semantic lint —
-#      Verible enforces style and formatting, which Verilator does not).
+#   1. Verible style lint (complements Verilator's semantic lint). Hard gate.
+#      There is deliberately NO format check: see the note in the verible job.
 #   2. Static CDC check (GH #95) — cdc_snitch + cdc_gate. Hard gate.
 on:
   push:
@@ -27,7 +27,7 @@ on:
 
 jobs:
   verible:
-    name: Verible RTL Lint + Format
+    name: Verible RTL Lint
     runs-on: ubuntu-latest
 
     env:
@@ -40,8 +40,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # need history to diff changed files for the format check
 
       - name: Install Verible
         run: |
@@ -68,41 +66,15 @@ jobs:
           make -C sim lint-verible
           echo "::endgroup::"
 
-      # FORMAT CHECK IS ADVISORY (deliberately non-blocking; bead hn9l). The
-      # existing tree is hand-aligned and CLAUDE.md forbids style-only mass edits,
-      # so this only covers RTL files changed by this push/PR. It must NOT be made
-      # a hard gate as things stand: measured 2026-10-10 on v0.0-4063, 81 of 83
-      # rtl/**/*.sv fail `--verify` under VERIBLE_FMT_FLAGS, and retuning (no
-      # alignment, 'preserve' alignment, column 200) only gets that to 72 of 83 --
-      # the house-style exemplars rtl/periph/timer.sv and gpio_controller.sv still
-      # fail every variant. A diff-only hard gate would therefore reject any PR
-      # touching RTL for style the tool cannot express. Revisit only if the team
-      # adopts verible's canonical format (then reformat deliberately, once).
-      - name: Determine changed RTL files
-        id: changed
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE="${{ github.event.before }}"
-          fi
-          # Fall back to main if the base sha is unavailable (e.g. first push).
-          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
-            BASE="origin/main"
-            git fetch --no-tags --depth=1 origin main || true
-          fi
-          FILES=$(git diff --name-only --diff-filter=ACMR "$BASE" HEAD -- 'rtl/**/*.sv' || true)
-          echo "Changed RTL files:"; echo "$FILES"
-          # Collapse to a single space-separated line for the make override.
-          echo "files=$(echo $FILES | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
-
-      - name: Verible format check (changed files)
-        if: steps.changed.outputs.files != ''
-        continue-on-error: true
-        run: |
-          echo "::group::verible-verilog-format --verify (changed files)"
-          make -C sim format-verible-check VERIBLE_CHECK_FILES="${{ steps.changed.outputs.files }}"
-          echo "::endgroup::"
+      # NO FORMAT CHECK (removed 2026-10-10, user decision after bead hn9l).
+      # verible-verilog-format cannot express the hand-aligned house style:
+      # measured on v0.0-4063, 81 of 83 rtl/**/*.sv fail `--verify`, no flag set
+      # gets below 72 of 83, and the house-style exemplars rtl/periph/timer.sv and
+      # gpio_controller.sv fail every variant. An advisory step that always reports
+      # differences is noise, and CLAUDE.md forbids style-only mass edits, so the
+      # step was dropped instead of gated. Formatting is enforced by review against
+      # docs/development/CODING_GUIDELINES.md. Re-add a format gate only together
+      # with a deliberate, verified, one-off whole-tree reformat.
 
   # ==========================================================================
   # GH #95 — static clock-domain-crossing gate.

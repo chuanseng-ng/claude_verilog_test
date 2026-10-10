@@ -20,7 +20,7 @@ enforced by a tool config, this document points at the config rather than restat
   tracked as a prioritized backlog in the [compliance audit](CODING_COMPLIANCE_AUDIT.md);
   each cleanup lands as its own reviewed change with regression evidence.
 - Authoritative tool configs: `.rules.verible_lint` (RTL style-lint),
-  `sim/Makefile` `VERIBLE_FMT_FLAGS` (RTL formatting), `pyproject.toml` (ruff/mypy/pytest),
+  `pyproject.toml` (ruff/mypy/pytest),
   `.pylintrc` (pylint), `.pre-commit-config.yaml` (local gates), `.editorconfig` (whitespace).
 
 ---
@@ -28,7 +28,7 @@ enforced by a tool config, this document points at the config rather than restat
 ## 1. SystemVerilog RTL
 
 Reference: lowRISC Verilog Style Guide, adapted to the house style codified in
-`.rules.verible_lint` and the Verible formatter flags in `sim/Makefile`.
+`.rules.verible_lint`.
 
 ### 1.1 File organization
 
@@ -100,13 +100,12 @@ Reference: lowRISC Verilog Style Guide, adapted to the house style codified in
 ### 1.6 Formatting
 
 - **4-space indent, spaces only, no tabs** (`.editorconfig` + Verible `no-tabs`).
-- Line length: soft limit 120 columns (`--column_limit=120`); hand-aligned AXI port maps
+- Line length: soft limit 120 columns; hand-aligned AXI port maps
   may exceed it (`line-length` rule intentionally disabled).
 - `begin`/`end` K&R style (`begin` trails the statement).
-- Formatting tool = `make format-verible-check` / `make format-verible-fix`
-  (`sim/Makefile` `VERIBLE_FMT_FLAGS`). ⚠️ It does NOT reproduce the hand-aligned house style
-  (see §1.7), so it is advisory; match the surrounding code, and do not run
-  `format-verible-fix` over existing files (no style-only mass edits).
+- **No formatting tool.** `verible-verilog-format` cannot reproduce the hand-aligned house
+  style (see §1.7), so there is no format target and no CI format check. Match the
+  surrounding code; formatting is enforced by review.
 
 ### 1.7 Lint gates
 
@@ -124,12 +123,11 @@ make lint-verible   # Verible style lint (hard gate; whole tree is clean)
   `lint_off`/`lint_on` pairs through the body; every waiver carries a one-line reason.
 - CI runs Verible via `.github/workflows/rtl-checks.yml`. The **lint step is a hard gate**
   (bead `hn9l`, audit P1-4 closed): the whole tree is Verible-clean, so any new finding fails
-  the job. The **format step is advisory** (`continue-on-error`, changed files only) and must
-  stay that way: on Verible v0.0-4063, 81 of 83 `rtl/**/*.sv` fail `--verify` under
-  `VERIBLE_FMT_FLAGS`, retuned flag sets only reach 72 of 83, and even the house-style exemplars
-  (`rtl/periph/timer.sv`, `gpio_controller.sv`) fail every variant. So `make verible`
-  (= lint + whole-tree format check) is not expected to pass; use `make lint-verible` as the
-  gate and `make format-verible-check VERIBLE_CHECK_FILES=<your files>` for information only.
+  the job. There is **no format check** (removed 2026-10-10 by user decision): on Verible v0.0-4063,
+  81 of 83 `rtl/**/*.sv` fail `--verify`, retuned flag sets only reach 72 of 83, and even the
+  house-style exemplars (`rtl/periph/timer.sv`, `gpio_controller.sv`) fail every variant, so an
+  advisory step was pure noise. `make verible` is now an alias for `make lint-verible`.
+  Re-adding a format gate requires a deliberate, verified, one-off whole-tree reformat first.
 - Local and CI run the same Verible binary: `flake.nix` (`veribleFor`) repackages the CI release
   tarball (same version + sha256). Bump `rtl-checks.yml` and `flake.nix` together.
 - `.rules.verible_lint` sets `always-ff-non-blocking=waive_for_locals:true`: blocking assignments
@@ -255,10 +253,10 @@ Categories: `[Fix]`, `[Feature]`, `[Code]` (refactoring), `[Env]` (build/tooling
 | :--- | :--- | :--- | :--- |
 | Editor | `.editorconfig` | whitespace/EOL, all files | advisory |
 | pre-commit | ruff, mypy, pylint, pytest-smoke, whitespace hooks | `tb/models`, `tb/tests`, `tb/cpu_uvm`, `sim` | blocking locally |
-| `sim/Makefile` | Verilator lint, Verible lint+format, CDC snitch | `rtl/**` | manual, run before commit |
+| `sim/Makefile` | Verilator lint, Verible lint, CDC snitch | `rtl/**` | manual, run before commit |
 | Spyglass | Synopsys Spyglass lint (+ `lint/spyglass/waivers.awl`) | `rtl/**` (SoC) | manual (external tool) — see §1.8 |
 | CI `qa-checks.yml` | ruff format+lint, mypy, pylint, pytest+coverage | `tb/models`, `tb/tests` | **blocking** |
-| CI `rtl-checks.yml` | Verible lint (tree) + format (changed files) | `rtl/**` | lint **blocking**; format advisory |
+| CI `rtl-checks.yml` | Verible lint (whole tree) | `rtl/**` | **blocking** |
 | CI `tests.yml` / `random_tests.yml` | pytest / cocotb regression | functional | blocking |
 
 Widening the enforced scope (cocotb lint, RTL hard gate, shellcheck) is tracked in the

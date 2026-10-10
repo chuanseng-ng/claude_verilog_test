@@ -37,7 +37,7 @@
 //
 // Ports:
 //   clk_i       — reference clock input (100 MHz XO)
-//   ref_clk_o   — clk_i, or test_clk_i in scan mode: the reference actually in use
+//   ref_clk_o   — clk_i, or scan_clk_i in scan mode: the reference actually in use
 //   rst_n_i     — top-level active-low reset (synchronous inside sub-modules)
 //   PLL_IMPL    — "STUB" (default) or "RNM" (AMS cosim only)
 //   APB4 slave  — psel/penable/pwrite/paddr/pwdata/pstrb/prdata/pready/pslverr
@@ -48,10 +48,10 @@
 //   pll_locked_o — raw PLL lock flag (exported to soc_top port)
 //
 // DFT (bead claude_verilog_test-j41m.2, docs/design/DFT_ARCHITECTURE.md sec.4
-// items 7 and 8): scan_mode_i / scan_rst_ni / test_clk_i make every flop in
+// items 7 and 8): scan_mode_i / scan_rst_ni / scan_clk_i make every flop in
 // this module, and the clock and reset it delivers, controllable from ports in
 // test mode.
-//   * clock: the reference is replaced by test_clk_i in scan mode (dft_clk_mux),
+//   * clock: the reference is replaced by scan_clk_i in scan mode (dft_clk_mux),
 //     so the lock counter, the APB register file and the stub's passthrough core_clk
 //     all run on the test clock. A non-stub PLL's OUTPUT is muxed separately (below)
 //     because its output is not the reference.
@@ -59,7 +59,7 @@
 //     lock counter (pll_locked). Left alone they would toggle as the chains shift and
 //     clear scanned flops mid-shift, so each is overridden by scan_rst_ni at the net
 //     that feeds the flops (dft_rst_mux), as is the reset of the register file.
-// Functional mode (scan_mode_i = 0, scan_rst_ni = 1, test_clk_i = 0): all three
+// Functional mode (scan_mode_i = 0, scan_rst_ni = 1, scan_clk_i = 0): all three
 // muxes are pass-through and the module behaves exactly as before.
 //
 // Coding rules: no logic — structural instantiation + assign only.
@@ -79,11 +79,11 @@ module pll_subsystem #(
     input  logic rst_n_i,
 
     // ── DFT test controls (j41m.2). Must be connected at every instantiation
-    //    (no SV port defaults): scan_mode_i=1'b0, scan_rst_ni=1'b1, test_clk_i=1'b0
+    //    (no SV port defaults): scan_mode_i=1'b0, scan_rst_ni=1'b1, scan_clk_i=1'b0
     //    where there is no scan-aware parent. ──────────────────────────────────
     input  logic scan_mode_i,
     input  logic scan_rst_ni,
-    input  logic test_clk_i,
+    input  logic scan_clk_i,
 
     // ── APB4 slave port (from an apb_cdc_bridge destination face) ───────────
     // soc_top does NOT wire this port straight to the apb_interconnect slot.
@@ -106,7 +106,7 @@ module pll_subsystem #(
     output logic core_clk,      // PLL output clock; feeds all children
     output logic core_rst_n,    // rst_n_i & pll_locked; holds children in reset
     output logic pll_locked_o,  // raw PLL lock flag (expose for observability)
-    // The reference clock this module actually runs on: clk_i, or test_clk_i in
+    // The reference clock this module actually runs on: clk_i, or scan_clk_i in
     // scan mode (j41m.2). Anything the parent clocks from the same reference (the
     // APB CDC bridge's destination face) must use THIS, not the raw port, or its
     // flops stay on the functional clock during test.
@@ -122,7 +122,7 @@ module pll_subsystem #(
                                 //   rst_n_i & pll_enable both high
 
     // ── DFT: test-clock and scan-reset bypass (see the header) ───────────────
-    logic ref_clk_w;        // clk_i, or test_clk_i in scan mode
+    logic ref_clk_w;        // clk_i, or scan_clk_i in scan mode
     logic rst_n_regs;       // rst_n_i, or scan_rst_ni in scan mode
     logic pll_rst_n_func;   // functional pll_rst_n before the scan override
     logic core_rst_n_func;  // functional core_rst_n before the scan override
@@ -130,7 +130,7 @@ module pll_subsystem #(
 
     dft_clk_mux u_ref_cm (
         .func_clk_i (clk_i),
-        .test_clk_i (test_clk_i),
+        .scan_clk_i (scan_clk_i),
         .sel_i      (scan_mode_i),
         .clk_o      (ref_clk_w)
     );
@@ -191,7 +191,7 @@ module pll_subsystem #(
     end else begin : g_core_clk_pll
         dft_clk_mux u_core_cm (
             .func_clk_i (pll_clk_w),
-            .test_clk_i (test_clk_i),
+            .scan_clk_i (scan_clk_i),
             .sel_i      (scan_mode_i),
             .clk_o      (core_clk)
         );

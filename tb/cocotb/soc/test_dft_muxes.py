@@ -43,7 +43,7 @@ async def test_ctrl_ports_is_a_passthrough(dut):
         dut.cp_scan_mode_i.value = m
         dut.cp_scan_en_i.value = e
         dut.cp_scan_rst_ni.value = r
-        dut.cp_test_clk_i.value = c
+        dut.cp_scan_clk_i.value = c
         await Timer(1, units="ns")
         assert int(dut.cp_scan_mode_o.value) == m
         assert int(dut.cp_scan_en_o.value) == e

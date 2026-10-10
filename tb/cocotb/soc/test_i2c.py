@@ -56,9 +56,12 @@ Tests (grouped; the name states the behaviour):
                   rx_fifo_fill_drain_and_stat, rx_fifo_full_holds_scl_low, rx_empty_read_is_zero
   IRQ             rx_threshold_irq, irq_sources_and_w1c, sticky_set_wins_over_clear
   rate / loopback clkdiv_100k_400k, loopback_write_then_read, status_reflects_bus_levels
-  bead pnfw       stop_to_start_gap_is_measured, stop_to_start_bus_free_time_meets_spec
-                  (expect_fail, bead gecv), fsm_illegal_state_recovers_to_idle,
+  bead pnfw       stop_to_start_gap_is_measured, stop_to_start_bus_free_time_meets_spec,
+                  fsm_illegal_state_recovers_to_idle,
                   loopback_slave_idle_fall_arm, clkdiv_ffff_wide_tick_counter
+  bead gecv       start_stop_condition_times_meet_spec, busy_covers_bus_free_time,
+                  condition_tick_reloads_at_clkdiv_ffff
+                  (+ stop_to_start_bus_free_time_meets_spec above)
 """
 
 import subprocess
@@ -1911,6 +1914,7 @@ async def _measure_tbuf(dut, div: int) -> dict:
             break
     else:
         raise AssertionError("first transaction never finished")
+    busy_drop = slave.cycle  # BFM tick on which STATUS.busy was first seen low
     await apb.write(I2C_CMD, word)  # back-to-back: next APB access after busy drops
     await _wait_idle(dut, limit=40000)
     assert slave.received == [0x3C, 0xC3], f"CLKDIV={div}: wrong data {slave.received}"
@@ -1926,6 +1930,43 @@ async def _measure_tbuf(dut, div: int) -> dict:
         "tick": div + 1,
         "tbuf": starts[1] - stops[0],
         "t_su_sto": stops[0] - last_rise,
+        "t_hd_sta": _hold_after(slave, starts[0]),  # START hold: SDA fall -> SCL fall
+        "busy_after_stop": busy_drop - stops[0],  # STOP -> STATUS.busy first read low
+    }
+
+
+def _hold_after(slave, start_cycle: int) -> int:
+    """START hold time tHD;STA: the START (SDA fall with SCL high) to the next SCL fall, in clk."""
+    return min(f for f in slave.scl_fall_cycles if f >= start_cycle) - start_cycle
+
+
+async def _measure_rstart(dut, div: int) -> dict:
+    """START+WRITE with no STOP, then a repeated START (+WRITE+STOP) at CLKDIV=`div`; the second
+    command is issued back-to-back (busy polled every clock).  Returns the repeated-START set-up
+    time tSU;STA (SCL rise -> SDA fall of the RSTART) and its hold tHD;STA, in BFM clk ticks."""
+    apb, slave = await _setup(dut, clkdiv=div)
+    await apb.write(I2C_ADDR, SLAVE_ADDR)
+    await _push(apb, [0x3C, 0xC3])
+    await apb.write(I2C_CMD, cmd(start=1, write=1, count=1))  # no STOP: bus held
+    for _ in range(40000):
+        await _settled_edge(dut)
+        if not await _peek(dut, I2C_STATUS) & ST_BUSY:
+            break
+    else:
+        raise AssertionError("first command never finished")
+    await apb.write(I2C_CMD, cmd(start=1, write=1, stop=1, count=1))  # repeated START
+    await _wait_idle(dut, limit=40000)
+    assert slave.received == [0x3C, 0xC3], f"CLKDIV={div}: wrong data {slave.received}"
+    slave.assert_clean()
+    timed = list(zip(slave.events, slave.event_cycles))
+    rs = [c for ev, c in timed if ev == ("RSTART",)]
+    assert len(rs) == 1, f"CLKDIV={div}: bus events {slave.events}"
+    last_rise = max(r for r in slave.scl_rise_cycles if r <= rs[0])
+    return {
+        "div": div,
+        "tick": div + 1,
+        "t_su_sta": rs[0] - last_rise,
+        "t_hd_sta": _hold_after(slave, rs[0]),
     }
 
 
@@ -1953,13 +1994,7 @@ async def test_i2c_stop_to_start_gap_is_measured(dut):
         assert m["tbuf"] <= 4 * m["tick"], f"CLKDIV={div}: implausible STOP->START {m['tbuf']} clk"
 
 
-# TBUF_EXPECT_FAIL: bead pnfw item 3 MEASURED A REAL SPEC MISS (not fixed here by instruction --
-# RTL is out of scope for pnfw).  The engine's only bus-free interval is S_STP_FREE, ONE tick, so
-# tBUF = tick + ~6 clk of command latency: ~2.6 us at the Standard divisor (min 4.7) and ~0.7 us
-# at the Fast divisor (min 1.3).  Tracked by bug bead claude_verilog_test-gecv;
-# the marker stays until RTL enforces a bus-free time, at which point the test XPASSes loudly --
-# remove expect_fail then and DO NOT weaken the limits below.
-@cocotb.test(expect_fail=True)
+@cocotb.test()
 async def test_i2c_stop_to_start_bus_free_time_meets_spec(dut):
     """STOP-to-START bus-free time against the I2C specification minimum (4.7 us Standard-mode
     at CLKDIV=249, 1.3 us Fast-mode at CLKDIV=62, 100 MHz clk), measured with the tightest
@@ -1972,6 +2007,81 @@ async def test_i2c_stop_to_start_bus_free_time_meets_spec(dut):
         if m["tbuf"] / 100.0 < spec
     ]
     assert not misses, "bus-free time below the I2C minimum: " + "; ".join(misses)
+
+
+# I2C-bus specification (UM10204) Table 10 minimums, us.  (CLKDIV, mode, tHD;STA, tSU;STA, tSU;STO):
+# START hold time, repeated-START set-up time, STOP set-up time.
+_COND_CASES = ((249, "Standard", 4.0, 4.7, 4.0), (62, "Fast", 0.6, 0.6, 0.6))
+
+
+@cocotb.test()
+async def test_i2c_start_stop_condition_times_meet_spec(dut):
+    """The three START/STOP condition times against the I2C specification minimum at both standard
+    divisors (100 MHz clk): tSU;STO (SCL rise -> STOP; 4.0 us Standard / 0.6 us Fast), tHD;STA
+    (START -> SCL fall, measured on the first START AND on the repeated START; 4.0 / 0.6 us) and
+    tSU;STA (SCL rise -> repeated START; 4.7 / 0.6 us).  Bead gecv: each used to last ONE tick.
+    Every figure is measured before any is asserted so one miss still reports all of them."""
+    rows = []
+    for div, mode, hd, su_sta, su_sto in _COND_CASES:
+        tb = await _measure_tbuf(dut, div)
+        rs = await _measure_rstart(dut, div)
+        rows.append((mode, div, "tSU;STO", tb["t_su_sto"], su_sto))
+        rows.append((mode, div, "tHD;STA (START)", tb["t_hd_sta"], hd))
+        rows.append((mode, div, "tHD;STA (RSTART)", rs["t_hd_sta"], hd))
+        rows.append((mode, div, "tSU;STA (RSTART)", rs["t_su_sta"], su_sta))
+    for mode, div, name, clk, spec in rows:
+        dut._log.info(
+            "%s CLKDIV=%d: %s = %d clk = %.2f us (spec min %.1f us)",
+            mode,
+            div,
+            name,
+            clk,
+            clk / 100.0,
+            spec,
+        )
+    misses = [
+        f"{mode} CLKDIV={div}: {name} {clk / 100.0:.2f} us < {spec} us"
+        for mode, div, name, clk, spec in rows
+        if clk / 100.0 < spec
+    ]
+    assert not misses, "START/STOP condition time below the I2C minimum: " + "; ".join(misses)
+
+
+@cocotb.test()
+async def test_i2c_busy_covers_bus_free_time(dut):
+    """Bead gecv semantics: the bus-free interval after a STOP is INSIDE STATUS.busy.  STATUS.busy
+    (and the DONE event) therefore drop only after >= 3 ticks of bus-free time, so a command written
+    on the first APB access after busy drops already meets tBUF (that is what the strict-limit
+    tBUF test measures), AND a command written DURING the bus-free interval is ignored like any
+    busy-time command -- it neither queues nor starts a second transaction.
+    SCOPE: CLKDIV=62 and 249 at 100 MHz; the 3-tick count is asserted to within a few clk."""
+    for div in (62, 249):
+        n = div + 1
+        m = await _measure_tbuf(dut, div)
+        assert 3 * n - 4 <= m["busy_after_stop"] <= 3 * n + 8, (
+            f"CLKDIV={div}: STOP->busy low {m['busy_after_stop']} clk, expected 3 ticks = {3 * n}"
+        )
+        # Command written while the engine sits in the bus-free interval is dropped.
+        apb, slave = await _setup(dut, clkdiv=div)
+        await apb.write(I2C_ADDR, SLAVE_ADDR)
+        await _push(apb, [0x3C, 0xC3])
+        word = cmd(start=1, write=1, stop=1, count=1)
+        await apb.write(I2C_CMD, word)
+        for _ in range(40000):
+            await _settled_edge(dut)
+            if ("STOP",) in slave.events:
+                break
+        else:
+            raise AssertionError(f"CLKDIV={div}: first transaction never reached its STOP")
+        assert await _peek(dut, I2C_STATUS) & ST_BUSY, "busy must be set in the bus-free interval"
+        await apb.write(I2C_CMD, word)  # inside the bus-free interval: must be ignored
+        await _wait_idle(dut, limit=40000)
+        await ClockCycles(dut.clk, 4 * n)
+        assert slave.events.count(("START",)) == 1 and slave.received == [0x3C], (
+            f"CLKDIV={div}: a command during the bus-free interval was not ignored: "
+            f"{slave.events} {slave.received}"
+        )
+        slave.assert_clean()
 
 
 # ---------------------------------------------------------------------------
@@ -2232,6 +2342,37 @@ async def test_i2c_status_reflects_bus_levels(dut):
 
 
 # -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+
+# Engine state encodings used below (i2c_bit_engine.state_e).
+S_RS_WAIT, S_RS_HI, S_ST_LO, S_STP_WAIT, S_STP_HI = 3, 4, 5, 13, 14
+
+
+@cocotb.test()
+async def test_i2c_condition_tick_reloads_at_clkdiv_ffff(dut):
+    """Bead gecv at CLKDIV = 0xFFFF (N = 65536): the multi-tick reloads of the START/STOP condition
+    states are 2N - 1 = 0x1FFFF (S_ST_LO, S_RS_HI, S_STP_HI) and 3N - 1 = 0x2FFFF (S_STP_FREE), the
+    latter needing tick_q bit 17 -- a 17-bit counter would wrap it to 0x0FFFF and tBUF would
+    collapse to under one tick.  Each state is entered by depositing its predecessor on the
+    registered state (as the illegal-encoding test does) and reading tick_q the clock after.
+    SCOPE: the reload value at entry only; running the full ~2^18 clk intervals is not done."""
+    e = dut.u_dut.u_bit_engine
+    cases = (  # (predecessor state, entered state, expected tick_q at entry)
+        (1, S_ST_LO, 0x1FFFF),  # S_BUSWAIT (bus idle: both lines high) -> START hold
+        (S_RS_WAIT, S_RS_HI, 0x1FFFF),  # SCL already high -> repeated-START set-up
+        (S_STP_WAIT, S_STP_HI, 0x1FFFF),  # SCL already high -> STOP set-up
+        (S_STP_HI, S_STP_FREE, 0x2FFFF),  # tick_q forced to 0 -> bus-free time
+    )
+    for pred, entered, want in cases:
+        await _setup(dut, clkdiv=LARGE_DIV, timeout=0)
+        e.state_q.value = pred
+        e.tick_q.value = 0
+        await _settled_edge(dut)
+        assert int(e.state_q.value) == entered, (
+            f"state {pred} did not advance to {entered} (got {int(e.state_q.value)})"
+        )
+        got = int(e.tick_q.value)
+        assert got == want, f"state {entered}: tick_q = 0x{got:x} at entry, expected 0x{want:x}"
 
 
 @cocotb.test()

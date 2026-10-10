@@ -2,14 +2,14 @@
 test_soc_dft_scan.py -- bead claude_verilog_test-j41m.2 (DFT Stage 1a), SoC level.
 
 DUT: tb_soc_pll -> soc_top (PLL_IMPL=STUB). soc_top is exercised through its new
-test-access ports (scan_mode_i, scan_en_i, scan_rst_ni, test_clk_i, scan_in_i /
+test-access ports (scan_mode_i, scan_en_i, scan_rst_ni, scan_clk_i, scan_in_i /
 scan_out_o). What is OBSERVABLE at a port is checked at the port (pll_locked_o,
 cpu_pll_locked_o, scan_out_o); what is internal is read through hierarchy
 (--public-flat-rw is on for every suite in this Makefile).
 
 What this proves, and what it does not:
   * PROVES  the test controls reach the right places: both PLL reference roots
-    run on test_clk_i in scan mode (functional clocks held stopped), the derived
+    run on scan_clk_i in scan mode (functional clocks held stopped), the derived
     resets inside pll_subsystem follow the scan reset and ignore the functional
     pins, the CPU clock gate opens in scan mode while its functional enable is
     closed, gpu_domain_rst_n follows the scan reset, and the scan_out placeholder
@@ -24,7 +24,7 @@ What this proves, and what it does not:
 Tests:
   test_functional_baseline_locks            scan ports inactive: both PLLs lock on clk_i
   test_scan_mode_runs_on_test_clk_only      scan mode, clk_i/cpu_clk_i STOPPED: PLL lock
-                                            counters advance on test_clk_i alone
+                                            counters advance on scan_clk_i alone
   test_functional_clocks_ignored_in_scan    scan mode: toggling clk_i/cpu_clk_i moves nothing
   test_scan_reset_overrides_functional      scan mode: rst_n_i/cpu_rst_n_i low is ignored,
                                             scan_rst_ni low resets (async)
@@ -86,7 +86,7 @@ async def test_functional_baseline_locks(dut):
 
 @cocotb.test()
 async def test_scan_mode_runs_on_test_clk_only(dut):
-    """Functional clocks stopped: the lock counters advance on test_clk_i alone."""
+    """Functional clocks stopped: the lock counters advance on scan_clk_i alone."""
     await _idle(dut)
     dut.scan_mode_i.value = 1
     dut.scan_rst_ni.value = 0  # hold every scan-controlled reset asserted
@@ -95,9 +95,9 @@ async def test_scan_mode_runs_on_test_clk_only(dut):
     dut.scan_rst_ni.value = 1
     await Timer(5, units="ns")
     # 30 test-clock cycles: the 16-count lock must complete on BOTH roots.
-    await _toggle(dut.test_clk_i, LOCK_CYCLES + 6)
-    assert int(dut.pll_locked_o.value) == 1, "fabric PLL reference did not run on test_clk_i"
-    assert int(dut.cpu_pll_locked_o.value) == 1, "CPU PLL reference did not run on test_clk_i"
+    await _toggle(dut.scan_clk_i, LOCK_CYCLES + 6)
+    assert int(dut.pll_locked_o.value) == 1, "fabric PLL reference did not run on scan_clk_i"
+    assert int(dut.cpu_pll_locked_o.value) == 1, "CPU PLL reference did not run on scan_clk_i"
 
 
 @cocotb.test()
@@ -125,12 +125,12 @@ async def test_scan_reset_overrides_functional(dut):
     await Timer(5, units="ns")
     dut.scan_rst_ni.value = 1
     await Timer(5, units="ns")
-    await _toggle(dut.test_clk_i, LOCK_CYCLES + 6)
+    await _toggle(dut.scan_clk_i, LOCK_CYCLES + 6)
     assert int(dut.pll_locked_o.value) == 1 and int(dut.cpu_pll_locked_o.value) == 1
     # Functional reset pins low across several test clocks: must change nothing.
     dut.rst_n_i.value = 0
     dut.cpu_rst_n_i.value = 0
-    await _toggle(dut.test_clk_i, 6)
+    await _toggle(dut.scan_clk_i, 6)
     assert int(dut.pll_locked_o.value) == 1, "rst_n_i reset the PLL block in scan mode"
     assert int(dut.cpu_pll_locked_o.value) == 1, "cpu_rst_n_i reset the PLL block in scan mode"
     # Scan reset: asynchronous, no clock edge needed.
@@ -167,14 +167,14 @@ async def test_cpu_clock_gate_forced_open(dut):
         prev = int(soc.cpu_gated_clk.value)
         for _ in range(n_cycles):
             dut.cpu_clk_i.value = 1
-            dut.test_clk_i.value = 1
+            dut.scan_clk_i.value = 1
             await Timer(2, units="ns")
             cur = int(soc.cpu_gated_clk.value)
             edges += int(cur and not prev)
             prev = cur
             await Timer(3, units="ns")
             dut.cpu_clk_i.value = 0
-            dut.test_clk_i.value = 0
+            dut.scan_clk_i.value = 0
             await Timer(5, units="ns")
             prev = int(soc.cpu_gated_clk.value)
         return edges
@@ -185,9 +185,9 @@ async def test_cpu_clock_gate_forced_open(dut):
     # clock. (The en=0, test_en=0 closed-gate baseline is test_clock_gate_scan's.)
     dut.scan_mode_i.value = 1
     dut.scan_rst_ni.value = 0
-    await _toggle(dut.test_clk_i, 3)
+    await _toggle(dut.scan_clk_i, 3)
     assert int(soc.cpu_gated_clk_en.value) == 0, "precondition: functional enable must be 0"
-    assert await _count_gated_edges(8) == 8, "cpu_gated_clk did not follow test_clk_i in scan mode"
+    assert await _count_gated_edges(8) == 8, "cpu_gated_clk did not follow scan_clk_i in scan mode"
 
 
 @cocotb.test()
@@ -199,7 +199,7 @@ async def test_scan_out_placeholder_is_zero(dut):
     assert int(dut.scan_out_o.value) == 0
     dut.scan_mode_i.value = 1
     dut.scan_en_i.value = 1
-    await _toggle(dut.test_clk_i, 4)
+    await _toggle(dut.scan_clk_i, 4)
     assert int(dut.scan_out_o.value) == 0
     # Return every test input to its inactive value (also exercises both toggle directions).
     dut.scan_en_i.value = 0

@@ -56,11 +56,11 @@ puts "INFO: No generated clock for core_clk — CTS traces through PLL BUFx2 as 
 set_false_path -from [get_ports rst_n_i]
 
 # DFT test access (bead claude_verilog_test-j41m.2, GH #244) -- FUNCTIONAL-MODE constraints.
-# soc_top gained scan_mode_i / scan_en_i / scan_rst_ni / test_clk_i / scan_in_i / scan_out_o.
+# soc_top gained scan_mode_i / scan_en_i / scan_rst_ni / scan_clk_i / scan_in_i / scan_out_o.
 # In functional mode scan_mode_i = 0, scan_en_i = 0 and scan_rst_ni = 1, so every scan mux is
-# transparent: pin them with case analysis (this also blocks test_clk_i out of the clock
+# transparent: pin them with case analysis (this also blocks scan_clk_i out of the clock
 # network, since the dft_clk_mux select is constant 0), and take the test ports out of timing.
-# A separate SCAN-MODE SDC (test_clk_i as the shift clock, scan_en timing, scan_mode = 1,
+# A separate SCAN-MODE SDC (scan_clk_i as the shift clock, scan_en timing, scan_mode = 1,
 # scan_in / scan_out delays) is a Stage 2 deliverable and does not exist yet. Guarded with
 # -quiet so a netlist from before this change still sources.
 foreach {_dft_p _dft_v} {scan_mode_i 0 scan_en_i 0 scan_rst_ni 1} {
@@ -69,7 +69,7 @@ foreach {_dft_p _dft_v} {scan_mode_i 0 scan_en_i 0 scan_rst_ni 1} {
     }
 }
 set _dft_in {}
-foreach _dft_p {scan_mode_i scan_en_i scan_rst_ni test_clk_i scan_in_i} {
+foreach _dft_p {scan_mode_i scan_en_i scan_rst_ni scan_clk_i scan_in_i} {
     foreach _dft_x [get_ports -quiet $_dft_p] { lappend _dft_in $_dft_x }
 }
 if {[llength $_dft_in] > 0} { set_false_path -from $_dft_in }

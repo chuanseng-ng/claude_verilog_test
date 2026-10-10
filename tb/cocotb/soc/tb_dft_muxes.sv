@@ -18,7 +18,7 @@ module tb_dft_muxes (
     input  logic cp_scan_mode_i,
     input  logic cp_scan_en_i,
     input  logic cp_scan_rst_ni,
-    input  logic cp_test_clk_i,
+    input  logic cp_scan_clk_i,
     output logic cp_scan_mode_o,
     output logic cp_scan_en_o,
     output logic cp_scan_rst_no,
@@ -28,7 +28,7 @@ module tb_dft_muxes (
 
     dft_clk_mux u_cm (
         .func_clk_i (cm_func_clk),
-        .test_clk_i (cm_test_clk),
+        .scan_clk_i (cm_test_clk),
         .sel_i      (cm_sel),
         .clk_o      (cm_clk_o)
     );
@@ -44,7 +44,7 @@ module tb_dft_muxes (
         .scan_mode_i (cp_scan_mode_i),
         .scan_en_i   (cp_scan_en_i),
         .scan_rst_ni (cp_scan_rst_ni),
-        .test_clk_i  (cp_test_clk_i),
+        .scan_clk_i  (cp_scan_clk_i),
         .scan_mode_o (cp_scan_mode_o),
         .scan_en_o   (cp_scan_en_o),
         .scan_rst_no (cp_scan_rst_no),

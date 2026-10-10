@@ -272,12 +272,12 @@ module soc_top
     // Direct (parallel) scan access; the JTAG TAP of Stage 1b (j41m.3) is added
     // on top and drives the same controls through dft_ctrl_ports. Inactive values
     // (functional mode, bit-identical to the pre-DFT design): scan_mode_i=0,
-    // scan_en_i=0, scan_rst_ni=1, test_clk_i=0 (any level; never selected).
+    // scan_en_i=0, scan_rst_ni=1, scan_clk_i=0 (any level; never selected).
     // See docs/design/DFT_ARCHITECTURE.md section 14 for the full contract.
     input  logic                    scan_mode_i,    // 1 = test mode (quasi-static)
     input  logic                    scan_en_i,      // 1 = shift, 0 = capture
     input  logic                    scan_rst_ni,    // scan reset, active low
-    input  logic                    test_clk_i,     // shared shift/capture clock, all domains
+    input  logic                    scan_clk_i,     // shared shift/capture clock, all domains
     input  logic [SCAN_CHAINS-1:0]  scan_in_i,      // placeholder until Stage 2 insertion
     output logic [SCAN_CHAINS-1:0]  scan_out_o      // tied 0 until Stage 2 insertion
 );
@@ -320,7 +320,7 @@ module soc_top
         .scan_mode_i (scan_mode_i),
         .scan_en_i   (scan_en_i),
         .scan_rst_ni (scan_rst_ni),
-        .test_clk_i  (test_clk_i),
+        .scan_clk_i  (scan_clk_i),
         .scan_mode_o (dft_scan_mode),
         .scan_en_o   (dft_scan_en),
         .scan_rst_no (dft_scan_rst_n),
@@ -2202,7 +2202,7 @@ module soc_top
         // DFT test controls (j41m.2)
         .scan_mode_i (dft_scan_mode),
         .scan_rst_ni (dft_scan_rst_n),
-        .test_clk_i  (dft_test_clk),
+        .scan_clk_i  (dft_test_clk),
         .ref_clk_o   (pll_ref_clk),
         // APB4 slave ← u_apb_pll_cdc m_* face (clk_i domain — GH #86 fix,
         // see CDC bridge note above)
@@ -2306,7 +2306,7 @@ module soc_top
         // DFT test controls (j41m.2)
         .scan_mode_i (dft_scan_mode),
         .scan_rst_ni (dft_scan_rst_n),
-        .test_clk_i  (dft_test_clk),
+        .scan_clk_i  (dft_test_clk),
         .ref_clk_o   (cpu_pll_ref_clk),
         // APB4 slave ← u_apb_pll2_cdc m_* face (cpu_clk_i domain — see CDC
         // bridge note above).

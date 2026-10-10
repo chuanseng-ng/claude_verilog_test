@@ -26,7 +26,7 @@ module dft_ctrl_ports (
     input  logic scan_mode_i,
     input  logic scan_en_i,
     input  logic scan_rst_ni,
-    input  logic test_clk_i,
+    input  logic scan_clk_i,
 
     output logic scan_mode_o,
     output logic scan_en_o,
@@ -39,6 +39,6 @@ module dft_ctrl_ports (
     assign scan_en_o   = scan_en_i;
     assign scan_rst_no = scan_rst_ni;
     assign test_en_o   = scan_mode_i;   // + mbist_en in Stage 4
-    assign test_clk_o  = test_clk_i;
+    assign test_clk_o  = scan_clk_i;
 
 endmodule : dft_ctrl_ports

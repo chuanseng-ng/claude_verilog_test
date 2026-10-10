@@ -78,12 +78,12 @@ module tb_soc_pll #(
     output logic        pll_locked_o,      // 1 when system PLL stub lock counter fires
     output logic        cpu_pll_locked_o,  // 1 when CPU-domain PLL stub lock counter fires
     // ── DFT test access (j41m.2). Inactive values: scan_mode_i=0, scan_en_i=0,
-    //    scan_rst_ni=1, test_clk_i=0, scan_in_i=0; soc_clocks.start_soc_clocks()
+    //    scan_rst_ni=1, scan_clk_i=0, scan_in_i=0; soc_clocks.start_soc_clocks()
     //    drives them for every suite. ─────────────────────────────────────
     input  logic        scan_mode_i,
     input  logic        scan_en_i,
     input  logic        scan_rst_ni,
-    input  logic        test_clk_i,
+    input  logic        scan_clk_i,
     input  logic [7:0]  scan_in_i,
     output logic [7:0]  scan_out_o
 );
@@ -123,7 +123,7 @@ module tb_soc_pll #(
         .scan_mode_i     (scan_mode_i),
         .scan_en_i       (scan_en_i),
         .scan_rst_ni     (scan_rst_ni),
-        .test_clk_i      (test_clk_i),
+        .scan_clk_i      (scan_clk_i),
         .scan_in_i       (scan_in_i),
         .scan_out_o      (scan_out_o),
         .pll_locked_o     (pll_locked_o),

@@ -97,8 +97,8 @@ make clean
 Two complementary tools, both run from `sim/`:
 
 - **Verilator** (`make lint`) — semantic/structural lint (widths, latches, unused signals).
-- **Verible** (`make verible`) — SystemVerilog *style* lint + *formatting* consistency.
-  Install a prebuilt binary from
+- **Verible** (`make lint-verible`) — SystemVerilog *style* lint. `nix develop` provides the
+  binary; otherwise install a prebuilt one from
   [Verible releases](https://github.com/chipsalliance/verible/releases) (no build needed).
 
 ```bash
@@ -107,16 +107,11 @@ cd sim
 make lint                  # Verilator semantic lint (CPU top + soc_top)
 
 make lint-verible          # Verible style lint (curated ruleset, whole tree)
-make format-verible-check  # Report formatting deviations (non-mutating)
-make format-verible-fix    # Rewrite files in place to canonical format
-make verible               # lint-verible + format-verible-check
-
-# Check/format a subset (used by CI for changed files only):
-make format-verible-check VERIBLE_CHECK_FILES="rtl/cpu/core/rv32i_alu.sv"
+make verible               # alias for lint-verible
 ```
 
 Style rules live in [`.rules.verible_lint`](../../.rules.verible_lint). CI runs Verible via the
 [`rtl-checks.yml`](../../.github/workflows/rtl-checks.yml) workflow — the **lint step is a hard
-gate** (whole tree clean); the format step is **advisory** (changed files only) because the formatter
-cannot reproduce the hand-aligned house style (bead `hn9l`). `nix develop` provides the same
+gate** (whole tree clean). There is no format check: the formatter cannot reproduce the
+hand-aligned house style (bead `hn9l`), so formatting is enforced by review. `nix develop` provides the same
 Verible binary CI installs, so no manual download is needed there.
