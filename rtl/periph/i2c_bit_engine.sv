@@ -49,10 +49,45 @@
 //     is 1 clk, not 3, so the loopback period is 4*N - 2 clk. Loopback is a fabric-test aid, not a
 //     rate reference.
 //   * The skew uses an integer floor(N / 8): the duty cycle is a step function of N, not exact.
-//   * Only the BIT clock is a spec-met quantity. Bus-free time between a STOP and the next START is
-//     S_STP_FREE (one tick) plus software latency; it is MEASURED by
-//     test_i2c_stop_to_start_bus_free_time_meets_spec (bead pnfw) and falls below the I2C minimum
-//     (4.7 us Standard / 1.3 us Fast) at the standard divisors -- bug bead claude_verilog_test-gecv.
+//   * START/STOP CONDITION times (bead claude_verilog_test-gecv). Every condition phase used to last
+//     ONE tick, about half the I2C minimum at the Standard divisor, so each is now a whole number of
+//     ticks, fixed by the ratio below. Because a tick is exactly 1/(4*f_scl) (N clk, f_scl =
+//     f_clk/(4N)), a phase of k ticks lasts k/(4*f_scl) at ANY CLKDIV: the spec minima are met
+//     whenever f_scl is at or below the rate at which k ticks equals the minimum, in the last column.
+//       phase / state                    ticks  length   spec min Std | Fast     met up to f_scl (Std | Fast)
+//       tHD;STA   START hold  S_ST_LO      2     2N        4.0 us    | 0.6 us    125 kHz  | 833 kHz
+//       tSU;STA   rep. START  S_RS_HI      2     2N (+3)   4.7 us    | 0.6 us    106 kHz  | 833 kHz
+//                 set-up (SCL rise -> SDA fall)
+//       tSU;STO   STOP set-up S_STP_HI     2     2N (+3)   4.0 us    | 0.6 us    125 kHz  | 833 kHz
+//                 (SCL rise -> SDA rise)
+//       tBUF      STOP -> START S_STP_FREE 3     3N        4.7 us    | 1.3 us    159 kHz  | 576 kHz
+//     Derivation: at 100 kHz a tick is 2.5 us, so 2 ticks = 5.0 us clears the tightest Standard
+//     minimum (4.7 us) and 1 tick (2.5 us) did not. At 400 kHz a tick is 0.625 us, so 2 ticks =
+//     1.25 us clears the 0.6 us minima, but NOT tBUF's 1.3 us (2 ticks would miss it by 0.05 us), so
+//     tBUF is 3 ticks = 1.875 us (Standard 7.5 us, which is more than the 4.7 us needed: one count
+//     serves both modes). "+3" is the pad-to-engine synchroniser latency of the SCL release: the
+//     phase is entered only after the SYNCHRONISED SCL reads high, so the real time from the pad
+//     edge is at least that much longer; it is NOT credited towards the figures above.
+//     RANGE OF THE GUARANTEE: the ratio is fixed in ticks and holds for every CLKDIV >= CLKDIV_MIN,
+//     so the Standard-mode minima are met for any bus at or below 100 kHz and the Fast-mode minima
+//     for any bus at or below 400 kHz (both inside the last column; slower buses only lengthen
+//     every phase). It does NOT cover a bus run above 400 kHz (the minima are not Fast-mode-Plus
+//     checked), and it does not cover a bus between ~106 kHz and 400 kHz judged against the Standard
+//     4.7 us figures -- that is Fast mode by definition, judged against the Fast column. tBUF is
+//     enforced only after THIS master's own STOP: S_BUSWAIT merely waits for both lines high, so the
+//     free time after another master's STOP is whatever that master left. Pad rise time and slave
+//     stretching only lengthen a phase. Loopback has a 1 clk (not 3 clk) synchroniser, which does
+//     not change the 2N / 3N figures.
+//   * BUSY SEMANTICS (gecv): the bus-free interval S_STP_FREE lies INSIDE STATUS.busy, and the DONE
+//     event of a STOP-terminated command is raised at its END. A command is accepted only when the
+//     engine is idle, so a command written on the very first APB access after busy drops already
+//     meets tBUF, and a command written during the interval is ignored like any busy-time command
+//     (no queueing, no second START). Consequence: DONE/busy fall 3 ticks (was 1) after the STOP
+//     edge on the bus. No other timing changes: the data-bit period (4N, tLOW/tHIGH above) is
+//     untouched.
+//   * Only the BIT clock and the START/STOP condition times above are spec-checked quantities (bit
+//     clock: test_i2c_clkdiv_100k_400k; conditions and tBUF:
+//     test_i2c_start_stop_condition_times_meet_spec / test_i2c_stop_to_start_bus_free_time_meets_spec).
 //
 // Port contract with i2c_controller.sv (the parent). Every port is single-clock (clk), synchronous
 // to the parent; there is NO clock-domain crossing in this module -- scl_s_i / sda_s_i must already
@@ -146,8 +181,9 @@ module i2c_bit_engine
         S_BUSWAIT   = 5'd1,    // wait: both synchronised lines high before START
         S_RS_REL    = 5'd2,    // T: repeated START, SCL low, SDA released
         S_RS_WAIT   = 5'd3,    // wait: SCL released, synchronised SCL not yet high (stretch)
-        S_RS_HI     = 5'd4,    // T: SCL high, SDA high (setup); SDA sensed low = arbitration lost
-        S_ST_LO     = 5'd5,    // T: START condition, SDA low with SCL high
+        S_RS_HI     = 5'd4,    // T: SCL high, SDA high (setup, tSU;STA = 2 ticks); SDA sensed low =
+                               //    arbitration lost
+        S_ST_LO     = 5'd5,    // T: START condition, SDA low with SCL high (tHD;STA = 2 ticks)
         S_BIT_L1    = 5'd6,    // T: SCL low, SDA held (hold time after SCL fall)
         S_BIT_L2    = 5'd7,    // T: SCL low, SDA at the new bit value
         S_BIT_WAIT  = 5'd8,    // wait: SCL released, synchronised SCL not yet high (stretch)
@@ -156,8 +192,8 @@ module i2c_bit_engine
         S_STP_HOLD  = 5'd11,  // T: SCL low, SDA held
         S_STP_LO    = 5'd12,  // T: SCL low, SDA low
         S_STP_WAIT  = 5'd13,  // wait: SCL released, synchronised SCL not yet high (stretch)
-        S_STP_HI    = 5'd14,  // T: SCL high, SDA low
-        S_STP_FREE  = 5'd15,  // T: SDA released with SCL high = STOP; bus-free time
+        S_STP_HI    = 5'd14,  // T: SCL high, SDA low (tSU;STO = 2 ticks)
+        S_STP_FREE  = 5'd15,  // T: SDA released with SCL high = STOP; bus-free time tBUF (3 ticks)
         S_BIT_HI1   = 5'd16   // T: SCL high, first half, shortened by the sync latency (appended so
                               //    the 16 original encodings above are unchanged)
     } state_e;
@@ -173,8 +209,9 @@ module i2c_bit_engine
     logic [7:0]  cnt_q, cnt_d;             // data bytes remaining in this command (incl. current)
     logic        ph_data_q, ph_data_d;     // 0 = address byte, 1 = data byte
     logic        txn_q, txn_d;             // this master holds the bus (START sent, no STOP yet)
-    logic [16:0] tick_q;                   // engine tick down-counter (17 b: the S_BIT_L2 reload is
-                                           // CLKDIV_eff + K, which exceeds 16 b at CLKDIV = 0xFFFF)
+    logic [17:0] tick_q;                   // engine tick down-counter (18 b: the S_STP_FREE reload is
+                                           // 3*CLKDIV_eff + 2 = 0x2FFFF at CLKDIV = 0xFFFF; the 2-tick
+                                           // condition reload is 0x1FFFF, S_BIT_L2's is CLKDIV_eff + K)
     logic [15:0] to_q;                     // stuck-wait counter, in ticks
 
     // Latched command context (loaded on accept)
@@ -209,7 +246,7 @@ module i2c_bit_engine
     // Bit-level helpers
     // =========================================================================
     logic tick_w;
-    assign tick_w = (tick_q == 17'h0);
+    assign tick_w = (tick_q == 18'h0);
 
     logic rd_byte_w;                       // current byte is received (read data phase)
     assign rd_byte_w = ph_data_q & rd_cmd_q;
@@ -239,8 +276,9 @@ module i2c_bit_engine
 
     // =========================================================================
     // Engine FSM -- next-state logic. Outputs are registered by the always_ff below.
-    // Every interval state lasts one tick (CLKDIV_eff+1 clk) except S_BIT_L2 (+K) and S_BIT_HI1
-    // (-3-K), whose lengths are set by the tick reload below; the `_WAIT` states and
+    // Every interval state lasts one tick (CLKDIV_eff+1 clk) except S_BIT_L2 (+K), S_BIT_HI1 (-3-K),
+    // S_ST_LO / S_RS_HI / S_STP_HI (2 ticks) and S_STP_FREE (3 ticks), whose lengths are set by the
+    // tick reload below; the `_WAIT` states and
     // S_BUSWAIT/S_DATA_WAIT instead leave on their condition and are bounded by the timeout.
     // =========================================================================
     logic fin_w;                           // command finished its bytes (ACK or NACK path)
@@ -508,25 +546,32 @@ module i2c_bit_engine
     // in whole ticks). The reload value is chosen by the state being ENTERED:
     //   S_BIT_L2  : CLKDIV_eff + K              (SCL-low phase carries the duty-cycle skew)
     //   S_BIT_HI1 : CLKDIV_eff - (SYNC_STAGES+1) - K   (the sync wait + skew come out of the high phase)
+    //   S_ST_LO / S_RS_HI / S_STP_HI : 2*N - 1 = 2*CLKDIV_eff + 1   (TICKS_COND = 2 ticks)
+    //   S_STP_FREE: 3*N - 1 = 3*CLKDIV_eff + 2                      (TICKS_FREE = 3 ticks)
     //   otherwise : CLKDIV_eff
-    // K = floor(N / 8), N = CLKDIV_eff + 1. All three are >= 0 for CLKDIV_eff >= SYNC_STAGES + 1
-    // (the CLKDIV_MIN guard); 17 b arithmetic cannot overflow (max 0xFFFF + 0x2000).
-    localparam int unsigned SYNC_LAT = SYNC_STAGES + 1;   // clk from SCL release to engine sees it high
+    // K = floor(N / 8), N = CLKDIV_eff + 1. The first two are >= 0 for CLKDIV_eff >= SYNC_STAGES + 1
+    // (the CLKDIV_MIN guard); 18 b arithmetic cannot overflow (max 3*0xFFFF + 2 = 0x2FFFF).
+    localparam int unsigned SYNC_LAT   = SYNC_STAGES + 1;   // clk from SCL release to engine sees it high
+    localparam int unsigned TICKS_COND = 2;   // tHD;STA, tSU;STA, tSU;STO -- see the header table
+    localparam int unsigned TICKS_FREE = 3;   // tBUF
 
-    logic [16:0] div_ext_w, lo_skew_w, tick_ld_w;
-    assign div_ext_w = {1'b0, div_eff_i};
-    assign lo_skew_w = (div_ext_w + 17'd1) >> 3;          // K
+    logic [17:0] div_ext_w, lo_skew_w, tick_ld_w;
+    assign div_ext_w = {2'b00, div_eff_i};
+    assign lo_skew_w = (div_ext_w + 18'd1) >> 3;          // K
 
     always_comb begin
         if      (state_d == S_BIT_L2)  tick_ld_w = div_ext_w + lo_skew_w;
-        else if (state_d == S_BIT_HI1) tick_ld_w = div_ext_w - 17'(SYNC_LAT) - lo_skew_w;
+        else if (state_d == S_BIT_HI1) tick_ld_w = div_ext_w - 18'(SYNC_LAT) - lo_skew_w;
+        else if ((state_d == S_ST_LO) || (state_d == S_RS_HI) || (state_d == S_STP_HI))
+                                       tick_ld_w = div_ext_w * 18'(TICKS_COND) + 18'(TICKS_COND - 1);
+        else if (state_d == S_STP_FREE) tick_ld_w = div_ext_w * 18'(TICKS_FREE) + 18'(TICKS_FREE - 1);
         else                           tick_ld_w = div_ext_w;
     end
 
     always_ff @(posedge clk) begin
-        if (!rst_n)                            tick_q <= 17'h0;
+        if (!rst_n)                            tick_q <= 18'h0;
         else if (state_d != state_q || tick_w) tick_q <= tick_ld_w;
-        else                                   tick_q <= tick_q - 17'h1;
+        else                                   tick_q <= tick_q - 18'h1;
     end
 
     // Stuck-wait counter, in ticks. Cleared on any state change; runs only inside a wait state.

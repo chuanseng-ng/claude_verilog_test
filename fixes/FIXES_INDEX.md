@@ -25,6 +25,7 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 | [PC_MISMATCH_FIX.md](#8-pc-mismatch-logging-fix) | 2026-01-28 | Test | LOW | ✅ Fixed |
 | [Section 9 (below)](#9-axi-lite-ring-phantom-decerr-r-beat-bead-3xtv) | 2026-10-07 | AXI-Lite Protocol | MEDIUM (P2) | ✅ Fixed |
 | [Section 10 (below)](#10-uart-rx-false-start-window-bead-rqvo) | 2026-10-09 | UART RX | LOW (P3) | ✅ Fixed |
+| [Section 11 (below)](#11-i2c-startstop-condition-times-bead-gecv) | 2026-10-10 | I2C bit engine | LOW (P3) | ✅ Fixed |
 
 ---
 
@@ -259,6 +260,24 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 - **Impact**: a genuine START falling edge landing in that window (phases ~10-15 after the glitch) was not framed from its own edge. The receiver returned to idle up to ~6 oversample ticks late, re-aligned on the already-low line, and sampled every following bit off-centre: lost or mis-framed byte.
 - **Fix**: reject at the os_tick with `os_phase_q == 10 && rx_maj` (the same point `RX_STOP` uses, since `rx_s9_q` is registered one tick earlier) and return to `RX_IDLE`, which re-arms level-based START detection on the next os_tick. The `bit_tick` branch now goes unconditionally to `RX_DATA` (a majority-HIGH vote can no longer reach it). Accepted-START timing is unchanged.
 - **Tests**: new `test_uart.test_rx_false_start_then_real_start` (2-clock glitch, then a real 8N1 frame starting 9..15 clocks after the glitch, byte-exact, no framing error, no spurious extra byte). Failed on the old RTL at gap 10; passes after. `test_rx_false_start_rejected` (05wf-5) did not encode the buggy timing and is unchanged.
+
+---
+
+## 11. I2C START/STOP Condition Times (bead gecv)
+
+**File**: `rtl/periph/i2c_bit_engine.sv` (tick reload for `S_ST_LO`, `S_RS_HI`, `S_STP_HI`, `S_STP_FREE`)
+**Date**: 2026-10-10
+**Severity**: P3 (no external I2C slave is attached in any flow; software could mask it with a delay)
+**Found by**: bead pnfw item 3 (verification-orchestrator), measured on the bus
+
+### Issue Fixed
+- **Problem**: every START/STOP condition phase lasted ONE tick (N = CLKDIV+1 clk, a quarter bit period), about half the I2C minimum at the Standard divisor. Measured at 100 MHz clk: tBUF 2.53 us at CLKDIV=249 (min 4.7) and 0.66 us at CLKDIV=62 (min 1.3); tSU;STO 2.53 us (min 4.0, Fast 0.66 vs 0.6); tHD;STA 2.50 us (min 4.0); tSU;STA of a repeated START 2.53 us (min 4.7). The Fast-mode tHD;STA/tSU;STA/tSU;STO met their 0.6 us by only 0.03..0.06 us.
+- **Impact**: a driver that wrote the next CMD on the first APB access after `STATUS.busy` dropped produced a STOP->START gap below spec; a Standard-mode slave could miss the START or STOP.
+- **Fix**: the phase lengths are now whole-tick counts set by the tick reload (no new state, `state_e` still 17 names / 5 bits): `S_ST_LO`, `S_RS_HI`, `S_STP_HI` = 2 ticks (reload `2N-1`), `S_STP_FREE` = 3 ticks (`3N-1`). 2 ticks = 5.0 us at 100 kHz clears the tightest Standard minimum (4.7 us); at 400 kHz 2 ticks = 1.25 us clears 0.6 us but NOT tBUF's 1.3 us, hence 3 ticks (1.875 us; Standard 7.5 us). Because a tick is exactly 1/(4 f_scl), the guarantee holds at any CLKDIV for a Standard-mode bus <= 100 kHz and a Fast-mode bus <= 400 kHz; it does not cover > 400 kHz and tBUF is enforced only after this master's own STOP (derivation table in the module header).
+- **Busy semantics**: the bus-free interval is INSIDE `STATUS.busy` and the DONE event of a STOP command is raised at its end (3 ticks after the STOP edge instead of 1). Commands written during the interval are ignored like any busy-time command, so tBUF holds even for a command written on the first APB access after busy drops.
+- **Not changed**: data-bit timing (period exactly 4N, tLOW/tHIGH) and `K = floor(N/8)` (bead cd15 stays deferred).
+- **Cost**: `tick_q` 17 -> 18 bits (+1 flop; `S_STP_FREE` reload is `0x2FFFF` at CLKDIV=0xFFFF), one 18-bit constant-3 adder in the reload mux, no new states.
+- **Tests**: `test_i2c_stop_to_start_bus_free_time_meets_spec` (was `expect_fail=True`, limits unchanged), new `test_i2c_start_stop_condition_times_meet_spec` (tSU;STO, tHD;STA on START and repeated START, tSU;STA, strict spec limits, both divisors), `test_i2c_busy_covers_bus_free_time`, `test_i2c_condition_tick_reloads_at_clkdiv_ffff`. All red on the old RTL, green after.
 
 ---
 
