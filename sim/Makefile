@@ -27,6 +27,12 @@ RTL_DIR := $(PROJ_ROOT)/rtl
 TB_DIR := $(PROJ_ROOT)/tb
 SIM_DIR := $(PROJ_ROOT)/sim
 
+# Bead 1eyv: where the instrumented simulations write their per-simulation coverage .dat files
+# and where the merged files / combined report land.  Absolute: every sub-make and simulator
+# process runs from this directory, but a relative path would silently follow a future `-C`.
+COV_DIR ?= $(SIM_BUILD_ROOT)/coverage
+override COV_DIR := $(abspath $(COV_DIR))
+
 # DUT configuration
 DUT := rv32i_cpu_top
 TOPLEVEL := $(DUT)
@@ -175,7 +181,10 @@ endif
 	# `which python3` resolves to nix Python 3.11, but PYTHONHOME=/usr is set in the
 	# outer environment pointing to Python 3.10 stdlib; the mismatch crashes
 	# verilator_includer. Hardcoding /usr/bin/python3 guarantees the version matches.
-	BUILD_ARGS += PYTHON3=/usr/bin/python3
+	# SIM_PYTHON3 is overridable for the same reason as in tb/cocotb/soc/Makefile: on a GitHub
+	# runner the interpreter cocotb runs on is the setup-python one, not /usr/bin/python3.
+	SIM_PYTHON3 ?= /usr/bin/python3
+	BUILD_ARGS += PYTHON3=$(SIM_PYTHON3)
 	# Override CXX/LINK: nix verilator generates Vtop.mk with CXX=clang++ but
 	# only g++ is available on this host outside nix's clang environment.
 	# cxx_shim.sh (in this directory) wraps g++ and strips clang-only flags
@@ -209,9 +218,27 @@ ifneq ($(wildcard /nix/store),)
 	  done && \
 	  export LD_LIBRARY_PATH=$(NIX_COMPAT_DIR):$${LD_LIBRARY_PATH} &&
 endif
+# Opt-in line + toggle coverage (GH #216 / bead nkj7 for the SoC flow, bead 1eyv here).  Same
+# flags as tb/cocotb/soc/Makefile so the .dat files from the two flows are point-for-point
+# comparable and tools/verif/coverage_report.py can merge them:
+#  * --coverage-line --coverage-toggle --coverage-max-width 256 instead of the blanket
+#    --coverage (which adds user-coverage pages the report ignores anyway);
+#  * the flags go in COMPILE_ARGS: several targets pass EXTRA_ARGS= on the command line, which
+#    would override a makefile-level `+=`;
+#  * `_cov` is appended to EVERY SIM_BUILD (the per-target ones passed on the command line and the
+#    default), so an instrumented build can never reuse an uninstrumented Vtop or vice versa
+#    (the stale-Vtop false-pass class of PR #142).  `override` is what lets the makefile edit a
+#    command-line value;
+#  * each simulation writes ITS OWN .dat to $(COV_DIR) through the runtime plusarg
+#    +verilator+coverage+file+ (cocotb 1.9.2 honours it).  The old behaviour -- every simulation
+#    writing sim/coverage.dat -- silently lost all but the last Phase 3/GPU run.
 ifdef COVERAGE
-	COMPILE_ARGS += --coverage
-	EXTRA_ARGS   += --coverage
+	COMPILE_ARGS += --coverage-line --coverage-toggle --coverage-max-width 256
+	# Idempotent: cocotb exports SIM_BUILD, so a sub-make that re-reads this makefile would
+	# otherwise see the already-suffixed value and append again (sim_build_cov_cov_cov).
+	override SIM_BUILD := $(patsubst %_cov,%,$(or $(SIM_BUILD),$(SIM_BUILD_ROOT)/sim_build))_cov
+	COV_MKDIR := $(shell mkdir -p $(COV_DIR))
+	override PLUSARGS += +verilator+coverage+file+$(COV_DIR)/$(notdir $(SIM_BUILD))__$(MODULE).dat
 endif
 endif
 
@@ -696,20 +723,48 @@ rollup:
 	fi
 
 # Run all tests with Verilator coverage instrumentation and generate reports
+# (nightly `rtl-coverage` job: CPU directed suites + Phase 3 cache suites).
 .PHONY: coverage
 coverage:
 	@echo "Running all tests with coverage instrumentation..."
-	@mkdir -p $(PROJ_ROOT)/reports
-	@rm -f $(SIM_DIR)/coverage_*.dat $(SIM_DIR)/coverage_merged.dat
+	@mkdir -p $(PROJ_ROOT)/reports $(COV_DIR)
+	@rm -f $(COV_DIR)/*.dat $(SIM_DIR)/coverage_*.dat $(SIM_DIR)/coverage_merged.dat
 	@$(MAKE) test COVERAGE=1
+	@ls $(COV_DIR)/*.dat >/dev/null 2>&1 || { echo "ERROR: coverage: no .dat written to $(COV_DIR) -- coverage was not collected" >&2; exit 1; }
 	@echo "Merging coverage data from all test modules..."
-	@verilator_coverage --write $(SIM_DIR)/coverage_merged.dat \
-		$(SIM_DIR)/coverage_*.dat 2>/dev/null || true
+	@verilator_coverage --write $(SIM_DIR)/coverage_merged.dat $(COV_DIR)/*.dat
 	@echo "Generating Verilator coverage report..."
 	@verilator_coverage $(SIM_DIR)/coverage_merged.dat \
 		--annotate $(PROJ_ROOT)/reports/coverage_annotated 2>/dev/null || \
-		echo "Note: verilator_coverage not available or no coverage data found"
+		echo "Note: verilator_coverage annotate failed (the merged .dat is still valid)"
 	@echo "Coverage report: reports/coverage_annotated/"
+
+# Bead 1eyv: CPU + Phase 3 cache + Phase 4 GPU suites, instrumented, merged into ONE file
+# ($(COV_DIR)/cpu_gpu_merged.dat) for tools/verif/coverage_report.py to combine with the SoC
+# regression's merged.dat.  Same Verilator, same flags, same report script as `soc_coverage`, so
+# the two inputs agree on point identity.  Separate from `coverage` so the nightly rtl-coverage
+# job's runtime and artifact are unchanged.  Fails (no `|| true`) if a suite fails or nothing was
+# written.
+#   make SIM_BUILD_ROOT=/nobackup/claude_sim_build/cov_cpu_gpu coverage_cpu_gpu
+.PHONY: coverage_cpu_gpu
+coverage_cpu_gpu:
+	@mkdir -p $(COV_DIR)
+	rm -f $(COV_DIR)/*.dat
+	$(MAKE) test COVERAGE=1
+	$(MAKE) gpu_all COVERAGE=1
+	@ls $(COV_DIR)/*.dat >/dev/null 2>&1 || { echo "ERROR: coverage_cpu_gpu: no .dat written to $(COV_DIR) -- coverage was not collected" >&2; exit 1; }
+	verilator_coverage --write $(COV_DIR)/cpu_gpu_merged.dat $(COV_DIR)/*.dat
+
+# Combined per-module report over all six RTL trees: the SoC regression's merged.dat (SOC_DAT,
+# from `make -C tb/cocotb/soc soc_coverage`) plus the CPU/cache/GPU suites'.  Informational.
+#   make SIM_BUILD_ROOT=... SOC_DAT=<soc>/coverage/merged.dat coverage_combined
+.PHONY: coverage_combined
+coverage_combined: coverage_cpu_gpu
+	@test -n "$(SOC_DAT)" -a -s "$(SOC_DAT)" || { echo "ERROR: coverage_combined: set SOC_DAT=<soc_coverage merged.dat>" >&2; exit 1; }
+	$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/coverage_report.py \
+		--dat $(SOC_DAT) --dat $(COV_DIR)/cpu_gpu_merged.dat --root $(PROJ_ROOT) \
+		--waivers $(PROJ_ROOT)/tools/verif/coverage_waivers.txt \
+		--out-md $(COV_DIR)/combined_report.md --out-json $(COV_DIR)/combined_report.json
 
 # ============================================================================
 # Random / Stress UVM Targets (used by CI)
