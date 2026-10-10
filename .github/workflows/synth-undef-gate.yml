@@ -1,0 +1,86 @@
+name: Synthesis undef gate
+
+# Bead gc0y. Frontend elaboration gate + generic-gate differential for the Sky130 CPU.
+# Covers the sv2v/yosys frontend only: the Synlig plugin is not installable on a stock runner
+# (oss-cad-suite ships yosys + slang, not Synlig), so the Synlig arm is protected only at PD-run
+# time by pnr/plugins/librelane_plugin_cvt_synthgate. See docs/SYNTH_UNDEF_GATE.md.
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'rtl/**'
+      - 'pnr/**'
+      - 'tools/verif/**'
+      - 'tools/cdc/**'
+      - 'sim/sky130_sram_1kbyte_1rw1r_32x256_8.sv'
+      - 'tb/tests/fixtures/synth_undef/**'
+      - '.github/workflows/synth-undef-gate.yml'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'rtl/**'
+      - 'pnr/**'
+      - 'tools/verif/**'
+      - 'tools/cdc/**'
+      - 'sim/sky130_sram_1kbyte_1rw1r_32x256_8.sv'
+      - 'tb/tests/fixtures/synth_undef/**'
+      - '.github/workflows/synth-undef-gate.yml'
+  workflow_dispatch:
+
+jobs:
+  synth-undef-smoke:
+    name: Elaboration gate + self-test + gate-vs-RTL smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Same pinned yosys (oss-cad-suite) and sv2v as the CDC job in rtl-checks.yml; the cache key
+      # is the same file, so the two jobs share one cache entry.
+      - name: Cache pinned tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            sim/build/cdc/oss-cad-suite
+            sim/build/cdc/sv2v-Linux
+          key: cdc-tools-${{ hashFiles('tools/cdc/versions.env') }}
+
+      - name: Fetch pinned yosys + sv2v
+        run: bash tools/cdc/fetch_cdc_tools.sh --with-yosys
+
+      - name: Install pinned Verilator
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Put pinned Verilator on PATH
+        run: |
+          nix profile install .#verilator
+          echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
+
+      - name: Scanner unit tests
+        run: |
+          python3 -m pip install --user pytest
+          python3 -m pytest tb/tests/test_check_synth_undef.py -q
+
+      - name: Elaboration gate, self-test and gate-vs-RTL smoke
+        env:
+          YOSYS: ${{ github.workspace }}/sim/build/cdc/oss-cad-suite/bin/yosys
+          SV2V: ${{ github.workspace }}/sim/build/cdc/sv2v-Linux/sv2v
+        run: timeout 900 bash tools/verif/synth_gate/ci_smoke.sh "$RUNNER_TEMP/synth_gate"
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synth-undef-gate-logs
+          path: |
+            ${{ runner.temp }}/synth_gate/*.log
+            ${{ runner.temp }}/synth_gate/*.out
+          if-no-files-found: warn

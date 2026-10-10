@@ -74,7 +74,25 @@ def _run_gate(step) -> None:
             step.warn(msg + "\n(CVT_SYNTH_GATE=warn: continuing)")
             return
         raise StepError(msg)
+    _census_tripwire(step, mode)
     _log_info(f"CVT synth gate PASS ({res['structural_check']}); report: synth_undef_gate.rpt")
+
+
+def _census_tripwire(step, mode: str) -> None:
+    """Sky130 CPU only: the fwd_b_* flops must exist in the synthesised netlist (dud4 tripwire)."""
+    cfg = step.config
+    if cfg.get("DESIGN_NAME") != "rv32i_cpu_top" or not str(cfg.get("PDK", "")).startswith("sky130"):
+        return
+    netlist = Path(step.step_dir) / "rv32i_cpu_top.nl.v"
+    if not netlist.is_file():  # JsonHeader step: no netlist yet
+        return
+    import check_cpu_netlist_census as census  # pylint: disable=import-outside-toplevel
+
+    if census.main([str(netlist)]) != 0 and mode != "warn":
+        raise StepError(
+            "CVT netlist census tripwire fired: fwd_b_* flops missing or flop count out of band "
+            f"({netlist}); this is the dud4 casualty signature (docs/SYNTH_UNDEF_GATE.md)"
+        )
 
 
 def _install() -> None:
