@@ -432,6 +432,13 @@ two stale-waiver warnings: `uart_controller` `L591` -> `L602` (bead `rqvo`), `pm
 Each target was re-read in the RTL and is still the `default:` arm it was waived as. After the fix: 0 stale waivers, line
 99.9 % (1667/1669 - the two left are `i2c_controller` L617/L645, bead `pnfw`), 0 modules below the 95 % line floor.
 
+**Update 2026-10-10 (bead `pnfw`, items 4): two I2C `default:` waivers removed.** `i2c_bit_engine` `L440` (the bit engine's
+`state_e` is `logic [4:0]` with 17 names, so encodings 17..31 exist; `test_i2c_fsm_illegal_state_recovers_to_idle` forces all 15
+through the simulator handle) and `i2c_controller` `L655` (the loopback slave's `slv_mode_e` has all four encodings named, so its
+`default:` is the `SLV_IDLE` arm, not an upset arm; `test_i2c_loopback_slave_idle_fall_arm` reaches it with a NACKed read followed by a
+stop-less write). Measured on the i2c + soc_i2c suites only (instrumented): `i2c_bit_engine` 114/114, `i2c_controller` 84/86 (97.7 %,
+same L617/L645 left), both waivers reported stale until deleted, none stale after. The full-regression totals above were NOT re-measured.
+
 **Non-vacuity (hand mutants, RTL reverted, `git diff --stat rtl/` empty).** Each killed by the named test:
 
 | Mutant | Killed by |

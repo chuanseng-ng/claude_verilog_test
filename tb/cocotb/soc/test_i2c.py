@@ -56,9 +56,9 @@ Tests (grouped; the name states the behaviour):
                   rx_fifo_fill_drain_and_stat, rx_fifo_full_holds_scl_low, rx_empty_read_is_zero
   IRQ             rx_threshold_irq, irq_sources_and_w1c, sticky_set_wins_over_clear
   rate / loopback clkdiv_100k_400k, loopback_write_then_read, status_reflects_bus_levels
-  bead pnfw       stop_to_start_gap_is_measured, stop_to_start_bus_free_time_meets_spec (expect_fail,
-                  bead gecv), fsm_illegal_state_recovers_to_idle, loopback_slave_idle_fall_arm,
-                  clkdiv_ffff_wide_tick_counter
+  bead pnfw       stop_to_start_gap_is_measured, stop_to_start_bus_free_time_meets_spec
+                  (expect_fail, bead gecv), fsm_illegal_state_recovers_to_idle,
+                  loopback_slave_idle_fall_arm, clkdiv_ffff_wide_tick_counter
 """
 
 import subprocess
@@ -2232,6 +2232,7 @@ async def test_i2c_status_reflects_bus_levels(dut):
 
 
 # -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
 
 @cocotb.test()
 async def test_register_walk(dut):
