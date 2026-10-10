@@ -105,6 +105,18 @@ The flat post-route netlist is committed gzipped (`<design>.nl.v.gz`; the raw GP
 ~103 MB, over GitHub's 100 MB limit). Run `gunzip -k <design>.nl.v.gz` to restore it. The LEF
 (gitignored, regenerated on demand) and LIB are read directly by P&R tools.
 
+## Synthesis undef gate and Surelog cache (bead gc0y)
+
+Every `librelane-*` target in `Makefile` carries `$(SYNTH_GATE_ENV)`, which puts `pnr/plugins` on
+`PYTHONPATH`. The plugin `librelane_plugin_cvt_synthgate` (a) runs `tools/verif/check_synth_undef.py`
+after `Yosys.JsonHeader`/`Yosys.Synthesis` and aborts the flow on frontend undef substitution, and
+(b) runs every Pyosys step with its **own step directory as cwd**. Surelog writes its `slpp_all/`
+cache to the cwd, and the targets run LibreLane from the shared `LIBRELANE_DIR` checkout, so before
+this the cache was shared by every project and worktree (measured stale-source hazard, bead dud4).
+Reports: `<run>/*yosys*/synth_undef_gate.rpt`. `CVT_SYNTH_GATE=warn|off` is an escape hatch for
+experiments only. Direct `python3 -m librelane` runs outside the Makefile must add
+`PYTHONPATH=<repo>/pnr/plugins` and a private cwd themselves. See `docs/SYNTH_UNDEF_GATE.md`.
+
 ## Quality Gates
 
 Before advancing to the next phase, the design must pass:

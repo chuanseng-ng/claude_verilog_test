@@ -6,7 +6,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tools" / "verif"))
 
-import check_struct_member_select as chk  # noqa: E402
+import check_struct_member_select as chk  # type: ignore[import-not-found]  # noqa: E402
 
 
 def _tree(tmp_path: Path, src: str) -> Path:

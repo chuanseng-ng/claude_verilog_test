@@ -23,6 +23,9 @@ REPO="$(cd "$HERE/../../../.." && pwd)"
 
 VBIN="${VERILATOR_BIN:-/nix/store/xjx9zx3vaz367c7lbnvsd1isvqfkmgg7-verilator-5.048/bin/verilator}"
 export VERILATOR_ROOT="${VERILATOR_ROOT:-/nix/store/xjx9zx3vaz367c7lbnvsd1isvqfkmgg7-verilator-5.048/share/verilator}"
+# VERILATOR_BIN is ALSO the variable verilator's own wrapper script reads as the path of the real
+# binary; leaving it exported makes the wrapper re-exec itself forever. Keep it script-local.
+unset VERILATOR_BIN
 PDK_VLOG="${PDK_VLOG:-$HOME/.ciel/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/verilog}"
 RTL_ROOT="${RTL_ROOT:-/nobackup/claude_sim_build/dud4/rtl_5c49ddf}"
 SRAM_MODEL="$RTL_ROOT/sim/sky130_sram_1kbyte_1rw1r_32x256_8.sv"

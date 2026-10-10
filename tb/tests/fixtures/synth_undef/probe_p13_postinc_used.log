@@ -1,0 +1,9 @@
+ Yosys 0.46 (git sha1 e97731b9dda91fa5fa53ed87df7c34163ba59a41, clang++ 17.0.6 -fPIC -O3)
+-- Executing script file `probe_out46/p13_postinc_used.synlig.ys' --
+1. Executing Verilog with UHDM frontend.
+Warning: probes/p13_postinc_used.sv:7: Post-incrementation operations are handled as pre-incrementation.
+Warning: wire '\j' is assigned in a block at probes/p13_postinc_used.sv:5.5-5.10.
+Warning: wire '\i' is assigned in a block at probes/p13_postinc_used.sv:6.10-6.15.
+Warning: wire '\i' is assigned in a block at probes/p13_postinc_used.sv:6.24-6.33.
+Warning: wire '\j' is assigned in a block at probes/p13_postinc_used.sv:7.25-7.28.
+probes/p13_postinc_used.sv:7: ERROR: Don't know how to detect sign and width for AST_ASSIGN_EQ node!

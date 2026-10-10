@@ -145,6 +145,23 @@ make lint-verible   # Verible style lint (hard gate; whole tree is clean)
   to block-local temporaries inside `always_ff` are legal; blocking assignment to anything
   declared outside the block is still an error.
 
+### 1.7.1 Synthesis undef-elaboration gate (bead `gc0y`)
+
+A synthesis frontend can replace logic with `x` and log only a warning (Synlig turned
+`.port(struct_reg.member[19:15])` into `5'x`; lint, `Checker.YosysSynthChecks`, LVS and P&R all passed
+on the wrong design - `docs/SKY130_CPU_SYNLIG_DUD4.md`). Every LibreLane run started from `pnr/Makefile`
+now runs `tools/verif/check_synth_undef.py` after `Yosys.JsonHeader` and `Yosys.Synthesis` (project plugin
+`pnr/plugins/librelane_plugin_cvt_synthgate`, no shared-LibreLane edit) and aborts on a hit, naming
+file:line and the message. It also checks the elaborated `*.h.json` for any instance input or named net wired
+to constant `x`, independent of message wording. Details: `docs/SYNTH_UNDEF_GATE.md`.
+
+- Fix the RTL (or the construct) rather than allowlisting. An allowlist entry in
+  `tools/verif/synth_undef_allowlist.txt` is `rule | regex | justification`; it must name the exact
+  construct and say why the substituted object cannot reach a flop or port. Stale entries are reported.
+- Never allowlist `undef-range-select` for design logic unless the replaced bits are provably dead.
+- Run it by hand: `python3 tools/verif/check_synth_undef.py --run-dir <run dir> [-v]` (exit 0 pass,
+  1 finding, 2 could not judge - empty/no-banner logs are never a pass).
+
 ### 1.8 Spyglass lint discipline
 
 Synopsys Spyglass is run on the SoC design as an additional lint gate (it is not installed in the
@@ -268,6 +285,7 @@ Categories: `[Fix]`, `[Feature]`, `[Code]` (refactoring), `[Env]` (build/tooling
 | Spyglass | Synopsys Spyglass lint (+ `lint/spyglass/waivers.awl`) | `rtl/**` (SoC) | manual (external tool) — see §1.8 |
 | CI `qa-checks.yml` | ruff format+lint, mypy, pylint, pytest+coverage | `tb/models`, `tb/tests` | **blocking** |
 | CI `rtl-checks.yml` | Verible lint (whole tree) | `rtl/**` | **blocking** |
+| `pnr/Makefile` (every `librelane-*` target) | `check_synth_undef.py` via `pnr/plugins` | synthesis logs + `*.h.json` | **blocking** (aborts the flow) |
 | CI `tests.yml` / `random_tests.yml` | pytest / cocotb regression | functional | blocking |
 
 Widening the enforced scope (cocotb lint, RTL hard gate, shellcheck) is tracked in the
