@@ -16,7 +16,7 @@ BBCMD=""; [ -n "$BB" ] && BBCMD="blackbox $BB"
   echo "plugin -i $SO"
   echo "read_systemverilog -sverilog -top $TOP $DEFS $FILES"
   echo "hierarchy -top $TOP"
-  echo "proc"; echo "memory"; echo "opt_clean"; echo "$BBCMD"; echo "flatten"; echo "opt_clean"
+  echo "proc"; echo "$BBCMD"; echo "flatten"
   echo 'expose -evert-dff t:$dff t:$dffe t:$sdff t:$sdffe t:$adff t:$adffe'; echo "opt_clean"
   echo "write_rtlil $OUT/$TOP.synlig.il"
 } > synlig.ys
@@ -27,7 +27,7 @@ SVD=""; for d in $DEFS; do SVD="$SVD --define=${d#-D}"; done
 {
   echo "read_verilog -sv $OUT/$TOP.sv2v.v"
   echo "hierarchy -top $TOP"
-  echo "proc"; echo "memory"; echo "opt_clean"; echo "$BBCMD"; echo "flatten"; echo "opt_clean"
+  echo "proc"; echo "$BBCMD"; echo "flatten"
   echo 'expose -evert-dff t:$dff t:$dffe t:$sdff t:$sdffe t:$adff t:$adffe'; echo "opt_clean"
   echo "write_rtlil $OUT/$TOP.sv2v.il"
 } > sv2v.ys

@@ -85,3 +85,40 @@ loop variable -- predicted correct by the type rule but verified separately in s
 
 WRITE (LHS) selects `y.m[hi:lo] = ..` / `y.m[i] = ..` (D2): **none** in `rtl/` (regex over single-line statements, plain,
 `assign`, and concatenation-LHS forms; 0 hits). D2 is therefore not triggered anywhere today.
+
+## Step 2b: Synlig-vs-sv2v equivalence on the real modules (`modeq.sh`, `run_modeq.sh`, `mkcone.py`)
+
+Method: elaborate the module with Synlig and with sv2v+yosys, `flatten`, expose flops (`expose -evert-dff`, so the
+check is combinational with matched state), miter + `sat -verify -prove-asserts`. Memory cap `systemd-run -p
+MemoryMax=4G -p MemorySwapMax=0`, timeout 900 s. Negative control: sv2v arm fed a copy of `rv32i_pipeline_wb.sv` with
+`trap_cause[3:0]` changed to `[4:1]` -> NOT-EQUIV (model found), as required. SAT sizes are non-trivial (e.g. 10 884
+variables / 29 627 clauses for `rv32i_pipeline_ex`).
+
+| module / cone | sites | prediction | result |
+| :--- | :--- | :--- | :--- |
+| `rv32i_pipeline_wb` | wb:75 | correct | **EQUIV** |
+| `rv32i_pipeline_ex1c` | ex1c:122-150,197 (byte/half store lanes) | correct | **EQUIV** |
+| `rv32i_pipeline_mem` | mem:103,104,111,112 (misalign) | correct | **EQUIV** |
+| `rv32i_pipeline_ex` (with alu, branch_comp) | ex:109 | correct | **EQUIV** |
+| `gpu_top` cone (`n_warps_raw`, text extracted verbatim) | gpu_top:253 | correct | **EQUIV** |
+| `gpu_compute_unit` cone (always_comb at :370-390 extracted verbatim, `id_ex_t` from the source) | 377,378,386,388 | **correct (type rule)** | **NOT EQUIVALENT -- prediction wrong** |
+
+The three D1/D2 sites classes behave as predicted. The GPU result is a **third, independent defect (D3)** that the
+type rule does not cover:
+
+### D3: element select of a struct member that is a multi-dimensional packed array
+
+`id_ex_t` has `logic [N_LANES-1:0][31:0] rs1_data, rs2_data;`. `id_ex_q.rs1_data[l]` (32-bit element `l`) is elaborated
+by Synlig as the single BIT `rs1_data[l]` (zero-extended), at the correct member base. Evidence in the cone netlist:
+Synlig `mem_addr_o[31:0] = id_ex_q[320] + sext(imm)` versus sv2v `id_ex_q[351:320] + sext(imm)`; lane 1 reads bit
+321 instead of `[383:352]`, etc. Probes (round 8, `results/round8_d3.txt`; independent of R, constant/runtime/loop index,
+port/local base, always fully silent: `oob=0`): `s.r[2]` -> `s[10]` instead of `s[31:24]`, `s.r[i]`, `s.r[l]` in a loop,
+a one-ranged-member struct too. Correct forms: `w = s.r; w[l]`, a plain (non-struct) 2-D vector `r[l]`, and a
+select of bits INSIDE an element (`s.r[2][5:2]`, equivalent).
+
+Consequence in `gpu_compute_unit`: the memory address (`mem_addr_o[l]`, `shmem_addr_o[l]`) and store data
+(`mem_wdata_o[l]`, `shmem_wdata_o[l]`) of VLD/VST/VLDS/VSTS are computed from ONE bit of the rs1/rs2 vector register
+instead of the 32-bit value. Not proven on whole-module level (flop names differ between the frontends after aliasing,
+which defeats the name-based flop exposure; the cone is verbatim source text with the same typedef).
+No CPU module contains this idiom (`sitetable.txt`: the only multi-dimensional-array-member element selects in `rtl/`
+are these four GPU lines).

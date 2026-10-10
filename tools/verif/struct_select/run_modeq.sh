@@ -18,5 +18,10 @@ case "$SET" in
   gpu)
     "$M" "$OUT/cu" gpu_compute_unit "$G/gpu_pkg.sv $G/vector_register_file.sv $G/vector_alu.sv $G/gpu_compute_unit.sv" "vector_register_file vector_alu"
     ;;
+  cone)
+    K=${CONE:-/nobackup/claude_sim_build/ainf/cone}
+    "$M" "$OUT/cu_cone"  gpu_cu_cone  "$G/gpu_pkg.sv $K/gpu_cu_cone.sv"
+    "$M" "$OUT/top_cone" gpu_top_cone "$G/gpu_pkg.sv $K/gpu_top_cone.sv"
+    ;;
   *) echo "unknown set $SET"; exit 2 ;;
 esac
