@@ -1203,7 +1203,8 @@ gpu_kernels:
 		tb.cocotb.gpu.kernels.kernel_memory_coalesce \
 		tb.cocotb.gpu.kernels.kernel_shared_mem_pingpong \
 		tb.cocotb.gpu.kernels.kernel_sync \
-		tb.cocotb.gpu.kernels.kernel_block_warps; do \
+		tb.cocotb.gpu.kernels.kernel_block_warps \
+		tb.cocotb.gpu.kernels.kernel_control_paths; do \
 		echo "========================================"; \
 		echo "Running kernel: $$module"; \
 		echo "========================================"; \

@@ -242,7 +242,54 @@ module gpu_top
 
     // sched_launch: 1-cycle pulse when IDLE and descriptor ready
     logic sched_launch;
-    assign sched_launch = (state_q == GPS_IDLE) && cq_desc_valid;
+    logic rst_pend_q;   // soft reset requested, waiting for the AXI masters to drain
+    assign sched_launch = (state_q == GPS_IDLE) && cq_desc_valid && !rst_pend_q;
+
+    // -------------------------------------------------------------------
+    // GPU_CTRL.reset: quiesce, then clear (bead q6w0)
+    //
+    // The reset is synchronous.  It is NOT folded into the asynchronous rst_n
+    // net: a register-driven asynchronous reset is a glitch / CDC / scan hazard.
+    // A write to CTRL.reset from any state (IDLE, RUNNING, DONE, ERROR):
+    //   1. rst_pend_q / halt_q: stop issuing instruction fetches and new
+    //      VLD/VST/VLDS/VSTS requests.  A fetch AR that is valid but not yet
+    //      accepted is never withdrawn (halt_q waits for it).
+    //   2. Wait until the AXI masters are quiet: no accepted fetch AR whose R is
+    //      still to come (if_outst_q), no memory-coalescer burst in flight
+    //      (mu_stall), no shared-memory access in flight (sm_stall).  A beat
+    //      already on the bus completes, so the crossbar never sees an
+    //      abandoned transaction or an orphan response.
+    //   3. soft_clr: one synchronous clock that returns state_q to IDLE and
+    //      clears the descriptor queue, warp scheduler and compute unit
+    //      (including gpu_error_o).  Configuration registers, the CTRL.irq_en
+    //      bit written with the reset, and the perf counters are kept.
+    // -------------------------------------------------------------------
+    logic halt_q;       // gate: no new fetch / memory request while a soft reset drains
+    logic if_outst_q;   // instruction-fetch AR accepted, its R beat not yet received
+    logic if_ar_stuck;  // fetch AR valid and not (yet) accepted: must not be withdrawn
+    logic soft_clr;     // one-cycle synchronous clear, asserted once the masters are quiet
+
+    assign if_ar_stuck = m_axil_if_arvalid && !m_axil_if_arready;
+    assign soft_clr    = rst_pend_q && halt_q && !mu_stall && !sm_stall && !if_outst_q;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            rst_pend_q <= 1'b0;
+            halt_q     <= 1'b0;
+        end else if (soft_clr) begin
+            rst_pend_q <= 1'b0;
+            halt_q     <= 1'b0;
+        end else begin
+            if (ctrl_reset_q) rst_pend_q <= 1'b1;
+            if ((ctrl_reset_q || rst_pend_q) && !if_ar_stuck) halt_q <= 1'b1;
+        end
+    end
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n)                                        if_outst_q <= 1'b0;
+        else if (m_axil_if_arvalid && m_axil_if_arready)   if_outst_q <= 1'b1;
+        else if (m_axil_if_rvalid)                         if_outst_q <= 1'b0;
+    end
 
     // n_warps: ceil(block_x / N_LANES), capped at N_WARPS.  This is a COUNT (0..N_WARPS), so it
     // is WARP_CNT_W bits wide, one more than a warp ID (WARP_W): capping at N_WARPS-1 made
@@ -266,13 +313,17 @@ module gpu_top
                     if      (cu_gpu_error)        state_q <= GPS_ERROR;
                     else if (sched_kernel_done)   state_q <= GPS_DONE;
                 GPS_DONE:
-                    if (ctrl_reset_q || ctrl_launch_q) state_q <= GPS_IDLE;
-                GPS_ERROR:
-                    if (ctrl_reset_q) state_q <= GPS_IDLE;
+                    if (ctrl_launch_q) state_q <= GPS_IDLE;
+                GPS_ERROR: ;  // sticky: only soft_clr (GPU_CTRL.reset) or rst_n leaves ERROR
                 default: state_q <= GPS_IDLE;
             endcase
             if ((state_q == GPS_RUNNING) && sched_kernel_done) irq_latch_q <= 1'b1;
-            if (irq_clr_q || ctrl_reset_q || sched_launch)     irq_latch_q <= 1'b0;
+            if (irq_clr_q || sched_launch)                     irq_latch_q <= 1'b0;
+            // GPU_CTRL.reset, from any state: back to IDLE with the IRQ latch cleared.
+            if (soft_clr) begin
+                state_q     <= GPS_IDLE;
+                irq_latch_q <= 1'b0;
+            end
         end
     end
 
@@ -340,8 +391,9 @@ module gpu_top
     // Shared memory active/we drive
     // -------------------------------------------------------------------
     logic [N_LANES-1:0] sm_active, sm_we;
-    assign sm_active = cu_shmem_mask & {N_LANES{cu_shmem_req}};
-    assign sm_we     = {N_LANES{cu_shmem_we}} & cu_shmem_mask & {N_LANES{cu_shmem_req}};
+    // halt_q: no new shared-memory / global-memory request while a soft reset drains.
+    assign sm_active = cu_shmem_mask & {N_LANES{cu_shmem_req && !halt_q}};
+    assign sm_we     = {N_LANES{cu_shmem_we}} & cu_shmem_mask & {N_LANES{cu_shmem_req && !halt_q}};
 
     // -------------------------------------------------------------------
     // gpu_command_queue
@@ -359,6 +411,7 @@ module gpu_top
         .block_z_i   (r_block_z_q),
         .arg_ptr_i   (r_arg_ptr_q),
         .irq_enable_i(r_irq_en_q),
+        .soft_clr_i  (soft_clr),
         /* verilator lint_off PINCONNECTEMPTY */
         .busy_o      (),                // gpu_top uses state_q for arbitration
         /* verilator lint_on PINCONNECTEMPTY */
@@ -382,7 +435,7 @@ module gpu_top
         .warp_id_o        (sched_warp_id),
         .warp_pc_o        (sched_warp_pc),
         .warp_mask_o      (sched_warp_mask),
-        .pipe_stall_i     (cu_pipe_stall),
+        .pipe_stall_i     (cu_pipe_stall || halt_q),   // halt_q: no new fetch while a soft reset drains
         .warp_retire_i    (cu_retire),
         .warp_retire_id_i (cu_retire_id),
         .warp_next_pc_i   (cu_retire_pc),
@@ -400,6 +453,7 @@ module gpu_top
         .div_stack_depth_o(sched_div_depth),
         .div_stack_top_o  (sched_div_top),
         .gpu_error_i      (cu_gpu_error),
+        .soft_clr_i       (soft_clr),
         .kernel_done_o    (sched_kernel_done)
     );
 
@@ -453,7 +507,8 @@ module gpu_top
         .shmem_rdata_i    (sm_rdata),
         .shmem_rvalid_i   (sm_rvalid),
         .div_stack_depth_i(sched_div_depth),
-        .div_stack_top_i  (sched_div_top)
+        .div_stack_top_i  (sched_div_top),
+        .soft_clr_i       (soft_clr)
     );
 
     // -------------------------------------------------------------------
@@ -464,7 +519,7 @@ module gpu_top
     ) u_mu (
         .clk          (clk),
         .rst_n        (rst_n),
-        .req_i        (cu_mem_req),
+        .req_i        (cu_mem_req && !halt_q),
         .we_i         (cu_mem_we),
         .addr_i       (cu_mem_addr),
         .wdata_i      (cu_mem_wdata),

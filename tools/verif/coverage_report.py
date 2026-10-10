@@ -73,6 +73,15 @@ informational trees never fail it):
   well above its entry is reported so the entry can be raised or removed.  It never relaxes the
   line floor.
 
+* **line-only trees** (``--line-gate-trees``, default ``rtl/cpu,rtl/mem,rtl/gpu``, bead a5ze):
+  the line floor above applies to every module of these trees too, evaluated on the same
+  (combined) data.  The control-toggle floor does NOT: their wide CSR / address / data buses
+  dominate toggle exactly as in the triaged trees and no ratchet was calibrated for them.  A
+  line-only tree with no measured module is an ERROR (exit 2), never a pass -- a gate run fed
+  only the SoC ``.dat`` must not look green -- and a gated module whose inputs disagree on its
+  point set is a failure (the union would inflate its denominator).  ``--line-gate-trees ""``
+  turns the extension off for a SoC-only local run.
+
 A module with nothing to gate does not pass vacuously: no line points and no control signals
 (and nothing waived) is a failure, "unmeasured".  A module with no line points but control
 signals is gated on those alone and the report says so; one whose line points are all waived
@@ -93,7 +102,8 @@ Usage::
 
     coverage_report.py --dat merged.dat [--dat more.dat ...] [--root <repo>] [--waivers <file>]
                        [--out-md report.md] [--out-json report.json]
-                       [--gate [--line-floor 95] [--toggle-floor 95] [--toggle-ratchet <file>]]
+                       [--gate [--line-floor 95] [--toggle-floor 95] [--toggle-ratchet <file>]
+                        [--line-gate-trees rtl/cpu,rtl/mem,rtl/gpu]]
 """
 
 from __future__ import annotations
@@ -114,6 +124,9 @@ HEADER_PREFIX = "# SystemC::Coverage-"
 
 TRIAGED_TREES = ("rtl/soc", "rtl/periph", "rtl/npu")
 INFORMATIONAL_TREES = ("rtl/cpu", "rtl/mem", "rtl/gpu")
+# Trees that join the gate for LINE coverage only (bead a5ze); the CLI default.  The library
+# default (GateConfig.line_trees) is empty so a caller opts in explicitly.
+LINE_GATED_TREES = INFORMATIONAL_TREES
 # Behavioural SRAM models are simulation stand-ins for hard macros, not design logic.
 EXCLUDED_BASENAME = re.compile(r"^(sram_1rw_|sky130_sram_)")
 EXCLUDED_PREFIXES = ("tb/", "sim/")
@@ -586,12 +599,13 @@ class GateConfig:
     line_floor: float = LINE_FLOOR_PCT
     toggle_floor: float = TOGGLE_FLOOR_PCT
     ratchet: dict[str, Ratchet] = field(default_factory=dict)
+    line_trees: tuple[str, ...] = ()  # line-only gated trees (bead a5ze)
 
 
 @dataclass(frozen=True)
 class GateFailure:
     module: str
-    check: str  # "line" | "toggle" | "unmeasured"
+    check: str  # "line" | "toggle" | "unmeasured" | "inconsistent"
     detail: str
 
 
@@ -647,10 +661,19 @@ def _below(hit: int, total: int, floor: float) -> bool:
 
 
 def evaluate_gate(report: Report, cfg: GateConfig) -> GateResult:
-    """Apply the line and control-toggle floors to the triaged modules."""
+    """Apply the line and control-toggle floors to the triaged modules, plus the line floor to
+    the modules of ``cfg.line_trees``.  Raises CoverageError if a line-gated tree is absent."""
     res = GateResult(cfg)
     triaged = [r for r in report.modules if r.triaged]
-    res.modules_gated = len(triaged)
+    line_only = [r for r in report.modules if not r.triaged and r.tree in cfg.line_trees]
+    missing = [t for t in cfg.line_trees if not any(r.tree == t for r in line_only)]
+    if missing:
+        raise CoverageError(
+            f"line-gated tree(s) {', '.join(missing)} not measured -- the gate needs the "
+            "CPU/cache/GPU input (pass its .dat with --dat, or --line-gate-trees '' for a "
+            "SoC-only run); a gate over data that lacks them is not a pass"
+        )
+    res.modules_gated = len(triaged) + len(line_only)
     for r in triaged:
         _gate_line(r, cfg, res)
         _gate_toggle(r, cfg, res)
@@ -661,6 +684,20 @@ def evaluate_gate(report: Report, cfg: GateConfig) -> GateResult:
                     "unmeasured",
                     "no line points and no control signals were measured -- nothing to gate "
                     f"on ({r.file}); a module with nothing measured is not a pass",
+                )
+            )
+    suspect = {(c.module, c.file): c for c in report.consistency if c.suspect}
+    for r in line_only:
+        _gate_line(r, cfg, res)
+        bad = suspect.get((r.module, r.file))
+        if bad is not None:
+            res.failures.append(
+                GateFailure(
+                    r.module,
+                    "inconsistent",
+                    f"the inputs disagree on this module's point set ({bad.shared}/{bad.total} "
+                    "points shared), so its line % is not trustworthy; regenerate every input "
+                    "from the same commit with the same Verilator",
                 )
             )
     known = {r.module for r in triaged}
@@ -853,7 +890,12 @@ def _gate_section(report: Report, gate: GateResult) -> list[str]:
         "",
         f"Line floor {cfg.line_floor:g} % per module; control-signal toggle floor "
         f"{cfg.toggle_floor:g} % (1-bit scalar signals only), with {len(cfg.ratchet)} ratchet "
-        f"override(s).  Triaged trees only.",
+        f"override(s).  Triaged trees"
+        + (
+            f"; {', '.join(cfg.line_trees)} are line-only (no toggle gate)."
+            if cfg.line_trees
+            else " only."
+        ),
         "",
         "| Module | Line % | Line hit/total | Control toggle % | Control hit/total "
         "| Control floor | Status |",
@@ -861,9 +903,11 @@ def _gate_section(report: Report, gate: GateResult) -> list[str]:
         "| ------------: | :----- |",
     ]
     bad = {f.module for f in gate.failures}
-    for r in (r for r in report.modules if r.triaged):
+    for r in (r for r in report.modules if r.triaged or r.tree in cfg.line_trees):
         entry = cfg.ratchet.get(r.module)
         floor = f"{entry.floor:g} (ratchet)" if entry else f"{cfg.toggle_floor:g}"
+        if not r.triaged:
+            floor = "line-only"
         out.append(
             f"| {r.module} | {_fmt_pct(r.line_pct)} | {r.line_hit}/{r.line_total} "
             f"| {_fmt_pct(r.ctl_pct)} | {r.ctl_hit}/{r.ctl_total} | {floor} "
@@ -871,7 +915,7 @@ def _gate_section(report: Report, gate: GateResult) -> list[str]:
         )
     out += [
         "",
-        f"**Gate {'PASS' if gate.passed else 'FAIL'}**: {gate.modules_gated} triaged modules, "
+        f"**Gate {'PASS' if gate.passed else 'FAIL'}**: {gate.modules_gated} gated modules, "
         f"{len(gate.failures)} failure(s).",
         "",
     ]
@@ -887,7 +931,8 @@ def render_markdown(report: Report, gate: GateResult | None = None) -> str:
     triaged = [r for r in report.modules if r.triaged]
     info = [r for r in report.modules if not r.triaged]
     verdict = (
-        "Gate enforced on the triaged trees: see the Gate section below "
+        "Gate enforced on the triaged trees (and the line floor on the line-only trees "
+        "when enabled): see the Gate section below "
         "(`docs/verification/SOC_COVERAGE_REPORT.md`)."
         if gate is not None
         else "Informational: no coverage percentage gates "
@@ -959,6 +1004,7 @@ def gate_to_dict(gate: GateResult) -> dict:
         "passed": gate.passed,
         "line_floor": cfg.line_floor,
         "toggle_floor": cfg.toggle_floor,
+        "line_trees": list(cfg.line_trees),
         "ratchet": {
             m: {"floor": e.floor, "bead": e.bead, "justification": e.justification}
             for m, e in sorted(cfg.ratchet.items())
@@ -1088,6 +1134,14 @@ def main(argv: list[str]) -> int:
         help=f"gate: control-signal toggle floor %% (default {TOGGLE_FLOOR_PCT:g})",
     )
     ap.add_argument(
+        "--line-gate-trees",
+        default=None,
+        metavar="TREES",
+        help="gate: comma-separated rtl/cpu|mem|gpu trees that also get the LINE floor "
+        f"(default {','.join(LINE_GATED_TREES)}; empty string = triaged trees only). "
+        "A tree with no measured module is an error",
+    )
+    ap.add_argument(
         "--toggle-ratchet",
         type=Path,
         help="gate: per-module control-toggle floors for known gaps (module | floor | bead | why)",
@@ -1097,8 +1151,21 @@ def main(argv: list[str]) -> int:
         args.line_floor is not None
         or args.toggle_floor is not None
         or args.toggle_ratchet is not None
+        or args.line_gate_trees is not None
     ):
-        ap.error("--line-floor, --toggle-floor and --toggle-ratchet require --gate")
+        ap.error(
+            "--line-floor, --toggle-floor, --toggle-ratchet and --line-gate-trees require --gate"
+        )
+    if args.line_gate_trees is None:
+        line_trees = LINE_GATED_TREES
+    else:
+        line_trees = tuple(t.strip() for t in args.line_gate_trees.split(",") if t.strip())
+        unknown = [t for t in line_trees if t not in LINE_GATED_TREES]
+        if unknown:
+            ap.error(
+                f"--line-gate-trees: {', '.join(unknown)} is not one of "
+                f"{', '.join(LINE_GATED_TREES)} (the triaged trees are always gated)"
+            )
 
     try:
         waivers = load_waivers(args.waivers) if args.waivers else []
@@ -1109,6 +1176,7 @@ def main(argv: list[str]) -> int:
                 line_floor=LINE_FLOOR_PCT if args.line_floor is None else args.line_floor,
                 toggle_floor=TOGGLE_FLOOR_PCT if args.toggle_floor is None else args.toggle_floor,
                 ratchet=load_ratchet(args.toggle_ratchet) if args.toggle_ratchet else {},
+                line_trees=line_trees,
             )
             gate = evaluate_gate(report, cfg)
     except CoverageError as exc:
@@ -1148,7 +1216,7 @@ def main(argv: list[str]) -> int:
         print(f"coverage_report: GATE WARNING: {w}", file=sys.stderr)
     if gate.passed:
         print(
-            f"coverage_report: GATE PASS: {gate.modules_gated} triaged modules meet the "
+            f"coverage_report: GATE PASS: {gate.modules_gated} gated modules meet the "
             f"{gate.config.line_floor:g} % line floor and the control-toggle floors",
         )
         return EXIT_OK

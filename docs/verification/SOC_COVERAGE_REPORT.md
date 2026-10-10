@@ -18,7 +18,8 @@ were instrumented. This report covers the whole `tb/cocotb/soc` regression (`soc
 - Line % = `v_line` + `v_branch` points; toggle % = `v_toggle` points (per bit, per direction, as Verilator
   counts them). A point is the same point in every instance and testbench and is hit if any instance hit it;
   `<module>__<params>` specialisations fold into the base module.
-- Triaged trees: `rtl/soc`, `rtl/periph`, `rtl/npu`. Informational: `rtl/cpu`, `rtl/mem`, `rtl/gpu`.
+- Triaged trees: `rtl/soc`, `rtl/periph`, `rtl/npu` (line + control-toggle gate). `rtl/cpu`, `rtl/mem`, `rtl/gpu`:
+  **line gate only** since bead `a5ze` slice 2 (see "Gate decision"); no toggle gate, no toggle triage.
   Excluded: `tb/`, `sim/`, behavioural SRAM models.
 
 Exact run command (15 GB host, `SIM_BUILD_ROOT` on the big disk, never concurrent with another soc sim):
@@ -362,9 +363,8 @@ same Verilator for a few cycles, so a `SUSPECT` consistency row would show up be
 ## rtl/cpu | mem | gpu line triage, slice 1 (bead `a5ze`, 2026-10-10)
 
 Scope decision (user, 2026-10-10): triage every uncovered line point of the modules under 95 %, write the missing tests,
-then move `rtl/cpu|mem|gpu` into the line gate. **Tests and waivers only, no RTL edits.** **This slice does not flip the
-gate**: `gpu_top` is still at 88.8 % (see "Remaining"). `rtl/cpu|mem|gpu` therefore stay informational in
-`coverage_report.py` and `soc_coverage.yml`.
+then move `rtl/cpu|mem|gpu` into the line gate. **Tests and waivers only, no RTL edits.** **Slice 1 did not flip the
+gate** (`gpu_top` was at 88.8 %); slice 2, below, did.
 
 **Basis and its limit.** Measured on HEAD `024abfe` with `make -C sim coverage_cpu_gpu` (nix Verilator 5.048) before and after
 the new tests: **207 passed / 0 failed before, 222 passed / 0 failed after** (+15 = 8 + 3 + 3 + 1; the 16th new test is
@@ -443,6 +443,56 @@ justification, all bound (no stale waiver). 17 line points removed from the deno
 - The gate flip itself (`coverage_report.py` `TRIAGED_TREES`, `soc_coverage.yml`: the combined steps lose `continue-on-error` for the part the gate depends on, `if: always()` on artifact upload, the CPU/GPU input becomes a hard requirement) is deliberately **not** done here. It lands only when every module is >= 95 % on a same-HEAD combined measurement.
 - Not verified: a same-HEAD SoC + CPU/GPU union (the SoC half is c68f91b); toggle coverage was not triaged (recommendation: keep the 100 % control-toggle gate off these trees until the line gate has run a few nights); the new CPU suites were not run on the 5.036 nightly Verilator.
 - Observation, not filed: `rv32i_csr_file` increments no counter in any cycle where a legal CSR instruction is in EX (`:332` vs `:444`), not only the written one. The header says only the written register is suppressed. Whether `mcycle` therefore under-counts is **unmeasured**; slice 2 should measure it before deciding on a bead.
+
+## rtl/cpu | mem | gpu line triage, slice 2: remaining gaps, same-HEAD measurement, gate flip (bead `a5ze`, 2026-10-10)
+
+**Basis.** HEAD `b8bb221` (after PR #257, the `47lf` warp-count fix) plus this branch. The CPU/cache/GPU half is a full
+local `make -C sim coverage_cpu_gpu` (nix Verilator 5.048). The SoC half is the `soc-coverage` artifact of the green
+`SoC Coverage` run 38045855126 on PR #257's branch (`c44f5ec`); `git diff c44f5ec origin/main -- rtl` is **empty**, so its
+RTL is HEAD's RTL and the point sets agree (the report's consistency section is empty). That closes the slice-1 caveat
+(stale SoC half for `ex1c` / `pipeline_mem`). One honest wrinkle: the local `coverage_cpu_gpu` target stopped before its
+merge step because one test (`test_soft_reset_recovers_from_error`) was red at that moment, for a harness reason fixed
+afterwards (an `expect_fail` test must fail with `AssertionError`, it raised `TimeoutError`); I merged the 32
+per-simulation `.dat` files by hand with the same `verilator_coverage --write` the target runs, and re-ran that kernel
+suite on its own (6/6 pass). The nightly job runs the unmodified target end to end.
+
+**Result of the flipped gate on that data: `GATE PASS: 74 gated modules`** (42 triaged + 32 in `rtl/cpu|mem|gpu`), 0 below the
+95 % line floor, no consistency warning. Per tree (line %, with waivers): `rtl/cpu` 99.3 (548/552), `rtl/mem` 97.8 (268/274),
+`rtl/gpu` 98.7 (297/301). **Every `gpu_top` point is closed or waived (100 %).** Lowest modules, i.e. the ones with the least
+headroom: `gpu_compute_unit` 95.5 (64/67, three uncovered, **one more uncovered point fails the gate**), `rv32i_cache_arbiter`
+96.3, `rv32i_cpu_top` 96.9, `rv32i_dcache` 97.1, `rv32i_hazard_unit` 97.4, `memory_coalescer` 97.5.
+
+### What closed the slice-1 open points
+
+| Point | Class | Disposition |
+| :---- | :---- | :---------- |
+| `gpu_top` L143, L155, L311, L312, L314, L331 (soft-reset bit, unmapped write, `BLOCK_Y` / `BLOCK_Z` / `IRQ_STATUS` reads, unmapped read) | a | `test_register_file_paths`, `test_done_returns_to_idle` (`kernel_control_paths.py`). |
+| `gpu_top` L262, L266, L267 x2 (RUNNING -> ERROR, ERROR -> IDLE) | a | `test_stack_overflow_sets_error` (five nested divergent branches overflow the 4-entry stack: STATUS exactly `error`, no done IRQ, sticky for 200 cycles) and `test_four_deep_nesting_ok` (the boundary: four fit). |
+| `gpu_top` L265 (DONE -> IDLE on launch / reset) | a | `test_done_returns_to_idle`. |
+| `rv32i_icache` L498 | a | `test_redirect_during_sram_latch_restarts_for_the_new_address`, `test_fence_i_during_sram_latch_aborts_and_refetches` (unit level, `tb/cocotb/mem/test_icache.py`): the abort lands in the `CS_SRAM_LATCH` cycle; the first checks the redirected fetch returns the NEW line (a stale `ic_addr_q` would return the old one), the second changes memory between the abort and the re-fetch to catch a stale line. |
+| `rv32i_decode` L508 (one point) | a | Not a mystery: the raw point is `l=508 o=else S=510,512`, the `else` arm for MISC-MEM `funct3` other than 000 / 001 (reserved, must be illegal). Closed by two more encodings in `test_illegal_encodings_trap` (`funct3` 010 and 111). |
+
+### Findings (RTL bugs; not fixed, per scope)
+
+| Bead | GH | Finding | Test |
+| :--- | :- | :------ | :--- |
+| `kiit` | #260 | `rv32i_csr_file.sv:332`: every perf counter freezes in any cycle a legal CSR instruction is in EX. Measured: 10 CSR instructions in a 30-cycle window, `mcycle` advanced **20** (30 - 10, one lost cycle per CSR instruction). Header and M7 spec say only the written register is suppressed. | `test_mcycle_counts_every_clock_cycle`, `expect_fail`, +-1 tolerance |
+| `q6w0` | #261 | `CTRL.reset` returns `gpu_top` to idle after ERROR but `gpu_compute_unit`'s `gpu_error_o` is cleared only by `rst_n`: the next launch goes straight back to ERROR. Control (DONE -> reset -> new kernel) passes. | `test_soft_reset_recovers_from_error`, `expect_fail` |
+
+`minstret` over the same window matched the program-order count, so no `minstret` defect is claimed; a CSR-read counter is
+inherently imprecise by the in-flight older instructions and the check was dropped rather than weakened.
+
+### Gate: what is and is not covered
+
+- Gated for line: all 32 modules of `rtl/cpu|mem|gpu`. No module needed a named exception, so no line-floor exception file
+  exists; if one ever must (a module that cannot reach 95 % without an RTL change) it gets an entry tied to its bead rather than a
+  lower floor.
+- Not gated, deliberately: control toggle on these trees (see "Gate decision"). Toggle was not triaged.
+- **The real validation of the flip is the `SoC Coverage` job on this PR.** It touches the workflow, so the full job runs: SoC half,
+  CPU/GPU half, combined report, gate. What was verified locally is the script (`tb/tests/test_coverage_report.py`, tests written first) and the gate result on
+  the same-RTL data above; the workflow YAML itself was only parsed, not executed.
+- The CPU suites still run only in the nightly / this job (`make -C sim test`), not per PR; the gate is what makes a regression there
+  visible.
 
 ## 7ovx register-walk re-measurement (2026-10-09)
 
@@ -668,9 +718,26 @@ red gate still publishes the report, `merged.dat` and `gate_report.{md,json}`. T
 its `PASS_FLOOR` are untouched, and the job still fails on a red suite, a collapsed instrumented pass count
 (`PASS_FLOOR`) or missing data as before.
 
-**Scope.** Triaged trees only (`rtl/soc`, `rtl/periph`, `rtl/npu`; 42 modules). `rtl/cpu`, `rtl/mem` and `rtl/gpu`
-stay informational and can never fail the gate (bead `a5ze`). The combined CPU/cache/GPU report is not gated either;
-the gate reads the SoC `merged.dat` only.
+**Scope (updated by bead `a5ze` slice 2, 2026-10-10).** The triaged trees (`rtl/soc`, `rtl/periph`, `rtl/npu`;
+42 modules) get the line floor and the control-toggle floor as before. **`rtl/cpu`, `rtl/mem` and `rtl/gpu` (32
+modules) now get the 95 % LINE floor too**, evaluated on the COMBINED data: the gate step reads both the SoC
+`merged.dat` and the CPU/cache/GPU `cpu_gpu_merged.dat`, which the same job produced at the same commit with the same
+Verilator. The **100 % control-toggle gate stays off these three trees** (their CSR / address / data buses dominate
+toggle exactly as in the triaged trees, and no ratchet was ever calibrated for them; revisit after the line gate has
+run for a few nights). The slice-1 note below that the gate "reads the SoC `merged.dat` only" is superseded.
+
+What makes the extension safe rather than decorative:
+
+- the CPU/cache/GPU step is no longer `continue-on-error`; a follow-up step applies the same log-grep floor as the SoC
+  half (`CPU_PASS_FLOOR`, 0 failed) and requires a non-empty `cpu_gpu_merged.dat`; a red suite or missing input fails
+  the job, and the summary / upload steps stay `if: always()`;
+- `coverage_report.py --gate` defaults `--line-gate-trees` to `rtl/cpu,rtl/mem,rtl/gpu`; a gate run whose data has no
+  module of one of those trees exits **2 (could not evaluate)**, never 0, so feeding it only the SoC `.dat` cannot look
+  green. `--line-gate-trees ""` disables the extension for a SoC-only local run;
+- a gated module whose inputs disagree on its point set (a `SUSPECT` row in the consistency section: different
+  Verilator or different source revision) is a gate failure (`inconsistent`): the union would inflate its
+  denominator. This is exactly the stale-SoC-`.dat` situation slice 1 hit;
+- category-b waivers apply to these trees like any other (`tools/verif/coverage_waivers.txt`).
 
 | Check | Floor | Measured on current RTL (42 modules) |
 | :---- | ----: | :----------------------------------- |
