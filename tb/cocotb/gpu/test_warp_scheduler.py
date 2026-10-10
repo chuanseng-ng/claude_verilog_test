@@ -7,6 +7,7 @@ Tests:
   test_retire_resumes_warp     — retired warp re-enters round-robin at correct PC
   test_all_done_kernel_done    — kernel_done_o asserts once all warps signal done
   test_div_push_pop_state      — divergence stack survives warp switches
+  test_eight_warps_issue_and_complete — n_warps_active_i = 8 (4-bit count) runs warps 0..7 (47lf)
 """
 import cocotb
 from cocotb.clock import Clock
@@ -280,3 +281,36 @@ async def test_div_push_pop_state(dut):
         f"PC should be RETURN_PC after pop, got 0x{int(dut.warp_pc_o.value):08x}"
     assert int(dut.warp_mask_o.value)        == RETURN_MASK, \
         f"Mask should be RETURN_MASK after pop, got 0x{int(dut.warp_mask_o.value):02x}"
+
+
+@cocotb.test()
+async def test_eight_warps_issue_and_complete(dut):
+    """n_warps_active_i = 8 (all warps; needs a 4-bit count) issues warps 0..7 and finishes.
+
+    Regression for bead 47lf / GH #254: the count was WARP_W = 3 bits wide, so 8 could not be
+    represented (it saturated to 7 in gpu_top, and would truncate to 0 here).  kernel_done_o
+    must also wait for warp 7, not just warps 0..6.
+    """
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    await _reset(dut)
+
+    dut.pipe_stall_i.value = 0
+    await _launch(dut, pc=0x6000, mask=0xFF, n_warps=8)
+
+    issued = []
+    for _ in range(8):
+        await Timer(1, units="ns")
+        assert dut.warp_issue_o.value == 1, f"Expected issue #{len(issued)} of 8"
+        issued.append(int(dut.warp_id_o.value))
+        await RisingEdge(dut.clk)
+    await Timer(1, units="ns")
+    assert issued == list(range(8)), f"Expected warps 0..7 in order, got {issued}"
+    assert dut.warp_issue_o.value == 0, "All 8 warps busy -- no further issue"
+
+    for w in range(7):
+        await _done(dut, warp_id=w)
+        await Timer(1, units="ns")
+        assert dut.kernel_done_o.value == 0, f"warps {w + 1}..7 still running"
+    await _done(dut, warp_id=7)
+    await Timer(1, units="ns")
+    assert dut.kernel_done_o.value == 1, "All 8 warps done -- kernel_done should assert"
