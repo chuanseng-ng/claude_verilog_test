@@ -1,154 +1,138 @@
 # Sky130 CPU macro netlist vs RTL differential (bead `dud4`)
 
 Date 2026-10-10. Question: is the Sky130 `rv32i_cpu_top` hard macro netlist (built with
-`USE_SYNLIG: true`) functionally corrupt, the way `u99`/`ma7` showed for ASAP7?
-Scope: test only. No PD run, no config change, no re-harden.
+`USE_SYNLIG: true`) functionally corrupt, the way `u99`/`ma7` showed for ASAP7? Test only: no PD run,
+no config change, no re-harden. Statements are tagged MEASURED, INFERRED or HYPOTHESIS.
 
 ## Verdict
 
-**CORRUPT (netlist != RTL), high confidence. Attribution to the Synlig frontend specifically: NOT established.**
+**CORRUPT, and the cause is localised to the Synlig frontend.** The committed Sky130 CPU macro netlist
+computes wrong results. Synlig elaborates two port connections of the hazard unit as undefined; a
+synthesis of the same pinned RTL through sv2v is functionally identical to RTL on every program tried, and a
+Synlig synthesis of the same RTL reproduces the committed netlist's failure signature. The mechanism is
+**hazard/forwarding compare against undefined `rs1`/`rs2`**, not the regfile read mux that `ma7`/`u99` blame.
 
-The committed Sky130 CPU macro netlist computes wrong architectural results. On the exact
-`u99` program it leaves `x4 = 0x30` where RTL gives `0x0c` (the same value `u99` saw on ASAP7),
-and on the exact `ma7` branch program it evaluates `BEQ x2,x3` (9==9) as NOT TAKEN (same as
-ASAP7). Three independent confirmations: Verilator + PDK functional cell models, yosys `sim` +
-Liberty cell models (a second, race-free simulator), and (for the RTL side) agreement with the
-Python reference model. The mechanism is **not** the regfile read mux that `ma7` blames; see
-"Mechanism". That also puts the `ma7`/`u99` diagnosis in question.
+## Root cause (MEASURED unless marked)
 
-## Netlist provenance (MEASURED)
+`rv32i_core.sv` connects the hazard unit as
+`.if_id_rs1_addr(if_id_reg.instruction[19:15])`, `.if_id_rs2_addr(if_id_reg.instruction[24:20])`
+(lines 432/433 at `5c49ddf`; 436/437 on main). Synlig/Surelog logs during `Yosys.Synthesis` and JsonHeader:
 
-* `pnr/sky130/cpu/macro/rv32i_cpu_top.nl.v.gz`, sha256
-  `d905d526e8b8093e556f77571c6ec259a2603341b23b15ebd89915ba2c5cea49`, 669,682 lines (gunzipped).
-  This is the file the Sky130 SoC consumes (`pnr/sky130/soc/config.json` MACROS entry
-  `../cpu/macro/...`); there is no other CPU netlist on disk.
-* Committed in `995c487` (2026-07-27): "Adopt RUN_2026-07-27_05-52-19 ... Netlist taken from the final
-  (post-fill-insertion) step". Parent chain: `74d3064`, `5c49ddf`.
-* Source RTL: `rtl/cpu`, `rtl/mem`, `rtl/soc` last changed in `9f15ebe` (2026-07-25), before the run
-  started. The RTL arm uses the tree at `5c49ddf` (`git archive`). `rv32i_regfile.sv` is unchanged
-  between `5c49ddf` and HEAD; HEAD differs in 15 other `rtl/cpu|mem` files (e.g. `999e44a` registered APB
-  outputs), which is why the pinned tree was used.
-* **Synlig as the frontend is NOT proven from a log.** The run directory is gone
-  (`/nobackup/sky130_cpu_runs` is empty), so no resolved config or synthesis log exists. The only
-  evidence is `pnr/sky130/cpu/config.json` at `5c49ddf`/`995c487`: `USE_SYNLIG: true`,
-  `SYNLIG_DEFER: false` (identical at HEAD). Treat "built by Synlig" as configuration evidence only.
-* Cells: 4,829 `dfxtp` flops, 10 `sky130_sram_1kbyte_1rw1r_32x256_8` macros (I$/D$ tag+data), no
-  latches, no clock gates.
+```
+rv32i_core.sv:432: Warning: Range select [639:608] out of bounds on signal `\if_id_reg': Setting all 32 result bits to undef.
+rv32i_core.sv:433: Warning: Range select [799:768] out of bounds on signal `\if_id_reg': Setting all 32 result bits to undef.
+```
 
-## Method (MEASURED)
+The raw RTLIL straight from Synlig has `connect \if_id_rs1_addr 5'x` and `connect \if_id_rs2_addr 5'x`
+(`localise/raw_synlig.il`, lines 22700-22701). A part-select of a packed-struct field inside a port
+connection is what triggers it. sv2v elaborates the same lines correctly. With the compare address undefined,
+every `rd_addr == if_id_rs?_addr` in `rv32i_hazard_unit` (pre-decoded forwarding selects, load-use detect) is a
+don't-care, so Yosys merges the B-side registered selects into the A-side ones.
 
-`tools/verif/gls/sky130/` (reproduce with `gen_all_progs.sh`, `build_arm.sh rtl|gate`, `run_arm.sh`,
-`compare_arms.py diff`). One testbench (`tb_sky130_cpu_check.sv`), unmodified, drives both arms;
-only the sources differ.
+Flop census (post-synthesis, pinned RTL `5c49ddf`): Synlig 4,829 `dfxtp` with **0** `fwd_b_*` flops; sv2v 4,834
+with 5 (`fwd_b_sel_r` x3, `fwd_b_ex1c_r`, `fwd_b_ex1b2_r`). The committed post-PnR netlist has **4,829** `dfxtp`
+and no `fwd_b_*` nets, i.e. exactly the Synlig count. `Removed N multiplexer ports` counts are identical in both
+arms (`OPT_MUXTREE` is not the difference). Source of these numbers: `/nobackup/claude_sim_build/dud4/synth/NOTES.md`
+(PD-agent synthesis-only experiment; commands, hashes and tool versions there: LibreLane 2.4.13, Yosys 0.46,
+Surelog 1.82, sv2v 0.0.13.1).
 
-* Gate arm: netlist + `sky130_fd_sc_hd` PDK functional Verilog models (`-DFUNCTIONAL`, UDP-based,
-  `UNIT_DELAY` empty) + `sim/sky130_sram_1kbyte_1rw1r_32x256_8.sv`. Verilator 5.048 handled the PDK
-  UDP models directly; nothing else was substituted.
-* RTL arm: pinned RTL, `+define+SRAM_SKY130`, same SRAM model, Verilator.
-* Bench: ROM + burst AXI read BFM, AXI write slave (MMIO stores bypass the D$ and show at the
-  boundary), APB master that halts the core and reads GPR x0..x31 through the debug port. Race
-  discipline: outputs snapshotted 1 ns before each posedge, bench state advances by NBA.
-* Comparison: commit stream, AXI writes, 32 debug GPR reads, and a per-cycle trace of every macro output
-  port (cycle-exact).
-* Programs: `ma7_straight` (u99), `ma7_branch` (ma7 step 1), `trivial` (ADDI x1,5 ; park),
-  `sweepA/B/C` (31-register sweep, three base/dest choices; expected stores computed by construction).
+## Simulation result: three netlists, same testbench, same programs (MEASURED)
 
-## Results (MEASURED)
+RTL arm: RTL at `5c49ddf` (+`SRAM_SKY130`). Gate arms: synthesis-only netlists (`Yosys.Synthesis` output, same PDK,
+config, library, strategy per pair; single variable = frontend), PDK functional cell models, project SRAM model.
+Programs: `trivial`, `ma7_straight` (u99), `ma7_branch`, `sweepA/B/C` (31-register sweeps). Comparison:
+commit stream, AXI writes, 32 debug GPR reads and a per-cycle trace of every output port.
 
-| program | RTL arm | gate vs RTL |
-|---|---|---|
-| trivial | matches model | **IDENTICAL**, all 74 commits, every cycle of the boundary trace, all 32 GPR reads |
-| ma7_straight | x4 = 0x0c | commit stream and AXI identical; **x2/x3/x4 = 0x0c/0x18/0x30** (RTL 0x07/0x0c/0x0c) |
-| ma7_branch | BEQ taken, parks 0x28 | **BEQ NOT taken**, retires 0x14, 0x18 (WRONG path) |
-| sweepA/B/C | 116/116 stores and final GPRs match expectation | **diverge at the first MMIO store** (cycle 348): gate raises `trap_taken` cause 6 (store address misaligned), `awaddr`=0 instead of `0x20000110`, restarts at pc 0 |
+| gate netlist (pinned RTL `5c49ddf`) | result vs RTL |
+|---|---|
+| committed post-PnR netlist (`995c487`) | x4 = `0x30`, BEQ x2,x3 not taken, sweeps trap at the first MMIO store (earlier section of this PR) |
+| `pinned/synlig` synth netlist | **5 of 6 programs diverge** with the same signature: `ma7_straight` x4 = `0x30` (RTL `0x0c`); `ma7_branch` first commit divergence #5 (pc 0x14 instead of 0x20, BEQ not taken); sweeps A/B/C diverge at commit #69 (first MMIO store, pc 0x114 -> restart at pc 0). `trivial` identical. Port matrix: 96 of 124 exercised cells FAIL |
+| `pinned/sv2v` synth netlist | **IDENTICAL to RTL on all 6 programs**, cycle-exact on every output port, all 32 debug reads. Port matrix: **124 of 124 cells PASS** (x1..x31 x {rs1, rs2, both, debug}) |
+| `wa/synlig` (main RTL + scratch workaround: the two selects routed through a full-width wire) | see "Main-RTL pair" below |
 
-Ruled out as harness causes (MEASURED):
+So: the fault exists at synthesis output (P&R, CTS, resizer and ECO are exonerated for this signature), the fault
+comes from the frontend, and the sv2v netlist of the same RTL is functionally correct for what was tested.
 
-* Initialisation/X: both arms re-run with `+verilator+rand+reset+2`, seeds 11 and 22: each arm identical to its
-  own zero-init run on all 6 programs; gate-vs-RTL divergence unchanged. (The regfile is synchronously
-  reset in RTL and the netlist has no un-reset state that the programs read.)
-* Simulator race / UDP scheduling: the original `ma7` yosys-`sim` harness, unmodified, on the same netlist
-  with Liberty cell models gives `apb_prdata_captured = 0x30` for the u99 program and the same
-  NOT-TAKEN `BEQ` trace (`run_yosys_gate_check.sh`).
-* SRAM model: same file, same read latency, both arms; `trivial` (which exercises I$ refill and the APB
-  path) is cycle-exact identical.
-* RTL commit mismatch: RTL pinned to the source commit; RTL arm independently matches the by-construction
-  expectation for all three sweeps and the published ma7 RTL results.
-* Cell models / power pins: functional models without power pins; `trivial` identical end to end.
+Ruled out as harness effects (MEASURED): initial state/X (random-reset runs, two seeds, identical to zero-init per
+arm); Verilator scheduling (original `ma7` yosys-`sim` harness also gives `0x30` and the not-taken branch on the
+committed netlist, and `0xc` on the pinned sv2v synth netlist); SRAM model and latency (same file, both arms); RTL
+commit (pinned; the RTL arm matches the by-construction expectation 116/116 stores and final GPRs); cell models
+(`trivial` is cycle-exact identical on every netlist).
 
-First diverging observation, `ma7_straight` (MEASURED, probe build): regfile storage `x2` is written
-`0x0c` at cycle 26 (RTL `0x07`); `x3` `0x18` at 29 (RTL `0x0c`); `x4` `0x30` at 32 (RTL `0x0c`). The
-debug-port read returned exactly the storage contents for all 32 registers (storage == debug read), so the
-debug read mux is faithful here; the **stored values are wrong**.
+### Harness problem found and fixed on the way (MEASURED)
 
-## Mechanism (partly MEASURED, partly INFERRED)
+On the first attempt the synthesis-output netlists produced no commits at all in Verilator, for **both** frontends.
+Cause: the PDK `sky130_fd_sc_hd__conb_1` model uses `pullup`/`pulldown` primitives; where the Yosys netlist drives
+output ports/nets straight from tie cells, Verilator resolves them as pulled tri-states, warns `Circular
+combinational logic ... __out__strong__out` and returns 0 for `HI`, so the CPU never starts. Fix: `CONB_FIX=1` in
+`build_arm.sh` swaps the cell type for a plain `HI=1, LO=0` module (`conb_model.v`). The yosys-`sim` Liberty run is
+unaffected and independently gave the same answers. The committed post-PnR netlist was not affected (its ties go through
+`assign` nets).
 
-* MEASURED: ID/EX `rs1_data`/`rs2_data` (the regfile read results registered into ID/EX) are identical to RTL in
-  every cycle of `ma7_straight` except the final `SW x4`, where the gate's read returns its (already wrong)
-  storage `0x30`. Reads of recently written registers are stale in both arms and corrected by forwarding.
-* MEASURED: the registered forwarding-select flops (`fwd_a_ex1c_r`, `fwd_a_ex1b2_r`, `fwd_a_sel_r`) assert in
-  a rolling pattern over cycles 25..31 in the gate, whereas RTL asserts a single forward (cycle 26).
-* INFERRED from the arithmetic: `0x0c = 7+5`, `0x18 = 12+12`, `0x30 = 24+24` i.e. each ALU operand is the
-  previous instruction's result instead of the architected operand, including for `rs=x0`. That is a
-  forwarding-select (hazard-unit pre-decode) fault, **not** a regfile read-mux fault.
-* This contradicts the `ma7` mechanism for Sky130. The ASAP7 results (same `0x30`, same wrong branch)
-  are consistent with the same forwarding fault and `u99`'s "debug read mux" attribution may have mistaken
-  wrong STORED values for a wrong read. **HYPOTHESIS for ASAP7, not tested here.**
-* MEASURED, negative: Synlig-elaborated + `librelane_opt(nodffe,nosdff)x5` versions of `rv32i_hazard_unit`,
-  `rv32i_forwarding_unit`, `rv32i_alu`, `rv32i_branch_comp`, `rv32i_decode`, `rv32i_imm_gen` are
-  **formally equivalent** to the sv2v/`read_verilog` versions (`miter` + SAT, `equiv_all_comb.sh`; vacuity
-  of the miter not separately checked). `rv32i_regfile` alone: identical coarse-cell census and identical
-  `OPT_MUXTREE` removals (14 ports) under Synlig and sv2v. So the fault is NOT visible when these modules are
-  elaborated in isolation.
-* MEASURED, unexplained: Synlig-elaborated whole CPU after proc/flatten/opt (stop before techmap/abc), simulated
-  with the ma7 harness in yosys, returns `apb_prdata_captured = xxxxxxxx` (X) for the u99 program, while the
-  sv2v-elaborated equivalent returns the correct `0x0c` (`frontend_sim_check.sh`). Not root-caused (could be
-  an X-propagation artefact of the Synlig RTLIL); it is a Synlig-vs-sv2v difference at the pre-techmap stage,
-  but not the same symptom as the netlist.
+## Corrected mechanism
 
-## Negative control
+* MEASURED (committed netlist, `ma7_straight` probes): regfile read data into ID/EX equals RTL in every cycle except
+  the final `SW x4`; stored values are wrong from `x2` on (`0x0c` instead of `0x07` at cycle 26); the registered
+  forwarding-select flops assert in a rolling pattern (cycles 25-31) where RTL asserts once.
+* INFERRED from the arithmetic and the root cause: with `if_id_rs1/rs2` undefined the forwarding selects depend on
+  the producer alone, so each ALU operand is the previous instruction's result (`7+5`, `12+12`, `24+24`), including
+  for `x0`. That also explains why the sweeps trap at the first store: the address operand is forwarded garbage.
+* The debug read mux is faithful (storage == debug read for all 32 registers). The regfile read mux is **not** the
+  fault; it passes the full 31-register x port matrix on the sv2v netlist, and the Synlig netlist's regfile read
+  results are not what fails.
 
-MEASURED, weak. Two attempts, both on a scratch copy (`inject_fault.py`; original untouched), compared
-gate-with-fault against the unfaulted gate arm:
+## Why nothing caught it
 
-1. Swap S0/S1 on the two bit-0 first-level read `mux4` cells for x0..x3 (`_35893_`, `_36552_`):
-   **not detected** in any program. Cause: the swap exchanges index 1 and 2, and x1=5, x2=7 share bit 0, so
-   it was invisible by construction. Recorded as an uninformative control, not as evidence.
-2. Tie input A1 (index-1 data) of the same two cells to 0: **detected in 1 of 6 programs** (`sweepC`): first
-   trace divergence at cycle 348, the same store the unfaulted gate traps on; with the fault the gate arm
-   executes `SW` at pc 0x114 (RTL-like) instead of trapping. The other five programs were unaffected
-   (`trivial`, `ma7_*`, `sweepA/B`: IDENTICAL to the unfaulted gate), so those cells are not on those
-   programs' observed paths.
+* Port-connection fault *between* modules: per-module Synlig-vs-sv2v SAT equivalence (hazard, forwarding, ALU, branch
+  comparator, decode, immediate generator: all equivalent in isolation; `equiv_all_comb.sh`) cannot see it because the
+  broken wires are the instance's port connection inside `rv32i_core`, outside every isolated module.
+* It is a logged **Warning** that no step gates on. `Checker.YosysSynthChecks`, lint (Verilator on the sources),
+  unmapped-cell, NetlistAssign and inferred-latch checks all pass (`synthesis__check_error__count` 0 in every arm).
+* Netgen LVS compares layout to the same wrong netlist; STA and P&R are happy with a smaller, wrong design (Synlig
+  netlist is 333-957 cells smaller).
+* The earlier `OPT_MUXTREE` hypothesis fits the symptom only by coincidence (identical removal counts in both arms).
 
-So the harness does detect a netlist change, but the control is low-sensitivity and was not run on a clean
-baseline (none exists). An unexpected side observation, **uninterpreted**: perturbing a regfile read-tree
-cell changed the failure of `sweepC` at the very cycle where it first diverges. That means the `sweep` failure
-(store-address path via ID read of the base register) may involve the regfile read path after all, unlike
-`ma7_straight`. Not resolved here.
+## Consequences
 
-## What was NOT done
+* The Sky130 SoC consumes the wrong CPU macro (`pnr/sky130/soc/config.json` MACROS). Every Sky130 SoC result that depends
+  on CPU behaviour at gate level rests on it; RTL-level cocotb results are unaffected.
+* ASAP7 (INFERRED, untested): the ASAP7 CPU config is also `USE_SYNLIG:true` on RTL with the same two lines, and
+  its `u99`/`ma7` signature (x4 = `0x30`, BEQ not taken) is identical to the one reproduced here by the Synlig netlist.
+  So the ASAP7 failure is very likely this defect, and the `u99`/`ma7` "regfile read-mux OPT_MUXTREE" diagnosis is
+  in doubt. Not verified by building or simulating any ASAP7 netlist here.
+* Remedies (owner's decision, both need a re-harden): switch the Sky130 CPU config to sv2v (as the SoC and, since `ma7`,
+  ASAP7 already are) and/or rewrite the two part-selects through a full-width wire; gate on the Synlig `Range select ...
+  out of bounds` / `undef` warning.
+* Surelog shared-cache caveat (MEASURED, from the synthesis run): the Makefile runs LibreLane with cwd = the librelane
+  checkout, so Surelog's `slpp_all` cache is shared across every project and worktree; one run logged source paths from
+  an older worktree whose `rv32i_core.sv`, `rv32i_hazard_unit.sv` and `rv32i_forwarding_unit.sv` differ. The resulting
+  netlist was byte-identical to the clean-cwd run, so no stale content leaked in that instance, but it is a latent hazard
+  and cannot be excluded for the committed netlist (its run directory is gone).
 
-* No sv2v-built (or otherwise non-Synlig) CPU netlist through the same flow was produced or simulated, so
-  **the fault is not attributed to Synlig**. The failure could equally come from a later flow step (ABC with
-  `DELAY 3`, resizer/repair, ECO). This is the single experiment that settles attribution (below).
-* The 31-register x port matrix was not obtained: all three sweeps trap at their first MMIO store, so no
-  per-register read-port verdict exists. The regfile read mux is NOT shown clean or corrupt in general; the
-  evidence is limited to `x4` on the rs2 port and debug-port reads of all 32 registers in `ma7_straight`.
-* Forwarding-select internals were probed only for the A side and only on `ma7_straight`.
-* Whole-CPU formal equivalence (gate netlist vs RTL) not attempted. Run dir / synthesis log for provenance
-  unavailable. ASAP7 not re-examined.
+## Negative control, on a clean baseline (MEASURED)
 
-## Next experiment (one)
+Baseline = `pinned/sv2v` netlist (IDENTICAL to RTL on all 6 programs). Fault (scratch copy, `inject_fault.py tie1`):
+data input A1 tied to 0 on the 63 first-level read-mux cells that select x1 among x0..x3 in every read tree
+(`find_x1_read_cells.py`). Detected in **4 of 6 programs** (`ma7_branch`, `sweepA`, `sweepB`, `sweepC`; first AXI write
+divergence: expected `0x91b7584a`, got `0x00001000`). Not detected in `trivial` and `ma7_straight` (neither reads x1
+through a settled read-mux path that matters there: `x1` is consumed via forwarding or only through the debug path).
+So the differential detects a regfile read-path fault when the program reads settled registers, which the sweeps do.
+Earlier controls against the faulty committed netlist were weak (an S0/S1 swap was invisible because x1 and x2 share
+bit 0).
 
-Synthesise `rv32i_cpu_top` with the committed Sky130 config but `USE_SYNLIG:false` (sv2v frontend), synthesis
-step only, and run `tools/verif/gls/sky130/` (`build_arm.sh gate <that netlist>`, `run_arm.sh`,
-`compare_arms.py diff`). If it matches RTL, the frontend is the cause; if it diverges identically, the fault is
-downstream of the frontend (and `ma7`'s remedy would not fix it). Needs the user's go-ahead (fresh synthesis).
+MAIN_PAIR_PLACEHOLDER
+
+## Not done / limits
+
+* Whole-CPU formal equivalence between netlists and RTL; ASAP7 netlist simulation; the sv2v netlist was shown
+  correct only for the programs above (all 31 registers on both ID ports, plus both ma7 programs), not exhaustively.
+* The committed netlist's own run log is gone, so "built by Synlig" for that exact file is inferred from its
+  signature (4,829 flops, no `fwd_b_*`) plus the config, not read from a log.
+* `rv32i_core.sv` line-number mapping is per RTL version (432/433 pinned, 436/437 main).
 
 ## Reproduce
 
-`gen_all_progs.sh <progs>`; `build_arm.sh rtl <dir>`; `build_arm.sh gate <dir> [netlist]`;
-`run_arm.sh <armdir> <progs>`; `compare_arms.py diff <rtl_run> <gate_run>`; `rand_init_check.sh`;
-`run_yosys_gate_check.sh`; probes: `build_probe_arms.sh`, `run_probe.sh`, `decode_trace.py`;
-`equiv_all_comb.sh`; `frontend_sim_check.sh`; `inject_fault.py`. Scratch under
-`/nobackup/claude_sim_build/dud4`. Netlists are not committed.
+`gen_all_progs.sh`, `build_arm.sh rtl|gate` (`CONB_FIX=1` for Yosys synthesis-output netlists; `RTL_ROOT=` selects
+the RTL tree), `run_arm.sh`, `compare_arms.py diff`, `port_matrix.py`, `run_and_compare.sh`, `run_yosys_gate_check.sh`,
+`inject_fault.py`, `find_x1_read_cells.py`, `equiv_all_comb.sh`; probes `build_probe_arms.sh`, `run_probe.sh`,
+`decode_trace.py`. Scratch under `/nobackup/claude_sim_build/dud4`. Netlists are not committed.

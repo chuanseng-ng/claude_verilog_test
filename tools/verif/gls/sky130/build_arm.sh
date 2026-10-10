@@ -62,7 +62,12 @@ case "$ARM" in
     ;;
   gate)
     NETLIST="${3:-${NETLIST:-/nobackup/claude_sim_build/dud4/rv32i_cpu_top.nl.v}}"
-    "$VBIN" "${COMMON[@]}" -DFUNCTIONAL '-DUNIT_DELAY=' \
+    if [ "${CONB_FIX:-0}" = 1 ]; then
+      sed 's/sky130_fd_sc_hd__conb_1 /dud4_conb /' "$NETLIST" > "$OUT/netlist.conbfix.v"
+      NETLIST="$OUT/netlist.conbfix.v"
+      EXTRA_V="$HERE/conb_model.v"
+    fi
+    "$VBIN" "${COMMON[@]}" -DFUNCTIONAL '-DUNIT_DELAY=' ${EXTRA_V:-} \
       --Mdir "$OUT/obj" "$PDK_VLOG/primitives.v" "$PDK_VLOG/sky130_fd_sc_hd.v" \
       "$SRAM_MODEL" "$NETLIST" "$TB" 2>&1 | tee "$OUT/build.log" | tail -5
     ;;
