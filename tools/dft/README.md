@@ -23,3 +23,6 @@ files (`__tt_025C_1v80.lib`, `sky130_fd_sc_hd.lef`, `sky130_fd_sc_hd__nom.tlef`)
 4. `soc_dft.tcl` (env `MODE`, `NCH`) - scan_replace + insert_dft on a full SoC synthesis netlist.
 5. `lib_setup.py <lib> <cells...>` - D/SCD/SCE setup and clk->Q at the middle table point.
 6. ATPG: `yosys cut.ys` (full-scan cut, flops exposed as ports) -> `timer_cut.blif`; `quaigh atpg timer_cut.blif -o t.test`.
+7. Crypto exclusion (decision 3): `python3 crypto_cone.py soc_top.nl.v --emit-instances excl.txt` (cone/fault-proxy numbers);
+   `MODE=no_mix NCH=4 EXCL=excl.txt openroad soc_dft_exclude.tcl` (`set_dont_touch` is honoured);
+   `python3 check_scan_exclusions.py scan_netlist.v --expect 256` (gate; exits 1 on violation; negative control = the full-scan netlist).

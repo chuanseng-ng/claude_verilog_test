@@ -75,6 +75,7 @@ See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for
 | `docs/PHASE6_IP_EXPANSION_PLAN.md` | Phase 6 IP expansion — remaining 6a peripherals + 6b crypto + 6c NPU (golden spec) |
 | `docs/design/RTL_DEFINITION.md` | Interface signal definitions |
 | `docs/design/MEMORY_MAP.md` | Address space and register map |
+| `docs/design/DFT_ARCHITECTURE.md` | Sky130 DFT (scan + MBIST) Stage 0 feasibility, architecture, decisions (GH #244) |
 | `docs/design/REFERENCE_MODEL_SPEC.md` | Python reference model API |
 
 ### Physical Design
