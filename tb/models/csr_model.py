@@ -6,8 +6,10 @@ mcause / mip / ID registers), the Phase 5 M7 performance-counter map (mcountinhi
 minstret[h], mhpmcounter3-5) and the RISC-V Zicsr rule that CSRRS/CSRRC with a zero source do not
 write.
 
-The model holds no free-running state: the counters only change through writes, so a test must
-freeze them with mcountinhibit before comparing a read against the model.
+execute() is the untimed instruction view: the counters only change through writes, so a test
+that compares a read against it must freeze them with mcountinhibit first.  tick() is the
+cycle-accurate view (bead kiit): it also advances the free-running counters, so a monitor can
+step it once per clock and compare the whole counter state with the DUT every cycle.
 """
 
 from __future__ import annotations
@@ -50,6 +52,7 @@ _READ_ONLY = {
     CSR_MHARTID: 0,
 }
 _MAINTENANCE = {CSR_DCACHE_FLUSH: "flush", CSR_DCACHE_INVAL: "inval"}
+MASK64 = (1 << 64) - 1
 
 
 class IllegalCsrError(Exception):
@@ -105,12 +108,73 @@ class CsrModel:
         operand &= 0x1F if imm else MASK32
         if kind not in ("RW", "RS", "RC"):
             raise ValueError(f"unknown CSR op {kind!r}")
-        writes = kind == "RW" or not (suppress_write or (imm and operand == 0))
-        if not writes:
+        if not self._writes(kind, operand, imm, suppress_write):
             return old
-        new = {"RW": operand, "RS": old | operand, "RC": old & ~operand & MASK32}[kind]
-        self._write(addr, new)
+        self._write(addr, self._new_value(kind, old, operand))
         return old
+
+    @staticmethod
+    def _writes(kind: str, operand: int, imm: bool, suppress_write: bool) -> bool:
+        """Zicsr: CSRRW always writes; CSRRS/CSRRC skip the write for rs1 == x0 / uimm == 0."""
+        return kind == "RW" or not (suppress_write or (imm and operand == 0))
+
+    @staticmethod
+    def _new_value(kind: str, old: int, operand: int) -> int:
+        return {"RW": operand, "RS": old | operand, "RC": old & ~operand & MASK32}[kind]
+
+    def tick(
+        self,
+        *,
+        retire: bool = False,
+        icache_miss: bool = False,
+        dcache_miss: bool = False,
+        branch_mispred: bool = False,
+        access: tuple[str, int, int, bool, bool] | None = None,
+    ) -> None:
+        """Advance the counters by one clock (bead kiit).
+
+        ``access`` is the CSR instruction in EX this cycle as ``(kind, addr, operand, imm,
+        suppress_write)`` (same meaning as execute()); None when there is none, or when it is
+        squashed by a trap entry / MRET in the same cycle.  Semantics, from the RISC-V privileged
+        spec and the project's "write wins over increment" rule:
+
+        * every counter whose mcountinhibit bit was clear at the START of the cycle counts, whatever
+          instruction is in EX -- mcountinhibit itself takes effect from the next cycle;
+        * a CSR write replaces the addressed 32-bit register only; every other counter still counts;
+        * the write beats the same-cycle increment of its own register, and a write to the low word
+          of mcycle / minstret also discards the carry that increment would have produced, while a
+          write to the high word leaves the low word counting (its wrap carry is lost);
+        * CSRRS/CSRRC with a zero source do not write, so the counter they read keeps counting.
+        """
+        inh = self.regs[CSR_MCOUNTINHIBIT]
+        nxt: dict[int, int] = {}
+        for bit, pair, fire in (
+            (0, (CSR_MCYCLE, CSR_MCYCLEH), True),
+            (2, (CSR_MINSTRET, CSR_MINSTRETH), retire),
+        ):
+            if fire and not inh >> bit & 1:
+                total = ((self.regs[pair[1]] << 32 | self.regs[pair[0]]) + 1) & MASK64
+                nxt[pair[0]], nxt[pair[1]] = total & MASK32, total >> 32
+        for bit, csr, fire in (
+            (3, CSR_MHPMCOUNTER3, icache_miss),
+            (4, CSR_MHPMCOUNTER4, dcache_miss),
+            (5, CSR_MHPMCOUNTER5, branch_mispred),
+        ):
+            if fire and not inh >> bit & 1:
+                nxt[csr] = (self.regs[csr] + 1) & MASK32
+        if access is not None:
+            kind, addr, operand, imm, suppress = access
+            old = self.read(addr)  # raises IllegalCsrError: the RTL squashes the write
+            operand &= 0x1F if imm else MASK32
+            if self._writes(kind, operand, imm, suppress):
+                new = self._new_value(kind, old, operand)
+                if addr in _FULL or addr in _HPM:
+                    nxt[addr] = new & MASK32
+                    if addr in (CSR_MCYCLE, CSR_MINSTRET):
+                        nxt.pop(addr + 0x80, None)  # carry into the high word is discarded
+                else:
+                    self._write(addr, new)
+        self.regs.update(nxt)
 
     def _write(self, addr: int, value: int) -> None:
         value &= MASK32

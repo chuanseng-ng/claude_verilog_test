@@ -27,9 +27,17 @@
 //        mstatus_mie_eff reflects what MIE will be AFTER the pending write,
 //        so the interrupt controller sees the correct gating in the same cycle.
 //
-// Performance counter increment priority: write wins over increment on same
-// cycle (i.e. if a CSR write and counter event arrive simultaneously, the
-// written value takes effect — the event increment is suppressed that cycle).
+// Performance counters count independently of everything else in EX: every
+// counter whose mcountinhibit bit was clear at the start of the cycle counts its
+// event in EVERY cycle, including cycles a CSR instruction is in EX and cycles a
+// trap is taken or MRET executes (bead kiit / GH #260 — they used to freeze).
+// A CSR instruction that WRITES a counter replaces only that 32-bit register:
+// the write wins over that register's own same-cycle increment, every other
+// counter still counts, and a write to the low word of mcycle / minstret also
+// discards the carry its increment would have made into the high word (a write
+// to the high word leaves the low word counting).  CSRRS/CSRRC with a zero
+// source do not write, so reading a counter never disturbs it.  A write to
+// mcountinhibit takes effect from the next cycle.
 
 module rv32i_csr_file (
     input  logic        clk,
@@ -270,6 +278,23 @@ module rv32i_csr_file (
     endfunction
 
     // =========================================================================
+    // csr_wr_en: the CSR instruction in EX actually writes (CSRRW/CSRRWI always;
+    // CSRRS/CSRRC and CSRRSI/CSRRCI only for rs1 != x0 / uimm != 0).  The counter
+    // write cases use it so a read-only access to a counter does not write the
+    // stale value back over that cycle's increment.  For the immediate forms
+    // rs1_addr carries instr[19:15] = the uimm itself (same decode the D-cache
+    // maintenance CSRs below rely on).
+    // =========================================================================
+    logic csr_wr_en;
+    always_comb begin
+        case (csr_op)
+            3'b001, 3'b101:                  csr_wr_en = 1'b1;
+            3'b010, 3'b011, 3'b110, 3'b111:  csr_wr_en = (rs1_addr != 5'h0);
+            default:                         csr_wr_en = 1'b0;
+        endcase
+    end
+
+    // =========================================================================
     // D-cache maintenance pulse registers (Phase 5)
     // 1-cycle pulses generated when a CSRW to 0x7C0 / 0x7C1 is executed.
     // The pulse is a registered always_ff output so it arrives at the dcache
@@ -285,6 +310,39 @@ module rv32i_csr_file (
     // Priority: reset > trap_entry > mret > csr instruction write
     // =========================================================================
     always_ff @(posedge clk) begin
+        // -------------------------------------------------------------------
+        // Performance counter increments — the DEFAULT for every cycle.  Later
+        // non-blocking assignments to the same register win, so the reset branch
+        // below and a CSR write to that exact register (final else-branch)
+        // override these; nothing else (a CSR access to any other register, a
+        // trap entry, an MRET) can suppress them.  mcountinhibit is read before
+        // any write to it lands, i.e. a write applies from the next cycle.
+        // -------------------------------------------------------------------
+        // mcycle: always-on event, inhibited by bit0 (carry runs low -> high)
+        if (!mcountinhibit_q[0]) begin
+            mcycle_q <= mcycle_q + 64'h1;
+        end
+
+        // minstret: retire strobe, inhibited by bit2
+        if (retire_i && !mcountinhibit_q[2]) begin
+            minstret_q <= minstret_q + 64'h1;
+        end
+
+        // mhpmcounter3: I-cache miss strobe, inhibited by bit3
+        if (icache_miss_i && !mcountinhibit_q[3]) begin
+            mhpmcounter3_q <= mhpmcounter3_q + 32'h1;
+        end
+
+        // mhpmcounter4: D-cache miss strobe, inhibited by bit4
+        if (dcache_miss_i && !mcountinhibit_q[4]) begin
+            mhpmcounter4_q <= mhpmcounter4_q + 32'h1;
+        end
+
+        // mhpmcounter5: branch mispredict strobe, inhibited by bit5
+        if (branch_mispred_i && !mcountinhibit_q[5]) begin
+            mhpmcounter5_q <= mhpmcounter5_q + 32'h1;
+        end
+
         if (!rst_n) begin
             mstatus_mie_q  <= 1'b0;
             mstatus_mpie_q <= 1'b0;
@@ -326,8 +384,8 @@ module rv32i_csr_file (
             csr_dcache_flush_q <= 1'b0;
             csr_dcache_inval_q <= 1'b0;
             // ---------------------------------------------------------------
-            // CSR instruction write (when active, write wins over increment;
-            // increment suppressed this cycle for the written register).
+            // CSR instruction write.  A counter write wins over THAT register's
+            // increment (above) only; no other counter is affected.
             // ---------------------------------------------------------------
             if (csr_access && !csr_illegal) begin
                 // Local blocking vars (no initializers — assigned explicitly to avoid IMPLICITSTATIC)
@@ -367,40 +425,54 @@ module rv32i_csr_file (
                         csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
                         mcause_q <= csr_nxt;
                     end
-                    12'hB00: begin  // mcycle low — write wins; carry suppressed this cycle
+                    12'hB00: begin  // mcycle low — write wins; its carry into mcycleh is dropped
                         csr_cur = mcycle_q[31:0];
                         csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
-                        mcycle_q[31:0] <= csr_nxt;
+                        if (csr_wr_en) begin
+                            mcycle_q <= {mcycle_q[63:32], csr_nxt};
+                        end
                     end
-                    12'hB02: begin  // minstret low — write wins
+                    12'hB02: begin  // minstret low — write wins; its carry into minstreth is dropped
                         csr_cur = minstret_q[31:0];
                         csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
-                        minstret_q[31:0] <= csr_nxt;
+                        if (csr_wr_en) begin
+                            minstret_q <= {minstret_q[63:32], csr_nxt};
+                        end
                     end
                     12'hB03: begin  // mhpmcounter3 — write wins
                         csr_cur = mhpmcounter3_q;
                         csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
-                        mhpmcounter3_q <= csr_nxt;
+                        if (csr_wr_en) begin
+                            mhpmcounter3_q <= csr_nxt;
+                        end
                     end
                     12'hB04: begin  // mhpmcounter4 — write wins
                         csr_cur = mhpmcounter4_q;
                         csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
-                        mhpmcounter4_q <= csr_nxt;
+                        if (csr_wr_en) begin
+                            mhpmcounter4_q <= csr_nxt;
+                        end
                     end
                     12'hB05: begin  // mhpmcounter5 — write wins
                         csr_cur = mhpmcounter5_q;
                         csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
-                        mhpmcounter5_q <= csr_nxt;
+                        if (csr_wr_en) begin
+                            mhpmcounter5_q <= csr_nxt;
+                        end
                     end
-                    12'hB80: begin  // mcycleh high — write wins
+                    12'hB80: begin  // mcycleh high — write wins; the low word keeps counting
                         csr_cur = mcycle_q[63:32];
                         csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
-                        mcycle_q[63:32] <= csr_nxt;
+                        if (csr_wr_en) begin
+                            mcycle_q[63:32] <= csr_nxt;
+                        end
                     end
-                    12'hB82: begin  // minstreth high — write wins
+                    12'hB82: begin  // minstreth high — write wins; the low word keeps counting
                         csr_cur = minstret_q[63:32];
                         csr_nxt = apply_csr_op(csr_cur, csr_wdata, csr_op, rs1_addr, 1'b1);
-                        minstret_q[63:32] <= csr_nxt;
+                        if (csr_wr_en) begin
+                            minstret_q[63:32] <= csr_nxt;
+                        end
                     end
                     // D-cache maintenance CSRs (Phase 5) — write-only; assert 1-cycle pulse.
                     // Any non-suppressed write triggers the operation; the written value is
@@ -441,36 +513,6 @@ module rv32i_csr_file (
                     // mip (0x344), mvendorid/marchid/mimpid/mhartid (0xF1x): read-only, writes ignored
                     default: ; // Illegal already flagged combinatorially; no state change
                 endcase
-            end else begin
-                // ---------------------------------------------------------------
-                // Performance counter increment (no CSR write this cycle).
-                // mcountinhibit bit gates each counter. Carry from low→high word.
-                // ---------------------------------------------------------------
-
-                // mcycle: always-on event (increment=1), inhibited by bit0
-                if (!mcountinhibit_q[0]) begin
-                    mcycle_q <= mcycle_q + 64'h1;
-                end
-
-                // minstret: retire strobe, inhibited by bit2
-                if (retire_i && !mcountinhibit_q[2]) begin
-                    minstret_q <= minstret_q + 64'h1;
-                end
-
-                // mhpmcounter3: I-cache miss strobe, inhibited by bit3
-                if (icache_miss_i && !mcountinhibit_q[3]) begin
-                    mhpmcounter3_q <= mhpmcounter3_q + 32'h1;
-                end
-
-                // mhpmcounter4: D-cache miss strobe, inhibited by bit4
-                if (dcache_miss_i && !mcountinhibit_q[4]) begin
-                    mhpmcounter4_q <= mhpmcounter4_q + 32'h1;
-                end
-
-                // mhpmcounter5: branch mispredict strobe, inhibited by bit5
-                if (branch_mispred_i && !mcountinhibit_q[5]) begin
-                    mhpmcounter5_q <= mhpmcounter5_q + 32'h1;
-                end
             end
         end
     end
