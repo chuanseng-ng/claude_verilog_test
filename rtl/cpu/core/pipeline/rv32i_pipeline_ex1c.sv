@@ -136,6 +136,7 @@ module rv32i_pipeline_ex1c (
                         ex1c_o.pre_wstrb         = 4'b1000;
                         ex1c_o.pre_wdata_aligned = {ex1a_i.fwd_store[7:0], 24'h0};
                     end
+                    default: ;  // unreachable (2-bit sel fully enumerated); outputs keep the defaults assigned above
                 endcase
             end
             3'b001: begin  // Halfword store
@@ -148,6 +149,7 @@ module rv32i_pipeline_ex1c (
                         ex1c_o.pre_wstrb         = 4'b1100;
                         ex1c_o.pre_wdata_aligned = {ex1a_i.fwd_store[15:0], 16'h0};
                     end
+                    default: ;  // unreachable (1-bit sel fully enumerated); outputs keep the defaults assigned above
                 endcase
             end
             3'b010: ;  // Word store — defaults already set above

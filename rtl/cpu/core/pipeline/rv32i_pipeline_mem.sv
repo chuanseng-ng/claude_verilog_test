@@ -70,12 +70,14 @@ module rv32i_pipeline_mem(
                     2'b01: mem_rdata_extracted = load_unsigned ? {24'h0, dc_rdata_i[15:8]}  : {{24{dc_rdata_i[15]}},  dc_rdata_i[15:8]};
                     2'b10: mem_rdata_extracted = load_unsigned ? {24'h0, dc_rdata_i[23:16]} : {{24{dc_rdata_i[23]}},  dc_rdata_i[23:16]};
                     2'b11: mem_rdata_extracted = load_unsigned ? {24'h0, dc_rdata_i[31:24]} : {{24{dc_rdata_i[31]}},  dc_rdata_i[31:24]};
+                    default: mem_rdata_extracted = 32'h0;  // unreachable (2-bit sel fully enumerated); equals the pre-assigned default
                 endcase
             end
             3'b001: begin  // Halfword load
                 case (load_addr[1])
                     1'b0: mem_rdata_extracted = load_unsigned ? {16'h0, dc_rdata_i[15:0]}  : {{16{dc_rdata_i[15]}},  dc_rdata_i[15:0]};
                     1'b1: mem_rdata_extracted = load_unsigned ? {16'h0, dc_rdata_i[31:16]} : {{16{dc_rdata_i[31]}},  dc_rdata_i[31:16]};
+                    default: mem_rdata_extracted = 32'h0;  // unreachable (1-bit sel fully enumerated); equals the pre-assigned default
                 endcase
             end
             3'b010: begin  // Word load

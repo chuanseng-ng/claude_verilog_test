@@ -482,8 +482,14 @@ VERIBLE_SOURCES := $(shell find $(RTL_DIR) -name '*.sv')
 # hand-aligned, so a whole-tree format gate would always fail). Example:
 #   make format-verible-check VERIBLE_CHECK_FILES="rtl/cpu/core/rv32i_alu.sv"
 VERIBLE_CHECK_FILES ?= $(VERIBLE_SOURCES)
-# 4-space indent + generous column limit + aligned ports/assignments match the
-# existing hand-formatted house style; keeps formatter churn minimal.
+# 4-space indent + generous column limit + aligned ports/assignments. NOTE (bead
+# hn9l): this does NOT reproduce the hand-aligned house style. Measured on
+# v0.0-4063: 81 of 83 rtl/**/*.sv fail `--verify`; alternative flag sets (no
+# alignment, 'preserve' alignment, column 200) only reach 72 of 83, and the
+# house-style exemplars timer.sv / gpio_controller.sv fail every variant. So the
+# format check is ADVISORY in CI and must not be run with -fix over existing RTL.
+# `make lint-verible` is the gate; `make verible` includes the whole-tree format
+# check and is therefore not expected to pass.
 VERIBLE_FMT_FLAGS := --indentation_spaces=4 --column_limit=120 \
 	--assignment_statement_alignment=align \
 	--port_declarations_alignment=align \
