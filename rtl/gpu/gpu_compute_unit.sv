@@ -100,7 +100,13 @@ module gpu_compute_unit
     // Per-warp divergence stack state (held externally in warp_scheduler)
     // -----------------------------------------------------------------------
     input  logic [DIV_STACK_DEPTH-1:0] div_stack_depth_i,
-    input  div_entry_t                  div_stack_top_i
+    input  div_entry_t                  div_stack_top_i,
+
+    // -----------------------------------------------------------------------
+    // GPU_CTRL.reset (bead q6w0): flush the pipeline and clear the sticky error.
+    // Synchronous, one cycle, issued by gpu_top once the AXI masters are quiet.
+    // -----------------------------------------------------------------------
+    input  logic                        soft_clr_i
 );
 
     // -----------------------------------------------------------------------
@@ -166,6 +172,7 @@ module gpu_compute_unit
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n)           instr_rdy_q <= 1'b0;
+        else if (soft_clr_i)  instr_rdy_q <= 1'b0;
         else if (if_rvalid_i) instr_rdy_q <= 1'b1;
         else if (!pipe_stall) instr_rdy_q <= 1'b0;
     end
@@ -244,6 +251,7 @@ module gpu_compute_unit
                     if_id_q.valid <= 1'b0;
                 end
             end
+            if (soft_clr_i) if_id_q.valid <= 1'b0;
         end
     end
 
@@ -302,6 +310,8 @@ module gpu_compute_unit
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             id_ex_q <= '0;
+        end else if (soft_clr_i) begin
+            id_ex_q.valid <= 1'b0;
         end else if (!pipe_stall) begin
             if (if_id_q.valid && instr_avail) begin
                 id_ex_q.valid         <= 1'b1;
@@ -480,6 +490,10 @@ module gpu_compute_unit
                 endcase
             end
         end
+            if (soft_clr_i) begin
+                ex_wb_q.valid <= 1'b0;
+                gpu_error_o   <= 1'b0;
+            end
         end // else
     end
 
