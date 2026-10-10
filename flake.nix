@@ -201,7 +201,7 @@
             packages = with pkgs; [
               verilator   # >= 5.036 (5.048 on the pinned rev)
               iverilog    # Icarus Verilog (alternate SIM=icarus path)
-              (veribleFor pkgs)  # verible-verilog-lint + -format, pinned == CI (see note below)
+              (veribleFor pkgs)  # verible-verilog-lint, pinned == CI (see note below)
               gcc         # g++ for Verilator-generated C++ (via sim/cxx_shim.sh)
               gnumake
               ccache
@@ -225,13 +225,10 @@
             #
             # STATUS (bead hn9l): the lint half IS now a hard gate. `make -C sim
             # lint-verible` exits 0 on the whole tree and the CI lint step no longer
-            # carries continue-on-error. The FORMAT half is still advisory (whole-tree
-            # `format-verible-check` fails on essentially every grandfathered file, and
-            # CLAUDE.md forbids style-only mass edits); CI checks only files changed in
-            # a PR, non-blocking. The CODING_GUIDELINES 1.7 chain therefore still ends in
-            # a format check that is not expected to pass on the whole tree -- run
-            # `make lint-verible` as the gate and `format-verible-check
-            # VERIBLE_CHECK_FILES=...` on your own changed files.
+            # carries continue-on-error. There is no FORMAT half any more
+            # (removed 2026-10-10): verible-verilog-format cannot reproduce the
+            # hand-aligned house style, so the format targets and the CI format step
+            # were dropped. `make lint-verible` is the whole Verible gate.
 
             # Only greet an interactive shell. `nix develop --command <cmd>` is how the
             # test/lint flows are driven, and these two lines otherwise prepend to every
