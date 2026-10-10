@@ -41,4 +41,15 @@ for arg in "$@"; do
         *) ARGS+=("$arg") ;;
     esac
 done
+# Bead b079 -- opt-in compiler cache.  Wrapping HERE, around the real g++ and AFTER the clang-only
+# flags above have been stripped, means ccache hashes exactly the command line g++ will run
+# (so a change to this shim's stripping rules is a different cache key), and sees g++ itself --
+# not this script -- as the compiler, so its compiler_check identifies the real toolchain instead
+# of this file's mtime (which is "checkout time" on every CI runner and would defeat the cache).
+# Link steps (no -c) are passed through by ccache unchanged.  Off unless SIM_CCACHE=1, so a
+# developer host without ccache, or anyone debugging a miscompile, is unaffected.
+if [ "${SIM_CCACHE:-0}" = "1" ] && command -v ccache >/dev/null 2>&1; then
+    export CCACHE_COMPILERCHECK="${CCACHE_COMPILERCHECK:-content}"
+    exec ccache g++ "${ARGS[@]}"
+fi
 exec g++ "${ARGS[@]}"
