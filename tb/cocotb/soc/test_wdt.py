@@ -178,6 +178,8 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from bfm.apb4_master import APB4Master
+import reg_maps  # noqa: E402
+from reg_walk import M32, check_w1c, walk_bank  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -1252,3 +1254,32 @@ async def test_wdt_irq_level_held_across_cycles(dut):
             f"irq_o dropped at cycle {cycle} of the 100-cycle hold window -- must be level-held, not a pulse"
         )
     dut._log.info("irq_o level-held across 100 consecutive cycles -- confirmed")
+
+
+# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+@cocotb.test()
+async def test_register_walk(dut):
+    """Walk every watchdog register against the documented map (reg_maps.WDT); the enable bit is never driven, FEED is skipped."""
+    await _start_clock_and_reset(dut)
+    m = _make_apb_bfm(dut)
+    regs, first = reg_maps.BANKS["wdt"]
+    await walk_bank(m, regs, first, log=dut._log)
+
+
+@cocotb.test()
+async def test_register_w1c_semantics(dut):
+    """WDT_IRQ_CLR is W1C against WDT_STATUS: let the dog bark then bite (both sticky; bite is
+    terminal so nothing re-sets), then clear bark and bite one at a time."""
+    await _start_clock_and_reset(dut)
+    m = _make_apb_bfm(dut)
+    R = reg_maps.WDT
+    o = lambda n: reg_maps.off(R, n)  # noqa: E731
+    await m.write(o("WDT_RELOAD"), 2)
+    await m.write(o("WDT_PRESCALE"), 0)
+    await m.write(o("WDT_CTRL"), 0x1)               # enable, RST_EN off
+    await ClockCycles(dut.clk, 40)
+    st, _ = await m.read(o("WDT_STATUS"))
+    assert st & 0x3 == 0x3, f"un-fed dog must have barked and bitten, STATUS=0x{st:x}"
+    rep = await check_w1c(m, o("WDT_STATUS"), o("WDT_IRQ_CLR"), [(0, 0), (1, 1)], name="WDT_STATUS")
+    rep.assert_clean()

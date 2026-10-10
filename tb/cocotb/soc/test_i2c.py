@@ -71,6 +71,8 @@ if str(_TB_DIR) not in sys.path:
     sys.path.insert(0, str(_TB_DIR))
 
 from bfm.apb4_master import APB4Master  # noqa: E402
+import reg_maps  # noqa: E402
+from reg_walk import walk_bank  # noqa: E402
 from bfm.i2c_slave import I2CSlave  # noqa: E402
 
 _PROJ_ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -1957,3 +1959,13 @@ async def test_i2c_status_reflects_bus_levels(dut):
         hold(False)
         await ClockCycles(dut.clk, 6)
         assert await _peek(dut, I2C_STATUS) & (ST_SCL | ST_SDA) == ST_SCL | ST_SDA
+
+
+# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+@cocotb.test()
+async def test_register_walk(dut):
+    """Walk every I2C register against the documented map (reg_maps.I2C); TX_DATA and CMD are skipped (push / command)."""
+    apb, _slave = await _start_clock_and_reset(dut)
+    regs, first = reg_maps.BANKS["i2c"]
+    await walk_bank(apb, regs, first, log=dut._log)

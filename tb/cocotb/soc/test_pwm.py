@@ -142,6 +142,8 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from bfm.apb4_master import APB4Master
+import reg_maps  # noqa: E402
+from reg_walk import M32, check_w1c, walk_bank  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -893,3 +895,35 @@ async def test_pwm_irq_level_held_across_cycles(dut):
             f"irq_o dropped at cycle {cycle} of the 50-cycle hold window -- must be level-held, not a pulse"
         )
     dut._log.info("irq_o level-held across 50 consecutive cycles -- confirmed")
+
+
+# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+@cocotb.test()
+async def test_register_walk(dut):
+    """Walk every PWM register against the documented map (reg_maps.PWM)."""
+    await _start_clock_and_reset(dut)
+    m = _make_apb_bfm(dut)
+    regs, first = reg_maps.BANKS["pwm"]
+    await walk_bank(m, regs, first, log=dut._log)
+
+
+@cocotb.test()
+async def test_register_w1c_semantics(dut):
+    """PWM_IRQ_CLR is W1C against the sticky period-wrap bits: four channels wrap, then each bit
+    is cleared alone (a 0, a low strobe or a non-pending bit clears nothing)."""
+    await _start_clock_and_reset(dut)
+    m = _make_apb_bfm(dut)
+    R = reg_maps.PWM
+    o = lambda n: reg_maps.off(R, n)  # noqa: E731
+    await m.write(o("PWM_PERIOD"), 3)
+    await m.write(o("PWM_PRESCALE"), 0)
+    await m.write(o("PWM_CTRL"), 0xF)               # enable all four channels
+    await ClockCycles(dut.clk, 24)
+    await m.write(o("PWM_CTRL"), 0)                 # disabled channels cannot wrap: bits hold
+    await ClockCycles(dut.clk, 4)
+    st, _ = await m.read(o("PWM_IRQ_STAT"))
+    assert st == 0xF, f"four enabled channels must each have wrapped, STAT=0x{st:x}"
+    rep = await check_w1c(m, o("PWM_IRQ_STAT"), o("PWM_IRQ_CLR"),
+                          [(b, b) for b in range(4)], name="PWM_IRQ_STAT")
+    rep.assert_clean()

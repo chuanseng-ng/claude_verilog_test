@@ -27,6 +27,8 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from bfm.apb4_master import APB4Master
+import reg_maps  # noqa: E402
+from reg_walk import walk_bank  # noqa: E402
 
 # ── Register byte addresses ───────────────────────────────────────────────────
 REG_IRQ_STATUS         = 0x00
@@ -245,3 +247,13 @@ async def test_multi_source_or(dut):
         f"IRQ_PENDING_MASKED expected 0 after clear, got {data:#010x}"
     )
     dut._log.info("test_multi_source_or PASS")
+
+
+# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+@cocotb.test()
+async def test_register_walk(dut):
+    """Walk the interrupt controller registers (N_SOURCES=5 standalone): MASK takes only [4:0], STATUS/PENDING_MASKED stay RO."""
+    m = await _setup(dut)
+    reg_maps_irq = reg_maps.irq_regs(5)
+    await walk_bank(m, reg_maps_irq, 3, log=dut._log)

@@ -149,6 +149,8 @@ if str(_PROJ_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJ_ROOT))
 
 from bfm.apb4_master import APB4Master  # noqa: E402
+import reg_maps  # noqa: E402
+from reg_walk import M32, check_w1c, walk_bank  # noqa: E402
 
 from tb.models import npu_model as npu  # noqa: E402
 
@@ -1731,3 +1733,38 @@ async def test_npu_elaboration_legal_configs_pass(dut):
     for args in ((), ("-GEN_NPU=0",), ("-GEN_NPU=1",)):
         r = _lint(*args)
         assert r.returncode == 0, f"{args} must elaborate cleanly:\n{r.stdout}{r.stderr}"
+
+
+# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+@cocotb.test()
+async def test_register_walk(dut):
+    """Walk every NPU register against the documented map (reg_maps.NPU); WDATA/AIN apertures skipped, CTRL.START never driven."""
+    rig = await _start_clock_and_reset(dut)
+    regs, first = reg_maps.BANKS["npu"]
+    await walk_bank(rig.main.apb, regs, first, log=dut._log)
+
+
+@cocotb.test()
+async def test_register_w1p_w1c_semantics(dut):
+    """CTRL[2] START is W1P (reads 0 forever, never stored) and IRQ_CLR is W1C by write-snoop.
+    A START with KLEN == 0 is the documented ILLEGAL start: it takes the 2-cycle zero-length path,
+    sets done (STATUS[1] == IRQ_STAT[0]) and latches cfg_rejected (STATUS[6]).  Each is then
+    cleared ALONE through IRQ_CLR[0] / IRQ_CLR[1]."""
+    rig = await _start_clock_and_reset(dut)
+    m = rig.main.apb
+    R = reg_maps.NPU
+    o = lambda n: reg_maps.off(R, n)  # noqa: E731
+    await m.write(o("NPU_CTRL"), 0x4)               # START with KLEN == 0
+    ctrl, _ = await m.read(o("NPU_CTRL"))
+    assert ctrl == 0, f"START is W1P: CTRL must read 0, got 0x{ctrl:x}"
+    await ClockCycles(dut.clk, 6)
+    st, _ = await m.read(o("NPU_STATUS"))
+    assert st & 0x42 == 0x42, f"illegal start must set done and cfg_rejected, STATUS=0x{st:02x}"
+    ist, _ = await m.read(o("NPU_IRQ_STAT"))
+    assert ist == 1, f"IRQ_STAT[0] mirrors STATUS.done, got 0x{ist:x}"
+    rep = await check_w1c(m, o("NPU_STATUS"), o("NPU_IRQ_CLR"), [(0, 1), (1, 6)],
+                          name="NPU_STATUS")
+    rep.assert_clean()
+    ist, _ = await m.read(o("NPU_IRQ_STAT"))
+    assert ist == 0, f"IRQ_STAT[0] must drop with done, got 0x{ist:x}"

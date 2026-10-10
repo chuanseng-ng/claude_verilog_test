@@ -93,6 +93,8 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from bfm.apb4_master import APB4Master
+import reg_maps  # noqa: E402
+from reg_walk import M32, check_w1c, walk_bank  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -748,3 +750,49 @@ async def test_gpio_out_of_range_access(dut):
         assert ok_r, f"out-of-range read from 0x{addr:03x} must return OKAY (pslverr=0), got SLVERR"
         assert data == 0, f"out-of-range read from 0x{addr:03x} must return 0, got 0x{data:08x}"
     dut._log.info("out-of-range access policy (drop write, read 0, pslverr=0) confirmed")
+
+
+# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+@cocotb.test()
+async def test_register_walk(dut):
+    """Walk every GPIO register against the documented map (reg_maps.GPIO)."""
+    await _start_clock_and_reset(dut)
+    m = _make_apb_bfm(dut)
+    regs, first = reg_maps.BANKS["gpio"]
+    await walk_bank(m, regs, first, log=dut._log)
+
+
+@cocotb.test()
+async def test_register_w1c_semantics(dut):
+    """GPIO_IRQ_CLR is W1C for EDGE pins only (MEMORY_MAP.md): per bit, one at a time, a 1 clears
+    exactly the matching latched edge, a 0 / a low byte strobe / a non-pending bit clears nothing;
+    in LEVEL mode the same writes must leave STAT following the live pins."""
+    await _start_clock_and_reset(dut)
+    m = _make_apb_bfm(dut)
+    R = reg_maps.GPIO
+    o = lambda n: reg_maps.off(R, n)  # noqa: E731
+    await m.write(o("GPIO_IRQ_TYPE"), M32)          # all edge-sensitive
+    await m.write(o("GPIO_IRQ_POL"), M32)           # rising
+    await ClockCycles(dut.clk, 4)
+    dut.gpio_in_i.value = M32                       # 0 -> 1 on every pin: 32 latched edges
+    await ClockCycles(dut.clk, 6)
+    st, _ = await m.read(o("GPIO_IRQ_STAT"))
+    assert st == M32, f"32 rising edges must latch 32 pending bits, STAT=0x{st:08x}"
+    rep = await check_w1c(m, o("GPIO_IRQ_STAT"), o("GPIO_IRQ_CLR"),
+                          [(b, b) for b in range(32)], name="GPIO_IRQ_STAT")
+    rep.assert_clean()
+    st, _ = await m.read(o("GPIO_IRQ_STAT"))
+    assert st == 0, f"all 32 edges cleared one at a time, STAT=0x{st:08x}"
+    # Level mode (TYPE=0, POL=1): pins are still high, so every STAT bit is LIVE-set.
+    await m.write(o("GPIO_IRQ_TYPE"), 0)
+    await ClockCycles(dut.clk, 4)
+    st, _ = await m.read(o("GPIO_IRQ_STAT"))
+    assert st == M32, f"level-high pins must read pending in level mode, STAT=0x{st:08x}"
+    await m.write(o("GPIO_IRQ_CLR"), M32)
+    st, _ = await m.read(o("GPIO_IRQ_STAT"))
+    assert st == M32, f"GPIO_IRQ_CLR must not clear a level-mode bit, STAT=0x{st:08x}"
+    dut.gpio_in_i.value = 0                         # drop the pins: the live level goes away
+    await ClockCycles(dut.clk, 6)
+    st, _ = await m.read(o("GPIO_IRQ_STAT"))
+    assert st == 0, f"level-mode STAT must follow the pins low, STAT=0x{st:08x}"

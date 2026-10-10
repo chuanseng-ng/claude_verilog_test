@@ -184,6 +184,8 @@ if str(_PROJ_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJ_ROOT))
 
 from bfm.apb4_master import APB4Master  # noqa: E402
+import reg_maps  # noqa: E402
+from reg_walk import M32, check_w1c, walk_bank  # noqa: E402
 
 from tb.models import aes128_model as aes  # noqa: E402
 
@@ -2020,3 +2022,35 @@ async def test_crypto_elaboration_legal_configs_pass(dut):
     ):
         r = _lint(*args)
         assert r.returncode == 0, f"{args} must elaborate cleanly:\n{r.stdout}{r.stderr}"
+
+
+# -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
+
+@cocotb.test()
+async def test_register_walk(dut):
+    """Walk every CRYPTO register against the documented map (reg_maps.CRYPTO); KEY/DIN apertures skipped, CTRL.START never driven."""
+    rig = await _start_clock_and_reset(dut)
+    regs, first = reg_maps.BANKS["crypto"]
+    await walk_bank(rig.main.apb, regs, first, log=dut._log)
+
+
+@cocotb.test()
+async def test_register_w1p_w1c_semantics(dut):
+    """CTRL[2] START is W1P (reads 0, never stored) and IRQ_CLR[0] is W1C against STATUS.done.
+    With no key loaded a START is the documented illegal start: the 2-cycle zero-length path
+    that sets done without writing a result.  done is cleared by IRQ_CLR[0] alone."""
+    rig = await _start_clock_and_reset(dut)
+    m = rig.main.apb
+    R = reg_maps.CRYPTO
+    o = lambda n: reg_maps.off(R, n)  # noqa: E731
+    await m.write(o("CRYPTO_CTRL"), 0x4)            # START, mode 0, no key loaded
+    ctrl, _ = await m.read(o("CRYPTO_CTRL"))
+    assert ctrl == 0, f"START is W1P: CTRL must read 0, got 0x{ctrl:x}"
+    await ClockCycles(dut.clk, 6)
+    st, _ = await m.read(o("CRYPTO_STATUS"))
+    assert st & 0x3 == 0x2, f"illegal start must finish with done and not busy, STATUS=0x{st:x}"
+    ist, _ = await m.read(o("CRYPTO_IRQ_STAT"))
+    assert ist == 1, f"IRQ_STAT[0] mirrors STATUS.done, got 0x{ist:x}"
+    rep = await check_w1c(m, o("CRYPTO_STATUS"), o("CRYPTO_IRQ_CLR"), [(0, 1)],
+                          name="CRYPTO_STATUS")
+    rep.assert_clean()
