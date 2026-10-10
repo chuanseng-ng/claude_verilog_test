@@ -386,3 +386,79 @@ async def test_boundary_high_set(dut):
     dut._log.info(f"High-set fill OK: {data:#010x}")
 
     mem.stop()
+
+
+async def _start_lookup_then_abort(dut, first: int, second: int | None, invalidate: bool):
+    """Present ``first`` for one edge (IDLE -> CS_SRAM_LATCH), then abort inside that state.
+
+    The abort is either a redirect (``ic_addr_i`` changes to ``second``) or a FENCE.I pulse.
+    """
+    dut.ic_valid_i.value = 1
+    dut.ic_addr_i.value = first
+    await RisingEdge(dut.clk)  # state_q <= CS_SRAM_LATCH, ic_addr_q <= first
+    if invalidate:
+        dut.ic_invalidate_i.value = 1
+    else:
+        assert second is not None
+        dut.ic_addr_i.value = second
+    await RisingEdge(dut.clk)  # CS_SRAM_LATCH sees the abort -> CS_IDLE (rv32i_icache.sv:498)
+    dut.ic_invalidate_i.value = 0
+
+
+@cocotb.test()
+async def test_redirect_during_sram_latch_restarts_for_the_new_address(dut):
+    """A branch redirect in the CS_SRAM_LATCH cycle discards the lookup of the old address.
+
+    The cache must then serve the NEW address from memory: returning the old line's data (a stale
+    ic_addr_q) is the failure this guards against.  Also checked: the old line is not lost, it
+    is simply fetched later on demand.
+    """
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = SimpleICacheAXIMem(dut, latency=0)
+    old, new = 0x0000_4000, 0x0000_5010
+    for base, magic in ((old, 0xA0A0_0000), (new, 0xB0B0_0000)):
+        for w in range(LINE_WORDS):
+            mem.write_word(base + 4 * w, magic + w)
+    await _reset(dut)
+
+    await _start_lookup_then_abort(dut, old, new, invalidate=False)
+    # The request is still valid but now for ``new``; wait for the stall to drop.
+    for _ in range(64):
+        await RisingEdge(dut.clk)
+        if not dut.ic_stall_o.value:
+            break
+    else:
+        raise TimeoutError("no response after a redirect in CS_SRAM_LATCH")
+    got = int(dut.ic_rdata_o.value)
+    dut.ic_valid_i.value = 0
+    assert got == 0xB0B0_0000, f"redirected fetch returned {got:#010x}, want the new line's word 0"
+
+    data_old = await _fetch(dut, old)
+    assert data_old == 0xA0A0_0000, f"old line fetched later: {data_old:#010x}"
+    mem.stop()
+
+
+@cocotb.test()
+async def test_fence_i_during_sram_latch_aborts_and_refetches(dut):
+    """FENCE.I in the CS_SRAM_LATCH cycle aborts the lookup; the same address then refills.
+
+    Memory is changed between the abort and the re-fetch, so a stale (pre-FENCE.I) result would
+    show up as the old word.
+    """
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    mem = SimpleICacheAXIMem(dut, latency=0)
+    addr = 0x0000_6000
+    for w in range(LINE_WORDS):
+        mem.write_word(addr + 4 * w, 0x1111_0000 + w)
+    await _reset(dut)
+    assert await _fetch(dut, addr) == 0x1111_0000  # line is now resident
+
+    await _start_lookup_then_abort(dut, addr, None, invalidate=True)
+    dut.ic_valid_i.value = 0
+    for w in range(LINE_WORDS):
+        mem.write_word(addr + 4 * w, 0x2222_0000 + w)  # self-modifying code
+    await ClockCycles(dut.clk, 2)
+
+    got = await _fetch(dut, addr)
+    assert got == 0x2222_0000, f"after FENCE.I the fetch returned {got:#010x} (stale line)"
+    mem.stop()
