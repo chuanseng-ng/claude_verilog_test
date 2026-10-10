@@ -190,11 +190,12 @@ module soc_top
     //   "RNM"            — real-number model; use only for M-c AMS co-sim.
     parameter string PLL_IMPL = "STUB",
 
-    // Number of parallel scan chains at the SoC boundary (DFT, j41m.2).
-    // Proposal and rationale: docs/design/DFT_ARCHITECTURE.md section 14.
-    // 8 = 7 on the clk_i/core_clk domain (~17.5 k scannable flops, ~2.5 k each)
-    //   + 1 on the cpu_clk_i domain (~0.9 k fabric flops outside the CPU macro).
-    // The CPU macro's own chains are a separate follow-up (it has no scan pins).
+    // Number of parallel scan chain pairs at the SoC boundary (DFT, j41m.2).
+    // 8 per the chain-count decision (PR #253): [4:0] five clk_i-domain fabric chains
+    // (~17.5 k scannable flops, ~3.5 k each), [5] one cpu_clk_i-domain fabric chain
+    // (~0.9 k flops outside the CPU macro), [7:6] the two CPU-macro chains. The macro has
+    // no scan pins yet (its boundary is out of scope for j41m.2, see DFT_ARCHITECTURE.md
+    // section 14), so [7:6] are reserved placeholders until that follow-up lands.
     parameter int unsigned SCAN_CHAINS = 8
 ) (
     // clk_i is the SYSTEM/FABRIC reference clock input (100 MHz crystal / XO).
@@ -2022,6 +2023,8 @@ module soc_top
     ) u_crypto (
         .clk     (core_clk),
         .rst_n   (core_rst_n),
+        // DFT (j41m.2): forces the key_q / rk_q read nets to 0 in scan mode.
+        .scan_mode_i (dft_scan_mode),
         .psel    (apb_psel    [APB_CRYPTO]),
         .penable (apb_penable [APB_CRYPTO]),
         .pwrite  (apb_pwrite  [APB_CRYPTO]),
