@@ -36,11 +36,27 @@
 # readability; Verible prefers `[DEPTH]`. ~40 sites — stylistic preference.
 -unpacked-dimensions-range-ordering
 
+# --- Configured (bead hn9l) --------------------------------------------------
+
+# Several `always_ff` blocks declare block-local temporaries (`logic do_fire;`,
+# `logic [31:0] csr_cur, csr_nxt;`, `automatic real vt, cpr, ...`) and assign
+# them with blocking `=`. That is legal and idiomatic (combinational scratch
+# values inside a clocked block), but the rule's default (waive_for_locals =
+# false) flags every blocking assignment in an always_ff, locals included:
+# 38 findings, 34 in rv32i_csr_file.sv and 4 in pll_rnm.sv. Each of the 38 was
+# checked by hand against its declaration: all are block-local variables.
+# `waive_for_locals` exempts exactly that case, so a blocking assignment to a
+# module-level signal (the real hazard this rule exists for) is STILL an
+# error. This is deliberately a rule parameter rather than a --waiver_files
+# entry or inline pragma, which would suppress the rule on those lines
+# whatever is assigned. Negative-controlled in bead hn9l.
+always-ff-non-blocking=waive_for_locals:true
+
 # --- Kept at default (report as warnings; high-value structural/style) -------
 # Notably still enabled and meaningful on this codebase:
 #   case-missing-default      — guards against unintended latches/incomplete cases
 #   always-ff-non-blocking    — sequential-logic blocking-assignment discipline
 #   no-trailing-spaces, no-tabs, enum-name-style, module-filename,
 #   packed-dimensions-range-ordering, explicit-function-lifetime, generate-label.
-# These surface real consistency signal (~33 findings today) and are left
-# non-blocking in CI during initial adoption.
+# The whole tree is clean against this ruleset (bead hn9l) and the CI lint step
+# is a hard gate: any new finding fails the build.

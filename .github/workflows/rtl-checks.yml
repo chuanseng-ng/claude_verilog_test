@@ -10,6 +10,7 @@ on:
     paths:
       - 'rtl/**'
       - '.rules.verible_lint'
+      - 'flake.nix'
       - 'sim/Makefile'
       - 'tools/cdc/**'
       - '.github/workflows/rtl-checks.yml'
@@ -18,6 +19,7 @@ on:
     paths:
       - 'rtl/**'
       - '.rules.verible_lint'
+      - 'flake.nix'
       - 'sim/Makefile'
       - 'tools/cdc/**'
       - '.github/workflows/rtl-checks.yml'
@@ -29,8 +31,11 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Pinned for reproducibility — bump deliberately.
+      # Pinned for reproducibility — bump deliberately, and bump flake.nix's
+      # `veribleFor` (version + sha256) in the SAME commit so `nix develop` and this
+      # job keep running the identical binary (bead hn9l).
       VERIBLE_VERSION: v0.0-4063-gf831ec18
+      VERIBLE_SHA256: 7b8110e0a5bfffae674f976490b5e6411471e410d474ff7fdbe4ae1e4e3381b6
 
     steps:
       - name: Checkout code
@@ -44,29 +49,35 @@ jobs:
           TARBALL="verible-${VERIBLE_VERSION}-linux-static-x86_64.tar.gz"
           URL="https://github.com/chipsalliance/verible/releases/download/${VERIBLE_VERSION}/${TARBALL}"
           mkdir -p /tmp/verible
-          curl -sSfL "$URL" | tar -xz -C /tmp/verible --strip-components=1
+          curl -sSfL -o "/tmp/${TARBALL}" "$URL"
+          echo "${VERIBLE_SHA256}  /tmp/${TARBALL}" | sha256sum -c -
+          tar -xzf "/tmp/${TARBALL}" -C /tmp/verible --strip-components=1
           echo "/tmp/verible/bin" >> "$GITHUB_PATH"
           echo "::endgroup::"
 
       - name: Verible version
         run: verible-verilog-lint --version
 
-      # Non-blocking during initial adoption (gradual rollout). Remove the
-      # `continue-on-error` lines below to make these a hard PR gate once the
-      # codebase passes clean.
-
+      # HARD GATE (bead hn9l). The whole tree is lint-clean, so any new finding
+      # fails the job. Do NOT re-add `continue-on-error` here; fix the finding, or
+      # (for a justified false positive) tune .rules.verible_lint with a reason.
       # Style lint runs against the whole tree (curated, low-noise ruleset).
       - name: Verible style lint
-        continue-on-error: true
         run: |
           echo "::group::verible-verilog-lint"
           make -C sim lint-verible
           echo "::endgroup::"
 
-      # The existing tree is hand-aligned, so the format check only covers RTL
-      # files changed by this push/PR — that keeps the signal actionable and
-      # lets this become a hard gate (drop continue-on-error) without a
-      # one-shot mass reformat of the codebase.
+      # FORMAT CHECK IS ADVISORY (deliberately non-blocking; bead hn9l). The
+      # existing tree is hand-aligned and CLAUDE.md forbids style-only mass edits,
+      # so this only covers RTL files changed by this push/PR. It must NOT be made
+      # a hard gate as things stand: measured 2026-10-10 on v0.0-4063, 81 of 83
+      # rtl/**/*.sv fail `--verify` under VERIBLE_FMT_FLAGS, and retuning (no
+      # alignment, 'preserve' alignment, column 200) only gets that to 72 of 83 --
+      # the house-style exemplars rtl/periph/timer.sv and gpio_controller.sv still
+      # fail every variant. A diff-only hard gate would therefore reject any PR
+      # touching RTL for style the tool cannot express. Revisit only if the team
+      # adopts verible's canonical format (then reformat deliberately, once).
       - name: Determine changed RTL files
         id: changed
         run: |

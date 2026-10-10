@@ -116,5 +116,7 @@ make format-verible-check VERIBLE_CHECK_FILES="rtl/cpu/core/rv32i_alu.sv"
 ```
 
 Style rules live in [`.rules.verible_lint`](../../.rules.verible_lint). CI runs Verible via the
-[`rtl-checks.yml`](../../.github/workflows/rtl-checks.yml) workflow — currently **non-blocking**
-during initial adoption (the format check covers only RTL files changed in a PR).
+[`rtl-checks.yml`](../../.github/workflows/rtl-checks.yml) workflow — the **lint step is a hard
+gate** (whole tree clean); the format step is **advisory** (changed files only) because the formatter
+cannot reproduce the hand-aligned house style (bead `hn9l`). `nix develop` provides the same
+Verible binary CI installs, so no manual download is needed there.
