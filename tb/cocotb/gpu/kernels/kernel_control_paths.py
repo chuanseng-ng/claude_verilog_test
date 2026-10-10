@@ -290,7 +290,7 @@ def loop_store_kernel(out: int = LOOP_OUT) -> dict:
     k.emit(vsll(3, 1, 2))
     k.emit(vaddi(9, 3, out - 7))
     k.emit(vaddi(7, 1, 0x40))
-    k.emit(vaddi(10, 3, -7))           # shared address = tid*4 (VSTS adds the data-register index 7)
+    k.emit(vaddi(10, 3, -7))           # shared addr = tid*4 (VSTS adds data-reg index 7)
     top = k.pc()
     k.emit(vst(7, 9, 0))
     k.emit(vsts(7, 10, 0))             # shared-memory traffic too, so a reset can land mid-access
@@ -369,7 +369,7 @@ class BusMonitor:
                 valid, ready, pay = (int(getattr(d, x).value) for x in (v, r, p))
                 prev = self._stuck.pop(n, None)
                 if prev is not None and (not valid or prev != pay):
-                    self.errors.append(f"cycle {self.cycle}: {n} valid withdrawn/changed before ready")
+                    self.errors.append(f"cycle {self.cycle}: {n} valid dropped or changed")
                 if valid and ready:
                     self.hs[n] += 1
                 elif valid:
@@ -382,17 +382,18 @@ class BusMonitor:
                     if ready:
                         self.hs[n] += 1
                     else:
-                        self.errors.append(f"cycle {self.cycle}: orphan {n} beat (offered, not accepted)")
+                        self.errors.append(f"cycle {self.cycle}: orphan {n} beat (not accepted)")
 
     def _check_reset_sequencer(self):
         """While a soft reset drains (halt_q): nothing new may start; at the soft_clr pulse:
         nothing may be outstanding on either master or inside the shared memory."""
         d = self.dut
         if int(d.halt_q.value):
-            for what, sig in (("fetch AR", d.m_axil_if_arvalid), ("coalescer start", d.u_mu.coal_start),
+            for what, sig in (("fetch AR", d.m_axil_if_arvalid),
+                              ("coalescer start", d.u_mu.coal_start),
                               ("shared-memory request", d.sm_active)):
                 if int(sig.value):
-                    self.errors.append(f"cycle {self.cycle}: new {what} while a soft reset drains")
+                    self.errors.append(f"cycle {self.cycle}: new {what} while draining")
         if int(d.soft_clr.value):
             self.clears += 1
             out = (self.hs["ifar"] - self.hs["ifr"], self.hs["ar"] - self.hs["r"],
@@ -633,7 +634,7 @@ async def test_start_queued_in_error_does_not_survive_reset(dut):
     await axil_write(dut, GPU_CTRL, CTRL_RESET)
     await wait_status(dut, ST_IDLE, timeout=200)
     await settle(dut, 100)
-    assert await axil_read(dut, GPU_STATUS) == ST_IDLE, "a START queued behind ERROR launched after reset"
+    assert await axil_read(dut, GPU_STATUS) == ST_IDLE, "START queued behind ERROR launched"
     assert not mem, f"a kernel stored after the reset: {mem}"
 
     # START | RESET in one write, from IDLE: reset wins.
