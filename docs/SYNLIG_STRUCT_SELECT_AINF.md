@@ -59,3 +59,29 @@ The single-bit LHS `y.m[i] = v` is correct for R >= 3 and wrong for R = 2 (`X3_l
 
 The rule is a function of the struct TYPE (count of ranged members), not of the member position, so every site can be
 predicted from its struct definition (step 2).
+
+## Step 2a: mechanical site table (`tools/verif/struct_select/sitetable.py`, output `results/sitetable.txt`)
+
+Struct types in `rtl/` (R = members declared with a packed range, i.e. the D1 trigger when R == 2):
+
+| type | R | where | note |
+| :--- | :-: | :--- | :--- |
+| `if_id_reg_t` | **2** | rv32i_pipeline_pkg | D1 HOT (`pc`, `instruction` ranged; `valid` scalar). The dud4 type. |
+| `warp_state_t` | **2** | gpu_pkg | D1 HOT, but no member select exists on it |
+| `div_entry_t` | **2** | gpu_pkg | D1 HOT, but no member select exists on it |
+| `desc_t` | 3 | dma_engine | one member-removal from R=2; no member select |
+| `mem_wb_reg_t` 7, `ex_mem_reg_t` 12, `ex1_ex2_reg_t` 12, `id_ex_reg_t` 14, `ex1a_ex1b_t` 19 | >= 7 | pipeline pkg | far from 2 |
+| `if_id_t` 4, `id_ex_t` 9, `ex_wb_t` 6 (gpu_compute_unit), `kernel_desc_t` 8, `gpu_[rib]_instr_t` 5-6 | >= 4 | gpu | |
+
+READ selects `x.m[..]` in the whole `rtl/` tree: 23 (24 incl. the two on one gpu_top line), all on types with R >= 7,
+so **all predicted correct**: rv32i_pipeline_ex:109 (`id_ex_reg_t.csr_op[2]`), rv32i_pipeline_mem:103,104,111,112
+(`ex_mem_reg_t.alu_result[0]`, `[1:0]`), rv32i_pipeline_wb:75 (`mem_wb_reg_t.trap_cause[3:0]`),
+rv32i_pipeline_ex1c:122-150,197 (`ex1a_ex1b_t.alu_result[1:0]/[1]/[31:1]`, `.fwd_store[7:0]/[15:0]`),
+gpu_top:253 (`kernel_desc_t.block_x[9:3]`, `[2:0]`; the line was :250 in the dud4 sweep),
+gpu_compute_unit:377,378,386,388 (`id_ex_t.rs1_data[l]`, `.rs2_data[l]`, `.imm[11]`). None of these is on an R == 2 type,
+so D1 does not apply. **No select at all exists on any of the three R == 2 types** (`if_id_reg_t`'s two were removed by PR #259).
+Not covered by probes: `id_ex_t.rs1_data[l]`, a member that is itself a 2-D packed array `[N_LANES-1:0][31:0]` selected by a
+loop variable -- predicted correct by the type rule but verified separately in step 2b.
+
+WRITE (LHS) selects `y.m[hi:lo] = ..` / `y.m[i] = ..` (D2): **none** in `rtl/` (regex over single-line statements, plain,
+`assign`, and concatenation-LHS forms; 0 hits). D2 is therefore not triggered anywhere today.
