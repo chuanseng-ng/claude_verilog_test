@@ -1,0 +1,20 @@
+# Known-benign hits for tools/verif/check_synth_undef.py (bead gc0y).
+#
+# Format:  <rule id> | <regex searched in the finding text> | <justification, >= 20 chars>
+#
+# Rules for adding an entry:
+#   * Name the exact construct, not the whole rule.  A bare rule id or '.*' is never acceptable.
+#   * The justification must say WHY the substituted/implicit object cannot reach a flop or port,
+#     and cite the evidence (bead, doc section, probe).
+#   * An entry that matches nothing in a run is reported as stale; delete it.
+#   * Do NOT add the 'undef-range-select' rule here for a design source line unless the replaced
+#     bits are provably dead (state the proof).  That rule is the dud4 defect.
+#
+# --- implicit declarations on dead lint sinks (docs/SKY130_CPU_SYNLIG_DUD4.md, dud4 warning diff)
+# Synlig reports the initialiser identifier of `logic _unused_x = y;` as implicitly declared.  The
+# `_unused_*` objects are lint sinks that nothing reads, so even if the implicit net is a new
+# undriven wire it has no fanout.  Verified: the sv2v arm (no such warning) and the Synlig arm
+# synthesise identical netlists apart from the hazard-unit defect.
+implicit-decl | Identifier `\\csr_wr_en' is implicitly declared | initialiser of the dead _unused_csr_wr_en lint sink in rv32i_core.sv (real net declared at line 204); the sink is read by nothing - dud4
+implicit-decl | Identifier `\\csr_illegal' is implicitly declared | initialiser of the dead _unused_csr_illegal lint sink in rv32i_core.sv (real net declared at line 211); the sink is read by nothing - dud4
+implicit-decl | Identifier `\\_unused_\w+' is implicitly declared | dead _unused_* lint sink in rv32i_cpu_top.sv, read by nothing, so an undriven implicit net has no fanout - dud4
