@@ -6,6 +6,7 @@ connections with ``5'x`` and logged only a Warning (bead dud4).  Every fixture u
 header, taken from the dud4 synthesis runs or from the wording probes (see the README there).
 """
 
+# pylint: disable=missing-function-docstring,protected-access,too-many-lines
 from __future__ import annotations
 
 import importlib.util

@@ -111,7 +111,7 @@ _COMPILED = {k: (sev, re.compile(rx), why) for k, (sev, rx, why) in RULES.items(
 _BANNER = re.compile(r"Yosys \d+\.\d+|^\d+\. Executing |Executing \w+ pass|Executing .* frontend")
 
 
-class InputError(Exception):
+class InputError(Exception):  # noqa: D101
     """The input could not be judged (maps to exit code 2)."""
 
 
@@ -121,6 +121,8 @@ class AllowlistError(Exception):
 
 @dataclass(frozen=True)
 class Finding:
+    """One scanner hit."""
+
     rule: str
     severity: str
     path: Path
@@ -133,6 +135,8 @@ class Finding:
 
 @dataclass
 class AllowEntry:
+    """One justified allowlist line."""
+
     rule: str
     pattern: str
     justification: str
@@ -151,7 +155,7 @@ def scan_log(path: Path | str) -> list[Finding]:
     p = Path(path)
     if not p.is_file():
         raise InputError(f"log not found: {p}")
-    raw = p.read_text(errors="replace")
+    raw = p.read_text(encoding="utf-8", errors="replace")
     if not raw.strip():
         raise InputError(f"log is empty: {p}")
     if not any(_BANNER.search(ln) for ln in raw.splitlines()):
@@ -174,7 +178,7 @@ def _is_user_cell(ctype: str) -> bool:
 def scan_header_json(path: Path | str) -> list[Finding]:
     p = Path(path)
     try:
-        data = json.loads(p.read_text())
+        data = json.loads(p.read_text(encoding="utf-8"))
         mods = data["modules"]
     except (OSError, ValueError, KeyError) as exc:
         raise InputError(f"header JSON unreadable: {p}: {exc}") from exc
@@ -237,7 +241,7 @@ def scan_header_json(path: Path | str) -> list[Finding]:
 
 def cross_check_removed_modules(findings: Iterable[Finding], header: Path | str) -> list[Finding]:
     try:
-        mods = json.loads(Path(header).read_text())["modules"]
+        mods = json.loads(Path(header).read_text(encoding="utf-8"))["modules"]
     except (OSError, ValueError, KeyError) as exc:
         raise InputError(f"header JSON unreadable: {header}: {exc}") from exc
     names = list(mods)
@@ -267,7 +271,7 @@ def cross_check_removed_modules(findings: Iterable[Finding], header: Path | str)
 def load_allowlist(path: Path | str) -> list[AllowEntry]:
     p = Path(path)
     entries: list[AllowEntry] = []
-    for n, raw in enumerate(p.read_text().splitlines(), 1):
+    for n, raw in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
@@ -331,7 +335,7 @@ def evaluate(logs: Sequence[Path], headers: Sequence[Path], entries: Sequence[Al
         "logs": [str(x) for x in logs],
         "headers": [str(x) for x in headers],
         "structural_check": "RAN" if headers else "NOT RUN (no *.h.json found)",
-        "stale_allowlist": [e for e in stale_entries(entries)],
+        "stale_allowlist": list(stale_entries(entries)),
     }
 
 
@@ -345,7 +349,7 @@ def _fmt(f: Finding) -> str:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n", maxsplit=1)[0])
     ap.add_argument("logs", nargs="*", type=Path, help="yosys/Synlig synthesis logs")
     ap.add_argument(
         "--run-dir", type=Path, help="LibreLane run dir (finds *yosys*/ logs + *.h.json)"
