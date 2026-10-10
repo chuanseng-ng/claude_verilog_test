@@ -57,3 +57,22 @@ Messages the tools never print; defects that leave no `x` at the elaboration bou
 runtime mux, the `OPT_MUXTREE` class of beads gcd/b0t); defects introduced after elaboration (ABC, resizer); anything in a flow
 that does not go through `pnr/Makefile`. It is a tripwire for the undef-substitution class, not a proof of frontend correctness;
 the gate-vs-RTL differential (`tools/verif/gls/`) remains the functional proof.
+
+## CI job (`.github/workflows/synth-undef-gate.yml`, `tools/verif/synth_gate/ci_smoke.sh`)
+
+Path-filtered on `rtl/**`, `pnr/**`, `tools/verif/**`. Uses the pinned oss-cad-suite yosys + sv2v of the CDC job (same cache key) and the
+pinned nix Verilator. Steps: (1) sv2v + yosys elaboration of the Sky130 `rv32i_cpu_top` source list, then the scanner and the structural
+check (must PASS); (2) **self-test**: a scratch copy of `rv32i_core.sv` with an out-of-range select injected into the `u_hazard` connection
+must make the same gate FAIL (the dud4 lines themselves cannot be the control here: sv2v elaborates them correctly, which is why the PD flow
+uses sv2v); (3) `synth -flatten` + `techmap` + `abc -g` to yosys generic gates (no PDK) and a Verilator gate-vs-RTL differential on `trivial`,
+`ma7_straight`, `ma7_branch` (commit stream, APB debug reads, AXI writes must be identical). Measured locally: 87 s end to end.
+
+Does NOT cover: the Synlig frontend (oss-cad-suite has no Synlig plugin; the Synlig arm is protected only by the PD-time plugin); ASAP7
+or SoC/GPU macros; PDK cell models and ABC mapping with the real liberty; timing. The differential's own negative control was not
+re-run for this job (it was exercised in dud4 with the Synlig netlist, which diverges). First CI run on GitHub is pending.
+
+## Netlist census tripwire (`tools/verif/check_cpu_netlist_census.py`)
+
+After a Sky130 `rv32i_cpu_top` synthesis the plugin requires the `fwd_b_sel_r`, `fwd_b_ex1c_r`, `fwd_b_ex1b2_r` nets and 4800-4950 flops.
+Measured on the dud4 netlists: sv2v main 4868 flops + all three nets (PASS); Synlig main 4863 flops, nets missing (FIRES); pinned Synlig
+4829 flops, nets missing (FIRES). It is a tripwire for this one known casualty, not a proof. ASAP7 netlists do not keep these net names.

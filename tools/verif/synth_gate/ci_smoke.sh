@@ -7,14 +7,15 @@
 #      elaborated correctly by sv2v, which is why the PD flow can use it).
 #   3. synthesise the sv2v netlist to yosys generic gates (no PDK) and run the gate-vs-RTL
 #      differential (trivial, ma7_straight, ma7_branch) in Verilator; any divergence fails.
-# Usage: ci_smoke.sh <workdir>     env: YOSYS SV2V VERILATOR_BIN VERILATOR_ROOT (defaults: on PATH)
+# Usage: ci_smoke.sh <workdir>     env: YOSYS SV2V VERILATOR_EXE (NOT VERILATOR_BIN, see build_arm.sh) (defaults: on PATH)
 set -euo pipefail
+unset VERILATOR_BIN
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../../.." && pwd)"
 W="$(mkdir -p "$1" && cd "$1" && pwd)"
 YOSYS="${YOSYS:-yosys}"
 SV2V="${SV2V:-sv2v}"
-VBIN="${VERILATOR_BIN:-$(command -v verilator)}"
+VBIN="${VERILATOR_EXE:-$(command -v verilator)}"
 VBIN="$(readlink -f "$VBIN")"
 export VERILATOR_ROOT="${VERILATOR_ROOT:-$(cd "$(dirname "$VBIN")/../share/verilator" && pwd)}"
 GATE="$REPO/tools/verif/check_synth_undef.py"
