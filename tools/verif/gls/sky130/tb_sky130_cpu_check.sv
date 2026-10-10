@@ -272,30 +272,36 @@ module tb_sky130_cpu_check;
   // ------------------------------------------------ APB debug master sequencer
   reg [31:0] rd_val;
 
+  // APB master tasks. Inputs are driven 1 ns AFTER the clock edge with blocking assignments
+  // (not NBAs at the edge): under Verilator --timing a testbench process resumed by a posedge
+  // runs before the DUT's clocked logic of the same edge, so an NBA drive at the edge is already
+  // visible to the DUT at that edge. That raced the registered pready (the dud4 Sky130 TB's
+  // sequencer then saw pready one cycle early and never completed on main RTL).
   task automatic apb_wr(input [11:0] a, input [31:0] d);
     begin
-      @(posedge clk_i);
-      apb_psel_i <= 1'b1; apb_penable_i <= 1'b0; apb_pwrite_i <= 1'b1;
-      apb_paddr_i <= a; apb_pwdata_i <= d;
-      @(posedge clk_i);
-      apb_penable_i <= 1'b1;
+      @(posedge clk_i); #1;
+      apb_psel_i = 1'b1; apb_penable_i = 1'b0; apb_pwrite_i = 1'b1;
+      apb_paddr_i = a; apb_pwdata_i = d;
+      @(posedge clk_i); #1;
+      apb_penable_i = 1'b1;
       @(posedge clk_i);
       while (!s_pready) @(posedge clk_i);
-      apb_psel_i <= 1'b0; apb_penable_i <= 1'b0; apb_pwrite_i <= 1'b0;
+      #1;
+      apb_psel_i = 1'b0; apb_penable_i = 1'b0; apb_pwrite_i = 1'b0;
     end
   endtask
 
   task automatic apb_rd(input [11:0] a, output [31:0] d);
     begin
-      @(posedge clk_i);
-      apb_psel_i <= 1'b1; apb_penable_i <= 1'b0; apb_pwrite_i <= 1'b0; apb_paddr_i <= a;
-      @(posedge clk_i);
-      apb_penable_i <= 1'b1;
-      @(posedge clk_i);          // access phase edge
-      @(posedge clk_i);          // snapshot below was taken before THIS edge and
-      while (!s_pready) @(posedge clk_i);   // after the access edge: data valid
+      @(posedge clk_i); #1;
+      apb_psel_i = 1'b1; apb_penable_i = 1'b0; apb_pwrite_i = 1'b0; apb_paddr_i = a;
+      @(posedge clk_i); #1;
+      apb_penable_i = 1'b1;
+      @(posedge clk_i);          // ACCESS cycle 1 (pready still 0)
+      while (!s_pready) @(posedge clk_i);   // pre-edge snapshot: pready=1 and registered prdata valid
       d = s_prdata;
-      apb_psel_i <= 1'b0; apb_penable_i <= 1'b0;
+      #1;
+      apb_psel_i = 1'b0; apb_penable_i = 1'b0;
     end
   endtask
 
