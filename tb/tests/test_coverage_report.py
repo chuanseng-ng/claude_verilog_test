@@ -739,3 +739,399 @@ def test_cli_fails_when_any_input_is_missing(tmp_path: Path) -> None:
     proc = run_cli("--dat", str(soc), "--dat", str(tmp_path / "gone.dat"), "--root", ROOT)
     assert proc.returncode != 0
     assert "gone.dat" in proc.stderr
+
+
+# -------------------------------------------------------------------- the gate (bead s1cg)
+#
+# ``--gate`` turns the report into a pass/fail check on the TRIAGED trees only (rtl/soc,
+# rtl/periph, rtl/npu): a per-module line floor and a toggle floor on CONTROL signals.  A control
+# signal is a 1-bit scalar: its Verilator toggle object carries no ``[bit]`` index.  Wide buses,
+# per-bit address/data lanes and arrays are datapath and are never gated.  The ratchet file
+# overrides the toggle floor for named modules whose control-toggle gap is a known test gap.
+
+
+def gate_module(
+    module: str,
+    *,
+    tree: str = "rtl/periph",
+    line_hit: int = 0,
+    line_total: int = 0,
+    ctl_hit: int = 0,
+    ctl_total: int = 0,
+    vec_hit: int = 0,
+    vec_total: int = 0,
+) -> list[str]:
+    """Records for one module with exact line / control-toggle / vector-toggle point counts.
+
+    Control toggle points come in (0->1, 1->0) pairs per scalar signal, so ``ctl_total`` is the
+    number of POINTS and must be even; ``ctl_hit`` points are hit, picked from the front.
+    """
+    f = f"{tree}/{module}.sv"
+    recs: list[str] = []
+    for i in range(line_total):
+        recs.append(
+            point(
+                kind="line",
+                module=module,
+                file=f,
+                line=100 + i,
+                obj="block",
+                src=str(100 + i),
+                count=1 if i < line_hit else 0,
+            )
+        )
+    for i in range(ctl_total):
+        d = "0->1" if i % 2 == 0 else "1->0"
+        recs.append(
+            point(
+                kind="toggle",
+                module=module,
+                file=f,
+                line=3,
+                obj=f"ctl{i // 2}:{d}",
+                count=1 if i < ctl_hit else 0,
+            )
+        )
+    for i in range(vec_total):
+        recs.append(
+            point(
+                kind="toggle",
+                module=module,
+                file=f,
+                line=4,
+                obj=f"bus[{i // 2}]:{'0->1' if i % 2 == 0 else '1->0'}",
+                count=1 if i < vec_hit else 0,
+            )
+        )
+    return recs
+
+
+def gate_of(
+    tmp_path: Path,
+    *records: str,
+    waivers: list[Any] | None = None,
+    cfg: Any = None,
+) -> Any:
+    report = cr.build_report(cr.parse_dat(write_dat(tmp_path, *records)), Path(ROOT), waivers or [])
+    return cr.evaluate_gate(report, cfg or cr.GateConfig(toggle_floor=95.0))
+
+
+def test_control_signal_is_a_one_bit_scalar_not_a_bus_bit(tmp_path: Path) -> None:
+    dat = write_dat(
+        tmp_path, *gate_module("foo", line_hit=1, line_total=1, ctl_hit=2, ctl_total=4, vec_total=6)
+    )
+    (row,) = cr.build_report(cr.parse_dat(dat), Path(ROOT), []).modules
+    assert (row.ctl_hit, row.ctl_total) == (2, 4)
+    assert (row.toggle_hit, row.toggle_total) == (2, 10)  # ctl + bus bits, the old total
+    assert row.ctl_pct == pytest.approx(50.0)
+    assert row.uncovered_ctl == ["ctl1:0->1", "ctl1:1->0"]
+
+
+def test_control_signal_with_struct_member_or_array_index_is_not_scalar(tmp_path: Path) -> None:
+    f = "rtl/periph/foo.sv"
+    recs = [
+        point(kind="toggle", module="foo", file=f, line=3, obj="state_q[0]:0->1", count=0),
+        point(kind="toggle", module="foo", file=f, line=3, obj="mem[2][5]:0->1", count=0),
+        point(kind="toggle", module="foo", file=f, line=3, obj="irq:0->1", count=1),
+    ]
+    (row,) = cr.build_report(cr.parse_dat(write_dat(tmp_path, *recs)), Path(ROOT), []).modules
+    assert (row.ctl_hit, row.ctl_total) == (1, 1)
+
+
+def test_gate_passes_when_every_triaged_module_meets_both_floors(tmp_path: Path) -> None:
+    res = gate_of(
+        tmp_path,
+        *gate_module("a", line_hit=20, line_total=20, ctl_hit=20, ctl_total=20),
+        *gate_module("b", tree="rtl/soc", line_hit=95, line_total=100, ctl_hit=19, ctl_total=20),
+    )
+    assert res.passed
+    assert res.failures == []
+
+
+def test_gate_boundary_exactly_at_the_floor_passes(tmp_path: Path) -> None:
+    res = gate_of(tmp_path, *gate_module("a", line_hit=95, line_total=100, ctl_hit=2, ctl_total=2))
+    assert res.passed
+
+
+def test_gate_fails_a_module_below_the_line_floor_and_names_it(tmp_path: Path) -> None:
+    res = gate_of(
+        tmp_path,
+        *gate_module("good", line_hit=10, line_total=10, ctl_hit=2, ctl_total=2),
+        *gate_module("bad", line_hit=94, line_total=100, ctl_hit=2, ctl_total=2),
+    )
+    assert not res.passed
+    (fail,) = res.failures
+    assert (fail.module, fail.check) == ("bad", "line")
+    assert "94/100" in fail.detail and "95" in fail.detail
+
+
+def test_gate_fails_a_module_below_the_control_toggle_floor(tmp_path: Path) -> None:
+    res = gate_of(
+        tmp_path,
+        *gate_module("a", line_hit=10, line_total=10, ctl_hit=18, ctl_total=20),
+    )
+    (fail,) = res.failures
+    assert (fail.module, fail.check) == ("a", "toggle")
+    assert "18/20" in fail.detail
+
+
+def test_gate_does_not_gate_datapath_toggle_bits(tmp_path: Path) -> None:
+    # Every control signal toggles, no bus bit does: still a pass.
+    res = gate_of(
+        tmp_path,
+        *gate_module(
+            "a", line_hit=10, line_total=10, ctl_hit=4, ctl_total=4, vec_hit=0, vec_total=512
+        ),
+    )
+    assert res.passed
+
+
+def test_gate_reports_every_failing_module_not_just_the_first(tmp_path: Path) -> None:
+    res = gate_of(
+        tmp_path,
+        *gate_module("a", line_hit=0, line_total=10, ctl_hit=2, ctl_total=2),
+        *gate_module("b", line_hit=10, line_total=10, ctl_hit=0, ctl_total=2),
+    )
+    assert sorted((f.module, f.check) for f in res.failures) == [("a", "line"), ("b", "toggle")]
+
+
+def test_gate_ignores_informational_trees_below_the_floor(tmp_path: Path) -> None:
+    res = gate_of(
+        tmp_path,
+        *gate_module("ok", line_hit=10, line_total=10, ctl_hit=2, ctl_total=2),
+        *gate_module("cpuish", tree="rtl/cpu", line_hit=1, line_total=10, ctl_hit=0, ctl_total=2),
+        *gate_module("gpuish", tree="rtl/gpu", line_hit=0, line_total=10, ctl_hit=0, ctl_total=2),
+        *gate_module("memish", tree="rtl/mem", line_hit=0, line_total=10, ctl_hit=0, ctl_total=2),
+    )
+    assert res.passed
+    assert res.failures == []
+
+
+def test_gate_waiver_removes_an_unreachable_uncovered_line_from_the_denominator(
+    tmp_path: Path,
+) -> None:
+    f = "rtl/periph/a.sv"
+    recs = gate_module("a", line_hit=19, line_total=20, ctl_hit=2, ctl_total=2)
+    recs.append(point(kind="line", module="a", file=f, line=900, obj="block", src="900", count=0))
+    assert not gate_of(tmp_path, *recs).passed  # 19/21 = 90.5 %
+    waiver = cr.Waiver("a", "line", r"^L900\b", "b", "dead default arm", 1)
+    assert gate_of(tmp_path, *recs, waivers=[waiver]).passed
+
+
+def test_gate_waiver_for_another_module_does_not_rescue(tmp_path: Path) -> None:
+    recs = gate_module("a", line_hit=0, line_total=10, ctl_hit=2, ctl_total=2)
+    other = cr.Waiver("zzz", "line", r".*", "b", "wrong module", 1)
+    assert not gate_of(tmp_path, *recs, waivers=[other]).passed
+
+
+def test_gate_waiver_on_a_control_signal_counts_toward_the_toggle_floor(tmp_path: Path) -> None:
+    recs = gate_module("a", line_hit=10, line_total=10, ctl_hit=2, ctl_total=4)
+    assert not gate_of(tmp_path, *recs).passed
+    waiver = cr.Waiver("a", "toggle", r"^ctl1:", "b", "tied off by design", 1)
+    assert gate_of(tmp_path, *recs, waivers=[waiver]).passed
+
+
+def test_gate_module_with_no_line_points_but_control_signals_is_not_applicable(
+    tmp_path: Path,
+) -> None:
+    res = gate_of(tmp_path, *gate_module("wires", ctl_hit=4, ctl_total=4))
+    assert res.passed
+    assert any("wires" in n and "no line points" in n for n in res.notes)
+
+
+def test_gate_module_with_nothing_gateable_does_not_pass_vacuously(tmp_path: Path) -> None:
+    # Only datapath bus bits: no line point and no control signal, nothing to gate on.
+    res = gate_of(tmp_path, *gate_module("busonly", vec_hit=2, vec_total=4))
+    (fail,) = res.failures
+    assert (fail.module, fail.check) == ("busonly", "unmeasured")
+
+
+def test_gate_module_whose_only_line_points_are_all_waived_passes_with_a_note(
+    tmp_path: Path,
+) -> None:
+    f = "rtl/soc/some_pkg.sv"
+    recs = [point(kind="line", module="some_pkg", file=f, line=7, obj="block", src="7", count=0)]
+    waiver = cr.Waiver("some_pkg", "line", r"^L7\b", "b", "unused helper", 1)
+    res = gate_of(tmp_path, *recs, waivers=[waiver])
+    assert res.passed
+    assert any("some_pkg" in n and "waived" in n for n in res.notes)
+
+
+def test_gate_module_with_lines_but_no_control_signals_only_gates_lines(tmp_path: Path) -> None:
+    res = gate_of(tmp_path, *gate_module("a", line_hit=10, line_total=10, vec_total=8))
+    assert res.passed
+    assert any("a" in n and "no control signals" in n for n in res.notes)
+
+
+def test_default_floors_are_the_measured_ones() -> None:
+    cfg = cr.GateConfig()
+    assert (cfg.line_floor, cfg.toggle_floor) == (95.0, 100.0)
+
+
+def test_gate_floors_are_configurable(tmp_path: Path) -> None:
+    recs = gate_module("a", line_hit=90, line_total=100, ctl_hit=2, ctl_total=2)
+    assert not gate_of(tmp_path, *recs).passed
+    assert gate_of(tmp_path, *recs, cfg=cr.GateConfig(line_floor=90.0)).passed
+
+
+# --- ratchet: per-module toggle floor for known control-toggle gaps
+
+
+def ratchet(floor: float, module: str = "a") -> dict[str, Any]:
+    return {module: cr.Ratchet(module, floor, "s1cg-gap", "known SoC-level test gap", 1)}
+
+
+def test_ratchet_lowers_the_toggle_floor_for_the_named_module_only(tmp_path: Path) -> None:
+    recs = [
+        *gate_module("a", line_hit=10, line_total=10, ctl_hit=18, ctl_total=20),
+        *gate_module("b", line_hit=10, line_total=10, ctl_hit=18, ctl_total=20),
+    ]
+    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet(90.0)))
+    assert [(f.module, f.check) for f in res.failures] == [("b", "toggle")]
+
+
+def test_ratchet_fails_when_a_module_regresses_below_its_recorded_floor(tmp_path: Path) -> None:
+    recs = gate_module("a", line_hit=10, line_total=10, ctl_hit=17, ctl_total=20)  # 85 %
+    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet(90.0)))
+    (fail,) = res.failures
+    assert (fail.module, fail.check) == ("a", "toggle")
+    assert "ratchet" in fail.detail and "90" in fail.detail
+
+
+def test_ratchet_above_the_default_is_a_stricter_floor(tmp_path: Path) -> None:
+    recs = gate_module("a", line_hit=10, line_total=10, ctl_hit=19, ctl_total=20)  # 95 %
+    assert gate_of(tmp_path, *recs).passed
+    assert not gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet(97.0))).passed
+
+
+def test_ratchet_with_headroom_warns_that_it_can_be_raised(tmp_path: Path) -> None:
+    recs = gate_module("a", line_hit=10, line_total=10, ctl_hit=19, ctl_total=20)  # 95 %
+    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet(80.0)))
+    assert res.passed
+    assert any("a" in w and "raise" in w for w in res.warnings)
+
+
+def test_ratchet_for_an_unknown_module_is_reported_stale(tmp_path: Path) -> None:
+    recs = gate_module("a", line_hit=10, line_total=10, ctl_hit=2, ctl_total=2)
+    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet(50.0, module="ghost")))
+    assert any("ghost" in w and "stale" in w for w in res.warnings)
+
+
+def test_ratchet_never_relaxes_the_line_gate(tmp_path: Path) -> None:
+    recs = gate_module("a", line_hit=1, line_total=10, ctl_hit=2, ctl_total=2)
+    res = gate_of(tmp_path, *recs, cfg=cr.GateConfig(ratchet=ratchet(0.0)))
+    assert [(f.module, f.check) for f in res.failures] == [("a", "line")]
+
+
+def test_ratchet_file_parses_and_validates(tmp_path: Path) -> None:
+    path = tmp_path / "r.txt"
+    path.write_text(
+        "# comment\n\na | 91.5 | bead1 | SoC-level I2C never driven\nb | 80 | bead2 | why\n",
+        encoding="utf-8",
+    )
+    got = cr.load_ratchet(path)
+    assert got["a"].floor == pytest.approx(91.5) and got["a"].bead == "bead1"
+    assert got["b"].floor == pytest.approx(80.0)
+
+
+@pytest.mark.parametrize(
+    ("text", "match"),
+    [
+        ("a | 91 | bead\n", "4 fields"),
+        ("a | high | bead | why\n", "floor"),
+        ("a | 101 | bead | why\n", "floor"),
+        ("a | -1 | bead | why\n", "floor"),
+        ("a | 90 | | why\n", "bead"),
+        ("a | 90 | bead |\n", "4 fields"),
+        ("a | 90 | bead | why\na | 91 | bead | why\n", "duplicate"),
+    ],
+)
+def test_ratchet_file_rejects_structural_defects(tmp_path: Path, text: str, match: str) -> None:
+    path = tmp_path / "r.txt"
+    path.write_text(text, encoding="utf-8")
+    with pytest.raises(cr.CoverageError, match=match):
+        cr.load_ratchet(path)
+
+
+def test_ratchet_file_missing_is_an_error(tmp_path: Path) -> None:
+    with pytest.raises(cr.CoverageError, match="missing"):
+        cr.load_ratchet(tmp_path / "nope.txt")
+
+
+# --- CLI
+
+
+def gate_cli(tmp_path: Path, records: list[str], *extra: str) -> subprocess.CompletedProcess[str]:
+    dat = write_dat(tmp_path, *records)
+    return run_cli("--dat", str(dat), "--root", ROOT, *extra)
+
+
+def test_cli_without_gate_still_exits_zero_and_prints_no_gate_verdict(tmp_path: Path) -> None:
+    proc = gate_cli(tmp_path, gate_module("a", line_hit=0, line_total=10, ctl_hit=0, ctl_total=2))
+    assert proc.returncode == 0, proc.stderr
+    assert "GATE" not in proc.stdout + proc.stderr
+    assert "Informational" in proc.stdout
+
+
+def test_cli_gate_fails_nonzero_and_lists_failing_modules(tmp_path: Path) -> None:
+    recs = gate_module("bad", line_hit=0, line_total=10, ctl_hit=0, ctl_total=2)
+    proc = gate_cli(tmp_path, recs, "--gate")
+    assert proc.returncode == 1
+    out = proc.stdout + proc.stderr
+    assert "GATE FAIL" in out
+    assert "bad" in out and "line" in out and "toggle" in out
+
+
+def test_cli_gate_passes_with_exit_zero(tmp_path: Path) -> None:
+    recs = gate_module("a", line_hit=10, line_total=10, ctl_hit=2, ctl_total=2)
+    proc = gate_cli(tmp_path, recs, "--gate")
+    assert proc.returncode == 0, proc.stderr
+    assert "GATE PASS" in proc.stdout + proc.stderr
+
+
+def test_cli_gate_failure_still_writes_the_report_files(tmp_path: Path) -> None:
+    md, js = tmp_path / "r.md", tmp_path / "r.json"
+    recs = gate_module("bad", line_hit=0, line_total=10, ctl_hit=0, ctl_total=2)
+    proc = gate_cli(tmp_path, recs, "--gate", "--out-md", str(md), "--out-json", str(js))
+    assert proc.returncode == 1
+    text = md.read_text(encoding="utf-8")
+    assert "Gate" in text and "bad" in text
+    assert "Informational: no coverage percentage gates" not in text
+    gate = json.loads(js.read_text(encoding="utf-8"))["gate"]
+    assert gate["passed"] is False
+    assert gate["failures"][0]["module"] == "bad"
+
+
+def test_cli_gate_options_without_gate_are_rejected(tmp_path: Path) -> None:
+    recs = gate_module("a", line_hit=10, line_total=10, ctl_hit=2, ctl_total=2)
+    proc = gate_cli(tmp_path, recs, "--line-floor", "50")
+    assert proc.returncode == 2
+    assert "--gate" in proc.stderr
+
+
+def test_cli_gate_floor_options_apply(tmp_path: Path) -> None:
+    recs = gate_module("a", line_hit=90, line_total=100, ctl_hit=2, ctl_total=2)
+    assert gate_cli(tmp_path, recs, "--gate").returncode == 1
+    assert gate_cli(tmp_path, recs, "--gate", "--line-floor", "90").returncode == 0
+
+
+def test_cli_gate_with_a_ratchet_file(tmp_path: Path) -> None:
+    recs = gate_module("a", line_hit=10, line_total=10, ctl_hit=18, ctl_total=20)
+    rf = tmp_path / "ratchet.txt"
+    rf.write_text("a | 90 | bead1 | known gap\n", encoding="utf-8")
+    assert gate_cli(tmp_path, recs, "--gate").returncode == 1
+    assert gate_cli(tmp_path, recs, "--gate", "--toggle-ratchet", str(rf)).returncode == 0
+
+
+def test_cli_gate_error_on_bad_data_stays_exit_two_not_one(tmp_path: Path) -> None:
+    proc = run_cli("--dat", str(tmp_path / "nope.dat"), "--root", ROOT, "--gate")
+    assert proc.returncode == 2
+
+
+def test_tracked_waiver_and_ratchet_files_parse() -> None:
+    """The files CI feeds the gate must be well-formed; a typo should fail here, not at 02:30."""
+    tools = REPO_ROOT / "tools" / "verif"
+    assert cr.load_waivers(tools / "coverage_waivers.txt")
+    ratchet = cr.load_ratchet(tools / "coverage_toggle_ratchet.txt")
+    assert ratchet, "the ratchet file is expected to carry the known soc_bus/soc_top gaps"
+    assert all(0.0 <= e.floor < 100.0 for e in ratchet.values())
