@@ -473,7 +473,8 @@ async def test_error_reset_kills_running_kernel_then_divergent_kernel_matches_mo
 @cocotb.test()
 async def test_soft_reset_during_running_is_protocol_clean(dut):
     """CTRL.reset while RUNNING aborts the kernel at a clean AXI boundary.  Sweeping the reset
-    over 20 offsets, with slow responders so it lands in fetch, AR/R, AW/W/B and ALU phases: the
+    over 100 consecutive offsets, with slow responders so it lands in fetch, AR/R, AW/W/B,
+    shared-memory and ALU phases: the
     bus stays protocol-clean, the GPU reaches IDLE, nothing is issued afterwards, and a fresh
     kernel then runs correctly."""
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
@@ -488,7 +489,7 @@ async def test_soft_reset_during_running_is_protocol_clean(dut):
     data_task = cocotb.start_soon(data_responder(dut, mem, ar_latency=1, r_latency=1,
                                                  aw_latency=2, w_latency=1))
     stores_seen = 0
-    for delay in range(0, 80, 4):
+    for delay in range(0, 100):
         await gpu_launch(dut, kernel_pc=0, block_x=8)
         await settle(dut, delay)
         st = await axil_read(dut, GPU_STATUS)
@@ -641,6 +642,53 @@ async def test_start_queued_in_error_does_not_survive_reset(dut):
     assert await axil_read(dut, GPU_STATUS) == ST_IDLE and not mem
     bus.check_clean("START|RESET")
     assert bus.clears >= 2
+    for t in (instr_task, data_task):
+        t.kill()
+    bus.stop()
+
+
+def loop_shmem_kernel() -> dict:
+    """Never finishes: VSTS / VLDS forever, no global-memory traffic (shared memory is busy for
+    a large fraction of the loop, the coalescer never is)."""
+    k = Kernel(base_pc=0)
+    k.emit(vmov_tid_x(1))
+    k.emit(vaddi(2, 0, 2))
+    k.emit(vsll(3, 1, 2))
+    k.emit(vaddi(7, 1, 0x40))
+    k.emit(vaddi(10, 3, -7))
+    top = k.pc()
+    k.emit(vsts(7, 10, 0))
+    k.emit(vlds(11, 10, 7))
+    k.emit(vjmp(top - k.pc()))
+    return k.instructions()
+
+
+@cocotb.test()
+async def test_soft_reset_during_shared_memory_loop(dut):
+    """CTRL.reset while the shared memory is mid-access drains it first (soft_clr never fires
+    with sm_stall up, nothing new starts while draining) and the GPU is launchable afterwards."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    await gpu_reset(dut)
+    image = dict(loop_shmem_kernel())
+    for pc, word in store_kernel().items():
+        image[STORE_BASE + pc] = word
+    mem: dict = {}
+    bus = BusMonitor(dut)
+    bus.start()
+    instr_task = cocotb.start_soon(instr_responder(dut, image))
+    data_task = cocotb.start_soon(data_responder(dut, mem))
+    for delay in range(0, 40):
+        await gpu_launch(dut, kernel_pc=0, block_x=8)
+        await settle(dut, delay)
+        assert await axil_read(dut, GPU_STATUS) == 0, f"delay {delay}: loop kernel not RUNNING"
+        await axil_write(dut, GPU_CTRL, CTRL_RESET)
+        await wait_status(dut, ST_IDLE, timeout=400)
+        await settle(dut, 20)
+        bus.check_clean(f"shmem loop, reset at +{delay}")
+    mem.clear()
+    await gpu_launch(dut, kernel_pc=STORE_BASE, block_x=8)
+    await wait_status(dut, ST_DONE, timeout=6000)
+    check_store(mem)
     for t in (instr_task, data_task):
         t.kill()
     bus.stop()
