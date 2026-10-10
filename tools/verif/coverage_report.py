@@ -53,9 +53,20 @@ Exit status
 ``.dat``, on a bad waiver file, or when no triaged RTL was measured at all: a clean exit over
 no data is never a pass (cf. bead dwp).
 
+Combined report (bead 1eyv)
+---------------------------
+``--dat`` may be repeated.  The inputs are concatenated and aggregated exactly like instances of
+one run -- the point identity already drops the hierarchy, so a point of ``rtl/cpu/...`` measured
+by the SoC regression AND by the CPU/cache/GPU suites is one point, hit if either hit it.  Because
+the inputs come from different checkouts, file paths are normalised to repo-relative (anchored on
+the ``rtl/<tree>/`` component when the path is not under ``--root``).  Two inputs that measured
+the same module are compared: if their point sets disagree (a different Verilator version or
+source revision) the module is listed under "Cross-input point-set consistency" and flagged
+SUSPECT below 80 % overlap; an input that contributes no reportable RTL at all is an error.
+
 Usage::
 
-    coverage_report.py --dat merged.dat [--root <repo>] [--waivers <file>]
+    coverage_report.py --dat merged.dat [--dat more.dat ...] [--root <repo>] [--waivers <file>]
                        [--out-md report.md] [--out-json report.json]
 """
 
@@ -84,6 +95,13 @@ EXCLUDED_PREFIXES = ("tb/", "sim/")
 KINDS = ("line", "toggle", "any")
 WAIVABLE_CATEGORIES = ("b",)
 LINE_FLOOR_PCT = 95.0
+# Two inputs that measured the same module/file should have (nearly) the same point set: the
+# instrumentation depends on the source and the Verilator version, not on the test.  Below this
+# overlap the inputs almost certainly disagree on point identity (different Verilator, different
+# source revision), and the union then double-counts the denominator.
+CONSISTENCY_SUSPECT_PCT = 80.0
+# Anchor for paths recorded under a different checkout (CI runner, developer worktree).
+_RTL_ANCHOR = re.compile(r"(?:^|/)(rtl/(?:soc|periph|npu|cpu|mem|gpu)/.+)$")
 
 _RECORD = re.compile(r"^C '(.*)' (\d+)\s*$", re.DOTALL)
 _PAGE_KIND = {"v_line": "line", "v_branch": "branch", "v_toggle": "toggle"}
@@ -109,6 +127,7 @@ class Point:
     src: str  # ``S`` key (source-line set), may be empty
     hier: str
     count: int
+    source: str = ""  # label of the .dat this point came from (bead 1eyv multi-input merge)
 
 
 @dataclass(frozen=True)
@@ -186,10 +205,33 @@ class ModuleRow:
 
 
 @dataclass
+class InputStat:
+    """What one ``--dat`` input contributed after path normalisation and tree filtering."""
+
+    name: str
+    reportable: int  # points under rtl/{soc,periph,npu,cpu,mem,gpu}
+    hit: int
+
+
+@dataclass
+class Consistency:
+    """A module/file measured by >= 2 inputs whose point sets are not identical."""
+
+    module: str
+    file: str
+    shared: int  # points present in every input that measured this module/file
+    total: int  # points in the union
+    only_in: dict[str, int]  # input -> points only that input has
+    suspect: bool  # overlap below CONSISTENCY_SUSPECT_PCT
+
+
+@dataclass
 class Report:
     modules: list[ModuleRow]
     waivers: list[Waiver]
     waiver_hits: dict[int, int]  # waiver lineno -> matched uncovered points
+    inputs: list[InputStat] = field(default_factory=list)
+    consistency: list[Consistency] = field(default_factory=list)
 
     @property
     def unused_waivers(self) -> list[Waiver]:
@@ -211,8 +253,11 @@ def _parse_fields(body: str, where: str) -> dict[str, str]:
     return fields
 
 
-def parse_dat(path: Path) -> list[Point]:
-    """Parse a Verilator coverage ``.dat`` into line / branch / toggle points."""
+def parse_dat(path: Path, label: str | None = None) -> list[Point]:
+    """Parse a Verilator coverage ``.dat`` into line / branch / toggle points.
+
+    ``label`` names the input in multi-input reports (default: the file name).
+    """
     if not path.is_file():
         raise CoverageError(f"{path}: coverage file is missing")
     text = path.read_text(encoding="utf-8", errors="replace")
@@ -222,6 +267,7 @@ def parse_dat(path: Path) -> list[Point]:
             f"{path}: not a Verilator coverage file (header '{HEADER_PREFIX}*' missing)"
         )
 
+    source = label if label is not None else path.name
     points: list[Point] = []
     for lineno, raw in enumerate(lines[1:], start=2):
         if not raw.strip() or raw.startswith("#"):
@@ -251,6 +297,7 @@ def parse_dat(path: Path) -> list[Point]:
                 src=fields.get("S", ""),
                 hier=fields.get("h", ""),
                 count=int(m.group(2)),
+                source=source,
             )
         )
     if not points:
@@ -300,14 +347,24 @@ def load_waivers(path: Path) -> list[Waiver]:
 
 
 def _relpath(file: str, root: Path) -> str | None:
-    """Repo-relative POSIX path, or None when the file is outside ``root``."""
-    norm = os.path.normpath(file)
+    """Repo-relative POSIX path, or None when the file is not reportable RTL.
+
+    A path under ``root`` is made relative to it.  Any other path -- recorded by a run in a
+    different checkout (CI runner, developer worktree) or relative to another directory
+    (``../rtl/...``) -- is anchored on its ``rtl/<tree>/`` component, so the same source file
+    gets the same identity in every input.
+    """
+    norm = os.path.normpath(file.replace("\\", "/"))
     if os.path.isabs(norm):
         try:
             return Path(norm).relative_to(root).as_posix()
         except ValueError:
-            return None
-    return Path(norm).as_posix()
+            pass
+    posix = Path(norm).as_posix()
+    anchored = _RTL_ANCHOR.search(posix)
+    if anchored:
+        return anchored.group(1)
+    return None if os.path.isabs(norm) else posix
 
 
 def _classify(rel: str) -> tuple[str, bool] | None:
@@ -334,18 +391,33 @@ def _signal_of(obj: str) -> str:
 
 def build_report(points: list[Point], root: Path, waivers: list[Waiver]) -> Report:
     """Aggregate points per module (across instances) and apply the waivers."""
-    # Pass 1: union over instances.  Identity drops the hierarchy; hit = any instance hit.
+    # Pass 1: union over instances and inputs.  Identity drops the hierarchy and the input; hit =
+    # any instance in any input hit.  Per-input key sets feed the consistency check.
     union: dict[tuple[str, str, str, int, int, str, str], bool] = {}
+    per_input: dict[tuple[str, str], dict[str, set[tuple[str, str, str, int, int, str, str]]]] = (
+        defaultdict(lambda: defaultdict(set))
+    )
+    input_stats: dict[str, list[int]] = {}
     for p in points:
+        stat = input_stats.setdefault(p.source, [0, 0])
         rel = _relpath(p.file, root)
         if rel is None or _classify(rel) is None:
             continue
         key = (p.module, rel, p.kind, p.line, p.col, p.name, p.src)
         union[key] = union.get(key, False) or p.count > 0
+        per_input[(p.module, rel)][p.source].add(key)
+        stat[0] += 1
+        stat[1] += int(p.count > 0)
     if not union:
         raise CoverageError(
             "no reportable RTL points (nothing under rtl/{soc,periph,npu,cpu,mem,gpu})"
         )
+    for name, (reportable, _hit) in input_stats.items():
+        if reportable == 0:
+            raise CoverageError(
+                f"input '{name}' contributed no reportable RTL points -- wrong checkout, wrong "
+                f"tree, or an empty run; refusing to merge it silently"
+            )
 
     rows: dict[tuple[str, str], ModuleRow] = {}
     waiver_hits: dict[int, int] = defaultdict(int)
@@ -403,7 +475,39 @@ def build_report(points: list[Point], root: Path, waivers: list[Waiver]) -> Repo
             "no triaged RTL was measured (rtl/soc, rtl/periph, rtl/npu) -- "
             "the regression ran but nothing in the triaged trees was instrumented"
         )
-    return Report(modules, waivers, dict(waiver_hits))
+    return Report(
+        modules,
+        waivers,
+        dict(waiver_hits),
+        inputs=[InputStat(n, r, h) for n, (r, h) in input_stats.items()],
+        consistency=_consistency(per_input),
+    )
+
+
+def _consistency(
+    per_input: dict[tuple[str, str], dict[str, set[tuple[str, str, str, int, int, str, str]]]],
+) -> list[Consistency]:
+    """Modules measured by >= 2 inputs whose point sets differ, worst overlap first."""
+    out: list[Consistency] = []
+    for (module, rel), by_source in sorted(per_input.items()):
+        if len(by_source) < 2:
+            continue
+        sets = list(by_source.values())
+        everything = set().union(*sets)
+        shared = set.intersection(*sets)
+        if len(shared) == len(everything):
+            continue
+        only = {
+            src: len(keys - set().union(*(o for s2, o in by_source.items() if s2 != src)))
+            for src, keys in by_source.items()
+        }
+        pct = 100.0 * len(shared) / len(everything)
+        out.append(
+            Consistency(
+                module, rel, len(shared), len(everything), only, pct < CONSISTENCY_SUSPECT_PCT
+            )
+        )
+    return sorted(out, key=lambda c: (c.shared / c.total, c.module))
 
 
 # --------------------------------------------------------------------------- rendering
@@ -484,6 +588,45 @@ def _gaps(rows: list[ModuleRow]) -> list[str]:
     return out
 
 
+def _inputs_section(report: Report) -> list[str]:
+    """Per-input contribution and the cross-input consistency table (multi-input runs only)."""
+    if len(report.inputs) < 2:
+        return []
+    out = [
+        "## Inputs",
+        "",
+        "| Input | Reportable points | Hit |",
+        "| :---- | ----------------: | --: |",
+        *(f"| {i.name} | {i.reportable} | {i.hit} |" for i in report.inputs),
+        "",
+    ]
+    if report.consistency:
+        out += [
+            "## Cross-input point-set consistency",
+            "",
+            "Modules measured by more than one input whose point sets differ.  The union is "
+            "reported; an overlap",
+            f"below {CONSISTENCY_SUSPECT_PCT:.0f} % means the inputs disagree on point identity "
+            "(different Verilator version or",
+            "source revision) and the module's denominator is inflated -- re-run both inputs "
+            "on one toolchain.",
+            "",
+            "| Module | File | Shared/total | Only in | Status |",
+            "| :----- | :--- | -----------: | :------ | :----- |",
+        ]
+        for c in report.consistency:
+            only = ", ".join(f"{k}: {v}" for k, v in c.only_in.items())
+            status = "SUSPECT" if c.suspect else "minor (parameter variants)"
+            out.append(f"| {c.module} | `{c.file}` | {c.shared}/{c.total} | {only} | {status} |")
+        out.append("")
+    else:
+        out += [
+            "Cross-input point-set consistency: all shared modules have identical point sets.",
+            "",
+        ]
+    return out
+
+
 def render_markdown(report: Report) -> str:
     triaged = [r for r in report.modules if r.triaged]
     info = [r for r in report.modules if not r.triaged]
@@ -510,6 +653,7 @@ def render_markdown(report: Report) -> str:
             *_table(info),
             "",
         ]
+    lines += _inputs_section(report)
     lines += ["## Uncovered items, triaged trees", "", *(_gaps(triaged) or ["None.", ""])]
     lines += ["## Waivers", ""]
     if report.waivers:
@@ -593,17 +737,47 @@ def report_to_dict(report: Report) -> dict:
             for w in report.waivers
         ],
         "unused_waivers": [w.lineno for w in report.unused_waivers],
+        "inputs": [
+            {"name": i.name, "reportable": i.reportable, "hit": i.hit} for i in report.inputs
+        ],
+        "consistency": [
+            {
+                "module": c.module,
+                "file": c.file,
+                "shared": c.shared,
+                "total": c.total,
+                "only_in": c.only_in,
+                "suspect": c.suspect,
+            }
+            for c in report.consistency
+        ],
     }
 
 
 # ------------------------------------------------------------------------------------ CLI
 
 
+def _parse_inputs(paths: list[Path]) -> list[Point]:
+    """Parse every input; label by file name, or by full path when two names collide."""
+    names = [p.name for p in paths]
+    points: list[Point] = []
+    for path in paths:
+        label = str(path) if names.count(path.name) > 1 else path.name
+        points += parse_dat(path, label)
+    return points
+
+
 def main(argv: list[str]) -> int:
     """CLI entry point; see the module docstring for the contract."""
     default_root = Path(__file__).resolve().parents[2]
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--dat", required=True, type=Path, help="merged Verilator coverage .dat")
+    ap.add_argument(
+        "--dat",
+        required=True,
+        action="append",
+        type=Path,
+        help="merged Verilator coverage .dat; repeat to merge several (bead 1eyv)",
+    )
     ap.add_argument(
         "--root", type=Path, default=default_root, help="repo root (default: this repo)"
     )
@@ -614,7 +788,7 @@ def main(argv: list[str]) -> int:
 
     try:
         waivers = load_waivers(args.waivers) if args.waivers else []
-        report = build_report(parse_dat(args.dat), args.root.resolve(), waivers)
+        report = build_report(_parse_inputs(args.dat), args.root.resolve(), waivers)
     except CoverageError as exc:
         print(f"coverage_report: ERROR: {exc}", file=sys.stderr)
         return EXIT_ERROR
@@ -638,6 +812,13 @@ def main(argv: list[str]) -> int:
     )
     for w in report.unused_waivers:
         print(f"coverage_report: WARNING: stale waiver at line {w.lineno}", file=sys.stderr)
+    for c in report.consistency:
+        if c.suspect:
+            print(
+                f"coverage_report: WARNING: {c.module}: inputs disagree on its point set "
+                f"({c.shared}/{c.total} shared) -- denominator inflated, see the report",
+                file=sys.stderr,
+            )
     return EXIT_OK
 
 

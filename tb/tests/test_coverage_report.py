@@ -27,6 +27,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -549,3 +550,192 @@ def test_cli_fails_on_bad_waiver_file(tmp_path: Path) -> None:
     proc = run_cli("--dat", str(dat), "--root", ROOT, "--waivers", str(waivers))
     assert proc.returncode != 0
     assert "justification" in proc.stderr
+
+
+# ------------------------------------------------------------- multi-input merge (bead 1eyv)
+#
+# The combined report merges the SoC regression's ``merged.dat`` with the CPU/cache/GPU suites'
+# ``.dat`` files.  They come from different checkouts (absolute paths differ: a developer
+# worktree, a CI runner), so the report must normalise to repo-relative paths itself, and the
+# points of one RTL file measured by two inputs must be one point, hit if either input hit it.
+
+FOREIGN_ROOTS = (
+    "/home/runner/work/claude_verilog_test/claude_verilog_test",
+    "/home/dev/Github/repo/.claude/worktrees/agent-abc123",
+)
+
+
+def foreign_point(root: str, **kw: object) -> str:
+    """A ``point()`` record whose file lives under a different checkout root."""
+    rec = point(**kw)  # type: ignore[arg-type]
+    return rec.replace(f"{ROOT}/", f"{root}/", 1)
+
+
+def cpu_records(hit_line: int, root: str | None = None) -> list[str]:
+    """Two line blocks of an informational-tree module; only ``hit_line`` is hit."""
+    out = []
+    for ln in (10, 20):
+        kw: dict[str, object] = {
+            "kind": "line",
+            "module": "dec",
+            "file": "rtl/cpu/core/dec.sv",
+            "line": ln,
+            "obj": "block",
+            "src": str(ln),
+            "count": int(ln == hit_line),
+        }
+        out.append(point(**kw) if root is None else foreign_point(root, **kw))  # type: ignore[arg-type]
+    return out
+
+
+@pytest.mark.parametrize("root", FOREIGN_ROOTS)
+def test_paths_from_another_checkout_normalise_to_repo_relative(tmp_path: Path, root: str) -> None:
+    rec = foreign_point(
+        root, kind="line", module="foo", file="rtl/periph/foo.sv", line=10, obj="b", count=1
+    )
+    report = cr.build_report(cr.parse_dat(write_dat(tmp_path, rec)), Path(ROOT), [])
+    assert [(m.module, m.file) for m in report.modules] == [("foo", "rtl/periph/foo.sv")]
+
+
+def test_dotdot_relative_path_normalises(tmp_path: Path) -> None:
+    # Verilator run from sim/ can record ../rtl/... for sources named relative to it.
+    rec = point(
+        kind="line", module="foo", file="rtl/periph/foo.sv", line=1, obj="b", src="1", count=1
+    ).replace(f"{ROOT}/rtl/periph", "../rtl/periph")
+    report = cr.build_report(cr.parse_dat(write_dat(tmp_path, rec)), Path(ROOT), [])
+    assert report.modules[0].file == "rtl/periph/foo.sv"
+
+
+def test_foreign_root_testbench_files_stay_excluded(tmp_path: Path) -> None:
+    tb = foreign_point(
+        FOREIGN_ROOTS[0],
+        kind="line",
+        module="tb_x",
+        file="tb/cocotb/soc/tb_x.sv",
+        line=1,
+        obj="b",
+        count=1,
+    )
+    dat = write_dat(tmp_path, *periph_records(), tb)
+    report = cr.build_report(cr.parse_dat(dat), Path(ROOT), [])
+    assert [m.module for m in report.modules] == ["foo"]
+
+
+def test_two_inputs_with_different_roots_merge_into_one_report(tmp_path: Path) -> None:
+    soc = write_dat(tmp_path, *periph_records(), name="soc.dat")
+    cpu = write_dat(tmp_path, *cpu_records(10, FOREIGN_ROOTS[0]), name="cpu.dat")
+    report = cr.build_report(cr.parse_dat(soc) + cr.parse_dat(cpu), Path(ROOT), [])
+    by_name = {m.module: m for m in report.modules}
+    assert set(by_name) == {"foo", "dec"}
+    assert by_name["dec"].tree == "rtl/cpu" and not by_name["dec"].triaged
+    assert (by_name["dec"].line_hit, by_name["dec"].line_total) == (1, 2)
+
+
+def test_point_hit_in_either_input_counts_as_hit_and_is_counted_once(tmp_path: Path) -> None:
+    a = write_dat(tmp_path, *cpu_records(10), name="a.dat")  # hits L10
+    b = write_dat(tmp_path, *cpu_records(20, FOREIGN_ROOTS[1]), name="b.dat")  # hits L20
+    soc = write_dat(tmp_path, *periph_records(), name="soc.dat")
+    only_a = cr.build_report(cr.parse_dat(soc) + cr.parse_dat(a), Path(ROOT), [])
+    both = cr.build_report(cr.parse_dat(soc) + cr.parse_dat(a) + cr.parse_dat(b), Path(ROOT), [])
+    dec_a = next(m for m in only_a.modules if m.module == "dec")
+    dec = next(m for m in both.modules if m.module == "dec")
+    assert (dec_a.line_hit, dec_a.line_total) == (1, 2)
+    assert (dec.line_hit, dec.line_total) == (2, 2)  # union of hits, not a sum of points
+    assert dec.uncovered_lines == []
+
+
+def test_identical_point_sets_report_no_mismatch(tmp_path: Path) -> None:
+    a = write_dat(tmp_path, *cpu_records(10), name="a.dat")
+    b = write_dat(tmp_path, *cpu_records(20, FOREIGN_ROOTS[0]), name="b.dat")
+    soc = write_dat(tmp_path, *periph_records(), name="soc.dat")
+    points = cr.parse_dat(soc) + cr.parse_dat(a) + cr.parse_dat(b)
+    assert cr.build_report(points, Path(ROOT), []).consistency == []
+
+
+def test_module_in_one_input_only_is_not_a_mismatch(tmp_path: Path) -> None:
+    soc = write_dat(tmp_path, *periph_records(), name="soc.dat")
+    cpu = write_dat(tmp_path, *cpu_records(10), name="cpu.dat")
+    report = cr.build_report(cr.parse_dat(soc) + cr.parse_dat(cpu), Path(ROOT), [])
+    assert report.consistency == []
+
+
+def mismatched_inputs(tmp_path: Path) -> list[Any]:
+    """Same module and file, but input B's points are at other lines (e.g. another Verilator)."""
+    a = write_dat(tmp_path, *cpu_records(10), name="a.dat")
+    shifted = [
+        point(
+            kind="line",
+            module="dec",
+            file="rtl/cpu/core/dec.sv",
+            line=ln,
+            obj="block",
+            src=str(ln),
+            count=1,
+        )
+        for ln in (11, 21)
+    ]
+    b = write_dat(tmp_path, *shifted, name="b.dat")
+    soc = write_dat(tmp_path, *periph_records(), name="soc.dat")
+    merged: list[Any] = cr.parse_dat(soc) + cr.parse_dat(a) + cr.parse_dat(b)
+    return merged
+
+
+def test_mismatched_point_sets_are_flagged_and_never_inflate_coverage(tmp_path: Path) -> None:
+    report = cr.build_report(mismatched_inputs(tmp_path), Path(ROOT), [])
+    dec = next(m for m in report.modules if m.module == "dec")
+    # Union semantics: four distinct points, three hit (L10 from a, L11 + L21 from b); the
+    # shifted input's hits are NOT credited to the other input's points, and the denominator is
+    # not silently shrunk to the overlap.
+    assert (dec.line_hit, dec.line_total) == (3, 4)
+    assert len(report.consistency) == 1
+    row = report.consistency[0]
+    assert (row.module, row.shared, row.total) == ("dec", 0, 4)
+    assert row.suspect
+    assert row.only_in == {"a.dat": 2, "b.dat": 2}
+
+
+def test_mismatch_appears_in_markdown_and_json(tmp_path: Path) -> None:
+    report = cr.build_report(mismatched_inputs(tmp_path), Path(ROOT), [])
+    md = cr.render_markdown(report)
+    assert "Cross-input point-set consistency" in md
+    assert "SUSPECT" in md
+    data = cr.report_to_dict(report)
+    assert data["consistency"][0]["module"] == "dec"
+    assert data["consistency"][0]["suspect"] is True
+
+
+def test_input_contributing_nothing_reportable_is_an_error(tmp_path: Path) -> None:
+    soc = write_dat(tmp_path, *periph_records(), name="soc.dat")
+    # Wrong tree entirely: a clean-looking merge would otherwise hide that this input was lost.
+    junk = write_dat(
+        tmp_path,
+        point(kind="line", module="tb_x", file="tb/x.sv", line=1, obj="b", src="1", count=1),
+        name="junk.dat",
+    )
+    with pytest.raises(cr.CoverageError, match="junk.dat"):
+        cr.build_report(cr.parse_dat(soc) + cr.parse_dat(junk), Path(ROOT), [])
+
+
+def test_report_lists_each_input_with_its_reportable_points(tmp_path: Path) -> None:
+    soc = write_dat(tmp_path, *periph_records(), name="soc.dat")
+    cpu = write_dat(tmp_path, *cpu_records(10), name="cpu.dat")
+    report = cr.build_report(cr.parse_dat(soc) + cr.parse_dat(cpu), Path(ROOT), [])
+    assert {i.name: i.reportable for i in report.inputs} == {"soc.dat": 8, "cpu.dat": 2}
+    assert [i["name"] for i in cr.report_to_dict(report)["inputs"]] == ["soc.dat", "cpu.dat"]
+
+
+def test_cli_accepts_repeated_dat_and_merges(tmp_path: Path) -> None:
+    soc = write_dat(tmp_path, *periph_records(), name="soc.dat")
+    cpu = write_dat(tmp_path, *cpu_records(10, FOREIGN_ROOTS[0]), name="cpu.dat")
+    js = tmp_path / "r.json"
+    proc = run_cli("--dat", str(soc), "--dat", str(cpu), "--root", ROOT, "--out-json", str(js))
+    assert proc.returncode == 0, proc.stderr
+    names = {m["module"] for m in json.loads(js.read_text(encoding="utf-8"))["modules"]}
+    assert names == {"foo", "dec"}
+
+
+def test_cli_fails_when_any_input_is_missing(tmp_path: Path) -> None:
+    soc = write_dat(tmp_path, *periph_records(), name="soc.dat")
+    proc = run_cli("--dat", str(soc), "--dat", str(tmp_path / "gone.dat"), "--root", ROOT)
+    assert proc.returncode != 0
+    assert "gone.dat" in proc.stderr

@@ -7,6 +7,15 @@ name: SoC Coverage
 # per-module table with tools/verif/coverage_report.py.  Method, run command, per-module table,
 # triage and the gating decision: docs/verification/SOC_COVERAGE_REPORT.md.
 #
+# Combined report (bead 1eyv): after the SoC regression, the same job runs the CPU / Phase 3
+# cache / Phase 4 GPU suites instrumented the same way (`make -C sim coverage_cpu_gpu`, same nix
+# Verilator, so both inputs agree on point identity) and merges the two .dat files at the report
+# level (`coverage_report.py --dat soc --dat cpu_gpu`).  One job, not a download of the
+# random_tests.yml rtl-coverage artifact: that job builds Verilator 5.036 from source in another
+# workflow, so its point keys are not guaranteed to match and its run is not ordered against this
+# one.  The combined step is informational and `continue-on-error`: the per-flow soc report, the
+# `soc-coverage` artifact and this job's gate are unchanged.
+#
 # NOT a per-PR gate.  An instrumented -O0 build is far slower than cocotb.yml's soc job, so this
 # runs nightly and on demand.  The pull_request trigger is limited to the files that make up
 # this report, so a change to the script, the waivers or this workflow is validated by a real
@@ -54,6 +63,8 @@ jobs:
     env:
       # Build dirs, per-simulation .dat files, merged.dat and the report all live here.
       SOC_COV_ROOT: /home/runner/soc_cov
+      # CPU / cache / GPU instrumented build dirs and per-simulation .dat files (bead 1eyv).
+      CPU_COV_ROOT: /home/runner/cpu_cov
       # 2026-10-07 (merge of beads 8riq + ej6j): 545 = 477 + 31 (8riq, measured 511 on its own branch) + 37 (ej6j, derived).
       # DERIVED for the merge -- tighten to (measured - 3) from this PR's soc_all CI log.
       # 2026-10-08 (GH #222 W5 / bead kp61): 546 = 545 + 1 (test_axprot_routed_to_selected_slave_only in test_axil_interconnect.py); measured 548 on main.
@@ -157,6 +168,36 @@ jobs:
           test -s "${SOC_COV_ROOT}/coverage/coverage_report.md" \
             || { echo "FAIL: coverage_report.md is missing or empty."; exit 1; }
 
+      # Bead 1eyv, informational: CPU directed + Phase 3 cache + Phase 4 GPU suites, instrumented.
+      # continue-on-error: a red or timed-out suite here must not fail the SoC coverage job.
+      - name: Run CPU / cache / GPU coverage (informational)
+        id: cpu_cov
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          # The SoC build dirs (~6 GB) are done with; merged.dat and the report are kept.
+          find "${SOC_COV_ROOT}" -maxdepth 1 -type d -name 'sim_build_*' -exec rm -rf {} +
+          df -h /
+          make -C sim coverage_cpu_gpu \
+            SIM_BUILD_ROOT="${CPU_COV_ROOT}" \
+            SIM_PYTHON3="$(command -v python3)" 2>&1 | tee cpu_gpu_coverage.log
+          test -s "${CPU_COV_ROOT}/coverage/cpu_gpu_merged.dat"
+
+      # Merge at the report level.  --dat is repeatable; paths are normalised to repo-relative, so
+      # the two inputs need not come from the same checkout path.  A module whose point sets
+      # disagree between inputs is listed in the report's consistency section.
+      - name: Combined per-module report (all six RTL trees)
+        id: combined
+        if: steps.cpu_cov.outcome == 'success'
+        continue-on-error: true
+        run: |
+          python3 tools/verif/coverage_report.py \
+            --dat "${SOC_COV_ROOT}/coverage/merged.dat" \
+            --dat "${CPU_COV_ROOT}/coverage/cpu_gpu_merged.dat" \
+            --waivers tools/verif/coverage_waivers.txt \
+            --out-md "${CPU_COV_ROOT}/coverage/combined_report.md" \
+            --out-json "${CPU_COV_ROOT}/coverage/combined_report.json"
+
       - name: Publish coverage table to the job summary
         if: always()
         run: |
@@ -165,6 +206,13 @@ jobs:
             cat "${report}" >> "${GITHUB_STEP_SUMMARY}"
           else
             echo "No coverage report was produced (see the run log)." >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          combined="${CPU_COV_ROOT}/coverage/combined_report.md"
+          if [ -s "${combined}" ]; then
+            printf '\n---\n\n## Combined (SoC + CPU/cache/GPU suites)\n\n' >> "${GITHUB_STEP_SUMMARY}"
+            cat "${combined}" >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "No combined report was produced (CPU/GPU step failed or was skipped)." >> "${GITHUB_STEP_SUMMARY}"
           fi
 
       - name: Upload coverage data and report
@@ -177,5 +225,19 @@ jobs:
             ${{ env.SOC_COV_ROOT }}/coverage/coverage_report.md
             ${{ env.SOC_COV_ROOT }}/coverage/coverage_report.json
             soc_coverage.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      # Separate artifact: the soc-coverage one above keeps exactly its previous contents.
+      - name: Upload combined coverage data and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtl-combined-coverage
+          path: |
+            ${{ env.CPU_COV_ROOT }}/coverage/cpu_gpu_merged.dat
+            ${{ env.CPU_COV_ROOT }}/coverage/combined_report.md
+            ${{ env.CPU_COV_ROOT }}/coverage/combined_report.json
+            cpu_gpu_coverage.log
           if-no-files-found: warn
           retention-days: 30
