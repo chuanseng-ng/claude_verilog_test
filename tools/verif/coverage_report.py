@@ -48,10 +48,35 @@ reported as stale.  The list is external on purpose: grandfathered RTL gets no p
 
 Exit status
 -----------
-0 for any coverage level -- the gate is informational (see
+Without ``--gate``: 0 for any coverage level (informational; see
 ``docs/verification/SOC_COVERAGE_REPORT.md``).  Nonzero (2) on a missing, malformed or empty
-``.dat``, on a bad waiver file, or when no triaged RTL was measured at all: a clean exit over
-no data is never a pass (cf. bead dwp).
+``.dat``, on a bad waiver or ratchet file, or when no triaged RTL was measured at all: a clean
+exit over no data is never a pass (cf. bead dwp).  With ``--gate``: additionally 1 when any
+triaged module fails the gate (see below).  Exit 2 always means "could not evaluate", never
+"evaluated and failed".
+
+Gate (bead s1cg)
+----------------
+``--gate`` enforces, on the TRIAGED trees only (``rtl/soc``, ``rtl/periph``, ``rtl/npu``; the
+informational trees never fail it):
+
+* **line floor** (``--line-floor``, default 95): every module's adjusted line % (line + branch
+  points, waived points removed) is at least the floor;
+* **control-signal toggle floor** (``--toggle-floor``, default 100): every module's toggle % over
+  its CONTROL signals is at least the floor.  A control signal is a 1-bit scalar: its Verilator
+  toggle object has no ``[bit]`` index (valid/ready/enable/irq/start/done/busy/FSM-strobe nets).
+  Buses, per-bit address/data lanes, FSM state vectors and arrays are datapath and are never
+  gated.  The rule is mechanical -- no hand-kept signal list to rot;
+* **ratchet** (``--toggle-ratchet FILE``, ``module | floor | bead | justification``): overrides
+  the toggle floor for a named module whose control-toggle gap is a KNOWN test gap tracked by a
+  bead.  It can only be edited upward without an explicit, reviewable lowering; a module sitting
+  well above its entry is reported so the entry can be raised or removed.  It never relaxes the
+  line floor.
+
+A module with nothing to gate does not pass vacuously: no line points and no control signals
+(and nothing waived) is a failure, "unmeasured".  A module with no line points but control
+signals is gated on those alone and the report says so; one whose line points are all waived
+passes with a note.
 
 Combined report (bead 1eyv)
 ---------------------------
@@ -68,6 +93,7 @@ Usage::
 
     coverage_report.py --dat merged.dat [--dat more.dat ...] [--root <repo>] [--waivers <file>]
                        [--out-md report.md] [--out-json report.json]
+                       [--gate [--line-floor 95] [--toggle-floor 95] [--toggle-ratchet <file>]]
 """
 
 from __future__ import annotations
@@ -81,7 +107,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-EXIT_OK, EXIT_ERROR = 0, 2
+EXIT_OK, EXIT_GATE_FAIL, EXIT_ERROR = 0, 1, 2
 
 SOH, STX = "\x01", "\x02"
 HEADER_PREFIX = "# SystemC::Coverage-"
@@ -95,6 +121,12 @@ EXCLUDED_PREFIXES = ("tb/", "sim/")
 KINDS = ("line", "toggle", "any")
 WAIVABLE_CATEGORIES = ("b",)
 LINE_FLOOR_PCT = 95.0
+# Chosen from measurement (bead s1cg): after the structural waivers 40 of 42 triaged modules sit at
+# exactly 100.0 % control-signal toggle, bit-identical across a local and an independent CI run.
+TOGGLE_FLOOR_PCT = 100.0
+# A ratchet entry this many points below the module's measured control-toggle % is reported as
+# raisable: the ratchet exists to stop regressions, so slack above it is a missed tightening.
+RATCHET_HEADROOM_PCT = 2.0
 # Two inputs that measured the same module/file should have (nearly) the same point set: the
 # instrumentation depends on the source and the Verilator version, not on the test.  Below this
 # overlap the inputs almost certainly disagree on point identity (different Verilator, different
@@ -182,6 +214,11 @@ class ModuleRow:
     toggle_waived: int = 0
     uncovered_lines: list[LineGap] = field(default_factory=list)
     uncovered_toggles: list[ToggleGap] = field(default_factory=list)
+    # Control signals = 1-bit scalar toggle objects (a subset of the toggle_* counts above).
+    ctl_hit: int = 0
+    ctl_total: int = 0  # adjusted (waived points removed)
+    ctl_waived: int = 0
+    uncovered_ctl: list[str] = field(default_factory=list)
 
     @staticmethod
     def _pct(hit: int, total: int) -> float | None:
@@ -202,6 +239,10 @@ class ModuleRow:
     @property
     def toggle_raw_pct(self) -> float | None:
         return self._pct(self.toggle_hit, self.toggle_total + self.toggle_waived)
+
+    @property
+    def ctl_pct(self) -> float | None:
+        return self._pct(self.ctl_hit, self.ctl_total)
 
 
 @dataclass
@@ -385,6 +426,16 @@ def _first_src_line(src: str, fallback: int) -> int:
     return int(m.group(1)) if m else fallback
 
 
+def is_control_toggle(obj: str) -> bool:
+    """True for the toggle object of a 1-bit scalar signal (no ``[bit]`` index).
+
+    Verilator names a vector bit ``sig[3]:0->1`` and a scalar ``sig:0->1``.  Only scalars are
+    control signals; indexed objects (bus bits, array elements, ``logic [0:0]`` nets) are
+    datapath and conservatively stay outside the control gate.
+    """
+    return "[" not in obj.split(":", 1)[0]
+
+
 def _signal_of(obj: str) -> str:
     return re.sub(r"\[[^\]]*\]", "", obj.split(":", 1)[0])
 
@@ -448,6 +499,7 @@ def build_report(points: list[Point], root: Path, waivers: list[Waiver]) -> Repo
                 row.line_waived += 1
             else:
                 row.toggle_waived += 1
+                row.ctl_waived += int(is_control_toggle(name))
             continue
 
         if is_line:
@@ -458,6 +510,11 @@ def build_report(points: list[Point], root: Path, waivers: list[Waiver]) -> Repo
         else:
             row.toggle_total += 1
             row.toggle_hit += int(hit)
+            if is_control_toggle(name):
+                row.ctl_total += 1
+                row.ctl_hit += int(hit)
+                if not hit:
+                    row.uncovered_ctl.append(name)
             bucket = toggles[(module, rel)][_signal_of(name)]
             bucket[1] += 1
             bucket[0] += int(hit)
@@ -508,6 +565,167 @@ def _consistency(
             )
         )
     return sorted(out, key=lambda c: (c.shared / c.total, c.module))
+
+
+# ------------------------------------------------------------------------------------ gate
+
+
+@dataclass(frozen=True)
+class Ratchet:
+    """One ratchet entry: a per-module control-toggle floor for a known, bead-tracked gap."""
+
+    module: str
+    floor: float
+    bead: str
+    justification: str
+    lineno: int
+
+
+@dataclass(frozen=True)
+class GateConfig:
+    line_floor: float = LINE_FLOOR_PCT
+    toggle_floor: float = TOGGLE_FLOOR_PCT
+    ratchet: dict[str, Ratchet] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class GateFailure:
+    module: str
+    check: str  # "line" | "toggle" | "unmeasured"
+    detail: str
+
+
+@dataclass
+class GateResult:
+    config: GateConfig
+    failures: list[GateFailure] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    modules_gated: int = 0
+
+    @property
+    def passed(self) -> bool:
+        return not self.failures
+
+
+def load_ratchet(path: Path) -> dict[str, Ratchet]:
+    """Parse the ratchet file (``module | floor | bead | justification``); defects are errors."""
+    if not path.is_file():
+        raise CoverageError(f"{path}: ratchet file is missing")
+    entries: dict[str, Ratchet] = {}
+    for lineno, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        where = f"{path}:{lineno}"
+        parts = [p.strip() for p in re.split(r"\s+\|\s+", stripped + " ", maxsplit=3)]
+        if len(parts) != 4 or not parts[3]:
+            raise CoverageError(
+                f"{where}: expected 'module | floor | bead | justification' "
+                f"(4 fields; a justification is mandatory)"
+            )
+        module, floor_text, bead, justification = parts
+        try:
+            floor = float(floor_text)
+        except ValueError as exc:
+            raise CoverageError(f"{where}: floor {floor_text!r} is not a number") from exc
+        if not 0.0 <= floor <= 100.0:
+            raise CoverageError(f"{where}: floor {floor} must be within 0..100")
+        if not bead:
+            raise CoverageError(f"{where}: bead is empty -- every ratchet entry tracks a gap")
+        if module in entries:
+            raise CoverageError(
+                f"{where}: duplicate entry for {module} (first at line {entries[module].lineno})"
+            )
+        entries[module] = Ratchet(module, floor, bead, justification, lineno)
+    return entries
+
+
+def _below(hit: int, total: int, floor: float) -> bool:
+    """True when ``hit/total`` is under ``floor`` %; exact at the boundary (95/100 meets 95)."""
+    return hit * 100 < floor * total
+
+
+def evaluate_gate(report: Report, cfg: GateConfig) -> GateResult:
+    """Apply the line and control-toggle floors to the triaged modules."""
+    res = GateResult(cfg)
+    triaged = [r for r in report.modules if r.triaged]
+    res.modules_gated = len(triaged)
+    for r in triaged:
+        _gate_line(r, cfg, res)
+        _gate_toggle(r, cfg, res)
+        if not (r.line_total or r.line_waived or r.ctl_total or r.ctl_waived):
+            res.failures.append(
+                GateFailure(
+                    r.module,
+                    "unmeasured",
+                    "no line points and no control signals were measured -- nothing to gate "
+                    f"on ({r.file}); a module with nothing measured is not a pass",
+                )
+            )
+    known = {r.module for r in triaged}
+    for name, entry in sorted(cfg.ratchet.items()):
+        if name not in known:
+            res.warnings.append(
+                f"ratchet entry at line {entry.lineno} ({name}, {entry.bead}) is stale: no such "
+                f"triaged module in this report -- remove or fix it"
+            )
+    return res
+
+
+def _gate_line(r: ModuleRow, cfg: GateConfig, res: GateResult) -> None:
+    if r.line_total == 0:
+        if r.line_waived:
+            res.notes.append(
+                f"{r.module}: line gate n/a, all {r.line_waived} line points are waived"
+            )
+        else:
+            res.notes.append(f"{r.module}: line gate n/a, no line points (pure wiring)")
+        return
+    if _below(r.line_hit, r.line_total, cfg.line_floor):
+        res.failures.append(
+            GateFailure(
+                r.module,
+                "line",
+                f"line {r.line_hit}/{r.line_total} = {_fmt_pct(r.line_pct)} % "
+                f"< floor {cfg.line_floor:g} %; uncovered: "
+                + ", ".join(_gap_text(g) for g in sorted(r.uncovered_lines, key=lambda g: g.line)),
+            )
+        )
+
+
+def _gate_toggle(r: ModuleRow, cfg: GateConfig, res: GateResult) -> None:
+    entry = cfg.ratchet.get(r.module)
+    if r.ctl_total == 0:
+        why = (
+            f"all {r.ctl_waived} control points are waived"
+            if r.ctl_waived
+            else "no control signals"
+        )
+        res.notes.append(f"{r.module}: control-toggle gate n/a, {why}")
+        return
+    if entry is not None:
+        floor, label = entry.floor, f"ratchet floor {entry.floor:g} % ({entry.bead})"
+    else:
+        floor, label = cfg.toggle_floor, f"floor {cfg.toggle_floor:g} %"
+    pct = r.ctl_pct
+    assert pct is not None
+    if _below(r.ctl_hit, r.ctl_total, floor):
+        shown = ", ".join(r.uncovered_ctl[:12]) + (" ..." if len(r.uncovered_ctl) > 12 else "")
+        res.failures.append(
+            GateFailure(
+                r.module,
+                "toggle",
+                f"control toggle {r.ctl_hit}/{r.ctl_total} = {pct:.1f} % < {label}; "
+                f"not toggled: {shown}",
+            )
+        )
+    elif entry is not None and pct - entry.floor > RATCHET_HEADROOM_PCT:
+        res.warnings.append(
+            f"{r.module}: control toggle {pct:.1f} % is {pct - entry.floor:.1f} points above its "
+            f"ratchet floor {entry.floor:g} % ({entry.bead}) -- raise the floor"
+            + (" or remove the entry" if pct >= cfg.toggle_floor else "")
+        )
 
 
 # --------------------------------------------------------------------------- rendering
@@ -627,14 +845,58 @@ def _inputs_section(report: Report) -> list[str]:
     return out
 
 
-def render_markdown(report: Report) -> str:
+def _gate_section(report: Report, gate: GateResult) -> list[str]:
+    """Per-module gate table, verdict, failures, notes and warnings (``--gate`` runs only)."""
+    cfg = gate.config
+    out = [
+        "## Gate",
+        "",
+        f"Line floor {cfg.line_floor:g} % per module; control-signal toggle floor "
+        f"{cfg.toggle_floor:g} % (1-bit scalar signals only), with {len(cfg.ratchet)} ratchet "
+        f"override(s).  Triaged trees only.",
+        "",
+        "| Module | Line % | Line hit/total | Control toggle % | Control hit/total "
+        "| Control floor | Status |",
+        "| :----- | -----: | -------------: | ---------------: | ----------------: "
+        "| ------------: | :----- |",
+    ]
+    bad = {f.module for f in gate.failures}
+    for r in (r for r in report.modules if r.triaged):
+        entry = cfg.ratchet.get(r.module)
+        floor = f"{entry.floor:g} (ratchet)" if entry else f"{cfg.toggle_floor:g}"
+        out.append(
+            f"| {r.module} | {_fmt_pct(r.line_pct)} | {r.line_hit}/{r.line_total} "
+            f"| {_fmt_pct(r.ctl_pct)} | {r.ctl_hit}/{r.ctl_total} | {floor} "
+            f"| {'FAIL' if r.module in bad else 'pass'} |"
+        )
+    out += [
+        "",
+        f"**Gate {'PASS' if gate.passed else 'FAIL'}**: {gate.modules_gated} triaged modules, "
+        f"{len(gate.failures)} failure(s).",
+        "",
+    ]
+    for f in gate.failures:
+        out.append(f"- FAIL `{f.module}` [{f.check}]: {f.detail}")
+    out += [f"- note: {n}" for n in gate.notes]
+    out += [f"- WARNING: {w}" for w in gate.warnings]
+    out.append("")
+    return out
+
+
+def render_markdown(report: Report, gate: GateResult | None = None) -> str:
     triaged = [r for r in report.modules if r.triaged]
     info = [r for r in report.modules if not r.triaged]
+    verdict = (
+        "Gate enforced on the triaged trees: see the Gate section below "
+        "(`docs/verification/SOC_COVERAGE_REPORT.md`)."
+        if gate is not None
+        else "Informational: no coverage percentage gates "
+        "(see `docs/verification/SOC_COVERAGE_REPORT.md`)."
+    )
     lines = [
         "# SoC line + toggle coverage",
         "",
-        "Informational: no coverage percentage gates "
-        "(see `docs/verification/SOC_COVERAGE_REPORT.md`).",
+        verdict,
         "Line % = `v_line` + `v_branch` points, toggle % = `v_toggle` points "
         "(per bit, per direction);",
         "a point is hit if any instance in any testbench hit it. "
@@ -654,6 +916,8 @@ def render_markdown(report: Report) -> str:
             "",
         ]
     lines += _inputs_section(report)
+    if gate is not None:
+        lines += _gate_section(report, gate)
     lines += ["## Uncovered items, triaged trees", "", *(_gaps(triaged) or ["None.", ""])]
     lines += ["## Waivers", ""]
     if report.waivers:
@@ -689,8 +953,27 @@ def _count_dict(hit: int, total: int, waived: int, pct: float | None, raw: float
     }
 
 
-def report_to_dict(report: Report) -> dict:
-    """JSON-serialisable form of the report."""
+def gate_to_dict(gate: GateResult) -> dict:
+    cfg = gate.config
+    return {
+        "passed": gate.passed,
+        "line_floor": cfg.line_floor,
+        "toggle_floor": cfg.toggle_floor,
+        "ratchet": {
+            m: {"floor": e.floor, "bead": e.bead, "justification": e.justification}
+            for m, e in sorted(cfg.ratchet.items())
+        },
+        "modules_gated": gate.modules_gated,
+        "failures": [
+            {"module": f.module, "check": f.check, "detail": f.detail} for f in gate.failures
+        ],
+        "notes": gate.notes,
+        "warnings": gate.warnings,
+    }
+
+
+def report_to_dict(report: Report, gate: GateResult | None = None) -> dict:
+    """JSON-serialisable form of the report; ``gate`` adds control-toggle numbers + verdict."""
     modules = []
     for r in report.modules:
         modules.append(
@@ -719,7 +1002,14 @@ def report_to_dict(report: Report) -> dict:
                 ],
             }
         )
+    if gate is not None:
+        for entry, r in zip(modules, report.modules, strict=True):
+            entry["control_toggle"] = _count_dict(
+                r.ctl_hit, r.ctl_total, r.ctl_waived, r.ctl_pct, None
+            )
+            entry["uncovered_control"] = list(r.uncovered_ctl)
     return {
+        **({"gate": gate_to_dict(gate)} if gate is not None else {}),
         "summary": {
             "triaged": _totals([r for r in report.modules if r.triaged]),
             "informational": _totals([r for r in report.modules if not r.triaged]),
@@ -784,31 +1074,64 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--waivers", type=Path, help="waiver file (module | kind | regex | b | why)")
     ap.add_argument("--out-md", type=Path, help="write the markdown report here")
     ap.add_argument("--out-json", type=Path, help="write the JSON report here")
+    ap.add_argument(
+        "--gate",
+        action="store_true",
+        help="enforce the line + control-toggle floors on the triaged trees (exit 1 on failure)",
+    )
+    ap.add_argument(
+        "--line-floor", type=float, help=f"gate: line floor %% (default {LINE_FLOOR_PCT:g})"
+    )
+    ap.add_argument(
+        "--toggle-floor",
+        type=float,
+        help=f"gate: control-signal toggle floor %% (default {TOGGLE_FLOOR_PCT:g})",
+    )
+    ap.add_argument(
+        "--toggle-ratchet",
+        type=Path,
+        help="gate: per-module control-toggle floors for known gaps (module | floor | bead | why)",
+    )
     args = ap.parse_args(argv[1:])
+    if not args.gate and (
+        args.line_floor is not None
+        or args.toggle_floor is not None
+        or args.toggle_ratchet is not None
+    ):
+        ap.error("--line-floor, --toggle-floor and --toggle-ratchet require --gate")
 
     try:
         waivers = load_waivers(args.waivers) if args.waivers else []
         report = build_report(_parse_inputs(args.dat), args.root.resolve(), waivers)
+        gate: GateResult | None = None
+        if args.gate:
+            cfg = GateConfig(
+                line_floor=LINE_FLOOR_PCT if args.line_floor is None else args.line_floor,
+                toggle_floor=TOGGLE_FLOOR_PCT if args.toggle_floor is None else args.toggle_floor,
+                ratchet=load_ratchet(args.toggle_ratchet) if args.toggle_ratchet else {},
+            )
+            gate = evaluate_gate(report, cfg)
     except CoverageError as exc:
         print(f"coverage_report: ERROR: {exc}", file=sys.stderr)
         return EXIT_ERROR
 
-    markdown = render_markdown(report)
+    markdown = render_markdown(report, gate)
     if args.out_md:
         args.out_md.write_text(markdown + "\n", encoding="utf-8")
     if args.out_json:
         args.out_json.write_text(
-            json.dumps(report_to_dict(report), indent=2) + "\n", encoding="utf-8"
+            json.dumps(report_to_dict(report, gate), indent=2) + "\n", encoding="utf-8"
         )
     if not args.out_md:
         print(markdown)
 
     t = report_to_dict(report)["summary"]["triaged"]
+    tail = "" if gate is not None else " (informational)"
     print(
         f"coverage_report: triaged {t['modules']} modules, line {t['line_hit']}/{t['line_total']} "
         f"({_fmt_pct(t['line_pct'])} %), toggle {t['toggle_hit']}/{t['toggle_total']} "
         f"({_fmt_pct(t['toggle_pct'])} %), {t['modules_below_line_floor']} below the "
-        f"{LINE_FLOOR_PCT:.0f} % line floor (informational)"
+        f"{LINE_FLOOR_PCT:.0f} % line floor{tail}"
     )
     for w in report.unused_waivers:
         print(f"coverage_report: WARNING: stale waiver at line {w.lineno}", file=sys.stderr)
@@ -819,7 +1142,24 @@ def main(argv: list[str]) -> int:
                 f"({c.shared}/{c.total} shared) -- denominator inflated, see the report",
                 file=sys.stderr,
             )
-    return EXIT_OK
+    if gate is None:
+        return EXIT_OK
+    for w in gate.warnings:
+        print(f"coverage_report: GATE WARNING: {w}", file=sys.stderr)
+    if gate.passed:
+        print(
+            f"coverage_report: GATE PASS: {gate.modules_gated} triaged modules meet the "
+            f"{gate.config.line_floor:g} % line floor and the control-toggle floors",
+        )
+        return EXIT_OK
+    print(
+        f"coverage_report: GATE FAIL: {len({f.module for f in gate.failures})} module(s), "
+        f"{len(gate.failures)} failure(s):",
+        file=sys.stderr,
+    )
+    for f in gate.failures:
+        print(f"coverage_report:   {f.module} [{f.check}] {f.detail}", file=sys.stderr)
+    return EXIT_GATE_FAIL
 
 
 if __name__ == "__main__":

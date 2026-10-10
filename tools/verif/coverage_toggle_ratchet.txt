@@ -1,0 +1,24 @@
+# Control-signal toggle ratchet for tools/verif/coverage_report.py --gate (bead s1cg).
+#
+# The gate requires every triaged module (rtl/soc, rtl/periph, rtl/npu) to toggle 100 % of its
+# CONTROL signals (1-bit scalar signals; buses are never gated), after the category-b waivers in
+# coverage_waivers.txt.  A module listed here is a KNOWN test gap: its floor is its measured
+# control-toggle % (rounded DOWN to 0.1, i.e. zero points of slack), so it cannot regress, and it
+# has a bead that closes the gap.
+#
+#   module | floor % | bead | justification
+#
+# Rules:
+#   * A floor may be RAISED freely.  When a gap bead lands, raise the floor to the new measured
+#     value in the same PR, or delete the line once the module reaches the default floor.  The
+#     report prints "raise the floor" when a module sits more than 2 points above its entry.
+#   * LOWERING a floor, or adding a module, is a deliberate relaxation: it needs a bead, a
+#     justification here, and PR review.  It is not a way to get a red nightly green.
+#   * Unreachable-by-design points are NOT ratchet material: they are category-b waivers.
+#   * The ratchet never relaxes the line floor.
+#
+# Measured on RTL at HEAD (local run and CI run 38015078972 agree exactly):
+#   soc_bus  107/120 = 89.17 %   soc_top  295/319 = 92.48 %
+
+soc_bus | 89.1 | 0ntg | boot-ROM write channel (rom_awvalid/awready/wlast/wvalid/wready/bvalid/bready, 13 points) is never driven at SoC level; boot_rom's write path is only unit-tested
+soc_top | 92.4 | 0ntg,4pl8 | same 13 bus_rom_* points (0ntg) plus 11 SoC-level gaps: I2C pads, uart_rx_i fall, wdt_cpu_rst_req_q fall, cpu/gif rready fall (4pl8)
