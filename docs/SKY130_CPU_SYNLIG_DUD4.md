@@ -152,3 +152,9 @@ The defect is therefore still present on current `main`.
 the RTL tree), `run_arm.sh`, `compare_arms.py diff`, `port_matrix.py`, `run_and_compare.sh`, `run_yosys_gate_check.sh`,
 `inject_fault.py`, `find_x1_read_cells.py`, `equiv_all_comb.sh`; probes `build_probe_arms.sh`, `run_probe.sh`,
 `decode_trace.py`. Scratch under `/nobackup/claude_sim_build/dud4`. Netlists are not committed.
+
+## Gate (bead gc0y)
+
+The defect class is now gated in every `pnr/Makefile` LibreLane run (`docs/SYNTH_UNDEF_GATE.md`): a log scanner plus a structural check of the elaborated header JSON, via the `pnr/plugins/librelane_plugin_cvt_synthgate` plugin. Negative control: this note's reverted `rv32i_core.sv` hazard lines make `make librelane-sky130-cpu` abort at the JsonHeader step.
+
+Testbench fix: `tools/verif/gls/sky130/tb_sky130_cpu_check.sv` now drives APB inputs 1 ns after the clock edge with blocking assignments (back-ported from the ASAP7 testbench). Before, its NBA-at-the-edge sequencer raced the registered `pready` on main RTL and debug reads timed out. Measured on main RTL (RTL arm, Verilator 5.048): all six programs complete with 32 APB reads each; `ma7_straight` reads `x3=0x0c`, `x4=0x0c`.
