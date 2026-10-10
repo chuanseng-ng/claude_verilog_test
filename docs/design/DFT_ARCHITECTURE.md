@@ -20,6 +20,11 @@ These are **DECIDED** by the project owner and are not open questions. The rest 
 | 4 | **MBIST is tester-only.** No APB register, no power-on auto-run, no firmware visibility. | The APB-slot analysis was dropped. MBIST is started and read only through the TAP (decision 5). |
 | 5 | **Test access is an IEEE 1149.1 JTAG TAP** controlling both scan and MBIST. | The TAP is a Stage 1 deliverable, not an optional last stage (sections 9, 10). |
 | 6 | **Pad ring / chip top is NOT in scope now.** | The core macro exposes the TAP and any unavoidable raw ports. Section 9.5 lists what a future chip-top epic needs. |
+| 7 | **Scan access = JTAG TAP for control and MBIST, PLUS parallel scan ports** (direct scan-in / scan-out / scan-enable / test clock for several chains). *(2026-10-10, follow-up)* | Resolves the old N3 in favour of parallel ports. Pin plan, chain proposal, test time and the at-speed statement are rewritten in sections 8, 9.5, 9.6, 10. Zero delay-fault coverage is **not** accepted as a goal; section 2.4 says what would be needed and that it is out of reach of the current tools. |
+| 8 | **99 % test / 98 % fault coverage is a GOAL, not a commitment.** *(2026-10-10, follow-up)* | Stage 3 begins with a time-boxed ATPG tool spike on the real netlist. The sign-off number is fixed only after a tool is shown to complete at scale (section 2.1, 10). |
+| 9 | **Sky130 CPU macro Synlig exposure is bead `dud4` (P1): test first, then the user decides on re-hardening.** *(2026-10-10, follow-up)* | The test is the `ma7` branch-dependent differential on the Sky130 CPU macro gate netlist against RTL, **no PD run**. Stage 2's CPU re-harden depends on its outcome (sections 4, 5, 10). |
+
+**Schedule decisions (2026-10-10).** Stage 1 is approved to start now that PR #250 has merged. FPGA Stage 0 (GH #245) follows Stage 1, not before it.
 
 ## 1a. Summary
 
@@ -32,9 +37,9 @@ These are **DECIDED** by the project owner and are not open questions. The rest 
 | 5 MBIST | 12 SRAM macros (2 x 4 KB in the fabric, 10 x 1 KB inside the CPU macro), 147,456 bits. March C- (10N): 10,240 cycles fabric / 2,560 cycles CPU in parallel = 256 us at 40 MHz. Two controllers, driven and read through the TAP. | [R] + [A] |
 | 6 Crypto | DECIDED: exclude. 256 flops (1.37 % of flops). **Unmasked, the exclusion costs ~11 % of the fault universe and still leaks the key**; masking brings it to ~0.7 %. | [M] |
 | 7 Cost | Scan flops +117,350 um2 fabric (+10.2 % of synthesised stdcell, ~+0.6 pp utilisation), +30,209 um2 CPU macro. D-pin setup +0.07 to +0.45 ns by corner. | [M] area/setup |
-| 8 Access | DECIDED: JTAG TAP. Raw ports: TCK, TMS, TDI, TDO, TDO-enable, optional TRST_N. | decision |
+| 8 Access | DECIDED: JTAG TAP (control + MBIST) **plus parallel scan ports** (decision 7): TAP 5-6 pins + `scan_clk_i`, `scan_en_i`, 8 x `scan_in_i`/`scan_out_o` = 23-24 raw pins (proposal, section 8). | decision / [A] |
 
-**Go/no-go:** Stage 1 (TAP + scan-ready RTL) GO. Stage 2 CONDITIONAL GO. Stage 3 CONDITIONAL: GO for a time-boxed tool spike, NO-GO for a promised production coverage number until the spike passes. Stage 4 (MBIST) GO. Details in section 11.
+**Go/no-go:** Stage 1 (TAP + parallel ports + scan-ready RTL) GO and approved to start (PR #250 merged). Stage 2 CONDITIONAL GO. Stage 3 CONDITIONAL: GO for a time-boxed tool spike, NO-GO for a promised coverage number until a tool is shown to complete at scale (decision 8). Stage 2's CPU re-harden additionally waits on `dud4` (decision 9). Stage 4 (MBIST) GO. Details in section 11.
 
 ## 1. Scan insertion tool
 
@@ -123,9 +128,11 @@ What breaks downstream [A, except where noted]:
 
 ## 2. ATPG tool, coverage target, pattern export
 
-### 2.1 Coverage target (DECIDED basis: tape-out intent) [A]
+### 2.1 Coverage goal (decision 8: a GOAL, not a commitment) [A]
 
-**Target: stuck-at test coverage >= 99.0 % of the scanned-domain fault list, and stuck-at fault coverage >= 98.0 % of the whole-SoC fault list,
+**Decision 8 (2026-10-10):** the numbers below are a goal. Nothing is promised until a tool has been shown to complete on the real netlist. Stage 3 therefore starts with a **time-boxed ATPG tool spike**, and the sign-off target is fixed only afterwards (section 10, Stage 3). If the spike fails, the per-block fallback of section 2.4 applies and the goal is restated per block.
+
+**Goal: stuck-at test coverage >= 99.0 % of the scanned-domain fault list, and stuck-at fault coverage >= 98.0 % of the whole-SoC fault list,
 with every exclusion itemised.** Test coverage = detected / (total - proven untestable); fault coverage = detected / total.
 
 Why 99.0 %: the DFT orchestrator's own sign-off criterion in this repo is `saf_coverage_pct >= 99.0` [R: dft-orchestrator contract], and the
@@ -186,7 +193,7 @@ maps them onto chain order (the `chain_check.py` walk gives the order) and emits
 ### 2.4 What the open-source tools cannot deliver (strict list, tape-out context) [A unless noted]
 
 - **No scan DRC tool.** Nothing checks, in the commercial sense, clock-as-data, reset controllability, X sources, bus contention, latch transparency. Stage 1 must carry its own netlist checks (`tools/dft/chain_check.py` and `check_scan_exclusions.py` are the start).
-- **No transition / at-speed ATPG, no path-delay.** Quaigh and Fault target stuck-at. Delay defects in the 40 MHz core are untested by scan; only the functional test and MBIST (which runs at `core_clk` speed) exercise speed.
+- **No transition / at-speed ATPG, no path-delay.** Quaigh and Fault target stuck-at [R: Fault Readme topics and `atpg.swift`; `quaigh atpg --help` offers only stuck-at generation plus random sequential patterns via `--num-cycles`]. This survey is not exhaustive. **Decision 7 does not accept zero delay-fault coverage as a goal**, so this is an unmet requirement, not an accepted loss. What parallel scan ports do and do not change is in section 9.6. What delay-fault coverage needs, and the current tools lack: (1) a transition-delay fault model (and path-delay for chosen critical paths); (2) two-time-frame test generation (launch-on-capture, or launch-on-shift), because a single-frame stuck-at pattern's expected response is **wrong** if the capture is applied with two pulses; (3) a transition-fault simulator to grade coverage; (4) timing-derived targeting from STA/SDF for small-delay defects; (5) capture-clock control: ATE-supplied bursts are enough here (section 9.6), an on-chip clock controller is not required; (6) masking of the asynchronous-domain crossings, the clock gate and false/multicycle paths in the capture sequence. Commercial ATPG (TetraMAX, Modus, Tessent) provides these; nothing available here does. It is **out of reach of the current tools**. Route options are open item N10.
 - **No pattern compression (EDT-style), no diagnosis, no fault dictionary.** Test time grows linearly with pattern count (section 8).
 - **No clock-domain-aware capture sequencing** for two asynchronous domains with a clock gate; the capture protocol (which domain pulses when) is hand-written.
 - **No clock-gate / latch modelling.** `en_latch` and the gate are untested structures (section 4 item 5).
@@ -268,10 +275,7 @@ Domain crossings that need chain separation or lock-up handling [R]: `u_cpu_axi_
 `u_apb_pll_cdc` (`:2073`), `u_apb_pll2_cdc` (`:2179`), `cdc_2ff_sync` x2 for PMU clock/isolate (`:583,611`), IRQ syncs (`:771,780`),
 `cdc_reset_sync` x2 (`:642,702`). `cpu_gated_clk` and `cpu_clk_i` are the same root and phase, so they can share a chain *if* the gate is forced on in scan.
 
-**Side finding (needs a human look).** `CLAUDE.md` says Sky130 is unaffected by the `ma7` Synlig miscompile because "both use the sv2v frontend".
-`pnr/sky130/soc/config.json:41` has `USE_SYNLIG: false`, but `pnr/sky130/cpu/config.json:88` has `USE_SYNLIG: true`, and the CPU macro contains
-`rv32i_regfile.sv`'s runtime-indexed read idiom. I did not test whether the Sky130 CPU macro is affected. It matters here because Stage 2 re-hardens the
-CPU macro; the re-harden is the natural moment to switch frontend, or to run the `u99`-style netlist differential on it first.
+**Side finding, now bead `dud4` (P1; decision 9).** `CLAUDE.md` says Sky130 is unaffected by the `ma7` Synlig miscompile because "both use the sv2v frontend". `pnr/sky130/soc/config.json:41` has `USE_SYNLIG: false`, but `pnr/sky130/cpu/config.json:88` has `USE_SYNLIG: true`, and the CPU macro contains `rv32i_regfile.sv`'s runtime-indexed read idiom [R]. I did not test whether the Sky130 CPU macro is affected [A: the defect was `OPT_MUXTREE` on a Synlig-elaborated design, PDK-independent in principle]. **Decided:** test first, with the `ma7` branch-dependent differential (the `tb_cpu_macro_check.v` method) on the Sky130 CPU macro gate netlist against RTL, **no PD run**; then the user decides on re-hardening. **Stage 2's CPU-macro re-harden depends on that outcome** (sections 5, 10), because a frontend switch changes the netlist the scan chains are inserted into.
 
 ## 5. Hard macros
 
@@ -283,6 +287,7 @@ CPU macro; the re-harden is the natural moment to switch frontend, or to run the
 - The 10 cache SRAMs are inside it, so MBIST ports (`mbist_en`, start, done, fail, per-memory fail optional) are macro pins too.
 - Chain architecture: the macro gets its own chains (e.g. 4 x ~1,207 flops), wired in `soc_top` RTL straight to top-level `scan_in/scan_out`. The SoC-level OpenROAD pass never sees
   those flops, so they are stitched in the macro run. Fabric chains are made at SoC level.
+- **Dependency on `dud4` (decision 9).** The CPU-macro re-harden for scan should be the same re-harden that fixes the Synlig exposure if the user chooses to re-harden for `dud4`; doing them as two rounds would cost another ~6-7 h per round (below). So Stage 2's CPU-macro half waits for the `dud4` differential result and the user's decision. The SoC-fabric half does not depend on it.
 - Re-harden cost [R from run history; the sum is [A]]: CPU full flow ~2h17m for 74 steps (`RUN_2026-07-21_18-02-11`), adopted run estimated 2.5-3 h; CPU harden had 8 runs and one pin-order
   attempt crashed twice before succeeding; SoC harden 3.4-3.6 h (`runtime.txt` sums [M]: 12,328 s and the prior accepted run 3.62 h); SoC Magic DRC peak ~15.4 GiB RSS on a 15 GiB host;
   host reboots every 2-8 h. So **~6-7 h per CPU+SoC round, realistically 2-3 rounds: 12-21 h of wall time**, with the KLayout DRC still skipped.
@@ -394,9 +399,28 @@ Current utilisation 45.21 % [M: `design__instance__utilization`]. Scan alone mov
 | `dfrtp_2` -> `sdfrtp_2` | 0.090/0.205 -> 0.205/0.405 | 0.260/0.599 -> 0.625/1.049 (**+0.365/+0.450**) |
 
 Clock-to-Q is unchanged (0.370 vs 0.369 ns for `dfxtp_2`). Against the latest accepted run's worst setup slack **+3.3286 ns (max_ss), +10.05 ns (nom_tt)** [M], the fabric absorbs this easily. Thin spots: the CPU macro (+0.174 ns, section 5) and the 843 reset flops (+0.45 ns at ss). Hold: worst +0.2822 ns (min_ff) [M]; the new Q->SCD links add the hold risk of section 1.5.
-**Pins** (core macro, no pad ring [R]; decision 5): the TAP replaces the dedicated scan/MBIST pin plan. Required ports: `tck_i tms_i tdi_i tdo_o tdo_oe_o` (+ optional `trst_ni`) = **5-6**.
-All scan and MBIST control signals are internal (section 9.5). Optional parallel scan ports would add 2 per extra chain (N3). The earlier 15-31 dedicated-pin estimate is withdrawn.
-Chains are badly unbalanced at 4 per domain: 236 vs 4,453 flops [M]. With the TAP's serial path the test time is set by the total, ~23.3 k bits per pattern (section 9.6).
+**Pins** (core macro, no pad ring [R]; decisions 5 and 7). Raw ports to add to `soc_top`:
+
+| Group | Ports | Count |
+|---|---|---|
+| TAP | `tck_i tms_i tdi_i tdo_o tdo_oe_o` (+ optional `trst_ni`) | 5-6 |
+| Parallel scan control | `scan_clk_i` (test clock), `scan_en_i` | 2 |
+| Parallel scan data | `scan_in_i[7:0]`, `scan_out_o[7:0]` | 16 |
+| **Total** | | **23-24** (proposal [A]; N=8 chain pairs) |
+
+`scan_mode`, `scan_rst_n`, chain select and all MBIST control stay internal, set through the TAP. The direct pins are inert unless the TAP has put the design in parallel-scan mode (they are ANDed with the TAP-held `scan_mode`), so a floating or noisy pin cannot disturb functional operation [A: to be verified in the Stage 1 cocotb suite]. Pin count is 2N+2 for N chain pairs: N=4 gives 10, N=16 gives 34 (plus the TAP). At chip top the pairs are candidates for GPIO-pad sharing (section 9.5). The earlier 15-31 dedicated-pin estimate and the TAP-only 5-6-pin plan are both superseded.
+
+**Chain proposal (decision 7) [A, from measured flop counts].** Scanned flops: core domain 17,553, `cpu_clk_i` fabric domain 943 [M: `soc_excl.log`, 256 key flops excluded], CPU macro 4,829 [M: macro netlist]; total 23,325. Chains are single-domain (`no_mix`) and the macro chains are stitched inside the macro run (section 5):
+
+| Chains | Domain | Flops each | Pairs |
+|---|---|---|---|
+| 5 | `clk_i` fabric | ~3,511 | 5 |
+| 1 | `cpu_clk_i` fabric (incl. `cpu_gated_clk` flops outside the macro) | 943 | 1 |
+| 2 | CPU macro | ~2,415 | 2 |
+
+Longest chain 3,511, so the 943-flop chain is under-used. The OpenROAD stitcher does not balance (section 1.3), so the split is made by the plugin (it picks flop subsets per chain), which is Stage 2 work. N=16 would give a longest chain of ~1,755 (10 core chains) at 34 raw pins.
+
+**Test time [A].** Shift cycles per pattern = longest chain + 1. At an assumed 1,000 patterns (no pattern count exists until Stage 3): N=8 gives 3.51 M cycles = **0.14 s at 25 MHz, 0.35 s at 10 MHz**. Serial TAP scan (23,325 bits) is 23.3 M cycles = 0.93 s at 25 MHz, 2.3 s at 10 MHz, so parallel ports are ~6.6x faster at N=8 (the imbalance limits it below 8x). Parallel shift is clocked by `scan_clk_i`, which is not limited by JTAG pad timing; the achievable rate is unknown until a pad ring exists.
 
 ## 9. Test access: IEEE 1149.1 TAP (decisions 5 and 6)
 
@@ -405,6 +429,7 @@ Chains are badly unbalanced at 4 per domain: 236 vs 4,453 flops [M]. With the TA
 ```mermaid
 flowchart LR
   P[TCK TMS TDI TDO TRST_N] --> T[TAP FSM + IR, TCK domain]
+  PP[scan_clk_i scan_en_i scan_in_i/scan_out_o x N] --> CH
   T --> D[TDR bank: IDCODE, BYPASS, SCAN_SEL, SCAN, MBIST_CTRL, MBIST_STATUS]
   D --> TC[dft_ctrl: scan_mode, scan_en, scan_rst_n, chain select]
   TC -->|glitch-free clock mux per root| CK[clk_i / cpu_clk_i roots]
@@ -422,7 +447,7 @@ TAP, IR, TDRs and `dft_ctrl` are new RTL (Stage 1). **None of this exists in the
 | `IDCODE` (reset default) | 32 bit | mandatory in practice. **Manufacturer ID field needs a decision** (section 12, N1) |
 | `SAMPLE/PRELOAD`, `EXTEST` | none until a pad ring exists | see 9.5 and decision N2: they cannot be implemented without a boundary register |
 | `SCAN_SEL` | chain-group select (fabric `clk_i`, fabric `cpu_clk_i`, CPU macro, all) | selects which chain(s) `SCAN` connects to TDI/TDO |
-| `SCAN` | selected chain(s) | enters scan mode (`scan_mode`=1, internal resets forced inactive, clock muxes to TCK). `Shift-DR` shifts with `scan_en`=1; `Capture-DR` performs one capture pulse with `scan_en`=0 |
+| `SCAN` | selected chain(s); a `PARALLEL` bit in `SCAN_SEL` hands shift/capture control to `scan_clk_i`/`scan_en_i`/`scan_in_i`/`scan_out_o` (decision 7) | enters scan mode (`scan_mode`=1, internal resets forced inactive, clock muxes to TCK). `Shift-DR` shifts with `scan_en`=1; `Capture-DR` performs one capture pulse with `scan_en`=0 |
 | `MBIST_CTRL` | control word | domain/algorithm/background select, `go` |
 | `MBIST_STATUS` | status word | 12 `done` + 12 `fail` + controller state, read-only, captured at `Capture-DR` |
 | `SCAN_RST` (optional) | 1 bit | pulse the functional reset network under test control |
@@ -432,7 +457,7 @@ Tester-only MBIST (decision 4) is exactly `MBIST_CTRL` then idle then `MBIST_STA
 ### 9.3 Clocking, domains, reset
 
 - **TCK is a third asynchronous domain**, unrelated to `clk_i` and `cpu_clk_i` (and these two are already asynchronous to each other [R]).
-- **Scan shift clock = TCK** (recommended). Each domain's clock root gets a **glitch-free clock mux** (`scan_mode ? TCK : functional clock`, select synchronised into each source domain, enable-before-switch) placed at the port side, ahead of the `u_cpu_cg` gate and ahead of CTS. Consequences: (1) no crossing exists *during shift*, because every scanned flop sees the same TCK; (2) the mux is on the clock path, so the clock tree insertion delay and the TCK-to-each-tree skew change, and **chains must stay single-domain** (`no_mix`, as planned) with a TDR-level junction (negative-edge retiming flop or lock-up latch) wherever chains are concatenated [A]; (3) CTS must treat the mux inputs; this changes `cts` results and needs a re-closure of hold on both trees [A: not measured].
+- **Scan shift clock = TCK in serial mode, `scan_clk_i` in parallel mode** (decision 7). One `test_clk = parallel ? scan_clk_i : TCK` is formed first (the select comes from the TAP and is quasi-static), so each domain's clock root still has a single 2-input **glitch-free clock mux** (`scan_mode ? test_clk : functional clock`, select synchronised into each source domain, enable-before-switch) placed at the port side, ahead of the `u_cpu_cg` gate and ahead of CTS. Consequences: (1) no crossing exists *during shift*, because every scanned flop sees the same test clock; (2) the mux is on the clock path, so the clock tree insertion delay and the TCK-to-each-tree skew change, and **chains must stay single-domain** (`no_mix`, as planned) with a TDR-level junction (negative-edge retiming flop or lock-up latch) wherever chains are concatenated [A]; (3) CTS must treat the mux inputs; this changes `cts` results and needs a re-closure of hold on both trees [A: not measured].
 - **Capture** uses a TCK pulse as well (a slow capture): fine for stuck-at, **not** at-speed. See 9.6.
 - **Control crossings TCK -> `core_clk` / `cpu_clk`:** quasi-static bits (MBIST `go`, algorithm selects, `scan_mode` for the reset overrides) go through `cdc_2ff_sync`; the protocol is "write, then wait >= 3 destination cycles in Run-Test/Idle". **Status crossings back** (`done`, `fail`) are sticky and sampled at `Capture-DR` through 2-FF synchronisers. The repo's existing primitives (`cdc_2ff_sync`, `cdc_reset_sync` [R]) are reused; the SDC needs `set_clock_groups -asynchronous` for TCK and `set_max_delay -datapath_only` on these crossings, following `phase5_soc_multiclock.sdc` [R: item 12 of CLAUDE.md].
 - **TRST_N / reset:** TAP FSM, IR and TDRs are reset by `TRST_N` (async, optional pin) **or** by five TCK cycles with TMS high (mandatory). The TAP must **not** be reset by `rst_n_i` or the PLL-derived resets (it must keep working while the core is in reset and while scan has forced the reset network). Entering Test-Logic-Reset clears `scan_mode`, `mbist_go` and the clock-mux selects. `TRST_N` and the TAP flops need a defined power-up state; they are not on any scan chain (9.4).
@@ -441,32 +466,31 @@ Tester-only MBIST (decision 4) is exactly `MBIST_CTRL` then idle then `MBIST_STA
 ### 9.4 The TAP's own flops
 The TAP FSM, IR and TDRs (~100-300 flops [A]) cannot be on the chains they control. They are an additional **unscanned set** (like the keys): tested by `IDCODE`/`BYPASS` readback and TDR write/readback, not by ATPG. Their coverage cost (~0.2-0.4 % [A]) is in the budget of section 2.1.
 
-### 9.5 What must stay a raw port on the core macro (decision 6)
-Regardless of TAP use, the macro boundary exposes: `tck_i`, `tms_i`, `tdi_i`, `tdo_o`, **`tdo_oe_o`** (a separate output-enable, matching this tree's no-`inout` style [R]; the chip top will build the tristate), `trst_ni` (optional). `clk_i`, `cpu_clk_i`, `rst_n_i`, `cpu_rst_n_i` already exist [R]. Nothing else is *required*: `scan_en`, `scan_mode`, `scan_rst_n` and the `mbist_*` signals are internal. Two things would force **additional raw ports**:
-(1) **at-speed capture** from functional clocks needs a launch-on-capture `scan_en` that is pipelined and timed in each functional domain, which TAP-timed `scan_en` cannot meet (so it would become an internally pipelined signal with its own timing closure, not a pin, but with SDC exceptions you do not have today); (2) **parallel scan pins** to beat TCK throughput (9.6).
-The CPU macro boundary (403 pins today [R]) gains `scan_in[4]/scan_out[4]`, `scan_en`, `scan_mode`, MBIST `go/done/fail[10]` and the shadow/observation ports, all through `pin_order.cfg` [R].
+### 9.5 Raw ports on the core macro (decisions 6 and 7)
+The macro boundary exposes the TAP ports `tck_i`, `tms_i`, `tdi_i`, `tdo_o`, **`tdo_oe_o`** (a separate output-enable, matching this tree's no-`inout` style [R]; the chip top will build the tristate), `trst_ni` (optional), and, from decision 7, the parallel scan ports `scan_clk_i`, `scan_en_i`, `scan_in_i[N-1:0]`, `scan_out_o[N-1:0]` (N=8 proposed, section 8). `clk_i`, `cpu_clk_i`, `rst_n_i`, `cpu_rst_n_i` already exist [R]. `scan_mode`, `scan_rst_n` and the `mbist_*` signals stay internal.
+The CPU macro boundary (403 pins today [R]) gains `scan_in[2]/scan_out[2]`, `scan_en`, `scan_mode`, MBIST `go/done/fail[10]` and the shadow/observation ports, all through `pin_order.cfg` [R].
 
-**What a future chip-top epic will need from DFT (not done now):** boundary-scan register and cells on every pad, real `EXTEST`/`SAMPLE`/`PRELOAD`/`CLAMP`/`HIGHZ` (making the TAP 1149.1-compliant); a registered JEDEC manufacturer ID in `IDCODE`; the TDO tristate and pad enables; the pad-level pin budget and whether any parallel scan pins can share GPIO pads; pad-ring test (the pad cells and ESD are outside scan); package pinout and ATE pin map; TCK/TMS/TDI input timing and TDO output timing constraints; the SDC `set_input_delay`/`set_output_delay` for the JTAG pins; and a probe/bond test plan including `TRST_N` handling.
+**What a future chip-top epic will need from DFT (not done now):** boundary-scan register and cells on every pad, real `EXTEST`/`SAMPLE`/`PRELOAD`/`CLAMP`/`HIGHZ` (making the TAP 1149.1-compliant); a registered JEDEC manufacturer ID in `IDCODE`; the TDO tristate and pad enables; the pad-level pin budget and whether the 18 parallel scan pins (`scan_clk_i`, `scan_en_i`, 8 pairs) can share GPIO pads; pad-ring test (the pad cells and ESD are outside scan); package pinout and ATE pin map; TCK/TMS/TDI input timing and TDO output timing constraints; the SDC `set_input_delay`/`set_output_delay` for the JTAG pins; and a probe/bond test plan including `TRST_N` handling.
 
-### 9.6 Conflicts to flag: JTAG-driven scan against throughput and at-speed expectations [A unless noted]
-- **Throughput.** A single TDI -> TDO path through every chain is 18,496 fabric + 4,829 CPU-macro scan flops = ~23.3 k bits [M counts]. At an assumed 1,000 patterns that is ~23.3 M TCK cycles: **2.3 s at 10 MHz, 0.9 s at 25 MHz per die**. Acceptable for a low-volume die, expensive for volume. Chains are also badly unbalanced (236 vs 4,453 flops per chain at `-max_chains 4` [M]); with a TDI-serial path the imbalance does not matter, with parallel chains it does.
-- **Mitigation options:** (a) accept serial JTAG scan for MPW-scale volume (recommended default); (b) add up to N parallel scan pin pairs (raw ports, GPIO-shareable at chip top), which cuts shift time ~N x and adds the pad-budget question; (c) pattern compression (not available in open source, 2.4).
-- **At-speed.** TCK-clocked capture is slow-speed. Stuck-at coverage is unaffected; transition/delay coverage is **zero** and no open-source ATPG would produce it anyway (2.4). Only MBIST runs at speed. If at-speed scan is ever required, raw functional-clock capture and a pipelined `scan_en` come back as requirements (9.5 item 1).
-- **TCK ceiling.** TCK limits shift rate by pad timing, not by logic; with no pad ring the real limit is not yet known.
+### 9.6 Throughput and at-speed with parallel ports (decision 7) [A unless noted]
+- **Throughput.** Serial TAP scan is ~23.3 k bits per pattern [M counts]; parallel ports at N=8 cut the longest chain to ~3.5 k (section 8). Serial TAP scan stays available for bring-up and as the path that needs only 5-6 pins.
+- **What parallel ports buy.** (a) Shift throughput, as above. (b) A shift clock decoupled from TCK. (c) A tester-controlled `scan_en_i` and test clock, so the **capture sequence is under ATE control**: shift with `scan_en_i` high, drop `scan_en_i` and let it settle, then apply the capture pulses on the test clock (or, with a select, on the functional clock pins; the PLL in this build is a passthrough, `pll_clkgen_stub.sv:69` [R], so the functional clocks are ATE-supplied pins anyway). A two-pulse launch-on-capture burst at core-clock rate is therefore **physically possible**, with `scan_en_i` held static low across both pulses; no on-chip clock controller and no pipelined `scan_en` are needed for launch-on-capture. Launch-on-shift (a `scan_en_i` transition at speed) is **not** supported: an external pin and its buffer tree cannot switch inside one core cycle.
+- **What they do not buy with stuck-at-only open-source ATPG.** (1) The tools generate **single-frame stuck-at patterns**. Applied with two pulses their expected responses are wrong, so each pattern must be re-simulated through two frames on the gate netlist (cocotb/Verilator) to obtain expected data; that gives pass/fail data, not a coverage figure. (2) No transition-fault list, fault simulation or targeting exists, so **delay-fault coverage remains unmeasured and unclaimed**; at-speed application of stuck-at patterns detects delay defects only incidentally. (3) Nothing masks the `clk_i`/`cpu_clk_i` asynchronous crossings, `en_latch` or false/multicycle paths in a two-pulse capture; the capture protocol per domain is hand-written. (4) The root clock mux must pass an ATE burst glitch-free and its insertion delay changes the capture timing seen by each domain (section 9.3). What delay coverage would need is in section 2.4 and open item N10.
+- **TCK ceiling.** TCK and `scan_clk_i` rates are limited by pad timing, not logic; with no pad ring the real limit is not yet known.
 - **Clock-mux cost.** The mux in each clock root adds insertion delay on the functional clock path in *every* mode and perturbs CTS and the macro/SoC clock skew; the CPU macro's +0.174 ns margin (section 5) makes this the most likely Stage 2 blocker.
 
 ## 10. Proposed architecture and staged plan (restaged for decision 5)
 
 - Test-mode controls are **internal**, from `dft_ctrl` inside the TAP: `scan_mode`, `scan_en`, `scan_rst_n`; `test_en = scan_mode | mbist_en` OR-ed into every clock-gate enable.
-- Chains: fabric `clk_i` domain 4 chains, `cpu_clk_i` + `cpu_gated_clk` 1-2, CPU macro 4, all `no_mix`; key flops and TAP flops unscanned; SRAM macros shadowed.
+- Chains (decision 7): 8 pairs on parallel ports: 5 fabric `clk_i`, 1 fabric `cpu_clk_i`, 2 CPU macro, all `no_mix`; the same chains are also reachable serially through the TAP; key flops and TAP flops unscanned; SRAM macros shadowed (section 8).
 - MBIST: two controllers, collars on the functional side of the `ifdef` arms, TAP-only start/status.
-- Raw ports: TCK, TMS, TDI, TDO, TDO_OE, TRST_N (section 9.5).
+- Raw ports: TCK, TMS, TDI, TDO, TDO_OE, TRST_N, `scan_clk_i`, `scan_en_i`, 8 x `scan_in_i`/`scan_out_o` (section 9.5).
 
 | Stage | Content | Concrete changes |
 |---|---|---|
-| **1 TAP + scan-ready RTL** (TAP lands first or with it) | no behaviour change with the TAP idle | (a) TAP FSM, IR, TDR bank, `dft_ctrl`, glitch-free clock muxes, TCK crossings, standalone cocotb suite (TAP state walk, IDCODE, BYPASS, reset). (b) Items 1-9, 11-13, 20 of section 4: un-tie the `07n` hooks to `dft_ctrl`; `cdc_reset_sync` output-side mux; scan hook in `cdc_2ff_sync`; `test_en` on `rv32i_clock_gate` (+ `.SE`); internal-reset override mux; scan/MBIST ports on `rv32i_cpu_top` + `pin_order.cfg`; `create_clock cpu_clk_i` and TCK clocks in `sky130_soc.sdc`; key/`rk_q` scan-mode masks (section 7). Gate: `soc_all` unchanged with TAP idle; Verilator lint; netlist X/loop check; `check_scan_exclusions.py`. |
-| **2 Insertion** | plugin step (option N, section 1.5), CPU macro first | Plugin `Flow` subclass; `set_dont_touch` list derived from net names; CPU macro re-harden with chains; SoC re-harden; compare LVS/DRC/setup/hold/antenna/`e45j` against `RUN_2026-10-09_06-18-39`; SET_B workaround (use 26Q2 on the netlist); scan/TCK SDC. |
-| **3 ATPG** | tool spike first | Add the tools to a new `flake.nix` devshell; Quaigh on `dma`/`npu`-sized cuts, then the fabric; Sky130-cell glue; gate-level replay of patterns through the TAP incl. a chain flush; SVF/STIL export (2.3). |
+| **1 TAP + parallel ports + scan-ready RTL** (**approved to start**, PR #250 merged; FPGA Stage 0 GH #245 follows it) | no behaviour change with the TAP idle and the scan pins inert | (a) TAP FSM, IR, TDR bank, `dft_ctrl`, `test_clk` select, parallel-port gating by `scan_mode`, glitch-free clock muxes, TCK crossings, standalone cocotb suite (TAP state walk, IDCODE, BYPASS, reset). (b) Items 1-9, 11-13, 20 of section 4: un-tie the `07n` hooks to `dft_ctrl`; `cdc_reset_sync` output-side mux; scan hook in `cdc_2ff_sync`; `test_en` on `rv32i_clock_gate` (+ `.SE`); internal-reset override mux; scan/MBIST ports on `rv32i_cpu_top` + `pin_order.cfg`; `create_clock cpu_clk_i` and TCK clocks in `sky130_soc.sdc`; key/`rk_q` scan-mode masks (section 7). Gate: `soc_all` unchanged with TAP idle; Verilator lint; netlist X/loop check; `check_scan_exclusions.py`. |
+| **2 Insertion** | plugin step (option N, section 1.5), CPU macro first; **the CPU-macro re-harden waits on `dud4` (decision 9)** | Plugin `Flow` subclass; `set_dont_touch` list derived from net names; CPU macro re-harden with chains; SoC re-harden; compare LVS/DRC/setup/hold/antenna/`e45j` against `RUN_2026-10-09_06-18-39`; SET_B workaround (use 26Q2 on the netlist); scan/TCK SDC. |
+| **3 ATPG** | time-boxed tool spike first (decision 8); sign-off number fixed only after it | Spike [A, proposed box: about 5 working days, 12 GB RAM cap, 24 h per tool run]: Quaigh on the fabric-sized full-scan cut (~18.5 k flops) via a ladder `npu` (~1.2 k flops), `crypto` (~3 k), `dma` (~9 k), fabric, recording completion, wall time, peak RAM, coverage. Then: add the tools to a new `flake.nix` devshell; Quaigh on `dma`/`npu`-sized cuts, then the fabric; Sky130-cell glue; gate-level replay of patterns through the TAP incl. a chain flush; SVF/STIL export (2.3). |
 | **4 MBIST** | via `rtl-design-orchestrator`; needs Stage 1 TAP | `mbist_ctrl`, `mem_collar` x12, SRAM shadow/observe logic, cocotb with injected stuck-at/coupling/decoder faults on the sim models (a BIST that always passes is the failure to rule out), then re-harden. |
 | **5 Chip-top hand-off** | notes only now | Boundary scan, IDCODE ID, TDO tristate, pad-level test; future epic (decision 6). |
 
@@ -474,27 +498,37 @@ The CPU macro boundary (403 pins today [R]) gains `scan_in[4]/scan_out[4]`, `sca
 
 | Stage | Call | Reason |
 |---|---|---|
-| 1 | **GO** | RTL-only, reversible, regression-checkable with the TAP idle; every item read from source. Stage 1 now includes the TAP, so it is larger than the issue's original estimate. |
-| 2 | **CONDITIONAL GO** | Tool works at SoC scale in 5 s [M] and honours `dont_touch` [M]; Sky130 build has defects (SET_B, `report_dft_config`), no lock-up/clock-gate/scan-enable handling; the CPU macro setup margin is +0.174 ns and now also pays for a clock mux. |
-| 3 | **CONDITIONAL**: GO for a time-boxed spike; NO-GO for a promised 99 % number | Quaigh works on a 2.9 k-gate cut [M]; SoC scale unproven; Fault unbuilt; Atalanta/PODEM non-commercial. Fallback is itemised per-block coverage. |
+| 1 | **GO, approved to start** | RTL-only, reversible, regression-checkable with the TAP idle; every item read from source. Stage 1 now includes the TAP, so it is larger than the issue's original estimate. |
+| 2 | **CONDITIONAL GO** (CPU-macro half also waits on `dud4`) | Tool works at SoC scale in 5 s [M] and honours `dont_touch` [M]; Sky130 build has defects (SET_B, `report_dft_config`), no lock-up/clock-gate/scan-enable handling; the CPU macro setup margin is +0.174 ns and now also pays for a clock mux. |
+| 3 | **CONDITIONAL**: GO for a time-boxed spike; NO-GO for a promised number (99 % / 98 % is a goal, decision 8) | Quaigh works on a 2.9 k-gate cut [M]; SoC scale unproven; Fault unbuilt; Atalanta/PODEM non-commercial. Fallback is itemised per-block coverage. |
 | 4 MBIST | **GO** | independent of ATPG; memory is 88 % of placed area; cheap; known SRAM-pin timing risk. Depends on the Stage 1 TAP. |
 | 5 | **N/A now** | pad ring out of scope. |
 
 ## 12. Open items
 
-No decisions remain open from the owner. New questions found while working (each needs an answer before the stage that uses it):
+IDs are kept stable because other sections cite them. Resolved items move to the second table.
+
+**Still open** (each needs an answer before the stage that uses it):
 
 | # | Question | Options | Recommendation |
 |---|---|---|---|
 | N1 | `IDCODE` manufacturer/part values | placeholder (documented non-JEDEC) / registered ID | placeholder until the chip-top epic |
 | N2 | 1149.1 compliance level: mandatory `SAMPLE/PRELOAD`/`EXTEST` need a boundary register | compliant-minus-boundary (documented) / boundary register on macro ports now | compliant-minus-boundary; revisit at chip top |
-| N3 | Serial TAP scan (0.9-2.3 s/die) vs adding parallel scan ports | serial / N raw pairs | serial for MPW scale; parallel ports only if volume appears |
 | N4 | TAP flops unscanned (~0.2-0.4 %) | accept with IDCODE/TDR readback / develop a separate TAP scan mode | accept |
-| N5 | Confirm coverage target (section 2.1: 99.0 % test, 98.0 % fault) | as stated / higher | as stated; revisit after the Stage 3 spike |
-| N6 | `ma7`: Sky130 CPU macro is built with `USE_SYNLIG: true` (`pnr/sky130/cpu/config.json:88`), contradicting `CLAUDE.md`'s claim that Sky130 is unaffected [R]; not tested | test now / switch frontend with the Stage 2 re-harden | decide before the CPU re-harden |
 | N7 | CPU macro target period (13.333 ns, +0.174 ns margin) with a clock mux and scan muxes | keep / relax | relax if Stage 2 shows negative slack; do not hide it |
 | N8 | Atalanta use if the tape-out turns commercial (2.2) | drop / license | keep the flow licence-clean (Quaigh/Fault engine) |
-| N9 | Delay-fault coverage: none from scan | accept (functional + MBIST at-speed only) / commercial ATPG later | accept |
+| N10 | **Route to delay-fault coverage** (new; follows from decision 7 rejecting zero delay coverage, section 2.4) | commercial ATPG licence or pattern-generation service for the tape-out / build transition ATPG on Quaigh/Fault / accept incidental detection only | scope as its own bead after the Stage 3 spike; a commercial service for pattern generation is the only option that meets the goal at tape-out scale |
+| N11 | Parallel chain count N (section 8: 8 pairs, 23-24 raw pins) | 4 (10+TAP pins) / 8 / 16 (34+TAP) | 8; revisit when the chip-top pad budget is known |
+| N12 | Spike box for Stage 3 (section 10) | as proposed / different box | as proposed; owner to confirm before Stage 3 starts |
+
+**Resolved** (2026-10-10):
+
+| # | Was | Resolution |
+|---|---|---|
+| N3 | Serial TAP scan vs parallel scan ports | **Decision 7:** TAP for control and MBIST plus parallel scan ports. Sections 8, 9.5, 9.6. |
+| N5 | Confirm coverage target 99.0 % test / 98.0 % fault | **Decision 8:** a goal, not a commitment; fixed after the Stage 3 tool spike. Section 2.1. |
+| N6 | `ma7`: Sky130 CPU macro built with `USE_SYNLIG: true` | **Decision 9:** bead `dud4`, test first (no PD run), then the user decides on re-hardening. Section 4. |
+| N9 | Delay-fault coverage: accept none from scan | **Not accepted** (decision 7). Replaced by N10. |
 
 ## 13. Not done or not verified
 - Fault was not built; Quaigh was not run beyond the `timer` cut; **no SoC-scale ATPG number exists**. No change to `flake.nix` was made.
@@ -506,3 +540,4 @@ No decisions remain open from the owner. New questions found while working (each
 - SVF/OpenOCD playback and the TAP RTL itself are not built; the TAP section is a design, not a measurement.
 - `hdl-kgraph` was not used; the RTL audit is grep and file reading, so a construct outside the greps could be missed.
 - The audit used RTL from a sibling worktree for the synthesis counts (same `main` at the time; small differences possible). Flop-count attribution by group is approximate; totals are exact.
+- Follow-up (decisions 7-9): the chain split, pin count and test times in section 8 are proposals from measured flop counts, not an insertion result; the parallel-port gating by `scan_mode` and the two-pulse launch-on-capture feasibility are design reasoning, not simulated; the `dud4` differential has not been run; the spike box is a proposal.
