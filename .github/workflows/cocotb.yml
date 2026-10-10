@@ -92,10 +92,12 @@ jobs:
       # cocotb runs on the setup-python interpreter, not on nix. sim/Makefile's
       # NIX_COMPAT_DIR loop symlinks these system libs (resolved via ldconfig)
       # so the Verilator sim binary can dlopen libpython/ctypes.
+      # ccache (bead b079) is installed from apt, not nix: it wraps the SYSTEM g++ that
+      # sim/cxx_shim.sh calls (see the shim), exactly like the apt line in random_tests.yml.
       - name: Install runtime libs for cocotb
         run: |
           sudo apt-get update
-          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5 ccache
 
       - name: Install Python dependencies
         run: |
@@ -115,23 +117,9 @@ jobs:
       - name: Check peripheral file-list membership
         run: python3 tools/verif/check_periph_filelists.py
 
-      # Verilog-2005 portability gate (bead f7vs.12). Converts the SoC sources
-      # with sv2v and parses + elaborates the result with yosys -- no CDC
-      # analysis, no synthesis.
-      #
-      # This class is INVISIBLE to the cocotb regression below: Verilator reads
-      # the SystemVerilog directly and never sees sv2v's output, so the whole
-      # suite can be green while the design is unsynthesisable. A real instance
-      # shipped in PWM and broke CI (PR #198, fixed in 2c5f351); it would
-      # equally have broken both PD flows, which are sv2v-fronted.
-      #
-      # The "CDC check" job already catches this incidentally, but it costs ~5
-      # minutes and reports a syntax error under a job named for clock domains.
-      # This fails in seconds and says what is actually wrong.
-      #
-      # Negative-controlled: reintroducing the PWM construct makes this exit 2.
-      - name: sv2v / Verilog-2005 portability gate
-        run: nix develop --command make -C sim sv2v-parse
+      # The Verilog-2005 portability gate (sv2v + yosys parse, bead f7vs.12, ~4.5 min) used to run
+      # here as a serial step.  It shares nothing with the regression below, so it is now its own
+      # job `sv2v_portability` (bead b079) and runs on a second runner in parallel.
 
       # soc_all_ci is the CI-runnable regression: every suite that needs nothing
       # beyond this repo + the nix sim devshell. It builds its own source list, so
@@ -151,9 +139,43 @@ jobs:
       # No `|| true` and no `continue-on-error`: this is a gate.
       # pipefail matters: without it the tee would mask make's exit status and
       # the gate would pass on a failing regression.
+      # Compiler cache for the Verilated model (bead b079).  Two layers of reuse:
+      #  * WITHIN a run, the five Verilator runtime objects (verilated.o, verilated_vpi.o, ...) and
+      #    cocotb's verilator.o are byte-identical in every one of the ~45 builds, so only the
+      #    first compiles them.  This holds even on a completely cold cache.
+      #  * ACROSS runs, an unchanged model (Vtop__ALL.o) is a hit.  That is the big win for PRs that
+      #    touch tests, docs or Python but not rtl/ -- and nearly nothing for a PR that edits RTL
+      #    the SoC model contains (the 15 -> 1 shared tb_soc_top build then misses once).
+      # Correctness does not depend on the key below: ccache hashes the preprocessed source, the
+      # exact compiler command line (after sim/cxx_shim.sh stripped its clang-only flags) and the
+      # g++ binary's content (CCACHE_COMPILERCHECK=content, set by the shim).  The key only
+      # decides which stale entries are offered; a stale one is a miss, never a wrong object.
+      # Saved from main pushes only, so PR runs read main's cache without filling the repo's 10 GB.
+      - name: Compiler identity (cache key input)
+        id: cc
+        run: echo "gcc=$(g++ -dumpfullversion)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore ccache
+        id: ccache_restore
+        uses: actions/cache/restore@v4
+        with:
+          path: .ccache
+          key: ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-
+            ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-
+
       - name: Run soc_all
+        env:
+          SIM_CCACHE: '1'
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_MAXSIZE: 700M
+          # Paths inside the build tree are absolute; with no -g in the flags ccache does not hash
+          # the working directory, and BASEDIR makes the workspace prefix irrelevant anyway.
+          CCACHE_BASEDIR: ${{ github.workspace }}
         run: |
           set -o pipefail
+          ccache --zero-stats
           echo "::group::make -C tb/cocotb/soc soc_all_ci"
           # SIM_PYTHON3 must be the SAME interpreter cocotb runs on. The Makefile
           # defaults to /usr/bin/python3, which is right locally but wrong here:
@@ -162,7 +184,13 @@ jobs:
           # own. Verilator's verilator_includer then loads a mismatched stdlib and
           # dies with "ModuleNotFoundError: No module named 'encodings'".
           echo "SIM_PYTHON3=$(command -v python3) ($(python3 -V))"
-          make -C tb/cocotb/soc soc_all_ci SIM_PYTHON3="$(command -v python3)" 2>&1 | tee cocotb_soc.log
+          # SIM_BUILD_JOBS: parallel C++ compile of each Verilated model (bead b079).  It applies to
+          # the Vtop.mk build only; the suites still run one after another.  It is not part of the
+          # build-directory key (it changes how fast a model is built, not what it is).
+          make -C tb/cocotb/soc soc_all_ci SIM_PYTHON3="$(command -v python3)" SIM_BUILD_JOBS="$(nproc)" 2>&1 | tee cocotb_soc.log
+          echo "::endgroup::"
+          echo "::group::ccache statistics"
+          ccache --show-stats
           echo "::endgroup::"
 
       # Belt-and-braces on top of make's exit code, same rationale as bead dwp
@@ -279,6 +307,13 @@ jobs:
             exit 1
           fi
 
+      - name: Save ccache
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: .ccache
+          key: ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}
+
       - name: Upload cocotb results
         if: always()
         uses: actions/upload-artifact@v4
@@ -390,3 +425,88 @@ jobs:
             cocotb_cpu.log
             tb/cocotb/cpu/results.xml
           if-no-files-found: warn
+
+  # Verilog-2005 portability gate (bead f7vs.12), moved here from a serial step of the soc_all job
+  # by bead b079: it shares nothing with the regression (no simulator, no cocotb), costs ~4.5 min
+  # (mostly fetching the nix devshell's sv2v + yosys closure), and so ran for nothing but latency.
+  # Run on its own runner it overlaps the regression instead of preceding it.
+  #
+  # NOT a rename of any existing check: a step name is not a status check, and the job name the
+  # soc_all comments warn about ("cocotb soc_all (SoC regression)") is unchanged.  This adds a NEW
+  # check, "sv2v / Verilog-2005 portability gate"; if branch protection ever lists required checks,
+  # add it there so the gate stays blocking.
+  #
+  # This class is INVISIBLE to the cocotb regression: Verilator reads the SystemVerilog directly
+  # and never sees sv2v's output, so the whole suite can be green while the design is
+  # unsynthesisable. A real instance shipped in PWM and broke CI (PR #198, fixed in 2c5f351); it
+  # would equally have broken both PD flows, which are sv2v-fronted.
+  # Negative-controlled: reintroducing the PWM construct makes this exit 2.
+  sv2v_portability:
+    name: sv2v / Verilog-2005 portability gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: sv2v / Verilog-2005 portability gate
+        run: nix develop --command make -C sim sv2v-parse
+
+  # Self-tests for the content-keyed Verilator build directories (bead b079).  These prove the
+  # sharing introduced for the soc_all job cannot turn into a stale-binary false pass (PR #142
+  # class): a changed define / -G parameter / tool version must change the directory, a touched
+  # RTL file must regenerate the model, and a failing suite in a SHARED directory must still fail
+  # the run.  A separate job so it overlaps the regression instead of lengthening it.
+  sim_build_key:
+    name: cocotb build-directory key self-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Nix (pinned Verilator from binary cache)
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Install pinned Verilator (nix profile, system-shell compile)
+        run: |
+          nix profile install .#verilator
+          verilator --version
+
+      - name: Install runtime libs for cocotb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
+
+      - name: Build-directory key unit tests
+        run: SIM_PYTHON3="$(command -v python3)" pytest tb/tests/test_sim_build_key.py -v
+
+      # Negative control (c): a failing suite that reuses another suite's build directory.
+      - name: Shared-build failure propagation
+        run: make -C tb/cocotb/soc check-shared-build-failure SIM_PYTHON3="$(command -v python3)"

@@ -551,7 +551,7 @@ ifdef COVERAGE
 	# Verilator will not create the directory itself; make a direct `make gpio COVERAGE=1` work too.
 	COV_MKDIR := $(shell mkdir -p $(COV_DIR))
 	COMPILE_ARGS += --coverage-line --coverage-toggle --coverage-max-width 256
-	override PLUSARGS += +verilator+coverage+file+$(COV_DIR)/$(notdir $(SIM_BUILD))__$(MODULE).dat
+	# (the +verilator+coverage+file+ plusarg is added further down, after SIM_BUILD is defined)
 endif
 	# Override PYTHON3: nix verilator hardcodes nix Python 3.11 but PYTHONHOME=/usr
 	# points to Python 3.10 stdlib — mismatch crashes verilator_includer.
@@ -597,7 +597,73 @@ endif
 # while the suite still reported 11/11 PASS. That is a false pass, strictly
 # worse than the VPI crash this bead started from, and it is only invisible
 # because TOPLEVEL happens to match. (Caught in review of PR #142.)
-BUILD_ARGS += SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_$@$(if $(filter-out freepdk45,$(SRAM_TARGET)),_$(SRAM_TARGET))$(COV_SFX)
+#
+# Bead b079 -- the directory is now chosen by CONTENT of the build recipe, not by target name.
+# The per-target name above fixed the collision (7je) but made every target pay for its own
+# Verilator build even when two targets compile the byte-identical model: tb_soc_top was built
+# 15 times per soc_all_ci run (~41 s each in CI) for 15 suites that differ only in the Python
+# MODULE they run.  SIM_BUILD is therefore
+#     $(SIM_BUILD_ROOT)/sim_build_<TOPLEVEL>_<key>[_cov]
+# where <key> is the first 16 hex digits of the sha256 of EVERYTHING that determines the
+# compiled model (SIM_KEY_MATERIAL below).  Two targets share a directory iff that material is
+# byte-equal; there is no hand-kept list of "these suites are the same".  Because the key covers
+# SRAM_TARGET's source list and +define, the -G parameter sweeps (register_bank ADDR_W,
+# boot_rom MEM_INIT_FILE, apb_interconnect N_SLAVES, ...) and the COVERAGE flags, the four
+# hard-coded per-variant SIM_BUILD= overrides that used to live in the recipes are gone: each
+# variant already hashes to its own directory (and COV_SFX still keeps an instrumented model
+# apart from a plain one even if the hash were ever to collide -- the PR #142 class).
+#
+# IN the key (compile-time): TOPLEVEL; the ordered VERILOG_SOURCES list; COMPILE_ARGS (every
+#   -D/+define+/--coverage*/--trace flag); EXTRA_ARGS (every -G parameter, -I, -W); BUILD_ARGS
+#   minus -j (CXX/LINK shim, PYTHON3, OPT_FAST/OPT_SLOW); the environment variables Verilator's
+#   makefile or cocotb's reads at build time (VERILATOR_TRACE, VERILATOR_SIM_DEBUG,
+#   VERILOG_INCLUDE_DIRS, COCOTB_HDL_*, CXXFLAGS/CPPFLAGS/LDFLAGS/OBJCACHE); and the toolchain
+#   (full `verilator --version`, g++ version, cocotb version, content hash of sim/cxx_shim.sh).
+# NOT in the key (runtime only): MODULE, TESTCASE, PLUSARGS, SIM_ARGS, and every environment
+#   variable only the Python tests read (REGBANK_ADDR_W, APB_IC_*, ...).  The firmware images are
+#   not compile-time either: no soc_all_ci target passes -GMEM_INIT_FILE for tb_soc_top, the tests
+#   backdoor-load the ROM over VPI, and the one target that DOES make a hex path a string
+#   parameter (boot_rom_init) carries it in EXTRA_ARGS and therefore in the key.
+# Source CONTENT is deliberately not hashed: cocotb already rebuilds when a VERILOG_SOURCES file
+#   is newer than Vtop.mk, which is the pre-existing (and unchanged) staleness rule; hashing
+#   content would leave a ~190 MB directory behind per RTL edit on a developer host.
+#
+# Sharing is safe because suites run strictly one after another (a sequential recipe), and each
+# one's outputs are separate: results.xml is checked by check_for_results_file at the end of its
+# own run, and the coverage .dat name carries MODULE (see PLUSARGS below).
+#
+# `make print-sim-build ...` and tb/tests/test_sim_build_key.py are the reproducible checks.
+# Toolchain identity, computed once per top-level make and inherited by every sub-make through
+# the environment (a `verilator --version` costs ~0.2 s and there are ~100 sub-makes per run).
+ifndef SIM_KEY_TOOLS
+  export SIM_KEY_TOOLS := $(shell printf '%s|%s|%s|%s' "$$(verilator --version 2>&1)" "$$(g++ --version 2>&1 | head -n1)" "$$(cocotb-config --version 2>&1)" "$$(sha256sum < $(SIM_DIR)/cxx_shim.sh | cut -c1-16)")
+endif
+# Only a simulation sub-make (MODULE given on the command line / env, as every recipe does) gets a
+# keyed directory; a bare `make` keeps cocotb's default ./sim_build exactly as before.
+ifneq ($(filter command line environment override,$(origin MODULE)),)
+  SIM_KEY_MATERIAL := $(strip \
+    tools=$(SIM_KEY_TOOLS) \
+    top=$(TOPLEVEL) \
+    sources=$(VERILOG_SOURCES) \
+    compile=$(COMPILE_ARGS) \
+    extra=$(EXTRA_ARGS) \
+    build=$(filter-out -j%,$(BUILD_ARGS)) \
+    env=$(VERILATOR_TRACE),$(VERILATOR_SIM_DEBUG),$(VERILOG_INCLUDE_DIRS),$(COCOTB_HDL_TIMEUNIT),$(COCOTB_HDL_TIMEPRECISION),$(CXXFLAGS),$(CPPFLAGS),$(LDFLAGS),$(OBJCACHE))
+  SIM_BUILD_KEY := $(shell printf '%s' '$(subst ','\'',$(SIM_KEY_MATERIAL))' | sha256sum | cut -c1-16)
+  SIM_BUILD := $(SIM_BUILD_ROOT)/sim_build_$(TOPLEVEL)_$(SIM_BUILD_KEY)$(COV_SFX)
+endif
+ifdef COVERAGE
+	# Each simulation writes its own .dat through the runtime plusarg (see the COVERAGE block).
+	# MODULE is in the name because suites that share a build directory share SIM_BUILD.
+	override PLUSARGS += +verilator+coverage+file+$(COV_DIR)/$(notdir $(SIM_BUILD))__$(MODULE).dat
+endif
+# Bead b079: parallel C++ compile of the Verilated model.  Unset by default (a developer host
+# keeps whatever -j its own MAKEFLAGS gives); CI sets it to the runner's core count.  Applies to
+# the Vtop.mk build only, never to the order the suites run in, and is excluded from the key.
+SIM_BUILD_JOBS ?=
+ifneq ($(strip $(SIM_BUILD_JOBS)),)
+	BUILD_ARGS += -j$(SIM_BUILD_JOBS)
+endif
 ifneq ($(wildcard /nix/store),)
 	# Nix environment: nix ld.so cannot find system libs when cocotb dlopen's
 	# libpython3.10.so.1.0.  Create a compat dir with symlinks to system libs.
@@ -697,7 +763,6 @@ register_bank:
 		VERILOG_SOURCES="$(REGBANK_SOURCES)" \
 		EXTRA_ARGS="-GADDR_W=5" \
 		$(BUILD_ARGS) \
-		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_register_bank_aw5$(COV_SFX) \
 		sim
 
 axil_interconnect:
@@ -763,7 +828,6 @@ boot_rom:
 		VERILOG_SOURCES="$(BOOTROM_SOURCES)" \
 		EXTRA_ARGS='-GMEM_INIT_FILE=\"$(SOC_DIR)/boot_rom_init.hex\"' \
 		$(BUILD_ARGS) \
-		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_boot_rom_init$(COV_SFX) \
 		sim
 
 dma_lint:
@@ -839,7 +903,6 @@ apb4_register_bank: apb4_register_bank_lint
 		VERILOG_SOURCES="$(APB4_REG_SOURCES)" \
 		EXTRA_ARGS="-GADDR_W=5" \
 		$(BUILD_ARGS) \
-		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_apb4_register_bank_aw5$(COV_SFX) \
 		sim
 
 # APB migration PR-1: axil_to_apb bridge lint + sim.
@@ -1047,7 +1110,6 @@ apb_interconnect: apb_interconnect_lint
 		$(MAKE) MODULE=test_apb_interconnect TOPLEVEL=tb_apb_interconnect \
 			VERILOG_SOURCES="$(APB_INTERCONNECT_SOURCES)" \
 			EXTRA_ARGS="-Wno-SYNCASYNCNET -GN_SLAVES=$$n" \
-			SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_apb_interconnect_n$${n}$(COV_SFX) \
 			sim; \
 	done; \
 	echo "=== apb_interconnect overlap test: N_SLAVES=2 OVERLAP_TEST=1 ==="; \
@@ -1055,7 +1117,6 @@ apb_interconnect: apb_interconnect_lint
 	$(MAKE) MODULE=test_apb_interconnect TOPLEVEL=tb_apb_interconnect \
 		VERILOG_SOURCES="$(APB_INTERCONNECT_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET -GN_SLAVES=2 -GOVERLAP_TEST=1" \
-		SIM_BUILD=$(SIM_BUILD_ROOT)/sim_build_apb_interconnect_overlap$(COV_SFX) \
 		sim
 
 # GH #91: async_axi_fifo lint + sim.
@@ -1136,7 +1197,7 @@ soc_boot: soc_boot_lint
 soc_periph: soc_boot_lint
 	$(MAKE) MODULE=test_periph_loopback TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1145,7 +1206,7 @@ soc_periph: soc_boot_lint
 soc_boot_diag:
 	$(MAKE) MODULE=test_boot_diag TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET"
 
 # M9 software-managed coherency test — CPU flush+GPU launch+CPU inval end-to-end.
@@ -1157,7 +1218,7 @@ soc_boot_diag:
 soc_coherency: soc_boot_lint
 	$(MAKE) MODULE=test_soc_coherency TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1170,7 +1231,7 @@ soc_coherency: soc_boot_lint
 soc_cpu_gpu: soc_boot_lint
 	$(MAKE) MODULE=test_cpu_gpu_irq TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1190,7 +1251,7 @@ soc_cpu_gpu: soc_boot_lint
 soc_gpio: soc_boot_lint
 	$(MAKE) MODULE=test_soc_gpio TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1209,7 +1270,7 @@ soc_gpio: soc_boot_lint
 soc_pwm: soc_boot_lint
 	$(MAKE) MODULE=test_soc_pwm TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1227,7 +1288,7 @@ soc_pwm: soc_boot_lint
 soc_wdt: soc_boot_lint
 	$(MAKE) MODULE=test_soc_wdt TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1243,7 +1304,7 @@ soc_wdt: soc_boot_lint
 soc_trng: soc_boot_lint
 	$(MAKE) MODULE=test_soc_trng TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1259,7 +1320,7 @@ soc_trng: soc_boot_lint
 soc_i2c: soc_boot_lint
 	$(MAKE) MODULE=test_soc_i2c TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1274,7 +1335,7 @@ soc_i2c: soc_boot_lint
 soc_crypto: soc_boot_lint
 	$(MAKE) MODULE=test_soc_crypto TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1290,7 +1351,7 @@ soc_crypto: soc_boot_lint
 soc_npu: soc_boot_lint
 	$(MAKE) MODULE=test_soc_npu TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1334,7 +1395,7 @@ gpio_driver: soc_boot_lint
 		exit 1; }
 	$(MAKE) MODULE=test_gpio_driver TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET \
 		  -GSRAM_MEM_WORDS=65536" \
 		$(BUILD_ARGS)
@@ -1412,7 +1473,7 @@ soc_stress: soc_boot_lint
 	/usr/bin/python3 $(SOC_DIR)/stress_fw/gen_stress_hex.py
 	$(MAKE) MODULE=test_soc_stress TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1435,7 +1496,7 @@ l2_bench_lint:
 l2_bench: l2_bench_lint
 	$(MAKE) MODULE=test_l2_bench TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET \
 		  -GSRAM_MEM_WORDS=65536" \
 		TESTCASE=test_hello_sanity,test_sweep_l2_bench \
@@ -1534,22 +1595,22 @@ soc_all_ci: check-space
 soc_integration_batch: soc_boot_lint
 	$(MAKE) MODULE=test_boot TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 	$(MAKE) MODULE=test_periph_loopback TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 	$(MAKE) MODULE=test_soc_coherency TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 	$(MAKE) MODULE=test_cpu_gpu_irq TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
-		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/gpu \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
 		$(BUILD_ARGS)
 
@@ -1586,6 +1647,43 @@ check-exit-propagation:
 		exit 1; \
 	fi; \
 	echo "check-exit-propagation: PASS -- the failing suite exited non-zero"
+
+# Bead b079: print the build directory (and, with SIM_KEY_VERBOSE=1, the exact key material) the
+# sub-make for the given variables would use, without building anything.  Used by
+# tb/tests/test_sim_build_key.py; handy when asking "why did this target rebuild / not share?":
+#   make print-sim-build MODULE=m TOPLEVEL=tb_soc_top VERILOG_SOURCES="..." EXTRA_ARGS="..." $(BUILD_ARGS)
+.PHONY: print-sim-build
+print-sim-build:
+	@echo "$(SIM_BUILD)"
+ifdef SIM_KEY_VERBOSE
+	@echo "key-material: $(SIM_KEY_MATERIAL)"
+endif
+
+# Bead b079 self-test (negative control c): a failing suite that REUSES another suite's build
+# directory must still make make exit non-zero.  The same register_bank DUT is run twice with the
+# same compile-time inputs and a different runtime-only environment (REGBANK_ADDR_W is read by the
+# Python test, never by Verilator): 12 matches the elaborated ADDR_W=12 and passes, 7 does not and
+# fails the stale-Vtop guard in test_register_bank._setup.  Passing proves, in one go, that
+#   * REGBANK_ADDR_W really is runtime-only (second run hashes to the SAME directory), and
+#   * the second run did NOT rebuild (no verilator invocation in its output), and
+#   * its failure is not masked by the sharing (the p6t8 exit-code wiring still fires).
+# Deliberately NOT in soc_all / soc_all_ci -- it fails a suite on purpose.
+.PHONY: check-shared-build-failure
+check-shared-build-failure:
+	@echo "=== check-shared-build-failure: a failing suite in a SHARED build dir MUST fail make ==="; \
+	set -e; \
+	REGBANK_ADDR_W=12 $(MAKE) MODULE=test_register_bank TOPLEVEL=tb_axi_lite_register_bank \
+		VERILOG_SOURCES="$(REGBANK_SOURCES)" $(BUILD_ARGS) sim; \
+	out=$$(REGBANK_ADDR_W=7 $(MAKE) MODULE=test_register_bank TOPLEVEL=tb_axi_lite_register_bank \
+		VERILOG_SOURCES="$(REGBANK_SOURCES)" $(BUILD_ARGS) sim 2>&1) && rc=0 || rc=$$?; \
+	echo "$$out" | tail -n 5; \
+	if [ "$$rc" -eq 0 ]; then \
+		echo "check-shared-build-failure: FAIL -- a failing suite in a shared build dir exited 0" >&2; exit 1; \
+	fi; \
+	if echo "$$out" | grep -q -- '-Mdir'; then \
+		echo "check-shared-build-failure: FAIL -- the second run REBUILT, so the directory was not shared" >&2; exit 1; \
+	fi; \
+	echo "check-shared-build-failure: PASS -- shared build reused (no rebuild) and the failing suite exited $$rc"
 
 .PHONY: check-space
 check-space:
