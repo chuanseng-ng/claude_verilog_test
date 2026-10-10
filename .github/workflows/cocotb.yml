@@ -259,7 +259,10 @@ jobs:
           # stop_to_start_bus_free_time_meets_spec expect_fail was removed and it now passes for real, count unchanged).
           # COMPUTED, not measured: the i2c suite itself measured 52 -> 55 locally (55/55 pass); the full soc_all_ci was
           # not re-run. Tighten to (measured - 3) from this PR's CI.
-          PASS_FLOOR: '602'
+          # 2026-10-10 (bead j41m.2, DFT Stage 1a): 622 = 625 - 3, MEASURED: soc_all_ci from clean on the final merged tree,
+          # 625 passed / 0 failed / 17 skipped over 62 suite summaries (605 on main + 20 new tests: clock_gate_scan 4,
+          # dft_muxes 3, soc_dft_scan 8, cdc_reset_sync_scan +3, crypto +2).
+          PASS_FLOOR: '622'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."
