@@ -167,6 +167,35 @@ module tb_sky130_cpu_check;
     s_arburst = axi_arburst_o; s_awburst = axi_awburst_o;
   end
 
+  // ------------------------------------------------ optional hierarchical probes
+  // (-DPROBE_FILE=\"<gen_probes.py output>\"): ID/EX register + regfile storage,
+  // snapshotted pre-posedge like every other observation.
+`ifdef PROBE_FILE
+`include `PROBE_FILE
+  reg [216:0]  s_idex;
+  reg [1023:0] s_regs;
+  reg [4:0]    s_fwd;
+  integer pfd;
+  string probefile;
+  initial begin
+    pfd = 0;
+    if ($value$plusargs("probe=%s", probefile)) pfd = $fopen(probefile, "w");
+  end
+  always @(negedge clk_i) begin
+    #4;
+    s_idex = p_idex;
+    s_regs = p_regs;
+    s_fwd = p_fwd;
+  end
+  // probe line: cyc valid rs1_addr rs2_addr rs1_data rs2_data instr pc
+  always @(posedge clk_i)
+    if (pfd != 0 && rst_n_i)
+      $fwrite(pfd, "%0d %b %0d %0d %08x %08x %08x %08x | %08x %08x %08x %08x %08x %08x %b\n", cyc, s_idex[0],
+              s_idex[56:52], s_idex[51:47], s_idex[152:121], s_idex[120:89], s_idex[184:153], s_idex[216:185],
+              s_regs[32*0 +: 32], s_regs[32*1 +: 32], s_regs[32*2 +: 32], s_regs[32*3 +: 32],
+              s_regs[32*4 +: 32], s_regs[32*5 +: 32], s_fwd);
+`endif
+
   // ------------------------------------------------- AXI read slave (ROM BFM)
   reg        ar_busy = 1'b0;
   reg [31:0] araddr_lat = 32'd0;
@@ -274,6 +303,9 @@ module tb_sky130_cpu_check;
     integer r;
     wait (rst_n_i === 1'b1);
     repeat (haltcyc) @(posedge clk_i);
+`ifdef PROBE_FILE
+    for (r = 0; r < 32; r = r + 1) $display("STATE x%0d=%08x", r, s_regs[32*r +: 32]);
+`endif
     apb_wr(12'h000, 32'h1);                 // DBG_CTRL[0] = halt request
     repeat (20) @(posedge clk_i);
     for (r = 0; r < 32; r = r + 1) begin

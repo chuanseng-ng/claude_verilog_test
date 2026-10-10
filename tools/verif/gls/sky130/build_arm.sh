@@ -29,8 +29,12 @@ SRAM_MODEL="$RTL_ROOT/sim/sky130_sram_1kbyte_1rw1r_32x256_8.sv"
 TB="$HERE/tb_sky130_cpu_check.sv"
 
 mkdir -p "$OUT"
+# Optional probes: PROBE_FILE=<path from gen_probes.py> adds hierarchical taps
+# (ID/EX register + regfile storage) under the same names in both arms.
+PROBE=()
+[ -n "${PROBE_FILE:-}" ] && PROBE=("-DPROBE_FILE=\"$PROBE_FILE\"")
 COMMON=(--binary --timing -Wno-fatal -Wno-lint -Wno-style -Wno-TIMESCALEMOD --build-jobs 2
-        --top-module tb_sky130_cpu_check -o Vtb)
+        --top-module tb_sky130_cpu_check -o Vtb ${PROBE[@]+"${PROBE[@]}"})
 
 case "$ARM" in
   rtl)

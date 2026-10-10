@@ -7,7 +7,7 @@ differs in the other arm.
 """
 import sys
 
-WIDTHS = [1] * 14 + [3, 3, 2, 2, 4, 4, 8, 8, 4] + [32] * 7
+WIDTHS = [1] * 14 + [3, 3, 2, 2, 4, 4, 8, 8, 4] + [32] * 8
 NAMES = (
     "arvalid rready awvalid wvalid wlast bready cvalid trap bt eb pcsrc tbj pready pslverr "
     "arsize awsize arburst awburst tcause dstate arlen awlen wstrb "
