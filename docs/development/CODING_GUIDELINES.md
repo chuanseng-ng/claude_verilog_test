@@ -103,8 +103,10 @@ Reference: lowRISC Verilog Style Guide, adapted to the house style codified in
 - Line length: soft limit 120 columns (`--column_limit=120`); hand-aligned AXI port maps
   may exceed it (`line-length` rule intentionally disabled).
 - `begin`/`end` K&R style (`begin` trails the statement).
-- Canonical formatting = `make format-verible-check` / `make format-verible-fix`
-  (`sim/Makefile` `VERIBLE_FMT_FLAGS` is the authority).
+- Formatting tool = `make format-verible-check` / `make format-verible-fix`
+  (`sim/Makefile` `VERIBLE_FMT_FLAGS`). ⚠️ It does NOT reproduce the hand-aligned house style
+  (see §1.7), so it is advisory; match the surrounding code, and do not run
+  `format-verible-fix` over existing files (no style-only mass edits).
 
 ### 1.7 Lint gates
 
@@ -114,14 +116,25 @@ Before committing RTL:
 cd sim
 make lint        # Verilator semantic lint (CPU top)
 make lint_soc    # Verilator semantic lint (SoC top)
-make verible     # Verible style lint + format check
+make lint-verible   # Verible style lint (hard gate; whole tree is clean)
 ```
 
 - Prefer fixing findings over waiving. If a waiver is genuinely needed, prefer a
   scoped, commented waiver near the top of the file over scattering inline
   `lint_off`/`lint_on` pairs through the body; every waiver carries a one-line reason.
-- CI runs Verible via `.github/workflows/rtl-checks.yml` (currently non-blocking during
-  adoption; the goal is a hard gate once the open findings are burned down — audit P1-4).
+- CI runs Verible via `.github/workflows/rtl-checks.yml`. The **lint step is a hard gate**
+  (bead `hn9l`, audit P1-4 closed): the whole tree is Verible-clean, so any new finding fails
+  the job. The **format step is advisory** (`continue-on-error`, changed files only) and must
+  stay that way: on Verible v0.0-4063, 81 of 83 `rtl/**/*.sv` fail `--verify` under
+  `VERIBLE_FMT_FLAGS`, retuned flag sets only reach 72 of 83, and even the house-style exemplars
+  (`rtl/periph/timer.sv`, `gpio_controller.sv`) fail every variant. So `make verible`
+  (= lint + whole-tree format check) is not expected to pass; use `make lint-verible` as the
+  gate and `make format-verible-check VERIBLE_CHECK_FILES=<your files>` for information only.
+- Local and CI run the same Verible binary: `flake.nix` (`veribleFor`) repackages the CI release
+  tarball (same version + sha256). Bump `rtl-checks.yml` and `flake.nix` together.
+- `.rules.verible_lint` sets `always-ff-non-blocking=waive_for_locals:true`: blocking assignments
+  to block-local temporaries inside `always_ff` are legal; blocking assignment to anything
+  declared outside the block is still an error.
 
 ### 1.8 Spyglass lint discipline
 
@@ -245,7 +258,7 @@ Categories: `[Fix]`, `[Feature]`, `[Code]` (refactoring), `[Env]` (build/tooling
 | `sim/Makefile` | Verilator lint, Verible lint+format, CDC snitch | `rtl/**` | manual, run before commit |
 | Spyglass | Synopsys Spyglass lint (+ `lint/spyglass/waivers.awl`) | `rtl/**` (SoC) | manual (external tool) — see §1.8 |
 | CI `qa-checks.yml` | ruff format+lint, mypy, pylint, pytest+coverage | `tb/models`, `tb/tests` | **blocking** |
-| CI `rtl-checks.yml` | Verible lint (tree) + format (changed files) | `rtl/**` | non-blocking (adoption) |
+| CI `rtl-checks.yml` | Verible lint (tree) + format (changed files) | `rtl/**` | lint **blocking**; format advisory |
 | CI `tests.yml` / `random_tests.yml` | pytest / cocotb regression | functional | blocking |
 
 Widening the enforced scope (cocotb lint, RTL hard gate, shellcheck) is tracked in the
