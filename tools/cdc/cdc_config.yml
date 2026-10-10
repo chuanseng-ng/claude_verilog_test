@@ -61,6 +61,16 @@ domain_aliases:
 reset_domains:
   - rst_n_i
   - cpu_rst_n_i
+  # DFT test controls (bead j41m.2). cdc_snitch has no notion of a quasi-static mode pin, so
+  # the scan reset and the scan-mode select would be modelled as two extra clock domains on
+  # every flop behind a dft_rst_mux / cdc_reset_sync output mux and on the crypto key mask.
+  # They are not data: scan_rst_ni is a reset (asynchronous by definition, like rst_n_i) and
+  # scan_mode_i is a test-mode level that the tester sets before the first test clock edge
+  # and never toggles while a clock runs (the contract documented in dft_clk_mux.sv /
+  # dft_rst_mux.sv / DFT_ARCHITECTURE.md sec.14). Listing them here removes them from the
+  # domain count; it does NOT waive any clock-to-clock crossing.
+  - scan_rst_ni
+  - scan_mode_i
 
 # --- 3. Top-level buses that are synchronous to a named domain --------------
 # Collapses a whole bus to one domain so per-bit fan-in stops looking

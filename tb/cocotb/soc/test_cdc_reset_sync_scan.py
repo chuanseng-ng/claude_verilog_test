@@ -189,3 +189,81 @@ async def _run_mux_reverts(dut):
         await RisingEdge(dut.clk_i)
     await Timer(SETTLE_NS, units="ns")
     assert dut.rst_n_o.value == 1, "normal functional deassert must work again post-scan-mode"
+
+
+# ── j41m.2 (DFT Stage 1a): OUTPUT-side scan select ──────────────────────────
+# The 07n hook sat only on the INPUT (async clear) of the chain. The chain's
+# own flops are scan flops and toggle while the tester shifts, so with an
+# input-only mux rst_n_o -- which every downstream async-reset flop consumes --
+# would pulse during shift. The delivered reset must be the scan reset itself
+# in scan mode, independent of the chain flops' state.
+
+
+@cocotb.test()
+async def test_output_is_scan_reset_even_when_chain_flops_are_zero(dut):
+    """Entering scan mode with the chain flops at 0 must deliver rst_n_o=1 at once."""
+    await with_timeout(_run_output_ignores_flops(dut), 10, "us")
+
+
+async def _run_output_ignores_flops(dut):
+    # Functional reset asserted: the STAGES chain flops are all 0 and rst_n_o=0.
+    await _start(dut, rst_n_i=0, scanmode_i=0, scan_rst_ni=1)
+    assert dut.rst_n_o.value == 0
+    # Enter scan mode, scan reset INACTIVE. rst_n_o must be 1 immediately: no
+    # clock edge, so the chain flops are still being cleared / have not retimed.
+    dut.scanmode_i.value = 1
+    await Timer(SETTLE_NS, units="ns")
+    assert dut.rst_n_o.value == 1, (
+        "in scan mode rst_n_o must be the scan reset (1), not the chain flops (still 0)"
+    )
+    # Scan reset asserts / releases with no clock involved at all.
+    dut.scan_rst_ni.value = 0
+    await Timer(SETTLE_NS, units="ns")
+    assert dut.rst_n_o.value == 0
+    dut.scan_rst_ni.value = 1
+    await Timer(SETTLE_NS, units="ns")
+    assert dut.rst_n_o.value == 1, "scan reset release must reach rst_n_o without a clock edge"
+
+
+@cocotb.test()
+async def test_no_pulse_while_chain_flops_run_in_scan_mode(dut):
+    """Across many clocks in scan mode (flops free-running) rst_n_o never moves."""
+    await with_timeout(_run_no_pulse(dut), 10, "us")
+
+
+async def _run_no_pulse(dut):
+    await _start(dut, rst_n_i=1, scanmode_i=1, scan_rst_ni=1)
+    seen = []
+
+    async def _watch():
+        while True:
+            await Timer(1, units="ns")
+            seen.append(int(dut.rst_n_o.value))
+
+    watcher = cocotb.start_soon(_watch())
+    # Hammer the functional reset (a derived reset would do this) across clocks.
+    for i in range(12):
+        dut.rst_n_i.value = i & 1
+        await RisingEdge(dut.clk_i)
+    watcher.kill()
+    assert seen and all(v == 1 for v in seen), "rst_n_o glitched in scan mode"
+
+
+@cocotb.test()
+async def test_functional_mode_still_retimed_by_the_chain(dut):
+    """scanmode_i=0: rst_n_o is still the chain output (sync deassert, STAGES edges)."""
+    await with_timeout(_run_functional_retimed(dut), 10, "us")
+
+
+async def _run_functional_retimed(dut):
+    await _start(dut, rst_n_i=0, scanmode_i=0, scan_rst_ni=0)  # scan_rst_ni must be ignored
+    assert dut.rst_n_o.value == 0
+    dut.rst_n_i.value = 1
+    await Timer(SETTLE_NS, units="ns")
+    assert dut.rst_n_o.value == 0, "deassert must not pass through combinationally"
+    await RisingEdge(dut.clk_i)
+    await Timer(SETTLE_NS, units="ns")
+    assert dut.rst_n_o.value == 0, "one edge is not enough for STAGES=2"
+    await RisingEdge(dut.clk_i)
+    await Timer(SETTLE_NS, units="ns")
+    assert dut.rst_n_o.value == 1

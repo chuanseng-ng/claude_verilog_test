@@ -423,6 +423,9 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/soc/pll/pll_clkgen.sv \
 	$(RTL_DIR)/soc/pll/pll_apb_regs.sv \
 	$(RTL_DIR)/soc/pll/pll_subsystem.sv \
+	$(RTL_DIR)/soc/dft/dft_clk_mux.sv \
+	$(RTL_DIR)/soc/dft/dft_rst_mux.sv \
+	$(RTL_DIR)/soc/dft/dft_ctrl_ports.sv \
 	$(RTL_DIR)/mem/rv32i_clock_gate.sv \
 	$(RTL_DIR)/soc/cdc/cdc_2ff_sync.sv \
 	$(RTL_DIR)/soc/cdc/cdc_reset_sync.sv \

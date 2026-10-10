@@ -57,6 +57,9 @@ module tb_crypto (
     input  logic clk,
     input  logic rst_n,
 
+    // DFT scan mode (bead j41m.2) -- main instance only; the other three are tied 0. 0 = functional.
+    input  logic scan_mode_i,
+
     // -- u_dut: APB4 slave port (BFM-facing, flat APB4 names) ---------------
     input  logic              psel,
     input  logic              penable,
@@ -114,6 +117,7 @@ module tb_crypto (
     ) u_dut (
         .clk    (clk),
         .rst_n  (rst_n),
+        .scan_mode_i (scan_mode_i),
         .psel   (psel),
         .penable(penable),
         .pwrite (pwrite),
@@ -134,6 +138,7 @@ module tb_crypto (
     ) u_dut_v4 (
         .clk    (clk),
         .rst_n  (rst_n),
+        .scan_mode_i (1'b0),
         .psel   (v4_psel),
         .penable(v4_penable),
         .pwrite (v4_pwrite),
@@ -154,6 +159,7 @@ module tb_crypto (
     ) u_dut_na (
         .clk    (clk),
         .rst_n  (rst_n),
+        .scan_mode_i (1'b0),
         .psel   (noaes_psel),
         .penable(noaes_penable),
         .pwrite (noaes_pwrite),
@@ -174,6 +180,7 @@ module tb_crypto (
     ) u_dut_ns (
         .clk    (clk),
         .rst_n  (rst_n),
+        .scan_mode_i (1'b0),
         .psel   (nosha_psel),
         .penable(nosha_penable),
         .pwrite (nosha_pwrite),

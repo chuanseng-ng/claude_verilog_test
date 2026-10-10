@@ -735,6 +735,9 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/pmu.sv \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_apb_regs.sv \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_subsystem.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_mux.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_rst_mux.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl_ports.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_interconnect.sv \
@@ -792,6 +795,20 @@ sky130-soc-sv2v:
 	@echo "  Clocked always blocks: $$(grep -c 'always.*posedge\|always.*negedge' $(SKY130_SOC_SV2V_OUT))"
 	@echo "  DFF count (reg decls): $$(grep -c '^\s*reg\s' $(SKY130_SOC_SV2V_OUT))"
 	@echo "  GPU cells (should be 0): $$(grep -c 'gpu_top\b' $(SKY130_SOC_SV2V_OUT) || echo 0)"
+
+# DFT Stage 1a (bead claude_verilog_test-j41m.2): prove on the flattened Sky130 netlist that in scan mode every
+# async reset is tester-controlled and every flop is test-clocked. Needs yosys on PATH (or YOSYS=/path/to/yosys).
+.PHONY: dft-scan-check
+dft-scan-check: sky130-soc-sv2v
+	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
+		--netlist $(SKY130_SOC_SV2V_OUT) --expect-gates 20
+
+# Same proof on the ASAP7 SoC netlist. That netlist instantiates ICGx1_ASAP7_75t_R and sram_1rw_256x32_asap7
+# without defining them, so the checker needs the analysis models (it fails rather than pass vacuously).
+.PHONY: dft-scan-check-asap7
+dft-scan-check-asap7: asap7-soc-sv2v
+	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
+		--netlist $(SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/asap7_cell_models.v --expect-gates 20
 
 # Sky130 Stage 2: SoC P&R with real DRC + LVS.
 # Requires:  make sky130-soc-sv2v   (generates soc_top_sv2v.v)
@@ -1510,6 +1527,9 @@ SOC_SV_FILES := \
 	$(LIBRELANE_ASAP7_SOC_DIR)/pll_clkgen_pnr.sv \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_apb_regs.sv \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_subsystem.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_mux.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_rst_mux.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl_ports.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
 	$(PROJECT_ROOT)/rtl/soc/apb4_register_bank.sv \
