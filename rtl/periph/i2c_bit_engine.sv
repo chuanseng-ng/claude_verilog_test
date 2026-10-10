@@ -32,6 +32,12 @@
 //     it; at those N run the bus a little slower. For N >= 16 the low time is >= 0.52 * T and the
 //     high time >= 0.46 * T. (ceil(N/8) would shrink the failing set to N = 4 alone; it changes the
 //     CLKDIV 4 low time and so needs test_i2c_clkdiv_clamp_to_min's "+2" assertion updated.)
+//   KNOWN LIMITATION (bead claude_verilog_test-cd15, deferred by the user as a latent IP limit):
+//     with K = floor(N / 8) the Fast-mode tLOW minimum (1.3 us) at EXACTLY 400 kHz is missed for
+//     N = CLKDIV + 1 in 4..7 and 13..15, i.e. f_clk 6.4..11.2 MHz or 20.8..24 MHz. No clock in this
+//     SoC is in either range (40 MHz Sky130, 571 MHz ASAP7, 1282 MHz CPU domain), so it is
+//     unreachable here; it only matters if this IP is reused in a design clocked in those ranges
+//     (run the bus slower there). The fix, K = ceil(N / 8), is recorded in the bead.
 //   RESIDUAL ERROR (the period is exactly 4*N clk except where noted; all are clk-granular):
 //   * Pad rise time. The 3 clk allowance assumes SCL, once oe_o is released, reaches the pad's logic
 //     threshold less than ~1 clk later (the first synchroniser flop then catches it on the very next
@@ -43,8 +49,10 @@
 //     is 1 clk, not 3, so the loopback period is 4*N - 2 clk. Loopback is a fabric-test aid, not a
 //     rate reference.
 //   * The skew uses an integer floor(N / 8): the duty cycle is a step function of N, not exact.
-//   * Only the BIT clock is characterised. Bus-free time between a STOP and the next START is
-//     S_STP_FREE (one tick) plus software latency -- not a spec-checked quantity here.
+//   * Only the BIT clock is a spec-met quantity. Bus-free time between a STOP and the next START is
+//     S_STP_FREE (one tick) plus software latency; it is MEASURED by
+//     test_i2c_stop_to_start_bus_free_time_meets_spec (bead pnfw) and falls below the I2C minimum
+//     (4.7 us Standard / 1.3 us Fast) at the standard divisors -- bug bead claude_verilog_test-gecv.
 //
 // Port contract with i2c_controller.sv (the parent). Every port is single-clock (clk), synchronous
 // to the parent; there is NO clock-domain crossing in this module -- scl_s_i / sda_s_i must already

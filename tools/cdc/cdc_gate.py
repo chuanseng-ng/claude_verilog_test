@@ -14,6 +14,8 @@ This script re-derives the verdict:
   2. a register is still BAD only if >= 2 distinct canonical domains remain
   3. match the residue against explicit, justified waivers
   4. fail if anything is left unwaived -- or if a waiver matched nothing
+  5. fail if a `required_synchronisers` entry matched no register that
+     cdc_snitch classified CDC (a synchroniser that was removed or bypassed)
 
 Step 4's second half matters as much as the first: a waiver that stops
 matching is either a fixed bug whose waiver should go, or a renamed signal
@@ -70,6 +72,16 @@ def load_config(path: Path) -> dict:
     cfg.setdefault("reset_domains", [])
     cfg.setdefault("port_domains", {})
     cfg.setdefault("waivers", [])
+    cfg.setdefault("required_synchronisers", [])
+
+    for i, rs in enumerate(cfg["required_synchronisers"]):
+        for field in ("id", "dest", "reason"):
+            if not rs.get(field):
+                raise ConfigError(f"required_synchronisers #{i} is missing field '{field}'")
+        try:
+            rs["_dest_re"] = re.compile(rs["dest"])
+        except re.error as exc:
+            raise ConfigError(f"required synchroniser '{rs['id']}' has an invalid 'dest': {exc}")
 
     seen_ids = set()
     for i, w in enumerate(cfg["waivers"]):
@@ -166,6 +178,31 @@ def parse_report(path: Path, cfg: dict):
     return counts, residue, unparsed
 
 
+def cdc_register_names(path: Path) -> set[str]:
+    """Names of every register cdc_snitch classified CDC (a single-source crossing marked
+    magic_cdc, i.e. an intentional synchroniser stage)."""
+    names = set()
+    for line in path.open():
+        if not line.startswith("CDC"):
+            continue
+        m = _LINE_RE.match(line)
+        if m:
+            names.add(m.group("name"))
+    return names
+
+
+def missing_synchronisers(cdc_names, cfg):
+    """`required_synchronisers` entries that matched no CDC-classified register.
+
+    The BAD/waiver machinery only notices a crossing that is both unsynchronised AND combined
+    with another domain; a raw single-source sample classifies OKX, which never fails the gate.
+    This is the positive check: the named synchronisers must still be there."""
+    return [
+        rs for rs in cfg["required_synchronisers"]
+        if not any(rs["_dest_re"].search(n) for n in cdc_names)
+    ]
+
+
 def apply_waivers(residue, cfg):
     hits = defaultdict(list)
     unwaived = []
@@ -206,6 +243,7 @@ def main(argv=None) -> int:
     try:
         cfg = load_config(args.config)
         counts, residue, unparsed = parse_report(args.report, cfg)
+        absent = missing_synchronisers(cdc_register_names(args.report), cfg)
     except ConfigError as exc:
         print(f"ERROR: {args.config}: {exc}", file=sys.stderr)
         return 2
@@ -288,8 +326,19 @@ def main(argv=None) -> int:
             print(f"        {wid}")
         print()
 
+    if absent:
+        failed = True
+        print("FAIL: required synchroniser(s) not found among the CDC-classified registers.")
+        print("      The synchroniser was removed, bypassed, or renamed so that it no "
+              "longer\n      carries (* magic_cdc *):")
+        for rs in absent:
+            print(f"        {rs['id']}  (dest {rs['dest']})")
+            print(f"          {' '.join(rs['reason'].split())[:150]}")
+        print()
+
     if not failed:
-        print("PASS: no unwaived cross-domain registers; every waiver still matches.")
+        print("PASS: no unwaived cross-domain registers; every waiver and every "
+              "required synchroniser still matches.")
 
     if args.json:
         args.json.write_text(
@@ -301,6 +350,7 @@ def main(argv=None) -> int:
                     "waived": {k: len(v) for k, v in hits.items()},
                     "unwaived": unwaived,
                     "stale_waivers": stale,
+                    "missing_synchronisers": [rs["id"] for rs in absent],
                     "accepted_risks": [w["id"] for w in risks],
                     "pass": not failed,
                 },

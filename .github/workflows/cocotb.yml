@@ -249,7 +249,12 @@ jobs:
           # 2026-10-09 (bead 7ovx): 594 = 597 measured (full local soc_coverage run, CI log-grep formula) - 3. The 597
           # includes this PR's 19 new tests: 13 test_register_walk (one per register-bank peripheral suite), 5 W1C/W1P
           # semantic tests (gpio, pwm, wdt, npu, crypto) and test_soc_register_walk in soc_integration.
-          PASS_FLOOR: '594'
+          # 2026-10-10 (bead pnfw): 599 = 597 measured (7ovx, full local soc_coverage run) + 5 new I2C tests in test_i2c.py
+          # (stop_to_start_gap_is_measured, stop_to_start_bus_free_time_meets_spec [expect_fail, counts as a pass],
+          # fsm_illegal_state_recovers_to_idle, loopback_slave_idle_fall_arm, clkdiv_ffff_wide_tick_counter) - 3.
+          # DERIVED, not measured: the i2c suite itself measured 47 -> 52 locally; the full soc_all_ci was not re-run.
+          # Tighten to (measured - 3) from this PR's CI.
+          PASS_FLOOR: '599'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."

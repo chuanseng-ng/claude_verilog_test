@@ -73,6 +73,14 @@ OK1: 17009   CDC: 37   OKX: 464   BAD: 16233
 4. **Fails** on any unwaived `BAD`, **and** on any waiver that matched nothing.
    A stale waiver means the crossing it covered was renamed, removed, or is no
    longer being checked — all failures, not free passes.
+5. **Requires** the synchronisers named in `required_synchronisers` (bead
+   `pnfw`: the two I2C pad inputs): each must still match a register
+   `cdc_snitch` classifies `CDC`. This is the positive check the BAD logic
+   cannot give — a lone raw sample of an async pin classifies `OKX`, which never
+   fails the gate. Negative control, run on a scratch copy only: bypassing the
+   SCL synchroniser in `i2c_controller.sv` turned the gate red twice over — 64
+   unwaived BAD registers (`PORT:i2c_scl_i+clk_i` on the bit engine's `tick_q`
+   and friends) and the `i2c-scl-pad-sync` requirement.
 
 ## Usage
 
