@@ -50,7 +50,9 @@ TEST_MODULES := \
 	tb.cocotb.cpu.test_fault_injection \
 	tb.cocotb.cpu.test_pipeline_hazards \
 	tb.cocotb.cpu.test_interrupts \
-	tb.cocotb.cpu.test_perf_counters
+	tb.cocotb.cpu.test_perf_counters \
+	tb.cocotb.cpu.test_csr_access \
+	tb.cocotb.cpu.test_decode_corners
 
 # RTL source files (Phase 3: 5-stage pipeline + I-cache + D-cache)
 # Packages must appear first so Verilator can resolve them.
@@ -270,10 +272,8 @@ help:
 	@echo "  make lint         - Run Verilator lint check (CPU top + chains lint_soc)"
 	@echo "  make lint_soc     - Run Verilator lint check for soc_top (Phase 5 M8)"
 	@echo "  make lint_soc_sky130 - lint_soc with SRAM_TARGET=sky130 (+define+SRAM_SKY130, GH #104)"
-	@echo "  make verible      - Run Verible style-lint + format check on rtl/ (needs verible)"
-	@echo "  make lint-verible        - Verible SystemVerilog style lint only"
-	@echo "  make format-verible-check - Verible format check (non-mutating)"
-	@echo "  make format-verible-fix  - Verible reformat rtl/ in place"
+	@echo "  make lint-verible - Verible SystemVerilog style lint on rtl/ (needs verible; CI hard gate)"
+	@echo "  make verible      - Alias for lint-verible"
 	@echo "  make cdc          - CDC check: cdc_snitch + cdc_gate waiver/domain analysis (CDC_STRICT=1 to gate)"
 	@echo "  make soc_periph     - Run Phase 5 M9 SoC DMA + peripheral loopback test"
 	@echo "  make soc_boot       - Run Phase 5 M9 SoC boot test (PC scoreboard + 100/100 stability)"
@@ -463,65 +463,32 @@ lint_soc_sky130:
 # distributes the shared rst_n_i. Frozen leaf RTL — not a SoC integration bug.
 
 # ============================================================================
-# Verible RTL style-lint + formatter (Phase 5 — complements Verilator lint)
+# Verible RTL style lint (Phase 5 — complements Verilator lint)
 # ----------------------------------------------------------------------------
-# Verible covers SystemVerilog *style consistency* and *formatting*, which
-# Verilator's semantic --lint-only does not. Install a prebuilt release binary
-# from https://github.com/chipsalliance/verible/releases (no build required).
+# Verible covers SystemVerilog *style consistency*, which Verilator's semantic
+# --lint-only does not. `nix develop` provides the same binary CI pins.
 #   make lint-verible          # style-lint every rtl/**/*.sv (curated ruleset)
-#   make format-verible-check  # report formatting deviations (non-mutating)
-#   make format-verible-fix    # rewrite files in place to canonical format
-#   make verible               # lint-verible + format-verible-check
+#   make verible               # alias for lint-verible
+#
+# There are deliberately NO format targets (removed 2026-10-10, bead hn9l
+# follow-up). verible-verilog-format cannot reproduce the hand-aligned house
+# style: on v0.0-4063, 81 of 83 rtl/**/*.sv fail `--verify`, no flag set gets
+# below 72 of 83, and the exemplars timer.sv / gpio_controller.sv fail every
+# variant. An in-place `--inplace` target would be a style-only mass edit of
+# verified RTL, which CLAUDE.md forbids.
 # ============================================================================
 VERIBLE_LINT    := verible-verilog-lint
-VERIBLE_FORMAT  := verible-verilog-format
 VERIBLE_RULES   := $(PROJ_ROOT)/.rules.verible_lint
 VERIBLE_SOURCES := $(shell find $(RTL_DIR) -name '*.sv')
-# Files the format check/fix operate on. Defaults to the whole tree; CI
-# overrides this with just the RTL files changed in a PR (the existing tree is
-# hand-aligned, so a whole-tree format gate would always fail). Example:
-#   make format-verible-check VERIBLE_CHECK_FILES="rtl/cpu/core/rv32i_alu.sv"
-VERIBLE_CHECK_FILES ?= $(VERIBLE_SOURCES)
-# 4-space indent + generous column limit + aligned ports/assignments. NOTE (bead
-# hn9l): this does NOT reproduce the hand-aligned house style. Measured on
-# v0.0-4063: 81 of 83 rtl/**/*.sv fail `--verify`; alternative flag sets (no
-# alignment, 'preserve' alignment, column 200) only reach 72 of 83, and the
-# house-style exemplars timer.sv / gpio_controller.sv fail every variant. So the
-# format check is ADVISORY in CI and must not be run with -fix over existing RTL.
-# `make lint-verible` is the gate; `make verible` includes the whole-tree format
-# check and is therefore not expected to pass.
-VERIBLE_FMT_FLAGS := --indentation_spaces=4 --column_limit=120 \
-	--assignment_statement_alignment=align \
-	--port_declarations_alignment=align \
-	--named_port_alignment=align
 
-.PHONY: verible lint-verible format-verible-check format-verible-fix
-verible: lint-verible format-verible-check
+.PHONY: verible lint-verible
+verible: lint-verible
 
 lint-verible:
 	@echo "Running Verible style lint..."
 	@command -v $(VERIBLE_LINT) >/dev/null 2>&1 || { echo "ERROR: $(VERIBLE_LINT) not found. Download a release from https://github.com/chipsalliance/verible/releases"; exit 1; }
 	@$(VERIBLE_LINT) --rules_config $(VERIBLE_RULES) $(VERIBLE_SOURCES)
 
-# Non-mutating per-file format check (verible-verilog-format --verify rejects
-# multi-file invocations, so loop). Exits non-zero if any file deviates.
-format-verible-check:
-	@echo "Running Verible format check (non-mutating)..."
-	@command -v $(VERIBLE_FORMAT) >/dev/null 2>&1 || { echo "ERROR: $(VERIBLE_FORMAT) not found. Download a release from https://github.com/chipsalliance/verible/releases"; exit 1; }
-	@cd $(PROJ_ROOT); fail=0; for f in $(VERIBLE_CHECK_FILES); do \
-		test -f "$$f" || { echo "ERROR: file not found: $$f"; fail=1; continue; }; \
-		$(VERIBLE_FORMAT) --verify $(VERIBLE_FMT_FLAGS) "$$f" || fail=1; \
-	done; \
-	if [ $$fail -ne 0 ]; then \
-		echo "Some files deviate from canonical format — run 'make format-verible-fix'."; \
-		exit 1; \
-	fi; \
-	echo "All checked files are canonically formatted."
-
-format-verible-fix:
-	@echo "Rewriting RTL to canonical Verible format..."
-	@command -v $(VERIBLE_FORMAT) >/dev/null 2>&1 || { echo "ERROR: $(VERIBLE_FORMAT) not found. Download a release from https://github.com/chipsalliance/verible/releases"; exit 1; }
-	@cd $(PROJ_ROOT); $(VERIBLE_FORMAT) --inplace $(VERIBLE_FMT_FLAGS) $(VERIBLE_CHECK_FILES)
 
 # ============================================================================
 # CDC check — BerkeleyLab/Bedrock cdc_snitch (informational; see tools/cdc/)
@@ -1235,7 +1202,8 @@ gpu_kernels:
 		tb.cocotb.gpu.kernels.kernel_divergence_basic \
 		tb.cocotb.gpu.kernels.kernel_memory_coalesce \
 		tb.cocotb.gpu.kernels.kernel_shared_mem_pingpong \
-		tb.cocotb.gpu.kernels.kernel_sync; do \
+		tb.cocotb.gpu.kernels.kernel_sync \
+		tb.cocotb.gpu.kernels.kernel_block_warps; do \
 		echo "========================================"; \
 		echo "Running kernel: $$module"; \
 		echo "========================================"; \

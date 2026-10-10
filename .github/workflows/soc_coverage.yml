@@ -90,7 +90,12 @@ jobs:
       # fsm_illegal_state_recovers_to_idle, loopback_slave_idle_fall_arm, clkdiv_ffff_wide_tick_counter) - 3.
       # DERIVED, not measured: the i2c suite itself measured 47 -> 52 locally; the full soc_all_ci was not re-run.
       # Tighten to (measured - 3) from this PR's CI.
-      PASS_FLOOR: '599'
+      # 2026-10-10 (bead gecv): 602 = 605 - 3, where 605 = 602 (pnfw's computed 599 + 3) + 3 new I2C tests in test_i2c.py
+      # (start_stop_condition_times_meet_spec, busy_covers_bus_free_time, condition_tick_reloads_at_clkdiv_ffff; the
+      # stop_to_start_bus_free_time_meets_spec expect_fail was removed and it now passes for real, count unchanged).
+      # COMPUTED, not measured: the i2c suite itself measured 52 -> 55 locally (55/55 pass); the full soc_all_ci was
+      # not re-run. Tighten to (measured - 3) from this PR's CI.
+      PASS_FLOOR: '602'
 
     steps:
       - name: Checkout repository
