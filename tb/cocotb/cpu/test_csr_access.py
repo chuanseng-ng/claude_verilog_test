@@ -695,6 +695,20 @@ def _random_csr_instr(rng: random.Random, rd: int, addr: int) -> list[int]:
     return [*li(SRC, value), _REG_FORM[kind](rd, addr, SRC)]
 
 
+# Structural note (measured, see the coverage dumps): in this core the retire strobe, the I$ miss
+# pulse and the registered branch-redirect pulse NEVER fall in a cycle in which a CSR instruction
+# is in EX, so before the fix mcycle and hpm4 were the only counters that actually lost counts to
+# a CSR in EX.  Reasons: instruction-to-instruction EX spacing is >= 3 cycles (the I$ hit path is
+# not pipelined; retire/commit trails the instruction's own EX by 2 cycles), the I$ miss is
+# detected one cycle after the last older instruction was in EX and then stalls the front end for
+# the refill, and the redirect pulse lands one cycle after the branch while the next real
+# instruction is 3+ cycles away (a CSR in the branch shadow is flushed, so csr_access is 0).
+# These counters are covered through the trap-entry / MRET cycles instead
+# (test_counters_through_trap_and_mret), where the freeze was real.  The random test asserts the
+# overlap stays at zero so the note cannot silently go stale.
+_STRUCTURAL_NO_OVERLAP = ("minstret", "hpm3", "hpm5")
+
+
 def random_counter_program(seed: int, n_items: int = 90) -> list[int]:
     """Straight-line program mixing counter CSR accesses with I$ / D$ misses and taken branches.
 
@@ -767,23 +781,37 @@ async def test_counters_match_cycle_model_random(dut):
         for k, v in mon.cov.items():
             total[k] = total.get(k, 0) + v
     dut._log.info(f"coverage: {dict(sorted(total.items()))}")
-    # The stimulus must really hit each coincidence, or a green run proves nothing.
-    for name in _CTR_WORDS:
-        for case in (
-            "event_with_csr_to_other",
-            "event_with_readonly_to_self",
-            "event_with_write_to_self",
-        ):
-            assert total.get(f"{name}:{case}", 0) > 0, f"stimulus never produced {name}:{case}"
+    # The stimulus must really hit each coincidence, or a green run proves nothing.  Only mcycle
+    # (counts every cycle) and hpm4 (D$ miss, raised from MEM) can coincide with a CSR in EX in
+    # this pipeline -- see the note above ``_STRUCTURAL_NO_OVERLAP``.
+    for case in (
+        "event_with_csr_to_other",
+        "event_with_readonly_to_self",
+        "event_with_write_to_self",
+    ):
+        assert total.get(f"mcycle:{case}", 0) > 0, f"stimulus never produced mcycle:{case}"
+    assert total.get("hpm4:event_with_csr_to_other", 0) > 0, "no D$ miss ever met a CSR in EX"
+    for name in _STRUCTURAL_NO_OVERLAP:
+        for case in ("csr_to_other", "readonly_to_self", "write_to_self"):
+            assert total.get(f"{name}:event_with_{case}", 0) == 0, (
+                f"{name} now overlaps a CSR in EX ({case}): the structural note is out of date"
+            )
 
 
 def _carry_alignment_program() -> list[int]:
-    """Write a low word that wraps ``d`` increments later, then write one half ``n`` NOPs after."""
+    """Write a low word that wraps ``d`` increments later, then write one half ``n`` NOPs after.
+
+    The cycles between the two writes depend on the I$ refills in between, so ``d`` is swept over
+    the whole range that can place the second write's EX on the wrap cycle.
+    """
     prog: list[int] = []
-    for pair_lo, pair_hi in ((CSR_MCYCLE, CSR_MCYCLEH), (CSR_MINSTRET, CSR_MINSTRETH)):
+    for pair_lo, pair_hi, d_max, n_set in (
+        (CSR_MCYCLE, CSR_MCYCLEH, 42, (0, 1)),
+        (CSR_MINSTRET, CSR_MINSTRETH, 14, (0, 1, 2, 3, 4)),
+    ):
         for target in (pair_lo, pair_hi):
-            for d in range(6):
-                for n in range(5):
+            for d in range(d_max):
+                for n in n_set:
                     prog += [*li(SRC, (0xFFFF_FFFF - d) & 0xFFFF_FFFF), CSRRW(0, pair_lo, SRC)]
                     prog += [*li(SRC, 0x1234_0000 + 16 * d + n), *([_NOP] * n)]
                     prog += [CSRRW(0, target, SRC)]
@@ -800,7 +828,7 @@ async def test_counter_carry_vs_write_alignment(dut):
     that both a low-word and a high-word write landed exactly on it, for both counters.
     """
     mem, dbg = await _setup_test(dut)
-    mon = await _run_monitored(dut, mem, dbg, _carry_alignment_program(), timeout_cycles=60000)
+    mon = await _run_monitored(dut, mem, dbg, _carry_alignment_program(), timeout_cycles=120000)
     _assert_clean(mon, "carry alignment sweep")
     dut._log.info(f"coverage: {dict(sorted(mon.cov.items()))}")
     for name in ("mcycle", "minstret"):
@@ -826,6 +854,10 @@ async def test_counters_through_trap_and_mret(dut):
     dut._log.info(f"coverage: {dict(sorted(mon.cov.items()))}")
     assert mon.cov.get("mcycle:event_in_trap_entry", 0) >= 4, "no trap-entry cycles seen"
     assert mon.cov.get("mcycle:event_in_mret", 0) >= 4, "no MRET cycles seen"
+    # The retire strobe and the I$ miss pulse land in trap-entry / MRET cycles even though they
+    # never meet an ordinary CSR in EX; those counts used to be dropped too.
+    for key in ("minstret:event_in_trap_entry", "minstret:event_in_mret", "hpm3:event_in_mret"):
+        assert mon.cov.get(key, 0) > 0, f"trap/MRET program never produced {key}"
     assert await dbg.read_gpr(6) == 4 and await dbg.read_gpr(7) == 4, "trap handler did not return"
 
 
@@ -856,3 +888,46 @@ async def test_minstret_matches_retirements_between_reads(dut):
     assert got == mon.minstret_reads, (
         f"minstret read {got} != retirements counted {mon.minstret_reads}"
     )
+
+
+def _dcache_miss_alignment_program() -> list[int]:
+    """A D$ miss (LW from a fresh line) followed by 0..6 filler instructions, then a CSR access.
+
+    The filler is either NOPs or taken branches (which re-time the front end), so the CSR lands
+    at many offsets from the miss.
+    """
+    prog = [*li(5, DATA_BASE)]
+    off = 0
+    for csr_case in ("other", "readonly", "write"):
+        for fill in ("nop", "branch"):
+            for n in range(7):
+                prog.append(LW(29, 5, off))
+                off += 16
+                for _ in range(n):
+                    prog += [_NOP] if fill == "nop" else [_TAKEN_BEQ, POISON]
+                if csr_case == "other":
+                    prog.append(CSRRS(6, CSR_MIMPID, 0))
+                elif csr_case == "readonly":
+                    prog.append(CSRRS(6, CSR_MHPMCOUNTER4, 0))
+                else:
+                    prog.append(CSRRW(0, CSR_MHPMCOUNTER4, 0))
+    return [*prog, EBREAK()]
+
+
+@cocotb.test()
+async def test_dcache_miss_counter_vs_csr_in_ex(dut):
+    """hpm4 counts a D$ miss that lands in a cycle a CSR instruction is in EX.
+
+    The only event counter that can overlap a CSR in EX in this pipeline.  Other CSR: the miss
+    still counts.  Read-only access to hpm4 itself: still counts.  Write to hpm4 itself: the write
+    wins and that one miss is not added on top.  The monitor checks the model every cycle and its
+    coverage proves each of the three overlaps really occurred.
+    """
+    mem, dbg = await _setup_test(dut)
+    mon = await _run_monitored(
+        dut, mem, dbg, _dcache_miss_alignment_program(), timeout_cycles=40000
+    )
+    _assert_clean(mon, "D$ miss vs CSR")
+    dut._log.info(f"coverage: {dict(sorted(mon.cov.items()))}")
+    for case in ("csr_to_other", "readonly_to_self", "write_to_self"):
+        assert mon.cov.get(f"hpm4:event_with_{case}", 0) > 0, f"D$ miss never overlapped: {case}"
