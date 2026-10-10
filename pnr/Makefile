@@ -684,7 +684,81 @@ librelane-sky130-results:
 # Sky130 Stage 1: CPU standalone with REAL Magic DRC + Netgen LVS (GH #103)
 # Builds native sky130_rv32i_cpu_top.{lef,lib,nl.v} macro views.
 # Uses volare PDK auto-detection (same as librelane-sky130).
-librelane-sky130-cpu:
+###############################################################################
+# sv2v CPU macro pre-processing step (bead claude_verilog_test-dud4, 2026-10-11)
+#
+# Bead dud4 proved the Synlig/UHDM frontend (USE_SYNLIG:true) elaborated two port
+# connections of rv32i_core's u_hazard instance as 5'x
+# (`.if_id_rs1_addr(if_id_reg.instruction[19:15])` / rs2 `[24:20]`: "Range select
+# [639:608] out of bounds on signal if_id_reg: Setting all 32 result bits to undef"), so
+# the committed Sky130 CPU macro (RUN_2026-07-27_05-52-19) mis-forwards. User-approved
+# remedy (2026-10-10): sv2v switch for this macro AND the RTL part-select rewrite
+# (PR #259). This target mirrors asap7-cpu-sv2v: it converts the CPU cone to one
+# Verilog-2005 file so Yosys read_verilog handles it without Synlig. The SRAM stub
+# (sky130_sram_1kbyte_1rw1r_32x256_8_stub.v) is already plain Verilog and stays OUT of
+# this list; it is the only module left undefined (hard macro).
+#
+# Defines: sv2v resolves `ifdef ITSELF, so SRAM_SKY130 (selects the OpenRAM macro
+# instantiation in rv32i_icache/dcache) MUST be passed here. The PDK_/SCL_/__ defines
+# are the ones LibreLane hands the Synlig frontend; no CPU-cone file branches on them,
+# they are passed so the recipe equals the synthesis-only "arm V" of the dud4 experiment
+# (/nobackup/claude_sim_build/dud4/synth/NOTES.md) bit for bit. No rv32i_clock_gate.sv
+# here (unlike ASAP7): the Sky130 CPU has no ICG.
+#
+# Output: pnr/sky130/cpu/rv32i_cpu_top_sv2v.v (generated, gitignored). Do not hand-edit.
+###############################################################################
+SKY130_CPU_SV_FILES := \
+	$(PROJECT_ROOT)/rtl/soc/axi_pkg.sv \
+	$(PROJECT_ROOT)/rtl/soc/soc_addr_map_pkg.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_pipeline_pkg.sv \
+	$(PROJECT_ROOT)/rtl/mem/rv32i_cache_pkg.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_alu.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_branch_comp.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_imm_gen.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_regfile.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_decode.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_forwarding_unit.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_hazard_unit.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_interrupt_ctrl.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_csr_file.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_if.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_id.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv \
+	$(PROJECT_ROOT)/rtl/mem/rv32i_icache.sv \
+	$(PROJECT_ROOT)/rtl/mem/rv32i_dcache.sv \
+	$(PROJECT_ROOT)/rtl/mem/rv32i_cache_arbiter.sv \
+	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_core.sv \
+	$(PROJECT_ROOT)/rtl/cpu/rv32i_cpu_top.sv
+
+SKY130_CPU_SV2V_DEFINES := --define=PDK_sky130A --define=SCL_sky130_fd_sc_hd \
+	--define=__librelane__ --define=__pnr__ --define=SRAM_SKY130
+SKY130_CPU_SV2V_OUT     := $(abspath $(LIBRELANE_SKY130_CPU_DIR)/rv32i_cpu_top_sv2v.v)
+
+.PHONY: sky130-cpu-sv2v
+sky130-cpu-sv2v:
+	@echo "=========================================="
+	@echo "Pre-processing: sv2v SV -> Verilog-2005 (Sky130 CPU macro, bead dud4)"
+	@echo "  Input : $(words $(SKY130_CPU_SV_FILES)) SV files"
+	@echo "  Output: $(SKY130_CPU_SV2V_OUT)"
+	@echo "=========================================="
+	@if [ ! -f "$(SV2V)" ]; then \
+		echo "ERROR: sv2v not found at $(SV2V)"; \
+		echo "Install via: nix-build '<nixpkgs>' -A haskellPackages.sv2v --no-out-link"; \
+		exit 1; fi
+	$(SV2V) $(SKY130_CPU_SV2V_DEFINES) $(SKY130_CPU_SV_FILES) -w $(SKY130_CPU_SV2V_OUT)
+	@# sv2v strips the `/* verilator lint_off/on BLKLOOPINIT */` pair that wraps the
+	@# cache valid-array reset loops; without it LibreLane's Checker.LintErrors
+	@# (Verilator on the flattened Verilog-2005) hard-fails. Same fix and rationale
+	@# as asap7-cpu-sv2v (lint only; no effect on synthesis).
+	sed -i '1i /* verilator lint_off BLKLOOPINIT */' $(SKY130_CPU_SV2V_OUT)
+	@echo "sv2v complete: $$(wc -l < $(SKY130_CPU_SV2V_OUT)) lines"
+
+librelane-sky130-cpu: sky130-cpu-sv2v
 	@echo "=========================================="
 	@echo "Running LibreLane flow — Sky130 CPU Stage 1 (real DRC/LVS)"
 	@echo "  Config : pnr/$(LIBRELANE_SKY130_CPU_DIR)/config.json"
