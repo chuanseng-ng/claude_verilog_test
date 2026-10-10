@@ -122,3 +122,23 @@ instead of the 32-bit value. Not proven on whole-module level (flop names differ
 which defeats the name-based flop exposure; the cone is verbatim source text with the same typedef).
 No CPU module contains this idiom (`sitetable.txt`: the only multi-dimensional-array-member element selects in `rtl/`
 are these four GPU lines).
+
+## Step 4: verdict, recommendation, limits
+
+Verdict: see the dated paragraph in `docs/ASAP7_CPU_SYNLIG_MA7.md`. CPU: remaining sites correct under Synlig
+(type rule + EQUIV of ex/mem/wb/ex1c; step 3 gate-level load/store programs not needed, no CPU module was predicted or
+measured wrong). GPU: second live miscompile (D3) in `gpu_compute_unit`; `gpu_top` cone is fine.
+
+Recommendation (no `rtl/` edits made here): (1) rewrite the remaining sites through named signals and broaden
+`CODING_GUIDELINES.md` to "no part/bit/element select of a struct member anywhere"; (2) GPU: wire-first
+(`logic [N_LANES-1:0][31:0] rs1_w = id_ex_q.rs1_data;`) or build the GPU with sv2v only (the `ma7` config change already
+did) and treat the committed Synlig GPU views as suspect; (3) CI: `tools/verif/check_struct_member_select.py` (source-idiom
+tripwire, baseline `tools/verif/struct_member_select_baseline.txt` = today's 23 select sites + 3 R == 2 types, unit tests
+`tb/tests/test_check_struct_member_select.py`); it catches D1, D2 and D3 because it flags every member select, but its
+baseline key has no line numbers, so a second select of the same `base.member` in the same file is not flagged. A
+stronger check is a per-module Synlig-vs-sv2v miter (`modeq.sh`) in the PD flow.
+
+Not verified: whole-module equivalence of `gpu_compute_unit`/`gpu_top`/`rv32i_core` (flop-name aliasing between the
+frontends defeats the name-based flop exposure; cones were cut verbatim instead); the GPU netlist behaviour in simulation;
+the committed GPU macro views; any select form hidden from the single-line regex (multi-line expressions, macros);
+Sky130 netlists; step 3 (gate-level ld/st programs) was skipped as agreed.

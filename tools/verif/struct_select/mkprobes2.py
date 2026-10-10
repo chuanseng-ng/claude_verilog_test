@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Round-2 probes: vary struct shape / packaging to find what triggers the Synlig mis-offset.
 
 usage: mkprobes2.py <outdir>

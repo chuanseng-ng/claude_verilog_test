@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Generate Synlig struct-member part-select probes (bead ainf).
 
 usage: mkprobes.py <outdir>
@@ -88,10 +89,12 @@ def build() -> dict:
     p["g01_local"] = PK + loc % ("r", "  assign r = d0; assign y = r.f1[7:4];")
     p["g02_local_alw"] = PK + loc % ("r", "  always_comb begin r = d0; y = r.f1[7:4]; end")
     p["g03_array_elem1"] = PK + loc % (
-        "a [0:1]", "  assign a[0] = d0; assign a[1] = d1; assign y = a[1].f1[7:4];"
+        "a [0:1]",
+        "  assign a[0] = d0; assign a[1] = d1; assign y = a[1].f1[7:4];",
     )
     p["g04_array_elem0"] = PK + loc % (
-        "a [0:1]", "  assign a[0] = d0; assign a[1] = d1; assign y = a[0].f1[7:4];"
+        "a [0:1]",
+        "  assign a[0] = d0; assign a[1] = d1; assign y = a[0].f1[7:4];",
     )
     p["g05_reg"] = (
         PK

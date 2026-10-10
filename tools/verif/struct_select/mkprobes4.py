@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Round-4: 3-member struct (real if_id_reg_t layout) in several usage forms.
 
 usage: mkprobes4.py <outdir>
@@ -17,7 +18,8 @@ SUB = "module sub(input logic [4:0] x, output logic [4:0] o); assign o = x ^ 5'h
 def build() -> dict:
     p = {}
     p["n01_assign_port"] = (
-        T + "module top(input pk::t_t s, output logic [4:0] y);\n  assign y = s.instruction[19:15];\nendmodule\n"
+        T
+        + "module top(input pk::t_t s, output logic [4:0] y);\n  assign y = s.instruction[19:15];\nendmodule\n"
     )
     p["n02_assign_local_reg"] = (
         T
@@ -51,7 +53,7 @@ def build() -> dict:
     )
     # the real package, port select
     p["q01_real_ifid_port"] = (
-        "`include \"RTLPKG\"\n"
+        '`include "RTLPKG"\n'
         "module top(input rv32i_pipeline_pkg::if_id_reg_t s, output logic [4:0] y);\n"
         "  assign y = s.instruction[19:15];\nendmodule\n"
     )

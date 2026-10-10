@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Round-3: seeded random struct shapes, to fit the Synlig mis-offset rule.
 
 usage: mkprobes3.py <outdir> [n=120] [seed=1]

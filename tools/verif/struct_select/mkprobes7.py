@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Round-7: usage forms x ranged-member count (R=2 / R=3), incl. LHS selects and unpacked structs.
 
 usage: mkprobes7.py <outdir>
@@ -28,11 +29,24 @@ def build() -> dict:
         w = WIDTH[t]
         hdr = pkg(t)
         # RHS forms, member b ([31:0], not at the struct MSB end except X2S/X2: b is LSB in X2)
-        p[f"{t}_rhs_port"] = hdr + "module top(input pk::s_t s, output logic [3:0] y);\n  assign y = s.b[7:4];\nendmodule\n"
-        p[f"{t}_rhs_hi1"] = hdr + "module top(input pk::s_t s, output logic [1:0] y);\n  assign y = s.b[1:0];\nendmodule\n"
-        p[f"{t}_rhs_a_hi1"] = hdr + "module top(input pk::s_t s, output logic [1:0] y);\n  assign y = s.a[1:0];\nendmodule\n"
-        p[f"{t}_rhs_bit"] = hdr + "module top(input pk::s_t s, output logic y);\n  assign y = s.b[1];\nendmodule\n"
-        p[f"{t}_rhs_bit0"] = hdr + "module top(input pk::s_t s, output logic y);\n  assign y = s.b[0];\nendmodule\n"
+        p[f"{t}_rhs_port"] = (
+            hdr
+            + "module top(input pk::s_t s, output logic [3:0] y);\n  assign y = s.b[7:4];\nendmodule\n"
+        )
+        p[f"{t}_rhs_hi1"] = (
+            hdr
+            + "module top(input pk::s_t s, output logic [1:0] y);\n  assign y = s.b[1:0];\nendmodule\n"
+        )
+        p[f"{t}_rhs_a_hi1"] = (
+            hdr
+            + "module top(input pk::s_t s, output logic [1:0] y);\n  assign y = s.a[1:0];\nendmodule\n"
+        )
+        p[f"{t}_rhs_bit"] = (
+            hdr + "module top(input pk::s_t s, output logic y);\n  assign y = s.b[1];\nendmodule\n"
+        )
+        p[f"{t}_rhs_bit0"] = (
+            hdr + "module top(input pk::s_t s, output logic y);\n  assign y = s.b[0];\nendmodule\n"
+        )
         p[f"{t}_rhs_local"] = hdr + (
             f"module top(input logic [{w - 1}:0] d, output logic [1:0] y);\n"
             "  pk::s_t r; assign r = d; assign y = r.b[1:0];\nendmodule\n"
@@ -90,11 +104,18 @@ def build() -> dict:
         )
         p[f"{t}_lhs_assign"] = hdr + (
             "module top(input logic [7:0] n, input pk::s_t s, output pk::s_t y);\n"
-            + "".join(f"  assign y.{m} = s.{m};\n" for m in ("a", "c", "z", "v") if f"logic [" in DEFS[t] and (f" {m};" in DEFS[t]))
+            + "".join(
+                f"  assign y.{m} = s.{m};\n"
+                for m in ("a", "c", "z", "v")
+                if "logic [" in DEFS[t] and (f" {m};" in DEFS[t])
+            )
             + "  assign y.b[31:8] = s.b[31:8]; assign y.b[7:0] = n;\nendmodule\n"
         )
     # unpacked structs
-    for t, defs in (("U2", "logic [15:0] a; logic [31:0] b;"), ("U3", "logic [15:0] a; logic [31:0] b; logic [7:0] c;")):
+    for t, defs in (
+        ("U2", "logic [15:0] a; logic [31:0] b;"),
+        ("U3", "logic [15:0] a; logic [31:0] b; logic [7:0] c;"),
+    ):
         p[f"{t}_unp_rhs"] = (
             f"package pk; typedef struct {{ {defs} }} s_t; endpackage\n"
             "module top(input logic [31:0] db, output logic [3:0] y);\n"

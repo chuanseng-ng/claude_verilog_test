@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Round-8 (D3): element select of a struct member that is itself a multi-dimensional packed array.
 
 usage: mkprobes8.py <outdir>
@@ -10,9 +11,16 @@ import sys
 
 P = {}
 T = "package pk; typedef struct packed { logic [3:0] a; logic [3:0][7:0] r; logic [2:0] b; logic [4:0] c; } s_t; endpackage\n"
-P["d3_const_idx"] = T + "module top(input pk::s_t s, output logic [7:0] y);\n  assign y = s.r[2];\nendmodule\n"
-P["d3_const_idx0"] = T + "module top(input pk::s_t s, output logic [7:0] y);\n  assign y = s.r[0];\nendmodule\n"
-P["d3_rt_idx"] = T + "module top(input pk::s_t s, input logic [1:0] i, output logic [7:0] y);\n  assign y = s.r[i];\nendmodule\n"
+P["d3_const_idx"] = (
+    T + "module top(input pk::s_t s, output logic [7:0] y);\n  assign y = s.r[2];\nendmodule\n"
+)
+P["d3_const_idx0"] = (
+    T + "module top(input pk::s_t s, output logic [7:0] y);\n  assign y = s.r[0];\nendmodule\n"
+)
+P["d3_rt_idx"] = (
+    T
+    + "module top(input pk::s_t s, input logic [1:0] i, output logic [7:0] y);\n  assign y = s.r[i];\nendmodule\n"
+)
 P["d3_loop_idx"] = T + (
     "module top(input pk::s_t s, output logic [3:0][7:0] y);\n"
     "  always_comb for (int l = 0; l < 4; l++) y[l] = s.r[l];\nendmodule\n"
@@ -29,7 +37,9 @@ P["d3_wire_first"] = T + (
     "module top(input pk::s_t s, output logic [3:0][7:0] y);\n"
     "  logic [3:0][7:0] w; assign w = s.r;\n  always_comb for (int l = 0; l < 4; l++) y[l] = w[l];\nendmodule\n"
 )
-P["d3_part_of_elem"] = T + "module top(input pk::s_t s, output logic [3:0] y);\n  assign y = s.r[2][5:2];\nendmodule\n"
+P["d3_part_of_elem"] = (
+    T + "module top(input pk::s_t s, output logic [3:0] y);\n  assign y = s.r[2][5:2];\nendmodule\n"
+)
 P["d3_X2"] = (
     "package pk; typedef struct packed { logic [3:0][7:0] r; logic [7:0] b; } s_t; endpackage\n"
     "module top(input pk::s_t s, output logic [7:0] y);\n  assign y = s.r[2];\nendmodule\n"

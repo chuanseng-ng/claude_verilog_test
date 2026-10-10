@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Round-5: read the Synlig stride directly, using structs with large members so hi*X stays in bounds.
 
 usage: mkprobes5.py <outdir>

@@ -192,3 +192,28 @@ Scratch: `/nobackup/claude_sim_build/dud4/asap7_sim/`. `asap7/gen_cell_lib.sh <o
 `CELLLIB=` the cell models), `sky130/gen_all_progs.sh`, `sky130/run_arm.sh`, `sky130/compare_arms.py diff`,
 `sky130/port_matrix.py`, `asap7/run_yosys_gate.sh`, `asap7/first_divergence.py`, `asap7/inject_stuck.py`.
 Netlists are not committed.
+
+## Update 2026-10-10 (bead `ainf`): is "Synlig + PR #259" safe for the remaining struct-member selects?
+
+Full evidence: `docs/SYNLIG_STRUCT_SELECT_AINF.md`. Verdict, stated no stronger than measured:
+
+* **CPU (`rtl/cpu`): no second Synlig miscompile of this class was found.** Synlig has three struct-select defects: D1
+  (`s.m[..]` on a struct type with exactly two packed-range members), D2 (LHS part-select of a member) and D3 (element
+  select of a multi-dimensional packed-array member). In `rtl/cpu` there are 15 remaining member selects
+  (`ex:109`, `mem:103,104,111,112`, `wb:75`, `ex1c:122-150,197`), all on struct types with 7..19 ranged members; the only
+  CPU R == 2 type (`if_id_reg_t`) has no select since PR #259; there is no LHS member select and no multi-dimensional
+  array member in any CPU struct. MEASURED: Synlig-vs-sv2v miter + SAT (flop-exposed, with a NOT-EQUIV negative
+  control) proves `rv32i_pipeline_ex`, `_mem`, `_wb`, `_ex1c` EQUIV, in addition to the earlier hazard, forwarding,
+  ALU, branch-compare, decode and immgen proofs. So the byte/halfword load-extraction and store-lane paths are
+  covered by a proof, not by a simulation. NOT covered: whole-core equivalence (`rv32i_core`, regfile, CSR file, caches
+  were not miter-checked), and defects of other classes (the `ma7` regfile `OPT_MUXTREE` class is a separate question).
+* **GPU (`rtl/gpu`): NOT safe under Synlig.** `gpu_compute_unit` reads `id_ex_q.rs1_data[l]` / `rs2_data[l]`
+  (`logic [N_LANES-1:0][31:0]` members): Synlig elaborates the 32-bit element as ONE bit (D3). The VLD/VST/VLDS/VSTS
+  addresses and store data are wrong in a Synlig netlist; the committed Synlig-built `gpu_top` macro views are affected.
+* **Fragility.** Whether a CPU struct is exposed to D1 depends on how many members carry a packed range: `if_id_reg_t`
+  is R == 2 today (safe only because it has no selects); the next-closest struct types are R >= 7 in the CPU and
+  `dma_engine.desc_t` R == 3 (one removal from R == 2). Adding a member select to `if_id_reg_t`, `warp_state_t` or
+  `div_entry_t`, or removing members from a 3-ranged-member struct, would silently re-arm D1. Any new GPU/CPU use of a
+  multi-dimensional packed member would re-arm D3. The conclusion above is a property of the current source, not of
+  Synlig. Recommendation: `tools/verif/check_struct_member_select.py` (baseline of today's hits) in CI, rewrite the
+  remaining sites through named wires, and for the GPU use sv2v or the named-wire rewrite before any Synlig GPU build.

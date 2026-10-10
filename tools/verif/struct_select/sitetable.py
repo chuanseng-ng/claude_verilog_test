@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Mechanical site table for the Synlig struct-member select defects (bead ainf).
 
 usage: sitetable.py [repo-root]
@@ -43,7 +44,9 @@ def parse_types(root: Path) -> dict:
 
 def var_types(root: Path, types: dict) -> dict:
     out: dict = {}
-    pat = re.compile(rf"\b(?:\w+::)?({'|'.join(map(re.escape, types))})\s+(?:(?:input|output|ref)\s+)?({IDENT})")
+    pat = re.compile(
+        rf"\b(?:\w+::)?({'|'.join(map(re.escape, types))})\s+(?:(?:input|output|ref)\s+)?({IDENT})"
+    )
     for p in sorted((root / "rtl").rglob("*.sv")):
         txt = strip_comments(p.read_text(encoding="utf-8", errors="replace"))
         for m in pat.finditer(txt):
@@ -64,7 +67,11 @@ def main() -> int:
     vtypes = var_types(root, types)
     print("== struct types (R = members declared with a packed range)")
     for n, t in sorted(types.items()):
-        flag = "  <-- R=2: D1 HOT" if t["R"] == 2 else ("  (one edit from R=2)" if t["R"] in (1, 3) else "")
+        flag = (
+            "  <-- R=2: D1 HOT"
+            if t["R"] == 2
+            else ("  (one edit from R=2)" if t["R"] in (1, 3) else "")
+        )
         print(f"{n:22s} R={t['R']:2d} members={len(t['members']):2d} {t['file']}{flag}")
     print("== member select sites")
     print("file:line | expr | base var | type | R | rw | prediction")

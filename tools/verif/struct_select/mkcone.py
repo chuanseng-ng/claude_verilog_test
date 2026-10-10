@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Cut the combinational cones around the GPU struct-member selects out of the real sources (bead ainf).
 
 usage: mkcone.py <repo-root> <outdir>
@@ -21,7 +22,9 @@ def main() -> int:
     )
     typedef = re.search(r"typedef struct packed \{[^{}]*\} id_ex_t;", cu).group(0)
     # nothing in id_ex_t's body contains braces except none; assert
-    always = re.search(r"always_comb begin\n\s*logic \[31:0\] shmem_byte_addr;.*?\n    end\n", cu, re.S).group(0)
+    always = re.search(
+        r"always_comb begin\n\s*logic \[31:0\] shmem_byte_addr;.*?\n    end\n", cu, re.S
+    ).group(0)
     assert "id_ex_q.rs1_data[l]" in always and td is not None
     body = (
         "module gpu_cu_cone\n    import gpu_pkg::*;\n(\n"
@@ -46,8 +49,12 @@ def main() -> int:
     # id_ex_t lives in the module in the source; hoist it into the cone module is not legal for a port type,
     # so declare it in a package instead.
     pkg = "package cu_cone_pkg;\n    import gpu_pkg::*;\n    " + typedef + "\nendpackage\n"
-    body = body.replace(f"    {typedef}\n", "").replace("    localparam int WARP_W = $clog2(N_WARPS);\n", "")
-    body = body.replace("    import gpu_pkg::*;\n(", "    import gpu_pkg::*;\n    import cu_cone_pkg::*;\n(")
+    body = body.replace(f"    {typedef}\n", "").replace(
+        "    localparam int WARP_W = $clog2(N_WARPS);\n", ""
+    )
+    body = body.replace(
+        "    import gpu_pkg::*;\n(", "    import gpu_pkg::*;\n    import cu_cone_pkg::*;\n("
+    )
     with open(os.path.join(out, "gpu_cu_cone.sv"), "w", encoding="utf-8") as f:
         f.write(pkg + body)
     top = (
