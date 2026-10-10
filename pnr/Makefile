@@ -803,6 +803,13 @@ dft-scan-check: sky130-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
 		--netlist $(SKY130_SOC_SV2V_OUT) --expect-gates 20
 
+# Same proof on the ASAP7 SoC netlist. That netlist instantiates ICGx1_ASAP7_75t_R and sram_1rw_256x32_asap7
+# without defining them, so the checker needs the analysis models (it fails rather than pass vacuously).
+.PHONY: dft-scan-check-asap7
+dft-scan-check-asap7: asap7-soc-sv2v
+	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
+		--netlist $(SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/asap7_cell_models.v --expect-gates 20
+
 # Sky130 Stage 2: SoC P&R with real DRC + LVS.
 # Requires:  make sky130-soc-sv2v   (generates soc_top_sv2v.v)
 # Requires:  pnr/sky130/cpu/macro/rv32i_cpu_top.{lef,gds,spice,lib}  (Stage-1 outputs)

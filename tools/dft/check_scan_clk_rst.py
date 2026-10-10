@@ -4,6 +4,7 @@
 Bead claude_verilog_test-j41m.2 (DFT Stage 1a), docs/design/DFT_ARCHITECTURE.md section 14.
 
 usage: check_scan_clk_rst.py design.json [--top soc_top] [--scan-mode scan_mode_i] [--expect-gates N]
+                             [--models cells.v ...]
        check_scan_clk_rst.py --netlist soc_top_sv2v.v [...]   # runs yosys itself (needs yosys on PATH)
 
 Input is a Yosys JSON of the FLATTENED, `proc`-ed design (no techmap, so $adff/$dff/$dlatch/$mux
@@ -26,8 +27,10 @@ backwards through combinational cells and applies the scan-mode rules:
 
 Exit 0 only if there are no violations AND (with --expect-gates) the number of scan-mode muxes
 found is at least N, so that a design in which the muxes were optimised away or renamed cannot
-pass vacuously. Negative controls (run by tests/test_dft_scan_check.py): replacing the muxes with
-wires makes this fail.
+pass vacuously. A cell type with no definition (a library cell or hard macro the netlist instantiates
+but does not define) also fails, because its outputs cannot be traced; give it a model with --models
+(tools/dft/asap7_cell_models.v for the ASAP7 SoC netlist). Negative controls (run by
+tb/tests/test_dft_scan_check.py): replacing the muxes with wires makes this fail.
 """
 import argparse
 import json
@@ -46,9 +49,11 @@ def is_seq(t):
     return t.startswith(SEQ_PREFIXES)
 
 
-def run_yosys(netlist, top):
+def run_yosys(netlist, top, models=()):
     out = Path(tempfile.mkdtemp(prefix="scanchk_")) / "d.json"
-    script = f"read_verilog -sv -defer {netlist}; hierarchy -top {top}; proc; flatten; opt_clean; write_json {out}"
+    pre = "".join(f"read_verilog -sv {m}; " for m in models)
+    script = (f"{pre}read_verilog -sv -defer {netlist}; hierarchy -top {top}; proc; flatten; opt_clean; "
+              f"write_json {out}")
     subprocess.run([os.environ.get("YOSYS", "yosys"), "-q", "-p", script], check=True)
     return str(out)
 
@@ -59,6 +64,7 @@ def load(path, top):
     drivers = {}   # bit -> (cell name, port)
     cells = mod["cells"]
     for cname, c in cells.items():
+        c.setdefault("port_directions", {})
         for port, bits in c["connections"].items():
             if c["port_directions"].get(port) == "output":
                 for b in bits:
@@ -82,9 +88,20 @@ def main():
     ap.add_argument("--scan-mode", default="scan_mode_i")
     ap.add_argument("--expect-gates", type=int, default=0)
     ap.add_argument("--max-print", type=int, default=12)
+    ap.add_argument("--models", action="append", default=[],
+                    help="Verilog behavioural/blackbox models of library cells and hard macros that the "
+                         "netlist instantiates but does not define (e.g. tools/dft/asap7_cell_models.v)")
     a = ap.parse_args()
-    path = a.json or run_yosys(a.netlist, a.top)
+    path = a.json or run_yosys(a.netlist, a.top, a.models)
     cells, drivers, ports, in_bits = load(path, a.top)
+    # A cell whose module is undefined has no port directions, so its outputs would never be traced and every
+    # cone ending in it would silently look controlled. Refuse to pass on such a netlist.
+    undefined = sorted({c["type"] for c in cells.values()
+                        if not c["type"].startswith("$") and not c["port_directions"]})
+    if undefined:
+        print(f"FAIL: cell types with no definition (outputs untraceable, result would be vacuous): "
+              f"{', '.join(undefined)}; pass --models FILE defining them")
+        return 1
     sm_bits = set(b for b in ports[a.scan_mode]["bits"] if isinstance(b, int))
 
     def cell_inputs(c):
