@@ -1,0 +1,10 @@
+read_verilog timer.v
+hierarchy -top timer
+synth -top timer -flatten
+dffunmap
+expose -evert-dff
+opt_clean -purge
+abc -g AND,NAND,OR,NOR,XOR,XNOR,ANDNOT,ORNOT,MUX
+opt_clean -purge
+tee -o cut_stat.rpt stat
+write_blif -gates timer_cut.blif
