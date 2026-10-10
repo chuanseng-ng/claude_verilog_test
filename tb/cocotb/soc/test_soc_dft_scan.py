@@ -201,6 +201,12 @@ async def test_scan_out_placeholder_is_zero(dut):
     dut.scan_en_i.value = 1
     await _toggle(dut.test_clk_i, 4)
     assert int(dut.scan_out_o.value) == 0
+    # Return every test input to its inactive value (also exercises both toggle directions).
+    dut.scan_en_i.value = 0
+    dut.scan_in_i.value = 0
+    dut.scan_mode_i.value = 0
+    await Timer(2, units="ns")
+    assert int(dut.scan_out_o.value) == 0
 
 
 @cocotb.test()

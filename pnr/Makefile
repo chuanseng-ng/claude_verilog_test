@@ -796,6 +796,13 @@ sky130-soc-sv2v:
 	@echo "  DFF count (reg decls): $$(grep -c '^\s*reg\s' $(SKY130_SOC_SV2V_OUT))"
 	@echo "  GPU cells (should be 0): $$(grep -c 'gpu_top\b' $(SKY130_SOC_SV2V_OUT) || echo 0)"
 
+# DFT Stage 1a (bead claude_verilog_test-j41m.2): prove on the flattened Sky130 netlist that in scan mode every
+# async reset is tester-controlled and every flop is test-clocked. Needs yosys on PATH (or YOSYS=/path/to/yosys).
+.PHONY: dft-scan-check
+dft-scan-check: sky130-soc-sv2v
+	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
+		--netlist $(SKY130_SOC_SV2V_OUT) --expect-gates 20
+
 # Sky130 Stage 2: SoC P&R with real DRC + LVS.
 # Requires:  make sky130-soc-sv2v   (generates soc_top_sv2v.v)
 # Requires:  pnr/sky130/cpu/macro/rv32i_cpu_top.{lef,gds,spice,lib}  (Stage-1 outputs)
