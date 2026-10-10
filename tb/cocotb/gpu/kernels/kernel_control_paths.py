@@ -14,22 +14,35 @@ Phase 4 (kernel must avoid)" with a 4-deep per-warp divergence stack, gpu_pkg::D
                                 not idle, not done, no interrupt, and it stays there
   test_soft_reset_recovers_from_error   CTRL.reset leaves ERROR for idle and a fresh kernel then
                                 runs to the correct result
+  test_error_reset_kills_running_kernel_then_divergent_kernel_matches_model   (bead q6w0) reset
+                                from ERROR also kills the still-spinning errored kernel, and a
+                                divergent kernel then matches gpu_ref_model on every lane
+  test_soft_reset_during_running_is_protocol_clean   (bead q6w0) CTRL.reset while RUNNING aborts
+                                the kernel only after the in-flight AXI beat completes: no
+                                dropped valid, no orphan R/B beat, nothing issued after IDLE
+  test_soft_reset_contract_config_irq_perf   (bead q6w0) reset keeps the config registers, the
+                                CTRL.irq_en bit it was written with and the perf counters; it
+                                clears the IRQ latch; reset from IDLE and DONE is harmless
+  test_hardware_reset_clears_error_and_config   (bead q6w0) rst_n still clears everything
 """
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.dirname(__file__))
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import FallingEdge, RisingEdge
 from gpu_asm import (
     Kernel, instr_responder, data_responder,
-    vmov_tid_x, vaddi, vsll, vst, vret, vblt, N_LANES,
+    vmov_tid_x, vaddi, vsll, vst, vret, vblt, vjmp, N_LANES,
 )
+from gpu_ref_model import GpuRefModel
+from kernel_divergence_basic import build_kernel as divergence_kernel, BASE_OUT as DIV_OUT
 from gpu_test_utils import (
     gpu_reset, gpu_launch, gpu_wait_done, axil_write, axil_read,
     GPU_CTRL, GPU_STATUS, GPU_BLOCK_Y, GPU_BLOCK_Z, GPU_IRQ_CLR, GPU_KERNEL_PC,
-    GPU_GRID_X, GPU_GRID_Y, GPU_GRID_Z, GPU_BLOCK_X,
+    GPU_GRID_X, GPU_GRID_Y, GPU_GRID_Z, GPU_BLOCK_X, GPU_ARG_PTR, GPU_PERFCNT0,
 )
 
 OUT = 0x300
@@ -196,10 +209,10 @@ async def test_stack_overflow_sets_error(dut):
         t.kill()
 
 
-# Strict expect_fail (bead q6w0 / GH #261): gpu_compute_unit's gpu_error_o is cleared only by
-# rst_n, so after CTRL.reset the next launch goes straight back to ERROR.  Remove expect_fail when
-# fixed; do not weaken the done / result checks.
-@cocotb.test(expect_fail=True)
+# Bead q6w0 / GH #261: gpu_compute_unit's gpu_error_o used to be cleared only by rst_n, so after
+# CTRL.reset the next launch went straight back to ERROR.  Fixed by the synchronous soft-reset
+# clear (see MEMORY_MAP.md "GPU_CTRL.RESET").
+@cocotb.test()
 async def test_soft_reset_recovers_from_error(dut):
     """CTRL.reset leaves ERROR for IDLE, after which a fresh kernel gives the right result."""
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
@@ -259,3 +272,319 @@ async def test_reset_after_done_then_new_kernel_runs(dut):
     check_store(mem)
     instr_task.kill()
     data_task.kill()
+
+
+# ---------------------------------------------------------------------------------------------
+# Bead q6w0: CTRL.reset contract.  Helpers first.
+# ---------------------------------------------------------------------------------------------
+LOOP_OUT = 0x500
+SPIN_BASE = 0x2000
+STORE_BASE = 0x1000
+
+
+def loop_store_kernel(out: int = LOOP_OUT) -> dict:
+    """Never finishes: store tid+0x40 to out+tid*4 forever (VST; VJMP back)."""
+    k = Kernel(base_pc=0)
+    k.emit(vmov_tid_x(1))
+    k.emit(vaddi(2, 0, 2))
+    k.emit(vsll(3, 1, 2))
+    k.emit(vaddi(9, 3, out - 7))
+    k.emit(vaddi(7, 1, 0x40))
+    top = k.pc()
+    k.emit(vst(7, 9, 0))
+    k.emit(vjmp(top - k.pc()))
+    return k.instructions()
+
+
+def error_then_spin_kernel(base: int) -> dict:
+    """nested_kernel(5) relocated to ``base``, with the first fall-through slot after the 5th
+    (overflowing) branch replaced by a self-jump.  The overflow sets gpu_error_o with no push, the
+    warp falls through into the self-jump and spins forever: the errored kernel is still
+    *running* when the host sees STATUS.error."""
+    regs = (4, 8, 12, 16, 20)
+    thresholds = (7, 6, 5, 4, 3)
+    k = Kernel(base_pc=base)
+    k.emit(vmov_tid_x(1))
+    for r, t in zip(regs, thresholds):
+        k.emit(vaddi(r, 0, t))
+    spin_pc = None
+    for r in regs:
+        bpc = k.pc()
+        target = bpc + 32 + r
+        k.emit(vblt(1, r, bpc, target))
+        if r == regs[-1]:
+            spin_pc = k.pc()
+        while k.pc() < target:
+            k.emit(vret())
+    k.emit(vret())
+    k.patch(spin_pc, vjmp(0))
+    return k.instructions()
+
+
+class BusMonitor:
+    """Passive AXI protocol checker on gpu_top's two master ports, sampled at the falling edge
+    (every DUT output and every testbench-driven input is settled there).
+
+    Checks: a valid is never withdrawn (or its payload changed) before its ready; every
+    response beat the testbench offers is accepted (an unaccepted R/B/IF-R beat is an orphan: the
+    master abandoned its transaction); request and response handshake counts agree once idle."""
+
+    REQ = {  # name: (valid, ready, payload)
+        "ifar": ("m_axil_if_arvalid", "m_axil_if_arready", "m_axil_if_araddr"),
+        "ar":   ("m_axi_arvalid", "m_axi_arready", "m_axi_araddr"),
+        "aw":   ("m_axi_awvalid", "m_axi_awready", "m_axi_awaddr"),
+        "w":    ("m_axi_wvalid", "m_axi_wready", "m_axi_wdata"),
+    }
+    RSP = {  # name: (valid, ready)
+        "ifr": ("m_axil_if_rvalid", "m_axil_if_rready"),
+        "r":   ("m_axi_rvalid", "m_axi_rready"),
+        "b":   ("m_axi_bvalid", "m_axi_bready"),
+    }
+
+    def __init__(self, dut):
+        self.dut = dut
+        self.hs = {n: 0 for n in (*self.REQ, *self.RSP)}
+        self.offered = {n: 0 for n in self.RSP}
+        self.errors = []
+        self.cycle = 0
+        self._stuck = {}
+        self.task = None
+
+    def start(self):
+        self.task = cocotb.start_soon(self._run())
+
+    def stop(self):
+        self.task.kill()
+
+    async def _run(self):
+        d = self.dut
+        while True:
+            await FallingEdge(d.clk)
+            self.cycle += 1
+            for n, (v, r, p) in self.REQ.items():
+                valid, ready, pay = (int(getattr(d, x).value) for x in (v, r, p))
+                prev = self._stuck.pop(n, None)
+                if prev is not None and (not valid or prev != pay):
+                    self.errors.append(f"cycle {self.cycle}: {n} valid withdrawn/changed before ready")
+                if valid and ready:
+                    self.hs[n] += 1
+                elif valid:
+                    self._stuck[n] = pay
+            for n, (v, r) in self.RSP.items():
+                valid, ready = int(getattr(d, v).value), int(getattr(d, r).value)
+                if valid:
+                    self.offered[n] += 1
+                    if ready:
+                        self.hs[n] += 1
+                    else:
+                        self.errors.append(f"cycle {self.cycle}: orphan {n} beat (offered, not accepted)")
+
+    def check_clean(self, where: str):
+        assert not self.errors, f"{where}: AXI protocol errors: {self.errors[:3]}"
+        for n in self.RSP:
+            assert self.offered[n] == self.hs[n], f"{where}: {n} beat offered but not accepted"
+        assert self.hs["ifar"] == self.hs["ifr"], (
+            f"{where}: fetch AR {self.hs['ifar']} != R {self.hs['ifr']}")
+        assert self.hs["ar"] == self.hs["r"], f"{where}: AR {self.hs['ar']} != R {self.hs['r']}"
+        assert self.hs["aw"] == self.hs["w"] == self.hs["b"], (
+            f"{where}: AW/W/B {self.hs['aw']}/{self.hs['w']}/{self.hs['b']}")
+
+
+async def settle(dut, cycles: int = 20):
+    for _ in range(cycles):
+        await RisingEdge(dut.clk)
+
+
+def check_model(mem: dict, words: dict, out_base: int):
+    """Every lane's store from the RTL run equals the reference model's."""
+    ref = GpuRefModel(n_lanes=N_LANES).run(words)
+    assert ref, "reference model produced no stores"
+    for addr, want in ref.items():
+        got = mem.get(addr)
+        assert got is not None and got & 0xFFFF_FFFF == want & 0xFFFF_FFFF, (
+            f"mem[{addr:#x}]={got}, model says {want:#x}")
+    for lane in range(N_LANES):
+        assert out_base + 4 * lane in ref
+
+
+@cocotb.test()
+async def test_error_reset_kills_running_kernel_then_divergent_kernel_matches_model(dut):
+    """ERROR does not stop the errored kernel (it keeps fetching).  CTRL.reset must: after IDLE
+    nothing is fetched or stored, and a divergent kernel then matches gpu_ref_model on all lanes
+    (a stale divergence stack / warp state / error flag would break it)."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    await gpu_reset(dut)
+    div_words = divergence_kernel()
+    image = dict(error_then_spin_kernel(SPIN_BASE))
+    image.update(div_words)
+    mem: dict = {}
+    bus = BusMonitor(dut)
+    bus.start()
+    instr_task = cocotb.start_soon(instr_responder(dut, image, latency=1))
+    data_task = cocotb.start_soon(data_responder(dut, mem))
+
+    await gpu_launch(dut, kernel_pc=SPIN_BASE, block_x=8)
+    await wait_status(dut, ST_ERROR, timeout=6000)
+    fetches = bus.hs["ifar"]
+    await settle(dut, 40)
+    assert bus.hs["ifar"] > fetches, "precondition: the errored kernel should still be spinning"
+
+    await axil_write(dut, GPU_CTRL, CTRL_RESET)
+    await wait_status(dut, ST_IDLE, timeout=200)
+    await settle(dut, 20)
+    n_fetch, n_ar, n_aw = bus.hs["ifar"], bus.hs["ar"], bus.hs["aw"]
+    await settle(dut, 200)
+    assert (bus.hs["ifar"], bus.hs["ar"], bus.hs["aw"]) == (n_fetch, n_ar, n_aw), (
+        "the errored kernel kept running after CTRL.reset returned the GPU to IDLE")
+    assert await axil_read(dut, GPU_STATUS) == ST_IDLE
+    bus.check_clean("after reset from ERROR")
+
+    mem.clear()
+    await gpu_launch(dut, kernel_pc=0, block_x=8)
+    await wait_status(dut, ST_DONE, timeout=6000)
+    check_model(mem, div_words, DIV_OUT)
+    bus.check_clean("after the recovery kernel")
+    for t in (instr_task, data_task):
+        t.kill()
+    bus.stop()
+
+
+@cocotb.test()
+async def test_soft_reset_during_running_is_protocol_clean(dut):
+    """CTRL.reset while RUNNING aborts the kernel at a clean AXI boundary.  Sweeping the reset
+    over 20 offsets, with slow responders so it lands in fetch, AR/R, AW/W/B and ALU phases: the
+    bus stays protocol-clean, the GPU reaches IDLE, nothing is issued afterwards, and a fresh
+    kernel then runs correctly."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    await gpu_reset(dut)
+    image = dict(loop_store_kernel())
+    for pc, word in store_kernel().items():
+        image[STORE_BASE + pc] = word
+    mem: dict = {}
+    bus = BusMonitor(dut)
+    bus.start()
+    instr_task = cocotb.start_soon(instr_responder(dut, image, latency=2))
+    data_task = cocotb.start_soon(data_responder(dut, mem, ar_latency=1, r_latency=1,
+                                                 aw_latency=2, w_latency=1))
+    stores_seen = 0
+    for delay in range(0, 80, 4):
+        await gpu_launch(dut, kernel_pc=0, block_x=8)
+        await settle(dut, delay)
+        st = await axil_read(dut, GPU_STATUS)
+        assert st == 0, f"delay {delay}: loop kernel should be RUNNING, STATUS={st:#x}"
+        await axil_write(dut, GPU_CTRL, CTRL_RESET)
+        await wait_status(dut, ST_IDLE, timeout=400)
+        await settle(dut, 20)
+        bus.check_clean(f"reset at +{delay}")
+        snap, n_ifar = dict(mem), bus.hs["ifar"]
+        await settle(dut, 60)
+        assert mem == snap and bus.hs["ifar"] == n_ifar, f"delay {delay}: activity after IDLE"
+        stores_seen += len(snap)
+        mem.clear()
+        await gpu_launch(dut, kernel_pc=STORE_BASE, block_x=8)
+        await wait_status(dut, ST_DONE, timeout=6000)
+        check_store(mem)
+        bus.check_clean(f"fresh kernel after reset at +{delay}")
+        mem.clear()
+        await axil_write(dut, GPU_CTRL, CTRL_RESET)
+        await wait_status(dut, ST_IDLE, timeout=200)
+    assert stores_seen > 0, "the sweep never aborted a kernel that had stored anything"
+    for t in (instr_task, data_task):
+        t.kill()
+    bus.stop()
+
+
+@cocotb.test()
+async def test_soft_reset_contract_config_irq_perf(dut):
+    """What CTRL.reset keeps and what it clears (MEMORY_MAP.md GPU_CTRL.RESET)."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    await gpu_reset(dut)
+    image = dict(store_kernel())
+    image.update(error_then_spin_kernel(SPIN_BASE))
+    mem: dict = {}
+    instr_task = cocotb.start_soon(instr_responder(dut, image))
+    data_task = cocotb.start_soon(data_responder(dut, mem))
+    cfg = {GPU_KERNEL_PC: 0, GPU_GRID_X: 3, GPU_GRID_Y: 2, GPU_GRID_Z: 5, GPU_BLOCK_X: 8,
+           GPU_BLOCK_Y: 0x11, GPU_BLOCK_Z: 0x22, GPU_ARG_PTR: 0xDEAD_BEE0}
+
+    async def regs():
+        return {a: await axil_read(dut, a) for a in cfg}
+
+    # Reset from IDLE is harmless: config kept, still IDLE, no spurious DONE.
+    for a, v in cfg.items():
+        await axil_write(dut, a, v)
+    await axil_write(dut, GPU_CTRL, CTRL_RESET | CTRL_IRQ_EN)
+    await settle(dut, 10)
+    assert await axil_read(dut, GPU_STATUS) == ST_IDLE
+    assert await regs() == cfg, "CTRL.reset from IDLE disturbed a configuration register"
+    assert await axil_read(dut, GPU_CTRL) == CTRL_IRQ_EN, "irq_en written with the reset is kept"
+
+    # DONE: IRQ latch set, perf counters count; reset clears the latch, keeps config and counters.
+    await axil_write(dut, GPU_CTRL, CTRL_LAUNCH | CTRL_IRQ_EN)
+    await wait_status(dut, ST_DONE)
+    check_store(mem)
+    assert await axil_read(dut, IRQ_STATUS) == 1 and dut.gpu_irq_o.value == 1
+    perf = [await axil_read(dut, GPU_PERFCNT0 + 4 * i) for i in range(6)]
+    assert perf[0] > 0 and perf[1] > 0, f"perf counters did not count: {perf}"
+    await axil_write(dut, GPU_CTRL, CTRL_RESET | CTRL_IRQ_EN)
+    await wait_status(dut, ST_IDLE, timeout=200)
+    assert await axil_read(dut, IRQ_STATUS) == 0 and dut.gpu_irq_o.value == 0, "IRQ latch survived"
+    assert await regs() == cfg
+    assert [await axil_read(dut, GPU_PERFCNT0 + 4 * i) for i in range(6)] == perf, (
+        "perf counters are kept across CTRL.reset (post-mortem), cleared by the next launch")
+
+    # The retained irq_en still raises the IRQ for the next finished kernel.
+    mem.clear()
+    await axil_write(dut, GPU_CTRL, CTRL_LAUNCH | CTRL_IRQ_EN)
+    await wait_status(dut, ST_DONE)
+    check_store(mem)
+    assert dut.gpu_irq_o.value == 1
+    await axil_write(dut, GPU_CTRL, CTRL_RESET | CTRL_IRQ_EN)
+    await wait_status(dut, ST_IDLE, timeout=200)
+
+    # ERROR: no IRQ, reset leaves IRQ low and the GPU launchable.
+    await axil_write(dut, GPU_KERNEL_PC, SPIN_BASE)
+    await axil_write(dut, GPU_CTRL, CTRL_LAUNCH | CTRL_IRQ_EN)
+    await wait_status(dut, ST_ERROR, timeout=6000)
+    assert dut.gpu_irq_o.value == 0
+    await axil_write(dut, GPU_CTRL, CTRL_RESET | CTRL_IRQ_EN)
+    await wait_status(dut, ST_IDLE, timeout=200)
+    assert dut.gpu_irq_o.value == 0 and await axil_read(dut, IRQ_STATUS) == 0
+    assert await axil_read(dut, GPU_KERNEL_PC) == SPIN_BASE, "kernel address is config: kept"
+    mem.clear()
+    await axil_write(dut, GPU_KERNEL_PC, 0)
+    await axil_write(dut, GPU_CTRL, CTRL_LAUNCH | CTRL_IRQ_EN)
+    await wait_status(dut, ST_DONE)
+    check_store(mem)
+    assert dut.gpu_irq_o.value == 1
+    for t in (instr_task, data_task):
+        t.kill()
+
+
+@cocotb.test()
+async def test_hardware_reset_clears_error_and_config(dut):
+    """rst_n still clears everything, including the sticky compute-unit error and the config."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    await gpu_reset(dut)
+    mem: dict = {}
+    instr_task = cocotb.start_soon(instr_responder(dut, nested_kernel(5)))
+    data_task = cocotb.start_soon(data_responder(dut, mem))
+    await gpu_launch(dut, kernel_pc=0, block_x=8)
+    await wait_status(dut, ST_ERROR, timeout=6000)
+    assert dut.u_cu.gpu_error_o.value == 1
+    instr_task.kill()
+    data_task.kill()
+    await gpu_reset(dut)
+    assert dut.u_cu.gpu_error_o.value == 0, "hardware reset must clear the compute-unit error"
+    assert await axil_read(dut, GPU_STATUS) == ST_IDLE
+    for a in (GPU_KERNEL_PC, GPU_BLOCK_X, GPU_GRID_X, GPU_CTRL):
+        assert await axil_read(dut, a) == 0, f"config {a:#x} survived hardware reset"
+    assert await axil_read(dut, GPU_PERFCNT0) == 0
+    mem.clear()
+    instr_task = cocotb.start_soon(instr_responder(dut, store_kernel()))
+    data_task = cocotb.start_soon(data_responder(dut, mem))
+    await gpu_launch(dut, kernel_pc=0, block_x=8)
+    await wait_status(dut, ST_DONE, timeout=6000)
+    check_store(mem)
+    for t in (instr_task, data_task):
+        t.kill()
