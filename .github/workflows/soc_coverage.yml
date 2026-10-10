@@ -100,10 +100,14 @@ jobs:
       # COMPUTED, not measured: the i2c suite itself measured 52 -> 55 locally (55/55 pass); the full soc_all_ci was
       # not re-run. Tighten to (measured - 3) from this PR's CI.
       PASS_FLOOR: '602'
-      # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`), CI log-grep formula.  Slice-1 base
-      # measured 207; a5ze slice 1 added 15 (222, measured), slice 2 added __ADDED__ (__MEAS__, measured locally).
-      # Floor = measured - 3.
-      CPU_PASS_FLOOR: '230'
+      # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`), CI log-grep formula (`passed$`; the
+      # expect_fail tests print "passed: failed as expected" and are NOT counted).
+      # 2026-10-10 (bead a5ze slice 2): 229 = 232 - 3.  232 is the count of a full local
+      # coverage_cpu_gpu run on HEAD + this branch (207 at the slice-1 base, +15 slice 1, +10 slice 2:
+      # 2 icache, 5 gpu control-path kernels, 3 other); that run had 1 red line, the then-misdeclared
+      # expect_fail kernel test, fixed and re-run on its own (6/6 pass), so 232 is measured but not from a
+      # single all-green invocation.  Tighten to (measured - 3) from this PR's CI.
+      CPU_PASS_FLOOR: '229'
 
     steps:
       - name: Checkout repository

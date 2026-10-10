@@ -90,12 +90,13 @@ async def program(dut, kernel_pc: int, block_x: int = 8):
 
 
 async def wait_status(dut, mask: int, timeout: int = 4000) -> int:
+    st = 0
     for _ in range(timeout):
         st = await axil_read(dut, GPU_STATUS)
         if st & mask:
             return st
         await RisingEdge(dut.clk)
-    raise TimeoutError(f"STATUS never showed {mask:#x}")
+    raise AssertionError(f"STATUS never showed {mask:#x}; last STATUS={st:#x}")
 
 
 def check_store(mem: dict):
@@ -195,7 +196,10 @@ async def test_stack_overflow_sets_error(dut):
         t.kill()
 
 
-@cocotb.test()
+# Strict expect_fail (bead q6w0 / GH #261): gpu_compute_unit's gpu_error_o is cleared only by
+# rst_n, so after CTRL.reset the next launch goes straight back to ERROR.  Remove expect_fail when
+# fixed; do not weaken the done / result checks.
+@cocotb.test(expect_fail=True)
 async def test_soft_reset_recovers_from_error(dut):
     """CTRL.reset leaves ERROR for IDLE, after which a fresh kernel gives the right result."""
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
@@ -219,6 +223,37 @@ async def test_soft_reset_recovers_from_error(dut):
     for pc, word in store_kernel().items():
         k.emit(word)
     instr_task = cocotb.start_soon(instr_responder(dut, k.instructions()))
+    await gpu_launch(dut, kernel_pc=base, block_x=8)
+    await wait_status(dut, ST_DONE, timeout=6000)
+    check_store(mem)
+    instr_task.kill()
+    data_task.kill()
+
+
+@cocotb.test()
+async def test_reset_after_done_then_new_kernel_runs(dut):
+    """Control for the error-recovery test: DONE -> CTRL.reset -> a kernel at another PC runs.
+
+    If this passes while the error-recovery test fails, the wedge is specific to leaving ERROR.
+    """
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    await gpu_reset(dut)
+    mem: dict = {}
+    data_task = cocotb.start_soon(data_responder(dut, mem))
+    base = 0x1000
+    image = dict(store_kernel())
+    k = Kernel(base_pc=base)
+    for word in store_kernel().values():
+        k.emit(word)
+    image.update(k.instructions())
+    instr_task = cocotb.start_soon(instr_responder(dut, image))
+    await gpu_launch(dut, kernel_pc=0, block_x=8)
+    await wait_status(dut, ST_DONE, timeout=6000)
+    await axil_write(dut, GPU_CTRL, CTRL_RESET)
+    for _ in range(4):
+        await RisingEdge(dut.clk)
+    assert await axil_read(dut, GPU_STATUS) == ST_IDLE
+    mem.clear()
     await gpu_launch(dut, kernel_pc=base, block_x=8)
     await wait_status(dut, ST_DONE, timeout=6000)
     check_store(mem)
