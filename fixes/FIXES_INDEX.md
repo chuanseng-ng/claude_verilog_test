@@ -28,6 +28,7 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 | [Section 11 (below)](#11-i2c-startstop-condition-times-bead-gecv) | 2026-10-10 | I2C bit engine | LOW (P3) | ✅ Fixed |
 | [Section 12 (below)](#12-gpu-warp-count-saturated-at-7-bead-47lf-gh-254) | 2026-10-10 | GPU warp scheduler | MEDIUM (P2) | ✅ Fixed |
 | [Section 13 (below)](#13-hazard-unit-rs-part-select-synlig-frontend-hazard-bead-dud4) | 2026-10-10 | Frontend hazard (Synlig) | HIGH (P1) | ✅ Fixed (RTL workaround) |
+| [Section 14 (below)](#14-gpu-gpu_ctrlreset-cannot-recover-from-error-bead-q6w0-gh-261) | 2026-10-10 | GPU control / soft reset | MEDIUM (P3, bead) | ✅ Fixed |
 
 ---
 
@@ -323,6 +324,26 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 - **Sweep**: whole `rtl/` tree searched for any `<ident>.<field>[...]` select; these were the only two in port connections of any module (full list in the PR description). The remaining struct-field selects are inside module bodies and elaborate correctly under Synlig (no further "out of bounds" warnings in the Sky130 CPU synthesis log).
 - **Not changed here**: `pnr/sky130/cpu/config.json` (sv2v switch), ASAP7 configs, macro views. The committed CPU macro views remain the defective netlists until the macro is re-hardened (separate PD step under bead dud4).
 - **Verification**: see the PR description (Synlig synthesis-only flop count and `fwd_b_*` presence, lint, cocotb regression, sv2v-converted yosys equivalence with negative control).
+
+---
+
+## 14. GPU GPU_CTRL.reset Cannot Recover From ERROR (bead q6w0, GH #261)
+
+**Files**: `rtl/gpu/gpu_top.sv` (quiesce + `soft_clr` sequencer, FSM), `rtl/gpu/gpu_compute_unit.sv` (`soft_clr_i`: pipeline flush, `gpu_error_o`), `rtl/gpu/warp_scheduler.sv` (`soft_clr_i`), `rtl/gpu/gpu_command_queue.sv` (`soft_clr_i`)
+**Date**: 2026-10-10
+**Severity**: P3 as filed; the trace showed it larger than the bead (see below)
+**Found by**: bead a5ze slice 2 (`test_soft_reset_recovers_from_error`), root-caused here with a signal-level probe
+
+### Issue Fixed
+- **Problem (traced)**: after a divergence-stack overflow, `GPU_CTRL.reset` returned `gpu_top` to IDLE but `gpu_compute_unit.gpu_error_o` (cleared only by `rst_n`) stayed 1, so the next launch went `RUNNING -> ERROR` in one cycle (`state_q` 0 -> 1 -> 3, `cu_err=1` throughout). Beyond the bead: (1) ERROR does not stop the errored kernel (`warp_scheduler.gpu_error_i` is an unused "reserved" input): the warp kept fetching and finishing in the background, `div_depth` 4 -> 0 and `warp_done` set 300 cycles later, state still ERROR; (2) `ctrl_reset_q` was ignored in RUNNING (the FSM acted on it only in DONE / ERROR), so a hung or runaway kernel could not be aborted; (3) a reset from ERROR while the errored kernel was mid-fetch or mid-store would have left an AXI transaction half-done, and an orphan fetch R beat would have set `instr_rdy_q` in the next kernel.
+- **Fix**: `GPU_CTRL.reset` is a synchronous quiesce-then-clear from any state. `gpu_top` sets `rst_pend_q`/`halt_q`, which stop new fetches (`pipe_stall_i` of the scheduler) and new VLD/VST/VLDS/VSTS requests (a fetch AR that is valid but not accepted is never withdrawn), waits for `!if_outst_q && !mu_stall && !sm_stall` (an accepted fetch, one coalescer burst, one shared-memory access have all finished), then pulses `soft_clr` for one clock: FSM -> IDLE, IRQ latch cleared, pending descriptor dropped, scheduler emptied (`n_warps_q`, busy, done, depths, round-robin pointer), compute-unit pipeline valids, `instr_rdy_q` and `gpu_error_o` cleared. Configuration registers, the `irq_en` bit and the perf counters are kept (contract: `MEMORY_MAP.md` "GPU_CTRL.RESET semantics", pending spec-owner confirmation).
+- **Why not OR the reset into `rst_n`**: that makes a register-driven asynchronous reset (glitch / CDC / scan hazard; PR #258 adds scan-reset muxes on `gpu_domain_rst_n`). All new clears are synchronous.
+- **State audit** (cleared by: HW = `rst_n`, SOFT = this fix, LAUNCH = next launch, - = never):
+  `state_q` HW+SOFT; `irq_latch_q` HW+SOFT+LAUNCH+IRQ_CLR; `r_*` config regs and `r_irq_en_q` HW only (kept by design); perf counters HW+LAUNCH (kept by soft reset: post-mortem); command-queue `valid_q` HW+SOFT; scheduler `n_warps_q`/`warp_busy`/`warp_done`/`div_depth`/`rr_ptr` HW+SOFT+LAUNCH; `warp_pc`/`warp_mask`/`div_stack` entries HW (pc/mask)+LAUNCH, not soft-cleared (unobservable with `n_warps_q` = 0); CU `if_id_q`/`id_ex_q`/`ex_wb_q` valid HW+SOFT, other fields HW only (dead without valid); `instr_rdy_q` HW+SOFT; `gpu_error_o` HW+SOFT (was HW only); coalescer FSM and `gpu_memory_unit.busy_q` HW only and drained, not cleared; `shared_memory` `pending_q`/`busy_q` HW only and drained; shared-memory contents and vector register file: no reset at all (never cleared); AXI-Lite slave write/read capture FSMs and `bvalid_q` HW only (must survive: the reset write's own response).
+- **Not changed (decided, not missed)**: bead `6hy6`'s `BLOCK_X = 0` hang (`n_warps_q` = 0 never issues, never done) was unrecoverable except by hardware reset (RUNNING ignored `CTRL.reset`); it is now recoverable by `CTRL.reset`. The hang itself is untouched. Warp-count and tail-lane behaviour unchanged.
+- **Latency**: IDLE is visible at least 2 cycles after the `CTRL` write completes (was 1); longer while an AXI beat drains. A `CTRL.START` written during the drain is dropped. A slave that never answers stalls the reset, as it stalls the kernel.
+- **Tests** (`kernel_control_paths.py`; 4 red on the old RTL, green after): `test_soft_reset_recovers_from_error` (`expect_fail` removed, limits unchanged), `test_error_reset_kills_running_kernel_then_divergent_kernel_matches_model`, `test_soft_reset_during_running_is_protocol_clean` (20 offsets, passive AXI monitor), `test_soft_reset_contract_config_irq_perf`, `test_hardware_reset_clears_error_and_config` (control, green before and after).
+- **Physical design**: `gpu_top` is a hard macro on ASAP7 and cannot be re-hardened on this host (beads `ma7` / `lxv` / `2kn`); the committed macro views are functionally behind this RTL. No PD run. The GPU is not in the Sky130 SoC.
 
 ---
 
