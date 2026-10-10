@@ -410,6 +410,24 @@ module rv32i_core #(
     // =========================================================================
     // Hazard Unit
     // =========================================================================
+    // IF/ID source-register fields, routed through named signals on purpose
+    // (bead dud4): a part-select of a packed-struct field written directly in
+    // a port connection, e.g. .if_id_rs1_addr(if_id_reg.instruction[19:15]),
+    // is mis-elaborated by the Synlig/UHDM frontend ("Range select out of
+    // bounds ... Setting all 32 result bits to undef" -> the port is tied to
+    // 5'bx), which turns every rd==rs hazard/forwarding compare into a
+    // don't-care and lets synthesis delete the fwd_b_* flops. The RTL is
+    // correct per the LRM; this is a frontend workaround. Do NOT fold these
+    // back into the port connections. See docs/development/CODING_GUIDELINES.md
+    // section 1.3 and fixes/FIXES_INDEX.md.
+    logic [31:0] if_id_instr_w;
+    logic [4:0]  if_id_rs1_addr_w;
+    logic [4:0]  if_id_rs2_addr_w;
+
+    assign if_id_instr_w    = if_id_reg.instruction;
+    assign if_id_rs1_addr_w = if_id_instr_w[19:15];
+    assign if_id_rs2_addr_w = if_id_instr_w[24:20];
+
     rv32i_hazard_unit u_hazard (
         .id_ex_rs1_addr    (id_ex_reg.rs1_addr),
         .id_ex_rs2_addr    (id_ex_reg.rs2_addr),
@@ -433,8 +451,8 @@ module rv32i_core #(
         .ex_mem_mem_rd     (ex_mem_reg.mem_rd),
         .mem_wb_rd_addr    (mem_wb_reg.rd_addr),
         .mem_wb_reg_wr_en  (mem_wb_reg.reg_wr_en),
-        .if_id_rs1_addr    (if_id_reg.instruction[19:15]),
-        .if_id_rs2_addr    (if_id_reg.instruction[24:20]),
+        .if_id_rs1_addr    (if_id_rs1_addr_w),
+        .if_id_rs2_addr    (if_id_rs2_addr_w),
         .if_cache_stall    (if_cache_stall),
         .mem_cache_stall   (mem_cache_stall),
         .ex_pc_redirect    (ex_pc_redirect_r),

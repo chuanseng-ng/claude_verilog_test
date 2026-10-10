@@ -26,6 +26,8 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 | [Section 9 (below)](#9-axi-lite-ring-phantom-decerr-r-beat-bead-3xtv) | 2026-10-07 | AXI-Lite Protocol | MEDIUM (P2) | ✅ Fixed |
 | [Section 10 (below)](#10-uart-rx-false-start-window-bead-rqvo) | 2026-10-09 | UART RX | LOW (P3) | ✅ Fixed |
 | [Section 11 (below)](#11-i2c-startstop-condition-times-bead-gecv) | 2026-10-10 | I2C bit engine | LOW (P3) | ✅ Fixed |
+| [Section 12 (below)](#12-gpu-warp-count-saturated-at-7-bead-47lf-gh-254) | 2026-10-10 | GPU warp scheduler | MEDIUM (P2) | ✅ Fixed |
+| [Section 13 (below)](#13-hazard-unit-rs-part-select-synlig-frontend-hazard-bead-dud4) | 2026-10-10 | Frontend hazard (Synlig) | HIGH (P1) | ✅ Fixed (RTL workaround) |
 
 ---
 
@@ -302,6 +304,25 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 - **Same class elsewhere in `rtl/gpu`**: none found. The other 3-bit quantities are warp IDs (0..7). No 6-bit thread count exists, `BLOCK_Y`/`BLOCK_Z` and the grid dimensions are stored but unused in Phase 4, and there is no active-warps perf counter.
 - **Tests** (red on the old RTL, green after): `kernel_block_warps.py` `test_block_sizes_57_to_64` (`expect_fail` removed, limits unchanged, now every size 57..64 individually), `test_lane_results_match_model` (all lanes of every warp vs `GpuRefModel` at `BLOCK_X` 1, 8, 9, 56, 57, 58, 60, 63, 64), `test_block_sizes_above_cap` (65, 72, 128, 1023); `test_warp_scheduler.py` `test_eight_warps_issue_and_complete`.
 - **Physical design**: `gpu_top` is a hard macro on ASAP7 (`pnr/asap7/soc/macro/gpu_top.*`) and cannot be re-hardened on this host (beads `ma7` / `lxv` / `2kn`). The committed macro views are now functionally behind this RTL (and were already Synlig-built, see `ma7`). No PD run was made. The GPU is not in the Sky130 SoC.
+
+---
+
+## 13. Hazard-Unit rs Part-Select, Synlig Frontend Hazard (bead dud4)
+
+**File**: `rtl/cpu/core/rv32i_core.sv` (`u_hazard` port connections `.if_id_rs1_addr` / `.if_id_rs2_addr`)
+**Date**: 2026-10-10
+**Severity**: P1 (committed Sky130 CPU macro netlist executed code incorrectly; ASAP7 CPU macro has the same two lines, inferred, untested)
+**Found by**: bead dud4 (PR #256, `docs/SKY130_CPU_SYNLIG_DUD4.md`) with a synthesis-only follow-up
+
+### Issue Fixed
+- **Problem**: `rv32i_core.sv` connected the hazard unit as `.if_id_rs1_addr(if_id_reg.instruction[19:15])` and `.if_id_rs2_addr(if_id_reg.instruction[24:20])`, a part-select of a packed-struct field written directly in a port connection. The Synlig/Surelog (UHDM) frontend mis-resolves it: `Range select [639:608] out of bounds on signal \if_id_reg: Setting all 32 result bits to undef` (and `[799:768]`), and the RTLIL carries `connect \if_id_rs1_addr 5'x`. Every `rd_addr == if_id_rs?_addr` compare in `rv32i_hazard_unit` (load-use detect and the pre-decoded forwarding selects) became a don't-care, and synthesis merged/deleted the `fwd_b_*` registered selects (Synlig netlist 4,829 flops and no `fwd_b_*`; sv2v netlist 4,834 with 5).
+- **The RTL was always correct per the LRM.** sv2v, Verilator and every cocotb suite elaborate the construct correctly. This is a frontend-hazard workaround, not a functional bug fix, and it changes no behaviour.
+- **Why nothing caught it**: Verilator lint, Yosys synth checks, LVS and per-module SAT equivalence all pass with the defect present; the fault is in a port connection BETWEEN modules and only the Synlig warning (not gated) reports it. Only gate-vs-RTL simulation exposes it.
+- **Fix**: the two selects now go through named signals: `if_id_instr_w = if_id_reg.instruction;` `if_id_rs1_addr_w = if_id_instr_w[19:15];` `if_id_rs2_addr_w = if_id_instr_w[24:20];`, and the port connections use `if_id_rs1_addr_w` / `if_id_rs2_addr_w`. A comment at the declaration names the hazard and bead dud4 so nobody folds them back.
+- **Rule added**: `docs/development/CODING_GUIDELINES.md` section 1.3, "No part/bit-select of a struct field in a port connection".
+- **Sweep**: whole `rtl/` tree searched for any `<ident>.<field>[...]` select; these were the only two in port connections of any module (full list in the PR description). The remaining struct-field selects are inside module bodies and elaborate correctly under Synlig (no further "out of bounds" warnings in the Sky130 CPU synthesis log).
+- **Not changed here**: `pnr/sky130/cpu/config.json` (sv2v switch), ASAP7 configs, macro views. The committed CPU macro views remain the defective netlists until the macro is re-hardened (separate PD step under bead dud4).
+- **Verification**: see the PR description (Synlig synthesis-only flop count and `fwd_b_*` presence, lint, cocotb regression, sv2v-converted yosys equivalence with negative control).
 
 ---
 
