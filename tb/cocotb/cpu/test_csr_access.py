@@ -19,15 +19,24 @@ GPR results are read back through the APB debug window, so no internal signal is
   test_dcache_flush_op_forms        0x7C0 fires only for non-suppressed forms (observed as a
                                     write-back reaching the AXI memory)
   test_dcache_inval_op_forms        0x7C1 likewise (observed as a dirty line being discarded)
+  test_mcycle_counts_every_clock_cycle           mcycle vs the testbench clock count (kiit)
+  test_counters_match_cycle_model_random         per-cycle counter state vs CsrModel.tick() over
+                                                 random programs with events coinciding with CSRs
+  test_counter_carry_vs_write_alignment          low/high-word carry against a write to the other
+                                                 half, swept over the alignment
+  test_counters_through_trap_and_mret            counters keep counting in trap-entry / MRET cycles
+  test_minstret_matches_retirements_between_reads  minstret delta == retire strobes between reads
 """
 
+import random
 from dataclasses import dataclass
 
 import cocotb
-from cocotb.triggers import RisingEdge
+from cocotb.triggers import ReadOnly, RisingEdge
 
 from sim.riscv_encoder import (
     ADDI,
+    BEQ,
     BNE,
     CSRRC,
     CSRRCI,
@@ -36,8 +45,11 @@ from sim.riscv_encoder import (
     CSRRW,
     CSRRWI,
     EBREAK,
+    ECALL,
+    JAL,
     LUI,
     LW,
+    MRET,
     SW,
 )
 from tb.cocotb.common.clock_reset import reset_dut
@@ -45,6 +57,7 @@ from tb.cocotb.cpu.phase2_test_utils import _setup_test
 from tb.models.csr_model import (
     CSR_DCACHE_FLUSH,
     CSR_DCACHE_INVAL,
+    CSR_MARCHID,
     CSR_MCAUSE,
     CSR_MCOUNTINHIBIT,
     CSR_MCYCLE,
@@ -54,7 +67,6 @@ from tb.models.csr_model import (
     CSR_MHPMCOUNTER3,
     CSR_MHPMCOUNTER4,
     CSR_MHPMCOUNTER5,
-    CSR_MARCHID,
     CSR_MIE,
     CSR_MIMPID,
     CSR_MINSTRET,
@@ -64,6 +76,7 @@ from tb.models.csr_model import (
     CSR_MTVEC,
     CSR_MVENDORID,
     CsrModel,
+    IllegalCsrError,
 )
 
 _REG_FORM = {"RW": CSRRW, "RS": CSRRS, "RC": CSRRC}
@@ -132,7 +145,9 @@ def expected_results(ops: list[Op], *, timer_irq: int = 0, ext_irq: int = 0) -> 
     return model
 
 
-async def fresh_run(dut, mem, dbg, program: list[int], preset=None, *, timer_irq=0, ext_irq=0):
+async def fresh_run(
+    dut, mem, dbg, program: list[int], preset=None, *, timer_irq=0, ext_irq=0, timeout_cycles=6000
+):
     """Reset the DUT and run ``program`` against a re-seeded memory (the clock keeps running).
 
     One clock and one AXI memory model per cocotb test; every program gets a fresh reset.
@@ -145,7 +160,7 @@ async def fresh_run(dut, mem, dbg, program: list[int], preset=None, *, timer_irq
     for i, word in enumerate(program):
         mem.write_word(4 * i, word)
     await RisingEdge(dut.clk_i)
-    await dbg.wait_halted(timeout_cycles=6000)
+    await dbg.wait_halted(timeout_cycles=timeout_cycles)
 
 
 async def run_ops(dut, mem, dbg, ops: list[Op], *, timer_irq: int = 0, ext_irq: int = 0):
@@ -158,7 +173,9 @@ async def run_ops(dut, mem, dbg, ops: list[Op], *, timer_irq: int = 0, ext_irq: 
             continue
         got = await dbg.read_gpr(i + 1)
         if got != want[i]:
-            bad.append(f"  op {i} {op.describe()}: rd=x{i + 1} got {got:#010x}, want {want[i]:#010x}")
+            bad.append(
+                f"  op {i} {op.describe()}: rd=x{i + 1} got {got:#010x}, want {want[i]:#010x}"
+            )
     assert not bad, "CSR result mismatch vs spec model:\n" + "\n".join(bad)
 
 
@@ -424,12 +441,12 @@ N_FILLER = 8  # back-to-back legal CSR reads between the two counter samples
 CSR_PC_A, CSR_PC_M = 0x04, 0x08  # first mcycle / minstret sample (loop body start)
 
 
-def _counter_loop_program() -> tuple[list[int], int, int]:
+def _counter_loop_program(filler_csr: int = CSR_MIMPID) -> tuple[list[int], int, int]:
     """Loop body: sample mcycle (A), sample minstret (M), N CSR reads, sample both again."""
     body = [
         CSRRS(1, CSR_MCYCLE, 0),  # A  @0x04
         CSRRS(3, CSR_MINSTRET, 0),  # M  @0x08
-        *[CSRRS(0, CSR_MIMPID, 0)] * N_FILLER,
+        *[CSRRS(0, filler_csr, 0)] * N_FILLER,
     ]
     pc_b = 4 + 4 * len(body)
     body += [CSRRS(2, CSR_MCYCLE, 0), CSRRS(4, CSR_MINSTRET, 0)]  # B, B'
@@ -438,9 +455,9 @@ def _counter_loop_program() -> tuple[list[int], int, int]:
     return [ADDI(5, 0, 2), *body, EBREAK()], pc_b, pc_b + 4
 
 
-async def _sample_counters(dut, mem, dbg):
+async def _sample_counters(dut, mem, dbg, filler_csr: int = CSR_MIMPID):
     """Run the loop; return (d_mcycle, tb_cycles, d_minstret, tb_commits) for the LAST pass."""
-    program, pc_b, pc_bm = _counter_loop_program()
+    program, pc_b, pc_bm = _counter_loop_program(filler_csr)
     commit_cycle: dict[int, int] = {}
     commits: list[int] = []  # cycle number of every commit
     state = {"n": 0}
@@ -465,11 +482,11 @@ async def _sample_counters(dut, mem, dbg):
     return d_cycle, tb_cycles, d_inst, tb_commits
 
 
-# Strict expect_fail (bead kiit / GH #260): rv32i_csr_file.sv:332 freezes every counter in any cycle
-# a CSR instruction is in EX.  Measured: 20 counted over 30 real cycles in a window of 10 CSR
-# instructions.  When the RTL is fixed this XPASSes, which cocotb reports as a failure -- delete
-# expect_fail then; do NOT widen the +-1 tolerance.
-@cocotb.test(expect_fail=True)
+# Regression test for bead kiit / GH #260 (was a strict expect_fail until the fix): the counters sat
+# in the else of "if (csr_access && !csr_illegal)", so every cycle a legal CSR instruction was in EX
+# dropped ALL increments.  Measured before the fix: 20 counted over 30 real cycles in a window of
+# 10 CSR instructions.  The +-1 tolerance below must not be widened.
+@cocotb.test()
 async def test_mcycle_counts_every_clock_cycle(dut):
     """mcycle is a cycle counter: across a CSR-heavy window it must advance by the number of
     clocks the testbench saw, not skip the cycles in which a CSR instruction is in EX.
@@ -484,4 +501,358 @@ async def test_mcycle_counts_every_clock_cycle(dut):
     dut._log.info(f"minstret delta {d_inst} vs testbench commits {tb_commits}")
     assert abs(d_cycle - tb_cycles) <= 1, (
         f"mcycle advanced {d_cycle} over {tb_cycles} real clock cycles"
+    )
+
+
+@cocotb.test()
+async def test_mcycle_counts_through_read_only_mcycle_reads(dut):
+    """Reading mcycle itself with CSRRS rd, mcycle, x0 does not write it, so it must not stall it.
+
+    Same window as above, but the filler CSR instructions are read-only accesses to mcycle.  A fix
+    that lets a CSR write override the increment without checking that the instruction writes at
+    all would write the stale value back on every one of these reads.
+    """
+    mem, dbg = await _setup_test(dut)
+    d_cycle, tb_cycles, _, _ = await _sample_counters(dut, mem, dbg, CSR_MCYCLE)
+    assert abs(d_cycle - tb_cycles) <= 1, (
+        f"mcycle advanced {d_cycle} over {tb_cycles} cycles with read-only mcycle fillers"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Cycle-accurate counter checker (bead kiit)
+# ---------------------------------------------------------------------------
+_CTR_WORDS = {
+    "mcycle": (CSR_MCYCLE, CSR_MCYCLEH),
+    "minstret": (CSR_MINSTRET, CSR_MINSTRETH),
+    "hpm3": (CSR_MHPMCOUNTER3,),
+    "hpm4": (CSR_MHPMCOUNTER4,),
+    "hpm5": (CSR_MHPMCOUNTER5,),
+}
+_STROBE = {
+    "minstret": "retire_i",
+    "hpm3": "icache_miss_i",
+    "hpm4": "dcache_miss_i",
+    "hpm5": "branch_mispred_i",
+}
+_INHIBIT_BIT = {"mcycle": 0, "minstret": 2, "hpm3": 3, "hpm4": 4, "hpm5": 5}
+_STATE = {
+    CSR_MCYCLE: ("mcycle_q", 0),
+    CSR_MCYCLEH: ("mcycle_q", 32),
+    CSR_MINSTRET: ("minstret_q", 0),
+    CSR_MINSTRETH: ("minstret_q", 32),
+    CSR_MHPMCOUNTER3: ("mhpmcounter3_q", 0),
+    CSR_MHPMCOUNTER4: ("mhpmcounter4_q", 0),
+    CSR_MHPMCOUNTER5: ("mhpmcounter5_q", 0),
+    CSR_MCOUNTINHIBIT: ("mcountinhibit_q", 0),
+}
+_SIGNALS = (
+    "csr_access",
+    "csr_addr",
+    "csr_op",
+    "csr_wdata",
+    "rs1_addr",
+    "csr_illegal",
+    "trap_entry",
+    "mret",
+    "retire_i",
+    "branch_mispred_i",
+    "icache_miss_i",
+    "dcache_miss_i",
+)
+_CSR_KIND = {1: "RW", 2: "RS", 3: "RC", 5: "RW", 6: "RS", 7: "RC"}
+
+
+class CounterMonitor:
+    """Steps CsrModel.tick() once per clock from the CSR file's own inputs and compares the full
+    counter state (mcycle[h], minstret[h], mhpmcounter3-5, mcountinhibit) with the DUT every cycle.
+
+    Samples are taken after each rising edge, when the inputs for the NEXT edge have settled, so
+    the model's prediction made at sample n is compared with the DUT state seen at sample n + 1.
+    ``cov`` counts the cycles in which a counter's increment coincided with each kind of CSR
+    activity, so a test can prove its stimulus really produced the case it claims to check.
+    """
+
+    def __init__(self, dut):
+        self.dut = dut
+        self.csr = dut.u_core.u_csr
+        self.cycle = 0
+        self.mismatches: list[str] = []
+        self.cov: dict[str, int] = {}
+        self.minstret_reads: list[int] = []  # retire strobes already counted at each read in EX
+        self.retired = 0
+        self._task = None
+        self._model: CsrModel | None = None
+
+    def start(self):
+        self._task = cocotb.start_soon(self._run())
+
+    def stop(self):
+        if self._task is not None:
+            self._task.cancel()
+
+    def _bump(self, key: str):
+        self.cov[key] = self.cov.get(key, 0) + 1
+
+    def _snapshot(self) -> dict[int, int]:
+        out = {}
+        for csr, (name, shift) in _STATE.items():
+            out[csr] = (int(getattr(self.csr, name).value) >> shift) & 0xFFFF_FFFF
+        return out
+
+    async def _run(self):
+        while True:
+            await RisingEdge(self.dut.clk_i)
+            await ReadOnly()
+            if not int(self.csr.rst_n.value):
+                self._model, self.retired = None, 0
+                continue
+            snap = self._snapshot()
+            if self._model is None:
+                self._model = CsrModel()
+                self._model.regs.update(snap)
+            else:
+                for csr, want in snap.items():
+                    got = self._model.regs[csr]
+                    if got != want and len(self.mismatches) < 8:
+                        self.mismatches.append(
+                            f"cycle {self.cycle} csr {csr:#05x}: "
+                            f"DUT {want:#010x}, model {got:#010x}"
+                        )
+                self._model.regs.update(snap)  # resync so one bug is reported once
+            self._step(snap[CSR_MCOUNTINHIBIT])
+            self.cycle += 1
+
+    def _step(self, inhibit: int):
+        sig = {n: int(getattr(self.csr, n).value) for n in _SIGNALS}
+        legal = bool(sig["csr_access"]) and not sig["csr_illegal"]
+        squashed = bool(sig["trap_entry"] or sig["mret"])
+        addr, op = sig["csr_addr"], sig["csr_op"]
+        imm = bool(op & 4)
+        wdata_low = sig["csr_wdata"] & 0x1F
+        writes = _CSR_KIND.get(op) == "RW" or (wdata_low != 0 if imm else sig["rs1_addr"] != 0)
+        if legal and addr == CSR_MINSTRET:
+            self.minstret_reads.append(self.retired)
+        access = None
+        if legal and not squashed:
+            access = (_CSR_KIND[op], addr, sig["csr_wdata"], imm, not imm and sig["rs1_addr"] == 0)
+        for name, words in _CTR_WORDS.items():
+            strobe = 1 if name == "mcycle" else sig[_STROBE[name]]
+            if not strobe or inhibit >> _INHIBIT_BIT[name] & 1:
+                continue
+            if sig["trap_entry"]:
+                self._bump(f"{name}:event_in_trap_entry")
+            elif sig["mret"]:
+                self._bump(f"{name}:event_in_mret")
+            elif legal and addr in words:
+                self._bump(f"{name}:event_with_{'write' if writes else 'readonly'}_to_self")
+            elif legal:
+                self._bump(f"{name}:event_with_csr_to_other")
+            else:
+                self._bump(f"{name}:event_no_csr")
+            # a write to one half of a 64-bit counter on the cycle its low word wraps
+            if name in ("mcycle", "minstret") and legal and not squashed and writes:
+                if addr in words and self._model.regs[words[0]] == 0xFFFF_FFFF:
+                    self._bump(f"{name}:write_{'lo' if addr == words[0] else 'hi'}_at_wrap")
+        if sig["retire_i"]:
+            self.retired += 1
+        try:
+            self._model.tick(
+                retire=bool(sig["retire_i"]),
+                icache_miss=bool(sig["icache_miss_i"]),
+                dcache_miss=bool(sig["dcache_miss_i"]),
+                branch_mispred=bool(sig["branch_mispred_i"]),
+                access=access,
+            )
+        except IllegalCsrError:
+            self.mismatches.append(
+                f"cycle {self.cycle}: model rejects csr {addr:#05x} the RTL took"
+            )
+
+
+_COUNTER_CSRS = [
+    CSR_MCYCLE,
+    CSR_MCYCLEH,
+    CSR_MINSTRET,
+    CSR_MINSTRETH,
+    CSR_MHPMCOUNTER3,
+    CSR_MHPMCOUNTER4,
+    CSR_MHPMCOUNTER5,
+]
+_NOP = ADDI(0, 0, 0)
+DATA_BASE = 0x4000
+POISON = ADDI(31, 31, 1)  # sits in the shadow of a taken branch / jump; never architecturally run
+_TAKEN_BEQ = BEQ(0, 0, 8)
+
+
+def _random_csr_instr(rng: random.Random, rd: int, addr: int) -> list[int]:
+    kind = rng.choice(["RW", "RS", "RC"])
+    if rng.random() < 0.4:
+        return [_IMM_FORM[kind](rd, addr, rng.choice([0, 1, 5, 31]))]
+    if rng.random() < 0.4:
+        return [_REG_FORM[kind](rd, addr, 0)]
+    value = rng.choice([0, 1, 0xFFFF_FFFF, 0xFFFF_FFF0, rng.getrandbits(32)])
+    return [*li(SRC, value), _REG_FORM[kind](rd, addr, SRC)]
+
+
+def random_counter_program(seed: int, n_items: int = 90) -> list[int]:
+    """Straight-line program mixing counter CSR accesses with I$ / D$ misses and taken branches.
+
+    Straight-line code walks into a new I$ line every four instructions, loads from fresh 16-byte
+    lines miss in the D$, and taken forward branches / JALs raise the redirect strobe, so the three
+    event counters see events at many different offsets from the CSR instructions.
+    """
+    rng = random.Random(seed)
+    prog = [*li(5, DATA_BASE)]
+    load_off = 0
+    unfreeze_at = -1
+    for i in range(n_items):
+        rd = 6 + rng.randrange(20)
+        roll = rng.random()
+        if roll < 0.30:
+            prog += _random_csr_instr(rng, rd, rng.choice(_COUNTER_CSRS))
+        elif roll < 0.48:
+            if rng.random() < 0.5:
+                prog.append(CSRRS(rd, CSR_MIMPID, 0))
+            else:
+                prog += _random_csr_instr(rng, rd, rng.choice([CSR_MEPC, CSR_MCAUSE]))
+        elif roll < 0.62:
+            prog += [ADDI(rd, rd, 1)] * rng.randrange(1, 4)
+        elif roll < 0.78 and load_off < 2000:
+            prog.append(LW(29, 5, load_off))
+            load_off += 16 + 4 * rng.randrange(3)
+        elif roll < 0.90:
+            prog += [_TAKEN_BEQ, POISON]
+        elif roll < 0.96:
+            prog += [JAL(0, 8), POISON]
+        elif unfreeze_at < 0:
+            mask = rng.choice([0x1, 0x4, 0x8, 0x10, 0x20])
+            prog += [*li(SRC, mask), CSRRW(0, CSR_MCOUNTINHIBIT, SRC)]
+            unfreeze_at = i + 3
+        if 0 <= unfreeze_at <= i:
+            prog.append(CSRRW(0, CSR_MCOUNTINHIBIT, 0))
+            unfreeze_at = -1
+    if unfreeze_at >= 0:
+        prog.append(CSRRW(0, CSR_MCOUNTINHIBIT, 0))
+    return [*prog, EBREAK()]
+
+
+def _assert_clean(mon: CounterMonitor, what: str):
+    assert mon.cycle > 20, f"{what}: monitor saw only {mon.cycle} cycles"
+    assert not mon.mismatches, (
+        f"{what}: counter state diverged from the spec model:\n  " + "\n  ".join(mon.mismatches)
+    )
+
+
+async def _run_monitored(dut, mem, dbg, program, **kw) -> CounterMonitor:
+    mon = CounterMonitor(dut)
+    mon.start()
+    try:
+        await fresh_run(dut, mem, dbg, program, **kw)
+        await RisingEdge(dut.clk_i)
+    finally:
+        mon.stop()
+    return mon
+
+
+@cocotb.test()
+async def test_counters_match_cycle_model_random(dut):
+    """Every counter equals the spec model after every cycle, with events coinciding with CSRs."""
+    mem, dbg = await _setup_test(dut)
+    total: dict[str, int] = {}
+    for seed in range(1, 9):
+        prog = random_counter_program(seed)
+        mon = await _run_monitored(dut, mem, dbg, prog, timeout_cycles=20000)
+        _assert_clean(mon, f"seed {seed}")
+        for k, v in mon.cov.items():
+            total[k] = total.get(k, 0) + v
+    dut._log.info(f"coverage: {dict(sorted(total.items()))}")
+    # The stimulus must really hit each coincidence, or a green run proves nothing.
+    for name in _CTR_WORDS:
+        for case in (
+            "event_with_csr_to_other",
+            "event_with_readonly_to_self",
+            "event_with_write_to_self",
+        ):
+            assert total.get(f"{name}:{case}", 0) > 0, f"stimulus never produced {name}:{case}"
+
+
+def _carry_alignment_program() -> list[int]:
+    """Write a low word that wraps ``d`` increments later, then write one half ``n`` NOPs after."""
+    prog: list[int] = []
+    for pair_lo, pair_hi in ((CSR_MCYCLE, CSR_MCYCLEH), (CSR_MINSTRET, CSR_MINSTRETH)):
+        for target in (pair_lo, pair_hi):
+            for d in range(6):
+                for n in range(5):
+                    prog += [*li(SRC, (0xFFFF_FFFF - d) & 0xFFFF_FFFF), CSRRW(0, pair_lo, SRC)]
+                    prog += [*li(SRC, 0x1234_0000 + 16 * d + n), *([_NOP] * n)]
+                    prog += [CSRRW(0, target, SRC)]
+    return [*prog, EBREAK()]
+
+
+@cocotb.test()
+async def test_counter_carry_vs_write_alignment(dut):
+    """A write to one half of mcycle / minstret at the cycle the low word wraps follows the spec.
+
+    Write to the low word: the written value wins and the discarded increment's carry must not
+    reach the high word.  Write to the high word: the written value wins, the low word keeps
+    counting.  The (d, n) sweep moves the write across the wrap cycle; the monitor coverage proves
+    that both a low-word and a high-word write landed exactly on it, for both counters.
+    """
+    mem, dbg = await _setup_test(dut)
+    mon = await _run_monitored(dut, mem, dbg, _carry_alignment_program(), timeout_cycles=60000)
+    _assert_clean(mon, "carry alignment sweep")
+    dut._log.info(f"coverage: {dict(sorted(mon.cov.items()))}")
+    for name in ("mcycle", "minstret"):
+        for half in ("lo", "hi"):
+            assert mon.cov.get(f"{name}:write_{half}_at_wrap", 0) > 0, (
+                f"sweep never wrote {name} {half} word on the wrap cycle"
+            )
+
+
+@cocotb.test()
+async def test_counters_through_trap_and_mret(dut):
+    """Counters keep counting in the cycles a trap is taken and MRET executes."""
+    handler = 0x200
+    prog = [*li(SRC, handler), CSRRW(0, CSR_MTVEC, SRC)]
+    for _ in range(4):
+        prog += [ADDI(6, 6, 1), ECALL(), ADDI(7, 7, 1)]
+    prog.append(EBREAK())
+    prog += [_NOP] * (handler // 4 - len(prog))
+    prog += [CSRRS(8, CSR_MEPC, 0), ADDI(8, 8, 4), CSRRW(0, CSR_MEPC, 8), MRET()]
+    mem, dbg = await _setup_test(dut)
+    mon = await _run_monitored(dut, mem, dbg, prog, timeout_cycles=20000)
+    _assert_clean(mon, "trap/mret")
+    dut._log.info(f"coverage: {dict(sorted(mon.cov.items()))}")
+    assert mon.cov.get("mcycle:event_in_trap_entry", 0) >= 4, "no trap-entry cycles seen"
+    assert mon.cov.get("mcycle:event_in_mret", 0) >= 4, "no MRET cycles seen"
+    assert await dbg.read_gpr(6) == 4 and await dbg.read_gpr(7) == 4, "trap handler did not return"
+
+
+@cocotb.test()
+async def test_minstret_matches_retirements_between_reads(dut):
+    """minstret read by a CSR instruction == retire strobes counted before that instruction's EX.
+
+    Counted at the commit interface (retire_i == commit_valid_o), so older instructions still in
+    flight when the read executes are correctly NOT yet included.  A retirement that lands in the
+    same cycle as an earlier CSR instruction's EX must not be dropped.
+    """
+    rng = random.Random(7)
+    prog: list[int] = []
+    n_reads = 14
+    for k in range(n_reads):
+        for _ in range(rng.randrange(0, 5)):
+            instr = rng.choice([ADDI(20, 20, 1), CSRRS(0, CSR_MIMPID, 0), _TAKEN_BEQ])
+            prog.append(instr)
+            if instr == _TAKEN_BEQ:
+                prog.append(POISON)
+        prog.append(CSRRS(k + 1, CSR_MINSTRET, 0))
+    prog.append(EBREAK())
+    mem, dbg = await _setup_test(dut)
+    mon = await _run_monitored(dut, mem, dbg, prog)
+    _assert_clean(mon, "minstret reads")
+    assert len(mon.minstret_reads) == n_reads, mon.minstret_reads
+    got = [await dbg.read_gpr(k + 1) for k in range(n_reads)]
+    assert got == mon.minstret_reads, (
+        f"minstret read {got} != retirements counted {mon.minstret_reads}"
     )
