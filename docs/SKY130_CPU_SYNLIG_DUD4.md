@@ -120,7 +120,23 @@ So the differential detects a regfile read-path fault when the program reads set
 Earlier controls against the faulty committed netlist were weak (an S0/S1 swap was invisible because x1 and x2 share
 bit 0).
 
-MAIN_PAIR_PLACEHOLDER
+## Main-RTL pair (`origin/main` = `5eb5f63`, MEASURED)
+
+RTL arm `RTL_ROOT=.../synth/rtl_main`; gate arms `synlig/`, `sv2v/` and `wa/synlig` (main + the scratch workaround).
+Caveat: `999e44a` registered the APB outputs, and `tb_sky130_cpu_check.sv`'s APB sequencer hangs on the main RTL
+itself (0 debug reads, TIMEOUT in the RTL arm too), so for this pair **debug-port reads and the port matrix are
+unavailable**; the sequencer was not adapted. Everything else (commit stream functional and cycle-exact, AXI write
+stream functional and cycle-exact, per-cycle trace of every output port) was compared, and the only failing check
+reported in every program is the 0-vs-32 debug-read count, equal on both sides. The RTL arm's 116/116 sweep stores
+match the by-construction expectation.
+
+| gate netlist (main RTL) | result vs main RTL |
+|---|---|
+| `sv2v/` | commit, AXI and per-cycle trace identical on all 6 programs |
+| `wa/synlig` (workaround: two selects via a full-width wire) | commit, AXI and per-cycle trace identical on all 6 programs, i.e. the same Synlig frontend is fine once the two lines are routed through a full-width wire. **This isolates the defect to those two lines under Synlig.** |
+| `synlig/` (unmodified) | fails: `ma7_branch` first commit divergence #5 (BEQ not taken), sweeps A/B/C divergence at commit #69, same as pinned |
+
+The defect is therefore still present on current `main`.
 
 ## Not done / limits
 
