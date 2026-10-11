@@ -840,6 +840,7 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_rst_mux.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl_ports.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/jtag_tap.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_switch.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
@@ -908,10 +909,11 @@ sky130-soc-sv2v:
 # (tap_scan_en is omitted from the allowed nets on purpose: scan_en has no RTL consumer until Stage 2 inserts scan
 # flops, so the net is optimised away; when Stage 2 connects it, add --tap-allowed-nets u_dft_ctrl.tap_scan_en.)
 DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tck_cg \
+	--tap-prefix u_dft_ctrl.u_clk_sw --tap-prefix u_dft_ctrl.u_sw_rst --tap-alt-clock scan_clk_i \
 	--scan-mode-net u_dft_ctrl.scan_mode_o --expect-tap-flops 20 \
 	--tap-allowed-nets u_dft_ctrl.tap_scan --tap-allowed-nets u_dft_ctrl.tap_serial \
 	--tap-allowed-nets u_dft_ctrl.tap_rst_assert \
-	--tap-allowed-nets u_dft_ctrl.tck_scan_gated --tap-allowed-nets tdo_o --tap-allowed-nets tdo_oe_o
+	--tap-allowed-nets u_dft_ctrl.test_clk_o --tap-allowed-nets tdo_o --tap-allowed-nets tdo_oe_o
 .PHONY: dft-scan-check
 dft-scan-check: sky130-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
@@ -1645,6 +1647,7 @@ SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_rst_mux.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl_ports.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/jtag_tap.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_switch.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \

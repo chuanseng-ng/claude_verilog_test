@@ -343,6 +343,11 @@ if {[llength [get_ports -quiet scan_out_o]] > 0} { set_false_path -to [get_ports
 # survives hierarchy flattening, so it cannot be case-analysed from this file; the scan-mode
 # SDC (a Stage 2 deliverable) must pin it (or set_clock_sense -stop_propagation on the mux
 # outputs once their pin names are known after synthesis).
+#
+# The glitch-free test-clock switch (dft_clk_switch.sv, DFT_ARCHITECTURE.md 15.5) adds two latch-based
+# enables and two 2-FF handshake synchronisers between tck_i and scan_clk_i. scan_clk_i has no clock in
+# this functional-mode SDC (it is a false-path port), so their handshake paths and the clock-gating
+# checks on the enable latches are timed only by the Stage 2 scan-mode SDC. Not run here.
 ###############################################################################
 if {[llength [get_ports -quiet tck_i]] > 0} {
     set _jtag_period 100.0

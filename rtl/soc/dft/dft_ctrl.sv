@@ -18,20 +18,26 @@
 //        scan_mode_o, test_en_o = pin | tap_scan
 //        scan_rst_no            = pin_scan_rst_n & ~rst_assert
 //        scan_en_o              = serial ? tap_scan_en   : pin_scan_en
-//        test_clk_o             = serial ? tck_scan_gated : pin_scan_clk
+//        test_clk_o             = glitch-free switch (serial ? tck_scan_gated
+//                                                              : pin_scan_clk)
 //
 // With the TAP idle (IR != SCAN, which includes reset and Test-Logic-Reset) every
 // term collapses to the 1a pin value, bit for bit. The TAP never gates the pin
 // path.
 //
-// test_clk_o select contract (section 15.5, open question Q-CLK): the select
-// `serial` is a falling-edge TCK flop that changes only in an Update state, where
-// tck_scan_gated is provably low (the gate is closed in every state but Capture
-// and Shift), so the TAP side of the mux cannot glitch. The pin side
-// (scan_clk_i) must be held low by the tester while IR or SCAN_SEL.PARALLEL
-// changes. This is a plain 2:1 select, not an enable-before-switch glitch-free
-// mux (that needs a clock in the deselected domain and deadlocks with a stopped
-// functional clock); entering scan mode destroys functional state anyway.
+// test_clk_o select (section 15.5, open question Q-CLK, RESOLVED): u_clk_sw is a
+// glitch-free enable-before-switch selector (dft_clk_switch) between
+// tck_scan_gated (A) and the pin test clock (B). The select `serial` is the
+// TAP's falling-edge flop; the enable latches inside the switch retire the old
+// clock and enable the new one so that no runt pulse and no extra edge reaches
+// test_clk_o whatever the A/B phase relation. Its handshake is reset by u_sw_rst,
+// a second cdc_reset_sync on trst_ni in the TCK domain (kept here so jtag_tap
+// is unchanged): reset selects the pin clock with the TAP clock off, so the 1a
+// pins-only operation (TAP in reset, TCK stopped) passes scan_clk_i through.
+// Tester contract (details in dft_clk_switch.sv): after serial -> parallel the
+// first pin-clock pulse appears at once if scan_clk_i was stopped during scan, or
+// about 3 pin-clock cycles later if it was toggling; parallel -> serial needs no
+// pin-clock edge if scan_clk_i idles LOW (stopped HIGH, it cannot complete).
 //
 // The scan_mode/test_en/scan_rst/scan_en controls are TCK-launched quasi-static
 // levels that deliberately cross into the functional domains unsynchronised
@@ -123,11 +129,34 @@ module dft_ctrl (
         .gclk    (tck_scan_gated)
     );
 
+    // ── Glitch-free test-clock select (section 15.5) ─────────────────────────
+    // Own TCK-domain reset synchroniser from trst_ni (scanmode_i = 0,
+    // scan_rst_ni = 1): the switch resets with the TAP but jtag_tap is untouched.
+    logic sw_rst_n;
+
+    cdc_reset_sync #(
+        .STAGES(2)
+    ) u_sw_rst (
+        .clk_i       (tck_i),
+        .rst_n_i     (trst_ni),
+        .scanmode_i  (1'b0),
+        .scan_rst_ni (1'b1),
+        .rst_n_o     (sw_rst_n)
+    );
+
+    dft_clk_switch u_clk_sw (
+        .tck_i   (tck_i),
+        .clk_a_i (tck_scan_gated),
+        .clk_b_i (pin_test_clk),
+        .sel_a_i (tap_serial),
+        .rst_n_i (sw_rst_n),
+        .clk_o   (test_clk_o)
+    );
+
     // ── Combiner (section 15.4) ──────────────────────────────────────────────
     assign scan_mode_o = pin_scan_mode | tap_scan;
     assign test_en_o   = pin_test_en   | tap_scan;
     assign scan_rst_no = pin_scan_rst_n & ~tap_rst_assert;
     assign scan_en_o   = tap_serial ? tap_scan_en    : pin_scan_en;
-    assign test_clk_o  = tap_serial ? tck_scan_gated : pin_test_clk;
 
 endmodule : dft_ctrl

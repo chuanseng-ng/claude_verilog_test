@@ -86,6 +86,15 @@ reset_domains:
   # Stage 4 MBIST status bit without its 2-FF synchroniser) fails that check even though this
   # gate can no longer see it.
   - tck_i
+  # The glitch-free test-clock switch (dft_clk_switch.sv, DFT_ARCHITECTURE.md 15.5) adds TWO real
+  # asynchronous crossings, both through cdc_2ff_sync with (* magic_cdc *): u_sync_a carries ~en_b_q
+  # (scan_clk_i domain latch) into tck_i, u_sync_b carries en_a_q (tck_i domain latch) into
+  # scan_clk_i. cdc_snitch reports their first stage as `BAD magic` because the enable latch
+  # inputs combine both clocks; they are the intended handshake synchronisers, not defects, and
+  # are NOT matched by `required_synchronisers` (that list only matches stages snitch calls CDC).
+  # Their presence and clocking are enforced instead by tools/dft/check_scan_clk_rst.py (the TAP
+  # prefix rule allows exactly tck_i or scan_clk_i as the clock of these cells, and the allowed
+  # TAP output net list) and by the dft_clk_switch unit suite (switch completion bounds, no runt).
 
 # --- 3. Top-level buses that are synchronous to a named domain --------------
 # Collapses a whole bus to one domain so per-bit fan-in stops looking

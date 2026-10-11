@@ -216,3 +216,12 @@ def test_tap_boundary_missing_net_name_fails(tmp_path: Path) -> None:
     res = _tap_run(tmp_path, "--tap-allowed-nets", "no_such_net")
     assert res.returncode == 1, res.stdout
     assert "allowed TAP output net not found" in res.stdout
+
+
+def test_tap_alt_clock_is_allowed_only_when_declared(tmp_path: Path) -> None:
+    # TAP-domain cells clocked by scan_clk_i (the pin half of the glitch-free test-clock switch)
+    ok = _tap_run(tmp_path, "--tap-alt-clock", "scan_clk_i", tck_src="scan_clk_i")
+    assert "TAP clock cone" not in ok.stdout, ok.stdout
+    bad = _tap_run(tmp_path, tck_src="scan_clk_i")
+    assert bad.returncode == 1, bad.stdout
+    assert "TAP clock cone is not exactly port" in bad.stdout

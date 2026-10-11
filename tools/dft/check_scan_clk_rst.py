@@ -113,6 +113,9 @@ def main():
     ap.add_argument("--scan-mode-net", default=None,
                     help="flattened net that IS scan mode (pin OR TAP); default: the --scan-mode port")
     ap.add_argument("--expect-tap-flops", type=int, default=0)
+    ap.add_argument("--tap-alt-clock", action="append", default=[],
+                    help="additional port a TAP-domain cell may be clocked by exactly (repeatable), e.g. scan_clk_i "
+                         "for the pin-side half of the glitch-free test-clock switch")
     ap.add_argument("--tap-allowed-nets", action="append", default=[],
                     help="flattened net the TAP domain may drive into non-TAP logic or an output port (repeatable); "
                          "anything else crossing the TAP boundary is a violation")
@@ -285,9 +288,9 @@ def main():
             n_tap += 1
             ck = c["connections"].get("CLK") or c["connections"].get("EN") or []
             for b in ck:
-                if isinstance(b, int) and cone_leaves(b) != ({a.tck}, set()):
+                if isinstance(b, int) and cone_leaves(b) not in [({p_}, set()) for p_ in [a.tck, *a.tap_alt_clock]]:
                     ph, sh = cone_leaves(b)
-                    violations.append((cname, t, "CLK", f"TAP clock cone is not exactly port {a.tck}: "
+                    violations.append((cname, t, "CLK", f"TAP clock cone is not exactly port {a.tck} (or an alt clock {a.tap_alt_clock}): "
                                        f"ports {sorted(ph)} seq {sorted(sh)[:3]}"))
             for p in ASYNC_PORTS:
                 for b in c["connections"].get(p, []):
