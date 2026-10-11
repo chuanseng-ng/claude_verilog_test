@@ -216,7 +216,7 @@ See Global Memory Map above.
 | 0x00C  | GPU_GRID_DIM_X   | RW     | 0x0000_0000 | Grid dimension X                         |
 | 0x010  | GPU_GRID_DIM_Y   | RW     | 0x0000_0000 | Grid dimension Y                         |
 | 0x014  | GPU_GRID_DIM_Z   | RW     | 0x0000_0000 | Grid dimension Z                         |
-| 0x018  | GPU_BLOCK_DIM_X  | RW     | 0x0000_0000 | Block dimension X                        |
+| 0x018  | GPU_BLOCK_DIM_X  | RW     | 0x0000_0000 | Block dimension X: **1..64 threads**; 0 or > 64 makes the launch raise ERROR (see "GPU_BLOCK_X launch contract") |
 | 0x01C  | GPU_BLOCK_DIM_Y  | RW     | 0x0000_0000 | Block dimension Y                        |
 | 0x020  | GPU_BLOCK_DIM_Z  | RW     | 0x0000_0000 | Block dimension Z                        |
 | 0x024  | GPU_WARP_SIZE    | RO     | 0x0000_0008 | Warp size (fixed at 8 in Phase 4)        |
@@ -264,6 +264,15 @@ Completion is **not instantaneous**. The reset halts new instruction fetches and
 3. **Perf counters are kept** across the reset (post-mortem value; the next launch clears them as before). **The IRQ latch is cleared** (as before). **Config registers are kept.** `CTRL[2]` follows the value written with the reset.
 4. A `START` written while the reset is draining is dropped.
 5. Vector register file and shared-memory contents are untouched (they have no hardware reset either).
+
+**GPU_BLOCK_X launch contract** — *decided 2026-10-11, bead `6hy6`; supersedes the earlier "256 threads" wording.* The GPU holds 8 warps of 8 lanes, so a block has **at most 64 threads**:
+
+| `GPU_BLOCK_X` | Effect of `GPU_CTRL.START` |
+|:--------------|:---------------------------|
+| 1..64 | Runs ceil(`GPU_BLOCK_X`/8) warps; **exactly `GPU_BLOCK_X` threads take effect** — the last warp starts with only its valid lanes active (`GPU_BLOCK_X` = 9: warp 0 all 8 lanes, warp 1 lane 0 only). Invalid lanes write no register, no shared-memory word and issue no AXI request, and take no part in branches |
+| 0, or > 64 (65, 72, 128, 1023, ...) | **Launch ERROR**: `GPU_STATUS` reads ERROR (`0x4`) within a few cycles; no instruction fetch, no warp issued, no store; no completion interrupt. Before this change 0 hung forever (STATUS never set) and > 64 was silently truncated to 8 warps |
+
+The launch ERROR is the **same ERROR** as the stack-overflow one (halt-on-ERROR above): the GPU sits quiescent, `GPU_BLOCK_X` and the other configuration registers are kept, and only `GPU_CTRL.RESET` (or hardware reset) leaves ERROR; a legal launch after the reset runs normally. The perf counters are cleared by the rejected launch as by any launch. `GPU_BLOCK_Y` / `GPU_BLOCK_Z` are stored but not interpreted in Phase 4.
 
 **Kernel launch sequence**:
 
