@@ -293,7 +293,10 @@ jobs:
           # 2026-10-10 (bead j41m.9): 624 = 627 - 3, same value as cocotb.yml. 627 MEASURED: soc_all_ci from clean on the merged tree
           # (main incl. #259/#263 + this PR), 627 passed / 0 failed / 17 skipped over 62 suite summaries = the 625 above + 2 new
           # soc_dft_scan tests (PMU-held GPU/CPU domain reset in scan mode).
-          PASS_FLOOR: '624'
+          # 2026-10-11 (bead j41m.3, DFT Stage 1b): 690 = 693 - 3, same value as soc_coverage.yml. 693 MEASURED: the cocotb soc_all
+          # job of PR 270 on head 9261df1 (log: 'cocotb: 693 passed, 0 failed') = the 627 above + 66 new tests (jtag_tap 48 =
+          # 16 x 3 TCK ratios, dft_ctrl 7, soc_jtag 11).
+          PASS_FLOOR: '690'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."
