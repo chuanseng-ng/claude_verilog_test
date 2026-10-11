@@ -114,7 +114,10 @@ jobs:
       # 2 icache, 5 gpu control-path kernels, 3 other); that run had 1 red line, the then-misdeclared
       # expect_fail kernel test, fixed and re-run on its own (6/6 pass), so 232 is measured but not from a
       # single all-green invocation.  Tighten to (measured - 3) from this PR's CI.
-      CPU_PASS_FLOOR: '229'
+      # 2026-10-11 (bead 6hy6): 251 = 254 - 3, 254 passed / 0 failed in the CI run
+      # 38138049318 (workflow_dispatch on fix/gpu-blockx-launch-6hy6, head 2dabc48); this branch
+      # adds 3 kernel_block_warps tests and 1 warp_scheduler test.
+      CPU_PASS_FLOOR: '251'
 
     steps:
       - name: Checkout repository
