@@ -146,3 +146,40 @@ only 0.29 % touch the SRAM macro. Both checkers are `--skip`-ped and do not gate
 
 ### Stages 3 & 4 — GPU (GH #105, #106)
 **Not attempted. Still host-gated** on ≥32 GB RAM + ~500 GB scratch; the current host has ~15 GB. The GPU remains ASAP7-indicative-only, exactly the fallback anticipated in §2. Epic GH #102 stays open on these two stages.
+
+### 2026-10-11 re-harden on the sv2v frontend (bead `dud4`) — supersedes every earlier Sky130 CPU and SoC result above
+
+**Every Sky130 CPU and SoC result above (Stage 1, Stage 2, the 2026-09-26 GPIO run and the e45j runs) wrapped a functionally wrong
+CPU macro.** The macro (`RUN_2026-07-27_05-52-19`, `USE_SYNLIG:true`) mis-forwarded because Synlig elaborated two hazard-unit port
+connections as `5'x` (`docs/SKY130_CPU_SYNLIG_DUD4.md`). LVS, DRC and timing numbers were genuine for that netlist; they said
+nothing about its function. The physical-verification claims stand as measurements of that layout, not as sign-off of a correct CPU.
+
+Remedy: `pnr/sky130/cpu/config.json` -> `USE_SYNLIG:false` on `make -C pnr sky130-cpu-sv2v` output; every other key unchanged
+(75 MHz, same floorplan, same `pin_order.cfg`). **Not a single-variable comparison with the July macro: the RTL changed too**
+(registered APB outputs, PR #259 hazard selects, PR #268 counters, others).
+
+**CPU standalone, `RUN_2026-10-11_06-00-12`** (06:00 -> 08:21 WIB; `make` exit 2 = deferred Magic DRC + I/O hold, as before):
+
+| metric | old macro `RUN_2026-07-27_05-52-19` | new |
+|---|---|---|
+| Netgen LVS / KLayout DRC / routing DRC | match / 0 / 0 | match / 0 / 0 |
+| Magic DRC | 27 733 913 (SRAM-internal, bead `45a`) | 27 733 913, 99.9869 % inside the 10 SRAM footprints, the other 3 626 are the known `nwell.4` abstract-view artifact |
+| setup nom_tt (tt/ff corners) | +0.174 ns (max_tt -0.121) | **+3.439 ns; all six tt/ff corners +3.06..+4.12, 0 violators** |
+| setup ss corners | not recoverable (run directory gone) | **FAIL, reg-to-reg: nom_ss -3.198 (854), min_ss -2.560 (716), max_ss -3.704 ns (996)**; worst path icache tag-SRAM half-cycle input, not forwarding. Reported, not tuned |
+| hold | I/O only; nom_tt -0.136 | reg-to-reg clean at all 9 corners; I/O only: nom_tt -0.379 (84), worst max_ss -0.834 ns (729 total) |
+| antenna pins / nets | 93 / 90 | 96 / 96 |
+| util / power (nom_tt) | 40.67 % / 88.5 mW (Run 8) | 40.83 % / 77.8 mW; 155 889 cells, 4 868 flops |
+| Liberty combinational in->out arcs | 462 | 0 (registered APB outputs) |
+
+Functional proof (`tools/verif/gls/sky130/run_netlist_proof.sh`, Verilator 5.048, RTL arm = current main): synthesis netlist and the
+committed post-fill netlist (sha256 `5c7f241b...9075`) are identical to RTL on all six programs cycle-exact and on the
+31-register x {rs1, rs2, both, debug} matrix (124/124); census 4 868 flops with `fwd_b_*` present; negative control (`A1=0` on the
+63 x1 first-level read-mux cells) diverges on 4 of 6 programs with 90 matrix cells failing. The synthesis gate (`gc0y`) passed
+(0 findings). Macro views regenerated in `pnr/sky130/cpu/macro/` (LEF, nine per-corner Liberty files, netlist `.gz`; GDS and SPICE
+gitignored): all 403 LEF pins keep identical position and layer, ports match RTL, SoC stub and LEF (401 signal bits).
+
+**SoC, `RUN_2026-10-11_08-39-41`** (rccal flow, `CVT_SYNTH_GATE=warn`): LVS 0, routing DRC 0, Magic 8 984 (same), setup 0 violators at
+all nine corners (worst +2.4825 ns max_ss, base +3.3286), hold 0 at all nine (worst +0.2874 ns, base +0.2822), antenna 187 nets /
+265 pins, util 45.22 %, 84.6 mW. `CVT.MaxCapViolations` FAILS with 4 unwaived violations on 3 flat nets and the old waiver is stale;
+details and the baseline comparison in `docs/SKY130_SLEW_CAP_E45J.md` §8. **The SoC closes at all nine corners while the CPU
+standalone macro does not close ss reg-to-reg setup; these are different clock periods (40 vs 75 MHz) and different scopes.**
