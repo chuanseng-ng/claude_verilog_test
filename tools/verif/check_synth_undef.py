@@ -18,6 +18,15 @@ Two independent detectors, so a wording change in one tool release cannot blind 
   fails on any module-instance input port, or any named net, connected to constant ``x``.  It does
   not depend on any message text.
 
+One narrow exemption (bead j1b7): yosys inlines every function call and gives the function's own
+argument/local/result wires (``<func>$func$<file>:<line>$<n>.<name>``) a constant-x ``update``
+that nothing reads - the real value flows through proc temporaries.  Those nets used to be
+``x-driven-net`` hits (509 on the Sky130 SoC).  A net is exempt (rule ``func-temp-dead-init``)
+only if the PRE-``proc`` RTLIL of the same elaboration (``--pre-rtlil``) shows NO reader of the
+wire, no other driver and a full-width x update; a name match alone never exempts, and a function
+that leaves its result unassigned on a path (a read of the x wire) stays a FAIL.  Every exempted
+net is counted per function in the report.  See docs/SYNTH_UNDEF_GATE.md.
+
 Exit codes: 0 pass, 1 an un-allowlisted FAIL finding, 2 the input could not be judged (no log,
 empty log, no recognisable synthesis banner).  Never a vacuous pass.
 """
@@ -105,6 +114,7 @@ STRUCTURAL_RULES = {
     "x-driven-net": "a named net is (partly) driven by constant x",
     "removed-module-missing": "module removed as unelaborated but no $paramod copy exists",
     "header-flattened": "header JSON is flattened; the structural check had nothing to inspect",
+    "func-temp-dead-init": "sv2v/yosys function temporary whose x driver is provably never read",
 }
 ALL_RULES = set(RULES) | set(STRUCTURAL_RULES)
 _COMPILED = {k: (sev, re.compile(rx), why) for k, (sev, rx, why) in RULES.items()}
@@ -171,11 +181,255 @@ def scan_log(path: Path | str) -> list[Finding]:
     return out
 
 
+# ----------------------------------------------------- function temporaries (bead j1b7)
+
+# yosys names a function call's own wires  <func>$func$<file>:<line>$<autoidx>.<variable>
+FUNC_TEMP_RE = re.compile(r"^\\?(?P<func>[A-Za-z_]\w*)\$func\$(?P<loc>.+?)\$\d+\.(?P<var>.+)$")
+_ALL_X = re.compile(r"^\d+'x+$")
+_BLOCK_OPENERS = {"module", "cell", "process", "switch"}
+
+FuncKey = tuple[str, str, str, str]  # (module base name, function, "file:line", variable)
+
+
+@dataclass
+class FuncTempGroup:
+    """The x-initialised wires of one function-temporary group in the pre-proc RTLIL."""
+
+    wires: int = 0  # wires that carry a constant-x update (the candidates)
+    reads: list[str] = field(default_factory=list)
+    other_driver: bool = False
+    partial: bool = False
+
+    @property
+    def dead_init(self) -> bool:
+        """Every candidate is only ever x-updated at full width, and nothing reads any of them."""
+        return self.wires > 0 and not self.reads and not self.other_driver and not self.partial
+
+
+@dataclass
+class _Wire:
+    """Per-wire evidence while parsing one module."""
+
+    key: FuncKey
+    x_full: bool = False
+    x_partial: bool = False
+    other_driver: bool = False
+    reads: list[str] = field(default_factory=list)
+
+
+def _module_base(name: str) -> str:
+    return name.rsplit("\\", 1)[-1]
+
+
+def _func_key(module: str, name: str) -> FuncKey | None:
+    m = FUNC_TEMP_RE.match(name)
+    if not m:
+        return None
+    loc_file, _, loc_line = m.group("loc").rpartition(":")
+    base = loc_file.rsplit("/", 1)[-1]
+    return (_module_base(module), m.group("func"), f"{base}:{loc_line}", m.group("var"))
+
+
+def _split_sigspec(tokens: list[str]) -> tuple[list[str], list[str]]:
+    """Split ``<sigspec> <sigspec>`` into two token lists (``{..}``/name/const plus ``[..]``)."""
+    i = 0
+    if tokens and tokens[0] == "{":
+        depth = 0
+        while i < len(tokens):
+            depth += tokens[i] == "{"
+            depth -= tokens[i] == "}"
+            i += 1
+            if depth == 0:
+                break
+    elif tokens:
+        i = 1
+    while i < len(tokens) and tokens[i].startswith("["):
+        i += 1
+    return tokens[:i], tokens[i:]
+
+
+def _record_reads(wires: dict[str, _Wire], toks: Iterable[str], module: str, line: str) -> None:
+    for t in toks:
+        w = wires.get(t)
+        if w is not None:
+            w.reads.append(f"{_module_base(module)}: {line}")
+
+
+def _classify_drive(
+    wires: dict[str, _Wire],
+    kw: str,
+    sides: tuple[list[str], list[str]],
+    where: tuple[str, str],
+) -> None:
+    lhs, rhs = sides
+    is_x = len(rhs) == 1 and _ALL_X.match(rhs[0]) is not None
+    partial = any(t.startswith("[") for t in lhs)
+    for t in lhs:
+        w = wires.get(t)
+        if w is None:
+            continue
+        if kw == "connect" or not is_x:
+            w.other_driver = True
+        elif partial:
+            w.x_partial = True
+        else:
+            w.x_full = True
+    _record_reads(wires, rhs, *where)
+
+
+def _flush_module(groups: dict[FuncKey, FuncTempGroup], wires: dict[str, _Wire]) -> None:
+    """Fold one module's per-wire evidence into groups; only x-initialised wires are candidates."""
+    for w in wires.values():
+        if not (w.x_full or w.x_partial):
+            continue  # a normally driven wire (e.g. the call-site result): not a candidate
+        g = groups.setdefault(w.key, FuncTempGroup())
+        g.wires += 1
+        g.reads += w.reads
+        g.other_driver |= w.other_driver
+        g.partial |= w.x_partial
+
+
+def parse_func_temps(text: str) -> dict[FuncKey, FuncTempGroup]:
+    """Classify every function-temporary wire of a pre-``proc`` RTLIL dump (``write_rtlil``).
+
+    A wire is *dead-init* only if every appearance outside its declaration is a full-width
+    ``update``/``assign`` of constant x.  Anything else - a read in a cell connection, a process
+    right-hand side, a ``switch``/``sync`` expression, a module-level ``connect``, or a second
+    driver - is recorded and defeats the exemption (fail closed).
+    """
+    groups: dict[FuncKey, FuncTempGroup] = {}
+    module = ""
+    wires: dict[str, _Wire] = {}
+    stack: list[str] = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        toks = line.split()
+        if not toks or toks[0] in ("attribute", "autoidx", "parameter"):
+            continue
+        kw = toks[0]
+        if kw == "module":
+            _flush_module(groups, wires)
+            module, wires, stack = toks[1], {}, ["module"]
+        elif kw == "wire":
+            key = _func_key(module, toks[-1])
+            if key is not None:
+                wires[toks[-1]] = _Wire(key)
+        elif kw == "end":
+            if stack:
+                stack.pop()
+        elif kw in _BLOCK_OPENERS:
+            stack.append(kw)
+            if kw == "switch":  # the selector is read
+                _record_reads(wires, toks[1:], module, line)
+        elif not wires:
+            continue
+        elif kw in ("assign", "update") or (kw == "connect" and stack[-1:] != ["cell"]):
+            _classify_drive(wires, kw, _split_sigspec(toks[1:]), (module, line))
+        elif kw in ("connect", "sync"):  # cell port connection / sync condition: a read
+            _record_reads(wires, toks[2:], module, line)
+        else:  # switch, case, memory, ...: every mention is a read
+            _record_reads(wires, toks[1:], module, line)
+    _flush_module(groups, wires)
+    return groups
+
+
+def load_func_temp_proof(paths: Iterable[Path | str]) -> dict[FuncKey, FuncTempGroup]:
+    """Parse and merge the pre-proc RTLIL dumps that serve as the proof for the exemption."""
+    merged: dict[FuncKey, FuncTempGroup] = {}
+    for path in paths:
+        p = Path(path)
+        try:
+            text = p.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            raise InputError(f"pre-proc RTLIL unreadable: {p}: {exc}") from exc
+        if not re.search(r"^module ", text, re.MULTILINE):
+            raise InputError(f"no RTLIL module in {p}; not a write_rtlil dump")
+        for key, g in parse_func_temps(text).items():
+            m = merged.setdefault(key, FuncTempGroup())
+            m.wires += g.wires
+            m.reads += g.reads
+            m.other_driver |= g.other_driver
+            m.partial |= g.partial
+    return merged
+
+
+def summarise_exemptions(findings: Iterable[Finding]) -> dict[str, int]:
+    """Exempted nets per function name (the report line that makes a new function visible)."""
+    out: dict[str, int] = {}
+    for f in findings:
+        if f.rule == "func-temp-dead-init":
+            out[f.extra] = out.get(f.extra, 0) + 1
+    return dict(sorted(out.items()))
+
+
+def format_exemptions(findings: Iterable[Finding]) -> list[str]:
+    """Human-readable exemption summary: rule, total, per-function counts."""
+    by_func = summarise_exemptions(findings)
+    if not by_func:
+        return []
+    return [
+        f"EXEMPT  [func-temp-dead-init] {sum(by_func.values())} net(s) in {len(by_func)} "
+        "function(s) (constant-x update proven unread in the pre-proc RTLIL): "
+        + " ".join(f"{fn}={n}" for fn, n in by_func.items())
+    ]
+
+
 def _is_user_cell(ctype: str) -> bool:
     return not ctype.startswith("$") or ctype.startswith("$paramod")
 
 
-def scan_header_json(path: Path | str) -> list[Finding]:
+def _resolve_func_temps(
+    path: Path,
+    cands: dict[FuncKey, list[tuple[str, str, int]]],
+    proof: dict[FuncKey, FuncTempGroup] | None,
+) -> list[Finding]:
+    """Exempt a candidate group only if the pre-proc RTLIL proves every wire of it dead-init."""
+    out: list[Finding] = []
+    for key, nets in cands.items():
+        g = proof.get(key) if proof else None
+        if g is None:
+            why = (
+                "no pre-proc RTLIL proof supplied (--pre-rtlil)"
+                if proof is None
+                else "group not found in the pre-proc RTLIL proof"
+            )
+        elif g.reads:
+            why = f"function temporary is READ before it is assigned: {g.reads[0]}"
+        elif g.other_driver or g.partial:
+            why = "function temporary has another driver or a partial x update"
+        elif g.wires != len(nets):
+            why = f"proof has {g.wires} wire(s) for this group but the netlist has {len(nets)}"
+        else:
+            why = ""
+        for short, nname, width in nets:
+            if why:
+                out.append(
+                    Finding(
+                        "x-driven-net",
+                        "FAIL",
+                        path,
+                        0,
+                        f"net {nname} (in {short}): {width}/{width} bits constant x; {why}",
+                    )
+                )
+            else:
+                out.append(
+                    Finding(
+                        "func-temp-dead-init",
+                        "EXEMPT",
+                        path,
+                        0,
+                        f"net {nname} (in {short}): {width} bits x, function '{key[1]}' temporary "
+                        "never read",
+                        extra=key[1],
+                    )
+                )
+    return out
+
+
+def scan_header_json(
+    path: Path | str, proof: dict[FuncKey, FuncTempGroup] | None = None
+) -> list[Finding]:
     p = Path(path)
     try:
         data = json.loads(p.read_text(encoding="utf-8"))
@@ -183,6 +437,7 @@ def scan_header_json(path: Path | str) -> list[Finding]:
     except (OSError, ValueError, KeyError) as exc:
         raise InputError(f"header JSON unreadable: {p}: {exc}") from exc
     out: list[Finding] = []
+    func_cands: dict[FuncKey, list[tuple[str, str, int]]] = {}
     for mname, mod in mods.items():
         short = mname.rsplit("\\", 1)[-1]
         for cname, cell in mod.get("cells", {}).items():
@@ -212,7 +467,10 @@ def scan_header_json(path: Path | str) -> list[Finding]:
                 continue
             bits = net.get("bits", [])
             nx = sum(1 for b in bits if b == "x")
-            if nx:
+            key = _func_key(mname, nname) if nx and nx == len(bits) else None
+            if key is not None:
+                func_cands.setdefault(key, []).append((short, nname, nx))
+            elif nx:
                 out.append(
                     Finding(
                         "x-driven-net",
@@ -222,6 +480,7 @@ def scan_header_json(path: Path | str) -> list[Finding]:
                         f"net {nname} (in {short}): {nx}/{len(bits)} bits constant x",
                     )
                 )
+    out += _resolve_func_temps(p, func_cands, proof)
     if len(mods) == 1 and any(
         c.get("type", "").startswith("$")
         for m in mods.values()
@@ -319,15 +578,21 @@ def find_run_inputs(run_dir: Path) -> tuple[list[Path], list[Path]]:
     return logs, headers
 
 
-def evaluate(logs: Sequence[Path], headers: Sequence[Path], entries: Sequence[AllowEntry]) -> dict:
+def evaluate(
+    logs: Sequence[Path],
+    headers: Sequence[Path],
+    entries: Sequence[AllowEntry],
+    proof: dict[FuncKey, FuncTempGroup] | None = None,
+) -> dict:
     findings: list[Finding] = []
     for lg in logs:
         findings += scan_log(lg)
     for h in headers:
-        findings += scan_header_json(h)
+        findings += scan_header_json(h, proof)
         findings += cross_check_removed_modules(findings, h)
     findings = apply_allowlist(dedupe(findings), entries)
     bad = [f for f in findings if f.severity == "FAIL" and not f.allowed]
+    exempt = summarise_exemptions(findings)
     return {
         "verdict": "FAIL" if bad else "PASS",
         "fail_count": len(bad),
@@ -336,6 +601,9 @@ def evaluate(logs: Sequence[Path], headers: Sequence[Path], entries: Sequence[Al
         "headers": [str(x) for x in headers],
         "structural_check": "RAN" if headers else "NOT RUN (no *.h.json found)",
         "stale_allowlist": list(stale_entries(entries)),
+        "exempt_by_function": exempt,
+        "exempt_total": sum(exempt.values()),
+        "exemption_proof": "pre-proc RTLIL" if proof is not None else "none supplied",
     }
 
 
@@ -365,12 +633,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument(
         "--no-allowlist", action="store_true", help="ignore ALL allowlists (audit mode)"
     )
+    ap.add_argument(
+        "--pre-rtlil",
+        type=Path,
+        action="append",
+        default=[],
+        help="pre-proc RTLIL (write_rtlil before proc) of the SAME elaboration as --header-json; "
+        "the proof that lets dead sv2v function temporaries through (rule func-temp-dead-init)",
+    )
     ap.add_argument("--json", action="store_true")
     ap.add_argument("-v", "--verbose", action="store_true", help="also print WARN/INFO findings")
     args = ap.parse_args(argv)
 
     logs = list(args.logs)
     headers = list(args.header_json)
+    pre_rtlil = list(args.pre_rtlil)
     try:
         if args.run_dir:
             if not args.run_dir.is_dir():
@@ -378,11 +655,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             rl, rh = find_run_inputs(args.run_dir)
             logs += rl
             headers += rh
+            pre_rtlil += sorted(args.run_dir.glob("*yosys*/*.pre.il"))
         if not logs:
             raise InputError("no synthesis logs given or found")
         al_paths = ([DEFAULT_ALLOWLIST] if DEFAULT_ALLOWLIST.is_file() else []) + args.allowlist
         entries = [] if args.no_allowlist else [e for ap_ in al_paths for e in load_allowlist(ap_)]
-        res = evaluate(logs, headers, entries)
+        proof = load_func_temp_proof(pre_rtlil) if pre_rtlil else None
+        res = evaluate(logs, headers, entries, proof)
     except (InputError, AllowlistError) as exc:
         print(f"check_synth_undef: INPUT ERROR (exit 2): {exc}", file=sys.stderr)
         return 2
@@ -396,6 +675,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         for f in res["findings"]:
             if f.severity == "FAIL" or f.allowed or args.verbose:
                 print(_fmt(f))
+        for line in format_exemptions(res["findings"]):
+            print(line)
         for e in res["stale_allowlist"] if args.verbose else []:
             print(f"WARN    [stale-allowlist] '{e.rule} | {e.pattern}' matched nothing")
         print(

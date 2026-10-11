@@ -65,7 +65,8 @@ def test_proof_keys_do_not_depend_on_autoidx_or_directories():
     assert ("functemp_clean", "pick", "functemp_clean.v:42", "kk") in keys
     il = (
         "module \\m\n  wire width 4 \\f$func$/some/dir/x.v:7$99.t\n"
-        "  process $p\n    sync always\n      update \\f$func$/some/dir/x.v:7$99.t 4'x\n  end\nend\n"
+        "  process $p\n    sync always\n"
+        "      update \\f$func$/some/dir/x.v:7$99.t 4'x\n  end\nend\n"
     )
     assert ("m", "f", "x.v:7", "t") in gate.parse_func_temps(il)
 
@@ -82,7 +83,9 @@ def test_module_name_is_base_name_of_paramod():
 def _il(body: str) -> str:
     return (
         "module \\m\n  wire width 4 \\f$func$a.v:1$2.t\n  wire width 4 \\y\n"
-        "  process $p\n    sync always\n      update \\f$func$a.v:1$2.t 4'x\n  end\n" + body + "end\n"
+        "  process $p\n    sync always\n      update \\f$func$a.v:1$2.t 4'x\n  end\n"
+        + body
+        + "end\n"
     )
 
 
@@ -119,14 +122,20 @@ def test_partial_x_update_is_not_dead_init():
     assert g.partial and not g.dead_init
 
 
-def test_non_x_update_is_a_real_driver():
+def test_non_x_update_is_a_normally_driven_wire_not_a_candidate():
     il = _il("").replace("update \\f$func$a.v:1$2.t 4'x", "update \\f$func$a.v:1$2.t \\y")
-    assert gate.parse_func_temps(il)[("m", "f", "a.v:1", "t")].other_driver
+    assert ("m", "f", "a.v:1", "t") not in gate.parse_func_temps(il)
+
+
+def test_x_update_plus_non_x_update_has_another_driver():
+    body = "  process $q\n    sync always\n      update \\f$func$a.v:1$2.t \\y\n  end\n"
+    g = _group(body)
+    assert g.other_driver and not g.dead_init
 
 
 def test_wire_without_x_update_is_not_a_candidate():
     il = "module \\m\n  wire \\f$func$a.v:1$2.t\nend\n"
-    assert not gate.parse_func_temps(il)[("m", "f", "a.v:1", "t")].dead_init
+    assert ("m", "f", "a.v:1", "t") not in gate.parse_func_temps(il)
 
 
 def test_similarly_named_proc_temporaries_are_not_reads():
@@ -143,7 +152,7 @@ def test_missing_rtlil_file_is_an_input_error(tmp_path):
     raise AssertionError("expected InputError")
 
 
-# --------------------------------------------------------------------------- exemption in the structural check
+# ---------------------------------------------------- exemption in the structural check
 
 
 def test_without_proof_every_function_temp_still_fails():
@@ -165,12 +174,16 @@ def test_with_proof_clean_functions_are_exempt_and_reported():
 
 
 def test_unassigned_result_is_still_a_failure_but_the_clean_function_is_exempt():
-    findings = gate.scan_header_json(FIX / "functemp_unassigned.h.json", _proof("functemp_unassigned"))
+    findings = gate.scan_header_json(
+        FIX / "functemp_unassigned.h.json", _proof("functemp_unassigned")
+    )
     bad = [f for f in _fails(findings) if f.rule == "x-driven-net"]
     assert bad, "a function result left unassigned on a path must not be hidden"
     assert all("leaky" in f.text for f in bad)
-    assert any("read" in f.text for f in bad)
-    assert gate.summarise_exemptions(findings) == {"fine": 4}
+    assert any("READ" in f.text for f in bad)
+    # only the wire that is actually read stays a failure; leaky's unread args are dead-init
+    assert len(bad) == 1 and "$result" in bad[0].text
+    assert gate.summarise_exemptions(findings) == {"fine": 4, "leaky": 2}
 
 
 def test_proof_from_another_design_exempts_nothing():
@@ -203,8 +216,15 @@ def test_partially_x_function_temp_is_not_exempt(tmp_path):
 
 def test_name_alone_never_exempts_a_user_net(tmp_path):
     # A user net that merely looks like a function temporary, absent from the proof.
-    h = {"modules": {"m": {"cells": {}, "ports": {}, "netnames": {
-        "mine$func$a.v:1$2.t": {"bits": ["x"], "attributes": {}}}}}}
+    h = {
+        "modules": {
+            "m": {
+                "cells": {},
+                "ports": {},
+                "netnames": {"mine$func$a.v:1$2.t": {"bits": ["x"], "attributes": {}}},
+            }
+        }
+    }
     p = tmp_path / "h.json"
     p.write_text(json.dumps(h))
     assert [f.rule for f in _fails(gate.scan_header_json(p, {}))] == ["x-driven-net"]
