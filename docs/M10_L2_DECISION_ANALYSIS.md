@@ -13,6 +13,13 @@ benchmark path (`sw/bench/`, riscv32-none-elf-gcc) and a SoC cocotb harness
 M7 hardware perf counters (`mhpmcounter3`=I$ miss, `mhpmcounter4`=D$ miss,
 `mcycle`, `minstret`) through a flushed scratch block, and computes miss rates.
 
+> **Note 2026-10-10 (bead `kiit`, GH #260):** `mcycle` and the other `rv32i_csr_file` performance
+> counters stopped counting in every cycle a CSR instruction was in EX (and in trap-entry / MRET
+> cycles). Cycle counts taken from `mcycle` before the fix therefore under-count by one per CSR
+> instruction in the measured window (the size of the effect depends on how many CSR instructions
+> the harness executes inside its window; it was not re-measured). The results below are left as
+> recorded. See `fixes/FIXES_INDEX.md` section 14.
+
 The decision workload is `sweep.c`: a working-set sweep (512 B → 32 KB) in two
 access patterns — **SEQ** (sequential) and **STRIDE** (256 B stride, defeats
 spatial locality) — each warmed by a prime pass then measured at steady state.

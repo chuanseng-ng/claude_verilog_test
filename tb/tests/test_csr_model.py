@@ -9,10 +9,16 @@ import pytest
 
 from tb.models.csr_model import (
     CSR_MCOUNTINHIBIT,
+    CSR_MCYCLE,
     CSR_MCYCLEH,
     CSR_MEPC,
+    CSR_MHPMCOUNTER3,
+    CSR_MHPMCOUNTER4,
+    CSR_MHPMCOUNTER5,
     CSR_MIE,
     CSR_MIMPID,
+    CSR_MINSTRET,
+    CSR_MINSTRETH,
     CSR_MIP,
     CSR_MSTATUS,
     CSR_MTVEC,
@@ -147,3 +153,125 @@ def test_64bit_counters_split_across_low_and_high_words():
     m.execute("RW", 0xB82, 0x1)
     assert m.read(0xB82) == 1
     assert m.read(0xB02) == 0
+
+
+# ---------------------------------------------------------------------------
+# tick(): cycle-accurate counter semantics (bead kiit / GH #260)
+# ---------------------------------------------------------------------------
+EVENTS = {
+    CSR_MHPMCOUNTER3: "icache_miss",
+    CSR_MHPMCOUNTER4: "dcache_miss",
+    CSR_MHPMCOUNTER5: "branch_mispred",
+}
+
+
+def test_tick_counts_every_cycle_without_a_csr_access():
+    """tick counts every cycle without a csr access."""
+    m = CsrModel()
+    for _ in range(5):
+        m.tick()
+    assert m.read(CSR_MCYCLE) == 5
+    assert m.read(CSR_MINSTRET) == 0  # event counters need their event
+
+
+def test_tick_events_count_only_when_strobed():
+    """tick events count only when strobed."""
+    m = CsrModel()
+    m.tick(retire=True, icache_miss=True, dcache_miss=True, branch_mispred=True)
+    m.tick(retire=True)
+    assert m.read(CSR_MINSTRET) == 2
+    assert [m.read(c) for c in EVENTS] == [1, 1, 1]
+
+
+@pytest.mark.parametrize("csr", [CSR_MCYCLE, CSR_MINSTRET, *EVENTS])
+def test_tick_csr_access_to_another_csr_drops_no_increment(csr):
+    """A legal CSR instruction in EX (reading or writing a different CSR) freezes nothing."""
+    m = CsrModel()
+    ev = {"retire": True, "icache_miss": True, "dcache_miss": True, "branch_mispred": True}
+    # A read-only form of the register under test must not stop it either.
+    m.tick(**ev, access=("RS", csr, 0, False, True))
+    m.tick(**ev, access=("RW", CSR_MEPC, 0x1234, False, False))  # write to a non-counter
+    m.tick(**ev, access=("RS", CSR_MIMPID, 0, False, True))
+    assert m.read(csr) == 3
+    assert m.read(CSR_MCYCLE) == 3
+    assert [m.read(c) for c in (CSR_MINSTRET, *EVENTS)] == [3, 3, 3, 3]
+
+
+@pytest.mark.parametrize("csr", [CSR_MCYCLE, CSR_MINSTRET, *EVENTS])
+def test_tick_write_beats_increment_of_its_own_register_only(csr):
+    """Write wins for the addressed register; all the others still count."""
+    m = CsrModel()
+    ev = {"retire": True, "icache_miss": True, "dcache_miss": True, "branch_mispred": True}
+    m.tick(**ev, access=("RW", csr, 100, False, False))
+    assert m.read(csr) == 100
+    for other in {CSR_MCYCLE, CSR_MINSTRET, *EVENTS} - {csr}:
+        assert m.read(other) == 1
+
+
+def test_tick_write_low_word_discards_the_carry_into_the_high_word():
+    """tick write low word discards the carry into the high word."""
+    m = CsrModel()
+    m.execute("RW", CSR_MCYCLE, 0xFFFF_FFFF)
+    m.execute("RW", CSR_MCYCLEH, 7)
+    m.tick(access=("RW", CSR_MCYCLE, 5, False, False))
+    assert (m.read(CSR_MCYCLEH), m.read(CSR_MCYCLE)) == (7, 5)  # no phantom carry
+    m.execute("RW", CSR_MINSTRET, 0xFFFF_FFFF)
+    m.tick(retire=True, access=("RW", CSR_MINSTRET, 9, False, False))
+    assert (m.read(CSR_MINSTRETH), m.read(CSR_MINSTRET)) == (0, 9)
+
+
+def test_tick_write_high_word_leaves_the_low_word_counting():
+    """tick write high word leaves the low word counting (its wrap carry is lost)."""
+    m = CsrModel()
+    m.execute("RW", CSR_MCYCLE, 0xFFFF_FFFF)
+    m.tick(access=("RW", CSR_MCYCLEH, 3, False, False))
+    assert (m.read(CSR_MCYCLEH), m.read(CSR_MCYCLE)) == (3, 0)
+    m.tick(retire=True, access=("RW", CSR_MINSTRETH, 4, False, False))
+    assert m.read(CSR_MINSTRETH) == 4
+    assert m.read(CSR_MINSTRET) == 1
+
+
+def test_tick_low_word_wrap_carries_into_the_high_word():
+    """tick low word wrap carries into the high word."""
+    m = CsrModel()
+    m.execute("RW", CSR_MCYCLE, 0xFFFF_FFFF)
+    m.tick(access=("RS", CSR_MIMPID, 0, False, True))
+    assert (m.read(CSR_MCYCLEH), m.read(CSR_MCYCLE)) == (1, 0)
+
+
+def test_tick_mcountinhibit_applies_from_the_next_cycle():
+    """The inhibit mask sampled at the start of the cycle gates the counters."""
+    m = CsrModel()
+    m.tick(access=("RW", CSR_MCOUNTINHIBIT, 0x3D, False, False))
+    assert m.read(CSR_MCYCLE) == 1  # still counted: the old mask was 0
+    m.tick(retire=True, icache_miss=True)
+    assert m.read(CSR_MCYCLE) == 1 and m.read(CSR_MINSTRET) == 0
+    m.tick(access=("RW", CSR_MCOUNTINHIBIT, 0, False, False))
+    assert m.read(CSR_MCYCLE) == 1  # still frozen this cycle
+    m.tick()
+    assert m.read(CSR_MCYCLE) == 2
+
+
+def test_tick_inhibit_bit_stops_only_its_counter():
+    """tick inhibit bit stops only its counter."""
+    m = CsrModel()
+    m.execute("RW", CSR_MCOUNTINHIBIT, 1 << 4)  # hpmcounter4 only
+    m.tick(retire=True, icache_miss=True, dcache_miss=True, branch_mispred=True)
+    assert [m.read(c) for c in (CSR_MCYCLE, CSR_MINSTRET, *EVENTS)] == [1, 1, 1, 0, 1]
+
+
+def test_tick_illegal_csr_access_raises():
+    """tick illegal csr access raises."""
+    with pytest.raises(IllegalCsrError):
+        CsrModel().tick(access=("RW", 0xBFF, 0, False, False))
+
+
+def test_tick_register_and_immediate_set_clear_forms():
+    """tick register and immediate set clear forms."""
+    m = CsrModel()
+    m.tick(access=("RW", CSR_MHPMCOUNTER3, 0xF0, False, False))
+    m.tick(access=("RC", CSR_MHPMCOUNTER3, 0x30, True, False))  # imm 0x30 -> uimm 0x10
+    assert m.read(CSR_MHPMCOUNTER3) == 0xE0
+    m.tick(icache_miss=True, access=("RS", CSR_MHPMCOUNTER3, 0, True, False))  # uimm 0: read only
+    assert m.read(CSR_MHPMCOUNTER3) == 0xE1
+    assert m.read(CSR_MINSTRETH) == 0

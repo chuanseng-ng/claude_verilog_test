@@ -1,0 +1,64 @@
+
+ /----------------------------------------------------------------------------\
+ |  yosys -- Yosys Open SYnthesis Suite                                       |
+ |  Copyright (C) 2012 - 2024  Claire Xenia Wolf <claire@yosyshq.com>         |
+ |  Distributed under an ISC-like license, type "license" to see terms        |
+ \----------------------------------------------------------------------------/
+ Yosys 0.46 (git sha1 e97731b9dda91fa5fa53ed87df7c34163ba59a41, clang++ 17.0.6 -fPIC -O3)
+Loaded SDC plugin
+
+1. Executing Liberty frontend: /home/neuromorphic/.ciel/ciel/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+Imported 428 cell types from liberty file.
+
+
+1. Executing Verilog with UHDM frontend.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/soc/soc_addr_map_pkg.sv:72: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/cpu/core/rv32i_regfile.sv:46: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:203: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:206: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:412: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:423: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:453: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:517: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:605: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_dcache.sv:250: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_dcache.sv:253: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_dcache.sv:499: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_dcache.sv:510: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_dcache.sv:547: Post-incrementation operations are handled as pre-incrementation.
+Warning: /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_dcache.sv:952: Post-incrementation operations are handled as pre-incrementation.
+Warning: Removing unelaborated module: \rv32i_core from the design.
+Warning: Removing unelaborated module: \rv32i_dcache from the design.
+Warning: Removing unelaborated module: \rv32i_cache_arbiter from the design.
+Warning: Removing unelaborated module: \rv32i_icache from the design.
+Warning: Removing unelaborated module: \rv32i_pipeline_if from the design.
+Warning: Replacing memory \data_dout0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:0
+Warning: Replacing memory \refill_addr_bank_q with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:453
+Warning: Replacing memory \data_din0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:416
+Warning: Replacing memory \data_addr0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:415
+Warning: Replacing memory \data_web0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:414
+Warning: Replacing memory \data_csb0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:413
+Warning: Replacing memory \data_dout_r with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_icache.sv:203
+Warning: wire '\_unused_rresp' is assigned in a block at /nobackup/claude_sim_build/dud4/synth/src_main/rtl/cpu/rv32i_cpu_top.sv:0.0-0.0.
+Warning: wire '\_unused_csr_illegal' is assigned in a block at /nobackup/claude_sim_build/dud4/synth/src_main/rtl/cpu/rv32i_cpu_top.sv:0.0-0.0.
+Warning: wire '\_unused_csr_wr_en' is assigned in a block at /nobackup/claude_sim_build/dud4/synth/src_main/rtl/cpu/rv32i_cpu_top.sv:0.0-0.0.
+Warning: wire '\_unused_resume' is assigned in a block at /nobackup/claude_sim_build/dud4/synth/src_main/rtl/cpu/rv32i_cpu_top.sv:0.0-0.0.
+/nobackup/claude_sim_build/dud4/synth/src_main/rtl/cpu/rv32i_cpu_top.sv:0: Warning: Identifier `\_unused_rresp' is implicitly declared.
+/nobackup/claude_sim_build/dud4/synth/src_main/rtl/cpu/rv32i_cpu_top.sv:0: Warning: Identifier `\_unused_csr_illegal' is implicitly declared.
+/nobackup/claude_sim_build/dud4/synth/src_main/rtl/cpu/rv32i_cpu_top.sv:0: Warning: Identifier `\_unused_csr_wr_en' is implicitly declared.
+/nobackup/claude_sim_build/dud4/synth/src_main/rtl/cpu/rv32i_cpu_top.sv:0: Warning: Identifier `\_unused_resume' is implicitly declared.
+/nobackup/claude_sim_build/dud4/synth/src_main/rtl/cpu/core/rv32i_core.sv:971: Warning: Identifier `\csr_illegal' is implicitly declared.
+/nobackup/claude_sim_build/dud4/synth/src_main/rtl/cpu/core/rv32i_core.sv:970: Warning: Identifier `\csr_wr_en' is implicitly declared.
+Warning: Replacing memory \data_dout0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_dcache.sv:0
+Warning: Replacing memory \data_din0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_dcache.sv:503
+Warning: Replacing memory \data_addr0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_dcache.sv:502
+Warning: Replacing memory \data_web0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_dcache.sv:501
+Warning: Replacing memory \data_csb0 with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_dcache.sv:500
+Warning: Replacing memory \data_dout_r with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_dcache.sv:250
+Warning: Replacing memory \hit_bank_q with list of registers. See /nobackup/claude_sim_build/dud4/synth/src_main/rtl/mem/rv32i_dcache.sv:307
+/nobackup/claude_sim_build/dud4/synth/src_main/rtl/cpu/core/rv32i_core.sv:436: Warning: Range select [639:608] out of bounds on signal `\if_id_reg': Setting all 32 result bits to undef.
+/nobackup/claude_sim_build/dud4/synth/src_main/rtl/cpu/core/rv32i_core.sv:437: Warning: Range select [799:768] out of bounds on signal `\if_id_reg': Setting all 32 result bits to undef.
+
+19. Executing CHECK pass (checking for obvious problems).
+Found and reported 0 problems.
+226. Executing JSON backend.

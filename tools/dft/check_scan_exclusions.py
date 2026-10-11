@@ -14,7 +14,7 @@ args = sys.argv[1:]
 path = args[0]
 expect = int(args[args.index('--expect') + 1]) if '--expect' in args else 256
 rx = re.compile(args[args.index('--regex') + 1] if '--regex' in args
-                else r'u_crypto\.g_aes\.u_aes\.(rk_q|key_i)\b')
+                else r'u_crypto\.(g_aes\.u_aes\.rk_q|key_q)\b')
 t = open(path).read()
 cells = re.findall(r'\n\s*(sky130_fd_sc_hd__\w+)\s+(\\?\S+)\s*\((.*?)\);', t, re.S)
 bad = []
