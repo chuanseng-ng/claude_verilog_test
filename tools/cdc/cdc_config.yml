@@ -76,9 +76,12 @@ reset_domains:
 # Collapses a whole bus to one domain so per-bit fan-in stops looking
 # multi-domain. Only list a bus here if it is genuinely synchronous to the
 # named domain -- a truly asynchronous pin must NOT be listed (uart_rx_i is
-# absent on purpose: it is async, it has a real 2-FF synchroniser in
-# uart_controller.sv, and cdc_snitch correctly reports it OKX. That OKX is the
-# evidence the tool would still catch a MISSING synchroniser.)
+# absent on purpose: it is async and has a real synchroniser in
+# uart_controller.sv. Since bead xtaa that synchroniser is a cdc_2ff_sync
+# (u_uart_rx_sync, RESET_VAL=1), so cdc_snitch classifies the crossing CDC, and
+# the required_synchronisers entry `uart-rx-pad-sync` below makes a deleted
+# synchroniser fail the gate. Before xtaa it was a hand-written chain reported
+# OKX, which could not be gated.)
 # The APB3 debug slave port. NOTE THE HISTORY: before GH #95 these ports fed
 # u_cpu DIRECTLY, and u_cpu runs on cpu_gated_clk -- so mapping them to any
 # domain here would have been a lie covering a real unsynchronised crossing
@@ -169,3 +172,9 @@ required_synchronisers:
     reason: >
       i2c_sda_i is an asynchronous pad input; i2c_controller.sv synchronises it
       through cdc_2ff_sync u_sda_sync before the bit engine sees it.
+  - id: uart-rx-pad-sync
+    dest: '^u_uart\.u_uart_rx_sync\.sync_q\[0\]:D$'
+    reason: >
+      uart_rx_i is an asynchronous pad input; uart_controller.sv synchronises it
+      through cdc_2ff_sync u_uart_rx_sync (RESET_VAL=1, idle-high) before the
+      receive FSM sees it (bead xtaa).
