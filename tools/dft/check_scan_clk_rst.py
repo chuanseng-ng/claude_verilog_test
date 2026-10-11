@@ -25,6 +25,22 @@ backwards through combinational cells and applies the scan-mode rules:
          ends at a sequential cell output (a flop-generated clock), or at a primary input without
          having passed a scan-mode mux (a flop on a functional clock root in scan mode).
 
+TAP DOMAIN (bead claude_verilog_test-j41m.3, DFT Stage 1b). With --tap-prefix PFX (repeatable) every
+sequential cell whose flattened name starts with "PFX." is a TAP-domain flop: by decision N4 it is on no scan
+chain, so it is NOT held to the rules above. It is held to its own:
+
+  * its CLK (latch EN) cone ends at the tck port and nowhere else (no mux, no flop-generated clock);
+  * its async reset cone ends at the trst port, or at a TAP-domain "reset synchroniser" flop whose own
+    async reset cone ends directly at the trst port (so nothing functional, no rst_n_i, no PLL/PMU reset,
+    can reset or disturb the TAP, and a TAP flop cannot be reset by another TAP flop in a loop).
+Everything outside the TAP is still held to the original rules, which also makes any path from a TAP flop
+into a non-TAP clock or reset (other than through the scan-mode mux) a violation.
+
+--scan-mode-net NAME names the flattened scan-mode NET (e.g. u_dft_ctrl.scan_mode_o) instead of the port,
+for a design where scan mode is the OR of a pin and the TAP. The net's fan-in must contain BOTH the
+--scan-mode port (the 1a pin leg) and at least one TAP-domain flop, so removing either leg fails.
+--expect-tap-flops N fails if fewer than N TAP-domain flops are found (renamed/optimised-away guard).
+
 Exit 0 only if there are no violations AND (with --expect-gates) the number of scan-mode muxes
 found is at least N, so that a design in which the muxes were optimised away or renamed cannot
 pass vacuously. A cell type with no definition (a library cell or hard macro the netlist instantiates
@@ -88,12 +104,20 @@ def main():
     ap.add_argument("--scan-mode", default="scan_mode_i")
     ap.add_argument("--expect-gates", type=int, default=0)
     ap.add_argument("--max-print", type=int, default=12)
+    ap.add_argument("--tap-prefix", action="append", default=[],
+                    help="flattened instance-name prefix of TAP-domain cells (repeatable); see the docstring")
+    ap.add_argument("--tck", default="tck_i", help="TAP clock port")
+    ap.add_argument("--trst", default="trst_ni", help="TAP reset port")
+    ap.add_argument("--scan-mode-net", default=None,
+                    help="flattened net that IS scan mode (pin OR TAP); default: the --scan-mode port")
+    ap.add_argument("--expect-tap-flops", type=int, default=0)
     ap.add_argument("--models", action="append", default=[],
                     help="Verilog behavioural/blackbox models of library cells and hard macros that the "
                          "netlist instantiates but does not define (e.g. tools/dft/asap7_cell_models.v)")
     a = ap.parse_args()
     path = a.json or run_yosys(a.netlist, a.top, a.models)
     cells, drivers, ports, in_bits = load(path, a.top)
+    netnames = json.load(open(path))["modules"][a.top].get("netnames", {})
     # A cell whose module is undefined has no port directions, so its outputs would never be traced and every
     # cone ending in it would silently look controlled. Refuse to pass on such a netlist.
     undefined = sorted({c["type"] for c in cells.values()
@@ -102,7 +126,38 @@ def main():
         print(f"FAIL: cell types with no definition (outputs untraceable, result would be vacuous): "
               f"{', '.join(undefined)}; pass --models FILE defining them")
         return 1
-    sm_bits = set(b for b in ports[a.scan_mode]["bits"] if isinstance(b, int))
+    if a.scan_mode_net:
+        if a.scan_mode_net not in netnames:
+            print(f"FAIL: scan-mode net {a.scan_mode_net} not found in the flattened netlist (renamed?)")
+            return 1
+        sm_bits = set(b for b in netnames[a.scan_mode_net]["bits"] if isinstance(b, int))
+    else:
+        sm_bits = set(b for b in ports[a.scan_mode]["bits"] if isinstance(b, int))
+
+    def in_tap(cname):
+        # yosys `flatten` names cells "$flatten\u_a.\u_b.$procdff$12": drop the marker and the escapes
+        n = cname.replace("$flatten", "").replace("\\", "")
+        return any(n.startswith(p + ".") for p in a.tap_prefix)
+
+    def cone_leaves(bit):
+        """Terminals of the combinational fan-in cone: (input-port names, sequential cell names)."""
+        ports_hit, seqs_hit, seen, stack = set(), set(), set(), [bit]
+        while stack:
+            b = stack.pop()
+            if b in seen:
+                continue
+            seen.add(b)
+            if b in in_bits:
+                ports_hit.add(in_bits[b])
+                continue
+            if b not in drivers:
+                continue
+            cn, _ = drivers[b]
+            if is_seq(cells[cn]["type"]):
+                seqs_hit.add(cn)
+                continue
+            stack.extend(x for _, x in cell_inputs(cells[cn]))
+        return ports_hit, seqs_hit
 
     def cell_inputs(c):
         for port, bits in c["connections"].items():
@@ -167,12 +222,50 @@ def main():
         return viol
 
     violations = []
-    n_async = n_seq = 0
+    n_async = n_seq = n_tap = 0
+
+    tap_cells = {cn for cn, c in cells.items() if is_seq(c["type"]) and in_tap(cn)}
+    # TAP reset synchroniser flops: async reset cone ends directly (and only) at the trst port.
+    tap_sync = set()
+    for cn in tap_cells:
+        rb = [b for b in cells[cn]["connections"].get("ARST", []) if isinstance(b, int)]
+        if rb and all(cone_leaves(b) == ({a.trst}, set()) for b in rb):
+            tap_sync.add(cn)
+
+    if a.scan_mode_net:
+        # both legs of scan mode must exist: the 1a pin and the TAP
+        legs_ports, legs_seqs = set(), set()
+        for b in sm_bits:
+            p_, s_ = cone_leaves(b)
+            legs_ports |= p_
+            legs_seqs |= s_
+        if a.scan_mode not in legs_ports:
+            violations.append((a.scan_mode_net, "net", "SCAN_MODE", f"pin leg {a.scan_mode} missing from scan mode"))
+        if a.tap_prefix and not (legs_seqs & tap_cells):
+            violations.append((a.scan_mode_net, "net", "SCAN_MODE", "TAP leg missing from scan mode"))
+
     for cname, c in cells.items():
         t = c["type"]
         if not is_seq(t):
             continue
         n_seq += 1
+        if cname in tap_cells:
+            n_tap += 1
+            ck = c["connections"].get("CLK") or c["connections"].get("EN") or []
+            for b in ck:
+                if isinstance(b, int) and cone_leaves(b) != ({a.tck}, set()):
+                    ph, sh = cone_leaves(b)
+                    violations.append((cname, t, "CLK", f"TAP clock cone is not exactly port {a.tck}: "
+                                       f"ports {sorted(ph)} seq {sorted(sh)[:3]}"))
+            for p in ASYNC_PORTS:
+                for b in c["connections"].get(p, []):
+                    if isinstance(b, int):
+                        n_async += 1
+                        ports_hit, seqs_hit = cone_leaves(b)
+                        if not (ports_hit <= {a.trst} and seqs_hit <= tap_sync):
+                            violations.append((cname, t, p, f"TAP reset cone not trst-only: ports "
+                                               f"{sorted(ports_hit)} seq {sorted(seqs_hit - tap_sync)[:3]}"))
+            continue
         # clock / latch enable
         ck = c["connections"].get("CLK") or c["connections"].get("EN") or []
         for b in ck:
@@ -187,13 +280,18 @@ def main():
                     for v in trace(b, "reset"):
                         violations.append((cname, t, p, v))
 
-    print(f"sequential cells: {n_seq}; async reset/set pins checked: {n_async}; scan-mode muxes: {gates}")
+    print(f"sequential cells: {n_seq}; async reset/set pins checked: {n_async}; scan-mode muxes: {gates}; "
+          f"TAP-domain flops: {n_tap} (reset synchronisers: {len(tap_sync)})")
     uniq = sorted(set(violations))
     print(f"violations: {len(uniq)}")
     for v in uniq[: a.max_print]:
         print("FAIL:", *v)
     if len(uniq) > a.max_print:
         print(f"... {len(uniq) - a.max_print} more")
+    if n_tap < a.expect_tap_flops:
+        print(f"FAIL: expected at least {a.expect_tap_flops} TAP-domain flops, found {n_tap} "
+              f"(prefix wrong or optimised away?)")
+        return 1
     if gates < a.expect_gates:
         print(f"FAIL: expected at least {a.expect_gates} scan-mode muxes, found {gates} (optimised away?)")
         return 1

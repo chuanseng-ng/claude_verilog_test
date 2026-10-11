@@ -262,9 +262,12 @@ set_clock_uncertainty -hold  0.150 [get_clocks core_clk]
 # file matches it deliberately (see header).
 ###############################################################################
 set _in_timed {}
+# DFT Stage 1b (j41m.3): the JTAG inputs are timed against tck (section "JTAG TAP" below),
+# not core_clk, and tck_i is a clock port (STA-0441), so they are not in this list.
+set _jtag_in_names {tck_i tms_i tdi_i trst_ni}
 foreach _p [all_inputs] {
     set _n [get_full_name $_p]
-    if {$_n ne "clk_i"} {
+    if {$_n ne "clk_i" && [lsearch -exact $_jtag_in_names $_n] < 0} {
         lappend _in_timed $_p
     }
 }
@@ -290,8 +293,14 @@ if {[llength $_in_timed] > 0} {
     set_input_delay  [expr $clock_period * 0.20] -clock core_clk -max $_in_timed
     set_input_delay  [expr $clock_period * 0.05] -clock core_clk -min $_in_timed
 }
-set_output_delay [expr $clock_period * 0.20] -clock core_clk -max [all_outputs]
-set_output_delay [expr $clock_period * 0.05] -clock core_clk -min [all_outputs]
+set _out_timed {}
+foreach _p [all_outputs] {
+    if {[lsearch -exact {tdo_o tdo_oe_o} [get_full_name $_p]] < 0} {
+        lappend _out_timed $_p
+    }
+}
+set_output_delay [expr $clock_period * 0.20] -clock core_clk -max $_out_timed
+set_output_delay [expr $clock_period * 0.05] -clock core_clk -min $_out_timed
 
 ###############################################################################
 # Asynchronous / quasi-static ports — false path
@@ -317,6 +326,53 @@ foreach _dft_p {scan_mode_i scan_en_i scan_rst_ni scan_clk_i scan_in_i} {
 }
 if {[llength $_dft_in] > 0} { set_false_path -from $_dft_in }
 if {[llength [get_ports -quiet scan_out_o]] > 0} { set_false_path -to [get_ports scan_out_o] }
+
+###############################################################################
+# JTAG TAP (bead claude_verilog_test-j41m.3, DFT Stage 1b) -- FUNCTIONAL-MODE constraints.
+# CONSTRAINTS TEXT ONLY: Tcl-syntax / port-resolution checked, NO P&R or STA sign-off run.
+#
+# tck_i is a third, asynchronous clock root that clocks ONLY the TAP (jtag_tap.sv: FSM, IR,
+# TDRs, TDO). 100 ns (10 MHz) is a conservative placeholder until a pad ring and an ATE
+# exist (DFT_ARCHITECTURE.md 9.5, 9.6). The TAP's outputs scan_mode / test_en / scan_rst /
+# scan_en are static controls (DFT_ARCHITECTURE.md 15.5, crossing 2), so the tck <-> core_clk
+# relation is declared asynchronous rather than timed.
+#
+# KNOWN GAP (Stage 2): scan_mode is now also driven by a TAP flop, so the dft_clk_mux selects
+# are no longer constant under set_case_analysis on scan_mode_i alone, and STA will propagate
+# tck / scan_clk_i through the muxes into the core clock network. That flop has no name that
+# survives hierarchy flattening, so it cannot be case-analysed from this file; the scan-mode
+# SDC (a Stage 2 deliverable) must pin it (or set_clock_sense -stop_propagation on the mux
+# outputs once their pin names are known after synthesis).
+###############################################################################
+if {[llength [get_ports -quiet tck_i]] > 0} {
+    set _jtag_period 100.0
+    create_clock -name tck -period $_jtag_period [get_ports tck_i]
+    set_clock_uncertainty -setup 0.300 [get_clocks tck]
+    set_clock_uncertainty -hold  0.150 [get_clocks tck]
+    set_clock_groups -asynchronous -group [get_clocks tck] -group [get_clocks core_clk]
+
+    set _jtag_data_in {}
+    foreach _jtag_p {tms_i tdi_i} {
+        foreach _jtag_x [get_ports -quiet $_jtag_p] { lappend _jtag_data_in $_jtag_x }
+    }
+    if {[llength $_jtag_data_in] > 0} {
+        set_driving_cell -lib_cell sky130_fd_sc_hd__buf_4 -pin X $_jtag_data_in
+        set_input_delay [expr $_jtag_period * 0.20] -clock tck -max $_jtag_data_in
+        set_input_delay [expr $_jtag_period * 0.05] -clock tck -min $_jtag_data_in
+    }
+    # TDO / TDO_OE are launched on the falling edge of tck inside the TAP; the external
+    # capture is the next rising edge, so half a period minus the board allowance remains.
+    set _jtag_out {}
+    foreach _jtag_p {tdo_o tdo_oe_o} {
+        foreach _jtag_x [get_ports -quiet $_jtag_p] { lappend _jtag_out $_jtag_x }
+    }
+    if {[llength $_jtag_out] > 0} {
+        set_output_delay [expr $_jtag_period * 0.20] -clock tck -max $_jtag_out
+        set_output_delay [expr $_jtag_period * 0.05] -clock tck -min $_jtag_out
+    }
+    # trst_ni: asynchronous assert into a cdc_reset_sync, same class as rst_n_i.
+    foreach _jtag_x [get_ports -quiet trst_ni] { set_false_path -from $_jtag_x }
+}
 
 # Second-domain reference reset (GH #92/#93). Same class as rst_n_i above: an
 # asynchronous reset feeding a cdc_reset_sync, so timing it against core_clk is
