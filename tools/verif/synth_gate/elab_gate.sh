@@ -25,7 +25,7 @@ GATE="$REPO/tools/verif/check_synth_undef.py"
 case "$TARGET" in
   sky130-cpu) TOP=rv32i_cpu_top; LIBS=("$REPO/pnr/sky130/sky130_sram_1kbyte_1rw1r_32x256_8_stub.v") ;;
   sky130-soc) TOP=soc_top; LIBS=() ;;
-  asap7-soc)  TOP=soc_top; LIBS=("$HERE/stubs/asap7_icg_stub.v") ;;
+  asap7-soc)  TOP=soc_top; LIBS=("$HERE/stubs/asap7_icg_stub.v" "$REPO/pnr/asap7/sram_1rw_256x32_asap7_stub.v") ;;
   *) echo "ERROR: unknown target '$TARGET'" >&2; exit 2 ;;
 esac
 
@@ -61,7 +61,7 @@ esac
   || { echo "ERROR: sv2v failed ($TAG):" >&2; cat "$W/$TAG.sv2v.err" >&2; exit 2; }
 {
   for l in "${LIBS[@]}"; do echo "read_verilog -sv -lib $l"; done
-  echo "read_verilog -sv $W/$TAG.sv2v.v"
+  echo "read_verilog -defer -noautowire -sv $W/$TAG.sv2v.v"
   echo "hierarchy -check -top $TOP"
   echo "write_rtlil $W/$TAG.pre.il"
   echo "proc"

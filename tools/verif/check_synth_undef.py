@@ -196,25 +196,35 @@ class FuncTempGroup:
     """The x-initialised wires of one function-temporary group in the pre-proc RTLIL."""
 
     wires: int = 0  # wires that carry a constant-x update (the candidates)
-    reads: list[str] = field(default_factory=list)
+    reads: list[str] = field(default_factory=list)  # observable reads (evidence lines)
+    benign_reads: int = 0  # reads whose value provably never reaches anything observable
     other_driver: bool = False
     partial: bool = False
 
     @property
     def dead_init(self) -> bool:
-        """Every candidate is only ever x-updated at full width, and nothing reads any of them."""
+        """Every candidate is only ever x-updated at full width, and no read of it is observable."""
         return self.wires > 0 and not self.reads and not self.other_driver and not self.partial
 
 
 @dataclass
 class _Wire:
-    """Per-wire evidence while parsing one module."""
+    """Per-wire drive evidence while parsing one module."""
 
     key: FuncKey
     x_full: bool = False
     x_partial: bool = False
     other_driver: bool = False
-    reads: list[str] = field(default_factory=list)
+
+
+@dataclass
+class _Stmt:
+    """One RTLIL statement that moves or observes values (``kind`` = assign/update/connect/read)."""
+
+    kind: str
+    lhs: list[str]
+    rhs: list[str]
+    line: str
 
 
 def _module_base(name: str) -> str:
@@ -248,43 +258,99 @@ def _split_sigspec(tokens: list[str]) -> tuple[list[str], list[str]]:
     return tokens[:i], tokens[i:]
 
 
-def _record_reads(wires: dict[str, _Wire], toks: Iterable[str], module: str, line: str) -> None:
-    for t in toks:
-        w = wires.get(t)
-        if w is not None:
-            w.reads.append(f"{_module_base(module)}: {line}")
-
-
-def _classify_drive(
-    wires: dict[str, _Wire],
-    kw: str,
-    sides: tuple[list[str], list[str]],
-    where: tuple[str, str],
-) -> None:
-    lhs, rhs = sides
-    is_x = len(rhs) == 1 and _ALL_X.match(rhs[0]) is not None
-    partial = any(t.startswith("[") for t in lhs)
-    for t in lhs:
+def _classify_drive(wires: dict[str, _Wire], stmt: _Stmt) -> None:
+    is_x = len(stmt.rhs) == 1 and _ALL_X.match(stmt.rhs[0]) is not None
+    partial = any(t.startswith("[") for t in stmt.lhs)
+    for t in stmt.lhs:
         w = wires.get(t)
         if w is None:
             continue
-        if kw == "connect" or not is_x:
+        if stmt.kind == "connect" or not is_x:
             w.other_driver = True
         elif partial:
             w.x_partial = True
         else:
             w.x_full = True
-    _record_reads(wires, rhs, *where)
 
 
-def _flush_module(groups: dict[FuncKey, FuncTempGroup], wires: dict[str, _Wire]) -> None:
-    """Fold one module's per-wire evidence into groups; only x-initialised wires are candidates."""
-    for w in wires.values():
-        if not (w.x_full or w.x_partial):
-            continue  # a normally driven wire (e.g. the call-site result): not a candidate
+def _propagate_taint(cands: dict[str, _Wire], stmts: list[_Stmt]) -> dict[str, set[str]]:
+    """Which candidate x-wires can flow into each signal name (flow-insensitive, so conservative)."""
+    taint: dict[str, set[str]] = {}
+    changed = True
+    while changed:
+        changed = False
+        for st in stmts:
+            if st.kind == "read":
+                continue
+            srcs: set[str] = set()
+            for t in st.rhs:
+                if t in cands:
+                    srcs.add(t)
+                srcs |= taint.get(t, set())
+            if not srcs:
+                continue
+            for lhs in st.lhs:
+                if lhs.startswith("[") or lhs in cands:
+                    continue
+                cur = taint.setdefault(lhs, set())
+                if not srcs <= cur:
+                    cur |= srcs
+                    changed = True
+    return taint
+
+
+def _flush_module(
+    groups: dict[FuncKey, FuncTempGroup],
+    module: str,
+    wires: dict[str, _Wire],
+    stmts: list[_Stmt],
+    outputs: set[str],
+) -> None:
+    """Fold one module's evidence into groups.
+
+    Candidates are the wires with a constant-x update.  A read of a candidate is *observable* only
+    if the value it produces can reach a cell input, a ``switch``/``sync`` expression, a real
+    (non-candidate) signal updated by a process, or an output port; a read whose value only ever
+    flows into the dead ``$0`` temporaries of x-initialised wires - the "keep my old value" branch
+    of a call made inside an ``if`` - is counted as benign.
+    """
+    cands = {n: w for n, w in wires.items() if w.x_full or w.x_partial}
+    if not cands:
+        return
+    taint = _propagate_taint(cands, stmts)
+    evidence: dict[str, list[str]] = {n: [] for n in cands}
+    benign: dict[str, int] = {n: 0 for n in cands}
+
+    def observe(names: Iterable[str], line: str) -> None:
+        srcs: set[str] = set()
+        for t in names:
+            if t in cands:
+                srcs.add(t)
+            srcs |= taint.get(t, set())
+        for s in srcs:
+            evidence[s].append(f"{_module_base(module)}: {line}")
+
+    for st in stmts:
+        if st.kind == "read":
+            observe(st.rhs, st.line)
+        elif st.kind == "update":
+            if any(t in cands or t in taint for t in st.rhs) and not any(
+                t in cands for t in st.lhs
+            ):
+                observe(st.rhs, st.line)
+        elif any(t in cands for t in st.rhs):
+            for t in st.rhs:
+                if t in cands:
+                    benign[t] += 1
+    for n, srcs in taint.items():
+        if n in outputs:
+            for s in srcs:
+                evidence[s].append(f"{_module_base(module)}: value reaches output port {n}")
+    for n, w in cands.items():
         g = groups.setdefault(w.key, FuncTempGroup())
         g.wires += 1
-        g.reads += w.reads
+        g.reads += evidence[n]
+        g.benign_reads += 0 if evidence[n] else benign[n]
         g.other_driver |= w.other_driver
         g.partial |= w.x_partial
 
@@ -293,13 +359,15 @@ def parse_func_temps(text: str) -> dict[FuncKey, FuncTempGroup]:
     """Classify every function-temporary wire of a pre-``proc`` RTLIL dump (``write_rtlil``).
 
     A wire is *dead-init* only if every appearance outside its declaration is a full-width
-    ``update``/``assign`` of constant x.  Anything else - a read in a cell connection, a process
-    right-hand side, a ``switch``/``sync`` expression, a module-level ``connect``, or a second
-    driver - is recorded and defeats the exemption (fail closed).
+    ``update``/``assign`` of constant x, or a read whose value cannot reach anything observable.
+    A read that can (cell connection, ``switch``/``sync``, a process update of a real signal, an
+    output port) or a second driver is recorded and defeats the exemption (fail closed).
     """
     groups: dict[FuncKey, FuncTempGroup] = {}
     module = ""
     wires: dict[str, _Wire] = {}
+    stmts: list[_Stmt] = []
+    outputs: set[str] = set()
     stack: list[str] = []
     for raw in text.splitlines():
         line = raw.strip()
@@ -308,9 +376,11 @@ def parse_func_temps(text: str) -> dict[FuncKey, FuncTempGroup]:
             continue
         kw = toks[0]
         if kw == "module":
-            _flush_module(groups, wires)
-            module, wires, stack = toks[1], {}, ["module"]
+            _flush_module(groups, module, wires, stmts, outputs)
+            module, wires, stmts, outputs, stack = toks[1], {}, [], set(), ["module"]
         elif kw == "wire":
+            if "output" in toks[:-1]:
+                outputs.add(toks[-1])
             key = _func_key(module, toks[-1])
             if key is not None:
                 wires[toks[-1]] = _Wire(key)
@@ -320,16 +390,17 @@ def parse_func_temps(text: str) -> dict[FuncKey, FuncTempGroup]:
         elif kw in _BLOCK_OPENERS:
             stack.append(kw)
             if kw == "switch":  # the selector is read
-                _record_reads(wires, toks[1:], module, line)
-        elif not wires:
-            continue
+                stmts.append(_Stmt("read", [], toks[1:], line))
         elif kw in ("assign", "update") or (kw == "connect" and stack[-1:] != ["cell"]):
-            _classify_drive(wires, kw, _split_sigspec(toks[1:]), (module, line))
+            lhs, rhs = _split_sigspec(toks[1:])
+            st = _Stmt(kw, lhs, rhs, line)
+            stmts.append(st)
+            _classify_drive(wires, st)
         elif kw in ("connect", "sync"):  # cell port connection / sync condition: a read
-            _record_reads(wires, toks[2:], module, line)
-        else:  # switch, case, memory, ...: every mention is a read
-            _record_reads(wires, toks[1:], module, line)
-    _flush_module(groups, wires)
+            stmts.append(_Stmt("read", [], toks[2:], line))
+        else:  # case, memory, ...: every mention is a read
+            stmts.append(_Stmt("read", [], toks[1:], line))
+    _flush_module(groups, module, wires, stmts, outputs)
     return groups
 
 
@@ -348,6 +419,7 @@ def load_func_temp_proof(paths: Iterable[Path | str]) -> dict[FuncKey, FuncTempG
             m = merged.setdefault(key, FuncTempGroup())
             m.wires += g.wires
             m.reads += g.reads
+            m.benign_reads += g.benign_reads
             m.other_driver |= g.other_driver
             m.partial |= g.partial
     return merged

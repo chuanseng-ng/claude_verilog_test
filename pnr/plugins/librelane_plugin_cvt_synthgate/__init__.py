@@ -76,13 +76,22 @@ def _write_proof(step, il_path: Path) -> None:
     ]
     if cfg.get("VERILOG_POWER_DEFINE"):
         defines.append(cfg["VERILOG_POWER_DEFINE"])
-    flags = [f"-D{d}" for d in defines] + [f"-I{d}" for d in (cfg.get("VERILOG_INCLUDE_DIRS") or [])]
-    cmds = [f"read_verilog -sv -lib {' '.join(flags)} {m}" for m in extra.get("blackbox_models", [])]
-    cmds += [f"read_verilog -sv {' '.join(flags)} {f}" for f in cfg["VERILOG_FILES"]]
-    chparams = " ".join(
-        "-chparam " + " ".join(p.split("=", 1)) for p in (cfg.get("SYNTH_PARAMETERS") or [])
-    )
-    cmds += [f"hierarchy -top {cfg['DESIGN_NAME']} {chparams}".strip(), f"write_rtlil {il_path}"]
+    flags = [f"-D{d}" for d in defines] + [
+        f"-I{d}" for d in (cfg.get("VERILOG_INCLUDE_DIRS") or [])
+    ]
+    cmds = [
+        f"read_verilog -sv -lib {' '.join(flags)} {m}" for m in extra.get("blackbox_models", [])
+    ]
+    # same reads as librelane's ys_common.read_verilog_files: -defer so that only parameterised
+    # instances are elaborated (sram_controller's elaboration guard $finish()es on its default)
+    cmds += [
+        f"read_verilog -defer -noautowire -sv {' '.join(flags)} {f}" for f in cfg["VERILOG_FILES"]
+    ]
+    cmds += [
+        "chparam -set " + " ".join(p.split("=", 1)) + f" {cfg['DESIGN_NAME']}"
+        for p in (cfg.get("SYNTH_PARAMETERS") or [])
+    ]
+    cmds += [f"hierarchy -top {cfg['DESIGN_NAME']}", f"write_rtlil {il_path}"]
     yosys = shutil.which("yosys")
     if yosys is None:
         raise StepError("CVT synth gate: yosys not on PATH, cannot prove function temporaries dead")
@@ -157,7 +166,9 @@ def _run_gate(step) -> None:
 def _census_tripwire(step, mode: str) -> None:
     """Sky130 CPU only: the fwd_b_* flops must exist in the synthesised netlist (dud4 tripwire)."""
     cfg = step.config
-    if cfg.get("DESIGN_NAME") != "rv32i_cpu_top" or not str(cfg.get("PDK", "")).startswith("sky130"):
+    if cfg.get("DESIGN_NAME") != "rv32i_cpu_top" or not str(cfg.get("PDK", "")).startswith(
+        "sky130"
+    ):
         return
     netlist = Path(step.step_dir) / "rv32i_cpu_top.nl.v"
     if not netlist.is_file():  # JsonHeader step: no netlist yet

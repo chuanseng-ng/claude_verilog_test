@@ -34,6 +34,68 @@ Silent forms (no distinct message at all): a constant out-of-range array index (
 `connect y 8'x` in BOTH frontends with only the benign `Replacing memory` line; only `x-driven-net` sees it.
 `struct.member[hi:lo]` part-selects are mis-offset by Synlig in ANY expression (p10, plain `assign`), not only in port connections.
 
+## sv2v function temporaries on the SoC (bead `j1b7`)
+
+The gate was designed and validated on the CPU macro. On the Sky130 SoC (sv2v frontend) the structural `x-driven-net` rule reported
+**509** hits, all of them wires named `<func>$func$<file>:<line>$<n>.<variable>` (functions `decode`, `sbox`, `xtime`, `mix_col`,
+`key_step`, `strb_expand`, SHA `small_sigma*`, `sv2v_cast_*`, ...), 0 `x-driven-instance-input`, 0 `undef-range-select`. The SoC flow aborted
+at step 3 and needed `CVT_SYNTH_GATE=warn`. The warn escape hatch is **not** part of any recipe, doc or CI step any more; the gate runs blocking.
+
+### Mechanism (read from the RTLIL, `tb/tests/fixtures/synth_undef/functemp_*`)
+
+yosys inlines each function call. Per call it creates two sets of wires: the call-site `$result` (really driven) and the function body's own
+argument, local and `$result` wires. The `always`-style process that implements the call carries `sync always / update <body wire> 4'x` for
+every body wire: the body wires are *declared storage* whose default value is x, and the real value travels through proc temporaries
+(`$0\<wire>$n` / `$1\<wire>$n`) into the call-site result. After `proc`, `connect \<body wire> 4'x` remains, so the JSON header shows a named net
+that is entirely constant x. A **read** of such a wire (a path that never assigned the variable) is a different object: proc resolves it into a
+literal `x` on a `$mux` data input. A function whose result is unassigned on some path therefore produces the same x-named net *plus* a
+reader, which is the case a pure name skip would hide.
+
+### The rule `func-temp-dead-init`
+
+A net `<func>$func$...` that is entirely x is **exempt** only if all hold, judged on the PRE-`proc` RTLIL of the same elaboration
+(`write_rtlil` after `hierarchy`, passed as `--pre-rtlil`):
+
+1. every x-initialised wire of the group (module base name, function, `file:line`, variable) has only full-width `update/assign <wire> <const x>`;
+2. no other driver (no non-x update/assign, no module-level `connect <wire> ...`);
+3. **no reader**: the wire appears in no cell connection, process right-hand side, `switch`, `sync` or `connect` right-hand side;
+4. the group size in the proof equals the number of such nets in the JSON header (a proof from another elaboration exempts nothing).
+
+Anything else keeps `x-driven-net` FAIL and the text says why (`function temporary is READ before it is assigned: <RTLIL line>`, `no pre-proc
+RTLIL proof supplied`, `group not found`, ...). No `--pre-rtlil` means no exemption (fail closed). Partially-x nets, instance inputs tied to x,
+log-level undef warnings and every other rule are untouched. Matching is by names that do not depend on yosys' autoidx or on directories, so the
+flow's JSON (absolute paths) and the proof run agree.
+
+Why not "check later in the yosys script": after `opt_clean -purge` the dead wires disappear without any name rule, but so does every
+unread-by-then named x net, and a function read of x becomes an anonymous `$mux` input that is indistinguishable from an intentional
+`default: y = 'x`. The pre-proc read test is the narrowest point at which the two cases still differ.
+
+### Report
+
+`check_synth_undef.py` always prints one line per run, and the LibreLane report `synth_undef_gate.rpt` carries the same line:
+
+```
+EXEMPT  [func-temp-dead-init] <N> net(s) in <M> function(s) (constant-x update proven unread in the pre-proc RTLIL): decode=188 sbox=40 ...
+```
+
+`-v` lists every exempted net. `--json` has `exempt_by_function` and `exempt_total`. A **new function** shows up as a new `name=count` entry; a function
+whose temporaries get read shows up as `x-driven-net` FAIL instead. Nothing needs to be added anywhere to introduce a function: if its temporaries
+are never read it is exempt automatically; if they are read, fix the RTL (assign the result on every path).
+
+### Measured (yosys 0.46, sv2v 0.0.13.1; `tools/verif/synth_gate/elab_gate.sh`)
+
+@@MEASURED@@
+
+### Controls (all in blocking mode, run by `ci_smoke.sh`)
+
+@@CONTROLS@@
+
+### Flow wiring
+
+The LibreLane plugin writes the proof lazily: only if the JSON header contains x-driven nets that look like function temporaries and the frontend is
+not Synlig, it re-elaborates the step's own sources (same config, defines and top) with plain yosys up to `hierarchy` and dumps
+`func_temp_proof.pre.il` into the JsonHeader step directory (one extra elaboration, see Measured). If that fails the step fails ("never a pass").
+
 ## `Post-incrementation operations are handled as pre-incrementation`
 
 The "30" warnings in the dud4 logs are 15 source sites, each reported by both the JSON-header and synthesis logs:
@@ -60,15 +122,18 @@ the gate-vs-RTL differential (`tools/verif/gls/`) remains the functional proof.
 
 ## CI job (`.github/workflows/synth-undef-gate.yml`, `tools/verif/synth_gate/ci_smoke.sh`)
 
-Path-filtered on `rtl/**`, `pnr/**`, `tools/verif/**`. Uses the pinned oss-cad-suite yosys + sv2v of the CDC job (same cache key) and the
-pinned nix Verilator. Steps: (1) sv2v + yosys elaboration of the Sky130 `rv32i_cpu_top` source list, then the scanner and the structural
-check (must PASS); (2) **self-test**: a scratch copy of `rv32i_core.sv` with an out-of-range select injected into the `u_hazard` connection
-must make the same gate FAIL (the dud4 lines themselves cannot be the control here: sv2v elaborates them correctly, which is why the PD flow
-uses sv2v); (3) `synth -flatten` + `techmap` + `abc -g` to yosys generic gates (no PDK) and a Verilator gate-vs-RTL differential on `trivial`,
-`ma7_straight`, `ma7_branch` (commit stream, APB debug reads, AXI writes must be identical). Measured locally: 87 s end to end.
+Path-filtered on `rtl/**`, `pnr/**`, `tools/verif/**`, the gate tests and fixtures. Uses the pinned oss-cad-suite yosys + sv2v of the CDC job (same cache
+key) and the pinned nix Verilator. `ci_smoke.sh` drives `tools/verif/synth_gate/elab_gate.sh` (source list and defines from `make -C pnr
+<target>-sv2v-inputs`, never a generated file; sv2v/yosys errors are printed). Steps: (1) **positive controls, blocking mode**: Sky130 CPU macro,
+Sky130 SoC and ASAP7 SoC must PASS; (2) **negative controls**, each must FAIL for the stated reason: CPU `u_hazard` out-of-range select (the dud4
+lines themselves cannot be the control, sv2v elaborates them correctly, which is why the PD flow uses sv2v), and in SoC scope an out-of-range
+struct-member select, an instance port tied to `'x`, and a function result left unassigned on a path (injected into a scratch copy of `timer.sv`,
+reaching `irq_o`; snippets in `tools/verif/synth_gate/inject/`); (3) `synth -flatten` + `techmap` + `abc -g` to yosys generic gates (no PDK) and a
+Verilator gate-vs-RTL differential on `trivial`, `ma7_straight`, `ma7_branch` (commit stream, APB debug reads, AXI writes must be identical).
+Runtime and peak RSS: @@CI@@
 
-Does NOT cover: the Synlig frontend (oss-cad-suite has no Synlig plugin; the Synlig arm is protected only by the PD-time plugin); ASAP7
-or SoC/GPU macros; PDK cell models and ABC mapping with the real liberty; timing. The differential's own negative control was not
+Does NOT cover: the Synlig frontend (oss-cad-suite has no Synlig plugin; the Synlig arm is protected only by the PD-time plugin); GPU macros;
+PDK cell models and ABC mapping with the real liberty; timing. The differential's own negative control was not
 re-run for this job (it was exercised in dud4 with the Synlig netlist, which diverges). First CI run on GitHub is pending.
 
 ## Netlist census tripwire (`tools/verif/check_cpu_netlist_census.py`)

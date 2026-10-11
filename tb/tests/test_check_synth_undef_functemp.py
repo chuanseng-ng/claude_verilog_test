@@ -82,7 +82,7 @@ def test_module_name_is_base_name_of_paramod():
 
 def _il(body: str) -> str:
     return (
-        "module \\m\n  wire width 4 \\f$func$a.v:1$2.t\n  wire width 4 \\y\n"
+        "module \\m\n  wire width 4 \\f$func$a.v:1$2.t\n  wire width 4 output 1 \\y\n"
         "  process $p\n    sync always\n      update \\f$func$a.v:1$2.t 4'x\n  end\n"
         + body
         + "end\n"
@@ -320,3 +320,51 @@ def test_the_exemption_cannot_be_allowlisted_into_existence(tmp_path):
         str(_log(tmp_path)),
     )  # fmt: skip
     assert r.returncode == 1
+
+
+# ------------------------------------------ hold reads (call made inside an `if`), bead j1b7
+
+
+def test_hold_read_that_only_feeds_dead_temporaries_is_benign():
+    proof = _proof("functemp_hold")
+    cast = [g for k, g in proof.items() if k[1] == "cast4"]
+    assert cast and all(g.dead_init and g.benign_reads for g in cast)
+
+
+def test_hold_fixture_is_exempt_but_unassigned_result_reaching_an_output_is_not():
+    findings = gate.scan_header_json(FIX / "functemp_hold.h.json", _proof("functemp_hold"))
+    bad = _fails(findings)
+    assert [f.rule for f in bad] == ["x-driven-net"]
+    assert "leaky2" in bad[0].text and "$result" in bad[0].text and "READ" in bad[0].text
+    assert gate.summarise_exemptions(findings) == {"cast4": 2, "leaky2": 2}
+
+
+def test_read_feeding_an_update_of_a_real_signal_is_observable():
+    body = (
+        "  process $q\n    assign $0\\y[3:0]$9 \\f$func$a.v:1$2.t\n"
+        "    sync always\n      update \\y $0\\y[3:0]$9\n  end\n"
+    )
+    assert _group(body).reads
+
+
+def test_read_feeding_only_a_dead_temporary_is_benign():
+    body = "  process $q\n    assign $0\\f$func$a.v:1$2.t[3:0]$9 \\f$func$a.v:1$2.t\n  end\n"
+    g = _group(body)
+    assert g.dead_init and g.benign_reads == 1
+
+
+def test_taint_propagates_through_a_chain_of_temporaries():
+    body = (
+        "  process $q\n    assign $1\\a[3:0]$1 \\f$func$a.v:1$2.t\n"
+        "    assign $2\\b[3:0]$2 $1\\a[3:0]$1\n"
+        "    switch $2\\b[3:0]$2\n    end\n  end\n"
+    )
+    assert _group(body).reads
+
+
+def test_cell_input_fed_by_a_tainted_temporary_is_observable():
+    body = (
+        "  process $q\n    assign $1\\a[3:0]$1 \\f$func$a.v:1$2.t\n  end\n"
+        "  cell $add $c\n    connect \\A $1\\a[3:0]$1\n  end\n"
+    )
+    assert _group(body).reads
