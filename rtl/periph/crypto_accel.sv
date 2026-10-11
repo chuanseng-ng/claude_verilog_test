@@ -39,12 +39,18 @@
 //   * NO INTEGRITY AND NO DECRYPT DATAPATH. ECB leaks plaintext patterns block-for-block; CTR is
 //     unauthenticated and trivially malleable (flipping a ciphertext bit flips the plaintext bit).
 //     There is no MAC, no AEAD mode and no AES decrypt -- CTR covers decryption instead.
-//   * THE KEY SHADOW REGISTER (key_q, 128 flops) IS FULLY EXPOSED THROUGH SCAN. Once DFT scan
-//     insertion is applied, every flop in this peripheral -- key_q, the AES state s_q and round key
-//     rk_q, the message shadow msg_q, the SHA working registers (w_q, a..h_q, hin_q) and the bank
-//     flops holding DOUT, DIGEST and IV -- is observable and controllable through the scan chain.
-//     DFT ACCESS MUST THEREFORE BE TREATED AS KEY ACCESS. The same holds for any debug path that
-//     can observe flop state.
+//   * SCAN (docs/design/DFT_ARCHITECTURE.md sec.7, bead j41m.2). key_q and the AES core's rk_q (256
+//     flops) are EXCLUDED from scan chains (project decision 3), and their READ side is forced to 0
+//     while scan_mode_i = 1 (key_eff_w here, rk_eff_w in aes128_core): without that mask the
+//     exclusion alone still leaks the key, because shifting in a chosen state, pulsing one capture
+//     and shifting out f(state, key) reveals it. What the mask does NOT cover: every OTHER flop here
+//     (the AES state s_q, msg_q, the SHA registers, the bank words holding DOUT/DIGEST/IV) is
+//     scanned, and s_q holds block ^ key (the whitening value, reloaded every idle cycle) and later
+//     round states from a PRIOR functional operation. Shifting out BEFORE any test-clock capture
+//     reads that residue. Scan entry must therefore follow a reset of this block (key_q = 0, then
+//     one capture with the mask on refreshes s_q with block ^ 0): a protocol requirement on the
+//     Stage 1b TAP / ATE, tracked in DFT_ARCHITECTURE.md sec.14. Any other debug path that can
+//     observe flop state is still key access.
 //
 // BYTE ORDER. FIPS-197 / FIPS 180-4 big-endian, consistently. For any 128-bit block B[0..15],
 // word 0 carries B0 in bits [31:24]: DIN0[31:24] = B0 ... DIN3[7:0] = B15, and the same for KEY,
@@ -183,6 +189,11 @@ module crypto_accel
 ) (
     input  logic clk,
     input  logic rst_n,
+
+    // DFT scan mode (bead j41m.2): 1 forces the key_q / rk_q read nets to 0 (see the SCAN note in
+    // the header). Quasi-static. Tie 1'b0 where there is no scan-aware parent: then both masks are
+    // a pass-through and the block is bit-identical to the pre-DFT design.
+    input  logic scan_mode_i,
 
     // =========================================================================
     // APB4 slave -- control/status registers
@@ -438,12 +449,20 @@ module crypto_accel
     logic aes_done_set_w, sha_done_set_w;
 
     // Key shadow state is declared up here because busy_q gates it and op_legal_w reads it.
-    logic [127:0] key_q;          // THE key shadow register (see non-goals: exposed through scan)
+    logic [127:0] key_q;          // THE key shadow register (excluded from scan; masked, see header)
+    // key_q as seen by the AES core: 0 in scan mode (DFT key mask). Unread when EN_AES = 0.
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic [127:0] key_eff_w;
+    /* verilator lint_on  UNUSEDSIGNAL */
     logic [3:0]   key_seen_q;     // which KEY words have been written since reset
     logic [3:0]   key_wr_w, key_accept_w;
     logic         key_valid_w, key_valid_d_w;
 
     assign busy_q = (state_q != C_IDLE);
+
+    // DFT key mask (docs/design/DFT_ARCHITECTURE.md sec.7.3): 128 AND gates. Must survive synthesis
+    // as logic on the key path -- it is the whole point of excluding key_q from scan.
+    assign key_eff_w = key_q & {128{~scan_mode_i}};
 
     assign key_valid_w = &key_seen_q;
 
@@ -580,7 +599,8 @@ module crypto_accel
             .clk        (clk),
             .rst_n      (rst_n),
             .start_i    (aes_start_w),
-            .key_i      (key_q),
+            .scan_mode_i(scan_mode_i),
+            .key_i      (key_eff_w),
             .block_i    (aes_block_w),
             .busy_o     (aes_busy_w),
             .done_set_o (aes_done_set_w),
