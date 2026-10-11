@@ -179,6 +179,32 @@ async def _wait_commits(dut, mon, n, timeout_cycles=4000):
     )
 
 
+async def _deposit_key(dut):
+    """Deposit the observability key into key_q and PROVE it is visible on key_eff_w before any
+    monitor looks (a deposit is not applied until the next simulator phase, and a monitor that
+    samples first would report a mask that is not there)."""
+    # _boot_cpu returns right after reset release; the peripheral reset synchronisers are still
+    # asserting for a few cycles and would clear a deposit made now, so let them release first.
+    await ClockCycles(dut.clk_i, 30)
+    dut.u_soc.u_crypto.key_q.value = KEY
+    await Timer(1, units="ns")
+    got = int(dut.u_soc.u_crypto.key_eff_w.value)
+    assert got == KEY, f"precondition: key_eff_w={got:#x} after depositing key_q"
+
+
+# The loop firmware is two instructions with a taken JAL, so the CPU retires about 0.28
+# instructions per clock (measured: 85 commits / 300 cycles, 118 / ~420). The floor is a
+# stalled-CPU detector, not a performance claim: half that rate, over whatever window ran.
+_MIN_IPC = 0.14
+
+
+def _assert_commit_rate(mon, c0, cy0, what):
+    commits, cycles = mon.commits - c0, mon.cycles - cy0
+    assert cycles > 0 and commits >= _MIN_IPC * cycles, (
+        f"CPU stalled ({what}): {commits} commits in {cycles} clk_i cycles"
+    )
+
+
 def _functional_nets(dut):
     """DFT nets that must sit at their functional value; returns violation strings."""
     soc, bad = dut.u_soc, []
@@ -245,13 +271,13 @@ async def test_jtag_idcode_and_oe_through_the_soc(dut):
 async def test_boot_with_tap_held_in_reset(dut):
     """TAP held in reset (trst_ni=0, tck=0, tms=1): the CPU runs, every DFT net is functional."""
     await _boot_cpu(dut)
-    dut.u_soc.u_crypto.key_q.value = KEY
+    await _deposit_key(dut)
     mon = _Monitor(dut, _functional_nets).start()
     log = EdgeLog({"test_clk": dut.u_soc.dft_test_clk}, dut.tck_i).start()
     await _wait_commits(dut, mon, 50)
-    c0 = mon.commits
+    c0, cy0 = mon.commits, mon.cycles
     await ClockCycles(dut.clk_i, 300)
-    assert mon.commits - c0 > 200, f"CPU stalled: {mon.commits - c0} commits in 300 cycles"
+    _assert_commit_rate(mon, c0, cy0, "TAP held in reset")
     assert not mon.violations, f"DFT net left its functional value: {mon.violations[:5]}"
     assert (
         int(dut.trst_ni.value) == 0 and int(dut.tdo_oe_o.value) == 0 and int(dut.tdo_o.value) == 0
@@ -266,17 +292,17 @@ async def test_boot_with_tap_held_in_reset(dut):
 async def test_boot_with_tck_toggling_in_tlr(dut):
     """trst_ni=1, TMS=1, TCK toggling (coprime to the core clock): TAP in TLR, SoC unaffected."""
     await _boot_cpu(dut)
-    dut.u_soc.u_crypto.key_q.value = KEY
+    await _deposit_key(dut)
     mon = _Monitor(dut, _functional_nets).start()
     log = EdgeLog({"test_clk": dut.u_soc.dft_test_clk}, dut.tck_i).start()
     await _wait_commits(dut, mon, 50)
     drv = await _tap_power_up(dut)  # trst_ni -> 1, TCK toggling with TMS=1
-    c0 = mon.commits
+    c0, cy0 = mon.commits, mon.cycles
     for _ in range(150):
         await drv.tick(1)
         assert int(dut.u_soc.u_dft_ctrl.tap_state.value) == 0xF
     assert drv.n_ticks >= 150 and drv.ref.state == "TLR"
-    assert mon.commits - c0 > 300, f"CPU stalled while TCK toggled: {mon.commits - c0} commits"
+    _assert_commit_rate(mon, c0, cy0, "TCK toggling in TLR")
     assert not mon.violations, f"DFT net disturbed by TCK in TLR: {mon.violations[:5]}"
     assert log.count("test_clk") == 0, "TCK reached the scan clock in Test-Logic-Reset"
     mon.stop()
@@ -289,7 +315,7 @@ async def test_tdr_contents_cannot_disturb_functional_mode(dut):
     """TDR contents written through the TAP with IR != SCAN change nothing; SCAN does."""
     await _boot_cpu(dut)
     soc = dut.u_soc
-    soc.u_crypto.key_q.value = KEY
+    await _deposit_key(dut)
     mon = _Monitor(dut, _functional_nets).start()
     log = EdgeLog({"test_clk": soc.dft_test_clk, "gclk": soc.cpu_gated_clk}, dut.tck_i).start()
     await _wait_commits(dut, mon, 50)
@@ -326,6 +352,9 @@ async def test_tdr_contents_cannot_disturb_functional_mode(dut):
     assert _functional_nets(dut), "control: the functional-net check must see the scan state"
     # exit through Test-Logic-Reset: functional nets back, CPU re-boots and commits again
     await drv.reset_tms()
+    # SCAN_RST=1 under SCAN really reset the crypto block (that is the scrub), so key_q is 0 now:
+    # put the observability key back, after the scan reset has released, before judging the mask.
+    await _deposit_key(dut)
     assert not _functional_nets(dut), (
         f"TLR did not restore functional mode: {_functional_nets(dut)}"
     )
