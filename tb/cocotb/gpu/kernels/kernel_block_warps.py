@@ -475,10 +475,13 @@ async def _illegal_case(dut, block_x: int, words: dict, after_done: bool):
             await gpu_launch(dut, kernel_pc=0, block_x=9)
             assert await gpu_wait_done(dut, timeout=20_000), "setup kernel did not finish"
             mem.clear()
+        nw0 = int(dut.u_sched.n_warps_q.value)     # scheduler state before the illegal launch
         mon.start()
         await program(dut, block_x)
         label = "after-done" if after_done else "fresh"
         await assert_launch_error(dut, block_x, mon, mem, label)
+        assert int(dut.cq_desc_valid.value) == 0, "illegal descriptor not consumed (still queued)"
+        assert int(dut.u_sched.n_warps_q.value) == nw0, "warp scheduler was launched/loaded"
         assert int(dut.halt_q.value) == 1, "ERROR entered without halting the GPU"
         if not after_done:
             assert await axil_read(dut, PERF_ISSUE) == 0, "a warp was issued"
