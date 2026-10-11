@@ -92,6 +92,26 @@ make cache_integration  # CPU + cache integration tests (5 tests)
 make clean
 ```
 
+## SoC cocotb regression (`tb/cocotb/soc`)
+
+```bash
+nix develop --command make -C tb/cocotb/soc soc_all_ci SIM_BUILD_ROOT=/nobackup/claude_sim_build/soc
+#   optional: SIM_BUILD_JOBS=4  (parallel C++ compile of each model; CI passes $(nproc))
+#   optional: SIM_CCACHE=1      (compiler cache, see sim/cxx_shim.sh; needs ccache on PATH)
+nix develop --command make -C tb/cocotb/soc print-sim-build MODULE=m TOPLEVEL=tb_soc_top SIM_KEY_VERBOSE=1
+```
+
+Each Verilator build lives in `$(SIM_BUILD_ROOT)/sim_build_<TOPLEVEL>_<key>[_cov]`, where `<key>` is a
+sha256 of everything that determines the compiled model (top level, ordered source list, `COMPILE_ARGS`,
+`EXTRA_ARGS` incl. every `-G`/`-D`/`-I`, `BUILD_ARGS`, build-time env, and the verilator / g++ / cocotb
+versions plus the `cxx_shim.sh` content). Suites with an identical model share one directory: the 15 full-SoC
+`tb_soc_top` suites compile once, not 15 times. MODULE, TESTCASE and plusargs are runtime-only and are not
+in the key. Source *content* is not hashed; staleness is still decided by cocotb's mtime rule on
+`VERILOG_SOURCES`. If two suites you expect to share do not, `print-sim-build` with `SIM_KEY_VERBOSE=1`
+shows the exact material. Checks: `pytest tb/tests/test_sim_build_key.py` and
+`make -C tb/cocotb/soc check-shared-build-failure` (both also run in CI, job "cocotb build-directory key
+self-tests"). `make clean-sim-builds` sweeps every directory.
+
 ## RTL Linting & Formatting
 
 Two complementary tools, both run from `sim/`:
