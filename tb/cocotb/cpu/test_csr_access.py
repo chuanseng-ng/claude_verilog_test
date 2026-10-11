@@ -559,6 +559,7 @@ _SIGNALS = (
     "branch_mispred_i",
     "icache_miss_i",
     "dcache_miss_i",
+    "csr_stall_i",
 )
 _CSR_KIND = {1: "RW", 2: "RS", 3: "RC", 5: "RW", 6: "RS", 7: "RC"}
 
@@ -573,9 +574,15 @@ class CounterMonitor:
     activity, so a test can prove its stimulus really produced the case it claims to check.
     """
 
-    def __init__(self, dut):
+    def __init__(self, dut, csr_seqs: list[int] | None = None):
         self.dut = dut
         self.csr = dut.u_core.u_csr
+        # Program-order index of every CSR instruction that executes, in order (arch_csr_seqs()).
+        # Only a write to minstret / minstreth needs it (bead f7z3: the model must know which
+        # older instructions are still in flight when the write executes).
+        self.csr_seqs = list(csr_seqs) if csr_seqs is not None else None
+        self.csr_done = 0  # CSR instructions that have left EX so far
+        self.read_log: list[tuple[int, int, int]] = []  # (cycle, addr, model value) per CSR in EX
         self.cycle = 0
         self.mismatches: list[str] = []
         self.cov: dict[str, int] = {}
@@ -605,7 +612,7 @@ class CounterMonitor:
             await RisingEdge(self.dut.clk_i)
             await ReadOnly()
             if not int(self.csr.rst_n.value):
-                self._model, self.retired = None, 0
+                self._model, self.retired, self.csr_done = None, 0, 0
                 continue
             snap = self._snapshot()
             if self._model is None:
@@ -633,9 +640,19 @@ class CounterMonitor:
         writes = _CSR_KIND.get(op) == "RW" or (wdata_low != 0 if imm else sig["rs1_addr"] != 0)
         if legal and addr == CSR_MINSTRET:
             self.minstret_reads.append(self.retired)
+        if legal and sig["trap_entry"]:
+            self._bump("csr_in_trap_entry")
         access = None
+        seq = None
         if legal and not squashed:
             access = (_CSR_KIND[op], addr, sig["csr_wdata"], imm, not imm and sig["rs1_addr"] == 0)
+            if self.csr_seqs is not None and self.csr_done < len(self.csr_seqs):
+                seq = self.csr_seqs[self.csr_done]
+            self.read_log.append((self.cycle, addr, self._model.regs.get(addr, 0)))
+            if not sig[
+                "csr_stall_i"
+            ]:  # the instruction leaves EX this cycle (not a frozen re-fire)
+                self.csr_done += 1
         for name, words in _CTR_WORDS.items():
             strobe = 1 if name == "mcycle" else sig[_STROBE[name]]
             if not strobe or inhibit >> _INHIBIT_BIT[name] & 1:
@@ -663,6 +680,7 @@ class CounterMonitor:
                 dcache_miss=bool(sig["dcache_miss_i"]),
                 branch_mispred=bool(sig["branch_mispred_i"]),
                 access=access,
+                access_seq=seq,
             )
         except IllegalCsrError:
             self.mismatches.append(
@@ -758,8 +776,38 @@ def _assert_clean(mon: CounterMonitor, what: str):
     )
 
 
+# Taken forward control transfers the architectural walker knows: word -> words advanced.
+_SKIP_WORDS = {
+    _TAKEN_BEQ: 2,
+    JAL(0, 8): 2,
+    BEQ(0, 0, 12): 3,
+    JAL(0, 12): 3,
+}
+
+
+def arch_csr_seqs(program: list[int]) -> list[int]:
+    """Program-order index of every CSR instruction in the architectural stream of ``program``.
+
+    Walks the program the way a core with no speculation would: sequential, except that the
+    taken forward transfers in ``_SKIP_WORDS`` (``_TAKEN_BEQ`` / ``JAL x0, +8``, and the +12
+    forms) skip the words in their shadow; stops at EBREAK.  Only valid for programs built from
+    those pieces.
+    """
+    seqs: list[int] = []
+    pc, index = 0, 0
+    while pc // 4 < len(program):
+        word = program[pc // 4]
+        if word == EBREAK():
+            break
+        if word & 0x7F == 0x73 and (word >> 12) & 7:
+            seqs.append(index)
+        index += 1
+        pc += 4 * _SKIP_WORDS.get(word, 1)
+    return seqs
+
+
 async def _run_monitored(dut, mem, dbg, program, **kw) -> CounterMonitor:
-    mon = CounterMonitor(dut)
+    mon = CounterMonitor(dut, arch_csr_seqs(program))
     mon.start()
     try:
         await fresh_run(dut, mem, dbg, program, **kw)

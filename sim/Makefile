@@ -52,6 +52,7 @@ TEST_MODULES := \
 	tb.cocotb.cpu.test_interrupts \
 	tb.cocotb.cpu.test_perf_counters \
 	tb.cocotb.cpu.test_csr_access \
+	tb.cocotb.cpu.test_minstret_write \
 	tb.cocotb.cpu.test_decode_corners
 
 # RTL source files (Phase 3: 5-stage pipeline + I-cache + D-cache)
