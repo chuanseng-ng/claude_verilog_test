@@ -3,9 +3,25 @@ GPU SIMT Kernel Execution Model
 
 Instruction-accurate model of GPU SIMT execution per PHASE4_GPU_ARCHITECTURE_SPEC.md.
 Implements 8-lane warp execution with basic divergence handling.
+
+Launch contract (bead 6hy6, user decision 2026-10-11): a block holds at most
+``MAX_BLOCK_THREADS`` = 64 threads (8 warps x 8 lanes, the frozen Phase 4 limit).  A launch
+with BLOCK_X == 0 or BLOCK_X > 64 is a launch ERROR: ``configure`` raises ``GPULaunchError``
+(the RTL reports GPU_STATUS.ERROR) and no warp is created.  The last warp of a block whose
+thread count is not a multiple of the warp size starts with ONLY its valid lanes active.
+
+BLOCK_Y, BLOCK_Z and the GRID_* registers are RESERVED in Phase 4 (decided 2026-10-11): stored
+and readable, no effect on the thread count.  The thread count of a block is BLOCK_X alone
+(1..64), matching the RTL and tb/cocotb/gpu/gpu_ref_model.py, so thread ids run along X only
+(tid.y = tid.z = 0).  The model still replicates the warps over ``grid_dim`` blocks as a
+spec-level convenience; the RTL launches a single block.
 """
 
 from .memory_model import MemoryModel
+
+
+class GPULaunchError(ValueError):
+    """The kernel launch the hardware reports as GPU_STATUS.ERROR (illegal BLOCK_X)."""
 
 
 class GPUKernelModel:
@@ -64,6 +80,9 @@ class GPUKernelModel:
     FUNCT7_SRL = 0b0000000
     FUNCT7_SRA = 0b0100000
 
+    # Phase 4 block limit: gpu_pkg::N_WARPS warps x N_LANES lanes (see GPULaunchError)
+    MAX_BLOCK_THREADS = 64
+
     # Special register indices (for VMOV_SPECIAL instruction, rs1 field)
     # These must fit in 5 bits (0-31) as they go in the rs1 field
     SREG_TID_X = 0
@@ -89,6 +108,7 @@ class GPUKernelModel:
         # Grid/block configuration
         self.grid_dim = (1, 1, 1)
         self.block_dim = (1, 1, 1)
+        self._threads_per_block = 1
 
         # Kernel program
         self.kernel_addr = 0
@@ -110,14 +130,24 @@ class GPUKernelModel:
             grid_dim: (grid_x, grid_y, grid_z)
             block_dim: (block_x, block_y, block_z)
             kernel_addr: Kernel instruction start address
+
+        Raises:
+            GPULaunchError: block_x == 0 or block_x > MAX_BLOCK_THREADS (64).  The model is
+                left with no warps, as the hardware executes no kernel instruction.
         """
+        if not 1 <= block_dim[0] <= self.MAX_BLOCK_THREADS:
+            self.warps = []
+            raise GPULaunchError(
+                f"BLOCK_X={block_dim[0]}: legal range is 1..{self.MAX_BLOCK_THREADS}"
+            )
         self.grid_dim = grid_dim
         self.block_dim = block_dim
         self.kernel_addr = kernel_addr
 
         # Calculate total warps
-        threads_per_block = block_dim[0] * block_dim[1] * block_dim[2]
+        threads_per_block = block_dim[0]  # BLOCK_Y / BLOCK_Z are reserved (no effect)
         warps_per_block = (threads_per_block + self.warp_size - 1) // self.warp_size
+        self._threads_per_block = threads_per_block
 
         # Initialize warps
         self.warps = []
@@ -138,17 +168,28 @@ class GPUKernelModel:
             "block_id": block_id,
             "warp_in_block": warp_id,
             "pc": self.kernel_addr,
-            "active_mask": 0xFF,  # All 8 lanes active initially
+            "active_mask": self._initial_mask(warp_id),  # valid lanes only (partial last warp)
             "done": False,
             "regs": [[0] * 32 for _ in range(self.warp_size)],  # 8 lanes x 32 regs
             "divergence_stack": [],  # Stack for divergence: [(pc, mask), ...]
         }
 
+    def _initial_mask(self, warp_in_block: int) -> int:
+        """Lane bitmask of a warp's valid threads: lane l is valid iff its thread index in the
+        block is below the block's thread count."""
+        threads = self._threads_per_block
+        return sum(
+            1 << lane
+            for lane in range(self.warp_size)
+            if warp_in_block * self.warp_size + lane < threads
+        )
+
     def _compute_thread_id(  # pylint: disable=unused-argument
         self, block_id: tuple, warp_in_block: int, lane: int
     ) -> tuple:
         """
-        Compute thread ID (tid.x, tid.y, tid.z) for a lane.
+        Compute thread ID (tid.x, tid.y, tid.z) for a lane.  BLOCK_Y / BLOCK_Z are reserved
+        in Phase 4, so tid.y and tid.z are always 0.
 
         Args:
             block_id: (bx, by, bz)
@@ -161,13 +202,8 @@ class GPUKernelModel:
         # Compute global thread index within block
         thread_in_block = warp_in_block * self.warp_size + lane
 
-        # Convert to 3D thread ID
-        block_x, block_y, _ = self.block_dim
-        tid_x = thread_in_block % block_x
-        tid_y = (thread_in_block // block_x) % block_y
-        tid_z = thread_in_block // (block_x * block_y)
-
-        return (tid_x, tid_y, tid_z)
+        # Threads are numbered along X only (block_dim[0] == thread count)
+        return (thread_in_block % self.block_dim[0], 0, 0)
 
     def load_kernel(self, instructions: dict[int, int]):
         """
