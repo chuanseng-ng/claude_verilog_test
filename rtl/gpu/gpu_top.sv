@@ -9,7 +9,7 @@
 //   0x00C GPU_GRID_X    [15:0]
 //   0x010 GPU_GRID_Y    [15:0]
 //   0x014 GPU_GRID_Z    [15:0]
-//   0x018 GPU_BLOCK_X   [9:0]
+//   0x018 GPU_BLOCK_X   [9:0]   1..64; 0 or >64 raises a launch ERROR (bead 6hy6)
 //   0x01C GPU_BLOCK_Y   [9:0]
 //   0x020 GPU_BLOCK_Z   [9:0]
 //   0x024 GPU_ARG_PTR
@@ -290,7 +290,8 @@ module gpu_top
             halt_q     <= 1'b0;
         end else begin
             if (ctrl_reset_q) rst_pend_q <= 1'b1;
-            if ((ctrl_reset_q || rst_pend_q || cu_gpu_error) && !if_ar_stuck) halt_q <= 1'b1;
+            if ((ctrl_reset_q || rst_pend_q || cu_gpu_error || launch_err) && !if_ar_stuck)
+                halt_q <= 1'b1;
         end
     end
 
@@ -300,15 +301,46 @@ module gpu_top
         else if (m_axil_if_rvalid)                         if_outst_q <= 1'b0;
     end
 
-    // n_warps: ceil(block_x / N_LANES), capped at N_WARPS.  This is a COUNT (0..N_WARPS), so it
-    // is WARP_CNT_W bits wide, one more than a warp ID (WARP_W): capping at N_WARPS-1 made
-    // BLOCK_X 57..64 run 7 of 8 warps (bead 47lf).  BLOCK_X > N_WARPS*N_LANES (64) cannot be
-    // honoured -- warp storage is N_WARPS deep -- and is truncated to N_WARPS warps.
+    // -------------------------------------------------------------------
+    // Launch block-size contract (bead 6hy6, decided 2026-10-11)
+    //
+    //   BLOCK_X in 1..N_WARPS*N_LANES (64): ceil(BLOCK_X / N_LANES) warps; the last warp starts
+    //     with only its valid lanes active (lane l of warp w is valid iff w*N_LANES + l < BLOCK_X).
+    //   BLOCK_X == 0 or > 64: launch ERROR.  blk_illegal makes the accepted launch enter
+    //     GPS_ERROR instead of GPS_RUNNING and raise halt_q on the same edge, exactly as
+    //     cu_gpu_error does for a stack overflow, so the GPU is quiescent in ERROR and only
+    //     soft_clr (GPU_CTRL.reset) or rst_n leaves it.  The warp scheduler is never launched
+    //     (sched_start = 0), so no warp issues and no instruction is fetched.  The descriptor
+    //     is still consumed (sched_launch acks it), the perf counters are cleared and the IRQ
+    //     latch is dropped, as for any accepted launch; no done IRQ is raised.
+    //     if_ar_stuck cannot hold halt_q off here: in GPS_IDLE no fetch AR is ever valid
+    //     (every warp is done, or n_warps_q == 0 after a reset).
+    // -------------------------------------------------------------------
+    // Full-member read into a plain wire: every select below is on the wire, not on the struct
+    // member (Synlig struct-member select defects, docs/SYNLIG_STRUCT_SELECT_AINF.md).
+    logic [9:0] cq_block_x;
+    assign cq_block_x = cq_desc.block_x;
+
+    logic blk_illegal;     // BLOCK_X is 0 or exceeds the 8 warps x 8 lanes of storage
+    logic launch_err;      // an illegal launch is accepted this cycle -> ERROR, scheduler untouched
+    logic sched_start;     // a legal launch is accepted this cycle -> scheduler loads the block
+    assign blk_illegal = (cq_block_x == 10'd0) || (cq_block_x > 10'(N_WARPS * N_LANES));
+    assign launch_err  = sched_launch && blk_illegal;
+    assign sched_start = sched_launch && !blk_illegal;
+
+    // n_warps: ceil(block_x / N_LANES) for a legal BLOCK_X.  This is a COUNT (0..N_WARPS), so it
+    // is WARP_CNT_W bits wide, one more than a warp ID (WARP_W) (bead 47lf).  Only meaningful
+    // when !blk_illegal: for an illegal BLOCK_X the scheduler is not launched and never reads it.
     logic [WARP_CNT_W-1:0] n_warps_w;
-    logic [9:0]            n_warps_raw;
-    assign n_warps_raw = {3'b0, cq_desc.block_x[9:3]} + {9'b0, |cq_desc.block_x[2:0]};
-    assign n_warps_w   = (n_warps_raw > 10'(N_WARPS)) ? WARP_CNT_W'(N_WARPS)
-                                                       : n_warps_raw[WARP_CNT_W-1:0];
+    assign n_warps_w = WARP_CNT_W'(cq_block_x[9:3]) + WARP_CNT_W'(|cq_block_x[2:0]);
+
+    // Initial active mask of the LAST warp: its first (BLOCK_X mod N_LANES) lanes, or all lanes
+    // when BLOCK_X is a multiple of N_LANES.  Constant-position compares, no indexed mux.
+    logic [N_LANES-1:0] last_warp_mask;
+    always_comb begin
+        for (int l = 0; l < N_LANES; l++)
+            last_warp_mask[l] = (cq_block_x[2:0] == 3'd0) || (3'(l) < cq_block_x[2:0]);
+    end
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -317,7 +349,7 @@ module gpu_top
         end else begin
             case (state_q)
                 GPS_IDLE:
-                    if (sched_launch) state_q <= GPS_RUNNING;
+                    if (sched_launch) state_q <= blk_illegal ? GPS_ERROR : GPS_RUNNING;
                 GPS_RUNNING:
                     if      (cu_gpu_error)        state_q <= GPS_ERROR;
                     else if (sched_kernel_done)   state_q <= GPS_DONE;
@@ -436,9 +468,10 @@ module gpu_top
     warp_scheduler u_sched (
         .clk              (clk),
         .rst_n            (rst_n),
-        .launch_i         (sched_launch),
+        .launch_i         (sched_start),     // not for an illegal BLOCK_X (launch_err)
         .kernel_pc_i      (cq_desc.kernel_pc),
         .init_mask_i      ({N_LANES{1'b1}}),
+        .last_mask_i      (last_warp_mask),
         .n_warps_active_i (n_warps_w),
         .warp_issue_o     (sched_issue),
         .warp_id_o        (sched_warp_id),
