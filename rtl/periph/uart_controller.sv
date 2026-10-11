@@ -40,7 +40,8 @@
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
 module uart_controller #(
-    parameter int unsigned ADDR_W = 12   // APB4 local address width
+    parameter int unsigned ADDR_W      = 12,  // APB4 local address width
+    parameter int unsigned SYNC_STAGES = 2    // uart_rx_i synchroniser depth (>= 2, bead xtaa)
 ) (
     input  logic clk,
     input  logic rst_n,
@@ -455,11 +456,15 @@ module uart_controller #(
     // bypasses this synchroniser. Same 2-cycle latency as the previous
     // hand-written chain; the reset is now asserted asynchronously by the
     // primitive (see the cdc_2ff_sync header) where it was synchronous here.
+    // SYNC_STAGES > 2 is safe for the receiver: the RX FSM aligns its
+    // oversample phase to the *synchronised* start edge and every later data
+    // edge is delayed by the same constant, so the sample points keep their
+    // position relative to the bits; only the data-valid latency grows.
     logic uart_rx_sync_q;
 
     cdc_2ff_sync #(
         .WIDTH     (1),
-        .STAGES    (2),
+        .STAGES    (SYNC_STAGES),
         .RESET_VAL (1'b1)
     ) u_uart_rx_sync (
         .clk_i   (clk),

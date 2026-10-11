@@ -44,7 +44,8 @@
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
 module spi_controller #(
-    parameter int unsigned ADDR_W = 12   // APB4 local address width
+    parameter int unsigned ADDR_W      = 12,  // APB4 local address width
+    parameter int unsigned SYNC_STAGES = 2    // spi_miso_i synchroniser depth (>= 2, bead xtaa)
 ) (
     input  logic clk,
     input  logic rst_n,
@@ -357,10 +358,10 @@ module spi_controller #(
     // SCLK itself), not clean by inspection. Route it through the standard
     // 2-FF synchroniser instead of hand-rolling flops.
     //
-    // Timing impact: cdc_2ff_sync adds 2 fabric-clock cycles of latency
+    // Timing impact: cdc_2ff_sync adds SYNC_STAGES (default 2) fabric-clock cycles of latency
     // between a spi_miso_i transition and its visibility to the shift
     // engine. This is transparent as long as the external slave's MISO has
-    // already been stable for >= 2 cycles by the sample edge -- true for any
+    // already been stable for >= SYNC_STAGES cycles by the sample edge -- true for any
     // half-period (SPI_CLK_DIV+1) comfortably larger than 2, which is what
     // this module's own external-slave guidance already requires (see the
     // SPI_CLK_DIV >= 7 recommendation above). Loopback mode is unaffected:
@@ -370,12 +371,15 @@ module spi_controller #(
     // this synchroniser in place -- the 2-cycle sync latency meets or exceeds
     // the half-period, so the sampled bit can be stale by a full bit
     // position. Flagged, not silently retimed; see bead
-    // claude_verilog_test-a2g close-out notes.
+    // claude_verilog_test-a2g close-out notes. Raising SYNC_STAGES raises the
+    // minimum safe half-period by the same amount: the SPI_CLK_DIV >= 7
+    // guidance assumes SYNC_STAGES = 2, so keep the half-period
+    // (SPI_CLK_DIV + 1 clocks) comfortably above SYNC_STAGES.
     logic spi_miso_sync_q;
 
     cdc_2ff_sync #(
         .WIDTH  (1),
-        .STAGES (2)
+        .STAGES (SYNC_STAGES)
     ) u_spi_miso_sync (
         .clk_i   (clk),
         .rst_n_i (rst_n),

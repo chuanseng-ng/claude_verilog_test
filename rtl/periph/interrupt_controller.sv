@@ -31,8 +31,9 @@
 
 module interrupt_controller
 #(
-    parameter int unsigned ADDR_W    = 12,   // APB4 local address width
-    parameter int unsigned N_SOURCES = 5     // number of interrupt sources
+    parameter int unsigned ADDR_W      = 12,  // APB4 local address width
+    parameter int unsigned N_SOURCES   = 5,   // number of interrupt sources
+    parameter int unsigned SYNC_STAGES = 2    // irq_src_i synchroniser depth (>= 2, bead xtaa)
 ) (
     input  logic clk,
     input  logic rst_n,
@@ -136,7 +137,7 @@ module interrupt_controller
         for (s = 0; s < N_SOURCES; s++) begin : g_irq_sync
             cdc_2ff_sync #(
                 .WIDTH  (1),
-                .STAGES (2)
+                .STAGES (SYNC_STAGES)
             ) u_irq_sync (
                 .clk_i   (clk),
                 .rst_n_i (rst_n),
