@@ -14,9 +14,17 @@ Phase 4 (kernel must avoid)" with a 4-deep per-warp divergence stack, gpu_pkg::D
                                 not idle, not done, no interrupt, and it stays there
   test_soft_reset_recovers_from_error   CTRL.reset leaves ERROR for idle and a fresh kernel then
                                 runs to the correct result
-  test_error_reset_kills_running_kernel_then_divergent_kernel_matches_model   (bead q6w0) reset
-                                from ERROR also kills the still-spinning errored kernel, and a
-                                divergent kernel then matches gpu_ref_model on every lane
+  test_error_halts_then_reset_then_divergent_kernel_matches_model   (bead q6w0) ERROR halts the
+                                errored kernel (no fetch, no memory traffic), CTRL.reset from the
+                                halted ERROR returns to IDLE, and a divergent kernel then
+                                matches gpu_ref_model on every lane
+  test_error_halts_issue_and_memory_traffic   (bead q6w0, halt-on-ERROR) 24 error-injection
+                                offsets: after ERROR nothing new starts, the in-flight fetch /
+                                VST / shared-memory access completes legally, then the GPU is
+                                quiescent in ERROR (STATUS stays error, nothing advances)
+  test_error_reset_while_inflight_drains   (bead q6w0, halt-on-ERROR) CTRL.reset written the
+                                moment ERROR is entered, with a burst still in flight, waits for
+                                the drain; relaunch is correct
   test_soft_reset_during_running_is_protocol_clean   (bead q6w0) CTRL.reset while RUNNING aborts
                                 the kernel only after the in-flight AXI beat completes: no
                                 dropped valid, no orphan R/B beat, nothing issued after IDLE
@@ -48,6 +56,8 @@ from gpu_test_utils import (
 OUT = 0x300
 CTRL_LAUNCH, CTRL_RESET, CTRL_IRQ_EN = 0x1, 0x2, 0x4
 ST_IDLE, ST_DONE, ST_ERROR = 0x1, 0x2, 0x4
+ST_ERROR_ENC = 3   # gpu_top state_q encoding of GPS_ERROR (internal; STATUS bit is ST_ERROR)
+ST_ERROR_ENC = 3   # gpu_top state_q encoding of GPS_ERROR (internal; STATUS bit is ST_ERROR)
 IRQ_STATUS = GPU_IRQ_CLR  # 0x028: read = latch, write bit0 = clear
 
 
@@ -353,12 +363,40 @@ class BusMonitor:
         self._stuck = {}
         self.clears = 0
         self.task = None
+        self.retires = 0        # cycles with a warp retire / warp done / issue / kernel-done pulse
+        self.dones = 0
+        self.issues = 0
+        self.kdones = 0
+        self.err_snap = None    # in-flight state sampled in the first cycle state_q == ERROR
+        self.retires = 0        # cycles with a warp retire / warp done / issue / kernel-done pulse
+        self.dones = 0
+        self.issues = 0
+        self.kdones = 0
+        self.err_snap = None    # in-flight state sampled in the first cycle state_q == ERROR
 
     def start(self):
         self.task = cocotb.start_soon(self._run())
 
     def stop(self):
         self.task.kill()
+
+    def arm(self):
+        """Forget the previous ERROR entry so the next one is sampled."""
+        self.err_snap = None
+
+    def activity(self) -> tuple:
+        """Everything that must stop once the GPU is quiescent in ERROR."""
+        return (self.hs["ifar"], self.hs["ar"], self.hs["aw"], self.hs["w"],
+                self.retires, self.dones, self.issues, self.kdones)
+
+    def arm(self):
+        """Forget the previous ERROR entry so the next one is sampled."""
+        self.err_snap = None
+
+    def activity(self) -> tuple:
+        """Everything that must stop once the GPU is quiescent in ERROR."""
+        return (self.hs["ifar"], self.hs["ar"], self.hs["aw"], self.hs["w"],
+                self.retires, self.dones, self.issues, self.kdones)
 
     async def _run(self):
         d = self.dut
@@ -374,6 +412,8 @@ class BusMonitor:
                     self.hs[n] += 1
                 elif valid:
                     self._stuck[n] = pay
+            self._count_pipeline_activity()
+            self._count_pipeline_activity()
             self._check_reset_sequencer()
             for n, (v, r) in self.RSP.items():
                 valid, ready = int(getattr(d, v).value), int(getattr(d, r).value)
@@ -384,16 +424,34 @@ class BusMonitor:
                     else:
                         self.errors.append(f"cycle {self.cycle}: orphan {n} beat (not accepted)")
 
-    def _check_reset_sequencer(self):
-        """While a soft reset drains (halt_q): nothing new may start; at the soft_clr pulse:
-        nothing may be outstanding on either master or inside the shared memory."""
+    def _count_pipeline_activity(self):
         d = self.dut
-        if int(d.halt_q.value):
-            for what, sig in (("fetch AR", d.m_axil_if_arvalid),
-                              ("coalescer start", d.u_mu.coal_start),
+        self.retires += int(d.cu_retire.value)
+        self.dones += int(d.cu_done.value)
+        self.issues += int(d.sched_issue.value)
+        self.kdones += int(d.sched_kernel_done.value)
+        if self.err_snap is None and int(d.state_q.value) == ST_ERROR_ENC:
+            self.err_snap = {
+                "cycle": self.cycle,
+                "mu_busy": int(d.u_mu.busy_q.value),
+                "if_outst": int(d.if_outst_q.value) if hasattr(d, "if_outst_q") else 0,
+                "sm_stall": int(d.sm_stall.value),
+                "halt_q": int(d.halt_q.value),
+            }
+
+    def _check_reset_sequencer(self):
+        """While a soft reset drains, or the GPU sits in ERROR (halt_q): nothing new may start;
+        at the soft_clr pulse: nothing may be outstanding on either master or inside the shared
+        memory.  A transaction that began before ERROR was visible runs to completion."""
+        d = self.dut
+        halted = int(d.halt_q.value) or int(d.state_q.value) == ST_ERROR_ENC
+        if halted:
+            for what, sig in (("coalescer start", d.u_mu.coal_start),
                               ("shared-memory request", d.sm_active)):
                 if int(sig.value):
-                    self.errors.append(f"cycle {self.cycle}: new {what} while draining")
+                    self.errors.append(f"cycle {self.cycle}: new {what} while draining/ERROR")
+        if int(d.halt_q.value) and int(d.m_axil_if_arvalid.value):
+            self.errors.append(f"cycle {self.cycle}: new fetch AR while draining/ERROR")
         if int(d.soft_clr.value):
             self.clears += 1
             out = (self.hs["ifar"] - self.hs["ifr"], self.hs["ar"] - self.hs["r"],
@@ -430,10 +488,11 @@ def check_model(mem: dict, words: dict, out_base: int):
 
 
 @cocotb.test()
-async def test_error_reset_kills_running_kernel_then_divergent_kernel_matches_model(dut):
-    """ERROR does not stop the errored kernel (it keeps fetching).  CTRL.reset must: after IDLE
-    nothing is fetched or stored, and a divergent kernel then matches gpu_ref_model on all lanes
-    (a stale divergence stack / warp state / error flag would break it)."""
+async def test_error_halts_then_reset_then_divergent_kernel_matches_model(dut):
+    """ERROR halts the errored kernel (it used to keep fetching): once the in-flight beats drain
+    nothing is fetched or stored.  CTRL.reset from the halted ERROR returns to IDLE, and a
+    divergent kernel then matches gpu_ref_model on all lanes (a stale divergence stack / warp
+    state / error flag would break it)."""
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     await gpu_reset(dut)
     div_words = divergence_kernel()
@@ -447,9 +506,12 @@ async def test_error_reset_kills_running_kernel_then_divergent_kernel_matches_mo
 
     await gpu_launch(dut, kernel_pc=SPIN_BASE, block_x=8)
     await wait_status(dut, ST_ERROR, timeout=6000)
-    fetches = bus.hs["ifar"]
-    await settle(dut, 40)
-    assert bus.hs["ifar"] > fetches, "precondition: the errored kernel should still be spinning"
+    await settle(dut, 40)                       # in-flight fetch drains
+    halted = bus.activity()
+    await settle(dut, 200)
+    assert bus.activity() == halted, (
+        "the errored kernel kept running in ERROR (fetch / retire / issue still advancing)")
+    assert await axil_read(dut, GPU_STATUS) == ST_ERROR, "STATUS must keep reporting ERROR"
 
     await axil_write(dut, GPU_CTRL, CTRL_RESET)
     await wait_status(dut, ST_IDLE, timeout=200)
@@ -457,7 +519,7 @@ async def test_error_reset_kills_running_kernel_then_divergent_kernel_matches_mo
     n_fetch, n_ar, n_aw = bus.hs["ifar"], bus.hs["ar"], bus.hs["aw"]
     await settle(dut, 200)
     assert (bus.hs["ifar"], bus.hs["ar"], bus.hs["aw"]) == (n_fetch, n_ar, n_aw), (
-        "the errored kernel kept running after CTRL.reset returned the GPU to IDLE")
+        "fetch / memory traffic after CTRL.reset returned the GPU to IDLE")
     assert await axil_read(dut, GPU_STATUS) == ST_IDLE
     bus.check_clean("after reset from ERROR")
 
@@ -690,6 +752,176 @@ async def test_soft_reset_during_shared_memory_loop(dut):
     await gpu_launch(dut, kernel_pc=STORE_BASE, block_x=8)
     await wait_status(dut, ST_DONE, timeout=6000)
     check_store(mem)
+    for t in (instr_task, data_task):
+        t.kill()
+    bus.stop()
+
+
+# ---------------------------------------------------------------------------------------------
+# Bead q6w0, halt-on-ERROR.  ERROR must stop the GPU issuing instructions and memory requests,
+# let in-flight bus beats drain, and then sit quiescent until software writes CTRL.reset.
+# ---------------------------------------------------------------------------------------------
+STORM_OUT = 0x700
+STORM_BASE = 0x4000
+CASE_BLOCK_X = (8, 16, 32)       # 1, 2, 4 warps: younger warps are in flight when one errors
+CASE_PAD = tuple(range(8))       # ALU slots between the overflow branch and the first VST
+
+
+def error_storm_kernel(base: int, pad: int) -> dict:
+    """nested_kernel(5) relocated to ``base``.  The 5th (overflowing) branch sets gpu_error_o;
+    the lanes that fall through run ``pad`` ALU ops and then loop forever over
+    VST / VSTS / VLDS / VST, so an ungated GPU keeps hitting the fetch port, the coalescer and the
+    shared memory after ERROR.  ``pad`` moves the first store relative to the error."""
+    regs = (4, 8, 12, 16, 20)
+    thresholds = (7, 6, 5, 4, 3)
+    k = Kernel(base_pc=base)
+    k.emit(vmov_tid_x(1))
+    k.emit(vaddi(2, 0, 2))
+    k.emit(vsll(3, 1, 2))
+    k.emit(vaddi(9, 3, STORM_OUT - 7))
+    k.emit(vaddi(7, 1, 0x40))
+    k.emit(vaddi(10, 3, -7))
+    for r, t in zip(regs, thresholds):
+        k.emit(vaddi(r, 0, t))
+    slot = None
+    for r in regs:
+        bpc = k.pc()
+        target = bpc + 32 + r
+        k.emit(vblt(1, r, bpc, target))
+        if r == regs[-1]:
+            slot = k.pc()
+        while k.pc() < target:
+            k.emit(vret())
+    k.emit(vret())
+    for i in range(pad):
+        k.patch(slot + 4 * i, vaddi(13, 0, 1))
+    head = slot + 4 * pad
+    k.patch(head, vst(7, 9, 0))
+    k.patch(head + 4, vsts(7, 10, 0))
+    k.patch(head + 8, vlds(11, 10, 7))
+    k.patch(head + 12, vst(7, 9, 0))
+    k.patch(head + 16, vjmp(head - (head + 16)))
+    return k.instructions()
+
+
+def storm_base(pad: int) -> int:
+    return STORM_BASE + 0x400 * (pad + 1)
+
+
+def storm_image() -> dict:
+    image = {STORE_BASE + pc: word for pc, word in store_kernel().items()}
+    for pad in CASE_PAD:
+        image.update(error_storm_kernel(storm_base(pad), pad))
+    return image
+
+
+async def wait_drained(dut, bus: BusMonitor, timeout: int = 600):
+    """Every transaction started so far has completed and the coalescer / shared memory are idle,
+    for 4 consecutive cycles."""
+    quiet = 0
+    pending = None
+    for _ in range(timeout):
+        await RisingEdge(dut.clk)
+        pending = (bus.hs["ifar"] - bus.hs["ifr"], bus.hs["ar"] - bus.hs["r"],
+                   bus.hs["aw"] - bus.hs["b"], int(dut.u_mu.busy_q.value), int(dut.sm_stall.value))
+        quiet = quiet + 1 if not any(pending) else 0
+        if quiet >= 4:
+            return
+    raise AssertionError(f"bus never drained after ERROR (pending {pending})")
+
+
+@cocotb.test()
+async def test_error_halts_issue_and_memory_traffic(dut):
+    """Halt-on-ERROR: after the GPU enters ERROR nothing new starts on the fetch port, the
+    coalescer or the shared memory; a transaction already under way completes legally; then the
+    GPU is quiescent (no AXI beat, no issue / retire / warp-done / kernel-done) until CTRL.reset,
+    while STATUS keeps reporting ERROR with no interrupt.  24 error-injection offsets (1/2/4
+    warps x 8 store positions) with slow responders."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    await gpu_reset(dut)
+    mem: dict = {}
+    bus = BusMonitor(dut)
+    bus.start()
+    instr_task = cocotb.start_soon(instr_responder(dut, storm_image(), latency=2))
+    data_task = cocotb.start_soon(data_responder(dut, mem, ar_latency=1, r_latency=1,
+                                                 aw_latency=2, w_latency=1))
+    inflight = {"mu_busy": 0, "if_outst": 0, "sm_stall": 0}
+    for block_x in CASE_BLOCK_X:
+        for pad in CASE_PAD:
+            where = f"block_x={block_x} pad={pad}"
+            bus.arm()
+            mem.clear()
+            await gpu_launch(dut, kernel_pc=storm_base(pad), block_x=block_x)
+            await wait_status(dut, ST_ERROR, timeout=6000)
+            snap = bus.err_snap
+            assert snap is not None, f"{where}: ERROR entry not sampled"
+            for key in inflight:
+                inflight[key] += snap[key]
+            await wait_drained(dut, bus)
+            await settle(dut, 24)
+            quiet, quiet_mem = bus.activity(), dict(mem)
+            await settle(dut, 300)
+            assert bus.activity() == quiet and mem == quiet_mem, (
+                f"{where}: the GPU kept working in ERROR: {quiet} -> {bus.activity()}")
+            assert await axil_read(dut, GPU_STATUS) == ST_ERROR, f"{where}: STATUS left ERROR"
+            assert dut.gpu_irq_o.value == 0 and await axil_read(dut, IRQ_STATUS) == 0
+            bus.check_clean(where)
+            await axil_write(dut, GPU_CTRL, CTRL_RESET)
+            await wait_status(dut, ST_IDLE, timeout=200)
+            await settle(dut, 10)
+            bus.check_clean(f"{where}, after reset")
+    # The sweep must really have put each kind of transaction in flight at the moment of ERROR,
+    # otherwise "completes legally" was never exercised.
+    assert inflight["mu_busy"] > 0, f"no coalescer burst was in flight at ERROR: {inflight}"
+    assert inflight["if_outst"] > 0, f"no fetch was in flight at ERROR: {inflight}"
+    assert inflight["sm_stall"] > 0, f"no shared-memory access was in flight at ERROR: {inflight}"
+    assert not bus.errors, bus.errors[:3]
+    for t in (instr_task, data_task):
+        t.kill()
+    bus.stop()
+
+
+@cocotb.test()
+async def test_error_reset_while_inflight_drains(dut):
+    """CTRL.reset written as early as software can after ERROR (the very cycle state_q enters
+    ERROR, so a fetch / burst / shared-memory access may still be in flight) waits for the drain:
+    the bus stays protocol-clean, nothing is outstanding at soft_clr, the GPU reaches IDLE and a
+    plain kernel then runs correctly."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    await gpu_reset(dut)
+    mem: dict = {}
+    bus = BusMonitor(dut)
+    bus.start()
+    instr_task = cocotb.start_soon(instr_responder(dut, storm_image(), latency=2))
+    data_task = cocotb.start_soon(data_responder(dut, mem, ar_latency=1, r_latency=1,
+                                                 aw_latency=2, w_latency=1))
+    clears = bus.clears
+    for block_x in CASE_BLOCK_X:
+        for pad in CASE_PAD:
+            where = f"block_x={block_x} pad={pad}"
+            await gpu_launch(dut, kernel_pc=storm_base(pad), block_x=block_x)
+            for _ in range(6000):
+                await RisingEdge(dut.clk)
+                if int(dut.state_q.value) == ST_ERROR_ENC:
+                    break
+            else:
+                raise AssertionError(f"{where}: never entered ERROR")
+            await axil_write(dut, GPU_CTRL, CTRL_RESET)
+            await wait_status(dut, ST_IDLE, timeout=400)
+            await settle(dut, 20)
+            bus.check_clean(f"{where}, reset at ERROR entry")
+            assert bus.clears > clears, f"{where}: soft_clr never fired"
+            clears = bus.clears
+            quiet = bus.activity()
+            await settle(dut, 60)
+            assert bus.activity() == quiet, f"{where}: activity after IDLE"
+            mem.clear()
+            await gpu_launch(dut, kernel_pc=STORE_BASE, block_x=8)
+            await wait_status(dut, ST_DONE, timeout=6000)
+            check_store(mem)
+            bus.check_clean(f"{where}, fresh kernel")
+            await axil_write(dut, GPU_CTRL, CTRL_RESET)
+            await wait_status(dut, ST_IDLE, timeout=200)
     for t in (instr_task, data_task):
         t.kill()
     bus.stop()
