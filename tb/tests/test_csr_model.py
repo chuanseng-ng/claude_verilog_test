@@ -275,3 +275,123 @@ def test_tick_register_and_immediate_set_clear_forms():
     m.tick(icache_miss=True, access=("RS", CSR_MHPMCOUNTER3, 0, True, False))  # uimm 0: read only
     assert m.read(CSR_MHPMCOUNTER3) == 0xE1
     assert m.read(CSR_MINSTRETH) == 0
+
+
+# ---------------------------------------------------------------------------
+# minstret / minstreth write semantics (bead f7z3)
+# ---------------------------------------------------------------------------
+def _write(m, csr, value, seq, *, retire=False):
+    """Execute ``CSRRW x0, csr, value`` as instruction ``seq`` in the cycle this call ticks."""
+    m.tick(retire=retire, access=("RW", csr, value, False, False), access_seq=seq)
+
+
+def _retire(m, n=1):
+    for _ in range(n):
+        m.tick(retire=True)
+
+
+def test_minstret_writers_own_retirement_does_not_increment():
+    """Spec: the instruction that writes minstret does not add 1 on top of the written value."""
+    m = CsrModel()
+    _write(m, CSR_MINSTRET, 100, seq=0)
+    assert m.read(CSR_MINSTRET) == 100
+    _retire(m)  # the writer retires
+    assert m.read(CSR_MINSTRET) == 100
+    _retire(m)  # the next instruction does count
+    assert m.read(CSR_MINSTRET) == 101
+
+
+@pytest.mark.parametrize("csr", [CSR_MINSTRET, CSR_MINSTRETH])
+def test_minstret_write_absorbs_older_instructions_still_in_flight(csr):
+    """Instructions 0 and 1 are in flight when instruction 2 writes: their strobes land after the
+    write but belong before it, so they must not count on top of it."""
+    m = CsrModel()
+    _write(m, csr, 50, seq=2)
+    _retire(m, 3)  # older 0, older 1, the writer itself
+    if csr == CSR_MINSTRET:
+        assert m.read(CSR_MINSTRET) == 50
+    else:
+        # high-word write: the older retirements still count in the low word (they are real
+        # retirements) -- only the writer's own strobe is absorbed, and their carry is dropped.
+        assert (m.read(CSR_MINSTRETH), m.read(CSR_MINSTRET)) == (50, 2)
+    _retire(m)
+    expect_low = 51 if csr == CSR_MINSTRET else 3
+    assert m.read(CSR_MINSTRET) == expect_low
+
+
+def test_minstret_write_same_cycle_strobe_is_an_older_instruction():
+    """The strobe in the write cycle itself belongs to an older instruction: low write overrides
+    it, high write lets it count in the low word."""
+    m = CsrModel()
+    _write(m, CSR_MINSTRET, 9, seq=1, retire=True)  # instr 0 retires in the cycle instr 1 writes
+    assert m.read(CSR_MINSTRET) == 9
+    _retire(m)  # the writer
+    assert m.read(CSR_MINSTRET) == 9
+    m = CsrModel()
+    _write(m, CSR_MINSTRETH, 9, seq=1, retire=True)
+    assert (m.read(CSR_MINSTRETH), m.read(CSR_MINSTRET)) == (9, 1)
+
+
+def test_minstret_high_write_discards_the_carry_of_older_retirements():
+    """An older retirement wrapping the low word would carry into the high word it is
+    overwriting; the carry must not land on top of the written value."""
+    m = CsrModel()
+    m.execute("RW", CSR_MINSTRET, 0xFFFF_FFFF)
+    _write(m, CSR_MINSTRETH, 7, seq=1)
+    _retire(m, 2)  # older (wraps the low word, no carry) + writer
+    assert (m.read(CSR_MINSTRETH), m.read(CSR_MINSTRET)) == (7, 0)
+    _retire(m)  # a younger instruction now counts normally
+    assert (m.read(CSR_MINSTRETH), m.read(CSR_MINSTRET)) == (7, 1)
+
+
+def test_minstret_zeroing_both_halves_back_to_back_reads_zero():
+    """csrw minstret, x0 ; csrw minstreth, x0 with both writers in flight together."""
+    m = CsrModel()
+    m.execute("RW", CSR_MINSTRET, 0x1234)
+    m.execute("RW", CSR_MINSTRETH, 0x5678)
+    _write(m, CSR_MINSTRET, 0, seq=1)  # instruction 0 is older and still in flight
+    _write(m, CSR_MINSTRETH, 0, seq=2)  # instruction 1 (the first writer) is in flight too
+    _retire(m, 3)
+    assert (m.read(CSR_MINSTRETH), m.read(CSR_MINSTRET)) == (0, 0)
+
+
+def test_minstret_older_absorbed_by_a_low_write_stays_absorbed_under_a_later_high_write():
+    """Instruction 0 retires before the low writer (1), so its strobe must stay dropped when the
+    high writer (3) executes while it is still in flight; instruction 2 (between the writers)
+    counts in the low word."""
+    m = CsrModel()
+    _write(m, CSR_MINSTRET, 10, seq=1)
+    _write(m, CSR_MINSTRETH, 20, seq=3)
+    _retire(m, 4)  # 0 (dropped), 1 (writer), 2 (low only), 3 (writer)
+    assert (m.read(CSR_MINSTRETH), m.read(CSR_MINSTRET)) == (20, 11)
+
+
+def test_minstret_read_only_forms_do_not_absorb_anything():
+    """CSRRS / CSRRC with a zero source do not write, so they absorb no retirement."""
+    m = CsrModel()
+    m.tick(access=("RS", CSR_MINSTRET, 0, False, True), access_seq=3)
+    m.tick(access=("RC", CSR_MINSTRETH, 0, True, False), access_seq=4)
+    _retire(m, 5)
+    assert m.read(CSR_MINSTRET) == 5
+
+
+def test_minstret_write_while_inhibited_still_absorbs_in_flight_strobes():
+    """Strobes are consumed in program order even while mcountinhibit[2] stops counting, so the
+    absorption must not leak past the inhibited window."""
+    m = CsrModel()
+    m.execute("RW", CSR_MCOUNTINHIBIT, 0x4)
+    _write(m, CSR_MINSTRET, 40, seq=1)
+    _retire(m, 2)  # older + writer, both inhibited anyway
+    m.execute("RW", CSR_MCOUNTINHIBIT, 0)
+    _retire(m)
+    assert m.read(CSR_MINSTRET) == 41
+
+
+def test_mcycle_write_has_no_in_flight_term():
+    """mcycle counts clocks, not retirements: a write only beats its own cycle's increment, and
+    the writer's retirement strobe changes nothing."""
+    m = CsrModel()
+    m.tick(access=("RW", CSR_MCYCLE, 500, False, False), access_seq=4)
+    m.tick(retire=True)
+    m.tick(retire=True)
+    assert m.read(CSR_MCYCLE) == 502
