@@ -388,3 +388,54 @@ def test_repo_config_requires_both_i2c_pad_synchronisers():
     cfg = cdc_gate.load_config(_GATE_PATH.with_name("cdc_config.yml"))
     ids = {rs["id"] for rs in cfg["required_synchronisers"]}
     assert {"i2c-scl-pad-sync", "i2c-sda-pad-sync"} <= ids
+
+
+# --- latch-launched synchronisers (bead j41m.3): cdc_snitch counts input PINS, so a latch (E and D)
+# or any 2-input logic in front of a magic_cdc stage classifies "BAD magic", never CDC.
+LATCH_REQ_CFG = (
+    BASE_CFG
+    + """required_synchronisers:
+  - id: latch-sync
+    dest: '^u_x\\.u_sync\\.sync_q\\[0\\]:D$'
+    latch_launched: true
+    reason: latch-launched handshake synchroniser
+"""
+)
+
+
+def test_latch_launched_bad_magic_satisfies_an_opted_in_entry(tmp_path, capsys):
+    cfg = write(tmp_path, "cfg.yml", LATCH_REQ_CFG)
+    rpt = write(
+        tmp_path,
+        "r.txt",
+        line("BAD", "u_x.u_sync.sync_q[0]:D", "clk_b", "2 x clk_a", magic=True),
+    )
+    assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 0, capsys.readouterr().out
+
+
+def test_bad_magic_does_not_satisfy_an_entry_that_did_not_opt_in(tmp_path):
+    cfg = write(tmp_path, "cfg.yml", REQ_CFG)
+    rpt = write(
+        tmp_path,
+        "r.txt",
+        line("BAD", "u_x.u_sync.sync_q[0]:D", "clk_b", "2 x clk_a", magic=True),
+    )
+    assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 1
+
+
+def test_latch_launched_entry_is_not_satisfied_by_unmarked_bad_or_okx(tmp_path):
+    """Negative controls: a bypassed (attribute-less) or raw-sampled stage must still go red."""
+    cfg = write(tmp_path, "cfg.yml", LATCH_REQ_CFG)
+    for stat in ("BAD", "OKX"):
+        rpt = write(
+            tmp_path,
+            f"r_{stat}.txt",
+            line(stat, "u_x.u_sync.sync_q[0]:D", "clk_b", "2 x clk_a", magic=False),
+        )
+        assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 1
+
+
+def test_latch_launched_entry_goes_red_when_the_stage_is_removed(tmp_path):
+    cfg = write(tmp_path, "cfg.yml", LATCH_REQ_CFG)
+    rpt = write(tmp_path, "r.txt", line("OK1", "u_x.other:D", "clk_b", "1 x clk_b"))
+    assert cdc_gate.main([str(rpt), "-c", str(cfg)]) == 1
