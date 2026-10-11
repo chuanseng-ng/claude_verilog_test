@@ -56,7 +56,7 @@
 // spacing >= 3 cycles, retire 5 cycles after EX).  A trap entry does not touch the
 // scoreboard: the EX-stage trap point is two stages past EX, so no younger writer has
 // executed yet (spacing >= 3) and every pending writer is older than the trap and
-// still retires.
+// still retires (an older writer's own strobe is at EX+5, never after the trap).
 
 module rv32i_csr_file (
     input  logic        clk,
