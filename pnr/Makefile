@@ -758,6 +758,13 @@ sky130-cpu-sv2v:
 	sed -i '1i /* verilator lint_off BLKLOOPINIT */' $(SKY130_CPU_SV2V_OUT)
 	@echo "sv2v complete: $$(wc -l < $(SKY130_CPU_SV2V_OUT)) lines"
 
+# Prints the exact sv2v inputs of the Sky130 CPU macro ("DEFINES ..." then one "FILE <path>" per line) so
+# tools/verif/synth_gate/ci_smoke.sh elaborates the same source list/defines the flow uses (single source of truth).
+.PHONY: sky130-cpu-sv2v-inputs
+sky130-cpu-sv2v-inputs:
+	@echo "DEFINES $(SKY130_CPU_SV2V_DEFINES)"
+	@for f in $(SKY130_CPU_SV_FILES); do echo "FILE $$f"; done
+
 librelane-sky130-cpu: sky130-cpu-sv2v
 	@echo "=========================================="
 	@echo "Running LibreLane flow — Sky130 CPU Stage 1 (real DRC/LVS)"
