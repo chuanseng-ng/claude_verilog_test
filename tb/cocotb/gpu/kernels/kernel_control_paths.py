@@ -1048,6 +1048,17 @@ async def test_error_injected_mid_traffic_halts_and_drains(dut):
         assert snap is not None, f"{where}: ERROR never entered"
         for key in inflight:
             inflight[key] += snap[key]
+        if delay % 2:
+            # Odd offsets: software writes CTRL.reset as early as it can, with the burst /
+            # shared-memory access / fetch still in flight.  soft_clr must wait for the drain.
+            clears = bus.clears
+            await axil_write(dut, GPU_CTRL, CTRL_RESET)
+            await wait_status(dut, ST_IDLE, timeout=400)
+            await settle(dut, 10)
+            bus.check_clean(f"{where}, early reset")
+            assert bus.clears > clears, f"{where}: soft_clr never fired"
+            assert int(dut.u_cu.gpu_error_o.value) == 0, f"{where}: reset did not clear the error"
+            continue
         await wait_drained(dut, bus)
         await settle(dut, 24)
         quiet, quiet_mem = bus.activity(), dict(mem)
