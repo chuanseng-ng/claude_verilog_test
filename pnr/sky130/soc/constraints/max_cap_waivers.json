@@ -2,14 +2,32 @@
     "version": 1,
     "waivers": [
         {
-            "id": "cpu-axi-rdata-i12-pin-cap",
-            "load_pin": {
-                "instance": "u_cpu*",
-                "pin": "axi_rdata_i[12]"
+            "id": "flat-111540-max-ss-run-2026-10-11",
+            "driver": {
+                "instance": "_111540_",
+                "pin": "X"
             },
-            "max_cap_pf": 0.7,
+            "run_id": "RUN_2026-10-11_08-39-41",
+            "corners": [
+                "max_ss_100C_1v60"
+            ],
+            "max_cap_pf": 0.3294,
             "bead": "claude_verilog_test-e45j",
-            "justification": "The only functional load of this net is the CPU macro input axi_rdata_i[12], whose Liberty pin capacitance is 0.2464 pF against a 0.0083 pF median over the macro's 92 input pins (next largest 0.1305 pF). With the 0.358 pF of post-RCX wire (2196 um, rank 54 of 117008 nets) and 12 antenna diodes the net is 0.614 pF against the 0.5301 pF o22a_4 max_capacitance (nom_tt; 0.643 vs 0.333 pF at max_ss). It is not an estimator error and not fixable by the resizer (rccal and wire-length-1500 runs both left it unbuffered); the source fix is an input buffer inside the CPU macro, which edits a hard-macro view and needs separate approval (cf. beads ma7/lxv). User decision 2026-10-09: waive this single net by name, adopt the RC-calibrated flow, gate everything else. The ceiling 0.70 pF sits 9 percent above the default flow's worst measured value (0.6427 pF, max_ss, RUN_2026-10-08_05-21-39) and 3.5 percent above the worst of any measured arm (0.6761 pF, max_ss, wire-length-1500 run RUN_2026-10-08_23-12-19); since the 0.2464 pF pin cap is fixed it still admits about 25 percent more wire (~2750 um), so ordinary placement drift passes but a real regression on this net fails and needs a human decision. Keyed on the macro pin, not the synthesis-generated driver name (_078722_ in RUN_2026-10-08_05-21-39)."
+            "justification": "Owner decision 2026-10-11 ('waive 2, fix 1'): flat SoC net driven by _111540_/X, no macro load, max_ss 0.3278 pF against the 0.3250 pF limit (+0.86 percent), measured in RUN_2026-10-11_08-39-41 (the first SoC run on the sv2v-rebuilt CPU macro, bead dud4). Waived by driver name because it is under 1 percent over the limit at one corner only. The name is synthesis-generated and the waiver is pinned to RUN_2026-10-11_08-39-41: it goes STALE on any re-run and must then be re-evaluated, not renewed. The ceiling is 0.5 percent above the measured value, so a regression on this net fails."
+        },
+        {
+            "id": "flat-112095-max-ss-run-2026-10-11",
+            "driver": {
+                "instance": "_112095_",
+                "pin": "X"
+            },
+            "run_id": "RUN_2026-10-11_08-39-41",
+            "corners": [
+                "max_ss_100C_1v60"
+            ],
+            "max_cap_pf": 0.3362,
+            "bead": "claude_verilog_test-e45j",
+            "justification": "Owner decision 2026-10-11 ('waive 2, fix 1'): flat SoC net driven by _112095_/X, no macro load, max_ss 0.3345 pF against the 0.3342 pF limit (+0.09 percent), measured in RUN_2026-10-11_08-39-41 (the first SoC run on the sv2v-rebuilt CPU macro, bead dud4). Waived by driver name because it is under 1 percent over the limit at one corner only. The name is synthesis-generated and the waiver is pinned to RUN_2026-10-11_08-39-41: it goes STALE on any re-run and must then be re-evaluated, not renewed. The ceiling is 0.5 percent above the measured value, so a regression on this net fails."
         }
     ]
 }

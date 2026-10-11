@@ -441,7 +441,26 @@ data input is now `axi_rdata_i[14]` at 0.0675 / 0.0691 pF (input median 0.0056 p
 | `_111540_/X` (`_057530_`) | max_ss | 0.3278 pF | 0.3250 pF (+0.9 %) |
 | `_112095_/X` (`_058083_`) | max_ss | 0.3345 pF | 0.3342 pF (+0.1 %) |
 
-Report: `62-cvt-maxcapviolations/max_cap_waivers.rpt` of the run. Open owner decisions: waive these nets by name, re-run, or
-accept. The setup/hold/LVS/DRC numbers do not depend on that decision. The SoC closes setup and hold at all nine corners
+Report: `62-cvt-maxcapviolations/max_cap_waivers.rpt` of the run.
+
+**Owner decision 2026-10-11, "waive 2, fix 1" (applied in `pnr/sky130/soc/constraints/max_cap_waivers.json`):**
+
+* The stale `cpu-axi-rdata-i12-pin-cap` waiver is **removed**.
+* `_111540_/X` (0.3278 vs 0.3250 pF, +0.9 %) and `_112095_/X` (0.3345 vs 0.3342 pF, +0.1 %), both max_ss only, are **waived by driver
+  name**, each with a justification, restricted to the `max_ss_100C_1v60` corner, a ceiling 0.5 % above the measured value, and
+  **pinned to `RUN_2026-10-11_08-39-41`**. Synthesis-generated names go stale on any re-run, so these two waivers apply only to that
+  run, show up as STALE on any other, and must then be re-evaluated, not renewed.
+* `_114232_/Y` (+11.8 % at max_ss, +6.0 % at nom_ss) stays **unwaived**. It must be closed at the next SoC run; the `j41m.4` scan-pin
+  re-harden of the CPU macro forces one (recorded in bead `e45j`).
+* To express a driver-name waiver the checker (`cvt_maxcap_waiver.py`) gained an optional `driver` key (exact instance, no globs) that
+  is mutually exclusive with `load_pin` and **requires** `run_id`; the flow step and the CLI pass the run directory name. Load-pin
+  waivers are unchanged. 7 new unit tests (`tb/tests/test_cvt_maxcap_waiver.py`, 59 pass).
+
+Offline check against the existing run (checker script only, no flow re-run):
+`python3 pnr/sky130/soc/plugin/cvt_maxcap_waiver.py /nobackup/sky130_soc_runs/RUN_2026-10-11_08-39-41 --waivers pnr/sky130/soc/constraints/max_cap_waivers.json`
+-> `2 waived, 2 unwaived violation(s), 0 stale waiver(s)`; the two unwaived are both `_114232_/Y` (max_ss 0.3020 pF, nom_ss
+0.2862 pF vs 0.2701 pF); `max-cap check: FAIL` (exit 1), as intended until `_114232_` is closed.
+
+Previous owner decision options, now resolved: waive by name (two nets), accept (none), re-run (`_114232_` at the next run). The setup/hold/LVS/DRC numbers do not depend on that decision. The SoC closes setup and hold at all nine corners
 (typical-corner caveat of `docs/SKY130_REAL_DRC_LVS_EVALUATION.md` §7 unchanged), whereas the CPU **standalone** macro does not
 close ss reg-to-reg setup (max_ss -3.70 ns, 996 violators, icache tag-SRAM half-cycle paths at 75 MHz); the SoC runs at 40 MHz.

@@ -151,6 +151,7 @@ class CVTMaxCapViolations(Step):
                 state_in[DesignFormat.NETLIST],
                 waivers,
                 strict_stale=strict_stale,
+                run_id=run_dir.name,
             )
         except (maxcap.ReportError, maxcap.WaiverError) as exc:
             msg = f"max-cap check could not be completed: {exc}"

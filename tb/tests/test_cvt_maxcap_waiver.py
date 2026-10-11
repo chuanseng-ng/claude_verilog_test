@@ -474,3 +474,89 @@ class TestCli:
         (run / "48-openroad-fillinsertion" / "soc_top.nl.v").unlink()
         rc = mw.main([str(run), "--waivers", str(waiver_file(tmp_path)), "--netlist", str(nl)])
         assert rc == 0
+
+
+# --------------------------------------------------------------------------- driver (run-pinned) waivers
+DRIVER_WAIVERS = {
+    "version": 1,
+    "waivers": [
+        {
+            "id": "drv-a",
+            "driver": {"instance": "_000001_", "pin": "Y"},
+            "run_id": "RUN_synthetic",
+            "max_cap_pf": 0.60,
+            "justification": "synthetic: 0.5 percent over the limit, pinned to one run",
+        }
+    ],
+}
+
+
+def driver_rows():
+    return {
+        "nom_tt_025C_1v80": [row("_000001_/Y", PIN_LIMIT, 0.5330)],
+        "max_ss_100C_1v60": [],
+        "min_ff_n40C_1v95": [],
+    }
+
+
+class TestDriverWaivers:
+    def test_driver_waiver_covers_exact_driver_on_its_run(self, tmp_path):
+        run = write_run(tmp_path, driver_rows())
+        v = mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, DRIVER_WAIVERS)))
+        assert v.ok
+        assert len(v.waived) == 1 and v.unwaived == ()
+
+    def test_driver_waiver_does_not_apply_to_another_run(self, tmp_path):
+        run = write_run(tmp_path, driver_rows())
+        v = mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, DRIVER_WAIVERS)))
+        other = tmp_path / "RUN_other"
+        run.rename(other)
+        v = mw.evaluate_run(other, mw.load_waivers(waiver_file(tmp_path, DRIVER_WAIVERS)))
+        assert not v.ok
+        assert [w.id for w in v.stale_waivers] == ["drv-a"]
+
+    def test_driver_waiver_needs_run_id_when_called_without_one(self, tmp_path):
+        run = write_run(tmp_path, driver_rows())
+        sta = mw.find_sta_dir(run)
+        v = mw.evaluate_sta_dir(
+            sta, mw.find_netlist(run), mw.load_waivers(waiver_file(tmp_path, DRIVER_WAIVERS))
+        )
+        assert not v.ok
+
+    def test_driver_waiver_ceiling_still_enforced(self, tmp_path):
+        rows = {
+            "nom_tt_025C_1v80": [row("_000001_/Y", PIN_LIMIT, 0.6500)],
+            "max_ss_100C_1v60": [],
+            "min_ff_n40C_1v95": [],
+        }
+        run = write_run(tmp_path, rows)
+        v = mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, DRIVER_WAIVERS)))
+        assert not v.ok
+        assert "ceiling" in v.unwaived[0].reason
+
+    def test_other_driver_is_not_covered(self, tmp_path):
+        rows = {
+            "nom_tt_025C_1v80": [row("_999999_/Y", PIN_LIMIT, 0.5330)],
+            "max_ss_100C_1v60": [],
+            "min_ff_n40C_1v95": [],
+        }
+        nl = NETLIST.replace(" _000001_ ", " _999999_ ")
+        run = write_run(tmp_path, rows, netlist=nl)
+        v = mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, DRIVER_WAIVERS)))
+        assert not v.ok
+
+    @pytest.mark.parametrize(
+        "mutate",
+        [
+            lambda w: w.pop("run_id"),
+            lambda w: w.update(load_pin={"instance": "u_cpu*", "pin": "p"}),
+            lambda w: w["driver"].update(instance="_0000*"),
+            lambda w: w.pop("driver"),
+        ],
+    )
+    def test_malformed_driver_waivers_are_rejected(self, tmp_path, mutate):
+        data = json.loads(json.dumps(DRIVER_WAIVERS))
+        mutate(data["waivers"][0])
+        with pytest.raises(mw.WaiverError):
+            mw.load_waivers(waiver_file(tmp_path, data))
+
