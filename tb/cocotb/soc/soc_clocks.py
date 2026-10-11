@@ -26,7 +26,8 @@ def drive_dft_inactive(dut) -> None:
     """Tie the DFT test-access ports (bead j41m.2) to their inactive values.
 
     scan_mode_i=0 (functional), scan_en_i=0, scan_rst_ni=1 (scan reset not
-    asserted), scan_clk_i=0, scan_in_i=0. With these the scan muxes, the
+    asserted), scan_clk_i=0, scan_in_i=0, and the JTAG TAP (j41m.3) held in reset
+    (tck_i=0, tms_i=1, tdi_i=0, trst_ni=0). With these the scan muxes, the
     clock-gate test enable and the crypto key mask are all pass-through, so
     every pre-DFT suite sees bit-identical behaviour. Called by
     start_soc_clocks() -- the one place every soc_top suite already goes
@@ -40,6 +41,13 @@ def drive_dft_inactive(dut) -> None:
     dut.scan_rst_ni.value = 1
     dut.scan_clk_i.value = 0
     dut.scan_in_i.value = 0
+    # JTAG TAP (j41m.3): held in reset (trst_ni=0) with TMS high, TCK parked low,
+    # so the TAP stays in Test-Logic-Reset and every combiner term is the pin value.
+    if hasattr(dut, "trst_ni"):
+        dut.tck_i.value = 0
+        dut.tms_i.value = 1
+        dut.tdi_i.value = 0
+        dut.trst_ni.value = 0
 
 
 def start_soc_clocks(dut, period_ns, cpu_period_ns=None):

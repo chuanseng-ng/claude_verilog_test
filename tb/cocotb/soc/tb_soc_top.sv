@@ -106,7 +106,15 @@ module tb_soc_top #(
     input  logic        scan_rst_ni,
     input  logic        scan_clk_i,
     input  logic [7:0]  scan_in_i,
-    output logic [7:0]  scan_out_o
+    output logic [7:0]  scan_out_o,
+    // ── JTAG TAP (j41m.3). Idle: tck_i=0, tms_i=1, tdi_i=0, trst_ni=0 (TAP held in
+    //    reset); soc_clocks.start_soc_clocks() drives them.
+    input  logic        tck_i,
+    input  logic        tms_i,
+    input  logic        tdi_i,
+    input  logic        trst_ni,
+    output logic        tdo_o,
+    output logic        tdo_oe_o
 );
 
     // GH #92: this single-clock wrapper does not expose cpu_pll_locked_o to
@@ -169,6 +177,12 @@ module tb_soc_top #(
         .scan_clk_i     (scan_clk_i),
         .scan_in_i      (scan_in_i),
         .scan_out_o     (scan_out_o),
+        .tck_i          (tck_i),
+        .tms_i          (tms_i),
+        .tdi_i          (tdi_i),
+        .trst_ni        (trst_ni),
+        .tdo_o          (tdo_o),
+        .tdo_oe_o       (tdo_oe_o),
         .pll_locked_o   (pll_locked_o),
         // GH #92: CPU-domain PLL lock, not observed by this single-clock
         // wrapper's tests (soc_boot/soc_periph/soc_coherency/soc_cpu_gpu).

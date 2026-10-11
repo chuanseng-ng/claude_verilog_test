@@ -269,8 +269,8 @@ module soc_top
     output logic        cpu_pll_locked_o,   // 1 when CPU-domain PLL has acquired lock
 
     // ── DFT test access (bead claude_verilog_test-j41m.2, GH #244) ───────────
-    // Direct (parallel) scan access; the JTAG TAP of Stage 1b (j41m.3) is added
-    // on top and drives the same controls through dft_ctrl_ports. Inactive values
+    // Direct (parallel) scan access; the JTAG TAP of Stage 1b (j41m.3, ports
+    // below) is OR-ed on top by dft_ctrl. Inactive values
     // (functional mode, bit-identical to the pre-DFT design): scan_mode_i=0,
     // scan_en_i=0, scan_rst_ni=1, scan_clk_i=0 (any level; never selected).
     // See docs/design/DFT_ARCHITECTURE.md section 14 for the full contract.
@@ -279,7 +279,20 @@ module soc_top
     input  logic                    scan_rst_ni,    // scan reset, active low
     input  logic                    scan_clk_i,     // shared shift/capture clock, all domains
     input  logic [SCAN_CHAINS-1:0]  scan_in_i,      // placeholder until Stage 2 insertion
-    output logic [SCAN_CHAINS-1:0]  scan_out_o      // tied 0 until Stage 2 insertion
+    output logic [SCAN_CHAINS-1:0]  scan_out_o,     // tied 0 until Stage 2 insertion
+
+    // ── JTAG TAP (bead claude_verilog_test-j41m.3, DFT Stage 1b) ─────────────
+    // Raw pins, no pad ring; TDO is never tri-stated here (no inout): the chip
+    // top builds the tristate from tdo_oe_o. TCK is an asynchronous third clock
+    // domain. Idle values used by every functional suite: tck_i=0, tms_i=1,
+    // tdi_i=0, trst_ni=0 (TAP held in reset). trst_ni must be asserted at
+    // power-up (open question Q-TRST). See DFT_ARCHITECTURE.md section 15.
+    input  logic                    tck_i,          // JTAG test clock
+    input  logic                    tms_i,          // JTAG test mode select
+    input  logic                    tdi_i,          // JTAG test data in
+    input  logic                    trst_ni,        // JTAG reset, active low
+    output logic                    tdo_o,          // JTAG test data out
+    output logic                    tdo_oe_o        // 1 while TAP shifts (TDO pad enable)
 );
 
     // =========================================================================
@@ -294,12 +307,12 @@ module soc_top
 
     // ── DFT test controls — SINGLE SOURCE (j41m.2; replaces the 07n tie-offs) ──
     // Every scan/test consumer in this file takes its control from the five nets
-    // below and from nothing else. They come from ONE dft_ctrl_ports instance,
-    // which in Stage 1a passes the top-level test ports straight through; Stage 1b
-    // (j41m.3) swaps that module for the JTAG-TAP-driven dft_ctrl with the same
-    // port list, so no consumer is touched. With the ports at their inactive
-    // values (scan_mode_i=0, scan_rst_ni=1) every mux and mask below is a pure
-    // pass-through and NOTHING about functional behaviour changes.
+    // below and from nothing else. They come from ONE dft_ctrl instance (Stage 1b,
+    // j41m.3): the JTAG TAP combined with the Stage 1a pin leg (dft_ctrl_ports,
+    // inside it). With the pins at their inactive values (scan_mode_i=0,
+    // scan_rst_ni=1) and the TAP idle (IR != SCAN, incl. held in reset) every mux
+    // and mask below is a pure pass-through and NOTHING about functional
+    // behaviour changes.
     //
     // Consumers: the reset overrides (cdc_reset_sync x2 here, inside async_axi_fifo
     // and apb_cdc_bridge, dft_rst_mux x3 in each pll_subsystem and one on
@@ -316,11 +329,17 @@ module soc_top
     logic dft_scan_en;
     /* verilator lint_on  UNUSEDSIGNAL */
 
-    dft_ctrl_ports u_dft_ctrl (
+    dft_ctrl u_dft_ctrl (
         .scan_mode_i (scan_mode_i),
         .scan_en_i   (scan_en_i),
         .scan_rst_ni (scan_rst_ni),
         .scan_clk_i  (scan_clk_i),
+        .tck_i       (tck_i),
+        .tms_i       (tms_i),
+        .tdi_i       (tdi_i),
+        .trst_ni     (trst_ni),
+        .tdo_o       (tdo_o),
+        .tdo_oe_o    (tdo_oe_o),
         .scan_mode_o (dft_scan_mode),
         .scan_en_o   (dft_scan_en),
         .scan_rst_no (dft_scan_rst_n),
