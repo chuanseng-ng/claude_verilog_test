@@ -476,7 +476,7 @@ class TestCli:
         assert rc == 0
 
 
-# --------------------------------------------------------------------------- driver (run-pinned) waivers
+# ------------------------------------------------------------- driver (run-pinned) waivers
 DRIVER_WAIVERS = {
     "version": 1,
     "waivers": [
@@ -559,4 +559,3 @@ class TestDriverWaivers:
         mutate(data["waivers"][0])
         with pytest.raises(mw.WaiverError):
             mw.load_waivers(waiver_file(tmp_path, data))
-
