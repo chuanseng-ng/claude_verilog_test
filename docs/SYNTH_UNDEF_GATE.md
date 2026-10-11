@@ -161,7 +161,8 @@ lines themselves cannot be the control, sv2v elaborates them correctly, which is
 struct-member select, an instance port tied to `'x`, and a function result left unassigned on a path (injected into a scratch copy of `timer.sv`,
 reaching `irq_o`; snippets in `tools/verif/synth_gate/inject/`); (3) `synth -flatten` + `techmap` + `abc -g` to yosys generic gates (no PDK) and a
 Verilator gate-vs-RTL differential on `trivial`, `ma7_straight`, `ma7_branch` (commit stream, APB debug reads, AXI writes must be identical).
-Runtime and peak RSS: @@CI@@
+Runtime and peak RSS on the GitHub runner (PR #271, all green): whole job 2 m 13 s; `ci_smoke.sh` 1 m 36 s wall, 426 MB peak (the Verilator build of step 3);
+gate cases: Sky130 CPU 2 s / 61 MB, Sky130 SoC 4 s / 93 MB, ASAP7 SoC 22 s / 154 MB, each negative control 2-5 s / 61-95 MB. The job timeout is 20 min.
 
 Does NOT cover: the Synlig frontend (oss-cad-suite has no Synlig plugin; the Synlig arm is protected only by the PD-time plugin); GPU macros;
 PDK cell models and ABC mapping with the real liberty; timing. The differential's own negative control was not
