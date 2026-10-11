@@ -62,14 +62,17 @@ Grid (entire kernel execution)
 
 **Phase 4 constraints**:
 
-- Grid dimensions: Up to 64x64x64 blocks (configurable via registers)
+- Grid dimensions: `GPU_GRID_DIM_X/Y/Z` are **reserved in Phase 4** (decided 2026-10-11, bead `6hy6`):
+  stored and readable, no effect. The Phase 4 hardware launches a single block; multi-block grids are a
+  later-phase feature
 - Block dimensions: **`GPU_BLOCK_X` = 1..64 threads, at most 64 threads per block** (8 warps x 8 lanes,
   the frozen Phase 4 limit; corrected 2026-10-11, bead `6hy6` — the earlier "16x16x1 / 256 threads per
-  block" text contradicted the 8-warp storage). `GPU_BLOCK_Y` / `GPU_BLOCK_Z` are stored and read back
-  but not interpreted by the Phase 4 RTL (threads are numbered along X only)
+  block" text contradicted the 8-warp storage). `GPU_BLOCK_Y` / `GPU_BLOCK_Z` are **reserved in
+  Phase 4**: stored and readable, no effect (the thread count is `GPU_BLOCK_X` alone, threads are numbered
+  along X only)
 - Warp size: **8 lanes** (fixed in Phase 4)
 - Warps per block: ceil(`GPU_BLOCK_X` / warp size), **at most 8**
-- Total threads: Grid size × Block size, with at most 64 threads per block
+- Total threads: `GPU_BLOCK_X` (1..64) in Phase 4, because the grid is reserved and a single block runs
 - Illegal block size: `GPU_BLOCK_X` = 0 or > 64 is rejected at launch with `GPU_STATUS.ERROR`
   (see "Launch validation" below)
 
@@ -317,8 +320,9 @@ address[lane] = base_register[lane] + offset
    ```
 
 2. **GPU executes kernel**:
-   - Iterates through all blocks in grid
-   - For each block, schedules warps round-robin
+   - Phase 4: runs the single block described by `GPU_BLOCK_DIM_X` (the grid registers are reserved, see
+     "Phase 4 constraints"); a later phase iterates through all blocks in the grid
+   - Schedules the block's warps round-robin
    - Each warp executes until VRET
 
 3. **GPU signals completion**:

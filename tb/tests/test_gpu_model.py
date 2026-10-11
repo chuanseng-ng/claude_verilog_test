@@ -76,28 +76,24 @@ class TestGPUKernelModel:
         )
         assert tid == (7, 0, 0)
 
-    def test_thread_id_2d_block(self):
-        """Test thread ID computation for 2D block."""
+    def test_block_y_z_are_reserved_for_thread_ids(self):
+        """BLOCK_Y/BLOCK_Z are reserved (bead 6hy6): thread ids run along X only."""
         gpu = GPUKernelModel()
         gpu.configure(
             grid_dim=(1, 1, 1),
-            block_dim=(4, 2, 1),  # 4x2 = 8 threads
+            block_dim=(4, 2, 1),  # thread count is BLOCK_X = 4, not 4x2
             kernel_addr=0x1000,
         )
 
+        assert len(gpu.warps) == 1
         warp = gpu.warps[0]
+        assert warp["active_mask"] == 0x0F
 
-        # Thread 0: (0, 0, 0)
-        tid = gpu._compute_thread_id(  # pylint: disable=protected-access
-            warp["block_id"], warp["warp_in_block"], 0
-        )
-        assert tid == (0, 0, 0)
-
-        # Thread 4: (0, 1, 0) - wraps to next row
-        tid = gpu._compute_thread_id(  # pylint: disable=protected-access
-            warp["block_id"], warp["warp_in_block"], 4
-        )
-        assert tid == (0, 1, 0)
+        for lane in range(4):
+            tid = gpu._compute_thread_id(  # pylint: disable=protected-access
+                warp["block_id"], warp["warp_in_block"], lane
+            )
+            assert tid == (lane, 0, 0)
 
     def test_load_kernel(self):
         """Test loading kernel instructions."""
@@ -408,6 +404,29 @@ class TestBlockLaunchContract:
         gpu = GPUKernelModel()
         gpu.configure(grid_dim=(1, 1, 1), block_dim=(block_x, 1, 1), kernel_addr=0x1000)
         assert [w["active_mask"] for w in gpu.warps] == masks
+
+    @pytest.mark.parametrize(
+        ("block_dim", "masks"),
+        [
+            ((9, 5, 3), [0xFF, 0x01]),  # Y/Z reserved: 9 threads, not 135
+            ((64, 7, 7), [0xFF] * 8),  # still legal: BLOCK_X alone is 1..64
+            ((8, 8, 8), [0xFF]),
+            ((1, 64, 64), [0x01]),
+        ],
+    )
+    def test_warp_count_comes_from_block_x_only(self, block_dim, masks):
+        """Thread count = BLOCK_X; BLOCK_Y / BLOCK_Z change neither warps nor masks."""
+        gpu = GPUKernelModel()
+        gpu.configure(grid_dim=(1, 1, 1), block_dim=block_dim, kernel_addr=0x1000)
+        assert [w["active_mask"] for w in gpu.warps] == masks
+
+    def test_block_y_z_do_not_make_a_launch_illegal(self):
+        """Only BLOCK_X is validated: 64 x 64 x 64 is legal, 65 x 1 x 1 is not."""
+        gpu = GPUKernelModel()
+        gpu.configure(grid_dim=(1, 1, 1), block_dim=(64, 64, 64), kernel_addr=0x1000)
+        assert len(gpu.warps) == 8
+        with pytest.raises(GPULaunchError):
+            gpu.configure(grid_dim=(1, 1, 1), block_dim=(65, 1, 1), kernel_addr=0x1000)
 
     def test_invalid_lanes_do_not_write_registers(self):
         """BLOCK_X=9: VADDI r1,r1,10 changes warp 0 (8 lanes) and lane 0 of warp 1 only."""

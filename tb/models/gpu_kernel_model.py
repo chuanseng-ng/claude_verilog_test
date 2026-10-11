@@ -9,6 +9,12 @@ Launch contract (bead 6hy6, user decision 2026-10-11): a block holds at most
 with BLOCK_X == 0 or BLOCK_X > 64 is a launch ERROR: ``configure`` raises ``GPULaunchError``
 (the RTL reports GPU_STATUS.ERROR) and no warp is created.  The last warp of a block whose
 thread count is not a multiple of the warp size starts with ONLY its valid lanes active.
+
+BLOCK_Y, BLOCK_Z and the GRID_* registers are RESERVED in Phase 4 (decided 2026-10-11): stored
+and readable, no effect on the thread count.  The thread count of a block is BLOCK_X alone
+(1..64), matching the RTL and tb/cocotb/gpu/gpu_ref_model.py, so thread ids run along X only
+(tid.y = tid.z = 0).  The model still replicates the warps over ``grid_dim`` blocks as a
+spec-level convenience; the RTL launches a single block.
 """
 
 from .memory_model import MemoryModel
@@ -139,7 +145,7 @@ class GPUKernelModel:
         self.kernel_addr = kernel_addr
 
         # Calculate total warps
-        threads_per_block = block_dim[0] * block_dim[1] * block_dim[2]
+        threads_per_block = block_dim[0]  # BLOCK_Y / BLOCK_Z are reserved (no effect)
         warps_per_block = (threads_per_block + self.warp_size - 1) // self.warp_size
         self._threads_per_block = threads_per_block
 
@@ -182,7 +188,8 @@ class GPUKernelModel:
         self, block_id: tuple, warp_in_block: int, lane: int
     ) -> tuple:
         """
-        Compute thread ID (tid.x, tid.y, tid.z) for a lane.
+        Compute thread ID (tid.x, tid.y, tid.z) for a lane.  BLOCK_Y / BLOCK_Z are reserved
+        in Phase 4, so tid.y and tid.z are always 0.
 
         Args:
             block_id: (bx, by, bz)
@@ -195,13 +202,8 @@ class GPUKernelModel:
         # Compute global thread index within block
         thread_in_block = warp_in_block * self.warp_size + lane
 
-        # Convert to 3D thread ID
-        block_x, block_y, _ = self.block_dim
-        tid_x = thread_in_block % block_x
-        tid_y = (thread_in_block // block_x) % block_y
-        tid_z = thread_in_block // (block_x * block_y)
-
-        return (tid_x, tid_y, tid_z)
+        # Threads are numbered along X only (block_dim[0] == thread count)
+        return (thread_in_block % self.block_dim[0], 0, 0)
 
     def load_kernel(self, instructions: dict[int, int]):
         """
