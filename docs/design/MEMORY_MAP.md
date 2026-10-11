@@ -240,6 +240,31 @@ See Global Memory Map above.
 | 1     | DONE       | RO     | 1 = Kernel complete, 0 = not done              |
 | 0     | IDLE       | RO     | 1 = GPU idle, 0 = GPU busy                     |
 
+**GPU_CTRL.RESET semantics** — *clarification 2026-10-10, bead `q6w0` / GH #261; contract accepted by the project owner 2026-10-11 (halt-on-ERROR added the same day). The frozen Phase 4 spec only says "reset"; this is the contract the RTL implements.*
+
+Writing `GPU_CTRL[1] = 1` is a **soft reset**, valid from any state (IDLE, RUNNING, DONE, ERROR). It is synchronous and behaves like a hardware reset of the GPU except for the software-visible configuration:
+
+| Item | After a soft reset |
+|:-----|:-------------------|
+| `GPU_STATUS` | IDLE (`0x1`) once the reset completes; ERROR and DONE are left, RUNNING is aborted |
+| Compute-unit error flag (stack overflow), pipeline, warp scheduler (warps, divergence stacks, round-robin pointer), pending kernel descriptor | cleared |
+| IRQ latch (RTL offset `0x028`; the table above predates it) and `gpu_irq_o` | cleared |
+| Kernel address, grid/block dims, `GPU_ARG_PTR` | **kept** |
+| `GPU_CTRL[2]` (IRQ enable; RTL bit not listed in the table above) | **kept as written by the reset write itself**: every `GPU_CTRL` write sets it from bit 2, so write `0x6` to keep interrupts enabled and `0x2` to disable them |
+| Performance counters (`0x030..0x06C`) | **kept** (post-mortem of an aborted/errored kernel); cleared by the next launch as before |
+| Vector register file, shared-memory contents | not touched (same as hardware reset: neither has a reset) |
+
+Completion is **not instantaneous**. The reset halts new instruction fetches and memory requests, lets any AXI beat already on the bus finish (an accepted instruction fetch, one coalescer burst, one shared-memory access), then clears; the AXI masters therefore never abandon a transaction mid-flight. Software must poll `GPU_STATUS` for IDLE before programming the next launch: a `GPU_CTRL.START` written while the reset is still draining is dropped. The wait is bounded by the AXI slave's response time (a slave that never answers stalls the reset, as it stalls the kernel). Before this change `GPU_CTRL.RESET` was ignored while RUNNING, did not clear the compute-unit error flag, and did not stop a kernel that had already faulted: after ERROR it reported IDLE but the next launch faulted again.
+
+**What ERROR does** (halt-on-ERROR, decided 2026-10-11, bead `q6w0`): a divergence-stack overflow sets a sticky error and `GPU_STATUS` reads ERROR (`0x4`). Entering ERROR **halts the GPU**: from the same clock edge on which `GPU_STATUS` first reads ERROR, no new instruction fetch and no new VLD/VST/VLDS/VSTS request is issued (the same halt gate the soft reset uses). A transaction already under way (an accepted instruction fetch, one coalescer burst, one shared-memory access) runs to completion, so the AXI masters never abandon a beat, and instructions already inside the pipeline retire without issuing memory requests. The GPU then sits quiescent in ERROR: `GPU_STATUS` keeps reading ERROR, the configuration registers and perf counters are untouched, and no completion interrupt is raised (interrupt behaviour unchanged). ERROR is left only by `GPU_CTRL.RESET` (or hardware reset); the reset finds the GPU already halted and completes as soon as the in-flight beat has drained. `GPU_STATUS == ERROR` means the GPU has stopped *starting* work; the last in-flight AXI beat may still be completing for a few cycles after it first reads ERROR. Before this change ERROR did not halt the kernel: the faulted warp fell through the overflowing branch and kept fetching and storing in the background.
+
+**Contract decisions, accepted 2026-10-11** (bead `q6w0`):
+1. A soft reset **during RUNNING aborts the kernel** (it was silently ignored before). Chosen because a "reset" that cannot stop a runaway kernel is not recoverable.
+2. The reset **drains the AXI masters before clearing** rather than aborting mid-beat, so the crossbar never sees an abandoned transaction. Cost: latency and dependence on the slave answering.
+3. **Perf counters are kept** across the reset (post-mortem value; the next launch clears them as before). **The IRQ latch is cleared** (as before). **Config registers are kept.** `CTRL[2]` follows the value written with the reset.
+4. A `START` written while the reset is draining is dropped.
+5. Vector register file and shared-memory contents are untouched (they have no hardware reset either).
+
 **Kernel launch sequence**:
 
 1. Write `GPU_KERNEL_ADDR` with kernel instruction address
