@@ -717,3 +717,30 @@ Selecting SCAN (IR = `4'h4`) is the **only** thing that enters TAP scan mode; TD
 
 ### 15.7 Tests and checks required of this stage
 Unit suite `test_jtag_tap` (module `jtag_tap` alone); DFT-controller suite on `dft_ctrl`; SoC suite on `tb_soc_pll`/`tb_soc_top`; mutation campaign on FSM transitions, IR capture, opcode decode, TDR decode, TDO/OE timing, gate enable, combiner; `check_scan_clk_rst.py` extended to cover TAP-domain flops (clock = `tck_i` only, reset = `trst_ni` through the sync only, unscanned by design) with a negative control; CDC gate declarations; coverage ratchet; sv2v source lists; SDC constraints text (TCK clock, asynchronous clock group, JTAG IO delays) in `sky130_soc.sdc` only. **PD is not run in this stage.**
+
+### 15.8 Implementation record (2026-10-11, PR #270)
+
+Built as specified in 15.1 to 15.5: `rtl/soc/dft/jtag_tap.sv`, `rtl/soc/dft/dft_ctrl.sv` (instantiates the unchanged `dft_ctrl_ports` as the pin leg), `soc_top` ports `tck_i tms_i tdi_i trst_ni tdo_o tdo_oe_o`, source lists (`pnr/Makefile` x2, `sim/Makefile`, `tb/cocotb/soc/Makefile` x3 DFT lists), port stubs (`soc_top_ports.v`, both PDKs). Implementation choices inside the specification, none of which change a pin or the instruction map: `parallel_o` and `chain_grp_o` are gated by IR = SCAN exactly like `serial_o`; Update-DR/Update-IR commit on the falling edge after the rising edge that entered the Update state; TAP flop count is 23 yosys cells (2 are the TRST synchroniser).
+
+| Check | Result [M] |
+|---|---|
+| `test_jtag_tap` (unit, 16 tests x 3 TCK/system-clock pairs 7/5, 13/3, 29/5 ns) | 48/48 pass |
+| `test_dft_ctrl` | 7/7 pass |
+| `test_soc_jtag` (tb_soc_pll) | 11/11 pass; first run 8/11, the 3 failures were test defects (absolute commit thresholds that ignored the loop firmware's ~0.28 IPC, a `key_q` deposit made while the peripheral resets were still asserting, and a post-scan check that forgot SCAN_RST resets the crypto block), RTL unchanged |
+| Hand mutants on TAP + `dft_ctrl` (IR capture value, Exit2-DR transition, `scan_mode` from TDR bits, `scan_en` in Capture-DR, ungated `chain_grp`/`rst_assert`, spurious gate edge in Exit1-DR, pin-OR on `test_clk_o`, `scan_mode_o = pin & tap`, ...) | 19 applied, 19 killed; mutated copies lived outside the tree |
+| `check_scan_clk_rst.py` + `tb/tests/test_dft_scan_check.py` | 14 pytest pass (8 new negative controls); both PDK netlists 0 violations: Sky130 1663 sequential cells / 28 scan-mode muxes, ASAP7 3749 / 29; 23 TAP-domain cells; scan mode net has the pin leg and a TAP leg; undeclared-TAP-output control on the real netlist fails with 4 violations |
+| CDC gate (`make -C sim cdc CDC_STRICT=1`, cdc_snitch + cdc_gate) | PASS, 0 unwaived, every waiver and required synchroniser still matches; `tck_i` added to `reset_domains` with the justification of 15.5 crossing 2, backed by the `--tap-allowed-nets` check above (the gate can no longer see a TCK-launched signal, the checker can) |
+| `make -C sim lint`, Verible (`.rules.verible_lint`), `check_struct_member_select.py`, `check_source_closure.py` (Sky130 and ASAP7 SoC) | clean / 0 findings / CLOSED, CLOSED; sv2v regenerates for both PDKs |
+| Python QA as CI (`ruff format --check`, `ruff check`, `mypy`, `pylint`) | clean; pylint 9.55/10; `pytest tb/tests` pass (yosys-gated tests run with the cdc-cache yosys) |
+| SDC (`sky130_soc.sdc`: `create_clock tck` 100 ns, `set_clock_groups -asynchronous`, JTAG IO delays, `trst_ni` false path) | sources to completion in OpenSTA against a port-only `soc_top` (tck clock and the six ports resolve; the only warnings are the pre-existing missing-port ones from the stub). **No STA sign-off and no PD run** |
+
+**Not verified:** any P&R, CTS, timing or hold effect of the TCK-gate / clock-select cells; STA with the TAP flop driving the clock-mux selects (the functional-mode SDC cannot name that flop after flattening, see the KNOWN GAP in `sky130_soc.sdc`); TCK frequency limits; real-silicon power-up without a driven `trst_ni`; metastability (not modelable); the ASAP7 SDCs (not edited: Sky130 is the target); `synth_gate/ci_smoke.sh` locally (not executable here; it covers the CPU frontend, which this change does not touch; CI ran it green); gate-level simulation of the TAP.
+
+**Open questions (each needs the owner; the doc's recommended default was used where one exists):**
+* Q-PIN: sections 8/9 say the direct scan pins should be gated by the TAP-held `scan_mode`; implemented as OR so the 1a pins and the "TAP must not gate the parallel path" decision hold. A floating `scan_mode_i` is unprotected.
+* Q-CLK: the test-clock select is a plain mux with a documented quiet-input contract, not an enable-before-switch glitch-free mux (15.5).
+* Q-TRST: `trst_ni` must be asserted at power-up or 5 TCK with TMS=1 applied; tie it to a power-on reset at the chip top. Idle value used by the suites: asserted.
+* Q-OP: opcode values (15.3) are private codes chosen here; the doc left them open. SCAN_RST was implemented as its own 1-bit instruction (the doc marks it optional), MBIST_CTRL/MBIST_STATUS reserved and decoded to BYPASS until Stage 4.
+* Q-STUB: SCAN's serial data register is a 1-bit stub until Stage 2 (no chains exist), `CHAIN_GRP` has no consumer, and `scan_en`/`tap_scan_en` has no RTL consumer (its net is optimised away; add it to the `--tap-allowed-nets` list in `pnr/Makefile` when Stage 2 connects it).
+* Q-SDC: the ASAP7 SoC SDCs were not given TCK constraints.
+* Open from the doc, unchanged: crypto scan-entry scrub (`j41m.6`; note SCAN_SEL/SCAN_RST under SCAN does reset the crypto block through the scan reset, which is a partial scrub path to evaluate there).
