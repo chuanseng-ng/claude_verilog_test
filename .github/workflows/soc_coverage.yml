@@ -114,9 +114,12 @@ jobs:
       # 2 icache, 5 gpu control-path kernels, 3 other); that run had 1 red line, the then-misdeclared
       # expect_fail kernel test, fixed and re-run on its own (6/6 pass), so 232 is measured but not from a
       # single all-green invocation.  Tighten to (measured - 3) from this PR's CI.
-      # 2026-10-11 (bead 6hy6): 251 = 254 - 3, 254 passed / 0 failed in the CI run
-      # 38138049318 (workflow_dispatch on fix/gpu-blockx-launch-6hy6, head 2dabc48); this branch
-      # adds 3 kernel_block_warps tests and 1 warp_scheduler test.
+      # 2026-10-11 (bead f7z3): 248 = 251 - 3; 251 measured by a full all-green local coverage_cpu_gpu run
+      # (0 failed), which includes the 11 new test_minstret_write tests.
+      # 2026-10-11 (bead 6hy6): 254 passed / 0 failed in CI run 38138049318 (workflow_dispatch on
+      # fix/gpu-blockx-launch-6hy6, head 2dabc48, BEFORE merging f7z3); this branch adds 3
+      # kernel_block_warps tests + 1 warp_scheduler test.  PROVISIONAL 251 until the merged head's
+      # coverage_cpu_gpu count is measured in CI (final value = measured - 3).
       CPU_PASS_FLOOR: '251'
 
     steps:

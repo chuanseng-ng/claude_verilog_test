@@ -10,6 +10,13 @@ execute() is the untimed instruction view: the counters only change through writ
 that compares a read against it must freeze them with mcountinhibit first.  tick() is the
 cycle-accurate view (bead kiit): it also advances the free-running counters, so a monitor can
 step it once per clock and compare the whole counter state with the DUT every cycle.
+
+minstret / minstreth (bead f7z3): the RISC-V privileged spec says a CSR write to minstret takes
+effect as if every OLDER instruction had already retired, and the writing instruction's own
+retirement does not increment the counter.  The DUT applies the write in EX, so tick() models the
+instructions still in flight at that moment by program-order index: the retirement strobes of the
+writer itself and of every older instruction that has not retired yet are absorbed (see
+tick()), never added on top of the written value.
 """
 
 from __future__ import annotations
@@ -72,6 +79,11 @@ class CsrModel:
             **dict.fromkeys(_HPM, 0),
         }
         self.maintenance: list[str] = []
+        # Program-order bookkeeping for tick(): how many retirement strobes were seen, and what
+        # to do with the strobe of each not-yet-retired instruction a minstret write absorbed
+        # ("drop": no increment at all; "lowonly": low word +1, no carry into the high word).
+        self.retired = 0
+        self._absorb: dict[int, str] = {}
 
     def read(self, addr: int, *, timer_irq: int = 0, ext_irq: int = 0) -> int:
         """Architectural value of ``addr``; raises IllegalCsrError if unimplemented."""
@@ -130,13 +142,20 @@ class CsrModel:
         dcache_miss: bool = False,
         branch_mispred: bool = False,
         access: tuple[str, int, int, bool, bool] | None = None,
+        access_seq: int | None = None,
     ) -> None:
-        """Advance the counters by one clock (bead kiit).
+        """Advance the counters by one clock (beads kiit, f7z3).
 
         ``access`` is the CSR instruction in EX this cycle as ``(kind, addr, operand, imm,
         suppress_write)`` (same meaning as execute()); None when there is none, or when it is
-        squashed by a trap entry / MRET in the same cycle.  Semantics, from the RISC-V privileged
-        spec and the project's "write wins over increment" rule:
+        squashed by a trap entry / MRET in the same cycle.  ``access_seq`` is that instruction's
+        program-order index: the number of instructions that precede it in the architectural
+        stream, equivalently the index of its own retirement strobe (the n-th strobe since reset
+        belongs to instruction n).  It is only needed for a write to minstret / minstreth; when
+        omitted the writer is taken to be the next instruction to retire (nothing older in flight).
+
+        Semantics, from the RISC-V privileged spec and the project's "write wins over increment"
+        rule:
 
         * every counter whose mcountinhibit bit was clear at the START of the cycle counts, whatever
           instruction is in EX -- mcountinhibit itself takes effect from the next cycle;
@@ -144,17 +163,29 @@ class CsrModel:
         * the write beats the same-cycle increment of its own register, and a write to the low word
           of mcycle / minstret also discards the carry that increment would have produced, while a
           write to the high word leaves the low word counting (its wrap carry is lost);
-        * CSRRS/CSRRC with a zero source do not write, so the counter they read keeps counting.
+        * CSRRS/CSRRC with a zero source do not write, so the counter they read keeps counting;
+        * minstret / minstreth (bead f7z3): the strobe of the writing instruction itself never
+          increments (neither word).  The strobes of the older instructions still in flight when
+          the write executes land BEFORE the write in program order, so they must not land on top
+          of it: a low-word write absorbs all of them (nothing is added), a high-word write lets
+          them count in the low word but discards their carry into the written high word.  An
+          older instruction already absorbed by an earlier low write stays absorbed.
         """
         inh = self.regs[CSR_MCOUNTINHIBIT]
         nxt: dict[int, int] = {}
+        absorbed = self._absorb.pop(self.retired, None) if retire else None
+        if retire:
+            self.retired += 1
+        lo_only = absorbed == "lowonly"
         for bit, pair, fire in (
             (0, (CSR_MCYCLE, CSR_MCYCLEH), True),
-            (2, (CSR_MINSTRET, CSR_MINSTRETH), retire),
+            (2, (CSR_MINSTRET, CSR_MINSTRETH), retire and absorbed != "drop"),
         ):
             if fire and not inh >> bit & 1:
-                total = ((self.regs[pair[1]] << 32 | self.regs[pair[0]]) + 1) & MASK64
-                nxt[pair[0]], nxt[pair[1]] = total & MASK32, total >> 32
+                lo = (self.regs[pair[0]] + 1) & MASK32
+                carry = self.regs[pair[0]] == MASK32 and not (bit == 2 and lo_only)
+                nxt[pair[0]] = lo
+                nxt[pair[1]] = (self.regs[pair[1]] + carry) & MASK32
         for bit, csr, fire in (
             (3, CSR_MHPMCOUNTER3, icache_miss),
             (4, CSR_MHPMCOUNTER4, dcache_miss),
@@ -172,9 +203,21 @@ class CsrModel:
                     nxt[addr] = new & MASK32
                     if addr in (CSR_MCYCLE, CSR_MINSTRET):
                         nxt.pop(addr + 0x80, None)  # carry into the high word is discarded
+                    if addr in (CSR_MINSTRET, CSR_MINSTRETH):
+                        seq = self.retired if access_seq is None else access_seq
+                        self._absorb_in_flight(seq, low_word=addr == CSR_MINSTRET)
                 else:
                     self._write(addr, new)
         self.regs.update(nxt)
+
+    def _absorb_in_flight(self, seq: int, *, low_word: bool) -> None:
+        """A minstret write by instruction ``seq`` executed: absorb the strobes it must not see."""
+        for older in range(self.retired, seq):
+            if low_word:
+                self._absorb[older] = "drop"
+            else:
+                self._absorb.setdefault(older, "lowonly")
+        self._absorb[seq] = "drop"
 
     def _write(self, addr: int, value: int) -> None:
         value &= MASK32
