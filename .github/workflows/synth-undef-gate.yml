@@ -15,6 +15,7 @@ on:
       - 'tools/cdc/**'
       - 'sim/sky130_sram_1kbyte_1rw1r_32x256_8.sv'
       - 'tb/tests/fixtures/synth_undef/**'
+      - 'tb/tests/test_check_synth_undef*.py'
       - '.github/workflows/synth-undef-gate.yml'
   pull_request:
     branches: [ "main" ]
@@ -25,6 +26,7 @@ on:
       - 'tools/cdc/**'
       - 'sim/sky130_sram_1kbyte_1rw1r_32x256_8.sv'
       - 'tb/tests/fixtures/synth_undef/**'
+      - 'tb/tests/test_check_synth_undef*.py'
       - '.github/workflows/synth-undef-gate.yml'
   workflow_dispatch:
 
@@ -67,13 +69,19 @@ jobs:
       - name: Scanner unit tests
         run: |
           python3 -m pip install --user pytest
-          python3 -m pytest tb/tests/test_check_synth_undef.py -q
+          python3 -m pytest tb/tests/test_check_synth_undef.py \
+            tb/tests/test_check_synth_undef_functemp.py -q
 
       - name: Elaboration gate, self-test and gate-vs-RTL smoke
         env:
           YOSYS: ${{ github.workspace }}/sim/build/cdc/oss-cad-suite/bin/yosys
           SV2V: ${{ github.workspace }}/sim/build/cdc/sv2v-Linux/sv2v
-        run: timeout 900 bash tools/verif/synth_gate/ci_smoke.sh "$RUNNER_TEMP/synth_gate"
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o "$RUNNER_TEMP/smoke.time" \
+            timeout 1200 bash tools/verif/synth_gate/ci_smoke.sh "$RUNNER_TEMP/synth_gate" \
+            || { rc=$?; grep -E "Elapsed|Maximum resident" "$RUNNER_TEMP/smoke.time" || true; exit $rc; }
+          grep -E "Elapsed|Maximum resident" "$RUNNER_TEMP/smoke.time"
 
       - name: Upload logs
         if: always()

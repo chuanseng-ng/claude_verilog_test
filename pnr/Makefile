@@ -765,6 +765,16 @@ sky130-cpu-sv2v-inputs:
 	@echo "DEFINES $(SKY130_CPU_SV2V_DEFINES)"
 	@for f in $(SKY130_CPU_SV_FILES); do echo "FILE $$f"; done
 
+# Same contract for the two SoC flows (bead j1b7): "DEFINES ..." then one absolute "FILE <path>" per line.
+.PHONY: sky130-soc-sv2v-inputs asap7-soc-sv2v-inputs
+sky130-soc-sv2v-inputs:
+	@echo "DEFINES $(SKY130_SOC_SV2V_DEFINES)"
+	@for f in $(SKY130_SOC_SV_FILES); do echo "FILE $$(readlink -f $$f)"; done
+
+asap7-soc-sv2v-inputs:
+	@echo "DEFINES $(SOC_SV2V_DEFINES)"
+	@for f in $(SOC_SV_FILES); do echo "FILE $$(readlink -f $$f)"; done
+
 librelane-sky130-cpu: sky130-cpu-sv2v
 	@echo "=========================================="
 	@echo "Running LibreLane flow — Sky130 CPU Stage 1 (real DRC/LVS)"
@@ -867,6 +877,9 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/soc_top.sv
 
 SKY130_SOC_SV2V_OUT := $(abspath $(LIBRELANE_SKY130_SOC_DIR)/soc_top_sv2v.v)
+# One definition, used by the sv2v recipe below AND by sky130-soc-sv2v-inputs (CI), so the gate
+# elaborates exactly what the flow elaborates.
+SKY130_SOC_SV2V_DEFINES := --define=__pnr__ --define=SRAM_SKY130
 
 sky130-soc-sv2v:
 	@echo "=========================================="
@@ -881,7 +894,7 @@ sky130-soc-sv2v:
 		echo "ERROR: sv2v not found at $(SV2V)"; \
 		echo "Install via: nix-build '<nixpkgs>' -A haskellPackages.sv2v --no-out-link"; \
 		exit 1; fi
-	$(SV2V) --define=__pnr__ --define=SRAM_SKY130 $(SKY130_SOC_SV_FILES) -w $(SKY130_SOC_SV2V_OUT)
+	$(SV2V) $(SKY130_SOC_SV2V_DEFINES) $(SKY130_SOC_SV_FILES) -w $(SKY130_SOC_SV2V_OUT)
 	@echo "sv2v complete: $$(wc -l < $(SKY130_SOC_SV2V_OUT)) lines"
 	@echo "  Clocked always blocks: $$(grep -c 'always.*posedge\|always.*negedge' $(SKY130_SOC_SV2V_OUT))"
 	@echo "  DFF count (reg decls): $$(grep -c '^\s*reg\s' $(SKY130_SOC_SV2V_OUT))"

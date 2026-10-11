@@ -184,6 +184,7 @@ User-approved remedy: sv2v switch for `pnr/sky130/cpu` (this change) plus the RT
 * **S6** SoC `RUN_2026-10-11_08-39-41`: see `docs/SKY130_SLEW_CAP_E45J.md` §8 and `docs/SKY130_REAL_DRC_LVS_EVALUATION.md`. Not a
   single-variable comparison with the 2026-10-09 baseline.
 
-Open (owner): the stale `axi_rdata_i[12]` max-cap waiver and 3 unwaived ss-corner nets; the `gc0y` structural `x-driven-net` check
-false-positives on 509 sv2v function-inlining temporaries when run on the SoC (the SoC run used `CVT_SYNTH_GATE=warn`, shell-only);
+Open (owner): the stale `axi_rdata_i[12]` max-cap waiver and 3 unwaived ss-corner nets; the `gc0y` structural `x-driven-net` check false-positived on 509 sv2v function-inlining temporaries on the SoC (that run used
+`CVT_SYNTH_GATE=warn`, shell-only) - **fixed by bead `j1b7`**: dead function temporaries are exempt on a pre-proc RTLIL proof and the SoC
+gate runs blocking (`docs/SYNTH_UNDEF_GATE.md`);
 ASAP7 macros are still the corrupt views (shelved).

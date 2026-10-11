@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# CI smoke for the synthesis undef gate (bead gc0y). Tool-independent of LibreLane/Synlig/PDK:
-#   1. sv2v the CPU (source list/defines from `make -C pnr sky130-cpu-sv2v-inputs`, i.e. what the flow uses), elaborate with yosys,
-#      and run tools/verif/check_synth_undef.py (log scan + structural header check) -> must PASS.
-#   2. SELF-TEST: inject an out-of-range select into a scratch copy of rv32i_core.sv -> the same
-#      gate MUST FAIL (proves the gate is live on this frontend; the dud4 lines themselves are
-#      elaborated correctly by sv2v, which is why the PD flow can use it).
-#   3. synthesise the sv2v netlist to yosys generic gates (no PDK) and run the gate-vs-RTL
+# CI smoke for the synthesis undef gate (beads gc0y, j1b7). Tool-independent of LibreLane/Synlig/PDK:
+#   1. POSITIVE controls, blocking mode: sv2v + yosys elaboration of the Sky130 CPU macro, the Sky130 SoC and
+#      the ASAP7 SoC (source lists/defines from `make -C pnr <target>-sv2v-inputs`, i.e. what the flows use),
+#      then tools/verif/check_synth_undef.py (log scan + structural header check + dead-function-temporary
+#      proof from the pre-proc RTLIL) -> every one must PASS.
+#   2. NEGATIVE controls: an out-of-range select in the CPU, and in SoC scope an out-of-range struct-member
+#      select, an instance port tied to 'x, and a function whose result is unassigned on a path and reaches an
+#      output -> the same gate MUST FAIL each time, for the stated reason.
+#   3. synthesise the sv2v CPU netlist to yosys generic gates (no PDK) and run the gate-vs-RTL
 #      differential (trivial, ma7_straight, ma7_branch) in Verilator; any divergence fails.
 # Usage: ci_smoke.sh <workdir>     env: YOSYS SV2V VERILATOR_EXE (NOT VERILATOR_BIN, see build_arm.sh) (defaults: on PATH)
 set -euo pipefail
@@ -18,58 +20,52 @@ SV2V="${SV2V:-sv2v}"
 VBIN="${VERILATOR_EXE:-$(command -v verilator)}"
 VBIN="$(readlink -f "$VBIN")"
 export VERILATOR_ROOT="${VERILATOR_ROOT:-$(cd "$(dirname "$VBIN")/../share/verilator" && pwd)}"
-GATE="$REPO/tools/verif/check_synth_undef.py"
 GLS="$REPO/tools/verif/gls/sky130"
-CFG="$REPO/pnr/sky130/cpu/config.json"
-
-# ---- source list + defines = what the flow feeds sv2v (pnr/Makefile sky130-cpu-sv2v). The config's
-# VERILOG_FILES now names the GENERATED (gitignored) rv32i_cpu_top_sv2v.v, so it cannot be the source list here.
-MAKE_OUT="$(make -s -C "$REPO/pnr" sky130-cpu-sv2v-inputs)" || { echo "ERROR: make sky130-cpu-sv2v-inputs failed" >&2; exit 2; }
-echo "$MAKE_OUT" | sed -n 's/^FILE //p' > "$W/sv_files.txt"
-read -r -a DEFS <<< "$(echo "$MAKE_OUT" | sed -n 's/^DEFINES //p')"
-[ -s "$W/sv_files.txt" ] && [ "${#DEFS[@]}" -gt 0 ] || { echo "ERROR: empty source list or defines from the Makefile" >&2; exit 2; }
-while read -r f; do [ -f "$f" ] || { echo "ERROR: listed source missing: $f" >&2; exit 2; }; done < "$W/sv_files.txt"
 STUB="$REPO/pnr/sky130/sky130_sram_1kbyte_1rw1r_32x256_8_stub.v"
+ELAB="$HERE/elab_gate.sh"
+export YOSYS SV2V
 
-# elaborate <tag> <file-list>: sv2v + yosys proc, writes $W/<tag>.{log,h.json,v}
-elaborate() {
-  local tag="$1" list="$2"
-  "$SV2V" "${DEFS[@]}" $(cat "$list") -w "$W/$tag.sv2v.v" 2> "$W/$tag.sv2v.err" \
-    || { echo "ERROR: sv2v failed ($tag):" >&2; cat "$W/$tag.sv2v.err" >&2; exit 1; }
-  cat > "$W/$tag.ys" <<EOF
-read_verilog -sv -lib $STUB
-read_verilog -sv $W/$tag.sv2v.v
-hierarchy -check -top rv32i_cpu_top
-proc
-opt_clean -purge
-write_json $W/$tag.h.json
-EOF
-  "$YOSYS" -l "$W/$tag.log" "$W/$tag.ys" > /dev/null \
-    || { echo "ERROR: yosys elaboration failed ($tag), last log lines:" >&2; tail -n 30 "$W/$tag.log" >&2; exit 1; }
+# expect_gate <expected rc> <regex that must appear in the output> <target> [inject]
+expect_gate() {
+  local want="$1" rx="$2" tgt="$3" inj="${4:-}" rc tag t0=$SECONDS
+  tag="$tgt${inj:+.$inj}"
+  set +e
+  bash "$ELAB" "$tgt" "$W" $inj > "$W/$tag.run.out" 2>&1
+  rc=$?
+  set -e
+  cut -c1-220 "$W/$tag.run.out" | grep -E "^(RESULT|FAIL|EXEMPT|check_synth_undef|ERROR)" | head -n 12 || true
+  if [ "$rc" != "$want" ]; then
+    echo "GATE CASE FAILED: $tag returned $rc, expected $want"
+    tail -n 40 "$W/$tag.run.out"
+    exit 4
+  fi
+  # full-width gate report (the console copy above is truncated to 220 columns)
+  if [ -n "$rx" ] && ! grep -Eq "$rx" "$W/$tag.gate.out"; then
+    echo "GATE CASE FAILED: $tag did not report /$rx/"
+    exit 4
+  fi
+  echo "  [$tag] rc=$rc as required ($((SECONDS - t0)) s)"
 }
 
-echo "== 1. elaborate current RTL + gate"
-elaborate main "$W/sv_files.txt"
-python3 -I "$GATE" --header-json "$W/main.h.json" -v "$W/main.log"
+echo "== 1. positive controls (blocking mode): current CPU and both SoC flows must PASS"
+expect_gate 0 "" sky130-cpu
+expect_gate 0 "func-temp-dead-init" sky130-soc
+expect_gate 0 "func-temp-dead-init" asap7-soc
 
-echo "== 2. self-test: injected out-of-range select must FAIL the gate"
-mkdir -p "$W/inject"
-sed 's/(if_id_rs1_addr_w),/(if_id_instr_w[40:36]),/' "$REPO/rtl/cpu/core/rv32i_core.sv" > "$W/inject/rv32i_core.sv"
-cmp -s "$W/inject/rv32i_core.sv" "$REPO/rtl/cpu/core/rv32i_core.sv" && { echo "injection did not apply"; exit 3; }
-sed "s#[^ ]*/rv32i_core.sv#$W/inject/rv32i_core.sv#" "$W/sv_files.txt" > "$W/sv_files_inject.txt"
-elaborate inject "$W/sv_files_inject.txt"
-set +e
-python3 -I "$GATE" --header-json "$W/inject.h.json" "$W/inject.log" > "$W/inject.gate.out"
-rc=$?
-set -e
-cat "$W/inject.gate.out" | cut -c1-200
-[ "$rc" = 1 ] || { echo "SELF-TEST FAILED: gate returned $rc on an injected undef (expected 1)"; exit 4; }
-echo "self-test OK (gate failed as required)"
+echo "== 2. negative controls: each injected defect must FAIL the same gate"
+# CPU: the dud4 hazard-unit lines themselves cannot be the control (sv2v elaborates them correctly, which
+# is why the PD flow uses sv2v), so an out-of-range select is injected into the u_hazard connection.
+expect_gate 1 "x-driven-instance-input" sky130-cpu cpu-hazard
+# SoC scope (j1b7): the same defect class, and a function result left unassigned on a path.
+expect_gate 1 "undef-range-select|x-driven-net" sky130-soc soc-oob
+expect_gate 1 "x-driven-instance-input" sky130-soc soc-x-port
+expect_gate 1 "x-driven-net.*j1b7_leaky.*READ" sky130-soc soc-leaky
+echo "negative controls OK (every injected defect failed the gate as required)"
 
 echo "== 3. generic-gate synthesis + gate-vs-RTL differential"
 cat > "$W/gen.ys" <<EOF
 read_verilog -sv -lib $STUB
-read_verilog -sv $W/main.sv2v.v
+read_verilog -sv $W/sky130-cpu.sv2v.v
 hierarchy -check -top rv32i_cpu_top
 synth -flatten -top rv32i_cpu_top
 techmap

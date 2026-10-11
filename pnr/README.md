@@ -113,8 +113,9 @@ after `Yosys.JsonHeader`/`Yosys.Synthesis` and aborts the flow on frontend undef
 (b) runs every Pyosys step with its **own step directory as cwd**. Surelog writes its `slpp_all/`
 cache to the cwd, and the targets run LibreLane from the shared `LIBRELANE_DIR` checkout, so before
 this the cache was shared by every project and worktree (measured stale-source hazard, bead dud4).
-Reports: `<run>/*yosys*/synth_undef_gate.rpt`. `CVT_SYNTH_GATE=warn|off` is an escape hatch for
-experiments only. Direct `python3 -m librelane` runs outside the Makefile must add
+Reports: `<run>/*yosys*/synth_undef_gate.rpt` (includes the per-function count of exempted sv2v function
+temporaries, bead j1b7; the SoC flows run the gate blocking, no warn mode needed). `CVT_SYNTH_GATE=warn|off`
+is an escape hatch for experiments only. Direct `python3 -m librelane` runs outside the Makefile must add
 `PYTHONPATH=<repo>/pnr/plugins` and a private cwd themselves. See `docs/SYNTH_UNDEF_GATE.md`.
 
 ## Quality Gates
