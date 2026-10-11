@@ -287,6 +287,24 @@ input  logic        timer_irq,      // Timer interrupt request
 
 **Note**: Requires Phase 2+ CPU with interrupt support
 
+#### DFT test access (Sky130 scan, bead j41m.2, GH #244)
+
+**Purpose**: scan / test-mode control of `soc_top`. Contract and rationale:
+`docs/design/DFT_ARCHITECTURE.md` section 14.
+
+```systemverilog
+parameter int unsigned SCAN_CHAINS = 8;
+input  logic                   scan_mode_i,   // 1 = test mode (quasi-static)   inactive 0
+input  logic                   scan_en_i,     // 1 = shift, 0 = capture          inactive 0
+input  logic                   scan_rst_ni,   // scan reset, active low          inactive 1
+input  logic                   scan_clk_i,    // shared shift/capture clock      inactive 0 (any)
+input  logic [SCAN_CHAINS-1:0] scan_in_i,     // placeholder until Stage 2       inactive 0
+output logic [SCAN_CHAINS-1:0] scan_out_o     // tied 0 until Stage 2
+```
+
+With the inactive values every scan mux and mask is a pass-through and `soc_top` is
+bit-identical to the pre-DFT design.
+
 #### Boot configuration
 
 **Purpose**: Select boot mode, clock configuration

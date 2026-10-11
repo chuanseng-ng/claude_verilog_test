@@ -15,7 +15,8 @@
 module soc_top #(
     parameter integer MEM_INIT_FILE  = 0,
     parameter integer PLL_IMPL       = 0,
-    parameter integer SRAM_MEM_WORDS = 1024
+    parameter integer SRAM_MEM_WORDS = 1024,
+    parameter integer SCAN_CHAINS    = 8
 ) (
     input  wire        clk_i,
     input  wire        rst_n_i,
@@ -56,7 +57,15 @@ module soc_top #(
 
     // PLL status
     output wire        pll_locked_o,
-    output wire        cpu_pll_locked_o
+    output wire        cpu_pll_locked_o,
+
+    // DFT test access (j41m.2). Inactive: scan_mode_i=0 scan_en_i=0 scan_rst_ni=1 scan_clk_i=0.
+    input  wire        scan_mode_i,
+    input  wire        scan_en_i,
+    input  wire        scan_rst_ni,
+    input  wire        scan_clk_i,
+    input  wire [7:0]  scan_in_i,
+    output wire [7:0]  scan_out_o
 );
 endmodule
 

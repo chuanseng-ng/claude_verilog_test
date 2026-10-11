@@ -118,7 +118,8 @@ module rv32i_dcache (
     );
 `elsif SRAM_ASAP7
     logic tag_gclk;
-    rv32i_clock_gate u_tag_cg (.en(!tag_csb0), .clk(clk), .gclk(tag_gclk));
+    // j41m.2: test_en tied 0 -- this gate clocks an SRAM macro only (no scannable flop behind it).
+    rv32i_clock_gate u_tag_cg (.en(!tag_csb0), .test_en(1'b0), .clk(clk), .gclk(tag_gclk));
     sram_1rw_256x32_asap7 u_tag_sram (
         .clk0   (tag_gclk),
         .csb0   (tag_csb0),
@@ -166,7 +167,8 @@ module rv32i_dcache (
             );
 `elsif SRAM_ASAP7
             logic data_gclk;
-            rv32i_clock_gate u_data_cg (.en(!data_csb0[gw]), .clk(clk), .gclk(data_gclk));
+            // j41m.2: test_en tied 0 -- this gate clocks an SRAM macro only (no scannable flop behind it).
+            rv32i_clock_gate u_data_cg (.en(!data_csb0[gw]), .test_en(1'b0), .clk(clk), .gclk(data_gclk));
             sram_1rw_256x32_asap7 u_data_sram (
                 .clk0   (data_gclk),
                 .csb0   (data_csb0[gw]),
