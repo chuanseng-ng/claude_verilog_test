@@ -178,3 +178,21 @@ def test_scan_mode_missing_pin_leg_fails(tmp_path: Path) -> None:
     res = _tap_run(tmp_path, pin_leg="1'b0")
     assert res.returncode == 1, res.stdout
     assert "pin leg scan_mode_i missing" in res.stdout
+
+
+def test_tap_boundary_declared_net_passes(tmp_path: Path) -> None:
+    res = _tap_run(tmp_path, "--tap-allowed-nets", "tap_scan")
+    assert res.returncode == 0, res.stdout
+
+
+def test_tap_boundary_undeclared_crossing_fails(tmp_path: Path) -> None:
+    # tap_scan (a TCK-launched flop) reaches the scan-mode OR but is not declared: must fail
+    res = _tap_run(tmp_path, "--tap-allowed-nets", "d")
+    assert res.returncode == 1, res.stdout
+    assert "undeclared TAP output reaches" in res.stdout
+
+
+def test_tap_boundary_missing_net_name_fails(tmp_path: Path) -> None:
+    res = _tap_run(tmp_path, "--tap-allowed-nets", "no_such_net")
+    assert res.returncode == 1, res.stdout
+    assert "allowed TAP output net not found" in res.stdout

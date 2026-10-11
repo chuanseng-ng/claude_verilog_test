@@ -39,6 +39,8 @@ into a non-TAP clock or reset (other than through the scan-mode mux) a violation
 --scan-mode-net NAME names the flattened scan-mode NET (e.g. u_dft_ctrl.scan_mode_o) instead of the port,
 for a design where scan mode is the OR of a pin and the TAP. The net's fan-in must contain BOTH the
 --scan-mode port (the 1a pin leg) and at least one TAP-domain flop, so removing either leg fails.
+--tap-allowed-nets NET (repeatable) lists the ONLY nets by which TAP-domain logic may drive non-TAP logic or an
+output port; an undeclared TCK-domain crossing fails. It backs the `tck_i` entry in tools/cdc/cdc_config.yml.
 --expect-tap-flops N fails if fewer than N TAP-domain flops are found (renamed/optimised-away guard).
 
 Exit 0 only if there are no violations AND (with --expect-gates) the number of scan-mode muxes
@@ -111,6 +113,9 @@ def main():
     ap.add_argument("--scan-mode-net", default=None,
                     help="flattened net that IS scan mode (pin OR TAP); default: the --scan-mode port")
     ap.add_argument("--expect-tap-flops", type=int, default=0)
+    ap.add_argument("--tap-allowed-nets", action="append", default=[],
+                    help="flattened net the TAP domain may drive into non-TAP logic or an output port (repeatable); "
+                         "anything else crossing the TAP boundary is a violation")
     ap.add_argument("--models", action="append", default=[],
                     help="Verilog behavioural/blackbox models of library cells and hard macros that the "
                          "netlist instantiates but does not define (e.g. tools/dft/asap7_cell_models.v)")
@@ -225,6 +230,33 @@ def main():
     n_async = n_seq = n_tap = 0
 
     tap_cells = {cn for cn, c in cells.items() if is_seq(c["type"]) and in_tap(cn)}
+
+    # TAP boundary: the TCK domain may drive the rest of the SoC through the DECLARED nets only. This is the
+    # compensating check for tools/cdc/cdc_config.yml, where `tck_i` is listed in reset_domains (cdc_snitch can then
+    # no longer see a TCK-launched signal reaching a functional register). Any TAP-prefixed cell (flop or gate)
+    # whose output bit feeds a non-TAP cell or an output port must be in the allowed net list.
+    if a.tap_allowed_nets:
+        allowed = set()
+        for nn in a.tap_allowed_nets:
+            if nn not in netnames:
+                violations.append((nn, "net", "TAP_BOUNDARY", "allowed TAP output net not found (renamed?)"))
+                continue
+            allowed |= {b for b in netnames[nn]["bits"] if isinstance(b, int)}
+        tap_any = {cn for cn in cells if in_tap(cn)}
+        crossing = {}
+        for cn, c in cells.items():
+            if cn in tap_any:
+                continue
+            for _, b in cell_inputs(c):
+                if b in drivers and drivers[b][0] in tap_any and b not in allowed:
+                    crossing[b] = (drivers[b][0], cn)
+        for pn, p in ports.items():
+            if p["direction"] == "output":
+                for b in p["bits"]:
+                    if isinstance(b, int) and b in drivers and drivers[b][0] in tap_any and b not in allowed:
+                        crossing[b] = (drivers[b][0], f"port {pn}")
+        for b, (src, dst) in sorted(crossing.items()):
+            violations.append((src, "tap", "TAP_BOUNDARY", f"undeclared TAP output reaches {dst}"))
     # TAP reset synchroniser flops: async reset cone ends directly (and only) at the trst port.
     tap_sync = set()
     for cn in tap_cells:

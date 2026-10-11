@@ -811,8 +811,13 @@ sky130-soc-sv2v:
 # DFT Stage 1a (bead claude_verilog_test-j41m.2): prove on the flattened Sky130 netlist that in scan mode every
 # async reset is tester-controlled and every flop is test-clocked. Needs yosys on PATH (or YOSYS=/path/to/yosys).
 # DFT Stage 1b (j41m.3): TAP-domain rules. scan mode is the OR of the 1a pin and the TAP, so name the net.
+# (tap_scan_en is omitted from the allowed nets on purpose: scan_en has no RTL consumer until Stage 2 inserts scan
+# flops, so the net is optimised away; when Stage 2 connects it, add --tap-allowed-nets u_dft_ctrl.tap_scan_en.)
 DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tck_cg \
-	--scan-mode-net u_dft_ctrl.scan_mode_o --expect-tap-flops 20
+	--scan-mode-net u_dft_ctrl.scan_mode_o --expect-tap-flops 20 \
+	--tap-allowed-nets u_dft_ctrl.tap_scan --tap-allowed-nets u_dft_ctrl.tap_serial \
+	--tap-allowed-nets u_dft_ctrl.tap_rst_assert \
+	--tap-allowed-nets u_dft_ctrl.tck_scan_gated --tap-allowed-nets tdo_o --tap-allowed-nets tdo_oe_o
 .PHONY: dft-scan-check
 dft-scan-check: sky130-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
