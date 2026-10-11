@@ -84,11 +84,42 @@ are never read it is exempt automatically; if they are read, fix the RTL (assign
 
 ### Measured (yosys 0.46, sv2v 0.0.13.1; `tools/verif/synth_gate/elab_gate.sh`)
 
-@@MEASURED@@
+| Target | Exempted nets | Functions | Remaining FAIL | Verdict | Elaboration (yosys) |
+| :--- | ---: | ---: | ---: | :--- | :--- |
+| Sky130 `rv32i_cpu_top` | 0 | 0 | 0 | PASS | 1.8 s, 84 MB |
+| Sky130 `soc_top` (`config.json` and `config_rccal.json` share the sv2v file) | 509 | 31 | 0 | PASS | 3.7 s, 140 MB |
+| ASAP7 `soc_top` | 512 | 32 (adds `word_onehot_local=3`) | 0 | PASS | 8.2 s, 214 MB |
+
+Sky130 SoC exemptions by function: `decode=188 sbox=40 xtime=32 sv2v_cast_16=32 sv2v_cast_16_signed=32 sv2v_cast_18=32 mix_col=28
+strb_expand=18 sv2v_cast_C850C=16 sv2v_cast_8F8A1=12 key_step=11 sv2v_cast_32=10 min2=8 round_tail=5 ch=4 maj=4 sv2v_cast_10D7B=4
+sv2v_cast_8=4 sv2v_cast_C2B14=4 sub_bytes=3 big_sigma0/1=2 each sha_k=2 shift_rows=2 small_sigma0/1=2 each sub_word=2 mix_columns=2
+sv2v_cast_0E339=2 sv2v_cast_3=2 sv2v_cast_9=2` (509 = the 509 of the bead, 0 left).
+
+**x never reaches anything observable.** For every exempted group the proof requires that no read of the wire can reach a cell input, a
+`switch`/`sync`, a process update of a real signal or an output port. Besides outright unread wires this covers the *hold read*: a call made
+inside an `if` of a combinational block makes `proc` re-assign the function's own wire to itself on the other branch (a read), but that value only
+feeds the dead `$0` temporaries of x-initialised wires. The proof follows each read through the process assignments (flow-insensitive, so
+conservative), which is why `sv2v_cast_*` calls in `axi4_crossbar` are exempt while `leaky` below is not. Independently, the structural rule
+`x-driven-instance-input` reports 0 hits on the SoC (an x on any instance input would be a FAIL). Measured on the same Sky130 SoC elaboration
+(all-x function-temp nets / x on user-instance inputs): after `proc` 509 / 0, after `opt_clean` 277 / 0, after `opt_clean -purge` 0 / 0 - the
+wires vanish by themselves once nothing reads them, with no name rule. Flow path: the LibreLane plugin (blocking, no `CVT_SYNTH_GATE`) was run to
+`Yosys.JsonHeader` for both Sky130 SoC configs: `verdict=PASS fail=0`, 509 exempt, one extra elaboration for the proof, 24 s, 380 MB peak for the
+whole LibreLane process.
 
 ### Controls (all in blocking mode, run by `ci_smoke.sh`)
 
-@@CONTROLS@@
+| Control | Injected into | Expected | Measured (standalone gate / LibreLane plugin at JsonHeader) |
+| :--- | :--- | :--- | :--- |
+| Positive: current CPU, Sky130 SoC, ASAP7 SoC | none | PASS | PASS / PASS (Sky130 SoC both configs) |
+| CPU hazard-unit out-of-range select (dud4 class) | `rv32i_core.sv` | FAIL | FAIL: `undef-range-select` + `x-driven-instance-input` |
+| (a1) constant part-select outside its vector, reaching `irq_o` | `timer.sv` (SoC) | FAIL | FAIL: `undef-range-select` + `x-driven-net` / FAIL (same) |
+| (a2) instance input port tied to `'x` | `timer.sv` (SoC) | FAIL | FAIL: `x-driven-instance-input` / FAIL |
+| (b) function result unassigned on a path, reaching `irq_o` | `timer.sv` (SoC) | FAIL | FAIL: `x-driven-net ... READ before it is assigned` (the `j1b7_leaky` result; its unread argument wires are the only exempt part) / FAIL |
+
+The struct-member form of the dud4 bug is Synlig-specific (sv2v flattens members to in-range slices), so control (a1) uses the plain out-of-range
+select, which yosys turns into the same `Range select ... out of bounds ... Setting all N result bits to undef` substitution. Snippets:
+`tools/verif/synth_gate/inject/`. Unit tests: `tb/tests/test_check_synth_undef_functemp.py` (35 tests, real-yosys fixtures
+`tb/tests/fixtures/synth_undef/functemp_{clean,unassigned,hold}.*`).
 
 ### Flow wiring
 

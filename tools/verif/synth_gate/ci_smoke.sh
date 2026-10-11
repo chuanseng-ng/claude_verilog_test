@@ -39,7 +39,8 @@ expect_gate() {
     tail -n 40 "$W/$tag.run.out"
     exit 4
   fi
-  if [ -n "$rx" ] && ! grep -Eq "$rx" "$W/$tag.run.out"; then
+  # full-width gate report (the console copy above is truncated to 220 columns)
+  if [ -n "$rx" ] && ! grep -Eq "$rx" "$W/$tag.gate.out"; then
     echo "GATE CASE FAILED: $tag did not report /$rx/"
     exit 4
   fi

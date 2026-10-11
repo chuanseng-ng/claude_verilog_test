@@ -79,9 +79,13 @@ def _write_proof(step, il_path: Path) -> None:
     flags = [f"-D{d}" for d in defines] + [
         f"-I{d}" for d in (cfg.get("VERILOG_INCLUDE_DIRS") or [])
     ]
-    cmds = [
-        f"read_verilog -sv -lib {' '.join(flags)} {m}" for m in extra.get("blackbox_models", [])
-    ]
+    cmds = []
+    for model in extra.get("blackbox_models", []):  # as librelane's ys_common.add_blackbox_models
+        stem = model[:-3] if model.endswith(".gz") else model
+        if stem.endswith(".lib"):
+            cmds.append(f"read_liberty -lib -ignore_miss_dir -setattr blackbox {model}")
+        else:
+            cmds.append(f"read_verilog -sv -lib {' '.join(flags)} {model}")
     # same reads as librelane's ys_common.read_verilog_files: -defer so that only parameterised
     # instances are elaborated (sram_controller's elaboration guard $finish()es on its default)
     cmds += [
