@@ -7,6 +7,8 @@
 **Branch**: `phase-4-pd-enhance`
 
 > **Caveat 2026-10-10 (bead `47lf`, GH #254) — every run below, and the macro views exported from them, predate an RTL fix.** `gpu_top` held its warp count in 3 bits and capped it at 7, so `BLOCK_X` 57..64 ran 7 of 8 warps. Fixed in `rtl/gpu/gpu_pkg.sv`, `gpu_top.sv`, `warp_scheduler.sv` (`WARP_CNT_W` = 4): the scheduler's `n_warps_q` gains one flop (`n_warps_w` is combinational) and the issue / `all_done` compares widen by one bit — a handful of cells, not expected to move the PPA below. **No PD run was made**: the GPU cannot be re-hardened on this host (beads `ma7` / `lxv` / `2kn`), so `pnr/asap7/soc/macro/gpu_top.*` are functionally behind the RTL (in addition to the Synlig-miscompile caveat of `ma7`). Re-harden when the host is available.
+> **Caveat 2026-10-10 (bead `q6w0`, GH #261) — the macro views are further behind the RTL.** `GPU_CTRL.reset` now does a synchronous quiesce-then-clear (`soft_clr`) across `gpu_top`, `warp_scheduler`, `gpu_compute_unit` and `gpu_command_queue`: a handful of control flops (`rst_pend_q`, `halt_q`, `if_outst_q`) plus a synchronous clear term on the scheduler/pipeline valid flops and `gpu_error_o`; no new runtime-indexed mux, no change to the asynchronous reset. Small, not expected to move the PPA above. **No PD run was made** (beads `ma7` / `lxv` / `2kn`; same situation as the `47lf` note above): `pnr/asap7/soc/macro/gpu_top.*` still behave as the pre-fix design, in which `CTRL.reset` cannot leave ERROR. Re-harden when the host is available.
+
 
 ---
 
