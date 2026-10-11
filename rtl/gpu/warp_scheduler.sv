@@ -21,7 +21,9 @@ module warp_scheduler
     // -----------------------------------------------------------------------
     input  logic                    launch_i,         // pulse: load descriptor below
     input  logic [31:0]             kernel_pc_i,      // entry-point PC for all warps
-    input  logic [N_LANES-1:0]      init_mask_i,      // initial active mask (all lanes)
+    input  logic [N_LANES-1:0]      init_mask_i,      // initial active mask of every full warp
+    input  logic [N_LANES-1:0]      last_mask_i,      // initial mask of the LAST active warp
+                                                      // (partial block, bead 6hy6)
     input  logic [WARP_CNT_W-1:0]   n_warps_active_i, // number of warps in this block (0..N_WARPS)
 
     // -----------------------------------------------------------------------
@@ -184,7 +186,10 @@ module warp_scheduler
                 rr_ptr    <= '0;
                 for (int w = 0; w < N_WARPS; w++) begin
                     warp_pc  [w] <= kernel_pc_i;
-                    warp_mask[w] <= init_mask_i;
+                    // The last active warp (index n_warps_active_i-1) may be partially filled:
+                    // constant w against a signal, no indexed mux.
+                    warp_mask[w] <= (WARP_CNT_W'(w + 1) == n_warps_active_i) ? last_mask_i
+                                                                             : init_mask_i;
                     warp_busy[w] <= 1'b0;
                     warp_done[w] <= 1'b0;
                     div_depth[w] <= '0;

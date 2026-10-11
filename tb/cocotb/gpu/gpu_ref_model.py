@@ -21,6 +21,14 @@ SIMT divergence semantics (single-level stack, matches gpu_compute_unit.sv):
 
 Random generator only emits guaranteed-reconverging single-level diamond patterns
 and modeled subset ops, so any mismatch is a real datapath bug.
+
+Launch contract (bead 6hy6, user decision 2026-10-11) -- block-level helpers below the class:
+  - GPU_BLOCK_X must be 1..MAX_BLOCK_THREADS (64 = N_WARPS x N_LANES).  0 or > 64 is a launch
+    ERROR (GPU_STATUS reads ERROR, no kernel instruction executes): ``launch_is_error``.
+  - A block of BLOCK_X threads runs ceil(BLOCK_X / N_LANES) warps; the last warp starts with
+    ONLY its valid lanes active (BLOCK_X=9: warp 0 all 8 lanes, warp 1 lane 0 only):
+    ``warp_lane_mask`` -> ``GpuRefModel(init_mask=...)``.  Invalid lanes never write registers,
+    shared memory or global memory.
 """
 from gpu_asm import (
     N_LANES,
@@ -31,6 +39,31 @@ from gpu_asm import (
 )
 
 MASK32 = 0xFFFF_FFFF
+
+N_WARPS = 8
+MAX_BLOCK_THREADS = N_WARPS * N_LANES   # 64: the frozen Phase 4 limit (8 warps x 8 lanes)
+
+
+class GpuLaunchError(ValueError):
+    """The launch the DUT reports as GPU_STATUS.ERROR (BLOCK_X == 0 or > MAX_BLOCK_THREADS)."""
+
+
+def launch_is_error(block_x: int) -> bool:
+    """True when a launch with this GPU_BLOCK_X raises the GPU ERROR condition."""
+    return not 1 <= block_x <= MAX_BLOCK_THREADS
+
+
+def warps_for_block(block_x: int) -> int:
+    """Number of warps a legal block of ``block_x`` threads runs: ceil(block_x / N_LANES)."""
+    if launch_is_error(block_x):
+        raise GpuLaunchError(f"BLOCK_X={block_x}: legal range is 1..{MAX_BLOCK_THREADS}")
+    return -(-block_x // N_LANES)
+
+
+def warp_lane_mask(block_x: int, warp_id: int, n_lanes: int = N_LANES) -> int:
+    """Initial active-lane bitmask of ``warp_id``: lane l is valid iff warp_id*n_lanes + l < block_x."""
+    warps_for_block(block_x)   # raises GpuLaunchError on an illegal block size
+    return sum(1 << lane for lane in range(n_lanes) if warp_id * n_lanes + lane < block_x)
 
 
 def _sext12(imm: int) -> int:
@@ -53,12 +86,18 @@ class GpuRefModel:
                       before execution (e.g. for VLD input regions). The dict
                       is shallow-copied; the model does not mutate the caller's
                       original.
+        init_mask:    initial active-lane bitmask (bit l = lane l); default all
+                      n_lanes.  Use ``warp_lane_mask`` for a partially filled
+                      last warp (bead 6hy6).
     """
 
     def __init__(self, n_lanes: int = N_LANES, warp_id: int = 0,
-                 initial_gmem: dict = None):
+                 initial_gmem: dict = None, init_mask: int = None):
         self.n = n_lanes
         self.warp_id = warp_id
+        full = (1 << n_lanes) - 1
+        self.init_mask = full if init_mask is None else init_mask & full
+        self.div_pushes = 0   # divergent branches taken in the last run (mirrors perf_cnt[3])
         self._seed_gmem = dict(initial_gmem) if initial_gmem else {}
         self.regs = [[0] * n_lanes for _ in range(32)]   # regs[r][lane]
         self._initial_addrs = set(self._seed_gmem)
@@ -116,9 +155,10 @@ class GpuRefModel:
         # the true-path hits VRET.
         div_stack = []
 
-        # Active mask: set of lane indices currently executing.
-        # Start with all lanes active (mirrors warp_mask_i = 0xFF for 8 lanes).
-        active_mask = list(range(self.n))  # list of active lane indices
+        # Active mask: set of lane indices currently executing.  Starts at init_mask: all lanes
+        # for a full warp (0xFF), only the valid lanes for a partially filled last warp.
+        active_mask = [lane for lane in range(self.n) if (self.init_mask >> lane) & 1]
+        self.div_pushes = 0
 
         pc = 0
         for _ in range(max_steps):
@@ -163,6 +203,7 @@ class GpuRefModel:
                     # Divergent: push false-path (not-taken) state, execute true-path
                     false_mask_bits = sum(1 << lane for lane in not_taken_lanes)
                     div_stack.append((fall_through, false_mask_bits))
+                    self.div_pushes += 1
                     active_mask = taken_lanes
                     pc = branch_target
                     continue
@@ -297,3 +338,14 @@ class GpuRefModel:
                                  f"at pc=0x{pc:x} (generator should not emit this)")
             pc += 4
         return self.gmem_writes
+
+
+def run_block(words: dict, block_x: int, initial_gmem: dict = None) -> dict:
+    """Reference stores of a whole block: the union of one GpuRefModel run per warp, each with
+    its own initial lane mask.  Raises GpuLaunchError where the DUT raises ERROR."""
+    stores: dict = {}
+    for w in range(warps_for_block(block_x)):
+        model = GpuRefModel(warp_id=w, initial_gmem=initial_gmem,
+                            init_mask=warp_lane_mask(block_x, w))
+        stores.update(model.run(words))
+    return stores

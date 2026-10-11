@@ -213,12 +213,12 @@ See Global Memory Map above.
 | 0x000  | GPU_CTRL         | RW     | 0x0000_0000 | GPU control                              |
 | 0x004  | GPU_STATUS       | RO     | 0x0000_0001 | GPU status                               |
 | 0x008  | GPU_KERNEL_ADDR  | RW     | 0x0000_0000 | Kernel start address                     |
-| 0x00C  | GPU_GRID_DIM_X   | RW     | 0x0000_0000 | Grid dimension X                         |
-| 0x010  | GPU_GRID_DIM_Y   | RW     | 0x0000_0000 | Grid dimension Y                         |
-| 0x014  | GPU_GRID_DIM_Z   | RW     | 0x0000_0000 | Grid dimension Z                         |
-| 0x018  | GPU_BLOCK_DIM_X  | RW     | 0x0000_0000 | Block dimension X                        |
-| 0x01C  | GPU_BLOCK_DIM_Y  | RW     | 0x0000_0000 | Block dimension Y                        |
-| 0x020  | GPU_BLOCK_DIM_Z  | RW     | 0x0000_0000 | Block dimension Z                        |
+| 0x00C  | GPU_GRID_DIM_X   | RW     | 0x0000_0000 | **Reserved in Phase 4**: stored, readable, no effect |
+| 0x010  | GPU_GRID_DIM_Y   | RW     | 0x0000_0000 | **Reserved in Phase 4**: stored, readable, no effect |
+| 0x014  | GPU_GRID_DIM_Z   | RW     | 0x0000_0000 | **Reserved in Phase 4**: stored, readable, no effect |
+| 0x018  | GPU_BLOCK_DIM_X  | RW     | 0x0000_0000 | Block dimension X: **1..64 threads**; 0 or > 64 makes the launch raise ERROR (see "GPU_BLOCK_X launch contract") |
+| 0x01C  | GPU_BLOCK_DIM_Y  | RW     | 0x0000_0000 | **Reserved in Phase 4**: stored, readable, no effect (thread count = `GPU_BLOCK_DIM_X` only) |
+| 0x020  | GPU_BLOCK_DIM_Z  | RW     | 0x0000_0000 | **Reserved in Phase 4**: stored, readable, no effect (thread count = `GPU_BLOCK_DIM_X` only) |
 | 0x024  | GPU_WARP_SIZE    | RO     | 0x0000_0008 | Warp size (fixed at 8 in Phase 4)        |
 | 0x028  | GPU_NUM_WARPS    | RO     | 0x0000_0004 | Number of warps (implementation-defined) |
 | 0x02C  | GPU_PC           | RO     | 0x0000_0000 | Current kernel PC (debug)                |
@@ -265,10 +265,21 @@ Completion is **not instantaneous**. The reset halts new instruction fetches and
 4. A `START` written while the reset is draining is dropped.
 5. Vector register file and shared-memory contents are untouched (they have no hardware reset either).
 
+**GPU_BLOCK_X launch contract** — *decided 2026-10-11, bead `6hy6`; supersedes the earlier "256 threads" wording.* The GPU holds 8 warps of 8 lanes, so a block has **at most 64 threads**:
+
+| `GPU_BLOCK_X` | Effect of `GPU_CTRL.START` |
+|:--------------|:---------------------------|
+| 1..64 | Runs ceil(`GPU_BLOCK_X`/8) warps; **exactly `GPU_BLOCK_X` threads take effect** — the last warp starts with only its valid lanes active (`GPU_BLOCK_X` = 9: warp 0 all 8 lanes, warp 1 lane 0 only). Invalid lanes write no register, no shared-memory word and issue no AXI request, and take no part in branches |
+| 0, or > 64 (65, 72, 128, 1023, ...) | **Launch ERROR**: `GPU_STATUS` reads ERROR (`0x4`) within a few cycles; no instruction fetch, no warp issued, no store; no completion interrupt. Before this change 0 hung forever (STATUS never set) and > 64 was silently truncated to 8 warps |
+
+The launch ERROR is the **same ERROR** as the stack-overflow one (halt-on-ERROR above): the GPU sits quiescent, `GPU_BLOCK_X` and the other configuration registers are kept, and only `GPU_CTRL.RESET` (or hardware reset) leaves ERROR; a legal launch after the reset runs normally. The perf counters are cleared by the rejected launch as by any launch. `GPU_BLOCK_Y` / `GPU_BLOCK_Z` and `GPU_GRID_*` are **reserved** in Phase 4 (stored, readable, no effect): the thread count is `GPU_BLOCK_X` alone, 1..64.
+
+**`GPU_BLOCK_X` reset value is 0, by decision (2026-10-11).** A `GPU_CTRL.START` before `GPU_BLOCK_X` has been written is an unconfigured launch and raises the launch ERROR above (it used to hang with STATUS never set). Software must write `GPU_BLOCK_X` (1..64) before every first launch after a hardware reset; the register keeps its value across `GPU_CTRL.RESET`.
+
 **Kernel launch sequence**:
 
 1. Write `GPU_KERNEL_ADDR` with kernel instruction address
-2. Write `GPU_GRID_DIM_*` and `GPU_BLOCK_DIM_*` with dimensions
+2. Write `GPU_BLOCK_DIM_X` (1..64; `GPU_GRID_DIM_*` and `GPU_BLOCK_DIM_Y/Z` are reserved in Phase 4)
 3. Write `GPU_CTRL[0] = 1` to start execution
 4. Poll `GPU_STATUS[1]` or wait for interrupt to detect completion
 

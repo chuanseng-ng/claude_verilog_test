@@ -116,7 +116,11 @@ jobs:
       # single all-green invocation.  Tighten to (measured - 3) from this PR's CI.
       # 2026-10-11 (bead f7z3): 248 = 251 - 3; 251 measured by a full all-green local coverage_cpu_gpu run
       # (0 failed), which includes the 11 new test_minstret_write tests.
-      CPU_PASS_FLOOR: '248'
+      # 2026-10-11 (bead 6hy6): 262 = 265 - 3; 265 passed / 0 failed in CI run 38143377262
+      # (soc_coverage on the merged head b7f737d = this branch + f7z3), i.e. the 254 measured on the
+      # branch before the merge + the 11 minstret tests.  The branch adds 3 kernel_block_warps tests
+      # and 1 warp_scheduler test.
+      CPU_PASS_FLOOR: '262'
 
     steps:
       - name: Checkout repository
