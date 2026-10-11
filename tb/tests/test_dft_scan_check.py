@@ -105,14 +105,17 @@ def test_undefined_cell_fails_instead_of_passing_vacuously(tmp_path: Path) -> No
     assert "no definition" in res.stdout
 
 
-# ---------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 # TAP-domain rules (bead claude_verilog_test-j41m.3, DFT Stage 1b)
-# ---------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 # A miniature of dft_ctrl: u_tap (TCK domain, unscanned by decision N4) owns a trst_ni reset
 # synchroniser and a flop `tap_q` that drives scan mode OR-ed with the scan_mode_i pin; a functional
 # flop sits behind a clock mux and a reset mux that select on the OR-ed net.
 _TAP_TOP = """
-module tapmod (input wire tck_i, input wire trst_ni, input wire frst_ni, input wire tms_i, output wire scan_q_o);
+module tapmod (
+    input wire tck_i, input wire trst_ni, input wire frst_ni, input wire tms_i,
+    output wire scan_q_o
+);
     reg s0_q, s1_q, tap_q;
     always @(posedge tck_i or negedge trst_ni) if (!trst_ni) s0_q <= 1'b0; else s0_q <= 1'b1;
     always @(posedge tck_i or negedge trst_ni) if (!trst_ni) s1_q <= 1'b0; else s1_q <= s0_q;
@@ -126,7 +129,8 @@ module top (
     output reg  q
 );
     wire tap_scan;
-    tapmod u_tap (.tck_i(TCK_SRC), .trst_ni(trst_ni), .frst_ni(rst_ni), .tms_i(tms_i), .scan_q_o(tap_scan));
+    tapmod u_tap (.tck_i(TCK_SRC), .trst_ni(trst_ni), .frst_ni(rst_ni), .tms_i(tms_i),
+                  .scan_q_o(tap_scan));
     wire scan_mode_w = PIN_LEG | tap_scan;
     wire clk_w = scan_mode_w ? scan_clk_i : clk_i;
     wire rst_w = scan_mode_w ? scan_rst_ni : rst_ni;
@@ -137,15 +141,31 @@ endmodule
 
 def _tap_run(tmp_path: Path, *extra: str, rst_src="s1_q", tck_src="tck_i", pin_leg="scan_mode_i"):
     # `RST_SRC` is tapmod-local, so substitute by token; `s1_q` is the synchroniser output.
-    src = (_TAP_TOP.replace("RST_SRC", rst_src).replace("TCK_SRC", tck_src)
-           .replace("PIN_LEG", pin_leg))
+    src = (
+        _TAP_TOP.replace("RST_SRC", rst_src).replace("TCK_SRC", tck_src).replace("PIN_LEG", pin_leg)
+    )
     netlist = tmp_path / "tap.v"
     netlist.write_text(src)
     env = dict(os.environ, YOSYS=str(YOSYS))
     return subprocess.run(
-        [sys.executable, str(CHECKER), "--netlist", str(netlist), "--top", "top",
-         "--tap-prefix", "u_tap", "--scan-mode-net", "scan_mode_w", *extra],
-        capture_output=True, text=True, env=env, check=False)
+        [
+            sys.executable,
+            str(CHECKER),
+            "--netlist",
+            str(netlist),
+            "--top",
+            "top",
+            "--tap-prefix",
+            "u_tap",
+            "--scan-mode-net",
+            "scan_mode_w",
+            *extra,
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
 
 
 def test_tap_domain_clean_passes(tmp_path: Path) -> None:
