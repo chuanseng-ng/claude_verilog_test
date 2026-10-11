@@ -263,8 +263,17 @@ module gpu_top
     //      clears the descriptor queue, warp scheduler and compute unit
     //      (including gpu_error_o).  Configuration registers, the CTRL.irq_en
     //      bit written with the reset, and the perf counters are kept.
+    //
+    // HALT ON ERROR (bead q6w0): the same halt_q gate is also raised by the
+    // compute-unit error (cu_gpu_error), on the same clock edge on which state_q
+    // enters GPS_ERROR.  From then on no new fetch and no new VLD/VST/VLDS/VSTS
+    // request is issued; a transaction already under way drains exactly as for
+    // a reset.  halt_q then stays up with rst_pend_q low, so soft_clr does not
+    // fire: the GPU sits quiescent in ERROR (STATUS keeps reading ERROR, config
+    // and perf counters untouched) until software writes CTRL.reset, which finds
+    // halt_q already up and clears once the masters are quiet.
     // -------------------------------------------------------------------
-    logic halt_q;       // gate: no new fetch / memory request while a soft reset drains
+    logic halt_q;       // gate: no new fetch / memory request (soft-reset drain, or ERROR)
     logic if_outst_q;   // instruction-fetch AR accepted, its R beat not yet received
     logic if_ar_stuck;  // fetch AR valid and not (yet) accepted: must not be withdrawn
     logic soft_clr;     // one-cycle synchronous clear, asserted once the masters are quiet
@@ -281,7 +290,7 @@ module gpu_top
             halt_q     <= 1'b0;
         end else begin
             if (ctrl_reset_q) rst_pend_q <= 1'b1;
-            if ((ctrl_reset_q || rst_pend_q) && !if_ar_stuck) halt_q <= 1'b1;
+            if ((ctrl_reset_q || rst_pend_q || cu_gpu_error) && !if_ar_stuck) halt_q <= 1'b1;
         end
     end
 
@@ -391,7 +400,7 @@ module gpu_top
     // Shared memory active/we drive
     // -------------------------------------------------------------------
     logic [N_LANES-1:0] sm_active, sm_we;
-    // halt_q: no new shared-memory / global-memory request while a soft reset drains.
+    // halt_q: no new shared-memory / global-memory request while a soft reset drains or in ERROR.
     assign sm_active = cu_shmem_mask & {N_LANES{cu_shmem_req && !halt_q}};
     assign sm_we     = {N_LANES{cu_shmem_we}} & cu_shmem_mask & {N_LANES{cu_shmem_req && !halt_q}};
 
@@ -435,7 +444,7 @@ module gpu_top
         .warp_id_o        (sched_warp_id),
         .warp_pc_o        (sched_warp_pc),
         .warp_mask_o      (sched_warp_mask),
-        .pipe_stall_i     (cu_pipe_stall || halt_q),   // halt_q: no new fetch while a soft reset drains
+        .pipe_stall_i     (cu_pipe_stall || halt_q),   // halt_q: no new fetch (reset drain / ERROR)
         .warp_retire_i    (cu_retire),
         .warp_retire_id_i (cu_retire_id),
         .warp_next_pc_i   (cu_retire_pc),
