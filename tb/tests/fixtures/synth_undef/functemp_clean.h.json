@@ -1,0 +1,680 @@
+{
+  "creator": "Yosys 0.46 (git sha1 e97731b9dda91fa5fa53ed87df7c34163ba59a41, clang++ 17.0.6 -fPIC -O3)",
+  "modules": {
+    "functemp_clean": {
+      "attributes": {
+        "top": "00000000000000000000000000000001",
+        "src": "functemp_clean.v:3.1-44.10"
+      },
+      "ports": {
+        "a": {
+          "direction": "input",
+          "bits": [ 2, 3, 4, 5 ]
+        },
+        "b": {
+          "direction": "input",
+          "bits": [ 6, 7, 8, 9 ]
+        },
+        "s": {
+          "direction": "input",
+          "bits": [ 10 ]
+        },
+        "k": {
+          "direction": "input",
+          "bits": [ 11, 12 ]
+        },
+        "ya": {
+          "direction": "output",
+          "bits": [ 13, 14, 15, 16 ]
+        },
+        "yb": {
+          "direction": "output",
+          "bits": [ 17, 18, 19, 20 ]
+        },
+        "yc": {
+          "direction": "output",
+          "bits": [ 21, 22, 23, 24 ]
+        },
+        "yd": {
+          "direction": "output",
+          "bits": [ 25, 26, 27, 28 ]
+        }
+      },
+      "cells": {
+        "$not$functemp_clean.v:33$37": {
+          "hide_name": 1,
+          "type": "$not",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000100",
+            "Y_WIDTH": "00000000000000000000000000000100"
+          },
+          "attributes": {
+            "src": "functemp_clean.v:33.20-33.22"
+          },
+          "port_directions": {
+            "A": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 6, 7, 8, 9 ],
+            "Y": [ 29, 30, 31, 32 ]
+          }
+        },
+        "$procmux$44": {
+          "hide_name": 1,
+          "type": "$mux",
+          "parameters": {
+            "WIDTH": "00000000000000000000000000000100"
+          },
+          "attributes": {
+            "full_case": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:17.11-17.12|functemp_clean.v:17.7-17.20"
+          },
+          "port_directions": {
+            "A": "input",
+            "B": "input",
+            "S": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ "0", "0", "0", "0" ],
+            "B": [ 2, 3, 4, 5 ],
+            "S": [ 10 ],
+            "Y": [ 13, 14, 15, 16 ]
+          }
+        },
+        "$procmux$47": {
+          "hide_name": 1,
+          "type": "$pmux",
+          "parameters": {
+            "S_WIDTH": "00000000000000000000000000000010",
+            "WIDTH": "00000000000000000000000000000100"
+          },
+          "attributes": {
+            "full_case": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:0.0-0.0|functemp_clean.v:31.5-35.12"
+          },
+          "port_directions": {
+            "A": "input",
+            "B": "input",
+            "S": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ "0", "0", "0", "0" ],
+            "B": [ 29, 30, 31, 32, 6, 7, 8, 9 ],
+            "S": [ 33, 34 ],
+            "Y": [ 21, 22, 23, 24 ]
+          }
+        },
+        "$procmux$48_CMP0": {
+          "hide_name": 1,
+          "type": "$eq",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000010",
+            "B_SIGNED": "00000000000000000000000000000000",
+            "B_WIDTH": "00000000000000000000000000000010",
+            "Y_WIDTH": "00000000000000000000000000000001"
+          },
+          "attributes": {
+            "full_case": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:0.0-0.0|functemp_clean.v:31.5-35.12"
+          },
+          "port_directions": {
+            "A": "input",
+            "B": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 11, 12 ],
+            "B": [ "1", "0" ],
+            "Y": [ 33 ]
+          }
+        },
+        "$procmux$49_CMP0": {
+          "hide_name": 1,
+          "type": "$logic_not",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000010",
+            "Y_WIDTH": "00000000000000000000000000000001"
+          },
+          "attributes": {
+            "full_case": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:0.0-0.0|functemp_clean.v:31.5-35.12"
+          },
+          "port_directions": {
+            "A": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 11, 12 ],
+            "Y": [ 34 ]
+          }
+        },
+        "$xor$functemp_clean.v:26$26": {
+          "hide_name": 1,
+          "type": "$xor",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000100",
+            "B_SIGNED": "00000000000000000000000000000000",
+            "B_WIDTH": "00000000000000000000000000000100",
+            "Y_WIDTH": "00000000000000000000000000000100"
+          },
+          "attributes": {
+            "src": "functemp_clean.v:26.43-26.57"
+          },
+          "port_directions": {
+            "A": "input",
+            "B": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 2, 3, 4, 5 ],
+            "B": [ "0", 2, 3, 4 ],
+            "Y": [ 35, 36, 37, 38 ]
+          }
+        },
+        "$xor$functemp_clean.v:26$28": {
+          "hide_name": 1,
+          "type": "$xor",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000100",
+            "B_SIGNED": "00000000000000000000000000000000",
+            "B_WIDTH": "00000000000000000000000000000100",
+            "Y_WIDTH": "00000000000000000000000000000100"
+          },
+          "attributes": {
+            "src": "functemp_clean.v:26.43-26.57"
+          },
+          "port_directions": {
+            "A": "input",
+            "B": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 35, 36, 37, 38 ],
+            "B": [ "0", "0", 2, 3 ],
+            "Y": [ 39, 40, 41, 42 ]
+          }
+        },
+        "$xor$functemp_clean.v:26$30": {
+          "hide_name": 1,
+          "type": "$xor",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000100",
+            "B_SIGNED": "00000000000000000000000000000000",
+            "B_WIDTH": "00000000000000000000000000000100",
+            "Y_WIDTH": "00000000000000000000000000000100"
+          },
+          "attributes": {
+            "src": "functemp_clean.v:26.43-26.57"
+          },
+          "port_directions": {
+            "A": "input",
+            "B": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 39, 40, 41, 42 ],
+            "B": [ "0", "0", "0", 2 ],
+            "Y": [ 17, 18, 19, 20 ]
+          }
+        },
+        "$xor$functemp_clean.v:43$42": {
+          "hide_name": 1,
+          "type": "$xor",
+          "parameters": {
+            "A_SIGNED": "00000000000000000000000000000000",
+            "A_WIDTH": "00000000000000000000000000000100",
+            "B_SIGNED": "00000000000000000000000000000000",
+            "B_WIDTH": "00000000000000000000000000000100",
+            "Y_WIDTH": "00000000000000000000000000000100"
+          },
+          "attributes": {
+            "src": "functemp_clean.v:43.27-43.32"
+          },
+          "port_directions": {
+            "A": "input",
+            "B": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [ 2, 3, 4, 5 ],
+            "B": [ 6, 7, 8, 9 ],
+            "Y": [ 25, 26, 27, 28 ]
+          }
+        }
+      },
+      "netnames": {
+        "$0\\init_then_cond$func$functemp_clean.v:40$2.$result[3:0]$11": {
+          "hide_name": 1,
+          "bits": [ 13, 14, 15, 16 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\init_then_cond$func$functemp_clean.v:40$6.$result[3:0]$12": {
+          "hide_name": 1,
+          "bits": [ 13, 14, 15, 16 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\init_then_cond$func$functemp_clean.v:40$6.c[0:0]$14": {
+          "hide_name": 1,
+          "bits": [ 10 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\init_then_cond$func$functemp_clean.v:40$6.t[3:0]$15": {
+          "hide_name": 1,
+          "bits": [ 13, 14, 15, 16 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\init_then_cond$func$functemp_clean.v:40$6.v[3:0]$13": {
+          "hide_name": 1,
+          "bits": [ 2, 3, 4, 5 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\loop_acc$func$functemp_clean.v:41$3.$result[3:0]$18": {
+          "hide_name": 1,
+          "bits": [ 17, 18, 19, 20 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\loop_acc$func$functemp_clean.v:41$7.$result[3:0]$19": {
+          "hide_name": 1,
+          "bits": [ 17, 18, 19, 20 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\loop_acc$func$functemp_clean.v:41$7.acc[3:0]$22": {
+          "hide_name": 1,
+          "bits": [ 17, 18, 19, 20 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\loop_acc$func$functemp_clean.v:41$7.i[31:0]$21": {
+          "hide_name": 1,
+          "bits": [ "0", "0", "1", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0" ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\loop_acc$func$functemp_clean.v:41$7.v[3:0]$20": {
+          "hide_name": 1,
+          "bits": [ 2, 3, 4, 5 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\pick$func$functemp_clean.v:42$4.$result[3:0]$32": {
+          "hide_name": 1,
+          "bits": [ 21, 22, 23, 24 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\pick$func$functemp_clean.v:42$8.$result[3:0]$33": {
+          "hide_name": 1,
+          "bits": [ 21, 22, 23, 24 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\pick$func$functemp_clean.v:42$8.kk[1:0]$34": {
+          "hide_name": 1,
+          "bits": [ 11, 12 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\pick$func$functemp_clean.v:42$8.v[3:0]$35": {
+          "hide_name": 1,
+          "bits": [ 6, 7, 8, 9 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\sv2v_cast_4$func$functemp_clean.v:43$5.$result[3:0]$39": {
+          "hide_name": 1,
+          "bits": [ 25, 26, 27, 28 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\sv2v_cast_4$func$functemp_clean.v:43$9.$result[3:0]$40": {
+          "hide_name": 1,
+          "bits": [ 25, 26, 27, 28 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$0\\sv2v_cast_4$func$functemp_clean.v:43$9.inp[3:0]$41": {
+          "hide_name": 1,
+          "bits": [ 25, 26, 27, 28 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$1\\init_then_cond$func$functemp_clean.v:40$6.t[3:0]$16": {
+          "hide_name": 1,
+          "bits": [ 13, 14, 15, 16 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$1\\pick$func$functemp_clean.v:42$8.$result[3:0]$36": {
+          "hide_name": 1,
+          "bits": [ 21, 22, 23, 24 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "$not$functemp_clean.v:33$37_Y": {
+          "hide_name": 1,
+          "bits": [ 29, 30, 31, 32 ],
+          "attributes": {
+            "src": "functemp_clean.v:33.20-33.22"
+          }
+        },
+        "$procmux$44_Y": {
+          "hide_name": 1,
+          "bits": [ 13, 14, 15, 16 ],
+          "attributes": {
+          }
+        },
+        "$procmux$45_CMP": {
+          "hide_name": 1,
+          "bits": [ 10 ],
+          "attributes": {
+          }
+        },
+        "$procmux$47_Y": {
+          "hide_name": 1,
+          "bits": [ 21, 22, 23, 24 ],
+          "attributes": {
+          }
+        },
+        "$procmux$48_CMP": {
+          "hide_name": 1,
+          "bits": [ 33 ],
+          "attributes": {
+          }
+        },
+        "$procmux$49_CMP": {
+          "hide_name": 1,
+          "bits": [ 34 ],
+          "attributes": {
+          }
+        },
+        "$shl$functemp_clean.v:26$23_Y": {
+          "hide_name": 1,
+          "bits": [ 2, 3, 4, 5 ],
+          "attributes": {
+            "src": "functemp_clean.v:26.50-26.56"
+          }
+        },
+        "$shl$functemp_clean.v:26$25_Y": {
+          "hide_name": 1,
+          "bits": [ "0", 2, 3, 4 ],
+          "attributes": {
+            "src": "functemp_clean.v:26.50-26.56"
+          }
+        },
+        "$shl$functemp_clean.v:26$27_Y": {
+          "hide_name": 1,
+          "bits": [ "0", "0", 2, 3 ],
+          "attributes": {
+            "src": "functemp_clean.v:26.50-26.56"
+          }
+        },
+        "$shl$functemp_clean.v:26$29_Y": {
+          "hide_name": 1,
+          "bits": [ "0", "0", "0", 2 ],
+          "attributes": {
+            "src": "functemp_clean.v:26.50-26.56"
+          }
+        },
+        "$xor$functemp_clean.v:26$24_Y": {
+          "hide_name": 1,
+          "bits": [ 2, 3, 4, 5 ],
+          "attributes": {
+            "src": "functemp_clean.v:26.43-26.57"
+          }
+        },
+        "$xor$functemp_clean.v:26$26_Y": {
+          "hide_name": 1,
+          "bits": [ 35, 36, 37, 38 ],
+          "attributes": {
+            "src": "functemp_clean.v:26.43-26.57"
+          }
+        },
+        "$xor$functemp_clean.v:26$28_Y": {
+          "hide_name": 1,
+          "bits": [ 39, 40, 41, 42 ],
+          "attributes": {
+            "src": "functemp_clean.v:26.43-26.57"
+          }
+        },
+        "$xor$functemp_clean.v:26$30_Y": {
+          "hide_name": 1,
+          "bits": [ 17, 18, 19, 20 ],
+          "attributes": {
+            "src": "functemp_clean.v:26.43-26.57"
+          }
+        },
+        "$xor$functemp_clean.v:43$42_Y": {
+          "hide_name": 1,
+          "bits": [ 25, 26, 27, 28 ],
+          "attributes": {
+            "src": "functemp_clean.v:43.27-43.32"
+          }
+        },
+        "a": {
+          "hide_name": 0,
+          "bits": [ 2, 3, 4, 5 ],
+          "attributes": {
+            "src": "functemp_clean.v:4.18-4.19"
+          }
+        },
+        "b": {
+          "hide_name": 0,
+          "bits": [ 6, 7, 8, 9 ],
+          "attributes": {
+            "src": "functemp_clean.v:5.18-5.19"
+          }
+        },
+        "init_then_cond$func$functemp_clean.v:40$2.$result": {
+          "hide_name": 0,
+          "bits": [ 13, 14, 15, 16 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "init_then_cond$func$functemp_clean.v:40$6.$result": {
+          "hide_name": 0,
+          "bits": [ "x", "x", "x", "x" ],
+          "attributes": {
+            "nosync": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "init_then_cond$func$functemp_clean.v:40$6.c": {
+          "hide_name": 0,
+          "bits": [ "x" ],
+          "attributes": {
+            "nosync": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:13.54-13.55"
+          }
+        },
+        "init_then_cond$func$functemp_clean.v:40$6.t": {
+          "hide_name": 0,
+          "bits": [ "x", "x", "x", "x" ],
+          "attributes": {
+            "nosync": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:14.15-14.16"
+          }
+        },
+        "init_then_cond$func$functemp_clean.v:40$6.v": {
+          "hide_name": 0,
+          "bits": [ "x", "x", "x", "x" ],
+          "attributes": {
+            "nosync": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:13.45-13.46"
+          }
+        },
+        "k": {
+          "hide_name": 0,
+          "bits": [ 11, 12 ],
+          "attributes": {
+            "src": "functemp_clean.v:7.18-7.19"
+          }
+        },
+        "loop_acc$func$functemp_clean.v:41$3.$result": {
+          "hide_name": 0,
+          "bits": [ 17, 18, 19, 20 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "loop_acc$func$functemp_clean.v:41$7.$result": {
+          "hide_name": 0,
+          "bits": [ "x", "x", "x", "x" ],
+          "attributes": {
+            "nosync": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "loop_acc$func$functemp_clean.v:41$7.acc": {
+          "hide_name": 0,
+          "bits": [ "x", "x", "x", "x" ],
+          "attributes": {
+            "nosync": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:23.15-23.18"
+          }
+        },
+        "loop_acc$func$functemp_clean.v:41$7.i": {
+          "hide_name": 0,
+          "bits": [ "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x", "x" ],
+          "signed": 1,
+          "attributes": {
+            "nosync": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:22.13-22.14"
+          }
+        },
+        "loop_acc$func$functemp_clean.v:41$7.v": {
+          "hide_name": 0,
+          "bits": [ "x", "x", "x", "x" ],
+          "attributes": {
+            "nosync": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:21.39-21.40"
+          }
+        },
+        "pick$func$functemp_clean.v:42$4.$result": {
+          "hide_name": 0,
+          "bits": [ 21, 22, 23, 24 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "pick$func$functemp_clean.v:42$8.$result": {
+          "hide_name": 0,
+          "bits": [ "x", "x", "x", "x" ],
+          "attributes": {
+            "nosync": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "pick$func$functemp_clean.v:42$8.kk": {
+          "hide_name": 0,
+          "bits": [ "x", "x" ],
+          "attributes": {
+            "nosync": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:30.35-30.37"
+          }
+        },
+        "pick$func$functemp_clean.v:42$8.v": {
+          "hide_name": 0,
+          "bits": [ "x", "x", "x", "x" ],
+          "attributes": {
+            "nosync": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:30.51-30.52"
+          }
+        },
+        "s": {
+          "hide_name": 0,
+          "bits": [ 10 ],
+          "attributes": {
+            "src": "functemp_clean.v:6.18-6.19"
+          }
+        },
+        "sv2v_cast_4$func$functemp_clean.v:43$5.$result": {
+          "hide_name": 0,
+          "bits": [ 25, 26, 27, 28 ],
+          "attributes": {
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "sv2v_cast_4$func$functemp_clean.v:43$9.$result": {
+          "hide_name": 0,
+          "bits": [ "x", "x", "x", "x" ],
+          "attributes": {
+            "nosync": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:0.0-0.0"
+          }
+        },
+        "sv2v_cast_4$func$functemp_clean.v:43$9.inp": {
+          "hide_name": 0,
+          "bits": [ "x", "x", "x", "x" ],
+          "attributes": {
+            "nosync": "00000000000000000000000000000001",
+            "src": "functemp_clean.v:37.42-37.45"
+          }
+        },
+        "ya": {
+          "hide_name": 0,
+          "bits": [ 13, 14, 15, 16 ],
+          "attributes": {
+            "src": "functemp_clean.v:8.18-8.20"
+          }
+        },
+        "yb": {
+          "hide_name": 0,
+          "bits": [ 17, 18, 19, 20 ],
+          "attributes": {
+            "src": "functemp_clean.v:9.18-9.20"
+          }
+        },
+        "yc": {
+          "hide_name": 0,
+          "bits": [ 21, 22, 23, 24 ],
+          "attributes": {
+            "src": "functemp_clean.v:10.18-10.20"
+          }
+        },
+        "yd": {
+          "hide_name": 0,
+          "bits": [ 25, 26, 27, 28 ],
+          "attributes": {
+            "src": "functemp_clean.v:11.18-11.20"
+          }
+        }
+      }
+    }
+  }
+}

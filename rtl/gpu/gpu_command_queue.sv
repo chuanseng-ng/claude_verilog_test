@@ -24,6 +24,7 @@ module gpu_command_queue
     input  logic [9:0]     block_z_i,
     input  logic [31:0]    arg_ptr_i,
     input  logic           irq_enable_i,   // GPU_CTRL[2] — registered in gpu_top
+    input  logic           soft_clr_i,     // GPU_CTRL.reset: drop a pending descriptor
 
     // -----------------------------------------------------------------------
     // Status
@@ -69,6 +70,7 @@ module gpu_command_queue
                 desc_q.block_z   <= block_z_i;
                 desc_q.arg_ptr   <= arg_ptr_i;
             end
+            if (soft_clr_i) valid_q <= 1'b0;   // wins over a same-cycle launch
         end
     end
 

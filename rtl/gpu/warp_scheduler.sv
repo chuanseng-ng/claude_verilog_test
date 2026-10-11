@@ -72,6 +72,12 @@ module warp_scheduler
     /* verilator lint_on UNUSEDSIGNAL */
 
     // -----------------------------------------------------------------------
+    // GPU_CTRL.reset (bead q6w0): abort the kernel.  Synchronous, one cycle, issued
+    // by gpu_top once the AXI masters are quiet.  Wins over every other update.
+    // -----------------------------------------------------------------------
+    input  logic                    soft_clr_i,
+
+    // -----------------------------------------------------------------------
     // Kernel completion
     // -----------------------------------------------------------------------
     output logic                    kernel_done_o
@@ -227,6 +233,21 @@ module warp_scheduler
                 warp_mask[div_pop_warp_i] <= div_pop_mask_i;
                 warp_busy[div_pop_warp_i] <= 1'b0;
                 div_depth[div_pop_warp_i] <= div_depth[div_pop_warp_i] - 1'b1;
+            end
+
+            // ---------------------------------------------------------------
+            // Soft reset: no active warps (n_warps_q == 0 stops issue and
+            // kernel_done), nothing busy or done, empty divergence stacks.
+            // warp_pc / warp_mask are reloaded by the next launch.
+            // ---------------------------------------------------------------
+            if (soft_clr_i) begin
+                n_warps_q <= '0;
+                rr_ptr    <= '0;
+                for (int w = 0; w < N_WARPS; w++) begin
+                    warp_busy[w] <= 1'b0;
+                    warp_done[w] <= 1'b0;
+                    div_depth[w] <= '0;
+                end
             end
 
         end

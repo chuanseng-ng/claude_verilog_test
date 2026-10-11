@@ -20,7 +20,10 @@ Environment: ``CVT_SYNTH_GATE=warn`` reports but does not abort, ``=off`` disabl
 missing gate is loud rather than silent.
 """
 
+import json
 import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -42,6 +45,87 @@ def _mode() -> str:
     return os.environ.get("CVT_SYNTH_GATE", "on").strip().lower()
 
 
+_PROOF_NAME = "func_temp_proof.pre.il"
+
+
+def _needs_proof(logs, headers, entries) -> bool:
+    """True if, without a proof, the header holds x-driven nets that look like function temporaries."""
+    res = gate.evaluate(logs, headers, entries)
+    return any(
+        f.rule == "x-driven-net" and gate.FUNC_TEMP_RE.match(f.text.split(" ")[1])
+        for f in res["findings"]
+        if f.severity == "FAIL"
+    )
+
+
+def _write_proof(step, il_path: Path) -> None:
+    """Re-elaborate the step's own sources up to ``hierarchy`` and dump the PRE-proc RTLIL.
+
+    Same sources, defines and top as the JsonHeader step (its config.json/extra.json), plain yosys
+    frontend only - a Synlig run has no ``$func$`` temporaries, so no proof is ever needed there.
+    """
+    step_dir = Path(step.step_dir)
+    cfg = json.loads((step_dir / "config.json").read_text(encoding="utf-8"))
+    extra_p = step_dir / "extra.json"
+    extra = json.loads(extra_p.read_text(encoding="utf-8")) if extra_p.is_file() else {}
+    defines = list(cfg.get("VERILOG_DEFINES") or []) + [
+        f"PDK_{cfg['PDK']}",
+        f"SCL_{cfg['STD_CELL_LIBRARY']}",
+        "__librelane__",
+        "__pnr__",
+    ]
+    if cfg.get("VERILOG_POWER_DEFINE"):
+        defines.append(cfg["VERILOG_POWER_DEFINE"])
+    flags = [f"-D{d}" for d in defines] + [
+        f"-I{d}" for d in (cfg.get("VERILOG_INCLUDE_DIRS") or [])
+    ]
+    cmds = []
+    for model in extra.get("blackbox_models", []):  # as librelane's ys_common.add_blackbox_models
+        stem = model[:-3] if model.endswith(".gz") else model
+        if stem.endswith(".lib"):
+            cmds.append(f"read_liberty -lib -ignore_miss_dir -setattr blackbox {model}")
+        else:
+            cmds.append(f"read_verilog -sv -lib {' '.join(flags)} {model}")
+    # same reads as librelane's ys_common.read_verilog_files: -defer so that only parameterised
+    # instances are elaborated (sram_controller's elaboration guard $finish()es on its default)
+    cmds += [
+        f"read_verilog -defer -noautowire -sv {' '.join(flags)} {f}" for f in cfg["VERILOG_FILES"]
+    ]
+    cmds += [
+        "chparam -set " + " ".join(p.split("=", 1)) + f" {cfg['DESIGN_NAME']}"
+        for p in (cfg.get("SYNTH_PARAMETERS") or [])
+    ]
+    cmds += [f"hierarchy -top {cfg['DESIGN_NAME']}", f"write_rtlil {il_path}"]
+    yosys = shutil.which("yosys")
+    if yosys is None:
+        raise StepError("CVT synth gate: yosys not on PATH, cannot prove function temporaries dead")
+    log = step_dir / "func_temp_proof.log"
+    proc = subprocess.run(  # noqa: S603
+        [yosys, "-l", str(log), "-p", "; ".join(cmds)],
+        cwd=step_dir,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=1800,
+    )
+    if proc.returncode != 0 or not il_path.is_file():
+        raise StepError(
+            f"CVT synth gate: proof elaboration failed (rc={proc.returncode}); see {log}:\n"
+            + proc.stderr[-2000:]
+        )
+
+
+def _proof(step, logs, headers, entries):
+    """Function-temporary proof for this run (generated once, lazily, only if candidates exist)."""
+    run_dir = Path(step.step_dir).parent
+    ils = sorted(run_dir.glob(f"*yosys*/{_PROOF_NAME}"))
+    if not ils and not step.config.get("USE_SYNLIG") and _needs_proof(logs, headers, entries):
+        il = Path(step.step_dir) / _PROOF_NAME
+        _write_proof(step, il)
+        ils = [il]
+    return gate.load_func_temp_proof(ils) if ils else None
+
+
 def _run_gate(step) -> None:
     mode = _mode()
     if mode == "off":
@@ -55,10 +139,15 @@ def _run_gate(step) -> None:
         gate.load_allowlist(gate.DEFAULT_ALLOWLIST) if gate.DEFAULT_ALLOWLIST.is_file() else []
     )
     try:
-        res = gate.evaluate(logs, headers, entries)
+        res = gate.evaluate(logs, headers, entries, _proof(step, logs, headers, entries))
     except (gate.InputError, gate.AllowlistError) as exc:
         raise StepError(f"CVT synth gate could not judge this step (never a pass): {exc}") from exc
-    lines = [gate._fmt(f) for f in res["findings"]]  # pylint: disable=protected-access
+    lines = [
+        gate._fmt(f)  # pylint: disable=protected-access
+        for f in res["findings"]
+        if f.severity != "EXEMPT"
+    ]
+    lines += gate.format_exemptions(res["findings"])
     lines.append(
         f"verdict={res['verdict']} fail={res['fail_count']} structural={res['structural_check']}"
     )
@@ -81,7 +170,9 @@ def _run_gate(step) -> None:
 def _census_tripwire(step, mode: str) -> None:
     """Sky130 CPU only: the fwd_b_* flops must exist in the synthesised netlist (dud4 tripwire)."""
     cfg = step.config
-    if cfg.get("DESIGN_NAME") != "rv32i_cpu_top" or not str(cfg.get("PDK", "")).startswith("sky130"):
+    if cfg.get("DESIGN_NAME") != "rv32i_cpu_top" or not str(cfg.get("PDK", "")).startswith(
+        "sky130"
+    ):
         return
     netlist = Path(step.step_dir) / "rv32i_cpu_top.nl.v"
     if not netlist.is_file():  # JsonHeader step: no netlist yet
