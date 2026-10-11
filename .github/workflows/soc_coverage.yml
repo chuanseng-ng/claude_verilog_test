@@ -116,7 +116,9 @@ jobs:
       # 2 icache, 5 gpu control-path kernels, 3 other); that run had 1 red line, the then-misdeclared
       # expect_fail kernel test, fixed and re-run on its own (6/6 pass), so 232 is measured but not from a
       # single all-green invocation.  Tighten to (measured - 3) from this PR's CI.
-      CPU_PASS_FLOOR: '229'
+      # 2026-10-11 (bead f7z3): 248 = 251 - 3; 251 measured by a full all-green local coverage_cpu_gpu run
+      # (0 failed), which includes the 11 new test_minstret_write tests.
+      CPU_PASS_FLOOR: '248'
 
     steps:
       - name: Checkout repository
