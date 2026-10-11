@@ -405,3 +405,62 @@ worktree needs them copied (`rsync -a --ignore-existing <primary>/pnr/sky130/{cp
 
 Still open (unchanged by this run): max-slew is skipped (423 at max_ss), the waiver is for the one macro-pin net, and a
 new RTL vintage may move the cap (ceiling 0.70 pF; STALE warning if the net stops violating).
+
+## 8. New baseline on the sv2v-rebuilt CPU macro (2026-10-11, bead `dud4`): stale waiver, 3 unwaived ss-corner nets
+
+`RUN_2026-10-11_08-39-41` (`make -C pnr librelane-sky130-soc-rccal-noklayout`, 08:39 -> 12:11 WIB, 3 h 32 min) is the first
+SoC run on the re-hardened CPU macro (`docs/SKY130_CPU_SYNLIG_DUD4.md`, "Re-harden"). **This is a new baseline, not a
+single-variable comparison with `RUN_2026-10-09_06-18-39` (§7.5):** the CPU macro frontend (Synlig -> sv2v), the macro's
+registered APB outputs (old macro predates `999e44a`), the hazard-select RTL fix (PR #259), the csr counter fix (PR #268)
+and the UART/I2C/GPU RTL changes since all differ. `CVT_SYNTH_GATE=warn` was exported in the shell for this run (see the
+PR body: the `gc0y` structural check false-positives on 509 sv2v function-inlining temporaries in the SoC); no tracked file
+carries it. KLayout DRC skipped as in §7.5.
+
+| metric | baseline `RUN_2026-10-09_06-18-39` | new `RUN_2026-10-11_08-39-41` |
+|---|---|---|
+| LVS / routing DRC / Magic DRC | 0 / 0 / 8 984 | 0 / 0 / 8 984 |
+| setup worst slack (violators), all 9 corners | +3.3286 ns max_ss (0) | +2.4825 ns max_ss (0); nom_tt +10.1818 |
+| hold worst slack (violators), all 9 corners | +0.2822 ns min_ff (0) | +0.2874 ns min_ff (0); nom_tt +0.5395 |
+| antenna nets / pins; diodes | 205 / 273; 10 918 | 187 / 265; 12 500 |
+| max-slew pins max_ss / max_tt / nom_tt (checker skipped) | 423 / 257 / 95 | 370 / 230 / 200 |
+| max-cap raw violations | 1 per tt/ss corner (6) | max_ss 3, nom_ss 1, all other corners 0 |
+| `CVT.MaxCapViolations` | PASS (6 waived / 0 unwaived) | **FAIL: 0 waived / 4 unwaived / 1 stale waiver** |
+| util / instances / power | 45.21 % / 312 320 / 84.9 mW | 45.22 % / 313 777 / 84.6 mW |
+
+**The waiver is stale.** `cpu-axi-rdata-i12-pin-cap` waived nothing at any corner. Its premise, the anomalous 0.2464 pF Liberty
+pin cap, belonged to the old macro. The new Liberty has `axi_rdata_i[12]` at 0.0469 pF (nom_tt) / 0.0496 pF (max_ss); the largest
+data input is now `axi_rdata_i[14]` at 0.0675 / 0.0691 pF (input median 0.0056 pF). **The waiver was neither removed nor changed**
+(the check still fails, and waiver changes are an owner decision).
+
+**Three unwaived nets, all flat SoC logic with no macro load, ss corners only** (no waiver added):
+
+| net / driver | corner | cap | limit |
+|---|---|---|---|
+| `_114232_/Y` (`_060214_`) | max_ss | 0.3020 pF | 0.2701 pF (+11.8 %) |
+| `_114232_/Y` (`_060214_`) | nom_ss | 0.2862 pF | 0.2701 pF (+6.0 %) |
+| `_111540_/X` (`_057530_`) | max_ss | 0.3278 pF | 0.3250 pF (+0.9 %) |
+| `_112095_/X` (`_058083_`) | max_ss | 0.3345 pF | 0.3342 pF (+0.1 %) |
+
+Report: `62-cvt-maxcapviolations/max_cap_waivers.rpt` of the run.
+
+**Owner decision 2026-10-11, "waive 2, fix 1" (applied in `pnr/sky130/soc/constraints/max_cap_waivers.json`):**
+
+* The stale `cpu-axi-rdata-i12-pin-cap` waiver is **removed**.
+* `_111540_/X` (0.3278 vs 0.3250 pF, +0.9 %) and `_112095_/X` (0.3345 vs 0.3342 pF, +0.1 %), both max_ss only, are **waived by driver
+  name**, each with a justification, restricted to the `max_ss_100C_1v60` corner, a ceiling 0.5 % above the measured value, and
+  **pinned to `RUN_2026-10-11_08-39-41`**. Synthesis-generated names go stale on any re-run, so these two waivers apply only to that
+  run, show up as STALE on any other, and must then be re-evaluated, not renewed.
+* `_114232_/Y` (+11.8 % at max_ss, +6.0 % at nom_ss) stays **unwaived**. It must be closed at the next SoC run; the `j41m.4` scan-pin
+  re-harden of the CPU macro forces one (recorded in bead `e45j`).
+* To express a driver-name waiver the checker (`cvt_maxcap_waiver.py`) gained an optional `driver` key (exact instance, no globs) that
+  is mutually exclusive with `load_pin` and **requires** `run_id`; the flow step and the CLI pass the run directory name. Load-pin
+  waivers are unchanged. 7 new unit tests (`tb/tests/test_cvt_maxcap_waiver.py`, 59 pass).
+
+Offline check against the existing run (checker script only, no flow re-run):
+`python3 pnr/sky130/soc/plugin/cvt_maxcap_waiver.py /nobackup/sky130_soc_runs/RUN_2026-10-11_08-39-41 --waivers pnr/sky130/soc/constraints/max_cap_waivers.json`
+-> `2 waived, 2 unwaived violation(s), 0 stale waiver(s)`; the two unwaived are both `_114232_/Y` (max_ss 0.3020 pF, nom_ss
+0.2862 pF vs 0.2701 pF); `max-cap check: FAIL` (exit 1), as intended until `_114232_` is closed.
+
+Previous owner decision options, now resolved: waive by name (two nets), accept (none), re-run (`_114232_` at the next run). The setup/hold/LVS/DRC numbers do not depend on that decision. The SoC closes setup and hold at all nine corners
+(typical-corner caveat of `docs/SKY130_REAL_DRC_LVS_EVALUATION.md` §7 unchanged), whereas the CPU **standalone** macro does not
+close ss reg-to-reg setup (max_ss -3.70 ns, 996 violators, icache tag-SRAM half-cycle paths at 75 MHz); the SoC runs at 40 MHz.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # CI smoke for the synthesis undef gate (bead gc0y). Tool-independent of LibreLane/Synlig/PDK:
-#   1. sv2v the CPU (same source list/defines as pnr/sky130/cpu/config.json), elaborate with yosys,
+#   1. sv2v the CPU (source list/defines from `make -C pnr sky130-cpu-sv2v-inputs`, i.e. what the flow uses), elaborate with yosys,
 #      and run tools/verif/check_synth_undef.py (log scan + structural header check) -> must PASS.
 #   2. SELF-TEST: inject an out-of-range select into a scratch copy of rv32i_core.sv -> the same
 #      gate MUST FAIL (proves the gate is live on this frontend; the dud4 lines themselves are
@@ -22,23 +22,20 @@ GATE="$REPO/tools/verif/check_synth_undef.py"
 GLS="$REPO/tools/verif/gls/sky130"
 CFG="$REPO/pnr/sky130/cpu/config.json"
 
-# ---- source list = config VERILOG_FILES minus the SRAM stub (the stub is read as a blackbox)
-python3 - "$CFG" "$REPO" "$W/sv_files.txt" <<'PY'
-import json, os, sys
-cfg, repo, out = sys.argv[1:4]
-files = json.load(open(cfg, encoding="utf-8"))["VERILOG_FILES"]
-base = os.path.dirname(cfg)
-res = [os.path.normpath(os.path.join(base, f[5:])) if f.startswith("dir::") else f for f in files]
-res = [f for f in res if "sram" not in os.path.basename(f)]
-open(out, "w", encoding="utf-8").write("\n".join(res) + "\n")
-PY
+# ---- source list + defines = what the flow feeds sv2v (pnr/Makefile sky130-cpu-sv2v). The config's
+# VERILOG_FILES now names the GENERATED (gitignored) rv32i_cpu_top_sv2v.v, so it cannot be the source list here.
+MAKE_OUT="$(make -s -C "$REPO/pnr" sky130-cpu-sv2v-inputs)" || { echo "ERROR: make sky130-cpu-sv2v-inputs failed" >&2; exit 2; }
+echo "$MAKE_OUT" | sed -n 's/^FILE //p' > "$W/sv_files.txt"
+read -r -a DEFS <<< "$(echo "$MAKE_OUT" | sed -n 's/^DEFINES //p')"
+[ -s "$W/sv_files.txt" ] && [ "${#DEFS[@]}" -gt 0 ] || { echo "ERROR: empty source list or defines from the Makefile" >&2; exit 2; }
+while read -r f; do [ -f "$f" ] || { echo "ERROR: listed source missing: $f" >&2; exit 2; }; done < "$W/sv_files.txt"
 STUB="$REPO/pnr/sky130/sky130_sram_1kbyte_1rw1r_32x256_8_stub.v"
-DEFS=(--define=PDK_sky130A --define=SCL_sky130_fd_sc_hd --define=__librelane__ --define=__pnr__ --define=SRAM_SKY130)
 
 # elaborate <tag> <file-list>: sv2v + yosys proc, writes $W/<tag>.{log,h.json,v}
 elaborate() {
   local tag="$1" list="$2"
-  "$SV2V" "${DEFS[@]}" $(cat "$list") -w "$W/$tag.sv2v.v" 2> "$W/$tag.sv2v.err"
+  "$SV2V" "${DEFS[@]}" $(cat "$list") -w "$W/$tag.sv2v.v" 2> "$W/$tag.sv2v.err" \
+    || { echo "ERROR: sv2v failed ($tag):" >&2; cat "$W/$tag.sv2v.err" >&2; exit 1; }
   cat > "$W/$tag.ys" <<EOF
 read_verilog -sv -lib $STUB
 read_verilog -sv $W/$tag.sv2v.v
@@ -47,7 +44,8 @@ proc
 opt_clean -purge
 write_json $W/$tag.h.json
 EOF
-  "$YOSYS" -l "$W/$tag.log" "$W/$tag.ys" > /dev/null
+  "$YOSYS" -l "$W/$tag.log" "$W/$tag.ys" > /dev/null \
+    || { echo "ERROR: yosys elaboration failed ($tag), last log lines:" >&2; tail -n 30 "$W/$tag.log" >&2; exit 1; }
 }
 
 echo "== 1. elaborate current RTL + gate"
@@ -58,7 +56,7 @@ echo "== 2. self-test: injected out-of-range select must FAIL the gate"
 mkdir -p "$W/inject"
 sed 's/(if_id_rs1_addr_w),/(if_id_instr_w[40:36]),/' "$REPO/rtl/cpu/core/rv32i_core.sv" > "$W/inject/rv32i_core.sv"
 cmp -s "$W/inject/rv32i_core.sv" "$REPO/rtl/cpu/core/rv32i_core.sv" && { echo "injection did not apply"; exit 3; }
-sed "s#$REPO/rtl/cpu/core/rv32i_core.sv#$W/inject/rv32i_core.sv#" "$W/sv_files.txt" > "$W/sv_files_inject.txt"
+sed "s#[^ ]*/rv32i_core.sv#$W/inject/rv32i_core.sv#" "$W/sv_files.txt" > "$W/sv_files_inject.txt"
 elaborate inject "$W/sv_files_inject.txt"
 set +e
 python3 -I "$GATE" --header-json "$W/inject.h.json" "$W/inject.log" > "$W/inject.gate.out"

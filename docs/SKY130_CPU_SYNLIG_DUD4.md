@@ -158,3 +158,32 @@ the RTL tree), `run_arm.sh`, `compare_arms.py diff`, `port_matrix.py`, `run_and_
 The defect class is now gated in every `pnr/Makefile` LibreLane run (`docs/SYNTH_UNDEF_GATE.md`): a log scanner plus a structural check of the elaborated header JSON, via the `pnr/plugins/librelane_plugin_cvt_synthgate` plugin. Negative control: this note's reverted `rv32i_core.sv` hazard lines make `make librelane-sky130-cpu` abort at the JsonHeader step.
 
 Testbench fix: `tools/verif/gls/sky130/tb_sky130_cpu_check.sv` now drives APB inputs 1 ns after the clock edge with blocking assignments (back-ported from the ASAP7 testbench). Before, its NBA-at-the-edge sequencer raced the registered `pready` on main RTL and debug reads timed out. Measured on main RTL (RTL arm, Verilator 5.048): all six programs complete with 32 APB reads each; `ma7_straight` reads `x3=0x0c`, `x4=0x0c`.
+
+## Re-harden on sv2v (2026-10-11) — remedy applied
+
+User-approved remedy: sv2v switch for `pnr/sky130/cpu` (this change) plus the RTL part-select rewrite (PR #259). Correctness only; no DFT pins.
+
+* **S1** `make -C pnr sky130-cpu-sv2v` (26 SV files, defines `PDK_sky130A SCL_sky130_fd_sc_hd __librelane__ __pnr__ SRAM_SKY130` = the
+  arm-V recipe above); `librelane-sky130-cpu` depends on it; config `USE_SYNLIG:false`, `VERILOG_FILES` = SRAM stub + generated file;
+  nothing else changed. Real yosys: 22/22 modules defined, only the SRAM stub is a blackbox. `FP_PIN_ORDER_CFG` was already wired
+  (`pin_order.cfg`), so no pin file was generated.
+* **S2** synthesis only (`dud4_synth`, origin/main `4d8e543` with PR #259 and #268): gate PASS (`fail=0`), census 4 868 flops
+  (`fwd_b_sel_r`, `fwd_b_ex1c_r`, `fwd_b_ex1b2_r` present), 28 102 cells, netlist sha256 `2acc6f6a...921d`. Differential: 6/6 programs
+  IDENTICAL, matrix 124/124 (RTL arm also 124/124, debug reads work on main RTL after the testbench fix).
+* **S3** full P&R `RUN_2026-10-11_06-00-12`, 75 MHz unchanged: LVS match, KLayout 0, routing DRC 0, Magic 27 733 913 (99.9869 %
+  inside SRAM footprints; 3 626 `nwell.4`), setup clean at six tt/ff corners (+3.44 ns nom_tt), **ss reg-to-reg setup fails** (nom_ss
+  -3.198 ns/854, max_ss -3.704 ns/996; icache tag-SRAM half-cycle paths; reported, not tuned), hold reg-to-reg clean / I/O-only
+  violators (nom_tt -0.379 ns), antenna 96/96, 77.8 mW, 40.83 % util, 4 868 flops. Old ss CPU-standalone numbers are not recoverable.
+* **S4** post-fill netlist (the one committed): census passes; 6/6 IDENTICAL; 124/124; negative control (63 x1 read-mux cells tied)
+  diverges on 4/6 programs, 90 matrix cells FAIL. `pnl.v` equals `nl.v` modulo the power ports. Re-validated on the committed `.nl.v.gz`
+  with `tools/verif/gls/sky130/run_netlist_proof.sh`.
+* **S5** views replaced (sha256, 12 chars, old -> new): lef `018792de0046 -> dfbfb5eba536`; nl.v.gz `d905d526e8b8 -> 9e45b339ffad`;
+  gds `474056b81d76 -> 7923de1f2d34`; spice `9aa1afb320e2 -> 2cd659eac361`; nom_tt lib `3b9410015273 -> c777011d5b9f`, max_ss
+  `738952c5cd95 -> 69c843f19d23` (all nine are pairwise distinct with correct per-corner temperature and voltage). 403/403 LEF pins at
+  identical position and layer; the Liberty has 0 combinational in->out arcs (old 462, the old macro predates registered APB outputs).
+* **S6** SoC `RUN_2026-10-11_08-39-41`: see `docs/SKY130_SLEW_CAP_E45J.md` §8 and `docs/SKY130_REAL_DRC_LVS_EVALUATION.md`. Not a
+  single-variable comparison with the 2026-10-09 baseline.
+
+Open (owner): the stale `axi_rdata_i[12]` max-cap waiver and 3 unwaived ss-corner nets; the `gc0y` structural `x-driven-net` check
+false-positives on 509 sv2v function-inlining temporaries when run on the SoC (the SoC run used `CVT_SYNTH_GATE=warn`, shell-only);
+ASAP7 macros are still the corrupt views (shelved).
