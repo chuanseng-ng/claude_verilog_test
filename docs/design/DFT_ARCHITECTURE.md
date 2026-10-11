@@ -649,3 +649,71 @@ already tied 0), the Sky130 macro is bit-for-bit unaffected by this change, and 
   tied 0 -> `soc_dft_scan.test_cpu_clock_gate_forced_open` FAIL; d `cdc_reset_sync` input-side only -> `cdc_reset_sync_scan` 2 FAIL, `soc_dft_scan` 1 FAIL; e `dft_clk_mux` ignores scan -> `dft_muxes` 1,
   `soc_dft_scan` 3 FAIL; f1 `dft_rst_mux` ignores scan (all instances) -> `dft_muxes` 1, `soc_dft_scan` 5 FAIL; f2 one instance (`pll_subsystem.u_core_rm`) -> `soc_dft_scan` 2 FAIL.
   **g `u_gpu_domain_rm` ignores scan: first SURVIVED** (`soc_dft_scan` 8/8 pass): with `pmu_gpu_rst_n` high the functional side already equals `scan_rst_ni`. **Killed 2026-10-10 (bead j41m.9)** by `soc_dft_scan.test_scan_gpu_reset_with_pmu_gpu_off` (9 PASS / 1 FAIL on the mutant, message `gpu_domain_rst_n ignored scan_rst_ni=1 while the PMU held the GPU in reset`; 10/10 on the real RTL). The test boots a 4-instruction CPU firmware (`sw MODE_GPU_OFF` to PMU CTRL `0x2000_8000`, then spin) so the PMU walks the GPU domain to `DOM_OFF` itself, no deposit; asserts in functional mode that `pmu_gpu_rst_n`, `gpu_domain_rst_n_func` and `gpu_domain_rst_n` are all 0; stops the functional clocks and enters scan mode with `scan_rst_ni` held at 1 (the PMU is reset by `core_rst_n`, which equals `scan_rst_ni` in scan mode, so holding it high preserves the power-down state); re-asserts the guard (`dom_state_q[GPU]==DOM_OFF`, `pmu_gpu_rst_n==0`, `gpu_domain_rst_n_func==0`) and only then requires `gpu_domain_rst_n==1`. The converse leg pulses `scan_rst_ni`=0, which resets the PMU (`pmu_gpu_rst_n` back to 1, asserted as a guard) and requires `gpu_domain_rst_n==0`. **CPU analogue** (`test_scan_cpu_reset_with_pmu_cpu_off`, firmware -> DMA -> PMU CTRL `MODE_CPU_OFF` via the existing `pmu_cycle.hex`): `cpu_domain_rst_n` follows `scan_rst_ni` with the PMU holding the CPU in reset; **passes on the real RTL, so the "needs no mux" claim for `cpu_domain_rst_n` holds**. Mutant h (`u_cpu_pmu_rst_sync.scanmode_i` tied 0) fails it (and also `test_cpu_clock_gate_forced_open`). A mutant that removed only the output-side mux of `cdc_reset_sync` while keeping its async-input select is equivalent once the 2-stage chain fills (the chain input is constant 1 and its async clear is `scan_rst_ni`), so it is not distinguishable by any test and is not claimed.
+
+## 15. Stage 1b specification and implementation record (bead `j41m.3`): JTAG TAP
+
+Scope: the TAP, its registers, the TAP-driven `dft_ctrl`, `soc_top` integration, checks. **No** scan insertion, ATPG, MBIST or CPU-macro change. Decisions already taken: section 0 (decisions 5-7) and the user decisions of 2026-10-11 (N1 non-JEDEC placeholder IDCODE, N2 compliant-minus-boundary-register, N4 TAP flops unscanned). Labels as before. This section was written **before** the RTL as its specification; the status table at its end is updated as each step lands.
+
+### 15.1 Modules and ports
+
+| Module | File | Role |
+|---|---|---|
+| `jtag_tap` | `rtl/soc/dft/jtag_tap.sv` | 16-state FSM, IR, TDR bank, TDO, all in the TCK domain. No functional-clock logic. |
+| `dft_ctrl` | `rtl/soc/dft/dft_ctrl.sv` | wraps `jtag_tap` + the 1a pin leg (`dft_ctrl_ports`, **unchanged**) + the TCK scan-clock gate + the combiner. Same five outputs as `dft_ctrl_ports` and the same four test inputs, plus the JTAG pins. `soc_top` instantiates this instead of `dft_ctrl_ports`. |
+
+`soc_top` gains (all raw, no pad ring): `tck_i`, `tms_i`, `tdi_i`, `trst_ni` (in); `tdo_o`, `tdo_oe_o` (out). Idle values used by every existing suite: `tck_i=0`, `tms_i=1`, `tdi_i=0`, **`trst_ni=0` (TAP held in reset)**. `TDO` is never tri-stated in RTL (no `inout`); the chip top builds the tristate from `tdo_oe_o`.
+
+### 15.2 TAP rules (IEEE 1149.1 where implemented)
+* 16 states with the standard 4-bit encodings (TLR=4'hF, RTI=4'hC, SelDR=4'h7, CapDR=4'h6, ShDR=4'h2, Ex1DR=4'h1, PauDR=4'h3, Ex2DR=4'h0, UpDR=4'h5, SelIR=4'h4, CapIR=4'hE, ShIR=4'hA, Ex1IR=4'h9, PauIR=4'hB, Ex2IR=4'h8, UpIR=4'hD). State flops on TCK **rising** edge. `state_o[3:0]` is exported by `jtag_tap` for tests.
+* Reset: `trst_ni` low asynchronously puts every TAP flop in its reset state; release goes through one `cdc_reset_sync` (TCK domain, 2 stages, `scanmode_i=0`) so deassertion is synchronous to TCK. Five TCK rising edges with TMS=1 reach TLR from any state. The TAP is reset by nothing else (not `rst_n_i`, not any PLL/PMU/WDT reset). While the state flop is TLR, IR returns to IDCODE and every TDR update register and every output returns to its default at the next falling edge.
+* IR: 4 bits. Shift register on the rising edge (shifts in Shift-IR, LSB first, TDI enters the MSB), loaded with **`4'b0001`** in Capture-IR (the mandatory `...01`). The update register `ir_q` and the registered decodes change on the **falling** edge in Update-IR. IR reset value = IDCODE.
+* DR: the register selected by `ir_q` is loaded in Capture-DR, shifts in Shift-DR (rising edge), and its update stage (where it has one) changes on the falling edge in Update-DR. Selection is a one-hot AND-OR (no runtime-indexed read).
+* TDO: a flop launched on the **falling** edge; carries `ir_shift[0]` in Shift-IR, the selected DR's LSB in Shift-DR, and **0 in every other state**. `tdo_oe_o` is a falling-edge flop that is 1 exactly in Shift-IR and Shift-DR.
+* Every `jtag_tap` output that reaches the SoC (`scan_mode_o`, `serial_o`, `parallel_o`, `rst_assert_o`, `scan_en_o`, `tdo_o`, `tdo_oe_o`) is a **direct falling-edge flop output computed from next-state values**: no combinational decode of IR/TDR bits downstream, so no output can glitch (they feed async resets, clock-mux selects and a clock-gate latch).
+
+### 15.3 Instruction map (private codes, fixed here; the doc left them open)
+
+| Opcode | Name | DR | Notes |
+|---|---|---|---|
+| `4'h0` | EXTEST | BYPASS | **not implemented** (no boundary register, N2); decodes to BYPASS |
+| `4'h1` | IDCODE | 32 | reset default; DR = `32'h15C0_1001`: version 1, part `16'h5C01`, manufacturer `11'h000` (**invalid for JEDEC on purpose**, N1), LSB 1 |
+| `4'h2` | SAMPLE/PRELOAD | BYPASS | **not implemented** (N2) |
+| `4'h3` | SCAN_SEL | 3 | `[0]` PARALLEL, `[2:1]` CHAIN_GRP (0 all, 1 `clk_i` fabric, 2 `cpu_clk_i` fabric, 3 CPU macro). Update register, reset 0. Capture loads the current value (readback). **No effect unless IR = SCAN.** CHAIN_GRP has no consumer until Stage 2 |
+| `4'h4` | SCAN | 1 (stub) | enters scan mode (15.4). Until Stage 2 stitches chains the serial chain path is a 1-bit stub with BYPASS timing; the single place to replace it is marked `STAGE2_CHAIN` in `jtag_tap.sv` |
+| `4'h5` | SCAN_RST | 1 | `[0]` assert scan reset (level). Update register, reset 0. Effective only while IR = SCAN |
+| `4'h6` | MBIST_CTRL | BYPASS | **reserved for Stage 4**; decodes to BYPASS now |
+| `4'h7` | MBIST_STATUS | BYPASS | **reserved for Stage 4**; decodes to BYPASS now |
+| `4'hF` | BYPASS | 1 | Capture loads 0 |
+| all others | | BYPASS | unknown opcodes -> BYPASS |
+
+### 15.4 What the TAP drives, and how it combines with the 1a pins
+Selecting SCAN (IR = `4'h4`) is the **only** thing that enters TAP scan mode; TDR contents alone never disturb functional operation (they are gated by IR = SCAN, and cleared by TLR/TRST). With `tap_scan` = (IR==SCAN), `serial` = tap_scan & ~PARALLEL, and `pin_*` = the unchanged 1a `dft_ctrl_ports` leg:
+
+| Output | Value | With the TAP idle |
+|---|---|---|
+| `scan_mode_o`, `test_en_o` | `pin_scan_mode \| tap_scan` | = pin (bit-identical to 1a) |
+| `scan_rst_no` | `pin_scan_rst_n & ~(tap_scan & SCAN_RST[0])` | = pin |
+| `scan_en_o` | `serial ? tap_scan_en : pin_scan_en` | = pin |
+| `test_clk_o` | `serial ? tck_scan_gated : pin_scan_clk` | = pin |
+
+`tap_scan_en` is a falling-edge flop = (state==Shift-DR) & serial. `tck_scan_gated` is TCK gated by an `rv32i_clock_gate` whose enable is (state in {Capture-DR, Shift-DR}) & serial, so the scanned flops see exactly the capture edge (the rising edge ending Capture-DR, `scan_en`=0) and the shift edges (rising edges ending Shift-DR cycles, `scan_en`=1), and **no** edge in Run-Test/Idle, Pause or Update (no spurious capture). PARALLEL=1 hands `scan_clk_i`/`scan_en_i`/`scan_in_i`/`scan_out_o` to the pins (the TAP still supplies `scan_mode`). The TAP **never gates the pin path**: with the TAP idle, or in TLR, the 1a pins work exactly as before. If a pin and the TAP are both in scan, the TAP wins `test_clk`/`scan_en` while `serial` is set.
+
+### 15.5 Clock/reset treatment and the declared crossings
+* TCK is an asynchronous third domain. Nothing in the TAP is clocked by a functional clock.
+* **Crossing 1, `trst_ni` -> TCK:** asynchronous assert, synchronous release through `cdc_reset_sync`. Declared a required synchroniser in `tools/cdc/cdc_config.yml`.
+* **Crossing 2, TCK-launched static controls -> functional sinks:** `scan_mode`, `test_en`, `scan_rst`, `scan_en` (falling-edge flops) feed only async-reset muxes, clock-mux selects, the clock-gate latch D and the crypto key mask. They are **deliberately not synchronised into any functional clock**: in scan mode the functional clock is stopped and replaced by the test clock, so a synchroniser in the destination domain would never advance, and the crypto mask (a data path into core-clock flops) must be effective before the first test-clock edge, not two edges later. This is the same *quasi-static* contract as the 1a ports (set with the functional clocks stopped, not toggled while a clock runs), declared and justified in `tools/cdc/cdc_config.yml` as an `accepted-risk` waiver, not a silent one.
+* **Clock-mux glitch-freedom (deviation from section 9.3's "glitch-free mux"):** `test_clk_o`'s select (`serial`) changes only on a TCK falling edge in an Update state, where the TAP-side input `tck_scan_gated` is provably low (the gate is closed in every non-Capture/Shift state), so the TAP input cannot glitch; the pin side (`scan_clk_i`) must be held low while IR or SCAN_SEL.PARALLEL changes (tester contract). A true enable-before-switch mux needs a clock in the *deselected* domain and deadlocks with a stopped functional clock; scan-mode entry destroys functional state by construction, so a runt pulse at the entry/exit instant cannot corrupt anything the test or the next functional reset depends on. **Open question Q-CLK.**
+* Power-up: without a driven `trst_ni` the TAP flops power up unknown. `trst_ni` must be asserted at power-up (or TMS held 1 for 5 TCK before relying on the TAP); at the chip top, tie it to a power-on reset. **Open question Q-TRST.**
+
+### 15.6 Documented deviations from IEEE 1149.1 and from section 9
+1. No boundary register: EXTEST/SAMPLE/PRELOAD decode to BYPASS (N2). 1149.1 requires them; compliance is "minus boundary register". CLAMP/HIGHZ absent.
+2. IDCODE manufacturer field `11'h000` is non-JEDEC (N1).
+3. TAP flops are on no scan chain (N4); they are tested by IDCODE/TDR readback and the 1b suite.
+4. SCAN's serial chain path is a 1-bit stub until Stage 2 (no chains exist to connect).
+5. MBIST_CTRL/MBIST_STATUS opcodes are reserved and decode to BYPASS (MBIST is Stage 4).
+6. Sections 8/9 said the direct scan pins are "ANDed with the TAP-held scan_mode" so a floating pin cannot disturb functional mode. **Not implemented**: the 1a contract (pins work alone) and the standing decision that the TAP must not gate the parallel path take precedence; the pins are OR-ed. A floating `scan_mode_i` is therefore not protected by the TAP. **Open question Q-PIN.**
+7. SCAN_RST is a level bit; the tester pulses it by writing 1 then 0.
+8. The crypto scan-entry scrub protocol (14.3 item 1) remains bead `j41m.6`; the TAP offers no scrub.
+
+### 15.7 Tests and checks required of this stage
+Unit suite `test_jtag_tap` (module `jtag_tap` alone); DFT-controller suite on `dft_ctrl`; SoC suite on `tb_soc_pll`/`tb_soc_top`; mutation campaign on FSM transitions, IR capture, opcode decode, TDR decode, TDO/OE timing, gate enable, combiner; `check_scan_clk_rst.py` extended to cover TAP-domain flops (clock = `tck_i` only, reset = `trst_ni` through the sync only, unscanned by design) with a negative control; CDC gate declarations; coverage ratchet; sv2v source lists; SDC constraints text (TCK clock, asynchronous clock group, JTAG IO delays) in `sky130_soc.sdc` only. **PD is not run in this stage.**
