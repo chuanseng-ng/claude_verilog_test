@@ -118,7 +118,8 @@ module npu_weight_mem #(
             assign bank_csb_w = ~(mem_en_w & (mem_addr_w[9:8] == 2'(b)));
 `ifdef SRAM_ASAP7
             logic bank_gclk_w;
-            rv32i_clock_gate u_cg (.en(~bank_csb_w), .clk(clk), .gclk(bank_gclk_w));
+            // j41m.2: test_en tied 0 -- this gate clocks an SRAM macro only (no scannable flop behind it).
+            rv32i_clock_gate u_cg (.en(~bank_csb_w), .test_en(1'b0), .clk(clk), .gclk(bank_gclk_w));
             sram_1rw_256x32_asap7 u_sram_macro (
                 .clk0   (bank_gclk_w),
                 .csb0   (bank_csb_w),

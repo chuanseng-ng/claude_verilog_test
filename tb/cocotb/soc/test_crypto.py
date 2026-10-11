@@ -477,6 +477,7 @@ async def _start_clock_and_reset(dut) -> _Rig:
     clk_task = await cocotb.start(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
     _active_tasks.append(clk_task)
     dut.rst_n.value = 0
+    dut.scan_mode_i.value = 0  # DFT scan mode off (bead j41m.2)
     rig = _Rig(dut)
     await _reset(dut, rig)
     return rig
@@ -1950,7 +1951,7 @@ module tb_crypto_single #(
     crypto_accel #(
         .ADDR_W(ADDR_W), .EN_AES(EN_AES), .EN_SHA(EN_SHA), .SBOX_PARALLEL(SBOX_PARALLEL)
     ) u_dut (
-        .clk(clk), .rst_n(rst_n), .psel(psel), .penable(penable), .pwrite(pwrite),
+        .clk(clk), .rst_n(rst_n), .scan_mode_i(1'b0), .psel(psel), .penable(penable), .pwrite(pwrite),
         .paddr(paddr), .pwdata(pwdata), .pstrb(pstrb), .prdata(prdata), .pready(pready),
         .pslverr(pslverr), .irq_o(irq_o)
     );
@@ -2054,3 +2055,102 @@ async def test_register_w1p_w1c_semantics(dut):
     rep = await check_w1c(m, o("CRYPTO_STATUS"), o("CRYPTO_IRQ_CLR"), [(0, 1)],
                           name="CRYPTO_STATUS")
     rep.assert_clean()
+
+
+# -- DFT scan-mode key mask (bead j41m.2, docs/design/DFT_ARCHITECTURE.md sec.7.3) --------------
+# key_q (crypto_accel) and rk_q (aes128_core) are excluded from scan. Exclusion alone leaks the key:
+# a tester could shift in a state, pulse one capture and shift out f(state, key). So in scan mode
+# the two registers' READ side is forced to 0: key_eff = key_q & ~scan_mode (the aes core's key_i)
+# and rk_eff = rk_q & ~scan_mode (the only reader of rk_q, key_step's input).
+#
+# Consequence the model below pins exactly: in scan mode the AES core runs with a round key that
+# never depends on any key, rk_const(r) = next_round_key(0, rcon_r) for every round r, and the
+# whitening key is 0.
+
+def _scan_mode_ecb_model(pt: bytes) -> bytes:
+    """aes128_core's ciphertext when key_eff = 0 and rk_eff = 0 on every read."""
+    s = pt
+    rcon = 0x01
+    for rnd in range(1, 11):
+        rk = aes.next_round_key(bytes(16), rcon)
+        s = aes.shift_rows(aes.sub_bytes(s))
+        if rnd != 10:
+            s = aes.mix_columns(s)
+        s = bytes(a ^ b for a, b in zip(s, rk, strict=True))
+        rcon = aes.xtime(rcon)
+    return s
+
+
+def _val(sig) -> int:
+    return int(sig.value)
+
+
+@cocotb.test()
+async def test_scan_mode_forces_key_registers_to_zero(dut):
+    """scan_mode_i=1 forces the key_q and rk_q read nets to 0 while the flops keep their value;
+    scan_mode_i=0 passes both through unchanged.
+    MUTATION TARGET: dropping either mask (key_eff = key_q or rk_eff = rk_q)."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    core = dut.u_dut.g_aes.u_aes
+    dut.scan_mode_i.value = 0
+    await d.load_key(FIPS_B_KEY)
+    await ClockCycles(dut.clk, 2)
+    key_int = int.from_bytes(FIPS_B_KEY, "big")
+    assert _val(dut.u_dut.key_q) == key_int
+    assert _val(dut.u_dut.key_eff_w) == key_int, "functional mode: key_eff must equal key_q"
+    assert _val(core.key_i) == key_int
+    # Mid-operation sample of rk_q / rk_eff_w in functional mode, then in scan mode.
+    await d.clear_done()
+    await d.push(FIPS_B_PT)
+    await d.start(MODE_ECB)
+    await ClockCycles(dut.clk, 3)
+    assert _val(core.rk_q) != 0
+    assert _val(core.rk_eff_w) == _val(core.rk_q), "functional mode: rk_eff must equal rk_q"
+    await d.trace()
+
+    dut.scan_mode_i.value = 1
+    await ClockCycles(dut.clk, 2)
+    assert _val(dut.u_dut.key_q) == key_int, "the mask must not touch the flop itself"
+    assert _val(dut.u_dut.key_eff_w) == 0, "scan mode: key_eff must be forced to 0"
+    assert _val(core.key_i) == 0, "scan mode: the AES core must see key 0"
+    await d.clear_done()
+    await d.push(FIPS_B_PT)
+    await d.start(MODE_ECB)
+    for _ in range(12):
+        await ClockCycles(dut.clk, 1)
+        assert _val(core.rk_eff_w) == 0, "scan mode: rk_eff must be forced to 0 every cycle"
+    await d.trace()
+    dut.scan_mode_i.value = 0
+
+
+@cocotb.test()
+async def test_scan_mode_result_is_key_independent_and_matches_model(dut):
+    """In scan mode the ciphertext depends on NO key and equals the masked-datapath model; leaving
+    scan mode restores the real AES with the key that is still in key_q.
+    MUTATION TARGET: a missing mask on either register (the result would track the key)."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    key_a, key_b = FIPS_B_KEY, bytes(range(16))
+    expected = _scan_mode_ecb_model(FIPS_B_PT)
+    assert expected != aes.encrypt_block(key_a, FIPS_B_PT)
+
+    dut.scan_mode_i.value = 0
+    await d.load_key(key_a)
+    assert await d.ecb(FIPS_B_PT) == FIPS_B_CT, "functional mode must be untouched"
+
+    dut.scan_mode_i.value = 1
+    await ClockCycles(dut.clk, 2)
+    got_a = await d.ecb(FIPS_B_PT)
+    assert got_a == expected, f"scan-mode ECB 0x{got_a.hex()} != masked model 0x{expected.hex()}"
+    await d.load_key(key_b)  # key writes still land in key_q (not scanned, not masked on write)
+    got_b = await d.ecb(FIPS_B_PT)
+    assert got_b == got_a, "scan-mode result changed with the key: the key leaks through capture"
+
+    dut.scan_mode_i.value = 0
+    await ClockCycles(dut.clk, 2)
+    assert await d.ecb(FIPS_B_PT) == aes.encrypt_block(key_b, FIPS_B_PT), (
+        "leaving scan mode must restore the real AES with the key held in key_q"
+    )

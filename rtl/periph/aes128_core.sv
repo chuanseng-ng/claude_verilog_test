@@ -80,6 +80,10 @@ module aes128_core
     input  logic         clk,
     input  logic         rst_n,
 
+    // DFT scan mode (bead j41m.2): 1 forces the rk_q READ net to 0 (rk_q is excluded from scan and
+    // inverts to the master key, so it must not reach any scanned flop through capture).
+    input  logic         scan_mode_i,
+
     input  logic         start_i,
     input  logic [127:0] key_i,
     input  logic [127:0] block_i,
@@ -439,7 +443,8 @@ module aes128_core
     logic [3:0]   round_q;       // 1..10
     logic [7:0]   rcon_q;        // 8'h01 at round 1, xtime() per round
     logic [127:0] s_q;           // AES state
-    logic [127:0] rk_q;          // current round key (on-the-fly schedule)
+    logic [127:0] rk_q;          // current round key (on-the-fly schedule); excluded from scan
+    logic [127:0] rk_eff_w;      // rk_q as read by the datapath: 0 in scan mode (DFT key mask)
 
     logic [127:0] rk_next_w;     // round key for the round in flight
     logic         mix_en_w;      // 0 in the final round
@@ -447,7 +452,9 @@ module aes128_core
     logic [127:0] s_adv_w;       // next s_q while in A_ROUND
     logic [127:0] tail_w;        // round_tail result: the ciphertext in the final round
 
-    assign rk_next_w = key_step(rk_q, rcon_q);
+    // rk_q has exactly one reader: key_step. Masking here covers every use of it.
+    assign rk_eff_w  = rk_q & {128{~scan_mode_i}};
+    assign rk_next_w = key_step(rk_eff_w, rcon_q);
     assign mix_en_w  = (round_q != 4'(LAST_ROUND));
 
     // =========================================================================
