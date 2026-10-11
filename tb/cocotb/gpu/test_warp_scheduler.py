@@ -26,6 +26,7 @@ async def _reset(dut):
     dut.launch_i.value          = 0
     dut.kernel_pc_i.value       = 0
     dut.init_mask_i.value       = 0
+    dut.last_mask_i.value       = 0
     dut.n_warps_active_i.value  = 0
     dut.pipe_stall_i.value      = 0
     dut.warp_retire_i.value     = 0
@@ -49,10 +50,13 @@ async def _reset(dut):
     await RisingEdge(dut.clk)
 
 
-async def _launch(dut, pc: int = 0x1000, mask: int = 0xFF, n_warps: int = 3):
+async def _launch(dut, pc: int = 0x1000, mask: int = 0xFF, n_warps: int = 3,
+                  last_mask: int = None):
+    """Launch; the last active warp gets ``last_mask`` (default: same as ``mask``)."""
     dut.launch_i.value          = 1
     dut.kernel_pc_i.value       = pc
     dut.init_mask_i.value       = mask
+    dut.last_mask_i.value       = mask if last_mask is None else last_mask
     dut.n_warps_active_i.value  = n_warps
     await RisingEdge(dut.clk)
     dut.launch_i.value = 0
@@ -111,6 +115,23 @@ async def test_round_robin_ordering(dut):
     await RisingEdge(dut.clk)
     await Timer(1, units="ns")
     assert dut.warp_issue_o.value == 0, "All warps busy — no issue expected"
+
+
+@cocotb.test()
+async def test_last_warp_gets_partial_mask(dut):
+    """Bead 6hy6: warps 0..n-2 start with init_mask, the LAST active warp with last_mask."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    for n_warps in (1, 2, 5, 8):
+        await _reset(dut)
+        dut.pipe_stall_i.value = 0
+        await _launch(dut, pc=0x1000, mask=0xFF, n_warps=n_warps, last_mask=0x07)
+        for w in range(n_warps):
+            await Timer(1, units="ns")
+            assert int(dut.warp_issue_o.value) == 1 and int(dut.warp_id_o.value) == w
+            want = 0x07 if w == n_warps - 1 else 0xFF
+            got = int(dut.warp_mask_o.value)
+            assert got == want, f"n_warps={n_warps} warp {w}: mask {got:#04x}, want {want:#04x}"
+            await RisingEdge(dut.clk)
 
 
 @cocotb.test()

@@ -31,6 +31,7 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 | [Section 14 (below)](#14-performance-counters-freeze-while-a-csr-instruction-is-in-ex-bead-kiit-gh-260) | 2026-10-10 | CSR file / perf counters | MEDIUM (P2) | ✅ Fixed |
 | [Section 15 (below)](#15-gpu-gpu_ctrlreset-cannot-recover-from-error-bead-q6w0-gh-261) | 2026-10-10 | GPU control / soft reset | MEDIUM (P3, bead) | ✅ Fixed |
 | [Section 16 (below)](#16-csr-write-to-minstret--minstreth-lands-under-in-flight-retirements-bead-f7z3) | 2026-10-11 | CSR file / minstret write | MEDIUM (P2) | ✅ Fixed |
+| [Section 17 (below)](#17-gpu-block_x-launch-contract-zero-hang-64-truncation-partial-warp-lanes-bead-6hy6) | 2026-10-11 | GPU launch / warp scheduler | MEDIUM (P3, bead) | ✅ Fixed |
 
 ---
 
@@ -297,7 +298,7 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 - **Problem**: the warp COUNT (0..8) was held in `WARP_W` = 3 bits, the width of a warp ID (0..7). `gpu_top` capped it at `N_WARPS-1` = 7, so `BLOCK_X` 57..64 (true count 8) ran warps 0..6 and warp 7 (threads 56..63) never executed. Measured before the fix: `n_warps_w` = `n_warps_q` = 7 for every `BLOCK_X` in 57..64 and above; 56 lane stores of 64 expected, the 8 missing being exactly lanes 56..63; no wrong values, no extra stores.
 - **Hypothesis confirmed, with one addition**: the representable-range diagnosis in the bead was right (counter width). The cap at 7 was a deliberate-looking guard on top of it, and the same truncation hid in two more places in `warp_scheduler`: the `all_done` compare cast `n_warps_q` back to `WARP_W` bits (so a count of 8 would read as 0 and the kernel would be declared done at once) and the issue compare `cand_i < n_warps_q` was 3 bits against a 3-bit register. Widening only `gpu_top` would have been wrong.
 - **Fix**: `gpu_pkg::WARP_CNT_W = $clog2(N_WARPS + 1)` = 4. `n_warps_w`, `warp_scheduler.n_warps_active_i` and `n_warps_q` are `WARP_CNT_W` wide; the cap is `N_WARPS` (`raw > N_WARPS ? N_WARPS : raw`); the issue and `all_done` compares are done at `WARP_CNT_W` width. Warp IDs, `rr_ptr`, the register file and every `WARP_W` signal are unchanged.
-- **Not changed (decided, not missed)**:
+- **Not changed (decided, not missed) -- all three superseded by section 17 (bead 6hy6, 2026-10-11)**:
   - `BLOCK_X` > 64 is still truncated, now to the 8 warps that exist (previously 7). The spec text conflicts with the frozen Phase 4 architecture (`PHASE4_GPU_ARCHITECTURE_SPEC.md:66` says up to 256 threads / 32 warps per block; CLAUDE.md and the 8-deep warp storage say 8 warps / 64 threads). Honouring it needs warp storage or multi-pass block execution, not a width fix. Pinned by `test_block_sizes_above_cap`.
   - `BLOCK_X` = 0 yields a count of 0: no warp ever issues and `kernel_done_o` requires `n_warps_q != 0`, so STATUS[done] never sets and the launch hangs until CTRL reset. Pre-existing, unchanged, deliberately not pinned by a test.
   - A partially filled last warp runs all 8 lanes (`init_mask_i` is a constant `0xFF`; `gpu_ref_model.py` and `tb/models/gpu_kernel_model.py` both do the same). Tail lanes are not masked at any `BLOCK_X`, e.g. 9 runs 16 lanes. Not a regression and not the reported defect; follow-up bead.
@@ -382,6 +383,29 @@ This directory contains documentation for all RTL bugs discovered and fixed duri
 - **Reference model**: `tb/models/csr_model.py` `CsrModel.tick()` models the absorption by program-order index (`access_seq`); `tb/models/rv32i_model.py` carries no CSR state at all (CSR reads return 0), so it has no minstret semantics to correct. The two existing minstret-writing sweeps in `test_csr_access` encoded the defect and went red on the unfixed RTL once the oracle was corrected.
 - **Tests**: `tb/cocotb/cpu/test_minstret_write.py` (11 tests) plus the oracle-fed `test_csr_access` (15). See the PR for the red->green evidence and the mutant table.
 - **Macros**: the committed Sky130 and ASAP7 CPU hard-macro views predate this fix and keep the old behaviour until the CPU macro is re-hardened (bead `j41m.4`).
+
+---
+
+## 17. GPU BLOCK_X Launch Contract: Zero Hang, >64 Truncation, Partial-Warp Lanes (bead 6hy6)
+
+**Files**: `rtl/gpu/gpu_top.sv` (`blk_illegal`, `launch_err`, `sched_start`, `last_warp_mask`, FSM IDLE arm, `halt_q` term), `rtl/gpu/warp_scheduler.sv` (`last_mask_i`)
+**Date**: 2026-10-11
+**Severity**: P3 (three launch edge cases left by bead 47lf / PR #257; decided by the project owner 2026-10-11)
+**Found by**: bead 47lf (`kernel_block_warps.py`), deliberately not changed there
+
+### Issue Fixed
+- **Problem 1, BLOCK_X = 0**: `n_warps_q` = 0, no warp ever issues, `kernel_done_o` needs `n_warps_q != 0`, so STATUS never set; the launch hung until `CTRL.reset`. Measured on the unfixed RTL: STATUS = 0x0 after 60 polls.
+- **Problem 2, BLOCK_X > 64 (65/72/128/1023)**: silently truncated to 8 warps (the 47lf cap). The spec said "up to 256 threads / 32 warps per block", contradicting the frozen 8 warps x 8 lanes storage.
+- **Problem 3, partial last warp**: `init_mask_i` was a constant 0xFF, so BLOCK_X = 9 ran 16 lanes. Measured on the unfixed RTL: BLOCK_X = 1 gave 8 stores and 8 AXI writes, register writes with mask 0xff on the 7 invalid lanes; BLOCK_X = 9 diverged twice where the model says once.
+- **Decision (owner, 2026-10-11)**: 0 or > 64 raises the GPU ERROR at launch; spec corrected to 64 threads max; the partial last warp starts with only its valid lanes active.
+- **Fix**: `blk_illegal = (BLOCK_X == 0) || (BLOCK_X > N_WARPS*N_LANES)`. An accepted launch (`sched_launch`) with `blk_illegal` goes `GPS_IDLE -> GPS_ERROR` and raises `halt_q` on the same edge (`launch_err` joins `cu_gpu_error` in the existing `halt_q` condition). That is the q6w0 ERROR path, not a second mechanism: STATUS reads ERROR, no done IRQ, config and perf counters kept, only `CTRL.reset` or `rst_n` leaves it, and a legal launch after the reset runs. The warp scheduler is launched only by `sched_start = sched_launch && !blk_illegal`, so nothing is fetched or stored. The descriptor is still acked, the perf counters cleared and the IRQ latch dropped by the rejected launch, as for any accepted launch. The 47lf cap `n_warps_raw > N_WARPS` is gone (the range is 1..64). `last_warp_mask[l] = (BLOCK_X[2:0] == 0) || (l < BLOCK_X[2:0])` feeds the new `warp_scheduler.last_mask_i`; the scheduler loads it for warp `n_warps_active_i - 1` and `init_mask_i` for the others. Every lane already honours `active_mask` for register, shared-memory and AXI writes and for the divergence masks, so masking at launch is sufficient. No runtime-indexed mux: all compares are constant-position against a signal. The `cq_desc.block_x[...]` struct-member selects (Synlig defect class, `docs/SYNLIG_STRUCT_SELECT_AINF.md`) were replaced by a plain wire; `check_struct_member_select.py` passes and the stale baseline line was removed.
+- **Why `if_ar_stuck` cannot defer `halt_q` here**: in `GPS_IDLE` no fetch AR is ever valid (all warps done, or `n_warps_q` = 0 after a reset). The tests assert `halt_q` = 1 once ERROR is entered.
+- **Spec**: `PHASE4_GPU_ARCHITECTURE_SPEC.md` (block dimensions, warps per block, reconvergence mask, new "Launch validation and partial last warp") and `MEMORY_MAP.md` (`GPU_BLOCK_DIM_X`, "GPU_BLOCK_X launch contract").
+- **Python models**: `tb/cocotb/gpu/gpu_ref_model.py` (`init_mask`, `launch_is_error`, `warp_lane_mask`, `run_block`, `div_pushes`) and `tb/models/gpu_kernel_model.py` (`GPULaunchError`, masked partial warp). Both agreed with the old behaviour. Unit tests: `tb/tests/test_gpu_model.py`, `tb/tests/test_gpu_ref_model_block.py`.
+- **Tests** (red on the old RTL: 5 of 7 FAIL; green after: 7 of 7): `kernel_block_warps.py` `test_lane_results_match_model`, `test_invalid_lanes_have_no_side_effects` (per-cycle register/shared/global strobe monitor plus read-back of surviving register and shared state), `test_partial_warp_divergence`, `test_illegal_block_x_raises_error` (0/65/72/128/1023: ERROR within 60 polls, no traffic, no IRQ, `CTRL.reset`, legal launch), `test_illegal_block_x_after_done`; `test_warp_scheduler.py` `test_last_warp_gets_partial_mask`. `test_block_sizes_above_cap`, which pinned the old truncation, was replaced.
+- **Follow-up decisions (owner, 2026-10-11)**: `BLOCK_Y`, `BLOCK_Z` and `GRID_X/Y/Z` are **reserved** in Phase 4 (stored, readable, no effect; thread count = `BLOCK_X` alone, 1..64) and the spec / MEMORY_MAP say so. `tb/models/gpu_kernel_model.py` now takes its warp count from `BLOCK_X` only, like the RTL and `gpu_ref_model.py` (it still replicates warps over `grid_dim` as a spec-level convenience). `BLOCK_X` keeps reset value 0, so an unconfigured launch raises ERROR.
+- **Behaviour change for software**: a launch with BLOCK_X unset (reset value 0) used to hang and now reports ERROR. Every firmware in the tree writes BLOCK_X = 8.
+- **Physical design**: `gpu_top` is a hard macro on ASAP7 and cannot be re-hardened on this host (beads `ma7` / `lxv` / `2kn`); the committed macro views are functionally behind this RTL. No PD run.
 
 ---
 

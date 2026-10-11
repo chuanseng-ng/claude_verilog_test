@@ -62,11 +62,19 @@ Grid (entire kernel execution)
 
 **Phase 4 constraints**:
 
-- Grid dimensions: Up to 64x64x64 blocks (configurable via registers)
-- Block dimensions: Up to 16x16x1 threads (max 256 threads per block)
+- Grid dimensions: `GPU_GRID_DIM_X/Y/Z` are **reserved in Phase 4** (decided 2026-10-11, bead `6hy6`):
+  stored and readable, no effect. The Phase 4 hardware launches a single block; multi-block grids are a
+  later-phase feature
+- Block dimensions: **`GPU_BLOCK_X` = 1..64 threads, at most 64 threads per block** (8 warps x 8 lanes,
+  the frozen Phase 4 limit; corrected 2026-10-11, bead `6hy6` — the earlier "16x16x1 / 256 threads per
+  block" text contradicted the 8-warp storage). `GPU_BLOCK_Y` / `GPU_BLOCK_Z` are **reserved in
+  Phase 4**: stored and readable, no effect (the thread count is `GPU_BLOCK_X` alone, threads are numbered
+  along X only)
 - Warp size: **8 lanes** (fixed in Phase 4)
-- Warps per block: Block size / warp size (up to 32 warps per block)
-- Total threads: Grid size × Block size (maximum ~1M threads)
+- Warps per block: ceil(`GPU_BLOCK_X` / warp size), **at most 8**
+- Total threads: `GPU_BLOCK_X` (1..64) in Phase 4, because the grid is reserved and a single block runs
+- Illegal block size: `GPU_BLOCK_X` = 0 or > 64 is rejected at launch with `GPU_STATUS.ERROR`
+  (see "Launch validation" below)
 
 ### SIMT execution
 
@@ -255,7 +263,8 @@ Each warp has an 8-bit **active lane mask**:
 3. Set active_mask = mask_true, execute true path
 4. Pop stack: set active_mask = mask_false, set PC to else branch
 5. Execute false path
-6. Reconverge: set active_mask = all lanes
+6. Reconverge: restore the mask the warp had before the branch (all 8 lanes for a full warp; only the
+   valid lanes for a partially filled last warp, see "Partial last warp")
 
 **Multi-level divergence**: Nested branches NOT supported in Phase 4 (kernel must avoid).
 
@@ -311,8 +320,9 @@ address[lane] = base_register[lane] + offset
    ```
 
 2. **GPU executes kernel**:
-   - Iterates through all blocks in grid
-   - For each block, schedules warps round-robin
+   - Phase 4: runs the single block described by `GPU_BLOCK_DIM_X` (the grid registers are reserved, see
+     "Phase 4 constraints"); a later phase iterates through all blocks in the grid
+   - Schedules the block's warps round-robin
    - Each warp executes until VRET
 
 3. **GPU signals completion**:
@@ -322,6 +332,22 @@ address[lane] = base_register[lane] + offset
 4. **CPU reads results**:
    - Poll `GPU_STATUS` or handle interrupt
    - Read result data from memory
+
+### Launch validation and partial last warp (bead `6hy6`, decided 2026-10-11)
+
+- **Legal block size**: `GPU_BLOCK_X` in 1..64. A launch (`GPU_CTRL.START`) with `GPU_BLOCK_X` = 0 or
+  `GPU_BLOCK_X` > 64 raises the **GPU ERROR condition at launch**: no kernel instruction is fetched or
+  executed, no warp is started, nothing is stored. `GPU_STATUS` reads ERROR (`0x4`) a few cycles after the
+  `START` write instead of hanging (0) or silently running a truncated block (> 64). It is the same ERROR
+  the divergence-stack overflow raises, with the same behaviour: the GPU is halted and quiescent, no done
+  interrupt, `GPU_BLOCK_X` and the other configuration registers keep what was written, and ERROR is left
+  only by `GPU_CTRL.RESET` (or hardware reset) — after which a legal launch works.
+- **Partial last warp**: a block of `GPU_BLOCK_X` threads runs ceil(`GPU_BLOCK_X` / 8) warps, and the last
+  warp **starts with only its valid lanes active**: lane *l* of warp *w* is valid iff *w* x 8 + *l* <
+  `GPU_BLOCK_X`. `GPU_BLOCK_X` = 9 runs warp 0 with all 8 lanes and warp 1 with lane 0 only. An invalid lane
+  never writes a register, never writes or reads shared memory, never issues an AXI request, and takes no
+  part in a branch (it is in neither the taken nor the not-taken mask). Software no longer has to mask the
+  tail lanes itself.
 
 ### Kernel termination
 

@@ -10,4 +10,3 @@ site|rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv|mem_wb_reg_i.trap_cause
 site|rtl/gpu/gpu_compute_unit.sv|id_ex_q.imm
 site|rtl/gpu/gpu_compute_unit.sv|id_ex_q.rs1_data
 site|rtl/gpu/gpu_compute_unit.sv|id_ex_q.rs2_data
-site|rtl/gpu/gpu_top.sv|cq_desc.block_x
