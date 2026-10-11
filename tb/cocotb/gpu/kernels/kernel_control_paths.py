@@ -18,10 +18,14 @@ Phase 4 (kernel must avoid)" with a 4-deep per-warp divergence stack, gpu_pkg::D
                                 errored kernel (no fetch, no memory traffic), CTRL.reset from the
                                 halted ERROR returns to IDLE, and a divergent kernel then
                                 matches gpu_ref_model on every lane
-  test_error_halts_issue_and_memory_traffic   (bead q6w0, halt-on-ERROR) 24 error-injection
+  test_error_halts_issue_and_memory_traffic   (bead q6w0, halt-on-ERROR) 56 error-injection
                                 offsets: after ERROR nothing new starts, the in-flight fetch /
                                 VST / shared-memory access completes legally, then the GPU is
                                 quiescent in ERROR (STATUS stays error, nothing advances)
+  test_error_injected_mid_traffic_halts_and_drains   (bead q6w0, halt-on-ERROR) the error flop is
+                                forced at 100 offsets into VST/VSTS/VLDS streams, so a burst /
+                                shared-memory access / fetch IS in flight at ERROR: it completes
+                                legally, nothing new starts, then quiescent; reset recovers
   test_error_reset_while_inflight_drains   (bead q6w0, halt-on-ERROR) CTRL.reset written the
                                 moment ERROR is entered, with a burst still in flight, waits for
                                 the drain; relaunch is correct
@@ -43,7 +47,8 @@ from cocotb.clock import Clock
 from cocotb.triggers import FallingEdge, RisingEdge
 from gpu_asm import (
     Kernel, instr_responder, data_responder,
-    vmov_tid_x, vaddi, vsll, vst, vsts, vlds, vret, vblt, vjmp, N_LANES,
+    vmov_tid_x, vmov_bid_x, vaddi, vsll, vst, vsts, vlds, vret, vblt, vbne, vjmp,
+    N_LANES,
 )
 from gpu_ref_model import GpuRefModel
 from kernel_divergence_basic import build_kernel as divergence_kernel, BASE_OUT as DIV_OUT
@@ -367,11 +372,13 @@ class BusMonitor:
         self.dones = 0
         self.issues = 0
         self.kdones = 0
+        self.demand = {"mem": 0, "shmem": 0, "fetch": 0}
         self.err_snap = None    # in-flight state sampled in the first cycle state_q == ERROR
         self.retires = 0        # cycles with a warp retire / warp done / issue / kernel-done pulse
         self.dones = 0
         self.issues = 0
         self.kdones = 0
+        self.demand = {"mem": 0, "shmem": 0, "fetch": 0}
         self.err_snap = None    # in-flight state sampled in the first cycle state_q == ERROR
 
     def start(self):
@@ -430,6 +437,11 @@ class BusMonitor:
         self.dones += int(d.cu_done.value)
         self.issues += int(d.sched_issue.value)
         self.kdones += int(d.sched_kernel_done.value)
+        if int(d.state_q.value) == ST_ERROR_ENC:
+            # Requests the (halted) GPU WANTED to make in ERROR: proof that each gate is exercised.
+            self.demand["mem"] += int(d.cu_mem_req.value)
+            self.demand["shmem"] += int(d.cu_shmem_req.value)
+            self.demand["fetch"] += int(d.u_sched.found.value)
         if self.err_snap is None and int(d.state_q.value) == ST_ERROR_ENC:
             self.err_snap = {
                 "cycle": self.cycle,
@@ -710,10 +722,10 @@ async def test_start_queued_in_error_does_not_survive_reset(dut):
     bus.stop()
 
 
-def loop_shmem_kernel() -> dict:
+def loop_shmem_kernel(base: int = 0) -> dict:
     """Never finishes: VSTS / VLDS forever, no global-memory traffic (shared memory is busy for
     a large fraction of the loop, the coalescer never is)."""
-    k = Kernel(base_pc=0)
+    k = Kernel(base_pc=base)
     k.emit(vmov_tid_x(1))
     k.emit(vaddi(2, 0, 2))
     k.emit(vsll(3, 1, 2))
@@ -763,8 +775,19 @@ async def test_soft_reset_during_shared_memory_loop(dut):
 # ---------------------------------------------------------------------------------------------
 STORM_OUT = 0x700
 STORM_BASE = 0x4000
-CASE_BLOCK_X = (8, 16, 32)       # 1, 2, 4 warps: younger warps are in flight when one errors
-CASE_PAD = tuple(range(8))       # ALU slots between the overflow branch and the first VST
+# Error-injection cases (kind, block_x, pad, instruction-fetch latency):
+#   "after":     one kernel image for every warp; the lanes that fall through the overflowing
+#                branch run ``pad`` ALU ops and then store forever (the kernel does not stop by
+#                itself after ERROR).  8 store positions x 1/2/4 warps, slow fetch.
+#   "bystander": warp 0 runs the 5-deep nest (and errors) while the other warps stream VSTs
+#                forever.  With a fast instruction fetch (latency 0 / 1) the instruction behind
+#                the erroring branch is already decoded, so a coalescer burst starts in the very
+#                cycle the error flag rises and is still in flight when ERROR is entered.
+#   "bystander_sm": the same with VSTS / VLDS streams, for the shared memory.
+#                ``pad`` ALU ops before the nest slide the error across the bystanders' loop.
+CASES = ([("after", bx, pad, 2) for bx in (8, 16, 32) for pad in range(8)]
+         + [(kind, bx, pad, 0) for kind in ("bystander", "bystander_sm")
+            for bx in (16, 64) for pad in range(8)])
 
 
 def error_storm_kernel(base: int, pad: int) -> dict:
@@ -804,14 +827,60 @@ def error_storm_kernel(base: int, pad: int) -> dict:
     return k.instructions()
 
 
-def storm_base(pad: int) -> int:
-    return STORM_BASE + 0x400 * (pad + 1)
+def error_bystander_kernel(base: int, pad: int, shared: bool) -> dict:
+    """Warp 0 runs the 5-deep nested divergence (the 5th branch overflows: ERROR) after ``pad``
+    ALU ops; every other warp takes a non-divergent branch (bid != 0) into an endless loop of
+    six VSTs (``shared`` False) or three VSTS / VLDS pairs (``shared`` True)."""
+    regs = (4, 8, 12, 16, 20)
+    thresholds = (7, 6, 5, 4, 3)
+    k = Kernel(base_pc=base)
+    k.emit(vmov_bid_x(14))
+    k.emit(vmov_tid_x(1))
+    k.emit(vaddi(2, 0, 2))
+    k.emit(vsll(3, 1, 2))
+    k.emit(vaddi(9, 3, STORM_OUT - 7))
+    k.emit(vaddi(7, 1, 0x40))
+    k.emit(vaddi(10, 3, -7))
+    for r, t in zip(regs, thresholds):
+        k.emit(vaddi(r, 0, t))
+    for _ in range(pad):
+        k.emit(vaddi(13, 0, 1))
+    bpc = k.pc()
+    k.emit(vbne(14, 0, bpc, bpc + 32))      # warps != 0 jump to the store loop
+    jmp_pc = k.emit(0)                      # warp 0 falls through: hop over the loop (patched)
+    while k.pc() < bpc + 32:
+        k.emit(vret())
+    head = k.pc()
+    for _ in range(3):
+        if shared:
+            k.emit(vsts(7, 10, 0))
+            k.emit(vlds(11, 10, 7))
+        else:
+            k.emit(vst(7, 9, 0))
+            k.emit(vst(7, 9, 0))
+    k.emit(vjmp(head - k.pc()))
+    k.patch(jmp_pc, vjmp(k.pc() - jmp_pc))
+    for r in regs:
+        npc = k.pc()
+        target = npc + 32 + r
+        k.emit(vblt(1, r, npc, target))
+        while k.pc() < target:
+            k.emit(vret())
+    k.emit(vret())
+    return k.instructions()
+
+
+def case_base(index: int) -> int:
+    return STORM_BASE + 0x400 * (index + 1)
 
 
 def storm_image() -> dict:
     image = {STORE_BASE + pc: word for pc, word in store_kernel().items()}
-    for pad in CASE_PAD:
-        image.update(error_storm_kernel(storm_base(pad), pad))
+    for i, (kind, _bx, pad, _lat) in enumerate(CASES):
+        if kind == "after":
+            image.update(error_storm_kernel(case_base(i), pad))
+        else:
+            image.update(error_bystander_kernel(case_base(i), pad, shared=kind == "bystander_sm"))
     return image
 
 
@@ -835,46 +904,54 @@ async def test_error_halts_issue_and_memory_traffic(dut):
     """Halt-on-ERROR: after the GPU enters ERROR nothing new starts on the fetch port, the
     coalescer or the shared memory; a transaction already under way completes legally; then the
     GPU is quiescent (no AXI beat, no issue / retire / warp-done / kernel-done) until CTRL.reset,
-    while STATUS keeps reporting ERROR with no interrupt.  24 error-injection offsets (1/2/4
-    warps x 8 store positions) with slow responders."""
+    while STATUS keeps reporting ERROR with no interrupt.  56 error-injection cases (see CASES)
+    with slow responders."""
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     await gpu_reset(dut)
     mem: dict = {}
     bus = BusMonitor(dut)
     bus.start()
-    instr_task = cocotb.start_soon(instr_responder(dut, storm_image(), latency=2))
+    image = storm_image()
+    instr_task = cocotb.start_soon(instr_responder(dut, image, latency=2))
     data_task = cocotb.start_soon(data_responder(dut, mem, ar_latency=1, r_latency=1,
                                                  aw_latency=2, w_latency=1))
     inflight = {"mu_busy": 0, "if_outst": 0, "sm_stall": 0}
-    for block_x in CASE_BLOCK_X:
-        for pad in CASE_PAD:
-            where = f"block_x={block_x} pad={pad}"
-            bus.arm()
-            mem.clear()
-            await gpu_launch(dut, kernel_pc=storm_base(pad), block_x=block_x)
-            await wait_status(dut, ST_ERROR, timeout=6000)
-            snap = bus.err_snap
-            assert snap is not None, f"{where}: ERROR entry not sampled"
-            for key in inflight:
-                inflight[key] += snap[key]
-            await wait_drained(dut, bus)
-            await settle(dut, 24)
-            quiet, quiet_mem = bus.activity(), dict(mem)
-            await settle(dut, 300)
-            assert bus.activity() == quiet and mem == quiet_mem, (
-                f"{where}: the GPU kept working in ERROR: {quiet} -> {bus.activity()}")
-            assert await axil_read(dut, GPU_STATUS) == ST_ERROR, f"{where}: STATUS left ERROR"
-            assert dut.gpu_irq_o.value == 0 and await axil_read(dut, IRQ_STATUS) == 0
-            bus.check_clean(where)
-            await axil_write(dut, GPU_CTRL, CTRL_RESET)
-            await wait_status(dut, ST_IDLE, timeout=200)
-            await settle(dut, 10)
-            bus.check_clean(f"{where}, after reset")
-    # The sweep must really have put each kind of transaction in flight at the moment of ERROR,
-    # otherwise "completes legally" was never exercised.
-    assert inflight["mu_busy"] > 0, f"no coalescer burst was in flight at ERROR: {inflight}"
+    fetch_lat = 2
+    for i, (kind, block_x, pad, lat) in enumerate(CASES):
+        where = f"{kind} block_x={block_x} pad={pad} fetch_latency={lat}"
+        if lat != fetch_lat:        # the GPU is IDLE and drained here: safe to swap the responder
+            instr_task.kill()
+            instr_task = cocotb.start_soon(instr_responder(dut, image, latency=lat))
+            fetch_lat = lat
+        bus.arm()
+        mem.clear()
+        await gpu_launch(dut, kernel_pc=case_base(i), block_x=block_x)
+        await wait_status(dut, ST_ERROR, timeout=6000)
+        snap = bus.err_snap
+        assert snap is not None, f"{where}: ERROR entry not sampled"
+        for key in inflight:
+            inflight[key] += snap[key]
+        await wait_drained(dut, bus)
+        await settle(dut, 24)
+        quiet, quiet_mem = bus.activity(), dict(mem)
+        await settle(dut, 300)
+        assert bus.activity() == quiet and mem == quiet_mem, (
+            f"{where}: the GPU kept working in ERROR: {quiet} -> {bus.activity()}")
+        assert await axil_read(dut, GPU_STATUS) == ST_ERROR, f"{where}: STATUS left ERROR"
+        assert dut.gpu_irq_o.value == 0 and await axil_read(dut, IRQ_STATUS) == 0
+        bus.check_clean(where)
+        await axil_write(dut, GPU_CTRL, CTRL_RESET)
+        await wait_status(dut, ST_IDLE, timeout=200)
+        await settle(dut, 10)
+        bus.check_clean(f"{where}, after reset")
+    # The sweep must really have asked for each kind of request while in ERROR (so each gate was
+    # exercised) and have had a fetch in flight at the moment of ERROR.  A coalescer burst or a
+    # shared-memory access can NOT be in flight at ERROR entry in this pipeline (the erroring
+    # branch executes only with memory idle and nothing behind it in ID/EX); that case is
+    # covered by test_error_injected_mid_traffic_halts_and_drains.
     assert inflight["if_outst"] > 0, f"no fetch was in flight at ERROR: {inflight}"
-    assert inflight["sm_stall"] > 0, f"no shared-memory access was in flight at ERROR: {inflight}"
+    for what, n in bus.demand.items():
+        assert n > 0, f"the {what} gate was never exercised in ERROR: demand {bus.demand}"
     assert not bus.errors, bus.errors[:3]
     for t in (instr_task, data_task):
         t.kill()
@@ -892,36 +969,107 @@ async def test_error_reset_while_inflight_drains(dut):
     mem: dict = {}
     bus = BusMonitor(dut)
     bus.start()
-    instr_task = cocotb.start_soon(instr_responder(dut, storm_image(), latency=2))
+    image = storm_image()
+    instr_task = cocotb.start_soon(instr_responder(dut, image, latency=2))
     data_task = cocotb.start_soon(data_responder(dut, mem, ar_latency=1, r_latency=1,
                                                  aw_latency=2, w_latency=1))
     clears = bus.clears
-    for block_x in CASE_BLOCK_X:
-        for pad in CASE_PAD:
-            where = f"block_x={block_x} pad={pad}"
-            await gpu_launch(dut, kernel_pc=storm_base(pad), block_x=block_x)
-            for _ in range(6000):
-                await RisingEdge(dut.clk)
-                if int(dut.state_q.value) == ST_ERROR_ENC:
-                    break
-            else:
-                raise AssertionError(f"{where}: never entered ERROR")
-            await axil_write(dut, GPU_CTRL, CTRL_RESET)
-            await wait_status(dut, ST_IDLE, timeout=400)
-            await settle(dut, 20)
-            bus.check_clean(f"{where}, reset at ERROR entry")
-            assert bus.clears > clears, f"{where}: soft_clr never fired"
-            clears = bus.clears
-            quiet = bus.activity()
-            await settle(dut, 60)
-            assert bus.activity() == quiet, f"{where}: activity after IDLE"
-            mem.clear()
-            await gpu_launch(dut, kernel_pc=STORE_BASE, block_x=8)
-            await wait_status(dut, ST_DONE, timeout=6000)
-            check_store(mem)
-            bus.check_clean(f"{where}, fresh kernel")
-            await axil_write(dut, GPU_CTRL, CTRL_RESET)
-            await wait_status(dut, ST_IDLE, timeout=200)
+    fetch_lat = 2
+    for i, (kind, block_x, pad, lat) in enumerate(CASES):
+        where = f"{kind} block_x={block_x} pad={pad} fetch_latency={lat}"
+        if lat != fetch_lat:
+            instr_task.kill()
+            instr_task = cocotb.start_soon(instr_responder(dut, image, latency=lat))
+            fetch_lat = lat
+        await gpu_launch(dut, kernel_pc=case_base(i), block_x=block_x)
+        for _ in range(6000):
+            await RisingEdge(dut.clk)
+            if int(dut.state_q.value) == ST_ERROR_ENC:
+                break
+        else:
+            raise AssertionError(f"{where}: never entered ERROR")
+        await axil_write(dut, GPU_CTRL, CTRL_RESET)
+        await wait_status(dut, ST_IDLE, timeout=400)
+        await settle(dut, 20)
+        bus.check_clean(f"{where}, reset at ERROR entry")
+        assert bus.clears > clears, f"{where}: soft_clr never fired"
+        clears = bus.clears
+        quiet = bus.activity()
+        await settle(dut, 60)
+        assert bus.activity() == quiet, f"{where}: activity after IDLE"
+        mem.clear()
+        await gpu_launch(dut, kernel_pc=STORE_BASE, block_x=8)
+        await wait_status(dut, ST_DONE, timeout=6000)
+        check_store(mem)
+        bus.check_clean(f"{where}, fresh kernel")
+        await axil_write(dut, GPU_CTRL, CTRL_RESET)
+        await wait_status(dut, ST_IDLE, timeout=200)
+    for t in (instr_task, data_task):
+        t.kill()
+    bus.stop()
+
+
+@cocotb.test()
+async def test_error_injected_mid_traffic_halts_and_drains(dut):
+    """The sticky error flop is forced high at 100 offsets into a kernel that streams VST / VSTS /
+    VLDS (60) or VSTS / VLDS only (40), so that a coalescer burst, a shared-memory access or a
+    fetch is in flight at the moment of ERROR (a real divergence overflow cannot time it that
+    way).  Required: the in-flight
+    transaction completes legally (AR/R, AW/W/B balance, no dropped valid, no orphan beat), nothing
+    new starts once ERROR is entered, the GPU is then quiescent with STATUS == ERROR, and CTRL.reset
+    returns it to IDLE with a correct relaunch."""
+    cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
+    await gpu_reset(dut)
+    shmem_base = 0x6000
+    image = dict(loop_store_kernel())
+    image.update(loop_shmem_kernel(shmem_base))
+    for pc, word in store_kernel().items():
+        image[STORE_BASE + pc] = word
+    mem: dict = {}
+    bus = BusMonitor(dut)
+    bus.start()
+    instr_task = cocotb.start_soon(instr_responder(dut, image, latency=1))
+    data_task = cocotb.start_soon(data_responder(dut, mem, ar_latency=1, r_latency=1,
+                                                 aw_latency=2, w_latency=1))
+    inflight = {"mu_busy": 0, "if_outst": 0, "sm_stall": 0}
+    for pc, delay in [(0, d) for d in range(12, 72)] + [(shmem_base, d) for d in range(12, 52)]:
+        where = f"error injected at +{delay} into the kernel at {pc:#x}"
+        bus.arm()
+        mem.clear()
+        await gpu_launch(dut, kernel_pc=pc, block_x=16)
+        await settle(dut, delay)
+        assert await axil_read(dut, GPU_STATUS) == 0, f"{where}: loop kernel should be RUNNING"
+        dut.u_cu.gpu_error_o.value = 1
+        for _ in range(200):
+            await RisingEdge(dut.clk)
+            if bus.err_snap is not None:
+                break
+        snap = bus.err_snap
+        assert snap is not None, f"{where}: ERROR never entered"
+        for key in inflight:
+            inflight[key] += snap[key]
+        await wait_drained(dut, bus)
+        await settle(dut, 24)
+        quiet, quiet_mem = bus.activity(), dict(mem)
+        await settle(dut, 200)
+        assert bus.activity() == quiet and mem == quiet_mem, (
+            f"{where}: the GPU kept working in ERROR: {quiet} -> {bus.activity()}")
+        assert await axil_read(dut, GPU_STATUS) == ST_ERROR, f"{where}: STATUS left ERROR"
+        bus.check_clean(where)
+        await axil_write(dut, GPU_CTRL, CTRL_RESET)
+        await wait_status(dut, ST_IDLE, timeout=200)
+        await settle(dut, 10)
+        bus.check_clean(f"{where}, after reset")
+        assert int(dut.u_cu.gpu_error_o.value) == 0, f"{where}: reset did not clear the error"
+    assert inflight["mu_busy"] > 0, f"no coalescer burst was in flight at ERROR: {inflight}"
+    assert inflight["if_outst"] > 0, f"no fetch was in flight at ERROR: {inflight}"
+    assert inflight["sm_stall"] > 0, f"no shared-memory access was in flight at ERROR: {inflight}"
+    assert not bus.errors, bus.errors[:3]
+    mem.clear()
+    await gpu_launch(dut, kernel_pc=STORE_BASE, block_x=8)
+    await wait_status(dut, ST_DONE, timeout=6000)
+    check_store(mem)
+    bus.check_clean("relaunch after the injection sweep")
     for t in (instr_task, data_task):
         t.kill()
     bus.stop()
