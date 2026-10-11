@@ -33,7 +33,14 @@ module tb_dft_ctrl (
     output logic ref_test_clk_o,
 
     output logic [3:0] tap_state_o,
-    output logic       tap_serial_o
+    output logic       tap_serial_o,
+
+    // the glitch-free test-clock switch (dft_clk_switch u_clk_sw): its A input (the TAP's gated
+    // TCK) and its two internal enable latches, so the suite can apply the same pulse analysis
+    // to dft_ctrl as to the switch alone
+    output logic       tck_gated_o,
+    output logic       en_a_o,
+    output logic       en_b_o
 );
 
     dft_ctrl u_dut (
@@ -68,5 +75,8 @@ module tb_dft_ctrl (
 
     assign tap_state_o  = u_dut.tap_state;
     assign tap_serial_o = u_dut.tap_serial;
+    assign tck_gated_o  = u_dut.tck_scan_gated;
+    assign en_a_o       = u_dut.u_clk_sw.en_a_q;
+    assign en_b_o       = u_dut.u_clk_sw.en_b_q;
 
 endmodule : tb_dft_ctrl

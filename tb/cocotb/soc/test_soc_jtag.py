@@ -50,6 +50,17 @@ Tests
   test_exit_scan_restores_functional_via_tlr_and_trst
                                                5xTMS, IR change and async TRST_N all hand the
                                                resets back to the functional pins
+  test_serial_parallel_switching_is_glitch_free_in_the_soc
+                                               serial <-> parallel x3 with scan_clk_i running: no
+                                               short pulse on dft_test_clk (glitch-free switch)
+
+Note on the glitch-free test-clock switch (dft_clk_switch, replaced the plain test_clk mux): no
+count above had to change.  Every existing test either never goes serial -> parallel with the pin
+clock counted afterwards, or enters PARALLEL from the reset state where the pin clock is already
+selected, so the pin clock's first two rising edges are not consumed by a handshake.  The one
+consequence that matters, for new tests: after serial -> parallel the pin clock needs about 3 cycles
+before its first pulse reaches dft_test_clk (and with the pin clock stopped throughout, none is
+consumed), so lock-counter tests count edges from the dft_test_clk log, not from pin toggles.
 """
 
 import sys
@@ -57,7 +68,8 @@ from pathlib import Path
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles, ReadOnly, RisingEdge, Timer
+from cocotb.triggers import ClockCycles, FallingEdge, ReadOnly, RisingEdge, Timer
+from cocotb.utils import get_sim_time
 from jtag_driver import (
     IDCODE_VAL,
     OP_BYPASS,
@@ -70,6 +82,11 @@ from jtag_driver import (
     OP_SCAN_SEL,
     EdgeLog,
     JtagDriver,
+    check_enable_latches,
+    check_handover,
+    events_of,
+    label_output_pulses,
+    pulses_of,
 )
 from soc_clocks import drive_dft_inactive, drive_soc_reset, start_soc_clocks
 
@@ -554,3 +571,80 @@ async def test_exit_scan_restores_functional_via_tlr_and_trst(dut):
             await drv.release_trst()
             await drv.settle()
     await Timer(2, units="ns")
+
+
+# ---------------------------------------------------------------------------
+@cocotb.test()
+async def test_serial_parallel_switching_is_glitch_free_in_the_soc(dut):
+    """serial <-> parallel through the TAP with scan_clk_i free-running, observed on the SoC net
+    dft_test_clk: no output pulse shorter than a source phase, every pulse a whole TCK-gated or pin
+    pulse, no extra edge, exact handover per select change (old source stops at once, the new one
+    passes from the 3rd handshake-clock rise).  The test clock is glitch-free here because
+    u_dft_ctrl.u_clk_sw (dft_clk_switch) replaced the plain mux.
+
+    Consequence for any test that goes serial -> parallel and then COUNTS pin edges (the PLL lock
+    counters count dft_test_clk edges): the pin clock must have toggled about 3 cycles before its
+    first pulse reaches the counters (its first two rising edges are consumed by the enable
+    handshake once it ran while the TAP clock was on).  The counts below therefore come from the
+    edge log of dft_test_clk, never from the number of pin toggles applied."""
+    await _idle(dut)
+    drv = await _tap_power_up(dut)
+    soc = dut.u_soc
+    cs = soc.u_dft_ctrl
+    await _enter_scan_released(drv, dut, sel=0)  # serial, scan reset released, counters at 0
+    assert int(dut.pll_locked_o.value) == 0 and int(dut.cpu_pll_locked_o.value) == 0
+    handles = {
+        "out": soc.dft_test_clk,
+        "a": cs.tck_scan_gated,
+        "b": dut.scan_clk_i,
+        "tck": dut.tck_i,
+        "en_a": cs.u_clk_sw.en_a_q,
+        "en_b": cs.u_clk_sw.en_b_q,
+        "sel": cs.tap_serial,
+    }
+    init_a, init_b = int(cs.u_clk_sw.en_a_q.value), int(cs.u_clk_sw.en_b_q.value)
+    log = EdgeLog(handles, dut.tck_i, dut.trst_ni).start()
+    clk_task = cocotb.start_soon(Clock(dut.scan_clk_i, PIN_CLK_NS, units="ns").start())
+    await Timer(30, units="ns")
+    for rnd in range(3):
+        await drv.shift_dr(0, 3)  # serial: capture + 3 shift edges through the switch
+        if rnd == 0:
+            assert int(dut.pll_locked_o.value) == 0, "only 4 test clocks so far: not locked"
+        await drv.write_tdr(OP_SCAN_SEL, 1, 3)  # IR leaves SCAN: select falls; PARALLEL=1
+        await drv.load_ir(OP_SCAN)  # IR=SCAN, parallel: scan_clk_i is the test clock
+        await drv.shift_dr(0, 3)  # TCK-driven scan in parallel: no TCK pulse on dft_test_clk
+        await Timer(40, units="ns")
+        await drv.write_tdr(OP_SCAN_SEL, 0, 3)  # PARALLEL=0 with IR != SCAN
+        await drv.load_ir(OP_SCAN)  # serial again: the select rises
+    await FallingEdge(dut.scan_clk_i)
+    clk_task.kill()
+    await Timer(5, units="ns")
+    log.stop()
+    ev = log.events
+    out, a, b, tck = (pulses_of(ev, n) for n in ("out", "a", "b", "tck"))
+    sel = events_of(ev, "sel")
+    t_end = int(get_sim_time("ps"))
+    min_phase = PIN_CLK_NS * 500
+    labels, problems = label_output_pulses(out, a, b, min_phase)
+    ub_a = min_phase + 3 * drv.T + 1
+    ub_b = drv.T // 2 + 3 * PIN_CLK_NS * 1000 + 1
+    tck_rises = [r for r, _f in tck]
+    for k, (t, v) in enumerate(sel):
+        t_next = sel[k + 1][0] if k + 1 < len(sel) else t_end
+        hp, _info = check_handover(
+            out, labels, a, b, tck_rises, t, "A" if v else "B", t_next, ub_a if v else ub_b
+        )
+        problems += [f"[select -> {'A' if v else 'B'} at {t} ps] {x}" for x in hp]
+    problems += check_enable_latches(
+        events_of(ev, "en_a"), events_of(ev, "en_b"), tck, b, init_a, init_b
+    )
+    assert not problems, f"{len(problems)} problem(s): " + "; ".join(problems[:6])
+    assert len([v for _t, v in sel if v]) == 3 and len([v for _t, v in sel if not v]) == 3
+    assert min(f - r for r, f in out) >= min_phase, (
+        "a pulse on dft_test_clk is shorter than a phase"
+    )
+    n_a = sum(1 for lab in labels if lab == "A")
+    n_b = sum(1 for lab in labels if lab == "B")
+    assert n_a == 3 * 4 and n_b > 30, f"serial pulses {n_a} (want 12), pin pulses {n_b}"
+    # the counters saw both kinds of edges: 12 serial + the pin pulses of the parallel windows
+    assert int(dut.pll_locked_o.value) == 1 and int(dut.cpu_pll_locked_o.value) == 1

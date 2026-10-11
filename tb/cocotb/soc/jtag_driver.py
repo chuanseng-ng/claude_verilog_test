@@ -33,6 +33,7 @@ Timeline of one tick (period T, half H, all in ps):
 Resolution is 1 ps; Verilator under cocotb runs at 1 ps precision.
 """
 
+import bisect
 from collections import deque
 
 import cocotb
@@ -530,3 +531,194 @@ class JtagDriver:
         idx = [i for i in range(33, len(out)) if out[i] == 1]
         assert len(idx) == 1, f"marker not found exactly once in the shifted-out stream: {out}"
         return idx[0] - 40
+
+
+# ---------------------------------------------------------------------------
+# Clock-pulse analysis for the glitch-free test-clock switch (dft_clk_switch)
+# ---------------------------------------------------------------------------
+# Used by test_dft_clk_switch.py (the switch alone), test_dft_ctrl.py and test_soc_jtag.py (the
+# switch inside dft_ctrl / soc_top).  Everything works on EDGE-TIME LOGS (EdgeLog.events) of the two
+# source clocks and the switch output, never on the RTL: a clock is a list of (rise_ps, fall_ps)
+# pulses; all clocks idle low.  A healthy switch output is a SUBSET of the source pulses, every one
+# passed WHOLE (same rise time AND same fall time as exactly one source pulse), never shortened,
+# never merged with a pulse of the other source, never separated from the previous output pulse by
+# less than the shortest phase of either source.
+
+
+def events_of(events, name):
+    """[(t_ps, new_value)] of one signal from EdgeLog.events."""
+    return [(t, new) for (n, t, _old, new) in events if n == name]
+
+
+def pulses_of(events, name, allow_open=False):
+    """[(rise_ps, fall_ps)] from an EdgeLog event list (signal assumed low before its first
+    event).  A signal that is still high at the end of the log is an error unless allow_open
+    (then the open pulse has fall = None)."""
+    out, rise = [], None
+    for t, v in events_of(events, name):
+        if v and rise is None:
+            rise = t
+        elif not v and rise is not None:
+            out.append((rise, t))
+            rise = None
+    if rise is not None:
+        assert allow_open, f"{name} is still high at the end of the log (rose at {rise} ps)"
+        out.append((rise, None))
+    return out
+
+
+def level_at(pulses, t, rises=None):
+    """Level of a pulse list at time t AFTER all events of that time step (a fall at t -> 0).
+    rises: optional precomputed [p[0] for p in pulses] (avoids O(n) per call)."""
+    rises = rises if rises is not None else [p[0] for p in pulses]
+    i = bisect.bisect_right(rises, t) - 1
+    return int(i >= 0 and (pulses[i][1] is None or t < pulses[i][1]))
+
+
+def label_output_pulses(out, a, b, min_phase, loose=False, gap_skip=()):
+    """Classify every output pulse against the source pulse lists.
+    Returns (labels, problems): labels[i] is 'A' or 'B' (the output pulse equals ONE whole source
+    pulse: same rise and same fall), 'AB' (identical in both sources: ambiguous), 'M' (loose mode
+    only: a merge of overlapping source pulses -- rise is a source rise, fall is a source fall, and
+    the whole interval is covered by source-high time), or None (a problem).
+    problems: human-readable strings; also reported: output high pulses or low gaps shorter than
+    min_phase (runts, the defect a plain mux has).  gap_skip: [(t0, t1)] windows (the async-reset
+    merge window) inside which a low gap between two whole pulses is tolerated: with both enables
+    briefly on, an A pulse in progress can be followed closely by a B pulse."""
+    a_by_rise, b_by_rise = dict(a), dict(b)
+    src_rise = set(a_by_rise) | set(b_by_rise)
+    src_fall = {f for _r, f in a} | {f for _r, f in b}
+    union = []  # merged source-high intervals
+    for r, f in sorted(a + b):
+        if union and r <= union[-1][1]:
+            union[-1][1] = max(union[-1][1], f)
+        else:
+            union.append([r, f])
+    labels, problems = [], []
+    for r, f in out:
+        la, lb = a_by_rise.get(r) == f, b_by_rise.get(r) == f
+        w = f - r
+        if w < min_phase:
+            problems.append(f"runt-high [{r},{f}] width {w} ps < min phase {min_phase} ps")
+        if la and lb:
+            labels.append("AB")
+        elif la:
+            labels.append("A")
+        elif lb:
+            labels.append("B")
+        else:
+            covered = any(u0 <= r and f <= u1 for u0, u1 in union)
+            if loose and r in src_rise and f in src_fall and covered and w >= min_phase:
+                labels.append("M")
+                continue
+            if r in src_rise and f in src_fall and covered:
+                why = "merge of overlapping A and B pulses"
+            elif r in src_rise:
+                why = "truncated: rises with a source edge, falls at no source fall"
+            elif f in src_fall:
+                why = "late start: falls with a source edge, rises at no source rise"
+            else:
+                why = "edges derived from no source edge"
+            problems.append(f"bad pulse [{r},{f}] width {w} ps: {why}")
+            labels.append(None)
+    for (_r0, f0), (r1, _f1) in zip(out, out[1:]):
+        if r1 - f0 < min_phase and not any(t0 <= f0 <= t1 for t0, t1 in gap_skip):
+            problems.append(f"runt-low gap [{f0},{r1}] {r1 - f0} ps < min phase {min_phase} ps")
+    return labels, problems
+
+
+def check_enable_latches(en_a, en_b, tck_pulses, b_pulses, init_a=0, init_b=0, skip=()):
+    """Latch-discipline and exclusion checks on the switch's two enable latches.
+    en_a/en_b: [(t, value)] event lists (EdgeLog via events_of).  en_a_q may change only while the
+    RAW tck_i is low, en_b_q only while clk_b_i is low (the latch is transparent only then; a change
+    while the clock is high would put an edge or a runt on the output), and the two must never be
+    high together.  skip: [(t0, t1)] windows (async reset assertion) where exclusion is not checked.
+    Returns a list of problem strings."""
+    problems = []
+    for nm, ev, pul in (("en_a_q", en_a, tck_pulses), ("en_b_q", en_b, b_pulses)):
+        rises = [p[0] for p in pul]
+        for t, v in ev:
+            if level_at(pul, t, rises):
+                problems.append(f"{nm} changed to {v} at {t} ps while its clock is high")
+    times = sorted({t for t, _v in en_a} | {t for t, _v in en_b})
+    ia, ib = 0, 0
+    a_cur, b_cur = init_a, init_b
+    for t in times:
+        while ia < len(en_a) and en_a[ia][0] <= t:
+            a_cur = en_a[ia][1]
+            ia += 1
+        while ib < len(en_b) and en_b[ib][0] <= t:
+            b_cur = en_b[ib][1]
+            ib += 1
+        if a_cur and b_cur and not any(t0 <= t <= t1 for (t0, t1) in skip):
+            problems.append(f"en_a_q and en_b_q both high at {t} ps")
+    return problems
+
+
+def check_handover(
+    out, labels, pa, pb, tck_rises, t_sw, target, t_end, ub_ps, max_old_pulses=0, lower=3
+):
+    """One select change at t_sw to `target` ('A' or 'B'), observed until t_end.
+    Rules (all per the dft_clk_switch contract):
+      * output pulses in [t_sw, t_end) are some old-source pulses (at most max_old_pulses, 0 for the
+        shipped design: the old enable drops at once) followed by new-source pulses, never an old
+        pulse after a new one, never an unclassifiable pulse;
+      * the passed new-source pulses are a contiguous SUFFIX of the new source's pulses (once the
+        handover completed every pulse passes, none is skipped);
+      * lower bound (lower=3; 0 disables it for steady windows): the first passed new-source pulse
+        rises no earlier than the 3rd rising edge after t_sw of the clock that carries the
+        handshake (tck_i for ->A, clk_b_i for ->B): a shorter handover would mean a missing
+        synchroniser stage;
+      * upper bound: every new-source pulse rising at or after t_sw + ub_ps passes.
+    Returns (problems, info) with info = {latency_ps (first passed new pulse rise - t_sw or None),
+    n_old, n_new, n_new_total}."""
+    new = pa if target == "A" else pb
+    old_l = "B" if target == "A" else "A"
+    sync = tck_rises if target == "A" else [r for r, _f in pb]
+    problems = []
+    passed_new, passed_old = [], []
+    state = "old"
+    for i, (r, _f) in enumerate(out):
+        if not (t_sw <= r < t_end):
+            continue
+        lab = labels[i]
+        if lab in (None, "M", "AB"):
+            problems.append(f"unclassifiable output pulse at {r} ps (label {lab})")
+        elif lab == target:
+            state = "new"
+            passed_new.append(r)
+        elif lab == old_l:
+            if state == "new":
+                problems.append(f"old-source ({lab}) pulse at {r} ps after the handover completed")
+            passed_old.append(r)
+    if len(passed_old) > max_old_pulses:
+        problems.append(
+            f"{len(passed_old)} old-source pulses passed after the select changed at {t_sw} ps "
+            f"(allowed {max_old_pulses}): {passed_old[:4]}"
+        )
+    new_rises = [r for r, _f in new if t_sw <= r < t_end]
+    if passed_new and new_rises[len(new_rises) - len(passed_new) :] != passed_new:
+        problems.append(
+            f"passed {target} pulses {passed_new[:4]}.. are not a contiguous suffix of the "
+            f"source pulses {new_rises[:6]}..: a pulse was skipped after the handover"
+        )
+    j = bisect.bisect_right(sync, t_sw)
+    if lower and passed_new and j + lower - 1 < len(sync) and passed_new[0] < sync[j + lower - 1]:
+        problems.append(
+            f"first {target} pulse passed at {passed_new[0]} ps, before handshake-clock rise "
+            f"#{lower} ({sync[j + lower - 1]} ps) after the select change at {t_sw} ps"
+        )
+    passed_set = set(passed_new)
+    late = [r for r in new_rises if r >= t_sw + ub_ps and r not in passed_set]
+    if late:
+        problems.append(
+            f"{target} pulses at {late[:4]} ps (>= {ub_ps} ps after the select change at "
+            f"{t_sw} ps) were not passed: handover not complete within the bound"
+        )
+    info = {
+        "latency_ps": (passed_new[0] - t_sw) if passed_new else None,
+        "n_old": len(passed_old),
+        "n_new": len(passed_new),
+        "n_new_total": len(new_rises),
+    }
+    return problems, info
