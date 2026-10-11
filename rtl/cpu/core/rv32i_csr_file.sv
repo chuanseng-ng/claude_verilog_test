@@ -38,6 +38,25 @@
 // to the high word leaves the low word counting).  CSRRS/CSRRC with a zero
 // source do not write, so reading a counter never disturbs it.  A write to
 // mcountinhibit takes effect from the next cycle.
+//
+// minstret / minstreth writes (bead f7z3): the write lands here in EX, but the
+// retire strobe trails EX by five stages, so instructions OLDER than the writer
+// are still in flight and the writer's own retirement is still to come.  Per the
+// privileged spec the older ones retire before the write and the writer's own
+// retirement does not increment, so none of them may land on the written value.
+// Each accepted write records, in a two-entry scoreboard, how many retire strobes
+// remain up to and including the writer (inflight_older_i + 1; the strobe of the
+// WB-stage instruction is the one in the write cycle itself and is overridden by
+// the write).  Those strobes are classified in program order:
+//   - the writer's own strobe: no increment at all (neither word);
+//   - older than a low-word (minstret) writer: no increment (overwritten);
+//   - older than a high-word (minstreth) writer: low word +1, but no carry into
+//     the high word it is overwriting.
+// Two entries cover the two writers that can be in flight together (EX-to-EX
+// spacing >= 3 cycles, retire 5 cycles after EX).  A trap entry does not touch the
+// scoreboard: the EX-stage trap point is two stages past EX, so no younger writer has
+// executed yet (spacing >= 3) and every pending writer is older than the trap and
+// still retires.
 
 module rv32i_csr_file (
     input  logic        clk,
@@ -67,6 +86,8 @@ module rv32i_csr_file (
     input  logic        branch_mispred_i,// 1 = branch/JALR redirect this cycle (hpmcounter5)
     input  logic        icache_miss_i,   // 1 = I-cache miss this cycle (hpmcounter3)
     input  logic        dcache_miss_i,   // 1 = D-cache miss this cycle (hpmcounter4)
+    input  logic [2:0]  inflight_older_i,// instructions older than the one in EX that are past EX
+                                         // and retire after this cycle (WB-stage one excluded)
 
     // ── CSR read output (combinational pre-write, atomic) ─────────────────────
     output logic [31:0] csr_rdata,       // CSR value before any write this cycle
@@ -306,6 +327,69 @@ module rv32i_csr_file (
     assign csr_dcache_inval_o = csr_dcache_inval_q;
 
     // =========================================================================
+    // minstret write scoreboard (bead f7z3) -- see the header.
+    //   pend    : entry holds a writer whose own retire strobe has not been seen
+    //   low     : the writer targets minstret (low word) rather than minstreth
+    //   pos     : retire strobes left up to and including the writer's own
+    //   drop    : the next retire strobe must not increment minstret at all
+    //   nocarry : the next retire strobe counts in the low word only
+    // drop / nocarry are registered so the retire -> counter enable sees flops only.
+    // =========================================================================
+    logic       mrw_pend0_q, mrw_pend1_q;
+    logic       mrw_low0_q,  mrw_low1_q;
+    logic [2:0] mrw_pos0_q,  mrw_pos1_q;
+    logic       mrw_drop_q,  mrw_nocarry_q;
+
+    logic       mrw_pend0_d, mrw_pend1_d;
+    logic       mrw_low0_d,  mrw_low1_d;
+    logic [2:0] mrw_pos0_d,  mrw_pos1_d;
+    logic       mrw_alloc;      // a minstret/minstreth write leaves EX this cycle
+    logic       mrw_drop_d,  mrw_nocarry_d;
+
+    // The write is applied on every cycle the instruction is held in EX (csr_stall_i), but it
+    // is one instruction: record it once, on the cycle it leaves EX.  Same squash terms as the
+    // write branch of the always_ff below.
+    assign mrw_alloc = csr_access && !csr_illegal && !trap_entry && !mret && !csr_stall_i &&
+                       csr_wr_en && (csr_addr == 12'hB02 || csr_addr == 12'hB82);
+
+    always_comb begin
+        mrw_pend0_d = mrw_pend0_q;
+        mrw_pend1_d = mrw_pend1_q;
+        mrw_low0_d  = mrw_low0_q;
+        mrw_low1_d  = mrw_low1_q;
+        mrw_pos0_d  = mrw_pos0_q;
+        mrw_pos1_d  = mrw_pos1_q;
+
+        // This cycle's retire strobe belongs to, or precedes, every pending writer.
+        if (retire_i && mrw_pend0_q) begin
+            if (mrw_pos0_q == 3'd1) mrw_pend0_d = 1'b0;
+            else                    mrw_pos0_d  = mrw_pos0_q - 3'd1;
+        end
+        if (retire_i && mrw_pend1_q) begin
+            if (mrw_pos1_q == 3'd1) mrw_pend1_d = 1'b0;
+            else                    mrw_pos1_d  = mrw_pos1_q - 3'd1;
+        end
+
+        // New writer: first free entry (entry 1 is reused if both are busy, which the
+        // pipeline spacing rules out).
+        if (mrw_alloc) begin
+            if (!mrw_pend0_d) begin
+                mrw_pend0_d = 1'b1;
+                mrw_low0_d  = (csr_addr == 12'hB02);
+                mrw_pos0_d  = inflight_older_i + 3'd1;
+            end else begin
+                mrw_pend1_d = 1'b1;
+                mrw_low1_d  = (csr_addr == 12'hB02);
+                mrw_pos1_d  = inflight_older_i + 3'd1;
+            end
+        end
+
+        mrw_drop_d    = (mrw_pend0_d && (mrw_low0_d || mrw_pos0_d == 3'd1)) ||
+                        (mrw_pend1_d && (mrw_low1_d || mrw_pos1_d == 3'd1));
+        mrw_nocarry_d = (mrw_pend0_d && !mrw_low0_d) || (mrw_pend1_d && !mrw_low1_d);
+    end
+
+    // =========================================================================
     // Synchronous CSR register updates
     // Priority: reset > trap_entry > mret > csr instruction write
     // =========================================================================
@@ -323,10 +407,23 @@ module rv32i_csr_file (
             mcycle_q <= mcycle_q + 64'h1;
         end
 
-        // minstret: retire strobe, inhibited by bit2
-        if (retire_i && !mcountinhibit_q[2]) begin
-            minstret_q <= minstret_q + 64'h1;
+        // minstret: retire strobe, inhibited by bit2.  A strobe belonging to a minstret writer or
+        // older than one is absorbed (mrw_drop_q) or counts in the low word only (mrw_nocarry_q).
+        if (retire_i && !mcountinhibit_q[2] && !mrw_drop_q) begin
+            minstret_q[31:0]  <= minstret_q[31:0] + 32'h1;
+            minstret_q[63:32] <= minstret_q[63:32] +
+                                 {31'h0, (&minstret_q[31:0]) && !mrw_nocarry_q};
         end
+
+        // Writer scoreboard follows the retire stream (cleared below on reset / trap entry)
+        mrw_pend0_q   <= mrw_pend0_d;
+        mrw_pend1_q   <= mrw_pend1_d;
+        mrw_low0_q    <= mrw_low0_d;
+        mrw_low1_q    <= mrw_low1_d;
+        mrw_pos0_q    <= mrw_pos0_d;
+        mrw_pos1_q    <= mrw_pos1_d;
+        mrw_drop_q    <= mrw_drop_d;
+        mrw_nocarry_q <= mrw_nocarry_d;
 
         // mhpmcounter3: I-cache miss strobe, inhibited by bit3
         if (icache_miss_i && !mcountinhibit_q[3]) begin
@@ -358,6 +455,10 @@ module rv32i_csr_file (
             mhpmcounter3_q  <= 32'h0;
             mhpmcounter4_q  <= 32'h0;
             mhpmcounter5_q  <= 32'h0;
+            mrw_pend0_q     <= 1'b0;
+            mrw_pend1_q     <= 1'b0;
+            mrw_drop_q      <= 1'b0;
+            mrw_nocarry_q   <= 1'b0;
             // D-cache maintenance pulse registers
             csr_dcache_flush_q <= 1'b0;
             csr_dcache_inval_q <= 1'b0;

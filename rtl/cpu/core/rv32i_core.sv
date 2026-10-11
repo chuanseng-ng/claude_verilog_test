@@ -574,6 +574,12 @@ module rv32i_core #(
     // =========================================================================
     assign csr_rd_access = id_ex_reg.csr_access && id_ex_reg.valid && !flush_ex_mem;
 
+    // Instructions older than the one in EX that have left EX and retire after this cycle
+    // (EX1c, EX1b, EX1b2 and EX2/MEM registers; the WB-stage instruction retires this cycle).
+    logic [2:0] csr_older_inflight;
+    assign csr_older_inflight = {2'b00, ex1a_ex1b_reg_q.valid} + {2'b00, ex1c_ex1b_reg_q.valid} +
+                                {2'b00, ex1b_ex2_reg_q.valid}  + {2'b00, ex_mem_reg.valid};
+
     rv32i_csr_file u_csr (
         .clk              (clk),
         .rst_n            (rst_n),
@@ -593,6 +599,7 @@ module rv32i_core #(
         .branch_mispred_i (ex_pc_redirect_r),// Registered 1-cycle EX redirect pulse
         .icache_miss_i    (ic_miss),         // I-cache CS_TAG_CHECK miss pulse
         .dcache_miss_i    (dc_miss),         // D-cache CS_TAG_CHECK miss pulse
+        .inflight_older_i (csr_older_inflight),
         .csr_rdata        (csr_rdata),
         .csr_illegal      (csr_illegal),
         .mtvec_out        (mtvec),
