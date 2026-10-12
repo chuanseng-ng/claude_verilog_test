@@ -350,7 +350,43 @@ DFT_MUXES_SOURCES = \
 	$(RTL)/soc/dft/dft_clk_mux.sv \
 	$(RTL)/soc/dft/dft_rst_mux.sv \
 	$(RTL)/soc/dft/dft_ctrl_ports.sv \
+	$(RTL)/soc/dft/jtag_tap.sv \
+	$(RTL)/soc/dft/dft_clk_switch.sv \
+	$(RTL)/soc/dft/dft_ctrl.sv \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_reset_sync.sv \
+	$(RTL)/mem/rv32i_clock_gate.sv \
 	$(SOC_DIR)/tb_dft_muxes.sv
+
+# Bead claude_verilog_test-j41m.3 (DFT Stage 1b): the JTAG TAP alone. cdc_reset_sync is the TAP's
+# TRST_N release synchroniser (the only dependency).
+JTAG_TAP_SOURCES = \
+	$(RTL)/soc/cdc/cdc_reset_sync.sv \
+	$(RTL)/soc/dft/jtag_tap.sv \
+	$(SOC_DIR)/tb_jtag_tap.sv
+
+# Bead claude_verilog_test-j41m.3: dft_ctrl = jtag_tap + the unchanged 1a pin leg + the TCK
+# scan-clock gate (rv32i_clock_gate) + the combiner; the wrapper also instantiates the 1a
+# dft_ctrl_ports as the golden reference.
+DFT_CTRL_SOURCES = \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_reset_sync.sv \
+	$(RTL)/mem/rv32i_clock_gate.sv \
+	$(RTL)/soc/dft/dft_ctrl_ports.sv \
+	$(RTL)/soc/dft/jtag_tap.sv \
+	$(RTL)/soc/dft/dft_clk_switch.sv \
+	$(RTL)/soc/dft/dft_ctrl.sv \
+	$(SOC_DIR)/tb_dft_ctrl.sv
+
+# Bead claude_verilog_test-j41m.3: the glitch-free test-clock switch alone.  tb_dft_clk_switch gates
+# a raw TCK with rv32i_clock_gate to make the A clock (as dft_ctrl does) and carries a PLAIN_MUX
+# parameter that swaps the switch for `sel ? a : b` (the RED negative control, target
+# dft_clk_switch_plainmux).
+DFT_CLK_SWITCH_SOURCES = \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/mem/rv32i_clock_gate.sv \
+	$(RTL)/soc/dft/dft_clk_switch.sv \
+	$(SOC_DIR)/tb_dft_clk_switch.sv
 
 # Full SoC top-level sources for the boot test (M9).
 # Order: packages first, leaf RTL, adapters, then soc_top + tb wrapper.
@@ -438,6 +474,9 @@ PLL_SOURCES = \
 	$(RTL)/soc/dft/dft_clk_mux.sv \
 	$(RTL)/soc/dft/dft_rst_mux.sv \
 	$(RTL)/soc/dft/dft_ctrl_ports.sv \
+	$(RTL)/soc/dft/jtag_tap.sv \
+	$(RTL)/soc/dft/dft_clk_switch.sv \
+	$(RTL)/soc/dft/dft_ctrl.sv \
 	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
@@ -523,6 +562,9 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/soc/dft/dft_clk_mux.sv \
 	$(RTL)/soc/dft/dft_rst_mux.sv \
 	$(RTL)/soc/dft/dft_ctrl_ports.sv \
+	$(RTL)/soc/dft/jtag_tap.sv \
+	$(RTL)/soc/dft/dft_clk_switch.sv \
+	$(RTL)/soc/dft/dft_ctrl.sv \
 	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
@@ -757,7 +799,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
+.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
 crossbar:
 	$(MAKE) MODULE=test_crossbar,test_crossbar_errors TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -1192,6 +1234,48 @@ dft_muxes: dft_muxes_lint
 		VERILOG_SOURCES="$(DFT_MUXES_SOURCES)" \
 		$(BUILD_ARGS)
 
+# Bead claude_verilog_test-j41m.3 (DFT Stage 1b): JTAG TAP unit suite, dft_ctrl suite.
+# Every unit test is generated once per (TCK period, system-clock period) pair, see test_jtag_tap.py.
+jtag_tap_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module tb_jtag_tap \
+		$(JTAG_TAP_SOURCES)
+
+jtag_tap: jtag_tap_lint
+	$(MAKE) MODULE=test_jtag_tap TOPLEVEL=tb_jtag_tap \
+		VERILOG_SOURCES="$(JTAG_TAP_SOURCES)" \
+		$(BUILD_ARGS)
+
+dft_clk_switch_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module tb_dft_clk_switch \
+		$(DFT_CLK_SWITCH_SOURCES)
+
+dft_clk_switch: dft_clk_switch_lint
+	$(MAKE) MODULE=test_dft_clk_switch TOPLEVEL=tb_dft_clk_switch \
+		VERILOG_SOURCES="$(DFT_CLK_SWITCH_SOURCES)" \
+		$(BUILD_ARGS)
+
+# RED negative control, deliberately NOT in soc_all / soc_all_ci: the SAME suite against
+# `assign clk_o = sel_a_i ? clk_a_i : clk_b_i` (the plain mux Q-CLK replaced).  It is EXPECTED TO
+# FAIL (runts, immediate switch with no handshake); a pass would mean the suite cannot tell the
+# glitch-free switch from a plain mux.  Run:  make dft_clk_switch_plainmux  (exit status non-zero).
+dft_clk_switch_plainmux: dft_clk_switch_lint
+	$(MAKE) MODULE=test_dft_clk_switch TOPLEVEL=tb_dft_clk_switch \
+		VERILOG_SOURCES="$(DFT_CLK_SWITCH_SOURCES)" \
+		EXTRA_ARGS="-GPLAIN_MUX=1" \
+		$(BUILD_ARGS)
+
+dft_ctrl_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module tb_dft_ctrl \
+		$(DFT_CTRL_SOURCES)
+
+dft_ctrl: dft_ctrl_lint
+	$(MAKE) MODULE=test_dft_ctrl TOPLEVEL=tb_dft_ctrl \
+		VERILOG_SOURCES="$(DFT_CTRL_SOURCES)" \
+		$(BUILD_ARGS)
+
 clock_gate_scan: clock_gate_scan_lint
 	$(MAKE) MODULE=test_clock_gate_scan TOPLEVEL=tb_clock_gate_scan \
 		VERILOG_SOURCES="$(CLOCK_GATE_SCAN_SOURCES)" \
@@ -1221,6 +1305,15 @@ soc_pll_multiclock: soc_pll_lint
 # (which exposes pll_locked_o / cpu_pll_locked_o). Same sources/flags as soc_pll_multiclock.
 soc_dft_scan: soc_pll_lint
 	$(MAKE) MODULE=test_soc_dft_scan TOPLEVEL=tb_soc_pll \
+		VERILOG_SOURCES="$(PLL_SOURCES)" \
+		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
+		  -Wno-SYNCASYNCNET" \
+		$(BUILD_ARGS)
+
+# Bead claude_verilog_test-j41m.3 (DFT Stage 1b): soc_top driven through the JTAG TAP (tb_soc_pll
+# carries tck_i/tms_i/tdi_i/trst_ni/tdo_o/tdo_oe_o). Same sources/flags as soc_dft_scan.
+soc_jtag: soc_pll_lint
+	$(MAKE) MODULE=test_soc_jtag TOPLEVEL=tb_soc_pll \
 		VERILOG_SOURCES="$(PLL_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
 		  -Wno-SYNCASYNCNET" \
@@ -1619,6 +1712,9 @@ soc_all_ci: check-space
 	$(MAKE) cdc_reset_sync_scan
 	$(MAKE) clock_gate_scan
 	$(MAKE) dft_muxes
+	$(MAKE) jtag_tap
+	$(MAKE) dft_clk_switch
+	$(MAKE) dft_ctrl
 	$(MAKE) soc_boot
 	$(MAKE) soc_periph
 	$(MAKE) soc_coherency
@@ -1635,6 +1731,7 @@ soc_all_ci: check-space
 	$(MAKE) soc_multiclock_reset
 	$(MAKE) soc_pll_multiclock
 	$(MAKE) soc_dft_scan
+	$(MAKE) soc_jtag
 	$(MAKE) soc_pmu_multiclock
 	$(MAKE) soc_integration
 

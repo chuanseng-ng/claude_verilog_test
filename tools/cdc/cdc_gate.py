@@ -178,28 +178,44 @@ def parse_report(path: Path, cfg: dict):
     return counts, residue, unparsed
 
 
-def cdc_register_names(path: Path) -> set[str]:
-    """Names of every register cdc_snitch classified CDC (a single-source crossing marked
-    magic_cdc, i.e. an intentional synchroniser stage)."""
-    names = set()
+def cdc_register_names(path: Path) -> dict[str, str]:
+    """Registers cdc_snitch saw as an intentional synchroniser stage, as {name: raw class}.
+
+    CDC       = single-source crossing marked magic_cdc (the normal case).
+    BAD+magic = a magic_cdc-marked register whose input cone cdc_snitch counted as more than one
+                entry. cdc_snitch counts INPUT PINS of the cells in the cone (see
+                docs/verification/CDC_SNITCH_POC.md and the reproducer in DFT_ARCHITECTURE.md
+                15.9), so a latch-launched (two pins: E and D) or any 2-input-logic-launched
+                synchroniser can never classify CDC. Only entries that opt in with
+                `latch_launched: true` may be satisfied by this second class."""
+    names = {}
     for line in path.open():
-        if not line.startswith("CDC"):
+        if not line.startswith(("CDC", "BAD")):
             continue
         m = _LINE_RE.match(line)
-        if m:
-            names.add(m.group("name"))
+        if not m:
+            continue
+        if m.group("stat") == "CDC" or (m.group("stat") == "BAD" and m.group("magic")):
+            names[m.group("name")] = m.group("stat")
     return names
 
 
 def missing_synchronisers(cdc_names, cfg):
-    """`required_synchronisers` entries that matched no CDC-classified register.
+    """`required_synchronisers` entries that matched no suitable register.
 
     The BAD/waiver machinery only notices a crossing that is both unsynchronised AND combined
     with another domain; a raw single-source sample classifies OKX, which never fails the gate.
-    This is the positive check: the named synchronisers must still be there."""
+    This is the positive check: the named synchronisers must still be there. By default only a
+    CDC-classified register satisfies an entry; `latch_launched: true` additionally accepts a
+    magic_cdc-marked register that cdc_snitch classed BAD (still never an unmarked or OKX one)."""
+    def ok(rs, name, stat):
+        return bool(rs["_dest_re"].search(name)) and (
+            stat == "CDC" or (stat == "BAD" and rs.get("latch_launched") is True)
+        )
+
     return [
         rs for rs in cfg["required_synchronisers"]
-        if not any(rs["_dest_re"].search(n) for n in cdc_names)
+        if not any(ok(rs, n, st) for n, st in cdc_names.items())
     ]
 
 

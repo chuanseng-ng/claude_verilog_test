@@ -839,6 +839,9 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_mux.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_rst_mux.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl_ports.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/jtag_tap.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_switch.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_interconnect.sv \
@@ -902,17 +905,26 @@ sky130-soc-sv2v:
 
 # DFT Stage 1a (bead claude_verilog_test-j41m.2): prove on the flattened Sky130 netlist that in scan mode every
 # async reset is tester-controlled and every flop is test-clocked. Needs yosys on PATH (or YOSYS=/path/to/yosys).
+# DFT Stage 1b (j41m.3): TAP-domain rules. scan mode is the OR of the 1a pin and the TAP, so name the net.
+# (tap_scan_en is omitted from the allowed nets on purpose: scan_en has no RTL consumer until Stage 2 inserts scan
+# flops, so the net is optimised away; when Stage 2 connects it, add --tap-allowed-nets u_dft_ctrl.tap_scan_en.)
+DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tck_cg \
+	--tap-prefix u_dft_ctrl.u_clk_sw --tap-prefix u_dft_ctrl.u_sw_rst --tap-alt-clock scan_clk_i \
+	--scan-mode-net u_dft_ctrl.scan_mode_o --expect-tap-flops 20 \
+	--tap-allowed-nets u_dft_ctrl.tap_scan --tap-allowed-nets u_dft_ctrl.tap_serial \
+	--tap-allowed-nets u_dft_ctrl.tap_rst_assert \
+	--tap-allowed-nets u_dft_ctrl.test_clk_o --tap-allowed-nets tdo_o --tap-allowed-nets tdo_oe_o
 .PHONY: dft-scan-check
 dft-scan-check: sky130-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
-		--netlist $(SKY130_SOC_SV2V_OUT) --expect-gates 20
+		--netlist $(SKY130_SOC_SV2V_OUT) --expect-gates 20 $(DFT_TAP_CHECK_ARGS)
 
 # Same proof on the ASAP7 SoC netlist. That netlist instantiates ICGx1_ASAP7_75t_R and sram_1rw_256x32_asap7
 # without defining them, so the checker needs the analysis models (it fails rather than pass vacuously).
 .PHONY: dft-scan-check-asap7
 dft-scan-check-asap7: asap7-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
-		--netlist $(SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/asap7_cell_models.v --expect-gates 20
+		--netlist $(SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/asap7_cell_models.v --expect-gates 20 $(DFT_TAP_CHECK_ARGS)
 
 # Sky130 Stage 2: SoC P&R with real DRC + LVS.
 # Requires:  make sky130-soc-sv2v   (generates soc_top_sv2v.v)
@@ -1634,6 +1646,9 @@ SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_mux.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_rst_mux.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl_ports.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/jtag_tap.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_switch.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
 	$(PROJECT_ROOT)/rtl/soc/apb4_register_bank.sv \

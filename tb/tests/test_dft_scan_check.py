@@ -103,3 +103,125 @@ def test_undefined_cell_fails_instead_of_passing_vacuously(tmp_path: Path) -> No
     res = _run(tmp_path, body)
     assert res.returncode == 1, res.stdout
     assert "no definition" in res.stdout
+
+
+# --------------------------------------------------------------------------------------------
+# TAP-domain rules (bead claude_verilog_test-j41m.3, DFT Stage 1b)
+# --------------------------------------------------------------------------------------------
+# A miniature of dft_ctrl: u_tap (TCK domain, unscanned by decision N4) owns a trst_ni reset
+# synchroniser and a flop `tap_q` that drives scan mode OR-ed with the scan_mode_i pin; a functional
+# flop sits behind a clock mux and a reset mux that select on the OR-ed net.
+_TAP_TOP = """
+module tapmod (
+    input wire tck_i, input wire trst_ni, input wire frst_ni, input wire tms_i,
+    output wire scan_q_o
+);
+    reg s0_q, s1_q, tap_q;
+    always @(posedge tck_i or negedge trst_ni) if (!trst_ni) s0_q <= 1'b0; else s0_q <= 1'b1;
+    always @(posedge tck_i or negedge trst_ni) if (!trst_ni) s1_q <= 1'b0; else s1_q <= s0_q;
+    always @(negedge tck_i or negedge RST_SRC) if (!RST_SRC) tap_q <= 1'b0; else tap_q <= tms_i;
+    assign scan_q_o = tap_q;
+endmodule
+
+module top (
+    input  wire clk_i, input wire rst_ni, input wire scan_mode_i, input wire scan_clk_i,
+    input  wire scan_rst_ni, input wire tck_i, input wire trst_ni, input wire tms_i, input wire d,
+    output reg  q
+);
+    wire tap_scan;
+    tapmod u_tap (.tck_i(TCK_SRC), .trst_ni(trst_ni), .frst_ni(rst_ni), .tms_i(tms_i),
+                  .scan_q_o(tap_scan));
+    wire scan_mode_w = PIN_LEG | tap_scan;
+    wire clk_w = scan_mode_w ? scan_clk_i : clk_i;
+    wire rst_w = scan_mode_w ? scan_rst_ni : rst_ni;
+    always @(posedge clk_w or negedge rst_w) if (!rst_w) q <= 1'b0; else q <= d;
+endmodule
+"""
+
+
+def _tap_run(tmp_path: Path, *extra: str, rst_src="s1_q", tck_src="tck_i", pin_leg="scan_mode_i"):
+    # `RST_SRC` is tapmod-local, so substitute by token; `s1_q` is the synchroniser output.
+    src = (
+        _TAP_TOP.replace("RST_SRC", rst_src).replace("TCK_SRC", tck_src).replace("PIN_LEG", pin_leg)
+    )
+    netlist = tmp_path / "tap.v"
+    netlist.write_text(src)
+    env = dict(os.environ, YOSYS=str(YOSYS))
+    return subprocess.run(
+        [
+            sys.executable,
+            str(CHECKER),
+            "--netlist",
+            str(netlist),
+            "--top",
+            "top",
+            "--tap-prefix",
+            "u_tap",
+            "--scan-mode-net",
+            "scan_mode_w",
+            *extra,
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+
+def test_tap_domain_clean_passes(tmp_path: Path) -> None:
+    res = _tap_run(tmp_path, "--expect-gates", "2", "--expect-tap-flops", "3")
+    assert res.returncode == 0, res.stdout
+    assert "TAP-domain flops: 3" in res.stdout
+
+
+def test_tap_flop_reset_by_functional_signal_fails(tmp_path: Path) -> None:
+    # tap_q reset by the functional reset pin (via frst_ni) instead of the trst synchroniser
+    res = _tap_run(tmp_path, rst_src="frst_ni")
+    assert res.returncode == 1, res.stdout
+    assert "TAP reset cone not trst-only" in res.stdout
+
+
+def test_tap_expect_flops_guard(tmp_path: Path) -> None:
+    res = _tap_run(tmp_path, "--expect-tap-flops", "4")
+    assert res.returncode == 1, res.stdout
+    assert "TAP-domain flops" in res.stdout
+
+
+def test_tap_clock_not_tck_fails(tmp_path: Path) -> None:
+    # TAP clocked from the functional clock: not exactly tck_i
+    res = _tap_run(tmp_path, tck_src="clk_i")
+    assert res.returncode == 1, res.stdout
+    assert "TAP clock cone is not exactly port" in res.stdout
+
+
+def test_scan_mode_missing_pin_leg_fails(tmp_path: Path) -> None:
+    res = _tap_run(tmp_path, pin_leg="1'b0")
+    assert res.returncode == 1, res.stdout
+    assert "pin leg scan_mode_i missing" in res.stdout
+
+
+def test_tap_boundary_declared_net_passes(tmp_path: Path) -> None:
+    res = _tap_run(tmp_path, "--tap-allowed-nets", "tap_scan")
+    assert res.returncode == 0, res.stdout
+
+
+def test_tap_boundary_undeclared_crossing_fails(tmp_path: Path) -> None:
+    # tap_scan (a TCK-launched flop) reaches the scan-mode OR but is not declared: must fail
+    res = _tap_run(tmp_path, "--tap-allowed-nets", "d")
+    assert res.returncode == 1, res.stdout
+    assert "undeclared TAP output reaches" in res.stdout
+
+
+def test_tap_boundary_missing_net_name_fails(tmp_path: Path) -> None:
+    res = _tap_run(tmp_path, "--tap-allowed-nets", "no_such_net")
+    assert res.returncode == 1, res.stdout
+    assert "allowed TAP output net not found" in res.stdout
+
+
+def test_tap_alt_clock_is_allowed_only_when_declared(tmp_path: Path) -> None:
+    # TAP-domain cells clocked by scan_clk_i (the pin half of the glitch-free test-clock switch)
+    ok = _tap_run(tmp_path, "--tap-alt-clock", "scan_clk_i", tck_src="scan_clk_i")
+    assert "TAP clock cone" not in ok.stdout, ok.stdout
+    bad = _tap_run(tmp_path, tck_src="scan_clk_i")
+    assert bad.returncode == 1, bad.stdout
+    assert "TAP clock cone is not exactly port" in bad.stdout

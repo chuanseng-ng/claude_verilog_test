@@ -305,6 +305,21 @@ output logic [SCAN_CHAINS-1:0] scan_out_o     // tied 0 until Stage 2
 With the inactive values every scan mux and mask is a pass-through and `soc_top` is
 bit-identical to the pre-DFT design.
 
+#### JTAG TAP (Sky130 DFT Stage 1b, bead j41m.3, GH #244)
+
+**Purpose**: IEEE 1149.1 test access port driving the same test controls as the pins above.
+Instruction map, TDRs, combination rules and deviations: `docs/design/DFT_ARCHITECTURE.md`
+section 15. Idle values used by the SoC suites: TAP held in reset.
+
+```systemverilog
+input  logic tck_i,       // TAP clock, asynchronous third domain          idle 0
+input  logic tms_i,       //                                               idle 1
+input  logic tdi_i,       //                                               idle 0
+input  logic trst_ni,     // async assert, TCK-synchronous release          idle 0 (TAP held in reset)
+output logic tdo_o,       // falling-edge flop, 0 outside Shift-IR/DR
+output logic tdo_oe_o     // 1 exactly in Shift-IR/DR (chip top builds the tristate)
+```
+
 #### Boot configuration
 
 **Purpose**: Select boot mode, clock configuration
