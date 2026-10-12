@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # oldnew_eq.sh - old-vs-new RTL equivalence of one module (bead ainf, wire-first rewrite).
 #
-# usage: oldnew_eq.sh <outdir> <top> <old-root> <new-root> "<files, relative to a root>" ["<modules to blackbox>"]
+# usage: oldnew_eq.sh <outdir> <top> <old-root> <new-root> "<files, relative to a root>" ["<modules to blackbox>"] ["<helper wires to hide>"]
+#   <helper wires to hide>: names of the NEW tree's wire-first helper wires (no-op in the old tree).
+#   `expose -evert-dff` names an exposed flop after the wire that best matches its Q; a helper wire
+#   aliasing a register slice exactly (id_ex_rs1_data_w <- id_ex_q.rs1_data) wins that choice and gives
+#   gold/gate different miter port names.  `rename -hide` turns the helper into a private ($-named)
+#   wire so the register's own public name is used in both trees.
 #
 # <old-root>/<new-root> are two repository trees (e.g. `git archive <rev> rtl | tar -x`); the SAME
 # relative file list is read from each.  For each of two independent front ends the module is
@@ -15,14 +20,15 @@
 # that the source edit is behaviour-preserving, which is what a pure refactor needs.
 # Run under: systemd-run --user --scope -q -p MemoryMax=4G -p MemorySwapMax=0 <this>
 set -u
-OUT=$1; TOP=$2; OLD=$3; NEW=$4; FILES=$5; BB=${6:-}
+OUT=$1; TOP=$2; OLD=$3; NEW=$4; FILES=$5; BB=${6:-}; HIDE=${7:-}
 Y_SV2V=${Y_SV2V:-/nix/store/9r0bh7sp051dpm8km8bqlb028anpd3v3-yosys/bin/yosys}
 Y_SLANG=${Y_SLANG:-/nix/store/4bmfi4470w0i3ixcaidfki18d3fyqvva-yosys-with-plugins-0.62/bin/yosys}
 SLANG_SO=${SLANG_SO:-/nix/store/07xn6zd11qvkp8h65gwycfisr3x9hk4f-yosys-slang/share/yosys/plugins/slang.so}
 SV2V=${SV2V:-/nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1/bin/sv2v}
 mkdir -p "$OUT"; cd "$OUT" || exit 2
 BBCMD=""; [ -n "$BB" ] && BBCMD="blackbox $BB"
-EXPOSE='expose -evert-dff t:$dff t:$dffe t:$sdff t:$sdffe t:$adff t:$adffe t:$adffe t:$dlatch'
+HIDECMD=""; for k in $HIDE; do HIDECMD="$HIDECMD\nrename -hide w:$k"; done
+EXPOSE='expose -evert-dff t:$dff t:$dffe t:$sdff t:$sdffe t:$adff t:$aldff t:$aldffe t:$dffsr t:$dffsre t:$dlatch'
 
 abs() { local r=$1 f out=""; for f in $FILES; do out="$out $r/$f"; done; echo "$out"; }
 
@@ -38,7 +44,7 @@ build() {   # build <frontend> <tag> <root>
     { echo "plugin -i $SLANG_SO"; echo "read_slang --top $TOP $files"; echo "hierarchy -top $TOP"; } > "$ys"
     yosys=$Y_SLANG
   fi
-  { echo "proc"; echo "$BBCMD"; echo "flatten"; echo "$EXPOSE"; echo "opt_clean"; echo "write_rtlil $il"; } >> "$ys"
+  { echo "proc"; echo -e "$HIDECMD"; echo "$BBCMD"; echo "flatten"; echo "memory_map"; echo "$EXPOSE"; echo "opt_clean"; echo "write_rtlil $il"; } >> "$ys"
   timeout 600 "$yosys" -q -l "$fe.$tag.log" "$ys" > /dev/null 2>&1
   [ -s "$il" ] || { echo "yosys produced no netlist ($fe $tag), see $OUT/$fe.$tag.log"; return 1; }
 }
