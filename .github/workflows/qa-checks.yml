@@ -35,6 +35,16 @@ jobs:
         if: github.event_name == 'pull_request' && matrix.python-version == '3.12'
         run: python3 tools/setup/check_beads_reopen.py --base-ref HEAD^1 --head-ref HEAD
 
+      # Bead ainf. BLOCKING, zero allowed sites: no bit/part/element select may be taken directly on
+      # a struct member anywhere in rtl/ (read or write) - copy the member to a named signal first.
+      # Synlig mis-elaborates that idiom, silently and in a way that depends on the struct TYPE
+      # (docs/SYNLIG_STRUCT_SELECT_AINF.md). Source-text scan only, stdlib only, no baseline: the
+      # waiver file tools/verif/struct_member_select_baseline.txt must stay empty or this fails.
+      # No `continue-on-error` and no `|| true`: this is a gate. tb/tests/test_check_struct_member_select.py
+      # runs the same check again under pytest below.
+      - name: Struct-member select gate (no select on a struct member in rtl/)
+        run: python3 tools/verif/check_struct_member_select.py -v
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
