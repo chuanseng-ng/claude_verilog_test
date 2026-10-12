@@ -44,6 +44,9 @@ SETTLE_PS = 100
 WIDTH_MASK = 0xFFFF
 SYNC_STAGES = 2
 
+# Sim time (ps) at which the read clock's first rising edge occurs; set by start().
+_RD_T0_PS = 0
+
 
 # ---------------------------------------------------------------------------
 # Per-instance handle
@@ -107,6 +110,8 @@ async def start(dut, f, wr_ns, rd_ns, rd_offset_ns=0, hold_reset=True):
         getattr(dut, f"{tag}_wr_valid_i").value = 0
         getattr(dut, f"{tag}_wr_data_i").value = 0
         getattr(dut, f"{tag}_rd_ready_i").value = 0
+    global _RD_T0_PS
+    _RD_T0_PS = int(get_sim_time("ps")) + int(rd_offset_ns * 1000)
     cocotb.start_soon(Clock(dut.wr_clk_i, wr_ns, units="ns").start())
 
     async def _late_rd():
@@ -396,43 +401,67 @@ async def run_full_boundary(dut, f):
 
 
 async def run_empty_boundary(dut, f):
-    """Empty after reset; a written word becomes visible only after the pointer has crossed
-    the synchroniser (>= SYNC_STAGES+1 read edges) and within a bounded time; reading the last
+    """Empty after reset; a written word becomes visible after EXACTLY SYNC_STAGES+1 read-clock
+    rising edges (SYNC_STAGES pointer-synchroniser ranks, then the registered empty flag) and
+    not one edge sooner -- repeated at several write/read phase relationships. Reading the last
     word returns to empty with no phantom."""
-    await bring_up(dut, f, 20, 3)
+    # Non-integer-ratio periods so a write edge essentially never coincides with a read edge
+    # (a coincident edge makes "how many read edges after the write" ambiguous in a
+    # zero-delay simulator); the guard below fails loudly if it ever does.
+    wr_ns, rd_ns = 20.3, 3.1
+    await bring_up(dut, f, wr_ns, rd_ns)
     tag = f.tag
+    wr_half_ps = int(wr_ns * 1000) // 2
+    rd_p_ps = int(rd_ns * 1000)
     for _ in range(10):
         await FallingEdge(dut.rd_clk_i)
         await settle()
         assert int(f.rd_valid.value) == 0, f"{tag}: rd_valid_o high on an empty FIFO"
-    # one write; count rd edges until visible
-    await FallingEdge(dut.wr_clk_i)
-    f.wr_valid.value = 1
-    f.wr_data.value = 0xBEEF
-    await settle()
-    assert int(f.wr_ready.value) == 1
-    await FallingEdge(dut.wr_clk_i)  # the accepting rising edge has passed
-    f.wr_valid.value = 0
-    edges = 0
-    seen = None
-    for _ in range(40):
-        await FallingEdge(dut.rd_clk_i)
-        edges += 1
+
+    visible = {}
+
+    async def watch():
+        while True:
+            await FallingEdge(dut.rd_clk_i)
+            await settle()
+            if int(f.rd_valid.value) == 1:
+                visible["t"] = get_sim_time("ps") - SETTLE_PS
+                visible["data"] = int(f.rd_data.value)
+                return
+
+    for trial in range(5):
+        visible.clear()
+        for _ in range(trial % 3 + 1):
+            await FallingEdge(dut.wr_clk_i)
+        await FallingEdge(dut.wr_clk_i)
+        f.wr_valid.value = 1
+        f.wr_data.value = 0xBEEF + trial
         await settle()
-        if int(f.rd_valid.value) == 1:
-            seen = edges
-            break
-    assert seen is not None, f"{tag}: written word never became visible"
-    # wr edge was < one wr half period before the first of these falling edges; with the rd
-    # clock far faster than the wr clock, SYNC_STAGES+1 rd rising edges are the floor.
-    assert seen >= SYNC_STAGES, f"{tag}: word visible after only {seen} rd edges -- bypasses the synchroniser?"
-    assert int(f.rd_data.value) == 0xBEEF
-    got = await _pop(dut, f, 6, want=1)
-    assert got == [0xBEEF]
-    for _ in range(10):
-        await FallingEdge(dut.rd_clk_i)
-        await settle()
-        assert int(f.rd_valid.value) == 0, f"{tag}: phantom word after the last read"
+        assert int(f.wr_ready.value) == 1
+        t_write = get_sim_time("ps") - SETTLE_PS + wr_half_ps  # the accepting rising edge
+        phase = (t_write - _RD_T0_PS) % rd_p_ps
+        assert 300 < phase < rd_p_ps - 300, f"{tag}: write edge coincides with a read edge"
+        wtask = cocotb.start_soon(watch())
+        await FallingEdge(dut.wr_clk_i)
+        f.wr_valid.value = 0
+        for _ in range(40):
+            await FallingEdge(dut.rd_clk_i)
+            if "t" in visible:
+                break
+        assert "t" in visible, f"{tag}: trial {trial}: written word never became visible"
+        wtask.kill()
+        edges = int((visible["t"] - _RD_T0_PS) // rd_p_ps - (t_write - _RD_T0_PS) // rd_p_ps)
+        assert edges == SYNC_STAGES + 1, (
+            f"{tag}: trial {trial}: word visible {edges} rd edges after the write, "
+            f"expected exactly {SYNC_STAGES + 1}"
+        )
+        assert visible["data"] == 0xBEEF + trial
+        got = await _pop(dut, f, 6, want=1)
+        assert got == [0xBEEF + trial]
+        for _ in range(8):
+            await FallingEdge(dut.rd_clk_i)
+            await settle()
+            assert int(f.rd_valid.value) == 0, f"{tag}: phantom word after the last read"
 
 
 async def run_ready_low_in_reset(dut, f):
