@@ -70,7 +70,14 @@ module soc_top #(
     input  wire        scan_rst_ni,
     input  wire        scan_clk_i,
     input  wire [7:0]  scan_in_i,
-    output wire [7:0]  scan_out_o
+    output wire [7:0]  scan_out_o,
+    // JTAG TAP (j41m.3). Idle: tck_i=0 tms_i=1 tdi_i=0 trst_ni=0 (TAP held in reset).
+    input  wire        tck_i,
+    input  wire        tms_i,
+    input  wire        tdi_i,
+    input  wire        trst_ni,
+    output wire        tdo_o,
+    output wire        tdo_oe_o
 );
 endmodule
 

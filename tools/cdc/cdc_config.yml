@@ -71,6 +71,32 @@ reset_domains:
   # domain count; it does NOT waive any clock-to-clock crossing.
   - scan_rst_ni
   - scan_mode_i
+  # JTAG TAP (bead j41m.3, DFT Stage 1b), DECLARED CROSSING 2 of DFT_ARCHITECTURE.md sec.15.5.
+  # The TAP is clocked by tck_i, a third asynchronous root. Its static controls (scan_mode,
+  # test_en, scan_rst assert, scan_en, the gated TCK) are flop outputs that reach every async
+  # reset mux, clock mux, the clock-gate latch D and the crypto key mask, so cdc_snitch would
+  # add `tck_i` to the source set of ~29 k registers. They are deliberately NOT synchronised
+  # into a functional clock: in scan mode the functional clocks are stopped and replaced by the
+  # test clock, and the key mask must act before the first test-clock edge. Same quasi-static
+  # contract as scan_mode_i / scan_rst_ni above (set while the functional clocks are stopped,
+  # not toggled while one runs). Listing tck_i here removes it from the domain count; it does
+  # NOT waive any other crossing, and the list of TAP-launched nets allowed to reach non-TAP
+  # logic is ENFORCED SEPARATELY by tools/dft/check_scan_clk_rst.py --tap-allowed-nets
+  # (`make -C pnr dft-scan-check`), so a new, unsynchronised TCK->functional data path (e.g. a
+  # Stage 4 MBIST status bit without its 2-FF synchroniser) fails that check even though this
+  # gate can no longer see it.
+  - tck_i
+  # The glitch-free test-clock switch (dft_clk_switch.sv, DFT_ARCHITECTURE.md 15.5) adds TWO real
+  # asynchronous crossings, both through cdc_2ff_sync with (* magic_cdc *): u_sync_a carries ~en_b_q
+  # (scan_clk_i domain latch) into tck_i, u_sync_b carries en_a_q (tck_i domain latch) into
+  # scan_clk_i. cdc_snitch classes their first stage `BAD magic` (ROOT CAUSE, reproduced: it counts
+  # input PINS of the cells in the launch cone and a latch has two (E and D), so even a
+  # single-domain latch, or any 2-input logic, in front of a magic_cdc stage can never classify
+  # CDC; the real netlist additionally combines both clocks in the latch D, see
+  # DFT_ARCHITECTURE.md 15.9). They are declared under `required_synchronisers` below with
+  # `latch_launched: true`: the gate then requires them to exist, to carry magic_cdc, and to be
+  # classified CDC or BAD+magic (never an unmarked/bypassed or OKX stage). Their clocking is also
+  # enforced by tools/dft/check_scan_clk_rst.py (TAP prefix rule: tck_i or scan_clk_i only).
 
 # --- 3. Top-level buses that are synchronous to a named domain --------------
 # Collapses a whole bus to one domain so per-bit fan-in stops looking
@@ -178,3 +204,18 @@ required_synchronisers:
       uart_rx_i is an asynchronous pad input; uart_controller.sv synchronises it
       through cdc_2ff_sync u_uart_rx_sync (RESET_VAL=1, idle-high) before the
       receive FSM sees it (bead xtaa).
+  # DFT Stage 1b (j41m.3): glitch-free test-clock switch handshake synchronisers. Latch-launched,
+  # so cdc_snitch classes them `BAD magic` (see the comment at reset_domains / tck_i); `latch_launched`
+  # lets the gate accept that class for these entries only.
+  - id: dft-clk-switch-sync-a
+    dest: '^u_dft_ctrl\.u_clk_sw\.u_sync_a\.sync_q\[0\]:D$'
+    latch_launched: true
+    reason: >
+      Carries ~en_b_q (enable latch of the scan_clk_i source) into the tck_i domain: the
+      parallel->serial half of the handshake in dft_clk_switch.sv.
+  - id: dft-clk-switch-sync-b
+    dest: '^u_dft_ctrl\.u_clk_sw\.u_sync_b\.sync_q\[0\]:D$'
+    latch_launched: true
+    reason: >
+      Carries en_a_q (enable latch of the gated-TCK source) into the scan_clk_i domain: the
+      serial->parallel half of the handshake in dft_clk_switch.sv.
