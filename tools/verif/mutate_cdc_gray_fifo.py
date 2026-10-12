@@ -2,8 +2,8 @@
 """Mutation campaign for the cdc_gray_fifo unit suite (bead 3snb).
 
 Each mutant is a textual edit of rtl/soc/cdc/cdc_gray_fifo.sv written to OUT_DIR and fed to the
-very same suite through `make CDC_GRAY_FIFO_RTL=<mutant> cdc_gray_fifo`. A mutant is KILLED when
-the run fails (elaboration/lint error, or any cocotb test FAIL) and SURVIVED when all tests pass.
+very same suite through `make CDC_GRAY_FIFO_RTL=<mutant> cdc_gray_fifo_sim`. A mutant is KILLED when
+the run fails (Verilator build/elaboration error, or any cocotb test FAIL) and SURVIVED when all tests pass.
 A mutant that did not apply (pattern not found) is an error, not a survivor.
 
 Usage (inside the nix sim devshell):
@@ -73,13 +73,15 @@ def build(name, edits, out):
         if n != 1:
             raise SystemExit(f"mutant {name}: pattern occurs {n}x (need 1): {old[:60]!r}")
         s = s.replace(old, new)
-    p = out / f"{name}.sv"
+    d = out / name
+    d.mkdir(parents=True, exist_ok=True)
+    p = d / "cdc_gray_fifo.sv"  # same basename as the original (lint DECLFILENAME)
     p.write_text(s)
     return p
 
 
 def run(mut_path, build_root):
-    cmd = ["make", "-C", str(ROOT / "tb/cocotb/soc"), "cdc_gray_fifo",
+    cmd = ["make", "-C", str(ROOT / "tb/cocotb/soc"), "cdc_gray_fifo_sim",
            f"CDC_GRAY_FIFO_RTL={mut_path}", f"SIM_BUILD_ROOT={build_root}",
            "SIM_BUILD_MIN_FREE_MB=500"]
     r = subprocess.run(cmd, capture_output=True, text=True)
@@ -104,7 +106,7 @@ def main():
             continue
         path = build(name, edits, out)
         rc, counts, failing, log = run(path, a.build_root)
-        (out / f"{name}.log").write_text(log)
+        (out / name / "run.log").write_text(log)
         if rc == 0 and counts and counts[2] == "0":
             verdict = "SURVIVED"
             survivors.append(name)

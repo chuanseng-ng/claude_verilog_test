@@ -285,6 +285,9 @@ async def run_reset_state(dut, f):
         assert int(f.wr_ready.value) == 0, f"{f.tag}: wr_ready_o high while wr domain in reset"
         assert int(f.rd_valid.value) == 0, f"{f.tag}: rd_valid_o high while rd domain in reset"
     await release_wr(dut)
+    await settle()
+    # full_q resets to 0 ("not full"), so ready is high at once on release, before any wr edge.
+    assert int(f.wr_ready.value) == 1, f"{f.tag}: wr_ready_o not high immediately after reset release"
     await release_rd(dut)
     await settle_cycles(dut, 4)
     await settle()
