@@ -86,8 +86,9 @@
 
 module gpio_controller
 #(
-    parameter int unsigned ADDR_W = 12,   // APB4 local address width
-    parameter int unsigned N_PINS = 32    // number of implemented GPIO pins (<= 32)
+    parameter int unsigned ADDR_W      = 12,  // APB4 local address width
+    parameter int unsigned N_PINS      = 32,  // number of implemented GPIO pins (<= 32)
+    parameter int unsigned SYNC_STAGES = 2    // gpio_in_i synchroniser depth (>= 2, bead xtaa)
 ) (
     input  logic clk,
     input  logic rst_n,
@@ -226,7 +227,7 @@ module gpio_controller
         for (p = 0; p < N_PINS; p++) begin : g_in_sync
             cdc_2ff_sync #(
                 .WIDTH  (1),
-                .STAGES (2)
+                .STAGES (SYNC_STAGES)
             ) u_gpio_in_sync (
                 .clk_i   (clk),
                 .rst_n_i (rst_n),

@@ -27,8 +27,9 @@
 `default_nettype none
 
 module tb_gpio #(
-    parameter int unsigned ADDR_W = 12,  // 4 KB slot -- matches gpio_controller.sv
-    parameter int unsigned N_PINS = 32   // number of implemented GPIO pins (<= 32)
+    parameter int unsigned ADDR_W      = 12,  // 4 KB slot -- matches gpio_controller.sv
+    parameter int unsigned N_PINS      = 32,  // number of implemented GPIO pins (<= 32)
+    parameter int unsigned SYNC_STAGES = 2    // input synchroniser depth (bead xtaa; test_periph_sync_stages)
 ) (
     input  logic clk,
     input  logic rst_n,
@@ -55,7 +56,8 @@ module tb_gpio #(
 
     gpio_controller #(
         .ADDR_W(ADDR_W),
-        .N_PINS(N_PINS)
+        .N_PINS(N_PINS),
+        .SYNC_STAGES(SYNC_STAGES)
     ) u_dut (
         .clk  (clk),
         .rst_n(rst_n),

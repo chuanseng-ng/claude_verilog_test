@@ -305,6 +305,18 @@ module soc_top
     localparam int unsigned IW          = AXI_ID_WIDTH;
     localparam int unsigned LENW        = AXI_LEN_WIDTH;
 
+    // Synchroniser depth of the four single-bit core_clk -> cpu_core_clk
+    // crossings below (u_cpu_clk_dis_sync, u_cpu_iso_en_sync, u_ext_irq_sync,
+    // u_timer_irq_sync). A localparam, not a port parameter, matching how the
+    // async_axi_fifo / apb_cdc_bridge instances here take their (default)
+    // SYNC_STAGES_TO_* without a soc_top-level knob. Bead xtaa. Default 2 is
+    // bit-identical to the previous hard-coded `.STAGES (2)`. NOTE: the
+    // reset-release ordering analysis above u_cpu_clk_dis_sync (cycle counts
+    // for u_cpu_pmu_rst_sync vs the enable synchroniser) was done at 2 and
+    // must be re-derived before raising this; the cdc_reset_sync instances
+    // (u_cpu_pmu_rst_sync, the WDT one) keep their own hard-coded STAGES.
+    localparam int unsigned SYNC_STAGES_TO_CPU = 2;
+
     // ── DFT test controls — SINGLE SOURCE (j41m.2; replaces the 07n tie-offs) ──
     // Every scan/test consumer in this file takes its control from the five nets
     // below and from nothing else. They come from ONE dft_ctrl instance (Stage 1b,
@@ -658,7 +670,7 @@ module soc_top
     logic pmu_cpu_clk_dis_sync;
     cdc_2ff_sync #(
         .WIDTH  (1),
-        .STAGES (2)
+        .STAGES (SYNC_STAGES_TO_CPU)
     ) u_cpu_clk_dis_sync (
         .clk_i   (cpu_core_clk),
         .rst_n_i (cpu_core_rst_n),
@@ -686,7 +698,7 @@ module soc_top
     logic pmu_cpu_iso_en_sync;
     cdc_2ff_sync #(
         .WIDTH  (1),
-        .STAGES (2)
+        .STAGES (SYNC_STAGES_TO_CPU)
     ) u_cpu_iso_en_sync (
         .clk_i   (cpu_core_clk),
         .rst_n_i (cpu_core_rst_n),
@@ -846,7 +858,7 @@ module soc_top
     logic ext_irq_cpu_sync, timer_irq_cpu_sync;
     cdc_2ff_sync #(
         .WIDTH  (1),
-        .STAGES (2)
+        .STAGES (SYNC_STAGES_TO_CPU)
     ) u_ext_irq_sync (
         .clk_i   (cpu_core_clk),
         .rst_n_i (cpu_core_rst_n),
@@ -855,7 +867,7 @@ module soc_top
     );
     cdc_2ff_sync #(
         .WIDTH  (1),
-        .STAGES (2)
+        .STAGES (SYNC_STAGES_TO_CPU)
     ) u_timer_irq_sync (
         .clk_i   (cpu_core_clk),
         .rst_n_i (cpu_core_rst_n),

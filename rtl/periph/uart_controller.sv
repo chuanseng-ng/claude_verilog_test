@@ -40,7 +40,8 @@
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
 module uart_controller #(
-    parameter int unsigned ADDR_W = 12   // APB4 local address width
+    parameter int unsigned ADDR_W      = 12,  // APB4 local address width
+    parameter int unsigned SYNC_STAGES = 2    // uart_rx_i synchroniser depth (>= 2, bead xtaa)
 ) (
     input  logic clk,
     input  logic rst_n,
@@ -448,22 +449,31 @@ module uart_controller #(
     logic framing_error_q;
 
     // 2-FF synchroniser on the asynchronous uart_rx_i pad (CDC hardening).
-    // Idle line is high (8N1).  Loopback path uses the internal tx_serial
-    // (same clock domain) and bypasses this synchroniser.
-    logic uart_rx_sync0_q;
-    logic uart_rx_sync1_q;
+    // Idle line is high (8N1), so the synchroniser must reset to 1: a reset
+    // value of 0 would present a false START bit to the receiver FSM.
+    // cdc_2ff_sync with RESET_VAL = 1 resets both stages to 1 (no inverters).
+    // Loopback path uses the internal tx_serial (same clock domain) and
+    // bypasses this synchroniser. Same 2-cycle latency as the previous
+    // hand-written chain; the reset is now asserted asynchronously by the
+    // primitive (see the cdc_2ff_sync header) where it was synchronous here.
+    // SYNC_STAGES > 2 is safe for the receiver: the RX FSM aligns its
+    // oversample phase to the *synchronised* start edge and every later data
+    // edge is delayed by the same constant, so the sample points keep their
+    // position relative to the bits; only the data-valid latency grows.
+    logic uart_rx_sync_q;
 
-    always_ff @(posedge clk) begin
-        if (!rst_n) begin
-            uart_rx_sync0_q <= 1'b1;
-            uart_rx_sync1_q <= 1'b1;
-        end else begin
-            uart_rx_sync0_q <= uart_rx_i;
-            uart_rx_sync1_q <= uart_rx_sync0_q;
-        end
-    end
+    cdc_2ff_sync #(
+        .WIDTH     (1),
+        .STAGES    (SYNC_STAGES),
+        .RESET_VAL (1'b1)
+    ) u_uart_rx_sync (
+        .clk_i   (clk),
+        .rst_n_i (rst_n),
+        .d_i     (uart_rx_i),
+        .q_o     (uart_rx_sync_q)
+    );
 
-    assign rx_serial = loopback ? tx_serial : uart_rx_sync1_q;
+    assign rx_serial = loopback ? tx_serial : uart_rx_sync_q;
 
     // Framing-error sticky FF (A3): set on framing error, cleared on rx_pop.
     // Triggered at os_phase==10 in RX_STOP so that rx_s7/s8/s9 are all stable
