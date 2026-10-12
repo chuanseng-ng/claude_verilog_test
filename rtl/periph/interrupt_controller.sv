@@ -31,8 +31,9 @@
 
 module interrupt_controller
 #(
-    parameter int unsigned ADDR_W    = 12,   // APB4 local address width
-    parameter int unsigned N_SOURCES = 5     // number of interrupt sources
+    parameter int unsigned ADDR_W      = 12,  // APB4 local address width
+    parameter int unsigned N_SOURCES   = 5,   // number of interrupt sources
+    parameter int unsigned SYNC_STAGES = 2    // irq_src_i synchroniser depth (>= 2, bead xtaa)
 ) (
     input  logic clk,
     input  logic rst_n,
@@ -114,23 +115,37 @@ module interrupt_controller
 
     // =========================================================================
     // 2-FF synchroniser for irq_src_i (CDC hardening)
-    // irq_src_i originates from peripheral IRQ lines that may be asynchronous to
-    // this clock in a multi-clock SoC; a two-stage synchroniser per bit removes
-    // metastability before the level is consumed by masking / status logic.
-    // stage1 samples the raw input; stage2 (irq_src_sync_q) is the synced source.
+    // irq_src_i originates from peripheral IRQ lines. In soc_top every source
+    // is currently synchronous to this clock (core_clk, or the gated copy of it
+    // that clocks the GPU), so for today's SoC the chain is a two-cycle
+    // retiming stage; it is kept as a real synchroniser so a source that moves
+    // to another clock domain stays safe.
+    //
+    // N_SOURCES independent single-bit cdc_2ff_sync instances (STAGES=2, reset
+    // 0), not one WIDTH(N_SOURCES) instance: the sources are independent
+    // level-held lines with no cross-bit coherency requirement, and
+    // cdc_2ff_sync.sv's scope warning forbids a multi-bit binary bus. Same
+    // pattern as gpio_controller.sv (g_in_sync). Behaviour vs the previous
+    // hand-written chain: same 2-cycle latency and same reset value (0); the
+    // reset is now asserted asynchronously by the primitive (see the
+    // cdc_2ff_sync header) where it was synchronous here.
     // =========================================================================
-    logic [N_SOURCES-1:0] irq_src_stage1_q;
-    logic [N_SOURCES-1:0] irq_src_sync_q;   // stage2 — synchronised source
+    logic [N_SOURCES-1:0] irq_src_sync_q;   // synchronised source
 
-    always_ff @(posedge clk) begin
-        if (!rst_n) begin
-            irq_src_stage1_q <= {N_SOURCES{1'b0}};
-            irq_src_sync_q   <= {N_SOURCES{1'b0}};
-        end else begin
-            irq_src_stage1_q <= irq_src_i;
-            irq_src_sync_q   <= irq_src_stage1_q;
+    genvar s;
+    generate
+        for (s = 0; s < N_SOURCES; s++) begin : g_irq_sync
+            cdc_2ff_sync #(
+                .WIDTH  (1),
+                .STAGES (SYNC_STAGES)
+            ) u_irq_sync (
+                .clk_i   (clk),
+                .rst_n_i (rst_n),
+                .d_i     (irq_src_i[s]),
+                .q_o     (irq_src_sync_q[s])
+            );
         end
-    end
+    endgenerate
 
     // =========================================================================
     // Masking logic

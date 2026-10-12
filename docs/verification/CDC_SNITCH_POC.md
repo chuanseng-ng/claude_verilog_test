@@ -51,7 +51,9 @@ OK1: 18249   CDC: 0   OKX: 8653   BAD: 5234
 - ✅ The toolchain runs end-to-end and elaborates the **entire** SoC to a netlist.
 - ✅ It **correctly recognized the real async input** `uart_rx_i`: 0 `BAD`, classified
   `OKX` (the 2-FF synchronizer in `uart_controller.sv` is seen). So it *would* catch a
-  *missing* synchronizer.
+  *missing* synchronizer. (Historical, at the time of the PoC. Since bead `xtaa` the UART
+  RX synchroniser is a `cdc_2ff_sync` instance, so the crossing is classified `CDC`, and
+  `tools/cdc/cdc_config.yml` `required_synchronisers` gates it explicitly.)
 
 ### The 5234 `BAD` are ~100% false positives
 

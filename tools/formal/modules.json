@@ -251,10 +251,12 @@
       "tier": 4,
       "top": "uart_controller",
       "gate_modules": [
+        "cdc_2ff_sync",
         "apb4_register_bank",
         "uart_controller"
       ],
       "gold_files": [
+        "rtl/soc/cdc/cdc_2ff_sync.sv",
         "rtl/soc/apb4_register_bank.sv",
         "rtl/periph/uart_controller.sv"
       ],
@@ -299,10 +301,12 @@
       "tier": 4,
       "top": "interrupt_controller",
       "gate_modules": [
+        "cdc_2ff_sync",
         "apb4_register_bank",
         "interrupt_controller"
       ],
       "gold_files": [
+        "rtl/soc/cdc/cdc_2ff_sync.sv",
         "rtl/soc/apb4_register_bank.sv",
         "rtl/periph/interrupt_controller.sv"
       ],

@@ -26,6 +26,29 @@
 // expected to already be a per-domain-synchronised reset (see
 // cdc_reset_sync.sv) at the instantiation site.
 //
+// Parameters (STAGES and RESET_VAL together):
+//   WIDTH      bits crossed; see the scope warning above for WIDTH > 1.
+//   STAGES     number of flop ranks in the chain. Default 2; elaboration
+//              fails below 2 (a single flop gives no settling time). The
+//              latency from a d_i change to q_o is exactly STAGES
+//              destination-clock edges. NOTE: the module name says "2ff" for
+//              historical reasons; STAGES > 2 is legal and the name is then a
+//              slight misnomer.
+//   RESET_VAL  value of EVERY one of the STAGES ranks while rst_n_i is
+//              asserted (bead claude_verilog_test-xtaa). It is therefore the
+//              value q_o shows during reset and, after release, until the
+//              first post-release d_i sample has propagated through STAGES
+//              edges. Default '0 keeps every pre-existing instance
+//              bit-identical. Use RESET_VAL = 1 for an idle-high line (e.g.
+//              uart_rx_i): the reset value must be one that is safe to
+//              advertise downstream -- for an idle-high line a reset value of
+//              0 reads as an active level (a false UART start bit) for the
+//              reset window. This replaces the older invert-in / invert-out
+//              workaround (soc_top.sv u_cpu_clk_dis_sync, commit 4398c2e),
+//              which remains valid and is left as is. RESET_VAL is per-bit,
+//              so a mixed pattern is legal, but the scope warning above still
+//              applies: it does not make a binary bus safe.
+//
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 //
 // ── On simulating CDC delay (bead claude_verilog_test-rvs) ────────────────
@@ -86,6 +109,10 @@
 module cdc_2ff_sync #(
     parameter int unsigned WIDTH  = 1,
     parameter int unsigned STAGES = 2,
+
+    // Value of every stage while rst_n_i is asserted (see header). Plain
+    // packed-vector parameter sized by WIDTH; no struct member select.
+    parameter logic [WIDTH-1:0] RESET_VAL = '0,
 
     // Simulation-only randomised settling-delay injection on stage 0 (see
     // header). Defeatable per instance; OFF by default at every existing
@@ -150,7 +177,7 @@ module cdc_2ff_sync #(
 
         always_ff @(posedge clk_i or negedge rst_n_i) begin
             if (!rst_n_i) begin
-                d_prev_q <= '0;
+                d_prev_q <= RESET_VAL;
             end else begin
                 d_prev_q <= d_i;
             end
@@ -177,7 +204,7 @@ module cdc_2ff_sync #(
     always_ff @(posedge clk_i or negedge rst_n_i) begin
         if (!rst_n_i) begin
             for (int unsigned i = 0; i < STAGES; i++) begin
-                sync_q[i] <= '0;
+                sync_q[i] <= RESET_VAL;
             end
         end else begin
 `ifdef SIMULATION

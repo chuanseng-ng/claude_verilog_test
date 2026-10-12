@@ -131,11 +131,13 @@ TIMER_SOURCES = \
 
 IRQ_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
 	$(RTL)/periph/interrupt_controller.sv
 
 UART_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
 	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
 	$(RTL)/periph/uart_controller.sv
 
 SPI_SOURCES = \
@@ -335,6 +337,12 @@ APB_CDC_BRIDGE_SOURCES = \
 # mux (scanmode_i / scan_rst_ni) directed unit test. cdc_reset_sync alone +
 # standalone TB wrapper -- no cdc_2ff_sync/cdc_gray_fifo dependency, this is
 # a single-primitive test, not a CDC bridge test.
+# Bead claude_verilog_test-xtaa: cdc_2ff_sync RESET_VAL directed unit test.
+# The primitive alone + standalone TB wrapper.
+CDC_2FF_SYNC_SOURCES = \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(SOC_DIR)/tb_cdc_2ff_sync.sv
+
 CDC_RESET_SYNC_SCAN_SOURCES = \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(SOC_DIR)/tb_cdc_reset_sync_scan.sv
@@ -799,7 +807,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
+.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint cdc_2ff_sync cdc_2ff_sync_lint cdc_2ff_sync_stages1_neg periph_sync_stages clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
 crossbar:
 	$(MAKE) MODULE=test_crossbar,test_crossbar_errors TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -909,8 +917,11 @@ timer: timer_lint
 		VERILOG_SOURCES="$(TIMER_SOURCES)" \
 		$(BUILD_ARGS)
 
+# -Wno-SYNCASYNCNET (irq_lint, uart_lint): the peripheral's own flops are
+# synchronous-reset while the cdc_2ff_sync instances assert reset
+# asynchronously, so rst_n reaches both styles; same rationale as spi_lint.
 irq_lint:
-	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
 		--top-module interrupt_controller $(IRQ_SOURCES)
 
 irq: irq_lint
@@ -919,7 +930,7 @@ irq: irq_lint
 		$(BUILD_ARGS)
 
 uart_lint:
-	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
 		--top-module uart_controller $(UART_SOURCES)
 
 uart: uart_lint
@@ -1202,6 +1213,57 @@ apb_cdc_bridge_lint:
 apb_cdc_bridge: apb_cdc_bridge_lint
 	$(MAKE) MODULE=test_apb_cdc_bridge TOPLEVEL=tb_apb_cdc_bridge \
 		VERILOG_SOURCES="$(APB_CDC_BRIDGE_SOURCES)" \
+		$(BUILD_ARGS)
+
+# Bead claude_verilog_test-xtaa: cdc_2ff_sync RESET_VAL lint + sim.
+cdc_2ff_sync_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module tb_cdc_2ff_sync \
+		$(CDC_2FF_SYNC_SOURCES)
+
+# Negative control: STAGES < 2 must fail elaboration (the generate-scope
+# $fatal in the primitive). Verilator is run on the bare primitive with
+# STAGES overridden to 1; the step passes only if it fails AND names the guard.
+cdc_2ff_sync_stages1_neg:
+	@out=$$(verilator --lint-only -Wall -Wno-IMPORTSTAR -GSTAGES=1 \
+		--top-module cdc_2ff_sync $(RTL)/soc/cdc/cdc_2ff_sync.sv 2>&1); rc=$$?; \
+	if [ $$rc -eq 0 ]; then \
+		echo "FAIL: STAGES=1 elaborated cleanly"; exit 1; \
+	elif echo "$$out" | grep -q "STAGES (1) must be >= 2"; then \
+		echo "PASS: STAGES=1 rejected by cdc_2ff_sync elaboration guard"; \
+	else \
+		echo "FAIL: STAGES=1 failed for the wrong reason"; echo "$$out"; exit 1; \
+	fi
+
+cdc_2ff_sync: cdc_2ff_sync_lint cdc_2ff_sync_stages1_neg
+	$(MAKE) MODULE=test_cdc_2ff_sync TOPLEVEL=tb_cdc_2ff_sync \
+		VERILOG_SOURCES="$(CDC_2FF_SYNC_SOURCES)" \
+		$(BUILD_ARGS)
+
+# Bead claude_verilog_test-xtaa: SYNC_STAGES pass-through of the four peripherals that own an
+# input synchroniser. One cheap latency test per family at SYNC_STAGES=3 (the default depth 2 is
+# covered by each peripheral's own suite). -GSYNC_STAGES is part of the sim_build key, so each
+# variant gets its own directory. Lint of each DUT already runs in its own <name>_lint target.
+periph_sync_stages: uart_lint irq_lint spi_lint gpio_lint
+	$(MAKE) MODULE=test_periph_sync_stages TOPLEVEL=uart_controller \
+		VERILOG_SOURCES="$(UART_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET -GSYNC_STAGES=3" \
+		SYNC_PERIPH=uart_controller EXPECT_STAGES=3 \
+		$(BUILD_ARGS)
+	$(MAKE) MODULE=test_periph_sync_stages TOPLEVEL=interrupt_controller \
+		VERILOG_SOURCES="$(IRQ_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET -GSYNC_STAGES=3" \
+		SYNC_PERIPH=interrupt_controller EXPECT_STAGES=3 \
+		$(BUILD_ARGS)
+	$(MAKE) MODULE=test_periph_sync_stages TOPLEVEL=spi_controller \
+		VERILOG_SOURCES="$(SPI_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET -GSYNC_STAGES=3" \
+		SYNC_PERIPH=spi_controller EXPECT_STAGES=3 \
+		$(BUILD_ARGS)
+	$(MAKE) MODULE=test_periph_sync_stages TOPLEVEL=tb_gpio \
+		VERILOG_SOURCES="$(GPIO_SOURCES)" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET -GSYNC_STAGES=3" \
+		SYNC_PERIPH=tb_gpio EXPECT_STAGES=3 \
 		$(BUILD_ARGS)
 
 # Bead claude_verilog_test-07n: cdc_reset_sync DFT scan-bypass lint + sim.
@@ -1710,6 +1772,8 @@ soc_all_ci: check-space
 	$(MAKE) async_axi_fifo
 	$(MAKE) apb_cdc_bridge
 	$(MAKE) cdc_reset_sync_scan
+	$(MAKE) cdc_2ff_sync
+	$(MAKE) periph_sync_stages
 	$(MAKE) clock_gate_scan
 	$(MAKE) dft_muxes
 	$(MAKE) jtag_tap

@@ -299,7 +299,10 @@ jobs:
           # 2026-10-12 (bead j41m.3, glitch-free test-clock switch): 719 = 722 - 3, same value as soc_coverage.yml. 722 MEASURED by
           # the cocotb soc_all job of PR 270 on head 928b402 ('cocotb: 722 passed, 0 failed') = the 693 above + 29 new tests
           # (dft_clk_switch 19, dft_ctrl +9, soc_jtag +1).
-          PASS_FLOOR: '719'
+          # 2026-10-12 (bead xtaa, merged onto main incl. PR 270): 727 = 730 - 3, same value as soc_coverage.yml. 730 = the 722 above
+          # + 8 new tests (cdc_2ff_sync 4, periph_sync_stages 4); the xtaa branch alone MEASURED 635 on head 6759536 against
+          # main's 627. Confirmed against the cocotb soc_all job of PR 274 on the merge head.
+          PASS_FLOOR: '727'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."
