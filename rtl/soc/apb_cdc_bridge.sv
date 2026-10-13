@@ -110,7 +110,7 @@
 //       already-captured response, then back to S_IDLE — ready for a new
 //       SETUP the very next cycle, exactly like the old scheme.
 //   Destination (m_*) domain:
-//     - Synchronises ONLY req_q (single bit) via cdc_2ff_sync, never the
+//     - Synchronises ONLY req_q (single bit) via cdc_sync, never the
 //       multi-bit command payload itself — see the CDC argument below.
 //     - D_IDLE: on req_m (the synchronised level) reading 1, captures the
 //       (already stable) command payload and moves to D_SETUP.
@@ -135,7 +135,7 @@
 //   same "stable data qualified by a synchronised single-bit control
 //   signal" pattern as cdc_gray_fifo's mem_q combinational read (see
 //   async_axi_fifo.sv header) — it is NOT the same as running an arbitrary
-//   multi-bit binary bus through cdc_2ff_sync (which cdc_2ff_sync's own
+//   multi-bit binary bus through cdc_sync (which cdc_sync's own
 //   header explicitly forbids). RZ makes this argument, if anything,
 //   stronger than NRZ: the payload is now held stable for the WHOLE
 //   4-phase round trip (assert + deassert), not just the assert half.
@@ -149,7 +149,7 @@
 // datapaths. Mirroring the GH #94 action item already open on
 // async_axi_fifo.sv, STA must add `set_max_delay -datapath_only` on these
 // four payload buses AND on the two single-bit level crossings (req_q,
-// ack_q) through their respective cdc_2ff_sync instances, AND on the
+// ack_q) through their respective cdc_sync instances, AND on the
 // existing m_rst_n_i -> m_rst_n_s single-bit status crossing described
 // below. This bead renamed req_toggle_q/ack_toggle_q to req_q/ack_q —
 // pnr/constraints/phase5_soc_multiclock_check.sdc sections 12/12a (the only
@@ -207,7 +207,7 @@
 //   no longer be guaranteed to land back at 0 in step with the destination
 //   for an m_rst_n_i-only event. This is closed by a THIRD mechanism:
 //   m_rst_n_i is synchronised into the s domain (m_rst_n_s, via
-//   cdc_2ff_sync, single-bit — safe under that module's own scope rules)
+//   cdc_sync, single-bit — safe under that module's own scope rules)
 //   and used to (a) gate whether a new request is forwarded at all
 //   (req_fwd_q captured at SETUP), (b) bound S_REQ so it always resolves —
 //   on ack_s (normal), or immediately if the request was never forwarded,
@@ -264,7 +264,7 @@
 // periods of s_clk_i):
 //   (1) rst_both_n -> u_m_rst_sync (cdc_reset_sync, STAGES_TO_M, m_clk_i) —
 //       the destination domain's own reset settling, standard contract.
-//   (2) ~m_rst_n_i -> u_m_rst_status_sync (cdc_2ff_sync, STAGES_TO_S,
+//   (2) ~m_rst_n_i -> u_m_rst_status_sync (cdc_sync, STAGES_TO_S,
 //       s_clk_i) — the availability-status crossing added by the #93
 //       availability fix (see "Availability-gating exception" below). This
 //       is the NEW crossing this fix introduced; violating its minimum low
@@ -286,7 +286,7 @@
 // cpu_gated_clk domain).
 //
 // Coding rules: registered FSMs only; async-assert/sync-deassert reset
-// (docs/development/CODING_GUIDELINES.md §1.4), matching cdc_2ff_sync /
+// (docs/development/CODING_GUIDELINES.md §1.4), matching cdc_sync /
 // cdc_reset_sync discipline.
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
@@ -369,12 +369,12 @@ module apb_cdc_bridge #(
     // Single-bit level crossing of the raw m_rst_n_i input (not m_rst_sync_n
     // — we want the source domain's own view of "is the destination
     // currently reset", independent of the destination's internal sync
-    // latency) via the same cdc_2ff_sync primitive already used for the
+    // latency) via the same cdc_sync primitive already used for the
     // req/ack levels.
     //
     // Polarity is DELIBERATE: we synchronise the ACTIVE-HIGH "destination in
     // reset" sense (~m_rst_n_i), not m_rst_n_i directly, so that
-    // cdc_2ff_sync's own fixed reset-to-0 behaviour means "presumed NOT in
+    // cdc_sync's own fixed reset-to-0 behaviour means "presumed NOT in
     // reset" (i.e. presumed alive) the instant s_rst_sync_n releases. This
     // is not just a style choice: an earlier version of this synchroniser
     // sampled m_rst_n_i directly (reset-to-0 = "presumed IN reset"), which
@@ -403,7 +403,7 @@ module apb_cdc_bridge #(
     // "available" as its OWN reset default (this is the exact bug class
     // behind 4398c2e's cpu_gated_clk-stopped-in-reset bug and 7a9f9d4's
     // cdc_gray_fifo wr_ready_o-asserted-in-reset bug — see CLAUDE.md GH #93
-    // status). m_rst_n_s violates that rule on its face: cdc_2ff_sync's
+    // status). m_rst_n_s violates that rule on its face: cdc_sync's
     // reset-to-0 default makes m_rst_n_s read 1 ("destination alive") for up
     // to SYNC_STAGES_TO_S s_clk_i cycles after s_rst_sync_n releases, even
     // when m_rst_n_i is genuinely already low. This IS a deliberate,
@@ -448,14 +448,14 @@ module apb_cdc_bridge #(
     // default depends on knowing m_rst_n_i's true value at reset time,
     // which is precisely what a synchroniser resolves only after
     // SYNC_STAGES_TO_S clock edges — not achievable without deviating from
-    // the shared cdc_2ff_sync primitive and its per-domain-synchronised-
+    // the shared cdc_sync primitive and its per-domain-synchronised-
     // reset discipline used uniformly everywhere else in this file. Given
     // the window is already proven bounded and side-effect-free by (a)-(c),
     // that deviation is not worth the extra risk. Documentation is correct.
     logic m_in_rst_s;   // 1 = destination domain observed in reset
     logic m_rst_n_s;    // 1 = destination domain observed NOT in reset (alive)
 
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH  (1),
         .STAGES (SYNC_STAGES_TO_S)
     ) u_m_rst_status_sync (
@@ -591,11 +591,11 @@ module apb_cdc_bridge #(
     end
 
     // =========================================================================
-    // req_q: s_clk_i -> m_clk_i (single bit — safe for cdc_2ff_sync)
+    // req_q: s_clk_i -> m_clk_i (single bit — safe for cdc_sync)
     // =========================================================================
     logic req_m;
 
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH  (1),
         .STAGES (SYNC_STAGES_TO_M)
     ) u_req_sync (
@@ -686,9 +686,9 @@ module apb_cdc_bridge #(
     assign m_pstrb_o   = cmd_pstrb_cap_q;
 
     // =========================================================================
-    // ack_q: m_clk_i -> s_clk_i (single bit — safe for cdc_2ff_sync)
+    // ack_q: m_clk_i -> s_clk_i (single bit — safe for cdc_sync)
     // =========================================================================
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH  (1),
         .STAGES (SYNC_STAGES_TO_S)
     ) u_ack_sync (

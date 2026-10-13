@@ -39,5 +39,5 @@ eqy-all:
 # on both frontends, yosys-sv and Synlig. Modules with no declared mutation
 # report SKIP, never PASS. A harness that cannot fail is not a harness.
 eqy-negative-control:
-	./run_eqy.sh --negative-control --module rv32i_clock_gate --module cdc_2ff_sync \
+	./run_eqy.sh --negative-control --module rv32i_clock_gate --module cdc_sync \
 	             --module async_axi_fifo --module axil_to_apb --module boot_rom

@@ -81,7 +81,7 @@ SRC_FILES=(
     "$ROOT/rtl/periph/uart_controller.sv"
     "$ROOT/rtl/periph/spi_controller.sv"
     "$ROOT/rtl/mem/rv32i_clock_gate.sv"
-    "$ROOT/rtl/soc/cdc/cdc_2ff_sync.sv"
+    "$ROOT/rtl/soc/cdc/cdc_sync.sv"
     "$ROOT/rtl/soc/cdc/cdc_reset_sync.sv"
     "$ROOT/rtl/soc/cdc/cdc_gray_fifo.sv"
     "$ROOT/rtl/soc/async_axi_fifo.sv"

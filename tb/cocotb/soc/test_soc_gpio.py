@@ -21,7 +21,7 @@ Coverage:
      reached slave 7 through the whole fabric.
   2. INPUT PATH: test drives gpio_in_i; firmware reads GPIO_DATA_IN back and
      self-checks in a bounded poll loop (naturally tolerant of the pin's
-     3-clock-edge synchroniser latency: 2-stage cdc_2ff_sync + 1
+     3-clock-edge synchroniser latency: 2-stage cdc_sync + 1
      register-bank cycle).
   3. INTERRUPT PATH, end to end: firmware unmasks a rising-edge interrupt on
      one GPIO pin, unmasks bit 5 (GPIO) in interrupt_controller's IRQ_MASK,

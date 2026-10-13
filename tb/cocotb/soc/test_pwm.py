@@ -78,7 +78,7 @@ gpio_controller's proven test_gpio_edge_set_beats_same_cycle_clear methodology.
 
 irq_o = |(PWM_IRQ_STAT & PWM_IRQ_EN), purely combinational and level-held (never a pulse) -- same
 contract and same underlying reason as gpio_controller.sv (every IRQ source feeding
-interrupt_controller crosses core_clk -> cpu_core_clk through a plain 2-FF cdc_2ff_sync at
+interrupt_controller crosses core_clk -> cpu_core_clk through a plain 2-FF cdc_sync at
 rtl/soc/soc_top.sv:637-644, which can only safely observe a level held for multiple destination-
 clock cycles).
 

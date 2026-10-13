@@ -160,13 +160,13 @@
 // a partial round state). Software should still gate reads on done.
 //
 // IRQ: irq_o = done_q & CTRL[3]. LEVEL-HELD, never a pulse -- every IRQ source crosses
-// core_clk -> cpu_core_clk through a plain 2-FF cdc_2ff_sync in soc_top.sv, which can miss a pulse.
+// core_clk -> cpu_core_clk through a plain 2-FF cdc_sync in soc_top.sv, which can miss a pulse.
 //   done next = (done_q & ~IRQ_CLR[0]) | done_set   -- SET WINS over a same-cycle W1C, so a
 //   completion is never lost to a racing clear. STATUS[1] and IRQ_STAT[0] are THE SAME FLOP mirrored
 //   into two words (i2c_controller.sv precedent), not two pieces of state.
 //
 // CDC: NONE. Single clock domain (core_clk) and no asynchronous inputs anywhere in this peripheral,
-// so the cdc_2ff_sync input-synchroniser pattern and the SDC set_false_path of the pad-input
+// so the cdc_sync input-synchroniser pattern and the SDC set_false_path of the pad-input
 // peripherals (GPIO, I2C) do NOT apply. This is stated rather than omitted on purpose.
 //
 // Reset: synchronous, active-low throughout (no `negedge rst_n`), matching the other periph/. The

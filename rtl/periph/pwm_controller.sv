@@ -67,7 +67,7 @@
 //
 // irq_o = |(PWM_IRQ_STAT & PWM_IRQ_EN) -- LEVEL-HELD, never a single-cycle pulse. Required, not
 // stylistic: every IRQ source feeding interrupt_controller crosses core_clk -> cpu_core_clk
-// through a plain 2-FF cdc_2ff_sync at rtl/soc/soc_top.sv:637-644, which can only safely observe
+// through a plain 2-FF cdc_sync at rtl/soc/soc_top.sv:637-644, which can only safely observe
 // a level held for multiple destination-clock cycles -- a single-cycle pulse could be missed
 // entirely. PWM_IRQ_STAT's stickiness (it stays 1 until a PWM_IRQ_CLR write with no coincident
 // fresh wrap) is what makes irq_o level-held.
@@ -130,7 +130,7 @@ module pwm_controller
 
     // Elaboration-time guard (IEEE 1800-2017 §20.11): $fatal directly inside a generate scope,
     // not wrapped in `initial`, fires at ELABORATION time -- under `verilator --lint-only` too.
-    // Mirrors rtl/soc/cdc/cdc_2ff_sync.sv's g_stages_check and gpio_controller.sv:137-139.
+    // Mirrors rtl/soc/cdc/cdc_sync.sv's g_stages_check and gpio_controller.sv:137-139.
     if (N_CH == 0 || N_CH > 8) begin : g_n_ch_check
         $fatal(1, "pwm_controller: N_CH (%0d) must be in [1, 8]", N_CH);
     end

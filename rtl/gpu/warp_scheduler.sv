@@ -97,7 +97,7 @@ module warp_scheduler
     // block), so this is latent rather than live -- but it is silent, so make
     // it loud.  Generate-scope $fatal, not `initial $fatal`, so it fires under
     // lint/synth elaboration and not only in simulation; same idiom as
-    // rtl/soc/cdc/cdc_2ff_sync.sv:82-84.
+    // rtl/soc/cdc/cdc_sync.sv:82-84.
     // -----------------------------------------------------------------------
     if (N_WARPS_P != N_WARPS) begin : g_n_warps_p_check
         $fatal(1, "warp_scheduler: N_WARPS_P (%0d) must equal gpu_pkg::N_WARPS (%0d) -- the scan/reset loops and WARP_W are bound to N_WARPS",

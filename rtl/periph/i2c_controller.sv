@@ -90,7 +90,7 @@
 // software re-issues. Detection falls out of the open-drain model for free.
 //
 // CDC: i2c_scl_i and i2c_sda_i are asynchronous external pins and are SINGLE-BIT, so each goes
-// through its own cdc_2ff_sync #(.WIDTH(1)) instance. cdc_2ff_sync's multi-bit prohibition does not
+// through its own cdc_sync #(.WIDTH(1)) instance. cdc_sync's multi-bit prohibition does not
 // apply (cf. gpio_controller.sv, which instantiates one per pin for the same reason). Nothing is
 // placed in front of the synchroniser. Its reset value is 0, which reads as "line low" for the first
 // two cycles after reset; nothing depends on it, because EN resets 0 and the pre-START bus-free wait
@@ -118,7 +118,7 @@
 // spi_controller.sv). It exists to make the SoC fabric test cheap; protocol coverage needs a real BFM.
 //
 // IRQ: irq_o = |(IRQ_STAT & IRQ_EN). LEVEL-HELD, never a pulse -- every IRQ source crosses
-// core_clk -> cpu_core_clk through a plain 2-FF cdc_2ff_sync in soc_top.sv, which can miss a pulse.
+// core_clk -> cpu_core_clk through a plain 2-FF cdc_sync in soc_top.sv, which can miss a pulse.
 //   sticky next = (q & ~clear) | set    -- a SET WINS over a same-cycle W1C, so an event is never
 //   lost to a racing clear (GPIO_IRQ_STAT / trng health_fail precedent). rx_threshold is not
 //   sticky: it follows the FIFO level and drops when software pops below the threshold.
@@ -176,7 +176,7 @@ module i2c_controller
     // =========================================================================
     // Local constants
     // =========================================================================
-    localparam int unsigned SYNC_STAGES = 2;   // cdc_2ff_sync depth used for both pins
+    localparam int unsigned SYNC_STAGES = 2;   // cdc_sync depth used for both pins
 
     // Elaboration guards. A generate-scope $fatal (not wrapped in `initial`) fires at ELABORATION
     // time, under `verilator --lint-only` too (same idiom as gpio_controller.sv's g_n_pins_check).
@@ -373,11 +373,11 @@ module i2c_controller
     assign clr_w = {4{wr_acc_w & is_irq_clr_addr_w}} & wdata_m_w[3:0];
 
     // =========================================================================
-    // Input synchronisation -- two SEPARATE single-bit cdc_2ff_sync instances
+    // Input synchronisation -- two SEPARATE single-bit cdc_sync instances
     // =========================================================================
     logic scl_ext_s_w, sda_ext_s_w;
 
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH  (1),
         .STAGES (SYNC_STAGES)
     ) u_scl_sync (
@@ -387,7 +387,7 @@ module i2c_controller
         .q_o     (scl_ext_s_w)
     );
 
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH  (1),
         .STAGES (SYNC_STAGES)
     ) u_sda_sync (

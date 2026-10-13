@@ -25,7 +25,7 @@ flat APB4 face selected by a signal-name prefix (APB4Master(dut, prefix, ...)):
 
 One simulation build therefore reaches both generate arms and both fold factors; tb_crypto's
 header says why.  crypto_accel has NO asynchronous input at all (clk / rst_n / APB4 in, irq_o out),
-so there is no CDC, no cdc_2ff_sync and no SDC exception to test.
+so there is no CDC, no cdc_sync and no SDC exception to test.
 
 Register map (crypto_accel.sv, ADDR_W=12, N_REGS=32; byte offset = word index * 4):
   0x000  CRYPTO_CTRL     [RW]  [1:0] mode (0 ECB, 1 CTR, 2 SHA-256, 3 reserved), [3] IRQ enable,

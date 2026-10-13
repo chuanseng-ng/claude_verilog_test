@@ -86,7 +86,7 @@ no timing control) and is exactly the fault model that reproduces the
 same-edge-assumption bug class GH #93 hit twice. What genuinely is NOT modelable
 here is analog metastability itself -- an intermediate, non-0/1 voltage on Q.
 No injector is implemented today (an attempt was reverted before merge; see
-rtl/soc/cdc/cdc_2ff_sync.sv's header and bead rvs), so these tests characterise
+rtl/soc/cdc/cdc_sync.sv's header and bead rvs), so these tests characterise
 the synchronised, deterministic RTL behaviour only
 -- opting a synchroniser in here is future work, not something this file does
 today. What remains genuinely NOT modelable in a 2-state simulator (Verilator,
@@ -260,7 +260,7 @@ async def _pmu_live_cycle_body(dut) -> None:
         f"(sequence: {powerdown_seq})"
     )
 
-    # Let the CDC synchronisers (cpu_domain_rst_n's cdc_2ff_sync into the
+    # Let the CDC synchronisers (cpu_domain_rst_n's cdc_sync into the
     # free-running cpu_core_clk domain) catch up to the now-settled OFF state
     # before sampling steady-state -- the transition edge itself was already
     # covered by the per-cycle ordering assertion above.

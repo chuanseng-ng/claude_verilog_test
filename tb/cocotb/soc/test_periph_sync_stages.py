@@ -2,7 +2,7 @@
 test_periph_sync_stages.py -- bead claude_verilog_test-xtaa.
 
 One cheap test per peripheral family proving that the SYNC_STAGES pass-through
-reaches the cdc_2ff_sync inside the peripheral: with SYNC_STAGES=EXPECT_STAGES
+reaches the cdc_sync inside the peripheral: with SYNC_STAGES=EXPECT_STAGES
 (default 3) an input change becomes visible on the synchronised internal net
 after exactly EXPECT_STAGES clock edges, not one sooner, and the reset value of
 that net is held during reset.

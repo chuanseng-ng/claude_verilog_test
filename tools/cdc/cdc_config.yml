@@ -87,7 +87,7 @@ reset_domains:
   # gate can no longer see it.
   - tck_i
   # The glitch-free test-clock switch (dft_clk_switch.sv, DFT_ARCHITECTURE.md 15.5) adds TWO real
-  # asynchronous crossings, both through cdc_2ff_sync with (* magic_cdc *): u_sync_a carries ~en_b_q
+  # asynchronous crossings, both through cdc_sync with (* magic_cdc *): u_sync_a carries ~en_b_q
   # (scan_clk_i domain latch) into tck_i, u_sync_b carries en_a_q (tck_i domain latch) into
   # scan_clk_i. cdc_snitch classes their first stage `BAD magic` (ROOT CAUSE, reproduced: it counts
   # input PINS of the cells in the launch cone and a latch has two (E and D), so even a
@@ -103,7 +103,7 @@ reset_domains:
 # multi-domain. Only list a bus here if it is genuinely synchronous to the
 # named domain -- a truly asynchronous pin must NOT be listed (uart_rx_i is
 # absent on purpose: it is async and has a real synchroniser in
-# uart_controller.sv. Since bead xtaa that synchroniser is a cdc_2ff_sync
+# uart_controller.sv. Since bead xtaa that synchroniser is a cdc_sync
 # (u_uart_rx_sync, RESET_VAL=1), so cdc_snitch classifies the crossing CDC, and
 # the required_synchronisers entry `uart-rx-pad-sync` below makes a deleted
 # synchroniser fail the gate. Before xtaa it was a hand-written chain reported
@@ -183,7 +183,7 @@ waivers:
 # classified OKX, which never fails the gate -- so a deleted synchroniser on a
 # pad that feeds a single flop would pass silently. Each entry here is a
 # positive check: some register matching `dest` must be classified CDC
-# (single-source crossing carrying (* magic_cdc *), i.e. a cdc_2ff_sync stage).
+# (single-source crossing carrying (* magic_cdc *), i.e. a cdc_sync stage).
 # Bead pnfw item 2: both I2C pad inputs (negative control: bypassing the SCL
 # synchroniser in a scratch copy of i2c_controller.sv turned this gate red with
 # 64 unwaived registers AND dropped the CDC count by one).
@@ -192,17 +192,17 @@ required_synchronisers:
     dest: '^u_i2c\.u_scl_sync\.sync_q\[0\]:D$'
     reason: >
       i2c_scl_i is an asynchronous pad input; i2c_controller.sv synchronises it
-      through cdc_2ff_sync u_scl_sync before the bit engine sees it.
+      through cdc_sync u_scl_sync before the bit engine sees it.
   - id: i2c-sda-pad-sync
     dest: '^u_i2c\.u_sda_sync\.sync_q\[0\]:D$'
     reason: >
       i2c_sda_i is an asynchronous pad input; i2c_controller.sv synchronises it
-      through cdc_2ff_sync u_sda_sync before the bit engine sees it.
+      through cdc_sync u_sda_sync before the bit engine sees it.
   - id: uart-rx-pad-sync
     dest: '^u_uart\.u_uart_rx_sync\.sync_q\[0\]:D$'
     reason: >
       uart_rx_i is an asynchronous pad input; uart_controller.sv synchronises it
-      through cdc_2ff_sync u_uart_rx_sync (RESET_VAL=1, idle-high) before the
+      through cdc_sync u_uart_rx_sync (RESET_VAL=1, idle-high) before the
       receive FSM sees it (bead xtaa).
   # DFT Stage 1b (j41m.3): glitch-free test-clock switch handshake synchronisers. Latch-launched,
   # so cdc_snitch classes them `BAD magic` (see the comment at reset_domains / tck_i); `latch_launched`

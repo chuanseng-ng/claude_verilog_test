@@ -58,11 +58,11 @@
 // through inference results.
 //
 // IRQ: irq_o = done_q & CTRL[3], LEVEL-HELD, never a pulse -- every IRQ crosses core_clk ->
-// cpu_core_clk through a plain 2-FF cdc_2ff_sync in soc_top.sv, which can miss a pulse.
+// cpu_core_clk through a plain 2-FF cdc_sync in soc_top.sv, which can miss a pulse.
 //   done next = (done_q & ~IRQ_CLR[0]) | done_set   -- SET WINS over a same-cycle W1C.
 //
 // CDC: NONE. Single clock domain and no asynchronous input anywhere in this block, so no
-// cdc_2ff_sync and no SDC exception applies. Stated on purpose rather than omitted.
+// cdc_sync and no SDC exception applies. Stated on purpose rather than omitted.
 //
 // Reset: synchronous, active-low, throughout (no `negedge rst_n`). The weight SRAM and the
 // datapath flops (FIFO entries, grid weights, product / result registers) are not reset: they are

@@ -872,7 +872,7 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/npu/npu_weight_mem.sv \
 	$(PROJECT_ROOT)/rtl/npu/npu_top.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_clock_gate.sv \
-	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_2ff_sync.sv \
+	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_sync.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_reset_sync.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_gray_fifo.sv \
 	$(PROJECT_ROOT)/rtl/soc/async_axi_fifo.sv \
@@ -1680,7 +1680,7 @@ SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/npu/npu_weight_mem.sv \
 	$(PROJECT_ROOT)/rtl/npu/npu_top.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_clock_gate.sv \
-	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_2ff_sync.sv \
+	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_sync.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_reset_sync.sv \
 	$(PROJECT_ROOT)/rtl/soc/cdc/cdc_gray_fifo.sv \
 	$(PROJECT_ROOT)/rtl/soc/async_axi_fifo.sv \

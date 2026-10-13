@@ -181,7 +181,7 @@ the use-before-declare hazard (declaration must sit after `soc_top.sv:625` and *
 test's mask expectation is checked first and its fix ships in the same commit as the widening.
 
 **Every `irq_o` must be level-held, never a single-cycle pulse** — each source crosses
-`core_clk → cpu_core_clk` through a plain 2-FF `cdc_2ff_sync` (`rtl/soc/soc_top.sv:637-644`),
+`core_clk → cpu_core_clk` through a plain 2-FF `cdc_sync` (`rtl/soc/soc_top.sv:637-644`),
 which can miss a pulse. W1C status clears are done by APB write-snoop, not through WMASK.
 
 ---
@@ -371,7 +371,7 @@ buffers plus external pull-ups — goes in the module header **and** `docs/desig
 it cannot be lost at integration.
 
 Both `_i` signals are asynchronous and **single-bit**, so two separate
-`cdc_2ff_sync #(.WIDTH(1))` instances are correct and the multi-bit prohibition does not apply.
+`cdc_sync #(.WIDTH(1))` instances are correct and the multi-bit prohibition does not apply.
 
 ⚠️ The bit-timing FSM must sample the **synchronised** SCL, and the minimum `I2C_CLKDIV` must
 exceed the 2-cycle synchroniser latency. This is the identical lesson already recorded at
@@ -616,7 +616,7 @@ and `npu_top` must consume a single declared latency. This is exactly the `CS_SR
 2. A `WADDR` or `WDATA` write **while `STATUS.busy`** is rejected and latches `STATUS[6]`.
    `STATUS[6]` clears on reset, on `IRQ_CLR[1]`, or on an accepted weight write.
 3. `irq_o = done_q & CTRL[3]`, **level-held, never a pulse** — every IRQ crosses
-   `core_clk → cpu_core_clk` through a plain `cdc_2ff_sync` in `soc_top.sv`, which can miss a
+   `core_clk → cpu_core_clk` through a plain `cdc_sync` in `soc_top.sv`, which can miss a
    pulse. `done_d = (done_q & ~clr) | set`, so a **set beats a same-cycle `IRQ_CLR` W1C** and a
    completion is never lost to a racing clear. `STATUS[1]` and `IRQ_STAT[0]` are the same flop
    mirrored into two words.
@@ -1011,7 +1011,7 @@ it. After groundwork G2/G3, items 4, 5, 11 and parts of 7 are already done for e
 1. **`rtl/periph/<name>.sv`** — module per the GPIO skeleton: ~80-line header comment block with
    the register map, CDC rationale, IRQ level-hold rationale, reset convention, APB4 phase
    contract, and a closing `// Lint target:` line.
-2. **Async inputs** → *N* separate `cdc_2ff_sync #(.WIDTH(1))` in a genvar loop, **never** one wide
+2. **Async inputs** → *N* separate `cdc_sync #(.WIDTH(1))` in a genvar loop, **never** one wide
    instance (the primitive's own scope warning forbids multi-bit binary buses, because bits resolve
    metastability on different edges and produce a word no source cycle ever drove). A genuinely
    coherent async word needs `cdc_gray_fifo` / `async_axi_fifo` instead.

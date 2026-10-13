@@ -431,7 +431,7 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/soc/dft/dft_clk_switch.sv \
 	$(RTL_DIR)/soc/dft/dft_ctrl.sv \
 	$(RTL_DIR)/mem/rv32i_clock_gate.sv \
-	$(RTL_DIR)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL_DIR)/soc/cdc/cdc_sync.sv \
 	$(RTL_DIR)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL_DIR)/soc/cdc/cdc_gray_fifo.sv \
 	$(RTL_DIR)/soc/async_axi_fifo.sv \

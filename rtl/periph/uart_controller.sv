@@ -451,18 +451,18 @@ module uart_controller #(
     // 2-FF synchroniser on the asynchronous uart_rx_i pad (CDC hardening).
     // Idle line is high (8N1), so the synchroniser must reset to 1: a reset
     // value of 0 would present a false START bit to the receiver FSM.
-    // cdc_2ff_sync with RESET_VAL = 1 resets both stages to 1 (no inverters).
+    // cdc_sync with RESET_VAL = 1 resets both stages to 1 (no inverters).
     // Loopback path uses the internal tx_serial (same clock domain) and
     // bypasses this synchroniser. Same 2-cycle latency as the previous
     // hand-written chain; the reset is now asserted asynchronously by the
-    // primitive (see the cdc_2ff_sync header) where it was synchronous here.
+    // primitive (see the cdc_sync header) where it was synchronous here.
     // SYNC_STAGES > 2 is safe for the receiver: the RX FSM aligns its
     // oversample phase to the *synchronised* start edge and every later data
     // edge is delayed by the same constant, so the sample points keep their
     // position relative to the bits; only the data-valid latency grows.
     logic uart_rx_sync_q;
 
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH     (1),
         .STAGES    (SYNC_STAGES),
         .RESET_VAL (1'b1)

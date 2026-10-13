@@ -25,25 +25,25 @@
       "negative_control_na": "The baseline itself is ERROR (zero partitions), so there is nothing for a mutation to break. Two were tried anyway: tying ENA to 1'b1 (reported DONE (PASS)) and swapping CLK/ENA (broke eqy's matcher: `partition: ERROR: conflicting matches for gold bit \\clk: \\clk vs \\en`). Neither is a detection."
     },
     {
-      "name": "cdc_2ff_sync",
+      "name": "cdc_sync",
       "tier": 2,
-      "top": "cdc_2ff_sync",
+      "top": "cdc_sync",
       "gate_modules": [
-        "cdc_2ff_sync"
+        "cdc_sync"
       ],
       "gold_files": [
-        "rtl/soc/cdc/cdc_2ff_sync.sv"
+        "rtl/soc/cdc/cdc_sync.sv"
       ],
       "defines": [],
       "common_fixtures": [],
       "depth": 5,
       "note": "Tier 2 -- sequential leaf, the base CDC synchroniser primitive (async-assert/sync-deassert reset, magic_cdc attribute). Checked at default parameters WIDTH=1/STAGES=2 (the instantiation defaults) -- other instantiated widths in the design are not separately re-checked (see README scope note).",
       "negative_control": {
-        "file": "rtl/soc/cdc/cdc_2ff_sync.sv",
+        "file": "rtl/soc/cdc/cdc_sync.sv",
         "find": "    assign q_o = sync_q[STAGES-1];",
         "replace": "    assign q_o = ~sync_q[STAGES-1];",
         "note": "invert the synchroniser's combinational output",
-        "design_note": "THREE mutations were tried on this module before one discriminated, and the two rejects are the most important results in this bead's negative-control round -- do not delete them. (1) `sync_q[i] <= d_i` instead of `sync_q[i-1]` (collapse the 2-FF chain): signal-DELETING, matched points 6 -> 5 and partitions 3 -> 2, reported DONE (PASS). Motivated the baseline_matched_points drift guard. (2) `sync_q[0] <= ~d_i` (invert the D input of the first stage): signal-PRESERVING, full 6-point / 3-partition match set, gold RTLIL provably carries a $not cell the gate does not -- and eqy STILL proved all three partitions and reported DONE (PASS). That is a FALSE PASS, not a match-set artifact, and the drift guard cannot see it. See README.md 'A false PASS that eqy's default strategy does not catch'. (3) The committed mutation inverts the combinational output q_o instead, which eqy catches cleanly (FAIL on partition cdc_2ff_sync.q_o)."
+        "design_note": "THREE mutations were tried on this module before one discriminated, and the two rejects are the most important results in this bead's negative-control round -- do not delete them. (1) `sync_q[i] <= d_i` instead of `sync_q[i-1]` (collapse the 2-FF chain): signal-DELETING, matched points 6 -> 5 and partitions 3 -> 2, reported DONE (PASS). Motivated the baseline_matched_points drift guard. (2) `sync_q[0] <= ~d_i` (invert the D input of the first stage): signal-PRESERVING, full 6-point / 3-partition match set, gold RTLIL provably carries a $not cell the gate does not -- and eqy STILL proved all three partitions and reported DONE (PASS). That is a FALSE PASS, not a match-set artifact, and the drift guard cannot see it. See README.md 'A false PASS that eqy's default strategy does not catch'. (3) The committed mutation inverts the combinational output q_o instead, which eqy catches cleanly (FAIL on partition cdc_sync.q_o)."
       },
       "baseline_matched_points": 6,
       "baseline_partitions": 3
@@ -53,14 +53,14 @@
       "tier": 3,
       "top": "async_axi_fifo",
       "gate_modules": [
-        "cdc_2ff_sync",
+        "cdc_sync",
         "cdc_reset_sync",
         "cdc_gray_fifo",
         "async_axi_fifo"
       ],
       "gold_files": [
         "rtl/soc/axi_pkg.sv",
-        "rtl/soc/cdc/cdc_2ff_sync.sv",
+        "rtl/soc/cdc/cdc_sync.sv",
         "rtl/soc/cdc/cdc_reset_sync.sv",
         "rtl/soc/cdc/cdc_gray_fifo.sv",
         "rtl/soc/async_axi_fifo.sv"
@@ -251,12 +251,12 @@
       "tier": 4,
       "top": "uart_controller",
       "gate_modules": [
-        "cdc_2ff_sync",
+        "cdc_sync",
         "apb4_register_bank",
         "uart_controller"
       ],
       "gold_files": [
-        "rtl/soc/cdc/cdc_2ff_sync.sv",
+        "rtl/soc/cdc/cdc_sync.sv",
         "rtl/soc/apb4_register_bank.sv",
         "rtl/periph/uart_controller.sv"
       ],
@@ -276,12 +276,12 @@
       "tier": 4,
       "top": "spi_controller",
       "gate_modules": [
-        "cdc_2ff_sync",
+        "cdc_sync",
         "apb4_register_bank",
         "spi_controller"
       ],
       "gold_files": [
-        "rtl/soc/cdc/cdc_2ff_sync.sv",
+        "rtl/soc/cdc/cdc_sync.sv",
         "rtl/soc/apb4_register_bank.sv",
         "rtl/periph/spi_controller.sv"
       ],
@@ -293,7 +293,7 @@
       "frontend": "synlig",
       "depth": 5,
       "expected_status": "ERROR",
-      "note": "Bead claude_verilog_test-q7n Step 1 (2026-08-15) -- ATTEMPTED, NOT a clean new PASS. spi_controller instantiates apb4_register_bank (u_regbank) with N_REGS=6 (RESET_VAL/WMASK passed in as this module's own per-register override arrays). apb4_register_bank is already root-caused unprovable at N_REGS>1 in modules.json's own apb4_register_bank entry (Cause A: sv2v and Synlig flatten unpacked-array module PORTS -- regs_o/hw_wen_i/hw_wdata_i -- in OPPOSITE element orders, an identity permutation only at N_REGS=1). spi_controller inherits this at N_REGS=6: confirmed empirically (2026-08-15, gate_modules=[cdc_2ff_sync, apb4_register_bank, spi_controller] -- spi_controller ALSO instantiates cdc_2ff_sync for its MISO input synchroniser (u_spi_miso_sync), an extraction dependency the first draft of this entry missed, which produced a misleading `Module \\\\cdc_2ff_sync ... is not part of the design` ERROR instead; fixed before commit), the partition step ERRORs the same way as timer/uart_controller's u_regbank finding: `conflicting matches for gold bit \\\\hw_wdata_i [N]: \\\\hw_wdata_i [N] vs 1'<const>` (bit index varies by module -- N_REGS and DW differ). This is a genuinely NEW finding this round -- it was not previously known that ALL FOUR rtl/periph/ peripherals (not just dma_engine) transitively inherit this limitation, since none had been attempted before. Not pursued further: the only known workaround (collapsing N_REGS to 1, per the apb4_register_bank_n1 tier-5 diagnostic) would mean checking spi_controller with all but one of its real registers removed -- not real coverage of the peripheral, so this is recorded as a known limitation (like dma_engine) rather than forced into a misleading PASS. expected_status is ERROR.",
+      "note": "Bead claude_verilog_test-q7n Step 1 (2026-08-15) -- ATTEMPTED, NOT a clean new PASS. spi_controller instantiates apb4_register_bank (u_regbank) with N_REGS=6 (RESET_VAL/WMASK passed in as this module's own per-register override arrays). apb4_register_bank is already root-caused unprovable at N_REGS>1 in modules.json's own apb4_register_bank entry (Cause A: sv2v and Synlig flatten unpacked-array module PORTS -- regs_o/hw_wen_i/hw_wdata_i -- in OPPOSITE element orders, an identity permutation only at N_REGS=1). spi_controller inherits this at N_REGS=6: confirmed empirically (2026-08-15, gate_modules=[cdc_sync, apb4_register_bank, spi_controller] -- spi_controller ALSO instantiates cdc_sync for its MISO input synchroniser (u_spi_miso_sync), an extraction dependency the first draft of this entry missed, which produced a misleading `Module \\\\cdc_sync ... is not part of the design` ERROR instead; fixed before commit), the partition step ERRORs the same way as timer/uart_controller's u_regbank finding: `conflicting matches for gold bit \\\\hw_wdata_i [N]: \\\\hw_wdata_i [N] vs 1'<const>` (bit index varies by module -- N_REGS and DW differ). This is a genuinely NEW finding this round -- it was not previously known that ALL FOUR rtl/periph/ peripherals (not just dma_engine) transitively inherit this limitation, since none had been attempted before. Not pursued further: the only known workaround (collapsing N_REGS to 1, per the apb4_register_bank_n1 tier-5 diagnostic) would mean checking spi_controller with all but one of its real registers removed -- not real coverage of the peripheral, so this is recorded as a known limitation (like dma_engine) rather than forced into a misleading PASS. expected_status is ERROR.",
       "negative_control_na": "Baseline is already ERROR (partition-matcher error inherited from apb4_register_bank's u_regbank port-flattening-order mismatch at N_REGS>1, confirmed empirically -- see note), so an injected mutation cannot discriminate. Negative-control coverage of the synlig frontend + apb4_register_bank family comes from axil_to_apb, boot_rom (Synlig frontend controls) and apb4_register_bank_n1/_n2 (tier-5 diagnostics, which have PASS/FAIL baselines a mutation could act on)."
     },
     {
@@ -301,12 +301,12 @@
       "tier": 4,
       "top": "interrupt_controller",
       "gate_modules": [
-        "cdc_2ff_sync",
+        "cdc_sync",
         "apb4_register_bank",
         "interrupt_controller"
       ],
       "gold_files": [
-        "rtl/soc/cdc/cdc_2ff_sync.sv",
+        "rtl/soc/cdc/cdc_sync.sv",
         "rtl/soc/apb4_register_bank.sv",
         "rtl/periph/interrupt_controller.sv"
       ],

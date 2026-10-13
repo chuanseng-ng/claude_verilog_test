@@ -39,7 +39,7 @@ watches via commit_pc_o:
     bounded poll loop reading GPIO_DATA_IN. cocotb, on seeing that PC, drives
     gpio_in_i = INPUT_MASK (bits INPUT_PIN_A/INPUT_PIN_B). The poll loop
     naturally tolerates the pin's 3-clock-edge synchroniser latency (2-stage
-    cdc_2ff_sync + 1 register-bank cycle) because each iteration costs several
+    cdc_sync + 1 register-bank cycle) because each iteration costs several
     cycles and the loop simply retries until it observes the new value or
     times out (a real synchronisation bug would show as a poll-limit FAIL).
 

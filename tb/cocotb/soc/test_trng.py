@@ -62,7 +62,7 @@ Timing/pipeline contract this suite pins (see the model's docstring for the full
     suite tolerates POP_SETTLE = 2 idle cycles after a pop before trusting STATUS again, and never
     pins an exact READY/FULL edge -- only the [R_k, R_k + FILL_SLACK] window.
   - irq_o is LEVEL-HELD, never a pulse: every IRQ source crosses core_clk -> cpu_core_clk through a
-    plain 2-FF cdc_2ff_sync in soc_top, which can miss a pulse.
+    plain 2-FF cdc_sync in soc_top, which can miss a pulse.
   - The W1C clear is an APB write-snoop on TRNG_IRQ_CLR, NOT a WMASK path, honouring pstrb; a
     hardware set beats a same-cycle clear so a health failure is never lost to a racing clear.
   - Disabled (CTRL[0] == 0): no entropy accumulates and the FIFO does not fill.
