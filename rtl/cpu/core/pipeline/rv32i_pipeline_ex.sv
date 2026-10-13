@@ -105,8 +105,12 @@ module rv32i_pipeline_ex(
     // 5-bit immediate already in id_ex_reg.immediate.
     // For register variants, write data is the forwarded rs1.
     // =========================================================================
+    // csr_op_w: named-signal copy of the struct member so the bit-select below is not taken
+    // directly on a struct member (Synlig mis-elaborates that; bead ainf).
+    logic [2:0]  csr_op_w;
     logic [31:0] csr_wd;
-    assign csr_wd = id_ex_reg_i.csr_op[2] ? id_ex_reg_i.immediate : fwd_rs1;
+    assign csr_op_w = id_ex_reg_i.csr_op;
+    assign csr_wd   = csr_op_w[2] ? id_ex_reg_i.immediate : fwd_rs1;
 
     // CSR outputs to csr_file
     assign csr_wr_en_o = id_ex_reg_i.csr_access && id_ex_reg_i.valid && !id_ex_reg_i.csr_illegal;
