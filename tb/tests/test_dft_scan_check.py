@@ -225,3 +225,178 @@ def test_tap_alt_clock_is_allowed_only_when_declared(tmp_path: Path) -> None:
     bad = _tap_run(tmp_path, tck_src="scan_clk_i")
     assert bad.returncode == 1, bad.stdout
     assert "TAP clock cone is not exactly port" in bad.stdout
+
+
+# --------------------------------------------------------------------------------------------
+# --expect-reset-sync (bead claude_verilog_test-j41m.11)
+# --------------------------------------------------------------------------------------------
+# A miniature of the two trst_ni reset synchronisers of dft_ctrl. `u_tap.u_trst_sync` resets the TAP flop,
+# `u_sw_rst` resets the consumer `u_clk_sw`; both are instances of the same 2-flop `rsync`. The two chains are
+# structurally identical (same clock, same async clear, D = 1), which is exactly why cdc_snitch's opt_merge folds
+# them into one and its report cannot tell them apart (docs/design/DFT_ARCHITECTURE.md 15.5): the checker runs
+# before any such merge, so it sees both.
+_RS_TOP = """
+module rsync (input wire clk_i, input wire rst_ni, output wire rst_no);
+    reg s0_q, s1_q;
+    always @(posedge clk_i or negedge rst_ni) if (!rst_ni) s0_q <= 1'b0; else s0_q <= 1'b1;
+    always @(posedge clk_i or negedge rst_ni) if (!rst_ni) s1_q <= 1'b0; else s1_q <= s0_q;
+    assign rst_no = s1_q;
+endmodule
+
+module tapmod (input wire tck_i, input wire trst_ni, input wire tms_i, output wire q_o, output wire r_o);
+    wire r;
+    TAP_RST
+    reg q;
+    always @(posedge tck_i or negedge r) if (!r) q <= 1'b0; else q <= tms_i;
+    assign q_o = q;
+    assign r_o = r;
+endmodule
+
+module clksw (input wire tck_i, input wire rst_ni, input wire d, output reg q_o);
+    always @(posedge tck_i or negedge rst_ni) if (!rst_ni) q_o <= 1'b0; else q_o <= d;
+endmodule
+
+module top (
+    input  wire tck_i, input wire trst_ni, input wire tms_i, input wire d, input wire scan_mode_i,
+    output wire q_tap_o, output wire q_sw_o, output wire r_tap_o, output wire r_sw_o
+);
+    tapmod u_tap (.tck_i(tck_i), .trst_ni(trst_ni), .tms_i(tms_i), .q_o(q_tap_o), .r_o(r_tap_o));
+    wire sw_r;
+    SW_RST
+    clksw u_clk_sw (.tck_i(tck_i), .rst_ni(CONSUMER_RST), .d(D_SRC), .q_o(q_sw_o));
+    assign r_sw_o = sw_r;
+endmodule
+"""
+_TAP_SYNC = "rsync u_trst_sync (.clk_i(CLK), .rst_ni(trst_ni), .rst_no(r));"
+_TAP_BYPASS = "assign r = trst_ni;"
+_SW_SYNC = "rsync u_sw_rst (.clk_i(tck_i), .rst_ni(trst_ni), .rst_no(sw_r));"
+_SW_BYPASS = "assign sw_r = trst_ni;"
+
+_RS_ARGS = (
+    "--tap-prefix", "u_tap", "--tap-prefix", "u_clk_sw", "--tap-prefix", "u_sw_rst",
+    "--expect-reset-sync", "u_tap.u_trst_sync=u_tap",
+    "--expect-reset-sync", "u_sw_rst=u_clk_sw",
+)  # fmt: skip
+
+
+def _rs_run(
+    tmp_path: Path,
+    *extra: str,
+    tap_rst=_TAP_SYNC,
+    sw_rst=_SW_SYNC,
+    consumer_rst="sw_r",
+    d_src="d",
+    args=_RS_ARGS,
+):
+    src = (
+        _RS_TOP.replace("TAP_RST", tap_rst)
+        .replace("SW_RST", sw_rst)
+        .replace("CONSUMER_RST", consumer_rst)
+        .replace("D_SRC", d_src)
+        .replace("CLK", "tck_i")
+    )
+    netlist = tmp_path / "rs.v"
+    netlist.write_text(src)
+    env = dict(os.environ, YOSYS=str(YOSYS))
+    return subprocess.run(
+        [sys.executable, str(CHECKER), "--netlist", str(netlist), "--top", "top", *args, *extra],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+
+def test_reset_sync_both_chains_present_passes(tmp_path: Path) -> None:
+    res = _rs_run(tmp_path)
+    assert res.returncode == 0, res.stdout
+    assert "reset synchronisers verified: 2" in res.stdout
+
+
+def test_reset_sync_sw_rst_bypassed_fails_naming_it(tmp_path: Path) -> None:
+    res = _rs_run(tmp_path, sw_rst=_SW_BYPASS, consumer_rst="trst_ni")
+    assert res.returncode == 1, res.stdout
+    assert "RESET_SYNC" in res.stdout
+    assert "u_sw_rst" in res.stdout
+    assert "u_trst_sync" not in res.stdout, res.stdout  # the intact chain is not blamed
+
+
+def test_reset_sync_trst_sync_bypassed_fails_naming_it(tmp_path: Path) -> None:
+    res = _rs_run(tmp_path, tap_rst=_TAP_BYPASS)
+    assert res.returncode == 1, res.stdout
+    assert "RESET_SYNC" in res.stdout
+    assert "u_tap.u_trst_sync" in res.stdout
+    assert "u_sw_rst" not in res.stdout, res.stdout
+
+
+def test_reset_sync_both_bypassed_fails_naming_both(tmp_path: Path) -> None:
+    res = _rs_run(tmp_path, tap_rst=_TAP_BYPASS, sw_rst=_SW_BYPASS, consumer_rst="trst_ni")
+    assert res.returncode == 1, res.stdout
+    assert "u_tap.u_trst_sync" in res.stdout
+    assert "u_sw_rst" in res.stdout
+
+
+def test_reset_sync_old_hole_is_closed_only_by_the_option(tmp_path: Path) -> None:
+    # Without --expect-reset-sync a TAP flop reset straight from trst_ni is accepted (the pre-j41m.11 behaviour);
+    # with it the same netlist fails. Keeps the option opt-in and the hole's closure attributable to it.
+    plain = (*_RS_ARGS[:6],)
+    res = _rs_run(
+        tmp_path, tap_rst=_TAP_BYPASS, sw_rst=_SW_BYPASS, consumer_rst="trst_ni", args=plain
+    )
+    assert res.returncode == 0, res.stdout
+
+
+def test_reset_sync_present_but_consumer_wired_to_trst_fails(tmp_path: Path) -> None:
+    # u_sw_rst exists (its output reaches a port) but the consumer is reset straight from the pin
+    res = _rs_run(tmp_path, consumer_rst="trst_ni")
+    assert res.returncode == 1, res.stdout
+    assert "not reset from" in res.stdout
+    assert "u_clk_sw" in res.stdout
+    assert "reaches" in res.stdout and "trst_ni" in res.stdout
+
+
+def test_reset_sync_consumer_wired_to_the_other_synchroniser_fails(tmp_path: Path) -> None:
+    # u_clk_sw is reset by the TAP's synchroniser instead of its own: the declared pairing is wrong
+    src_top = _RS_TOP.replace("CONSUMER_RST", "r_tap_w").replace("D_SRC", "d")
+    src_top = src_top.replace("wire sw_r;", "wire sw_r; wire r_tap_w = r_tap_o;")
+    netlist = tmp_path / "rs.v"
+    netlist.write_text(
+        src_top.replace("TAP_RST", _TAP_SYNC).replace("SW_RST", _SW_SYNC).replace("CLK", "tck_i")
+    )
+    env = dict(os.environ, YOSYS=str(YOSYS))
+    res = subprocess.run(
+        [sys.executable, str(CHECKER), "--netlist", str(netlist), "--top", "top", *_RS_ARGS],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    assert res.returncode == 1, res.stdout
+    assert "u_clk_sw is not reset from u_sw_rst" in res.stdout
+
+
+def test_reset_sync_chain_not_clocked_by_tck_fails(tmp_path: Path) -> None:
+    sync = "rsync u_trst_sync (.clk_i(tms_i), .rst_ni(trst_ni), .rst_no(r));"
+    res = _rs_run(tmp_path, tap_rst=sync)
+    assert res.returncode == 1, res.stdout
+    assert "u_tap.u_trst_sync" in res.stdout
+    assert "clock" in res.stdout
+
+
+def test_reset_sync_min_flops_guard(tmp_path: Path) -> None:
+    res = _rs_run(tmp_path, "--reset-sync-min-flops", "3")
+    assert res.returncode == 1, res.stdout
+    assert "found 2" in res.stdout
+
+
+def test_reset_sync_trst_reaching_an_undeclared_cell_fails(tmp_path: Path) -> None:
+    # a third consumer takes trst_ni directly and is under no declared pairing
+    res = _rs_run(
+        tmp_path,
+        args=(*_RS_ARGS, "--tap-prefix", "u_extra"),
+        d_src="xq",  # keeps u_extra alive through opt_clean
+        sw_rst=_SW_SYNC
+        + "\n    wire xq;\n    clksw u_extra (.tck_i(tck_i), .rst_ni(trst_ni), .d(d), .q_o(xq));",
+    )
+    assert res.returncode == 1, res.stdout
+    assert "u_extra" in res.stdout
