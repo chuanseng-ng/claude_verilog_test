@@ -41,7 +41,10 @@
 //
 // The scan_mode/test_en/scan_rst/scan_en controls are TCK-launched quasi-static
 // levels that deliberately cross into the functional domains unsynchronised
-// (section 15.5 crossing 2; accepted-risk waiver in tools/cdc/cdc_config.yml).
+// (section 15.5 crossing 2). This is not a waiver: tck_i is listed under
+// reset_domains in tools/cdc/cdc_config.yml, which only removes it from the CDC
+// gate's domain count, and tools/dft/check_scan_clk_rst.py --tap-allowed-nets keeps
+// the TCK-launched nets that may reach non-TAP logic enumerated and checked.
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
