@@ -391,14 +391,14 @@ set_false_path -from [get_ports cpu_rst_n_i]
 
 # GPIO inputs (Phase 6a, bead claude_verilog_test-ckc) — asynchronous external
 # pins. Same class as uart_rx_i / spi_miso_i below: gpio_controller.sv
-# synchronises EVERY pin through its own per-pin cdc_2ff_sync before anything
+# synchronises EVERY pin through its own per-pin cdc_sync before anything
 # in core_clk uses it, so a setup/hold check from the pad against core_clk has
 # no physical meaning.
 #
 # Measured, not assumed: this was the LAST remaining hold violation in the
 # design. RUN_2026-09-25_22-02-12 closed 68 of 71 hold violations via the
 # resizer hold-margin raise, and the 3 survivors were all the same path --
-# gpio_in_i[31] -> _60250_ (a cdc_2ff_sync stage-1 flop) at max_ss/nom_ss/
+# gpio_in_i[31] -> _60250_ (a cdc_sync stage-1 flop) at max_ss/nom_ss/
 # min_ss, worst -0.2456 ns. Every tt and ff corner was already clean.
 set_false_path -from [get_ports gpio_in_i]
 
@@ -411,12 +411,12 @@ set_false_path -from [get_ports gpio_in_i]
 # reason: a constraint naming a port that is currently tied off is inert,
 # whereas discovering a missing exception during a 4-10 h Sky130 harden is not.
 #
-# Same class as gpio_in_i above (async external pin -> cdc_2ff_sync) for the
+# Same class as gpio_in_i above (async external pin -> cdc_sync) for the
 # inputs, and as uart_tx_o below (async sink, nothing timed against core_clk)
 # for the outputs.
 #
 # i2c_*_i  : asynchronous open-drain bus lines, each synchronised by its own
-#            single-bit cdc_2ff_sync inside i2c_controller.sv (6a-5).
+#            single-bit cdc_sync inside i2c_controller.sv (6a-5).
 # pwm_o    : push-pull outputs, no receiver in this timing scope (6a-2).
 # wdt_rst_req_o : level-held reset request consumed off-chip / by the pad ring;
 #            the CPU-domain reset path it also feeds is a cdc_reset_sync, i.e.

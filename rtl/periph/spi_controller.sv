@@ -26,7 +26,7 @@
 // slave use SPI_CLK_DIV >= 7 so the 1-clock offset is a negligible fraction of
 // the SCLK half-period and setup margin is preserved.
 //
-// spi_miso_i is routed through a cdc_2ff_sync (bead claude_verilog_test-a2g)
+// spi_miso_i is routed through a cdc_sync (bead claude_verilog_test-a2g)
 // before reaching the shift engine, adding 2 fabric clocks of latency on top
 // of the above. SPI_CLK_DIV >= 7 keeps this well inside the settled window;
 // SPI_CLK_DIV == 0 or 1 is NOT safe for a real external slave (loopback is
@@ -358,7 +358,7 @@ module spi_controller #(
     // SCLK itself), not clean by inspection. Route it through the standard
     // 2-FF synchroniser instead of hand-rolling flops.
     //
-    // Timing impact: cdc_2ff_sync adds SYNC_STAGES (default 2) fabric-clock cycles of latency
+    // Timing impact: cdc_sync adds SYNC_STAGES (default 2) fabric-clock cycles of latency
     // between a spi_miso_i transition and its visibility to the shift
     // engine. This is transparent as long as the external slave's MISO has
     // already been stable for >= SYNC_STAGES cycles by the sample edge -- true for any
@@ -377,7 +377,7 @@ module spi_controller #(
     // (SPI_CLK_DIV + 1 clocks) comfortably above SYNC_STAGES.
     logic spi_miso_sync_q;
 
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH  (1),
         .STAGES (SYNC_STAGES)
     ) u_spi_miso_sync (

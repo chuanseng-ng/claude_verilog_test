@@ -20,13 +20,13 @@
 // event or a driven level.
 //
 // Input synchronisation: gpio_in_i is an asynchronous external pin bus. Per
-// rtl/soc/cdc/cdc_2ff_sync.sv's own scope warning, that primitive is valid
+// rtl/soc/cdc/cdc_sync.sv's own scope warning, that primitive is valid
 // ONLY for WIDTH=1 or gray-coded buses -- NOT an arbitrary multi-bit binary
 // bus, because independent bits can resolve metastability on different
 // destination-clock edges and the sampled word could transiently equal a
 // value no single source-side cycle ever drove. GPIO pins carry no cross-bit
 // word coherency (each pin is an independent, unrelated external signal), so
-// this module instantiates N_PINS SEPARATE single-bit cdc_2ff_sync instances
+// this module instantiates N_PINS SEPARATE single-bit cdc_sync instances
 // -- one per pin -- rather than one WIDTH(N_PINS) instance, making that
 // absence of coherency explicit and self-documenting rather than accidental.
 //
@@ -61,7 +61,7 @@
 // irq_o = |(GPIO_IRQ_STAT & GPIO_IRQ_EN) -- LEVEL-HELD, never a single-cycle
 // pulse. This is required, not stylistic: soc_top.sv documents (see its IRQ
 // routing note) that every IRQ source feeding interrupt_controller crosses
-// core_clk -> cpu_core_clk through a plain 2-FF cdc_2ff_sync (u_ext_irq_sync),
+// core_clk -> cpu_core_clk through a plain 2-FF cdc_sync (u_ext_irq_sync),
 // which can only safely observe a level that stays asserted for multiple
 // destination-clock cycles -- a single-cycle pulse could be missed entirely
 // by that synchroniser. GPIO_IRQ_STAT's stickiness is what makes irq_o
@@ -129,7 +129,7 @@ module gpio_controller
     // generate scope, not wrapped in `initial`, fires at ELABORATION time --
     // under `verilator --lint-only` too, which never runs simulation and would
     // otherwise silently let an illegal N_PINS through. Mirrors
-    // rtl/soc/cdc/cdc_2ff_sync.sv's g_stages_check and the rationale recorded
+    // rtl/soc/cdc/cdc_sync.sv's g_stages_check and the rationale recorded
     // at rtl/soc/sram_controller.sv:110-126.
     // N_PINS == 0 is rejected as well as > 32: a zero-pin instance would make
     // every [N_PINS-1:0] part-select below a [-1:0] range, and PIN_MASK's
@@ -216,16 +216,16 @@ module gpio_controller
     );
 
     // =========================================================================
-    // Input synchronisation — N_PINS independent single-bit cdc_2ff_sync
+    // Input synchronisation — N_PINS independent single-bit cdc_sync
     // instances (see header: a single WIDTH(N_PINS) instance is forbidden by
-    // cdc_2ff_sync.sv's own scope warning for an arbitrary binary bus).
+    // cdc_sync.sv's own scope warning for an arbitrary binary bus).
     // =========================================================================
     logic [N_PINS-1:0] gpio_in_sync_q;
 
     genvar p;
     generate
         for (p = 0; p < N_PINS; p++) begin : g_in_sync
-            cdc_2ff_sync #(
+            cdc_sync #(
                 .WIDTH  (1),
                 .STAGES (SYNC_STAGES)
             ) u_gpio_in_sync (

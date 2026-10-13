@@ -3,7 +3,7 @@
 # is unchanged by bead 3snb's DEPTH=2 generate branch.
 #
 # gold = cdc_gray_fifo.sv as it was at OLD_REF (default origin/main), module renamed
-#        cdc_gray_fifo_old so both can coexist; cdc_2ff_sync is shared and untouched.
+#        cdc_gray_fifo_old so both can coexist; cdc_sync is shared and untouched.
 # gate = the working-tree cdc_gray_fifo.sv.
 # Both are read through yosys-slang (an independent front end), flattened, async2sync'd and
 # compared with equiv_make + equiv_simple + equiv_induct per DEPTH.
@@ -31,7 +31,7 @@ git -C "$ROOT" show "$OLD_REF:rtl/soc/cdc/cdc_gray_fifo.sv" \
     > "$OLD_SV"
 [ -s "$OLD_SV" ] || { echo "ERROR: cannot read cdc_gray_fifo.sv at $OLD_REF" >&2; exit 3; }
 NEW_SV="${NEW_SV:-$ROOT/rtl/soc/cdc/cdc_gray_fifo.sv}"   # override only for the negative control
-SYNC_SV="$ROOT/rtl/soc/cdc/cdc_2ff_sync.sv"
+SYNC_SV="$ROOT/rtl/soc/cdc/cdc_sync.sv"
 
 rc=0
 for d in "${DEPTHS[@]}"; do

@@ -9,7 +9,7 @@
 #
 # Usage:
 #   tools/formal/run_eqy.sh --tier 1
-#   tools/formal/run_eqy.sh --module cdc_2ff_sync --module dma_engine
+#   tools/formal/run_eqy.sh --module cdc_sync --module dma_engine
 #   tools/formal/run_eqy.sh --all --pnr-negative-control
 #
 # Exit code is run_eqy.py's aggregate verdict (0 PASS / 1 FAIL / 2 ERROR / 3 no match).

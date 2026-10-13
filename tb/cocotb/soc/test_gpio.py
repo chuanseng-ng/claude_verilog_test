@@ -21,7 +21,7 @@ elaboration-time $fatal guard via cocotb either).
 
 Sync / edge latency contract (see gpio_controller.sv header for the RTL's own description, and
 test_gpio_data_in_sync_latency's docstring for the exact empirical calibration against this
-cocotb/Verilator environment): gpio_in_i is synchronised by a 2-stage cdc_2ff_sync per pin, and
+cocotb/Verilator environment): gpio_in_i is synchronised by a 2-stage cdc_sync per pin, and
 apb4_register_bank's own HW-write path is itself a further registered mirror of the synchronised
 wire before a pin change is visible through an APB read of GPIO_DATA_IN or (via edge/level
 detection built on the same synchronised wire) GPIO_IRQ_STAT. Measured directly against this RTL
@@ -308,7 +308,7 @@ async def test_gpio_output_pins_mirror_data_out_and_dir(dut):
 async def test_gpio_data_in_sync_latency(dut):
     """Cycle-exact: GPIO_DATA_IN is stale through the first 2 clock edges after a pin change and
     becomes visible on the 3rd -- one edge per flop in the path, exactly as the RTL reads:
-    gpio_in_i -> cdc_2ff_sync stage 0 (edge 1) -> stage 1, i.e. gpio_in_sync_q (edge 2) ->
+    gpio_in_i -> cdc_sync stage 0 (edge 1) -> stage 1, i.e. gpio_in_sync_q (edge 2) ->
     apb4_register_bank's GPIO_DATA_IN HW-write mirror (edge 3).
 
     Note this count only holds because every pin change in this file is driven while the

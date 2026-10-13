@@ -131,18 +131,18 @@ TIMER_SOURCES = \
 
 IRQ_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/periph/interrupt_controller.sv
 
 UART_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
 	$(RTL)/soc/apb4_register_bank.sv \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/periph/uart_controller.sv
 
 SPI_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/periph/spi_controller.sv
 
 # APB migration PR-1: apb4_register_bank unit-test sources.
@@ -187,17 +187,17 @@ PMU_SOURCES = \
 	$(SOC_DIR)/tb_pmu.sv
 
 # Phase 6a (bead claude_verilog_test-ckc): standalone gpio_controller unit-test sources.
-# apb4_register_bank (register file) + cdc_2ff_sync (N_PINS independent single-bit input
+# apb4_register_bank (register file) + cdc_sync (N_PINS independent single-bit input
 # synchronisers, one per pin -- see gpio_controller.sv header) + gpio_controller + standalone TB.
 GPIO_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/periph/gpio_controller.sv \
 	$(SOC_DIR)/tb_gpio.sv
 
 # Phase 6a-2 (bead claude_verilog_test-f7vs.6): standalone pwm_controller unit-test sources.
 # apb4_register_bank (register file) + pwm_controller + standalone TB. Unlike GPIO_SOURCES above,
-# there is no cdc_2ff_sync here -- PWM has no async input pins at all (push-pull pwm_o only, no
+# there is no cdc_sync here -- PWM has no async input pins at all (push-pull pwm_o only, no
 # oe, no CDC -- docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-2 -- PWM"). pwm_controller.sv does not
 # exist yet as of this line's authorship (strict TDD, step 2 of Sec.9's workflow); the pwm/
 # pwm_lint targets below are expected to fail to elaborate until it does.
@@ -208,7 +208,7 @@ PWM_SOURCES = \
 
 # Phase 6a-3 (bead claude_verilog_test-f7vs.7): standalone watchdog_timer unit-test sources.
 # apb4_register_bank (register file) + watchdog_timer + standalone TB. Like PWM there is no
-# cdc_2ff_sync here -- the WDT has no async input pins (clk/rst_n/APB4 only; irq_o and
+# cdc_sync here -- the WDT has no async input pins (clk/rst_n/APB4 only; irq_o and
 # wdt_rst_req_o are outputs), so no CDC in this module -- docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7
 # "6a-3 -- WDT". watchdog_timer.sv does not exist yet as of this line's authorship (strict TDD,
 # step 2 of Sec.9's workflow); the wdt/wdt_lint targets below are expected to fail to elaborate
@@ -224,7 +224,7 @@ WDT_SOURCES = \
 # does NOT define that macro, so trng_lfsr_entropy.sv is the arm under test and
 # trng_ro_sky130.sv is deliberately absent (it is a Sky130-only analog stub, exempted in
 # tools/verif/check_periph_filelists.py's EXEMPT map -- never add it to a file list). No
-# cdc_2ff_sync here: the LFSR arm has no asynchronous input (clk/rst_n/APB4 only; irq_o is an
+# cdc_sync here: the LFSR arm has no asynchronous input (clk/rst_n/APB4 only; irq_o is an
 # output) -- docs/PHASE6_IP_EXPANSION_PLAN.md Sec.7 "6a-4 -- TRNG". trng.sv and
 # trng_lfsr_entropy.sv do not exist yet as of this line's authorship (strict TDD, step 2 of
 # Sec.9's workflow); the trng/trng_lint targets below are expected to fail to elaborate until they
@@ -236,14 +236,14 @@ TRNG_SOURCES = \
 	$(SOC_DIR)/tb_trng.sv
 
 # Phase 6a-5 (bead claude_verilog_test-f7vs.9): standalone i2c_controller unit-test sources.
-# apb4_register_bank (register file) + cdc_2ff_sync (i2c_controller instantiates one per pin,
+# apb4_register_bank (register file) + cdc_sync (i2c_controller instantiates one per pin,
 # like gpio_controller) + i2c_bit_engine (protocol core) + i2c_controller + standalone TB. The bus (wired-AND of master, slave and
 # pull-up) is modelled by tb/cocotb/bfm/i2c_slave.py, NOT by any RTL file in this list.
 # test_i2c.py also re-lints this exact list with `-GCLKDIV_MIN=2` to prove the DUT's elaboration
 # guard refuses an unsafe prescaler minimum.
 I2C_SOURCES = \
 	$(RTL)/soc/apb4_register_bank.sv \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/periph/i2c_bit_engine.sv \
 	$(RTL)/periph/i2c_controller.sv \
 	$(SOC_DIR)/tb_i2c.sv
@@ -258,7 +258,7 @@ I2C_SOURCES = \
 # generate arms and both fold factors; test_crypto.py also re-lints this exact list (read back
 # through tools/verif/check_source_closure.py's parser, not hand-copied) with -G overrides to
 # prove the elaboration guards refuse an illegal SBOX_PARALLEL / ADDR_W / EN_AES=EN_SHA=0.
-# NO cdc/cdc_2ff_sync.sv here, deliberately and unlike gpio / i2c: crypto_accel has NO
+# NO cdc/cdc_sync.sv here, deliberately and unlike gpio / i2c: crypto_accel has NO
 # asynchronous input at all (clk / rst_n / APB4 in, irq_o out), so there is nothing to
 # synchronise, and no SDC set_false_path applies either -- the crypto_accel header says so
 # explicitly. Do not "add it for safety": an unused module in the list is dead weight that would
@@ -288,7 +288,7 @@ CRYPTO_SOURCES = \
 # ASAP7 arm instantiates it per bank (en = !csb0); under the default define set that arm is not
 # elaborated, so the file is dead weight at sim time but keeps the list a faithful superset of every
 # arm and costs nothing (an `ifdef`-pruned module is never an unused-module lint warning).
-# NO cdc/cdc_2ff_sync.sv, deliberately: npu_top has NO asynchronous input (clk / rst_n / APB4 in,
+# NO cdc/cdc_sync.sv, deliberately: npu_top has NO asynchronous input (clk / rst_n / APB4 in,
 # irq_o out), so there is nothing to synchronise -- do not "add it for safety". The three rtl/npu
 # files did not exist when this list was written (strict TDD): npu / npu_lint are expected to fail
 # to elaborate until the RTL lands. rtl/npu/ must not be created by the verification step because
@@ -314,7 +314,7 @@ APB_INTERCONNECT_SOURCES = \
 # async_axi_fifo + standalone TB wrapper. No bus-bridge or full SoC required.
 ASYNC_AXI_FIFO_SOURCES = \
 	$(RTL)/soc/axi_pkg.sv \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
 	$(RTL)/soc/async_axi_fifo.sv \
@@ -328,27 +328,27 @@ ASYNC_AXI_FIFO_SOURCES = \
 # gray-coded multi-bit pointers) + standalone TB wrapper. No bus-bridge or
 # full SoC required.
 APB_CDC_BRIDGE_SOURCES = \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/soc/apb_cdc_bridge.sv \
 	$(SOC_DIR)/tb_apb_cdc_bridge.sv
 
 # Bead claude_verilog_test-07n: standalone cdc_reset_sync DFT scan-bypass
 # mux (scanmode_i / scan_rst_ni) directed unit test. cdc_reset_sync alone +
-# standalone TB wrapper -- no cdc_2ff_sync/cdc_gray_fifo dependency, this is
+# standalone TB wrapper -- no cdc_sync/cdc_gray_fifo dependency, this is
 # a single-primitive test, not a CDC bridge test.
-# Bead claude_verilog_test-xtaa: cdc_2ff_sync RESET_VAL directed unit test.
+# Bead claude_verilog_test-xtaa: cdc_sync RESET_VAL directed unit test.
 # The primitive alone + standalone TB wrapper.
-CDC_2FF_SYNC_SOURCES = \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
-	$(SOC_DIR)/tb_cdc_2ff_sync.sv
+CDC_SYNC_SOURCES = \
+	$(RTL)/soc/cdc/cdc_sync.sv \
+	$(SOC_DIR)/tb_cdc_sync.sv
 
 # Bead claude_verilog_test-3snb: standalone cdc_gray_fifo (DEPTH=2 variant + DEPTH=4 control)
 # unit-test sources. CDC_GRAY_FIFO_RTL is overridable so the mutation campaign can point the very
 # same suite at a mutated copy of the primitive: make CDC_GRAY_FIFO_RTL=/path/mutant.sv cdc_gray_fifo
 CDC_GRAY_FIFO_RTL ?= $(RTL)/soc/cdc/cdc_gray_fifo.sv
 CDC_GRAY_FIFO_SOURCES = \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(CDC_GRAY_FIFO_RTL) \
 	$(SOC_DIR)/tb_cdc_gray_fifo.sv
 
@@ -370,7 +370,7 @@ DFT_MUXES_SOURCES = \
 	$(RTL)/soc/dft/jtag_tap.sv \
 	$(RTL)/soc/dft/dft_clk_switch.sv \
 	$(RTL)/soc/dft/dft_ctrl.sv \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/mem/rv32i_clock_gate.sv \
 	$(SOC_DIR)/tb_dft_muxes.sv
@@ -386,7 +386,7 @@ JTAG_TAP_SOURCES = \
 # scan-clock gate (rv32i_clock_gate) + the combiner; the wrapper also instantiates the 1a
 # dft_ctrl_ports as the golden reference.
 DFT_CTRL_SOURCES = \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/mem/rv32i_clock_gate.sv \
 	$(RTL)/soc/dft/dft_ctrl_ports.sv \
@@ -400,7 +400,7 @@ DFT_CTRL_SOURCES = \
 # parameter that swaps the switch for `sel ? a : b` (the RED negative control, target
 # dft_clk_switch_plainmux).
 DFT_CLK_SWITCH_SOURCES = \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/mem/rv32i_clock_gate.sv \
 	$(RTL)/soc/dft/dft_clk_switch.sv \
 	$(SOC_DIR)/tb_dft_clk_switch.sv
@@ -494,7 +494,7 @@ PLL_SOURCES = \
 	$(RTL)/soc/dft/jtag_tap.sv \
 	$(RTL)/soc/dft/dft_clk_switch.sv \
 	$(RTL)/soc/dft/dft_ctrl.sv \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
 	$(RTL)/soc/async_axi_fifo.sv \
@@ -582,7 +582,7 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/soc/dft/jtag_tap.sv \
 	$(RTL)/soc/dft/dft_clk_switch.sv \
 	$(RTL)/soc/dft/dft_ctrl.sv \
-	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
 	$(RTL)/soc/async_axi_fifo.sv \
@@ -599,7 +599,7 @@ ifeq ($(SIM),verilator)
 	COMPILE_ARGS += -Wno-CASEINCOMPLETE
 	COMPILE_ARGS += -Wno-TIMESCALEMOD
 	COMPILE_ARGS += -Wno-UNOPTFLAT
-	# bead claude_verilog_test-rvs: gates rtl/soc/cdc/cdc_2ff_sync.sv's
+	# bead claude_verilog_test-rvs: gates rtl/soc/cdc/cdc_sync.sv's
 	# optional simulation-only randomised-delay CDC injector (RAND_CDC_DELAY_EN,
 	# default OFF at every instantiation site — this define alone changes
 	# nothing observable). Never defined for sim/Makefile's lint_soc or the
@@ -816,7 +816,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint cdc_2ff_sync cdc_2ff_sync_lint cdc_2ff_sync_stages1_neg cdc_gray_fifo cdc_gray_fifo_sim cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg periph_sync_stages clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
+.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint cdc_sync cdc_sync_lint cdc_sync_stages1_neg cdc_gray_fifo cdc_gray_fifo_sim cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg periph_sync_stages clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
 crossbar:
 	$(MAKE) MODULE=test_crossbar,test_crossbar_errors TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -927,7 +927,7 @@ timer: timer_lint
 		$(BUILD_ARGS)
 
 # -Wno-SYNCASYNCNET (irq_lint, uart_lint): the peripheral's own flops are
-# synchronous-reset while the cdc_2ff_sync instances assert reset
+# synchronous-reset while the cdc_sync instances assert reset
 # asynchronously, so rst_n reaches both styles; same rationale as spi_lint.
 irq_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
@@ -948,10 +948,10 @@ uart: uart_lint
 		$(BUILD_ARGS)
 
 # -Wno-SYNCASYNCNET: spi_controller's own flops are synchronous-reset while the
-# cdc_2ff_sync on spi_miso_i (bead a2g) asserts reset asynchronously, so rst_n
+# cdc_sync on spi_miso_i (bead a2g) asserts reset asynchronously, so rst_n
 # reaches both styles.  With spi_controller as the lint ROOT there is no logic
 # between the port and the two usages, so Verilator flags the mix; the same
-# rst_n / cdc_2ff_sync pattern raises nothing at soc_top scope.  Every SoC-level
+# rst_n / cdc_sync pattern raises nothing at soc_top scope.  Every SoC-level
 # target in this file already carries this flag for the same reason.
 spi_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
@@ -1048,10 +1048,10 @@ pmu: pmu_lint
 		$(BUILD_ARGS)
 
 # Phase 6a (bead claude_verilog_test-ckc): gpio_controller lint + sim.
-# lint only: apb4_register_bank + cdc_2ff_sync + gpio_controller + standalone TB wrapper.
-# -Wno-SYNCASYNCNET: same rationale as spi_lint above -- cdc_2ff_sync's own flops are
+# lint only: apb4_register_bank + cdc_sync + gpio_controller + standalone TB wrapper.
+# -Wno-SYNCASYNCNET: same rationale as spi_lint above -- cdc_sync's own flops are
 # asynchronous-reset while gpio_controller's are synchronous-reset, and both are flopped off the
-# same rst_n at this lint ROOT (gpio_controller instantiates cdc_2ff_sync directly).
+# same rst_n at this lint ROOT (gpio_controller instantiates cdc_sync directly).
 gpio_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
 		--top-module tb_gpio \
@@ -1066,7 +1066,7 @@ gpio: gpio_lint
 # Phase 6a-2 (bead claude_verilog_test-f7vs.6): pwm_controller lint + sim.
 # lint only: apb4_register_bank + pwm_controller + standalone TB wrapper.
 # -Wno-SYNCASYNCNET: matches the gpio targets' convention above, for consistency with the rest of
-# this file's per-target EXTRA_ARGS, even though PWM has no cdc_2ff_sync / async input of its own.
+# this file's per-target EXTRA_ARGS, even though PWM has no cdc_sync / async input of its own.
 pwm_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
 		--top-module tb_pwm \
@@ -1107,9 +1107,9 @@ trng: trng_lint
 		$(BUILD_ARGS)
 
 # Phase 6a-5 (bead claude_verilog_test-f7vs.9): i2c_controller lint + sim (L1 protocol suite).
-# lint only: apb4_register_bank + cdc_2ff_sync + i2c_controller + standalone TB wrapper.
+# lint only: apb4_register_bank + cdc_sync + i2c_controller + standalone TB wrapper.
 # -Wno-SYNCASYNCNET: same per-target convention as the gpio/pwm/wdt/trng targets above (the
-# async pad inputs feed cdc_2ff_sync flops).
+# async pad inputs feed cdc_sync flops).
 i2c_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
 		--top-module tb_i2c \
@@ -1224,29 +1224,29 @@ apb_cdc_bridge: apb_cdc_bridge_lint
 		VERILOG_SOURCES="$(APB_CDC_BRIDGE_SOURCES)" \
 		$(BUILD_ARGS)
 
-# Bead claude_verilog_test-xtaa: cdc_2ff_sync RESET_VAL lint + sim.
-cdc_2ff_sync_lint:
+# Bead claude_verilog_test-xtaa: cdc_sync RESET_VAL lint + sim.
+cdc_sync_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
-		--top-module tb_cdc_2ff_sync \
-		$(CDC_2FF_SYNC_SOURCES)
+		--top-module tb_cdc_sync \
+		$(CDC_SYNC_SOURCES)
 
 # Negative control: STAGES < 2 must fail elaboration (the generate-scope
 # $fatal in the primitive). Verilator is run on the bare primitive with
 # STAGES overridden to 1; the step passes only if it fails AND names the guard.
-cdc_2ff_sync_stages1_neg:
+cdc_sync_stages1_neg:
 	@out=$$(verilator --lint-only -Wall -Wno-IMPORTSTAR -GSTAGES=1 \
-		--top-module cdc_2ff_sync $(RTL)/soc/cdc/cdc_2ff_sync.sv 2>&1); rc=$$?; \
+		--top-module cdc_sync $(RTL)/soc/cdc/cdc_sync.sv 2>&1); rc=$$?; \
 	if [ $$rc -eq 0 ]; then \
 		echo "FAIL: STAGES=1 elaborated cleanly"; exit 1; \
 	elif echo "$$out" | grep -q "STAGES (1) must be >= 2"; then \
-		echo "PASS: STAGES=1 rejected by cdc_2ff_sync elaboration guard"; \
+		echo "PASS: STAGES=1 rejected by cdc_sync elaboration guard"; \
 	else \
 		echo "FAIL: STAGES=1 failed for the wrong reason"; echo "$$out"; exit 1; \
 	fi
 
-cdc_2ff_sync: cdc_2ff_sync_lint cdc_2ff_sync_stages1_neg
-	$(MAKE) MODULE=test_cdc_2ff_sync TOPLEVEL=tb_cdc_2ff_sync \
-		VERILOG_SOURCES="$(CDC_2FF_SYNC_SOURCES)" \
+cdc_sync: cdc_sync_lint cdc_sync_stages1_neg
+	$(MAKE) MODULE=test_cdc_sync TOPLEVEL=tb_cdc_sync \
+		VERILOG_SOURCES="$(CDC_SYNC_SOURCES)" \
 		$(BUILD_ARGS)
 
 # Bead claude_verilog_test-3snb: cdc_gray_fifo DEPTH=2 lint + sim.
@@ -1258,7 +1258,7 @@ cdc_gray_fifo_lint:
 		$(CDC_GRAY_FIFO_SOURCES)
 	@for d in 2 4 8 16; do \
 		verilator --lint-only -Wall -Wno-IMPORTSTAR -GDEPTH=$$d \
-			--top-module cdc_gray_fifo $(RTL)/soc/cdc/cdc_2ff_sync.sv $(CDC_GRAY_FIFO_RTL) \
+			--top-module cdc_gray_fifo $(RTL)/soc/cdc/cdc_sync.sv $(CDC_GRAY_FIFO_RTL) \
 			|| { echo "FAIL: cdc_gray_fifo DEPTH=$$d lint"; exit 1; }; \
 		echo "PASS: cdc_gray_fifo DEPTH=$$d lint clean"; \
 	done
@@ -1268,7 +1268,7 @@ cdc_gray_fifo_lint:
 cdc_gray_fifo_depth_guard_neg:
 	@for d in 0 1 3 6 12; do \
 		out=$$(verilator --lint-only -Wall -Wno-IMPORTSTAR -GDEPTH=$$d \
-			--top-module cdc_gray_fifo $(RTL)/soc/cdc/cdc_2ff_sync.sv $(CDC_GRAY_FIFO_RTL) 2>&1); rc=$$?; \
+			--top-module cdc_gray_fifo $(RTL)/soc/cdc/cdc_sync.sv $(CDC_GRAY_FIFO_RTL) 2>&1); rc=$$?; \
 		if [ $$rc -eq 0 ]; then \
 			echo "FAIL: DEPTH=$$d elaborated cleanly"; exit 1; \
 		elif echo "$$out" | grep -q "DEPTH ($$d) must be a power of two and >= 2"; then \
@@ -1659,7 +1659,7 @@ gpio_driver: soc_boot_lint
 # Drives clk_i (fabric) / cpu_clk_i (CPU) at a genuinely asynchronous 7 ns /
 # 3 ns ratio (see test_soc_multiclock.py's module docstring for the full
 # rationale) to prove the CPU<->fabric CDC (async_axi_fifo + the
-# ext_irq/timer_irq/pmu_cpu_* cdc_2ff_sync synchronisers in soc_top.sv) works
+# ext_irq/timer_irq/pmu_cpu_* cdc_sync synchronisers in soc_top.sv) works
 # when the two domains are not clock-aligned, reusing boot_fw/boot.hex,
 # periph_fw/periph_loopback.hex, and cpu_gpu_irq_fw/cpu_gpu_irq_fw.hex — no
 # new firmware. Reuses SOC_BOOT_SOURCES + soc_boot_lint (same DUT/lint gate
@@ -1821,7 +1821,7 @@ soc_all_ci: check-space
 	$(MAKE) async_axi_fifo
 	$(MAKE) apb_cdc_bridge
 	$(MAKE) cdc_reset_sync_scan
-	$(MAKE) cdc_2ff_sync
+	$(MAKE) cdc_sync
 	$(MAKE) cdc_gray_fifo
 	$(MAKE) periph_sync_stages
 	$(MAKE) clock_gate_scan

@@ -88,7 +88,7 @@ mutation report `SKIP`, never `PASS`.
 
 | module | frontend | injected mutation | result |
 | --- | --- | --- | --- |
-| `cdc_2ff_sync` | yosys-sv | invert the combinational output `q_o` | caught (FAIL on `cdc_2ff_sync.q_o`) |
+| `cdc_sync` | yosys-sv | invert the combinational output `q_o` | caught (FAIL on `cdc_sync.q_o`) |
 | `async_axi_fifo` | yosys-sv | corrupt the binary→gray encoding (`>>1` → `>>2`) of the write pointer | caught (FAIL on `wr_gray_d` in **all five** channel FIFOs) |
 | `axil_to_apb` | **synlig** | swap the write/read response states out of `S_ACCESS` | caught (FAIL on `axil_to_apb.state_d`) |
 | `boot_rom` | **synlig** | corrupt the INCR burst stride from 4 to 8 bytes | caught (FAIL on `boot_rom.r_addr_q`) |
@@ -130,11 +130,11 @@ reported `PASS`:
 | mutation | effect on the match set | eqy verdict |
 | --- | --- | --- |
 | `rv32i_clock_gate`: tie `ENA` to `1'b1` | 8 → 8 points, 0 → 0 partitions | `DONE (PASS)` — but so does the *unmutated* baseline; see the zero-partition guard |
-| `cdc_2ff_sync`: `sync_q[i] <= d_i` (collapse the 2-FF chain) | **6 → 5 points, 3 → 2 partitions** | `DONE (PASS)` |
+| `cdc_sync`: `sync_q[i] <= d_i` (collapse the 2-FF chain) | **6 → 5 points, 3 → 2 partitions** | `DONE (PASS)` |
 | `async_axi_fifo`: re-introduce commit `7a9f9d4`'s `wr_ready_o` bug | matcher broke | `ERROR: conflicting matches for gold bit \wr_clk_i` |
 
 This is bead `dwp`'s failure shape one level up: the report is not *empty*, it
-just silently *covers less*. The `cdc_2ff_sync` case is closed two ways — the
+just silently *covers less*. The `cdc_sync` case is closed two ways — the
 drift guard above, and by replacing the mutation with a signal-preserving one
 (all rejected mutations are kept in `modules.json` under `design_note` so
 nobody re-invents them). The `rv32i_clock_gate` case turned out to be
@@ -145,7 +145,7 @@ a matcher `ERROR` is not a detection.
 
 ### A false PASS that eqy's default strategy does not catch
 
-The most important result of this round. On `cdc_2ff_sync`, the mutation
+The most important result of this round. On `cdc_sync`, the mutation
 
 ```systemverilog
 sync_q[0] <= ~d_i;    // instead of  sync_q[0] <= d_i;
@@ -156,7 +156,7 @@ guard sees nothing) and is **provably present in the gold netlist** — the
 generated `gold.il` contains
 
 ```
-cell $not $not$...gold_patched_cdc_2ff_sync.sv:96$11
+cell $not $not$...gold_patched_cdc_sync.sv:96$11
   connect \A \d_i
   connect \Y $0\sync_q[0][0:0]
 ```
@@ -208,10 +208,10 @@ miter` to every partition's proof script — this is the actual fix, not a
 config tweak.
 
 Verified through the committed harness itself, not just a manual repro: with
-`use sby`, `cdc_2ff_sync`'s baseline still PASSes (6/6 matched points, 3/3
+`use sby`, `cdc_sync`'s baseline still PASSes (6/6 matched points, 3/3
 partitions — no regression), and the previously-false-PASS mutation
 (`sync_q[0] <= ~d_i`, the exact case in the table above) now **FAILs** on
-partition `cdc_2ff_sync.sync_q.0` — `DONE (FAIL, rc=2)`. A full `--all` re-run
+partition `cdc_sync.sync_q.0` — `DONE (FAIL, rc=2)`. A full `--all` re-run
 under the new strategy reproduced every pre-existing tier's result exactly (no
 `expected_status` mismatches, no drift-guard trips, `async_axi_fifo` still
 285 matched points / 476 partitions) — the strategy switch closed the
@@ -233,8 +233,8 @@ generated `xprop`/`formalff` script for a specific partition if it matters.**
 | Tier | Module | Frontend | Status | Matched pts | Partitions | Runtime |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | `rv32i_clock_gate` | yosys-sv | **ERROR — vacuous** | 8 | **0** | 0.3 s |
-| 2 | `cdc_2ff_sync` | yosys-sv | **PASS** | 6 | 3 | 0.5 s |
-| 3 | `async_axi_fifo` + `cdc_2ff_sync` + `cdc_reset_sync` + `cdc_gray_fifo` | yosys-sv | **PASS** | 285 | 476 | 29.5 s |
+| 2 | `cdc_sync` | yosys-sv | **PASS** | 6 | 3 | 0.5 s |
+| 3 | `async_axi_fifo` + `cdc_sync` + `cdc_reset_sync` + `cdc_gray_fifo` | yosys-sv | **PASS** | 285 | 476 | 29.5 s |
 | 4 | `axil_to_apb` | synlig | **PASS** | 41 | 122 | 8.7 s |
 | 4 | `boot_rom` | synlig | **PASS** | 41 | 36 | 4.5 s |
 | 4 | `axi_lite_register_bank` | synlig | FAIL (expected, root-caused) | 38 | 574 proved / 2 failed | — |
@@ -267,7 +267,7 @@ in.** All four instantiate `apb4_register_bank` (already root-caused
 unprovable at `N_REGS>1` — see "Tier-4 register-bank FAIL" below) with
 `N_REGS` ∈ {3, 4, 5, 6}. `timer` (N_REGS=4), `uart_controller` (N_REGS=5), and
 `spi_controller` (N_REGS=6, and — a second, harness-side bug caught before
-commit — it also instantiates `cdc_2ff_sync` for its MISO input synchroniser,
+commit — it also instantiates `cdc_sync` for its MISO input synchroniser,
 which the first draft of this entry omitted from `gate_modules`) all ERROR at
 the partition-matching step, before any proof is attempted: `conflicting
 matches for gold bit \hw_wdata_i [N]: \hw_wdata_i [N] vs 1'<const>` (N=0 for
@@ -297,7 +297,7 @@ a healthy filesystem reproduced 285 points / 476 partitions / PASS exactly.
   reading the 29 lines. The entry is kept in the registry as an
   `expected_status: ERROR` so this stays visible rather than being quietly
   dropped.
-- **Tier 2** (`cdc_2ff_sync`): the base CDC synchroniser primitive, at the
+- **Tier 2** (`cdc_sync`): the base CDC synchroniser primitive, at the
   instantiation defaults (`WIDTH=1`/`STAGES=2`). Other widths used elsewhere
   are not separately re-checked.
 - **Tier 3** (`async_axi_fifo` + its 3 CDC submodules, 770 lines): the full
@@ -571,7 +571,7 @@ would going in — report that plainly rather than leading with the PASS count.
 
 **Step 0 — the real win.** `sat` → `sby` (`EqySbyStrategy`, `xprop=True`,
 `engine smtbmc bitwuzla`), verified through the committed `--negative-control`
-harness itself: the previously-false-PASSing `cdc_2ff_sync`
+harness itself: the previously-false-PASSing `cdc_sync`
 `sync_q[0] <= ~d_i` mutation now genuinely FAILs, and a full `--all` re-run
 reproduced every pre-existing result exactly (0 `expected_status` mismatches,
 0 drift-guard trips) — the fix cost nothing already proven, only runtime

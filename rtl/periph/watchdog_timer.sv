@@ -50,7 +50,7 @@
 //
 // irq_o = |STATUS[2:0] -- LEVEL-HELD, never a single-cycle pulse. There is no IRQ_EN register
 // (masking is the interrupt_controller's job). Required, not stylistic: every IRQ source crosses
-// core_clk -> cpu_core_clk through a plain 2-FF cdc_2ff_sync in soc_top.sv, which can miss a pulse.
+// core_clk -> cpu_core_clk through a plain 2-FF cdc_sync in soc_top.sv, which can miss a pulse.
 // STATUS stickiness makes irq_o level-held; W1C drops it.
 //   STATUS next = (STATUS & ~clr) | set   -- SET WINS over a same-cycle clear, so a bark or bite
 //   can never be lost to a racing WDT_IRQ_CLR write.

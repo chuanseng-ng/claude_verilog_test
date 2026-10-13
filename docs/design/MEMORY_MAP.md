@@ -467,7 +467,7 @@ repeated START, mandatory clock stretching, arbitration-loss *detection*, 8-byte
 > - The wired-AND of master and slaves lives **off-chip** (the physical bus). It is not modelled in the
 >   RTL; a testbench must model it. (The internal loopback models it for its one internal slave only.)
 > - `*_i` are the sensed pad levels and are **asynchronous**; each is synchronised inside the block by
->   its own single-bit `cdc_2ff_sync`.
+>   its own single-bit `cdc_sync`.
 
 | Offset | Name           | Access | Description                                        |
 |:------:|:--------------:|:------:|:--------------------------------------------------:|

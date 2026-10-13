@@ -1,4 +1,4 @@
-// cdc_2ff_sync.sv
+// cdc_sync.sv
 // GH #91 — Generic multi-flop CDC synchroniser.
 //
 // !!! SCOPE WARNING — READ BEFORE INSTANTIATING !!!
@@ -106,7 +106,7 @@
 // cdc_gray_fifo.sv. Implicit-net detection is covered by Verilator
 // (IMPLICIT/UNDRIVEN) and Verible instead.
 
-module cdc_2ff_sync #(
+module cdc_sync #(
     parameter int unsigned WIDTH  = 1,
     parameter int unsigned STAGES = 2,
 
@@ -150,7 +150,7 @@ module cdc_2ff_sync #(
     // rtl/soc/sram_controller.sv:110-126 for why `initial $fatal` alone is
     // not sufficient under `verilator --lint-only`).
     if (STAGES < 2) begin : g_stages_check
-        $fatal(1, "cdc_2ff_sync: STAGES (%0d) must be >= 2", STAGES);
+        $fatal(1, "cdc_sync: STAGES (%0d) must be >= 2", STAGES);
     end
 
     // ── Synchroniser flop array ──────────────────────────────────────────────
@@ -220,4 +220,4 @@ module cdc_2ff_sync #(
 
     assign q_o = sync_q[STAGES-1];
 
-endmodule : cdc_2ff_sync
+endmodule : cdc_sync

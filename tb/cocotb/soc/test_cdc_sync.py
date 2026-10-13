@@ -1,7 +1,7 @@
 """
-test_cdc_2ff_sync.py -- bead claude_verilog_test-xtaa cocotb verification for
-cdc_2ff_sync's STAGES and RESET_VAL parameters (rtl/soc/cdc/cdc_2ff_sync.sv),
-via the standalone wrapper tb_cdc_2ff_sync.sv.
+test_cdc_sync.py -- bead claude_verilog_test-xtaa cocotb verification for
+cdc_sync's STAGES and RESET_VAL parameters (rtl/soc/cdc/cdc_sync.sv),
+via the standalone wrapper tb_cdc_sync.sv.
 
 DUT instances (all share clk_i / rst_n_i):
   matrix i = 0..5   WIDTH=1, STAGES = 2 + i//2 (2,3,4), RESET_VAL = i % 2
@@ -27,7 +27,7 @@ Tests:
       and the next release re-synchronises with the same latency.
 
 The STAGES < 2 elaboration guard (negative control) is checked by the
-`cdc_2ff_sync_stages1_neg` Makefile step, since a failed elaboration cannot
+`cdc_sync_stages1_neg` Makefile step, since a failed elaboration cannot
 be observed from inside a simulation.
 """
 

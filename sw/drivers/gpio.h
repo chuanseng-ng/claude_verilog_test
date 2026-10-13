@@ -25,7 +25,7 @@
  * driver that papers over any of these will mislead its callers):
  *
  *  1. INPUT SYNC LATENCY: gpio_in_i is asynchronous and is synchronised by a
- *     2-stage cdc_2ff_sync per pin, then latched into the register bank on
+ *     2-stage cdc_sync per pin, then latched into the register bank on
  *     the following cycle -- a real pin transition takes 3 clk edges before
  *     it is visible in GPIO_DATA_IN. gpio_in_read() below returns whatever
  *     is in the register RIGHT NOW -- it does not wait. Any caller that

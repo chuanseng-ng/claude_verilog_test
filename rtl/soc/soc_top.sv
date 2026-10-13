@@ -84,7 +84,7 @@
 //           2-phase NRZ toggle handshake before then); see that file's
 //           header for the protocol and why it was converted.
 //         * pmu_cpu_clk_en (core_clk, drives u_cpu_cg's enable): synchronised
-//           INVERTED, as pmu_cpu_clk_dis_sync (cdc_2ff_sync of ~pmu_cpu_clk_en),
+//           INVERTED, as pmu_cpu_clk_dis_sync (cdc_sync of ~pmu_cpu_clk_en),
 //           clocked by cpu_core_clk (NOT cpu_gated_clk — see the bootstrap-
 //           deadlock note above u_cpu_clk_dis_sync below). GH #93-fix
 //           (originally landed as pmu_cpu_clk_en_sync, non-inverted): a
@@ -92,7 +92,7 @@
 //           cpu_core_rst_n is low, stopping cpu_gated_clk for the CPU's
 //           entire reset window and making u_cpu's synchronous reset
 //           unloadable. Inverting so the synchronised value is "disabled"
-//           (0 = not disabled = clock runs) makes cdc_2ff_sync's reset-to-0
+//           (0 = not disabled = clock runs) makes cdc_sync's reset-to-0
 //           behavior the SAFE state instead of the unsafe one. See the
 //           detailed ordering note above u_cpu_clk_dis_sync below.
 //         * pmu_cpu_rst_n (core_clk, ANDed into cpu_domain_rst_n): cdc_reset_sync
@@ -102,11 +102,11 @@
 //           same structure as pmu_cpu_rst_n above. Phase 6a-3, bead
 //           claude_verilog_test-f7vs.7 — see the WDT reset-path block below.
 //         * pmu_cpu_iso_en (core_clk, clamps the CPU->fabric handshake):
-//           cdc_2ff_sync clocked by cpu_core_clk; the clamp itself now lives
+//           cdc_sync clocked by cpu_core_clk; the clamp itself now lives
 //           at the async_axi_fifo s_* (CPU-domain) face — see clamp-scope
 //           note below.
 //         * ext_irq / timer_irq (core_clk, level-held sources — see
-//           interrupt_controller.sv / timer.sv headers): cdc_2ff_sync each,
+//           interrupt_controller.sv / timer.sv headers): cdc_sync each,
 //           clocked by cpu_core_clk.
 //         * apb_* top-level debug port (core_clk, chip-boundary bus) <->
 //           u_cpu's APB3 debug slave: rtl/soc/apb_cdc_bridge.sv
@@ -119,7 +119,7 @@
 //       In a single-clock build, tie cpu_clk_i == clk_i and cpu_rst_n_i ==
 //       rst_n_i at the integration site (see tb_soc_top.sv / tb_soc_pll.sv for
 //       the reference tie-off) — every crossing above degenerates to a 1:1
-//       ratio synchroniser, which async_axi_fifo / cdc_2ff_sync / cdc_reset_sync
+//       ratio synchroniser, which async_axi_fifo / cdc_sync / cdc_reset_sync
 //       all handle correctly (no bypass path; see async_axi_fifo.sv header).
 //     Known hazard NOT fixed here (documented, reported to the user): the
 //       PMU's CPU power-down sequence has no drain/quiesce step. This
@@ -553,8 +553,8 @@ module soc_top
     //
     // ---- BUG (fixed here) + reset-release ordering, with cycle counts -----
     // The original (non-inverted) u_cpu_clk_en_sync synchronised pmu_cpu_clk_en
-    // directly and was reset by cpu_core_rst_n. cdc_2ff_sync resets its flop
-    // chain to 0 (see cdc_2ff_sync.sv), so that synchroniser's output was 0
+    // directly and was reset by cpu_core_rst_n. cdc_sync resets its flop
+    // chain to 0 (see cdc_sync.sv), so that synchroniser's output was 0
     // (clock DISABLED) for the entire time cpu_core_rst_n was low, and for
     // STAGES=2 more cpu_core_clk edges after cpu_core_rst_n released (pipeline
     // fill latency) before it could reach 1. Meanwhile pmu_cpu_rst_n defaults
@@ -570,7 +570,7 @@ module soc_top
     // its reset branch.
     //
     // Fix: synchronise the INVERTED enable, pmu_cpu_clk_dis_sync = sync(
-    // ~pmu_cpu_clk_en). cdc_2ff_sync's reset-to-0 value now means "NOT
+    // ~pmu_cpu_clk_en). cdc_sync's reset-to-0 value now means "NOT
     // disabled", i.e. the safe/reset state is "clock running", not "clock
     // stopped". u_cpu_cg's en input is ~pmu_cpu_clk_dis_sync.
     //
@@ -668,7 +668,7 @@ module soc_top
     // (see "Residual risk" callout in CLAUDE.md's GH #90 status entry).
     // =========================================================================
     logic pmu_cpu_clk_dis_sync;
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH  (1),
         .STAGES (SYNC_STAGES_TO_CPU)
     ) u_cpu_clk_dis_sync (
@@ -686,7 +686,7 @@ module soc_top
     //
     // Safe-reset-value sanity check (GH #93-fix review): unlike the clk_en
     // crossing above, this one is NOT inverted, and that is correct.
-    // cdc_2ff_sync resets pmu_cpu_iso_en_sync to 0 = "not isolated", which
+    // cdc_sync resets pmu_cpu_iso_en_sync to 0 = "not isolated", which
     // matches pmu_cpu_iso_en's own PMU-side reset default (DOM_ON: iso_en_w=0,
     // see pmu.sv reset-defaults comment) — the synchroniser's safe state and
     // the source signal's safe state agree, so there is no cold-boot window
@@ -696,7 +696,7 @@ module soc_top
     // design decision — see the ISO_CPU clamp-scope note below — not one this
     // fix revisits.)
     logic pmu_cpu_iso_en_sync;
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH  (1),
         .STAGES (SYNC_STAGES_TO_CPU)
     ) u_cpu_iso_en_sync (
@@ -856,7 +856,7 @@ module soc_top
     // level synchroniser cannot miss the assertion — see soc_top.sv header
     // "IRQ routing" note.
     logic ext_irq_cpu_sync, timer_irq_cpu_sync;
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH  (1),
         .STAGES (SYNC_STAGES_TO_CPU)
     ) u_ext_irq_sync (
@@ -865,7 +865,7 @@ module soc_top
         .d_i     (ext_irq),
         .q_o     (ext_irq_cpu_sync)
     );
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH  (1),
         .STAGES (SYNC_STAGES_TO_CPU)
     ) u_timer_irq_sync (
@@ -2043,7 +2043,7 @@ module soc_top
     // =========================================================================
     // CRYPTO — AES-128 / SHA-256 accelerator, APB slave (apb_psel[APB_CRYPTO]),
     // Phase 6b (bead claude_verilog_test-f7vs.10). core_clk domain, single clock, NO asynchronous
-    // inputs and NO top-level pins (register-only), so no cdc_2ff_sync and no SDC false-path apply.
+    // inputs and NO top-level pins (register-only), so no cdc_sync and no SDC false-path apply.
     // aes128_core / sha256_core are instantiated inside crypto_accel. Default EN_AES = EN_SHA = 1,
     // SBOX_PARALLEL = 16. irq_o -> interrupt_controller bit 10 (level-held).
     // NOT production cryptography: see the crypto_accel.sv header NON-GOALS (no side-channel
@@ -2071,7 +2071,7 @@ module soc_top
     // =========================================================================
     // NPU — INT8 4x4 weight-stationary MAC array, APB slave (apb_psel[APB_NPU]),
     // Phase 6c (bead claude_verilog_test-f7vs.11). core_clk domain, single clock, NO asynchronous
-    // inputs and NO top-level pins (register-only), so no cdc_2ff_sync and no SDC false-path apply.
+    // inputs and NO top-level pins (register-only), so no cdc_sync and no SDC false-path apply.
     // npu_mac_array / npu_weight_mem are instantiated inside npu_top; the weight store is one
     // 4 KB SRAM macro. Default EN_NPU = 1. irq_o -> interrupt_controller bit 11 (level-held).
     // =========================================================================

@@ -70,7 +70,7 @@ def _post_reset_recovery_cycles(dut) -> int:
     synchronisers have resolved and issue a transaction expected to
     succeed.
 
-    Both directions here are cdc_2ff_sync instances (SYNC_STAGES_TO_S /
+    Both directions here are cdc_sync instances (SYNC_STAGES_TO_S /
     SYNC_STAGES_TO_M, read back from the RTL via sync_stages_to_{s,m}_o
     rather than hardcoded a second time -- see tb_apb_cdc_bridge.sv
     header) whose NOMINAL settling latency is STAGES cycles. Under the

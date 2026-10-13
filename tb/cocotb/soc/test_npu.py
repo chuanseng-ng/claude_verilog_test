@@ -19,7 +19,7 @@ face selected by a signal-name prefix (APB4Master(dut, prefix, ...)):
     "off_"  u_dut_off  EN_NPU = 0   (the SoC tie-off arm: APB must still terminate cleanly)
 
 npu_top has NO asynchronous input (clk / rst_n / APB4 in, irq_o out), so there is no CDC, no
-cdc_2ff_sync and no SDC exception to test.
+cdc_sync and no SDC exception to test.
 
 Register map (npu_top.sv, ADDR_W=12, N_REGS=16; byte offset = word index * 4):
   0x00 CTRL      [RW]  [0] RELU_EN, [3] IRQ_EN.  [2] START is W1P: a WRITE-SNOOP pulse, not a stored

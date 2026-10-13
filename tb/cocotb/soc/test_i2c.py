@@ -112,7 +112,7 @@ SLAVE_ADDR = 0x50
 FAST_DIV = 3  # hardware minimum (tick = 4 clk): fastest legal, worst sync-latency margin
 TICK = FAST_DIV + 1  # clk cycles per engine tick at FAST_DIV
 FIFO_DEPTH = 8
-SYNC_STAGES = 2  # cdc_2ff_sync depth the DUT header documents for both pad inputs
+SYNC_STAGES = 2  # cdc_sync depth the DUT header documents for both pad inputs
 
 _active_tasks: list = []
 
@@ -1500,7 +1500,7 @@ async def test_i2c_clkdiv_min_guard_rejects_elaboration(dut):
     negative control that proves the command line itself is sound."""
     srcs = [
         str(_PROJ_ROOT / "rtl/soc/apb4_register_bank.sv"),
-        str(_PROJ_ROOT / "rtl/soc/cdc/cdc_2ff_sync.sv"),
+        str(_PROJ_ROOT / "rtl/soc/cdc/cdc_sync.sv"),
         str(_PROJ_ROOT / "rtl/periph/i2c_bit_engine.sv"),
         str(_PROJ_ROOT / "rtl/periph/i2c_controller.sv"),
         str(Path(__file__).resolve().parent / "tb_i2c.sv"),

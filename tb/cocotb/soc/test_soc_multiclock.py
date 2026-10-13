@@ -13,7 +13,7 @@ BLOCKER NOTE #1 (2026-08-01, commit 66a9af1) — RESOLVED by commit 4398c2e
 ("[Fix] GH #93: keep cpu_gated_clk running through cpu_domain_rst_n"). The
 original symptom (0 committed instructions on every ratio including 1:1,
 `make soc_boot` itself red) was a CPU clock-gate/synchronous-reset race:
-u_cpu_clk_en_sync (a cdc_2ff_sync, reset-to-0) gated cpu_gated_clk directly,
+u_cpu_clk_en_sync (a cdc_sync, reset-to-0) gated cpu_gated_clk directly,
 so the CPU saw zero clock edges during its own reset window and its
 synchronous reset was never sampled. Fixed by synchronising the INVERTED
 enable (pmu_cpu_clk_dis_sync) so the synchroniser's reset-to-0 state means
@@ -106,12 +106,12 @@ domain) and cpu_clk_i (CPU domain, GH #93) at a 1:1 ratio via
 soc_clocks.start_soc_clocks() — see that module's header. At 1:1, the two
 Clock() coroutines start in phase and never drift apart, so the CPU<->fabric
 CDC boundary (rtl/soc/async_axi_fifo.sv's u_cpu_axi_cdc bridge, plus the
-cdc_2ff_sync/cdc_reset_sync instances synchronising the PMU control signals
+cdc_sync/cdc_reset_sync instances synchronising the PMU control signals
 and ext_irq/timer_irq into the CPU domain — see soc_top.sv's GH #93 header
 comment) is exercised only in its degenerate synchronous-clock case. This
 suite is the one place in the regression that drives a genuinely
 asynchronous ratio, to prove the CDC primitives (registered-gray-pointer
-2-FF sync, cdc_2ff_sync level synchronisers, cdc_reset_sync) work when the
+2-FF sync, cdc_sync level synchronisers, cdc_reset_sync) work when the
 two domains are NOT clock-aligned.
 
 Clock periods (see also soc_clocks.py's module docstring):
@@ -130,7 +130,7 @@ Clock periods (see also soc_clocks.py's module docstring):
       relative phase between clk_i and cpu_clk_i edges only repeats every
       LCM(3,7) = 21 ns, walking through 7 distinct cpu_clk_i-edge phases
       relative to each clk_i edge (and vice versa) before it does. Every
-      async_axi_fifo AR/AW/W/B/R handshake and every cdc_2ff_sync sample in
+      async_axi_fifo AR/AW/W/B/R handshake and every cdc_sync sample in
       this suite therefore lands at a genuinely different, non-repeating
       phase offset rather than a single fixed one.
     - Both values are deliberately small (single-digit ns) so total wall
@@ -150,7 +150,7 @@ Firmware reuse ONLY (no new firmware/C source is written here):
      pattern), all CPU-issued traffic through u_cpu_axi_cdc's AW/W/B and
      AR/R channels for MMIO reads/writes, adapted to poll cpu_clk_i.
   3. cpu_gpu_irq_fw/cpu_gpu_irq_fw.hex — GPU (fabric domain) completion IRQ
-     crossing into the CPU domain via u_ext_irq_sync (cdc_2ff_sync),
+     crossing into the CPU domain via u_ext_irq_sync (cdc_sync),
      triggering a real trap/ISR (test_cpu_gpu_irq.py positive-path pattern),
      adapted to poll cpu_clk_i. Only the positive path is included here — see
      the module-level "scope decisions" note near the bottom of this file.
@@ -555,7 +555,7 @@ async def test_multiclock_periph_loopback(dut):
 # (cpu_gpu_irq_fw/cpu_gpu_irq_fw.hex, positive path only — see "scope
 # decisions" note below)
 # Exercises: gpu_irq_o (fabric domain) -> interrupt_controller -> ext_irq
-# (fabric domain) -> u_ext_irq_sync (cdc_2ff_sync, clocked by cpu_core_clk)
+# (fabric domain) -> u_ext_irq_sync (cdc_sync, clocked by cpu_core_clk)
 # -> ext_irq_cpu_sync -> rv32i_cpu_top.ext_irq_i -> real trap/ISR entry.
 # =============================================================================
 _IRQ_HEX = str(Path(__file__).parent / "cpu_gpu_irq_fw" / "cpu_gpu_irq_fw.hex")
@@ -566,7 +566,7 @@ _IRQ_HEX = str(Path(__file__).parent / "cpu_gpu_irq_fw" / "cpu_gpu_irq_fw.hex")
 # cpu_clk_i cycles at the new ratio (7/3 ~= 2.33x) and rounded up
 # generously: 100,000 * 2.33 ~= 233,333 -> 500,000 cpu_clk_i cycles (extra
 # headroom vs. a bare 1x conversion, since this positive path also carries
-# the new ext_irq cdc_2ff_sync latency plus the u_cpu_axi_cdc traffic for
+# the new ext_irq cdc_sync latency plus the u_cpu_axi_cdc traffic for
 # the D$ flush/kernel-write/launch MMIO sequence, none of which existed in
 # the plain boot/periph paths' timing budgets).
 IRQ_TIMEOUT_CYCLES = 500_000
@@ -637,7 +637,7 @@ async def test_multiclock_cpu_gpu_irq_pass(dut):
         f"Teeth check failed: ISR_FLAG (SRAM word {ISR_FLAG_WI}) = {isr_flag}, "
         f"expected 1 — the ISR did not run even though PASS_PC was committed. "
         f"This would indicate the fabric-domain ext_irq -> u_ext_irq_sync "
-        f"(cdc_2ff_sync) -> CPU-domain ext_irq_i crossing failed to deliver "
+        f"(cdc_sync) -> CPU-domain ext_irq_i crossing failed to deliver "
         f"the interrupt at this clock ratio."
     )
 
@@ -680,7 +680,7 @@ async def test_multiclock_cpu_gpu_irq_pass(dut):
 # - timer_irq is NOT exercised by anything in this file (or, as far as this
 #   author can tell, by any pre-existing SoC-level suite): no reused
 #   firmware here programs the `timer` peripheral to actually pulse
-#   irq_src_i[2]/timer_irq. u_timer_irq_sync (cdc_2ff_sync, identical
+#   irq_src_i[2]/timer_irq. u_timer_irq_sync (cdc_sync, identical
 #   structure to u_ext_irq_sync) is therefore UNEXERCISED by this suite —
 #   this is a real, explicitly-acknowledged coverage gap, not an oversight
 #   papered over. Closing it would require either new firmware (out of

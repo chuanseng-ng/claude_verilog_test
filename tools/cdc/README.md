@@ -138,7 +138,7 @@ survives `sv2v` and `yosys` flattening (verified: it reaches
 `pnr/sky130/soc/soc_top_sv2v.v`). Two places carry it today, and every
 synchroniser in the design is an instance of one of them:
 
-- [`rtl/soc/cdc/cdc_2ff_sync.sv`](../../rtl/soc/cdc/cdc_2ff_sync.sv) — the
+- [`rtl/soc/cdc/cdc_sync.sv`](../../rtl/soc/cdc/cdc_sync.sv) — the
   generic N-stage data synchroniser
 - [`rtl/soc/cdc/cdc_reset_sync.sv`](../../rtl/soc/cdc/cdc_reset_sync.sv) — the
   reset synchroniser chain
