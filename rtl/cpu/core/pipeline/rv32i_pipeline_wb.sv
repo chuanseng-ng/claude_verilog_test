@@ -72,7 +72,11 @@ module rv32i_pipeline_wb(
     assign commit_pc_o    = mem_wb_reg_i.pc;
     assign commit_insn_o  = mem_wb_reg_i.instruction;
     assign trap_taken_o   = mem_wb_reg_i.valid && mem_wb_reg_i.trap_valid;
-    assign trap_cause_o   = mem_wb_reg_i.trap_cause[3:0];
+    // Named-signal copy of the struct member: the part-select is taken from this wire, never
+    // directly on mem_wb_reg_i.trap_cause (Synlig mis-elaborates that; bead ainf).
+    logic [31:0] mem_wb_trap_cause_w;
+    assign mem_wb_trap_cause_w = mem_wb_reg_i.trap_cause;
+    assign trap_cause_o   = mem_wb_trap_cause_w[3:0];
 
     // =========================================================================
     // Debug halt

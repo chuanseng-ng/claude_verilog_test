@@ -372,6 +372,16 @@ module gpu_compute_unit
         is_divergent   = (mask_taken != '0) && (mask_not_taken != '0);
     end
 
+    // Named-signal copies of the id_ex_q members that are element/bit-selected below.  Selects are
+    // taken from these wires, never directly on id_ex_q.<member>: Synlig reads
+    // id_ex_q.rs1_data[l] (multi-dim packed array member) as ONE BIT instead of the 32-bit element
+    // (defect D3, bead ainf).  The copies keep the same lane-index select.
+    logic [N_LANES-1:0][31:0] id_ex_rs1_data_w, id_ex_rs2_data_w;
+    logic [11:0]              id_ex_imm_w;
+    assign id_ex_rs1_data_w = id_ex_q.rs1_data;
+    assign id_ex_rs2_data_w = id_ex_q.rs2_data;
+    assign id_ex_imm_w      = id_ex_q.imm;
+
     // Memory interface — address generation for VLD/VST (global) and VLDS/VSTS (shared)
     logic is_mem_op, is_shmem_op;
     assign is_mem_op   = id_ex_q.valid && (id_ex_q.iclass == IC_MEMORY);
@@ -384,8 +394,8 @@ module gpu_compute_unit
         mem_we_o        = (id_ex_q.opcode == VST);
         mem_lane_mask_o = id_ex_q.active_mask;
         for (int l = 0; l < N_LANES; l++) begin
-            mem_addr_o[l]  = id_ex_q.rs1_data[l] + {{20{id_ex_q.imm[11]}}, id_ex_q.imm};
-            mem_wdata_o[l] = id_ex_q.rs2_data[l];
+            mem_addr_o[l]  = id_ex_rs1_data_w[l] + {{20{id_ex_imm_w[11]}}, id_ex_imm_w};
+            mem_wdata_o[l] = id_ex_rs2_data_w[l];
         end
         // Shared memory path (VLDS/VSTS) — mutually exclusive with global path
         shmem_req_o       = is_shmem_op && !shmem_stall_i;
@@ -393,9 +403,9 @@ module gpu_compute_unit
         shmem_lane_mask_o = id_ex_q.active_mask;
         shmem_byte_addr   = '0;
         for (int l = 0; l < N_LANES; l++) begin
-            shmem_byte_addr  = id_ex_q.rs1_data[l] + {{20{id_ex_q.imm[11]}}, id_ex_q.imm};
+            shmem_byte_addr  = id_ex_rs1_data_w[l] + {{20{id_ex_imm_w[11]}}, id_ex_imm_w};
             shmem_addr_o[l]  = shmem_byte_addr[SHMEM_W-1:0];
-            shmem_wdata_o[l] = id_ex_q.rs2_data[l];
+            shmem_wdata_o[l] = id_ex_rs2_data_w[l];
         end
     end
 

@@ -86,6 +86,16 @@ module rv32i_pipeline_ex1c (
     assign sel[6] = c_bch & ~any_012345;
 
     // =========================================================================
+    // Named-signal copies of the struct members that are bit/part-selected below.
+    // Selects are taken from these wires, never directly on ex1a_i.<member>
+    // (Synlig mis-elaborates that idiom; bead ainf).
+    // =========================================================================
+    logic [31:0] ex1a_alu_result_w;
+    logic [31:0] ex1a_fwd_store_w;
+    assign ex1a_alu_result_w = ex1a_i.alu_result;
+    assign ex1a_fwd_store_w  = ex1a_i.fwd_store;
+
+    // =========================================================================
     // Output logic
     // =========================================================================
     always_comb begin
@@ -119,35 +129,35 @@ module rv32i_pipeline_ex1c (
 
         case (ex1a_i.mem_size)
             3'b000: begin  // Byte store
-                case (ex1a_i.alu_result[1:0])
+                case (ex1a_alu_result_w[1:0])
                     2'b00: begin
                         ex1c_o.pre_wstrb         = 4'b0001;
-                        ex1c_o.pre_wdata_aligned = {24'h0, ex1a_i.fwd_store[7:0]};
+                        ex1c_o.pre_wdata_aligned = {24'h0, ex1a_fwd_store_w[7:0]};
                     end
                     2'b01: begin
                         ex1c_o.pre_wstrb         = 4'b0010;
-                        ex1c_o.pre_wdata_aligned = {16'h0, ex1a_i.fwd_store[7:0], 8'h0};
+                        ex1c_o.pre_wdata_aligned = {16'h0, ex1a_fwd_store_w[7:0], 8'h0};
                     end
                     2'b10: begin
                         ex1c_o.pre_wstrb         = 4'b0100;
-                        ex1c_o.pre_wdata_aligned = {8'h0, ex1a_i.fwd_store[7:0], 16'h0};
+                        ex1c_o.pre_wdata_aligned = {8'h0, ex1a_fwd_store_w[7:0], 16'h0};
                     end
                     2'b11: begin
                         ex1c_o.pre_wstrb         = 4'b1000;
-                        ex1c_o.pre_wdata_aligned = {ex1a_i.fwd_store[7:0], 24'h0};
+                        ex1c_o.pre_wdata_aligned = {ex1a_fwd_store_w[7:0], 24'h0};
                     end
                     default: ;  // unreachable (2-bit sel fully enumerated); outputs keep the defaults assigned above
                 endcase
             end
             3'b001: begin  // Halfword store
-                case (ex1a_i.alu_result[1])
+                case (ex1a_alu_result_w[1])
                     1'b0: begin
                         ex1c_o.pre_wstrb         = 4'b0011;
-                        ex1c_o.pre_wdata_aligned = {16'h0, ex1a_i.fwd_store[15:0]};
+                        ex1c_o.pre_wdata_aligned = {16'h0, ex1a_fwd_store_w[15:0]};
                     end
                     1'b1: begin
                         ex1c_o.pre_wstrb         = 4'b1100;
-                        ex1c_o.pre_wdata_aligned = {ex1a_i.fwd_store[15:0], 16'h0};
+                        ex1c_o.pre_wdata_aligned = {ex1a_fwd_store_w[15:0], 16'h0};
                     end
                     default: ;  // unreachable (1-bit sel fully enumerated); outputs keep the defaults assigned above
                 endcase
@@ -194,7 +204,7 @@ module rv32i_pipeline_ex1c (
                 ((sel[0] | sel[1] | sel[2]) ? ex1a_i.mtvec                     : 32'h0) |
                 (sel[3]                     ? (ex1a_i.pc + 32'd4)               : 32'h0) |
                 (sel[4]                     ? ex1a_i.mret_pc                    : 32'h0) |
-                (sel[5]                     ? {ex1a_i.alu_result[31:1], 1'b0}   : 32'h0) |
+                (sel[5]                     ? {ex1a_alu_result_w[31:1], 1'b0}   : 32'h0) |
                 (sel[6]                     ? (ex1a_i.pc + ex1a_i.immediate)    : 32'h0);
 
             // dec_trap_cause: only IRQ/ILLEGAL/EBREAK set a non-zero cause

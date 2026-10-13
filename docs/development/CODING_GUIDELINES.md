@@ -75,17 +75,27 @@ Reference: lowRISC Verilog Style Guide, adapted to the house style codified in
 - **Package imports are module-scoped**: `module foo import gpu_pkg::*; (...)`.
   File-scope `import pkg::*;` above the module is **banned** in new code — it pollutes
   the compilation unit and breaks tool-ordering assumptions.
-- **No part/bit-select of a struct field in a port connection.** Writing
-  `.port(sig.field[h:l])` or `.port(sig.field[i])` (or the same inside a concatenation, or a
-  select of a nested/array-element struct field) is legal SystemVerilog but is mis-elaborated by
-  the Synlig/UHDM frontend: it warns `Range select ... out of bounds ... Setting all N result bits
-  to undef` and ties the port to `x`, silently turning downstream compares into don't-cares
-  (bead `dud4`: the CPU hazard-unit `rs1`/`rs2` ports; `rv32i_core.sv`). Lint, LVS and
-  per-module equivalence do not catch it. Assign the struct field to a named full-width signal
-  first, take the select from that signal into a second named signal, and connect the latter.
-  Selects of struct fields inside module bodies are not affected. Any new
-  `Range select ... out of bounds` / `Setting all ... bits to undef` line in a Synlig synthesis
-  log is a build failure, not a warning.
+- **No bit/part/element select directly on a struct member, anywhere.** `s.m[i]`, `s.m[hi:lo]`,
+  `s.m[b +: w]`, `s[i].m[hi:lo]`, and the same inside a concatenation, an expression, a `case`
+  selector, a port connection (`.port(sig.field[h:l])`) or on the left-hand side of an assignment
+  (`y.m[hi:lo] = v`) are banned in `rtl/`. They are legal SystemVerilog but the Synlig/UHDM
+  frontend mis-elaborates them, usually **silently** (no warning, no `x`, wrong bits), and which
+  form breaks depends on the struct *type*, so a typedef edit can turn a working line into a broken
+  one without touching it: a type with exactly two packed-range members reads any `s.m[hi:lo]` at
+  the wrong offset (D1); an LHS `y.m[hi:lo] = v` is elaborated as a whole-member write (D2); an
+  element select of a multi-dimensional packed-array member (`s.rs1_data[l]`) is read as one bit
+  (D3). In a port connection it additionally warns `Range select ... out of bounds ... Setting all
+  N result bits to undef` and ties the port to `x` (bead `dud4`, the CPU hazard-unit
+  `rs1`/`rs2` ports). Lint, LVS and per-module equivalence do not catch it. **Write the member to
+  a named full-width signal first and select from that signal:**
+  `logic [31:0] alu_result_w; assign alu_result_w = ex_mem_reg_i.alu_result;` then
+  `alu_result_w[1:0]`. For a multi-dimensional packed member the copy keeps the member's shape
+  (`logic [N_LANES-1:0][31:0] rs1_data_w;`). For a write, build the whole member value in a named
+  signal and assign the whole member. The copy keeps the identical select, so it adds no mux. Whole
+  member reads and writes (`s.m`, `s.m = v`) are fine. Enforced by
+  `tools/verif/check_struct_member_select.py` (blocking in `qa-checks.yml`, zero allowed sites, no
+  baseline; see `docs/SYNLIG_STRUCT_SELECT_AINF.md`). Any new `Range select ... out of bounds` /
+  `Setting all ... bits to undef` line in a Synlig synthesis log is a build failure, not a warning.
 - **Latches are banned.** All combinational outputs assigned on every path
   (Verilator lint + `case-missing-default` guard this).
 

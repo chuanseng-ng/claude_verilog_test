@@ -94,22 +94,27 @@ module rv32i_pipeline_mem(
     logic        mem_misaligned_load, mem_misaligned_store, mem_misaligned;
     logic [31:0] mem_trap_cause_d;
 
+    // Named-signal copy of the struct member: selects are taken from this wire, never directly
+    // on ex_mem_reg_i.alu_result (Synlig mis-elaborates that; bead ainf).
+    logic [31:0] ex_mem_alu_result_w;
+    assign ex_mem_alu_result_w = ex_mem_reg_i.alu_result;
+
     always_comb begin
         mem_misaligned_load  = 1'b0;
         mem_misaligned_store = 1'b0;
 
         if (ex_mem_reg_i.mem_rd) begin
             case (ex_mem_reg_i.mem_size)
-                3'b001: mem_misaligned_load = ex_mem_reg_i.alu_result[0];
-                3'b010: mem_misaligned_load = |ex_mem_reg_i.alu_result[1:0];
+                3'b001: mem_misaligned_load = ex_mem_alu_result_w[0];
+                3'b010: mem_misaligned_load = |ex_mem_alu_result_w[1:0];
                 default: mem_misaligned_load = 1'b0;
             endcase
         end
 
         if (ex_mem_reg_i.mem_wr) begin
             case (ex_mem_reg_i.mem_size)
-                3'b001: mem_misaligned_store = ex_mem_reg_i.alu_result[0];
-                3'b010: mem_misaligned_store = |ex_mem_reg_i.alu_result[1:0];
+                3'b001: mem_misaligned_store = ex_mem_alu_result_w[0];
+                3'b010: mem_misaligned_store = |ex_mem_alu_result_w[1:0];
                 default: mem_misaligned_store = 1'b0;
             endcase
         end
