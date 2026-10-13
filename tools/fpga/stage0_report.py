@@ -39,7 +39,7 @@ if fam == "xc7":
     lram = sum(v for k, v in cnt.items() if k in LUTRAM)
     # RAM32M = 4 x (32x2) + ... occupies 4 LUT6 sites (SLICEM); RAM32X1D 2; RAM64M 4; RAM64X1D 2; RAM128X1D 4; RAM256X1D 4
     lutram_sites = (cnt["RAM32M"] * 4 + cnt["RAM64M"] * 4 + cnt["RAM32X1D"] * 2 + cnt["RAM64X1D"] * 2 +
-                    cnt["RAM32X1S"] + cnt["RAM64X1S"] + cnt["RAM128X1D"] * 4 + cnt["RAM256X1D"] * 4)
+                    cnt["RAM32X1S"] + cnt["RAM64X1S"] + cnt["RAM128X1D"] * 4 + cnt["RAM128X1S"] * 2 + cnt["RAM256X1D"] * 4)
     b18, b36 = cnt["RAMB18E1"], cnt["RAMB36E1"]
     print(f"\nSUMMARY xc7: LUT(logic)={lut} LUTRAM_cells={lram} (~{lutram_sites} LUT sites) FF={ff} "
           f"LATCH={cnt['LDCE']+cnt['LDPE']} BRAM18={b18} BRAM36={b36} (=> {b36 + (b18+1)//2} RAMB36-equivalents) "

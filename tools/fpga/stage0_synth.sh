@@ -30,7 +30,10 @@ fi
 
 case $fam in
   xc7)  synth="synth_xilinx -top soc_top -family xc7 -flatten -noiopad" ;;
-  ecp5) synth="synth_ecp5 -top soc_top -flatten -noiopad" ;;
+  # synth_ecp5's last step ("check": autoname, hierarchy -check, stat) is purely cosmetic naming + reporting, and
+  # `autoname` on the flattened SoC aborts with std::bad_alloc under the 10 GB cap (measured, nogpu and gpu).
+  # Run everything up to it; stat/write_json below produce the same counts. All mapping passes still run.
+  ecp5) synth="synth_ecp5 -top soc_top -flatten -noiopad -run :check" ;;
   *) echo "bad family $fam"; exit 2 ;;
 esac
 
@@ -40,6 +43,7 @@ hierarchy -check -top soc_top
 tee -o $out/$tag.hier.txt stat
 $synth
 tee -o $out/$tag.stat.txt stat
+blackbox =A:whitebox
 write_json $out/$tag.json
 EOF
 

@@ -608,6 +608,13 @@ ifeq ($(SIM),verilator)
 	# Makefile) can see the injector at all, and only instances that
 	# explicitly override RAND_CDC_DELAY_EN=1 activate it.
 	COMPILE_ARGS += +define+SIMULATION
+	# bead hlrm (FPGA Stage 0): `make FPGA=1 soc_all_ci` elaborates the `FPGA arms (rtl/fpga block-RAM-inferable
+	# memories). `-y rtl/fpga` lets Verilator resolve fpga_sram_1rw / fpga_sdp_ram_be by module name, so no source
+	# list changes; COMPILE_ARGS is part of the content-keyed SIM_BUILD name, so FPGA and non-FPGA builds can
+	# never share a directory. Off by default; nothing changes unless FPGA=1 is passed.
+	ifeq ($(FPGA),1)
+	COMPILE_ARGS += +define+FPGA -y $(PROJ_ROOT)/rtl/fpga
+	endif
 	COMPILE_ARGS += --timescale 1ns/1ps
 	COMPILE_ARGS += --public-flat-rw
 	COMPILE_ARGS += --no-timing
