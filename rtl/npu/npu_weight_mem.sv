@@ -128,6 +128,15 @@ module npu_weight_mem #(
                 .din0   (wr_data_i),
                 .dout0  (bank_dout_w[b])
             );
+`elsif FPGA
+            fpga_sram_1rw #(.AW(8)) u_sram_macro (
+                .clk0   (clk),
+                .csb0   (bank_csb_w),
+                .web0   (mem_web_w),
+                .addr0  (mem_addr_w[7:0]),
+                .din0   (wr_data_i),
+                .dout0  (bank_dout_w[b])
+            );
 `else
             sram_1rw_256x32_freepdk45 u_sram_macro (
                 .clk0   (clk),

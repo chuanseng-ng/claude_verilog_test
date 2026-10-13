@@ -62,6 +62,16 @@
 // in tb_axi4_crossbar.sv; all widths come from axi_pkg.  Flat per-channel
 // signals (no SV interfaces) per the Phase 5 RTL convention.
 
+// hlrm (FPGA Stage 0): the SRAM_SKY130 FSM arm (single write port + dedicated registered-read port, 2-entry skid
+// buffer, no flat word array) is the right shape for an FPGA block RAM too. SRAM_CTRL_2P selects that FSM arm;
+// it is local to this file (undefined at the end) so it can never leak into another module's `ifdef.
+// With FPGA undefined it is defined exactly when SRAM_SKY130 is, so every pre-existing elaboration is unchanged.
+`ifdef SRAM_SKY130
+`define SRAM_CTRL_2P
+`elsif FPGA
+`define SRAM_CTRL_2P
+`endif
+
 module sram_controller
     import axi_pkg::*;
     import soc_addr_map_pkg::*;
@@ -143,6 +153,12 @@ module sram_controller
         // and synthesis elaboration alike, before a single clock is run.
         $fatal(1, "sram_controller: SRAM_SKY130 requires MEM_WORDS=1024 (4 KB) to match the sky130_sram_4kbyte_1rw1r_32x1024_8 macro geometry; got MEM_WORDS=%0d", MEM_WORDS);
     end
+`elsif FPGA
+    // hlrm: backing store is the fpga_sdp_ram_be instance at the bottom of this file (inferred block RAM).
+    // MEM_WORDS must be a power of two so the word index is a plain bit slice of the byte address.
+    if ((MEM_WORDS & (MEM_WORDS - 1)) != 0) begin : g_mem_words_pow2_check
+        $fatal(1, "sram_controller: FPGA arm requires MEM_WORDS to be a power of two; got MEM_WORDS=%0d", MEM_WORDS);
+    end
 `else
     logic [DW-1:0] mem [0:MEM_WORDS-1];
 `endif
@@ -190,7 +206,7 @@ module sram_controller
     // synthesized functional behavior for the SRAM_SKY130 branch either way.
     typedef enum logic [1:0] {W_IDLE, W_DATA, W_DRAIN, W_RESP} wstate_e;
     wstate_e          wstate;
-`ifdef SRAM_SKY130
+`ifdef SRAM_CTRL_2P
     logic [IDX_W-1:0] w_idx;
 `else
     // bead rvb: binary word index (unlike the ifdef branch above, this is a
@@ -214,7 +230,7 @@ module sram_controller
             wstate <= W_IDLE;
             w_err  <= 1'b0;
             w_incr <= 1'b0;
-`ifndef SRAM_SKY130
+`ifndef SRAM_CTRL_2P
             drain_cnt <= 1'b0;
 `endif
         end else begin
@@ -236,7 +252,7 @@ module sram_controller
                             w_idx <= w_idx + 1'b1;
                         end
                         if (s_wlast) begin
-`ifdef SRAM_SKY130
+`ifdef SRAM_CTRL_2P
                             wstate <= W_RESP;
 `else
                             // bead rvb: BVALID must not assert until this
@@ -251,7 +267,7 @@ module sram_controller
                         end
                     end
                 end
-`ifndef SRAM_SKY130
+`ifndef SRAM_CTRL_2P
                 W_DRAIN: begin
                     if (drain_cnt == 1'b0) begin
                         wstate <= W_RESP;
@@ -276,7 +292,7 @@ module sram_controller
     assign s_bid     = bid_q;
     assign s_bresp   = w_err ? AXI_RESP_SLVERR : AXI_RESP_OKAY;
 
-`ifndef SRAM_SKY130
+`ifndef SRAM_CTRL_2P
     // bead rvb Path A residual fix (2026-09-17): 2-stage registered,
     // group-distributed write pipeline. Replaces the first rvb iteration's
     // word_sel_q-gated per-word always_ff (2026-09-16), which still made
@@ -443,7 +459,7 @@ module sram_controller
     end
 `endif
 
-`ifdef SRAM_SKY130
+`ifdef SRAM_CTRL_2P
     // ── SRAM macro — port 0 (RW, write-only in this controller) ─────────────
     // Committed the same cycle the write FSM accepts a beat: csb0 active-low,
     // gated on an actual (non-error) write so an out-of-range burst never
@@ -466,7 +482,7 @@ module sram_controller
 `endif
 
     // ── Read FSM ─────────────────────────────────────────────────────────────
-`ifndef SRAM_SKY130
+`ifndef SRAM_CTRL_2P
     // ---- Default: flat behavioral array, REGISTERED read (bead ydw). ----
     //
     // claude_verilog_test-ydw: the previous `assign s_rdata = mem[r_idx]`
@@ -878,6 +894,32 @@ module sram_controller
     // dout0 (port 0 read data) is never consumed — port 0 is write-only here.
     logic _unused_dout0;
     assign _unused_dout0 = &{1'b0, mem_dout0_unused};
+`elsif FPGA
+    // ── FPGA: inferred block RAM (hlrm) ──────────────────────────────────────
+    // Same two-port contract as the Sky130 macro arm above: write port = the write FSM (byte-enabled, committed
+    // the cycle the beat is accepted), read port = the read FSM's dedicated port with ONE registered-read cycle.
+    // The Sky130 macro launches dout1 on the negedge after the address edge and the FSM samples it at the next
+    // posedge; a registered-output block RAM presents the same data over the same cycle, so the skid-buffer
+    // timing above holds unchanged (rd_pend_q is high exactly when mem_dout1 is the fresh word).
+    // w_mem_write / mem_csb0 / mem_wmask0 / mem_addr0 / mem_din0 / mem_dout0_unused are declared and driven by
+    // the shared SRAM_CTRL_2P block above (identical write-side qualification to the Sky130 macro arm).
+    logic [SW-1:0]    mem_we;
+    assign mem_we = mem_csb0 ? '0 : mem_wmask0;
+
+    fpga_sdp_ram_be #(.WORDS(MEM_WORDS)) u_fpga_mem (
+        .clk    (clk),
+        .we_i   (mem_we),
+        .waddr_i(mem_addr0),
+        .wdata_i(mem_din0),
+        .re_i   (~mem_csb1),
+        .raddr_i(mem_addr1),
+        .rdata_o(mem_dout1)
+    );
+
+    // No port-0 read in this controller; the shared block's dout0 placeholder is never driven in this arm.
+    assign mem_dout0_unused = '0;
+    logic _unused_dout0;
+    assign _unused_dout0 = &{1'b0, mem_dout0_unused};
 `endif
 
     // ── Unused inputs ────────────────────────────────────────────────────────
@@ -887,3 +929,5 @@ module sram_controller
     assign _unused_ok = &{1'b0, s_awsize, s_arsize};
 
 endmodule
+
+`undef SRAM_CTRL_2P
