@@ -14,12 +14,12 @@
 //
 // Params:
 //   WIDTH       — payload width in bits.
-//   DEPTH       — FIFO depth in entries. MUST be a power of two and >= 4.
+//   DEPTH       — FIFO depth in entries. MUST be a power of two and >= 2.
 //                 Power-of-two is required by the gray-code wrap arithmetic.
-//                 DEPTH must be >= 4 (not 2): at DEPTH=2, PTR_W=$clog2(2)+1=2
-//                 and the full-flag address slice rd_gray_sync_w[PTR_W-3:0]
-//                 degenerates to [-1:0], which is not a legal bit range —
-//                 DEPTH=2 is therefore illegal, not merely impractical.
+//                 DEPTH=2 (bead claude_verilog_test-3snb) is the minimal variant:
+//                 a 2-entry FIFO whose 2-bit gray pointer is the smallest
+//                 multi-bit bus that can cross safely (see "DEPTH=2 full flag"
+//                 below). DEPTH >= 4 is the original, unchanged behaviour.
 //   SYNC_STAGES — stage count passed to both internal cdc_2ff_sync gray
 //                 pointer synchronisers (>= 2 required; see cdc_2ff_sync.sv).
 //
@@ -42,6 +42,32 @@
 // additionally qualified by its own domain's wr_rst_n_i, a same-domain
 // input, not a cross-domain path — see the reset-gating note above
 // full_q/empty_q's derivation below).
+//
+//
+// DEPTH=2 full flag (bead claude_verilog_test-3snb)
+// ------------------------------------------------
+// Full means "the write pointer is exactly DEPTH ahead of the (synchronised)
+// read pointer", i.e. the two PTR_W-bit BINARY pointers are equal in the low
+// ADDR_W bits and differ in the wrap bit. In gray code that is: the top two
+// bits of the gray pointers are both inverted and every lower bit is equal —
+// the general (DEPTH >= 4) compare
+//     wr_gray_d == {~rd_sync[PTR_W-1:PTR_W-2], rd_sync[PTR_W-3:0]}.
+// At DEPTH=2, PTR_W = 2 and there are no lower bits: rd_sync[PTR_W-3:0] is
+// rd_sync[-1:0], not a legal range, so the compare degenerates to inverting the
+// WHOLE pointer:  wr_gray_d == ~rd_sync.  Checked exhaustively over the four
+// 2-bit pointer values (binary b -> gray g = b ^ (b >> 1)):
+//     rd bin 00 (g 00) -> full at wr bin 10 (g 11) = ~00   ok
+//     rd bin 01 (g 01) -> full at wr bin 11 (g 10) = ~01   ok
+//     rd bin 10 (g 11) -> full at wr bin 00 (g 00) = ~11   ok
+//     rd bin 11 (g 10) -> full at wr bin 01 (g 01) = ~10   ok
+// and no other (wr, rd) pair satisfies it: the four gray codes are all
+// distinct, so wr_gray_d == ~rd_sync selects exactly one wr value per rd value.
+// Inverting only the MSB instead (the naive narrowing of the general form) is
+// WRONG at depth 2: it matches wr bin 11 against rd bin 00, i.e. it reports
+// full only after THREE words are in a two-entry memory (overflow).
+// Everything else — empty compare, pointer crossings, reset gating, storage —
+// is shared with DEPTH >= 4 unchanged. The depth-2 branch only selects the
+// compare operand (full_cmp_w below); no flop, port or instance name changes.
 //
 // Reset: asynchronous assert, synchronous deassert, active-low per domain
 // (docs/development/CODING_GUIDELINES.md §1.4). wr_rst_n_i / rd_rst_n_i are
@@ -71,13 +97,13 @@ module cdc_gray_fifo #(
     input  logic             rd_ready_i
 );
 
-    // Elaboration-time guard: DEPTH must be a power of two and >= 4 (see
+    // Elaboration-time guard: DEPTH must be a power of two and >= 2 (see
     // header). Generate-scope $fatal (not wrapped in `initial`) so it fires
     // under `verilator --lint-only` / synthesis elaboration and not only
     // under simulation — see rtl/soc/sram_controller.sv:110-126 for the
     // precedent and the reason `initial $fatal` alone is insufficient here.
-    if ((DEPTH < 4) || ((DEPTH & (DEPTH - 1)) != 0)) begin : g_depth_check
-        $fatal(1, "cdc_gray_fifo: DEPTH (%0d) must be a power of two and >= 4", DEPTH);
+    if ((DEPTH < 2) || ((DEPTH & (DEPTH - 1)) != 0)) begin : g_depth_check
+        $fatal(1, "cdc_gray_fifo: DEPTH (%0d) must be a power of two and >= 2", DEPTH);
     end
 
     // ── Local geometry ────────────────────────────────────────────────────────
@@ -164,11 +190,24 @@ module cdc_gray_fifo #(
         end
     end
 
+    // Gray value the next write pointer must equal for the FIFO to be full
+    // (see "DEPTH=2 full flag" in the header). Only the compare operand is
+    // generate-selected, so the flop below is identical for every DEPTH.
+    logic [PTR_W-1:0] full_cmp_w;
+
+    if (DEPTH == 2) begin : g_full_cmp_d2
+        // 2-bit gray pointer: "invert the top two bits" is the whole pointer.
+        assign full_cmp_w = ~rd_gray_sync_w;
+    end else begin : g_full_cmp_dge4
+        // DEPTH >= 4 (PTR_W >= 3): original expression, unchanged.
+        assign full_cmp_w = {~rd_gray_sync_w[PTR_W-1:PTR_W-2], rd_gray_sync_w[PTR_W-3:0]};
+    end
+
     always_ff @(posedge wr_clk_i or negedge wr_rst_n_i) begin
         if (!wr_rst_n_i) begin
             full_q <= 1'b0;
         end else begin
-            full_q <= (wr_gray_d == {~rd_gray_sync_w[PTR_W-1:PTR_W-2], rd_gray_sync_w[PTR_W-3:0]});
+            full_q <= (wr_gray_d == full_cmp_w);
         end
     end
 

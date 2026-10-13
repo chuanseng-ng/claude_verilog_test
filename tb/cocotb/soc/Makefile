@@ -343,6 +343,15 @@ CDC_2FF_SYNC_SOURCES = \
 	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
 	$(SOC_DIR)/tb_cdc_2ff_sync.sv
 
+# Bead claude_verilog_test-3snb: standalone cdc_gray_fifo (DEPTH=2 variant + DEPTH=4 control)
+# unit-test sources. CDC_GRAY_FIFO_RTL is overridable so the mutation campaign can point the very
+# same suite at a mutated copy of the primitive: make CDC_GRAY_FIFO_RTL=/path/mutant.sv cdc_gray_fifo
+CDC_GRAY_FIFO_RTL ?= $(RTL)/soc/cdc/cdc_gray_fifo.sv
+CDC_GRAY_FIFO_SOURCES = \
+	$(RTL)/soc/cdc/cdc_2ff_sync.sv \
+	$(CDC_GRAY_FIFO_RTL) \
+	$(SOC_DIR)/tb_cdc_gray_fifo.sv
+
 CDC_RESET_SYNC_SCAN_SOURCES = \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(SOC_DIR)/tb_cdc_reset_sync_scan.sv
@@ -807,7 +816,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint cdc_2ff_sync cdc_2ff_sync_lint cdc_2ff_sync_stages1_neg periph_sync_stages clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
+.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint cdc_2ff_sync cdc_2ff_sync_lint cdc_2ff_sync_stages1_neg cdc_gray_fifo cdc_gray_fifo_sim cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg periph_sync_stages clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
 crossbar:
 	$(MAKE) MODULE=test_crossbar,test_crossbar_errors TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -1239,6 +1248,46 @@ cdc_2ff_sync: cdc_2ff_sync_lint cdc_2ff_sync_stages1_neg
 	$(MAKE) MODULE=test_cdc_2ff_sync TOPLEVEL=tb_cdc_2ff_sync \
 		VERILOG_SOURCES="$(CDC_2FF_SYNC_SOURCES)" \
 		$(BUILD_ARGS)
+
+# Bead claude_verilog_test-3snb: cdc_gray_fifo DEPTH=2 lint + sim.
+# Lint of the wrapper (both depths) plus the bare primitive at every legal depth, so the depth-2
+# generate branch and the unchanged DEPTH>=4 branch are each elaborated under -Wall.
+cdc_gray_fifo_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR \
+		--top-module tb_cdc_gray_fifo \
+		$(CDC_GRAY_FIFO_SOURCES)
+	@for d in 2 4 8 16; do \
+		verilator --lint-only -Wall -Wno-IMPORTSTAR -GDEPTH=$$d \
+			--top-module cdc_gray_fifo $(RTL)/soc/cdc/cdc_2ff_sync.sv $(CDC_GRAY_FIFO_RTL) \
+			|| { echo "FAIL: cdc_gray_fifo DEPTH=$$d lint"; exit 1; }; \
+		echo "PASS: cdc_gray_fifo DEPTH=$$d lint clean"; \
+	done
+
+# Negative control: illegal depths must fail elaboration through the generate-scope $fatal, and
+# must name the guard (not die for an unrelated reason).
+cdc_gray_fifo_depth_guard_neg:
+	@for d in 0 1 3 6 12; do \
+		out=$$(verilator --lint-only -Wall -Wno-IMPORTSTAR -GDEPTH=$$d \
+			--top-module cdc_gray_fifo $(RTL)/soc/cdc/cdc_2ff_sync.sv $(CDC_GRAY_FIFO_RTL) 2>&1); rc=$$?; \
+		if [ $$rc -eq 0 ]; then \
+			echo "FAIL: DEPTH=$$d elaborated cleanly"; exit 1; \
+		elif echo "$$out" | grep -q "DEPTH ($$d) must be a power of two and >= 2"; then \
+			echo "PASS: DEPTH=$$d rejected by cdc_gray_fifo elaboration guard"; \
+		else \
+			echo "FAIL: DEPTH=$$d failed for the wrong reason"; echo "$$out"; exit 1; \
+		fi; \
+	done
+
+# cdc_gray_fifo_sim is the simulation alone (no lint / guard steps): the mutation campaign
+# (tools/verif/mutate_cdc_gray_fifo.py) uses it so a mutant is killed by the suite's behavioural
+# checks, not merely by lint.
+cdc_gray_fifo_sim:
+	$(MAKE) MODULE=test_cdc_gray_fifo TOPLEVEL=tb_cdc_gray_fifo \
+		VERILOG_SOURCES="$(CDC_GRAY_FIFO_SOURCES)" \
+		$(BUILD_ARGS)
+
+cdc_gray_fifo: cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg
+	$(MAKE) cdc_gray_fifo_sim
 
 # Bead claude_verilog_test-xtaa: SYNC_STAGES pass-through of the four peripherals that own an
 # input synchroniser. One cheap latency test per family at SYNC_STAGES=3 (the default depth 2 is
@@ -1773,6 +1822,7 @@ soc_all_ci: check-space
 	$(MAKE) apb_cdc_bridge
 	$(MAKE) cdc_reset_sync_scan
 	$(MAKE) cdc_2ff_sync
+	$(MAKE) cdc_gray_fifo
 	$(MAKE) periph_sync_stages
 	$(MAKE) clock_gate_scan
 	$(MAKE) dft_muxes

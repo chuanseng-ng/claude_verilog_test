@@ -83,7 +83,7 @@ module async_axi_fifo #(
     parameter int unsigned LENW  = axi_pkg::AXI_LEN_WIDTH,
     parameter int unsigned SIZEW = axi_pkg::AXI_SIZE_WIDTH,
 
-    // ── Per-channel FIFO depths (power of two, >= 4 each) ────────────────────
+    // ── Per-channel FIFO depths (power of two; validated at >= 4 only -- cdc_gray_fifo itself accepts 2 since 3snb, not validated here) ──
     parameter int unsigned AW_DEPTH = 4,
     parameter int unsigned W_DEPTH  = 8,
     parameter int unsigned B_DEPTH  = 4,
