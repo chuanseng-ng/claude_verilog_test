@@ -230,11 +230,11 @@ def test_tap_alt_clock_is_allowed_only_when_declared(tmp_path: Path) -> None:
 # --------------------------------------------------------------------------------------------
 # --expect-reset-sync (bead claude_verilog_test-j41m.11)
 # --------------------------------------------------------------------------------------------
-# A miniature of the two trst_ni reset synchronisers of dft_ctrl. `u_tap.u_trst_sync` resets the TAP flop,
-# `u_sw_rst` resets the consumer `u_clk_sw`; both are instances of the same 2-flop `rsync`. The two chains are
-# structurally identical (same clock, same async clear, D = 1), which is exactly why cdc_snitch's opt_merge folds
-# them into one and its report cannot tell them apart (docs/design/DFT_ARCHITECTURE.md 15.5): the checker runs
-# before any such merge, so it sees both.
+# A miniature of the two trst_ni reset synchronisers of dft_ctrl. `u_tap.u_trst_sync` resets the
+# TAP flop, `u_sw_rst` resets the consumer `u_clk_sw`; both are instances of the same 2-flop
+# `rsync`. The two chains are structurally identical (same clock, same async clear, D = 1), which
+# is exactly why cdc_snitch's opt_merge folds them into one and its report cannot tell them apart
+# (docs/design/DFT_ARCHITECTURE.md 15.5): the checker runs before any such merge, so it sees both.
 _RS_TOP = """
 module rsync (input wire clk_i, input wire rst_ni, output wire rst_no);
     reg s0_q, s1_q;
@@ -243,7 +243,9 @@ module rsync (input wire clk_i, input wire rst_ni, output wire rst_no);
     assign rst_no = s1_q;
 endmodule
 
-module tapmod (input wire tck_i, input wire trst_ni, input wire tms_i, output wire q_o, output wire r_o);
+module tapmod (
+    input wire tck_i, input wire trst_ni, input wire tms_i, output wire q_o, output wire r_o
+);
     wire r;
     TAP_RST
     reg q;
@@ -337,8 +339,9 @@ def test_reset_sync_both_bypassed_fails_naming_both(tmp_path: Path) -> None:
 
 
 def test_reset_sync_old_hole_is_closed_only_by_the_option(tmp_path: Path) -> None:
-    # Without --expect-reset-sync a TAP flop reset straight from trst_ni is accepted (the pre-j41m.11 behaviour);
-    # with it the same netlist fails. Keeps the option opt-in and the hole's closure attributable to it.
+    # Without --expect-reset-sync a TAP flop reset straight from trst_ni is accepted (the
+    # pre-j41m.11 behaviour); with it the same netlist fails. Keeps the option opt-in and the
+    # hole's closure attributable to it.
     plain = (*_RS_ARGS[:6],)
     res = _rs_run(
         tmp_path, tap_rst=_TAP_BYPASS, sw_rst=_SW_BYPASS, consumer_rst="trst_ni", args=plain
