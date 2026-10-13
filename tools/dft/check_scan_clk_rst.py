@@ -179,8 +179,14 @@ def check_reset_syncs(a, cells, ports, drivers, cell_inputs, cone_leaves, violat
             for pn, bits in cells[cn]["connections"].items():
                 if cells[cn]["port_directions"].get(pn) == "output":
                     stack.extend(x for x in bits if isinstance(x, int))
-    for cn in sorted(direct - all_sync):
-        fail(a.trst, f"port {a.trst} reaches {flat_name(cn)} without a cdc_reset_sync (synchroniser bypassed?)")
+    # One finding per instance (not per flop), so a bypass cannot bury the named-chain findings under dozens of flop lines.
+    by_inst = {}
+    for cn in direct - all_sync:
+        inst = flat_name(cn).rsplit(".", 1)[0]
+        by_inst[inst] = by_inst.get(inst, 0) + 1
+    for inst, n in sorted(by_inst.items()):
+        fail(inst, f"port {a.trst} reaches {n} sequential cell(s) under {inst} without a cdc_reset_sync "
+                   f"(synchroniser bypassed?)")
     return ok
 
 
