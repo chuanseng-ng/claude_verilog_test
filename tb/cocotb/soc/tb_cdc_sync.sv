@@ -1,5 +1,5 @@
-// tb_cdc_2ff_sync.sv
-// Bead claude_verilog_test-xtaa -- directed testbench for cdc_2ff_sync's
+// tb_cdc_sync.sv
+// Bead claude_verilog_test-xtaa -- directed testbench for cdc_sync's
 // STAGES and RESET_VAL parameters.
 //
 // One simulation covers the whole matrix the cocotb test needs:
@@ -9,7 +9,7 @@
 //                     pattern, non-default depth)
 // All instances share clk_i / rst_n_i; the data inputs are independent.
 
-module tb_cdc_2ff_sync (
+module tb_cdc_sync (
     input  logic       clk_i,
     input  logic       rst_n_i,
 
@@ -23,7 +23,7 @@ module tb_cdc_2ff_sync (
     genvar i;
     generate
         for (i = 0; i < 6; i++) begin : g_m
-            cdc_2ff_sync #(
+            cdc_sync #(
                 .WIDTH     (1),
                 .STAGES    (2 + i / 2),
                 .RESET_VAL (1'(i % 2))
@@ -39,7 +39,7 @@ module tb_cdc_2ff_sync (
     // Four independent single-bit lines: this wrapper does not claim the
     // lines are coherent (see the primitive's scope warning); it exists to
     // prove each bit takes its own bit of RESET_VAL.
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH     (4),
         .STAGES    (3),
         .RESET_VAL (4'b1010)
@@ -50,4 +50,4 @@ module tb_cdc_2ff_sync (
         .q_o     (qx_o)
     );
 
-endmodule : tb_cdc_2ff_sync
+endmodule : tb_cdc_sync

@@ -28,7 +28,7 @@ written because a real run tripped it:
 SCOPE WARNING (measured, see README.md): eqy's default `sat` strategy has a
 demonstrated false-PASS class -- the generated miter accepts a gold-side `x`
 unconditionally, and formalff/setundef are applied to the gate side only. An
-inverted D input on a feedback-free flop (cdc_2ff_sync `sync_q[0] <= ~d_i`)
+inverted D input on a feedback-free flop (cdc_sync `sync_q[0] <= ~d_i`)
 is NOT caught. Read every PASS here as "eqy's default strategy found no
 counterexample", not as "these are equivalent".
 
@@ -372,9 +372,9 @@ def build_eqy_config(
     # ("SMT Solver 'yices-smt2' not found in path") -- bitwuzla is the solver
     # this devshell actually vendors (confirmed present on PATH).
     # Empirically verified (2026-08-15, manual eqy runs outside this
-    # harness): cdc_2ff_sync's baseline still PASSes under sby+xprop, and the
+    # harness): cdc_sync's baseline still PASSes under sby+xprop, and the
     # `sync_q[0] <= ~d_i` false-PASS mutation that "sat" missed now FAILs on
-    # partition cdc_2ff_sync.sync_q.0 -- DONE (FAIL, rc=2).
+    # partition cdc_sync.sync_q.0 -- DONE (FAIL, rc=2).
     return (
         "[gold]\n" + "\n".join(gold_lines) + "\n\n"
         "[gate]\n" + "\n".join(gate_lines) + "\n\n"
@@ -481,7 +481,7 @@ def parse_verdict(rc: int, log: str, workdir: Path, module: str, entry: dict | N
     # for it. This is the same failure shape as bead dwp (tool exits 0, report
     # is empty) one level up: the report is non-empty, it just covers less.
     # Found the hard way -- a negative control that deleted a signal from the
-    # cone (cdc_2ff_sync: the 2-FF chain collapsed to `sync_q[i] <= d_i`)
+    # cone (cdc_sync: the 2-FF chain collapsed to `sync_q[i] <= d_i`)
     # shrank matched points 6->5 and partitions 3->2, and eqy still reported
     # DONE (PASS). Without this guard the harness silently stops discriminating
     # exactly when a corruption removes logic.

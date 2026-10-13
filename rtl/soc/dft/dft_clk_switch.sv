@@ -34,7 +34,7 @@
 // what lets the deselected source drop with no edge on it.
 //
 // Polarity of the B->A crossing. The B-to-A synchroniser carries ~en_b_q ("B is
-// off"), not en_b_q. cdc_2ff_sync resets to 0, and 0 must mean the TRUE reset
+// off"), not en_b_q. cdc_sync resets to 0, and 0 must mean the TRUE reset
 // state: B is ON at reset, so "B off" resets to 0. Carrying en_b_q would reset to
 // "B off" while B is on and let A enable over a running B if sel_a_i were already
 // high at reset release. The A->B crossing carries en_a_q (A is OFF at reset, so
@@ -97,7 +97,7 @@
 // Synthesis and CTS see two clock roots into one cell and STA sees the enable
 // latches as clock-gating checks (not run in this stage, see DFT_ARCHITECTURE.md
 // section 15). The two 2-FF synchronisers carry the magic_cdc attribute through
-// cdc_2ff_sync. The latches are written with always_latch.
+// cdc_sync. The latches are written with always_latch.
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
@@ -139,7 +139,7 @@ module dft_clk_switch (
     end
 
     // ── Cross-domain handshake synchronisers ─────────────────────────────────
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH (1)
     ) u_sync_a (
         .clk_i   (tck_i),
@@ -148,7 +148,7 @@ module dft_clk_switch (
         .q_o     (b_off_in_a)
     );
 
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH (1)
     ) u_sync_b (
         .clk_i   (clk_b_i),

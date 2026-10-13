@@ -31,7 +31,7 @@
       "rtl/soc/axil_to_apb.sv",
       "rtl/soc/axilite_to_axi4.sv",
       "rtl/soc/boot_rom.sv",
-      "rtl/soc/cdc/cdc_2ff_sync.sv",
+      "rtl/soc/cdc/cdc_sync.sv",
       "rtl/soc/cdc/cdc_gray_fifo.sv",
       "rtl/soc/cdc/cdc_reset_sync.sv",
       "rtl/soc/pll/pll_apb_regs.sv",

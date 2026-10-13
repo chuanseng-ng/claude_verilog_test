@@ -5,7 +5,7 @@
 // FIFO Design" style-1 dual-clock FIFO: binary read/write pointers are kept
 // locally in each domain, converted to gray code, and only the REGISTERED
 // gray pointer crosses the clock boundary — through exactly one
-// cdc_2ff_sync instance per direction. The full/empty flags are each
+// cdc_sync instance per direction. The full/empty flags are each
 // computed from a comparison between the local combinational next-state
 // gray pointer and the ALREADY-SYNCHRONISED remote gray pointer, then
 // registered. This costs one extra cycle of pointer latency but is what
@@ -20,8 +20,8 @@
 //                 a 2-entry FIFO whose 2-bit gray pointer is the smallest
 //                 multi-bit bus that can cross safely (see "DEPTH=2 full flag"
 //                 below). DEPTH >= 4 is the original, unchanged behaviour.
-//   SYNC_STAGES — stage count passed to both internal cdc_2ff_sync gray
-//                 pointer synchronisers (>= 2 required; see cdc_2ff_sync.sv).
+//   SYNC_STAGES — stage count passed to both internal cdc_sync gray
+//                 pointer synchronisers (>= 2 required; see cdc_sync.sv).
 //
 // !!! mem_q is a genuine ASYNCHRONOUS DATA PATH !!!
 // Storage is a flop array (`logic [WIDTH-1:0] mem_q [DEPTH]`), written on
@@ -150,12 +150,12 @@ module cdc_gray_fifo #(
 
     // ── Gray-pointer CDC crossings ────────────────────────────────────────────
     // ONLY the registered gray pointer crosses domains, each through exactly
-    // one cdc_2ff_sync instance. Binary pointers and the combinational
+    // one cdc_sync instance. Binary pointers and the combinational
     // *_gray_d next-state values never cross the clock boundary.
     logic [PTR_W-1:0] wr_gray_sync_r;   // wr_gray_q synchronised into the READ domain
     logic [PTR_W-1:0] rd_gray_sync_w;   // rd_gray_q synchronised into the WRITE domain
 
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH  (PTR_W),
         .STAGES (SYNC_STAGES)
     ) u_wr_ptr_to_rd (
@@ -165,7 +165,7 @@ module cdc_gray_fifo #(
         .q_o     (wr_gray_sync_r)
     );
 
-    cdc_2ff_sync #(
+    cdc_sync #(
         .WIDTH  (PTR_W),
         .STAGES (SYNC_STAGES)
     ) u_rd_ptr_to_wr (

@@ -37,7 +37,7 @@
 // restarted. Adaptive-proportion is a documented non-goal. Seed 0 is not rescued: it trips.
 //
 // IRQ: irq_o = CTRL[1] & ((fifo_level >= max(CTRL[5:2],1)) | health_fail). LEVEL-HELD, never a
-// pulse -- every IRQ source crosses core_clk -> cpu_core_clk through a plain 2-FF cdc_2ff_sync in
+// pulse -- every IRQ source crosses core_clk -> cpu_core_clk through a plain 2-FF cdc_sync in
 // soc_top.sv, which can miss a pulse. Threshold 0 behaves as 1; 5..15 never fire on the level.
 //   health_fail next = (health_fail & ~clr) | trip   -- SET WINS over a same-cycle clear.
 //

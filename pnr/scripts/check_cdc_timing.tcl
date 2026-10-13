@@ -529,7 +529,7 @@ puts "================================================================"
 #       substrings only.
 #   (4) semantics: q_o (the synchroniser's LAST-stage output) is a
 #       destination-domain-only net, not the crossing itself -- see
-#       cdc_2ff_sync.sv. These reports now target the launch->first-capture
+#       cdc_sync.sv. These reports now target the launch->first-capture
 #       segment instead: d_i where it survives as its own net
 #       (u_wr_ptr_to_rd.d_i does), or the source register net directly
 #       where d_i does not survive (u_rd_ptr_to_wr.d_i collapses into
@@ -570,7 +570,7 @@ cdc_report_through \
 puts "================================================================"
 puts "CDC boundary timing -- apb_cdc_bridge (u_apb_pll2_cdc, u_apb_dbg_cdc)"
 puts "================================================================"
-# req_q / ack_q are each a direct RTL passthrough into their cdc_2ff_sync's
+# req_q / ack_q are each a direct RTL passthrough into their cdc_sync's
 # d_i (see apb_cdc_bridge.sv), and unlike section 11's gray-pointer case,
 # BOTH source registers keep their own net name here -- matched directly, no
 # d_i lookup needed.

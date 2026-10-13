@@ -51,7 +51,7 @@ that sets WDT_CTRL[0] commits, i.e. the edge on which APB4Master.write() returns
     bite timing is identical with RST_EN == 1. test_wdt_rst_en_does_not_gate_wdt_rst_req asserts
     that distinction so the RTL cannot conflate the two.
   - irq_o is LEVEL-HELD, never a single-cycle pulse: every IRQ source crosses core_clk ->
-    cpu_core_clk through a plain 2-FF cdc_2ff_sync at rtl/soc/soc_top.sv, which can miss a pulse.
+    cpu_core_clk through a plain 2-FF cdc_sync at rtl/soc/soc_top.sv, which can miss a pulse.
   - The W1C clear is an APB write-snoop on WDT_IRQ_CLR (gpio_controller.sv:281-301 /
     pwm_controller.sv idiom), NOT a WMASK path. A hardware set beats a same-cycle clear, so a
     bark or bite can never be lost to a racing clear.

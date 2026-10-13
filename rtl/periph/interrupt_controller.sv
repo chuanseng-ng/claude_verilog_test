@@ -121,21 +121,21 @@ module interrupt_controller
     // retiming stage; it is kept as a real synchroniser so a source that moves
     // to another clock domain stays safe.
     //
-    // N_SOURCES independent single-bit cdc_2ff_sync instances (STAGES=2, reset
+    // N_SOURCES independent single-bit cdc_sync instances (STAGES=2, reset
     // 0), not one WIDTH(N_SOURCES) instance: the sources are independent
     // level-held lines with no cross-bit coherency requirement, and
-    // cdc_2ff_sync.sv's scope warning forbids a multi-bit binary bus. Same
+    // cdc_sync.sv's scope warning forbids a multi-bit binary bus. Same
     // pattern as gpio_controller.sv (g_in_sync). Behaviour vs the previous
     // hand-written chain: same 2-cycle latency and same reset value (0); the
     // reset is now asserted asynchronously by the primitive (see the
-    // cdc_2ff_sync header) where it was synchronous here.
+    // cdc_sync header) where it was synchronous here.
     // =========================================================================
     logic [N_SOURCES-1:0] irq_src_sync_q;   // synchronised source
 
     genvar s;
     generate
         for (s = 0; s < N_SOURCES; s++) begin : g_irq_sync
-            cdc_2ff_sync #(
+            cdc_sync #(
                 .WIDTH  (1),
                 .STAGES (SYNC_STAGES)
             ) u_irq_sync (

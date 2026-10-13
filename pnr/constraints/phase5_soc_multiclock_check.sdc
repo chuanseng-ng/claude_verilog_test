@@ -114,7 +114,7 @@
 #       point even where they did resolve. `u_wr_ptr_to_rd/q_o` /
 #       `u_ack_sync/q_o` / etc. are the OUTPUT of the synchroniser's LAST
 #       flop — a path lying entirely inside the DESTINATION domain (see
-#       rtl/soc/cdc/cdc_2ff_sync.sv: `assign q_o = sync_q[STAGES-1];`).
+#       rtl/soc/cdc/cdc_sync.sv: `assign q_o = sync_q[STAGES-1];`).
 #       The real clock-domain crossing is the SOURCE register -> the
 #       synchroniser's FIRST flop D input (`sync_q[0] <= d_i;`). Every
 #       exception below has been re-pointed at that launch->first-capture
@@ -667,7 +667,7 @@ foreach {_fifo_inst _wr_clk _wr_period _rd_clk _rd_period} $_cdc_fifo_dirs {
 # RENAMED (bead claude_verilog_test-rfz, 2026-08-12): apb_cdc_bridge.sv
 # converted from a 2-phase NRZ toggle handshake to a 4-phase RZ handshake.
 # req_toggle_q/ack_toggle_q became req_q/ack_q -- same electrical role (each
-# is still the one register whose value crosses via cdc_2ff_sync), so the
+# is still the one register whose value crosses via cdc_sync), so the
 # object-mapping methodology below (bead 7l5) is unaffected; only the name
 # patterns changed. This is exactly the class of stale-pattern-matches-zero
 # hazard bead 7l5 itself warns about (see OBJECT RESOLUTION item 3) -- do
@@ -675,7 +675,7 @@ foreach {_fifo_inst _wr_clk _wr_period _rd_clk _rd_period} $_cdc_fifo_dirs {
 # these `-filter {name =~ ...}` strings in the same commit.
 #
 # Object mapping (bead 7l5): req_q / ack_q are each a direct RTL passthrough
-# into their cdc_2ff_sync's d_i (`.d_i(req_q)` / `.d_i(ack_q)`, see
+# into their cdc_sync's d_i (`.d_i(req_q)` / `.d_i(ack_q)`, see
 # rtl/soc/apb_cdc_bridge.sv), and in THIS module both source registers keep
 # their own clean net names post-optimisation (unlike section 11's
 # asymmetric case) -- matched directly, no d_i net needed. The cmd_*/resp_*
@@ -730,7 +730,7 @@ cdc_apply_max_delay $_dbg_ack_sync 1750 cpu_clk sys_clk \
 # not reintroduce the masking problem this file exists to avoid.
 #
 # The other four are genuine single-bit DATA crossings through
-# cdc_2ff_sync; budgets left at 1.0x destination period (cpu_core_clk =
+# cdc_sync; budgets left at 1.0x destination period (cpu_core_clk =
 # cpu_clk, 780 ps) — same rationale as sections 12/12a.
 #
 # Object mapping for the four data crossings (bead 7l5): u_cpu_clk_dis_sync

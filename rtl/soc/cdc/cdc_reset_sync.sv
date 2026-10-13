@@ -96,7 +96,7 @@ module cdc_reset_sync #(
     // always_ff driving multiple array/vector elements via a for-loop, whose
     // result is later used as a downstream async reset, gets its array
     // elements misclassified as "used both synchronously and
-    // asynchronously" (confirmed by isolated repro; cdc_2ff_sync uses the
+    // asynchronously" (confirmed by isolated repro; cdc_sync uses the
     // identical array+for-loop shape and lints clean ONLY because its
     // outputs are consumed as data, never as a reset edge). One always_ff
     // per stage sidesteps the false positive entirely and is, if anything,
