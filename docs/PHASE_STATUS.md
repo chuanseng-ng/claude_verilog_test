@@ -1,10 +1,16 @@
 # Project Phase Status
 
-Last updated: 2026-09-26
+Last updated: 2026-10-15
 
 ## Current Phase
 
 **Phase 5: SoC Integration** - ✅ COMPLETE (2026-06-24) — M1–M12 done. M10 L2 gate → NO-GO (`docs/M10_L2_DECISION_ANALYSIS.md`); M11 ASAP7 SoC P&R signed off **571 MHz / 62.9 mW / 520×520 µm / 65.6 % util / 0 DRC / 0 antenna** (sv2v frontend; `docs/PHASE5_RUN_HISTORY.md`). Indicative ASAP7 (predictive PDK). ⚠️ **Timing/power now also unvalidated** (bead `8f3`/`0p6`, 2026-09-16): produced by `OpenROAD.STAMidPNR-3` without an in-session re-route, a defect proven to give false-clean zero-wire STA; run 14's artifacts are wiped and cannot be re-checked. ✅ **Update 2026-09-18 (bead `0d0`)**: the SoC on *current* RTL has since been re-measured three times on the fixed flow (`STA_POSTGRT_INSESSION_GRT=1`, pinned OpenROAD 26Q2, annotation-gated). Current honest point, superseding the earlier 258.5 mW / −2084 ps snapshot: **setup WNS −727.37 ps / TNS −60,665 ps / 781 violators, hold CLEAN, 283.6 mW total / 89.6 mW fabric-only** (`RUN_2026-09-17_20-41-11`). Timing is still NOT closed at 1750 ps, and run 14's own numbers remain unvalidated — `docs/PHASE5_RUN_HISTORY.md` §"Power figure caveat".
+
+**Phase 6: IP Expansion** - ✅ COMPLETE (2026-10-05) — 6a (GPIO, PWM, WDT, TRNG, I2C), 6b (CRYPTO) and 6c (NPU) RTL complete; epic `f7vs` closed (15/15 children). The batched Sky130 SoC harden (Gate B, `f7vs.15`, PR #214) closed timing at all 9 corners on 2026-10-05. ASAP7 stays out of scope for Phase 6 (beads `ma7`/`lxv`/`2kn`). Details in the Phase 6 section below.
+
+**DFT: scan + MBIST + JTAG for the Sky130 SoC** (epic `j41m`, GH #244) - 🚧 IN PROGRESS — Stage 0 architecture ✅ (`docs/design/DFT_ARCHITECTURE.md`, PR #250); Stage 1a scan-ready SoC fabric merged (PR #258; bead `j41m.2` still open); Stage 1b IEEE 1149.1 JTAG TAP ✅ (PR #270, `j41m.3`). Stage 2 scan insertion not started; MBIST not built (Stage 4 plan only).
+
+**FPGA prototyping** (epic `hlrm`, GH #245) - 🚧 IN PROGRESS — Stage 0 ✅ without hardware: `docs/FPGA_STAGE0_EVALUATION.md` (PR #279) and `docs/FPGA_BOARD_SELECTION.md` (PR #283; recommendation Digilent Nexys Video XC7A200T). Open-tool ECP5 fmax lower bound: ~48–52 MHz CPU-only on LFE5U-85F (a lower bound, not an estimate of the Artix-7). Board-gated stages not started. A Vivado Artix-7 run is in progress on a separate branch with no results yet.
 
 **Phase 7: Mixed-Signal PLL Clock Generator** - 🚧 IN PROGRESS — M-a/M-b1/M-b2/M-c ✅ complete (2026-06-20); M-d = documentation (this update). Dual-PDK charge-pump PLL via analog-design agents (ASAP7 indicative + Sky130 real CP-block DRC/LVS), AMS RNM integrated as SoC clock source. See `docs/PHASE7_MIXED_SIGNAL_PLL_PLAN.md`. (Phase 7 ran alongside the in-progress Phase 5 PD/sign-off tail.)
 
@@ -353,7 +359,7 @@ above 40 MHz is likely and has never been swept. The ROADMAP's 75 MHz Sky130 fig
 | M11 | SoC P&R + STA (`phase5_soc.sdc`/`.upf`) | ✅ 2026-06-24 ⚠️ figures unvalidated, bead `0p6` |
 | M12 | Sign-off + documentation | ✅ 2026-06-24 |
 
-### Phase 6: IP Expansion 🚧
+### Phase 6: IP Expansion ✅ COMPLETE (2026-10-05)
 
 **Golden spec**: `docs/PHASE6_IP_EXPANSION_PLAN.md` (added 2026-09-28, bead `f7vs.1`).
 **Tracking**: bead epic `claude_verilog_test-f7vs`.
@@ -375,6 +381,7 @@ per-item.
 | 6a-5 | I2C master controller | 11 / 9 | `f7vs.9` | ✅ 2026-10-03 (RTL + bit engine + `i2c_slave` BFM + 46/46 L1 + soc_i2c L2; PR #208; `soc_all_ci` 394) |
 | 6b | CRYPTO — AES-128 (ECB+CTR) + SHA-256 | 12 / 10 | `f7vs.10` | ✅ 2026-10-03 (RTL 3 files + 41/41 L1 + soc_crypto L2 + **Gate A run**: 277 875 µm² ≈ 28 % of SoC stdcell area — first recorded as 3.59 % against a stdcell+macro denominator, corrected 2026-10-04 — +14.04 ns ss @ 25 ns) |
 | 6c | INT8 NPU, 4×4 weight-stationary, 4 KB weight SRAM | 13 / 11 | `f7vs.11` | ✅ 2026-10-04 (RTL 3 files + 39/39 L1 + soc_npu L2 + mutation 65 mutants: 55 killed, 10 provably equivalent, 0 gaps + **Gate A**: 203 179 µm² stdcell ≈ 20 % of SoC stdcell + 4 KB macro, +1.84 ns ss @ 25 ns) |
+| Gate B | Batched Sky130 SoC harden with all Phase 6 IP | — | `f7vs.15` | ✅ 2026-10-05 (`RUN_2026-10-05_06-50-11`, PR #214): setup met at all 9 corners (worst max_ss +0.579 ns), hold 0 violators, Netgen LVS clear, routing DRC 0, 81.0 mW total, 44.8 % util; antenna 210 nets / 305 pins accepted by user decision; `e45j` slew/cap recorded, not a Phase 6 exit criterion. Source: `docs/PHASE6_IP_EXPANSION_PLAN.md` §8, run 2 |
 
 Three documentation defects were corrected when the golden spec landed: AES/SHA is **APB4**, not
 AXI4-Lite (`ROADMAP.md:431` was a survivor of the pre-2026-09-20 text); the AES throughput figures
@@ -594,29 +601,21 @@ All previous specification issues have been resolved:
 
 ## Next Actions
 
-### Immediate — Phase 6 IP Expansion
+### Immediate — DFT (`j41m`) and FPGA (`hlrm`)
 
-**Phases 0-5 are complete.** Phase 5 signed off 2026-06-24 (M1-M12); Phase 6a's first peripheral
-(GPIO) landed and hardened on Sky130 2026-09-26; Phase 7 M-a..M-c complete 2026-06-20.
+**Phases 0–6 are complete.** Phase 6 closed 2026-10-05 (Gate B). Phase 7 M-a..M-c complete 2026-06-20.
 
-**Current priority**: Phase 6 is complete (6a, 6b and 6c). Next is Gate B — the one batched Sky130 harden after all Phase 6 items (`docs/PHASE6_IP_EXPANSION_PLAN.md` §8), whose watch items are the NPU MAC path's +1.84 ns pre-layout slack, the second 4 KB SRAM macro's placement, and bead `e45j`'s slew/cap counts on ~48 % more stdcell logic.
-Golden spec: `docs/PHASE6_IP_EXPANSION_PLAN.md`. Tracking: bead epic `claude_verilog_test-f7vs`.
+**Current priority**: finish DFT Stage 1a (bead `j41m.2`, still open; `j41m.9` is its GPU scan-reset test gap), then Stage 2 scan insertion (`j41m.8`, `j41m.4`–`j41m.6`). Open human decisions in `docs/design/DFT_ARCHITECTURE.md`: Q-TRST and Q-STUB, and the Sky130 CPU-macro re-harden, which depends on bead `dud4`.
 
-1. **Groundwork** (G1-G5) — front-loads the risk so each later peripheral is near-pure RTL + test:
-   - ✅ G1 golden spec + ROADMAP bus/numbering corrections
-   - G2 pre-allocate the APB window to `0x2001_0FFF` and `N_SOURCES` 6 → 12, in one commit
-   - G3 pre-add every planned `tb_soc_top.sv` port and SDC exception, one forced clean
-   - G4 `check_periph_filelists.py` + the first-ever `apb_interconnect` unit suite
-   - G5 this status section
+FPGA stages beyond Stage 0 are gated on a board choice (`hlrm`). The Vivado Artix-7 run is in progress on a separate branch.
 
-2. **6a peripherals**, derisk-first: PWM → WDT → TRNG → I2C. Each is RTL + L1 unit suite + L2
-   SoC-fabric suite + SoC integration, with tests written **before** the RTL.
+Golden specs: `docs/design/DFT_ARCHITECTURE.md`, `docs/FPGA_BOARD_SELECTION.md`, `docs/PHASE6_IP_EXPANSION_PLAN.md` (Phase 6, closed).
 
-3. **Gate B** — one batched Sky130 harden after all of 6a
-   (`make librelane-sky130-soc-noklayout`; the full target OOMs in KLayout DRC on this host,
-   which sits before Netgen LVS in LibreLane's Classic flow).
-
-4. **6b CRYPTO**, then **6c NPU** — the NPU warrants its own planning pass.
+**Regression gates in CI (read 2026-10-15)**:
+- `cocotb.yml` soc job: `PASS_FLOOR: '759'` (its comment records 762 measured on PR #276). CPU job: `PASS_FLOOR: '100'`.
+- `soc_coverage.yml` (nightly, cron `30 2 * * *`): `PASS_FLOOR: '759'`, `CPU_PASS_FLOOR: '262'`. Line gate 95 % on `rtl/soc`, `rtl/periph`, `rtl/npu` plus the control-signal toggle gate (bead `s1cg`, PR #246); line gate 95 % also on `rtl/cpu`, `rtl/mem`, `rtl/gpu` (bead `a5ze`, PR #262). Not a per-PR gate.
+- `qa-checks.yml`: struct-member select gate, blocking (PR #275, bead `ainf`); beads reopen gate.
+- `rtl-checks.yml`: `dft-scan-check` and `dft-scan-check-asap7` (PR #281, bead `j41m.12`).
 
 ### Deferred / host-blocked (not Phase 6 work)
 
@@ -628,6 +627,7 @@ Golden spec: `docs/PHASE6_IP_EXPANSION_PLAN.md`. Tracking: bead epic `claude_ver
 | `e45j` | Sky130 post-RCX max-slew/max-cap; no post-RCX repair stage exists in LibreLane | re-measured at Gate B; **not** a Phase 6 exit criterion |
 | `o1i` | Per-corner SRAM SPICE characterization (~80-95 h) | host stability |
 | GH #105/#106 | Sky130 GPU stages 3-4 | ≥32 GB RAM + ~500 GB scratch |
+| `hlrm` Stages 1+ | FPGA bring-up, firmware validation, dual-oscillator CDC | a board choice (human decision) |
 
 ## Documentation Structure
 

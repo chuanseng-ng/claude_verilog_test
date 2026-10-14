@@ -45,6 +45,25 @@ current status, see the root [`README.md`](../../README.md) and
 - ✅ Verification: GPU unit + kernel tests green; CPU re-gate 140/140 + 100k random; 1,000-kernel random regression, 0 deadlocks/mismatches
 - ✅ PPA sign-off (ASAP7 7nm, Run `RUN_2026-05-28_06-29-48`): **571 MHz (1.75 ns) / 262 mW / 115,600 µm² die / 60,500 µm² stdcell**, Setup WS +197.3 ps, Hold WS +16.3 ps (0 viol), 0 antenna
 
+## Phase 5 Complete ✅ (2026-06-24)
+
+- ✅ M1–M12 complete: AXI4 crossbar and AXI-Lite/APB fabric; Phase 3 refill FSMs upgraded to AXI4 bursts; UART, SPI, timer, IRQ controller and DMA; behavioral AXI4 SRAM controller; `soc_top` integration; CSR performance counters; SoC verification (boot, DMA/UART/SPI loopback, SW coherency, CPU-GPU IRQ); M10 L2 decision NO-GO; M11 backend flow; M12 sign-off (`CLAUDE.md` items 1–10)
+- ✅ Behavioral PMU (2026-08-01) and the 2-domain multi-clock SoC with CDC (2026-08-09) (`CLAUDE.md` items 11–12)
+- ⚠️ The M11 sign-off figures (571 MHz / 62.9 mW, fabric-only, excluding both hard macros) are unvalidated, and the routing claims are withdrawn. The current-RTL measurement is setup WNS −727.37 ps, 781 violators, hold clean (bead `0d0`). See `docs/PHASE5_RUN_HISTORY.md`.
+
+## Phase 6 Complete ✅ (2026-10-05)
+
+- ✅ 6a peripherals, all APB4 slaves: GPIO (`ckc`, RTL 2026-09-20, Sky130-hardened 2026-09-26), PWM (`f7vs.6`, 2026-09-28), WDT (`f7vs.7`, 2026-09-29), TRNG (`f7vs.8`, 2026-10-01), I2C (`f7vs.9`, 2026-10-03, PR #208). APB indices 7–11, IRQ bits 5–9.
+- ✅ 6b CRYPTO (`f7vs.10`, 2026-10-03): AES-128 (ECB and CTR) and SHA-256 at APB index 12 / IRQ bit 10; `test_crypto` 41/41. Not production cryptography (`CLAUDE.md` item 14).
+- ✅ 6c INT8 NPU (`f7vs.11`, 2026-10-04): 4×4 weight-stationary array at APB index 13 / IRQ bit 11; `test_npu` 39/39, `test_soc_npu` 1/1.
+- ✅ Gate A synthesis probes per item (CRYPTO 277 875 µm², NPU 203 179 µm² stdcell) and Gate B, the batched Sky130 harden (`f7vs.15`, PR #214, `RUN_2026-10-05_06-50-11`): setup met at all 9 corners (worst max_ss +0.579 ns), hold clean, Netgen LVS clear, routing DRC 0.
+- ASAP7 is out of scope for all of Phase 6 (beads `ma7`, `lxv`, `2kn`). Sources: `docs/PHASE6_IP_EXPANSION_PLAN.md` §8, `docs/PHASE_STATUS.md`.
+
+## In Progress: DFT and FPGA (status 2026-10-15)
+
+- **DFT: scan, MBIST and JTAG for the Sky130 SoC** (epic `j41m`, GH #244). Stage 0 architecture (PR #250, `docs/design/DFT_ARCHITECTURE.md`); Stage 1a scan-ready SoC fabric (PR #258; bead `j41m.2` still open); Stage 1b IEEE 1149.1 JTAG TAP (PR #270, `j41m.3`); TRST reset-sync check (PR #280) and CI `dft-scan-check` for both PDKs (PR #281). Stage 2 scan insertion not started; MBIST not built.
+- **FPGA prototyping** (epic `hlrm`, GH #245). Stage 0 without hardware: FPGA-define memory arms and yosys resource counts (PR #279), SRAM backdoor helper with `FPGA=1` regression 762 passed (PR #282), board recommendation Digilent Nexys Video XC7A200T and ECP5 fmax lower bound (PR #283, `docs/FPGA_BOARD_SELECTION.md`). Board-gated stages wait for a board.
+
 ## Implemented Features
 
 ### Phase 1 (Complete) ✅

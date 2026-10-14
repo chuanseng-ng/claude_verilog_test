@@ -391,9 +391,11 @@ Both support the OpenROAD flow and are suitable for academic/research projects.
 - **DRC/LVS clean**
 - **Tape-out ready (if target technology selected)**
 
-### Phase 6+ — IP Expansion & Technology Node Exploration (🚧 6a done, rest planned)
+### Phase 6+ — IP Expansion & Technology Node Exploration (✅ 6a–6c complete; Gate B ✅ 2026-10-05)
 
 **Prerequisites**: Phase 5 complete (full SoC validated)
+
+**Status (2026-10-15)**: Phase 6 complete. 6a (GPIO, PWM, WDT, TRNG, I2C), 6b (CRYPTO) and 6c (NPU) are built; the batched Sky130 harden (Gate B) closed 2026-10-05 (bead `f7vs.15`, PR #214). ASAP7 is out of scope for Phase 6 (beads `ma7`, `lxv`, `2kn`).
 
 > **Golden spec:** [`docs/PHASE6_IP_EXPANSION_PLAN.md`](PHASE6_IP_EXPANSION_PLAN.md) —
 > full register maps, address/IRQ allocation, per-item acceptance criteria and non-goals.
@@ -499,7 +501,7 @@ bounds throughput, and nothing in this repo measures it.
   coarse-grain netlist, zero `$shiftx`/`$pmux`/`$mem*` in the three `rtl/npu` modules.
 - **Gate A:** 203 179 µm² stdcell (≈20 % of the SoC's stdcell area) + the 472 439 µm² macro,
   **+1.84 ns** setup at ss on 25 ns. Thin: the limiter is the MAC array's single-cycle multiply +
-  adder tree + accumulate, and the pre-identified Gate B fallback is registering the column sums.
+  adder tree + accumulate, and the pre-identified Gate B fallback (registering the column sums) was not needed: the Gate B NPU MAC path measured +3.56 ns at max_ss in run 1 (`f7vs.15` notes).
 - Target: keyword spotting / gesture detection class workloads — **demo firmware is a non-goal**.
 
 | Node | NPU clock | Peak throughput | INT4/sparsity |
@@ -539,6 +541,11 @@ INT8 MAC critical path: ~10–13 logic levels. Full NPU (INT4/tiling/sparsity) r
 - ⚠️ **Stage-2 timing is a typical-corner (nom_tt) sign-off**, not a validated multi-corner one — the SRAM macro is characterized at TT only, so the nine reported corners are nine labels backed by a single macro model. The physical gates (LVS/DRC/PDN) carry no such caveat. Per-corner SRAM SPICE characterization measured at ~80–95 h against a host that reboots every 2–8 h → bead `o1i`, deferred host-blocked.
 - **Stages 3–4 — GPU** (GH #105/#106): not attempted; need ≥32 GB RAM + ~500 GB scratch vs the current ~15 GB host. GPU stays ASAP7-indicative-only.
 - Full record: `docs/SKY130_REAL_DRC_LVS_EVALUATION.md` §7.
+
+### Post-Phase-6 tracks: DFT and FPGA (not numbered phases)
+
+- **DFT: scan, MBIST and JTAG for the Sky130 SoC** (epic `j41m`): Stage 0 architecture ✅ (`docs/design/DFT_ARCHITECTURE.md`); Stage 1a fabric RTL merged (PR #258, bead `j41m.2` still open); Stage 1b JTAG TAP ✅ (PR #270). Stage 2 scan insertion is not started, and MBIST has no RTL yet.
+- **FPGA prototyping** (epic `hlrm`): Stage 0 ✅ without hardware (`docs/FPGA_STAGE0_EVALUATION.md`, PR #279). Board recommendation Digilent Nexys Video XC7A200T (`docs/FPGA_BOARD_SELECTION.md`, PR #283). Open-tool ECP5 fmax lower bound ~48–52 MHz CPU-only. Later stages wait for a board.
 
 ### Phase 7 — Mixed-Signal PLL Clock Generator
 
