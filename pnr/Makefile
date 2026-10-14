@@ -914,7 +914,7 @@ DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tc
 	--tap-allowed-nets u_dft_ctrl.tap_scan --tap-allowed-nets u_dft_ctrl.tap_serial \
 	--tap-allowed-nets u_dft_ctrl.tap_rst_assert \
 	--tap-allowed-nets u_dft_ctrl.test_clk_o --tap-allowed-nets tdo_o --tap-allowed-nets tdo_oe_o \
-	--expect-reset-sync u_dft_ctrl.u_tap.u_trst_sync=u_dft_ctrl.u_tap \
+	--expect-reset-sync u_dft_ctrl.u_tap.u_trst_syncX=u_dft_ctrl.u_tap \
 	--expect-reset-sync u_dft_ctrl.u_sw_rst=u_dft_ctrl.u_clk_sw
 # Bead j41m.11: --expect-reset-sync finds the two trst_ni cdc_reset_sync chains independently by hierarchy and requires
 # that the TAP and the clock switch are reset from THEIR chain and that trst_ni reaches nothing else directly. The CDC
