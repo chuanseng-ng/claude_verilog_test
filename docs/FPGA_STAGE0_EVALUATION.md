@@ -164,8 +164,17 @@ first, un-`-i` run aborted at `soc_boot` after 700 passed / 1 failed.
 
 | Run | Passed | Failed | Notes |
 |---|---|---|---|
-| `soc_all_ci`, `FPGA=1`, no test edits (measured, CI-style grep `cocotb.regression .* passed$`) | **742** | **20** | 72 suite summaries; main is 762 |
+| `soc_all_ci`, `FPGA=1`, no test edits (measured, CI-style grep `cocotb.regression .* passed$`), **before the helper** | **742** | **20** | 72 suite summaries; main is 762 |
 | Diagnostic re-run of the 15 suites that contain the 20 failures, TB handle path temporarily changed (edit reverted, never committed) | 31 | **0** | the 20 pass; 742 + 20 = **762** = main |
+| `soc_all_ci`, `FPGA=1`, **with the `sram_backdoor.sram_mem` helper (PR #282)**, same command, `SIM_BUILD_ROOT=/nobackup/fpga_helper/regr` (measured, CI grep) | **762** | **0** | 72 suite summaries, 17 skipped, 0 `contains no object named` lines, make exit 0; 2026-10-14 18:12 to 19:46 (cold build) |
+| Default build, same commit, CI `cocotb soc_all` job (PR #282, run 38554821410) | **762** | **0** | log line `cocotb: 762 passed, 0 failed`; floors untouched |
+
+**Resolved by `tb/cocotb/soc/sram_backdoor.py` (PR #282).** `sram_mem(dut)` tries `dut.u_soc.u_sram.mem`, then
+`dut.u_soc.u_sram.u_fpga_mem.mem`, and raises `SramBackdoorError` naming every path tried if neither resolves; all 31 backdoor
+sites in 18 SoC suites go through it (pure test refactor, no assertion or RTL change; `tb/tests/test_sram_backdoor.py` pins
+each path and the error). The `SRAM_SKY130` macro arm (`u_sram.u_sram_macro`) is deliberately **not** served: no SoC-level
+cocotb build defines `SRAM_SKY130`, so a path for it could not be verified, and the macro's read/write timing differs from the
+flat array; the helper fails loudly there. The statement below describes the failure as it was before the helper.
 
 **Root cause of all 20 failures (one cause, measured):** every one is `AttributeError: u_sram contains no object named mem`
 (20 of 20 tracebacks, `grep -c`). These tests backdoor-read / backdoor-load the SoC SRAM through the hierarchical handle
@@ -173,15 +182,13 @@ first, un-`-i` run aborted at `soc_boot` after 700 passed / 1 failed.
 `test_soc_gpio/pwm/wdt/trng/i2c/crypto/npu`, the multiclock and PMU suites). In the `FPGA` arm (and equally in the
 `SRAM_SKY130` arm) the array is not in `sram_controller`; it is `u_sram.u_fpga_mem.mem`. It is a testbench
 hierarchy dependency, not a functional RTL difference: with the path pointed at `u_fpga_mem.mem` all 20 pass. It also means
-those 20 tests are the ones that prove the `sram_controller` FPGA arm end to end through the SoC, and **that evidence exists
-only from the diagnostic re-run**, not from the unmodified regression. The `sram_controller` unit suite (AXI-only) and the boot
+those 20 tests are the ones that prove the `sram_controller` FPGA arm end to end through the SoC; that evidence now exists from
+the unmodified-RTL regression with the helper (762/762 above), not only from the diagnostic re-run. The `sram_controller` unit suite (AXI-only) and the boot
 PC scoreboard / 100-boot stability passed unmodified under `FPGA=1`.
 
-**CI job: proposal only, NOT added, floors untouched** (`PASS_FLOOR` 759 / `CPU_PASS_FLOOR` unchanged). Cost is ~35 min for
-the full run (measured: 06:57 to 07:24 for the cached `-i` rerun, plus ~35 min for the first cold run), not cheap, and it is not green without a testbench change.
-To make it green, the 20 backdoor sites need the SRAM handle resolved by a helper (one `try` over
-`u_sram.mem` / `u_sram.u_fpga_mem.mem`); that is a test edit and is a human decision (9.7). If wanted, run it nightly and
-non-blocking, not in the PR gate.
+**CI job: NOT added (user decision 2026-10-14: "path helper, no CI job"), floors untouched** (`PASS_FLOOR` 759 / `CPU_PASS_FLOOR`
+unchanged). The `FPGA=1` regression is a local-only check. Cost: ~35 min warm (measured: 06:57 to 07:24 for the cached `-i`
+rerun), 94 min for the cold helper run above on this 15 GB host. The testbench blocker that kept it red is removed by the helper.
 
 ## 6. Clock gating: no arm written (decision needed)
 
