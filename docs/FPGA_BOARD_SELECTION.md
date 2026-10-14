@@ -164,8 +164,11 @@ register, register to output), IO standards, banks, pin placement (nextpnr place
   values (seed 1: 2.77 ns and 1.84 ns), no failing frequency.
 - No hold analysis exists in nextpnr; no hold number is produced.
 
-**With the GPU:** one optional attempt was still running when this section was first committed; its outcome is added in a later commit
-(until then: not measured).
+**With the GPU:** one attempt (seed 1, same flow and harness) **did not place**. Packing reported 84,953 LUT4 (101 %) and 85,909
+TRELLIS_COMB of 83,640 (**102 %**; 67,369 logic LUT4 + 4,888 carry + 8,464 RAM LUT4 = 80 % of the RAM-capable sites), 19,202 FF
+(22 %), 49 DP16KD, and the placer stopped with "ERROR: Unable to find legal placement for all cells, design is probably at
+utilisation limit" (about 2 min of nextpnr). So the with-GPU build does not fit an LFE5U-85F, consistent with the Stage 0
+sizing, and it has **no** timing number. No Artix-7 conclusion follows from this (that device is larger).
 
 **Not verified:** any Xilinx/Vivado timing (the Artix-7 figure is unmeasured; ECP5 -> Artix-7 speed-up is not quantified here);
 a different `--freq` target or `router2`; post-synthesis simulation of the netlist; a real clock gate; pad timing; power; hold.
