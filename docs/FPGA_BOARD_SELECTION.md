@@ -1,8 +1,8 @@
 # FPGA board selection (bead `hlrm`, GH #245)
 
 Status: **recommendation, not a purchase decision.** Written 2026-10-14. It builds on the yosys resource counts in
-[`FPGA_STAGE0_EVALUATION.md`](FPGA_STAGE0_EVALUATION.md) §2. Neither fmax nor a vendor-tool synthesis has been measured,
-so every "fits" below is an estimate.
+[`FPGA_STAGE0_EVALUATION.md`](FPGA_STAGE0_EVALUATION.md) §2. No vendor-tool synthesis has been run and fmax exists only
+as an ECP5 lower bound (§5, "Measured: ECP5 lower bound"), so every "fits" below is an estimate.
 
 ## 1. How much FPGA the design needs
 
@@ -88,11 +88,93 @@ Consequences:
 - With open tools available today, the only post-route timing is **nextpnr-ecp5 on an LFE5U-85F**. ECP5 is a slower
   family than Artix-7, so that figure is a lower bound for Artix-7, and only the CPU-only build fits.
 
+### Measured: ECP5 lower bound (2026-10-14, CPU-only build, post place-and-route)
+
+**Read this as a LOWER BOUND for the recommended Artix-7 (XC7A200T), not an estimate of it.** ECP5 is a slower family
+than Artix-7. It was run because it is the only post-route timing the open tools can give today (decision on bead `hlrm`:
+"ECP5 lower bound now, Vivado later"). No Xilinx timing exists yet.
+
+**Result (nextpnr-ecp5, LFE5U-85F-6BG381C, CPU-only SoC, `--freq 60`, 3 seeds, post-route "Max frequency"):**
+
+| Clock domain (what it clocks) | Seed 1 | Seed 2 | Seed 3 | Min .. max |
+|---|---|---|---|---|
+| `cpu_gated_clk` (CPU core, caches, CPU-side CDC; ASIC target 1282 MHz) | 47.95 | 51.66 | 48.33 | **47.95 .. 51.66 MHz** |
+| `core_clk` (bus, peripherals, CRYPTO, NPU, DMA, SRAM; ASIC target 571 MHz) | 47.35 | 52.88 | 55.22 | **47.35 .. 55.22 MHz** |
+| `cpu_core_clk` (ungated CPU-domain sync/reset logic, 174 FFs) | 132.03 | 148.06 | 122.80 | 122.80 .. 148.06 |
+| `tck_i` (JTAG/DFT) | 101.32 | 122.22 | 109.05 | 101.32 .. 122.22 |
+| `clk_i` (harness shell, 290 FFs) | 229.25 | 223.56 | 231.86 | (harness, not SoC) |
+
+Both SoC domains **failed** the 60 MHz target in all three seeds, so the two numbers that matter are the achieved
+Fmax of the two big domains: about **48-52 MHz (CPU)** and **47-55 MHz (fabric)**. Seed spread is about +-5 MHz. Only
+one target (60 MHz) was run for the three seeds; the placer is timing-driven toward the target, so a different target would
+move the numbers (not measured). Against the ASIC clocks this is a prototype scale factor of roughly 25x (CPU, 1282 MHz)
+and 10-12x (fabric, 571 MHz). It sits in the upper half of the Stage 0 depth-proxy bracket (ECP5 no-GPU, 38-61 MHz;
+`FPGA_STAGE0_EVALUATION.md` 2.5), which that proxy had labelled "order of magnitude only".
+
+**Critical paths (post-route, copied from the nextpnr reports; module from the sv2v source line of the start flop):**
+
+| Domain | Path (seed 1) | Shape | Seeds 2 and 3 |
+|---|---|---|---|
+| `cpu_gated_clk` | `rv32i_core` `mem_trap_entry_r` flop (hazard unit) -> `stall_ex1_ex2` -> `flush_ex1a_ex1b` -> `ex1b_comb` -> pipeline-register input mux | 11 LUT levels, 3.12 ns logic + 17.73 ns routing (85 % routing) | Same start flop; endpoint is the `u_icache.valid_array` bit reset (12 levels, 3.78 ns logic + 15.58 / 16.91 ns routing) |
+| `core_clk` | `axil_to_apb` `apb_paddr` flop -> APB decode -> UART register bank write -> sync-reset pin of a UART `apb4_register_bank` flop | 11 LUT levels, 3.57 ns logic + 17.56 ns routing (83 % routing) | Seed 2: CRYPTO `aes128_core` S-box (`sub_bytes`) cone, 15 levels, 4.18 + 14.73 ns. Seed 3: I2C `apb4_register_bank` clock-divider -> `i2c_bit_engine.tick_q`, 22 levels (carry chain), 7.82 + 10.29 ns |
+
+Reading: the CPU limiter is the **trap / stall / flush control cone** (the high-fanout control class the ASIC work also
+fought), not the ALU, forwarding mux, cache tag compare or NPU MAC. The fabric limiter is **not one path**: three seeds gave three
+different modules (UART bank, AES, I2C), all within ~8 MHz of each other, i.e. a flat wall of many near-critical paths. Both are
+~85 % wire delay on a design this size, so seed noise is large and a vendor tool's placer may do better or worse.
+
+**Utilisation (identical in every seed, `85k` device):** TRELLIS_COMB 39,004 / 83,640 (**46 %**; 34,290 logic LUT4 + 3,582
+carry + 272 RAM + 136 RAMW), TRELLIS_FF 14,639 (**17 %**), DP16KD 17 / 208 (8 %), MULT18X18D 19 / 156 (12 %), DCCA (global
+clock buffers) 5 / 56, TRELLIS_IO 6 / 365. Routing completed in every run (no unrouted nets); nextpnr's router1 reports no
+congestion map, so "no congestion problem" is inferred from completion, not measured. The harness adds +118 LUT4 and +290 FF to
+the Stage 0 count (34,172 / 14,349).
+
+**Method:** `tools/fpga/stage0_pnr_ecp5.sh` (sv2v with `--define=FPGA --define=__pnr__` -> yosys 0.62 `synth_ecp5 -flatten
+-run :check`, the Stage 0 settings, now with iopad insertion -> `nextpnr-ecp5 --85k --package CABGA381 --speed 6 --freq 60
+--seed N --timing-allow-fail --ignore-loops`). Summaries via `tools/fpga/stage0_pnr_report.py`. Outputs in
+`/nobackup/fpga_ecp5_fmax/` (not in the repo). Versions, all from nix: nextpnr 0.11.1
+`/nix/store/z9dl8x2hkcnwa71b9fwjsqxdhgx7q4xc-nextpnr-0.11.1`, prjtrellis `trellis-unstable-2025-01-30`
+`/nix/store/y7jvwg7amb7nk951clb1sl4k055wrnfc-trellis-unstable-2025-01-30` (database `lgnv5k4789pidnpsw9pwsf9vv84k3066`),
+yosys 0.62 and sv2v 0.0.13.1 as in Stage 0. Nothing installed outside nix; `flake.nix` untouched.
+Cost: yosys 3:29 / 1.7 GB; nextpnr 8:25 (seed 1, quiet host), 42:14 (seed 2) and 19:07 (seed 3) with other jobs loading the
+host (load average ~13), peak RSS 1.33-1.35 GB each.
+
+**What the harness cut** (`tools/fpga/ecp5_timing_harness.sv`; the core RTL is unchanged): `soc_top` has 292 port bits
+(103 in, 189 out) against 205 user IO on CABGA381, so it cannot be pinned. The 99 non-clock inputs come from one
+serial shift register on a single pin, the 189 outputs are registered and XOR-folded into one pin (so no output cone is
+optimised away); `clk_i`, `cpu_clk_i`, `scan_clk_i`, `tck_i` stay real pins. **Not timed:** every pad-level path (input to
+register, register to output), IO standards, banks, pin placement (nextpnr placed the six IO freely, no LPF). The shells add ~300 FFs
+(2 %).
+
+**How the gated clock and the clock tree were treated (caveats that matter):**
+- Nothing here is a real clock tree. `core_clk` is `clk_i` through the `dft_clk_mux` **LUT**, `cpu_core_clk` is `cpu_clk_i`
+  through a LUT, and `cpu_gated_clk` is the behavioural latch + AND `rv32i_clock_gate` (Stage 0 option D, unchanged). nextpnr
+  promoted all five clock nets to global clocks (5 DCCA) and timed each as its own domain; it derives the LUT delay
+  (0.24 ns) into the clock-to-clock relation. It does **not** time the latch enable path.
+- yosys maps the four latches (`u_cpu_cg`, `u_tck_cg` clock gates; `dft_clk_switch` `en_a_q` / `en_b_q`) as LUT feedback, i.e. four
+  combinational loops. **nextpnr refuses to run without `--ignore-loops`** ("Timing analysis failed due to combinational loops");
+  the loops are therefore cut, not analysed. A LUT-feedback latch as a clock gate is unproven in hardware; the real prototype
+  needs one of the §6 gating options of `FPGA_STAGE0_EVALUATION.md`.
+- `--freq 60` applied to **every** domain; the ASIC's different per-domain targets are not expressed.
+- **Cross-domain paths are timed as synchronous** paths at the 60 MHz relation. The #94 SDC (`set_clock_groups -asynchronous`,
+  `set_max_delay -datapath_only`) is **not translated**; the CDC FIFOs and bridges are timed like ordinary logic. The worst
+  cross-domain figures nextpnr printed (44.99 / 47.49 / 51.89 MHz in seeds 1 / 2 / 3: `tck_i` falling edge -> `core_clk`, a JTAG/DFT
+  path, and in seed 3 a harness shift-register flop -> `core_clk` reset fanout) are in the same band as the domain Fmax and are
+  not separate limiters. The relations between the two main SoC domains (`core_clk` <-> `cpu_gated_clk`) printed only max-delay
+  values (seed 1: 2.77 ns and 1.84 ns), no failing frequency.
+- No hold analysis exists in nextpnr; no hold number is produced.
+
+**With the GPU:** one optional attempt was still running when this section was first committed; its outcome is added in a later commit
+(until then: not measured).
+
+**Not verified:** any Xilinx/Vivado timing (the Artix-7 figure is unmeasured; ECP5 -> Artix-7 speed-up is not quantified here);
+a different `--freq` target or `router2`; post-synthesis simulation of the netlist; a real clock gate; pad timing; power; hold.
+
 ## 6. Open decisions
 
 1. Board (recommendation: Nexys Video).
-2. Clock-speed sanity check: install Vivado ML Standard (needs the user's AMD account), run the open-tool ECP5 lower
-   bound now, or both.
+2. Clock-speed sanity check: the open-tool ECP5 lower bound is done (above: ~48-52 MHz CPU, ~47-55 MHz fabric, CPU-only).
+   Remaining: a Vivado ML Standard run (needs the user's AMD account) for the real Artix-7 number.
 3. Second clock source (recommendation: Si5351A breakout), after confirming clock-capable pins on the chosen board.
 4. The Stage 1 decisions already recorded on bead `hlrm`: GPU shared-memory RAM style, clock-gating strategy, strip DFT
    on the prototype, IO wrapper and `boot_rom` image owner.
