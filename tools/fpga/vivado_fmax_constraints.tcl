@@ -56,6 +56,47 @@ proc apply_constraints {period period_cpu rdir} {
     set_clock_groups -asynchronous -group [get_clocks tck_i] -group [get_clocks {clk_i cpu_clk_i scan_clk_i}]
     cdc_log CUT "tck_i asynchronous to clk_i / cpu_clk_i / scan_clk_i (clock group); scan_clk_i physically exclusive with clk_i, cpu_clk_i"
 
+    # FUNCTIONAL MODE: the SoC SDC resolves the DFT clock muxes with set_case_analysis scan_mode_i/scan_en_i 0 on ports. In the
+    # harness those are flops, and the muxes are LUTs (then a BUFG), so without this tck_i and scan_clk_i propagate through the
+    # dft_clk_mux / dft_clk_switch LUT into core_clk and every functional flop gets timed a second and third time under
+    # "scan_clk_i" and "tck_i" (measured, 10 ns run 1: tck_i WNS -2.85 ns was a TAP-fall -> core_clk path, not a TCK path).
+    # Stop the two test clocks at the first combinational cell that merges them into the clock network; they then still clock
+    # the JTAG TAP / TCK domain behind their own BUFG. This is the Vivado form of the SDC's case analysis.
+    foreach c {tck_i scan_clk_i} {
+        set net [get_nets -quiet ${c}_IBUF]
+        set stop {}
+        foreach p [get_pins -quiet -leaf -of_objects $net -filter {DIRECTION == IN}] {
+            set ref [get_property REF_NAME [get_cells -of_objects $p]]
+            if {![string match BUFG* $ref]} { lappend stop $p }
+        }
+        if {[llength $stop] > 0} {
+            set_clock_sense -stop_propagation -clocks [get_clocks $c] $stop
+            cdc_log TRANSLATED "functional mode: $c stopped at [llength $stop] clock-mux pin(s): $stop"
+        } else {
+            cdc_log MISS "functional mode: no clock-mux pin found for $c"
+        }
+    }
+
+    # Harness-shell crossings. The SDC false-paths the port-level equivalents (cpu_rst_n_i, the DFT inputs, and the commit_* /
+    # pll_locked_* / gpu_irq / apb_* outputs). In the harness those ports are clk_i-domain shell flops (in_sr / out_q), so the
+    # same crossings appear as clk_i <-> cpu_clk_i paths that do not exist in the real SoC. Cut exactly those two sets.
+    set_false_path -from [get_cells -hierarchical -quiet -filter {NAME =~ in_sr_reg*}] -to [all_registers -clock [get_clocks cpu_clk_i]]
+    set_false_path -from [get_clocks cpu_clk_i] -to [get_cells -hierarchical -quiet -filter {NAME =~ out_q_reg* || NAME =~ grp_q_reg* || NAME =~ dout_reg*}]
+    # Same-domain (clk_i) shell inputs that the SDC false-paths at the port: rst_n_i / cpu_rst_n_i (in_sr 0,1), all apb_* inputs
+    # (2..48), uart_rx_i / spi_miso_i (49, 50) and the DFT inputs scan_mode/scan_en/scan_rst_n/scan_in/tms/tdi/trst (85..98).
+    # in_sr 51..84 (gpio_in_i, i2c_*_i) keep the clk_i launch, as in the SDC (which gives them a 10 % input delay).
+    set sdc_false {}
+    for {set i 0} {$i <= 50} {incr i} { lappend sdc_false "in_sr_reg\[$i\]" }
+    for {set i 85} {$i <= 98} {incr i} { lappend sdc_false "in_sr_reg\[$i\]" }
+    set fp_cells [get_cells -quiet $sdc_false]
+    if {[llength $fp_cells] > 0} {
+        set_false_path -from $fp_cells
+        cdc_log CUT "harness shells: set_false_path from [llength $fp_cells] in_sr flops that model SDC-false-pathed ports (rst, apb_*, uart_rx, spi_miso, DFT)"
+    } else {
+        cdc_log MISS "harness shells: no in_sr_reg cells matched"
+    }
+    cdc_log CUT "harness shells: in_sr -> cpu_clk_i registers and cpu_clk_i -> out_q/grp_q/dout set_false_path (SDC false-paths cpu_rst_n_i, DFT inputs and commit_*/pll/irq outputs)"
+
     # the two harness data pins carry no SoC logic (serial shift-in / folded observe-out): pad paths are not timed
     set_false_path -from [get_ports din]
     set_false_path -to [get_ports dout]

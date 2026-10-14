@@ -94,7 +94,8 @@ them past `proc`). They exist in the shared RTL, not in the `FPGA` arms.
 ### 2.5 fmax: NOT MEASURED (ECP5 lower bound measured later)
 
 > A post-route ECP5 lower bound now exists: CPU-only, LFE5U-85F-6, nextpnr 0.11.1, about 48-52 MHz (CPU domain) and
-> 47-55 MHz (fabric domain) over 3 seeds; see [`FPGA_BOARD_SELECTION.md`](FPGA_BOARD_SELECTION.md) §5. Still no Xilinx timing.
+> 47-55 MHz (fabric domain) over 3 seeds; see [`FPGA_BOARD_SELECTION.md`](FPGA_BOARD_SELECTION.md) §5. A real Artix-7 XC7A200T
+> Vivado 2026.1 post-route result (~107 MHz CPU, ~83 MHz fabric, CPU-only) is in the same section, "Measured: Artix-7 XC7A200T".
 
 There is **no nextpnr**, no Vivado, no Quartus. yosys has no placement or routing. What exists is a *depth proxy*: the
 longest combinational path in LUT-level equivalents (LUT = 1, MUXF = 0.5, CARRY4 = 0.25; cut at FF/latch/BRAM/DSP/ports),
