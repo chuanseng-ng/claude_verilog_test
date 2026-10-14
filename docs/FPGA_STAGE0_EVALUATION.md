@@ -157,7 +157,31 @@ this change touched (`rv32i_cache_pkg` unused parameters, `DECLFILENAME` on the 
 
 ## 5. Regression with the FPGA define
 
-REGRESSION_PLACEHOLDER
+Command: `nix develop --command make -i -C tb/cocotb/soc FPGA=1 SIM_BUILD_ROOT=/nobackup/fpga_stage0/regr soc_all_ci`
+(separate, content-keyed SIM_BUILD root; `FPGA=1` adds `+define+FPGA -y rtl/fpga`, a new opt-in hook in
+`tb/cocotb/soc/Makefile`). `-i` because `soc_all_ci` is a chain of `$(MAKE)` lines and stops at the first failing suite; the
+first, un-`-i` run aborted at `soc_boot` after 700 passed / 1 failed.
+
+| Run | Passed | Failed | Notes |
+|---|---|---|---|
+| `soc_all_ci`, `FPGA=1`, no test edits (measured, CI-style grep `cocotb.regression .* passed$`) | **742** | **20** | 72 suite summaries; main is 762 |
+| Diagnostic re-run of the 15 suites that contain the 20 failures, TB handle path temporarily changed (edit reverted, never committed) | 31 | **0** | the 20 pass; 742 + 20 = **762** = main |
+
+**Root cause of all 20 failures (one cause, measured):** every one is `AttributeError: u_sram contains no object named mem`
+(20 of 20 tracebacks, `grep -c`). These tests backdoor-read / backdoor-load the SoC SRAM through the hierarchical handle
+`dut.u_soc.u_sram.mem` (about 20 sites across `test_boot`, `test_periph_loopback`, `test_soc_coherency`, `test_cpu_gpu_irq`,
+`test_soc_gpio/pwm/wdt/trng/i2c/crypto/npu`, the multiclock and PMU suites). In the `FPGA` arm (and equally in the
+`SRAM_SKY130` arm) the array is not in `sram_controller`; it is `u_sram.u_fpga_mem.mem`. It is a testbench
+hierarchy dependency, not a functional RTL difference: with the path pointed at `u_fpga_mem.mem` all 20 pass. It also means
+those 20 tests are the ones that prove the `sram_controller` FPGA arm end to end through the SoC, and **that evidence exists
+only from the diagnostic re-run**, not from the unmodified regression. The `sram_controller` unit suite (AXI-only) and the boot
+PC scoreboard / 100-boot stability passed unmodified under `FPGA=1`.
+
+**CI job: proposal only, NOT added, floors untouched** (`PASS_FLOOR` 759 / `CPU_PASS_FLOOR` unchanged). Cost is ~35 min for
+the full run (measured: 06:57 to 07:24 for the cached `-i` rerun, plus ~35 min for the first cold run), not cheap, and it is not green without a testbench change.
+To make it green, the 20 backdoor sites need the SRAM handle resolved by a helper (one `try` over
+`u_sram.mem` / `u_sram.u_fpga_mem.mem`); that is a test edit and is a human decision (9.7). If wanted, run it nightly and
+non-blocking, not in the PR gate.
 
 ## 6. Clock gating: no arm written (decision needed)
 
