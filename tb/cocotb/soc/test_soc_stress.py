@@ -35,6 +35,7 @@ import cocotb
 from cocotb.triggers import RisingEdge, ReadOnly
 
 from soc_clocks import drive_soc_reset, start_soc_clocks
+from sram_backdoor import sram_mem
 
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(_ROOT) not in sys.path:
@@ -200,7 +201,7 @@ async def test_soc_stress(dut):
     dut._log.info("PASS_PC reached at sim_cycle=%d", sim_cycle)
 
     # ── Post-pass SRAM backdoor readout ──────────────────────────────────────
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
 
     iter_done  = int(sram[ITER_WI].value)
     bm_cpu     = int(sram[BM_CPU_WI].value)

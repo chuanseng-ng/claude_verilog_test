@@ -73,6 +73,7 @@ import cocotb
 from cocotb.triggers import ClockCycles, ReadOnly, RisingEdge, with_timeout
 
 from soc_clocks import start_soc_clocks
+from sram_backdoor import sram_mem
 
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(_ROOT) not in sys.path:
@@ -247,7 +248,7 @@ async def _fabric_held_cpu_free_body(dut) -> None:
     for _ in range(40):
         await RisingEdge(dut.clk_i)
     await ReadOnly()
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
     dut_w0 = int(sram[_SENTINEL_0_WI].value)
     dut_w1 = int(sram[_SENTINEL_1_WI].value)
     assert dut_w0 == SENTINEL_0, f"SRAM sentinel 0 mismatch after fabric-held boot: {dut_w0:#x}"
@@ -351,7 +352,7 @@ async def _cpu_held_fabric_free_body(dut) -> None:
     for _ in range(40):
         await RisingEdge(dut.clk_i)
     await ReadOnly()
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
     dut_w0 = int(sram[_SENTINEL_0_WI].value)
     dut_w1 = int(sram[_SENTINEL_1_WI].value)
     assert dut_w0 == SENTINEL_0, f"SRAM sentinel 0 mismatch after cpu-held boot: {dut_w0:#x}"

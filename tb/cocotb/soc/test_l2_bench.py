@@ -14,8 +14,8 @@ aliasing.
 Firmware contract (mirrored from sw/bench/bench.h and README.md):
 
   ROM: trampoline.hex  → backdoor-loaded into u_soc.u_boot_rom.mem
-  SRAM: <prog>.hex     → backdoor-loaded into u_soc.u_sram.mem starting
-                          at word index 0 (byte 0x2000)
+  SRAM: <prog>.hex     → backdoor-loaded into the SoC SRAM array
+                          (sram_backdoor.sram_mem) starting at word index 0 (byte 0x2000)
 
   Scratch region SRAM word index:
       BENCH_SCRATCH_BASE_WI = (0x41C00 - 0x2000) / 4 = 0x7F00
@@ -56,6 +56,7 @@ import cocotb
 from cocotb.triggers import RisingEdge, ReadOnly
 
 from soc_clocks import drive_soc_reset, start_soc_clocks
+from sram_backdoor import sram_mem
 
 # ── Project paths ─────────────────────────────────────────────────────────────
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent          # repo root
@@ -103,12 +104,12 @@ def _load_rom(dut, words: list) -> None:
 
 
 def _load_sram(dut, words: list) -> None:
-    """Backdoor-load word list into u_soc.u_sram.mem starting at index 0.
+    """Backdoor-load word list into the SoC SRAM array (sram_mem) at index 0.
 
     SRAM word index = (byte_addr - 0x2000) / 4.  The .hex image starts at
     0x2000, so the first word of the image maps to SRAM index 0.
     """
-    mem = dut.u_soc.u_sram.mem
+    mem = sram_mem(dut)
     for i, w in enumerate(words):
         mem[i].value = w
 
@@ -339,7 +340,7 @@ def _dcache_read_word(dut, byte_addr: int) -> int:
 
     # Fallback: read from main SRAM
     wi = _sram_wi(byte_addr)
-    raw = dut.u_soc.u_sram.mem[wi].value
+    raw = sram_mem(dut)[wi].value
     return int(raw) & 0xFFFF_FFFF
 
 
