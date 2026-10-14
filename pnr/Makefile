@@ -913,7 +913,12 @@ DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tc
 	--scan-mode-net u_dft_ctrl.scan_mode_o --expect-tap-flops 20 \
 	--tap-allowed-nets u_dft_ctrl.tap_scan --tap-allowed-nets u_dft_ctrl.tap_serial \
 	--tap-allowed-nets u_dft_ctrl.tap_rst_assert \
-	--tap-allowed-nets u_dft_ctrl.test_clk_o --tap-allowed-nets tdo_o --tap-allowed-nets tdo_oe_o
+	--tap-allowed-nets u_dft_ctrl.test_clk_o --tap-allowed-nets tdo_o --tap-allowed-nets tdo_oe_o \
+	--expect-reset-sync u_dft_ctrl.u_tap.u_trst_sync=u_dft_ctrl.u_tap \
+	--expect-reset-sync u_dft_ctrl.u_sw_rst=u_dft_ctrl.u_clk_sw
+# Bead j41m.11: --expect-reset-sync finds the two trst_ni cdc_reset_sync chains independently by hierarchy and requires
+# that the TAP and the clock switch are reset from THEIR chain and that trst_ni reaches nothing else directly. The CDC
+# gate cannot do this (cdc_snitch's opt_merge folds the two chains into one and classes both OK1/OKX).
 .PHONY: dft-scan-check
 dft-scan-check: sky130-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \

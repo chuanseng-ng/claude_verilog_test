@@ -42,6 +42,17 @@ for a design where scan mode is the OR of a pin and the TAP. The net's fan-in mu
 --tap-allowed-nets NET (repeatable) lists the ONLY nets by which TAP-domain logic may drive non-TAP logic or an
 output port; an undeclared TCK-domain crossing fails. It backs the `tck_i` entry in tools/cdc/cdc_config.yml.
 --expect-tap-flops N fails if fewer than N TAP-domain flops are found (renamed/optimised-away guard).
+--expect-reset-sync SYNC=CONSUMER (repeatable; bead claude_verilog_test-j41m.11) names one `cdc_reset_sync` chain on the
+trst port and the logic it must reset, both as flattened instance-name prefixes, e.g.
+`u_dft_ctrl.u_sw_rst=u_dft_ctrl.u_clk_sw`. Each chain is identified independently, by hierarchy, on this netlist (it has
+had no opt_merge, so two structurally identical chains stay two; cdc_snitch's flow merges them and cannot tell them apart):
+
+  * at least --reset-sync-min-flops (default 2) flops under SYNC, each with an async reset cone that is exactly the trst
+    port and a clock cone that is exactly the tck port (a removed, bypassed, renamed or re-clocked chain fails and is named);
+  * at least one sequential cell under CONSUMER (outside every declared SYNC) has an input cone ending at a flop of that
+    SYNC, i.e. the consumer really is reset by this synchroniser and not by another chain;
+  * the trst port reaches NO sequential cell outside the declared SYNC chains through combinational logic alone. This closes
+    the TAP rule above, which accepts a TAP flop reset straight from the trst port, so a bypassed synchroniser passed.
 
 Exit 0 only if there are no violations AND (with --expect-gates) the number of scan-mode muxes
 found is at least N, so that a design in which the muxes were optimised away or renamed cannot
@@ -98,6 +109,87 @@ def load(path, top):
     return cells, drivers, ports, in_bits
 
 
+def flat_name(cname):
+    # yosys `flatten` names cells "$flatten<backslash>u_a.<backslash>u_b.$procdff$12": drop the marker and the escapes
+    return cname.replace("$flatten", "").replace("\\", "")
+
+
+def check_reset_syncs(a, cells, ports, drivers, cell_inputs, cone_leaves, violations):
+    """--expect-reset-sync (see the module docstring). Appends to `violations`; returns the number of verified chains."""
+    def fail(spec, msg):
+        violations.append((spec, "reset_sync", "RESET_SYNC", msg))
+
+    def under(cn, prefix):
+        return flat_name(cn).startswith(prefix + ".")
+
+    pairs = []
+    for spec in a.expect_reset_sync:
+        sync_p, _, cons_p = spec.partition("=")
+        if not sync_p or not cons_p:
+            fail(spec, "malformed --expect-reset-sync, expected SYNC=CONSUMER (instance-name prefixes)")
+            continue
+        pairs.append((sync_p, cons_p))
+    seq_cells = {cn: c for cn, c in cells.items() if is_seq(c["type"])}
+    sync_cells = {sp: {cn for cn in seq_cells if under(cn, sp)} for sp, _ in pairs}
+    all_sync = set().union(*sync_cells.values()) if sync_cells else set()
+
+    ok = 0
+    for sync_p, cons_p in pairs:
+        good = set()
+        for cn in sorted(sync_cells[sync_p]):
+            c = seq_cells[cn]
+            arst = [b for p in ASYNC_PORTS for b in c["connections"].get(p, []) if isinstance(b, int)]
+            clk = [b for b in (c["connections"].get("CLK") or c["connections"].get("EN") or []) if isinstance(b, int)]
+            if not arst or any(cone_leaves(b) != ({a.trst}, set()) for b in arst):
+                fail(sync_p, f"flop {flat_name(cn)} async reset is not exactly port {a.trst}")
+            elif not clk or any(cone_leaves(b) != ({a.tck}, set()) for b in clk):
+                fail(sync_p, f"flop {flat_name(cn)} clock is not exactly port {a.tck}")
+            else:
+                good.add(cn)
+        chain_ok = len(good) >= a.reset_sync_min_flops
+        if not chain_ok:
+            fail(sync_p, f"reset synchroniser chain {sync_p}: expected at least {a.reset_sync_min_flops} flops with "
+                         f"async reset = port {a.trst} and clock = port {a.tck}, found {len(good)} "
+                         f"(chain removed, bypassed, renamed or re-clocked?)")
+        consumers = [cn for cn in seq_cells if under(cn, cons_p) and cn not in all_sync]
+        if not consumers:
+            fail(sync_p, f"consumer {cons_p} has no sequential cells (prefix wrong or optimised away?)")
+            chain_ok = False
+        elif not any(cone_leaves(b)[1] & good for cn in consumers for _, b in cell_inputs(seq_cells[cn])):
+            fail(sync_p, f"{cons_p} is not reset from {sync_p}: no cell under it has an input cone ending at a flop "
+                         f"of that synchroniser")
+            chain_ok = False
+        ok += chain_ok
+
+    # No sequential cell outside the declared chains may be reached from the trst port by combinational logic alone.
+    fanout = {}
+    for cn, c in cells.items():
+        for _, b in cell_inputs(c):
+            fanout.setdefault(b, []).append(cn)
+    seen, stack, direct = set(), [b for b in ports[a.trst]["bits"] if isinstance(b, int)], set()
+    while stack:
+        b = stack.pop()
+        if b in seen:
+            continue
+        seen.add(b)
+        for cn in fanout.get(b, []):
+            if is_seq(cells[cn]["type"]):
+                direct.add(cn)
+                continue
+            for pn, bits in cells[cn]["connections"].items():
+                if cells[cn]["port_directions"].get(pn) == "output":
+                    stack.extend(x for x in bits if isinstance(x, int))
+    # One finding per instance (not per flop), so a bypass cannot bury the named-chain findings under dozens of flop lines.
+    by_inst = {}
+    for cn in direct - all_sync:
+        inst = flat_name(cn).rsplit(".", 1)[0]
+        by_inst[inst] = by_inst.get(inst, 0) + 1
+    for inst, n in sorted(by_inst.items()):
+        fail(inst, f"port {a.trst} reaches {n} sequential cell(s) under {inst} without a cdc_reset_sync "
+                   f"(synchroniser bypassed?)")
+    return ok
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("json", nargs="?")
@@ -113,6 +205,11 @@ def main():
     ap.add_argument("--scan-mode-net", default=None,
                     help="flattened net that IS scan mode (pin OR TAP); default: the --scan-mode port")
     ap.add_argument("--expect-tap-flops", type=int, default=0)
+    ap.add_argument("--expect-reset-sync", action="append", default=[], metavar="SYNC=CONSUMER",
+                    help="a cdc_reset_sync chain on the trst port and the logic it resets, as flattened instance "
+                         "prefixes (repeatable); see the docstring")
+    ap.add_argument("--reset-sync-min-flops", type=int, default=2,
+                    help="minimum flops each --expect-reset-sync chain must contain (STAGES of cdc_reset_sync)")
     ap.add_argument("--tap-alt-clock", action="append", default=[],
                     help="additional port a TAP-domain cell may be clocked by exactly (repeatable), e.g. scan_clk_i "
                          "for the pin-side half of the glitch-free test-clock switch")
@@ -315,8 +412,14 @@ def main():
                     for v in trace(b, "reset"):
                         violations.append((cname, t, p, v))
 
+    n_rs_ok = 0
+    if a.expect_reset_sync:
+        n_rs_ok = check_reset_syncs(a, cells, ports, drivers, cell_inputs, cone_leaves, violations)
+
     print(f"sequential cells: {n_seq}; async reset/set pins checked: {n_async}; scan-mode muxes: {gates}; "
           f"TAP-domain flops: {n_tap} (reset synchronisers: {len(tap_sync)})")
+    if a.expect_reset_sync:
+        print(f"reset synchronisers verified: {n_rs_ok} of {len(a.expect_reset_sync)}")
     uniq = sorted(set(violations))
     print(f"violations: {len(uniq)}")
     for v in uniq[: a.max_print]:
