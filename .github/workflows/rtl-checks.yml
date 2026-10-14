@@ -210,7 +210,7 @@ jobs:
       - name: DFT scan-check tests (pinned yosys, must not skip)
         if: ${{ !cancelled() }}
         env:
-          YOSYS: ''
+          YOSYS: ${{ github.workspace }}/sim/build/cdc/oss-cad-suite/bin/yosys
           EXPECT_TESTS: '25'
         run: |
           python3 -m pip install --user pytest
