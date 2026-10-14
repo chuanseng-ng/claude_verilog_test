@@ -91,7 +91,10 @@ three `rv32i_clock_gate` instances (`u_cpu_cg`, `u_gpu_cg`, `u_tck_cg`) + the tw
 removed by the tie-off; the three `autoblock.w` latches do not appear to survive as cells (**UNVERIFIED**: I did not trace
 them past `proc`). They exist in the shared RTL, not in the `FPGA` arms.
 
-### 2.5 fmax: NOT MEASURED
+### 2.5 fmax: NOT MEASURED (ECP5 lower bound measured later)
+
+> A post-route ECP5 lower bound now exists: CPU-only, LFE5U-85F-6, nextpnr 0.11.1, about 48-52 MHz (CPU domain) and
+> 47-55 MHz (fabric domain) over 3 seeds; see [`FPGA_BOARD_SELECTION.md`](FPGA_BOARD_SELECTION.md) §5. Still no Xilinx timing.
 
 There is **no nextpnr**, no Vivado, no Quartus. yosys has no placement or routing. What exists is a *depth proxy*: the
 longest combinational path in LUT-level equivalents (LUT = 1, MUXF = 0.5, CARRY4 = 0.25; cut at FF/latch/BRAM/DSP/ports),
@@ -239,6 +242,9 @@ BRAM and DSP are not the limit anywhere: 9 RAMB36-eq of 105+ (7-series), 17 / 49
 The GPU is LUT-bound, and 7-series mapped its 16 KB shared memory to LUT-RAM (~5 K sites) where BRAM would be nearly free.
 
 ## 9. Board options and go / no-go (options for the user, not a decision)
+
+> **Superseded for board choice by [`FPGA_BOARD_SELECTION.md`](FPGA_BOARD_SELECTION.md)** (2026-10-14): growth-adjusted sizing,
+> Singapore price/stock, recommendation (Nexys Video, XC7A200T), second-clock add-on and fmax tool availability.
 
 | Option | Fits | Toolchain | Note |
 |---|---|---|---|
