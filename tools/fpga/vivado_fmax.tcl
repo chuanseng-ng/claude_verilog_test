@@ -21,6 +21,13 @@ proc stamp {msg} {
 }
 
 set_param general.maxThreads $threads
+if {$phase eq "probe"} {
+    # cheap licence / part check: no design is read
+    puts "VFMAX-PROBE version=[version -short]"
+    puts "VFMAX-PROBE part=[get_parts $part]"
+    puts "VFMAX-PROBE family=[get_property FAMILY [get_parts $part]] luts=[get_property LUT_ELEMENTS [get_parts $part]]"
+    exit 0
+}
 file mkdir $rdir
 stamp "start phase=$phase gpu=$gpu part=$part version=[version -short]"
 
