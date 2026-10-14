@@ -233,6 +233,9 @@ The GPU is LUT-bound, and 7-series mapped its 16 KB shared memory to LUT-RAM (~5
 
 ## 9. Board options and go / no-go (options for the user, not a decision)
 
+> **Superseded for board choice by [`FPGA_BOARD_SELECTION.md`](FPGA_BOARD_SELECTION.md)** (2026-10-14): growth-adjusted sizing,
+> Singapore price/stock, recommendation (Nexys Video, XC7A200T), second-clock add-on and fmax tool availability.
+
 | Option | Fits | Toolchain | Note |
 |---|---|---|---|
 | 1. ECP5-85F board (ULX3S / Versa) | no-GPU with margin | Fully open: yosys + nextpnr-ecp5 + prjtrellis + openFPGALoader (nextpnr/prjtrellis not on host: flake change) | Only option that needs no vendor tool; GPU does not fit with margin |
