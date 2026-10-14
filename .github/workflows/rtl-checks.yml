@@ -1,9 +1,13 @@
 name: RTL Checks
 
-# Two independent RTL gates:
+# Independent RTL gates:
 #   1. Verible style lint (complements Verilator's semantic lint). Hard gate.
 #      There is deliberately NO format check: see the note in the verible job.
 #   2. Static CDC check (GH #95) — cdc_snitch + cdc_gate. Hard gate.
+#   3. DFT scan-readiness check (bead j41m.12) — tools/dft/check_scan_clk_rst.py on
+#      the Sky130 and ASAP7 flattened SoC netlists, plus its own negative-control
+#      pytest suite. Hard gate, run inside the `cdc` job (it already carries the pinned
+#      yosys + sv2v, so no second 700 MB download).
 on:
   push:
     branches: [ "main" ]
@@ -13,6 +17,14 @@ on:
       - 'flake.nix'
       - 'sim/Makefile'
       - 'tools/cdc/**'
+      # DFT scan-readiness check (bead j41m.12): the checker, its tests, the Makefile
+      # targets that drive it, and the PnR-side stubs/wrappers sv2v folds into the
+      # netlists it reads. Without these, an edit that breaks the check would not run it.
+      - 'tools/dft/**'
+      - 'tb/tests/test_dft_scan_check.py'
+      - 'pnr/Makefile'
+      - 'pnr/sky130/soc/*.sv'
+      - 'pnr/asap7/soc/*.sv'
       - '.github/workflows/rtl-checks.yml'
   pull_request:
     branches: [ "main" ]
@@ -22,6 +34,14 @@ on:
       - 'flake.nix'
       - 'sim/Makefile'
       - 'tools/cdc/**'
+      # DFT scan-readiness check (bead j41m.12): the checker, its tests, the Makefile
+      # targets that drive it, and the PnR-side stubs/wrappers sv2v folds into the
+      # netlists it reads. Without these, an edit that breaks the check would not run it.
+      - 'tools/dft/**'
+      - 'tb/tests/test_dft_scan_check.py'
+      - 'pnr/Makefile'
+      - 'pnr/sky130/soc/*.sv'
+      - 'pnr/asap7/soc/*.sv'
       - '.github/workflows/rtl-checks.yml'
   workflow_dispatch:
 
@@ -149,6 +169,63 @@ jobs:
           echo "::group::make cdc CDC_STRICT=1"
           make -C sim cdc CDC_STRICT=1
           echo "::endgroup::"
+
+      # ------------------------------------------------------------------
+      # DFT scan-readiness gate (bead j41m.12). HARD GATE — no continue-on-error.
+      #
+      # Proves, on the flattened Sky130 and ASAP7 SoC netlists, that in scan mode
+      # every async reset is tester-controlled, every flop is test-clocked, and the
+      # two trst_ni reset synchronisers (u_trst_sync in jtag_tap, u_sw_rst in
+      # dft_ctrl) are present and each feeds only its own consumer
+      # (--expect-reset-sync, bead j41m.11). The CDC gate above cannot see this:
+      # cdc_snitch's opt_merge folds the two identical chains into one.
+      #
+      # Tools: the job's own pinned yosys and sv2v are handed to the Makefile through
+      # its existing YOSYS (`:=`, overridable only on the command line) and SV2V
+      # (`?=`) variables; the Makefile defaults (a bare `yosys` on PATH, a /nix/store
+      # sv2v) are left alone because they are what a developer host uses. Note the
+      # pinned sv2v here is v0.0.13, the Makefile's host default is 0.0.13.1.
+      #
+      # `!cancelled()` so a failing CDC gate does not hide this gate's verdict (and
+      # vice versa); a failed tool fetch still fails these steps loudly.
+      # ------------------------------------------------------------------
+      - name: DFT scan-check (Sky130 + ASAP7 SoC netlists)
+        if: ${{ !cancelled() }}
+        env:
+          PINNED_YOSYS: ${{ github.workspace }}/sim/build/cdc/oss-cad-suite/bin/yosys
+          PINNED_SV2V: ${{ github.workspace }}/sim/build/cdc/sv2v-Linux/sv2v
+        run: |
+          for target in dft-scan-check dft-scan-check-asap7; do
+            echo "::group::make -C pnr ${target}"
+            make -C pnr "${target}" YOSYS="${PINNED_YOSYS}" SV2V="${PINNED_SV2V}"
+            echo "::endgroup::"
+          done
+
+      # tb/tests/test_dft_scan_check.py skips ITSELF when it cannot find yosys
+      # (`pytestmark = skipif(YOSYS is None)`), and a plain pytest run reports that as
+      # green. Run with the pinned yosys and fail the step if ANY test skipped or fewer
+      # than the expected number ran; a green-by-skipping gate is the failure this
+      # step exists to prevent. EXPECT_TESTS is a floor, not an exact count: raise it
+      # in the same commit that adds tests to the file.
+      - name: DFT scan-check tests (pinned yosys, must not skip)
+        if: ${{ !cancelled() }}
+        env:
+          YOSYS: ${{ github.workspace }}/sim/build/cdc/oss-cad-suite/bin/yosys
+          EXPECT_TESTS: '25'
+        run: |
+          python3 -m pip install --user pytest
+          log="${RUNNER_TEMP}/dft_scan_pytest.log"
+          python3 -m pytest tb/tests/test_dft_scan_check.py -v -rs -p no:cacheprovider 2>&1 | tee "${log}"
+          if grep -Eq '[0-9]+ skipped|SKIPPED' "${log}"; then
+            echo "::error::test_dft_scan_check.py skipped tests; the gate did not run (is YOSYS=${YOSYS} usable?)"
+            exit 1
+          fi
+          passed="$(grep -Eo '[0-9]+ passed' "${log}" | tail -n 1 | grep -Eo '[0-9]+' || true)"
+          echo "dft scan-check pytest: ${passed:-0} passed (floor ${EXPECT_TESTS})"
+          if [ "${passed:-0}" -lt "${EXPECT_TESTS}" ]; then
+            echo "::error::only ${passed:-0} test_dft_scan_check.py tests passed, expected >= ${EXPECT_TESTS}"
+            exit 1
+          fi
 
       # Keep the raw report and the machine-readable summary even on failure —
       # the gate output names the offending registers, which is what you need
