@@ -128,6 +128,15 @@ module rv32i_dcache (
         .din0   (tag_din0),
         .dout0  (tag_dout0)
     );
+`elsif FPGA
+    fpga_sram_1rw #(.AW(8)) u_tag_sram (
+        .clk0   (clk),
+        .csb0   (tag_csb0),
+        .web0   (tag_web0),
+        .addr0  (tag_addr0),
+        .din0   (tag_din0),
+        .dout0  (tag_dout0)
+    );
 `else
     sram_1rw_256x32_freepdk45 u_tag_sram (
         .clk0   (clk),
@@ -171,6 +180,15 @@ module rv32i_dcache (
             rv32i_clock_gate u_data_cg (.en(!data_csb0[gw]), .test_en(1'b0), .clk(clk), .gclk(data_gclk));
             sram_1rw_256x32_asap7 u_data_sram (
                 .clk0   (data_gclk),
+                .csb0   (data_csb0[gw]),
+                .web0   (data_web0[gw]),
+                .addr0  (data_addr0[gw]),
+                .din0   (data_din0[gw]),
+                .dout0  (data_dout0[gw])
+            );
+`elsif FPGA
+            fpga_sram_1rw #(.AW(8)) u_data_sram (
+                .clk0   (clk),
                 .csb0   (data_csb0[gw]),
                 .web0   (data_web0[gw]),
                 .addr0  (data_addr0[gw]),

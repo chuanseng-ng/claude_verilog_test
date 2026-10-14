@@ -116,6 +116,16 @@ module shared_memory
     genvar b;
     generate
     for (b = 0; b < SHARED_BANKS; b++) begin : g_bank
+`ifdef FPGA
+        fpga_sram_1rw #(.AW(7)) u_bank (
+            .clk0  (clk),
+            .csb0  (~bank_sel[b]),     // active-low chip select
+            .web0  (~bank_we[b]),      // active-low write enable (low = write)
+            .addr0 (bank_word[b]),
+            .din0  (bank_din[b]),
+            .dout0 (bank_dout[b])
+        );
+`else
         sram_1rw_128x32_asap7 u_bank (
             .clk0  (clk),
             .csb0  (~bank_sel[b]),     // active-low chip select
@@ -124,6 +134,7 @@ module shared_memory
             .din0  (bank_din[b]),
             .dout0 (bank_dout[b])
         );
+`endif
     end : g_bank
     endgenerate
 
