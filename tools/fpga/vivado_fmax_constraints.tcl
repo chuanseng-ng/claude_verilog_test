@@ -32,14 +32,15 @@
 
 proc cdc_log {kind msg} { puts "VFMAX-CDC $kind: $msg" }
 
-# Bound every path ending on the D pin of a cell whose full name matches `pattern` (budget in ns, datapath only).
-proc bound_capture_d {pattern budget what} {
+# Bound every path from clock `from_clk` ending on the D pin of a cell whose full name matches `pattern` (budget in ns,
+# datapath only; Vivado requires -from for -datapath_only, so the launching clock stands in for the launching cells).
+proc bound_capture_d {pattern budget from_clk what} {
     set cells [get_cells -hierarchical -quiet -filter "NAME =~ $pattern && IS_SEQUENTIAL"]
     if {[llength $cells] == 0} { cdc_log MISS "$what: no cell matches $pattern"; return 0 }
     set pins [get_pins -quiet -of_objects $cells -filter {REF_PIN_NAME == D}]
     if {[llength $pins] == 0} { cdc_log MISS "$what: [llength $cells] cells, no D pins"; return 0 }
-    set_max_delay -datapath_only $budget -to $pins
-    cdc_log TRANSLATED "$what: set_max_delay -datapath_only $budget to [llength $pins] D pins ([llength $cells] cells)"
+    set_max_delay -datapath_only $budget -from [get_clocks $from_clk] -to $pins
+    cdc_log TRANSLATED "$what: set_max_delay -datapath_only $budget from $from_clk to [llength $pins] D pins ([llength $cells] cells)"
     return [llength $pins]
 }
 
@@ -54,6 +55,11 @@ proc apply_constraints {period period_cpu rdir} {
     set_clock_groups -physically_exclusive -group [get_clocks cpu_clk_i] -group [get_clocks scan_clk_i]
     set_clock_groups -asynchronous -group [get_clocks tck_i] -group [get_clocks {clk_i cpu_clk_i scan_clk_i}]
     cdc_log CUT "tck_i asynchronous to clk_i / cpu_clk_i / scan_clk_i (clock group); scan_clk_i physically exclusive with clk_i, cpu_clk_i"
+
+    # the two harness data pins carry no SoC logic (serial shift-in / folded observe-out): pad paths are not timed
+    set_false_path -from [get_ports din]
+    set_false_path -to [get_ports dout]
+    cdc_log CUT "harness pins din / dout set_false_path (pad paths of the 6-pin harness, not SoC paths)"
 
     # domain-wide crossing bounds, 0.9 x destination period (check-SDC rule), datapath only
     set b_to_sys [expr {0.9 * $period}]
@@ -75,17 +81,18 @@ proc apply_constraints {period period_cpu rdir} {
         cdc_log MISS "cdc_reset_sync async pins: none found"
     }
 
-    # tighter gray-pointer budgets (0.5 x destination period) on the five channel FIFOs of u_cpu_axi_cdc
-    foreach {fifo dest} {u_aw_fifo cpu u_w_fifo cpu u_ar_fifo cpu u_b_fifo sys u_r_fifo sys} {
-        # write-pointer crossing lands in the READ domain, read-pointer crossing in the WRITE domain
-        set rd [expr {$dest eq "cpu" ? $period_cpu : $period}]
-        set wr [expr {$dest eq "cpu" ? $period : $period_cpu}]
-        bound_capture_d "*u_cpu_axi_cdc*$fifo*u_wr_ptr_to_rd*" [expr {0.5 * $rd}] "$fifo wr-ptr -> rd domain"
-        bound_capture_d "*u_cpu_axi_cdc*$fifo*u_rd_ptr_to_wr*" [expr {0.5 * $wr}] "$fifo rd-ptr -> wr domain"
+    # tighter gray-pointer budgets (0.5 x destination period) on the five channel FIFOs of u_cpu_axi_cdc.
+    # Direction as in the check SDC: aw/w/ar are written in cpu_clk and read in sys_clk; b/r the other way round.
+    foreach {fifo wr_clk} {u_aw_fifo cpu_clk_i u_w_fifo cpu_clk_i u_ar_fifo cpu_clk_i u_b_fifo clk_i u_r_fifo clk_i} {
+        if {$wr_clk eq "cpu_clk_i"} { set rd_clk clk_i;     set wr_p $period_cpu; set rd_p $period
+        } else {                      set rd_clk cpu_clk_i; set wr_p $period;     set rd_p $period_cpu }
+        # the write pointer crosses into the READ domain, the read pointer into the WRITE domain
+        bound_capture_d "*u_cpu_axi_cdc*$fifo*u_wr_ptr_to_rd*" [expr {0.5 * $rd_p}] $wr_clk "$fifo wr-ptr -> rd domain"
+        bound_capture_d "*u_cpu_axi_cdc*$fifo*u_rd_ptr_to_wr*" [expr {0.5 * $wr_p}] $rd_clk "$fifo rd-ptr -> wr domain"
     }
-    bound_capture_d "*u_apb_pll2_cdc*req_q*"  $period_cpu "u_apb_pll2_cdc req_q (s->m)"
-    bound_capture_d "*u_apb_pll2_cdc*ack_q*"  $period     "u_apb_pll2_cdc ack_q (m->s)"
-    bound_capture_d "*u_apb_dbg_cdc*req_q*"   $period_cpu "u_apb_dbg_cdc req_q (s->m)"
-    bound_capture_d "*u_apb_dbg_cdc*ack_q*"   $period     "u_apb_dbg_cdc ack_q (m->s)"
-    bound_capture_d "*u_cpu_clk_dis_sync*"    $period_cpu "u_cpu_clk_dis_sync single-bit CDC"
+    bound_capture_d "*u_apb_pll2_cdc*req_q*" $period_cpu clk_i     "u_apb_pll2_cdc req_q (s->m)"
+    bound_capture_d "*u_apb_pll2_cdc*ack_q*" $period     cpu_clk_i "u_apb_pll2_cdc ack_q (m->s)"
+    bound_capture_d "*u_apb_dbg_cdc*req_q*"  $period_cpu clk_i     "u_apb_dbg_cdc req_q (s->m)"
+    bound_capture_d "*u_apb_dbg_cdc*ack_q*"  $period     cpu_clk_i "u_apb_dbg_cdc ack_q (m->s)"
+    bound_capture_d "*u_cpu_clk_dis_sync*"   $period_cpu clk_i     "u_cpu_clk_dis_sync single-bit CDC"
 }

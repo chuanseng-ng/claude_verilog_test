@@ -28,7 +28,7 @@ root=$(cd "$1" && pwd); out=$2; gpu=$3; phase=$4; tag=$5; period=${6:-10.0}
 : "${VIVADO_SETTINGS:?set VIVADO_SETTINGS to the Vivado settings64.sh path}"
 [ -r "$VIVADO_SETTINGS" ] || { echo "cannot read VIVADO_SETTINGS=$VIVADO_SETTINGS"; exit 2; }
 case $gpu in gpu|nogpu) ;; *) echo "bad gpu arg $gpu"; exit 2 ;; esac
-case $phase in synth|impl|both|probe) ;; *) echo "bad phase $phase"; exit 2 ;; esac
+case $phase in synth|impl|both|probe|constr) ;; *) echo "bad phase $phase"; exit 2 ;; esac
 here=$(cd "$(dirname "$0")" && pwd)
 # shellcheck disable=SC1090
 source "$VIVADO_SETTINGS" > /dev/null 2>&1

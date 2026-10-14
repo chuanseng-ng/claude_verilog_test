@@ -36,7 +36,21 @@ if {$phase eq "synth" || $phase eq "both"} {
     set files [split [string trim [read $fh]] "\n"]
     close $fh
     stamp "read_verilog -sv [llength $files] files"
-    read_verilog -sv $files
+    # one read_verilog per file: a `default_nettype none left open by one file must not leak into the next (Vivado carries
+    # compiler directives across the files of a single read_verilog call; pnr/sky130/soc/gpu_top_tieoff.sv is implicit-net style)
+    foreach f $files {
+        if {[file tail $f] eq "gpu_top_tieoff.sv"} {
+            # Vivado 2026.1 rejects `input logic x` under `default_nettype none` ([Synth 8-6735]); Verilator, sv2v and
+            # yosys accept it. Read a copy with that one directive line removed (the repo file is untouched, the
+            # module's logic is identical: every port is explicitly typed, so the directive has no effect on it).
+            set fh [open $f r]; set txt [read $fh]; close $fh
+            regsub -all -line {^`default_nettype (none|wire)\s*$} $txt "" txt
+            set f $dir/gpu_top_tieoff_vivado.sv
+            set fh [open $f w]; puts -nonewline $fh $txt; close $fh
+            stamp "gpu_top_tieoff.sv read from a copy without default_nettype ($f)"
+        }
+        read_verilog -sv $f
+    }
     stamp "synth_design"
     # In-context synthesis of the 6-pin timing harness; default flatten_hierarchy (rebuilt) keeps module names in cell
     # paths so critical paths can be attributed to modules. +define FPGA / __pnr__ as Stage 0 (sv2v flow) uses.
@@ -50,8 +64,8 @@ if {$phase eq "synth" || $phase eq "both"} {
     stamp "synth reports written"
 }
 
-if {$phase eq "impl" || $phase eq "both"} {
-    if {$phase eq "impl"} {
+if {$phase eq "impl" || $phase eq "both" || $phase eq "constr"} {
+    if {$phase ne "both"} {
         stamp "open_checkpoint synth.dcp"
         open_checkpoint $dir/synth.dcp
     }
@@ -61,6 +75,7 @@ if {$phase eq "impl" || $phase eq "both"} {
     report_clocks -file $rdir/pre.clocks.rpt
     report_clock_networks -file $rdir/pre.clock_networks.rpt
     check_timing -verbose -file $rdir/pre.check_timing.rpt
+    if {$phase eq "constr"} { stamp "constr-only run, exiting"; exit 0 }
 
     opt_design
     stamp "opt_design done"
