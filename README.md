@@ -15,12 +15,12 @@ This project incrementally builds a fully functional SoC:
 4. **Phase 3**: Memory System (I-cache + D-cache) ✅ **COMPLETE** (2026-05-21)
 5. **Phase 4**: GPU-Lite Compute Engine (SIMT) ✅ **COMPLETE** (2026-05-27)
 6. **Phase 5**: SoC Integration (peripherals, boot ROM) ✅ **COMPLETE** (2026-06-24)
-7. **Phase 6**: IP expansion — GPIO/I2C/PWM/WDT/TRNG/AES-SHA, INT8 NPU ✅ **6a + 6b + 6c done**
+7. **Phase 6**: IP expansion — GPIO/I2C/PWM/WDT/TRNG/AES-SHA, INT8 NPU ✅ **complete** (Sky130 Gate B harden closed 2026-10-05)
 8. **Phase 7**: Mixed-signal charge-pump PLL (dual-PDK, AMS RNM) ✅ M-a–M-c complete
 
 ## Current Status
 
-Phases 0–5 complete. Phase 6 underway: **6a complete** (GPIO — also hardened on Sky130 — plus PWM, WDT, TRNG, I2C) **6b complete** (AES-128 + SHA-256 crypto accelerator) and **6c complete** (INT8 4×4 NPU with a 4 KB hard-macro weight SRAM). Phase 6 RTL is done; the batched Sky130 harden (Gate B) is next.
+Phases 0–5 complete. **Phase 6 complete** (epic `f7vs` closed 2026-10-05): **6a** (GPIO — also hardened on Sky130 — plus PWM, WDT, TRNG, I2C), **6b** (AES-128 + SHA-256 crypto accelerator) and **6c** (INT8 4×4 NPU with a 4 KB hard-macro weight SRAM). Two tracks are open: **DFT** (scan + JTAG + MBIST for the Sky130 SoC, epic `j41m`) and **FPGA prototyping** (epic `hlrm`, Stage 0 done, no hardware yet).
 
 **The strongest result in this project is the Sky130 SoC**, because Sky130 is the only node here with
 genuine physical verification (ASAP7 and FreePDK45 skip Magic/KLayout/Netgen entirely). As of
@@ -39,6 +39,8 @@ genuine physical verification (ASAP7 and FreePDK45 skip Magic/KLayout/Netgen ent
 (bead `45a`); and KLayout DRC is currently **deferred, not waived** (it OOM-killed an 8.5 GB step on a
 15 GB host). Detail → [`docs/SKY130_REAL_DRC_LVS_EVALUATION.md`](docs/SKY130_REAL_DRC_LVS_EVALUATION.md).
 
+**Latest batched Sky130 SoC harden (Gate B, `RUN_2026-10-05_06-50-11`, bead `f7vs.15`, PR #214)** covers all Phase 6 IP: setup met at all 9 corners (worst is max_ss **+0.579 ns**, the thin corner to watch), hold 0 violators at all 9, Netgen LVS clear, routing DRC 0, 81.0 mW total, 44.8 % utilisation, 1 703 620 µm² stdcell. KLayout DRC skipped, not waived. Antenna 210 nets / 305 pins accepted by user decision (2026-10-05); the `e45j` slew/cap counts are recorded, not gating. Source: `docs/PHASE6_IP_EXPANSION_PLAN.md` §8.
+
 ⚠️ **Every ASAP7 figure below is unvalidated**, and the ASAP7 CPU/GPU macros additionally rest on a
 netlist with a **proven frontend miscompile** (beads `u99`/`ma7` — a Synlig-built netlist mis-executes
 a branch). Those are shelved pending a ≥32 GB host. See `CLAUDE.md` for the full exposure.
@@ -52,6 +54,11 @@ a branch). Those are shelved pending a ≥32 GB host. See `CLAUDE.md` for the fu
 | 4 — GPU-Lite SIMT | ✅ | 2026-05-27 | GPU+CPU regression green; ASAP7 **571 MHz / 262 mW** ⚠️ unvalidated (bead `8f3`/`0p6`) |
 | 5 — SoC integration | ✅ | 2026-06-24 | M1–M12 done; ASAP7 SoC 571 MHz / 62.9 mW ⚠️ unvalidated (bead `8f3`/`0p6`). Current RTL re-measured on the fixed flow (bead `0d0`): −727 ps / 781 violators / hold clean / 283.6 mW — not closed |
 | 6a — GPIO controller | ✅ | 2026-09-26 | APB4, 32-pin, `0x2000_A000`; `test_gpio` 16/16, `soc_all` 217/217. **Sky130: LVS PASSED, setup + hold both clean at all 9 corners** |
+| 6b — CRYPTO (AES-128 + SHA-256) | ✅ | 2026-10-03 | APB4 index 12, IRQ 10; `test_crypto` 41/41 (FIPS-197 + SP 800-38A vectors); Gate A 277 875 µm² |
+| 6c — INT8 NPU (4×4) | ✅ | 2026-10-04 | APB4 index 13, IRQ 11; `test_npu` 39/39, `test_soc_npu` 1/1; Gate A 203 179 µm² stdcell + 4 KB macro |
+| 6 — Gate B (batched Sky130 harden) | ✅ | 2026-10-05 | `RUN_2026-10-05_06-50-11`: setup met 9/9 corners, hold 0, LVS clear, routing DRC 0 (`f7vs.15`, PR #214) |
+| DFT — scan + MBIST + JTAG (`j41m`) | 🚧 | — | Stage 0 architecture (PR #250); Stage 1a fabric RTL (PR #258, bead open); Stage 1b JTAG TAP (PR #270). MBIST not built |
+| FPGA prototype (`hlrm`) | 🚧 | — | Stage 0 open-tool resource counts, no hardware (PR #279); board recommendation Nexys Video XC7A200T (PR #283); ECP5 fmax lower bound ~48–52 MHz CPU |
 
 Full per-phase records and feature lists → [`docs/readme/PHASE_HISTORY.md`](docs/readme/PHASE_HISTORY.md).
 
@@ -107,6 +114,9 @@ Core specifications in `docs/`:
 | `SKY130_REAL_DRC_LVS_EVALUATION.md` | Sky130 real DRC/LVS sign-off — the only genuinely verified node |
 | `LIBRELANE_PATCHING_EVALUATION.md` | Whether/how to patch the shared LibreLane install |
 | `verification/VERIFICATION_PLAN.md` | Verification strategy by phase |
+| `design/DFT_ARCHITECTURE.md` | DFT scan + MBIST + JTAG architecture for the Sky130 SoC (epic `j41m`) |
+| `FPGA_STAGE0_EVALUATION.md` | FPGA Stage 0 feasibility: yosys resource counts, no hardware (epic `hlrm`) |
+| `FPGA_BOARD_SELECTION.md` | FPGA board recommendation and measured ECP5 fmax lower bound (epic `hlrm`) |
 | `development/CODING_GUIDELINES.md` | Coding practices & style guidelines (RTL + Python + shell) |
 | `development/CODING_COMPLIANCE_AUDIT.md` | Guidelines compliance audit and remediation backlog |
 
@@ -135,7 +145,7 @@ complete definitions in [`docs/design/MEMORY_MAP.md`](docs/design/MEMORY_MAP.md)
 
 This is a specification-driven project with clear phase boundaries. Contributions should:
 
-1. Follow the current phase's scope (Phase 6 — IP expansion; 6a, 6b and 6c complete, Gate B harden next)
+1. Follow the current phase's scope (Phase 6 — IP expansion — is complete; current tracks are DFT `j41m` and FPGA `hlrm`)
 2. Maintain consistency with specifications in `docs/`
 3. Include appropriate tests (pytest for Phase 0, cocotb for Phase 1+)
 

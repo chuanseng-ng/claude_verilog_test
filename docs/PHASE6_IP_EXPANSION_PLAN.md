@@ -1,6 +1,6 @@
 # Phase 6 — IP Expansion Plan (golden spec)
 
-**Status:** Groundwork in progress (bead `f7vs`, 2026-09-28). Phase 6a GPIO ✅ complete.
+**Status:** Phase 6 complete (2026-10-05). 6a–6c are built and Gate B (§8) closed 2026-10-05 (bead `f7vs.15`); epic `f7vs` is closed. This document is kept as the golden spec, and its per-item status text is dated.
 **Scope:** every remaining Phase 6 item — the four unbuilt 6a peripherals, the 6b crypto
 accelerator, and the 6c NPU.
 **Supersedes for planning purposes:** the 24-line sketch at `docs/ROADMAP.md:429-453`, which

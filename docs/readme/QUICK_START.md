@@ -135,3 +135,32 @@ Style rules live in [`.rules.verible_lint`](../../.rules.verible_lint). CI runs 
 gate** (whole tree clean). There is no format check: the formatter cannot reproduce the
 hand-aligned house style (bead `hn9l`), so formatting is enforced by review. `nix develop` provides the same
 Verible binary CI installs, so no manual download is needed there.
+
+## DFT, CDC and FPGA Targets (added 2026-10-15)
+
+Targets verified against the Makefiles (`.PHONY` lists in `tb/cocotb/soc/Makefile` and `pnr/Makefile`).
+
+```bash
+# CDC primitives (bead 0y0p renamed cdc_2ff_sync to cdc_sync, PR #277)
+nix develop --command make -C tb/cocotb/soc cdc_sync
+nix develop --command make -C tb/cocotb/soc cdc_gray_fifo
+nix develop --command make -C tb/cocotb/soc cdc_reset_sync_scan
+
+# DFT (epic j41m): JTAG TAP and scan-mode muxes
+nix develop --command make -C tb/cocotb/soc jtag_tap
+nix develop --command make -C tb/cocotb/soc dft_ctrl
+nix develop --command make -C tb/cocotb/soc soc_dft_scan
+
+# Netlist scan checks (CI passes pinned YOSYS and SV2V; see .github/workflows/rtl-checks.yml)
+nix develop --command make -C pnr dft-scan-check
+nix develop --command make -C pnr dft-scan-check-asap7
+
+# FPGA Stage 0 (epic hlrm): FPGA=1 selects the block-RAM-inferable memory arms
+nix develop --command make -C tb/cocotb/soc FPGA=1 soc_all_ci
+
+# Struct-member select gate (blocking in qa-checks; PR #275)
+python3 tools/verif/check_struct_member_select.py -v
+
+# FPGA Stage 0 open-tool synthesis: one job per call (see the script header)
+tools/fpga/stage0_synth.sh <repo-root> <out-dir> <gpu|nogpu> <xc7|ecp5>
+```

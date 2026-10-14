@@ -704,7 +704,7 @@ class GPUScoreboard(uvm_component):
 
 ## Phase 5 Verification
 
-**Status**: SoC integration
+**Status**: ✅ COMPLETE (2026-06-24, M1–M12); live status in `docs/PHASE_STATUS.md`
 
 ### System-Level Verification
 
