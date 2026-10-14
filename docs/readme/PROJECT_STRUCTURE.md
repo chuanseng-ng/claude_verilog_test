@@ -41,8 +41,13 @@
 │   │   ├── rv32i_icache.sv       # I-cache (4 KB, direct-mapped, FENCE.I)
 │   │   ├── rv32i_dcache.sv       # D-cache (4 KB, write-back + write-allocate)
 │   │   └── rv32i_cache_arbiter.sv # D$ priority AXI arbiter
-│   ├── periph/                   # 🚧 Phase 5 (UART, SPI, timer, IRQ ctrl, DMA — M4/M5)
-│   └── soc/                      # 🚧 Phase 5 (crossbar, AXI-Lite ring, SRAM ctrl, soc_top — M1/M3/M6/M8)
+│   ├── periph/                   # ✅ Phase 5 UART, SPI, timer, IRQ ctrl, DMA (M4/M5); Phase 6 GPIO, PWM, WDT, TRNG, I2C, CRYPTO
+│   ├── npu/                      # ✅ Phase 6c INT8 4×4 NPU (npu_top, npu_mac_array, npu_weight_mem)
+│   ├── fpga/                     # 🚧 FPGA Stage 0: block-RAM arms behind the FPGA define (epic hlrm)
+│   └── soc/                      # ✅ Phase 5 SoC: AXI4 crossbar, AXI-Lite/APB fabric, SRAM ctrl, PMU, PLL, async bridge, soc_top
+│       ├── cdc/                  # cdc_sync, cdc_reset_sync, cdc_gray_fifo (cdc_2ff_sync renamed to cdc_sync, PR #277)
+│       └── dft/                  # 🚧 DFT Stage 1a/1b: jtag_tap, dft_ctrl, dft_clk_switch, dft_clk_mux, dft_rst_mux, dft_ctrl_ports
+├── tools/                        # Helper scripts: fpga/ (Stage 0 synthesis), dft/ (scan checks), cdc/, verif/, eda/
 ├── micro_p/                      # Phase 1 single-cycle CPU (archived)
 ├── sim/                          # Simulation scripts (Phase 1+)
 └── CLAUDE.md                     # Claude Code instructions
