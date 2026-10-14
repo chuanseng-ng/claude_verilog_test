@@ -34,6 +34,7 @@ if str(_ROOT) not in sys.path:
 
 from tb.models.soc_model import SoCModel
 from soc_clocks import drive_soc_reset, start_soc_clocks
+from sram_backdoor import sram_mem
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -235,8 +236,8 @@ _SENTINEL_1_WI = 1   # SRAM[0x2004]
 async def test_boot_sram_sentinels(dut):
     """Fresh boot; verify DUT hardware SRAM[0x2000]=0xDEADBEEF and SRAM[0x2004]=0x12345678.
 
-    Mechanism: backdoor read of dut.u_soc.u_sram.mem[] via Verilator
-    --public-flat-rw hierarchy handle.  This is the same mechanism used by
+    Mechanism: backdoor read of the SRAM array (sram_backdoor.sram_mem) via
+    the Verilator --public-flat-rw hierarchy handle.  This is the same mechanism used by
     test_soc_stress.py (post-pass SRAM readout) and test_soc_coherency.py
     (kernel SRAM preload).  It directly reads the physical backing store of
     the behavioral SRAM DUT, confirming the sentinel values physically landed
@@ -314,7 +315,7 @@ async def test_boot_sram_sentinels(dut):
     # DUT-side SRAM backdoor readback — same handle as test_soc_stress.py:202
     # and test_soc_coherency.py:128.  mem[] is word-indexed (32-bit words);
     # word_index = (byte_addr - SRAM_BASE) >> 2.
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
     dut_w0 = int(sram[_SENTINEL_0_WI].value)
     dut_w1 = int(sram[_SENTINEL_1_WI].value)
 

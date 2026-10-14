@@ -58,6 +58,7 @@ import cocotb
 from cocotb.triggers import RisingEdge, ReadOnly
 
 from soc_clocks import drive_soc_reset, start_soc_clocks
+from sram_backdoor import sram_mem
 
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(_ROOT) not in sys.path:
@@ -126,7 +127,7 @@ def _load_kernel_to_sram(dut) -> None:
     backdoor ensures the GPU ifetch from SRAM succeeds, isolating the
     coherency failure to the src-data stale-read path.
     """
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
     kernel_words = _fw_words(_KERNEL_HEX)
     for i, word in enumerate(kernel_words):
         sram[KERNEL_IDX + i].value = word
@@ -234,7 +235,7 @@ async def test_coherency_pass(dut):
         )
         # Backdoor SRAM dump to diagnose failure
         try:
-            sram = dut.u_soc.u_sram.mem
+            sram = sram_mem(dut)
             for i in range(N_SRC_WORDS):
                 sv = int(sram[SRC_IDX + i].value)
                 dv = int(sram[DST_IDX + i].value)
@@ -250,7 +251,7 @@ async def test_coherency_pass(dut):
     )
 
     # Independent SRAM backdoor check: dst[i] == src[i] + 1
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
     for i in range(N_SRC_WORDS):
         src_val  = int(sram[SRC_IDX + i].value)
         dst_val  = int(sram[DST_IDX + i].value)
@@ -341,7 +342,7 @@ async def test_coherency_no_flush(dut):
     # Tests share the same DUT binary; SRAM retains state across test cases.
     # Without this, SRAM[SRC] would still hold (i+1)*0x10 from test_coherency_pass
     # and the GPU would see correct source data despite the flush being omitted.
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
     for i in range(N_SRC_WORDS):
         sram[SRC_IDX + i].value = 0
 

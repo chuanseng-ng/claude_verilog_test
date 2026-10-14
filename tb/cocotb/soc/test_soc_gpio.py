@@ -52,6 +52,7 @@ import cocotb
 from cocotb.triggers import RisingEdge, ReadOnly
 
 from soc_clocks import drive_soc_reset, start_soc_clocks
+from sram_backdoor import sram_mem
 
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(_ROOT) not in sys.path:
@@ -278,7 +279,7 @@ async def test_soc_gpio(dut):
 
     # Independent backdoor check: ISR_COUNT (SRAM word ISR_COUNT_WI) must be
     # exactly 1, matching the firmware's own teeth check.
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
     isr_count = int(sram[ISR_COUNT_WI].value)
     assert isr_count == 1, (
         f"backdoor SRAM read: ISR_COUNT (word {ISR_COUNT_WI}) = {isr_count}, "

@@ -203,7 +203,7 @@ def build_firmware(asm: Assembler):
     # (rv32i_dcache.sv's cacheable-address check), so without an explicit
     # flush the counter store only dirties the write-back D-cache's line —
     # it never reaches real SRAM, and the testbench observes the counter
-    # via a BACKDOOR read of u_soc.u_sram.mem (bypassing the D-cache
+    # via a BACKDOOR read of the SoC SRAM array (bypassing the D-cache
     # entirely), which would then never see the increment regardless of
     # whether the CPU is actually executing correctly. This is the same
     # flush-before-external-observation pattern Step 1c above already uses

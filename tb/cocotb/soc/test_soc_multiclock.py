@@ -195,6 +195,7 @@ import cocotb
 from cocotb.triggers import RisingEdge, ReadOnly
 
 from soc_clocks import drive_soc_reset, start_soc_clocks
+from sram_backdoor import sram_mem
 
 # ---------------------------------------------------------------------------
 # Project root on Python path so tb.models / tb.cocotb imports work
@@ -266,7 +267,7 @@ def _load_rom(dut, words: list) -> None:
 
 def _zero_sram_range(dut, start_wi: int, n: int) -> None:
     """Zero n SRAM words starting at word index start_wi (backdoor)."""
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
     for i in range(n):
         sram[start_wi + i].value = 0
 
@@ -458,7 +459,7 @@ async def test_multiclock_boot_sram_sentinels(dut):
         await RisingEdge(dut.clk_i)
     await ReadOnly()
 
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
     dut_w0 = int(sram[_SENTINEL_0_WI].value)
     dut_w1 = int(sram[_SENTINEL_1_WI].value)
 
@@ -539,7 +540,7 @@ async def test_multiclock_periph_loopback(dut):
     # (the DMA engine's own AXI4 master does not cross the CDC — only the
     # CPU's programming MMIO writes/polls do — so this confirms the MMIO
     # commands that crossed u_cpu_axi_cdc actually landed correctly).
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
     for i in range(DMA_N_WORDS):
         src = int(sram[DMA_SRC_IDX + i].value)
         dst = int(sram[DMA_DST_IDX + i].value)
@@ -617,7 +618,7 @@ async def test_multiclock_cpu_gpu_irq_pass(dut):
             last_pc, saw_fail,
         )
         try:
-            sram = dut.u_soc.u_sram.mem
+            sram = sram_mem(dut)
             flag = int(sram[ISR_FLAG_WI].value)
             dut._log.error("  ISR_FLAG (SRAM[%d]) = %d (expect 1)", ISR_FLAG_WI, flag)
         except Exception as exc:  # pragma: no cover - debug aid only
@@ -630,7 +631,7 @@ async def test_multiclock_cpu_gpu_irq_pass(dut):
         f"(last_pc=0x{last_pc:08x}, saw_fail={saw_fail})"
     )
 
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
 
     isr_flag = int(sram[ISR_FLAG_WI].value)
     assert isr_flag == 1, (

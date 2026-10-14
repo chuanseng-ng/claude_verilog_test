@@ -60,6 +60,7 @@ import cocotb
 from cocotb.triggers import RisingEdge, ReadOnly
 
 from soc_clocks import drive_soc_reset, start_soc_clocks
+from sram_backdoor import sram_mem
 
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(_ROOT) not in sys.path:
@@ -365,7 +366,7 @@ async def test_soc_wdt(dut):
     assert _i(dut.wdt_rst_req_o) == 1, "wdt_rst_req_o is not level-held at PASS"
 
     # ---- backdoor SRAM ------------------------------------------------------------------------
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
     count = int(sram[ISR_COUNT_WI].value)
     log0 = int(sram[ISR_LOG0_WI].value)
     log1 = int(sram[ISR_LOG1_WI].value)

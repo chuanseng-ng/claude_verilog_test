@@ -66,6 +66,7 @@ import cocotb
 from cocotb.triggers import RisingEdge, ReadOnly
 
 from soc_clocks import drive_soc_reset, start_soc_clocks
+from sram_backdoor import sram_mem
 
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(_ROOT) not in sys.path:
@@ -131,7 +132,7 @@ def _load_rom(dut, hex_path: str) -> None:
 
 def _zero_sram_range(dut, start_wi: int, n: int) -> None:
     """Zero n SRAM words starting at word index start_wi."""
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
     for i in range(n):
         sram[start_wi + i].value = 0
 
@@ -250,7 +251,7 @@ async def test_cpu_gpu_irq_pass(dut):
             last_pc, saw_fail
         )
         try:
-            sram = dut.u_soc.u_sram.mem
+            sram = sram_mem(dut)
             flag = int(sram[ISR_FLAG_WI].value)
             dut._log.error("  ISR_FLAG (SRAM[%d]) = %d  (expect 1)", ISR_FLAG_WI, flag)
             for i in range(N_SRC_WORDS):
@@ -270,7 +271,7 @@ async def test_cpu_gpu_irq_pass(dut):
     )
 
     # Backdoor checks
-    sram = dut.u_soc.u_sram.mem
+    sram = sram_mem(dut)
 
     # 1. ISR-ran teeth check: ISR_FLAG_WI must be 1
     isr_flag = int(sram[ISR_FLAG_WI].value)
@@ -350,7 +351,7 @@ async def test_cpu_gpu_irq_no_irq_enable(dut):
     )
 
     # Confirm ISR did NOT run
-    sram    = dut.u_soc.u_sram.mem
+    sram    = sram_mem(dut)
     isr_flag = int(sram[ISR_FLAG_WI].value)
     assert isr_flag == 0, (
         f"ISR_FLAG is {isr_flag} but should be 0 — ISR ran even though "
