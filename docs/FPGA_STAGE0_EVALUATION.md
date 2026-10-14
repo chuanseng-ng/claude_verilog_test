@@ -1,4 +1,4 @@
-# FPGA Stage 0 evaluation (bead `hlrm`, GH #245, draft PR #279)
+# FPGA Stage 0 evaluation (bead `hlrm`, GH #245, PR #279)
 
 Feasibility only: open tools, **no board, no vendor toolchain, no place-and-route, no timing, no hardware.**
 Everything below is either *measured* (tool output quoted, source named) or *inferred* (marked). Nothing here is a
