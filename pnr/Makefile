@@ -205,7 +205,7 @@ SV2V                ?= /nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1
 .PHONY: librelane-asap7-soc-multiclock
 .PHONY: librelane-asap7-soc-multiclock-hier
 .PHONY: librelane-asap7-3014 librelane-asap7-gpu-3014
-.PHONY: check-cdc-timing-asap7-soc
+.PHONY: check-cdc-timing-asap7-soc check-cdc-timing-sky130-soc
 .PHONY: asap7-soc-sv2v
 .PHONY: librelane-sky130-results librelane-sky130-cpu-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results librelane-asap7-soc-results
 .PHONY: prune-asap7-runs prune-asap7-gpu-runs prune-asap7-soc-runs
@@ -246,6 +246,7 @@ help:
 	@echo "  librelane-asap7-soc-multiclock - GH #96: same flow with the 2-clock SDC (config_multiclock.json)"
 	@echo "                              (SOC_CONFIG overrides the config file for all three librelane-asap7-soc* targets)"
 	@echo "  check-cdc-timing-asap7-soc - Post-route CDC budget check (OpenSTA, phase5_soc_multiclock_check.sdc; GH #96)"
+	@echo "  check-cdc-timing-sky130-soc - Post-route CDC budget check, Sky130 SoC (sky130_soc_cdc_check.sdc; bead j41m.5)"
 	@echo "  check-asap7-routing        - Fail loudly if the latest ASAP7 CPU run committed zero routed wires (bead xy6)"
 	@echo "  check-asap7-gpu-routing    - Fail loudly if the latest ASAP7 GPU run committed zero routed wires (bead xy6)"
 	@echo "  check-asap7-soc-routing    - Fail loudly if the latest ASAP7 SoC run committed zero routed wires (bead xy6)"
@@ -2090,6 +2091,52 @@ check-cdc-timing-asap7-soc:
 		rm -f "$$CDC_LOG"; \
 		exit "$$STA_EXIT"; \
 	fi; \
+	rm -f "$$CDC_LOG"
+
+#----------------------------------------------------------------
+# check-cdc-timing-sky130-soc: post-route CDC budget verification, Sky130 SoC (bead j41m.5).
+# Sky130 sibling of check-cdc-timing-asap7-soc: pnr/scripts/check_cdc_timing_sky130.tcl with
+# pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc against a finished Sky130 SoC run (netlist
+# + OpenRCX SPEF of the chosen corner). The budgets cannot live in sky130_soc.sdc (it declares
+# core_clk/cpu_clk asynchronous, and OpenSTA drops a set_max_delay across such a pair) -- see the
+# header of the check SDC.
+#
+# Usage: make check-cdc-timing-sky130-soc [RUN_DIR=/nobackup/sky130_soc_runs/RUN_...] [CDC_CORNER=nom_tt_025C_1v80]
+#        (RUN_DIR defaults to the newest run under /nobackup/sky130_soc_runs)
+# Exit: 0 pass; 1 on any CDC-EXCEPTION-MISS / VIOLATED / FAIL / SETUP-ERROR marker in the log
+# (grepped independent of sta's own exit code, as in the ASAP7 target); sta's exit otherwise.
+# Memory: ~3-5 GB with SPEF on this SoC; do not run next to a LibreLane flow on a 15 GB host.
+#----------------------------------------------------------------
+CDC_CORNER ?= nom_tt_025C_1v80
+check-cdc-timing-sky130-soc:
+	@CDC_RUN_DIR="$(RUN_DIR)"; \
+	if [ -z "$$CDC_RUN_DIR" ]; then \
+		CDC_RUN_DIR=$$(ls -td /nobackup/sky130_soc_runs/RUN_* 2>/dev/null | head -1); fi; \
+	if [ -z "$$CDC_RUN_DIR" ]; then \
+		echo "No Sky130 SoC run found under /nobackup/sky130_soc_runs/ and RUN_DIR not set."; exit 1; fi; \
+	echo "=========================================="; \
+	echo "Post-route CDC budget check -- Sky130 SoC"; \
+	echo "  Run dir : $$CDC_RUN_DIR"; \
+	echo "  Corner  : $(CDC_CORNER)"; \
+	echo "  SDC     : $(abspath $(LIBRELANE_SKY130_SOC_DIR)/constraints/sky130_soc_cdc_check.sdc)"; \
+	echo "=========================================="; \
+	CDC_LOG=$$(mktemp /tmp/check_cdc_timing_sky130.XXXXXX.log); \
+	mkdir -p /nobackup/sky130_soc_runs/cdc_check_reports; \
+	( cd $(LIBRELANE_DIR) && nix-shell --run \
+		"CDC_CHECK_RUN_DIR=$$CDC_RUN_DIR CDC_CHECK_CORNER=$(CDC_CORNER) \
+		 CDC_CHECK_REPORTS=/nobackup/sky130_soc_runs/cdc_check_reports/$$(basename $$CDC_RUN_DIR)_$(CDC_CORNER) \
+		 sta -no_init -exit $(abspath scripts/check_cdc_timing_sky130.tcl)" ) > "$$CDC_LOG" 2>&1; \
+	STA_EXIT=$$?; \
+	grep -v 'Creating black box' "$$CDC_LOG"; \
+	if grep -qE "CDC-EXCEPTION-MISS|budget VIOLATED|CDC-CHECK-RESULT: FAIL|CDC-CHECK-SETUP-ERROR" "$$CDC_LOG"; then \
+		echo "FAIL: check-cdc-timing-sky130-soc -- CDC finding marker(s) present (sta exit $$STA_EXIT). Log: $$CDC_LOG"; \
+		exit 1; fi; \
+	if [ "$$STA_EXIT" -ne 0 ]; then \
+		echo "FAIL: check-cdc-timing-sky130-soc -- sta exited $$STA_EXIT with no recognised marker (tool/setup error). Log: $$CDC_LOG"; \
+		exit "$$STA_EXIT"; fi; \
+	if ! grep -q "CDC-CHECK-RESULT: PASS" "$$CDC_LOG"; then \
+		echo "FAIL: check-cdc-timing-sky130-soc -- no PASS marker in the log (a check that did not report is not a pass). Log: $$CDC_LOG"; \
+		exit 1; fi; \
 	rm -f "$$CDC_LOG"
 
 # flop-count: DFF breakdown from any LibreLane run's synthesis log.
