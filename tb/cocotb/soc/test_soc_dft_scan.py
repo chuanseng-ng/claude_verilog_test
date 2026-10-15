@@ -230,6 +230,40 @@ async def test_scan_out_placeholder_is_zero(dut):
 
 
 @cocotb.test()
+async def test_cpu_macro_scan_boundary(dut):
+    """j41m.4: the CPU macro's scan pins are wired from dft_ctrl / the top scan vectors, bit-exact.
+
+    Chain indices [7:6] of scan_in_i/scan_out_o belong to u_cpu (bit 6 -> macro bit 0, bit 7 -> bit 1);
+    scan_mode/scan_en come from the dft_ctrl nets (NOT the raw ports); the macro's own scan_out_o is
+    the placeholder 0, so top scan_out_o[7:6] reads 0; test_en for the cache gates follows scan_mode.
+    """
+    await _idle(dut)
+    soc = dut.u_soc
+    cpu = soc.u_cpu
+    # Inactive: everything 0 (bit-identical to the pre-DFT macro).
+    assert int(cpu.scan_mode_i.value) == 0 and int(cpu.scan_en_i.value) == 0
+    assert int(cpu.scan_in_i.value) == 0 and int(cpu.test_en_w.value) == 0
+    # Data mapping: only bits 7:6 reach the macro, in order.
+    for top, macro in ((0x3F, 0b00), (0x40, 0b01), (0x80, 0b10), (0xC0, 0b11), (0xFF, 0b11)):
+        dut.scan_in_i.value = top
+        await Timer(2, units="ns")
+        assert int(cpu.scan_in_i.value) == macro, f"scan_in_i=0x{top:02x}: macro saw {int(cpu.scan_in_i.value):02b}"
+    dut.scan_in_i.value = 0
+    # Control: macro mirrors the dft_ctrl nets (pin leg here; TAP leg is dft_ctrl's own suite).
+    dut.scan_mode_i.value = 1
+    dut.scan_en_i.value = 1
+    await Timer(2, units="ns")
+    assert int(soc.dft_scan_mode.value) == 1 and int(cpu.scan_mode_i.value) == 1
+    assert int(soc.dft_scan_en.value) == 1 and int(cpu.scan_en_i.value) == 1
+    assert int(cpu.test_en_w.value) == 1, "cache clock-gate test_en must follow scan_mode"
+    assert (int(dut.scan_out_o.value) >> 6) == 0, "macro scan_out_o is a placeholder 0 until Stage 2"
+    dut.scan_en_i.value = 0
+    dut.scan_mode_i.value = 0
+    await Timer(2, units="ns")
+    assert int(cpu.scan_mode_i.value) == 0 and int(cpu.scan_en_i.value) == 0 and int(cpu.test_en_w.value) == 0
+
+
+@cocotb.test()
 async def test_exit_scan_restores_functional(dut):
     """Leaving scan mode hands the resets back to the functional pins."""
     await _idle(dut)
