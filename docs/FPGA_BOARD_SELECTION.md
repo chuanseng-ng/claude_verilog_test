@@ -45,7 +45,7 @@ XCK26 resources (Farnell listing): 256 K system logic cells, 144 block RAM, 64 U
 GPU included, with room for growth.
 
 - **vs Genesys 2:** more headroom and a faster speed grade, but ~75 % more expensive for margin the design does not need
-  yet. Pick it only if fmax turns out to be the problem (the measured Artix-7 fmax, ~74-107 MHz in Vivado, does not trigger that; section 5).
+  yet. Pick it only if fmax turns out to be the problem (the measured Artix-7 fmax, ~74-107 MHz in Vivado, does not trigger that; section 5). Re-checked against the Kintex-7 measurement (section 5, "Measured: Kintex-7"): about 1.7-1.9x faster than Artix-7, which does not change this.
 - **vs KV260:** cheapest by far; its ARM processor could load firmware and act as a debug host, and its UltraRAM could
   hold a much larger SoC SRAM. But the full SoC sits at the 70 % ceiling once it grows, PL pin access for the peripherals
   is limited, and no Singapore stock was found.
@@ -179,8 +179,7 @@ a different `--freq` target or `router2`; post-synthesis simulation of the netli
 Real vendor result for the recommended part: **Vivado v2026.1 (lin64, Build 6511674), `xc7a200tsbg484-1`, free BASIC licence**,
 post-route, non-project batch flow. Reproduce with `tools/fpga/vivado_fmax.sh` (+ `vivado_fmax.tcl`,
 `vivado_fmax_constraints.tcl`, `vivado_fmax_report.py`); `VIVADO_SETTINGS` must point at the install's `settings64.sh`.
-Outputs live in `/nobackup/fpga_vivado_fmax/` (not in the repo). The Genesys 2 comparison is not part of this run (Kintex-7
-is not installed; tracked as bead `hlrm.1`).
+Outputs live in `/nobackup/fpga_vivado_fmax/` (not in the repo). The Genesys 2 comparison is the next subsection (bead `hlrm.1`).
 
 **Result, CPU-only build (no GPU; the Sky130 tie-off replaces `rtl/gpu`), clock targets `clk_i` 10 ns (100 MHz) and `cpu_clk_i` 7 ns (143 MHz), one run:**
 
@@ -347,15 +346,118 @@ LUTs yosys reports for this RTL", not as a bound for other RTL.
   faster speed grade, so the "pick it only if fmax turns out to be the problem" condition of section 3 is not triggered by this
   measurement.
 
-**NOT verified in the Artix-7 numbers:** any other speed grade or part (Kintex-7 / Genesys 2, bead `hlrm.1`); a sweep of clock targets
+**NOT verified in the Artix-7 numbers:** any other speed grade or part (Kintex-7 / Genesys 2 is measured in the next subsection); a sweep of clock targets
 or seeds (one run per build, ~1 ns spread observed); post-route simulation; power; pad-level timing and hold (harness shells only);
 `phys_opt_design` after routing and any non-default directive (a longer-effort flow may do better); the effect of removing the
 behavioural clock gate; the other 7 hold endpoints (not inspected); any run on hardware.
 
+### Measured: Kintex-7 XC7K325T-2 (Vivado 2026.1), the Genesys 2 part (bead `hlrm.1`)
+
+Same flow as the Artix-7 run above, only the part changed: **`xc7k325tffg900-2`**, Vivado v2026.1, same RTL (origin/main
+`7875da3`; no RTL change since the Artix-7 run, only bead notes), same harness, same filelist, same constraints script, same
+flow (`opt_design`, `place_design`, `phys_opt_design`, `route_design`, default directives), `maxThreads 4`. `tools/fpga/vivado_fmax.*`
+needed **no change**: the part was already the `VFMAX_PART` variable and the Artix-7 default is untouched. Invocation:
+`VFMAX_PART=xc7k325tffg900-2 VFMAX_PERIOD_CPU=7 vivado_fmax.sh . <out> {nogpu|gpu} ... 10` (CPU-only: `synth` then `impl`; with GPU:
+`both`, as for Artix-7). Outputs in `/nobackup/fpga_vivado_fmax_k7/` (not in the repo). Every figure below is [M] (read from the Vivado
+reports of this session) unless marked [A] (assumed / inferred) or [R] (read from another document).
+
+**Step 1: like-for-like targets (`clk_i` 10 ns, `cpu_clk_i` 7 ns), one run per build. Result: the Kintex-7 met every constraint, so
+these are lower bounds, not achieved fmax** (the placer stops optimising once the target is met; the Artix-7 run missed all four, so
+its figures were what the router achieved while still trying).
+
+| Build / domain | Artix-7 -1 WNS [R] (est. fmax) | Kintex-7 -2 WNS (lower bound 1/(T-WNS)) | WNS swing |
+|---|---|---|---|
+| CPU-only, `clk_i` fabric | -2.085 ns (~83 MHz) | **+1.411 ns** (>= 116 MHz) | +3.50 ns |
+| CPU-only, `cpu_clk_i` | -2.332 ns (~107 MHz) | **+0.088 ns** (>= 145 MHz; the reported WNS is the clock-gate enable latch, borrowing; the worst register-to-register path has +0.748 ns, >= 160 MHz) | +2.42 ns (>= 3.08 ns on the register path) |
+| With GPU, `clk_i` fabric | -3.452 ns (~74 MHz) | **+0.367 ns** (>= 104 MHz) | +3.82 ns |
+| With GPU, `cpu_clk_i` | -3.183 ns (~98 MHz) | **+0.102 ns** (>= 145 MHz, same latch endpoint) | +3.29 ns |
+
+**Step 2 (an addition to the brief, needed because step 1 saturated): tighter targets, `clk_i` 7 ns (143 MHz) and `cpu_clk_i` 5 ns
+(200 MHz)**, implementation only on the same synthesis checkpoints (so only the constraint changes), one run per build. This is
+what measures an achieved fmax, the same way the Artix-7 7 ns CPU target did. It is a different target pair from the Artix-7 run, so
+it is **not** a strict like-for-like; step 1 is the strict one.
+
+| Build / domain | Target | WNS / failing endpoints | Estimated fmax = 1/(T-WNS) | Limiting path (start -> end; logic) |
+|---|---|---|---|---|
+| CPU-only, `clk_i` fabric | 7.0 ns | **+0.245 ns**, 0 of 23,444 (met) | **>= 148 MHz** (lower bound; true limit not reached) | NPU MAC: `ain_q` -> column-3 `acc_q`, 20 levels (13 CARRY4, 5 LUT2), 3.21 ns logic + 3.57 ns route |
+| CPU-only, `cpu_clk_i` | 5.0 ns | **-0.566 ns**, 1807 of 13,589 | **~180 MHz** | `u_cpu_pmu_rst_sync` flop -> synchronous-reset pin of `id_ex_reg` (`rs2_data`, `csr_op`...), 4 levels (LUT3/5/6/6), 0.40 ns logic + 3.71 ns route, clock skew -1.12 ns: a **reset-distribution** path, not the ALU path that limited Artix-7 |
+| With GPU, `clk_i` fabric | 7.0 ns | **-0.955 ns**, 269 of 56,540 | **~126 MHz** | GPU warp scheduler `rr_ptr` -> `u_gif_adapter` `ar_addr_q`, 16 levels (9 LUT6, 1 MUXF7), 1.07 ns logic + 5.65 ns route, skew -1.10 ns |
+| With GPU, `cpu_clk_i` | 5.0 ns | **-0.257 ns**, 243 of 13,607 | **~190 MHz** | `ex1c_ex1b_reg` `pc` -> `u_csr` `mhpmcounter4` clock enable, 16 levels (8 CARRY4, 4 LUT6), 1.34 ns logic + 3.58 ns route |
+
+(Step-1 critical paths, for the record: CPU-only `clk_i` worst is `u_pll_sub` stub `locked_q` -> SHA `w_q` reset pin, 2 levels, 7.4 ns
+of routing, +1.411 ns slack; with GPU it is a GPU scheduler flop (`rr_ptr`) -> DMA `state_q` clock-enable path, the same family that limited Artix-7 (17 levels, 1.48 ns
+logic + 6.98 ns route, skew -0.93 ns); `cpu_clk_i` is the clock-gate enable latch in both, then `mem_wb_reg.pc` -> `u_csr` `mcause`
+clock enable (15 levels, 7 CARRY4) at +0.748 ns CPU-only.)
+
+**Prototype scale factor** (ASIC 571 MHz fabric / 1282 MHz CPU), using the step-2 numbers: fabric ~126 MHz with GPU (4.5x) and
+>= 148 MHz CPU-only (<= 3.9x); CPU ~190 MHz with GPU (6.7x) and ~180 MHz CPU-only (7.1x). Artix-7 was 7-17x.
+
+**Kintex-7 vs Artix-7, does the difference exceed the ~1 ns run-to-run spread?** Yes, on every comparison, with the caveat that the
+spread was observed on Artix-7 only and is not re-measured here (one run per build and target on Kintex-7 as well).
+- Strict like-for-like (step 1, same 10/7 ns targets): the WNS swing is **+2.4 to +3.8 ns** (>= 3.1 ns on the CPU register path),
+  i.e. 2.4x to 3.8x the 1 ns spread, and it flips all four domains from failing to meeting timing.
+- Achieved periods (step 2 against the Artix-7 estimates): with GPU, fabric 8.0 ns vs 13.5 ns (-5.5 ns, 1.7x) and CPU 5.3 ns vs 10.2 ns
+  (-4.9 ns, 1.9x); CPU-only, fabric <= 6.8 ns vs 12.1 ns (>= 5.3 ns, >= 1.8x) and CPU 5.6 ns vs 9.3 ns (-3.8 ns, 1.7x). Because the Kintex-7
+  targets were tighter and tighter targets push the placer harder, a part of this gap may be the target, not the device [A]; the strict
+  step-1 swing does not have that issue.
+- Reading: **Kintex-7 -2 is roughly 1.7x to 1.9x faster than Artix-7 -1 on this design** (fabric ~126 MHz+ vs ~74-83 MHz, CPU ~180-190 MHz vs
+  ~98-107 MHz), and its fabric limiter moves around (NPU MAC, GPU scheduler -> bus) just as on Artix-7. Single runs, so read the
+  ratio as 1.7-1.9x +/- the placement spread, not as a precise factor.
+
+**Utilisation (post-route, `xc7k325tffg900-2`, step-1 runs; step-2 within +/-2 % of these):**
+
+| | CPU-only | With GPU |
+|---|---|---|
+| Slice LUTs | 18,375 of 203,800 (**9.0 %**; 18,090 logic + 285 LUT-RAM) | 39,518 (**19.4 %**; 36,417 logic + 3,101 LUT-RAM) |
+| Slice registers | 13,143 (3.2 %), 4 latches | 17,950 (4.4 %), 5 latches |
+| Block RAM tiles | 12 of 445 (2.7 %) | 28 (6.3 %): 1 RAMB36 + 54 RAMB18 |
+| DSP48E1 | 2 of 840 (0.2 %) | 26 (3.1 %) |
+| BUFGCTRL | 6 of 32 | 7 of 32 |
+| Artix-7 for reference [R] | 18,981 LUT (14.2 %), 13.2 K FF, 12 BRAM, 2 DSP | 40,586 LUT (30.3 %), 18.0 K FF, 28 BRAM, 26 DSP |
+
+The mapping is the same as on Artix-7 (same block RAM, DSP and register counts; LUT count 3 % lower CPU-only and 3 % lower with GPU, a
+packing difference between the two device families [A]). The Kintex-7 simply has 1.5x the LUTs.
+
+**Hold:** CPU-only is clean in both steps (WHS +0.061 / +0.066 ns on `clk_i`, +0.088 / +0.094 ns on `cpu_clk_i`). **With GPU it is
+not, and this one is not a harness-shell artifact:** step 1 `clk_i` WHS **-0.312 ns on 118 endpoints** (THS -13.9 ns); step 2 **-0.206 ns on
+203 endpoints** (THS -19.9 ns). The worst endpoints are internal bus-to-GPU registers (`u_axil_ic` / `u_periph_bridge` / `u_sram`
+`buf_data_q` -> `u_gpu` `ar_addr_q`, `aw_addr_q`, `if_id_q`), with **+0.92 to +1.10 ns of clock skew** (destination later than source).
+Cause [A, not isolated]: the GPU clock is the behavioural LUT clock gate promoted to its own BUFG, so its insertion delay is later than
+the plain `clk_i` BUFG (8 x TIMING-14 "LUT on the clock tree", the same structural finding as Artix-7, where the skew was about 1.5 ns).
+On Artix-7 only 8 endpoints (-0.112 ns) failed hold and the worst was a harness shell flop, so the Kintex-7 hold picture is worse and
+different. It does not affect the fmax numbers, but it is a real finding for the clock-gate decision (bead `hlrm.2`): on hardware this
+would need a hold fix (balanced clock, a vendor clock-enable primitive instead of a LUT gate, or removing the gate on the prototype), and
+the run was not repeated with a post-route `phys_opt_design`, which may or may not close it.
+
+**Cost (all within the host limits; MemAvailable was 12.6-13.9 GB before every job, no OOM, no waiting needed):**
+
+| Job | Wall time | Peak RSS |
+|---|---|---|
+| CPU-only synthesis | 3:56 | 2.49 GB |
+| CPU-only P&R, 10/7 ns | 5:59 | 3.14 GB |
+| With GPU, synthesis + P&R in one session, 10/7 ns | 15:08 | 4.07 GB |
+| CPU-only P&R, 7/5 ns | 8:31 | 2.83 GB |
+| With GPU P&R, 7/5 ns | 12:13 | 3.09 GB |
+
+(Artix-7 for reference [R]: 4:07 + 10:06 CPU-only, 21:23 with GPU. Kintex-7 was faster for the same flow, probably because it met timing
+at the first target so the router and `phys_opt` had less to do [A].)
+
+**What this does to the recommendation:** **nothing; section 3 stands (Nexys Video).** Section 3 says to pick the Genesys 2 "only if
+fmax turns out to be the problem". Kintex-7 is measurably faster (about 1.7-1.9x), but Artix-7 already gives ~74-107 MHz, a 7-17x
+scale factor against the ASIC clocks, which the Artix-7 conclusion above already judged fast enough for firmware validation
+and the CDC soak [A, judgement carried over, not re-evaluated], so fmax is not the problem. The Genesys 2 costs about 75 % more
+(section 2 [R]) for headroom that was not needed (19 % of its LUTs with the GPU, against 30 % on the XC7A200T; the XC7A200T has
+ample margin). The one new input is the GPU-build hold behaviour above, which is a clock-gate design issue, not a part selection issue.
+
+**NOT verified in the Kintex-7 numbers:** a seed sweep or more than one run per build and target (the Artix-7 ~1 ns spread is assumed to
+apply, not re-measured); the true fmax of the two domains that still met timing at the tightest target tried (CPU-only fabric
+>= 148 MHz); the effect of `phys_opt_design` after routing and non-default directives; fixing or characterising the GPU-build hold
+endpoints; pad-level timing, power, any hardware run; the remaining cause analysis for the CPU-only `cpu_clk_i` reset-path limiter
+(it is a 1,807-endpoint family, the top three endpoints inspected); the Genesys 2 board itself (pinout, clocks, price) is untouched.
 
 1. Board (recommendation: Nexys Video).
 2. Clock-speed sanity check: done for the CPU-only build. ECP5 lower bound ~48-52 MHz CPU, ~47-55 MHz fabric; Artix-7
-   XC7A200T-1 in Vivado 2026.1 ~107 MHz CPU, ~83 MHz fabric (above). Kintex-7 / Genesys 2 comparison: bead `hlrm.1`.
+   XC7A200T-1 in Vivado 2026.1 ~107 MHz CPU, ~83 MHz fabric (above). Kintex-7 XC7K325T-2 (Genesys 2) ~180-190 MHz CPU, ~126 MHz+ fabric (subsection above).
 3. Second clock source (recommendation: Si5351A breakout), after confirming clock-capable pins on the chosen board.
 4. The Stage 1 decisions already recorded on bead `hlrm`: GPU shared-memory RAM style, clock-gating strategy, strip DFT
    on the prototype, IO wrapper and `boot_rom` image owner.
