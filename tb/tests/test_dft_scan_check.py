@@ -431,8 +431,17 @@ _BLK_GATE_NOTEST = """
     assign gclk_o = clk_i & en_l;
 endmodule
 """
-_BLK_ARGS = ("--clock-port", "clk_i", "--max-async-pins", "0", "--expect-seq-min", "2",
-             "--all-latches-need-scan-mode", "--expect-latches-min", "1")
+_BLK_ARGS = (
+    "--clock-port",
+    "clk_i",
+    "--max-async-pins",
+    "0",
+    "--expect-seq-min",
+    "2",
+    "--all-latches-need-scan-mode",
+    "--expect-latches-min",
+    "1",
+)
 
 
 def _blk_run(tmp_path: Path, tail: str, head: str = _BLK_HEAD, args: tuple = _BLK_ARGS):
@@ -480,8 +489,10 @@ def test_block_mode_async_reset_trips_max_async_pins(tmp_path: Path) -> None:
 
 def test_block_mode_flop_generated_clock_still_fails(tmp_path: Path) -> None:
     tail = _BLK_GATE_TESTEN.replace(
-        "endmodule", "    reg dv_q;\n    always @(posedge clk_i) dv_q <= d;\n    reg r_q;\n"
-        "    always @(posedge dv_q) r_q <= d;\n    assign gclk_o = gclk_o2 & r_q;\n    wire gclk_o2 = clk_i;\nendmodule"
+        "endmodule",
+        "    reg dv_q;\n    always @(posedge clk_i) dv_q <= d;\n    reg r_q;\n"
+        "    always @(posedge dv_q) r_q <= d;\n    assign gclk_o = gclk_o2 & r_q;\n"
+        "    wire gclk_o2 = clk_i;\nendmodule",
     ).replace("    assign gclk_o = clk_i & en_l;\n", "")
     res = _blk_run(tmp_path, tail)
     assert res.returncode == 1, res.stdout
@@ -496,6 +507,8 @@ def test_block_mode_latch_count_guard(tmp_path: Path) -> None:
 
 
 def test_block_mode_seq_min_guard(tmp_path: Path) -> None:
-    res = _blk_run(tmp_path, _BLK_GATE_TESTEN, args=("--clock-port", "clk_i", "--expect-seq-min", "50"))
+    res = _blk_run(
+        tmp_path, _BLK_GATE_TESTEN, args=("--clock-port", "clk_i", "--expect-seq-min", "50")
+    )
     assert res.returncode == 1, res.stdout
     assert "expected at least 50 sequential cells" in res.stdout
