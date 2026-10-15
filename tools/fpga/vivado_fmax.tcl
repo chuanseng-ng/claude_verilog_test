@@ -31,6 +31,25 @@ if {$phase eq "probe"} {
 file mkdir $rdir
 stamp "start phase=$phase gpu=$gpu part=$part version=[version -short]"
 
+if {$phase eq "ooc"} {
+    # Trimming check: synthesise soc_top ALONE (no harness, every port kept, nothing tied) out of context. If the harness had
+    # trimmed logic or tied inputs to constants, this count would be larger than the in-context one.
+    file mkdir $dir/ooc
+    set fh [open $dir/filelist.txt r]
+    set files [split [string trim [read $fh]] "\n"]
+    close $fh
+    foreach f $files {
+        if {[file tail $f] eq "ecp5_timing_harness.sv"} { continue }
+        if {[file tail $f] eq "gpu_top_tieoff.sv"} { set f $dir/gpu_top_tieoff_vivado.sv }
+        read_verilog -sv $f
+    }
+    synth_design -top soc_top -part $part -mode out_of_context -verilog_define FPGA -verilog_define __pnr__
+    report_utilization -file $dir/ooc/utilization.rpt
+    report_utilization -hierarchical -hierarchical_depth 3 -file $dir/ooc/utilization_hier.rpt
+    stamp "ooc synth done"
+    exit 0
+}
+
 if {$phase eq "synth" || $phase eq "both"} {
     set fh [open $dir/filelist.txt r]
     set files [split [string trim [read $fh]] "\n"]

@@ -45,7 +45,7 @@ XCK26 resources (Farnell listing): 256 K system logic cells, 144 block RAM, 64 U
 GPU included, with room for growth.
 
 - **vs Genesys 2:** more headroom and a faster speed grade, but ~75 % more expensive for margin the design does not need
-  yet. Pick it only if fmax turns out to be the problem.
+  yet. Pick it only if fmax turns out to be the problem (the measured Artix-7 fmax, ~74-107 MHz in Vivado, does not trigger that; section 5).
 - **vs KV260:** cheapest by far; its ARM processor could load firmware and act as a debug host, and its UltraRAM could
   hold a much larger SoC SRAM. But the full SoC sits at the 70 % ceiling once it grows, PL pin access for the peripherals
   is limited, and no Singapore stock was found.
@@ -78,7 +78,7 @@ connector carries dedicated clock-capable `CLK*_M2C` pins and is the clean alter
 
 | Tool | Available? | Notes |
 |---|---|---|
-| Vivado | **No** | Not on the host, not in `/opt`, `/tools` or the nix store, and not in nixpkgs (proprietary). A free Vivado ML Standard install needs an AMD account download (~100 GB installed; `/nobackup` has ~600 GB free). |
+| Vivado | **Yes since 2026-10-15** (v2026.1, `/nobackup/FPGA_SW/2026.1/Vivado`, free BASIC licence; installed after this table was first written, the original note was: not on the host, not in `/opt`, `/tools` or the nix store, and not in nixpkgs (proprietary). A free Vivado ML Standard install needed an AMD account download (~100 GB installed; `/nobackup` has ~600 GB free). |
 | nextpnr 0.11.1 (nixpkgs) | Yes, via `nix build nixpkgs#nextpnr` | Architectures: `ecp5`, `ice40`, `nexus`, `generic`, himbaechel `gowin` / `ng-ultra` / `gatemate`. **No Xilinx 7-series** (nextpnr-xilinx / prjxray are not in nixpkgs). |
 | trellis (ECP5 database) | Yes, nixpkgs `trellis` | Needed by `nextpnr-ecp5`. |
 | openFPGALoader 1.1.1 | Yes, nixpkgs | Board programming only. |
@@ -211,8 +211,7 @@ LUT-RAM), Slice registers 13,206 of 267,600 (4.9 %, 4 of them latches), F7 / F8 
 LUTs available against 134,600 in the part query and the synthesis report; the reason was not investigated.) **Versus yosys Stage 0** (CPU-only, 38,554 LUT1-6, 14,079
 FF, 9 RAMB36-equivalents, 19 DSP48E1): Vivado used **about 0.49x the LUTs** (the "10-30 % fewer" assumption in section 1 was too
 conservative: it is ~51 % fewer here), about the same flops, 12 vs ~9 block-RAM tiles and 2 vs 19 DSPs (the 4x4 INT8 NPU
-multipliers went to LUTs and CARRY4 chains, not DSP48E1). All blocks are present in the hierarchy report (CPU 7.9 K LUT, CRYPTO
-3.0 K, NPU 2.0 K, bus 2.5 K, DMA 0.9 K, I2C 0.5 K); nothing was swept away by the harness. This does not move the section 1
+multipliers went to LUTs and CARRY4 chains, not DSP48E1). All blocks are present in the hierarchy report; the harness was checked and swept nothing away ("Trimming check" below). This does not move the section 1
 sizing for the full SoC (that depends on the GPU, see below), but it removes the "38.6 K LUTs, 70 % rule" worry for the CPU-only build
 on this part: it uses 14 %.
 
@@ -265,7 +264,93 @@ on this part: it uses 14 %.
   is the open clock-gating decision). The evidence for "small" is that the CPU critical path starts and ends on gated flops with
   skew of -0.05 ns and positive hold slack (+0.117 ns); the evidence against being fully clean is TIMING-14.
 
-**Cost:** synthesis 4:07 wall / 2.49 GB peak RSS; place and route (this run) 10:06 wall / 2.73 GB; both well inside the host limits.
+**Cost (CPU-only):** synthesis 4:07 wall / 2.49 GB peak RSS; place and route 10:06 wall / 2.73 GB; both well inside the host limits.
+
+**With the GPU (full SoC), same flow, same targets (`clk_i` 10 ns, `cpu_clk_i` 7 ns), one run: it fits, comfortably.**
+
+| | CPU-only | Full SoC with GPU |
+|---|---|---|
+| `clk_i` fabric WNS / estimated fmax | -2.085 ns / ~83 MHz | **-3.452 ns / ~74 MHz** (4527 of 56,511 endpoints fail) |
+| `cpu_clk_i` CPU WNS / estimated fmax | -2.332 ns / ~107 MHz | **-3.183 ns / ~98 MHz** (6267 of 13,588 fail) |
+| Hold WHS (worst) | +0.058 ns | **-0.112 ns, 8 endpoints** (see below) |
+| `clk_i` -> `cpu_clk_i` / `cpu_clk_i` -> `clk_i` crossings WNS | -1.444 / -1.052 ns | -1.454 / -1.229 ns |
+| Slice LUTs (post-route) | 18,981 (14.2 %) | **40,586 of 133,800 (30.3 %)**: 37,485 logic + 3,101 LUT-RAM |
+| Slice registers | 13,206 (4.9 %) | 17,988 (6.7 %), 5 latches |
+| Block RAM tiles | 12 (3.3 %) | 28 of 365 (7.7 %): 1 RAMB36 + 54 RAMB18 |
+| DSP48E1 | 2 (0.3 %) | 26 of 740 (3.5 %) |
+| BUFGCTRL | 6 | 7 of 32 |
+| Wall time / peak RSS (synthesis + P&R in one session for the GPU build) | 4:07 + 10:06 / 2.7 GB | 21:23 / 3.28 GB |
+
+- **GPU fit verdict on XC7A200T: fits with a large margin.** 30 % of the LUTs, 8 % of the block RAM, 4 % of the DSPs. That is half of
+  the "~62 %" of section 2, which came from yosys LUT counts plus 25 % growth and bring-up margin; today's measured SoC is 30 %, so even
+  after +25 % growth and +5 K bring-up logic (both assumed, not measured) the estimate is about 42 %.
+- **GPU shared memory went to block RAM in Vivado**: `shared_memory` is 32 RAMB18 (plus 9.6 K LUTs of mux and control around them);
+  yosys had chosen LUT-RAM (~5 K LUT sites) for the same RTL. The GPU vector register file went to LUT-RAM (2,816 LUT-RAM sites
+  in `gpu_top`). So the Stage 1 "GPU shared-memory RAM style" decision is not forced on this part: Vivado already picks block RAM.
+- **Timing with the GPU is worse, and the CPU number moved even though the CPU RTL did not.** The fabric limiter is a GPU
+  warp-scheduler `warp_done` flop -> DMA `state_q` clock enable (16 levels, 2.79 ns logic + 9.51 ns route = 77 % wire, clock skew
+  -0.91 ns); the CPU limiter in this run is EX2 `ex_mem.mem_size` -> I-cache `refill_buf` clock enable (12 levels, 2.0 ns logic + 7.8 ns
+  route). The CPU domain gained a worse WNS (-2.33 -> -3.18 ns, ~107 -> ~98 MHz) with identical CPU logic, so **the placement-to-placement
+  spread of a single run is of the order of 1 ns (~10 %)**; the honest reading is "fabric ~74-83 MHz, CPU ~98-107 MHz" rather than any
+  single figure, and one run per build is all that was done (no seed or target sweep).
+- **Hold:** worst -0.112 ns on 8 endpoints (THS -0.49 ns). The worst one is a harness shell flop `in_sr[82]` (`gpio_in_i[31]`) -> the
+  GPIO input synchroniser, with 1.52 ns of clock skew: the shell flop sits behind a plain `clk_i` BUFG while the synchroniser sits
+  behind the `core_clk` LUT + BUFG (extra insertion delay). The SDC's `set_false_path -hold -from [all_inputs]` was **not**
+  translated, so this is a harness / pad-hold artifact; the other seven endpoints were not individually inspected. It does show a
+  real structural point: a LUT in the clock path adds about 1.5 ns of insertion delay against a direct BUFG.
+- **Clock gating / latches:** 5 `LDCE` (the CPU, GPU and TCK clock-gate enables and the two clock-switch latches); every LUT-driven clock net again became a BUFG (the GPU gated clock is its own BUFG with 5,462 pins); 8 x TIMING-14
+  (Critical Warning) instead of 5; no combinational loops.
+
+**Trimming check (is Vivado's 2x-smaller LUT count and 2-vs-19 DSP real, or did logic disappear?) - verdict: no material trimming;
+the numbers are valid for the design as written.** Evidence, all measured unless marked inference:
+1. **Harness did not trim anything.** `soc_top` synthesised alone, out of context (`vivado_fmax.sh ... ooc`: no harness, every port
+   kept, nothing tied off) gives CPU-only **18,687 LUT / 12,957 FF / 12 BRAM tiles / 2 DSP** and with GPU **40,017 LUT / 17,763 FF /
+   28 BRAM tiles / 26 DSP**. The in-context runs (18,700 / 13,239 and 40,038 / 18,046) differ by exactly the harness shells
+   (+282 / +283 FF, +13 / +21 LUT). The 6-pin harness neither created constants nor orphaned outputs.
+2. **Removal messages are small and behaviour-preserving.** Synthesis log, CPU-only: 37 flops "unused, removed" (31 are the
+   high bits of the NPU requantiser product register, absorbed into the DSP48E1 P register, per the `DSP Report` lines), 7 unused CSR
+   registers (`rv32i_csr_file`: two trimmed from 32 to 4 bits), 92 flops with a constant-0 input propagated (59 in `u_crypto`),
+   and >=100 duplicate registers merged (Synth 8-3886 hit its 100-message print limit; the printed ones are pipeline duplicates such as
+   `id_ex_reg.rs2_addr[4:0]` == `instruction[24:20]`). `opt_design` then removed **192 cells in total** and propagated no constants.
+   Nothing block-sized is removed.
+3. **Every block is present with its state.** Flip-flops per block, Vivado (post-synthesis hierarchy) vs yosys (the same sv2v netlist,
+   non-flattened `synth_xilinx`, one instance per module assumed): CPU 4,717 vs 6,284 (-25 %, the merged duplicates), CRYPTO 2,799 vs 3,007,
+   NPU 1,076 vs 1,011, DMA 801 vs 545, I2C 374 vs 620, GPIO 288 vs 290, PWM 260 vs 288, SPI 205 vs 323 (other peripherals not tabulated); SoC total 12,957 vs 14,079 (-8 %). A trimmed block would have lost its flops; none did. (Per-block **LUT**
+   counts cannot be compared the same way: with `flatten_hierarchy rebuilt` Vivado attributes LUTs by pre-optimisation names, so for example
+   the APB read-mux LUTs of CRYPTO appear under `u_axil_apb_bridge`. Only the totals are meaningful.)
+4. **The DSP gap is a mapping choice.** The only multipliers Vivado put in DSP48E1 are the NPU requantiser product (`prod_d_w` =
+   32 x 17 -> 2 cascaded DSPs: `DSP Report ... (PCIN>>17)+A*B`). The 16 INT8 x INT8 PE multipliers in `npu_mac_array`
+   (`16'(w_q) * 16'($signed(a))`, i.e. 8-bit operands behind a sign extension) went to LUT fabric plus a 12-CARRY4 chain, which is the
+   fabric-fmax limiting path above and the reason the NPU costs 1,977 LUTs. yosys put the same 16 + 3 (requantiser) multipliers, plus one in
+   `i2c_controller` (not traced), into 19 DSP48E1. Vivado clearly does infer DSPs for wide multiplies: the GPU adds 24 DSP48E1 in
+   Vivado (26 - 2) against 25 in yosys (44 - 19).
+5. **Where the 2x LUT gap comes from is only partly shown.** Shown: S-boxes of AES went to 8 RAMB18 ROMs in Vivado while yosys
+   `proc_rom` made them logic; duplicates merged (-1.1 K FF and their LUTs); wide-mux packing (640 F7
+   + 130 F8 vs 3,271 + 872 in yosys). Inference only, not isolated per cause: Vivado's LUT6 packing and cross-boundary optimisation
+   versus ABC's `synth_xilinx` result (yosys's own non-flattened run is **bigger** than its flattened one, 15.9 K + 5.1 K INV LUTs for the CPU
+   alone, so 38.5 K is itself a flatten-dependent figure). The GPU increment is similar in both tools (+21.3 K LUT in Vivado, +23.8 K in
+   yosys), so the gap is in the common base, not the GPU.
+Consequence: the utilisation and fmax numbers above stand. The LUT ratio should be read as "Vivado needs roughly half to two thirds of the
+LUTs yosys reports for this RTL", not as a bound for other RTL.
+
+**What the measurement changes in this document:**
+- Section 1's "Vivado typically 10-30 % fewer LUTs than yosys (inference)" is replaced by a measurement: **~51 % fewer for CPU-only
+  (18,981 vs 38,554) and ~35 % fewer for the full SoC (40,586 LUT + LUT-RAM vs 62,353 logic LUT + ~5 K LUT-RAM sites)**. The yosys-based
+  sizing in sections 1 and 2 is therefore conservative by about 2x for LUTs, and the "fits" column above is pessimistic.
+- Section 2's "Arty A7-100T does not fit the full SoC" is **no longer true on LUTs alone**: 40.6 K of 63.4 K is ~64 % today, and
+  ~80 % with the 25 % growth, so it fits today, with no room for bring-up logic and growth (plus the other limits not measured here:
+  its pins; its 135 block RAM tiles and 240 DSPs would cover the 28 and 26 used here, from the device data sheet, not checked in Vivado). The recommendation below does not change, because
+  the user wants growth headroom and debug logic, and the Nexys Video still has ~2x the LUTs for a price that was already
+  decided to be acceptable; it is noted as an alternative only if cost dominates.
+- Timing: on both Artix-7 builds the prototype clocks are **~74-107 MHz**, a 7-17x scale factor against the ASIC targets. That is
+  fast enough for firmware validation and the CDC soak, and well above the ECP5 lower bound; it does **not** need the Genesys 2's
+  faster speed grade, so the "pick it only if fmax turns out to be the problem" condition of section 3 is not triggered by this
+  measurement.
+
+**NOT verified in the Artix-7 numbers:** any other speed grade or part (Kintex-7 / Genesys 2, bead `hlrm.1`); a sweep of clock targets
+or seeds (one run per build, ~1 ns spread observed); post-route simulation; power; pad-level timing and hold (harness shells only);
+`phys_opt_design` after routing and any non-default directive (a longer-effort flow may do better); the effect of removing the
+behavioural clock gate; the other 7 hold endpoints (not inspected); any run on hardware.
 
 
 1. Board (recommendation: Nexys Video).

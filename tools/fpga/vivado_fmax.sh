@@ -3,7 +3,7 @@
 # ONE Vivado job per call. Vivado is NOT in CI and not in nix: point VIVADO_SETTINGS at the install's settings64.sh.
 #
 # usage: VIVADO_SETTINGS=/path/to/Vivado/<ver>/settings64.sh \
-#        vivado_fmax.sh <repo-root> <out-dir> <gpu|nogpu> <synth|impl|both|probe> <tag> [period-ns]
+#        vivado_fmax.sh <repo-root> <out-dir> <gpu|nogpu> <synth|impl|both|probe|constr|ooc> <tag> [period-ns]
 #
 #   synth  read the SystemVerilog directly (+define FPGA +define __pnr__), synth_design on the timing harness, write
 #          <out-dir>/<gpu>/synth.dcp and pre-implementation reports.
@@ -28,7 +28,7 @@ root=$(cd "$1" && pwd); out=$2; gpu=$3; phase=$4; tag=$5; period=${6:-10.0}
 : "${VIVADO_SETTINGS:?set VIVADO_SETTINGS to the Vivado settings64.sh path}"
 [ -r "$VIVADO_SETTINGS" ] || { echo "cannot read VIVADO_SETTINGS=$VIVADO_SETTINGS"; exit 2; }
 case $gpu in gpu|nogpu) ;; *) echo "bad gpu arg $gpu"; exit 2 ;; esac
-case $phase in synth|impl|both|probe|constr) ;; *) echo "bad phase $phase"; exit 2 ;; esac
+case $phase in synth|impl|both|probe|constr|ooc) ;; *) echo "bad phase $phase"; exit 2 ;; esac
 here=$(cd "$(dirname "$0")" && pwd)
 # shellcheck disable=SC1090
 source "$VIVADO_SETTINGS" > /dev/null 2>&1
@@ -38,7 +38,7 @@ export VFMAX_PART=${VFMAX_PART:-xc7a200tsbg484-1} VFMAX_THREADS=${VFMAX_THREADS:
 export VFMAX_PERIOD_CPU=${VFMAX_PERIOD_CPU:-$period} VFMAX_PHYS_OPT_POST=${VFMAX_PHYS_OPT_POST:-0}
 export VFMAX_HERE=$here
 # file list = the Stage 0 list (cocotb PLL_SOURCES + rv32i_clock_gate + rtl/fpga/*.sv) + the harness
-if [ "$phase" = synth ] || [ "$phase" = both ]; then
+if [ "$phase" = synth ] || [ "$phase" = both ] || [ "$phase" = ooc ]; then
   { "$here/stage0_filelist.sh" "$root" "$gpu" fpga; echo "$here/ecp5_timing_harness.sv"; } > "$out/$gpu/filelist.txt"
 fi
 log=$out/$gpu/$tag.vivado.log
