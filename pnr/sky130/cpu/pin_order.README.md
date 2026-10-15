@@ -49,3 +49,21 @@ This rebalance addresses the PIN-CLUSTERING root cause. The SoC integration
 ALSO repositions both macros away from the die's (20,20) corner (previously
 only 20 µm margin on south/west) to give every edge genuine escape room —
 see `pnr/sky130/soc/macro_placement.cfg`.
+
+## v3: DFT scan boundary (bead j41m.4, DFT_ARCHITECTURE.md 14.10)
+
+Six pins are added, all on the **N edge**, appended after `commit_valid_o` so every existing N-edge
+entry keeps its position in the list: `scan_mode_i`, `scan_en_i`, `scan_in_i[1:0]`, `scan_out_o[1:0]`
+(N 95 -> 101 bits; 401 -> 407 signal bits, checked by matching every port bit of the sv2v netlist against exactly one entry). S/E/W are untouched. N was chosen because it faces the SoC's open
+flat-logic region where `u_dft_ctrl` and the top-level scan ports (`scan_in_i[7:6]`, `scan_out_o[7:6]`)
+are routed from; it is also the edge that already carries `clk_i`/`rst_n_i`.
+
+There is deliberately **no** `scan_clk_i` and **no** `scan_rst_ni` pin: `clk_i` is already the muxed test
+clock (soc_top's `dft_clk_mux` sits ahead of `u_cpu_cg`) and the macro's only reset is the synchronous
+`rst_n_i`, which `soc_top` drives from a net that equals `scan_rst_ni` in scan mode.
+
+NOT yet measured: whether `Odb.CustomIOPlacement` keeps the other 397 pins at their v2 positions when 6
+are appended to the N list (the ioplacer may re-space the whole edge). Compare the regenerated LEF's pin
+rectangles with `macro/rv32i_cpu_top.lef` before accepting the re-harden; the ASAP7 lesson (393 of 401
+pins moved, run 22) is the failure mode to rule out. `ERRORS_ON_UNMATCHED_IO: both` makes a missing entry
+fail loudly.

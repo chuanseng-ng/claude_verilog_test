@@ -906,13 +906,13 @@ sky130-soc-sv2v:
 # DFT Stage 1a (bead claude_verilog_test-j41m.2): prove on the flattened Sky130 netlist that in scan mode every
 # async reset is tester-controlled and every flop is test-clocked. Needs yosys on PATH (or YOSYS=/path/to/yosys).
 # DFT Stage 1b (j41m.3): TAP-domain rules. scan mode is the OR of the 1a pin and the TAP, so name the net.
-# (tap_scan_en is omitted from the allowed nets on purpose: scan_en has no RTL consumer until Stage 2 inserts scan
-# flops, so the net is optimised away; when Stage 2 connects it, add --tap-allowed-nets u_dft_ctrl.tap_scan_en.)
+# (tap_scan_en is an allowed TAP output since bead j41m.4: the CPU macro's scan_en_i is its first consumer, through
+# dft_ctrl's scan_en_o mux. Before that it had no consumer and the net was optimised away.)
 DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tck_cg \
 	--tap-prefix u_dft_ctrl.u_clk_sw --tap-prefix u_dft_ctrl.u_sw_rst --tap-alt-clock scan_clk_i \
 	--scan-mode-net u_dft_ctrl.scan_mode_o --expect-tap-flops 20 \
 	--tap-allowed-nets u_dft_ctrl.tap_scan --tap-allowed-nets u_dft_ctrl.tap_serial \
-	--tap-allowed-nets u_dft_ctrl.tap_rst_assert \
+	--tap-allowed-nets u_dft_ctrl.tap_rst_assert --tap-allowed-nets u_dft_ctrl.tap_scan_en \
 	--tap-allowed-nets u_dft_ctrl.test_clk_o --tap-allowed-nets tdo_o --tap-allowed-nets tdo_oe_o \
 	--expect-reset-sync u_dft_ctrl.u_tap.u_trst_sync=u_dft_ctrl.u_tap \
 	--expect-reset-sync u_dft_ctrl.u_sw_rst=u_dft_ctrl.u_clk_sw
@@ -930,6 +930,25 @@ dft-scan-check: sky130-soc-sv2v
 dft-scan-check-asap7: asap7-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
 		--netlist $(SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/asap7_cell_models.v --expect-gates 20 $(DFT_TAP_CHECK_ARGS)
+
+# Bead j41m.4: the same proof on the CPU hard macro itself (BLOCK MODE of check_scan_clk_rst.py). The SoC-level checks
+# above see the macro as a blackbox, so they say nothing about its 4.8k flops. Here: (1) every flop clock cone ends at
+# clk_i (the parent muxes the test clock onto it) or at a clock-gate latch whose enable contains scan_mode_i (ASAP7 arm:
+# the cache SRAM gates, test_en_i); (2) ZERO async reset/set pins exist, so there is no internal reset that needs a scan
+# override (the macro's only reset is the synchronous rst_n_i, forced by the parent); (3) >= 900 word-level sequential
+# cells were found (vacuity guard; the Sky130 macro has 944, the ASAP7 one 954); (4) every latch (clock gate) has
+# scan_mode_i in its D cone even though its output clocks only an SRAM macro, which the clock-cone walk cannot reach;
+# the ASAP7 macro must contain >= 10 of them (5 per cache), the Sky130 macro none.
+.PHONY: dft-scan-check-cpu-macro dft-scan-check-cpu-macro-asap7
+dft-scan-check-cpu-macro: sky130-cpu-sv2v
+	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
+		--netlist $(SKY130_CPU_SV2V_OUT) --top rv32i_cpu_top --models $(PROJECT_ROOT)/pnr/sky130/sky130_sram_1kbyte_1rw1r_32x256_8_stub.v \
+		--clock-port clk_i --max-async-pins 0 --expect-seq-min 900 --all-latches-need-scan-mode
+
+dft-scan-check-cpu-macro-asap7: asap7-cpu-sv2v
+	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
+		--netlist $(CPU_SV2V_OUT) --top rv32i_cpu_top --models $(PROJECT_ROOT)/tools/dft/asap7_cell_models.v \
+		--clock-port clk_i --max-async-pins 0 --expect-seq-min 900 --all-latches-need-scan-mode --expect-latches-min 10
 
 # Sky130 Stage 2: SoC P&R with real DRC + LVS.
 # Requires:  make sky130-soc-sv2v   (generates soc_top_sv2v.v)

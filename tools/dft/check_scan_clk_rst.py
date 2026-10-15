@@ -54,6 +54,20 @@ had no opt_merge, so two structurally identical chains stay two; cdc_snitch's fl
   * the trst port reaches NO sequential cell outside the declared SYNC chains through combinational logic alone. This closes
     the TAP rule above, which accepts a TAP flop reset straight from the trst port, so a bypassed synchroniser passed.
 
+BLOCK MODE (bead claude_verilog_test-j41m.4, the CPU hard macro). A hard macro has no test-clock mux of its own: the
+parent (soc_top) muxes the test clock onto the macro's clock pin, so inside the macro "scan mode" is invisible on the clock
+path and a flop clocked straight from the clock pin is correct. Three options express that:
+
+  --clock-port PORT  (repeatable) a port that IS the block's clock root; a clock cone ending there needs no scan-mode mux
+                     (every other port, and every flop-generated clock, is still a violation);
+  --max-async-pins N fails if more than N async reset/set pins exist (0 for the macro: all its resets are the synchronous
+                     rst_n_i that the parent already forces, so there is nothing for a reset mux to override);
+  --expect-seq-min N fails if fewer than N sequential cells are found (a renamed/blackboxed block cannot pass vacuously);
+  --all-latches-need-scan-mode  EVERY $dlatch must have scan_mode in its D cone, whether or not it clocks a traced flop.
+                     Needed because the ASAP7 macro's clock gates clock only SRAM macros (models, not sequential cells),
+                     so the clock-cone walk never reaches them and would pass vacuously;
+  --expect-latches-min N  fails if fewer than N $dlatch cells exist (10 in the ASAP7 macro: 5 gates per cache).
+
 Exit 0 only if there are no violations AND (with --expect-gates) the number of scan-mode muxes
 found is at least N, so that a design in which the muxes were optimised away or renamed cannot
 pass vacuously. A cell type with no definition (a library cell or hard macro the netlist instantiates
@@ -198,6 +212,16 @@ def main():
     ap.add_argument("--scan-mode", default="scan_mode_i")
     ap.add_argument("--expect-gates", type=int, default=0)
     ap.add_argument("--max-print", type=int, default=12)
+    ap.add_argument("--clock-port", action="append", default=[],
+                    help="port that is the block's clock root (its test-clock mux is in the parent); see BLOCK MODE")
+    ap.add_argument("--max-async-pins", type=int, default=None,
+                    help="fail if more async reset/set pins than this exist (BLOCK MODE: 0 for the CPU macro)")
+    ap.add_argument("--all-latches-need-scan-mode", action="store_true",
+                    help="every $dlatch needs scan_mode in its D cone, even if it clocks no traced flop (BLOCK MODE)")
+    ap.add_argument("--expect-latches-min", type=int, default=0,
+                    help="fail if fewer $dlatch cells than this exist (vacuity guard for --all-latches-need-scan-mode)")
+    ap.add_argument("--expect-seq-min", type=int, default=0,
+                    help="fail if fewer sequential cells than this are found (vacuity guard)")
     ap.add_argument("--tap-prefix", action="append", default=[],
                     help="flattened instance-name prefix of TAP-domain cells (repeatable); see the docstring")
     ap.add_argument("--tck", default="tck_i", help="TAP clock port")
@@ -303,7 +327,7 @@ def main():
                 continue
             seen.add((b, passed))
             if b in in_bits:
-                if kind == "clock" and not passed and in_bits[b] != a.scan_mode:
+                if kind == "clock" and not passed and in_bits[b] != a.scan_mode and in_bits[b] not in a.clock_port:
                     viol.append(f"clock reaches port {in_bits[b]} without a scan-mode mux")
                 continue
             if b not in drivers:
@@ -412,6 +436,14 @@ def main():
                     for v in trace(b, "reset"):
                         violations.append((cname, t, p, v))
 
+    n_latch = 0
+    for cname, c in cells.items():
+        if c["type"].startswith("$dlatch") and cname not in tap_cells:
+            n_latch += 1
+            if a.all_latches_need_scan_mode and not any(
+                    isinstance(x, int) and depends_on_scan_mode(x) for x in c["connections"].get("D", [])):
+                violations.append((cname, c["type"], "EN", "latch (clock gate) has no scan-mode term in its D input"))
+
     n_rs_ok = 0
     if a.expect_reset_sync:
         n_rs_ok = check_reset_syncs(a, cells, ports, drivers, cell_inputs, cone_leaves, violations)
@@ -429,6 +461,16 @@ def main():
     if n_tap < a.expect_tap_flops:
         print(f"FAIL: expected at least {a.expect_tap_flops} TAP-domain flops, found {n_tap} "
               f"(prefix wrong or optimised away?)")
+        return 1
+    if n_latch < a.expect_latches_min:
+        print(f"FAIL: expected at least {a.expect_latches_min} latches, found {n_latch} (clock gates removed or renamed?)")
+        return 1
+    if n_seq < a.expect_seq_min:
+        print(f"FAIL: expected at least {a.expect_seq_min} sequential cells, found {n_seq} (blackboxed or renamed?)")
+        return 1
+    if a.max_async_pins is not None and n_async > a.max_async_pins:
+        print(f"FAIL: expected at most {a.max_async_pins} async reset/set pins, found {n_async} "
+              f"(a derived or async reset appeared in the block: it needs a scan-mode override)")
         return 1
     if gates < a.expect_gates:
         print(f"FAIL: expected at least {a.expect_gates} scan-mode muxes, found {gates} (optimised away?)")
