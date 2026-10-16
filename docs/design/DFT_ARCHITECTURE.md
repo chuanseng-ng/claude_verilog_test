@@ -684,6 +684,43 @@ Supersedes 14.6 for the macro boundary. RTL only: **no PD run, no macro view reg
 * The macro netlist now has 3 input ports and 2 output ports without loads/with tie cells; `DIODE_ON_PORTS: in` may place diodes on the unloaded inputs. Harmless, not checked.
 * `sky130_cpu.sdc` is unchanged (new ports are unconstrained in functional STA); a scan-mode macro SDC is a Stage 2 deliverable.
 
+### 14.11 PD re-harden for the CPU macro scan boundary and the `cpu_clk_i` SDC (beads `j41m.4` PD step + `j41m.5`, 2026-10-16)
+
+Labels: [M] measured this session, [R] read from a file, [A] inferred. Runs: CPU macro `RUN_2026-10-16_02-27-26`
+(`/nobackup/sky130_cpu_runs`), SoC `RUN_2026-10-16_04-53-49` (`make -C pnr librelane-sky130-soc-rccal-noklayout`,
+KLayout DRC skipped as always). Baselines: CPU `RUN_2026-10-11_06-00-12`, SoC `RUN_2026-10-11_08-39-41`
+and `RUN_2026-10-09_06-18-39`. **Not a single-variable comparison with either baseline** (RTL vintage changed: JTAG TAP,
+clock switch, scan boundary; and the SoC SDC now clocks the CPU domain).
+
+**CPU macro [M].** LVS 0, KLayout DRC 0, routing DRC 0, Magic 27,733,913 (bit-identical to the dud4 macro), antenna 94/96 (was 96/96),
+4,880 flops (was 4,868; not attributed). Setup: tt/ff corners clean and slightly better (+3.79 ns nom_tt, was +3.44); **ss still fails
+exactly as before** (max_ss -4.009 ns / 972 violators, was -3.704 / 996; nom_ss -3.333 / 861, was -3.198 / 854; icache-tag path class,
+reported not tuned). Hold: I/O-port-only violators remain (nom_tt -0.076 ns / 7, was -0.379 / 84; max_ss -0.467 / 124, was -0.834 / 144);
+reg-to-reg hold clean. Gate-vs-RTL proof (`tools/verif/gls/sky130/run_netlist_proof.sh` on the post-fill netlist): 6/6 programs identical,
+124/124 matrix, negative control detected (4/6 diverge, 90 cells fail). **Pin result: the 6 appended N-edge names re-spaced the whole N edge:
+95 of the 403 existing pins moved (max 214 um, mean 106 um), S/E/W/power identical** (`pin_order.README.md`). The Liberty views carry the 6 new pins.
+
+**SoC [M]** (vs `RUN_2026-10-11_08-39-41`): LVS 0 (same), routing DRC 0 (same), Magic 8,984 (same), setup and hold 0 violators at all 9 corners
+(same), hold worst +0.113 ns (max_ff; was +0.287), antenna 197/252 nets/pins (was 187/265), max-slew 304 (was 370), util 45.37 % (45.22), power 100.3 mW
+(84.6; the CPU domain's 945 flops and the new CTS tree are now clocked and counted, [A]), 433 hold buffers (was 2: the CPU-macro input hold of about 1 ns,
+previously unchecked because the macro clock was undefined). CTS now builds `cpu_core_clk` (174 sinks) and `cpu_gated_clk_regs` (771 sinks) trees.
+The flow's reported setup worst slack is a literal 0.000 at every corner: a latch time-borrow artifact of the TAP's negative-level latch in the `tck`
+group, not a real margin. Real per-clock figures (replica STA with the run's SPEF, propagated clocks): core_clk +9.97 ns nom_tt / +2.55 max_ss
+(baseline +2.48), cpu_clk +10.1 nom_tt / +7.09 max_ss, hold cpu_clk +0.59 / +1.34.
+**`CVT.MaxCapViolations` FAILS (deferred): 2 unwaived nets, both clock nets**: `cpu_gated_clk` (driver `and2_2` clock-gate AND, 0.60-0.68 pF vs limit
+0.19-0.40 at 8 corners) and `core_clk` (driver `a21bo_2`, the `dft_clk_mux` output, 0.29-0.31 pF vs 0.18-0.29 at 4 tt/ss corners). Both old waivers are STALE
+(the by-name driver waivers for `RUN_2026-10-11_08-39-41` match nothing). Attribution [A]: the `core_clk` driver is the clock switch from the JTAG TAP
+work, absent from the baseline netlist (no `tck_i` there), so that one is not caused by this change; `cpu_gated_clk` was an `and2_4` in the baseline and is
+now a clock net owned by CTS, which `repair_design` does not buffer. No waiver was added or changed (owner decision).
+
+**CDC budget check [M]** (`make -C pnr check-cdc-timing-sky130-soc`, real SPEF): PASS at nom_tt and max_ss; 11 groups (10 FIFO/bridge/PMU/IRQ + the
+`u_m_rst_status_sync`) plus the two domain-wide fallbacks all bound; worst margins at max_ss: fifo_rd2wr +0.95 ns of 12.5, fifo_wr2rd +1.68. Negative control (all budgets
+forced to 1 ns): FAIL with 9 findings. The requested `set_max_delay -datapath_only` cannot live in `sky130_soc.sdc`: OpenSTA has no such flag and drops a
+max_delay across `-asynchronous` clocks (bead k07), so the budgets are in `sky130_soc_cdc_check.sdc` as for ASAP7.
+
+**Scan checkers [M]**: `dft-scan-check` (SoC, sv2v netlist of the same RTL): 1,694 sequential cells, 295 async pins, 28 scan-mode muxes, 0 violations;
+`dft-scan-check-cpu-macro`: 944 sequential cells, 0 async pins, 0 violations. They run on the sv2v netlists, not on the placed netlist (which has Sky130 cells the checker has no models for).
+
 ## 15. Stage 1b specification and implementation record (bead `j41m.3`): JTAG TAP
 
 Scope: the TAP, its registers, the TAP-driven `dft_ctrl`, `soc_top` integration, checks. **No** scan insertion, ATPG, MBIST or CPU-macro change. Decisions already taken: section 0 (decisions 5-7) and the user decisions of 2026-10-11 (N1 non-JEDEC placeholder IDCODE, N2 compliant-minus-boundary-register, N4 TAP flops unscanned). Labels as before. This section was written **before** the RTL as its specification; the status table at its end is updated as each step lands.

@@ -62,8 +62,12 @@ There is deliberately **no** `scan_clk_i` and **no** `scan_rst_ni` pin: `clk_i` 
 clock (soc_top's `dft_clk_mux` sits ahead of `u_cpu_cg`) and the macro's only reset is the synchronous
 `rst_n_i`, which `soc_top` drives from a net that equals `scan_rst_ni` in scan mode.
 
-NOT yet measured: whether `Odb.CustomIOPlacement` keeps the other 397 pins at their v2 positions when 6
-are appended to the N list (the ioplacer may re-space the whole edge). Compare the regenerated LEF's pin
-rectangles with `macro/rv32i_cpu_top.lef` before accepting the re-harden; the ASAP7 lesson (393 of 401
-pins moved, run 22) is the failure mode to rule out. `ERRORS_ON_UNMATCHED_IO: both` makes a missing entry
-fail loudly.
+MEASURED (RUN_2026-10-16_02-27-26, `tools/verif/lef_pin_diff.py` old vs new LEF): appending 6 names
+to the N list **did move the other N-edge pins**. 409 pins in the new LEF (403 + 6); of the 403 existing
+pins, 308 are identical (all S, E, W and the 2 power pins) and **95 moved, exactly the 95 pre-existing
+N-edge signal pins** (the ioplacer re-spaces the whole edge: max shift 214.4 um, mean 106.3 um along x,
+same layer met2). The 6 new pins sit at the east end of N (x = 3393.5 .. 3570.9 um). `ERRORS_ON_UNMATCHED_IO:
+both` did its job (every port bit matched one entry). Consequence: the SoC must be re-placed/re-routed
+against the new LEF (it was, RUN_2026-10-16_04-53-49); a stale SoC run against the old LEF is invalid.
+If a later change must not move the N pins, they would have to be pinned at fixed coordinates (a different
+mechanism than this file), which was not attempted.
