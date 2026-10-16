@@ -713,6 +713,21 @@ group, not a real margin. Real per-clock figures (replica STA with the run's SPE
 work, absent from the baseline netlist (no `tck_i` there), so that one is not caused by this change; `cpu_gated_clk` was an `and2_4` in the baseline and is
 now a clock net owned by CTS, which `repair_design` does not buffer. No waiver was added or changed (owner decision).
 
+**Clock-root drive fix (owner decision: fix, not waive; RTL done, PD re-harden pending)**: root cause is that CTS owns the clock net, hangs a long root wire on the
+synthesised driver (the register-tree root buffer is placed at the sink centroid: `and2_2` at (4533, 2026) um, `clkbuf_regs_0_cpu_clk` at (2276, 193) um, about 4 mm), and
+`repair_design` skips clock nets, so nothing re-drives it. The drivers must be strong from synthesis on. Under `+define+USE_SKY130_CLKCELLS` (only in
+`SKY130_SOC_SV2V_DEFINES`, so the CPU macro is untouched) the two roots are hand-instantiated library cells, black-box stubs in `pnr/sky130/soc/sky130_clkcells_stub.v`:
+`u_cpu_cg` (`rv32i_clock_gate #(.HARD_ROOT(1))`) is `sky130_fd_sc_hd__sdlclkp_4` (GATE/SCE = `en`/`test_en`, same `en | test_en` latched while CLK is low) driving
+`sky130_fd_sc_hd__clkbuf_16`; every `dft_clk_mux` (`u_pll_sub.u_ref_cm`, `u_cpu_pll_sub.u_ref_cm`) is `mux2_4` + `clkbuf_16`. Flattened instance names (stable, checked in the
+yosys-flattened netlist): `u_cpu_cg.g_cell.u_icg`, `u_cpu_cg.g_cell.u_root_buf`, `u_pll_sub.u_ref_cm.u_mux`, `u_pll_sub.u_ref_cm.u_root_buf`, and the same two under `u_cpu_pll_sub`.
+`u_gpu_cg` stays behavioural so it still optimises away with the tie-off GPU. `RSZ_DONT_TOUCH_RX` in the three `pnr/sky130/soc/config*.json` pins these instances.
+Load vs limit (measured loads from RUN_2026-10-16_04-53-49, `clkbuf_16` max_capacitance from the Liberty): `cpu_gated_clk` 0.60-0.68 pF vs 1.017 pF at ss (about 67 % worst case,
+was 0.19 pF), `core_clk` 0.29-0.31 pF vs 1.017 pF at ss (about 31 %, was 0.18 pF). INFERRED, not measured: the new 2-pin ICG-to-buffer and mux-to-buffer nets are placed by
+global placement and must stay under the `sdlclkp_4`/`mux2_4` ss limit (0.33 pF, roughly 3 mm of wire); the post-CTS run decides. Scan-mode behaviour of the cell arm:
+`dft-scan-check` runs against `tools/dft/sky130_cell_models.v` (0 violations; a broken-mux model fails it), but the checker does not trace the ICG enable cone (the same
+gap exists for the ASAP7 ICG), so SCE forcing the gate open rests on the Liberty statetable (`SCE=H -> M0=H` regardless of `GATE`) and on the unchanged behavioural arm in
+`test_clock_gate_scan` / `test_soc_dft_scan`.
+
 **CDC budget check [M]** (`make -C pnr check-cdc-timing-sky130-soc`, real SPEF): PASS at nom_tt and max_ss; 11 groups (10 FIFO/bridge/PMU/IRQ + the
 `u_m_rst_status_sync`) plus the two domain-wide fallbacks all bound; worst margins at max_ss: fifo_rd2wr +0.95 ns of 12.5, fifo_wr2rd +1.68. Negative control (all budgets
 forced to 1 ns): FAIL with 9 findings. The requested `set_max_delay -datapath_only` cannot live in `sky130_soc.sdc`: OpenSTA has no such flag and drops a
