@@ -671,3 +671,58 @@ def test_behavioural_gate_te_from_scan_mode_passes(tmp_path: Path) -> None:
     )
     res = _blk_run(tmp_path, tail, head=_ICG_HEAD, args=_ICG_ARGS)
     assert res.returncode == 0, res.stdout
+
+
+_DUP_HEAD = """
+module top (
+    input  wire clk_i, input wire scan_mode_i, input wire d, input wire en_i, input wire x_i,
+    output reg  q, output reg r
+);
+    reg tap_q, other_q;
+    always @(posedge clk_i) begin tap_q <= x_i; other_q <= d; end
+    wire sm = scan_mode_i | tap_q;
+    always @(posedge clk_i) r <= sm & d;
+    wire gclk;
+    always @(posedge gclk) q <= d;
+    reg en_l;
+    always @* if (!clk_i) en_l = en_i | {te};
+    assign gclk = clk_i & en_l;
+endmodule
+"""
+
+
+def _dup_run(tmp_path: Path, te: str):
+    netlist = tmp_path / "top.v"
+    netlist.write_text(_DUP_HEAD.replace("{te}", te))
+    return subprocess.run(
+        [
+            sys.executable,
+            str(CHECKER),
+            "--netlist",
+            str(netlist),
+            "--top",
+            "top",
+            "--clock-port",
+            "clk_i",
+            "--scan-mode-net",
+            "sm",
+        ],
+        capture_output=True,
+        text=True,
+        env=dict(os.environ, YOSYS=str(YOSYS)),
+        check=False,
+    )
+
+
+    # dft_ctrl builds scan_mode_o and test_en_o as two separate `pin | tap_scan` cells; flatten
+    # keeps both. The second is scan mode, so it counts as forcing the gate (commuted operands).
+    # keeps both. The second is scan mode, so it counts as forcing the gate (operands commuted).
+    res = _dup_run(tmp_path, "(tap_q | scan_mode_i)")
+    assert res.returncode == 0, res.stdout
+
+
+def test_te_that_only_looks_like_the_scan_mode_net_fails(tmp_path: Path) -> None:
+    # same shape, one operand is a different register: not scan mode, the gate can close in shift
+    res = _dup_run(tmp_path, "(other_q | scan_mode_i)")
+    assert res.returncode == 1, res.stdout
+    assert "clock gate" in res.stdout

@@ -419,7 +419,7 @@ def main():
         stack = [bit]
         while stack:
             b = stack.pop()
-            if b in sm_bits:
+            if b in sm_bits or vnum(b) in sm_ids():
                 return True
             if b in seen or b not in drivers:
                 continue
@@ -430,6 +430,74 @@ def main():
                 continue
             stack.extend(x for _, x in cell_inputs(c))
         return False
+
+    # Structural hashing (value numbering) of the combinational cones. The scan-mode net is one cell
+    # (e.g. dft_ctrl's `scan_mode_o = pin | tap_scan`) and the clock-gate test enable another cell with the same
+    # inputs (`test_en_o = pin | tap_scan`): flatten keeps both. They are the same function of the same
+    # nets, so the second IS scan mode. Two bits share a number only if they have the same cell type, the same
+    # parameters and inputs with the same numbers (operands of bitwise AND/OR/XOR compared unordered), or are
+    # the same bit; a leaf (port, sequential output, undriven bit) only equals itself.
+    vid = {}
+    vtab = {}
+    _bitwise = ("$and", "$or", "$xor", "$xnor")
+
+    def intern(key):
+        return vtab.setdefault(key, len(vtab))
+
+    def vin(c, port, i):
+        bits = c["connections"].get(port, [])
+        signed = str(c.get("parameters", {}).get(port + "_SIGNED", "0")).strip("0") != ""
+        if i < len(bits):
+            x = bits[i]
+        elif signed and bits:
+            x = bits[-1]
+        else:
+            x = "0"
+        return ("c", x) if isinstance(x, str) else vid[x]
+
+    def vnum(bit):
+        stack = [bit]
+        while stack:
+            b = stack[-1]
+            if b in vid:
+                stack.pop()
+                continue
+            if b in in_bits or b not in drivers or is_seq(cells[drivers[b][0]]["type"]):
+                vid[b] = intern(("leaf", b))
+                stack.pop()
+                continue
+            c = cells[drivers[b][0]]
+            pend = [x for _, x in cell_inputs(c) if x not in vid]
+            if pend and b not in comb_seen:
+                comb_seen.add(b)
+                stack.extend(pend)
+                continue
+            for _, x in cell_inputs(c):
+                vid.setdefault(x, intern(("leaf", x)))   # combinational loop: unevaluated input = leaf
+            ybits = c["connections"].get("Y", [])
+            i = ybits.index(b) if b in ybits else -1
+            params = tuple(sorted((k, str(v)) for k, v in c.get("parameters", {}).items()))
+            if c["type"] in _bitwise and i >= 0:
+                ops = tuple(sorted((repr(vin(c, "A", i)), repr(vin(c, "B", i)))))
+                key = (c["type"], params, ops)
+            else:
+                ports_ = tuple(
+                    (pn, tuple(repr(vin(c, pn, j)) for j in range(len(c["connections"][pn]))))
+                    for pn in sorted(c["connections"])
+                    if c["port_directions"].get(pn) == "input"
+                )
+                key = (c["type"], params, ports_, b if i < 0 else i)
+            vid[b] = intern(key)
+            stack.pop()
+        return vid[bit]
+
+    comb_seen = set()
+    sm_id_cache = []
+
+    def sm_ids():
+        if not sm_id_cache:
+            sm_id_cache.append({vnum(b) for b in sm_bits})
+        return sm_id_cache[0]
 
     fv_memo = {}
 
@@ -445,7 +513,7 @@ def main():
             b = stack[-1]
             if b in fv_memo:
                 stack.pop()
-            elif b in sm_bits:
+            elif b in sm_bits or vnum(b) in sm_ids():
                 fv_memo[b] = 1
             elif b in in_bits or b not in drivers or is_seq(cells[drivers[b][0]]["type"]):
                 fv_memo[b] = None
