@@ -714,9 +714,9 @@ def _dup_run(tmp_path: Path, te: str):
     )
 
 
+def test_te_that_is_a_structural_copy_of_the_scan_mode_net_passes(tmp_path: Path) -> None:
     # dft_ctrl builds scan_mode_o and test_en_o as two separate `pin | tap_scan` cells; flatten
     # keeps both. The second is scan mode, so it counts as forcing the gate (commuted operands).
-    # keeps both. The second is scan mode, so it counts as forcing the gate (operands commuted).
     res = _dup_run(tmp_path, "(tap_q | scan_mode_i)")
     assert res.returncode == 0, res.stdout
 
@@ -726,3 +726,10 @@ def test_te_that_only_looks_like_the_scan_mode_net_fails(tmp_path: Path) -> None
     res = _dup_run(tmp_path, "(other_q | scan_mode_i)")
     assert res.returncode == 1, res.stdout
     assert "clock gate" in res.stdout
+
+
+def test_expect_clock_gates_guard_fails_when_no_gate_is_checked(tmp_path: Path) -> None:
+    tail = "    assign gclk = clk_i;\nendmodule\n"
+    res = _blk_run(tmp_path, tail, head=_ICG_HEAD, args=(*_ICG_ARGS, "--expect-clock-gates", "1"))
+    assert res.returncode == 1, res.stdout
+    assert "expected at least 1 clock gates" in res.stdout

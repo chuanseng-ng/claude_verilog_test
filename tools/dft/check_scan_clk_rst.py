@@ -290,6 +290,12 @@ def main():
         help="fail if fewer sequential cells than this are found (vacuity guard)",
     )
     ap.add_argument(
+        "--expect-clock-gates",
+        type=int,
+        default=0,
+        help="fail if fewer clock-gate latches than this were checked for the scan-mode force (vacuity guard)",
+    )
+    ap.add_argument(
         "--waive-clock-gate",
         action="append",
         default=[],
@@ -473,7 +479,9 @@ def main():
                 stack.extend(pend)
                 continue
             for _, x in cell_inputs(c):
-                vid.setdefault(x, intern(("leaf", x)))   # combinational loop: unevaluated input = leaf
+                vid.setdefault(
+                    x, intern(("leaf", x))
+                )  # combinational loop: unevaluated input = leaf
             ybits = c["connections"].get("Y", [])
             i = ybits.index(b) if b in ybits else -1
             params = tuple(sorted((k, str(v)) for k, v in c.get("parameters", {}).items()))
@@ -590,11 +598,14 @@ def main():
         return None  # $xor, $eq, $pmux, arithmetic, ...: unknown (conservative)
 
     used_waivers = set()
-    n_gates = [0]
+    gates_seen = set()
 
     def gate_name(cn):
         n = flat_name(cn)
-        return n.rsplit(".", 1)[0] if "." in n else n
+        k = n.find(".$")  # drop yosys's anonymous cell suffix ($auto$proc_dlatch.cc:432:...)
+        if k >= 0:
+            n = n[:k]
+        return n
 
     def waived(cn):
         n = gate_name(cn)
@@ -604,7 +615,7 @@ def main():
 
     def gate_findings(cn):
         """Findings for one clock-gate latch: [] if scan mode forces it open (or it is waived)."""
-        n_gates[0] += 1
+        gates_seen.add(cn)
         if waived(cn):
             return []
         d = list(cells[cn]["connections"].get("D", []))
@@ -795,6 +806,11 @@ def main():
         f"sequential cells: {n_seq}; async reset/set pins checked: {n_async}; scan-mode muxes: {gates}; "
         f"TAP-domain flops: {n_tap} (reset synchronisers: {len(tap_sync)})"
     )
+    print(
+        f"clock gates checked for the scan-mode force: {len(gates_seen)} "
+        f"({len(used_waivers)} waiver(s) used): "
+        + (", ".join(sorted({gate_name(g) for g in gates_seen})) or "none")
+    )
     if a.expect_reset_sync:
         print(f"reset synchronisers verified: {n_rs_ok} of {len(a.expect_reset_sync)}")
     uniq = sorted(set(violations))
@@ -807,6 +823,12 @@ def main():
         print(
             f"FAIL: expected at least {a.expect_tap_flops} TAP-domain flops, found {n_tap} "
             f"(prefix wrong or optimised away?)"
+        )
+        return 1
+    if len(gates_seen) < a.expect_clock_gates:
+        print(
+            f"FAIL: expected at least {a.expect_clock_gates} clock gates checked for the scan-mode force, "
+            f"found {len(gates_seen)} (gates removed, renamed or no longer behind a traced flop?)"
         )
         return 1
     if n_latch < a.expect_latches_min:

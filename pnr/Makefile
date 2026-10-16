@@ -931,7 +931,7 @@ DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tc
 .PHONY: dft-scan-check
 dft-scan-check: sky130-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
-		--netlist $(SKY130_SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/sky130_cell_models.v --expect-gates 20 $(DFT_TAP_CHECK_ARGS)
+		--netlist $(SKY130_SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/sky130_cell_models.v --expect-gates 20 $(DFT_TAP_CHECK_ARGS) --expect-clock-gates 1
 
 # (--models: the clock roots are hand-instantiated sky130 cells since USE_SKY130_CLKCELLS; the netlist carries only their
 # black-box stubs, so the checker needs the analysis models to trace the enable / select cones through them.)
@@ -940,15 +940,15 @@ dft-scan-check: sky130-soc-sv2v
 .PHONY: dft-scan-check-asap7
 dft-scan-check-asap7: asap7-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
-		--netlist $(SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/asap7_cell_models.v --expect-gates 20 $(DFT_TAP_CHECK_ARGS)
+		--netlist $(SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/asap7_cell_models.v --expect-gates 20 $(DFT_TAP_CHECK_ARGS) --expect-clock-gates 1
 
 # Bead j41m.4: the same proof on the CPU hard macro itself (BLOCK MODE of check_scan_clk_rst.py). The SoC-level checks
 # above see the macro as a blackbox, so they say nothing about its 4.8k flops. Here: (1) every flop clock cone ends at
 # clk_i (the parent muxes the test clock onto it) or at a clock-gate latch whose enable contains scan_mode_i (ASAP7 arm:
 # the cache SRAM gates, test_en_i); (2) ZERO async reset/set pins exist, so there is no internal reset that needs a scan
 # override (the macro's only reset is the synchronous rst_n_i, forced by the parent); (3) >= 900 word-level sequential
-# cells were found (vacuity guard; the Sky130 macro has 944, the ASAP7 one 954); (4) every latch (clock gate) has
-# scan_mode_i in its D cone even though its output clocks only an SRAM macro, which the clock-cone walk cannot reach;
+# cells were found (vacuity guard; the Sky130 macro has 944, the ASAP7 one 954); (4) every latch (clock gate) is FORCED open: with scan_mode_i = 1 its D is 1 whatever the enable (bead j41m.16; it used to need only
+# a scan_mode_i term somewhere in its D cone) even though its output clocks only an SRAM macro, which the clock-cone walk cannot reach;
 # the ASAP7 macro must contain >= 10 of them (5 per cache), the Sky130 macro none.
 .PHONY: dft-scan-check-cpu-macro dft-scan-check-cpu-macro-asap7
 dft-scan-check-cpu-macro: sky130-cpu-sv2v
@@ -959,7 +959,7 @@ dft-scan-check-cpu-macro: sky130-cpu-sv2v
 dft-scan-check-cpu-macro-asap7: asap7-cpu-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
 		--netlist $(CPU_SV2V_OUT) --top rv32i_cpu_top --models $(PROJECT_ROOT)/tools/dft/asap7_cell_models.v \
-		--clock-port clk_i --max-async-pins 0 --expect-seq-min 900 --all-latches-need-scan-mode --expect-latches-min 10
+		--clock-port clk_i --max-async-pins 0 --expect-seq-min 900 --all-latches-need-scan-mode --expect-latches-min 10 --expect-clock-gates 10
 
 # Sky130 Stage 2: SoC P&R with real DRC + LVS.
 # Requires:  make sky130-soc-sv2v   (generates soc_top_sv2v.v)
