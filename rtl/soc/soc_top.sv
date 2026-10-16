@@ -2466,7 +2466,10 @@ module soc_top
     // behind them is clocked by the (test) clock whatever the PMU says. In scan mode
     // cpu_core_clk / core_clk ARE the test clock (pll_subsystem), so the gated
     // clocks are too.
-    rv32i_clock_gate u_cpu_cg (.en(cpu_gated_clk_en), .test_en(dft_test_en), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
+    // HARD_ROOT: cpu_gated_clk is a CTS root (771 register sinks + the CPU macro clock pin). On the Sky130 SoC build
+    // (USE_SKY130_CLKCELLS) it is a hand-instantiated sdlclkp_4 + clkbuf_16, see rv32i_clock_gate.sv. u_gpu_cg stays
+    // behavioural: its output feeds no CTS tree in the Sky130 SoC (GPU is a tie-off), so it must optimise away.
+    rv32i_clock_gate #(.HARD_ROOT(1'b1)) u_cpu_cg (.en(cpu_gated_clk_en), .test_en(dft_test_en), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
     rv32i_clock_gate u_gpu_cg (.en(pmu_gpu_clk_en),   .test_en(dft_test_en), .clk(core_clk),     .gclk(gpu_gated_clk));
 
 endmodule : soc_top

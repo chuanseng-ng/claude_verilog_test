@@ -831,6 +831,7 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/soc_periph_map_pkg.sv \
 	$(LIBRELANE_SKY130_SOC_DIR)/rv32i_cpu_top_stub.sv \
 	$(LIBRELANE_SKY130_SOC_DIR)/gpu_top_tieoff.sv \
+	$(LIBRELANE_SKY130_SOC_DIR)/sky130_clkcells_stub.v \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_clkgen_stub.sv \
 	$(LIBRELANE_SKY130_SOC_DIR)/pll_clkgen_pnr.sv \
 	$(PROJECT_ROOT)/rtl/soc/apb4_register_bank.sv \
@@ -883,7 +884,14 @@ SKY130_SOC_SV_FILES := \
 SKY130_SOC_SV2V_OUT := $(abspath $(LIBRELANE_SKY130_SOC_DIR)/soc_top_sv2v.v)
 # One definition, used by the sv2v recipe below AND by sky130-soc-sv2v-inputs (CI), so the gate
 # elaborates exactly what the flow elaborates.
-SKY130_SOC_SV2V_DEFINES := --define=__pnr__ --define=SRAM_SKY130
+#
+# USE_SKY130_CLKCELLS (bead claude_verilog_test-j41m.4): hand-instantiate sky130_fd_sc_hd__sdlclkp_4 + clkbuf_16
+# (rv32i_clock_gate, HARD_ROOT instances) and mux2_4 + clkbuf_16 (dft_clk_mux) on the two clock roots whose
+# behavioural form synthesis mapped to and2_2 / a21bo_2, failing CVT.MaxCapViolations on the CTS-owned nets
+# cpu_gated_clk and core_clk (RUN_2026-10-16_04-53-49). sv2v resolves the `ifdef itself, so it must be passed here;
+# config.json's VERILOG_DEFINES comes too late. NOT in SKY130_CPU_SV2V_DEFINES: the CPU hard macro is unchanged.
+# The three cells' black-box stubs are sky130_clkcells_stub.v in SKY130_SOC_SV_FILES.
+SKY130_SOC_SV2V_DEFINES := --define=__pnr__ --define=SRAM_SKY130 --define=USE_SKY130_CLKCELLS
 
 sky130-soc-sv2v:
 	@echo "=========================================="
@@ -923,8 +931,10 @@ DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tc
 .PHONY: dft-scan-check
 dft-scan-check: sky130-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
-		--netlist $(SKY130_SOC_SV2V_OUT) --expect-gates 20 $(DFT_TAP_CHECK_ARGS)
+		--netlist $(SKY130_SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/sky130_cell_models.v --expect-gates 20 $(DFT_TAP_CHECK_ARGS)
 
+# (--models: the clock roots are hand-instantiated sky130 cells since USE_SKY130_CLKCELLS; the netlist carries only their
+# black-box stubs, so the checker needs the analysis models to trace the enable / select cones through them.)
 # Same proof on the ASAP7 SoC netlist. That netlist instantiates ICGx1_ASAP7_75t_R and sram_1rw_256x32_asap7
 # without defining them, so the checker needs the analysis models (it fails rather than pass vacuously).
 .PHONY: dft-scan-check-asap7
