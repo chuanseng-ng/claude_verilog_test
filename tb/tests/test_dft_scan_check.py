@@ -512,3 +512,162 @@ def test_block_mode_seq_min_guard(tmp_path: Path) -> None:
     )
     assert res.returncode == 1, res.stdout
     assert "expected at least 50 sequential cells" in res.stdout
+
+
+# --------------------------------------------------------------------------------------------
+# Clock-gate TE must be FORCED ACTIVE by scan mode (bead claude_verilog_test-j41m.16)
+# --------------------------------------------------------------------------------------------
+# The earlier rule only asked that scan_mode appear somewhere in the gate latch's D cone.
+# That accepts a TE that is scan_mode AND something functional, or ~scan_mode, or a GATE that
+# merely contains scan_mode: in scan mode the gate can then still close and stop the registers
+# behind it during shift. The rule is now: with scan mode = 1 the latch D must evaluate to 1
+# whatever the functional enable and every other input are (three-valued propagation).
+_MODELS_DIR = REPO / "tools" / "dft"
+_SKY_MODELS = (_MODELS_DIR / "sky130_cell_models.v").read_text()
+_ASAP_MODELS = (_MODELS_DIR / "asap7_cell_models.v").read_text()
+
+_ICG_HEAD = """
+module top (
+    input  wire clk_i, input wire scan_mode_i, input wire d, input wire en_i, input wire func_i,
+    output reg  q, output reg r
+);
+    reg func_q;
+    always @(posedge clk_i) func_q <= func_i;
+    wire gclk;
+    always @(posedge gclk) q <= d;
+    always @(posedge clk_i) r <= d;
+"""
+_SKY_ICG = (
+    "    sky130_fd_sc_hd__sdlclkp_4 u_cg "
+    "(.CLK(clk_i), .GATE({gate}), .SCE({te}), .GCLK(gclk));\nendmodule\n"
+)
+_ASAP_ICG = (
+    "    ICGx1_ASAP7_75t_R u_cg (.CLK(clk_i), .ENA({gate}), .SE({te}), .GCLK(gclk));\nendmodule\n"
+)
+_ICG_ARGS = ("--clock-port", "clk_i", "--max-async-pins", "0")
+_PLAIN_DLCLKP = """
+module sky130_fd_sc_hd__dlclkp_4 (input CLK, input GATE, output GCLK);
+  reg en_l;
+  always @* if (!CLK) en_l = GATE;
+  assign GCLK = CLK & en_l;
+endmodule
+"""
+
+
+def _icg_run(tmp_path: Path, tail: str, models: str, args: tuple = _ICG_ARGS):
+    mfile = tmp_path / "models.v"
+    mfile.write_text(models)
+    return _blk_run(tmp_path, tail, head=_ICG_HEAD, args=(*args, "--models", str(mfile)))
+
+
+@pytest.mark.parametrize(
+    ("flavour", "models", "tmpl"),
+    [("sky130", _SKY_MODELS, _SKY_ICG), ("asap7", _ASAP_MODELS, _ASAP_ICG)],
+    ids=["sky130", "asap7"],
+)
+class TestClockGateTE:
+    def test_te_from_scan_mode_passes(self, tmp_path, flavour, models, tmpl) -> None:
+        res = _icg_run(tmp_path, tmpl.format(gate="en_i", te="scan_mode_i"), models)
+        assert res.returncode == 0, res.stdout
+        assert "violations: 0" in res.stdout
+
+    def test_te_tied_zero_fails_naming_the_gate(self, tmp_path, flavour, models, tmpl) -> None:
+        res = _icg_run(tmp_path, tmpl.format(gate="en_i", te="1'b0"), models)
+        assert res.returncode == 1, res.stdout
+        assert "u_cg" in res.stdout
+
+    def test_te_from_functional_register_fails(self, tmp_path, flavour, models, tmpl) -> None:
+        res = _icg_run(tmp_path, tmpl.format(gate="en_i", te="func_q"), models)
+        assert res.returncode == 1, res.stdout
+        assert "u_cg" in res.stdout
+
+    def test_te_is_scan_mode_and_functional_fails(self, tmp_path, flavour, models, tmpl) -> None:
+        # depends on scan mode but does not FORCE the gate open (old structural rule: pass)
+        res = _icg_run(tmp_path, tmpl.format(gate="en_i", te="scan_mode_i & func_q"), models)
+        assert res.returncode == 1, res.stdout
+        assert "u_cg" in res.stdout
+        assert "does not force" in res.stdout
+
+    def test_te_inverted_scan_mode_fails(self, tmp_path, flavour, models, tmpl) -> None:
+        res = _icg_run(tmp_path, tmpl.format(gate="en_i", te="~scan_mode_i"), models)
+        assert res.returncode == 1, res.stdout
+        assert "does not force" in res.stdout
+
+    def test_scan_mode_only_in_functional_enable_fails(
+        self, tmp_path, flavour, models, tmpl
+    ) -> None:
+        # SCE/SE is dead (tied 0); scan mode only ANDs into GATE, so en_i = 0 closes the gate
+        res = _icg_run(tmp_path, tmpl.format(gate="en_i & scan_mode_i", te="1'b0"), models)
+        assert res.returncode == 1, res.stdout
+        assert "does not force" in res.stdout
+
+    def test_model_without_te_function_fails(self, tmp_path, flavour, models, tmpl) -> None:
+        # the original negative control: delete the SCE / SE term from the analysis model
+        broken = models.replace("GATE | SCE", "GATE").replace("ENA | SE", "ENA")
+        assert broken != models
+        res = _icg_run(tmp_path, tmpl.format(gate="en_i", te="scan_mode_i"), broken)
+        assert res.returncode == 1, res.stdout
+        assert "u_cg" in res.stdout
+
+    def test_forced_gate_that_clocks_nothing_traced_is_still_checked(
+        self, tmp_path, flavour, models, tmpl
+    ) -> None:
+        # SRAM-style gate: gclk feeds an output only, so the clock-cone walk never reaches it;
+        # --all-latches-need-scan-mode must still prove the force
+        tail = tmpl.format(gate="en_i", te="func_q").replace(
+            "endmodule", "    assign q_o = gclk;\nendmodule"
+        )
+        head = _ICG_HEAD.replace("output reg  q,", "output wire q_o, output reg  q,")
+        mfile = tmp_path / "models.v"
+        mfile.write_text(models)
+        res = _blk_run(
+            tmp_path,
+            tail,
+            head=head,
+            args=(*_ICG_ARGS, "--all-latches-need-scan-mode", "--models", str(mfile)),
+        )
+        assert res.returncode == 1, res.stdout
+        assert "u_cg" in res.stdout
+
+
+def test_plain_dlclkp_without_te_fails(tmp_path: Path) -> None:
+    tail = (
+        "    sky130_fd_sc_hd__dlclkp_4 u_cg (.CLK(clk_i), .GATE(en_i), .GCLK(gclk));\nendmodule\n"
+    )
+    res = _icg_run(tmp_path, tail, _PLAIN_DLCLKP)
+    assert res.returncode == 1, res.stdout
+    assert "u_cg" in res.stdout
+
+
+def test_plain_dlclkp_explicit_waiver_passes_and_stale_waiver_fails(tmp_path: Path) -> None:
+    tail = (
+        "    sky130_fd_sc_hd__dlclkp_4 u_cg (.CLK(clk_i), .GATE(en_i), .GCLK(gclk));\nendmodule\n"
+    )
+    ok = _icg_run(tmp_path, tail, _PLAIN_DLCLKP, args=(*_ICG_ARGS, "--waive-clock-gate", "u_cg"))
+    assert ok.returncode == 0, ok.stdout
+    stale = _icg_run(
+        tmp_path, tail, _PLAIN_DLCLKP, args=(*_ICG_ARGS, "--waive-clock-gate", "u_nosuch")
+    )
+    assert stale.returncode == 1, stale.stdout
+    assert "u_nosuch" in stale.stdout
+
+
+def test_behavioural_gate_te_floating_input_fails(tmp_path: Path) -> None:
+    # rv32i_clock_gate's behavioural arm with test_en left to a free input port
+    head = _ICG_HEAD.replace("input  wire func_i,", "input  wire func_i, input wire te_i,")
+    tail = (
+        "    reg en_l;\n    always @* if (!clk_i) en_l = en_i | te_i;\n"
+        "    assign gclk = clk_i & en_l;\nendmodule\n"
+    )
+    res = _blk_run(tmp_path, tail, head=head, args=_ICG_ARGS)
+    assert res.returncode == 1, res.stdout
+    assert "does not force" in res.stdout or "no scan-mode term" in res.stdout
+
+
+def test_behavioural_gate_te_from_scan_mode_passes(tmp_path: Path) -> None:
+    tail = (
+        "    reg en_l;\n    always @* if (!clk_i) en_l = en_i | scan_mode_i;\n"
+        "    assign gclk = clk_i & en_l;\nendmodule\n"
+    )
+    res = _blk_run(tmp_path, tail, head=_ICG_HEAD, args=_ICG_ARGS)
+    assert res.returncode == 0, res.stdout
