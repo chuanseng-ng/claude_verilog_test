@@ -724,9 +724,9 @@ yosys-flattened netlist): `u_cpu_cg.g_cell.u_icg`, `u_cpu_cg.g_cell.u_root_buf`,
 Load vs limit (measured loads from RUN_2026-10-16_04-53-49, `clkbuf_16` max_capacitance from the Liberty): `cpu_gated_clk` 0.60-0.68 pF vs 1.017 pF at ss (about 67 % worst case,
 was 0.19 pF), `core_clk` 0.29-0.31 pF vs 1.017 pF at ss (about 31 %, was 0.18 pF). INFERRED, not measured: the new 2-pin ICG-to-buffer and mux-to-buffer nets are placed by
 global placement and must stay under the `sdlclkp_4`/`mux2_4` ss limit (0.33 pF, roughly 3 mm of wire); the post-CTS run decides. Scan-mode behaviour of the cell arm:
-`dft-scan-check` runs against `tools/dft/sky130_cell_models.v` (0 violations; a broken-mux model fails it), but the checker does not trace the ICG enable cone (the same
-gap exists for the ASAP7 ICG), so SCE forcing the gate open rests on the Liberty statetable (`SCE=H -> M0=H` regardless of `GATE`) and on the unchanged behavioural arm in
-`test_clock_gate_scan` / `test_soc_dft_scan`.
+`dft-scan-check` runs against `tools/dft/sky130_cell_models.v` (0 violations, 1 clock gate checked for the scan-mode force: `u_cpu_cg.g_cell.u_icg`, via the j41m.16
+`--expect-clock-gates 1` proof; negative controls: a model without the `SCE` term fails it with the gate-not-forced-open message, a broken-mux model fails the mux rule).
+The proof is on the analysis model, whose `GATE | SCE` latch input is taken from the Liberty statetable (`SCE=H -> M0=H` regardless of `GATE`), not on the library cell itself.
 
 **CDC budget check [M]** (`make -C pnr check-cdc-timing-sky130-soc`, real SPEF): PASS at nom_tt and max_ss; 11 groups (10 FIFO/bridge/PMU/IRQ + the
 `u_m_rst_status_sync`) plus the two domain-wide fallbacks all bound; worst margins at max_ss: fifo_rd2wr +0.95 ns of 12.5, fifo_wr2rd +1.68. Negative control (all budgets
