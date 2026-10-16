@@ -1,6 +1,5 @@
-run_id:      pd_20261016_j41m4_sky130_cpu_scan_boundary
-design_name: rv32i_cpu_top (Sky130 CPU macro) then soc_top
+run_id:      pd_20261016_j41m4_sky130_soc_clkcells_attempt1
+design_name: soc_top (Sky130)
 pdk:         sky130A
-tool:        LibreLane (nix)
 branch:      feat/dft-cpu-macro-scan-j41m4 (draft PR #287)
-last_stage:  DONE: CPU macro RUN_2026-10-16_02-27-26, SoC RUN_2026-10-16_04-53-49, CDC check PASS, scan checkers 0 violations; CVT.MaxCapViolations FAIL (2 unwaived clock nets) awaits owner decision
+last_stage:  STOPPED: RUN_2026-10-16_23-48-20 failed at step 28 (ODB-0370, dont_touch ICG on the shared dft_scan_mode net); awaiting RTL/flow decision
