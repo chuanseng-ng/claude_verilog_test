@@ -3,7 +3,7 @@
 # Sourced by build.tcl inside an in-memory project (create_project -in_memory -part ...).
 #
 #   jtag_axi_0  Xilinx JTAG-to-AXI Master, AXI4-Lite, 32-bit address and data  (PROTOCOL 2 = AXI4LITE)
-#   ila_0       the ONLY ILA (BASIC licence), 75 MHz CPU clock, 7 probes: 12/32/32/11 (APB debug, flags) + 1/32/32 (commit)
+#   ila_0       the ONLY ILA (BASIC licence), 75 MHz CPU clock, 5 probes: 24 (paddr, APB/flags, commit_valid) / 32 pwdata / 32 prdata / 32 commit_pc / 32 commit_insn
 # The probe widths MUST match fpga/nexys_video/nexys_video_dbg.sv.
 
 proc nv_create_ips {ipdir} {
@@ -15,18 +15,16 @@ proc nv_create_ips {ipdir} {
         CONFIG.M_AXI_DATA_WIDTH {32} \
     ] [get_ips jtag_axi_0]
 
-    # ONE ILA only: the free (BASIC) Vivado licence rejects multiple ILA cores ([Chipscope 16-620]).
+    # ONE ILA, at most 5 probes: the free (BASIC) Vivado licence rejects more ([Chipscope 16-620]).
     create_ip -name ila -vendor xilinx.com -library ip -module_name ila_0 -dir $ipdir
     set_property -dict [list \
-        CONFIG.C_NUM_OF_PROBES {7} \
+        CONFIG.C_NUM_OF_PROBES {5} \
         CONFIG.C_DATA_DEPTH {2048} \
-        CONFIG.C_PROBE0_WIDTH {12} \
+        CONFIG.C_PROBE0_WIDTH {24} \
         CONFIG.C_PROBE1_WIDTH {32} \
         CONFIG.C_PROBE2_WIDTH {32} \
-        CONFIG.C_PROBE3_WIDTH {11} \
-        CONFIG.C_PROBE4_WIDTH {1} \
-        CONFIG.C_PROBE5_WIDTH {32} \
-        CONFIG.C_PROBE6_WIDTH {32} \
+        CONFIG.C_PROBE3_WIDTH {32} \
+        CONFIG.C_PROBE4_WIDTH {32} \
     ] [get_ips ila_0]
 
     generate_target all [get_ips]

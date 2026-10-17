@@ -107,18 +107,19 @@ module nexys_video_dbg (
     assign paddr_hi_unused = paddr_full[31:12];
 
     // ---- ILA: ONE core only. The free Vivado licence (BASIC) rejects a design with more than one ILA
-    // ([Chipscope 16-620]). It runs on the 75 MHz CPU clock, which samples the 50 MHz system-domain signals
+    // ([Chipscope 16-620]; and at most 5 probes). It runs on the 75 MHz CPU clock, which samples the 50 MHz system-domain signals
     // (APB debug bus, UART, flags) without loss. The clocks are outputs of one MMCM, so the sys -> cpu probe paths are
     // related-clock paths; probe widths are fixed in ip.tcl, keep the two in step.
+    // BASIC licence also caps an ILA at 5 probes ([Chipscope 16-620]), so the narrow signals share probe0.
     ila_0 u_ila (
         .clk     (clk_cpu_i),
-        .probe0  (apb_paddr_o),                 // [11:0]
+        .probe0  ({apb_paddr_o,                                        // [23:12]
+                   apb_psel_o, apb_penable_o, apb_pwrite_o, apb_pready_i, apb_pslverr_i, uart_tx_i, uart_rx_i,
+                   gpu_irq_i, wdt_rst_req_i, pll_locked_i, cpu_pll_locked_i,   // [11:1]
+                   commit_valid_i}),                                   // [0]
         .probe1  (apb_pwdata_o),                // [31:0]
         .probe2  (apb_prdata_i),                // [31:0]
-        .probe3  ({apb_psel_o, apb_penable_o, apb_pwrite_o, apb_pready_i, apb_pslverr_i, uart_tx_i, uart_rx_i,
-                   gpu_irq_i, wdt_rst_req_i, pll_locked_i, cpu_pll_locked_i}),  // [10:0]
-        .probe4  (commit_valid_i),              // [0:0]
-        .probe5  (commit_pc_i),                 // [31:0]
-        .probe6  (commit_insn_i)                // [31:0]
+        .probe3  (commit_pc_i),                 // [31:0]
+        .probe4  (commit_insn_i)                // [31:0]
     );
 endmodule

@@ -28,13 +28,11 @@ endmodule
 
 module ila_0 (
     input wire        clk,
-    input wire [11:0] probe0,
+    input wire [23:0] probe0,
     input wire [31:0] probe1,
     input wire [31:0] probe2,
-    input wire [10:0] probe3,
-    input wire [0:0]  probe4,
-    input wire [31:0] probe5,
-    input wire [31:0] probe6
+    input wire [31:0] probe3,
+    input wire [31:0] probe4
 );
 endmodule
 
