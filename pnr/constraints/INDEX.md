@@ -30,6 +30,12 @@
 ### Power Constraints (existing)
 
 11. **phase1_cpu.upf** - UPF power intent (existing file)
+12. **phase5_soc.upf** - UPF 3.0 power intent for `soc_top` (4 domains, 14 isolation clamps, 5 system states).
+    Rewritten 2026-10-17 (bead `h3lm`); checked against the RTL by `tools/verif/check_upf.py` (CI gate).
+    Read by no physical-design flow today. Spec: `docs/design/UPF_POWER_SPEC.md` Phase 5.
+13. **phase5_soc_rtl_facts.json** - GENERATED input of that checker (hierarchy, ports and clamps of
+    `soc_top` for the ASAP7 and Sky130 arms). Do not edit; regenerate with
+    `python3 tools/verif/check_upf.py gen-facts` (needs `pyslang`); CI runs `gen-facts --check`.
 
 ## File Sizes
 
