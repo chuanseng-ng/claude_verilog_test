@@ -165,6 +165,58 @@ New check on the existing run, `make -C pnr check-cdc-timing-sky130-soc` (defaul
   6.25 ns limit. A limit of 0.1 ns flags 3 of 10 pointers at nom_tt (the check can fail). The padding chains
   inflate arrival, not spread, so skew is not the failure mode here.
 
-Open: the re-harden that proves the fix (max_ss CDC pass, no `dlygate4sd3_1` chains on these pins) has NOT been run.
-Expected, not measured: fifo arrival falls from about 16.7 ns to about 1 to 3 ns at max_ss, and the new baseline is
-not a single-variable comparison with 14-07-01 (hold repair now differs everywhere these pins fed).
+Open (at the time of section 7): the re-harden that proves the fix had not been run. Section 8 is that run.
+
+## 8. Re-harden #5 with the hold exemption: RUN_2026-10-17_23-06-56 (measured, 2026-10-18)
+
+`make -C pnr librelane-sky130-soc-noklayout` (rccal default, KLayout DRC skipped), origin tip `e47709e`, 12 GB cgroup cap,
+about 4 h 26 min wall. Not a single-variable comparison with 14-07-01 (hold repair differs wherever the 34 pins fed), but the
+only intended input change is the `set_false_path -hold` on the 34 stage-0 capture D pins.
+
+Binding (early check): `INFO: CDC-HOLD-EXEMPT: 34 gray-pointer capture D pins exempt from hold (10 synchronisers)` in every
+SDC load (9 prepnr corners, floorplan, global/detailed placement, CTS); no `CDC-HOLD-EXEMPT-MISS` anywhere in the run dir.
+
+| Gate | 14-07-01 (before) | 23-06-56 (this run) |
+|---|---|---|
+| LVS | PASS | PASS (0 errors) |
+| Routing DRC | 0 | 0 (iterations 61879, 23674, 20711, 1491, 30, 1, 0) |
+| Magic DRC | 8984 (deferred, waived `45a`) | 8984 (same) |
+| Antenna nets / pins | 225 / 312 | 198 / 257 |
+| Setup violators, 9 corners | 0 | 0 |
+| Hold violators, 9 corners | 0 | 0 (worst +0.2704 max_ff, +0.4742 nom_tt, +0.5013 max_ss; before +0.2731 worst) |
+| `CVT.MaxCapViolations` (empty waiver list) | PASS | PASS, 0 waived / 0 unwaived, 9 corners |
+| Hold buffers (`design__instance__count__hold_buffer`) | 543 | 488 |
+| `dlygate4sd3_1` in the fanin cone of the 34 pins | 170 | 0 |
+| `dlygate4sd3_1` whole design | 19246 | 19094 |
+| CDC check nom_tt + max_ss (default) | max_ss FAIL (-0.715 / -0.516 ns) | PASS both |
+| CDC check, all 9 corners (`CDC_CORNERS=all`) | not run | PASS all 9 |
+| `make -C pnr dft-scan-check` | 0 | 0 violations |
+
+Notes on the table. "Setup worst slack" prints 0.0 in LibreLane's summary for both runs: that is the latch time-borrow paths
+(4 inferred latches), not a margin. The smallest non-zero setup slack in `max.rpt` is +3.136 ns at max_ss (+3.060 before).
+Setup/hold violator counts are what gate.
+
+CDC budget groups after the fix: `fifo_rd2wr` and `fifo_wr2rd` worst slack +11.69 / +11.71 ns at nom_tt and +11.09 / +11.14 ns at
+max_ss, on a 12.5 ns budget, so the crossing datapath is about 1.4 ns at max_ss (was -0.715 slack). Worst over all nine corners
++11.094 ns. All other groups MET at both default corners.
+
+Bit skew, all 10 pointers: nom_tt 0.014 to 0.103 ns, max_ss 0.028 to 0.196 ns (limit 6.25 ns); over all nine corners the
+maximum is 0.196 ns.
+
+Clock root cells survive CTS (no CTS-0105 in this run, 0 in 14-07-01 too): `buf_16` x3 (`u_cpu_cg.g_cell.u_root_buf`,
+`u_cpu_pll_sub.u_ref_cm.u_root_buf`, `u_pll_sub.u_ref_cm.u_root_buf`), `sdlclkp_4` x1 (`u_cpu_cg.g_cell.u_icg`), `mux2_4` x2
+(`u_ref_cm.u_mux`, cpu and fabric). CTS built trees on core_clk (17784 sinks), cpu_core_clk, tck_i and dft_test_clk.
+
+### Scan-view hold on the 34 pins (information for Stage 2, NOT a pass/fail)
+
+Standalone OpenSTA on the final fill netlist and nom SPEF, the flow's own `sky130_soc.sdc` with `CVT_SDC_SCAN_VIEW=1` (no
+exemption), all clocks propagated, nom_tt Liberty. Script: the same endpoint list the SDC builds (stage-0 `sync_q[0]` D pins).
+- 17 of 34 pins VIOLATE hold on tck -> tck: slack -3.086 to -3.240 ns (worst `_150140_/D`: launch clock latency 3.308 ns,
+  capture 6.748 ns, data 0.319 ns clk->Q, no logic in between). The other 17 are MET at +3.523 to +3.634 ns (opposite domain
+  direction, capture tree earlier than launch). Setup in the same view: +95.8 ns or better (tck period).
+- Before the fix the resizer had padded these with 170 `dlygate4sd3_1`; with the same standalone STA on 14-07-01 the same pins
+  show +2.123 ns hold. So the exemption trades a hidden scan-mode hold failure for a functional-mode non-padding. The 17 failing
+  pins are the whole tck-skew exposure of section 6 (core vs cpu tree insertion delay differs by about 3.4 ns), now measured at
+  -3.24 ns worst on a post-route netlist, i.e. worse than the -2.16 ns (with parasitics, pre-padding) quoted in section 6.
+- Nothing here changes the section 6 conclusion: masking the 34 stage-0 flops in the capture response (or holding the pointers
+  across capture) remains the Stage 2 (bead j41m.8) obligation, and "scan hold safe" is still NOT claimed.
