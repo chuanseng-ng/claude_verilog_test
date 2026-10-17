@@ -136,6 +136,21 @@ gate** (whole tree clean). There is no format check: the formatter cannot reprod
 hand-aligned house style (bead `hn9l`), so formatting is enforced by review. `nix develop` provides the same
 Verible binary CI installs, so no manual download is needed there.
 
+## Tool-input RTL filelists (`rtl/filelist/`)
+
+Committed, tool-agnostic `.f` filelists for external tools (simulators, linters, sv2v wrappers):
+`soc_top.f`, `cpu_top.f`, `gpu_top.f`, each with a `*_sim_models.f` companion for the simulation SRAM
+models. Paths are repo-root-relative: run from the repo root with `-f` (not `-F`), e.g.
+
+```bash
+verilator --lint-only -Wall -Wno-fatal --top-module soc_top \
+    -f rtl/filelist/soc_top.f -f rtl/filelist/soc_top_sim_models.f
+```
+
+The lists are generated from the Makefile source lists (`python3 tools/verif/gen_filelist.py`) and CI
+fails on drift (`--check`). Details, define handling and the completeness proof:
+[`rtl/filelist/README.md`](../../rtl/filelist/README.md).
+
 ## DFT, CDC and FPGA Targets (added 2026-10-15)
 
 Targets verified against the Makefiles (`.PHONY` lists in `tb/cocotb/soc/Makefile` and `pnr/Makefile`).
