@@ -377,3 +377,105 @@ async def test_scan_cpu_reset_with_pmu_cpu_off(dut):
     dut.scan_rst_ni.value = 1
     await _toggle(dut.scan_clk_i, 4)
     assert int(soc.cpu_domain_rst_n.value) == 1
+
+
+# ---------------------------------------------------------------------------
+# j41m.6: crypto_accel zeroizes key/state on scan entry and exit, wired through soc_top.
+# ---------------------------------------------------------------------------
+# The bus-level behaviour of the wipe (real keys, real AES / SHA operations, every register class,
+# mutation-checked) is test_crypto's. THIS test proves the SoC wiring: soc_top's dft_scan_mode
+# reaches u_crypto, the wipe fires on the test clock that dft_clk_mux selects, and it fires on exit
+# on the functional clock. Residue is DEPOSITED on the flops through the hierarchy (this wrapper
+# has no CPU firmware that drives the APB ring); no scan chain exists yet (scan_out_o is a
+# placeholder until Stage 2), so the readback is the same backdoor, not a shift.
+def _crypto_seed(soc):
+    cr = soc.u_crypto
+    aes_c = cr.g_aes.u_aes
+    sha_c = cr.g_sha.u_sha
+    cr.key_q.value = 0x2B7E151628AED2A6ABF7158809CF4F3C
+    cr.key_seen_q.value = 0xF
+    cr.msg_q.value = (1 << 511) | 0x3243F6A8885A308D313198A2E0370734
+    aes_c.s_q.value = 0x3243F6A8885A308D313198A2E0370734
+    aes_c.rk_q.value = 0xD014F9A8C9EE2589E13F0CC8B6630CA6
+    sha_c.hin_q.value = 0x6A09E667BB67AE853C6EF372A54FF53A510E527F9B05688C1F83D9AB5BE0CD19
+    sha_c.a_q.value = 0x11111111
+    sha_c.h_q.value = 0x22222222
+    sha_c.w_q[0].value = 0x33333333
+    sha_c.w_q[15].value = 0x44444444
+
+
+def _crypto_residue(soc) -> dict[str, int]:
+    cr = soc.u_crypto
+    aes_c = cr.g_aes.u_aes
+    sha_c = cr.g_sha.u_sha
+    return {
+        "key_q": int(cr.key_q.value),
+        "key_seen_q": int(cr.key_seen_q.value),
+        "msg_q": int(cr.msg_q.value),
+        "aes.s_q": int(aes_c.s_q.value),
+        "aes.rk_q": int(aes_c.rk_q.value),
+        "sha.hin_q": int(sha_c.hin_q.value),
+        "sha.a_q": int(sha_c.a_q.value),
+        "sha.h_q": int(sha_c.h_q.value),
+        "sha.w_q[0]": int(sha_c.w_q[0].value),
+        "sha.w_q[15]": int(sha_c.w_q[15].value),
+    }
+
+
+def _nonzero(d: dict[str, int]) -> dict[str, str]:
+    return {k: hex(v) for k, v in d.items() if v}
+
+
+@cocotb.test()
+async def test_scan_entry_and_exit_wipe_crypto_through_soc_top(dut):
+    """Functional mode with seeded key/state residue -> scan_mode_i=1: three scan_clk_i edges later
+    every seeded flop is 0 (the wipe ran on the TEST clock, with clk_i/cpu_clk_i held stopped).
+    Residue seeded in scan mode is wiped again on exit, on the functional clock.
+    MUTATION TARGET: u_crypto.scan_mode_i not tied to dft_scan_mode."""
+    await _idle(dut)
+    soc = dut.u_soc
+    dut.rst_n_i.value = 0
+    dut.cpu_rst_n_i.value = 0
+    func_clk = cocotb.start_soon(Clock(dut.clk_i, PERIOD_NS, units="ns").start())
+    cpu_clk = cocotb.start_soon(Clock(dut.cpu_clk_i, PERIOD_NS, units="ns").start())
+    await ClockCycles(dut.clk_i, 4)
+    dut.rst_n_i.value = 1
+    dut.cpu_rst_n_i.value = 1
+    await ClockCycles(dut.clk_i, LOCK_CYCLES + 6)
+    assert int(dut.pll_locked_o.value) == 1
+    _crypto_seed(soc)
+    await Timer(1, units="ns")
+    seeded = _crypto_residue(soc)
+    assert all(v != 0 for v in seeded.values()), f"seed did not take: {seeded}"
+    assert int(soc.u_crypto.wipe_w.value) == 0
+
+    # --- entry: stop the functional clocks, then drive the test clock only
+    func_clk.kill()
+    cpu_clk.kill()
+    dut.clk_i.value = 0
+    dut.cpu_clk_i.value = 0
+    dut.scan_mode_i.value = 1
+    await Timer(2, units="ns")  # scan_mode is quasi-static: stable before the first test-clock edge
+    saw_wipe = False
+    for _ in range(6):
+        await _toggle(dut.scan_clk_i, 1)
+        if int(soc.u_crypto.wipe_w.value) == 1:
+            saw_wipe = True
+            break
+    assert saw_wipe, "wipe_w never became visible on the test clock after scan_mode_i rose"
+    await _toggle(dut.scan_clk_i, 1)  # the clearing edge
+    left = _nonzero(_crypto_residue(soc))
+    assert not left, f"residue after scan entry: {left}"
+    await _toggle(dut.scan_clk_i, 12)
+    assert int(soc.u_crypto.wipe_w.value) == 0
+
+    # --- exit: seed again in scan mode, hand the clock back to the functional root
+    _crypto_seed(soc)
+    await Timer(1, units="ns")
+    assert all(v != 0 for v in _crypto_residue(soc).values())
+    dut.scan_mode_i.value = 0
+    cocotb.start_soon(Clock(dut.clk_i, PERIOD_NS, units="ns").start())
+    cocotb.start_soon(Clock(dut.cpu_clk_i, PERIOD_NS, units="ns").start())
+    await ClockCycles(dut.clk_i, 6)
+    left = _nonzero(_crypto_residue(soc))
+    assert not left, f"residue after scan exit: {left}"
