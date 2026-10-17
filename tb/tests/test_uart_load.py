@@ -19,7 +19,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools" / "fw"))
 
-import uart_load as ul  # noqa: E402
+import uart_load as ul  # type: ignore[import-not-found]  # noqa: E402
 
 PROTO_H = ROOT / "sw" / "bootloader" / "uart_boot_proto.h"
 BOOT_C = ROOT / "sw" / "bootloader" / "uart_boot.c"
