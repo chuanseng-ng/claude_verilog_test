@@ -20,6 +20,7 @@ with an ordinal ``#k/N`` for identical lines.  The properties pinned here:
     replaced.
 """
 
+# pylint: disable=missing-function-docstring,too-few-public-methods  # descriptive test names; Repo is a fixture helper
 from __future__ import annotations
 
 import importlib.util
