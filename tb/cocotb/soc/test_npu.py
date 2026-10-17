@@ -1670,12 +1670,17 @@ module tb_npu_single #(
     output logic              pslverr,
     output logic              irq_o
 );
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic [31:0] mb_dout0_w;
+    /* verilator lint_on  UNUSEDSIGNAL */
     npu_top #(
         .ADDR_W(ADDR_W), .WEIGHT_WORDS(WEIGHT_WORDS), .GRID(GRID), .EN_NPU(EN_NPU)
     ) u_dut (
         .clk(clk), .rst_n(rst_n), .psel(psel), .penable(penable), .pwrite(pwrite),
         .paddr(paddr), .pwdata(pwdata), .pstrb(pstrb), .prdata(prdata), .pready(pready),
-        .pslverr(pslverr), .irq_o(irq_o)
+        .pslverr(pslverr), .irq_o(irq_o),
+        .mb_en_i(1'b0), .mb_ce_i(1'b0), .mb_we_i(1'b0), .mb_wmask_i(4'hF), .mb_addr_i(10'd0),
+        .mb_din_i(32'd0), .mb_dout0_o(mb_dout0_w)
     );
 endmodule
 `default_nettype wire

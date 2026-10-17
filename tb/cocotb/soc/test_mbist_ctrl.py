@@ -440,6 +440,7 @@ async def test_soc_shape_full_size(dut):
     await check_against_golden(dut, 0, 1, Fault(2, v_addr=512, v_bit=0, dir=1))
     await check_against_golden(dut, 3, 0, Fault(5, 100, 4, 101, 4, 1, 0), bg_sel=1)
     await check_against_golden(dut, 4, 1, Fault(10, v_bit=3, val=1))
+    disarm_all(dut)
     _, st = await run_bist(dut, alg=5, bg_sweep=1)
     assert decode_status(st)["fail_any"] == 0
     await stop(dut)
