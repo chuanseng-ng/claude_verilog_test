@@ -7,7 +7,7 @@
 //                               GATE | SCE, exactly the structure rv32i_clock_gate's behavioural arm builds, so the checker
 //                               can see that the enable cone contains the scan-mode term (SCE = test_en).
 //   sky130_fd_sc_hd__mux2_4     the dft_clk_mux 2:1 mux (X = S ? A1 : A0); scan mode selects the test clock.
-//   sky130_fd_sc_hd__clkbuf_16  root buffer.
+//   sky130_fd_sc_hd__buf_16     root buffer (plain buffer, not a clkbuf: CTS-0105, see rv32i_clock_gate.sv).
 module sky130_fd_sc_hd__sdlclkp_4 (
     input  CLK,
     input  GATE,
@@ -28,7 +28,7 @@ module sky130_fd_sc_hd__mux2_4 (
   assign X = S ? A1 : A0;
 endmodule
 
-module sky130_fd_sc_hd__clkbuf_16 (
+module sky130_fd_sc_hd__buf_16 (
     input  A,
     output X
 );

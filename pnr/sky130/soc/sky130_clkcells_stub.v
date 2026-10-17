@@ -13,7 +13,7 @@
 // Pin names and functions from sky130_fd_sc_hd__tt_025C_1v80.lib:
 //   sdlclkp_4  GCLK = CLK & latch_(CLK low)(GATE | SCE)           (clock_gating_integrated_cell latch_posedge_precontrol)
 //   mux2_4     X = S ? A1 : A0
-//   clkbuf_16  X = A
+//   buf_16     X = A      (NOT clkbuf_16: see rtl/mem/rv32i_clock_gate.sv, CTS-0105)
 
 (* blackbox *)
 module sky130_fd_sc_hd__sdlclkp_4 (
@@ -34,7 +34,7 @@ module sky130_fd_sc_hd__mux2_4 (
 endmodule
 
 (* blackbox *)
-module sky130_fd_sc_hd__clkbuf_16 (
+module sky130_fd_sc_hd__buf_16 (
     input  A,
     output X
 );

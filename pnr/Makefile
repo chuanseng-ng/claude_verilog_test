@@ -885,8 +885,8 @@ SKY130_SOC_SV2V_OUT := $(abspath $(LIBRELANE_SKY130_SOC_DIR)/soc_top_sv2v.v)
 # One definition, used by the sv2v recipe below AND by sky130-soc-sv2v-inputs (CI), so the gate
 # elaborates exactly what the flow elaborates.
 #
-# USE_SKY130_CLKCELLS (bead claude_verilog_test-j41m.4): hand-instantiate sky130_fd_sc_hd__sdlclkp_4 + clkbuf_16
-# (rv32i_clock_gate, HARD_ROOT instances) and mux2_4 + clkbuf_16 (dft_clk_mux) on the two clock roots whose
+# USE_SKY130_CLKCELLS (bead claude_verilog_test-j41m.4): hand-instantiate sky130_fd_sc_hd__sdlclkp_4 + buf_16
+# (rv32i_clock_gate, HARD_ROOT instances) and mux2_4 + buf_16 (dft_clk_mux; buf_16, not clkbuf_16, to avoid CTS-0105) on the two clock roots whose
 # behavioural form synthesis mapped to and2_2 / a21bo_2, failing CVT.MaxCapViolations on the CTS-owned nets
 # cpu_gated_clk and core_clk (RUN_2026-10-16_04-53-49). sv2v resolves the `ifdef itself, so it must be passed here;
 # config.json's VERILOG_DEFINES comes too late. NOT in SKY130_CPU_SV2V_DEFINES: the CPU hard macro is unchanged.

@@ -718,10 +718,19 @@ synthesised driver (the register-tree root buffer is placed at the sink centroid
 `repair_design` skips clock nets, so nothing re-drives it. The drivers must be strong from synthesis on. Under `+define+USE_SKY130_CLKCELLS` (only in
 `SKY130_SOC_SV2V_DEFINES`, so the CPU macro is untouched) the two roots are hand-instantiated library cells, black-box stubs in `pnr/sky130/soc/sky130_clkcells_stub.v`:
 `u_cpu_cg` (`rv32i_clock_gate #(.HARD_ROOT(1))`) is `sky130_fd_sc_hd__sdlclkp_4` (GATE/SCE = `en`/`test_en`, same `en | test_en` latched while CLK is low) driving
-`sky130_fd_sc_hd__clkbuf_16`; every `dft_clk_mux` (`u_pll_sub.u_ref_cm`, `u_cpu_pll_sub.u_ref_cm`) is `mux2_4` + `clkbuf_16`. Flattened instance names (stable, checked in the
+`sky130_fd_sc_hd__buf_16`; every `dft_clk_mux` (`u_pll_sub.u_ref_cm`, `u_cpu_pll_sub.u_ref_cm`) is `mux2_4` + `buf_16`. Flattened instance names (stable, checked in the
 yosys-flattened netlist): `u_cpu_cg.g_cell.u_icg`, `u_cpu_cg.g_cell.u_root_buf`, `u_pll_sub.u_ref_cm.u_mux`, `u_pll_sub.u_ref_cm.u_root_buf`, and the same two under `u_cpu_pll_sub`.
 `u_gpu_cg` stays behavioural so it still optimises away with the tie-off GPU. `RSZ_DONT_TOUCH_RX` in the three `pnr/sky130/soc/config*.json` pins these instances.
-Load vs limit (measured loads from RUN_2026-10-16_04-53-49, `clkbuf_16` max_capacitance from the Liberty): `cpu_gated_clk` 0.60-0.68 pF vs 1.017 pF at ss (about 67 % worst case,
+**Why `buf_16` and not `clkbuf_16` (CTS-0105, RUN_2026-10-17_08-53-43)**: the first cell arm used `clkbuf_16` for the three root buffers (`u_cpu_cg.g_cell.u_root_buf`,
+`u_pll_sub.u_ref_cm.u_root_buf`, `u_cpu_pll_sub.u_ref_cm.u_root_buf`). `clkbuf_16` is in `CTS_CLK_BUFFERS`, so TritonCTS treated each one as a clock buffer that already existed on
+the net and logged `CTS-0105: Net "core_clk" already has clock buffer u_pll_sub.u_ref_cm.u_root_buf. Skipping...` (likewise `cpu_core_clk` and `cpu_gated_clk`). It built no
+clock tree on any of the three roots, and setup ended at WNS -130 ns. Owner decision: use `sky130_fd_sc_hd__buf_16`, a plain buffer that is not in the CTS buffer list, so CTS
+sees an ordinary driver and builds its tree below it. `CTS_CLK_BUFFERS` / `CTS_ROOT_BUFFER` still name `clkbuf_16` (CTS's own cell choice, unchanged). Instance names are
+unchanged, so `RSZ_DONT_TOUCH_RX` and `MANUAL_GLOBAL_PLACEMENTS` need no edit. Liberty check (MEASURED, `max_capacitance` of the output pin): `buf_16` 5.0 pF (the library cap)
+at ss_n40C_1v28, ss_100C_1v60 and tt_025C_1v80, 2.846 pF at ss_n40C_1v40, against `clkbuf_16` 0.757 / 1.017 / 1.532 / 2.826 pF at the same corners, so the drive margin is
+not reduced. Input pin cap is 13.3 fF (`buf_16`) vs 7.5 fF (`clkbuf_16`), negligible against the 0.33 pF `mux2_4`/`sdlclkp_4` limit. Cell area is 27.5 vs 25.0 um^2. NOT yet
+measured: whether CTS now builds the trees and closes setup, which is the next PD run.
+Load vs limit (measured loads from RUN_2026-10-16_04-53-49; the limit quoted is the `clkbuf_16` Liberty value used at the time, `buf_16` is higher, see above): `cpu_gated_clk` 0.60-0.68 pF vs 1.017 pF at ss (about 67 % worst case,
 was 0.19 pF), `core_clk` 0.29-0.31 pF vs 1.017 pF at ss (about 31 %, was 0.18 pF). INFERRED, not measured: the new 2-pin ICG-to-buffer and mux-to-buffer nets are placed by
 global placement and must stay under the `sdlclkp_4`/`mux2_4` ss limit (0.33 pF, roughly 3 mm of wire); the post-CTS run decides. Scan-mode behaviour of the cell arm:
 `dft-scan-check` runs against `tools/dft/sky130_cell_models.v` (0 violations, 1 clock gate checked for the scan-mode force: `u_cpu_cg.g_cell.u_icg`, via the j41m.16
