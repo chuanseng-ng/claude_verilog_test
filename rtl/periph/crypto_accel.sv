@@ -21,9 +21,10 @@
 //     read DOUT. In CTR mode that yields DOUT = E_attacker(IV) ^ msg_q, from which the attacker
 //     recovers the victim's plaintext even though DIN also reads 0; in SHA mode it yields
 //     H(victim_msg). Treat this block as an unprotected shared oracle, not as key storage.
-//   * NO KEY LIFECYCLE: no zeroisation command, no lock bit, and key_valid never drops once set.
-//     The ONLY clear is core_rst_n (rst_n_i & pll_locked), i.e. a whole-SoC reset -- which also
-//     fires on a PLL unlock -- so "zeroise the key" means "reset the SoC".
+//   * NO SOFTWARE KEY LIFECYCLE: no zeroisation command, no lock bit, and key_valid never drops
+//     by software action. The clears are core_rst_n (rst_n_i & pll_locked), i.e. a whole-SoC
+//     reset -- which also fires on a PLL unlock -- and the DFT scan-entry/exit wipe (below), which
+//     is the one non-reset path that drops key_valid.
 //   * RESIDUAL STATE SURVIVES A CONTEXT SWITCH. key_q, msg_q, DOUT, DIGEST and IV all persist (the
 //     AES core's rk_q holds the round-10 key, which inverts to the master key, for one cycle after
 //     an operation and then re-tracks key_q while idle). A second user that writes fewer
@@ -46,11 +47,36 @@
 //     and shifting out f(state, key) reveals it. What the mask does NOT cover: every OTHER flop here
 //     (the AES state s_q, msg_q, the SHA registers, the bank words holding DOUT/DIGEST/IV) is
 //     scanned, and s_q holds block ^ key (the whitening value, reloaded every idle cycle) and later
-//     round states from a PRIOR functional operation. Shifting out BEFORE any test-clock capture
-//     reads that residue. Scan entry must therefore follow a reset of this block (key_q = 0, then
-//     one capture with the mask on refreshes s_q with block ^ 0): a protocol requirement on the
-//     Stage 1b TAP / ATE, tracked in DFT_ARCHITECTURE.md sec.14. Any other debug path that can
-//     observe flop state is still key access.
+//     round states from a PRIOR functional operation.
+//   * SCAN WIPE (bead j41m.6, DFT_ARCHITECTURE.md sec.14.3). Hardware zeroizes the block on every
+//     scan_mode_i EDGE, rising (entry) AND falling (exit): wipe_w, one cycle, clears key_q,
+//     key_seen_q (so key_valid drops), msg_q, ctr_op_q, the AES core (s_q, rk_q, rcon_q, round_q,
+//     state_q), the SHA core (w_q, a_q..h_q, hin_q, t_q, state_q) and, through the register bank's
+//     hardware-write port, DOUT0-3, DIGEST0-7 and IV0-3. It is a ONE-TIME clear, not a reset held
+//     during scan, so the block stays scan-testable. NOT cleared: CTRL (mode / IRQ enable /
+//     SHA_CONT -- not secret), the sticky done flag, key_write_rejected, and the three edge-detect
+//     flops. Exit also wipes so that nothing scan-loaded can become a live key or live data.
+//     TIMING. scan_mode_i is quasi-static and asynchronous to this clock (it is a TAP or pin
+//     level), so it passes a 2-FF synchroniser (scan_s1_q, scan_s2_q) and a third flop
+//     (scan_prev_q) makes the edge: wipe_w = scan_s2_q ^ scan_prev_q, which is high in the THIRD
+//     clk cycle after scan_mode_i changes (edges 1, 2 sample it, edge 3 clears). On entry clk IS
+//     the scan clock (dft_clk_mux selects it with scan_mode_i). The synchroniser flops carry NO
+//     reset on purpose: they must track the input through reset, so a reset (including the tester's
+//     scan reset) neither fabricates nor hides an edge; a reset shorter than 3 cycles can at worst
+//     produce a spurious wipe, which is the safe direction. The wipe asserts for any scan_mode_i
+//     change, including a glitch longer than a clock period.
+//     WHAT THIS DOES NOT DO -- ATE CONTRACT. The clear is functional D logic. Scan insertion puts
+//     its scan mux AFTER that logic, so a shift edge (scan_en = 1) overrides the clear. The wipe
+//     therefore takes effect only if edges 1..3 after scan_mode_i rises have scan_en = 0 (capture
+//     type cycles), and scan_out must not be sampled before edge 3. A tester that shifts earlier,
+//     or a malicious one, reads the residue: this is hardware zeroize against a COOPERATING tester
+//     and against software, NOT secure-scan against an adversarial one. Closing that needs the
+//     wipe to be asynchronous (rejected here: the repo's DFT check requires every async reset cone
+//     to end at a pin or a scan-mode mux, never a flop output) or scan_en to be withheld from the
+//     chains until a wipe-done handshake (TAP / soc_top change; DFT_ARCHITECTURE.md sec.14.3).
+//     While wipe_w is high a start is turned into the hang-free illegal path, an in-flight
+//     operation is aborted to done (no data), and KEY / DIN writes are dropped (a KEY write latches
+//     key_write_rejected). Any other debug path that can observe flop state is still key access.
 //
 // BYTE ORDER. FIPS-197 / FIPS 180-4 big-endian, consistently. For any 128-bit block B[0..15],
 // word 0 carries B0 in bits [31:24]: DIN0[31:24] = B0 ... DIN3[7:0] = B15, and the same for KEY,
@@ -466,6 +492,21 @@ module crypto_accel
 
     assign key_valid_w = &key_seen_q;
 
+    // -------------------------------------------------------------------------
+    // Scan-mode edge detect -> wipe_w (bead j41m.6). See the SCAN WIPE note in the header.
+    // 2-FF synchroniser + one history flop, deliberately UNRESET (they track scan_mode_i through
+    // reset so that a reset can neither create nor hide an edge).
+    // -------------------------------------------------------------------------
+    logic scan_s1_q, scan_s2_q, scan_prev_q;
+    always_ff @(posedge clk) begin
+        scan_s1_q   <= scan_mode_i;
+        scan_s2_q   <= scan_s1_q;
+        scan_prev_q <= scan_s2_q;
+    end
+
+    logic wipe_w;   // one cycle per scan_mode_i edge (entry and exit); clears all key/data state
+    assign wipe_w = scan_s2_q ^ scan_prev_q;
+
     logic op_legal_w;
     assign op_legal_w = (((mode_w == 2'd0) || (mode_w == 2'd1)) && EN_AES && key_valid_w)
                       || ((mode_w == 2'd2) && EN_SHA);   // mode 3 is always illegal
@@ -474,15 +515,16 @@ module crypto_accel
     /* verilator lint_off UNUSEDSIGNAL */
     logic sha_start_w;   // unused when EN_SHA = 0
     /* verilator lint_on  UNUSEDSIGNAL */
-    assign start_accept_w = start_pulse_w && (state_q == C_IDLE) && op_legal_w;
+    assign start_accept_w = start_pulse_w && (state_q == C_IDLE) && op_legal_w && !wipe_w;
     assign aes_start_w    = start_accept_w & ~mode_w[1];
     assign sha_start_w    = start_accept_w & mode_w[1];
 
     always_comb begin
         state_d = state_q;
         unique case (state_q)
-            C_IDLE:  if (start_pulse_w) state_d = op_legal_w ? C_BUSY : C_DONE;
-            C_BUSY:  if (aes_done_set_w | sha_done_set_w) state_d = C_IDLE;
+            C_IDLE:  if (start_pulse_w) state_d = (op_legal_w && !wipe_w) ? C_BUSY : C_DONE;
+            C_BUSY:  if (wipe_w)                               state_d = C_DONE;   // aborted: no data
+                     else if (aes_done_set_w | sha_done_set_w) state_d = C_IDLE;
             C_DONE:  state_d = C_IDLE;
             default: state_d = C_IDLE;
         endcase
@@ -499,7 +541,7 @@ module crypto_accel
     // corrupted by a CTRL write in flight.
     logic ctr_op_q;
     always_ff @(posedge clk) begin
-        if (!rst_n)           ctr_op_q <= 1'b0;
+        if (!rst_n || wipe_w) ctr_op_q <= 1'b0;
         else if (aes_start_w) ctr_op_q <= ctr_mode_w;
     end
 
@@ -511,7 +553,7 @@ module crypto_accel
     assign done_d         = (done_q & ~clr_w[0]) | done_set_any_w;
 
     logic key_rej_q, key_rej_d;
-    assign key_rej_d = (key_rej_q & ~clr_w[1] & ~(|key_accept_w)) | ((|key_wr_w) & busy_q);
+    assign key_rej_d = (key_rej_q & ~clr_w[1] & ~(|key_accept_w)) | ((|key_wr_w) & (busy_q | wipe_w));
 
     always_ff @(posedge clk) begin
         if (!rst_n) begin
@@ -533,14 +575,14 @@ module crypto_accel
         for (int unsigned i = 0; i < 4; i++) begin
             // A zero strobe selects no byte lane: no write attempted, so neither accepted nor rejected.
             key_wr_w[i]     = wr_acc_w & is_key_addr_w[i] & (|pstrb);
-            key_accept_w[i] = key_wr_w[i] & ~busy_q;
+            key_accept_w[i] = key_wr_w[i] & ~busy_q & ~wipe_w;
         end
     end
 
-    assign key_valid_d_w = &(key_seen_q | key_accept_w);
+    assign key_valid_d_w = ~wipe_w & (&(key_seen_q | key_accept_w));
 
     always_ff @(posedge clk) begin
-        if (!rst_n) begin
+        if (!rst_n || wipe_w) begin
             key_q       <= 128'h0;
             key_seen_q  <= 4'h0;
         end else begin
@@ -559,10 +601,10 @@ module crypto_accel
     // =========================================================================
     logic [MSG_W-1:0] msg_q;
     logic             din_push_w;
-    assign din_push_w = wr_acc_w & is_din_addr_w & (pstrb == 4'hF) & ~busy_q;
+    assign din_push_w = wr_acc_w & is_din_addr_w & (pstrb == 4'hF) & ~busy_q & ~wipe_w;
 
     always_ff @(posedge clk) begin
-        if (!rst_n)          msg_q <= '0;
+        if (!rst_n || wipe_w) msg_q <= '0;
         else if (din_push_w) msg_q <= {msg_q[MSG_W-33:0], pwdata};
     end
 
@@ -600,6 +642,7 @@ module crypto_accel
             .rst_n      (rst_n),
             .start_i    (aes_start_w),
             .scan_mode_i(scan_mode_i),
+            .wipe_i     (wipe_w),
             .key_i      (key_eff_w),
             .block_i    (aes_block_w),
             .busy_o     (aes_busy_w),
@@ -616,6 +659,7 @@ module crypto_accel
         sha256_core u_sha (
             .clk        (clk),
             .rst_n      (rst_n),
+            .wipe_i     (wipe_w),
             .start_i    (sha_start_w),
             .block_i    (msg_q),
             .h_i        (sha_h_i_w),
@@ -664,6 +708,23 @@ module crypto_accel
         for (int unsigned i = 0; i < 8; i++) begin
             hw_wen_i  [REG_DIGEST0 + i] = sha_done_set_w;
             hw_wdata_i[REG_DIGEST0 + i] = sha_h_o_w[32*(7-i) +: 32];
+        end
+
+        // SCAN WIPE (bead j41m.6): the bank words that hold key- or message-derived results are
+        // cleared through the hardware-write port; this block comes last so it overrides every
+        // completion / increment write above in the same cycle. IV is not secret but is counter
+        // state that scan must not leave live either.
+        if (wipe_w) begin
+            for (int unsigned i = 0; i < 4; i++) begin
+                hw_wen_i  [REG_DOUT0 + i] = 1'b1;
+                hw_wdata_i[REG_DOUT0 + i] = 32'h0;
+                hw_wen_i  [REG_IV0 + i]   = 1'b1;
+                hw_wdata_i[REG_IV0 + i]   = 32'h0;
+            end
+            for (int unsigned i = 0; i < 8; i++) begin
+                hw_wen_i  [REG_DIGEST0 + i] = 1'b1;
+                hw_wdata_i[REG_DIGEST0 + i] = 32'h0;
+            end
         end
     end
 
