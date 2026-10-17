@@ -532,52 +532,106 @@ add_pst_state COMPUTE_LOW_POWER -pst system_pst \
 
 ## Phase 5: Full SoC Integration
 
+The Phase 5 SoC (`soc_top`) has **four** power domains on one nominal voltage, not the seven
+sketched when this chapter was first written. The authoritative description is
+`pnr/constraints/phase5_soc.upf` (IEEE 1801-2015 / UPF 3.0); this chapter summarises it and records
+what the RTL does and does not implement. The file was rewritten on 2026-10-17 (bead `h3lm`) after an
+audit found it had drifted from the RTL. Its purpose is input for UPF-aware test tools.
+
 ### Power Architecture
 
-**Domains**: 7+ domains (core, caches, GPU, peripherals, memory controller, debug, always-on)
-**Hierarchical power management**: Top-level controller manages all domains
-**Complex PST**: Multiple system modes (active, compute, idle, sleep, deep sleep)
+| Domain | Elements | Primary supply | Notes |
+| :----- | :------- | :------------- | :---- |
+| `PD_CPU` | `u_cpu` (hard macro, incl. L1 caches) | `SS_CPU` (`VDD_CPU`, switchable) | gated by clock gate + reset + clamp |
+| `PD_GPU` | `u_gpu` | `SS_GPU` (`VDD_GPU`, switchable) | same |
+| `PD_SRAM` | `u_sram` | `SS_AON` (`VDD`) | always on |
+| `PD_PERIPH` | the top scope and every other instance | `SS_AON` (`VDD`) | always on |
 
-```text
-┌─────────────────────────────────────────────┐
-│         PD_AON (1.8V - always on)           │
-│  - Power Controller                         │
-│  - Clock Controller                         │
-│  - Wake-up Logic                            │
-└─────────────────────────────────────────────┘
+`PD_PERIPH` is `-elements {.}` minus the three carved-out instances, and its **membership is
+explicit**: the UPF header carries a `# upf-check aon <instance>` roster of the 32 always-on
+top-level instances with the reason each must stay powered (the CPU-domain synchronisers, both clock
+gates, the CDC bridges, the PMU, the DFT seam, the PLLs, the fabric and the peripherals). The checker
+fails if a top-level instance is added to or removed from `soc_top` without updating the roster.
 
-┌─────────────────────────────────────────────┐
-│         PD_CORE (0.9V - switchable)         │
-└─────────────────────────────────────────────┘
+### What is modelled, and what is deliberately not
 
-┌─────────────────────────────────────────────┐
-│         PD_GPU (0.7-0.9V - switchable)      │
-└─────────────────────────────────────────────┘
+- **Power switches: none.** `pmu.sv` emits no switch control (`cpu_pg_ctrl` / `gpu_pg_ctrl` do not
+  exist) and no `soc_top` net could drive one. The old `create_power_switch` commands controlled
+  ports that were never in the RTL and used options no UPF parser accepts. `VDD_CPU` / `VDD_GPU` are
+  therefore modelled as externally driven supply ports with ON / OFF port states, so each supply net
+  has a source. The UPF header carries the shape of the switch to add once RTL control exists.
+- **Isolation: exactly the signals `soc_top` clamps**, not every output. `ISO_CPU` (6 signals,
+  control `pmu_cpu_iso_en_sync`) and `ISO_GPU` (8 signals, control `pmu_gpu_iso_en`), clamp value 0,
+  sense high, `-location parent`, supply `SS_AON`. The set is checked for equality with the RTL in
+  both SRAM arms. AXI address/data/control buses stay unclamped because each is qualified by a clamped
+  valid and is don't-care once valid is 0. Every other output of `u_cpu` / `u_gpu` is classified in the
+  UPF (`payload`, `slave_response`, `observability`) so a new output cannot escape review.
+- **Retention: none.** The old header claim that state is "rebuilt from SRAM on wakeup" was never
+  true. `pmu.sv` emits `ret_save` / `ret_restore` in order but `soc_top` leaves them unconnected.
+  See `docs/POWER_DOMAIN_EVALUATION.md` section 3 for what survives a PMU off/on cycle.
+- **Not expressed** because the RTL or library offers nothing to bind: macro PG-pin connections (done
+  by `pnr/*/pdn*.tcl`), level shifters (single voltage), isolation and retention cell mapping (neither
+  ASAP7 nor Sky130 ships an isolation cell).
 
-┌─────────────────────────────────────────────┐
-│       PD_PERIPH (1.8V - switchable)         │
-│  - UART, SPI, Timer, DMA                    │
-└─────────────────────────────────────────────┘
+### Power states
 
-┌─────────────────────────────────────────────┐
-│         PD_MEM_CTRL (0.9V - always on)      │
-│  - Memory Controller                        │
-└─────────────────────────────────────────────┘
+Supply sets carry ON (and OFF for the two switchable rails). The system group `SOC_PST` has five
+states whose names and encodings come from `rtl/soc/pmu.sv` (`CTRL[1:0]`, `u_pmu/pmu_mode_req`):
 
-┌─────────────────────────────────────────────┐
-│         PD_DEBUG (1.8V - always on)         │
-└─────────────────────────────────────────────┘
-```
+| State | `pmu_mode_req` | `SS_CPU` | `SS_GPU` | `scan_mode_i` |
+| :---- | :------------- | :------- | :------- | :------------ |
+| `NORMAL` | `2'b00` | ON | ON | 0 |
+| `CPU_OFF` | `2'b01` | OFF | ON | 0 |
+| `GPU_OFF` | `2'b10` | ON | OFF | 0 |
+| `IDLE` | `2'b11` | OFF | OFF | 0 |
+| `SCAN` | not constrained | ON | ON | 1 |
 
-### System Power Modes (Phase 5)
+`pmu_mode_req` is the *requested* mode; the PMU takes four single-cycle actions per direction, and
+those transient cycles belong to no named state.
 
-| Mode | Core | GPU | Caches | Periph | Description |
-| :--: | :--: | :-: | :----: | :----: | :---------: |
-| ACTIVE | ON | ON | ON | ON | Full system active |
-| COMPUTE | IDLE | ON | ON | IDLE | GPU compute workload |
-| IDLE | IDLE | OFF | ON | IDLE | CPU idle, quick wake |
-| SLEEP | RET | OFF | RET | OFF | Low power, retain state |
-| DEEP_SLEEP | OFF | OFF | OFF | OFF | Ultra-low power, lose state |
+**`SCAN` versus the RTL (confirmed in `soc_top.sv` and `dft_ctrl_ports.sv`):**
+
+| Aspect under `scan_mode_i = 1` | RTL behaviour | Matches "all ON"? |
+| :----------------------------- | :------------ | :---------------- |
+| Clock gates | forced open: `test_en_o = scan_mode_i`, `rv32i_clock_gate` latches `en \| test_en` | yes (checked) |
+| Domain resets | forced to the scan reset (`dft_rst_mux`, `cdc_reset_sync` output muxes) | yes |
+| PMU | **not overridden**: mode register and FSM are ordinary scan-chain flops | no |
+| ISO clamps | **not qualified by `scan_mode_i`**; follow `pmu_*_iso_en` | no |
+
+So under scan a clamp can be active, depending on the PMU state shifted in. This is a real mismatch
+with the intent of the `SCAN` state. It is documented, not changed (follow-up bead).
+
+### Known gaps and follow-ups
+
+1. **Isolation-versus-reset ordering has no handshake.** The PMU spaces its actions one `core_clk`
+   cycle apart (down: save, isolate, gate, reset; up: reset release, ungate, restore, de-isolate).
+   The CPU clamp control passes a 2-flop synchroniser into `cpu_core_clk` while the reset reaches
+   `u_cpu` through a `cdc_reset_sync` with asynchronous assertion. "Isolate before reset asserts"
+   holds only because two `cpu_core_clk` edges (1.56 ns at 1282 MHz) are shorter than two `core_clk`
+   cycles (3.5 ns at 571 MHz). A slower CPU clock or a deeper synchroniser would reorder them.
+2. **Slave-side responses are not isolated** (`u_gpu` AXI-Lite `rvalid`, `awready`, ... and `u_cpu` debug
+   APB `pready` ...). With a really removed supply they would drive X into the always-on ring.
+3. **Scan does not force the clamps off** (table above).
+4. `m_axil_if_rready` was the one GPU-to-fabric handshake the RTL did not clamp; clamped as part of `h3lm`.
+
+### Checking
+
+`python3 tools/verif/check_upf.py` (stdlib only, CI gate in `qa-checks.yml`) verifies that every
+`-elements` path and control net resolves in the elaborated `soc_top`, that the UPF clamp set equals
+the RTL clamp set, that domain membership is explicit and disjoint, and that state names, encodings
+and per-mode rail states equal `pmu.sv`. It reads `pnr/constraints/phase5_soc_rtl_facts.json`, which
+`check_upf.py gen-facts` generates from `rtl/filelist/soc_top.f` with pyslang for both SRAM arms (ASAP7
+and Sky130); `gen-facts --check` is the drift gate. A passing run proves **references and set
+equalities, not tool acceptance and not electrical sufficiency of a clamp.**
+
+### Tool compatibility
+
+Measured 2026-10-17 on OpenROAD 26Q2: `read_upf -file` accepts only a small subset (it defines
+`create_power_domain`, `set_isolation`, `create_power_switch`, `define_power_switch_cell` and
+`map_power_switch`; there is no `upf_version`, `create_supply_*`, `add_power_state`, ...). It fails on
+the first command of both the old file (`create_supply_port`) and the new one (`upf_version`). The
+file targets full UPF 3.0, so this is a tool-subset limitation and no gate depends on it. No
+UPF-aware simulator or linter is available in the open flow.
 
 ## Power-Aware Verification
 

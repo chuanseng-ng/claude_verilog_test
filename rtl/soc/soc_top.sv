@@ -955,7 +955,7 @@ module soc_top
 
     logic gpu_axi_awvalid_raw, gpu_axi_wvalid_raw, gpu_axi_arvalid_raw;
     logic gpu_axi_bready_raw, gpu_axi_rready_raw;
-    logic gpu_gif_arvalid_raw;
+    logic gpu_gif_arvalid_raw, gpu_gif_rready_raw;
     logic gpu_irq_raw;
 
     // =========================================================================
@@ -1514,7 +1514,7 @@ module soc_top
         .m_axil_if_rdata            (gif_axil_rdata),
         .m_axil_if_rresp            (gif_axil_rresp),
         .m_axil_if_rvalid           (gif_axil_rvalid),
-        .m_axil_if_rready           (gif_axil_rready),
+        .m_axil_if_rready           (gpu_gif_rready_raw),
         // AXI4 data master → crossbar M2 (raw; clamped below)
         .m_axi_araddr               (xbar_m_araddr  [2]),
         .m_axi_arvalid              (gpu_axi_arvalid_raw),
@@ -1548,7 +1548,7 @@ module soc_top
     assign xbar_m_arburst [2] = AXI_BURST_INCR;
 
     // ISO_GPU functional-isolation clamp (`-location parent`, clamp_value 0):
-    // forces the GPU->fabric handshake + IRQ to 0 while pmu_gpu_iso_en is
+    // forces the GPU->fabric handshake (incl. m_axil_if_rready, h3lm) + IRQ to 0 while pmu_gpu_iso_en is
     // asserted. See clamp-scope note above u_gpu.
     assign xbar_m_awvalid [2] = pmu_gpu_iso_en ? 1'b0 : gpu_axi_awvalid_raw;
     assign xbar_m_wvalid  [2] = pmu_gpu_iso_en ? 1'b0 : gpu_axi_wvalid_raw;
@@ -1556,6 +1556,10 @@ module soc_top
     assign xbar_m_bready  [2] = pmu_gpu_iso_en ? 1'b0 : gpu_axi_bready_raw;
     assign xbar_m_rready  [2] = pmu_gpu_iso_en ? 1'b0 : gpu_axi_rready_raw;
     assign gif_axil_arvalid   = pmu_gpu_iso_en ? 1'b0 : gpu_gif_arvalid_raw;
+    // bead h3lm: m_axil_if_rready is the ifetch R-channel accept - the one GPU->fabric
+    // handshake output the original ISO_GPU clamp set missed (found by the UPF audit,
+    // tools/verif/check_upf.py). Clamped like the other four ready/valid outputs.
+    assign gif_axil_rready    = pmu_gpu_iso_en ? 1'b0 : gpu_gif_rready_raw;
     assign gpu_irq_o          = pmu_gpu_iso_en ? 1'b0 : gpu_irq_raw;
 
     // =========================================================================
