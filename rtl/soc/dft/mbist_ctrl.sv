@@ -136,40 +136,46 @@ module mbist_ctrl #(
 
     // First and last microcode address of each algorithm.
     function automatic logic [4:0] alg_start(input logic [2:0] a);
+        logic [4:0] r;
         unique case (a)
-            3'd0:    return 5'd0;
-            3'd1:    return 5'd6;
-            3'd2:    return 5'd0;
-            3'd3:    return 5'd9;
-            3'd4:    return 5'd19;
-            3'd5:    return 5'd0;
-            default: return 5'd0;
+            3'd0:    r = 5'd0;
+            3'd1:    r = 5'd6;
+            3'd2:    r = 5'd0;
+            3'd3:    r = 5'd9;
+            3'd4:    r = 5'd19;
+            3'd5:    r = 5'd0;
+            default: r = 5'd0;
         endcase
+        return r;
     endfunction
 
     function automatic logic [4:0] alg_end(input logic [2:0] a);
+        logic [4:0] r;
         unique case (a)
-            3'd0:    return 5'd5;
-            3'd1:    return 5'd8;
-            3'd2:    return 5'd8;
-            3'd3:    return 5'd18;
-            3'd4:    return 5'd21;
-            3'd5:    return 5'd21;
-            default: return 5'd0;
+            3'd0:    r = 5'd5;
+            3'd1:    r = 5'd8;
+            3'd2:    r = 5'd8;
+            3'd3:    r = 5'd18;
+            3'd4:    r = 5'd21;
+            3'd5:    r = 5'd21;
+            default: r = 5'd0;
         endcase
+        return r;
     endfunction
 
     // Background patterns (word-oriented memory: log2(32) + 1 = 6).
     function automatic logic [31:0] bg_pat(input logic [2:0] b);
+        logic [31:0] r;
         unique case (b)
-            3'd0:    return 32'h0000_0000;
-            3'd1:    return 32'h5555_5555;
-            3'd2:    return 32'h3333_3333;
-            3'd3:    return 32'h0F0F_0F0F;
-            3'd4:    return 32'h00FF_00FF;
-            3'd5:    return 32'h0000_FFFF;
-            default: return 32'h0000_0000;
+            3'd0:    r = 32'h0000_0000;
+            3'd1:    r = 32'h5555_5555;
+            3'd2:    r = 32'h3333_3333;
+            3'd3:    r = 32'h0F0F_0F0F;
+            3'd4:    r = 32'h00FF_00FF;
+            3'd5:    r = 32'h0000_FFFF;
+            default: r = 32'h0000_0000;
         endcase
+        return r;
     endfunction
 
     function automatic logic [31:0] expand4(input logic [3:0] m);
