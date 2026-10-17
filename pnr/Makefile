@@ -925,7 +925,7 @@ DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tc
 	--tap-allowed-nets u_dft_ctrl.mbist_ctl_o --tap-allowed-nets u_dft_ctrl.mbist_wr_o \
 	--tap-allowed-nets u_dft_ctrl.mbist_rst_tck_n_o \
 	--expect-reset-sync u_mbist.u_xing_core.u_rd_rst=u_mbist.u_xing_core.u_fifo@any \
-	--tck-prefix u_mbist --expect-tck-flops 100 \
+	--tck-prefix u_mbist --expect-tck-flops 140 \
 	--tck-sink u_mbist.u_xing_core.u_fifo.u_wr_ptr_to_rd --tck-sink u_mbist.u_xing_core.u_hold
 # Bead j41m.14/j41m.10: the MBIST control-word FIFO (write side, TCK) and the status synchronisers (TCK side) are
 # TCK-domain flops identified by CLOCK under u_mbist (--tck-prefix). The three TAP outputs that feed the FIFO write
