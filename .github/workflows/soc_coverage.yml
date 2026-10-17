@@ -52,6 +52,7 @@ on:
       - 'tools/verif/coverage_waivers.txt'
       - 'tools/verif/coverage_toggle_ratchet.txt'
       - 'tb/tests/test_coverage_report.py'
+      - 'tb/tests/test_coverage_waiver_anchors.py'
 
 concurrency:
   group: soc-coverage-${{ github.ref }}
@@ -185,7 +186,7 @@ jobs:
       # Cheap, runs first: the report script's own tests.  This is what the pull_request
       # trigger is really validating before the long run starts.
       - name: Unit-test the coverage report script
-        run: python3 -m pytest tb/tests/test_coverage_report.py -q
+        run: python3 -m pytest tb/tests/test_coverage_report.py tb/tests/test_coverage_waiver_anchors.py -q
 
       # pipefail so tee cannot mask make's exit status.  No `|| true`: a failing regression
       # fails this job (the Makefile target also refuses to render a report from no data).

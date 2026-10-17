@@ -45,6 +45,32 @@ jobs:
       - name: Struct-member select gate (no select on a struct member in rtl/)
         run: python3 tools/verif/check_struct_member_select.py -v
 
+      # Bead xlc4. BLOCKING: every content-anchored line waiver in tools/verif/coverage_waivers.txt must
+      # still bind to its source line. An RTL edit that touches a waived line (or adds an identical
+      # one) goes stale here, on the PR, instead of turning the nightly soc_coverage gate red. Reads
+      # the waiver file and rtl/ only (no simulation, no coverage data); stdlib only. Exit 1 = stale,
+      # exit 2 = ambiguous or malformed. tb/tests/test_coverage_waiver_anchors.py repeats it under pytest.
+      - name: Coverage waiver anchors (no stale line waiver)
+        run: python3 tools/verif/coverage_report.py --check-waivers --waivers tools/verif/coverage_waivers.txt
+
+      # Bead 1as3. BLOCKING: the committed rtl/filelist/*.f are GENERATED from the Makefile source
+      # lists (tb/cocotb/soc/Makefile PLL_SOURCES, pnr/Makefile CPU_SV_FILES / GPU_SV_FILES). Editing
+      # one of those lists without regenerating (python3 tools/verif/gen_filelist.py) leaves an
+      # external tool compiling a stale file set - and sv2v-based tools silently blackbox a module
+      # missing from a list. Stdlib only. No `continue-on-error`, no `|| true`: this is a gate.
+      - name: RTL filelist drift gate (rtl/filelist/*.f match their Makefile sources)
+        run: python3 tools/verif/gen_filelist.py --check
+
+      # Bead h3lm. BLOCKING: pnr/constraints/phase5_soc.upf must reference things that exist in soc_top.
+      # The previous UPF named isolation nets and switch controls that were never in the RTL and nothing
+      # noticed for months. tools/verif/check_upf.py checks (stdlib only, no EDA tool) that every
+      # -elements path and control net resolves, that the UPF clamp set EQUALS the clamps soc_top
+      # implements (both arms), that domain membership is explicit, and that the power-state names and
+      # encodings equal rtl/soc/pmu.sv. It reads the committed pnr/constraints/phase5_soc_rtl_facts.json;
+      # the drift step below proves that file still matches the RTL. No `continue-on-error`: a gate.
+      - name: UPF structural gate (phase5_soc.upf vs soc_top and pmu.sv)
+        run: python3 tools/verif/check_upf.py -v
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -55,6 +81,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      # Bead h3lm. BLOCKING drift gate for the facts file above: re-elaborates rtl/filelist/soc_top.f
+      # with pyslang (both SRAM arms) and fails if the committed JSON differs. Fix: run
+      # `python3 tools/verif/check_upf.py gen-facts`, review the diff, commit.
+      - name: UPF facts drift gate (facts file matches a fresh elaboration of the RTL)
+        run: python tools/verif/check_upf.py gen-facts --check
 
       - name: Run ruff format check
         run: |
