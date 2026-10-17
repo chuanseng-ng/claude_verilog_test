@@ -62,6 +62,8 @@ class BootloaderError(RuntimeError):
 
 
 class Link(Protocol):
+    """The serial-port subset the protocol layer needs (pyserial ``Serial`` satisfies it)."""
+
     def write(self, data: bytes, /) -> object: ...
     def read(self, size: int, /) -> bytes: ...
     def reset_input_buffer(self) -> None: ...
@@ -82,6 +84,8 @@ def build_frame(cmd: int, payload: bytes = b"") -> bytes:
 
 @dataclass(frozen=True)
 class Response:
+    """One decoded target reply: ACK with payload, or NAK with an error code."""
+
     ok: bool
     payload: bytes = b""  # ACK payload
     error: int = 0  # NAK error code
@@ -105,6 +109,8 @@ def read_response(link: Link) -> Response | None:
 
 @dataclass(frozen=True)
 class Info:
+    """Contents of the INFO reply."""
+
     version: int
     max_data: int
     load_lo: int
@@ -112,6 +118,7 @@ class Info:
 
 
 def parse_info(payload: bytes) -> Info:
+    """Decode the 11-byte INFO payload."""
     if len(payload) != 11:
         raise BootloaderError(f"INFO payload is {len(payload)} bytes, expected 11")
     ver, max_data, lo, hi = struct.unpack("<BHII", payload)
@@ -160,15 +167,19 @@ class Bootloader:
         raise BootloaderError(f"command 0x{cmd:02x} failed after {self.retries + 1} tries: {last}")
 
     def info(self) -> Info:
+        """Query protocol version, block size and the load window."""
         return parse_info(self.transact(CMD_INFO))
 
     def write(self, addr: int, data: bytes) -> None:
+        """Store ``data`` at ``addr`` in target SRAM (at most the INFO block size)."""
         self.transact(CMD_WRITE, struct.pack("<I", addr) + data)
 
     def remote_crc(self, addr: int, nbytes: int) -> int:
+        """CRC32 of target SRAM as the target reads it back (after a D$ flush)."""
         return struct.unpack("<I", self.transact(CMD_CRC, struct.pack("<II", addr, nbytes)))[0]
 
     def jump(self, entry: int) -> None:
+        """Start the image at ``entry`` (the target flushes the D$ and runs FENCE.I first)."""
         self.transact(CMD_JUMP, struct.pack("<I", entry))
 
 
@@ -177,11 +188,14 @@ class Bootloader:
 
 @dataclass(frozen=True)
 class Segment:
+    """A contiguous block of image bytes and its target address."""
+
     addr: int
     data: bytes
 
 
 def load_bin(path: Path, addr: int) -> list[Segment]:
+    """A flat binary is one segment at ``addr``."""
     return [Segment(addr, path.read_bytes())]
 
 
@@ -204,11 +218,13 @@ def load_elf(data: bytes) -> tuple[list[Segment], int]:
 
 
 def chunks(seg: Segment, size: int) -> Iterator[Segment]:
+    """Split a segment into WRITE-sized pieces."""
     for off in range(0, len(seg.data), size):
         yield Segment(seg.addr + off, seg.data[off : off + size])
 
 
 def check_fits(segs: Iterable[Segment], info: Info) -> None:
+    """Refuse images that fall outside the target load window before sending anything."""
     for s in segs:
         if s.addr < info.load_lo or s.addr + len(s.data) > info.load_hi:
             raise BootloaderError(
@@ -254,11 +270,13 @@ def load_image(
 
 
 def _int(s: str) -> int:
+    """argparse type: decimal or 0x-prefixed integer."""
     return int(s, 0)
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    """Command-line entry point; returns the process exit status."""
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n", maxsplit=1)[0])
     ap.add_argument("port", help="serial port, e.g. /dev/ttyUSB1 or COM5")
     ap.add_argument("image", nargs="?", type=Path, help="ELF (detected by magic) or flat binary")
     ap.add_argument("--baud", type=int, default=115200)
@@ -281,7 +299,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     try:
-        import serial  # type: ignore[import-not-found]  # pyserial
+        import serial  # type: ignore[import-not-found]  # pylint: disable=import-outside-toplevel
     except ImportError:
         print("pyserial is required: pip install pyserial", file=sys.stderr)
         return 2

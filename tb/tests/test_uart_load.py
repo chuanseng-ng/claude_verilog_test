@@ -6,6 +6,7 @@ tb/cocotb/soc/test_uart_boot.py; here we pin the framing, the CRC convention (in
 fixed residue the C code compares against) and the protocol constants shared with
 sw/bootloader/uart_boot_proto.h.
 """
+# pylint: disable=missing-function-docstring,missing-class-docstring,invalid-name
 
 import re
 import struct
