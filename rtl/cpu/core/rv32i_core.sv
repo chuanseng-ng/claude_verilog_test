@@ -19,6 +19,10 @@ module rv32i_core #(
     input  logic        clk,
     input  logic        rst_n,
 
+    // DFT (bead j41m.4): test-mode force for the cache SRAM clock gates (ASAP7 arm
+    // only). Quasi-static; tie 1'b0 when not testing. Forwarded to both caches.
+    input  logic        test_en_i,
+
     // ── AXI4 master (unified cache → memory, burst-capable from Phase 5 M2) ──
     output logic [31:0] axi_araddr,
     output logic [axi_pkg::AXI_LEN_WIDTH-1:0]  axi_arlen,
@@ -833,6 +837,7 @@ module rv32i_core #(
     rv32i_icache u_icache (
         .clk              (clk),
         .rst_n            (rst_n),
+        .test_en_i        (test_en_i),
         .ic_addr_i        (ic_addr),
         .ic_valid_i       (ic_valid),
         .ic_rdata_o       (ic_rdata),
@@ -858,6 +863,7 @@ module rv32i_core #(
     rv32i_dcache u_dcache (
         .clk              (clk),
         .rst_n            (rst_n),
+        .test_en_i        (test_en_i),
         .dc_addr_i        (dc_addr),
         .dc_valid_i       (dc_valid),
         .dc_we_i          (dc_we),

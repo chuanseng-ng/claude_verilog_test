@@ -80,6 +80,12 @@ module rv32i_cpu_top #(
 
     // Interrupt inputs
     input  logic        ext_irq_i,
-    input  logic        timer_irq_i
+    input  logic        timer_irq_i,
+
+    // DFT test boundary (bead j41m.4, DFT_ARCHITECTURE.md 14.10)
+    input  logic        scan_mode_i,
+    input  logic        scan_en_i,
+    input  logic [1:0]  scan_in_i,
+    output logic [1:0]  scan_out_o
 );
 endmodule

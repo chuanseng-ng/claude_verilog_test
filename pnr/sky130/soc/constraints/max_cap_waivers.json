@@ -1,33 +1,4 @@
 {
     "version": 1,
-    "waivers": [
-        {
-            "id": "flat-111540-max-ss-run-2026-10-11",
-            "driver": {
-                "instance": "_111540_",
-                "pin": "X"
-            },
-            "run_id": "RUN_2026-10-11_08-39-41",
-            "corners": [
-                "max_ss_100C_1v60"
-            ],
-            "max_cap_pf": 0.3294,
-            "bead": "claude_verilog_test-e45j",
-            "justification": "Owner decision 2026-10-11 ('waive 2, fix 1'): flat SoC net driven by _111540_/X, no macro load, max_ss 0.3278 pF against the 0.3250 pF limit (+0.86 percent), measured in RUN_2026-10-11_08-39-41 (the first SoC run on the sv2v-rebuilt CPU macro, bead dud4). Waived by driver name because it is under 1 percent over the limit at one corner only. The name is synthesis-generated and the waiver is pinned to RUN_2026-10-11_08-39-41: it goes STALE on any re-run and must then be re-evaluated, not renewed. The ceiling is 0.5 percent above the measured value, so a regression on this net fails."
-        },
-        {
-            "id": "flat-112095-max-ss-run-2026-10-11",
-            "driver": {
-                "instance": "_112095_",
-                "pin": "X"
-            },
-            "run_id": "RUN_2026-10-11_08-39-41",
-            "corners": [
-                "max_ss_100C_1v60"
-            ],
-            "max_cap_pf": 0.3362,
-            "bead": "claude_verilog_test-e45j",
-            "justification": "Owner decision 2026-10-11 ('waive 2, fix 1'): flat SoC net driven by _112095_/X, no macro load, max_ss 0.3345 pF against the 0.3342 pF limit (+0.09 percent), measured in RUN_2026-10-11_08-39-41 (the first SoC run on the sv2v-rebuilt CPU macro, bead dud4). Waived by driver name because it is under 1 percent over the limit at one corner only. The name is synthesis-generated and the waiver is pinned to RUN_2026-10-11_08-39-41: it goes STALE on any re-run and must then be re-evaluated, not renewed. The ceiling is 0.5 percent above the measured value, so a regression on this net fails."
-        }
-    ]
+    "waivers": []
 }

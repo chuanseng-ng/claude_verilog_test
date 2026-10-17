@@ -305,7 +305,10 @@ jobs:
           # 2026-10-13 (bead 3snb, cdc_gray_fifo DEPTH=2): 759 = 762 - 3, same value as soc_coverage.yml. 762 MEASURED by the cocotb
           # soc_all job of PR 276 ('cocotb: 762 passed, 0 failed') = the 730 above + 32 new tests (cdc_gray_fifo 16 behaviours x
           # DEPTH 2 and 4).
-          PASS_FLOOR: '759'
+          # 2026-10-15 (bead j41m.4, DFT CPU-macro scan boundary): 761 = 764 - 3, same value as the other workflow. 764 MEASURED:
+          # soc_all_ci from clean on the branch head, 764 passed / 0 failed / 17 skipped over 72 suite summaries (the 762 above
+          # + 2 new soc_dft_scan tests: test_cpu_macro_scan_boundary and test_cpu_macro_scan_boundary_tap_leg).
+          PASS_FLOOR: '761'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."

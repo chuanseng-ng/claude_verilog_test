@@ -221,7 +221,11 @@
 # verified at the macro level" -- report both facts, do not conflate them.
 ###############################################################################
 #
-# Single clock domain: core_clk = 25.0 ns (40 MHz).
+# Two clock domains since bead j41m.5 (2026-10-16): core_clk (clk_i) and cpu_clk (cpu_clk_i),
+# both 25.0 ns (40 MHz), declared asynchronous (see "Second clock root" and "Clock groups"
+# below). Before that change this was a single-clock file and the whole CPU domain was
+# unclocked, so every sign-off number recorded before RUN_2026-10-16 EXCLUDES the CPU-domain
+# fabric flops and the CPU-macro boundary arcs.
 # CPU is a hard macro with its own characterised timing arcs in the .lib;
 # path analysis through the CPU macro boundary uses those timing arcs.
 #
@@ -241,6 +245,37 @@ create_clock \
 
 set_clock_uncertainty -setup 0.300 [get_clocks core_clk]
 set_clock_uncertainty -hold  0.150 [get_clocks core_clk]
+
+###############################################################################
+# Second clock root: cpu_clk_i (bead claude_verilog_test-j41m.5, DFT_ARCHITECTURE.md
+# section 4 item 20 / 14.5; GH #92-#96 multi-clock epic).
+#
+# cpu_clk_i is a SECOND, independent top-level reference (u_cpu_pll_sub's reference; the
+# CPU clock gate u_cpu_cg is sourced from cpu_core_clk). Until now it had NO create_clock,
+# so every flop behind it -- the CPU macro's clk_i pin (cpu_gated_clk), u_cpu_axi_cdc's
+# CPU-side face, the APB/PLL2 bridge's CPU side, the CPU-domain synchronisers -- was
+# UNCLOCKED: not timed, not balanced by CTS, and every CPU-macro boundary arc was checked
+# against an undefined clock. Defining it newly constrains those flops and gives CTS a second
+# tree to build; that is the point of this change, and it moves sign-off timing.
+#
+# Period: 25.0 ns, the same as core_clk (40 MHz). The Sky130 SoC runs both domains at the
+# one frequency the fabric closes at; the CPU macro itself was hardened at 13.333 ns
+# standalone, so the macro boundary has more headroom here than in its own sign-off. The two
+# clocks are declared asynchronous (section "Clock groups" below), so the equal period does
+# NOT make CDC paths timed as synchronous.
+#
+# Like core_clk, NO create_generated_clock: the PLL stub is a passthrough and the
+# dft_clk_mux / u_cpu_cg are combinational (mux, latch+AND) on the clock path, which STA
+# propagates through. Run-13 lesson (phase5_soc_multiclock.sdc): a generated clock on a
+# passthrough makes CTS build split, unbalanced trees.
+###############################################################################
+create_clock \
+    -name cpu_clk \
+    -period $clock_period \
+    [get_ports cpu_clk_i]
+
+set_clock_uncertainty -setup 0.300 [get_clocks cpu_clk]
+set_clock_uncertainty -hold  0.150 [get_clocks cpu_clk]
 
 ###############################################################################
 # Load and drive modelling
@@ -267,7 +302,7 @@ set _in_timed {}
 set _jtag_in_names {tck_i tms_i tdi_i trst_ni}
 foreach _p [all_inputs] {
     set _n [get_full_name $_p]
-    if {$_n ne "clk_i" && [lsearch -exact $_jtag_in_names $_n] < 0} {
+    if {$_n ne "clk_i" && $_n ne "cpu_clk_i" && [lsearch -exact $_jtag_in_names $_n] < 0} {
         lappend _in_timed $_p
     }
 }
@@ -280,7 +315,7 @@ set_driving_cell \
 set_driving_cell \
     -lib_cell sky130_fd_sc_hd__clkbuf_16 \
     -pin X \
-    [get_ports clk_i]
+    [get_ports {clk_i cpu_clk_i}]
 
 set_load 0.1 [all_outputs]
 
@@ -354,7 +389,6 @@ if {[llength [get_ports -quiet tck_i]] > 0} {
     create_clock -name tck -period $_jtag_period [get_ports tck_i]
     set_clock_uncertainty -setup 0.300 [get_clocks tck]
     set_clock_uncertainty -hold  0.150 [get_clocks tck]
-    set_clock_groups -asynchronous -group [get_clocks tck] -group [get_clocks core_clk]
 
     set _jtag_data_in {}
     foreach _jtag_p {tms_i tdi_i} {
@@ -377,6 +411,39 @@ if {[llength [get_ports -quiet tck_i]] > 0} {
     }
     # trst_ni: asynchronous assert into a cdc_reset_sync, same class as rst_n_i.
     foreach _jtag_x [get_ports -quiet trst_ni] { set_false_path -from $_jtag_x }
+}
+
+###############################################################################
+# Clock groups (bead claude_verilog_test-j41m.5): core_clk, cpu_clk and tck are three
+# mutually asynchronous roots. core_clk and cpu_clk are two independent top-level
+# references (GH #92) bridged ONLY by the declared CDC modules (async_axi_fifo
+# u_cpu_axi_cdc, apb_cdc_bridge u_apb_dbg_cdc / u_apb_pll2_cdc, and the cdc_sync /
+# cdc_reset_sync instances on the PMU/IRQ signals), so ordinary setup/hold between them would
+# only report fabricated violations on those synchroniser paths; tck is declared against both
+# (the TAP's outputs are static controls, DFT_ARCHITECTURE.md 15.5 crossing 2).
+#
+# THE CDC BUDGETS (max-delay on the crossings) ARE NOT IN THIS FILE, ON PURPOSE. The
+# request that opened this bead asked for `set_max_delay -datapath_only` modelled on
+# phase5_soc_multiclock.sdc, but that file's own header records two tool-verified facts
+# (bead k07, OpenSTA 2.6.0 and the OpenROAD-embedded engine, STA-0563): (1) -datapath_only
+# is not an implemented flag of set_max_delay and aborts read_sdc outright; (2) even without
+# it, a set_max_delay across clocks declared set_clock_groups -asynchronous is DROPPED
+# (set_false_path > set_max_delay, regardless of -through/-from/-to specificity). So the
+# budgets live in the separate post-route check SDC, sky130_soc_cdc_check.sdc, which declares
+# both clocks WITHOUT any group/false-path relation and is read only by
+# pnr/scripts/check_cdc_timing_sky130.tcl (`make -C pnr check-cdc-timing-sky130-soc`), the
+# same split phase5_soc_multiclock.sdc / phase5_soc_multiclock_check.sdc use.
+#
+# Guarded per clock so an older netlist/port set still sources.
+###############################################################################
+set _async_groups {}
+foreach _c {core_clk cpu_clk tck} {
+    if {[llength [get_clocks -quiet $_c]] > 0} {
+        lappend _async_groups -group [get_clocks $_c]
+    }
+}
+if {[llength $_async_groups] > 2} {
+    set_clock_groups -name async_domains -asynchronous {*}$_async_groups
 }
 
 # Second-domain reference reset (GH #92/#93). Same class as rst_n_i above: an
@@ -454,6 +521,10 @@ set_multicycle_path 1 -hold  -to   [get_ports {apb_prdata_o apb_pready_o apb_psl
 # Observability outputs — relaxed (sampled externally, not on-chip timing)
 ###############################################################################
 set_false_path -to [get_ports {commit_valid_o commit_pc_o commit_insn_o gpu_irq_o pll_locked_o}]
+# cpu_pll_locked_o is launched by a cpu_clk-domain flop (u_cpu_pll_sub). Once cpu_clk exists
+# it would otherwise be a cpu_clk -> core_clk-referenced output path; same class as
+# pll_locked_o (a level status flag, no timed receiver). Guarded: older port sets lack it.
+foreach _p [get_ports -quiet cpu_pll_locked_o] { set_false_path -to $_p }
 
 ###############################################################################
 # CPU macro hold false-path on I/O boundary
