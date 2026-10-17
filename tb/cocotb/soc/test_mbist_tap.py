@@ -268,6 +268,7 @@ async def t_overflow_is_reported_and_cleared(dut, cfg):
     t = await setup(dut, cfg)
     # the Test-Logic-Reset default word written at power-up occupies a FIFO slot until the destination clock
     # has read it; let it drain first so exactly two slots are free
+    await t.drv.walk([0] * 8)  # the default write itself happens on the first TCK edges after the release
     await ClockCycles(dut.clk_core_i, 40)
     # ... and the write side only SEES the freed slot after the read pointer has crossed back into the TCK
     # domain, which needs TCK edges (tester rule: keep TCK running in Run-Test/Idle)

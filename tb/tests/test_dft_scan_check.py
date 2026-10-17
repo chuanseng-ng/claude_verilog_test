@@ -408,9 +408,10 @@ def test_reset_sync_trst_reaching_an_undeclared_cell_fails(tmp_path: Path) -> No
 # --------------------------------------------------------------------------------------------
 # Mixed-domain block: the MBIST control-word crossing (beads j41m.14 / j41m.10)
 # --------------------------------------------------------------------------------------------
-# A miniature of u_mbist: `mixed` holds a TCK-clocked flop (the FIFO write side), a 2-FF synchroniser and a
-# holding register in the functional domain that may read it, and (optionally) a raw functional flop that
-# BYPASSES the synchroniser. `--tck-prefix u_mb` adopts the TCK flop into the TAP domain by clock;
+# A miniature of u_mbist: `mixed` holds a TCK-clocked flop (the FIFO write side), a 2-FF
+# synchroniser and a holding register in the functional domain that may read it, and
+# (optionally) a raw functional flop that BYPASSES the synchroniser.
+# `--tck-prefix u_mb` adopts the TCK flop into the TAP domain by clock;
 # `--tck-sink` names the only cells that may read it.
 _MIXED = """
 module tapm (input wire tck_i, input wire trst_ni, output wire rst_o);
@@ -430,7 +431,8 @@ module holdm (input wire clk_i, input wire rst_ni, input wire d, output reg q);
     always @(posedge clk_i or negedge rst_ni) if (!rst_ni) q <= 1'b0; else q <= d;
 endmodule
 
-module mixed (input wire tck_i, input wire clk_i, input wire rst_s_ni, input wire rst_f_ni, input wire d,
+module mixed (input wire tck_i, input wire clk_i, input wire rst_s_ni, input wire rst_f_ni,
+              input wire d,
               output wire q_sync, output wire q_hold, output wire q_raw);
     reg w_q;
     always @(posedge WCLK or negedge rst_s_ni) if (!rst_s_ni) w_q <= 1'b0; else w_q <= d;
@@ -503,7 +505,8 @@ def test_tck_block_flop_driving_an_output_port_fails(tmp_path: Path) -> None:
 
 
 def test_tck_block_flop_not_clocked_by_tck_is_checked_as_functional(tmp_path: Path) -> None:
-    # w_q clocked by the (muxed) functional clock is NOT adopted into the TAP domain: it is held to the
+    # w_q clocked by the (muxed) functional clock is NOT adopted into the TAP domain: it is held to
+    # the
     # ordinary rules, and its reset comes from a TAP flop, which is a violation there
     res = _mixed_run(tmp_path, wclk="clk_i")
     assert res.returncode == 1, res.stdout
