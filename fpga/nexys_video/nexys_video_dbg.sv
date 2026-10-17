@@ -2,9 +2,9 @@
 //
 //   host (Vivado hw_manager, Tcl "create_hw_axi_txn") --JTAG--> jtag_axi_0 (AXI4-Lite master, 32/32)
 //        --> axil_to_apb (repo RTL, reused unchanged) --> soc_top APB3 debug port (12-bit address)
-//   + two ILAs: ila_sys_0 on the 50 MHz system clock, ila_cpu_0 on the 75 MHz CPU clock.
+//   + one ILA (ila_0, 75 MHz CPU clock).
 //
-// The three vendor IP modules (jtag_axi_0, ila_sys_0, ila_cpu_0) are NOT checked in: build.tcl creates them with
+// The two vendor IP modules (jtag_axi_0, ila_0) are NOT checked in: build.tcl creates them with
 // create_ip/set_property (fpga/nexys_video/ip.tcl). Lint uses fpga/nexys_video/sim/ip_stubs.v.
 //
 // The APB debug port reaches the CPU debug registers (halt/step/GPR/PC) through apb_cdc_bridge inside soc_top; it is NOT
@@ -106,19 +106,19 @@ module nexys_video_dbg (
     assign apb_paddr_o     = paddr_full[11:0];
     assign paddr_hi_unused = paddr_full[31:12];
 
-    // ---- ILAs (probe widths are fixed in ip.tcl; keep the two in step)
-    ila_sys_0 u_ila_sys (
-        .clk     (clk_sys_i),
+    // ---- ILA: ONE core only. The free Vivado licence (BASIC) rejects a design with more than one ILA
+    // ([Chipscope 16-620]). It runs on the 75 MHz CPU clock, which samples the 50 MHz system-domain signals
+    // (APB debug bus, UART, flags) without loss. The clocks are outputs of one MMCM, so the sys -> cpu probe paths are
+    // related-clock paths; probe widths are fixed in ip.tcl, keep the two in step.
+    ila_0 u_ila (
+        .clk     (clk_cpu_i),
         .probe0  (apb_paddr_o),                 // [11:0]
         .probe1  (apb_pwdata_o),                // [31:0]
         .probe2  (apb_prdata_i),                // [31:0]
         .probe3  ({apb_psel_o, apb_penable_o, apb_pwrite_o, apb_pready_i, apb_pslverr_i, uart_tx_i, uart_rx_i,
-                   gpu_irq_i, wdt_rst_req_i, pll_locked_i, cpu_pll_locked_i})   // [10:0]
-    );
-    ila_cpu_0 u_ila_cpu (
-        .clk     (clk_cpu_i),
-        .probe0  (commit_valid_i),              // [0:0]
-        .probe1  (commit_pc_i),                 // [31:0]
-        .probe2  (commit_insn_i)                // [31:0]
+                   gpu_irq_i, wdt_rst_req_i, pll_locked_i, cpu_pll_locked_i}),  // [10:0]
+        .probe4  (commit_valid_i),              // [0:0]
+        .probe5  (commit_pc_i),                 // [31:0]
+        .probe6  (commit_insn_i)                // [31:0]
     );
 endmodule

@@ -5,8 +5,8 @@ Board: Digilent Nexys Video, XC7A200T-1SBG484C. First build is **with GPU**. Pre
 | File | Role |
 |---|---|
 | `nexys_video_top.sv` | board top: MMCM, BUFGs, reset sync, IOBUF/IBUF/OBUF pad wrappers, DFT tie-off, `soc_top` |
-| `nexys_video_dbg.sv` | JTAG-to-AXI-Lite master -> `rtl/soc/axil_to_apb.sv` -> `soc_top` APB debug port, two ILAs |
-| `ip.tcl` | creates `jtag_axi_0`, `ila_sys_0`, `ila_cpu_0` at build time (no IP binaries are checked in) |
+| `nexys_video_dbg.sv` | JTAG-to-AXI-Lite master -> `rtl/soc/axil_to_apb.sv` -> `soc_top` APB debug port, one ILA |
+| `ip.tcl` | creates `jtag_axi_0`, `ila_0` at build time (no IP binaries are checked in) |
 | `clkfix.tcl` | re-sources every PMU-gate `BUFGCE.I` from the MMCM output, parallel with the ungated BUFG |
 | `nexys_video.xdc` | pins (Digilent master XDC), IO standards, IO timing |
 | `nexys_video_cdc.xdc` | XDC translation of the CDC SDC budgets + `ASYNC_REG` |
@@ -49,8 +49,7 @@ on the rest. UART: `uart_rx_out` is the FPGA transmit line.
 ## Debug
 
 `open_hw_manager`, connect, program the bitstream. `hw_axi_1` (the JTAG-to-AXI master) reads/writes the CPU debug APB space
-(12-bit address): this is the CPU debug port, not the peripheral map. ILA `ila_sys_0` (50 MHz: APB debug bus, UART, IRQ and
-lock flags) and `ila_cpu_0` (75 MHz: commit valid/PC/instruction) appear in the hardware manager.
+(12-bit address): this is the CPU debug port, not the peripheral map. The single ILA `ila_0` (75 MHz CPU clock; the free Vivado licence allows one ILA core) probes the APB debug bus, UART, IRQ and lock flags (system domain, oversampled) and the commit valid/PC/instruction.
 
 ## DFT
 

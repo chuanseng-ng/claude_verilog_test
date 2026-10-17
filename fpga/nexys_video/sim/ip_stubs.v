@@ -1,6 +1,6 @@
 // ip_stubs.v -- black-box stand-ins for the build-time Vivado IP, FOR LINT ONLY (bead hlrm.2).
 // Never put this file in a Vivado file list: it would shadow the generated IP modules.
-// Port lists mirror what fpga/nexys_video/ip.tcl generates (jtag_axi AXI4-Lite master; two ILAs).
+// Port lists mirror what fpga/nexys_video/ip.tcl generates (jtag_axi AXI4-Lite master; one ILA).
 module jtag_axi_0 (
     input  wire        aclk,
     input  wire        aresetn,
@@ -26,20 +26,15 @@ module jtag_axi_0 (
 );
 endmodule
 
-module ila_sys_0 (
+module ila_0 (
     input wire        clk,
     input wire [11:0] probe0,
     input wire [31:0] probe1,
     input wire [31:0] probe2,
-    input wire [10:0] probe3
-);
-endmodule
-
-module ila_cpu_0 (
-    input wire        clk,
-    input wire [0:0]  probe0,
-    input wire [31:0] probe1,
-    input wire [31:0] probe2
+    input wire [10:0] probe3,
+    input wire [0:0]  probe4,
+    input wire [31:0] probe5,
+    input wire [31:0] probe6
 );
 endmodule
 
