@@ -2403,7 +2403,7 @@ async def test_start_and_key_write_in_the_wipe_cycle(dut):
     """A START that lands in the wipe cycle takes the hang-free illegal path (done, idle, no data)
     instead of leaving the wrapper busy over a cleared core; a KEY write in that cycle is dropped
     and latches key_write_rejected.
-    MUTATION TARGET: start not blocked / key write accepted while wipe_w."""
+    MUTATION TARGET: START not blocked in the wipe cycle; key_write_rejected not latched for a KEY write there."""
     _kill_active_tasks()
     rig = await _start_clock_and_reset(dut)
     d = rig.main

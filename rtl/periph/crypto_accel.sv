@@ -575,7 +575,7 @@ module crypto_accel
         for (int unsigned i = 0; i < 4; i++) begin
             // A zero strobe selects no byte lane: no write attempted, so neither accepted nor rejected.
             key_wr_w[i]     = wr_acc_w & is_key_addr_w[i] & (|pstrb);
-            key_accept_w[i] = key_wr_w[i] & ~busy_q & ~wipe_w;
+            key_accept_w[i] = key_wr_w[i] & ~busy_q;   // wipe_w needs no term: it wins in every consumer
         end
     end
 
@@ -601,7 +601,7 @@ module crypto_accel
     // =========================================================================
     logic [MSG_W-1:0] msg_q;
     logic             din_push_w;
-    assign din_push_w = wr_acc_w & is_din_addr_w & (pstrb == 4'hF) & ~busy_q & ~wipe_w;
+    assign din_push_w = wr_acc_w & is_din_addr_w & (pstrb == 4'hF) & ~busy_q;   // wipe_w wins in msg_q's clear
 
     always_ff @(posedge clk) begin
         if (!rst_n || wipe_w) msg_q <= '0;
