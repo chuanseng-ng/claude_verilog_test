@@ -2534,11 +2534,12 @@ module soc_top
     // behind them is clocked by the (test) clock whatever the PMU says. In scan mode
     // cpu_core_clk / core_clk ARE the test clock (pll_subsystem), so the gated
     // clocks are too.
-    // MBIST_CPU = 1: the CPU-domain MBIST run forces this gate open (TAP-launched quasi-static level, same
-    // contract as test_en; section 16.6). With MBIST_CPU = 0 there is no CPU controller and the force is unused.
-    logic cpu_cg_test_en;
-    assign cpu_cg_test_en = dft_test_en | (MBIST_CPU ? mbist_force : 1'b0);
-    rv32i_clock_gate u_cpu_cg (.en(cpu_gated_clk_en), .test_en(cpu_cg_test_en), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
+    // MBIST_CPU = 1: the CPU-domain MBIST run forces this gate open (a TAP-launched quasi-static level, same
+    // contract as test_en; section 16.6). It is OR-ed into the gate ENABLE, not into test_en, so test_en stays the
+    // dft test-enable net (UPF check U07). With MBIST_CPU = 0 there is no CPU controller and the force is constant 0.
+    logic cpu_cg_en;
+    assign cpu_cg_en = cpu_gated_clk_en | (MBIST_CPU ? mbist_force : 1'b0);
+    rv32i_clock_gate u_cpu_cg (.en(cpu_cg_en), .test_en(dft_test_en), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
     rv32i_clock_gate u_gpu_cg (.en(pmu_gpu_clk_en),   .test_en(dft_test_en), .clk(core_clk),     .gclk(gpu_gated_clk));
 
 endmodule : soc_top

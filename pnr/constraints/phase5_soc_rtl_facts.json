@@ -126,6 +126,7 @@
     "u_gpu_domain_rm": "dft_rst_mux",
     "u_i2c": "i2c_controller",
     "u_irq_ctrl": "interrupt_controller",
+    "u_mbist": "soc_mbist",
     "u_npu": "npu_top",
     "u_pll_sub": "pll_subsystem",
     "u_pmu": "pmu",
@@ -542,6 +543,38 @@
      "clk": [
       "in",
       1
+     ],
+     "mb_addr_i": [
+      "in",
+      10
+     ],
+     "mb_ce_i": [
+      "in",
+      1
+     ],
+     "mb_din_i": [
+      "in",
+      32
+     ],
+     "mb_dout0_o": [
+      "out",
+      32
+     ],
+     "mb_dout1_o": [
+      "out",
+      32
+     ],
+     "mb_en_i": [
+      "in",
+      1
+     ],
+     "mb_we_i": [
+      "in",
+      1
+     ],
+     "mb_wmask_i": [
+      "in",
+      4
      ],
      "rst_n": [
       "in",
@@ -791,6 +824,7 @@
     "u_gpu_domain_rm": "dft_rst_mux",
     "u_i2c": "i2c_controller",
     "u_irq_ctrl": "interrupt_controller",
+    "u_mbist": "soc_mbist",
     "u_npu": "npu_top",
     "u_pll_sub": "pll_subsystem",
     "u_pmu": "pmu",
@@ -1207,6 +1241,38 @@
      "clk": [
       "in",
       1
+     ],
+     "mb_addr_i": [
+      "in",
+      10
+     ],
+     "mb_ce_i": [
+      "in",
+      1
+     ],
+     "mb_din_i": [
+      "in",
+      32
+     ],
+     "mb_dout0_o": [
+      "out",
+      32
+     ],
+     "mb_dout1_o": [
+      "out",
+      32
+     ],
+     "mb_en_i": [
+      "in",
+      1
+     ],
+     "mb_we_i": [
+      "in",
+      1
+     ],
+     "mb_wmask_i": [
+      "in",
+      4
      ],
      "rst_n": [
       "in",
