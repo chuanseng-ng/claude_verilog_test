@@ -563,7 +563,7 @@ Added after the 2026-10-10 decisions (parallel scan ports in addition to the TAP
 | `scan_out_o` | out | `SCAN_CHAINS` | 0 | chain outputs, **tied 0** until Stage 2 |
 
 `SCAN_CHAINS` defaults to **8**, the figure fixed by the chain-count decision (PR #253): 5 `clk_i` fabric chains, 1 `cpu_clk_i`
-fabric chain, 2 CPU-macro chains. Indices `[7:6]` are reserved for the macro and stay placeholders until 14.6 lands. My own count
+fabric chain, 2 CPU-macro chains. Indices `[7:6]` are reserved for the macro; they are wired through to `rv32i_cpu_top` since 14.10 (`j41m.4`) and the macro ties its own `scan_out_o` 0 until Stage 2. My own count
 (17.5 k `clk_i`-domain scannable flops [M, section 4], 0.9 k `cpu_clk_i` outside the macro) does not contradict it: 5 chains of ~3.5 k
 is within 40 % of 7 of ~2.5 k, and the shift time is set by the longest chain, so the pin saving of two pairs costs ~1.4x shift length.
 
@@ -608,7 +608,7 @@ ours in the same plugin step. Lint stays clean because the unread inputs are con
   `create_clock cpu_clk_i` was *not* added to `sky130_soc.sdc`: it newly constrains ~5.7 k CPU-domain flops and needs the async clock groups and CDC
   budgets of `phase5_soc_multiclock.sdc`, which changes sign-off timing and cannot be validated without a PD run. Filed as a bead.
 
-### 14.6 CPU macro boundary: deliberately not changed
+### 14.6 CPU macro boundary: deliberately not changed (SUPERSEDED for the Sky130 RTL by 14.10, bead `j41m.4`)
 `rv32i_cpu_top` has no scan pins, and adding them invalidates the committed LEF/Liberty/blackbox views and `pin_order.cfg` on both PDKs; the ASAP7 macro cannot be
 re-hardened on this host (`ma7`/`lxv`/`2kn`), and `dud4` is currently investigating gate-versus-RTL differences in the Sky130 CPU macro netlist. So: the macro
 instantiates `rv32i_clock_gate` only in its ASAP7 cache arms, with `test_en` tied `1'b0` (no netlist change after constant propagation; the ASAP7 `ICG` `.SE` pin was
@@ -651,6 +651,99 @@ already tied 0), the Sky130 macro is bit-for-bit unaffected by this change, and 
   tied 0 -> `soc_dft_scan.test_cpu_clock_gate_forced_open` FAIL; d `cdc_reset_sync` input-side only -> `cdc_reset_sync_scan` 2 FAIL, `soc_dft_scan` 1 FAIL; e `dft_clk_mux` ignores scan -> `dft_muxes` 1,
   `soc_dft_scan` 3 FAIL; f1 `dft_rst_mux` ignores scan (all instances) -> `dft_muxes` 1, `soc_dft_scan` 5 FAIL; f2 one instance (`pll_subsystem.u_core_rm`) -> `soc_dft_scan` 2 FAIL.
   **g `u_gpu_domain_rm` ignores scan: first SURVIVED** (`soc_dft_scan` 8/8 pass): with `pmu_gpu_rst_n` high the functional side already equals `scan_rst_ni`. **Killed 2026-10-10 (bead j41m.9)** by `soc_dft_scan.test_scan_gpu_reset_with_pmu_gpu_off` (9 PASS / 1 FAIL on the mutant, message `gpu_domain_rst_n ignored scan_rst_ni=1 while the PMU held the GPU in reset`; 10/10 on the real RTL). The test boots a 4-instruction CPU firmware (`sw MODE_GPU_OFF` to PMU CTRL `0x2000_8000`, then spin) so the PMU walks the GPU domain to `DOM_OFF` itself, no deposit; asserts in functional mode that `pmu_gpu_rst_n`, `gpu_domain_rst_n_func` and `gpu_domain_rst_n` are all 0; stops the functional clocks and enters scan mode with `scan_rst_ni` held at 1 (the PMU is reset by `core_rst_n`, which equals `scan_rst_ni` in scan mode, so holding it high preserves the power-down state); re-asserts the guard (`dom_state_q[GPU]==DOM_OFF`, `pmu_gpu_rst_n==0`, `gpu_domain_rst_n_func==0`) and only then requires `gpu_domain_rst_n==1`. The converse leg pulses `scan_rst_ni`=0, which resets the PMU (`pmu_gpu_rst_n` back to 1, asserted as a guard) and requires `gpu_domain_rst_n==0`. **CPU analogue** (`test_scan_cpu_reset_with_pmu_cpu_off`, firmware -> DMA -> PMU CTRL `MODE_CPU_OFF` via the existing `pmu_cycle.hex`): `cpu_domain_rst_n` follows `scan_rst_ni` with the PMU holding the CPU in reset; **passes on the real RTL, so the "needs no mux" claim for `cpu_domain_rst_n` holds**. Mutant h (`u_cpu_pmu_rst_sync.scanmode_i` tied 0) fails it (and also `test_cpu_clock_gate_forced_open`). A mutant that removed only the output-side mux of `cdc_reset_sync` while keeping its async-input select is equivalent once the 2-stage chain fills (the chain input is constant 1 and its async clear is `scan_rst_ni`), so it is not distinguishable by any test and is not claimed.
+
+### 14.10 CPU macro scan/test boundary, Sky130 half (bead `j41m.4`, RTL step only)
+
+Supersedes 14.6 for the macro boundary. RTL only: **no PD run, no macro view regenerated** (the committed `pnr/sky130/cpu/macro/*` views and the ASAP7 views are still the pre-DFT ones). The ASAP7 half is bead `j41m.13`. Labels as above.
+
+**Ports added to `rv32i_cpu_top`** (inactive values = today's behaviour; Verilator leaves an undriven input at 0, so every existing cocotb top that instantiates the macro bare is unaffected):
+
+| Port | Dir | Width | Inactive | Driven in `soc_top` from |
+|---|---|---|---|---|
+| `scan_mode_i` | in | 1 | 0 | `dft_scan_mode` (pin OR TAP) |
+| `scan_en_i` | in | 1 | 0 | `dft_scan_en` (`dft_ctrl`: TAP-serial ? TAP : pin). **Not** the raw `scan_en_i` port |
+| `scan_in_i` | in | 2 | 0 | top `scan_in_i[SCAN_CHAINS-1 -: 2]`, i.e. indices 7:6 |
+| `scan_out_o` | out | 2 | tied 0 | top `scan_out_o[7:6]`; fabric bits `[5:0]` stay the old placeholder tie |
+
+**Deliberately no `scan_clk` and no `scan_rst_ni` port** [R]:
+* `clk_i` of the macro is `cpu_gated_clk`, which in scan mode is already the test clock (`dft_clk_mux` on the `cpu_clk_i` root, ahead of `u_cpu_cg`, 14.2). The macro keeps one clock root and gains **no clock mux, so no insertion delay on its tree**; the +0.174 ns margin of section 5 is not spent on a clock mux.
+* Every reset inside the macro is the synchronous `rst_n_i` (no `or negedge` flop, no derived reset: `check_scan_clk_rst.py` block mode reports **0 async reset/set pins** on both macro netlists [M]). `soc_top` drives it from `cpu_domain_rst_n`, which equals `scan_rst_ni` in scan mode (14.2). A mux inside the macro would only put a gate in front of a ~4.8 k-flop reset tree. If a later change introduces any async or derived reset, `--max-async-pins 0` fails and the override becomes mandatory then.
+
+**Clock gates** [R]: the Sky130 macro has **none** (`SKY130_CPU_SV_FILES` omits `rv32i_clock_gate.sv`, the SRAM arm instantiates the macro directly). The ASAP7 arm has 10 (`u_tag_cg` + 4x `u_data_cg`, in each of `u_icache` and `u_dcache`); their `test_en` was tied `1'b0` and is now `test_en_w = scan_mode_i` (via new `test_en_i` ports on `rv32i_core`, `rv32i_icache`, `rv32i_dcache`; `| mbist_en` is added where Stage 4 lands). They clock **SRAM macros only**, so nothing scannable is gained; the reason to do it is that the clock-gate rule of the checker requires a test term in every clock-gate latch. The new port is unused in the Sky130/FPGA/FreePDK45 arms (waived with a scoped `lint_off UNUSEDSIGNAL`).
+
+**Placeholders**: `scan_en_i`/`scan_in_i` have no RTL consumer and `scan_out_o` is one `assign scan_out_o = '0; // DFT_PLACEHOLDER` until Stage 2 stitches the two chains **inside the macro flow** (14.4 contract: remove the tie, last flop to `scan_out_o[k]`, `scan_in_i[k]` to first flop, every `SCE` to `scan_en_i`). The two blackbox stubs (`pnr/{sky130,asap7}/soc/rv32i_cpu_top_stub.sv`) carry the same four ports. The committed ASAP7 macro LEF/lib lack these pins: an ASAP7 SoC P&R against them fails at macro pin match until `j41m.13`.
+
+**Pins** (`pnr/sky130/cpu/pin_order.cfg`): 6 added at the end of the N edge (401 -> 407 signal bits; every port bit matches exactly one entry [M]). `pnr/asap7/cpu/pin_order.cfg` is **unchanged**: the ASAP7 CPU harden will fail loudly in `io_place.py` (design pin missing from the file) until `j41m.13` adds them; it could not complete on this host anyway (`ma7`/`lxv`/`2kn`).
+
+**Checks** [M]: `make -C pnr dft-scan-check-cpu-macro` / `dft-scan-check-cpu-macro-asap7` (new; `check_scan_clk_rst.py` BLOCK MODE: `--clock-port clk_i --max-async-pins 0 --expect-seq-min 900 --all-latches-need-scan-mode`, ASAP7 also `--expect-latches-min 10`): Sky130 macro 944 word-level sequential cells, 0 async pins, 0 violations; ASAP7 macro 954 / 0 / 0 violations, 10 clock-gate latches all with `scan_mode_i` in D. Negative control on the real ASAP7 macro netlist with `.test_en(1'b0)`: **10 violations**. The SoC-level checks needed `u_dft_ctrl.tap_scan_en` added to `--tap-allowed-nets` (its first consumer is now the macro pin), as 15.9 / the bead note predicted. `tb/tests/test_dft_scan_check.py` 25 -> 32 tests, CI floor raised to 32 and the two macro targets added to the CI loop.
+
+**Risks and Stage 2 notes** [A unless noted]:
+* Fabric insertion (`j41m.8`) must take its `SCE` from `dft_scan_en`, not the raw `scan_en_i` port, or serial (TAP) scan would shift the macro and not the fabric.
+* Re-harden of the Sky130 macro will add the scan mux to ~4.8 k D pins (+0.066/+0.085 ns, section 5) on a +0.174 ns margin: the relaxation/retime question of section 5 is still open and is *the* Stage 2 risk. This RTL step adds only the 6 pins and one tie cell, no logic on a timing path.
+* Whether appending 6 names to the N list moves the other 397 pins is **unmeasured**; compare the regenerated LEF against the committed one before accepting (see `pin_order.README.md`).
+* The macro netlist now has 3 input ports and 2 output ports without loads/with tie cells; `DIODE_ON_PORTS: in` may place diodes on the unloaded inputs. Harmless, not checked.
+* `sky130_cpu.sdc` is unchanged (new ports are unconstrained in functional STA); a scan-mode macro SDC is a Stage 2 deliverable.
+
+### 14.11 PD re-harden for the CPU macro scan boundary and the `cpu_clk_i` SDC (beads `j41m.4` PD step + `j41m.5`, 2026-10-16)
+
+Labels: [M] measured this session, [R] read from a file, [A] inferred. Runs: CPU macro `RUN_2026-10-16_02-27-26`
+(`/nobackup/sky130_cpu_runs`), SoC `RUN_2026-10-16_04-53-49` (`make -C pnr librelane-sky130-soc-rccal-noklayout`,
+KLayout DRC skipped as always). Baselines: CPU `RUN_2026-10-11_06-00-12`, SoC `RUN_2026-10-11_08-39-41`
+and `RUN_2026-10-09_06-18-39`. **Not a single-variable comparison with either baseline** (RTL vintage changed: JTAG TAP,
+clock switch, scan boundary; and the SoC SDC now clocks the CPU domain).
+
+**CPU macro [M].** LVS 0, KLayout DRC 0, routing DRC 0, Magic 27,733,913 (bit-identical to the dud4 macro), antenna 94/96 (was 96/96),
+4,880 flops (was 4,868; not attributed). Setup: tt/ff corners clean and slightly better (+3.79 ns nom_tt, was +3.44); **ss still fails
+exactly as before** (max_ss -4.009 ns / 972 violators, was -3.704 / 996; nom_ss -3.333 / 861, was -3.198 / 854; icache-tag path class,
+reported not tuned). Hold: I/O-port-only violators remain (nom_tt -0.076 ns / 7, was -0.379 / 84; max_ss -0.467 / 124, was -0.834 / 144);
+reg-to-reg hold clean. Gate-vs-RTL proof (`tools/verif/gls/sky130/run_netlist_proof.sh` on the post-fill netlist): 6/6 programs identical,
+124/124 matrix, negative control detected (4/6 diverge, 90 cells fail). **Pin result: the 6 appended N-edge names re-spaced the whole N edge:
+95 of the 403 existing pins moved (max 214 um, mean 106 um), S/E/W/power identical** (`pin_order.README.md`). The Liberty views carry the 6 new pins.
+
+**SoC [M]** (vs `RUN_2026-10-11_08-39-41`): LVS 0 (same), routing DRC 0 (same), Magic 8,984 (same), setup and hold 0 violators at all 9 corners
+(same), hold worst +0.113 ns (max_ff; was +0.287), antenna 197/252 nets/pins (was 187/265), max-slew 304 (was 370), util 45.37 % (45.22), power 100.3 mW
+(84.6; the CPU domain's 945 flops and the new CTS tree are now clocked and counted, [A]), 433 hold buffers (was 2: the CPU-macro input hold of about 1 ns,
+previously unchecked because the macro clock was undefined). CTS now builds `cpu_core_clk` (174 sinks) and `cpu_gated_clk_regs` (771 sinks) trees.
+The flow's reported setup worst slack is a literal 0.000 at every corner: a latch time-borrow artifact of the TAP's negative-level latch in the `tck`
+group, not a real margin. Real per-clock figures (replica STA with the run's SPEF, propagated clocks): core_clk +9.97 ns nom_tt / +2.55 max_ss
+(baseline +2.48), cpu_clk +10.1 nom_tt / +7.09 max_ss, hold cpu_clk +0.59 / +1.34.
+**`CVT.MaxCapViolations` FAILS (deferred): 2 unwaived nets, both clock nets**: `cpu_gated_clk` (driver `and2_2` clock-gate AND, 0.60-0.68 pF vs limit
+0.19-0.40 at 8 corners) and `core_clk` (driver `a21bo_2`, the `dft_clk_mux` output, 0.29-0.31 pF vs 0.18-0.29 at 4 tt/ss corners). Both old waivers are STALE
+(the by-name driver waivers for `RUN_2026-10-11_08-39-41` match nothing). Attribution [A]: the `core_clk` driver is the clock switch from the JTAG TAP
+work, absent from the baseline netlist (no `tck_i` there), so that one is not caused by this change; `cpu_gated_clk` was an `and2_4` in the baseline and is
+now a clock net owned by CTS, which `repair_design` does not buffer. No waiver was added or changed (owner decision).
+
+**Clock-root drive fix (owner decision: fix, not waive; RTL done, PD re-harden pending)**: root cause is that CTS owns the clock net, hangs a long root wire on the
+synthesised driver (the register-tree root buffer is placed at the sink centroid: `and2_2` at (4533, 2026) um, `clkbuf_regs_0_cpu_clk` at (2276, 193) um, about 4 mm), and
+`repair_design` skips clock nets, so nothing re-drives it. The drivers must be strong from synthesis on. Under `+define+USE_SKY130_CLKCELLS` (only in
+`SKY130_SOC_SV2V_DEFINES`, so the CPU macro is untouched) the two roots are hand-instantiated library cells, black-box stubs in `pnr/sky130/soc/sky130_clkcells_stub.v`:
+`u_cpu_cg` (`rv32i_clock_gate #(.HARD_ROOT(1))`) is `sky130_fd_sc_hd__sdlclkp_4` (GATE/SCE = `en`/`test_en`, same `en | test_en` latched while CLK is low) driving
+`sky130_fd_sc_hd__buf_16`; every `dft_clk_mux` (`u_pll_sub.u_ref_cm`, `u_cpu_pll_sub.u_ref_cm`) is `mux2_4` + `buf_16`. Flattened instance names (stable, checked in the
+yosys-flattened netlist): `u_cpu_cg.g_cell.u_icg`, `u_cpu_cg.g_cell.u_root_buf`, `u_pll_sub.u_ref_cm.u_mux`, `u_pll_sub.u_ref_cm.u_root_buf`, and the same two under `u_cpu_pll_sub`.
+`u_gpu_cg` stays behavioural so it still optimises away with the tie-off GPU. `RSZ_DONT_TOUCH_RX` in the three `pnr/sky130/soc/config*.json` pins these instances.
+**Why `buf_16` and not `clkbuf_16` (CTS-0105, RUN_2026-10-17_08-53-43)**: the first cell arm used `clkbuf_16` for the three root buffers (`u_cpu_cg.g_cell.u_root_buf`,
+`u_pll_sub.u_ref_cm.u_root_buf`, `u_cpu_pll_sub.u_ref_cm.u_root_buf`). `clkbuf_16` is in `CTS_CLK_BUFFERS`, so TritonCTS treated each one as a clock buffer that already existed on
+the net and logged `CTS-0105: Net "core_clk" already has clock buffer u_pll_sub.u_ref_cm.u_root_buf. Skipping...` (likewise `cpu_core_clk` and `cpu_gated_clk`). It built no
+clock tree on any of the three roots, and setup ended at WNS -130 ns. Owner decision: use `sky130_fd_sc_hd__buf_16`, a plain buffer that is not in the CTS buffer list, so CTS
+sees an ordinary driver and builds its tree below it. `CTS_CLK_BUFFERS` / `CTS_ROOT_BUFFER` still name `clkbuf_16` (CTS's own cell choice, unchanged). Instance names are
+unchanged, so `RSZ_DONT_TOUCH_RX` and `MANUAL_GLOBAL_PLACEMENTS` need no edit. Liberty check (MEASURED, `max_capacitance` of the output pin): `buf_16` 5.0 pF (the library cap)
+at ss_n40C_1v28, ss_100C_1v60 and tt_025C_1v80, 2.846 pF at ss_n40C_1v40, against `clkbuf_16` 0.757 / 1.017 / 1.532 / 2.826 pF at the same corners, so the drive margin is
+not reduced. Input pin cap is 13.3 fF (`buf_16`) vs 7.5 fF (`clkbuf_16`), negligible against the 0.33 pF `mux2_4`/`sdlclkp_4` limit. Cell area is 27.5 vs 25.0 um^2. NOT yet
+measured: whether CTS now builds the trees and closes setup, which is the next PD run.
+Load vs limit (measured loads from RUN_2026-10-16_04-53-49; the limit quoted is the `clkbuf_16` Liberty value used at the time, `buf_16` is higher, see above): `cpu_gated_clk` 0.60-0.68 pF vs 1.017 pF at ss (about 67 % worst case,
+was 0.19 pF), `core_clk` 0.29-0.31 pF vs 1.017 pF at ss (about 31 %, was 0.18 pF). INFERRED, not measured: the new 2-pin ICG-to-buffer and mux-to-buffer nets are placed by
+global placement and must stay under the `sdlclkp_4`/`mux2_4` ss limit (0.33 pF, roughly 3 mm of wire); the post-CTS run decides. Scan-mode behaviour of the cell arm:
+`dft-scan-check` runs against `tools/dft/sky130_cell_models.v` (0 violations, 1 clock gate checked for the scan-mode force: `u_cpu_cg.g_cell.u_icg`, via the j41m.16
+`--expect-clock-gates 1` proof; negative controls: a model without the `SCE` term fails it with the gate-not-forced-open message, a broken-mux model fails the mux rule).
+The proof is on the analysis model, whose `GATE | SCE` latch input is taken from the Liberty statetable (`SCE=H -> M0=H` regardless of `GATE`), not on the library cell itself.
+
+**CDC budget check [M]** (`make -C pnr check-cdc-timing-sky130-soc`, real SPEF): PASS at nom_tt and max_ss; 11 groups (10 FIFO/bridge/PMU/IRQ + the
+`u_m_rst_status_sync`) plus the two domain-wide fallbacks all bound; worst margins at max_ss: fifo_rd2wr +0.95 ns of 12.5, fifo_wr2rd +1.68. Negative control (all budgets
+forced to 1 ns): FAIL with 9 findings. The requested `set_max_delay -datapath_only` cannot live in `sky130_soc.sdc`: OpenSTA has no such flag and drops a
+max_delay across `-asynchronous` clocks (bead k07), so the budgets are in `sky130_soc_cdc_check.sdc` as for ASAP7.
+
+**Scan checkers [M]**: `dft-scan-check` (SoC, sv2v netlist of the same RTL): 1,694 sequential cells, 295 async pins, 28 scan-mode muxes, 0 violations;
+`dft-scan-check-cpu-macro`: 944 sequential cells, 0 async pins, 0 violations. They run on the sv2v netlists, not on the placed netlist (which has Sky130 cells the checker has no models for).
 
 ## 15. Stage 1b specification and implementation record (bead `j41m.3`): JTAG TAP
 

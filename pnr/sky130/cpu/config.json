@@ -31,6 +31,10 @@
     "FP_PIN_ORDER_CFG": "dir::pin_order.cfg",
     "ERRORS_ON_UNMATCHED_IO": "both",
 
+    "// FP_DEF_TEMPLATE_NOTE": "bead lu09: pin COORDINATES are frozen to pin_template.def (derived from macro/rv32i_cpu_top.lef by tools/verif/pin_lock.py gen). Odb.ApplyDEFTemplate runs after Odb.CustomIOPlacement and overwrites every pin shape; strict mode makes any design-vs-template pin-set mismatch a hard error, so a new pin needs a deliberate template edit and never re-spaces an edge. pin_order.cfg still decides which pins exist and on which side. Side effect (LibreLane 2.4.13): OpenROAD.GlobalPlacementSkipIO is skipped when a template is set. See pin_order.README.md 'v4'.",
+    "FP_DEF_TEMPLATE": "dir::pin_template.def",
+    "FP_TEMPLATE_MATCH_MODE": "strict",
+
     "FP_CORE_UTIL":    30,
     "FP_ASPECT_RATIO": 1,
 

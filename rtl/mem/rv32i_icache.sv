@@ -42,6 +42,13 @@ module rv32i_icache (
     input  logic        clk,
     input  logic        rst_n,
 
+    // DFT (bead j41m.4): forces the SRAM clock gates open in test mode. Used by the
+    // `SRAM_ASAP7 arm only (the other arms instantiate no clock gate); quasi-static,
+    // tie 1'b0 when not testing. See docs/design/DFT_ARCHITECTURE.md section 14.10.
+    /* verilator lint_off UNUSEDSIGNAL */
+    input  logic        test_en_i,
+    /* verilator lint_on  UNUSEDSIGNAL */
+
     // ── CPU-side interface (from IF stage) ────────────────────────────────────
     input  logic [31:0] ic_addr_i,        // Fetch address
     input  logic        ic_valid_i,       // Fetch request valid
@@ -95,8 +102,11 @@ module rv32i_icache (
     );
 `elsif SRAM_ASAP7
     logic tag_gclk;
-    // j41m.2: test_en tied 0 -- this gate clocks an SRAM macro only (no scannable flop behind it).
-    rv32i_clock_gate u_tag_cg (.en(!tag_csb0), .test_en(1'b0), .clk(clk), .gclk(tag_gclk));
+    // j41m.4: test_en_i (scan_mode | mbist_en at the macro boundary) forces the gate open in
+    // test mode. The gate clocks an SRAM macro only (no scannable flop behind it, so nothing
+    // is lost by leaving it functional), but the clock-gate latch must carry a test term for
+    // tools/dft/check_scan_clk_rst.py to accept the clock cone (j41m.2 left this tied 0).
+    rv32i_clock_gate u_tag_cg (.en(!tag_csb0), .test_en(test_en_i), .clk(clk), .gclk(tag_gclk));
     sram_1rw_256x32_asap7 u_tag_sram (
         .clk0   (tag_gclk),
         .csb0   (tag_csb0),
@@ -153,8 +163,8 @@ module rv32i_icache (
             );
 `elsif SRAM_ASAP7
             logic data_gclk;
-            // j41m.2: test_en tied 0 -- this gate clocks an SRAM macro only (no scannable flop behind it).
-            rv32i_clock_gate u_data_cg (.en(!data_csb0[gw]), .test_en(1'b0), .clk(clk), .gclk(data_gclk));
+            // j41m.4: see u_tag_cg above.
+            rv32i_clock_gate u_data_cg (.en(!data_csb0[gw]), .test_en(test_en_i), .clk(clk), .gclk(data_gclk));
             sram_1rw_256x32_asap7 u_data_sram (
                 .clk0   (data_gclk),
                 .csb0   (data_csb0[gw]),

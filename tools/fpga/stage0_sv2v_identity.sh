@@ -16,7 +16,7 @@ declare -A SETS=(
   [sim]=""                                              # cocotb / Verilator default: no defines
   [simulation]="--define=SIMULATION"                    # cdc_sync RAND_CDC_DELAY arm
   [pnr]="--define=__pnr__"
-  [sky130]="--define=__pnr__ --define=SRAM_SKY130"      # pnr/Makefile SKY130_SOC_SV2V_DEFINES
+  [sky130]="--define=__pnr__ --define=SRAM_SKY130 --define=USE_SKY130_CLKCELLS"  # pnr/Makefile SKY130_SOC_SV2V_DEFINES
   [asap7]="--define=USE_ICG_CELL --define=__pnr__ --define=SRAM_ASAP7"   # SOC_SV2V_DEFINES
 )
 for gpu in gpu nogpu; do

@@ -205,7 +205,7 @@ SV2V                ?= /nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1
 .PHONY: librelane-asap7-soc-multiclock
 .PHONY: librelane-asap7-soc-multiclock-hier
 .PHONY: librelane-asap7-3014 librelane-asap7-gpu-3014
-.PHONY: check-cdc-timing-asap7-soc
+.PHONY: check-cdc-timing-asap7-soc check-cdc-timing-sky130-soc
 .PHONY: asap7-soc-sv2v
 .PHONY: librelane-sky130-results librelane-sky130-cpu-results librelane-nangate45-results librelane-asap7-results librelane-asap7-gpu-results librelane-asap7-soc-results
 .PHONY: prune-asap7-runs prune-asap7-gpu-runs prune-asap7-soc-runs
@@ -246,6 +246,7 @@ help:
 	@echo "  librelane-asap7-soc-multiclock - GH #96: same flow with the 2-clock SDC (config_multiclock.json)"
 	@echo "                              (SOC_CONFIG overrides the config file for all three librelane-asap7-soc* targets)"
 	@echo "  check-cdc-timing-asap7-soc - Post-route CDC budget check (OpenSTA, phase5_soc_multiclock_check.sdc; GH #96)"
+	@echo "  check-cdc-timing-sky130-soc - Post-route CDC budget check, Sky130 SoC (sky130_soc_cdc_check.sdc; bead j41m.5)"
 	@echo "  check-asap7-routing        - Fail loudly if the latest ASAP7 CPU run committed zero routed wires (bead xy6)"
 	@echo "  check-asap7-gpu-routing    - Fail loudly if the latest ASAP7 GPU run committed zero routed wires (bead xy6)"
 	@echo "  check-asap7-soc-routing    - Fail loudly if the latest ASAP7 SoC run committed zero routed wires (bead xy6)"
@@ -788,6 +789,19 @@ librelane-sky130-cpu: sky130-cpu-sv2v
 		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 $(abspath $(LIBRELANE_SKY130_CPU_DIR))/config.json"
 
+# Bead lu09: pin-coordinate lock for the Sky130 CPU macro. pnr/sky130/cpu/pin_template.def is derived from the
+# committed macro/rv32i_cpu_top.lef and fed to LibreLane as FP_DEF_TEMPLATE (strict), so appending a pin cannot re-space
+# an edge. This target needs no EDA tools: it fails if the template omits/moves a pin of the committed LEF, or if two
+# template pins overlap (LibreLane does not check that). After a harden, pass the fresh LEF to also prove no pin moved:
+#   make -C pnr sky130-cpu-pin-lock-check NEW_LEF=<run>/final/lef/rv32i_cpu_top.lef
+# To change the lock deliberately: edit pin_template.def, re-harden, commit the new LEF AND
+# `python3 tools/verif/pin_lock.py gen pnr/sky130/cpu/macro/rv32i_cpu_top.lef pnr/sky130/cpu/pin_template.def`.
+.PHONY: sky130-cpu-pin-lock-check
+sky130-cpu-pin-lock-check:
+	python3 $(PROJECT_ROOT)/tools/verif/pin_lock.py check \
+		--lef $(PROJECT_ROOT)/pnr/sky130/cpu/macro/rv32i_cpu_top.lef \
+		--def $(PROJECT_ROOT)/pnr/sky130/cpu/pin_template.def $(if $(NEW_LEF),--new-lef $(NEW_LEF))
+
 librelane-sky130-cpu-results:
 	$(call librelane_results,$(LIBRELANE_SKY130_CPU_DIR))
 
@@ -830,6 +844,7 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/soc_periph_map_pkg.sv \
 	$(LIBRELANE_SKY130_SOC_DIR)/rv32i_cpu_top_stub.sv \
 	$(LIBRELANE_SKY130_SOC_DIR)/gpu_top_tieoff.sv \
+	$(LIBRELANE_SKY130_SOC_DIR)/sky130_clkcells_stub.v \
 	$(PROJECT_ROOT)/rtl/soc/pll/pll_clkgen_stub.sv \
 	$(LIBRELANE_SKY130_SOC_DIR)/pll_clkgen_pnr.sv \
 	$(PROJECT_ROOT)/rtl/soc/apb4_register_bank.sv \
@@ -882,7 +897,14 @@ SKY130_SOC_SV_FILES := \
 SKY130_SOC_SV2V_OUT := $(abspath $(LIBRELANE_SKY130_SOC_DIR)/soc_top_sv2v.v)
 # One definition, used by the sv2v recipe below AND by sky130-soc-sv2v-inputs (CI), so the gate
 # elaborates exactly what the flow elaborates.
-SKY130_SOC_SV2V_DEFINES := --define=__pnr__ --define=SRAM_SKY130
+#
+# USE_SKY130_CLKCELLS (bead claude_verilog_test-j41m.4): hand-instantiate sky130_fd_sc_hd__sdlclkp_4 + buf_16
+# (rv32i_clock_gate, HARD_ROOT instances) and mux2_4 + buf_16 (dft_clk_mux; buf_16, not clkbuf_16, to avoid CTS-0105) on the two clock roots whose
+# behavioural form synthesis mapped to and2_2 / a21bo_2, failing CVT.MaxCapViolations on the CTS-owned nets
+# cpu_gated_clk and core_clk (RUN_2026-10-16_04-53-49). sv2v resolves the `ifdef itself, so it must be passed here;
+# config.json's VERILOG_DEFINES comes too late. NOT in SKY130_CPU_SV2V_DEFINES: the CPU hard macro is unchanged.
+# The three cells' black-box stubs are sky130_clkcells_stub.v in SKY130_SOC_SV_FILES.
+SKY130_SOC_SV2V_DEFINES := --define=__pnr__ --define=SRAM_SKY130 --define=USE_SKY130_CLKCELLS
 
 sky130-soc-sv2v:
 	@echo "=========================================="
@@ -906,13 +928,13 @@ sky130-soc-sv2v:
 # DFT Stage 1a (bead claude_verilog_test-j41m.2): prove on the flattened Sky130 netlist that in scan mode every
 # async reset is tester-controlled and every flop is test-clocked. Needs yosys on PATH (or YOSYS=/path/to/yosys).
 # DFT Stage 1b (j41m.3): TAP-domain rules. scan mode is the OR of the 1a pin and the TAP, so name the net.
-# (tap_scan_en is omitted from the allowed nets on purpose: scan_en has no RTL consumer until Stage 2 inserts scan
-# flops, so the net is optimised away; when Stage 2 connects it, add --tap-allowed-nets u_dft_ctrl.tap_scan_en.)
+# (tap_scan_en is an allowed TAP output since bead j41m.4: the CPU macro's scan_en_i is its first consumer, through
+# dft_ctrl's scan_en_o mux. Before that it had no consumer and the net was optimised away.)
 DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tck_cg \
 	--tap-prefix u_dft_ctrl.u_clk_sw --tap-prefix u_dft_ctrl.u_sw_rst --tap-alt-clock scan_clk_i \
 	--scan-mode-net u_dft_ctrl.scan_mode_o --expect-tap-flops 20 \
 	--tap-allowed-nets u_dft_ctrl.tap_scan --tap-allowed-nets u_dft_ctrl.tap_serial \
-	--tap-allowed-nets u_dft_ctrl.tap_rst_assert \
+	--tap-allowed-nets u_dft_ctrl.tap_rst_assert --tap-allowed-nets u_dft_ctrl.tap_scan_en \
 	--tap-allowed-nets u_dft_ctrl.test_clk_o --tap-allowed-nets tdo_o --tap-allowed-nets tdo_oe_o \
 	--expect-reset-sync u_dft_ctrl.u_tap.u_trst_sync=u_dft_ctrl.u_tap \
 	--expect-reset-sync u_dft_ctrl.u_sw_rst=u_dft_ctrl.u_clk_sw
@@ -922,14 +944,35 @@ DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tc
 .PHONY: dft-scan-check
 dft-scan-check: sky130-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
-		--netlist $(SKY130_SOC_SV2V_OUT) --expect-gates 20 $(DFT_TAP_CHECK_ARGS)
+		--netlist $(SKY130_SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/sky130_cell_models.v --expect-gates 20 $(DFT_TAP_CHECK_ARGS) --expect-clock-gates 1
 
+# (--models: the clock roots are hand-instantiated sky130 cells since USE_SKY130_CLKCELLS; the netlist carries only their
+# black-box stubs, so the checker needs the analysis models to trace the enable / select cones through them.)
 # Same proof on the ASAP7 SoC netlist. That netlist instantiates ICGx1_ASAP7_75t_R and sram_1rw_256x32_asap7
 # without defining them, so the checker needs the analysis models (it fails rather than pass vacuously).
 .PHONY: dft-scan-check-asap7
 dft-scan-check-asap7: asap7-soc-sv2v
 	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
-		--netlist $(SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/asap7_cell_models.v --expect-gates 20 $(DFT_TAP_CHECK_ARGS)
+		--netlist $(SOC_SV2V_OUT) --models $(PROJECT_ROOT)/tools/dft/asap7_cell_models.v --expect-gates 20 $(DFT_TAP_CHECK_ARGS) --expect-clock-gates 1
+
+# Bead j41m.4: the same proof on the CPU hard macro itself (BLOCK MODE of check_scan_clk_rst.py). The SoC-level checks
+# above see the macro as a blackbox, so they say nothing about its 4.8k flops. Here: (1) every flop clock cone ends at
+# clk_i (the parent muxes the test clock onto it) or at a clock-gate latch whose enable contains scan_mode_i (ASAP7 arm:
+# the cache SRAM gates, test_en_i); (2) ZERO async reset/set pins exist, so there is no internal reset that needs a scan
+# override (the macro's only reset is the synchronous rst_n_i, forced by the parent); (3) >= 900 word-level sequential
+# cells were found (vacuity guard; the Sky130 macro has 944, the ASAP7 one 954); (4) every latch (clock gate) is FORCED open: with scan_mode_i = 1 its D is 1 whatever the enable (bead j41m.16; it used to need only
+# a scan_mode_i term somewhere in its D cone) even though its output clocks only an SRAM macro, which the clock-cone walk cannot reach;
+# the ASAP7 macro must contain >= 10 of them (5 per cache), the Sky130 macro none.
+.PHONY: dft-scan-check-cpu-macro dft-scan-check-cpu-macro-asap7
+dft-scan-check-cpu-macro: sky130-cpu-sv2v
+	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
+		--netlist $(SKY130_CPU_SV2V_OUT) --top rv32i_cpu_top --models $(PROJECT_ROOT)/pnr/sky130/sky130_sram_1kbyte_1rw1r_32x256_8_stub.v \
+		--clock-port clk_i --max-async-pins 0 --expect-seq-min 900 --all-latches-need-scan-mode
+
+dft-scan-check-cpu-macro-asap7: asap7-cpu-sv2v
+	YOSYS=$(YOSYS) python3 $(PROJECT_ROOT)/tools/dft/check_scan_clk_rst.py \
+		--netlist $(CPU_SV2V_OUT) --top rv32i_cpu_top --models $(PROJECT_ROOT)/tools/dft/asap7_cell_models.v \
+		--clock-port clk_i --max-async-pins 0 --expect-seq-min 900 --all-latches-need-scan-mode --expect-latches-min 10 --expect-clock-gates 10
 
 # Sky130 Stage 2: SoC P&R with real DRC + LVS.
 # Requires:  make sky130-soc-sv2v   (generates soc_top_sv2v.v)
@@ -2071,6 +2114,52 @@ check-cdc-timing-asap7-soc:
 		rm -f "$$CDC_LOG"; \
 		exit "$$STA_EXIT"; \
 	fi; \
+	rm -f "$$CDC_LOG"
+
+#----------------------------------------------------------------
+# check-cdc-timing-sky130-soc: post-route CDC budget verification, Sky130 SoC (bead j41m.5).
+# Sky130 sibling of check-cdc-timing-asap7-soc: pnr/scripts/check_cdc_timing_sky130.tcl with
+# pnr/sky130/soc/constraints/sky130_soc_cdc_check.sdc against a finished Sky130 SoC run (netlist
+# + OpenRCX SPEF of the chosen corner). The budgets cannot live in sky130_soc.sdc (it declares
+# core_clk/cpu_clk asynchronous, and OpenSTA drops a set_max_delay across such a pair) -- see the
+# header of the check SDC.
+#
+# Usage: make check-cdc-timing-sky130-soc [RUN_DIR=/nobackup/sky130_soc_runs/RUN_...] [CDC_CORNER=nom_tt_025C_1v80]
+#        (RUN_DIR defaults to the newest run under /nobackup/sky130_soc_runs)
+# Exit: 0 pass; 1 on any CDC-EXCEPTION-MISS / VIOLATED / FAIL / SETUP-ERROR marker in the log
+# (grepped independent of sta's own exit code, as in the ASAP7 target); sta's exit otherwise.
+# Memory: ~3-5 GB with SPEF on this SoC; do not run next to a LibreLane flow on a 15 GB host.
+#----------------------------------------------------------------
+CDC_CORNER ?= nom_tt_025C_1v80
+check-cdc-timing-sky130-soc:
+	@CDC_RUN_DIR="$(RUN_DIR)"; \
+	if [ -z "$$CDC_RUN_DIR" ]; then \
+		CDC_RUN_DIR=$$(ls -td /nobackup/sky130_soc_runs/RUN_* 2>/dev/null | head -1); fi; \
+	if [ -z "$$CDC_RUN_DIR" ]; then \
+		echo "No Sky130 SoC run found under /nobackup/sky130_soc_runs/ and RUN_DIR not set."; exit 1; fi; \
+	echo "=========================================="; \
+	echo "Post-route CDC budget check -- Sky130 SoC"; \
+	echo "  Run dir : $$CDC_RUN_DIR"; \
+	echo "  Corner  : $(CDC_CORNER)"; \
+	echo "  SDC     : $(abspath $(LIBRELANE_SKY130_SOC_DIR)/constraints/sky130_soc_cdc_check.sdc)"; \
+	echo "=========================================="; \
+	CDC_LOG=$$(mktemp /tmp/check_cdc_timing_sky130.XXXXXX.log); \
+	mkdir -p /nobackup/sky130_soc_runs/cdc_check_reports; \
+	( cd $(LIBRELANE_DIR) && nix-shell --run \
+		"CDC_CHECK_RUN_DIR=$$CDC_RUN_DIR CDC_CHECK_CORNER=$(CDC_CORNER) \
+		 CDC_CHECK_REPORTS=/nobackup/sky130_soc_runs/cdc_check_reports/$$(basename $$CDC_RUN_DIR)_$(CDC_CORNER) \
+		 sta -no_init -exit $(abspath scripts/check_cdc_timing_sky130.tcl)" ) > "$$CDC_LOG" 2>&1; \
+	STA_EXIT=$$?; \
+	grep -v 'Creating black box' "$$CDC_LOG"; \
+	if grep -qE "CDC-EXCEPTION-MISS|budget VIOLATED|CDC-CHECK-RESULT: FAIL|CDC-CHECK-SETUP-ERROR" "$$CDC_LOG"; then \
+		echo "FAIL: check-cdc-timing-sky130-soc -- CDC finding marker(s) present (sta exit $$STA_EXIT). Log: $$CDC_LOG"; \
+		exit 1; fi; \
+	if [ "$$STA_EXIT" -ne 0 ]; then \
+		echo "FAIL: check-cdc-timing-sky130-soc -- sta exited $$STA_EXIT with no recognised marker (tool/setup error). Log: $$CDC_LOG"; \
+		exit "$$STA_EXIT"; fi; \
+	if ! grep -q "CDC-CHECK-RESULT: PASS" "$$CDC_LOG"; then \
+		echo "FAIL: check-cdc-timing-sky130-soc -- no PASS marker in the log (a check that did not report is not a pass). Log: $$CDC_LOG"; \
+		exit 1; fi; \
 	rm -f "$$CDC_LOG"
 
 # flop-count: DFF breakdown from any LibreLane run's synthesis log.
