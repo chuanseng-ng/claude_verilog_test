@@ -87,3 +87,84 @@ the failing budget, so combine with A or B.
 
 Recommendation (analysis only, not a decision): B for tape-out quality, A as the interim record
 if the schedule needs a green check, C in either case.
+
+## 5. Decision (user, 2026-10-17): B + C. Implemented, flow NOT re-run
+
+B. `pnr/sky130/soc/constraints/sky130_soc.sdc`, new block after "Clock groups": for the ten gray-pointer
+synchronisers of the five `async_axi_fifo` FIFOs (`u_cpu_axi_cdc`), per bit:
+`set_false_path -hold -from <opposite-domain launch flops> -to <stage-0 capture D pin>`. Setup is untouched.
+It is structural (stage-0 `sync_q[0]` net -> driver = capture flop -> `get_fanin -startpoints_only` filtered by
+`all_registers -clock`), the same resolver as the check SDC, so it does not depend on anonymous cell names or
+on a `.` in an OpenSTA `-filter`. A miss is a hard `error` (CDC-HOLD-EXEMPT-MISS), because a silently unbound
+exception would put the 11.8 ns of padding back. All three SoC configs (`config.json`, `config_rccal.json`,
+`config_rccal_wl1500.json`) point `PNR_SDC_FILE`/`SIGNOFF_SDC_FILE`/`FALLBACK_SDC_FILE` at this one file, so no
+config edit is needed. Deliberately NOT exempted: the apb_cdc_bridge req/ack and PMU/IRQ `cdc_sync` captures
+(>= 12 ns slack at every corner, one extra table row each if ever needed) and the payload registers covered by the
+section-10 fallback (the fallback `core2cpu` finding at max_ss is the same worst path and should clear with the
+rest; if a payload register turns out to be padded after the re-run, extend then, with a measurement).
+
+C. `check-cdc-timing-sky130-soc` now loops `CDC_CORNERS` (default `nom_tt_025C_1v80 max_ss_100C_1v60`,
+`all` = nine, `CDC_CORNER=<one>` still wins), one `sta` at a time, FAIL on any corner, with a summary.
+`check_cdc_timing_sky130.tcl` adds a per-pointer bit-skew report (section "Per-pointer bit-skew"): max minus min
+data arrival at the stage-0 D pins of a pointer, clocks propagated, limit `CDC_CHECK_SKEW_FRAC` (default 0.25) x
+min(source, destination period) = 6.25 ns, or absolute `CDC_CHECK_SKEW_LIMIT`. The Gray criterion's hard limit is
+one source period (the pointer moves at most once per source cycle, so more spread than that can mix bits of two
+updates); 0.25 is a 4x derate for OCV, jitter and the corner spread a single SPEF measurement cannot see.
+
+## 6. Scan-mode hold: the approach chosen, and what is NOT verified
+
+The tck -> tck race is fictitious in functional mode and real in scan capture, where one test clock reaches both
+trees (DFT_ARCHITECTURE.md 9.3). Options considered:
+
+| Option | Fixes functional padding | Keeps scan hold safe | Cost / verdict |
+|---|---|---|---|
+| `set_false_path -hold` limited to functional clocks | no change: core->cpu is already in the async group; the padded path IS tck->tck | n/a | meaningless here |
+| Scan-mode-only SDC/corner in LibreLane | needs a second constraint set | yes | LibreLane Classic has one SDC per corner, no MMMC; a second set is a post-route standalone STA, not a repair |
+| Lock-up latch | no | no | fixes the Q->SI chain hop between domains, not the functional D path of a crossing; still needed at chain joins (Stage 2) |
+| Exclude stage-0 flops from scan | yes | no | they still sample a live pointer during shift, so they are X and X-propagate into FIFO flags; costs coverage on 34 flops |
+| Balance the ICG/trees in CTS | partly | partly | two independent roots; skew is inherent, balancing async trees is a CTS research item |
+| Exemption + masked capture + scan-view measurement (CHOSEN) | yes | residual, see below | no area, no RTL change, deterministic |
+
+Chosen: exempt in the functional implementation (above), and keep scan hold on a separate, explicit footing:
+1. The same file re-sourced with `CVT_SDC_SCAN_VIEW=1` skips the exemption, i.e. the scan-mode view of the same
+   crossings (hold kept on tck -> tck). It is the single source for the scan-mode measurement, so it cannot drift
+   from the functional list. The flow never sets it.
+2. A hold failure on these 34 pins in scan capture can only corrupt the captured value of the stage-0 flops (a
+   test-response mismatch). It cannot corrupt the FIFO state functionally and cannot occur in functional mode.
+   The test protocol therefore has to treat the 34 stage-0 capture flops as masked in the expected response (or
+   hold the pointer registers across the capture cycle). Cost: 34 flops lose capture observability for faults on
+   their own D path.
+3. UNVERIFIED until Stage 2 (j41m.8) inserts chains and a real scan-mode SDC exists: (a) the scan-capture hold
+   slack of these pins on a post-fix netlist (measurable with the scan view; before the fix it was -1.369 ns
+   post-CTS without parasitics, -2.16 ns with, and +2.12 to +3.66 ns after the resizer padded it); (b) that
+   the stage-0 flops are actually masked in the pattern set (there is no X-masking engine in the open ATPG tools,
+   DFT_ARCHITECTURE.md section 2.4); (c) the capture sequencing per domain, which is hand-written. Bead j41m.8
+   owns this; do not read "scan hold safe" from this change.
+
+## 7. Evidence (RUN_2026-10-17_14-07-01, read-only; one STA at a time)
+
+Binding of the exemption (OpenSTA `sta` and the flow's own `openroad`, nom_tt, clocks propagated; endpoints =
+distinct hold-checked endpoints from `report_checks -path_delay min -format end`):
+- Synthesis netlist, post-CTS netlist/ODB, and post-repair fill netlist + nom SPEF: the SDC exempts **34 pins**
+  (10 synchronisers: bits 3,3,3,3,3,3,4,4,4,4), identical to the 34 capture D pins the check SDC budgets
+  (`fifo_rd2wr` 17 + `fifo_wr2rd` 17).
+- Hold endpoints, exemption off (scan view) vs on: 19341 -> 19307 (CTS netlist) and 19341 -> 19307 (final).
+  The 34 removed endpoints are exactly the exempt list (set equality), none added, 0 changed slack on the rest,
+  and a repeat is bit-identical.
+- Before the fix the removed endpoints had hold slack -1.369 .. +1.848 ns at post-CTS (17 of 34 negative) and
+  +2.123 .. +3.663 ns on the padded final netlist (the buffers the exemption stops).
+- Negative control: bogus instance token -> "no stage-0 net matched"; launch clock wrong -> "no core_clk launch
+  flop" (3 bits); both clocks swapped -> "no cpu_clk capture flop D pin" (3 bits): 7 misses, 0 pins bound. In the
+  SDC any miss is a hard error.
+
+New check on the existing run, `make -C pnr check-cdc-timing-sky130-soc` (default corners):
+- nom_tt: PASS (fifo_rd2wr +5.994, fifo_wr2rd +6.089 ns).
+- max_ss: FAIL, as expected for a run that predates the fix (fifo_rd2wr -0.715, fifo_wr2rd -0.516 ns,
+  `core2cpu` fallback is the same path). The default now catches what the nom_tt default hid.
+- Bit skew, all 10 pointers, both corners: 0.014 to 0.512 ns (max `u_aw_fifo.rd2wr` 0.512 ns at max_ss) against a
+  6.25 ns limit. A limit of 0.1 ns flags 3 of 10 pointers at nom_tt (the check can fail). The padding chains
+  inflate arrival, not spread, so skew is not the failure mode here.
+
+Open: the re-harden that proves the fix (max_ss CDC pass, no `dlygate4sd3_1` chains on these pins) has NOT been run.
+Expected, not measured: fifo arrival falls from about 16.7 ns to about 1 to 3 ns at max_ss, and the new baseline is
+not a single-variable comparison with 14-07-01 (hold repair now differs everywhere these pins fed).
