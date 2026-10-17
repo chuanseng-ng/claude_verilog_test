@@ -402,11 +402,41 @@ MBIST_TAP_SOURCES = \
 	$(RTL)/soc/dft/dft_ctrl.sv \
 	$(RTL)/soc/dft/mbist_ctrl.sv \
 	$(RTL)/soc/dft/mbist_xing.sv \
+	$(RTL)/soc/dft/mbist_ctl_hold.sv \
 	$(RTL)/soc/dft/mbist_status_sync.sv \
 	$(RTL)/soc/dft/mem_collar.sv \
 	$(RTL)/soc/dft/soc_mbist.sv \
 	$(SOC_DIR)/sram_fi_core.sv \
 	$(SOC_DIR)/tb_mbist_tap.sv
+
+# SoC-level integration on the REAL wrappers: sram_controller + npu_top with +define+SRAM_SKY130 against the
+# fault-injecting stand-in that takes the real macro's module name.
+MBIST_SOC_SLICE_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/soc_addr_map_pkg.sv \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
+	$(RTL)/soc/cdc/cdc_reset_sync.sv \
+	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
+	$(RTL)/mem/rv32i_clock_gate.sv \
+	$(RTL)/soc/dft/dft_ctrl_ports.sv \
+	$(RTL)/soc/dft/jtag_tap.sv \
+	$(RTL)/soc/dft/dft_clk_switch.sv \
+	$(RTL)/soc/dft/dft_rst_mux.sv \
+	$(RTL)/soc/dft/dft_ctrl.sv \
+	$(RTL)/soc/dft/mbist_ctrl.sv \
+	$(RTL)/soc/dft/mbist_xing.sv \
+	$(RTL)/soc/dft/mbist_ctl_hold.sv \
+	$(RTL)/soc/dft/mbist_status_sync.sv \
+	$(RTL)/soc/dft/mem_collar.sv \
+	$(RTL)/soc/dft/soc_mbist.sv \
+	$(RTL)/soc/sram_controller.sv \
+	$(RTL)/npu/npu_mac_array.sv \
+	$(RTL)/npu/npu_weight_mem.sv \
+	$(RTL)/npu/npu_top.sv \
+	$(SOC_DIR)/sram_fi_core.sv \
+	$(SOC_DIR)/sky130_sram_fi_wrappers.sv \
+	$(SOC_DIR)/tb_mbist_soc_slice.sv
 
 # FI model with no fault armed vs the REAL 4 KB simulation model.
 MBIST_FI_EQUIV_SOURCES = \
@@ -528,6 +558,7 @@ PLL_SOURCES = \
 	$(RTL)/soc/dft/dft_ctrl.sv \
 	$(RTL)/soc/dft/mbist_ctrl.sv \
 	$(RTL)/soc/dft/mbist_xing.sv \
+	$(RTL)/soc/dft/mbist_ctl_hold.sv \
 	$(RTL)/soc/dft/mbist_status_sync.sv \
 	$(RTL)/soc/dft/mem_collar.sv \
 	$(RTL)/soc/dft/soc_mbist.sv \
@@ -621,6 +652,7 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/soc/dft/dft_ctrl.sv \
 	$(RTL)/soc/dft/mbist_ctrl.sv \
 	$(RTL)/soc/dft/mbist_xing.sv \
+	$(RTL)/soc/dft/mbist_ctl_hold.sv \
 	$(RTL)/soc/dft/mbist_status_sync.sv \
 	$(RTL)/soc/dft/mem_collar.sv \
 	$(RTL)/soc/dft/soc_mbist.sv \
@@ -865,7 +897,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint cdc_sync cdc_sync_lint cdc_sync_stages1_neg cdc_gray_fifo cdc_gray_fifo_sim cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg periph_sync_stages clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint mbist_ctrl mbist_ctrl_lint mbist_tap mbist_tap_lint mbist_fi_equiv mbist_fi_equiv_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
+.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint cdc_sync cdc_sync_lint cdc_sync_stages1_neg cdc_gray_fifo cdc_gray_fifo_sim cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg periph_sync_stages clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint mbist_ctrl mbist_ctrl_lint mbist_tap mbist_tap_lint mbist_soc_slice mbist_soc_slice_lint mbist_fi_equiv mbist_fi_equiv_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation
 crossbar:
 	$(MAKE) MODULE=test_crossbar,test_crossbar_errors TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -1428,6 +1460,15 @@ mbist_tap_lint:
 mbist_tap: mbist_tap_lint
 	$(MAKE) MODULE=test_mbist_tap TOPLEVEL=tb_mbist_tap \
 		VERILOG_SOURCES="$(MBIST_TAP_SOURCES)" \
+		$(BUILD_ARGS)
+
+mbist_soc_slice_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR +define+SRAM_SKY130 --top-module tb_mbist_soc_slice $(MBIST_SOC_SLICE_SOURCES)
+
+mbist_soc_slice: mbist_soc_slice_lint
+	$(MAKE) MODULE=test_mbist_soc_slice TOPLEVEL=tb_mbist_soc_slice \
+		VERILOG_SOURCES="$(MBIST_SOC_SLICE_SOURCES)" \
+		EXTRA_ARGS="+define+SRAM_SKY130" \
 		$(BUILD_ARGS)
 
 mbist_fi_equiv_lint:

@@ -22,6 +22,7 @@
 //            8 AF multi   address fi_v_addr selects its own cells AND those of fi_a_addr (write both, read AND)
 //            9 RET        cell (fi_v_addr, fi_v_bit) decays to fi_val when more than fi_ret_t negedges have passed
 //                         since the last write to the word
+//           11 P1STUCK   read port 1 only: data bit fi_v_bit of dout1 stuck at fi_val (the array and port 0 are fine)
 //           10 WMASK      write-mask lane fi_v_bit[1:0] stuck: fi_val = 0 never written, 1 always written
 // Lint: this is a testbench model; the suite's lint target runs -Wall with the unused clk1 waived below.
 
@@ -174,6 +175,10 @@ module sram_fi_core #(
         end
         if (!csb1_r) begin
             dout1 <= rd(int'(addr1_r));
+            if (fi_kind == 11) begin
+                // read-port-1 data bit stuck (port 0 and the array are fine)
+                dout1[fi_v_bit] <= fi_val[0];
+            end
         end
         if (!csb0_r && web0_r) begin
             dout0 <= rd(int'(addr0_r));

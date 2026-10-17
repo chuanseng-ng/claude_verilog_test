@@ -42,7 +42,7 @@ CFGS = [(53, 10, 7), (20, 31, 13), (10, 97, 29)]
 
 def ctl_q(dut, dom):
     x = dut.u_mbist.u_xing_core if dom == "core" else dut.u_mbist.g_cpu.u_xing_cpu
-    return int(x.ctl_q.value)
+    return int(x.u_hold.ctl_q.value)
 
 
 def mem(dut, dom, i):
@@ -266,16 +266,20 @@ async def t_functional_reset_does_not_restart(dut, cfg):
 
 async def t_overflow_is_reported_and_cleared(dut, cfg):
     t = await setup(dut, cfg)
+    # the Test-Logic-Reset default word written at power-up occupies a FIFO slot until the destination clock
+    # has read it; let it drain first so exactly two slots are free
+    await ClockCycles(dut.clk_core_i, 40)
+    # ... and the write side only SEES the freed slot after the read pointer has crossed back into the TCK
+    # domain, which needs TCK edges (tester rule: keep TCK running in Run-Test/Idle)
+    await t.drv.walk([0] * 8)
     t.core_clk.kill()  # destination clock of the core FIFO stops
     dut.clk_core_i.value = 0
     await ClockCycles(dut.clk_cpu_i, 4)
     w = [ctl_word(run=1, alg=0, dom_core=1, dom_cpu=0),
          ctl_word(run=1, alg=1, dom_core=1, dom_cpu=0),
          ctl_word(run=1, alg=2, dom_core=1, dom_cpu=0)]  # fmt: skip
-    f = dut.u_mbist.u_xing_core.u_fifo
     for x in w:
         await t.drv.write_tdr(OP_MBIST_CTRL, x, 29)
-        dut._log.info(f"DBG after write: wr_bin={int(f.wr_bin_q.value)} full={int(f.full_q.value)} rdv={int(f.rd_valid_o.value)} mem0={int(f.mem_q[0].value):#x} mem1={int(f.mem_q[1].value):#x}")
     st = await t.read_status()
     assert st["ovf"] == 1, "a third write into a full 2-entry FIFO with a stopped reader must set the flag"
     t.core_clk = cocotb.start_soon(Clock(dut.clk_core_i, cfg[1], units="ns").start())

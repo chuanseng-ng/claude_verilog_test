@@ -56,7 +56,7 @@
 +incdir+rtl/soc/dft
 +incdir+rtl/soc/cdc
 
-// ---- RTL (89 files, packages first) ----
+// ---- RTL (90 files, packages first) ----
 rtl/soc/axi_pkg.sv
 rtl/soc/soc_addr_map_pkg.sv
 rtl/soc/soc_periph_map_pkg.sv
@@ -135,6 +135,7 @@ rtl/soc/dft/dft_clk_switch.sv
 rtl/soc/dft/dft_ctrl.sv
 rtl/soc/dft/mbist_ctrl.sv
 rtl/soc/dft/mbist_xing.sv
+rtl/soc/dft/mbist_ctl_hold.sv
 rtl/soc/dft/mbist_status_sync.sv
 rtl/soc/dft/mem_collar.sv
 rtl/soc/dft/soc_mbist.sv

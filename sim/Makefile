@@ -432,6 +432,7 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/soc/dft/dft_ctrl.sv \
 	$(RTL_DIR)/soc/dft/mbist_ctrl.sv \
 	$(RTL_DIR)/soc/dft/mbist_xing.sv \
+	$(RTL_DIR)/soc/dft/mbist_ctl_hold.sv \
 	$(RTL_DIR)/soc/dft/mbist_status_sync.sv \
 	$(RTL_DIR)/soc/dft/mem_collar.sv \
 	$(RTL_DIR)/soc/dft/soc_mbist.sv \

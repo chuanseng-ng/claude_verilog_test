@@ -211,7 +211,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           YOSYS: ${{ github.workspace }}/sim/build/cdc/oss-cad-suite/bin/yosys
-          EXPECT_TESTS: '25'
+          EXPECT_TESTS: '30'
         run: |
           python3 -m pip install --user pytest
           log="${RUNNER_TEMP}/dft_scan_pytest.log"

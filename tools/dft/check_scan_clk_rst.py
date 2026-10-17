@@ -123,8 +123,16 @@ def check_reset_syncs(a, cells, ports, drivers, cell_inputs, cone_leaves, violat
         return flat_name(cn).startswith(prefix + ".")
 
     pairs = []
+    anyclk = set()
     for spec in a.expect_reset_sync:
         sync_p, _, cons_p = spec.partition("=")
+        if cons_p.endswith("@any"):
+            # A chain in a FUNCTIONAL clock domain (the MBIST control-word FIFO's read-side reset): its clock is the
+            # scan-muxed core clock and its reset input carries the scan-mode override, so the TAP-chain rules
+            # "clock exactly tck, reset exactly trst" cannot hold. It is still required to be a chain on trst
+            # (the reset cone must contain the trst port) that really resets its consumer.
+            cons_p = cons_p[: -len("@any")]
+            anyclk.add(sync_p)
         if not sync_p or not cons_p:
             fail(spec, "malformed --expect-reset-sync, expected SYNC=CONSUMER (instance-name prefixes)")
             continue
@@ -140,7 +148,14 @@ def check_reset_syncs(a, cells, ports, drivers, cell_inputs, cone_leaves, violat
             c = seq_cells[cn]
             arst = [b for p in ASYNC_PORTS for b in c["connections"].get(p, []) if isinstance(b, int)]
             clk = [b for b in (c["connections"].get("CLK") or c["connections"].get("EN") or []) if isinstance(b, int)]
-            if not arst or any(cone_leaves(b) != ({a.trst}, set()) for b in arst):
+            if sync_p in anyclk:
+                if not arst or any(a.trst not in cone_leaves(b)[0] for b in arst):
+                    fail(sync_p, f"flop {flat_name(cn)} async reset cone does not contain port {a.trst}")
+                elif not clk:
+                    fail(sync_p, f"flop {flat_name(cn)} has no clock")
+                else:
+                    good.add(cn)
+            elif not arst or any(cone_leaves(b) != ({a.trst}, set()) for b in arst):
                 fail(sync_p, f"flop {flat_name(cn)} async reset is not exactly port {a.trst}")
             elif not clk or any(cone_leaves(b) != ({a.tck}, set()) for b in clk):
                 fail(sync_p, f"flop {flat_name(cn)} clock is not exactly port {a.tck}")
@@ -216,6 +231,17 @@ def main():
     ap.add_argument("--tap-allowed-nets", action="append", default=[],
                     help="flattened net the TAP domain may drive into non-TAP logic or an output port (repeatable); "
                          "anything else crossing the TAP boundary is a violation")
+    ap.add_argument("--tck-prefix", action="append", default=[],
+                    help="flattened instance-name prefix of a MIXED-domain block (repeatable), e.g. the MBIST "
+                         "control-word FIFO: a sequential cell under it whose clock cone is EXACTLY the tck port is "
+                         "TAP-domain (unscanned, held to the TAP clock/reset rules); every other cell under it is "
+                         "checked as ordinary functional logic")
+    ap.add_argument("--tck-sink", action="append", default=[],
+                    help="flattened instance-name prefix of NON-TAP cells that may read a --tck-prefix TCK-domain flop "
+                         "(repeatable): the pointer synchroniser and the holding register of the crossing. Any other "
+                         "non-TAP cell or output port whose fan-in cone contains such a flop is a violation")
+    ap.add_argument("--expect-tck-flops", type=int, default=0,
+                    help="fail if fewer TCK-domain flops are found under --tck-prefix (renamed/optimised-away guard)")
     ap.add_argument("--models", action="append", default=[],
                     help="Verilog behavioural/blackbox models of library cells and hard macros that the "
                          "netlist instantiates but does not define (e.g. tools/dft/asap7_cell_models.v)")
@@ -364,6 +390,69 @@ def main():
         if rb and all(cone_leaves(b) == ({a.trst}, set()) for b in rb):
             tap_sync.add(cn)
 
+    # Mixed-domain blocks (bead j41m.14/j41m.10, the MBIST control-word FIFO): TCK-clocked flops under --tck-prefix join
+    # the TAP domain by CLOCK, not by name. They are deliberately left out of tap_any above, so the boundary list does
+    # not have to name every internal net; the dedicated sink check below is what keeps them from leaking.
+    tck_cells = set()
+    if a.tck_prefix:
+        def under(cname, prefixes):
+            n = cname.replace("$flatten", "").replace("\\", "")
+            return any(n.startswith(p + ".") for p in prefixes)
+
+        for cn, c in cells.items():
+            if is_seq(c["type"]) and cn not in tap_cells and under(cn, a.tck_prefix):
+                ck = [b for b in (c["connections"].get("CLK") or c["connections"].get("EN") or [])
+                      if isinstance(b, int)]
+                if ck and all(cone_leaves(b) == ({a.tck}, set()) for b in ck):
+                    tck_cells.add(cn)
+        tap_cells |= tck_cells
+        if len(tck_cells) < a.expect_tck_flops:
+            violations.append(("tck", "block", "TCK_FLOPS",
+                               f"expected at least {a.expect_tck_flops} TCK-domain flops under {a.tck_prefix}, "
+                               f"found {len(tck_cells)} (prefix wrong or optimised away?)"))
+        for sp in a.tck_sink:
+            if not any(is_seq(c["type"]) and under(cn, [sp]) for cn, c in cells.items()):
+                violations.append((sp, "prefix", "TCK_SINK", "declared sink prefix matches no sequential cell (renamed?)"))
+        # Forward reachability from every TCK-domain flop through combinational cells to the sequential cells and
+        # output ports it feeds (a backward cone per sink would be quadratic on a 20 k-flop netlist).
+        fanout, out_bit_port = {}, {}
+        for cn2, c2 in cells.items():
+            for _, b in cell_inputs(c2):
+                fanout.setdefault(b, []).append(cn2)
+        for pn, p in ports.items():
+            if p["direction"] == "output":
+                for b in p["bits"]:
+                    if isinstance(b, int):
+                        out_bit_port[b] = pn
+        reached = {}
+        for tc in sorted(tck_cells):
+            seen_c, stack = set(), [b for pn2, bs in cells[tc]["connections"].items()
+                                    if cells[tc]["port_directions"].get(pn2) == "output"
+                                    for b in bs if isinstance(b, int)]
+            seen_b = set()
+            while stack:
+                b = stack.pop()
+                if b in seen_b:
+                    continue
+                seen_b.add(b)
+                if b in out_bit_port:
+                    violations.append((out_bit_port[b], "port", "TCK_SINK", f"output port is driven by TCK-domain flop {tc}"))
+                for cn2 in fanout.get(b, []):
+                    if cn2 in seen_c:
+                        continue
+                    seen_c.add(cn2)
+                    c2 = cells[cn2]
+                    if is_seq(c2["type"]):
+                        reached.setdefault(cn2, tc)
+                    else:
+                        stack.extend(x for pn2, bs in c2["connections"].items()
+                                     if c2["port_directions"].get(pn2) == "output"
+                                     for x in bs if isinstance(x, int))
+        for cn2, tc in sorted(reached.items()):
+            if cn2 not in tap_cells and not under(cn2, a.tck_sink):
+                violations.append((cn2, cells[cn2]["type"], "TCK_SINK",
+                                   f"reads TCK-domain flop {tc} without a declared synchroniser/holding register"))
+
     if a.scan_mode_net:
         # both legs of scan mode must exist: the 1a pin and the TAP
         legs_ports, legs_seqs = set(), set()
@@ -417,7 +506,7 @@ def main():
         n_rs_ok = check_reset_syncs(a, cells, ports, drivers, cell_inputs, cone_leaves, violations)
 
     print(f"sequential cells: {n_seq}; async reset/set pins checked: {n_async}; scan-mode muxes: {gates}; "
-          f"TAP-domain flops: {n_tap} (reset synchronisers: {len(tap_sync)})")
+          f"TAP-domain flops: {n_tap} (reset synchronisers: {len(tap_sync)}; TCK-domain flops by clock: {len(tck_cells)})")
     if a.expect_reset_sync:
         print(f"reset synchronisers verified: {n_rs_ok} of {len(a.expect_reset_sync)}")
     uniq = sorted(set(violations))

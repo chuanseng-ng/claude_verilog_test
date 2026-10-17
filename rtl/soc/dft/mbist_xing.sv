@@ -89,17 +89,22 @@ module mbist_xing #(
         .rst_n_o      (rst_n_o)
     );
 
-    logic [CTL_W-1:0] ctl_q;
+    // The holding register is an instance of its own: it is the ONE place that reads the FIFO's TCK-domain
+    // storage combinationally (rd_data_w), so tools/dft/check_scan_clk_rst.py --tck-sink names it (and the
+    // FIFO's pointer synchroniser) as the only cells allowed to read a TCK-domain flop.
+    logic [CTL_W-1:0] ctl_w;
 
-    always_ff @(posedge clk_dst_i or negedge rst_n_o) begin
-        if (!rst_n_o) begin
-            ctl_q <= '0;
-        end else if (rd_valid_w) begin
-            ctl_q <= rd_data_w;
-        end
-    end
+    mbist_ctl_hold #(
+        .CTL_W (CTL_W)
+    ) u_hold (
+        .clk_i  (clk_dst_i),
+        .rst_n_i(rst_n_o),
+        .load_i (rd_valid_w),
+        .d_i    (rd_data_w),
+        .q_o    (ctl_w)
+    );
 
-    assign run_o = ctl_q[0] & ctl_q[DOM_BIT];
-    assign cfg_o = ctl_q[26:1];
+    assign run_o = ctl_w[0] & ctl_w[DOM_BIT];
+    assign cfg_o = ctl_w[26:1];
 
 endmodule : mbist_xing
