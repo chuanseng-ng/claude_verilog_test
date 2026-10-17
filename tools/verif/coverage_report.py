@@ -37,14 +37,38 @@ Waivers
 ``tools/verif/coverage_waivers.txt`` (``--waivers``) lists points that are unreachable BY
 DESIGN (a tie-off, an ``EN_*=0`` generate arm, an elaboration guard).  One per line::
 
-    module | kind | regex | category | justification
+    module | kind | pattern | category | justification
 
-``kind`` is ``line`` (line and branch points, matched as ``L<line>`` or ``L<line> <arm>``),
-``toggle`` (matched as ``<signal>[<bit>]:<from>-><to>``) or ``any``.  ``category`` is ``b``
-(the only waivable class: test gaps and bugs are beads, never waivers).  A justification is
-mandatory.  A waiver can only remove an UNCOVERED point from the denominator; the raw
-percentage stays in the report beside the adjusted one, and a waiver that matches nothing is
-reported as stale.  The list is external on purpose: grandfathered RTL gets no pragma edits.
+``kind`` is ``line`` (line and branch points), ``toggle`` (matched as
+``<signal>[<bit>]:<from>-><to>``) or ``any``.  ``category`` is ``b`` (the only waivable class:
+test gaps and bugs are beads, never waivers).  A justification is mandatory.  A waiver can only
+remove an UNCOVERED point from the denominator; the raw percentage stays in the report beside the
+adjusted one, and a waiver that matches nothing is reported.  The list is external on purpose:
+grandfathered RTL gets no pragma edits.
+
+A ``line`` waiver is anchored on the TEXT of the waived source line, never on its number (bead
+xlc4: a line number drifts with every edit above it, and PR #279 shifted ``sram_controller.sv``
+by 16 lines and turned the main gate red)::
+
+    sram_controller | line | @"default: wstate <= W_IDLE;" | b | why
+
+* the text is compared after dropping ``//`` and ``/* */`` comments and collapsing whitespace, so
+  rewording a comment or re-aligning the line keeps the waiver while any edit to the code makes it
+  STALE;
+* an anchor must match exactly one line of the file that declares the module.  Identical lines
+  take an ordinal, ``@"default: ;"#2/3`` = the 2nd of 3.  The ``3`` is checked: if the number of
+  identical lines changes the waiver is stale instead of silently pointing at another line, and a
+  bare anchor that matches several lines is an ERROR (exit 2);
+* one entry may list several anchors (``@"a;" @"b;"#1/2``); an anchor waives every line and
+  branch point on its line;
+* a numeric line waiver (``^L284\\b``) is rejected by the loader; ``--migrate-waivers FILE``
+  converts one.
+
+An anchor is resolved against the RTL under ``--root``, not against the coverage data, so the
+check needs no simulation (``--check-waivers``) and does not depend on which modules a given
+``.dat`` measured.  A waiver is STALE when its module is no longer declared, an anchor matches no
+line, or an ordinal anchor's count changed.  ``--gate`` fails on any stale waiver
+(``stale-waiver``); a plain report only warns.
 
 Exit status
 -----------
@@ -60,6 +84,9 @@ Gate (bead s1cg)
 ``--gate`` enforces, on the TRIAGED trees only (``rtl/soc``, ``rtl/periph``, ``rtl/npu``; the
 informational trees never fail it):
 
+* **no stale waiver** (bead xlc4): every anchored line waiver still binds to its source line (see
+  Waivers).  This is not a coverage floor; it fails even when every floor is met, because a stale
+  waiver has silently un-waived a point;
 * **line floor** (``--line-floor``, default 95): every module's adjusted line % (line + branch
   points, waived points removed) is at least the floor;
 * **control-signal toggle floor** (``--toggle-floor``, default 100): every module's toggle % over
@@ -104,6 +131,8 @@ Usage::
                        [--out-md report.md] [--out-json report.json]
                        [--gate [--line-floor 95] [--toggle-floor 95] [--toggle-ratchet <file>]
                         [--line-gate-trees rtl/cpu,rtl/mem,rtl/gpu]]
+    coverage_report.py --check-waivers --waivers <file> [--root <repo>]   # no .dat; exit 0/1/2
+    coverage_report.py --migrate-waivers <file> [--root <repo>]           # prints the new file
 """
 
 from __future__ import annotations
@@ -176,8 +205,31 @@ class Point:
 
 
 @dataclass(frozen=True)
+class Anchor:
+    """One content anchor of a line waiver: the normalised text of the waived source line.
+
+    ``ordinal``/``count`` (``#k/N``) pick the k-th of N identical lines.  N is an assertion, not
+    a hint: when the file stops having exactly N such lines the anchor goes stale instead of
+    silently pointing at a different one.
+    """
+
+    text: str
+    ordinal: int | None = None
+    count: int | None = None
+
+    def __str__(self) -> str:
+        escaped = self.text.replace("\\", "\\\\").replace('"', '\\"')
+        suffix = "" if self.ordinal is None else f"#{self.ordinal}/{self.count}"
+        return f'@"{escaped}"{suffix}'
+
+
+@dataclass(frozen=True)
 class Waiver:
-    """One waiver-file entry; ``lineno`` is its line in the waiver file."""
+    """One waiver-file entry; ``lineno`` is its line in the waiver file.
+
+    A ``line`` waiver carries ``anchors`` (``pattern`` keeps the spec text for display); every
+    other waiver is a plain regex ``pattern`` over the point label.
+    """
 
     module: str
     kind: str
@@ -185,6 +237,7 @@ class Waiver:
     category: str
     justification: str
     lineno: int
+    anchors: tuple[Anchor, ...] = ()
 
     def matches(self, module: str, kind: str, text: str) -> bool:
         if module != self.module:
@@ -286,10 +339,21 @@ class Report:
     waiver_hits: dict[int, int]  # waiver lineno -> matched uncovered points
     inputs: list[InputStat] = field(default_factory=list)
     consistency: list[Consistency] = field(default_factory=list)
+    resolutions: dict[int, WaiverResolution] = field(default_factory=dict)  # anchored waivers
 
     @property
     def unused_waivers(self) -> list[Waiver]:
+        """Waivers that matched no uncovered point (true on a partial run too: not a failure)."""
         return [w for w in self.waivers if self.waiver_hits.get(w.lineno, 0) == 0]
+
+    @property
+    def stale_waivers(self) -> list[Waiver]:
+        """Anchored waivers whose source anchor no longer binds (bead xlc4): always a gate fail."""
+        return [
+            w
+            for w in self.waivers
+            if (res := self.resolutions.get(w.lineno)) is not None and res.status == "stale"
+        ]
 
 
 # ------------------------------------------------------------------------------ parsing
@@ -389,12 +453,258 @@ def load_waivers(path: Path) -> list[Waiver]:
             )
         if not justification:
             raise CoverageError(f"{where}: justification is empty")
-        try:
-            re.compile(pattern)
-        except re.error as exc:
-            raise CoverageError(f"{where}: bad regex {pattern!r}: {exc}") from exc
-        waivers.append(Waiver(module, kind, pattern, category, justification, lineno))
+        anchors: tuple[Anchor, ...] = ()
+        if kind == "line" or (kind == "any" and _LEGACY_LINE_PATTERN.match(pattern)):
+            if not pattern.startswith("@"):
+                raise CoverageError(
+                    f"{where}: a line waiver must be content-anchored, "
+                    f'@"<text of the waived source line>" (optionally #k/N for identical '
+                    f"lines), not a line-number regex {pattern!r}: a line number drifts with "
+                    f"every edit above it (bead xlc4).  Convert it with --migrate-waivers"
+                )
+            if kind != "line":
+                raise CoverageError(f"{where}: an @-anchor is only valid for kind 'line'")
+            anchors = parse_anchors(pattern, where)
+        elif pattern.startswith("@"):
+            raise CoverageError(f"{where}: an @-anchor is only valid for kind 'line'")
+        else:
+            try:
+                re.compile(pattern)
+            except re.error as exc:
+                raise CoverageError(f"{where}: bad regex {pattern!r}: {exc}") from exc
+        waivers.append(Waiver(module, kind, pattern, category, justification, lineno, anchors))
     return waivers
+
+
+# ----------------------------------------------------------------- waiver anchors (bead xlc4)
+#
+# A line waiver names the waived point by the TEXT of its source line, not by its number, so an
+# edit above it cannot move it out from under the waiver.  Resolution reads the RTL source (no
+# coverage data), which also lets ``--check-waivers`` run in the per-PR QA job without a
+# simulation.
+
+_LEGACY_LINE_PATTERN = re.compile(r"\^?L\(?\d")
+_ANCHOR_TOKEN = re.compile(r'@"((?:[^"\\]|\\.)*)"(?:#(\d+)/(\d+))?')
+_MODULE_DECL = re.compile(r"^[ \t]*(?:module|package|interface)\s+([A-Za-z_]\w*)", re.MULTILINE)
+_LEGACY_LINES = re.compile(r"\^L\(?(\d+(?:\|\d+)*)\)?\\b")
+
+
+def normalize_source_line(raw: str) -> str:
+    """The comparison form of a source line: comments removed, whitespace collapsed.
+
+    ``//`` and same-line ``/* */`` comments are dropped (outside string literals), so rewording a
+    comment or re-aligning the line does not stale a waiver, while any change to the code does.
+    """
+    out: list[str] = []
+    i, n = 0, len(raw)
+    in_str = False
+    while i < n:
+        c = raw[i]
+        if in_str:
+            out.append(c)
+            if c == "\\" and i + 1 < n:
+                out.append(raw[i + 1])
+                i += 2
+                continue
+            in_str = c != '"'
+        elif c == '"':
+            in_str = True
+            out.append(c)
+        elif raw.startswith("//", i):
+            break
+        elif raw.startswith("/*", i):
+            end = raw.find("*/", i + 2)
+            if end == -1:
+                break
+            out.append(" ")
+            i = end + 2
+            continue
+        else:
+            out.append(c)
+        i += 1
+    return " ".join("".join(out).split())
+
+
+def parse_anchors(spec: str, where: str) -> tuple[Anchor, ...]:
+    """Parse ``@"text"[#k/N] [@"text"[#k/N] ...]``; every defect is an error."""
+    anchors: list[Anchor] = []
+    pos, spec = 0, spec.strip()
+    while pos < len(spec):
+        m = _ANCHOR_TOKEN.match(spec, pos)
+        if m is None:
+            raise CoverageError(
+                f'{where}: bad anchor near {spec[pos : pos + 40]!r}; expected @"<source line>" '
+                f'or @"<source line>"#k/N'
+            )
+        text = normalize_source_line(re.sub(r"\\(.)", r"\1", m.group(1)))
+        if not text:
+            raise CoverageError(f"{where}: anchor {m.group(0)!r} has no code left to match")
+        ordinal = count = None
+        if m.group(2) is not None:
+            ordinal, count = int(m.group(2)), int(m.group(3))
+            if not 1 <= ordinal <= count:
+                raise CoverageError(f"{where}: ordinal #{ordinal}/{count} must satisfy 1 <= k <= N")
+        anchors.append(Anchor(text, ordinal, count))
+        pos = m.end()
+        while pos < len(spec) and spec[pos].isspace():
+            pos += 1
+    if not anchors:
+        raise CoverageError(f"{where}: empty anchor")
+    return tuple(anchors)
+
+
+@dataclass(frozen=True)
+class WaiverResolution:
+    """Where an anchored waiver's anchors bind in the source (``status`` ok | stale)."""
+
+    status: str
+    file: str | None  # repo-relative
+    lines: tuple[int, ...]  # the lines that DID bind, ascending
+    problems: tuple[str, ...]  # why the others did not
+    targets: tuple[tuple[str, int | None], ...] = ()  # (anchor, bound line or None), as written
+
+
+def _declared_modules(root: Path) -> dict[str, list[str]]:
+    """Module/package/interface name -> repo-relative files declaring it, over ``rtl/``."""
+    found: dict[str, list[str]] = defaultdict(list)
+    base = root / "rtl"
+    for path in sorted([*base.rglob("*.sv"), *base.rglob("*.v")]):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        rel = path.relative_to(root).as_posix()
+        for name in _MODULE_DECL.findall(text):
+            if rel not in found[name]:
+                found[name].append(rel)
+    return found
+
+
+def _normalised_source(root: Path, rel: str, cache: dict[str, list[str]]) -> list[str]:
+    if rel not in cache:
+        text = (root / rel).read_text(encoding="utf-8", errors="replace")
+        cache[rel] = [normalize_source_line(row) for row in text.split("\n")]
+    return cache[rel]
+
+
+def _bind_anchor(anchor: Anchor, norm: list[str]) -> tuple[int | None, str | None, str | None]:
+    """Bind one anchor to a 1-based line: ``(line, stale_problem, ambiguity)``."""
+    hits = [i + 1 for i, text in enumerate(norm) if text == anchor.text]
+    if anchor.ordinal is None or anchor.count is None:
+        if len(hits) == 1:
+            return hits[0], None, None
+        if not hits:
+            return None, f"anchor {anchor} matches no line (the waived line was edited)", None
+        return (
+            None,
+            None,
+            f"ambiguous anchor {anchor} matches lines {', '.join(map(str, hits))}; "
+            f"add #k/{len(hits)} to pick one",
+        )
+    if len(hits) != anchor.count:
+        return (
+            None,
+            f"anchor {anchor} matches {len(hits)} line(s), expected {anchor.count} "
+            "(identical lines were added or removed; re-check which one is waived)",
+            None,
+        )
+    return hits[anchor.ordinal - 1], None, None
+
+
+def resolve_waivers(waivers: list[Waiver], root: Path) -> dict[int, WaiverResolution]:
+    """Bind every anchored waiver to source lines; key = waiver lineno.
+
+    An anchor that no longer binds makes the waiver ``stale``.  An ambiguous anchor, or a module
+    declared in several files, cannot be evaluated and raises :class:`CoverageError` (all of
+    them at once) -- the report never picks one candidate silently.
+    """
+    anchored = [w for w in waivers if w.anchors]
+    if not anchored:
+        return {}
+    declared = _declared_modules(root)
+    sources: dict[str, list[str]] = {}
+    results: dict[int, WaiverResolution] = {}
+    errors: list[str] = []
+    for w in anchored:
+        files = declared.get(w.module, [])
+        who = f"waiver at line {w.lineno} ({w.module})"
+        if not files:
+            results[w.lineno] = WaiverResolution(
+                "stale", None, (), (f"module {w.module} is not declared under rtl/",)
+            )
+            continue
+        if len(files) > 1:
+            errors.append(f"{who}: module {w.module} is declared in {', '.join(files)}")
+            continue
+        rel = files[0]
+        norm = _normalised_source(root, rel, sources)
+        lines: list[int] = []
+        problems: list[str] = []
+        targets: list[tuple[str, int | None]] = []
+        for anchor in w.anchors:
+            line, stale, ambiguous = _bind_anchor(anchor, norm)
+            targets.append((str(anchor), line))
+            if ambiguous:
+                errors.append(f"{who}: {ambiguous} in {rel}")
+            elif stale:
+                problems.append(stale)
+            elif line is not None:
+                lines.append(line)
+        results[w.lineno] = WaiverResolution(
+            "stale" if problems else "ok",
+            rel,
+            tuple(sorted(set(lines))),
+            tuple(problems),
+            tuple(targets),
+        )
+    if errors:
+        raise CoverageError("; ".join(errors))
+    return results
+
+
+def migrate_legacy_waivers(text: str, root: Path) -> str:
+    r"""Rewrite numeric ``line | ^L<n>\b`` waivers as content anchors, against ``root``'s RTL.
+
+    Everything else (comments, toggle waivers, justifications, spacing) is kept byte for byte,
+    and a file with nothing legacy in it comes back unchanged, so this is idempotent.  Each
+    number must point at real code; identical lines get ``#k/N``.
+    """
+    declared = _declared_modules(root)
+    sources: dict[str, list[str]] = {}
+    out: list[str] = []
+    for raw in text.split("\n"):
+        stripped = raw.strip()
+        parts = [q.strip() for q in re.split(r"\s+\|\s+", stripped + " ", maxsplit=4)]
+        legacy = (
+            stripped
+            and not stripped.startswith("#")
+            and len(parts) == 5
+            and parts[1] == "line"
+            and _LEGACY_LINES.fullmatch(parts[2])
+        )
+        if not legacy:
+            out.append(raw)
+            continue
+        module, pattern = parts[0], parts[2]
+        files = declared.get(module, [])
+        if len(files) != 1:
+            raise CoverageError(
+                f"cannot migrate {module!r}: declared in {len(files)} files under rtl/"
+            )
+        norm = _normalised_source(root, files[0], sources)
+        match = _LEGACY_LINES.fullmatch(pattern)
+        assert match is not None
+        anchors: list[Anchor] = []
+        for number in (int(n) for n in match.group(1).split("|")):
+            if number > len(norm) or not norm[number - 1]:
+                raise CoverageError(
+                    f"cannot migrate {module!r}: line {number} of {files[0]} is blank, a "
+                    "comment or past the end of the file -- nothing to anchor on"
+                )
+            same = [i + 1 for i, t in enumerate(norm) if t == norm[number - 1]]
+            if len(same) == 1:
+                anchors.append(Anchor(norm[number - 1]))
+            else:
+                anchors.append(Anchor(norm[number - 1], same.index(number) + 1, len(same)))
+        out.append(raw.replace(f" | {pattern} | ", f" | {' '.join(map(str, anchors))} | ", 1))
+    return "\n".join(out)
 
 
 # ---------------------------------------------------------------------------- aggregation
@@ -485,6 +795,7 @@ def build_report(points: list[Point], root: Path, waivers: list[Waiver]) -> Repo
 
     rows: dict[tuple[str, str], ModuleRow] = {}
     waiver_hits: dict[int, int] = defaultdict(int)
+    resolutions = resolve_waivers(waivers, root)
     toggles: dict[tuple[str, str], dict[str, list[int]]] = defaultdict(
         lambda: defaultdict(lambda: [0, 0])
     )
@@ -505,7 +816,7 @@ def build_report(points: list[Point], root: Path, waivers: list[Waiver]) -> Repo
 
         waived_by = None
         if not hit:
-            waived_by = next((w for w in waivers if w.matches(module, kind, label)), None)
+            waived_by = _find_waiver(waivers, resolutions, (module, rel, kind, line), label)
         if waived_by is not None:
             waiver_hits[waived_by.lineno] += 1
             if is_line:
@@ -551,7 +862,41 @@ def build_report(points: list[Point], root: Path, waivers: list[Waiver]) -> Repo
         dict(waiver_hits),
         inputs=[InputStat(n, r, h) for n, (r, h) in input_stats.items()],
         consistency=_consistency(per_input),
+        resolutions=resolutions,
     )
+
+
+def _stale_text(report: Report, w: Waiver) -> str:
+    return f"waiver at line {w.lineno} ({w.module}): " + "; ".join(
+        report.resolutions[w.lineno].problems
+    )
+
+
+def _find_waiver(
+    waivers: list[Waiver],
+    resolutions: dict[int, WaiverResolution],
+    point: tuple[str, str, str, int],
+    label: str,
+) -> Waiver | None:
+    """The first waiver covering an uncovered point ``(module, file, kind, line)``.
+
+    An anchored waiver covers every line/branch point on a line its anchors resolved to, in the
+    file that declares its module; any other waiver is a regex over the point label.
+    """
+    module, rel, kind, line = point
+    for w in waivers:
+        if w.anchors:
+            res = resolutions[w.lineno]
+            if (
+                w.module == module
+                and kind in ("line", "branch")
+                and rel == res.file
+                and line in res.lines
+            ):
+                return w
+        elif w.matches(module, kind, label):
+            return w
+    return None
 
 
 def _consistency(
@@ -700,6 +1045,18 @@ def evaluate_gate(report: Report, cfg: GateConfig) -> GateResult:
                     "from the same commit with the same Verilator",
                 )
             )
+    # Bead xlc4: a waiver whose source anchor no longer binds has either un-waived a point nobody
+    # is looking at (the line was edited) or outlived its code.  The check reads only the waiver
+    # file and the RTL, so it cannot switch itself off on a partial run or a shallow checkout.
+    for w in report.stale_waivers:
+        res.failures.append(
+            GateFailure(
+                w.module,
+                "stale-waiver",
+                f"{_stale_text(report, w)}; re-anchor or remove the waiver in the waiver file "
+                "after re-checking that the point is still unreachable by design",
+            )
+        )
     known = {r.module for r in triaged}
     for name, entry in sorted(cfg.ratchet.items()):
         if name not in known:
@@ -967,25 +1324,53 @@ def render_markdown(report: Report, gate: GateResult | None = None) -> str:
     lines += ["## Waivers", ""]
     if report.waivers:
         lines += [
-            "| Module | Kind | Pattern | Cat | Points waived | Justification |",
-            "| :----- | :--- | :------ | :-- | ------------: | :------------ |",
+            "| Module | Kind | Pattern / anchor | Resolves to | Cat | Points waived "
+            "| Justification |",
+            "| :----- | :--- | :--------------- | :---------- | :-- | ------------: "
+            "| :------------ |",
         ]
         for w in report.waivers:
             n = report.waiver_hits.get(w.lineno, 0)
             lines.append(
-                f"| {w.module} | {w.kind} | `{w.pattern}` | {w.category} | {n} "
-                f"| {w.justification} |"
+                f"| {w.module} | {w.kind} | `{w.pattern.replace('|', chr(92) + '|')}` "
+                f"| {_resolved_text(report, w)} | {w.category} | {n} | {w.justification} |"
             )
         lines.append("")
+        stale = {w.lineno for w in report.stale_waivers}
+        for w in report.stale_waivers:
+            lines.append(f"WARNING: stale waiver anchor: {_stale_text(report, w)}")
         for w in report.unused_waivers:
-            lines.append(
-                f"WARNING: waiver on line {w.lineno} ({w.module} / `{w.pattern}`) matched no "
-                f"uncovered point -- stale, remove it."
-            )
+            if w.lineno not in stale:
+                lines.append(
+                    f"WARNING: waiver on line {w.lineno} ({w.module} / `{w.pattern}`) matched "
+                    f"no uncovered point -- stale, remove it."
+                )
         lines.append("")
     else:
         lines += ["None.", ""]
     return "\n".join(lines)
+
+
+def _resolved_text(report: Report, w: Waiver) -> str:
+    res = report.resolutions.get(w.lineno)
+    if res is None:
+        return "-"
+    where = ", ".join(f"{res.file}:{n}" for n in res.lines) or "(unbound)"
+    return f"{where} STALE" if res.status == "stale" else where
+
+
+def _resolution_dict(report: Report, w: Waiver) -> dict:
+    res = report.resolutions.get(w.lineno)
+    if res is None:
+        return {}
+    return {
+        "resolved": {
+            "status": res.status,
+            "file": res.file,
+            "lines": list(res.lines),
+            "problems": list(res.problems),
+        }
+    }
 
 
 def _count_dict(hit: int, total: int, waived: int, pct: float | None, raw: float | None) -> dict:
@@ -1069,10 +1454,12 @@ def report_to_dict(report: Report, gate: GateResult | None = None) -> dict:
                 "category": w.category,
                 "justification": w.justification,
                 "points_waived": report.waiver_hits.get(w.lineno, 0),
+                **_resolution_dict(report, w),
             }
             for w in report.waivers
         ],
         "unused_waivers": [w.lineno for w in report.unused_waivers],
+        "stale_waivers": [w.lineno for w in report.stale_waivers],
         "inputs": [
             {"name": i.name, "reportable": i.reportable, "hit": i.hit} for i in report.inputs
         ],
@@ -1103,21 +1490,72 @@ def _parse_inputs(paths: list[Path]) -> list[Point]:
     return points
 
 
+def _cli_migrate(args: argparse.Namespace) -> int:
+    try:
+        text = args.migrate_waivers.read_text(encoding="utf-8")
+        sys.stdout.write(migrate_legacy_waivers(text, args.root.resolve()))
+    except (CoverageError, OSError) as exc:
+        print(f"coverage_report: ERROR: {exc}", file=sys.stderr)
+        return EXIT_ERROR
+    return EXIT_OK
+
+
+def _cli_check_waivers(args: argparse.Namespace) -> int:
+    """Source-only waiver check, cheap enough for every PR (bead xlc4)."""
+    try:
+        waivers = load_waivers(args.waivers)
+        resolutions = resolve_waivers(waivers, args.root.resolve())
+    except CoverageError as exc:
+        print(f"coverage_report: ERROR: {exc}", file=sys.stderr)
+        return EXIT_ERROR
+    stale = 0
+    for w in waivers:
+        res = resolutions.get(w.lineno)
+        if res is None:
+            continue
+        for anchor, line in res.targets:
+            print(f"{res.file}:{line}: {w.module}: {anchor}" if line else f"STALE {anchor}")
+        if res.status == "stale":
+            stale += 1
+            print(
+                f"coverage_report: stale waiver {w.module} (waiver line {w.lineno})",
+                file=sys.stderr,
+            )
+            for problem in res.problems:
+                print(f"coverage_report:   {problem}", file=sys.stderr)
+    total = sum(1 for w in waivers if w.anchors)
+    print(f"coverage_report: {total} anchored line waiver(s), {stale} stale")
+    return EXIT_GATE_FAIL if stale else EXIT_OK
+
+
 def main(argv: list[str]) -> int:
     """CLI entry point; see the module docstring for the contract."""
     default_root = Path(__file__).resolve().parents[2]
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument(
         "--dat",
-        required=True,
         action="append",
         type=Path,
-        help="merged Verilator coverage .dat; repeat to merge several (bead 1eyv)",
+        help="merged Verilator coverage .dat; repeat to merge several (bead 1eyv); "
+        "required except with --check-waivers / --migrate-waivers",
     )
     ap.add_argument(
         "--root", type=Path, default=default_root, help="repo root (default: this repo)"
     )
     ap.add_argument("--waivers", type=Path, help="waiver file (module | kind | regex | b | why)")
+    ap.add_argument(
+        "--check-waivers",
+        action="store_true",
+        help="no coverage data: bind every anchored line waiver in --waivers to the RTL under "
+        "--root and exit 1 if any is stale, 2 if one is ambiguous (bead xlc4)",
+    )
+    ap.add_argument(
+        "--migrate-waivers",
+        type=Path,
+        metavar="FILE",
+        help="print FILE with its numeric ^L<n> line waivers rewritten as content anchors, "
+        "resolved against the RTL under --root",
+    )
     ap.add_argument("--out-md", type=Path, help="write the markdown report here")
     ap.add_argument("--out-json", type=Path, help="write the JSON report here")
     ap.add_argument(
@@ -1147,6 +1585,14 @@ def main(argv: list[str]) -> int:
         help="gate: per-module control-toggle floors for known gaps (module | floor | bead | why)",
     )
     args = ap.parse_args(argv[1:])
+    if args.migrate_waivers is not None:
+        return _cli_migrate(args)
+    if args.check_waivers:
+        if args.waivers is None:
+            ap.error("--check-waivers requires --waivers")
+        return _cli_check_waivers(args)
+    if not args.dat:
+        ap.error("--dat is required (unless --check-waivers or --migrate-waivers)")
     if not args.gate and (
         args.line_floor is not None
         or args.toggle_floor is not None

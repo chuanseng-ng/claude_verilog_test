@@ -45,6 +45,14 @@ jobs:
       - name: Struct-member select gate (no select on a struct member in rtl/)
         run: python3 tools/verif/check_struct_member_select.py -v
 
+      # Bead xlc4. BLOCKING: every content-anchored line waiver in tools/verif/coverage_waivers.txt must
+      # still bind to its source line. An RTL edit that touches a waived line (or adds an identical
+      # one) goes stale here, on the PR, instead of turning the nightly soc_coverage gate red. Reads
+      # the waiver file and rtl/ only (no simulation, no coverage data); stdlib only. Exit 1 = stale,
+      # exit 2 = ambiguous or malformed. tb/tests/test_coverage_waiver_anchors.py repeats it under pytest.
+      - name: Coverage waiver anchors (no stale line waiver)
+        run: python3 tools/verif/coverage_report.py --check-waivers --waivers tools/verif/coverage_waivers.txt
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:

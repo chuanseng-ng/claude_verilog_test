@@ -788,7 +788,18 @@ failure `unmeasured`. A module with no line points but control signals is gated 
 
 - **Waive an unreachable point** (category `b` only; a test gap is a bead, never a waiver): add one line to
   `tools/verif/coverage_waivers.txt` (`module | toggle | ^sig:1->0$ | b | why, with a file:line`). The raw percentage
-  stays in the report and a waiver that matches nothing is flagged stale.
+  stays in the report and a waiver that matches nothing is flagged. A **line** waiver is anchored on the text of the
+  waived source line, not its number: `module | line | @"default: state_q <= S_IDLE;" | b | why` (comments and spacing
+  are ignored; identical lines take `#k/N`, e.g. `@"default: ;"#2/3`; a bare anchor matching several lines is an
+  error). Check it with `python3 tools/verif/coverage_report.py --check-waivers --waivers tools/verif/coverage_waivers.txt`
+  (no simulation needed; every PR runs it in the QA job).
+- **A stale line waiver fails the gate** (bead `xlc4`, `stale-waiver`): the waived line was edited or removed, its module
+  is gone, or the number of identical lines changed. This replaces the old numeric `^L<n>\b` keys, which an edit above
+  the line silently un-waived (PR #279 shifted `sram_controller.sv` by 16 lines and the main gate went red until PR #290
+  re-keyed it). Fix: re-read the RTL, confirm the point is still unreachable by design, update the anchor. Old numeric
+  entries convert with `coverage_report.py --migrate-waivers <file>`. A waiver that merely matches no *uncovered* point
+  (the point is now covered, or the module was not measured by this `.dat`) stays a warning: it is expected on a partial
+  run, and a new test should not turn the nightly red.
 - **Close a gap bead**: land the test, re-run `soc_coverage`, then in the same PR raise the module's ratchet floor to
   the new measured value, or delete the entry once the module reaches 100 %.
 - **Add a ratchet entry** (a deliberate relaxation): needs a bead and a justification in the file; use it only for a real,

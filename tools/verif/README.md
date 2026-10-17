@@ -105,11 +105,18 @@ python3 tools/verif/coverage_report.py --dat merged.dat \
   `tb/`, `sim/` and the behavioural SRAM models are excluded.
 - `coverage_waivers.txt` lists points unreachable **by design** (category `b` only; a
   justification is mandatory; no pragma edits to RTL). Raw % stays visible beside the adjusted
-  %, and a waiver that matches nothing is flagged stale.
+  %, and a waiver that matches nothing is flagged.
+- Line waivers are **content-anchored** (bead `xlc4`): `module | line | @"default: state_q <= S_IDLE;" | b | why`
+  names the waived source line by its text (comments and spacing ignored), not its number, so an
+  edit above it cannot un-waive it. Identical lines take `#k/N` (`@"default: ;"#2/3`); a bare
+  anchor that matches several lines is an error. An anchor goes **stale** when the waived line is
+  edited or removed, its module vanishes, or the count of identical lines changes; `--gate` then
+  fails (check `stale-waiver`). `--check-waivers` runs the same resolution with no `.dat` (the
+  per-PR QA job), `--migrate-waivers FILE` rewrites old `^L<n>\b` entries.
 - Exit 0 at any coverage level (the gate is informational, see
   `docs/verification/SOC_COVERAGE_REPORT.md`); exit 2 on a missing/malformed/empty `.dat`, a bad
   waiver file, or when nothing in the triaged trees was measured -- never a vacuous pass.
-- Tests: `python3 -m pytest tb/tests/test_coverage_report.py`.
+- Tests: `python3 -m pytest tb/tests/test_coverage_report.py tb/tests/test_coverage_waiver_anchors.py`.
 
 ## `check_struct_member_select.py`
 
