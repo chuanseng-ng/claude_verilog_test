@@ -45,6 +45,14 @@ jobs:
       - name: Struct-member select gate (no select on a struct member in rtl/)
         run: python3 tools/verif/check_struct_member_select.py -v
 
+      # Bead 1as3. BLOCKING: the committed rtl/filelist/*.f are GENERATED from the Makefile source
+      # lists (tb/cocotb/soc/Makefile PLL_SOURCES, pnr/Makefile CPU_SV_FILES / GPU_SV_FILES). Editing
+      # one of those lists without regenerating (python3 tools/verif/gen_filelist.py) leaves an
+      # external tool compiling a stale file set - and sv2v-based tools silently blackbox a module
+      # missing from a list. Stdlib only. No `continue-on-error`, no `|| true`: this is a gate.
+      - name: RTL filelist drift gate (rtl/filelist/*.f match their Makefile sources)
+        run: python3 tools/verif/gen_filelist.py --check
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
