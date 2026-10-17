@@ -117,7 +117,7 @@ jobs:
       # 2026-10-13 (bead 3snb, cdc_gray_fifo DEPTH=2): 759 = 762 - 3, same value as cocotb.yml. 762 MEASURED by the cocotb
       # soc_all job of PR 276 ('cocotb: 762 passed, 0 failed') = the 730 above + 32 new tests (cdc_gray_fifo 16 behaviours x
       # DEPTH 2 and 4).
-      PASS_FLOOR: '759'
+      PASS_FLOOR: '799'
       # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`), CI log-grep formula (`passed$`; the
       # expect_fail tests print "passed: failed as expected" and are NOT counted).
       # 2026-10-10 (bead a5ze slice 2): 229 = 232 - 3.  232 is the count of a full local

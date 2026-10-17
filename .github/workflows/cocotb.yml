@@ -305,7 +305,7 @@ jobs:
           # 2026-10-13 (bead 3snb, cdc_gray_fifo DEPTH=2): 759 = 762 - 3, same value as soc_coverage.yml. 762 MEASURED by the cocotb
           # soc_all job of PR 276 ('cocotb: 762 passed, 0 failed') = the 730 above + 32 new tests (cdc_gray_fifo 16 behaviours x
           # DEPTH 2 and 4).
-          PASS_FLOOR: '759'
+          PASS_FLOOR: '799'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."

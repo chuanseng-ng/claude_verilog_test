@@ -1951,6 +1951,10 @@ soc_all_ci: check-space
 	$(MAKE) jtag_tap
 	$(MAKE) dft_clk_switch
 	$(MAKE) dft_ctrl
+	$(MAKE) mbist_fi_equiv
+	$(MAKE) mbist_ctrl
+	$(MAKE) mbist_tap
+	$(MAKE) mbist_soc_slice
 	$(MAKE) soc_boot
 	$(MAKE) soc_periph
 	$(MAKE) soc_coherency
