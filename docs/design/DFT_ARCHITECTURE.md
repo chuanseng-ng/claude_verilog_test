@@ -973,16 +973,25 @@ Inside the macro: 10 `mem_collar` (tag and data of each cache, collar between th
 * TAP-driven end-to-end test (`MBIST_CTRL` write, poll `MBIST_STATUS`, per-memory go/no-go and fail address through the TAP), including TLR abort, FIFO overflow flag, and the crossing at several TCK/core clock ratios.
 * Lint (Verilator -Wall), `dft-scan-check` for both PDKs with the pinned yosys, sv2v regeneration, the CDC gate, `soc_all_ci` plain and `FPGA=1`.
 
-### 16.9 Area (replaced by measured values as they are obtained)
+### 16.9 Area [M, 2026-10-18]
 
-| Item | Estimate [A] | Measured [M] |
-|---|---|---|
-| `mbist_ctrl` core domain (2 memories) | ~6 k um2 | see 16.10 |
-| `mbist_ctrl` CPU domain (10 memories) | ~15 k um2 | see 16.10 |
-| `mem_collar` | ~0.7 k um2 each (59 mux2 at 11.3 um2) | see 16.10 |
-| `mbist_xing` FIFOs + holding registers | ~1.5 k um2 per domain | see 16.10 |
-| TAP additions (29 + 140 shift/update bits) | ~6 k um2 | see 16.10 |
+Method: `sv2v` + pinned yosys 0.62 `synth -flatten; dfflibmap; abc -liberty` on `sky130_fd_sc_hd__tt_025C_1v80`, per block, no timing-driven sizing (the real flow's buffering and `dfxtp_2` upsizing come on top). The estimate column is the section 6.3 / 16.9 estimate that this replaces.
 
-### 16.10 Implementation record
+| Block | Estimate [A] | Measured [M] | Flops |
+|---|---|---|---|
+| `mbist_ctrl`, core domain (N=2, AW=10, port 1 on memory 0) | ~6 k um2 | **13,314 um2** | 243 |
+| `mbist_ctrl`, CPU domain (N=10, AW=8) | ~15 k um2 | **28,009 um2** | 398 |
+| `mem_collar` AW=10 with port 1 / AW=8 without | ~0.7 k um2 each | **653 / 513 um2** | 0 |
+| `mbist_xing` (reset sync + depth-2 FIFO + holding register), per domain | ~1.5 k um2 | **3,562 um2** | 46 |
+| `mbist_status_sync` (69 per-bit 2-FF + done/busy flop), per domain | (not estimated) | **3,503 um2** | 140 |
+| `jtag_tap` new vs `origin/main` (29 + 140 shift/update bits, decode, strobe) | ~6 k um2 | **+8,217 um2** (2,620 -> 10,837) | +204 |
 
-(Filled in as phases land.)
+Totals: **landed in this PR (core domain + 2 collars + TAP delta) = 13,314 + 1,166 + 3,562 + 3,503 + 8,217 = 29,762 um2** (0.15 pp of the 20.36 M um2 core; 2.6 % of the 1,150,630 um2 synthesised stdcell area of section 8); **CPU-macro follow-up (controller + 10 collars + xing + status) = 28,009 + 5,130 + 3,562 + 3,503 = 40,204 um2** (inside the CPU macro: the controller and collars; in the SoC fabric: xing and status). Everything together is about 70 k um2 (0.34 pp of the core), above the 45-60 k um2 of section 6.3: the per-memory first-fail record (23 flops per memory) and the 140 per-bit status synchronisers dominate. Possible trims if area is contested [A, not tried]: keep one shared first-fail record instead of one per memory (the per-memory go/no-go bits stay), drop the redundant `pause_cycles_q` (22 flops).
+
+### 16.10 Implementation record (2026-10-18, PR #306)
+
+* **RTL (landed):** `mbist_ctrl`, `mem_collar`, `mbist_xing` + `mbist_ctl_hold`, `mbist_status_sync`, `soc_mbist` (all `rtl/soc/dft/`); `jtag_tap` / `dft_ctrl` gain `MBIST_CTRL` / `MBIST_STATUS` and the write strobe; `soc_top` instantiates `soc_mbist` (core domain) and wires the collar bus into `sram_controller` and `npu_top` -> `npu_weight_mem` (SRAM_SKY130 arm only; every other arm ties the new ports off). `soc_top` parameter `MBIST_CPU` (default 0) carries the CPU-domain crossing; the CPU macro is NOT changed.
+* **Found by the verification, fixed:** (1) the first LANE algorithm (forward lane order only) missed a write-mask lane-0-stuck-at-1 fault: a reverse lane pass (microcode address 21) was added. (2) The control-word FIFO's write side learns of a freed slot only when TCK runs (read pointer must cross back): tester rule added to 16.5. (3) The Test-Logic-Reset default write occupies a FIFO slot until the destination clock reads it (visible only with a very slow destination clock).
+* **Verification:** `mbist_ctrl` (3 build points), `mbist_tap` (3 clock ratios), `mbist_soc_slice` (real wrappers), `mbist_fi_equiv` (FI model == real simulation model), the existing `jtag_tap` / `dft_ctrl` suites against the extended TAP model, `test_dft_scan_check.py` (+5 tests for the TCK-block rules). Results are in the PR description.
+* **Checker changes:** `tools/dft/check_scan_clk_rst.py` `--tck-prefix` / `--tck-sink` / `--expect-tck-flops` and the `SYNC=CONSUMER@any` form of `--expect-reset-sync` (a reset synchroniser in a functional clock domain); `pnr/Makefile` `DFT_TAP_CHECK_ARGS` carries the three declared TAP outputs and the two sink prefixes.
+* **Not done / open:** CPU-macro collars and re-harden (16.7); SDC for the new crossings (item 12 of the table in 16.5, STA owner); `required_synchronisers` entries in `tools/cdc/cdc_config.yml` for the FIFO pointer synchronisers (see the PR for the CDC gate result); scan testability of the TCK-side FIFO storage (unscanned by N4); metastability is not modelable here.
