@@ -53,6 +53,16 @@ jobs:
       - name: RTL filelist drift gate (rtl/filelist/*.f match their Makefile sources)
         run: python3 tools/verif/gen_filelist.py --check
 
+      # Bead h3lm. BLOCKING: pnr/constraints/phase5_soc.upf must reference things that exist in soc_top.
+      # The previous UPF named isolation nets and switch controls that were never in the RTL and nothing
+      # noticed for months. tools/verif/check_upf.py checks (stdlib only, no EDA tool) that every
+      # -elements path and control net resolves, that the UPF clamp set EQUALS the clamps soc_top
+      # implements (both arms), that domain membership is explicit, and that the power-state names and
+      # encodings equal rtl/soc/pmu.sv. It reads the committed pnr/constraints/phase5_soc_rtl_facts.json;
+      # the drift step below proves that file still matches the RTL. No `continue-on-error`: a gate.
+      - name: UPF structural gate (phase5_soc.upf vs soc_top and pmu.sv)
+        run: python3 tools/verif/check_upf.py -v
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -63,6 +73,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      # Bead h3lm. BLOCKING drift gate for the facts file above: re-elaborates rtl/filelist/soc_top.f
+      # with pyslang (both SRAM arms) and fails if the committed JSON differs. Fix: run
+      # `python3 tools/verif/check_upf.py gen-facts`, review the diff, commit.
+      - name: UPF facts drift gate (facts file matches a fresh elaboration of the RTL)
+        run: python tools/verif/check_upf.py gen-facts --check
 
       - name: Run ruff format check
         run: |
