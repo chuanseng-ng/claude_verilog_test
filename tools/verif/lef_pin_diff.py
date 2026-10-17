@@ -32,7 +32,7 @@ def parse_pins(path: str, macro: str | None):
     body = text[start.end() : end.start()]
 
     pins: dict[str, list] = defaultdict(list)
-    for pm in re.finditer(r"^\s*PIN\s+(\S+)(.*?)^\s*END\s+\1\b", body, re.M | re.S):
+    for pm in re.finditer(r"^\s*PIN\s+(\S+)(.*?)^\s*END\s+\1(?!\S)", body, re.M | re.S):
         pname, pbody = pm.group(1), pm.group(2)
         layer = None
         for line in pbody.splitlines():
