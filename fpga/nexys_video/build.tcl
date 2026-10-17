@@ -6,7 +6,7 @@
 #   NV_PHASE    synth | all                     NV_TAG   run tag
 #   NV_BOOT_HEX absolute path of the boot ROM image ($readmemh text)
 #   NV_THREADS  general.maxThreads (default 4)  NV_PART  device (default xc7a200tsbg484-1)
-#   NV_NODEBUG  1 = leave out jtag_axi + ILAs (build the SoC alone)
+#   NV_NOCLKFIX 1 = skip clkfix.tcl (BUFG -> BUFGCE cascade) to measure the parallel arrangement against it
 
 proc env_or {name default} {
     if {[info exists ::env($name)] && $::env($name) ne ""} { return $::env($name) }
@@ -47,8 +47,13 @@ synth_design -top nexys_video_top -part $part \
     -generic [list BOOT_HEX=\"$boot\"]
 stamp "synth_design done"
 read_xdc $here/nexys_video.xdc
-nv_bufgce_parallel_fix
-read_xdc $here/nexys_video_cdc.xdc
+if {[env_or NV_NOCLKFIX 0] eq "1"} {
+    puts "NV-CLKFIX disabled (NV_NOCLKFIX=1): BUFG -> BUFGCE cascade, for the skew comparison only"
+} else {
+    nv_bufgce_parallel_fix
+}
+# -unmanaged: the CDC file uses if/foreach, which a managed XDC rejects ([Designutils 20-1307])
+read_xdc -unmanaged $here/nexys_video_cdc.xdc
 write_checkpoint -force $rdir/synth.dcp
 report_utilization -file $rdir/synth.utilization.rpt
 report_clock_networks -file $rdir/synth.clock_networks.rpt

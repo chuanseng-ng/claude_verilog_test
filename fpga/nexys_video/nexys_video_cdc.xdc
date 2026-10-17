@@ -1,4 +1,4 @@
-## nexys_video_cdc.xdc -- XDC translation of the CDC intent of pnr/constraints/phase5_soc_multiclock.sdc and
+## nexys_video_cdc.xdc -- (read with `read_xdc -unmanaged`: it uses if/foreach) XDC translation of the CDC intent of pnr/constraints/phase5_soc_multiclock.sdc and
 ## phase5_soc_multiclock_check.sdc (bead hlrm.2). Applied AFTER synth_design (it binds to synthesized cell names) and after
 ## nexys_video.xdc (it needs the derived clocks). Same translation as tools/fpga/vivado_fmax_constraints.tcl, adapted to the
 ## real board top: the clocks are MMCM outputs, not harness pins.

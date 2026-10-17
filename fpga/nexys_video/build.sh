@@ -15,10 +15,12 @@ out=$(mkdir -p "$1" && cd "$1" && pwd); phase=${2:-all}; tag=${3:-run}
 [ -r "$VIVADO_SETTINGS" ] || { echo "cannot read VIVADO_SETTINGS=$VIVADO_SETTINGS"; exit 2; }
 export NV_BOOT_HEX=${NV_BOOT_HEX:-$here/boot_placeholder.hex}
 [ -r "$NV_BOOT_HEX" ] || { echo "cannot read NV_BOOT_HEX=$NV_BOOT_HEX"; exit 2; }
+NV_BOOT_HEX=$(readlink -f "$NV_BOOT_HEX"); export NV_BOOT_HEX
 export NV_ROOT=$root NV_OUT=$out NV_PHASE=$phase NV_TAG=$tag
 # shellcheck disable=SC1090
 source "$VIVADO_SETTINGS" > /dev/null 2>&1
 log=$out/$tag.vivado.log
+cd "$out" || exit 2   # Vivado drops .Xil/ and clockInfo.txt into the working directory
 /usr/bin/time -v -o "$out/$tag.time" timeout "${NV_TIMEOUT:-14400}" \
   vivado -mode batch -source "$here/build.tcl" -nojournal -nolog > "$log" 2> "$out/$tag.stderr"
 echo "vivado rc=$?" | tee "$out/$tag.rc"

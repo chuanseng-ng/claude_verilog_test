@@ -130,15 +130,23 @@ module nexys_video_top #(
     IOBUF u_sda (.IO(i2c_sda), .I(sda_o), .T(~sda_oe), .O(sda_i));
 
     logic spi_cs_n_o, spi_mosi_o, spi_sclk_o;
+    logic [3:0] pwm_o;
     OBUF u_uart_tx (.I(uart_tx_o),  .O(uart_rx_out));
     IBUF u_uart_rx (.I(uart_tx_in), .O(uart_rx_i));
-    OBUF u_spi_cs  (.I(spi_cs_n_o), .O(spi_cs_n));
-    OBUF u_spi_mo  (.I(spi_mosi_o), .O(spi_mosi));
     IBUF u_spi_mi  (.I(spi_miso),   .O(spi_miso_i));
-    OBUF u_spi_sc  (.I(spi_sclk_o), .O(spi_sclk));
-    logic [3:0] pwm_o;
+    // SPI and PWM outputs are combinational off the peripheral state (PWM compare, SPI FSM decode): 8.4 ns of logic plus
+    // ~3.7 ns of clock insertion against a 10 ns output budget failed by up to -2.3 ns (measured, nv5). One output flop per
+    // pad, placed in the IOB, makes the pad path a clk->Q + OBUF. All seven pads move together (one clk_sys of delay), so
+    // the SPI cs_n/mosi/sclk phase relation is unchanged; the serial rates are far below clk_sys.
+    /* verilator lint_off PROCASSINIT */
+    (* IOB = "TRUE" *) logic [6:0] pad_q = 7'b100_0000;   // power-up: cs_n high, everything else low (FPGA-only file)
+    /* verilator lint_on PROCASSINIT */
+    always_ff @(posedge clk_sys) pad_q <= {spi_cs_n_o, spi_mosi_o, spi_sclk_o, pwm_o};
+    OBUF u_spi_cs (.I(pad_q[6]), .O(spi_cs_n));
+    OBUF u_spi_mo (.I(pad_q[5]), .O(spi_mosi));
+    OBUF u_spi_sc (.I(pad_q[4]), .O(spi_sclk));
     for (genvar i = 0; i < 4; i++) begin : g_pwm
-        OBUF u_pwm_obuf (.I(pwm_o[i]), .O(pwm[i]));
+        OBUF u_pwm_obuf (.I(pad_q[i]), .O(pwm[i]));
     end
 
     // ---------------------------------------------------------------- debug path
