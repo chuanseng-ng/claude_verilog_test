@@ -68,7 +68,15 @@ module dft_ctrl (
     output logic scan_en_o,
     output logic scan_rst_no,
     output logic test_en_o,
-    output logic test_clk_o
+    output logic test_clk_o,
+
+    // ── MBIST (Stage 4, section 16.5): TAP data registers and TCK-side crossing hooks ──────────
+    output logic [28:0]  mbist_ctl_o,       // MBIST_CTRL update register
+    output logic         mbist_wr_o,        // one-TCK-edge write strobe
+    output logic         mbist_force_o,     // CPU clock-gate force (run & dom_cpu)
+    output logic         mbist_rst_tck_n_o, // TCK-domain reset derived from trst_ni (FIFO write side)
+    input  logic         mbist_wr_ready_i,
+    input  logic [138:0] mbist_status_i
 );
 
     // ── Pin leg (unchanged Stage 1a module) ──────────────────────────────────
@@ -119,7 +127,12 @@ module dft_ctrl (
         .rst_assert_o   (tap_rst_assert),
         .scan_en_o      (tap_scan_en),
         .shift_clk_en_o (tap_shift_clk_en),
-        .chain_grp_o    (tap_chain_grp)
+        .chain_grp_o    (tap_chain_grp),
+        .mbist_ctl_o      (mbist_ctl_o),
+        .mbist_wr_o       (mbist_wr_o),
+        .mbist_force_o    (mbist_force_o),
+        .mbist_wr_ready_i (mbist_wr_ready_i),
+        .mbist_status_i   (mbist_status_i)
     );
 
     // ── TCK scan-clock gate ──────────────────────────────────────────────────
@@ -146,6 +159,8 @@ module dft_ctrl (
         .scan_rst_ni (1'b1),
         .rst_n_o     (sw_rst_n)
     );
+
+    assign mbist_rst_tck_n_o = sw_rst_n;
 
     dft_clk_switch u_clk_sw (
         .tck_i   (tck_i),
