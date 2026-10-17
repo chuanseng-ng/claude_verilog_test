@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-10-10T00:00:00+00:00",
+  "updated_at": "2026-10-18T00:00:00+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -81,7 +81,9 @@
         "module": "i2c_controller",
         "category": "cdc",
         "claim": "two cdc_2ff_sync pad synchronisers (u_scl_sync/u_sda_sync) never checked by a CDC tool (SpyGlass/JasperGold/Questa NOT RUN); a synchroniser bypass is only caught indirectly via its latency"
-      }
+      },
+      {"module": "crypto_accel", "category": "cdc", "claim": "scan_mode_i (TAP/pin level, async to core_clk) crosses through an unreset 2-FF synchroniser + edge flop (scan_s1_q/scan_s2_q/scan_prev_q); never checked by a CDC tool (SpyGlass/JasperGold/Questa NOT RUN), only by simulation and check_scan_clk_rst.py"},
+      {"module": "crypto_accel", "category": "protocol", "claim": "scan wipe is functional D logic that a scan_en=1 edge overrides: it protects against software and a cooperating tester only if ATE applies 3 scan_en=0 edges after scan_mode rises (DFT_ARCHITECTURE.md 14.10 item 5); an adversarial tester that shifts earlier reads the residue; no scan chains exist yet, so this is analysed, not simulated"}
     ]
   },
   "verification_status": {
@@ -2212,6 +2214,18 @@
       "suggested_next_step": "proceed",
       "reason": "bead pnfw: fix_request fr_609b42790e0f_20261003_015343_00 re-validated (i2c 52/52, strict-limit test_i2c_clkdiv_100k_400k green) -> verified_fixed; new DUT finding (tBUF) filed as bead gecv, pinned expect_fail, not an open fix_request (P3, not exercised in this SoC); signoff stays false.",
       "constraint_ref": "fr_609b42790e0f_20261003_015343_00"
+    },
+    {
+      "timestamp": "2026-10-18T00:00:00+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "bead j41m.6: crypto_accel hardware scan wipe (PR #305, draft). Verilator -Wall 0 RTL warnings, test_crypto 51/51, test_soc_dft_scan 11/11, 25/25 mutants killed, dft-scan-check sky130+asap7 0 violations, soc_all_ci plain and FPGA=1 769/0/17. Limit: wipe is overridden by scan_en=1 edges (adversarial tester not covered). rtl.signoff unchanged (false): CDC/RDC tools not run.",
+      "constraint_ref": null
     }
   ],
   "fix_requests": [
