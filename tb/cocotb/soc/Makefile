@@ -614,6 +614,9 @@ ifeq ($(SIM),verilator)
 	# never share a directory. Off by default; nothing changes unless FPGA=1 is passed.
 	ifeq ($(FPGA),1)
 	COMPILE_ARGS += +define+FPGA -y $(PROJ_ROOT)/rtl/fpga
+	# bead hlrm.2: the FPGA clock-gate arm (rv32i_clock_gate `FPGA_BUFGCE) instantiates the Xilinx BUFGCE primitive;
+	# the simulation stub lives in rtl/fpga/sim/ (kept out of rtl/fpga/ so no Vivado file list can pick it up).
+	COMPILE_ARGS += +define+FPGA_BUFGCE -y $(PROJ_ROOT)/rtl/fpga/sim
 	endif
 	COMPILE_ARGS += --timescale 1ns/1ps
 	COMPILE_ARGS += --public-flat-rw

@@ -266,6 +266,30 @@
               fi
             '';
           };
+
+          # FPGA prototyping shell (bead hlrm.2, GH #245). Open tools only: yosys + sv2v for the Stage 0 resource/identity
+          # scripts (tools/fpga/), openFPGALoader to program the Nexys Video, verilator for the FPGA=1 cocotb regression.
+          # Vivado is NOT here: it is a vendor install and stays external (/nobackup/FPGA_SW/2026.1 on this host;
+          # fpga/nexys_video/build.sh reads VIVADO_SETTINGS). Nothing in the lean default/CI shell changes.
+          fpga = pkgs.mkShell {
+            name = "soc-fpga";
+
+            packages = with pkgs; [
+              yosys
+              haskellPackages.sv2v
+              openfpgaloader
+              verilator
+              gnumake
+              python3
+            ];
+
+            shellHook = ''
+              if [[ $- == *i* ]]; then
+                echo "soc fpga env ready. Vivado is external: export VIVADO_SETTINGS=/nobackup/FPGA_SW/2026.1/Vivado/settings64.sh"
+                echo "Board build: fpga/nexys_video/build.sh <out-dir> [synth|all] [tag]"
+              fi
+            '';
+          };
         }
         # Bambu HLS shell (GH #119). Linux-only; see bambuFor above.
         // lib.optionalAttrs pkgs.stdenv.isLinux {
