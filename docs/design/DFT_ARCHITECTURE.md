@@ -844,10 +844,12 @@ Justification: memory is 88 % of placed area and the test is tester-only, so the
 | 1 | `RETENTION` | `up(w0)`; PAUSE; `up(r0,w1)`; PAUSE; `up(r1)` | data-retention faults (cell decays within the pause) |
 | 2 | `MARCH_CM_RET` (production default) | `MARCH_CM` then `RETENTION` | both of the above |
 | 3 | `CKBD` | checkerboard `up(wc) up(rc) up(w~c) up(r~c)`, then March C- on the checkerboard background | adjacent-cell shorts and leakage, neighbourhood-sensitive coupling in logical space |
-| 4 | `LANE` | `up(w0)`; `up(w1 lane0, r, w1 lane1, r, w1 lane2, r, w1 lane3, r)` with `wmask` = one byte lane at a time | write-mask (`wmask0`) lane faults, which a full-word March cannot see |
+| 4 | `LANE` | `up(w0)`; `up(w ~P lane0, r, w ~P lane1, r, w ~P lane2, r, w ~P lane3, r)`; `up(w P lane3, r, w P lane2, r, w P lane1, r, w P lane0, r)` with `wmask` = one byte lane at a time, every read compared against the cumulative expected word | write-mask (`wmask0`) lane faults, which a full-word March cannot see. Both orders are needed: a lane whose mask bit is stuck at 1 is visible only if some other lane is written before it, so the forward pass exposes lanes 1-3 and the reverse pass lanes 0-2 (**found by the fault-injection suite: the first, forward-only version missed lane 0**) |
 | 5 | `FULL` | 2 + 3 + 4 in sequence | everything above |
 
 Retention pause: `cycles = pause_mant << (2 * pause_exp)`, `pause_mant` 8 bits, `pause_exp` 3 bits, so 0 to 255 << 14 = 4,177,920 cycles (104 ms at 40 MHz, 56 ms at 75 MHz). Longer pauses are made by the tester running the algorithm repeatedly, or by `RETENTION` alone followed by re-reads (the sticky fail record is per run).
+
+**Microcode address map** (the value reported in `rec_elem`): `MARCH_CM` 0-5, `RETENTION` 6-8, `CKBD` 9-18, `LANE` 19-21 (19 `up(w0)`, 20 forward lane sequence, 21 reverse lane sequence). Algorithm ranges: 0 = 0-5, 1 = 6-8, 2 = 0-8, 3 = 9-18, 4 = 19-21, 5 = 0-21. Cycle count of one run = 1 + sum over its elements of (1 + pause + nops x 2^AW + 2), pinned by `test_cycle_counts_pin_the_sequencing`.
 
 **Port 1.** Memories with a functional read port 1 (`P1_MASK`; the SoC SRAM) read **both** ports in every read operation and compare both against the same expected word, so the functional read path (port 1) is tested in the same run at no extra cycles. Not covered: simultaneous port-0 write / port-1 read of different addresses (the section 6.1 wish list); stated as a limitation.
 
@@ -923,7 +925,7 @@ Go/no-go per memory = `fail[i]`; "good" requires `done = 1` and `fail_any = 0` a
 | 1, 2 | Applies to the MBIST word only; scan controls unchanged (section 15.5, crossing 2 stands) |
 | 3, 4 | One `cdc_gray_fifo` **per destination domain**; read side the **ungated** `core_clk` / `cpu_core_clk`, never a gated clock |
 | 5 | Write strobe is a falling-edge TAP flop set in Update-DR, so exactly one rising TCK edge writes the word: **+1 TCK after Update-DR**. Tester contract: after Update-DR of `MBIST_CTRL`, at least one more TCK before relying on the write (any following Capture-DR satisfies it) |
-| 6 | Overflow (strobe while `wr_ready` low) sets the sticky `tck_ovf` in `MBIST_STATUS` bit 0; cleared by Test-Logic-Reset / TRST only. The TAP never stalls |
+| 6 | Overflow (strobe while `wr_ready` low) sets the sticky `tck_ovf` in `MBIST_STATUS` bit 0; cleared by TRST or by an **accepted** `run = 0` word (which includes the Test-Logic-Reset default write). The TAP never stalls |
 | 7 | **DEPTH 2** with the overflow flag. Reason: the destination only needs the latest word (`run` is a level, a held register), a lost intermediate word is reported, and `cdc_gray_fifo` at DEPTH 2 is the variant PR #276 validated; `async_axi_fifo` is not involved |
 | 8 | Both FIFO resets are derived from `trst_ni` alone (write side: the TAP's `rst_tck_n`; read side: a `cdc_reset_sync` of `trst_ni` into the destination clock, with the scan-mode reset override). The controller is reset by that **and** the functional domain reset, so `rst_n_i` can never start MBIST, never touches the TAP, and cannot leave phantom FIFO entries (functional reset does not reset the FIFO pointers) |
 | 9 | Entering Test-Logic-Reset (any path) writes the default word (`run = 0`) once, so five TMS-high clocks abort a running MBIST. The FIFO is empty or holds at most one stale word at that time (DEPTH 2 is enough because the strobe is one per Update-DR and the tester pace is slower than the destination) |

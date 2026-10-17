@@ -122,9 +122,13 @@ module mbist_ctrl #(
             5'd16: w = mk(1'b1, 1'b1, 1'b0, 1'b0, 2'd1, R0, W1, W0);
             5'd17: w = mk(1'b1, 1'b1, 1'b0, 1'b0, 2'd1, R1, W0, W0);
             5'd18: w = mk(1'b1, 1'b1, 1'b0, 1'b0, 2'd0, R0, W0, W0);
-            // LANE: up(w0); up(lane sequence, 8 slots, handled by the lane generator)
+            // LANE: up(w0); up(lane sequence, 8 slots, lanes 0..3, writes ~P); up(lane sequence, lanes 3..0,
+            // writes P). The 8-slot lane sequences are handled by the lane generator; nm1[0] = 1 selects the
+            // reverse sequence. Two orders are needed: a lane whose mask bit is stuck at 1 is only visible if
+            // a lane is written BEFORE it (forward order exposes lanes 1..3, reverse order lanes 0..2).
             5'd19: w = mk(1'b0, 1'b0, 1'b0, 1'b0, 2'd0, W0, W0, W0);
             5'd20: w = mk(1'b0, 1'b0, 1'b0, 1'b1, 2'd0, W0, W0, W0);
+            5'd21: w = mk(1'b0, 1'b0, 1'b0, 1'b1, 2'd1, W0, W0, W0);
             default: w = 12'h000;
         endcase
         return w;
@@ -149,8 +153,8 @@ module mbist_ctrl #(
             3'd1:    return 5'd8;
             3'd2:    return 5'd8;
             3'd3:    return 5'd18;
-            3'd4:    return 5'd20;
-            3'd5:    return 5'd20;
+            3'd4:    return 5'd21;
+            3'd5:    return 5'd21;
             default: return 5'd0;
         endcase
     endfunction
@@ -227,19 +231,23 @@ module mbist_ctrl #(
     logic       op_rd;
     logic       op_pol;
     logic       slot_last;
+    logic       lane_rev;
     logic [1:0] lane_k;
-    logic [3:0] lane_cum;
+    logic [3:0] lane_rd_xm;
     logic [3:0] lane_wm;
 
     assign op_sel = (slot_q[1:0] == 2'd0) ? u_op0 : ((slot_q[1:0] == 2'd1) ? u_op1 : u_op2);
-    assign lane_k = slot_q[2:1];
+    assign lane_rev = u_nm1[0];
+    assign lane_k   = lane_rev ? ~slot_q[2:1] : slot_q[2:1];
 
+    // Forward: write lane k with ~P, read expects lanes 0..k inverted. Reverse: write lane k with P, read
+    // expects the lanes below k still inverted.
     always_comb begin
         unique case (lane_k)
-            2'd0:    begin lane_cum = 4'b0001; lane_wm = 4'b0001; end
-            2'd1:    begin lane_cum = 4'b0011; lane_wm = 4'b0010; end
-            2'd2:    begin lane_cum = 4'b0111; lane_wm = 4'b0100; end
-            default: begin lane_cum = 4'b1111; lane_wm = 4'b1000; end
+            2'd0:    begin lane_rd_xm = lane_rev ? 4'b0000 : 4'b0001; lane_wm = 4'b0001; end
+            2'd1:    begin lane_rd_xm = lane_rev ? 4'b0001 : 4'b0011; lane_wm = 4'b0010; end
+            2'd2:    begin lane_rd_xm = lane_rev ? 4'b0011 : 4'b0111; lane_wm = 4'b0100; end
+            default: begin lane_rd_xm = lane_rev ? 4'b0111 : 4'b1111; lane_wm = 4'b1000; end
         endcase
     end
 
@@ -266,7 +274,7 @@ module mbist_ctrl #(
 
     always_comb begin
         if (u_lane) begin
-            xm_now = op_rd ? lane_cum : 4'hF;
+            xm_now = op_rd ? lane_rd_xm : (lane_rev ? 4'h0 : 4'hF);
             wm_now = lane_wm;
         end else begin
             xm_now = {4{pol_eff}};
