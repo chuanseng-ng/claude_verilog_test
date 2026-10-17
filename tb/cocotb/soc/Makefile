@@ -63,7 +63,7 @@ export PYTHONPATH := $(TB):$(SOC_DIR):$(PYTHONPATH)
 #   make sram_controller SRAM_TARGET=sky130   # sky130_sram_4kbyte_1rw1r_32x1024_8
 SRAM_TARGET ?= freepdk45
 ifeq ($(SRAM_TARGET),sky130)
-    SRAM_CTRL_SIM_MODEL := $(SIM_DIR)/sky130_sram_4kbyte_1rw1r_32x1024_8.sv
+    SRAM_CTRL_SIM_MODEL := $(SIM_DIR)/sky130_sram_4kbyte_1rw1r_32x1024_8.sv $(RTL)/soc/dft/mem_collar.sv
     COMPILE_ARGS += +define+SRAM_SKY130
 else
     SRAM_CTRL_SIM_MODEL :=
