@@ -842,6 +842,11 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/dft/jtag_tap.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_switch.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_ctrl.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_xing.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_status_sync.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mem_collar.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/soc_mbist.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_interconnect.sv \
@@ -1654,6 +1659,11 @@ SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/dft/jtag_tap.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_switch.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_ctrl.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_xing.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_status_sync.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mem_collar.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/soc_mbist.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
 	$(PROJECT_ROOT)/rtl/soc/apb4_register_bank.sv \

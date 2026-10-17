@@ -99,7 +99,16 @@ module npu_top #(
     output logic              pslverr,
 
     // Interrupt -- level-held, never a pulse
-    output logic irq_o
+    output logic irq_o,
+
+    // MBIST (DFT Stage 4, DFT_ARCHITECTURE.md section 16): weight-memory collar bus; ignored when EN_NPU = 0.
+    input  logic        mb_en_i,
+    input  logic        mb_ce_i,
+    input  logic        mb_we_i,
+    input  logic [3:0]  mb_wmask_i,
+    input  logic [9:0]  mb_addr_i,
+    input  logic [31:0] mb_din_i,
+    output logic [31:0] mb_dout0_o
 );
 
     // Elaboration guards: generate-scope $fatal fires at ELABORATION time, under
@@ -120,10 +129,12 @@ module npu_top #(
         assign pready  = 1'b1;
         assign pslverr = 1'b0;
         assign irq_o   = 1'b0;
+        assign mb_dout0_o = 32'd0;
 
         /* verilator lint_off UNUSEDSIGNAL */
         logic unused_w;
-        assign unused_w = ^{clk, rst_n, psel, penable, pwrite, paddr, pwdata, pstrb};
+        assign unused_w = ^{clk, rst_n, psel, penable, pwrite, paddr, pwdata, pstrb,
+                            mb_en_i, mb_ce_i, mb_we_i, mb_wmask_i, mb_addr_i, mb_din_i};
         /* verilator lint_on  UNUSEDSIGNAL */
     end else begin : g_on
 
@@ -382,7 +393,14 @@ module npu_top #(
             .wr_data_i (pwdata),
             .rd_en_i   (rd_en_w),
             .rd_addr_i (wptr_q),
-            .rd_data_o (wrow_w)
+            .rd_data_o (wrow_w),
+            .mb_en_i    (mb_en_i),
+            .mb_ce_i    (mb_ce_i),
+            .mb_we_i    (mb_we_i),
+            .mb_wmask_i (mb_wmask_i),
+            .mb_addr_i  (mb_addr_i),
+            .mb_din_i   (mb_din_i),
+            .mb_dout0_o (mb_dout0_o)
         );
 
         // ain_q[0] is the AIN FIFO head (declared below)

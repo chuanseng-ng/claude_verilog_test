@@ -494,6 +494,11 @@ PLL_SOURCES = \
 	$(RTL)/soc/dft/jtag_tap.sv \
 	$(RTL)/soc/dft/dft_clk_switch.sv \
 	$(RTL)/soc/dft/dft_ctrl.sv \
+	$(RTL)/soc/dft/mbist_ctrl.sv \
+	$(RTL)/soc/dft/mbist_xing.sv \
+	$(RTL)/soc/dft/mbist_status_sync.sv \
+	$(RTL)/soc/dft/mem_collar.sv \
+	$(RTL)/soc/dft/soc_mbist.sv \
 	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
@@ -582,6 +587,11 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/soc/dft/jtag_tap.sv \
 	$(RTL)/soc/dft/dft_clk_switch.sv \
 	$(RTL)/soc/dft/dft_ctrl.sv \
+	$(RTL)/soc/dft/mbist_ctrl.sv \
+	$(RTL)/soc/dft/mbist_xing.sv \
+	$(RTL)/soc/dft/mbist_status_sync.sv \
+	$(RTL)/soc/dft/mem_collar.sv \
+	$(RTL)/soc/dft/soc_mbist.sv \
 	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
