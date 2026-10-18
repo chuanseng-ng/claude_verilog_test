@@ -126,6 +126,9 @@ class I2CSlave:
         self.mem = bytearray(mem_size)
         self.ptr = 0
         self.register_mode = True
+        # Passive listeners (bead h367 functional coverage): each is called as cb(event) with the
+        # same tuple that is appended to `events`.  Configuration, so reset_state() keeps them.
+        self._observers: list = []
 
         self._task = None
         self._init_runtime()
@@ -191,10 +194,24 @@ class I2CSlave:
         self._init_runtime()
         self._drive_released()
 
+    def add_observer(self, callback) -> None:
+        """Register a passive listener called as `callback(event)` for every logged bus event
+        (the tuples documented above) and for the extra ("STRETCH", ...) notification (see
+        `_notify`).  It must not touch the bus or the BFM's state."""
+        self._observers.append(callback)
+
     def _log(self, event: tuple) -> None:
         """Record an observed bus event and the BFM tick it was observed on."""
         self.events.append(event)
         self.event_cycles.append(self.cycle)
+        self._notify(event)
+
+    def _notify(self, event: tuple) -> None:
+        """Pass `event` to the observers.  Besides everything `_log` records, observers receive
+        ("STRETCH", mode, fall_idx, every_fall) when the slave starts holding SCL low; that one is
+        NOT in `events` (so no test's event-list assertion can see it)."""
+        for callback in self._observers:
+            callback(event)
 
     def _drive_released(self) -> None:
         self._scl_i.value = 1
@@ -457,10 +474,12 @@ class I2CSlave:
         """Count the SCL fall and arm any stretch / contention planned for it."""
         self._fall_idx += 1
         idx = self._fall_idx
-        cycles = self._stretch_plan.pop(idx, 0) or self._stretch_all
+        planned = self._stretch_plan.pop(idx, 0)
+        cycles = planned or self._stretch_all
         if cycles:
             self._scl_drv = 0
             self._stretch_left = cycles
+            self._notify(("STRETCH", self._mode, idx, not planned))
         if self._contend_left < 0:  # "until the next fall": this is it
             self._contend_left = 0
             self._contend_on = False
