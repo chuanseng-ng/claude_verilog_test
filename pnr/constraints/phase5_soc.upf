@@ -90,7 +90,11 @@
 #                   is clamped and qualifies the commit payload.  Also u_cpu's
 #                   scan_out_o (j41m.4): a test-only pin, meaningful only in the
 #                   SCAN power state where every domain is ON, and tied 0 by the
-#                   macro until Stage 2 stitches its chains.
+#                   macro until Stage 2 stitches its chains, and its mbist_status_o
+#                   (c54a): a 69-bit test-only status block that is read only through
+#                   the TAP (mbist_status_sync) while the CPU domain is powered (the
+#                   MBIST precondition, DFT_ARCHITECTURE.md 16.6); it is 0 while no
+#                   run is active, and nothing functional consumes it.
 #
 # upf-check unclamped payload: u_cpu/axi_awaddr_o u_cpu/axi_awlen_o u_cpu/axi_awsize_o u_cpu/axi_awburst_o
 # upf-check unclamped payload: u_cpu/axi_wdata_o u_cpu/axi_wstrb_o u_cpu/axi_wlast_o
@@ -102,7 +106,7 @@
 # upf-check unclamped observability: u_cpu/commit_pc_o u_cpu/commit_insn_o u_cpu/trap_taken_o u_cpu/trap_cause_o
 # upf-check unclamped observability: u_cpu/debug_rs1_data_o u_cpu/debug_rs2_data_o u_cpu/debug_branch_taken_o
 # upf-check unclamped observability: u_cpu/debug_take_branch_jump_o u_cpu/debug_pc_src_o u_cpu/debug_state_o u_cpu/debug_ebreak_o
-# upf-check unclamped observability: u_cpu/scan_out_o
+# upf-check unclamped observability: u_cpu/scan_out_o u_cpu/mbist_status_o
 #
 # Retention: NONE.  The old header said state is "rebuilt from SRAM on wakeup";
 # that was never true and nothing implements it.  pmu.sv emits ret_save /
