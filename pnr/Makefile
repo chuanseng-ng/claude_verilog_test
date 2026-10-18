@@ -789,6 +789,19 @@ librelane-sky130-cpu: sky130-cpu-sv2v
 		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
 		 $(abspath $(LIBRELANE_SKY130_CPU_DIR))/config.json"
 
+# Bead lu09: pin-coordinate lock for the Sky130 CPU macro. pnr/sky130/cpu/pin_template.def is derived from the
+# committed macro/rv32i_cpu_top.lef and fed to LibreLane as FP_DEF_TEMPLATE (strict), so appending a pin cannot re-space
+# an edge. This target needs no EDA tools: it fails if the template omits/moves a pin of the committed LEF, or if two
+# template pins overlap (LibreLane does not check that). After a harden, pass the fresh LEF to also prove no pin moved:
+#   make -C pnr sky130-cpu-pin-lock-check NEW_LEF=<run>/final/lef/rv32i_cpu_top.lef
+# To change the lock deliberately: edit pin_template.def, re-harden, commit the new LEF AND
+# `python3 tools/verif/pin_lock.py gen pnr/sky130/cpu/macro/rv32i_cpu_top.lef pnr/sky130/cpu/pin_template.def`.
+.PHONY: sky130-cpu-pin-lock-check
+sky130-cpu-pin-lock-check:
+	python3 $(PROJECT_ROOT)/tools/verif/pin_lock.py check \
+		--lef $(PROJECT_ROOT)/pnr/sky130/cpu/macro/rv32i_cpu_top.lef \
+		--def $(PROJECT_ROOT)/pnr/sky130/cpu/pin_template.def $(if $(NEW_LEF),--new-lef $(NEW_LEF))
+
 librelane-sky130-cpu-results:
 	$(call librelane_results,$(LIBRELANE_SKY130_CPU_DIR))
 

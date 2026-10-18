@@ -45,6 +45,12 @@ jobs:
       - name: Struct-member select gate (no select on a struct member in rtl/)
         run: python3 tools/verif/check_struct_member_select.py -v
 
+      # Bead lu09. BLOCKING: the Sky130 CPU macro's pin coordinates are frozen by pin_template.def
+      # (LibreLane FP_DEF_TEMPLATE, strict). Fails if the template omits or moves any signal pin of the
+      # committed macro LEF, or if two template pins overlap (LibreLane does not check that). Stdlib only.
+      - name: Pin-lock gate (Sky130 CPU macro pin template reproduces the committed LEF)
+        run: python3 tools/verif/pin_lock.py check --lef pnr/sky130/cpu/macro/rv32i_cpu_top.lef --def pnr/sky130/cpu/pin_template.def
+
       # Bead xlc4. BLOCKING: every content-anchored line waiver in tools/verif/coverage_waivers.txt must
       # still bind to its source line. An RTL edit that touches a waived line (or adds an identical
       # one) goes stale here, on the PR, instead of turning the nightly soc_coverage gate red. Reads
