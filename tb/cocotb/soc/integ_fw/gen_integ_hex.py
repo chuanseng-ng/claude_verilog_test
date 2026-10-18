@@ -46,6 +46,23 @@ IMAGE 3  gpu_iso.hex -- GPU power-down/up with a level-held gpu_irq_o
   isolation.  The clamp itself is observable only in the window between iso_en rising and
   the reset asserting, where gpu_irq_raw is still 1.
 
+IMAGE 4  dma_walk.hex -- the DMA as the SoC's only software-programmable bus master walk
+  (beads 0ntg + xkw5).  No interrupts: the DMA is polled through its STATUS register.
+  Phase 1 ALIAS  : sixteen 16-byte copies whose SRC and DST each have one more high address bit
+                  set (bits 12..27, the whole 256 MB SRAM window).  The behavioural SRAM only
+                  realises 4 KB and aliases the rest (sram_controller.sv word_index), so every
+                  copy lands in the same 4 KB and is checkable by backdoor; the point is that
+                  each address bit of the crossbar, the SRAM slave port and the DMA master
+                  port is driven both ways on a transfer that really completes.
+  Phase 2 ROMWR  : nine copies SRAM -> boot-ROM window (len 4..128 B, varied word addresses).
+                  boot_rom has no write path by design (ej6j): every attempt must end in
+                  STATUS.error with ERR_INFO = SLVERR / write (0b010), and the ROM must be
+                  bit-identical afterwards.  This is the first SoC-level drive of
+                  crossbar -> boot_rom AW/W/B.
+  Phase 3 DECERR : DMA reads from, and writes to, four unmapped addresses (bits 28, 17 of the
+                  hole above the peripheral window, 30, 31).  The crossbar's default slave
+                  answers DECERR: read -> ERR_INFO = 0b111, write -> 0b011.
+
 Registers: IMAGE 1 MAIN uses x1-x23 (x2=VAR_BASE x3=TIMER x4=UART x5=SPI x6=DMA x7=IRQ);
 the ISR uses only x24-x31.
 """
@@ -58,7 +75,7 @@ if _PROJ_ROOT not in sys.path:
     sys.path.insert(0, _PROJ_ROOT)
 
 from sim.riscv_encoder import (  # noqa: E402
-    ADDI, ADD, ANDI, SW, LW, BNE, BEQ, JAL, EBREAK, SLLI, CSRRW, CSRRS, MRET,
+    ADDI, ADD, ANDI, OR, SW, LW, BNE, BEQ, JAL, EBREAK, SLLI, XORI, CSRRW, CSRRS, MRET,
 )
 from tb.cocotb.soc.gpio_fw.gen_gpio_hex import Assembler, lui_addi, NOP  # noqa: E402
 from tb.cocotb.soc.cpu_gpu_irq_fw import gen_cpu_gpu_irq_hex as gpuirq  # noqa: E402
@@ -445,12 +462,144 @@ def build_gpu_iso(asm):
     tail(asm)
 
 
+# =============================================================================
+# IMAGE 4: DMA walk -- SRAM aliases, boot-ROM write (SLVERR), unmapped addresses (DECERR)
+# =============================================================================
+# SRAM layout (all below the 4 KB the behavioural SRAM realises; SRAM_BASE = 0x2000)
+WALK_SRC_A = SRAM_BASE + 0x100   # 4-word pattern A (alias-walk sources, even iterations)
+WALK_SRC_B = SRAM_BASE + 0x140   # 4-word pattern B (odd iterations)
+WALK_SRC_ROM = SRAM_BASE + 0x200  # 32-word source for the ROM-write copies
+WALK_DST = SRAM_BASE + 0x400     # + 0x10 * i : alias-walk destinations
+WALK_SCRATCH = SRAM_BASE + 0x600  # destination of the failing-read copies (never written)
+WALK_PAT_A = (0xDEADBEEF, 0x12345678, 0xA5A5A5A5, 0x5A5A5A5A)
+WALK_PAT_B = (0xFFFFFFFF, 0x00000000, 0xAAAAAAAA, 0x55555555)
+WALK_ALIAS_BITS = tuple(range(12, 28))   # address bit k of the 256 MB SRAM window
+WALK_ROM_FILL_SEED = 0xA5A5A5A5
+WALK_ROM_FILL_STEP = 0x9E3779B1
+WALK_ROM_FILL_WORDS = 32
+# (length in bytes, destination) of the boot-ROM write attempts; every one stays inside the
+# 4 KB ROM window and inside one 4 KB page (the DMA splits bursts there anyway).
+WALK_ROM_COPIES = (
+    (4, 0x1FFC), (8, 0x1FF8), (16, 0x1FF0), (32, 0x1FE0), (64, 0x1FC0), (128, 0x1F80),
+    (16, 0x1554), (16, 0x1AA8), (16, 0x1000),
+)
+WALK_DECERR_ADDRS = (0x1000_0000, 0x2002_0000, 0x4000_0000, 0x8000_0000)
+ERRINFO_ROM_WRITE = 0b010     # SLVERR, error on the write channel
+ERRINFO_DECERR_READ = 0b111   # DECERR, error on the read channel
+ERRINFO_DECERR_WRITE = 0b011  # DECERR, error on the write channel
+DMA_STATUS_DONE, DMA_STATUS_ERR = 0x2, 0x4
+
+
+def build_dma_walk(asm):
+    trampoline(asm)
+    asm.label("MAIN")
+    li(asm, 6, DMA_BASE)
+    li(asm, 2, SRAM_BASE)
+
+    # ---- source patterns -------------------------------------------------------------
+    for base, pat in ((WALK_SRC_A, WALK_PAT_A), (WALK_SRC_B, WALK_PAT_B)):
+        for i, v in enumerate(pat):
+            li(asm, 5, v)
+            li(asm, 7, base + 4 * i)
+            asm.emit(SW(5, 7, 0))
+    li(asm, 12, WALK_ROM_FILL_SEED)
+    li(asm, 13, WALK_SRC_ROM)
+    li(asm, 14, WALK_ROM_FILL_STEP)
+    asm.emit(ADDI(11, 0, 0))
+    asm.emit(ADDI(15, 0, WALK_ROM_FILL_WORDS))
+    asm.label("FILL")
+    asm.emit(SW(12, 13, 0))
+    asm.emit(ADD(12, 12, 14))
+    asm.emit(ADDI(13, 13, 4))
+    asm.emit(ADDI(11, 11, 1))
+    br(asm, BNE, 11, 15, "FILL")
+    flush_dcache(asm, "FLW")                      # the DMA reads SRAM behind the D-cache
+
+    def program(src_reg, dst_reg, nbytes):
+        asm.emit(SW(src_reg, 6, 0x00))
+        asm.emit(SW(dst_reg, 6, 0x04))
+        asm.emit(ADDI(8, 0, nbytes))
+        asm.emit(SW(8, 6, 0x08))
+
+    def run(tag, errinfo=None):
+        """Start the programmed copy, poll STATUS.{done,error}, check it, soft-reset."""
+        asm.emit(ADDI(8, 0, 1))
+        asm.emit(SW(8, 6, 0x0C))                  # CTRL.start
+        asm.emit(ADDI(14, 0, 0))
+        li(asm, 15, 3000)
+        asm.label(f"{tag}_P")
+        asm.emit(LW(9, 6, 0x10))                  # STATUS
+        asm.emit(ANDI(10, 9, DMA_STATUS_DONE | DMA_STATUS_ERR))
+        br(asm, BNE, 10, 0, f"{tag}_D")
+        asm.emit(ADDI(14, 14, 1))
+        br(asm, BNE, 14, 15, f"{tag}_P")
+        jmp(asm, "FAIL")                          # never completed
+        asm.label(f"{tag}_D")
+        if errinfo is None:
+            asm.emit(ADDI(11, 0, DMA_STATUS_DONE))  # done and NOT error
+            br(asm, BNE, 10, 11, "FAIL")
+        else:
+            asm.emit(ADDI(11, 0, DMA_STATUS_ERR))   # error and NOT done
+            br(asm, BNE, 10, 11, "FAIL")
+            asm.emit(LW(9, 6, 0x18))              # ERR_INFO
+            asm.emit(ADDI(11, 0, errinfo))
+            br(asm, BNE, 9, 11, "FAIL")
+        asm.emit(ADDI(8, 0, 4))
+        asm.emit(SW(8, 6, 0x0C))                  # CTRL.soft_reset: clears the sticky bits
+
+    # ---- phase 1: SRAM alias walk ----------------------------------------------------
+    li(asm, 22, 1 << WALK_ALIAS_BITS[0])          # x22 = one-hot address bit
+    li(asm, 24, 1 << (WALK_ALIAS_BITS[-1] + 1))   # loop end
+    li(asm, 23, WALK_DST)                         # x23 = running destination offset
+    asm.emit(ADDI(25, 0, 0))                      # x25 = pattern select (0 / 0x40)
+    asm.label("ALIAS")
+    li(asm, 7, WALK_SRC_A)
+    asm.emit(ADD(7, 7, 25))
+    asm.emit(OR(7, 7, 22))                        # src = pattern | (1 << k)
+    asm.emit(OR(5, 23, 22))                       # dst = slot    | (1 << k)
+    program(7, 5, 16)
+    run("AL")
+    asm.emit(ADDI(23, 23, 0x10))
+    asm.emit(XORI(25, 25, 0x40))
+    asm.emit(SLLI(22, 22, 1))
+    br(asm, BNE, 22, 24, "ALIAS")
+    asm.label("ALIAS_DONE")
+    asm.emit(NOP)
+
+    # ---- phase 2: boot-ROM write attempts -> SLVERR ----------------------------------
+    li(asm, 7, WALK_SRC_ROM)
+    for n, (nbytes, dst) in enumerate(WALK_ROM_COPIES):
+        li(asm, 5, dst)
+        program(7, 5, nbytes)
+        run(f"RW{n}", ERRINFO_ROM_WRITE)
+    asm.label("ROM_DONE")
+    asm.emit(NOP)
+
+    # ---- phase 3: unmapped addresses -> DECERR ---------------------------------------
+    li(asm, 5, WALK_SCRATCH)
+    for n, addr in enumerate(WALK_DECERR_ADDRS):
+        li(asm, 7, addr)
+        program(7, 5, 16)
+        run(f"DR{n}", ERRINFO_DECERR_READ)
+    li(asm, 7, WALK_SRC_ROM)
+    for n, addr in enumerate(WALK_DECERR_ADDRS):
+        li(asm, 5, addr)
+        program(7, 5, 16)
+        run(f"DW{n}", ERRINFO_DECERR_WRITE)
+    asm.label("DECERR_DONE")
+    asm.emit(NOP)
+    jmp(asm, "PASS")
+    tail(asm)
+
+
 IMAGES = {
     "irq_spi": (build_irq_spi, ("ISR", "MAIN", "PASS", "FAIL", "TIMER_ARMED", "SPI_ARMED")),
     "pll_prog": (build_pll_prog, ("MAIN", "PASS", "FAIL", "PLL_RESET_OK", "PLL1_A",
                                   "PLL2_PROGRAMMED", "PLL1_B")),
     "gpu_iso": (build_gpu_iso, ("MAIN", "PASS", "FAIL", "GPU_DONE", "GPU_OFF", "GPU_ON",
                                 "GPU_RELAUNCHED", "IRQ_CLR")),
+    "dma_walk": (build_dma_walk, ("MAIN", "PASS", "FAIL", "ALIAS_DONE", "ROM_DONE",
+                                  "DECERR_DONE")),
 }
 
 
@@ -476,6 +625,12 @@ def main():
         "UART_TX_BYTE": UART_TX_BYTE, "SPI_TX_BYTE": SPI_TX_BYTE,
         "SPI_SLAVE_RESP": SPI_SLAVE_RESP, "PLL1_VAL_A": PLL1_VAL_A, "PLL2_VAL": PLL2_VAL,
         "PLL1_VAL_B": PLL1_VAL_B, "SPI_CLK_DIV": SPI_CLK_DIV,
+        "WALK_SRC_A": WALK_SRC_A, "WALK_SRC_B": WALK_SRC_B, "WALK_SRC_ROM": WALK_SRC_ROM,
+        "WALK_DST": WALK_DST, "WALK_SCRATCH": WALK_SCRATCH,
+        "WALK_ROM_FILL_SEED": WALK_ROM_FILL_SEED, "WALK_ROM_FILL_STEP": WALK_ROM_FILL_STEP,
+        "WALK_ROM_FILL_WORDS": WALK_ROM_FILL_WORDS,
+        "WALK_N_ALIAS": len(WALK_ALIAS_BITS), "WALK_N_ROM_COPIES": len(WALK_ROM_COPIES),
+        "WALK_ROM_BEATS": sum(n // 4 for n, _ in WALK_ROM_COPIES),
     }
     for k, v in consts.items():
         addr_lines.append(f"{k} = 0x{v:x}\n" if v > 255 else f"{k} = {v}\n")
