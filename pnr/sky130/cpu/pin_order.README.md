@@ -49,3 +49,25 @@ This rebalance addresses the PIN-CLUSTERING root cause. The SoC integration
 ALSO repositions both macros away from the die's (20,20) corner (previously
 only 20 µm margin on south/west) to give every edge genuine escape room —
 see `pnr/sky130/soc/macro_placement.cfg`.
+
+## v3: DFT scan boundary (bead j41m.4, DFT_ARCHITECTURE.md 14.10)
+
+Six pins are added, all on the **N edge**, appended after `commit_valid_o` so every existing N-edge
+entry keeps its position in the list: `scan_mode_i`, `scan_en_i`, `scan_in_i[1:0]`, `scan_out_o[1:0]`
+(N 95 -> 101 bits; 401 -> 407 signal bits, checked by matching every port bit of the sv2v netlist against exactly one entry). S/E/W are untouched. N was chosen because it faces the SoC's open
+flat-logic region where `u_dft_ctrl` and the top-level scan ports (`scan_in_i[7:6]`, `scan_out_o[7:6]`)
+are routed from; it is also the edge that already carries `clk_i`/`rst_n_i`.
+
+There is deliberately **no** `scan_clk_i` and **no** `scan_rst_ni` pin: `clk_i` is already the muxed test
+clock (soc_top's `dft_clk_mux` sits ahead of `u_cpu_cg`) and the macro's only reset is the synchronous
+`rst_n_i`, which `soc_top` drives from a net that equals `scan_rst_ni` in scan mode.
+
+MEASURED (RUN_2026-10-16_02-27-26, `tools/verif/lef_pin_diff.py` old vs new LEF): appending 6 names
+to the N list **did move the other N-edge pins**. 409 pins in the new LEF (403 + 6); of the 403 existing
+pins, 308 are identical (all S, E, W and the 2 power pins) and **95 moved, exactly the 95 pre-existing
+N-edge signal pins** (the ioplacer re-spaces the whole edge: max shift 214.4 um, mean 106.3 um along x,
+same layer met2). The 6 new pins sit at the east end of N (x = 3393.5 .. 3570.9 um). `ERRORS_ON_UNMATCHED_IO:
+both` did its job (every port bit matched one entry). Consequence: the SoC must be re-placed/re-routed
+against the new LEF (it was, RUN_2026-10-16_04-53-49); a stale SoC run against the old LEF is invalid.
+If a later change must not move the N pins, they would have to be pinned at fixed coordinates (a different
+mechanism than this file), which was not attempted.
