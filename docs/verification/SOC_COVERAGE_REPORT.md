@@ -16,6 +16,15 @@ were instrumented. This report covers the whole `tb/cocotb/soc` regression (`soc
 - `make soc_coverage` runs the whole `soc_all_ci` instrumented, merges all `.dat` files with
   `verilator_coverage --write`, and renders the tables below with `tools/verif/coverage_report.py`.
   It is not part of `soc_all_ci` / `soc_all`; CI runs it nightly (`.github/workflows/soc_coverage.yml`).
+- **CI is sharded (bead 9ayu.1).** The workflow does not run `soc_coverage` as one job: it runs `NSHARDS` (6) `soc_shard`
+  legs (`make soc_coverage_shard SHARD=k NSHARDS=6`) and the `cpu_gpu` job in parallel, then a final job (name
+  `SoC line + toggle coverage`, the required check) merges every shard's `.dat` with the same `verilator_coverage --write`
+  and runs the unchanged report and gate. The suite list is the single variable `SOC_CI_SUITES` in
+  `tb/cocotb/soc/Makefile` (`soc_all_ci` runs all of it). The slice for shard k comes from `tools/verif/soc_shards.py`
+  (deterministic greedy balance on the measured timings in `tools/verif/soc_shard_weights.json`; a new suite needs no edit
+  there, it gets a default weight). The final job fails unless the union of the suites the shards ran equals
+  `SOC_CI_SUITES` (`soc_shards.py union`) and the pass count SUMMED over all shard logs reaches `PASS_FLOOR`.
+  `make soc_coverage` itself is unchanged for local use.
 - Line % = `v_line` + `v_branch` points; toggle % = `v_toggle` points (per bit, per direction, as Verilator
   counts them). A point is the same point in every instance and testbench and is hit if any instance hit it;
   `<module>__<params>` specialisations fold into the base module.
