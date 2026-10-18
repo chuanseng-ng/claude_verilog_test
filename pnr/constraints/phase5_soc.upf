@@ -1,168 +1,316 @@
 ###############################################################################
-# phase5_soc.upf — Power intent for soc_top on ASAP7 7nm predictive
-# IEEE 1801-2015 (UPF 3.0)
+# phase5_soc.upf - Power intent for soc_top (IEEE 1801-2015, UPF 3.0)
 #
-# Phase 5 SoC power architecture (4 power domains at single voltage):
+# Purpose: input for UPF-aware test tools.  This file describes the power
+# architecture soc_top is DESIGNED for; the behavioural PMU (rtl/soc/pmu.sv)
+# sequences it with clock gates, resets and functional clamps, but no power
+# switch exists in the RTL (see section 4).  Its references are machine-checked
+# against the elaborated RTL by tools/verif/check_upf.py (CI: qa-checks.yml);
+# bead h3lm records the audit that rewrote it.  Nothing in the physical flow
+# reads it today (pnr/Makefile UPF_FILE points at phase3_cache.upf, unused).
 #
-#   PD_CPU    — rv32i_cpu_top + L1 caches (power-gatable; controlled by SW)
-#   PD_GPU    — gpu_top SIMT engine       (power-gatable; controlled by SW)
-#   PD_SRAM   — sram_controller + SRAM    (always-on; holds program data)
-#   PD_PERIPH — DMA, UART, SPI, timer,    (always-on; peripheral fabric)
-#               IRQ ctrl, AXI crossbar,
-#               AXI-Lite interconnect,
-#               boot ROM, PLL
+# Rewritten 2026-10-17 (bead h3lm).  The previous revision named isolation
+# nets (cpu_iso_en, gpu_iso_en) and switch control ports (cpu_pg_ctrl,
+# gpu_pg_ctrl) that do not exist in soc_top, isolated every output where the
+# RTL clamps a handful of handshakes, used create_power_switch options no UPF
+# parser accepts, and passed a domain name where a supply set is required.
 #
-# All domains share VDD = 0.7 V (ASAP7 RVT nominal).
-# Power gating of PD_CPU and PD_GPU is modelled as design intent; actual
-# header/footer cells depend on ASAP7 PDK configuration.  OpenROAD does not
-# insert switch cells in this flow — UPF is carried for formal/simulation use.
+# Domains (4, as before; all on one nominal voltage, 0.7 V ASAP7 RVT):
 #
-# Isolation strategy:
-#   - CPU outputs isolated to 0 when PD_CPU is powered down
-#   - GPU outputs isolated to 0 when PD_GPU is powered down
-#   No retention registers in Phase 5 (state rebuilt from SRAM on wakeup).
+#   PD_CPU    u_cpu     rv32i_cpu_top hard macro incl. L1 caches   switchable rail VDD_CPU
+#   PD_GPU    u_gpu     gpu_top                                    switchable rail VDD_GPU
+#   PD_SRAM   u_sram    sram_controller + SRAM                     always-on  (VDD)
+#   PD_PERIPH everything else in soc_top, incl. the top-level glue always-on  (VDD)
+#
+# PD_PERIPH membership is EXPLICIT via the roster below: the checker fails if
+# a top-level instance is added or removed without updating it.  Why each must
+# stay powered while PD_CPU / PD_GPU are off:
+#
+#   CPU-domain synchronisers (cpu_core_clk, ungated PLL output, so they keep
+#   running while u_cpu's clock is gated):
+# upf-check aon u_cpu_clk_dis_sync  -- ~pmu_cpu_clk_en into the CPU clock domain (drives u_cpu_cg)
+# upf-check aon u_cpu_iso_en_sync   -- pmu_cpu_iso_en into the CPU clock domain: THE ISO_CPU control net
+# upf-check aon u_cpu_pmu_rst_sync  -- pmu_cpu_rst_n into cpu_domain_rst_n
+# upf-check aon u_cpu_wdt_rst_sync  -- watchdog bite into cpu_domain_rst_n
+# upf-check aon u_ext_irq_sync      -- ext_irq into the CPU clock domain
+# upf-check aon u_timer_irq_sync    -- timer_irq into the CPU clock domain
+#   Clock gates (a gate that lost power could not re-enable its own domain):
+# upf-check aon u_cpu_cg            -- gates cpu_core_clk for u_cpu
+# upf-check aon u_gpu_cg            -- gates core_clk for u_gpu
+#   CDC bridges (the CPU<->fabric seam and the APB ones; the clamps sit on the CPU side of u_cpu_axi_cdc):
+# upf-check aon u_cpu_axi_cdc       -- async_axi_fifo, CPU data port <-> crossbar M0
+# upf-check aon u_apb_dbg_cdc       -- apb_cdc_bridge, debug APB into u_cpu
+# upf-check aon u_apb_pll_cdc       -- apb_cdc_bridge, PLL 1 registers
+# upf-check aon u_apb_pll2_cdc      -- apb_cdc_bridge, PLL 2 registers
+#   Power management and DFT:
+# upf-check aon u_pmu               -- the sequencer: drives both ISO controls, clock enables and resets
+# upf-check aon u_dft_ctrl          -- scan_mode / test_en seam
+# upf-check aon u_gpu_domain_rm     -- dft_rst_mux on the GPU-domain reset
+#   Clocking and fabric:
+# upf-check aon u_pll_sub           -- pll_subsystem (fabric clock)
+# upf-check aon u_cpu_pll_sub       -- pll_subsystem (CPU clock)
+# upf-check aon u_bus               -- soc_bus (AXI crossbar + AXI-Lite/APB rings)
+# upf-check aon u_gif_adapter       -- axilite_to_axi4 (GPU ifetch -> crossbar M1)
+# upf-check aon u_irq_ctrl          -- interrupt_controller
+# upf-check aon u_boot_rom          -- boot ROM
+#   Bus masters and peripherals:
+# upf-check aon u_dma               -- dma_engine
+# upf-check aon u_uart              -- uart_controller
+# upf-check aon u_spi               -- spi_controller
+# upf-check aon u_timer             -- timer
+# upf-check aon u_gpio              -- gpio_controller
+# upf-check aon u_pwm               -- pwm_controller
+# upf-check aon u_wdt               -- watchdog_timer
+# upf-check aon u_trng              -- trng
+# upf-check aon u_i2c               -- i2c_controller
+# upf-check aon u_crypto            -- crypto_accel
+# upf-check aon u_npu               -- npu_top (its weight SRAM macros are inside)
+#
+# Isolation (section 5) covers EXACTLY the signals soc_top clamps, not every
+# output.  A clamp forces a handshake to 0 while the domain is off:
+#
+#   ISO_CPU  6 signals, control pmu_cpu_iso_en_sync (cpu_core_clk, 2-FF from the PMU)
+#   ISO_GPU  8 signals, control pmu_gpu_iso_en      (core_clk, straight from the PMU)
+#
+# Every other output of u_cpu / u_gpu is deliberately unclamped and falls in one
+# of three classes (the checker requires each to be listed):
+#
+#   payload         AXI address/data/control buses.  Each is qualified by a
+#                   clamped valid, so it is don't-care downstream once valid=0;
+#                   clamping 32-bit buses buys nothing in this model.
+#   slave_response  slave-side response of u_gpu's AXI-Lite port and u_cpu's
+#                   debug APB port.  KNOWN GAP: with the supply really removed
+#                   these (rvalid, awready, pready ...) would drive X into the
+#                   always-on ring.  soc_top accepts a stalled access into a
+#                   gated domain (soc_top.sv "clamp-scope" note); full per-port
+#                   isolation is part of the deferred true-power-gating scope
+#                   (docs/POWER_DOMAIN_EVALUATION.md section 4).
+#   observability   commit / trap / debug outputs to top-level pins; commit_valid_o
+#                   is clamped and qualifies the commit payload.  Also u_cpu's
+#                   scan_out_o (j41m.4): a test-only pin, meaningful only in the
+#                   SCAN power state where every domain is ON, and tied 0 by the
+#                   macro until Stage 2 stitches its chains.
+#
+# upf-check unclamped payload: u_cpu/axi_awaddr_o u_cpu/axi_awlen_o u_cpu/axi_awsize_o u_cpu/axi_awburst_o
+# upf-check unclamped payload: u_cpu/axi_wdata_o u_cpu/axi_wstrb_o u_cpu/axi_wlast_o
+# upf-check unclamped payload: u_cpu/axi_araddr_o u_cpu/axi_arlen_o u_cpu/axi_arsize_o u_cpu/axi_arburst_o
+# upf-check unclamped payload: u_gpu/m_axil_if_araddr u_gpu/m_axi_araddr u_gpu/m_axi_awaddr u_gpu/m_axi_wdata u_gpu/m_axi_wstrb
+# upf-check unclamped slave_response: u_cpu/apb_prdata_o u_cpu/apb_pready_o u_cpu/apb_pslverr_o
+# upf-check unclamped slave_response: u_gpu/s_axil_awready u_gpu/s_axil_wready u_gpu/s_axil_bresp u_gpu/s_axil_bvalid
+# upf-check unclamped slave_response: u_gpu/s_axil_arready u_gpu/s_axil_rdata u_gpu/s_axil_rresp u_gpu/s_axil_rvalid
+# upf-check unclamped observability: u_cpu/commit_pc_o u_cpu/commit_insn_o u_cpu/trap_taken_o u_cpu/trap_cause_o
+# upf-check unclamped observability: u_cpu/debug_rs1_data_o u_cpu/debug_rs2_data_o u_cpu/debug_branch_taken_o
+# upf-check unclamped observability: u_cpu/debug_take_branch_jump_o u_cpu/debug_pc_src_o u_cpu/debug_state_o u_cpu/debug_ebreak_o
+# upf-check unclamped observability: u_cpu/scan_out_o
+#
+# Retention: NONE.  The old header said state is "rebuilt from SRAM on wakeup";
+# that was never true and nothing implements it.  pmu.sv emits ret_save /
+# ret_restore in order, but soc_top leaves those nets unconnected.  Across a
+# PMU off->on cycle the CPU keeps its flops only as a behavioural artefact
+# (synchronous reset asserted while its clock is gated) and the GPU loses state
+# (asynchronous reset); software must re-initialise both after power-up (bead
+# 4a7i, docs/POWER_DOMAIN_EVALUATION.md section 3).  No set_retention appears
+# here because the RTL has no retention element to bind it to.
+#
+# Not expressed here (no RTL or library hook): macro PG-pin connections (done
+# by the PDN scripts, pnr/*/pdn*.tcl, with per-PDK pin names), level shifters
+# (single voltage), isolation/retention cell mapping (neither ASAP7 nor Sky130
+# ships an isolation cell; the clamp is plain AND logic in soc_top).
+#
+# Voltage: 0.7 V is the ASAP7 RVT nominal.  The same structure holds for the
+# Sky130 SoC (1.8 V); a Sky130 consumer must substitute the voltage literals.
 ###############################################################################
 
-###############################################################################
-# 1. Supply ports
-###############################################################################
-create_supply_port VDD -direction in
-create_supply_port VSS -direction in
+upf_version 3.0
+set_design_top soc_top
 
 ###############################################################################
-# 2. Supply nets
+# 1. Supply ports and nets
+#
+# VDD_CPU / VDD_GPU are the switchable rails.  With no power switch in the RTL
+# (section 4) they are modelled as externally driven supply ports, so every
+# supply net has a source and the OFF states in section 6 are reachable.
 ###############################################################################
-create_supply_net VDD     -reuse
+create_supply_port VDD     -direction in
+create_supply_port VSS     -direction in
+create_supply_port VDD_CPU -direction in
+create_supply_port VDD_GPU -direction in
+
+create_supply_net VDD
+create_supply_net VSS
 create_supply_net VDD_CPU
 create_supply_net VDD_GPU
-create_supply_net VSS     -reuse
 
-connect_supply_net VDD -ports VDD
-connect_supply_net VSS -ports VSS
+connect_supply_net VDD     -ports {VDD}
+connect_supply_net VSS     -ports {VSS}
+connect_supply_net VDD_CPU -ports {VDD_CPU}
+connect_supply_net VDD_GPU -ports {VDD_GPU}
 
-# CPU and GPU use switchable rails derived from top VDD
-connect_supply_net VDD_CPU -reuse
-connect_supply_net VDD_GPU -reuse
+add_port_state VDD     -state {ON 0.7}
+add_port_state VSS     -state {GND 0.0}
+add_port_state VDD_CPU -state {ON 0.7} -state {OFF off}
+add_port_state VDD_GPU -state {ON 0.7} -state {OFF off}
+
+###############################################################################
+# 2. Supply sets
+###############################################################################
+create_supply_set SS_AON \
+    -function {power  VDD} \
+    -function {ground VSS}
+
+create_supply_set SS_CPU \
+    -function {power  VDD_CPU} \
+    -function {ground VSS}
+
+create_supply_set SS_GPU \
+    -function {power  VDD_GPU} \
+    -function {ground VSS}
 
 ###############################################################################
 # 3. Power domains
 ###############################################################################
 
-# PD_PERIPH: always-on top-level domain (crossbar, interconnect, peripherals, PLL)
-# Includes anything not explicitly assigned to CPU/GPU/SRAM below.
+# PD_PERIPH: the top scope (so the clamp muxes and other top-level glue are in
+# a domain) and every descendant except the three domains carved out below.
+# Membership of the top-level instances is the roster in the header.
 create_power_domain PD_PERIPH \
-    -include_scope
+    -elements {.} \
+    -exclude_elements {u_cpu u_gpu u_sram} \
+    -supply {primary SS_AON}
 
-set_domain_supply_net PD_PERIPH \
-    -primary_power_net  VDD \
-    -primary_ground_net VSS
-
-# PD_CPU: CPU hard macro + L1 caches (power-gatable)
-create_power_domain PD_CPU \
-    -elements { u_cpu }
-
-set_domain_supply_net PD_CPU \
-    -primary_power_net  VDD_CPU \
-    -primary_ground_net VSS
-
-# PD_GPU: GPU hard macro (power-gatable)
-create_power_domain PD_GPU \
-    -elements { u_gpu }
-
-set_domain_supply_net PD_GPU \
-    -primary_power_net  VDD_GPU \
-    -primary_ground_net VSS
-
-# PD_SRAM: SRAM controller and backing memory (always-on)
 create_power_domain PD_SRAM \
-    -elements { u_sram }
+    -elements {u_sram} \
+    -supply {primary SS_AON}
 
-set_domain_supply_net PD_SRAM \
-    -primary_power_net  VDD \
-    -primary_ground_net VSS
+create_power_domain PD_CPU \
+    -elements {u_cpu} \
+    -supply {primary SS_CPU} \
+    -available_supplies {SS_AON}
 
-###############################################################################
-# 4. Power switches (design intent; ASAP7 switch cell mapping TBD)
-###############################################################################
-
-# CPU power switch — controlled by SW via CSR or firmware register
-create_power_switch PSW_CPU \
-    -domain PD_CPU \
-    -output_supply_port {vout VDD_CPU} \
-    -input_supply_port  {vin VDD} \
-    -control_port       {ctrl cpu_pg_ctrl} \
-    -on_value  0 \
-    -off_value 1
-
-# GPU power switch — controlled by SW kernel launch/completion
-create_power_switch PSW_GPU \
-    -domain PD_GPU \
-    -output_supply_port {vout VDD_GPU} \
-    -input_supply_port  {vin VDD} \
-    -control_port       {ctrl gpu_pg_ctrl} \
-    -on_value  0 \
-    -off_value 1
+create_power_domain PD_GPU \
+    -elements {u_gpu} \
+    -supply {primary SS_GPU} \
+    -available_supplies {SS_AON}
 
 ###############################################################################
-# 5. Isolation cells
-#    Clamp CPU outputs to 0 when PD_CPU is gated.
-#    Clamp GPU outputs to 0 when PD_GPU is gated.
-#    Isolation is in the parent domain (PD_PERIPH) so cells remain powered.
+# 4. Power switches: intentionally NONE
+#
+# rtl/soc/pmu.sv (header, "This module deliberately does NOT emit
+# cpu_pg_ctrl/gpu_pg_ctrl") has no power-switch control output, and no
+# soc_top net can drive one.  The old PSW_CPU / PSW_GPU controlled ports that
+# did not exist.  Rather than invent a control net, the switches are omitted
+# and the rails are supply ports (section 1).  When a real switch lands, the
+# shape is:
+#
+#   create_power_switch PSW_CPU -domain PD_CPU \
+#       -input_supply_port {vin VDD} -output_supply_port {vout VDD_CPU} \
+#       -control_port {sleep_n <pmu switch net>} \
+#       -on_state {on vin {sleep_n}} -off_state {off {!sleep_n}}
+#
+# with VDD_CPU's supply port and port state replaced by a supply net driven by
+# the switch.  Ordering to honour then (IEEE 1801): save, isolate, [reset],
+# switch off; switch on, [reset release], restore, release isolation.
 ###############################################################################
 
+###############################################################################
+# 5. Isolation: exactly the signals soc_top clamps (functional AND logic in
+#    soc_top, in PD_PERIPH, i.e. -location parent, clamp value 0).
+#
+# Control nets are soc_top nets, checked to exist:
+#   pmu_cpu_iso_en_sync  u_cpu_iso_en_sync/q_o   (cpu_core_clk domain)
+#   pmu_gpu_iso_en       u_pmu/gpu_iso_en_o      (core_clk domain)
+# The CPU clamp sits at the CPU-domain face of u_cpu_axi_cdc (GH #93), which is
+# why its control is the synchronised copy.  The RTL clamp is already a mux, so
+# a flow that also INSERTS isolation cells from this strategy would double-clamp
+# (harmless: AND of two ANDs); the strategies document the RTL's clamps.
+#
+# Ordering note (bead-worthy, NOT fixed here): the PMU spaces its actions one
+# core_clk cycle apart: iso, gate, reset on the way down; reset release, ungate,
+# restore, de-isolate on the way up.  "Isolate before the reset asserts" holds
+# for the CPU only because the 2-FF synchroniser on pmu_cpu_iso_en (2 cpu_core_clk
+# edges, 1.56 ns at 1282 MHz) happens to be shorter than the 2 core_clk cycles
+# (3.5 ns at 571 MHz) between the iso and reset actions - there is no handshake,
+# and the reset itself reaches u_cpu through a cdc_reset_sync whose assertion is
+# asynchronous.  A slower CPU clock, or a deeper STAGES, would reorder them.
+###############################################################################
 set_isolation ISO_CPU \
     -domain PD_CPU \
-    -isolation_supply_set PD_PERIPH \
+    -isolation_supply_set SS_AON \
     -clamp_value 0 \
-    -applies_to outputs \
-    -isolation_signal cpu_iso_en \
-    -isolation_sense  high \
+    -isolation_signal pmu_cpu_iso_en_sync \
+    -isolation_sense high \
+    -elements { \
+        u_cpu/axi_awvalid_o \
+        u_cpu/axi_wvalid_o \
+        u_cpu/axi_arvalid_o \
+        u_cpu/axi_bready_o \
+        u_cpu/axi_rready_o \
+        u_cpu/commit_valid_o \
+    } \
     -location parent
-
-map_isolation_cell ISO_CPU \
-    -domain PD_CPU \
-    -lib_cells {*ISO*}
 
 set_isolation ISO_GPU \
     -domain PD_GPU \
-    -isolation_supply_set PD_PERIPH \
+    -isolation_supply_set SS_AON \
     -clamp_value 0 \
-    -applies_to outputs \
-    -isolation_signal gpu_iso_en \
-    -isolation_sense  high \
+    -isolation_signal pmu_gpu_iso_en \
+    -isolation_sense high \
+    -elements { \
+        u_gpu/m_axi_awvalid \
+        u_gpu/m_axi_wvalid \
+        u_gpu/m_axi_arvalid \
+        u_gpu/m_axi_bready \
+        u_gpu/m_axi_rready \
+        u_gpu/m_axil_if_arvalid \
+        u_gpu/m_axil_if_rready \
+        u_gpu/gpu_irq_o \
+    } \
     -location parent
 
-map_isolation_cell ISO_GPU \
-    -domain PD_GPU \
-    -lib_cells {*ISO*}
-
 ###############################################################################
-# 6. Power state table
+# 6. Power states
 ###############################################################################
 
-add_power_state PD_PERIPH \
-    -state ON {-supply_expr {power == FULL_ON && ground == FULL_ON}}
+# Supply-set states.  The always-on rail has one state; the switchable rails
+# have ON and OFF.
+add_power_state -supply SS_AON \
+    -state {ON -supply_expr {power == {FULL_ON 0.7} && ground == {FULL_ON 0.0}}}
 
-add_power_state PD_SRAM \
-    -state ON {-supply_expr {power == FULL_ON && ground == FULL_ON}}
+add_power_state -supply SS_CPU \
+    -state {ON -supply_expr {power == {FULL_ON 0.7} && ground == {FULL_ON 0.0}}} \
+    -state {OFF -supply_expr {power == {OFF} && ground == {FULL_ON 0.0}}}
 
-add_power_state PD_CPU \
-    -state ACTIVE     {-supply_expr {power == FULL_ON}} \
-    -state OFF        {-supply_expr {power == OFF}}
+add_power_state -supply SS_GPU \
+    -state {ON -supply_expr {power == {FULL_ON 0.7} && ground == {FULL_ON 0.0}}} \
+    -state {OFF -supply_expr {power == {OFF} && ground == {FULL_ON 0.0}}}
 
-add_power_state PD_GPU \
-    -state ACTIVE     {-supply_expr {power == FULL_ON}} \
-    -state OFF        {-supply_expr {power == OFF}}
+# System states.  Names and the 2-bit encodings are pmu.sv's CTRL[1:0]
+# (MODE_NORMAL/CPU_OFF/GPU_OFF/IDLE); u_pmu/pmu_mode_req is the REQUESTED mode,
+# so a state is the settled condition (the PMU walks 4 actions per direction,
+# one per cycle, and those transient cycles belong to no named state).
+# Each functional state also requires scan_mode_i == 1'b0 so it is exclusive
+# with SCAN.  The checker compares names, encodings and per-mode rail state
+# with pmu.sv.
+#
+# SCAN is the test-mode override: scan_mode_i = 1 with every rail ON, whatever
+# the PMU holds.  What the RTL actually does under scan_mode_i (confirmed in
+# soc_top.sv / dft_ctrl_ports.sv, and checked):
+#   - clock gates:  FORCED OPEN.  dft_ctrl_ports assigns test_en_o = scan_mode_i
+#                   and u_cpu_cg / u_gpu_cg take it on test_en (rv32i_clock_gate
+#                   latches en | test_en).  Matches this state.
+#   - resets:       forced to the scan reset (dft_rst_mux / cdc_reset_sync output
+#                   muxes / pll_subsystem u_core_rm).  Matches.
+#   - the PMU:      NOT overridden.  Its mode register and FSM are ordinary flops
+#                   on the scan chain, so pmu_*_iso_en follows whatever state is
+#                   shifted in.  MISMATCH with "all domains ON": the ISO clamps
+#                   are not qualified by scan_mode_i, so under scan a clamp can
+#                   be active.  Documented, not changed (bead-worthy, see
+#                   docs/design/UPF_POWER_SPEC.md "Phase 5").
+create_power_state_group SOC_PST
 
-# System power state table (legal combinations)
-# NORMAL:      all on
-# CPU_OFF:     CPU gated, GPU+periph+sram on
-# GPU_OFF:     GPU gated, CPU+periph+sram on
-# IDLE:        both CPU and GPU gated
-create_pst system_pst \
-    -supplies {VDD VDD_CPU VDD_GPU}
-
-add_pst_state NORMAL   -pst system_pst -state {VDD VDD_CPU VDD_GPU}
-add_pst_state CPU_OFF  -pst system_pst -state {VDD off VDD_GPU}
-add_pst_state GPU_OFF  -pst system_pst -state {VDD VDD_CPU off}
-add_pst_state IDLE     -pst system_pst -state {VDD off off}
+add_power_state -group SOC_PST \
+    -state {NORMAL -logic_expr {SS_AON == ON && SS_CPU == ON  && SS_GPU == ON  && u_pmu/pmu_mode_req == 2'b00 && scan_mode_i == 1'b0}} \
+    -state {CPU_OFF -logic_expr {SS_AON == ON && SS_CPU == OFF && SS_GPU == ON  && u_pmu/pmu_mode_req == 2'b01 && scan_mode_i == 1'b0}} \
+    -state {GPU_OFF -logic_expr {SS_AON == ON && SS_CPU == ON  && SS_GPU == OFF && u_pmu/pmu_mode_req == 2'b10 && scan_mode_i == 1'b0}} \
+    -state {IDLE -logic_expr {SS_AON == ON && SS_CPU == OFF && SS_GPU == OFF && u_pmu/pmu_mode_req == 2'b11 && scan_mode_i == 1'b0}} \
+    -state {SCAN -logic_expr {SS_AON == ON && SS_CPU == ON  && SS_GPU == ON  && scan_mode_i == 1'b1}}

@@ -16,7 +16,10 @@
 #
 # Env:
 #   CDC_CHECK_RUN_DIR   (required) LibreLane run dir.
-#   CDC_CHECK_CORNER    default nom_tt_025C_1v80. One of {nom,min,max}_{tt_025C_1v80,ss_100C_1v60,ff_n40C_1v95}.
+#   CDC_CHECK_SKEW_FRAC  default 0.25. Per-pointer bit-skew limit as a fraction of min(source, destination) period
+#                        (see the skew section for the justification). CDC_CHECK_SKEW_LIMIT (ns) overrides it.
+#   CDC_CHECK_CORNER    default nom_tt_025C_1v80 (one corner per sta run; `make check-cdc-timing-sky130-soc` loops nom_tt AND
+#                       max_ss by default, bead j41m.5). One of {nom,min,max}_{tt_025C_1v80,ss_100C_1v60,ff_n40C_1v95}.
 #                       The prefix picks the SPEF (OpenRCX writes nom/min/max), the rest the Liberty.
 #   CDC_CHECK_NETLIST   default <run>/final/nl/soc_top.nl.v, else the fill-insertion step's nl.v.
 #   CDC_CHECK_SPEF      default <run>/*-openroad-rcx/<nom|min|max>/soc_top.<..>.spef; "none" = no parasitics.
@@ -186,6 +189,71 @@ foreach {dir f t} {cpu2core cpu_clk core_clk core2cpu core_clk cpu_clk} {
         puts "CDC-GROUP domain_wide_${dir} MET"
     }
 }
+
+#----------------------------------------------------------------
+# Per-pointer bit-skew (Cummings Gray-code criterion; bead j41m.5 option C).
+#
+# A gray pointer is safe across the boundary only if its bits arrive within a window narrower
+# than the time between two successive pointer updates. The pointer changes at most once per
+# SOURCE clock cycle, so the hard limit is skew < 1 source period (above that, the capture flop
+# can see bits of update k and update k+1 mixed, which is not a gray neighbour). The budget
+# above bounds the ABSOLUTE delay; this bounds the SPREAD, which is what makes gray coding
+# work, and it keeps holding when a future change makes the absolute delay small but uneven.
+#
+# Skew of a pointer = max - min over its bits of the data ARRIVAL at the stage-0 D pin (launch
+# clock latency + CK->Q + wire), measured with the launch/capture clocks PROPAGATED (set after
+# the budget reports above, because the budgets are deliberately timed on ideal clocks): with
+# ideal clocks the launch-tree skew between the bits' source flops would be invisible.
+#
+# Default limit = CDC_CHECK_SKEW_FRAC (0.25) x min(source, destination period). 0.25 is a 4x
+# derate of the 1-source-period hard limit for what this single-corner, SPEF-only measurement
+# cannot see (OCV between the bit paths, source-clock jitter, the ss/ff spread of the next
+# run). min() because the period that matters is whichever clock is faster; they are both 25 ns
+# here, so the limit is 6.25 ns. CDC_CHECK_SKEW_LIMIT (ns) overrides it absolutely.
+#----------------------------------------------------------------
+proc cdc_skew_report {} {
+    set frac [cdc_env CDC_CHECK_SKEW_FRAC 0.25]
+    set abs_limit [cdc_env CDC_CHECK_SKEW_LIMIT ""]
+    set period [expr {[info exists ::clock_period] ? $::clock_period : 25.0}]
+    if {$abs_limit ne ""} { set limit $abs_limit } else { set limit [expr {$frac * $period}] }
+    if {[dict size $::cdc_ptr_info] == 0} {
+        cdc_record_finding "bit-skew: no gray-pointer crossings recorded (the SDC's sec. 11 never ran)"
+        return
+    }
+    set_propagated_clock [get_clocks {core_clk cpu_clk}]
+    foreach ptr [lsort [dict keys $::cdc_ptr_info]] {
+        lassign [dict get $::cdc_ptr_info $ptr] fc tc pins
+        set nbits [llength $pins]
+        set rpt [file join $::REPORTS_DIR cdc_skew_${ptr}.rpt]
+        report_checks -to $pins -path_delay max -format end -group_count 1000 -endpoint_count 1 -digits 3 > $rpt
+        set fh [open $rpt r]; set tab [read $fh]; close $fh
+        set want [dict create]
+        foreach p $pins { dict set want [string map {"\\" ""} [get_full_name $p]] 1 }
+        set arrs {}
+        foreach line [split $tab "\n"] {
+            if {[regexp {^\s*(\S+)\s+\(\S+\)\s+(-?[0-9]+\.[0-9]+)\s+(-?[0-9]+\.[0-9]+)\s+(-?[0-9]+\.[0-9]+)\s+\((MET|VIOLATED)\)\s*$} $line -> ep req act sl st]} {
+                if {[dict exists $want [string map {"\\" ""} $ep]]} { lappend arrs $act }
+            }
+        }
+        if {$nbits == 0 || [llength $arrs] != $nbits} {
+            cdc_record_finding "bit-skew: pointer $ptr: [llength $arrs] of $nbits capture bits have a timed path (see $rpt)"
+            puts [format "CDC-SKEW %-14s bits=%-2d UNCONSTRAINED" $ptr $nbits]
+            continue
+        }
+        set sorted [lsort -real $arrs]
+        set amin [lindex $sorted 0]
+        set amax [lindex $sorted end]
+        set skew [expr {$amax - $amin}]
+        set verdict MET
+        if {$skew > $limit} {
+            set verdict VIOLATED
+            cdc_record_finding "bit-skew VIOLATED: pointer $ptr ($fc -> $tc) skew [format %.3f $skew] ns > limit [format %.3f $limit] ns (see $rpt)"
+        }
+        puts [format "CDC-SKEW %-14s %s->%s bits=%-2d arr_min=%-7s arr_max=%-7s skew=%-6s limit=%-6s %s" \
+            $ptr $fc $tc $nbits $amin $amax [format %.3f $skew] [format %.3f $limit] $verdict]
+    }
+}
+cdc_skew_report
 
 puts ""
 puts "================================================================"

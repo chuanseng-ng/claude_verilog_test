@@ -2124,43 +2124,65 @@ check-cdc-timing-asap7-soc:
 # core_clk/cpu_clk asynchronous, and OpenSTA drops a set_max_delay across such a pair) -- see the
 # header of the check SDC.
 #
-# Usage: make check-cdc-timing-sky130-soc [RUN_DIR=/nobackup/sky130_soc_runs/RUN_...] [CDC_CORNER=nom_tt_025C_1v80]
+# Usage: make check-cdc-timing-sky130-soc [RUN_DIR=/nobackup/sky130_soc_runs/RUN_...]
+#                                         [CDC_CORNERS="nom_tt_025C_1v80 max_ss_100C_1v60"] [CDC_CORNER=<one>]
 #        (RUN_DIR defaults to the newest run under /nobackup/sky130_soc_runs)
-# Exit: 0 pass; 1 on any CDC-EXCEPTION-MISS / VIOLATED / FAIL / SETUP-ERROR marker in the log
-# (grepped independent of sta's own exit code, as in the ASAP7 target); sta's exit otherwise.
-# Memory: ~3-5 GB with SPEF on this SoC; do not run next to a LibreLane flow on a 15 GB host.
+# Corners (bead j41m.5, decision C): the DEFAULT is nom_tt AND max_ss, sequentially, one sta process at
+# a time, FAIL if ANY corner fails. A nom_tt-only default hid a 0.95 ns margin on RUN_2026-10-16_04-53-49
+# that became -0.715 ns at max_ss on the next run. CDC_CORNERS=all runs all nine; CDC_CORNER=<one> (the
+# old single-corner knob) still works and wins over CDC_CORNERS. Each corner also reports the per-pointer
+# gray-code bit skew (CDC_CHECK_SKEW_FRAC / CDC_CHECK_SKEW_LIMIT, see check_cdc_timing_sky130.tcl).
+# Exit: 0 only if every corner passes; 1 on any CDC-EXCEPTION-MISS / VIOLATED / FAIL / SETUP-ERROR marker in
+# a corner's log (grepped independent of sta's own exit code, as in the ASAP7 target); sta's exit otherwise.
+# Memory: ~3-5 GB per corner with SPEF on this SoC, corners run one after another; do not run next to a
+# LibreLane flow on a 15 GB host.
 #----------------------------------------------------------------
-CDC_CORNER ?= nom_tt_025C_1v80
+CDC_CORNER ?=
+CDC_CORNERS ?= nom_tt_025C_1v80 max_ss_100C_1v60
+CDC_CORNERS_ALL := nom_tt_025C_1v80 nom_ss_100C_1v60 nom_ff_n40C_1v95 min_tt_025C_1v80 min_ss_100C_1v60 min_ff_n40C_1v95 max_tt_025C_1v80 max_ss_100C_1v60 max_ff_n40C_1v95
 check-cdc-timing-sky130-soc:
 	@CDC_RUN_DIR="$(RUN_DIR)"; \
 	if [ -z "$$CDC_RUN_DIR" ]; then \
 		CDC_RUN_DIR=$$(ls -td /nobackup/sky130_soc_runs/RUN_* 2>/dev/null | head -1); fi; \
 	if [ -z "$$CDC_RUN_DIR" ]; then \
 		echo "No Sky130 SoC run found under /nobackup/sky130_soc_runs/ and RUN_DIR not set."; exit 1; fi; \
+	CORNERS="$(if $(strip $(CDC_CORNER)),$(CDC_CORNER),$(if $(filter all,$(CDC_CORNERS)),$(CDC_CORNERS_ALL),$(CDC_CORNERS)))"; \
 	echo "=========================================="; \
 	echo "Post-route CDC budget check -- Sky130 SoC"; \
 	echo "  Run dir : $$CDC_RUN_DIR"; \
-	echo "  Corner  : $(CDC_CORNER)"; \
+	echo "  Corners : $$CORNERS"; \
 	echo "  SDC     : $(abspath $(LIBRELANE_SKY130_SOC_DIR)/constraints/sky130_soc_cdc_check.sdc)"; \
 	echo "=========================================="; \
-	CDC_LOG=$$(mktemp /tmp/check_cdc_timing_sky130.XXXXXX.log); \
 	mkdir -p /nobackup/sky130_soc_runs/cdc_check_reports; \
-	( cd $(LIBRELANE_DIR) && nix-shell --run \
-		"CDC_CHECK_RUN_DIR=$$CDC_RUN_DIR CDC_CHECK_CORNER=$(CDC_CORNER) \
-		 CDC_CHECK_REPORTS=/nobackup/sky130_soc_runs/cdc_check_reports/$$(basename $$CDC_RUN_DIR)_$(CDC_CORNER) \
-		 sta -no_init -exit $(abspath scripts/check_cdc_timing_sky130.tcl)" ) > "$$CDC_LOG" 2>&1; \
-	STA_EXIT=$$?; \
-	grep -v 'Creating black box' "$$CDC_LOG"; \
-	if grep -qE "CDC-EXCEPTION-MISS|budget VIOLATED|CDC-CHECK-RESULT: FAIL|CDC-CHECK-SETUP-ERROR" "$$CDC_LOG"; then \
-		echo "FAIL: check-cdc-timing-sky130-soc -- CDC finding marker(s) present (sta exit $$STA_EXIT). Log: $$CDC_LOG"; \
-		exit 1; fi; \
-	if [ "$$STA_EXIT" -ne 0 ]; then \
-		echo "FAIL: check-cdc-timing-sky130-soc -- sta exited $$STA_EXIT with no recognised marker (tool/setup error). Log: $$CDC_LOG"; \
-		exit "$$STA_EXIT"; fi; \
-	if ! grep -q "CDC-CHECK-RESULT: PASS" "$$CDC_LOG"; then \
-		echo "FAIL: check-cdc-timing-sky130-soc -- no PASS marker in the log (a check that did not report is not a pass). Log: $$CDC_LOG"; \
-		exit 1; fi; \
-	rm -f "$$CDC_LOG"
+	FAILED=""; SUMMARY=""; \
+	for CORNER in $$CORNERS; do \
+		echo ""; echo "---- corner $$CORNER ----"; \
+		CDC_LOG=$$(mktemp /tmp/check_cdc_timing_sky130.XXXXXX.log); \
+		( cd $(LIBRELANE_DIR) && nix-shell --run \
+			"CDC_CHECK_RUN_DIR=$$CDC_RUN_DIR CDC_CHECK_CORNER=$$CORNER \
+			 CDC_CHECK_PNR_DIR=$(abspath .) \
+			 CDC_CHECK_REPORTS=/nobackup/sky130_soc_runs/cdc_check_reports/$$(basename $$CDC_RUN_DIR)_$$CORNER \
+			 $(if $(CDC_SKEW_FRAC),CDC_CHECK_SKEW_FRAC=$(CDC_SKEW_FRAC)) $(if $(CDC_SKEW_LIMIT),CDC_CHECK_SKEW_LIMIT=$(CDC_SKEW_LIMIT)) \
+			 sta -no_init -exit $(abspath scripts/check_cdc_timing_sky130.tcl)" ) > "$$CDC_LOG" 2>&1; \
+		STA_EXIT=$$?; \
+		grep -v 'Creating black box' "$$CDC_LOG"; \
+		if grep -qE "CDC-EXCEPTION-MISS|budget VIOLATED|bit-skew VIOLATED|CDC-CHECK-RESULT: FAIL|CDC-CHECK-SETUP-ERROR" "$$CDC_LOG"; then \
+			echo "FAIL: corner $$CORNER -- CDC finding marker(s) present (sta exit $$STA_EXIT). Log: $$CDC_LOG"; \
+			FAILED="$$FAILED $$CORNER"; SUMMARY="$$SUMMARY\n  $$CORNER: FAIL"; continue; fi; \
+		if [ "$$STA_EXIT" -ne 0 ]; then \
+			echo "FAIL: corner $$CORNER -- sta exited $$STA_EXIT with no recognised marker (tool/setup error). Log: $$CDC_LOG"; \
+			FAILED="$$FAILED $$CORNER"; SUMMARY="$$SUMMARY\n  $$CORNER: FAIL (sta exit $$STA_EXIT)"; continue; fi; \
+		if ! grep -q "CDC-CHECK-RESULT: PASS" "$$CDC_LOG"; then \
+			echo "FAIL: corner $$CORNER -- no PASS marker in the log (a check that did not report is not a pass). Log: $$CDC_LOG"; \
+			FAILED="$$FAILED $$CORNER"; SUMMARY="$$SUMMARY\n  $$CORNER: FAIL (no PASS marker)"; continue; fi; \
+		SUMMARY="$$SUMMARY\n  $$CORNER: PASS"; \
+		rm -f "$$CDC_LOG"; \
+	done; \
+	echo ""; echo "=========================================="; \
+	printf "CDC check summary ($$CDC_RUN_DIR):$$SUMMARY\n"; \
+	if [ -n "$$FAILED" ]; then \
+		echo "FAIL: check-cdc-timing-sky130-soc -- failing corner(s):$$FAILED"; exit 1; fi; \
+	echo "PASS: check-cdc-timing-sky130-soc -- all corners pass: $$CORNERS"
 
 # flop-count: DFF breakdown from any LibreLane run's synthesis log.
 # Usage: make flop-count RUN_DIR=asap7/gpu/runs/RUN_2026-05-24_09-12-00

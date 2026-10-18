@@ -75,6 +75,11 @@ set_false_path -from [get_ports cpu_rst_n_i]
 set ::cdc_exception_misses {}
 # group name -> list of capture D pins, filled by the appliers, consumed by the script
 set ::cdc_groups [dict create]
+# pointer label ("u_aw_fifo.wr2rd") -> {from_clk to_clk {capture D pins of its bits}}: the unit of the
+# per-pointer bit-skew report (check_cdc_timing_sky130.tcl, bead j41m.5 option C). Filled by sec. 11.
+set ::cdc_ptr_info [dict create]
+# capture D pins of the most recent cdc_apply_sync_budget call (one synchroniser = one pointer)
+set ::cdc_last_pins {}
 # group name -> expected budget (ns), so the script can verify the budget was actually applied
 set ::cdc_group_budget [dict create]
 
@@ -139,6 +144,7 @@ proc cdc_sync_stage0_nets {inst_token} {
 # one bit's cells into another's exception). Capture D pins are recorded under $group for the
 # script's report. Returns the number of bits applied; every unresolved bit is a recorded miss.
 proc cdc_apply_sync_budget {group inst_token val from_clk to_clk description} {
+    set ::cdc_last_pins {}
     set _nets [cdc_sync_stage0_nets $inst_token]
     if {![cdc_require_match $_nets $description]} {
         return 0
@@ -171,6 +177,7 @@ proc cdc_apply_sync_budget {group inst_token val from_clk to_clk description} {
         # sides pin-qualified the later declaration wins, as the ASAP7 file documents.
         set_max_delay $val -from $_launch -to $_dpins
         dict lappend ::cdc_groups $group {*}$_dpins
+        lappend ::cdc_last_pins {*}$_dpins
         incr _applied
     }
     dict set ::cdc_group_budget $group $val
@@ -226,9 +233,11 @@ foreach {_fifo _wr_clk _rd_clk} $_cdc_fifo_dirs {
     cdc_apply_sync_budget fifo_wr2rd "u_cpu_axi_cdc*${_fifo}*u_wr_ptr_to_rd" \
         [expr {$clock_period * 0.5}] $_wr_clk $_rd_clk \
         "sec.11 u_cpu_axi_cdc.${_fifo}.u_wr_ptr_to_rd gray-pointer crossing ($_wr_clk -> $_rd_clk)"
+    dict set ::cdc_ptr_info "${_fifo}.wr2rd" [list $_wr_clk $_rd_clk $::cdc_last_pins]
     cdc_apply_sync_budget fifo_rd2wr "u_cpu_axi_cdc*${_fifo}*u_rd_ptr_to_wr" \
         [expr {$clock_period * 0.5}] $_rd_clk $_wr_clk \
         "sec.11 u_cpu_axi_cdc.${_fifo}.u_rd_ptr_to_wr gray-pointer crossing ($_rd_clk -> $_wr_clk)"
+    dict set ::cdc_ptr_info "${_fifo}.rd2wr" [list $_rd_clk $_wr_clk $::cdc_last_pins]
 }
 
 ###############################################################################

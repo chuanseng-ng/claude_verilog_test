@@ -9,17 +9,19 @@
 // power switches, or retention-cell silicon — those require a UPF-capable
 // simulator not available in this open-source flow and are explicitly
 // deferred. `pnr/constraints/phase5_soc.upf` already carries the UPF intent
-// (PD_CPU/PD_GPU/PD_SRAM/PD_PERIPH, ISO_CPU/ISO_GPU, system_pst) that this
-// module's outputs are named and ordered to match.
+// (PD_CPU/PD_GPU/PD_SRAM/PD_PERIPH, ISO_CPU/ISO_GPU, the SOC_PST state group) that
+// this module's outputs are named and ordered to match. tools/verif/check_upf.py
+// (CI) checks the mode names/encodings below against that file.
 //
-// Power modes (2-bit CTRL[1:0], matches phase5_soc.upf system_pst 4-state PST):
+// Power modes (2-bit CTRL[1:0], matches the phase5_soc.upf SOC_PST NORMAL/CPU_OFF/GPU_OFF/IDLE states):
 //   00  NORMAL   — CPU on,  GPU on
 //   01  CPU_OFF  — CPU off, GPU on
 //   10  GPU_OFF  — CPU on,  GPU off
 //   11  IDLE     — CPU off, GPU off
 //
 // Sequencing order (fixed by the UPF, not a design choice — see evaluation
-// doc section 3 and phase5_soc.upf ISO_CPU/ISO_GPU + PSW_CPU/PSW_GPU):
+// doc section 3 and phase5_soc.upf ISO_CPU/ISO_GPU; the UPF has no power
+// switch, see below):
 //   Power-down: assert *_ret_save -> assert *_iso_en -> gate clock (*_clk_en=0)
 //               -> assert domain reset (*_rst_n=0).
 //   Power-up:   release domain reset (*_rst_n=1) -> ungate clock (*_clk_en=1)
@@ -35,8 +37,8 @@
 //
 // Retention scope (explicit no-op): cpu_ret_save_o/cpu_ret_restore_o (and GPU
 // equivalents) are emitted in the correct order for verification to assert,
-// but there is no retention-cell silicon in this model (phase5_soc.upf:23,
-// "No retention registers in Phase 5"). Because the domain's reset is only
+// but there is no retention-cell silicon in this model (phase5_soc.upf header,
+// "Retention: NONE"). Because the domain's reset is only
 // ever asserted while its clock is already gated (DOM_PD_GATE precedes DOM_OFF)
 // and is always released before the clock is ungated (DOM_PU_RST precedes
 // DOM_PU_CLK), the domain's own flops never see an active clock edge while
@@ -65,9 +67,10 @@
 // u_cpu/u_gpu, in the always-on PD_PERIPH domain), per the UPF's
 // `-location parent` placement. See soc_top.sv for the clamp scope/rationale.
 //
-// This module deliberately does NOT emit cpu_pg_ctrl/gpu_pg_ctrl (the UPF
-// power-switch control signals, PSW_CPU/PSW_GPU, active-LOW on-value per
-// phase5_soc.upf:94-95,103-104 `-on_value 0 -off_value 1`). Real power
+// This module deliberately does NOT emit cpu_pg_ctrl/gpu_pg_ctrl (power-
+// switch control signals). phase5_soc.upf therefore has no create_power_switch
+// either (bead h3lm: its former PSW_CPU/PSW_GPU named these nonexistent ports
+// and used invalid options); VDD_CPU/VDD_GPU are modelled as supply ports. Real power
 // switches are part of the deferred full-power-gating scope (no switch
 // insertion happens in this ASAP7 flow either — pnr/asap7/soc/pdn.tcl).
 // Forward-compat note: if a future phase adds real switches, cpu_pg_ctrl

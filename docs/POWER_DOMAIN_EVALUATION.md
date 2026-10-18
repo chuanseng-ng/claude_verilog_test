@@ -2,6 +2,34 @@
 
 **Status:** DECIDED 2026-06-27 — **GO (scoped): behavioral PMU sequencer only.** Build a clock-gate / reset / functional-isolation power-mode controller that is verifiable in the open Verilator flow. True UPF power-gating silicon (real isolation/retention cells, power switches, secondary PDN) is **deferred** — it needs a UPF-capable simulator the open flow lacks. Bead `claude_verilog_test-9m4`.
 
+## Update 2026-10-17 (bead `h3lm`): the UPF was audited and rewritten
+
+The sections below are the 2026-06-27 decision record and are kept as history. Two of their
+statements are no longer true:
+
+- "Zero RTL hooks" and the `cpu_iso_en` / `gpu_iso_en` / `cpu_pg_ctrl` names. The PMU and the clamps
+  exist (`pmu.sv`, `soc_top.sv`). The original `phase5_soc.upf` named those nets and two power-switch
+  control ports that never existed in `soc_top`, isolated every output while the RTL clamps a handful of
+  handshakes, and used option syntax no UPF parser accepts. It is rewritten (IEEE 1801-2015) and
+  checked against the elaborated RTL in CI by `tools/verif/check_upf.py`.
+- `phase5_soc.upf:23` ("no retention registers") and `:94-95,103-104` (the switches). Those lines
+  moved; the file now has **no power switches** (the PMU emits no switch control) and **no retention**.
+  Line numbers are no longer cited; use the section names in the UPF header.
+
+What the audit found beyond syntax, kept here because they are design facts, not UPF facts:
+
+1. `m_axil_if_rready` (GPU instruction-fetch R-channel accept) was the one GPU-to-fabric handshake
+   `soc_top` did not clamp. It is now clamped like the other seven GPU signals (ISO_GPU is 8 signals,
+   ISO_CPU is 6).
+2. The previous UPF's "state rebuilt from SRAM on wakeup" was never implemented (section 3).
+3. **Isolation versus reset ordering has no handshake.** The CPU clamp control passes a 2-flop
+   synchroniser, the reset a `cdc_reset_sync` with asynchronous assertion; "isolate first" holds only
+   because 2 x 780 ps is shorter than two PMU cycles of 1750 ps. Not fixed here; worth a bead.
+4. **Scan mode does not override the PMU or the clamps.** Clock gates (`test_en`) and resets are forced
+   by `scan_mode_i`, but the PMU is ordinary scan-chain state, so a clamp can be active under scan. The
+   UPF `SCAN` state says "all ON"; the mismatch is documented in `docs/design/UPF_POWER_SPEC.md`.
+5. Slave-side response outputs of `u_gpu` / `u_cpu` are unclamped by design (section 4 scope).
+
 ## 1. Findings
 
 - **UPF is spec-only.** `pnr/constraints/phase5_soc.upf` *declares* 4 domains (PD_CPU/GPU/SRAM/PERIPH) + 2 power switches (PSW_CPU/GPU) + isolation (ISO_CPU/GPU) + a 4-state PST (NORMAL/CPU_OFF/GPU_OFF/IDLE) — but lines 17-18 and `pnr/asap7/soc/pdn.tcl:7-9` state explicitly: **OpenROAD does not insert switches; single-VDD; UPF carried for formal/sim only.** M11 signed off single-domain (62.9 mW, all logic powered).
@@ -22,7 +50,7 @@ A **behavioral power-mode controller** modeled as ordinary synchronous RTL — t
   - **Power-up** (exit to NORMAL): (release domain reset) → ungate clock → assert retention-restore → de-assert isolation. Mirrors "restore AFTER the switch closes".
   - This is the actual *sequencing* logic — the part with real design content.
 - **Functional isolation** = output-clamp muxes at the CPU/GPU macro boundaries (clamp to the UPF `clamp_value 0`) when the domain is "off" — behaviorally identical to isolation cells for sim, synthesizes as logic.
-- **Retention scope (explicit):** the PMU *emits* the retention save/restore control signals in the correct order (forward-compatible with the deferred real-power-gating work), and the verification asserts that ordering. But in the behavioral model the domain is **clock-gated, not supply-removed**, and retention save/restore is a **functional no-op in this model**. ⚠️ **Corrected 2026-10-09 (bead `4a7i`):** whether a domain's flops keep their state across an off→on cycle depends on its reset style, not on the clock gating alone. The **CPU** domain uses synchronous reset, and the PMU asserts and releases its reset only while the clock is gated, so CPU state (MTVEC/MSTATUS/PC) does survive — but as a behavioural-model artifact, not retention. The **GPU** domain (`gpu_top`, `gpu_compute_unit`, `warp_scheduler`, …) uses asynchronous reset (`always_ff @(posedge clk or negedge rst_n)`), so asserting `pmu_gpu_rst_n` clears its state (IRQ latch, `GPU_CTRL.irq_enable`, `STATUS.done`) even with the clock gated — reproduced by `tb/cocotb/soc/test_soc_integration.py::test_soc_gpu_isolation_via_pmu`. Neither domain models real retention; real silicon with no retention cells (none in Phase 5, `phase5_soc.upf:23`) loses state in both, so the GPU behaviour is the realistic one. **Software must re-initialise the GPU after power-up** (and should not rely on CPU state surviving either). Real retention-cell save/restore (where the supply is actually cut and state would be lost without it) is part of the **deferred** real-power-gating scope (§4), which needs power switches + a UPF-aware simulator. So: retention *control sequencing* = in scope; retention *cell silicon / true supply-off state preservation* = explicitly out of scope here.
+- **Retention scope (explicit):** the PMU *emits* the retention save/restore control signals in the correct order (forward-compatible with the deferred real-power-gating work), and the verification asserts that ordering. But in the behavioral model the domain is **clock-gated, not supply-removed**, and retention save/restore is a **functional no-op in this model**. ⚠️ **Corrected 2026-10-09 (bead `4a7i`):** whether a domain's flops keep their state across an off→on cycle depends on its reset style, not on the clock gating alone. The **CPU** domain uses synchronous reset, and the PMU asserts and releases its reset only while the clock is gated, so CPU state (MTVEC/MSTATUS/PC) does survive — but as a behavioural-model artifact, not retention. The **GPU** domain (`gpu_top`, `gpu_compute_unit`, `warp_scheduler`, …) uses asynchronous reset (`always_ff @(posedge clk or negedge rst_n)`), so asserting `pmu_gpu_rst_n` clears its state (IRQ latch, `GPU_CTRL.irq_enable`, `STATUS.done`) even with the clock gated — reproduced by `tb/cocotb/soc/test_soc_integration.py::test_soc_gpu_isolation_via_pmu`. Neither domain models real retention; real silicon with no retention cells (none in Phase 5, `phase5_soc.upf` header) loses state in both, so the GPU behaviour is the realistic one. **Software must re-initialise the GPU after power-up** (and should not rely on CPU state surviving either). Real retention-cell save/restore (where the supply is actually cut and state would be lost without it) is part of the **deferred** real-power-gating scope (§4), which needs power switches + a UPF-aware simulator. So: retention *control sequencing* = in scope; retention *cell silicon / true supply-off state preservation* = explicitly out of scope here.
 
 This delivers the **on/off-sequencing controller + its verification** (enter/exit each PST state, observe clock-gate, observe isolation clamp, confirm no functional X-leak from a gated domain). It does **not** model real supply-off, retention-cell silicon, or power switches.
 
