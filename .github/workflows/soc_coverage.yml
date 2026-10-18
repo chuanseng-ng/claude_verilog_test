@@ -475,7 +475,10 @@ jobs:
       # 2026-10-18 (bead h367, I2C functional coverage): 834 = 837 - 3. 837 EXPECTED = 832 (the line above) + 5 new tests in
       # test_i2c.py (long transfers, repeated-START chain, CMD shapes, COUNT=255, RX-full timeout); the i2c suite itself
       # measured 55 -> 60 locally. Confirm against this PR's CI pass count.
-      PASS_FLOOR: '834'
+      # 2026-10-19 (bead xkw5 leftovers, PR #320): 854 = 857 - 3. 857 MEASURED by the cocotb soc_all job of this PR on the
+      # merge with #319 ('cocotb: 857 passed, 0 failed (floor 834), summed over 4 shards') = 837 + 20 new tests (timer, wdt, pwm, spi,
+      # pmu, pll_apb_regs, dma, npu, 3 i2c, 2 x 2 for each of the two register-bank builds, test_soc_gpu_walk_both_masters).
+      PASS_FLOOR: '854'
       # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`), CI log-grep formula (`passed$`; the
       # expect_fail tests print "passed: failed as expected" and are NOT counted).
       # 2026-10-10 (bead a5ze slice 2): 229 = 232 - 3.  232 is the count of a full local
