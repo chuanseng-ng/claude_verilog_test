@@ -182,16 +182,19 @@ ROM `JUMP`, truncated frame, oversized length, line noise before `SOF`; and auto
 a preloaded image. `tb/tests/test_uart_load.py` covers the host tool and CRC convention without a
 simulator.
 
-**UART RX note (RTL finding, worked around here, not fixed here).** `uart_controller`'s receiver only
-returns to `RX_IDLE` at the *end* of the stop bit (`bit_tick`) and then re-aligns on the next oversample
-tick, so after every back-to-back 8N1 byte it is one oversample tick (`D+1` clocks) later relative to
-the sender. After about 7 bytes without idle time the mid-bit sample point crosses a bit boundary and
-the byte is mis-framed. Measured with this suite: an 8-byte INFO frame sent at 1 stop bit fails, the
-same frame with 2 stop bits passes, at divisors 3 and 5. A fix belongs in `uart_controller.sv`
-(go idle after the stop-bit mid-point sample); until then **the host must send 8N2**
-(`uart_load.py` does by default, `--stopbits 1` to override) and the cocotb UART model does the same.
-The extra stop bit costs 10 % of throughput (11 bits per byte). The `uart` unit tests only receive
-single bytes, which is why this was not seen before.
+**UART RX framing (bead `shm5`, fixed in RTL).** `uart_controller`'s receiver used to return to
+`RX_IDLE` only at the *end* of the stop bit (`bit_tick`) and then re-align on the next oversample
+tick, so after every back-to-back 8N1 byte it was one oversample tick (`D+1` clocks) later relative to
+the sender; after about 7 bytes without idle time the mid-bit sample point crossed a bit boundary and
+the byte was mis-framed (an 8-byte INFO frame at 1 stop bit failed, with 2 stop bits it passed). The
+receiver now has its own phase counter that restarts on **every** START edge, votes each bit on phases
+6/7/8, and closes the frame at the stop-bit mid-point (push byte, framing check, re-arm), so the next
+START is accepted from there on. Plain **8N1 with no idle gap works**, at a sender bit-clock error of
+up to +/-3.5 % (`test_uart.py::test_rx_back_to_back_*`: 256 zero-gap bytes, +/-2 % and +/-3.5 %, 8N2;
+`soc_uart_boot::test_load_verify_8n1_back_to_back`: a full program load at 8N1). **8N2 stays the
+host-loader default** (`uart_load.py`, the cocotb UART model): it costs 10 % throughput (11 bits per
+byte) and buys one extra bit time of idle margin; `uart_load.py --stopbits 1` selects 8N1. No firmware
+or boot-image change was needed: the bootloader only reads bytes from the RX FIFO.
 
 **Receive-rate headroom (measured in simulation).** Each received byte costs two MMIO reads that cross
 the CPU -> fabric bridge. At divisor 3 with 8N2 (704 clocks/byte) the bootloader keeps up (128-byte

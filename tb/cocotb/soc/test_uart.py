@@ -65,7 +65,7 @@ RESP_OKAY = True
 BAUD_D0        = 0     # D=0: os_tick every clock; 16 clocks/bit
 WAIT_FRAME_D0  = 200   # > 160 clocks (10 bits × 16 clocks)
 # For loopback tests: TX starts after first bit_tick from idle (≤16 clocks
-# from CTRL write), then 10 bits × 16 clocks, + RX_DONE push. 250 is safe.
+# from CTRL write), then 10 bits × 16 clocks, + RX push. 250 is safe.
 WAIT_LOOPBACK_D0 = 300
 
 
@@ -258,7 +258,7 @@ async def test_loopback_rx(dut):
 
     # Wait for TX frame to complete and RX to capture byte
     # A4: frame = 160 clocks; TX may start up to 16 clocks after CTRL write;
-    # RX_DONE takes 1 extra cycle to push. 300 clocks is sufficient.
+    # the push follows the stop-bit mid-point; 300 clocks is ample.
     await ClockCycles(dut.clk, WAIT_LOOPBACK_D0)
 
     # Check rx_valid (rx_empty must be 0)
@@ -381,7 +381,7 @@ async def test_async_rx_raw_pin(dut):
     # Return line to idle after frame
     dut.uart_rx_i.value = 1
 
-    # Wait for RX to push the byte (RX_DONE→rx_push, then FIFO write)
+    # Wait for RX to push the byte (rx_push at the stop-bit mid-point, then FIFO write)
     # Frame = 10 bits × 16 clks = 160 clks; we're already past that.
     # Give a few extra cycles for the FIFO write and AXI readback.
     await ClockCycles(dut.clk, 20)
