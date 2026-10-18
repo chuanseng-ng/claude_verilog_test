@@ -1,0 +1,33 @@
+/* bootloader.ld -- generated from bootloader.ld.in by the Makefile (@RAM_BASE@, @RAM_BYTES@).
+ * ROM: 4 KB at 0x1000 holds .text + .rodata.  RAM: top of SRAM holds .bss + stack.
+ * There is no ROM->RAM .data copy, so initialised data is a link error (the ASSERT below):
+ * use `const` for tables and zero-initialised statics for state. */
+ENTRY(_start)
+MEMORY
+{
+  ROM (rx)  : ORIGIN = 0x00001000, LENGTH = 0x1000
+  RAM (rwx) : ORIGIN = @RAM_BASE@, LENGTH = @RAM_BYTES@
+}
+__stack_top = ORIGIN(RAM) + LENGTH(RAM);
+SECTIONS
+{
+  .text : {
+    KEEP(*(.text.init))     /* _start must land at 0x1000 = RESET_PC */
+    *(.text .text.*)
+    *(.rodata .rodata.*)
+    *(.srodata .srodata.*)
+    . = ALIGN(4);
+  } > ROM
+  .data : { *(.data .data.* .sdata .sdata.*) } > RAM
+  .bss (NOLOAD) : {
+    __bss_start = .;
+    *(.sbss .sbss.*)
+    *(.bss .bss.*)
+    *(COMMON)
+    . = ALIGN(4);
+    __bss_end = .;
+  } > RAM
+  /DISCARD/ : { *(.comment) *(.note .note.*) *(.eh_frame) }
+}
+ASSERT(SIZEOF(.data) == 0, "bootloader must not contain initialised data (no ROM->RAM copy)")
+ASSERT(__bss_end <= __stack_top - 128, "bootloader .bss leaves less than 128 B of stack")
