@@ -285,8 +285,9 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         choices=(1, 2),
         default=2,
-        help="stop bits per byte; 2 (default) works around the SoC UART receiver losing frame "
-        "alignment on back-to-back 8N1 bytes (see sw/bootloader/README.md)",
+        help="stop bits per byte; 2 (default, 8N2) keeps one bit time of idle margin per byte, "
+        "1 (8N1) also works since the SoC UART receiver re-syncs on every START edge "
+        "(bead shm5, see sw/bootloader/README.md); 8N2 costs ~10%% throughput",
     )
     ap.add_argument("--addr", type=_int, default=DEFAULT_ADDR, help="load address of a flat binary")
     ap.add_argument("--entry", type=_int, help="jump address (default: ELF entry, or --addr)")

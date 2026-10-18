@@ -43,6 +43,18 @@ PHASE 2 — interrupt driven
     level-held source in a single access (nothing to race), then a read-back round trip so the
     level drains through the ext_irq synchroniser before MRET re-enables MIE. Exactly ONE trap.
 
+SECOND IMAGE (i2c_pad_fw.hex, bead 4pl8) -- the REAL pads.  The image above stays in loopback so the
+pad oe pins never move; nothing at SoC level ever drove i2c_{scl,sda}_oe_o or took i2c_{scl,sda}_i
+low.  This image runs three polled transactions with CTRL.LOOPBACK = 0 against the register-file
+slave BFM tb/cocotb/bfm/i2c_slave.py (address 0x2A) closing the wired-AND on the tb_soc_top pins:
+  T1  START | WRITE | STOP, count 2     bytes 0x10 (register pointer) then 0xA5, both ACKed
+  T2  START | WRITE (no STOP) 0x10, then repeated START | READ | STOP | NACK_LAST: reads back the
+      0xA5 T1 stored, so the data path is proven in both directions through the pads
+  T3  address 0x55 (no such slave), START | WRITE | STOP: the address byte is NACKed, IRQ_STAT must
+      read done | nack
+The firmware scores IRQ_STAT / RX_DATA itself; the testbench independently scores the slave's own
+event log and register file.
+
 Result area (SRAM word indices from RES_BASE_WI):
    0 ISR_COUNT  1 ISR_I2C_STAT  2 ISR_IRQC_PENDING  3 CTRL_RESET  4 CLKDIV_RESET  5 TIMEOUT_RESET
    6 FIFO_STAT_RESET  7 RESERVED_READ  8 CLKDIV_READBACK  9 P1_WRITE_STAT  10 P1_READ_STAT
@@ -306,6 +318,94 @@ def build_firmware(asm: Assembler) -> None:
     asm.emit(EBREAK())
 
 
+PAD_FW_HEX = "i2c_pad_fw.hex"
+PAD_ADDR = 0x2A
+PAD_PTR = 0x10  # register pointer the slave BFM stores the data byte at
+PAD_DATA = 0xA5
+PAD_NACK_ADDR = 0x55  # no slave answers here
+CMD_WRITE2_STOP = 0x20B  # START | WRITE | STOP, COUNT = 2
+CMD_WRITE_HOLD = 0x103  # START | WRITE, COUNT = 1 (no STOP: the bus is held)
+CMD_RSTART_READ = 0x11D  # START | READ | STOP | NACK_LAST, COUNT = 1 (a repeated START here)
+PAD_RES_T1_STAT = 0
+PAD_RES_T2A_STAT = 1
+PAD_RES_T2B_STAT = 2
+PAD_RES_T2_RX = 3
+PAD_RES_T3_STAT = 4
+PAD_RES_T3_STATUS = 5
+IRQ_NACK = 0x2
+
+
+def build_pad_firmware(asm: Assembler) -> None:
+    asm.thunk(lambda lbl, pc: JAL(0, lbl["MAIN"] - pc))
+    asm.pad_to_word(MAIN_START_WORDS)
+
+    asm.label("MAIN")
+    _emit_li(asm, 2, I2C_BASE)
+    _emit_li(asm, 4, RES_BASE_ADDR)
+    for w in range(RES_WORDS):
+        asm.emit(SW(0, 4, w * 4))
+
+    # CLKDIV minimum, EN only (real pads), interrupt path left disabled (IRQ_EN resets 0).
+    _wr(asm, I2C_OFF_CLKDIV, CLKDIV_RUN)
+    _wr(asm, I2C_OFF_CTRL, 0x1)
+    asm.label("PAD_READY")
+    asm.nop()
+
+    # ---- T1: register write through the pads ----------------------------------------------
+    _wr(asm, I2C_OFF_ADDR, PAD_ADDR)
+    _wr(asm, I2C_OFF_TX, PAD_PTR)
+    _wr(asm, I2C_OFF_TX, PAD_DATA)
+    _wr(asm, I2C_OFF_CMD, CMD_WRITE2_STOP)
+    _poll_done(asm, "T1")
+    _rd_check(asm, I2C_OFF_IRQ_STAT, PAD_RES_T1_STAT, IRQ_DONE, mask=IRQ_STICKY)
+    asm.label("T1_DONE")
+    asm.nop()
+
+    # ---- T2: write the pointer, hold the bus, repeated START, read the byte back -----------
+    _wr(asm, I2C_OFF_IRQ_CLR, IRQ_STICKY)
+    _wr(asm, I2C_OFF_TX, PAD_PTR)
+    _wr(asm, I2C_OFF_CMD, CMD_WRITE_HOLD)
+    _poll_done(asm, "T2A")
+    _rd_check(asm, I2C_OFF_IRQ_STAT, PAD_RES_T2A_STAT, IRQ_DONE, mask=IRQ_STICKY)
+    _wr(asm, I2C_OFF_IRQ_CLR, IRQ_STICKY)
+    _wr(asm, I2C_OFF_ADDR, PAD_ADDR | 0x80)
+    _wr(asm, I2C_OFF_CMD, CMD_RSTART_READ)
+    _poll_done(asm, "T2B")
+    _rd_check(asm, I2C_OFF_IRQ_STAT, PAD_RES_T2B_STAT, IRQ_DONE, mask=IRQ_STICKY)
+    _rd_check(asm, I2C_OFF_RX, PAD_RES_T2_RX, PAD_DATA)
+    asm.label("T2_DONE")
+    asm.nop()
+
+    # ---- T3: a NACKed address ---------------------------------------------------------------
+    _wr(asm, I2C_OFF_IRQ_CLR, IRQ_STICKY)
+    _wr(asm, I2C_OFF_ADDR, PAD_NACK_ADDR)
+    _wr(asm, I2C_OFF_TX, 0x00)
+    _wr(asm, I2C_OFF_CMD, CMD_WRITE_STOP)
+    _poll_done(asm, "T3")
+    _rd_check(asm, I2C_OFF_IRQ_STAT, PAD_RES_T3_STAT, IRQ_DONE | IRQ_NACK, mask=IRQ_STICKY)
+    # STATUS: nack (bit 2) sticky, and the engine idle with the bus released (busy/txn clear).
+    _rd_check(asm, I2C_OFF_STATUS, PAD_RES_T3_STATUS, 0x4, mask=0x7)
+    asm.label("T3_DONE")
+    asm.nop()
+
+    # Flush the D-cache so the backdoor SRAM read at the end of the test sees the stores.
+    asm.emit(CSRRW(0, 0x7C0, 0))
+    asm.emit(ADDI(14, 0, 0))
+    asm.emit(ADDI(15, 0, 2000))
+    asm.label("FLUSH_WAIT")
+    asm.emit(ADDI(14, 14, 1))
+    asm.thunk(lambda lbl, pc: BNE(14, 15, lbl["FLUSH_WAIT"] - pc))
+    asm.thunk(lambda lbl, pc: JAL(0, lbl["PASS"] - pc))
+
+    asm.label("FAIL")
+    asm.emit(ADDI(31, 0, -1))
+    asm.emit(EBREAK())
+
+    asm.label("PASS")
+    asm.emit(ADDI(31, 0, 1))
+    asm.emit(EBREAK())
+
+
 ADDR_CONSTS = (
     "SLAVE_ADDR",
     "BYTE1",
@@ -325,6 +425,16 @@ ADDR_CONSTS = (
     "RES_P1_READ_STAT",
     "RES_P1_RX_DATA",
     "RES_P1_STATUS",
+    "PAD_ADDR",
+    "PAD_PTR",
+    "PAD_DATA",
+    "PAD_NACK_ADDR",
+    "PAD_RES_T1_STAT",
+    "PAD_RES_T2A_STAT",
+    "PAD_RES_T2B_STAT",
+    "PAD_RES_T2_RX",
+    "PAD_RES_T3_STAT",
+    "PAD_RES_T3_STATUS",
 )
 
 
@@ -345,6 +455,19 @@ def main():
             f.write(f"{w:08x}\n")
     print(f"Wrote {len(padded)} words to {hex_path} ({len(words)} used)")
 
+    pad = Assembler(origin=ROM_BASE)
+    build_pad_firmware(pad)
+    pad_words = pad.resolve()
+    pad_labels = pad.labels
+    assert len(pad_words) <= ROM_WORDS, f"pad firmware too large: {len(pad_words)} words"
+    for req in ("MAIN", "FAIL", "PASS", "PAD_READY", "T1_DONE", "T2_DONE", "T3_DONE"):
+        assert req in pad_labels, f"pad label {req!r} not found in {list(pad_labels)}"
+    pad_hex = os.path.join(out_dir, PAD_FW_HEX)
+    with open(pad_hex, "w") as f:
+        for w in list(pad_words) + [NOP] * (ROM_WORDS - len(pad_words)):
+            f.write(f"{w:08x}\n")
+    print(f"Wrote {ROM_WORDS} words to {pad_hex} ({len(pad_words)} used)")
+
     addrs_path = os.path.join(out_dir, "i2c_fw_addrs.py")
     with open(addrs_path, "w") as f:
         f.write("# Auto-generated by gen_i2c_hex.py — do not edit.\n")
@@ -358,6 +481,15 @@ def main():
             ("P2_ARMED_PC", "P2_ARMED"),
         ):
             f.write(f"{name:<18} = 0x{labels[label]:08x}\n")
+        for name, label in (
+            ("PAD_PASS_PC", "PASS"),
+            ("PAD_FAIL_PC", "FAIL"),
+            ("PAD_READY_PC", "PAD_READY"),
+            ("PAD_T1_DONE_PC", "T1_DONE"),
+            ("PAD_T2_DONE_PC", "T2_DONE"),
+            ("PAD_T3_DONE_PC", "T3_DONE"),
+        ):
+            f.write(f"{name:<18} = 0x{pad_labels[label]:08x}\n")
         for name in ADDR_CONSTS:
             f.write(f"{name:<18} = {globals()[name]}\n")
     print(f"Wrote {addrs_path}")
