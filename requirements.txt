@@ -8,6 +8,7 @@ ruff>=0.1.0
 # Verification infrastructure
 cocotb>=1.8.0,<2.0  # cocotb 2.x removed the units= kwarg used throughout tb/
 pyuvm>=3.0.0,<3.1   # pinned alongside cocotb 1.x
+cocotb-coverage==1.2.0  # functional coverage (bead h367); needs cocotb ~=1.8. 2.0 requires cocotb>=2 and Python>=3.11
 pyyaml>=6.0         # tools/cdc/cdc_gate.py config + tb/tests/test_cdc_gate.py
 pyslang==11.0.0     # tools/verif/check_upf.py gen-facts (UPF facts drift gate); pinned: the Python API moved between majors
 
