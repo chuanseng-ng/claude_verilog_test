@@ -70,8 +70,8 @@ IMAGE 4  dma_walk.hex -- the DMA as the SoC's only software-programmable bus mas
 IMAGE 5  gpu_walk.hex -- the GPU's two bus masters walked through the fabric (bead xkw5)
   The GPU is the only master that can put an arbitrary 32-bit address on the crossbar from a
   software-written program, on BOTH of its ports: the instruction-fetch port (crossbar M1, the
-  kernel PC) and the data port (M2, VLD/VST addresses).  The CPU patches one immediate of a tiny
-  kernel and relaunches it sixteen times.
+  kernel PC) and the data port (M2, VLD/VST addresses).  The CPU writes sixteen copies of a tiny kernel, each with
+  its own patched immediate, and launches them one after the other.
   Phase A ALIAS  : launch k (k = 12..27) fetches the kernel from KERNEL_PC | (1 << k) and the
                   kernel loads 8 words from, and stores 8 words to, (1 << k) | 0x2000 + offset.
                   The behavioural SRAM realises 4 KB and aliases the rest, so every launch
@@ -649,6 +649,7 @@ GW_DECERR_ST = (0x4000_0000, 0x2001_1000, 0xC000_0000)
 GW_DATA_BASE = 0x5A5                # phase B..E store data = 0x5A5 + 4 * lane (VADDI imm12)
 GW_PATCH_WORD = 4                   # kernel word holding the "VADDI r5, r0, k" immediate
 GW_POLL_LIMIT = 4000
+GW_COPY_STRIDE = 0x40               # phase A: byte distance between the kernel copies
 
 _G_ADDI_R5_K0 = gpuirq.gpu_vaddi(5, 0, 0)
 
@@ -792,22 +793,37 @@ def build_gpu_walk(asm):
         poll_status(f"{tag}I", 1)
 
     # ---- phase A: alias walk on both GPU ports ----------------------------------------
-    write_kernel(gw_kernel_alias())
+    # Sixteen patched copies of the kernel (64 bytes apart) are written first and flushed ONCE;
+    # a D-cache flush costs ~12k cycles, so one per launch would dominate the test.
+    template = gw_kernel_alias()
     li(asm, 22, 1 << GW_ALIAS_BITS[0])            # x22 = one-hot bit k
     li(asm, 24, 1 << (GW_ALIAS_BITS[-1] + 1))     # loop end
     asm.emit(ADDI(25, 0, GW_ALIAS_BITS[0]))       # x25 = k
-    asm.label("GA_LOOP")
-    li(asm, 13, _G_ADDI_R5_K0)
-    asm.emit(SLLI(15, 25, 20))
-    asm.emit(OR(13, 13, 15))                      # VADDI r5, r0, k
-    asm.emit(SW(13, 5, 4 * GW_PATCH_WORD))
-    flush_dcache(asm, "GAFL")
-    asm.emit(OR(14, 22, 5))
-    asm.emit(SW(14, 6, gpuirq.GPU_OFF_KERNEL_PC))  # KERNEL_PC = kernel | (1 << k)
-    run_kernel("GA")
+    asm.emit(ADDI(26, 5, 0))                      # x26 = kernel copy
+    asm.label("GA_W")
+    for i, kw in enumerate(template):
+        if i == GW_PATCH_WORD:
+            li(asm, 13, _G_ADDI_R5_K0)
+            asm.emit(SLLI(15, 25, 20))
+            asm.emit(OR(13, 13, 15))              # VADDI r5, r0, k
+            asm.emit(SW(13, 26, 4 * i))
+        else:
+            li(asm, 7, kw)
+            asm.emit(SW(7, 26, 4 * i))
+    asm.emit(ADDI(26, 26, GW_COPY_STRIDE))
     asm.emit(SLLI(22, 22, 1))
     asm.emit(ADDI(25, 25, 1))
-    br(asm, BNE, 22, 24, "GA_LOOP")
+    br(asm, BNE, 22, 24, "GA_W")
+    flush_dcache(asm, "GAFL")
+    li(asm, 22, 1 << GW_ALIAS_BITS[0])
+    asm.emit(ADDI(26, 5, 0))
+    asm.label("GA_L")
+    asm.emit(OR(14, 26, 22))
+    asm.emit(SW(14, 6, gpuirq.GPU_OFF_KERNEL_PC))  # KERNEL_PC = copy | (1 << k)
+    run_kernel("GA")
+    asm.emit(ADDI(26, 26, GW_COPY_STRIDE))
+    asm.emit(SLLI(22, 22, 1))
+    br(asm, BNE, 22, 24, "GA_L")
     asm.label("GA_DONE")
     asm.emit(NOP)
 
@@ -870,7 +886,7 @@ def main():
         "GW_KBASE": GW_KBASE, "GW_SRC": GW_SRC, "GW_LD_OFF": GW_LD_OFF, "GW_ST_OFF": GW_ST_OFF,
         "GW_SCR_B": GW_SCR_B, "GW_SCR_C": GW_SCR_C, "GW_TIMER_CMP": GW_TIMER_CMP,
         "GW_ROM_WR": GW_ROM_WR, "GW_DATA_BASE": GW_DATA_BASE, "GW_N_ALIAS": len(GW_ALIAS_BITS),
-        "GW_ALIAS_LO": GW_ALIAS_BITS[0],
+        "GW_ALIAS_LO": GW_ALIAS_BITS[0], "GW_COPY_STRIDE": GW_COPY_STRIDE,
     }
     for k, v in consts.items():
         addr_lines.append(f"{k} = 0x{v:x}\n" if v > 255 else f"{k} = {v}\n")

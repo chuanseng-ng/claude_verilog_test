@@ -887,7 +887,7 @@ async def test_soc_gpu_walk_both_masters(dut):
         assert chunk_w == want_w, f"launch k={k}: writes {chunk_w} != {want_w}"
         fetched = set(ifetch["A"])
         for n in range(16):
-            addr = (kbase | (1 << k)) + 4 * n
+            addr = ((kbase + A.GW_COPY_STRIDE * j) | (1 << k)) + 4 * n
             assert addr in fetched, f"launch k={k}: kernel word {n} never fetched at 0x{addr:08x}"
     sram = sram_mem(dut)
     for l in range(LANES):

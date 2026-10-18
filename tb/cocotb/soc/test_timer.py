@@ -311,3 +311,51 @@ async def test_register_walk(dut):
     m = await _setup(dut)
     regs, first = reg_maps.BANKS["timer"]
     await walk_bank(m, regs, first, log=dut._log)
+
+
+# ── Counter carry chain and full-width compare (bead xkw5) ───────────────────────────────────
+
+@cocotb.test()
+async def test_counter_carry_chain_and_wide_compare(dut):
+    """The counter carries across every 2**k boundary and the compare is full width.
+
+    Bits 9..31 of the 32-bit counter cannot be reached by counting (bit 31 needs 2**31 ticks), so
+    the counter is placed just below each boundary through the simulator handle (a plain
+    ``count_q`` deposit; the RTL is untouched) and the hardware carries across it.  Per k = 1..31:
+    COMPARE = 2**k, count_q = 2**k - 1 -> irq_o must stay low while the timer is merely armed, then
+    the first tick makes the count 2**k and the (>=) compare must fire; TMR_COUNTER must read the
+    carried value.  The last case wraps 0xFFFF_FFFF -> 0.  A compare that looked at fewer bits
+    would fire early or never in one of these cases.
+    """
+    m = await _setup(dut)
+    mask = 0xFFFF_FFFF
+    await m.write(REG_TMR_PRESCALE, 0)
+    for k in range(1, 32):
+        # disarm, drop the sticky irq and zero the count (CTRL[2] rising edge), then re-arm low
+        await m.write(REG_TMR_CTRL, CTRL_AUTO_CLEAR)
+        await m.write(REG_TMR_CTRL, 0)
+        await m.write(REG_TMR_COMPARE, 1 << k)
+        dut.count_q.value = (1 << k) - 1
+        await m.write(REG_TMR_CTRL, CTRL_IRQ_EN)  # irq visible, still not counting
+        for _ in range(2):
+            await RisingEdge(dut.clk)
+        assert int(dut.irq_o.value) == 0, f"k={k}: irq with count {(1 << k) - 1:#x} < compare {1 << k:#x}"
+        await m.write(REG_TMR_CTRL, CTRL_ENABLE | CTRL_IRQ_EN)
+        for _ in range(2):
+            await RisingEdge(dut.clk)
+        assert int(dut.irq_o.value) == 1, f"k={k}: no irq after the count carried into bit {k}"
+        count, _ = await m.read(REG_TMR_COUNTER)
+        assert 0 <= count - (1 << k) < 40, f"k={k}: TMR_COUNTER {count:#x} after the carry"
+
+    # wrap: 0xFFFF_FFFE -> 0xFFFF_FFFF (match, COMPARE = all-ones) -> 0, irq stays sticky
+    await m.write(REG_TMR_CTRL, CTRL_AUTO_CLEAR)
+    await m.write(REG_TMR_CTRL, 0)
+    await m.write(REG_TMR_COMPARE, mask)
+    dut.count_q.value = mask - 1
+    await m.write(REG_TMR_CTRL, CTRL_ENABLE | CTRL_IRQ_EN)
+    for _ in range(3):
+        await RisingEdge(dut.clk)
+    assert int(dut.irq_o.value) == 1, "no irq when the count reached 0xFFFFFFFF"
+    count, _ = await m.read(REG_TMR_COUNTER)
+    assert count < 40, f"counter did not wrap to near zero: {count:#x}"
+    assert int(dut.irq_o.value) == 1, "the sticky irq dropped on the wrap"

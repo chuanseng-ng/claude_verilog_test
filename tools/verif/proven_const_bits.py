@@ -74,6 +74,9 @@ SOURCES = (
     "rtl/soc/pmu.sv",
     "rtl/soc/pll/pll_apb_regs.sv",
     "rtl/soc/pll/pll_clkgen_stub.sv",
+    # pll_clkgen selects the STUB or RNM implementation with a string parameter; the RNM arm is
+    # pruned at elaboration, so pll_rnm.sv (real-number model) is neither needed nor listed.
+    "rtl/soc/pll/pll_clkgen.sv",
     "rtl/soc/pll/pll_subsystem.sv",
     "rtl/periph/crypto_accel.sv",
     "rtl/periph/aes128_core.sv",
