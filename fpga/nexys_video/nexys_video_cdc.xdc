@@ -12,6 +12,8 @@
 ##   * apb_cdc_bridge req/ack and the PMU cpu_clk_dis synchroniser: 1 x destination period, datapath only.
 ##   * Reset synchronisers (cdc_reset_sync, and the two in nexys_video_top): async set/clear pins are a reset path.
 ##   * ASYNC_REG on every synchroniser flop (`*sync_q_reg*`), set here so the ASIC RTL stays untouched.
+## Triage of the report_cdc Critical findings, their waivers (nexys_video_cdc_waivers.tcl) and the RTL-owned open items:
+## fpga/nexys_video/CDC_TRIAGE.md (bead hlrm.3).
 ## HONEST CAVEAT: the two clocks are outputs of ONE MMCM, so Vivado sees them as related (synchronous) clocks. The
 ## -datapath_only budgets therefore REPLACE the default related-clock setup check on these crossings, but the HOLD check
 ## between related clocks still runs; it is covered by the WHS figure in the build report. An independent-clock soak needs
@@ -31,8 +33,8 @@ set nv_rstq [get_cells -hierarchical -quiet -filter {(NAME =~ sys_rst_q_reg* || 
 if {[llength $nv_rstq] > 0} { set_property ASYNC_REG TRUE $nv_rstq }
 
 ## domain-wide crossing bounds (0.9 x destination period)
-set_max_delay -datapath_only [expr {0.9 * $nv_p_sys}] -from $nv_cpu -to $nv_sys
-set_max_delay -datapath_only [expr {0.9 * $nv_p_cpu}] -from $nv_sys -to $nv_cpu
+set_max_delay -datapath_only [format %.3f [expr {0.9 * $nv_p_sys}]] -from $nv_cpu -to $nv_sys
+set_max_delay -datapath_only [format %.3f [expr {0.9 * $nv_p_cpu}]] -from $nv_sys -to $nv_cpu
 
 ## reset synchronisers: async clear/preset pins
 set nv_rs [get_cells -hierarchical -quiet -filter {(NAME =~ *rst_sync* || NAME =~ sys_rst_q_reg* || NAME =~ cpu_rst_q_reg*) && IS_SEQUENTIAL}]
@@ -52,7 +54,20 @@ foreach {nv_fifo nv_wrdom} {u_aw_fifo cpu u_w_fifo cpu u_ar_fifo cpu u_b_fifo sy
             "*u_cpu_axi_cdc*${nv_fifo}*u_rd_ptr_to_wr*" $nv_rdclk $nv_wp] {
         set nv_cells [get_cells -hierarchical -quiet -filter "NAME =~ $nv_pat && IS_SEQUENTIAL"]
         set nv_pins  [get_pins -quiet -of_objects $nv_cells -filter {REF_PIN_NAME == D}]
-        if {[llength $nv_pins] > 0} { set_max_delay -datapath_only [expr {0.5 * $nv_dst_p}] -from $nv_from -to $nv_pins }
+        if {[llength $nv_pins] > 0} { set_max_delay -datapath_only [format %.3f [expr {0.5 * $nv_dst_p}]] -from $nv_from -to $nv_pins }
+    }
+    ## bus skew on the two gray pointers (bead hlrm.3): the bits of one pointer must reach the first synchroniser stage within
+    ## the same bound, otherwise two consecutive increments can be seen out of order. Same 0.5 x destination-period figure as
+    ## the max-delay, source = the registered gray pointer, load = the first-stage D pins.
+    foreach {nv_sp nv_dp nv_dst_p} [list \
+            "*u_cpu_axi_cdc*${nv_fifo}*wr_gray_q_reg*" "*u_cpu_axi_cdc*${nv_fifo}*u_wr_ptr_to_rd*" $nv_rp \
+            "*u_cpu_axi_cdc*${nv_fifo}*rd_gray_q_reg*" "*u_cpu_axi_cdc*${nv_fifo}*u_rd_ptr_to_wr*" $nv_wp] {
+        set nv_src [get_cells -hierarchical -quiet -filter "NAME =~ $nv_sp && IS_SEQUENTIAL"]
+        set nv_dc  [get_cells -hierarchical -quiet -filter "NAME =~ $nv_dp && IS_SEQUENTIAL"]
+        set nv_dpn [get_pins -quiet -of_objects $nv_dc -filter {REF_PIN_NAME == D}]
+        if {[llength $nv_src] > 0 && [llength $nv_dpn] > 0} {
+            set_bus_skew -from $nv_src -to $nv_dpn [format %.3f [expr {0.5 * $nv_dst_p}]]
+        } else { puts "NV-CDC WARN set_bus_skew $nv_fifo $nv_sp: src=[llength $nv_src] dst=[llength $nv_dpn]" }
     }
 }
 
