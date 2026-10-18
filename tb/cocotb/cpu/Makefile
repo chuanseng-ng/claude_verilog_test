@@ -45,6 +45,9 @@ VERILOG_SOURCES += $(PWD)/../../../rtl/soc/axi_pkg.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/soc/soc_addr_map_pkg.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/cpu/core/rv32i_pipeline_pkg.sv
 VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_cache_pkg.sv
+# MBIST (c54a): the CPU macro's cache collars and controller
+VERILOG_SOURCES += $(PWD)/../../../rtl/soc/dft/mem_collar.sv
+VERILOG_SOURCES += $(PWD)/../../../rtl/soc/dft/mbist_ctrl.sv
 # rv32i_clock_gate.sv: instantiated by rv32i_icache.sv/rv32i_dcache.sv (tag/data bank clock gating)
 VERILOG_SOURCES += $(PWD)/../../../rtl/mem/rv32i_clock_gate.sv
 # Phase 3: Verilator-compatible SRAM behavioral model

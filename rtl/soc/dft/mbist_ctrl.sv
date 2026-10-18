@@ -31,7 +31,12 @@ module mbist_ctrl #(
     parameter int unsigned        N_MEM   = 2,
     parameter int unsigned        AW      = 10,
     parameter int unsigned        RD_LAT  = 2,
-    parameter logic [N_MEM-1:0]   P1_MASK = '0     // 1 = memory has a functional read port 1 (read and compared too)
+    parameter logic [N_MEM-1:0]   P1_MASK = '0,    // 1 = memory has a functional read port 1 (read and compared too)
+    // 1 (default): every flop has the asynchronous reset rst_n_i (the SoC-fabric core-domain instance).
+    // 0: NO reset pin is used; rst_n_i is ignored and the state is cleared by run_i = 0 (see below). This is
+    // the CPU-hard-macro instance (section 16.7): the macro has only a synchronous reset and no async pin may
+    // be added to it (check_scan_clk_rst.py), so its reset is folded into run_i by the instantiator.
+    parameter bit                 ASYNC_RST = 1'b1
 ) (
     input  logic          clk_i,
     input  logic          rst_n_i,
@@ -65,6 +70,15 @@ module mbist_ctrl #(
     if (RD_LAT < 1) begin : g_lat_check
         $fatal(1, "mbist_ctrl: RD_LAT (%0d) must be >= 1", RD_LAT);
     end
+
+    // ── Reset ────────────────────────────────────────────────────────────────
+    // ASYNC_RST = 0: with the async clause tied inactive, synthesis removes it (constant arst) and every flop
+    // is a plain D flop. That is safe because run_i = 0 flushes ALL state within RD_LAT + 2 clocks: st_d is
+    // IDLE (so st_q, bist_en_q, issue and b_ce_q fall), cfg_err_q, every fail / record flop and mask_q are
+    // cleared by !run_i, the read-tag pipeline shifts out the cleared issue, and the data/address registers
+    // are only observable while bist_en_q = 1. The instantiator holds run_i low through reset.
+    logic rst_a_n;
+    assign rst_a_n = ASYNC_RST ? rst_n_i : 1'b1;
 
     // ── cfg_i fields ─────────────────────────────────────────────────────────
     logic [2:0] cfg_alg;
@@ -334,8 +348,8 @@ module mbist_ctrl #(
     end
 
     // ── Sequencer registers ──────────────────────────────────────────────────
-    always_ff @(posedge clk_i or negedge rst_n_i) begin
-        if (!rst_n_i) begin
+    always_ff @(posedge clk_i or negedge rst_a_n) begin
+        if (!rst_a_n) begin
             st_q           <= S_IDLE;
             bist_en_q      <= 1'b0;
             alg_q          <= 3'd0;
@@ -406,8 +420,8 @@ module mbist_ctrl #(
     end
 
     // ── Op registers and read tags ───────────────────────────────────────────
-    always_ff @(posedge clk_i or negedge rst_n_i) begin
-        if (!rst_n_i) begin
+    always_ff @(posedge clk_i or negedge rst_a_n) begin
+        if (!rst_a_n) begin
             b_ce_q    <= 1'b0;
             b_we_q    <= 1'b0;
             b_wmask_q <= 4'hF;
@@ -428,8 +442,8 @@ module mbist_ctrl #(
     generate
         for (gl = 0; gl < RD_LAT; gl++) begin : g_tag
             if (gl == 0) begin : g_first
-                always_ff @(posedge clk_i or negedge rst_n_i) begin
-                    if (!rst_n_i) begin
+                always_ff @(posedge clk_i or negedge rst_a_n) begin
+                    if (!rst_a_n) begin
                         tg_rd_q[0]   <= 1'b0;
                         tg_addr_q[0] <= '0;
                         tg_xm_q[0]   <= 4'd0;
@@ -442,8 +456,8 @@ module mbist_ctrl #(
                     end
                 end
             end else begin : g_next
-                always_ff @(posedge clk_i or negedge rst_n_i) begin
-                    if (!rst_n_i) begin
+                always_ff @(posedge clk_i or negedge rst_a_n) begin
+                    if (!rst_a_n) begin
                         tg_rd_q[gl]   <= 1'b0;
                         tg_addr_q[gl] <= '0;
                         tg_xm_q[gl]   <= 4'd0;
@@ -503,8 +517,8 @@ module mbist_ctrl #(
             assign ev_w[gm] = cmp_rd && (m0_w[gm] || m1_w[gm]);
             assign err_w[gm] = m0_w[gm] ? (d0_w ^ cmp_exp) : (d1_w ^ cmp_exp);
 
-            always_ff @(posedge clk_i or negedge rst_n_i) begin
-                if (!rst_n_i) begin
+            always_ff @(posedge clk_i or negedge rst_a_n) begin
+                if (!rst_a_n) begin
                     fail_q[gm]       <= 1'b0;
                     rec_addr_q[gm]   <= 10'd0;
                     rec_elem_q[gm]   <= 5'd0;
@@ -545,8 +559,8 @@ module mbist_ctrl #(
         end
     end
 
-    always_ff @(posedge clk_i or negedge rst_n_i) begin
-        if (!rst_n_i) begin
+    always_ff @(posedge clk_i or negedge rst_a_n) begin
+        if (!rst_a_n) begin
             mask_q <= 32'd0;
         end else if (!run_i) begin
             mask_q <= 32'd0;

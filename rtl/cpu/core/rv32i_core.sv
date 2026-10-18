@@ -23,6 +23,18 @@ module rv32i_core #(
     // only). Quasi-static; tie 1'b0 when not testing. Forwarded to both caches.
     input  logic        test_en_i,
 
+    // MBIST (bead claude_verilog_test-c54a, DFT_ARCHITECTURE.md 16.7): broadcast bus from the CPU macro's
+    // controller to the ten cache-macro collars, and the macros' port-0 read data back
+    // ({data[3], data[2], data[1], data[0], tag} per cache). Forwarded to both caches unchanged.
+    input  logic         mbist_en_i,
+    input  logic         mbist_ce_i,
+    input  logic         mbist_we_i,
+    input  logic [3:0]   mbist_wmask_i,
+    input  logic [7:0]   mbist_addr_i,
+    input  logic [31:0]  mbist_din_i,
+    output logic [159:0] mbist_ic_dout_o,
+    output logic [159:0] mbist_dc_dout_o,
+
     // ── AXI4 master (unified cache → memory, burst-capable from Phase 5 M2) ──
     output logic [31:0] axi_araddr,
     output logic [axi_pkg::AXI_LEN_WIDTH-1:0]  axi_arlen,
@@ -838,6 +850,13 @@ module rv32i_core #(
         .clk              (clk),
         .rst_n            (rst_n),
         .test_en_i        (test_en_i),
+        .mbist_en_i       (mbist_en_i),
+        .mbist_ce_i       (mbist_ce_i),
+        .mbist_we_i       (mbist_we_i),
+        .mbist_wmask_i    (mbist_wmask_i),
+        .mbist_addr_i     (mbist_addr_i),
+        .mbist_din_i      (mbist_din_i),
+        .mbist_dout_o     (mbist_ic_dout_o),
         .ic_addr_i        (ic_addr),
         .ic_valid_i       (ic_valid),
         .ic_rdata_o       (ic_rdata),
@@ -864,6 +883,13 @@ module rv32i_core #(
         .clk              (clk),
         .rst_n            (rst_n),
         .test_en_i        (test_en_i),
+        .mbist_en_i       (mbist_en_i),
+        .mbist_ce_i       (mbist_ce_i),
+        .mbist_we_i       (mbist_we_i),
+        .mbist_wmask_i    (mbist_wmask_i),
+        .mbist_addr_i     (mbist_addr_i),
+        .mbist_din_i      (mbist_din_i),
+        .mbist_dout_o     (mbist_dc_dout_o),
         .dc_addr_i        (dc_addr),
         .dc_valid_i       (dc_valid),
         .dc_we_i          (dc_we),

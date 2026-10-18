@@ -48,6 +48,21 @@ module rv32i_dcache (
     input  logic        test_en_i,
     /* verilator lint_on  UNUSEDSIGNAL */
 
+    // MBIST (bead claude_verilog_test-c54a, DFT_ARCHITECTURE.md 16.7): the CPU-macro controller's broadcast
+    // bus in, the five macros' port-0 read data out ({data[3], data[2], data[1], data[0], tag}, 32 b each).
+    // Active only in the SRAM_SKY130 arm (mem_collar in front of every macro); every other arm ignores the
+    // inputs and drives 0, so an MBIST run on an arm without the macros FAILS rather than passing vacuously.
+    // mbist_en_i = 0 makes every collar a pass-through (bit-identical to the pre-MBIST cache).
+    /* verilator lint_off UNUSEDSIGNAL */
+    input  logic         mbist_en_i,
+    input  logic         mbist_ce_i,
+    input  logic         mbist_we_i,
+    input  logic [3:0]   mbist_wmask_i,
+    input  logic [7:0]   mbist_addr_i,
+    input  logic [31:0]  mbist_din_i,
+    /* verilator lint_on  UNUSEDSIGNAL */
+    output logic [159:0] mbist_dout_o,
+
     // ── CPU-side interface (from MEM stage) ───────────────────────────────────
     input  logic [31:0] dc_addr_i,
     input  logic        dc_valid_i,
@@ -110,17 +125,46 @@ module rv32i_dcache (
     logic [31:0] tag_din0, tag_dout0;
 
 `ifdef SRAM_SKY130
+    // MBIST collar (HAS_P1 = 0: port 1 stays tied off). bist_en = 0 passes every functional signal through.
+    logic        tag_csb0_m, tag_web0_m, tag_csb1_m;
+    logic [3:0]  tag_wmask0_m;
+    logic [7:0]  tag_addr0_m, tag_addr1_m;
+    logic [31:0] tag_din0_m;
+
+    mem_collar #(.AW(8), .HAS_P1(1'b0)) u_tag_collar (
+        .bist_en_i  (mbist_en_i),
+        .b_ce_i     (mbist_ce_i),
+        .b_we_i     (mbist_we_i),
+        .b_wmask_i  (mbist_wmask_i),
+        .b_addr_i   (mbist_addr_i),
+        .b_din_i    (mbist_din_i),
+        .csb0_f_i   (tag_csb0),
+        .web0_f_i   (tag_web0),
+        .wmask0_f_i (4'b1111),
+        .addr0_f_i  (tag_addr0),
+        .din0_f_i   (tag_din0),
+        .csb1_f_i   (1'b1),
+        .addr1_f_i  (8'b0),
+        .csb0_m_o   (tag_csb0_m),
+        .web0_m_o   (tag_web0_m),
+        .wmask0_m_o (tag_wmask0_m),
+        .addr0_m_o  (tag_addr0_m),
+        .din0_m_o   (tag_din0_m),
+        .csb1_m_o   (tag_csb1_m),
+        .addr1_m_o  (tag_addr1_m)
+    );
+
     sky130_sram_1kbyte_1rw1r_32x256_8 u_tag_sram (
         .clk0   (clk),
-        .csb0   (tag_csb0),
-        .web0   (tag_web0),
-        .wmask0 (4'b1111),
-        .addr0  (tag_addr0),
-        .din0   (tag_din0),
+        .csb0   (tag_csb0_m),
+        .web0   (tag_web0_m),
+        .wmask0 (tag_wmask0_m),
+        .addr0  (tag_addr0_m),
+        .din0   (tag_din0_m),
         .dout0  (tag_dout0),
         .clk1   (clk),
-        .csb1   (1'b1),
-        .addr1  (8'b0),
+        .csb1   (tag_csb1_m),
+        .addr1  (tag_addr1_m),
         .dout1  ()
     );
 `elsif SRAM_ASAP7
@@ -171,17 +215,46 @@ module rv32i_dcache (
     generate
         for (gw = 0; gw < LINE_WORDS; gw++) begin : gen_data_sram
 `ifdef SRAM_SKY130
+            // MBIST collar, see u_tag_collar.
+            logic        d_csb0_m, d_web0_m, d_csb1_m;
+            logic [3:0]  d_wmask0_m;
+            logic [7:0]  d_addr0_m, d_addr1_m;
+            logic [31:0] d_din0_m;
+
+            mem_collar #(.AW(8), .HAS_P1(1'b0)) u_data_collar (
+                .bist_en_i  (mbist_en_i),
+                .b_ce_i     (mbist_ce_i),
+                .b_we_i     (mbist_we_i),
+                .b_wmask_i  (mbist_wmask_i),
+                .b_addr_i   (mbist_addr_i),
+                .b_din_i    (mbist_din_i),
+                .csb0_f_i   (data_csb0[gw]),
+                .web0_f_i   (data_web0[gw]),
+                .wmask0_f_i (4'b1111),
+                .addr0_f_i  (data_addr0[gw]),
+                .din0_f_i   (data_din0[gw]),
+                .csb1_f_i   (1'b1),
+                .addr1_f_i  (8'b0),
+                .csb0_m_o   (d_csb0_m),
+                .web0_m_o   (d_web0_m),
+                .wmask0_m_o (d_wmask0_m),
+                .addr0_m_o  (d_addr0_m),
+                .din0_m_o   (d_din0_m),
+                .csb1_m_o   (d_csb1_m),
+                .addr1_m_o  (d_addr1_m)
+            );
+
             sky130_sram_1kbyte_1rw1r_32x256_8 u_data_sram (
                 .clk0   (clk),
-                .csb0   (data_csb0[gw]),
-                .web0   (data_web0[gw]),
-                .wmask0 (4'b1111),
-                .addr0  (data_addr0[gw]),
-                .din0   (data_din0[gw]),
+                .csb0   (d_csb0_m),
+                .web0   (d_web0_m),
+                .wmask0 (d_wmask0_m),
+                .addr0  (d_addr0_m),
+                .din0   (d_din0_m),
                 .dout0  (data_dout0[gw]),
                 .clk1   (clk),
-                .csb1   (1'b1),
-                .addr1  (8'b0),
+                .csb1   (d_csb1_m),
+                .addr1  (d_addr1_m),
                 .dout1  ()
             );
 `elsif SRAM_ASAP7
@@ -217,6 +290,14 @@ module rv32i_dcache (
 `endif
         end
     endgenerate
+
+    // MBIST read-data export: port-0 dout of the tag and the four data macros, straight off the macro outputs
+    // (no mux on the read path). Sky130 arm only; 0 elsewhere (see the port comment).
+`ifdef SRAM_SKY130
+    assign mbist_dout_o = {data_dout0[3], data_dout0[2], data_dout0[1], data_dout0[0], tag_dout0};
+`else
+    assign mbist_dout_o = 160'd0;
+`endif
 
     // =========================================================================
     // FSM state and pipeline registers

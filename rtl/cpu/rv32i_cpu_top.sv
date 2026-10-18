@@ -106,17 +106,33 @@ module rv32i_cpu_top #(
   input  logic        scan_mode_i,     // 1 = test mode (quasi-static)
   input  logic        scan_en_i,       // 1 = shift, 0 = capture (consumer arrives with Stage 2 insertion)
   input  logic [1:0]  scan_in_i,       // chain inputs  (placeholder until Stage 2 insertion)
-  output logic [1:0]  scan_out_o       // chain outputs (tied 0 until Stage 2 insertion)
+  output logic [1:0]  scan_out_o,      // chain outputs (tied 0 until Stage 2 insertion)
+
+  // ================================================================
+  // MBIST boundary (bead claude_verilog_test-c54a, DFT_ARCHITECTURE.md 16.7)
+  // ================================================================
+  // 96 quasi-static pins, no timing path other than the ordinary sync-to-clk_i. Inactive values
+  // (functional mode, bit-identical to the pre-MBIST macro): mbist_run_i = 0, mbist_cfg_i = 0.
+  // mbist_run_i / mbist_cfg_i come from the CPU-domain holding register of soc_top's soc_mbist
+  // (mbist_xing, ungated cpu_core_clk; the same frequency/source as clk_i = cpu_gated_clk). The status
+  // block returns through mbist_status_sync into the TCK domain. Layout: section 16.5 (one 69-bit block).
+  input  logic        mbist_run_i,     // level: 1 starts the selected algorithm, 0 aborts and clears
+  input  logic [25:0] mbist_cfg_i,     // alg, bg_sweep, bg_sel, pause_mant/exp, mask_sel, rd_sel
+  output logic [68:0] mbist_status_o   // done busy cfg_err fail_any fail[9:0] record mask
 );
 
   // ================================================================
   // DFT seam
   // ================================================================
   // test_en forces the cache SRAM clock gates open (ASAP7 arm; the Sky130 macro has no
-  // clock gate). Same definition as the fabric's dft_test_en: scan_mode | mbist_en. There
-  // is no MBIST yet (Stage 4); that term is added here when it lands.
+  // clock gate). Same definition as the fabric's dft_test_en: scan_mode | mbist_en, where
+  // mbist_en is this macro's own controller (bist_en_o, a flop). It reaches the gates only
+  // in the ASAP7 arm (no collar exists there, so the term is a no-op today); in the Sky130
+  // arm the CPU clock gate that must be forced open for an MBIST run is u_cpu_cg in soc_top,
+  // which carries the TAP-launched mbist_force (section 16.6).
   logic test_en_w;
-  assign test_en_w = scan_mode_i;
+  logic mb_en_w;
+  assign test_en_w = scan_mode_i | mb_en_w;
 
   // scan_en_i and scan_in_i have no RTL consumer and scan_out_o is driven 0 UNTIL Stage 2
   // scan insertion (a netlist step in this macro's flow) stitches the two chains: it
@@ -130,6 +146,50 @@ module rv32i_cpu_top #(
   assign dft_scan_en_unused = scan_en_i;
   /* verilator lint_on  UNUSEDSIGNAL */
   assign scan_out_o = '0;  // DFT_PLACEHOLDER: replaced by Stage 2 insertion
+
+  // ================================================================
+  // MBIST controller for the ten cache macros (section 16.7)
+  // ================================================================
+  // One controller INSIDE the macro (the macros' ports are not otherwise reachable), memories in lock-step:
+  //   index 0 = I$ tag, 1..4 = I$ data[0..3], 5 = D$ tag, 6..9 = D$ data[0..3]; 256 x 32 each, port 1 unused.
+  // ASYNC_RST = 0: the macro has only the synchronous rst_n_i and check_scan_clk_rst.py forbids an async pin
+  // inside it, so the controller has NO reset pin; the reset is folded into run (run & rst_n_i), and
+  // run = 0 flushes every controller flop within a few clocks (see mbist_ctrl). A functional reset therefore
+  // aborts a running MBIST exactly like a TAP abort; it can never start one.
+  // This instance exists in every SRAM arm. In the arms without the Sky130 macros (default, FPGA, ASAP7) the
+  // caches drive 0 as read data, so an MBIST run there reports a FAIL, never a vacuous pass.
+  logic         mb_ce_w;
+  logic         mb_we_w;
+  logic [3:0]   mb_wmask_w;
+  logic [7:0]   mb_addr_w;
+  logic [31:0]  mb_din_w;
+  logic [159:0] mb_ic_dout_w;
+  logic [159:0] mb_dc_dout_w;
+  logic         mb_run_w;
+
+  assign mb_run_w = mbist_run_i & rst_n_i;
+
+  mbist_ctrl #(
+    .N_MEM     (10),
+    .AW        (8),
+    .RD_LAT    (2),
+    .P1_MASK   ('0),
+    .ASYNC_RST (1'b0)
+  ) u_mbist_ctrl (
+    .clk_i     (clk_i),
+    .rst_n_i   (1'b1),
+    .run_i     (mb_run_w),
+    .cfg_i     (mbist_cfg_i),
+    .bist_en_o (mb_en_w),
+    .b_ce_o    (mb_ce_w),
+    .b_we_o    (mb_we_w),
+    .b_wmask_o (mb_wmask_w),
+    .b_addr_o  (mb_addr_w),
+    .b_din_o   (mb_din_w),
+    .dout0_i   ({mb_dc_dout_w, mb_ic_dout_w}),
+    .dout1_i   (320'd0),
+    .status_o  (mbist_status_o)
+  );
 
   // ================================================================
   // Internal Signals
@@ -209,6 +269,16 @@ module rv32i_cpu_top #(
     .clk            (clk_i),
     .rst_n          (rst_n_i),
     .test_en_i      (test_en_w),
+
+    // MBIST broadcast bus and macro read data (section 16.7)
+    .mbist_en_i      (mb_en_w),
+    .mbist_ce_i      (mb_ce_w),
+    .mbist_we_i      (mb_we_w),
+    .mbist_wmask_i   (mb_wmask_w),
+    .mbist_addr_i    (mb_addr_w),
+    .mbist_din_i     (mb_din_w),
+    .mbist_ic_dout_o (mb_ic_dout_w),
+    .mbist_dc_dout_o (mb_dc_dout_w),
 
     // AXI4 burst memory interface
     .axi_araddr     (axi_araddr_o),

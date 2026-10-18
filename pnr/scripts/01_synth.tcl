@@ -78,6 +78,8 @@ puts "================================================================"
 # --- Packages (must precede all modules that import them) ---
 read_verilog -sv $RTL_DIR/cpu/core/rv32i_pipeline_pkg.sv
 read_verilog -sv $RTL_DIR/mem/rv32i_cache_pkg.sv
+read_verilog -sv $RTL_DIR/soc/dft/mem_collar.sv
+read_verilog -sv $RTL_DIR/soc/dft/mbist_ctrl.sv
 
 # --- Leaf modules (no inter-module dependencies) ---
 read_verilog -sv $RTL_DIR/cpu/core/rv32i_alu.sv

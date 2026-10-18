@@ -327,6 +327,8 @@ RTL_SOURCES := \
 	$(RTL_DIR)/soc/soc_addr_map_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
+	$(RTL_DIR)/soc/dft/mem_collar.sv \
+	$(RTL_DIR)/soc/dft/mbist_ctrl.sv \
 	$(RTL_DIR)/mem/rv32i_clock_gate.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
 	$(RTL_DIR)/cpu/core/rv32i_branch_comp.sv \
@@ -713,6 +715,8 @@ SKY130_CPU_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/soc_addr_map_pkg.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_pipeline_pkg.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_cache_pkg.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mem_collar.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_ctrl.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_alu.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_branch_comp.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_imm_gen.sv \
@@ -1351,6 +1355,8 @@ CPU_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/soc_addr_map_pkg.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_pipeline_pkg.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_cache_pkg.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mem_collar.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_ctrl.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_clock_gate.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_alu.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_branch_comp.sv \
@@ -2440,6 +2446,8 @@ CPU_SCHEM_SRCS := \
 	asap7/icg_asap7_stub.v \
 	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
+	$(RTL_DIR)/soc/dft/mem_collar.sv \
+	$(RTL_DIR)/soc/dft/mbist_ctrl.sv \
 	$(RTL_DIR)/mem/rv32i_clock_gate.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
 	$(RTL_DIR)/cpu/core/rv32i_branch_comp.sv \
