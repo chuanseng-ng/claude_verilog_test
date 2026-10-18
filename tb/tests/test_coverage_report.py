@@ -1135,7 +1135,8 @@ def test_tracked_waiver_and_ratchet_files_parse() -> None:
     tools = REPO_ROOT / "tools" / "verif"
     assert cr.load_waivers(tools / "coverage_waivers.txt")
     ratchet = cr.load_ratchet(tools / "coverage_toggle_ratchet.txt")
-    assert ratchet, "the ratchet file is expected to carry the known soc_bus/soc_top gaps"
+    # Empty is valid: beads 0ntg / 4pl8 closed the last two known gaps (soc_bus, soc_top).
+    assert isinstance(ratchet, dict)
     assert all(0.0 <= e.floor < 100.0 for e in ratchet.values())
 
 
