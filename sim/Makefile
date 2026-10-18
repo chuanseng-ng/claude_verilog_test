@@ -430,6 +430,12 @@ SOC_TOP_SOURCES := \
 	$(RTL_DIR)/soc/dft/jtag_tap.sv \
 	$(RTL_DIR)/soc/dft/dft_clk_switch.sv \
 	$(RTL_DIR)/soc/dft/dft_ctrl.sv \
+	$(RTL_DIR)/soc/dft/mbist_ctrl.sv \
+	$(RTL_DIR)/soc/dft/mbist_xing.sv \
+	$(RTL_DIR)/soc/dft/mbist_ctl_hold.sv \
+	$(RTL_DIR)/soc/dft/mbist_status_sync.sv \
+	$(RTL_DIR)/soc/dft/mem_collar.sv \
+	$(RTL_DIR)/soc/dft/soc_mbist.sv \
 	$(RTL_DIR)/mem/rv32i_clock_gate.sv \
 	$(RTL_DIR)/soc/cdc/cdc_sync.sv \
 	$(RTL_DIR)/soc/cdc/cdc_reset_sync.sv \

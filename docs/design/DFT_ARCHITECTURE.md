@@ -299,6 +299,8 @@ Domain crossings that need chain separation or lock-up handling [R]: `u_cpu_axi_
 
 ## 6. MBIST architecture (tester-only, TAP-driven; decisions 4 and 5)
 
+> **Superseded for Stage 4 by section 16 (2026-10-17): algorithm set, TAP registers, the control-word crossing (depth-2 `cdc_gray_fifo`) and the CPU-macro proposal are specified there.** The text below is the Stage-0 plan, kept as history.
+>
 > **Status (2026-10-13): Stage 4 plan, NOT built.** No MBIST RTL exists; `MBIST_CTRL`/`MBIST_STATUS` (IR 6/7) decode to BYPASS (`jtag_tap.sv:17`). The "2-FF sync" crossings drawn and described in this section (and the "write, then wait >= 3 destination cycles" rule in section 9.3) apply **only to the future MBIST control/status words**. They do **not** describe the as-built Stage 1b scan controls, which are deliberately unsynchronised (section 15.5, crossing 2). The crossing mechanism for the MBIST control word is not settled; see "Deferred: MBIST control-word crossing" at the end of section 15.5.
 
 ```mermaid
@@ -584,9 +586,13 @@ TAP-driven `dft_ctrl` of identical port list, so nothing in `soc_top` is re-plum
 | `cpu_clk_i` `create_clock` | **NOT done** (14.5) | - |
 
 ### 14.3 Findings the mask does not close
-1. **Residual state at scan entry.** The mask stops the *capture-path* leak. `s_q` is scanned and holds `block ^ key` (reloaded every idle
-   cycle) and round states from a prior functional operation; shifting out before any test-clock capture reads them. The block must be reset
-   (`key_q` -> 0) before scan entry, then one capture refreshes `s_q`. This is a **protocol requirement on the Stage 1b TAP/ATE**; bead filed.
+1. **Residual state at scan entry. CLOSED in hardware by bead `j41m.6` (section 14.10), with one stated limit.** The mask stops the
+   *capture-path* leak. `s_q` is scanned and holds `block ^ key` (reloaded every idle cycle) and round states from a prior functional
+   operation, and the SHA working state and the DOUT/DIGEST/IV words are scanned too; shifting out before any test-clock capture reads
+   them. The original answer was a protocol requirement on the TAP/ATE (reset the block first). The user decision of 2026-10-15/17 replaced
+   it with a **hardware zeroize on every `scan_mode` edge**: `crypto_accel` clears its key, round-key, AES state, SHA state, message shadow
+   and result/IV words in one cycle, on entry and on exit. Limit: the clear is functional D logic that a shift edge overrides, so it protects
+   against software and a cooperating tester, not an adversarial one (14.10 item 5).
 2. The unmasked `msg_q`/IV/`DOUT` are scanned and are not secret by themselves.
 3. A reset is not enough for *DOUT* if a prior ciphertext is sensitive; it is ciphertext, which is already an output.
 
@@ -632,7 +638,7 @@ already tied 0), the Sky130 macro is bit-for-bit unaffected by this change, and 
 | `soc_top` test ports + `dft_ctrl_ports` seam (TAP-ready); `scan_clk_i` shared test clock | CPU macro scan ports, its internal clock gates/resets, `pin_order.cfg`, re-harden (CPU-boundary bead) |
 | `rv32i_clock_gate.test_en`, live on `u_cpu_cg`/`u_gpu_cg`; SRAM-only gates tied 0 | `create_clock cpu_clk_i` in `sky130_soc.sdc` (SDC bead) |
 | `cdc_reset_sync` output-side scan select; PLL/GPU-domain reset overrides; PLL test-clock bypass | Scan-mode SDC, scan insertion, lock-up latches (Stage 2) |
-| Crypto `key_q`/`rk_q` read masks, tested | Scan-entry scrub protocol for crypto residue (Stage 1b/TAP bead) |
+| Crypto `key_q`/`rk_q` read masks, tested | ~~Scan-entry scrub protocol for crypto residue~~ done in hardware by `j41m.6` (14.10); open: scan_en withholding (14.10 item 5) |
 | `check_scan_clk_rst.py` netlist proof + negative controls; both sv2v netlists regenerate | Re-run `make soc_coverage` and prune waivers that the new suite makes stale (coverage bead) |
 
 ### 14.9 Gap-closure results (2026-10-10, after the implementing agent ran out of turns)
@@ -812,7 +818,7 @@ Selecting SCAN (IR = `4'h4`) is the **only** thing that enters TAP scan mode; TD
 5. MBIST_CTRL/MBIST_STATUS opcodes are reserved and decode to BYPASS (MBIST is Stage 4).
 6. Sections 8/9 said the direct scan pins are "ANDed with the TAP-held scan_mode" so a floating pin cannot disturb functional mode. **Not implemented**: the 1a contract (pins work alone) and the standing decision that the TAP must not gate the parallel path take precedence; the pins are OR-ed. A floating `scan_mode_i` is therefore not protected by the TAP. Decision (2026-10-11, Q-PIN): keep OR; floating-pin protection is a pad pull-down at pad-ring time (section 9.5).
 7. SCAN_RST is a level bit; the tester pulses it by writing 1 then 0.
-8. The crypto scan-entry scrub protocol (14.3 item 1) remains bead `j41m.6`; the TAP offers no scrub.
+8. The crypto scan-entry scrub (14.3 item 1) is now done in `crypto_accel` hardware (`j41m.6`, 14.10); the TAP still offers no scrub of its own and does not withhold `scan_en` until the wipe completes.
 
 ### 15.7 Tests and checks required of this stage
 Unit suite `test_jtag_tap` (module `jtag_tap` alone); DFT-controller suite on `dft_ctrl`; SoC suite on `tb_soc_pll`/`tb_soc_top`; mutation campaign on FSM transitions, IR capture, opcode decode, TDR decode, TDO/OE timing, gate enable, combiner; `check_scan_clk_rst.py` extended to cover TAP-domain flops (clock = `tck_i` only, reset = `trst_ni` through the sync only, unscanned by design) with a negative control; CDC gate declarations; coverage ratchet; sv2v source lists; SDC constraints text (TCK clock, asynchronous clock group, JTAG IO delays) in `sky130_soc.sdc` only. **PD is not run in this stage.**
@@ -840,7 +846,7 @@ Built as specified in 15.1 to 15.5: `rtl/soc/dft/jtag_tap.sv`, `rtl/soc/dft/dft_
 * Q-OP (RESOLVED, frozen 2026-10-11, kept for the record): opcode values (15.3) are private codes chosen here; the doc left them open. SCAN_RST was implemented as its own 1-bit instruction (the doc marks it optional), MBIST_CTRL/MBIST_STATUS reserved and decoded to BYPASS until Stage 4.
 * Q-STUB: SCAN's serial data register is a 1-bit stub until Stage 2 (no chains exist), `CHAIN_GRP` has no consumer, and `scan_en`/`tap_scan_en` has no RTL consumer (its net is optimised away; add it to the `--tap-allowed-nets` list in `pnr/Makefile` when Stage 2 connects it).
 * Q-SDC (moved to its own P4 bead 2026-10-11): the ASAP7 SoC SDCs were not given TCK constraints; not edited here.
-* Open from the doc, unchanged: crypto scan-entry scrub (`j41m.6`; note SCAN_SEL/SCAN_RST under SCAN does reset the crypto block through the scan reset, which is a partial scrub path to evaluate there).
+* Crypto scan-entry scrub: closed in hardware by `j41m.6` (14.10). SCAN_SEL/SCAN_RST under SCAN also resets the crypto block through the scan reset, which is an additional, tester-driven scrub path and is not relied on.
 
 ### 15.9 Q-CLK change record (2026-10-11): glitch-free test-clock switch, supersedes the "plain mux" statements above
 User decisions: Q-PIN keep OR (pad pull-downs at pad-ring time); Q-CLK glitch-free enable-before-switch mux now; Q-OP frozen; Q-SDC separate bead. Where 15.4/15.5/15.6/15.8 above or the earlier experience record say the test-clock select is a plain mux, the "Test-clock mux" bullet of 15.5 is the current design. Deviation from the request's wording, flagged: the per-source enables are latches (transparent while the own raw clock is low), not falling-edge flops, because a flop-based enable cannot retire a stopped deselected clock and would deadlock the common tester state; the 2-FF cross-coupling, AND-OR output and reset-selects-pin-clock are as requested.
@@ -883,3 +889,255 @@ So (i) the attribute survives (it is `magic` in all rows; it also survives the f
 * Upstream (BerkeleyLab/Bedrock) report: treat latch cells as sequential launch points, and count distinct domains rather than pins. A low-value report (the tool is "crude WIP" by its own header).
 * Alternate enforcement (what is applied plus `check_scan_clk_rst.py` TAP-prefix clocking and the unit suite).
 * Interaction with open PR #274 (xtaa: `cdc_sync` gains `RESET_VAL`, edits `cdc_config.yml` and `CDC_SNITCH_POC.md`): both instances here keep the default reset value 0, which the switch relies on (`b_off_in_a`/`a_on_in_b` reset to 0 by design), so the RTL is unaffected as long as the default stays 0; the `cdc_config.yml` edits will conflict textually at the end of `required_synchronisers` and need a line-union.
+
+### 14.10 Crypto scan wipe: hardware zeroize on scan entry and exit (bead `j41m.6`, 2026-10-17)
+Implements the user decision of 2026-10-15/17: `crypto_accel` clears its key- and message-derived state on the `scan_mode` edge, before
+any shift can happen, as a one-time wipe that keeps the block scan-testable. Files: `rtl/periph/crypto_accel.sv` (edge detect, wipe,
+bank clear), `aes128_core.sv` and `sha256_core.sv` (new `wipe_i`). No port was added to `crypto_accel` or `soc_top`.
+
+1. **Edge detect.** `wipe_w = scan_s2_q ^ scan_prev_q`: a 2-FF synchroniser (`scan_s1_q`, `scan_s2_q`) plus one history flop, all in the
+   crypto clock domain (`core_clk`). **A synchroniser is needed.** `scan_mode` is quasi-static but not synchronous to `core_clk`:
+   `scan_mode_o = pin | tap_scan` and `tap_scan` is a TCK-domain flop, and on exit the clock handed back is the functional PLL clock, which
+   has no phase relationship to TCK. The raw level already feeds the 256 key/rk AND masks (a quasi-static data use); an *edge* detector needs
+   a clean synchronous level, and a metastable first stage must not reach 1,400 flop D pins. The three flops are deliberately **unreset**
+   so they track the input through reset: a reset (including `scan_rst_ni` pulsed inside scan mode) neither fabricates an entry edge on
+   release nor hides the exit edge (`test_reset_neither_creates_nor_hides_a_scan_edge`). A reset shorter than 3 cycles can at worst
+   produce a spurious wipe, the safe direction.
+2. **Single-cycle synchronous clear, not an asynchronous clear.** `wipe_w` is one cycle wide and enters every wiped flop as `if (!rst_n ||
+   wipe_w)`; the register-bank words (DOUT0-3, DIGEST0-7, IV0-3) are cleared through the bank's hardware-write port, last in the
+   `always_comb` so it overrides a same-cycle completion or `IV3` increment. Latency: `scan_mode` changes; edge 1 samples it, edge 2
+   moves it to `scan_s2_q` (`wipe_w` high after this edge), **edge 3 clears**. On entry `core_clk` is the scan clock (`dft_clk_mux`
+   selects it with the same `scan_mode`). It is not held: `wipe_w` is a one-cycle pulse per edge and a key written in scan mode persists
+   (`test_scan_wipe_is_one_shot_so_scan_stays_testable`).
+3. **Exit also wipes.** Recommended and implemented: leaving scan mode fires the same pulse, so anything loaded while in scan mode (a
+   scan-loaded `s_q`, `msg_q`, IV, or a key written over APB in scan mode) never becomes a live key or live data. Tested by
+   `test_scan_exit_wipes_scan_loaded_state`.
+4. **`key_valid` drops** (`key_seen_q` is cleared), so after a wipe a start is the existing hang-free illegal path (done, no data). While
+   `wipe_w` is high a START takes that path, an in-flight AES/SHA operation is aborted to done with no data (`C_BUSY -> C_DONE`), and KEY
+   writes are dropped and latch `key_write_rejected`; DIN pushes in that cycle are cleared by the wipe. Software must not rely on a key or
+   operation surviving a `scan_mode` change.
+5. **What ATE must guarantee, and the limit.** The clear is functional D logic. Scan insertion puts its scan mux *after* that logic, so any
+   edge with `scan_en = 1` loads `scan_in` instead of the cleared value, and the last flop of a chain shows its Q at `scan_out` before
+   the first edge. Therefore: after `scan_mode` rises, edges 1 to 3 must be capture-type (`scan_en = 0`) and `scan_out` must not be
+   sampled before edge 3 (a spare edge is recommended). On exit the functional clock restarts on its own and no rule applies. **This
+   protects against software and against a cooperating tester; an adversarial tester that shifts at edge 1 reads the residue.** I looked
+   for a design that needs no tester rule and found none that is both secure and clean under this repo's checks: (a) an asynchronous clear
+   needs a pulse generated from a flop (or a delay line), and `check_scan_clk_rst.py` requires every async reset cone to end at a primary
+   input, a constant or a scan-mode mux; it would also lose the first shift bit and trip a scan DRC on a reset driven by a non-scan
+   flop; (b) a level-held async clear is a reset held during scan, which the decision forbids. The robust fix is a handshake, not RTL inside
+   the block: `dft_ctrl` withholds `scan_en_o` (and the first `scan_clk` edge) until `crypto_accel` reports the wipe done. That touches
+   `dft_ctrl`/`soc_top` and the Stage 2 insertion (`j41m.8`), so it is left as a follow-up rather than done here; filed as a note on `j41m.8`.
+6. **Interaction with the reset muxes.** The wipe does not use or alter `dft_rst_mux` / `scan_rst_ni`: in scan mode `core_rst_n = scan_rst_ni`
+   and the existing synchronous reset still clears everything when the tester asserts it. `check_scan_clk_rst.py` is unchanged and passes
+   (Sky130 sv2v netlist: 1,696 sequential cells, 294 async pins, 28 scan-mode muxes, 0 violations; ASAP7: 3,782 / 294 / 29 / 0): no new
+   async pin, no new clock.
+7. **Flops wiped** (primary build, `SBOX_PARALLEL=16`, `EN_AES=EN_SHA=1`): `key_q` 128, `key_seen_q` 4, `msg_q` 512, `ctr_op_q` 1;
+   AES `s_q` 128, `rk_q` 128, `rcon_q` 8, `round_q` 4, `state_q`; SHA `w_q` 16x32, `a_q`..`h_q` 8x32, `hin_q` 256, `t_q` 7, `state_q`;
+   wrapper `state_q`; bank words DOUT 128, DIGEST 256, IV 128. **Not wiped:** `CTRL` (mode, IRQ enable, SHA_CONT: not secret), sticky
+   `done` and `key_write_rejected`, the three edge flops, and the APB bank's other words (they hold no key or message data).
+8. **Tests and mutation.** `test_crypto.py`: 8 scan-wipe tests (every flop class sampled in the first cycle after the clearing edge,
+   because the idle pre-load of `s_q`/`rk_q` would refresh them a cycle later and hide a missing clear), plus `test_soc_dft_scan.py`
+   wiring test through `soc_top`. Mutation campaign: `tools/verif/mutate_crypto_scan_wipe.py` (results in the PR description).
+
+## 16. Stage 4 specification (beads `j41m.14` MBIST, `j41m.10` control-word crossing)
+
+Specification written before the RTL; the status table at its end is updated as each step lands. Labels as before: **[M]** measured, **[R]** read from source, **[A]** assumed or estimated. This section **supersedes** the Stage-4 plan text of sections 6 and 10 and the "per-bit `cdc_sync`, wait >= 3 cycles" text of sections 6.2 and 9.3 (those are kept as history). Decisions 4 and 5 (tester-only, TAP-driven) are unchanged.
+
+### 16.0 User decisions of 2026-10-17 and what this stage lands
+
+| # | Decision | Consequence |
+|---|---|---|
+| D1 | Algorithm: March C- **plus a retention test** (write, pause, read, programmable pause). Evaluate SMarchCHKB-family support. | Section 16.2 (algorithms), 16.3 (SMarch evaluation). |
+| D2 | Scope: collars on **all** Sky130 SoC SRAM macros, including the CPU-macro caches. | Section 16.1 (inventory), 16.7 (CPU macro). |
+| D3 | Access: TAP-only start/status. Include the `j41m.10` TCK -> core crossing (depth-2 `cdc_gray_fifo`). | Sections 16.4, 16.5. |
+
+**What lands in the PR that carries this section (phases, each committed separately):** (1) this section; (2) RTL `mbist_ctrl`, `mem_collar`, the TAP data registers (opcodes 6/7), the crossing `mbist_xing`, the integrating `soc_mbist`, with unit and fault-injection suites; (3) integration in `soc_top` for the **two SoC-level macros** (`sram_controller`, NPU weight memory); (4) the **CPU-macro cache collars are designed here (16.7) but NOT implemented in `rv32i_cpu_top`**: they change the hard-macro boundary and need a CPU re-harden. Recommendation in 16.7: land them with the `j41m.4` re-harden, not before.
+
+### 16.1 Memory inventory, reconciled with the bead's "x12" [R, re-checked 2026-10-17]
+
+`grep` of `rtl/` for SRAM macro instantiations and the Sky130 SoC config (`pnr/sky130/soc/config.json`, `VERILOG_DEFINES __pnr__ SRAM_SKY130`, `gpu_top_tieoff.sv`): **12 macro instances, no others**.
+
+| # | Instance | Macro | Size | Ports used | Domain / clock | Lands in this PR |
+|---|---|---|---|---|---|---|
+| 1 | `u_sram.u_sram_macro` (`sram_controller.sv`) | `sky130_sram_4kbyte_1rw1r_32x1024_8` | 1024 x 32 | port 0 write, **port 1 read** (functional read path) | core, `core_clk` | yes (soc_top) |
+| 2 | `u_npu.g_on.u_wmem.u_sram_macro` (`npu_weight_mem.sv`) | same | 1024 x 32 | port 0 RW, port 1 tied off | core, `core_clk` | yes (soc_top) |
+| 3-7 | icache `u_tag_sram`, 4 x `gen_data_sram[*].u_data_sram` | `sky130_sram_1kbyte_1rw1r_32x256_8` | 256 x 32 each | port 0 RW, port 1 tied off | CPU, `cpu_gated_clk`, **inside `rv32i_cpu_top`** | designed (16.7) |
+| 8-12 | dcache `u_tag_sram`, 4 x `gen_data_sram[*].u_data_sram` | same | 256 x 32 each | same | same | designed (16.7) |
+
+Reconciliation: "x12" = 2 SoC-level + 10 inside the CPU hard macro, exactly section 3.1. Not memories for this purpose: the GPU `shared_memory` (32 x `sram_1rw_128x32_asap7`) is tied off in the Sky130 SoC and stays ASAP7-indicative; `dma_engine.linebuf`, FIFOs, regfile and cache valid/dirty arrays are flops and go on scan chains (3.2). 147,456 bits in total. No spare rows or columns exist, so the result is pass/fail with a fail record, not repair.
+
+### 16.2 Algorithms, encoding and architecture decision
+
+**Architecture: a ROM-microcode sequencer, one per clock domain, with selectable algorithm; not field-programmable, not hardwired per algorithm.**
+
+| Option | Area on Sky130 [A, to be replaced by the measured number in 16.9] | Flexibility | Risk |
+|---|---|---|---|
+| Hardwired FSM per algorithm | smallest for ONE algorithm; each extra algorithm adds a state set | none after tape-out | each algorithm is its own verification job |
+| **ROM microcode, algorithm select (chosen)** | ROM is a constant `case` function: synthesises to ~100-300 gates, **no flops**; sequencer ~60-80 flops | six algorithms, three backgrounds knobs, programmable pause, all selectable through the TAP | one engine verified once; adding an algorithm is a ROM row |
+| Field-programmable microcode (loadable through the TAP) | + 22 elements x ~16 bits = ~350 flops per domain (~7.5 k um2 per domain at 21.3 um2 per `dfxtp_2`, [A]) plus a load register | maximum (silicon-debug algorithms) | a corrupted or mis-loaded program silently becomes a different test; needs its own readback check |
+
+Justification: memory is 88 % of placed area and the test is tester-only, so the controller must be small, but the cost of a loadable program (~15 k um2 for two domains) is about the cost of the whole chosen controller, and the algorithms the project needs are known. If a silicon-debug algorithm is ever required the ROM becomes a flop array behind the same sequencer (the sequencer already consumes a microinstruction word; only its source changes).
+
+**Sequencer.** One microinstruction = one March element: direction, up to three read/write operations, a data-polarity per operation, a `ck` flag (polarity XOR address bit 0, giving a checkerboard), `pause_before`, and a `lane` kind (the byte-lane element). The engine sweeps the element over the address range, issues one operation per cycle, drains `RD_LAT + 1` cycles at each element boundary (so background and expected data are constant while reads are in flight), then fetches the next microinstruction.
+
+**Data backgrounds** (word-oriented memory, `log2(32) + 1 = 6`): `0x00000000`, `0x55555555`, `0x33333333`, `0x0F0F0F0F`, `0x00FF00FF`, `0x0000FFFF`. `w0` writes the background `P`, `w1` writes `~P`; with `ck` the polarity is XORed with address bit 0. `bg_sweep = 1` repeats the selected algorithm for all six backgrounds.
+
+**Algorithms** (3-bit `alg`; reserved codes finish at once with `cfg_err`):
+
+| `alg` | Name | Elements | Detects (theory) |
+|---|---|---|---|
+| 0 | `MARCH_CM` | March C- (10N): `up(w0) up(r0,w1) up(r1,w0) down(r0,w1) down(r1,w0) down(r0)` | SAF, TF, AF, unlinked CFin/CFid/CFst |
+| 1 | `RETENTION` | `up(w0)`; PAUSE; `up(r0,w1)`; PAUSE; `up(r1)` | data-retention faults (cell decays within the pause) |
+| 2 | `MARCH_CM_RET` (production default) | `MARCH_CM` then `RETENTION` | both of the above |
+| 3 | `CKBD` | checkerboard `up(wc) up(rc) up(w~c) up(r~c)`, then March C- on the checkerboard background | adjacent-cell shorts and leakage, neighbourhood-sensitive coupling in logical space |
+| 4 | `LANE` | `up(w0)`; `up(w ~P lane0, r, w ~P lane1, r, w ~P lane2, r, w ~P lane3, r)`; `up(w P lane3, r, w P lane2, r, w P lane1, r, w P lane0, r)` with `wmask` = one byte lane at a time, every read compared against the cumulative expected word | write-mask (`wmask0`) lane faults, which a full-word March cannot see. Both orders are needed: a lane whose mask bit is stuck at 1 is visible only if some other lane is written before it, so the forward pass exposes lanes 1-3 and the reverse pass lanes 0-2 (**found by the fault-injection suite: the first, forward-only version missed lane 0**) |
+| 5 | `FULL` | 2 + 3 + 4 in sequence | everything above |
+
+Retention pause: `cycles = pause_mant << (2 * pause_exp)`, `pause_mant` 8 bits, `pause_exp` 3 bits, so 0 to 255 << 14 = 4,177,920 cycles (104 ms at 40 MHz, 56 ms at 75 MHz). Longer pauses are made by the tester running the algorithm repeatedly, or by `RETENTION` alone followed by re-reads (the sticky fail record is per run).
+
+**Microcode address map** (the value reported in `rec_elem`): `MARCH_CM` 0-5, `RETENTION` 6-8, `CKBD` 9-18, `LANE` 19-21 (19 `up(w0)`, 20 forward lane sequence, 21 reverse lane sequence). Algorithm ranges: 0 = 0-5, 1 = 6-8, 2 = 0-8, 3 = 9-18, 4 = 19-21, 5 = 0-21. Cycle count of one run = 1 + sum over its elements of (1 + pause + nops x 2^AW + 2), pinned by `test_cycle_counts_pin_the_sequencing`.
+
+**Port 1.** Memories with a functional read port 1 (`P1_MASK`; the SoC SRAM) read **both** ports in every read operation and compare both against the same expected word, so the functional read path (port 1) is tested in the same run at no extra cycles. Not covered: simultaneous port-0 write / port-1 read of different addresses (the section 6.1 wish list); stated as a limitation.
+
+### 16.3 SMarchCHKB-family evaluation (decision D1)
+
+The user wrote `smarchchkd`. What is public and what is not: the Siemens/Mentor Tessent algorithm family is named `SMarch`, `SMarchCHKB`, `SMarchCHKBvcd`, `SMarchCHKBcil`, ... ([Tessent AppNote MG576062 on Scribd](https://www.scribd.com/document/355278009/Tessent-AppNote-Memory-Shared-BUS) shows `SMarchCHKBcil` as the default and discusses `SMarchCHKBvcd` and bit-grouping/word-size limits); the generic industry name is `SMarchCKBD`, "Serial March and Checkerboard", whose stated purpose is "to detect memory failures using either fast row access or fast column access" ([design-reuse article](https://www.design-reuse.com/articles/45915/memory-testing-self-repair-mechanism.html)). **The element sequences of the Tessent algorithms are proprietary and are not in any source this stage could reach**; the article gives only the plain checkerboard (`w c, r c, w ~c, r ~c`, up) and does not define SMarchCKBD's sequence, coverage or retention handling.
+
+Decision: **implement an open SMarchCKBD-style algorithm (`CKBD`, alg 3) and do not claim Tessent compatibility.** It combines the two published ingredients (checkerboard and March) on one engine: the checkerboard sequence above, then March C- with data polarity tied to address parity (`ck`), swept over the six backgrounds if `bg_sweep` is set. The closest named variant is `SMarchCHKB`; `vcd` (probably "vertical column disturb" or "verify column data", unverified) and `cil` (unverified) are NOT implemented. The checkerboard is in **logical** address/bit space: the physical row/column mapping of the OpenRAM macros is scrambled and not in the LEF/Liberty, so "adjacent" is a logical notion; the 6-background sweep plus address-parity polarity is the practical substitute and is the stated limit of the claim. Coverage claims for `CKBD` are what the fault-injection suite measures (coupling between logically adjacent cells, address-parity-dependent faults), not a Tessent figure. Adding a `vcd`/`cil`-like sequence later is a ROM row (16.2), no sequencer change.
+
+### 16.4 Controller and collar interfaces
+
+```mermaid
+flowchart LR
+  TAP[jtag_tap, TCK] -->|MBIST_CTRL 29b, wr strobe| X[mbist_xing: one cdc_gray_fifo per domain]
+  X -->|ctl, ungated core_clk| C1[mbist_ctrl core]
+  X -->|ctl, ungated cpu_core_clk| C2[mbist_ctrl cpu, in CPU macro]
+  C1 -->|broadcast ce/we/addr/din/wmask/rd1| K1[mem_collar sram_controller]
+  C1 --> K2[mem_collar npu_weight_mem]
+  K1 --- M1[4KB macro]
+  K2 --- M2[4KB macro]
+  M1 -->|dout0/dout1| C1
+  M2 -->|dout0| C1
+  C2 --> K3[10 collars I/D cache]
+  C1 -->|status 69b, 2-FF + done delayed| TAP
+  C2 -->|status 69b| TAP
+```
+
+**`mem_collar`** (pure input-side mux, on the functional side of the `ifdef` arm, placed in the wrapper next to the macro instance). `bist_en_i` selects: `csb0_m = bist_en ? ~b_ce : csb0_f`, `web0_m = bist_en ? ~b_we : web0_f`, `wmask0_m = bist_en ? b_wmask : wmask0_f`, `addr0_m`, `din0_m` likewise; port 1 (only when `HAS_P1`): `csb1_m = bist_en ? ~(b_ce & ~b_we & b_rd1) : csb1_f`, `addr1_m`. Macro read data is **not** muxed: `dout0`/`dout1` go to the functional logic unchanged and are also exported to the controller (an extra fan-out, no extra mux on the read path). `bist_en_i` is a flop output of the controller, so no mux select can glitch. With `bist_en = 0` the collar is a pass-through and the design is bit-identical to today (checked by the existing `soc_all` with the collar present).
+
+**`mbist_ctrl`** (parameters `N_MEM`, `AW`, `DW = 32`, `RD_LAT = 2`, `P1_MASK`): sequencer, data generator, one comparator per memory and port, per-memory sticky `fail` and first-fail record. Broadcast outputs are **registered** (`b_ce b_we b_wmask b_addr b_din b_rd1`), so the collar input pins are driven from flops. Read latency 2 is the Sky130 macro contract [R, `sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv`: inputs captured at the posedge, operation at the following negedge, data sampled at the next posedge; the same timing holds for the 1 KB model], and is a parameter checked by the unit suite against the real sim models.
+
+### 16.5 TAP registers, control word, crossing (j41m.10 folded in)
+
+**Opcodes (frozen, section 15.3, now implemented):** `4'h6` `MBIST_CTRL`, `4'h7` `MBIST_STATUS`. Section 15.6 deviation 5 is retired; the unit suites that asserted BYPASS for 6/7 are changed.
+
+`MBIST_CTRL` (29 bits, LSB first, update register in `jtag_tap`, Capture-DR reads back the current value, reset 0 = idle):
+
+| Bits | Field | Meaning |
+|---|---|---|
+| 0 | `run` | level. 1 starts the selected algorithm when the controller is idle; 0 aborts and clears all status |
+| 3:1 | `alg` | 16.2 |
+| 4 | `bg_sweep` | 1 = all six backgrounds |
+| 7:5 | `bg_sel` | background 0-5 (6, 7 = `cfg_err`) |
+| 15:8 | `pause_mant` | retention pause mantissa |
+| 18:16 | `pause_exp` | retention pause exponent |
+| 22:19 | `mask_sel` | memory whose first-failure XOR mask is captured (latched at start) |
+| 26:23 | `rd_sel` | memory whose fail record is shown in the status (live, may change after `done`) |
+| 27 | `dom_core` | enable the core-clock controller |
+| 28 | `dom_cpu` | enable the CPU-clock controller |
+
+`MBIST_STATUS` (read-only, captured at Capture-DR, 140 bits, LSB first): bit 0 `tck_ovf` (sticky; control-word FIFO overflow), bit 1 `cpu_present`, bits 70:2 core block, bits 139:71 CPU block. One 69-bit block per domain:
+
+| Bits | Field |
+|---|---|
+| 0 | `done` (all selected tests complete; held until `run` = 0) |
+| 1 | `busy` |
+| 2 | `cfg_err` (reserved `alg` or `bg_sel`) |
+| 3 | `fail_any` |
+| 13:4 | `fail[9:0]` per-memory go/no-go (sticky) |
+| 23:14 | `rec_addr` first-fail word address of memory `rd_sel` |
+| 28:24 | `rec_elem` element index (microcode address) |
+| 31:29 | `rec_slot` operation slot within the element |
+| 34:32 | `rec_bg` background index |
+| 36:35 | `rec_port` {port 1 mismatch, port 0 mismatch} |
+| 68:37 | `err_mask` XOR of read vs expected at the first failure of memory `mask_sel` |
+
+Go/no-go per memory = `fail[i]`; "good" requires `done = 1` and `fail_any = 0` and `cfg_err = 0`. A block that never ran reads `done = 0`, so an absent or stuck controller cannot read as a pass.
+
+**Crossing (j41m.10).** Resolution of the 15 open questions of PR #276 (the recommendation of each, taken because the user folded `j41m.10` into this stage; any of them can still be overturned at review):
+
+| Q | Resolution |
+|---|---|
+| 1, 2 | Applies to the MBIST word only; scan controls unchanged (section 15.5, crossing 2 stands) |
+| 3, 4 | One `cdc_gray_fifo` **per destination domain**; read side the **ungated** `core_clk` / `cpu_core_clk`, never a gated clock |
+| 5 | Write strobe is a falling-edge TAP flop set in Update-DR, so exactly one rising TCK edge writes the word: **+1 TCK after Update-DR**. Tester contract: after Update-DR of `MBIST_CTRL`, at least one more TCK before relying on the write (any following Capture-DR satisfies it) |
+| 6 | Overflow (strobe while `wr_ready` low) sets the sticky `tck_ovf` in `MBIST_STATUS` bit 0; cleared by TRST or by an **accepted** `run = 0` word (which includes the Test-Logic-Reset default write). The TAP never stalls |
+| 7 | **DEPTH 2** with the overflow flag. Reason: the destination only needs the latest word (`run` is a level, a held register), a lost intermediate word is reported, and `cdc_gray_fifo` at DEPTH 2 is the variant PR #276 validated; `async_axi_fifo` is not involved |
+| 8 | Both FIFO resets are derived from `trst_ni` alone (write side: the TAP's `rst_tck_n`; read side: a `cdc_reset_sync` of `trst_ni` into the destination clock, with the scan-mode reset override). The controller is reset by that **and** the functional domain reset, so `rst_n_i` can never start MBIST, never touches the TAP, and cannot leave phantom FIFO entries (functional reset does not reset the FIFO pointers) |
+| 9 | Entering Test-Logic-Reset (any path) writes the default word (`run = 0`) once, so five TMS-high clocks abort a running MBIST. The FIFO is empty or holds at most one stale word at that time (DEPTH 2 is enough because the strobe is one per Update-DR and the tester pace is slower than the destination) |
+| 10 | `SYNC_STAGES` 2 |
+| 11 | `check_scan_clk_rst.py` gets a narrow extension (flops under a named prefix whose clock cone is exactly `tck_i` are TAP-domain), `--tap-allowed-nets` and `--expect-tap-flops` updated; `required_synchronisers` entries added for the two pointer synchronisers; `tck_i` stays in `reset_domains` |
+| 12 | `set_max_delay -datapath_only` is not implemented by OpenSTA (`phase5_soc_multiclock.sdc:112-123`); the FIFO crossings follow the form used there for the existing FIFOs. **Open: needs the STA owner**; no SDC edit in this PR |
+| 13 | Opcodes 6/7 leave BYPASS in this stage |
+| 14 | Sections 6 and 9.3 carry a pointer to this section |
+| 15 | `mem_q` (unreset, written on `tck_i`) is in the TCK domain beside the TAP flops: unscanned, covered by N4 (TDR readback: write `MBIST_CTRL`, read it back) |
+
+**Status return crossing.** `done`/`fail`/record/mask bits are stable once `done` is high (the controller freezes them). Each status bit goes through a 2-FF `cdc_sync` into `tck_i`; `done` and `busy` pass through **one extra TCK flop**, so when the tester sees `done = 1` every data bit has had a full TCK period to settle. Reading with `done = 0` shows data that may be mid-update; that is the documented meaning of "not done". A change of `rd_sel` after `done` needs >= 3 TCK before the next Capture-DR (documented tester rule). Likewise the control-word FIFO's write side learns that a slot was freed only after the read pointer has crossed back into the TCK domain, which needs TCK edges: **the tester keeps TCK running in Run-Test/Idle** (found by `test_overflow_is_reported_and_cleared`, which saw a second word rejected while TCK was stopped).
+
+**Reset and idle contract.** `trst_ni = 0` (the idle value of every existing suite) holds the FIFO side and the controller in reset: `bist_en = 0`, all collars pass through, no behaviour change. A functional reset leaves the controller idle and clears the destination holding register, so the tester rewrites `MBIST_CTRL`.
+
+### 16.6 Clocking, scan_mode, PMU
+
+* **Core controller and its two collars:** `core_clk`, the same clock as `sram_controller` and the NPU [R]. MBIST runs on the functional clock (at speed for the memories).
+* **CPU controller:** `cpu_gated_clk` (the CPU macro's `clk_i`), fed by a control word whose FIFO read side is the **ungated** `cpu_core_clk`. The two are the same source and frequency (`cpu_gated_clk` is `cpu_core_clk` through `u_cpu_cg`); the existing design already treats signals from `cpu_core_clk` logic into `cpu_gated_clk` logic as one domain [R `soc_top.sv:540-660`].
+* **MBIST clock force.** `u_cpu_cg` is also gated by the PMU. The CPU controller therefore needs the gate forced open while a CPU-domain test runs: the TAP-launched `mbist_clk_force` (quasi-static, a falling-edge TAP flop) is OR-ed into the gate's `test_en`. Same quasi-static contract as `test_en` today (section 15.5, crossing 2). Precondition (tester contract): the CPU domain is powered and not isolated (PMU default after reset); MBIST does not drive the PMU. Core-domain memories are not on gated clocks.
+* **scan_mode:** the controller's and the destination FIFO's asynchronous resets pass the same `dft_rst_mux` / `cdc_reset_sync` scan override as every other register, so in scan mode they are tester-controlled and `bist_en` cannot be 1 unless the chains put it there. The controller flops are ordinary scan flops. The TCK-side FIFO flops are TAP-domain (unscanned). In scan mode the SRAM macro is a black box exactly as before (section 6.3); MBIST adds no new scan-mode behaviour.
+* **Destructive test.** MBIST overwrites every tested memory. After a run the SoC needs a functional reset and memory reload (tester contract), the same as after scan.
+
+### 16.7 CPU-macro cache collars: design, proposal, re-harden need
+
+Ten memories (16.1 rows 3-12) sit inside `rv32i_cpu_top`; reaching them needs a controller **inside** the macro (clock `clk_i` = `cpu_gated_clk`) and these new ports. The existing 403 pins are placed by `pin_order.cfg` with `ERRORS_ON_UNMATCHED_IO both` [R `pnr/sky130/cpu/pin_order.README.md`], so every new pin must be added to it.
+
+| Port | Dir | Width | Source / sink |
+|---|---|---|---|
+| `mbist_run_i` | in | 1 | CPU-domain holding register (`run & dom_cpu`) |
+| `mbist_cfg_i` | in | 26 | `alg bg_sweep bg_sel pause mask_sel rd_sel` |
+| `mbist_status_o` | out | 69 | the status block of 16.5 |
+| **total** | | **96** | quasi-static, no timing path other than the ordinary sync-to-clk |
+
+`mbist_clk_force` stays in `soc_top` (it drives `u_cpu_cg`, outside the macro). Pin-count alternative if the pin budget is contested: return the status in 16-bit slices selected by a 3-bit port (46 pins), at the cost of a multi-step tester readout and a different CPU `MBIST_STATUS` layout; **not** chosen because it would change the frozen TDR layout later.
+
+Inside the macro: 10 `mem_collar` (tag and data of each cache, collar between the cache logic and the macro instance in `rv32i_icache.sv` / `rv32i_dcache.sv`), one `mbist_ctrl` (`N_MEM = 10`, `AW = 8`, `P1_MASK = 0`), and the cache modules gain `mbist_*` broadcast ports. The functional side of the `SRAM_ASAP7` / FPGA / FreePDK45 arms stays untouched (the collar sits only in the `SRAM_SKY130` arm and in a pass-through shim for the others).
+
+**Proposal: do NOT land the CPU-macro collars in the PR that carries this section; land them with the `j41m.4` CPU-macro scan-boundary re-harden.** Reasons: (1) both need the same boundary change and the same ~6-7 h CPU + SoC re-harden round [section 5, A]; two rounds cost another 6-7 h; (2) both interact with `pin_order.cfg` and the lock of lu09 (#294), so one pin change is safer than two; (3) the CPU timing margin is the thinnest in the design (+0.174 ns, section 5) and a collar mux on ten SRAM address/data pins plus a controller is exactly the kind of change that may need the period relaxation of open item N7, which should be measured once with scan muxes included; (4) everything the CPU side needs is already built and unit-tested here (`mbist_ctrl` at `N_MEM = 10`, `AW = 8`, the CPU domain of `mbist_xing`/`soc_mbist`, the TDR block), so the follow-up is wiring and a re-harden, not new verification. **Re-harden is required; none was run.** In this PR `soc_top` carries the CPU-domain FIFO/holding-register path behind a parameter (`MBIST_CPU = 0`), the CPU status block reads 0 and `cpu_present = 0`.
+
+### 16.8 Verification required of this stage (non-negotiable per the bead)
+
+* **A BIST that always passes (or always fails) is the failure to rule out.** Fault-injecting SRAM models (same timing as the Sky130 sim models, equivalence-checked against them with faults off) support: stuck-at 0/1, transition up/down, inversion coupling, idempotent coupling, state coupling, address-decoder faults (no access, alias, multiple access), write-mask lane stuck, and retention decay with a configurable decay time.
+* An independent Python golden model of the algorithms (written from the algorithm definitions in 16.2, not from the ROM) predicts, for each (algorithm, fault), whether it is detected and the first-fail address / element / slot; the RTL record must match exactly. Faults an algorithm is NOT expected to detect (for example a retention fault under `MARCH_CM`) must pass. A no-fault run of every algorithm and background must pass with `fail_any = 0, done = 1`.
+* Retention: a decay time T with pause < T passes and pause > T fails (the programmable pause is meaningful).
+* TAP-driven end-to-end test (`MBIST_CTRL` write, poll `MBIST_STATUS`, per-memory go/no-go and fail address through the TAP), including TLR abort, FIFO overflow flag, and the crossing at several TCK/core clock ratios.
+* Lint (Verilator -Wall), `dft-scan-check` for both PDKs with the pinned yosys, sv2v regeneration, the CDC gate, `soc_all_ci` plain and `FPGA=1`.
+
+### 16.9 Area [M, 2026-10-18]
+
+Method: `sv2v` + pinned yosys 0.62 `synth -flatten; dfflibmap; abc -liberty` on `sky130_fd_sc_hd__tt_025C_1v80`, per block, no timing-driven sizing (the real flow's buffering and `dfxtp_2` upsizing come on top). The estimate column is the section 6.3 / 16.9 estimate that this replaces.
+
+| Block | Estimate [A] | Measured [M] | Flops |
+|---|---|---|---|
+| `mbist_ctrl`, core domain (N=2, AW=10, port 1 on memory 0) | ~6 k um2 | **13,314 um2** | 243 |
+| `mbist_ctrl`, CPU domain (N=10, AW=8) | ~15 k um2 | **28,009 um2** | 398 |
+| `mem_collar` AW=10 with port 1 / AW=8 without | ~0.7 k um2 each | **653 / 513 um2** | 0 |
+| `mbist_xing` (reset sync + depth-2 FIFO + holding register), per domain | ~1.5 k um2 | **3,562 um2** | 46 |
+| `mbist_status_sync` (69 per-bit 2-FF + done/busy flop), per domain | (not estimated) | **3,503 um2** | 140 |
+| `jtag_tap` new vs `origin/main` (29 + 140 shift/update bits, decode, strobe) | ~6 k um2 | **+8,217 um2** (2,620 -> 10,837) | +204 |
+
+Totals: **landed in this PR (core domain + 2 collars + TAP delta) = 13,314 + 1,166 + 3,562 + 3,503 + 8,217 = 29,762 um2** (0.15 pp of the 20.36 M um2 core; 2.6 % of the 1,150,630 um2 synthesised stdcell area of section 8); **CPU-macro follow-up (controller + 10 collars + xing + status) = 28,009 + 5,130 + 3,562 + 3,503 = 40,204 um2** (inside the CPU macro: the controller and collars; in the SoC fabric: xing and status). Everything together is about 70 k um2 (0.34 pp of the core), above the 45-60 k um2 of section 6.3: the per-memory first-fail record (23 flops per memory) and the 140 per-bit status synchronisers dominate. Possible trims if area is contested [A, not tried]: keep one shared first-fail record instead of one per memory (the per-memory go/no-go bits stay), drop the redundant `pause_cycles_q` (22 flops).
+
+### 16.10 Implementation record (2026-10-18, PR #306)
+
+* **RTL (landed):** `mbist_ctrl`, `mem_collar`, `mbist_xing` + `mbist_ctl_hold`, `mbist_status_sync`, `soc_mbist` (all `rtl/soc/dft/`); `jtag_tap` / `dft_ctrl` gain `MBIST_CTRL` / `MBIST_STATUS` and the write strobe; `soc_top` instantiates `soc_mbist` (core domain) and wires the collar bus into `sram_controller` and `npu_top` -> `npu_weight_mem` (SRAM_SKY130 arm only; every other arm ties the new ports off). `soc_top` parameter `MBIST_CPU` (default 0) carries the CPU-domain crossing; the CPU macro is NOT changed.
+* **Found by the verification, fixed:** (1) the first LANE algorithm (forward lane order only) missed a write-mask lane-0-stuck-at-1 fault: a reverse lane pass (microcode address 21) was added. (2) The control-word FIFO's write side learns of a freed slot only when TCK runs (read pointer must cross back): tester rule added to 16.5. (3) The Test-Logic-Reset default write occupies a FIFO slot until the destination clock reads it (visible only with a very slow destination clock).
+* **Verification:** `mbist_ctrl` (3 build points), `mbist_tap` (3 clock ratios), `mbist_soc_slice` (real wrappers), `mbist_fi_equiv` (FI model == real simulation model), the existing `jtag_tap` / `dft_ctrl` suites against the extended TAP model, `test_dft_scan_check.py` (+5 tests for the TCK-block rules). Results are in the PR description.
+* **Checker changes:** `tools/dft/check_scan_clk_rst.py` `--tck-prefix` / `--tck-sink` / `--expect-tck-flops` and the `SYNC=CONSUMER@any` form of `--expect-reset-sync` (a reset synchroniser in a functional clock domain); `pnr/Makefile` `DFT_TAP_CHECK_ARGS` carries the three declared TAP outputs and the two sink prefixes.
+* **Not done / open:** CPU-macro collars and re-harden (16.7); SDC for the new crossings (item 12 of the table in 16.5, STA owner); `required_synchronisers` entries in `tools/cdc/cdc_config.yml` for the FIFO pointer synchronisers (see the PR for the CDC gate result); scan testability of the TCK-side FIFO storage (unscanned by N4); metastability is not modelable here.

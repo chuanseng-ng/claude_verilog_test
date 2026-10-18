@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-10-17T18:36:33+07:00",
+  "updated_at": "2026-10-18T00:00:00+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -81,6 +81,16 @@
         "module": "i2c_controller",
         "category": "cdc",
         "claim": "two cdc_2ff_sync pad synchronisers (u_scl_sync/u_sda_sync) never checked by a CDC tool (SpyGlass/JasperGold/Questa NOT RUN); a synchroniser bypass is only caught indirectly via its latency"
+      },
+      {
+        "module": "crypto_accel",
+        "category": "cdc",
+        "claim": "scan_mode_i (TAP/pin level, async to core_clk) crosses through an unreset 2-FF synchroniser + edge flop (scan_s1_q/scan_s2_q/scan_prev_q); never checked by a CDC tool (SpyGlass/JasperGold/Questa NOT RUN), only by simulation and check_scan_clk_rst.py"
+      },
+      {
+        "module": "crypto_accel",
+        "category": "protocol",
+        "claim": "scan wipe is functional D logic that a scan_en=1 edge overrides: it protects against software and a cooperating tester only if ATE applies 3 scan_en=0 edges after scan_mode rises (DFT_ARCHITECTURE.md 14.10 item 5); an adversarial tester that shifts earlier reads the residue; no scan chains exist yet, so this is analysed, not simulated"
       }
     ]
   },
@@ -2237,6 +2247,18 @@
       "retry_strategy": "refine",
       "suggested_next_step": "loop_back_to:timing_optimization",
       "reason": "RUN_2026-10-17_14-07-01 (buf_16 clock roots) completed all 63 steps: CTS-0105 gone, LVS 0, route DRC 0, Magic 8984 (baseline), setup/hold clean at 9 corners, CVT.MaxCapViolations PASS with 0 waivers, dft-scan-check 0 violations, CDC budgets PASS at nom_tt. FAIL: CDC budget check at max_ss (fifo_rd2wr -0.715 ns, fifo_wr2rd -0.516 ns, core2cpu domain-wide) from 10-deep hold-buffer chains on gray-pointer crossings; antenna 225 nets/312 pins nonzero; max-slew gate skipped (401 pins max_ss); KLayout DRC skipped. Loop-back not executed in this scoped task; pd.signoff stays false.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-10-18T00:00:00+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "high",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "bead j41m.6: crypto_accel hardware scan wipe (PR #305, draft). Verilator -Wall 0 RTL warnings, test_crypto 51/51, test_soc_dft_scan 11/11, 25/25 mutants killed, dft-scan-check sky130+asap7 0 violations, soc_all_ci plain and FPGA=1 769/0/17. Limit: wipe is overridden by scan_en=1 edges (adversarial tester not covered). rtl.signoff unchanged (false): CDC/RDC tools not run.",
       "constraint_ref": null
     }
   ],

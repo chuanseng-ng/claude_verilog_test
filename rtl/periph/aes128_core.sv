@@ -70,6 +70,7 @@
 // Gate A question, not the period.
 //
 // Reset: synchronous, active-low (always_ff @(posedge clk) + if (!rst_n)), matching rtl/periph/.
+// wipe_i (bead j41m.6) is an additional synchronous clear of the same flops: scan-mode entry/exit.
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
@@ -83,6 +84,10 @@ module aes128_core
     // DFT scan mode (bead j41m.2): 1 forces the rk_q READ net to 0 (rk_q is excluded from scan and
     // inverts to the master key, so it must not reach any scanned flop through capture).
     input  logic         scan_mode_i,
+
+    // DFT scan-entry/exit zeroize (bead j41m.6): 1-cycle synchronous clear of every key- or
+    // plaintext-derived flop (s_q, rk_q, rcon_q, round_q, state_q), same effect as !rst_n.
+    input  logic         wipe_i,
 
     input  logic         start_i,
     input  logic [127:0] key_i,
@@ -486,7 +491,7 @@ module aes128_core
     // FSM / registers
     // =========================================================================
     always_ff @(posedge clk) begin
-        if (!rst_n) begin
+        if (!rst_n || wipe_i) begin
             state_q <= A_IDLE;
             round_q <= 4'd0;
             rcon_q  <= 8'h01;

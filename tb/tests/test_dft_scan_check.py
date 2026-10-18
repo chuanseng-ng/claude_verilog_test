@@ -406,6 +406,120 @@ def test_reset_sync_trst_reaching_an_undeclared_cell_fails(tmp_path: Path) -> No
 
 
 # --------------------------------------------------------------------------------------------
+# Mixed-domain block: the MBIST control-word crossing (beads j41m.14 / j41m.10)
+# --------------------------------------------------------------------------------------------
+# A miniature of u_mbist: `mixed` holds a TCK-clocked flop (the FIFO write side), a 2-FF
+# synchroniser and a holding register in the functional domain that may read it, and
+# (optionally) a raw functional flop that BYPASSES the synchroniser.
+# `--tck-prefix u_mb` adopts the TCK flop into the TAP domain by clock;
+# `--tck-sink` names the only cells that may read it.
+_MIXED = """
+module tapm (input wire tck_i, input wire trst_ni, output wire rst_o);
+    reg s0_q, s1_q;
+    always @(posedge tck_i or negedge trst_ni) if (!trst_ni) s0_q <= 1'b0; else s0_q <= 1'b1;
+    always @(posedge tck_i or negedge trst_ni) if (!trst_ni) s1_q <= 1'b0; else s1_q <= s0_q;
+    assign rst_o = s1_q;
+endmodule
+
+module syncm (input wire clk_i, input wire rst_ni, input wire d, output reg q);
+    reg m_q;
+    always @(posedge clk_i or negedge rst_ni) if (!rst_ni) begin m_q <= 1'b0; q <= 1'b0; end
+                                              else begin m_q <= d; q <= m_q; end
+endmodule
+
+module holdm (input wire clk_i, input wire rst_ni, input wire d, output reg q);
+    always @(posedge clk_i or negedge rst_ni) if (!rst_ni) q <= 1'b0; else q <= d;
+endmodule
+
+module mixed (input wire tck_i, input wire clk_i, input wire rst_s_ni, input wire rst_f_ni,
+              input wire d,
+              output wire q_sync, output wire q_hold, output wire q_raw);
+    reg w_q;
+    always @(posedge WCLK or negedge rst_s_ni) if (!rst_s_ni) w_q <= 1'b0; else w_q <= d;
+    syncm u_sync (.clk_i(clk_i), .rst_ni(rst_f_ni), .d(w_q), .q(q_sync));
+    holdm u_hold (.clk_i(clk_i), .rst_ni(rst_f_ni), .d(w_q), .q(q_hold));
+    reg raw_q;
+    always @(posedge clk_i or negedge rst_f_ni) if (!rst_f_ni) raw_q <= 1'b0; else raw_q <= w_q;
+    assign q_raw = RAWOUT;
+endmodule
+
+module top (input wire clk_i, input wire rst_ni, input wire scan_mode_i, input wire scan_clk_i,
+            input wire scan_rst_ni, input wire tck_i, input wire trst_ni, input wire d,
+            output wire q_sync, output wire q_hold, output wire q_raw);
+    wire rst_s;
+    tapm u_tap (.tck_i(tck_i), .trst_ni(trst_ni), .rst_o(rst_s));
+    wire clk_f = scan_mode_i ? scan_clk_i : clk_i;
+    wire rst_f = scan_mode_i ? scan_rst_ni : rst_ni;
+    mixed u_mb (.tck_i(tck_i), .clk_i(clk_f), .rst_s_ni(rst_s), .rst_f_ni(rst_f), .d(d),
+                .q_sync(q_sync), .q_hold(q_hold), .q_raw(q_raw));
+endmodule
+"""
+
+
+def _mixed_run(tmp_path: Path, *extra: str, wclk="tck_i", rawout="1'b0"):
+    netlist = tmp_path / "mixed.v"
+    netlist.write_text(_MIXED.replace("WCLK", wclk).replace("RAWOUT", rawout))
+    env = dict(os.environ, YOSYS=str(YOSYS))
+    return subprocess.run(
+        [
+            sys.executable,
+            str(CHECKER),
+            "--netlist",
+            str(netlist),
+            "--top",
+            "top",
+            "--tap-prefix",
+            "u_tap",
+            "--tck-prefix",
+            "u_mb",
+            "--tck-sink",
+            "u_mb.u_sync",
+            "--tck-sink",
+            "u_mb.u_hold",
+            *extra,
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+
+def test_tck_block_synchronised_passes(tmp_path: Path) -> None:
+    res = _mixed_run(tmp_path, "--expect-tck-flops", "1")
+    assert res.returncode == 0, res.stdout
+    assert "TCK-domain flops by clock: 1" in res.stdout
+
+
+def test_tck_block_flop_read_by_an_unsynchronised_flop_fails(tmp_path: Path) -> None:
+    # raw_q (functional domain, not under a declared sink) samples the TCK flop directly: the bypass
+    res = _mixed_run(tmp_path, rawout="raw_q")
+    assert res.returncode == 1, res.stdout
+    assert "TCK_SINK" in res.stdout or "without a declared synchroniser" in res.stdout
+
+
+def test_tck_block_flop_driving_an_output_port_fails(tmp_path: Path) -> None:
+    res = _mixed_run(tmp_path, rawout="w_q")
+    assert res.returncode == 1, res.stdout
+    assert "output port is driven by TCK-domain flop" in res.stdout
+
+
+def test_tck_block_flop_not_clocked_by_tck_is_checked_as_functional(tmp_path: Path) -> None:
+    # w_q clocked by the (muxed) functional clock is NOT adopted into the TAP domain: it is held to
+    # the
+    # ordinary rules, and its reset comes from a TAP flop, which is a violation there
+    res = _mixed_run(tmp_path, wclk="clk_i")
+    assert res.returncode == 1, res.stdout
+
+
+def test_tck_block_expect_flops_guard_and_missing_sink_prefix(tmp_path: Path) -> None:
+    res = _mixed_run(tmp_path, "--expect-tck-flops", "2")
+    assert res.returncode == 1 and "expected at least 2 TCK-domain flops" in res.stdout
+    res = _mixed_run(tmp_path, "--tck-sink", "u_mb.u_renamed")
+    assert res.returncode == 1 and "matches no sequential cell" in res.stdout
+
+
+# --------------------------------------------------------------------------------------------
 # BLOCK MODE (bead claude_verilog_test-j41m.4): the CPU hard macro
 # --------------------------------------------------------------------------------------------
 # A miniature of rv32i_cpu_top: its flops are clocked straight from the clk_i pin (the parent muxes
