@@ -80,6 +80,16 @@ module rv32i_cpu_top #(
 
     // Interrupt inputs
     input  logic        ext_irq_i,
-    input  logic        timer_irq_i
+    input  logic        timer_irq_i,
+
+    // DFT test boundary (bead j41m.4, DFT_ARCHITECTURE.md 14.10). These four ports exist in
+    // the RTL and in this stub so the SoC netlist elaborates, but the COMMITTED ASAP7 macro
+    // views (pnr/asap7/soc/macro/rv32i_cpu_top.{lef,lib,nl}) are the pre-DFT ones and do not
+    // have the pins. An ASAP7 SoC P&R against them fails at the macro pin match until bead
+    // j41m.13 regenerates the views (blocked on ma7/lxv/2kn, like every ASAP7 SoC re-run).
+    input  logic        scan_mode_i,
+    input  logic        scan_en_i,
+    input  logic [1:0]  scan_in_i,
+    output logic [1:0]  scan_out_o
 );
 endmodule

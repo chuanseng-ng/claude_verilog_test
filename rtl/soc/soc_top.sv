@@ -194,8 +194,9 @@ module soc_top
     // 8 per the chain-count decision (PR #253): [4:0] five clk_i-domain fabric chains
     // (~17.5 k scannable flops, ~3.5 k each), [5] one cpu_clk_i-domain fabric chain
     // (~0.9 k flops outside the CPU macro), [7:6] the two CPU-macro chains. The macro has
-    // no scan pins yet (its boundary is out of scope for j41m.2, see DFT_ARCHITECTURE.md
-    // section 14), so [7:6] are reserved placeholders until that follow-up lands.
+    // has two scan pairs since j41m.4 (DFT_ARCHITECTURE.md 14.10): the top CPU_SCAN_CHAINS
+    // indices [SCAN_CHAINS-1:SCAN_CHAINS-2] are wired straight through to u_cpu's
+    // scan_in_i/scan_out_o; the macro ties its own scan_out_o 0 until Stage 2 stitches it.
     parameter int unsigned SCAN_CHAINS = 8
 ) (
     // clk_i is the SYSTEM/FABRIC reference clock input (100 MHz crystal / XO).
@@ -299,6 +300,11 @@ module soc_top
     // Local parameters
     // =========================================================================
     localparam int unsigned N_MASTERS   = 4;
+
+    // Scan pairs owned by the CPU hard macro (width of rv32i_cpu_top.scan_in_i/scan_out_o).
+    // They are the TOP indices of the SoC scan vectors. A mismatch with the macro's port
+    // width is a WIDTH error at the u_cpu instance, not a silent truncation.
+    localparam int unsigned CPU_SCAN_CHAINS = 2;
     localparam int unsigned AW          = AXI_ADDR_WIDTH;
     localparam int unsigned DW          = AXI_DATA_WIDTH;
     localparam int unsigned SW          = AXI_STRB_WIDTH;
@@ -334,12 +340,12 @@ module soc_top
     logic dft_scan_rst_n;
     logic dft_test_en;
     logic dft_test_clk;
-    // scan_en has no RTL consumer until Stage 2 inserts the scan flops (they take
-    // their SE pin from a net the insertion step ties to this port); test_clk is
-    // consumed only through pll_subsystem's own ports below.
-    /* verilator lint_off UNUSEDSIGNAL */
+    // scan_en: the only RTL consumer is the CPU macro's scan_en_i (j41m.4). The fabric
+    // flops have none until Stage 2 inserts them; that step must take their SE pin from
+    // THIS net (dft_scan_en, TAP-or-pin), not from the raw scan_en_i port, or serial
+    // (TAP) scan would shift the macro with scan_en and the fabric without it.
+    // test_clk is consumed only through pll_subsystem's own ports below.
     logic dft_scan_en;
-    /* verilator lint_on  UNUSEDSIGNAL */
 
     dft_ctrl u_dft_ctrl (
         .scan_mode_i (scan_mode_i),
@@ -365,11 +371,29 @@ module soc_top
     // connects chain k's last flop to scan_out_o[k] and scan_in_i[k] to its first.
     // The tie is intentionally one `assign` on one vector so that step has a single,
     // unambiguous thing to replace; the lint waivers are scoped to just these two.
+    //
+    // CPU macro (j41m.4): the top CPU_SCAN_CHAINS pairs belong to u_cpu and go straight
+    // to it. Named wires, constant part-selects only (no runtime index, no struct select).
+    // The macro's own scan_out_o is also a placeholder tie-0 until Stage 2 stitches it
+    // inside the macro flow.
+`ifndef __pnr__
+    initial begin
+        if (SCAN_CHAINS <= CPU_SCAN_CHAINS)
+            $fatal(1, "soc_top: SCAN_CHAINS must exceed the CPU macro's %0d scan pairs", CPU_SCAN_CHAINS);
+    end
+`endif
+    localparam int unsigned FABRIC_SCAN_CHAINS = SCAN_CHAINS - CPU_SCAN_CHAINS;
+
+    logic [CPU_SCAN_CHAINS-1:0] cpu_scan_in_w;
+    logic [CPU_SCAN_CHAINS-1:0] cpu_scan_out_w;
+    assign cpu_scan_in_w = scan_in_i[SCAN_CHAINS-1 -: CPU_SCAN_CHAINS];
+
     /* verilator lint_off UNUSEDSIGNAL */
-    logic [SCAN_CHAINS-1:0] dft_scan_in_unused;
-    assign dft_scan_in_unused = scan_in_i;
+    logic [FABRIC_SCAN_CHAINS-1:0] dft_scan_in_unused;
+    assign dft_scan_in_unused = scan_in_i[FABRIC_SCAN_CHAINS-1:0];
     /* verilator lint_on  UNUSEDSIGNAL */
-    assign scan_out_o = '0;  // DFT_PLACEHOLDER: replaced by Stage 2 insertion
+    assign scan_out_o[FABRIC_SCAN_CHAINS-1:0] = '0;  // DFT_PLACEHOLDER: replaced by Stage 2 insertion
+    assign scan_out_o[SCAN_CHAINS-1 -: CPU_SCAN_CHAINS] = cpu_scan_out_w;
 
     // =========================================================================
     // Phase 7 M-c / Pre-Phase-6 #3: PLL subsystem
@@ -1236,7 +1260,15 @@ module soc_top
         // Interrupt inputs — GH #93: synchronised into the CPU domain (see
         // PMU sequencing nets above; both sources are level-held, not pulses)
         .ext_irq_i                  (ext_irq_cpu_sync),
-        .timer_irq_i                (timer_irq_cpu_sync)
+        .timer_irq_i                (timer_irq_cpu_sync),
+        // DFT (j41m.4). clk_i above is already the test clock in scan mode (dft_clk_mux
+        // ahead of u_cpu_cg), cpu_domain_rst_n already equals dft_scan_rst_n in scan mode,
+        // so the macro needs only mode/enable/data. dft_scan_en is the TAP-or-pin scan
+        // enable from dft_ctrl, NOT the raw scan_en_i port.
+        .scan_mode_i                (dft_scan_mode),
+        .scan_en_i                  (dft_scan_en),
+        .scan_in_i                  (cpu_scan_in_w),
+        .scan_out_o                 (cpu_scan_out_w)
     );
 
     // ISO_CPU functional-isolation clamp (`-location parent`, clamp_value 0):
@@ -2438,7 +2470,10 @@ module soc_top
     // behind them is clocked by the (test) clock whatever the PMU says. In scan mode
     // cpu_core_clk / core_clk ARE the test clock (pll_subsystem), so the gated
     // clocks are too.
-    rv32i_clock_gate u_cpu_cg (.en(cpu_gated_clk_en), .test_en(dft_test_en), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
+    // HARD_ROOT: cpu_gated_clk is a CTS root (771 register sinks + the CPU macro clock pin). On the Sky130 SoC build
+    // (USE_SKY130_CLKCELLS) it is a hand-instantiated sdlclkp_4 + buf_16, see rv32i_clock_gate.sv. u_gpu_cg stays
+    // behavioural: its output feeds no CTS tree in the Sky130 SoC (GPU is a tie-off), so it must optimise away.
+    rv32i_clock_gate #(.HARD_ROOT(1'b1)) u_cpu_cg (.en(cpu_gated_clk_en), .test_en(dft_test_en), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
     rv32i_clock_gate u_gpu_cg (.en(pmu_gpu_clk_en),   .test_en(dft_test_en), .clk(core_clk),     .gclk(gpu_gated_clk));
 
 endmodule : soc_top
