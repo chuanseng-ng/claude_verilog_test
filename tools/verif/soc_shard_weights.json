@@ -7,10 +7,11 @@
   "Source: serial instrumented job 117501311868 of soc_coverage run 39068597871 (74 min).",
   "Weights only steer the balance.  A suite missing from this file gets default_run_s, so a new",
   "suite never breaks the sharding; refresh the file from a newer job log when the balance drifts.",
-  "soc_uart_boot is sharded as three TESTCASE units (SOC_CI_SPLITS in tb/cocotb/soc/Makefile); its",
+  "soc_uart_boot is sharded as four TESTCASE units (SOC_CI_SPLITS in tb/cocotb/soc/Makefile); its",
   "times are measured from sharded run 39089303895 (the whole module is ~1980 s instrumented, of",
   "which test_load_verify_jump_and_run alone is ~890 s).  The mbist_* suites (added by #306) have",
-  "no measurement yet and use default_run_s."
+  "no measurement yet and use default_run_s.  test_load_verify_8n1_back_to_back (shm5, #314) is",
+  "estimated, not measured: 890 s x (384.2 / 448.7 s plain-sim ratio vs test_load_verify_jump_and_run)."
  ],
  "default_run_s": 40.0,
  "groups": {
@@ -208,6 +209,10 @@
   },
   "soc_uart_boot:TESTCASE=test_load_verify_jump_and_run": {
    "run_s": 890.0,
+   "group": "tb_soc_top"
+  },
+  "soc_uart_boot:TESTCASE=test_load_verify_8n1_back_to_back": {
+   "run_s": 760.0,
    "group": "tb_soc_top"
   },
   "soc_uart_boot:TESTCASE=test_bad_crc_is_nakked_and_memory_untouched,test_refusals_nak_with_the_right_code,test_banner_and_info_default_115200_at_50mhz": {

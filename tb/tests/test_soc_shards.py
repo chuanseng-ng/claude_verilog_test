@@ -39,13 +39,21 @@ sys.modules["soc_shards"] = ss
 _SPEC.loader.exec_module(ss)
 
 DEFAULT_MAKEFILE_TEXT = (REPO_ROOT / "tb" / "cocotb" / "soc" / "Makefile").read_text()
+# The eight heaviest sharding units, one per shard.  soc_multiclock dropped out when shm5 (#314)
+# split test_load_verify_8n1_back_to_back into its own soc_uart_boot slice (~760 s instrumented).
 HEAVY = [
     "i2c",
     "soc_integration",
     "soc_cpu_gpu",
     "soc_coherency",
-    "soc_multiclock",
     "soc_uart_boot:TESTCASE=test_load_verify_jump_and_run",
+    "soc_uart_boot:TESTCASE=test_load_verify_8n1_back_to_back",
+    "soc_uart_boot:TESTCASE=test_bad_crc_is_nakked_and_memory_untouched,"
+    "test_refusals_nak_with_the_right_code,test_banner_and_info_default_115200_at_50mhz",
+    "soc_uart_boot:TESTCASE=test_table_sum_is_independent,test_banner_and_info_sim_divisor,"
+    "test_oversized_length_nak_then_resync,test_truncated_frame_times_out_and_recovers,"
+    "test_line_noise_before_sof_is_ignored,test_autoboot_runs_preloaded_image,"
+    "test_autoboot_refuses_empty_sram_and_stays_serviceable",
 ]
 NSHARDS = 8
 
@@ -345,9 +353,9 @@ def test_every_split_covers_each_cocotb_test_exactly_once(plain_suites: list[str
 
 def test_split_units_are_sharded_and_unioned(suites: list[str], weights: dict) -> None:
     units = [u for u in suites if u.startswith("soc_uart_boot:")]
-    assert len(units) == 3
+    assert len(units) == 4
     shards = ss.assign(suites, NSHARDS, weights)
-    assert sum(u in m for m in shards for u in units) == 3
+    assert sum(u in m for m in shards for u in units) == 4
     assert ss.check_union(suites, {f"s{k}": m for k, m in enumerate(shards)}) == []
     # Running the whole module in one shard instead of its slices is a union failure, not a pass.
     problems = ss.check_union(

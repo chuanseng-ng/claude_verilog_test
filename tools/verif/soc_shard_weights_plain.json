@@ -12,7 +12,9 @@
   "measured instrumented.  Suites absent here cost default_run_s, so a new suite never breaks the",
   "sharding.  Runner speed varies ~2x between runs (soc_uart_boot: 709 s here, 1394 s in run",
   "39113206673); the weights only need to be proportional.  Refresh from a newer job log when the",
-  "printed per-shard estimate drifts from the measured shard times."
+  "printed per-shard estimate drifts from the measured shard times.  The fourth slice,",
+  "test_load_verify_8n1_back_to_back (shm5, #314), is 317 s x 384.2/448.7: its plain-sim time",
+  "measured in #314's cocotb run 39113206673, scaled by test_load_verify_jump_and_run's ratio."
  ],
  "default_run_s": 10.0,
  "groups": {
@@ -210,6 +212,10 @@
   },
   "soc_uart_boot:TESTCASE=test_load_verify_jump_and_run": {
    "run_s": 317.0,
+   "group": "tb_soc_top"
+  },
+  "soc_uart_boot:TESTCASE=test_load_verify_8n1_back_to_back": {
+   "run_s": 271.4,
    "group": "tb_soc_top"
   },
   "soc_uart_boot:TESTCASE=test_bad_crc_is_nakked_and_memory_untouched,test_refusals_nak_with_the_right_code,test_banner_and_info_default_115200_at_50mhz": {
