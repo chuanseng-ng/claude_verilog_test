@@ -477,7 +477,13 @@ jobs:
       # and main's other additions + 7 new test_mbist_cpu_macro + 1 test_sram_fi_equiv (1 KB macro, mbist_fi_equiv_1k).
       # 2026-10-18 (merge of main into #313 c54a): 837 = 840 - 3. 840 EXPECTED = 832 on main + c54a's 8 (7
       # test_mbist_cpu_macro + 1 test_sram_fi_equiv 1 KB); confirm against this merge's sharded CI pass count.
-      PASS_FLOOR: '837'
+      # 2026-10-18 (bead h367, I2C functional coverage): 834 = 837 - 3. 837 EXPECTED = 832 (the line above) + 5 new tests in
+      # test_i2c.py (long transfers, repeated-START chain, CMD shapes, COUNT=255, RX-full timeout); the i2c suite itself
+      # measured 55 -> 60 locally. Confirm against this PR's CI pass count.
+      # CONFIRMED (h367): 837 passed / 0 failed in #319's CI.
+      # 2026-10-19 (merge of main #319 into #313 c54a): 842 = 845 - 3. 845 EXPECTED = 837 (main, confirmed)
+      # + c54a's 8; confirm against this merge's sharded CI pass count.
+      PASS_FLOOR: '842'
       # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`), CI log-grep formula (`passed$`; the
       # expect_fail tests print "passed: failed as expected" and are NOT counted).
       # 2026-10-10 (bead a5ze slice 2): 229 = 232 - 3.  232 is the count of a full local

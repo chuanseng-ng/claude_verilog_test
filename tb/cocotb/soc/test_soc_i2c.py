@@ -54,6 +54,7 @@ from pathlib import Path
 
 import cocotb
 from bfm.i2c_slave import I2CSlave
+from i2c_cov import COV
 from cocotb.triggers import ReadOnly, RisingEdge
 from soc_clocks import drive_soc_reset, start_soc_clocks
 from sram_backdoor import sram_mem
@@ -370,6 +371,10 @@ async def test_soc_i2c(dut):
     )
     assert res(RES_P1_STATUS) & 0x1F == 0, f"STATUS after phase 1: 0x{res(RES_P1_STATUS):x}"
 
+    # Functional coverage (bead h367): each fact below was asserted above.
+    for path in ("reset_values", "loopback_write", "loopback_read", "irq_to_cpu"):
+        COV.soc(path)
+
 
 # ---------------------------------------------------------------------------
 # Real-pad transactions (bead 4pl8)
@@ -399,6 +404,7 @@ async def test_soc_i2c_real_pads(dut):
     """
     await _setup(dut, _PAD_FW_HEX)
     slave = I2CSlave(dut, "i2c_", dut.clk_i, address=PAD_ADDR)
+    COV.attach(None, slave)  # bus-level functional coverage of the real-pad traffic (bead h367)
     _active_tasks.append(slave.start())
 
     seen = {"ready": False, "t1": False, "t2": False, "t3": False}
@@ -485,3 +491,7 @@ async def test_soc_i2c_real_pads(dut):
     assert res(PAD_RES_T2_RX) == PAD_DATA, f"RX_DATA 0x{res(PAD_RES_T2_RX):02x}"
     assert res(PAD_RES_T3_STAT) & 0xF == 0x3, f"T3 IRQ_STAT 0x{res(PAD_RES_T3_STAT):x} (done|nack)"
     assert res(PAD_RES_T3_STATUS) & 0x7 == 0x4, f"T3 STATUS 0x{res(PAD_RES_T3_STATUS):x} (nack only)"
+
+    # Functional coverage (bead h367): the events, register file and IRQ_STAT checks above passed.
+    for path in ("real_pad_write", "real_pad_read", "real_pad_addr_nack"):
+        COV.soc(path)
