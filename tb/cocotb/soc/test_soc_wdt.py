@@ -465,3 +465,86 @@ async def test_soc_wdt_rst_en(dut):
         f"(+{fall_cycle - bite_cycle}); {loop_commits_before_bite} loop commits before the bite; "
         f"last commit at {last_commit_cycle} (period={B_PERIOD_CYCLES})"
     )
+
+
+@cocotb.test()
+async def test_soc_wdt_rst_en_release(dut):
+    """RST_EN = 1: a bite holds the CPU domain in reset until an external reset releases it.
+
+    Bead 4pl8.  `test_soc_wdt_rst_en` stops at the silence window, so wdt_cpu_rst_req_q never
+    fell at SoC level.  Here, once the CPU domain is held in reset by the bite, the whole SoC is
+    reset and released, and the testbench checks the full reset-then-release recovery:
+
+      * the held state first: wdt_rst_req_o and wdt_cpu_rst_req_q high, cpu_domain_rst_n low;
+      * during the external reset wdt_cpu_rst_req_q falls (it is core_clk-synchronously reset) and
+        wdt_rst_req_o drops -- the WDT itself was reset, the one thing a CPU-domain-only bite
+        deliberately does not do;
+      * after release cpu_domain_rst_n rises again, the CPU re-boots from the ROM and commits the
+        firmware's configuration marker a second time, then spins (it is really running again);
+      * the dog is back to its reset state: no bite in the window straight after release.
+    """
+    await _setup(dut, _FW_B_HEX)
+
+    config_commits = 0
+    bite_cycle = None
+    held_cycle = None
+    for cycle_idx in range(B_TEST_TIMEOUT_CYCLES):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        if dut.commit_valid_o.value and int(dut.commit_pc_o.value) == B_CONFIG_DONE_PC:
+            config_commits += 1
+        if bite_cycle is None and _i(dut.wdt_rst_req_o):
+            bite_cycle = cycle_idx
+        if bite_cycle is not None and _i(dut.u_soc.cpu_domain_rst_n) == 0:
+            held_cycle = cycle_idx
+            break
+    assert config_commits == 1, f"expected one configuration commit before the bite, got {config_commits}"
+    assert held_cycle is not None, "the bite never held the CPU domain in reset"
+
+    # Let the held state settle, then check it before touching reset.
+    for _ in range(B_COMMIT_DRAIN_CYCLES + 20):
+        await RisingEdge(dut.clk_i)
+    await ReadOnly()
+    assert _i(dut.wdt_rst_req_o) == 1 and _i(dut.u_soc.wdt_cpu_rst_req_q) == 1
+    assert _i(dut.u_soc.cpu_domain_rst_n) == 0
+    await RisingEdge(dut.clk_i)
+
+    # ---- external reset: asserted for several cycles, then released ---------------------------
+    drive_soc_reset(dut, True)
+    req_q_fell = False
+    wdt_pin_fell = False
+    for _ in range(8):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        req_q_fell |= _i(dut.u_soc.wdt_cpu_rst_req_q) == 0
+        wdt_pin_fell |= _i(dut.wdt_rst_req_o) == 0
+    assert req_q_fell, "wdt_cpu_rst_req_q never fell during the external reset"
+    assert wdt_pin_fell, "wdt_rst_req_o stayed high through an external reset: the WDT was not reset"
+    await RisingEdge(dut.clk_i)
+    drive_soc_reset(dut, False)
+
+    # ---- recovery ------------------------------------------------------------------------------
+    domain_released = False
+    second_config = False
+    loop_commits = 0
+    early_bite = False
+    for cycle_idx in range(B_TEST_TIMEOUT_CYCLES):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        if _i(dut.u_soc.cpu_domain_rst_n):
+            domain_released = True
+        if _i(dut.wdt_rst_req_o) and not second_config:
+            early_bite = True
+        if dut.commit_valid_o.value:
+            pc = int(dut.commit_pc_o.value)
+            if pc == B_CONFIG_DONE_PC:
+                second_config = True
+            if pc == B_LOOP_PC and second_config:
+                loop_commits += 1
+        if second_config and loop_commits > 10:
+            break
+    assert domain_released, "cpu_domain_rst_n never rose after the external reset was released"
+    assert not early_bite, "wdt_rst_req_o rose before the re-booted firmware re-enabled the dog"
+    assert second_config, "the CPU never re-booted to the configuration marker"
+    assert loop_commits > 10, f"CPU spun only {loop_commits} times after re-boot: not really running"
+    assert _i(dut.u_soc.wdt_cpu_rst_req_q) == 0, "wdt_cpu_rst_req_q still high after recovery"
