@@ -34,6 +34,13 @@ Tests:
                                             functional enable is 0
   test_scan_out_placeholder_is_zero         defined 0 until Stage 2 insertion
   test_exit_scan_restores_functional        scan_mode back to 0: functional reset works again
+  test_cpu_macro_scan_boundary              (j41m.4) CPU macro scan pins: bit-exact
+                                            scan_in[7:6] map, control nets, pin leg
+                                            (dft_ctrl nets == raw ports here)
+  test_cpu_macro_scan_boundary_tap_leg      (j41m.4) same boundary under TAP serial scan
+                                            with the PINS at 0: macro scan_mode/scan_en
+                                            follow dft_scan_mode/dft_scan_en, not the
+                                            raw ports (kills mutants b and e)
   test_scan_gpu_reset_with_pmu_gpu_off      PMU holds the GPU domain in reset (real CPU-firmware
                                             power-down), THEN scan mode: gpu_domain_rst_n must
                                             follow scan_rst_ni (j41m.9, mutant g)
@@ -54,6 +61,7 @@ from pathlib import Path
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, ReadOnly, RisingEdge, Timer
+from jtag_driver import JtagDriver
 from soc_clocks import drive_dft_inactive, start_soc_clocks
 
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -227,6 +235,91 @@ async def test_scan_out_placeholder_is_zero(dut):
     dut.scan_mode_i.value = 0
     await Timer(2, units="ns")
     assert int(dut.scan_out_o.value) == 0
+
+
+@cocotb.test()
+async def test_cpu_macro_scan_boundary(dut):
+    """j41m.4: the CPU macro's scan pins are wired from dft_ctrl / the top scan vectors, bit-exact.
+
+    Chain indices [7:6] of scan_in_i/scan_out_o belong to u_cpu (bit 6 -> macro 0, 7 -> 1);
+    scan_mode/scan_en come from the dft_ctrl nets (NOT the raw ports); the macro's own scan_out_o
+    is the placeholder 0, so top scan_out_o[7:6] reads 0; test_en for the cache gates follows
+    scan_mode.
+    """
+    await _idle(dut)
+    soc = dut.u_soc
+    cpu = soc.u_cpu
+    # Inactive: everything 0 (bit-identical to the pre-DFT macro).
+    assert int(cpu.scan_mode_i.value) == 0 and int(cpu.scan_en_i.value) == 0
+    assert int(cpu.scan_in_i.value) == 0 and int(cpu.test_en_w.value) == 0
+    # Data mapping: only bits 7:6 reach the macro, in order.
+    for top, macro in ((0x3F, 0b00), (0x40, 0b01), (0x80, 0b10), (0xC0, 0b11), (0xFF, 0b11)):
+        dut.scan_in_i.value = top
+        await Timer(2, units="ns")
+        assert int(cpu.scan_in_i.value) == macro, (
+            f"scan_in_i=0x{top:02x}: macro saw {int(cpu.scan_in_i.value):02b}"
+        )
+    dut.scan_in_i.value = 0
+    # Control: macro mirrors the dft_ctrl nets (pin leg here; TAP leg is dft_ctrl's own suite).
+    dut.scan_mode_i.value = 1
+    dut.scan_en_i.value = 1
+    await Timer(2, units="ns")
+    assert int(soc.dft_scan_mode.value) == 1 and int(cpu.scan_mode_i.value) == 1
+    assert int(soc.dft_scan_en.value) == 1 and int(cpu.scan_en_i.value) == 1
+    assert int(cpu.test_en_w.value) == 1, "cache clock-gate test_en must follow scan_mode"
+    assert (int(dut.scan_out_o.value) >> 6) == 0, (
+        "macro scan_out_o is a placeholder 0 until Stage 2"
+    )
+    dut.scan_en_i.value = 0
+    dut.scan_mode_i.value = 0
+    await Timer(2, units="ns")
+    assert (
+        int(cpu.scan_mode_i.value) == 0
+        and int(cpu.scan_en_i.value) == 0
+        and int(cpu.test_en_w.value) == 0
+    )
+
+
+@cocotb.test()
+async def test_cpu_macro_scan_boundary_tap_leg(dut):
+    """j41m.4: serial (TAP) scan reaches the CPU macro through the dft_ctrl nets, not the raw pins.
+
+    With the scan_mode_i / scan_en_i PINS held 0, TAP serial scan makes dft_scan_mode = 1 and, in
+    Shift-DR only, dft_scan_en = 1. The macro must follow those nets. test_cpu_macro_scan_boundary
+    drives the pins, where the dft_ctrl nets and the raw ports are equal, so it cannot tell a macro
+    wired to dft_scan_en/dft_scan_mode from one wired straight to the ports; here they differ.
+    A macro fed from the raw ports would be scanned without shift enable under serial scan.
+    """
+    await _idle(dut)
+    soc = dut.u_soc
+    cpu = soc.u_cpu
+    assert int(dut.scan_mode_i.value) == 0 and int(dut.scan_en_i.value) == 0, "pins must stay 0"
+    drv = JtagDriver(
+        dut.tck_i, dut.tms_i, dut.tdi_i, dut.trst_ni, dut.tdo_o, period_ns=11, name="tap_leg"
+    )
+    await drv.start()
+    # Scan reset asserted (SCAN_RST=1) so the leg is independent of the PMU/reset history.
+    await drv.enter_scan(sel=0, rst=1)
+    await drv.goto("RTI")
+    assert int(soc.dft_scan_mode.value) == 1 and int(cpu.scan_mode_i.value) == 1, (
+        "macro scan_mode_i must follow dft_scan_mode (TAP), not the scan_mode_i pin"
+    )
+    assert int(cpu.test_en_w.value) == 1, "cache clock-gate test_en must follow the TAP scan mode"
+    assert int(soc.dft_scan_en.value) == 0 and int(cpu.scan_en_i.value) == 0, (
+        "no shift enable outside Shift-DR"
+    )
+    await drv.goto("SHDR")
+    await Timer(1, units="ns")
+    assert int(dut.scan_en_i.value) == 0, "scan_en_i pin must still be 0"
+    assert int(soc.dft_scan_en.value) == 1, "TAP Shift-DR must raise dft_scan_en"
+    assert int(cpu.scan_en_i.value) == 1, (
+        "macro scan_en_i must follow dft_scan_en (TAP), not the scan_en_i pin"
+    )
+    assert int(cpu.scan_mode_i.value) == 1
+    await drv.goto("RTI")
+    await Timer(1, units="ns")
+    assert int(cpu.scan_en_i.value) == 0, "shift enable must drop when the TAP leaves Shift-DR"
+    await drv.reset_tms()
 
 
 @cocotb.test()

@@ -86,7 +86,10 @@
 #                   isolation is part of the deferred true-power-gating scope
 #                   (docs/POWER_DOMAIN_EVALUATION.md section 4).
 #   observability   commit / trap / debug outputs to top-level pins; commit_valid_o
-#                   is clamped and qualifies the commit payload.
+#                   is clamped and qualifies the commit payload.  Also u_cpu's
+#                   scan_out_o (j41m.4): a test-only pin, meaningful only in the
+#                   SCAN power state where every domain is ON, and tied 0 by the
+#                   macro until Stage 2 stitches its chains.
 #
 # upf-check unclamped payload: u_cpu/axi_awaddr_o u_cpu/axi_awlen_o u_cpu/axi_awsize_o u_cpu/axi_awburst_o
 # upf-check unclamped payload: u_cpu/axi_wdata_o u_cpu/axi_wstrb_o u_cpu/axi_wlast_o
@@ -98,6 +101,7 @@
 # upf-check unclamped observability: u_cpu/commit_pc_o u_cpu/commit_insn_o u_cpu/trap_taken_o u_cpu/trap_cause_o
 # upf-check unclamped observability: u_cpu/debug_rs1_data_o u_cpu/debug_rs2_data_o u_cpu/debug_branch_taken_o
 # upf-check unclamped observability: u_cpu/debug_take_branch_jump_o u_cpu/debug_pc_src_o u_cpu/debug_state_o u_cpu/debug_ebreak_o
+# upf-check unclamped observability: u_cpu/scan_out_o
 #
 # Retention: NONE.  The old header said state is "rebuilt from SRAM on wakeup";
 # that was never true and nothing implements it.  pmu.sv emits ret_save /

@@ -168,6 +168,22 @@ set_false_path -from [get_ports rst_n_i]
 set_false_path -from [get_ports ext_irq_i]
 set_false_path -from [get_ports timer_irq_i]
 
+# DFT scan/test boundary (bead claude_verilog_test-j41m.4, DFT_ARCHITECTURE.md 14.10).
+# rv32i_cpu_top gained scan_mode_i, scan_en_i, scan_in_i[1:0], scan_out_o[1:0]. Today they
+# have NO functional consumer: scan_mode_i/scan_en_i/scan_in_i drive no cell input and
+# scan_out_o is a constant-0 tie (Stage 2 stitches the two chains inside this flow). They are
+# quasi-static test controls (scan_mode_i, scan_en_i change only between functional and test
+# phases, with the clocks stopped) or tester-timed shift data, so they are not timed against
+# the functional clk_i: a clk_i-relative input/output delay would invent a requirement no
+# hardware imposes and would fight the Stage 2 scan-mode SDC, which owns shift-clock timing.
+# Same treatment as the SoC SDC (sky130_soc.sdc, "DFT test access"). Deliberately NOT
+# set_case_analysis: this SDC also feeds Liberty generation, and a pinned constant could
+# prune arcs from the exported macro model once Stage 2 gives the pins real fanout.
+set_false_path -from [get_ports scan_mode_i]
+set_false_path -from [get_ports scan_en_i]
+set_false_path -from [get_ports {scan_in_i[*]}]
+set_false_path -to   [get_ports {scan_out_o[*]}]
+
 # Verification observability outputs
 set_false_path -to [get_ports commit_valid_o]
 set_false_path -to [get_ports {commit_pc_o[*]}]
