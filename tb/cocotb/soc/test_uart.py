@@ -28,6 +28,7 @@
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, ClockCycles, FallingEdge
+from cocotb.utils import get_sim_time
 
 from bfm.apb4_master import APB4Master
 import reg_maps  # noqa: E402
@@ -1097,3 +1098,143 @@ async def test_register_walk(dut):
     m = await _setup(dut)
     regs, first = reg_maps.BANKS["uart"]
     await walk_bank(m, regs, first, log=dut._log)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Bead shm5 — back-to-back RX framing.  The receiver must re-synchronise on the
+# START falling edge of EVERY frame; an 8N1 stream with no idle gap and a
+# bit-clock error of up to +/-3.5 % must be received byte-exact with no
+# framing error.  Before the fix the receiver returned to idle only at the END
+# of the stop bit, started each next frame one oversample tick late, and lost
+# framing after ~7 consecutive bytes.
+# ═════════════════════════════════════════════════════════════════════════════
+
+def _stream_levels(data, bit_clocks, err=0.0, stop_bits=1, lead=0, tail=0):
+    """Per-clock line levels of `data` sent back-to-back (no idle between frames).
+
+    `bit_clocks` is the nominal bit period in clocks; `err` the sender's bit-period
+    error as a fraction (+0.035 = sender 3.5 % slow).  Bit edges are placed at
+    round(n * bit_clocks * (1 + err)) over the whole stream, so the error is a
+    true frequency offset and does not average out between frames.  `lead` idle
+    clocks precede the first START (sweeps its alignment to the os_tick grid).
+    """
+    bits = []
+    for b in data:
+        bits += [0] + [(b >> i) & 1 for i in range(8)] + [1] * stop_bits
+    period = bit_clocks * (1.0 + err)
+    levels = [1] * lead
+    prev = 0
+    for n, v in enumerate(bits, start=1):
+        end = round(n * period)
+        levels += [v] * (end - prev)
+        prev = end
+    return levels + [1] * tail
+
+
+async def _rx_stream_check(dut, m, data, d_val, err=0.0, stop_bits=1, lead=0):
+    """Drive `data` back-to-back on uart_rx_i while an APB reader drains the RX
+    FIFO; require every byte in order, no framing error, nothing extra."""
+    bc = 16 * (d_val + 1)
+    await m.write(REG_UART_BAUD, d_val)
+    await m.write(REG_UART_CTRL, CTRL_RX_EN)
+    await ClockCycles(dut.clk, 2 * bc)
+    levels = _stream_levels(data, bc, err, stop_bits, lead=lead, tail=3 * bc)
+    driver = cocotb.start_soon(_drive_levels(dut, levels))
+
+    got, fe = [], False
+    t_end = get_sim_time("ns") + 2 * (len(levels) + 20 * bc)   # 2 ns clock
+    while get_sim_time("ns") < t_end:
+        st = await _status(m)
+        fe |= bool(st & STATUS_FRAMING_ERROR)
+        if st & STATUS_RX_VALID:
+            d, _ = await m.read(REG_UART_RX)
+            got.append(d & 0xFF)
+        else:
+            await ClockCycles(dut.clk, 4)
+        if len(got) >= len(data) and driver.done():
+            break
+    await driver
+    await ClockCycles(dut.clk, 4 * bc)
+    st = await _status(m)
+    fe |= bool(st & STATUS_FRAMING_ERROR)
+
+    tag = f"D={d_val} err={err:+.3f} stop={stop_bits} lead={lead}"
+    bad = next((i for i, (g, w) in enumerate(zip(got, data)) if g != w), None)
+    assert bad is None, (
+        f"[{tag}] first mismatch at byte {bad}: got 0x{got[bad]:02X}, "
+        f"expected 0x{data[bad]:02X} ({len(got)}/{len(data)} received)")
+    assert len(got) == len(data), (
+        f"[{tag}] received {len(got)} of {len(data)} bytes (all matched up to there)")
+    assert not fe, f"[{tag}] spurious framing_error on a well-formed stream"
+    assert st & STATUS_RX_EMPTY, f"[{tag}] extra byte left in RX FIFO: {st:#010x}"
+
+
+def _stream_bytes(n, seed):
+    import random
+    rng = random.Random(seed)
+    # corner values first (all-0 has no data edges, 0x55/0xAA alternate, 0x80/0x01
+    # put the only edge at one end), then pseudo-random fill.
+    corner = [0x00, 0xFF, 0x55, 0xAA, 0x80, 0x01, 0x7F, 0xFE]
+    return (corner + [rng.randrange(256) for _ in range(n)])[:n]
+
+
+@cocotb.test()
+async def test_rx_back_to_back_8n1_256(dut):
+    """256 consecutive 8N1 bytes with ZERO idle between frames (nominal baud), at
+    several START alignments relative to the os_tick grid and D = 0 / 1 / 3."""
+    m = await _setup(dut)
+    data = _stream_bytes(256, 0x5A17)
+    for d_val, lead in ((3, 0), (3, 37), (0, 5), (1, 11)):
+        await _rx_stream_check(dut, m, data, d_val, lead=lead)
+
+
+@cocotb.test()
+async def test_rx_back_to_back_8n1_baud_error(dut):
+    """Back-to-back 8N1 with the sender's bit clock off by -3.5 / -2 / +2 / +3.5 %
+    (D=3, 64 clocks/bit, so the error spans 1.3-2.2 clocks per bit)."""
+    m = await _setup(dut)
+    data = _stream_bytes(128, 0xBEEF)
+    for err in (-0.035, -0.02, 0.02, 0.035):
+        await _rx_stream_check(dut, m, data, 3, err=err, lead=13)
+
+
+@cocotb.test()
+async def test_rx_back_to_back_8n1_baud_error_wide_divisor(dut):
+    """Same +/-3.5 % sweep at D=9 (160 clocks/bit): coarser os_tick, finer error."""
+    m = await _setup(dut)
+    data = _stream_bytes(64, 0xC0DE)
+    for err in (-0.035, 0.035):
+        await _rx_stream_check(dut, m, data, 9, err=err, lead=71)
+
+
+@cocotb.test()
+async def test_rx_back_to_back_8n2(dut):
+    """The 8N2 form the bootloader host loader defaults to keeps working, nominal
+    and at +/-3.5 %."""
+    m = await _setup(dut)
+    data = _stream_bytes(128, 0x2222)
+    for err in (0.0, -0.035, 0.035):
+        await _rx_stream_check(dut, m, data, 3, err=err, stop_bits=2, lead=9)
+
+
+@cocotb.test()
+async def test_rx_back_to_back_bad_stop_recovers(dut):
+    """A bad (low) stop bit sets framing_error and still pushes the byte; after
+    the line idles, a back-to-back 8N1 stream is received cleanly and a re-sync
+    on the bad frame does not leave the receiver misaligned."""
+    m = await _setup(dut)
+    d_val, bc = 3, 64
+    await m.write(REG_UART_BAUD, d_val)
+    await m.write(REG_UART_CTRL, CTRL_RX_EN)
+    await ClockCycles(dut.clk, 2 * bc)
+
+    await _drive_levels(dut, _frame_levels(0xC3, bc, stop_bit=0))
+    await ClockCycles(dut.clk, 3 * bc)
+    st = await _status(m)
+    assert st & STATUS_FRAMING_ERROR and st & STATUS_RX_VALID, f"{st:#010x}"
+    d, _ = await m.read(REG_UART_RX)
+    assert d == 0xC3, f"{d:#010x}"
+    assert not (await _status(m)) & STATUS_FRAMING_ERROR, "read-to-clear"
+    assert (await _status(m)) & STATUS_RX_EMPTY, "bad-stop frame produced extra bytes"
+
+    await _rx_stream_check(dut, m, _stream_bytes(64, 0x0BAD), d_val, lead=5)
