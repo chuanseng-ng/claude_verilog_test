@@ -104,3 +104,22 @@ sky130-cpu-pin-lock-check` reports the new pin as "pending" and still passes. Af
 `NEW_LEF=<run>/final/lef/rv32i_cpu_top.lef` to prove no existing pin moved.
 
 The same exposure exists on the ASAP7 CPU and GPU macros (`pnr/asap7/`); the lock is not applied there.
+
+## v5: MBIST boundary (bead c54a, DFT_ARCHITECTURE.md 16.7)
+
+96 pins are added: `mbist_run_i` and `mbist_cfg_i[25:0]` (27 inputs) on the **N** edge, `mbist_status_o[68:0]`
+(69 outputs) on the **S** edge. N and S were chosen because they are the least dense edges (101 and 97 pins over
+3600 um, against 113 over 1800 um on E); after the change N has 128 and S 166 (46 pins/mm, below E's 63).
+
+`pin_template.def` was extended WITHOUT moving any existing pin: there is no free contiguous edge segment (each
+edge is already spread over its full length by the ioplacer), so every new pin sits in the middle of an existing
+inter-pin gap, snapped to the met2 track grid (230 nm + k * 460 nm). N: gaps 60..86 (east half, nearest the
+scan pins, bits in order), S: gaps 24..92 (bits in order). Resulting pitch next to a neighbour is 17.4 um (N)
+and 17.9-18.9 um (S), far above the metal spacing. `make -C pnr sky130-cpu-pin-lock-check` reports the 96 pins
+as "pending (in template, not yet in LEF)" until the re-harden; after it, run it with
+`NEW_LEF=<run>/final/lef/rv32i_cpu_top.lef` to prove nothing moved. The template DEF diff against main is
+additions plus the two count lines (`PINS`/`NETS` 407 -> 503).
+
+`pin_order.cfg` only decides which pins exist per side (`ERRORS_ON_UNMATCHED_IO: both`); the template decides where.
+The ASAP7 CPU macro (`pnr/asap7/cpu/pin_order.cfg`, an explicit list that already lacks the j41m.4 scan pins) is not
+changed: its re-harden is shelved (ma7/lxv/2kn) and j41m.13 must regenerate it with the DFT and MBIST pins.
