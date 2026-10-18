@@ -2034,11 +2034,16 @@ print-soc-ci-suites:
 SHARD ?=
 NSHARDS ?=
 SOC_SUITES_RAN ?= $(SIM_BUILD_ROOT)/suites_ran.txt
+# Cost model for SHARD=/NSHARDS= (bead 9ayu.2).  Empty = the script's default, the INSTRUMENTED
+# (COVERAGE=1) timings of soc_coverage.yml.  The plain cocotb.yml shards pass the uninstrumented
+# file (tools/verif/soc_shard_weights_plain.json), because instrumented and plain runs scale
+# differently per suite and a balance tuned for one is poor for the other.
+SOC_SHARD_WEIGHTS ?=
 ifneq ($(strip $(SHARD)),)
   ifeq ($(strip $(NSHARDS)),)
     $(error SHARD=$(SHARD) needs NSHARDS=<n>)
   endif
-  SUITES = $(shell $(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/soc_shards.py select --shard $(SHARD) --nshards $(NSHARDS) --suites "$(SOC_CI_SUITES)" --splits "$(SOC_CI_SPLITS)")
+  SUITES = $(shell $(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/soc_shards.py $(if $(strip $(SOC_SHARD_WEIGHTS)),--weights $(SOC_SHARD_WEIGHTS)) select --shard $(SHARD) --nshards $(NSHARDS) --suites "$(SOC_CI_SUITES)" --splits "$(SOC_CI_SPLITS)")
 endif
 .PHONY: soc_ci_shard
 soc_ci_shard: check-space
