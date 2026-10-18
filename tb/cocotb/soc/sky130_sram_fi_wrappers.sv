@@ -25,4 +25,26 @@ module sky130_sram_4kbyte_1rw1r_32x1024_8 (
     );
 
 endmodule : sky130_sram_4kbyte_1rw1r_32x1024_8
+
+// The 1 KB macro of the CPU caches (tag + 4 data per cache): same stand-in, 256 words (c54a).
+module sky130_sram_1kbyte_1rw1r_32x256_8 (
+    input  logic        clk0,
+    input  logic        csb0,
+    input  logic        web0,
+    input  logic [3:0]  wmask0,
+    input  logic [7:0]  addr0,
+    input  logic [31:0] din0,
+    output logic [31:0] dout0,
+    input  logic        clk1,
+    input  logic        csb1,
+    input  logic [7:0]  addr1,
+    output logic [31:0] dout1
+);
+
+    sram_fi_core #(.AW(8)) u_core (
+        .clk0(clk0), .csb0(csb0), .web0(web0), .wmask0(wmask0), .addr0(addr0), .din0(din0), .dout0(dout0),
+        .clk1(clk1), .csb1(csb1), .addr1(addr1), .dout1(dout1)
+    );
+
+endmodule : sky130_sram_1kbyte_1rw1r_32x256_8
 /* verilator lint_on DECLFILENAME */

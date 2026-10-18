@@ -444,6 +444,60 @@ MBIST_FI_EQUIV_SOURCES = \
 	$(SOC_DIR)/sram_fi_core.sv \
 	$(SOC_DIR)/tb_sram_fi_equiv.sv
 
+# Bead claude_verilog_test-c54a: the REAL rv32i_cpu_top (+define+SRAM_SKY130, ten collars and the in-macro MBIST
+# controller) behind dft_ctrl + soc_mbist, against fault-injecting stand-ins carrying the 1 KB macro's name.
+MBIST_CPU_MACRO_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/soc_addr_map_pkg.sv \
+	$(RTL)/cpu/core/rv32i_pipeline_pkg.sv \
+	$(RTL)/mem/rv32i_cache_pkg.sv \
+	$(RTL)/cpu/core/rv32i_alu.sv \
+	$(RTL)/cpu/core/rv32i_branch_comp.sv \
+	$(RTL)/cpu/core/rv32i_imm_gen.sv \
+	$(RTL)/cpu/core/rv32i_regfile.sv \
+	$(RTL)/cpu/core/rv32i_decode.sv \
+	$(RTL)/cpu/core/rv32i_forwarding_unit.sv \
+	$(RTL)/cpu/core/rv32i_hazard_unit.sv \
+	$(RTL)/cpu/core/rv32i_interrupt_ctrl.sv \
+	$(RTL)/cpu/core/rv32i_csr_file.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_if.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_id.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_ex.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_ex1c.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_ex1b.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_ex2.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_mem.sv \
+	$(RTL)/cpu/core/pipeline/rv32i_pipeline_wb.sv \
+	$(RTL)/mem/rv32i_icache.sv \
+	$(RTL)/mem/rv32i_dcache.sv \
+	$(RTL)/mem/rv32i_cache_arbiter.sv \
+	$(RTL)/cpu/core/rv32i_core.sv \
+	$(RTL)/cpu/rv32i_cpu_top.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
+	$(RTL)/soc/cdc/cdc_reset_sync.sv \
+	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
+	$(RTL)/mem/rv32i_clock_gate.sv \
+	$(RTL)/soc/dft/dft_ctrl_ports.sv \
+	$(RTL)/soc/dft/jtag_tap.sv \
+	$(RTL)/soc/dft/dft_clk_switch.sv \
+	$(RTL)/soc/dft/dft_rst_mux.sv \
+	$(RTL)/soc/dft/dft_ctrl.sv \
+	$(RTL)/soc/dft/mbist_ctrl.sv \
+	$(RTL)/soc/dft/mbist_xing.sv \
+	$(RTL)/soc/dft/mbist_ctl_hold.sv \
+	$(RTL)/soc/dft/mbist_status_sync.sv \
+	$(RTL)/soc/dft/mem_collar.sv \
+	$(RTL)/soc/dft/soc_mbist.sv \
+	$(SOC_DIR)/sram_fi_core.sv \
+	$(SOC_DIR)/sky130_sram_fi_wrappers.sv \
+	$(SOC_DIR)/tb_mbist_cpu_macro.sv
+
+# 1 KB macro: FI model with no fault armed vs the REAL 1 KB simulation model.
+MBIST_FI_EQUIV_1K_SOURCES = \
+	$(SIM_DIR)/sky130_sram_1kbyte_1rw1r_32x256_8.sv \
+	$(SOC_DIR)/sram_fi_core.sv \
+	$(SOC_DIR)/tb_sram_fi_equiv_1k.sv
+
 # Bead claude_verilog_test-j41m.3: dft_ctrl = jtag_tap + the unchanged 1a pin leg + the TCK
 # scan-clock gate (rv32i_clock_gate) + the combiner; the wrapper also instantiates the 1a
 # dft_ctrl_ports as the golden reference.
@@ -900,7 +954,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint cdc_sync cdc_sync_lint cdc_sync_stages1_neg cdc_gray_fifo cdc_gray_fifo_sim cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg periph_sync_stages clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint mbist_ctrl mbist_ctrl_lint mbist_tap mbist_tap_lint mbist_soc_slice mbist_soc_slice_lint mbist_fi_equiv mbist_fi_equiv_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation soc_uart_boot
+.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint cdc_sync cdc_sync_lint cdc_sync_stages1_neg cdc_gray_fifo cdc_gray_fifo_sim cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg periph_sync_stages clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint mbist_ctrl mbist_ctrl_lint mbist_tap mbist_tap_lint mbist_soc_slice mbist_soc_slice_lint mbist_fi_equiv mbist_fi_equiv_lint mbist_fi_equiv_1k mbist_fi_equiv_1k_lint mbist_cpu_macro mbist_cpu_macro_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation soc_uart_boot
 crossbar:
 	$(MAKE) MODULE=test_crossbar,test_crossbar_errors TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -1482,6 +1536,24 @@ mbist_fi_equiv: mbist_fi_equiv_lint
 		VERILOG_SOURCES="$(MBIST_FI_EQUIV_SOURCES)" \
 		$(BUILD_ARGS)
 
+mbist_fi_equiv_1k_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-DECLFILENAME --top-module tb_sram_fi_equiv_1k $(MBIST_FI_EQUIV_1K_SOURCES)
+
+mbist_fi_equiv_1k: mbist_fi_equiv_1k_lint
+	$(MAKE) MODULE=test_sram_fi_equiv TOPLEVEL=tb_sram_fi_equiv_1k \
+		VERILOG_SOURCES="$(MBIST_FI_EQUIV_1K_SOURCES)" \
+		$(BUILD_ARGS)
+
+mbist_cpu_macro_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM -Wno-PINCONNECTEMPTY \
+		+define+SRAM_SKY130 --top-module tb_mbist_cpu_macro $(MBIST_CPU_MACRO_SOURCES)
+
+mbist_cpu_macro: mbist_cpu_macro_lint
+	$(MAKE) MODULE=test_mbist_cpu_macro TOPLEVEL=tb_mbist_cpu_macro \
+		VERILOG_SOURCES="$(MBIST_CPU_MACRO_SOURCES)" \
+		EXTRA_ARGS="+define+SRAM_SKY130" \
+		$(BUILD_ARGS)
+
 dft_clk_switch_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
 		--top-module tb_dft_clk_switch \
@@ -1965,9 +2037,11 @@ soc_all_ci: check-space
 	$(MAKE) dft_clk_switch
 	$(MAKE) dft_ctrl
 	$(MAKE) mbist_fi_equiv
+	$(MAKE) mbist_fi_equiv_1k
 	$(MAKE) mbist_ctrl
 	$(MAKE) mbist_tap
 	$(MAKE) mbist_soc_slice
+	$(MAKE) mbist_cpu_macro
 	$(MAKE) soc_boot
 	$(MAKE) soc_periph
 	$(MAKE) soc_coherency
