@@ -69,5 +69,38 @@ N-edge signal pins** (the ioplacer re-spaces the whole edge: max shift 214.4 um,
 same layer met2). The 6 new pins sit at the east end of N (x = 3393.5 .. 3570.9 um). `ERRORS_ON_UNMATCHED_IO:
 both` did its job (every port bit matched one entry). Consequence: the SoC must be re-placed/re-routed
 against the new LEF (it was, RUN_2026-10-16_04-53-49); a stale SoC run against the old LEF is invalid.
-If a later change must not move the N pins, they would have to be pinned at fixed coordinates (a different
-mechanism than this file), which was not attempted.
+The coordinates are now frozen by `pin_template.def` (v4 below).
+
+## v4: frozen pin coordinates (bead lu09)
+
+`pin_template.def` is derived from the committed `macro/rv32i_cpu_top.lef` (`python3 tools/verif/pin_lock.py gen
+macro/rv32i_cpu_top.lef pin_template.def`) and wired in as `FP_DEF_TEMPLATE` with `FP_TEMPLATE_MATCH_MODE: strict`.
+`pin_order.cfg` is unchanged and still decides which pins exist and on which side; the template decides where.
+LibreLane 2.4.13 runs `Odb.ApplyDEFTemplate` right after `Odb.CustomIOPlacement` and overwrites each pin's shape with
+the template's, so whatever spacing `CustomIOPlacement` computed is discarded.
+
+Mechanisms evaluated (LibreLane 2.4.13 source, `/home/neuromorphic/Downloads/Github/librelane`):
+
+| Mechanism | Verdict |
+| --------- | ------- |
+| `FP_DEF_TEMPLATE` (chosen) | Exact coordinates, byte-identical to the committed LEF. Strict mode exits `EX_DATAERR` when the design and template pin sets differ in either direction, so a new pin fails loudly instead of moving anything. |
+| Reserved spare slots (`$N` virtual pins in `pin_order.cfg`) | Rejected. `equally_spaced_sequence` spaces `floor(tracks / (pins + virtual))` apart, so inserting `$N` now would itself move all 101 N pins, and a later pin only keeps the pitch while spares remain. It also fails silently once they run out. |
+| Explicit placement via `FP_IO_*` | Does not exist in 2.4.13: those variables set pin length, extension and thickness only. `OpenROAD.IOPlacement` (the only `place_pins` caller) is skipped when `FP_PIN_ORDER_CFG` is set. |
+| Custom IO placement script / plugin step | Would work, but is new code to own for what `FP_DEF_TEMPLATE` already does. |
+
+Known limits of the chosen mechanism:
+
+- `GlobalPlacementSkipIO` is skipped whenever a template is set (`openroad.py:1407`). That pass only seeds a
+  placement that `OpenROAD.GlobalPlacement` redoes (`PL_SKIP_INITIAL_PLACEMENT` defaults to false), so no effect on
+  cell placement is expected, but this was not measured. Treat the first harden under the lock as not a single-variable
+  comparison with RUN_2026-10-16_02-27-26.
+- `ApplyDEFTemplate` does not check that two template pins overlap (measured: two pins on one slot, exit 0, no
+  message). `tools/verif/pin_lock.py check` does, together with min spacing and the template-vs-LEF comparison.
+- The template does not move `DIEAREA`; a die change only produces a warning. A die change invalidates the lock.
+
+Adding a pin: add its name to `pin_order.cfg`; add a pin line (same format, a free slot, mfg-grid aligned) to
+`pin_template.def`; re-harden; commit the new LEF. Between the template edit and the new LEF, `make -C pnr
+sky130-cpu-pin-lock-check` reports the new pin as "pending" and still passes. After the harden, run it with
+`NEW_LEF=<run>/final/lef/rv32i_cpu_top.lef` to prove no existing pin moved.
+
+The same exposure exists on the ASAP7 CPU and GPU macros (`pnr/asap7/`); the lock is not applied there.

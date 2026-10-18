@@ -54,3 +54,6 @@ asap7/schematics/
 .dolt/
 *.db
 .beads-credential-key
+
+# Bead lu09: the frozen Sky130 CPU macro pin template is a tracked input, not a flow output.
+!sky130/cpu/pin_template.def
