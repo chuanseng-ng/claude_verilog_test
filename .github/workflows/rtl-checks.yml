@@ -22,6 +22,9 @@ on:
       # netlists it reads. Without these, an edit that breaks the check would not run it.
       - 'tools/dft/**'
       - 'tb/tests/test_dft_scan_check.py'
+      # PMU registered-outputs structural gate (bead ktwt).
+      - 'tools/verif/check_registered_outputs.py'
+      - 'tb/tests/test_pmu_registered_outputs.py'
       - 'pnr/Makefile'
       - 'pnr/sky130/soc/*.sv'
       - 'pnr/asap7/soc/*.sv'
@@ -39,6 +42,9 @@ on:
       # netlists it reads. Without these, an edit that breaks the check would not run it.
       - 'tools/dft/**'
       - 'tb/tests/test_dft_scan_check.py'
+      # PMU registered-outputs structural gate (bead ktwt).
+      - 'tools/verif/check_registered_outputs.py'
+      - 'tb/tests/test_pmu_registered_outputs.py'
       - 'pnr/Makefile'
       - 'pnr/sky130/soc/*.sv'
       - 'pnr/asap7/soc/*.sv'
@@ -225,6 +231,32 @@ jobs:
           echo "dft scan-check pytest: ${passed:-0} passed (floor ${EXPECT_TESTS})"
           if [ "${passed:-0}" -lt "${EXPECT_TESTS}" ]; then
             echo "::error::only ${passed:-0} test_dft_scan_check.py tests passed, expected >= ${EXPECT_TESTS}"
+            exit 1
+          fi
+
+      # PMU registered outputs (bead ktwt). The PMU's clk_en/iso_en/rst_n/ret outputs drive
+      # cdc_sync D pins, the async clear of u_cpu_pmu_rst_sync and the GPU async reset, so
+      # each must be a flop Q (a binary-state decode can glitch, and no zero-delay simulation
+      # can show that). The test proves it on the sv2v->yosys netlist and carries one mutation
+      # per output. Same no-skip rule as the DFT step: a skipped gate is not a passing gate.
+      - name: PMU registered-outputs gate (pinned yosys + sv2v, must not skip)
+        if: ${{ !cancelled() }}
+        env:
+          YOSYS: ${{ github.workspace }}/sim/build/cdc/oss-cad-suite/bin/yosys
+          SV2V: ${{ github.workspace }}/sim/build/cdc/sv2v-Linux/sv2v
+          EXPECT_TESTS: '12'
+        run: |
+          python3 -m pip install --user pytest
+          log="${RUNNER_TEMP}/pmu_regout_pytest.log"
+          python3 -m pytest tb/tests/test_pmu_registered_outputs.py -v -rs -p no:cacheprovider 2>&1 | tee "${log}"
+          if grep -Eq '[0-9]+ skipped|SKIPPED' "${log}"; then
+            echo "::error::test_pmu_registered_outputs.py skipped tests; the gate did not run"
+            exit 1
+          fi
+          passed="$(grep -Eo '[0-9]+ passed' "${log}" | tail -n 1 | grep -Eo '[0-9]+' || true)"
+          echo "pmu registered-outputs pytest: ${passed:-0} passed (floor ${EXPECT_TESTS})"
+          if [ "${passed:-0}" -lt "${EXPECT_TESTS}" ]; then
+            echo "::error::only ${passed:-0} tests passed, expected >= ${EXPECT_TESTS}"
             exit 1
           fi
 

@@ -35,6 +35,18 @@
 // current one completes. This avoids ill-defined half-isolated / half-gated
 // states.
 //
+// Registered outputs (bead ktwt): every *_clk_en_o / *_iso_en_o / *_rst_n_o /
+// *_ret_save_o / *_ret_restore_o is the Q of a dedicated flop, never a
+// combinational decode of the binary dom_state_q. soc_top feeds these to
+// cdc_sync D pins, to the ASYNC clear of u_cpu_pmu_rst_sync and (GPU) to an
+// async reset and an isolation mux select, where a decode glitch is an event
+// (a Vivado CDC triage found glitch-capable transitions on 4 of the 9 state
+// changes, including a runt reset on DOM_PU_RESTORE -> DOM_PU_ISO). The flops
+// load the decode of the NEXT state, so every output is visible in exactly the
+// cycle the old combinational decode showed it: no latency change, the UPF
+// order and the one-action-per-cycle walk are untouched. The reset values are
+// the DOM_ON decode (see "Reset defaults" below).
+//
 // Retention scope (explicit no-op): cpu_ret_save_o/cpu_ret_restore_o (and GPU
 // equivalents) are emitted in the correct order for verification to assert,
 // but there is no retention-cell silicon in this model (phase5_soc.upf header,
@@ -282,127 +294,165 @@ module pmu #(
         endcase
     end
 
-    logic clk_en_w      [N_DOM];
-    logic iso_en_w      [N_DOM];
-    logic rst_n_w       [N_DOM];
-    logic ret_save_w    [N_DOM];
-    logic ret_restore_w [N_DOM];
+    // Registered sequencing outputs (ktwt). These drive cdc_sync D pins and the
+    // ASYNC clear of u_cpu_pmu_rst_sync in soc_top, and (GPU) the async reset
+    // and the handshake isolation mux of the GPU domain. A combinational
+    // decode of the 4-bit binary dom_state_q can glitch when several state
+    // bits change on one edge (4 of the 9 transitions; a runt reset on
+    // DOM_PU_RESTORE -> DOM_PU_ISO), and a glitch on an async clear or a
+    // synchroniser D pin is a real event. Each output is therefore the Q of
+    // its own flop, loaded with the decode of the NEXT state: the value seen
+    // at cycle t is exactly decode(dom_state_q at t), so no output moves one
+    // cycle earlier or later than in the combinational version (UPF order and
+    // test_pmu's per-cycle expectations are unchanged).
+    logic clk_en_q      [N_DOM];
+    logic iso_en_q      [N_DOM];
+    logic rst_n_q       [N_DOM];
+    logic ret_save_q    [N_DOM];
+    logic ret_restore_q [N_DOM];
+
+    // Next-state decode and its output decode are combinational and may
+    // glitch freely: they only ever feed flop D pins.
+    pmu_dom_state_e dom_state_d [N_DOM];
+    logic clk_en_d      [N_DOM];
+    logic iso_en_d      [N_DOM];
+    logic rst_n_d       [N_DOM];
+    logic ret_save_d    [N_DOM];
+    logic ret_restore_d [N_DOM];
 
     genvar d;
     generate
         for (d = 0; d < N_DOM; d++) begin : g_dom_seq
 
-            // ── State register (synchronous reset -- see header) ────────────
-            always_ff @(posedge clk_i) begin
-                if (!rst_n_i) begin
-                    dom_state_q[d] <= DOM_ON;
-                end else begin
-                    unique case (dom_state_q[d])
-                        DOM_ON:         dom_state_q[d] <= dom_target_on[d] ? DOM_ON : DOM_PD_SAVE;
-                        DOM_PD_SAVE:    dom_state_q[d] <= DOM_PD_ISO;
-                        DOM_PD_ISO:     dom_state_q[d] <= DOM_PD_GATE;
-                        DOM_PD_GATE:    dom_state_q[d] <= DOM_OFF;
-                        DOM_OFF:        dom_state_q[d] <= dom_target_on[d] ? DOM_PU_RST : DOM_OFF;
-                        DOM_PU_RST:     dom_state_q[d] <= DOM_PU_CLK;
-                        DOM_PU_CLK:     dom_state_q[d] <= DOM_PU_RESTORE;
-                        DOM_PU_RESTORE: dom_state_q[d] <= DOM_PU_ISO;
-                        DOM_PU_ISO:     dom_state_q[d] <= DOM_ON;
-                        default:        dom_state_q[d] <= DOM_ON;
-                    endcase
-                end
-            end
-
-            // ── Output decode (combinational; one action live per state) ────
+            // ── Next-state logic ────────────────────────────────────────────
             always_comb begin
                 unique case (dom_state_q[d])
+                    DOM_ON:         dom_state_d[d] = dom_target_on[d] ? DOM_ON : DOM_PD_SAVE;
+                    DOM_PD_SAVE:    dom_state_d[d] = DOM_PD_ISO;
+                    DOM_PD_ISO:     dom_state_d[d] = DOM_PD_GATE;
+                    DOM_PD_GATE:    dom_state_d[d] = DOM_OFF;
+                    DOM_OFF:        dom_state_d[d] = dom_target_on[d] ? DOM_PU_RST : DOM_OFF;
+                    DOM_PU_RST:     dom_state_d[d] = DOM_PU_CLK;
+                    DOM_PU_CLK:     dom_state_d[d] = DOM_PU_RESTORE;
+                    DOM_PU_RESTORE: dom_state_d[d] = DOM_PU_ISO;
+                    DOM_PU_ISO:     dom_state_d[d] = DOM_ON;
+                    default:        dom_state_d[d] = DOM_ON;
+                endcase
+            end
+
+            // ── Output decode of the NEXT state (one action live per state) ─
+            always_comb begin
+                unique case (dom_state_d[d])
                     DOM_ON: begin
-                        clk_en_w[d] = 1'b1;
-                        iso_en_w[d] = 1'b0;
-                        rst_n_w[d] = 1'b1;
-                        ret_save_w[d] = 1'b0;
-                        ret_restore_w[d] = 1'b0;
+                        clk_en_d[d] = 1'b1;
+                        iso_en_d[d] = 1'b0;
+                        rst_n_d[d] = 1'b1;
+                        ret_save_d[d] = 1'b0;
+                        ret_restore_d[d] = 1'b0;
                     end
                     DOM_PD_SAVE: begin
-                        clk_en_w[d] = 1'b1;
-                        iso_en_w[d] = 1'b0;
-                        rst_n_w[d] = 1'b1;
-                        ret_save_w[d] = 1'b1;
-                        ret_restore_w[d] = 1'b0;
+                        clk_en_d[d] = 1'b1;
+                        iso_en_d[d] = 1'b0;
+                        rst_n_d[d] = 1'b1;
+                        ret_save_d[d] = 1'b1;
+                        ret_restore_d[d] = 1'b0;
                     end
                     DOM_PD_ISO: begin
-                        clk_en_w[d] = 1'b1;
-                        iso_en_w[d] = 1'b1;
-                        rst_n_w[d] = 1'b1;
-                        ret_save_w[d] = 1'b0;
-                        ret_restore_w[d] = 1'b0;
+                        clk_en_d[d] = 1'b1;
+                        iso_en_d[d] = 1'b1;
+                        rst_n_d[d] = 1'b1;
+                        ret_save_d[d] = 1'b0;
+                        ret_restore_d[d] = 1'b0;
                     end
                     DOM_PD_GATE: begin
-                        clk_en_w[d] = 1'b0;
-                        iso_en_w[d] = 1'b1;
-                        rst_n_w[d] = 1'b1;
-                        ret_save_w[d] = 1'b0;
-                        ret_restore_w[d] = 1'b0;
+                        clk_en_d[d] = 1'b0;
+                        iso_en_d[d] = 1'b1;
+                        rst_n_d[d] = 1'b1;
+                        ret_save_d[d] = 1'b0;
+                        ret_restore_d[d] = 1'b0;
                     end
                     DOM_OFF: begin
-                        clk_en_w[d] = 1'b0;
-                        iso_en_w[d] = 1'b1;
-                        rst_n_w[d] = 1'b0;
-                        ret_save_w[d] = 1'b0;
-                        ret_restore_w[d] = 1'b0;
+                        clk_en_d[d] = 1'b0;
+                        iso_en_d[d] = 1'b1;
+                        rst_n_d[d] = 1'b0;
+                        ret_save_d[d] = 1'b0;
+                        ret_restore_d[d] = 1'b0;
                     end
                     DOM_PU_RST: begin
-                        clk_en_w[d] = 1'b0;
-                        iso_en_w[d] = 1'b1;
-                        rst_n_w[d] = 1'b1;
-                        ret_save_w[d] = 1'b0;
-                        ret_restore_w[d] = 1'b0;
+                        clk_en_d[d] = 1'b0;
+                        iso_en_d[d] = 1'b1;
+                        rst_n_d[d] = 1'b1;
+                        ret_save_d[d] = 1'b0;
+                        ret_restore_d[d] = 1'b0;
                     end
                     DOM_PU_CLK: begin
-                        clk_en_w[d] = 1'b1;
-                        iso_en_w[d] = 1'b1;
-                        rst_n_w[d] = 1'b1;
-                        ret_save_w[d] = 1'b0;
-                        ret_restore_w[d] = 1'b0;
+                        clk_en_d[d] = 1'b1;
+                        iso_en_d[d] = 1'b1;
+                        rst_n_d[d] = 1'b1;
+                        ret_save_d[d] = 1'b0;
+                        ret_restore_d[d] = 1'b0;
                     end
                     DOM_PU_RESTORE: begin
-                        clk_en_w[d] = 1'b1;
-                        iso_en_w[d] = 1'b1;
-                        rst_n_w[d] = 1'b1;
-                        ret_save_w[d] = 1'b0;
-                        ret_restore_w[d] = 1'b1;
+                        clk_en_d[d] = 1'b1;
+                        iso_en_d[d] = 1'b1;
+                        rst_n_d[d] = 1'b1;
+                        ret_save_d[d] = 1'b0;
+                        ret_restore_d[d] = 1'b1;
                     end
                     DOM_PU_ISO: begin
-                        clk_en_w[d] = 1'b1;
-                        iso_en_w[d] = 1'b0;
-                        rst_n_w[d] = 1'b1;
-                        ret_save_w[d] = 1'b0;
-                        ret_restore_w[d] = 1'b0;
+                        clk_en_d[d] = 1'b1;
+                        iso_en_d[d] = 1'b0;
+                        rst_n_d[d] = 1'b1;
+                        ret_save_d[d] = 1'b0;
+                        ret_restore_d[d] = 1'b0;
                     end
                     default: begin
-                        clk_en_w[d] = 1'b1;
-                        iso_en_w[d] = 1'b0;
-                        rst_n_w[d] = 1'b1;
-                        ret_save_w[d] = 1'b0;
-                        ret_restore_w[d] = 1'b0;
+                        clk_en_d[d] = 1'b1;
+                        iso_en_d[d] = 1'b0;
+                        rst_n_d[d] = 1'b1;
+                        ret_save_d[d] = 1'b0;
+                        ret_restore_d[d] = 1'b0;
                     end
                 endcase
+            end
+
+            // ── State + output registers (synchronous reset -- see header) ──
+            // Reset values are decode(DOM_ON): ungated, not isolated, reset
+            // released, no retention pulse -- identical to what the former
+            // combinational outputs showed during reset.
+            always_ff @(posedge clk_i) begin
+                if (!rst_n_i) begin
+                    dom_state_q[d]    <= DOM_ON;
+                    clk_en_q[d]       <= 1'b1;
+                    iso_en_q[d]       <= 1'b0;
+                    rst_n_q[d]        <= 1'b1;
+                    ret_save_q[d]     <= 1'b0;
+                    ret_restore_q[d]  <= 1'b0;
+                end else begin
+                    dom_state_q[d]    <= dom_state_d[d];
+                    clk_en_q[d]       <= clk_en_d[d];
+                    iso_en_q[d]       <= iso_en_d[d];
+                    rst_n_q[d]        <= rst_n_d[d];
+                    ret_save_q[d]     <= ret_save_d[d];
+                    ret_restore_q[d]  <= ret_restore_d[d];
+                end
             end
 
         end : g_dom_seq
     endgenerate
 
     // ── Map per-domain arrays to named output ports ─────────────────────────
-    assign cpu_clk_en_o      = clk_en_w[DOM_CPU];
-    assign cpu_iso_en_o      = iso_en_w[DOM_CPU];
-    assign cpu_rst_n_o       = rst_n_w[DOM_CPU];
-    assign cpu_ret_save_o    = ret_save_w[DOM_CPU];
-    assign cpu_ret_restore_o = ret_restore_w[DOM_CPU];
+    assign cpu_clk_en_o      = clk_en_q[DOM_CPU];
+    assign cpu_iso_en_o      = iso_en_q[DOM_CPU];
+    assign cpu_rst_n_o       = rst_n_q[DOM_CPU];
+    assign cpu_ret_save_o    = ret_save_q[DOM_CPU];
+    assign cpu_ret_restore_o = ret_restore_q[DOM_CPU];
 
-    assign gpu_clk_en_o      = clk_en_w[DOM_GPU];
-    assign gpu_iso_en_o      = iso_en_w[DOM_GPU];
-    assign gpu_rst_n_o       = rst_n_w[DOM_GPU];
-    assign gpu_ret_save_o    = ret_save_w[DOM_GPU];
-    assign gpu_ret_restore_o = ret_restore_w[DOM_GPU];
+    assign gpu_clk_en_o      = clk_en_q[DOM_GPU];
+    assign gpu_iso_en_o      = iso_en_q[DOM_GPU];
+    assign gpu_rst_n_o       = rst_n_q[DOM_GPU];
+    assign gpu_ret_save_o    = ret_save_q[DOM_GPU];
+    assign gpu_ret_restore_o = ret_restore_q[DOM_GPU];
 
     // =========================================================================
     // STATUS / DOMAIN_EN: HW-written every cycle (same pattern as
@@ -421,16 +471,16 @@ module pmu #(
     assign hw_wen  [2]   = 1'b1;
     assign hw_wdata[2]   = {
         22'b0,
-        ret_restore_w[DOM_GPU],
-        ret_save_w[DOM_GPU],
-        ret_restore_w[DOM_CPU],
-        ret_save_w[DOM_CPU],
-        rst_n_w[DOM_GPU],
-        rst_n_w[DOM_CPU],
-        iso_en_w[DOM_GPU],
-        iso_en_w[DOM_CPU],
-        clk_en_w[DOM_GPU],
-        clk_en_w[DOM_CPU]
+        ret_restore_q[DOM_GPU],
+        ret_save_q[DOM_GPU],
+        ret_restore_q[DOM_CPU],
+        ret_save_q[DOM_CPU],
+        rst_n_q[DOM_GPU],
+        rst_n_q[DOM_CPU],
+        iso_en_q[DOM_GPU],
+        iso_en_q[DOM_CPU],
+        clk_en_q[DOM_GPU],
+        clk_en_q[DOM_CPU]
     };
 
 endmodule : pmu

@@ -566,6 +566,14 @@ fails if a top-level instance is added to or removed from `soc_top` without upda
   both SRAM arms. AXI address/data/control buses stay unclamped because each is qualified by a clamped
   valid and is don't-care once valid is 0. Every other output of `u_cpu` / `u_gpu` is classified in the
   UPF (`payload`, `slave_response`, `observability`) so a new output cannot escape review.
+- **PMU outputs are flop Q pins (bead `ktwt`).** `pmu_*_clk_en` / `iso_en` / `rst_n` / `ret_*` are each
+  registered inside `pmu.sv` from the decode of the *next* FSM state, so they appear in exactly the
+  cycle the earlier combinational decode showed them (the sequence above and `test_pmu`'s per-cycle
+  expectations are unchanged: zero added latency). They feed `cdc_sync` D pins, the asynchronous clear
+  of `u_cpu_pmu_rst_sync` and the GPU async reset / clamp select, where a decode glitch on the 4-bit
+  binary state (possible on 4 of the 9 transitions, including a runt reset on `DOM_PU_RESTORE` ->
+  `DOM_PU_ISO`) would be a real event. Zero-delay simulation cannot show a glitch, so
+  `tools/verif/check_registered_outputs.py` proves it on the netlist (`tb/tests/test_pmu_registered_outputs.py`).
 - **Retention: none.** The old header claim that state is "rebuilt from SRAM on wakeup" was never
   true. `pmu.sv` emits `ret_save` / `ret_restore` in order but `soc_top` leaves them unconnected.
   See `docs/POWER_DOMAIN_EVALUATION.md` section 3 for what survives a PMU off/on cycle.
