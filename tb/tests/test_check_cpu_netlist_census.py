@@ -35,11 +35,11 @@ def _run(tmp_path, text, *extra):
 
 
 def test_good_netlist_passes(tmp_path):
-    assert _run(tmp_path, _netlist(True, 4868)) == 0
+    assert _run(tmp_path, _netlist(True, 5286)) == 0
 
 
 def test_missing_fwd_b_nets_fire(tmp_path):
-    assert _run(tmp_path, _netlist(False, 4863)) == 1
+    assert _run(tmp_path, _netlist(False, 5281)) == 1
 
 
 def test_flop_count_outside_band_fires(tmp_path):
@@ -49,3 +49,8 @@ def test_flop_count_outside_band_fires(tmp_path):
 def test_empty_or_non_verilog_input_is_not_a_pass(tmp_path):
     assert _run(tmp_path, "") == 2
     assert census.main([str(tmp_path / "missing.v")]) == 2
+
+
+def test_pre_mbist_flop_count_is_now_out_of_band(tmp_path):
+    # 4868 was the pre-c54a count; with the in-macro controller a netlist at 4868 has lost flops.
+    assert _run(tmp_path, _netlist(True, 4868)) == 1
