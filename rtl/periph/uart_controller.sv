@@ -1,5 +1,5 @@
 // uart_controller.sv
-// Phase 5 (M4) — UART peripheral, 8N1, APB4 slave.
+// Phase 5 (M4) — UART peripheral, 8N1 (8N2 also received), APB4 slave.
 // APB migration PR-2: converted from AXI4-Lite slave to APB4 slave.
 //
 // Register map (word indices into apb4_register_bank):
@@ -19,9 +19,13 @@
 //            advances one state per bit_tick (= 16 oversample ticks).
 // RX engine (A4 — 16x oversample):
 //   2-FF synchroniser on uart_rx_i (loopback bypasses it).
-//   START detect: synchronised line low at any os_tick → align os_phase to 0.
-//   Bits sampled at os_phase==8 (mid-bit); majority-vote of phases 7, 8, 9.
-//   STOP bit sampled at mid-bit; if not 1 → framing_error sticky set (A3).
+//   START detect: synchronised line low at any os_tick → restart the RX's own
+//   phase counter (rx_phase_q) at 0; the TX phase counter is never touched.
+//   Bits voted 2-of-3 on rx_phase_q 6, 7, 8 (mid-bit).
+//   STOP bit voted at its mid-point; if not 1 → framing_error sticky set (A3).
+//   The frame closes AT the stop-bit mid-point (byte pushed, IDLE re-armed), so
+//   the next START is accepted from there on: back-to-back 8N1 frames with no
+//   idle gap and a bit-clock error of +/-3.5 % are received (bead shm5).
 //   Byte is always pushed regardless of framing error (flag-only, no drop).
 // Loopback: RX receives internal tx_serial (same clock domain); shared os_tick
 //           generator keeps TX and RX exactly bit-aligned.
