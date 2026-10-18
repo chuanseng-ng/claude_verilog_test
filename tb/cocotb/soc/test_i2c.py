@@ -2422,15 +2422,15 @@ async def test_i2c_max_byte_count(dut):
     await _push(apb, vals[:FIFO_DEPTH])
     await apb.write(I2C_CMD, cmd(start=1, write=1, stop=1, count=255))
     nxt = FIFO_DEPTH
-    for _ in range(200_000):
-        await _settled_edge(dut)
+    for _ in range(20_000):
+        await ClockCycles(dut.clk, 16)  # a byte takes ~80 clk: coarse polling is enough
         if nxt < len(vals) and (await _peek(dut, I2C_FIFO_STAT)) & 0xF <= 5:
             await apb.write(I2C_TX_DATA, vals[nxt])
             nxt += 1
-        if nxt == len(vals) and not (await _peek(dut, I2C_STATUS)) & ST_BUSY:
+        if nxt == len(vals):
             break
     assert nxt == len(vals), "refill never found space"
-    await _wait_idle(dut)
+    await _wait_idle(dut, limit=60_000)
     assert slave.received == vals, "the 255-byte stream was corrupted"
     slave.assert_clean()
 
@@ -2444,7 +2444,9 @@ async def test_i2c_stuck_wait_counter_runs_full_width(dut):
     slave.stretch_at_fall(3, 140_000)
     await apb.write(I2C_ADDR, SLAVE_ADDR)
     await apb.write(I2C_TX_DATA, 0x4C)
-    stat = await _run(dut, apb, cmd(start=1, write=1, stop=1, count=1), limit=300_000)
+    await apb.write(I2C_CMD, cmd(start=1, write=1, stop=1, count=1))
+    await ClockCycles(dut.clk, 141_000)  # outlast the stretch without polling every clock
+    stat = await _wait_idle(dut, limit=60_000)
     assert stat & IRQ_STICKY == IRQ_DONE, f"IRQ_STAT=0x{stat:x}"
     assert slave.received == [0x4C]
     slave.assert_clean()
