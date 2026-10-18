@@ -70,7 +70,7 @@ def check_hex(path: Path) -> tuple[int, list[str]]:
 def cmd_check(_: argparse.Namespace) -> int:
     for p in (HEX, MANIFEST):
         if not p.is_file():
-            print(f"missing {p.relative_to(ROOT)}: run `make -C fpga/nexys_video bootimg`")
+            print(f"missing {p}: run `make -C fpga/nexys_video bootimg`")
             return 2
     man = json.loads(MANIFEST.read_text())
     bad: list[str] = []

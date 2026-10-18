@@ -71,6 +71,14 @@ jobs:
       - name: UPF structural gate (phase5_soc.upf vs soc_top and pmu.sv)
         run: python3 tools/verif/check_upf.py -v
 
+      # Bead hlrm.4. BLOCKING: fpga/nexys_video/boot_uart.hex (the boot ROM of the Nexys Video bitstream) is generated from
+      # sw/bootloader by `make -C fpga/nexys_video bootimg`. This job has no RISC-V toolchain, so the gate compares the sha256 of
+      # every source file that feeds the image (and the build parameters, and the hex itself) with
+      # boot_uart.manifest.json: editing the bootloader without regenerating, or hand-editing the hex, fails here. The byte-for-
+      # byte rebuild (`make bootimg-check`, nix `bench` devShell) is the local complement. Stdlib only.
+      - name: Boot image drift gate (boot_uart.hex matches the bootloader sources)
+        run: python3 tools/fpga/boot_image.py check
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
