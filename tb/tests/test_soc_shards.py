@@ -247,12 +247,15 @@ needs_make = pytest.mark.skipif(
 
 
 def _make(args: list[str], root: Path) -> subprocess.CompletedProcess[str]:
+    # The Makefile reads SOC_SHARD_WEIGHTS from the environment too; a CI job that exports it for
+    # its real run must not change which weights these tests plan with.
+    env = {k: v for k, v in os.environ.items() if k != "SOC_SHARD_WEIGHTS"}
     return subprocess.run(
         ["make", "--no-print-directory", "-C", str(SOC_DIR), f"SIM_BUILD_ROOT={root}", *args],
         capture_output=True,
         text=True,
         check=False,
-        env=os.environ.copy(),
+        env=env,
     )
 
 
@@ -351,3 +354,88 @@ def test_split_units_are_sharded_and_unioned(suites: list[str], weights: dict) -
         suites, {"s0": [u for u in suites if u not in units] + ["soc_uart_boot"]}
     )
     assert any("soc_uart_boot: run by s0 but not in SOC_CI_SUITES" in p for p in problems)
+
+
+# --------------------------------------- plain (uninstrumented) weights + cocotb.yml (bead 9ayu.2)
+
+PLAIN_WEIGHTS = REPO_ROOT / "tools" / "verif" / "soc_shard_weights_plain.json"
+COCOTB_YML = REPO_ROOT / ".github" / "workflows" / "cocotb.yml"
+COCOTB_NSHARDS = 4  # must equal NSHARDS / the soc_shard matrix in cocotb.yml (checked below)
+
+
+@pytest.fixture(scope="module")
+def plain_weights() -> dict:
+    return dict(ss.load_weights(PLAIN_WEIGHTS))
+
+
+def test_plain_weights_name_only_real_suites(suites: list[str], plain_weights: dict) -> None:
+    assert PLAIN_WEIGHTS.exists()
+    unknown = sorted(set(plain_weights["suites"]) - set(suites))
+    assert not unknown, f"{PLAIN_WEIGHTS.name} names suites not in SOC_CI_SUITES: {unknown}"
+    groups = {g for v in plain_weights["suites"].values() if (g := v.get("group"))}
+    assert groups <= set(plain_weights["groups"])
+
+
+def test_plain_weights_are_a_different_cost_model(weights: dict, plain_weights: dict) -> None:
+    """The file really is the uninstrumented one (an instrumented run is several times slower)."""
+    common = set(weights["suites"]) & set(plain_weights["suites"])
+    assert len(common) >= 30
+    inst = sum(weights["suites"][s]["run_s"] for s in common)
+    plain = sum(plain_weights["suites"][s]["run_s"] for s in common)
+    assert 1.5 < inst / plain < 20, (inst, plain)
+
+
+def test_plain_shards_are_balanced_and_split_the_uart_boot_slices(
+    suites: list[str], plain_weights: dict
+) -> None:
+    shards = ss.assign(suites, COCOTB_NSHARDS, plain_weights)
+    loads = ss.shard_loads(shards, plain_weights)
+    assert max(loads) / min(loads) < 1.1, loads
+    where = {s: k for k, m in enumerate(shards) for s in m}
+    uart = [u for u in suites if u.startswith("soc_uart_boot:")]
+    assert len({where[u] for u in uart}) == len(uart), "uart_boot slices must not share a shard"
+    assert ss.check_union(suites, {f"s{k}": m for k, m in enumerate(shards)}) == []
+
+
+def test_cocotb_workflow_shard_count_is_consistent() -> None:
+    """NSHARDS, the matrix and COCOTB_NSHARDS agree; the aggregate job keeps its check name."""
+    text = COCOTB_YML.read_text()
+    m = re.search(r"^env:\n(?:  #.*\n)*  NSHARDS: '(\d+)'", text, re.M)
+    assert m, "cocotb.yml has no top-level NSHARDS"
+    n = int(m.group(1))
+    mat = re.search(r"matrix:\n\s+shard: \[([0-9, ]+)\]", text)
+    assert mat, "cocotb.yml soc_shard has no shard matrix"
+    legs = [int(x) for x in mat.group(1).split(",")]
+    assert legs == list(range(n)), f"matrix {legs} != range(NSHARDS={n})"
+    assert n == COCOTB_NSHARDS
+    # The aggregate gate keeps the old job name, needs the shards, and cannot be skipped.
+    agg = re.search(
+        r"^  soc_all:\n    name: cocotb soc_all \(SoC regression\)\n    needs: \[soc_shard\]\n"
+        r"    if: \$\{\{ always\(\) \}\}\n",
+        text,
+        re.M,
+    )
+    assert agg, "the soc_all aggregate job lost its name, its needs or its always()"
+    assert "SOC_SHARD_WEIGHTS: tools/verif/soc_shard_weights_plain.json" in text
+
+
+@needs_make
+def test_soc_ci_shard_honours_a_weights_override(
+    tmp_path: Path, suites: list[str], plain_weights: dict
+) -> None:
+    k = 1
+    r = _make(
+        [
+            "-n",
+            "MAKE=echo",
+            "soc_ci_shard",
+            f"SHARD={k}",
+            f"NSHARDS={COCOTB_NSHARDS}",
+            f"SOC_SHARD_WEIGHTS={PLAIN_WEIGHTS}",
+        ],
+        tmp_path,
+    )
+    assert r.returncode == 0, r.stderr
+    known = {s.replace(":", " ") for s in suites}
+    ran = [ln for ln in r.stdout.splitlines() if ln in known]
+    assert ran == [s.replace(":", " ") for s in ss.assign(suites, COCOTB_NSHARDS, plain_weights)[k]]
