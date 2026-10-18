@@ -4,7 +4,7 @@
 #
 #   NV_ROOT     repo root                       NV_OUT   output directory (reports, dcp, bit)
 #   NV_PHASE    synth | all                     NV_TAG   run tag
-#   NV_BOOT_HEX absolute path of the boot ROM image ($readmemh text)
+#   NV_BOOT_HEX absolute path of the boot ROM image ($readmemh text); build.sh defaults it to boot_uart.hex (UART bootloader)
 #   NV_THREADS  general.maxThreads (default 4)  NV_PART  device (default xc7a200tsbg484-1)
 #   NV_NOCLKFIX 1 = skip clkfix.tcl (BUFG -> BUFGCE cascade) to measure the parallel arrangement against it
 
@@ -17,7 +17,13 @@ set out   $::env(NV_OUT)
 set phase [env_or NV_PHASE all]
 set tag   [env_or NV_TAG run]
 set part  [env_or NV_PART xc7a200tsbg484-1]
-set boot  $::env(NV_BOOT_HEX)
+set boot  [env_or NV_BOOT_HEX $root/fpga/nexys_video/boot_uart.hex]
+# the boot ROM is 1024 words; $readmemh of a longer file would silently truncate in the ROM init
+set bfh [open $boot r]
+set bwords [llength [split [string trim [read $bfh]] "\n"]]
+close $bfh
+if {$bwords < 1 || $bwords > 1024} { error "boot image $boot has $bwords words (boot ROM holds 1..1024)" }
+puts "NV-BOOT image $boot: $bwords words, sha256 [lindex [exec sha256sum $boot] 0]"
 set here  $root/fpga/nexys_video
 set rdir  $out/$tag
 file mkdir $rdir
@@ -83,7 +89,14 @@ report_methodology -file $rdir/methodology.rpt
 report_drc -file $rdir/drc.rpt
 report_io -file $rdir/io.rpt
 report_exceptions -file $rdir/exceptions.rpt
+# CDC (bead hlrm.3): cdc.rpt = with the documented waivers (the gate input, tools/fpga/cdc_gate.py), cdc_raw.rpt = no waivers
+source $here/nexys_video_cdc_waivers.tcl
+nv_cdc_waivers
 report_cdc -details -file $rdir/cdc.rpt
+report_cdc -details -show_waiver -file $rdir/cdc_waived.rpt
+report_cdc -details -no_waiver -file $rdir/cdc_raw.rpt
+report_waivers -file $rdir/waivers.rpt
+report_bus_skew -file $rdir/bus_skew.rpt
 report_high_fanout_nets -timing -max_nets 15 -file $rdir/high_fanout.rpt
 report_timing -delay_type min -max_paths 10 -nworst 1 -input_pins -file $rdir/paths_hold_worst.rpt
 # Gated-vs-ungated skew evidence: ungated-domain flop -> flop behind the GPU / CPU BUFGCE (min = hold, max = setup).

@@ -1,0 +1,22 @@
+{
+  "image": "fpga/nexys_video/boot_uart.hex",
+  "generator": "make -C fpga/nexys_video bootimg   (tools/fpga/boot_image.py write)",
+  "params": {
+    "variant": "default",
+    "SRAM_BYTES": "65536",
+    "EXTRA_DEFS": "-DBL_CPU_HZ=75000000u"
+  },
+  "sources": {
+    "sw/bootloader/uart_boot.c": "5dd210109b0693a1cfb262d3003db91effff10f7ebaa2c93b0d6b6c7d9a77ae8",
+    "sw/bootloader/crt0.S": "c432ef74b695683a2c2516ca4ac8343a93ab4a694b4b5a5cffe8f50917c27635",
+    "sw/bootloader/bootloader.ld.in": "3e5d9a4f184d95eab45766587413008ca30b081289e57919a1bb58dc7d5884c0",
+    "sw/bootloader/bl_config.h": "0e5bd925bafcaa85821cce04441ae40b6c56c357ab4e5a4d4aaecd1c67af6f1d",
+    "sw/bootloader/uart_boot_proto.h": "53cf60d3fe9480910f8c6d5526077d3979a80a1fa187126a58a4decb7f78e37e",
+    "sw/bootloader/Makefile": "f395b73f30992f758ffed742e8989a3ad865bb76911aae2bbc32044061554435",
+    "sw/bench/bin2hex.py": "8cdd34fc2eabaceddc2c6a485ef475b8c3973f80025eea03b4878cae5eac7600"
+  },
+  "bin_bytes": 1620,
+  "words": 405,
+  "hex_sha256": "39344a4d6458cbe2bc7cfbcc25d1ef1a5b1e96e5d01a9e300fd5745b0ac2133e",
+  "toolchain": "riscv32-none-elf-gcc (GCC) 15.2.0"
+}

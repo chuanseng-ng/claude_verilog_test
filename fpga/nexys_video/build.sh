@@ -2,7 +2,7 @@
 # build.sh -- Vivado synth + impl + bitstream of the Nexys Video prototype (bead hlrm.2). ONE Vivado job per call.
 #
 # usage: [VIVADO_SETTINGS=/nobackup/FPGA_SW/2026.1/Vivado/settings64.sh] \
-#        [NV_BOOT_HEX=/abs/boot.hex] fpga/nexys_video/build.sh <out-dir> [synth|all] [tag]
+#        [NV_BOOT_HEX=/abs/boot.hex  (default: fpga/nexys_video/boot_uart.hex, the UART bootloader)] fpga/nexys_video/build.sh <out-dir> [synth|all] [tag]
 #
 # Vivado is external (not in nix, not in CI). The default VIVADO_SETTINGS is this host's install.
 # Peak RSS and elapsed time are written to <out-dir>/<tag>.time. Do NOT run while a PD flow holds the host's memory cap.
@@ -13,7 +13,13 @@ root=$(cd "$here/../.." && pwd)
 out=$(mkdir -p "$1" && cd "$1" && pwd); phase=${2:-all}; tag=${3:-run}
 : "${VIVADO_SETTINGS:=/nobackup/FPGA_SW/2026.1/Vivado/settings64.sh}"
 [ -r "$VIVADO_SETTINGS" ] || { echo "cannot read VIVADO_SETTINGS=$VIVADO_SETTINGS"; exit 2; }
-export NV_BOOT_HEX=${NV_BOOT_HEX:-$here/boot_placeholder.hex}
+# Default boot ROM = the committed UART bootloader image. The staleness gate (sources + params vs the manifest) runs first
+# so a firmware edit without `make bootimg` cannot be synthesised into a bitstream; an explicit NV_BOOT_HEX skips it.
+if [ -z "${NV_BOOT_HEX:-}" ]; then
+  python3 "$root/tools/fpga/boot_image.py" check || { echo "boot image is stale: make -C fpga/nexys_video bootimg"; exit 2; }
+  NV_BOOT_HEX=$here/boot_uart.hex
+fi
+export NV_BOOT_HEX
 [ -r "$NV_BOOT_HEX" ] || { echo "cannot read NV_BOOT_HEX=$NV_BOOT_HEX"; exit 2; }
 NV_BOOT_HEX=$(readlink -f "$NV_BOOT_HEX"); export NV_BOOT_HEX
 export NV_ROOT=$root NV_OUT=$out NV_PHASE=$phase NV_TAG=$tag
