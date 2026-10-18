@@ -56,7 +56,10 @@ MUTANTS = [
      [("else                             wait_cnt_q <= '0;", "else                             wait_cnt_q <= wait_cnt_q;")], None),
     ("t06_counter_not_reset", "pmu", PMU, "the counter has no reset",
      [("                        wait_cnt_q       <= '0;\n                        cpu_iso_ack_to_q <= 1'b0;\n                    end else begin",
-       "                        cpu_iso_ack_to_q <= 1'b0;\n                    end else begin")], None),
+       "                        cpu_iso_ack_to_q <= 1'b0;\n                    end else begin")],
+     "equivalent: dom_state_q is reset to DOM_ON, so wait_active is 0 from the first cycle of reset and "
+     "the counter's own 'else' branch clears it on the first edge after release; nothing reads the counter "
+     "outside a wait"),
     ("t07_flag_never_set", "pmu", PMU, "STATUS[3] is never set on a timeout",
      [("else if (wait_hit[d])                              cpu_iso_ack_to_q <= 1'b1;", "else if (1'b0)                                     cpu_iso_ack_to_q <= 1'b1;")], None),
     ("t08_flag_set_on_any_wait", "pmu", PMU, "STATUS[3] is set whenever a wait starts, not only on timeout",

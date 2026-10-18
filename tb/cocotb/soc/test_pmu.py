@@ -766,11 +766,23 @@ async def test_pmu_gpu_ignores_cpu_ack(dut):
 
 @cocotb.test()
 async def test_pmu_reset_during_iso_wait(dut):
-    """A reset in the middle of a wait restarts the counter and clears the flag."""
+    """A reset restarts the wait and clears the sticky flag (reset-clear of STATUS[3] included)."""
     _kill_active_tasks()
     await _start_clock_and_reset(dut)
     bfm = _make_apb_bfm(dut)
     dut.ack_stuck_i.value = 1
+
+    # Leg 1: a timeout sets the flag, a reset clears it (a flag with no reset would survive).
+    assert await bfm.write(CTRL_OFFSET, MODE_CPU_OFF)
+    await _wait_state(dut, DOM_OFF, limit=ISO_ACK_TIMEOUT + 20)
+    assert (await _status(bfm)) >> STATUS_TO_BIT & 1, "precondition: the timeout must set STATUS[3]"
+    dut.rst_n.value = 0
+    await ClockCycles(dut.clk, 2)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 2)
+    assert (await _status(bfm)) == 0x3, "reset must clear STATUS[3] and return both domains to ON"
+
+    # Leg 2: a reset in the middle of a wait restarts the counter.
     assert await bfm.write(CTRL_OFFSET, MODE_CPU_OFF)
     await _wait_state(dut, DOM_PD_ISO)
     await ClockCycles(dut.clk, 8)                  # counter now ~8 of 16
