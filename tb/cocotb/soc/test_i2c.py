@@ -2395,6 +2395,169 @@ async def test_i2c_condition_tick_reloads_at_clkdiv_ffff(dut):
         assert got == want, f"state {entered}: tick_q = 0x{got:x} at entry, expected 0x{want:x}"
 
 
+# ---------------------------------------------------------------------------
+# Functional-coverage closure tests (bead h367): scenarios the I2C coverage model
+# (docs/verification/I2C_FUNCTIONAL_COVERAGE_MODEL.md) showed no other test reached.
+# ---------------------------------------------------------------------------
+
+
+@cocotb.test()
+async def test_i2c_transfers_longer_than_both_fifos(dut):
+    """A 20-byte write (21 bytes on the wire with the slave's register pointer) and an 18-byte
+    read, both well past the 8-byte FIFOs: software refills / drains while the engine holds SCL
+    low, and the stream is intact end to end. Scenario for the model's n17_up byte-count bins."""
+    apb, slave = await _setup(dut)
+    vals = [0x30 + i for i in range(20)]
+    await apb.write(I2C_ADDR, SLAVE_ADDR)
+    await _push(apb, vals[:FIFO_DEPTH])
+    await apb.write(I2C_CMD, cmd(start=1, write=1, stop=1, count=20))
+    nxt = FIFO_DEPTH
+    for _ in range(40000):
+        await _settled_edge(dut)
+        if nxt < len(vals) and (await _peek(dut, I2C_FIFO_STAT)) & 0xF <= 5:
+            await apb.write(I2C_TX_DATA, vals[nxt])
+            nxt += 1
+        if nxt == len(vals) and not (await _peek(dut, I2C_STATUS)) & ST_BUSY:
+            break
+    assert nxt == len(vals), "refill never found space"
+    await _wait_idle(dut)
+    assert slave.received == vals, f"long write corrupted: {slave.received}"
+    assert len([e for e in slave.events if e[0] == "WR"]) == 20
+
+    slave.reset_log()
+    pattern = [0x40 + i for i in range(18)]
+    slave.read_queue = list(pattern)
+    await apb.write(I2C_ADDR, SLAVE_ADDR | 0x80)
+    await apb.write(I2C_CMD, cmd(start=1, read=1, stop=1, nack_last=1, count=18))
+    got: list = []
+    for _ in range(60000):
+        fs = await _peek(dut, I2C_FIFO_STAT)
+        if (fs >> 4) & 0xF:
+            got.append(await _rd(apb, I2C_RX_DATA))
+        elif not (await _peek(dut, I2C_STATUS)) & ST_BUSY:
+            break
+        await _settled_edge(dut)
+    await _wait_idle(dut)
+    got += await _drain_rx(apb)
+    assert got == pattern, f"long read corrupted: {got}"
+    rds = [e for e in slave.events if e[0] == "RD"]
+    assert len(rds) == 18 and rds[-1][2] is False and all(e[2] for e in rds[:-1])
+    slave.assert_clean()
+
+
+@cocotb.test()
+async def test_i2c_repeated_start_chain_write_read_write(dut):
+    """Three segments in one transaction: write, repeated START + read, repeated START + write,
+    one STOP at the end. The slave sees exactly one START, two RSTARTs and one STOP, and the bus is
+    held between the commands. A repeated START after a READ (not only after a write) works."""
+    apb, slave = await _setup(dut)
+    await apb.write(I2C_ADDR, SLAVE_ADDR)
+    await apb.write(I2C_TX_DATA, 0x40)
+    await _run(dut, apb, cmd(start=1, write=1, count=1))
+    slave.read_queue = [0x81]  # MSB set: the slave releases SDA for the next repeated START
+    await apb.write(I2C_ADDR, SLAVE_ADDR | 0x80)
+    await _run(dut, apb, cmd(start=1, read=1, nack_last=1, count=1))
+    assert await _rd(apb, I2C_STATUS) & ST_TXN, "bus must stay held after the read segment"
+    await apb.write(I2C_ADDR, SLAVE_ADDR)
+    await apb.write(I2C_TX_DATA, 0x22)
+    stat = await _run(dut, apb, cmd(start=1, write=1, stop=1, count=1))
+    assert stat & IRQ_STICKY == IRQ_DONE
+    assert slave.events == [
+        ("START",),
+        ("ADDR", SLAVE_ADDR, 0, True),
+        ("WR", 0x40, True),
+        ("RSTART",),
+        ("ADDR", SLAVE_ADDR, 1, True),
+        ("RD", 0x81, False),
+        ("RSTART",),
+        ("ADDR", SLAVE_ADDR, 0, True),
+        ("WR", 0x22, True),
+        ("STOP",),
+    ], slave.events
+    assert await _drain_rx(apb) == [0x81]
+    slave.assert_clean()
+
+
+@cocotb.test()
+async def test_i2c_command_shapes_address_only_and_both_flags(dut):
+    """The remaining legal CMD shapes. START (+STOP) with neither WRITE nor READ is an address-only
+    probe: START, address, no data byte, STOP only if asked (otherwise the bus is held and a
+    STOP-only command ends it). With BOTH data flags WRITE wins, with or without START / STOP, and
+    a continuation (no START) writes into the open transaction."""
+    apb, slave = await _setup(dut)
+    await apb.write(I2C_ADDR, SLAVE_ADDR)
+
+    # START + STOP, no data: an address probe.
+    stat = await _run(dut, apb, cmd(start=1, stop=1))
+    assert stat & IRQ_STICKY == IRQ_DONE
+    assert slave.events == [("START",), ("ADDR", SLAVE_ADDR, 0, True), ("STOP",)], slave.events
+
+    # START only: address, then the bus is held; a STOP-only command releases it.
+    slave.reset_log()
+    await apb.write(I2C_IRQ_CLR, IRQ_STICKY)
+    await _run(dut, apb, cmd(start=1))
+    assert slave.events == [("START",), ("ADDR", SLAVE_ADDR, 0, True)], slave.events
+    assert await _rd(apb, I2C_STATUS) & ST_TXN
+    await _run(dut, apb, cmd(stop=1))
+    assert slave.events[-1] == ("STOP",) and not await _rd(apb, I2C_STATUS) & ST_TXN
+
+    # START + WRITE + READ, no STOP: write wins, bus held.
+    slave.reset_log()
+    await apb.write(I2C_TX_DATA, 0x31)
+    await _run(dut, apb, cmd(start=1, write=1, read=1, count=1))
+    assert slave.events == [("START",), ("ADDR", SLAVE_ADDR, 0, True), ("WR", 0x31, True)]
+    assert await _rd(apb, I2C_STATUS) & ST_TXN
+
+    # Continuation (no START), WRITE + READ, no STOP: write wins again.
+    await apb.write(I2C_TX_DATA, 0x32)
+    await _run(dut, apb, cmd(write=1, read=1, count=1))
+    assert slave.events[-1] == ("WR", 0x32, True), slave.events
+
+    # Continuation, WRITE + READ + STOP.
+    await apb.write(I2C_TX_DATA, 0x33)
+    await _run(dut, apb, cmd(write=1, read=1, stop=1, count=1))
+    assert slave.events[-2:] == [("WR", 0x33, True), ("STOP",)], slave.events
+    fs = await _rd(apb, I2C_FIFO_STAT)
+    assert fs & 0x800 and fs & 0x200, f"no read may have run, TX drained: FIFO_STAT=0x{fs:x}"
+    slave.assert_clean()
+
+
+@cocotb.test()
+async def test_i2c_cmd_count_255_abandoned_on_data_nack(dut):
+    """COUNT = 255 (the field maximum) is accepted as a 255-byte write; the slave NACKs the second
+    data byte, so the engine abandons the other 253, sends the requested STOP and sets `nack`. Only
+    two data bytes reach the bus and the six unsent TX bytes stay in the FIFO."""
+    apb, slave = await _setup(dut)
+    slave.data_acks = [True, False]
+    await apb.write(I2C_ADDR, SLAVE_ADDR)
+    await _push(apb, [0x50 + i for i in range(FIFO_DEPTH)])
+    stat = await _run(dut, apb, cmd(start=1, write=1, stop=1, count=255))
+    assert stat & IRQ_STICKY == IRQ_DONE | IRQ_NACK, f"IRQ_STAT=0x{stat:x}"
+    assert [e[0] for e in slave.events] == ["START", "ADDR", "WR", "WR", "STOP"], slave.events
+    assert slave.events[3] == ("WR", 0x51, False)
+    assert (await _rd(apb, I2C_FIFO_STAT)) & 0xF == FIFO_DEPTH - 2
+    slave.assert_clean()
+
+
+@cocotb.test()
+async def test_i2c_rx_full_wait_times_out(dut):
+    """The RX-full wait is bounded by I2C_TIMEOUT like every other stall: a 10-byte READ with
+    nobody popping the RX FIFO fills it (8 bytes), holds SCL low, then times out. Sticky `timeout`
+    INSTEAD of `done`, lines released, the 8 received bytes still readable."""
+    apb, slave = await _setup(dut, timeout=300)
+    pattern = [0x60 + i for i in range(10)]
+    slave.read_queue = list(pattern)
+    await apb.write(I2C_ADDR, SLAVE_ADDR | 0x80)
+    stat = await _run(dut, apb, cmd(start=1, read=1, stop=1, nack_last=1, count=10), limit=30000)
+    assert stat & IRQ_STICKY == IRQ_TOUT, f"IRQ_STAT=0x{stat:x}"
+    assert int(dut.i2c_scl_oe_o.value) == 0 and int(dut.i2c_sda_oe_o.value) == 0
+    st = await _rd(apb, I2C_STATUS)
+    assert st & ST_TOUT and not st & (ST_BUSY | ST_TXN | ST_NACK | ST_ARB), f"STATUS=0x{st:x}"
+    assert (await _rd(apb, I2C_FIFO_STAT) >> 4) & 0xF == FIFO_DEPTH
+    assert await _drain_rx(apb) == pattern[:FIFO_DEPTH]
+    COV.timeout("rx_full")
+
+
 @cocotb.test()
 async def test_register_walk(dut):
     """Walk every I2C register against the documented map (reg_maps.I2C); TX_DATA and CMD are skipped (push / command)."""
