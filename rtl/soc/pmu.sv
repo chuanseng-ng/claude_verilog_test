@@ -59,19 +59,19 @@
 //     meet the previous cycle's still-high ack in DOM_PD_ISO and gate the clock
 //     and assert reset with no clamp (a stale ack). STATUS.cpu_domain_on now also
 //     means "the clamp has been seen released in the CPU domain".
-// Power-up needs NO ack for the iso-release-vs-reset-release order (the UPF's
-// last step, de-assert iso, stays last). The release can only be observed by
-// the clamp's consumers through paths that are structurally behind the reset
-// release: u_cpu_cg is forbidden to open (cpu_gated_clk_en includes
-// pmu_cpu_rst_n_cpu_sync) until the reset release is observed in the CPU
-// domain, and every sampler of the clamped lines (u_cpu_axi_cdc's s-side, the
-// CPU) runs on cpu_gated_clk. A clamp released one cpu_core_clk edge early
-// (a metastable first stage in silicon) therefore exposes only retained,
-// unsampled values on a still-stopped clock; the same-clock 2-flop paths of
-// the reset and the clamp keep the nominal order. The hazard on the way up is
-// "iso released too EARLY", which the 3-clk_i-cycle gap already makes the
-// non-nominal case; the way down is "iso applied too LATE", unbounded in the
-// ratio, hence the ack there.
+// Power-up needs NO ack for the iso-release-vs-reset-release order (decision, bead
+// 3ogd). The UPF's last up-step, de-assert iso, stays last, and the hazard on the way
+// up is the mirror of the one on the way down: iso released too EARLY. It is harmless
+// here by structure, for any ratio: the only things the clamp holds are lines sampled
+// by cpu_gated_clk (u_cpu_axi_cdc's s-side, the CPU) plus the commit_valid_o
+// observation pin, and cpu_gated_clk cannot tick until the reset release is observed
+// in the CPU domain (soc_top: cpu_gated_clk_en includes pmu_cpu_rst_n_cpu_sync). A
+// clamp released a cpu_core_clk edge ahead of the reset release (a metastable first
+// stage in silicon; in this zero-delay model both paths are 2-flop syncs on one clock
+// and keep the nominal order) therefore exposes only retained values on a still-stopped
+// clock. Way down, by contrast, the reset acts ASYNCHRONOUSLY and at once, so the
+// clamp being late is observable: that direction gets the ack. (The release ack above
+// is a handshake-completion wait, not an ordering wait.)
 // The GPU domain needs no ack: u_gpu is on clk_i/core_clk, the clamp control is
 // the PMU's own flop (pmu_gpu_iso_en, no synchroniser) and gpu_rst_n is another
 // flop on the same edge, so the 2-cycle spacing is exact. Internally its ack is

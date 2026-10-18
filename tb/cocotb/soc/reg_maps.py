@@ -237,6 +237,8 @@ PMU = [
     # The mode field is never driven to non-zero; the other 30 bits are not SW-writable and must
     # stay 0 under all-ones writes.
     Reg("PMU_CTRL", _w(0), reset=0, wmask=0x3, drive=M32 & ~0x3),
+    # [3] cpu_iso_ack_timeout (sticky, bead 3ogd) is 0 from reset and only a power-down whose CPU
+    # iso-ack wait expired sets it, so the idle walk sees the same 0x3.
     Reg("PMU_STATUS", _w(1), reset=0x3, wmask=0),          # cpu_domain_on | gpu_domain_on
     Reg("PMU_DOMAIN_EN", _w(2), reset=0x33, wmask=0),      # clk_en / rst_n of both domains
 ]
