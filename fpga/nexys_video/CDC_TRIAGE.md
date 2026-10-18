@@ -5,6 +5,8 @@ Input: the routed with-GPU build of PR #304 (`nv7`, Vivado 2026.1, `report_cdc -
 RTL CDC structures (`rtl/soc/cdc/`, `rtl/soc/async_axi_fifo.sv`, `rtl/soc/apb_cdc_bridge.sv`, `rtl/soc/soc_top.sv`,
 `rtl/soc/pmu.sv`). No RTL was edited.
 
+Row counts below are those of the `nv7` report (the `nv8` rebuild differs by one W1 row, see the result section).
+
 Result: **1377 are explained and waived with a stated reason, 3 are a real RTL finding that is deliberately not waived.**
 No finding turned out to be a missing `ASYNC_REG` or a missing constraint (every Critical row already carried
 `Max Delay Datapath Only` or `False Path`; the 57 + 11 + 9 recognised synchroniser structures all have `ASYNC_REG`).
@@ -130,7 +132,37 @@ reports for the debug hub), so this triage carries over. Only a real second osci
 
 ## Result of this change
 
-TBD-RESULT
+Build `nv8` (this branch: the real UART bootloader ROM, `set_bus_skew` on the ten gray buses, the waiver set; Vivado 2026.1,
+`build.sh ... all`, 21 min wall, peak RSS 3.8 GB, bitstream written, DRC 0 errors). `cdc_raw.rpt` is `report_cdc -no_waiver`.
+
+| | before (`nv7`, PR #304) | after (`nv8`) |
+|---|---:|---:|
+| `report_cdc` Critical, no waivers | 1380 | 1379 |
+| of which classified W1 / W2 / W3 / W4 / PMU | 1260 / 110 / 4 / 3 / 3 | 1259 / 110 / 4 / 3 / 3 |
+| `report_cdc` Critical, with the waivers (`cdc.rpt`) | n/a | **3** (all `u_pmu`, RTL-owned) |
+| Unexplained Critical (`vivado_cdc_gate.py`) | n/a | **0** |
+| ID counts raw (CDC-1 / 4 / 10 / 13) | 1064 / 2 / 10 / 304 | 1063 / 2 / 10 / 304 |
+
+(The one-row difference is place-and-route noise between two builds; the classification script maps 100 % of the raw rows of both
+reports to a class, nothing falls through.)
+
+Timing, `nv8` routed, all user constraints met (`timing_summary.rpt`):
+
+| Clock | WNS (ns) | WHS (ns) |
+|---|---:|---:|
+| `cpu_raw` (75 MHz) | +0.649 | +0.019 |
+| `sys_raw` (50 MHz) | +1.568 | +0.017 |
+| BSCAN TCK (debug hub) | +25.713 | +0.121 |
+| design total | +0.649 (TNS 0) | +0.017 (THS 0) |
+| `sys_raw` -> `cpu_raw` (max-delay 12.000) | +2.901 | |
+| `cpu_raw` -> `sys_raw` (max-delay 18.000) | +6.756 | |
+
+`nv7` for comparison: WNS +0.428, WHS +0.013. The ten gray-pointer `set_bus_skew` constraints (0.5 x destination period: 6.667 / 10.000 ns)
+have a worst actual skew of 0.996 ns, worst slack +5.835 ns (`bus_skew.rpt`). Utilisation: 41,801 LUT (31.2 %), 21,822 FF, 54 BRAM
+tiles, 26 DSP, unchanged within noise. The boot ROM is read from `boot_uart.hex` (`[Synth 8-3876] $readmem data file ... read
+successfully`, `NV-BOOT ... 405 words, sha256 39344a4d...`). The ROM maps to distributed logic and is merged into the fetch logic, so
+the init bits cannot be diffed against the hex in the routed netlist; the synthesis read-back message is the evidence, not a netlist diff.
+
 
 ## Reproduce
 
