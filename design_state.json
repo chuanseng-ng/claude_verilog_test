@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-10-18T00:00:00+00:00",
+  "updated_at": "2026-10-18T22:12:57+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -91,6 +91,21 @@
         "module": "crypto_accel",
         "category": "protocol",
         "claim": "scan wipe is functional D logic that a scan_en=1 edge overrides: it protects against software and a cooperating tester only if ATE applies 3 scan_en=0 edges after scan_mode rises (DFT_ARCHITECTURE.md 14.10 item 5); an adversarial tester that shifts earlier reads the residue; no scan chains exist yet, so this is analysed, not simulated"
+      },
+      {
+        "module": "soc_top/pmu",
+        "category": "cdc",
+        "claim": "bead 3ogd: set_max_delay budgets for the u_cpu_iso_ack_sync return crossing (check SDCs, Vivado XDC) were written by analogy with the existing PMU crossings and never run through OpenSTA/Vivado on a routed netlist; PD timing NOT run"
+      },
+      {
+        "module": "pmu",
+        "category": "reset",
+        "claim": "bead 3ogd: power-up needs no ack for the iso-release-vs-reset-release order; argued from structure (clamp consumers are clocked by cpu_gated_clk, which cannot tick before reset release is observed), not tool-proven; the nominal order is only observed by a zero-delay model (INV3)"
+      },
+      {
+        "module": "pmu",
+        "category": "parameter",
+        "claim": "bead 3ogd: ISO_ACK_TIMEOUT=255 covers a cpu_core_clk up to ~80x slower than clk_i by the ~(3R+3) round-trip estimate; measured round trip only at R=1/3/8 (and 3/7)"
       }
     ]
   },
@@ -2260,6 +2275,54 @@
       "suggested_next_step": "proceed",
       "reason": "bead j41m.6: crypto_accel hardware scan wipe (PR #305, draft). Verilator -Wall 0 RTL warnings, test_crypto 51/51, test_soc_dft_scan 11/11, 25/25 mutants killed, dft-scan-check sky130+asap7 0 violations, soc_all_ci plain and FPGA=1 769/0/17. Limit: wipe is overridden by scan_en=1 edges (adversarial tester not covered). rtl.signoff unchanged (false): CDC/RDC tools not run.",
       "constraint_ref": null
+    },
+    {
+      "agent": "rtl-design-orchestrator",
+      "confidence": "high",
+      "constraint_ref": null,
+      "timestamp": "2026-10-18T22:12:57+00:00",
+      "stage": "rtl_coding",
+      "decision": "loop_back",
+      "failure_class": "functional",
+      "retry_strategy": "refine",
+      "suggested_next_step": "loop_back_to:rtl_coding",
+      "reason": "bead 3ogd: tests written first and RED on origin/main (CPU clock 3x/8x slower: reset asserts with the clamp open, INV1/INV2); iso-ack handshake implemented in pmu.sv + soc_top.sv"
+    },
+    {
+      "agent": "rtl-design-orchestrator",
+      "confidence": "high",
+      "constraint_ref": null,
+      "timestamp": "2026-10-18T22:12:57+00:00",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "bead 3ogd: Verilator -Wall 0 warnings in pmu.sv/soc_top.sv on lint_soc and lint_soc_sky130; pmu unit lint clean; soc_boot_lint clean; registered-output structural check 11/11 and check_upf PASS"
+    },
+    {
+      "agent": "rtl-design-orchestrator",
+      "confidence": "high",
+      "constraint_ref": null,
+      "timestamp": "2026-10-18T22:12:57+00:00",
+      "stage": "cdc_rdc_analysis",
+      "decision": "proceed",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "bead 3ogd: cdc_snitch+cdc_gate PASS 0 unwaived (new required synchroniser pmu-cpu-iso-ack-sync matched); dft-scan-check sky130+asap7 0 violations; mutation 24/26 killed, 2 documented equivalent; soc_all_ci plain and FPGA=1 838/0 over 80 suites. Not run: synth_check, PD timing of the new crossing, slang"
+    },
+    {
+      "agent": "rtl-design-orchestrator",
+      "confidence": "high",
+      "constraint_ref": null,
+      "timestamp": "2026-10-18T22:12:57+00:00",
+      "stage": "rtl_signoff",
+      "decision": "escalate",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "escalate",
+      "reason": "bead 3ogd PR #317: rtl.signoff left false - synth_check not run and PD timing of u_cpu_iso_ack_sync unvalidated (see rtl.unverified); human review of the PR and CI result required"
     }
   ],
   "fix_requests": [
