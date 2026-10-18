@@ -783,6 +783,23 @@ set _timer_irq_src [get_nets timer_irq -quiet]
 cdc_apply_max_delay $_timer_irq_src 780 sys_clk cpu_clk \
     "sec.13 timer_irq (source of u_timer_irq_sync) single-bit CDC crossing"
 
+# 13a. Isolation-ack RETURN crossing (bead 3ogd): the only PMU crossing in the cpu_clk -> sys_clk
+#      direction. u_cpu_iso_ack_sync (cdc_sync, clocked by core_clk = sys_clk) samples
+#      pmu_cpu_iso_en_sync, the last stage of u_cpu_iso_en_sync AND the select of the CPU clamp
+#      muxes, and hands the result to the PMU as cpu_iso_ack_i. Same direct-passthrough pattern
+#      as the three crossings above: no logic between the source flop and the synchroniser, so
+#      its d_i net does not survive and the SOURCE net does, as a plain top-level net
+#      (pmu_cpu_iso_en_sync; its other loads are the six clamp muxes, all cpu_clk, which the
+#      to_clk filter in cdc_net_from_to drops). Budget: 1.0x DESTINATION period (sys_clk,
+#      1750 ps), the same convention as the other return crossings (sec.12/12a ack_q). The PMU
+#      holds iso_en until this ack returns, so the signal is level-held by construction.
+#      NOT YET RUN through OpenSTA on a routed netlist (no PD run was made for this change): the
+#      object binding is by analogy with pmu_cpu_iso_en above and is gated by the
+#      CDC-EXCEPTION-MISS check in section 15, which fails loudly if the net is not found.
+set _iso_ack_src [get_nets pmu_cpu_iso_en_sync -quiet]
+cdc_apply_max_delay $_iso_ack_src 1750 cpu_clk sys_clk \
+    "sec.13a pmu_cpu_iso_en_sync (source of u_cpu_iso_ack_sync) single-bit CDC crossing (cpu_clk -> sys_clk)"
+
 ###############################################################################
 # 15. CDC exception coverage gate — hard-fail on any section 11-13 miss.
 #

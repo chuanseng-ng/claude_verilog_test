@@ -263,7 +263,8 @@ cdc_apply_sync_budget apb_dbg_rst_status "u_apb_dbg_cdc*u_m_rst_status_sync" $cl
 
 ###############################################################################
 # 13. PMU / IRQ single-bit crossings into the cpu_clk domain (cdc_sync instances in soc_top):
-#     u_cpu_clk_dis_sync, u_cpu_iso_en_sync, u_ext_irq_sync, u_timer_irq_sync.
+#     u_cpu_clk_dis_sync, u_cpu_iso_en_sync, u_ext_irq_sync, u_timer_irq_sync (13a below adds
+#     the one return crossing, u_cpu_iso_ack_sync, cpu_clk -> core_clk).
 #     1.0x destination period. (pmu_cpu_rst_n's cdc_reset_sync needs no entry: it has no
 #     data input, only an async clear, covered by sec 10a.)
 ###############################################################################
@@ -272,6 +273,13 @@ foreach {_s _g} {u_cpu_clk_dis_sync pmu_clk_dis u_cpu_iso_en_sync pmu_iso_en \
     cdc_apply_sync_budget $_g $_s $clock_period core_clk cpu_clk \
         "sec.13 ${_s} single-bit crossing (core_clk -> cpu_clk)"
 }
+
+# 13a. Isolation-ack RETURN crossing (bead 3ogd): u_cpu_iso_ack_sync samples pmu_cpu_iso_en_sync
+#      (the CPU-domain clamp control, cpu_clk) into core_clk for the PMU's cpu_iso_ack_i. The only
+#      PMU crossing in the cpu_clk -> core_clk direction; same 1.0x destination-period budget and
+#      the same structural binding as every row above. Not yet run on a routed Sky130 netlist.
+cdc_apply_sync_budget pmu_iso_ack u_cpu_iso_ack_sync $clock_period cpu_clk core_clk \
+    "sec.13a u_cpu_iso_ack_sync single-bit crossing (cpu_clk -> core_clk)"
 
 ###############################################################################
 # 15. Coverage gate: any miss above is a hard Tcl error (the script turns it into a finding).
