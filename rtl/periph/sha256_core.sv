@@ -54,12 +54,17 @@
 //                 parent can hw_wen the DIGEST bank words on the same edge with no result register.
 //
 // Reset: synchronous, active-low (always_ff @(posedge clk) + if (!rst_n)), matching rtl/periph/.
+// wipe_i (bead j41m.6) is an additional synchronous clear of the same flops: scan-mode entry/exit.
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
 module sha256_core (
     input  logic         clk,
     input  logic         rst_n,
+
+    // DFT scan-entry/exit zeroize (bead j41m.6): 1-cycle synchronous clear of the whole working
+    // state (w_q, a_q..h_q, hin_q, t_q, state_q), same effect as !rst_n.
+    input  logic         wipe_i,
 
     input  logic         start_i,
     input  logic [511:0] block_i,
@@ -193,7 +198,7 @@ module sha256_core (
     assign w_new_w = small_sigma1(w_q[14]) + w_q[9] + small_sigma0(w_q[1]) + w_q[0];
 
     always_ff @(posedge clk) begin
-        if (!rst_n) begin
+        if (!rst_n || wipe_i) begin
             state_q <= S_IDLE;
             t_q     <= 7'd0;
             hin_q   <= 256'h0;

@@ -2085,6 +2085,12 @@ def _val(sig) -> int:
     return int(sig.value)
 
 
+
+# NOTE (bead j41m.6): every scan_mode_i edge now also wipes the key (see the SCAN WIPE section
+# below), so the two j41m.2 mask tests load their key AFTER the entry wipe has settled; the key
+# the mask is hiding is therefore one written while in scan mode, which is the case that matters
+# (key_q is excluded from scan, so a scan-mode key write is exactly what an attacker controls).
+
 @cocotb.test()
 async def test_scan_mode_forces_key_registers_to_zero(dut):
     """scan_mode_i=1 forces the key_q and rk_q read nets to 0 while the flops keep their value;
@@ -2110,7 +2116,9 @@ async def test_scan_mode_forces_key_registers_to_zero(dut):
     assert _val(core.rk_eff_w) == _val(core.rk_q), "functional mode: rk_eff must equal rk_q"
     await d.trace()
 
-    dut.scan_mode_i.value = 1
+    await _scan_to(dut, 1)
+    assert _val(dut.u_dut.key_q) == 0, "scan entry wipes the functional key"
+    await d.load_key(FIPS_B_KEY)  # a key written in scan mode is the one the mask must hide
     await ClockCycles(dut.clk, 2)
     assert _val(dut.u_dut.key_q) == key_int, "the mask must not touch the flop itself"
     assert _val(dut.u_dut.key_eff_w) == 0, "scan mode: key_eff must be forced to 0"
@@ -2122,13 +2130,13 @@ async def test_scan_mode_forces_key_registers_to_zero(dut):
         await ClockCycles(dut.clk, 1)
         assert _val(core.rk_eff_w) == 0, "scan mode: rk_eff must be forced to 0 every cycle"
     await d.trace()
-    dut.scan_mode_i.value = 0
+    await _scan_to(dut, 0)
 
 
 @cocotb.test()
 async def test_scan_mode_result_is_key_independent_and_matches_model(dut):
     """In scan mode the ciphertext depends on NO key and equals the masked-datapath model; leaving
-    scan mode restores the real AES with the key that is still in key_q.
+    scan mode wipes the scan-mode key, and the real AES returns once a key is loaded again.
     MUTATION TARGET: a missing mask on either register (the result would track the key)."""
     _kill_active_tasks()
     rig = await _start_clock_and_reset(dut)
@@ -2141,16 +2149,302 @@ async def test_scan_mode_result_is_key_independent_and_matches_model(dut):
     await d.load_key(key_a)
     assert await d.ecb(FIPS_B_PT) == FIPS_B_CT, "functional mode must be untouched"
 
-    dut.scan_mode_i.value = 1
-    await ClockCycles(dut.clk, 2)
+    await _scan_to(dut, 1)
+    await d.load_key(key_a)  # scan entry wiped the functional key: load one in scan mode
     got_a = await d.ecb(FIPS_B_PT)
     assert got_a == expected, f"scan-mode ECB 0x{got_a.hex()} != masked model 0x{expected.hex()}"
     await d.load_key(key_b)  # key writes still land in key_q (not scanned, not masked on write)
     got_b = await d.ecb(FIPS_B_PT)
     assert got_b == got_a, "scan-mode result changed with the key: the key leaks through capture"
 
-    dut.scan_mode_i.value = 0
-    await ClockCycles(dut.clk, 2)
+    await _scan_to(dut, 0)
+    assert not (await d.status() & ST_KEYV), "leaving scan mode must drop the scan-mode key"
+    await d.load_key(key_b)
     assert await d.ecb(FIPS_B_PT) == aes.encrypt_block(key_b, FIPS_B_PT), (
-        "leaving scan mode must restore the real AES with the key held in key_q"
+        "after scan exit the real AES must work once a key is loaded"
     )
+
+
+# -- DFT scan wipe (bead j41m.6, docs/design/DFT_ARCHITECTURE.md sec.14.3) -----------------------
+# crypto_accel zeroizes key-, round-, message- and digest-derived state on EVERY scan_mode_i edge
+# (entry and exit). scan_mode_i passes a 2-FF synchroniser plus an edge flop, so wipe_w is high in
+# the cycle after the 2nd edge that follows the change and the flops clear on the 3rd. Every check
+# below samples the FIRST cycle after the clearing edge: the idle pre-load of s_q / rk_q refreshes
+# them one cycle later by itself, which would hide a missing clear if the sample were taken later.
+# MUTATION TARGETS: tools/verif/mutate_crypto_scan_wipe.py.
+
+WIPE_LATENCY = 2  # edges after the scan_mode_i change until wipe_w is visible; clear is edge 3
+SETTLE_AFTER_WIPE = 4  # extra cycles for the idle pre-load to settle before functional use
+
+
+def _crypto_flops(dut) -> dict[str, int]:
+    """Every key- or message-derived flop of the primary build (names are for the failure text)."""
+    top = dut.u_dut
+    aes_c = top.g_aes.u_aes
+    sha_c = top.g_sha.u_sha
+    flops = {
+        "key_q": _val(top.key_q),
+        "key_seen_q": _val(top.key_seen_q),
+        "msg_q": _val(top.msg_q),
+        "ctr_op_q": _val(top.ctr_op_q),
+        "aes.s_q": _val(aes_c.s_q),
+        "aes.rk_q": _val(aes_c.rk_q),
+        "aes.state_q": _val(aes_c.state_q),
+        "sha.hin_q": _val(sha_c.hin_q),
+        "sha.t_q": _val(sha_c.t_q),
+        "sha.state_q": _val(sha_c.state_q),
+    }
+    for nm in "abcdefgh":
+        flops[f"sha.{nm}_q"] = _val(getattr(sha_c, f"{nm}_q"))
+    for j in range(16):
+        flops[f"sha.w_q[{j}]"] = _val(sha_c.w_q[j])
+    return flops
+
+
+async def _bank_words(d: _Dev) -> dict[str, int]:
+    """DOUT / DIGEST / IV over the bus (they are RO / RW bank words)."""
+    out = {}
+    for i, a in enumerate(DOUT):
+        out[f"DOUT{i}"] = await d.peek(a)
+    for i, a in enumerate(DIGEST):
+        out[f"DIGEST{i}"] = await d.peek(a)
+    for i, a in enumerate(IV):
+        out[f"IV{i}"] = await d.peek(a)
+    return out
+
+
+async def _scan_mode_edge(dut, level: int) -> None:
+    """Change scan_mode_i and return in the first settled cycle AFTER the clearing edge. Pins the
+    latency: wipe_w must be visible after exactly WIPE_LATENCY edges, and for one cycle only."""
+    dut.scan_mode_i.value = level
+    seen = None
+    for k in range(1, 8):
+        await RisingEdge(dut.clk)
+        await _settle()
+        if _val(dut.u_dut.wipe_w):
+            seen = k
+            break
+    assert seen == WIPE_LATENCY, f"wipe_w first visible after {seen} edges, contract says {WIPE_LATENCY}"
+    await RisingEdge(dut.clk)  # the clearing edge
+    await _settle()
+    assert _val(dut.u_dut.wipe_w) == 0, "wipe_w must be a ONE-cycle pulse per scan_mode_i edge"
+
+
+async def _scan_to(dut, level: int) -> None:
+    """Edge, wipe, then enough cycles for the idle pre-load to settle."""
+    await _scan_mode_edge(dut, level)
+    await ClockCycles(dut.clk, SETTLE_AFTER_WIPE)
+
+
+async def _dirty_everything(d: _Dev, dut) -> None:
+    """Load a key and run CTR, ECB and SHA so every flop class holds key- or message-derived data."""
+    await d.load_key(FIPS_B_KEY)
+    await d.set_iv(bytes.fromhex("000102030405060708090a0b0c0d0e0f"))
+    await d.ctr(bytes(range(16, 32)))
+    assert await d.ecb(FIPS_B_PT) == FIPS_B_CT
+    await d.sha(b"abc")
+    # The last operation is SHA, so ctr_op_q still holds the CTR choice of the last AES start (1
+    # would need CTR last); rerun one CTR block so it is 1 at the sample point, then SHA again.
+    await d.ctr(bytes(range(32, 48)))
+    await d.sha(b"abc")
+    await d.push(bytes(range(64)))  # leave a non-trivial message in msg_q
+
+
+def _assert_all_zero(flops: dict[str, int], bank: dict[str, int], when: str) -> None:
+    bad = {k: hex(v) for k, v in {**flops, **bank}.items() if v != 0}
+    assert not bad, f"{when}: key/state flops not zero: {bad}"
+
+
+@cocotb.test()
+async def test_scan_entry_wipes_every_key_and_state_flop(dut):
+    """Load a key, run CTR / ECB / SHA, enter scan mode: in the first cycle after the clearing edge
+    every key-, round-, message-, digest- and IV-derived flop reads 0, key_valid has dropped and
+    the DOUT / DIGEST / IV bank words read 0 over the bus.
+    MUTATION TARGET: removing the clear on any one register class."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await _dirty_everything(d, dut)
+
+    pre = _crypto_flops(dut)
+    pre_bank = await _bank_words(d)
+    for name in ("key_q", "key_seen_q", "msg_q", "ctr_op_q", "aes.s_q", "aes.rk_q", "sha.hin_q",
+                 "sha.t_q", "sha.a_q", "sha.e_q", "sha.w_q[0]", "sha.w_q[15]"):
+        assert pre[name] != 0, f"precondition: {name} must hold residue before scan entry"
+    for name in ("DOUT0", "DOUT3", "DIGEST0", "DIGEST7", "IV0", "IV3"):
+        assert pre_bank[name] != 0, f"precondition: {name} must be non-zero before scan entry"
+    assert await d.status() & ST_KEYV
+
+    await _scan_mode_edge(dut, 1)
+    _assert_all_zero(_crypto_flops(dut), await _bank_words(d), "first cycle after scan entry")
+    assert not (await d.status() & ST_KEYV), "key_valid must drop with the key"
+    assert (await d.status()) & (ST_BUSY | ST_DONE) in (0, ST_DONE), "block must be idle"
+
+    # An operation after the wipe is the hang-free illegal path: done, no data.
+    await ClockCycles(dut.clk, SETTLE_AFTER_WIPE)
+    await d.clear_done()
+    await d.push(FIPS_B_PT)
+    await d.start(MODE_ECB)
+    await d.trace()
+    assert await d.dout() == bytes(16), "no key after the wipe: ECB must not produce data"
+
+
+@cocotb.test()
+async def test_scan_exit_wipes_scan_loaded_state(dut):
+    """Everything loaded while in scan mode (key, IV, message) is wiped again on scan exit, so
+    nothing scan-loaded can become a live key; key_valid drops; the block works afterwards.
+    MUTATION TARGET: no wipe on the falling scan_mode_i edge."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await _scan_to(dut, 1)
+    await d.load_key(FIPS_B_KEY)
+    await d.set_iv(bytes(range(16)))
+    await d.push(bytes(range(64)))
+    await ClockCycles(dut.clk, 2)
+    assert _val(dut.u_dut.key_q) == int.from_bytes(FIPS_B_KEY, "big")
+    assert _val(dut.u_dut.msg_q) != 0
+    assert await d.status() & ST_KEYV
+    assert await d.get_iv() != bytes(16)
+
+    await _scan_mode_edge(dut, 0)
+    _assert_all_zero(_crypto_flops(dut), await _bank_words(d), "first cycle after scan exit")
+    assert not (await d.status() & ST_KEYV), "scan exit must drop key_valid"
+
+    await ClockCycles(dut.clk, SETTLE_AFTER_WIPE)
+    await d.load_key(FIPS_B_KEY)
+    assert await d.ecb(FIPS_B_PT) == FIPS_B_CT, "the block must work normally after scan exit"
+
+
+@cocotb.test()
+async def test_scan_wipe_is_one_shot_so_scan_stays_testable(dut):
+    """The clear is a one-time wipe on the edge, not a reset held during scan: a key written in
+    scan mode persists for as long as scan mode lasts and wipe_w never re-fires.
+    MUTATION TARGET: wipe held as a level (reset-like) while scan_mode_i = 1."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await _scan_to(dut, 1)
+    await d.load_key(FIPS_B_KEY)
+    key_int = int.from_bytes(FIPS_B_KEY, "big")
+    for _ in range(30):
+        await RisingEdge(dut.clk)
+        await _settle()
+        assert _val(dut.u_dut.wipe_w) == 0, "wipe_w must not re-fire while scan_mode_i is steady"
+        assert _val(dut.u_dut.key_q) == key_int, "scan-mode key write must persist (no held clear)"
+    assert await d.status() & ST_KEYV
+
+
+@cocotb.test()
+async def test_scan_entry_aborts_inflight_aes_and_sha(dut):
+    """Scan entry in the middle of an AES block and of a SHA block: the cores' round state is
+    cleared in the first cycle after the clearing edge and the operation ends hang-free as done
+    with no data (DOUT / DIGEST 0).
+    MUTATION TARGET: a core that ignores wipe_i, or a wrapper FSM that stays busy."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await d.load_key(FIPS_B_KEY)
+
+    # --- AES: wipe lands in the middle of the 11-cycle block
+    await d.clear_done()
+    await d.push(FIPS_B_PT)
+    await d.start(MODE_ECB)
+    await ClockCycles(dut.clk, 2)
+    assert await d.status() & ST_BUSY and _val(dut.u_dut.g_aes.u_aes.state_q) != 0
+    await _scan_mode_edge(dut, 1)
+    flops = _crypto_flops(dut)
+    _assert_all_zero(flops, await _bank_words(d), "AES in flight, first cycle after the wipe")
+    await ClockCycles(dut.clk, 3)
+    st = await d.status()
+    assert st & ST_DONE and not st & ST_BUSY, f"aborted AES op must end done/idle, STATUS=0x{st:x}"
+    assert await d.dout() == bytes(16)
+    await _scan_to(dut, 0)
+
+    # --- SHA: wipe lands in the middle of the 66-cycle block
+    await d.load_key(FIPS_B_KEY)
+    await d.clear_done()
+    await d.push(bytes(range(64)))
+    await d.start(MODE_SHA)
+    await ClockCycles(dut.clk, 20)
+    assert await d.status() & ST_BUSY and _val(dut.u_dut.g_sha.u_sha.t_q) != 0
+    await _scan_mode_edge(dut, 1)
+    _assert_all_zero(_crypto_flops(dut), await _bank_words(d), "SHA in flight, first cycle after the wipe")
+    await ClockCycles(dut.clk, 3)
+    st = await d.status()
+    assert st & ST_DONE and not st & ST_BUSY, f"aborted SHA op must end done/idle, STATUS=0x{st:x}"
+    assert await d.digest() == bytes(32)
+
+
+async def _timed_access_at_clearing_edge(dut, d: _Dev, addr: int, data: int) -> None:
+    """Drive one APB write whose ACCESS phase is sampled on the clearing edge itself (edge 3 after
+    the scan_mode_i rise), i.e. in the cycle where wipe_w is high."""
+    dut.scan_mode_i.value = 1
+    await RisingEdge(dut.clk)  # edge 1
+    d.psel.value = 1
+    d.penable.value = 0
+    d.pwrite.value = 1
+    d.paddr.value = addr
+    d.pwdata.value = data
+    d.pstrb.value = 0xF
+    await RisingEdge(dut.clk)  # edge 2: SETUP sampled, wipe_w rises after it
+    d.penable.value = 1
+    await _settle()
+    assert _val(dut.u_dut.wipe_w) == 1, "ACCESS phase must coincide with the wipe cycle"
+    await RisingEdge(dut.clk)  # edge 3: ACCESS sampled together with the clear
+    d.psel.value = 0
+    d.penable.value = 0
+    d.pwrite.value = 0
+    await _settle()
+
+
+@cocotb.test()
+async def test_start_and_key_write_in_the_wipe_cycle(dut):
+    """A START that lands in the wipe cycle takes the hang-free illegal path (done, idle, no data)
+    instead of leaving the wrapper busy over a cleared core; a KEY write in that cycle is dropped
+    and latches key_write_rejected.
+    MUTATION TARGET: START not blocked in the wipe cycle; key_write_rejected not latched for a KEY write there."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await d.load_key(FIPS_B_KEY)
+    await d.push(FIPS_B_PT)
+    await d.w(CRYPTO_CTRL, _ctrl(MODE_ECB))
+    await d.clear_done()
+    await _timed_access_at_clearing_edge(dut, d, CRYPTO_CTRL, _ctrl(MODE_ECB, start=1))
+    await ClockCycles(dut.clk, 3)
+    st = await d.status()
+    assert st & ST_DONE and not st & ST_BUSY, f"start in the wipe cycle must end done/idle, 0x{st:x}"
+    assert await d.dout() == bytes(16)
+    assert _val(dut.u_dut.g_aes.u_aes.state_q) == 0
+    await _scan_to(dut, 0)
+
+    await d.w(CRYPTO_IRQ_CLR, CLR_REJ)
+    await _timed_access_at_clearing_edge(dut, d, KEY[0], 0xDEADBEEF)
+    await ClockCycles(dut.clk, 1)
+    assert await d.status() & ST_REJ, "a KEY write in the wipe cycle must latch key_write_rejected"
+    assert _val(dut.u_dut.key_q) == 0
+    assert not (await d.status() & ST_KEYV)
+
+
+@cocotb.test()
+async def test_reset_neither_creates_nor_hides_a_scan_edge(dut):
+    """The edge detector tracks scan_mode_i through reset: a reset pulse inside scan mode (the
+    tester's scan reset) does not fabricate an entry edge on release, and the exit edge after it
+    is still detected.
+    MUTATION TARGET: resetting the synchroniser / edge flops to 0."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await _scan_to(dut, 1)
+    dut.rst_n.value = 0
+    await ClockCycles(dut.clk, 5)
+    dut.rst_n.value = 1
+    for _ in range(12):
+        await RisingEdge(dut.clk)
+        await _settle()
+        assert _val(dut.u_dut.wipe_w) == 0, "reset release inside scan mode must not look like an edge"
+    await d.load_key(FIPS_B_KEY)
+    assert await d.status() & ST_KEYV
+    await _scan_mode_edge(dut, 0)
+    assert _val(dut.u_dut.key_q) == 0, "exit edge after a scan-mode reset must still wipe"
