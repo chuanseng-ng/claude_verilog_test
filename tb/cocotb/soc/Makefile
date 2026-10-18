@@ -63,7 +63,7 @@ export PYTHONPATH := $(TB):$(SOC_DIR):$(PYTHONPATH)
 #   make sram_controller SRAM_TARGET=sky130   # sky130_sram_4kbyte_1rw1r_32x1024_8
 SRAM_TARGET ?= freepdk45
 ifeq ($(SRAM_TARGET),sky130)
-    SRAM_CTRL_SIM_MODEL := $(SIM_DIR)/sky130_sram_4kbyte_1rw1r_32x1024_8.sv
+    SRAM_CTRL_SIM_MODEL := $(SIM_DIR)/sky130_sram_4kbyte_1rw1r_32x1024_8.sv $(RTL)/soc/dft/mem_collar.sv
     COMPILE_ARGS += +define+SRAM_SKY130
 else
     SRAM_CTRL_SIM_MODEL :=
@@ -382,6 +382,68 @@ JTAG_TAP_SOURCES = \
 	$(RTL)/soc/dft/jtag_tap.sv \
 	$(SOC_DIR)/tb_jtag_tap.sv
 
+# Bead claude_verilog_test-j41m.14 (DFT Stage 4): MBIST controller + collar + fault-injecting SRAM models.
+MBIST_CTRL_SOURCES = \
+	$(RTL)/soc/dft/mbist_ctrl.sv \
+	$(RTL)/soc/dft/mem_collar.sv \
+	$(SOC_DIR)/sram_fi_core.sv \
+	$(SOC_DIR)/tb_mbist_domain.sv
+
+# TAP-driven end to end: dft_ctrl + soc_mbist (core + CPU domain) + controllers + FI memories.
+MBIST_TAP_SOURCES = \
+	$(RTL)/soc/cdc/cdc_sync.sv \
+	$(RTL)/soc/cdc/cdc_reset_sync.sv \
+	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
+	$(RTL)/mem/rv32i_clock_gate.sv \
+	$(RTL)/soc/dft/dft_ctrl_ports.sv \
+	$(RTL)/soc/dft/jtag_tap.sv \
+	$(RTL)/soc/dft/dft_clk_switch.sv \
+	$(RTL)/soc/dft/dft_rst_mux.sv \
+	$(RTL)/soc/dft/dft_ctrl.sv \
+	$(RTL)/soc/dft/mbist_ctrl.sv \
+	$(RTL)/soc/dft/mbist_xing.sv \
+	$(RTL)/soc/dft/mbist_ctl_hold.sv \
+	$(RTL)/soc/dft/mbist_status_sync.sv \
+	$(RTL)/soc/dft/mem_collar.sv \
+	$(RTL)/soc/dft/soc_mbist.sv \
+	$(SOC_DIR)/sram_fi_core.sv \
+	$(SOC_DIR)/tb_mbist_tap.sv
+
+# SoC-level integration on the REAL wrappers: sram_controller + npu_top with +define+SRAM_SKY130 against the
+# fault-injecting stand-in that takes the real macro's module name.
+MBIST_SOC_SLICE_SOURCES = \
+	$(RTL)/soc/axi_pkg.sv \
+	$(RTL)/soc/soc_addr_map_pkg.sv \
+	$(RTL)/soc/apb4_register_bank.sv \
+	$(RTL)/soc/cdc/cdc_sync.sv \
+	$(RTL)/soc/cdc/cdc_reset_sync.sv \
+	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
+	$(RTL)/mem/rv32i_clock_gate.sv \
+	$(RTL)/soc/dft/dft_ctrl_ports.sv \
+	$(RTL)/soc/dft/jtag_tap.sv \
+	$(RTL)/soc/dft/dft_clk_switch.sv \
+	$(RTL)/soc/dft/dft_rst_mux.sv \
+	$(RTL)/soc/dft/dft_ctrl.sv \
+	$(RTL)/soc/dft/mbist_ctrl.sv \
+	$(RTL)/soc/dft/mbist_xing.sv \
+	$(RTL)/soc/dft/mbist_ctl_hold.sv \
+	$(RTL)/soc/dft/mbist_status_sync.sv \
+	$(RTL)/soc/dft/mem_collar.sv \
+	$(RTL)/soc/dft/soc_mbist.sv \
+	$(RTL)/soc/sram_controller.sv \
+	$(RTL)/npu/npu_mac_array.sv \
+	$(RTL)/npu/npu_weight_mem.sv \
+	$(RTL)/npu/npu_top.sv \
+	$(SOC_DIR)/sram_fi_core.sv \
+	$(SOC_DIR)/sky130_sram_fi_wrappers.sv \
+	$(SOC_DIR)/tb_mbist_soc_slice.sv
+
+# FI model with no fault armed vs the REAL 4 KB simulation model.
+MBIST_FI_EQUIV_SOURCES = \
+	$(SIM_DIR)/sky130_sram_4kbyte_1rw1r_32x1024_8.sv \
+	$(SOC_DIR)/sram_fi_core.sv \
+	$(SOC_DIR)/tb_sram_fi_equiv.sv
+
 # Bead claude_verilog_test-j41m.3: dft_ctrl = jtag_tap + the unchanged 1a pin leg + the TCK
 # scan-clock gate (rv32i_clock_gate) + the combiner; the wrapper also instantiates the 1a
 # dft_ctrl_ports as the golden reference.
@@ -494,6 +556,12 @@ PLL_SOURCES = \
 	$(RTL)/soc/dft/jtag_tap.sv \
 	$(RTL)/soc/dft/dft_clk_switch.sv \
 	$(RTL)/soc/dft/dft_ctrl.sv \
+	$(RTL)/soc/dft/mbist_ctrl.sv \
+	$(RTL)/soc/dft/mbist_xing.sv \
+	$(RTL)/soc/dft/mbist_ctl_hold.sv \
+	$(RTL)/soc/dft/mbist_status_sync.sv \
+	$(RTL)/soc/dft/mem_collar.sv \
+	$(RTL)/soc/dft/soc_mbist.sv \
 	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
@@ -582,6 +650,12 @@ SOC_BOOT_SOURCES = \
 	$(RTL)/soc/dft/jtag_tap.sv \
 	$(RTL)/soc/dft/dft_clk_switch.sv \
 	$(RTL)/soc/dft/dft_ctrl.sv \
+	$(RTL)/soc/dft/mbist_ctrl.sv \
+	$(RTL)/soc/dft/mbist_xing.sv \
+	$(RTL)/soc/dft/mbist_ctl_hold.sv \
+	$(RTL)/soc/dft/mbist_status_sync.sv \
+	$(RTL)/soc/dft/mem_collar.sv \
+	$(RTL)/soc/dft/soc_mbist.sv \
 	$(RTL)/soc/cdc/cdc_sync.sv \
 	$(RTL)/soc/cdc/cdc_reset_sync.sv \
 	$(RTL)/soc/cdc/cdc_gray_fifo.sv \
@@ -743,7 +817,7 @@ endif
 ifdef COVERAGE
 	# Each simulation writes its own .dat through the runtime plusarg (see the COVERAGE block).
 	# MODULE is in the name because suites that share a build directory share SIM_BUILD.
-	override PLUSARGS += +verilator+coverage+file+$(COV_DIR)/$(notdir $(SIM_BUILD))__$(MODULE).dat
+	override PLUSARGS += +verilator+coverage+file+$(COV_DIR)/$(notdir $(SIM_BUILD))__$(MODULE)$(if $(TESTCASE),__tc$(shell printf '%s' '$(TESTCASE)' | sha256sum | cut -c1-8)).dat
 endif
 # Bead b079: parallel C++ compile of the Verilated model.  Unset by default (a developer host
 # keeps whatever -j its own MAKEFLAGS gives); CI sets it to the runner's core count.  Applies to
@@ -826,7 +900,7 @@ define check_for_results_file
     @$(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/check_cocotb_results.py $(COCOTB_RESULTS_FILE) || (echo "ERROR: cocotb recorded failures (bead p6t8: cocotb itself cannot set an exit code)" >&2 && exit 1)
 endef
 
-.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint cdc_sync cdc_sync_lint cdc_sync_stages1_neg cdc_gray_fifo cdc_gray_fifo_sim cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg periph_sync_stages clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation soc_uart_boot
+.PHONY: axi4_to_axilite axilite_to_axi4 boot_rom crossbar register_bank axil_interconnect axil_apb_fabric axil_apb_fabric_lint sram_controller dma dma_lint timer timer_lint irq irq_lint uart uart_lint spi spi_lint soc_boot soc_periph soc_coherency soc_cpu_gpu soc_stress soc_pll soc_pll_lint soc_all soc_all_ci verilator_lint soc_boot_lint l2_bench l2_bench_lint apb4_register_bank apb4_register_bank_lint axil_to_apb axil_to_apb_lint pmu pmu_lint async_axi_fifo async_axi_fifo_lint soc_multiclock soc_multiclock_reset soc_pll_multiclock soc_dft_scan apb_cdc_bridge apb_cdc_bridge_lint soc_pmu_multiclock soc_integration cdc_reset_sync_scan cdc_reset_sync_scan_lint cdc_sync cdc_sync_lint cdc_sync_stages1_neg cdc_gray_fifo cdc_gray_fifo_sim cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg periph_sync_stages clock_gate_scan clock_gate_scan_lint dft_muxes dft_muxes_lint jtag_tap jtag_tap_lint mbist_ctrl mbist_ctrl_lint mbist_tap mbist_tap_lint mbist_soc_slice mbist_soc_slice_lint mbist_fi_equiv mbist_fi_equiv_lint dft_clk_switch dft_clk_switch_lint dft_clk_switch_plainmux dft_ctrl dft_ctrl_lint soc_jtag gpio gpio_lint soc_gpio gpio_driver apb_interconnect apb_interconnect_lint pwm pwm_lint soc_pwm wdt wdt_lint soc_wdt trng trng_lint soc_trng i2c i2c_lint soc_i2c crypto crypto_lint soc_crypto npu npu_lint soc_npu check-exit-propagation soc_uart_boot
 crossbar:
 	$(MAKE) MODULE=test_crossbar,test_crossbar_errors TOPLEVEL=tb_axi4_crossbar \
 		$(BUILD_ARGS)
@@ -1367,6 +1441,47 @@ jtag_tap: jtag_tap_lint
 		VERILOG_SOURCES="$(JTAG_TAP_SOURCES)" \
 		$(BUILD_ARGS)
 
+mbist_ctrl_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR --top-module tb_mbist_domain $(MBIST_CTRL_SOURCES)
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -GN_MEM=10 -GAW=8 -GP1_MASK=0 --top-module tb_mbist_domain $(MBIST_CTRL_SOURCES)
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -GN_MEM=2 -GAW=10 -GP1_MASK=1 --top-module tb_mbist_domain $(MBIST_CTRL_SOURCES)
+
+# Three build points (each hashes to its own SIM_BUILD): small (every algorithm x every fault class), soc
+# (two 1024-word macros, port 1 on memory 0) and cpu (ten 256-word cache SRAMs).
+mbist_ctrl: mbist_ctrl_lint
+	@set -e; for cfg in "small 4 6 5" "soc 2 10 1" "cpu 10 8 0"; do set -- $$cfg; \
+	  echo "=== mbist_ctrl: $$1 (N_MEM=$$2 AW=$$3 P1_MASK=$$4) ==="; \
+	  MBIST_CFG=$$1 $(MAKE) MODULE=test_mbist_ctrl TOPLEVEL=tb_mbist_domain \
+		VERILOG_SOURCES="$(MBIST_CTRL_SOURCES)" \
+		EXTRA_ARGS="-GN_MEM=$$2 -GAW=$$3 -GP1_MASK=$$4" \
+		$(BUILD_ARGS); \
+	done
+
+mbist_tap_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR --top-module tb_mbist_tap $(MBIST_TAP_SOURCES)
+
+mbist_tap: mbist_tap_lint
+	$(MAKE) MODULE=test_mbist_tap TOPLEVEL=tb_mbist_tap \
+		VERILOG_SOURCES="$(MBIST_TAP_SOURCES)" \
+		$(BUILD_ARGS)
+
+mbist_soc_slice_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR +define+SRAM_SKY130 --top-module tb_mbist_soc_slice $(MBIST_SOC_SLICE_SOURCES)
+
+mbist_soc_slice: mbist_soc_slice_lint
+	$(MAKE) MODULE=test_mbist_soc_slice TOPLEVEL=tb_mbist_soc_slice \
+		VERILOG_SOURCES="$(MBIST_SOC_SLICE_SOURCES)" \
+		EXTRA_ARGS="+define+SRAM_SKY130" \
+		$(BUILD_ARGS)
+
+mbist_fi_equiv_lint:
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-DECLFILENAME --top-module tb_sram_fi_equiv $(MBIST_FI_EQUIV_SOURCES)
+
+mbist_fi_equiv: mbist_fi_equiv_lint
+	$(MAKE) MODULE=test_sram_fi_equiv TOPLEVEL=tb_sram_fi_equiv \
+		VERILOG_SOURCES="$(MBIST_FI_EQUIV_SOURCES)" \
+		$(BUILD_ARGS)
+
 dft_clk_switch_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
 		--top-module tb_dft_clk_switch \
@@ -1812,63 +1927,134 @@ l2_bench: l2_bench_lint
 soc_all: soc_all_ci
 	$(MAKE) gpio_driver
 
+# Bead 9ayu.1: the ordered list of `soc_all_ci` sub-make invocations lives in ONE variable.  An
+# entry is the sub-make's arguments joined with ':' (so an entry with a variable assignment stays
+# one word: `sram_controller:SRAM_TARGET=sky130` is `$(MAKE) sram_controller SRAM_TARGET=sky130`).
+# It is consumed by
+#   * soc_all_ci          -- every entry, in this order (behaviour unchanged);
+#   * soc_ci_shard        -- a subset (SUITES="..." or SHARD=k NSHARDS=n), same relative order;
+#   * print-soc-ci-suites -- one entry per line, for tools/verif/soc_shards.py and the CI union check.
+# Add a new CI suite HERE, once; the sharded coverage workflow and (bead 9ayu.2) the sharded
+# cocotb workflow pick it up with no further edit.  soc_ci_shard also makes the run order of a
+# shard deterministic (list order), which matters only for the build-dir sharing described above.
+SOC_CI_SUITES := \
+    crossbar \
+    register_bank \
+    axil_interconnect \
+    axil_apb_fabric \
+    sram_controller \
+    sram_controller:SRAM_TARGET=sky130 \
+    axi4_to_axilite \
+    axilite_to_axi4 \
+    boot_rom \
+    dma \
+    irq \
+    timer \
+    uart \
+    spi \
+    apb4_register_bank \
+    axil_to_apb \
+    pmu \
+    gpio \
+    pwm \
+    wdt \
+    trng \
+    i2c \
+    crypto \
+    npu \
+    apb_interconnect \
+    async_axi_fifo \
+    apb_cdc_bridge \
+    cdc_reset_sync_scan \
+    cdc_sync \
+    cdc_gray_fifo \
+    periph_sync_stages \
+    clock_gate_scan \
+    dft_muxes \
+    jtag_tap \
+    dft_clk_switch \
+    dft_ctrl \
+    mbist_fi_equiv \
+    mbist_ctrl \
+    mbist_tap \
+    mbist_soc_slice \
+    soc_boot \
+    soc_periph \
+    soc_coherency \
+    soc_cpu_gpu \
+    soc_gpio \
+    soc_pwm \
+    soc_wdt \
+    soc_trng \
+    soc_i2c \
+    soc_crypto \
+    soc_npu \
+    soc_uart_boot \
+    soc_pll \
+    soc_multiclock \
+    soc_multiclock_reset \
+    soc_pll_multiclock \
+    soc_dft_scan \
+    soc_jtag \
+    soc_pmu_multiclock \
+    soc_integration
+
+# Suites whose ONE module is too heavy for a single shard are run as several TESTCASE slices when
+# sharded (never by soc_all_ci, which runs the whole module).  `suite=slice|slice|...`, a slice is
+# a comma-separated list of the module's cocotb test names.  soc_uart_boot is ~33 min instrumented
+# (test_load_verify_jump_and_run alone is ~15 min); its slices are balanced on measured times.
+# Every @cocotb.test of the module must appear in exactly one slice: tb/tests/test_soc_shards.py
+# checks that against the test file, so a new test cannot silently fall out of the sharded run.
+SOC_CI_SPLITS := \
+    soc_uart_boot=test_load_verify_jump_and_run|test_bad_crc_is_nakked_and_memory_untouched,test_refusals_nak_with_the_right_code,test_banner_and_info_default_115200_at_50mhz|test_table_sum_is_independent,test_banner_and_info_sim_divisor,test_oversized_length_nak_then_resync,test_truncated_frame_times_out_and_recovers,test_line_noise_before_sof_is_ignored,test_autoboot_runs_preloaded_image,test_autoboot_refuses_empty_sram_and_stays_serviceable
+
+define soc_nl
+
+
+endef
+# `$(call soc_run_suites,<entries>)` expands to one recipe line per entry, each exactly the line
+# soc_all_ci used to spell out by hand.
+soc_run_suites = $(foreach s,$(1),+$(MAKE) $(subst :, ,$(s))$(soc_nl))
+
 soc_all_ci: check-space
-	$(MAKE) crossbar
-	$(MAKE) register_bank
-	$(MAKE) axil_interconnect
-	$(MAKE) axil_apb_fabric
-	$(MAKE) sram_controller
-	$(MAKE) sram_controller SRAM_TARGET=sky130
-	$(MAKE) axi4_to_axilite
-	$(MAKE) axilite_to_axi4
-	$(MAKE) boot_rom
-	$(MAKE) dma
-	$(MAKE) irq
-	$(MAKE) timer
-	$(MAKE) uart
-	$(MAKE) spi
-	$(MAKE) apb4_register_bank
-	$(MAKE) axil_to_apb
-	$(MAKE) pmu
-	$(MAKE) gpio
-	$(MAKE) pwm
-	$(MAKE) wdt
-	$(MAKE) trng
-	$(MAKE) i2c
-	$(MAKE) crypto
-	$(MAKE) npu
-	$(MAKE) apb_interconnect
-	$(MAKE) async_axi_fifo
-	$(MAKE) apb_cdc_bridge
-	$(MAKE) cdc_reset_sync_scan
-	$(MAKE) cdc_sync
-	$(MAKE) cdc_gray_fifo
-	$(MAKE) periph_sync_stages
-	$(MAKE) clock_gate_scan
-	$(MAKE) dft_muxes
-	$(MAKE) jtag_tap
-	$(MAKE) dft_clk_switch
-	$(MAKE) dft_ctrl
-	$(MAKE) soc_boot
-	$(MAKE) soc_periph
-	$(MAKE) soc_coherency
-	$(MAKE) soc_cpu_gpu
-	$(MAKE) soc_gpio
-	$(MAKE) soc_pwm
-	$(MAKE) soc_wdt
-	$(MAKE) soc_trng
-	$(MAKE) soc_i2c
-	$(MAKE) soc_crypto
-	$(MAKE) soc_npu
-	$(MAKE) soc_uart_boot
-	$(MAKE) soc_pll
-	$(MAKE) soc_multiclock
-	$(MAKE) soc_multiclock_reset
-	$(MAKE) soc_pll_multiclock
-	$(MAKE) soc_dft_scan
-	$(MAKE) soc_jtag
-	$(MAKE) soc_pmu_multiclock
-	$(MAKE) soc_integration
+	$(call soc_run_suites,$(SOC_CI_SUITES))
+
+.PHONY: print-soc-ci-suites
+print-soc-ci-suites:
+	@$(foreach s,$(SOC_CI_SUITES),echo '$(s)';)
+
+# Bead 9ayu.1: run a subset of the soc_all_ci list (a CI shard).  Select it either explicitly,
+#   make soc_ci_shard SUITES="crossbar soc_boot sram_controller:SRAM_TARGET=sky130"
+# or by index, using the deterministic balanced assignment of tools/verif/soc_shards.py
+# (weights: tools/verif/soc_shard_weights.json):
+#   make soc_ci_shard SHARD=1 NSHARDS=5
+# Every entry that ran to completion is appended to $(SOC_SUITES_RAN) (default
+# $(SIM_BUILD_ROOT)/suites_ran.txt), which the CI merge job compares with print-soc-ci-suites.
+# A suite that fails stops the shard (the p6t8 check makes a red suite exit non-zero).
+SHARD ?=
+NSHARDS ?=
+SOC_SUITES_RAN ?= $(SIM_BUILD_ROOT)/suites_ran.txt
+ifneq ($(strip $(SHARD)),)
+  ifeq ($(strip $(NSHARDS)),)
+    $(error SHARD=$(SHARD) needs NSHARDS=<n>)
+  endif
+  SUITES = $(shell $(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/soc_shards.py select --shard $(SHARD) --nshards $(NSHARDS) --suites "$(SOC_CI_SUITES)" --splits "$(SOC_CI_SPLITS)")
+endif
+.PHONY: soc_ci_shard
+soc_ci_shard: check-space
+	@test -n "$(strip $(SUITES))" || { echo "ERROR: soc_ci_shard: set SUITES=\"...\" or SHARD=<k> NSHARDS=<n>" >&2; exit 1; }
+	@mkdir -p $(dir $(SOC_SUITES_RAN)) && : > $(SOC_SUITES_RAN)
+	$(foreach s,$(SUITES),+$(MAKE) $(subst :, ,$(s)) && echo '$(s)' >> $(SOC_SUITES_RAN)$(soc_nl))
+
+# Bead 9ayu.1: the instrumented half of `soc_coverage` for ONE shard: run the shard's suites with
+# COVERAGE=1 and leave the per-simulation .dat files in $(COV_DIR).  No merge and no report here;
+# the sharded workflow's final job merges every shard's .dat and renders the report once.
+.PHONY: soc_coverage_shard
+soc_coverage_shard:
+	@mkdir -p $(COV_DIR)
+	rm -f $(COV_DIR)/*.dat
+	$(MAKE) soc_ci_shard COVERAGE=1
+	@ls $(COV_DIR)/*.dat >/dev/null 2>&1 || { echo "ERROR: soc_coverage_shard: no .dat written to $(COV_DIR) -- coverage was not collected" >&2; exit 1; }
 
 # soc_integration_batch — compile tb_soc_top ONCE and run the four soc_top integration
 # suites back-to-back without a clean between MODULE changes.

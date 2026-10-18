@@ -2,25 +2,52 @@ name: SoC Coverage
 
 # GH #216 (bead nkj7): line + toggle coverage for the whole SoC cocotb regression.
 #
-# Runs `make -C tb/cocotb/soc soc_coverage`, i.e. the entire soc_all_ci regression built with
-# Verilator --coverage-line --coverage-toggle, merges every per-simulation .dat, and renders a
-# per-module table with tools/verif/coverage_report.py.  Method, run command, per-module table,
-# triage and the gating decision: docs/verification/SOC_COVERAGE_REPORT.md.
+# Runs the entire soc_all_ci regression built with Verilator --coverage-line --coverage-toggle,
+# merges every per-simulation .dat, and renders a per-module table with
+# tools/verif/coverage_report.py.  Method, run command, per-module table, triage and the gating
+# decision: docs/verification/SOC_COVERAGE_REPORT.md.
 #
-# Combined report (bead 1eyv): after the SoC regression, the same job runs the CPU / Phase 3
-# cache / Phase 4 GPU suites instrumented the same way (`make -C sim coverage_cpu_gpu`, same nix
-# Verilator, so both inputs agree on point identity) and merges the two .dat files at the report
-# level (`coverage_report.py --dat soc --dat cpu_gpu`).  One job, not a download of the
-# random_tests.yml rtl-coverage artifact: that job builds Verilator 5.036 from source in another
-# workflow, so its point keys are not guaranteed to match and its run is not ordered against this
-# one.  Since bead a5ze the CPU/cache/GPU half is REQUIRED (no `continue-on-error`): the gate
-# evaluates rtl/cpu|mem|gpu on the combined data, so a suite that is red, a collapsed pass count
-# or a missing `cpu_gpu_merged.dat` fails the job instead of silently dropping three trees.
+# Sharding (bead 9ayu.1).  This used to be ONE serial job (74 min: 62 min of instrumented SoC
+# suites + 11 min of CPU/cache/GPU suites).  It is now a fan-out that finishes in the time of its
+# slowest leg:
+#
+#   soc_shard (matrix, NSHARDS legs) --\
+#                                       >-- soc_coverage  (merge + report + gate; the job whose
+#   cpu_gpu                          --/                    name is the required check)
+#
+# * The list of suites is ONE variable, SOC_CI_SUITES in tb/cocotb/soc/Makefile (soc_all_ci runs the
+#   whole list, `make soc_ci_shard SHARD=k NSHARDS=n` a balanced slice of it).  The slice is
+#   planned by tools/verif/soc_shards.py from the measured instrumented timings in
+#   tools/verif/soc_shard_weights.json -- deterministic, so every leg and the merge job agree on it
+#   without passing the plan around.  The heaviest suites (i2c, soc_integration, soc_cpu_gpu,
+#   soc_coherency, soc_multiclock, and the slow soc_uart_boot test, which SOC_CI_SPLITS runs as three
+#   TESTCASE slices) land in different shards.
+# * Each shard uploads its per-simulation .dat files, its log and `suites_ran.txt` (every suite its
+#   make completed).  The final job merges ALL shards' .dat with verilator_coverage (the same
+#   operation the serial `soc_coverage` target performed over one directory, so the merged file is
+#   byte-identical to merging the same simulations serially), and fails unless
+#     - the union of the shards' suites_ran.txt is EXACTLY SOC_CI_SUITES (none lost, none run twice,
+#       none unknown): `python3 tools/verif/soc_shards.py union`;
+#     - the SUMMED pass count of all shard logs reaches PASS_FLOOR and no log has a failure (bead
+#       p6t8: a cocotb target exits 0 over failures, so this grep is the only red-suite catch);
+#     - the CPU/cache/GPU log reaches CPU_PASS_FLOOR with no failure.
+# * ccache (bead b079's pattern, copied from cocotb.yml) in every compiling job.  Only main
+#   (the nightly schedule, a manual dispatch on main) saves; pull requests restore.
+# * The final job runs `if: always()` and fails explicitly when any shard or the CPU/GPU job did not
+#   succeed.  A skipped required check counts as passing, so `needs` alone would let a red shard
+#   turn the check grey instead of red.
+#
+# Combined report (bead 1eyv): the CPU / Phase 3 cache / Phase 4 GPU suites run instrumented the
+# same way (`make -C sim coverage_cpu_gpu`, same nix Verilator, so both inputs agree on point
+# identity) and are merged with the SoC data at the report level (`coverage_report.py --dat soc
+# --dat cpu_gpu`).  Since bead a5ze that half is REQUIRED (no `continue-on-error`): the gate
+# evaluates rtl/cpu|mem|gpu on the combined data, so a red suite, a collapsed pass count or a
+# missing `cpu_gpu_merged.dat` fails the job instead of silently dropping three trees.
 #
 # NOT a per-PR gate.  An instrumented -O0 build is far slower than cocotb.yml's soc job, so this
 # runs nightly and on demand.  The pull_request trigger is limited to the files that make up
-# this report, so a change to the script, the waivers or this workflow is validated by a real
-# run before it merges; it does not fire for RTL or testbench edits.
+# this report, so a change to the script, the waivers, the shard plan or this workflow is validated
+# by a real run before it merges; it does not fire for RTL or testbench edits.
 #
 # Gating (bead s1cg, user decision 2026-10-10): the job fails if the REGRESSION fails (a red
 # suite, a collapsed pass count), if no coverage data was produced, or if the "Coverage gate"
@@ -28,17 +55,17 @@ name: SoC Coverage
 # floor (after category-b waivers) and the control-signal toggle floor (1-bit scalar signals; a
 # per-module ratchet in tools/verif/coverage_toggle_ratchet.txt holds the known gaps).  Bead a5ze:
 # every module of rtl/cpu, rtl/mem and rtl/gpu must also reach the 95 % LINE floor, evaluated on
-# the COMBINED data (SoC + CPU/cache/GPU, produced at the same commit by this job); the
-# control-signal toggle gate stays off those three trees.  The gate step runs AFTER the
-# CPU/GPU steps and the summary / upload steps are `if: always()`, so a red gate or a red
-# CPU/GPU suite still publishes the report and the data.  Definition of a control signal,
-# floors, how to add a waiver or raise a ratchet: SOC_COVERAGE_REPORT.md.
+# the COMBINED data (SoC + CPU/cache/GPU, produced at the same commit by this workflow); the
+# control-signal toggle gate stays off those three trees.  The gate step runs AFTER the merge
+# steps and the summary / upload steps are `if: always()`, so a red gate or a red suite still
+# publishes the report and the data.  Definition of a control signal, floors, how to add a waiver
+# or raise a ratchet: SOC_COVERAGE_REPORT.md.
 #
 # The Verilator pin is the same contract as cocotb.yml: nix-installed (flake-pinned) Verilator
 # compiles the sim, cocotb runs on the setup-python interpreter.  `nix profile install
 # .#verilator` puts verilator AND verilator_coverage on PATH, which is what the merge needs
 # (bead hg2's nix-Verilator-vs-coverage crash is side-stepped by the Makefile's
-# PYTHON3=$(SIM_PYTHON3) override; this job passes SIM_PYTHON3 exactly as cocotb.yml does).
+# PYTHON3=$(SIM_PYTHON3) override; every job here passes SIM_PYTHON3 exactly as cocotb.yml does).
 
 on:
   schedule:
@@ -51,31 +78,345 @@ on:
       - 'tools/verif/coverage_report.py'
       - 'tools/verif/coverage_waivers.txt'
       - 'tools/verif/coverage_toggle_ratchet.txt'
+      - 'tools/verif/soc_shards.py'
+      - 'tools/verif/soc_shard_weights.json'
+      - 'tb/cocotb/soc/Makefile'
       - 'tb/tests/test_coverage_report.py'
       - 'tb/tests/test_coverage_waiver_anchors.py'
+      - 'tb/tests/test_soc_shards.py'
 
 concurrency:
   group: soc-coverage-${{ github.ref }}
   cancel-in-progress: true
 
-# Least privilege: this job only reads the repo, and runs repository-controlled Makefile and
+# Least privilege: these jobs only read the repo, and run repository-controlled Makefile and
 # Python (same posture as cocotb.yml).
 permissions:
   contents: read
 
+env:
+  # Number of soc_shard matrix legs.  Must equal the length of the matrix list below: every leg
+  # asserts it (strategy.job-total) and the final job asserts it against the shard artifacts it got.
+  NSHARDS: '8'
+
 jobs:
-  soc_coverage:
-    name: SoC line + toggle coverage
+  soc_shard:
+    name: SoC coverage shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    # soc_all_ci is ~38 min uninstrumented on a small host; the instrumented build adds a
-    # coverage-point table per module plus per-simulation counting.  Generous headroom, but still
-    # fail rather than burn the 6 h default.
-    timeout-minutes: 300
+    # A shard is ~1/8 of the old 62-minute instrumented SoC run (the longest, ~16 min, holds the single 15-minute
+    # test_load_verify_jump_and_run).  Generous headroom, but still fail
+    # rather than burn the 6 h default.
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
 
     env:
-      # Build dirs, per-simulation .dat files, merged.dat and the report all live here.
+      # Build dirs, per-simulation .dat files and suites_ran.txt all live here.
       SOC_COV_ROOT: /home/runner/soc_cov
+
+    steps:
+      - name: Matrix size matches NSHARDS
+        run: |
+          if [ "${{ strategy.job-total }}" != "${NSHARDS}" ]; then
+            echo "FAIL: the matrix has ${{ strategy.job-total }} legs but NSHARDS=${NSHARDS}; fix one of them."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      # The Makefile's check-space gate wants >= 6 GB free.  A hosted runner normally has more than
+      # that to spare for a shard (the ~6 GB of SoC build dirs of the old serial job were spread over
+      # all shards), so the ~40 s of deleting unused toolchains is only paid when space is short.
+      - name: Free disk space (only if short)
+        run: |
+          avail_mb=$(df -Pm / | awk 'NR==2 {print $4}')
+          echo "free on /: ${avail_mb} MB"
+          if [ "${avail_mb}" -lt 15000 ]; then
+            sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/share/boost
+            df -h /
+          fi
+
+      - name: Install Nix (pinned Verilator from binary cache)
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Install pinned Verilator (nix profile, system-shell compile)
+        run: |
+          nix profile install .#verilator
+          verilator --version
+          command -v verilator_coverage
+
+      # ccache (bead b079) is installed from apt, not nix: it wraps the SYSTEM g++ that
+      # sim/cxx_shim.sh calls (see the shim), exactly like cocotb.yml.
+      - name: Install runtime libs for cocotb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5 ccache
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
+          pip list
+
+      # Compiler cache for the instrumented Verilated models (bead b079; same rationale and same
+      # correctness argument as cocotb.yml's step: ccache hashes the preprocessed source, the exact
+      # command line and the g++ binary's content, so the key only decides which stale entries are
+      # offered, and a stale one is a miss, never a wrong object).  One cache per shard, because a
+      # shard compiles a fixed subset of the models.  Saved from main only, so PR runs read main's
+      # cache without filling the repo's 10 GB.
+      - name: Compiler identity (cache key input)
+        id: cc
+        run: echo "gcc=$(g++ -dumpfullversion)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ccache
+          key: ccache-cov-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-shard${{ matrix.shard }}-${{ github.sha }}
+          restore-keys: |
+            ccache-cov-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-shard${{ matrix.shard }}-
+            ccache-cov-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-shard${{ matrix.shard }}-
+
+      # pipefail so tee cannot mask make's exit status.  No `|| true`: a failing suite fails this
+      # leg (the Makefile target also refuses to finish from no data).  SIM_BUILD_JOBS: parallel C++
+      # compile of each Verilated model (bead b079); it is not part of the build-directory key.
+      - name: Run this shard's suites (instrumented)
+        env:
+          SIM_CCACHE: '1'
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_MAXSIZE: 500M
+          CCACHE_BASEDIR: ${{ github.workspace }}
+        run: |
+          set -o pipefail
+          ccache --zero-stats
+          echo "SIM_PYTHON3=$(command -v python3) ($(python3 -V))"
+          python3 tools/verif/soc_shards.py plan --nshards "${NSHARDS}"
+          echo "::group::make -C tb/cocotb/soc soc_coverage_shard SHARD=${{ matrix.shard }} NSHARDS=${NSHARDS}"
+          make -C tb/cocotb/soc soc_coverage_shard \
+            SHARD=${{ matrix.shard }} NSHARDS="${NSHARDS}" \
+            SIM_BUILD_ROOT="${SOC_COV_ROOT}" \
+            SIM_PYTHON3="$(command -v python3)" \
+            SIM_BUILD_JOBS="$(nproc)" 2>&1 | tee soc_shard.log
+          echo "::endgroup::"
+          echo "::group::ccache statistics"
+          ccache --show-stats | tee ccache_stats.txt
+          echo "::endgroup::"
+
+      # Same log-grep as the serial job, per shard (a fast, local failure).  The FLOOR is enforced
+      # by the final job on the SUMMED counts: a shard legitimately holds only a fraction of the
+      # tests, so no per-shard floor exists.
+      - name: Check this shard's regression
+        run: |
+          if [ ! -s soc_shard.log ]; then
+            echo "FAIL: no log produced - the shard did not run."
+            exit 1
+          fi
+          passed=$(grep -cE 'cocotb\.regression .* passed$' soc_shard.log || true)
+          failed=$(grep -cE 'cocotb\.regression .* (failed|FAILED)$' soc_shard.log || true)
+          echo "shard ${{ matrix.shard }} (instrumented): ${passed} passed, ${failed} failed"
+          if [ "${failed}" -ne 0 ]; then
+            echo "FAIL: ${failed} test(s) reported failed."
+            grep -E 'cocotb\.regression .* (failed|FAILED)$' soc_shard.log | head -40
+            exit 1
+          fi
+          if [ "${passed}" -lt 1 ]; then
+            echo "FAIL: no passing test in this shard's log."
+            exit 1
+          fi
+          test -s "${SOC_COV_ROOT}/suites_ran.txt" \
+            || { echo "FAIL: suites_ran.txt is missing or empty."; exit 1; }
+          compgen -G "${SOC_COV_ROOT}/coverage/*.dat" > /dev/null \
+            || { echo "FAIL: no .dat was produced - no coverage was collected."; exit 1; }
+          echo "suites run by this shard:"; cat "${SOC_COV_ROOT}/suites_ran.txt"
+
+      - name: Save ccache
+        if: always() && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: .ccache
+          key: ccache-cov-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-shard${{ matrix.shard }}-${{ github.sha }}
+
+      # One staging directory so the artifact has a flat, predictable layout for the final job.
+      - name: Stage shard output
+        if: always()
+        run: |
+          mkdir -p shard_out
+          cp "${SOC_COV_ROOT}"/coverage/*.dat shard_out/ 2>/dev/null || true
+          cp "${SOC_COV_ROOT}/suites_ran.txt" shard_out/ 2>/dev/null || true
+          cp soc_shard.log ccache_stats.txt shard_out/ 2>/dev/null || true
+          find shard_out -type f | head -80
+
+      - name: Upload shard coverage data and log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soc-cov-shard-${{ matrix.shard }}
+          path: shard_out
+          if-no-files-found: warn
+          retention-days: 7
+
+  cpu_gpu:
+    name: CPU / cache / GPU coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    env:
       # CPU / cache / GPU instrumented build dirs and per-simulation .dat files (bead 1eyv).
+      CPU_COV_ROOT: /home/runner/cpu_cov
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Free disk space (only if short)
+        run: |
+          avail_mb=$(df -Pm / | awk 'NR==2 {print $4}')
+          echo "free on /: ${avail_mb} MB"
+          if [ "${avail_mb}" -lt 15000 ]; then
+            sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/share/boost
+            df -h /
+          fi
+
+      - name: Install Nix (pinned Verilator from binary cache)
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Install pinned Verilator (nix profile, system-shell compile)
+        run: |
+          nix profile install .#verilator
+          verilator --version
+          command -v verilator_coverage
+
+      - name: Install runtime libs for cocotb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5 ccache
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
+          pip list
+
+      # The shard planner and the Makefile list it reads, including the tests that expand
+      # `soc_all_ci` / `soc_ci_shard` with make (they need Verilator and cocotb, which this job has).
+      - name: Unit-test the shard planner and the SOC_CI_SUITES refactor
+        run: python3 -m pytest tb/tests/test_soc_shards.py -q
+
+      - name: Compiler identity (cache key input)
+        id: cc
+        run: echo "gcc=$(g++ -dumpfullversion)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ccache
+          key: ccache-cov-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-cpugpu-${{ github.sha }}
+          restore-keys: |
+            ccache-cov-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-cpugpu-
+            ccache-cov-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-cpugpu-
+
+      # Bead 1eyv / a5ze: CPU directed + Phase 3 cache + Phase 4 GPU suites, instrumented.  REQUIRED:
+      # the gate reads rtl/cpu|mem|gpu from this data, so no continue-on-error.
+      - name: Run CPU / cache / GPU coverage
+        env:
+          SIM_CCACHE: '1'
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_MAXSIZE: 500M
+          CCACHE_BASEDIR: ${{ github.workspace }}
+        run: |
+          set -o pipefail
+          ccache --zero-stats
+          make -C sim coverage_cpu_gpu \
+            SIM_BUILD_ROOT="${CPU_COV_ROOT}" \
+            SIM_PYTHON3="$(command -v python3)" 2>&1 | tee cpu_gpu_coverage.log
+          echo "::group::ccache statistics"
+          ccache --show-stats | tee ccache_stats.txt
+          echo "::endgroup::"
+
+      # Fast, local failure; the CPU_PASS_FLOOR is enforced by the final job (it is a gate input).
+      - name: Check the CPU / cache / GPU regression
+        run: |
+          if [ ! -s cpu_gpu_coverage.log ]; then
+            echo "FAIL: no CPU/GPU log produced - the regression did not run."
+            exit 1
+          fi
+          passed=$(grep -cE 'cocotb\.regression .* passed$' cpu_gpu_coverage.log || true)
+          failed=$(grep -cE 'cocotb\.regression .* (failed|FAILED)$' cpu_gpu_coverage.log || true)
+          echo "cocotb (CPU/cache/GPU, instrumented): ${passed} passed, ${failed} failed"
+          if [ "${failed}" -ne 0 ]; then
+            echo "FAIL: ${failed} CPU/GPU test(s) reported failed."
+            grep -E 'cocotb\.regression .* (failed|FAILED)$' cpu_gpu_coverage.log | head -40
+            exit 1
+          fi
+          test -s "${CPU_COV_ROOT}/coverage/cpu_gpu_merged.dat" \
+            || { echo "FAIL: cpu_gpu_merged.dat is missing or empty - no CPU/GPU coverage was produced."; exit 1; }
+
+      - name: Save ccache
+        if: always() && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: .ccache
+          key: ccache-cov-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-cpugpu-${{ github.sha }}
+
+      - name: Stage CPU/GPU output
+        if: always()
+        run: |
+          mkdir -p cpu_gpu_out
+          cp "${CPU_COV_ROOT}/coverage/cpu_gpu_merged.dat" cpu_gpu_out/ 2>/dev/null || true
+          cp cpu_gpu_coverage.log ccache_stats.txt cpu_gpu_out/ 2>/dev/null || true
+          find cpu_gpu_out -type f
+
+      - name: Upload CPU/GPU coverage data and log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpu-gpu-coverage
+          path: cpu_gpu_out
+          if-no-files-found: warn
+          retention-days: 7
+
+  # The job whose name is the required check ("SoC line + toggle coverage" has been this job's name
+  # since before the split, so branch protection keeps working).  Merge, report and gate.
+  soc_coverage:
+    name: SoC line + toggle coverage
+    needs: [soc_shard, cpu_gpu]
+    # always(): when a leg fails this job must still run and go RED.  Without it the job is skipped
+    # and a skipped required check is reported as passing.
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      # Merged SoC data and the report live here (same paths as the serial job).
+      SOC_COV_ROOT: /home/runner/soc_cov
+      # The CPU/GPU .dat is staged here so the combined-report paths are unchanged.
       CPU_COV_ROOT: /home/runner/cpu_cov
       # 2026-10-07 (merge of beads 8riq + ej6j): 545 = 477 + 31 (8riq, measured 511 on its own branch) + 37 (ej6j, derived).
       # DERIVED for the merge -- tighten to (measured - 3) from this PR's soc_all CI log.
@@ -120,7 +461,10 @@ jobs:
       # 2026-10-15 (bead j41m.4, DFT CPU-macro scan boundary): 761 = 764 - 3, same value as the other workflow. 764 MEASURED:
       # soc_all_ci from clean on the branch head, 764 passed / 0 failed / 17 skipped over 72 suite summaries (the 762 above
       # + 2 new soc_dft_scan tests: test_cpu_macro_scan_boundary and test_cpu_macro_scan_boundary_tap_leg).
-      PASS_FLOOR: '761'
+      # 2026-10-18 (bead j41m.14, MBIST, merged with #287/#304/#307): 813 = 816 - 3. 816 MEASURED: soc_all_ci from
+      # clean on the merge of origin/main into feat/dft-mbist-j41m14 (e7cf6cf), 816 passed / 0 failed over 79 suite
+      # summaries (MBIST ctrl/tap/soc_slice/fi_equiv suites + soc_uart_boot on top of main). #305's crypto tests land on top.
+      PASS_FLOOR: '813'
       # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`), CI log-grep formula (`passed$`; the
       # expect_fail tests print "passed: failed as expected" and are NOT counted).
       # 2026-10-10 (bead a5ze slice 2): 229 = 232 - 3.  232 is the count of a full local
@@ -137,6 +481,15 @@ jobs:
       CPU_PASS_FLOOR: '262'
 
     steps:
+      - name: Every shard and the CPU/GPU job succeeded
+        run: |
+          echo "soc_shard: ${{ needs.soc_shard.result }}"
+          echo "cpu_gpu:   ${{ needs.cpu_gpu.result }}"
+          if [ "${{ needs.soc_shard.result }}" != "success" ] || [ "${{ needs.cpu_gpu.result }}" != "success" ]; then
+            echo "FAIL: an upstream job did not succeed (see its log); nothing can be merged or gated."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -148,14 +501,6 @@ jobs:
           python-version: '3.10'
           cache: 'pip'
 
-      # The instrumented build dirs are larger than the plain ones and the Makefile's
-      # check-space gate wants >= 6 GB free.  The hosted image ships several GB of toolchains
-      # this job never uses.
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/share/boost
-          df -h /
-
       - name: Install Nix (pinned Verilator from binary cache)
         uses: cachix/install-nix-action@v30
         with:
@@ -163,53 +508,74 @@ jobs:
             experimental-features = nix-command flakes
             accept-flake-config = true
 
-      - name: Install pinned Verilator (nix profile, system-shell compile)
+      # Only verilator_coverage is needed here (the merge); the same flake pin as the legs so the
+      # merged file is written by the Verilator that wrote the inputs.
+      - name: Install pinned Verilator (nix profile; verilator_coverage for the merge)
         run: |
           nix profile install .#verilator
           verilator --version
-          # soc_coverage merges with verilator_coverage; fail here, not 2 hours in, if the
-          # profile did not put it on PATH.
           command -v verilator_coverage
           verilator_coverage --version
-
-      - name: Install runtime libs for cocotb
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5
 
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
-          pip list
+          pip install pytest pytest-cov
 
       # Cheap, runs first: the report script's own tests.  This is what the pull_request
       # trigger is really validating before the long run starts.
       - name: Unit-test the coverage report script
-        run: python3 -m pytest tb/tests/test_coverage_report.py tb/tests/test_coverage_waiver_anchors.py -q
+        run: python3 -m pytest tb/tests/test_coverage_report.py tb/tests/test_coverage_waiver_anchors.py tb/tests/test_soc_shards.py -q
 
-      # pipefail so tee cannot mask make's exit status.  No `|| true`: a failing regression
-      # fails this job (the Makefile target also refuses to render a report from no data).
-      - name: Run soc_coverage
+      - name: Download shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: soc-cov-shard-*
+          path: shards
+
+      - name: Download CPU/GPU artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: cpu-gpu-coverage
+          path: cpu_gpu
+
+      # The three gates the serial job had, now over the shards:
+      #  1. the suites that ran are EXACTLY SOC_CI_SUITES;
+      #  2. the SUMMED pass count (same log-grep formula as cocotb.yml, bead p6t8/dwp) reaches
+      #     PASS_FLOOR and no log has a failure;
+      #  3. merged.dat exists.  The merge is verilator_coverage over every shard's per-simulation
+      #     .dat -- the same operation the serial `soc_coverage` target ran over one directory.
+      - name: Check the instrumented regression is the whole regression (summed over shards)
         run: |
           set -o pipefail
-          echo "SIM_PYTHON3=$(command -v python3) ($(python3 -V))"
-          make -C tb/cocotb/soc soc_coverage \
-            SIM_BUILD_ROOT="${SOC_COV_ROOT}" \
-            SIM_PYTHON3="$(command -v python3)" 2>&1 | tee soc_coverage.log
-
-      # Same log-grep floor as cocotb.yml, for the same reason (bead p6t8, dwp): a cocotb
-      # target can exit 0 over a red or missing suite, and an instrumented run that silently
-      # lost suites would report coverage of a smaller regression as if it were the whole one.
-      - name: Check the instrumented regression is the whole regression
-        run: |
-          if [ ! -s soc_coverage.log ]; then
-            echo "FAIL: no log produced - the regression did not run."
+          n=$(find shards -mindepth 1 -maxdepth 1 -type d -name 'soc-cov-shard-*' | wc -l)
+          echo "shard artifacts: ${n} (NSHARDS=${NSHARDS})"
+          if [ "${n}" -ne "${NSHARDS}" ]; then
+            echo "FAIL: expected ${NSHARDS} shard artifacts, got ${n}."
             exit 1
           fi
+          for d in shards/soc-cov-shard-*; do
+            for f in suites_ran.txt soc_shard.log; do
+              test -s "${d}/${f}" || { echo "FAIL: ${d}/${f} is missing or empty."; exit 1; }
+            done
+          done
+          {
+            printf '## Sharded SoC regression\n\n'
+            printf '| shard | suites run | tests passed | tests failed |\n|---:|---:|---:|---:|\n'
+            for d in shards/soc-cov-shard-*; do
+              p=$(grep -cE 'cocotb\.regression .* passed$' "${d}/soc_shard.log" || true)
+              f=$(grep -cE 'cocotb\.regression .* (failed|FAILED)$' "${d}/soc_shard.log" || true)
+              printf '| %s | %s | %s | %s |\n' "$(basename "${d}")" "$(wc -l < "${d}/suites_ran.txt")" "${p}" "${f}"
+            done
+            printf '\n'
+          } >> "${GITHUB_STEP_SUMMARY}"
+          python3 tools/verif/soc_shards.py union shards/soc-cov-shard-*/suites_ran.txt | tee union.txt
+          cat union.txt >> "${GITHUB_STEP_SUMMARY}"
+          cat shards/soc-cov-shard-*/soc_shard.log > soc_coverage.log
           passed=$(grep -cE 'cocotb\.regression .* passed$' soc_coverage.log || true)
           failed=$(grep -cE 'cocotb\.regression .* (failed|FAILED)$' soc_coverage.log || true)
-          echo "cocotb (instrumented): ${passed} passed, ${failed} failed (floor ${PASS_FLOOR})"
+          echo "cocotb (instrumented, summed over ${n} shards): ${passed} passed, ${failed} failed (floor ${PASS_FLOOR})"
+          echo "cocotb summed over ${n} shards: ${passed} passed, ${failed} failed (floor ${PASS_FLOOR})" >> "${GITHUB_STEP_SUMMARY}"
           if [ "${failed}" -ne 0 ]; then
             echo "FAIL: ${failed} test(s) reported failed."
             grep -E 'cocotb\.regression .* (failed|FAILED)$' soc_coverage.log | head -40
@@ -219,46 +585,51 @@ jobs:
             echo "FAIL: only ${passed} tests passed, expected >= ${PASS_FLOOR}."
             exit 1
           fi
+          mkdir -p "${SOC_COV_ROOT}/coverage"
+          verilator_coverage --write "${SOC_COV_ROOT}/coverage/merged.dat" shards/soc-cov-shard-*/*.dat
           test -s "${SOC_COV_ROOT}/coverage/merged.dat" \
             || { echo "FAIL: merged.dat is missing or empty - no coverage was produced."; exit 1; }
+          echo "per-simulation .dat files merged: $(find shards -name '*.dat' | wc -l)"
+
+      # Per-module SoC report: the command the serial `soc_coverage` Makefile target ran after merging.
+      - name: Per-module SoC report
+        run: |
+          python3 tools/verif/coverage_report.py \
+            --dat "${SOC_COV_ROOT}/coverage/merged.dat" --root "${GITHUB_WORKSPACE}" \
+            --waivers tools/verif/coverage_waivers.txt \
+            --out-md "${SOC_COV_ROOT}/coverage/coverage_report.md" \
+            --out-json "${SOC_COV_ROOT}/coverage/coverage_report.json"
           test -s "${SOC_COV_ROOT}/coverage/coverage_report.md" \
             || { echo "FAIL: coverage_report.md is missing or empty."; exit 1; }
-
-      # Bead 1eyv / a5ze: CPU directed + Phase 3 cache + Phase 4 GPU suites, instrumented.  REQUIRED:
-      # the gate below reads rtl/cpu|mem|gpu from this data, so no continue-on-error.
-      - name: Run CPU / cache / GPU coverage
-        run: |
-          set -o pipefail
-          # The SoC build dirs (~6 GB) are done with; merged.dat and the report are kept.
-          find "${SOC_COV_ROOT}" -maxdepth 1 -type d -name 'sim_build_*' -exec rm -rf {} +
-          df -h /
-          make -C sim coverage_cpu_gpu \
-            SIM_BUILD_ROOT="${CPU_COV_ROOT}" \
-            SIM_PYTHON3="$(command -v python3)" 2>&1 | tee cpu_gpu_coverage.log
 
       # Same log-grep floor as the SoC half (bead p6t8, dwp): a make target can exit 0 over a
       # suite that never ran, and an instrumented run that lost suites would hand the gate a
       # smaller regression's coverage as if it were the whole one.
       - name: Check the CPU / cache / GPU regression is the whole regression
         run: |
-          if [ ! -s cpu_gpu_coverage.log ]; then
+          log=cpu_gpu/cpu_gpu_coverage.log
+          if [ ! -s "${log}" ]; then
             echo "FAIL: no CPU/GPU log produced - the regression did not run."
             exit 1
           fi
-          passed=$(grep -cE 'cocotb\.regression .* passed$' cpu_gpu_coverage.log || true)
-          failed=$(grep -cE 'cocotb\.regression .* (failed|FAILED)$' cpu_gpu_coverage.log || true)
+          passed=$(grep -cE 'cocotb\.regression .* passed$' "${log}" || true)
+          failed=$(grep -cE 'cocotb\.regression .* (failed|FAILED)$' "${log}" || true)
           echo "cocotb (CPU/cache/GPU, instrumented): ${passed} passed, ${failed} failed (floor ${CPU_PASS_FLOOR})"
+          echo "cocotb CPU/cache/GPU: ${passed} passed, ${failed} failed (floor ${CPU_PASS_FLOOR})" >> "${GITHUB_STEP_SUMMARY}"
           if [ "${failed}" -ne 0 ]; then
             echo "FAIL: ${failed} CPU/GPU test(s) reported failed."
-            grep -E 'cocotb\.regression .* (failed|FAILED)$' cpu_gpu_coverage.log | head -40
+            grep -E 'cocotb\.regression .* (failed|FAILED)$' "${log}" | head -40
             exit 1
           fi
           if [ "${passed}" -lt "${CPU_PASS_FLOOR}" ]; then
             echo "FAIL: only ${passed} CPU/GPU tests passed, expected >= ${CPU_PASS_FLOOR}."
             exit 1
           fi
-          test -s "${CPU_COV_ROOT}/coverage/cpu_gpu_merged.dat" \
+          test -s cpu_gpu/cpu_gpu_merged.dat \
             || { echo "FAIL: cpu_gpu_merged.dat is missing or empty - no CPU/GPU coverage was produced."; exit 1; }
+          mkdir -p "${CPU_COV_ROOT}/coverage"
+          cp cpu_gpu/cpu_gpu_merged.dat "${CPU_COV_ROOT}/coverage/cpu_gpu_merged.dat"
+          cp cpu_gpu/cpu_gpu_coverage.log cpu_gpu_coverage.log
 
       # Merge at the report level.  --dat is repeatable; paths are normalised to repo-relative, so
       # the two inputs need not come from the same checkout path.  A module whose point sets
@@ -274,7 +645,7 @@ jobs:
             --out-json "${CPU_COV_ROOT}/coverage/combined_report.json"
 
       # Beads s1cg + a5ze: the gate.  NOT continue-on-error.  Evaluated on the COMBINED data (both
-      # .dat inputs, produced by this job at one commit with one Verilator): the triaged trees get
+      # .dat inputs, produced by this workflow at one commit with one Verilator): the triaged trees get
       # the line + control-toggle floors, rtl/cpu|mem|gpu the line floor (the tool's default
       # --line-gate-trees).  Writes gate_report.{md,json} next to the SoC report (uploaded below).
       # Exit 1 = a module is under a floor or its inputs disagree, exit 2 = the gate could not be

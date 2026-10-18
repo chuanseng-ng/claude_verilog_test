@@ -65,7 +65,16 @@ module npu_weight_mem #(
     // Read port (request in cycle c, data in rd_data_o during cycle c+2)
     input  logic        rd_en_i,
     input  logic [9:0]  rd_addr_i,
-    output logic [31:0] rd_data_o
+    output logic [31:0] rd_data_o,
+
+    // MBIST (DFT Stage 4, DFT_ARCHITECTURE.md section 16): active only in the SRAM_SKY130 arm.
+    input  logic        mb_en_i,
+    input  logic        mb_ce_i,
+    input  logic        mb_we_i,
+    input  logic [3:0]  mb_wmask_i,
+    input  logic [9:0]  mb_addr_i,
+    input  logic [31:0] mb_din_i,
+    output logic [31:0] mb_dout0_o
 );
 
     if (WEIGHT_WORDS != 1024) begin : g_weight_words_check
@@ -86,23 +95,65 @@ module npu_weight_mem #(
     // ── Sky130: ONE 1024 x 32 macro. Port 1 is tied off exactly as rv32i_icache.sv does. ───────
     logic [31:0] dout1_unused_w;
 
+    // DFT Stage 4: mem_collar between the wrapper and the macro. Port 1 stays tied off (HAS_P1 = 0).
+    logic        mb_csb0_m;
+    logic        mb_web0_m;
+    logic [3:0]  mb_wmask0_m;
+    logic [9:0]  mb_addr0_m;
+    logic [31:0] mb_din0_m;
+    logic        mb_csb1_m;
+    logic [9:0]  mb_addr1_m;
+
+    mem_collar #(
+        .AW     (10),
+        .HAS_P1 (1'b0)
+    ) u_mbist_collar (
+        .bist_en_i  (mb_en_i),
+        .b_ce_i     (mb_ce_i),
+        .b_we_i     (mb_we_i),
+        .b_wmask_i  (mb_wmask_i),
+        .b_addr_i   (mb_addr_i),
+        .b_din_i    (mb_din_i),
+        .csb0_f_i   (~mem_en_w),
+        .web0_f_i   (mem_web_w),
+        .wmask0_f_i (4'b1111),
+        .addr0_f_i  (mem_addr_w),
+        .din0_f_i   (wr_data_i),
+        .csb1_f_i   (1'b1),
+        .addr1_f_i  (10'b0),
+        .csb0_m_o   (mb_csb0_m),
+        .web0_m_o   (mb_web0_m),
+        .wmask0_m_o (mb_wmask0_m),
+        .addr0_m_o  (mb_addr0_m),
+        .din0_m_o   (mb_din0_m),
+        .csb1_m_o   (mb_csb1_m),
+        .addr1_m_o  (mb_addr1_m)
+    );
+
     sky130_sram_4kbyte_1rw1r_32x1024_8 u_sram_macro (
         .clk0   (clk),
-        .csb0   (~mem_en_w),
-        .web0   (mem_web_w),
-        .wmask0 (4'b1111),
-        .addr0  (mem_addr_w),
-        .din0   (wr_data_i),
+        .csb0   (mb_csb0_m),
+        .web0   (mb_web0_m),
+        .wmask0 (mb_wmask0_m),
+        .addr0  (mb_addr0_m),
+        .din0   (mb_din0_m),
         .dout0  (mux_dout_w),
         .clk1   (clk),
-        .csb1   (1'b1),
-        .addr1  (10'b0),
+        .csb1   (mb_csb1_m),
+        .addr1  (mb_addr1_m),
         .dout1  (dout1_unused_w)
     );
+
+    assign mb_dout0_o = mux_dout_w;
 
     logic unused_dout1_w;
     assign unused_dout1_w = &{1'b0, dout1_unused_w};
 `else
+    // No Sky130 macro in the banked / FPGA arms: the MBIST collar does not exist here.
+    assign mb_dout0_o = 32'd0;
+    logic unused_mb_w;
+    assign unused_mb_w = &{1'b0, mb_en_i, mb_ce_i, mb_we_i, mb_wmask_i, mb_addr_i, mb_din_i};
+
     // ── Banked arms: 4 x 256 x 32, bank = addr[9:8], offset = addr[7:0] ───────────────────────
     logic [31:0] bank_dout_w [4];
     logic [1:0]  bank_sel_q;   // registered bank select: the bank whose dout is valid next cycle

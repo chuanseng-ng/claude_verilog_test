@@ -45,6 +45,7 @@
 #   Power management and DFT:
 # upf-check aon u_pmu               -- the sequencer: drives both ISO controls, clock enables and resets
 # upf-check aon u_dft_ctrl          -- scan_mode / test_en seam
+# upf-check aon u_mbist            -- soc_mbist: MBIST control-word crossing, core-domain controller and status return (DFT Stage 4)
 # upf-check aon u_gpu_domain_rm     -- dft_rst_mux on the GPU-domain reset
 #   Clocking and fabric:
 # upf-check aon u_pll_sub           -- pll_subsystem (fabric clock)

@@ -197,7 +197,11 @@ module soc_top
     // has two scan pairs since j41m.4 (DFT_ARCHITECTURE.md 14.10): the top CPU_SCAN_CHAINS
     // indices [SCAN_CHAINS-1:SCAN_CHAINS-2] are wired straight through to u_cpu's
     // scan_in_i/scan_out_o; the macro ties its own scan_out_o 0 until Stage 2 stitches it.
-    parameter int unsigned SCAN_CHAINS = 8
+    parameter int unsigned SCAN_CHAINS = 8,
+    // DFT Stage 4 (j41m.14): 1 = the CPU hard macro carries its MBIST controller and cache collars
+    // (DFT_ARCHITECTURE.md section 16.7); the CPU-domain control-word crossing and the u_cpu_cg force are
+    // instantiated. 0 (shipped) until the CPU macro is re-hardened with the new boundary ports.
+    parameter bit MBIST_CPU = 1'b0
 ) (
     // clk_i is the SYSTEM/FABRIC reference clock input (100 MHz crystal / XO).
     // Internally the SoC runs on core_clk derived from the PLL.
@@ -347,6 +351,14 @@ module soc_top
     // test_clk is consumed only through pll_subsystem's own ports below.
     logic dft_scan_en;
 
+    // MBIST (DFT Stage 4, section 16): TAP data registers and the TCK-side crossing hooks.
+    logic [28:0]  mbist_ctl;
+    logic         mbist_wr;
+    logic         mbist_force;
+    logic         mbist_rst_tck_n;
+    logic         mbist_wr_ready;
+    logic [138:0] mbist_status;
+
     dft_ctrl u_dft_ctrl (
         .scan_mode_i (scan_mode_i),
         .scan_en_i   (scan_en_i),
@@ -362,7 +374,13 @@ module soc_top
         .scan_en_o   (dft_scan_en),
         .scan_rst_no (dft_scan_rst_n),
         .test_en_o   (dft_test_en),
-        .test_clk_o  (dft_test_clk)
+        .test_clk_o  (dft_test_clk),
+        .mbist_ctl_o       (mbist_ctl),
+        .mbist_wr_o        (mbist_wr),
+        .mbist_force_o     (mbist_force),
+        .mbist_rst_tck_n_o (mbist_rst_tck_n),
+        .mbist_wr_ready_i  (mbist_wr_ready),
+        .mbist_status_i    (mbist_status)
     );
 
     // Scan-chain port placeholders. scan_in_i has no consumer and scan_out_o is
@@ -1843,6 +1861,69 @@ module soc_top
     );
 
     // =========================================================================
+    // MBIST (DFT Stage 4, beads j41m.14 / j41m.10; DFT_ARCHITECTURE.md section 16)
+    //   Core-domain controller for the two SoC-level SRAM macros (index 0 = u_sram, 1 = u_npu weight memory),
+    //   the TCK -> core_clk control-word crossing (depth-2 cdc_gray_fifo) and the status return. Started and
+    //   read ONLY through the TAP (MBIST_CTRL / MBIST_STATUS); no bus slave decodes to it. With the TAP idle or
+    //   in reset (trst_ni = 0) bist_en is 0 and both collars are pass-through.
+    //   The CPU-domain half (MBIST_CPU = 1) needs the CPU macro boundary change of section 16.7.
+    // =========================================================================
+    logic         mb_bist_en;
+    logic         mb_ce;
+    logic         mb_we;
+    logic [3:0]   mb_wmask;
+    logic [9:0]   mb_addr;
+    logic [31:0]  mb_din;
+    logic [31:0]  mb_sram_dout0;
+    logic [31:0]  mb_sram_dout1;
+    logic [31:0]  mb_npu_dout0;
+
+    // CPU domain: holding-register outputs for the (future) CPU-macro controller; status in from the macro.
+    // Unused (and the macro status tied 0) until MBIST_CPU = 1.
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic         mb_cpu_run;
+    logic [25:0]  mb_cpu_cfg;
+    logic         mb_cpu_ctl_rst_n;
+    /* verilator lint_on  UNUSEDSIGNAL */
+    logic [68:0]  mb_cpu_status;
+
+    // Placeholder until the CPU macro exports its status block (section 16.7).
+    assign mb_cpu_status = 69'd0;
+
+    soc_mbist #(
+        .CPU_PRESENT (MBIST_CPU),
+        .N_MEM       (2),
+        .AW          (10),
+        .P1_MASK     (2'b01)
+    ) u_mbist (
+        .tck_i            (tck_i),
+        .rst_tck_n_i      (mbist_rst_tck_n),
+        .mbist_ctl_i      (mbist_ctl),
+        .mbist_wr_i       (mbist_wr),
+        .mbist_wr_ready_o (mbist_wr_ready),
+        .mbist_status_o   (mbist_status),
+        .trst_ni          (trst_ni),
+        .scan_mode_i      (dft_scan_mode),
+        .scan_rst_ni      (dft_scan_rst_n),
+        .core_clk_i       (core_clk),
+        .core_rst_n_i     (core_rst_n),
+        .bist_en_o        (mb_bist_en),
+        .b_ce_o           (mb_ce),
+        .b_we_o           (mb_we),
+        .b_wmask_o        (mb_wmask),
+        .b_addr_o         (mb_addr),
+        .b_din_o          (mb_din),
+        .dout0_i          ({mb_npu_dout0, mb_sram_dout0}),
+        .dout1_i          ({32'd0, mb_sram_dout1}),
+        .cpu_clk_i        (cpu_core_clk),
+        .cpu_rst_n_i      (cpu_core_rst_n),
+        .cpu_run_o        (mb_cpu_run),
+        .cpu_cfg_o        (mb_cpu_cfg),
+        .cpu_ctl_rst_n_o  (mb_cpu_ctl_rst_n),
+        .cpu_status_i     (mb_cpu_status)
+    );
+
+    // =========================================================================
     // S1: SRAM controller (sram_controller) ← crossbar SLV_SRAM
     // =========================================================================
     sram_controller #(
@@ -1878,7 +1959,15 @@ module soc_top
         .s_rresp      (bus_mem_rresp),
         .s_rlast      (bus_mem_rlast),
         .s_rvalid     (bus_mem_rvalid),
-        .s_rready     (bus_mem_rready)
+        .s_rready     (bus_mem_rready),
+        .mb_en_i      (mb_bist_en),
+        .mb_ce_i      (mb_ce),
+        .mb_we_i      (mb_we),
+        .mb_wmask_i   (mb_wmask),
+        .mb_addr_i    (mb_addr),
+        .mb_din_i     (mb_din),
+        .mb_dout0_o   (mb_sram_dout0),
+        .mb_dout1_o   (mb_sram_dout1)
     );
 
     // (S2/periph, AXI-Lite ring, APB bridge, and APB interconnect are now
@@ -2125,7 +2214,14 @@ module soc_top
         .prdata  (apb_prdata  [APB_NPU]),
         .pready  (apb_pready  [APB_NPU]),
         .pslverr (apb_pslverr [APB_NPU]),
-        .irq_o   (npu_irq)
+        .irq_o   (npu_irq),
+        .mb_en_i    (mb_bist_en),
+        .mb_ce_i    (mb_ce),
+        .mb_we_i    (mb_we),
+        .mb_wmask_i (mb_wmask),
+        .mb_addr_i  (mb_addr),
+        .mb_din_i   (mb_din),
+        .mb_dout0_o (mb_npu_dout0)
     );
 
     // =========================================================================
@@ -2470,10 +2566,15 @@ module soc_top
     // behind them is clocked by the (test) clock whatever the PMU says. In scan mode
     // cpu_core_clk / core_clk ARE the test clock (pll_subsystem), so the gated
     // clocks are too.
+    // MBIST_CPU = 1: the CPU-domain MBIST run forces this gate open (a TAP-launched quasi-static level, same
+    // contract as test_en; section 16.6). It is OR-ed into the gate ENABLE, not into test_en, so test_en stays the
+    // dft test-enable net (UPF check U07). With MBIST_CPU = 0 there is no CPU controller and the force is constant 0.
     // HARD_ROOT: cpu_gated_clk is a CTS root (771 register sinks + the CPU macro clock pin). On the Sky130 SoC build
     // (USE_SKY130_CLKCELLS) it is a hand-instantiated sdlclkp_4 + buf_16, see rv32i_clock_gate.sv. u_gpu_cg stays
     // behavioural: its output feeds no CTS tree in the Sky130 SoC (GPU is a tie-off), so it must optimise away.
-    rv32i_clock_gate #(.HARD_ROOT(1'b1)) u_cpu_cg (.en(cpu_gated_clk_en), .test_en(dft_test_en), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
+    logic cpu_cg_en;
+    assign cpu_cg_en = cpu_gated_clk_en | (MBIST_CPU ? mbist_force : 1'b0);
+    rv32i_clock_gate #(.HARD_ROOT(1'b1)) u_cpu_cg (.en(cpu_cg_en), .test_en(dft_test_en), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
     rv32i_clock_gate u_gpu_cg (.en(pmu_gpu_clk_en),   .test_en(dft_test_en), .clk(core_clk),     .gclk(gpu_gated_clk));
 
 endmodule : soc_top

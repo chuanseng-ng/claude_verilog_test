@@ -81,6 +81,11 @@ module tb_npu (
     output logic        off_irq_o
 );
 
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic [31:0] mb_dout_on_w;
+    logic [31:0] mb_dout_off_w;
+    /* verilator lint_on  UNUSEDSIGNAL */
+
     npu_top #(
         .ADDR_W      (12),
         .WEIGHT_WORDS(1024),
@@ -98,7 +103,14 @@ module tb_npu (
         .prdata (prdata),
         .pready (pready),
         .pslverr(pslverr),
-        .irq_o  (irq_o)
+        .irq_o  (irq_o),
+        .mb_en_i    (1'b0),
+        .mb_ce_i    (1'b0),
+        .mb_we_i    (1'b0),
+        .mb_wmask_i (4'hF),
+        .mb_addr_i  (10'd0),
+        .mb_din_i   (32'd0),
+        .mb_dout0_o (mb_dout_on_w)
     );
 
     npu_top #(
@@ -118,7 +130,14 @@ module tb_npu (
         .prdata (off_prdata),
         .pready (off_pready),
         .pslverr(off_pslverr),
-        .irq_o  (off_irq_o)
+        .irq_o  (off_irq_o),
+        .mb_en_i    (1'b0),
+        .mb_ce_i    (1'b0),
+        .mb_we_i    (1'b0),
+        .mb_wmask_i (4'hF),
+        .mb_addr_i  (10'd0),
+        .mb_din_i   (32'd0),
+        .mb_dout0_o (mb_dout_off_w)
     );
 
 endmodule : tb_npu
