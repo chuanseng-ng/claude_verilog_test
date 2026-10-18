@@ -100,3 +100,7 @@ hls/**/HLS_output/
 # regenerable with no error to notice.
 !hls/**/*_tb.xml
 pnr/.openroad-shim/
+
+# Vivado working-directory droppings (fpga/nexys_video/build.sh now runs Vivado inside its output directory)
+.Xil/
+clockInfo.txt

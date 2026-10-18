@@ -46,7 +46,13 @@ module rv32i_clock_gate #(
     input  logic clk,
     output logic gclk
 );
-`ifdef USE_ICG_CELL
+`ifdef FPGA_BUFGCE
+    // FPGA prototype (bead hlrm.2): Xilinx 7-series global clock buffer with clock enable. CE is latched while the
+    // input clock is low (same glitch-free contract as the ICG / latch+AND arms), O is a dedicated global-clock
+    // tree. The board build feeds `clk` from the same MMCM output as the ungated BUFG (see fpga/nexys_video/),
+    // so gated and ungated domains stay matched. Simulation / lint use the stub in rtl/fpga/sim/BUFGCE.v.
+    BUFGCE u_bufgce (.I(clk), .CE(en | test_en), .O(gclk));
+`elsif USE_ICG_CELL
     // USE_ICG_CELL is in VERILOG_DEFINES (Yosys) but not LINTER_DEFINES (Verilator).
     ICGx1_ASAP7_75t_R u_icg (.CLK(clk), .ENA(en), .SE(test_en), .GCLK(gclk));
 `else
