@@ -1,4 +1,4 @@
-"""Structural gate + negative controls for the PMU's registered outputs (bead claude_verilog_test-ktwt).
+"""Structural gate + negative controls for the PMU's registered outputs (bead ktwt).
 
 ``rtl/soc/pmu.sv`` drives ``cdc_sync`` D pins, the ASYNC clear of ``u_cpu_pmu_rst_sync`` and the
 GPU async reset / isolation mux select. Those outputs must be flop Q pins: a combinational decode
@@ -19,6 +19,8 @@ Needs yosys and sv2v (``$YOSYS`` / ``$SV2V`` or PATH); skipped otherwise. CI run
 the pinned tools and fails if anything skipped (see .github/workflows/rtl-checks.yml).
 """
 
+# pylint: disable=missing-function-docstring  # descriptive test names
+
 import os
 import re
 import shutil
@@ -36,9 +38,7 @@ REGBANK = REPO / "rtl" / "soc" / "apb4_register_bank.sv"
 YOSYS = os.environ.get("YOSYS") or shutil.which("yosys")
 SV2V = os.environ.get("SV2V") or shutil.which("sv2v")
 
-pytestmark = pytest.mark.skipif(
-    YOSYS is None or SV2V is None, reason="yosys and sv2v are required"
-)
+pytestmark = pytest.mark.skipif(YOSYS is None or SV2V is None, reason="yosys and sv2v are required")
 
 SIGNALS = ("clk_en", "iso_en", "rst_n", "ret_save", "ret_restore")
 DOMAINS = ("cpu", "gpu")
@@ -84,8 +84,11 @@ def test_combinational_output_is_caught(tmp_path: Path, port: str) -> None:
     mut.write_text(mutated)
     res = _run(mut, PORTS)
     assert res.returncode == 1, res.stdout + res.stderr
-    failing = {line.split(":")[0].split("[")[0].removeprefix("FAIL ") for line in
-               res.stdout.splitlines() if line.startswith("FAIL ")}
+    failing = {
+        line.split(":")[0].split("[")[0].removeprefix("FAIL ")
+        for line in res.stdout.splitlines()
+        if line.startswith("FAIL ")
+    }
     assert failing == {port}, f"expected only {port} to fail, got {failing}\n{res.stdout}"
 
 
