@@ -43,6 +43,8 @@ class APB4Master:
         self.dut    = dut
         self.clock  = clock
         self.reset  = reset
+        # Passive listeners (bead h367 functional coverage), see add_observer().
+        self._observers: list = []
 
         # Master-driven outputs
         self.psel    = getattr(dut, f"{prefix}psel")
@@ -67,6 +69,17 @@ class APB4Master:
         self.paddr.value   = 0
         self.pwdata.value  = 0
         self.pstrb.value   = 0xF  # all bytes valid; overridden per transaction
+
+    def add_observer(self, callback) -> None:
+        """Register a passive listener, called after every COMPLETED transfer as
+        `callback(is_write, addr, data, strb, ok)`: `data` is the written word for a write and the
+        sampled prdata for a read, `ok` is False on pslverr.  It must not touch the bus.  Nothing
+        is registered by default, so an unobserved BFM behaves exactly as before."""
+        self._observers.append(callback)
+
+    def _notify(self, is_write: bool, addr: int, data: int, strb: int, ok: bool) -> None:
+        for callback in self._observers:
+            callback(is_write, addr, data, strb, ok)
 
     async def write(self, addr: int, data: int, strb: int = 0xF) -> bool:
         """
@@ -106,6 +119,7 @@ class APB4Master:
         self.pwrite.value  = 0
         self.pstrb.value   = 0xF  # restore default
 
+        self._notify(True, addr, data, strb, not err)
         return not err
 
     async def read(self, addr: int) -> tuple[int, bool]:
@@ -145,4 +159,5 @@ class APB4Master:
         self.psel.value    = 0
         self.penable.value = 0
 
+        self._notify(False, addr, data, 0x0, not err)
         return (data, not err)

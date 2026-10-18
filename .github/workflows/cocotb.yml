@@ -49,6 +49,11 @@ on:
       - 'tools/verif/soc_shards.py'
       - 'tools/verif/soc_shard_weights_plain.json'
       - 'tb/tests/test_soc_shards.py'
+      - 'tools/verif/functional_coverage_report.py'
+      - 'tools/verif/functional_coverage_gates.txt'
+      - 'tools/verif/functional_coverage_waivers.txt'
+      - 'tb/tests/test_functional_coverage_report.py'
+      - 'requirements.txt'
   pull_request:
     branches: [ "main" ]
     paths:
@@ -61,6 +66,11 @@ on:
       - 'tools/verif/soc_shards.py'
       - 'tools/verif/soc_shard_weights_plain.json'
       - 'tb/tests/test_soc_shards.py'
+      - 'tools/verif/functional_coverage_report.py'
+      - 'tools/verif/functional_coverage_gates.txt'
+      - 'tools/verif/functional_coverage_waivers.txt'
+      - 'tb/tests/test_functional_coverage_report.py'
+      - 'requirements.txt'
   workflow_dispatch:
 
 # A second push to the same branch supersedes an in-flight run — the regression
@@ -248,6 +258,9 @@ jobs:
           # test_soc_i2c_real_pads and test_soc_wdt_rst_en_release.
           # 2026-10-18 (merge of #316 onto #314): 829 = 832 - 3. 832 EXPECTED = 826 (#316 measured) + 6 shm5 tests;
           # confirm against the merged PR's sharded CI pass count.
+          # 2026-10-18 (bead h367, I2C functional coverage): 834 = 837 - 3. 837 EXPECTED = 832 (the line above) + 5 new tests in
+          # test_i2c.py (long transfers, repeated-START chain, CMD shapes, COUNT=255, RX-full timeout); the i2c suite itself
+          # measured 55 -> 60 locally. Confirm against this PR's CI pass count.
           # 2026-10-18 (bead 3ogd, PMU iso-ack handshake): 835 = 838 - 3. 838 MEASURED: soc_all_ci from clean (fresh SIM_BUILD_ROOT, -j4) on
           # the merge of origin/main (#312, #315) into fix/pmu-iso-ack-3ogd, 838 passed / 0 failed over 80 suite summaries = the 816 above
           # + 7 tests already on main since then (inferred from the difference, likely #305 crypto) + 15 new (test_pmu +8, soc_pmu_iso_ack +7).
@@ -255,7 +268,11 @@ jobs:
           # expectation above) + 15 new tests (test_pmu +8, new suite soc_pmu_iso_ack +7). MEASURED on the pre-#314/#316 base: 838 =
           # 823 + 15 (soc_all_ci from clean, plain AND FPGA=1, 838 passed / 0 failed over 80 suite summaries). Confirm 847 against the
           # merged PR's sharded CI pass count.
-          PASS_FLOOR: '844'
+          # 2026-10-19 (bead 3ogd, PMU iso-ack handshake, merged onto #319): 849 = 852 - 3. 852 EXPECTED = 837 (main, CI-measured
+          # per #319's merge) + 15 new tests (test_pmu +8, new suite soc_pmu_iso_ack +7). MEASURED on the pre-#314/#316 base: 838 =
+          # 823 + 15 (soc_all_ci from clean, plain AND FPGA=1, 838 passed / 0 failed over 80 suite summaries). Confirm 852 against the
+          # merged PR's sharded CI pass count.
+          PASS_FLOOR: '849'
         run: |
           set -o pipefail
           n=$(find shards -mindepth 1 -maxdepth 1 -type d -name 'cocotb-soc-shard-*' | wc -l)
@@ -296,6 +313,39 @@ jobs:
             echo "A suite likely failed to elaborate and was skipped while make still exited 0."
             exit 1
           fi
+
+      # Bead h367: functional (covergroup) coverage.  Every shard exported one YAML per simulator
+      # process (FUNC_COV_DIR); merge them and gate the groups listed in functional_coverage_gates.txt
+      # (floor, min_bins, stale waivers).  Needs only PyYAML: the script does not import
+      # cocotb-coverage.  A group with no data is an error, not a pass.
+      - name: Functional coverage gate
+        run: |
+          python3 -m pip install pyyaml
+          mkdir -p func_cov_report
+          set +e
+          python3 tools/verif/functional_coverage_report.py \
+            --in shards \
+            --waivers tools/verif/functional_coverage_waivers.txt \
+            --gates tools/verif/functional_coverage_gates.txt \
+            --out-md func_cov_report/functional_coverage.md \
+            --out-json func_cov_report/functional_coverage.json \
+            --out-yaml func_cov_report/functional_coverage_merged.yml \
+            --gate
+          rc=$?
+          set -e
+          if [ -s func_cov_report/functional_coverage.md ]; then
+            cat func_cov_report/functional_coverage.md >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          exit "${rc}"
+
+      - name: Upload functional coverage report
+        if: always() && needs.soc_shard.result == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: functional-coverage
+          path: func_cov_report
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Upload combined cocotb log
         if: always() && needs.soc_shard.result == 'success'
@@ -370,7 +420,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
+          pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov 'cocotb-coverage==1.2.0' pyyaml
           pip list
 
       # Static, dependency-free gate: every rtl/periph and rtl/npu module must
@@ -463,6 +513,9 @@ jobs:
           # Paths inside the build tree are absolute; with no -g in the flags ccache does not hash
           # the working directory, and BASEDIR makes the workspace prefix irrelevant anyway.
           CCACHE_BASEDIR: ${{ github.workspace }}
+          # Bead h367: each simulator process writes its functional-coverage YAML here
+          # (tb/cocotb/soc/func_cov.py); the aggregate job merges and gates every shard's files.
+          FUNC_COV_DIR: ${{ github.workspace }}/func_cov
         run: |
           set -o pipefail
           ccache --zero-stats
@@ -520,6 +573,7 @@ jobs:
             cocotb_soc_shard.log
             suites_ran.txt
             ccache_stats.txt
+            func_cov
           if-no-files-found: warn
           retention-days: 7
 
