@@ -49,6 +49,11 @@ on:
       - 'tools/verif/soc_shards.py'
       - 'tools/verif/soc_shard_weights_plain.json'
       - 'tb/tests/test_soc_shards.py'
+      - 'tools/verif/functional_coverage_report.py'
+      - 'tools/verif/functional_coverage_gates.txt'
+      - 'tools/verif/functional_coverage_waivers.txt'
+      - 'tb/tests/test_functional_coverage_report.py'
+      - 'requirements.txt'
   pull_request:
     branches: [ "main" ]
     paths:
@@ -61,6 +66,11 @@ on:
       - 'tools/verif/soc_shards.py'
       - 'tools/verif/soc_shard_weights_plain.json'
       - 'tb/tests/test_soc_shards.py'
+      - 'tools/verif/functional_coverage_report.py'
+      - 'tools/verif/functional_coverage_gates.txt'
+      - 'tools/verif/functional_coverage_waivers.txt'
+      - 'tb/tests/test_functional_coverage_report.py'
+      - 'requirements.txt'
   workflow_dispatch:
 
 # A second push to the same branch supersedes an in-flight run — the regression
@@ -290,6 +300,39 @@ jobs:
             exit 1
           fi
 
+      # Bead h367: functional (covergroup) coverage.  Every shard exported one YAML per simulator
+      # process (FUNC_COV_DIR); merge them and gate the groups listed in functional_coverage_gates.txt
+      # (floor, min_bins, stale waivers).  Needs only PyYAML: the script does not import
+      # cocotb-coverage.  A group with no data is an error, not a pass.
+      - name: Functional coverage gate
+        run: |
+          python3 -m pip install pyyaml
+          mkdir -p func_cov_report
+          set +e
+          python3 tools/verif/functional_coverage_report.py \
+            --in shards \
+            --waivers tools/verif/functional_coverage_waivers.txt \
+            --gates tools/verif/functional_coverage_gates.txt \
+            --out-md func_cov_report/functional_coverage.md \
+            --out-json func_cov_report/functional_coverage.json \
+            --out-yaml func_cov_report/functional_coverage_merged.yml \
+            --gate
+          rc=$?
+          set -e
+          if [ -s func_cov_report/functional_coverage.md ]; then
+            cat func_cov_report/functional_coverage.md >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          exit "${rc}"
+
+      - name: Upload functional coverage report
+        if: always() && needs.soc_shard.result == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: functional-coverage
+          path: func_cov_report
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Upload combined cocotb log
         if: always() && needs.soc_shard.result == 'success'
         uses: actions/upload-artifact@v4
@@ -363,7 +406,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
+          pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov 'cocotb-coverage==1.2.0' pyyaml
           pip list
 
       # Static, dependency-free gate: every rtl/periph and rtl/npu module must
@@ -456,6 +499,9 @@ jobs:
           # Paths inside the build tree are absolute; with no -g in the flags ccache does not hash
           # the working directory, and BASEDIR makes the workspace prefix irrelevant anyway.
           CCACHE_BASEDIR: ${{ github.workspace }}
+          # Bead h367: each simulator process writes its functional-coverage YAML here
+          # (tb/cocotb/soc/func_cov.py); the aggregate job merges and gates every shard's files.
+          FUNC_COV_DIR: ${{ github.workspace }}/func_cov
         run: |
           set -o pipefail
           ccache --zero-stats
@@ -513,6 +559,7 @@ jobs:
             cocotb_soc_shard.log
             suites_ran.txt
             ccache_stats.txt
+            func_cov
           if-no-files-found: warn
           retention-days: 7
 

@@ -1,0 +1,4 @@
+# Functional-coverage gates (bead h367).  group | floor_pct | min_bins | justification
+# Every group listed is REQUIRED: no data for it is an error.  floor_pct applies to the ADJUSTED
+# percentage (category-b waivers removed); min_bins stops the model being shrunk to reach the floor.
+i2c | 100 | 1 | placeholder until the measured model size is recorded
