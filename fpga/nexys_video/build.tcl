@@ -89,7 +89,7 @@ report_methodology -file $rdir/methodology.rpt
 report_drc -file $rdir/drc.rpt
 report_io -file $rdir/io.rpt
 report_exceptions -file $rdir/exceptions.rpt
-# CDC (bead hlrm.3): cdc.rpt = with the documented waivers (the gate input, tools/fpga/cdc_gate.py), cdc_raw.rpt = no waivers
+# CDC (bead hlrm.3): cdc.rpt = with the documented waivers (the gate input, tools/fpga/vivado_cdc_gate.py), cdc_raw.rpt = no waivers
 source $here/nexys_video_cdc_waivers.tcl
 nv_cdc_waivers
 report_cdc -details -file $rdir/cdc.rpt

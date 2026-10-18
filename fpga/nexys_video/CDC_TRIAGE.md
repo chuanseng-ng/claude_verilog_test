@@ -19,7 +19,7 @@ No finding turned out to be a missing `ASYNC_REG` or a missing constraint (every
 | Missing `ASYNC_REG` / constraint | 0 | (hardening added anyway: `set_bus_skew`) |
 
 Before / after (same routed design family; the "after" numbers are from build `nv8`, section "Result of this change"):
-Critical 1380 before, 3 unwaived after (all RTL-owned). `tools/fpga/cdc_gate.py` fails the build report on any other Critical
+Critical 1380 before, 3 unwaived after (all RTL-owned). `tools/fpga/vivado_cdc_gate.py` fails the build report on any other Critical
 row and fails on all of them with `--strict`.
 
 ## Per-ID disposition
@@ -106,7 +106,7 @@ identical RTL is in the ASIC, so this also applies to the Sky130/ASAP7 flows, wh
 Fix request (RTL, not done here): register `clk_en_w` / `iso_en_w` / `rst_n_w` in the PMU's own clock domain (or encode `dom_state_q`
 one-hot / gray so every transition flips one bit and the decode of an unchanging output is hazard-free), keeping the UPF-mandated
 sequence order unchanged; the cdc_sync stages are already there. A registered output delays each action by one cycle, which the
-`pmu` and `soc_top` ordering tests must re-check. When fixed, `cdc_gate.py --strict` must pass and `RTL_OPEN` in `tools/fpga/cdc_gate.py`
+`pmu` and `soc_top` ordering tests must re-check. When fixed, `vivado_cdc_gate.py --strict` must pass and `RTL_OPEN` in `tools/fpga/vivado_cdc_gate.py`
 is emptied.
 `NV_CDC_WAIVE_RTL_OPEN=1` (for `build.tcl`) applies a clearly labelled TEMPORARY waiver for these three rows, only to demonstrate the
 "everything else closed" state; the default build does not.
@@ -136,8 +136,8 @@ TBD-RESULT
 
 ```bash
 fpga/nexys_video/build.sh /nobackup/<out> all <tag>        # writes <tag>/cdc.rpt (waived), cdc_raw.rpt (no waivers), cdc_waived.rpt, waivers.rpt, bus_skew.rpt
-python3 tools/fpga/cdc_gate.py /nobackup/<out>/<tag>/cdc.rpt            # PASS with the 3 RTL-owned rows listed
-python3 tools/fpga/cdc_gate.py /nobackup/<out>/<tag>/cdc.rpt --strict   # fails until the PMU is fixed
+python3 tools/fpga/vivado_cdc_gate.py /nobackup/<out>/<tag>/cdc.rpt            # PASS with the 3 RTL-owned rows listed
+python3 tools/fpga/vivado_cdc_gate.py /nobackup/<out>/<tag>/cdc.rpt --strict   # fails until the PMU is fixed
 ```
 
 Waivers can be re-checked on an existing checkpoint without a rebuild: `open_checkpoint routed.dcp; source nexys_video_cdc_waivers.tcl;

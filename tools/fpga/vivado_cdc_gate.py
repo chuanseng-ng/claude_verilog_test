@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""cdc_gate.py -- gate on a Vivado report_cdc -details report (bead hlrm.3).
+"""vivado_cdc_gate.py -- gate on a Vivado report_cdc -details report (bead hlrm.3).
 
 Reads the report that build.tcl writes AFTER the documented waivers (fpga/nexys_video/nexys_video_cdc_waivers.tcl) and fails
 if any Critical row is left that is not one of the known RTL-owned open findings (fpga/nexys_video/CDC_TRIAGE.md, section
 "RTL findings"). The RTL-owned findings are NOT waived by default and are reported separately, so a clean exit means "no
 unexplained Critical", not "no Critical".
 
-  cdc_gate.py cdc.rpt            exit 0: only the known RTL-open rows remain (listed); exit 1: any other Critical row
-  cdc_gate.py cdc.rpt --strict   exit 1 on ANY Critical row, including the RTL-open ones (use once the RTL is fixed)
+  vivado_cdc_gate.py cdc.rpt            exit 0: only the known RTL-open rows remain (listed); exit 1: any other Critical row
+  vivado_cdc_gate.py cdc.rpt --strict   exit 1 on ANY Critical row, including the RTL-open ones (use once the RTL is fixed)
 
 A report whose summary table and detail rows disagree, or that has no summary, is NOT a pass (exit 2).
 """
