@@ -464,7 +464,10 @@ jobs:
       # 2026-10-18 (bead j41m.14, MBIST, merged with #287/#304/#307): 813 = 816 - 3. 816 MEASURED: soc_all_ci from
       # clean on the merge of origin/main into feat/dft-mbist-j41m14 (e7cf6cf), 816 passed / 0 failed over 79 suite
       # summaries (MBIST ctrl/tap/soc_slice/fi_equiv suites + soc_uart_boot on top of main). #305's crypto tests land on top.
-      PASS_FLOOR: '813'
+      # 2026-10-18 (beads 0ntg/4pl8/xkw5, PR #316): 823 = 826 - 3. 826 MEASURED by the sharded soc_coverage run of
+      # this PR (summed over 8 shards, 0 failed): 823 on main + test_soc_dma_walk_rom_write_and_decode_errors,
+      # test_soc_i2c_real_pads and test_soc_wdt_rst_en_release.
+      PASS_FLOOR: '823'
       # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`), CI log-grep formula (`passed$`; the
       # expect_fail tests print "passed: failed as expected" and are NOT counted).
       # 2026-10-10 (bead a5ze slice 2): 229 = 232 - 3.  232 is the count of a full local
