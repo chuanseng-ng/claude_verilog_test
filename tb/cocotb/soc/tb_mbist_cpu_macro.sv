@@ -25,6 +25,7 @@ module tb_mbist_cpu_macro (
     input  logic clk_i,        // ungated CPU clock (cpu_core_clk)
     input  logic rst_n_i,      // CPU-domain reset (cpu_domain_rst_n)
     input  logic pmu_clk_en_i, // stand-in for cpu_gated_clk_en
+    input  logic pmu_rst_n_i,  // stand-in for the PMU-driven part of cpu_domain_rst_n (macro reset only; the MBIST holding register is NOT reset by it)
     output logic gclk_o,       // the macro's clk_i
     output logic mbist_force_o,
     output logic bist_en_o,    // the macro controller's collar select (hierarchical alias)
@@ -135,11 +136,14 @@ module tb_mbist_cpu_macro (
     logic [1:0]  scan_out;
     /* verilator lint_on  UNUSEDSIGNAL */
 
+    logic macro_rst_n;
+    assign macro_rst_n = rst_n_i & pmu_rst_n_i;   // soc_top: cpu_domain_rst_n
+
     rv32i_cpu_top #(
         .RESET_PC (32'h0000_1000)
     ) u_cpu (
         .clk_i                    (gclk_o),
-        .rst_n_i                  (rst_n_i),
+        .rst_n_i                  (macro_rst_n),
         .axi_awaddr_o             (axi_awaddr),
         .axi_awlen_o              (axi_awlen),
         .axi_awsize_o             (axi_awsize),

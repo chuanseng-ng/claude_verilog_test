@@ -67,6 +67,7 @@ async def setup(dut, pmu_en=1):
     dut.scan_clk_i.value = 0
     dut.rst_n_i.value = 0
     dut.pmu_clk_en_i.value = pmu_en
+    dut.pmu_rst_n_i.value = 1
     drv = JtagDriver(dut.tck_i, dut.tms_i, dut.tdi_i, dut.trst_ni, dut.tdo_o,
                      period_ns=TCK_NS, probe=None, name="mbist_cpu")  # fmt: skip
     await drv.start(hold_reset=True)
@@ -295,3 +296,29 @@ async def test_functional_reset_aborts_and_never_starts(dut):
     st = await run(drv, alg=0)
     assert st["cpu"]["done"] == 1 and st["cpu"]["fail_any"] == 0
     await stop(dut, drv)
+
+
+@cocotb.test()
+async def test_macro_reset_alone_aborts_the_controller(dut):
+    """The macro's own synchronous reset (the PMU part of cpu_domain_rst_n) does NOT reset the MBIST holding
+    register, so only the reset folded into the controller's run (run & rst_n_i) can stop a test: bist_en must fall
+    for the duration of the reset, and the run restarts from scratch (status cleared) once it is released because the
+    run level is still 1."""
+    drv = await setup(dut)
+    await drv.write_tdr(OP_MBIST_CTRL, ctl_word(run=1, dom_core=0, dom_cpu=1, alg=5, bg_sweep=1), 29)
+    for _ in range(100):
+        await ClockCycles(dut.clk_i, 20)
+        if int(dut.bist_en_o.value):
+            break
+    assert int(dut.bist_en_o.value) == 1
+    dut.pmu_rst_n_i.value = 0
+    await ClockCycles(dut.clk_i, 8)
+    assert int(dut.bist_en_o.value) == 0, "macro reset must flush the reset-free controller"
+    st = await read_status(drv)
+    assert st["cpu"]["busy"] == 0 and st["cpu"]["done"] == 0
+    dut.pmu_rst_n_i.value = 1
+    await ClockCycles(dut.clk_i, 30)
+    assert int(dut.bist_en_o.value) == 1, "run is still 1 in the holding register: the test restarts from scratch"
+    await drv.write_tdr(OP_MBIST_CTRL, ctl_word(run=0, dom_core=0, dom_cpu=1), 29)
+    await ClockCycles(dut.clk_i, 12)
+    assert int(dut.bist_en_o.value) == 0
