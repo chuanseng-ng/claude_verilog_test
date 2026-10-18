@@ -13,11 +13,14 @@ a suite silently dropped (or run twice) by that split, so the properties pinned 
     same order as the list, and `print-soc-ci-suites` agrees with the script's parse.
 """
 
+# pylint: disable=missing-function-docstring,redefined-outer-name  # pytest fixtures + descriptive test names
+
 from __future__ import annotations
 
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -35,12 +38,28 @@ ss = importlib.util.module_from_spec(_SPEC)
 sys.modules["soc_shards"] = ss
 _SPEC.loader.exec_module(ss)
 
-HEAVY = ["i2c", "soc_integration", "soc_cpu_gpu", "soc_coherency", "soc_multiclock"]
+DEFAULT_MAKEFILE_TEXT = (REPO_ROOT / "tb" / "cocotb" / "soc" / "Makefile").read_text()
+HEAVY = [
+    "i2c",
+    "soc_integration",
+    "soc_cpu_gpu",
+    "soc_coherency",
+    "soc_multiclock",
+    "soc_uart_boot:TESTCASE=test_load_verify_jump_and_run",
+]
+NSHARDS = 8
+
+
+@pytest.fixture(scope="module")
+def plain_suites() -> list[str]:
+    """SOC_CI_SUITES: what soc_all_ci runs."""
+    return list(ss.load_suites())
 
 
 @pytest.fixture(scope="module")
 def suites() -> list[str]:
-    return list(ss.load_suites())
+    """The sharding units: SOC_CI_SUITES with the SOC_CI_SPLITS suites expanded."""
+    return list(ss.load_units())
 
 
 @pytest.fixture(scope="module")
@@ -103,7 +122,7 @@ def test_assign_is_deterministic(suites: list[str], weights: dict) -> None:
 
 
 def test_heavy_suites_are_in_different_shards(suites: list[str], weights: dict) -> None:
-    shards = ss.assign(suites, 6, weights)
+    shards = ss.assign(suites, NSHARDS, weights)
     where = {s: k for k, m in enumerate(shards) for s in m}
     assert len({where[s] for s in HEAVY}) == len(HEAVY)
 
@@ -177,17 +196,17 @@ def test_cli_union_exit_codes(tmp_path: Path, suites: list[str], weights: dict) 
     files = []
     for k, m in enumerate(shards):
         p = tmp_path / f"ran{k}.txt"
-        p.write_text("\n".join(m) + "\n")
+        p.write_text("\n".join(m) + "\n", encoding="utf-8")
         files.append(str(p))
     ok = subprocess.run(
-        [sys.executable, str(SCRIPT), "union", *files], capture_output=True, text=True
+        [sys.executable, str(SCRIPT), "union", *files], capture_output=True, text=True, check=False
     )
     assert ok.returncode == 0, ok.stdout + ok.stderr
     # Drop one suite from one manifest: the gate must go red.
     first = Path(files[0])
-    first.write_text("\n".join(shards[0][1:]) + "\n")
+    first.write_text("\n".join(shards[0][1:]) + "\n", encoding="utf-8")
     bad = subprocess.run(
-        [sys.executable, str(SCRIPT), "union", *files], capture_output=True, text=True
+        [sys.executable, str(SCRIPT), "union", *files], capture_output=True, text=True, check=False
     )
     assert bad.returncode == 1
     assert shards[0][0] in bad.stdout and "silently lost" in bad.stdout
@@ -196,6 +215,7 @@ def test_cli_union_exit_codes(tmp_path: Path, suites: list[str], weights: dict) 
         [sys.executable, str(SCRIPT), "union", *files[1:], str(tmp_path / "missing.txt")],
         capture_output=True,
         text=True,
+        check=False,
     )
     assert gone.returncode == 1
 
@@ -213,6 +233,7 @@ def test_cli_select_matches_assign(suites: list[str], weights: dict) -> None:
         [sys.executable, str(SCRIPT), "select", "--shard", "6", "--nshards", "6"],
         capture_output=True,
         text=True,
+        check=False,
     )
     assert bad.returncode == 2
 
@@ -236,14 +257,14 @@ def _make(args: list[str], root: Path) -> subprocess.CompletedProcess[str]:
 
 
 @needs_make
-def test_print_target_agrees_with_the_script(tmp_path: Path, suites: list[str]) -> None:
+def test_print_target_agrees_with_the_script(tmp_path: Path, plain_suites: list[str]) -> None:
     r = _make(["print-soc-ci-suites"], tmp_path)
     assert r.returncode == 0, r.stderr
-    assert r.stdout.split() == suites
+    assert r.stdout.split() == plain_suites
 
 
 @needs_make
-def test_soc_all_ci_expands_to_the_list_in_order(tmp_path: Path, suites: list[str]) -> None:
+def test_soc_all_ci_expands_to_the_list_in_order(tmp_path: Path, plain_suites: list[str]) -> None:
     """`make -n MAKE=echo` turns each `$(MAKE) x y` into the line `x y`: the invocations run."""
     r = _make(["-n", "MAKE=echo", "soc_all_ci"], tmp_path)
     assert r.returncode == 0, r.stderr
@@ -252,20 +273,20 @@ def test_soc_all_ci_expands_to_the_list_in_order(tmp_path: Path, suites: list[st
         for ln in r.stdout.splitlines()
         if ln and not ln.startswith(("echo ", " ", "fi", "free_mb", "if ", "mkdir", "warning"))
     ]
-    assert ran == [s.replace(":", " ") for s in suites]
+    assert ran == [s.replace(":", " ") for s in plain_suites]
 
 
 @needs_make
 def test_soc_ci_shard_dry_run_selects_by_index(
     tmp_path: Path, suites: list[str], weights: dict
 ) -> None:
-    for k in (0, 5):
-        r = _make(["-n", "MAKE=echo", "soc_ci_shard", f"SHARD={k}", "NSHARDS=6"], tmp_path)
+    for k in (0, NSHARDS - 1):
+        r = _make(["-n", "MAKE=echo", "soc_ci_shard", f"SHARD={k}", f"NSHARDS={NSHARDS}"], tmp_path)
         assert r.returncode == 0, r.stderr
         ran = [
             ln for ln in r.stdout.splitlines() if ln and ln in {s.replace(":", " ") for s in suites}
         ]
-        assert ran == [s.replace(":", " ") for s in ss.assign(suites, 6, weights)[k]]
+        assert ran == [s.replace(":", " ") for s in ss.assign(suites, NSHARDS, weights)[k]]
 
 
 @needs_make
@@ -273,3 +294,60 @@ def test_soc_ci_shard_refuses_to_run_nothing(tmp_path: Path) -> None:
     r = _make(["soc_ci_shard"], tmp_path)
     assert r.returncode != 0
     assert "set SUITES" in r.stderr
+
+
+# ----------------------------------------------------------------------------- split suites
+
+
+def test_parse_splits_and_expand_units() -> None:
+    sp = ss.parse_splits("FOO := 1\nSOC_CI_SPLITS := \\\n    x=a,b|c \\\n    y=d\n")
+    assert sp == {"x": [["a", "b"], ["c"]], "y": [["d"]]}
+    assert ss.expand_units(["w", "x", "y"], sp) == [
+        "w",
+        "x:TESTCASE=a,b",
+        "x:TESTCASE=c",
+        "y:TESTCASE=d",
+    ]
+    assert ss.parse_splits("FOO := 1\n") == {}
+
+
+@pytest.mark.parametrize("bad", ["x", "x=", "x=a||b", "x=a x=b"])
+def test_parse_splits_rejects_malformed(bad: str) -> None:
+    with pytest.raises(ValueError):
+        ss.parse_splits_value(bad)
+
+
+def test_expand_units_rejects_a_split_of_an_unknown_suite() -> None:
+    with pytest.raises(ValueError, match="not in SOC_CI_SUITES"):
+        ss.expand_units(["a"], {"nope": [["t"]]})
+
+
+def test_every_split_covers_each_cocotb_test_exactly_once(plain_suites: list[str]) -> None:
+    """A test missing from every slice would silently never run in the sharded coverage."""
+    splits = ss.parse_splits(DEFAULT_MAKEFILE_TEXT)
+    assert "soc_uart_boot" in splits
+    for suite, slices in splits.items():
+        assert suite in plain_suites
+        module = {"soc_uart_boot": "test_uart_boot"}[suite]
+        src = (SOC_DIR / f"{module}.py").read_text()
+        tests = re.findall(r"@cocotb\.test\([^)]*\)\s*\nasync def (\w+)", src)
+        assert tests, f"no @cocotb.test found in {module}.py"
+        flat = [t for sl in slices for t in sl]
+        assert sorted(flat) == sorted(tests), (
+            f"{suite}: SOC_CI_SPLITS slices != the tests of {module}.py "
+            f"(missing {sorted(set(tests) - set(flat))}, extra {sorted(set(flat) - set(tests))}, "
+            f"duplicated {sorted({t for t in flat if flat.count(t) > 1})})"
+        )
+
+
+def test_split_units_are_sharded_and_unioned(suites: list[str], weights: dict) -> None:
+    units = [u for u in suites if u.startswith("soc_uart_boot:")]
+    assert len(units) == 3
+    shards = ss.assign(suites, NSHARDS, weights)
+    assert sum(u in m for m in shards for u in units) == 3
+    assert ss.check_union(suites, {f"s{k}": m for k, m in enumerate(shards)}) == []
+    # Running the whole module in one shard instead of its slices is a union failure, not a pass.
+    problems = ss.check_union(
+        suites, {"s0": [u for u in suites if u not in units] + ["soc_uart_boot"]}
+    )
+    assert any("soc_uart_boot: run by s0 but not in SOC_CI_SUITES" in p for p in problems)

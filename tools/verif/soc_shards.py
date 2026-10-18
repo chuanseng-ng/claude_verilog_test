@@ -6,12 +6,18 @@ The ordered list of `soc_all_ci` sub-make invocations lives in ONE place,
 ':' (`sram_controller:SRAM_TARGET=sky130` is `make sram_controller SRAM_TARGET=sky130`).  This
 script reads that variable straight from the Makefile (no make, no Verilator needed) and
 
-  list      prints the entries, one per line;
+  list      prints the entries, one per line (--units: the sharding units, see below);
   select    prints the entries of ONE shard (space separated, in list order) -- what
             `make soc_ci_shard SHARD=k NSHARDS=n` and the CI matrix jobs run;
   plan      prints the whole assignment with the estimated load of every shard;
   union     the CI gate: given the `suites_ran.txt` every shard wrote, fails unless the union is
             EXACTLY the list -- no suite lost, none run twice, none unknown.
+
+A suite listed in `SOC_CI_SPLITS` is too heavy for one shard: it is sharded as several UNITS,
+`suite:TESTCASE=a,b` (cocotb runs only those tests of the module), whose slices together cover
+every test of the module exactly once (tb/tests/test_soc_shards.py checks that against the test
+file).  `soc_all_ci` is unaffected: it runs the whole module.  All shard-side logic (select,
+plan, union) works on units.
 
 Assignment is deterministic (same inputs, same output, on any host), so every matrix job and the
 merge job compute the same plan independently.  It is greedy longest-processing-time on the cost
@@ -50,6 +56,50 @@ def parse_suites(makefile_text: str) -> list[str]:
     if dup:
         raise ValueError(f"SOC_CI_SUITES has duplicate entries: {dup}")
     return entries
+
+
+_SPLIT_RE = re.compile(r"^SOC_CI_SPLITS\s*:?=((?:[^\n]*\\\n)*[^\n]*)$", re.M)
+
+
+def parse_splits(makefile_text: str) -> dict[str, list[list[str]]]:
+    """Return {suite: [[test, ...], ...]} from SOC_CI_SPLITS (empty if the variable is absent)."""
+    m = _SPLIT_RE.search(makefile_text)
+    return parse_splits_value(m.group(1).replace("\\\n", " ")) if m else {}
+
+
+def parse_splits_value(value: str) -> dict[str, list[list[str]]]:
+    """Parse the VALUE of SOC_CI_SPLITS: `suite=a,b|c ...` -> {suite: [[a, b], [c]]}."""
+    out: dict[str, list[list[str]]] = {}
+    for entry in value.split():
+        suite, sep, rest = entry.partition("=")
+        if not sep or not rest:
+            raise ValueError(f"bad SOC_CI_SPLITS entry {entry!r} (want suite=a,b|c)")
+        slices = [[t for t in sl.split(",") if t] for sl in rest.split("|")]
+        if any(not sl for sl in slices):
+            raise ValueError(f"empty slice in SOC_CI_SPLITS entry {entry!r}")
+        if suite in out:
+            raise ValueError(f"duplicate SOC_CI_SPLITS suite {suite!r}")
+        out[suite] = slices
+    return out
+
+
+def expand_units(suites: list[str], splits: dict[str, list[list[str]]]) -> list[str]:
+    """Replace each split suite by its `suite:TESTCASE=a,b` units, keeping list order."""
+    unknown = sorted(set(splits) - set(suites))
+    if unknown:
+        raise ValueError(f"SOC_CI_SPLITS names suites not in SOC_CI_SUITES: {unknown}")
+    units: list[str] = []
+    for suite in suites:
+        if suite in splits:
+            units.extend(f"{suite}:TESTCASE={','.join(sl)}" for sl in splits[suite])
+        else:
+            units.append(suite)
+    return units
+
+
+def load_units(makefile: Path = DEFAULT_MAKEFILE) -> list[str]:
+    text = Path(makefile).read_text()
+    return expand_units(parse_suites(text), parse_splits(text))
 
 
 def load_suites(makefile: Path = DEFAULT_MAKEFILE) -> list[str]:
@@ -150,11 +200,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--makefile", type=Path, default=DEFAULT_MAKEFILE)
     ap.add_argument("--weights", type=Path, default=DEFAULT_WEIGHTS)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("list")
+    p_list = sub.add_parser("list")
+    p_list.add_argument("--units", action="store_true", help="print the sharding units")
     p_sel = sub.add_parser("select")
     p_sel.add_argument("--shard", type=int, required=True)
     p_sel.add_argument("--nshards", type=int, required=True)
     p_sel.add_argument("--suites", help="space separated list to shard instead of the Makefile's")
+    p_sel.add_argument("--splits", default="", help="value of SOC_CI_SPLITS (with --suites)")
     p_plan = sub.add_parser("plan")
     p_plan.add_argument("--nshards", type=int, required=True)
     p_un = sub.add_parser("union")
@@ -163,9 +215,11 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if a.cmd == "select" and a.suites:
-            suites = a.suites.split()
-        else:
+            suites = expand_units(a.suites.split(), parse_splits_value(a.splits))
+        elif a.cmd == "list" and not a.units:
             suites = load_suites(a.makefile)
+        else:
+            suites = load_units(a.makefile)
     except (OSError, ValueError) as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 2

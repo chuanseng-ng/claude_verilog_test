@@ -817,7 +817,7 @@ endif
 ifdef COVERAGE
 	# Each simulation writes its own .dat through the runtime plusarg (see the COVERAGE block).
 	# MODULE is in the name because suites that share a build directory share SIM_BUILD.
-	override PLUSARGS += +verilator+coverage+file+$(COV_DIR)/$(notdir $(SIM_BUILD))__$(MODULE).dat
+	override PLUSARGS += +verilator+coverage+file+$(COV_DIR)/$(notdir $(SIM_BUILD))__$(MODULE)$(if $(TESTCASE),__tc$(shell printf '%s' '$(TESTCASE)' | sha256sum | cut -c1-8)).dat
 endif
 # Bead b079: parallel C++ compile of the Verilated model.  Unset by default (a developer host
 # keeps whatever -j its own MAKEFLAGS gives); CI sets it to the runner's core count.  Applies to
@@ -1999,6 +1999,15 @@ SOC_CI_SUITES := \
     soc_pmu_multiclock \
     soc_integration
 
+# Suites whose ONE module is too heavy for a single shard are run as several TESTCASE slices when
+# sharded (never by soc_all_ci, which runs the whole module).  `suite=slice|slice|...`, a slice is
+# a comma-separated list of the module's cocotb test names.  soc_uart_boot is ~33 min instrumented
+# (test_load_verify_jump_and_run alone is ~15 min); its slices are balanced on measured times.
+# Every @cocotb.test of the module must appear in exactly one slice: tb/tests/test_soc_shards.py
+# checks that against the test file, so a new test cannot silently fall out of the sharded run.
+SOC_CI_SPLITS := \
+    soc_uart_boot=test_load_verify_jump_and_run|test_bad_crc_is_nakked_and_memory_untouched,test_refusals_nak_with_the_right_code,test_banner_and_info_default_115200_at_50mhz|test_table_sum_is_independent,test_banner_and_info_sim_divisor,test_oversized_length_nak_then_resync,test_truncated_frame_times_out_and_recovers,test_line_noise_before_sof_is_ignored,test_autoboot_runs_preloaded_image,test_autoboot_refuses_empty_sram_and_stays_serviceable
+
 define soc_nl
 
 
@@ -2029,7 +2038,7 @@ ifneq ($(strip $(SHARD)),)
   ifeq ($(strip $(NSHARDS)),)
     $(error SHARD=$(SHARD) needs NSHARDS=<n>)
   endif
-  SUITES = $(shell $(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/soc_shards.py select --shard $(SHARD) --nshards $(NSHARDS) --suites "$(SOC_CI_SUITES)")
+  SUITES = $(shell $(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/soc_shards.py select --shard $(SHARD) --nshards $(NSHARDS) --suites "$(SOC_CI_SUITES)" --splits "$(SOC_CI_SPLITS)")
 endif
 .PHONY: soc_ci_shard
 soc_ci_shard: check-space

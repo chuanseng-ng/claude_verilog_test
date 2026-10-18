@@ -19,8 +19,9 @@ name: SoC Coverage
 #   whole list, `make soc_ci_shard SHARD=k NSHARDS=n` a balanced slice of it).  The slice is
 #   planned by tools/verif/soc_shards.py from the measured instrumented timings in
 #   tools/verif/soc_shard_weights.json -- deterministic, so every leg and the merge job agree on it
-#   without passing the plan around.  The five heaviest suites (i2c, soc_integration, soc_cpu_gpu,
-#   soc_coherency, soc_multiclock) land in different shards.
+#   without passing the plan around.  The heaviest suites (i2c, soc_integration, soc_cpu_gpu,
+#   soc_coherency, soc_multiclock, and the slow soc_uart_boot test, which SOC_CI_SPLITS runs as three
+#   TESTCASE slices) land in different shards.
 # * Each shard uploads its per-simulation .dat files, its log and `suites_ran.txt` (every suite its
 #   make completed).  The final job merges ALL shards' .dat with verilator_coverage (the same
 #   operation the serial `soc_coverage` target performed over one directory, so the merged file is
@@ -96,19 +97,20 @@ permissions:
 env:
   # Number of soc_shard matrix legs.  Must equal the length of the matrix list below: every leg
   # asserts it (strategy.job-total) and the final job asserts it against the shard artifacts it got.
-  NSHARDS: '6'
+  NSHARDS: '8'
 
 jobs:
   soc_shard:
     name: SoC coverage shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    # A shard is ~1/6 of the old 62-minute instrumented SoC run.  Generous headroom, but still fail
+    # A shard is ~1/8 of the old 62-minute instrumented SoC run (the longest, ~16 min, holds the single 15-minute
+    # test_load_verify_jump_and_run).  Generous headroom, but still fail
     # rather than burn the 6 h default.
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
 
     env:
       # Build dirs, per-simulation .dat files and suites_ran.txt all live here.

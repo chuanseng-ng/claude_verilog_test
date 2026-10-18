@@ -5,9 +5,12 @@
   "Verilator build excluded; `group` names a build directory shared by several suites (the b079",
   "content-keyed SIM_BUILD), whose one-off build_s is charged once to each shard that uses it.",
   "Source: serial instrumented job 117501311868 of soc_coverage run 39068597871 (74 min).",
-  "soc_uart_boot joined soc_all_ci after that run and is an ESTIMATE.",
   "Weights only steer the balance.  A suite missing from this file gets default_run_s, so a new",
-  "suite never breaks the sharding; refresh the file from a newer job log when the balance drifts."
+  "suite never breaks the sharding; refresh the file from a newer job log when the balance drifts.",
+  "soc_uart_boot is sharded as three TESTCASE units (SOC_CI_SPLITS in tb/cocotb/soc/Makefile); its",
+  "times are measured from sharded run 39089303895 (the whole module is ~1980 s instrumented, of",
+  "which test_load_verify_jump_and_run alone is ~890 s).  The mbist_* suites (added by #306) have",
+  "no measurement yet and use default_run_s."
  ],
  "default_run_s": 40.0,
  "groups": {
@@ -203,8 +206,16 @@
    "run_s": 366.2,
    "group": "tb_soc_top"
   },
-  "soc_uart_boot": {
-   "run_s": 45.0,
+  "soc_uart_boot:TESTCASE=test_load_verify_jump_and_run": {
+   "run_s": 890.0,
+   "group": "tb_soc_top"
+  },
+  "soc_uart_boot:TESTCASE=test_bad_crc_is_nakked_and_memory_untouched,test_refusals_nak_with_the_right_code,test_banner_and_info_default_115200_at_50mhz": {
+   "run_s": 710.0,
+   "group": "tb_soc_top"
+  },
+  "soc_uart_boot:TESTCASE=test_table_sum_is_independent,test_banner_and_info_sim_divisor,test_oversized_length_nak_then_resync,test_truncated_frame_times_out_and_recovers,test_line_noise_before_sof_is_ignored,test_autoboot_runs_preloaded_image,test_autoboot_refuses_empty_sram_and_stays_serviceable": {
+   "run_s": 390.0,
    "group": "tb_soc_top"
   }
  }
