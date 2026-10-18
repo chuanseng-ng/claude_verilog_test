@@ -311,7 +311,10 @@ jobs:
           # 2026-10-18 (bead j41m.14, MBIST, merged with #287/#304/#307): 813 = 816 - 3. 816 MEASURED: soc_all_ci from
           # clean on the merge of origin/main into feat/dft-mbist-j41m14 (e7cf6cf), 816 passed / 0 failed over 79 suite
           # summaries (MBIST ctrl/tap/soc_slice/fi_equiv suites + soc_uart_boot on top of main). #305's crypto tests land on top.
-          PASS_FLOOR: '813'
+          # 2026-10-18 (bead shm5, UART RX re-sync): 826 = 829 - 3. 829 MEASURED: soc_all_ci from clean on the branch head,
+          # 829 passed / 0 failed over 79 suite summaries (the 816 above + #305's crypto tests + 6 new: 5
+          # test_uart test_rx_back_to_back_* and test_uart_boot.test_load_verify_8n1_back_to_back).
+          PASS_FLOOR: '826'
         run: |
           if [ ! -s cocotb_soc.log ]; then
             echo "FAIL: no cocotb log produced — the regression did not run."
