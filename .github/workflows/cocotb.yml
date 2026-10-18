@@ -15,6 +15,21 @@ name: Cocotb Regression
 # statically without needing a simulator). Both jobs below now run in CI so
 # neither list can silently rot again.
 #
+# Sharding (bead 9ayu.2).  The SoC regression used to be ONE job (28-58 min depending on the runner
+# and the ccache).  It is now
+#
+#   soc_shard (matrix, NSHARDS legs) --> soc_all  (aggregate gate; keeps the old check name)
+#
+# * The list of suites is ONE variable, SOC_CI_SUITES in tb/cocotb/soc/Makefile (shared with
+#   soc_coverage.yml, bead 9ayu.1).  `soc_all_ci` runs all of it; `make soc_ci_shard SHARD=k
+#   NSHARDS=n` runs a deterministic, balanced slice, planned by tools/verif/soc_shards.py from the
+#   UNINSTRUMENTED per-suite times in tools/verif/soc_shard_weights_plain.json.
+# * Each leg uploads its log and `suites_ran.txt`.  The aggregate job fails unless the suites that
+#   ran are EXACTLY SOC_CI_SUITES, the SUMMED pass count reaches PASS_FLOOR and no leg logged a
+#   failure; it runs `if: always()` so a red or cancelled leg cannot leave the check green/grey.
+# * ccache is restored per leg and saved from main only.
+# `cpu_phase2_all`, `sv2v_portability` and `sim_build_key` are unchanged.
+#
 # Tool sourcing mirrors random_tests.yml deliberately: Verilator comes from the
 # repo flake (pinned 5.048 — the version the RTL is known to elaborate under),
 # while cocotb runs on the setup-python interpreter, not on nix. Do not "simplify"
@@ -31,6 +46,9 @@ on:
       - 'flake.nix'
       - 'flake.lock'
       - '.github/workflows/cocotb.yml'
+      - 'tools/verif/soc_shards.py'
+      - 'tools/verif/soc_shard_weights_plain.json'
+      - 'tb/tests/test_soc_shards.py'
   pull_request:
     branches: [ "main" ]
     paths:
@@ -40,6 +58,9 @@ on:
       - 'flake.nix'
       - 'flake.lock'
       - '.github/workflows/cocotb.yml'
+      - 'tools/verif/soc_shards.py'
+      - 'tools/verif/soc_shard_weights_plain.json'
+      - 'tb/tests/test_soc_shards.py'
   workflow_dispatch:
 
 # A second push to the same branch supersedes an in-flight run — the regression
@@ -55,148 +76,50 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # Number of soc_shard matrix legs (bead 9ayu.2).  Must equal the length of the matrix list below:
+  # every leg asserts it (strategy.job-total) and the aggregate job asserts it against the shard
+  # artifacts it received.
+  NSHARDS: '4'
+
 jobs:
+  # Aggregate gate (bead 9ayu.2).  This job KEEPS the id and the name of the old single job, so the
+  # check "cocotb soc_all (SoC regression)" that may be listed as required in branch protection still
+  # exists and still means "the whole SoC regression is green".  The regression itself now runs in
+  # the `soc_shard` matrix below; this job runs `if: always()` after the shards, so a red or cancelled
+  # shard turns it RED (a skipped required check counts as passing, so `needs` alone would not do).
   soc_all:
     name: cocotb soc_all (SoC regression)
+    needs: [soc_shard]
+    if: ${{ always() }}
     runs-on: ubuntu-latest
-    # Measured ~15-25 min locally on a 16-core host; CI runners are smaller, so
-    # allow generous headroom but still fail rather than burn the 6 h default.
-    timeout-minutes: 120
+    timeout-minutes: 15
 
     steps:
-      # persist-credentials: false — do not leave the token in .git/config where
-      # the regression's own code could read it.
+      - name: Every shard succeeded
+        run: |
+          echo "soc_shard: ${{ needs.soc_shard.result }}"
+          if [ "${{ needs.soc_shard.result }}" != "success" ]; then
+            echo "FAIL: a soc_shard leg did not succeed (see its log); the regression is not green."
+            exit 1
+          fi
+
+      # persist-credentials: false — do not leave the token in .git/config.
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Download shard artifacts
+        uses: actions/download-artifact@v4
         with:
-          python-version: '3.10'
-          cache: 'pip'
-
-      - name: Install Nix (pinned Verilator from binary cache)
-        uses: cachix/install-nix-action@v30
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            accept-flake-config = true
-
-      - name: Install pinned Verilator (nix profile, system-shell compile)
-        run: |
-          nix profile install .#verilator
-          verilator --version
-
-      # cocotb runs on the setup-python interpreter, not on nix. sim/Makefile's
-      # NIX_COMPAT_DIR loop symlinks these system libs (resolved via ldconfig)
-      # so the Verilator sim binary can dlopen libpython/ctypes.
-      # ccache (bead b079) is installed from apt, not nix: it wraps the SYSTEM g++ that
-      # sim/cxx_shim.sh calls (see the shim), exactly like the apt line in random_tests.yml.
-      - name: Install runtime libs for cocotb
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5 ccache
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
-          pip list
-
-      # Static, dependency-free gate: every rtl/periph and rtl/npu module must
-      # appear in all five build source lists. This exists because a module
-      # missing from a *PD* list is silently BLACKBOXED by sv2v -- the flow
-      # completes with a wrong netlist and no cocotb suite below can detect it,
-      # since cocotb never runs the PD flow. Needs no nix shell and no Verilator,
-      # so it runs before the expensive regression and fails fast.
-      # Complements check_source_closure.py, which checks a different property
-      # (does a list close over its own `import pkg::*`), and which passes
-      # happily when a module is absent from a list entirely.
-      - name: Check peripheral file-list membership
-        run: python3 tools/verif/check_periph_filelists.py
-
-      # The Verilog-2005 portability gate (sv2v + yosys parse, bead f7vs.12, ~4.5 min) used to run
-      # here as a serial step.  It shares nothing with the regression below, so it is now its own
-      # job `sv2v_portability` (bead b079) and runs on a second runner in parallel.
-
-      # soc_all_ci is the CI-runnable regression: every suite that needs nothing
-      # beyond this repo + the nix sim devshell. It builds its own source list, so
-      # it is unaffected by the tb/cocotb/cpu breakage above.
-      #
-      # It is soc_all_ci and NOT soc_all on purpose. soc_all additionally runs
-      # suites that need the riscv32-none-elf cross toolchain to have produced
-      # sw/bench/build/*.hex (currently gpio_driver); this job installs no cross
-      # toolchain, so those suites die in _parse_hex() with FileNotFoundError --
-      # which is what failed on PR #195. soc_all remains the full local gate and
-      # should be run before pushing. See the split's rationale on the soc_all
-      # target in tb/cocotb/soc/Makefile.
-      #
-      # The step and job NAMES still say soc_all deliberately: the check name
-      # "cocotb soc_all (SoC regression)" may be a required status check in branch
-      # protection, and renaming it would make that requirement unsatisfiable.
-      # No `|| true` and no `continue-on-error`: this is a gate.
-      # pipefail matters: without it the tee would mask make's exit status and
-      # the gate would pass on a failing regression.
-      # Compiler cache for the Verilated model (bead b079).  Two layers of reuse:
-      #  * WITHIN a run, the five Verilator runtime objects (verilated.o, verilated_vpi.o, ...) and
-      #    cocotb's verilator.o are byte-identical in every one of the ~45 builds, so only the
-      #    first compiles them.  This holds even on a completely cold cache.
-      #  * ACROSS runs, an unchanged model (Vtop__ALL.o) is a hit.  That is the big win for PRs that
-      #    touch tests, docs or Python but not rtl/ -- and nearly nothing for a PR that edits RTL
-      #    the SoC model contains (the 15 -> 1 shared tb_soc_top build then misses once).
-      # Correctness does not depend on the key below: ccache hashes the preprocessed source, the
-      # exact compiler command line (after sim/cxx_shim.sh stripped its clang-only flags) and the
-      # g++ binary's content (CCACHE_COMPILERCHECK=content, set by the shim).  The key only
-      # decides which stale entries are offered; a stale one is a miss, never a wrong object.
-      # Saved from main pushes only, so PR runs read main's cache without filling the repo's 10 GB.
-      - name: Compiler identity (cache key input)
-        id: cc
-        run: echo "gcc=$(g++ -dumpfullversion)" >> "$GITHUB_OUTPUT"
-
-      - name: Restore ccache
-        id: ccache_restore
-        uses: actions/cache/restore@v4
-        with:
-          path: .ccache
-          key: ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}
-          restore-keys: |
-            ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-
-            ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-
-
-      - name: Run soc_all
-        env:
-          SIM_CCACHE: '1'
-          CCACHE_DIR: ${{ github.workspace }}/.ccache
-          CCACHE_MAXSIZE: 700M
-          # Paths inside the build tree are absolute; with no -g in the flags ccache does not hash
-          # the working directory, and BASEDIR makes the workspace prefix irrelevant anyway.
-          CCACHE_BASEDIR: ${{ github.workspace }}
-        run: |
-          set -o pipefail
-          ccache --zero-stats
-          echo "::group::make -C tb/cocotb/soc soc_all_ci"
-          # SIM_PYTHON3 must be the SAME interpreter cocotb runs on. The Makefile
-          # defaults to /usr/bin/python3, which is right locally but wrong here:
-          # setup-python puts a hostedtoolcache interpreter on PATH and points
-          # PYTHONHOME/LD_LIBRARY_PATH at it, while /usr/bin/python3 is Ubuntu's
-          # own. Verilator's verilator_includer then loads a mismatched stdlib and
-          # dies with "ModuleNotFoundError: No module named 'encodings'".
-          echo "SIM_PYTHON3=$(command -v python3) ($(python3 -V))"
-          # SIM_BUILD_JOBS: parallel C++ compile of each Verilated model (bead b079).  It applies to
-          # the Vtop.mk build only; the suites still run one after another.  It is not part of the
-          # build-directory key (it changes how fast a model is built, not what it is).
-          make -C tb/cocotb/soc soc_all_ci SIM_PYTHON3="$(command -v python3)" SIM_BUILD_JOBS="$(nproc)" 2>&1 | tee cocotb_soc.log
-          echo "::endgroup::"
-          echo "::group::ccache statistics"
-          ccache --show-stats
-          echo "::endgroup::"
+          pattern: cocotb-soc-shard-*
+          path: shards
 
       # Belt-and-braces on top of make's exit code, same rationale as bead dwp
       # (a tool that exits 0 with an empty report must never read as PASS).
       #
-      # This checks the LOG, not results.xml, deliberately. soc_all runs 21
+      # This checks the LOGS, not results.xml, deliberately. soc_all runs 21
       # suites through the same target and each overwrites the previous
       # results.xml, so the XML on disk at the end describes only the last
       # suite — it cannot witness the whole regression. (Its schema is also
@@ -256,13 +179,19 @@ jobs:
       # set just under that so a dropped suite trips it rather than passing
       # unnoticed. Raise it deliberately as suites are added.
       #
-      # NOTE this floor is measured against soc_all_ci, which is what this job
-      # runs. The `gpio_driver` suite is in soc_all (the full local gate) but not
+      # NOTE this floor is measured against soc_all_ci, which is what the shards
+      # run (their union). The `gpio_driver` suite is in soc_all (the full local gate) but not
       # in soc_all_ci, because it needs sw/bench/build/*.hex from the riscv32
       # cross toolchain that this job does not install. l2_bench is in neither --
       # it is a benchmark harness, not a regression. See tb/cocotb/soc/Makefile.
+      #
+      # Sharded (bead 9ayu.2): every shard logs only its own slice of the suites, so no shard can hold
+      # the floor.  This step SUMS the pass counts of all shard logs and applies PASS_FLOOR to the sum,
+      # and it also proves the shards ran EXACTLY the suites of SOC_CI_SUITES (tb/cocotb/soc/Makefile):
+      # none lost, none run twice, none unknown (tools/verif/soc_shards.py union).  Without that, a
+      # shard that silently ran too few suites would only be caught if the floor happened to trip.
       - name: Verify regression actually ran
-        if: always()
+        if: always() && needs.soc_shard.result == 'success'
         env:
           # 2026-10-07 (merge of beads 8riq + ej6j): 545 = 477 + 31 (8riq, measured 511 on its own branch) + 37 (ej6j, derived).
           # DERIVED for the merge -- tighten to (measured - 3) from this PR's soc_all CI log.
@@ -313,13 +242,35 @@ jobs:
           # summaries (MBIST ctrl/tap/soc_slice/fi_equiv suites + soc_uart_boot on top of main). #305's crypto tests land on top.
           PASS_FLOOR: '813'
         run: |
-          if [ ! -s cocotb_soc.log ]; then
-            echo "FAIL: no cocotb log produced — the regression did not run."
+          set -o pipefail
+          n=$(find shards -mindepth 1 -maxdepth 1 -type d -name 'cocotb-soc-shard-*' | wc -l)
+          echo "shard artifacts: ${n} (NSHARDS=${NSHARDS})"
+          if [ "${n}" -ne "${NSHARDS}" ]; then
+            echo "FAIL: expected ${NSHARDS} shard artifacts, got ${n}."
             exit 1
           fi
+          for d in shards/cocotb-soc-shard-*; do
+            for f in suites_ran.txt cocotb_soc_shard.log; do
+              test -s "${d}/${f}" || { echo "FAIL: ${d}/${f} is missing or empty - the regression did not run."; exit 1; }
+            done
+          done
+          {
+            printf '## Sharded SoC regression\n\n'
+            printf '| shard | suites run | tests passed | tests failed |\n|---:|---:|---:|---:|\n'
+            for d in shards/cocotb-soc-shard-*; do
+              p=$(grep -cE 'cocotb\.regression .* passed$' "${d}/cocotb_soc_shard.log" || true)
+              f=$(grep -cE 'cocotb\.regression .* (failed|FAILED)$' "${d}/cocotb_soc_shard.log" || true)
+              printf '| %s | %s | %s | %s |\n' "$(basename "${d}")" "$(wc -l < "${d}/suites_ran.txt")" "${p}" "${f}"
+            done
+            printf '\n'
+          } >> "${GITHUB_STEP_SUMMARY}"
+          python3 tools/verif/soc_shards.py union shards/cocotb-soc-shard-*/suites_ran.txt | tee union.txt
+          cat union.txt >> "${GITHUB_STEP_SUMMARY}"
+          cat shards/cocotb-soc-shard-*/cocotb_soc_shard.log > cocotb_soc.log
           passed=$(grep -cE 'cocotb\.regression .* passed$' cocotb_soc.log || true)
           failed=$(grep -cE 'cocotb\.regression .* (failed|FAILED)$' cocotb_soc.log || true)
-          echo "cocotb: ${passed} passed, ${failed} failed (floor ${PASS_FLOOR})"
+          echo "cocotb: ${passed} passed, ${failed} failed (floor ${PASS_FLOOR}), summed over ${n} shards"
+          echo "cocotb summed over ${n} shards: ${passed} passed, ${failed} failed (floor ${PASS_FLOOR})" >> "${GITHUB_STEP_SUMMARY}"
           if [ "${failed}" -ne 0 ]; then
             echo "FAIL: ${failed} test(s) reported failed."
             grep -E 'cocotb\.regression .* (failed|FAILED)$' cocotb_soc.log | head -40
@@ -331,22 +282,232 @@ jobs:
             exit 1
           fi
 
-      - name: Save ccache
-        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/cache/save@v4
-        with:
-          path: .ccache
-          key: ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-${{ github.sha }}
-
-      - name: Upload cocotb results
-        if: always()
+      - name: Upload combined cocotb log
+        if: always() && needs.soc_shard.result == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: cocotb-soc-results
           path: |
             cocotb_soc.log
-            tb/cocotb/**/results.xml
+            union.txt
           if-no-files-found: warn
+
+  # The SoC regression itself (bead 9ayu.2), split over NSHARDS runners.  `soc_all_ci` is a flat list
+  # of independent sub-makes (SOC_CI_SUITES in tb/cocotb/soc/Makefile); `make soc_ci_shard SHARD=k
+  # NSHARDS=n` runs a deterministic balanced slice of it, planned by tools/verif/soc_shards.py from
+  # tools/verif/soc_shard_weights_plain.json (measured UNINSTRUMENTED per-suite times; the coverage
+  # workflow uses the instrumented file).  The aggregate job `soc_all` above sums the legs.
+  # Same structure as soc_coverage.yml's soc_shard (bead 9ayu.1).
+  soc_shard:
+    name: cocotb soc_all shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    # A shard is ~1/4 of the ~35 min serial run (the longest unit, one soc_uart_boot slice, is ~5 min);
+    # allow generous headroom but still fail rather than burn the 6 h default.
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+
+    env:
+      # Uninstrumented cost model (soc_coverage.yml uses the instrumented default).
+      SOC_SHARD_WEIGHTS: tools/verif/soc_shard_weights_plain.json
+
+    steps:
+      - name: Matrix size matches NSHARDS
+        run: |
+          if [ "${{ strategy.job-total }}" != "${NSHARDS}" ]; then
+            echo "FAIL: the matrix has ${{ strategy.job-total }} legs but NSHARDS=${NSHARDS}; fix one of them."
+            exit 1
+          fi
+
+      # persist-credentials: false — do not leave the token in .git/config where
+      # the regression's own code could read it.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Nix (pinned Verilator from binary cache)
+        uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+
+      - name: Install pinned Verilator (nix profile, system-shell compile)
+        run: |
+          nix profile install .#verilator
+          verilator --version
+
+      # cocotb runs on the setup-python interpreter, not on nix. sim/Makefile's
+      # NIX_COMPAT_DIR loop symlinks these system libs (resolved via ldconfig)
+      # so the Verilator sim binary can dlopen libpython/ctypes.
+      # ccache (bead b079) is installed from apt, not nix: it wraps the SYSTEM g++ that
+      # sim/cxx_shim.sh calls (see the shim), exactly like the apt line in random_tests.yml.
+      - name: Install runtime libs for cocotb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libffi8 zlib1g libexpat1 libbz2-1.0 liblzma5 ccache
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install 'cocotb>=1.8.0,<2.0' cocotb-bus cocotbext-axi 'pyuvm>=3.0.0,<3.1' pytest pytest-cov
+          pip list
+
+      # Static, dependency-free gate: every rtl/periph and rtl/npu module must
+      # appear in all five build source lists. This exists because a module
+      # missing from a *PD* list is silently BLACKBOXED by sv2v -- the flow
+      # completes with a wrong netlist and no cocotb suite below can detect it,
+      # since cocotb never runs the PD flow. Needs no nix shell and no Verilator,
+      # so it runs before the expensive regression and fails fast.
+      # Complements check_source_closure.py, which checks a different property
+      # (does a list close over its own `import pkg::*`), and which passes
+      # happily when a module is absent from a list entirely.
+      - name: Check peripheral file-list membership
+        run: python3 tools/verif/check_periph_filelists.py
+
+      # The Verilog-2005 portability gate (sv2v + yosys parse, bead f7vs.12, ~4.5 min) used to run
+      # here as a serial step.  It shares nothing with the regression below, so it is now its own
+      # job `sv2v_portability` (bead b079) and runs on a second runner in parallel.
+
+      # The shard planner and the Makefile list it reads, including the tests that expand
+      # `soc_all_ci` / `soc_ci_shard` with make (they need Verilator and cocotb, which this job has).
+      # Cheap, and it fails before the expensive part if the plan and the Makefile disagree.
+      - name: Unit-test the shard planner and the SOC_CI_SUITES refactor
+        run: python3 -m pytest tb/tests/test_soc_shards.py -q
+
+
+      # soc_all_ci is the CI-runnable regression: every suite that needs nothing
+      # beyond this repo + the nix sim devshell. It builds its own source list, so
+      # it is unaffected by the tb/cocotb/cpu breakage above.
+      #
+      # It is soc_all_ci and NOT soc_all on purpose. soc_all additionally runs
+      # suites that need the riscv32-none-elf cross toolchain to have produced
+      # sw/bench/build/*.hex (currently gpio_driver); this job installs no cross
+      # toolchain, so those suites die in _parse_hex() with FileNotFoundError --
+      # which is what failed on PR #195. soc_all remains the full local gate and
+      # should be run before pushing. See the split's rationale on the soc_all
+      # target in tb/cocotb/soc/Makefile.
+      #
+      # The aggregate JOB still says soc_all deliberately: the check name
+      # "cocotb soc_all (SoC regression)" may be a required status check in branch
+      # protection, and renaming it would make that requirement unsatisfiable.
+      # (No required status check is configured on main as of bead 9ayu.2: the ruleset only
+      # requires a pull request.  The name is kept anyway, cheaply.)
+      # No `|| true` and no `continue-on-error`: this is a gate.
+      # pipefail matters: without it the tee would mask make's exit status and
+      # the gate would pass on a failing regression.
+      # Compiler cache for the Verilated model (bead b079).  Two layers of reuse:
+      #  * WITHIN a run, the five Verilator runtime objects (verilated.o, verilated_vpi.o, ...) and
+      #    cocotb's verilator.o are byte-identical in every one of the ~45 builds, so only the
+      #    first compiles them.  This holds even on a completely cold cache.
+      #  * ACROSS runs, an unchanged model (Vtop__ALL.o) is a hit.  That is the big win for PRs that
+      #    touch tests, docs or Python but not rtl/ -- and nearly nothing for a PR that edits RTL
+      #    the SoC model contains (the 15 -> 1 shared tb_soc_top build then misses once).
+      # Correctness does not depend on the key below: ccache hashes the preprocessed source, the
+      # exact compiler command line (after sim/cxx_shim.sh stripped its clang-only flags) and the
+      # g++ binary's content (CCACHE_COMPILERCHECK=content, set by the shim).  The key only
+      # decides which stale entries are offered; a stale one is a miss, never a wrong object.
+      # Saved from main pushes only, so PR runs read main's cache without filling the repo's 10 GB.
+      - name: Compiler identity (cache key input)
+        id: cc
+        run: echo "gcc=$(g++ -dumpfullversion)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore ccache
+        id: ccache_restore
+        uses: actions/cache/restore@v4
+        with:
+          path: .ccache
+          # One cache per shard (a shard compiles a fixed subset of the models).  The restore-keys end
+          # in the generic prefix on purpose: the very first runs find only the old single-job cache
+          # (a superset of any shard's models), which is still a valid and warm starting point.
+          key: ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-shard${{ matrix.shard }}-${{ github.sha }}
+          restore-keys: |
+            ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-shard${{ matrix.shard }}-
+            ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-
+            ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-
+
+      # pipefail so tee cannot mask make's exit status; no `|| true`: a failing suite fails this leg.
+      # SIM_PYTHON3 must be the SAME interpreter cocotb runs on (see the note on the old single job in
+      # git history: /usr/bin/python3 vs the setup-python interpreter dies with "No module named
+      # 'encodings'").  SIM_BUILD_JOBS: parallel C++ compile of each Verilated model (bead b079); it
+      # is not part of the build-directory key.  SOC_SUITES_RAN is the manifest of suites that ran
+      # to completion, which the aggregate job compares with SOC_CI_SUITES.
+      - name: Run this shard's suites
+        env:
+          SIM_CCACHE: '1'
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_MAXSIZE: 400M
+          # Paths inside the build tree are absolute; with no -g in the flags ccache does not hash
+          # the working directory, and BASEDIR makes the workspace prefix irrelevant anyway.
+          CCACHE_BASEDIR: ${{ github.workspace }}
+        run: |
+          set -o pipefail
+          ccache --zero-stats
+          echo "SIM_PYTHON3=$(command -v python3) ($(python3 -V))"
+          python3 tools/verif/soc_shards.py --weights "${SOC_SHARD_WEIGHTS}" plan --nshards "${NSHARDS}"
+          echo "::group::make -C tb/cocotb/soc soc_ci_shard SHARD=${{ matrix.shard }} NSHARDS=${NSHARDS}"
+          make -C tb/cocotb/soc soc_ci_shard \
+            SHARD=${{ matrix.shard }} NSHARDS="${NSHARDS}" \
+            SOC_SHARD_WEIGHTS="${GITHUB_WORKSPACE}/${SOC_SHARD_WEIGHTS}" \
+            SOC_SUITES_RAN="${GITHUB_WORKSPACE}/suites_ran.txt" \
+            SIM_PYTHON3="$(command -v python3)" \
+            SIM_BUILD_JOBS="$(nproc)" 2>&1 | tee cocotb_soc_shard.log
+          echo "::endgroup::"
+          echo "::group::ccache statistics"
+          ccache --show-stats | tee ccache_stats.txt
+          echo "::endgroup::"
+
+      # Per-shard version of the aggregate job's log check (a fast, local failure).  The FLOOR is
+      # applied by the aggregate job to the SUMMED count: a shard legitimately holds only a fraction
+      # of the tests, so no per-shard floor exists.
+      - name: Check this shard's regression
+        run: |
+          if [ ! -s cocotb_soc_shard.log ]; then
+            echo "FAIL: no log produced - the shard did not run."
+            exit 1
+          fi
+          passed=$(grep -cE 'cocotb\.regression .* passed$' cocotb_soc_shard.log || true)
+          failed=$(grep -cE 'cocotb\.regression .* (failed|FAILED)$' cocotb_soc_shard.log || true)
+          echo "shard ${{ matrix.shard }}: ${passed} passed, ${failed} failed"
+          if [ "${failed}" -ne 0 ]; then
+            echo "FAIL: ${failed} test(s) reported failed."
+            grep -E 'cocotb\.regression .* (failed|FAILED)$' cocotb_soc_shard.log | head -40
+            exit 1
+          fi
+          if [ "${passed}" -lt 1 ]; then
+            echo "FAIL: no passing test in this shard's log."
+            exit 1
+          fi
+          test -s suites_ran.txt || { echo "FAIL: suites_ran.txt is missing or empty."; exit 1; }
+          echo "suites run by this shard:"; cat suites_ran.txt
+
+      - name: Save ccache
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: .ccache
+          key: ccache-soc-${{ runner.os }}-gcc${{ steps.cc.outputs.gcc }}-${{ hashFiles('flake.lock') }}-shard${{ matrix.shard }}-${{ github.sha }}
+
+      - name: Upload shard log and manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cocotb-soc-shard-${{ matrix.shard }}
+          path: |
+            cocotb_soc_shard.log
+            suites_ran.txt
+            ccache_stats.txt
+          if-no-files-found: warn
+          retention-days: 7
 
   cpu_phase2_all:
     name: cocotb phase2_all (CPU standalone regression)
