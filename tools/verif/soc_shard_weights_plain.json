@@ -81,16 +81,16 @@
    "run_s": 5.7
   },
   "pwm": {
-   "run_s": 5.6
+   "run_s": 25.0
   },
   "wdt": {
-   "run_s": 6.0
+   "run_s": 13.0
   },
   "trng": {
    "run_s": 11.7
   },
   "i2c": {
-   "run_s": 123.3
+   "run_s": 150.0
   },
   "crypto": {
    "run_s": 12.9
@@ -207,7 +207,7 @@
    "group": "tb_soc_top"
   },
   "soc_integration": {
-   "run_s": 110.4,
+   "run_s": 240.0,
    "group": "tb_soc_top"
   },
   "soc_uart_boot:TESTCASE=test_load_verify_jump_and_run": {
