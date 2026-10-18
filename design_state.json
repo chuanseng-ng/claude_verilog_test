@@ -2,7 +2,7 @@
   "format_version": "1.5",
   "design_name": "phase5_soc",
   "created_at": "2026-05-31T00:00:00Z",
-  "updated_at": "2026-10-18T00:00:00+00:00",
+  "updated_at": "2026-10-18T08:00:17+00:00",
   "rtl": {
     "top_module": "soc_top",
     "files": [
@@ -2259,6 +2259,18 @@
       "retry_strategy": "none",
       "suggested_next_step": "proceed",
       "reason": "bead j41m.6: crypto_accel hardware scan wipe (PR #305, draft). Verilator -Wall 0 RTL warnings, test_crypto 51/51, test_soc_dft_scan 11/11, 25/25 mutants killed, dft-scan-check sky130+asap7 0 violations, soc_all_ci plain and FPGA=1 769/0/17. Limit: wipe is overridden by scan_en=1 edges (adversarial tester not covered). rtl.signoff unchanged (false): CDC/RDC tools not run.",
+      "constraint_ref": null
+    },
+    {
+      "timestamp": "2026-10-18T08:00:17+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "medium",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "bead c54a: CPU-macro MBIST collars on the 10 cache SRAMs + 96-pin boundary (PR #313, draft; MBIST_CPU default 1; needs the combined PD re-harden). Verilator -Wall 0 new warnings on 4 arms; dft-scan-check sky130/asap7 SoC + both CPU macros 0 violations; test_mbist_cpu_macro 7/7, 5/5 mutants killed, mbist_fi_equiv_1k 1/1, soc_jtag CPU-domain run; sim rollup + sky130-arm icache/dcache/cache_integration green; Sky130-arm RTL cycle-exact vs main 6/6 IDENTICAL; soc_all_ci plain and FPGA=1 831 passed / 0 failed / 41 skipped; check_upf + gen-facts --check PASS. slang NOT RUN (not installed). rtl.signoff stays false: no PD re-harden, timing of the added collar mux unmeasured.",
       "constraint_ref": null
     }
   ],
