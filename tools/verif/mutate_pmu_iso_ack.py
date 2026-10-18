@@ -90,7 +90,10 @@ MUTANTS = [
      [("    ) u_cpu_iso_ack_sync (\n        .clk_i   (core_clk),", "    ) u_cpu_iso_ack_sync (\n        .clk_i   (cpu_core_clk),")], None),
     ("s05_ack_after_cpu_gating", "soc_pmu_iso_ack", TOP, "ack sync reset by cpu_core_rst_n instead of core_rst_n",
      [(".rst_n_i (core_rst_n),\n        .d_i     (pmu_cpu_iso_en_sync),", ".rst_n_i (cpu_core_rst_n),\n        .d_i     (pmu_cpu_iso_en_sync),")],
-     "equivalent for the property: both resets are released long before the first power cycle and the ack path only matters with both domains alive; the dead-CPU-clock test exercises cpu_core_rst_n low, where the sync is already held at 0 by its own chain"),
+     "functionally equivalent in a zero-delay run: the ack sync's only source, u_cpu_iso_en_sync, is "
+     "itself cleared by cpu_core_rst_n, so the ack reads 0 in that reset window either way; the mutant "
+     "differs only in WHICH domain's reset releases the flop (a reset-domain structure fact, not a "
+     "behaviour). NOT detectable by cocotb and not claimed to be covered by any gate (UNVERIFIED)"),
     # ---- part 2: ISO_GPU clamp on m_axil_if_rready -------------------------------------------
     ("c01_gif_rready_unclamped", "soc_pmu_iso_ack", TOP, "m_axil_if_rready clamp removed (PR #301)",
      [("assign gif_axil_rready    = pmu_gpu_iso_en ? 1'b0 : gpu_gif_rready_raw;", "assign gif_axil_rready    = gpu_gif_rready_raw;")], None),
