@@ -683,7 +683,8 @@ async def test_soc_dma_walk_rom_write_and_decode_errors(dut):
       * boot ROM write: every attempt is one AW handshake and the right number of W beats at the
         ROM port, answered by exactly one B beat with SLVERR, and the ROM array is bit-identical
         afterwards -- a refused write must be refused, not silently accepted;
-      * unmapped addresses: the ROM port stays quiet while the default slave answers DECERR.
+      * unmapped addresses: the ROM port stays quiet while the default slave answers DECERR;
+      * unaligned reads inside a peripheral window complete and read the unmapped word as 0.
     """
     words = _read_hex(_FW_DIR / "dma_walk.hex")
     await _setup(dut, words)
@@ -722,6 +723,7 @@ async def test_soc_dma_walk_rom_write_and_decode_errors(dut):
             ("alias", A.DMA_WALK_ALIAS_DONE),
             ("rom", A.DMA_WALK_ROM_DONE),
             ("decerr", A.DMA_WALK_DECERR_DONE),
+            ("unal", A.DMA_WALK_UNAL_DONE),
         ):
             if pc == mark and name not in marks:
                 marks[name] = (cycle, aw_hs, w_beats, b_hs)
@@ -729,7 +731,7 @@ async def test_soc_dma_walk_rom_write_and_decode_errors(dut):
             saw_pass = True
             break
     assert saw_pass, "PASS_PC never committed; recent PCs " + " ".join(f"0x{p:08x}" for p in recent)
-    assert set(marks) == {"alias", "rom", "decerr"}, f"phase markers seen: {sorted(marks)}"
+    assert set(marks) == {"alias", "rom", "decerr", "unal"}, f"phase markers seen: {sorted(marks)}"
 
     # ---- phase 1: aliased SRAM transfers all completed and moved the right data ----------------
     sram = sram_mem(dut)
@@ -743,6 +745,11 @@ async def test_soc_dma_walk_rom_write_and_decode_errors(dut):
             f"alias copy {i}: destination words {[hex(g) for g in got]} != {[hex(x) for x in want]}"
         )
     assert marks["alias"][1] == 0, "the ROM write channel moved during the SRAM alias walk"
+    # Unaligned reads of an unmapped timer-window word: each destination word was pre-filled with
+    # all-ones, and an unmapped register reads 0 with no side effect.
+    for n in range(A.WALK_N_UNAL):
+        w = int(sram[(A.WALK_UNAL_DST - 0x2000) // 4 + n].value)
+        assert w == 0, f"unaligned DMA read {n}: destination word 0x{w:08x}, expected 0"
 
     # ---- phase 2: the boot ROM refused every write -------------------------------------------
     n_rom = A.WALK_N_ROM_COPIES

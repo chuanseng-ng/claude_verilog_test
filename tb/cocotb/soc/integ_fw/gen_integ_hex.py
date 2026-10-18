@@ -63,6 +63,10 @@ IMAGE 4  dma_walk.hex -- the DMA as the SoC's only software-programmable bus mas
                   hole above the peripheral window, 30, 31).  The crossbar's default slave
                   answers DECERR: read -> ERR_INFO = 0b111, write -> 0b011.
 
+  Phase 4 UNALIGN: four single-word DMA reads from byte offsets +1/+2/+3 and then +0 of an unmapped timer-window
+                  word.  Only a DMA can put a non-zero address[1:0] on the peripheral ring (the
+                  D-cache word-aligns uncached accesses), and apb_interconnect broadcasts paddr to
+                  every slave, so this one probe toggles paddr[1:0] of all peripherals.
 Registers: IMAGE 1 MAIN uses x1-x23 (x2=VAR_BASE x3=TIMER x4=UART x5=SPI x6=DMA x7=IRQ);
 the ISR uses only x24-x31.
 """
@@ -484,6 +488,12 @@ WALK_ROM_COPIES = (
     (16, 0x1554), (16, 0x1AA8), (16, 0x1000),
 )
 WALK_DECERR_ADDRS = (0x1000_0000, 0x2002_0000, 0x4000_0000, 0x8000_0000)
+# Unaligned single-word DMA reads from an UNMAPPED word inside the timer's APB window (reads 0, no
+# side effect).  No other master can put a non-zero address[1:0] on the peripheral ring: the
+# D-cache word-aligns every uncached access (rv32i_dcache.sv axi_{ar,aw}addr_o).
+WALK_UNAL_BASE = 0x2000_4000 + 0x100
+WALK_UNAL_OFFS = (1, 2, 3, 0)   # the trailing aligned read drops address[1:0] again
+WALK_UNAL_DST = SRAM_BASE + 0x700   # pre-filled with all-ones; the DMA must overwrite each word
 ERRINFO_ROM_WRITE = 0b010     # SLVERR, error on the write channel
 ERRINFO_DECERR_READ = 0b111   # DECERR, error on the read channel
 ERRINFO_DECERR_WRITE = 0b011  # DECERR, error on the write channel
@@ -502,6 +512,10 @@ def build_dma_walk(asm):
             li(asm, 5, v)
             li(asm, 7, base + 4 * i)
             asm.emit(SW(5, 7, 0))
+    li(asm, 5, 0xFFFFFFFF)
+    for k in range(len(WALK_UNAL_OFFS)):
+        li(asm, 7, WALK_UNAL_DST + 4 * k)
+        asm.emit(SW(5, 7, 0))
     li(asm, 12, WALK_ROM_FILL_SEED)
     li(asm, 13, WALK_SRC_ROM)
     li(asm, 14, WALK_ROM_FILL_STEP)
@@ -588,6 +602,15 @@ def build_dma_walk(asm):
         run(f"DW{n}", ERRINFO_DECERR_WRITE)
     asm.label("DECERR_DONE")
     asm.emit(NOP)
+
+    # ---- phase 4: unaligned reads put non-zero paddr[1:0] on the whole peripheral ring ------
+    for n, off in enumerate(WALK_UNAL_OFFS):
+        li(asm, 7, WALK_UNAL_BASE + off)
+        li(asm, 5, WALK_UNAL_DST + 4 * n)
+        program(7, 5, 4)
+        run(f"UA{n}")
+    asm.label("UNAL_DONE")
+    asm.emit(NOP)
     jmp(asm, "PASS")
     tail(asm)
 
@@ -599,7 +622,7 @@ IMAGES = {
     "gpu_iso": (build_gpu_iso, ("MAIN", "PASS", "FAIL", "GPU_DONE", "GPU_OFF", "GPU_ON",
                                 "GPU_RELAUNCHED", "IRQ_CLR")),
     "dma_walk": (build_dma_walk, ("MAIN", "PASS", "FAIL", "ALIAS_DONE", "ROM_DONE",
-                                  "DECERR_DONE")),
+                                  "DECERR_DONE", "UNAL_DONE")),
 }
 
 
@@ -629,6 +652,7 @@ def main():
         "WALK_DST": WALK_DST, "WALK_SCRATCH": WALK_SCRATCH,
         "WALK_ROM_FILL_SEED": WALK_ROM_FILL_SEED, "WALK_ROM_FILL_STEP": WALK_ROM_FILL_STEP,
         "WALK_ROM_FILL_WORDS": WALK_ROM_FILL_WORDS,
+        "WALK_UNAL_DST": WALK_UNAL_DST, "WALK_N_UNAL": len(WALK_UNAL_OFFS),
         "WALK_N_ALIAS": len(WALK_ALIAS_BITS), "WALK_N_ROM_COPIES": len(WALK_ROM_COPIES),
         "WALK_ROM_BEATS": sum(n // 4 for n, _ in WALK_ROM_COPIES),
     }
