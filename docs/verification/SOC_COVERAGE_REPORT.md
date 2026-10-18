@@ -504,6 +504,59 @@ inherently imprecise by the in-flight older instructions and the check was dropp
 - The CPU suites still run only in the nightly / this job (`make -C sim test`), not per PR; the gate is what makes a regression there
   visible.
 
+## Coverage cleanup: beads j41m.7, 34dv, 4pl8, 0ntg, xkw5 (PR #316, 2026-10-18)
+
+Policy (user, 2026-10-18): add SoC tests where a stimulus is reasonable, waive only what is structurally
+unreachable with a reason, prune stale waivers on measured data.  Before = merged data of the main
+`soc_coverage` run 39107233271 (RTL at 92e0243); after = sharded run 39119364474 of PR #316 (8 shards + CPU/GPU
+job, gate green, 826 tests passed / 0 failed, `PASS_FLOOR` 813 -> 823).
+
+| Triaged trees (54 modules) | Before | After |
+| :--- | ---: | ---: |
+| Line + branch | 99.85 % (2000/2003) | 99.85 % (2001/2004) |
+| Toggle, adjusted | 71.22 % (49720/69810) | 78.32 % (51696/66007) |
+| `soc_bus` control toggle | 89.17 % (107/120) | 100 % (120/120) |
+| `soc_top` control toggle | 92.48 % (295/319) in the bead, 351/373 measured | 100 % (371/371) |
+
+The ratchet file is now empty: both entries (`soc_bus`, `soc_top`) were removed because the modules reached the default
+100 % floor.  Line coverage is unchanged (the extra line point is from the PMU registered-output refactor merged
+meanwhile); the work is toggle coverage.
+
+### New tests (no RTL change)
+
+| Bead | Test | What it drives and checks |
+| :--- | :--- | :--- |
+| 0ntg, xkw5 | `test_soc_integration.py::test_soc_dma_walk_rom_write_and_decode_errors` (firmware `integ_fw/dma_walk.hex`) | Nine DMA copies SRAM -> boot ROM: each is one AW, the right W beats and exactly one B with SLVERR, the DMA reports `ERR_INFO` 0b010, and the ROM array is bit-identical afterwards (the first SoC-level drive of crossbar -> `boot_rom` AW/W/B). Sixteen SRAM alias copies with address bit 12..27 set, destination data checked by backdoor. DECERR reads and writes at four unmapped addresses (`ERR_INFO` 0b111 / 0b011). Four unaligned single-word reads inside the timer window, which put a non-zero `address[1:0]` on the APB ring (only a DMA can; the D-cache word-aligns uncached accesses). |
+| 4pl8 | `test_soc_i2c.py::test_soc_i2c_real_pads` (firmware `i2c_fw/i2c_pad_fw.hex`) | CTRL.LOOPBACK = 0 against the register-file slave BFM: 2-byte write, pointer write + repeated-START read-back, NACKed address. The slave's exact event log, its register file, oe edges on both pads and a silent IRQ path are scored by the testbench. |
+| 4pl8 | `test_soc_wdt.py::test_soc_wdt_rst_en_release` | RST_EN = 1 bite holds the CPU domain in reset; an external reset then makes `wdt_cpu_rst_req_q` and `wdt_rst_req_o` fall, `cpu_domain_rst_n` is released and the CPU re-boots and spins. |
+
+`uart_rx_i` fall was already covered on main (bead text was out of date).  No `soc_uart_boot` test was added, so
+`SOC_CI_SPLITS` is unchanged, and no new suite was added, so `soc_shard_weights.json` is unchanged.
+
+### Waivers
+
+Removed (5, matched no uncovered point in the measured data, now toggled by the DFT/MBIST tests): `apb_cdc_bridge` and
+`async_axi_fifo` `scanmode_i` and `scan_rst_ni:1->0`, and `sram_controller` `mem_dout0_unused` (j41m.7, 34dv).
+
+Added, category b:
+
+* `soc_top` `cpu_axi_rready_raw:1->0` and `gpu_gif_rready_raw:1->0`: both nets are constant 1 once out of reset
+  (`rv32i_cache_arbiter.sv:185`, caches tie R ready high; `gpu_compute_unit.sv:234`) (4pl8).
+* 32 entries for the register-bank peripherals, `dma_engine`, `pmu`, `pll_apb_regs`, `npu_top` and `crypto_accel`
+  (3839 points): the hardware-write enable/data ports of `apb4_register_bank` and a few width-limited intermediates
+  (`dst_to_4k`, `src_to_4k`, `m_*size`, `m_*burst`, `m_wstrb`, `addr_ext_w`).  Evidence is not a reading of the RTL:
+  `tools/verif/proven_const_bits.py` elaborates the module with yosys-slang, runs `opt_dff -sat` and looks every
+  never-hit point up in the optimised netlist; only bits it proves constant are waived (xkw5).
+
+### Still open (xkw5 stays open)
+
+* `regs_o` / `regs` of the register banks (about 2300 points), `prdata` above the field width, and counters such as
+  `timer.count_q`: yosys cannot prove the bank flops constant because they have no initial value, so these are
+  reported as test gaps, not waived.  Many are WO/RO/reserved bits (for example `uart` `regs_o[0]`, the TX snoop
+  register with WMASK 0) that a bank-parameter-aware prover could waive; the genuine gaps are counter and FIFO bits.
+* The GPU master's address bits (VLD/VST walk) were not driven.
+* `pll_subsystem` could not be analysed (its `pll_clkgen` black box is rejected by yosys-slang).
+
 ## 7ovx register-walk re-measurement (2026-10-09)
 
 Bead `7ovx` (GH #216 follow-up). Most of the remaining toggle gap on the register-bank peripherals and the fabric was upper

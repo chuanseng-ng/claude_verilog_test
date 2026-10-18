@@ -659,3 +659,117 @@ async def test_soc_register_walk(dut):
             f"{soc_reg_fw.entry_name_for(res[26])} (0x{res[26]:08x}): wrote 0x{res[27]:08x}, "
             f"read 0x{res[28]:08x}, expected 0x{res[29]:08x}")
     assert res[31] == 1, f"PASS marker committed but x31 = 0x{res[31]:x}"
+
+
+# ---------------------------------------------------------------------------
+# Test: DMA walk -- SRAM aliases, boot-ROM write (SLVERR), unmapped addresses (DECERR)
+# ---------------------------------------------------------------------------
+def _rom_snapshot(soc) -> list:
+    """Every word of the behavioural boot-ROM array, read through the backdoor."""
+    mem = soc.u_boot_rom.mem
+    return [int(mem[i].value) for i in range(len(mem))]
+
+
+@cocotb.test()
+async def test_soc_dma_walk_rom_write_and_decode_errors(dut):
+    """The DMA walks the SRAM window, is refused by the boot ROM, and hits the default slave.
+
+    Beads 0ntg (crossbar -> boot_rom write channel) and xkw5 (upper address bits of the
+    crossbar).  Firmware (integ_fw dma_walk.hex) is self-checking; the testbench adds the
+    observations the firmware cannot make:
+
+      * SRAM alias walk: all sixteen destinations hold the pattern the (aliased) source held,
+        so every high address bit is a real, completed transfer rather than a stuck bus;
+      * boot ROM write: every attempt is one AW handshake and the right number of W beats at the
+        ROM port, answered by exactly one B beat with SLVERR, and the ROM array is bit-identical
+        afterwards -- a refused write must be refused, not silently accepted;
+      * unmapped addresses: the ROM port stays quiet while the default slave answers DECERR;
+      * unaligned reads inside a peripheral window complete and read the unmapped word as 0.
+    """
+    words = _read_hex(_FW_DIR / "dma_walk.hex")
+    await _setup(dut, words)
+    soc = dut.u_soc
+    rom_before = _rom_snapshot(soc)
+
+    aw_hs = 0
+    w_beats = 0
+    w_last = 0
+    b_hs = 0
+    b_resps = []
+    rom_aw_addrs = []
+    marks = {}
+    saw_pass = False
+    recent = []
+    for cycle in range(600_000):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        if int(soc.bus_rom_awvalid.value) and int(soc.bus_rom_awready.value):
+            aw_hs += 1
+            rom_aw_addrs.append(int(soc.bus_rom_awaddr.value))
+        if int(soc.bus_rom_wvalid.value) and int(soc.bus_rom_wready.value):
+            w_beats += 1
+            w_last += int(soc.bus_rom_wlast.value)
+        if int(soc.bus_rom_bvalid.value) and int(soc.bus_rom_bready.value):
+            b_hs += 1
+            b_resps.append(int(soc.bus_rom_bresp.value))
+        if not int(dut.commit_valid_o.value):
+            continue
+        pc = int(dut.commit_pc_o.value)
+        recent = (recent + [pc])[-16:]
+        assert pc != A.DMA_WALK_FAIL, (
+            "firmware reached FAIL_PC; recent PCs " + " ".join(f"0x{p:08x}" for p in recent)
+        )
+        for name, mark in (
+            ("alias", A.DMA_WALK_ALIAS_DONE),
+            ("rom", A.DMA_WALK_ROM_DONE),
+            ("decerr", A.DMA_WALK_DECERR_DONE),
+            ("unal", A.DMA_WALK_UNAL_DONE),
+        ):
+            if pc == mark and name not in marks:
+                marks[name] = (cycle, aw_hs, w_beats, b_hs)
+        if pc == A.DMA_WALK_PASS:
+            saw_pass = True
+            break
+    assert saw_pass, "PASS_PC never committed; recent PCs " + " ".join(f"0x{p:08x}" for p in recent)
+    assert set(marks) == {"alias", "rom", "decerr", "unal"}, f"phase markers seen: {sorted(marks)}"
+
+    # ---- phase 1: aliased SRAM transfers all completed and moved the right data ----------------
+    sram = sram_mem(dut)
+    pat_a = (0xDEADBEEF, 0x12345678, 0xA5A5A5A5, 0x5A5A5A5A)
+    pat_b = (0xFFFFFFFF, 0x00000000, 0xAAAAAAAA, 0x55555555)
+    for i in range(A.WALK_N_ALIAS):
+        want = pat_a if i % 2 == 0 else pat_b
+        base_w = (A.WALK_DST - 0x2000) // 4 + 4 * i
+        got = tuple(int(sram[base_w + j].value) for j in range(4))
+        assert got == want, (
+            f"alias copy {i}: destination words {[hex(g) for g in got]} != {[hex(x) for x in want]}"
+        )
+    assert marks["alias"][1] == 0, "the ROM write channel moved during the SRAM alias walk"
+    # Unaligned reads of an unmapped timer-window word: each destination word was pre-filled with
+    # all-ones, and an unmapped register reads 0 with no side effect.
+    for n in range(A.WALK_N_UNAL):
+        w = int(sram[(A.WALK_UNAL_DST - 0x2000) // 4 + n].value)
+        assert w == 0, f"unaligned DMA read {n}: destination word 0x{w:08x}, expected 0"
+
+    # ---- phase 2: the boot ROM refused every write -------------------------------------------
+    n_rom = A.WALK_N_ROM_COPIES
+    assert aw_hs == n_rom, f"{aw_hs} AW handshakes at the ROM port, expected {n_rom} (one per copy)"
+    assert b_hs == n_rom and w_last == n_rom, f"{b_hs} B beats / {w_last} WLASTs, expected {n_rom}"
+    assert w_beats == A.WALK_ROM_BEATS, (
+        f"{w_beats} W beats at the ROM port, expected {A.WALK_ROM_BEATS}"
+    )
+    assert all(r == 2 for r in b_resps), f"ROM write responses {b_resps}, all must be SLVERR (2)"
+    assert marks["rom"][1] == n_rom and marks["rom"][3] == n_rom
+    assert marks["decerr"][1] == n_rom and marks["decerr"][3] == n_rom, (
+        "the unmapped-address phase reached the ROM port"
+    )
+    rom_after = _rom_snapshot(soc)
+    assert rom_after == rom_before, "boot ROM contents changed: a refused write was accepted"
+    dut._log.info(
+        "DMA walk: %d ROM AW (%s), %d W beats, B resps %s, finished at cycle %d",
+        aw_hs,
+        ",".join(f"0x{a:04x}" for a in rom_aw_addrs),
+        w_beats,
+        b_resps,
+        marks["decerr"][0],
+    )
