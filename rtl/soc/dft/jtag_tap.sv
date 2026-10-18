@@ -14,7 +14,12 @@
 //   4'h4 SCAN         1 bit stub; selecting it is the ONLY way into TAP scan mode
 //   4'h5 SCAN_RST     1 bit level, update register, reset 0; effective in SCAN only
 //   4'hF BYPASS       1 bit
-//   everything else (EXTEST 0, SAMPLE 2, MBIST 6/7, reserved, unknown) -> BYPASS
+//   4'h6 MBIST_CTRL   29 bit update register (docs/design/DFT_ARCHITECTURE.md section 16.5), reset 0;
+//                    Capture-DR reads it back. Update-DR (and entry to Test-Logic-Reset, with the default
+//                    word 0) raises mbist_wr_o for exactly one TCK rising edge: the write strobe of the
+//                    control-word crossing (mbist_xing).
+//   4'h7 MBIST_STATUS 140 bit read-only: [0] sticky control-word overflow, [139:1] mbist_status_i
+//   everything else (EXTEST 0, SAMPLE 2, reserved, unknown) -> BYPASS
 //
 // Clocking and reset
 //   * Everything is clocked by tck_i only; nothing here sees a functional clock.
@@ -76,7 +81,14 @@ module jtag_tap (
     output logic       rst_assert_o,    // tap_scan & SCAN_RST[0]
     output logic       scan_en_o,       // (state == Shift-DR) & serial
     output logic       shift_clk_en_o,  // combinational: clock-gate enable for TCK
-    output logic [1:0] chain_grp_o      // SCAN_SEL[2:1] while in SCAN, else 0
+    output logic [1:0] chain_grp_o,     // SCAN_SEL[2:1] while in SCAN, else 0
+
+    // ── MBIST (Stage 4, section 16.5) ────────────────────────────────────────
+    output logic [28:0]  mbist_ctl_o,       // MBIST_CTRL update register (falling-edge flops)
+    output logic         mbist_wr_o,        // write strobe, falling-edge flop: ONE rising TCK edge per Update-DR
+    output logic         mbist_force_o,     // run & dom_cpu, falling-edge flop: forces the CPU clock gate open
+    input  logic         mbist_wr_ready_i,  // every enabled control-word FIFO can accept (1 when absent)
+    input  logic [138:0] mbist_status_i     // {cpu block, core block, cpu_present}, TCK-domain synchronised
 );
 
     // ── TAP states (IEEE 1149.1 standard encodings) ──────────────────────────
@@ -104,6 +116,8 @@ module jtag_tap (
     localparam logic [3:0] OP_SCAN_SEL = 4'h3;
     localparam logic [3:0] OP_SCAN     = 4'h4;
     localparam logic [3:0] OP_SCAN_RST = 4'h5;
+    localparam logic [3:0] OP_MBIST_CTL = 4'h6;
+    localparam logic [3:0] OP_MBIST_ST  = 4'h7;
     localparam logic [3:0] IR_CAPTURE  = 4'b0001;   // mandatory ...01 pattern
     localparam logic [31:0] IDCODE_VAL = 32'h15C0_1001;
 
@@ -195,11 +209,15 @@ module jtag_tap (
     logic       dec_scan_sel_d;
     logic       dec_scan_d;
     logic       dec_scan_rst_d;
+    logic       dec_mb_ctl_d;
+    logic       dec_mb_st_d;
     logic       dec_bypass_d;
     logic       dec_idcode_q;
     logic       dec_scan_sel_q;
     logic       dec_scan_q;        // == tap_scan
     logic       dec_scan_rst_q;
+    logic       dec_mb_ctl_q;
+    logic       dec_mb_st_q;
     logic       dec_bypass_q;
 
     always_comb begin
@@ -215,7 +233,10 @@ module jtag_tap (
     assign dec_scan_sel_d = (ir_d == OP_SCAN_SEL);
     assign dec_scan_d     = (ir_d == OP_SCAN);
     assign dec_scan_rst_d = (ir_d == OP_SCAN_RST);
-    assign dec_bypass_d   = ~(dec_idcode_d | dec_scan_sel_d | dec_scan_d | dec_scan_rst_d);
+    assign dec_mb_ctl_d   = (ir_d == OP_MBIST_CTL);
+    assign dec_mb_st_d    = (ir_d == OP_MBIST_ST);
+    assign dec_bypass_d   = ~(dec_idcode_d | dec_scan_sel_d | dec_scan_d | dec_scan_rst_d
+                              | dec_mb_ctl_d | dec_mb_st_d);
 
     always_ff @(negedge tck_i or negedge rst_tck_n) begin
         if (!rst_tck_n) begin
@@ -224,6 +245,8 @@ module jtag_tap (
             dec_scan_sel_q <= 1'b0;
             dec_scan_q     <= 1'b0;
             dec_scan_rst_q <= 1'b0;
+            dec_mb_ctl_q   <= 1'b0;
+            dec_mb_st_q    <= 1'b0;
             dec_bypass_q   <= 1'b0;
         end else begin
             ir_q           <= ir_d;
@@ -231,6 +254,8 @@ module jtag_tap (
             dec_scan_sel_q <= dec_scan_sel_d;
             dec_scan_q     <= dec_scan_d;
             dec_scan_rst_q <= dec_scan_rst_d;
+            dec_mb_ctl_q   <= dec_mb_ctl_d;
+            dec_mb_st_q    <= dec_mb_st_d;
             dec_bypass_q   <= dec_bypass_d;
         end
     end
@@ -241,6 +266,9 @@ module jtag_tap (
     logic [2:0]  scan_sel_sh_q;
     logic        scan_sh_q;        // STAGE2_CHAIN: 1-bit stub, BYPASS timing
     logic        scan_rst_sh_q;
+    logic [28:0] mb_ctl_sh_q;
+    logic [139:0] mb_st_sh_q;
+    logic        mb_ovf_q;
     logic        bypass_q;
 
     // Update registers (falling edge), declared here for the capture paths.
@@ -248,6 +276,8 @@ module jtag_tap (
     logic [2:0]  scan_sel_d;
     logic        scan_rst_q;
     logic        scan_rst_d;
+    logic [28:0] mb_ctl_q;
+    logic [28:0] mb_ctl_d;
 
     always_ff @(posedge tck_i or negedge rst_tck_n) begin
         if (!rst_tck_n) begin
@@ -255,6 +285,8 @@ module jtag_tap (
             scan_sel_sh_q <= '0;
             scan_sh_q     <= 1'b0;
             scan_rst_sh_q <= 1'b0;
+            mb_ctl_sh_q   <= '0;
+            mb_st_sh_q    <= '0;
             bypass_q      <= 1'b0;
         end else begin
             if (dec_idcode_q) begin
@@ -286,6 +318,20 @@ module jtag_tap (
                     scan_rst_sh_q <= tdi_i;
                 end
             end
+            if (dec_mb_ctl_q) begin
+                if (st_capdr) begin
+                    mb_ctl_sh_q <= mb_ctl_q;
+                end else if (st_shdr) begin
+                    mb_ctl_sh_q <= {tdi_i, mb_ctl_sh_q[28:1]};
+                end
+            end
+            if (dec_mb_st_q) begin
+                if (st_capdr) begin
+                    mb_st_sh_q <= {mbist_status_i, mb_ovf_q};
+                end else if (st_shdr) begin
+                    mb_st_sh_q <= {tdi_i, mb_st_sh_q[139:1]};
+                end
+            end
             if (dec_bypass_q) begin
                 if (st_capdr) begin
                     bypass_q <= 1'b0;
@@ -315,6 +361,36 @@ module jtag_tap (
         end
     end
 
+    // MBIST_CTRL update value, and the write strobe: Update-DR of MBIST_CTRL, or the FIRST falling edge in
+    // Test-Logic-Reset (default word 0 written once, so five TMS-high clocks abort a running MBIST).
+    logic st_tlr_prev_q;
+    logic mb_wr_d;
+    logic mb_force_d;
+
+    always_comb begin
+        mb_ctl_d = mb_ctl_q;
+        if (st_tlr) begin
+            mb_ctl_d = '0;
+        end else if (st_updr && dec_mb_ctl_q) begin
+            mb_ctl_d = mb_ctl_sh_q;
+        end
+    end
+
+    assign mb_wr_d    = (st_updr && dec_mb_ctl_q) || (st_tlr && !st_tlr_prev_q);
+    assign mb_force_d = mb_ctl_d[0] & mb_ctl_d[28];
+
+    // Sticky overflow: a strobe while the FIFO cannot accept loses the word. Cleared only by TRST or by
+    // an ACCEPTED run = 0 word (which includes the Test-Logic-Reset default write).
+    always_ff @(posedge tck_i or negedge rst_tck_n) begin
+        if (!rst_tck_n) begin
+            mb_ovf_q <= 1'b0;
+        end else if (mbist_wr_o && !mbist_wr_ready_i) begin
+            mb_ovf_q <= 1'b1;
+        end else if (mbist_wr_o && !mb_ctl_q[0]) begin
+            mb_ovf_q <= 1'b0;
+        end
+    end
+
     // ── TDO: one-hot AND-OR over the selected register's LSB ─────────────────
     logic dr_lsb;
     logic tdo_d;
@@ -325,6 +401,8 @@ module jtag_tap (
                   | (dec_scan_sel_q & scan_sel_sh_q[0])
                   | (dec_scan_q     & scan_sh_q)
                   | (dec_scan_rst_q & scan_rst_sh_q)
+                  | (dec_mb_ctl_q   & mb_ctl_sh_q[0])
+                  | (dec_mb_st_q    & mb_st_sh_q[0])
                   | (dec_bypass_q   & bypass_q);
 
     assign st_shdr_or_shir = st_shdr | st_shir;
@@ -359,6 +437,10 @@ module jtag_tap (
             rst_assert_o <= 1'b0;
             scan_en_o    <= 1'b0;
             chain_grp_o  <= 2'b00;
+            mb_ctl_q       <= '0;
+            mbist_wr_o     <= 1'b0;
+            mbist_force_o  <= 1'b0;
+            st_tlr_prev_q  <= 1'b0;
         end else begin
             scan_sel_q   <= scan_sel_d;
             scan_rst_q   <= scan_rst_d;
@@ -370,11 +452,17 @@ module jtag_tap (
             rst_assert_o <= dec_scan_d & scan_rst_d;
             scan_en_o    <= st_shdr & serial_d;
             chain_grp_o  <= dec_scan_d ? scan_sel_d[2:1] : 2'b00;
+            mb_ctl_q       <= mb_ctl_d;
+            mbist_wr_o     <= mb_wr_d;
+            mbist_force_o  <= mb_force_d;
+            st_tlr_prev_q  <= st_tlr;
         end
     end
 
     // Clock-gate enable for the TCK scan clock (dft_ctrl): capture and shift
     // cycles only, so there is no edge in Run-Test/Idle, Pause or Update.
     assign shift_clk_en_o = serial_o & (st_capdr | st_shdr);
+
+    assign mbist_ctl_o = mb_ctl_q;
 
 endmodule : jtag_tap

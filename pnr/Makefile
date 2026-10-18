@@ -857,6 +857,12 @@ SKY130_SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/dft/jtag_tap.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_switch.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_ctrl.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_xing.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_ctl_hold.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_status_sync.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mem_collar.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/soc_mbist.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_interconnect.sv \
@@ -937,7 +943,16 @@ DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tc
 	--tap-allowed-nets u_dft_ctrl.tap_rst_assert --tap-allowed-nets u_dft_ctrl.tap_scan_en \
 	--tap-allowed-nets u_dft_ctrl.test_clk_o --tap-allowed-nets tdo_o --tap-allowed-nets tdo_oe_o \
 	--expect-reset-sync u_dft_ctrl.u_tap.u_trst_sync=u_dft_ctrl.u_tap \
-	--expect-reset-sync u_dft_ctrl.u_sw_rst=u_dft_ctrl.u_clk_sw
+	--expect-reset-sync u_dft_ctrl.u_sw_rst=u_dft_ctrl.u_clk_sw \
+	--tap-allowed-nets u_dft_ctrl.mbist_ctl_o --tap-allowed-nets u_dft_ctrl.mbist_wr_o \
+	--tap-allowed-nets u_dft_ctrl.mbist_rst_tck_n_o \
+	--expect-reset-sync u_mbist.u_xing_core.u_rd_rst=u_mbist.u_xing_core.u_fifo@any \
+	--tck-prefix u_mbist --expect-tck-flops 140 \
+	--tck-sink u_mbist.u_xing_core.u_fifo.u_wr_ptr_to_rd --tck-sink u_mbist.u_xing_core.u_hold
+# Bead j41m.14/j41m.10: the MBIST control-word FIFO (write side, TCK) and the status synchronisers (TCK side) are
+# TCK-domain flops identified by CLOCK under u_mbist (--tck-prefix). The three TAP outputs that feed the FIFO write
+# side are declared nets; --tck-sink names the only two non-TAP cells that may read a TCK-domain flop (the pointer
+# synchroniser and the holding register), so a bypassed synchroniser or any new TCK->core path fails.
 # Bead j41m.11: --expect-reset-sync finds the two trst_ni cdc_reset_sync chains independently by hierarchy and requires
 # that the TAP and the clock switch are reset from THEIR chain and that trst_ni reaches nothing else directly. The CDC
 # gate cannot do this (cdc_snitch's opt_merge folds the two chains into one and classes both OK1/OKX).
@@ -1697,6 +1712,12 @@ SOC_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/dft/jtag_tap.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_clk_switch.sv \
 	$(PROJECT_ROOT)/rtl/soc/dft/dft_ctrl.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_ctrl.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_xing.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_ctl_hold.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_status_sync.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mem_collar.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/soc_mbist.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi4_crossbar.sv \
 	$(PROJECT_ROOT)/rtl/soc/axi_lite_register_bank.sv \
 	$(PROJECT_ROOT)/rtl/soc/apb4_register_bank.sv \

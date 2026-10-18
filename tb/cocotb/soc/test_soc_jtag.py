@@ -76,6 +76,7 @@ from jtag_driver import (
     OP_EXTEST,
     OP_IDCODE,
     OP_MBIST_CTRL,
+    OP_MBIST_STATUS,
     OP_SAMPLE,
     OP_SCAN,
     OP_SCAN_RST,
@@ -88,6 +89,7 @@ from jtag_driver import (
     label_output_pulses,
     pulses_of,
 )
+from mbist_golden import ctl_word, decode_status
 from soc_clocks import drive_dft_inactive, drive_soc_reset, start_soc_clocks
 
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -648,3 +650,73 @@ async def test_serial_parallel_switching_is_glitch_free_in_the_soc(dut):
     assert n_a == 3 * 4 and n_b > 30, f"serial pulses {n_a} (want 12), pin pulses {n_b}"
     # the counters saw both kinds of edges: 12 serial + the pin pulses of the parallel windows
     assert int(dut.pll_locked_o.value) == 1 and int(dut.cpu_pll_locked_o.value) == 1
+
+
+# ---------------------------------------------------------------------------
+@cocotb.test()
+async def test_mbist_over_the_tap_in_soc_top(dut):
+    """DFT Stage 4 wiring in the real soc_top: MBIST_CTRL write -> crossing -> core controller -> MBIST_STATUS.
+
+    This default simulation arm instantiates NO Sky130 macro (flat array / FreePDK45 models, no collar), so the
+    controller's read data is constant 0 and every March C- read of a 1 must fail: both memories report a failure
+    and done = 1. That is the honest result, and the point of the test: MBIST on an arm without the macro FAILS
+    instead of passing vacuously. The fault-injection proof against real macro models is test_mbist_soc_slice;
+    this test proves the soc_top wiring (TAP pins -> u_dft_ctrl -> u_mbist) and that a run drives the collar bus
+    while the CPU keeps committing.
+    """
+    tasks = await _boot_cpu(dut)
+    soc = dut.u_soc
+    mon = _Monitor(dut).start()
+    await _wait_commits(dut, mon, 50)
+    # No spec-model probe here: the model of the TAP does not know the live MBIST status word, so a probe would
+    # (correctly) flag TDO. The status words are checked against the golden decode below instead.
+    drv = JtagDriver(dut.tck_i, dut.tms_i, dut.tdi_i, dut.trst_ni, dut.tdo_o,
+                     period_ns=TCK_NS, probe=None, name="soc_tap_mbist")  # fmt: skip
+    await drv.start()
+    assert int(soc.mb_bist_en.value) == 0, "idle: collars are pass-through"
+    await drv.write_tdr(OP_MBIST_CTRL, ctl_word(run=1, alg=0, dom_core=1, dom_cpu=0), 29)
+    done = False
+    for _ in range(300):
+        await drv.load_ir(OP_MBIST_STATUS)
+        v = await drv.shift_dr(0, 140)
+        core = decode_status((v >> 2) & ((1 << 69) - 1))
+        if core["done"]:
+            done = True
+            break
+    assert done, "MBIST did not finish through the soc_top TAP wiring"
+    assert (v >> 1) & 1 == 0, "cpu_present reads 0 (MBIST_CPU = 0: the CPU macro is not wired)"
+    assert core["fail"] == 0b11 and core["fail_any"] == 1, (
+        f"no macro in this arm: both memories must fail, got {core['fail']:#b}"
+    )
+    assert int(soc.mb_bist_en.value) == 1
+    await drv.write_tdr(OP_MBIST_CTRL, ctl_word(run=0), 29)
+    await ClockCycles(dut.clk_i, 8)
+    assert int(soc.mb_bist_en.value) == 0
+    # CPU-domain enable: with MBIST_CPU = 0 nothing runs, but the TAP-launched clock-gate force (run & dom_cpu)
+    # rises and falls, and the CPU keeps running on the gated clock
+    await drv.write_tdr(OP_MBIST_CTRL, ctl_word(run=1, alg=0, dom_core=0, dom_cpu=1), 29)
+    assert int(soc.mbist_force.value) == 1
+    await drv.write_tdr(OP_MBIST_CTRL, ctl_word(run=0, dom_core=0, dom_cpu=1), 29)
+    assert int(soc.mbist_force.value) == 0
+    # Control-word FIFO overflow at the SoC level: stop the fabric clock (the FIFO's read side), write three
+    # words (depth 2), the third is lost and MBIST_STATUS bit 0 reports it; restart and clear it with an
+    # accepted run = 0 word.
+    await drv.walk([0] * 8)
+    tasks[0].kill()
+    dut.clk_i.value = 0
+    for alg in (0, 1, 2):
+        await drv.write_tdr(OP_MBIST_CTRL, ctl_word(run=0, alg=alg, dom_core=1, dom_cpu=0), 29)
+    await drv.load_ir(OP_MBIST_STATUS)
+    v = await drv.shift_dr(0, 140)
+    assert v & 1 == 1, "a third write into a full 2-entry FIFO with a stopped reader must set the overflow flag"
+    assert int(soc.mbist_wr_ready.value) == 0
+    cocotb.start_soon(Clock(dut.clk_i, CLK_NS, units="ns").start())
+    await ClockCycles(dut.clk_i, 20)
+    await drv.write_tdr(OP_MBIST_CTRL, ctl_word(run=0), 29)
+    await drv.load_ir(OP_MBIST_STATUS)
+    v = await drv.shift_dr(0, 140)
+    assert v & 1 == 0, "an accepted run = 0 word clears the overflow flag"
+    c0 = mon.commits
+    await _wait_commits(dut, mon, 50)
+    assert mon.commits > c0, "the CPU keeps committing after the MBIST run"
+    mon.stop()

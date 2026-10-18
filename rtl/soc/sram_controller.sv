@@ -129,7 +129,18 @@ module sram_controller
     output logic [1:0]      s_rresp,
     output logic            s_rlast,
     output logic            s_rvalid,
-    input  logic            s_rready
+    input  logic            s_rready,
+
+    // ── MBIST (DFT Stage 4, DFT_ARCHITECTURE.md section 16): collar select/bus in, macro read data out.
+    //    Active only in the SRAM_SKY130 arm; every other arm ignores the inputs and drives 0.
+    input  logic            mb_en_i,
+    input  logic            mb_ce_i,
+    input  logic            mb_we_i,
+    input  logic [3:0]      mb_wmask_i,
+    input  logic [9:0]      mb_addr_i,
+    input  logic [31:0]     mb_din_i,
+    output logic [31:0]     mb_dout0_o,
+    output logic [31:0]     mb_dout1_o
 );
 
     // ── Local geometry ───────────────────────────────────────────────────────
@@ -877,23 +888,60 @@ module sram_controller
     // rtl/mem/rv32i_dcache.sv / rv32i_icache.sv): vccd1/vssd1 connectivity is
     // supplied by the LEF + PDN_MACRO_CONNECTIONS at PD time, not by RTL-level
     // power ports, so no ports exist to tie off here.
+    // DFT Stage 4: mem_collar between the controller and the macro (functional side of the arm).
+    // bist_en = 0 is a pass-through of every signal below, so the functional behaviour is unchanged.
+    logic             mb_csb0_m;
+    logic             mb_web0_m;
+    logic [3:0]       mb_wmask0_m;
+    logic [9:0]       mb_addr0_m;
+    logic [31:0]      mb_din0_m;
+    logic             mb_csb1_m;
+    logic [9:0]       mb_addr1_m;
+
+    mem_collar #(
+        .AW     (10),
+        .HAS_P1 (1'b1)
+    ) u_mbist_collar (
+        .bist_en_i  (mb_en_i),
+        .b_ce_i     (mb_ce_i),
+        .b_we_i     (mb_we_i),
+        .b_wmask_i  (mb_wmask_i),
+        .b_addr_i   (mb_addr_i),
+        .b_din_i    (mb_din_i),
+        .csb0_f_i   (mem_csb0),
+        .web0_f_i   (1'b0),
+        .wmask0_f_i (mem_wmask0),
+        .addr0_f_i  (mem_addr0),
+        .din0_f_i   (mem_din0),
+        .csb1_f_i   (mem_csb1),
+        .addr1_f_i  (mem_addr1),
+        .csb0_m_o   (mb_csb0_m),
+        .web0_m_o   (mb_web0_m),
+        .wmask0_m_o (mb_wmask0_m),
+        .addr0_m_o  (mb_addr0_m),
+        .din0_m_o   (mb_din0_m),
+        .csb1_m_o   (mb_csb1_m),
+        .addr1_m_o  (mb_addr1_m)
+    );
+
     sky130_sram_4kbyte_1rw1r_32x1024_8 u_sram_macro (
         .clk0   (clk),
-        .csb0   (mem_csb0),
-        .web0   (1'b0),
-        .wmask0 (mem_wmask0),
-        .addr0  (mem_addr0),
-        .din0   (mem_din0),
+        .csb0   (mb_csb0_m),
+        .web0   (mb_web0_m),
+        .wmask0 (mb_wmask0_m),
+        .addr0  (mb_addr0_m),
+        .din0   (mb_din0_m),
         .dout0  (mem_dout0_unused),
         .clk1   (clk),
-        .csb1   (mem_csb1),
-        .addr1  (mem_addr1),
+        .csb1   (mb_csb1_m),
+        .addr1  (mb_addr1_m),
         .dout1  (mem_dout1)
     );
 
-    // dout0 (port 0 read data) is never consumed — port 0 is write-only here.
-    logic _unused_dout0;
-    assign _unused_dout0 = &{1'b0, mem_dout0_unused};
+    // dout0 (port 0 read data) is never consumed functionally — port 0 is write-only here. It is read by
+    // the MBIST controller (and so is dout1, which is also the functional read path).
+    assign mb_dout0_o = mem_dout0_unused;
+    assign mb_dout1_o = mem_dout1;
 `elsif FPGA
     // ── FPGA: inferred block RAM (hlrm) ──────────────────────────────────────
     // Same two-port contract as the Sky130 macro arm above: write port = the write FSM (byte-enabled, committed
@@ -920,6 +968,14 @@ module sram_controller
     assign mem_dout0_unused = '0;
     logic _unused_dout0;
     assign _unused_dout0 = &{1'b0, mem_dout0_unused};
+`endif
+
+`ifndef SRAM_SKY130
+    // No Sky130 macro in this arm (flat array / FPGA block RAM): the MBIST collar does not exist here.
+    assign mb_dout0_o = 32'd0;
+    assign mb_dout1_o = 32'd0;
+    logic _unused_mb;
+    assign _unused_mb = &{1'b0, mb_en_i, mb_ce_i, mb_we_i, mb_wmask_i, mb_addr_i, mb_din_i};
 `endif
 
     // ── Unused inputs ────────────────────────────────────────────────────────

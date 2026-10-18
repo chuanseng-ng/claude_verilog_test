@@ -40,7 +40,15 @@ module tb_dft_ctrl (
     // to dft_ctrl as to the switch alone
     output logic       tck_gated_o,
     output logic       en_a_o,
-    output logic       en_b_o
+    output logic       en_b_o,
+
+    // MBIST hooks of dft_ctrl (Stage 4); inputs idle at 0 = FIFO ready, status 0
+    output logic [28:0]  mbist_ctl_o,
+    output logic         mbist_wr_o,
+    output logic         mbist_force_o,
+    output logic         mbist_rst_tck_n_o,
+    input  logic         mbist_not_ready_i,
+    input  logic [138:0] mbist_status_i
 );
 
     dft_ctrl u_dut (
@@ -58,7 +66,13 @@ module tb_dft_ctrl (
         .scan_en_o   (scan_en_o),
         .scan_rst_no (scan_rst_no),
         .test_en_o   (test_en_o),
-        .test_clk_o  (test_clk_o)
+        .test_clk_o  (test_clk_o),
+        .mbist_ctl_o       (mbist_ctl_o),
+        .mbist_wr_o        (mbist_wr_o),
+        .mbist_force_o     (mbist_force_o),
+        .mbist_rst_tck_n_o (mbist_rst_tck_n_o),
+        .mbist_wr_ready_i  (~mbist_not_ready_i),
+        .mbist_status_i    (mbist_status_i)
     );
 
     dft_ctrl_ports u_ref (

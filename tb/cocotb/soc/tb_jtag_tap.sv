@@ -28,6 +28,13 @@ module tb_jtag_tap (
     output logic       shift_clk_en_o,
     output logic [1:0] chain_grp_o,
 
+    // MBIST (Stage 4): idle inputs 0 = control-word FIFO ready, status 0
+    output logic [28:0]  mbist_ctl_o,
+    output logic         mbist_wr_o,
+    output logic         mbist_force_o,
+    input  logic         mbist_not_ready_i,
+    input  logic [138:0] mbist_status_i,
+
     input  logic       sys_clk_i,
     output logic [7:0] sys_cnt_o,
 
@@ -50,7 +57,12 @@ module tb_jtag_tap (
         .rst_assert_o   (rst_assert_o),
         .scan_en_o      (scan_en_o),
         .shift_clk_en_o (shift_clk_en_o),
-        .chain_grp_o    (chain_grp_o)
+        .chain_grp_o    (chain_grp_o),
+        .mbist_ctl_o      (mbist_ctl_o),
+        .mbist_wr_o       (mbist_wr_o),
+        .mbist_force_o    (mbist_force_o),
+        .mbist_wr_ready_i (~mbist_not_ready_i),
+        .mbist_status_i   (mbist_status_i)
     );
 
     initial sys_cnt_o = '0;

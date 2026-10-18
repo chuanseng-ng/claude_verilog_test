@@ -106,7 +106,11 @@ FALLING_OUTS = (
     "rst_assert",
     "scan_en",
     "chain_grp",
+    "mbist_wr",
+    "mbist_force",
 )
+MB_CTL_LEN = 29
+MB_ST_LEN = 140
 SHIFT_STATES = ("SHIR", "SHDR")
 
 
@@ -147,6 +151,10 @@ class TapRef:
 
     def __init__(self):
         self.held = True
+        # Test-controlled inputs of the MBIST TDRs: the 139-bit status word presented to Capture-DR of
+        # MBIST_STATUS and whether the control-word FIFO can accept a write.
+        self.mb_status = 0
+        self.mb_ready = True
         self.async_reset()
 
     def async_reset(self):
@@ -159,6 +167,9 @@ class TapRef:
         self.sel = 0  # SCAN_SEL update register
         self.rst = 0  # SCAN_RST update register
         self.rst_edges_left = 2
+        self.mb_ctl = 0  # MBIST_CTRL update register
+        self.mb_ovf = 0  # sticky control-word overflow
+        self.tlr_prev = 0
         self.out = {k: 0 for k in FALLING_OUTS}
 
     def release(self):
@@ -170,7 +181,7 @@ class TapRef:
     # -- DR geometry -------------------------------------------------------
     def dr_len(self, ir=None) -> int:
         ir = self.ir if ir is None else ir
-        return {OP_IDCODE: 32, OP_SCAN_SEL: 3}.get(ir, 1)
+        return {OP_IDCODE: 32, OP_SCAN_SEL: 3, OP_MBIST_CTRL: MB_CTL_LEN, OP_MBIST_STATUS: MB_ST_LEN}.get(ir, 1)
 
     def dr_capture(self) -> int:
         if self.ir == OP_IDCODE:
@@ -179,6 +190,10 @@ class TapRef:
             return self.sel
         if self.ir == OP_SCAN_RST:
             return self.rst
+        if self.ir == OP_MBIST_CTRL:
+            return self.mb_ctl
+        if self.ir == OP_MBIST_STATUS:
+            return (self.mb_status << 1) | self.mb_ovf
         return 0  # BYPASS, SCAN stub, and every unimplemented/unknown opcode
 
     # -- TCK edges ----------------------------------------------------------
@@ -198,6 +213,12 @@ class TapRef:
         elif s == "SHDR":
             n = self.dr_len()
             self.dr = (self.dr >> 1) | (tdi << (n - 1))
+        # sticky overflow flag, sampled at the rising edge that the FIFO would write on
+        if self.out["mbist_wr"]:
+            if not self.mb_ready:
+                self.mb_ovf = 1
+            elif not (self.mb_ctl & 1):
+                self.mb_ovf = 0
         self.state = NEXT[s][tms]
 
     def fall(self):
@@ -205,11 +226,12 @@ class TapRef:
             return
         s = self.state
         if s == "TLR":
-            ir_d, sel_d, rst_d = OP_IDCODE, 0, 0
+            ir_d, sel_d, rst_d, mb_d = OP_IDCODE, 0, 0, 0
         else:
             ir_d = self.ir_shift if s == "UPIR" else self.ir
             sel_d = self.dr if (s == "UPDR" and self.ir == OP_SCAN_SEL) else self.sel
             rst_d = self.dr if (s == "UPDR" and self.ir == OP_SCAN_RST) else self.rst
+            mb_d = self.dr if (s == "UPDR" and self.ir == OP_MBIST_CTRL) else self.mb_ctl
         tdo = 0
         if s == "SHIR":
             tdo = self.ir_shift & 1
@@ -227,8 +249,15 @@ class TapRef:
             "rst_assert": int(scan and bool(rst_d & 1)),
             "scan_en": int(s == "SHDR" and bool(serial)),
             "chain_grp": ((sel_d >> 1) & 3) if scan else 0,
+            "mbist_wr": int(
+                self.rst_edges_left == 0
+                and ((s == "UPDR" and self.ir == OP_MBIST_CTRL) or (s == "TLR" and not self.tlr_prev))
+            ),
+            "mbist_force": int((mb_d & 1) and bool((mb_d >> 28) & 1)),
         }
-        self.ir, self.sel, self.rst = ir_d, sel_d, rst_d
+        if self.rst_edges_left == 0:  # the falling-edge flops are still in reset during the release window
+            self.tlr_prev = int(s == "TLR")
+        self.ir, self.sel, self.rst, self.mb_ctl = ir_d, sel_d, rst_d, mb_d
 
     # -- derived (combinational in the RTL) --------------------------------------
     @property
@@ -242,6 +271,8 @@ class TapRef:
         d["ir_q"] = self.ir  # update registers (falling edge of Update-IR / Update-DR / TLR)
         d["scan_sel_q"] = self.sel
         d["scan_rst_q"] = self.rst
+        d["mb_ctl_q"] = self.mb_ctl
+        d["mbist_ovf"] = self.mb_ovf
         return d
 
 
@@ -522,15 +553,17 @@ class JtagDriver:
         await self.write_tdr(OP_SCAN_RST, rst, 1)
         await self.load_ir(OP_SCAN)
 
-    async def measure_dr_length(self):
-        """Length of the currently selected DR, measured by marker flush: 40 zeros, a 1, 49 zeros;
-        the marker re-appears at output index 40 + length (captured bits are all at index < 33)."""
-        stream = [0] * 40 + [1] + [0] * 49
+    async def measure_dr_length(self, cap_bits=33):
+        """Length of the currently selected DR, measured by marker flush: cap_bits+7 zeros, a 1,
+        cap_bits+16 zeros; the marker re-appears at output index (cap_bits+7) + length. Captured
+        bits are all at index < cap_bits (default 33: the 32-bit IDCODE is the longest short DR)."""
+        pre = cap_bits + 7
+        stream = [0] * pre + [1] + [0] * (cap_bits + 16)
         await self.shift_dr(0, len(stream), stream=stream)
         out = self.last_bits
-        idx = [i for i in range(33, len(out)) if out[i] == 1]
+        idx = [i for i in range(cap_bits, len(out)) if out[i] == 1]
         assert len(idx) == 1, f"marker not found exactly once in the shifted-out stream: {out}"
-        return idx[0] - 40
+        return idx[0] - pre
 
 
 # ---------------------------------------------------------------------------

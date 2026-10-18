@@ -111,6 +111,9 @@ def _probe(dut):
         "ir_q": int(dut.ir_q_o.value),
         "scan_sel_q": int(dut.scan_sel_q_o.value),
         "scan_rst_q": int(dut.scan_rst_q_o.value),
+        "mbist_wr": int(dut.mbist_wr_o.value),
+        "mbist_force": int(dut.mbist_force_o.value),
+        "mb_ctl_q": int(dut.mbist_ctl_o.value),
     }
 
 
@@ -440,12 +443,10 @@ async def t_scan_stub_is_a_one_bit_delay(dut, cfg):
 
 
 # ---------------------------------------------------------------------------
-_EXPECT_LEN = {OP_IDCODE: 32, OP_SCAN_SEL: 3}
+_EXPECT_LEN = {OP_IDCODE: 32, OP_SCAN_SEL: 3, OP_MBIST_CTRL: 29, OP_MBIST_STATUS: 140}
 _UNIMPLEMENTED = (
     OP_EXTEST,
     OP_SAMPLE,
-    OP_MBIST_CTRL,
-    OP_MBIST_STATUS,
     8,
     9,
     10,
@@ -467,7 +468,7 @@ async def t_every_opcode_decodes_as_specified(dut, cfg):
             f"scan_mode_o wrong for opcode {op:#x}"
         )
         want = _EXPECT_LEN.get(op, 1)
-        got = await drv.measure_dr_length()
+        got = await drv.measure_dr_length(cap_bits=141 if op == OP_MBIST_STATUS else 33)
         assert got == want, f"opcode {op:#x}: DR length {got}, spec {want}"
         await drv.load_ir(op)  # measure_dr_length shifted zeros into the TDRs; reselect
         if op in _UNIMPLEMENTED or op == OP_SCAN:
