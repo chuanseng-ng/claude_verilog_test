@@ -134,14 +134,22 @@ async def test_idle_collars_are_passthrough_and_macro_alive(dut):
     pairs = passthrough_pairs(dut)
     fetches = 0
     activity = 0
-    for _ in range(300):
-        await FallingEdge(dut.gclk_o)
+    ic = dut.u_cpu.u_core.u_icache
+    dc = dut.u_cpu.u_core.u_dcache
+    # restart the parked CPU so its first fetch (tag + data reads, refill request) falls inside the sampled window
+    dut.rst_n_i.value = 0
+    await ClockCycles(dut.clk_i, 4)
+    dut.rst_n_i.value = 1
+    for _ in range(400):
+        await RisingEdge(dut.gclk_o)
         fetches += int(dut.arvalid_o.value)
         for f, m in pairs:
             assert int(f.value) == int(m.value), "bist_en = 0: a collar must pass the functional signal through"
-        activity += int(dut.u_cpu.u_core.u_icache.tag_csb0.value) == 0
+        # a macro operation is requested this cycle (active-low csb0) on any of the ten macros
+        csbs = [ic.tag_csb0, dc.tag_csb0] + [ic.data_csb0[g] for g in range(4)] + [dc.data_csb0[g] for g in range(4)]
+        activity += any(int(c.value) == 0 for c in csbs)
     assert fetches > 0, "the parked CPU macro must still be asking for its first fetch (alive)"
-    assert activity > 0, "the I$ tag macro was read at least once, so the pass-through check was not vacuous"
+    assert activity > 0, "a cache macro was accessed at least once, so the pass-through check was not vacuous"
     # run = 0 written explicitly changes nothing
     await stop(dut, drv)
 

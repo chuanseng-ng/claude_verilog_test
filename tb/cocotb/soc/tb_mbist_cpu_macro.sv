@@ -114,7 +114,7 @@ module tb_mbist_cpu_macro (
 
     // CPU clock gate: PMU enable OR the TAP-launched MBIST force (soc_top cpu_cg_en), test_en as in soc_top.
     logic cg_en;
-    assign cg_en = pmu_clk_en_i | mbist_force_o;
+    assign cg_en = pmu_clk_en_i | mbist_force_o | cpu_status[0] | cpu_status[1];  // soc_top: cpu_mbist_busy
 
     rv32i_clock_gate #(.HARD_ROOT(1'b0)) u_cpu_cg (
         .en      (cg_en),

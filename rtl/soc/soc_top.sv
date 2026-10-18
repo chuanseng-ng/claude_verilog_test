@@ -2579,8 +2579,16 @@ module soc_top
     // HARD_ROOT: cpu_gated_clk is a CTS root (771 register sinks + the CPU macro clock pin). On the Sky130 SoC build
     // (USE_SKY130_CLKCELLS) it is a hand-instantiated sdlclkp_4 + buf_16, see rv32i_clock_gate.sv. u_gpu_cg stays
     // behavioural: its output feeds no CTS tree in the Sky130 SoC (GPU is a tie-off), so it must optimise away.
+    // The force is HELD by the macro controller itself (cpu_mbist_busy = status done | busy, which is st_q != IDLE):
+    // the TAP drops mbist_force at the Update-DR of the run = 0 word, a few cpu_core_clk edges BEFORE that word has
+    // crossed into the macro, and with the PMU gate closed the controller would never see it and would be left
+    // with bist_en = 1 (collars on the BIST bus) behind a stopped clock. With the self-hold the gate stays open
+    // until the controller has cleared (done / busy fall one gated edge after run = 0 arrives), then closes.
+    // Found by test_mbist_cpu_macro.py::test_mbist_force_opens_the_closed_clock_gate (c54a).
+    logic cpu_mbist_busy;
     logic cpu_cg_en;
-    assign cpu_cg_en = cpu_gated_clk_en | (MBIST_CPU ? mbist_force : 1'b0);
+    assign cpu_mbist_busy = MBIST_CPU ? (mb_cpu_status[0] | mb_cpu_status[1]) : 1'b0;
+    assign cpu_cg_en = cpu_gated_clk_en | (MBIST_CPU ? mbist_force : 1'b0) | cpu_mbist_busy;
     rv32i_clock_gate #(.HARD_ROOT(1'b1)) u_cpu_cg (.en(cpu_cg_en), .test_en(dft_test_en), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
     rv32i_clock_gate u_gpu_cg (.en(pmu_gpu_clk_en),   .test_en(dft_test_en), .clk(core_clk),     .gclk(gpu_gated_clk));
 
