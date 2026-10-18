@@ -80,6 +80,7 @@ from bfm.apb4_master import APB4Master  # noqa: E402
 import reg_maps  # noqa: E402
 from reg_walk import walk_bank  # noqa: E402
 from bfm.i2c_slave import I2CSlave  # noqa: E402
+from i2c_cov import COV  # noqa: E402  (functional coverage, bead h367)
 
 _PROJ_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
@@ -158,6 +159,7 @@ async def _start_clock_and_reset(dut, address: int = SLAVE_ADDR):
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 4)  # let the pad synchronisers fill with the released bus
     apb = APB4Master(dut, "", dut.clk)
+    COV.attach(apb, slave)  # passive functional-coverage observers (bead h367)
     return apb, slave
 
 
@@ -181,7 +183,9 @@ async def _peek(dut, addr: int) -> int:
     dut.pwrite.value = 0
     dut.paddr.value = addr
     await Timer(1, units="step")
-    return int(dut.prdata.value)
+    value = int(dut.prdata.value)
+    COV.reg_read(addr, value)
+    return value
 
 
 def _raw_write_setup(dut, addr: int, data: int) -> None:
@@ -651,7 +655,7 @@ async def test_i2c_cmd_ignored_when_disabled_busy_or_illegal(dut):
     apb, slave = await _setup(dut, enable=False)
     await apb.write(I2C_ADDR, SLAVE_ADDR)
 
-    async def quiet(label: str, cycles: int = 80) -> None:
+    async def quiet(label: str, cycles: int = 80, kind: str = "illegal_shape") -> None:
         for _ in range(cycles):
             await _settled_edge(dut)
             st = await _peek(dut, I2C_STATUS)
@@ -661,10 +665,11 @@ async def test_i2c_cmd_ignored_when_disabled_busy_or_illegal(dut):
             )
         assert slave.events == [], f"[{label}] bus activity {slave.events}"
         assert await _peek(dut, I2C_IRQ_STAT) & IRQ_STICKY == 0, f"[{label}] status bit set"
+        COV.cmd_ignored(kind)  # sampled only after the bus proved quiet
 
     # EN = 0
     await apb.write(I2C_CMD, cmd(start=1, write=1, stop=1, count=1))
-    await quiet("EN=0")
+    await quiet("EN=0", kind="disabled")
     await apb.write(I2C_CTRL, CTRL_EN)
     await _settled_edge(dut)
 
@@ -681,7 +686,7 @@ async def test_i2c_cmd_ignored_when_disabled_busy_or_illegal(dut):
 
     # pstrb: lane 0 absent -> no command, even though the data word is a valid START|WRITE|STOP
     await apb.write(I2C_CMD, cmd(start=1, write=1, stop=1, count=1), strb=0b1110)
-    await quiet("pstrb[0]=0", 40)
+    await quiet("pstrb[0]=0", 40, kind="no_strobe")
 
     # While busy a second command is dropped: only the first transaction reaches the bus.
     await apb.write(I2C_TX_DATA, 0xAA)
@@ -690,6 +695,7 @@ async def test_i2c_cmd_ignored_when_disabled_busy_or_illegal(dut):
     await _wait_idle(dut)
     kinds = [e[0] for e in slave.events]
     assert kinds == ["START", "ADDR", "WR", "STOP"], f"busy-time command leaked: {slave.events}"
+    COV.cmd_ignored("busy")
     assert slave.events[2] == ("WR", 0xAA, True)
     fs = await _rd(apb, I2C_FIFO_STAT)
     assert fs & 0x800, "the dropped READ must not have pushed anything"
@@ -754,6 +760,7 @@ async def test_i2c_en_disable_aborts_and_flushes(dut):
     await _run(dut, apb, cmd(start=1, write=1, stop=1, count=1))
     assert [e for e in slave.events if e[0] == "WR"] == [("WR", 0xD7, True)], slave.events
     assert n_wr_at_abort >= 1
+    COV.abort("en_cleared")
 
 
 @cocotb.test()
@@ -786,6 +793,7 @@ async def test_i2c_reset_mid_transaction(dut):
     assert await _rd(apb, I2C_FIFO_STAT) == 0xA00
     assert await _rd(apb, I2C_IRQ_STAT) == 0
     assert await _rd(apb, I2C_STATUS) & (ST_BUSY | ST_TXN | ST_NACK | ST_ARB | ST_TOUT) == 0
+    COV.abort("reset")
 
 
 # ---------------------------------------------------------------------------
@@ -904,6 +912,7 @@ async def test_i2c_timeout_stuck_scl(dut):
     assert slave.events == [("START",)], slave.events
     assert (await _rd(apb, I2C_FIFO_STAT)) & 0xF == 1, "TX byte must be untouched"
     assert slave.stretching, "precondition: the slave is still holding SCL"
+    COV.timeout("scl_stretched")
 
     # Recovery.
     slave.reset_state()
@@ -979,6 +988,7 @@ async def test_i2c_timeout_bus_busy_wait(dut):
     stat = await _wait_idle(dut, 2000)
     assert stat & IRQ_STICKY == IRQ_TOUT, f"IRQ_STAT=0x{stat:x}"
     assert slave.events == [], "a START reached a busy bus"
+    COV.timeout("bus_busy_wait")
 
     # (b)
     slave.reset_log()
@@ -1011,6 +1021,7 @@ async def test_i2c_timeout_fifo_starvation(dut):
     assert slave.events == [("START",), ("ADDR", SLAVE_ADDR, 0, True)], slave.events
     assert int(dut.i2c_scl_oe_o.value) == 0 and int(dut.i2c_sda_oe_o.value) == 0
     assert not await _rd(apb, I2C_STATUS) & (ST_NACK | ST_TXN)
+    COV.timeout("tx_starve")
 
     # (b)
     slave.reset_state()
@@ -1052,6 +1063,14 @@ async def test_i2c_timeout_zero_disables(dut):
 # ---------------------------------------------------------------------------
 
 
+_ARB_PHASE = {
+    "address bit": "address_bit",
+    "data bit": "data_bit",
+    "read NACK slot": "read_nack_slot",
+    "repeated START setup": "rstart_setup",
+}
+
+
 async def _assert_arb_lost(dut, apb, label: str) -> None:
     """Common arbitration-loss postconditions: ONLY `arb_lost` is flagged (never `done`), both lines
     released, engine idle, txn_active cleared, and the master goes silent on SCL."""
@@ -1064,6 +1083,7 @@ async def _assert_arb_lost(dut, apb, label: str) -> None:
     assert int(dut.i2c_scl_oe_o.value) == 0 and int(dut.i2c_sda_oe_o.value) == 0, (
         f"[{label}] master must release both lines on arbitration loss"
     )
+    COV.arb_loss(_ARB_PHASE[label])  # sampled only after the assertions above passed
 
 
 @cocotb.test()
