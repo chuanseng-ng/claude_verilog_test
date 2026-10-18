@@ -352,11 +352,12 @@ module rv32i_icache (
     // =========================================================================
     // Stall output
     // =========================================================================
+    // state_q[3] = LATCH or REFILL here (the only unconditional-stall states this FSM uses;
+    // HIT_PENDING / WRITEBACK / UNCACHED_* / *_SCAN are D$-only). See rv32i_cache_pkg.sv, bead r51p.
     assign ic_stall_o =
+        state_q[3]                                ||   // Waiting for pipeline reg / refill in progress
         (state_q == CS_IDLE       &&  ic_valid_i) ||   // Initiating SRAM read
-        (state_q == CS_SRAM_LATCH)                ||   // Waiting for pipeline reg
-        (state_q == CS_TAG_CHECK  && !hit)         ||   // Miss detected (or mismatch)
-        (state_q == CS_REFILL);                         // Refill in progress
+        (state_q == CS_TAG_CHECK  && !hit);            // Miss detected (or mismatch)                         // Refill in progress
     // CS_TAG_CHECK + hit : stall=0, ic_rdata_o from tag_dout_r/data_dout_r
     // CS_DONE            : stall=0, ic_rdata_o from refill_buf_q
 
@@ -439,6 +440,29 @@ module rv32i_icache (
     end
 
     // =========================================================================
+    // SRAM read enable in CS_IDLE (bead r51p)
+    //
+    // Functional arms: read only for a live fetch (ic_valid_i && !ic_invalidate_i).
+    //
+    // Sky130 arm: read in every CS_IDLE cycle. A read issued while ic_valid_i = 0 (or during
+    // FENCE.I) is never consumed: tag_dout_r / data_dout_r capture dout0 only in CS_SRAM_LATCH,
+    // and CS_SRAM_LATCH is entered only from a CS_IDLE cycle with ic_valid_i = 1 and
+    // ic_invalidate_i = 0, whose own read is the one that is captured. A read has no side
+    // effect on the macro. In exchange csb0/addr0 no longer depend on ic_valid_i, i.e. on
+    // the dcache-stall -> hazard-priority -> redirect/halt network that dominated the ss
+    // setup failure of the CPU macro (docs/SKY130_CPU_SS_SETUP_R51P.md). Only that arm is
+    // changed: on ASAP7 csb0 feeds the SRAM clock gate (extra enabled cycles = extra dynamic
+    // power on a flow signed off as-is) and the other arms have no timing problem here.
+    // Writes (tag_we_q / data_we_q) override below and are unaffected.
+    // =========================================================================
+    logic idle_read_en;
+`ifdef SRAM_SKY130
+    assign idle_read_en = 1'b1;
+`else
+    assign idle_read_en = ic_valid_i && !ic_invalidate_i;
+`endif
+
+    // =========================================================================
     // SRAM combinational control — Tag SRAM (port 0)
     // =========================================================================
     always_comb begin
@@ -449,8 +473,9 @@ module rv32i_icache (
 
         case (state_q)
             CS_IDLE: begin
-                // Issue tag read when a new valid fetch arrives (not FENCE.I)
-                if (ic_valid_i && !ic_invalidate_i) begin
+                // Issue tag read when a new valid fetch arrives (not FENCE.I);
+                // see idle_read_en for the Sky130 arm.
+                if (idle_read_en) begin
                     tag_csb0  = 1'b0;
                     tag_web0  = 1'b1;   // read
                     tag_addr0 = addr_index;
@@ -530,7 +555,7 @@ module rv32i_icache (
         case (state_q)
             CS_IDLE: begin
                 // Issue read on all 4 word SRAMs simultaneously (same index)
-                if (ic_valid_i && !ic_invalidate_i) begin
+                if (idle_read_en) begin
                     for (int w = 0; w < LINE_WORDS; w++) begin
                         data_csb0[w]  = 1'b0;
                         data_web0[w]  = 1'b1;  // read

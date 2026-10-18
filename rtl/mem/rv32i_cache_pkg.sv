@@ -34,21 +34,30 @@ package rv32i_cache_pkg;
     // CS_HIT_PENDING added (Run 15 timing fix): one extra register stage between
     // CS_SRAM_LATCH and CS_TAG_CHECK so hit_comb is registered before it fans
     // out to the data SRAM mux network (~821 loads → registered hit_q/hit_bank_q).
+    //
+    // Encoding rule (bead r51p, timing only, no behavioural change): state_q[3] = 1
+    // exactly for the states that stall the pipeline in EVERY cycle they are occupied
+    // (LATCH, HIT_PENDING, REFILL, WRITEBACK, UNCACHED_RD/WR, FLUSH_SCAN, INVAL_SCAN).
+    // IDLE (stalls only with a request), TAG_CHECK (stalls only on a miss) and DONE
+    // (never stalls) have state_q[3] = 0. dc_stall_o / ic_stall_o then need one state
+    // bit instead of a 4-bit decode, which sat at the head of the Sky130 ss critical
+    // cone (docs/SKY130_CPU_SS_SETUP_R51P.md). CS_IDLE stays 0 (reset state).
+    // tb/tests/test_cache_stall_encoding.py guards the rule.
     // =========================================================================
     typedef enum logic [3:0] {
         CS_IDLE          = 4'b0000,  // Idle: issue SRAM read on new request
-        CS_SRAM_LATCH    = 4'b0101,  // Latch: capture negedge SRAM dout into pipeline regs
-        CS_HIT_PENDING   = 4'b0110,  // Hit pipeline: register hit_comb before fanout
         CS_TAG_CHECK     = 4'b0001,  // Tag check: hit_q valid, act on hit or miss
-        CS_REFILL        = 4'b0010,  // Refill: fetch words from AXI and write to SRAM
-        CS_WRITEBACK     = 4'b0011,  // Writeback: flush dirty line to AXI (D$ only)
         CS_DONE          = 4'b0100,  // Done: output data from refill buffer, release stall
+        CS_SRAM_LATCH    = 4'b1000,  // Latch: capture negedge SRAM dout into pipeline regs
+        CS_HIT_PENDING   = 4'b1001,  // Hit pipeline: register hit_comb before fanout
+        CS_REFILL        = 4'b1010,  // Refill: fetch words from AXI and write to SRAM
+        CS_WRITEBACK     = 4'b1011,  // Writeback: flush dirty line to AXI (D$ only)
         // ── Phase 5 uncached MMIO bypass states (D$ only) ─────────────────────
-        CS_UNCACHED_RD   = 4'b0111,  // Uncached read: single-beat AR → R, bypass cache
-        CS_UNCACHED_WR   = 4'b1000,  // Uncached write: single-beat AW/W → B, bypass cache
+        CS_UNCACHED_RD   = 4'b1100,  // Uncached read: single-beat AR → R, bypass cache
+        CS_UNCACHED_WR   = 4'b1101,  // Uncached write: single-beat AW/W → B, bypass cache
         // ── Phase 5 D-cache maintenance states (D$ only) ──────────────────────
-        CS_FLUSH_SCAN    = 4'b1001,  // Flush-all: walk 256 lines, write back dirty ones
-        CS_INVAL_SCAN    = 4'b1010   // Inval-all: walk 256 lines, clear valid+dirty bits
+        CS_FLUSH_SCAN    = 4'b1110,  // Flush-all: walk 256 lines, write back dirty ones
+        CS_INVAL_SCAN    = 4'b1111   // Inval-all: walk 256 lines, clear valid+dirty bits
     } cache_state_t;
 
     // =========================================================================
