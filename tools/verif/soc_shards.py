@@ -249,7 +249,7 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  - {p}")
             return 1
         print(
-            f"OK: {total} suites run by {len(ran)} shards == the {len(suites)} entries of "
+            f"OK: {total} suites run by {len(ran)} shards == the {len(suites)} sharding units of "
             "SOC_CI_SUITES (none lost, none twice)"
         )
         return 0

@@ -245,7 +245,7 @@ jobs:
           echo "suites run by this shard:"; cat "${SOC_COV_ROOT}/suites_ran.txt"
 
       - name: Save ccache
-        if: always() && (github.ref == 'refs/heads/main' || github.event_name == 'pull_request')
+        if: always() && github.ref == 'refs/heads/main'
         uses: actions/cache/save@v4
         with:
           path: .ccache
@@ -379,7 +379,7 @@ jobs:
             || { echo "FAIL: cpu_gpu_merged.dat is missing or empty - no CPU/GPU coverage was produced."; exit 1; }
 
       - name: Save ccache
-        if: always() && (github.ref == 'refs/heads/main' || github.event_name == 'pull_request')
+        if: always() && github.ref == 'refs/heads/main'
         uses: actions/cache/save@v4
         with:
           path: .ccache
