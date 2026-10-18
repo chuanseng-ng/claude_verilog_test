@@ -86,8 +86,50 @@ module rv32i_cpu_top #(
   // Interrupt Inputs (Phase 2)
   // ================================================================
   input  logic        ext_irq_i,       // External interrupt (M-mode MEIP)
-  input  logic        timer_irq_i      // Timer interrupt (M-mode MTIP)
+  input  logic        timer_irq_i,     // Timer interrupt (M-mode MTIP)
+
+  // ================================================================
+  // DFT test boundary (bead claude_verilog_test-j41m.4, DFT_ARCHITECTURE.md 14.10)
+  // ================================================================
+  // Inactive values (functional mode, bit-identical to the pre-DFT macro):
+  // scan_mode_i = 0, scan_en_i = 0, scan_in_i = 0.
+  //
+  // NO scan_clk and NO scan_rst_ni port, deliberately:
+  //  * clk_i IS the test clock in scan mode. soc_top muxes the test clock into the
+  //    cpu_clk_i root (dft_clk_mux) ahead of u_cpu_cg, so the macro has one clock root
+  //    and no clock mux of its own (no insertion delay added to this macro's tree).
+  //  * Every reset in this macro is the SYNCHRONOUS rst_n_i itself (no derived or async
+  //    reset exists inside it: tools/dft/check_scan_clk_rst.py reports 0 async pins on
+  //    the macro netlist), and soc_top drives it from cpu_domain_rst_n, which equals
+  //    scan_rst_ni in scan mode. A second mux here would only add delay to the reset
+  //    tree of ~4.8k flops.
+  input  logic        scan_mode_i,     // 1 = test mode (quasi-static)
+  input  logic        scan_en_i,       // 1 = shift, 0 = capture (consumer arrives with Stage 2 insertion)
+  input  logic [1:0]  scan_in_i,       // chain inputs  (placeholder until Stage 2 insertion)
+  output logic [1:0]  scan_out_o       // chain outputs (tied 0 until Stage 2 insertion)
 );
+
+  // ================================================================
+  // DFT seam
+  // ================================================================
+  // test_en forces the cache SRAM clock gates open (ASAP7 arm; the Sky130 macro has no
+  // clock gate). Same definition as the fabric's dft_test_en: scan_mode | mbist_en. There
+  // is no MBIST yet (Stage 4); that term is added here when it lands.
+  logic test_en_w;
+  assign test_en_w = scan_mode_i;
+
+  // scan_en_i and scan_in_i have no RTL consumer and scan_out_o is driven 0 UNTIL Stage 2
+  // scan insertion (a netlist step in this macro's flow) stitches the two chains: it
+  // removes this tie, connects chain k's last flop to scan_out_o[k] and scan_in_i[k] to
+  // its first, and every scan flop's SCE to scan_en_i. One assign on one vector so that
+  // step has a single thing to replace (same contract as soc_top, section 14.4).
+  /* verilator lint_off UNUSEDSIGNAL */
+  logic [1:0] dft_scan_in_unused;
+  logic       dft_scan_en_unused;
+  assign dft_scan_in_unused = scan_in_i;
+  assign dft_scan_en_unused = scan_en_i;
+  /* verilator lint_on  UNUSEDSIGNAL */
+  assign scan_out_o = '0;  // DFT_PLACEHOLDER: replaced by Stage 2 insertion
 
   // ================================================================
   // Internal Signals
@@ -166,6 +208,7 @@ module rv32i_cpu_top #(
   ) u_core (
     .clk            (clk_i),
     .rst_n          (rst_n_i),
+    .test_en_i      (test_en_w),
 
     // AXI4 burst memory interface
     .axi_araddr     (axi_araddr_o),

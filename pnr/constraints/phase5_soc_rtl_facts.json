@@ -348,6 +348,22 @@
       "in",
       1
      ],
+     "scan_en_i": [
+      "in",
+      1
+     ],
+     "scan_in_i": [
+      "in",
+      2
+     ],
+     "scan_mode_i": [
+      "in",
+      1
+     ],
+     "scan_out_o": [
+      "out",
+      2
+     ],
      "timer_irq_i": [
       "in",
       1
@@ -1045,6 +1061,22 @@
      "rst_n_i": [
       "in",
       1
+     ],
+     "scan_en_i": [
+      "in",
+      1
+     ],
+     "scan_in_i": [
+      "in",
+      2
+     ],
+     "scan_mode_i": [
+      "in",
+      1
+     ],
+     "scan_out_o": [
+      "out",
+      2
      ],
      "timer_irq_i": [
       "in",

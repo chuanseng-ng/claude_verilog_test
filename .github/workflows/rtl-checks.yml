@@ -173,6 +173,7 @@ jobs:
       # ------------------------------------------------------------------
       # DFT scan-readiness gate (bead j41m.12). HARD GATE — no continue-on-error.
       #
+      # (Bead j41m.4: also run in BLOCK MODE on the flattened CPU-macro netlists of both PDKs.)
       # Proves, on the flattened Sky130 and ASAP7 SoC netlists, that in scan mode
       # every async reset is tester-controlled, every flop is test-clocked, and the
       # two trst_ni reset synchronisers (u_trst_sync in jtag_tap, u_sw_rst in
@@ -195,7 +196,7 @@ jobs:
           PINNED_YOSYS: ${{ github.workspace }}/sim/build/cdc/oss-cad-suite/bin/yosys
           PINNED_SV2V: ${{ github.workspace }}/sim/build/cdc/sv2v-Linux/sv2v
         run: |
-          for target in dft-scan-check dft-scan-check-asap7; do
+          for target in dft-scan-check dft-scan-check-asap7 dft-scan-check-cpu-macro dft-scan-check-cpu-macro-asap7; do
             echo "::group::make -C pnr ${target}"
             make -C pnr "${target}" YOSYS="${PINNED_YOSYS}" SV2V="${PINNED_SV2V}"
             echo "::endgroup::"
@@ -211,7 +212,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           YOSYS: ${{ github.workspace }}/sim/build/cdc/oss-cad-suite/bin/yosys
-          EXPECT_TESTS: '30'
+          EXPECT_TESTS: '60'
         run: |
           python3 -m pip install --user pytest
           log="${RUNNER_TEMP}/dft_scan_pytest.log"

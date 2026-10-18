@@ -109,6 +109,15 @@ module boot_rom
         end else begin
             for (int i = 0; i < int'(MEM_WORDS); i++) mem[i] = '0;
         end
+`elsif FPGA
+        // FPGA prototype (bead hlrm.2): the board build defines __pnr__ (sv2v-aligned flow) AND FPGA. Vivado turns an
+        // `initial` $readmemh on a read-only array into block-RAM INIT, so MEM_INIT_FILE becomes the boot image.
+        // ASIC flows never define FPGA, so their ROM stays zero-initialised.
+        if (MEM_INIT_FILE != "") begin
+            $readmemh(MEM_INIT_FILE, mem);
+        end else begin
+            for (int i = 0; i < int'(MEM_WORDS); i++) mem[i] = '0;
+        end
 `else
         // PnR: MEM_INIT_FILE is int stub; always zero-init (synthesis anyway)
         for (int i = 0; i < int'(MEM_WORDS); i++) mem[i] = '0;
