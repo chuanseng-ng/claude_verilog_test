@@ -1528,3 +1528,50 @@ async def test_dma_queue_full_drops_start_silently(dut):
     assert [r["addr"] for r in slave.ar_log][-1] == descs[5][0]
     _assert_clean(slave, mon, "queue full")
     dut._log.info("test_dma_queue_full_drops_start_silently PASS")
+
+
+# ── Register walk: address/length registers, RO words, unmapped words (bead xkw5) ────────────
+
+
+@cocotb.test()
+async def test_dma_register_walk(dut):
+    """SRC_ADDR, DST_ADDR and LENGTH hold every bit pattern written (walking ones, walking zeros,
+    alternating, all-ones, zero) and nothing else moves; the read-only words ignore stores; words
+    beyond the eight registers read 0 and swallow stores without disturbing any register; the byte
+    offset of an address is ignored.  CTRL is not walked (its bits are start/reset commands).
+    """
+    axil, _ = await _setup(dut)
+    m32 = 0xFFFF_FFFF
+    patterns = [1 << i for i in range(32)] + [m32 ^ (1 << i) for i in range(32)]
+    patterns += [0xAAAAAAAA, 0x55555555, m32, 0]
+    rw = (REG_SRC_ADDR, REG_DST_ADDR, REG_LENGTH)
+    status0, _ = await axil.read(REG_STATUS)
+    assert status0 == 0x10, f"STATUS at reset {status0:#x}: expected q_empty only"
+    for reg in rw:
+        for pat in patterns:
+            await axil.write(reg, pat)
+            got, _ = await axil.read(reg)
+            assert got == pat, f"reg {reg:#x}: wrote {pat:#010x}, read {got:#010x}"
+        await axil.write(reg, 0)
+    # read-only words: stores are ignored
+    for reg in (REG_STATUS, REG_IRQ_STATUS, REG_ERR_INFO, 0x1C):
+        before, _ = await axil.read(reg)
+        await axil.write(reg, m32)
+        after, _ = await axil.read(reg)
+        assert after == before, f"RO word {reg:#x} changed {before:#x} -> {after:#x}"
+    assert (await axil.read(0x1C))[0] == 0, "RSVD must read 0"
+    # unmapped words: read 0, a store disturbs nothing
+    for k in range(5, 12):
+        addr = 1 << k
+        got, _ = await axil.read(addr)
+        assert got == 0, f"unmapped word {addr:#x} read {got:#x}"
+        await axil.write(addr, m32)
+    for reg in rw:
+        got, _ = await axil.read(reg)
+        assert got == 0, f"register {reg:#x} disturbed by a store to an unmapped word: {got:#x}"
+    # the byte offset is ignored
+    for off in (1, 2, 3):
+        got, _ = await axil.read(REG_STATUS + off)
+        assert got == status0, f"STATUS read at +{off}: {got:#x}"
+    await axil.write(REG_LENGTH + 2, 0x1234)
+    assert (await axil.read(REG_LENGTH))[0] == 0x1234, "a store at byte offset +2 must land in LENGTH"

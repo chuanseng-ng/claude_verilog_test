@@ -59,6 +59,10 @@ SOURCES = (
     "rtl/soc/axi_lite_register_bank.sv",
     "rtl/soc/cdc/cdc_sync.sv",
     "rtl/soc/cdc/cdc_reset_sync.sv",
+    "rtl/soc/dft/dft_rst_mux.sv",
+    "rtl/soc/dft/dft_clk_mux.sv",
+    "rtl/soc/dft/mem_collar.sv",
+    "rtl/mem/sram_1rw_256x32_freepdk45.sv",
     "rtl/periph/timer.sv",
     "rtl/periph/uart_controller.sv",
     "rtl/periph/spi_controller.sv",
@@ -87,7 +91,7 @@ SOURCES = (
 )
 # Unpacked arrays of 32-bit words (two indices in the point name) or of 1-bit flags (one index).
 UNPACKED = {"hw_wdata_i", "hw_wen_i", "regs_o", "regs", "hw_wdata", "hw_wen", "regs_out"}
-NAME_RE = re.compile(r"^([A-Za-z_][\w$]*)((?:\[\d+\])*):(\d)->(\d)$")
+NAME_RE = re.compile(r"^([A-Za-z_][\w$.]*)((?:\[\d+\])*):(\d)->(\d)$")  # '.' = generate scope
 
 
 def constant_nets(module: str, workdir: Path) -> dict[str, list]:
@@ -98,7 +102,7 @@ def constant_nets(module: str, workdir: Path) -> dict[str, list]:
     script.write_text(
         f"plugin -i {SLANG}\n"
         "read_slang --allow-use-before-declare --ignore-unknown-modules "
-        f"-I rtl/soc -I rtl/soc/cdc -I rtl/periph -I rtl/npu --top {module} {' '.join(sources)}\n"
+        f"-I rtl/soc -I rtl/soc/cdc -I rtl/soc/dft -I rtl/mem -I rtl/periph -I rtl/npu --top {module} {' '.join(sources)}\n"
         f"hierarchy -top {module}\nproc\nflatten\nsetattr -set keep 1 w:*\n"
         "opt -full\nopt_dff -sat\nopt -full\nopt_dff -sat\nopt_clean\n"
         f"write_json {out}\n"
@@ -114,7 +118,7 @@ def constant_nets(module: str, workdir: Path) -> dict[str, list]:
     if res.returncode != 0:
         raise SystemExit(f"yosys failed for {module}:\n{res.stdout[-1500:]}\n{res.stderr[-1500:]}")
     nets = json.loads(out.read_text())["modules"][module]["netnames"]
-    return {n: d["bits"] for n, d in nets.items() if "." not in n}
+    return {n: d["bits"] for n, d in nets.items()}
 
 
 def const_value(nets: dict[str, list], sig: str, idx: list[int]) -> str | None:

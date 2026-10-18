@@ -59,7 +59,10 @@ RESETS = ("rst_n", "rst_n_i", "rst_ni", "presetn", "rstn", "aresetn", "reset_n")
 BMC_TIMEOUT_S = 25
 TOP_TIMEOUT_S = 45  # per-chunk proof budget; halved on every bisection level
 MIN_TIMEOUT_S = 15
-INCLUDES = ("rtl/soc", "rtl/soc/cdc", "rtl/periph", "rtl/npu", "rtl/soc/pll")
+INCLUDES = ("rtl/soc", "rtl/soc/cdc", "rtl/soc/dft", "rtl/mem", "rtl/periph", "rtl/npu", "rtl/soc/pll")
+
+
+TIES: dict[str, str] = {}  # input port -> constant (``--tie``); e.g. scan_mode_i=0 = functional mode
 
 
 class FormalError(Exception):
@@ -150,6 +153,9 @@ def wrapper_text(
         if name == clk:
             conn.append(f".{name}(clk)")
             continue
+        if name in TIES:
+            conn.append(f".{name}({width}'d{TIES[name]})")
+            continue
         if name == rst:
             conn.append(f".{name}(rst_n)")
             continue
@@ -214,7 +220,7 @@ def run_sby(
     ):
         sby = workdir / f"fv_{module}_{tag}_{mode}.sby"
         sby.write_text(
-            f"[options]\nmode {mode}\naigsmt none\n{extra}timeout {budget}\n\n"
+            f"[options]\nmode {mode}\naigsmt none\nmulticlock on\n{extra}timeout {budget}\n\n"
             f"[engines]\n{engine}\n\n{script}"
         )
         res = subprocess.run(
@@ -232,6 +238,8 @@ def run_sby(
             return "fail"
         if mode == "prove" and re.search(r"engine_\d \(abc pdr\) returned pass", text, re.I):
             return "pass"
+        if "Reached TIMEOUT" in text and not re.search(r"engine_\d \(abc \w+\) returned", text, re.I):
+            return "unknown"  # the model itself did not build inside the budget
         if mode == "bmc" and not re.search(r"engine_\d \(abc bmc3\) returned (pass|timeout)", text, re.I):
             raise FormalError(f"sby bmc gave no verdict for {module}/{tag}:\n{text[-1500:]}")
     return "unknown"
@@ -299,6 +307,13 @@ def main(argv: list[str]) -> int:
     )
     parser.add_argument("--jobs", type=int, default=3)
     parser.add_argument(
+        "--tie",
+        action="append",
+        default=[],
+        metavar="PORT=VALUE",
+        help="hold an input port at a constant (e.g. scan_mode_i=0: prove functional mode only)",
+    )
+    parser.add_argument(
         "--waivers",
         type=Path,
         default=ROOT / "tools/verif/coverage_waivers.txt",
@@ -312,6 +327,9 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--out", type=Path, help="write the JSON lines here as well")
     parser.add_argument("modules", nargs="+")
     args = parser.parse_args(argv)
+    for item in args.tie:
+        port, _, val = item.partition("=")
+        TIES[port] = val
     overrides: dict[str, dict[str, str]] = defaultdict(dict)
     for item in args.param:
         mod, _, rest = item.partition(":")

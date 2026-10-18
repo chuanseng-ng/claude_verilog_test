@@ -533,3 +533,47 @@ async def test_register_walk(dut):
     m = _make_apb_bfm(dut)
     regs, first = reg_maps.BANKS["pmu"]
     await walk_bank(m, regs, first, log=dut._log)
+
+
+# ---------------------------------------------------------------------------
+# DOMAIN_EN read-back across a full power cycle (bead xkw5)
+# ---------------------------------------------------------------------------
+
+def _domain_en_bitmap(cpu: tuple, gpu: tuple) -> int:
+    """DOMAIN_EN word (pmu.sv hw_wdata[2]): clk_en, iso_en, rst_n, ret_save, ret_restore per domain."""
+    c_clk, c_iso, c_rst, c_save, c_rest = cpu
+    g_clk, g_iso, g_rst, g_save, g_rest = gpu
+    return (
+        c_clk | (g_clk << 1) | (c_iso << 2) | (g_iso << 3) | (c_rst << 4) | (g_rst << 5)
+        | (c_save << 6) | (c_rest << 7) | (g_save << 8) | (g_rest << 9)
+    )
+
+
+@cocotb.test()
+async def test_pmu_domain_en_mirrors_sequencer(dut):
+    """PMU_DOMAIN_EN, read back every cycle through a full IDLE power cycle, is the registered image
+    of the ten sequencer outputs one cycle later -- including the isolation and retention flags that
+    are high only for one or two cycles of the sequence.  Down and up are both walked, so every
+    DOMAIN_EN bit [9:0] is observed high and low through the real read path."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    seen = set()
+    for mode in (MODE_IDLE, MODE_NORMAL):
+        assert await bfm.write(CTRL_OFFSET, mode)
+        dut.pwrite.value = 0
+        dut.paddr.value = DOMAIN_EN_OFFSET
+        prev = None
+        for _ in range(9):
+            await RisingEdge(dut.clk)
+            got = int(dut.prdata.value)
+            if prev is not None:
+                assert got == prev, f"mode {mode}: DOMAIN_EN {got:#05x}, outputs one cycle earlier gave {prev:#05x}"
+                seen.add(prev)
+            prev = _domain_en_bitmap(_sample_cpu(dut), _sample_gpu(dut))
+    ever_high = ever_low = 0
+    for word in seen:
+        ever_high |= word
+        ever_low |= ~word & 0x3FF
+    assert ever_high == 0x3FF, f"DOMAIN_EN bits never seen high: {0x3FF & ~ever_high:#05x}"
+    assert ever_low == 0x3FF, f"DOMAIN_EN bits never seen low: {0x3FF & ~ever_low:#05x}"

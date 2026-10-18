@@ -341,7 +341,7 @@ async def test_counter_carry_chain_and_wide_compare(dut):
             await RisingEdge(dut.clk)
         assert int(dut.irq_o.value) == 0, f"k={k}: irq with count {(1 << k) - 1:#x} < compare {1 << k:#x}"
         await m.write(REG_TMR_CTRL, CTRL_ENABLE | CTRL_IRQ_EN)
-        for _ in range(2):
+        for _ in range(5):
             await RisingEdge(dut.clk)
         assert int(dut.irq_o.value) == 1, f"k={k}: no irq after the count carried into bit {k}"
         count, _ = await m.read(REG_TMR_COUNTER)

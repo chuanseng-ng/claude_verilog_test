@@ -80,7 +80,11 @@ IMAGE 5  gpu_walk.hex -- the GPU's two bus masters walked through the fabric (be
   Phase C PERIPH : 8 lanes write the timer's COMPARE register (one APB write per lane through
                   M2 -> axi4_to_axilite -> ring), read it back and copy it to SRAM.
   Phase D ROMWR  : 8 lanes store to the boot ROM; the ROM refuses every write with SLVERR.
-  Phase E DECERR : loads and stores to four unmapped addresses, answered DECERR.
+  Phase E DECERR : loads and stores to unmapped addresses, answered DECERR.
+  Phase F UNALIGN: loads from both PLL windows at byte offsets 0..3.  Only a bus master can put a
+                  non-zero address[1:0] on a peripheral behind the APB clock-domain bridges (the DMA
+                  walk reaches the timer window only); the register banks ignore it, so each
+                  unaligned load must equal the aligned one.
   The GPU ignores read and write responses (gpu_top.sv leaves rresp/bresp unused), so a refused
   or unmapped access never stalls it; the testbench scores the responses at the crossbar port.
 Registers: IMAGE 1 MAIN uses x1-x23 (x2=VAR_BASE x3=TIMER x4=UART x5=SPI x6=DMA x7=IRQ);
@@ -95,7 +99,7 @@ if _PROJ_ROOT not in sys.path:
     sys.path.insert(0, _PROJ_ROOT)
 
 from sim.riscv_encoder import (  # noqa: E402
-    ADDI, ADD, ANDI, OR, SW, LW, BNE, BEQ, JAL, EBREAK, SLLI, XORI, CSRRW, CSRRS, MRET,
+    ADDI, ADD, ANDI, OR, SW, LW, BNE, BEQ, JAL, EBREAK, SLLI, XORI, CSRRW, CSRRS, MRET, LUI,
 )
 from tb.cocotb.soc.gpio_fw.gen_gpio_hex import Assembler, lui_addi, NOP  # noqa: E402
 from tb.cocotb.soc.cpu_gpu_irq_fw import gen_cpu_gpu_irq_hex as gpuirq  # noqa: E402
@@ -644,8 +648,11 @@ GW_SCR_B = SRAM_BASE + 0x500        # phase B copy of the first 8 ROM words
 GW_SCR_C = SRAM_BASE + 0x540        # phase C read-back of the timer COMPARE register
 GW_TIMER_CMP = 0x2000_4000 + 0x04   # TMR_COMPARE (RW, reset 0xFFFFFFFF)
 GW_ROM_WR = 0x1F00                  # phase D: eight words inside the 4 KB boot ROM
-GW_DECERR_LD = (0x1000_0000, 0x2002_0000, 0x8000_0000)
-GW_DECERR_ST = (0x4000_0000, 0x2001_1000, 0xC000_0000)
+GW_DECERR_LD = (0x1000_0000, 0x8000_0000)
+GW_DECERR_ST = (0x4000_0000, 0x2001_1000)
+GW_SCR_F = SRAM_BASE + 0x600        # phase F: 8 loads x 8 lanes x 4 bytes (aligned / unaligned pairs)
+GW_PLL_BASES = (0x2000_7000,)       # PLL1 APB window (behind u_apb_pll_cdc)
+GW_UNAL_OFFS = (0, 1, 2, 3)         # byte offsets: 0 is the aligned reference
 GW_DATA_BASE = 0x5A5                # phase B..E store data = 0x5A5 + 4 * lane (VADDI imm12)
 GW_PATCH_WORD = 4                   # kernel word holding the "VADDI r5, r0, k" immediate
 GW_POLL_LIMIT = 4000
@@ -738,6 +745,18 @@ def gw_kernel_rom_write():
     return _g_prolog() + _g_store(GW_ROM_WR, True, 8) + [gpuirq.gpu_vret()]
 
 
+def gw_kernel_pll_unaligned():
+    """Aligned and +1/+2/+3 byte-offset loads from both PLL windows (CONTROL/STATUS words)."""
+    out = _g_prolog()
+    n = 0
+    for base in GW_PLL_BASES:
+        for off in GW_UNAL_OFFS:
+            out += _g_load(base + off, True)
+            out += _g_store(GW_SCR_F + 0x20 * n, True, 7)
+            n += 1
+    return out + [gpuirq.gpu_vret()]
+
+
 def gw_kernel_decerr():
     out = _g_prolog()
     for addr in GW_DECERR_LD:
@@ -745,6 +764,19 @@ def gw_kernel_decerr():
     for addr in GW_DECERR_ST:
         out += _g_store(addr, False, 8)
     return out + [gpuirq.gpu_vret()]
+
+
+def la(asm, rd, label):
+    """Load the ROM address of `label` into rd (LUI + ADDI, resolved in the second pass)."""
+    def hi(lbl, _pc, t=label):
+        return LUI(rd, ((lbl[t] + 0x800) >> 12) & 0xFFFFF)
+
+    def lo(lbl, _pc, t=label):
+        low = lbl[t] & 0xFFF
+        return ADDI(rd, rd, low - 0x1000 if low >= 0x800 else low)
+
+    asm.thunk(hi)
+    asm.thunk(lo)
 
 
 def build_gpu_walk(asm):
@@ -763,10 +795,18 @@ def build_gpu_walk(asm):
     asm.emit(ADDI(7, 0, 8))
     asm.emit(SW(7, 6, gpuirq.GPU_OFF_BLOCK_X))
 
-    def write_kernel(words):
-        for i, kw in enumerate(words):
-            li(asm, 7, kw)
-            asm.emit(SW(7, 5, 4 * i))
+    def copy_words(tag, table, n_words, dst_reg):
+        """Copy n_words kernel words from the ROM table `table` to [dst_reg] (x7/x8/x18/x19 scratch)."""
+        la(asm, 7, table)
+        asm.emit(ADDI(8, dst_reg, 0))
+        asm.emit(ADDI(18, 0, n_words))
+        asm.label(tag)
+        asm.emit(LW(19, 7, 0))
+        asm.emit(SW(19, 8, 0))
+        asm.emit(ADDI(7, 7, 4))
+        asm.emit(ADDI(8, 8, 4))
+        asm.emit(ADDI(18, 18, -1))
+        br(asm, BNE, 18, 0, tag)
 
     def poll_status(tag, mask):
         """Spin until GPU_STATUS & mask is non-zero; FAIL on timeout or when STATUS.error is set."""
@@ -796,20 +836,17 @@ def build_gpu_walk(asm):
     # Sixteen patched copies of the kernel (64 bytes apart) are written first and flushed ONCE;
     # a D-cache flush costs ~12k cycles, so one per launch would dominate the test.
     template = gw_kernel_alias()
+    tables = {"K_ALIAS": template}
     li(asm, 22, 1 << GW_ALIAS_BITS[0])            # x22 = one-hot bit k
     li(asm, 24, 1 << (GW_ALIAS_BITS[-1] + 1))     # loop end
     asm.emit(ADDI(25, 0, GW_ALIAS_BITS[0]))       # x25 = k
     asm.emit(ADDI(26, 5, 0))                      # x26 = kernel copy
     asm.label("GA_W")
-    for i, kw in enumerate(template):
-        if i == GW_PATCH_WORD:
-            li(asm, 13, _G_ADDI_R5_K0)
-            asm.emit(SLLI(15, 25, 20))
-            asm.emit(OR(13, 13, 15))              # VADDI r5, r0, k
-            asm.emit(SW(13, 26, 4 * i))
-        else:
-            li(asm, 7, kw)
-            asm.emit(SW(7, 26, 4 * i))
+    copy_words("GA_CP", "K_ALIAS", len(template), 26)
+    li(asm, 13, _G_ADDI_R5_K0)
+    asm.emit(SLLI(15, 25, 20))
+    asm.emit(OR(13, 13, 15))                      # VADDI r5, r0, k
+    asm.emit(SW(13, 26, 4 * GW_PATCH_WORD))
     asm.emit(ADDI(26, 26, GW_COPY_STRIDE))
     asm.emit(SLLI(22, 22, 1))
     asm.emit(ADDI(25, 25, 1))
@@ -829,8 +866,10 @@ def build_gpu_walk(asm):
 
     # ---- phases B..E: one fresh kernel each, fetched from its plain address -----------------
     for name, kernel in (("GB", gw_kernel_rom_read()), ("GC", gw_kernel_periph()),
-                         ("GD", gw_kernel_rom_write()), ("GE", gw_kernel_decerr())):
-        write_kernel(kernel)
+                         ("GD", gw_kernel_rom_write()), ("GE", gw_kernel_decerr()),
+                         ("GF", gw_kernel_pll_unaligned())):
+        tables[f"K_{name}"] = kernel
+        copy_words(f"{name}_CP", f"K_{name}", len(kernel), 5)
         flush_dcache(asm, f"{name}FL")
         asm.emit(SW(5, 6, gpuirq.GPU_OFF_KERNEL_PC))
         run_kernel(name)
@@ -839,6 +878,10 @@ def build_gpu_walk(asm):
     flush_dcache(asm, "GFIN")
     jmp(asm, "PASS")
     tail(asm)
+    for label, words in tables.items():           # kernel images, data after the code
+        asm.label(label)
+        for w in words:
+            asm.emit(w)
 
 
 IMAGES = {
@@ -850,7 +893,7 @@ IMAGES = {
     "dma_walk": (build_dma_walk, ("MAIN", "PASS", "FAIL", "ALIAS_DONE", "ROM_DONE",
                                   "DECERR_DONE", "UNAL_DONE")),
     "gpu_walk": (build_gpu_walk, ("MAIN", "PASS", "FAIL", "GA_DONE", "GB_DONE", "GC_DONE",
-                                  "GD_DONE", "GE_DONE")),
+                                  "GD_DONE", "GE_DONE", "GF_DONE")),
 }
 
 
@@ -884,7 +927,7 @@ def main():
         "WALK_N_ALIAS": len(WALK_ALIAS_BITS), "WALK_N_ROM_COPIES": len(WALK_ROM_COPIES),
         "WALK_ROM_BEATS": sum(n // 4 for n, _ in WALK_ROM_COPIES),
         "GW_KBASE": GW_KBASE, "GW_SRC": GW_SRC, "GW_LD_OFF": GW_LD_OFF, "GW_ST_OFF": GW_ST_OFF,
-        "GW_SCR_B": GW_SCR_B, "GW_SCR_C": GW_SCR_C, "GW_TIMER_CMP": GW_TIMER_CMP,
+        "GW_SCR_B": GW_SCR_B, "GW_SCR_F": GW_SCR_F, "GW_SCR_C": GW_SCR_C, "GW_TIMER_CMP": GW_TIMER_CMP,
         "GW_ROM_WR": GW_ROM_WR, "GW_DATA_BASE": GW_DATA_BASE, "GW_N_ALIAS": len(GW_ALIAS_BITS),
         "GW_ALIAS_LO": GW_ALIAS_BITS[0], "GW_COPY_STRIDE": GW_COPY_STRIDE,
     }

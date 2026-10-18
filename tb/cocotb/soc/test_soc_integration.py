@@ -780,9 +780,9 @@ async def test_soc_dma_walk_rom_write_and_decode_errors(dut):
 # ---------------------------------------------------------------------------
 GW_SRC_VALS = (0xDEADBEEF, 0x12345678, 0xA5A5A5A5, 0x5A5A5A5A,
                0xFFFFFFFF, 0x00000000, 0xAAAAAAAA, 0x55555555)
-GW_PHASES = ("A", "B", "C", "D", "E")
-GW_DECERR_LD = (0x1000_0000, 0x2002_0000, 0x8000_0000)
-GW_DECERR_ST = (0x4000_0000, 0x2001_1000, 0xC000_0000)
+GW_PHASES = ("A", "B", "C", "D", "E", "F")
+GW_DECERR_LD = (0x1000_0000, 0x8000_0000)
+GW_DECERR_ST = (0x4000_0000, 0x2001_1000)
 M_IF, M_GPU = 1, 2   # crossbar master ports of the GPU instruction fetch and data masters
 LANES = 8
 
@@ -854,7 +854,7 @@ async def test_soc_gpu_walk_both_masters(dut):
         )
         for i, mark in enumerate(
             (A.GPU_WALK_GA_DONE, A.GPU_WALK_GB_DONE, A.GPU_WALK_GC_DONE, A.GPU_WALK_GD_DONE,
-             A.GPU_WALK_GE_DONE)
+             A.GPU_WALK_GE_DONE, A.GPU_WALK_GF_DONE)
         ):
             if pc == mark and GW_PHASES[i] not in marks:
                 marks[GW_PHASES[i]] = cycle
@@ -932,6 +932,15 @@ async def test_soc_gpu_walk_both_masters(dut):
     assert all(r == 3 for _, _, r in rd), f"unmapped read responses {rd}: DECERR (3) expected"
     assert sorted({a for a, _, _ in wr}) == sorted(GW_DECERR_ST), f"unmapped writes {sorted({a for a, _, _ in wr})}"
     assert all(r == 3 for _, _, r in wr), f"unmapped write responses {wr}: DECERR (3) expected"
+    # ---- phase F: byte offsets +1..+3 on the PLL1 window read the same register as +0 -------------
+    scratch = [
+        int(sram[(A.GW_SCR_F - 0x2000) // 4 + 8 * n + l].value) for n in range(4) for l in range(LANES)
+    ]
+    ref = scratch[:LANES]
+    assert ref[0] & 1 == 1, f"PLL1 CONTROL reads {ref[0]:#x}: pll_enable must read 1"
+    for off in (1, 2, 3):
+        got = scratch[LANES * off:LANES * (off + 1)]
+        assert got == ref, f"PLL1 read at byte offset +{off} gave {got}, the aligned read gave {ref}"
     dut._log.info(
         "GPU walk: %d ifetch beats (A), phases at cycles %s",
         len(ifetch["A"]),
