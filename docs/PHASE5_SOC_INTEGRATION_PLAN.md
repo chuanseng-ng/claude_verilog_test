@@ -89,7 +89,7 @@ Legend: ⏸️ not started · 🔄 in progress · ✅ done
 No PD this item (crossbar hardens at SoC top, M11).
 
 ### M4 — Peripherals *(deps: M3; sub-items parallelizable)* ✅ COMPLETE (2026-06-01)
-- ✅ `rtl/periph/uart_controller.sv` — AXI-Lite slave; TX/RX FIFO, baud divisor, status + IRQ. **Hardened (dq4):** 16× oversample RX with mid-bit 2-of-3 majority vote, STOP-bit framing-error detect (`UART_STATUS[6]`, read-to-clear), sticky TX-empty IRQ qualifier (no spurious reset IRQ), WSTRB byte-lane snoop. *Note: `UART_BAUD` now sets the oversample-tick period — 1 bit = 16×(D+1) clocks.*
+- ✅ `rtl/periph/uart_controller.sv` — AXI-Lite slave; TX/RX FIFO, baud divisor, status + IRQ. **Hardened (dq4):** 16× oversample RX with mid-bit 2-of-3 majority vote, STOP-bit framing-error detect (`UART_STATUS[6]`, read-to-clear), sticky TX-empty IRQ qualifier (no spurious reset IRQ), WSTRB byte-lane snoop. *Note: `UART_BAUD` now sets the oversample-tick period — 1 bit = 16×(D+1) clocks.* **RX re-sync (bead `shm5`):** the receiver has its own phase counter restarted on every START edge, votes on phases 6/7/8 and closes the frame at the STOP-bit mid-point, so back-to-back 8N1 frames (no idle gap, up to ±3.5 % bit-clock error) are received; before this it lost framing after ~7 bytes and the bootloader host loader used 8N2 (still its default).
 - ✅ `rtl/periph/spi_controller.sv` — AXI-Lite slave; SPI master, configurable CPOL/CPHA, IRQ. **Hardened (dq4):** WSTRB byte-lane snoop; real-MISO + RX-overflow tests added.
 - ✅ `rtl/periph/timer.sv` — AXI-Lite slave; mtime/mtimecmp → drives CPU `timer_irq_i`.
 - ✅ `rtl/periph/interrupt_controller.sv` — aggregate UART/SPI/timer/DMA/GPU IRQ → CPU `ext_irq_i` (MEIP); maskable + prioritized.
