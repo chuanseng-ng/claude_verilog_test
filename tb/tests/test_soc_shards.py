@@ -22,6 +22,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -39,12 +40,12 @@ HEAVY = ["i2c", "soc_integration", "soc_cpu_gpu", "soc_coherency", "soc_multiclo
 
 @pytest.fixture(scope="module")
 def suites() -> list[str]:
-    return ss.load_suites()
+    return list(ss.load_suites())
 
 
 @pytest.fixture(scope="module")
 def weights() -> dict:
-    return ss.load_weights()
+    return dict(ss.load_weights())
 
 
 # ----------------------------------------------------------------------------- parsing
@@ -96,7 +97,9 @@ def test_assign_is_a_partition_preserving_order(suites: list[str], weights: dict
 
 
 def test_assign_is_deterministic(suites: list[str], weights: dict) -> None:
-    assert ss.assign(suites, 6, weights) == ss.assign(list(suites), 6, json.loads(json.dumps(weights)))
+    assert ss.assign(suites, 6, weights) == ss.assign(
+        list(suites), 6, json.loads(json.dumps(weights))
+    )
 
 
 def test_heavy_suites_are_in_different_shards(suites: list[str], weights: dict) -> None:
@@ -111,7 +114,9 @@ def test_shards_are_balanced(suites: list[str], weights: dict) -> None:
     assert max(loads) / min(loads) < 1.15, loads
 
 
-def test_unknown_suite_gets_default_weight_and_still_shards(suites: list[str], weights: dict) -> None:
+def test_unknown_suite_gets_default_weight_and_still_shards(
+    suites: list[str], weights: dict
+) -> None:
     extra = suites + ["brand_new_suite"]
     shards = ss.assign(extra, 6, weights)
     assert sum("brand_new_suite" in m for m in shards) == 1
@@ -123,7 +128,7 @@ def test_assign_rejects_zero_shards(suites: list[str], weights: dict) -> None:
 
 
 def test_shared_build_group_cost_is_charged_once_per_shard() -> None:
-    w = {
+    w: dict[str, Any] = {
         "default_run_s": 10.0,
         "groups": {"g": {"build_s": 100.0}},
         "suites": {"a": {"run_s": 10, "group": "g"}, "b": {"run_s": 10, "group": "g"}},
@@ -154,7 +159,8 @@ def test_union_detects_a_lost_suite(suites: list[str], weights: dict) -> None:
 
 def test_union_detects_duplicate_and_unknown(suites: list[str]) -> None:
     problems = ss.check_union(
-        suites, {"s0": suites[:30] + ["nope"], "s1": suites[29:]}  # suites[29] run by both
+        suites,
+        {"s0": suites[:30] + ["nope"], "s1": suites[29:]},  # suites[29] run by both
     )
     text = "\n".join(problems)
     assert f"{suites[29]}: run twice" in text
@@ -173,12 +179,16 @@ def test_cli_union_exit_codes(tmp_path: Path, suites: list[str], weights: dict) 
         p = tmp_path / f"ran{k}.txt"
         p.write_text("\n".join(m) + "\n")
         files.append(str(p))
-    ok = subprocess.run([sys.executable, str(SCRIPT), "union", *files], capture_output=True, text=True)
+    ok = subprocess.run(
+        [sys.executable, str(SCRIPT), "union", *files], capture_output=True, text=True
+    )
     assert ok.returncode == 0, ok.stdout + ok.stderr
     # Drop one suite from one manifest: the gate must go red.
     first = Path(files[0])
     first.write_text("\n".join(shards[0][1:]) + "\n")
-    bad = subprocess.run([sys.executable, str(SCRIPT), "union", *files], capture_output=True, text=True)
+    bad = subprocess.run(
+        [sys.executable, str(SCRIPT), "union", *files], capture_output=True, text=True
+    )
     assert bad.returncode == 1
     assert shards[0][0] in bad.stdout and "silently lost" in bad.stdout
     # A missing manifest file is the same as an empty one.
@@ -207,7 +217,7 @@ def test_cli_select_matches_assign(suites: list[str], weights: dict) -> None:
     assert bad.returncode == 2
 
 
-# ----------------------------------------------------------------------------- Makefile (needs the simulator toolchain)
+# ---------------------------------------------- Makefile (needs make + verilator)
 
 needs_make = pytest.mark.skipif(
     not all(shutil.which(t) for t in ("make", "verilator", "cocotb-config")),
@@ -234,19 +244,27 @@ def test_print_target_agrees_with_the_script(tmp_path: Path, suites: list[str]) 
 
 @needs_make
 def test_soc_all_ci_expands_to_the_list_in_order(tmp_path: Path, suites: list[str]) -> None:
-    """`make -n MAKE=echo` turns every `$(MAKE) x y` into the line `x y`: the executed invocations."""
+    """`make -n MAKE=echo` turns each `$(MAKE) x y` into the line `x y`: the invocations run."""
     r = _make(["-n", "MAKE=echo", "soc_all_ci"], tmp_path)
     assert r.returncode == 0, r.stderr
-    ran = [ln for ln in r.stdout.splitlines() if ln and not ln.startswith(("echo ", " ", "fi", "free_mb", "if ", "mkdir", "warning"))]
+    ran = [
+        ln
+        for ln in r.stdout.splitlines()
+        if ln and not ln.startswith(("echo ", " ", "fi", "free_mb", "if ", "mkdir", "warning"))
+    ]
     assert ran == [s.replace(":", " ") for s in suites]
 
 
 @needs_make
-def test_soc_ci_shard_dry_run_selects_by_index(tmp_path: Path, suites: list[str], weights: dict) -> None:
+def test_soc_ci_shard_dry_run_selects_by_index(
+    tmp_path: Path, suites: list[str], weights: dict
+) -> None:
     for k in (0, 5):
         r = _make(["-n", "MAKE=echo", "soc_ci_shard", f"SHARD={k}", "NSHARDS=6"], tmp_path)
         assert r.returncode == 0, r.stderr
-        ran = [ln for ln in r.stdout.splitlines() if ln and ln in {s.replace(":", " ") for s in suites}]
+        ran = [
+            ln for ln in r.stdout.splitlines() if ln and ln in {s.replace(":", " ") for s in suites}
+        ]
         assert ran == [s.replace(":", " ") for s in ss.assign(suites, 6, weights)[k]]
 
 
