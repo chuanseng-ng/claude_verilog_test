@@ -247,12 +247,15 @@ needs_make = pytest.mark.skipif(
 
 
 def _make(args: list[str], root: Path) -> subprocess.CompletedProcess[str]:
+    # The Makefile reads SOC_SHARD_WEIGHTS from the environment too; a CI job that exports it for
+    # its real run must not change which weights these tests plan with.
+    env = {k: v for k, v in os.environ.items() if k != "SOC_SHARD_WEIGHTS"}
     return subprocess.run(
         ["make", "--no-print-directory", "-C", str(SOC_DIR), f"SIM_BUILD_ROOT={root}", *args],
         capture_output=True,
         text=True,
         check=False,
-        env=os.environ.copy(),
+        env=env,
     )
 
 

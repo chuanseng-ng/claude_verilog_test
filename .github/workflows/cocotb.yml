@@ -309,10 +309,6 @@ jobs:
       matrix:
         shard: [0, 1, 2, 3]
 
-    env:
-      # Uninstrumented cost model (soc_coverage.yml uses the instrumented default).
-      SOC_SHARD_WEIGHTS: tools/verif/soc_shard_weights_plain.json
-
     steps:
       - name: Matrix size matches NSHARDS
         run: |
@@ -443,6 +439,9 @@ jobs:
       # to completion, which the aggregate job compares with SOC_CI_SUITES.
       - name: Run this shard's suites
         env:
+          # Uninstrumented cost model (soc_coverage.yml uses the instrumented default).  Step-level
+          # on purpose: the planner unit tests run in this job too and must see the default.
+          SOC_SHARD_WEIGHTS: tools/verif/soc_shard_weights_plain.json
           SIM_CCACHE: '1'
           CCACHE_DIR: ${{ github.workspace }}/.ccache
           CCACHE_MAXSIZE: 400M
