@@ -57,8 +57,8 @@ NAME_RE = re.compile(r"^([A-Za-z_][\w$.]*)((?:\[\d+\])*):(\d)->(\d)$")
 CLOCKS = ("clk", "clk_i", "pclk", "aclk", "clock")
 RESETS = ("rst_n", "rst_ni", "presetn", "rstn", "aresetn", "reset_n")
 BMC_TIMEOUT_S = 25
-TOP_TIMEOUT_S = 240  # per-chunk proof budget; halved on every bisection level
-MIN_TIMEOUT_S = 30
+TOP_TIMEOUT_S = 45  # per-chunk proof budget; halved on every bisection level
+MIN_TIMEOUT_S = 15
 INCLUDES = ("rtl/soc", "rtl/soc/cdc", "rtl/periph", "rtl/npu", "rtl/soc/pll")
 
 
@@ -66,14 +66,24 @@ class FormalError(Exception):
     """A module the tool cannot wrap or a tool failure."""
 
 
-def candidate_bits(points: list, module: str) -> list[str]:
-    """Bits of ``module`` for which neither toggle direction was ever hit."""
+def candidate_bits(
+    points: list, module: str, waivers: list | None = None, skip: re.Pattern | None = None
+) -> list[str]:
+    """Bits of ``module`` for which neither toggle direction was ever hit.
+
+    Points an existing waiver already covers are left out (they need no new proof), and so are
+    bits whose name matches ``skip`` (counters a long run reaches, not a stuck bit).
+    """
     seen: dict[str, dict[str, bool]] = defaultdict(dict)
     for pt in points:
         if pt.module.split("__")[0] != module or pt.kind != "toggle":
             continue
         match = NAME_RE.match(pt.name)
         if not match:
+            continue
+        if any(w.matches(module, "toggle", pt.name) for w in waivers or []):
+            continue
+        if skip is not None and skip.search(match.group(1) + match.group(2)):
             continue
         bit = match.group(1) + match.group(2)
         direction = f"{match.group(3)}{match.group(4)}"
@@ -244,6 +254,7 @@ def classify(
                 counter[0] += 1
                 tag = f"c{counter[0]}"
             verdict = run_sby(module, params, ports, chunk, workdir, tag, timeout_s)
+            print(f"  {module}/{tag}: {len(chunk)} bits -> {verdict}", file=sys.stderr, flush=True)
             if verdict == "pass":
                 return chunk, [], []
             if len(chunk) == 1:
@@ -286,7 +297,18 @@ def main(argv: list[str]) -> int:
         metavar="MODULE:NAME=VALUE",
         help="parameter override for the wrapper instance (repeatable)",
     )
-    parser.add_argument("--jobs", type=int, default=4)
+    parser.add_argument("--jobs", type=int, default=3)
+    parser.add_argument(
+        "--waivers",
+        type=Path,
+        default=ROOT / "tools/verif/coverage_waivers.txt",
+        help="points already waived there are not re-proven",
+    )
+    parser.add_argument(
+        "--skip",
+        default="",
+        help="regex over bit names such as regs_o[0][12] to leave out (counters and other bits that only a long run reaches)",
+    )
     parser.add_argument("--out", type=Path, help="write the JSON lines here as well")
     parser.add_argument("modules", nargs="+")
     args = parser.parse_args(argv)
@@ -296,11 +318,17 @@ def main(argv: list[str]) -> int:
         key, _, val = rest.partition("=")
         overrides[mod][key] = val
     points = [pt for dat in args.dat for pt in cr.parse_dat(dat)]
+    waivers = cr.load_waivers(args.waivers)
+    skip = re.compile(args.skip) if args.skip else None
     lines = []
     with tempfile.TemporaryDirectory() as tmp:
         for module in args.modules:
             res = classify(
-                module, overrides.get(module, {}), candidate_bits(points, module), Path(tmp), args.jobs
+                module,
+                overrides.get(module, {}),
+                candidate_bits(points, module, waivers, skip),
+                Path(tmp),
+                args.jobs,
             )
             lines.append(json.dumps(res))
             print(lines[-1], flush=True)
