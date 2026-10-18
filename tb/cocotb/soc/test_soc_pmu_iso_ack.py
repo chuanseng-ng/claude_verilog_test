@@ -42,6 +42,7 @@ run, which keeps its AXI request lines busy so the clamp has something to clamp)
 THE INVARIANT MONITOR (sampled after every clk_i AND every cpu_clk_i rising edge, ReadOnly):
   INV1  pmu_cpu_rst_n_cpu_sync == 0  ->  pmu_cpu_iso_en_sync == 1   (reset implies clamp active)
   INV2  cpu_gated_clk_en == 0        ->  pmu_cpu_iso_en_sync == 1   (clock gated implies clamp)
+  INV4  pmu_cpu_iso_ack changes only on clk_i edges (it is a synchroniser output into core_clk)
   INV3  pmu_cpu_iso_en_sync == 0     ->  pmu_cpu_rst_n_cpu_sync == 1  (power-UP: clamp not released
         while the PMU reset is still observed asserted).  NOMINAL-ONLY: in this zero-delay model both
         release paths are 2-flop syncs on the same clock so the order is deterministic; in silicon a
@@ -162,6 +163,7 @@ class IsoMonitor:
         self.ack_rise_ns: list = []
         self.rst_sync_fall_ns: list = []
         self._prev = {"iso_s": None, "ack": None, "rst_s": None, "state": None}
+        self.core_phase = None  # sim time (ns) modulo FABRIC_NS of a clk_i rising edge
         self._tasks: list = []
 
     def start(self) -> None:
@@ -207,8 +209,19 @@ class IsoMonitor:
                     self.violations.append(
                         (now, "INV3", "isolation clamp released in the CPU domain while the PMU "
                                       "reset is still observed asserted (nominal order)"))
-            if ack is not None and p["ack"] is not None and ack == 1 and p["ack"] == 0:
-                self.ack_rise_ns.append(now)
+            if is_core and self.core_phase is None:
+                self.core_phase = now % FABRIC_NS
+            if ack is not None and p["ack"] is not None and ack != p["ack"]:
+                if ack == 1:
+                    self.ack_rise_ns.append(now)
+                # INV4: the ack is the output of a synchroniser INTO core_clk, so it may only
+                # change on a clk_i edge.  A change first seen on a cpu_clk_i edge that is not
+                # also a clk_i edge means the return crossing is clocked by the wrong clock (or
+                # is a bare wire): the PMU would be sampling an unsynchronised cpu_clk signal.
+                if self.core_phase is not None and (now - self.core_phase) % FABRIC_NS != 0:
+                    self.violations.append(
+                        (now, "INV4", "cpu_iso_ack changed off a core_clk edge: the return "
+                                      "crossing is not synchronised into core_clk"))
             if is_core and state != p["state"]:
                 self.transitions.append((now, state))
             p["iso_s"], p["rst_s"], p["ack"] = iso_s, rst_s, ack
