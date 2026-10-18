@@ -80,6 +80,7 @@ class Env:
         self.bit = _bit_cycles(div)
         self.rx = bytearray()  # bytes the DUT transmitted (decoded from uart_tx_o)
         self.pcs: list[int] = []
+        self.stop_gap = 1  # extra stop bits per byte driven by send(): 1 = 8N2, 0 = 8N1
 
     async def monitor_tx(self):
         d = self.dut
@@ -101,15 +102,17 @@ class Env:
                 if not self.pcs or self.pcs[-1] != pc:
                     self.pcs.append(pc)
 
-    async def send(self, data: bytes, gap_bits: int = 1):
-        """Drive uart_rx_i: 8N1, LSB first, `1 + gap_bits` stop bits (default: 8N2).
+    async def send(self, data: bytes, gap_bits: int | None = None):
+        """Drive uart_rx_i: 8N1, LSB first, `1 + gap_bits` stop bits.
 
-        8N2 is deliberate and matches what tools/fw/uart_load.py configures: the
-        uart_controller receiver returns to idle only at the END of the stop bit and re-arms on
-        the next oversample tick, so it falls one oversample tick further behind on every
-        back-to-back 8N1 byte and mis-frames after roughly 7 bytes (measured here: an 8-byte frame
-        at gap 0 fails, the same frame with one extra stop bit passes). See README "UART RX note".
+        Default (`gap_bits=None` -> `self.stop_gap`, 1) is 8N2, matching the default of
+        tools/fw/uart_load.py.  8N2 is kept as the host-loader default for margin and was the
+        workaround for bead shm5 (the receiver used to lose framing after ~7 back-to-back 8N1
+        bytes); that RTL defect is fixed, so `gap_bits=0` (plain 8N1, no idle) works too and
+        test_load_verify_8n1_back_to_back covers it.  See README "UART RX".
         """
+        if gap_bits is None:
+            gap_bits = self.stop_gap
         d = self.dut
         for byte in data:
             for bit in [0] + [(byte >> i) & 1 for i in range(8)] + [1]:
@@ -262,6 +265,20 @@ async def test_load_verify_jump_and_run(dut):
     first_sram = next(i for i, pc in enumerate(env.pcs) if SRAM_BASE <= pc < LOAD_HI)
     assert all(0x1000 <= pc < 0x2000 for pc in env.pcs[:first_sram]), "ran from an unexpected PC"
     assert env.pcs[first_sram] == SRAM_BASE
+
+
+@cocotb.test()
+async def test_load_verify_8n1_back_to_back(dut):
+    """Plain 8N1 (no extra stop bit, no idle between bytes) works since bead shm5: the whole
+    program loads in several packets and its CRC and SRAM contents are right."""
+    env = await setup(dut, "uart_boot_sim.hex")
+    env.stop_gap = 0
+    await env.wait_rx(len(ul.BANNER), 60_000)
+    await load_testprog(env)
+    resp = await env.cmd(ul.CMD_CRC, struct.pack("<II", SRAM_BASE, len(TESTPROG)))
+    assert resp.ok and struct.unpack("<I", resp.payload)[0] == zlib.crc32(TESTPROG)
+    await ClockCycles(dut.clk_i, 2000)  # let the last WRITE's D$ flush reach SRAM
+    assert sram_bytes(dut, SRAM_BASE, len(TESTPROG)) == TESTPROG
 
 
 @cocotb.test()

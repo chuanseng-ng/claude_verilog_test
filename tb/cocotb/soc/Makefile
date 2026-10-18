@@ -2002,11 +2002,11 @@ SOC_CI_SUITES := \
 # Suites whose ONE module is too heavy for a single shard are run as several TESTCASE slices when
 # sharded (never by soc_all_ci, which runs the whole module).  `suite=slice|slice|...`, a slice is
 # a comma-separated list of the module's cocotb test names.  soc_uart_boot is ~33 min instrumented
-# (test_load_verify_jump_and_run alone is ~15 min); its slices are balanced on measured times.
+# (test_load_verify_jump_and_run alone is ~15 min); its slices are balanced on measured times (the 8n1 slice, shm5, is estimated).
 # Every @cocotb.test of the module must appear in exactly one slice: tb/tests/test_soc_shards.py
 # checks that against the test file, so a new test cannot silently fall out of the sharded run.
 SOC_CI_SPLITS := \
-    soc_uart_boot=test_load_verify_jump_and_run|test_bad_crc_is_nakked_and_memory_untouched,test_refusals_nak_with_the_right_code,test_banner_and_info_default_115200_at_50mhz|test_table_sum_is_independent,test_banner_and_info_sim_divisor,test_oversized_length_nak_then_resync,test_truncated_frame_times_out_and_recovers,test_line_noise_before_sof_is_ignored,test_autoboot_runs_preloaded_image,test_autoboot_refuses_empty_sram_and_stays_serviceable
+    soc_uart_boot=test_load_verify_jump_and_run|test_load_verify_8n1_back_to_back|test_bad_crc_is_nakked_and_memory_untouched,test_refusals_nak_with_the_right_code,test_banner_and_info_default_115200_at_50mhz|test_table_sum_is_independent,test_banner_and_info_sim_divisor,test_oversized_length_nak_then_resync,test_truncated_frame_times_out_and_recovers,test_line_noise_before_sof_is_ignored,test_autoboot_runs_preloaded_image,test_autoboot_refuses_empty_sram_and_stays_serviceable
 
 define soc_nl
 
