@@ -1812,63 +1812,121 @@ l2_bench: l2_bench_lint
 soc_all: soc_all_ci
 	$(MAKE) gpio_driver
 
+# Bead 9ayu.1: the ordered list of `soc_all_ci` sub-make invocations lives in ONE variable.  An
+# entry is the sub-make's arguments joined with ':' (so an entry with a variable assignment stays
+# one word: `sram_controller:SRAM_TARGET=sky130` is `$(MAKE) sram_controller SRAM_TARGET=sky130`).
+# It is consumed by
+#   * soc_all_ci          -- every entry, in this order (behaviour unchanged);
+#   * soc_ci_shard        -- a subset (SUITES="..." or SHARD=k NSHARDS=n), same relative order;
+#   * print-soc-ci-suites -- one entry per line, for tools/verif/soc_shards.py and the CI union check.
+# Add a new CI suite HERE, once; the sharded coverage workflow and (bead 9ayu.2) the sharded
+# cocotb workflow pick it up with no further edit.  soc_ci_shard also makes the run order of a
+# shard deterministic (list order), which matters only for the build-dir sharing described above.
+SOC_CI_SUITES := \
+    crossbar \
+    register_bank \
+    axil_interconnect \
+    axil_apb_fabric \
+    sram_controller \
+    sram_controller:SRAM_TARGET=sky130 \
+    axi4_to_axilite \
+    axilite_to_axi4 \
+    boot_rom \
+    dma \
+    irq \
+    timer \
+    uart \
+    spi \
+    apb4_register_bank \
+    axil_to_apb \
+    pmu \
+    gpio \
+    pwm \
+    wdt \
+    trng \
+    i2c \
+    crypto \
+    npu \
+    apb_interconnect \
+    async_axi_fifo \
+    apb_cdc_bridge \
+    cdc_reset_sync_scan \
+    cdc_sync \
+    cdc_gray_fifo \
+    periph_sync_stages \
+    clock_gate_scan \
+    dft_muxes \
+    jtag_tap \
+    dft_clk_switch \
+    dft_ctrl \
+    soc_boot \
+    soc_periph \
+    soc_coherency \
+    soc_cpu_gpu \
+    soc_gpio \
+    soc_pwm \
+    soc_wdt \
+    soc_trng \
+    soc_i2c \
+    soc_crypto \
+    soc_npu \
+    soc_uart_boot \
+    soc_pll \
+    soc_multiclock \
+    soc_multiclock_reset \
+    soc_pll_multiclock \
+    soc_dft_scan \
+    soc_jtag \
+    soc_pmu_multiclock \
+    soc_integration
+
+define soc_nl
+
+
+endef
+# `$(call soc_run_suites,<entries>)` expands to one recipe line per entry, each exactly the line
+# soc_all_ci used to spell out by hand.
+soc_run_suites = $(foreach s,$(1),+$(MAKE) $(subst :, ,$(s))$(soc_nl))
+
 soc_all_ci: check-space
-	$(MAKE) crossbar
-	$(MAKE) register_bank
-	$(MAKE) axil_interconnect
-	$(MAKE) axil_apb_fabric
-	$(MAKE) sram_controller
-	$(MAKE) sram_controller SRAM_TARGET=sky130
-	$(MAKE) axi4_to_axilite
-	$(MAKE) axilite_to_axi4
-	$(MAKE) boot_rom
-	$(MAKE) dma
-	$(MAKE) irq
-	$(MAKE) timer
-	$(MAKE) uart
-	$(MAKE) spi
-	$(MAKE) apb4_register_bank
-	$(MAKE) axil_to_apb
-	$(MAKE) pmu
-	$(MAKE) gpio
-	$(MAKE) pwm
-	$(MAKE) wdt
-	$(MAKE) trng
-	$(MAKE) i2c
-	$(MAKE) crypto
-	$(MAKE) npu
-	$(MAKE) apb_interconnect
-	$(MAKE) async_axi_fifo
-	$(MAKE) apb_cdc_bridge
-	$(MAKE) cdc_reset_sync_scan
-	$(MAKE) cdc_sync
-	$(MAKE) cdc_gray_fifo
-	$(MAKE) periph_sync_stages
-	$(MAKE) clock_gate_scan
-	$(MAKE) dft_muxes
-	$(MAKE) jtag_tap
-	$(MAKE) dft_clk_switch
-	$(MAKE) dft_ctrl
-	$(MAKE) soc_boot
-	$(MAKE) soc_periph
-	$(MAKE) soc_coherency
-	$(MAKE) soc_cpu_gpu
-	$(MAKE) soc_gpio
-	$(MAKE) soc_pwm
-	$(MAKE) soc_wdt
-	$(MAKE) soc_trng
-	$(MAKE) soc_i2c
-	$(MAKE) soc_crypto
-	$(MAKE) soc_npu
-	$(MAKE) soc_uart_boot
-	$(MAKE) soc_pll
-	$(MAKE) soc_multiclock
-	$(MAKE) soc_multiclock_reset
-	$(MAKE) soc_pll_multiclock
-	$(MAKE) soc_dft_scan
-	$(MAKE) soc_jtag
-	$(MAKE) soc_pmu_multiclock
-	$(MAKE) soc_integration
+	$(call soc_run_suites,$(SOC_CI_SUITES))
+
+.PHONY: print-soc-ci-suites
+print-soc-ci-suites:
+	@$(foreach s,$(SOC_CI_SUITES),echo '$(s)';)
+
+# Bead 9ayu.1: run a subset of the soc_all_ci list (a CI shard).  Select it either explicitly,
+#   make soc_ci_shard SUITES="crossbar soc_boot sram_controller:SRAM_TARGET=sky130"
+# or by index, using the deterministic balanced assignment of tools/verif/soc_shards.py
+# (weights: tools/verif/soc_shard_weights.json):
+#   make soc_ci_shard SHARD=1 NSHARDS=5
+# Every entry that ran to completion is appended to $(SOC_SUITES_RAN) (default
+# $(SIM_BUILD_ROOT)/suites_ran.txt), which the CI merge job compares with print-soc-ci-suites.
+# A suite that fails stops the shard (the p6t8 check makes a red suite exit non-zero).
+SHARD ?=
+NSHARDS ?=
+SOC_SUITES_RAN ?= $(SIM_BUILD_ROOT)/suites_ran.txt
+ifneq ($(strip $(SHARD)),)
+  ifeq ($(strip $(NSHARDS)),)
+    $(error SHARD=$(SHARD) needs NSHARDS=<n>)
+  endif
+  SUITES = $(shell $(or $(SIM_PYTHON3),python3) $(PROJ_ROOT)/tools/verif/soc_shards.py select --shard $(SHARD) --nshards $(NSHARDS) --suites "$(SOC_CI_SUITES)")
+endif
+.PHONY: soc_ci_shard
+soc_ci_shard: check-space
+	@test -n "$(strip $(SUITES))" || { echo "ERROR: soc_ci_shard: set SUITES=\"...\" or SHARD=<k> NSHARDS=<n>" >&2; exit 1; }
+	@mkdir -p $(dir $(SOC_SUITES_RAN)) && : > $(SOC_SUITES_RAN)
+	$(foreach s,$(SUITES),+$(MAKE) $(subst :, ,$(s)) && echo '$(s)' >> $(SOC_SUITES_RAN)$(soc_nl))
+
+# Bead 9ayu.1: the instrumented half of `soc_coverage` for ONE shard: run the shard's suites with
+# COVERAGE=1 and leave the per-simulation .dat files in $(COV_DIR).  No merge and no report here;
+# the sharded workflow's final job merges every shard's .dat and renders the report once.
+.PHONY: soc_coverage_shard
+soc_coverage_shard:
+	@mkdir -p $(COV_DIR)
+	rm -f $(COV_DIR)/*.dat
+	$(MAKE) soc_ci_shard COVERAGE=1
+	@ls $(COV_DIR)/*.dat >/dev/null 2>&1 || { echo "ERROR: soc_coverage_shard: no .dat written to $(COV_DIR) -- coverage was not collected" >&2; exit 1; }
 
 # soc_integration_batch — compile tb_soc_top ONCE and run the four soc_top integration
 # suites back-to-back without a clean between MODULE changes.

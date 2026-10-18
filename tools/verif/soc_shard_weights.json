@@ -1,0 +1,211 @@
+{
+ "_comment": [
+  "Per-suite cost model for tools/verif/soc_shards.py (bead 9ayu.1).  Seconds on a 4-vCPU hosted",
+  "runner for an INSTRUMENTED (COVERAGE=1) soc_all_ci run.  run_s = the suite's time with any shared",
+  "Verilator build excluded; `group` names a build directory shared by several suites (the b079",
+  "content-keyed SIM_BUILD), whose one-off build_s is charged once to each shard that uses it.",
+  "Source: serial instrumented job 117501311868 of soc_coverage run 39068597871 (74 min).",
+  "soc_uart_boot joined soc_all_ci after that run and is an ESTIMATE.",
+  "Weights only steer the balance.  A suite missing from this file gets default_run_s, so a new",
+  "suite never breaks the sharding; refresh the file from a newer job log when the balance drifts."
+ ],
+ "default_run_s": 40.0,
+ "groups": {
+  "tb_soc_top": {
+   "build_s": 55.1
+  },
+  "tb_soc_pll": {
+   "build_s": 51.7
+  }
+ },
+ "suites": {
+  "crossbar": {
+   "run_s": 26.6
+  },
+  "register_bank": {
+   "run_s": 34.9
+  },
+  "axil_interconnect": {
+   "run_s": 18.9
+  },
+  "axil_apb_fabric": {
+   "run_s": 19.5
+  },
+  "sram_controller": {
+   "run_s": 59.2
+  },
+  "sram_controller:SRAM_TARGET=sky130": {
+   "run_s": 19.0
+  },
+  "axi4_to_axilite": {
+   "run_s": 19.2
+  },
+  "axilite_to_axi4": {
+   "run_s": 18.6
+  },
+  "boot_rom": {
+   "run_s": 34.7
+  },
+  "dma": {
+   "run_s": 26.0
+  },
+  "irq": {
+   "run_s": 19.1
+  },
+  "timer": {
+   "run_s": 19.3
+  },
+  "uart": {
+   "run_s": 25.5
+  },
+  "spi": {
+   "run_s": 27.2
+  },
+  "apb4_register_bank": {
+   "run_s": 34.9
+  },
+  "axil_to_apb": {
+   "run_s": 18.8
+  },
+  "pmu": {
+   "run_s": 19.1
+  },
+  "gpio": {
+   "run_s": 24.7
+  },
+  "pwm": {
+   "run_s": 19.7
+  },
+  "wdt": {
+   "run_s": 20.8
+  },
+  "trng": {
+   "run_s": 39.3
+  },
+  "i2c": {
+   "run_s": 346.5
+  },
+  "crypto": {
+   "run_s": 50.7
+  },
+  "npu": {
+   "run_s": 28.5
+  },
+  "apb_interconnect": {
+   "run_s": 189.4
+  },
+  "async_axi_fifo": {
+   "run_s": 26.5
+  },
+  "apb_cdc_bridge": {
+   "run_s": 22.7
+  },
+  "cdc_reset_sync_scan": {
+   "run_s": 19.1
+  },
+  "cdc_sync": {
+   "run_s": 19.3
+  },
+  "cdc_gray_fifo": {
+   "run_s": 35.4
+  },
+  "periph_sync_stages": {
+   "run_s": 72.3
+  },
+  "clock_gate_scan": {
+   "run_s": 19.5
+  },
+  "dft_muxes": {
+   "run_s": 19.3
+  },
+  "jtag_tap": {
+   "run_s": 77.3
+  },
+  "dft_clk_switch": {
+   "run_s": 52.3
+  },
+  "dft_ctrl": {
+   "run_s": 23.3
+  },
+  "soc_boot": {
+   "run_s": 34.2,
+   "group": "tb_soc_top"
+  },
+  "soc_periph": {
+   "run_s": 46.7,
+   "group": "tb_soc_top"
+  },
+  "soc_coherency": {
+   "run_s": 328.5,
+   "group": "tb_soc_top"
+  },
+  "soc_cpu_gpu": {
+   "run_s": 345.6,
+   "group": "tb_soc_top"
+  },
+  "soc_gpio": {
+   "run_s": 42.7,
+   "group": "tb_soc_top"
+  },
+  "soc_pwm": {
+   "run_s": 42.4,
+   "group": "tb_soc_top"
+  },
+  "soc_wdt": {
+   "run_s": 58.4,
+   "group": "tb_soc_top"
+  },
+  "soc_trng": {
+   "run_s": 56.8,
+   "group": "tb_soc_top"
+  },
+  "soc_i2c": {
+   "run_s": 105.0,
+   "group": "tb_soc_top"
+  },
+  "soc_crypto": {
+   "run_s": 96.7,
+   "group": "tb_soc_top"
+  },
+  "soc_npu": {
+   "run_s": 57.7,
+   "group": "tb_soc_top"
+  },
+  "soc_pll": {
+   "run_s": 48.3,
+   "group": "tb_soc_pll"
+  },
+  "soc_multiclock": {
+   "run_s": 278.7,
+   "group": "tb_soc_top"
+  },
+  "soc_multiclock_reset": {
+   "run_s": 12.3,
+   "group": "tb_soc_top"
+  },
+  "soc_pll_multiclock": {
+   "run_s": 11.5,
+   "group": "tb_soc_pll"
+  },
+  "soc_dft_scan": {
+   "run_s": 29.1,
+   "group": "tb_soc_pll"
+  },
+  "soc_jtag": {
+   "run_s": 22.1,
+   "group": "tb_soc_pll"
+  },
+  "soc_pmu_multiclock": {
+   "run_s": 32.1,
+   "group": "tb_soc_top"
+  },
+  "soc_integration": {
+   "run_s": 366.2,
+   "group": "tb_soc_top"
+  },
+  "soc_uart_boot": {
+   "run_s": 45.0,
+   "group": "tb_soc_top"
+  }
+ }
+}
