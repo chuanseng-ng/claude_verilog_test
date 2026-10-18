@@ -204,6 +204,10 @@
    "run_s": 12.4,
    "group": "tb_soc_top"
   },
+  "soc_pmu_iso_ack": {
+   "run_s": 12.0,
+   "group": "tb_soc_top"
+  },
   "soc_integration": {
    "run_s": 110.4,
    "group": "tb_soc_top"
