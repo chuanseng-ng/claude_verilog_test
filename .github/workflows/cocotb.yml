@@ -258,7 +258,10 @@ jobs:
           # test_soc_i2c_real_pads and test_soc_wdt_rst_en_release.
           # 2026-10-18 (merge of #316 onto #314): 829 = 832 - 3. 832 EXPECTED = 826 (#316 measured) + 6 shm5 tests;
           # confirm against the merged PR's sharded CI pass count.
-          PASS_FLOOR: '829'
+          # 2026-10-18 (bead h367, I2C functional coverage): 834 = 837 - 3. 837 EXPECTED = 832 (the line above) + 5 new tests in
+          # test_i2c.py (long transfers, repeated-START chain, CMD shapes, COUNT=255, RX-full timeout); the i2c suite itself
+          # measured 55 -> 60 locally. Confirm against this PR's CI pass count.
+          PASS_FLOOR: '834'
         run: |
           set -o pipefail
           n=$(find shards -mindepth 1 -maxdepth 1 -type d -name 'cocotb-soc-shard-*' | wc -l)
