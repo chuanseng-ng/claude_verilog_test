@@ -487,6 +487,14 @@ module dma_engine
             q_head         <= '0;
             q_tail         <= '0;
             q_count        <= '0;
+            // CTRL hardware-writeback flops (bead 0oc4): they MUST have a reset value. The register
+            // bank samples hw_wen_i/hw_wdata_i on the first edge after rst_n deasserts; without a
+            // reset these two held their power-up contents through the whole reset window, so in
+            // silicon (or an X-propagating simulator) CTRL could load garbage there, including
+            // CTRL.start (spurious DMA) and CTRL.soft_reset. Verilator zero-initialises flops, which
+            // is why no ordinary simulation shows it (test_dma_ctrl_hw_flops_reset_* deposit garbage).
+            hw_wen_i  [REG_CTRL]   <= 1'b0;
+            hw_wdata_i[REG_CTRL]   <= '0;
         end else begin
 
             // ------------------------------------------------------------------
