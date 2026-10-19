@@ -486,12 +486,17 @@ jobs:
       # per #319's merge) + 15 new tests (test_pmu +8, new suite soc_pmu_iso_ack +7). MEASURED on the pre-#314/#316 base: 838 =
       # 823 + 15 (soc_all_ci from clean, plain AND FPGA=1, 838 passed / 0 failed over 80 suite summaries). Confirm 852 against the
       # merged PR's sharded CI pass count.
+      # 2026-10-19 (bead 0oc4, dma_engine CTRL hw-write flop reset): 854 = 857 - 3. 857 EXPECTED = 852 (main, per the 3ogd note above) + 5 new test_dma
+      # tests (test_dma_ctrl_hw_flops_reset_*; no new suite). MEASURED locally: test_dma 18 -> 23 (plain and FPGA=1). Not measured: full soc_all_ci
+      # (a Sky130 PD run held the host). Other open PRs (#313, #320) also move this floor: re-base the number on merge.
       # 2026-10-19 (bead xkw5 leftovers, PR #320): 854 = 857 - 3. 857 MEASURED by the cocotb soc_all job of this PR on the
       # merge with #319 ('cocotb: 857 passed, 0 failed (floor 834), summed over 4 shards') = 837 + 20 new tests (timer, wdt, pwm, spi,
       # pmu, pll_apb_regs, dma, npu, 3 i2c, 2 x 2 for each of the two register-bank builds, test_soc_gpu_walk_both_masters).
       # 2026-10-19 (merge of main #317 into #320 xkw5): 869 = 872 - 3. 872 EXPECTED = 852 (main, #317 measured)
       # + xkw5's 20 new tests (857 measured on the 837 base); confirm against this merge's sharded CI pass count.
-      PASS_FLOOR: '869'
+      # 2026-10-19 (merge of main #321 into #320 xkw5): 874 = 877 - 3. 877 EXPECTED = 857 (main, #321 measured)
+      # + xkw5's 20 new tests (872 measured on the 852 base); confirm against this merge's sharded CI pass count.
+      PASS_FLOOR: '874'
       # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`), CI log-grep formula (`passed$`; the
       # expect_fail tests print "passed: failed as expected" and are NOT counted).
       # 2026-10-10 (bead a5ze slice 2): 229 = 232 - 3.  232 is the count of a full local
