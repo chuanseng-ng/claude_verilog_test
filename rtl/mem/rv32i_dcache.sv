@@ -431,17 +431,12 @@ module rv32i_dcache (
     // =========================================================================
     // Stall output
     // =========================================================================
+    // state_q[3] = every state that stalls unconditionally (see rv32i_cache_pkg.sv, bead r51p):
+    // LATCH, HIT_PENDING, REFILL, WRITEBACK, UNCACHED_RD/WR, FLUSH_SCAN, INVAL_SCAN.
     assign dc_stall_o =
+        state_q[3]                                ||   // unconditional-stall states
         (state_q == CS_IDLE        && dc_valid_i) ||   // Initiating SRAM read or uncached bypass
-        (state_q == CS_SRAM_LATCH)                ||   // Waiting for pipeline reg
-        (state_q == CS_HIT_PENDING)               ||   // Registering hit result
-        (state_q == CS_TAG_CHECK   && !hit_q)     ||   // Miss or still checking
-        (state_q == CS_WRITEBACK)                 ||   // Writing back dirty line (normal or flush)
-        (state_q == CS_REFILL)                    ||   // Refilling
-        (state_q == CS_UNCACHED_RD)               ||   // Uncached single-beat AXI read
-        (state_q == CS_UNCACHED_WR)               ||   // Uncached single-beat AXI write
-        (state_q == CS_FLUSH_SCAN)                ||   // Maintenance flush-all scan
-        (state_q == CS_INVAL_SCAN);                    // Maintenance invalidate-all scan
+        (state_q == CS_TAG_CHECK   && !hit_q);         // Miss or still checking                    // Maintenance invalidate-all scan
     // CS_TAG_CHECK + hit_q: stall=0
     // CS_DONE: stall=0
 
