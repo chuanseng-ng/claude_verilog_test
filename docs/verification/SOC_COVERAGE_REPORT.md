@@ -561,18 +561,18 @@ Added, category b:
 
 Same policy as #316 (tests where a stimulus is reasonable, waivers only for what is proven unreachable, no RTL change).
 Before = merged data of the #316 sharded run 39119364474 (triaged trees: **78.32 %**, 51696/66007 adjusted toggle points).
-After = sharded run 39177716842 of PR #320 on the merge with #319 (8 shards + CPU/GPU job, gate green, 0 stale waivers, 857 tests passed / 0 failed, `PASS_FLOOR` 834 -> 854).  Before submitting, the touched unit suites were also run instrumented locally and merged with the baseline: that gave 84.82 % (53638/63234) without the SoC-level GPU walk, which is in the CI figure.
+After = sharded run 39179705146 of PR #320 on the merge with #319 (final head) (8 shards + CPU/GPU job, gate green, 0 stale waivers, 857 tests passed / 0 failed, `PASS_FLOOR` 834 -> 854).  Before submitting, the touched unit suites were also run instrumented locally and merged with the baseline: that gave 84.82 % (53638/63234) without the SoC-level GPU walk, which is in the CI figure.
 
 
 | Triaged trees (54 modules) | Before (#316) | After (this PR, CI) |
 | :--- | ---: | ---: |
 | Line + branch | 99.85 % (2001/2004) | 99.85 % (2001/2004) |
-| Toggle, adjusted | 78.32 % (51696/66007) | **86.32 % (54594/63248)** |
+| Toggle, adjusted | 78.32 % (51696/66007) | **86.32 % (54598/63248)** |
 
 The modules whose toggle gaps this bead named are at 100 % (adjusted): `timer`, `watchdog_timer`, `pwm_controller`, `spi_controller`,
 `interrupt_controller`, `pmu`, `pll_apb_regs`, `trng`, `npu_top`, `i2c_controller`, `i2c_bit_engine`, `gpio_controller`,
 `axi_lite_register_bank`.  Left: `uart_controller` 647/649 (`rx_state_q[2]`, a state bit that #314's RX re-sync added to main after
-the baseline: new on main, not touched here), `pll_subsystem` 161/162 (see below), `dma_engine` 85.4 %, `apb4_register_bank` 94.8 %.
+the baseline: new on main, not touched here), `dma_engine` 85.4 %, `apb4_register_bank` 94.8 %.
 The SoC-level GPU walk moved `soc_top` 59.5 -> 66.5 %, `soc_bus` 58.7 -> 65.1 %, `axi4_crossbar` 71.6 -> 75.0 %,
 `axilite_to_axi4` 66.8 -> 78.6 % (the GPU instruction-fetch adapter).
 
