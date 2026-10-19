@@ -261,10 +261,23 @@ jobs:
           # 2026-10-18 (bead h367, I2C functional coverage): 834 = 837 - 3. 837 EXPECTED = 832 (the line above) + 5 new tests in
           # test_i2c.py (long transfers, repeated-START chain, CMD shapes, COUNT=255, RX-full timeout); the i2c suite itself
           # measured 55 -> 60 locally. Confirm against this PR's CI pass count.
+          # 2026-10-18 (bead 3ogd, PMU iso-ack handshake): 835 = 838 - 3. 838 MEASURED: soc_all_ci from clean (fresh SIM_BUILD_ROOT, -j4) on
+          # the merge of origin/main (#312, #315) into fix/pmu-iso-ack-3ogd, 838 passed / 0 failed over 80 suite summaries = the 816 above
+          # + 7 tests already on main since then (inferred from the difference, likely #305 crypto) + 15 new (test_pmu +8, soc_pmu_iso_ack +7).
+          # 2026-10-19 (bead 3ogd, PMU iso-ack handshake, merged onto #314/#316): 844 = 847 - 3. 847 EXPECTED = 832 (main, itself an
+          # expectation above) + 15 new tests (test_pmu +8, new suite soc_pmu_iso_ack +7). MEASURED on the pre-#314/#316 base: 838 =
+          # 823 + 15 (soc_all_ci from clean, plain AND FPGA=1, 838 passed / 0 failed over 80 suite summaries). Confirm 847 against the
+          # merged PR's sharded CI pass count.
+          # 2026-10-19 (bead 3ogd, PMU iso-ack handshake, merged onto #319): 849 = 852 - 3. 852 EXPECTED = 837 (main, CI-measured
+          # per #319's merge) + 15 new tests (test_pmu +8, new suite soc_pmu_iso_ack +7). MEASURED on the pre-#314/#316 base: 838 =
+          # 823 + 15 (soc_all_ci from clean, plain AND FPGA=1, 838 passed / 0 failed over 80 suite summaries). Confirm 852 against the
+          # merged PR's sharded CI pass count.
           # 2026-10-19 (bead xkw5 leftovers, PR #320): 854 = 857 - 3. 857 MEASURED by the cocotb soc_all job of this PR on the
           # merge with #319 ('cocotb: 857 passed, 0 failed (floor 834), summed over 4 shards') = 837 + 20 new tests (timer, wdt, pwm, spi,
           # pmu, pll_apb_regs, dma, npu, 3 i2c, 2 x 2 for each of the two register-bank builds, test_soc_gpu_walk_both_masters).
-          PASS_FLOOR: '854'
+          # 2026-10-19 (merge of main #317 into #320 xkw5): 869 = 872 - 3. 872 EXPECTED = 852 (main, #317 measured)
+          # + xkw5's 20 new tests (857 measured on the 837 base); confirm against this merge's sharded CI pass count.
+          PASS_FLOOR: '869'
         run: |
           set -o pipefail
           n=$(find shards -mindepth 1 -maxdepth 1 -type d -name 'cocotb-soc-shard-*' | wc -l)

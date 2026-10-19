@@ -418,7 +418,8 @@ if {[llength [get_ports -quiet tck_i]] > 0} {
 # mutually asynchronous roots. core_clk and cpu_clk are two independent top-level
 # references (GH #92) bridged ONLY by the declared CDC modules (async_axi_fifo
 # u_cpu_axi_cdc, apb_cdc_bridge u_apb_dbg_cdc / u_apb_pll2_cdc, and the cdc_sync /
-# cdc_reset_sync instances on the PMU/IRQ signals), so ordinary setup/hold between them would
+# cdc_reset_sync instances on the PMU/IRQ signals, including the iso-ack return
+# u_cpu_iso_ack_sync, bead 3ogd), so ordinary setup/hold between them would
 # only report fabricated violations on those synchroniser paths; tck is declared against both
 # (the TAP's outputs are static controls, DFT_ARCHITECTURE.md 15.5 crossing 2).
 #

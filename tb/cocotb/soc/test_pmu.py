@@ -5,7 +5,7 @@ DUT: tb_pmu (standalone wrapper, directly instantiates pmu)
 
 Register map (pmu.sv, ADDR_W=12 local byte offset):
   0x000  CTRL      [RW]  [1:0] pmu_mode_req (WMASK=0x3); reset 0x0 (NORMAL)
-  0x004  STATUS    [RO]  [0] cpu_domain_on [1] gpu_domain_on [2] busy
+  0x004  STATUS    [RO]  [0] cpu_domain_on [1] gpu_domain_on [2] busy [3] cpu_iso_ack_timeout (sticky)
   0x008  DOMAIN_EN [RO]  live per-signal bitmap (see pmu.sv header for bit map)
 
 Mode encoding: 00 NORMAL, 01 CPU_OFF, 10 GPU_OFF, 11 IDLE.
@@ -46,6 +46,24 @@ Tests:
   test_pmu_mid_sequence_mode_change_no_reversal
       GH #101 documented intent: CTRL write mid-descent does not reverse
       the in-flight sequence; it completes to OFF, then powers back up.
+
+Isolation handshake (bead 3ogd).  tb_pmu models the CPU-domain ack round trip with a
+configurable latency (ack_lat_i; 0 = pass-through, which is what every test above runs at),
+a stuck ack (ack_stuck_i) and a forced ack (ack_force_i / ack_force_val_i):
+  test_pmu_cpu_power_down_waits_for_ack
+      DOM_PD_ISO lasts exactly ack_lat+1 cycles, the clock gate / reset follow the ack by one /
+      two cycles, never precede it (latency sweep 0..10).
+  test_pmu_cpu_power_up_waits_for_ack_release
+      DOM_PU_ISO lasts exactly ack_lat+1 cycles (the 4-phase return-to-zero wait).
+  test_pmu_back_to_back_no_stale_ack
+      A power-down requested right after a power-up still waits its full ack latency.
+  test_pmu_iso_ack_timeout_*
+      A dead ack does not hang the sequencer: it proceeds after ISO_ACK_TIMEOUT cycles in either
+      wait, sets sticky STATUS[3], and the next CPU power-down clears it.
+  test_pmu_gpu_ignores_cpu_ack
+      The GPU walk is bit-identical whatever the CPU ack does.
+  test_pmu_reset_during_iso_wait / test_pmu_mid_wait_mode_flip_no_reversal
+      A reset restarts the wait counter; a mode flip during the wait does not reverse the walk.
 """
 
 import sys
@@ -117,6 +135,10 @@ async def _start_clock_and_reset(dut) -> None:
     clk_task = await cocotb.start(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
     _active_tasks.append(clk_task)
 
+    dut.ack_lat_i.value       = 0
+    dut.ack_stuck_i.value     = 0
+    dut.ack_force_i.value     = 0
+    dut.ack_force_val_i.value = 0
     dut.rst_n.value    = 0
     dut.psel.value     = 0
     dut.penable.value  = 0
@@ -522,6 +544,283 @@ async def test_pmu_mid_sequence_mode_change_no_reversal(dut):
         "mid-sequence mode change confirmed: in-flight power-down completes "
         "unreversed, power-up begins only after settling at OFF"
     )
+
+# ---------------------------------------------------------------------------
+# Isolation handshake (bead 3ogd)
+# ---------------------------------------------------------------------------
+
+ISO_ACK_TIMEOUT = 16  # tb_pmu's ISO_ACK_TIMEOUT parameter default
+STATUS_TO_BIT = 3
+
+DOM_ON, DOM_PD_SAVE, DOM_PD_ISO, DOM_PD_GATE, DOM_OFF = 0, 1, 2, 3, 4
+DOM_PU_RST, DOM_PU_CLK, DOM_PU_RESTORE, DOM_PU_ISO = 5, 6, 7, 8
+
+
+def _snap(dut, dom: int = 0) -> tuple:
+    """(dom_state_q, ack as the PMU sees it, cpu output tuple) at the current instant."""
+    return (
+        int(dut.u_dut.dom_state_q[dom].value),
+        int(dut.cpu_iso_ack_o.value),
+        _sample_cpu(dut),
+    )
+
+
+async def _trace(dut, n: int, dom: int = 0) -> list:
+    out = [_snap(dut, dom)]
+    for _ in range(n):
+        await RisingEdge(dut.clk)
+        out.append(_snap(dut, dom))
+    return out
+
+
+def _rle(states: list) -> list:
+    out: list = []
+    for s_ in states:
+        if out and out[-1][0] == s_:
+            out[-1][1] += 1
+        else:
+            out.append([s_, 1])
+    return [tuple(x) for x in out]
+
+
+async def _wait_state(dut, target: int, limit: int = 200, dom: int = 0) -> None:
+    for _ in range(limit):
+        if int(dut.u_dut.dom_state_q[dom].value) == target:
+            return
+        await RisingEdge(dut.clk)
+    raise AssertionError(f"dom_state_q[{dom}] never reached {target}")
+
+
+async def _status(bfm) -> int:
+    val, ok = await bfm.read(STAT_OFFSET)
+    assert ok, "STATUS read returned SLVERR"
+    return val
+
+
+async def _down(dut, bfm, lat: int, n: int = 0) -> list:
+    """CPU_OFF from a settled-ON domain; returns the per-cycle trace until well past OFF."""
+    dut.ack_lat_i.value = lat
+    assert await bfm.write(CTRL_OFFSET, MODE_CPU_OFF)
+    return await _trace(dut, n or (12 + lat))
+
+
+@cocotb.test()
+async def test_pmu_cpu_power_down_waits_for_ack(dut):
+    """DOM_PD_ISO lasts ack_lat+1 cycles; gate follows the first high ack by 1 cycle, reset by 2."""
+    for lat in (0, 1, 2, 5, 10):
+        _kill_active_tasks()
+        await _start_clock_and_reset(dut)
+        bfm = _make_apb_bfm(dut)
+        tr = await _down(dut, bfm, lat)
+        states = [t[0] for t in tr]
+        rle = _rle(states)
+        assert rle[:4] == [(DOM_ON, 2), (DOM_PD_SAVE, 1), (DOM_PD_ISO, lat + 1), (DOM_PD_GATE, 1)], (
+            f"lat={lat}: walk {rle}")
+        assert rle[4][0] == DOM_OFF, f"lat={lat}: walk {rle}"
+        g = states.index(DOM_PD_GATE)
+        o = states.index(DOM_OFF)
+        first_ack = [t[1] for t in tr].index(1)
+        assert first_ack == g - 1, f"lat={lat}: gate must follow the first high ack by one cycle"
+        assert o == first_ack + 2, f"lat={lat}: reset must follow the first high ack by two cycles"
+        # The ack is low through the wait and high on its last cycle.
+        iso_acks = [t[1] for t in tr if t[0] == DOM_PD_ISO]
+        assert iso_acks == [0] * lat + [1], f"lat={lat}: ack during PD_ISO {iso_acks}"
+        # Clock and reset outputs never move before the ack.
+        for i, t in enumerate(tr):
+            if i <= first_ack:
+                assert t[2][0] == 1 and t[2][2] == 1, f"lat={lat}: clk/rst moved before the ack @{i}"
+    dut._log.info("power-down waits exactly for the ack across latency 0/1/2/5/10")
+
+
+@cocotb.test()
+async def test_pmu_cpu_power_up_waits_for_ack_release(dut):
+    """DOM_PU_ISO lasts ack_lat+1 cycles (iso_en already low); ON only after the ack falls."""
+    for lat in (0, 1, 3, 10):
+        _kill_active_tasks()
+        await _start_clock_and_reset(dut)
+        bfm = _make_apb_bfm(dut)
+        await _down(dut, bfm, lat)
+        await _wait_state(dut, DOM_OFF)
+        assert await bfm.write(CTRL_OFFSET, MODE_NORMAL)
+        tr = await _trace(dut, 14 + lat)
+        states = [t[0] for t in tr]
+        rle = _rle(states)
+        assert rle[:6] == [(DOM_OFF, 2), (DOM_PU_RST, 1), (DOM_PU_CLK, 1), (DOM_PU_RESTORE, 1),
+                           (DOM_PU_ISO, lat + 1), (DOM_ON, rle[5][1])], f"lat={lat}: walk {rle}"
+        pu = [t for t in tr if t[0] == DOM_PU_ISO]
+        assert all(t[2][1] == 0 for t in pu), "iso_en must already be de-asserted in DOM_PU_ISO"
+        assert [t[1] for t in pu] == [1] * lat + [0], f"lat={lat}: ack during PU_ISO {[t[1] for t in pu]}"
+    dut._log.info("power-up waits exactly for the ack release across latency 0/1/3/10")
+
+
+@cocotb.test()
+async def test_pmu_back_to_back_no_stale_ack(dut):
+    """Power-down requested immediately after a power-up must not be satisfied by the old ack."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    lat = 10
+    await _down(dut, bfm, lat)
+    await _wait_state(dut, DOM_OFF)
+    assert await bfm.write(CTRL_OFFSET, MODE_NORMAL)
+    await _wait_state(dut, DOM_ON)
+    # No idle gap: the next request goes in the very cycle the domain reads ON.
+    assert await bfm.write(CTRL_OFFSET, MODE_CPU_OFF)
+    tr = await _trace(dut, 30)
+    pd = [t for t in tr if t[0] == DOM_PD_ISO]
+    assert pd, "second power-down never reached DOM_PD_ISO"
+    assert pd[0][1] == 0, "ack was still high on entry to DOM_PD_ISO: stale ack from the last cycle"
+    assert len(pd) == lat + 1, (
+        f"second power-down spent {len(pd)} cycles in DOM_PD_ISO, expected {lat + 1}: the wait was "
+        "satisfied by a stale ack")
+    dut._log.info("back-to-back power cycle: the second power-down waited its full ack latency")
+
+
+@cocotb.test()
+async def test_pmu_iso_ack_timeout_power_down(dut):
+    """A dead ack: proceed after ISO_ACK_TIMEOUT cycles, flag STATUS[3], clear it on the next
+    power-down, and give every wait the FULL timeout (the counter does not carry over)."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+
+    assert (await _status(bfm)) == 0x3, "STATUS[3] must be 0 at reset"
+
+    dut.ack_stuck_i.value = 1                      # ack frozen low
+    assert await bfm.write(CTRL_OFFSET, MODE_CPU_OFF)
+    tr = await _trace(dut, ISO_ACK_TIMEOUT + 12)
+    rle = _rle([t[0] for t in tr])
+    assert rle[2] == (DOM_PD_ISO, ISO_ACK_TIMEOUT), f"timeout wait length: {rle}"
+    assert [r[0] for r in rle[:5]] == [DOM_ON, DOM_PD_SAVE, DOM_PD_ISO, DOM_PD_GATE, DOM_OFF], rle
+    assert (await _status(bfm)) == 0b1010, "STATUS[3] must be set (cpu off, gpu on, timeout)"
+
+    # Up with the ack still low: PU_ISO is a zero-extra-cycle wait, the flag stays (sticky).
+    assert await bfm.write(CTRL_OFFSET, MODE_NORMAL)
+    tr = await _trace(dut, 14)
+    assert dict(_rle([t[0] for t in tr])).get(DOM_PU_ISO) == 1
+    await _wait_state(dut, DOM_ON)
+    assert (await _status(bfm)) >> STATUS_TO_BIT & 1, "STATUS[3] must be sticky through the power-up"
+
+    # Same again: a second dead-ack wait gets the full timeout and re-flags.
+    assert await bfm.write(CTRL_OFFSET, MODE_CPU_OFF)
+    tr = await _trace(dut, ISO_ACK_TIMEOUT + 12)
+    assert _rle([t[0] for t in tr])[2] == (DOM_PD_ISO, ISO_ACK_TIMEOUT), "counter carried over"
+    await _wait_state(dut, DOM_OFF)
+    assert await bfm.write(CTRL_OFFSET, MODE_NORMAL)
+    await _wait_state(dut, DOM_ON)
+
+    # A healthy power-down clears the flag when it begins.
+    dut.ack_stuck_i.value = 0
+    dut.ack_lat_i.value = 3
+    assert await bfm.write(CTRL_OFFSET, MODE_CPU_OFF)
+    tr = await _trace(dut, 20)
+    assert _rle([t[0] for t in tr])[2] == (DOM_PD_ISO, 4), "healthy power-down must wait lat+1"
+    await _wait_state(dut, DOM_OFF)
+    assert (await _status(bfm)) == 0b0010, "STATUS[3] must clear when the next power-down begins"
+
+
+@cocotb.test()
+async def test_pmu_iso_ack_timeout_power_up(dut):
+    """The power-up wait (ack must FALL) times out too, and flags STATUS[3]."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    await _down(dut, bfm, 2)
+    await _wait_state(dut, DOM_OFF)
+    assert not (await _status(bfm)) >> STATUS_TO_BIT & 1, "healthy power-down must not flag"
+
+    dut.ack_force_val_i.value = 1                  # the ack never falls
+    dut.ack_force_i.value = 1
+    assert await bfm.write(CTRL_OFFSET, MODE_NORMAL)
+    tr = await _trace(dut, ISO_ACK_TIMEOUT + 14)
+    rle = _rle([t[0] for t in tr])
+    pu = [r for r in rle if r[0] == DOM_PU_ISO]
+    assert pu == [(DOM_PU_ISO, ISO_ACK_TIMEOUT)], f"PU_ISO timeout length: {rle}"
+    assert rle[-1][0] == DOM_ON, rle
+    assert (await _status(bfm)) >> STATUS_TO_BIT & 1, "PU_ISO timeout must set STATUS[3]"
+
+
+@cocotb.test()
+async def test_pmu_gpu_ignores_cpu_ack(dut):
+    """The GPU walk is bit-identical whatever the CPU ack does (same clock, no ack)."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    dut.ack_lat_i.value = 10
+    dut.ack_force_val_i.value = 0
+    dut.ack_force_i.value = 1                      # CPU ack never comes
+    assert await bfm.write(CTRL_OFFSET, MODE_IDLE)
+    tr = await _trace(dut, 8, dom=1)
+    rle = _rle([t[0] for t in tr])
+    assert rle[:5] == [(DOM_ON, 2), (DOM_PD_SAVE, 1), (DOM_PD_ISO, 1), (DOM_PD_GATE, 1),
+                       (DOM_OFF, rle[4][1])], f"GPU walk disturbed by the CPU ack: {rle}"
+    # While the CPU is still waiting, the GPU is already off.
+    assert int(dut.u_dut.dom_state_q[0].value) == DOM_PD_ISO
+    await _wait_state(dut, DOM_OFF, dom=0)
+    assert await bfm.write(CTRL_OFFSET, MODE_NORMAL)
+    tr = await _trace(dut, 10, dom=1)
+    rle = _rle([t[0] for t in tr])
+    assert rle[:6] == [(DOM_OFF, 2), (DOM_PU_RST, 1), (DOM_PU_CLK, 1), (DOM_PU_RESTORE, 1),
+                       (DOM_PU_ISO, 1), (DOM_ON, rle[5][1])], f"GPU power-up disturbed: {rle}"
+
+
+@cocotb.test()
+async def test_pmu_reset_during_iso_wait(dut):
+    """A reset restarts the wait and clears the sticky flag (reset-clear of STATUS[3] included)."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    dut.ack_stuck_i.value = 1
+
+    # Leg 1: a timeout sets the flag, a reset clears it (a flag with no reset would survive).
+    assert await bfm.write(CTRL_OFFSET, MODE_CPU_OFF)
+    await _wait_state(dut, DOM_OFF, limit=ISO_ACK_TIMEOUT + 20)
+    assert (await _status(bfm)) >> STATUS_TO_BIT & 1, "precondition: the timeout must set STATUS[3]"
+    dut.rst_n.value = 0
+    await ClockCycles(dut.clk, 2)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 2)
+    assert (await _status(bfm)) == 0x3, "reset must clear STATUS[3] and return both domains to ON"
+
+    # Leg 2: a reset in the middle of a wait restarts the counter.
+    assert await bfm.write(CTRL_OFFSET, MODE_CPU_OFF)
+    await _wait_state(dut, DOM_PD_ISO)
+    await ClockCycles(dut.clk, 8)                  # counter now ~8 of 16
+    assert int(dut.u_dut.dom_state_q[0].value) == DOM_PD_ISO
+
+    dut.rst_n.value = 0
+    await ClockCycles(dut.clk, 2)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 2)
+    assert int(dut.u_dut.dom_state_q[0].value) == DOM_ON, "reset must return the domain to ON"
+
+    assert await bfm.write(CTRL_OFFSET, MODE_CPU_OFF)
+    tr = await _trace(dut, ISO_ACK_TIMEOUT + 12)
+    assert _rle([t[0] for t in tr])[2] == (DOM_PD_ISO, ISO_ACK_TIMEOUT), (
+        "the wait counter survived the reset: the post-reset wait was shorter than the timeout")
+    await _wait_state(dut, DOM_OFF)
+    assert (await _status(bfm)) >> STATUS_TO_BIT & 1
+
+
+@cocotb.test()
+async def test_pmu_mid_wait_mode_flip_no_reversal(dut):
+    """CTRL=NORMAL written while the CPU waits for the ack does not reverse the power-down."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    lat = 10
+    dut.ack_lat_i.value = lat
+    assert await bfm.write(CTRL_OFFSET, MODE_CPU_OFF)
+    await _wait_state(dut, DOM_PD_ISO)
+    await ClockCycles(dut.clk, 2)
+    assert await bfm.write(CTRL_OFFSET, MODE_NORMAL)       # flip mid-wait
+    tr = await _trace(dut, 40)
+    rle = _rle([t[0] for t in tr])
+    order = [r[0] for r in rle]
+    assert order[:5] == [DOM_PD_ISO, DOM_PD_GATE, DOM_OFF, DOM_PU_RST, DOM_PU_CLK], order
+    assert DOM_ON not in order[:order.index(DOM_OFF)], f"reversed before OFF: {order}"
+    assert order[-1] == DOM_ON
+
 
 
 # -- Register walk (bead 7ovx): reset/idle values, RO/RW masks, byte lanes, unmapped words ------
