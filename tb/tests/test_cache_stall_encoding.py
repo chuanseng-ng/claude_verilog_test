@@ -18,6 +18,8 @@ cocotb cache suites and by the RTL-arm differential in tools/verif/gls/sky130.
 import re
 from pathlib import Path
 
+# pylint: disable=missing-function-docstring  # descriptive test names
+
 RTL = Path(__file__).resolve().parents[2] / "rtl" / "mem"
 
 # States that stall the pipeline in every cycle they are occupied.
@@ -75,7 +77,10 @@ def test_stall_outputs_use_state_bit3():
 
 def test_icache_sram_read_enable_independent_of_ic_valid():
     ic = (RTL / "rv32i_icache.sv").read_text()
-    for block in ("SRAM combinational control — Tag SRAM", "SRAM combinational control — Data SRAMs"):
+    for block in (
+        "SRAM combinational control — Tag SRAM",
+        "SRAM combinational control — Data SRAMs",
+    ):
         body = ic.split(block, 1)[1].split("endcase", 1)[0]
         idle = body.split("CS_IDLE:", 1)[1]
         assert "ic_valid_i" not in idle, f"{block}: CS_IDLE read enable still gated by ic_valid_i"
