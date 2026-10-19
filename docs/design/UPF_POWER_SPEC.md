@@ -566,6 +566,14 @@ fails if a top-level instance is added to or removed from `soc_top` without upda
   both SRAM arms. AXI address/data/control buses stay unclamped because each is qualified by a clamped
   valid and is don't-care once valid is 0. Every other output of `u_cpu` / `u_gpu` is classified in the
   UPF (`payload`, `slave_response`, `observability`) so a new output cannot escape review.
+- **PMU outputs are flop Q pins (bead `ktwt`).** `pmu_*_clk_en` / `iso_en` / `rst_n` / `ret_*` are each
+  registered inside `pmu.sv` from the decode of the *next* FSM state, so they appear in exactly the
+  cycle the earlier combinational decode showed them (the sequence above and `test_pmu`'s per-cycle
+  expectations are unchanged: zero added latency). They feed `cdc_sync` D pins, the asynchronous clear
+  of `u_cpu_pmu_rst_sync` and the GPU async reset / clamp select, where a decode glitch on the 4-bit
+  binary state (possible on 4 of the 9 transitions, including a runt reset on `DOM_PU_RESTORE` ->
+  `DOM_PU_ISO`) would be a real event. Zero-delay simulation cannot show a glitch, so
+  `tools/verif/check_registered_outputs.py` proves it on the netlist (`tb/tests/test_pmu_registered_outputs.py`).
 - **Retention: none.** The old header claim that state is "rebuilt from SRAM on wakeup" was never
   true. `pmu.sv` emits `ret_save` / `ret_restore` in order but `soc_top` leaves them unconnected.
   See `docs/POWER_DOMAIN_EVALUATION.md` section 3 for what survives a PMU off/on cycle.
@@ -603,12 +611,20 @@ with the intent of the `SCAN` state. It is documented, not changed (follow-up be
 
 ### Known gaps and follow-ups
 
-1. **Isolation-versus-reset ordering has no handshake.** The PMU spaces its actions one `core_clk`
-   cycle apart (down: save, isolate, gate, reset; up: reset release, ungate, restore, de-isolate).
-   The CPU clamp control passes a 2-flop synchroniser into `cpu_core_clk` while the reset reaches
-   `u_cpu` through a `cdc_reset_sync` with asynchronous assertion. "Isolate before reset asserts"
-   holds only because two `cpu_core_clk` edges (1.56 ns at 1282 MHz) are shorter than two `core_clk`
-   cycles (3.5 ns at 571 MHz). A slower CPU clock or a deeper synchroniser would reorder them.
+1. **Isolation-versus-reset ordering (was: no handshake; FIXED, bead `3ogd`).** The PMU walks the UPF
+   order (down: save, isolate, gate, reset; up: reset release, ungate, restore, de-isolate). The CPU
+   clamp control passes a 2-flop synchroniser into `cpu_core_clk` while the reset reaches `u_cpu`
+   through a `cdc_reset_sync` with asynchronous assertion, so with the actions merely spaced one
+   `core_clk` cycle apart "isolate before reset asserts" held only while two `cpu_core_clk` edges were
+   shorter than two `core_clk` cycles (it failed at a CPU clock 3x slower). `soc_top.u_cpu_iso_ack_sync`
+   now synchronises the CPU-domain clamp control back into `core_clk` (`pmu_cpu_iso_ack`) and the CPU
+   `DOM_PD_ISO` state waits for it before the clock gate and the reset; `DOM_PU_ISO` waits for it to
+   fall (return-to-zero, which also stops a stale ack from satisfying the next power-down). Power-up
+   needs no ack for the iso-release-vs-reset-release order: the clamp's consumers are clocked by
+   `cpu_gated_clk`, which cannot tick before the reset release is observed (`cpu_gated_clk_en` includes
+   `pmu_cpu_rst_n_cpu_sync`). The GPU needs none (same clock, the clamp control is the PMU flop). The step order of
+   this UPF is unchanged. A dead CPU clock (CPU PLL unlocked) never acks: `ISO_ACK_TIMEOUT`
+   (255 `core_clk` cycles) lets the PMU proceed and sets `STATUS[3]`.
 2. **Slave-side responses are not isolated** (`u_gpu` AXI-Lite `rvalid`, `awready`, ... and `u_cpu` debug
    APB `pready` ...). With a really removed supply they would drive X into the always-on ring.
 3. **Scan does not force the clamps off** (table above).

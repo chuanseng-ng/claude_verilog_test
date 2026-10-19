@@ -136,4 +136,5 @@ proc apply_constraints {period period_cpu rdir} {
     bound_capture_d "*u_apb_dbg_cdc*req_q*"  $period_cpu clk_i     "u_apb_dbg_cdc req_q (s->m)"
     bound_capture_d "*u_apb_dbg_cdc*ack_q*"  $period     cpu_clk_i "u_apb_dbg_cdc ack_q (m->s)"
     bound_capture_d "*u_cpu_clk_dis_sync*"   $period_cpu clk_i     "u_cpu_clk_dis_sync single-bit CDC"
+    bound_capture_d "*u_cpu_iso_ack_sync*"   $period     cpu_clk_i "u_cpu_iso_ack_sync single-bit CDC (m->s, bead 3ogd)"
 }

@@ -1,0 +1,4 @@
+# Functional-coverage waivers (bead h367).  item | bin | category | justification
+# category is always b (unreachable by design); a bin that is merely not hit yet needs a test.
+# A cross bin is the labels joined by commas.  A waiver on a bin that is hit, or that is not in the
+# model, is stale and fails the gate.

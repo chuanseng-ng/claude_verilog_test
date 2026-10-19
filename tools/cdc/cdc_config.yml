@@ -204,6 +204,14 @@ required_synchronisers:
       uart_rx_i is an asynchronous pad input; uart_controller.sv synchronises it
       through cdc_sync u_uart_rx_sync (RESET_VAL=1, idle-high) before the
       receive FSM sees it (bead xtaa).
+  # Bead 3ogd: the PMU's isolation-ack RETURN crossing (cpu_core_clk -> core_clk). Without it the
+  # ack would be an unsynchronised cpu-domain signal sampled by the PMU. A scratch copy clocking
+  # u_cpu_iso_ack_sync by cpu_core_clk (no crossing left) must turn this entry red.
+  - id: pmu-cpu-iso-ack-sync
+    dest: '^u_cpu_iso_ack_sync\.sync_q\[0\]:D$'
+    reason: >
+      soc_top.sv u_cpu_iso_ack_sync carries pmu_cpu_iso_en_sync (the CPU-domain clamp control)
+      back into core_clk as pmu.cpu_iso_ack_i, the 4-phase partner of cpu_iso_en_o.
   # DFT Stage 1b (j41m.3): glitch-free test-clock switch handshake synchronisers. Latch-launched,
   # so cdc_snitch classes them `BAD magic` (see the comment at reset_domains / tck_i); `latch_launched`
   # lets the gate accept that class for these entries only.

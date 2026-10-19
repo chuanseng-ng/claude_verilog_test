@@ -53,6 +53,8 @@ import sys
 from pathlib import Path
 
 import cocotb
+from bfm.i2c_slave import I2CSlave
+from i2c_cov import COV
 from cocotb.triggers import ReadOnly, RisingEdge
 from soc_clocks import drive_soc_reset, start_soc_clocks
 from sram_backdoor import sram_mem
@@ -70,6 +72,22 @@ from tb.cocotb.soc.i2c_fw.i2c_fw_addrs import (  # noqa: E402
     P1_CMD_PC,
     P1_DONE_PC,
     P2_ARMED_PC,
+    PAD_ADDR,
+    PAD_DATA,
+    PAD_FAIL_PC,
+    PAD_NACK_ADDR,
+    PAD_PASS_PC,
+    PAD_PTR,
+    PAD_READY_PC,
+    PAD_RES_T1_STAT,
+    PAD_RES_T2A_STAT,
+    PAD_RES_T2B_STAT,
+    PAD_RES_T2_RX,
+    PAD_RES_T3_STAT,
+    PAD_RES_T3_STATUS,
+    PAD_T1_DONE_PC,
+    PAD_T2_DONE_PC,
+    PAD_T3_DONE_PC,
     PASS_PC,
     RES_BASE_WI,
     RES_CLKDIV_READBK,
@@ -352,3 +370,128 @@ async def test_soc_i2c(dut):
         f"0x{BYTE1:02x}"
     )
     assert res(RES_P1_STATUS) & 0x1F == 0, f"STATUS after phase 1: 0x{res(RES_P1_STATUS):x}"
+
+    # Functional coverage (bead h367): each fact below was asserted above.
+    for path in ("reset_values", "loopback_write", "loopback_read", "irq_to_cpu"):
+        COV.soc(path)
+
+
+# ---------------------------------------------------------------------------
+# Real-pad transactions (bead 4pl8)
+# ---------------------------------------------------------------------------
+_PAD_FW_HEX = str(Path(__file__).parent / "i2c_fw" / "i2c_pad_fw.hex")
+
+# Three polled transactions at CLKDIV 3 (one SCL bit = 16 clk): ~90 bit-times plus MMIO polling
+# over the fabric and the 2000-cycle D-cache-flush delay loop. Headroom for fabric latency.
+I2C_PAD_TIMEOUT_CYCLES = 120_000
+
+
+@cocotb.test()
+async def test_soc_i2c_real_pads(dut):
+    """Drive the real open-drain pads through the whole SoC against a register-file slave.
+
+    `test_soc_i2c` stays in loopback, so until now no SoC test ever moved i2c_*_oe_o or took
+    i2c_*_i low (bead 4pl8).  Here CTRL.LOOPBACK = 0 and tb/cocotb/bfm/i2c_slave.py closes the
+    wired-AND on the tb_soc_top pins.  Firmware (i2c_pad_fw.hex) runs a 2-byte register write, a
+    pointer write + repeated-START read-back, and a NACKed address, scoring IRQ_STAT / RX_DATA
+    itself.  The testbench independently scores:
+
+      * the slave's own event log -- the exact START/ADDR/WR/RSTART/RD/STOP sequence on the bus;
+      * the slave's register file holds the byte the master wrote (the data left the SoC);
+      * the master drove SCL and SDA low and released them again (oe both ways) and honoured the
+        bus: the slave's clock-stretch / dead-pin protocol checks stayed clean;
+      * the interrupt path stayed silent (I2C_IRQ_EN is 0 for the whole run).
+    """
+    await _setup(dut, _PAD_FW_HEX)
+    slave = I2CSlave(dut, "i2c_", dut.clk_i, address=PAD_ADDR)
+    COV.attach(None, slave)  # bus-level functional coverage of the real-pad traffic (bead h367)
+    _active_tasks.append(slave.start())
+
+    seen = {"ready": False, "t1": False, "t2": False, "t3": False}
+    marks = {PAD_READY_PC: "ready", PAD_T1_DONE_PC: "t1", PAD_T2_DONE_PC: "t2", PAD_T3_DONE_PC: "t3"}
+    saw_pass = False
+    recent: list = []
+    scl_oe_edges = [0, 0]  # rises, falls
+    sda_oe_edges = [0, 0]
+    prev = (0, 0)
+    irq_high = 0
+
+    for cycle_idx in range(I2C_PAD_TIMEOUT_CYCLES):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        scl_oe, sda_oe = _i(dut.i2c_scl_oe_o), _i(dut.i2c_sda_oe_o)
+        for k, (cur, old) in enumerate(((scl_oe, prev[0]), (sda_oe, prev[1]))):
+            if cur != old:
+                (scl_oe_edges if k == 0 else sda_oe_edges)[0 if cur else 1] += 1
+        prev = (scl_oe, sda_oe)
+        if _i(dut.u_soc.i2c_irq) or _i(dut.u_soc.ext_irq):
+            irq_high += 1
+
+        if dut.commit_valid_o.value:
+            pc = int(dut.commit_pc_o.value)
+            recent = (recent + [pc])[-16:]
+            assert pc != PAD_FAIL_PC, (
+                f"firmware reached FAIL_PC at 0x{pc:08x} -- a real-pad transaction check failed "
+                f"(IRQ_STAT / RX_DATA / STATUS, or a bounded poll timed out); slave events: "
+                f"{slave.events}"
+            )
+            if pc in marks:
+                seen[marks[pc]] = True
+            if pc == PAD_PASS_PC:
+                saw_pass = True
+                break
+
+    assert saw_pass, (
+        f"PAD_PASS_PC never committed within {I2C_PAD_TIMEOUT_CYCLES} cycles; recent PCs "
+        + " ".join(f"0x{p:08x}" for p in recent)
+        + f"; slave events: {slave.events}"
+    )
+    for name, ok in seen.items():
+        assert ok, f"marker {name} was never committed"
+
+    # ---- the bus as the slave saw it ------------------------------------------------------------
+    want = [
+        ("START",),
+        ("ADDR", PAD_ADDR, 0, True),
+        ("WR", PAD_PTR, True),
+        ("WR", PAD_DATA, True),
+        ("STOP",),
+        ("START",),
+        ("ADDR", PAD_ADDR, 0, True),
+        ("WR", PAD_PTR, True),
+        ("RSTART",),
+        ("ADDR", PAD_ADDR, 1, True),
+        ("RD", PAD_DATA, False),
+        ("STOP",),
+        ("START",),
+        ("ADDR", PAD_NACK_ADDR, 0, False),
+        ("STOP",),
+    ]
+    assert slave.events == want, f"bus events {slave.events}"
+    assert slave.mem[PAD_PTR] == PAD_DATA, (
+        f"slave register file holds 0x{slave.mem[PAD_PTR]:02x} at 0x{PAD_PTR:02x}, expected "
+        f"0x{PAD_DATA:02x}"
+    )
+    slave.assert_clean()
+
+    # ---- the pads really moved, both ways --------------------------------------------------------
+    assert scl_oe_edges[0] > 20 and scl_oe_edges[1] > 20, f"SCL oe edges (rise, fall) {scl_oe_edges}"
+    assert sda_oe_edges[0] > 10 and sda_oe_edges[1] > 10, f"SDA oe edges (rise, fall) {sda_oe_edges}"
+    assert irq_high == 0, f"i2c_irq/ext_irq asserted for {irq_high} cycle(s) with I2C_IRQ_EN == 0"
+
+    # ---- backdoor SRAM: what the firmware read -----------------------------------------------------
+    sram = sram_mem(dut)
+
+    def res(idx: int) -> int:
+        return int(sram[RES_BASE_WI + idx].value)
+
+    assert res(PAD_RES_T1_STAT) & 0xF == 0x1, f"T1 IRQ_STAT 0x{res(PAD_RES_T1_STAT):x}"
+    assert res(PAD_RES_T2A_STAT) & 0xF == 0x1, f"T2a IRQ_STAT 0x{res(PAD_RES_T2A_STAT):x}"
+    assert res(PAD_RES_T2B_STAT) & 0xF == 0x1, f"T2b IRQ_STAT 0x{res(PAD_RES_T2B_STAT):x}"
+    assert res(PAD_RES_T2_RX) == PAD_DATA, f"RX_DATA 0x{res(PAD_RES_T2_RX):02x}"
+    assert res(PAD_RES_T3_STAT) & 0xF == 0x3, f"T3 IRQ_STAT 0x{res(PAD_RES_T3_STAT):x} (done|nack)"
+    assert res(PAD_RES_T3_STATUS) & 0x7 == 0x4, f"T3 STATUS 0x{res(PAD_RES_T3_STATUS):x} (nack only)"
+
+    # Functional coverage (bead h367): the events, register file and IRQ_STAT checks above passed.
+    for path in ("real_pad_write", "real_pad_read", "real_pad_addr_nack"):
+        COV.soc(path)

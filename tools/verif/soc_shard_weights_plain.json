@@ -1,0 +1,246 @@
+{
+ "_comment": [
+  "Per-suite cost model for tools/verif/soc_shards.py, PLAIN (uninstrumented) soc_all_ci run, the",
+  "one cocotb.yml shards (bead 9ayu.2).  Same format as soc_shard_weights.json (instrumented).",
+  "Source: the 'Run soc_all' step log of cocotb.yml job 117623384863 (run 39109839710, 4-vCPU",
+  "ubuntu-latest, warm ccache, 2081 s of make).  A suite's run_s is the wall time between the end",
+  "of the previous results block and the end of its own, so a Verilator build it triggered is",
+  "included (warm ccache: a few seconds); `group` build_s is a COLD-cache estimate (a PR that",
+  "edits rtl/ recompiles the model once per shard) and only steers how builds are shared.",
+  "soc_uart_boot (709 s as one module) is split in the three SOC_CI_SPLITS units in the same",
+  "proportions as the instrumented measurement (890:710:390), since the per-test split was only",
+  "measured instrumented.  Suites absent here cost default_run_s, so a new suite never breaks the",
+  "sharding.  Runner speed varies ~2x between runs (soc_uart_boot: 709 s here, 1394 s in run",
+  "39113206673); the weights only need to be proportional.  Refresh from a newer job log when the",
+  "printed per-shard estimate drifts from the measured shard times.  The fourth slice,",
+  "test_load_verify_8n1_back_to_back (shm5, #314), is 317 s x 384.2/448.7: its plain-sim time",
+  "measured in #314's cocotb run 39113206673, scaled by test_load_verify_jump_and_run's ratio."
+ ],
+ "default_run_s": 10.0,
+ "groups": {
+  "tb_soc_top": {
+   "build_s": 60.0
+  },
+  "tb_soc_pll": {
+   "build_s": 60.0
+  }
+ },
+ "suites": {
+  "crossbar": {
+   "run_s": 8.7
+  },
+  "register_bank": {
+   "run_s": 9.2
+  },
+  "axil_interconnect": {
+   "run_s": 5.5
+  },
+  "axil_apb_fabric": {
+   "run_s": 5.6
+  },
+  "sram_controller": {
+   "run_s": 16.6
+  },
+  "sram_controller:SRAM_TARGET=sky130": {
+   "run_s": 5.5
+  },
+  "axi4_to_axilite": {
+   "run_s": 5.4
+  },
+  "axilite_to_axi4": {
+   "run_s": 5.3
+  },
+  "boot_rom": {
+   "run_s": 9.0
+  },
+  "dma": {
+   "run_s": 7.8
+  },
+  "irq": {
+   "run_s": 5.4
+  },
+  "timer": {
+   "run_s": 5.4
+  },
+  "uart": {
+   "run_s": 7.4
+  },
+  "spi": {
+   "run_s": 8.1
+  },
+  "apb4_register_bank": {
+   "run_s": 9.3
+  },
+  "axil_to_apb": {
+   "run_s": 5.4
+  },
+  "pmu": {
+   "run_s": 5.5
+  },
+  "gpio": {
+   "run_s": 5.7
+  },
+  "pwm": {
+   "run_s": 5.6
+  },
+  "wdt": {
+   "run_s": 6.0
+  },
+  "trng": {
+   "run_s": 11.7
+  },
+  "i2c": {
+   "run_s": 123.3
+  },
+  "crypto": {
+   "run_s": 12.9
+  },
+  "npu": {
+   "run_s": 8.7
+  },
+  "apb_interconnect": {
+   "run_s": 44.4
+  },
+  "async_axi_fifo": {
+   "run_s": 8.0
+  },
+  "apb_cdc_bridge": {
+   "run_s": 6.8
+  },
+  "cdc_reset_sync_scan": {
+   "run_s": 5.7
+  },
+  "cdc_sync": {
+   "run_s": 5.7
+  },
+  "cdc_gray_fifo": {
+   "run_s": 12.0
+  },
+  "periph_sync_stages": {
+   "run_s": 17.4
+  },
+  "clock_gate_scan": {
+   "run_s": 5.6
+  },
+  "dft_muxes": {
+   "run_s": 5.6
+  },
+  "jtag_tap": {
+   "run_s": 28.2
+  },
+  "dft_clk_switch": {
+   "run_s": 16.1
+  },
+  "dft_ctrl": {
+   "run_s": 6.6
+  },
+  "soc_boot": {
+   "run_s": 26.5,
+   "group": "tb_soc_top"
+  },
+  "soc_periph": {
+   "run_s": 18.7,
+   "group": "tb_soc_top"
+  },
+  "soc_coherency": {
+   "run_s": 104.2,
+   "group": "tb_soc_top"
+  },
+  "soc_cpu_gpu": {
+   "run_s": 112.1,
+   "group": "tb_soc_top"
+  },
+  "soc_gpio": {
+   "run_s": 17.4,
+   "group": "tb_soc_top"
+  },
+  "soc_pwm": {
+   "run_s": 17.3,
+   "group": "tb_soc_top"
+  },
+  "soc_wdt": {
+   "run_s": 22.9,
+   "group": "tb_soc_top"
+  },
+  "soc_trng": {
+   "run_s": 21.8,
+   "group": "tb_soc_top"
+  },
+  "soc_i2c": {
+   "run_s": 38.7,
+   "group": "tb_soc_top"
+  },
+  "soc_crypto": {
+   "run_s": 35.8,
+   "group": "tb_soc_top"
+  },
+  "soc_npu": {
+   "run_s": 22.9,
+   "group": "tb_soc_top"
+  },
+  "soc_pll": {
+   "run_s": 30.2,
+   "group": "tb_soc_pll"
+  },
+  "soc_multiclock": {
+   "run_s": 71.6,
+   "group": "tb_soc_top"
+  },
+  "soc_multiclock_reset": {
+   "run_s": 7.4,
+   "group": "tb_soc_top"
+  },
+  "soc_pll_multiclock": {
+   "run_s": 7.1,
+   "group": "tb_soc_pll"
+  },
+  "soc_dft_scan": {
+   "run_s": 11.4,
+   "group": "tb_soc_pll"
+  },
+  "soc_jtag": {
+   "run_s": 19.2,
+   "group": "tb_soc_pll"
+  },
+  "soc_pmu_multiclock": {
+   "run_s": 12.4,
+   "group": "tb_soc_top"
+  },
+  "soc_pmu_iso_ack": {
+   "run_s": 12.0,
+   "group": "tb_soc_top"
+  },
+  "soc_integration": {
+   "run_s": 110.4,
+   "group": "tb_soc_top"
+  },
+  "soc_uart_boot:TESTCASE=test_load_verify_jump_and_run": {
+   "run_s": 317.0,
+   "group": "tb_soc_top"
+  },
+  "soc_uart_boot:TESTCASE=test_load_verify_8n1_back_to_back": {
+   "run_s": 271.4,
+   "group": "tb_soc_top"
+  },
+  "soc_uart_boot:TESTCASE=test_bad_crc_is_nakked_and_memory_untouched,test_refusals_nak_with_the_right_code,test_banner_and_info_default_115200_at_50mhz": {
+   "run_s": 252.9,
+   "group": "tb_soc_top"
+  },
+  "soc_uart_boot:TESTCASE=test_table_sum_is_independent,test_banner_and_info_sim_divisor,test_oversized_length_nak_then_resync,test_truncated_frame_times_out_and_recovers,test_line_noise_before_sof_is_ignored,test_autoboot_runs_preloaded_image,test_autoboot_refuses_empty_sram_and_stays_serviceable": {
+   "run_s": 138.9,
+   "group": "tb_soc_top"
+  },
+  "mbist_fi_equiv": {
+   "run_s": 13.2
+  },
+  "mbist_ctrl": {
+   "run_s": 89.4
+  },
+  "mbist_tap": {
+   "run_s": 46.5
+  },
+  "mbist_soc_slice": {
+   "run_s": 18.9
+  }
+ }
+}
