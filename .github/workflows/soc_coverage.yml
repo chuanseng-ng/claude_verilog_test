@@ -486,7 +486,10 @@ jobs:
       # per #319's merge) + 15 new tests (test_pmu +8, new suite soc_pmu_iso_ack +7). MEASURED on the pre-#314/#316 base: 838 =
       # 823 + 15 (soc_all_ci from clean, plain AND FPGA=1, 838 passed / 0 failed over 80 suite summaries). Confirm 852 against the
       # merged PR's sharded CI pass count.
-      PASS_FLOOR: '849'
+      # 2026-10-19 (bead 0oc4, dma_engine CTRL hw-write flop reset): 854 = 857 - 3. 857 EXPECTED = 852 (main, per the 3ogd note above) + 5 new test_dma
+      # tests (test_dma_ctrl_hw_flops_reset_*; no new suite). MEASURED locally: test_dma 18 -> 23 (plain and FPGA=1). Not measured: full soc_all_ci
+      # (a Sky130 PD run held the host). Other open PRs (#313, #320) also move this floor: re-base the number on merge.
+      PASS_FLOOR: '854'
       # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`), CI log-grep formula (`passed$`; the
       # expect_fail tests print "passed: failed as expected" and are NOT counted).
       # 2026-10-10 (bead a5ze slice 2): 229 = 232 - 3.  232 is the count of a full local
