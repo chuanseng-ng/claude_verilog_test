@@ -491,12 +491,17 @@ jobs:
       # per #319's merge) + 15 new tests (test_pmu +8, new suite soc_pmu_iso_ack +7). MEASURED on the pre-#314/#316 base: 838 =
       # 823 + 15 (soc_all_ci from clean, plain AND FPGA=1, 838 passed / 0 failed over 80 suite summaries). Confirm 852 against the
       # merged PR's sharded CI pass count.
+      # 2026-10-19 (bead 0oc4, dma_engine CTRL hw-write flop reset): 854 = 857 - 3. 857 EXPECTED = 852 (main, per the 3ogd note above) + 5 new test_dma
+      # tests (test_dma_ctrl_hw_flops_reset_*; no new suite). MEASURED locally: test_dma 18 -> 23 (plain and FPGA=1). Not measured: full soc_all_ci
+      # (a Sky130 PD run held the host). Other open PRs (#313, #320) also move this floor: re-base the number on merge.
       # CONFIRMED (h367): 837 passed / 0 failed in #319's CI.
       # 2026-10-19 (merge of main #319 into #313 c54a): 842 = 845 - 3. 845 EXPECTED = 837 (main, confirmed)
       # + c54a's 8; confirm against this merge's sharded CI pass count.
       # 2026-10-19 (merge of main #317/#319 into #313 c54a, incl. #318 r51p): 857 = 860 - 3. 860 EXPECTED = 852
       # (main, #317 measured) + c54a's 8 cocotb tests (#318 adds pytest only); confirm against this merge's sharded CI pass count.
-      PASS_FLOOR: '857'
+      # 2026-10-19 (merge of main #321 into #313 c54a): 862 = 865 - 3. 865 EXPECTED = 857 (main, #321 measured)
+      # + c54a's 8 cocotb tests; confirm against this merge's sharded CI pass count.
+      PASS_FLOOR: '862'
       # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`), CI log-grep formula (`passed$`; the
       # expect_fail tests print "passed: failed as expected" and are NOT counted).
       # 2026-10-10 (bead a5ze slice 2): 229 = 232 - 3.  232 is the count of a full local

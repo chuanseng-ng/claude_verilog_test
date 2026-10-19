@@ -20,7 +20,7 @@ from axi4_fabric_bfm import AxiSlave
 from axi4_slave_model import AXI4SlaveModel
 from bfm.axi4lite_master import AXI4LiteMaster
 from cocotb.clock import Clock
-from cocotb.triggers import ReadOnly, RisingEdge
+from cocotb.triggers import ReadOnly, RisingEdge, Timer
 from cocotb.utils import get_sim_time
 
 # ── Register byte addresses ───────────────────────────────────────────────────
@@ -1528,3 +1528,119 @@ async def test_dma_queue_full_drops_start_silently(dut):
     assert [r["addr"] for r in slave.ar_log][-1] == descs[5][0]
     _assert_clean(slave, mon, "queue full")
     dut._log.info("test_dma_queue_full_drops_start_silently PASS")
+
+
+# ── Bead 0oc4: CTRL hardware-write flops must have a reset value ─────────────
+#
+# dma_engine drives hw_wen_i/hw_wdata_i[REG_CTRL] from flops (the "clear start / soft-reset after
+# consume" writeback).  They used to be assigned only in the non-reset branch of the FSM always_ff,
+# so they had NO reset value: they held their power-up contents for the whole reset window, and on
+# the first edge after rst_n deasserted the register bank (which only samples hw_wen_i outside
+# reset) loaded that content into CTRL.  In silicon, or an X-propagating simulator, that is
+# arbitrary garbage -- including CTRL.start (spurious DMA of SRC=DST=LEN=0) and CTRL.soft_reset.
+# Verilator zero-initialises every flop, so no ordinary test ever sees it.
+#
+# These tests model "power-up garbage" by DEPOSITING a value into the two flops before the first
+# clock edge, then run the normal reset sequence and check the DMA is still idle afterwards.  They
+# fail on the unfixed RTL (the garbage survives reset and is committed into CTRL) and pass once
+# both flops are reset to 0.
+
+PWRUP_OBSERVE_CYCLES = 24  # a spurious start reaches m_arvalid within ~5 cycles of reset release
+
+
+async def _power_up_with_ctrl_hw_garbage(dut, wen, wdata):
+    """Deposit (wen, wdata) into the CTRL hw-write flops pre-clock, reset, then watch the DMA.
+
+    Returns (axil, violations): `violations` lists every AXI master request seen between reset
+    release and PWRUP_OBSERVE_CYCLES later (there must be none: nothing was ever started).
+    """
+    global _active_slave_tasks
+    for task in _active_slave_tasks:
+        task.kill()
+    _active_slave_tasks = []
+
+    # Power-up state: reset asserted, clock not yet running, flops holding garbage.
+    dut.rst_n.value = 0
+    dut.hw_wen_i[REG_CTRL // 4].value = wen
+    dut.hw_wdata_i[REG_CTRL // 4].value = wdata
+    await Timer(1, units="ns")
+
+    cocotb.start_soon(Clock(dut.clk, CLK_PERIOD_NS, units="ns").start())
+    axil = AXI4LiteMaster(dut, "s_axil_", dut.clk)
+    slave = AXI4SlaveModel(dut, "m", dut.clk, mem=None)
+
+    def _tracked_start():
+        t1 = cocotb.start_soon(slave._write_loop())
+        t2 = cocotb.start_soon(slave._read_loop())
+        _active_slave_tasks.extend([t1, t2])
+
+    slave.start = _tracked_start
+    slave.start()
+
+    for _ in range(5):
+        await RisingEdge(dut.clk)
+    await ReadOnly()
+    held = (int(dut.hw_wen_i[REG_CTRL // 4].value), int(dut.hw_wdata_i[REG_CTRL // 4].value))
+    await RisingEdge(dut.clk)
+    dut.rst_n.value = 1
+
+    violations = []
+    if held != (0, 0):
+        violations.append(f"CTRL hw-write flops still {held} at the end of reset, want (0, 0)")
+    for cyc in range(PWRUP_OBSERVE_CYCLES):
+        await RisingEdge(dut.clk)
+        for sig in ("m_arvalid", "m_awvalid", "m_wvalid"):
+            if int(getattr(dut, sig).value):
+                violations.append(f"cycle {cyc} after reset release: {sig} asserted")
+    return axil, violations
+
+
+async def _assert_dma_idle_after_garbage(dut, axil, violations, what):
+    ctrl, _ = await axil.read(REG_CTRL)
+    status, _ = await axil.read(REG_STATUS)
+    irq, _ = await axil.read(REG_IRQ_STATUS)
+    if ctrl != 0:
+        violations.append(f"CTRL = {ctrl:#010x} after reset, want 0")
+    if status != STATUS_Q_EMPTY:
+        violations.append(f"STATUS = {status:#010x} after reset, want {STATUS_Q_EMPTY:#x} (idle, empty)")
+    if irq != 0:
+        violations.append(f"IRQ_STATUS = {irq:#010x} after reset, want 0")
+    assert not violations, f"{what}: power-up garbage in the CTRL hw-write flops leaked: " + "; ".join(
+        violations
+    )
+
+
+@cocotb.test()
+async def test_dma_ctrl_hw_flops_reset_start_garbage(dut):
+    """Power-up garbage hw_wen=1, hw_wdata=START must not start a DMA after reset."""
+    axil, viol = await _power_up_with_ctrl_hw_garbage(dut, 1, CTRL_START)
+    await _assert_dma_idle_after_garbage(dut, axil, viol, "start garbage")
+
+
+@cocotb.test()
+async def test_dma_ctrl_hw_flops_reset_irqen_garbage(dut):
+    """Power-up garbage hw_wen=1, hw_wdata=IRQ_EN must not leave CTRL.irq_en set after reset."""
+    axil, viol = await _power_up_with_ctrl_hw_garbage(dut, 1, CTRL_IRQ_EN)
+    await _assert_dma_idle_after_garbage(dut, axil, viol, "irq_en garbage")
+
+
+@cocotb.test()
+async def test_dma_ctrl_hw_flops_reset_srst_garbage(dut):
+    """Power-up garbage hw_wen=1, hw_wdata=SOFT_RESET must not self-issue a soft reset."""
+    axil, viol = await _power_up_with_ctrl_hw_garbage(dut, 1, CTRL_SRST)
+    await _assert_dma_idle_after_garbage(dut, axil, viol, "soft_reset garbage")
+
+
+@cocotb.test()
+async def test_dma_ctrl_hw_flops_reset_all_ones_garbage(dut):
+    """Power-up garbage hw_wen=1, hw_wdata=0xFFFFFFFF (every CTRL bit, incl. reserved)."""
+    axil, viol = await _power_up_with_ctrl_hw_garbage(dut, 1, 0xFFFF_FFFF)
+    await _assert_dma_idle_after_garbage(dut, axil, viol, "all-ones garbage")
+
+
+@cocotb.test()
+async def test_dma_ctrl_hw_flops_reset_wdata_only_garbage(dut):
+    """hw_wen=0 with garbage hw_wdata is harmless on its own, but BOTH flops must be reset: the
+    wdata flop is only masked by the wen flop, and a one-flop reset is a latent trap."""
+    axil, viol = await _power_up_with_ctrl_hw_garbage(dut, 0, 0xFFFF_FFFF)
+    await _assert_dma_idle_after_garbage(dut, axil, viol, "wdata-only garbage")
