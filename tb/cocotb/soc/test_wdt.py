@@ -1283,3 +1283,39 @@ async def test_register_w1c_semantics(dut):
     assert st & 0x3 == 0x3, f"un-fed dog must have barked and bitten, STATUS=0x{st:x}"
     rep = await check_w1c(m, o("WDT_STATUS"), o("WDT_IRQ_CLR"), [(0, 0), (1, 1)], name="WDT_STATUS")
     rep.assert_clean()
+
+
+# -- Full-width counter and prescaler (bead xkw5) -------------------------------------------------
+
+@cocotb.test()
+async def test_wdt_counter_full_width_and_wide_prescaler(dut):
+    """Every bit of the 32-bit COUNT and of the 16-bit prescaler phase moves in both directions.
+
+    COUNT: RELOAD = 2**k is fed in (a valid feed reloads), one tick later the live count is
+    2**k - 1 (bit k falls, every lower bit rises), the next feed with RELOAD = 2**(k+1) makes bit k
+    rise again.  Walking k = 8..31 therefore toggles each of COUNT[31:8] both ways without running
+    2**31 ticks, and the value read back is checked against the reload each time.
+    Prescaler: PRESCALE = 0x8000 makes the phase counter run 0 .. 0x8000 (every bit 4..15 rises)
+    and fall back to 0 on the tick; the count has fallen by exactly one after one period.
+    """
+    await _start_clock_and_reset(dut)
+    m = _make_apb_bfm(dut)
+    await m.write(WDT_PRESCALE, 0)
+    await m.write(WDT_RELOAD, 1 << 8)
+    await m.write(WDT_CTRL, CTRL_EN)
+    for k in range(8, 32):
+        await m.write(WDT_RELOAD, 1 << k)
+        await m.write(WDT_FEED, MAGIC)
+        count, _ = await m.read(WDT_COUNT)
+        assert (1 << k) - 40 <= count <= (1 << k), f"k={k}: COUNT {count:#x} after a feed of {1 << k:#x}"
+    st, _ = await m.read(WDT_STATUS)
+    assert st == 0, f"STATUS {st:#x}: a counter this large must not have timed out"
+
+    await _pulse_reset(dut)
+    await m.write(WDT_PRESCALE, 0x8000)
+    await m.write(WDT_RELOAD, 1000)
+    await m.write(WDT_CTRL, CTRL_EN)
+    period = 0x8000 + 1
+    await ClockCycles(dut.clk, period + 200)
+    count, _ = await m.read(WDT_COUNT)
+    assert count == 999, f"COUNT {count} after one prescaler period of {period} cycles"

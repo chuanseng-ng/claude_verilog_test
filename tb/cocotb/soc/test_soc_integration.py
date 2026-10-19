@@ -773,3 +773,176 @@ async def test_soc_dma_walk_rom_write_and_decode_errors(dut):
         b_resps,
         marks["decerr"][0],
     )
+
+
+# ---------------------------------------------------------------------------
+# Test: GPU walk -- both GPU bus masters through the fabric (bead xkw5)
+# ---------------------------------------------------------------------------
+GW_SRC_VALS = (0xDEADBEEF, 0x12345678, 0xA5A5A5A5, 0x5A5A5A5A,
+               0xFFFFFFFF, 0x00000000, 0xAAAAAAAA, 0x55555555)
+GW_PHASES = ("A", "B", "C", "D", "E", "F")
+GW_DECERR_LD = (0x1000_0000, 0x8000_0000)
+GW_DECERR_ST = (0x4000_0000, 0x2001_1000)
+M_IF, M_GPU = 1, 2   # crossbar master ports of the GPU instruction fetch and data masters
+LANES = 8
+
+
+def _port(sig, master: int, width: int) -> int:
+    """Field of one crossbar master port out of a packed [N_MASTERS-1:0][width-1:0] net."""
+    return (int(sig.value) >> (master * width)) & ((1 << width) - 1)
+
+
+def _bit(sig, master: int) -> int:
+    return (int(sig.value) >> master) & 1
+
+
+@cocotb.test()
+async def test_soc_gpu_walk_both_masters(dut):
+    """The GPU walks the address space with its ifetch (M1) and data (M2) crossbar ports.
+
+    Bead xkw5.  Firmware (integ_fw gpu_walk.hex) launches a tiny kernel; the testbench scores every
+    handshake at the crossbar master ports:
+
+      * phase A: launch k fetches the kernel from KERNEL_PC | 1<<k (M1) and its 8 lanes load from /
+        store to (1<<k)|0x2000 + offsets (M2), k = 12..27: each launch moves the right data, with
+        the SRAM aliasing the high bits onto the same 4 KB;
+      * phase B: lanes read the first 8 boot-ROM words, which land in SRAM unchanged;
+      * phase C: lanes write the timer COMPARE register through M2 -> axi4_to_axilite -> ring and
+        read it back (all eight reads equal one of the written values);
+      * phase D: eight stores to the boot ROM each get SLVERR and the ROM is bit-identical after;
+      * phase E: loads and stores to unmapped addresses each get DECERR.
+    """
+    words = _read_hex(_FW_DIR / "gpu_walk.hex")
+    await _setup(dut, words)
+    soc = dut.u_soc
+    rom_before = _rom_snapshot(soc)
+
+    phase = 0
+    marks = {}
+    ifetch = {p: [] for p in GW_PHASES}
+    reads = {p: [] for p in GW_PHASES}     # (addr, rdata, rresp)
+    writes = {p: [] for p in GW_PHASES}    # (addr, wdata, bresp)
+    ar_q, aw_q, w_q = [], [], []
+    saw_pass = False
+    recent = []
+    for cycle in range(1_500_000):
+        await RisingEdge(dut.clk_i)
+        await ReadOnly()
+        p = GW_PHASES[phase]
+        if _bit(soc.xbar_m_arvalid, M_IF) and _bit(soc.xbar_m_arready, M_IF):
+            ifetch[p].append(_port(soc.xbar_m_araddr, M_IF, 32))
+        if _bit(soc.xbar_m_arvalid, M_GPU) and _bit(soc.xbar_m_arready, M_GPU):
+            ar_q.append(_port(soc.xbar_m_araddr, M_GPU, 32))
+        if _bit(soc.xbar_m_rvalid, M_GPU) and _bit(soc.xbar_m_rready, M_GPU):
+            assert ar_q, "R beat at the GPU data port with no read outstanding"
+            reads[p].append(
+                (ar_q.pop(0), _port(soc.xbar_m_rdata, M_GPU, 32), _port(soc.xbar_m_rresp, M_GPU, 2))
+            )
+        if _bit(soc.xbar_m_awvalid, M_GPU) and _bit(soc.xbar_m_awready, M_GPU):
+            aw_q.append(_port(soc.xbar_m_awaddr, M_GPU, 32))
+        if _bit(soc.xbar_m_wvalid, M_GPU) and _bit(soc.xbar_m_wready, M_GPU):
+            w_q.append(_port(soc.xbar_m_wdata, M_GPU, 32))
+        if _bit(soc.xbar_m_bvalid, M_GPU) and _bit(soc.xbar_m_bready, M_GPU):
+            assert aw_q and w_q, "B beat at the GPU data port with no write outstanding"
+            writes[p].append((aw_q.pop(0), w_q.pop(0), _port(soc.xbar_m_bresp, M_GPU, 2)))
+        if not int(dut.commit_valid_o.value):
+            continue
+        pc = int(dut.commit_pc_o.value)
+        recent = (recent + [pc])[-16:]
+        assert pc != A.GPU_WALK_FAIL, (
+            "firmware reached FAIL_PC; recent PCs " + " ".join(f"0x{x:08x}" for x in recent)
+        )
+        for i, mark in enumerate(
+            (A.GPU_WALK_GA_DONE, A.GPU_WALK_GB_DONE, A.GPU_WALK_GC_DONE, A.GPU_WALK_GD_DONE,
+             A.GPU_WALK_GE_DONE, A.GPU_WALK_GF_DONE)
+        ):
+            if pc == mark and GW_PHASES[i] not in marks:
+                marks[GW_PHASES[i]] = cycle
+                phase = min(i + 1, len(GW_PHASES) - 1)
+        if pc == A.GPU_WALK_PASS:
+            saw_pass = True
+            break
+    assert saw_pass, "PASS_PC never committed; recent PCs " + " ".join(f"0x{x:08x}" for x in recent)
+    assert set(marks) == set(GW_PHASES), f"phase markers seen: {sorted(marks)}"
+    assert not ar_q and not aw_q and not w_q, "GPU data port transactions left incomplete"
+
+    n_alias = A.GW_N_ALIAS
+    ks = [A.GW_ALIAS_LO + j for j in range(n_alias)]
+    kbase, ld_off, st_off = A.GW_KBASE, A.GW_LD_OFF, A.GW_ST_OFF
+    mask32 = 0xFFFF_FFFF
+
+    # ---- phase A ---------------------------------------------------------------------------
+    rd, wr = reads["A"], writes["A"]
+    assert len(rd) == LANES * n_alias, f"{len(rd)} GPU reads in phase A, expected {LANES * n_alias}"
+    assert len(wr) == LANES * n_alias, f"{len(wr)} GPU writes in phase A, expected {LANES * n_alias}"
+    for j, k in enumerate(ks):
+        base = (1 << k) | 0x2000
+        chunk_r = sorted(rd[j * LANES:(j + 1) * LANES])
+        want_r = sorted((base + ld_off + 4 * l, GW_SRC_VALS[l], 0) for l in range(LANES))
+        assert chunk_r == want_r, f"launch k={k}: reads {chunk_r} != {want_r}"
+        chunk_w = sorted(wr[j * LANES:(j + 1) * LANES])
+        want_w = sorted(
+            (base + st_off + 4 * l, (GW_SRC_VALS[l] + k) & mask32, 0) for l in range(LANES)
+        )
+        assert chunk_w == want_w, f"launch k={k}: writes {chunk_w} != {want_w}"
+        fetched = set(ifetch["A"])
+        for n in range(16):
+            addr = ((kbase + A.GW_COPY_STRIDE * j) | (1 << k)) + 4 * n
+            assert addr in fetched, f"launch k={k}: kernel word {n} never fetched at 0x{addr:08x}"
+    sram = sram_mem(dut)
+    for l in range(LANES):
+        got = int(sram[(0x2000 + st_off + 4 * l - 0x2000) // 4].value)
+        want = (GW_SRC_VALS[l] + ks[-1]) & mask32
+        assert got == want, f"final destination word {l}: 0x{got:08x} != 0x{want:08x}"
+
+    # ---- phase B: boot ROM read ------------------------------------------------------------
+    rd = sorted(reads["B"])
+    assert rd == sorted((0x1000 + 4 * l, rom_before[l], 0) for l in range(LANES)), (
+        f"ROM reads {rd}"
+    )
+    for l in range(LANES):
+        got = int(sram[(A.GW_SCR_B - 0x2000) // 4 + l].value)
+        assert got == rom_before[l], f"ROM word {l} copied as 0x{got:08x}, ROM holds {rom_before[l]:08x}"
+
+    # ---- phase C: peripheral (timer COMPARE) write + read -----------------------------------
+    wrote = [(A.GW_TIMER_CMP, A.GW_DATA_BASE + 4 * l) for l in range(LANES)]
+    wr = writes["C"]
+    got_w = sorted((a, d) for a, d, _ in wr[:LANES])
+    assert got_w == sorted(wrote), f"timer writes {got_w} != {sorted(wrote)}"
+    assert all(r == 0 for _, _, r in wr[:LANES]), f"timer write responses {wr[:LANES]}"
+    rd = reads["C"]
+    assert len(rd) == LANES and all(a == A.GW_TIMER_CMP and r == 0 for a, _, r in rd), f"timer reads {rd}"
+    vals = {d for _, d, _ in rd}
+    assert len(vals) == 1 and vals <= {d for _, d in wrote}, (
+        f"timer read-back values {sorted(vals)}: one of the written values expected"
+    )
+    for l in range(LANES):
+        got = int(sram[(A.GW_SCR_C - 0x2000) // 4 + l].value)
+        assert got == next(iter(vals)), f"read-back copy {l} is 0x{got:08x}"
+
+    # ---- phase D: boot ROM refuses every store ------------------------------------------------
+    wr = writes["D"][:LANES]
+    assert sorted(a for a, _, _ in wr) == [A.GW_ROM_WR + 4 * l for l in range(LANES)], f"ROM stores {wr}"
+    assert all(r == 2 for _, _, r in wr), f"ROM store responses {wr}: SLVERR (2) expected"
+    assert _rom_snapshot(soc) == rom_before, "boot ROM contents changed: a refused write was accepted"
+
+    # ---- phase E: unmapped addresses answer DECERR -----------------------------------------
+    rd, wr = reads["E"], writes["E"]
+    assert sorted({a for a, _, _ in rd}) == sorted(GW_DECERR_LD), f"unmapped reads {sorted({a for a, _, _ in rd})}"
+    assert all(r == 3 for _, _, r in rd), f"unmapped read responses {rd}: DECERR (3) expected"
+    assert sorted({a for a, _, _ in wr}) == sorted(GW_DECERR_ST), f"unmapped writes {sorted({a for a, _, _ in wr})}"
+    assert all(r == 3 for _, _, r in wr), f"unmapped write responses {wr}: DECERR (3) expected"
+    # ---- phase F: byte offsets +1..+3 on the PLL1 window read the same register as +0 -------------
+    scratch = [
+        int(sram[(A.GW_SCR_F - 0x2000) // 4 + 8 * n + l].value) for n in range(5) for l in range(LANES)
+    ]
+    ref = scratch[:LANES]
+    assert ref[0] & 1 == 1, f"PLL1 CONTROL reads {ref[0]:#x}: pll_enable must read 1"
+    for off in (1, 2, 3, 4):  # entry 4 is the trailing aligned read
+        got = scratch[LANES * off:LANES * (off + 1)]
+        assert got == ref, f"PLL1 read number {off} (byte offset +{off % 4}) gave {got}, the aligned read gave {ref}"
+    dut._log.info(
+        "GPU walk: %d ifetch beats (A), phases at cycles %s",
+        len(ifetch["A"]),
+        {p: marks[p] for p in GW_PHASES},
+    )

@@ -534,3 +534,54 @@ async def test_nregs_equals_wordw_boundary(dut):
             f"read back {data:#010x} (transaction OKAY both ways -- register file is inert "
             f"if this is 0: truncating WORDW'(N_REGS) cast wrapped to 0)")
     dut._log.info("N_REGS == 2**WORDW boundary OK (reg0 + reg5 round-trip)")
+
+
+# ---------------------------------------------------------------------------
+# Every HW-write port, every bit, both edges; every out-of-range address bit (bead xkw5)
+# ---------------------------------------------------------------------------
+@cocotb.test()
+async def test_hw_write_every_register_every_bit(dut):
+    """A hardware write lands in each of the eight registers whatever its WMASK, for every bit
+    pattern: walking ones, walking zeros, alternating, all-ones, zero.  HW writes bypass the
+    write mask, so a fully-masked register (6) and a partly masked one (7) take the whole word.
+    Registers 0..5 are driven through the generic injection port, 6 and 7 through their own."""
+    m = await _setup(dut)
+    mask = 0xFFFF_FFFF
+    patterns = [1 << i for i in range(32)] + [mask ^ (1 << i) for i in range(32)]
+    patterns += [0xAAAAAAAA, 0x55555555, mask, 0]
+    for reg in range(8):
+        for pat in patterns:
+            if reg < 6:
+                dut.hw_gen_wdata.value = pat
+                dut.hw_gen_wen.value = 1 << reg
+            elif reg == 6:
+                dut.hw_status_wdata.value = pat
+                dut.hw_status_wen.value = 1
+            else:
+                dut.hw_aux_wdata.value = pat
+                dut.hw_aux_wen.value = 1
+            await RisingEdge(dut.pclk)
+            dut.hw_gen_wen.value = 0
+            dut.hw_status_wen.value = 0
+            dut.hw_aux_wen.value = 0
+            await RisingEdge(dut.pclk)
+            got, _ = await m.read(4 * reg)
+            assert got == pat, f"reg {reg}: HW wrote {pat:#010x}, SW read {got:#010x}"
+
+
+@cocotb.test()
+async def test_every_out_of_range_address_bit(dut):
+    """A load or store at an address with only word-index bit k set (k above the 8 registers) reads
+    0 and does not disturb any register: the range gate looks at every address bit."""
+    if WIDE_ONLY:
+        return  # needs the 4 KB window (ADDR_W = 12 build)
+    m = await _setup(dut)
+    for reg in range(6):
+        await m.write(4 * reg, 0x11111111 * (reg + 1))
+    for k in range(5, ADDR_W):
+        got, ok = await m.read(1 << k)
+        assert ok and got == 0, f"address bit {k}: read {got:#x}"
+        assert await m.write(1 << k, 0xFFFFFFFF)
+    for reg in range(6):
+        got, _ = await m.read(4 * reg)
+        assert got == 0x11111111 * (reg + 1), f"reg {reg} disturbed by an out-of-range store: {got:#x}"

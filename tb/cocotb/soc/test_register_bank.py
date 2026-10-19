@@ -405,3 +405,50 @@ async def test_response_backpressure_blocks_new_requests(dut):
     held = [s for s in samples if s[4] == 1]
     assert len(held) >= 5
     assert all(s[3] == 0 for s in held), "AR accepted while the R response was still pending"
+
+
+@cocotb.test()
+async def test_hw_write_every_register_every_bit(dut):
+    """AXI-Lite twin of the APB4 bank test (bead xkw5): a hardware write lands in each of the eight
+    registers, whatever its WMASK, for every bit pattern (walking ones / zeros, alternating, all-ones,
+    zero), and a software read returns it."""
+    m = await _setup(dut)
+    mask = 0xFFFF_FFFF
+    patterns = [1 << i for i in range(32)] + [mask ^ (1 << i) for i in range(32)]
+    patterns += [0xAAAAAAAA, 0x55555555, mask, 0]
+    for reg in range(8):
+        for pat in patterns:
+            if reg < 6:
+                dut.hw_gen_wdata.value = pat
+                dut.hw_gen_wen.value = 1 << reg
+            elif reg == 6:
+                dut.hw_status_wdata.value = pat
+                dut.hw_status_wen.value = 1
+            else:
+                dut.hw_aux_wdata.value = pat
+                dut.hw_aux_wen.value = 1
+            await RisingEdge(dut.clk)
+            dut.hw_gen_wen.value = 0
+            dut.hw_status_wen.value = 0
+            dut.hw_aux_wen.value = 0
+            await RisingEdge(dut.clk)
+            got, _ = await m.read(4 * reg)
+            assert got == pat, f"reg {reg}: HW wrote {pat:#010x}, SW read {got:#010x}"
+
+
+@cocotb.test()
+async def test_every_out_of_range_address_bit(dut):
+    """A load or store at an address with only word-index bit k set (k above the 8 registers)
+    reads 0 and disturbs no register: the range gate sees every address bit (bead xkw5)."""
+    if ADDR_W != 12:
+        return  # needs the 4 KB window
+    m = await _setup(dut)
+    for reg in range(6):
+        await m.write(4 * reg, 0x11111111 * (reg + 1))
+    for k in range(5, ADDR_W):
+        got, resp = await m.read(1 << k)
+        assert resp == RESP_OKAY and got == 0, f"address bit {k}: read {got:#x} resp {resp}"
+        assert await m.write(1 << k, 0xFFFFFFFF) == RESP_OKAY
+    for reg in range(6):
+        got, _ = await m.read(4 * reg)
+        assert got == 0x11111111 * (reg + 1), f"reg {reg} disturbed by an out-of-range store: {got:#x}"

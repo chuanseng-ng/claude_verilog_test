@@ -927,3 +927,47 @@ async def test_register_w1c_semantics(dut):
     rep = await check_w1c(m, o("PWM_IRQ_STAT"), o("PWM_IRQ_CLR"),
                           [(b, b) for b in range(4)], name="PWM_IRQ_STAT")
     rep.assert_clean()
+
+
+# -- Full-width tick counter and prescaler (bead xkw5) -------------------------------------------
+
+@cocotb.test()
+async def test_pwm_full_width_period_and_prescaler(dut):
+    """PERIOD = 0xFFFF and PRESCALE = 0x8000 drive every bit of both 16-bit counters.
+
+    Phase 1 (PRESCALE 0): the tick counter runs 0 .. 0xFFFE, so bits 9..15 all rise and fall.
+    Channel 0 has DUTY = 0x8000: its output must be active early in the period (tick ~0x7000),
+    inactive after tick 0x8000 (~0x9000), and the period-wrap event must set IRQ_STAT[0] only after
+    the whole 65535-tick period -- a duty/period compare that ignored bit 15 would fail one of these.
+    Phase 2: PRESCALE = 0x8000 makes the prescaler phase counter run 0 .. 0x8000 (every bit rises)
+    and fall back on the tick; PERIOD = 2 then wraps after two such ticks, and not before.
+    """
+    await _start_clock_and_reset(dut)
+    m = _make_apb_bfm(dut)
+    await m.write(PWM_PRESCALE, 0)
+    await m.write(PWM_DUTY01, 0x8000)
+    await m.write(PWM_CTRL, 0x1)
+    await m.write(PWM_PERIOD, 0xFFFF)               # the counter starts when PERIOD becomes non-zero
+    await ClockCycles(dut.clk, 0x7000)
+    assert int(dut.pwm_o.value) & 1 == 1, "ch0 inactive at tick ~0x7000 with DUTY 0x8000"
+    await ClockCycles(dut.clk, 0x2000)
+    assert int(dut.pwm_o.value) & 1 == 0, "ch0 still active at tick ~0x9000 with DUTY 0x8000"
+    stat, _ = await m.read(PWM_IRQ_STAT)
+    assert stat == 0, f"IRQ_STAT 0x{stat:x}: the period has not wrapped yet at tick ~0x9000"
+    await ClockCycles(dut.clk, 0x7000 + 64)
+    stat, _ = await m.read(PWM_IRQ_STAT)
+    assert stat == 0x1, f"IRQ_STAT 0x{stat:x}: ch0 must have wrapped once after 0xFFFF ticks"
+
+    dut.rst_n.value = 0
+    await ClockCycles(dut.clk, 4)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 2)
+    await m.write(PWM_PRESCALE, 0x8000)
+    await m.write(PWM_CTRL, 0x1)
+    await m.write(PWM_PERIOD, 2)
+    await ClockCycles(dut.clk, 0x8001 + 200)        # one prescaled tick: tick_count 0 -> 1, no wrap
+    stat, _ = await m.read(PWM_IRQ_STAT)
+    assert stat == 0, f"IRQ_STAT 0x{stat:x}: wrapped after a single 0x8001-cycle tick of a 2-tick period"
+    await ClockCycles(dut.clk, 0x8001)
+    stat, _ = await m.read(PWM_IRQ_STAT)
+    assert stat == 0x1, f"IRQ_STAT 0x{stat:x}: the second tick must complete the period"

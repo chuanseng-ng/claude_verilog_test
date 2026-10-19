@@ -794,3 +794,27 @@ async def test_register_walk(dut):
     m = await _setup(dut)
     regs, first = reg_maps.BANKS["spi"]
     await walk_bank(m, regs, first, log=dut._log)
+
+
+# ── RX FIFO: every slot, every data bit, both edges (bead xkw5) ──────────────────────────────
+
+@cocotb.test()
+async def test_rx_fifo_every_slot_every_bit(dut):
+    """Fill the four-entry RX FIFO with 0xFF, drain it, fill with 0x00, drain, ... so that every bit
+    of every slot rises and falls, and check each byte comes back in order from the slot that held it
+    (loopback, CLK_DIV 0).  An entry whose storage dropped or merged a bit would read back wrong."""
+    m = await _setup(dut)
+    await m.write(REG_SPI_CLK_DIV, 0)
+    await m.write(REG_SPI_CTRL, CTRL_ENABLE | CTRL_LOOPBACK)
+    for fill in (0xFF, 0x00, 0xFF, 0x00):
+        for _ in range(4):
+            assert await m.write(REG_SPI_TX, fill) == RESP_OKAY
+            await ClockCycles(dut.clk, TRANSFER_WAIT_DIV0)
+        status, _ = await m.read(REG_SPI_STATUS)
+        assert status & STATUS_RX_FULL, f"fill {fill:#04x}: RX FIFO not full, STATUS={status:#010x}"
+        for slot in range(4):
+            data, _ = await m.read(REG_SPI_RX)
+            assert (data & 0xFF) == fill, f"fill {fill:#04x}: slot {slot} read {data:#010x}"
+            await RisingEdge(dut.clk)
+        status, _ = await m.read(REG_SPI_STATUS)
+        assert status & STATUS_RX_EMPTY, f"fill {fill:#04x}: RX FIFO not empty, STATUS={status:#010x}"

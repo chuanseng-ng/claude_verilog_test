@@ -47,7 +47,12 @@ module tb_axi_lite_register_bank #(
 
     // Hardware injection -> register index 7 (partial WMASK 0x000000FF).
     input  logic              hw_aux_wen,
-    input  logic [31:0]       hw_aux_wdata
+    input  logic [31:0]       hw_aux_wdata,
+
+    // Hardware injection -> registers 0..5 (fully SW-writable): one enable per register, one
+    // shared data word.  Lets a test drive every HW-write port of the bank (bead xkw5).
+    input  logic [5:0]        hw_gen_wen,
+    input  logic [31:0]       hw_gen_wdata
 );
 
     localparam logic [31:0] WM [N_REGS] = '{
@@ -61,6 +66,10 @@ module tb_axi_lite_register_bank #(
         for (int unsigned i = 0; i < N_REGS; i++) begin
             hw_wen  [i] = 1'b0;
             hw_wdata[i] = 32'b0;
+        end
+        for (int unsigned i = 0; i < 6; i++) begin
+            hw_wen  [i] = hw_gen_wen[i];
+            hw_wdata[i] = hw_gen_wdata;
         end
         hw_wen  [6] = hw_status_wen;
         hw_wdata[6] = hw_status_wdata;

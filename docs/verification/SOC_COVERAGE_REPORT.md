@@ -557,6 +557,118 @@ Added, category b:
 * The GPU master's address bits (VLD/VST walk) were not driven.
 * `pll_subsystem` could not be analysed (its `pll_clkgen` black box is rejected by yosys-slang).
 
+## Coverage cleanup, second pass: bead xkw5 leftovers (PR #320, 2026-10-19)
+
+Same policy as #316 (tests where a stimulus is reasonable, waivers only for what is proven unreachable, no RTL change).
+Before = merged data of the #316 sharded run 39119364474 (triaged trees: **78.32 %**, 51696/66007 adjusted toggle points).
+After = sharded run 39179705146 of PR #320 on the merge with #319 (final head) (8 shards + CPU/GPU job, gate green, 0 stale waivers, 857 tests passed / 0 failed, `PASS_FLOOR` 834 -> 854).  Before submitting, the touched unit suites were also run instrumented locally and merged with the baseline: that gave 84.82 % (53638/63234) without the SoC-level GPU walk, which is in the CI figure.
+
+
+| Triaged trees (54 modules) | Before (#316) | After (this PR, CI) |
+| :--- | ---: | ---: |
+| Line + branch | 99.85 % (2001/2004) | 99.85 % (2001/2004) |
+| Toggle, adjusted | 78.32 % (51696/66007) | **86.32 % (54598/63248)** |
+
+The modules whose toggle gaps this bead named are at 100 % (adjusted): `timer`, `watchdog_timer`, `pwm_controller`, `spi_controller`,
+`interrupt_controller`, `pmu`, `pll_apb_regs`, `trng`, `npu_top`, `i2c_controller`, `i2c_bit_engine`, `gpio_controller`,
+`axi_lite_register_bank`.  Left: `uart_controller` 647/649 (`rx_state_q[2]`, a state bit that #314's RX re-sync added to main after
+the baseline: new on main, not touched here), `dma_engine` 85.4 %, `apb4_register_bank` 94.8 %.
+The SoC-level GPU walk moved `soc_top` 59.5 -> 66.5 %, `soc_bus` 58.7 -> 65.1 %, `axi4_crossbar` 71.6 -> 75.0 %,
+`axilite_to_axi4` 66.8 -> 78.6 % (the GPU instruction-fetch adapter).
+
+### The prover: waivers cite a proof, not a netlist lookup
+
+`tools/verif/proven_const_bits.py` (yosys `opt_dff -sat`) cannot decide a register-bank flop held at its reset value by
+`WMASK = 0`, because the flop has no initial value.  New `tools/verif/stuck_bits_formal.py` closes that gap with an unbounded
+model-checking proof (SymbiYosys, ABC `pdr`, preceded by a short `bmc3` search for quick counter-examples).  For a module it takes the
+bits that never moved in either direction in the merged `.dat`, wraps the module, assumes only that reset is asserted in cycles 0-1
+(every simulation here resets first), leaves **every other input free**, and asserts that each bit equals its cycle-2 value for ever
+after (so a combinational bit like `prdata[k]` must be independent of the free inputs too).  PASS = proof for all input sequences;
+FAIL = a counter-example exists = a test gap (never a waiver); timeout = `unknown`, reported.  `tools/verif/stuck_bits_waivers.py`
+renders the PASS bits as waiver lines and **refuses a proven bit that lies inside a documented writable mask** (it would be a
+documentation or RTL finding); none occurred.  `--tie PORT=VAL` holds inputs constant (used once, below).  Both tools are unit
+tested in `tb/tests/test_stuck_bits_waivers.py`.
+
+Waivers added (category b), about 2 770 points net (the denominator also moved with main's own RTL changes):
+
+| Module(s) | What was proven stuck | Proof |
+| :-- | :-- | :-- |
+| `uart_controller`, `spi_controller`, `interrupt_controller`, `pwm_controller`, `watchdog_timer`, `gpio_controller`, `trng`, `timer`, `pmu`, `pll_apb_regs`, `i2c_controller` | `regs_o`/`regs_out` words that are reserved / RO / WO fields (documented WMASK in `reg_maps.py`, no HW write) and the `prdata` bits above the implemented width; `prescale_reg[31:16]` | SBY/PDR, free inputs |
+| `i2c_bit_engine` | `div_ext_w[17:16]`, `lo_skew_w[17:14]` (widened intermediates of a 16-bit CLKDIV) | SBY/PDR |
+| `dma_engine` | `regs_o[7]` (RSVD), `beats_raw[31:9]` | SBY/PDR |
+| `pll_subsystem` | `prdata[3:1]`, `prdata[31:10]` | SBY/PDR **in functional mode** (`scan_mode_i = 0`, `scan_rst_ni = 1`, `scan_clk_i = 0`); with scan mode free the same bits can move, so the waiver says so |
+| `npu_top` | `g_on.addr_ext_w[31:10]` (zero extension, `npu_top.sv:209`), `g_on.hw_wen_i[...]` of registers never hardware-written (`:562`, only STATUS/WADDR/AOUT/IRQ_STAT are re-assigned) and the three always-1 enables' falls | manual proof from the RTL; all but `hw_wen_i[13]` also confirmed by yosys `opt_dff -sat` (the netlist lookup does not resolve that one name) |
+| `trng` | `regs_o[1][3]:1->0` = the `INSECURE` localparam (`trng.sv:108-110`) | manual proof (build-time constant) |
+| `pll_apb_regs` | `regs_out[0][0]:1->0` = non-clearable `pll_enable` (GH #89) | manual proof, same fact as the existing `pll_enable_o` waiver |
+
+`pll_subsystem` was never "unanalysable": `pll_clkgen.sv` (the wrapper that selects the STUB/RNM implementation with a string
+parameter, RNM arm pruned) was simply missing from the prover's source list, so the yosys-slang front end saw an unknown module.
+Adding it (and the DFT mux and memory-collar sources `pll_subsystem` and `npu_top` instantiate) makes both analysable; the
+previous "reject" was a missing file, not a frontend limitation.
+
+### New tests (no RTL change)
+
+| Test | What it drives and checks |
+| :-- | :-- |
+| `test_soc_integration.py::test_soc_gpu_walk_both_masters` (firmware `integ_fw/gpu_walk.hex`) | The GPU's two crossbar masters (ifetch M1, data M2) walked like #316 walked the DMA: 16 launches with `KERNEL_PC \| 1<<k` and `VLD/VST` at `(1<<k)\|0x2000` (k = 12..27) with data checked per lane and every kernel word fetch seen; boot-ROM reads (data equals the ROM), timer COMPARE write+read through M2 -> `axi4_to_axilite` -> ring, boot-ROM stores answered SLVERR with the ROM bit-identical, unmapped loads/stores answered DECERR, and byte-offset +1..+3 loads from the PLL1 window equal the aligned load (the only way to put a non-zero `paddr[1:0]` behind the PLL clock-domain bridge; the run ends with an aligned read so the falls are seen: the first CI run ended on +3 and left `pll_subsystem` `paddr[1]:1->0`, fixed after it). One flush of 16 patched kernel copies instead of one per launch keeps it at about 163 k cycles. |
+| `test_timer.py::test_counter_carry_chain_and_wide_compare` | counter placed just below each 2^k boundary through the simulator handle (`count_q`), compare fires exactly at the carry, wrap at 2^32 |
+| `test_wdt.py::test_wdt_counter_full_width_and_wide_prescaler` | RELOAD = 2^k fed in for k = 8..31 (COUNT read back each time) and PRESCALE = 0x8000 for the 16-bit phase counter |
+| `test_pwm.py::test_pwm_full_width_period_and_prescaler` | PERIOD = 0xFFFF with DUTY = 0x8000 (active at tick ~0x7000, inactive ~0x9000, wrap only after the full period) and PRESCALE = 0x8000 |
+| `test_spi.py::test_rx_fifo_every_slot_every_bit` | 0xFF/0x00 fills of the 4-entry RX FIFO, drained in order |
+| `test_i2c.py::test_i2c_fifo_every_slot_every_bit`, `test_i2c_max_byte_count`, `test_i2c_stuck_wait_counter_runs_full_width` | 8-entry TX/RX FIFOs with 0xFF/0x00 fills; a 255-byte write with software refill; a 140 000-clk SCL stretch with the watchdog off (stuck-wait counter through bit 15). PR #319 (h367) adds different I2C tests (17+ byte transfers, command shapes, COUNT=255 abandoned on NACK, RX-full timeout); none covers these bit patterns, so there is no overlap. |
+| `test_pmu.py::test_pmu_domain_en_mirrors_sequencer` | DOMAIN_EN read back each cycle through a full IDLE power cycle equals the registered image of the ten sequencer outputs |
+| `test_pll_apb_regs.py::test_pll_apb_regs_byte_offset_ignored` | writes at +3 and reads at +0..+3 of CONTROL/STATUS |
+| `test_dma.py::test_dma_register_walk` | SRC/DST/LENGTH patterns, RO words ignore stores, unmapped words read 0 and swallow stores, byte offset ignored |
+| `test_npu.py::test_npu_aout_fifo_every_slot_every_bit` | 4-deep AOUT FIFO filled with 0xFF.. / 0x00.. / 0x55.. / 0xAA.. results (identity tile) |
+| `test_apb4_register_bank.py` / `test_register_bank.py`: `test_hw_write_every_register_every_bit`, `test_every_out_of_range_address_bit` | new generic HW-injection port on the two `tb_*_register_bank` wrappers (registers 0..5); every register takes every bit pattern from the hardware side; every out-of-range word-address bit is read/written |
+
+### Per-module result (CI run above; adjusted toggle, hit/total; rows shown only where the module changed)
+
+| Module | Toggle before | Toggle after |
+| :----- | ------------: | -----------: |
+| pll_apb_regs | 39.4 (150/381) | 100.0 (154/154) |
+| pmu | 56.5 (281/497) | 100.0 (291/291) |
+| watchdog_timer | 63.1 (799/1267) | 100.0 (991/991) |
+| spi_controller | 63.6 (607/955) | 100.0 (611/611) |
+| timer | 64.6 (474/734) | 100.0 (612/612) |
+| axi_lite_register_bank | 65.3 (1294/1982) | 100.0 (1982/1982) |
+| interrupt_controller | 67.1 (327/487) | 100.0 (327/327) |
+| uart_controller | 69.4 (635/915) | 99.7 (647/649) |
+| pwm_controller | 70.2 (776/1106) | 100.0 (818/818) |
+| pll_subsystem | 74.5 (158/212) | 99.4 (161/162) |
+| dma_engine | 61.6 (1127/1829) | 85.4 (1326/1553) |
+| trng | 77.0 (1219/1584) | 100.0 (1219/1219) |
+| apb4_register_bank | 79.9 (1496/1873) | 94.8 (1775/1873) |
+| axilite_to_axi4 | 66.8 (250/374) | 78.6 (294/374) |
+| npu_top | 88.2 (2784/3155) | 100.0 (3084/3084) |
+| i2c_bit_engine | 91.6 (456/498) | 100.0 (486/486) |
+| i2c_controller | 92.9 (1151/1239) | 100.0 (1207/1207) |
+| soc_top | 59.5 (3365/5656) | 66.5 (3759/5656) |
+| soc_bus | 58.7 (3219/5480) | 65.1 (3568/5480) |
+| gpio_controller | 96.3 (1671/1735) | 100.0 (1671/1671) |
+| axi4_crossbar | 71.6 (3045/4252) | 75.0 (3189/4252) |
+| sram_controller | 81.8 (1589/1942) | 82.3 (1599/1942) |
+
+
+### Findings (no RTL change made)
+
+* **`dma_engine` CTRL mirror: `hw_wen_i[REG_CTRL]` / `hw_wdata_i[REG_CTRL]` are flops without a reset** (`dma_engine.sv:639-647` sit inside
+  the `else` of the FSM's `if (!rst_n)`).  They feed the register bank's hardware-write port, which the bank applies on the first edge
+  after reset is released, so in silicon (or X-propagating gate simulation) CTRL, including the `start`/`soft_reset` bits, can load
+  power-up garbage then.  In 2-state Verilator the flops start at 0, so no simulation can see it; the prover finds it because it lets the
+  un-reset flops start anywhere, which is why `ctrl_reg[31:3]`, `regs_o[3][31:3]` and `hw_wdata_i[3][31:2]` (about 180 points) are **not**
+  waived.  Reported for the RTL owner; not worked around here.
+* `pll_subsystem` and the SoC share one decoupling fact: the register banks ignore `paddr[1:0]`; the GPU walk now proves it at SoC level.
+
+### Still open
+
+* `dma_engine`: the CTRL mirror points above, `dst_q[1:0]` (needs a descriptor with an unaligned destination: not attempted, the AXI side of an
+  unaligned INCR burst is outside this PR) and `words_rem_q[31:10]` (needs a transfer of at least 4 KB words = 16 KB; the SRAM model realises 4 KB).
+* `apb4_register_bank`: `addr_word[29:10]`, `paddr[31:12]`, `hw_wen_i[13:10,31:26]` of the instance with a 32-bit window (not reachable from the unit wrapper).
+* Not in xkw5's scope and untouched: `mbist_ctrl`/`soc_mbist`/`mbist_status_sync`, `async_axi_fifo`/`cdc_gray_fifo`, `sram_controller`, `boot_rom`, and the crossbar/ring upper-address, ID, burst and response fields that no master can drive (CPU/DMA/GPU address
+  windows are walked now, IDs and burst fields are constant per master).
+* The SBY prover needs about 3 GB per PDR job; it runs offline (not in CI).
+
 ## 7ovx register-walk re-measurement (2026-10-09)
 
 Bead `7ovx` (GH #216 follow-up). Most of the remaining toggle gap on the register-bank peripherals and the fabric was upper
