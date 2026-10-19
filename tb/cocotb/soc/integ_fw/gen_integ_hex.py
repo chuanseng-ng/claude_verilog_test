@@ -652,7 +652,7 @@ GW_DECERR_LD = (0x1000_0000, 0x8000_0000)
 GW_DECERR_ST = (0x4000_0000, 0x2001_1000)
 GW_SCR_F = SRAM_BASE + 0x600        # phase F: 8 loads x 8 lanes x 4 bytes (aligned / unaligned pairs)
 GW_PLL_BASES = (0x2000_7000,)       # PLL1 APB window (behind u_apb_pll_cdc)
-GW_UNAL_OFFS = (0, 1, 2, 3)         # byte offsets: 0 is the aligned reference
+GW_UNAL_OFFS = (0, 1, 2, 3, 0)      # byte offsets: 0 is the aligned reference; the trailing 0 makes the falls
 GW_DATA_BASE = 0x5A5                # phase B..E store data = 0x5A5 + 4 * lane (VADDI imm12)
 GW_PATCH_WORD = 4                   # kernel word holding the "VADDI r5, r0, k" immediate
 GW_POLL_LIMIT = 4000

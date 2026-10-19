@@ -934,13 +934,13 @@ async def test_soc_gpu_walk_both_masters(dut):
     assert all(r == 3 for _, _, r in wr), f"unmapped write responses {wr}: DECERR (3) expected"
     # ---- phase F: byte offsets +1..+3 on the PLL1 window read the same register as +0 -------------
     scratch = [
-        int(sram[(A.GW_SCR_F - 0x2000) // 4 + 8 * n + l].value) for n in range(4) for l in range(LANES)
+        int(sram[(A.GW_SCR_F - 0x2000) // 4 + 8 * n + l].value) for n in range(5) for l in range(LANES)
     ]
     ref = scratch[:LANES]
     assert ref[0] & 1 == 1, f"PLL1 CONTROL reads {ref[0]:#x}: pll_enable must read 1"
-    for off in (1, 2, 3):
+    for off in (1, 2, 3, 4):  # entry 4 is the trailing aligned read
         got = scratch[LANES * off:LANES * (off + 1)]
-        assert got == ref, f"PLL1 read at byte offset +{off} gave {got}, the aligned read gave {ref}"
+        assert got == ref, f"PLL1 read number {off} (byte offset +{off % 4}) gave {got}, the aligned read gave {ref}"
     dut._log.info(
         "GPU walk: %d ifetch beats (A), phases at cycles %s",
         len(ifetch["A"]),
