@@ -35,7 +35,7 @@ This restriction is due to Ubuntu's page size being 4 KB
 | 0x2000_5000 - 0x2000_5FFF  | 4 KB    | DMA Control (AXI-Lite) | DMA engine control registers |
 | 0x2000_6000 - 0x2000_6FFF  | 4 KB    | IRQ Control (AXI-Lite) | Interrupt controller registers |
 | 0x2000_7000 - 0x2000_7FFF  | 4 KB    | PLL Control (APB4)  | PLL subsystem config/status (`pll_apb_regs`) |
-| 0x2000_8000 - 0x2000_8FFF  | 4 KB    | PMU Control (APB4)  | Power-mode sequencer registers (`pmu.sv`, GH #98/#99/#100) |
+| 0x2000_8000 - 0x2000_8FFF  | 4 KB    | PMU Control (APB4)  | Power-mode sequencer registers (`pmu.sv`, GH #98/#99/#100). `STATUS[3]` = sticky `cpu_iso_ack_timeout` (bead 3ogd) |
 | 0x2000_9000 - 0x2000_9FFF  | 4 KB    | PLL2 Control (APB4) | Second PLL subsystem config/status, CPU-domain reference clock (`pll_apb_regs`, GH #92) |
 | 0x2000_A000 - 0x2000_AFFF  | 4 KB    | GPIO (APB4)         | 32-pin GPIO controller (`gpio_controller.sv`, Phase 6a) |
 | 0x2000_B000 - 0x2000_BFFF  | 4 KB    | PWM (APB4)          | 4-channel PWM controller (`pwm_controller.sv`, Phase 6a-2) |

@@ -624,6 +624,12 @@ cdc_report_through \
     "check_cdc_timing.tcl PMU/IRQ single-bit crossing report query" \
     $REPORTS_DIR/cdc_pmu_irq.rpt
 
+# Isolation-ack return crossing (bead 3ogd): cpu_clk -> sys_clk, source net pmu_cpu_iso_en_sync.
+cdc_report_through \
+    [get_nets -hierarchical -filter {name == pmu_cpu_iso_en_sync} -quiet] \
+    "check_cdc_timing.tcl PMU iso-ack return crossing report query (cpu_clk -> sys_clk)" \
+    $REPORTS_DIR/cdc_pmu_iso_ack.rpt
+
 puts "================================================================"
 puts "CDC boundary timing -- domain-wide fallback (mem_q + apb cmd_/resp_ payload)"
 puts "================================================================"

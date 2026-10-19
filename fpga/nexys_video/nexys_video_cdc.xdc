@@ -9,7 +9,8 @@
 ##     so: set_max_delay -datapath_only 0.9 x destination period, both directions.
 ##   * Gray-pointer crossings of the five async_axi_fifo channel FIFOs: 0.5 x destination period, datapath only, on the
 ##     first synchroniser stage D pins.
-##   * apb_cdc_bridge req/ack and the PMU cpu_clk_dis synchroniser: 1 x destination period, datapath only.
+##   * apb_cdc_bridge req/ack, the PMU cpu_clk_dis synchroniser and the PMU iso-ack return synchroniser
+##     (u_cpu_iso_ack_sync, clk_cpu -> clk_sys, bead 3ogd): 1 x destination period, datapath only.
 ##   * Reset synchronisers (cdc_reset_sync, and the two in nexys_video_top): async set/clear pins are a reset path.
 ##   * ASYNC_REG on every synchroniser flop (`*sync_q_reg*`), set here so the ASIC RTL stays untouched.
 ## Triage of the report_cdc Critical findings, their waivers (nexys_video_cdc_waivers.tcl) and the RTL-owned open items:
@@ -77,7 +78,8 @@ foreach {nv_pat nv_from nv_dst_p} [list \
         "*u_apb_pll2_cdc*ack_q*"   $nv_cpu $nv_p_sys \
         "*u_apb_dbg_cdc*req_q*"    $nv_sys $nv_p_cpu \
         "*u_apb_dbg_cdc*ack_q*"    $nv_cpu $nv_p_sys \
-        "*u_cpu_clk_dis_sync*"     $nv_sys $nv_p_cpu] {
+        "*u_cpu_clk_dis_sync*"     $nv_sys $nv_p_cpu \
+        "*u_cpu_iso_ack_sync*"     $nv_cpu $nv_p_sys] {
     set nv_cells [get_cells -hierarchical -quiet -filter "NAME =~ $nv_pat && IS_SEQUENTIAL"]
     set nv_pins  [get_pins -quiet -of_objects $nv_cells -filter {REF_PIN_NAME == D}]
     if {[llength $nv_pins] > 0} { set_max_delay -datapath_only $nv_dst_p -from $nv_from -to $nv_pins }
