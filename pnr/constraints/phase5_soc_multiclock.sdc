@@ -36,8 +36,12 @@
 #       constraining the CPU<->fabric CDC boundary that GH #91/#92/#93 built
 #       and this bead's whole reason for existing: async_axi_fifo
 #       (u_cpu_axi_cdc), apb_cdc_bridge (u_apb_pll2_cdc, and — GH #95 fix,
-#       bead claude_verilog_test-eg2 — u_apb_dbg_cdc), and the PMU/IRQ
-#       single-bit crossings into cpu_core_clk.
+#       bead claude_verilog_test-eg2 — u_apb_dbg_cdc), the PMU/IRQ
+#       single-bit crossings into cpu_core_clk, and (bead 3ogd) the one return
+#       crossing u_cpu_iso_ack_sync (cpu_core_clk -> core_clk). The set_max_delay
+#       budgets for all of them live in phase5_soc_multiclock_check.sdc, NOT here:
+#       -datapath_only is not an OpenSTA flag and a cross-clock set_max_delay is
+#       dropped under set_clock_groups -asynchronous (bead k07, see section 3).
 #
 # Clock topology (2-domain SoC, sv2v synthesis, GH #92/#93):
 #   clk_i      = fabric-domain top-level reference input. CTS root for sys_clk.

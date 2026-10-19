@@ -105,6 +105,12 @@
 //           cdc_sync clocked by cpu_core_clk; the clamp itself now lives
 //           at the async_axi_fifo s_* (CPU-domain) face — see clamp-scope
 //           note below.
+//         * pmu_cpu_iso_ack (cpu_core_clk -> core_clk, the REVERSE direction;
+//           bead 3ogd): the CPU-domain clamp control pmu_cpu_iso_en_sync
+//           synchronised back into core_clk by u_cpu_iso_ack_sync and fed to
+//           u_pmu.cpu_iso_ack_i. The PMU holds the CPU domain in its
+//           isolation states until it sees the clamp active (power-down) /
+//           released (power-up); see the note above u_cpu_iso_en_sync.
 //         * ext_irq / timer_irq (core_clk, level-held sources — see
 //           interrupt_controller.sv / timer.sv headers): cdc_sync each,
 //           clocked by cpu_core_clk.
@@ -329,6 +335,8 @@ module soc_top
     // must be re-derived before raising this; the cdc_reset_sync instances
     // (u_cpu_pmu_rst_sync, the WDT one) keep their own hard-coded STAGES.
     localparam int unsigned SYNC_STAGES_TO_CPU = 2;
+    // Depth of the one cpu_core_clk -> core_clk crossing (u_cpu_iso_ack_sync, bead 3ogd).
+    localparam int unsigned SYNC_STAGES_FROM_CPU = 2;
 
     // ── DFT test controls — SINGLE SOURCE (j41m.2; replaces the 07n tie-offs) ──
     // Every scan/test consumer in this file takes its control from the five nets
@@ -760,6 +768,50 @@ module soc_top
         .rst_n_i (cpu_core_rst_n),
         .d_i     (pmu_cpu_iso_en),
         .q_o     (pmu_cpu_iso_en_sync)
+    );
+
+    // ---- Isolation-ack handshake (bead 3ogd) -----------------------------------------------
+    // PROBLEM. pmu_cpu_iso_en reaches the clamp above through a 2-flop cdc_sync clocked by
+    // cpu_core_clk, but pmu_cpu_rst_n reaches u_cpu_pmu_rst_sync's ASYNCHRONOUS clear directly
+    // (async assert), so the reset takes effect on the very core_clk edge the PMU drops it. The
+    // PMU spaced the two by 2 core_clk cycles; "isolate first" therefore held only while
+    // 2 x cpu_core_clk period < 2 x core_clk period, and failed for a CPU clock slower than the
+    // fabric clock (the clamp became active 6 core cycles after a reset that asserted at 2, at 3x).
+    //
+    // FIX. pmu_cpu_iso_en_sync -- the clamp control AS THE CPU DOMAIN SEES IT, i.e. the actual
+    // select of the clamp muxes below -- is synchronised back into core_clk (u_cpu_iso_ack_sync)
+    // and returned to the PMU as cpu_iso_ack_i. The sequencer waits in DOM_PD_ISO for the ack
+    // before it gates the clock (DOM_PD_GATE) and asserts reset (DOM_OFF), so the UPF order
+    // "isolate, then gate, then reset" holds for ANY ratio of the two clocks: the ack is the
+    // output of a synchroniser, so it can be late but never early. It also waits in DOM_PU_ISO for
+    // the ack to FALL after the PMU de-asserts iso_en (the return-to-zero half of the handshake):
+    // without it a power-down requested right after a power-up would meet the previous cycle's
+    // still-high ack and skip its own wait (a stale ack). pmu.sv's header has the full argument,
+    // including why power-up needs no ack for the iso-release-vs-reset-release order.
+    //
+    // CLOCK GATING ORDER (a hang check, as the ack travels cpu_core_clk -> core_clk): the source
+    // flop is the last stage of u_cpu_iso_en_sync, clocked by cpu_core_clk, the UNGATED PLL output.
+    // It is never clocked by cpu_gated_clk, so closing the gate (DOM_PD_GATE, which the PMU only
+    // reaches AFTER the ack) cannot starve the ack path, and the PMU never waits on a clock that
+    // its own wait is meant to stop. The one case in which cpu_core_clk's flops do not run is
+    // cpu_core_rst_n low (CPU PLL unlocked/disabled), which holds u_cpu_iso_en_sync at 0: the ack
+    // never rises, and pmu.sv's ISO_ACK_TIMEOUT (STATUS[3]) bounds the wait instead of hanging.
+    //
+    // CDC. d_i is a flop Q (the last stage of u_cpu_iso_en_sync), single bit, so no combinational
+    // decode feeds this D pin (bead ktwt's rule). It is level-held by the handshake itself: the PMU
+    // does not move iso_en again until the ack has followed the previous move (DOM_PD_ISO waits for
+    // the rise, DOM_PU_ISO for the fall), so a slow cpu_core_clk can never miss either phase and a
+    // plain 2-FF level synchroniser is sufficient in both directions. cdc_sync resets to 0 = "clamp
+    // not active", which is the PMU-side reset default as well.
+    logic pmu_cpu_iso_ack;
+    cdc_sync #(
+        .WIDTH  (1),
+        .STAGES (SYNC_STAGES_FROM_CPU)
+    ) u_cpu_iso_ack_sync (
+        .clk_i   (core_clk),
+        .rst_n_i (core_rst_n),
+        .d_i     (pmu_cpu_iso_en_sync),
+        .q_o     (pmu_cpu_iso_ack)
     );
 
     // pmu_cpu_rst_n: synchronised into the cpu_core_clk domain with
@@ -2527,6 +2579,7 @@ module soc_top
         .cpu_rst_n_o         (pmu_cpu_rst_n),
         .cpu_ret_save_o      (pmu_cpu_ret_save),
         .cpu_ret_restore_o   (pmu_cpu_ret_restore),
+        .cpu_iso_ack_i       (pmu_cpu_iso_ack),
         // GPU domain sequencing (PD_GPU)
         .gpu_clk_en_o        (pmu_gpu_clk_en),
         .gpu_iso_en_o        (pmu_gpu_iso_en),

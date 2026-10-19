@@ -266,10 +266,23 @@ jobs:
           # 2026-10-18 (bead h367, I2C functional coverage): 834 = 837 - 3. 837 EXPECTED = 832 (the line above) + 5 new tests in
           # test_i2c.py (long transfers, repeated-START chain, CMD shapes, COUNT=255, RX-full timeout); the i2c suite itself
           # measured 55 -> 60 locally. Confirm against this PR's CI pass count.
+          # 2026-10-18 (bead 3ogd, PMU iso-ack handshake): 835 = 838 - 3. 838 MEASURED: soc_all_ci from clean (fresh SIM_BUILD_ROOT, -j4) on
+          # the merge of origin/main (#312, #315) into fix/pmu-iso-ack-3ogd, 838 passed / 0 failed over 80 suite summaries = the 816 above
+          # + 7 tests already on main since then (inferred from the difference, likely #305 crypto) + 15 new (test_pmu +8, soc_pmu_iso_ack +7).
+          # 2026-10-19 (bead 3ogd, PMU iso-ack handshake, merged onto #314/#316): 844 = 847 - 3. 847 EXPECTED = 832 (main, itself an
+          # expectation above) + 15 new tests (test_pmu +8, new suite soc_pmu_iso_ack +7). MEASURED on the pre-#314/#316 base: 838 =
+          # 823 + 15 (soc_all_ci from clean, plain AND FPGA=1, 838 passed / 0 failed over 80 suite summaries). Confirm 847 against the
+          # merged PR's sharded CI pass count.
+          # 2026-10-19 (bead 3ogd, PMU iso-ack handshake, merged onto #319): 849 = 852 - 3. 852 EXPECTED = 837 (main, CI-measured
+          # per #319's merge) + 15 new tests (test_pmu +8, new suite soc_pmu_iso_ack +7). MEASURED on the pre-#314/#316 base: 838 =
+          # 823 + 15 (soc_all_ci from clean, plain AND FPGA=1, 838 passed / 0 failed over 80 suite summaries). Confirm 852 against the
+          # merged PR's sharded CI pass count.
           # CONFIRMED (h367): 837 passed / 0 failed in #319's CI.
           # 2026-10-19 (merge of main #319 into #313 c54a): 842 = 845 - 3. 845 EXPECTED = 837 (main, confirmed)
           # + c54a's 8; confirm against this merge's sharded CI pass count.
-          PASS_FLOOR: '842'
+          # 2026-10-19 (merge of main #317/#319 into #313 c54a, incl. #318 r51p): 857 = 860 - 3. 860 EXPECTED = 852
+          # (main, #317 measured) + c54a's 8 cocotb tests (#318 adds pytest only); confirm against this merge's sharded CI pass count.
+          PASS_FLOOR: '857'
         run: |
           set -o pipefail
           n=$(find shards -mindepth 1 -maxdepth 1 -type d -name 'cocotb-soc-shard-*' | wc -l)

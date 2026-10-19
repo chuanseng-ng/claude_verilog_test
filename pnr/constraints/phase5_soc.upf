@@ -30,6 +30,7 @@
 #   running while u_cpu's clock is gated):
 # upf-check aon u_cpu_clk_dis_sync  -- ~pmu_cpu_clk_en into the CPU clock domain (drives u_cpu_cg)
 # upf-check aon u_cpu_iso_en_sync   -- pmu_cpu_iso_en into the CPU clock domain: THE ISO_CPU control net
+# upf-check aon u_cpu_iso_ack_sync  -- pmu_cpu_iso_en_sync back into core_clk: the PMU's iso-ack (bead 3ogd)
 # upf-check aon u_cpu_pmu_rst_sync  -- pmu_cpu_rst_n into cpu_domain_rst_n
 # upf-check aon u_cpu_wdt_rst_sync  -- watchdog bite into cpu_domain_rst_n
 # upf-check aon u_ext_irq_sync      -- ext_irq into the CPU clock domain
@@ -229,14 +230,17 @@ create_power_domain PD_GPU \
 # a flow that also INSERTS isolation cells from this strategy would double-clamp
 # (harmless: AND of two ANDs); the strategies document the RTL's clamps.
 #
-# Ordering note (bead-worthy, NOT fixed here): the PMU spaces its actions one
-# core_clk cycle apart: iso, gate, reset on the way down; reset release, ungate,
-# restore, de-isolate on the way up.  "Isolate before the reset asserts" holds
-# for the CPU only because the 2-FF synchroniser on pmu_cpu_iso_en (2 cpu_core_clk
-# edges, 1.56 ns at 1282 MHz) happens to be shorter than the 2 core_clk cycles
-# (3.5 ns at 571 MHz) between the iso and reset actions - there is no handshake,
-# and the reset itself reaches u_cpu through a cdc_reset_sync whose assertion is
-# asynchronous.  A slower CPU clock, or a deeper STAGES, would reorder them.
+# Ordering (bead 3ogd, FIXED): the PMU spaces its actions one core_clk cycle apart:
+# iso, gate, reset on the way down; reset release, ungate, restore, de-isolate on
+# the way up.  The CPU domain's clamp control crosses into cpu_core_clk through a
+# 2-FF synchroniser while its reset asserts ASYNCHRONOUSLY, so with the actions
+# merely spaced in time "isolate before the reset asserts" held only while
+# 2 x cpu_core_clk period < 2 x core_clk period.  It is now a handshake:
+# u_cpu_iso_ack_sync returns pmu_cpu_iso_en_sync to the PMU (pmu_cpu_iso_ack), and
+# the CPU's DOM_PD_ISO state holds the clock gate and the reset until the clamp is
+# seen active (DOM_PU_ISO symmetrically waits for it to be seen released).  The
+# step order above is unchanged; only the wait between steps is now event-based.
+# The GPU needs none (same clock, the clamp control is the PMU flop itself).
 ###############################################################################
 set_isolation ISO_CPU \
     -domain PD_CPU \

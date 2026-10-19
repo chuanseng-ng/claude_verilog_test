@@ -22,9 +22,17 @@ What the audit found beyond syntax, kept here because they are design facts, not
    `soc_top` did not clamp. It is now clamped like the other seven GPU signals (ISO_GPU is 8 signals,
    ISO_CPU is 6).
 2. The previous UPF's "state rebuilt from SRAM on wakeup" was never implemented (section 3).
-3. **Isolation versus reset ordering has no handshake.** The CPU clamp control passes a 2-flop
-   synchroniser, the reset a `cdc_reset_sync` with asynchronous assertion; "isolate first" holds only
-   because 2 x 780 ps is shorter than two PMU cycles of 1750 ps. Not fixed here; worth a bead.
+3. **Isolation versus reset ordering had no handshake (FIXED, bead `3ogd`).** The CPU clamp control passes a
+   2-flop synchroniser, the reset a `cdc_reset_sync` with asynchronous assertion; "isolate first" held only
+   because 2 x 780 ps is shorter than two PMU cycles of 1750 ps, and failed for a CPU clock slower than the
+   fabric clock (reproduced: at 3x slower the reset asserted 6 core cycles before the clamp). Now an
+   iso-ack handshake: `soc_top`'s `u_cpu_iso_ack_sync` returns the CPU-domain clamp control to the PMU,
+   whose CPU `DOM_PD_ISO` holds the clock gate and the reset until it is seen active, and whose `DOM_PU_ISO`
+   holds the settle at ON until it is seen released (4-phase). The UPF step order is unchanged. Bounded by
+   `ISO_ACK_TIMEOUT` (255 cycles) with sticky `STATUS[3]` so a dead CPU clock cannot hang the PMU. Cost:
+   the CPU power-down and power-up each take longer by the ack round trip (measured: +2 / +4 / +8 / +15
+   core cycles per direction for a CPU clock 7:3 faster / 1:1 / 3x / 8x slower than the fabric).
+   See the "Isolation handshake" block in `rtl/soc/pmu.sv`.
 4. **Scan mode does not override the PMU or the clamps.** Clock gates (`test_en`) and resets are forced
    by `scan_mode_i`, but the PMU is ordinary scan-chain state, so a clamp can be active under scan. The
    UPF `SCAN` state says "all ON"; the mismatch is documented in `docs/design/UPF_POWER_SPEC.md`.
