@@ -340,3 +340,23 @@ async def test_register_walk(dut):
     m = _make_apb_bfm(dut)
     regs, first = reg_maps.BANKS["pll"]
     await walk_bank(m, regs, first, log=dut._log)
+
+
+@cocotb.test()
+async def test_pll_apb_regs_byte_offset_ignored(dut):
+    """paddr[1:0] is not decoded (word-aligned register file, module header): a write to byte
+    offset +3 of CONTROL lands in CONTROL, and every one of the four byte addresses of CONTROL and of
+    STATUS reads that register -- never a neighbour.  Bead xkw5: the only way to move paddr[1:0]."""
+    _kill_active_tasks()
+    await _start_clock_and_reset(dut)
+    bfm = _make_apb_bfm(dut)
+    assert await bfm.write(CTRL_OFFSET + 3, 0x0F0)
+    ctrl, ok = await bfm.read(CTRL_OFFSET)
+    assert ok and ctrl == 0x0F1, f"CONTROL 0x{ctrl:08x}: the +3 write must land in CONTROL (WMASK 0x3F0)"
+    status, ok = await bfm.read(STAT_OFFSET)
+    assert ok
+    for off in range(4):
+        got, ok = await bfm.read(CTRL_OFFSET + off)
+        assert ok and got == ctrl, f"CONTROL read at +{off}: 0x{got:08x} != 0x{ctrl:08x}"
+        got, ok = await bfm.read(STAT_OFFSET + off)
+        assert ok and got == status, f"STATUS read at +{off}: 0x{got:08x} != 0x{status:08x}"

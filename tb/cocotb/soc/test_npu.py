@@ -1773,3 +1773,25 @@ async def test_register_w1p_w1c_semantics(dut):
     rep.assert_clean()
     ist, _ = await m.read(o("NPU_IRQ_STAT"))
     assert ist == 0, f"IRQ_STAT[0] must drop with done, got 0x{ist:x}"
+
+
+@npu_test
+async def test_npu_aout_fifo_every_slot_every_bit(dut):
+    """Every bit of every AOUT FIFO slot rises and falls (bead xkw5): with the identity tile and
+    SCALE 1/0 the result word equals the activation word, so four 0xFFFFFFFF results fill the depth-4
+    FIFO (a result queued in each of the four slots), four reads drain them in order, then four
+    0x00000000 and four 0xFFFFFFFF results do the same -- each slot goes 0 -> 1 -> 0 -> 1 as a
+    queued result and each pop shifts the older entries down, one slot at a time."""
+    _kill_active_tasks()
+    rig = await _start_clock_and_reset(dut)
+    d = rig.main
+    await d.load_tile(0, IDENT_ROWS)
+    for word in (_pack([-1] * 4), _pack([0] * 4), _pack([-1] * 4), _pack([85] * 4), _pack([-86] * 4)):
+        for _k in range(AOUT_DEPTH):
+            await d.infer(0, [word], _scale(1, 0), pop=False)
+        st = await d.peek(STATUS)
+        assert st & ST_AOUT_FULL, f"word {word:#010x}: AOUT FIFO not full, STATUS=0x{st:02x}"
+        for k in range(AOUT_DEPTH):
+            assert await d.r(AOUT) == word, f"word {word:#010x}: pop {k} returned a different result"
+        st = await d.peek(STATUS)
+        assert not st & (ST_AOUT_VALID | ST_AOUT_FULL), f"drained: STATUS=0x{st:02x}"
