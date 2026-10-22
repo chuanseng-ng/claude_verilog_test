@@ -123,3 +123,23 @@ additions plus the two count lines (`PINS`/`NETS` 407 -> 503).
 `pin_order.cfg` only decides which pins exist per side (`ERRORS_ON_UNMATCHED_IO: both`); the template decides where.
 The ASAP7 CPU macro (`pnr/asap7/cpu/pin_order.cfg`, an explicit list that already lacks the j41m.4 scan pins) is not
 changed: its re-harden is shelved (ma7/lxv/2kn) and j41m.13 must regenerate it with the DFT and MBIST pins.
+
+## v6: mbist_status_o moved from the S edge to the N edge (bead c54a, user-approved "Option A", 2026-10-23)
+
+MEASURED (RUN_2026-10-19_17-59-18, v5 pin plan, RTL incl. #318): global routing finished with overflow 9202 (baseline
+RUN_2026-10-16_02-27-26: 0), detailed routing ended at 924 violations after 65 iterations (baseline: 0 by iteration 16).
+891 of the 924 were Shorts against the met1-met3 obstruction of icache data SRAM [1] and [2], and the global-route
+guides of 99 + 75 nets crossed those two macro interiors on met1/met2 (0 in the baseline). Cause (inferred from the
+pin geometry, not isolated by a control run): the icache macro row sits at y = 20..418, so a south-edge pin under a
+macro is reachable only through the 20 um strip between the die edge and the macro. v5 put 13 of the 69 new
+`mbist_status_o` pins under each of those two macros, doubling the 13 existing pins there (baseline: 13 per macro).
+
+Change: the 69 `mbist_status_o[68:0]` pins move to the **N** edge, each in the middle of one of the 69 widest inter-pin
+gaps of the 128 existing N pins (35.4 um gaps; bits in x order; snapped to the met2 track grid 230 nm + k * 460 nm).
+Nearest new-to-old pin distance 17.6 um, minimum N pitch 17.48 um (an existing gap). The N edge has no macro under it
+(dcache macros end at y = 918, die top at 1800). N goes 128 -> 197 pins, S goes back to 97 (the baseline count).
+The 407 pre-existing pins and the 27 `mbist_run_i`/`mbist_cfg_i` pins do not move (`make -C pnr
+sky130-cpu-pin-lock-check` OK, and the template diff against v5 touches only the 69 `mbist_status_o` lines). Total pins
+stay 503, die and macro placement unchanged. SoC consequence: `u_cpu/mbist_status_o` now leaves the macro on its N face,
+the same face as `mbist_run_i`/`mbist_cfg_i`; a SoC floorplan that put the CPU macro with its S face towards the
+status consumer must be re-checked against the new LEF.
