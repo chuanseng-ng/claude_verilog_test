@@ -103,7 +103,12 @@ ifeq ($(SIM),vcs)
 else
   # xrun's -defparam silently IGNORES string-typed parameters ("*W,BDDSTR ... ignored"), so parameter
   # overrides go through a generated hierarchical-defparam top (see below) instead of the command line.
-  SP_PARAMS :=
+  # Numeric overrides DO go on the command line (-defparam): a hierarchical defparam is applied after the
+  # wrapper's own parameter-dependent typedefs are resolved, so e.g. tb_apb_interconnect's
+  # `typedef ... [N_SLAVES]` kept N_SLAVES's default and failed elaboration (TYCMPAT).
+  SP_GS_STR := $(foreach g,$(SP_GS),$(if $(findstring \",$(g)),$(g)))
+  SP_GS_NUM := $(filter-out $(SP_GS_STR),$(SP_GS))
+  SP_PARAMS := $(foreach g,$(SP_GS_NUM),-defparam $(TOPLEVEL).$(patsubst -G%,%,$(g)))
   SP_BASE   := -sv -nocopyright -nohistory -top sp_defparams
 endif
 
@@ -132,11 +137,11 @@ endif
 
 ifeq ($(SIM)$(if $(strip $(SIM_BUILD)),,-nobuild),xcelium)
   # Generated override module: one hierarchical defparam per -G<P>=<v> (string values keep their quotes).
-  ifneq ($(SP_GS),)
+  ifneq ($(SP_GS_STR),)
     SP_DEFPARAM_SV := $(SIM_BUILD)/sp_defparams.sv
     SP_MKDIR := $(shell mkdir -p $(SIM_BUILD))
     $(file >$(SP_DEFPARAM_SV),module sp_defparams;)
-    $(foreach g,$(SP_GS),$(file >>$(SP_DEFPARAM_SV),  defparam $(TOPLEVEL).$(subst \",",$(patsubst -G%,%,$(g)));))
+    $(foreach g,$(SP_GS_STR),$(file >>$(SP_DEFPARAM_SV),  defparam $(TOPLEVEL).$(subst \",",$(patsubst -G%,%,$(g)));))
     $(file >>$(SP_DEFPARAM_SV),endmodule)
     override VERILOG_SOURCES += $(SP_DEFPARAM_SV)
   else

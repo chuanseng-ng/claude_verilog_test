@@ -1288,14 +1288,14 @@ apb_interconnect: $(call sp_lint,apb_interconnect_lint)
 		APB_IC_N_SLAVES=$$n APB_IC_OVERLAP=0 \
 		$(MAKE) MODULE=test_apb_interconnect TOPLEVEL=tb_apb_interconnect \
 			VERILOG_SOURCES="$(APB_INTERCONNECT_SOURCES)" \
-			EXTRA_ARGS="-Wno-SYNCASYNCNET -GN_SLAVES=$$n" \
+			EXTRA_ARGS="-Wno-SYNCASYNCNET -GN_SLAVES=$$n +define+TB_N_SLAVES=$$n" \
 			sim; \
 	done; \
 	echo "=== apb_interconnect overlap test: N_SLAVES=2 OVERLAP_TEST=1 ==="; \
 	APB_IC_N_SLAVES=2 APB_IC_OVERLAP=1 \
 	$(MAKE) MODULE=test_apb_interconnect TOPLEVEL=tb_apb_interconnect \
 		VERILOG_SOURCES="$(APB_INTERCONNECT_SOURCES)" \
-		EXTRA_ARGS="-Wno-SYNCASYNCNET -GN_SLAVES=2 -GOVERLAP_TEST=1" \
+		EXTRA_ARGS="-Wno-SYNCASYNCNET -GN_SLAVES=2 -GOVERLAP_TEST=1 +define+TB_N_SLAVES=2 +define+TB_OVERLAP_TEST=1" \
 		sim
 
 # GH #91: async_axi_fifo lint + sim.

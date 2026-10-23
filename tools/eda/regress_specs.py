@@ -52,7 +52,7 @@ def cpu():
                                "gpu_coalescer", "gpu_memunit", "gpu_shmem", "gpu_top_smoke")]  # gpu_unit
     ks = ["kernel_vector_add", "kernel_dot_product", "kernel_divergence_basic", "kernel_memory_coalesce",
           "kernel_shared_mem_pingpong", "kernel_sync", "kernel_block_warps", "kernel_control_paths"]
-    j += [f"sim:sim:MODULE=tb.cocotb.gpu.kernels.{k},TOPLEVEL=gpu_top" for k in ks]   # gpu_kernels (+SIM_BUILD/VERILOG_SOURCES below)
+    j += [f"sim:sim:MODULE=tb.cocotb.gpu.kernels.{k},TOPLEVEL=gpu_top,VERILOG_SOURCES=$(GPU_SOURCES)" for k in ks]   # gpu_kernels (+SIM_BUILD/VERILOG_SOURCES below)
     j += ["sim:gpu_handoff", "sim:gpu_random_smoke"]
     return j
 

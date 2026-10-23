@@ -67,14 +67,15 @@ def hgen(handle, name: str, idx: int, *rest: str):
 
 
 async def read_only():
-    """``await ReadOnly()`` that tolerates being called while already in the ReadOnly phase.
+    """``await ReadOnly()`` that is a no-op when the caller is already in the ReadOnly phase.
 
-    Verilator treats that as a no-op; VCS fails to register a second cbReadOnlySynch and raises
-    ``TriggerException``.  On that failure, step 1 ps out of the phase and wait for ReadOnly again."""
-    from cocotb.triggers import ReadOnly, Timer
+    Verilator accepts a second ReadOnly there; VCS raises ``TriggerException`` and Xcelium shuts the
+    simulator down ("Simulator shut down prematurely").  cocotb 1.x tracks the phase in
+    ``scheduler._mode``; if that private attribute is absent the plain ``await ReadOnly()`` is used."""
+    import cocotb
+    from cocotb.triggers import ReadOnly
 
-    try:
-        await ReadOnly()
-    except Exception:  # cocotb.triggers.TriggerException
-        await Timer(1, units="ps")
-        await ReadOnly()
+    sch = getattr(cocotb, "scheduler", None)
+    if sch is not None and getattr(sch, "_mode", None) == getattr(sch, "_MODE_READONLY", object()):
+        return
+    await ReadOnly()
