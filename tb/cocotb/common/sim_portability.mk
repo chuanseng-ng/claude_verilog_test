@@ -56,6 +56,9 @@ else ifneq ($(filter vcs xcelium,$(SIM)),)
 
 sp_lint =
 
+# sim/Makefile never sets this; cocotb's Makefile.xcelium refuses to run without it.
+TOPLEVEL_LANG ?= verilog
+
 ifdef COVERAGE
   $(error COVERAGE=1 is Verilator-only for now (SIM=$(SIM)); vcs/xcelium coverage is not wired into sim_portability.mk yet)
 endif
@@ -82,7 +85,11 @@ SP_IN := $(call sp_fold,$(SP_RAW_EXTRA) $(SP_RAW_COMPILE),$(SP_VAL_FLAGS))
 
 SP_DEFS := $(filter +define+%,$(SP_IN)) $(patsubst -D%,+define+%,$(filter -D%,$(SP_IN))) \
            $(addprefix +define+,$(SIM_PORT_DEFINES))
-SP_INCS := $(filter +incdir+%,$(SP_IN)) $(patsubst -I%,+incdir+%,$(filter -I%,$(SP_IN)))
+# Verilator's -I is BOTH the `include path and a module-library search dir (it finds <module>.sv/.v there).
+# Some source lists in the soc Makefile are incomplete and only work because of that (e.g. rv32i_clock_gate.sv
+# is missing from SOC_BOOT_SOURCES), so -I also becomes -y; a genuinely missing module still errors.
+SP_INCS := $(filter +incdir+%,$(SP_IN)) $(patsubst -I%,+incdir+%,$(filter -I%,$(SP_IN))) \
+           $(foreach d,$(patsubst -I%,%,$(filter -I%,$(SP_IN))),-y $(d)) $(if $(filter -I%,$(SP_IN)),+libext+.sv+.v)
 SP_GS   := $(filter -G%,$(SP_IN))
 SP_REST := $(filter-out $(SP_DROP) -G% -I% -D% +define+% +incdir+%,$(SP_IN))
 
@@ -123,7 +130,7 @@ else
   override SIM_BUILD := $(patsubst %_$(SIM),%,$(or $(SIM_BUILD),$(SIM_BUILD_ROOT)/sim_build))_$(SIM)
 endif
 
-ifeq ($(SIM),xcelium)
+ifeq ($(SIM)$(if $(strip $(SIM_BUILD)),,-nobuild),xcelium)
   # Generated override module: one hierarchical defparam per -G<P>=<v> (string values keep their quotes).
   ifneq ($(SP_GS),)
     SP_DEFPARAM_SV := $(SIM_BUILD)/sp_defparams.sv

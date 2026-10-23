@@ -90,14 +90,22 @@ def run_spec(sim: str, root: Path, logdir: Path, spec: str, extra_make: list[str
     mvars = [v for v in (rest[0].split(",") if rest and rest[0] else []) if v]
     jroot = root  # per-chain SIM_BUILD_ROOT is created by the caller
     log = logdir / f"{sim}__{area}__{target}{'__' + '_'.join(v.replace('=', '-') for v in mvars) if mvars else ''}.log"
+    # sim/Makefile only includes cocotb's makefile when a goal is literally `results.xml`, so its results
+    # file cannot be relocated: run it in place (jobs touching sim/ must therefore be serial) and copy it.
+    in_build = [] if area == "sim" else ["SIM_RESULTS_IN_BUILD=1"]
     cmd = ["make", "-C", str(AREA_DIR[area]), f"SIM={sim}", f"SIM_BUILD_ROOT={jroot}",
-           "SIM_RESULTS_IN_BUILD=1", target, *mvars, *extra_make]
+           *in_build, target, *mvars, *extra_make]
+    if area == "sim":
+        (AREA_DIR[area] / "results.xml").unlink(missing_ok=True)
     t0 = time.time()
     with log.open("w") as fh:
         fh.write("$ " + " ".join(cmd) + "\n")
         fh.flush()
         rc = subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT, env=ENV).returncode
     wall = time.time() - t0
+    if area == "sim" and (AREA_DIR[area] / "results.xml").is_file():
+        import shutil
+        shutil.copy(AREA_DIR[area] / "results.xml", jroot / f"results__{target}.xml")
     return {"spec": spec, "cmd": cmd, "rc": rc, "wall_s": round(wall, 1), "log": str(log), "t0": t0}
 
 

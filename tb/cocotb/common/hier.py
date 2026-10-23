@@ -18,3 +18,37 @@ def hsub(handle, *names: str):
         return cur
     except AttributeError:
         return handle._id(".".join(names), extended=False)
+
+
+def _is_struct(handle) -> bool:
+    return not hasattr(handle, "value")
+
+
+def pget(handle) -> int:
+    """Read a (possibly struct-typed) port as one packed integer.
+
+    Verilator exposes a packed-struct port as a single vector; VCS exposes it as a scope whose children
+    are the members (declaration order, first member = MSB).  ``pget`` hides the difference."""
+    if not _is_struct(handle):
+        return int(handle.value)
+    v = 0
+    for m in handle:
+        v = (v << _width(m)) | pget(m)
+    return v
+
+
+def _width(handle) -> int:
+    return len(handle) if not _is_struct(handle) else sum(_width(m) for m in handle)
+
+
+def pset(handle, value: int) -> None:
+    """Drive a (possibly struct-typed) port from one packed integer (see ``pget`` for the layout)."""
+    if not _is_struct(handle):
+        handle.value = value
+        return
+    members = list(handle)
+    shift = _width(handle)
+    for m in members:
+        w = _width(m)
+        shift -= w
+        pset(m, (value >> shift) & ((1 << w) - 1))

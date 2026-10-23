@@ -30,6 +30,7 @@ Tests:
   6. VRET on non-empty stack                             — div_pop_o asserted
 """
 import cocotb
+from tb.cocotb.common.hier import pget, pset
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, RisingEdge, Timer
 
@@ -93,7 +94,7 @@ async def _reset(dut, cycles=4):
     dut.shmem_rdata_i.value      = 0
     dut.shmem_rvalid_i.value     = 0
     dut.div_stack_depth_i.value  = 0
-    dut.div_stack_top_i.value    = 0
+    pset(dut.div_stack_top_i, 0)
     await ClockCycles(dut.clk, cycles)
     dut.rst_n.value = 1
     await RisingEdge(dut.clk)
@@ -111,7 +112,7 @@ async def _run_instr(dut, warp_id, pc, mask, instr_word,
     """
     # Present the scheduler's divergence stack state for this warp
     dut.div_stack_depth_i.value = div_depth
-    dut.div_stack_top_i.value   = _pack_div_entry(div_top_pc, div_top_mask)
+    pset(dut.div_stack_top_i, _pack_div_entry(div_top_pc, div_top_mask))
 
     # Wait until pipeline is ready for a new warp
     for _ in range(20):
@@ -150,7 +151,7 @@ async def _run_instr(dut, warp_id, pc, mask, instr_word,
         'warp_next_mask'  : int(dut.warp_next_mask_o.value),
         'warp_done'       : int(dut.warp_done_o.value),
         'div_push'        : int(dut.div_push_o.value),
-        'div_push_entry'  : int(dut.div_push_entry_o.value),
+        'div_push_entry'  : pget(dut.div_push_entry_o),
         'div_pop'         : int(dut.div_pop_o.value),
         'div_pop_pc'      : int(dut.div_pop_pc_o.value),
         'div_pop_mask'    : int(dut.div_pop_mask_o.value),
@@ -194,9 +195,11 @@ async def test_converging_taken(dut):
     cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
     await _reset(dut)
 
-    # Use non-zero immediate: imm=8 → branch_target = pc + 8
+    # Use non-zero immediate: imm=0x20 → branch_target = pc + 0x20.  imm[4:0] must be 0: they ARE the rs2 field
+    # (instr[24:20]); the old imm=8 made rs2=r8, an unwritten register that only compared equal to r0 because
+    # Verilator zero-initialises memories (a 4-state simulator reads X, so the branch outcome went X).
     pc  = 0x2000
-    imm = 8   # 12-bit positive offset
+    imm = 0x20   # 12-bit positive offset, rs2 field (imm[4:0]) = 0 = r0
     # For a branch instruction, dec_imm = instr[31:20].
     # Branch target = pc + sign_extend(dec_imm[11:0]).
     # Use I-type encoding: imm in bits[31:20], rs1=0, rs2 field (bits[24:20]) = 0
