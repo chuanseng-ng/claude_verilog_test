@@ -38,11 +38,6 @@ async def test_fi_model_equals_real_model(dut):
         dut.addr0_i.value = a
         dut.din0_i.value = 0
         await RisingEdge(dut.clk_i)
-    # One read on each port so both real output registers are driven before the comparison starts.
-    dut.csb0_i.value = 0
-    dut.web0_i.value = 1
-    dut.csb1_i.value = 0
-    await ClockCycles(dut.clk_i, 3)
     dut.csb0_i.value = 1
     dut.csb1_i.value = 1
     await ClockCycles(dut.clk_i, 4)

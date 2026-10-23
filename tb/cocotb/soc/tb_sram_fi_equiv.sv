@@ -29,14 +29,11 @@ module tb_sram_fi_equiv (
     );
 
     initial mismatch_o = 32'd0;
-    // Compare at every posedge (the outputs settled at the preceding negedge).
+    // Compare at every posedge (the outputs settled at the preceding negedge), from time 0: both models
+    // reset their output registers to 0, so there is no start-up window to skip.  Every output, X
+    // included, is compared with !==.
     always @(posedge clk_i) begin
-        // Compare once both real outputs have been driven.  Before a port's first read its output register
-        // is X in a 4-state simulator (Verilator: 0) while the 2-state FI model resets to 0 -- a power-up
-        // difference of the output register, not a behavioural one.  After that every output, X included,
-        // is compared with !==.
-        if (!$isunknown(dout0_real_o) && !$isunknown(dout1_real_o) &&
-            (dout0_real_o !== dout0_fi_o || dout1_real_o !== dout1_fi_o)) begin
+        if (dout0_real_o !== dout0_fi_o || dout1_real_o !== dout1_fi_o) begin
             mismatch_o <= mismatch_o + 32'd1;
         end
     end
