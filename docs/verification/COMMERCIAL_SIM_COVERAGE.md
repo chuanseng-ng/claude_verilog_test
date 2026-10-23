@@ -1,5 +1,7 @@
 # VCS code coverage and hole review (Step 4, report-only)
 
+Environment setup and the uninstrumented VCS/Xcelium regression flow: [PROPRIETARY_SIM_FLOW.md](PROPRIETARY_SIM_FLOW.md).
+
 Measured 2026-10-23/24 on branch `feature/commercial-sims`, Synopsys VCS Y-2026.03 + URG Y-2026.03.
 Scope decision (user): **VCS only**. Xcelium coverage was not collected: `imc` is not installed on this host, so a
 collected Xcelium database could not be merged or reported. `COVERAGE=1` under `SIM=xcelium` is refused with a clear

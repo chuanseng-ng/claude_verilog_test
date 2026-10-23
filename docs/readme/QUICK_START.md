@@ -112,6 +112,20 @@ shows the exact material. Checks: `pytest tb/tests/test_sim_build_key.py` and
 `make -C tb/cocotb/soc check-shared-build-failure` (both also run in CI, job "cocotb build-directory key
 self-tests"). `make clean-sim-builds` sweeps every directory.
 
+## Proprietary simulators (VCS / Xcelium)
+
+On a host with Synopsys VCS or Cadence Xcelium (no nix or Verilator needed):
+
+```bash
+make eda-venv && source tools/eda/sim_env.sh                 # csh: source tools/eda/sim_env.csh
+make -C tb/cocotb/soc SIM=vcs gpio                           # or SIM=xcelium; same targets as Verilator
+python3 tools/eda/run_cocotb_targets.py --sim vcs --jobs 3 $(python3 tools/eda/regress_specs.py soc)
+```
+
+cocotb 1.x `make` exits 0 even when tests fail: judge from `results.xml` (the driver does). Full setup, pass
+floors, portability rules and troubleshooting: [docs/verification/PROPRIETARY_SIM_FLOW.md](../verification/PROPRIETARY_SIM_FLOW.md).
+VCS coverage: [docs/verification/COMMERCIAL_SIM_COVERAGE.md](../verification/COMMERCIAL_SIM_COVERAGE.md).
+
 ## RTL Linting & Formatting
 
 Two complementary tools, both run from `sim/`:
