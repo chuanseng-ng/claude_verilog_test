@@ -1365,3 +1365,14 @@ distclean:
 	@rm -f dump.vcd 2>/dev/null || true
 	@rm -f results.xml 2>/dev/null || true
 	@rm -f *.log 2>/dev/null || true
+
+# Commercial-simulator coverage for the CPU / Phase 3 cache / Phase 4 GPU rollup (Step 4 of the VCS/Xcelium
+# bring-up; VCS only).  Same job list as the uninstrumented VCS regression (tools/eda/regress_specs.py cpu),
+# every simulation instrumented (-cm line+cond+fsm+tgl+branch+assert, scoped to rtl/), then one urg
+# -flex_merge merge -> $(VCS_COV_ROOT)/report/cpu/urgReport/.  sim/ jobs write ./results.xml in place, so
+# they run strictly serially.  See `soc_coverage_vcs` in tb/cocotb/soc/Makefile; run both with
+#   python3 tools/eda/vcs_coverage.py run --area all     (adds a combined report/all)
+VCS_COV_ROOT ?= $(PROJ_ROOT)/sim_build_cov
+.PHONY: coverage_cpu_gpu_vcs
+coverage_cpu_gpu_vcs:
+	python3 $(PROJ_ROOT)/tools/eda/vcs_coverage.py run --area cpu --root $(VCS_COV_ROOT) --out $(VCS_COV_ROOT)/report --jobs 1

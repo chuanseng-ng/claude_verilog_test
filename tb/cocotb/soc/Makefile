@@ -2226,3 +2226,22 @@ soc_coverage:
 		--dat $(COV_DIR)/merged.dat --root $(PROJ_ROOT) \
 		--waivers $(PROJ_ROOT)/tools/verif/coverage_waivers.txt \
 		--out-md $(COV_DIR)/coverage_report.md --out-json $(COV_DIR)/coverage_report.json
+
+# Commercial-simulator coverage (Step 4 of the VCS/Xcelium bring-up; user decision: VCS only -- Xcelium's
+# imc is not installed, and COVERAGE=1 is refused for SIM=xcelium by tb/cocotb/common/sim_portability.mk).
+# Runs the SAME soc_all_ci job list as the uninstrumented VCS regression (tools/eda/regress_specs.py soc,
+# read from `make print-soc-ci-suites`, never a fork) with COVERAGE=1 -- every simulation compiled with
+# `-cm line+cond+fsm+tgl+branch+assert`, scoped to rtl/ with -cm_hier, writing a uniquely named test into
+# its build's simv.vdb -- through the results.xml-judging driver at bounded parallelism (VCS_COV_JOBS,
+# default 3: 15 GB host), then merges every simv.vdb with ONE urg call (-flex_merge modules: the suites
+# have different top-level testbenches, so the databases have different base designs) and writes
+# $(VCS_COV_ROOT)/report/soc/urgReport/{dashboard,modlist,hierarchy,modinfo,...}.txt (+ .html).
+# Needs `source tools/eda/sim_env.sh` (VCS_HOME, licence, venv) in the calling shell.
+#   make SIM=vcs soc_coverage_vcs     (SIM=vcs only so this Makefile parses without a verilator binary; the script sets SIM=vcs for every sub-make itself)
+#   make SIM=vcs VCS_COV_ROOT=/big/disk/cov soc_coverage_vcs
+# Fails if any chain fails, or if urg reports no scores ("--" everywhere is not a result).
+VCS_COV_ROOT ?= $(PROJ_ROOT)/sim_build_cov
+VCS_COV_JOBS ?= 3
+.PHONY: soc_coverage_vcs
+soc_coverage_vcs:
+	python3 $(PROJ_ROOT)/tools/eda/vcs_coverage.py run --area soc --root $(VCS_COV_ROOT) --out $(VCS_COV_ROOT)/report --jobs $(VCS_COV_JOBS)

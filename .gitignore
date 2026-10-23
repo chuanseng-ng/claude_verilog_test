@@ -121,3 +121,12 @@ xcelium.d/
 novas*
 verdiLog/
 sim_build_eda/
+
+# Commercial-simulator (VCS) code coverage: databases, merged dbs, urg reports, scope files
+*.vdb/
+simv.daidir/
+urgReport*/
+vcs_cov_scope_*.f
+vcs_cov_scope_*.cfg
+cm.log
+cm_name_*/
