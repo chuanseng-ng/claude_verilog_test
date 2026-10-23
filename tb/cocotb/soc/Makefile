@@ -1500,7 +1500,7 @@ mbist_ctrl_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -GN_MEM=10 -GAW=8 -GP1_MASK=0 --top-module tb_mbist_domain $(MBIST_CTRL_SOURCES)
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -GN_MEM=2 -GAW=10 -GP1_MASK=1 --top-module tb_mbist_domain $(MBIST_CTRL_SOURCES)
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -GN_MEM=10 -GAW=8 -GP1_MASK=0 -GLOCAL_CMP=1 --top-module tb_mbist_domain $(MBIST_CTRL_SOURCES)
-	verilator --lint-only -Wall -Wno-IMPORTSTAR -GN_MEM=4 -GAW=6 -GP1_MASK=5 -GLOCAL_CMP=1 --top-module tb_mbist_domain $(MBIST_CTRL_SOURCES)
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -GN_MEM=4 -GAW=6 -GP1_MASK="4'b0101" -GLOCAL_CMP=1 --top-module tb_mbist_domain $(MBIST_CTRL_SOURCES)
 
 # Three build points (each hashes to its own SIM_BUILD): small (every algorithm x every fault class), soc
 # (two 1024-word macros, port 1 on memory 0) and cpu (ten 256-word cache SRAMs); small and cpu are built a
