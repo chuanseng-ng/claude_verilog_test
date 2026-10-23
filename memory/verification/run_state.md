@@ -413,3 +413,33 @@ Xcelium soc 45/46 PASS: 918 tests 16 fail (ALL soc:dft_clk_switch) 46 skip = 856
 BLOCKED: soc:dft_clk_switch on Xcelium only -- zero-width clk_o pulse (fix_request, RTL rtl/soc/dft/dft_clk_switch.sv latch phase). Standalone repro: tools/eda/repro/dft_clk_switch_xrun_glitch.sv.
 Negative control (test_negative_control added to test_cdc_sync.py then reverted): FAIL reported on both sims.
 Resume: re-run `source tools/eda/sim_env.sh; python3 tools/eda/run_cocotb_targets.py --sim xcelium --jobs 3 soc:dft_clk_switch` after the RTL fix; step 4 (VCS coverage) not started.
+
+## Step 4: VCS code coverage (report-only) -- started 2026-10-23T23:20:42+08:00
+run_id:      verification_20261023_232042  (commercial-sims-step4-vcs-coverage)
+design_name: claude_verilog_test
+tool:        vcs Y-2026.03 + urg
+start_time:  2026-10-23T23:20:42+08:00
+last_stage:  simulator_portability (COVERAGE=1 wiring)
+mode:        report_only_coverage   (coverage_mode: report_only; no tests written, no loop-backs)
+simulators:  verilator (reference, make -n parity), vcs (coverage). Xcelium/imc SKIPPED by user decision.
+job_bound:   3 (15 GB RAM)
+shards:      (none launched yet)
+last_stage:  coverage_analysis (instrumented regression running)  [2026-10-23T23:39:40+08:00]
+shards:
+  - id: vcs_cov_all   status: running   (soc then cpu, serial areas; soc --jobs 3, cpu --jobs 1)
+    cmd: source tools/eda/sim_env.sh; python3 tools/eda/vcs_coverage.py run --area all --root sim_build_cov --jobs 3
+    log: /tmp/claude-1001/-home-RD-ryan-Desktop-Github-claude-verilog-test/bae07d35-31fa-4eed-8eaf-434170264799/scratchpad/vcs_cov_all.log   results: sim_build_cov/{soc,cpu}/driver.json (+ sim_build_cov/report/{soc,cpu,all}/urgReport)
+    counts: pending (uninstrumented reference: soc 872 pass / 46 skip, cpu 265 pass)
+  - make -n parity capture: /tmp/claude-1001/-home-RD-ryan-Desktop-Github-claude-verilog-test/bae07d35-31fa-4eed-8eaf-434170264799/scratchpad/par/{before,after} (before = HEAD c82a52b, after = working tree)
+
+## Status at hand-off (Step 4, VCS coverage, report-only) -- 2026-10-24T00:22:18+08:00
+last_stage:  coverage_analysis (report-only) COMPLETE; regression_signoff NOT RUN (report-only never sets sign-off)
+shards (all complete):
+  - vcs_cov_all   status: complete   cmd: python3 tools/eda/vcs_coverage.py run --area all --root sim_build_cov --jobs 3
+    results: sim_build_cov/{soc,cpu}/driver.json, report/{soc,cpu,all}/urgReport   counts: soc tests=918 fail=0 err=0 skip=46 (872 pass, 1090 s); cpu tests=265 fail=0 (316 s)
+Instrumented pass counts equal the uninstrumented ones (872 / 265). urg merged 114 tests (80 soc + 34 cpu) = 114 results xml.
+make -n parity SIM=verilator: 30/30 cmp -s identical. COVERAGE=1 SIM=xcelium refused (clear message).
+Overall (module-definition view, all): SCORE 82.80 LINE 79.23 COND 86.51 TOGGLE 77.03 FSM 76.94 BRANCH 94.31; hierarchy view 67.40/79.07/71.42/55.04/54.39/77.09.
+Deliverable: docs/verification/COMMERCIAL_SIM_COVERAGE.md (ranked holes H1-H15 + waiver proposals W1-W9; nothing applied).
+Resume: databases are in sim_build_cov/ (gitignored); re-merge with vcs_coverage.py merge; regenerate with the run command above (about 24 min).
+Open: Xcelium/imc coverage skipped by user decision; soc:dft_clk_switch Xcelium fix_request from Step 3 still open.
