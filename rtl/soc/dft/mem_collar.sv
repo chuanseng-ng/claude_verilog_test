@@ -11,15 +11,22 @@
 // compares both. HAS_P1 = 0 is for macros whose port 1 is tied off in the functional design (the caches,
 // the NPU weight memory): the port-1 outputs are then constant tie-offs, exactly as the wrapper had them.
 //
-// Local compare (LOCAL_CMP = 1, bead claude_verilog_test-c54a, section 16.7): the collar also owns the read-data
-// comparator of its macro. The controller no longer receives 32 (64 with port 1) read-data wires per memory;
-// it broadcasts a compact expected-data tag instead (x_rd_i, x_xm_i, x_bg_i; 8 nets, shared by all collars) and
-// gets back ONE registered mismatch strobe per read port (cmp_fail0_o / cmp_fail1_o). The expected word is
-// rebuilt locally, exactly as mbist_ctrl builds it: bg_pat(x_bg_i) ^ expand4(x_xm_i). The compare reads the
-// macro dout0/dout1 nets with one XOR2 per bit (no register on dout), the strobe is registered here, so the long
-// route back to the controller is a full-cycle flop-to-flop path and the half-cycle dout0 path ends at a flop
-// next to the macro. The strobe lags the data-sample cycle by one clock; mbist_ctrl (LOCAL_CMP = 1) accounts for
-// that. With LOCAL_CMP = 0 (SoC fabric instances) the compare ports are unused: tie the inputs, ignore the outputs.
+// Local compare (LOCAL_CMP = 1, bead claude_verilog_test-c54a, section 16.7 / 16.12): the collar also owns the
+// read-data comparator of its macro. The controller no longer receives 32 (64 with port 1) read-data wires per
+// memory; it broadcasts a compact expected-data tag instead (x_rd_i, x_xm_i, x_bg_i; 8 nets, shared by all
+// collars) and gets back ONE registered mismatch strobe per read port (cmp_fail0_o / cmp_fail1_o). The expected
+// word is rebuilt locally, exactly as mbist_ctrl builds it: bg_pat(x_bg_i) ^ expand4(x_xm_i).
+//
+// Timing (the Sky130 macro launches dout0/dout1 on the FALLING edge, the cache samples them half a cycle later):
+//   * dout -> XOR2 per bit -> reduce -> flop on the FALLING edge of clk_i. The flop captures one FULL cycle
+//     after the macro launched the data, not the half cycle the cache's own capture gets. The load on dout is
+//     still one XOR2 input per bit, no flop on dout.
+//   * The expected-data tag is launched by the controller on the same falling edge (it holds the tag of the
+//     read whose data the macro launched on that edge), so both operands of the XOR have the same full cycle.
+//   * falling-edge flop -> rising-edge flop (no logic, adjacent, half a cycle) -> the route to the controller,
+//     which is a full-cycle flop-to-flop path. cmp_fail*_o is therefore two clocks after the sample cycle;
+//     mbist_ctrl (LOCAL_CMP = 1) accounts for that.
+// With LOCAL_CMP = 0 (SoC fabric instances) the compare ports are unused: tie the inputs, ignore the outputs.
 //
 // Specification: docs/design/DFT_ARCHITECTURE.md section 16.4.
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
@@ -103,7 +110,9 @@ module mem_collar #(
         logic [31:0] exp_w;
         logic        ev0_w;
         logic        ev1_w;
-        logic        fail0_q;
+        logic        fail0_n_q;   // falling-edge capture, full cycle after the macro launched dout
+        logic        fail1_n_q;
+        logic        fail0_q;     // rising-edge retime, drives the route to the controller
         logic        fail1_q;
 
         assign exp_w = bg_pat(x_bg_i) ^ {{8{x_xm_i[3]}}, {8{x_xm_i[2]}}, {8{x_xm_i[1]}}, {8{x_xm_i[0]}}};
@@ -111,10 +120,15 @@ module mem_collar #(
         assign ev1_w = HAS_P1 && x_rd_i && (|(dout1_i ^ exp_w));
 
         // No reset pin (same contract as the reset-free mbist_ctrl): x_rd_i falls within RD_LAT clocks of
-        // run = 0, so the strobe is flushed to 0 one clock later.
+        // run = 0, so both strobe stages are flushed to 0 within two more clocks.
+        always_ff @(negedge clk_i) begin
+            fail0_n_q <= ev0_w;
+            fail1_n_q <= ev1_w;
+        end
+
         always_ff @(posedge clk_i) begin
-            fail0_q <= ev0_w;
-            fail1_q <= ev1_w;
+            fail0_q <= fail0_n_q;
+            fail1_q <= fail1_n_q;
         end
 
         assign cmp_fail0_o = fail0_q;

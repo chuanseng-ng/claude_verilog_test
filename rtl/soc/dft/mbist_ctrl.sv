@@ -28,9 +28,12 @@
 // Local compare (LOCAL_CMP = 1, bead claude_verilog_test-c54a, section 16.7): the comparators live in the
 // mem_collars (next to the macros). This module then broadcasts the expected-data tag (x_rd_o, x_xm_o, x_bg_o;
 // flop outputs) and receives one registered mismatch strobe per memory and read port (cmp_fail0_i / cmp_fail1_i)
-// instead of dout0_i / dout1_i. The strobe is one clock later than the combinational compare, so the drain is one
-// cycle longer and the read tags have one more stage (addr, slot): the first-fail record (addr, elem, slot, bg,
-// port) and the sticky fail flags are identical to LOCAL_CMP = 0. The one thing not available is the XOR mask of
+// instead of dout0_i / dout1_i. The Sky130 macro launches its read data on the falling edge, so the collar
+// captures the compare on the next falling edge (a full cycle after the launch) and retimes it to the rising
+// edge: the strobe is two clocks later than the combinational compare. The tag broadcast is launched on the same
+// falling edge (x_*_o are falling-edge copies of the sample-stage tag), so the drain is two cycles longer and the
+// read tags have two more stages (addr, slot): the first-fail record (addr, elem, slot, bg, port) and the sticky
+// fail flags are identical to LOCAL_CMP = 0. The one thing not available is the XOR mask of
 // the failing word (status_o[68:37]): the data never reaches this module, the field reads 0.
 //
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
@@ -240,7 +243,9 @@ module mbist_ctrl #(
     logic [AW-1:0] addr_q;
     logic [2:0]   slot_q;
     logic [21:0]  pcnt_q;
-    logic [$clog2(RD_LAT+1)-1:0] dcnt_q;
+    // LOCAL_CMP reloads RD_LAT + 1 (see the drain below), one more than the controller-side compare.
+    localparam int unsigned DCNT_MAX = LOCAL_CMP ? (RD_LAT + 1) : RD_LAT;
+    logic [$clog2(DCNT_MAX+1)-1:0] dcnt_q;
     logic         cfg_err_q;
 
     logic [11:0]  uw;
@@ -331,8 +336,8 @@ module mbist_ctrl #(
     logic [AW-1:0] b_addr_q;
     logic [31:0]   b_din_q;
 
-    // LOCAL_CMP = 1 adds one tag stage: the collar's mismatch strobe arrives one clock after the data sample.
-    localparam int unsigned TG_DEPTH = RD_LAT + (LOCAL_CMP ? 1 : 0);
+    // LOCAL_CMP = 1 adds two tag stages: the collar's mismatch strobe arrives two clocks after the data sample.
+    localparam int unsigned TG_DEPTH = RD_LAT + (LOCAL_CMP ? 2 : 0);
 
     logic          tg_rd_q   [TG_DEPTH];
     logic [AW-1:0] tg_addr_q [TG_DEPTH];
@@ -420,7 +425,7 @@ module mbist_ctrl #(
                             slot_q <= 3'd0;
                             addr_q <= u_down ? (addr_q - 1'b1) : (addr_q + 1'b1);
                             if (addr_end) begin
-                                dcnt_q <= ($bits(dcnt_q))'(LOCAL_CMP ? RD_LAT : (RD_LAT - 1));
+                                dcnt_q <= ($bits(dcnt_q))'(LOCAL_CMP ? (RD_LAT + 1) : (RD_LAT - 1));
                             end
                         end else begin
                             slot_q <= slot_q + 3'd1;
@@ -514,18 +519,37 @@ module mbist_ctrl #(
     logic [31:0]   cmp_exp;   // read only by the controller-side compare (not built with LOCAL_CMP = 1)
     /* verilator lint_on  UNUSEDSIGNAL */
 
-    // Local compare: the collars see the tag of the data-sample stage (RD_LAT-1); the strobe comes back one
-    // clock later, when the same read has advanced to the last tag stage (TG_DEPTH-1), which is where the
-    // record is taken. LOCAL_CMP = 0 compares here, in the sample stage, and the two stages coincide.
+    // Local compare: the collars see (falling-edge copy of) the tag of the data-sample stage (RD_LAT-1); the
+    // strobe comes back two clocks later, when the same read has advanced to the last tag stage (TG_DEPTH-1),
+    // which is where the record is taken. LOCAL_CMP = 0 compares here, in the sample stage, and the two coincide.
     assign cmp_rd   = tg_rd_q[RD_LAT-1];
     assign cmp_addr = tg_addr_q[TG_DEPTH-1];
     assign cmp_xm   = tg_xm_q[RD_LAT-1];
     assign cmp_slot = tg_slot_q[TG_DEPTH-1];
     assign cmp_exp  = bg_pat(bg_idx_q) ^ expand4(cmp_xm);
 
-    assign x_rd_o = cmp_rd;
-    assign x_xm_o = cmp_xm;
-    assign x_bg_o = bg_idx_q;
+    if (LOCAL_CMP) begin : g_xtag
+        // Launched on the falling edge, the edge on which the macro launches the read data this tag describes:
+        // the collar's falling-edge capture then has a full cycle for both XOR operands. No reset pin; the
+        // copies follow the (flushed) sample-stage tag.
+        logic       x_rd_n_q;
+        logic [3:0] x_xm_n_q;
+        logic [2:0] x_bg_n_q;
+
+        always_ff @(negedge clk_i) begin
+            x_rd_n_q <= cmp_rd;
+            x_xm_n_q <= cmp_xm;
+            x_bg_n_q <= bg_idx_q;
+        end
+
+        assign x_rd_o = x_rd_n_q;
+        assign x_xm_o = x_xm_n_q;
+        assign x_bg_o = x_bg_n_q;
+    end else begin : g_xtag_off
+        assign x_rd_o = cmp_rd;
+        assign x_xm_o = cmp_xm;
+        assign x_bg_o = bg_idx_q;
+    end
 
     logic [N_MEM-1:0] fail_q;
     logic [N_MEM-1:0] ev_w;

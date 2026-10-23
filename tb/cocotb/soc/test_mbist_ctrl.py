@@ -25,8 +25,8 @@ MBIST_LOCAL=1 (Makefile configs small_local / cpu_local, bead claude_verilog_tes
 LOCAL_CMP = 1: every collar compares its own macro's read data and returns one registered mismatch strobe per
 port, the controller sees no read data. Every assertion above is kept (fail flag per memory, address, element, slot,
 background, port, all against the same golden model, every algorithm x every fault class) with two stated
-differences: the XOR mask field is not provided (reads 0, asserted), and the drain is one cycle longer per element
-(the cycle-count formula uses a read latency of 3 instead of 2).
+differences: the XOR mask field is not provided (reads 0, asserted), and the drain is two cycles longer per element
+(the cycle-count formula uses a read latency of 4 instead of 2: two more drain cycles per element).
 """
 
 import os
@@ -243,7 +243,7 @@ async def test_cycle_counts_pin_the_sequencing(dut):
     """Cycle count from run to done is a closed formula (regression guard on the sequencer)."""
     await init(dut)
     n = N_WORDS
-    rd_lat = 3 if LOCAL else 2   # LOCAL_CMP: the strobe is registered in the collar, one more drain cycle
+    rd_lat = 4 if LOCAL else 2   # LOCAL_CMP: falling-edge capture + rising-edge retime in the collar, two more drain cycles
 
     def formula(alg, pause_cycles=0):
         lo, hi = ALG_RANGE[alg]
