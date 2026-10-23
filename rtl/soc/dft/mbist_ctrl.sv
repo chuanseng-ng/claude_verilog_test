@@ -25,6 +25,14 @@
 // No runtime-indexed array reads: the microcode is a constant-label case function, every per-memory
 // select is a one-hot AND-OR over a constant-bound loop, the op slot select is a ternary tree.
 //
+// Local compare (LOCAL_CMP = 1, bead claude_verilog_test-c54a, section 16.7): the comparators live in the
+// mem_collars (next to the macros). This module then broadcasts the expected-data tag (x_rd_o, x_xm_o, x_bg_o;
+// flop outputs) and receives one registered mismatch strobe per memory and read port (cmp_fail0_i / cmp_fail1_i)
+// instead of dout0_i / dout1_i. The strobe is one clock later than the combinational compare, so the drain is one
+// cycle longer and the read tags have one more stage (addr, slot): the first-fail record (addr, elem, slot, bg,
+// port) and the sticky fail flags are identical to LOCAL_CMP = 0. The one thing not available is the XOR mask of
+// the failing word (status_o[68:37]): the data never reaches this module, the field reads 0.
+//
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
 module mbist_ctrl #(
@@ -36,7 +44,10 @@ module mbist_ctrl #(
     // 0: NO reset pin is used; rst_n_i is ignored and the state is cleared by run_i = 0 (see below). This is
     // the CPU-hard-macro instance (section 16.7): the macro has only a synchronous reset and no async pin may
     // be added to it (check_scan_clk_rst.py), so its reset is folded into run_i by the instantiator.
-    parameter bit                 ASYNC_RST = 1'b1
+    parameter bit                 ASYNC_RST = 1'b1,
+    // 1: collar-local compare (see header); dout0_i / dout1_i are unused, cmp_fail*_i and x_*_o are used.
+    // 0: compare here from dout0_i / dout1_i; cmp_fail*_i are unused (tie 0), x_*_o may be left open.
+    parameter bit                 LOCAL_CMP = 1'b0
 ) (
     input  logic          clk_i,
     input  logic          rst_n_i,
@@ -53,9 +64,18 @@ module mbist_ctrl #(
     output logic [AW-1:0] b_addr_o,
     output logic [31:0]   b_din_o,
 
-    // ── Read data of every memory (macro outputs, flattened [i*32 +: 32]) ────
+    // ── Read data of every memory (macro outputs, flattened [i*32 +: 32]; LOCAL_CMP = 0 only) ──
+    /* verilator lint_off UNUSEDSIGNAL */
     input  logic [N_MEM*32-1:0] dout0_i,
     input  logic [N_MEM*32-1:0] dout1_i,
+
+    // ── Local compare (LOCAL_CMP = 1 only): expected-data tag out, mismatch strobes in ──
+    output logic          x_rd_o,
+    output logic [3:0]    x_xm_o,
+    output logic [2:0]    x_bg_o,
+    input  logic [N_MEM-1:0] cmp_fail0_i,
+    input  logic [N_MEM-1:0] cmp_fail1_i,
+    /* verilator lint_on  UNUSEDSIGNAL */
 
     // ── Status block (section 16.5) ──────────────────────────────────────────
     output logic [68:0]   status_o
@@ -213,7 +233,9 @@ module mbist_ctrl #(
     logic         bg_sweep_q;
     logic [2:0]   bg_idx_q;
     logic [21:0]  pause_cycles_q;
-    logic [3:0]   mask_sel_q;
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic [3:0]   mask_sel_q;     // read only by the mask capture (not built with LOCAL_CMP = 1)
+    /* verilator lint_on  UNUSEDSIGNAL */
     logic [4:0]   pc_q;
     logic [AW-1:0] addr_q;
     logic [2:0]   slot_q;
@@ -309,10 +331,13 @@ module mbist_ctrl #(
     logic [AW-1:0] b_addr_q;
     logic [31:0]   b_din_q;
 
-    logic          tg_rd_q   [RD_LAT];
-    logic [AW-1:0] tg_addr_q [RD_LAT];
-    logic [3:0]    tg_xm_q   [RD_LAT];
-    logic [2:0]    tg_slot_q [RD_LAT];
+    // LOCAL_CMP = 1 adds one tag stage: the collar's mismatch strobe arrives one clock after the data sample.
+    localparam int unsigned TG_DEPTH = RD_LAT + (LOCAL_CMP ? 1 : 0);
+
+    logic          tg_rd_q   [TG_DEPTH];
+    logic [AW-1:0] tg_addr_q [TG_DEPTH];
+    logic [3:0]    tg_xm_q   [TG_DEPTH];
+    logic [2:0]    tg_slot_q [TG_DEPTH];
 
     logic          issue;
     assign issue = (st_q == S_SWEEP);
@@ -395,7 +420,7 @@ module mbist_ctrl #(
                             slot_q <= 3'd0;
                             addr_q <= u_down ? (addr_q - 1'b1) : (addr_q + 1'b1);
                             if (addr_end) begin
-                                dcnt_q <= ($bits(dcnt_q))'(RD_LAT - 1);
+                                dcnt_q <= ($bits(dcnt_q))'(LOCAL_CMP ? RD_LAT : (RD_LAT - 1));
                             end
                         end else begin
                             slot_q <= slot_q + 3'd1;
@@ -440,7 +465,7 @@ module mbist_ctrl #(
 
     genvar gl;
     generate
-        for (gl = 0; gl < RD_LAT; gl++) begin : g_tag
+        for (gl = 0; gl < TG_DEPTH; gl++) begin : g_tag
             if (gl == 0) begin : g_first
                 always_ff @(posedge clk_i or negedge rst_a_n) begin
                     if (!rst_a_n) begin
@@ -485,19 +510,30 @@ module mbist_ctrl #(
     logic [AW-1:0] cmp_addr;
     logic [3:0]    cmp_xm;
     logic [2:0]    cmp_slot;
-    logic [31:0]   cmp_exp;
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic [31:0]   cmp_exp;   // read only by the controller-side compare (not built with LOCAL_CMP = 1)
+    /* verilator lint_on  UNUSEDSIGNAL */
 
+    // Local compare: the collars see the tag of the data-sample stage (RD_LAT-1); the strobe comes back one
+    // clock later, when the same read has advanced to the last tag stage (TG_DEPTH-1), which is where the
+    // record is taken. LOCAL_CMP = 0 compares here, in the sample stage, and the two stages coincide.
     assign cmp_rd   = tg_rd_q[RD_LAT-1];
-    assign cmp_addr = tg_addr_q[RD_LAT-1];
+    assign cmp_addr = tg_addr_q[TG_DEPTH-1];
     assign cmp_xm   = tg_xm_q[RD_LAT-1];
-    assign cmp_slot = tg_slot_q[RD_LAT-1];
+    assign cmp_slot = tg_slot_q[TG_DEPTH-1];
     assign cmp_exp  = bg_pat(bg_idx_q) ^ expand4(cmp_xm);
+
+    assign x_rd_o = cmp_rd;
+    assign x_xm_o = cmp_xm;
+    assign x_bg_o = bg_idx_q;
 
     logic [N_MEM-1:0] fail_q;
     logic [N_MEM-1:0] ev_w;
     logic [N_MEM-1:0] m0_w;
     logic [N_MEM-1:0] m1_w;
-    logic [31:0]      err_w [N_MEM];
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic [31:0]      err_w [N_MEM];   // read only by the mask capture (not built with LOCAL_CMP = 1)
+    /* verilator lint_on  UNUSEDSIGNAL */
     logic [9:0]       rec_addr_q [N_MEM];
     logic [4:0]       rec_elem_q [N_MEM];
     logic [2:0]       rec_slot_q [N_MEM];
@@ -508,14 +544,22 @@ module mbist_ctrl #(
     genvar gm;
     generate
         for (gm = 0; gm < N_MEM; gm++) begin : g_cmp
-            logic [31:0] d0_w;
-            logic [31:0] d1_w;
-            assign d0_w = dout0_i[gm*32 +: 32];
-            assign d1_w = dout1_i[gm*32 +: 32];
-            assign m0_w[gm] = |(d0_w ^ cmp_exp);
-            assign m1_w[gm] = P1_MASK[gm] && (|(d1_w ^ cmp_exp));
-            assign ev_w[gm] = cmp_rd && (m0_w[gm] || m1_w[gm]);
-            assign err_w[gm] = m0_w[gm] ? (d0_w ^ cmp_exp) : (d1_w ^ cmp_exp);
+            if (LOCAL_CMP) begin : g_local
+                // The collar already gated the strobe with the read tag.
+                assign m0_w[gm]  = cmp_fail0_i[gm];
+                assign m1_w[gm]  = P1_MASK[gm] && cmp_fail1_i[gm];
+                assign ev_w[gm]  = m0_w[gm] || m1_w[gm];
+                assign err_w[gm] = 32'd0;
+            end else begin : g_here
+                logic [31:0] d0_w;
+                logic [31:0] d1_w;
+                assign d0_w = dout0_i[gm*32 +: 32];
+                assign d1_w = dout1_i[gm*32 +: 32];
+                assign m0_w[gm] = |(d0_w ^ cmp_exp);
+                assign m1_w[gm] = P1_MASK[gm] && (|(d1_w ^ cmp_exp));
+                assign ev_w[gm] = cmp_rd && (m0_w[gm] || m1_w[gm]);
+                assign err_w[gm] = m0_w[gm] ? (d0_w ^ cmp_exp) : (d1_w ^ cmp_exp);
+            end
 
             always_ff @(posedge clk_i or negedge rst_a_n) begin
                 if (!rst_a_n) begin
@@ -544,28 +588,33 @@ module mbist_ctrl #(
         end
     endgenerate
 
-    // Mask capture for the memory selected at start: one-hot AND-OR over constant-bound loops.
-    logic        mask_ev;
-    logic [31:0] mask_err;
+    // Mask capture for the memory selected at start: one-hot AND-OR over constant-bound loops. Not built with
+    // LOCAL_CMP = 1 (the failing word never reaches this module): the status field is a constant 0 then.
+    if (LOCAL_CMP) begin : g_nomask
+        assign mask_q = 32'd0;
+    end else begin : g_mask
+        logic        mask_ev;
+        logic [31:0] mask_err;
 
-    always_comb begin
-        mask_ev  = 1'b0;
-        mask_err = 32'd0;
-        for (int i = 0; i < N_MEM; i++) begin
-            if (mask_sel_q == 4'(i)) begin
-                mask_ev  = ev_w[i] && !fail_q[i];
-                mask_err = err_w[i];
+        always_comb begin
+            mask_ev  = 1'b0;
+            mask_err = 32'd0;
+            for (int i = 0; i < N_MEM; i++) begin
+                if (mask_sel_q == 4'(i)) begin
+                    mask_ev  = ev_w[i] && !fail_q[i];
+                    mask_err = err_w[i];
+                end
             end
         end
-    end
 
-    always_ff @(posedge clk_i or negedge rst_a_n) begin
-        if (!rst_a_n) begin
-            mask_q <= 32'd0;
-        end else if (!run_i) begin
-            mask_q <= 32'd0;
-        end else if (mask_ev) begin
-            mask_q <= mask_err;
+        always_ff @(posedge clk_i or negedge rst_a_n) begin
+            if (!rst_a_n) begin
+                mask_q <= 32'd0;
+            end else if (!run_i) begin
+                mask_q <= 32'd0;
+            end else if (mask_ev) begin
+                mask_q <= mask_err;
+            end
         end
     end
 

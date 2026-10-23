@@ -20,6 +20,13 @@ What makes this more than a smoke test (the failure to rule out is a BIST that a
     fault that a non-solid background exposes; RETENTION must catch a decaying cell only when the pause
     exceeds the decay time);
   * no-fault runs of every algorithm and background must pass (a BIST that always fails is excluded too).
+
+MBIST_LOCAL=1 (Makefile configs small_local / cpu_local, bead claude_verilog_test-c54a) builds the same bench with
+LOCAL_CMP = 1: every collar compares its own macro's read data and returns one registered mismatch strobe per
+port, the controller sees no read data. Every assertion above is kept (fail flag per memory, address, element, slot,
+background, port, all against the same golden model, every algorithm x every fault class) with two stated
+differences: the XOR mask field is not provided (reads 0, asserted), and the drain is one cycle longer per element
+(the cycle-count formula uses a read latency of 3 instead of 2).
 """
 
 import os
@@ -40,6 +47,7 @@ from mbist_golden import (
 )
 
 CFG = os.environ.get("MBIST_CFG", "small")
+LOCAL = os.environ.get("MBIST_LOCAL", "0") == "1"
 GEOM = {"small": (4, 6, 0b0101), "soc": (2, 10, 0b01), "cpu": (10, 8, 0)}
 N_MEM, AW, P1_MASK = GEOM[CFG]
 N_WORDS = 1 << AW
@@ -132,6 +140,11 @@ async def settle(dut):
     await Timer(1, units="ps")
 
 
+def want_mask(v):
+    """The XOR mask of the first failing word: provided by the controller-side compare only."""
+    return 0 if LOCAL else v
+
+
 def has_p1(i):
     return bool((P1_MASK >> i) & 1)
 
@@ -159,7 +172,7 @@ async def check_against_golden(dut, alg, faulty, fault, **kw):
             assert got_fail == 1, f"{ALG_NAME[alg]} {fault.label()}: RTL passed, golden fails at {exp}"
             for k in ("addr", "elem", "slot", "bg", "port"):
                 assert s[k] == exp[k], f"{ALG_NAME[alg]} {fault.label()}: {k} RTL {s[k]} golden {exp[k]}"
-            assert s["mask"] == exp["mask"], (
+            assert s["mask"] == want_mask(exp["mask"]), (
                 f"{ALG_NAME[alg]} {fault.label()}: mask RTL {s['mask']:#x} golden {exp['mask']:#x}"
             )
     assert decode_status(int(dut.status_o.value))["fail_any"] == (0 if exp is None else 1)
@@ -230,7 +243,7 @@ async def test_cycle_counts_pin_the_sequencing(dut):
     """Cycle count from run to done is a closed formula (regression guard on the sequencer)."""
     await init(dut)
     n = N_WORDS
-    rd_lat = 2
+    rd_lat = 3 if LOCAL else 2   # LOCAL_CMP: the strobe is registered in the collar, one more drain cycle
 
     def formula(alg, pause_cycles=0):
         lo, hi = ALG_RANGE[alg]
@@ -317,7 +330,7 @@ async def test_rd_sel_out_of_range_reads_zero_and_mask_follows_mask_sel(dut):
     s3 = await status_for(dut, 3, base)
     assert (s2["fail"] >> 2) & 1 and (s3["fail"] >> 3) & 1 and not (s2["fail"] & 0b0011)
     assert s2["addr"] == 5 and s3["addr"] == 9
-    assert s3["mask"] == 1 << 20, f"mask_sel=3 must hold memory 3's XOR mask, got {s3['mask']:#x}"
+    assert s3["mask"] == want_mask(1 << 20), f"mask_sel=3 must hold memory 3's XOR mask, got {s3['mask']:#x}"
     s9 = await status_for(dut, 9, base)  # no such memory
     assert s9["addr"] == 0 and s9["elem"] == 0 and s9["port"] == 0
     await stop(dut)
@@ -410,7 +423,7 @@ async def test_retention_pause_semantics(dut):
             assert (s["fail"] >> faulty) & 1, "pause longer than the decay time must fail"
             want_elem = 7 if decay == 1 else 8  # decays-to-1 shows in r0 (element 7), decays-to-0 in r1 (element 8)
             assert s["addr"] == 9 and s["elem"] == want_elem and s["slot"] == 0, s
-            assert s["mask"] == 1 << 4
+            assert s["mask"] == want_mask(1 << 4)
             await stop(dut)
             # March C- has no pause: the retention fault is invisible to it
             _, st = await run_bist(dut, alg=0, mask_sel=faulty)
@@ -466,6 +479,6 @@ async def test_cpu_shape_ten_memories(dut):
     s0 = await status_for(dut, 0, base)
     s9 = await status_for(dut, 9, base)
     assert (s0["fail"] & 0x201) == 0x201
-    assert s0["addr"] == 3 and s9["addr"] == 250 and s9["mask"] == 1 << 31
+    assert s0["addr"] == 3 and s9["addr"] == 250 and s9["mask"] == want_mask(1 << 31)
     await stop(dut)
     disarm_all(dut)

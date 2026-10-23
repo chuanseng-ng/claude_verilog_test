@@ -1499,15 +1499,18 @@ mbist_ctrl_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR --top-module tb_mbist_domain $(MBIST_CTRL_SOURCES)
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -GN_MEM=10 -GAW=8 -GP1_MASK=0 --top-module tb_mbist_domain $(MBIST_CTRL_SOURCES)
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -GN_MEM=2 -GAW=10 -GP1_MASK=1 --top-module tb_mbist_domain $(MBIST_CTRL_SOURCES)
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -GN_MEM=10 -GAW=8 -GP1_MASK=0 -GLOCAL_CMP=1 --top-module tb_mbist_domain $(MBIST_CTRL_SOURCES)
+	verilator --lint-only -Wall -Wno-IMPORTSTAR -GN_MEM=4 -GAW=6 -GP1_MASK=5 -GLOCAL_CMP=1 --top-module tb_mbist_domain $(MBIST_CTRL_SOURCES)
 
 # Three build points (each hashes to its own SIM_BUILD): small (every algorithm x every fault class), soc
-# (two 1024-word macros, port 1 on memory 0) and cpu (ten 256-word cache SRAMs).
+# (two 1024-word macros, port 1 on memory 0) and cpu (ten 256-word cache SRAMs); small and cpu are built a
+# second time with LOCAL_CMP = 1 (collar-local compare, bead c54a).
 mbist_ctrl: mbist_ctrl_lint
-	@set -e; for cfg in "small 4 6 5" "soc 2 10 1" "cpu 10 8 0"; do set -- $$cfg; \
-	  echo "=== mbist_ctrl: $$1 (N_MEM=$$2 AW=$$3 P1_MASK=$$4) ==="; \
-	  MBIST_CFG=$$1 $(MAKE) MODULE=test_mbist_ctrl TOPLEVEL=tb_mbist_domain \
+	@set -e; for cfg in "small 4 6 5 0" "soc 2 10 1 0" "cpu 10 8 0 0" "small 4 6 5 1" "cpu 10 8 0 1"; do set -- $$cfg; \
+	  echo "=== mbist_ctrl: $$1 (N_MEM=$$2 AW=$$3 P1_MASK=$$4 LOCAL_CMP=$$5) ==="; \
+	  MBIST_CFG=$$1 MBIST_LOCAL=$$5 $(MAKE) MODULE=test_mbist_ctrl TOPLEVEL=tb_mbist_domain \
 		VERILOG_SOURCES="$(MBIST_CTRL_SOURCES)" \
-		EXTRA_ARGS="-GN_MEM=$$2 -GAW=$$3 -GP1_MASK=$$4" \
+		EXTRA_ARGS="-GN_MEM=$$2 -GAW=$$3 -GP1_MASK=$$4 -GLOCAL_CMP=$$5" \
 		$(BUILD_ARGS); \
 	done
 

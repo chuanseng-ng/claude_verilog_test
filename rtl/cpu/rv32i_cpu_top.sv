@@ -163,18 +163,33 @@ module rv32i_cpu_top #(
   logic [3:0]   mb_wmask_w;
   logic [7:0]   mb_addr_w;
   logic [31:0]  mb_din_w;
-  logic [159:0] mb_ic_dout_w;
-  logic [159:0] mb_dc_dout_w;
+  logic [4:0]   mb_ic_fail_w;
+  logic [4:0]   mb_dc_fail_w;
+  logic         mb_x_rd_w;
+  logic [3:0]   mb_x_xm_w;
+  logic [2:0]   mb_x_bg_w;
   logic         mb_run_w;
 
   assign mb_run_w = mbist_run_i & rst_n_i;
+
+  // Collar-local compare (bead c54a): in the Sky130 arm each mem_collar compares its own macro's read data and
+  // returns one registered mismatch strobe, so the controller sees 10 strobes instead of 320 read-data wires and
+  // broadcasts an 8-net expected-data tag (x_*) beside the 47-net op bus. The arms without the macros have no
+  // collars and read constant 0: the controller then compares that 0 itself (LOCAL_CMP = 0, as before the change),
+  // so an MBIST run there still FAILS rather than passing vacuously.
+`ifdef SRAM_SKY130
+  localparam bit MB_LOCAL_CMP = 1'b1;
+`else
+  localparam bit MB_LOCAL_CMP = 1'b0;
+`endif
 
   mbist_ctrl #(
     .N_MEM     (10),
     .AW        (8),
     .RD_LAT    (2),
     .P1_MASK   ('0),
-    .ASYNC_RST (1'b0)
+    .ASYNC_RST (1'b0),
+    .LOCAL_CMP (MB_LOCAL_CMP)
   ) u_mbist_ctrl (
     .clk_i     (clk_i),
     .rst_n_i   (1'b1),
@@ -186,8 +201,13 @@ module rv32i_cpu_top #(
     .b_wmask_o (mb_wmask_w),
     .b_addr_o  (mb_addr_w),
     .b_din_o   (mb_din_w),
-    .dout0_i   ({mb_dc_dout_w, mb_ic_dout_w}),
+    .dout0_i   (320'd0),     // read data is compared in the collars (Sky130 arm) or is constant 0 (other arms)
     .dout1_i   (320'd0),
+    .x_rd_o    (mb_x_rd_w),
+    .x_xm_o    (mb_x_xm_w),
+    .x_bg_o    (mb_x_bg_w),
+    .cmp_fail0_i ({mb_dc_fail_w, mb_ic_fail_w}),
+    .cmp_fail1_i (10'd0),
     .status_o  (mbist_status_o)
   );
 
@@ -277,8 +297,11 @@ module rv32i_cpu_top #(
     .mbist_wmask_i   (mb_wmask_w),
     .mbist_addr_i    (mb_addr_w),
     .mbist_din_i     (mb_din_w),
-    .mbist_ic_dout_o (mb_ic_dout_w),
-    .mbist_dc_dout_o (mb_dc_dout_w),
+    .mbist_x_rd_i    (mb_x_rd_w),
+    .mbist_x_xm_i    (mb_x_xm_w),
+    .mbist_x_bg_i    (mb_x_bg_w),
+    .mbist_ic_fail_o (mb_ic_fail_w),
+    .mbist_dc_fail_o (mb_dc_fail_w),
 
     // AXI4 burst memory interface
     .axi_araddr     (axi_araddr_o),

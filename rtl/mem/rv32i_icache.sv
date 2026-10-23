@@ -50,9 +50,12 @@ module rv32i_icache (
     /* verilator lint_on  UNUSEDSIGNAL */
 
     // MBIST (bead claude_verilog_test-c54a, DFT_ARCHITECTURE.md 16.7): the CPU-macro controller's broadcast
-    // bus in, the five macros' port-0 read data out ({data[3], data[2], data[1], data[0], tag}, 32 b each).
-    // Active only in the SRAM_SKY130 arm (mem_collar in front of every macro); every other arm ignores the
-    // inputs and drives 0, so an MBIST run on an arm without the macros FAILS rather than passing vacuously.
+    // bus and expected-data tag in, one registered mismatch strobe per macro out ({data[3], data[2], data[1],
+    // data[0], tag}). Each mem_collar compares its own macro's port-0 read data locally (LOCAL_CMP), so the
+    // 32-bit read data of the five macros never leaves the collars. Active only in the SRAM_SKY130 arm
+    // (mem_collar in front of every macro); every other arm ignores the inputs and drives 0 strobes, and the
+    // CPU top then compares the constant-0 read data in the controller itself (LOCAL_CMP = 0), so an MBIST run
+    // on an arm without the macros FAILS rather than passing vacuously.
     // mbist_en_i = 0 makes every collar a pass-through (bit-identical to the pre-MBIST cache).
     /* verilator lint_off UNUSEDSIGNAL */
     input  logic         mbist_en_i,
@@ -61,8 +64,11 @@ module rv32i_icache (
     input  logic [3:0]   mbist_wmask_i,
     input  logic [7:0]   mbist_addr_i,
     input  logic [31:0]  mbist_din_i,
+    input  logic         mbist_x_rd_i,
+    input  logic [3:0]   mbist_x_xm_i,
+    input  logic [2:0]   mbist_x_bg_i,
     /* verilator lint_on  UNUSEDSIGNAL */
-    output logic [159:0] mbist_dout_o,
+    output logic [4:0]   mbist_fail_o,
 
     // ── CPU-side interface (from IF stage) ────────────────────────────────────
     input  logic [31:0] ic_addr_i,        // Fetch address
@@ -107,8 +113,12 @@ module rv32i_icache (
     logic [3:0]  tag_wmask0_m;
     logic [7:0]  tag_addr0_m, tag_addr1_m;
     logic [31:0] tag_din0_m;
+    logic        tag_cmp_fail;
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic        tag_cmp_fail1_unused;   // HAS_P1 = 0: constant 0
+    /* verilator lint_on  UNUSEDSIGNAL */
 
-    mem_collar #(.AW(8), .HAS_P1(1'b0)) u_tag_collar (
+    mem_collar #(.AW(8), .HAS_P1(1'b0), .LOCAL_CMP(1'b1)) u_tag_collar (
         .bist_en_i  (mbist_en_i),
         .b_ce_i     (mbist_ce_i),
         .b_we_i     (mbist_we_i),
@@ -122,6 +132,14 @@ module rv32i_icache (
         .din0_f_i   (tag_din0),
         .csb1_f_i   (1'b1),
         .addr1_f_i  (8'b0),
+        .clk_i      (clk),
+        .x_rd_i     (mbist_x_rd_i),
+        .x_xm_i     (mbist_x_xm_i),
+        .x_bg_i     (mbist_x_bg_i),
+        .dout0_i    (tag_dout0),
+        .dout1_i    (32'd0),
+        .cmp_fail0_o(tag_cmp_fail),
+        .cmp_fail1_o(tag_cmp_fail1_unused),
         .csb0_m_o   (tag_csb0_m),
         .web0_m_o   (tag_web0_m),
         .wmask0_m_o (tag_wmask0_m),
@@ -187,6 +205,9 @@ module rv32i_icache (
     logic [7:0]  data_addr0  [0:LINE_WORDS-1];
     logic [31:0] data_din0   [0:LINE_WORDS-1];
     logic [31:0] data_dout0  [0:LINE_WORDS-1];
+`ifdef SRAM_SKY130
+    logic        data_cmp_fail [0:LINE_WORDS-1];   // MBIST local-compare strobe of each data collar
+`endif
 
     genvar gw;
     generate
@@ -197,8 +218,11 @@ module rv32i_icache (
             logic [3:0]  d_wmask0_m;
             logic [7:0]  d_addr0_m, d_addr1_m;
             logic [31:0] d_din0_m;
+            /* verilator lint_off UNUSEDSIGNAL */
+            logic        d_cmp_fail1_unused;   // HAS_P1 = 0: constant 0
+            /* verilator lint_on  UNUSEDSIGNAL */
 
-            mem_collar #(.AW(8), .HAS_P1(1'b0)) u_data_collar (
+            mem_collar #(.AW(8), .HAS_P1(1'b0), .LOCAL_CMP(1'b1)) u_data_collar (
                 .bist_en_i  (mbist_en_i),
                 .b_ce_i     (mbist_ce_i),
                 .b_we_i     (mbist_we_i),
@@ -212,6 +236,14 @@ module rv32i_icache (
                 .din0_f_i   (data_din0[gw]),
                 .csb1_f_i   (1'b1),
                 .addr1_f_i  (8'b0),
+                .clk_i      (clk),
+                .x_rd_i     (mbist_x_rd_i),
+                .x_xm_i     (mbist_x_xm_i),
+                .x_bg_i     (mbist_x_bg_i),
+                .dout0_i    (data_dout0[gw]),
+                .dout1_i    (32'd0),
+                .cmp_fail0_o(data_cmp_fail[gw]),
+                .cmp_fail1_o(d_cmp_fail1_unused),
                 .csb0_m_o   (d_csb0_m),
                 .web0_m_o   (d_web0_m),
                 .wmask0_m_o (d_wmask0_m),
@@ -268,12 +300,13 @@ module rv32i_icache (
         end
     endgenerate
 
-    // MBIST read-data export: port-0 dout of the tag and the four data macros, straight off the macro outputs
-    // (no mux on the read path). Sky130 arm only; 0 elsewhere (see the port comment).
+    // MBIST mismatch-strobe export: the registered local-compare result of the tag and the four data collars.
+    // The collars tap the macro dout0 nets (one XOR2 per bit, no register or mux on the read path). Sky130 arm
+    // only; 0 elsewhere (see the port comment).
 `ifdef SRAM_SKY130
-    assign mbist_dout_o = {data_dout0[3], data_dout0[2], data_dout0[1], data_dout0[0], tag_dout0};
+    assign mbist_fail_o = {data_cmp_fail[3], data_cmp_fail[2], data_cmp_fail[1], data_cmp_fail[0], tag_cmp_fail};
 `else
-    assign mbist_dout_o = 160'd0;
+    assign mbist_fail_o = 5'd0;
 `endif
 
     // =========================================================================

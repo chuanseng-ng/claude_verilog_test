@@ -183,14 +183,50 @@ async def test_interword_fault_in_each_macro(dut):
         rec = await record(drv, dict(base, mask_sel=i), i)
         for k in ("addr", "elem", "slot", "bg", "port"):
             assert rec[k] == exp[k], f"macro {i}: {k} TAP {rec[k]} golden {exp[k]}"
-        # the XOR mask follows mask_sel (latched at start): re-run selecting this macro and read it
+        # Collar-local compare (bead c54a): the failing word never leaves the collar, so the XOR mask field is not
+        # provided. It reads 0 whatever mask_sel selects (golden's mask is non-zero for this fault).
+        assert rec["mask"] == 0 and exp["mask"] != 0
         await stop(dut, drv)
         st = await run(drv, **dict(base, mask_sel=i))
-        assert (await record(drv, dict(base, mask_sel=i), i))["mask"] == exp["mask"]
+        assert (await record(drv, dict(base, mask_sel=i), i))["mask"] == 0
         await stop(dut, drv)
         arm(dut, i, Fault())
         mem(dut, i).fi_clear.value = 1
     dut._log.info("an inter-word coupling fault is attributed to exactly the macro that has it, for all ten")
+
+
+@cocotb.test()
+async def test_stuck_bit_attributed_to_the_right_collar(dut):
+    """Bead c54a fault-injection check for the collar-local compare: a stuck-at bit in ONE macro, for each of the
+    ten, on three different bit positions (0, a middle bit, 31) and both polarities. Exactly that macro's go/no-go
+    bit rises (the other nine strobes stay quiet), and the first-fail record (word address, element, slot,
+    background, port) equals the independent golden model. A fault-free run right after clean-up passes, so the
+    flags are not sticky across runs."""
+    drv = await setup(dut)
+    base = dict(alg=0, mask_sel=0)
+    for i in range(N):
+        for bit, val in ((0, 1), (13 + i, 0), (31, 1)):
+            f = Fault(1, v_addr=(37 * i + bit) % 256, v_bit=bit, val=val)
+            exp = golden_first_fail(0, AW, False, f)
+            assert exp is not None
+            arm(dut, i, f)
+            st = await run(drv, **base)
+            c = st["cpu"]
+            assert c["done"] == 1 and c["fail"] == 1 << i and c["fail_any"] == 1, f"macro {i} bit {bit}: {c}"
+            rec = await record(drv, base, i)
+            for k in ("addr", "elem", "slot", "bg", "port"):
+                assert rec[k] == exp[k], f"macro {i} bit {bit}: {k} TAP {rec[k]} golden {exp[k]}"
+            for j in range(N):
+                if j != i:
+                    other = await record(drv, base, j)
+                    assert other["addr"] == 0 and other["elem"] == 0 and other["slot"] == 0, (i, j, other)
+            await stop(dut, drv)
+            arm(dut, i, Fault())
+            mem(dut, i).fi_clear.value = 1
+        st = await run(drv, **base)
+        assert st["cpu"]["done"] == 1 and st["cpu"]["fail_any"] == 0 and st["cpu"]["fail"] == 0
+        await stop(dut, drv)
+    dut._log.info("a stuck bit is attributed to exactly the collar that has it, for all ten macros")
 
 
 @cocotb.test()
