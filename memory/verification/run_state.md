@@ -1,0 +1,127 @@
+# Commercial-sim bring-up run state (branch feature/commercial-sims)
+
+Steps 1-2 of /home/RD/ryan/.claude/plans/using-the-chip-design-agent-fluttering-pie.md.
+Driver: tools/eda/run_cocotb_targets.py (judges only from results__*.xml). Build root: <repo>/sim_build_eda (gitignored).
+Checkpoint lines are appended below by the driver.
+
+## Checkpoints
+- 2026-10-23T21:29:36 [vcs] soc:crossbar: PASS tests=14 fail=0 err=0 skip=0 wall=6.0s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:29:37 [vcs] soc:apb4_register_bank: FAIL tests=12 fail=1 err=0 skip=1 wall=7.6s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:29:43 [vcs] soc:cdc_gray_fifo: PASS tests=32 fail=0 err=0 skip=0 wall=13.2s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:29:45 [vcs] soc:gpio: PASS tests=18 fail=0 err=0 skip=0 wall=7.5s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:29:53 [vcs] soc:crypto: FAIL tests=51 fail=7 err=0 skip=0 wall=10.4s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:29:55 [vcs] soc:npu: FAIL tests=42 fail=2 err=0 skip=0 wall=10.0s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:29:58 [vcs] soc:jtag_tap: FAIL tests=0 fail=0 err=0 skip=0 wall=4.8s compile_diag_err=1 warn_kinds=4
+- 2026-10-23T21:30:01 [vcs] soc:register_bank: FAIL tests=14 fail=2 err=0 skip=1 wall=6.7s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:30:09 [vcs] soc:boot_rom: FAIL tests=9 fail=2 err=0 skip=0 wall=11.4s compile_diag_err=0 warn_kinds=6
+- 2026-10-23T21:30:23 [vcs] soc:soc_boot+soc:soc_gpio+soc:soc_crypto: FAIL tests=0 fail=0 err=0 skip=0 wall=22.2s compile_diag_err=3 warn_kinds=5
+- 2026-10-23T21:30:37 [vcs] cpu:smoke: PASS tests=12 fail=0 err=0 skip=0 wall=27.2s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:32:01 [vcs] soc:uart: PASS tests=27 fail=0 err=0 skip=0 wall=145.1s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:38:21 [vcs] soc:crypto: FAIL tests=1 fail=1 err=0 skip=0 wall=5.4s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:39:55 [vcs] soc:crypto: PASS tests=51 fail=0 err=0 skip=2 wall=7.4s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:39:59 [vcs] soc:boot_rom: PASS tests=9 fail=0 err=0 skip=0 wall=11.7s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:40:00 [vcs] soc:apb4_register_bank: PASS tests=24 fail=0 err=0 skip=2 wall=12.3s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:40:00 [vcs] soc:register_bank: PASS tests=28 fail=0 err=0 skip=2 wall=12.7s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:40:04 [vcs] soc:jtag_tap: FAIL tests=0 fail=0 err=0 skip=0 wall=4.8s compile_diag_err=1 warn_kinds=4
+- 2026-10-23T21:40:04 [vcs] soc:npu: PASS tests=42 fail=0 err=0 skip=2 wall=9.7s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:40:22 [vcs] soc:jtag_tap: FAIL tests=48 fail=48 err=0 skip=0 wall=6.5s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:41:03 [vcs] soc:jtag_tap: FAIL tests=48 fail=8 err=0 skip=0 wall=17.1s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:41:39 [vcs] soc:jtag_tap: PASS tests=48 fail=0 err=0 skip=0 wall=21.9s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:42:02 [xcelium] soc:crossbar: FAIL tests=0 fail=0 err=0 skip=0 wall=0.0s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:42:02 [xcelium] soc:apb4_register_bank: FAIL tests=0 fail=0 err=0 skip=0 wall=0.0s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:42:02 [xcelium] soc:cdc_gray_fifo: FAIL tests=0 fail=0 err=0 skip=0 wall=0.0s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:42:02 [xcelium] soc:uart: FAIL tests=0 fail=0 err=0 skip=0 wall=0.0s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:42:02 [xcelium] soc:crypto: FAIL tests=0 fail=0 err=0 skip=0 wall=0.0s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:42:02 [xcelium] soc:gpio: FAIL tests=0 fail=0 err=0 skip=0 wall=0.0s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:42:02 [xcelium] soc:npu: FAIL tests=0 fail=0 err=0 skip=0 wall=0.0s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:42:02 [xcelium] soc:jtag_tap: FAIL tests=0 fail=0 err=0 skip=0 wall=0.0s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:42:02 [xcelium] soc:register_bank: FAIL tests=0 fail=0 err=0 skip=0 wall=0.0s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:42:02 [xcelium] soc:boot_rom: FAIL tests=0 fail=0 err=0 skip=0 wall=0.0s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:42:02 [xcelium] soc:soc_boot+soc:soc_gpio+soc:soc_crypto: FAIL tests=0 fail=0 err=0 skip=0 wall=0.0s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:42:19 [xcelium] cpu:smoke: PASS tests=12 fail=0 err=0 skip=0 wall=16.7s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:44:03 [xcelium] soc:crossbar: PASS tests=14 fail=0 err=0 skip=0 wall=5.2s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:44:06 [xcelium] soc:apb4_register_bank: PASS tests=24 fail=0 err=0 skip=2 wall=8.3s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:44:07 [xcelium] soc:cdc_gray_fifo: PASS tests=32 fail=0 err=0 skip=0 wall=9.2s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:44:11 [xcelium] soc:gpio: PASS tests=18 fail=0 err=0 skip=0 wall=4.7s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:44:14 [xcelium] soc:crypto: PASS tests=51 fail=0 err=0 skip=2 wall=6.9s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:44:17 [xcelium] soc:npu: PASS tests=42 fail=0 err=0 skip=2 wall=6.1s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:44:27 [xcelium] soc:register_bank: PASS tests=28 fail=0 err=0 skip=2 wall=9.3s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:44:35 [xcelium] soc:boot_rom: PASS tests=9 fail=0 err=0 skip=0 wall=8.1s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:44:35 [xcelium] soc:jtag_tap: PASS tests=48 fail=0 err=0 skip=0 wall=21.2s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:44:47 [xcelium] soc:soc_boot+soc:soc_gpio+soc:soc_crypto: FAIL tests=0 fail=0 err=0 skip=0 wall=11.9s compile_diag_err=21 warn_kinds=4
+- 2026-10-23T21:44:51 [xcelium] cpu:smoke: PASS tests=12 fail=0 err=0 skip=0 wall=16.4s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:45:42 [xcelium] soc:uart: PASS tests=27 fail=0 err=0 skip=0 wall=98.5s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:18 [vcs] sim:gpu_regfile: FAIL tests=0 fail=0 err=0 skip=0 wall=1.1s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:19 [vcs] sim:gpu_alu: FAIL tests=0 fail=0 err=0 skip=0 wall=1.1s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:20 [vcs] sim:gpu_diverge: FAIL tests=0 fail=0 err=0 skip=0 wall=1.1s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:20 [vcs] sim:phase3_all: FAIL tests=0 fail=0 err=0 skip=0 wall=3.4s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:21 [vcs] sim:gpu_sched: FAIL tests=0 fail=0 err=0 skip=0 wall=1.1s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:21 [vcs] sim:gpu_cmdq: FAIL tests=0 fail=0 err=0 skip=0 wall=1.1s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:22 [vcs] sim:gpu_coalescer: FAIL tests=0 fail=0 err=0 skip=0 wall=1.2s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:22 [vcs] sim:gpu_memunit: FAIL tests=0 fail=0 err=0 skip=0 wall=1.2s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:23 [vcs] sim:gpu_shmem: FAIL tests=0 fail=0 err=0 skip=0 wall=1.1s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:24 [xcelium] sim:gpu_regfile: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:25 [xcelium] sim:gpu_alu: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:26 [xcelium] sim:gpu_diverge: FAIL tests=0 fail=0 err=0 skip=0 wall=0.8s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:26 [xcelium] sim:phase3_all: FAIL tests=0 fail=0 err=0 skip=0 wall=2.6s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:27 [xcelium] sim:gpu_cmdq: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:27 [xcelium] sim:gpu_sched: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:28 [xcelium] sim:gpu_coalescer: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:28 [xcelium] sim:gpu_memunit: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:47:28 [xcelium] sim:gpu_shmem: FAIL tests=0 fail=0 err=0 skip=0 wall=0.8s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:48:19 [vcs] sim:icache: PASS tests=9 fail=0 err=0 skip=0 wall=3.8s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:48:32 [vcs] sim:icache: PASS tests=9 fail=0 err=0 skip=0 wall=2.4s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:48:36 [vcs] sim:dcache: PASS tests=8 fail=0 err=0 skip=0 wall=3.8s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:48:41 [vcs] sim:cache_integration: PASS tests=5 fail=0 err=0 skip=0 wall=4.6s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:48:46 [vcs] sim:gpu_regfile: PASS tests=5 fail=0 err=0 skip=0 wall=6.0s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:48:50 [vcs] sim:gpu_alu: PASS tests=17 fail=0 err=0 skip=0 wall=3.8s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:48:54 [vcs] sim:gpu_diverge: FAIL tests=6 fail=6 err=0 skip=0 wall=4.1s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:48:58 [vcs] sim:gpu_sched: FAIL tests=7 fail=7 err=0 skip=0 wall=3.7s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:49:02 [vcs] sim:gpu_cmdq: FAIL tests=3 fail=3 err=0 skip=0 wall=3.8s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:49:06 [vcs] sim:gpu_coalescer: PASS tests=5 fail=0 err=0 skip=0 wall=3.8s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:49:10 [vcs] sim:gpu_memunit: PASS tests=5 fail=0 err=0 skip=0 wall=3.8s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:49:13 [vcs] sim:gpu_shmem: PASS tests=4 fail=0 err=0 skip=0 wall=3.7s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:49:14 [xcelium] sim:icache: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:49:15 [xcelium] sim:dcache: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:49:16 [xcelium] sim:cache_integration: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:49:17 [xcelium] sim:gpu_regfile: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:49:18 [xcelium] sim:gpu_alu: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:49:18 [xcelium] sim:gpu_diverge: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:49:19 [xcelium] sim:gpu_sched: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:49:20 [xcelium] sim:gpu_cmdq: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:49:21 [xcelium] sim:gpu_coalescer: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:49:22 [xcelium] sim:gpu_memunit: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:49:23 [xcelium] sim:gpu_shmem: FAIL tests=0 fail=0 err=0 skip=0 wall=0.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:51:38 [xcelium] sim:icache: PASS tests=9 fail=0 err=0 skip=0 wall=2.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:51:41 [xcelium] sim:dcache: PASS tests=8 fail=0 err=0 skip=0 wall=2.8s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:51:44 [xcelium] sim:cache_integration: PASS tests=5 fail=0 err=0 skip=0 wall=3.0s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:51:47 [xcelium] sim:gpu_regfile: PASS tests=5 fail=0 err=0 skip=0 wall=2.8s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:51:49 [xcelium] sim:gpu_alu: PASS tests=17 fail=0 err=0 skip=0 wall=2.8s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:51:52 [xcelium] sim:gpu_diverge: PASS tests=6 fail=0 err=0 skip=0 wall=2.8s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:51:55 [xcelium] sim:gpu_sched: PASS tests=7 fail=0 err=0 skip=0 wall=2.8s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:51:58 [xcelium] sim:gpu_cmdq: PASS tests=3 fail=0 err=0 skip=0 wall=2.8s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:52:01 [xcelium] sim:gpu_coalescer: PASS tests=5 fail=0 err=0 skip=0 wall=2.8s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:52:04 [xcelium] sim:gpu_memunit: PASS tests=5 fail=0 err=0 skip=0 wall=2.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:52:07 [xcelium] sim:gpu_shmem: PASS tests=4 fail=0 err=0 skip=0 wall=2.9s compile_diag_err=0 warn_kinds=0
+- 2026-10-23T21:52:20 [vcs] sim:icache: PASS tests=9 fail=0 err=0 skip=0 wall=2.4s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:52:22 [vcs] sim:dcache: PASS tests=8 fail=0 err=0 skip=0 wall=2.4s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:52:25 [vcs] sim:cache_integration: PASS tests=5 fail=0 err=0 skip=0 wall=2.6s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:52:27 [vcs] sim:gpu_regfile: PASS tests=5 fail=0 err=0 skip=0 wall=2.4s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:52:29 [vcs] sim:gpu_alu: PASS tests=17 fail=0 err=0 skip=0 wall=2.4s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:52:32 [vcs] sim:gpu_diverge: PASS tests=6 fail=0 err=0 skip=0 wall=2.4s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:52:34 [vcs] sim:gpu_sched: PASS tests=7 fail=0 err=0 skip=0 wall=2.4s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:52:37 [vcs] sim:gpu_cmdq: PASS tests=3 fail=0 err=0 skip=0 wall=2.5s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:52:39 [vcs] sim:gpu_coalescer: PASS tests=5 fail=0 err=0 skip=0 wall=2.4s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:52:42 [vcs] sim:gpu_memunit: PASS tests=5 fail=0 err=0 skip=0 wall=2.5s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:52:44 [vcs] sim:gpu_shmem: PASS tests=4 fail=0 err=0 skip=0 wall=2.4s compile_diag_err=0 warn_kinds=1
+- 2026-10-23T21:53:36 [vcs] sim:phase3_all: PASS tests=5 fail=0 err=0 skip=0 wall=12.3s compile_diag_err=0 warn_kinds=5
+- 2026-10-23T21:53:44 [xcelium] sim:phase3_all: PASS tests=5 fail=0 err=0 skip=0 wall=8.7s compile_diag_err=0 warn_kinds=0
+
+## Status at hand-off (Steps 1-2, commercial sims)
+- Commits on feature/commercial-sims: a10d79b (portability layer), e53b22b (SoC TB portability), + sim/ GPU/cache commit. LOCAL ONLY.
+- make -n parity SIM=verilator: 30 targets; soc exactly byte-identical (cmp -s), cpu/sim identical modulo `Makefile:NNN` line numbers inside pre-existing "overriding recipe for target 'debug'" warnings.
+- Smoke PASS on BOTH vcs and xcelium: soc crossbar apb4_register_bank cdc_gray_fifo uart gpio crypto npu jtag_tap register_bank boot_rom; cpu smoke; sim icache dcache cache_integration phase3_all gpu_{regfile,alu,diverge,sched,cmdq,coalescer,memunit,shmem}.
+- BLOCKED by genuine RTL LRM defects (fix_requests, rtl/ NOT edited): rtl/gpu/gpu_top.sv:293 uses `launch_err` declared at :325; rtl/periph/i2c_controller.sv:431 uses tx_fifo_q/tx_empty_w/rx_full_w declared at :465/:472 (+ implicit-net redeclare). Blocks every tb_soc_top / gpu_top suite on both tools.
+  With both declarations hoisted in a SCRATCH worktree (not in repo): soc_boot+soc_gpio+soc_crypto PASS (5 tests) on vcs and xcelium; gpu_top_smoke/gpu_handoff/gpu_random_smoke PASS on both.
+- Resume: `source tools/eda/sim_env.sh; python3 tools/eda/run_cocotb_targets.py --sim {vcs|xcelium} --jobs 3 <AREA:TARGET ...>` (see its --help). Build root sim_build_eda/ (gitignored).
+- Open: Step 3 needs the 2 RTL fixes first; -y/-I emulation hides incomplete source lists (rv32i_clock_gate.sv missing from SOC_BOOT_SOURCES).
