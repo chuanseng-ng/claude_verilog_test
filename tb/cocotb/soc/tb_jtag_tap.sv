@@ -65,10 +65,11 @@ module tb_jtag_tap (
         .mbist_status_i   (mbist_status_i)
     );
 
-    // A plain `always` (not always_ff) with a declaration initialiser: an always_ff target may not be
-    // written by any other process, and VCS counts both `initial x = 0` and a declaration initialiser as
-    // such a process (IEEE 1800-2017 9.2.2.4; Error-[ICPD]/[ICPD_INIT]).  Verilator tolerated the original.
-    logic [7:0] sys_cnt_q = 8'd0;
+    // A plain `always` (not always_ff) initialised by an `initial` block: an always_ff target may not be
+    // written by any other process (IEEE 1800-2017 9.2.2.4; VCS Error-[ICPD]/[ICPD_INIT]), and a
+    // declaration initialiser on a procedurally written variable is Verilator >= 5.04x PROCASSINIT.
+    logic [7:0] sys_cnt_q;
+    initial sys_cnt_q = 8'd0;
     always @(posedge sys_clk_i) sys_cnt_q <= sys_cnt_q + 8'd1;
     assign sys_cnt_o = sys_cnt_q;
 

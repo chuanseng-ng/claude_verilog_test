@@ -22,7 +22,9 @@
 //   - Only nonblocking `<=` assignments; write+read combined in one
 //     always@(negedge) block per port to avoid multiple-driver lint errors.
 //   - No $display diagnostics.
-//   - dout0/dout1 power up as 32'd0 (declaration initialisers), not X: before a
+//   - dout0/dout1 power up as 32'd0 (an `initial` block, not declaration
+//     initialisers: Verilator >= 5.04x flags a declaration initialiser on a
+//     procedurally written variable as PROCASSINIT), not X: before a
 //     port's first read the output register otherwise differs between a 4-state
 //     simulator (X) and Verilator (0), and a consumer that samples dout before
 //     its first read would see simulator-dependent data. The fault-injecting
@@ -48,14 +50,22 @@ module sky130_sram_4kbyte_1rw1r_32x1024_8 (
     input  [3:0]  wmask0,   // byte write mask
     input  [9:0]  addr0,
     input  [31:0] din0,
-    output reg [31:0] dout0 = 32'd0,
+    output reg [31:0] dout0,
     // Port 1: R (dedicated read port — used exclusively by the AXI read
     // channel in sram_controller.sv; port 0 is used exclusively for writes)
     input         clk1,
     input         csb1,
     input  [9:0]  addr1,
-    output reg [31:0] dout1 = 32'd0
+    output reg [31:0] dout1
 );
+
+    // Power-up value of the output registers (see header). Plain always blocks
+    // write them below, so an initial block is legal (IEEE 1800 9.2.2.4 restricts
+    // only always_ff targets).
+    initial begin
+        dout0 = 32'd0;
+        dout1 = 32'd0;
+    end
 
     // Memory array: 1024 words x 32 bits (4 KB)
     reg [31:0] mem [0:1023];
