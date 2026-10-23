@@ -42,6 +42,7 @@ bash.exe.stackdump
 # Python
 venv/
 .venv/
+.venv-eda/
 
 # Test results and artifacts
 results/

@@ -26,7 +26,7 @@ BEADS_GUARD_FILES := $(wildcard $(REPO_ROOT)/tools/setup/githooks/*) \
   $(REPO_ROOT)/tools/setup/check_beads_reopen.py
 
 .DEFAULT_GOAL := help
-.PHONY: help setup setup-rtk setup-mcp setup-beads verify-tooling mcp-status verify-librelane-lint
+.PHONY: help setup setup-rtk setup-mcp setup-beads verify-tooling mcp-status verify-librelane-lint eda-venv
 
 help:
 	@echo "RV32I + GPU-lite SoC — developer tooling Makefile"
@@ -36,6 +36,7 @@ help:
 	@echo "  make verify-tooling - Prove the setup took effect (filters, tests, both MCP servers). Fails loudly."
 	@echo "  make mcp-status     - Show the configured MCP servers and whether each one handshakes"
 	@echo "  make verify-librelane-lint - Lint the CPU RTL with LibreLane's own Verilator (bead 2wo)"
+	@echo "  make eda-venv       - Build .venv-eda/ (python3.11 + cocotb 1.x stack) for VCS/Xcelium runs; idempotent"
 	@echo "  make setup-rtk      - Just the rtk half of setup"
 	@echo "  make setup-mcp      - Just the .mcp.json half of setup"
 	@echo "  make setup-beads    - Just the beads half: merge driver (b1o) + checkout guard hooks (78ld)"
@@ -46,6 +47,29 @@ help:
 	@echo "  sw/bench/Makefile   - bare-metal RISC-V benchmarks"
 	@echo ""
 	@echo "Background: tools/eda/README.md, and the RTK section of CLAUDE.md"
+
+# ---------------------------------------------------------------- eda-venv
+
+# Python/cocotb environment for the commercial simulators (VCS / Xcelium) on
+# hosts without nix.  Activate with `source tools/eda/sim_env.sh` (bash) or
+# `source tools/eda/sim_env.csh` (csh).  Idempotent: re-running only re-syncs
+# requirements-eda.txt (the stamp file tracks it).  Override the interpreter
+# with EDA_PYTHON=/path/to/python3.11 (>=3.10 required).
+EDA_PYTHON ?= /usr/bin/python3.11
+EDA_VENV   ?= $(REPO_ROOT)/.venv-eda
+
+eda-venv: $(EDA_VENV)/.stamp-requirements
+
+$(EDA_VENV)/bin/python:
+	@echo "==> creating $(EDA_VENV) with $(EDA_PYTHON)"
+	@$(EDA_PYTHON) -m venv $(EDA_VENV)
+	@$(EDA_VENV)/bin/python -m pip install -q --upgrade pip
+
+$(EDA_VENV)/.stamp-requirements: $(EDA_VENV)/bin/python $(REPO_ROOT)/requirements-eda.txt
+	@echo "==> installing requirements-eda.txt"
+	@$(EDA_VENV)/bin/python -m pip install -q -r $(REPO_ROOT)/requirements-eda.txt
+	@$(EDA_VENV)/bin/python -m pip list 2>/dev/null | grep -iE '^(cocotb|cocotb-bus|cocotb-coverage|cocotbext-axi|pyuvm|pytest|pytest-cov|pyyaml) '
+	@touch $@
 
 # ---------------------------------------------------------------- setup
 
