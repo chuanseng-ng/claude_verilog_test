@@ -32,6 +32,9 @@ else
   echo "sim_env: WARNING: $_se_venv missing -- run 'make eda-venv' in $_se_root" > /dev/stderr
 endif
 setenv SIM_PYTHON3 "`which python3`"
+# cocotb logs non-ASCII test docstrings; an ASCII locale makes every such log line raise UnicodeEncodeError.
+setenv PYTHONIOENCODING utf-8
+setenv LC_ALL C.UTF-8
 
 # --- VCS --------------------------------------------------------------------
 if ( ! $?VCS_HOME ) then

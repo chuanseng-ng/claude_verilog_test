@@ -35,6 +35,9 @@ import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+# cocotb logs non-ASCII (em dashes in test docstrings); under an ASCII locale the logging module raises
+# UnicodeEncodeError on every such message.
+ENV = {**os.environ, "PYTHONIOENCODING": "utf-8", "LC_ALL": os.environ.get("LC_ALL") or "C.UTF-8"}
 REPO = Path(__file__).resolve().parents[2]
 AREA_DIR = {"soc": REPO / "tb/cocotb/soc", "cpu": REPO / "tb/cocotb/cpu", "sim": REPO / "sim"}
 
@@ -93,7 +96,7 @@ def run_spec(sim: str, root: Path, logdir: Path, spec: str, extra_make: list[str
     with log.open("w") as fh:
         fh.write("$ " + " ".join(cmd) + "\n")
         fh.flush()
-        rc = subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT, env=os.environ).returncode
+        rc = subprocess.run(cmd, stdout=fh, stderr=subprocess.STDOUT, env=ENV).returncode
     wall = time.time() - t0
     return {"spec": spec, "cmd": cmd, "rc": rc, "wall_s": round(wall, 1), "log": str(log), "t0": t0}
 

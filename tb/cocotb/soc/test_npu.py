@@ -1687,6 +1687,12 @@ endmodule
 """
 
 
+
+# These tests shell out to `verilator --lint-only` (elaboration-guard checks).  That is a Verilator
+# feature, so under another simulator (VCS / Xcelium) they are SKIPPED, visibly, not passed: the
+# guards themselves are not exercised there.  Under Verilator (CI) nothing changes.
+_NOT_VERILATOR = not cocotb.SIM_NAME.lower().startswith("verilator")
+
 def _lint(*overrides: str) -> subprocess.CompletedProcess:
     """`verilator --lint-only -Wall` of the NPU_SOURCES RTL under a single-instance top, with
     optional -G<PARAM>=<value> overrides."""
@@ -1711,7 +1717,7 @@ def _lint(*overrides: str) -> subprocess.CompletedProcess:
         return subprocess.run(cmd, capture_output=True, text=True, check=False)
 
 
-@cocotb.test()
+@cocotb.test(skip=_NOT_VERILATOR)
 async def test_npu_elaboration_guard_rejects_bad_weight_words(dut):
     """D12: WEIGHT_WORDS other than 1024 is an elaboration $fatal naming WEIGHT_WORDS (the 4 KB
     macro is the only memory the block is built around; a sweep must not silently infer flops).
@@ -1730,7 +1736,7 @@ async def test_npu_elaboration_guard_rejects_bad_weight_words(dut):
         )
 
 
-@cocotb.test()
+@cocotb.test(skip=_NOT_VERILATOR)
 async def test_npu_elaboration_legal_configs_pass(dut):
     """Both generate arms elaborate and lint clean on their own (-Wall, so any warning fails):
     EN_NPU = 1 at the defaults and EN_NPU = 0 (the block constant-folds away).  The EN_NPU = 0

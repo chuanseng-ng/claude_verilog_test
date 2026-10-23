@@ -25,6 +25,9 @@ fi
 # cocotb's makefiles locate the interpreter via `which python3`; the venv one wins now.
 # Tell this repo's Makefiles (SIM_PYTHON3 pattern from CI) to use it explicitly too.
 export SIM_PYTHON3="${SIM_PYTHON3:-$(command -v python3 2>/dev/null)}"
+# cocotb logs non-ASCII test docstrings; an ASCII locale makes every such log line raise UnicodeEncodeError.
+export PYTHONIOENCODING="${PYTHONIOENCODING:-utf-8}"
+export LC_ALL="${LC_ALL:-C.UTF-8}"
 
 # --- VCS --------------------------------------------------------------------
 if [ -z "${VCS_HOME:-}" ]; then

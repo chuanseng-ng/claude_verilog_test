@@ -452,7 +452,15 @@ class JtagDriver:
         self.tms.value = tms
         self.tdi.value = tdi
         await Timer(self.H - 1, "ps")
-        sampled = int(self.tdo.value)
+        try:
+            sampled = int(self.tdo.value)
+        except ValueError:
+            # Power-up only (start() runs these ticks with probe=None and discards the result): the TDO flop
+            # has no reset until the first falling TCK edge in Test-Logic-Reset, so a 4-state simulator reads X
+            # where Verilator's 2-state init reads 0.  After power-up an X still raises, as before.
+            if self.probe is not None:
+                raise
+            sampled = 0
         self.snaps["pre"] = self._compare("pre_rise")
         state_before = self.ref.state
         serial_before = self.ref.out["serial"]

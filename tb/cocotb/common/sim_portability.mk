@@ -88,12 +88,16 @@ SP_REST := $(filter-out $(SP_DROP) -G% -I% -D% +define+% +incdir+%,$(SP_IN))
 
 ifeq ($(SIM),vcs)
   VCS_LINT_FLAGS ?= +lint=TFIPC-L
-  SP_PARAMS := $(patsubst -G%,-pvalue+$(TOPLEVEL).%,$(SP_GS))
+  # A string value arrives as \"text\" (the backslashes survive make; sh would eat them).  VCS only accepts
+  # -pvalue+top.P=\"text\" with the backslashes intact on its argv, so escape them for the recipe's sh.
+  SP_PARAMS := $(patsubst -G%,-pvalue+$(TOPLEVEL).%,$(subst \",\\\",$(SP_GS)))
   # (-sverilog / -timescale / -full64 come from cocotb's own VCS makefile)
   SP_BASE   := $(VCS_LINT_FLAGS) $(VCS_EXTRA_COMPILE)
 else
-  SP_PARAMS := $(foreach g,$(SP_GS),-defparam $(TOPLEVEL).$(patsubst -G%,%,$(g)))
-  SP_BASE   := -sv -nocopyright -nohistory
+  # xrun's -defparam silently IGNORES string-typed parameters ("*W,BDDSTR ... ignored"), so parameter
+  # overrides go through a generated hierarchical-defparam top (see below) instead of the command line.
+  SP_PARAMS :=
+  SP_BASE   := -sv -nocopyright -nohistory -top sp_defparams
 endif
 
 # Same define can arrive twice (the Makefile's own block plus SIM_PORT_DEFINES): dedupe, keep order.
@@ -111,7 +115,7 @@ ifeq ($(SIM_PORT_KEYED_BUILD),1)
     override SIM_BUILD := $(patsubst %_$(SIM),%,$(SIM_BUILD))_$(SIM)
   else ifneq ($(filter command line environment override,$(origin MODULE)),)
     SP_KEY_MATERIAL := $(strip sim=$(SIM) home=$(VCS_HOME)$(XCELIUM_HOME) top=$(TOPLEVEL) \
-                       sources=$(VERILOG_SOURCES) compile=$(COMPILE_ARGS))
+                       sources=$(VERILOG_SOURCES) compile=$(COMPILE_ARGS) params=$(SP_GS))
     SP_KEY := $(shell printf '%s' '$(subst ','\'',$(SP_KEY_MATERIAL))' | sha256sum | cut -c1-16)
     SIM_BUILD := $(SIM_BUILD_ROOT)/sim_build_$(SIM)_$(TOPLEVEL)_$(SP_KEY)
   endif
@@ -120,6 +124,21 @@ else
 endif
 
 ifeq ($(SIM),xcelium)
+  # Generated override module: one hierarchical defparam per -G<P>=<v> (string values keep their quotes).
+  ifneq ($(SP_GS),)
+    SP_DEFPARAM_SV := $(SIM_BUILD)/sp_defparams.sv
+    SP_MKDIR := $(shell mkdir -p $(SIM_BUILD))
+    $(file >$(SP_DEFPARAM_SV),module sp_defparams;)
+    $(foreach g,$(SP_GS),$(file >>$(SP_DEFPARAM_SV),  defparam $(TOPLEVEL).$(subst \",",$(patsubst -G%,%,$(g)));))
+    $(file >>$(SP_DEFPARAM_SV),endmodule)
+    override VERILOG_SOURCES += $(SP_DEFPARAM_SV)
+  else
+    # keep `-top sp_defparams` valid when there is nothing to override
+    SP_DEFPARAM_SV := $(SIM_BUILD)/sp_defparams.sv
+    SP_MKDIR := $(shell mkdir -p $(SIM_BUILD))
+    $(file >$(SP_DEFPARAM_SV),module sp_defparams; endmodule)
+    override VERILOG_SOURCES += $(SP_DEFPARAM_SV)
+  endif
   # Per-build log + history so concurrent builds in one directory do not trample xrun.log.
   COMPILE_ARGS += -l $(SIM_BUILD)/xrun.log
 endif

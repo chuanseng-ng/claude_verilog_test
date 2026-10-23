@@ -61,6 +61,9 @@ async def _setup(dut):
     dut.hw_status_wdata.value = 0
     dut.hw_aux_wen.value = 0
     dut.hw_aux_wdata.value = 0
+    # hw_gen_*: undriven inputs are X in a 4-state simulator (Verilator reads 0) and poison the SW-write merge.
+    dut.hw_gen_wen.value = 0
+    dut.hw_gen_wdata.value = 0
     dut.rst_n.value = 0
     m = AXI4LiteMaster(dut, "s_axil_", dut.clk)
     for _ in range(5):
