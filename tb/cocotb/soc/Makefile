@@ -863,6 +863,20 @@ TOPLEVEL ?= tb_axi4_crossbar
 # Suppress reduced-log noise to keep output readable.
 export COCOTB_REDUCED_LOG_FMT=1
 
+# Commercial simulators (SIM=vcs | SIM=xcelium): tb/cocotb/common/sim_portability.mk translates the
+# Verilator-flavoured EXTRA_ARGS/COMPILE_ARGS (-G<P>=, -I, -D, -W*, --trace ...) into each tool's
+# own form, gives every build its own SIM_BUILD and turns the `*_lint` prerequisites into no-ops.
+# It is inert for SIM=verilator, which is the only simulator CI runs.  `+define+SIMULATION` is set
+# in the verilator block above, so it is passed on here for the other simulators.
+SIM_PORT_KEYED_BUILD := 1
+SIM_PORT_DEFINES := SIMULATION
+ifneq ($(SIM),verilator)
+  ifeq ($(FPGA),1)
+    $(error FPGA=1 is only wired for SIM=verilator (the -y rtl/fpga library lookup is not translated for $(SIM)))
+  endif
+endif
+include $(TB)/common/sim_portability.mk
+
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
 # Bead p6t8 -- make a failing cocotb suite actually fail the make.
@@ -938,7 +952,7 @@ axil_apb_fabric_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
 		--top-module tb_axil_apb_fabric $(AXIL_APB_FABRIC_SOURCES)
 
-axil_apb_fabric: axil_apb_fabric_lint
+axil_apb_fabric: $(call sp_lint,axil_apb_fabric_lint)
 	$(MAKE) MODULE=test_axil_apb_fabric TOPLEVEL=tb_axil_apb_fabric \
 		VERILOG_SOURCES="$(AXIL_APB_FABRIC_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
@@ -959,7 +973,7 @@ verilator_lint:
 # `--lint-only` nor a live cocotb run treats as fatal). -GMEM_WORDS=1024
 # matches the macro geometry the RTL comment (sram_controller.sv line ~52)
 # already documents as mandatory under SRAM_SKY130.
-sram_controller: verilator_lint
+sram_controller: $(call sp_lint,verilator_lint)
 	$(MAKE) MODULE=test_sram_controller TOPLEVEL=sram_controller \
 		VERILOG_SOURCES="$(SRAM_SOURCES)" \
 		EXTRA_ARGS="$(if $(filter sky130,$(SRAM_TARGET)),-GMEM_WORDS=1024)" \
@@ -996,7 +1010,7 @@ dma_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
 		--top-module dma_engine $(DMA_SOURCES)
 
-dma: dma_lint
+dma: $(call sp_lint,dma_lint)
 	$(MAKE) MODULE=test_dma TOPLEVEL=dma_engine \
 		VERILOG_SOURCES="$(DMA_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1005,7 +1019,7 @@ timer_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
 		--top-module timer $(TIMER_SOURCES)
 
-timer: timer_lint
+timer: $(call sp_lint,timer_lint)
 	$(MAKE) MODULE=test_timer TOPLEVEL=timer \
 		VERILOG_SOURCES="$(TIMER_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1017,7 +1031,7 @@ irq_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
 		--top-module interrupt_controller $(IRQ_SOURCES)
 
-irq: irq_lint
+irq: $(call sp_lint,irq_lint)
 	$(MAKE) MODULE=test_irq_ctrl TOPLEVEL=interrupt_controller \
 		VERILOG_SOURCES="$(IRQ_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1026,7 +1040,7 @@ uart_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
 		--top-module uart_controller $(UART_SOURCES)
 
-uart: uart_lint
+uart: $(call sp_lint,uart_lint)
 	$(MAKE) MODULE=test_uart TOPLEVEL=uart_controller \
 		VERILOG_SOURCES="$(UART_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1041,7 +1055,7 @@ spi_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-SYNCASYNCNET \
 		--top-module spi_controller $(SPI_SOURCES)
 
-spi: spi_lint
+spi: $(call sp_lint,spi_lint)
 	$(MAKE) MODULE=test_spi TOPLEVEL=spi_controller \
 		VERILOG_SOURCES="$(SPI_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
@@ -1055,7 +1069,7 @@ apb4_register_bank_lint:
 # Two build points (bead r5hu); same scheme as register_bank above.  The ADDR_W=5 point is the
 # POSITIVE CONTROL for the axi_lite_register_bank truncating-cast defect: this module already
 # zero-extends the address (GH #87), so its boundary test must pass.
-apb4_register_bank: apb4_register_bank_lint
+apb4_register_bank: $(call sp_lint,apb4_register_bank_lint)
 	@set -e; \
 	echo "=== apb4_register_bank: ADDR_W=12 (default) ==="; \
 	REGBANK_ADDR_W=12 \
@@ -1076,7 +1090,7 @@ axil_to_apb_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR \
 		--top-module tb_axil_to_apb $(AXIL_TO_APB_SOURCES)
 
-axil_to_apb: axil_to_apb_lint
+axil_to_apb: $(call sp_lint,axil_to_apb_lint)
 	$(MAKE) MODULE=test_axil_to_apb TOPLEVEL=tb_axil_to_apb \
 		VERILOG_SOURCES="$(AXIL_TO_APB_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1104,7 +1118,7 @@ pll_regs_lint:
 # pll_regs: APB migration PR-7 — pll_axil_regs deleted; pll_regs is now an
 #   alias for pll_apb_regs (4 tests, tb_pll_apb_regs, APB4 slave).
 #   The original test_pll_regs (AXI-Lite) is superseded by test_pll_apb_regs.
-pll_regs: pll_regs_lint
+pll_regs: $(call sp_lint,pll_regs_lint)
 	$(MAKE) pll_apb_regs
 
 # APB migration PR-6: pll_apb_regs lint + sim.
@@ -1114,7 +1128,7 @@ pll_apb_regs_lint:
 		--top-module tb_pll_apb_regs \
 		$(PLL_APB_REGS_SOURCES)
 
-pll_apb_regs: pll_apb_regs_lint
+pll_apb_regs: $(call sp_lint,pll_apb_regs_lint)
 	$(MAKE) MODULE=test_pll_apb_regs TOPLEVEL=tb_pll_apb_regs \
 		VERILOG_SOURCES="$(PLL_APB_REGS_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1126,7 +1140,7 @@ pmu_lint:
 		--top-module tb_pmu \
 		$(PMU_SOURCES)
 
-pmu: pmu_lint
+pmu: $(call sp_lint,pmu_lint)
 	$(MAKE) MODULE=test_pmu TOPLEVEL=tb_pmu \
 		VERILOG_SOURCES="$(PMU_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1141,7 +1155,7 @@ gpio_lint:
 		--top-module tb_gpio \
 		$(GPIO_SOURCES)
 
-gpio: gpio_lint
+gpio: $(call sp_lint,gpio_lint)
 	$(MAKE) MODULE=test_gpio TOPLEVEL=tb_gpio \
 		VERILOG_SOURCES="$(GPIO_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
@@ -1156,7 +1170,7 @@ pwm_lint:
 		--top-module tb_pwm \
 		$(PWM_SOURCES)
 
-pwm: pwm_lint
+pwm: $(call sp_lint,pwm_lint)
 	$(MAKE) MODULE=test_pwm TOPLEVEL=tb_pwm \
 		VERILOG_SOURCES="$(PWM_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
@@ -1170,7 +1184,7 @@ wdt_lint:
 		--top-module tb_wdt \
 		$(WDT_SOURCES)
 
-wdt: wdt_lint
+wdt: $(call sp_lint,wdt_lint)
 	$(MAKE) MODULE=test_wdt TOPLEVEL=tb_wdt \
 		VERILOG_SOURCES="$(WDT_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
@@ -1184,7 +1198,7 @@ trng_lint:
 		--top-module tb_trng \
 		$(TRNG_SOURCES)
 
-trng: trng_lint
+trng: $(call sp_lint,trng_lint)
 	$(MAKE) MODULE=test_trng TOPLEVEL=tb_trng \
 		VERILOG_SOURCES="$(TRNG_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
@@ -1199,7 +1213,7 @@ i2c_lint:
 		--top-module tb_i2c \
 		$(I2C_SOURCES)
 
-i2c: i2c_lint
+i2c: $(call sp_lint,i2c_lint)
 	$(MAKE) MODULE=test_i2c TOPLEVEL=tb_i2c \
 		VERILOG_SOURCES="$(I2C_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
@@ -1216,7 +1230,7 @@ crypto_lint:
 		--top-module tb_crypto \
 		$(CRYPTO_SOURCES)
 
-crypto: crypto_lint
+crypto: $(call sp_lint,crypto_lint)
 	$(MAKE) MODULE=test_crypto TOPLEVEL=tb_crypto \
 		VERILOG_SOURCES="$(CRYPTO_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
@@ -1238,7 +1252,7 @@ npu_lint:
 		--top-module tb_npu \
 		$(NPU_SOURCES)
 
-npu: npu_lint
+npu: $(call sp_lint,npu_lint)
 	$(MAKE) MODULE=test_npu TOPLEVEL=tb_npu \
 		VERILOG_SOURCES="$(NPU_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET" \
@@ -1267,7 +1281,7 @@ apb_interconnect_lint:
 # `set -e` (in a single multi-line shell recipe, note the trailing `\` continuations) so a
 # failure at any sweep point aborts the target with a non-zero exit instead of being masked by
 # a later point's success.
-apb_interconnect: apb_interconnect_lint
+apb_interconnect: $(call sp_lint,apb_interconnect_lint)
 	@set -e; \
 	for n in 1 2 7 8 9 13 14 15 16 17; do \
 		echo "=== apb_interconnect sweep: N_SLAVES=$$n ==="; \
@@ -1291,7 +1305,7 @@ async_axi_fifo_lint:
 		--top-module tb_async_axi_fifo \
 		$(ASYNC_AXI_FIFO_SOURCES)
 
-async_axi_fifo: async_axi_fifo_lint
+async_axi_fifo: $(call sp_lint,async_axi_fifo_lint)
 	$(MAKE) MODULE=test_async_axi_fifo TOPLEVEL=tb_async_axi_fifo \
 		VERILOG_SOURCES="$(ASYNC_AXI_FIFO_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1303,7 +1317,7 @@ apb_cdc_bridge_lint:
 		--top-module tb_apb_cdc_bridge \
 		$(APB_CDC_BRIDGE_SOURCES)
 
-apb_cdc_bridge: apb_cdc_bridge_lint
+apb_cdc_bridge: $(call sp_lint,apb_cdc_bridge_lint)
 	$(MAKE) MODULE=test_apb_cdc_bridge TOPLEVEL=tb_apb_cdc_bridge \
 		VERILOG_SOURCES="$(APB_CDC_BRIDGE_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1328,7 +1342,7 @@ cdc_sync_stages1_neg:
 		echo "FAIL: STAGES=1 failed for the wrong reason"; echo "$$out"; exit 1; \
 	fi
 
-cdc_sync: cdc_sync_lint cdc_sync_stages1_neg
+cdc_sync: $(call sp_lint,cdc_sync_lint cdc_sync_stages1_neg)
 	$(MAKE) MODULE=test_cdc_sync TOPLEVEL=tb_cdc_sync \
 		VERILOG_SOURCES="$(CDC_SYNC_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1370,14 +1384,14 @@ cdc_gray_fifo_sim:
 		VERILOG_SOURCES="$(CDC_GRAY_FIFO_SOURCES)" \
 		$(BUILD_ARGS)
 
-cdc_gray_fifo: cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg
+cdc_gray_fifo: $(call sp_lint,cdc_gray_fifo_lint cdc_gray_fifo_depth_guard_neg)
 	$(MAKE) cdc_gray_fifo_sim
 
 # Bead claude_verilog_test-xtaa: SYNC_STAGES pass-through of the four peripherals that own an
 # input synchroniser. One cheap latency test per family at SYNC_STAGES=3 (the default depth 2 is
 # covered by each peripheral's own suite). -GSYNC_STAGES is part of the sim_build key, so each
 # variant gets its own directory. Lint of each DUT already runs in its own <name>_lint target.
-periph_sync_stages: uart_lint irq_lint spi_lint gpio_lint
+periph_sync_stages: $(call sp_lint,uart_lint irq_lint spi_lint gpio_lint)
 	$(MAKE) MODULE=test_periph_sync_stages TOPLEVEL=uart_controller \
 		VERILOG_SOURCES="$(UART_SOURCES)" \
 		EXTRA_ARGS="-Wno-SYNCASYNCNET -GSYNC_STAGES=3" \
@@ -1406,7 +1420,7 @@ cdc_reset_sync_scan_lint:
 		--top-module tb_cdc_reset_sync_scan \
 		$(CDC_RESET_SYNC_SCAN_SOURCES)
 
-cdc_reset_sync_scan: cdc_reset_sync_scan_lint
+cdc_reset_sync_scan: $(call sp_lint,cdc_reset_sync_scan_lint)
 	$(MAKE) MODULE=test_cdc_reset_sync_scan TOPLEVEL=tb_cdc_reset_sync_scan \
 		VERILOG_SOURCES="$(CDC_RESET_SYNC_SCAN_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1424,7 +1438,7 @@ dft_muxes_lint:
 		--top-module tb_dft_muxes \
 		$(DFT_MUXES_SOURCES)
 
-dft_muxes: dft_muxes_lint
+dft_muxes: $(call sp_lint,dft_muxes_lint)
 	$(MAKE) MODULE=test_dft_muxes TOPLEVEL=tb_dft_muxes \
 		VERILOG_SOURCES="$(DFT_MUXES_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1436,7 +1450,7 @@ jtag_tap_lint:
 		--top-module tb_jtag_tap \
 		$(JTAG_TAP_SOURCES)
 
-jtag_tap: jtag_tap_lint
+jtag_tap: $(call sp_lint,jtag_tap_lint)
 	$(MAKE) MODULE=test_jtag_tap TOPLEVEL=tb_jtag_tap \
 		VERILOG_SOURCES="$(JTAG_TAP_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1448,7 +1462,7 @@ mbist_ctrl_lint:
 
 # Three build points (each hashes to its own SIM_BUILD): small (every algorithm x every fault class), soc
 # (two 1024-word macros, port 1 on memory 0) and cpu (ten 256-word cache SRAMs).
-mbist_ctrl: mbist_ctrl_lint
+mbist_ctrl: $(call sp_lint,mbist_ctrl_lint)
 	@set -e; for cfg in "small 4 6 5" "soc 2 10 1" "cpu 10 8 0"; do set -- $$cfg; \
 	  echo "=== mbist_ctrl: $$1 (N_MEM=$$2 AW=$$3 P1_MASK=$$4) ==="; \
 	  MBIST_CFG=$$1 $(MAKE) MODULE=test_mbist_ctrl TOPLEVEL=tb_mbist_domain \
@@ -1460,7 +1474,7 @@ mbist_ctrl: mbist_ctrl_lint
 mbist_tap_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR --top-module tb_mbist_tap $(MBIST_TAP_SOURCES)
 
-mbist_tap: mbist_tap_lint
+mbist_tap: $(call sp_lint,mbist_tap_lint)
 	$(MAKE) MODULE=test_mbist_tap TOPLEVEL=tb_mbist_tap \
 		VERILOG_SOURCES="$(MBIST_TAP_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1468,7 +1482,7 @@ mbist_tap: mbist_tap_lint
 mbist_soc_slice_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR +define+SRAM_SKY130 --top-module tb_mbist_soc_slice $(MBIST_SOC_SLICE_SOURCES)
 
-mbist_soc_slice: mbist_soc_slice_lint
+mbist_soc_slice: $(call sp_lint,mbist_soc_slice_lint)
 	$(MAKE) MODULE=test_mbist_soc_slice TOPLEVEL=tb_mbist_soc_slice \
 		VERILOG_SOURCES="$(MBIST_SOC_SLICE_SOURCES)" \
 		EXTRA_ARGS="+define+SRAM_SKY130" \
@@ -1477,7 +1491,7 @@ mbist_soc_slice: mbist_soc_slice_lint
 mbist_fi_equiv_lint:
 	verilator --lint-only -Wall -Wno-IMPORTSTAR -Wno-DECLFILENAME --top-module tb_sram_fi_equiv $(MBIST_FI_EQUIV_SOURCES)
 
-mbist_fi_equiv: mbist_fi_equiv_lint
+mbist_fi_equiv: $(call sp_lint,mbist_fi_equiv_lint)
 	$(MAKE) MODULE=test_sram_fi_equiv TOPLEVEL=tb_sram_fi_equiv \
 		VERILOG_SOURCES="$(MBIST_FI_EQUIV_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1487,7 +1501,7 @@ dft_clk_switch_lint:
 		--top-module tb_dft_clk_switch \
 		$(DFT_CLK_SWITCH_SOURCES)
 
-dft_clk_switch: dft_clk_switch_lint
+dft_clk_switch: $(call sp_lint,dft_clk_switch_lint)
 	$(MAKE) MODULE=test_dft_clk_switch TOPLEVEL=tb_dft_clk_switch \
 		VERILOG_SOURCES="$(DFT_CLK_SWITCH_SOURCES)" \
 		$(BUILD_ARGS)
@@ -1496,7 +1510,7 @@ dft_clk_switch: dft_clk_switch_lint
 # `assign clk_o = sel_a_i ? clk_a_i : clk_b_i` (the plain mux Q-CLK replaced).  It is EXPECTED TO
 # FAIL (runts, immediate switch with no handshake); a pass would mean the suite cannot tell the
 # glitch-free switch from a plain mux.  Run:  make dft_clk_switch_plainmux  (exit status non-zero).
-dft_clk_switch_plainmux: dft_clk_switch_lint
+dft_clk_switch_plainmux: $(call sp_lint,dft_clk_switch_lint)
 	$(MAKE) MODULE=test_dft_clk_switch TOPLEVEL=tb_dft_clk_switch \
 		VERILOG_SOURCES="$(DFT_CLK_SWITCH_SOURCES)" \
 		EXTRA_ARGS="-GPLAIN_MUX=1" \
@@ -1507,17 +1521,17 @@ dft_ctrl_lint:
 		--top-module tb_dft_ctrl \
 		$(DFT_CTRL_SOURCES)
 
-dft_ctrl: dft_ctrl_lint
+dft_ctrl: $(call sp_lint,dft_ctrl_lint)
 	$(MAKE) MODULE=test_dft_ctrl TOPLEVEL=tb_dft_ctrl \
 		VERILOG_SOURCES="$(DFT_CTRL_SOURCES)" \
 		$(BUILD_ARGS)
 
-clock_gate_scan: clock_gate_scan_lint
+clock_gate_scan: $(call sp_lint,clock_gate_scan_lint)
 	$(MAKE) MODULE=test_clock_gate_scan TOPLEVEL=tb_clock_gate_scan \
 		VERILOG_SOURCES="$(CLOCK_GATE_SCAN_SOURCES)" \
 		$(BUILD_ARGS)
 
-soc_pll: soc_pll_lint
+soc_pll: $(call sp_lint,soc_pll_lint)
 	$(MAKE) MODULE=test_pll_lock TOPLEVEL=tb_soc_pll \
 		VERILOG_SOURCES="$(PLL_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1530,7 +1544,7 @@ soc_pll: soc_pll_lint
 # module docstring for why this is a separate DUT/target from
 # soc_multiclock). Reuses pll2_fw/pll2_decode.hex — no new firmware.
 #
-soc_pll_multiclock: soc_pll_lint
+soc_pll_multiclock: $(call sp_lint,soc_pll_lint)
 	$(MAKE) MODULE=test_soc_multiclock_pll2 TOPLEVEL=tb_soc_pll \
 		VERILOG_SOURCES="$(PLL_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1539,7 +1553,7 @@ soc_pll_multiclock: soc_pll_lint
 
 # Bead claude_verilog_test-j41m.2 (DFT Stage 1a): soc_top test-access ports, via tb_soc_pll
 # (which exposes pll_locked_o / cpu_pll_locked_o). Same sources/flags as soc_pll_multiclock.
-soc_dft_scan: soc_pll_lint
+soc_dft_scan: $(call sp_lint,soc_pll_lint)
 	$(MAKE) MODULE=test_soc_dft_scan TOPLEVEL=tb_soc_pll \
 		VERILOG_SOURCES="$(PLL_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1548,7 +1562,7 @@ soc_dft_scan: soc_pll_lint
 
 # Bead claude_verilog_test-j41m.3 (DFT Stage 1b): soc_top driven through the JTAG TAP (tb_soc_pll
 # carries tck_i/tms_i/tdi_i/trst_ni/tdo_o/tdo_oe_o). Same sources/flags as soc_dft_scan.
-soc_jtag: soc_pll_lint
+soc_jtag: $(call sp_lint,soc_pll_lint)
 	$(MAKE) MODULE=test_soc_jtag TOPLEVEL=tb_soc_pll \
 		VERILOG_SOURCES="$(PLL_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1565,7 +1579,7 @@ soc_boot_lint:
 
 # M9 SoC boot test — 3 tests: PC scoreboard, SRAM sentinels, 100/100 stability.
 # fr_null_20260603_052800_00 (CPU RESET_PC) fixed by rtl-design-orchestrator 2026-06-03.
-soc_boot: soc_boot_lint
+soc_boot: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_boot TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1574,7 +1588,7 @@ soc_boot: soc_boot_lint
 
 # M9 SoC DMA + peripheral loopback test — self-checking firmware drives DMA
 # mem->mem + UART/SPI internal loopback via CPU MMIO; scoreboards PASS_PC/FAIL_PC.
-soc_periph: soc_boot_lint
+soc_periph: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_periph_loopback TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1595,7 +1609,7 @@ soc_boot_diag:
 # Firmware: coherency_fw/coherency_fw.hex (generated by gen_coherency_hex.py).
 # Tests: test_coherency_pass (positive), test_coherency_no_flush (negative),
 #        test_coherency_no_inval (negative/warn if dst lines cold).
-soc_coherency: soc_boot_lint
+soc_coherency: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_coherency TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1608,7 +1622,7 @@ soc_coherency: soc_boot_lint
 # spin loop until the ISR fires (mtvec trap → ISR clears IRQ + sets flag +
 # MRET), then reads corrected dst words and verifies src+1.
 # Tests: test_cpu_gpu_irq_pass (positive), test_cpu_gpu_irq_no_irq_enable (negative).
-soc_cpu_gpu: soc_boot_lint
+soc_cpu_gpu: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_cpu_gpu_irq TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1628,7 +1642,7 @@ soc_cpu_gpu: soc_boot_lint
 # input path (gpio_in_i -> GPIO_DATA_IN, respecting the 3-clock-edge sync
 # latency), and the GPIO -> interrupt_controller[5] -> CPU MEIP interrupt
 # path end to end (CPU actually takes the trap; GPIO_IRQ_CLR deasserts it).
-soc_gpio: soc_boot_lint
+soc_gpio: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_gpio TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1638,7 +1652,7 @@ soc_gpio: soc_boot_lint
 # UART boot-ROM bootloader (bead hlrm.2): the real bootloader image from sw/bootloader/prebuilt/
 # is backdoor-loaded into boot_rom and driven over uart_rx_i by a bit-level UART model.
 # Rebuild the images (needs the nix #bench toolchain):  make -C sw/bootloader prebuilt
-soc_uart_boot: soc_boot_lint
+soc_uart_boot: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_uart_boot TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1657,7 +1671,7 @@ soc_uart_boot: soc_boot_lint
 # channel 0 is enabled — no cocotb stimulus needed, unlike soc_gpio) and the
 # PWM -> interrupt_controller[6] -> CPU MEIP interrupt path end to end (CPU
 # actually takes the trap; PWM_IRQ_CLR + PWM_IRQ_EN=0 deassert it).
-soc_pwm: soc_boot_lint
+soc_pwm: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_pwm TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1675,7 +1689,7 @@ soc_pwm: soc_boot_lint
 # (bite resets the CPU domain only). watchdog_timer.sv is already in SOC_BOOT_SOURCES and
 # tb_soc_top.sv already lints clean with wdt_rst_req_o, so this reuses soc_boot_lint exactly
 # like soc_pwm above.
-soc_wdt: soc_boot_lint
+soc_wdt: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_wdt TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1691,7 +1705,7 @@ soc_wdt: soc_boot_lint
 # tb/models/trng_lfsr_model.py and TRNG_STATUS[3] (INSECURE) read back, then an interrupt-driven
 # phase. trng.sv + trng_lfsr_entropy.sv are already in SOC_BOOT_SOURCES and tb_soc_top.sv is
 # unchanged (TRNG adds no top-level pins), so this reuses soc_boot_lint exactly like soc_wdt above.
-soc_trng: soc_boot_lint
+soc_trng: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_trng TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1707,7 +1721,7 @@ soc_trng: soc_boot_lint
 # image (i2c_fw/gen_i2c_hex.py, no cross toolchain -- CI-safe). i2c_controller.sv is already in
 # SOC_BOOT_SOURCES and tb_soc_top.sv already exposes the i2c_* pins, so this reuses soc_boot_lint
 # exactly like soc_trng/soc_gpio/soc_wdt above.
-soc_i2c: soc_boot_lint
+soc_i2c: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_i2c TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1722,7 +1736,7 @@ soc_i2c: soc_boot_lint
 # hand-assembled image (crypto_fw/gen_crypto_hex.py, no cross toolchain -- CI-safe). crypto_accel.sv,
 # aes128_core.sv and sha256_core.sv are already in SOC_BOOT_SOURCES and tb_soc_top.sv needs no new
 # ports (crypto has no pins), so this reuses soc_boot_lint exactly like soc_i2c/soc_trng above.
-soc_crypto: soc_boot_lint
+soc_crypto: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_crypto TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1738,7 +1752,7 @@ soc_crypto: soc_boot_lint
 # toolchain -- CI-safe). npu_top.sv / npu_mac_array.sv / npu_weight_mem.sv are already in
 # SOC_BOOT_SOURCES and tb_soc_top.sv needs no new ports (the NPU has no pins), so this reuses
 # soc_boot_lint exactly like soc_crypto above.
-soc_npu: soc_boot_lint
+soc_npu: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_npu TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1776,7 +1790,7 @@ soc_npu: soc_boot_lint
 # RTL-level GPIO coverage is unaffected either way: soc_gpio is in soc_all_ci
 # because its firmware (tb/cocotb/soc/gpio_fw/gpio_fw.hex) is generated by a
 # pure-Python assembler, is committed, and needs no external toolchain.
-gpio_driver: soc_boot_lint
+gpio_driver: $(call sp_lint,soc_boot_lint)
 	@test -f $(PROJ_ROOT)/sw/bench/build/gpio_demo.hex -a \
 	      -f $(PROJ_ROOT)/sw/bench/build/trampoline.hex || { \
 		echo "ERROR: sw/bench/build/{gpio_demo,trampoline}.hex missing."; \
@@ -1802,7 +1816,7 @@ gpio_driver: soc_boot_lint
 #
 # In soc_all (see the soc_all comment block) since 2026-08-02, once both
 # bugs it found were fixed. Runnable standalone too: `rtk make soc_multiclock`.
-soc_multiclock: soc_boot_lint
+soc_multiclock: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_multiclock TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1817,7 +1831,7 @@ soc_multiclock: soc_boot_lint
 # full rationale (regression coverage for fr_57f49b7f9b29 / fr_280f3ac18c66's
 # shared bug-class signature, at full-SoC scale). Reuses boot_fw/boot.hex --
 # no new firmware. Same DUT/source list/lint gate as soc_multiclock.
-soc_multiclock_reset: soc_boot_lint
+soc_multiclock_reset: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_multiclock_reset TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1832,7 +1846,7 @@ soc_multiclock_reset: soc_boot_lint
 # once gated). Firmware: pmu_cycle_fw/pmu_cycle.hex (generated by
 # gen_pmu_cycle_hex.py) -- new firmware, not reused from another suite. Same
 # DUT/source list/lint gate as soc_multiclock.
-soc_pmu_multiclock: soc_boot_lint
+soc_pmu_multiclock: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_pmu_multiclock TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1845,7 +1859,7 @@ soc_pmu_multiclock: soc_boot_lint
 # must time out, not hang the PMU); and the ISO_GPU clamps incl. m_axil_if_rready (PR #301).  Power
 # cycles are driven by a backdoor write of PMU CTRL, so no firmware.  Same DUT/source list/lint gate
 # as soc_pmu_multiclock.
-soc_pmu_iso_ack: soc_boot_lint
+soc_pmu_iso_ack: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_pmu_iso_ack TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1859,7 +1873,7 @@ soc_pmu_iso_ack: soc_boot_lint
 # force-complete PSLVERR with the destination in reset). Six tests, ONE Vtop build. Firmware:
 # integ_fw/gen_integ_hex.py (three images, hand-assembled, no cross toolchain -- CI-safe).
 # Same DUT/source list/lint gate as soc_pmu_multiclock.
-soc_integration: soc_boot_lint
+soc_integration: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_soc_integration TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -1872,7 +1886,7 @@ soc_integration: soc_boot_lint
 # Waveform tracing is DISABLED (EXTRA_ARGS="") — tracing 1M+ cycles would
 # generate a multi-GB VCD dump.  Keep this target OUT of soc_all because
 # runtime is long (>5 min); run explicitly with `make soc_stress`.
-soc_stress: soc_boot_lint
+soc_stress: $(call sp_lint,soc_boot_lint)
 	/usr/bin/python3 $(SOC_DIR)/stress_fw/gen_stress_hex.py
 	$(MAKE) MODULE=test_soc_stress TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
@@ -1896,7 +1910,7 @@ l2_bench_lint:
 		--top-module tb_soc_top \
 		$(SOC_BOOT_SOURCES)
 
-l2_bench: l2_bench_lint
+l2_bench: $(call sp_lint,l2_bench_lint)
 	$(MAKE) MODULE=test_l2_bench TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \
@@ -2083,7 +2097,7 @@ soc_coverage_shard:
 # Vtop binary is current and skips recompilation for suites 2-4.
 # Requires the same SIM_BUILD for all four invocations (set via env or command line).
 .PHONY: soc_integration_batch
-soc_integration_batch: soc_boot_lint
+soc_integration_batch: $(call sp_lint,soc_boot_lint)
 	$(MAKE) MODULE=test_boot TOPLEVEL=tb_soc_top \
 		VERILOG_SOURCES="$(SOC_BOOT_SOURCES)" \
 		EXTRA_ARGS="-I$(RTL)/cpu/core -I$(RTL)/mem -I$(RTL)/soc -I$(RTL)/soc/cdc -I$(RTL)/gpu \

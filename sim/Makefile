@@ -576,6 +576,9 @@ ifneq ($(filter test sim regression results.xml,$(MAKECMDGOALS)),)
         $(error cocotb not found. Please run this in WSL with cocotb installed: pip install cocotb)
     endif
 
+    # Commercial simulators (SIM=vcs | SIM=xcelium): flag translation + SIM-tagged SIM_BUILD; inert for verilator.
+    include $(PROJ_ROOT)/tb/cocotb/common/sim_portability.mk
+
     # Include cocotb makefiles
     include $(shell $(COCOTB_CONFIG) --makefiles)/Makefile.sim
 endif
