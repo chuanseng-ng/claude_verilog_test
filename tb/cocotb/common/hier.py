@@ -52,3 +52,29 @@ def pset(handle, value: int) -> None:
         w = _width(m)
         shift -= w
         pset(m, (value >> shift) & ((1 << w) - 1))
+
+
+def hgen(handle, name: str, idx: int, *rest: str):
+    """``hgen(h, "g_mem", 3, "u_mem")`` == ``h.g_mem[3].u_mem`` on Verilator; VCS names the child
+    ``"g_mem[3].u_mem"`` (generate-for index and scope path flattened into one name)."""
+    try:
+        cur = getattr(handle, name)[idx]
+        for n in rest:
+            cur = getattr(cur, n)
+        return cur
+    except (AttributeError, IndexError, TypeError):
+        return handle._id(".".join([f"{name}[{idx}]", *rest]), extended=False)
+
+
+async def read_only():
+    """``await ReadOnly()`` that tolerates being called while already in the ReadOnly phase.
+
+    Verilator treats that as a no-op; VCS fails to register a second cbReadOnlySynch and raises
+    ``TriggerException``.  On that failure, step 1 ps out of the phase and wait for ReadOnly again."""
+    from cocotb.triggers import ReadOnly, Timer
+
+    try:
+        await ReadOnly()
+    except Exception:  # cocotb.triggers.TriggerException
+        await Timer(1, units="ps")
+        await ReadOnly()

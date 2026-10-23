@@ -21,6 +21,7 @@ import cocotb
 from bfm.axi4_master import RESP_OKAY, AXI4Master
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
+from common.hier import hsub
 from jtag_driver import OP_MBIST_CTRL, OP_MBIST_STATUS, JtagDriver
 from mbist_golden import Fault, ctl_word, decode_status, golden_first_fail
 
@@ -29,7 +30,9 @@ AW = 10
 
 
 def macro(dut, which):
-    return dut.u_sram.u_sram_macro.u_core if which == "sram" else dut.u_npu.g_on.u_wmem.u_sram_macro.u_core
+    if which == "sram":
+        return dut.u_sram.u_sram_macro.u_core
+    return hsub(dut.u_npu, "g_on", "u_wmem").u_sram_macro.u_core
 
 
 def arm(dut, which, f: Fault):

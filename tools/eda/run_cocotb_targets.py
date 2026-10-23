@@ -111,7 +111,7 @@ def run_spec(sim: str, root: Path, logdir: Path, spec: str, extra_make: list[str
 
 def run_chain(sim: str, base: Path, logdir: Path, chain: str, extra_make: list[str]) -> dict:
     specs = chain.split("+")
-    name = re.sub(r"[^A-Za-z0-9_.=-]+", "_", chain)
+    name = re.sub(r"[^A-Za-z0-9_.-]+", "_", chain)  # no "=": make reads path=value on its command line as an assignment
     jroot = base / name
     jroot.mkdir(parents=True, exist_ok=True)
     (jroot / "suites_ran.txt").touch()
