@@ -281,6 +281,8 @@ module gpu_top
     assign if_ar_stuck = m_axil_if_arvalid && !m_axil_if_arready;
     assign soft_clr    = rst_pend_q && halt_q && !mu_stall && !sm_stall && !if_outst_q;
 
+    logic launch_err;      // an illegal launch is accepted this cycle -> ERROR, scheduler untouched
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             rst_pend_q <= 1'b0;
@@ -322,7 +324,6 @@ module gpu_top
     assign cq_block_x = cq_desc.block_x;
 
     logic blk_illegal;     // BLOCK_X is 0 or exceeds the 8 warps x 8 lanes of storage
-    logic launch_err;      // an illegal launch is accepted this cycle -> ERROR, scheduler untouched
     logic sched_start;     // a legal launch is accepted this cycle -> scheduler loads the block
     assign blk_illegal = (cq_block_x == 10'd0) || (cq_block_x > 10'(N_WARPS * N_LANES));
     assign launch_err  = sched_launch && blk_illegal;
