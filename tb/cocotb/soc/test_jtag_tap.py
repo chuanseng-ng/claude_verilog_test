@@ -125,6 +125,10 @@ async def _setup(dut, cfg, release=True):
     """Start the free-running system clock, bring the TAP to TLR (optionally then hold TRST_N)."""
     tck_ns, sys_ns = cfg
     dut.sys_clk_i.value = 0
+    # Idle MBIST inputs (control-word FIFO ready, status 0): undriven they are X in a 4-state simulator,
+    # whereas Verilator reads an undriven input as 0.
+    dut.mbist_not_ready_i.value = 0
+    dut.mbist_status_i.value = 0
     cocotb.start_soon(Clock(dut.sys_clk_i, sys_ns, units="ns").start())
     drv = JtagDriver(
         dut.tck_i, dut.tms_i, dut.tdi_i, dut.trst_ni, dut.tdo_o, period_ns=tck_ns,

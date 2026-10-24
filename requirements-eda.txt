@@ -1,0 +1,16 @@
+# Python environment for running the cocotb regressions under the COMMERCIAL
+# simulators (VCS / Xcelium) on a host with no nix.  Built by `make eda-venv`
+# into the gitignored .venv-eda/ (python3.11).
+#
+# Specifiers deliberately mirror .github/workflows/cocotb.yml (the soc job's
+# `pip install` line) so the commercial-simulator runs see the same cocotb
+# 1.x / pyuvm 3.0.x stack as the Verilator CI.  Do NOT bump cocotb to 2.x:
+# tb/ uses the 1.x `units=` kwarg.
+cocotb>=1.8.0,<2.0
+cocotb-bus
+cocotbext-axi
+pyuvm>=3.0.0,<3.1
+cocotb-coverage==1.2.0
+pytest
+pytest-cov
+pyyaml>=6.0

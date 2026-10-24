@@ -98,6 +98,7 @@ See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for
 | Document | Purpose |
 | :------- | :------ |
 | `docs/verification/VERIFICATION_PLAN.md` | Verification strategy (RTL + physical design) |
+| `docs/verification/PROPRIETARY_SIM_FLOW.md` | VCS / Xcelium setup, regression run, portability rules (EDA hosts without nix) |
 | `docs/RANDOM_TESTS_STATUS.md` | Random instruction test results and guide |
 | `fixes/FIXES_INDEX.md` | ⭐ Central reference for all RTL bug fixes |
 

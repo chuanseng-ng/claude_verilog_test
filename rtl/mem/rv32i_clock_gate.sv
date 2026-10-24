@@ -41,9 +41,10 @@ module rv32i_clock_gate #(
     // 1 = this gate is a clock root that CTS builds a tree on (only honoured under USE_SKY130_CLKCELLS).
     parameter bit HARD_ROOT = 1'b0
 ) (
-    input  logic en,
-    input  logic test_en,
-    input  logic clk,
+    // Explicit `wire` on the inputs: a testbench `default_nettype none leaks into this -y-resolved file under Xcelium (*W,NODNTW)
+    input  wire logic en,
+    input  wire logic test_en,
+    input  wire logic clk,
     output logic gclk
 );
 `ifdef FPGA_BUFGCE

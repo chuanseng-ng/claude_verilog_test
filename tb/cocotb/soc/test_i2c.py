@@ -1513,7 +1513,7 @@ async def test_i2c_clkdiv_clamp_to_min(dut):
     assert low[4] == low[3] + 2, f"CLKDIV=4 must add exactly one tick per SCL-low half: {low}"
 
 
-@cocotb.test()
+@cocotb.test(skip=not cocotb.SIM_NAME.lower().startswith("verilator"))  # shells out to `verilator --lint-only`
 async def test_i2c_clkdiv_min_guard_rejects_elaboration(dut):
     """The DUT's g_clkdiv_min_check $fatal must REFUSE to elaborate an unsafe prescaler minimum
     (CLKDIV_MIN < SYNC_STAGES+1 = 3), and the same lint command must pass at the default -- the
@@ -2385,6 +2385,9 @@ async def test_i2c_condition_tick_reloads_at_clkdiv_ffff(dut):
     )
     for pred, entered, want in cases:
         await _setup(dut, clkdiv=LARGE_DIV, timeout=0)
+        # _setup returns in the clock-edge time step; a VCS deposit made there is overwritten by the same
+        # step's pending NBA on tick_q.  Step past the edge first (Verilator is indifferent).
+        await Timer(1, units="step")
         e.state_q.value = pred
         e.tick_q.value = 0
         await _settled_edge(dut)

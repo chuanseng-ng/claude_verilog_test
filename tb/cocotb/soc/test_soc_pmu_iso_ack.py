@@ -494,7 +494,7 @@ async def test_gpu_isolation_clamps_follow_pmu_iso_en(dut):
                     violations.append("GPU reset asserted with the GPU clamp inactive")
                 for out_name, raw_name, idx in GPU_CLAMPS:
                     out_h = getattr(soc, out_name)
-                    out = int((out_h[idx] if idx is not None else out_h).value)
+                    out = (int(out_h.value) >> idx) & 1 if idx is not None else int(out_h.value)
                     raw = int(getattr(soc, raw_name).value)
                     if out != (raw & (1 - iso)):
                         violations.append(f"{out_name}={out} raw={raw} iso={iso}")

@@ -28,6 +28,19 @@ async def test_fi_model_equals_real_model(dut):
     dut.csb1_i.value = 1
     dut.addr1_i.value = 0
     await ClockCycles(dut.clk_i, 3)
+    # Power-up contents: Verilator zero-fills both arrays, a 4-state simulator leaves the real model's X
+    # (the FI model is 2-state) -- an initial-state difference, not a behavioural one.  Write 0 to every
+    # word through the functional port so both models start identically in every simulator.
+    for a in range(1024):
+        dut.csb0_i.value = 0
+        dut.web0_i.value = 0
+        dut.wmask0_i.value = 0xF
+        dut.addr0_i.value = a
+        dut.din0_i.value = 0
+        await RisingEdge(dut.clk_i)
+    dut.csb0_i.value = 1
+    dut.csb1_i.value = 1
+    await ClockCycles(dut.clk_i, 4)
     reads0 = reads1 = same = nonzero = 0
     hot = [rng.randrange(1024) for _ in range(12)]  # a small hot set so reads hit written words
     for cyc in range(6000):
@@ -46,7 +59,9 @@ async def test_fi_model_equals_real_model(dut):
         same += int(a0 == a1 and op < 0.45)
         await RisingEdge(dut.clk_i)
         await Timer(1, units="ps")
-        nonzero += int(int(dut.dout1_real_o.value) != 0 or int(dut.dout0_real_o.value) != 0)
+        # An unwritten word reads X in a 4-state simulator (0 in Verilator); only the vacuity counter is
+        # affected -- the equivalence check itself is mismatch_o, which compares with !== (X included).
+        nonzero += int(any(v.is_resolvable and int(v) != 0 for v in (dut.dout1_real_o.value, dut.dout0_real_o.value)))
     assert int(dut.mismatch_o.value) == 0, f"{int(dut.mismatch_o.value)} cycles with differing outputs"
     # vacuity guards: the traffic really exercised the interesting cases
     assert reads0 > 500 and reads1 > 500 and same > 20 and nonzero > 500, (reads0, reads1, same, nonzero)

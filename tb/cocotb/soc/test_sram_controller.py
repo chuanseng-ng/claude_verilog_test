@@ -41,6 +41,10 @@ async def _setup(dut):
     # Initialise the ID inputs the BFM leaves untouched.
     dut.s_awid.value = 0
     dut.s_arid.value = 0
+    # MBIST collar inputs (SRAM_SKY130 arm): undriven they are X in a 4-state simulator, which poisons the
+    # macro's port-1 select; 0 is the functional (collar pass-through) setting, and what Verilator gave.
+    for sig in ("mb_en_i", "mb_ce_i", "mb_we_i", "mb_wmask_i", "mb_addr_i", "mb_din_i"):
+        getattr(dut, sig).value = 0
     # Assert reset for 5 cycles, then release.
     dut.rst_n.value = 0
     for _ in range(5):
@@ -491,9 +495,9 @@ async def test_read_backpressure_no_drop_no_dup(dut):
         # so the combinational R-channel outputs (rvalid/rdata/rlast/rresp)
         # are already settled here.
         rvalid = int(dut.s_rvalid.value)
-        rdata  = int(dut.s_rdata.value)
-        rlast  = int(dut.s_rlast.value)
-        rresp  = int(dut.s_rresp.value)
+        rdata  = int(dut.s_rdata.value) if rvalid else 0  # RDATA is X while RVALID=0 in a 4-state simulator
+        rlast  = int(dut.s_rlast.value) if rvalid else 0
+        rresp  = int(dut.s_rresp.value) if rvalid else 0
 
         if pending:
             assert rvalid == 1, (
@@ -882,9 +886,9 @@ async def test_read_backpressure_random(dut):
             dut.s_rready.value = int(rr)
             await RisingEdge(dut.clk)
             rvalid = int(dut.s_rvalid.value)
-            rdata  = int(dut.s_rdata.value)
-            rlast  = int(dut.s_rlast.value)
-            rresp  = int(dut.s_rresp.value)
+            rdata  = int(dut.s_rdata.value) if rvalid else 0  # RDATA is X while RVALID=0 in a 4-state simulator
+            rlast  = int(dut.s_rlast.value) if rvalid else 0
+            rresp  = int(dut.s_rresp.value) if rvalid else 0
 
             if pending:
                 assert rvalid == 1, (

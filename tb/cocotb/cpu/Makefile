@@ -102,6 +102,9 @@ ifeq ($(SIM), icarus)
     COMPILE_ARGS += -g2012
 endif
 
+# Commercial simulators (SIM=vcs | SIM=xcelium): flag translation + SIM-keyed SIM_BUILD; inert for verilator.
+include $(dir $(abspath $(lastword $(MAKEFILE_LIST))))../common/sim_portability.mk
+
 # Include cocotb makefiles
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
