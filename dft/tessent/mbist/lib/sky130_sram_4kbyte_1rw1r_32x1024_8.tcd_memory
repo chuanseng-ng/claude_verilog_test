@@ -14,9 +14,11 @@
 //   A3  Port 1 (clk1/csb1/addr1/dout1) is read-only; dout1 is only updated when csb1 is low.
 //   A4  No bypass/transparent mode is requested (TransparentMode None): the macro is a black box in scan
 //       mode, as in the in-house flow (docs/design/DFT_ARCHITECTURE.md 6.3).
-//   A5  Physical row/column mapping is NOT described (OpenRAM scrambles it and the LEF/Liberty do not say), so
-//       the address map is logical: all 10 address bits are "row" bits.  Neighbourhood algorithms are therefore
-//       logical-space only, the same limit as the in-house CKBD algorithm.
+//   A5  Physical row/column mapping is NOT described (OpenRAM scrambles it and the LEF/Liberty do not say).  The
+//       address map below is a LOGICAL split, Address[9:2] = row and Address[1:0] = column, chosen only because
+//       Tessent refuses BitGrouping 8 on a memory with no column address bits (it silently forces BitGrouping to
+//       the word size, 32, which would drop the byte-lane write-mask test).  Neighbourhood algorithms are
+//       therefore logical-space only, the same limit as the in-house CKBD algorithm.
 //   A6  MinHold 1: one idle clock is the minimum between a write and the following access to be safe in the
 //       model; the OpenRAM model has no multi-cycle hold requirement (T_HOLD is only an output hold delay).
 MemoryTemplate (sky130_sram_4kbyte_1rw1r_32x1024_8) {
@@ -25,7 +27,7 @@ MemoryTemplate (sky130_sram_4kbyte_1rw1r_32x1024_8) {
    CellName               : sky130_sram_4kbyte_1rw1r_32x1024_8;
    Algorithm              : SMarchCHKBcil;
    BitGrouping            : 8;
-   LogicalPorts           : 1RW 1R;
+   LogicalPorts           : 1R1RW;
    MinHold                : 1;
    NumberOfWords          : 1024;
    TransparentMode        : None;
@@ -93,7 +95,8 @@ MemoryTemplate (sky130_sram_4kbyte_1rw1r_32x1024_8) {
    AddressCounter {
       Function (Address) {
          LogicalAddressMap {
-            RowAddress[9:0] : Address[9:0];
+            RowAddress[7:0]    : Address[9:2];
+            ColumnAddress[1:0] : Address[1:0];
          }
       }
    }
