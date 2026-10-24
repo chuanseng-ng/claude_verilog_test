@@ -52,6 +52,7 @@ import sys
 from pathlib import Path
 
 import cocotb
+from common.hier import hsub
 from cocotb.triggers import ReadOnly, RisingEdge
 from soc_clocks import drive_soc_reset, start_soc_clocks
 from sram_backdoor import sram_mem
@@ -274,7 +275,7 @@ async def test_soc_npu(dut):
         npu_irq = _i(dut.u_soc.npu_irq)
         ext_irq = _i(dut.u_soc.ext_irq)
         src_vec = _i(dut.u_soc.u_irq_ctrl.irq_src_i)
-        done_q = _i(dut.u_soc.u_npu.g_on.done_q)
+        done_q = _i(hsub(dut.u_soc.u_npu, "g_on", "done_q"))
 
         # Boundary edge, independent of commit_pc_o.
         if npu_irq and not prev_irq and irq_rise_cycle is None:

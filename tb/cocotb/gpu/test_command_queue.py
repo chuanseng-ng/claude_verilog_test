@@ -17,6 +17,7 @@ kernel_desc_t packed layout (142 bits total, MSB first):
   [ 31:  0] arg_ptr    32b
 """
 import cocotb
+from tb.cocotb.common.hier import pget
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
@@ -95,7 +96,7 @@ async def test_descriptor_stored(dut):
     assert dut.busy_o.value       == 1, "busy should assert after launch"
     assert dut.irq_enable_o.value == 1, "irq_enable_o should reflect irq_enable_i"
 
-    d = _decode_desc(int(dut.desc_o.value))
+    d = _decode_desc(pget(dut.desc_o))
     assert d["kernel_pc"] == 0xCAFE_0000, f"kernel_pc mismatch: 0x{d['kernel_pc']:08x}"
     assert d["grid_x"]    == 8,           f"grid_x mismatch: {d['grid_x']}"
     assert d["grid_y"]    == 4,           f"grid_y mismatch: {d['grid_y']}"
@@ -122,7 +123,7 @@ async def test_launch_while_busy_dropped(dut):
 
     # First descriptor must be unchanged
     assert dut.desc_valid_o.value == 1, "valid should remain asserted"
-    d = _decode_desc(int(dut.desc_o.value))
+    d = _decode_desc(pget(dut.desc_o))
     assert d["kernel_pc"] == 0x1000,        f"First kernel_pc overwritten: 0x{d['kernel_pc']:08x}"
     assert d["arg_ptr"]   == 0xAAAA_AAAA,   f"First arg_ptr overwritten: 0x{d['arg_ptr']:08x}"
 
@@ -149,6 +150,6 @@ async def test_ack_clears_valid(dut):
     await _launch(dut, kernel_pc=0x3000, arg_ptr=0x2222_2222)
     await Timer(1, units="ns")
     assert dut.desc_valid_o.value == 1, "New launch should be accepted after ack"
-    d = _decode_desc(int(dut.desc_o.value))
+    d = _decode_desc(pget(dut.desc_o))
     assert d["kernel_pc"] == 0x3000,      f"New kernel_pc mismatch: 0x{d['kernel_pc']:08x}"
     assert d["arg_ptr"]   == 0x2222_2222, f"New arg_ptr mismatch: 0x{d['arg_ptr']:08x}"

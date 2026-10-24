@@ -172,6 +172,7 @@ import tempfile
 from pathlib import Path
 
 import cocotb
+from common.hier import hsub
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, RisingEdge, Timer
 from cocotb.utils import get_sim_time
@@ -1960,6 +1961,12 @@ endmodule
 """
 
 
+
+# These tests shell out to `verilator --lint-only` (elaboration-guard checks).  That is a Verilator
+# feature, so under another simulator (VCS / Xcelium) they are SKIPPED, visibly, not passed: the
+# guards themselves are not exercised there.  Under Verilator (CI) nothing changes.
+_NOT_VERILATOR = not cocotb.SIM_NAME.lower().startswith("verilator")
+
 def _lint(*overrides: str) -> subprocess.CompletedProcess:
     """`verilator --lint-only -Wall` of the CRYPTO_SOURCES RTL under a single-instance top, with
     optional -G<PARAM>=<value> overrides."""
@@ -1983,7 +1990,7 @@ def _lint(*overrides: str) -> subprocess.CompletedProcess:
         return subprocess.run(cmd, capture_output=True, text=True, check=False)
 
 
-@cocotb.test()
+@cocotb.test(skip=_NOT_VERILATOR)
 async def test_crypto_elaboration_guards_reject_illegal_config(dut):
     """The elaboration guards refuse an illegal configuration: SBOX_PARALLEL other than 16 / 4
     (3, 8, 0), ADDR_W outside [7, 32] (6, 33), and EN_AES = EN_SHA = 0 (a peripheral that can do
@@ -2010,7 +2017,7 @@ async def test_crypto_elaboration_guards_reject_illegal_config(dut):
         )
 
 
-@cocotb.test()
+@cocotb.test(skip=_NOT_VERILATOR)
 async def test_crypto_elaboration_legal_configs_pass(dut):
     """Both generate arms elaborate and lint clean on their own: EN_AES = 0 alone and EN_SHA = 0
     alone (the other core stays), SBOX_PARALLEL = 4, and the lowest legal ADDR_W (7: five word
@@ -2099,7 +2106,7 @@ async def test_scan_mode_forces_key_registers_to_zero(dut):
     _kill_active_tasks()
     rig = await _start_clock_and_reset(dut)
     d = rig.main
-    core = dut.u_dut.g_aes.u_aes
+    core = hsub(dut.u_dut, "g_aes", "u_aes")
     dut.scan_mode_i.value = 0
     await d.load_key(FIPS_B_KEY)
     await ClockCycles(dut.clk, 2)
@@ -2180,8 +2187,8 @@ SETTLE_AFTER_WIPE = 4  # extra cycles for the idle pre-load to settle before fun
 def _crypto_flops(dut) -> dict[str, int]:
     """Every key- or message-derived flop of the primary build (names are for the failure text)."""
     top = dut.u_dut
-    aes_c = top.g_aes.u_aes
-    sha_c = top.g_sha.u_sha
+    aes_c = hsub(top, "g_aes", "u_aes")
+    sha_c = hsub(top, "g_sha", "u_sha")
     flops = {
         "key_q": _val(top.key_q),
         "key_seen_q": _val(top.key_seen_q),
@@ -2351,7 +2358,7 @@ async def test_scan_entry_aborts_inflight_aes_and_sha(dut):
     await d.push(FIPS_B_PT)
     await d.start(MODE_ECB)
     await ClockCycles(dut.clk, 2)
-    assert await d.status() & ST_BUSY and _val(dut.u_dut.g_aes.u_aes.state_q) != 0
+    assert await d.status() & ST_BUSY and _val(hsub(dut.u_dut, "g_aes", "u_aes").state_q) != 0
     await _scan_mode_edge(dut, 1)
     flops = _crypto_flops(dut)
     _assert_all_zero(flops, await _bank_words(d), "AES in flight, first cycle after the wipe")
@@ -2367,7 +2374,7 @@ async def test_scan_entry_aborts_inflight_aes_and_sha(dut):
     await d.push(bytes(range(64)))
     await d.start(MODE_SHA)
     await ClockCycles(dut.clk, 20)
-    assert await d.status() & ST_BUSY and _val(dut.u_dut.g_sha.u_sha.t_q) != 0
+    assert await d.status() & ST_BUSY and _val(hsub(dut.u_dut, "g_sha", "u_sha").t_q) != 0
     await _scan_mode_edge(dut, 1)
     _assert_all_zero(_crypto_flops(dut), await _bank_words(d), "SHA in flight, first cycle after the wipe")
     await ClockCycles(dut.clk, 3)
@@ -2416,7 +2423,7 @@ async def test_start_and_key_write_in_the_wipe_cycle(dut):
     st = await d.status()
     assert st & ST_DONE and not st & ST_BUSY, f"start in the wipe cycle must end done/idle, 0x{st:x}"
     assert await d.dout() == bytes(16)
-    assert _val(dut.u_dut.g_aes.u_aes.state_q) == 0
+    assert _val(hsub(dut.u_dut, "g_aes", "u_aes").state_q) == 0
     await _scan_to(dut, 0)
 
     await d.w(CRYPTO_IRQ_CLR, CLR_REJ)

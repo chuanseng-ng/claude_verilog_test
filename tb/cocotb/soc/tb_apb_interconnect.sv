@@ -49,13 +49,24 @@
 
 `default_nettype none
 
+// Sweep defaults, overridable from the command line with +define+TB_N_SLAVES=<n> / +define+TB_OVERLAP_TEST=1.
+// The Makefile still passes -GN_SLAVES=<n> (Verilator).  xrun's -defparam is applied AFTER the typedefs below
+// are sized, so a typedef/DUT-parameter type that depends on N_SLAVES got inconsistent widths (TYCMPAT);
+// a define sets the default itself and is applied consistently by every simulator.
+`ifndef TB_N_SLAVES
+ `define TB_N_SLAVES 8
+`endif
+`ifndef TB_OVERLAP_TEST
+ `define TB_OVERLAP_TEST 0
+`endif
+
 module tb_apb_interconnect #(
-    parameter int unsigned N_SLAVES   = 8,       // mirrors apb_interconnect's N_SLAVES
+    parameter int unsigned N_SLAVES   = `TB_N_SLAVES,       // mirrors apb_interconnect's N_SLAVES
     parameter int unsigned ADDR_W     = 32,      // mirrors apb_interconnect's ADDR_W
     parameter int unsigned DW         = 32,      // mirrors apb_interconnect's DW
     parameter int unsigned SW         = 4,       // mirrors apb_interconnect's SW
     parameter int unsigned SLV_WINDOW = 32'h1000,// wrapper-only: bytes per generated slave window
-    parameter bit          OVERLAP_TEST = 1'b0   // wrapper-only: see header
+    parameter bit          OVERLAP_TEST = `TB_OVERLAP_TEST   // wrapper-only: see header
 ) (
     // ── APB master input (from axil_to_apb bridge, BFM-facing) ───────────────
     input  logic              psel,

@@ -29,7 +29,9 @@ module tb_sram_fi_equiv (
     );
 
     initial mismatch_o = 32'd0;
-    // Compare at every posedge (the outputs settled at the preceding negedge).
+    // Compare at every posedge (the outputs settled at the preceding negedge), from time 0: both models
+    // reset their output registers to 0, so there is no start-up window to skip.  Every output, X
+    // included, is compared with !==.
     always @(posedge clk_i) begin
         if (dout0_real_o !== dout0_fi_o || dout1_real_o !== dout1_fi_o) begin
             mismatch_o <= mismatch_o + 32'd1;

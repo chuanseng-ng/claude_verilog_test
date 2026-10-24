@@ -101,6 +101,7 @@ from pathlib import Path
 import cocotb
 from cocotb.triggers import ClockCycles, ReadOnly, RisingEdge, with_timeout
 
+from common.hier import read_only
 from soc_clocks import start_soc_clocks
 from sram_backdoor import sram_mem
 
@@ -204,7 +205,7 @@ async def _wait_for_dom_state(dut, target_states, timeout_cycles, label) -> list
 
 
 async def _read_counter(dut) -> int:
-    await ReadOnly()
+    await read_only()
     sram = sram_mem(dut)
     return int(sram[COUNTER_WORD_IDX].value)
 

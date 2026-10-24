@@ -303,6 +303,10 @@ async def _setup(dut, s_ns, m_ns, wait_states=0, err_addrs=None, mem=None) -> Si
     n = _post_reset_recovery_cycles(dut)
     await ClockCycles(dut.s_clk, n)
     await ClockCycles(dut.m_clk, n)
+    # Step off the clock edge: at a coprime ratio the m_clk edge this returns on can coincide with an s_clk
+    # edge, and the master's first writes would then race that edge's flop sampling in Xcelium (the bridge
+    # saw the ACCESS phase without ever seeing SETUP).  Verilator is indifferent to the 1 ps.
+    await Timer(1, units="step")
 
     return SimpleNamespace(
         s_master=s_master,
@@ -1373,6 +1377,7 @@ async def _apb_reset_asym_s_held_m_free_body(dut, s_ns, m_ns) -> None:
     n = _post_reset_recovery_cycles(dut)
     await ClockCycles(dut.s_clk, n)
     await ClockCycles(dut.m_clk, n)
+    await Timer(1, units="step")  # step off a possibly coincident clock edge (see _setup)
 
     s_master = APB4Master(dut, "s_", dut.s_clk)
     ok = await s_master.write(0x900, 0xDEADBEEF)

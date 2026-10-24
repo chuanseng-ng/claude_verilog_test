@@ -28,6 +28,7 @@ import random
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, RisingEdge, Timer
+from common.hier import hgen
 from mbist_golden import (
     ALG_NAME,
     ALG_RANGE,
@@ -51,7 +52,7 @@ only_cpu = dict(skip=CFG != "cpu")
 
 
 def mem(dut, i):
-    return dut.g_mem[i].u_mem
+    return hgen(dut, "g_mem", i, "u_mem")
 
 
 def arm(dut, i, f: Fault):

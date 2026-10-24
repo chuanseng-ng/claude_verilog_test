@@ -144,8 +144,11 @@ class AXI4Master:
         while True:
             await ReadOnly()
             if s("rvalid").value:
-                data.append(int(s("rdata").value))
                 resp = int(s("rresp").value)
+                rd = s("rdata").value
+                # AXI: RDATA is don't-care on an error response; a 4-state simulator shows it as X
+                # where Verilator shows 0.  An X on an OKAY beat still raises.
+                data.append(0 if (resp != RESP_OKAY and not rd.is_resolvable) else int(rd))
                 last = bool(s("rlast").value)
                 await self._edge()
                 if last:

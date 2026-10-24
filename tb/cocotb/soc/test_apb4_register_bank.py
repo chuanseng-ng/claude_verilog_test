@@ -91,6 +91,10 @@ async def _setup(dut):
     dut.hw_status_wdata.value = 0
     dut.hw_aux_wen.value   = 0
     dut.hw_aux_wdata.value = 0
+    # hw_gen_* feed the HW-write port of regs 0..5; left undriven they are X in a 4-state simulator
+    # (Verilator reads an undriven input as 0), which poisons `base` in the bank's SW-write merge.
+    dut.hw_gen_wen.value   = 0
+    dut.hw_gen_wdata.value = 0
     dut.presetn.value = 0
     m = APB4Master(dut, "", dut.pclk)
     for _ in range(5):

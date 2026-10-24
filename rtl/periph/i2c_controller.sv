@@ -408,6 +408,10 @@ module i2c_controller
     logic       busy_d_w, txn_d_w;         // engine next-state mirrors (STATUS writeback)
     logic       scl_s_w, sda_s_w;          // lines as the engine sees them (see "Lines" below)
 
+    // FIFO head / flag nets: declared here because the engine instance below connects them (use-before-declare is an LRM error)
+    logic [7:0] tx_fifo_q [FIFO_DEPTH];
+    logic tx_full_w, tx_empty_w, rx_full_w, rx_empty_w;
+
     i2c_bit_engine #(
         .SYNC_STAGES (SYNC_STAGES)
     ) u_bit_engine (
@@ -462,14 +466,12 @@ module i2c_controller
     // FIFOs -- shift registers, head at [0], entries above `level` are always zero
     // (trng.sv idiom). TX: APB push / engine pop. RX: engine push / APB pop.
     // =========================================================================
-    logic [7:0] tx_fifo_q [FIFO_DEPTH];
     logic [7:0] tx_fifo_d [FIFO_DEPTH];
     logic [7:0] rx_fifo_q [FIFO_DEPTH];
     logic [7:0] rx_fifo_d [FIFO_DEPTH];
     logic [3:0] tx_level_q, tx_level_d;
     logic [3:0] rx_level_q, rx_level_d;
 
-    logic tx_full_w, tx_empty_w, rx_full_w, rx_empty_w;
     assign tx_full_w  = (tx_level_q == 4'(FIFO_DEPTH));
     assign tx_empty_w = (tx_level_q == 4'd0);
     assign rx_full_w  = (rx_level_q == 4'(FIFO_DEPTH));

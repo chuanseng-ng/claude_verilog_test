@@ -6,7 +6,7 @@
 // open question Q-CLK of docs/design/DFT_ARCHITECTURE.md section 15.5: the plain
 // 2:1 mux `serial ? tck_scan_gated : scan_clk_i` is replaced by this module.
 //
-//   clk_o = (clk_a_i & en_a_q) | (clk_b_i & en_b_q)
+//   clk_o = (clk_a_i & en_a_q & tck_i) | (clk_b_i & en_b_q)
 //
 // en_a_q and en_b_q are enable LATCHES, each transparent while ITS OWN raw clock
 // is low (A's phase reference is the raw tck_i, not the gated clk_a_i, which
@@ -14,6 +14,29 @@
 // therefore changes only while the clock it gates is low, so the AND term is 0
 // before, during and after every enable change: no runt pulse and no extra edge
 // on either source, whatever the phase relation between A and B.
+//
+// Why the A term carries a third input, tck_i. clk_a_i is the GATED tck_i (clock
+// gate = latch + AND) and so falls AFTER tck_i: one delta cycle in zero-delay
+// simulation, the gate's delay in silicon. The A latch opens on !tck_i, so with
+// en_a_d already 1, en_a_q can rise while clk_a_i is still high, and
+// (clk_a_i & en_a_q) alone would emit a runt (zero width in RTL; Xcelium reports
+// it, and an event-ordering-dependent result is not acceptable in either
+// simulator). Guarding the A term with tck_i kills the race at the OUTPUT instead:
+// tck_i has already fallen in the delta in which the latch opens, so the A term
+// is 0 when en_a_q rises, whatever the gate's delay. Functionally the term is
+// redundant (clk_a_i high implies tck_i high, apart from that skew interval); it
+// costs one extra AND input on the clock path and is the output-side form of the
+// clock-gating hold check of en_a_q against the fall of clk_a_i.
+//
+// Why the latch itself must stay tck-only. The first fix for this race opened
+// the A latch on `!tck_i && !clk_a_i`. That is correct in simulation but breaks
+// the DFT TAP clock rule: tools/dft/check_scan_clk_rst.py (make dft-scan-check)
+// requires every TAP-domain sequential cell (u_dft_ctrl.u_clk_sw) to be clocked
+// by the tck_i port ONLY, and a latch gated by clk_a_i traces through the TAP
+// clock gate u_tck_cg. The output guard keeps every sequential cell here on
+// tck_i or scan_clk_i. B needs no such term: clk_b_i is both the gated source and
+// the latch phase (one net, no skew between the two uses), so en_b_q can never
+// change while clk_b_i is high.
 //
 // This differs from the usual flop-only enable-before-switch mux ON PURPOSE. A
 // flop retires the old selection only on an edge of the deselected clock, so a
@@ -102,7 +125,7 @@
 // Lint target: verilator -Wall -Wno-IMPORTSTAR 0 errors 0 warnings.
 
 module dft_clk_switch (
-    input  logic tck_i,     // raw TCK: A-domain handshake clock and A's latch phase
+    input  logic tck_i,     // raw TCK: A-domain handshake clock, A's latch phase and output guard
     input  logic clk_a_i,   // A: gated TCK, idles low
     input  logic clk_b_i,   // B: scan_clk_i pin clock, assumed to idle low
     input  logic sel_a_i,   // 1 = select A (TAP serial), 0 = select B (pins)
@@ -125,7 +148,9 @@ module dft_clk_switch (
     assign en_b_d =  rst_active | (~sel_a_i & ~a_on_in_b);
 
     // ── Enable latches ───────────────────────────────────────────────────────
-    // Transparent while the OWN raw clock is low, hold while it is high.
+    // Transparent while the OWN raw clock is low, hold while it is high. The A latch
+    // is deliberately tck_i-only (DFT TAP clock rule); the race with the later fall
+    // of the gated clk_a_i is closed by the tck_i term in the output, see the header.
     always_latch begin
         if (!tck_i) begin
             en_a_q = en_a_d;
@@ -158,6 +183,6 @@ module dft_clk_switch (
     );
 
     // ── Output ───────────────────────────────────────────────────────────────
-    assign clk_o = (clk_a_i & en_a_q) | (clk_b_i & en_b_q);
+    assign clk_o = (clk_a_i & en_a_q & tck_i) | (clk_b_i & en_b_q);
 
 endmodule : dft_clk_switch

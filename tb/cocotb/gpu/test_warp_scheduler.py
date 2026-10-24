@@ -10,6 +10,7 @@ Tests:
   test_eight_warps_issue_and_complete — n_warps_active_i = 8 (4-bit count) runs warps 0..7 (47lf)
 """
 import cocotb
+from tb.cocotb.common.hier import pget, pset
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
@@ -37,7 +38,7 @@ async def _reset(dut):
     dut.warp_done_id_i.value    = 0
     dut.div_push_i.value        = 0
     dut.div_push_warp_i.value   = 0
-    dut.div_push_entry_i.value  = 0
+    pset(dut.div_push_entry_i, 0)
     dut.div_pop_i.value         = 0
     dut.div_pop_warp_i.value    = 0
     dut.div_pop_pc_i.value      = 0
@@ -244,7 +245,7 @@ async def test_div_push_pop_state(dut):
     dut.warp_next_mask_i.value = 0xF0      # true-path mask
     dut.div_push_i.value       = 1
     dut.div_push_warp_i.value  = 0
-    dut.div_push_entry_i.value = _pack_div_entry(RETURN_PC, RETURN_MASK)
+    pset(dut.div_push_entry_i, _pack_div_entry(RETURN_PC, RETURN_MASK))
     await RisingEdge(dut.clk)
     # busy[0]←0, pc[0]←0x5008, mask[0]←0xF0, div_depth[0]←1, rr_ptr←1
     dut.warp_retire_i.value = 0
@@ -275,7 +276,7 @@ async def test_div_push_pop_state(dut):
         f"Expected warp 0 (wrap-around), got {int(dut.warp_id_o.value)}"
     assert int(dut.div_stack_depth_o.value) == 1, \
         f"Warp 0 stack depth should be 1, got {int(dut.div_stack_depth_o.value)}"
-    top      = int(dut.div_stack_top_o.value)
+    top      = pget(dut.div_stack_top_o)
     top_pc   = (top >> N_LANES) & 0xFFFF_FFFF
     top_mask = top & 0xFF
     assert top_pc   == RETURN_PC, \

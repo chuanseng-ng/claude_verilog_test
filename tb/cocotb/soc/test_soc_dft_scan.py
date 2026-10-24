@@ -59,6 +59,7 @@ import sys
 from pathlib import Path
 
 import cocotb
+from common.hier import hsub
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles, ReadOnly, RisingEdge, Timer
 from jtag_driver import JtagDriver
@@ -483,8 +484,8 @@ async def test_scan_cpu_reset_with_pmu_cpu_off(dut):
 # placeholder until Stage 2), so the readback is the same backdoor, not a shift.
 def _crypto_seed(soc):
     cr = soc.u_crypto
-    aes_c = cr.g_aes.u_aes
-    sha_c = cr.g_sha.u_sha
+    aes_c = hsub(cr, "g_aes", "u_aes")
+    sha_c = hsub(cr, "g_sha", "u_sha")
     cr.key_q.value = 0x2B7E151628AED2A6ABF7158809CF4F3C
     cr.key_seen_q.value = 0xF
     cr.msg_q.value = (1 << 511) | 0x3243F6A8885A308D313198A2E0370734
@@ -499,8 +500,8 @@ def _crypto_seed(soc):
 
 def _crypto_residue(soc) -> dict[str, int]:
     cr = soc.u_crypto
-    aes_c = cr.g_aes.u_aes
-    sha_c = cr.g_sha.u_sha
+    aes_c = hsub(cr, "g_aes", "u_aes")
+    sha_c = hsub(cr, "g_sha", "u_sha")
     return {
         "key_q": int(cr.key_q.value),
         "key_seen_q": int(cr.key_seen_q.value),

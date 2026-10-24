@@ -194,10 +194,11 @@ async def setup(dut, hexname: str, div: int = SIM_DIV, sram_image: bytes = b"") 
 
     env = Env(dut, div)
     _active_tasks.append(cocotb.start_soon(env.monitor_tx()))
-    _active_tasks.append(cocotb.start_soon(env.monitor_commits()))
     for _ in range(5):
         await RisingEdge(dut.clk_i)
     drive_soc_reset(dut, False)
+    # Started after reset release: commit_valid_o is X (4-state sims) until the reset has propagated.
+    _active_tasks.append(cocotb.start_soon(env.monitor_commits()))
     return env
 
 

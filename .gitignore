@@ -42,6 +42,7 @@ bash.exe.stackdump
 # Python
 venv/
 .venv/
+.venv-eda/
 
 # Test results and artifacts
 results/
@@ -104,3 +105,28 @@ pnr/.openroad-shim/
 # Vivado working-directory droppings (fpga/nexys_video/build.sh now runs Vivado inside its output directory)
 .Xil/
 clockInfo.txt
+
+# Commercial-simulator (VCS / Xcelium) bring-up droppings (feature/commercial-sims)
+ucli.key
+suites_ran.txt
+csrc/
+simv
+simv.daidir/
+vc_hdrs.h
+cm.log
+xrun.log
+xrun.history
+xcelium.d/
+.simvision/
+novas*
+verdiLog/
+sim_build_eda/
+
+# Commercial-simulator (VCS) code coverage: databases, merged dbs, urg reports, scope files
+*.vdb/
+simv.daidir/
+urgReport*/
+vcs_cov_scope_*.f
+vcs_cov_scope_*.cfg
+cm.log
+cm_name_*/

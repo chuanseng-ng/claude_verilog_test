@@ -29,6 +29,7 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.regression import TestFactory
 from cocotb.triggers import ClockCycles, Timer
+from common.hier import hgen, hsub
 from jtag_driver import OP_MBIST_CTRL, OP_MBIST_STATUS, JtagDriver, bits_of
 from mbist_golden import Fault, ctl_word, decode_status, golden_first_fail
 
@@ -41,12 +42,12 @@ CFGS = [(53, 10, 7), (20, 31, 13), (10, 97, 29)]
 
 
 def ctl_q(dut, dom):
-    x = dut.u_mbist.u_xing_core if dom == "core" else dut.u_mbist.g_cpu.u_xing_cpu
+    x = dut.u_mbist.u_xing_core if dom == "core" else hsub(dut.u_mbist, "g_cpu", "u_xing_cpu")
     return int(x.u_hold.ctl_q.value)
 
 
 def mem(dut, dom, i):
-    return dut.g_core[i].u_mem if dom == "core" else dut.g_cpu[i].u_mem
+    return hgen(dut, "g_core", i, "u_mem") if dom == "core" else hgen(dut, "g_cpu", i, "u_mem")
 
 
 def arm(dut, dom, i, f: Fault):
