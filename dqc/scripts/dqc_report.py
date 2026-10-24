@@ -136,6 +136,8 @@ def main():
     ap.add_argument("--arm", default="default")
     ap.add_argument("--awl", default="")
     ap.add_argument("--top-n", type=int, default=12)
+    ap.add_argument("--accept-not-run", default="",
+                    help="comma list of rules the licence cannot run; reported loudly, never silently")
     a = ap.parse_args()
 
     repo = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
@@ -164,6 +166,19 @@ def main():
                            % (len(rows), unparsed, hdr["Number of Reported Messages"]))
         if unparsed:
             reasons.append("%d report rows could not be parsed" % unparsed)
+
+    # rules the tool could not run (licence): never hidden.  Accepted only if named in --accept-not-run.
+    accepted = {x for x in a.accept_not_run.split(",") if x}
+    not_run = []
+    for r in rows:
+        if r["rule"] == "Ac_license01":
+            mm = re.match(r"'([^']*)' not run", r["msg"])
+            names = [x for x in (mm.group(1).split(",") if mm else [r["msg"]])]
+            not_run += names
+            bad = [n for n in names if n not in accepted]
+            if bad:
+                reasons.append("rules NOT RUN (licence) and not on the accepted list: %s" % ",".join(bad))
+    rows = [r for r in rows if r["rule"] != "Ac_license01"]
 
     # first-party module black-boxed by the tool => nothing was analysed there
     for r in rows:
@@ -198,7 +213,7 @@ def main():
     byrule = collections.Counter((r["cls"], r["rule"]) for r in rows)
     summ = {"goal": a.goal, "arm": a.arm, "top": a.top, "verdict": verdict, "reasons": reasons,
             "fatal": cnt["fatal"], "error": cnt["error"], "warning": cnt["warning"], "info": cnt["info"],
-            "waived_total": waived, "waivers_in_files": len(waivers), "report": rpt, "timing": timing,
+            "not_run_rules": not_run, "waived_total": waived, "waivers_in_files": len(waivers), "report": rpt, "timing": timing,
             "by_rule": {"%s:%s" % k: v for k, v in sorted(byrule.items())}}
     with open(os.path.join(a.run, a.tag + ".summary.json"), "w") as fh:
         json.dump(summ, fh, indent=1)
@@ -214,6 +229,8 @@ def main():
           % (cnt["fatal"], cnt["error"], cnt["warning"], cnt["info"], waived, len(waivers)))
     print("  unwaived Fatal+Error: %d" % unw_err)
     print("  run: %s" % timing)
+    if not_run:
+        print("  NOT RUN (licence, accepted): %s" % ", ".join(not_run))
     print("  report: %s" % (os.path.relpath(rpt, repo) if rpt else "(none)"))
     print("  all rows: %s" % os.path.relpath(os.path.join(a.run, a.tag + ".unwaived.tsv"), repo))
     top = [(k, v) for k, v in byrule.most_common() if k[0] in ("fatal", "error")][:a.top_n]

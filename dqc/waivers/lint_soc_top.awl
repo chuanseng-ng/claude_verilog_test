@@ -1,0 +1,15 @@
+# lint_soc_top.awl - SpyGlass lint/lint_rtl waivers for soc_top (DQC flow).
+#
+# Every `waive` is ONE line and carries  -rules <rule>  a scope  and  -comment "id= by= why=".
+# dqc/scripts/dqc_report.py refuses to accept a run whose waivers lack any of these.
+# Date of triage: 2026-10-24.  by = who accepted the waiver; the user must re-confirm on review.
+#
+# NOTE: only Error/Fatal findings gate; warnings are reported (dqc/run/<arm>/lint.unwaived.tsv)
+# and ranked in docs/verification/DQC_FLOW.md, not waived.
+
+# 1024 x UndrivenInTerm-ML: "Detected undriven input terminal soc_top.u_boot_rom.mem[N][31:0]".
+# CLASS: tool artifact of a simulation-only ROM model, plus one design note (see DQC_FLOW.md F-2).
+# boot_rom.mem is filled by an `initial` block ($readmemh in simulation, zero-fill in PnR); SpyGlass
+# ignores initial blocks for synthesis (SYNTH_5143), so the 1024 array words look undriven.  The same
+# fact means the ASIC build has no boot-ROM content path at all (documented in boot_rom.sv:96-122).
+waive -du {boot_rom} -rules {UndrivenInTerm-ML} -msg {u_boot_rom\.mem\[} -regexp -comment "id=lint-bootrom-undriven; by=dqc-triage(agent), pending user review; why=boot_rom.mem is initial-block-loaded (sim-only readmemh / PnR zero-fill); synthesis ignores initial so every word looks undriven. Tool artifact of the behavioural ROM model; the missing silicon ROM content is raised as design note F-2, not hidden"
