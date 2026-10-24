@@ -14,10 +14,11 @@
 #
 # Host notes: the pinned sv2v needs a glibc wrapper on RHEL8 (SV2V=<wrapper>); Tessent licence comes from
 # MGLS_LICENSE_FILE / SALT_LICENSE_SERVER; VCS from tools/eda/sim_env.sh.  Tessent is held to 2 processors
-# (set_multiprocessing_options in dofiles/common_setup.tcl).  Optional host overrides: build/host_env.sh.
+# (set_multiprocessing_options in dofiles/common_setup.tcl).  Optional host overrides: host/env.mk and host/env.sh (gitignored).
 HERE      := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 ROOT      := $(abspath $(HERE)/../../..)
 BUILD     := $(HERE)/build
+-include $(HERE)/host/env.mk
 SV2V      ?= sv2v
 export SV2V
 RUN       := $(HERE)/scripts/run_tessent.sh

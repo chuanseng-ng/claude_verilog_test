@@ -6,7 +6,7 @@
 set -e
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 root="$(cd "$here/../../.." && pwd)"
-[ -f "$here/build/host_env.sh" ] && . "$here/build/host_env.sh"   # optional host-specific overrides (gitignored)
+[ -f "$here/host/env.sh" ] && . "$here/host/env.sh"   # optional host-specific overrides (gitignored)
 YOSYS="${YOSYS:-yosys}"; SV2V="${SV2V:-sv2v}"
 LIB="${SKY130_LIB:?set SKY130_LIB to sky130_fd_sc_hd__tt_025C_1v80.lib}"
 out="$here/build/area"; mkdir -p "$out"
@@ -27,6 +27,10 @@ case "$1" in
   "$SV2V" --define=__pnr__ "$root/rtl/soc/dft/mem_collar.sv" -w "$out/mem_collar.v"
   run mbist_ctrl "$out/inhouse_mbist_ctrl.rpt"   "read_verilog $out/mbist_ctrl.v; chparam -set N_MEM 2 -set AW 10 -set P1_MASK 1 mbist_ctrl"
   run mem_collar "$out/inhouse_collar_p1.rpt"    "read_verilog $out/mem_collar.v; chparam -set AW 10 -set HAS_P1 1 mem_collar"
+  "$SV2V" --define=__pnr__ "$root/rtl/soc/cdc/cdc_sync.sv" "$root/rtl/soc/cdc/cdc_reset_sync.sv" "$root/rtl/soc/cdc/cdc_gray_fifo.sv" \
+      "$root/rtl/soc/dft/dft_rst_mux.sv" "$root/rtl/soc/dft/mbist_ctl_hold.sv" "$root/rtl/soc/dft/mbist_xing.sv" "$root/rtl/soc/dft/mbist_status_sync.sv" -w "$out/mbist_acc.v"
+  run mbist_xing "$out/inhouse_xing.rpt" "read_verilog $out/mbist_acc.v; chparam -set CTL_W 29 -set DOM_BIT 27 mbist_xing"
+  run mbist_status_sync "$out/inhouse_status_sync.rpt" "read_verilog $out/mbist_acc.v; chparam -set ST_W 69 mbist_status_sync"
   run mem_collar "$out/inhouse_collar_nop1.rpt"  "read_verilog $out/mem_collar.v; chparam -set AW 10 -set HAS_P1 0 mem_collar"
   ;;
  base)

@@ -1,4 +1,4 @@
 build/
-*.log
+host/
 tsdb_outdir/
 simulation_outdir/
