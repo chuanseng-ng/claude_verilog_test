@@ -1,0 +1,174 @@
+
+8. Printing statistics.
+
+=== mbist_xing ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       18        - wires
+      127        - wire bits
+       18        - public wires
+      127        - public wire bits
+       13        - ports
+       66        - port bits
+        2   12.512 cells
+        2   12.512   sky130_fd_sc_hd__and2_0
+        4        - submodules
+        1        -   $paramod$9ca3675f30525a8bf216ea1ed95db75225751188\cdc_gray_fifo
+        1        -   $paramod\cdc_reset_sync\STAGES=s32'00000000000000000000000000000010
+        1        -   $paramod\mbist_ctl_hold\CTL_W=32'00000000000000000000000000011101
+        1        -   dft_rst_mux
+
+   Chip area for module '\mbist_xing': 12.512000
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== $paramod$9ca3675f30525a8bf216ea1ed95db75225751188\cdc_gray_fifo ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       37        - wires
+      160        - wire bits
+       24        - public wires
+      146        - public wire bits
+       10        - ports
+       66        - port bits
+      116 2.41E+03 cells
+        1    5.005   sky130_fd_sc_hd__a21oi_1
+        3   11.261   sky130_fd_sc_hd__clkinv_1
+        7  175.168   sky130_fd_sc_hd__dfrtp_1
+        1   26.275   sky130_fd_sc_hd__dfstp_2
+       58  1741.67   sky130_fd_sc_hd__edfxtp_1
+        2   12.512   sky130_fd_sc_hd__lpflow_isobufsrc_1
+       30  337.824   sky130_fd_sc_hd__mux2_1
+        1    5.005   sky130_fd_sc_hd__nand3_1
+        1    7.507   sky130_fd_sc_hd__nand3b_1
+        1    8.758   sky130_fd_sc_hd__nand4b_1
+        3   11.261   sky130_fd_sc_hd__nor2_1
+        6    52.55   sky130_fd_sc_hd__xnor2_1
+        2   17.517   sky130_fd_sc_hd__xor2_1
+        2        - submodules
+        2        -   $paramod$b12d1036521eecdff1834e94f93fe59e7ca9fad2\cdc_sync
+
+   Chip area for module '$paramod$9ca3675f30525a8bf216ea1ed95db75225751188\cdc_gray_fifo': 2412.313600
+     of which used for sequential elements: 1943.113600 (80.55%)
+
+=== dft_rst_mux ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   11.261 cells
+        1   11.261   sky130_fd_sc_hd__mux2_1
+
+   Chip area for module '\dft_rst_mux': 11.260800
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== $paramod\cdc_reset_sync\STAGES=s32'00000000000000000000000000000010 ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        7        - wires
+        8        - wire bits
+        7        - public wires
+        8        - public wire bits
+        5        - ports
+        5        - port bits
+        4    72.57 cells
+        2   50.048   sky130_fd_sc_hd__dfrtp_1
+        2   22.522   sky130_fd_sc_hd__mux2_1
+
+   Chip area for module '$paramod\cdc_reset_sync\STAGES=s32'00000000000000000000000000000010': 72.569600
+     of which used for sequential elements: 50.048000 (68.97%)
+
+=== $paramod$b12d1036521eecdff1834e94f93fe59e7ca9fad2\cdc_sync ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        5        - wires
+        8        - wire bits
+        5        - public wires
+        8        - public wire bits
+        4        - ports
+        6        - port bits
+        4  100.096 cells
+        4  100.096   sky130_fd_sc_hd__dfrtp_1
+
+   Chip area for module '$paramod$b12d1036521eecdff1834e94f93fe59e7ca9fad2\cdc_sync': 100.096000
+     of which used for sequential elements: 100.096000 (100.00%)
+
+=== $paramod\mbist_ctl_hold\CTL_W=32'00000000000000000000000000011101 ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       34        - wires
+       90        - wire bits
+        5        - public wires
+       61        - public wire bits
+        5        - ports
+       61        - port bits
+       58 1.05E+03 cells
+       29  725.696   sky130_fd_sc_hd__dfrtp_1
+       29  326.563   sky130_fd_sc_hd__mux2_1
+
+   Chip area for module '$paramod\mbist_ctl_hold\CTL_W=32'00000000000000000000000000011101': 1052.259200
+     of which used for sequential elements: 725.696000 (68.97%)
+
+=== design hierarchy ===
+
+        +----------Count including submodules.
+        |        +-Area including submodules.
+        |        | 
+      189 3.76E+03 mbist_xing
+      116 2.41E+03 $paramod$9ca3675f30525a8bf216ea1ed95db75225751188\cdc_gray_fifo
+        4  100.096   $paramod$b12d1036521eecdff1834e94f93fe59e7ca9fad2\cdc_sync
+        4    72.57 $paramod\cdc_reset_sync\STAGES=s32'00000000000000000000000000000010
+       58 1.05E+03 $paramod\mbist_ctl_hold\CTL_W=32'00000000000000000000000000011101
+        1   11.261 dft_rst_mux
+
+        +----------Count including submodules.
+        |        +-Area including submodules.
+        |        | 
+      110        - wires
+      405        - wire bits
+       68        - public wires
+      362        - public wire bits
+       45        - ports
+      214        - port bits
+        -        - memories
+        -        - memory bits
+        -        - processes
+      189 3.76E+03 cells
+        1    5.005   sky130_fd_sc_hd__a21oi_1
+        2   12.512   sky130_fd_sc_hd__and2_0
+        3   11.261   sky130_fd_sc_hd__clkinv_1
+       46 1.15E+03   sky130_fd_sc_hd__dfrtp_1
+        1   26.275   sky130_fd_sc_hd__dfstp_2
+       58  1741.67   sky130_fd_sc_hd__edfxtp_1
+        2   12.512   sky130_fd_sc_hd__lpflow_isobufsrc_1
+       62   698.17   sky130_fd_sc_hd__mux2_1
+        1    5.005   sky130_fd_sc_hd__nand3_1
+        1    7.507   sky130_fd_sc_hd__nand3b_1
+        1    8.758   sky130_fd_sc_hd__nand4b_1
+        3   11.261   sky130_fd_sc_hd__nor2_1
+        6    52.55   sky130_fd_sc_hd__xnor2_1
+        2   17.517   sky130_fd_sc_hd__xor2_1
+        4 3.75E+03 submodules
+        1 2.61E+03   $paramod$9ca3675f30525a8bf216ea1ed95db75225751188\cdc_gray_fifo
+        1    72.57   $paramod\cdc_reset_sync\STAGES=s32'00000000000000000000000000000010
+        1 1.05E+03   $paramod\mbist_ctl_hold\CTL_W=32'00000000000000000000000000011101
+        1   11.261   dft_rst_mux
+
+   Chip area for top module '\mbist_xing': 3761.107200
+     of which used for sequential elements: 2919.049600 (77.61%)
+

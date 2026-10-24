@@ -1,0 +1,1452 @@
+membistipg c1 -configfile /tmp/.tessent.tmp.eda.ic.ryan.35088/scratch/membistipg_workdir/mbist_eval_top_rtl1_tessent_mbist_c1_controller/c1.membist -memory_tcd_list_file /tmp/.tessent.tmp.eda.ic.ryan.35088/scratch/membistipg_workdir/mbist_eval_top_rtl1_tessent_mbist_c1_controller/MemLibs/memory_library_list.txt -clockPeriod 25 -failureLimit 4096 -compStat sharedwithgo -usemulticyclepaths on -parallelStaticRetentionTest on -controllertype programmable -extension v -structuralExtension vg -bak off -flow tessent_shell -designName mbist_eval_top -pass_id rtl1 -scratch_dir "/tmp/.tessent.tmp.eda.ic.ryan.35088/scratch/membistipg_workdir" -outDir "/home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument" -log membistipg.log_c1 -multithreading -xortreecapacity 3 
+
+***************************************************************************************************
+*                                                                                                 *
+* This material contains trade secrets or otherwise confidential                                  *
+* information owned by Siemens Industry Software Inc. or its affiliates                           *
+* (collectively, "SISW"), or its licensors. Access to and use of this                             *
+* information is strictly limited as set forth in the Customer's                                  *
+* applicable agreements with SISW.                                                                *
+*                                                                                                 *
+* Unpublished work. Copyright 2025 Siemens                                                        *
+*                                                                                                 *
+* RESTRICTED RIGHTS USE (SHORT FORM)                                                              *
+*                                                                                                 *
+***************************************************************************************************
+
+
+***************************************************************************************************
+*                                                                                                 *
+*                                        membistipGenerate                                        *
+*                                         Version 2025.4                                          *
+*                               (optimized for 64-bit architecture)                               *
+*                                                                                                 *
+***************************************************************************************************
+
+ Parsing command line options...
+ Reading the configuration file /tmp/.tessent.tmp.eda.ic.ryan.35088/scratch/membistipg_workdir/mbist_eval_top_rtl1_tessent_mbist_c1_controller/c1.membist.
+ Reading the library file /tmp/.tessent.tmp.eda.ic.ryan.35088/scratch/membistipg_workdir/mbist_eval_top_rtl1_tessent_mbist_c1_controller/MemLibs/sky130_sram_4kbyte_1rw1r_32x1024_8.lib.
+
+
+
+Checked out mttsmemorybistf from mgc_s.
+Checked out mttsmemstdprog from mgc_s.
+Warning [PPHW01] : You have not specified the property NumberOfDataRegisterBits. The controller is HardProgrammable 
+                   and specifies algorithms other than from the SMarch/SMarchCHKB family. Setting the 
+                   size of the expect and write data registers to 32 bits, which is the widest word width 
+                   of all memories tested by this controller.
+
+User Options:                           
+  Working Directory:                    /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/
+  Source Directory:                     /home/EDA/mentor/tessent2025/tessent_2025.4
+  Configuration File:                   mbist_eval_top.membistpg
+  Memory Library File:                  /tmp/.tessent.tmp.eda.ic.ryan.35088/scratch/membistipg_workdir/mbist_eval_top_rtl1_tessent_mbist_c1_controller/MemLibs/sky130_sram_4kbyte_1rw1r_32x1024_8.lib
+  Output Directory:                     /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument
+  Log File:                             /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/membistipg.log_c1
+  Language:                             VERILOG
+  Extension:                            v
+  Structural Extension:                 vg
+  Collar Generation:                    ON
+  Controller Generation:                ON
+  CompStat:                             SHAREDWITHGO
+  Scan Model Generation:                ON
+  Scan Chains:                          PREP
+  Clock Period:                         25 ns
+  Xor Tree Capacity:                    3
+  Use MultiCycle Paths:                 ON
+  Include Test Pattern Library:         ON
+  Algorithm Summary:                    OFF
+
+Including Algorithms from the Test Pattern Library...
+  Including the Library Test Pattern LVMARCHCMINUS.
+  Including the Library Test Pattern LVCHECKERBOARD1X1.
+  Including the Library Test Pattern SMARCHCHKB.
+  Including the Library Test Pattern SMARCHCHKBCI.
+  Including the Library Test Pattern SMARCHCHKBCIL.
+  Including the Library Test Pattern SMARCH.
+
+Controller Options:                     
+  Controller Type:                      Programmable
+  Soft-Algorithm Instructions:          0
+  SoftAlgorithmAddressMinMax:           No
+  EnableAEqualsBCommand:                No
+  X0 Address Segment Bits:              0
+  Y0 Address Segment Bits:              0
+  InvertDataWithAddressBitRange:        0
+  Data Register Bits:                   32
+  Delay Counter Bits:                   0
+  CounterA Bits:                        0
+  Stop-On-Nth-Error Counter Bits:       12
+
+Validating all user specified algorithms and any included algorithms from the library of test patterns...
+
+Warning [PPHW01] : REF#10400005 : MemoryController(C1)::Algorithm(LVMARCHCMINUS)::TestRegisterSetup::DataPolarityEnable:ON is ignored since the physical data map does not exist.
+
+Warning [PPHW01] : REF#10400005 : MemoryController(C1)::Algorithm(LVCHECKERBOARD1X1)::TestRegisterSetup::DataPolarityEnable:ON is ignored since the physical data map does not exist.
+
+  Calculating the run length for algorithm SMARCHCHKBCIL...
+    Run Length Summary for Algorithm SMARCHCHKBCIL and OperationSet SYNC used in Step 0 with BitSlice 1
+      Instruction(INST0_IDLE_PH_1)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(INS1_PH_2)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS2_PH_2)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS3_PH_3)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS4_PH_3)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS5_IDLE_PH_4)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(INS6_PH_5)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS7_PH_5.5)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS8_PH_6)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS9_PH_6.5)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS10_PH_7)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INST11_IDLE_PH_8)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(INS12_PH_9)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS13_PH_9)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS14_PH_10)
+        Total Instruction Executions:        1023.0
+        Total Clocks:                        2046.0
+      Instruction(INS15_PH_11)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS16_PH_11)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS17_PH_13)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS18_PH_13)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS19_PH_15.1_STARTROW)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS20_PH_15.2_STARTROW)
+        Total Instruction Executions:        4.0
+        Total Clocks:                        8.0
+      Instruction(INS21_PH_15.3_STARTROW)
+        Total Instruction Executions:        4.0
+        Total Clocks:                        8.0
+      Instruction(INS22_PH_15.1)
+        Total Instruction Executions:        1020.0
+        Total Clocks:                        2040.0
+      Instruction(INS23_PH_15.2)
+        Total Instruction Executions:        1020.0
+        Total Clocks:                        2040.0
+      Instruction(INS24_PH_15.3)
+        Total Instruction Executions:        1020.0
+        Total Clocks:                        2040.0
+      Instruction(INS25_PH_15.1_NEXTROW)
+        Total Instruction Executions:        4.0
+        Total Clocks:                        8.0
+      Instruction(INS26_PH_15.2_LASTROW_FIRSTLOC)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS27_PH_15.3_LASTROW_FIRSTLOC)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS28_PH_15.1_LASTROW)
+        Total Instruction Executions:        255.0
+        Total Clocks:                        510.0
+      Instruction(INS29_PH_15.2_LASTROW)
+        Total Instruction Executions:        255.0
+        Total Clocks:                        510.0
+      Instruction(INS30_PH_15.3_LASTROW)
+        Total Instruction Executions:        255.0
+        Total Clocks:                        510.0
+      Instruction(INS31_PH_16)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS32_PH_16)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS33_PH_17)
+        Total Instruction Executions:        511.0
+        Total Clocks:                        1022.0
+      Instruction(INS34_PH_18.1_STARTROW)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS35_PH_18.2_STARTROW)
+        Total Instruction Executions:        4.0
+        Total Clocks:                        8.0
+      Instruction(INS36_PH_18.3_STARTROW)
+        Total Instruction Executions:        4.0
+        Total Clocks:                        8.0
+      Instruction(INS37_PH_18.1)
+        Total Instruction Executions:        1020.0
+        Total Clocks:                        2040.0
+      Instruction(INS38_PH_18.2)
+        Total Instruction Executions:        1020.0
+        Total Clocks:                        2040.0
+      Instruction(INS39_PH_18.3)
+        Total Instruction Executions:        1020.0
+        Total Clocks:                        2040.0
+      Instruction(INS40_PH_18.1_NEXTROW)
+        Total Instruction Executions:        4.0
+        Total Clocks:                        8.0
+      Instruction(INS41_PH_18.2_LASTROW_FIRSTLOC)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS42_PH_18.3_LASTROW_FIRSTLOC)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS43_PH_18.1_LASTROW)
+        Total Instruction Executions:        255.0
+        Total Clocks:                        510.0
+      Instruction(INS44_PH_18.2_LASTROW)
+        Total Instruction Executions:        255.0
+        Total Clocks:                        510.0
+      Instruction(INS45_PH_18.3_LASTROW)
+        Total Instruction Executions:        255.0
+        Total Clocks:                        510.0
+      Instruction(INS46_PH_19)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS47_PH_19)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS48_PH_20)
+        Total Instruction Executions:        511.0
+        Total Clocks:                        1022.0
+      Total Clocks:                          46106.0
+      Total Time(@25ns period):              1.15265 ms
+      Max Number of Strobes:                 42002.0
+
+Summary for Hard Coded Algorithm(LVMARCHCMINUS)
+  Calculating the run length for algorithm LVMARCHCMINUS...
+    Run Length Summary                       
+      Instruction(M0_W0)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(M1_R0_W1)
+        Total Instruction Executions:        4096.0
+        Total Clocks:                        8192.0
+      Instruction(M5_R0)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(3)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(4)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(5)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(6)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(7)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(8)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(9)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(10)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(11)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(12)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(13)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(14)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(15)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(16)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(17)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(18)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(19)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(20)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(21)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(22)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(23)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(24)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(25)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(26)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(27)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(28)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(29)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(30)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(31)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(32)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(33)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(34)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(35)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(36)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(37)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(38)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(39)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(40)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(41)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(42)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(43)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(44)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(45)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(46)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(47)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(48)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Total Clocks:                          12472.0
+      Total Time(@25ns period):              311.8 us
+
+Summary for Hard Coded Algorithm(SMARCH)
+  Calculating the run length for algorithm SMARCH...
+    Run Length Summary                       
+      Instruction(INST0_IDLE_PH_1)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(INS1_PH_2)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS2_PH_2)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS3_PH_3)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS4_PH_3)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS5_PH_4)
+        Total Instruction Executions:        1023.0
+        Total Clocks:                        2046.0
+      Instruction(INS6_PH_5)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS7_PH_5)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS8_PH_6)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS9_PH_6)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS10_PH_7)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS11_PH_7)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS12_PH_9)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS13_PH_9)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(14)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(15)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(16)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(17)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(18)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(19)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(20)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(21)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(22)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(23)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(24)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(25)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(26)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(27)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(28)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(29)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(30)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(31)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(32)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(33)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(34)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(35)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(36)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(37)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(38)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(39)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(40)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(41)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(42)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(43)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(44)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(45)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(46)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(47)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(48)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Total Clocks:                          22678.0
+      Total Time(@25ns period):              566.95 us
+
+Summary for Hard Coded Algorithm(SMARCHCHKB)
+  Calculating the run length for algorithm SMARCHCHKB...
+    Run Length Summary                       
+      Instruction(INST0_IDLE_PH_1)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(INS1_PH_2)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS2_PH_2)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS3_PH_3)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS4_PH_3)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS5_IDLE_PH_4)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(INS6_PH_5)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS7_PH_6)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS8_PH_7)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INST9_IDLE_PH_8)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(INS10_PH_9)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS11_PH_9)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS12_PH_10)
+        Total Instruction Executions:        1023.0
+        Total Clocks:                        2046.0
+      Instruction(INS13_PH_11)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS14_PH_11)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS15_PH_13)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS16_PH_13)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS17_PH_15)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS18_PH_15)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(19)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(20)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(21)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(22)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(23)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(24)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(25)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(26)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(27)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(28)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(29)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(30)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(31)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(32)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(33)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(34)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(35)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(36)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(37)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(38)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(39)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(40)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(41)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(42)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(43)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(44)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(45)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(46)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(47)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(48)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Total Clocks:                          28814.0
+      Total Time(@25ns period):              720.35 us
+
+Summary for Hard Coded Algorithm(SMARCHCHKBCI)
+  Calculating the run length for algorithm SMARCHCHKBCI...
+    Run Length Summary                       
+      Instruction(INST0_IDLE_PH_1)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(INS1_PH_2)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS2_PH_2)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS3_PH_3)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS4_PH_3)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS5_IDLE_PH_4)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(INS6_PH_5)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS7_PH_5.5)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS8_PH_6)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS9_PH_6.5)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS10_PH_7)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INST11_IDLE_PH_8)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(INS12_PH_9)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS13_PH_9)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS14_PH_10)
+        Total Instruction Executions:        1023.0
+        Total Clocks:                        2046.0
+      Instruction(INS15_PH_11)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS16_PH_11)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS17_PH_13)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS18_PH_13)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(INS19_PH_15)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS20_PH_16)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS21_PH_16)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS22_PH_17)
+        Total Instruction Executions:        1023.0
+        Total Clocks:                        2046.0
+      Instruction(INS23_PH_18)
+        Total Instruction Executions:        1024.0
+        Total Clocks:                        2048.0
+      Instruction(INS24_PH_19)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS25_PH_19)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        2.0
+      Instruction(INS26_PH_20)
+        Total Instruction Executions:        1023.0
+        Total Clocks:                        2046.0
+      Instruction(27)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(28)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(29)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(30)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(31)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(32)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(33)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(34)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(35)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(36)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(37)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(38)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(39)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(40)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(41)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(42)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(43)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(44)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(45)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(46)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(47)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(48)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Total Clocks:                          36978.0
+      Total Time(@25ns period):              924.45 us
+
+Summary for Hard Coded Algorithm(LVCHECKERBOARD1X1)
+  Calculating the run length for algorithm LVCHECKERBOARD1X1...
+    Run Length Summary                       
+      Instruction(W_1X1_CHECKERBOARD)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(R_1X1_CHECKERBOARD)
+        Total Instruction Executions:        2048.0
+        Total Clocks:                        4096.0
+      Instruction(2)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(3)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(4)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(5)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(6)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(7)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(8)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(9)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(10)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(11)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(12)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(13)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(14)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(15)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(16)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(17)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(18)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(19)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(20)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(21)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(22)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(23)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(24)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(25)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(26)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(27)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(28)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(29)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(30)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(31)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(32)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(33)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(34)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(35)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(36)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(37)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(38)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(39)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(40)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(41)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(42)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(43)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(44)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(45)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(46)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(47)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Instruction(48)
+        Total Instruction Executions:        1.0
+        Total Clocks:                        4.0
+      Total Clocks:                          8380.0
+      Total Time(@25ns period):              209.5 us
+
+Memory Configurations:                  
+
+Memory:                                 m1
+
+  Status Information
+  ------------------
+    DataComparatorMap
+    -----------------
+    -----------------
+    GO_ID[0] <- LocalComparator[0] <- DATA[0] 
+    GO_ID[1] <- LocalComparator[1] <- DATA[1] 
+    GO_ID[2] <- LocalComparator[2] <- DATA[2] 
+    GO_ID[3] <- LocalComparator[3] <- DATA[3] 
+    GO_ID[4] <- LocalComparator[4] <- DATA[4] 
+    GO_ID[5] <- LocalComparator[5] <- DATA[5] 
+    GO_ID[6] <- LocalComparator[6] <- DATA[6] 
+    GO_ID[7] <- LocalComparator[7] <- DATA[7] 
+    GO_ID[8] <- LocalComparator[8] <- DATA[8] 
+    GO_ID[9] <- LocalComparator[9] <- DATA[9] 
+    GO_ID[10] <- LocalComparator[10] <- DATA[10] 
+    GO_ID[11] <- LocalComparator[11] <- DATA[11] 
+    GO_ID[12] <- LocalComparator[12] <- DATA[12] 
+    GO_ID[13] <- LocalComparator[13] <- DATA[13] 
+    GO_ID[14] <- LocalComparator[14] <- DATA[14] 
+    GO_ID[15] <- LocalComparator[15] <- DATA[15] 
+    GO_ID[16] <- LocalComparator[16] <- DATA[16] 
+    GO_ID[17] <- LocalComparator[17] <- DATA[17] 
+    GO_ID[18] <- LocalComparator[18] <- DATA[18] 
+    GO_ID[19] <- LocalComparator[19] <- DATA[19] 
+    GO_ID[20] <- LocalComparator[20] <- DATA[20] 
+    GO_ID[21] <- LocalComparator[21] <- DATA[21] 
+    GO_ID[22] <- LocalComparator[22] <- DATA[22] 
+    GO_ID[23] <- LocalComparator[23] <- DATA[23] 
+    GO_ID[24] <- LocalComparator[24] <- DATA[24] 
+    GO_ID[25] <- LocalComparator[25] <- DATA[25] 
+    GO_ID[26] <- LocalComparator[26] <- DATA[26] 
+    GO_ID[27] <- LocalComparator[27] <- DATA[27] 
+    GO_ID[28] <- LocalComparator[28] <- DATA[28] 
+    GO_ID[29] <- LocalComparator[29] <- DATA[29] 
+    GO_ID[30] <- LocalComparator[30] <- DATA[30] 
+    GO_ID[31] <- LocalComparator[31] <- DATA[31] 
+
+  Address Counter
+  ---------------
+  RowAddress[7:0] Countrange:           Maximum[8'b11111111]
+                                        Minimum[8'b00000000]
+  ColumnAddress[1:0] Countrange:        Maximum[2'b11]
+                                        Minimum[2'b00]
+
+  Function Data Bus  Data Register Bit  Port
+  ----------------   -----------------  ----
+  d[31] (INPUT)      WRITE[31]          din0[31]
+  d[30] (INPUT)      WRITE[30]          din0[30]
+  d[29] (INPUT)      WRITE[29]          din0[29]
+  d[28] (INPUT)      WRITE[28]          din0[28]
+  d[27] (INPUT)      WRITE[27]          din0[27]
+  d[26] (INPUT)      WRITE[26]          din0[26]
+  d[25] (INPUT)      WRITE[25]          din0[25]
+  d[24] (INPUT)      WRITE[24]          din0[24]
+  d[23] (INPUT)      WRITE[23]          din0[23]
+  d[22] (INPUT)      WRITE[22]          din0[22]
+  d[21] (INPUT)      WRITE[21]          din0[21]
+  d[20] (INPUT)      WRITE[20]          din0[20]
+  d[19] (INPUT)      WRITE[19]          din0[19]
+  d[18] (INPUT)      WRITE[18]          din0[18]
+  d[17] (INPUT)      WRITE[17]          din0[17]
+  d[16] (INPUT)      WRITE[16]          din0[16]
+  d[15] (INPUT)      WRITE[15]          din0[15]
+  d[14] (INPUT)      WRITE[14]          din0[14]
+  d[13] (INPUT)      WRITE[13]          din0[13]
+  d[12] (INPUT)      WRITE[12]          din0[12]
+  d[11] (INPUT)      WRITE[11]          din0[11]
+  d[10] (INPUT)      WRITE[10]          din0[10]
+  d[9] (INPUT)       WRITE[9]           din0[9]
+  d[8] (INPUT)       WRITE[8]           din0[8]
+  d[7] (INPUT)       WRITE[7]           din0[7]
+  d[6] (INPUT)       WRITE[6]           din0[6]
+  d[5] (INPUT)       WRITE[5]           din0[5]
+  d[4] (INPUT)       WRITE[4]           din0[4]
+  d[3] (INPUT)       WRITE[3]           din0[3]
+  d[2] (INPUT)       WRITE[2]           din0[2]
+  d[1] (INPUT)       WRITE[1]           din0[1]
+  d[0] (INPUT)       WRITE[0]           din0[0]
+  d[31] (OUTPUT)     EXPECT[31]         dout0[31]
+  d[30] (OUTPUT)     EXPECT[30]         dout0[30]
+  d[29] (OUTPUT)     EXPECT[29]         dout0[29]
+  d[28] (OUTPUT)     EXPECT[28]         dout0[28]
+  d[27] (OUTPUT)     EXPECT[27]         dout0[27]
+  d[26] (OUTPUT)     EXPECT[26]         dout0[26]
+  d[25] (OUTPUT)     EXPECT[25]         dout0[25]
+  d[24] (OUTPUT)     EXPECT[24]         dout0[24]
+  d[23] (OUTPUT)     EXPECT[23]         dout0[23]
+  d[22] (OUTPUT)     EXPECT[22]         dout0[22]
+  d[21] (OUTPUT)     EXPECT[21]         dout0[21]
+  d[20] (OUTPUT)     EXPECT[20]         dout0[20]
+  d[19] (OUTPUT)     EXPECT[19]         dout0[19]
+  d[18] (OUTPUT)     EXPECT[18]         dout0[18]
+  d[17] (OUTPUT)     EXPECT[17]         dout0[17]
+  d[16] (OUTPUT)     EXPECT[16]         dout0[16]
+  d[15] (OUTPUT)     EXPECT[15]         dout0[15]
+  d[14] (OUTPUT)     EXPECT[14]         dout0[14]
+  d[13] (OUTPUT)     EXPECT[13]         dout0[13]
+  d[12] (OUTPUT)     EXPECT[12]         dout0[12]
+  d[11] (OUTPUT)     EXPECT[11]         dout0[11]
+  d[10] (OUTPUT)     EXPECT[10]         dout0[10]
+  d[9] (OUTPUT)      EXPECT[9]          dout0[9]
+  d[8] (OUTPUT)      EXPECT[8]          dout0[8]
+  d[7] (OUTPUT)      EXPECT[7]          dout0[7]
+  d[6] (OUTPUT)      EXPECT[6]          dout0[6]
+  d[5] (OUTPUT)      EXPECT[5]          dout0[5]
+  d[4] (OUTPUT)      EXPECT[4]          dout0[4]
+  d[3] (OUTPUT)      EXPECT[3]          dout0[3]
+  d[2] (OUTPUT)      EXPECT[2]          dout0[2]
+  d[1] (OUTPUT)      EXPECT[1]          dout0[1]
+  d[0] (OUTPUT)      EXPECT[0]          dout0[0]
+  d[-1] (OUTPUT)     EXPECT[-1]         dout1[31]
+  d[-2] (OUTPUT)     EXPECT[-2]         dout1[30]
+  d[-3] (OUTPUT)     EXPECT[-3]         dout1[29]
+  d[-4] (OUTPUT)     EXPECT[-4]         dout1[28]
+  d[-5] (OUTPUT)     EXPECT[-5]         dout1[27]
+  d[-6] (OUTPUT)     EXPECT[-6]         dout1[26]
+  d[-7] (OUTPUT)     EXPECT[-7]         dout1[25]
+  d[-8] (OUTPUT)     EXPECT[-8]         dout1[24]
+  d[-9] (OUTPUT)     EXPECT[-9]         dout1[23]
+  d[-10] (OUTPUT)    EXPECT[-10]        dout1[22]
+  d[-11] (OUTPUT)    EXPECT[-11]        dout1[21]
+  d[-12] (OUTPUT)    EXPECT[-12]        dout1[20]
+  d[-13] (OUTPUT)    EXPECT[-13]        dout1[19]
+  d[-14] (OUTPUT)    EXPECT[-14]        dout1[18]
+  d[-15] (OUTPUT)    EXPECT[-15]        dout1[17]
+  d[-16] (OUTPUT)    EXPECT[-16]        dout1[16]
+  d[-17] (OUTPUT)    EXPECT[-17]        dout1[15]
+  d[-18] (OUTPUT)    EXPECT[-18]        dout1[14]
+  d[-19] (OUTPUT)    EXPECT[-19]        dout1[13]
+  d[-20] (OUTPUT)    EXPECT[-20]        dout1[12]
+  d[-21] (OUTPUT)    EXPECT[-21]        dout1[11]
+  d[-22] (OUTPUT)    EXPECT[-22]        dout1[10]
+  d[-23] (OUTPUT)    EXPECT[-23]        dout1[9]
+  d[-24] (OUTPUT)    EXPECT[-24]        dout1[8]
+  d[-25] (OUTPUT)    EXPECT[-25]        dout1[7]
+  d[-26] (OUTPUT)    EXPECT[-26]        dout1[6]
+  d[-27] (OUTPUT)    EXPECT[-27]        dout1[5]
+  d[-28] (OUTPUT)    EXPECT[-28]        dout1[4]
+  d[-29] (OUTPUT)    EXPECT[-29]        dout1[3]
+  d[-30] (OUTPUT)    EXPECT[-30]        dout1[2]
+  d[-31] (OUTPUT)    EXPECT[-31]        dout1[1]
+  d[-32] (OUTPUT)    EXPECT[0]          dout1[0]
+
+  Function Address Bus             Logical Bit         Port
+  --------------------             -----------         ----
+  Address[9]                       RowAddress[7]       addr0[9]
+  Address[8]                       RowAddress[6]       addr0[8]
+  Address[7]                       RowAddress[5]       addr0[7]
+  Address[6]                       RowAddress[4]       addr0[6]
+  Address[5]                       RowAddress[3]       addr0[5]
+  Address[4]                       RowAddress[2]       addr0[4]
+  Address[3]                       RowAddress[1]       addr0[3]
+  Address[2]                       RowAddress[0]       addr0[2]
+  Address[1]                       ColumnAddress[1]    addr0[1]
+  Address[0]                       ColumnAddress[0]    addr0[0]
+  Address[9]                       RowAddress[7]       addr1[9]
+  Address[8]                       RowAddress[6]       addr1[8]
+  Address[7]                       RowAddress[5]       addr1[7]
+  Address[6]                       RowAddress[4]       addr1[6]
+  Address[5]                       RowAddress[3]       addr1[5]
+  Address[4]                       RowAddress[2]       addr1[4]
+  Address[3]                       RowAddress[1]       addr1[3]
+  Address[2]                       RowAddress[0]       addr1[2]
+  Address[1]                       ColumnAddress[1]    addr1[1]
+  Address[0]                       ColumnAddress[0]    addr1[0]
+
+  Test Port                        Logical Read/Write Ports
+  ---------                        ------------------------
+  0                                A
+  1                                B / A
+
+
+Memory:                                 m2
+
+  Status Information
+  ------------------
+    DataComparatorMap
+    -----------------
+    -----------------
+    GO_ID[0] <- LocalComparator[0] <- DATA[0] 
+    GO_ID[1] <- LocalComparator[1] <- DATA[1] 
+    GO_ID[2] <- LocalComparator[2] <- DATA[2] 
+    GO_ID[3] <- LocalComparator[3] <- DATA[3] 
+    GO_ID[4] <- LocalComparator[4] <- DATA[4] 
+    GO_ID[5] <- LocalComparator[5] <- DATA[5] 
+    GO_ID[6] <- LocalComparator[6] <- DATA[6] 
+    GO_ID[7] <- LocalComparator[7] <- DATA[7] 
+    GO_ID[8] <- LocalComparator[8] <- DATA[8] 
+    GO_ID[9] <- LocalComparator[9] <- DATA[9] 
+    GO_ID[10] <- LocalComparator[10] <- DATA[10] 
+    GO_ID[11] <- LocalComparator[11] <- DATA[11] 
+    GO_ID[12] <- LocalComparator[12] <- DATA[12] 
+    GO_ID[13] <- LocalComparator[13] <- DATA[13] 
+    GO_ID[14] <- LocalComparator[14] <- DATA[14] 
+    GO_ID[15] <- LocalComparator[15] <- DATA[15] 
+    GO_ID[16] <- LocalComparator[16] <- DATA[16] 
+    GO_ID[17] <- LocalComparator[17] <- DATA[17] 
+    GO_ID[18] <- LocalComparator[18] <- DATA[18] 
+    GO_ID[19] <- LocalComparator[19] <- DATA[19] 
+    GO_ID[20] <- LocalComparator[20] <- DATA[20] 
+    GO_ID[21] <- LocalComparator[21] <- DATA[21] 
+    GO_ID[22] <- LocalComparator[22] <- DATA[22] 
+    GO_ID[23] <- LocalComparator[23] <- DATA[23] 
+    GO_ID[24] <- LocalComparator[24] <- DATA[24] 
+    GO_ID[25] <- LocalComparator[25] <- DATA[25] 
+    GO_ID[26] <- LocalComparator[26] <- DATA[26] 
+    GO_ID[27] <- LocalComparator[27] <- DATA[27] 
+    GO_ID[28] <- LocalComparator[28] <- DATA[28] 
+    GO_ID[29] <- LocalComparator[29] <- DATA[29] 
+    GO_ID[30] <- LocalComparator[30] <- DATA[30] 
+    GO_ID[31] <- LocalComparator[31] <- DATA[31] 
+
+  Address Counter
+  ---------------
+  RowAddress[7:0] Countrange:           Maximum[8'b11111111]
+                                        Minimum[8'b00000000]
+  ColumnAddress[1:0] Countrange:        Maximum[2'b11]
+                                        Minimum[2'b00]
+
+  Function Data Bus  Data Register Bit  Port
+  ----------------   -----------------  ----
+  d[31] (INPUT)      WRITE[31]          din0[31]
+  d[30] (INPUT)      WRITE[30]          din0[30]
+  d[29] (INPUT)      WRITE[29]          din0[29]
+  d[28] (INPUT)      WRITE[28]          din0[28]
+  d[27] (INPUT)      WRITE[27]          din0[27]
+  d[26] (INPUT)      WRITE[26]          din0[26]
+  d[25] (INPUT)      WRITE[25]          din0[25]
+  d[24] (INPUT)      WRITE[24]          din0[24]
+  d[23] (INPUT)      WRITE[23]          din0[23]
+  d[22] (INPUT)      WRITE[22]          din0[22]
+  d[21] (INPUT)      WRITE[21]          din0[21]
+  d[20] (INPUT)      WRITE[20]          din0[20]
+  d[19] (INPUT)      WRITE[19]          din0[19]
+  d[18] (INPUT)      WRITE[18]          din0[18]
+  d[17] (INPUT)      WRITE[17]          din0[17]
+  d[16] (INPUT)      WRITE[16]          din0[16]
+  d[15] (INPUT)      WRITE[15]          din0[15]
+  d[14] (INPUT)      WRITE[14]          din0[14]
+  d[13] (INPUT)      WRITE[13]          din0[13]
+  d[12] (INPUT)      WRITE[12]          din0[12]
+  d[11] (INPUT)      WRITE[11]          din0[11]
+  d[10] (INPUT)      WRITE[10]          din0[10]
+  d[9] (INPUT)       WRITE[9]           din0[9]
+  d[8] (INPUT)       WRITE[8]           din0[8]
+  d[7] (INPUT)       WRITE[7]           din0[7]
+  d[6] (INPUT)       WRITE[6]           din0[6]
+  d[5] (INPUT)       WRITE[5]           din0[5]
+  d[4] (INPUT)       WRITE[4]           din0[4]
+  d[3] (INPUT)       WRITE[3]           din0[3]
+  d[2] (INPUT)       WRITE[2]           din0[2]
+  d[1] (INPUT)       WRITE[1]           din0[1]
+  d[0] (INPUT)       WRITE[0]           din0[0]
+  d[31] (OUTPUT)     EXPECT[31]         dout0[31]
+  d[30] (OUTPUT)     EXPECT[30]         dout0[30]
+  d[29] (OUTPUT)     EXPECT[29]         dout0[29]
+  d[28] (OUTPUT)     EXPECT[28]         dout0[28]
+  d[27] (OUTPUT)     EXPECT[27]         dout0[27]
+  d[26] (OUTPUT)     EXPECT[26]         dout0[26]
+  d[25] (OUTPUT)     EXPECT[25]         dout0[25]
+  d[24] (OUTPUT)     EXPECT[24]         dout0[24]
+  d[23] (OUTPUT)     EXPECT[23]         dout0[23]
+  d[22] (OUTPUT)     EXPECT[22]         dout0[22]
+  d[21] (OUTPUT)     EXPECT[21]         dout0[21]
+  d[20] (OUTPUT)     EXPECT[20]         dout0[20]
+  d[19] (OUTPUT)     EXPECT[19]         dout0[19]
+  d[18] (OUTPUT)     EXPECT[18]         dout0[18]
+  d[17] (OUTPUT)     EXPECT[17]         dout0[17]
+  d[16] (OUTPUT)     EXPECT[16]         dout0[16]
+  d[15] (OUTPUT)     EXPECT[15]         dout0[15]
+  d[14] (OUTPUT)     EXPECT[14]         dout0[14]
+  d[13] (OUTPUT)     EXPECT[13]         dout0[13]
+  d[12] (OUTPUT)     EXPECT[12]         dout0[12]
+  d[11] (OUTPUT)     EXPECT[11]         dout0[11]
+  d[10] (OUTPUT)     EXPECT[10]         dout0[10]
+  d[9] (OUTPUT)      EXPECT[9]          dout0[9]
+  d[8] (OUTPUT)      EXPECT[8]          dout0[8]
+  d[7] (OUTPUT)      EXPECT[7]          dout0[7]
+  d[6] (OUTPUT)      EXPECT[6]          dout0[6]
+  d[5] (OUTPUT)      EXPECT[5]          dout0[5]
+  d[4] (OUTPUT)      EXPECT[4]          dout0[4]
+  d[3] (OUTPUT)      EXPECT[3]          dout0[3]
+  d[2] (OUTPUT)      EXPECT[2]          dout0[2]
+  d[1] (OUTPUT)      EXPECT[1]          dout0[1]
+  d[0] (OUTPUT)      EXPECT[0]          dout0[0]
+  d[-1] (OUTPUT)     EXPECT[-1]         dout1[31]
+  d[-2] (OUTPUT)     EXPECT[-2]         dout1[30]
+  d[-3] (OUTPUT)     EXPECT[-3]         dout1[29]
+  d[-4] (OUTPUT)     EXPECT[-4]         dout1[28]
+  d[-5] (OUTPUT)     EXPECT[-5]         dout1[27]
+  d[-6] (OUTPUT)     EXPECT[-6]         dout1[26]
+  d[-7] (OUTPUT)     EXPECT[-7]         dout1[25]
+  d[-8] (OUTPUT)     EXPECT[-8]         dout1[24]
+  d[-9] (OUTPUT)     EXPECT[-9]         dout1[23]
+  d[-10] (OUTPUT)    EXPECT[-10]        dout1[22]
+  d[-11] (OUTPUT)    EXPECT[-11]        dout1[21]
+  d[-12] (OUTPUT)    EXPECT[-12]        dout1[20]
+  d[-13] (OUTPUT)    EXPECT[-13]        dout1[19]
+  d[-14] (OUTPUT)    EXPECT[-14]        dout1[18]
+  d[-15] (OUTPUT)    EXPECT[-15]        dout1[17]
+  d[-16] (OUTPUT)    EXPECT[-16]        dout1[16]
+  d[-17] (OUTPUT)    EXPECT[-17]        dout1[15]
+  d[-18] (OUTPUT)    EXPECT[-18]        dout1[14]
+  d[-19] (OUTPUT)    EXPECT[-19]        dout1[13]
+  d[-20] (OUTPUT)    EXPECT[-20]        dout1[12]
+  d[-21] (OUTPUT)    EXPECT[-21]        dout1[11]
+  d[-22] (OUTPUT)    EXPECT[-22]        dout1[10]
+  d[-23] (OUTPUT)    EXPECT[-23]        dout1[9]
+  d[-24] (OUTPUT)    EXPECT[-24]        dout1[8]
+  d[-25] (OUTPUT)    EXPECT[-25]        dout1[7]
+  d[-26] (OUTPUT)    EXPECT[-26]        dout1[6]
+  d[-27] (OUTPUT)    EXPECT[-27]        dout1[5]
+  d[-28] (OUTPUT)    EXPECT[-28]        dout1[4]
+  d[-29] (OUTPUT)    EXPECT[-29]        dout1[3]
+  d[-30] (OUTPUT)    EXPECT[-30]        dout1[2]
+  d[-31] (OUTPUT)    EXPECT[-31]        dout1[1]
+  d[-32] (OUTPUT)    EXPECT[0]          dout1[0]
+
+  Function Address Bus             Logical Bit         Port
+  --------------------             -----------         ----
+  Address[9]                       RowAddress[7]       addr0[9]
+  Address[8]                       RowAddress[6]       addr0[8]
+  Address[7]                       RowAddress[5]       addr0[7]
+  Address[6]                       RowAddress[4]       addr0[6]
+  Address[5]                       RowAddress[3]       addr0[5]
+  Address[4]                       RowAddress[2]       addr0[4]
+  Address[3]                       RowAddress[1]       addr0[3]
+  Address[2]                       RowAddress[0]       addr0[2]
+  Address[1]                       ColumnAddress[1]    addr0[1]
+  Address[0]                       ColumnAddress[0]    addr0[0]
+  Address[9]                       RowAddress[7]       addr1[9]
+  Address[8]                       RowAddress[6]       addr1[8]
+  Address[7]                       RowAddress[5]       addr1[7]
+  Address[6]                       RowAddress[4]       addr1[6]
+  Address[5]                       RowAddress[3]       addr1[5]
+  Address[4]                       RowAddress[2]       addr1[4]
+  Address[3]                       RowAddress[1]       addr1[3]
+  Address[2]                       RowAddress[0]       addr1[2]
+  Address[1]                       ColumnAddress[1]    addr1[1]
+  Address[0]                       ColumnAddress[0]    addr1[0]
+
+  Test Port                        Logical Read/Write Ports
+  ---------                        ------------------------
+  0                                A
+  1                                B / A
+
+
+Summary of Operations                   
+---------------------
+
+  OperationSetFamily:                   DEFAULT
+
+    OperationSet:                       SYNC
+
+      Operation:                        NOOPERATION
+        Tick:                           1234
+        EVENGROUPWRITEENABLE:           1111
+        ODDGROUPWRITEENABLE:            1111
+        SELECT:                         1111
+        WRITEENABLE:                    0000
+        SHADOWREADENABLE:               0000
+        SHADOWREADADDRESS:              0000
+        STROBEDATAOUT:                  0000
+
+      Operation:                        WRITE
+        Tick:                           12
+        EVENGROUPWRITEENABLE:           11
+        ODDGROUPWRITEENABLE:            11
+        SELECT:                         11
+        WRITEENABLE:                    11
+        SHADOWREADENABLE:               00
+        SHADOWREADADDRESS:              00
+        STROBEDATAOUT:                  00
+
+      Operation:                        READ
+        Tick:                           12
+        EVENGROUPWRITEENABLE:           11
+        ODDGROUPWRITEENABLE:            11
+        SELECT:                         11
+        WRITEENABLE:                    00
+        SHADOWREADENABLE:               11
+        SHADOWREADADDRESS:              00
+        STROBEDATAOUT:                  01
+
+      Operation:                        READMODIFYWRITE
+        Tick:                           12
+        EVENGROUPWRITEENABLE:           11
+        ODDGROUPWRITEENABLE:            11
+        SELECT:                         11
+        WRITEENABLE:                    01
+        SHADOWREADENABLE:               11
+        SHADOWREADADDRESS:              01
+        STROBEDATAOUT:                  01
+
+      Operation:                        WRITEREAD
+        Tick:                           12
+        EVENGROUPWRITEENABLE:           11
+        ODDGROUPWRITEENABLE:            11
+        SELECT:                         11
+        WRITEENABLE:                    10
+        SHADOWREADENABLE:               11
+        SHADOWREADADDRESS:              10
+        STROBEDATAOUT:                  00
+
+Warning [PPHW01] : REF# : The MemoryTemplate sky130_sram_4kbyte_1rw1r_32x1024_8 with MemoryCollar m1 has group write enable port(s) and specifies built-in operation set SYNC. The group write enable port(s) will be enabled by default.
+
+Warning [PPHW01] : REF# : The MemoryTemplate sky130_sram_4kbyte_1rw1r_32x1024_8 with MemoryCollar m2 has group write enable port(s) and specifies built-in operation set SYNC. The group write enable port(s) will be enabled by default.
+
+
+ Generating design files...
+   Registering mbist_eval_top_rtl1_tessent_mbist_c1_controller.v for generation.
+   Registering mbist_eval_top_rtl1_tessent_mbist_c1_interface_m1.v for generation.
+   Registering mbist_eval_top_rtl1_tessent_mbist_c1_interface_m1.icl for generation.
+   Registering sky130_sram_4kbyte_1rw1r_32x1024_8.scan for generation.
+   Registering sky130_sram_4kbyte_1rw1r_32x1024_8.syn for generation.
+   Registering mbist_eval_top_rtl1_tessent_mbist_c1_interface_m2.v for generation.
+   Registering mbist_eval_top_rtl1_tessent_mbist_c1_interface_m2.icl for generation.
+   Registering mbist_eval_top_rtl1_tessent_mbist_c1_controller.gtool_info for generation.
+   Registering mbist_eval_top_rtl1_tessent_mbist_c1_controller.icl for generation.
+   Registering mbist_eval_top_rtl1_tessent_mbist_c1_controller.pdl for generation.
+   Registering mbist_eval_top_rtl1_tessent_mbist_c1_controller.tcd for generation.
+   Registering mbist_eval_top_rtl1_tessent_mbist_c1.designa for generation.
+   Generating controller module:                     /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/mbist_eval_top_rtl1_tessent_mbist_c1_controller.v
+   Generating interface module:                      /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/mbist_eval_top_rtl1_tessent_mbist_c1_interface_m1.v
+   Generating interface ICL:                         /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/mbist_eval_top_rtl1_tessent_mbist_c1_interface_m1.icl
+   Generating memory scan model:                     /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/sky130_sram_4kbyte_1rw1r_32x1024_8.scan
+   Generating memory synthesis model:                /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/sky130_sram_4kbyte_1rw1r_32x1024_8.syn
+   Generating interface module:                      /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/mbist_eval_top_rtl1_tessent_mbist_c1_interface_m2.v
+   Generating interface ICL:                         /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/mbist_eval_top_rtl1_tessent_mbist_c1_interface_m2.icl
+   Generating gtool_info file:                       /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/mbist_eval_top_rtl1_tessent_mbist_c1_controller.gtool_info
+   Generating ICL file:                              /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/mbist_eval_top_rtl1_tessent_mbist_c1_controller.icl
+   Generating PDL file:                              /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/mbist_eval_top_rtl1_tessent_mbist_c1_controller.pdl
+   Generating Tessent Instrument Description file:   /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/mbist_eval_top_rtl1_tessent_mbist_c1_controller.tcd
+   Generating designa file:                          /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/mbist_eval_top_rtl1_tessent_mbist_c1.designa
+
+ Error Summary:
+
+	Total Warnings	: 5
+
+ Log file is /home/RD/ryan/Desktop/Github/claude_verilog_test/.claude/worktrees/agent-aaf7eff8abc4ffe2d/dft/tessent/mbist/build/run/tsdb_outdir/instruments/mbist_eval_top_rtl1_mbist.instrument/membistipg.log_c1.
+
+ Done.
+

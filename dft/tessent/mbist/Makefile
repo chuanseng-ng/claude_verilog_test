@@ -31,7 +31,7 @@ EVAL_SV   := $(ROOT)/rtl/soc/axi_pkg.sv $(ROOT)/rtl/soc/soc_addr_map_pkg.sv $(RO
              $(HERE)/rtl/mbist_eval_top.sv
 EVAL_V    := $(BUILD)/mbist_eval_top_sv2v.v
 
-.PHONY: all mbist-generate mbist-insert mbist-sim mbist-area clean
+.PHONY: all mbist-generate mbist-insert mbist-sim mbist-area mbist-evidence clean
 all: mbist-generate mbist-insert mbist-sim mbist-area
 
 $(EVAL_V): $(EVAL_SV)
@@ -54,6 +54,15 @@ mbist-area:
 	$(HERE)/scripts/area.sh inhouse
 	$(HERE)/scripts/area.sh base
 	$(HERE)/scripts/area.sh tessent
+
+# Small, committed result files (the rest of build/ is gitignored).
+mbist-evidence:
+	mkdir -p $(HERE)/evidence/area $(HERE)/evidence/fi $(HERE)/evidence/generation
+	cp $(BUILD)/area/*.rpt $(HERE)/evidence/area/
+	cp $(BUILD)/fi/summary.md $(HERE)/evidence/fi/
+	cp $(BUILD)/run/tsdb_outdir/instruments/*mbist.instrument/*_c1.generation_log $(HERE)/evidence/generation/full_c1.generation_log
+	cp $(BUILD)/run/tsdb_outdir/dft_inserted_designs/*/mbist_eval_top.dft_summary_dictionary $(HERE)/evidence/generation/full.dft_summary_dictionary
+	python3 $(HERE)/scripts/area_breakdown.py $(HERE)/evidence/area/tessent_top*.rpt > $(HERE)/evidence/area/tessent_breakdown.txt
 
 clean:
 	rm -rf $(BUILD)
