@@ -1,0 +1,20 @@
+# Gate-level synthesis of the Sky130 SoC fabric for the Tessent evaluation flow (step a).
+# Template: the Makefile substitutes @LIB@ @NETLIST_IN@ @NETLIST_OUT@ @STAT@ @LATCHMAP@.
+# Mirrors the Yosys.Synthesis step of the LibreLane flow in spirit (library loaded as -lib cells first so the three
+# hand-instantiated clock cells in the sv2v netlist bind to real cells; CPU macro + SRAM macros stay black boxes) but is
+# an evaluation netlist: NOT the netlist that is placed and routed.
+read_liberty -overwrite -setattr liberty_cell -lib @LIB@
+read_verilog -defer -sv @NETLIST_IN@
+hierarchy -check -top soc_top
+synth -top soc_top -flatten
+techmap -map @LATCHMAP@
+opt_clean -purge
+dfflibmap -liberty @LIB@ -dont_use sky130_fd_sc_hd__lpflow_* -dont_use sky130_fd_sc_hd__sdf* -dont_use sky130_fd_sc_hd__probe*
+abc -liberty @LIB@ -dont_use sky130_fd_sc_hd__lpflow_* -dont_use sky130_fd_sc_hd__probe* -dont_use sky130_fd_sc_hd__clkdly* -dont_use sky130_fd_sc_hd__dlygate* -dont_use sky130_fd_sc_hd__dlymetal*
+opt_clean -purge
+hilomap -singleton -hicell sky130_fd_sc_hd__conb_1 HI -locell sky130_fd_sc_hd__conb_1 LO
+opt_clean -purge
+splitnets -ports
+tee -o @STAT@ stat -liberty @LIB@
+check -assert -noinit
+write_verilog -noattr -noexpr -nohex -nodec @NETLIST_OUT@
