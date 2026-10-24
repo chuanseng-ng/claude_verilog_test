@@ -1,0 +1,20 @@
+// Interface-only Verilog view of the OpenRAM Sky130 4 KB macro, read by Tessent with
+// `read_verilog -interface_only -exclude_from_file_dictionary`.  The simulation model is
+// sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv (no power pins, same ports as pnr/sky130/soc/macro/*.v).
+`timescale 1ns/1ps
+module sky130_sram_4kbyte_1rw1r_32x1024_8 (
+    clk0, csb0, web0, wmask0, addr0, din0, dout0,
+    clk1, csb1, addr1, dout1
+);
+    input         clk0;
+    input         csb0;
+    input         web0;
+    input  [3:0]  wmask0;
+    input  [9:0]  addr0;
+    input  [31:0] din0;
+    output [31:0] dout0;
+    input         clk1;
+    input         csb1;
+    input  [9:0]  addr1;
+    output [31:0] dout1;
+endmodule

@@ -20,7 +20,6 @@ THREADS   ?= 2
 # are a physical-implementation choice and a black box to Tessent).
 SV2V_DEFS := --define=__pnr__ --define=SRAM_SKY130
 EVAL_SV   := $(ROOT)/rtl/soc/axi_pkg.sv $(ROOT)/rtl/soc/soc_addr_map_pkg.sv $(ROOT)/rtl/soc/soc_periph_map_pkg.sv \
-             $(ROOT)/pnr/sky130/soc/sky130_sram_4kbyte_1rw1r_32x1024_8_stub.sv \
              $(ROOT)/rtl/soc/dft/mem_collar.sv $(ROOT)/rtl/soc/sram_controller.sv $(ROOT)/rtl/npu/npu_weight_mem.sv \
              $(HERE)/rtl/mbist_eval_top.sv
 EVAL_V    := $(BUILD)/mbist_eval_top_sv2v.v
