@@ -126,37 +126,40 @@ def model(cell):
         lines.append("  reg %s;" % q)
         if qn:
             lines.append("  wire %s = ~%s;" % (qn, q))
-        clr = fn(a["clear"]) if "clear" in a else "1'b0"
-        pre = fn(a["preset"]) if "preset" in a else "1'b0"
-        lines.append("  always @* if (%s) %s = 1'b0; else if (%s) %s = 1'b1; else if (%s) %s = %s;" %
-                     (clr, q, pre, q, fn(a["enable"]), q, fn(a["data_in"])))
+        branches = []
+        if "clear" in a:
+            lines.append("  wire %s_clr = %s;" % (q, fn(a["clear"])))
+            branches.append("if (%s_clr) %s = 1'b0;" % (q, q))
+        if "preset" in a:
+            lines.append("  wire %s_pre = %s;" % (q, fn(a["preset"])))
+            branches.append("if (%s_pre) %s = 1'b1;" % (q, q))
+        lines.append("  wire %s_en = %s;" % (q, fn(a["enable"])))
+        lines.append("  wire %s_d = %s;" % (q, fn(a["data_in"])))
+        branches.append("if (%s_en) %s = %s_d;" % (q, q, q))
+        sens = [q + "_en", q + "_d"] + ([q + "_clr"] if "clear" in a else []) + ([q + "_pre"] if "preset" in a else [])
+        lines.append("  always @(%s) " % " or ".join(sens) + " else ".join(branches))
     for st in sts:
         stin = st["args"][0].split()
         stout = st["args"][1].split()
-        rows = st["attrs"]["table"].split(",")
-        for s in stout:
-            states.add(s)
-            lines.append("  reg %s;" % s)
-        lines.append("  always @* begin")
+        rows = [[x.strip() for x in r.split(":")] for r in st["attrs"]["table"].split(",")]
+        if stin[0] != "CLK" or len(stout) != 1:
+            raise ValueError("statetable is not a clock-gate latch")
+        others = stin[1:]
+        # verify: with CLK low the latch follows OR(others); with CLK high it holds
         for r in rows:
-            parts = [x.strip() for x in r.split(":")]
-            pat = parts[0].split()
-            nxt = parts[2].split()
-            conds = []
-            for sig, v in zip(stin, pat):
-                if v == "L":
-                    conds.append("%s == 1'b0" % sig)
-                elif v == "H":
-                    conds.append("%s == 1'b1" % sig)
-            assigns = []
-            for s, v in zip(stout, nxt):
-                if v == "L":
-                    assigns.append("%s = 1'b0;" % s)
-                elif v == "H":
-                    assigns.append("%s = 1'b1;" % s)
-            if assigns:
-                lines.append("    if (%s) begin %s end" % (" && ".join(conds) or "1'b1", " ".join(assigns)))
-        lines.append("  end")
+            pat, nxt = r[0].split(), r[2].split()[0]
+            if pat[0] == "L" and all(v in "LH" for v in pat[1:]):
+                want = "H" if any(v == "H" for v in pat[1:]) else "L"
+                if nxt != want:
+                    raise ValueError("statetable row does not match OR of enables")
+            elif pat[0] == "H" and nxt not in ("N", "-"):
+                raise ValueError("statetable: latch not holding while CLK high")
+        m0 = stout[0]
+        states.add(m0)
+        lines.append("  reg %s;" % m0)
+        lines.append("  wire %s_en = ~CLK;" % m0)
+        lines.append("  wire %s_d = %s;" % (m0, " | ".join(others)))
+        lines.append("  always @(%s_en or %s_d) if (%s_en) %s = %s_d;" % (m0, m0, m0, m0, m0))
     for p in pins:
         func = p["attrs"].get("function") or p["attrs"].get("state_function")
         if p["attrs"].get("direction") == "output" and func:

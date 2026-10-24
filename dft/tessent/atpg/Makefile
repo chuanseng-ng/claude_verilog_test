@@ -24,7 +24,9 @@ export BUILD LIB ROOT THREADS
 
 SV2V_NET  := $(BUILD)/soc_top_sv2v.v
 GATE_NET  := $(BUILD)/soc_top_gate.v
+FIX_NET   := $(BUILD)/soc_top_gate_fix.v
 SCAN_NET  := $(BUILD)/soc_top_scan.v
+ATPGLIB   := $(BUILD)/sky130_hd.atpglib
 
 .PHONY: all synth scan atpg clean lib sv2v
 all: synth scan atpg
@@ -49,8 +51,22 @@ $(GATE_NET): $(SV2V_NET) $(LIB) scripts/synth.ys.in scripts/latch_map.v
 	/usr/bin/time -v -o $(BUILD)/synth.time $(YOSYS) -q -l $(BUILD)/synth.log $(BUILD)/synth.ys
 	@grep -E "Elapsed|Maximum resident" $(BUILD)/synth.time
 
+# Tessent cell library: Liberty -> zero-delay Verilog models (lib2v.py) -> LibComp -> .atpglib.  The Liberty is also
+# read by Tessent (read_liberty) for scan-cell equivalence and clock-gate attributes.
+.PHONY: cells
+cells: $(ATPGLIB)
+$(ATPGLIB): $(LIB) scripts/lib2v.py
+	mkdir -p $(BUILD)/libcomp
+	python3 scripts/lib2v.py $(LIB) $(BUILD)/sky130_hd_models.v $(BUILD)/lib2v_report.txt
+	cd $(BUILD)/libcomp && libcomp $(BUILD)/sky130_hd_models.v -dofile -logfile libcomp.log -replace < /dev/null > libcomp.out 2>&1
+	cp $(BUILD)/libcomp/libcomp.atpglib $(ATPGLIB)
+	@! grep -E "^// *Error" $(BUILD)/libcomp/libcomp.log
+
+$(FIX_NET): $(GATE_NET) scripts/fixup_gate.py
+	python3 scripts/fixup_gate.py $(GATE_NET) $(FIX_NET)
+
 scan: $(SCAN_NET)
-$(SCAN_NET): $(GATE_NET) $(wildcard scripts/*.tcl)
+$(SCAN_NET): $(FIX_NET) $(ATPGLIB) $(wildcard scripts/*.tcl)
 	cd $(BUILD) && /usr/bin/time -v -o scan.time tessent -shell -dofile $(HERE)/scripts/scan.tcl -logfile scan.log < /dev/null > scan.out 2>&1
 	@grep -E "Elapsed|Maximum resident" $(BUILD)/scan.time
 	@test -s $(SCAN_NET)

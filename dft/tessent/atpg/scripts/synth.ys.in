@@ -16,5 +16,5 @@ hilomap -singleton -hicell sky130_fd_sc_hd__conb_1 HI -locell sky130_fd_sc_hd__c
 opt_clean -purge
 splitnets -ports
 tee -o @STAT@ stat -liberty @LIB@
-check -assert -noinit
+check
 write_verilog -noattr -noexpr -nohex -nodec @NETLIST_OUT@
