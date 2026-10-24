@@ -78,6 +78,7 @@ See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for
 | `docs/PHASE5_SOC_INTEGRATION_PLAN.md` | Phase 5 SoC integration roadmap — 12 milestones M1–M12 (golden spec) |
 | `docs/PHASE6_IP_EXPANSION_PLAN.md` | Phase 6 IP expansion — remaining 6a peripherals + 6b crypto + 6c NPU (golden spec) |
 | `docs/design/DFT_ARCHITECTURE.md` | DFT scan + MBIST + JTAG architecture for the Sky130 SoC (epic `j41m`) |
+| `docs/design/TESSENT_MBIST_EVALUATION.md` | Parallel evaluation of Siemens Tessent MemoryBIST vs the in-house MBIST (flow in `dft/tessent/mbist/`; epic `j41m`) |
 | `docs/FPGA_BOARD_SELECTION.md` | FPGA board recommendation and measured ECP5 fmax lower bound (epic `hlrm`) |
 | `docs/design/RTL_DEFINITION.md` | Interface signal definitions |
 | `docs/design/MEMORY_MAP.md` | Address space and register map |

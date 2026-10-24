@@ -1141,3 +1141,11 @@ Totals: **landed in this PR (core domain + 2 collars + TAP delta) = 13,314 + 1,1
 * **Verification:** `mbist_ctrl` (3 build points), `mbist_tap` (3 clock ratios), `mbist_soc_slice` (real wrappers), `mbist_fi_equiv` (FI model == real simulation model), the existing `jtag_tap` / `dft_ctrl` suites against the extended TAP model, `test_dft_scan_check.py` (+5 tests for the TCK-block rules). Results are in the PR description.
 * **Checker changes:** `tools/dft/check_scan_clk_rst.py` `--tck-prefix` / `--tck-sink` / `--expect-tck-flops` and the `SYNC=CONSUMER@any` form of `--expect-reset-sync` (a reset synchroniser in a functional clock domain); `pnr/Makefile` `DFT_TAP_CHECK_ARGS` carries the three declared TAP outputs and the two sink prefixes.
 * **Not done / open:** CPU-macro collars and re-harden (16.7); SDC for the new crossings (item 12 of the table in 16.5, STA owner); `required_synchronisers` entries in `tools/cdc/cdc_config.yml` for the FIFO pointer synchronisers (see the PR for the CDC gate result); scan testability of the TCK-side FIFO storage (unscanned by N4); metastability is not modelable here.
+
+### 16.11 Parallel evaluation of Siemens Tessent MemoryBIST (pointer)
+
+A Tessent 2025.4 MemoryBIST flow for the same two SoC-level SRAM macros (TCD memory description, generated and
+inserted controller, VCS simulation of Tessent's own patterns, a fault campaign over the 105-fault catalogue of
+`mbist_golden.py`, and area against 16.9 measured the same way) lives in `dft/tessent/mbist/`. It does not change or
+replace anything in this section. Results and a recommendation (keep the in-house MBIST; Tessent is a possible licensed
+cross-check): `docs/design/TESSENT_MBIST_EVALUATION.md`.
