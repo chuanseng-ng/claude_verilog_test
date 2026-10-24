@@ -4,9 +4,13 @@
 #   source of scan control; scan_clk_i is the single shift/capture clock (functional clock roots are muxed to it by
 #   dft_clk_mux); scan_rst_ni is the only async reset in scan mode; scan_en_i is the scan enable (stand-in for the internal
 #   dft_scan_en net, which equals scan_en_i with the TAP idle).
-add_black_boxes -modules {rv32i_cpu_top sky130_sram_4kbyte_1rw1r_32x1024_8}
-add_clocks 0 scan_clk_i
-add_clocks 1 scan_rst_ni
-add_input_constraints scan_mode_i -C1
-add_input_constraints {clk_i cpu_clk_i tck_i tdi_i trst_ni} -C0
-add_input_constraints {tms_i rst_n_i cpu_rst_n_i} -C1
+# Each command is guarded: after import_scan_mode (ATPG) the clock and some constraints are already defined.
+proc setup_try {cmd} {
+  if {[catch {uplevel 1 $cmd} msg]} { puts "SETUP-NOTE: '$cmd' -> $msg" }
+}
+setup_try {add_black_boxes -modules {rv32i_cpu_top sky130_sram_4kbyte_1rw1r_32x1024_8}}
+setup_try {add_clocks 0 scan_clk_i}
+setup_try {add_clocks 1 scan_rst_ni}
+setup_try {add_input_constraints scan_mode_i -C1}
+setup_try {add_input_constraints {clk_i cpu_clk_i tck_i tdi_i trst_ni} -C0}
+setup_try {add_input_constraints {tms_i rst_n_i cpu_rst_n_i} -C1}
