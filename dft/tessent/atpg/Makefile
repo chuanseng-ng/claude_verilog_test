@@ -29,7 +29,7 @@ SCAN_NET  := $(BUILD)/soc_top_scan.v
 ATPGLIB   := $(BUILD)/sky130_hd.atpglib
 TCELLLIB  := $(BUILD)/sky130_hd.tcelllib
 
-.PHONY: all synth scan atpg clean lib sv2v
+.PHONY: all synth scan atpg atpg-trans clean lib sv2v
 all: synth scan atpg
 
 lib: $(LIB)
@@ -82,6 +82,11 @@ atpg: $(SCAN_NET)
 	mkdir -p $(BUILD)/patterns
 	cd $(BUILD) && /usr/bin/time -v -o atpg.time tessent -shell -dofile $(HERE)/scripts/atpg.tcl -logfile atpg.log -replace < /dev/null > atpg.out 2>&1
 	@grep -E "Elapsed|Maximum resident" $(BUILD)/atpg.time
+
+atpg-trans: $(SCAN_NET)
+	mkdir -p $(BUILD)/patterns
+	cd $(BUILD) && /usr/bin/time -v -o atpg_trans.time tessent -shell -dofile $(HERE)/scripts/atpg_trans.tcl -logfile atpg_trans.log -replace < /dev/null > atpg_trans.out 2>&1
+	@grep -E "Elapsed|Maximum resident" $(BUILD)/atpg_trans.time
 
 clean:
 	rm -rf $(BUILD)
