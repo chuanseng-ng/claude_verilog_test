@@ -165,9 +165,10 @@ def model(cell):
         if p["attrs"].get("direction") == "output" and func:
             for pn in p["args"]:
                 ex = fn(func)
-                if re.fullmatch(r"[A-Za-z_]\w*", ex) and ex in ins:
+                core = ex.strip().strip("()").strip()
+                if re.fullmatch(r"[A-Za-z_]\w*", core) and core in ins:
                     # a bare wire would be modelled as a _wire primitive; use a gate so Tessent sees a buffer
-                    lines.append("  buf g_%s (%s, %s);" % (pn, pn, ex))
+                    lines.append("  buf g_%s (%s, %s);" % (pn, pn, core))
                 else:
                     lines.append("  assign %s = %s;" % (pn, ex))
         elif p["attrs"].get("direction") == "output":

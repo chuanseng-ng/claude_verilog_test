@@ -10,9 +10,14 @@ set_design_level top
 set_cell_library_options -default_dft_cell_selection_name sky130hd
 source $SRC/common_setup.tcl
 set_scan_enable scan_en_i -active high
+# S1/S2 are errors by default and stop the mode transition.  They flag the flops whose clock is not controllable from
+# scan_clk_i (TAP-domain flops clocked by tck_i, held at 0; DFT_ARCHITECTURE N4 keeps them off every chain).  Demote to
+# warnings so the flow proceeds; scripts/triage_drc.py proves the violators are only the declared TAP-domain instances.
+set_drc_handling S1 warning
+set_drc_handling S2 warning
 set_system_mode analysis
 report_drc_rules -fails_summary > $B/scan_drc_summary.rpt
-report_drc_rules -all_fails > $B/scan_drc_all_fails.rpt
+report_drc_rules -all_fails -verbose > $B/scan_drc_all_fails.rpt
 report_clocks > $B/scan_clocks.rpt
 report_scan_elements > $B/scan_elements.rpt
 # 6 fabric chains (DFT_ARCHITECTURE section 8: 5 clk_i + 1 cpu_clk_i); chains 6,7 belong to the CPU macro (black box here).

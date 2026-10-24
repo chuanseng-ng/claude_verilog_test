@@ -39,7 +39,7 @@ $(LIB):
 # The sv2v netlist is the one the PD flow synthesises (pnr/Makefile sky130-soc-sv2v); regenerate it into BUILD so the
 # checked-in tree is not touched.
 sv2v: $(SV2V_NET)
-$(SV2V_NET): FORCE
+$(SV2V_NET):
 	mkdir -p $(BUILD)
 	$(MAKE) -C $(ROOT)/pnr sky130-soc-sv2v SV2V=$(SV2V) SKY130_SOC_SV2V_OUT=$(SV2V_NET) > $(BUILD)/sv2v.log 2>&1
 	@tail -4 $(BUILD)/sv2v.log
@@ -72,15 +72,15 @@ $(FIX_NET): $(GATE_NET) scripts/fixup_gate.py
 
 scan: $(SCAN_NET)
 $(SCAN_NET): $(FIX_NET) $(TCELLLIB) $(wildcard scripts/*.tcl)
-	cd $(BUILD) && /usr/bin/time -v -o scan.time tessent -shell -dofile $(HERE)/scripts/scan.tcl -logfile scan.log < /dev/null > scan.out 2>&1
+	cd $(BUILD) && /usr/bin/time -v -o scan.time tessent -shell -dofile $(HERE)/scripts/scan.tcl -logfile scan.log -replace < /dev/null > scan.out 2>&1
 	@grep -E "Elapsed|Maximum resident" $(BUILD)/scan.time
 	@test -s $(SCAN_NET)
+	python3 scripts/triage_drc.py $(FIX_NET) $(BUILD)/scan_drc_all_fails.rpt 2 > $(BUILD)/drc_triage.txt
 
 atpg: $(SCAN_NET)
-	cd $(BUILD) && /usr/bin/time -v -o atpg.time tessent -shell -dofile $(HERE)/scripts/atpg.tcl -logfile atpg.log < /dev/null > atpg.out 2>&1
+	cd $(BUILD) && /usr/bin/time -v -o atpg.time tessent -shell -dofile $(HERE)/scripts/atpg.tcl -logfile atpg.log -replace < /dev/null > atpg.out 2>&1
 	@grep -E "Elapsed|Maximum resident" $(BUILD)/atpg.time
 
 clean:
 	rm -rf $(BUILD)
 
-FORCE:
