@@ -33,9 +33,9 @@ case "$1" in
   run mbist_eval_top "$out/base_top.rpt" "read_verilog -lib $IFACE; read_verilog -defer $here/build/mbist_eval_top_sv2v.v"
   ;;
  tessent)
-  tsdb="$here/build/run/tsdb_outdir"
+  tsdb="${MBIST_RUN:-$here/build/run}/tsdb_outdir"
   insts=$(ls "$tsdb"/instruments/*/*.v | tr '\n' ' ')
   mod="$tsdb/dft_inserted_designs/mbist_eval_top_rtl1.dft_inserted_design/modified_rtl_files/mbist_eval_top_sv2v.v"
-  run mbist_eval_top "$out/tessent_top.rpt" "read_verilog -lib $IFACE; read_verilog -defer $insts $mod"
+  run mbist_eval_top "$out/tessent_top${MBIST_VARIANT:+_$MBIST_VARIANT}.rpt" "read_verilog -lib $IFACE; read_verilog -defer $insts $mod"
   ;;
 esac

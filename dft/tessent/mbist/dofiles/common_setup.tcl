@@ -6,5 +6,9 @@ read_verilog $::env(MBIST_HERE)/lib/sky130_sram_4kbyte_1rw1r_32x1024_8.v_interfa
 read_verilog $::env(MBIST_BUILD)/mbist_eval_top_sv2v.v
 set_current_design mbist_eval_top
 set_design_level physical_block
-set_dft_specification_requirements -memory_test on
+if {[info exists ::env(MBIST_VARIANT)] && $::env(MBIST_VARIANT) eq "tap"} {
+    set_dft_specification_requirements -memory_test on -host_scan_interface_type tap
+} else {
+    set_dft_specification_requirements -memory_test on
+}
 add_clocks clk -period 25ns

@@ -32,7 +32,7 @@ append body "        run_mode : hw_default;\n        parallel_retention_time : 2
 append body "          DiagnosisOptions { compare_go : on; compare_memory_go : on; }\n        }\n      }\n    }\n  }\n"
 append body "}\n"
 read_config_data -from_string $body
-process_patterns_specification -pattern_id full
+process_patterns_specification
 
 if {$::env(MBIST_MODEL) eq "fi"} {
     set_simulation_library_sources -v $::env(MBIST_ROOT)/tb/cocotb/soc/sram_fi_core.sv -v $::env(MBIST_HERE)/tb/sky130_sram_fi_tess.sv
