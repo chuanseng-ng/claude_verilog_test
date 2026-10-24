@@ -82,6 +82,7 @@ See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for
 | `docs/design/RTL_DEFINITION.md` | Interface signal definitions |
 | `docs/design/MEMORY_MAP.md` | Address space and register map |
 | `docs/design/DFT_ARCHITECTURE.md` | Sky130 DFT (scan + MBIST) Stage 0 feasibility, architecture, decisions (GH #244) |
+| `docs/design/TESSENT_ATPG_FLOW.md` | Tessent scan insertion + ATPG evaluation flow for the Sky130 SoC fabric (`dft/tessent/atpg/`, epic `j41m`, Stage 2 evaluation) |
 | `docs/design/REFERENCE_MODEL_SPEC.md` | Python reference model API |
 
 ### Physical Design

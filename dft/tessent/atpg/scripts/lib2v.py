@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Generate behavioural Verilog cell models from a Liberty file (sky130_fd_sc_hd).
 
 Why: Tessent's read_liberty only attaches *attributes* (scan pins, test_cell, clock gating) to cell models; the

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Netlist fix-ups between yosys and Tessent (generated artefact only; RTL is untouched).
 
 1. The RTL drives scan_out_o[5:0] with a placeholder tie (soc_top.sv `assign scan_out_o[..] = '0; // DFT_PLACEHOLDER`,

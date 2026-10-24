@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Replace the auto-created dft_cell_selection in the raw .tcelllib with a curated sky130_fd_sc_hd selection.
 Usage: mk_tcelllib.py raw.tcelllib out.tcelllib"""
 import re

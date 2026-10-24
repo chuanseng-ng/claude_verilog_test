@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Group Tessent DRC violations by the RTL hierarchy of the offending sequential cell.
 
 The yosys netlist is flat and its instances are anonymous (`_135887_`), but each flop/latch Q net keeps its RTL name
@@ -43,10 +44,7 @@ def group(net):
 
 rules = collections.defaultdict(collections.Counter)
 totals = collections.Counter()
-viol_re = re.compile(r"/(\S+?)(?:/\S+)?\s.*\(([A-Z]+\d+)-\d+\)")
-src_re = re.compile(r"\(([A-Z]+\d+)-\d+\)")
 for line in open(rpt_file):
-    m = re.search(r"(?:cell|flop|input \d+ of|latch|port)\s+/?(_\d+_|\S+?)(?:/\S+)?\s.*\(([A-Z]+\d+)-\d+\)\.?\s*$", line)
     m2 = re.search(r"\((S\d+|C\d+|D\d+|E\d+|A\d+)-\d+\)", line)
     if not m2:
         continue

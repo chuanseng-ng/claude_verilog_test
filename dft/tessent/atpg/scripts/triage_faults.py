@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Attribute Tessent untestable/undetected faults to RTL blocks.
 
 The netlist is flat with anonymous instances; each cell is attributed to the hierarchy prefix of its output net (or of its own

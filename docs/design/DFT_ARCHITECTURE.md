@@ -1141,3 +1141,9 @@ Totals: **landed in this PR (core domain + 2 collars + TAP delta) = 13,314 + 1,1
 * **Verification:** `mbist_ctrl` (3 build points), `mbist_tap` (3 clock ratios), `mbist_soc_slice` (real wrappers), `mbist_fi_equiv` (FI model == real simulation model), the existing `jtag_tap` / `dft_ctrl` suites against the extended TAP model, `test_dft_scan_check.py` (+5 tests for the TCK-block rules). Results are in the PR description.
 * **Checker changes:** `tools/dft/check_scan_clk_rst.py` `--tck-prefix` / `--tck-sink` / `--expect-tck-flops` and the `SYNC=CONSUMER@any` form of `--expect-reset-sync` (a reset synchroniser in a functional clock domain); `pnr/Makefile` `DFT_TAP_CHECK_ARGS` carries the three declared TAP outputs and the two sink prefixes.
 * **Not done / open:** CPU-macro collars and re-harden (16.7); SDC for the new crossings (item 12 of the table in 16.5, STA owner); `required_synchronisers` entries in `tools/cdc/cdc_config.yml` for the FIFO pointer synchronisers (see the PR for the CDC gate result); scan testability of the TCK-side FIFO storage (unscanned by N4); metastability is not modelable here.
+
+## 17. Tessent scan + ATPG evaluation (pointer)
+
+A Siemens Tessent 2025.4 scan-insertion and ATPG evaluation of the Sky130 SoC fabric (6 chains of ~3,044, stuck-at 94.17 % test coverage / 1,574 patterns, transition
+81.28 % / 2,567 patterns, 20 patterns simulated clean on VCS with a negative control) is in `docs/design/TESSENT_ATPG_FLOW.md`, code in `dft/tessent/atpg/`. It follows
+sections 8, 14, 15 and decision N4 unchanged, is not back-annotated into PD, and does not modify the RTL.

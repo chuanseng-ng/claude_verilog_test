@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
 """Create simulation stand-ins for the two black-box macro types of the SoC fabric netlist.
 
 ATPG treats rv32i_cpu_top and the SRAM macro as black boxes whose outputs are X, and Tessent's expected responses mask
