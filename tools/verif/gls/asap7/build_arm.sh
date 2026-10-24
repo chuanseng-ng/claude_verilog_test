@@ -45,6 +45,7 @@ case "$ARM" in
     SRC=(
       "$R/soc/axi_pkg.sv" "$R/soc/soc_addr_map_pkg.sv"
       "$R/cpu/core/rv32i_pipeline_pkg.sv" "$R/mem/rv32i_cache_pkg.sv"
+      "$R/soc/dft/mem_collar.sv" "$R/soc/dft/mbist_ctrl.sv"
       "$R/cpu/core/rv32i_alu.sv" "$R/cpu/core/rv32i_branch_comp.sv"
       "$R/cpu/core/rv32i_imm_gen.sv" "$R/cpu/core/rv32i_regfile.sv"
       "$R/cpu/core/rv32i_decode.sv" "$R/cpu/core/rv32i_forwarding_unit.sv"

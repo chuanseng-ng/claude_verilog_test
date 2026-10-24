@@ -90,6 +90,15 @@ module rv32i_cpu_top #(
     input  logic        scan_mode_i,
     input  logic        scan_en_i,
     input  logic [1:0]  scan_in_i,
-    output logic [1:0]  scan_out_o
+    output logic [1:0]  scan_out_o,
+
+    // MBIST boundary (bead c54a, DFT_ARCHITECTURE.md 16.7): 96 pins, same status as the four DFT ports
+    // above: present in the RTL and in this stub so the SoC netlist elaborates, absent from the committed
+    // ASAP7 macro views and from pnr/asap7/cpu/pin_order.cfg (not changed: the ASAP7 CPU macro re-harden is
+    // shelved, blocked on ma7/lxv/2kn; j41m.13 regenerates the views and must add these pins, which carry
+    // no live logic on the ASAP7 arm: the caches have no collars there and drive 0 as MBIST read data).
+    input  logic        mbist_run_i,
+    input  logic [25:0] mbist_cfg_i,
+    output logic [68:0] mbist_status_o
 );
 endmodule
