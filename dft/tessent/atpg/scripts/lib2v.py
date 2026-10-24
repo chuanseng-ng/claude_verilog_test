@@ -164,7 +164,12 @@ def model(cell):
         func = p["attrs"].get("function") or p["attrs"].get("state_function")
         if p["attrs"].get("direction") == "output" and func:
             for pn in p["args"]:
-                lines.append("  assign %s = %s;" % (pn, fn(func)))
+                ex = fn(func)
+                if re.fullmatch(r"[A-Za-z_]\w*", ex) and ex in ins:
+                    # a bare wire would be modelled as a _wire primitive; use a gate so Tessent sees a buffer
+                    lines.append("  buf g_%s (%s, %s);" % (pn, pn, ex))
+                else:
+                    lines.append("  assign %s = %s;" % (pn, ex))
         elif p["attrs"].get("direction") == "output":
             raise ValueError("output %s has no function" % p["args"][0])
     lines.append("endmodule")

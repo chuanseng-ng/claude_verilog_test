@@ -27,6 +27,7 @@ GATE_NET  := $(BUILD)/soc_top_gate.v
 FIX_NET   := $(BUILD)/soc_top_gate_fix.v
 SCAN_NET  := $(BUILD)/soc_top_scan.v
 ATPGLIB   := $(BUILD)/sky130_hd.atpglib
+TCELLLIB  := $(BUILD)/sky130_hd.tcelllib
 
 .PHONY: all synth scan atpg clean lib sv2v
 all: synth scan atpg
@@ -54,7 +55,7 @@ $(GATE_NET): $(SV2V_NET) $(LIB) scripts/synth.ys.in scripts/latch_map.v
 # Tessent cell library: Liberty -> zero-delay Verilog models (lib2v.py) -> LibComp -> .atpglib.  The Liberty is also
 # read by Tessent (read_liberty) for scan-cell equivalence and clock-gate attributes.
 .PHONY: cells
-cells: $(ATPGLIB)
+cells: $(TCELLLIB)
 $(ATPGLIB): $(LIB) scripts/lib2v.py
 	mkdir -p $(BUILD)/libcomp
 	python3 scripts/lib2v.py $(LIB) $(BUILD)/sky130_hd_models.v $(BUILD)/lib2v_report.txt
@@ -62,11 +63,15 @@ $(ATPGLIB): $(LIB) scripts/lib2v.py
 	cp $(BUILD)/libcomp/libcomp.atpglib $(ATPGLIB)
 	@! grep -E "^// *Error" $(BUILD)/libcomp/libcomp.log
 
+$(TCELLLIB): $(ATPGLIB) scripts/gen_tcelllib.tcl scripts/mk_tcelllib.py
+	cd $(BUILD) && tessent -shell -dofile $(HERE)/scripts/gen_tcelllib.tcl -logfile gen_tcelllib.log -replace < /dev/null > gen_tcelllib.out 2>&1
+	python3 scripts/mk_tcelllib.py $(BUILD)/sky130_hd_raw.tcelllib $(TCELLLIB)
+
 $(FIX_NET): $(GATE_NET) scripts/fixup_gate.py
 	python3 scripts/fixup_gate.py $(GATE_NET) $(FIX_NET)
 
 scan: $(SCAN_NET)
-$(SCAN_NET): $(FIX_NET) $(ATPGLIB) $(wildcard scripts/*.tcl)
+$(SCAN_NET): $(FIX_NET) $(TCELLLIB) $(wildcard scripts/*.tcl)
 	cd $(BUILD) && /usr/bin/time -v -o scan.time tessent -shell -dofile $(HERE)/scripts/scan.tcl -logfile scan.log < /dev/null > scan.out 2>&1
 	@grep -E "Elapsed|Maximum resident" $(BUILD)/scan.time
 	@test -s $(SCAN_NET)
