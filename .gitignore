@@ -130,3 +130,11 @@ vcs_cov_scope_*.f
 vcs_cov_scope_*.cfg
 cm.log
 cm_name_*/
+
+# DQC flow (SpyGlass/HAL run directories and scratch)
+dqc/run/
+spyglass-reports/
+*.vdb
+.spyglass_cache/
+hal.log
+xrun.history

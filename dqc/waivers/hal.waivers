@@ -1,0 +1,8 @@
+# hal.waivers - Cadence HAL waivers (DQC flow).  id | tag | file-regex | message-regex | by | why
+# All six fields mandatory; a waiver that matches nothing FAILS the run (stale).
+# Style categories (RTL_NAMING, RTL_FILEFORMAT, RTL_CODECOMMENT, RTL_CODINGSTYLE: 80-column,
+# begin/end, ...) and CBPAHI (hierarchy-crossing combinational path; 3797 rows, a structure metric
+# on vector_register_file/dcache/dma/regbanks, not a defect) are switched off in the Makefile
+# (HAL_NOCHECK), not waived line by line.
+hal-gltasr-cdc-reset-sync | GLTASR | rtl/soc/cdc/cdc_reset_sync\.sv | mux\(scanmode_i\) | dqc-triage(agent), pending user review | Intentional DFT reset override mux (scan_mode selects scan_rst_ni): DFT_ARCHITECTURE.md sec.14, enforced by tools/dft/check_scan_clk_rst.py
+hal-gltasr-dft-rst-mux | GLTASR | rtl/soc/dft/dft_rst_mux\.sv | mux\(scan_mode_i\) | dqc-triage(agent), pending user review | Same intentional scan_mode reset mux; the mux IS the DFT reset-control cell
