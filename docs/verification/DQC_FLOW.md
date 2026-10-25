@@ -65,14 +65,14 @@ TCK-domain crossings (the MBIST control word and status) are real crossings and 
 | Goal | Fatal | Error | Warning | Waived | Unwaived Fatal+Error | Wall / peak RSS | Verdict |
 | :-- | --: | --: | --: | --: | --: | :-- | :-- |
 | lint/lint_rtl, before waivers | 0 | 1024 | 604 | 0 | 1024 | 900 s / 1.66 GB (Tessent job concurrent) | FAIL |
-| lint/lint_rtl, after `lint_soc_top.awl` | 0 | 0 | 608 | 1024 | 0 | re-report on the saved project: seconds | 0 errors (see note) |
+| lint/lint_rtl, after `lint_soc_top.awl` | 0 | 0 | 604 (+4 info) | 1024 | 0 | 209 s / 1.66 GB | **PASS** |
 | cdc/cdc_setup_check | 0 | 0 | 32 | 0 | 0 | 96 s / 1.65 GB | PASS (2 rules not run, accepted) |
 | cdc/cdc_verify_struct | 0 | 0 | 45 | 0 | 0 | 90 s / 1.68 GB | **INCOMPLETE** (crossing rules not run) |
 | rdc/rdc_verify_struct | not run on soc_top | | | | | selftest: 9 s / 0.77 GB | **INCOMPLETE** |
 | HAL (`make hal`), raw | - | 3802 | 6337 warn / 1598 notes | 0 | 3802 | 36 s / 0.68 GB | FAIL |
 | HAL, after config + `hal.waivers` | - | 1 | 6337 | 4 | 1 | 32 s / 0.68 GB | FAIL (open F-7) |
 
-Note on the lint "after" row: the waiver was applied by loading the `.awl` into the saved project and re-writing `moresimple` (1632 generated, 1024 waived, 608 reported). The full `make lint` was not re-run end to end with the waiver in place. **First action on resume: `make -C dqc lint` and confirm PASS.**
+Note on the lint "after" row: measured by a full `make -C dqc lint` run end to end with the waiver in place (2026-10-25, on this branch merged with `main` at `8ca75b3`): `fatal=0 error=0 warning=604 info=4`, `waived by .awl: 1024`, `VERDICT: PASS`. The earlier figure of 608 came from re-reporting the saved project and counted the 4 info rows as warnings.
 
 ### Negative control (`make -C dqc selftest`)
 
@@ -106,7 +106,7 @@ Remaining lint warnings (W415a x276, STARC05-2.2.3.3 x81, W240 x75, W528 x62, ST
 
 ## Open work / exact resume point
 
-1. Run `make -C dqc lint` end to end and confirm PASS with the waiver (only the saved-project re-report was done).
+1. ~~Run `make -C dqc lint` end to end with the waiver~~ Done 2026-10-25: PASS (see Results).
 2. Resolve the `cdc_adv_checker` licence key, then re-run `make -C dqc selftest` (must go green), `cdc`, `rdc`; triage the real crossings (CDC/RDC) and add SGDC qualifiers for the project synchronisers only for crossings proven safe.
 3. HAL: 3802 raw errors = 3797 CBPAHI (turned off, structure metric) + 4 GLTASR (waived, intentional DFT reset mux) + 1 VERCAS (F-7, open). Style categories are off via `HAL_NOCHECK`; 6337 warnings remain listed, not triaged.
 4. `ARM=sky130` run (`SRAM_SKY130`).
