@@ -1,0 +1,43 @@
+STAGE_TIME: floorplan 4 s
+STAGE_TIME: pdn 7 s
+STAGE_TIME: place_opt 461 s
+STAGE_TIME: place 471 s
+STAGE_TIME: clock_opt 719 s
+STAGE_TIME: cts 724 s
+STAGE_TIME: route_auto 106 s
+STAGE_TIME: route_opt 73 s
+STAGE_TIME: route 212 s
+  puts "REPAIR_PASS $i: DRCs=$d shorts=$s"
+REPAIR_PASS 1: DRCs=81 shorts=100
+REPAIR_PASS 2: DRCs=35 shorts=54
+REPAIR_PASS 3: DRCs=9 shorts=9
+REPAIR_PASS 4: DRCs=4 shorts=3
+STAGE_TIME: repair 143 s
+  puts "REPAIR_PASS $i: DRCs=$d shorts=$s"
+REPAIR_PASS 1: DRCs=3 shorts=2
+REPAIR_PASS 2: DRCs=2 shorts=0
+REPAIR_PASS 3: DRCs=7 shorts=6
+REPAIR_PASS 4: DRCs=1 shorts=1
+REPAIR_PASS 5: DRCs=1 shorts=0
+REPAIR_PASS 6: DRCs=1 shorts=1
+REPAIR_PASS 7: DRCs=0 shorts=0
+STAGE_TIME: repair 136 s
+    puts "FINAL_${tag}: violating_paths(<=1000 listed)=$n wns=$wns tns_of_listed=$tns"
+    puts "FINAL_${tag}_WORST_SLACK: [get_attribute $p1 slack]"
+  if {$rc} { puts "FINAL_${tag}: query failed: $e" }
+FINAL_SETUP: violating_paths(<=1000 listed)=1 wns=-0.004559 tns_of_listed=-0.004559
+FINAL_SETUP_WORST_SLACK: -0.004559
+FINAL_HOLD: violating_paths(<=1000 listed)=0 wns=0.0 tns_of_listed=0.0
+FINAL_HOLD_WORST_SLACK: 0.000755
+  puts "FILLER_FIX pass $k: [llength $names] filler cells overlap routed shapes"
+FILLER_FIX pass 1: 428 filler cells overlap routed shapes
+FILLER_FIX pass 2: 0 filler cells overlap routed shapes
+STAGE_TIME: finish 123 s
+01_floorplan 0:14.44 1911180kB
+02_pdn 0:14.02 2001412kB
+03_place 8:00.40 3101068kB
+04_cts 12:12.58 3772512kB
+05_route 3:40.18 3258956kB
+05b_repair 2:32.13 2965496kB
+05c_repair 2:24.13 2589164kB
+06_finish 2:12.12 3564716kB

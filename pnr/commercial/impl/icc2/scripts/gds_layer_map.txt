@@ -1,0 +1,21 @@
+; ICC2 tool layer (from sky130_hd.tf layerNumber) -> sky130A GDS layer:datatype  (source: ~/pdk/sky130A/libs.tech/klayout/tech/sky130A.map)
+ 1   64:20    ; nwell
+ 2   122:16   ; pwell (label)
+ 10  66:44    ; licon (polyCont)
+ 22  67:20    ; li1
+ 21  67:44    ; mcon
+ 24  68:20    ; met1
+ 23  68:44    ; via
+ 26  69:20    ; met2
+ 25  69:44    ; via2
+ 28  70:20    ; met3
+ 27  70:44    ; via3
+ 30  71:20    ; met4
+ 29  71:44    ; via4
+ 32  72:20    ; met5
+text 22  67:5
+text 24  68:5
+text 26  69:5
+text 28  70:5
+text 30  71:5
+text 32  72:5

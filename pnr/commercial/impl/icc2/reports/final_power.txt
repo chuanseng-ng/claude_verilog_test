@@ -1,0 +1,80 @@
+****************************************
+Report : power
+        -significant_digits 2
+Design : rv32i_cpu_top
+Version: X-2025.06-SP1
+Date   : Mon Oct 26 01:51:51 2026
+****************************************
+Information: Activity propagation will be performed for scenario default.
+Warning: Mapping to scan cell 'sky130_fd_sc_hd__sdfbbn_1' in library is not possible because cell has 'dont_use' attribute. (SQM-1067)
+Warning: Mapping to scan cell 'sky130_fd_sc_hd__sdfbbn_2' in library is not possible because cell has 'dont_use' attribute. (SQM-1067)
+Warning: Mapping to scan cell 'sky130_fd_sc_hd__sdfbbp_1' in library is not possible because cell has 'dont_use' attribute. (SQM-1067)
+Warning: Mapping to scan cell 'sky130_fd_sc_hd__sedfxbp_1' in library is not possible because cell has 'dont_use' attribute. (SQM-1067)
+Warning: Mapping to scan cell 'sky130_fd_sc_hd__sedfxbp_2' in library is not possible because cell has 'dont_use' attribute. (SQM-1067)
+Warning: Mapping to scan cell 'sky130_fd_sc_hd__sedfxtp_1' in library is not possible because cell has 'dont_use' attribute. (SQM-1067)
+Warning: Mapping to scan cell 'sky130_fd_sc_hd__sedfxtp_2' in library is not possible because cell has 'dont_use' attribute. (SQM-1067)
+Warning: Mapping to scan cell 'sky130_fd_sc_hd__sedfxtp_4' in library is not possible because cell has 'dont_use' attribute. (SQM-1067)
+Information: Doing activity propagation for mode 'default' and corner 'default' with effort level 'medium'. (POW-024)
+Information: Timer-derived activity data is cached on scenario default (POW-052)
+Infomation: Fast mode activity propagation power.rtl_activity_annotation setup is ignored. Always use accurate mode.
+Information: Running switching activity propagation with 2 threads!
+
+ **** Information : No. of simulation cycles = 6 ****
+Mode: default
+Corner: default
+Scenario: default
+Voltage: 1.80
+Temperature: 25.00
+
+Voltage Unit         : 1V
+Capacitance Unit     : 1pF
+Time Unit            : 1ns
+Temperature Unit     : 1C
+Dynamic Power Unit   : 1nW
+Leakage Power Unit   : 1nW
+
+Switched supply net power scaling:
+scaling for leakage power
+
+Supply nets:
+VPWR (power) probability 1.00 (default)
+VGND (ground) probability 1.00 (default)
+Warning: Power table extrapolation (extrapolation mode) for port clk0 on cell u_core/u_dcache/u_tag_sram for parameter Tinp. Lowest table value = inf, highest table value = inf, value = 0.420666 (POW-046)
+Warning: Power table extrapolation (extrapolation mode) for port clk0 on cell u_core/u_dcache/u_tag_sram for parameter Cout. Lowest table value = inf, highest table value = inf, value = 0.000000 (POW-046)
+Warning: Power table extrapolation (extrapolation mode) for port clk1 on cell u_core/u_dcache/u_tag_sram for parameter Tinp. Lowest table value = inf, highest table value = inf, value = 0.355434 (POW-046)
+Warning: Power table extrapolation (extrapolation mode) for port clk1 on cell u_core/u_dcache/u_tag_sram for parameter Cout. Lowest table value = inf, highest table value = inf, value = 0.000000 (POW-046)
+Warning: Fall toggles on pin u_mbist_ctrl_g_xtag_x_rd_n_q_reg/Q are impossible given input states; converted to rise toggles. (POW-069)
+Warning: Power table extrapolation (extrapolation mode) for port X on cell gre_a_BUF_209_inst_16033 for parameter Tinp. Lowest table value = 0.010000, highest table value = 1.500000, value = 0.007572 (POW-046)
+Warning: Power table extrapolation (extrapolation mode) for port X on cell gre_a_BUF_218_inst_16039 for parameter Tinp. Lowest table value = 0.010000, highest table value = 1.500000, value = 0.002346 (POW-046)
+Warning: Power table extrapolation (extrapolation mode) for port X on cell ZBUF_2_inst_10884 for parameter Tinp. Lowest table value = 0.010000, highest table value = 1.500000, value = 0.007362 (POW-046)
+Warning: Power table extrapolation (extrapolation mode) for port clk0 on cell u_core/u_icache_gen_data_sram_3__u_data_sram for parameter Tinp. Lowest table value = inf, highest table value = inf, value = 0.478516 (POW-046)
+Warning: Power table extrapolation (extrapolation mode) for port clk0 on cell u_core/u_icache_gen_data_sram_3__u_data_sram for parameter Cout. Lowest table value = inf, highest table value = inf, value = 0.000000 (POW-046)
+Warning: Power table extrapolation (extrapolation mode) for port clk1 on cell u_core/u_icache_gen_data_sram_3__u_data_sram for parameter Tinp. Lowest table value = inf, highest table value = inf, value = 0.405560 (POW-046)
+Note - message 'POW-046' limit (10) exceeded. Remainder will be suppressed.
+Warning: Rise-Fall toggles on pin u_core/U14328/X are impossible given input states; converted to zero toggles. (POW-069)
+Warning: Rise-Fall toggles on pin u_core/U18070/Y are impossible given input states; converted to zero toggles. (POW-069)
+
+  Cell Internal Power    = 4.56e+07 nW ( 81.7%)
+  Net Switching Power    = 1.02e+07 nW ( 18.3%)
+Total Dynamic Power      = 5.58e+07 nW (100.0%)
+
+Cell Leakage Power       = 9.53e+04 nW
+
+
+  Attributes
+  ----------
+      u  -  User defined power group
+      i  -  Includes clock pin internal power
+
+Power Group         Internal Power        Switching Power          Leakage Power            Total Power    (   %  )    Attrs
+-----------------------------------------------------------------------------------------------------------------------------
+io_pad                    0.00e+00               0.00e+00               0.00e+00               0.00e+00    (  0.0%)         
+memory                    2.88e+07               1.53e+05               9.52e+04               2.90e+07    ( 51.9%)         
+black_box                -6.65e-01               0.00e+00               1.36e+01               1.30e+01    (  0.0%)         
+clock_network             1.63e+07               7.33e+06               2.08e+00               2.37e+07    ( 42.3%)        i
+register                  5.12e+04               6.49e+04               4.67e+01               1.16e+05    (  0.2%)         
+sequential                0.00e+00               0.00e+00               0.00e+00               0.00e+00    (  0.0%)         
+combinational             4.50e+05               2.70e+06               6.65e+01               3.15e+06    (  5.6%)         
+-----------------------------------------------------------------------------------------------------------------------------
+Total                     4.56e+07 nW            1.02e+07 nW            9.53e+04 nW            5.59e+07 nW
+1

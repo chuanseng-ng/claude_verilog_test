@@ -1,0 +1,26 @@
+****************************************
+Report : report_utilization
+Design : rv32i_cpu_top
+Version: X-2025.06-SP1
+Date   : Mon Oct 26 01:53:18 2026
+****************************************
+Utilization Ratio:			0.0723
+Utilization options:
+ - Area calculation based on:		site_row of block rv32i_cpu_top/06_finish
+ - Categories of objects excluded:	hard_macros macro_keepouts soft_macros io_cells hard_blockages 
+Total Area:				6244751.7120
+Total Capacity Area:			4337622.6240
+Total Area of cells:			313528.1984
+Area of excluded objects:
+ - hard_macros         :		1917876.1600
+ - macro_keepouts      :		0.0000
+ - soft_macros         :		0.0000
+ - io_cells            :		0.0000
+ - hard_blockages      :		0.0000
+Total Area of excluded objects:		1917876.1600
+Ratio of excluded objects:		0.3071
+
+Utilization of site-rows with:
+ - Site 'unithd':				0.0723
+
+0.0723

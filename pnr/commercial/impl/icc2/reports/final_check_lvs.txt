@@ -1,0 +1,34 @@
+Information: Using 2 threads for LVS
+[Check Short] Stage 1	[Check Net] Init	Elapsed =    0:00:00, CPU =    0:00:00
+Elapsed =    0:00:00, CPU =    0:00:00
+Warning: Port VPWR have no valid pin shapes. Skip this port. (RT-203)
+[Check Short] Stage 1-2	Elapsed =    0:00:01, CPU =    0:00:01
+[Check Short] Stage 2	Elapsed =    0:00:01, CPU =    0:00:01
+[Check Short] Stage 2-2	Elapsed =    0:00:10, CPU =    0:00:19
+[Check Short] Stage 3	Elapsed =    0:00:10, CPU =    0:00:19
+[Check Short] End	Elapsed =    0:00:10, CPU =    0:00:19
+Warning: Port VGND have no valid pin shapes. Skip this port. (RT-203)
+[Check Net] 10% 	Elapsed =    0:00:11, CPU =    0:00:21
+[Check Net] 20% 	Elapsed =    0:00:11, CPU =    0:00:22
+[Check Net] 30% 	Elapsed =    0:00:12, CPU =    0:00:24
+[Check Net] 40% 	Elapsed =    0:00:13, CPU =    0:00:24
+[Check Net] 50% 	Elapsed =    0:00:13, CPU =    0:00:24
+[Check Net] 60% 	Elapsed =    0:00:13, CPU =    0:00:25
+[Check Net] 70% 	Elapsed =    0:00:13, CPU =    0:00:25
+[Check Net] 80% 	Elapsed =    0:00:13, CPU =    0:00:25
+[Check Net] 90% 	Elapsed =    0:00:13, CPU =    0:00:25
+[Check Net] All nets are submitted.
+[Check Net] 100%	Elapsed =    0:00:13, CPU =    0:00:25
+
+===============================================================
+    Maximum number of violations is set to 100000
+    Abort checking when more than 100000 violations are found
+    All violations might not be found.
+===============================================================
+Total number of input nets is 35143.
+Total number of short violations is 0.
+Total number of open nets is 0.
+Total number of floating route violations is 0.
+
+Elapsed =    0:00:14, CPU =    0:00:26
+1

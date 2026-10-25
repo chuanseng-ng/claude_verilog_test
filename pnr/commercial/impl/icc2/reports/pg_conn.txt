@@ -1,0 +1,37 @@
+Checking secondary net through power switch is enabled. 
+Secondary net will be checked together from primary net. They will be treated as the same net
+Primary Net : VPWR    Secondary Net:
+Primary Net : VGND    Secondary Net:
+Loading cell instances...
+Number of Standard Cells: 0
+Number of Macro Cells: 10
+Number of IO Pad Cells: 0
+Number of Blocks: 0
+Loading P/G wires and vias...
+Number of VPWR Wires: 1107
+Number of VPWR Vias: 22262
+Number of VPWR Terminals: 0
+**************Verify net VPWR connectivity*****************
+  Number of floating wires: 0
+  Number of floating vias: 0
+  Number of floating std cells: 0
+  Number of floating hard macros: 0
+  Number of floating I/O pads: 0
+  Number of floating terminals: 0
+  Number of floating hierarchical blocks: 0
+************************************************************
+Loading cell instances...
+Loading P/G wires and vias...
+Number of VGND Wires: 1102
+Number of VGND Vias: 22724
+Number of VGND Terminals: 0
+**************Verify net VGND connectivity*****************
+  Number of floating wires: 0
+  Number of floating vias: 0
+  Number of floating std cells: 0
+  Number of floating hard macros: 0
+  Number of floating I/O pads: 0
+  Number of floating terminals: 0
+  Number of floating hierarchical blocks: 0
+************************************************************
+Overall runtime: 0 seconds.
