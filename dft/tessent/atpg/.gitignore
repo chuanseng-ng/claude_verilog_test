@@ -1,2 +1,4 @@
 build/
 lib/
+# Committed evidence: the root .gitignore ignores every reports/ directory; this flow keeps its small summaries
+!reports/

@@ -1,0 +1,18 @@
+# wall-clock and peak RSS, 8-core host shared with a SpyGlass job; Tessent ran single-threaded (add_processors -number is not accepted in 2025.4; 1 thread used)
+## scan
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:36.32
+	Maximum resident set size (kbytes): 1167684
+## atpg
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 4:55.29
+	Maximum resident set size (kbytes): 1182512
+## atpg_trans
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 26:28.83
+	Maximum resident set size (kbytes): 1218340
+## synth (yosys)
+Elapsed 17:44.23, max RSS 1102428 kB
+## vcs stuck-at serial, 20 sampled patterns (compile ~1 min)
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 2:33.90
+	Maximum resident set size (kbytes): 153200
+## vcs negative control
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 2:31.72
+	Maximum resident set size (kbytes): 153180

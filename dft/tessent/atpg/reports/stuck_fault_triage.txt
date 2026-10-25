@@ -1,0 +1,48 @@
+== build/stuck_faults_AU.rpt
+ AU: 6468
+      2645  (top-level glue / anonymous nets)
+      1155  u_crypto
+       438  u_npu
+       362  u_mbist
+       267  u_i2c
+       182  u_trng
+       174  u_spi
+       165  u_bus
+       160  u_pwm
+       159  u_gpio
+ AU.BB: 5729
+      3097  u_cpu_axi_cdc
+      1399  (top-level glue / anonymous nets)
+       460  u_sram
+       395  u_npu
+       137  (port / unknown)
+       109  u_apb_dbg_cdc
+       105  u_mbist
+        11  u_cpu_iso_en_sync
+         8  u_bus
+         8  u_dft_ctrl
+ AU.PC: 9377
+      6015  (top-level glue / anonymous nets)
+      2598  u_crypto
+       419  u_mbist
+       304  u_dft_ctrl
+        14  u_cpu_axi_cdc
+         6  (port / unknown)
+         4  u_apb_dbg_cdc
+         3  u_cpu_clk_dis_sync
+         3  u_apb_pll2_cdc
+         3  u_cpu_pmu_rst_sync
+ AU.SEQ: 168
+       168  u_mbist
+ AU.TC: 5373
+      3101  u_dft_ctrl
+      1416  (top-level glue / anonymous nets)
+       852  u_mbist
+         4  (port / unknown)
+== build/stuck_faults_UO.rpt
+ UO.AAB: 57
+        46  (top-level glue / anonymous nets)
+         6  u_dma
+         2  u_npu
+         2  u_bus
+         1  u_crypto

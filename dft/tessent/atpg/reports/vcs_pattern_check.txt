@@ -1,0 +1,9 @@
+stuck-at serial, 20 sampled patterns of 1574 (plus chain test), netlist soc_top_scan.v:
+Begin chain test
+End chain test
+No error between simulated and expected patterns
+Time: 2802282 ns
+negative control (one scan link SCD tied to 1'b0, mid-file):
+Begin chain test
+End chain test
+Error between simulated and expected patterns
