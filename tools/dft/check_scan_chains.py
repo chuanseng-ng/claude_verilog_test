@@ -55,6 +55,9 @@ def main() -> int:
 
     cells = parse(a.netlist)
     problems = []
+    raw = open(a.netlist, encoding="utf-8", errors="replace").read()
+    if re.search(r"\bscan_(?:enable|in|out)_\d+\b", raw):
+        problems.append("insert_dft's own ports (scan_enable_N / scan_in_N / scan_out_N) are still in the netlist")
     driver = {}  # net -> (cell, pin) for output pins
     for cname, (typ, pins) in cells.items():
         for pin, net in pins.items():

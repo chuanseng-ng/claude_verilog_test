@@ -1,7 +1,7 @@
 {
     "meta": {
         "version": 2,
-        "flow": "Classic",
+        "flow": "CVTClassicScan",
         "substituting_steps": {
             "OpenROAD.RepairDesignPostGPL": "CVT.RepairDesignPostGPL",
             "OpenROAD.ResizerTimingPostCTS": "CVT.ResizerTimingPostCTS",
@@ -156,5 +156,13 @@
     "GRT_ANTENNA_ITERS": 20,
     "GRT_ANTENNA_MARGIN": 50,
     "CVT_RC_CALIBRATION": "nom=1.88,1.02 min=1.69,0.62 max=2.04,1.91",
-    "CVT_MAXCAP_WAIVERS": "dir::constraints/max_cap_waivers.json"
+    "CVT_MAXCAP_WAIVERS": "dir::constraints/max_cap_waivers.json",
+    "// SCAN_NOTE": "DFT Stage 2 (bead j41m.8): flow CVTClassicScan = Classic + CVT.ScanInsert after Checker.NetlistAssignStatements. OpenROAD 26Q2 dft (CVT_SCAN_OPENROAD, set by pnr/Makefile) scan-replaces every flop and stitches 5 core_clk chains + 1 cpu-domain chain (max 3700 cells) onto scan_in_i[5:0]/scan_out_o[5:0] (chains 7:6 are inside the CPU macro). Unscanned by design: the TAP/test-clock flops (tck_i, scan_clk_i domains) and the 256 crypto key registers (DFT_ARCHITECTURE.md 7). Every SCE joins dft_scan_en. insert_dft does not reuse existing ports, so its own are merged into ours.",
+    "CVT_SCAN_CLOCKS": ["core_clk:clk_i:25", "cpu_clk:cpu_clk_i:25", "tck:tck_i:100"],
+    "CVT_SCAN_MAX_LENGTH": 3700,
+    "CVT_SCAN_EXCLUDE_CLOCK_NETS": ["tck_i", "scan_clk_i"],
+    "CVT_SCAN_EXCLUDE_QNET_REGEX": "u_crypto\\.(g_aes\\.u_aes\\.rk_q|key_q)",
+    "CVT_SCAN_EXPECT_QNET_EXCLUDED": 256,
+    "CVT_SCAN_PORT_ORDER": ["^core_clk$", "^cpu_(core|gated)_clk$"],
+    "CVT_SCAN_EN_NET": "dft_scan_en"
 }

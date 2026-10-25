@@ -88,6 +88,34 @@ SCAN_VARS = [
 _ASSIGN_RE = re.compile(r"^\s*assign\s", re.M)
 
 
+_TOOL_PORT_RE = re.compile(r"scan_(?:enable|in|out)_\d+")
+
+
+def strip_tool_ports(text: str) -> Tuple[str, List[str]]:
+    """Remove the dangling ports insert_dft created.
+
+    The ODB-side merge leaves ``scan_enable_0`` / ``scan_in_<k>`` / ``scan_out_<k>`` in the written module header and as
+    ``input``/``output`` declarations (OpenROAD keeps the module port); they carry no net, but the flow's IO placement
+    then fails with "scan_in_0 not found in config but found in design".  Returns the cleaned text and the dropped names.
+    """
+    m = re.search(r"\bmodule\s+\S+\s*\((.*?)\);", text, re.S)
+    if not m:
+        raise StepError("scan netlist: no module header found")
+    names = [n.strip() for n in m.group(1).split(",")]
+    dropped = [n for n in names if _TOOL_PORT_RE.fullmatch(n)]
+    keep = [n for n in names if not _TOOL_PORT_RE.fullmatch(n)]
+    header = m.group(0)[: m.group(0).index("(") + 1] + "\n    " + ",\n    ".join(keep) + ");"
+    text = text[: m.start()] + header + text[m.end():]
+    for n in dropped:
+        text, k = re.subn(rf"^\s*(?:input|output)\s+{re.escape(n)}\s*;\s*\n", "", text, flags=re.M)
+        if k != 1:
+            raise StepError(f"scan netlist: expected one declaration of tool port {n}, removed {k}")
+    left = [n for n in dropped if re.search(rf"\b{re.escape(n)}\b", text)]
+    if left:
+        raise StepError(f"scan netlist: tool port(s) {left} are still referenced after stripping")
+    return text, dropped
+
+
 @Step.factory.register()
 class CVTScanInsert(Step):
     id = "CVT.ScanInsert"
@@ -160,7 +188,12 @@ class CVTScanInsert(Step):
                 "(CVT-SCAN-ERROR lines name the cause)"
             )
         with open(nl_out, encoding="utf-8", errors="replace") as fh:
-            n_assign = len(_ASSIGN_RE.findall(fh.read()))
+            text = fh.read()
+        text, dropped = strip_tool_ports(text)
+        self.info(f"dropped the tool-created ports {dropped}")
+        with open(nl_out, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        n_assign = len(_ASSIGN_RE.findall(text))
         if n_assign:
             raise StepError(f"scan netlist has {n_assign} assign statement(s); Checker.NetlistAssignStatements would reject it")
 

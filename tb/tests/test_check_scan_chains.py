@@ -1,0 +1,66 @@
+"""Unit tests for tools/dft/check_scan_chains.py (bead j41m.8): a good 2-chain netlist passes, and each defect fails."""
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+TOOL = Path(__file__).resolve().parents[2] / "tools" / "dft" / "check_scan_chains.py"
+
+GOOD = """module m (clk, se, scan_in_i, scan_out_o);
+  input clk; input se; input [1:0] scan_in_i; output [1:0] scan_out_o;
+  wire q0, q1, q2, q3, h;
+  sky130_fd_sc_hd__sdfxtp_2 f0 (.CLK(clk), .D(q3), .Q(q0), .SCD(scan_in_i[0]), .SCE(se));
+  sky130_fd_sc_hd__sdfxtp_2 f1 (.CLK(clk), .D(q0), .Q(q1), .SCD(h), .SCE(se));
+  sky130_fd_sc_hd__dlygate4sd3_1 hb (.A(q0), .X(h));
+  sky130_fd_sc_hd__sdfxtp_2 f2 (.CLK(clk), .D(q1), .Q(q2), .SCD(scan_in_i[1]), .SCE(se));
+  sky130_fd_sc_hd__dfxtp_2 skipped (.CLK(clk), .D(q2), .Q(q3));
+  sky130_fd_sc_hd__buf_2 ob0 (.A(q1), .X(scan_out_o[0]));
+  sky130_fd_sc_hd__buf_2 ob1 (.A(q2), .X(scan_out_o[1]));
+endmodule
+"""
+
+
+def run(tmp_path, text, *args):
+    nl = tmp_path / "n.v"
+    nl.write_text(text)
+    return subprocess.run([sys.executable, str(TOOL), str(nl), "--chains", "2", "--en-net", "se", *args],
+                          capture_output=True, text=True)
+
+
+def test_good_netlist_passes_and_reports_lengths(tmp_path):
+    r = run(tmp_path, GOOD, "--expect-chains", "2", "--expect-unscanned", "1", "--expect-length", "2,1")
+    assert r.returncode == 0, r.stdout
+    assert "lengths [2, 1]" in r.stdout
+
+
+def test_broken_link_is_an_orphan(tmp_path):
+    r = run(tmp_path, GOOD.replace(".SCD(h)", ".SCD(q2)"))
+    assert r.returncode == 1 and "FAIL" in r.stdout
+
+
+def test_two_sce_nets_fail(tmp_path):
+    r = run(tmp_path, GOOD.replace("f2 (.CLK(clk), .D(q1), .Q(q2), .SCD(scan_in_i[1]), .SCE(se))",
+                                   "f2 (.CLK(clk), .D(q1), .Q(q2), .SCD(scan_in_i[1]), .SCE(clk))"))
+    assert r.returncode == 1 and "SCE" in r.stdout
+
+
+def test_wrong_scan_out_driver_fails(tmp_path):
+    r = run(tmp_path, GOOD.replace(".A(q2), .X(scan_out_o[1])", ".A(q3), .X(scan_out_o[1])"))
+    assert r.returncode == 1
+
+
+def test_unscanned_count_mismatch_fails(tmp_path):
+    r = run(tmp_path, GOOD, "--expect-unscanned", "0")
+    assert r.returncode == 1
+
+
+@pytest.mark.parametrize("bad", ["--expect-chains 3", "--expect-length 1,2"])
+def test_expectation_mismatch_fails(tmp_path, bad):
+    r = run(tmp_path, GOOD, *bad.split())
+    assert r.returncode == 1
+
+
+def test_leftover_tool_port_fails(tmp_path):
+    r = run(tmp_path, GOOD.replace("output [1:0] scan_out_o;", "output [1:0] scan_out_o; input scan_in_0;"))
+    assert r.returncode == 1 and "own ports" in r.stdout
