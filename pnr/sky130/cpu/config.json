@@ -1,7 +1,7 @@
 {
     "meta": {
         "version": 2,
-        "flow": "Classic"
+        "flow": "CVTClassicScan"
     },
 
     "DESIGN_NAME": "rv32i_cpu_top",
@@ -15,6 +15,11 @@
     ],
 
     "VERILOG_DEFINES": ["SRAM_SKY130"],
+
+    "// SCAN_NOTE": "DFT Stage 2 (bead j41m.8): flow CVTClassicScan = Classic + CVT.ScanInsert (pnr/sky130/soc/plugin/cvt_scan_step.py) right after the synthesis checkers. OpenROAD 26Q2 dft (CVT_SCAN_OPENROAD, set by pnr/Makefile) scan-replaces every flop and stitches 2 chains (max 2660 cells) onto the pre-existing scan_in_i[1:0]/scan_out_o[1:0]; every SCE is joined to scan_en_i. 26Q2 insert_dft does not reuse existing ports, so its own ports are merged into ours (DFT_ARCHITECTURE.md 14.12).",
+    "CVT_SCAN_CLOCKS": ["clk_i:clk_i:13.333"],
+    "CVT_SCAN_MAX_LENGTH": 2660,
+    "CVT_SCAN_EN_NET": "scan_en_i",
 
     "CLOCK_PORT":   "clk_i",
     "CLOCK_NET":    "clk_i",
