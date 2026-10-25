@@ -238,16 +238,23 @@ proc cdc_skew_report {} {
         lassign [dict get $::cdc_ptr_info $ptr] fc tc pins
         set nbits [llength $pins]
         set rpt [file join $::REPORTS_DIR cdc_skew_${ptr}.rpt]
-        report_checks -to $pins -path_delay max -format end -group_count 1000 -endpoint_count 1 -digits 3 > $rpt
+        # -from the pointer's own launch clock, and one arrival per endpoint: since the check SDC also declares tck (bead
+        # y5mn), the test clock reaches the functional trees and every endpoint there is reported once per path group
+        # (core_clk and tck), which made the old one-line-per-bit count fail ("UNCONSTRAINED") on every pointer.
+        report_checks -from [get_clocks $fc] -to $pins -path_delay max -format end -group_count 1000 -endpoint_count 1 -digits 3 > $rpt
         set fh [open $rpt r]; set tab [read $fh]; close $fh
         set want [dict create]
         foreach p $pins { dict set want [string map {"\\" ""} [get_full_name $p]] 1 }
-        set arrs {}
+        set byep [dict create]
         foreach line [split $tab "\n"] {
             if {[regexp {^\s*(\S+)\s+\(\S+\)\s+(-?[0-9]+\.[0-9]+)\s+(-?[0-9]+\.[0-9]+)\s+(-?[0-9]+\.[0-9]+)\s+\((MET|VIOLATED)\)\s*$} $line -> ep req act sl st]} {
-                if {[dict exists $want [string map {"\\" ""} $ep]]} { lappend arrs $act }
+                set epn [string map {"\\" ""} $ep]
+                if {[dict exists $want $epn]} {
+                    if {![dict exists $byep $epn] || $act > [dict get $byep $epn]} { dict set byep $epn $act }
+                }
             }
         }
+        set arrs [dict values $byep]
         if {$nbits == 0 || [llength $arrs] != $nbits} {
             cdc_record_finding "bit-skew: pointer $ptr: [llength $arrs] of $nbits capture bits have a timed path (see $rpt)"
             puts [format "CDC-SKEW %-14s bits=%-2d UNCONSTRAINED" $ptr $nbits]
