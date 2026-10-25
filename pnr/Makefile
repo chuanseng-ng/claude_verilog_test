@@ -327,6 +327,8 @@ RTL_SOURCES := \
 	$(RTL_DIR)/soc/soc_addr_map_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
+	$(RTL_DIR)/soc/dft/mem_collar.sv \
+	$(RTL_DIR)/soc/dft/mbist_ctrl.sv \
 	$(RTL_DIR)/mem/rv32i_clock_gate.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
 	$(RTL_DIR)/cpu/core/rv32i_branch_comp.sv \
@@ -713,6 +715,8 @@ SKY130_CPU_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/soc_addr_map_pkg.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_pipeline_pkg.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_cache_pkg.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mem_collar.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_ctrl.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_alu.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_branch_comp.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_imm_gen.sv \
@@ -945,10 +949,15 @@ DFT_TAP_CHECK_ARGS := --tap-prefix u_dft_ctrl.u_tap --tap-prefix u_dft_ctrl.u_tc
 	--expect-reset-sync u_dft_ctrl.u_tap.u_trst_sync=u_dft_ctrl.u_tap \
 	--expect-reset-sync u_dft_ctrl.u_sw_rst=u_dft_ctrl.u_clk_sw \
 	--tap-allowed-nets u_dft_ctrl.mbist_ctl_o --tap-allowed-nets u_dft_ctrl.mbist_wr_o \
-	--tap-allowed-nets u_dft_ctrl.mbist_rst_tck_n_o \
+	--tap-allowed-nets u_dft_ctrl.mbist_rst_tck_n_o --tap-allowed-nets u_dft_ctrl.mbist_force_o \
 	--expect-reset-sync u_mbist.u_xing_core.u_rd_rst=u_mbist.u_xing_core.u_fifo@any \
-	--tck-prefix u_mbist --expect-tck-flops 140 \
-	--tck-sink u_mbist.u_xing_core.u_fifo.u_wr_ptr_to_rd --tck-sink u_mbist.u_xing_core.u_hold
+	--expect-reset-sync u_mbist.g_cpu.u_xing_cpu.u_rd_rst=u_mbist.g_cpu.u_xing_cpu.u_fifo@any \
+	--tck-prefix u_mbist --expect-tck-flops 290 \
+	--tck-sink u_mbist.u_xing_core.u_fifo.u_wr_ptr_to_rd --tck-sink u_mbist.u_xing_core.u_hold \
+	--tck-sink u_mbist.g_cpu.u_xing_cpu.u_fifo.u_wr_ptr_to_rd --tck-sink u_mbist.g_cpu.u_xing_cpu.u_hold
+# Bead c54a: mbist_force_o (run & dom_cpu, a quasi-static falling-edge TAP flop) is OR-ed into u_cpu_cg's enable when
+# MBIST_CPU = 1 (section 16.6), so it is a declared TAP output; the CPU-domain FIFO (u_mbist.g_cpu.u_xing_cpu) gets the
+# same --expect-reset-sync / --tck-sink treatment as the core one, and --expect-tck-flops covers both (290).
 # Bead j41m.14/j41m.10: the MBIST control-word FIFO (write side, TCK) and the status synchronisers (TCK side) are
 # TCK-domain flops identified by CLOCK under u_mbist (--tck-prefix). The three TAP outputs that feed the FIFO write
 # side are declared nets; --tck-sink names the only two non-TAP cells that may read a TCK-domain flop (the pointer
@@ -1351,6 +1360,8 @@ CPU_SV_FILES := \
 	$(PROJECT_ROOT)/rtl/soc/soc_addr_map_pkg.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_pipeline_pkg.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_cache_pkg.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mem_collar.sv \
+	$(PROJECT_ROOT)/rtl/soc/dft/mbist_ctrl.sv \
 	$(PROJECT_ROOT)/rtl/mem/rv32i_clock_gate.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_alu.sv \
 	$(PROJECT_ROOT)/rtl/cpu/core/rv32i_branch_comp.sv \
@@ -2440,6 +2451,8 @@ CPU_SCHEM_SRCS := \
 	asap7/icg_asap7_stub.v \
 	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
+	$(RTL_DIR)/soc/dft/mem_collar.sv \
+	$(RTL_DIR)/soc/dft/mbist_ctrl.sv \
 	$(RTL_DIR)/mem/rv32i_clock_gate.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
 	$(RTL_DIR)/cpu/core/rv32i_branch_comp.sv \

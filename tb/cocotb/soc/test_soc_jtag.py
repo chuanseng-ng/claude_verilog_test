@@ -684,7 +684,8 @@ async def test_mbist_over_the_tap_in_soc_top(dut):
             done = True
             break
     assert done, "MBIST did not finish through the soc_top TAP wiring"
-    assert (v >> 1) & 1 == 0, "cpu_present reads 0 (MBIST_CPU = 0: the CPU macro is not wired)"
+    assert (v >> 1) & 1 == 1, "cpu_present reads 1 (MBIST_CPU = 1: the CPU macro carries its controller, c54a)"
+    assert decode_status((v >> 71) & ((1 << 69) - 1))["done"] == 0, "the CPU-domain controller was not started"
     assert core["fail"] == 0b11 and core["fail_any"] == 1, (
         f"no macro in this arm: both memories must fail, got {core['fail']:#b}"
     )
@@ -692,12 +693,30 @@ async def test_mbist_over_the_tap_in_soc_top(dut):
     await drv.write_tdr(OP_MBIST_CTRL, ctl_word(run=0), 29)
     await ClockCycles(dut.clk_i, 8)
     assert int(soc.mb_bist_en.value) == 0
-    # CPU-domain enable: with MBIST_CPU = 0 nothing runs, but the TAP-launched clock-gate force (run & dom_cpu)
-    # rises and falls, and the CPU keeps running on the gated clock
+    # CPU domain (MBIST_CPU = 1, c54a): TAP -> cpu_core_clk crossing -> u_cpu.mbist_run_i / mbist_cfg_i -> the
+    # controller inside the CPU macro -> mbist_status_o -> status return -> TAP. Same honest result as the core
+    # domain in this arm: the caches have no Sky130 macro (and no collar) here, their MBIST read data is 0, so all
+    # ten memories fail and done = 1, while the TAP-launched clock-gate force (run & dom_cpu) rises and falls and
+    # the CPU keeps committing. The proof against real macros with injected faults is test_mbist_cpu_macro.
     await drv.write_tdr(OP_MBIST_CTRL, ctl_word(run=1, alg=0, dom_core=0, dom_cpu=1), 29)
     assert int(soc.mbist_force.value) == 1
+    cpu_done = False
+    for _ in range(400):
+        await drv.load_ir(OP_MBIST_STATUS)
+        v = await drv.shift_dr(0, 140)
+        cpu = decode_status((v >> 71) & ((1 << 69) - 1))
+        if cpu["done"]:
+            cpu_done = True
+            break
+    assert cpu_done, "CPU-domain MBIST did not finish through the soc_top wiring"
+    assert cpu["fail"] == 0x3FF and cpu["fail_any"] == 1 and cpu["cfg_err"] == 0, (
+        f"no macros in this arm: all ten cache memories must fail, got {cpu['fail']:#x}"
+    )
+    assert int(soc.u_cpu.mb_en_w.value) == 1 and int(soc.mb_cpu_run.value) == 1
     await drv.write_tdr(OP_MBIST_CTRL, ctl_word(run=0, dom_core=0, dom_cpu=1), 29)
     assert int(soc.mbist_force.value) == 0
+    await ClockCycles(dut.clk_i, 20)
+    assert int(soc.u_cpu.mb_en_w.value) == 0 and int(soc.mb_cpu_run.value) == 0
     # Control-word FIFO overflow at the SoC level: stop the fabric clock (the FIFO's read side), write three
     # words (depth 2), the third is lost and MBIST_STATUS bit 0 reports it; restart and clear it with an
     # accepted run = 0 word.

@@ -204,10 +204,13 @@ module soc_top
     // indices [SCAN_CHAINS-1:SCAN_CHAINS-2] are wired straight through to u_cpu's
     // scan_in_i/scan_out_o; the macro ties its own scan_out_o 0 until Stage 2 stitches it.
     parameter int unsigned SCAN_CHAINS = 8,
-    // DFT Stage 4 (j41m.14): 1 = the CPU hard macro carries its MBIST controller and cache collars
-    // (DFT_ARCHITECTURE.md section 16.7); the CPU-domain control-word crossing and the u_cpu_cg force are
-    // instantiated. 0 (shipped) until the CPU macro is re-hardened with the new boundary ports.
-    parameter bit MBIST_CPU = 1'b0
+    // DFT Stage 4 (j41m.14 / c54a): 1 (shipped) = the CPU hard macro carries its MBIST controller and cache
+    // collars (DFT_ARCHITECTURE.md section 16.7); the CPU-domain control-word crossing and the u_cpu_cg force
+    // are instantiated and u_cpu's mbist_* boundary ports are driven. 0 = no CPU-domain MBIST: the crossing is
+    // absent, the mbist_* ports are tied inactive and the CPU status block reads 0 (cpu_present = 0).
+    // The committed CPU macro views (pnr/sky130/cpu/macro) predate the 96 mbist_* pins: the SoC flow fails its
+    // macro pin match until the CPU macro is re-hardened (bead c54a, PD step).
+    parameter bit MBIST_CPU = 1'b1
 ) (
     // clk_i is the SYSTEM/FABRIC reference clock input (100 MHz crystal / XO).
     // Internally the SoC runs on core_clk derived from the PLL.
@@ -366,6 +369,17 @@ module soc_top
     logic         mbist_rst_tck_n;
     logic         mbist_wr_ready;
     logic [138:0] mbist_status;
+
+    // MBIST CPU domain (c54a): soc_mbist's holding-register outputs into u_cpu's mbist_* ports, and the
+    // macro's 69-bit status block back. With MBIST_CPU = 0 the three outputs of soc_mbist are tied inactive
+    // and mb_cpu_status is ignored. mb_cpu_ctl_rst_n is the controller reset of the stand-alone (fabric)
+    // instantiation; the macro's controller folds the CPU reset into run, so it has no consumer here.
+    logic         mb_cpu_run;
+    logic [25:0]  mb_cpu_cfg;
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic         mb_cpu_ctl_rst_n;
+    /* verilator lint_on  UNUSEDSIGNAL */
+    logic [68:0]  mb_cpu_status;
 
     dft_ctrl u_dft_ctrl (
         .scan_mode_i (scan_mode_i),
@@ -1338,7 +1352,12 @@ module soc_top
         .scan_mode_i                (dft_scan_mode),
         .scan_en_i                  (dft_scan_en),
         .scan_in_i                  (cpu_scan_in_w),
-        .scan_out_o                 (cpu_scan_out_w)
+        .scan_out_o                 (cpu_scan_out_w),
+        // MBIST (c54a, section 16.7): CPU-domain holding register in, 69-bit status block out. Quasi-static
+        // levels crossing from cpu_core_clk into the gated clk_i of the same source and frequency.
+        .mbist_run_i                (mb_cpu_run),
+        .mbist_cfg_i                (mb_cpu_cfg),
+        .mbist_status_o             (mb_cpu_status)
     );
 
     // ISO_CPU functional-isolation clamp (`-location parent`, clamp_value 0):
@@ -1918,7 +1937,7 @@ module soc_top
     //   the TCK -> core_clk control-word crossing (depth-2 cdc_gray_fifo) and the status return. Started and
     //   read ONLY through the TAP (MBIST_CTRL / MBIST_STATUS); no bus slave decodes to it. With the TAP idle or
     //   in reset (trst_ni = 0) bist_en is 0 and both collars are pass-through.
-    //   The CPU-domain half (MBIST_CPU = 1) needs the CPU macro boundary change of section 16.7.
+    //   The CPU-domain half (MBIST_CPU = 1) drives the CPU macro's mbist_* boundary ports (section 16.7).
     // =========================================================================
     logic         mb_bist_en;
     logic         mb_ce;
@@ -1929,18 +1948,6 @@ module soc_top
     logic [31:0]  mb_sram_dout0;
     logic [31:0]  mb_sram_dout1;
     logic [31:0]  mb_npu_dout0;
-
-    // CPU domain: holding-register outputs for the (future) CPU-macro controller; status in from the macro.
-    // Unused (and the macro status tied 0) until MBIST_CPU = 1.
-    /* verilator lint_off UNUSEDSIGNAL */
-    logic         mb_cpu_run;
-    logic [25:0]  mb_cpu_cfg;
-    logic         mb_cpu_ctl_rst_n;
-    /* verilator lint_on  UNUSEDSIGNAL */
-    logic [68:0]  mb_cpu_status;
-
-    // Placeholder until the CPU macro exports its status block (section 16.7).
-    assign mb_cpu_status = 69'd0;
 
     soc_mbist #(
         .CPU_PRESENT (MBIST_CPU),
@@ -2625,8 +2632,16 @@ module soc_top
     // HARD_ROOT: cpu_gated_clk is a CTS root (771 register sinks + the CPU macro clock pin). On the Sky130 SoC build
     // (USE_SKY130_CLKCELLS) it is a hand-instantiated sdlclkp_4 + buf_16, see rv32i_clock_gate.sv. u_gpu_cg stays
     // behavioural: its output feeds no CTS tree in the Sky130 SoC (GPU is a tie-off), so it must optimise away.
+    // The force is HELD by the macro controller itself (cpu_mbist_busy = status done | busy, which is st_q != IDLE):
+    // the TAP drops mbist_force at the Update-DR of the run = 0 word, a few cpu_core_clk edges BEFORE that word has
+    // crossed into the macro, and with the PMU gate closed the controller would never see it and would be left
+    // with bist_en = 1 (collars on the BIST bus) behind a stopped clock. With the self-hold the gate stays open
+    // until the controller has cleared (done / busy fall one gated edge after run = 0 arrives), then closes.
+    // Found by test_mbist_cpu_macro.py::test_mbist_force_opens_the_closed_clock_gate (c54a).
+    logic cpu_mbist_busy;
     logic cpu_cg_en;
-    assign cpu_cg_en = cpu_gated_clk_en | (MBIST_CPU ? mbist_force : 1'b0);
+    assign cpu_mbist_busy = MBIST_CPU ? (mb_cpu_status[0] | mb_cpu_status[1]) : 1'b0;
+    assign cpu_cg_en = cpu_gated_clk_en | (MBIST_CPU ? mbist_force : 1'b0) | cpu_mbist_busy;
     rv32i_clock_gate #(.HARD_ROOT(1'b1)) u_cpu_cg (.en(cpu_cg_en), .test_en(dft_test_en), .clk(cpu_core_clk), .gclk(cpu_gated_clk));
     rv32i_clock_gate u_gpu_cg (.en(pmu_gpu_clk_en),   .test_en(dft_test_en), .clk(core_clk),     .gclk(gpu_gated_clk));
 

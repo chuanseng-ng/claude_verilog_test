@@ -87,6 +87,8 @@ VERILOG_SOURCES := \
 	$(RTL_DIR)/soc/soc_addr_map_pkg.sv \
 	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
+	$(RTL_DIR)/soc/dft/mem_collar.sv \
+	$(RTL_DIR)/soc/dft/mbist_ctrl.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
 	$(RTL_DIR)/cpu/core/rv32i_imm_gen.sv \
 	$(RTL_DIR)/cpu/core/rv32i_regfile.sv \
@@ -119,6 +121,8 @@ CACHE_SOURCES := \
 	$(RTL_DIR)/soc/axi_pkg.sv \
 	$(RTL_DIR)/soc/soc_addr_map_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
+	$(RTL_DIR)/soc/dft/mem_collar.sv \
+	$(RTL_DIR)/soc/dft/mbist_ctrl.sv \
 	$(RTL_DIR)/mem/rv32i_icache.sv \
 	$(RTL_DIR)/mem/rv32i_dcache.sv \
 	$(RTL_DIR)/mem/rv32i_cache_arbiter.sv
@@ -357,6 +361,8 @@ SOC_TOP_SOURCES := \
 	$(SRAM_CTRL_SIM_MODEL) \
 	$(RTL_DIR)/cpu/core/rv32i_pipeline_pkg.sv \
 	$(RTL_DIR)/mem/rv32i_cache_pkg.sv \
+	$(RTL_DIR)/soc/dft/mem_collar.sv \
+	$(RTL_DIR)/soc/dft/mbist_ctrl.sv \
 	$(RTL_DIR)/cpu/core/rv32i_alu.sv \
 	$(RTL_DIR)/cpu/core/rv32i_imm_gen.sv \
 	$(RTL_DIR)/cpu/core/rv32i_regfile.sv \
