@@ -193,3 +193,18 @@ python3 tools/verif/check_struct_member_select.py -v
 # FPGA Stage 0 open-tool synthesis: one job per call (see the script header)
 tools/fpga/stage0_synth.sh <repo-root> <out-dir> <gpu|nogpu> <xc7|ecp5>
 ```
+
+
+## Design quality checks (SpyGlass / HAL, local EDA host only)
+
+```bash
+make -C dqc lint        # SpyGlass lint/lint_rtl on soc_top
+make -C dqc cdc         # SpyGlass CDC (setup + verify_struct)
+make -C dqc rdc         # SpyGlass RDC
+make -C dqc hal         # Cadence HAL
+make -C dqc selftest    # negative control: a known-bad CDC/RDC design must be flagged
+```
+
+Needs SpyGlass X-2025.06-SP1 and Cadence Xcelium (HAL) on PATH with licences; not run in CI. Exit 0 = PASS,
+1 = unwaived Fatal/Error, 2 = INCOMPLETE (rules did not run). As of 2026-10-24 the CDC/RDC crossing rules do
+not run on this host's licence set, so `cdc`/`rdc` report INCOMPLETE. See `docs/verification/DQC_FLOW.md`.

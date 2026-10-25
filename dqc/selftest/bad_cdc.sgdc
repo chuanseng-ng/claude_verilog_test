@@ -1,0 +1,5 @@
+current_design bad_cdc
+clock -name clk_a -domain a
+clock -name clk_b -domain b
+reset -name rst_a_n -value 0
+reset -name rst_b_n -value 0

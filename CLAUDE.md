@@ -83,6 +83,7 @@ See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for
 | `docs/design/RTL_DEFINITION.md` | Interface signal definitions |
 | `docs/design/MEMORY_MAP.md` | Address space and register map |
 | `docs/design/DFT_ARCHITECTURE.md` | Sky130 DFT (scan + MBIST) Stage 0 feasibility, architecture, decisions (GH #244) |
+| `docs/design/TESSENT_ATPG_FLOW.md` | Tessent scan insertion + ATPG evaluation flow for the Sky130 SoC fabric (`dft/tessent/atpg/`, epic `j41m`, Stage 2 evaluation) |
 | `docs/design/REFERENCE_MODEL_SPEC.md` | Python reference model API |
 
 ### Physical Design
@@ -100,6 +101,7 @@ See `docs/ROADMAP.md` for the complete phase plan and `docs/PHASE_STATUS.md` for
 | :------- | :------ |
 | `docs/verification/VERIFICATION_PLAN.md` | Verification strategy (RTL + physical design) |
 | `docs/verification/PROPRIETARY_SIM_FLOW.md` | VCS / Xcelium setup, regression run, portability rules (EDA hosts without nix) |
+| `docs/verification/DQC_FLOW.md` | Local SpyGlass lint/CDC/RDC + Cadence HAL flow (`make -C dqc ...`), waivers, licence matrix, open RTL findings |
 | `docs/RANDOM_TESTS_STATUS.md` | Random instruction test results and guide |
 | `fixes/FIXES_INDEX.md` | ⭐ Central reference for all RTL bug fixes |
 

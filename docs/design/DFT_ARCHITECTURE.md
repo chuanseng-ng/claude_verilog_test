@@ -1188,3 +1188,9 @@ inserted controller, VCS simulation of Tessent's own patterns, a fault campaign 
 `mbist_golden.py`, and area against 16.9 measured the same way) lives in `dft/tessent/mbist/`. It does not change or
 replace anything in this section. Results and a recommendation (keep the in-house MBIST; Tessent is a possible licensed
 cross-check): `docs/design/TESSENT_MBIST_EVALUATION.md`.
+
+## 17. Tessent scan + ATPG evaluation (pointer)
+
+A Siemens Tessent 2025.4 scan-insertion and ATPG evaluation of the Sky130 SoC fabric (6 chains of ~3,044, stuck-at 94.17 % test coverage / 1,574 patterns, transition
+81.28 % / 2,567 patterns, 20 patterns simulated clean on VCS with a negative control) is in `docs/design/TESSENT_ATPG_FLOW.md`, code in `dft/tessent/atpg/`. It follows
+sections 8, 14, 15 and decision N4 unchanged, is not back-annotated into PD, and does not modify the RTL.

@@ -1,0 +1,44 @@
+// soc_top.sgdc - SpyGlass CDC / RDC constraints for soc_top (DQC flow), FUNCTIONAL mode.
+//
+// Every statement is derived from the repo, not guessed:
+//   clocks   rtl/soc/soc_top.sv ports; pnr/constraints/phase5_soc_multiclock.sdc sec.1 (sys_clk on
+//            clk_i, cpu_clk on cpu_clk_i, asynchronous to each other); tools/cdc/cdc_config.yml
+//            (clock_domains + domain_aliases: core_clk, gpu_gated_clk = clk_i; cpu_core_clk,
+//            cpu_gated_clk = cpu_clk_i -- SpyGlass derives those through the PLL-stub passthrough
+//            and the rv32i_clock_gate cells itself, so no alias statement is needed).
+//   tck_i    the JTAG TAP clock (DFT_ARCHITECTURE.md 15.5): a third asynchronous root.
+//   scan_clk_i  the parallel scan clock; in functional mode it is muxed out (scan_mode=0).
+//   resets   rst_n_i / cpu_rst_n_i (set_false_path in the SDC, async by design), trst_ni (TAP).
+//   test     scan_mode_i=0, scan_en_i=0, scan_rst_ni=1 -- the exact set_case_analysis the SDC uses
+//            (phase5_soc_multiclock.sdc sec.4a) -- plus the TAP-held controls that are OR-ed onto
+//            them inside dft_ctrl (DFT_ARCHITECTURE.md 15.4).  With the TAP idle they are 0.
+// The TAP's own TCK-domain logic and the TCK<->core crossings (MBIST control word, status) are real
+// crossings and stay VISIBLE to the checker.
+
+current_design soc_top
+
+clock -name clk_i      -domain sys_clk
+clock -name cpu_clk_i  -domain cpu_clk
+clock -name tck_i      -domain tck
+clock -name scan_clk_i -domain scan_clk
+
+reset -name rst_n_i     -value 0
+reset -name cpu_rst_n_i -value 0
+reset -name trst_ni     -value 0
+
+// functional mode
+set_case_analysis -name scan_mode_i -value 0
+set_case_analysis -name scan_en_i   -value 0
+set_case_analysis -name scan_rst_ni -value 1
+set_case_analysis -name u_dft_ctrl.tap_scan       -value 0
+set_case_analysis -name u_dft_ctrl.tap_rst_assert -value 0
+set_case_analysis -name u_dft_ctrl.tap_serial     -value 0
+set_case_analysis -name u_dft_ctrl.tap_scan_en    -value 0
+
+// Internally generated asynchronous resets (SpyGlass propagates resets through combinational logic
+// from the ports only; a flop-registered reset must be declared: Reset_info09a).  Both feed the
+// async clear of a cdc_reset_sync in cpu_core_clk:
+//   pmu_cpu_rst_n    registered PMU output (pmu.sv, ktwt), core_clk domain      soc_top.sv u_cpu_pmu_rst_sync
+//   wdt reset        ~wdt_cpu_rst_req_q, core_clk domain                        soc_top.sv u_cpu_wdt_rst_sync
+reset -name u_cpu_pmu_rst_sync.rst_n_i -value 0
+reset -name u_cpu_wdt_rst_sync.rst_n_i -value 0
