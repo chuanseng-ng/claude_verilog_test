@@ -2,10 +2,14 @@
 // DFT Stage 4 (bead claude_verilog_test-j41m.14): mbist_ctrl + N mem_collar + N fault-injecting SRAM models
 // (sram_fi_core, Sky130 macro timing). Parameters are set per build with -G (N_MEM, AW, P1_MASK).
 // The functional-side ports let a test prove the collar is a pass-through when bist_en = 0.
+// LOCAL_CMP = 1 builds the collar-local compare (bead c54a): the collars compare their own macro's read data and
+// return one registered mismatch strobe per port, the controller sees no read data. Default 0 (compare in the
+// controller, as in the SoC fabric instance).
 module tb_mbist_domain #(
     parameter int unsigned      N_MEM   = 4,
     parameter int unsigned      AW      = 6,
-    parameter logic [N_MEM-1:0] P1_MASK = 4'b0101
+    parameter logic [N_MEM-1:0] P1_MASK = 4'b0101,
+    parameter bit               LOCAL_CMP = 1'b0
 ) (
     input  logic                 clk_i,
     input  logic                 rst_n_i,
@@ -30,12 +34,18 @@ module tb_mbist_domain #(
     logic [3:0]    b_wmask;
     logic [AW-1:0] b_addr;
     logic [31:0]   b_din;
+    logic          x_rd;
+    logic [3:0]    x_xm;
+    logic [2:0]    x_bg;
+    logic [N_MEM-1:0] cmp_fail0;
+    logic [N_MEM-1:0] cmp_fail1;
 
     mbist_ctrl #(
         .N_MEM   (N_MEM),
         .AW      (AW),
         .RD_LAT  (2),
-        .P1_MASK (P1_MASK)
+        .P1_MASK (P1_MASK),
+        .LOCAL_CMP (LOCAL_CMP)
     ) u_ctrl (
         .clk_i     (clk_i),
         .rst_n_i   (rst_n_i),
@@ -49,6 +59,11 @@ module tb_mbist_domain #(
         .b_din_o   (b_din),
         .dout0_i   (f_dout0_o),
         .dout1_i   (f_dout1_o),
+        .x_rd_o    (x_rd),
+        .x_xm_o    (x_xm),
+        .x_bg_o    (x_bg),
+        .cmp_fail0_i (cmp_fail0),
+        .cmp_fail1_i (cmp_fail1),
         .status_o  (status_o)
     );
 
@@ -65,7 +80,8 @@ module tb_mbist_domain #(
 
             mem_collar #(
                 .AW     (AW),
-                .HAS_P1 (P1_MASK[gi])
+                .HAS_P1 (P1_MASK[gi]),
+                .LOCAL_CMP (LOCAL_CMP)
             ) u_collar (
                 .bist_en_i  (bist_en_o),
                 .b_ce_i     (b_ce),
@@ -80,6 +96,14 @@ module tb_mbist_domain #(
                 .din0_f_i   (f_din0_i[gi*32 +: 32]),
                 .csb1_f_i   (f_csb1_i[gi]),
                 .addr1_f_i  (f_addr1_i[gi*AW +: AW]),
+                .clk_i      (clk_i),
+                .x_rd_i     (x_rd),
+                .x_xm_i     (x_xm),
+                .x_bg_i     (x_bg),
+                .dout0_i    (f_dout0_o[gi*32 +: 32]),
+                .dout1_i    (f_dout1_o[gi*32 +: 32]),
+                .cmp_fail0_o(cmp_fail0[gi]),
+                .cmp_fail1_o(cmp_fail1[gi]),
                 .csb0_m_o   (csb0_m),
                 .web0_m_o   (web0_m),
                 .wmask0_m_o (wmask0_m),

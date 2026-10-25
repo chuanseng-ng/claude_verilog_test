@@ -37,6 +37,8 @@ SOURCES=(
   "$RTL/soc/soc_addr_map_pkg.sv"
   "$RTL/cpu/core/rv32i_pipeline_pkg.sv"
   "$RTL/mem/rv32i_cache_pkg.sv"
+  "$RTL/soc/dft/mem_collar.sv"
+  "$RTL/soc/dft/mbist_ctrl.sv"
   "$RTL/cpu/core/rv32i_alu.sv"
   "$RTL/cpu/core/rv32i_imm_gen.sv"
   "$RTL/cpu/core/rv32i_regfile.sv"

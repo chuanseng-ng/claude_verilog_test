@@ -345,6 +345,18 @@
       "in",
       1
      ],
+     "mbist_cfg_i": [
+      "in",
+      26
+     ],
+     "mbist_run_i": [
+      "in",
+      1
+     ],
+     "mbist_status_o": [
+      "out",
+      69
+     ],
      "rst_n_i": [
       "in",
       1
@@ -1059,6 +1071,18 @@
      "ext_irq_i": [
       "in",
       1
+     ],
+     "mbist_cfg_i": [
+      "in",
+      26
+     ],
+     "mbist_run_i": [
+      "in",
+      1
+     ],
+     "mbist_status_o": [
+      "out",
+      69
      ],
      "rst_n_i": [
       "in",

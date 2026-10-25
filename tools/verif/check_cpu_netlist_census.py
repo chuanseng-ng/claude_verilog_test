@@ -8,8 +8,10 @@ nets/flops and 5 fewer flops (4863 vs 4868 on main RTL, 4829 vs 4834 on the pinn
 Checks on a flat Yosys gate netlist (Verilog):
   * every ``--require-net`` regex (default: the three fwd_b_* registers) matches a declared net;
   * the number of flop instances (cells matching ``--flop-regex``) is inside [min, max].
-Defaults are the Sky130 ``rv32i_cpu_top`` numbers (4868 dfxtp on current main, band +-60 for RTL
-growth).  The ASAP7 netlists do not keep these net names, so use ``--require-net`` overrides or
+Defaults are the Sky130 ``rv32i_cpu_top`` numbers: 5286 flops with the in-macro MBIST controller
+(bead c54a; 4868 before it, the controller alone is 406 flops when synthesised standalone), band
+-66/+84 for RTL growth, the same spacing the 4868 band had.  Re-centre the band, with the measured
+attribution, whenever the macro RTL deliberately grows; the fwd_b_* net check does not move.  The ASAP7 netlists do not keep these net names, so use ``--require-net`` overrides or
 only the flop band there.  Exit 0 pass, 1 tripwire fired, 2 unreadable/empty input.
 """
 
@@ -38,8 +40,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("netlist", type=Path)
     ap.add_argument("--require-net", action="append", default=None, help="regex; repeatable")
     ap.add_argument("--flop-regex", default=DEFAULT_FLOP)
-    ap.add_argument("--min-flops", type=int, default=4800)
-    ap.add_argument("--max-flops", type=int, default=4950)
+    ap.add_argument("--min-flops", type=int, default=5220)
+    ap.add_argument("--max-flops", type=int, default=5370)
     args = ap.parse_args(argv)
     try:
         text = args.netlist.read_text(encoding="utf-8", errors="replace")

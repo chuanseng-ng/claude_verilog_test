@@ -49,6 +49,27 @@ module rv32i_icache (
     input  logic        test_en_i,
     /* verilator lint_on  UNUSEDSIGNAL */
 
+    // MBIST (bead claude_verilog_test-c54a, DFT_ARCHITECTURE.md 16.7): the CPU-macro controller's broadcast
+    // bus and expected-data tag in, one registered mismatch strobe per macro out ({data[3], data[2], data[1],
+    // data[0], tag}). Each mem_collar compares its own macro's port-0 read data locally (LOCAL_CMP), so the
+    // 32-bit read data of the five macros never leaves the collars. Active only in the SRAM_SKY130 arm
+    // (mem_collar in front of every macro); every other arm ignores the inputs and drives 0 strobes, and the
+    // CPU top then compares the constant-0 read data in the controller itself (LOCAL_CMP = 0), so an MBIST run
+    // on an arm without the macros FAILS rather than passing vacuously.
+    // mbist_en_i = 0 makes every collar a pass-through (bit-identical to the pre-MBIST cache).
+    /* verilator lint_off UNUSEDSIGNAL */
+    input  logic         mbist_en_i,
+    input  logic         mbist_ce_i,
+    input  logic         mbist_we_i,
+    input  logic [3:0]   mbist_wmask_i,
+    input  logic [7:0]   mbist_addr_i,
+    input  logic [31:0]  mbist_din_i,
+    input  logic         mbist_x_rd_i,
+    input  logic [3:0]   mbist_x_xm_i,
+    input  logic [2:0]   mbist_x_bg_i,
+    /* verilator lint_on  UNUSEDSIGNAL */
+    output logic [4:0]   mbist_fail_o,
+
     // ── CPU-side interface (from IF stage) ────────────────────────────────────
     input  logic [31:0] ic_addr_i,        // Fetch address
     input  logic        ic_valid_i,       // Fetch request valid
@@ -87,17 +108,58 @@ module rv32i_icache (
     logic [31:0] tag_din0, tag_dout0;
 
 `ifdef SRAM_SKY130
+    // MBIST collar (HAS_P1 = 0: port 1 stays tied off). bist_en = 0 passes every functional signal through.
+    logic        tag_csb0_m, tag_web0_m, tag_csb1_m;
+    logic [3:0]  tag_wmask0_m;
+    logic [7:0]  tag_addr0_m, tag_addr1_m;
+    logic [31:0] tag_din0_m;
+    logic        tag_cmp_fail;
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic        tag_cmp_fail1_unused;   // HAS_P1 = 0: constant 0
+    /* verilator lint_on  UNUSEDSIGNAL */
+
+    mem_collar #(.AW(8), .HAS_P1(1'b0), .LOCAL_CMP(1'b1)) u_tag_collar (
+        .bist_en_i  (mbist_en_i),
+        .b_ce_i     (mbist_ce_i),
+        .b_we_i     (mbist_we_i),
+        .b_wmask_i  (mbist_wmask_i),
+        .b_addr_i   (mbist_addr_i),
+        .b_din_i    (mbist_din_i),
+        .csb0_f_i   (tag_csb0),
+        .web0_f_i   (tag_web0),
+        .wmask0_f_i (4'b1111),
+        .addr0_f_i  (tag_addr0),
+        .din0_f_i   (tag_din0),
+        .csb1_f_i   (1'b1),
+        .addr1_f_i  (8'b0),
+        .clk_i      (clk),
+        .x_rd_i     (mbist_x_rd_i),
+        .x_xm_i     (mbist_x_xm_i),
+        .x_bg_i     (mbist_x_bg_i),
+        .dout0_i    (tag_dout0),
+        .dout1_i    (32'd0),
+        .cmp_fail0_o(tag_cmp_fail),
+        .cmp_fail1_o(tag_cmp_fail1_unused),
+        .csb0_m_o   (tag_csb0_m),
+        .web0_m_o   (tag_web0_m),
+        .wmask0_m_o (tag_wmask0_m),
+        .addr0_m_o  (tag_addr0_m),
+        .din0_m_o   (tag_din0_m),
+        .csb1_m_o   (tag_csb1_m),
+        .addr1_m_o  (tag_addr1_m)
+    );
+
     sky130_sram_1kbyte_1rw1r_32x256_8 u_tag_sram (
         .clk0   (clk),
-        .csb0   (tag_csb0),
-        .web0   (tag_web0),
-        .wmask0 (4'b1111),
-        .addr0  (tag_addr0),
-        .din0   (tag_din0),
+        .csb0   (tag_csb0_m),
+        .web0   (tag_web0_m),
+        .wmask0 (tag_wmask0_m),
+        .addr0  (tag_addr0_m),
+        .din0   (tag_din0_m),
         .dout0  (tag_dout0),
         .clk1   (clk),
-        .csb1   (1'b1),
-        .addr1  (8'b0),
+        .csb1   (tag_csb1_m),
+        .addr1  (tag_addr1_m),
         .dout1  ()
     );
 `elsif SRAM_ASAP7
@@ -143,22 +205,65 @@ module rv32i_icache (
     logic [7:0]  data_addr0  [0:LINE_WORDS-1];
     logic [31:0] data_din0   [0:LINE_WORDS-1];
     logic [31:0] data_dout0  [0:LINE_WORDS-1];
+`ifdef SRAM_SKY130
+    logic        data_cmp_fail [0:LINE_WORDS-1];   // MBIST local-compare strobe of each data collar
+`endif
 
     genvar gw;
     generate
         for (gw = 0; gw < LINE_WORDS; gw++) begin : gen_data_sram
 `ifdef SRAM_SKY130
+            // MBIST collar, see u_tag_collar.
+            logic        d_csb0_m, d_web0_m, d_csb1_m;
+            logic [3:0]  d_wmask0_m;
+            logic [7:0]  d_addr0_m, d_addr1_m;
+            logic [31:0] d_din0_m;
+            /* verilator lint_off UNUSEDSIGNAL */
+            logic        d_cmp_fail1_unused;   // HAS_P1 = 0: constant 0
+            /* verilator lint_on  UNUSEDSIGNAL */
+
+            mem_collar #(.AW(8), .HAS_P1(1'b0), .LOCAL_CMP(1'b1)) u_data_collar (
+                .bist_en_i  (mbist_en_i),
+                .b_ce_i     (mbist_ce_i),
+                .b_we_i     (mbist_we_i),
+                .b_wmask_i  (mbist_wmask_i),
+                .b_addr_i   (mbist_addr_i),
+                .b_din_i    (mbist_din_i),
+                .csb0_f_i   (data_csb0[gw]),
+                .web0_f_i   (data_web0[gw]),
+                .wmask0_f_i (4'b1111),
+                .addr0_f_i  (data_addr0[gw]),
+                .din0_f_i   (data_din0[gw]),
+                .csb1_f_i   (1'b1),
+                .addr1_f_i  (8'b0),
+                .clk_i      (clk),
+                .x_rd_i     (mbist_x_rd_i),
+                .x_xm_i     (mbist_x_xm_i),
+                .x_bg_i     (mbist_x_bg_i),
+                .dout0_i    (data_dout0[gw]),
+                .dout1_i    (32'd0),
+                .cmp_fail0_o(data_cmp_fail[gw]),
+                .cmp_fail1_o(d_cmp_fail1_unused),
+                .csb0_m_o   (d_csb0_m),
+                .web0_m_o   (d_web0_m),
+                .wmask0_m_o (d_wmask0_m),
+                .addr0_m_o  (d_addr0_m),
+                .din0_m_o   (d_din0_m),
+                .csb1_m_o   (d_csb1_m),
+                .addr1_m_o  (d_addr1_m)
+            );
+
             sky130_sram_1kbyte_1rw1r_32x256_8 u_data_sram (
                 .clk0   (clk),
-                .csb0   (data_csb0[gw]),
-                .web0   (data_web0[gw]),
-                .wmask0 (4'b1111),
-                .addr0  (data_addr0[gw]),
-                .din0   (data_din0[gw]),
+                .csb0   (d_csb0_m),
+                .web0   (d_web0_m),
+                .wmask0 (d_wmask0_m),
+                .addr0  (d_addr0_m),
+                .din0   (d_din0_m),
                 .dout0  (data_dout0[gw]),
                 .clk1   (clk),
-                .csb1   (1'b1),
-                .addr1  (8'b0),
+                .csb1   (d_csb1_m),
+                .addr1  (d_addr1_m),
                 .dout1  ()
             );
 `elsif SRAM_ASAP7
@@ -194,6 +299,15 @@ module rv32i_icache (
 `endif
         end
     endgenerate
+
+    // MBIST mismatch-strobe export: the registered local-compare result of the tag and the four data collars.
+    // The collars tap the macro dout0 nets (one XOR2 per bit, no register or mux on the read path). Sky130 arm
+    // only; 0 elsewhere (see the port comment).
+`ifdef SRAM_SKY130
+    assign mbist_fail_o = {data_cmp_fail[3], data_cmp_fail[2], data_cmp_fail[1], data_cmp_fail[0], tag_cmp_fail};
+`else
+    assign mbist_fail_o = 5'd0;
+`endif
 
     // =========================================================================
     // FSM state and pipeline registers
@@ -271,11 +385,12 @@ module rv32i_icache (
     // =========================================================================
     // Stall output
     // =========================================================================
+    // state_q[3] = LATCH or REFILL here (the only unconditional-stall states this FSM uses;
+    // HIT_PENDING / WRITEBACK / UNCACHED_* / *_SCAN are D$-only). See rv32i_cache_pkg.sv, bead r51p.
     assign ic_stall_o =
+        state_q[3]                                ||   // Waiting for pipeline reg / refill in progress
         (state_q == CS_IDLE       &&  ic_valid_i) ||   // Initiating SRAM read
-        (state_q == CS_SRAM_LATCH)                ||   // Waiting for pipeline reg
-        (state_q == CS_TAG_CHECK  && !hit)         ||   // Miss detected (or mismatch)
-        (state_q == CS_REFILL);                         // Refill in progress
+        (state_q == CS_TAG_CHECK  && !hit);            // Miss detected (or mismatch)                         // Refill in progress
     // CS_TAG_CHECK + hit : stall=0, ic_rdata_o from tag_dout_r/data_dout_r
     // CS_DONE            : stall=0, ic_rdata_o from refill_buf_q
 
@@ -358,6 +473,29 @@ module rv32i_icache (
     end
 
     // =========================================================================
+    // SRAM read enable in CS_IDLE (bead r51p)
+    //
+    // Functional arms: read only for a live fetch (ic_valid_i && !ic_invalidate_i).
+    //
+    // Sky130 arm: read in every CS_IDLE cycle. A read issued while ic_valid_i = 0 (or during
+    // FENCE.I) is never consumed: tag_dout_r / data_dout_r capture dout0 only in CS_SRAM_LATCH,
+    // and CS_SRAM_LATCH is entered only from a CS_IDLE cycle with ic_valid_i = 1 and
+    // ic_invalidate_i = 0, whose own read is the one that is captured. A read has no side
+    // effect on the macro. In exchange csb0/addr0 no longer depend on ic_valid_i, i.e. on
+    // the dcache-stall -> hazard-priority -> redirect/halt network that dominated the ss
+    // setup failure of the CPU macro (docs/SKY130_CPU_SS_SETUP_R51P.md). Only that arm is
+    // changed: on ASAP7 csb0 feeds the SRAM clock gate (extra enabled cycles = extra dynamic
+    // power on a flow signed off as-is) and the other arms have no timing problem here.
+    // Writes (tag_we_q / data_we_q) override below and are unaffected.
+    // =========================================================================
+    logic idle_read_en;
+`ifdef SRAM_SKY130
+    assign idle_read_en = 1'b1;
+`else
+    assign idle_read_en = ic_valid_i && !ic_invalidate_i;
+`endif
+
+    // =========================================================================
     // SRAM combinational control — Tag SRAM (port 0)
     // =========================================================================
     always_comb begin
@@ -368,8 +506,9 @@ module rv32i_icache (
 
         case (state_q)
             CS_IDLE: begin
-                // Issue tag read when a new valid fetch arrives (not FENCE.I)
-                if (ic_valid_i && !ic_invalidate_i) begin
+                // Issue tag read when a new valid fetch arrives (not FENCE.I);
+                // see idle_read_en for the Sky130 arm.
+                if (idle_read_en) begin
                     tag_csb0  = 1'b0;
                     tag_web0  = 1'b1;   // read
                     tag_addr0 = addr_index;
@@ -449,7 +588,7 @@ module rv32i_icache (
         case (state_q)
             CS_IDLE: begin
                 // Issue read on all 4 word SRAMs simultaneously (same index)
-                if (ic_valid_i && !ic_invalidate_i) begin
+                if (idle_read_en) begin
                     for (int w = 0; w < LINE_WORDS; w++) begin
                         data_csb0[w]  = 1'b0;
                         data_web0[w]  = 1'b1;  // read

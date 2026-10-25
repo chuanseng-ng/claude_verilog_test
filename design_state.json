@@ -2277,6 +2277,18 @@
       "constraint_ref": null
     },
     {
+      "timestamp": "2026-10-18T08:00:17+00:00",
+      "agent": "rtl-design-orchestrator",
+      "stage": "lint_check",
+      "decision": "proceed",
+      "confidence": "medium",
+      "failure_class": "none",
+      "retry_strategy": "none",
+      "suggested_next_step": "proceed",
+      "reason": "bead c54a: CPU-macro MBIST collars on the 10 cache SRAMs + 96-pin boundary (PR #313, draft; MBIST_CPU default 1; needs the combined PD re-harden). Verilator -Wall 0 new warnings on 4 arms; dft-scan-check sky130/asap7 SoC + both CPU macros 0 violations; test_mbist_cpu_macro 7/7, 5/5 mutants killed, mbist_fi_equiv_1k 1/1, soc_jtag CPU-domain run; sim rollup + sky130-arm icache/dcache/cache_integration green; Sky130-arm RTL cycle-exact vs main 6/6 IDENTICAL; soc_all_ci plain and FPGA=1 831 passed / 0 failed / 41 skipped; check_upf + gen-facts --check PASS. slang NOT RUN (not installed). rtl.signoff stays false: no PD re-harden, timing of the added collar mux unmeasured.",
+      "constraint_ref": null
+    },
+    {
       "agent": "rtl-design-orchestrator",
       "confidence": "high",
       "constraint_ref": null,

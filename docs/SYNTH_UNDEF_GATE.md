@@ -170,6 +170,6 @@ re-run for this job (it was exercised in dud4 with the Synlig netlist, which div
 
 ## Netlist census tripwire (`tools/verif/check_cpu_netlist_census.py`)
 
-After a Sky130 `rv32i_cpu_top` synthesis the plugin requires the `fwd_b_sel_r`, `fwd_b_ex1c_r`, `fwd_b_ex1b2_r` nets and 4800-4950 flops.
+After a Sky130 `rv32i_cpu_top` synthesis the plugin requires the `fwd_b_sel_r`, `fwd_b_ex1c_r`, `fwd_b_ex1b2_r` nets and 5220-5370 flops (re-centred from 4800-4950 on 2026-10-18, bead `c54a`: the in-macro `mbist_ctrl` adds 406 flops standalone, the Sky130 CPU synthesis went 4868 -> 5286; the fwd_b_* net requirement is unchanged and is the real tripwire).
 Measured on the dud4 netlists: sv2v main 4868 flops + all three nets (PASS); Synlig main 4863 flops, nets missing (FIRES); pinned Synlig
 4829 flops, nets missing (FIRES). It is a tripwire for this one known casualty, not a proof. ASAP7 netlists do not keep these net names.
