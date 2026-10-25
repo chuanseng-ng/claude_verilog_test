@@ -1,0 +1,132 @@
+**************************************************
+Report         : failing_points
+
+Reference      : r:/WORK/rv32i_cpu_top
+Implementation : i:/WORK/rv32i_cpu_top
+Version        : X-2025.06
+Date           : Mon Oct 26 00:32:11 2026
+**************************************************
+
+32 Failing compare points (32 matched, 0 unmatched):
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1a_ex1b_reg_q_reg_fwd_store__9_
+
+ [BBNet: multiply-driven net
+  BBPin: black-box pin
+  Cut:   cut-point
+  DFF:   non-constant DFF register
+  DFF0:  constant 0 DFF register
+  DFF1:  constant 1 DFF register
+  DFFX:  constant X DFF register
+  DFF0X: constrained 0X DFF register
+  DFF1X: constrained 1X DFF register
+  LAT:   non-constant latch register
+  LAT0:  constant 0 latch register
+  LAT1:  constant 1 latch register
+  LATX:  constant X latch register
+  LAT0X: constrained 0X latch register
+  LAT1X: constrained 1X latch register
+  LATCG: clock-gating latch register
+  TLA:   transparent latch register
+  TLA0X: transparent constrained 0X latch register
+  TLA1X: transparent constrained 1X latch register
+  Loop:  cycle break point
+  Port:  primary (top-level) port
+  Und:   undriven signal cut-point
+  Unk:   unknown signal cut-point]
+
+1

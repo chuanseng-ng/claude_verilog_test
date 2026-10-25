@@ -1,0 +1,3372 @@
+**************************************************
+Report         : failing_points
+
+Reference      : r:/WORK/rv32i_cpu_top
+Implementation : i:/WORK/rv32i_cpu_top
+Version        : X-2025.06
+Date           : Mon Oct 26 00:32:53 2026
+**************************************************
+
+1112 Failing compare points (1112 matched, 0 unmatched):
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/halt_latch_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/halt_latch_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_alu_result__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_access_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_access_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_csr_rdata__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_instruction__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_jump_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_jump_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_rd_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_rd_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_size__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_size__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_size__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_size__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_unsigned_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_unsigned_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wdata_aligned__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wr_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wr_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wstrb__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wstrb__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wstrb__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wstrb__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wstrb__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wstrb__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wstrb__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_mem_wstrb__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_pc__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_rd_addr__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_rd_addr__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_rd_addr__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_rd_addr__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_rd_addr__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_rd_addr__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_rd_addr__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_rd_addr__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_rd_addr__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_rd_addr__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_reg_wr_en_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_reg_wr_en_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_trap_cause__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_trap_cause__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_trap_cause__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_trap_cause__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_trap_cause__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_trap_cause__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_trap_cause__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_trap_cause__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_trap_valid_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_trap_valid_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_valid_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex1b_ex2_reg_q_reg_valid_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/ex_pc_redirect_r_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/ex_pc_redirect_r_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_csr_dcache_flush_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_csr_dcache_flush_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_csr_dcache_inval_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_csr_dcache_inval_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcause_q_reg_9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcountinhibit_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcountinhibit_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcountinhibit_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcountinhibit_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcountinhibit_q_reg_3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcountinhibit_q_reg_3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcountinhibit_q_reg_4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcountinhibit_q_reg_4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcountinhibit_q_reg_5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcountinhibit_q_reg_5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_32_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_32_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_33_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_33_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_34_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_34_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_35_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_35_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_36_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_36_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_37_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_37_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_38_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_38_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_39_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_39_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_40_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_40_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_41_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_41_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_42_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_42_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_43_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_43_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_44_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_44_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_45_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_45_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_46_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_46_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_47_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_47_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_48_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_48_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_49_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_49_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_50_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_50_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_51_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_51_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_52_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_52_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_53_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_53_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_54_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_54_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_55_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_55_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_56_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_56_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_57_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_57_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_58_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_58_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_59_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_59_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_60_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_60_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_61_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_61_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_62_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_62_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_63_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_63_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mcycle_q_reg_9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mepc_q_reg_9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter3_q_reg_9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter4_q_reg_9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mhpmcounter5_q_reg_9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mie_meie_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mie_meie_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mie_mtie_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mie_mtie_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_32_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_32_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_33_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_33_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_34_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_34_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_35_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_35_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_36_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_36_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_37_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_37_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_38_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_38_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_39_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_39_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_40_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_40_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_41_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_41_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_42_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_42_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_43_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_43_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_44_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_44_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_45_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_45_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_46_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_46_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_47_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_47_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_48_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_48_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_49_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_49_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_50_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_50_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_51_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_51_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_52_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_52_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_53_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_53_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_54_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_54_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_55_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_55_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_56_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_56_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_57_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_57_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_58_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_58_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_59_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_59_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_60_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_60_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_61_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_61_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_62_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_62_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_63_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_63_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_minstret_q_reg_9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_drop_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_drop_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_low0_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_low0_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_low1_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_low1_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_nocarry_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_nocarry_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pend0_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pend0_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pend1_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pend1_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pos0_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pos0_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pos0_q_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pos0_q_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pos0_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pos0_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pos1_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pos1_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pos1_q_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pos1_q_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pos1_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mrw_pos1_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mstatus_mie_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mstatus_mie_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mstatus_mpie_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mstatus_mpie_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_csr_mtvec_base_q_reg_9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ar_pending_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ar_pending_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_cancel_ar_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_cancel_ar_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_cancel_draining_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_cancel_draining_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_data_we_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_data_we_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_ic_addr_q_reg_9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_0__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_1__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_2__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_addr_bank_q_reg_3__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_0__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_1__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_2__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_buf_q_reg_3__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_line_addr_q_reg_9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_word_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_word_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_refill_word_q_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_refill_word_q_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_state_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_state_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_state_q_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_state_q_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_state_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_state_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_state_q_reg_3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_state_q_reg_3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_tag_we_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_tag_we_q_reg
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_100_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_100_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_101_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_101_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_102_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_102_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_103_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_103_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_104_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_104_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_105_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_105_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_106_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_106_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_107_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_107_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_108_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_108_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_109_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_109_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_110_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_110_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_111_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_111_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_112_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_112_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_113_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_113_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_114_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_114_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_115_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_115_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_116_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_116_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_117_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_117_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_118_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_118_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_119_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_119_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_120_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_120_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_121_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_121_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_122_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_122_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_123_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_123_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_124_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_124_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_125_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_125_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_126_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_126_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_127_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_127_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_128_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_128_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_129_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_129_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_130_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_130_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_131_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_131_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_132_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_132_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_133_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_133_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_134_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_134_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_135_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_135_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_136_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_136_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_137_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_137_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_138_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_138_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_139_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_139_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_140_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_140_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_141_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_141_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_142_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_142_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_143_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_143_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_144_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_144_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_145_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_145_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_146_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_146_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_147_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_147_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_148_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_148_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_149_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_149_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_150_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_150_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_151_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_151_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_152_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_152_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_153_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_153_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_154_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_154_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_155_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_155_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_156_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_156_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_157_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_157_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_158_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_158_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_159_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_159_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_160_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_160_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_161_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_161_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_162_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_162_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_163_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_163_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_164_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_164_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_165_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_165_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_166_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_166_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_167_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_167_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_168_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_168_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_169_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_169_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_170_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_170_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_171_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_171_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_172_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_172_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_173_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_173_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_174_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_174_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_175_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_175_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_176_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_176_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_177_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_177_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_178_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_178_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_179_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_179_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_180_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_180_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_181_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_181_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_182_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_182_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_183_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_183_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_184_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_184_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_185_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_185_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_186_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_186_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_187_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_187_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_188_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_188_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_189_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_189_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_190_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_190_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_191_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_191_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_192_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_192_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_193_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_193_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_194_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_194_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_195_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_195_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_196_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_196_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_197_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_197_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_198_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_198_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_199_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_199_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_200_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_200_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_201_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_201_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_202_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_202_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_203_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_203_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_204_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_204_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_205_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_205_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_206_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_206_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_207_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_207_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_208_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_208_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_209_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_209_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_210_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_210_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_211_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_211_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_212_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_212_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_213_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_213_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_214_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_214_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_215_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_215_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_216_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_216_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_217_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_217_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_218_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_218_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_219_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_219_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_220_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_220_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_221_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_221_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_222_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_222_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_223_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_223_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_224_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_224_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_225_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_225_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_226_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_226_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_227_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_227_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_228_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_228_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_229_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_229_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_230_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_230_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_231_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_231_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_232_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_232_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_233_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_233_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_234_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_234_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_235_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_235_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_236_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_236_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_237_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_237_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_238_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_238_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_239_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_239_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_240_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_240_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_241_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_241_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_242_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_242_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_243_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_243_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_244_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_244_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_245_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_245_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_246_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_246_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_247_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_247_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_248_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_248_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_249_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_249_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_250_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_250_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_251_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_251_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_252_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_252_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_253_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_253_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_254_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_254_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_255_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_255_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_32_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_32_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_33_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_33_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_34_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_34_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_35_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_35_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_36_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_36_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_37_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_37_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_38_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_38_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_39_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_39_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_40_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_40_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_41_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_41_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_42_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_42_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_43_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_43_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_44_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_44_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_45_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_45_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_46_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_46_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_47_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_47_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_48_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_48_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_49_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_49_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_50_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_50_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_51_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_51_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_52_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_52_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_53_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_53_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_54_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_54_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_55_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_55_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_56_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_56_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_57_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_57_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_58_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_58_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_59_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_59_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_60_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_60_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_61_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_61_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_62_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_62_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_63_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_63_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_64_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_64_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_65_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_65_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_66_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_66_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_67_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_67_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_68_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_68_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_69_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_69_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_70_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_70_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_71_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_71_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_72_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_72_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_73_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_73_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_74_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_74_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_75_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_75_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_76_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_76_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_77_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_77_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_78_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_78_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_79_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_79_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_80_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_80_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_81_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_81_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_82_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_82_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_83_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_83_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_84_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_84_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_85_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_85_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_86_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_86_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_87_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_87_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_88_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_88_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_89_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_89_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_90_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_90_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_91_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_91_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_92_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_92_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_93_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_93_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_94_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_94_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_95_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_95_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_96_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_96_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_97_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_97_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_98_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_98_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_99_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_99_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_icache_valid_array_reg_9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_instruction__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_pc__9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_valid_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_if_id_reg_o_reg_valid_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_0_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_0_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_10_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_10_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_11_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_11_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_12_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_12_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_13_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_13_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_14_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_14_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_15_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_15_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_16_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_16_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_17_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_17_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_18_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_18_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_19_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_19_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_1_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_1_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_20_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_20_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_21_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_21_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_22_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_22_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_23_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_23_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_24_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_24_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_25_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_25_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_26_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_26_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_27_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_27_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_28_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_28_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_29_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_29_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_2_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_2_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_30_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_30_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_31_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_31_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_3_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_3_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_4_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_4_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_5_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_5_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_6_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_6_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_7_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_7_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_8_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_8_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_9_
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_pc_q_reg_9_
+
+  Ref  DFF        r:/WORK/rv32i_cpu_top/u_core/u_if_step_done_q_reg
+  Impl DFF        i:/WORK/rv32i_cpu_top/u_core/u_if_step_done_q_reg
+
+  Ref  Port       r:/WORK/rv32i_cpu_top/debug_ebreak_o
+  Impl Port       i:/WORK/rv32i_cpu_top/debug_ebreak_o
+
+ [BBNet: multiply-driven net
+  BBPin: black-box pin
+  Cut:   cut-point
+  DFF:   non-constant DFF register
+  DFF0:  constant 0 DFF register
+  DFF1:  constant 1 DFF register
+  DFFX:  constant X DFF register
+  DFF0X: constrained 0X DFF register
+  DFF1X: constrained 1X DFF register
+  LAT:   non-constant latch register
+  LAT0:  constant 0 latch register
+  LAT1:  constant 1 latch register
+  LATX:  constant X latch register
+  LAT0X: constrained 0X latch register
+  LAT1X: constrained 1X latch register
+  LATCG: clock-gating latch register
+  TLA:   transparent latch register
+  TLA0X: transparent constrained 0X latch register
+  TLA1X: transparent constrained 1X latch register
+  Loop:  cycle break point
+  Port:  primary (top-level) port
+  Und:   undriven signal cut-point
+  Unk:   unknown signal cut-point]
+
+1
