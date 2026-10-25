@@ -564,11 +564,68 @@ if {[info exists ::env(CVT_SDC_SCAN_VIEW)] && $::env(CVT_SDC_SCAN_VIEW) eq "1"} 
         cvt_cdc_hold_exempt "u_cpu_axi_cdc*${_fifo}*u_rd_ptr_to_wr" $_rd_clk $_wr_clk \
             "u_cpu_axi_cdc.${_fifo}.u_rd_ptr_to_wr (${_rd_clk} -> ${_wr_clk})"
     }
+    # MBIST control-word crossings, TCK -> destination clock (bead y5mn / j41m.10, DFT_ARCHITECTURE.md 16.5): the same
+    # inter-tree skew reasoning as above. The TAP flops sit on the tck root; the destination capture flops sit
+    # behind the functional trees that ALSO carry tck (dft_clk_mux), so the flow STA times tck -> dst as a
+    # same-clock tck -> tck hold race with the full tree latency, and the resizer would pad it with delay cells
+    # in front of the 2-FF write-pointer synchroniser and the 28 holding-register D pins of each domain. In
+    # functional mode tck and the destination clock are asynchronous, so there is no hold requirement.
+    # Only the tck -> dst direction needs this. dst -> tck (read pointer, 69 status bits) has the LATE launch and the
+    # EARLY (tck-direct) capture, which only widens its hold slack. Setup is untouched. The launch set of the
+    # payload is found by the `u_fifo*mem_q*` NAMES (the storage), not by `all_registers -clock tck`, which also
+    # returns every functional flop the test clock reaches through the muxes.
+    # Skipped (with the AXI rows) under CVT_SDC_SCAN_VIEW=1: in scan capture these ARE real same-clock paths.
+    proc cvt_mbist_data_hold_exempt {xing_token dst_clk description} {
+        set _dst [cvt_cdc_regs_on_clock $dst_clk]
+        set _q {}
+        foreach _n [get_nets -hierarchical -filter "name =~ *${xing_token}*mem_q*" -quiet] {
+            if {![string match "*${xing_token}*u_fifo*" [cvt_cdc_plain_name $_n]]} { continue }
+            foreach _p [get_pins -of_objects $_n -filter {direction == output} -quiet] {
+                foreach _c [get_cells -of_objects $_p] {
+                    if {![dict exists $_dst [get_full_name $_c]]} { lappend _q $_p }
+                }
+            }
+        }
+        if {[llength $_q] == 0} {
+            lappend ::cvt_cdc_hold_exempt_misses "${description}: no mem_q launch flop"
+            return 0
+        }
+        set _launch {}
+        foreach _p $_q { foreach _c [get_cells -of_objects $_p] { lappend _launch $_c } }
+        set _dpins {}
+        foreach _e [get_fanout -from $_q -endpoints_only -flat] {
+            if {[catch {get_property $_e lib_pin_name} _lp]} { continue }   ;# a port, not a pin
+            if {$_lp ne "D"} { continue }
+            if {[dict exists $_dst [get_full_name [get_cells -of_objects $_e]]]} { lappend _dpins $_e }
+        }
+        if {[llength $_dpins] == 0} {
+            lappend ::cvt_cdc_hold_exempt_misses "${description}: no ${dst_clk} D pin in the mem_q fan-out"
+            return 0
+        }
+        set_false_path -hold -from [lsort -unique $_launch] -to [lsort -unique $_dpins]
+        foreach _p $_dpins { lappend ::cvt_cdc_hold_exempt_pins [get_full_name $_p] }
+        return [llength [lsort -unique $_dpins]]
+    }
+    if {[llength [get_clocks -quiet tck]] > 0} {
+        foreach {_dom _xing _dclk} {
+            core u_xing_core core_clk
+            cpu  u_xing_cpu  cpu_clk
+        } {
+            # the cpu half only exists with soc_top MBIST_CPU = 1
+            if {[llength [get_nets -hierarchical -filter "name =~ *${_xing}*" -quiet]] == 0} {
+                puts "INFO: CDC-HOLD-EXEMPT: no ${_xing} in this netlist (MBIST_CPU = 0 or pre-MBIST netlist); MBIST ${_dom} row skipped."
+                continue
+            }
+            cvt_cdc_hold_exempt "${_xing}*u_fifo*u_wr_ptr_to_rd" tck $_dclk \
+                "u_mbist.${_xing}.u_fifo.u_wr_ptr_to_rd (tck -> ${_dclk})"
+            cvt_mbist_data_hold_exempt $_xing $_dclk "u_mbist.${_xing} mem_q -> holding register (tck -> ${_dclk})"
+        }
+    }
     if {[llength $::cvt_cdc_hold_exempt_misses] > 0} {
         foreach _m $::cvt_cdc_hold_exempt_misses { puts "ERROR: CDC-HOLD-EXEMPT-MISS: $_m" }
         error "sky130_soc.sdc: [llength $::cvt_cdc_hold_exempt_misses] CDC gray-pointer hold exemption(s) failed to bind (see CDC-HOLD-EXEMPT-MISS lines); the hold padding they exist to stop would return."
     }
-    puts "INFO: CDC-HOLD-EXEMPT: [llength $::cvt_cdc_hold_exempt_pins] gray-pointer capture D pins exempt from hold (10 synchronisers)."
+    puts "INFO: CDC-HOLD-EXEMPT: [llength $::cvt_cdc_hold_exempt_pins] capture D pins exempt from hold (10 async_axi_fifo gray-pointer synchronisers + the MBIST tck -> dst pointer/payload rows)."
 }
 
 # Second-domain reference reset (GH #92/#93). Same class as rst_n_i above: an

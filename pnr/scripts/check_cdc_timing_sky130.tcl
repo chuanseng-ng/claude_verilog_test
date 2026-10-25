@@ -139,8 +139,20 @@ proc cdc_group_report {group} {
     set want [dict get $::cdc_group_budget $group]
     set rpt_tab  [file join $::REPORTS_DIR cdc_${group}.slack.rpt]
     set rpt_full [file join $::REPORTS_DIR cdc_${group}.worst.rpt]
-    report_checks -to $pins -path_delay max -format end -group_count 2000 -digits 3 > $rpt_tab
-    report_checks -to $pins -path_delay max -format full -digits 3 > $rpt_full
+    # Groups with a recorded launch set (sec. 14, bead y5mn) are reported -from that set too: their capture
+    # D pins also take ordinary same-domain paths (e.g. ctl_q's enable mux), which must not stand in for the
+    # crossing. Groups without one (all older rows) keep the plain -to query.
+    set fromcells {}
+    if {[info exists ::cdc_group_from] && [dict exists $::cdc_group_from $group]} {
+        set fromcells [lsort -unique [dict get $::cdc_group_from $group]]
+    }
+    if {[llength $fromcells] > 0} {
+        report_checks -from $fromcells -to $pins -path_delay max -format end -group_count 2000 -digits 3 > $rpt_tab
+        report_checks -from $fromcells -to $pins -path_delay max -format full -digits 3 > $rpt_full
+    } else {
+        report_checks -to $pins -path_delay max -format end -group_count 2000 -digits 3 > $rpt_tab
+        report_checks -to $pins -path_delay max -format full -digits 3 > $rpt_full
+    }
     set fh [open $rpt_tab r]; set tab [read $fh]; close $fh
     set fh [open $rpt_full r]; set full [read $fh]; close $fh
 
@@ -221,6 +233,7 @@ proc cdc_skew_report {} {
         return
     }
     set_propagated_clock [get_clocks {core_clk cpu_clk}]
+    if {[llength [get_clocks -quiet tck]] > 0} { set_propagated_clock [get_clocks tck] }
     foreach ptr [lsort [dict keys $::cdc_ptr_info]] {
         lassign [dict get $::cdc_ptr_info $ptr] fc tc pins
         set nbits [llength $pins]
