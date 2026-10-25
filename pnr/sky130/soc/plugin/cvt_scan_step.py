@@ -26,6 +26,7 @@ from typing import List, Optional, Tuple
 from librelane.config import Variable
 from librelane.flows import Flow
 from librelane.flows.classic import Classic
+from librelane.logging import info as _log_info
 from librelane.state import DesignFormat, State
 from librelane.steps import MetricsUpdate, Step, ViewsUpdate
 from librelane.steps.checker import NetlistAssignStatements
@@ -190,7 +191,7 @@ class CVTScanInsert(Step):
         with open(nl_out, encoding="utf-8", errors="replace") as fh:
             text = fh.read()
         text, dropped = strip_tool_ports(text)
-        self.info(f"dropped the tool-created ports {dropped}")
+        _log_info(f"dropped the tool-created ports {dropped}")
         with open(nl_out, "w", encoding="utf-8") as fh:
             fh.write(text)
         n_assign = len(_ASSIGN_RE.findall(text))
