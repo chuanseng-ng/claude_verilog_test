@@ -1,4 +1,74 @@
 {
     "version": 1,
-    "waivers": []
+    "waivers": [
+        {
+            "id": "u-ref-cm-mux-clk-cpu-pll-sub",
+            "driver": {
+                "instance": "u_cpu_pll_sub.u_ref_cm.u_mux",
+                "pin": "X"
+            },
+            "run_id": "RUN_2026-10-25_08-28-45",
+            "corners": [
+                "min_ss_100C_1v60",
+                "nom_ss_100C_1v60",
+                "max_ss_100C_1v60"
+            ],
+            "max_cap_pf": 0.45,
+            "bead": "claude_verilog_test-e45j",
+            "justification": "User decision 2026-10-25 (PR #328). Clock net u_cpu_pll_sub.u_ref_cm.mux_clk: a hard-instantiated clock mux (u_mux, mux2_4 from sky130_clkcells_stub) driving the hard-instantiated buf_16 root buffer u_root_buf, in the CTS clock-net set, plus 7 antenna diodes that OpenROAD.RepairAntennas inserted AFTER the cap repair stage (0 diodes on this net in RUN_2026-10-17_23-06-56; the diode attribution is inferred from the netlist and the log, not isolated by an experiment). Neither the pre-route nor the post-GRT cap-repair margin can reach it: raising GRT_DESIGN_REPAIR_MAX_CAP_PCT 30 -> 40 (RUN_2026-10-25_15-59-23) left it at 0.379-0.418 pF against the 0.3397 pF limit. Measured in the shipped run RUN_2026-10-25_08-28-45: min_ss 0.3985, nom_ss 0.4210, max_ss 0.4356 pF (+17 to +28 percent over the limit); the other six corners do not violate. The driver is a stable hand-instantiated name, but the schema only accepts a driver waiver pinned to a run_id (no glob, no load pin: the net has no macro load), so this waiver goes STALE on any other run and must be re-issued or the schema extended."
+        },
+        {
+            "id": "sram-din0-22-collar-mux",
+            "load_pin": {
+                "instance": "u_sram.u_sram_macro",
+                "pin": "din0[22]"
+            },
+            "corners": [
+                "max_ss_100C_1v60"
+            ],
+            "max_cap_pf": 0.35,
+            "bead": "claude_verilog_test-e45j",
+            "justification": "User decision 2026-10-25 (PR #328). Write-data net u_sram.mb_din0_m[22] from the MBIST collar mux into the SRAM macro pin din0[22]. Measured in the shipped run RUN_2026-10-25_08-28-45: max_ss 0.3460 pF against the 0.3388 pF limit (+2.1 percent); no other corner violates. Ceiling = the next round 0.01 pF above the measurement (+1.2 percent), so a regression fails. Keyed on the load macro pin, not on the synthesis-generated driver. An over-repair run (GRT_DESIGN_REPAIR_MAX_CAP_PCT 40, RUN_2026-10-25_15-59-23) cleared this net but raised unwaived max-cap from 8 to 23 (SRAM macro dout0 nets at all corners) and added a max_ss setup violator, so the shipped run keeps the margin at 30 and waives instead."
+        },
+        {
+            "id": "sram-din0-29-collar-mux",
+            "load_pin": {
+                "instance": "u_sram.u_sram_macro",
+                "pin": "din0[29]"
+            },
+            "corners": [
+                "max_ss_100C_1v60"
+            ],
+            "max_cap_pf": 0.35,
+            "bead": "claude_verilog_test-e45j",
+            "justification": "User decision 2026-10-25 (PR #328). Write-data net u_sram.mb_din0_m[29] from the MBIST collar mux into the SRAM macro pin din0[29]. Measured in the shipped run RUN_2026-10-25_08-28-45: max_ss 0.3446 pF against the 0.3388 pF limit (+1.7 percent); no other corner violates. Ceiling = the next round 0.01 pF above the measurement (+1.6 percent). Keyed on the load macro pin. See sram-din0-22-collar-mux for why the 40 percent over-repair run was not shipped."
+        },
+        {
+            "id": "sram-din0-30-collar-mux",
+            "load_pin": {
+                "instance": "u_sram.u_sram_macro",
+                "pin": "din0[30]"
+            },
+            "corners": [
+                "max_ss_100C_1v60"
+            ],
+            "max_cap_pf": 0.36,
+            "bead": "claude_verilog_test-e45j",
+            "justification": "User decision 2026-10-25 (PR #328). Write-data net u_sram.mb_din0_m[30] from the MBIST collar mux into the SRAM macro pin din0[30]. Measured in the shipped run RUN_2026-10-25_08-28-45: max_ss 0.3513 pF against the 0.3388 pF limit (+3.7 percent); no other corner violates. Ceiling = the next round 0.01 pF above the measurement (+2.5 percent). Keyed on the load macro pin. See sram-din0-22-collar-mux for why the 40 percent over-repair run was not shipped."
+        },
+        {
+            "id": "sram-din0-31-collar-mux",
+            "load_pin": {
+                "instance": "u_sram.u_sram_macro",
+                "pin": "din0[31]"
+            },
+            "corners": [
+                "max_ss_100C_1v60",
+                "nom_ss_100C_1v60"
+            ],
+            "max_cap_pf": 0.38,
+            "bead": "claude_verilog_test-e45j",
+            "justification": "User decision 2026-10-25 (PR #328). Write-data net u_sram.mb_din0_m[31] from the MBIST collar mux into the SRAM macro pin din0[31]. Measured in the shipped run RUN_2026-10-25_08-28-45: max_ss 0.3784 pF against the 0.3388 pF limit (+11.7 percent) and nom_ss 0.3564 pF against 0.3388 pF (+5.2 percent); no other corner violates. Ceiling = the next round 0.01 pF above the worst measurement (+0.4 percent), so this is the tightest of the four. Keyed on the load macro pin. See sram-din0-22-collar-mux for why the 40 percent over-repair run was not shipped."
+        }
+    ]
 }

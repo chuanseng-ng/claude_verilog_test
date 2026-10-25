@@ -61,13 +61,27 @@ create_clock -name cpu_clk -period $clock_period [get_ports cpu_clk_i]
 set_clock_uncertainty -setup 0.300 [get_clocks cpu_clk]
 set_clock_uncertainty -hold  0.150 [get_clocks cpu_clk]
 
-# DELIBERATE ABSENCE: no set_clock_groups, no set_false_path between core_clk and cpu_clk.
+# Third root: the JTAG TAP clock (bead y5mn / j41m.10). Same period as sky130_soc.sdc's placeholder. It exists
+# here ONLY so the MBIST control-word and status crossings (section 14) have a launch/capture clock; as for
+# the other two clocks it is deliberately NOT related to them. Guarded so an older netlist without the port
+# still sources. The test clock reaches the functional trees through the dft_clk_mux (flow STA), so a flop in
+# core_clk/cpu_clk may carry `tck` as a second clock: section 14 therefore NEVER identifies a TCK-domain cell
+# by `all_registers -clock tck`, only structurally (fan-in of a synchroniser, minus the destination domain).
+set tck_period 100.0
+if {[llength [get_ports -quiet tck_i]] > 0} {
+    create_clock -name tck -period $tck_period [get_ports tck_i]
+    set_clock_uncertainty -setup 0.300 [get_clocks tck]
+    set_clock_uncertainty -hold  0.150 [get_clocks tck]
+}
+
+# DELIBERATE ABSENCE: no set_clock_groups, no set_false_path between core_clk, cpu_clk and tck.
 
 ###############################################################################
 # 2. Asynchronous reset ports (as in sky130_soc.sdc)
 ###############################################################################
 set_false_path -from [get_ports rst_n_i]
 set_false_path -from [get_ports cpu_rst_n_i]
+foreach _p [get_ports -quiet trst_ni] { set_false_path -from $_p }
 
 ###############################################################################
 # Coverage guard + helper procs
@@ -280,6 +294,214 @@ foreach {_s _g} {u_cpu_clk_dis_sync pmu_clk_dis u_cpu_iso_en_sync pmu_iso_en \
 #      the same structural binding as every row above. Not yet run on a routed Sky130 netlist.
 cdc_apply_sync_budget pmu_iso_ack u_cpu_iso_ack_sync $clock_period cpu_clk core_clk \
     "sec.13a u_cpu_iso_ack_sync single-bit crossing (cpu_clk -> core_clk)"
+
+###############################################################################
+# 14. MBIST TCK <-> functional crossings (bead y5mn, j41m.10 Q12; DFT_ARCHITECTURE.md 16.5, 16.11)
+#
+# PR #306 added, per destination domain (core_clk: u_mbist.u_xing_core; cpu_core_clk: u_mbist.g_cpu.u_xing_cpu):
+#   (a) a depth-2 cdc_gray_fifo, write side tck, read side the UNGATED destination clock, rd_ready tied 1:
+#         u_fifo.u_wr_ptr_to_rd  tck -> dst  gray write pointer (2-FF)      GRAY    budget
+#         u_fifo.u_rd_ptr_to_wr  dst -> tck  gray read pointer  (2-FF)      GRAY    budget
+#         u_fifo.mem_q -> mbist_ctl_hold ctl_q  tck -> dst  combinational read of the 2x29-bit storage into the
+#                                                               holding register                    PAYLOAD budget
+#   (b) mbist_status_sync: 69 per-bit single-bit cdc_sync dst -> tck (u_stsync_core / g_cpu.u_stsync_cpu).
+# For the CPU domain the status launch is the CPU hard macro itself (mbist_status_o[], launched by clk_i), so
+# the launch cell is the macro instance; its 35 pins {23,22} U [68:36] (rec_addr[9:8] since AW = 8, rec_port[1], and err_mask, tied 0 since the collar-local compare,
+# DFT_ARCHITECTURE.md 16.12) have no launching arc, are recognised as constants and are accounted for, not skipped.
+#
+# BUDGETS (new numbers, chosen here; OpenSTA has no -datapath_only, see the header):
+#   * gray pointers, both directions: 0.5 x min(source, destination) period = 12.5 ns. The existing FIFO rows use
+#     0.5 x the DESTINATION period; with a 100 ns tck that rule would give the dst->tck pointer 50 ns, four times
+#     looser than the 25 ns functional clock that launches it, so the faster period governs here.
+#   * mem_q -> ctl_q payload: 0.9 x the destination period = 22.5 ns (the section-10 payload convention). The data
+#     is only consumed after the pointer has crossed (>= 2 destination edges), so this is conservative.
+#   * status bits dst -> tck: 1.0 x min(source, destination) period = 25 ns (single-bit level crossings; the
+#     documented >= 3 TCK settle rule and the done/busy extra flop do the coherency, section 16.5).
+# All three are CLOCKS-IDEAL datapath bounds like every other row.
+#
+# NEGATIVE CONTROL: CDC_CHECK_MBIST_BUDGET_NS=<ns> forces every section-14 budget to that value (e.g. 0.001); the
+# check must then FAIL on every section-14 group. A check that cannot fail is not a check.
+#
+# NOT COVERED HERE, ON PURPOSE (listed so the gap is visible, not hidden):
+#   * mbist_force (TAP falling-edge flop, tck) -> u_cpu_cg enable: a single UNSYNCHRONISED quasi-static control,
+#     the section 15.5 "crossing 2" contract; async-grouped in the implementation SDC. No synchroniser exists to
+#     bind a budget to; a CDC lint rule, not an SDC row, is the right owner.
+#   * mbist_run_i / mbist_cfg_i[25:0] into the CPU macro: launched by the cpu_core_clk holding register, captured by
+#     the macro on cpu_gated_clk (the same clock root), and the macro Liberty carries setup/hold arcs for every one
+#     of them. They are ordinary synchronous cpu_clk paths, timed by the flow STA, not CDC.
+#   * macro mbist_status_o[1:0] -> u_cpu_cg enable (cpu_cg_en feedback): same clock root, ordinary clock-gating check.
+###############################################################################
+set ::cdc_mb_const_bits {}
+set ::cdc_group_from [dict create]
+
+proc cdc_mb_budget {val} {
+    if {[info exists ::env(CDC_CHECK_MBIST_BUDGET_NS)] && $::env(CDC_CHECK_MBIST_BUDGET_NS) ne ""} {
+        return $::env(CDC_CHECK_MBIST_BUDGET_NS)
+    }
+    return $val
+}
+
+# Startpoint cells in the fan-in of $dpins, optionally minus the registers of clock $excl_clk.
+proc cdc_mb_startpoints {dpins excl_clk} {
+    # Startpoint PINS, not cells: a hard-macro output with no launching arc (the tied-0 mbist_status_o bits) comes back
+    # as the macro's OUTPUT pin, while a real launch comes back as a clock INPUT pin (clk_i / CLK). Only the latter
+    # is a launch; `-only_cells` would report the macro instance for both and hide the difference.
+    set _sp {}
+    foreach _p [get_fanin -to $dpins -startpoints_only -flat] {
+        if {[catch {get_property $_p lib_pin_name}]} { continue }   ;# a port, not a pin
+        if {[get_property $_p direction] ne "input"} { continue }
+        foreach _c [get_cells -of_objects $_p] { lappend _sp $_c }
+    }
+    set _sp [lsort -unique $_sp]
+    if {$excl_clk eq ""} { return $_sp }
+    set _ns [cdc_regs_on_clock $excl_clk]
+    set _r {}
+    foreach c $_sp { if {![dict exists $_ns [get_full_name $c]]} { lappend _r $c } }
+    return $_r
+}
+
+# launch_excl: "" = every startpoint; a clock name = every startpoint that is NOT a register of that clock
+# (this is how the TCK side is found without `all_registers -clock tck`, see section 1).
+# const_ok: list of bit indices (parsed from `g_bit[N]` in the net name) allowed to have NO launch cell.
+# One set_max_delay per bit. Returns the bits applied; unresolved bits are recorded misses.
+proc cdc_mb_apply_sync {group inst_token val launch_excl to_clk description const_ok} {
+    set ::cdc_last_pins {}
+    set val [cdc_mb_budget $val]
+    set _nets [cdc_sync_stage0_nets $inst_token]
+    if {![cdc_require_match $_nets $description]} { return 0 }
+    set _applied 0
+    foreach _n $_nets {
+        set _drv_pins [get_pins -of_objects $_n -filter {direction == output} -quiet]
+        set _caps [cdc_filter_by_clock [get_cells -of_objects $_drv_pins -quiet] $to_clk]
+        if {[llength $_caps] == 0} {
+            puts "ERROR: CDC-EXCEPTION-MISS: ${description} (net [get_full_name $_n]) -- no ${to_clk}-domain register drives the stage-0 net. NOT applied."
+            lappend ::cdc_exception_misses "${description} (net [get_full_name $_n])"
+            continue
+        }
+        set _dpins [get_pins -of_objects $_caps -filter {direction == input && name == D} -quiet]
+        if {[llength $_dpins] == 0} {
+            lappend ::cdc_exception_misses "${description} (net [get_full_name $_n]) no D pin"
+            continue
+        }
+        set _launch [cdc_mb_startpoints $_dpins $launch_excl]
+        if {[llength $_launch] == 0} {
+            set _idx -1
+            regexp {g_bit\[([0-9]+)\]} [cdc_plain_name $_n] -> _idx
+            if {$_idx >= 0 && [lsearch -exact $const_ok $_idx] >= 0} {
+                lappend ::cdc_mb_const_bits "${group}\[$_idx\]"
+                continue
+            }
+            puts "ERROR: CDC-EXCEPTION-MISS: ${description} (net [get_full_name $_n]) -- no launch cell in the fan-in of the capture D pin. NOT applied."
+            lappend ::cdc_exception_misses "${description} (net [get_full_name $_n]) no launch"
+            continue
+        }
+        set_max_delay $val -from $_launch -to $_dpins
+        dict lappend ::cdc_groups $group {*}$_dpins
+        dict lappend ::cdc_group_from $group {*}$_launch
+        lappend ::cdc_last_pins {*}$_dpins
+        incr _applied
+    }
+    dict set ::cdc_group_budget $group $val
+    return $_applied
+}
+
+# mem_q -> ctl_q payload. Launch = the flops behind the `u_fifo*mem_q*` nets (the FIFO storage, found by NAME because
+# yosys keeps the storage nets but renames/merges the bus nets after the holding register: ctl_w[26:1] comes back
+# as core_cfg_w). Capture = every destination-domain register D pin in the fan-out of those flops (the holding
+# register's bits; anything else the storage reached would show up in the count check). One exception per
+# domain: every entry reaches every bit through the read mux.
+proc cdc_mb_apply_data {group inst_token val dst_clk description} {
+    set val [cdc_mb_budget $val]
+    set _nets {}
+    foreach _n [get_nets -hierarchical -filter "name =~ *${inst_token}*mem_q*" -quiet] {
+        set _nm [cdc_plain_name $_n]
+        if {[string match "*${inst_token}*u_fifo*" $_nm]} { lappend _nets $_n }
+    }
+    if {![cdc_require_match $_nets $description]} { return 0 }
+    set _dst [cdc_regs_on_clock $dst_clk]
+    set _launch {}
+    set _qpins {}
+    foreach _n $_nets {
+        foreach _p [get_pins -of_objects $_n -filter {direction == output} -quiet] {
+            foreach _c [get_cells -of_objects $_p] {
+                if {[dict exists $_dst [get_full_name $_c]]} { continue }
+                lappend _launch $_c
+                lappend _qpins $_p
+            }
+        }
+    }
+    set _launch [lsort -unique $_launch]
+    if {[llength $_launch] == 0} {
+        puts "ERROR: CDC-EXCEPTION-MISS: ${description} -- no non-${dst_clk} register drives a mem_q net. NOT applied."
+        lappend ::cdc_exception_misses "${description} launch"
+        return 0
+    }
+    set _dpins {}
+    foreach _e [get_fanout -from $_qpins -endpoints_only -flat] {
+        if {[catch {get_property $_e lib_pin_name} _lp]} { continue }   ;# a port, not a pin
+        if {$_lp ne "D"} { continue }
+        set _c [get_cells -of_objects $_e]
+        if {[dict exists $_dst [get_full_name $_c]]} { lappend _dpins $_e }
+    }
+    set _dpins [lsort -unique $_dpins]
+    if {[llength $_dpins] == 0} {
+        puts "ERROR: CDC-EXCEPTION-MISS: ${description} -- no ${dst_clk} register D pin in the fan-out of the mem_q flops. NOT applied."
+        lappend ::cdc_exception_misses "${description} capture"
+        return 0
+    }
+    set_max_delay $val -from $_launch -to $_dpins
+    dict lappend ::cdc_groups $group {*}$_dpins
+    dict lappend ::cdc_group_from $group {*}$_launch
+    dict set ::cdc_group_budget $group $val
+    puts "INFO: MBIST-XING: $group: [llength $_launch] mem_q launch flops -> [llength $_dpins] ${dst_clk} D pins."
+    return [llength $_dpins]
+}
+
+if {[llength [get_clocks -quiet tck]] > 0 && [llength [get_nets -hierarchical -filter "name =~ *u_xing_core*" -quiet]] > 0} {
+    set _mb_gray [expr {0.5 * min($clock_period, $tck_period)}]
+    set _mb_pay  [expr {0.9 * $clock_period}]
+    set _mb_bit  [expr {1.0 * min($clock_period, $tck_period)}]
+    # Expected bit counts (a count that drifts means a crossing silently lost or gained a bit: a miss, not a pass):
+    # DEPTH-2 gray pointer = 2 bits; status block: core 61 (69 minus fail[9:2] of the 8 absent memories, constants that yosys removes), CPU 34 real + 35 constant-0 macro pins; ctl_q 28 bits
+    # per domain (the 29-bit word's other-domain enable bit has no consumer in this domain and is optimised away).
+    proc cdc_mb_expect {what got want} {
+        if {$got != $want} {
+            puts "ERROR: CDC-EXCEPTION-MISS: sec.14 $what: bound $got bit(s), expected $want."
+            lappend ::cdc_exception_misses "sec.14 $what bit count $got != $want"
+        }
+    }
+    foreach {_dom _xing _sts _dclk _nstat} {
+        core u_xing_core u_stsync_core core_clk 61
+        cpu  u_xing_cpu  u_stsync_cpu  cpu_clk  34
+    } {
+        # tck -> dst gray write pointer: launch = the TCK-side pointer flops (everything not in the dst domain)
+        set _n [cdc_mb_apply_sync mb_${_dom}_wr2rd "${_xing}*u_fifo*u_wr_ptr_to_rd" $_mb_gray $_dclk $_dclk \
+            "sec.14 ${_xing} write-pointer crossing (tck -> ${_dclk})" {}]
+        cdc_mb_expect "${_xing} wr2rd" $_n 2
+        dict set ::cdc_ptr_info "mb_${_dom}.wr2rd" [list tck $_dclk $::cdc_last_pins]
+        # dst -> tck gray read pointer: launch = the dst-domain pointer flops
+        set _n [cdc_mb_apply_sync mb_${_dom}_rd2wr "${_xing}*u_fifo*u_rd_ptr_to_wr" $_mb_gray "" tck \
+            "sec.14 ${_xing} read-pointer crossing (${_dclk} -> tck)" {}]
+        cdc_mb_expect "${_xing} rd2wr" $_n 2
+        dict set ::cdc_ptr_info "mb_${_dom}.rd2wr" [list $_dclk tck $::cdc_last_pins]
+        # FIFO storage -> holding register
+        set _n [cdc_mb_apply_data mb_${_dom}_data $_xing $_mb_pay $_dclk \
+            "sec.14 ${_xing} mem_q -> ctl_q payload (tck -> ${_dclk})"]
+        cdc_mb_expect "${_xing} ctl_q" $_n 28
+        # status block, dst -> tck, one 2-FF per bit
+        set _const_ok {}
+        if {$_dom eq "cpu"} {
+            # rec_addr[9:8] (bits 23:22; the macro controller has AW = 8), rec_port[1] (36), err_mask (68:37)
+            set _const_ok {22 23}
+            for {set _i 36} {$_i <= 68} {incr _i} { lappend _const_ok $_i }
+        }
+        set _n [cdc_mb_apply_sync mb_${_dom}_status $_sts $_mb_bit "" tck \
+            "sec.14 ${_sts} status bits (${_dclk} -> tck)" $_const_ok]
+        cdc_mb_expect "${_sts} status" $_n $_nstat
+    }
+    cdc_mb_expect "constant status bits (cpu)" [llength $::cdc_mb_const_bits] 35
+    puts "INFO: MBIST-XING: constant (no launching arc) status bits accounted for: [llength $::cdc_mb_const_bits] ($::cdc_mb_const_bits)"
+}
 
 ###############################################################################
 # 15. Coverage gate: any miss above is a hard Tcl error (the script turns it into a finding).
