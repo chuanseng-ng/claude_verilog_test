@@ -45,14 +45,17 @@
 +incdir+rtl/soc
 +incdir+rtl/cpu/core
 +incdir+rtl/mem
++incdir+rtl/soc/dft
 +incdir+rtl/cpu/core/pipeline
 +incdir+rtl/cpu
 
-// ---- RTL (27 files, packages first) ----
+// ---- RTL (29 files, packages first) ----
 rtl/soc/axi_pkg.sv
 rtl/soc/soc_addr_map_pkg.sv
 rtl/cpu/core/rv32i_pipeline_pkg.sv
 rtl/mem/rv32i_cache_pkg.sv
+rtl/soc/dft/mem_collar.sv
+rtl/soc/dft/mbist_ctrl.sv
 rtl/mem/rv32i_clock_gate.sv
 rtl/cpu/core/rv32i_alu.sv
 rtl/cpu/core/rv32i_branch_comp.sv

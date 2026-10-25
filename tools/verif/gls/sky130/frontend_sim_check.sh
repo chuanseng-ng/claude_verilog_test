@@ -19,7 +19,7 @@ Y62=/nix/store/f1q0w7rd0a4ny4hqvfxlhs4cmariidcy-yosys-0.62/bin/yosys
 SV2V=/nix/store/bknj130bjxz018c73yawkjmbzjhppqbc-sv2v-0.0.13.1/bin/sv2v
 SRAM_MODEL="$1/sim/sky130_sram_1kbyte_1rw1r_32x256_8.sv"
 mkdir -p "$OUT"; cp "$ROM" "$OUT/rom_cpu_check.hex"
-FILES="$R/soc/axi_pkg.sv $R/soc/soc_addr_map_pkg.sv $R/cpu/core/rv32i_pipeline_pkg.sv $R/mem/rv32i_cache_pkg.sv
+FILES="$R/soc/axi_pkg.sv $R/soc/soc_addr_map_pkg.sv $R/cpu/core/rv32i_pipeline_pkg.sv $R/mem/rv32i_cache_pkg.sv $R/soc/dft/mem_collar.sv $R/soc/dft/mbist_ctrl.sv
 $R/cpu/core/rv32i_alu.sv $R/cpu/core/rv32i_branch_comp.sv $R/cpu/core/rv32i_imm_gen.sv $R/cpu/core/rv32i_regfile.sv
 $R/cpu/core/rv32i_decode.sv $R/cpu/core/rv32i_forwarding_unit.sv $R/cpu/core/rv32i_hazard_unit.sv
 $R/cpu/core/rv32i_interrupt_ctrl.sv $R/cpu/core/rv32i_csr_file.sv

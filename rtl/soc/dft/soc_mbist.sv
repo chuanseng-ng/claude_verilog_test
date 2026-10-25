@@ -61,6 +61,11 @@ module soc_mbist #(
     logic        core_ctl_rst_n_w;
     logic [68:0] core_status_w;
     logic [68:0] core_status_tck_w;
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic        core_x_rd_w;         // LOCAL_CMP = 0 here: the expected-data tag is not consumed
+    logic [3:0]  core_x_xm_w;
+    logic [2:0]  core_x_bg_w;
+    /* verilator lint_on  UNUSEDSIGNAL */
 
     mbist_xing #(
         .CTL_W   (29),
@@ -99,6 +104,11 @@ module soc_mbist #(
         .b_din_o   (b_din_o),
         .dout0_i   (dout0_i),
         .dout1_i   (dout1_i),
+        .x_rd_o    (core_x_rd_w),
+        .x_xm_o    (core_x_xm_w),
+        .x_bg_o    (core_x_bg_w),
+        .cmp_fail0_i ('0),
+        .cmp_fail1_i ('0),
         .status_o  (core_status_w)
     );
 

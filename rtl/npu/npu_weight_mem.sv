@@ -103,6 +103,10 @@ module npu_weight_mem #(
     logic [31:0] mb_din0_m;
     logic        mb_csb1_m;
     logic [9:0]  mb_addr1_m;
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic        mb_cmp_f0_unused;   // LOCAL_CMP = 0: the collar compare is not built, strobes are constant 0
+    logic        mb_cmp_f1_unused;
+    /* verilator lint_on  UNUSEDSIGNAL */
 
     mem_collar #(
         .AW     (10),
@@ -121,6 +125,14 @@ module npu_weight_mem #(
         .din0_f_i   (wr_data_i),
         .csb1_f_i   (1'b1),
         .addr1_f_i  (10'b0),
+        .clk_i       (clk),
+        .x_rd_i      (1'b0),
+        .x_xm_i      (4'b0),
+        .x_bg_i      (3'b0),
+        .dout0_i     (32'd0),
+        .dout1_i     (32'd0),
+        .cmp_fail0_o (mb_cmp_f0_unused),
+        .cmp_fail1_o (mb_cmp_f1_unused),
         .csb0_m_o   (mb_csb0_m),
         .web0_m_o   (mb_web0_m),
         .wmask0_m_o (mb_wmask0_m),

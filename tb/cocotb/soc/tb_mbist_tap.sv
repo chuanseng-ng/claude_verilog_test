@@ -77,6 +77,16 @@ module tb_mbist_tap #(
     assign unused_w = &{1'b0, dft_scan_en, dft_test_en, dft_test_clk};
     /* verilator lint_on  UNUSEDSIGNAL */
 
+    // LOCAL_CMP = 0 everywhere in this bench (the collar-local compare is covered by tb_mbist_domain and the
+    // real CPU macro in tb_mbist_cpu_macro): the compare ports of the controllers and collars are parked.
+    /* verilator lint_off UNUSEDSIGNAL */
+    logic        cmp_f0_unused;
+    logic        cmp_f1_unused;
+    logic        x_rd_unused;
+    logic [3:0]  x_xm_unused;
+    logic [2:0]  x_bg_unused;
+    /* verilator lint_on  UNUSEDSIGNAL */
+
     // ── Core domain ──────────────────────────────────────────────────────────
     logic                  c_bist_en;
     logic                  c_ce;
@@ -160,6 +170,14 @@ module tb_mbist_tap #(
                 .din0_f_i   (32'd0),
                 .csb1_f_i   (1'b1),
                 .addr1_f_i  ('0),
+                .clk_i       (clk_core_i),
+                .x_rd_i      (1'b0),
+                .x_xm_i      (4'b0),
+                .x_bg_i      (3'b0),
+                .dout0_i     (32'd0),
+                .dout1_i     (32'd0),
+                .cmp_fail0_o (cmp_f0_unused),
+                .cmp_fail1_o (cmp_f1_unused),
                 .csb0_m_o   (csb0_m),
                 .web0_m_o   (web0_m),
                 .wmask0_m_o (wmask0_m),
@@ -204,6 +222,11 @@ module tb_mbist_tap #(
         .b_din_o   (p_din),
         .dout0_i   (p_dout0),
         .dout1_i   (p_dout1),
+        .x_rd_o    (x_rd_unused),
+        .x_xm_o    (x_xm_unused),
+        .x_bg_o    (x_bg_unused),
+        .cmp_fail0_i ('0),
+        .cmp_fail1_i ('0),
         .status_o  (cpu_status)
     );
 
@@ -232,6 +255,14 @@ module tb_mbist_tap #(
                 .din0_f_i   (32'd0),
                 .csb1_f_i   (1'b1),
                 .addr1_f_i  ('0),
+                .clk_i       (clk_cpu_i),
+                .x_rd_i      (1'b0),
+                .x_xm_i      (4'b0),
+                .x_bg_i      (3'b0),
+                .dout0_i     (32'd0),
+                .dout1_i     (32'd0),
+                .cmp_fail0_o (cmp_f0_unused),
+                .cmp_fail1_o (cmp_f1_unused),
                 .csb0_m_o   (csb0_m),
                 .web0_m_o   (web0_m),
                 .wmask0_m_o (wmask0_m),
