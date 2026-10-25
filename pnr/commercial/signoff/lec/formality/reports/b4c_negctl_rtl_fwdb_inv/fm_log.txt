@@ -1,0 +1,327 @@
+
+                                 Formality (R)
+
+                 Version X-2025.06 for linux64 - May 25, 2025 
+
+                    Copyright (c) 1988 - 2025 Synopsys, Inc.
+   This software and the associated documentation are proprietary to Synopsys,
+ Inc. This software may only be used in accordance with the terms and conditions
+ of a written license agreement with Synopsys, Inc. All other use, reproduction,
+   or distribution of this software is strictly prohibited.  Licensed Products
+     communicate with Synopsys servers for the purpose of providing software
+    updates, detecting software piracy and verifying that customers are using
+    Licensed Products in conformity with the applicable License Key for such
+  Licensed Products. Synopsys will use information gathered in connection with
+    this process to deliver software updates and pursue software pirates and
+                                   infringers.
+
+ Inclusivity & Diversity - Visit SolvNetPlus to read the "Synopsys Statement on
+            Inclusivity and Diversity" (Refer to article 000036315 at
+                        https://solvnetplus.synopsys.com)
+
+Build: 9835556
+Hostname: eda.ic
+Current time: Mon Oct 26 02:04:00 2026
+
+Loading db file '/home/EDA/synopsys/fm/X-2025.06/libraries/syn/gtech.db'
+
+Script: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/scripts/fm_lec_icc2.tcl
+
+Information: Term was not able to be set up using xterm-256color . Using "xterm" by default instead. (CLE-10)
+# fm_lec_icc2.tcl -- Step B4c: Formality LEC of the post-route ICC2 netlist.
+#   fm_shell -f fm_lec_icc2.tcl     env: REPO PDKDIR RUN IMPL REFMODE=rtl|dc  SVF=<file>|none  [RTL_LIST] [REF_NETLIST]
+#   REFMODE=rtl : reference = the 28 SV files + 5 defines (as B4a), optional DC SVF (see report for why it may be useless here)
+#   REFMODE=dc  : reference = DC-NXT netlist (itself proven == RTL in B4a), no SVF; netlist-to-netlist hop
+# Implementation = ICC2 write_verilog -exclude {pg_netlist physical_only_cells} output: flat, no PG pins, 115 port diodes, no assigns.
+# Same rules as B4a: no set_constant / set_dont_verify / user_match / waivers.  Every setting carries its reason.
+set REPO   $::env(REPO)
+/home/RD/ryan/Desktop/Github/claude_verilog_test
+set PDKDIR $::env(PDKDIR)
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130
+set RUN    $::env(RUN)
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/b4c_negctl_rtl_fwdb_inv
+set IMPL   $::env(IMPL)
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_icc2_fwdb_inv.nl.v
+set SVFF   $::env(SVF)
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/syn/dc/runs/b3a_dc_tt/out/rv32i_cpu_top.svf
+set MODE   $::env(REFMODE)
+rtl
+set TOP    rv32i_cpu_top
+rv32i_cpu_top
+set B      $PDKDIR/build/db
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db
+set SRAMDB $B/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db
+set STDDB  $B/sky130_fd_sc_hd__tt_025C_1v80.db
+/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_fd_sc_hd__tt_025C_1v80.db
+file mkdir $RUN
+# Host rule: <= 2 cores (VMware guest; Innovus runs concurrently).
+set_host_options -max_cores 2
+1
+# Missing RTL/modules must not silently become black boxes (only the SRAM, from its .db, is one).
+set_app_var hdlin_unresolved_modules error
+error
+# Report all failing points, not 20, to characterise a non-equivalence fully.
+set_app_var verification_failing_point_limit 0
+0
+if {$SVFF ne "none"} { set_svf $SVFF } else { puts "NO SVF" }
+SVF set to '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/syn/dc/runs/b3a_dc_tt/out/rv32i_cpu_top.svf'.
+Warning:  Unable to find checksum file Svf1/
+.
+1
+if {$MODE eq "rtl"} {
+  # reference = RTL (SRAM .db first so the 10 sram instances resolve as the library macro)
+  read_db -container r -technology_library $SRAMDB
+  set files {}
+  set fh [open $::env(RTL_LIST) r]
+  while {[gets $fh l] >= 0} { if {[string trim $l] ne ""} { lappend files [string trim $l] } }
+  close $fh
+  foreach f $files { if {[string match *stub* $f]} { error "SRAM stub must not be read: $f" } }
+  set defines {PDK_sky130A SCL_sky130_fd_sc_hd __librelane__ __pnr__ SRAM_SKY130}
+  read_sverilog -container r -libname WORK -define $defines $files
+  set_top r:/WORK/$TOP
+} else {
+  # reference = DC netlist; std-cell + SRAM .db read in 'r' BEFORE its netlist (tech library must precede the design)
+  read_db -container r -technology_library $STDDB
+  read_db -container r -technology_library $SRAMDB
+  read_verilog -container r -libname WORK -netlist $::env(REF_NETLIST)
+  set_top r:/WORK/$TOP
+}
+Loading db file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db'
+Current container set to 'r'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/axi_pkg.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/soc_addr_map_pkg.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_pipeline_pkg.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_pkg.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mem_collar.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mbist_ctrl.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_alu.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_branch_comp.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_imm_gen.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_regfile.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_decode.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_forwarding_unit.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_hazard_unit.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_interrupt_ctrl.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_csr_file.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_if.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_id.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_icache.sv'
+Warning: The 'declaration initial assignment' construct is not supported.  It will be ignored. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_icache.sv Line: 787)  (FMR_VLOG-038)
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_dcache.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_arbiter.sv'
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv'
+Warning: The 'declaration initial assignment' construct is not supported.  It will be ignored. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv Line: 1036)  (FMR_VLOG-038)
+Warning: The 'declaration initial assignment' construct is not supported.  It will be ignored. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv Line: 1037)  (FMR_VLOG-038)
+Warning: The 'declaration initial assignment' construct is not supported.  It will be ignored. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv Line: 1038)  (FMR_VLOG-038)
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/rv32i_cpu_top.sv'
+Setting top design to 'r:/WORK/rv32i_cpu_top'
+Status:   Elaborating design rv32i_cpu_top   ...  
+Status:   Elaborating design mbist_ctrl  N_MEM=10, AW=8, RD_LAT=2, P1_MASK='0, ASYNC_RST=1'b0, LOCAL_CMP=1'h1 ...  
+Information: Created design named 'mbist_ctrl_10_8_2_P1_MASK_'0_0_1'. (FE-LINK-13)
+Status:   Elaborating design rv32i_core  RESET_PC=32'h00000000 ...  
+Information: Created design named 'rv32i_core_00000000'. (FE-LINK-13)
+Status:   Elaborating design rv32i_pipeline_ex1c   ...  
+Status:   Elaborating design rv32i_hazard_unit   ...  
+Status:   Elaborating design rv32i_forwarding_unit   ...  
+Status:   Elaborating design rv32i_csr_file   ...  
+Status:   Elaborating design rv32i_interrupt_ctrl   ...  
+Status:   Elaborating design rv32i_regfile   ...  
+Status:   Elaborating design rv32i_pipeline_if  RESET_PC=32'h00000000 ...  
+Information: Created design named 'rv32i_pipeline_if_00000000'. (FE-LINK-13)
+Status:   Elaborating design rv32i_pipeline_id   ...  
+Status:   Elaborating design rv32i_decode   ...  
+Status:   Elaborating design rv32i_imm_gen   ...  
+Status:   Elaborating design rv32i_pipeline_ex   ...  
+Status:   Elaborating design rv32i_alu   ...  
+Warning: Signed to unsigned assignment occurs. (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_alu.sv Line: 78)  (FMR_VLOG-063)
+Status:   Elaborating design rv32i_branch_comp   ...  
+Status:   Elaborating design rv32i_pipeline_ex1b   ...  
+Status:   Elaborating design rv32i_pipeline_ex2   ...  
+Status:   Elaborating design rv32i_pipeline_mem   ...  
+Status:   Elaborating design rv32i_pipeline_wb   ...  
+Status:   Elaborating design rv32i_icache   ...  
+Status:   Elaborating design mem_collar  AW=8, HAS_P1=1'b0, LOCAL_CMP=1'b1 ...  
+Information: Created design named 'mem_collar_8_0_1'. (FE-LINK-13)
+Status:   Elaborating design rv32i_dcache   ...  
+Status:   Elaborating design rv32i_cache_arbiter   ...  
+Status:  Implementing inferred operators...
+Top design set to 'r:/WORK/rv32i_cpu_top' with warnings
+Reference design set to 'r:/WORK/rv32i_cpu_top'
+1
+# implementation libraries after the reference top is set (B4a finding: otherwise FM-236 / FE-LINK-2)
+read_db -container i -technology_library $STDDB
+Loading db file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_fd_sc_hd__tt_025C_1v80.db'
+Current container set to 'i'
+1
+read_db -container i -technology_library $SRAMDB
+Loading db file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db'
+1
+read_verilog -container i -libname WORK -netlist $IMPL
+Loading verilog file '/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/mutant_icc2_fwdb_inv.nl.v'
+1
+set_top i:/WORK/$TOP
+Setting top design to 'i:/WORK/rv32i_cpu_top'
+Status:  Implementing inferred operators...
+
+************ Library Checking Summary ************
+Warning:  406 unlinked power cell(s) with unread pg pins.
+Warning:  69 unlinked power cell(s) with no power down function on an ff or latch.
+        Use 'report_libraries -defects all' for more details.
+**************************************************
+
+Top design successfully set to 'i:/WORK/rv32i_cpu_top'
+Implementation design set to 'i:/WORK/rv32i_cpu_top'
+1
+match
+Reference design is 'r:/WORK/rv32i_cpu_top'
+Implementation design is 'i:/WORK/rv32i_cpu_top'
+Status:  Checking designs...
+    Warning: Design r:/SKY130_SRAM_1KBYTE_1RW1R_32X256_8_TT_1P8V_25C_LIB/sky130_sram_1kbyte_1rw1r_32x256_8 is a black box and there are cells referencing it (FM-160)
+    Warning: Design i:/SKY130_SRAM_1KBYTE_1RW1R_32X256_8_TT_1P8V_25C_LIB/sky130_sram_1kbyte_1rw1r_32x256_8 is a black box and there are cells referencing it (FM-160)
+    Warning: 10 (125) black-box references found in reference (implementation) design; see formality.log for list (FM-182)
+Status:  Building verification models...
+Status:  Checking Consistency...
+    Info: Design(ref) vs SVF ...
+    Info: Completed
+
+Status:  Processing Guide Commands...
+    SVF BEGIN: Timestamp: Cpu: 0.001h, Wall: 0.001h, Mem: 0.836G, Current time: Mon Oct 26 02:04:03 2026
+    SVF END: Timestamp: Cpu: 0.001h, Wall: 0.001h, Mem: 0.881G, Current time: Mon Oct 26 02:04:04 2026
+
+***************************** Guidance Summary *****************************
+                                         Status
+Command                 Accepted   Rejected    Pending Unprocessed     Total
+----------------------------------------------------------------------------
+architecture_netlist:          5          0          0          0          5
+boundary            :          5          0          0          0          5
+boundary_netlist    :          5          0          0          0          5
+change_names        :         85          0          0          0         85
+constant            :        718          0          0          0        718
+datapath            :          5          0          0          0          5
+environment         :          7          0          0          0          7
+file_info           :         29          0          0          0         29
+instance_map        :         28          0          0          0         28
+inv_push            :         18          0          0          0         18
+mark                :         48          0          0          0         48
+merge               :         10          0          0          0         10
+reg_constant        :        138          0          0          0        138
+reg_merging         :          5          0          0          0          5
+replace             :         33          0          0          0         33
+ungroup             :         35          0          0          0         35
+uniquify            :          2          0          0          0          2
+ununiquify          :          1          0          0          0          1
+----------------------------------------------------------------------------
+Total               :       1177          0          0          0       1177
+
+
+Note: No guide_hier_map commands were found in the SVF. It is
+      important to enable guide_hier_map generation in
+      Design Compiler to avoid SVF rejections that can cause
+      aborted/failing points or long run times during verification.
+      In Design Compiler the recommended methodology uses variable
+      hdlin_enable_hier_map and command set_verification_top.
+
+SVF files read:
+      /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/syn/dc/runs/b3a_dc_tt/out/rv32i_cpu_top.svf
+
+SVF files produced:
+  /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/formality/runs/b4c_negctl_rtl_fwdb_inv/formality_svf/
+    svf.txt
+****************************************************************************
+
+Status:  Matching...
+    
+*********************************** Matching Results ***********************************    
+ 6233 Compare points matched by name    
+ 0 Compare points matched by signature analysis    
+ 0 Compare points matched by topology    
+ 436 Matched primary inputs, black-box outputs    
+ 0(115) Unmatched reference(implementation) compare points    
+ 0(0) Unmatched reference(implementation) primary inputs, black-box outputs    
+ 889(0) Unmatched reference(implementation) unread points    
+----------------------------------------------------------------------------------------    
+Unmatched Objects                                                        REF        IMPL    
+----------------------------------------------------------------------------------------    
+ Black-boxes (BBox)                                                        0         115    
+ Black-box input pins (BBPin)                                              0         115    
+****************************************************************************************
+
+1
+redirect -file $RUN/unmatched_points.txt {report_unmatched_points}
+redirect -file $RUN/black_boxes.txt {report_black_boxes -all}
+redirect -file $RUN/svf_operations.txt {report_svf_operation}
+puts "MATCH_DONE"
+MATCH_DONE
+set rc [verify]
+Reference design is 'r:/WORK/rv32i_cpu_top'
+Implementation design is 'i:/WORK/rv32i_cpu_top'
+    
+*********************************** Matching Results ***********************************    
+ 6233 Compare points matched by name    
+ 0 Compare points matched by signature analysis    
+ 0 Compare points matched by topology    
+ 436 Matched primary inputs, black-box outputs    
+ 0(115) Unmatched reference(implementation) compare points    
+ 0(0) Unmatched reference(implementation) primary inputs, black-box outputs    
+ 889(0) Unmatched reference(implementation) unread points    
+----------------------------------------------------------------------------------------    
+Unmatched Objects                                                        REF        IMPL    
+----------------------------------------------------------------------------------------    
+ Black-boxes (BBox)                                                        0         115    
+ Black-box input pins (BBPin)                                              0         115    
+****************************************************************************************
+
+Status:  Verifying...
+START MULTICORE OUTPUT #24 UVM_6#26 (pid 368296)
+    Compare point u_core/fwd_b_ex1c_r_reg failed (is not equivalent)
+END MULTICORE OUTPUT #24 UVM_6#26
+
+
+********************************* Verification Results *********************************
+Verification FAILED
+   ATTENTION: No guide_hier_map commands were found in the SVF. It is
+              important to enable guide_hier_map generation in
+              Design Compiler to avoid SVF rejections that can cause
+              aborted/failing points or long run times during verification.
+              In Design Compiler the recommended methodology uses variable
+              hdlin_enable_hier_map and command set_verification_top.
+-------------------
+ Reference design: r:/WORK/rv32i_cpu_top
+ Implementation design: i:/WORK/rv32i_cpu_top
+ 6232 Passing compare points
+ 1 Failing compare points (1 matched, 0 unmatched)
+ 0 Aborted compare points
+ 0 Unverified compare points
+----------------------------------------------------------------------------------------
+Matched Compare Points     BBPin    Loop   BBNet     Cut    Port     DFF     LAT   TOTAL
+----------------------------------------------------------------------------------------
+Passing (equivalent)         570       0       0       0     379    5283       0    6232
+Failing (not equivalent)       0       0       0       0       0       1       0       1
+****************************************************************************************
+Info:  Try the analyze_points command to see if Formality can determine potential
+causes, or suggest next steps for a FAILED or INCONCLUSIVE verification.
+See the man page for analyze_points usage and options.
+0
+puts "VERIFY_RESULT: $rc"
+VERIFY_RESULT: 0
+redirect -file $RUN/failing_points.txt {report_failing_points}
+redirect -file $RUN/aborted_points.txt {report_aborted_points}
+redirect -file $RUN/unverified_points.txt {report_unverified_points}
+puts "FM_DONE"
+FM_DONE
+exit
+
+Maximum memory usage for this session: 1102 MB
+CPU usage for this session: 39.3 seconds ( 0.01 hours )
+Current time: Mon Oct 26 02:04:29 2026
+Elapsed time: 28 seconds ( 0.01 hours )
+Number of cores used: 2
+
+Thank you for using Formality (R)!

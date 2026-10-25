@@ -56,3 +56,44 @@ lec-dc-svfprobe:
 	-$(MAKE) lec-dc TAG=b4a_rtlmut_m2_merge RTL_SUBST=$(REPO)/rtl/cpu/core/rv32i_core.sv=$(RTLMUT)/rv32i_core_m2.sv
 	-$(MAKE) lec-dc TAG=b4a_rtlmut_m3_const RTL_SUBST=$(REPO)/rtl/cpu/core/rv32i_pipeline_pkg.sv=$(RTLMUT)/rv32i_pipeline_pkg_m3.sv
 	@for t in b4a_rtlmut_m2_merge b4a_rtlmut_m3_const; do grep -q "Verification FAILED" $(HERE)/runs/$$t/fm.log && echo "svfprobe $$t: FAILED (good)" || { echo "svfprobe $$t: PASSED -- SVF guidance is not verified"; exit 1; }; done
+
+# ---------------- B4c: post-route ICC2 netlist ----------------
+ICC2OUT := $(REPO)/pnr/commercial/impl/icc2/runs/b5a_icc2/out
+ICC2NL  ?= $(ICC2OUT)/rv32i_cpu_top.nl.v
+DCNL    := $(DCOUT)/rv32i_cpu_top.nl.v
+define RUNFM2
+	@$(PE); $(SAFE); mkdir -p $(RUN); cd $(RUN); \
+	  export REPO=$(REPO) PDKDIR=$(PDKDIR) RUN=$(RUN) IMPL=$(1) SVF=$(2) REFMODE=$(3) REF_NETLIST=$(DCNL) RTL_LIST=$(RUN)/rtl.f; \
+	  $(REPO)/pnr/commercial/syn/dc/scripts/rtl_list.sh $(REPO) $(RUN)/rtl.f; \
+	  /usr/bin/time -v -o $(RUN)/time.txt $(PDKDIR)/scripts/safe_run.sh $(RUN)/fm.log fm_shell -f $(HERE)/scripts/fm_lec_icc2.tcl; \
+	  rc=$$?; echo "fm_shell rc=$$rc"; grep -E "VERIFY_RESULT|FM_DONE|Verification (SUCCEEDED|FAILED|INCONCLUSIVE)" $(RUN)/fm.log; exit $$rc
+endef
+
+.PHONY: lec-icc2-rtl lec-icc2-rtl-nosvf lec-icc2-dc lec-icc2-negctl lec-icc2
+lec-icc2-rtl:        # (a) RTL vs ICC2 netlist, with the DC SVF
+	$(call RUNFM2,$(ICC2NL),$(SVF),rtl)
+lec-icc2-rtl-nosvf:  # (a') same without SVF
+	$(MAKE) lec-icc2-rtl SVF=none TAG=b4c_icc2_vs_rtl_nosvf
+lec-icc2-dc:         # (b) DC netlist vs ICC2 netlist, no SVF
+	$(call RUNFM2,$(ICC2NL),none,dc)
+lec-icc2-negctl:     # mutants of the ICC2 netlist vs the DC netlist (netlist hop, cheap); each must FAIL
+	@mkdir -p $(HERE)/runs
+	python3 $(HERE)/scripts/mk_mutant_icc2.py $(ICC2NL) $(HERE)/runs/mutant_icc2_fwdb_inv.nl.v fwdb_inv
+	python3 $(HERE)/scripts/mk_mutant_icc2.py $(ICC2NL) $(HERE)/runs/mutant_icc2_swap.nl.v swap
+	-$(MAKE) lec-icc2-dc ICC2NL=$(HERE)/runs/mutant_icc2_fwdb_inv.nl.v TAG=b4c_negctl_dc_fwdb_inv
+	-$(MAKE) lec-icc2-dc ICC2NL=$(HERE)/runs/mutant_icc2_swap.nl.v TAG=b4c_negctl_dc_swap
+	-$(MAKE) lec-icc2-rtl ICC2NL=$(HERE)/runs/mutant_icc2_fwdb_inv.nl.v TAG=b4c_negctl_rtl_fwdb_inv
+	-$(MAKE) lec-icc2-rtl ICC2NL=$(HERE)/runs/mutant_icc2_swap.nl.v TAG=b4c_negctl_rtl_swap
+	@for t in b4c_negctl_dc_fwdb_inv b4c_negctl_dc_swap b4c_negctl_rtl_fwdb_inv b4c_negctl_rtl_swap; do \
+	  if grep -q "Verification FAILED" $(HERE)/runs/$$t/fm.log; then echo "negctl $$t: NON-EQUIVALENT (good)"; \
+	  else echo "negctl $$t: NOT DETECTED -- LEC verdict is untrustworthy"; exit 1; fi; done
+
+# Variant with the 115 passive port diodes stripped (0 unmatched points): each diode has a single input pin and no output, so it cannot affect function.
+STRIPNL := $(HERE)/runs/icc2_nodiode.nl.v
+.PHONY: lec-icc2-nodiode
+lec-icc2-nodiode:
+	@mkdir -p $(HERE)/runs
+	python3 $(HERE)/scripts/strip_diodes.py $(ICC2NL) $(STRIPNL)
+	-$(MAKE) lec-icc2-dc ICC2NL=$(STRIPNL) TAG=b4c_icc2nodiode_vs_dc
+	-$(MAKE) lec-icc2-rtl ICC2NL=$(STRIPNL) TAG=b4c_icc2nodiode_vs_rtl_svf
+	@for t in b4c_icc2nodiode_vs_dc b4c_icc2nodiode_vs_rtl_svf; do grep -q "Verification SUCCEEDED" $(HERE)/runs/$$t/fm.log && echo "$$t: SUCCEEDED" || { echo "$$t: NOT EQUIVALENT"; exit 1; }; done
