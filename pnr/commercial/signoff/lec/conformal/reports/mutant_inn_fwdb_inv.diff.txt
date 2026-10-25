@@ -1,0 +1,7 @@
+60291a60292,60293
+>    wire mut_n ;
+>    sky130_fd_sc_hd__inv_1 mut_inv ( .A(\u_core/n_13109 ), .Y(mut_n) );
+60294c60296
+< 	.D(\u_core/n_13109 ),
+---
+> 	.D(mut_n),

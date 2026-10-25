@@ -30,7 +30,7 @@ define RUNLEC
 	  rc=$$?; echo "lec rc=$$rc"; grep -E "B4B_LEG1_VERDICT|Compare Results|No of (compare|diff|abort|unknown)" $(RUN)/lec.log | tail -12; exit $$rc
 endef
 
-.PHONY: gen lec-genus lec-genus-negctl lec-genus-flat lec-genus-direct
+.PHONY: gen lec-genus lec-genus-negctl lec-genus-flat lec-genus-direct lec-innovus-rtl lec-innovus-genus lec-innovus-rtl-nodiode lec-innovus-genus-nodiode lec-innovus-negctl
 gen:
 	python3 $(HERE)/scripts/mk_do.py $(GRUN)/out/lec_rv32i_cpu_top.do $(HERE)/scripts/lec_genus.do
 
@@ -62,3 +62,47 @@ lec-genus-flat:
 # Direct flat RTL -> FINAL netlist compare, no Genus implementation information (constants/merges found by Conformal itself).
 lec-genus-direct:
 	$(MAKE) lec-genus DOFILE=$(HERE)/scripts/lec_genus_direct.do TAG=b4b_direct_rtl_vs_final
+
+# ---------------------------------------------------------------------------------------------------------------------------------
+# Step B4d: post-route Innovus netlist (pnr/commercial/impl/innovus/runs/b5b_innovus).  Flat compares, no fv_map / Genus implementation info.
+#   lec-innovus-rtl      (a) RTL vs Innovus netlist          lec-innovus-genus   (b) Genus final netlist vs Innovus netlist
+#   *-nodiode            same with the 271 diode_2 cells stripped (scripts/strip_diodes.py)
+#   lec-innovus-negctl   2 mutants x 2 golden designs, each must be NON-EQUIVALENT
+INNTAG   ?= b5b_innovus
+INNNL    ?= $(REPO)/pnr/commercial/impl/innovus/runs/$(INNTAG)/out/rv32i_cpu_top.nl.v
+GENUS_NL ?= $(GRUN)/out/rv32i_cpu_top.nl.v
+INNMAP   ?= $(HERE)/runs/b4b_genus_vs_rtl/fv_map_rv32i_cpu_topnlv_1.map.do
+ITAG     ?= b4d_innovus_vs_rtl
+define RUNLEC2
+	@$(PE); $(SAFE); rm -rf $(RUN); mkdir -p $(RUN); cd $(RUN); \
+	  export LEC_VERSION=$(LECVER) LEC_RUN=$(RUN) IMPL=$(1) MAPFILE=$(3) GOLDEN_NL=$(GENUS_NL); \
+	  /usr/bin/time -v -o $(RUN)/time.txt $(PDKDIR)/scripts/safe_run.sh $(RUN)/lec.stdout lec -nogui -xl -dofile $(2) ; \
+	  rc=$$?; echo "lec rc=$$rc"; grep -E "B4D_[A-Z]*_VERDICT|No of (compare|diff|abort|unknown)" $(RUN)/lec.log | tail -6; exit $$rc
+endef
+$(HERE)/runs/innovus_nodiode.nl.v: $(INNNL) $(HERE)/scripts/strip_diodes.py
+	@mkdir -p $(HERE)/runs
+	python3 $(HERE)/scripts/strip_diodes.py $(INNNL) $@
+
+lec-innovus-rtl:
+	$(call RUNLEC2,$(INNNL),$(HERE)/scripts/lec_innovus_rtl.do,$(INNMAP))
+lec-innovus-genus:
+	$(call RUNLEC2,$(INNNL),$(HERE)/scripts/lec_innovus_genus.do,)
+lec-innovus-rtl-nodiode: $(HERE)/runs/innovus_nodiode.nl.v
+	$(MAKE) lec-innovus-rtl INNNL=$< TAG=b4d_innovus_nodiode_vs_rtl
+lec-innovus-genus-nodiode: $(HERE)/runs/innovus_nodiode.nl.v
+	$(MAKE) lec-innovus-genus INNNL=$< TAG=b4d_innovus_nodiode_vs_genus
+
+lec-innovus-negctl:
+	@mkdir -p $(HERE)/runs
+	python3 $(HERE)/scripts/mk_mutant_innovus.py $(INNNL) $(HERE)/runs/mutant_inn_fwdb_inv.nl.v fwdb_inv
+	python3 $(HERE)/scripts/mk_mutant_innovus.py $(INNNL) $(HERE)/runs/mutant_inn_swap.nl.v swap
+	-$(MAKE) lec-innovus-rtl INNNL=$(HERE)/runs/mutant_inn_fwdb_inv.nl.v TAG=b4d_negctl_rtl_fwdb_inv
+	-$(MAKE) lec-innovus-rtl INNNL=$(HERE)/runs/mutant_inn_swap.nl.v TAG=b4d_negctl_rtl_swap
+	-$(MAKE) lec-innovus-genus INNNL=$(HERE)/runs/mutant_inn_fwdb_inv.nl.v TAG=b4d_negctl_genus_fwdb_inv
+	-$(MAKE) lec-innovus-genus INNNL=$(HERE)/runs/mutant_inn_swap.nl.v TAG=b4d_negctl_genus_swap
+	@rc=0; for t in rtl_fwdb_inv rtl_swap; do \
+	  if grep -q "B4D_RTL_VERDICT: NOT_EQUIVALENT" $(HERE)/runs/b4d_negctl_$$t/lec.log; then echo "negctl $$t (vs RTL): NON-EQUIVALENT (good)"; \
+	  else echo "negctl $$t: NOT DETECTED -- LEC verdict is untrustworthy"; rc=1; fi; done; \
+	for t in genus_fwdb_inv genus_swap; do \
+	  if grep -q "B4D_GENUS_VERDICT: NOT_EQUIVALENT" $(HERE)/runs/b4d_negctl_$$t/lec.log; then echo "negctl $$t (vs Genus netlist): NON-EQUIVALENT (good)"; \
+	  else echo "negctl $$t: NOT DETECTED -- LEC verdict is untrustworthy"; rc=1; fi; done; exit $$rc
