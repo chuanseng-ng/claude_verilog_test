@@ -1,0 +1,40 @@
+                      Statistics Report                     
+                       Stuck-at Faults                      
+------------------------------------------------------------
+Fault Classes                               #faults         
+                                            (total)         
+---------------------------------  -------------------------
+  FU (full)                                  661690         
+  -------------------------------  -------------------------
+  UO (unobserved)                           88      ( 0.01%)
+  DS (det_simulation)                   498880      (75.39%)
+  DI (det_implication)                  117653      (17.78%)
+  PU (posdet_untestable)                   950      ( 0.14%)
+  UU (unused)                                4      ( 0.00%)
+  TI (tied)                                 14      ( 0.00%)
+  RE (redundant)                          6474      ( 0.98%)
+  AU (atpg_untestable)                   37627      ( 5.69%)
+------------------------------------------------------------
+Fault Sub-classes                                           
+  -------------------------------                           
+  AU (atpg_untestable)                                      
+    BB    (black_boxes)                   6915      ( 1.05%)
+    PC*   (pin_constraints)              14707      ( 2.22%)
+    TC*   (tied_cells)                    8407      ( 1.27%)
+    SEQ   (sequential_depth)               280      ( 0.04%)
+    Unclassified                          7318      ( 1.11%)
+  UC+UO                                                     
+    AAB   (atpg_abort)                      88      ( 0.01%)
+  *Use "report_statistics -detailed_analysis" for details.  
+------------------------------------------------------------
+Coverage                                                    
+  -------------------------------                           
+  test_coverage                                      94.17% 
+  fault_coverage                                     93.25% 
+  atpg_effectiveness                                 99.99% 
+------------------------------------------------------------
+#test_patterns                                         1574 
+#simulated_patterns                                    1581 
+CPU_time (secs)                                       292.3 
+------------------------------------------------------------
+

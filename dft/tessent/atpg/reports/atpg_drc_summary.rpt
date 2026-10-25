@@ -1,0 +1,3 @@
+C4:  #fails=731 handling=note (clock may be affected by its captured data)
+D5:  #fails=483 handling=warning (non-scan memory element)
+E5:  #fails=308 handling=note (X-state propagation)

@@ -1,0 +1,5 @@
+C4:  #fails=731 handling=note (clock may be affected by its captured data)
+D5:  #fails=477 handling=warning (non-scan memory element)
+S1:  #fails=417 handling=warning (unstable nonscan cells when clocks off)
+S2:  #fails=471 handling=warning (clock capture ability check)
+S7:  #fails=13 handling=note (Potentially scannable cell that is not in the clock path is driven by a constant value)

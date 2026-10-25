@@ -1,0 +1,41 @@
+                     Statistics Report                     
+                     Transition Faults                     
+-----------------------------------------------------------
+Fault Classes                              #faults         
+                                           (total)         
+--------------------------------  -------------------------
+  FU (full)                                 608006         
+  ------------------------------  -------------------------
+  UC (uncontrolled)                       169      ( 0.03%)
+  UO (unobserved)                        4012      ( 0.66%)
+  DS (det_simulation)                  379018      (62.34%)
+  DI (det_implication)                 109618      (18.03%)
+  PU (posdet_untestable)                  643      ( 0.11%)
+  PT (posdet_testable)                      1      ( 0.00%)
+  RE (redundant)                         6437      ( 1.06%)
+  AU (atpg_untestable)                 108108      (17.78%)
+-----------------------------------------------------------
+Fault Sub-classes                                          
+  ------------------------------                           
+  AU (atpg_untestable)                                     
+    BB    (black_boxes)                  3150      ( 0.52%)
+    PC*   (pin_constraints)             15710      ( 2.58%)
+    MPO   (mask_po)                         6      ( 0.00%)
+    Unclassified                        89242      (14.68%)
+  UC+UO                                                    
+    AAB   (atpg_abort)                   4181      ( 0.69%)
+  *Use "report_statistics -detailed_analysis" for details. 
+-----------------------------------------------------------
+Coverage                                                   
+  ------------------------------                           
+  test_coverage                                     81.28% 
+  fault_coverage                                    80.42% 
+  atpg_effectiveness                                99.31% 
+-----------------------------------------------------------
+#test_patterns                                        2567 
+  #basic_patterns                                        3 
+  #clock_sequential_patterns                          2564 
+#simulated_patterns                                   2572 
+CPU_time (secs)                                     1586.6 
+-----------------------------------------------------------
+

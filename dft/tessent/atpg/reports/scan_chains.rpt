@@ -1,0 +1,14 @@
+
+===============================
+Scan Chains Created by the Tool
+===============================
+
+   Scan mode 'soc_scan' has 6 scan chains:
+   ---------------------------------------
+      chain = chain0   group = dummy  input = /\scan_in_i[0]   output = /\scan_out_o[0]   length = 3044
+      chain = chain1   group = dummy  input = /\scan_in_i[1]   output = /\scan_out_o[1]   length = 3044
+      chain = chain2   group = dummy  input = /\scan_in_i[2]   output = /\scan_out_o[2]   length = 3044
+      chain = chain3   group = dummy  input = /\scan_in_i[3]   output = /\scan_out_o[3]   length = 3044
+      chain = chain4   group = dummy  input = /\scan_in_i[4]   output = /\scan_out_o[4]   length = 3044
+      chain = chain5   group = dummy  input = /\scan_in_i[5]   output = /\scan_out_o[5]   length = 3043
+

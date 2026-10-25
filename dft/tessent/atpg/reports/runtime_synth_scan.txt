@@ -1,0 +1,4 @@
+Elapsed (wall clock) time (h:mm:ss or m:ss): 17:44.23 (synth)
+Maximum resident set size (kbytes): 1102428 (synth)
+Elapsed (wall clock) time (h:mm:ss or m:ss): 1:49.82 (scan)
+Maximum resident set size (kbytes): 1167904 (scan)

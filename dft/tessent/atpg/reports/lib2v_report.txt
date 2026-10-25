@@ -1,0 +1,14 @@
+modelled 415 cells, could not model 13
+UNMODELLED sky130_fd_sc_hd__ebufn_1: three_state
+UNMODELLED sky130_fd_sc_hd__ebufn_2: three_state
+UNMODELLED sky130_fd_sc_hd__ebufn_4: three_state
+UNMODELLED sky130_fd_sc_hd__ebufn_8: three_state
+UNMODELLED sky130_fd_sc_hd__einvn_0: three_state
+UNMODELLED sky130_fd_sc_hd__einvn_1: three_state
+UNMODELLED sky130_fd_sc_hd__einvn_2: three_state
+UNMODELLED sky130_fd_sc_hd__einvn_4: three_state
+UNMODELLED sky130_fd_sc_hd__einvn_8: three_state
+UNMODELLED sky130_fd_sc_hd__einvp_1: three_state
+UNMODELLED sky130_fd_sc_hd__einvp_2: three_state
+UNMODELLED sky130_fd_sc_hd__einvp_4: three_state
+UNMODELLED sky130_fd_sc_hd__einvp_8: three_state
