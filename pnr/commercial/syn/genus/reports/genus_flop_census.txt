@@ -1,0 +1,12 @@
+sky130_fd_sc_hd__dfbbn_2 1
+sky130_fd_sc_hd__dfrtn_1 17
+sky130_fd_sc_hd__dfsbp_1 1
+sky130_fd_sc_hd__dfsbp_2 3
+sky130_fd_sc_hd__dfxbp_1 84
+sky130_fd_sc_hd__dfxbp_2 32
+sky130_fd_sc_hd__dfxtp_1 4824
+sky130_fd_sc_hd__dfxtp_2 127
+sky130_fd_sc_hd__dfxtp_4 33
+sky130_fd_sc_hd__sdfxtp_1 73
+sky130_fd_sc_hd__sdfxtp_2 3
+sky130_fd_sc_hd__sdfxtp_4 10
