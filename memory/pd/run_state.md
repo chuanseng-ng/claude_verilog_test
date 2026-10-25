@@ -1,7 +1,8 @@
-run_id:      pd_20261017_j41m4_sky130_soc_cdc_hold_exempt_run5
+run_id:      pd_20261025_sky130_soc_reharden_batch
 design_name: soc_top (Sky130)
 pdk:         sky130A
-tool:        LibreLane (nix) make -C pnr librelane-sky130-soc-noklayout (config_rccal.json)
-branch:      feat/dft-cpu-macro-scan-j41m4 (draft PR #287), tip e47709e + results commit
-run_dir:     /nobackup/sky130_soc_runs/RUN_2026-10-17_23-06-56
-last_stage:  COMPLETE (63 steps; exit 2 = deferred Magic DRC 8984 baseline). CDC max_ss PASS (all 9 corners), 0 dlygate on the 34 pins, LVS/DRC/setup/hold/maxcap clean, antenna 198/257. signoff NOT achieved (KLayout skipped, antenna nonzero, max-slew skipped, scan-view hold -3.24 ns unmasked = Stage 2).
+tool:        LibreLane (nix) make -C pnr librelane-sky130-soc-noklayout (config_rccal.json), CVT_SYNTH_GATE=warn
+branch:      feat/sky130-soc-reharden-batch (base a196947 + SDC commit 82069c7)
+start_time:  2026-10-25
+run_dir:     (set at launch)
+last_stage:  SDC task (y5mn) committed; run not yet launched
