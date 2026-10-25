@@ -43,5 +43,12 @@ for c in nom min max; do
   # the converter matches CONDUCTOR/DIELECTRIC/VIA anywhere in a line (even inside comments) -> feed it a comment-free ITF
   grep -v '^ *\$' "$b/tech/itf/sky130A_$c.itf" > "$out/sky130A_$c.nocomment.itf"
   (cd "$out" && perl "$out/adsTechConverter.patched.pl" -s "$out/sky130A_$c.nocomment.itf" -m "$out/layer_map.txt" -e "$out/em_table.txt" -o "$out/sky130A_$c.tech") > "$b/logs/adsTechConverter_$c.log" 2>&1 || { echo "converter failed ($c)"; tail -20 "$b/logs/adsTechConverter_$c.log"; exit 1; }
+  # RedHawk 2025R2 rejects EM_Adjust inside via{} blocks (TEC-011, part 2a): drop it there, keep it in metal{} blocks
+  python3 -I - "$out/sky130A_$c.tech" <<'PY'
+import re, sys
+p = sys.argv[1]; t = open(p).read()
+t = re.sub(r"(via\s+\S+\s*\n\{(?:(?!\n\}).)*?)\n\s*EM_Adjust\s+\S+", r"\1", t, flags=re.S)
+open(p, "w").write(t)
+PY
   echo "wrote $out/sky130A_$c.tech"
 done

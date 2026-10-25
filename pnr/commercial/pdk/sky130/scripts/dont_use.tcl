@@ -1,5 +1,6 @@
-# dont_use.tcl -- cells synthesis / optimisation must not pick, for sky130_fd_sc_hd.  Source it AFTER the libraries are read.
-#   Synopsys (dc_shell / icc2_shell / pt_shell):  set_dont_use   Cadence (genus / innovus):  set_dont_use  (same name, same lib/cell syntax)
+# dont_use.tcl -- cells synthesis / optimisation must not pick, for sky130_fd_sc_hd.  Source it AFTER the libraries are read/linked.
+#   Synopsys (dcnxt_shell / icc2_shell / pt_shell):  set_dont_use [get_lib_cells */<cell>]   (a bare "*/<cell>" string is rejected: UID-109)
+#   Cadence (genus / innovus):                       set_db [get_db base_cells <cell>] .dont_use true
 #
 # EVIDENCE (lc_shell read_lib warnings, build/logs/lc_*.log -- identical in tt/ss/ff):
 #   LIBG-10  "Failed to recognize the functionality": decap_{3,4,6,8,12}, diode_2, lpflow_bleeder_1, lpflow_decapkapwr_{3,4,6,8,12}
@@ -17,4 +18,10 @@ set _pdk_dont_use {
   sky130_fd_sc_hd__sedfxtp_1 sky130_fd_sc_hd__sedfxtp_2 sky130_fd_sc_hd__sedfxtp_4
   sky130_fd_sc_hd__sdfbbn_1 sky130_fd_sc_hd__sdfbbn_2 sky130_fd_sc_hd__sdfbbp_1
 }
-foreach c $_pdk_dont_use { catch { set_dont_use */$c } }
+if {[llength [info commands get_db]]} {
+  # Genus / Innovus
+  foreach c $_pdk_dont_use { catch { set_db [get_db base_cells $c] .dont_use true } }
+} else {
+  # DC / ICC2 / PT
+  foreach c $_pdk_dont_use { set _lc [get_lib_cells -quiet */$c]; if {[sizeof_collection $_lc]} { set_dont_use $_lc } }
+}

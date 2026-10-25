@@ -244,3 +244,116 @@ sidewall models, no LVS `-compilation`).
    OpenROAD run; tune FIT K values and the corner multiplier if the ground/coupling split disagrees.
 6. Decide on temperature coefficients and cross corners (rmax-cmin, rmin-cmax) once correlation is in.
 7. Diff `dont_use.tcl` against LibreLane's sky130A default; run DC/PT link checks with the four `.db` files.
+
+---
+
+# Part 2a: ICC2 NDM build and tool load tests (2026-10-25)
+
+Scope: build the ICC2 reference NDMs and prove that every commercial tool can load the Sky130 views. Everything below
+was run through `scripts/safe_run.sh` (load/memory gate, process-group kill), one tool at a time, single thread.
+`make part2a` reruns the whole chain and passed end to end (about 3 minutes, all targets print `... OK`).
+Test netlist: `tests/link_trivial.v` (one `sky130_fd_sc_hd__dfxtp_1` plus one `sky130_sram_1kbyte_1rw1r_32x256_8`,
+non-ANSI port list because PrimeTime's reader rejects ANSI headers, SVR-4) and `tests/link_trivial.sdc`.
+
+## 9. Result table
+
+| Check | Tool / version | Make target | Result | Wall | Peak RSS |
+|---|---|---|---|---|---|
+| NDM build tt/ss/ff (stdcell), phys (fill/tap), sram | icc2_lm_shell X-2025.06 | `ndm` | **OK**, `check_workspace` succeeded x5 | 2-3 s each | 0.45 GB |
+| Link + `check_design` | dcnxt_shell X-2025.06-SP3 (NDM topo) | `link-check-dc` | **OK**, `LINK_RESULT: 1`, no link messages | 8 s | 0.68 GB |
+| Link, 3 corners | pt_shell X-2025.06 | `link-check-pt` | **OK**, `link_design` clean at tt/ss/ff | 6 s | 1.1 GB |
+| MMMC + physical + netlist + `report_timing` | Genus 23.14-s090 | `load-genus` | **OK**, 438 base cells, 3 views, timing path reported | 14 s | 0.65 GB |
+| `init_design` + floorplan + tracks + `check_design` + DEF out | Innovus 23.14-s088 | `load-innovus` | **OK**, 213 rows, 12 track patterns, 0 tool ERRORs | 20 s | 2.5 GB |
+| Design lib on the NDMs, link, floorplan | icc2_shell X-2025.06-SP1 | `load-icc2` | **OK**, 220 rows, 12 tracks at LEF pitches | 60 s | 1.8 GB |
+| Tech file + LEF + Liberty + DEF import | RedHawk 2025 R2.2 | `load-redhawk` | **tech OK**, LEF/lib/DEF import OK; full `setup design` not attempted (needs PG shapes) | 4 s | 0.4 GB |
+
+## 10. What had to be fixed (file: what)
+
+1. **`icc2_lm_shell` cannot take a tech LEF** (`create_workspace -technology` wants a `.tf`; LIB-007). New
+   `scripts/gen_techfile.py` derives `build/ndm/sky130_hd.tf` from `sky130_fd_sc_hd__nom.tlef`: layers, pitches, widths,
+   spacings, minArea, spacing tables, cut sizes, via enclosures (from the base `VIARULE`s), sites `unithd`/`unithddbl`.
+   Iterations needed: fat-spacing table must be NxN, non-redundant and start at threshold 0 (TECH-008/032), ContactCode
+   `minCutNum` is unsupported, via enclosures must be crossed (TECH-083w), `licon` needs a ContactCode-less polyCont layer.
+   Final tf loads with no warning.
+2. **Layer stack**: ICC2 mask names must be gapless `metal1..N`/`via1..N`, so `li1` is mask `metal1`, `met1..met5` are
+   `metal2..metal6` (map in `build/ndm/sky130_layer_map.txt`). Layer names stay the Sky130 ones. li1 must be excluded from
+   routing in the design flow (not yet done, part 2b).
+3. **`scripts/build_ndm.tcl`**: stdcells and SRAM cannot share a workspace in the `normal` flow (the hd `.db` lacks the SRAM
+   and vice versa, and the PG rail names differ: VPWR/VGND/VPB/VNB vs vccd1/vssd1; LM-014/LM-025). Now five NDMs:
+   `sky130_hd_{tt,ss,ff}`, `sky130_hd_phys`, `sky130_sram_1kbyte_1rw1r_32x256_8`. **`sky130_hd_phys`** (physical_only flow) is
+   needed for the 9 LEF cells that have no Liberty: `fill_1/2/4/8`, `tap_1/2`, `tapvgnd_1`, `tapvgnd2_1`, `tapvpwrvgnd_1`.
+   `-scale_factor 1000`, existing NDM deleted before commit, routing directions set in the workspace.
+4. **`scripts/mmmc.tcl`**: (a) Genus 23.14 has no `create_delay_corner -library_set` and needs `create_timing_condition`;
+   Innovus 23.1 rejects that form (TCLCMD-992). Style is auto-selected (`place_design` present means Innovus), override with
+   `CVT_MMMC_STYLE`. (b) rc corners use `-qrc_tech` only when `build/qrc/<c>/qrcTechFile` exists, else none (see 11.4).
+   (c) `[info script]` is not this file under Innovus, so `HERE` env is preferred.
+5. **`scripts/dont_use.tcl`**: `set_dont_use */cell` is rejected by DC/ICC2 (UID-109) and Genus has no such command. Now
+   tool-aware (`set_dont_use [get_lib_cells */c]` vs `set_db [get_db base_cells c] .dont_use true`). Verified: 22 cells flagged
+   in DC (21 ours plus 1 library-native), 32 in Genus (21 ours plus 11 library-native).
+6. **`scripts/gen_redhawk_tech.sh`**: RedHawk 2025R2 rejects `EM_Adjust` in `via{}` blocks (TEC-011, 10 warnings); stripped
+   from via blocks. Tech file now parses with only the Tnom/Tnom_em warnings (26, TEC-056/065, temperature coefficients are
+   absent from the stack by design).
+7. Plain `dc_shell -topographical_mode` is the Milkyway flow (no `create_lib`, CMD-005). The NDM libraries are used by
+   **`dcnxt_shell -topographical_mode`**; `link-check-dc` uses that.
+
+## 11. Warnings and findings (counts from the logs)
+
+1. **NDM (per stdcell corner)**: NDM-032w 879 (VPWR/VGND declared `inout` in LEF, `in` in the Liberty pg_pin; LM-054 "fixed",
+   428 cells), FRAM-066 190 ("very large regular routing blockage on li1": cell OBS covers the cell; only matters if li1 were
+   routable, so it must be kept non-routable), LM-114 69 (CLK/GATE port type clock to signal in the physical view; in ICC2
+   `get_attribute CLK clock` on `dfxtp_1` is still `true`, so CTS sink detection is unaffected), LEFR-064 4 (four
+   `lpflow_lsbuf_*isowell_tap` cells re-sited from `unithddbl` to `unithd`), FRAM-069 1 (`macro_sparecell` has no via region).
+   SRAM NDM: no pin mismatch between LEF and Liberty, only the vccd1/vssd1 direction note. Frames: 428 + 9 + 1.
+2. **DC `check_library`** reports "Error" LIBCHK-213 for the PG pin direction (`unknown` in the pg_pin `.db` vs in/inout in
+   the NDM): 4 pins x 379 cells = 1516 rows plus `diode_2` (std_cell in logic, diode in physical, LIBCHK-217) and the 9
+   physical-only cells (LIBCHK-210, expected). None affects link or `check_design` (both clean). Treat LIBCHK-213 as noise
+   from the pg_pin `.db` format; do not "fix" the Liberty.
+3. **PrimeTime**: DEL-008 (operating-condition temperature differs between the stdcell lib and the TT-only SRAM, ss and ff views,
+   known `o1i` limitation), "56 ports with no clock-relative input delay" and "3 register clock pins with no clock" (no SDC in
+   the link test), LNK-045 info. No error.
+4. **qrcTechFile not available yet** (Techgen still running in the queue): `mmmc.tcl` warns `rc_* has NO qrcTechFile` and
+   Genus/Innovus load with tech-LEF RC only. Innovus then emits IMPEXT warnings (sheet resistance from LEF, 15 via-resistance
+   defaults because the LEF `VIA` blocks carry no resistance). Genus `read_physical`: PHYS-129 (via resistance 0), PHYS-12/13
+   (li1 RPERSQ 12.8 vs 0.03-0.125, a real 100x spread), PHYS-279 (the 9 physical-only cells, expected).
+5. **Genus library reading**: LBR-9 (decap/diode/bleeder cells have no output pin; covered by `dont_use`), LBR-81 (all four
+   wireload models non-monotonic, repaired by Genus), LBR-38 (nominal PVT differs between ss lib and the TT SRAM), LBR-40/41/155/162
+   information only. 335 usable logic and 52 usable sequential cells in the tt view.
+6. **Innovus** (`690 warnings, 25 errors` in the summary: all 25 "errors" are `check_design` category entries on a bare
+   floorplan, not tool failures): CHKPLC-11 SRAM LEF obstruction does not fully cover the macro (OBS is met1/met2 full, met3/met4
+   partial), IMPFP-7016 macro not fixed (test artefact), IMPPP-4422 followpin missing (no PG yet), IMPESO-441/444/450 (no Tempus
+   in PATH, signoff category), IMPOPT-2908 "Maximum transition too small" (not traced to a value), IMPLF: SRAM data pins have no
+   `ANTENNAGATEAREA`/`ANTENNADIFFAREA` (antenna on macro pins unchecked, same as OpenROAD), "no overlap layer in any LEF".
+7. **Tracks**: Innovus' automatic tracks do not follow the tech LEF (met3 y 0.61 vs 0.68, met4 x 0.69 vs 0.92, met5 y 3.66 vs
+   3.4; "Generated pitch ... different from technology file"; `-honor_pitch` does not change it). `build/ndm/sky130_tracks_innovus.tcl`
+   (explicit `add_tracks -mode replace -pitches`) restores the LEF pitches; start offsets stay Innovus-chosen and do not match
+   the LEF OFFSETs (the `-offsets` form was accepted but not honoured for the preferred direction). OpenROAD uses LEF offsets,
+   so track alignment will differ between the two arms.
+8. **Routing directions** are not stored in the `.tf` or carried to the ICC2 design library: in `icc2_shell` the NDM layers show
+   `routing_direction unknown` and `initialize_floorplan` auto-derives li1 H, met1 V ... (wrong, DPUI-924). Sourcing
+   `build/ndm/sky130_tech_setup.tcl` (set_attribute, stored as a per-block override, ATTR-12) fixes it: li1 V, met1 H ... and
+   tracks come out at the LEF pitches (0.46/0.34/0.46/0.68/0.92/3.4). DC and Genus/Innovus read the directions correctly (DC
+   from the NDM, the others from LEF). `sky130_tech_setup.tcl` must be sourced for every ICC2 block before floorplanning.
+9. **RedHawk**: the batch session imports the GSR, the tech file (no error), the three LEFs and the Liberty. It also reads the
+   Innovus DEF ("126 nets, 2 instances"). ERROR SLB-091 x10: PG arcs for the 10 `lpflow_clkbufkapwr_*` cells are incomplete
+   in the UPF-lib view (unused cells; they would block `setup design` if the tool treats it as fatal). `setup design` proper
+   was not attempted: it needs power-grid shapes and pad locations (a dummy `.ploc` and `FREQUENCY` are supplied by
+   `scripts/load_redhawk.sh` only to get past the GSR parser; the keyword `DESIGN` is rejected as ambiguous in this version).
+10. **Open modelling points**: antenna rules are generated into `sky130_tech_setup.tcl` as `define_antenna_rule` /
+    `define_antenna_layer_rule` procs but were **not executed** (the ICC2 test sources the file, the procs are only defined).
+    TLU+ for ICC2: `build/nxtgrd/nom/sky130A_nom.tluplus` exists but `set_tlu_plus_files` (design-lib command) and the layer map
+    (`build/tech/map/starrc_layer.map`) were only recorded, not exercised. Per-corner TLU+ (min/max) and nxtgrd are queued.
+
+## 12. Remaining blockers
+
+- **Synthesis, DC-topo**: none for link/read/topo setup. Still to do: `compile_ultra` smoke on a real block, TLU+ hookup
+  (`set_tlu_plus_files`), SDC from `pnr/sky130/cpu/constraints`, SRAM `set_dont_touch`.
+- **Synthesis, Genus**: none for load. qrcTechFile (queued, hours) is needed for post-route-quality RC but not for `syn_generic`
+  with LEF RC; `syn_map` / `syn_opt` not run here.
+- **P&R, ICC2**: li1 non-routable setting (`set_ignored_layers` or equivalent), PG strategy for the two rail pairs (hd VPWR/VGND vs
+  SRAM vccd1/vssd1: `connect_pg_net` mapping), antenna rule procs untested, TLU+ and `set_parasitic_parameters`, DRC rule file
+  (the `.tf` carries only basic rules, no Sky130 DRC beyond width/spacing/area/enclosure), tap/fill cell selection
+  (`tapvpwrvgnd_1`, `fill_*` are in the phys NDM).
+- **P&R, Innovus**: qrcTechFile (queued) for post-route extraction, `sky130_tracks_innovus.tcl` plus offset alignment, SRAM obstruction
+  (CHKPLC-11), the IMPOPT-2908 origin, PG nets (two pairs), Tempus path for signoff-category checks.
+- **Common**: SRAM Liberty is TT-only in all corners (bead `o1i`); li1 is not routable but is a metal1 mask; the stack/ITF
+  convention still needs the StarXtract plate test and OpenRCX correlation (part 2b).
