@@ -1,0 +1,1195 @@
+
+26. Printing statistics.
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_interface_m1 ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      219        - wires
+      502        - wire bits
+       73        - public wires
+      348        - public wire bits
+       56        - ports
+      300        - port bits
+      263 2.31E+03 cells
+        2   15.014   sky130_fd_sc_hd__a211oi_1
+        1    7.507   sky130_fd_sc_hd__a21boi_0
+       11   55.053   sky130_fd_sc_hd__a21oi_1
+        1    8.758   sky130_fd_sc_hd__a221oi_1
+        1    8.758   sky130_fd_sc_hd__a22o_1
+        1    7.507   sky130_fd_sc_hd__a22oi_1
+        2   17.517   sky130_fd_sc_hd__a311oi_1
+        1    6.256   sky130_fd_sc_hd__and3_1
+       20   75.072   sky130_fd_sc_hd__clkinv_1
+       12  300.288   sky130_fd_sc_hd__dfrtp_1
+        3   18.768   sky130_fd_sc_hd__lpflow_inputiso1p_1
+        2   12.512   sky130_fd_sc_hd__lpflow_isobufsrc_1
+       36  405.389   sky130_fd_sc_hd__mux2_1
+       46  460.442   sky130_fd_sc_hd__mux2i_1
+       10   37.536   sky130_fd_sc_hd__nand2_1
+        4   25.024   sky130_fd_sc_hd__nand2b_1
+        5   25.024   sky130_fd_sc_hd__nand3_1
+        3   22.522   sky130_fd_sc_hd__nand3b_1
+        1    6.256   sky130_fd_sc_hd__nand4_1
+        5   18.768   sky130_fd_sc_hd__nor2_1
+        1    5.005   sky130_fd_sc_hd__nor3_1
+        1    6.256   sky130_fd_sc_hd__nor4_1
+        1    8.758   sky130_fd_sc_hd__nor4b_1
+        2   20.019   sky130_fd_sc_hd__o211a_1
+       15   75.072   sky130_fd_sc_hd__o21ai_0
+        1    6.256   sky130_fd_sc_hd__o22ai_1
+        1    10.01   sky130_fd_sc_hd__o311a_1
+        1    6.256   sky130_fd_sc_hd__or3_1
+       66  578.054   sky130_fd_sc_hd__xnor2_1
+        7   61.309   sky130_fd_sc_hd__xor2_1
+        5        - submodules
+        1        -   mbist_eval_top_rtl1_tessent_and2
+        1        -   mbist_eval_top_rtl1_tessent_buf
+        1        -   mbist_eval_top_rtl1_tessent_clk_gate_and
+        1        -   mbist_eval_top_rtl1_tessent_clk_mux2
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_interface_m1_STATUS
+
+   Area for cell type $_DLATCH_N_ is unknown!
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_c1_interface_m1': 2310.966400
+     of which used for sequential elements: 300.288000 (12.99%)
+
+=== $paramod\mem_collar\AW=s32'00000000000000000000000000001010\HAS_P1=1'0 ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       22        - wires
+      169        - wire bits
+       20        - public wires
+      167        - public wire bits
+       20        - ports
+      167        - port bits
+       50  535.514 cells
+        2    10.01   sky130_fd_sc_hd__a21oi_1
+       46  517.997   sky130_fd_sc_hd__mux2_1
+        2    7.507   sky130_fd_sc_hd__nor2_1
+
+   Chip area for module '$paramod\mem_collar\AW=s32'00000000000000000000000000001010\HAS_P1=1'0': 535.513600
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_interface_m2 ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      219        - wires
+      502        - wire bits
+       73        - public wires
+      348        - public wire bits
+       56        - ports
+      300        - port bits
+      263 2.31E+03 cells
+        2   15.014   sky130_fd_sc_hd__a211oi_1
+        1    7.507   sky130_fd_sc_hd__a21boi_0
+       11   55.053   sky130_fd_sc_hd__a21oi_1
+        1    8.758   sky130_fd_sc_hd__a221oi_1
+        1    8.758   sky130_fd_sc_hd__a22o_1
+        1    7.507   sky130_fd_sc_hd__a22oi_1
+        2   17.517   sky130_fd_sc_hd__a311oi_1
+        1    6.256   sky130_fd_sc_hd__and3_1
+       20   75.072   sky130_fd_sc_hd__clkinv_1
+       12  300.288   sky130_fd_sc_hd__dfrtp_1
+        3   18.768   sky130_fd_sc_hd__lpflow_inputiso1p_1
+        2   12.512   sky130_fd_sc_hd__lpflow_isobufsrc_1
+       36  405.389   sky130_fd_sc_hd__mux2_1
+       46  460.442   sky130_fd_sc_hd__mux2i_1
+       10   37.536   sky130_fd_sc_hd__nand2_1
+        4   25.024   sky130_fd_sc_hd__nand2b_1
+        5   25.024   sky130_fd_sc_hd__nand3_1
+        3   22.522   sky130_fd_sc_hd__nand3b_1
+        1    6.256   sky130_fd_sc_hd__nand4_1
+        5   18.768   sky130_fd_sc_hd__nor2_1
+        1    5.005   sky130_fd_sc_hd__nor3_1
+        1    6.256   sky130_fd_sc_hd__nor4_1
+        1    8.758   sky130_fd_sc_hd__nor4b_1
+        2   20.019   sky130_fd_sc_hd__o211a_1
+       15   75.072   sky130_fd_sc_hd__o21ai_0
+        1    6.256   sky130_fd_sc_hd__o22ai_1
+        1    10.01   sky130_fd_sc_hd__o311a_1
+        1    6.256   sky130_fd_sc_hd__or3_1
+       66  578.054   sky130_fd_sc_hd__xnor2_1
+        7   61.309   sky130_fd_sc_hd__xor2_1
+        5        - submodules
+        1        -   mbist_eval_top_rtl1_tessent_and2
+        1        -   mbist_eval_top_rtl1_tessent_buf
+        1        -   mbist_eval_top_rtl1_tessent_clk_gate_and
+        1        -   mbist_eval_top_rtl1_tessent_clk_mux2
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_interface_m2_STATUS
+
+   Area for cell type $_DLATCH_N_ is unknown!
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_c1_interface_m2': 2310.966400
+     of which used for sequential elements: 300.288000 (12.99%)
+
+=== mbist_eval_top_rtl1_tessent_posedge_synchronizer_reset ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        5        - wires
+        5        - wire bits
+        5        - public wires
+        5        - public wire bits
+        4        - ports
+        4        - port bits
+        2   50.048 cells
+        2   50.048   sky130_fd_sc_hd__dfrtp_1
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_posedge_synchronizer_reset': 50.048000
+     of which used for sequential elements: 50.048000 (100.00%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_controller_fsm ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       51        - wires
+       61        - wire bits
+       19        - public wires
+       29        - public wire bits
+       16        - ports
+       16        - port bits
+       47  517.997 cells
+        1    7.507   sky130_fd_sc_hd__a21o_1
+        2    10.01   sky130_fd_sc_hd__a21oi_1
+        5   43.792   sky130_fd_sc_hd__a22o_1
+        1    6.256   sky130_fd_sc_hd__a31oi_1
+        1    6.256   sky130_fd_sc_hd__and2_0
+        2    7.507   sky130_fd_sc_hd__clkinv_1
+       12  300.288   sky130_fd_sc_hd__dfrtp_1
+        1   26.275   sky130_fd_sc_hd__dfstp_2
+        3   18.768   sky130_fd_sc_hd__lpflow_isobufsrc_1
+        2    7.507   sky130_fd_sc_hd__nand2_1
+        1    5.005   sky130_fd_sc_hd__nand3_1
+        8   30.029   sky130_fd_sc_hd__nor2_1
+        3   15.014   sky130_fd_sc_hd__nor3_1
+        1    7.507   sky130_fd_sc_hd__nor3b_1
+        2   15.014   sky130_fd_sc_hd__o21a_1
+        1    5.005   sky130_fd_sc_hd__o21ai_0
+        1    6.256   sky130_fd_sc_hd__o22ai_1
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_c1_controller_fsm': 517.996800
+     of which used for sequential elements: 326.563200 (63.04%)
+
+=== mbist_eval_top_rtl1_tessent_and2 ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        3        - wires
+        3        - wire bits
+        3        - public wires
+        3        - public wire bits
+        3        - ports
+        3        - port bits
+        1    6.256 cells
+        1    6.256   sky130_fd_sc_hd__and2_0
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_and2': 6.256000
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_controller_pointer_cntrl ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      265        - wires
+      302        - wire bits
+       45        - public wires
+       82        - public wire bits
+       39        - ports
+       60        - port bits
+      256  1970.64 cells
+        1    8.758   sky130_fd_sc_hd__a2111oi_0
+        2   15.014   sky130_fd_sc_hd__a211oi_1
+        1    10.01   sky130_fd_sc_hd__a21bo_1
+        3   22.522   sky130_fd_sc_hd__a21boi_0
+        1    7.507   sky130_fd_sc_hd__a21o_1
+       10   50.048   sky130_fd_sc_hd__a21oi_1
+        3   30.029   sky130_fd_sc_hd__a221o_1
+        5   43.792   sky130_fd_sc_hd__a22o_1
+        4   30.029   sky130_fd_sc_hd__a22oi_1
+        3   18.768   sky130_fd_sc_hd__a31oi_1
+        1    8.758   sky130_fd_sc_hd__a41oi_1
+        3   18.768   sky130_fd_sc_hd__and2_0
+        2   12.512   sky130_fd_sc_hd__and3_1
+        1    8.758   sky130_fd_sc_hd__and3b_1
+        1    10.01   sky130_fd_sc_hd__and4b_1
+        5   18.768   sky130_fd_sc_hd__clkinv_1
+       27  675.648   sky130_fd_sc_hd__dfrtp_1
+        8   50.048   sky130_fd_sc_hd__lpflow_isobufsrc_1
+        1   11.261   sky130_fd_sc_hd__mux2_1
+       48  180.173   sky130_fd_sc_hd__nand2_1
+       10    62.56   sky130_fd_sc_hd__nand2b_1
+       10   50.048   sky130_fd_sc_hd__nand3_1
+        2   15.014   sky130_fd_sc_hd__nand3b_1
+        6   37.536   sky130_fd_sc_hd__nand4_1
+        1    8.758   sky130_fd_sc_hd__nand4b_1
+       17   63.811   sky130_fd_sc_hd__nor2_1
+        1    6.256   sky130_fd_sc_hd__nor2b_1
+       12   60.058   sky130_fd_sc_hd__nor3_1
+        2   15.014   sky130_fd_sc_hd__nor3b_1
+        3   18.768   sky130_fd_sc_hd__nor4_1
+        6   45.043   sky130_fd_sc_hd__o211ai_1
+        1    7.507   sky130_fd_sc_hd__o21a_1
+       28  140.134   sky130_fd_sc_hd__o21ai_0
+        1    7.507   sky130_fd_sc_hd__o21bai_1
+        1    8.758   sky130_fd_sc_hd__o221ai_1
+        4   25.024   sky130_fd_sc_hd__o22ai_1
+        2   17.517   sky130_fd_sc_hd__o311ai_0
+        5   37.536   sky130_fd_sc_hd__o31ai_1
+        1    8.758   sky130_fd_sc_hd__o32ai_1
+        2   17.517   sky130_fd_sc_hd__o41ai_1
+        3   18.768   sky130_fd_sc_hd__or3_1
+        3   26.275   sky130_fd_sc_hd__or3b_1
+        2   15.014   sky130_fd_sc_hd__or4_1
+        1    8.758   sky130_fd_sc_hd__xnor2_1
+        2   17.517   sky130_fd_sc_hd__xor2_1
+        5        - submodules
+        5        -   mbist_eval_top_rtl1_tessent_buf
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_c1_controller_pointer_cntrl': 1970.640000
+     of which used for sequential elements: 675.648000 (34.29%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_controller_add_gen ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      219        - wires
+      264        - wire bits
+       31        - public wires
+       76        - public wire bits
+       21        - ports
+       35        - port bits
+      230 1.89E+03 cells
+        1    7.507   sky130_fd_sc_hd__a211oi_1
+        1    7.507   sky130_fd_sc_hd__a21boi_0
+       12   90.086   sky130_fd_sc_hd__a21o_1
+       22  110.106   sky130_fd_sc_hd__a21oi_1
+        5   43.792   sky130_fd_sc_hd__a22o_1
+        4   35.034   sky130_fd_sc_hd__a311oi_1
+        1    8.758   sky130_fd_sc_hd__a31o_1
+        8   50.048   sky130_fd_sc_hd__a31oi_1
+        1    6.256   sky130_fd_sc_hd__and2_0
+        2   12.512   sky130_fd_sc_hd__and3_1
+        1    8.758   sky130_fd_sc_hd__and3b_1
+        2   17.517   sky130_fd_sc_hd__and4_1
+        3   11.261   sky130_fd_sc_hd__clkinv_1
+       20   500.48   sky130_fd_sc_hd__dfrtp_1
+        4   25.024   sky130_fd_sc_hd__lpflow_inputiso1p_1
+        2   12.512   sky130_fd_sc_hd__lpflow_isobufsrc_1
+       21  236.477   sky130_fd_sc_hd__mux2_1
+        2   20.019   sky130_fd_sc_hd__mux2i_1
+       21   78.826   sky130_fd_sc_hd__nand2_1
+        4   25.024   sky130_fd_sc_hd__nand2b_1
+        6   30.029   sky130_fd_sc_hd__nand3_1
+        2   15.014   sky130_fd_sc_hd__nand3b_1
+        1    6.256   sky130_fd_sc_hd__nand4_1
+        8   30.029   sky130_fd_sc_hd__nor2_1
+        3   15.014   sky130_fd_sc_hd__nor3_1
+        3   22.522   sky130_fd_sc_hd__nor3b_1
+        2   12.512   sky130_fd_sc_hd__nor4_1
+        1    8.758   sky130_fd_sc_hd__nor4b_1
+        1   11.261   sky130_fd_sc_hd__o2111a_1
+        3   26.275   sky130_fd_sc_hd__o2111ai_1
+        3   22.522   sky130_fd_sc_hd__o211ai_1
+        2   15.014   sky130_fd_sc_hd__o21a_1
+       37  185.178   sky130_fd_sc_hd__o21ai_0
+        1    6.256   sky130_fd_sc_hd__o22ai_1
+        1    10.01   sky130_fd_sc_hd__o311a_1
+        1    8.758   sky130_fd_sc_hd__o41ai_1
+        1    8.758   sky130_fd_sc_hd__or3b_1
+        4   35.034   sky130_fd_sc_hd__xnor2_1
+       13  113.859   sky130_fd_sc_hd__xor2_1
+       10        - submodules
+       10        -   mbist_eval_top_rtl1_tessent_buf
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_c1_controller_add_gen': 1890.563200
+     of which used for sequential elements: 500.480000 (26.47%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_controller_add_format ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+       20        - wire bits
+        4        - public wires
+       20        - public wire bits
+        4        - ports
+       20        - port bits
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_controller_signal_gen ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       57        - wires
+       61        - wire bits
+       25        - public wires
+       29        - public wire bits
+       24        - ports
+       26        - port bits
+       43  330.317 cells
+        1    8.758   sky130_fd_sc_hd__a2111oi_0
+        4   20.019   sky130_fd_sc_hd__a21oi_1
+        1    7.507   sky130_fd_sc_hd__a22oi_1
+        1    3.754   sky130_fd_sc_hd__clkinv_1
+        5   125.12   sky130_fd_sc_hd__dfrtp_1
+        1    6.256   sky130_fd_sc_hd__lpflow_inputiso1p_1
+        2   12.512   sky130_fd_sc_hd__lpflow_isobufsrc_1
+        1    10.01   sky130_fd_sc_hd__mux2i_1
+        6   22.522   sky130_fd_sc_hd__nand2_1
+        3   18.768   sky130_fd_sc_hd__nand2b_1
+        1    5.005   sky130_fd_sc_hd__nand3_1
+        1    7.507   sky130_fd_sc_hd__nand3b_1
+        5   18.768   sky130_fd_sc_hd__nor2_1
+        2    10.01   sky130_fd_sc_hd__nor3_1
+        1    6.256   sky130_fd_sc_hd__nor4_1
+        1    7.507   sky130_fd_sc_hd__o21a_1
+        5   25.024   sky130_fd_sc_hd__o21ai_0
+        1    8.758   sky130_fd_sc_hd__o41ai_1
+        1    6.256   sky130_fd_sc_hd__or3_1
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_c1_controller_signal_gen': 330.316800
+     of which used for sequential elements: 125.120000 (37.88%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_controller_data_gen ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      405        - wires
+      550        - wire bits
+       22        - public wires
+      167        - public wire bits
+       17        - ports
+       93        - port bits
+      514 4.36E+03 cells
+       97  485.466   sky130_fd_sc_hd__a21oi_1
+        1    8.758   sky130_fd_sc_hd__a221oi_1
+        6   37.536   sky130_fd_sc_hd__a31oi_1
+        1    6.256   sky130_fd_sc_hd__and3_1
+       66 1.65E+03   sky130_fd_sc_hd__dfrtp_1
+        2   12.512   sky130_fd_sc_hd__lpflow_inputiso1p_1
+       42  157.651   sky130_fd_sc_hd__nand2_1
+        1    6.256   sky130_fd_sc_hd__nand2b_1
+        7   35.034   sky130_fd_sc_hd__nand3_1
+        4   25.024   sky130_fd_sc_hd__nand4_1
+       65  243.984   sky130_fd_sc_hd__nor2_1
+        1    7.507   sky130_fd_sc_hd__o21a_1
+       66  330.317   sky130_fd_sc_hd__o21ai_0
+        2   15.014   sky130_fd_sc_hd__o21bai_1
+      148  1.3E+03   sky130_fd_sc_hd__xnor2_1
+        5   43.792   sky130_fd_sc_hd__xor2_1
+        1        - submodules
+        1        -   mbist_eval_top_rtl1_tessent_buf
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_c1_controller_data_gen': 4362.934400
+     of which used for sequential elements: 1651.584000 (37.85%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_controller_repeat_loop_cntrl ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       77        - wires
+      105        - wire bits
+       32        - public wires
+       60        - public wire bits
+       30        - ports
+       56        - port bits
+       60  455.437 cells
+        1    10.01   sky130_fd_sc_hd__a21bo_1
+        1    7.507   sky130_fd_sc_hd__a21o_1
+        1    5.005   sky130_fd_sc_hd__a21oi_1
+        2   12.512   sky130_fd_sc_hd__a31oi_1
+        1    10.01   sky130_fd_sc_hd__a32o_1
+        1    8.758   sky130_fd_sc_hd__a32oi_1
+        2   12.512   sky130_fd_sc_hd__and2_0
+        1    3.754   sky130_fd_sc_hd__clkinv_1
+        4  100.096   sky130_fd_sc_hd__dfrtp_1
+        1    6.256   sky130_fd_sc_hd__lpflow_inputiso1p_1
+        2   12.512   sky130_fd_sc_hd__lpflow_isobufsrc_1
+        2   22.522   sky130_fd_sc_hd__mux2_1
+        1    10.01   sky130_fd_sc_hd__mux2i_1
+        8   30.029   sky130_fd_sc_hd__nand2_1
+        4   25.024   sky130_fd_sc_hd__nand2b_1
+        3   15.014   sky130_fd_sc_hd__nand3_1
+        1    7.507   sky130_fd_sc_hd__nand3b_1
+        1    6.256   sky130_fd_sc_hd__nand4_1
+        4   15.014   sky130_fd_sc_hd__nor2_1
+        3   15.014   sky130_fd_sc_hd__nor3_1
+        1    7.507   sky130_fd_sc_hd__o211ai_1
+        1    7.507   sky130_fd_sc_hd__o21a_1
+        4   20.019   sky130_fd_sc_hd__o21ai_0
+        1    6.256   sky130_fd_sc_hd__or3_1
+        8   70.067   sky130_fd_sc_hd__xnor2_1
+        1    8.758   sky130_fd_sc_hd__xor2_1
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_c1_controller_repeat_loop_cntrl': 455.436800
+     of which used for sequential elements: 100.096000 (21.98%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_controller_ctl_comp ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      196        - wires
+      219        - wire bits
+       35        - public wires
+       58        - public wire bits
+       28        - ports
+       29        - port bits
+      195 1.73E+03 cells
+        2   15.014   sky130_fd_sc_hd__a211oi_1
+        1    7.507   sky130_fd_sc_hd__a21o_1
+       22  110.106   sky130_fd_sc_hd__a21oi_1
+        1    8.758   sky130_fd_sc_hd__a221oi_1
+        2   17.517   sky130_fd_sc_hd__a22o_1
+        1    7.507   sky130_fd_sc_hd__a22oi_1
+        5    31.28   sky130_fd_sc_hd__a31oi_1
+        4   40.038   sky130_fd_sc_hd__a32o_1
+        4   25.024   sky130_fd_sc_hd__and3_1
+        1    8.758   sky130_fd_sc_hd__and3b_1
+        1    8.758   sky130_fd_sc_hd__and4_1
+        1    10.01   sky130_fd_sc_hd__and4b_1
+        4   15.014   sky130_fd_sc_hd__clkinv_1
+       31  775.744   sky130_fd_sc_hd__dfrtp_1
+        3   18.768   sky130_fd_sc_hd__lpflow_inputiso1p_1
+        3   18.768   sky130_fd_sc_hd__lpflow_isobufsrc_1
+        1   11.261   sky130_fd_sc_hd__mux2_1
+        2   20.019   sky130_fd_sc_hd__mux2i_1
+       17   63.811   sky130_fd_sc_hd__nand2_1
+        5    31.28   sky130_fd_sc_hd__nand2b_1
+        6   30.029   sky130_fd_sc_hd__nand3_1
+        2   15.014   sky130_fd_sc_hd__nand3b_1
+        3   18.768   sky130_fd_sc_hd__nand4_1
+        2   17.517   sky130_fd_sc_hd__nand4b_1
+       23   86.333   sky130_fd_sc_hd__nor2_1
+        4   20.019   sky130_fd_sc_hd__nor3_1
+        1    7.507   sky130_fd_sc_hd__nor3b_1
+        2   12.512   sky130_fd_sc_hd__nor4_1
+        4   30.029   sky130_fd_sc_hd__o211ai_1
+        2   15.014   sky130_fd_sc_hd__o21a_1
+       18   90.086   sky130_fd_sc_hd__o21ai_0
+        1    8.758   sky130_fd_sc_hd__o2bb2ai_1
+        1    8.758   sky130_fd_sc_hd__o31a_1
+        3   22.522   sky130_fd_sc_hd__o31ai_1
+        1    8.758   sky130_fd_sc_hd__o41ai_1
+        2   12.512   sky130_fd_sc_hd__or3_1
+        1    8.758   sky130_fd_sc_hd__or3b_1
+        4   35.034   sky130_fd_sc_hd__xnor2_1
+        4   35.034   sky130_fd_sc_hd__xor2_1
+        1        - submodules
+        1        -   mbist_eval_top_rtl1_tessent_posedge_synchronizer_reset
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_c1_controller_ctl_comp': 1727.907200
+     of which used for sequential elements: 775.744000 (44.90%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_controller_port_counter ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       24        - wires
+       25        - wire bits
+       14        - public wires
+       15        - public wire bits
+       14        - ports
+       15        - port bits
+       13  121.366 cells
+        1    5.005   sky130_fd_sc_hd__a21oi_1
+        1    10.01   sky130_fd_sc_hd__a32o_1
+        1    3.754   sky130_fd_sc_hd__clkinv_1
+        2   50.048   sky130_fd_sc_hd__dfrtp_1
+        1    6.256   sky130_fd_sc_hd__lpflow_isobufsrc_1
+        1    3.754   sky130_fd_sc_hd__nand2_1
+        1    7.507   sky130_fd_sc_hd__nor3b_1
+        1    6.256   sky130_fd_sc_hd__nor4_1
+        1    7.507   sky130_fd_sc_hd__o21bai_1
+        1    7.507   sky130_fd_sc_hd__o31ai_1
+        1    6.256   sky130_fd_sc_hd__or3_1
+        1    7.507   sky130_fd_sc_hd__or4_1
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_c1_controller_port_counter': 121.366400
+     of which used for sequential elements: 50.048000 (41.24%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_bap_tdr ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       45        - wires
+       75        - wire bits
+       25        - public wires
+       42        - public wire bits
+       23        - ports
+       27        - port bits
+       61 1.11E+03 cells
+        1    3.754   sky130_fd_sc_hd__clkinv_1
+       13  325.312   sky130_fd_sc_hd__dfrtn_1
+        1   26.275   sky130_fd_sc_hd__dfstp_2
+       14  420.403   sky130_fd_sc_hd__edfxtp_1
+       28  315.302   sky130_fd_sc_hd__mux2_1
+        4   15.014   sky130_fd_sc_hd__nand2_1
+        1        - submodules
+        1        -   mbist_eval_top_rtl1_tessent_mux2
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_bap_tdr': 1106.060800
+     of which used for sequential elements: 771.990400 (69.80%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_bap_ctl_sib ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       27        - wires
+       27        - wire bits
+       16        - public wires
+       16        - public wire bits
+       15        - ports
+       15        - port bits
+       15  175.168 cells
+        2   50.048   sky130_fd_sc_hd__dfrtn_1
+        2   60.058   sky130_fd_sc_hd__edfxtp_1
+        2   12.512   sky130_fd_sc_hd__lpflow_isobufsrc_1
+        2   22.522   sky130_fd_sc_hd__mux2_1
+        4   15.014   sky130_fd_sc_hd__nand2_1
+        1    5.005   sky130_fd_sc_hd__nand3_1
+        2    10.01   sky130_fd_sc_hd__o21ai_0
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_bap_ctl_sib': 175.168000
+     of which used for sequential elements: 110.105600 (62.86%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_bap_sib ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       19        - wires
+       19        - wire bits
+       13        - public wires
+       13        - public wire bits
+       11        - ports
+       11        - port bits
+       10  118.864 cells
+        1    7.507   sky130_fd_sc_hd__a21o_1
+        2    10.01   sky130_fd_sc_hd__a21oi_1
+        1    6.256   sky130_fd_sc_hd__and2_0
+        2   50.048   sky130_fd_sc_hd__dfrtn_1
+        1   20.019   sky130_fd_sc_hd__dfxtp_1
+        1   11.261   sky130_fd_sc_hd__mux2_1
+        1    10.01   sky130_fd_sc_hd__mux2i_1
+        1    3.754   sky130_fd_sc_hd__nand2_1
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_bap_sib': 118.864000
+     of which used for sequential elements: 70.067200 (58.95%)
+
+=== mbist_eval_top_rtl1_tessent_mux2 ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   11.261 cells
+        1   11.261   sky130_fd_sc_hd__mux2_1
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mux2': 11.260800
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== mbist_eval_top_rtl1_tessent_buf ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        2        - wires
+        2        - wire bits
+        2        - public wires
+        2        - public wire bits
+        2        - ports
+        2        - port bits
+
+=== mbist_eval_top_rtl1_tessent_clk_buf ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        2        - wires
+        2        - wire bits
+        2        - public wires
+        2        - public wire bits
+        2        - ports
+        2        - port bits
+
+=== mbist_eval_top_rtl1_tessent_clk_gate_and ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        6        - wires
+        6        - wire bits
+        6        - public wires
+        6        - public wire bits
+        4        - ports
+        4        - port bits
+        3   12.512 cells
+        1        -   $_DLATCH_N_
+        1    6.256   sky130_fd_sc_hd__and2_0
+        1    6.256   sky130_fd_sc_hd__lpflow_inputiso1p_1
+
+   Area for cell type $_DLATCH_N_ is unknown!
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_clk_gate_and': 12.512000
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== mbist_eval_top_rtl1_tessent_clk_mux2 ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        4        - wires
+        4        - wire bits
+        4        - public wires
+        4        - public wire bits
+        4        - ports
+        4        - port bits
+        1   11.261 cells
+        1   11.261   sky130_fd_sc_hd__mux2_1
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_clk_mux2': 11.260800
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== $paramod\sram_controller\MEM_WORDS=s32'00000000000000000000010000000000 ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      377        - wires
+      904        - wire bits
+      107        - public wires
+      634        - public wire bits
+       77        - ports
+      413        - port bits
+      422 5.14E+03 cells
+        1    8.758   sky130_fd_sc_hd__a2111oi_0
+        2   15.014   sky130_fd_sc_hd__a21boi_0
+        4   30.029   sky130_fd_sc_hd__a21o_1
+       28  140.134   sky130_fd_sc_hd__a21oi_1
+        1    8.758   sky130_fd_sc_hd__a221oi_1
+        1    8.758   sky130_fd_sc_hd__a22o_1
+        5   37.536   sky130_fd_sc_hd__a22oi_1
+        1    8.758   sky130_fd_sc_hd__a2bb2oi_1
+        1    8.758   sky130_fd_sc_hd__a31o_1
+        4   25.024   sky130_fd_sc_hd__a31oi_1
+        1    8.758   sky130_fd_sc_hd__a32oi_1
+        1    8.758   sky130_fd_sc_hd__a41oi_1
+        4   25.024   sky130_fd_sc_hd__and2_0
+        3   18.768   sky130_fd_sc_hd__and3_1
+        8   30.029   sky130_fd_sc_hd__clkinv_1
+       13   260.25   sky130_fd_sc_hd__dfxtp_1
+      102 3.06E+03   sky130_fd_sc_hd__edfxtp_1
+        1    6.256   sky130_fd_sc_hd__lpflow_inputiso1p_1
+       10    62.56   sky130_fd_sc_hd__lpflow_isobufsrc_1
+       33  330.317   sky130_fd_sc_hd__mux2i_1
+       44  165.158   sky130_fd_sc_hd__nand2_1
+        4   25.024   sky130_fd_sc_hd__nand2b_1
+        7   35.034   sky130_fd_sc_hd__nand3_1
+        3   22.522   sky130_fd_sc_hd__nand3b_1
+       10    62.56   sky130_fd_sc_hd__nand4_1
+        1    8.758   sky130_fd_sc_hd__nand4b_1
+       34  127.622   sky130_fd_sc_hd__nor2_1
+        3   15.014   sky130_fd_sc_hd__nor3_1
+        8   50.048   sky130_fd_sc_hd__nor4_1
+        1    8.758   sky130_fd_sc_hd__o2111ai_1
+        1    10.01   sky130_fd_sc_hd__o211a_1
+        4   30.029   sky130_fd_sc_hd__o211ai_1
+        2   15.014   sky130_fd_sc_hd__o21a_1
+       45  225.216   sky130_fd_sc_hd__o21ai_0
+        7   43.792   sky130_fd_sc_hd__o22ai_1
+        2   15.014   sky130_fd_sc_hd__o31ai_1
+        4   30.029   sky130_fd_sc_hd__or4_1
+        7   61.309   sky130_fd_sc_hd__xnor2_1
+       10   87.584   sky130_fd_sc_hd__xor2_1
+        1        -   sky130_sram_4kbyte_1rw1r_32x1024_8
+        2        - submodules
+        1        -   $paramod\mem_collar\AW=s32'00000000000000000000000000001010\HAS_P1=1'1
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_interface_m1
+
+   Area for cell type $_DLATCH_N_ is unknown!
+   Area for cell type \sky130_sram_4kbyte_1rw1r_32x1024_8 is unknown!
+
+   Chip area for module '$paramod\sram_controller\MEM_WORDS=s32'00000000000000000000010000000000': 5143.683200
+     of which used for sequential elements: 3323.187200 (64.61%)
+
+=== $paramod\npu_weight_mem\WEIGHT_WORDS=s32'00000000000000000000010000000000 ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       70        - wires
+      438        - wire bits
+       69        - public wires
+      437        - public wire bits
+       52        - ports
+      276        - port bits
+       45   760.73 cells
+        1    3.754   sky130_fd_sc_hd__clkinv_1
+       32  640.614   sky130_fd_sc_hd__dfxtp_1
+       10  112.608   sky130_fd_sc_hd__mux2_1
+        1    3.754   sky130_fd_sc_hd__nor2_1
+        1        -   sky130_sram_4kbyte_1rw1r_32x1024_8
+        2        - submodules
+        1        -   $paramod\mem_collar\AW=s32'00000000000000000000000000001010\HAS_P1=1'0
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_interface_m2
+
+   Area for cell type $_DLATCH_N_ is unknown!
+   Area for cell type \sky130_sram_4kbyte_1rw1r_32x1024_8 is unknown!
+
+   Chip area for module '$paramod\npu_weight_mem\WEIGHT_WORDS=s32'00000000000000000000010000000000': 760.729600
+     of which used for sequential elements: 640.614400 (84.21%)
+
+=== mbist_eval_top_rtl1_tessent_sib_1 ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       76        - wires
+       80        - wire bits
+       52        - public wires
+       56        - public wire bits
+       32        - ports
+       33        - port bits
+       48  494.224 cells
+        3        -   $_DLATCH_N_
+        1    10.01   sky130_fd_sc_hd__a21bo_1
+        1    5.005   sky130_fd_sc_hd__a21oi_1
+        5    31.28   sky130_fd_sc_hd__and2_0
+        4   15.014   sky130_fd_sc_hd__clkinv_1
+        2   50.048   sky130_fd_sc_hd__dfrtn_1
+        4   80.077   sky130_fd_sc_hd__dfxtp_1
+        5  150.144   sky130_fd_sc_hd__edfxtp_1
+        1    6.256   sky130_fd_sc_hd__lpflow_isobufsrc_1
+        5   56.304   sky130_fd_sc_hd__mux2_1
+        2   20.019   sky130_fd_sc_hd__mux2i_1
+        6   22.522   sky130_fd_sc_hd__nand2_1
+        1    5.005   sky130_fd_sc_hd__nand3_1
+        2    7.507   sky130_fd_sc_hd__nor2_1
+        1    7.507   sky130_fd_sc_hd__o21a_1
+        3   15.014   sky130_fd_sc_hd__o21ai_0
+        2   12.512   sky130_fd_sc_hd__o22ai_1
+       11        - submodules
+        7        -   mbist_eval_top_rtl1_tessent_buf
+        1        -   mbist_eval_top_rtl1_tessent_clk_buf
+        1        -   mbist_eval_top_rtl1_tessent_clk_gate_and
+        1        -   mbist_eval_top_rtl1_tessent_clk_mux2
+        1        -   mbist_eval_top_rtl1_tessent_mux2
+
+   Area for cell type $_DLATCH_N_ is unknown!
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_sib_1': 494.224000
+     of which used for sequential elements: 280.268800 (56.71%)
+
+=== mbist_eval_top_rtl1_tessent_sib_2 ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       19        - wires
+       19        - wire bits
+       13        - public wires
+       13        - public wire bits
+       10        - ports
+       10        - port bits
+       11  133.878 cells
+        1        -   $_DLATCH_N_
+        1    10.01   sky130_fd_sc_hd__a21bo_1
+        1    5.005   sky130_fd_sc_hd__a21oi_1
+        1    6.256   sky130_fd_sc_hd__and2_0
+        2   50.048   sky130_fd_sc_hd__dfrtn_1
+        1   30.029   sky130_fd_sc_hd__edfxtp_1
+        1   11.261   sky130_fd_sc_hd__mux2_1
+        1    10.01   sky130_fd_sc_hd__mux2i_1
+        1    3.754   sky130_fd_sc_hd__nand2_1
+        1    7.507   sky130_fd_sc_hd__o21a_1
+
+   Area for cell type $_DLATCH_N_ is unknown!
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_sib_2': 133.878400
+     of which used for sequential elements: 80.076800 (59.81%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_bap ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       74        - wires
+       80        - wire bits
+       67        - public wires
+       73        - public wire bits
+       37        - ports
+       39        - port bits
+       14  148.893 cells
+        1    8.758   sky130_fd_sc_hd__and4_1
+        4   15.014   sky130_fd_sc_hd__clkinv_1
+        1   25.024   sky130_fd_sc_hd__dfrtn_1
+        3   60.058   sky130_fd_sc_hd__dfxtp_1
+        1   11.261   sky130_fd_sc_hd__mux2_1
+        1    3.754   sky130_fd_sc_hd__nand2_1
+        1    3.754   sky130_fd_sc_hd__nor2_1
+        1    10.01   sky130_fd_sc_hd__nor4bb_1
+        1   11.261   sky130_fd_sc_hd__o2111a_1
+       24        - submodules
+       15        -   mbist_eval_top_rtl1_tessent_buf
+        3        -   mbist_eval_top_rtl1_tessent_clk_buf
+        2        -   mbist_eval_top_rtl1_tessent_clk_gate_and
+        1        -   mbist_eval_top_rtl1_tessent_mbist_bap_ctl_sib
+        2        -   mbist_eval_top_rtl1_tessent_mbist_bap_sib
+        1        -   mbist_eval_top_rtl1_tessent_mbist_bap_tdr
+
+   Area for cell type $_DLATCH_N_ is unknown!
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_bap': 148.892800
+     of which used for sequential elements: 85.081600 (57.14%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_controller ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      191        - wires
+      305        - wire bits
+      151        - public wires
+      265        - public wire bits
+       56        - ports
+      130        - port bits
+       84  884.598 cells
+        1    8.758   sky130_fd_sc_hd__a2111oi_0
+        3   22.522   sky130_fd_sc_hd__a211oi_1
+        1    7.507   sky130_fd_sc_hd__a21boi_0
+        5   25.024   sky130_fd_sc_hd__a21oi_1
+        1    8.758   sky130_fd_sc_hd__a22o_1
+        1    10.01   sky130_fd_sc_hd__a311o_1
+        7   43.792   sky130_fd_sc_hd__and2_0
+        2   12.512   sky130_fd_sc_hd__and3_1
+        1    8.758   sky130_fd_sc_hd__and3b_1
+        7   26.275   sky130_fd_sc_hd__clkinv_1
+        3   75.072   sky130_fd_sc_hd__dfrtn_1
+       15   375.36   sky130_fd_sc_hd__dfrtp_1
+        2    52.55   sky130_fd_sc_hd__dfstp_2
+        1    6.256   sky130_fd_sc_hd__lpflow_inputiso1p_1
+        4   25.024   sky130_fd_sc_hd__lpflow_isobufsrc_1
+        1   11.261   sky130_fd_sc_hd__mux2_1
+        9   33.782   sky130_fd_sc_hd__nand2_1
+        1    6.256   sky130_fd_sc_hd__nand2b_1
+        1    5.005   sky130_fd_sc_hd__nand3_1
+        1   11.261   sky130_fd_sc_hd__nand4bb_1
+        6   22.522   sky130_fd_sc_hd__nor2_1
+        1    5.005   sky130_fd_sc_hd__nor3_1
+        1    7.507   sky130_fd_sc_hd__nor3b_1
+        1    8.758   sky130_fd_sc_hd__nor4b_1
+        1    10.01   sky130_fd_sc_hd__nor4bb_1
+        1    7.507   sky130_fd_sc_hd__o211ai_1
+        4   30.029   sky130_fd_sc_hd__o21a_1
+        2   17.517   sky130_fd_sc_hd__o22a_1
+       30        - submodules
+        9        -   mbist_eval_top_rtl1_tessent_and2
+        8        -   mbist_eval_top_rtl1_tessent_buf
+        1        -   mbist_eval_top_rtl1_tessent_clk_gate_and
+        1        -   mbist_eval_top_rtl1_tessent_clk_mux2
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_controller_add_format
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_controller_add_gen
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_controller_ctl_comp
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_controller_data_gen
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_controller_fsm
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_controller_pointer_cntrl
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_controller_port_counter
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_controller_repeat_loop_cntrl
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_controller_signal_gen
+        2        -   mbist_eval_top_rtl1_tessent_posedge_synchronizer_reset
+
+   Area for cell type $_DLATCH_N_ is unknown!
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_c1_controller': 884.598400
+     of which used for sequential elements: 502.982400 (56.86%)
+
+=== mbist_eval_top ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      118        - wires
+      431        - wire bits
+      118        - public wires
+      431        - public wire bits
+       45        - ports
+      286        - port bits
+        6        - submodules
+        1        -   $paramod\npu_weight_mem\WEIGHT_WORDS=s32'00000000000000000000010000000000
+        1        -   $paramod\sram_controller\MEM_WORDS=s32'00000000000000000000010000000000
+        1        -   mbist_eval_top_rtl1_tessent_mbist_bap
+        1        -   mbist_eval_top_rtl1_tessent_mbist_c1_controller
+        1        -   mbist_eval_top_rtl1_tessent_sib_1
+        1        -   mbist_eval_top_rtl1_tessent_sib_2
+
+   Area for cell type $_DLATCH_N_ is unknown!
+   Area for cell type \sky130_sram_4kbyte_1rw1r_32x1024_8 is unknown!
+
+   Chip area for module '\mbist_eval_top': 0.000000
+     of which used for sequential elements: 0.000000 (-nan%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_interface_m1_STATUS ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      177        - wires
+      301        - wire bits
+       25        - public wires
+      149        - public wire bits
+       21        - ports
+       52        - port bits
+      222 1.73E+03 cells
+       33  165.158   sky130_fd_sc_hd__a21oi_1
+        1    8.758   sky130_fd_sc_hd__a41oi_1
+        1    6.256   sky130_fd_sc_hd__and3_1
+       34  127.622   sky130_fd_sc_hd__clkinv_1
+       35   875.84   sky130_fd_sc_hd__dfrtp_1
+        1    6.256   sky130_fd_sc_hd__lpflow_isobufsrc_1
+       64   240.23   sky130_fd_sc_hd__nand2_1
+        2   12.512   sky130_fd_sc_hd__nand2b_1
+        2   15.014   sky130_fd_sc_hd__nand3b_1
+        2   12.512   sky130_fd_sc_hd__nand4_1
+        2    7.507   sky130_fd_sc_hd__nor2_1
+        8   50.048   sky130_fd_sc_hd__nor4_1
+        1    8.758   sky130_fd_sc_hd__nor4b_1
+        1   11.261   sky130_fd_sc_hd__o2111a_1
+        1    10.01   sky130_fd_sc_hd__o211a_1
+        1    7.507   sky130_fd_sc_hd__o21a_1
+       32  160.154   sky130_fd_sc_hd__o21ai_0
+        1    8.758   sky130_fd_sc_hd__or3b_1
+       32        - submodules
+       32        -   mbist_eval_top_rtl1_tessent_mux2
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_c1_interface_m1_STATUS': 1734.163200
+     of which used for sequential elements: 875.840000 (50.51%)
+
+=== mbist_eval_top_rtl1_tessent_mbist_c1_interface_m2_STATUS ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+      177        - wires
+      301        - wire bits
+       25        - public wires
+      149        - public wire bits
+       21        - ports
+       52        - port bits
+      222 1.73E+03 cells
+       33  165.158   sky130_fd_sc_hd__a21oi_1
+        1    8.758   sky130_fd_sc_hd__a41oi_1
+        1    6.256   sky130_fd_sc_hd__and3_1
+       34  127.622   sky130_fd_sc_hd__clkinv_1
+       35   875.84   sky130_fd_sc_hd__dfrtp_1
+        1    6.256   sky130_fd_sc_hd__lpflow_isobufsrc_1
+       64   240.23   sky130_fd_sc_hd__nand2_1
+        2   12.512   sky130_fd_sc_hd__nand2b_1
+        2   15.014   sky130_fd_sc_hd__nand3b_1
+        2   12.512   sky130_fd_sc_hd__nand4_1
+        2    7.507   sky130_fd_sc_hd__nor2_1
+        8   50.048   sky130_fd_sc_hd__nor4_1
+        1    8.758   sky130_fd_sc_hd__nor4b_1
+        1   11.261   sky130_fd_sc_hd__o2111a_1
+        1    10.01   sky130_fd_sc_hd__o211a_1
+        1    7.507   sky130_fd_sc_hd__o21a_1
+       32  160.154   sky130_fd_sc_hd__o21ai_0
+        1    8.758   sky130_fd_sc_hd__or3b_1
+       32        - submodules
+       32        -   mbist_eval_top_rtl1_tessent_mux2
+
+   Chip area for module '\mbist_eval_top_rtl1_tessent_mbist_c1_interface_m2_STATUS': 1734.163200
+     of which used for sequential elements: 875.840000 (50.51%)
+
+=== $paramod\mem_collar\AW=s32'00000000000000000000000000001010\HAS_P1=1'1 ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       54        - wires
+      201        - wire bits
+       20        - public wires
+      167        - public wire bits
+       20        - ports
+      167        - port bits
+       93  653.126 cells
+        1    7.507   sky130_fd_sc_hd__a21o_1
+        2    10.01   sky130_fd_sc_hd__a21oi_1
+       21   78.826   sky130_fd_sc_hd__clkinv_1
+        1    6.256   sky130_fd_sc_hd__lpflow_isobufsrc_1
+       36  405.389   sky130_fd_sc_hd__mux2_1
+       10   37.536   sky130_fd_sc_hd__nand2_1
+        2    7.507   sky130_fd_sc_hd__nor2_1
+       20  100.096   sky130_fd_sc_hd__o21ai_0
+
+   Chip area for module '$paramod\mem_collar\AW=s32'00000000000000000000000000001010\HAS_P1=1'1': 653.126400
+     of which used for sequential elements: 0.000000 (0.00%)
+
+=== design hierarchy ===
+
+        +----------Count including submodules.
+        |        +-Area including submodules.
+        |        | 
+     3296 3.08E+04 mbist_eval_top
+       45   760.73 $paramod\npu_weight_mem\WEIGHT_WORDS=s32'00000000000000000000010000000000
+       50  535.514   $paramod\mem_collar\AW=s32'00000000000000000000000000001010\HAS_P1=1'0
+      263 2.31E+03   mbist_eval_top_rtl1_tessent_mbist_c1_interface_m2
+        1    6.256     mbist_eval_top_rtl1_tessent_and2
+        3   12.512     mbist_eval_top_rtl1_tessent_clk_gate_and
+        1   11.261     mbist_eval_top_rtl1_tessent_clk_mux2
+      222 1.73E+03     mbist_eval_top_rtl1_tessent_mbist_c1_interface_m2_STATUS
+        1   11.261       mbist_eval_top_rtl1_tessent_mux2
+      422 5.14E+03 $paramod\sram_controller\MEM_WORDS=s32'00000000000000000000010000000000
+       93  653.126   $paramod\mem_collar\AW=s32'00000000000000000000000000001010\HAS_P1=1'1
+      263 2.31E+03   mbist_eval_top_rtl1_tessent_mbist_c1_interface_m1
+        1    6.256     mbist_eval_top_rtl1_tessent_and2
+        3   12.512     mbist_eval_top_rtl1_tessent_clk_gate_and
+        1   11.261     mbist_eval_top_rtl1_tessent_clk_mux2
+      222 1.73E+03     mbist_eval_top_rtl1_tessent_mbist_c1_interface_m1_STATUS
+        1   11.261       mbist_eval_top_rtl1_tessent_mux2
+       14  148.893 mbist_eval_top_rtl1_tessent_mbist_bap
+        3   12.512   mbist_eval_top_rtl1_tessent_clk_gate_and
+       15  175.168   mbist_eval_top_rtl1_tessent_mbist_bap_ctl_sib
+       10  118.864   mbist_eval_top_rtl1_tessent_mbist_bap_sib
+       61 1.11E+03   mbist_eval_top_rtl1_tessent_mbist_bap_tdr
+        1   11.261     mbist_eval_top_rtl1_tessent_mux2
+       84  884.598 mbist_eval_top_rtl1_tessent_mbist_c1_controller
+        1    6.256   mbist_eval_top_rtl1_tessent_and2
+        3   12.512   mbist_eval_top_rtl1_tessent_clk_gate_and
+        1   11.261   mbist_eval_top_rtl1_tessent_clk_mux2
+      230 1.89E+03   mbist_eval_top_rtl1_tessent_mbist_c1_controller_add_gen
+      195 1.73E+03   mbist_eval_top_rtl1_tessent_mbist_c1_controller_ctl_comp
+        2   50.048     mbist_eval_top_rtl1_tessent_posedge_synchronizer_reset
+      514 4.36E+03   mbist_eval_top_rtl1_tessent_mbist_c1_controller_data_gen
+       47  517.997   mbist_eval_top_rtl1_tessent_mbist_c1_controller_fsm
+      256  1970.64   mbist_eval_top_rtl1_tessent_mbist_c1_controller_pointer_cntrl
+       13  121.366   mbist_eval_top_rtl1_tessent_mbist_c1_controller_port_counter
+       60  455.437   mbist_eval_top_rtl1_tessent_mbist_c1_controller_repeat_loop_cntrl
+       43  330.317   mbist_eval_top_rtl1_tessent_mbist_c1_controller_signal_gen
+        2   50.048   mbist_eval_top_rtl1_tessent_posedge_synchronizer_reset
+       48  494.224 mbist_eval_top_rtl1_tessent_sib_1
+        3   12.512   mbist_eval_top_rtl1_tessent_clk_gate_and
+        1   11.261   mbist_eval_top_rtl1_tessent_clk_mux2
+        1   11.261   mbist_eval_top_rtl1_tessent_mux2
+       11  133.878 mbist_eval_top_rtl1_tessent_sib_2
+
+        +----------Count including submodules.
+        |        +-Area including submodules.
+        |        | 
+     3669        - wires
+     6448        - wire bits
+     1575        - public wires
+     4325        - public wire bits
+     1209        - ports
+     3092        - port bits
+        -        - memories
+        -        - memory bits
+        -        - processes
+     3296 3.08E+04 cells
+       10        -   $_DLATCH_N_
+        4   35.034   sky130_fd_sc_hd__a2111oi_0
+       12   90.086   sky130_fd_sc_hd__a211oi_1
+        4   40.038   sky130_fd_sc_hd__a21bo_1
+        9   67.565   sky130_fd_sc_hd__a21boi_0
+       23  172.666   sky130_fd_sc_hd__a21o_1
+      290 1.45E+03   sky130_fd_sc_hd__a21oi_1
+        3   30.029   sky130_fd_sc_hd__a221o_1
+        5   43.792   sky130_fd_sc_hd__a221oi_1
+       21  183.926   sky130_fd_sc_hd__a22o_1
+       13   97.594   sky130_fd_sc_hd__a22oi_1
+        1    8.758   sky130_fd_sc_hd__a2bb2oi_1
+        1    10.01   sky130_fd_sc_hd__a311o_1
+        8   70.067   sky130_fd_sc_hd__a311oi_1
+        2   17.517   sky130_fd_sc_hd__a31o_1
+       29  181.424   sky130_fd_sc_hd__a31oi_1
+        6   60.058   sky130_fd_sc_hd__a32o_1
+        2   17.517   sky130_fd_sc_hd__a32oi_1
+        4   35.034   sky130_fd_sc_hd__a41oi_1
+       43  269.008   sky130_fd_sc_hd__and2_0
+       18  112.608   sky130_fd_sc_hd__and3_1
+        4   35.034   sky130_fd_sc_hd__and3b_1
+        4   35.034   sky130_fd_sc_hd__and4_1
+        2   20.019   sky130_fd_sc_hd__and4b_1
+      171  641.866   sky130_fd_sc_hd__clkinv_1
+       27  675.648   sky130_fd_sc_hd__dfrtn_1
+      282 7.06E+03   sky130_fd_sc_hd__dfrtp_1
+        4  105.101   sky130_fd_sc_hd__dfstp_2
+       54 1.08E+03   sky130_fd_sc_hd__dfxtp_1
+      124 3.72E+03   sky130_fd_sc_hd__edfxtp_1
+       25    156.4   sky130_fd_sc_hd__lpflow_inputiso1p_1
+       45   281.52   sky130_fd_sc_hd__lpflow_isobufsrc_1
+      299 3.37E+03   sky130_fd_sc_hd__mux2_1
+      136 1.36E+03   sky130_fd_sc_hd__mux2i_1
+      374  1.4E+03   sky130_fd_sc_hd__nand2_1
+       44  275.264   sky130_fd_sc_hd__nand2b_1
+       54  270.259   sky130_fd_sc_hd__nand3_1
+       21  157.651   sky130_fd_sc_hd__nand3b_1
+       31  193.936   sky130_fd_sc_hd__nand4_1
+        4   35.034   sky130_fd_sc_hd__nand4b_1
+        1   11.261   sky130_fd_sc_hd__nand4bb_1
+      192  720.691   sky130_fd_sc_hd__nor2_1
+        1    6.256   sky130_fd_sc_hd__nor2b_1
+       33  165.158   sky130_fd_sc_hd__nor3_1
+        9   67.565   sky130_fd_sc_hd__nor3b_1
+       35   218.96   sky130_fd_sc_hd__nor4_1
+        6    52.55   sky130_fd_sc_hd__nor4b_1
+        2   20.019   sky130_fd_sc_hd__nor4bb_1
+        4   45.043   sky130_fd_sc_hd__o2111a_1
+        4   35.034   sky130_fd_sc_hd__o2111ai_1
+        7   70.067   sky130_fd_sc_hd__o211a_1
+       19  142.637   sky130_fd_sc_hd__o211ai_1
+       20  150.144   sky130_fd_sc_hd__o21a_1
+      323  1616.55   sky130_fd_sc_hd__o21ai_0
+        4   30.029   sky130_fd_sc_hd__o21bai_1
+        1    8.758   sky130_fd_sc_hd__o221ai_1
+        2   17.517   sky130_fd_sc_hd__o22a_1
+       17  106.352   sky130_fd_sc_hd__o22ai_1
+        1    8.758   sky130_fd_sc_hd__o2bb2ai_1
+        3   30.029   sky130_fd_sc_hd__o311a_1
+        2   17.517   sky130_fd_sc_hd__o311ai_0
+        1    8.758   sky130_fd_sc_hd__o31a_1
+       11   82.579   sky130_fd_sc_hd__o31ai_1
+        1    8.758   sky130_fd_sc_hd__o32ai_1
+        5   43.792   sky130_fd_sc_hd__o41ai_1
+       10    62.56   sky130_fd_sc_hd__or3_1
+        7   61.309   sky130_fd_sc_hd__or3b_1
+        7    52.55   sky130_fd_sc_hd__or4_1
+      304 2.66E+03   sky130_fd_sc_hd__xnor2_1
+       49  429.162   sky130_fd_sc_hd__xor2_1
+        2        -   sky130_sram_4kbyte_1rw1r_32x1024_8
+        6 3.08E+04 submodules
+        1 5.73E+03   $paramod\npu_weight_mem\WEIGHT_WORDS=s32'00000000000000000000010000000000
+        1 1.02E+04   $paramod\sram_controller\MEM_WORDS=s32'00000000000000000000010000000000
+        1  1.7E+03   mbist_eval_top_rtl1_tessent_mbist_bap
+        1 1.25E+04   mbist_eval_top_rtl1_tessent_mbist_c1_controller
+        1  529.258   mbist_eval_top_rtl1_tessent_sib_1
+        1  133.878   mbist_eval_top_rtl1_tessent_sib_2
+
+   Area for cell type $_DLATCH_N_ is unknown!
+   Area for cell type \sky130_sram_4kbyte_1rw1r_32x1024_8 is unknown!
+
+   Chip area for top module '\mbist_eval_top': 30823.312000
+     of which used for sequential elements: 12642.124800 (41.01%)
+

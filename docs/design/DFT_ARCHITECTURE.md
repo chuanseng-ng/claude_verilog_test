@@ -1181,6 +1181,14 @@ Two CPU-macro P&R runs failed to route (global-route overflow 9,202 and 24,377 a
 
 **Update 2026-10-24: full-cycle capture (bead `c54a`)**: the first collar compare ended in a rising-edge flop, a half-cycle path because the Sky130 macro launches `dout` on the falling edge. In the macro re-harden it failed setup at the ss corners only (icache -1.84 ns, dcache -0.94 ns). The strobe flop is now on the falling edge, so it captures one full cycle after the launch; the controller launches the expected-data tag from falling-edge copies on the same edge; a rising-edge retime flop in the collar then drives the route to the controller (a full-cycle flop-to-flop path). The strobe is two clocks after the sample cycle: the drain is `RD_LAT + 2` cycles and the read tags have two more stages. `dout` still carries one XOR2 input per bit and no flop. Flops 5,270 -> 5,299 [M, yosys generic, inside the census band]; 18 falling-edge flops, which need lock-up handling at Stage 2 scan insertion. The timing argument is from the edge relationships; it is not measured until the next macro re-harden. The `LOCAL_CMP = 0` logic is unchanged. Suites on this RTL: `mbist_cpu_macro` 8/8, `mbist_ctrl` 5 configs, `mbist_tap` 24/24, `mbist_soc_slice` 3/3, both `mbist_fi_equiv` 1/1.
 
+### 16.13 Parallel evaluation of Siemens Tessent MemoryBIST (pointer)
+
+A Tessent 2025.4 MemoryBIST flow for the same two SoC-level SRAM macros (TCD memory description, generated and
+inserted controller, VCS simulation of Tessent's own patterns, a fault campaign over the 105-fault catalogue of
+`mbist_golden.py`, and area against 16.9 measured the same way) lives in `dft/tessent/mbist/`. It does not change or
+replace anything in this section. Results and a recommendation (keep the in-house MBIST; Tessent is a possible licensed
+cross-check): `docs/design/TESSENT_MBIST_EVALUATION.md`.
+
 ## 17. Tessent scan + ATPG evaluation (pointer)
 
 A Siemens Tessent 2025.4 scan-insertion and ATPG evaluation of the Sky130 SoC fabric (6 chains of ~3,044, stuck-at 94.17 % test coverage / 1,574 patterns, transition

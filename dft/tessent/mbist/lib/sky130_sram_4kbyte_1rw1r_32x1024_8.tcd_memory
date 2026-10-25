@@ -1,0 +1,103 @@
+// Tessent memory description (TCD) for the OpenRAM Sky130 4 KB 1RW+1R SRAM macro
+//   sky130_sram_4kbyte_1rw1r_32x1024_8   (1024 words x 32 bits, 4 byte-lane write mask)
+//
+// Authored from: pnr/sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8_TT_1p8V_25C.lib (ports, bus
+// widths, clock-relative timing), the OpenRAM behavioural model next to it (.v) and the project's
+// simulation model sim/sky130_sram_4kbyte_1rw1r_32x1024_8.sv.  Assumptions are listed in
+// docs/design/TESSENT_MBIST_EVALUATION.md section 3; the short form:
+//   A1  Both ports are synchronous to their own clock pin (clk0 / clk1).  The macro captures every input at
+//       the rising edge and performs the access at the FOLLOWING falling edge, so dout is valid half a clock
+//       after the capturing edge and is sampled by downstream logic at the next rising edge: one clock of
+//       read latency, no output register on the macro boundary.  That is the Tessent "sync" operation set
+//       with DataOutStage None; the half-cycle (negedge-launched) internal timing is invisible at the pins.
+//   A2  csb0/csb1/web0 are active low; wmask0 is active high, one bit per 8-bit lane (BitGrouping 8).
+//   A3  Port 1 (clk1/csb1/addr1/dout1) is read-only; dout1 is only updated when csb1 is low.
+//   A4  No bypass/transparent mode is requested (TransparentMode None): the macro is a black box in scan
+//       mode, as in the in-house flow (docs/design/DFT_ARCHITECTURE.md 6.3).
+//   A5  Physical row/column mapping is NOT described (OpenRAM scrambles it and the LEF/Liberty do not say).  The
+//       address map below is a LOGICAL split, Address[9:2] = row and Address[1:0] = column, chosen only because
+//       Tessent refuses BitGrouping 8 on a memory with no column address bits (it silently forces BitGrouping to
+//       the word size, 32, which would drop the byte-lane write-mask test).  Neighbourhood algorithms are
+//       therefore logical-space only, the same limit as the in-house CKBD algorithm.
+//   A6  MinHold 1: one idle clock is the minimum between a write and the following access to be safe in the
+//       model; the OpenRAM model has no multi-cycle hold requirement (T_HOLD is only an output hold delay).
+MemoryTemplate (sky130_sram_4kbyte_1rw1r_32x1024_8) {
+
+   MemoryType             : SRAM;
+   CellName               : sky130_sram_4kbyte_1rw1r_32x1024_8;
+   Algorithm              : SMarchCHKBcil;
+   BitGrouping            : 8;
+   LogicalPorts           : 1R1RW;
+   MinHold                : 1;
+   NumberOfWords          : 1024;
+   TransparentMode        : None;
+   DataOutStage           : None;
+   OperationSet           : sync;
+   MilliWattsPerMegaHertz : 0.3;
+
+   // ---- Port 0 : read/write -------------------------------------------------
+   Port (clk0) {
+      Function    : Clock;
+      Polarity    : ActiveHigh;
+      LogicalPort : A;
+   }
+   Port (csb0) {
+      Function    : Select;
+      Polarity    : ActiveLow;
+      LogicalPort : A;
+   }
+   Port (web0) {
+      Function    : WriteEnable;
+      Polarity    : ActiveLow;
+      LogicalPort : A;
+   }
+   Port (wmask0[3:0]) {
+      Function    : GroupWriteEnable;
+      Polarity    : ActiveHigh;
+      LogicalPort : A;
+   }
+   Port (addr0[9:0]) {
+      Function    : Address;
+      LogicalPort : A;
+   }
+   Port (din0[31:0]) {
+      Function    : Data;
+      Direction   : Input;
+      LogicalPort : A;
+   }
+   Port (dout0[31:0]) {
+      Function    : Data;
+      Direction   : Output;
+      LogicalPort : A;
+   }
+
+   // ---- Port 1 : read only --------------------------------------------------
+   Port (clk1) {
+      Function    : Clock;
+      Polarity    : ActiveHigh;
+      LogicalPort : B;
+   }
+   Port (csb1) {
+      Function    : Select;
+      Polarity    : ActiveLow;
+      LogicalPort : B;
+   }
+   Port (addr1[9:0]) {
+      Function    : Address;
+      LogicalPort : B;
+   }
+   Port (dout1[31:0]) {
+      Function    : Data;
+      Direction   : Output;
+      LogicalPort : B;
+   }
+
+   AddressCounter {
+      Function (Address) {
+         LogicalAddressMap {
+            RowAddress[7:0]    : Address[9:2];
+            ColumnAddress[1:0] : Address[1:0];
+         }
+      }
+   }
+}

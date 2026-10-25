@@ -1,0 +1,84 @@
+puts "" 
+puts "===========" 
+puts " Important " 
+puts "===========" 
+puts "The dft_summary_dictionary file will be retired in a future release." 
+puts "A new tool command will be implemented to generate the same information." 
+puts "" 
+
+set dft_summary {
+  mbist_eval_top {
+    mentor::memory_bist::DftSpecification {
+      SummaryInfo {
+        version 1
+        current_design mbist_eval_top
+        DesignInstance {
+          - {
+            DesignId {
+              rtl1 {
+                Controller {
+                  mbist_eval_top_rtl1_tessent_mbist_c1_controller_inst {
+                    bist_clock_period_ns 25.0000
+                    bist_clock_connection clk
+                    module_name mbist_eval_top_rtl1_tessent_mbist_c1_controller
+                    design_instance mbist_eval_top_rtl1_tessent_mbist_c1_controller_inst
+                    bap_module_name mbist_eval_top_rtl1_tessent_mbist_bap
+                    bap_design_instance mbist_eval_top_rtl1_tessent_mbist_bap_inst
+                    bist_port {mbist_eval_top_rtl1_tessent_mbist_bap_inst/bistEn[0]}
+                    Step {
+                      0 {
+                        StepInfo {
+                          power_mw 24.00
+                          run_time_ns 2254100.0
+                          test_cycles 90164
+                          comparator_location per_interface
+                        }
+                        MemoryInstance {
+                          u_sram/u_sram_macro {
+                            power_mw 12.00
+                            interface_id m1
+                            template /Core(sky130_sram_4kbyte_1rw1r_32x1024_8)/Memory
+                            type sram
+                            object_id instance:0
+                            MemoryInterfaceInfo {
+                              design_instance u_sram/u_sram_macro_interface_inst
+                              module_name mbist_eval_top_rtl1_tessent_mbist_c1_interface_m1
+                            }
+                            logical_ports 1R1RW
+                            test_ports 2
+                          }
+                          u_wmem/u_sram_macro {
+                            power_mw 12.00
+                            interface_id m2
+                            template /Core(sky130_sram_4kbyte_1rw1r_32x1024_8)/Memory
+                            type sram
+                            object_id instance:1
+                            MemoryInterfaceInfo {
+                              design_instance u_wmem/u_sram_macro_interface_inst
+                              module_name mbist_eval_top_rtl1_tessent_mbist_c1_interface_m2
+                            }
+                            logical_ports 1R1RW
+                            test_ports 2
+                          }
+                        }
+                      }
+                    }
+                    power_mw 24.00
+                    run_time_ns 2254100.0
+                    test_cycles 90164
+                    soft_operation_count 0
+                    flop_count 190
+                    soft_instruction_count 0
+                    soft_operation_length 0
+                    soft_operation_max_strobe_data_out_pipelines 0
+                    soft_operation_signals {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

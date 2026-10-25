@@ -1,0 +1,67 @@
+
+8. Printing statistics.
+
+=== $paramod$3a60f47c0d38c845717b76847acd7e2fa5ab0dff\cdc_sync ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        5        - wires
+        5        - wire bits
+        5        - public wires
+        5        - public wire bits
+        4        - ports
+        4        - port bits
+        2   50.048 cells
+        2   50.048   sky130_fd_sc_hd__dfrtp_1
+
+   Chip area for module '$paramod$3a60f47c0d38c845717b76847acd7e2fa5ab0dff\cdc_sync': 50.048000
+     of which used for sequential elements: 50.048000 (100.00%)
+
+=== mbist_status_sync ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+        5        - wires
+      209        - wire bits
+        5        - public wires
+      209        - public wire bits
+        4        - ports
+      140        - port bits
+        2   50.048 cells
+        2   50.048   sky130_fd_sc_hd__dfrtp_1
+       69        - submodules
+       69        -   $paramod$3a60f47c0d38c845717b76847acd7e2fa5ab0dff\cdc_sync
+
+   Chip area for module '\mbist_status_sync': 50.048000
+     of which used for sequential elements: 50.048000 (100.00%)
+
+=== design hierarchy ===
+
+        +----------Count including submodules.
+        |        +-Area including submodules.
+        |        | 
+      140  3503.36 mbist_status_sync
+        2   50.048 $paramod$3a60f47c0d38c845717b76847acd7e2fa5ab0dff\cdc_sync
+
+        +----------Count including submodules.
+        |        +-Area including submodules.
+        |        | 
+      350        - wires
+      554        - wire bits
+      350        - public wires
+      554        - public wire bits
+      280        - ports
+      416        - port bits
+        -        - memories
+        -        - memory bits
+        -        - processes
+      140  3503.36 cells
+      140  3503.36   sky130_fd_sc_hd__dfrtp_1
+       69 3.45E+03 submodules
+       69 3.45E+03   $paramod$3a60f47c0d38c845717b76847acd7e2fa5ab0dff\cdc_sync
+
+   Chip area for top module '\mbist_status_sync': 3503.360000
+     of which used for sequential elements: 3503.360000 (100.00%)
+

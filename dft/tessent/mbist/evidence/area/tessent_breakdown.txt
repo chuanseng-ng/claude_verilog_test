@@ -1,0 +1,24 @@
+reports/area/tessent_top.rpt
+  controller                                     14376
+  memory interfaces + comparators/status          8090
+  BAP (TDR + SIBs)                                1549
+  IJTAG SIB network                                628
+  Tessent TAP                                        0
+  generic cells                                     91
+  TOTAL inserted                                 24735
+reports/area/tessent_top_min.rpt
+  controller                                     12262
+  memory interfaces + comparators/status          8090
+  BAP (TDR + SIBs)                                1549
+  IJTAG SIB network                                628
+  Tessent TAP                                        0
+  generic cells                                     91
+  TOTAL inserted                                 22620
+reports/area/tessent_top_tap.rpt
+  controller                                     14376
+  memory interfaces + comparators/status          8090
+  BAP (TDR + SIBs)                                1549
+  IJTAG SIB network                                628
+  Tessent TAP                                     1200
+  generic cells                                     91
+  TOTAL inserted                                 25935

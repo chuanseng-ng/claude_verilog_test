@@ -1,0 +1,22 @@
+
+8. Printing statistics.
+
+=== mem_collar ===
+
+        +----------Local Count, excluding submodules.
+        |        +-Local Area, excluding submodules.
+        |        | 
+       22        - wires
+      169        - wire bits
+       20        - public wires
+      167        - public wire bits
+       20        - ports
+      167        - port bits
+       50  535.514 cells
+        2    10.01   sky130_fd_sc_hd__a21oi_1
+       46  517.997   sky130_fd_sc_hd__mux2_1
+        2    7.507   sky130_fd_sc_hd__nor2_1
+
+   Chip area for module '\mem_collar': 535.513600
+     of which used for sequential elements: 0.000000 (0.00%)
+
