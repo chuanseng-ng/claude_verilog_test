@@ -1,0 +1,6 @@
+8934,8935c8934,8935
+<   sky130_fd_sc_hd__and3b_1 g371542(.A_N (fwd_b_sel_r[0]), .B (n_13445),
+<        .C (fwd_b_sel_r[1]), .X (n_13535));
+---
+>   sky130_fd_sc_hd__and3b_1 g371542(.A_N (fwd_b_sel_r[1]), .B (n_13445),
+>        .C (fwd_b_sel_r[0]), .X (n_13535));

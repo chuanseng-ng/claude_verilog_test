@@ -1,0 +1,301 @@
+// Confirm all Non-equivalent compared points
+
+Functional test vector for mapped points:
+  (G) + 764    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][17]/U$1
+  (R) + 763    DFF  /u_core/ex1a_ex1b_reg_q_reg[fwd_store][17]/U$1
+Diagnosis points: [DATA]
+  (G) + 119717 OR   /u_core/g431933/U$1
+  (R) + 118102 OR   /u_core/g431933/U$1
+
+  (G) + 2      PI  /rst_n_i = 1
+  (R) + 2      PI  /rst_n_i = 1
+
+  (G) + 508    DFF /u_core/fwd_b_ex1b2_r_reg/U$1 = 0
+  (R) + 508    DFF /u_core/fwd_b_ex1b2_r_reg/U$1 = 0
+
+  (G) + 509    DFF /u_core/fwd_b_ex1c_r_reg/U$1 = 0
+  (R) + 509    DFF /u_core/fwd_b_ex1c_r_reg/U$1 = 0
+
+  (G) + 510    DFF /u_core/fwd_b_sel_r_reg[1]/U$1 = 0
+  (R) + 510    DFF /u_core/fwd_b_sel_r_reg[1]/U$1 = 0
+
+  (G) + 594    DFF /u_core/u_mem_mem_wb_reg_o_reg[alu_result][17]/U$1 = 1
+  (R) + 594    DFF /u_core/u_mem_mem_wb_reg_o_reg[alu_result][17]/U$1 = 1
+
+  (G) + 609    DFF /u_core/u_mem_mem_wb_reg_o_reg[csr_access]/U$1 = 0
+  (R) + 609    DFF /u_core/u_mem_mem_wb_reg_o_reg[csr_access]/U$1 = 0
+
+  (G) + 627    DFF /u_core/u_mem_mem_wb_reg_o_reg[csr_rdata][17]/U$1 = 0
+  (R) + 627    DFF /u_core/u_mem_mem_wb_reg_o_reg[csr_rdata][17]/U$1 = 0
+
+  (G) + 642    DFF /u_core/u_mem_mem_wb_reg_o_reg[jump]/U$1 = 0
+  (R) + 642    DFF /u_core/u_mem_mem_wb_reg_o_reg[jump]/U$1 = 0
+
+  (G) + 660    DFF /u_core/u_mem_mem_wb_reg_o_reg[mem_rdata][17]/U$1 = 1
+  (R) + 660    DFF /u_core/u_mem_mem_wb_reg_o_reg[mem_rdata][17]/U$1 = 1
+
+  (G) + 675    DFF /u_core/fwd_b_sel_r_reg[0]/U$1 = 1
+  (R) + 675    DFF /u_core/fwd_b_sel_r_reg[0]/U$1 = 1
+
+  (G) + 676    DFF /u_core/u_mem_mem_wb_reg_o_reg[mem_rd]/U$1 = 0
+  (R) + 676    DFF /u_core/u_mem_mem_wb_reg_o_reg[mem_rd]/U$1 = 0
+
+  (G) + 694    DFF /u_core/ex1a_ex1b_reg_q_reg[alu_result][17]/U$1 = 0
+  (R) + 694    DFF /u_core/ex1a_ex1b_reg_q_reg[alu_result][17]/U$1 = 0
+
+  (G) + 711    DFF /u_core/ex1a_ex1b_reg_q_reg[csr_access]/U$1 = 1
+  (R) + 4989   DFF /u_core/ex1a_ex1b_reg_q_reg[csr_access]/U$1 = 1
+
+  (G) + 730    DFF /u_core/ex1a_ex1b_reg_q_reg[csr_rdata][17]/U$1 = 0
+  (R) + 729    DFF /u_core/ex1a_ex1b_reg_q_reg[csr_rdata][17]/U$1 = 0
+
+  (G) + 764    DFF /u_core/ex1a_ex1b_reg_q_reg[fwd_store][17]/U$1 = 1
+  (R) + 763    DFF /u_core/ex1a_ex1b_reg_q_reg[fwd_store][17]/U$1 = 1
+
+  (G) + 849    DFF /u_core/ex1a_ex1b_reg_q_reg[jump]/U$1 = 0
+  (R) + 846    DFF /u_core/ex1a_ex1b_reg_q_reg[jump]/U$1 = 0
+
+  (G) + 920    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][2]/U$1 = 1
+  (R) + 916    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][2]/U$1 = 1
+
+  (G) + 921    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][3]/U$1 = 0
+  (R) + 917    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][3]/U$1 = 0
+
+  (G) + 922    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][4]/U$1 = 0
+  (R) + 918    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][4]/U$1 = 0
+
+  (G) + 923    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][5]/U$1 = 0
+  (R) + 919    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][5]/U$1 = 0
+
+  (G) + 924    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][6]/U$1 = 0
+  (R) + 920    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][6]/U$1 = 0
+
+  (G) + 925    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][7]/U$1 = 0
+  (R) + 921    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][7]/U$1 = 0
+
+  (G) + 926    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][8]/U$1 = 1
+  (R) + 922    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][8]/U$1 = 1
+
+  (G) + 927    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][9]/U$1 = 1
+  (R) + 923    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][9]/U$1 = 1
+
+  (G) + 928    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][10]/U$1 = 1
+  (R) + 924    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][10]/U$1 = 1
+
+  (G) + 929    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][11]/U$1 = 1
+  (R) + 925    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][11]/U$1 = 1
+
+  (G) + 930    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][12]/U$1 = 0
+  (R) + 926    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][12]/U$1 = 0
+
+  (G) + 931    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][13]/U$1 = 1
+  (R) + 927    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][13]/U$1 = 1
+
+  (G) + 932    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][14]/U$1 = 0
+  (R) + 928    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][14]/U$1 = 0
+
+  (G) + 933    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][15]/U$1 = 0
+  (R) + 929    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][15]/U$1 = 0
+
+  (G) + 934    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][16]/U$1 = 1
+  (R) + 930    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][16]/U$1 = 1
+
+  (G) + 935    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][17]/U$1 = 0
+  (R) + 931    DFF /u_core/ex1a_ex1b_reg_q_reg[pc][17]/U$1 = 0
+
+  (G) + 969    DFF /u_core/ex1b_ex2_reg_q_reg[alu_result][17]/U$1 = 1
+  (R) + 965    DFF /u_core/ex1b_ex2_reg_q_reg[alu_result][17]/U$1 = 1
+
+  (G) + 984    DFF /u_core/ex1b_ex2_reg_q_reg[csr_access]/U$1 = 1
+  (R) + 4990   DFF /u_core/ex1b_ex2_reg_q_reg[csr_access]/U$1 = 1
+
+  (G) + 1002   DFF /u_core/ex1b_ex2_reg_q_reg[csr_rdata][17]/U$1 = 1
+  (R) + 997    DFF /u_core/ex1b_ex2_reg_q_reg[csr_rdata][17]/U$1 = 1
+
+  (G) + 1049   DFF /u_core/ex1b_ex2_reg_q_reg[jump]/U$1 = 1
+  (R) + 1044   DFF /u_core/ex1b_ex2_reg_q_reg[jump]/U$1 = 1
+
+  (G) + 1093   DFF /u_core/ex1b_ex2_reg_q_reg[pc][2]/U$1 = 0
+  (R) + 1088   DFF /u_core/ex1b_ex2_reg_q_reg[pc][2]/U$1 = 0
+
+  (G) + 1094   DFF /u_core/ex1b_ex2_reg_q_reg[pc][3]/U$1 = 1
+  (R) + 1089   DFF /u_core/ex1b_ex2_reg_q_reg[pc][3]/U$1 = 1
+
+  (G) + 1095   DFF /u_core/ex1b_ex2_reg_q_reg[pc][4]/U$1 = 1
+  (R) + 1090   DFF /u_core/ex1b_ex2_reg_q_reg[pc][4]/U$1 = 1
+
+  (G) + 1096   DFF /u_core/ex1b_ex2_reg_q_reg[pc][5]/U$1 = 0
+  (R) + 1091   DFF /u_core/ex1b_ex2_reg_q_reg[pc][5]/U$1 = 0
+
+  (G) + 1097   DFF /u_core/ex1b_ex2_reg_q_reg[pc][6]/U$1 = 0
+  (R) + 1092   DFF /u_core/ex1b_ex2_reg_q_reg[pc][6]/U$1 = 0
+
+  (G) + 1098   DFF /u_core/ex1b_ex2_reg_q_reg[pc][7]/U$1 = 1
+  (R) + 1093   DFF /u_core/ex1b_ex2_reg_q_reg[pc][7]/U$1 = 1
+
+  (G) + 1099   DFF /u_core/ex1b_ex2_reg_q_reg[pc][8]/U$1 = 1
+  (R) + 1094   DFF /u_core/ex1b_ex2_reg_q_reg[pc][8]/U$1 = 1
+
+  (G) + 1100   DFF /u_core/ex1b_ex2_reg_q_reg[pc][9]/U$1 = 1
+  (R) + 1095   DFF /u_core/ex1b_ex2_reg_q_reg[pc][9]/U$1 = 1
+
+  (G) + 1101   DFF /u_core/ex1b_ex2_reg_q_reg[pc][10]/U$1 = 0
+  (R) + 1096   DFF /u_core/ex1b_ex2_reg_q_reg[pc][10]/U$1 = 0
+
+  (G) + 1102   DFF /u_core/ex1b_ex2_reg_q_reg[pc][11]/U$1 = 0
+  (R) + 1097   DFF /u_core/ex1b_ex2_reg_q_reg[pc][11]/U$1 = 0
+
+  (G) + 1103   DFF /u_core/ex1b_ex2_reg_q_reg[pc][12]/U$1 = 1
+  (R) + 1098   DFF /u_core/ex1b_ex2_reg_q_reg[pc][12]/U$1 = 1
+
+  (G) + 1104   DFF /u_core/ex1b_ex2_reg_q_reg[pc][13]/U$1 = 0
+  (R) + 1099   DFF /u_core/ex1b_ex2_reg_q_reg[pc][13]/U$1 = 0
+
+  (G) + 1105   DFF /u_core/ex1b_ex2_reg_q_reg[pc][14]/U$1 = 0
+  (R) + 1100   DFF /u_core/ex1b_ex2_reg_q_reg[pc][14]/U$1 = 0
+
+  (G) + 1106   DFF /u_core/ex1b_ex2_reg_q_reg[pc][15]/U$1 = 1
+  (R) + 1101   DFF /u_core/ex1b_ex2_reg_q_reg[pc][15]/U$1 = 1
+
+  (G) + 1107   DFF /u_core/ex1b_ex2_reg_q_reg[pc][16]/U$1 = 0
+  (R) + 1102   DFF /u_core/ex1b_ex2_reg_q_reg[pc][16]/U$1 = 0
+
+  (G) + 1108   DFF /u_core/ex1b_ex2_reg_q_reg[pc][17]/U$1 = 0
+  (R) + 1103   DFF /u_core/ex1b_ex2_reg_q_reg[pc][17]/U$1 = 0
+
+  (G) + 1152   DFF /u_core/ex1c_ex1b_reg_q_reg[alu_result][17]/U$1 = 0
+  (R) + 1144   DFF /u_core/ex1c_ex1b_reg_q_reg[alu_result][17]/U$1 = 0
+
+  (G) + 1167   DFF /u_core/ex1c_ex1b_reg_q_reg[csr_access]/U$1 = 0
+  (R) + 5004   DFF /u_core/ex1c_ex1b_reg_q_reg[csr_access]/U$1 = 0
+
+  (G) + 1185   DFF /u_core/ex1c_ex1b_reg_q_reg[csr_rdata][17]/U$1 = 0
+  (R) + 1176   DFF /u_core/ex1c_ex1b_reg_q_reg[csr_rdata][17]/U$1 = 0
+
+  (G) + 1274   DFF /u_core/ex1c_ex1b_reg_q_reg[jump]/U$1 = 0
+  (R) + 4970   DFF /u_core/ex1c_ex1b_reg_q_reg[jump]/U$1 = 0
+
+  (G) + 1282   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][2]/U$1 = 0
+  (R) + 1268   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][2]/U$1 = 0
+
+  (G) + 1283   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][3]/U$1 = 1
+  (R) + 1269   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][3]/U$1 = 1
+
+  (G) + 1284   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][4]/U$1 = 0
+  (R) + 1270   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][4]/U$1 = 0
+
+  (G) + 1285   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][5]/U$1 = 1
+  (R) + 1271   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][5]/U$1 = 1
+
+  (G) + 1286   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][6]/U$1 = 1
+  (R) + 1272   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][6]/U$1 = 1
+
+  (G) + 1287   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][7]/U$1 = 1
+  (R) + 1273   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][7]/U$1 = 1
+
+  (G) + 1288   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][8]/U$1 = 1
+  (R) + 1274   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][8]/U$1 = 1
+
+  (G) + 1289   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][9]/U$1 = 0
+  (R) + 1275   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][9]/U$1 = 0
+
+  (G) + 1290   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][10]/U$1 = 1
+  (R) + 1276   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][10]/U$1 = 1
+
+  (G) + 1291   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][11]/U$1 = 0
+  (R) + 1277   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][11]/U$1 = 0
+
+  (G) + 1292   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][12]/U$1 = 1
+  (R) + 1278   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][12]/U$1 = 1
+
+  (G) + 1293   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][13]/U$1 = 0
+  (R) + 1279   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][13]/U$1 = 0
+
+  (G) + 1294   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][14]/U$1 = 0
+  (R) + 1280   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][14]/U$1 = 0
+
+  (G) + 1295   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][15]/U$1 = 1
+  (R) + 1281   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][15]/U$1 = 1
+
+  (G) + 1296   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][16]/U$1 = 1
+  (R) + 1282   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][16]/U$1 = 1
+
+  (G) + 1297   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][17]/U$1 = 0
+  (R) + 1283   DFF /u_core/ex1c_ex1b_reg_q_reg[pc][17]/U$1 = 0
+
+  (G) + 1350   DFF /u_core/ex_pc_redirect_r_reg/U$1 = 0
+  (R) + 4968   DFF /u_core/ex_pc_redirect_r_reg/U$1 = 0
+
+  (G) + 2270   DFF /u_core/u_dcache_state_q_reg[1]/U$1 = 1
+  (R) + 2250   DFF /u_core/u_dcache_state_q_reg[1]/U$1 = 1
+
+  (G) + 2271   DFF /u_core/u_dcache_state_q_reg[3]/U$1 = 1
+  (R) + 2251   DFF /u_core/u_dcache_state_q_reg[3]/U$1 = 1
+
+  (G) + 2730   DFF /u_core/u_ex2_ex_mem_reg_o_reg[alu_result][0]/U$1 = 1
+  (R) + 4976   DFF /u_core/u_ex2_ex_mem_reg_o_reg[alu_result][0]/U$1 = 1
+
+  (G) + 2731   DFF /u_core/u_ex2_ex_mem_reg_o_reg[alu_result][1]/U$1 = 0
+  (R) + 5000   DFF /u_core/u_ex2_ex_mem_reg_o_reg[alu_result][1]/U$1 = 0
+
+  (G) + 2747   DFF /u_core/u_ex2_ex_mem_reg_o_reg[alu_result][17]/U$1 = 0
+  (R) + 2720   DFF /u_core/u_ex2_ex_mem_reg_o_reg[alu_result][17]/U$1 = 0
+
+  (G) + 2762   DFF /u_core/u_ex2_ex_mem_reg_o_reg[csr_access]/U$1 = 0
+  (R) + 4991   DFF /u_core/u_ex2_ex_mem_reg_o_reg[csr_access]/U$1 = 0
+
+  (G) + 2780   DFF /u_core/u_ex2_ex_mem_reg_o_reg[csr_rdata][17]/U$1 = 0
+  (R) + 2752   DFF /u_core/u_ex2_ex_mem_reg_o_reg[csr_rdata][17]/U$1 = 0
+
+  (G) + 2827   DFF /u_core/u_ex2_ex_mem_reg_o_reg[jump]/U$1 = 0
+  (R) + 2799   DFF /u_core/u_ex2_ex_mem_reg_o_reg[jump]/U$1 = 0
+
+  (G) + 2828   DFF /u_core/u_ex2_ex_mem_reg_o_reg[mem_rd]/U$1 = 0
+  (R) + 2800   DFF /u_core/u_ex2_ex_mem_reg_o_reg[mem_rd]/U$1 = 0
+
+  (G) + 2829   DFF /u_core/u_ex2_ex_mem_reg_o_reg[mem_size][0]/U$1 = 0
+  (R) + 4996   DFF /u_core/u_ex2_ex_mem_reg_o_reg[mem_size][0]/U$1 = 0
+
+  (G) + 2830   DFF /u_core/u_ex2_ex_mem_reg_o_reg[mem_size][1]/U$1 = 0
+  (R) + 4974   DFF /u_core/u_ex2_ex_mem_reg_o_reg[mem_size][1]/U$1 = 0
+
+  (G) + 2870   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][2]/U$1 = 1
+  (R) + 2839   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][2]/U$1 = 1
+
+  (G) + 2871   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][3]/U$1 = 0
+  (R) + 2840   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][3]/U$1 = 0
+
+  (G) + 2872   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][4]/U$1 = 1
+  (R) + 2841   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][4]/U$1 = 1
+
+  (G) + 2873   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][5]/U$1 = 0
+  (R) + 2842   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][5]/U$1 = 0
+
+  (G) + 2874   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][6]/U$1 = 1
+  (R) + 2843   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][6]/U$1 = 1
+
+  (G) + 2875   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][7]/U$1 = 0
+  (R) + 2844   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][7]/U$1 = 0
+
+  (G) + 2876   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][8]/U$1 = 1
+  (R) + 2845   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][8]/U$1 = 1
+
+  (G) + 2877   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][9]/U$1 = 1
+  (R) + 2846   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][9]/U$1 = 1
+
+  (G) + 2878   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][10]/U$1 = 0
+  (R) + 2847   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][10]/U$1 = 0
+
+  (G) + 2879   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][11]/U$1 = 0
+  (R) + 2848   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][11]/U$1 = 0
+
+  (G) + 2880   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][12]/U$1 = 0
+  (R) + 2849   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][12]/U$1 = 0
+
+  (G) + 2881   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][13]/U$1 = 1
+  (R) + 2850   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][13]/U$1 = 1
+
+  (G) + 2882   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][14]/U$1 = 1
+  (R) + 2851   DFF /u_core/u_ex2_ex_mem_reg_o_reg[pc][14]/U$1 = 1
+
+[truncated by B4b: original 3461797 bytes; see runs/ locally]

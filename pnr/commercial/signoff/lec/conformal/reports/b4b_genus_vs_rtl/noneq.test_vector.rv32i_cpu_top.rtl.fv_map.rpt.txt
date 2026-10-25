@@ -1,0 +1,1 @@
+// Confirm all Non-equivalent compared points
