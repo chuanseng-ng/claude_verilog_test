@@ -1,0 +1,80 @@
+ 
+****************************************
+check_design summary:
+Version:     X-2025.06-SP3
+Date:        Mon Oct 26 00:03:27 2026
+****************************************
+
+                   Name                                            Total
+--------------------------------------------------------------------------------
+Inputs/Outputs                                                    497
+    Unconnected ports (LINT-28)                                   235
+    Shorted outputs (LINT-31)                                     131
+    Constant outputs (LINT-52)                                    131
+
+Cells                                                               3
+    Nets connected to multiple pins on same cell (LINT-33)          3
+
+Nets                                                              522
+--------------------------------------------------------------------------------
+
+Warning: In design 'rv32i_cpu_top', port 'scan_mode_i' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_cpu_top', port 'scan_en_i' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_cpu_top', port 'scan_in_i[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_cpu_top', port 'scan_in_i[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_cpu_top', port 'mbist_cfg_i[21]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_cpu_top', port 'mbist_cfg_i[20]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_cpu_top', port 'mbist_cfg_i[19]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_cpu_top', port 'mbist_cfg_i[18]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'test_en_i' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_araddr[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_araddr[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_arlen[7]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_arlen[6]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_arlen[5]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_arlen[4]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_arlen[3]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_arlen[2]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_arlen[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_arsize[2]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_arsize[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_arburst[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_rready' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awaddr[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awaddr[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awlen_7_' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awlen_6_' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awlen_5_' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awlen_4_' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awlen_3_' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awlen_2_' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awlen_0__BAR' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awsize[2]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awsize[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awsize[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awburst[1]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'axi_awburst[0]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'dbg_resume_req' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[31]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[30]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[29]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[28]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[27]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[26]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[25]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[24]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[23]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[22]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[21]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[20]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[19]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[18]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[17]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[16]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[15]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[14]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[13]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[12]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[11]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[10]' is not connected to any nets. (LINT-28)
+Warning: In design 'rv32i_core_00000000', port 'debug_rs1_data[9]' is not connected to any nets. (LINT-28)

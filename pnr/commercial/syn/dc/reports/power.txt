@@ -1,0 +1,41 @@
+Information: Propagating switching activity (low effort zero delay simulation). (PWR-6)
+Warning: Design has unannotated primary inputs. (PWR-414)
+Warning: Design has unannotated sequential cell outputs. (PWR-415)
+Warning: Design has unannotated black box outputs. (PWR-428)
+ 
+****************************************
+Report : power
+        -hier
+        -analysis_effort low
+Design : rv32i_cpu_top
+Version: X-2025.06-SP3
+Date   : Mon Oct 26 00:03:27 2026
+****************************************
+
+
+Library(s) Used:
+
+    sky130_fd_sc_hd__tt_025C_1v80 (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_fd_sc_hd__tt_025C_1v80.db)
+    sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C_lib (File: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/db/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.db)
+
+
+Operating Conditions: tt_025C_1v80   Library: sky130_fd_sc_hd__tt_025C_1v80
+Wire Load Model Mode: Inactive.
+
+
+Global Operating Voltage = 1.8  
+Power-specific unit information :
+    Voltage Units = 1V
+    Capacitance Units = 1.000000pf
+    Time Units = 1ns
+    Dynamic Power Units = 1mW    (derived from V,C,T units)
+    Leakage Power Units = 1nW
+
+
+--------------------------------------------------------------------------------
+                                       Switch   Int      Leak     Total
+Hierarchy                              Power    Power    Power    Power    %
+--------------------------------------------------------------------------------
+rv32i_cpu_top                             2.620   45.107 9.53e+04   47.822 100.0
+  u_core (rv32i_core_00000000)            2.342   42.960 9.52e+04   45.397  94.9
+1

@@ -1,0 +1,18 @@
+
+Sanity check for TLU+ vs MW-Tech files:
+ max_tlu+: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/nxtgrd/nom/sky130A_nom.tluplus
+ min_tlu+: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/nxtgrd/nom/sky130A_nom.tluplus
+ mapping_file: /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/pdk/sky130/build/tech/map/starrc_layer.map
+ max_emul_tlu+: **NONE**
+ min_emul_tlu+: **NONE**
+ MW design lib: WORK.dlib
+
+--------- Sanity Check on TLUPlus Files -------------
+1. Checking the conducting layer names in ITF and mapping file ... 
+[ Passed! ]
+2. Checking the via layer names in ITF and mapping file ... 
+[ Passed! ]
+3. Checking the consistency of Min Width and Min Spacing between MW-tech and ITF ... 
+[ Passed! ]
+----------------- Check Ends ------------------
+1
