@@ -464,3 +464,11 @@ Offline check against the existing run (checker script only, no flow re-run):
 Previous owner decision options, now resolved: waive by name (two nets), accept (none), re-run (`_114232_` at the next run). The setup/hold/LVS/DRC numbers do not depend on that decision. The SoC closes setup and hold at all nine corners
 (typical-corner caveat of `docs/SKY130_REAL_DRC_LVS_EVALUATION.md` §7 unchanged), whereas the CPU **standalone** macro does not
 close ss reg-to-reg setup (max_ss -3.70 ns, 996 violators, icache tag-SRAM half-cycle paths at 75 MHz); the SoC runs at 40 MHz.
+
+## 2026-10-26 addendum: stable hand-instantiated driver waivers (PR #330, DFT Stage 2)
+
+A `driver` waiver can now set `"stable": true` and omit `run_id` when the driver is a stable hand-instantiated driver, e.g. the clock mux
+`u_cpu_pll_sub.u_ref_cm.u_mux/X`. The loader refuses `stable` on a tool-generated name; ceiling, corners and justification bind as before; a stable
+waiver on a driver that does not violate is STALE. Synthesis-named drivers keep the mandatory `run_id`. Waiver file state after the scan run
+`RUN_2026-10-26_09-59-03`: mux_clk (no run_id, 0.45 pF), din0[22] (0.37 pF, max_ss + nom_ss), din0[23] (0.36), din0[26] (0.355); `_047147_/Y` stays unwaived
+and is tracked here. `--strict-stale` on that run: 7 waived, 1 unwaived, 0 stale. Details: `docs/design/DFT_ARCHITECTURE.md` 14.13.
