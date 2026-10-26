@@ -296,7 +296,12 @@ jobs:
           # + c54a's 8 cocotb tests; confirm against this merge's sharded CI pass count.
           # 2026-10-19 (merge of main #320 into #313 c54a): 882 = 885 - 3. 885 EXPECTED = 877 (main; #320 CI measured 877
           # passed / 0 failed, cocotb run 39247547781) + c54a's 8 cocotb tests; confirm against this merge's sharded CI pass count.
-          PASS_FLOOR: '882'
+          # 2026-10-26 (bead j41m.17, scan_en gate tests): 908 = 911 - 3. 911 MEASURED: soc_all_ci from a clean
+          # SIM_BUILD on this branch, CI log-grep formula (`cocotb.regression .* passed$`), 0 failed, 85 suites
+          # (965 tests incl. 54 skipped). Of the 911, 14 are new here (test_soc_scan_en_gate 12 + 2 in test_crypto);
+          # the rest of the step up from 882 is growth on main since that floor was last set. Measured locally and
+          # unsharded; confirm against this PR's sharded CI pass count.
+          PASS_FLOOR: '908'
         run: |
           set -o pipefail
           n=$(find shards -mindepth 1 -maxdepth 1 -type d -name 'cocotb-soc-shard-*' | wc -l)
