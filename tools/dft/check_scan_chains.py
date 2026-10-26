@@ -12,7 +12,7 @@ Checks (exit 1 on any failure, 0 only if all pass):
      scan-in port, and every flop Q / scan-in port feeds at most one SCD (a chain, never a tree);
   2. walking from scan_in_i[k] reaches scan_out_o[k]'s driver for every chain that has an input load;
   3. every scan flop is on exactly one chain (no orphans, no loops);
-  4. every SCE pin is on ONE net (the scan-enable net; --en-net names it) and that net is not a chain data net;
+  4. every SCE pin traces back (through buffers) to ONE root net (--en-net names it);
   5. optional: chain count, per-chain lengths, number of flops that are NOT scan cells (--expect-unscanned).
 Prints chain lengths and the unscanned-flop count so a run record can quote them.
 """
@@ -133,11 +133,16 @@ def main() -> int:
     if stray:
         problems.append(f"scan flops fed from unexpected port(s) {stray}")
 
-    sce_nets = {pins.get("SCE") for _, (_, pins) in scan.items()}
-    if len(sce_nets) != 1:
-        problems.append(f"SCE pins sit on {len(sce_nets)} nets, expected exactly 1: {sorted(map(str, sce_nets))[:4]}")
-    elif a.en_net and next(iter(sce_nets)) != norm(a.en_net):
-        problems.append(f"SCE net is {next(iter(sce_nets))}, expected {a.en_net}")
+    # SCE: after repair_design / CTS the enable net is a buffer tree; trace each pin back to its root.
+    roots = defaultdict(int)
+    for _, (_, pins) in scan.items():
+        kind, who = trace_back(pins.get("SCE", ""))
+        roots[f"{kind}:{who}" if kind != "port" else who] += 1
+    sce_nets = set(roots)
+    if len(roots) != 1:
+        problems.append(f"SCE pins trace to {len(roots)} different roots, expected exactly 1: {sorted(roots.items(), key=lambda kv: -kv[1])[:4]}")
+    elif a.en_net and next(iter(roots)) != norm(a.en_net):
+        problems.append(f"SCE root is {next(iter(roots))}, expected {a.en_net}")
 
     lengths = [c["length"] for c in chains]
     if a.expect_chains is not None and len(chains) != a.expect_chains:
@@ -152,11 +157,11 @@ def main() -> int:
         "unscanned_flops": len(nonscan),
         "chains": chains,
         "chain_lengths": lengths,
-        "sce_nets": sorted(map(str, sce_nets)),
+        "sce_roots": dict(roots),
         "problems": problems,
     }
     print(f"scan flops {len(scan)}  unscanned flops {len(nonscan)}  chains {len(chains)}  lengths {lengths}")
-    print(f"SCE nets: {result['sce_nets']}")
+    print(f"SCE roots: {result['sce_roots']}")
     for p in problems[:20]:
         print("FAIL:", p)
     if a.json:
