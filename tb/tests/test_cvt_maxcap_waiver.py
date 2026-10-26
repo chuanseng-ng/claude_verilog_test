@@ -561,11 +561,12 @@ class TestDriverWaivers:
             mw.load_waivers(waiver_file(tmp_path, data))
 
 
-# ------------------------------------------------------- stable hand-instantiated driver waivers (no run_id)
+# ---------------------------------------------- stable hand-instantiated driver waivers (no run_id)
 STABLE_NETLIST = NETLIST.replace(
     " sky130_fd_sc_hd__nand2_1 _000001_ (.A(a), .B(b), .Y(net_other));",
     " sky130_fd_sc_hd__nand2_1 _000001_ (.A(a), .B(b), .Y(net_other));\n"
-    " sky130_fd_sc_hd__mux2_4 \\u_cpu_pll_sub.u_ref_cm.u_mux  (.A0(a), .A1(b), .S(s), .X(mux_clk));",
+    " sky130_fd_sc_hd__mux2_4 \\u_cpu_pll_sub.u_ref_cm.u_mux  "
+    "(.A0(a), .A1(b), .S(s), .X(mux_clk));",
 )
 STABLE_WAIVERS = {
     "version": 1,
@@ -603,7 +604,9 @@ class TestStableDriverWaivers:
     def test_stable_driver_waiver_applies_to_evaluate_sta_dir_without_run_id(self, tmp_path):
         run = write_run(tmp_path, stable_rows(), netlist=STABLE_NETLIST)
         v = mw.evaluate_sta_dir(
-            mw.find_sta_dir(run), mw.find_netlist(run), mw.load_waivers(waiver_file(tmp_path, STABLE_WAIVERS))
+            mw.find_sta_dir(run),
+            mw.find_netlist(run),
+            mw.load_waivers(waiver_file(tmp_path, STABLE_WAIVERS)),
         )
         assert v.ok
 
@@ -639,7 +642,16 @@ class TestStableDriverWaivers:
 
     @pytest.mark.parametrize(
         "name",
-        ["_078722_", "net4101", "max_cap7259", "wire6998", "load_slew6964", "rebuffer12", "clkbuf_3_6_0_tck_i", "u_x._000123_"],
+        [
+            "_078722_",
+            "net4101",
+            "max_cap7259",
+            "wire6998",
+            "load_slew6964",
+            "rebuffer12",
+            "clkbuf_3_6_0_tck_i",
+            "u_x._000123_",
+        ],
     )
     def test_stable_flag_rejects_a_tool_generated_name(self, tmp_path, name):
         data = json.loads(json.dumps(STABLE_WAIVERS))
@@ -649,7 +661,8 @@ class TestStableDriverWaivers:
         assert mw.looks_generated(name)
 
     @pytest.mark.parametrize(
-        "name", ["u_cpu_pll_sub.u_ref_cm.u_mux", "u_pll_sub.u_ref_cm.u_root_buf", "u_cpu_cg.g_cell.u_icg"]
+        "name",
+        ["u_cpu_pll_sub.u_ref_cm.u_mux", "u_pll_sub.u_ref_cm.u_root_buf", "u_cpu_cg.g_cell.u_icg"],
     )
     def test_hand_instantiated_names_are_not_flagged(self, name):
         assert not mw.looks_generated(name)

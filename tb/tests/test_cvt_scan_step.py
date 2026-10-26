@@ -1,12 +1,16 @@
-"""Tests for the CVT.ScanInsert LibreLane step (bead j41m.8): catch plugin Python bugs in pytest, not in a 3 h harden.
+"""Tests for the CVT.ScanInsert LibreLane step (bead j41m.8).
+
+Catch plugin Python bugs in pytest, not in a 3 h harden.
 
 Three launches of the CPU macro scan run were lost to bugs that no unit test covered:
   1. the step returned pathlib.Path where LibreLane's State needs librelane.common.Path,
   2. insert_dft's dangling ports survived into the netlist,
   3. a call to a Step method that does not exist (self.info).
-Fast tests below pin each of those without LibreLane. The end-to-end test runs the real step in isolation (about 30 s) and
-is skipped when LibreLane / OpenROAD 26Q2 / a baseline synthesis state are not present.
+Fast tests below pin each of those without LibreLane. The end-to-end test runs the real step in
+isolation (about 30 s) and is skipped when LibreLane, OpenROAD 26Q2 or a baseline synthesis
+state are not present.
 """
+
 import ast
 import re
 import subprocess
@@ -19,8 +23,17 @@ PLUGIN = ROOT / "pnr" / "sky130" / "soc" / "plugin" / "cvt_scan_step.py"
 SRC = PLUGIN.read_text()
 TREE = ast.parse(SRC)
 
-# Step members this module may legitimately use through ``self`` (verified against librelane/steps/step.py).
-KNOWN_SELF = {"config", "step_dir", "toolbox", "run_subprocess", "warn", "err", "_binary", "_libs_and_lefs"}
+# Step members this module may use through ``self`` (verified against librelane/steps/step.py).
+KNOWN_SELF = {
+    "config",
+    "step_dir",
+    "toolbox",
+    "run_subprocess",
+    "warn",
+    "err",
+    "_binary",
+    "_libs_and_lefs",
+}
 
 
 def _load_strip():
@@ -28,7 +41,10 @@ def _load_strip():
         n
         for n in TREE.body
         if (isinstance(n, ast.FunctionDef) and n.name == "strip_tool_ports")
-        or (isinstance(n, ast.Assign) and any(getattr(t, "id", "") == "_TOOL_PORT_RE" for t in n.targets))
+        or (
+            isinstance(n, ast.Assign)
+            and any(getattr(t, "id", "") == "_TOOL_PORT_RE" for t in n.targets)
+        )
     ]
     assert len(nodes) == 2
     ns = {"re": re, "Tuple": tuple, "List": list, "StepError": RuntimeError}
@@ -52,7 +68,12 @@ def test_step_only_uses_known_self_members():
         if isinstance(n, ast.Attribute) and isinstance(n.value, ast.Name) and n.value.id == "self"
     }
     defined = {n.name for n in cls.body if isinstance(n, ast.FunctionDef)}
-    unknown = used - KNOWN_SELF - defined - {"id", "name", "long_name", "inputs", "outputs", "config_vars"}
+    unknown = (
+        used
+        - KNOWN_SELF
+        - defined
+        - {"id", "name", "long_name", "inputs", "outputs", "config_vars"}
+    )
     assert not unknown, f"CVTScanInsert uses unknown Step member(s) {sorted(unknown)}"
 
 
@@ -99,8 +120,10 @@ def test_flow_inserts_the_step_after_the_assign_checker():
     assert "steps[: idx + 1] + [CVTScanInsert] + steps[idx + 1 :]" in SRC
 
 
-# ------------------------------------------------------------------ end to end (real LibreLane, 30 s)
-SOC_STATE = Path("/nobackup/sky130_soc_runs/RUN_2026-10-25_08-28-45/06-checker-netlistassignstatements/state_out.json")
+# ------------------------------------------------------------ end to end (real LibreLane, 30 s)
+SOC_STATE = Path(
+    "/nobackup/sky130_soc_runs/RUN_2026-10-25_08-28-45/06-checker-netlistassignstatements/state_out.json"
+)
 OPENROAD = Path("/nix/store/hgqrwa4687mf7n0y2x6lcgx1kj42sfga-openroad-26Q2/bin/openroad")
 LIBRELANE = Path.home() / "Downloads" / "Github" / "librelane"
 
@@ -124,10 +147,21 @@ def test_step_runs_end_to_end_in_isolation():
         timeout=900,
     )
     assert r.returncode == 0, r.stdout + r.stderr
-    nl = next(line.split(" ", 1)[1] for line in r.stdout.splitlines() if line.startswith("NETLIST "))
+    nl = next(
+        line.split(" ", 1)[1] for line in r.stdout.splitlines() if line.startswith("NETLIST ")
+    )
     chk = subprocess.run(
-        ["python3", str(ROOT / "tools" / "dft" / "check_scan_chains.py"), nl, "--en-net", "dft_scan_en",
-         "--expect-chains", "6", "--expect-unscanned", "922"],
+        [
+            "python3",
+            str(ROOT / "tools" / "dft" / "check_scan_chains.py"),
+            nl,
+            "--en-net",
+            "dft_scan_en",
+            "--expect-chains",
+            "6",
+            "--expect-unscanned",
+            "922",
+        ],
         capture_output=True,
         text=True,
     )
@@ -135,10 +169,15 @@ def test_step_runs_end_to_end_in_isolation():
 
 
 def test_run_strips_tool_ports_before_writing_the_netlist():
-    """Bug 2: the strip must be applied to the netlist the step hands on (killed mutant: call removed)."""
+    """Bug 2: the strip must be applied to the netlist the step hands on (mutant: call removed)."""
     run = next(
-        n for n in ast.walk(next(c for c in TREE.body if isinstance(c, ast.ClassDef) and c.name == "CVTScanInsert"))
+        n
+        for n in ast.walk(
+            next(c for c in TREE.body if isinstance(c, ast.ClassDef) and c.name == "CVTScanInsert")
+        )
         if isinstance(n, ast.FunctionDef) and n.name == "run"
     )
-    calls = [n.func.id for n in ast.walk(run) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)]
+    calls = [
+        n.func.id for n in ast.walk(run) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+    ]
     assert "strip_tool_ports" in calls

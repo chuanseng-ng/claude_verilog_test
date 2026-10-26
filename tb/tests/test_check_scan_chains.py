@@ -1,4 +1,8 @@
-"""Unit tests for tools/dft/check_scan_chains.py (bead j41m.8): a good 2-chain netlist passes, and each defect fails."""
+"""Unit tests for tools/dft/check_scan_chains.py (bead j41m.8).
+
+A good 2-chain netlist passes, and each defect fails.
+"""
+
 import subprocess
 import sys
 from pathlib import Path
@@ -24,12 +28,17 @@ endmodule
 def run(tmp_path, text, *args):
     nl = tmp_path / "n.v"
     nl.write_text(text)
-    return subprocess.run([sys.executable, str(TOOL), str(nl), "--chains", "2", "--en-net", "se", *args],
-                          capture_output=True, text=True)
+    return subprocess.run(
+        [sys.executable, str(TOOL), str(nl), "--chains", "2", "--en-net", "se", *args],
+        capture_output=True,
+        text=True,
+    )
 
 
 def test_good_netlist_passes_and_reports_lengths(tmp_path):
-    r = run(tmp_path, GOOD, "--expect-chains", "2", "--expect-unscanned", "1", "--expect-length", "2,1")
+    r = run(
+        tmp_path, GOOD, "--expect-chains", "2", "--expect-unscanned", "1", "--expect-length", "2,1"
+    )
     assert r.returncode == 0, r.stdout
     assert "lengths [2, 1]" in r.stdout
 
@@ -40,8 +49,13 @@ def test_broken_link_is_an_orphan(tmp_path):
 
 
 def test_two_sce_nets_fail(tmp_path):
-    r = run(tmp_path, GOOD.replace("f2 (.CLK(clk), .D(q1), .Q(q2), .SCD(scan_in_i[1]), .SCE(se))",
-                                   "f2 (.CLK(clk), .D(q1), .Q(q2), .SCD(scan_in_i[1]), .SCE(clk))"))
+    r = run(
+        tmp_path,
+        GOOD.replace(
+            "f2 (.CLK(clk), .D(q1), .Q(q2), .SCD(scan_in_i[1]), .SCE(se))",
+            "f2 (.CLK(clk), .D(q1), .Q(q2), .SCD(scan_in_i[1]), .SCE(clk))",
+        ),
+    )
     assert r.returncode == 1 and "SCE" in r.stdout
 
 
@@ -62,7 +76,10 @@ def test_expectation_mismatch_fails(tmp_path, bad):
 
 
 def test_leftover_tool_port_fails(tmp_path):
-    r = run(tmp_path, GOOD.replace("output [1:0] scan_out_o;", "output [1:0] scan_out_o; input scan_in_0;"))
+    r = run(
+        tmp_path,
+        GOOD.replace("output [1:0] scan_out_o;", "output [1:0] scan_out_o; input scan_in_0;"),
+    )
     assert r.returncode == 1 and "own ports" in r.stdout
 
 
