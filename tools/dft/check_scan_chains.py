@@ -50,6 +50,8 @@ def main() -> int:
     ap.add_argument("--expect-chains", type=int)
     ap.add_argument("--expect-unscanned", type=int)
     ap.add_argument("--expect-length")
+    ap.add_argument("--explain-qrx", help="regex: unscanned flops whose Q net matches are accounted for (crypto keys)")
+    ap.add_argument("--explain-clk", help="comma list of clock roots (through buffers/inverters) whose flops are intentionally unscanned")
     ap.add_argument("--json")
     a = ap.parse_args()
 
@@ -135,15 +137,60 @@ def main() -> int:
 
     # SCE: after repair_design / CTS the enable net is a buffer tree; trace each pin back to its root.
     roots = defaultdict(int)
+    stop = norm(a.en_net) if a.en_net else None
+
+    def sce_root(net):
+        for _ in range(64):
+            if net == stop:
+                return stop
+            d = driver.get(net)
+            if d is None:
+                return net
+            cell, _pin = d
+            typ, pins_ = cells[cell]
+            if BUF_RE.match(typ):
+                net = pins_.get("A", "")
+                continue
+            return f"{typ.replace('sky130_fd_sc_hd__', '')}:{cell}"
+        return "loop"
+
     for _, (_, pins) in scan.items():
-        kind, who = trace_back(pins.get("SCE", ""))
-        roots[f"{kind}:{who}" if kind != "port" else who] += 1
+        roots[sce_root(pins.get("SCE", ""))] += 1
     sce_nets = set(roots)
     if len(roots) != 1:
         problems.append(f"SCE pins trace to {len(roots)} different roots, expected exactly 1: {sorted(roots.items(), key=lambda kv: -kv[1])[:4]}")
     elif a.en_net and next(iter(roots)) != norm(a.en_net):
         problems.append(f"SCE root is {next(iter(roots))}, expected {a.en_net}")
 
+    if a.explain_qrx or a.explain_clk:
+        qrx = re.compile(a.explain_qrx) if a.explain_qrx else None
+        clk_roots = set(norm(x) for x in (a.explain_clk or "").split(",") if x)
+
+        def clk_root(net):
+            for _ in range(64):
+                d = driver.get(net)
+                if d is None:
+                    return net
+                cell, _pin = d
+                typ, pins_ = cells[cell]
+                if BUF_RE.match(typ) or re.match(r"sky130_fd_sc_hd__(inv|clkinv)_", typ):
+                    net = pins_.get("A", "")
+                    continue
+                return f"{typ}:{cell}"
+            return "loop"
+
+        unexplained = []
+        by_reason = defaultdict(int)
+        for c, (typ, pins) in nonscan.items():
+            if qrx and qrx.search(pins.get("Q", "")):
+                by_reason["qnet-regex"] += 1
+            elif clk_root(pins.get("CLK", "")) in clk_roots:
+                by_reason["clock:" + clk_root(pins.get("CLK", ""))] += 1
+            else:
+                unexplained.append(c)
+        print("unscanned flops explained by:", dict(by_reason))
+        if unexplained:
+            problems.append(f"{len(unexplained)} unscanned flops are not explained by the exclusion rules (first: {unexplained[:3]})")
     lengths = [c["length"] for c in chains]
     if a.expect_chains is not None and len(chains) != a.expect_chains:
         problems.append(f"{len(chains)} chains, expected {a.expect_chains}")

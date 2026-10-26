@@ -64,3 +64,22 @@ def test_expectation_mismatch_fails(tmp_path, bad):
 def test_leftover_tool_port_fails(tmp_path):
     r = run(tmp_path, GOOD.replace("output [1:0] scan_out_o;", "output [1:0] scan_out_o; input scan_in_0;"))
     assert r.returncode == 1 and "own ports" in r.stdout
+
+
+EXPLAIN = GOOD.replace(
+    "sky130_fd_sc_hd__dfxtp_2 skipped (.CLK(clk), .D(q2), .Q(q3));",
+    "sky130_fd_sc_hd__dfxtp_2 skipped (.CLK(tck_buf), .D(q2), .Q(q3));\n"
+    "  sky130_fd_sc_hd__clkbuf_4 cb (.A(tck_i), .X(tck_buf));\n"
+    "  sky130_fd_sc_hd__mux2_8 enmux (.A0(a0), .A1(a1), .S(s), .X(se));",
+)
+
+
+def test_unscanned_flop_explained_by_clock_root_and_sce_root_stops_at_named_net(tmp_path):
+    r = run(tmp_path, EXPLAIN, "--explain-clk", "tck_i", "--expect-unscanned", "1")
+    assert r.returncode == 0, r.stdout
+    assert "clock:tck_i" in r.stdout
+
+
+def test_unexplained_unscanned_flop_fails(tmp_path):
+    r = run(tmp_path, EXPLAIN, "--explain-clk", "scan_clk_i")
+    assert r.returncode == 1 and "not explained" in r.stdout
