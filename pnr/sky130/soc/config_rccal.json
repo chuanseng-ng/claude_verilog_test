@@ -164,5 +164,8 @@
     "CVT_SCAN_EXCLUDE_QNET_REGEX": "u_crypto\\.(g_aes\\.u_aes\\.rk_q|key_q)",
     "CVT_SCAN_EXPECT_QNET_EXCLUDED": 256,
     "CVT_SCAN_PORT_ORDER": ["^core_clk$", "^cpu_(core|gated)_clk$"],
-    "CVT_SCAN_EN_NET": "dft_scan_en"
+    "CVT_SCAN_EN_NET": "dft_scan_en",
+    "// SCAN_OUT_GATE_NOTE": "j41m.17 decision 5a: every scan_out_o[n] is an AND2 of the chain's last Q and the crypto wipe-done net (crypto_accel scan_wipe_done_o, soc_top crypto_wipe_done), so no chain end shows un-wiped crypto state before the scan-entry wipe. The step fails if the net is missing. SoC only: the CPU macro has no crypto.",
+    "CVT_SCAN_OUT_GATE_NET": "crypto_wipe_done",
+    "CVT_SCAN_OUT_GATE_CELL": "sky130_fd_sc_hd__and2_2"
 }

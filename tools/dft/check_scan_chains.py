@@ -2,7 +2,7 @@
 """Structural scan-chain connectivity check on a gate-level Verilog netlist (bead j41m.8, DFT Stage 2).
 
 usage: check_scan_chains.py NETLIST [--in-fmt 'scan_in_i[%d]'] [--out-fmt 'scan_out_o[%d]'] [--chains N]
-           [--en-net NET] [--expect-chains N] [--expect-unscanned N] [--expect-length L,L,...] [--json OUT]
+           [--en-net NET] [--out-gate-net NET] [--expect-chains N] [--expect-unscanned N] [--expect-length L,L,...] [--json OUT]
 
 Works on the netlist written by CVT.ScanInsert AND on later stages (placed, post-CTS, post-route, fill): hold buffers and
 repair buffers that the flow puts between a flop Q and the next SCD pin are traced through (buf/dlygate/clkbuf, input A).
@@ -13,6 +13,9 @@ Checks (exit 1 on any failure, 0 only if all pass):
   2. walking from scan_in_i[k] reaches scan_out_o[k]'s driver for every chain that has an input load;
   3. every scan flop is on exactly one chain (no orphans, no loops);
   4. every SCE pin traces back (through buffers) to ONE root net (--en-net names it);
+  4b. with --out-gate-net NET (SoC, bead j41m.17): every scan_out_o[n] is driven by an AND2 (sky130 and2_*) whose one input
+      traces, through buffers only, to the chain's last flop Q and whose other input traces, through buffers only, to the net
+      NET (the crypto wipe-done net).  A buffer, or any other driver, in place of the AND is an error.
   5. optional: chain count, per-chain lengths, number of flops that are NOT scan cells (--expect-unscanned).
 Prints chain lengths and the unscanned-flop count so a run record can quote them.
 """
@@ -47,6 +50,7 @@ def main() -> int:
     ap.add_argument("--out-fmt", default="scan_out_o[%d]")
     ap.add_argument("--chains", type=int, default=8, help="number of scan port pairs to look for")
     ap.add_argument("--en-net")
+    ap.add_argument("--out-gate-net", help="net every scan_out_o[n] must be ANDed with (crypto wipe-done); omit for the CPU macro")
     ap.add_argument("--expect-chains", type=int)
     ap.add_argument("--expect-unscanned", type=int)
     ap.add_argument("--expect-length")
@@ -81,6 +85,41 @@ def main() -> int:
                 continue
             return ("other", cell)
         return ("other", "loop")
+
+    def root_net(net, stop=None):
+        """Follow `net` back through buffers only, stopping at `stop`; return the net where the walk ends."""
+        for _ in range(64):
+            if net == stop:
+                return net
+            d = driver.get(net)
+            if d is None:
+                return net
+            typ_, pins_ = cells[d[0]]
+            if BUF_RE.match(typ_):
+                net = pins_.get("A", "")
+                continue
+            return net
+        return net
+
+    def check_out_gate(k, out_net, last):
+        """scan_out_o[k] must be and2(Q of the chain's last flop, wipe-done net); returns a list of problems."""
+        want = norm(a.out_gate_net)
+        out_net = root_net(out_net)  # later stages may add port/repair buffers after the gate
+        d = driver.get(out_net)
+        if d is None:
+            return [f"chain {k}: {out_net} has no driver"]
+        cell, _pin = d
+        typ, pins_ = cells[cell]
+        if not re.match(r"sky130_fd_sc_hd__and2_\d+$", typ):
+            return [f"chain {k}: the scan-out port is driven (behind buffers only) by {typ} {cell}, expected an AND2 gated by {want} (no wipe-done gate)"]
+        ins = [pins_.get("A", ""), pins_.get("B", "")]
+        for flop_in, gate_in in (ins, ins[::-1]):
+            if trace_back(flop_in) == ("flop", last) and root_net(gate_in, want) == want:
+                return []
+        return [
+            f"chain {k}: AND {cell} on {out_net} has inputs {ins}: one must trace to the last flop {last} and the other to {want} "
+            f"(found {[trace_back(i) for i in ins]}, roots {[root_net(i, want) for i in ins]})"
+        ]
 
     scan = {c: v for c, v in cells.items() if re.match(r"sky130_fd_sc_hd__sdf", v[0])}
     nonscan = {c: v for c, v in cells.items() if FLOP_RE.match(v[0]) and c not in scan}
@@ -124,9 +163,12 @@ def main() -> int:
             cur = nxt.get(cur)
         if cur is not None:
             problems.append(f"chain {k} loops at {cur}")
-        end = trace_back(out_net)
-        if end != ("flop", last):
-            problems.append(f"chain {k}: {out_net} is driven by {end}, expected the last flop {last}")
+        if a.out_gate_net:
+            problems.extend(check_out_gate(k, out_net, last))
+        else:
+            end = trace_back(out_net)
+            if end != ("flop", last):
+                problems.append(f"chain {k}: {out_net} is driven by {end}, expected the last flop {last}")
         chains.append({"index": k, "length": length, "first": head, "last": last})
     orphans = [c for c in scan if c not in seen]
     if orphans:

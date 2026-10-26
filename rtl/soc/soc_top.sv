@@ -370,7 +370,10 @@ module soc_top
     // Functional mode: scan_wipe_done_o is a constant 1 once scan_mode has been 0 for 3 core_clk
     // edges, so dft_scan_en == dft_scan_en_req there. DFT_ARCHITECTURE.md sec.14.14.
     logic dft_scan_en_req;
-    logic crypto_wipe_done;
+    // (* keep *): crypto_wipe_done feeds only the AND below, so without it synthesis merges the net into
+    // anonymous logic and the Stage 2 step (pnr/sky130/soc/plugin, CVT_SCAN_OUT_GATE_NET) can no longer find it
+    // to gate scan_out_o[n] (bead j41m.17 decision 5a). The attribute changes no behaviour.
+    (* keep *) logic crypto_wipe_done;
     logic dft_scan_en;
     assign dft_scan_en = dft_scan_en_req & crypto_wipe_done;
 
