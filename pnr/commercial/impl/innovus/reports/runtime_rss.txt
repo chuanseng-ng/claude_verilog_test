@@ -1,19 +1,27 @@
-runs/b5b_innovus/logs/01_floorplan.time
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:20.03
-	Maximum resident set size (kbytes): 2530956
-runs/b5b_innovus/logs/02_pdn.time
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:28.03
-	Maximum resident set size (kbytes): 2683376
-runs/b5b_innovus/logs/03_place.time
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 9:30.65
-	Maximum resident set size (kbytes): 4574276
-runs/b5b_innovus/logs/04_cts.time
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 9:16.52
-	Maximum resident set size (kbytes): 4704308
-runs/b5b_innovus/logs/05_route.time
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 52:30.66
-	Maximum resident set size (kbytes): 3884832
-runs/b5b_innovus/logs/05b_repair.time
-runs/b5b_innovus/logs/06_finish.time
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 2:16.15
-	Maximum resident set size (kbytes): 7100360
+runs/b5c_innovus_s2/logs/01_floorplan.time
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:08.35
+	Maximum resident set size (kbytes): 2466944
+runs/b5c_innovus_s2/logs/02_pdn.time
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:30.16
+	Maximum resident set size (kbytes): 2609464
+runs/b5c_innovus_s2/logs/03_place.time
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 9:50.05
+	Maximum resident set size (kbytes): 4497492
+runs/b5c_innovus_s2/logs/04_cts.time
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 8:11.37
+	Maximum resident set size (kbytes): 4645708
+runs/b5c_innovus_s2/logs/05_route.time
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 7:25.21
+	Maximum resident set size (kbytes): 3536708
+runs/b5c_innovus_s2/logs/05a_route.time
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 5:18.92
+	Maximum resident set size (kbytes): 3267168
+runs/b5c_innovus_s2/logs/05b_repair.time
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:10.42
+	Maximum resident set size (kbytes): 2920036
+runs/b5c_innovus_s2/logs/05d_final_repair.time
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 2:04.01
+	Maximum resident set size (kbytes): 3174676
+runs/b5c_innovus_s2/logs/06_finish.time
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 5:47.09
+	Maximum resident set size (kbytes): 7041108

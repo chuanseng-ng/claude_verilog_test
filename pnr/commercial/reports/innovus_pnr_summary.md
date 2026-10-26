@@ -1,9 +1,63 @@
-# Cadence Innovus place-and-route, Sky130 `rv32i_cpu_top` (step B5b)
+# Cadence Innovus place-and-route, Sky130 `rv32i_cpu_top` (steps B5b, B5c)
 
-**Verdict: flow completed to GDS, but routing is NOT clean: 1,579 DRC markers remain (Innovus `verify_drc`), 91 % of them in one congestion hotspot at the die's
-left edge. Not a signoff-quality result.** Every number below is Innovus-native, tt corner, tech-LEF RC (no qrcTechFile exists; the capTable stop-gap was rejected
-by Innovus, see below). Final timing/power/parasitics are the neutral judge's job (StarRC -> PrimeTime). Nothing was LEC'd, LVS'd or opened in KLayout.
+**B5c verdict (final Innovus arm result): the flow completes to GDS with timing met at tt but routing DRC is NOT zero: 3 `verify_drc` Metal Short markers remain (B5b: 1,579).**
+Routing-DRC verdict: **FAIL (3 markers), not DRC-clean.** Max-tran / max-cap: **FAIL, unrepaired** (115 and 476 nets violating at tt, worst -4.793 ns / -0.649 pF; B5b 122 / 475). All numbers are Innovus-native,
+tt, tech-LEF RC (no qrcTechFile; the capTable stop-gap was rejected by Innovus, see B5b notes). Final timing/parasitics are the neutral judge's job. Nothing was LEC'd, LVS'd or opened in KLayout.
+The B5b sections further down are kept as the first attempt; the Innovus deliverables are now the **B5c** ones in `pnr/commercial/impl/innovus/runs/b5c_innovus_s2/out/` (`reports/*.txt` were overwritten with the B5c reports;
+B5b originals are in git and in `runs/b5b_innovus`).
 
+## B5c: reroute to fix the left-edge DRC hotspot
+**Root cause (diagnosis from the B5b DEF vs the OpenROAD and ICC2 DEFs, no tool run needed).** The 16 pins in the hotspot window are `commit_insn_o[8..23]`, met3 on the left edge, 17.68 um apart, all exactly on the
+met3 y tracks (offset 0.34, pitch 0.68; integer track index): pin access/off-grid is **not** the cause. The cause is placement. Innovus put **536 logic cells in the 100 um pocket x<100** beside the tag-SRAM column
+(OpenROAD 66, ICC2 24) and **370 cells above it** (x<300, y 917-1050; OpenROAD 12, ICC2 7): mostly `FE_OFC*`/`FE_PHC*` port buffers (`apb_pwdata_i`, `commit_insn_o`, `mbist_cfg_i`, `commit_pc_o`...) pulled toward the
+left-edge pins. That pocket is the through-route channel for nets whose pins are on the top (`mbist_status_o`, `axi_aw*`, `axi_wdata_o`), right (`apb_pwdata_i`) and bottom (`axi_ar*`, `axi_rdata_i`) edges, so the macro OBS
+(met1/met2 full, met3/met4 partial) plus the cells left no tracks: 1,507 shorts, 91 % of the markers in x 0-300 / y 750-1050. Other regions (channel, gaps, right strip) matched the reference arms (2,131 vs 2,720 / 2,533 channel cells).
+The global-route overflow map of the window was not obtained (`report_congestion` does not exist in this Innovus; the design-wide overflow after place was 0.48 % H / 1.09 % V). No PDN strap or SRAM halo exists in the window beyond the
+PDN already described (no halo in any arm).
+
+**Step 1 (primary fix, from 03_place): a left-edge placement screen** (`B5C_SCREEN=1` in `03_place.tcl`): hard placement blockage `{0 0 100 917.5}` (the dead-end pocket) + partial blockage 15 % `{0 917.5 300 1100}`. Everything else
+unchanged (same netlist, SDC, tt MMMC, LEF RC, same scripts); floorplan and PDN re-run from scratch (deterministic). Run `runs/b5c_innovus`.
+**Step 2 (separate change, from 02_pdn): keep the met4 straps 25 um away from the D-cache SRAM bottom edge** (`B5C_STRAP=1`, `addStripe -area_blockage {20 495 3580 520}` for the met4 stripes only), chosen because after step 1 the 31
+remaining markers were 22 met4 `ParallelRunLength` spacings between signal wires and the VPWR/VGND met4 straps plus 9 shorts, 27 on met4, all at y=519.6 (the D-cache macro pin edge) - i.e. a PDN-vs-macro-pin interaction, the
+ICC2 arm's solution family (it cut its met4 straps at the macros). Full flow re-run from 02_pdn, run `runs/b5c_innovus_s2` (placement screen kept).
+**Step 3 (tried, discarded):** an extra `ecoRoute -fix_drc` loop after post-route opt (`05d_final_repair.tcl`) went 3 -> 5 markers; reverted by re-running `06_finish` from the step-2 `05_route` label (3 markers, verified).
+The in-flow `05b_repair` (ecoRoute, 4 passes) moved: step 1 30 -> 25 (post-route opt re-introduced to 31); step 2 3 -> 2 (post-route opt back to 3).
+
+### B5b -> B5c delta
+| Metric | B5b (no fix) | B5c step 1 (placement screen) | **B5c final (screen + strap keep-out)** |
+|---|---|---|---|
+| Detail-route DRC at the start of NanoRoute | 4,769 | 707 | n/a (3 after route) |
+| `verify_drc` after routing | 1,584 | 30 | **3** |
+| `verify_drc` final (after post-route opt + fill) | 1,579 (1,507 shorts) | 31 (22 spacing met4 vs PDN, 9 shorts) | **3 Metal Short** (2 met4, 1 met3; 2 within 10 um of an SRAM edge at x~100/y~520 and x~1.2/y~580, 1 at x 96.7/y 685.6) |
+| Logic cells in the left pocket x<100 / x<300,y917-1050 | 536 / 370 | 9 / 182 | 7 / 196 |
+| Antenna (`verifyProcessAntenna`) | 0 | 3 nets | 1 net / 1 pin |
+| Setup WNS tt (I/O group; reg2reg) | +0.173 ns (+2.147) | **-0.574 ns**, TNS -0.860, 2 paths (+2.934) | **+0.008 ns**, TNS 0, 0 paths (+1.408) |
+| Hold WNS tt (reg2reg) | -0.0004 ns, 1 path (+2.156) | +0.006 ns (+2.346) | **+0.115 ns**, 0 paths (+2.809) |
+| max_tran violating nets (worst) | 122 (-3.639 ns) | 115 (-4.191) | **115 (-4.793)** |
+| max_cap violating nets (worst) | 475 (-0.504 pF) | 474 (-0.578) | **476 (-0.649)** |
+| Power (default activity, indicative) | 87.82 mW | 90.99 mW | **91.46 mW** (internal 54.78, switching 36.59, leakage 0.095) |
+| Signal wirelength | 6,050,812 um | 6,523,112 um | **6,592,299 um** (met1 2,165,312; met2 2,170,403; met3 1,704,234; met4 552,349) |
+| Cut vias (report_route) | 305,986 | 306,750 | **307,565** |
+| `report_area` (incl. 1,907,125 um2 macros) | 2,229,879 um2 | 2,252,674 um2 | **2,251,218 um2** -> ~344,093 um2 logic+clock+tie+diode |
+| diode_2 / conb_1 / taps | 271 / 133 / 63,521 | 265 / 133 / 63,521 | 262 / 133 / 63,521 |
+| Wall: place / CTS / route / post-route opt / finish | 9.5 / 9.3 / 63 / 52.5 / 2.3 min | 15.5 / 13.4 / 12.8 / 14.3 / 7.6 min | **9.8 / 8.2 / 5.3 / 7.4 / 3.3 min** (router converges in 5 min instead of 63) |
+| Peak RSS (finish) | 7.1 GB | 6.9 GB | 6.9 GB |
+Step-1/final timing is the same SDC, tt, LEF RC, `-effortLevel low` post-route extraction; the step-1 setup regression (-0.574 ns on two I/O paths) disappears in the final run, which is a different placement/CTS/route
+outcome, not a measured effect of the strap change alone: the two runs differ in PDN and therefore in every downstream stage, so no per-step timing attribution is claimed. Wall times are contended-host figures (Techgen and StarRC were running).
+
+### B5c verdicts
+- **Routing DRC: FAIL, 3 markers (was 1,579).** The remaining 3 shorts are single-net-pair shorts near the left-edge pocket / macro column; repair attempts do not converge (ecoRoute 3 -> 2 in the loop, back to 3 after the post-route opt; a post-opt repair made it 5).
+- **Antenna: 1 net / 1 pin** (`verifyProcessAntenna`). **Max-tran / max-cap: FAIL, unrepaired** (115 / 476 nets).
+- Setup/hold at tt (LEF RC): met (+0.008 / +0.115 ns), with the usual caveat that Innovus optimises setup to ~0; the neutral judge decides.
+- PG/well-pin connectivity reports are still saturated by decap/fill well pins and unusable (as in B5b); `verifyPowerVia` clean.
+
+### B5c outputs (replace the B5b ones as the Innovus arm's deliverables)
+`pnr/commercial/impl/innovus/runs/b5c_innovus_s2/out/`: `rv32i_cpu_top.nl.v` (logical, no PG/physical cells, not LEC'd), `rv32i_cpu_top.pg.pnl.v` (PG + physical, for LVS), `rv32i_cpu_top.def`, `rv32i_cpu_top.gds`
+(hd + SRAM merged, Sky130 layers; not opened in KLayout), `rv32i_cpu_top.sdc`, `rv32i_cpu_top.innovus_native.spef` (tech-LEF RC, NOT signoff). Databases in `runs/b5c_innovus_s2/dbs` (`05_route` and `06_finish` are the final labels;
+`05d_final` is the discarded step 3). Step-1 run: `runs/b5c_innovus`. Reproduce: `TAG=b5c_innovus_s2 B5C_STRAP=1 scripts/chain_b5c.sh` (step 1 only: `scripts/chain_b5c.sh`), final fill/outputs via `FROM_LABEL=05_route scripts/run_stage.sh 06_finish b5c_innovus_s2`.
+DRC classification files: `reports/drc_classification_b5b_final.txt`, `..._b5c_step1_after_route.txt`, `..._b5c_final.txt`.
+
+## B5b (first attempt, kept for the record)
 Run dir (gitignored): `pnr/commercial/impl/innovus/runs/b5b_innovus` (`dbs/`: `01_floorplan 02_pdn 03_place 04a_cts_raw 04_cts 05a_routed 05_route 06_finish`).
 Scripts + Makefile: `pnr/commercial/impl/innovus/`. Native reports as `.txt`: `pnr/commercial/impl/innovus/reports/`. Innovus 23.14-s088_1, `setMultiCpuUsage -localCpu 2`,
 every run under `safe_run.sh` (SAFE_MEM_MAX 7G). Netlist in: `syn/genus/runs/b3b_genus_tt_r2/out/rv32i_cpu_top.nl.v` (Conformal-proven, B4b). SDC: the ORIGINAL

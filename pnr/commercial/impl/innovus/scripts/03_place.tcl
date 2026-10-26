@@ -12,6 +12,14 @@ catch { setDoAssign on -buffer sky130_fd_sc_hd__buf_2 } e ; puts "setDoAssign: $
 # ---- placement controls (OpenROAD: PL_TARGET_DENSITY_PCT 25, GPL/DPL_CELL_PADDING 4 sites, time- and routability-driven)
 setPlaceMode -reset
 setPlaceMode -place_global_max_density 0.25 -timingDriven true -place_global_cong_effort auto -place_global_place_io_pins false
+# ---- B5c: left-edge placement screen (only when B5C_SCREEN=1; b5b ran without it).  Evidence (DEF census of the b5b result vs OpenROAD / ICC2): Innovus put 536 logic cells in the
+#      100 um pocket x<100 beside the tag-SRAM column (OpenROAD 66, ICC2 24) and 370 above it (x<300, y 917-1050; 12 / 7), mostly FE_OFC/FE_PHC port buffers pulled to the left-edge pins;
+#      that pocket is a through-route channel for the top/right/bottom-pin nets, and 91 % of the 1,579 b5b DRCs sit there.
+if {[info exists ::env(B5C_SCREEN)] && $::env(B5C_SCREEN) == 1} {
+  createPlaceBlockage -box {0 0 100 917.5} -type hard
+  createPlaceBlockage -box {0 917.5 300 1100} -type partial -density 15
+  puts "B5C_SCREEN: hard placement blockage {0 0 100 917.5}; partial (15 %) {0 917.5 300 1100}"
+}
 set npad 0
 foreach c [dbGet head.allCells.name] {
   set c [lindex $c 0]

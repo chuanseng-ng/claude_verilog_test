@@ -25,7 +25,15 @@ globalNetConnect VGND -type pgpin -pin VNB  -all -override
 setAddStripeMode -reset
 setAddStripeMode -stacked_via_bottom_layer met1 -stacked_via_top_layer met5 -ignore_nondefault_domains true
 sroute -connect corePin -nets {VPWR VGND} -allowJogging 0 -allowLayerChange 0 -corePinLayer met1 -corePinTarget {firstAfterRowEnd}
-addStripe -layer met4 -direction vertical   -nets {VPWR VGND} -width 3.1 -spacing 1.7 -set_to_set_distance 100 -start_from left   -start_offset 20
+# B5c step 2 (B5C_STRAP=1): the 31 DRCs left after the placement screen are 22 met4 ParallelRunLength spacings between SIGNAL wires and the VPWR/VGND met4 straps (+ 9 shorts) all at y=519.6,
+# i.e. at the D-cache SRAM bottom edge where the macro pins are; keep the met4 straps 25 um away from that edge (the ICC2 arm cut its met4 straps at the macros altogether).
+set _blk {}
+if {[info exists ::env(B5C_STRAP)] && $::env(B5C_STRAP) == 1} { set _blk [list {20 495 3580 520}]; puts "B5C_STRAP: met4 strap blockage $_blk" }
+if {[llength $_blk]} {
+  addStripe -layer met4 -direction vertical   -nets {VPWR VGND} -width 3.1 -spacing 1.7 -set_to_set_distance 100 -start_from left   -start_offset 20 -area_blockage $_blk
+} else {
+  addStripe -layer met4 -direction vertical   -nets {VPWR VGND} -width 3.1 -spacing 1.7 -set_to_set_distance 100 -start_from left   -start_offset 20
+}
 addStripe -layer met5 -direction horizontal -nets {VPWR VGND} -width 3.1 -spacing 1.7 -set_to_set_distance 100 -start_from bottom -start_offset 20
 # SRAM power pins (vccd1/vssd1, met4 ring pins) -> straps
 sroute -connect blockPin -nets {VPWR VGND} -blockPin useLef -blockPinTarget {nearestTarget} -allowJogging 0 -allowLayerChange 1 -blockPinLayerRange {met4 met4} -layerChangeRange {met4 met5}
