@@ -559,3 +559,131 @@ class TestDriverWaivers:
         mutate(data["waivers"][0])
         with pytest.raises(mw.WaiverError):
             mw.load_waivers(waiver_file(tmp_path, data))
+
+
+# ---------------------------------------------- stable hand-instantiated driver waivers (no run_id)
+STABLE_NETLIST = NETLIST.replace(
+    " sky130_fd_sc_hd__nand2_1 _000001_ (.A(a), .B(b), .Y(net_other));",
+    " sky130_fd_sc_hd__nand2_1 _000001_ (.A(a), .B(b), .Y(net_other));\n"
+    " sky130_fd_sc_hd__mux2_4 \\u_cpu_pll_sub.u_ref_cm.u_mux  "
+    "(.A0(a), .A1(b), .S(s), .X(mux_clk));",
+)
+STABLE_WAIVERS = {
+    "version": 1,
+    "waivers": [
+        {
+            "id": "stable-mux",
+            "driver": {"instance": "u_cpu_pll_sub.u_ref_cm.u_mux", "pin": "X", "stable": True},
+            "corners": ["max_ss_100C_1v60"],
+            "max_cap_pf": 0.45,
+            "justification": "synthetic: hand-instantiated clock mux, survives re-synthesis",
+        }
+    ],
+}
+
+
+def stable_rows(cap=0.40):
+    return {
+        "nom_tt_025C_1v80": [],
+        "max_ss_100C_1v60": [row("u_cpu_pll_sub.u_ref_cm.u_mux/X", SS_LIMIT, cap)],
+        "min_ff_n40C_1v95": [],
+    }
+
+
+class TestStableDriverWaivers:
+    def test_stable_driver_waiver_applies_without_run_id_on_any_run(self, tmp_path):
+        run = write_run(tmp_path, stable_rows(), netlist=STABLE_NETLIST)
+        w = mw.load_waivers(waiver_file(tmp_path, STABLE_WAIVERS))
+        assert w[0].stable_driver and w[0].run_id == ""
+        assert mw.evaluate_run(run, w).ok
+        other = tmp_path / "RUN_a_completely_different_run"
+        run.rename(other)
+        v = mw.evaluate_run(other, w)
+        assert v.ok and len(v.waived) == 1 and v.stale_waivers == ()
+
+    def test_stable_driver_waiver_applies_to_evaluate_sta_dir_without_run_id(self, tmp_path):
+        run = write_run(tmp_path, stable_rows(), netlist=STABLE_NETLIST)
+        v = mw.evaluate_sta_dir(
+            mw.find_sta_dir(run),
+            mw.find_netlist(run),
+            mw.load_waivers(waiver_file(tmp_path, STABLE_WAIVERS)),
+        )
+        assert v.ok
+
+    def test_stable_driver_waiver_ceiling_still_binds(self, tmp_path):
+        run = write_run(tmp_path, stable_rows(cap=0.50), netlist=STABLE_NETLIST)
+        v = mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, STABLE_WAIVERS)))
+        assert not v.ok and "ceiling" in v.unwaived[0].reason
+
+    def test_stable_driver_waiver_corner_scope_binds(self, tmp_path):
+        rows = stable_rows()
+        rows["nom_tt_025C_1v80"] = [row("u_cpu_pll_sub.u_ref_cm.u_mux/X", PIN_LIMIT, 0.60)]
+        run = write_run(tmp_path, rows, netlist=STABLE_NETLIST)
+        v = mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, STABLE_WAIVERS)))
+        assert not v.ok
+        assert [u.corner for u in v.unwaived] == ["nom_tt_025C_1v80"]
+
+    def test_stable_driver_waiver_is_stale_when_the_driver_does_not_violate(self, tmp_path):
+        run = write_run(tmp_path, {c: [] for c in CORNERS}, netlist=STABLE_NETLIST)
+        waivers = mw.load_waivers(waiver_file(tmp_path, STABLE_WAIVERS))
+        v = mw.evaluate_run(run, waivers)
+        assert v.ok and [s.id for s in v.stale_waivers] == ["stable-mux"]
+        assert "u_cpu_pll_sub.u_ref_cm.u_mux/X" in v.format()
+        assert not mw.evaluate_run(run, waivers, strict_stale=True).ok
+
+    def test_stable_driver_waiver_does_not_cover_another_driver(self, tmp_path):
+        rows = {
+            "nom_tt_025C_1v80": [],
+            "max_ss_100C_1v60": [row("_000001_/Y", SS_LIMIT, 0.40)],
+            "min_ff_n40C_1v95": [],
+        }
+        run = write_run(tmp_path, rows, netlist=STABLE_NETLIST)
+        assert not mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, STABLE_WAIVERS))).ok
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "_078722_",
+            "net4101",
+            "max_cap7259",
+            "wire6998",
+            "load_slew6964",
+            "rebuffer12",
+            "clkbuf_3_6_0_tck_i",
+            "u_x._000123_",
+        ],
+    )
+    def test_stable_flag_rejects_a_tool_generated_name(self, tmp_path, name):
+        data = json.loads(json.dumps(STABLE_WAIVERS))
+        data["waivers"][0]["driver"]["instance"] = name
+        with pytest.raises(mw.WaiverError, match="tool-generated"):
+            mw.load_waivers(waiver_file(tmp_path, data))
+        assert mw.looks_generated(name)
+
+    @pytest.mark.parametrize(
+        "name",
+        ["u_cpu_pll_sub.u_ref_cm.u_mux", "u_pll_sub.u_ref_cm.u_root_buf", "u_cpu_cg.g_cell.u_icg"],
+    )
+    def test_hand_instantiated_names_are_not_flagged(self, name):
+        assert not mw.looks_generated(name)
+
+    def test_run_pinned_path_is_unchanged_for_synthesis_names(self, tmp_path):
+        data = json.loads(json.dumps(DRIVER_WAIVERS))
+        data["waivers"][0]["driver"]["stable"] = False
+        assert mw.load_waivers(waiver_file(tmp_path, data))[0].run_id == "RUN_synthetic"
+        data["waivers"][0].pop("run_id")
+        with pytest.raises(mw.WaiverError, match="run_id"):
+            mw.load_waivers(waiver_file(tmp_path, data))
+
+    @pytest.mark.parametrize("bad", ["yes", 1, None])
+    def test_stable_must_be_boolean(self, tmp_path, bad):
+        data = json.loads(json.dumps(STABLE_WAIVERS))
+        data["waivers"][0]["driver"]["stable"] = bad
+        with pytest.raises(mw.WaiverError):
+            mw.load_waivers(waiver_file(tmp_path, data))
+
+    def test_stable_with_run_id_still_pins_to_that_run(self, tmp_path):
+        data = json.loads(json.dumps(STABLE_WAIVERS))
+        data["waivers"][0]["run_id"] = "RUN_somewhere_else"
+        run = write_run(tmp_path, stable_rows(), netlist=STABLE_NETLIST)
+        assert not mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, data))).ok

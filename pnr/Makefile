@@ -790,7 +790,7 @@ librelane-sky130-cpu: sky130-cpu-sv2v
 	@if [ ! -f "$(LIBRELANE_SKY130_CPU_DIR)/config.json" ]; then \
 		echo "ERROR: $(LIBRELANE_SKY130_CPU_DIR)/config.json not found."; exit 1; fi
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"$(OR_PATH_PREFIX) $(SYNTH_GATE_ENV) python3 -m librelane \
+		"$(OR_PATH_PREFIX) CVT_SCAN_OPENROAD=$(ASAP7_OPENROAD_BIN) PYTHONPATH=$(SYNTH_GATE_PLUGIN_DIR):$(SKY130_SOC_PLUGIN_DIR):\$$PYTHONPATH python3 -m librelane \
 		 $(abspath $(LIBRELANE_SKY130_CPU_DIR))/config.json"
 
 # Bead lu09: pin-coordinate lock for the Sky130 CPU macro. pnr/sky130/cpu/pin_template.def is derived from the
@@ -1162,7 +1162,7 @@ librelane-sky130-soc: sky130-soc-sv2v
 	@[ -L $(LIBRELANE_SKY130_SOC_DIR)/runs ] || \
 		ln -sfn /nobackup/sky130_soc_runs $(LIBRELANE_SKY130_SOC_DIR)/runs
 	cd $(LIBRELANE_DIR) && nix-shell --run \
-		"PYTHONPATH=$(LIBRELANE_DIR):$(SKY130_SOC_PLUGIN_DIR):$(SYNTH_GATE_PLUGIN_DIR) \
+		"CVT_SCAN_OPENROAD=$(ASAP7_OPENROAD_BIN) PYTHONPATH=$(LIBRELANE_DIR):$(SKY130_SOC_PLUGIN_DIR):$(SYNTH_GATE_PLUGIN_DIR) \
 		 python3 -m librelane \
 		 --skip Checker.LintTimingConstructs \
 		 --skip Checker.LintErrors \

@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import cvt_maxcap_waiver as maxcap
+import cvt_scan_step  # noqa: F401  (registers CVT.ScanInsert and the CVTClassicScan flow; DFT Stage 2, bead j41m.8)
 from librelane.common import Path as ConfigPath  # str subclass LibreLane's Variable type system requires
 from librelane.config import Variable
 from librelane.state import DesignFormat, State
