@@ -198,6 +198,10 @@
    "run_s": 11.4,
    "group": "tb_soc_pll"
   },
+  "soc_scan_en_gate": {
+   "run_s": 45.0,
+   "group": "tb_soc_pll"
+  },
   "soc_jtag": {
    "run_s": 19.2,
    "group": "tb_soc_pll"
