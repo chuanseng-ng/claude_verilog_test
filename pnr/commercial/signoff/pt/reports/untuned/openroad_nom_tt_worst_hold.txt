@@ -10,7 +10,7 @@ Report : timing
 	-sort_by slack
 Design : rv32i_cpu_top
 Version: X-2025.06
-Date   : Mon Oct 26 20:21:15 2026
+Date   : Mon Oct 26 21:22:41 2026
 ****************************************
   Startpoint: apb_penable_i
                (input port clocked by clk_i)

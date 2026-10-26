@@ -10,7 +10,7 @@ Report : timing
 	-sort_by slack
 Design : rv32i_cpu_top
 Version: X-2025.06
-Date   : Mon Oct 26 20:26:42 2026
+Date   : Mon Oct 26 21:33:46 2026
 ****************************************
   Startpoint: axi_rdata_i[3]
                (input port clocked by clk_i)

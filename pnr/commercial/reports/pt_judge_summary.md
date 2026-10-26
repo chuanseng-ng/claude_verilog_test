@@ -200,6 +200,7 @@ Open items:
 | Scripts, Makefile, .gitignore (`runs*/`, `!reports/`) | `pnr/commercial/signoff/pt/{Makefile,.gitignore,scripts/}`: `judge.tcl` (one pt_shell: link, shared SDC with md5 assert, SPEF, annotation gate, 9-corner metrics, PrimePower A/B), `run_one.sh` (SPEF snapshot + md5 stamp + safe_run), `arms.sh` (netlist/SPEF per arm), `collect.py` (tables), diagnostics `diag_io_latency.tcl`, `diag_sram_path.tcl`, `diag_native_spef.tcl`, `power_diag.tcl` via `run_diag.sh` |
 | Targets | `make untuned` (this pass, frozen untuned SPEFs); `make rejudge` / `judge` (current SPEFs); `openroad`, `icc2`, `innovus`, `rcx`; `tables`; `force-<arm>` |
 | This pass, compact reports | `pnr/commercial/signoff/pt/reports/untuned/`: `{openroad,icc2,openroad_rcx}_9corner.txt`, `openroad_three_way.txt`, `power_nom_tt.txt`, `*_nom_tt_worst_{setup,hold}.txt`, `*_nom_tt_power_full.txt`, `compact_tables.md`, `judge_tables.md`, `judge_results.json` (all metrics, every md5) |
+| I/O-latency variant (B6b) | section 10; `make untuned-iolat`, `reports/untuned_iolat/`, `runs_untuned_iolat/` |
 | Raw runs (gitignored) | `pnr/commercial/signoff/pt/runs_untuned/<arm>_<rc>_<lib>/` (`pt.log`, `metrics.tsv`, `inputs.txt`, `spef/` snapshot, reports) |
 
 ## 9. Tool gotchas (for back-porting into the agent suite)
@@ -217,3 +218,69 @@ Open items:
 | SPEF replaced during a run | copy the SPEF into the run dir and take the md5 before and after the copy (`run_one.sh`); stamp = md5 of SPEF + netlist + SDC + scripts + power flag, so `make rejudge` reruns only what changed |
 | Host load gate | `safe_run.sh` waits for load < 6 in 30 s steps (up to 2 h); with an Innovus job and a DRC/LVS job running, the first PT start waited about 10 minutes. Shell `sleep N` chains are blocked in this harness: use background `until` loops |
 | `rm -rf runs reports/*` | blocked by the harness's safety check; the stale directories were `mv`-ed aside and deleted later by explicit path on the coordinator's say-so |
+
+## 10. I/O-latency SDC variant (task B6b, comparison only)
+
+**What and why.** Section 5.2 found that ICC2 closed I/O hold against an SDC with `set_clock_latency 1.77814 [get_clocks clk_i]` that the shared SDC lacks. Per the user's decision the shared SDC
+`pnr/sky130/cpu/constraints/sky130_cpu.sdc` is **not edited** (the production LibreLane CPU-macro flow uses it). Instead a generated, comparison-only copy models the I/O latency as a **virtual I/O clock**:
+
+- Generator `pnr/commercial/constraints/gen_iolat_sdc.py` -> `pnr/commercial/constraints/sky130_cpu_iolat.sdc` (+ `.md5` sidecar). It asserts the source md5 `3c69635042a9d65cb87e71a9db713e4e` and fails otherwise, is deterministic (no timestamps), and asserts that all 66 I/O delays were rewritten (28 `set_input_delay` + 38 `set_output_delay`, `-clock clk_i` -> `-clock clk_io`).
+- **Generated SDC md5: `e90bdba8b93f8f4e985c5fbaa6d4ab90`** (whole file; the header states the md5 of the file with its own md5 line removed, `8941f999c9530089b2c1c42197e0109a`, because a file cannot contain its own md5).
+- Added after the clk_i block: `create_clock -name clk_io -period 13.333` (virtual, no source), `set_clock_latency -source 1.0` and `set_clock_latency 1.778` on clk_io, uncertainty 0.5 / 0.2 as clk_i; and `group_path -name IO -from` / `-to [get_clocks clk_io]`. Everything else (false paths, multicycles, drive/load, DRC limits, clk_i itself) is unchanged.
+- Assumption (stated in the file header): the SoC-side flops have about the same insertion delay as the macro's internal flops. 1.778 is ICC2's derived 1.77814, rounded. **clk_io is ideal: the judge now propagates only clk_i (`set_propagated_clock [get_clocks clk_i]`; in the base SDC this is identical to `all_clocks`); a propagated virtual clock would ignore its network latency.**
+- Parameterised judge: `PT_SDC=base|iolat` (md5 asserted in `run_one.sh` and again in `judge.tcl`); `make untuned-iolat` (frozen untuned SPEFs -> `runs_untuned_iolat/`, `reports/untuned_iolat/`), `make judge-iolat` (current SPEFs -> `runs_iolat/`, `reports/iolat/`), `make compare-untuned` / `compare-current`; **`make rejudge` runs both variants** on the current SPEFs. The base set was rerun with the final scripts (numbers unchanged from sections 3-5). Same frozen untuned SPEFs, same netlists, all 9 corners, OpenROAD and ICC2 only (the OpenRCX sanity arm is not part of this variant). Innovus stays PENDING (its b5c_innovus_s2 netlist exists but no StarRC SPEFs yet).
+
+**Validation at nom_tt, both arms** (`reports/untuned_iolat/validation_nom_tt.txt`):
+1. `check_timing -verbose`: **no new unconstrained endpoints or ports**. Unconstrained endpoints 34 and ports without input delay 26 in both variants and both arms; set comparison of the full warning lists: 0 added, 0 removed (the 34 are the `mbist_status_o` outputs, the 26 are inputs already unconstrained in the base).
+2. `report_clocks` (iolat): `clk_i 13.3330 {0 6.6665} p {clk_i}` and `clk_io 13.3330 {0 6.6665} (ideal, sources {})`; PT warns UITE-121 "Creating virtual clock clk_io with no sources", expected.
+3. Spot path `axi_rdata_i[10] -> _52592_/D` (OpenROAD, min): base `clock network delay (propagated) 1.0000`, input delay 0.5, launch 1.5000 ns, slack +0.1023. iolat `clock clk_io (rise)`, `clock network delay (ideal) 2.7780` (= 1.0 source + 1.778 network), input delay 0.5, launch 3.2780 ns, slack +1.8803. Same effect on the setup spot path (launch 3.0 -> 4.778, slack 8.602 -> 6.824). Capture side (clk_i, propagated, source latency 1.0 + CTS tree) is unchanged.
+4. **Propagated-clock reg->reg results are unchanged**: identical in 36/36 (arm, setup/hold, corner) cells (WNS, TNS, violators and endpoint count to 1e-9; `reports/untuned_iolat/base_vs_iolat.txt`). Where reg->reg meets, `judge.tcl` records no value (`get_timing_paths` returned only violating paths), so the worst reg->reg slack was also checked directly at nom_tt (`scripts/diag_r2r_wns.tcl`, 6 digits): OpenROAD setup +3.374176 / hold +0.532610 and ICC2 setup -0.090911 / hold -0.014733, **all identical in both variants**. (PT's `report_global_timing` reg->reg / in->reg split is *not* invariant: it re-assigns an endpoint between categories when an I/O constraint changes; the explicit `-from` register clock pins `-to` register data pins query is.)
+5. **Power is unchanged by the I/O constraint, confirmed at nom_tt, one run per arm** (`reports/untuned_iolat/power_nom_tt.txt`): variant B OpenROAD 93.985 mW, ICC2 67.990 mW; variant A 77.080 / 55.724 mW; identical to section 4 to the printed digits.
+
+**Base vs iolat, nine corners** (nom and max rows INDICATIVE; SRAM TT-only; untuned ITF). Full tables with reg->reg / I/O WNS and TNS: `reports/untuned_iolat/base_vs_iolat.txt`.
+
+#### OpenROAD (StarRC, untuned): base SDC -> iolat SDC
+
+Each cell: WNS / TNS / violating endpoints (reg->reg / I/O). ns.
+
+| corner | setup base | setup iolat | hold base | hold iolat |
+|---|---|---|---|---|
+| nom_tt_025C_1v80 | +3.0493 / 0.000 / 0 (0/0) | +3.0953 / 0.000 / 0 (0/0) | -0.3470 / -4.579 / 62 (0/62) | +0.5326 / 0.000 / 0 (0/0) |
+| nom_ss_100C_1v60 | -3.6789 / -1466.222 / 1130 (1055/75) | -3.6789 / -1426.074 / 1084 (1054/30) | -0.8225 / -27.928 / 124 (0/124) | +0.9555 / 0.000 / 0 (0/0) |
+| nom_ff_n40C_1v95 | +3.8917 / 0.000 / 0 (0/0) | +3.8917 / 0.000 / 0 (0/0) | -0.1524 / -0.673 / 9 (0/9) | +0.2473 / 0.000 / 0 (0/0) |
+| min_tt_025C_1v80 | +3.6856 / 0.000 / 0 (0/0) | +3.2300 / 0.000 / 0 (0/0) | -0.0347 / -0.035 / 1 (0/1) | +0.5600 / 0.000 / 0 (0/0) |
+| min_ss_100C_1v60 | -2.1167 / -448.660 / 645 (641/4) | -2.1167 / -453.796 / 666 (641/25) | -0.3414 / -0.663 / 5 (0/5) | +1.3152 / 0.000 / 0 (0/0) |
+| min_ff_n40C_1v95 | +4.1739 / 0.000 / 0 (0/0) | +4.1739 / 0.000 / 0 (0/0) | +0.0985 / 0.000 / 0 (0/0) | +0.2614 / 0.000 / 0 (0/0) |
+| max_tt_025C_1v80 | +2.1797 / 0.000 / 0 (0/0) | +2.6595 / 0.000 / 0 (0/0) | -0.6981 / -48.499 / 231 (0/231) | +0.4962 / 0.000 / 0 (0/0) |
+| max_ss_100C_1v60 | -5.3352 / -3004.335 / 1480 (1376/104) | -5.3352 / -2883.810 / 1447 (1376/71) | -1.3624 / -95.575 / 199 (0/199) | +0.4156 / 0.000 / 0 (0/0) |
+| max_ff_n40C_1v95 | +3.5418 / 0.000 / 0 (0/0) | +3.5418 / 0.000 / 0 (0/0) | -0.4315 / -8.831 / 90 (0/90) | +0.2070 / 0.000 / 0 (0/0) |
+
+#### ICC2 (StarRC, untuned): base SDC -> iolat SDC
+
+Each cell: WNS / TNS / violating endpoints (reg->reg / I/O). ns.
+
+| corner | setup base | setup iolat | hold base | hold iolat |
+|---|---|---|---|---|
+| nom_tt_025C_1v80 | -0.0909 / -0.160 / 2 (2/0) | -0.0909 / -0.160 / 2 (2/0) | -1.1597 / -171.277 / 432 (5/427) | -0.0147 / -0.028 / 5 (5/0) |
+| nom_ss_100C_1v60 | -14.9330 / -4572.401 / 1504 (1488/16) | -14.9330 / -4615.273 / 1519 (1464/55) | -2.0797 / -399.996 / 468 (0/468) | -0.3017 / -3.386 / 22 (0/22) |
+| nom_ff_n40C_1v95 | +2.6717 / 0.000 / 0 (0/0) | +2.6717 / 0.000 / 0 (0/0) | -0.7186 / -81.926 / 401 (98/303) | -0.0908 / -4.068 / 99 (99/0) |
+| min_tt_025C_1v80 | +0.3839 / 0.000 / 0 (0/0) | +0.3839 / 0.000 / 0 (0/0) | -0.9884 / -131.402 / 370 (1/369) | -0.0027 / -0.003 / 1 (1/0) |
+| min_ss_100C_1v60 | -14.4809 / -2971.842 / 842 (841/1) | -14.4809 / -2992.382 / 870 (841/29) | -1.8059 / -336.688 / 467 (0/467) | -0.0279 / -0.036 / 2 (0/2) |
+| min_ff_n40C_1v95 | +3.1705 / 0.000 / 0 (0/0) | +3.1705 / 0.000 / 0 (0/0) | -0.5988 / -61.379 / 341 (98/243) | -0.0887 / -3.692 / 101 (99/2) |
+| max_tt_025C_1v80 | -1.4141 / -17.264 / 67 (67/0) | -1.4141 / -17.264 / 67 (67/0) | -1.3408 / -214.760 / 463 (15/448) | -0.0191 / -0.107 / 15 (15/0) |
+| max_ss_100C_1v60 | -15.4061 / -7281.157 / 2293 (2225/68) | -15.4061 / -7306.531 / 2258 (2225/33) | -2.3746 / -472.103 / 478 (0/478) | -0.5966 / -12.385 / 40 (0/40) |
+| max_ff_n40C_1v95 | +2.1312 / 0.000 / 0 (0/0) | +2.1312 / 0.000 / 0 (0/0) | -0.8512 / -107.907 / 436 (102/334) | -0.1066 / -4.755 / 103 (103/0) |
+
+Counts of corners with zero violating endpoints (of 9): OpenROAD setup 6 -> 6, **hold 1 -> 9**; ICC2 setup 4 -> 4, **hold 0 -> 0 (I/O-clean 0 -> 5)**.
+
+**Reading (measured).**
+- **ICC2 I/O hold now closes at five corners** (nom_tt, nom_ff, min_tt, max_tt, max_ff have 0 I/O hold violators; the ~1.2 ns tt violation is gone, so section 5.2's explanation is confirmed on all 9 corners). It does **not** fully close hold anywhere: reg->reg hold violators remain at every tt/ff corner, unchanged by the variant (-0.0027 to -0.1066 ns, 1 to 103 endpoints; nom_tt -0.0147 ns, 5 endpoints, i.e. the same -0.015 ns the shared SDC shows, against ICC2's native +0.0008), and I/O hold residuals remain at min_ff (-0.044 ns, 2 endpoints) and at the ss corners (nom_ss -0.302 ns / 22, min_ss -0.028 / 2, max_ss -0.597 / 40). The ss residuals are a corner ICC2 never optimised.
+- **OpenROAD I/O hold closes everywhere with iolat** (hold violators 1-231 at 8 of 9 base corners -> 0 at all 9 corners; hold WNS +0.207 (max_ff) to +1.315 ns (min_ss)): its input hold paths were short because it was built against an SDC whose I/O clock arrives with no network latency; with the later I/O launch they have margin. The hold WNS that remains is reg->reg (e.g. nom_tt +0.5326 ns). So the OpenROAD hold failures of section 3 are entirely an artefact of the I/O launch time, not of the implementation's reg->reg hold.
+- **I/O setup moves in opposite directions for inputs and outputs**: the input launch is 1.778 ns later (less setup margin) and the output capture is 1.778 ns later (more margin). Where setup was met it stays met in both arms at all tt/ff corners (OpenROAD I/O setup violators 0 -> 0, ICC2 0 -> 0). At the ss corners, where setup already fails, OpenROAD's I/O setup WNS **improves** (nom_ss -3.076 -> -1.335 ns, 75 -> 30 endpoints; max_ss -4.565 -> -2.787, 104 -> 71) because its violations were on outputs, while ICC2's I/O setup WNS **worsens** (nom_ss -3.094 -> -4.872 ns, 16 -> 55 endpoints; max_ss -3.949 -> -5.727, 68 -> 33 endpoints but deeper). Total-design setup WNS does not move at the ss corners (reg->reg dominates: OpenROAD -3.679 / -2.117 / -5.335, ICC2 -14.9 / -14.5 / -15.4); at OpenROAD min_tt the total setup WNS drops 3.686 -> 3.230 and at max_tt rises 2.180 -> 2.660 (the worst path there is an I/O path), still met.
+- **Sign-off view**: neither variant makes either arm sign-off clean (ss setup fails by -2 to -15 ns reg->reg in both). The iolat variant removes OpenROAD's hold failures and turns ICC2's I/O hold from 243-478 violating endpoints per corner to 0-40 (0 at five corners), leaving its small reg->reg residue.
+
+**Caveat on fairness (report both variants).** OpenROAD (and Innovus, b5c) were implemented and repaired against the **base** SDC; ICC2 was effectively implemented against the **iolat** form. Neither variant is perfectly fair to every arm: base penalises ICC2's I/O hold (an artefact of the SDC it was not given) and iolat flatters OpenROAD's I/O hold (hold it never had to repair) and penalises ICC2's input setup at ss. The 1.778 ns is ICC2's own derived value, not a measured latency of a real SoC clock tree; the SoC-side insertion delay assumption is unverified. Use base for "does this meet the production macro SDC" and iolat only to separate SDC-modelling effects from implementation quality. The decision whether the production SDC should carry an I/O latency remains with the SDC owner (open item 4 in section 7).
+
+Files (B6b): `pnr/commercial/constraints/{gen_iolat_sdc.py,sky130_cpu_iolat.sdc,sky130_cpu_iolat.sdc.md5}`; `pnr/commercial/signoff/pt/reports/untuned_iolat/{openroad,icc2}_9corner.txt, base_vs_iolat.txt, validation_nom_tt.txt, power_nom_tt.txt, judge_results.json}`; raw runs `pnr/commercial/signoff/pt/runs_untuned_iolat/`; scripts `compare_variants.py`, `diag_r2r_wns.tcl`.
+
+**Additional gotchas (B6b).** A propagated virtual clock ignores `set_clock_latency` network latency: propagate only the real clock. `create_clock` with no source gives UITE-121 (expected). `get_timing_paths -from regs -to regs -max_paths N` returned only violating paths in this setup, so a "worst slack including positive" query needs `-max_paths 1`. Header md5 of a generated file cannot cover itself: state the md5 of the file minus that line and keep the full-file md5 in a sidecar the consumer asserts.

@@ -8,7 +8,14 @@ arm=$1; rc=$2; lib=$3; pw=${4:-0}
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../../../../.." && pwd)
 . "$HERE/arms.sh"
-SDC=$ROOT/pnr/sky130/cpu/constraints/sky130_cpu.sdc
+# PT_SDC selects the SDC variant: base (default; pnr/sky130/cpu/constraints/sky130_cpu.sdc, md5 3c69...) or iolat (comparison-only
+# pnr/commercial/constraints/sky130_cpu_iolat.sdc, expected md5 from its generator-written .md5 sidecar, re-verified here)
+case "${PT_SDC:-base}" in
+  base)  SDC=$ROOT/pnr/sky130/cpu/constraints/sky130_cpu.sdc; SDC_MD5=3c69635042a9d65cb87e71a9db713e4e ;;
+  iolat) SDC=$ROOT/pnr/commercial/constraints/sky130_cpu_iolat.sdc; SDC_MD5=$(tr -d ' \n' < "$SDC.md5") ;;
+  *) echo "unknown PT_SDC=$PT_SDC" >&2; exit 2 ;;
+esac
+[ "$(md5sum "$SDC" | cut -d' ' -f1)" = "$SDC_MD5" ] || { echo "SDC md5 mismatch for variant ${PT_SDC:-base}: $SDC" >&2; exit 5; }
 NL=$ROOT/$(arm_netlist "$arm"); SP=$ROOT/$(arm_spef "$arm" "$rc"); MK=$(arm_spef_marker "$arm" "$rc")
 tag=${arm}_${rc}_${lib}
 # PT_SET (e.g. untuned) selects the run directory runs_<set>/ (default runs/); PT_STARRC_DIR is read by arms.sh
@@ -33,7 +40,7 @@ rm -f "$out/.done"
 { echo "spef_src=$SP"; echo "spef_md5=$m1"; echo "netlist_src=$NL"; echo "netlist_md5=$nlmd5"; echo "sdc_md5=$sdcmd5"; echo "scripts_md5=$scmd5"; echo "power=$pw"; } > "$out/inputs.txt"
 . "$ROOT/tools/eda/pd_env.sh" >/dev/null 2>&1 || true
 cd "$out"
-export J_ROOT=$ROOT J_NETLIST=$NL J_SPEF=$out/spef/$(basename "$SP") J_RC=$rc J_LIB=$lib J_POWER=$pw J_SDC=$SDC J_OUT=$out
+export J_ROOT=$ROOT J_NETLIST=$NL J_SPEF=$out/spef/$(basename "$SP") J_RC=$rc J_LIB=$lib J_POWER=$pw J_SDC=$SDC J_SDC_MD5=$SDC_MD5 J_SDC_VARIANT=${PT_SDC:-base} J_OUT=$out
 export SAFE_THREADS=2 SAFE_MEM_MAX=${SAFE_MEM_MAX:-6G} SAFE_TIMEOUT=${SAFE_TIMEOUT:-3600}
 rc_=0
 "$ROOT/pnr/commercial/pdk/sky130/scripts/safe_run.sh" "$out/pt.log" \

@@ -48,7 +48,7 @@
   "in_netlist_md5": "e9150655c154779119d823b4222358d5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "3543223c4cfa5eba039b9a94093b431d",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_max/rv32i_cpu_top.max.spef",
@@ -58,9 +58,18 @@
   "nets": "35637",
   "nofunction_cells": "125",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "103",
+  "r2rx_hold_tns": "-4.755207",
+  "r2rx_hold_viol": "103",
+  "r2rx_hold_wns": "-0.106629",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "max",
-  "rss_gb": 1.0085830688476562,
+  "rss_gb": 1.0574874877929688,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -85,7 +94,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_max_ff/spef/rv32i_cpu_top.max.spef",
   "spef_annotated_nets": 35141,
   "spef_nets_missing": 8,
-  "wall": "0:11.74"
+  "wall": "0:08.28"
  },
  "icc2_max_ss": {
   "annot": {
@@ -136,7 +145,7 @@
   "in_netlist_md5": "e9150655c154779119d823b4222358d5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "3543223c4cfa5eba039b9a94093b431d",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_max/rv32i_cpu_top.max.spef",
@@ -146,9 +155,18 @@
   "nets": "35637",
   "nofunction_cells": "125",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "2225",
+  "r2rx_setup_tns": "-7227.758982",
+  "r2rx_setup_viol": "2225",
+  "r2rx_setup_wns": "-15.406076",
   "rc_corner": "max",
-  "rss_gb": 1.0151481628417969,
+  "rss_gb": 1.0771331787109375,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    -15.4061,
    -7281.1578,
@@ -173,7 +191,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_max_ss/spef/rv32i_cpu_top.max.spef",
   "spef_annotated_nets": 35141,
   "spef_nets_missing": 8,
-  "wall": "0:14.38"
+  "wall": "0:10.93"
  },
  "icc2_max_tt": {
   "annot": {
@@ -224,7 +242,7 @@
   "in_netlist_md5": "e9150655c154779119d823b4222358d5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "3543223c4cfa5eba039b9a94093b431d",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_max/rv32i_cpu_top.max.spef",
@@ -234,9 +252,18 @@
   "nets": "35637",
   "nofunction_cells": "125",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "15",
+  "r2rx_hold_tns": "-0.106836",
+  "r2rx_hold_viol": "15",
+  "r2rx_hold_wns": "-0.019055",
+  "r2rx_setup_endpoints": "67",
+  "r2rx_setup_tns": "-17.263793",
+  "r2rx_setup_viol": "67",
+  "r2rx_setup_wns": "-1.414103",
   "rc_corner": "max",
-  "rss_gb": 1.0158348083496094,
+  "rss_gb": 1.0625839233398438,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    -1.4141,
    -17.2637,
@@ -261,7 +288,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_max_tt/spef/rv32i_cpu_top.max.spef",
   "spef_annotated_nets": 35141,
   "spef_nets_missing": 8,
-  "wall": "0:17.78"
+  "wall": "0:08.62"
  },
  "icc2_min_ff": {
   "annot": {
@@ -312,7 +339,7 @@
   "in_netlist_md5": "e9150655c154779119d823b4222358d5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "d858f034023cbde6727c0b928c0aa73a",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_min/rv32i_cpu_top.min.spef",
@@ -322,9 +349,18 @@
   "nets": "35637",
   "nofunction_cells": "125",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "99",
+  "r2rx_hold_tns": "-3.620966",
+  "r2rx_hold_viol": "99",
+  "r2rx_hold_wns": "-0.088685",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "min",
-  "rss_gb": 1.0385551452636719,
+  "rss_gb": 1.0563163757324219,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -349,7 +385,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_min_ff/spef/rv32i_cpu_top.min.spef",
   "spef_annotated_nets": 35141,
   "spef_nets_missing": 8,
-  "wall": "0:08.95"
+  "wall": "0:09.04"
  },
  "icc2_min_ss": {
   "annot": {
@@ -400,7 +436,7 @@
   "in_netlist_md5": "e9150655c154779119d823b4222358d5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "d858f034023cbde6727c0b928c0aa73a",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_min/rv32i_cpu_top.min.spef",
@@ -410,9 +446,18 @@
   "nets": "35637",
   "nofunction_cells": "125",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "841",
+  "r2rx_setup_tns": "-2969.627466",
+  "r2rx_setup_viol": "841",
+  "r2rx_setup_wns": "-14.480940",
   "rc_corner": "min",
-  "rss_gb": 1.0340499877929688,
+  "rss_gb": 1.0571632385253906,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    -14.4809,
    -2971.8416,
@@ -437,7 +482,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_min_ss/spef/rv32i_cpu_top.min.spef",
   "spef_annotated_nets": 35141,
   "spef_nets_missing": 8,
-  "wall": "0:09.29"
+  "wall": "0:08.58"
  },
  "icc2_min_tt": {
   "annot": {
@@ -488,7 +533,7 @@
   "in_netlist_md5": "e9150655c154779119d823b4222358d5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "d858f034023cbde6727c0b928c0aa73a",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_min/rv32i_cpu_top.min.spef",
@@ -498,9 +543,18 @@
   "nets": "35637",
   "nofunction_cells": "125",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "1",
+  "r2rx_hold_tns": "-0.002737",
+  "r2rx_hold_viol": "1",
+  "r2rx_hold_wns": "-0.002737",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "min",
-  "rss_gb": 1.0396041870117188,
+  "rss_gb": 1.0597610473632812,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -525,7 +579,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_min_tt/spef/rv32i_cpu_top.min.spef",
   "spef_annotated_nets": 35141,
   "spef_nets_missing": 8,
-  "wall": "0:10.54"
+  "wall": "0:08.32"
  },
  "icc2_nom_ff": {
   "annot": {
@@ -576,7 +630,7 @@
   "in_netlist_md5": "e9150655c154779119d823b4222358d5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "bc2b889a3cdb866e91793e2873919063",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_nom/rv32i_cpu_top.nom.spef",
@@ -586,9 +640,18 @@
   "nets": "35637",
   "nofunction_cells": "125",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "99",
+  "r2rx_hold_tns": "-4.068389",
+  "r2rx_hold_viol": "99",
+  "r2rx_hold_wns": "-0.090813",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "nom",
-  "rss_gb": 1.0451393127441406,
+  "rss_gb": 1.057373046875,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -613,7 +676,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_nom_ff/spef/rv32i_cpu_top.nom.spef",
   "spef_annotated_nets": 35141,
   "spef_nets_missing": 8,
-  "wall": "0:11.02"
+  "wall": "0:08.55"
  },
  "icc2_nom_ss": {
   "annot": {
@@ -664,7 +727,7 @@
   "in_netlist_md5": "e9150655c154779119d823b4222358d5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "bc2b889a3cdb866e91793e2873919063",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_nom/rv32i_cpu_top.nom.spef",
@@ -674,9 +737,18 @@
   "nets": "35637",
   "nofunction_cells": "125",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "1488",
+  "r2rx_setup_tns": "-4565.246481",
+  "r2rx_setup_viol": "1488",
+  "r2rx_setup_wns": "-14.933018",
   "rc_corner": "nom",
-  "rss_gb": 1.0507888793945312,
+  "rss_gb": 1.0679092407226562,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    -14.933,
    -4572.4004,
@@ -701,7 +773,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_nom_ss/spef/rv32i_cpu_top.nom.spef",
   "spef_annotated_nets": 35141,
   "spef_nets_missing": 8,
-  "wall": "0:08.25"
+  "wall": "0:10.15"
  },
  "icc2_nom_tt": {
   "annot": {
@@ -752,7 +824,7 @@
   "in_netlist_md5": "e9150655c154779119d823b4222358d5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
   "in_power": "1",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "bc2b889a3cdb866e91793e2873919063",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_nom/rv32i_cpu_top.nom.spef",
@@ -868,9 +940,18 @@
   "power_toggle_rate": "0.1",
   "power_toggle_ref": "related",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "5",
+  "r2rx_hold_tns": "-0.027901",
+  "r2rx_hold_viol": "5",
+  "r2rx_hold_wns": "-0.014733",
+  "r2rx_setup_endpoints": "2",
+  "r2rx_setup_tns": "-0.1597",
+  "r2rx_setup_viol": "2",
+  "r2rx_setup_wns": "-0.090911",
   "rc_corner": "nom",
-  "rss_gb": 1.079376220703125,
+  "rss_gb": 1.0904808044433594,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    -0.0909,
    -0.1597,
@@ -894,8 +975,8 @@
   "setup_worst_start": "u_core/u_icache_ic_addr_q_reg_7_/CLK",
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_nom_tt/spef/rv32i_cpu_top.nom.spef",
   "spef_annotated_nets": 35141,
-  "spef_nets_missing": 0,
-  "wall": "0:19.04"
+  "spef_nets_missing": 8,
+  "wall": "0:17.48"
  },
  "openroad_max_ff": {
   "annot": {
@@ -946,7 +1027,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "afd0054fc546717cc2e223cc5750d5db",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_max/rv32i_cpu_top.max.spef",
@@ -956,9 +1037,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "max",
-  "rss_gb": 1.1792144775390625,
+  "rss_gb": 1.1741180419921875,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -983,7 +1073,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_max_ff/spef/rv32i_cpu_top.max.spef",
   "spef_annotated_nets": 42291,
   "spef_nets_missing": 0,
-  "wall": "0:26.08"
+  "wall": "0:25.60"
  },
  "openroad_max_ss": {
   "annot": {
@@ -1034,7 +1124,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "afd0054fc546717cc2e223cc5750d5db",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_max/rv32i_cpu_top.max.spef",
@@ -1044,9 +1134,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "1376",
+  "r2rx_setup_tns": "-2845.56292",
+  "r2rx_setup_viol": "1376",
+  "r2rx_setup_wns": "-5.335169",
   "rc_corner": "max",
-  "rss_gb": 1.2040176391601562,
+  "rss_gb": 1.1871299743652344,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    -5.3352,
    -3004.3365,
@@ -1071,7 +1170,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_max_ss/spef/rv32i_cpu_top.max.spef",
   "spef_annotated_nets": 42291,
   "spef_nets_missing": 0,
-  "wall": "0:24.20"
+  "wall": "0:39.89"
  },
  "openroad_max_tt": {
   "annot": {
@@ -1122,7 +1221,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "afd0054fc546717cc2e223cc5750d5db",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_max/rv32i_cpu_top.max.spef",
@@ -1132,9 +1231,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "max",
-  "rss_gb": 1.1605682373046875,
+  "rss_gb": 1.2020072937011719,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -1159,7 +1267,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_max_tt/spef/rv32i_cpu_top.max.spef",
   "spef_annotated_nets": 42291,
   "spef_nets_missing": 0,
-  "wall": "0:13.44"
+  "wall": "0:17.74"
  },
  "openroad_min_ff": {
   "annot": {
@@ -1210,7 +1318,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "e9cab9ea3821814f1939cefd3bc8b2c6",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_min/rv32i_cpu_top.min.spef",
@@ -1220,9 +1328,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "min",
-  "rss_gb": 1.1999893188476562,
+  "rss_gb": 1.1871910095214844,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -1247,7 +1364,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_min_ff/spef/rv32i_cpu_top.min.spef",
   "spef_annotated_nets": 42291,
   "spef_nets_missing": 0,
-  "wall": "0:13.09"
+  "wall": "0:17.64"
  },
  "openroad_min_ss": {
   "annot": {
@@ -1298,7 +1415,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "e9cab9ea3821814f1939cefd3bc8b2c6",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_min/rv32i_cpu_top.min.spef",
@@ -1308,9 +1425,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "641",
+  "r2rx_setup_tns": "-444.955736",
+  "r2rx_setup_viol": "641",
+  "r2rx_setup_wns": "-2.116686",
   "rc_corner": "min",
-  "rss_gb": 1.1988372802734375,
+  "rss_gb": 1.1455268859863281,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    -2.1167,
    -448.6587,
@@ -1335,7 +1461,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_min_ss/spef/rv32i_cpu_top.min.spef",
   "spef_annotated_nets": 42291,
   "spef_nets_missing": 0,
-  "wall": "0:12.55"
+  "wall": "0:45.68"
  },
  "openroad_min_tt": {
   "annot": {
@@ -1386,7 +1512,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "e9cab9ea3821814f1939cefd3bc8b2c6",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_min/rv32i_cpu_top.min.spef",
@@ -1396,9 +1522,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "min",
-  "rss_gb": 1.2025070190429688,
+  "rss_gb": 1.1840782165527344,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -1423,7 +1558,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_min_tt/spef/rv32i_cpu_top.min.spef",
   "spef_annotated_nets": 42291,
   "spef_nets_missing": 0,
-  "wall": "0:11.15"
+  "wall": "0:12.27"
  },
  "openroad_nom_ff": {
   "annot": {
@@ -1474,7 +1609,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "e4decacbe1ff8ef76bc8882a9c1614c1",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_nom/rv32i_cpu_top.nom.spef",
@@ -1484,9 +1619,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "nom",
-  "rss_gb": 1.2015266418457031,
+  "rss_gb": 1.1803398132324219,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -1511,7 +1655,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_nom_ff/spef/rv32i_cpu_top.nom.spef",
   "spef_annotated_nets": 42291,
   "spef_nets_missing": 0,
-  "wall": "0:13.03"
+  "wall": "0:12.30"
  },
  "openroad_nom_ss": {
   "annot": {
@@ -1562,7 +1706,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "e4decacbe1ff8ef76bc8882a9c1614c1",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_nom/rv32i_cpu_top.nom.spef",
@@ -1572,9 +1716,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "1055",
+  "r2rx_setup_tns": "-1409.853913",
+  "r2rx_setup_viol": "1055",
+  "r2rx_setup_wns": "-3.678934",
   "rc_corner": "nom",
-  "rss_gb": 1.210479736328125,
+  "rss_gb": 1.1861000061035156,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    -3.6789,
    -1466.2228,
@@ -1599,7 +1752,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_nom_ss/spef/rv32i_cpu_top.nom.spef",
   "spef_annotated_nets": 42291,
   "spef_nets_missing": 0,
-  "wall": "0:12.45"
+  "wall": "0:13.50"
  },
  "openroad_nom_tt": {
   "annot": {
@@ -1650,7 +1803,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "1",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "e4decacbe1ff8ef76bc8882a9c1614c1",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_nom/rv32i_cpu_top.nom.spef",
@@ -1766,9 +1919,18 @@
   "power_toggle_rate": "0.1",
   "power_toggle_ref": "related",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "nom",
-  "rss_gb": 1.21051025390625,
+  "rss_gb": 1.1686859130859375,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -1793,7 +1955,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_nom_tt/spef/rv32i_cpu_top.nom.spef",
   "spef_annotated_nets": 42291,
   "spef_nets_missing": 0,
-  "wall": "0:32.76"
+  "wall": "0:37.37"
  },
  "openroad_rcx_max_ff": {
   "annot": {
@@ -1844,7 +2006,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "9bc424693c8a495ad319dc7b0c77e06c",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.max.spef",
@@ -1854,9 +2016,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "max",
-  "rss_gb": 1.1360054016113281,
+  "rss_gb": 1.1857490539550781,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -1881,7 +2052,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_max_ff/spef/rv32i_cpu_top.max.spef",
   "spef_annotated_nets": 42196,
   "spef_nets_missing": 0,
-  "wall": "0:42.78"
+  "wall": "0:13.74"
  },
  "openroad_rcx_max_ss": {
   "annot": {
@@ -1932,7 +2103,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "9bc424693c8a495ad319dc7b0c77e06c",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.max.spef",
@@ -1942,9 +2113,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "1094",
+  "r2rx_setup_tns": "-1646.840488",
+  "r2rx_setup_viol": "1094",
+  "r2rx_setup_wns": "-4.271461",
   "rc_corner": "max",
-  "rss_gb": 1.1673355102539062,
+  "rss_gb": 1.182281494140625,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    -4.2715,
    -1757.6086,
@@ -1969,7 +2149,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_max_ss/spef/rv32i_cpu_top.max.spef",
   "spef_annotated_nets": 42196,
   "spef_nets_missing": 0,
-  "wall": "0:15.75"
+  "wall": "0:14.89"
  },
  "openroad_rcx_max_tt": {
   "annot": {
@@ -2020,7 +2200,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "9bc424693c8a495ad319dc7b0c77e06c",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.max.spef",
@@ -2030,9 +2210,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "max",
-  "rss_gb": 1.1408462524414062,
+  "rss_gb": 1.17828369140625,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -2057,7 +2246,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_max_tt/spef/rv32i_cpu_top.max.spef",
   "spef_annotated_nets": 42196,
   "spef_nets_missing": 0,
-  "wall": "0:17.47"
+  "wall": "0:15.70"
  },
  "openroad_rcx_min_ff": {
   "annot": {
@@ -2108,7 +2297,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "422555b4836b029080afc87823e8a873",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.min.spef",
@@ -2118,9 +2307,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "min",
-  "rss_gb": 1.1402931213378906,
+  "rss_gb": 1.1830215454101562,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -2145,7 +2343,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_min_ff/spef/rv32i_cpu_top.min.spef",
   "spef_annotated_nets": 42196,
   "spef_nets_missing": 0,
-  "wall": "0:15.46"
+  "wall": "0:15.01"
  },
  "openroad_rcx_min_ss": {
   "annot": {
@@ -2196,7 +2394,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "422555b4836b029080afc87823e8a873",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.min.spef",
@@ -2206,9 +2404,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "686",
+  "r2rx_setup_tns": "-609.256145",
+  "r2rx_setup_viol": "686",
+  "r2rx_setup_wns": "-2.661736",
   "rc_corner": "min",
-  "rss_gb": 1.1363182067871094,
+  "rss_gb": 1.1790542602539062,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    -2.6617,
    -636.4306,
@@ -2233,7 +2440,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_min_ss/spef/rv32i_cpu_top.min.spef",
   "spef_annotated_nets": 42196,
   "spef_nets_missing": 0,
-  "wall": "0:16.93"
+  "wall": "0:15.49"
  },
  "openroad_rcx_min_tt": {
   "annot": {
@@ -2284,7 +2491,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "422555b4836b029080afc87823e8a873",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.min.spef",
@@ -2294,9 +2501,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "min",
-  "rss_gb": 1.1313552856445312,
+  "rss_gb": 1.1867027282714844,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -2321,7 +2537,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_min_tt/spef/rv32i_cpu_top.min.spef",
   "spef_annotated_nets": 42196,
   "spef_nets_missing": 0,
-  "wall": "0:22.97"
+  "wall": "0:14.39"
  },
  "openroad_rcx_nom_ff": {
   "annot": {
@@ -2372,7 +2588,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "3cbabd15466ec03a232846811dac4f89",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nom.spef",
@@ -2382,9 +2598,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "nom",
-  "rss_gb": 1.1329574584960938,
+  "rss_gb": 1.1740150451660156,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -2409,7 +2634,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_nom_ff/spef/rv32i_cpu_top.nom.spef",
   "spef_annotated_nets": 42196,
   "spef_nets_missing": 0,
-  "wall": "0:27.88"
+  "wall": "0:20.98"
  },
  "openroad_rcx_nom_ss": {
   "annot": {
@@ -2460,7 +2685,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "0",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "3cbabd15466ec03a232846811dac4f89",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nom.spef",
@@ -2470,9 +2695,18 @@
   "nets": "42611",
   "nofunction_cells": "64096",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "968",
+  "r2rx_setup_tns": "-1085.934913",
+  "r2rx_setup_viol": "968",
+  "r2rx_setup_wns": "-3.518764",
   "rc_corner": "nom",
-  "rss_gb": 1.1382179260253906,
+  "rss_gb": 1.1703643798828125,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    -3.5188,
    -1156.6267,
@@ -2497,7 +2731,7 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_nom_ss/spef/rv32i_cpu_top.nom.spef",
   "spef_annotated_nets": 42196,
   "spef_nets_missing": 0,
-  "wall": "0:17.72"
+  "wall": "0:17.04"
  },
  "openroad_rcx_nom_tt": {
   "annot": {
@@ -2548,7 +2782,7 @@
   "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
   "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
   "in_power": "1",
-  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_scripts_md5": "eb3794200e303bbf668d387449e4683b",
   "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
   "in_spef_md5": "3cbabd15466ec03a232846811dac4f89",
   "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nom.spef",
@@ -2664,9 +2898,18 @@
   "power_toggle_rate": "0.1",
   "power_toggle_ref": "related",
   "pt_version": "X-2025.06",
+  "r2rx_hold_endpoints": "0",
+  "r2rx_hold_tns": "0.0",
+  "r2rx_hold_viol": "0",
+  "r2rx_hold_wns": "1e9",
+  "r2rx_setup_endpoints": "0",
+  "r2rx_setup_tns": "0.0",
+  "r2rx_setup_viol": "0",
+  "r2rx_setup_wns": "1e9",
   "rc_corner": "nom",
-  "rss_gb": 1.13671875,
+  "rss_gb": 1.1852912902832031,
   "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "sdc_variant": "base",
   "setup_gt_total": [
    null,
    0.0,
@@ -2691,6 +2934,6 @@
   "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_nom_tt/spef/rv32i_cpu_top.nom.spef",
   "spef_annotated_nets": 42196,
   "spef_nets_missing": 0,
-  "wall": "0:27.79"
+  "wall": "0:25.03"
  }
 }

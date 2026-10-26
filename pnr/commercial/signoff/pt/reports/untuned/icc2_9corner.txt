@@ -28,13 +28,13 @@ max_ff_n40C_1v95    -0.8512  -107.907   436 |   -0.1066    -4.723   102 |   -0.8
 
 DRV (violating pins) and ANNOTATION GATE (p2p = nets with a driver and load; gate: >1 % p2p unannotated or any clock net unannotated = FAIL)
 corner             max_tran  max_cap  max_fan |  p2p nets p2p unann clk nets clk unann loadless driverless | gate  | SPEF nets not in netlist | wall   rss
-nom_tt_025C_1v80        677      164      173 |     35141         0      410         0      359        137 | PASS  |                        0 | 0:19.04 1.1G
-nom_ss_100C_1v60      40243      166      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:08.25 1.1G
-nom_ff_n40C_1v95         33      161      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:11.02 1.0G
-min_tt_025C_1v80         36      154      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:10.54 1.0G
-min_ss_100C_1v60      26975      156      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:09.29 1.0G
-min_ff_n40C_1v95         24      152      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:08.95 1.0G
-max_tt_025C_1v80      11592      176      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:17.78 1.0G
-max_ss_100C_1v60      49535      178      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:14.38 1.0G
-max_ff_n40C_1v95        562      176      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:11.74 1.0G
+nom_tt_025C_1v80        677      164      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:17.48 1.1G
+nom_ss_100C_1v60      40243      166      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:10.15 1.1G
+nom_ff_n40C_1v95         33      161      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:08.55 1.1G
+min_tt_025C_1v80         36      154      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:08.32 1.1G
+min_ss_100C_1v60      26975      156      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:08.58 1.1G
+min_ff_n40C_1v95         24      152      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:09.04 1.1G
+max_tt_025C_1v80      11592      176      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:08.62 1.1G
+max_ss_100C_1v60      49535      178      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:10.93 1.1G
+max_ff_n40C_1v95        562      176      173 |     35141         0      410         0      359        137 | PASS  |                        8 | 0:08.28 1.1G
 

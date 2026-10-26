@@ -10,7 +10,7 @@ Report : timing
 	-sort_by slack
 Design : rv32i_cpu_top
 Version: X-2025.06
-Date   : Mon Oct 26 20:24:28 2026
+Date   : Mon Oct 26 21:31:53 2026
 ****************************************
   Startpoint: u_core/u_icache_ic_addr_q_reg_7_
                (rising edge-triggered flip-flop clocked by clk_i)

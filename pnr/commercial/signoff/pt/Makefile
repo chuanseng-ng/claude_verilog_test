@@ -20,10 +20,28 @@ untuned:
 	PT_SET=untuned PT_STARRC_DIR=pnr/commercial/signoff/starrc/runs/_superseded_untuned $(MAKE) judge-set
 
 judge-set: openroad icc2 innovus rcx tables
+
+# SDC variants.  base (default) = pnr/sky130/cpu/constraints/sky130_cpu.sdc (md5 3c69...).  iolat = COMPARISON-ONLY
+# pnr/commercial/constraints/sky130_cpu_iolat.sdc (virtual I/O clock, latency 1.778 ns; python3 -I pnr/commercial/constraints/gen_iolat_sdc.py regenerates it).
+#   make untuned-iolat  = iolat SDC on the frozen untuned SPEFs  (runs_untuned_iolat/, reports/untuned_iolat/); openroad + icc2 only
+#   make judge-iolat    = iolat SDC on the current SPEFs         (runs_iolat/, reports/iolat/)
+#   make rejudge        = base AND iolat on the current SPEFs (both variants)
+#   make compare-untuned / compare-current = base-vs-iolat tables (reports/<iolat set>/base_vs_iolat.txt)
+untuned-iolat:
+	PT_SET=untuned_iolat PT_SDC=iolat PT_STARRC_DIR=pnr/commercial/signoff/starrc/runs/_superseded_untuned $(MAKE) judge-set-iolat
+judge-iolat:
+	PT_SET=iolat PT_SDC=iolat $(MAKE) judge-set-iolat
+judge-set-iolat: openroad icc2 innovus tables
+compare-untuned:
+	python3 -I scripts/compare_variants.py untuned untuned_iolat
+compare-current:
+	python3 -I scripts/compare_variants.py current iolat
+.PHONY: untuned-iolat judge-iolat judge-set-iolat compare-untuned compare-current
 .PHONY: untuned judge-set judge rejudge openroad icc2 innovus rcx tables clean-runs force-openroad force-icc2 force-innovus force-rcx
 
 judge: openroad icc2 innovus tables
 rejudge: judge
+	$(MAKE) judge-iolat
 openroad: ; @$(call RUNARM,openroad)
 icc2:     ; @$(call RUNARM,icc2)
 innovus:  ; @$(call RUNARM,innovus)

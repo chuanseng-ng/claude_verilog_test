@@ -1,0 +1,100 @@
+# base SDC (untuned) vs I/O-latency SDC (untuned_iolat); same frozen SPEFs, same netlists, PrimeTime. ns.
+
+Columns per variant: WNS / TNS / endpoints for the whole design; pure reg->reg (get_timing_paths -from register clock pins -to register data pins, worst path per endpoint; WNS is the worst slack even when positive); I/O = in->reg + reg->out + in->out from report_global_timing (categories re-assign an endpoint when an I/O constraint changes).
+'met' = no violation in that category.  The pure reg->reg numbers must be IDENTICAL between variants (clk_i is untouched); the last column checks wns/tns/violators/endpoint count to 1e-9.
+
+## OpenROAD (StarRC, untuned) -- SETUP
+corner            variant             total WNS/TNS/n |                r2r WNS/TNS/n |                I/O WNS/TNS/n | r2r same?
+nom_tt_025C_1v80  base      +3.0493/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+nom_tt_025C_1v80  iolat     +3.0953/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+nom_ss_100C_1v60  base      -3.6789/-1466.222/ 1130 |       -3.6789/-1409.854/1055 |       -3.0764/  -56.368/  75 | yes
+nom_ss_100C_1v60  iolat     -3.6789/-1426.074/ 1084 |       -3.6789/-1409.854/1055 |       -1.3347/  -16.524/  30 | yes
+nom_ff_n40C_1v95  base      +3.8917/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+nom_ff_n40C_1v95  iolat     +3.8917/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+min_tt_025C_1v80  base      +3.6856/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+min_tt_025C_1v80  iolat     +3.2300/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+min_ss_100C_1v60  base      -2.1167/ -448.660/  645 |       -2.1167/ -444.956/ 641 |       -1.6702/   -3.704/   4 | yes
+min_ss_100C_1v60  iolat     -2.1167/ -453.796/  666 |       -2.1167/ -444.956/ 641 |       -1.0993/   -8.840/  25 | yes
+min_ff_n40C_1v95  base      +4.1739/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+min_ff_n40C_1v95  iolat     +4.1739/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+max_tt_025C_1v80  base      +2.1797/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+max_tt_025C_1v80  iolat     +2.6595/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+max_ss_100C_1v60  base      -5.3352/-3004.335/ 1480 |       -5.3352/-2845.563/1376 |       -4.5646/ -158.772/ 104 | yes
+max_ss_100C_1v60  iolat     -5.3352/-2883.810/ 1447 |       -5.3352/-2845.563/1376 |       -2.7866/  -38.247/  71 | yes
+max_ff_n40C_1v95  base      +3.5418/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+max_ff_n40C_1v95  iolat     +3.5418/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+
+## OpenROAD (StarRC, untuned) -- HOLD
+corner            variant             total WNS/TNS/n |                r2r WNS/TNS/n |                I/O WNS/TNS/n | r2r same?
+nom_tt_025C_1v80  base      -0.3470/   -4.579/   62 | +1000000000.0000/    0.000/   0 |       -0.3470/   -4.579/  62 | yes
+nom_tt_025C_1v80  iolat     +0.5326/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+nom_ss_100C_1v60  base      -0.8225/  -27.928/  124 | +1000000000.0000/    0.000/   0 |       -0.8225/  -27.928/ 124 | yes
+nom_ss_100C_1v60  iolat     +0.9555/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+nom_ff_n40C_1v95  base      -0.1524/   -0.673/    9 | +1000000000.0000/    0.000/   0 |       -0.1524/   -0.673/   9 | yes
+nom_ff_n40C_1v95  iolat     +0.2473/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+min_tt_025C_1v80  base      -0.0347/   -0.035/    1 | +1000000000.0000/    0.000/   0 |       -0.0347/   -0.035/   1 | yes
+min_tt_025C_1v80  iolat     +0.5600/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+min_ss_100C_1v60  base      -0.3414/   -0.663/    5 | +1000000000.0000/    0.000/   0 |       -0.3414/   -0.663/   5 | yes
+min_ss_100C_1v60  iolat     +1.3152/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+min_ff_n40C_1v95  base      +0.0985/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+min_ff_n40C_1v95  iolat     +0.2614/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+max_tt_025C_1v80  base      -0.6981/  -48.499/  231 | +1000000000.0000/    0.000/   0 |       -0.6981/  -48.499/ 231 | yes
+max_tt_025C_1v80  iolat     +0.4962/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+max_ss_100C_1v60  base      -1.3624/  -95.575/  199 | +1000000000.0000/    0.000/   0 |       -1.3624/  -95.575/ 199 | yes
+max_ss_100C_1v60  iolat     +0.4156/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+max_ff_n40C_1v95  base      -0.4315/   -8.831/   90 | +1000000000.0000/    0.000/   0 |       -0.4315/   -8.831/  90 | yes
+max_ff_n40C_1v95  iolat     +0.2070/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+
+## ICC2 (StarRC, untuned) -- SETUP
+corner            variant             total WNS/TNS/n |                r2r WNS/TNS/n |                I/O WNS/TNS/n | r2r same?
+nom_tt_025C_1v80  base      -0.0909/   -0.160/    2 |       -0.0909/   -0.160/   2 |           met/    0.000/   0 | yes
+nom_tt_025C_1v80  iolat     -0.0909/   -0.160/    2 |       -0.0909/   -0.160/   2 |           met/    0.000/   0 | yes
+nom_ss_100C_1v60  base     -14.9330/-4572.401/ 1504 |      -14.9330/-4565.246/1488 |       -3.0944/   -7.155/  16 | yes
+nom_ss_100C_1v60  iolat    -14.9330/-4615.273/ 1519 |      -14.9330/-4565.246/1488 |       -4.8724/  -57.437/  55 | yes
+nom_ff_n40C_1v95  base      +2.6717/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+nom_ff_n40C_1v95  iolat     +2.6717/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+min_tt_025C_1v80  base      +0.3839/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+min_tt_025C_1v80  iolat     +0.3839/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+min_ss_100C_1v60  base     -14.4809/-2971.842/  842 |      -14.4809/-2969.627/ 841 |       -2.2145/   -2.215/   1 | yes
+min_ss_100C_1v60  iolat    -14.4809/-2992.382/  870 |      -14.4809/-2969.627/ 841 |       -3.9925/  -22.754/  29 | yes
+min_ff_n40C_1v95  base      +3.1705/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+min_ff_n40C_1v95  iolat     +3.1705/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+max_tt_025C_1v80  base      -1.4141/  -17.264/   67 |       -1.4141/  -17.264/  67 |           met/    0.000/   0 | yes
+max_tt_025C_1v80  iolat     -1.4141/  -17.264/   67 |       -1.4141/  -17.264/  67 |           met/    0.000/   0 | yes
+max_ss_100C_1v60  base     -15.4061/-7281.157/ 2293 |      -15.4061/-7227.759/2225 |       -3.9485/  -53.398/  68 | yes
+max_ss_100C_1v60  iolat    -15.4061/-7306.531/ 2258 |      -15.4061/-7227.759/2225 |       -5.7265/  -78.772/  33 | yes
+max_ff_n40C_1v95  base      +2.1312/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+max_ff_n40C_1v95  iolat     +2.1312/    0.000/    0 | +1000000000.0000/    0.000/   0 |           met/    0.000/   0 | yes
+
+## ICC2 (StarRC, untuned) -- HOLD
+corner            variant             total WNS/TNS/n |                r2r WNS/TNS/n |                I/O WNS/TNS/n | r2r same?
+nom_tt_025C_1v80  base      -1.1597/ -171.277/  432 |       -0.0147/   -0.028/   5 |       -1.1597/ -171.249/ 427 | yes
+nom_tt_025C_1v80  iolat     -0.0147/   -0.028/    5 |       -0.0147/   -0.028/   5 |           met/    0.000/   0 | yes
+nom_ss_100C_1v60  base      -2.0797/ -399.996/  468 | +1000000000.0000/    0.000/   0 |       -2.0797/ -399.996/ 468 | yes
+nom_ss_100C_1v60  iolat     -0.3017/   -3.386/   22 | +1000000000.0000/    0.000/   0 |       -0.3017/   -3.386/  22 | yes
+nom_ff_n40C_1v95  base      -0.7186/  -81.926/  401 |       -0.0908/   -4.068/  99 |       -0.7186/  -77.877/ 303 | yes
+nom_ff_n40C_1v95  iolat     -0.0908/   -4.068/   99 |       -0.0908/   -4.068/  99 |           met/    0.000/   0 | yes
+min_tt_025C_1v80  base      -0.9884/ -131.402/  370 |       -0.0027/   -0.003/   1 |       -0.9884/ -131.399/ 369 | yes
+min_tt_025C_1v80  iolat     -0.0027/   -0.003/    1 |       -0.0027/   -0.003/   1 |           met/    0.000/   0 | yes
+min_ss_100C_1v60  base      -1.8059/ -336.688/  467 | +1000000000.0000/    0.000/   0 |       -1.8059/ -336.688/ 467 | yes
+min_ss_100C_1v60  iolat     -0.0279/   -0.036/    2 | +1000000000.0000/    0.000/   0 |       -0.0279/   -0.036/   2 | yes
+min_ff_n40C_1v95  base      -0.5988/  -61.379/  341 |       -0.0887/   -3.621/  99 |       -0.5988/  -57.763/ 243 | yes
+min_ff_n40C_1v95  iolat     -0.0887/   -3.692/  101 |       -0.0887/   -3.621/  99 |       -0.0440/   -0.071/   2 | yes
+max_tt_025C_1v80  base      -1.3408/ -214.760/  463 |       -0.0191/   -0.107/  15 |       -1.3408/ -214.653/ 448 | yes
+max_tt_025C_1v80  iolat     -0.0191/   -0.107/   15 |       -0.0191/   -0.107/  15 |           met/    0.000/   0 | yes
+max_ss_100C_1v60  base      -2.3746/ -472.103/  478 | +1000000000.0000/    0.000/   0 |       -2.3746/ -472.103/ 478 | yes
+max_ss_100C_1v60  iolat     -0.5966/  -12.385/   40 | +1000000000.0000/    0.000/   0 |       -0.5966/  -12.385/  40 | yes
+max_ff_n40C_1v95  base      -0.8512/ -107.907/  436 |       -0.1066/   -4.755/ 103 |       -0.8512/ -103.184/ 334 | yes
+max_ff_n40C_1v95  iolat     -0.1066/   -4.755/  103 |       -0.1066/   -4.755/ 103 |           met/    0.000/   0 | yes
+
+r2r identical between variants: 36/36 (arm,kind,corner) cells
+
+## Sign-off view: counts of corners that meet (WNS >= 0) per variant
+  openroad setup base  : 6/9 corners with 0 violating endpoints
+  openroad setup iolat : 6/9 corners with 0 violating endpoints
+  openroad hold  base  : 1/9 corners with 0 violating endpoints
+  openroad hold  iolat : 9/9 corners with 0 violating endpoints
+  icc2     setup base  : 4/9 corners with 0 violating endpoints
+  icc2     setup iolat : 4/9 corners with 0 violating endpoints
+  icc2     hold  base  : 0/9 corners with 0 violating endpoints
+  icc2     hold  iolat : 0/9 corners with 0 violating endpoints

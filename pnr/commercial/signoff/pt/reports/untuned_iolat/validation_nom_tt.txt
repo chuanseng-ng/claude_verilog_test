@@ -1,0 +1,118 @@
+# Validation at nom_tt (base vs iolat SDC)
+
+## openroad
+SDC md5 base 3c69635042a9d65cb87e71a9db713e4e  iolat e90bdba8b93f8f4e985c5fbaa6d4ab90  variant tags base/iolat
+check_timing: unconstrained endpoints / ports without input delay: base (34, 26)  iolat (34, 26)  (new warnings in iolat: 0, removed 0)
+report_clocks (iolat):
+   ****************************************
+   Report : clock
+   Design : rv32i_cpu_top
+   Version: X-2025.06
+   Date   : Mon Oct 26 21:37:01 2026
+   ****************************************
+   Attributes:
+       p - Propagated clock
+       G - Generated  clock
+       I - Inactive   clock
+   Clock             Period          Waveform            Attrs     Sources
+   -----------------------------------------------------------------------
+   clk_i            13.3330          {0.0000 6.6665}     p         {clk_i}
+   clk_io           13.3330          {0.0000 6.6665}               {}
+   1
+spot input path axi_rdata_i[10] (base): 
+   	-sort_by slack
+     Startpoint: axi_rdata_i[10]
+     Endpoint: _52592_ (rising edge-triggered flip-flop clocked by clk_i)
+     clock clk_i (rise edge)                               0.0000     0.0000
+     clock network delay (propagated)                      1.0000     1.0000
+     input external delay                                  0.5000     1.5000 f
+     clock clk_i (rise edge)                               0.0000     0.0000
+     clock source latency                                  1.0000     1.0000
+     slack (MET)                                                      0.1023
+   	-sort_by slack
+     Startpoint: axi_rdata_i[10]
+     Endpoint: u_core.u_dcache.gen_data_sram[0].u_data_sram
+     clock clk_i (rise edge)                               0.0000     0.0000
+     clock network delay (propagated)                      1.0000     1.0000
+     input external delay                                  2.0000     3.0000 r
+     clock clk_i (rise edge)                              13.3330    13.3330
+     clock source latency                                  1.0000    14.3330
+     slack (MET)                                                      8.6021
+spot input path axi_rdata_i[10] (iolat): 
+   	-sort_by slack
+     Startpoint: axi_rdata_i[10]
+     Endpoint: _52592_ (rising edge-triggered flip-flop clocked by clk_i)
+     clock clk_io (rise edge)                              0.0000     0.0000
+     clock network delay (ideal)                           2.7780     2.7780
+     input external delay                                  0.5000     3.2780 f
+     clock clk_i (rise edge)                               0.0000     0.0000
+     clock source latency                                  1.0000     1.0000
+     slack (MET)                                                      1.8803
+   	-sort_by slack
+     Startpoint: axi_rdata_i[10]
+     Endpoint: u_core.u_dcache.gen_data_sram[0].u_data_sram
+     clock clk_io (rise edge)                              0.0000     0.0000
+     clock network delay (ideal)                           2.7780     2.7780
+     input external delay                                  2.0000     4.7780 r
+     clock clk_i (rise edge)                              13.3330    13.3330
+     clock source latency                                  1.0000    14.3330
+     slack (MET)                                                      6.8241
+
+## icc2
+SDC md5 base 3c69635042a9d65cb87e71a9db713e4e  iolat e90bdba8b93f8f4e985c5fbaa6d4ab90  variant tags base/iolat
+check_timing: unconstrained endpoints / ports without input delay: base (34, 26)  iolat (34, 26)  (new warnings in iolat: 0, removed 0)
+report_clocks (iolat):
+   ****************************************
+   Report : clock
+   Design : rv32i_cpu_top
+   Version: X-2025.06
+   Date   : Mon Oct 26 21:40:36 2026
+   ****************************************
+   Attributes:
+       p - Propagated clock
+       G - Generated  clock
+       I - Inactive   clock
+   Clock             Period          Waveform            Attrs     Sources
+   -----------------------------------------------------------------------
+   clk_i            13.3330          {0.0000 6.6665}     p         {clk_i}
+   clk_io           13.3330          {0.0000 6.6665}               {}
+   1
+spot input path axi_rdata_i[10] (base): 
+   	-sort_by slack
+     Startpoint: axi_rdata_i[10]
+     Endpoint: u_core/u_dcache/uncached_rdata_q_reg_10_
+     clock clk_i (rise edge)                               0.0000     0.0000
+     clock network delay (propagated)                      1.0000     1.0000
+     input external delay                                  0.5000     1.5000 f
+     clock clk_i (rise edge)                               0.0000     0.0000
+     clock source latency                                  1.0000     1.0000
+     slack (VIOLATED)                                                -1.1597
+   	-sort_by slack
+     Startpoint: axi_rdata_i[10]
+     Endpoint: u_core/u_dcache/gen_data_sram_3__u_data_sram
+     clock clk_i (rise edge)                               0.0000     0.0000
+     clock network delay (propagated)                      1.0000     1.0000
+     input external delay                                  2.0000     3.0000 r
+     clock clk_i (rise edge)                              13.3330    13.3330
+     clock source latency                                  1.0000    14.3330
+     slack (MET)                                                     10.4353
+spot input path axi_rdata_i[10] (iolat): 
+   	-sort_by slack
+     Startpoint: axi_rdata_i[10]
+     Endpoint: u_core/u_dcache/uncached_rdata_q_reg_10_
+     clock clk_io (rise edge)                              0.0000     0.0000
+     clock network delay (ideal)                           2.7780     2.7780
+     input external delay                                  0.5000     3.2780 f
+     clock clk_i (rise edge)                               0.0000     0.0000
+     clock source latency                                  1.0000     1.0000
+     slack (MET)                                                      0.6183
+   	-sort_by slack
+     Startpoint: axi_rdata_i[10]
+     Endpoint: u_core/u_dcache/gen_data_sram_3__u_data_sram
+     clock clk_io (rise edge)                              0.0000     0.0000
+     clock network delay (ideal)                           2.7780     2.7780
+     input external delay                                  2.0000     4.7780 r
+     clock clk_i (rise edge)                              13.3330    13.3330
+     clock source latency                                  1.0000    14.3330
+     slack (MET)                                                      8.6573
+

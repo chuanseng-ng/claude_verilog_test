@@ -10,7 +10,7 @@ Report : timing
 	-sort_by slack
 Design : rv32i_cpu_top
 Version: X-2025.06
-Date   : Mon Oct 26 20:21:15 2026
+Date   : Mon Oct 26 21:22:41 2026
 ****************************************
   Startpoint: _51959_ (rising edge-triggered flip-flop clocked by clk_i)
   Endpoint: axi_araddr_o[2]

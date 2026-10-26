@@ -4,7 +4,7 @@ Report : Averaged Power
 	-nosplit
 Design : rv32i_cpu_top
 Version: X-2025.06
-Date   : Mon Oct 26 20:26:53 2026
+Date   : Mon Oct 26 21:33:58 2026
 ****************************************
 
 
@@ -39,7 +39,7 @@ Report : Averaged Power
 	-nosplit
 Design : rv32i_cpu_top
 Version: X-2025.06
-Date   : Mon Oct 26 20:26:47 2026
+Date   : Mon Oct 26 21:33:51 2026
 ****************************************
 
 
