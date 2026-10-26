@@ -1,0 +1,3095 @@
+                          CONFORMAL (R)
+                   Version 24.10-p100 (30-May-2024) (64 bit executable)
+   Copyright (c) Cadence Design Systems, Inc., 1997-2024. All Rights Reserved
+
+
+This program is proprietary and confidential information belonging to
+Cadence Design Systems, Inc., and may be used and disclosed only as authorized
+in a license agreement controlling such use and disclosure.
+
+// Warning: This version is 878 days old. You can download the latest version from http://downloads.cadence.com.
+
+0
+// Command: usage -auto -elapse
+CPU time     : 0.41    seconds
+Elapse time  : 0       seconds
+Memory usage : 88.59   M bytes
+0
+// Command: set_mapping_method -sensitive
+0
+// Command: set_parallel_option -threads 1,2 -norelease_license
+// Number of threads is set to 1,2.
+0
+// Command: set_compare_options -threads 1,2
+Set computing threads of compare to 1,2.
+0
+// Command: set env(RC_VERSION)     "23.14-s090_1"
+23.14-s090_1
+// Command: set env(CDN_SYNTH_ROOT) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set CDN_SYNTH_ROOT      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86
+// Command: set env(CW_DIR) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set CW_DIR      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware"
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware
+// Command: set lec_version_required "21.20249"
+21.20249
+// Command: if { ($lec_version < $lec_version_required) &&
+//              [file exists /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim]} {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/old_encrypt_sim"
+//          } else {
+//              set env(CW_DIR_SIM) "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//              set CW_DIR_SIM      "/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim"
+//          }
+/home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/chipware/sim
+// Command: set_multiplier_implementation boothrca -both
+0
+// Command: set_undefined_cell black_box -noascend -both
+0
+// Command: add_notranslate_modules -library -both sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: add_search_path . /home/EDA/cadence/DDI231_ISR4/GENUS231/tools.lnx86/lib/tech -library -both
+0
+// Command: read_library -liberty -both \
+//              /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib \
+//              /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/sky130/cpu/pdk_lib_patched/sky130_sram_1kbyte_1rw1r_32x256_8_TT_1p8V_25C.lib ...
+// Parsing file /home/RD/ryan/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib ...
+// Warning: (RTL9.17) Cell doesn't have any output pins or all output pins are undriven (blackboxed) (occurrence:12)
+// Warning: (RTL9.21) Liberty cell with interface_timing attribute set to true was not an empty cell (occurrence:1)
+// Note: (RTL9.26) Liberty pin with internal_node use default input_map (occurrence:6)
+// Note: (HRC1.2) Module/entity is not translated (blackboxed) (occurrence:1)
+// Note: Read Liberty library successfully
+0
+CPU time     : 0.72    seconds
+Elapse time  : 1       seconds
+Memory usage : 110.72  M bytes
+// Command: set_undriven_signal 0 -golden
+0
+// Command: set_naming_style genus -golden
+0
+// Command: set_naming_rule "%s\[%d\]" -instance_array -golden
+0
+// Command: set_naming_rule "%s_reg" -register -golden
+0
+// Command: set_naming_rule "%L.%s" "%L\[%d\].%s" "%s" -instance -golden
+0
+// Command: set_naming_rule "%L.%s" "%L\[%d\].%s" "%s" -variable -golden
+0
+// Command: set_naming_rule -ungroup_separator {_} -golden
+0
+// Command: set_hdl_options -const_port_extend
+0
+// Command: set_hdl_options -unsigned_conversion_overflow on
+0
+// Command: set_hdl_option -v_to_vd on
+// Command: set_hdl_options -v_to_vd on
+// Note: '-v' to '-vd' option is 'ON'
+0
+// Command: set lec_version_required "20.10100"
+20.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//          set_hdl_option -extract_macro_constraint
+//          }
+// Command: set_hdl_options -extract_macro_constraint
+0
+// Command: set lec_version_required "20.20226"
+20.20226
+// Command: if {$lec_version >= $lec_version_required} {
+//              set_hdl_options -VERILOG_INCLUDE_DIR "sep:src"
+//          } else {
+//              set_hdl_options -VERILOG_INCLUDE_DIR "sep:src:cwd"
+//          }
+// Command: set_hdl_options -VERILOG_INCLUDE_DIR sep:src
+0
+// Command: read_design -enumconstraint -define PDK_sky130A -define SCL_sky130_fd_sc_hd -define __librelane__ -define __pnr__ -define SRAM_SKY130 -define SYNTHESIS  -merge bbox -golden -lastmod -noelab  -sv09 /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/axi_pkg.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/soc_addr_map_pkg.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_pipeline_pkg.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_pkg.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mem_collar.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mbist_ctrl.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_alu.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_branch_comp.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_imm_gen.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_regfile.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_decode.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_forwarding_unit.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_hazard_unit.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_interrupt_ctrl.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_csr_file.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_if.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_id.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_icache.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_dcache.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_arbiter.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/rv32i_cpu_top.sv
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/axi_pkg.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/soc_addr_map_pkg.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_pipeline_pkg.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_pkg.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mem_collar.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/soc/dft/mbist_ctrl.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_alu.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_branch_comp.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_imm_gen.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_regfile.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_decode.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_forwarding_unit.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_hazard_unit.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_interrupt_ctrl.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_csr_file.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_if.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_id.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1c.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex1b.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_ex2.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_mem.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/pipeline/rv32i_pipeline_wb.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_icache.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_dcache.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/mem/rv32i_cache_arbiter.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/core/rv32i_core.sv ...
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/rtl/cpu/rv32i_cpu_top.sv ...
+0
+CPU time     : 0.93    seconds
+Elapse time  : 1       seconds
+Memory usage : 120.96  M bytes
+// Command: elaborate_design -golden -root {rv32i_cpu_top} -rootonly -rootonly  
+// Golden root module is set to 'rv32i_cpu_top'
+// Warning: (RTL1.2) Variable/signal is assigned by multiple non-blocking assignments (occurrence:1314)
+// Warning: (RTL1.5b) Potential loss of RHS msb or carry-out bit (occurrence:33)
+// Note: (RTL5.5a) Default case item with non-X assignment(s) (occurrence:43)
+// Note: (RTL5.7) Default case item with inconsistent assignment(s). (occurrence:18)
+// Warning: (RTL6.4) Enum value constraint is added (occurrence:49)
+// Warning: (RTL7.3) Array index in RHS might be out of range (occurrence:3)
+// Warning: (RTL7.4) Array index in LHS might be out of range (occurrence:2)
+// Warning: (RTL7.10) Comparison with signed and unsigned operands (occurrence:1)
+// Warning: (RTL7.10d) Comparison with positive constant of different signedness (occurrence:8)
+// Warning: (RTL8.3) Unreachable DFF/DLAT is removed (occurrence:14)
+// Warning: (RTL10) Both posedge and negedge are used in different always/process (occurrence:19)
+// Warning: (RTL14) Signal has input but it has no output (occurrence:58)
+// Warning: (RTL14.1) Fanout load of the signal is removed (occurrence:143)
+// Note: (VLG2.2b) Non-binary case item is used in casez statement (occurrence:6)
+// Note: (VLG6.4) Supported system datapath function call (occurrence:3)
+// Note: (VLG9.2) The `define macro is used (occurrence:6)
+// Note: (SV8.1) Package imported (occurrence:19)
+// Warning: (DIR6.2) Supported compiler directive is detected (occurrence:36)
+// Note: (DIR6.3) Conditional compiler directive clause is effective (occurrence:10)
+// Warning: (IGN1.1) Initial construct is not supported. The entire initial construct will be ignored (occurrence:4)
+// Warning: (IGN4) Attribute instance(s) are ignored (occurrence:2)
+// Note: (HRC3.5b) Open output port connection is detected (occurrence:11)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:1165)
+// Warning: (HRC3.16) A wire is declared, but not used in the module (occurrence:11)
+// Warning: Total black box modules referenced in Golden = 1
+// Warning: Total black box modules referenced in Golden = 1
+0
+CPU time     : 1.38    seconds
+Elapse time  : 1       seconds
+Memory usage : 158.94  M bytes
+// Command: read_design -verilog95   -revised -lastmod -noelab $env(IMPL)
+// Parsing file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/runs/b4e_mutant_swap.nl.v ...
+0
+CPU time     : 3.18    seconds
+Elapse time  : 2       seconds
+Memory usage : 200.45  M bytes
+// Command: elaborate_design -revised -root {rv32i_cpu_top}
+// Revised root module is set to 'rv32i_cpu_top'
+// Warning: (RTL14) Signal has input but it has no output (occurrence:322)
+// Note: (HRC3.5b) Open output port connection is detected (occurrence:132)
+// Warning: (HRC3.10a) An input port is declared, but it is not completely used in the module (occurrence:8)
+// Warning: (HRC3.16) A wire is declared, but not used in the module (occurrence:1668)
+// Warning: Total black box modules referenced in Revised = 2
+0
+CPU time     : 3.84    seconds
+Elapse time  : 2       seconds
+Memory usage : 192.31  M bytes
+// Command: file mkdir rtl_fv_map_db
+// Command: write_design -golden rtl_fv_map_db/elab.v -replace
+// Note: Wrote VERILOG design successfully
+0
+CPU time     : 4.99    seconds
+Elapse time  : 4       seconds
+Memory usage : 192.57  M bytes
+// Command: uniquify -all -nolib -golden
+Uniquified 0 module(s)
+0
+// Command: report_design_data
+============================================
+Summary           Golden         Revised
+============================================
+Design-modules        35               1
+Library-cells       1305           34219
+============================================
+Primitives      Golden              Revised
+============================================
+INPUT              124                  124
+OUTPUT             379                  379
+--------------------------------------------
+$CNTRT     *         4                    0
+AND        *     20684                33811
+BUF        *       268                 7268
+DFF        *      6236                 5208
+INV        *      2198                63287
+MUX        *     24419                    0
+NAND       *         3                    0
+NOR        *       840                    0
+OR         *      5229                16163
+TIE0       *         0                  133
+TIE1       *         0                  133
+WIRE       *      2711                    2
+XNOR       *       157                    0
+XOR        *      1781                    0
+------ word-level --------------------------
+ADD        *        30                    0
+EQ         *        30                    0
+GE         *         5                    0
+GT         *         2                    0
+LE         *         2                    0
+LT         *         5                    0
+NE         *         3                    0
+SLL        *         2                    0
+SRA        *         1                    0
+SRL        *         1                    0
+SUBTRACT   *         6                    0
+WAND       *        18                    0
+WINV       *         2                    0
+WMUX       *       931                    0
+WOR        *        21                    0
+WSEL       *       215                    0
+WXOR       *        23                    0
+BBOX       *        10                  272
+------ don't care --------------------------
+X-assignments      110                    0
+--------------------------------------------
+Total            64650               126277
+
+0
+// Command: report_black_box
+SYSTEM: (R) sky130_fd_sc_hd__diode_2
+SYSTEM: (G R) sky130_sram_1kbyte_1rw1r_32x256_8
+0
+// Command: report_modules
+Golden:
+   rv32i_cpu_top 
+      mbist_ctrl_N_MEM10_AW8_RD_LAT2_P1_MASK0_ASYNC_RST0_LOCAL_CMP1 
+      rv32i_core_RESET_PC0 
+         rv32i_pipeline_ex1c 
+            VDW_ADD_32_1_0 
+         rv32i_hazard_unit 
+         rv32i_forwarding_unit 
+         rv32i_csr_file 
+         rv32i_interrupt_ctrl 
+         rv32i_regfile 
+         rv32i_pipeline_if_RESET_PC0 
+         rv32i_pipeline_id 
+            VDW_ADD_32_1_0 
+            rv32i_decode 
+            rv32i_imm_gen 
+         rv32i_pipeline_ex 
+            rv32i_alu 
+            rv32i_branch_comp 
+         rv32i_pipeline_ex1b 
+         rv32i_pipeline_ex2 
+         rv32i_pipeline_mem 
+         rv32i_pipeline_wb 
+         rv32i_icache 
+            mem_collar_AW8_HAS_P10_LOCAL_CMP1 
+         rv32i_dcache 
+            mem_collar_AW8_HAS_P10_LOCAL_CMP1 
+         rv32i_cache_arbiter 
+Revised:
+   rv32i_cpu_top 
+0
+// Command: set_flatten_model -seq_constant
+0
+// Command: set_flatten_model -seq_constant_x_to 0
+0
+// Command: set_flatten_model -hier_seq_merge
+0
+// Command: set_flatten_model -seq_merge
+0
+// Command: set_flatten_model -balanced_modeling
+0
+// Command: set lec_version_required "21.10142"
+21.10142
+// Command: if {$lec_version >= $lec_version_required} {
+//              puts "For safety of verification, PIs and POs should be mapped by name."
+//              set_mapping_method -mapping_file_nopipo
+//          }
+For safety of verification, PIs and POs should be mapped by name.
+// Command: set_mapping_method -mapping_file_nopipo
+0
+// Command: if {$env(MAPFILE) ne ""} { set_mapping_method -search_in_mapping_file }
+// Command: set_mapping_method -search_in_mapping_file
+0
+// Command: if {$env(MAPFILE) ne ""} { set_analyze_option -mapping_file $env(MAPFILE) }
+// Command: set_analyze_option -mapping_file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/runs/b4b_genus_vs_rtl/fv_map_rv32i_cpu_topnlv_1.map.do
+// Reading mapping information file /home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/lec/conformal/runs/b4b_genus_vs_rtl/fv_map_rv32i_cpu_topnlv_1.map.do ...
+// 5721 mapping information records are added
+0
+CPU time     : 5.18    seconds
+Elapse time  : 4       seconds
+Memory usage : 197.00  M bytes
+// Command: if {$env(MAPFILE) ne ""} { check_mapping_setup -mapping_file_quality -summary }
+// Command: check_mapping_setup -mapping_file_quality -summary
+// Note: PI and PO are ignored due to set_mapping_method -MAPPING_FILE_NOPIPO
+===============================================
+        Mapping File Quality Summary
+===============================================
+                     Golden      Revised
+-----------------------------------------------
+Valid                     0         5218
+Invalid                5218            0
+Unmapped               6236         5208
+===============================================
+0
+CPU time     : 5.30    seconds
+Elapse time  : 4       seconds
+Memory usage : 200.39  M bytes
+// Command: set lec_version_required "20.10100"
+20.10100
+// Command: if {$lec_version >= $lec_version_required} {
+//          }
+// Command: set_analyze_option -auto -report_map
+0
+// Command: set_system_mode lec
+// Processing Golden ...
+// Modeling Golden ...
+// Warning: (F34) Converted 110 X assignment(s) as don't care(s)
+// Processing Revised ...
+// Modeling Revised ...
+// Balanced modeling mapped 10416 out of 11444 DFF/DLATs
+// 1083 are from mapping setup information.
+// (F18) Converted 388 DFF/DLAT(s) in (G) to ZERO/ONE
+// (F36) Added 6498 don't care(s) due to $constraints.
+CPU time     : 6.28    seconds
+Elapse time  : 5       seconds
+Memory usage : 279.30  M bytes
+// Warning: Golden and Revised have different numbers of key points:
+// Golden  key points = 6749
+// Revised key points = 5983
+// Mapping key points ...
+// Applying mapping information ...
+// Mapped 1083 key point(s) by mapping information
+// Warning: Golden has 81 unmapped key points
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            124    379    4125   10        4638    
+--------------------------------------------------------------------------------
+Revised           124    379    4125   10        4638    
+================================================================================
+Mapped points: USER class
+--------------------------------------------------------------------------------
+Mapped points     DFF       Total   
+--------------------------------------------------------------------------------
+Golden            1083      1083    
+--------------------------------------------------------------------------------
+Revised           1083      1083    
+================================================================================
+Unmapped points:
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   DFF       Total   
+--------------------------------------------------------------------------------
+Unreachable       947       947     
+Not-mapped        81        81      
+================================================================================
+Revised:
+--------------------------------------------------------------------------------
+Unmapped points   BBOX      Total   
+--------------------------------------------------------------------------------
+Unreachable       262       262     
+================================================================================
+// Warning: Key point mapping is incomplete
+CPU time     : 7.03    seconds
+Elapse time  : 6       seconds
+Memory usage : 279.56  M bytes
+// Running automatic setup...
+// Merged 77 DFF/DLAT(s) in (G)
+// Remodeling sequential constants...
+// Remodeling Golden ...
+// Remodeling Revised ...
+// Modeling sequential merge in (G).
+// Modeling sequential merge in (R).
+// Merged 4 DFF/DLAT(s) in Golden.
+================================================================================
+Mapped points: SYSTEM class
+--------------------------------------------------------------------------------
+Mapped points     PI     PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Golden            124    379    4125   10        4638    
+--------------------------------------------------------------------------------
+Revised           124    379    4125   10        4638    
+================================================================================
+// Note: A key point group is counted as one key point
+// Golden has 37 key point groups
+Mapped points: USER class
+--------------------------------------------------------------------------------
+Mapped points     DFF       Total   
+--------------------------------------------------------------------------------
+Golden            1083      1083    
+--------------------------------------------------------------------------------
+Revised           1083      1083    
+================================================================================
+// Note: A key point group is counted as one key point
+// Golden has 16 key point groups
+Unmapped points:
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   DFF       Total   
+--------------------------------------------------------------------------------
+Unreachable       947       947     
+================================================================================
+Revised:
+--------------------------------------------------------------------------------
+Unmapped points   BBOX      Total   
+--------------------------------------------------------------------------------
+Unreachable       262       262     
+================================================================================
+// Automatic setup finished.
+0
+CPU time     : 24.16   seconds
+Elapse time  : 24      seconds
+Memory usage : 364.97  M bytes
+// Command: echo "B4D_RTL_UNMAPPED_BEGIN"
+B4D_RTL_UNMAPPED_BEGIN
+// Command: report_unmapped_points -summary
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   DFF       Total   
+--------------------------------------------------------------------------------
+Unreachable       947       947     
+================================================================================
+Revised:
+--------------------------------------------------------------------------------
+Unmapped points   BBOX      Total   
+--------------------------------------------------------------------------------
+Unreachable       262       262     
+================================================================================
+0
+// Command: report_unmapped_points -notmapped
+
+0 unmapped points reported
+0
+// Command: report_unmapped_points -extra
+
+0 unmapped points reported
+0
+// Command: report_unmapped_points -unreachable
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   816    DFF  /u_mbist_ctrl/rec_port_q_reg[0][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   818    DFF  /u_mbist_ctrl/rec_port_q_reg[1][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   820    DFF  /u_mbist_ctrl/rec_port_q_reg[2][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   822    DFF  /u_mbist_ctrl/rec_port_q_reg[3][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   824    DFF  /u_mbist_ctrl/rec_port_q_reg[4][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   826    DFF  /u_mbist_ctrl/rec_port_q_reg[5][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   828    DFF  /u_mbist_ctrl/rec_port_q_reg[6][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   830    DFF  /u_mbist_ctrl/rec_port_q_reg[7][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   832    DFF  /u_mbist_ctrl/rec_port_q_reg[8][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   834    DFF  /u_mbist_ctrl/rec_port_q_reg[9][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   946    DFF  /u_mbist_ctrl/rec_addr_q_reg[0][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   947    DFF  /u_mbist_ctrl/rec_addr_q_reg[0][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   956    DFF  /u_mbist_ctrl/rec_addr_q_reg[1][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   957    DFF  /u_mbist_ctrl/rec_addr_q_reg[1][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   966    DFF  /u_mbist_ctrl/rec_addr_q_reg[2][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   967    DFF  /u_mbist_ctrl/rec_addr_q_reg[2][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   976    DFF  /u_mbist_ctrl/rec_addr_q_reg[3][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   977    DFF  /u_mbist_ctrl/rec_addr_q_reg[3][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   986    DFF  /u_mbist_ctrl/rec_addr_q_reg[4][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   987    DFF  /u_mbist_ctrl/rec_addr_q_reg[4][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   996    DFF  /u_mbist_ctrl/rec_addr_q_reg[5][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   997    DFF  /u_mbist_ctrl/rec_addr_q_reg[5][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1006   DFF  /u_mbist_ctrl/rec_addr_q_reg[6][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1007   DFF  /u_mbist_ctrl/rec_addr_q_reg[6][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1016   DFF  /u_mbist_ctrl/rec_addr_q_reg[7][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1017   DFF  /u_mbist_ctrl/rec_addr_q_reg[7][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1026   DFF  /u_mbist_ctrl/rec_addr_q_reg[8][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1027   DFF  /u_mbist_ctrl/rec_addr_q_reg[8][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1036   DFF  /u_mbist_ctrl/rec_addr_q_reg[9][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1037   DFF  /u_mbist_ctrl/rec_addr_q_reg[9][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1402   DFF  /u_core/ex1b_ex2_reg_q_reg[mem_size][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1407   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_addr][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1408   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_addr][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1409   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_addr][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1410   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_addr][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1411   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_addr][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1412   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_addr][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1413   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_addr][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1414   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_addr][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1415   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_addr][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1416   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_addr][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1417   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_addr][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1418   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_addr][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1419   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1420   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1421   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1422   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1423   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1424   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1425   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1426   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1427   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1428   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1429   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1430   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1431   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1432   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1433   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1434   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1435   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1436   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1437   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1438   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1439   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1440   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1441   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1442   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1443   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1444   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1445   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1446   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1447   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1448   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1449   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1450   DFF  /u_core/ex1b_ex2_reg_q_reg[csr_wdata][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1452   DFF  /u_core/ex1b_ex2_reg_q_reg[jalr]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1453   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_redirect]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1454   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1455   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1456   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1457   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1458   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1459   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1460   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1461   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1462   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1463   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1464   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1465   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1466   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1467   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1468   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1469   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1470   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1471   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1472   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1473   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1474   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1475   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1476   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1477   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1478   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1479   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1480   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1481   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1482   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1483   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1484   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1485   DFF  /u_core/ex1b_ex2_reg_q_reg[pc_target][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1487   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1488   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1489   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1490   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1491   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1492   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1493   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1494   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1495   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1496   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1497   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1498   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1499   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1500   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1501   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1502   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1503   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1504   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1505   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1506   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1507   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1508   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1509   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1510   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1511   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1512   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1513   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1514   DFF  /u_core/ex1b_ex2_reg_q_reg[trap_cause][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1552   DFF  /u_core/ex1c_ex1b_reg_q_reg[branch_taken]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1553   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1554   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1555   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1556   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1557   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1558   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1559   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1560   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1561   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1562   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1563   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1564   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1565   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1566   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1567   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1568   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1569   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1570   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1571   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1572   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1573   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1574   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1575   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1576   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1577   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1578   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1579   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1580   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1581   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1582   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1583   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1584   DFF  /u_core/ex1c_ex1b_reg_q_reg[fwd_store][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1585   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1586   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1587   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1588   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1589   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1590   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1591   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1592   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1593   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1594   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1595   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1596   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1597   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1598   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1599   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1600   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1601   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1602   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1603   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1604   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1605   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1606   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1607   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1608   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1609   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1610   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1611   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1612   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1613   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1614   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1615   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1616   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_wd][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1689   DFF  /u_core/ex1c_ex1b_reg_q_reg[mem_size][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1694   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_addr][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1695   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_addr][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1696   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_addr][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1697   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_addr][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1698   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_addr][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1699   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_addr][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1700   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_addr][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1701   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_addr][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1702   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_addr][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1703   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_addr][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1704   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_addr][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1705   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_addr][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1739   DFF  /u_core/ex1c_ex1b_reg_q_reg[jalr]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1740   DFF  /u_core/ex1c_ex1b_reg_q_reg[branch]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1741   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1742   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1743   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1744   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1745   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1746   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1747   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1748   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1749   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1750   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1751   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1752   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1753   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1754   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1755   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1756   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1757   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1758   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1759   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1760   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1761   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1762   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1763   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1764   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1765   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1766   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1767   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1768   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1769   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1770   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1771   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1772   DFF  /u_core/ex1c_ex1b_reg_q_reg[immediate][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1773   DFF  /u_core/ex1c_ex1b_reg_q_reg[ebreak]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1774   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1775   DFF  /u_core/ex1c_ex1b_reg_q_reg[fence_i]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1776   DFF  /u_core/ex1c_ex1b_reg_q_reg[illegal]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1777   DFF  /u_core/ex1c_ex1b_reg_q_reg[csr_illegal]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1779   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_valid_r]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1780   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1781   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1782   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1783   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1784   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1785   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1786   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1787   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1788   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1789   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1790   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1791   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1792   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1793   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1794   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1795   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1796   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1797   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1798   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1799   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1800   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1801   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1802   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1803   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1804   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1805   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1806   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1807   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1808   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1809   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1810   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1811   DFF  /u_core/ex1c_ex1b_reg_q_reg[irq_cause][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1812   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1813   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1814   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1815   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1816   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1817   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1818   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1819   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1820   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1821   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1822   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1823   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1824   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1825   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1826   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1827   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1828   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1829   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1830   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1831   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1832   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1833   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1834   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1835   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1836   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1837   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1838   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1839   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1840   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1841   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1842   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1843   DFF  /u_core/ex1c_ex1b_reg_q_reg[mtvec][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1844   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1845   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1846   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1847   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1848   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1849   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1850   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1851   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1852   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1853   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1854   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1855   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1856   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1857   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1858   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1859   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1860   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1861   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1862   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1863   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1864   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1865   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1866   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1867   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1868   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1869   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1870   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1871   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1872   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1873   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1874   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1875   DFF  /u_core/ex1c_ex1b_reg_q_reg[mret_pc][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1876   DFF  /u_core/ex1c_ex1b_reg_q_reg[flush_ex_mem]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1877   DFF  /u_core/ex1c_ex1b_reg_q_reg[rs1_addr][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1878   DFF  /u_core/ex1c_ex1b_reg_q_reg[rs1_addr][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1879   DFF  /u_core/ex1c_ex1b_reg_q_reg[rs1_addr][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1880   DFF  /u_core/ex1c_ex1b_reg_q_reg[rs1_addr][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1881   DFF  /u_core/ex1c_ex1b_reg_q_reg[rs1_addr][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1882   DFF  /u_core/ex1c_ex1b_reg_q_reg[rs2_addr][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1883   DFF  /u_core/ex1c_ex1b_reg_q_reg[rs2_addr][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1884   DFF  /u_core/ex1c_ex1b_reg_q_reg[rs2_addr][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1885   DFF  /u_core/ex1c_ex1b_reg_q_reg[rs2_addr][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1886   DFF  /u_core/ex1c_ex1b_reg_q_reg[rs2_addr][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1887   DFF  /u_core/ex1c_ex1b_reg_q_reg[trap_type][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1888   DFF  /u_core/ex1c_ex1b_reg_q_reg[trap_type][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1889   DFF  /u_core/ex1c_ex1b_reg_q_reg[trap_type][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1961   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1962   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1963   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1964   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1965   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1966   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1967   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1968   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1969   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1970   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1971   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1972   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1973   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1974   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1975   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1976   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1977   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1978   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1979   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1980   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1981   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1982   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1983   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1984   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1985   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1986   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1987   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_trap_cause][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   1992   DFF  /u_core/ex1c_ex1b_reg_q_reg[dec_is_irq]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2061   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2062   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2063   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2064   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2065   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2066   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2067   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2068   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2069   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2070   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2071   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2072   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2073   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2074   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2075   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2076   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2077   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2078   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2079   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2080   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2081   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2082   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2083   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2084   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2085   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2086   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2087   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2088   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2089   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2090   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2091   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2092   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_wd][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2165   DFF  /u_core/ex1a_ex1b_reg_q_reg[mem_size][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2170   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_addr][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2171   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_addr][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2172   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_addr][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2173   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_addr][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2174   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_addr][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2175   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_addr][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2176   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_addr][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2177   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_addr][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2178   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_addr][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2179   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_addr][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2180   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_addr][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2181   DFF  /u_core/ex1a_ex1b_reg_q_reg[csr_addr][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2257   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2258   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2259   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2260   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2261   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2262   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2263   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2264   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2265   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2266   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2267   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2268   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2269   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2270   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2271   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2272   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2273   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2274   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2275   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2276   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2277   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2278   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2279   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2280   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2281   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2282   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2283   DFF  /u_core/ex1a_ex1b_reg_q_reg[irq_cause][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2318   DFF  /u_core/ex1a_ex1b_reg_q_reg[mtvec][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2319   DFF  /u_core/ex1a_ex1b_reg_q_reg[mtvec][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2352   DFF  /u_core/ex1a_ex1b_reg_q_reg[flush_ex_mem]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2353   DFF  /u_core/ex1a_ex1b_reg_q_reg[rs1_addr][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2354   DFF  /u_core/ex1a_ex1b_reg_q_reg[rs1_addr][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2355   DFF  /u_core/ex1a_ex1b_reg_q_reg[rs1_addr][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2356   DFF  /u_core/ex1a_ex1b_reg_q_reg[rs1_addr][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2357   DFF  /u_core/ex1a_ex1b_reg_q_reg[rs1_addr][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2358   DFF  /u_core/ex1a_ex1b_reg_q_reg[rs2_addr][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2359   DFF  /u_core/ex1a_ex1b_reg_q_reg[rs2_addr][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2360   DFF  /u_core/ex1a_ex1b_reg_q_reg[rs2_addr][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2361   DFF  /u_core/ex1a_ex1b_reg_q_reg[rs2_addr][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2362   DFF  /u_core/ex1a_ex1b_reg_q_reg[rs2_addr][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2363   DFF  /u_core/ex1a_ex1b_reg_q_reg[trap_type][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2364   DFF  /u_core/ex1a_ex1b_reg_q_reg[trap_type][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2365   DFF  /u_core/ex1a_ex1b_reg_q_reg[trap_type][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2366   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2367   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2368   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2369   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2370   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2371   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2372   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2373   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2374   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2375   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2376   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2377   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2378   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2379   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2380   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2381   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2382   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2383   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2384   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2385   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2386   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2387   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2388   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2389   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2390   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2391   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2392   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2393   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2394   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2395   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2396   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2397   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wdata_aligned][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2398   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wstrb][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2399   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wstrb][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2400   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wstrb][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2401   DFF  /u_core/ex1a_ex1b_reg_q_reg[pre_wstrb][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2402   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_valid]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2403   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_do_redirect]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2404   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2405   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2406   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2407   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2408   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2409   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2410   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2411   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2412   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2413   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2414   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2415   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2416   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2417   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2418   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2419   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2420   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2421   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2422   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2423   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2424   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2425   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2426   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2427   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2428   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2429   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2430   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2431   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2432   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2433   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2434   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2435   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_redirect_target][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2436   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2437   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2438   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2439   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2440   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2441   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2442   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2443   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2444   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2445   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2446   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2447   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2448   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2449   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2450   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2451   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2452   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2453   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2454   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2455   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2456   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2457   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2458   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2459   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2460   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2461   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2462   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2463   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2464   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2465   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2466   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2467   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_trap_cause][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2468   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_is_irq]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2469   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_mret]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2470   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_dbg_halt]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2471   DFF  /u_core/ex1a_ex1b_reg_q_reg[dec_fence_i]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2505   DFF  /u_core/mem_trap_cause_val_r_reg[31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2506   DFF  /u_core/mem_trap_cause_val_r_reg[30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2507   DFF  /u_core/mem_trap_cause_val_r_reg[29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2508   DFF  /u_core/mem_trap_cause_val_r_reg[28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2509   DFF  /u_core/mem_trap_cause_val_r_reg[27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2510   DFF  /u_core/mem_trap_cause_val_r_reg[26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2511   DFF  /u_core/mem_trap_cause_val_r_reg[25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2512   DFF  /u_core/mem_trap_cause_val_r_reg[24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2513   DFF  /u_core/mem_trap_cause_val_r_reg[23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2514   DFF  /u_core/mem_trap_cause_val_r_reg[22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2515   DFF  /u_core/mem_trap_cause_val_r_reg[21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2516   DFF  /u_core/mem_trap_cause_val_r_reg[20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2517   DFF  /u_core/mem_trap_cause_val_r_reg[19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2518   DFF  /u_core/mem_trap_cause_val_r_reg[18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2519   DFF  /u_core/mem_trap_cause_val_r_reg[17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2520   DFF  /u_core/mem_trap_cause_val_r_reg[16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2521   DFF  /u_core/mem_trap_cause_val_r_reg[15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2522   DFF  /u_core/mem_trap_cause_val_r_reg[14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2523   DFF  /u_core/mem_trap_cause_val_r_reg[13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2524   DFF  /u_core/mem_trap_cause_val_r_reg[12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2525   DFF  /u_core/mem_trap_cause_val_r_reg[11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2526   DFF  /u_core/mem_trap_cause_val_r_reg[10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2527   DFF  /u_core/mem_trap_cause_val_r_reg[9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2528   DFF  /u_core/mem_trap_cause_val_r_reg[8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2529   DFF  /u_core/mem_trap_cause_val_r_reg[7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2530   DFF  /u_core/mem_trap_cause_val_r_reg[6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2531   DFF  /u_core/mem_trap_cause_val_r_reg[5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2532   DFF  /u_core/mem_trap_cause_val_r_reg[4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2533   DFF  /u_core/mem_trap_cause_val_r_reg[3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2536   DFF  /u_core/mem_trap_cause_val_r_reg[0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2600   DFF  /u_core/mem_trap_target_r_reg[1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2601   DFF  /u_core/mem_trap_target_r_reg[0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2853   DFF  /u_core/u_csr/mcountinhibit_q_reg[31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2854   DFF  /u_core/u_csr/mcountinhibit_q_reg[30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2855   DFF  /u_core/u_csr/mcountinhibit_q_reg[29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2856   DFF  /u_core/u_csr/mcountinhibit_q_reg[28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2857   DFF  /u_core/u_csr/mcountinhibit_q_reg[27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2858   DFF  /u_core/u_csr/mcountinhibit_q_reg[26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2859   DFF  /u_core/u_csr/mcountinhibit_q_reg[25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2860   DFF  /u_core/u_csr/mcountinhibit_q_reg[24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2861   DFF  /u_core/u_csr/mcountinhibit_q_reg[23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2862   DFF  /u_core/u_csr/mcountinhibit_q_reg[22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2863   DFF  /u_core/u_csr/mcountinhibit_q_reg[21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2864   DFF  /u_core/u_csr/mcountinhibit_q_reg[20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2865   DFF  /u_core/u_csr/mcountinhibit_q_reg[19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2866   DFF  /u_core/u_csr/mcountinhibit_q_reg[18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2867   DFF  /u_core/u_csr/mcountinhibit_q_reg[17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2868   DFF  /u_core/u_csr/mcountinhibit_q_reg[16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2869   DFF  /u_core/u_csr/mcountinhibit_q_reg[15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2870   DFF  /u_core/u_csr/mcountinhibit_q_reg[14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2871   DFF  /u_core/u_csr/mcountinhibit_q_reg[13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2872   DFF  /u_core/u_csr/mcountinhibit_q_reg[12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2873   DFF  /u_core/u_csr/mcountinhibit_q_reg[11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2874   DFF  /u_core/u_csr/mcountinhibit_q_reg[10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2875   DFF  /u_core/u_csr/mcountinhibit_q_reg[9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2876   DFF  /u_core/u_csr/mcountinhibit_q_reg[8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2877   DFF  /u_core/u_csr/mcountinhibit_q_reg[7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2878   DFF  /u_core/u_csr/mcountinhibit_q_reg[6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   2883   DFF  /u_core/u_csr/mcountinhibit_q_reg[1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4238   DFF  /u_core/u_id/id_ex_reg_o_reg[rs2_addr][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4239   DFF  /u_core/u_id/id_ex_reg_o_reg[rs2_addr][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4240   DFF  /u_core/u_id/id_ex_reg_o_reg[rs2_addr][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4241   DFF  /u_core/u_id/id_ex_reg_o_reg[rs2_addr][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4242   DFF  /u_core/u_id/id_ex_reg_o_reg[rs2_addr][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4258   DFF  /u_core/u_id/id_ex_reg_o_reg[mem_size][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4463   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[mem_size][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4468   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_addr][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4469   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_addr][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4470   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_addr][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4471   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_addr][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4472   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_addr][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4473   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_addr][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4474   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_addr][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4475   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_addr][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4476   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_addr][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4477   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_addr][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4478   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_addr][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4479   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_addr][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4480   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4481   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4482   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4483   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4484   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4485   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4486   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4487   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4488   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4489   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4490   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4491   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4492   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4493   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4494   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4495   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4496   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4497   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4498   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4499   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4500   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4501   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4502   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4503   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4504   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4505   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4506   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4507   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4508   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4509   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4510   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4511   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[csr_wdata][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4513   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[jalr]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4514   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_redirect]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4515   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4516   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4517   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4518   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4519   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4520   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4521   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4522   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4523   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4524   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4525   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4526   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4527   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4528   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4529   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4530   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4531   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4532   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4533   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4534   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4535   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4536   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4537   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4538   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4539   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4540   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4541   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4542   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4543   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4544   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4545   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4546   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[pc_target][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4548   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4549   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4550   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4551   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4552   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4553   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4554   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4555   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4556   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4557   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4558   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4559   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4560   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4561   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4562   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4563   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4564   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4565   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4566   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4567   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4568   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4569   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4570   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4571   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4572   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4573   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4574   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4575   DFF  /u_core/u_ex2/ex_mem_reg_o_reg[trap_cause][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4751   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4752   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4753   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4754   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4755   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4756   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4757   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4758   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4759   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4760   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4761   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4762   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4763   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4764   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4765   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4766   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4767   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4768   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4769   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4770   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4771   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][11]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4772   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][10]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4773   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][9]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4774   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][8]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4775   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][7]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4776   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][6]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4777   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][5]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4778   DFF  /u_core/u_mem/mem_wb_reg_o_reg[trap_cause][4]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4835   DFF  /u_core/u_icache/tag_din_q_reg[31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4836   DFF  /u_core/u_icache/tag_din_q_reg[30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4837   DFF  /u_core/u_icache/tag_din_q_reg[29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4838   DFF  /u_core/u_icache/tag_din_q_reg[28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4839   DFF  /u_core/u_icache/tag_din_q_reg[27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4840   DFF  /u_core/u_icache/tag_din_q_reg[26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4841   DFF  /u_core/u_icache/tag_din_q_reg[25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4842   DFF  /u_core/u_icache/tag_din_q_reg[24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4843   DFF  /u_core/u_icache/tag_din_q_reg[23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4844   DFF  /u_core/u_icache/tag_din_q_reg[22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4845   DFF  /u_core/u_icache/tag_din_q_reg[21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4846   DFF  /u_core/u_icache/tag_din_q_reg[20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4996   DFF  /u_core/u_icache/tag_dout_r_reg[31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4997   DFF  /u_core/u_icache/tag_dout_r_reg[30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4998   DFF  /u_core/u_icache/tag_dout_r_reg[29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   4999   DFF  /u_core/u_icache/tag_dout_r_reg[28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5000   DFF  /u_core/u_icache/tag_dout_r_reg[27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5001   DFF  /u_core/u_icache/tag_dout_r_reg[26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5002   DFF  /u_core/u_icache/tag_dout_r_reg[25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5003   DFF  /u_core/u_icache/tag_dout_r_reg[24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5004   DFF  /u_core/u_icache/tag_dout_r_reg[23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5005   DFF  /u_core/u_icache/tag_dout_r_reg[22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5006   DFF  /u_core/u_icache/tag_dout_r_reg[21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5007   DFF  /u_core/u_icache/tag_dout_r_reg[20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5028   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5029   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5030   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5031   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5032   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5033   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5034   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5035   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5036   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5037   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5038   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5039   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5040   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5041   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5042   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5043   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5044   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5045   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5046   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5047   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5056   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5057   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5058   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5059   DFF  /u_core/u_icache/refill_addr_bank_q_reg[0][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5060   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5061   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5062   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5063   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5064   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5065   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5066   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5067   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5068   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5069   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5070   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5071   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5072   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5073   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5074   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5075   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5076   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5077   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5078   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5079   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5088   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5089   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5090   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5091   DFF  /u_core/u_icache/refill_addr_bank_q_reg[1][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5092   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5093   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5094   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5095   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5096   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5097   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5098   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5099   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5100   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5101   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5102   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5103   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5104   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5105   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5106   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5107   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5108   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5109   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5110   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5111   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5120   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5121   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5122   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5123   DFF  /u_core/u_icache/refill_addr_bank_q_reg[2][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5124   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5125   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5126   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5127   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5128   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5129   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5130   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5131   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5132   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5133   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5134   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5135   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5136   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][19]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5137   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][18]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5138   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][17]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5139   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][16]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5140   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][15]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5141   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][14]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5142   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][13]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5143   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][12]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5152   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5153   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5154   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5155   DFF  /u_core/u_icache/refill_addr_bank_q_reg[3][0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5285   DFF  /u_core/u_icache/cancel_wait_r_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5318   DFF  /u_core/u_icache/refill_line_addr_q_reg[3]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5319   DFF  /u_core/u_icache/refill_line_addr_q_reg[2]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5320   DFF  /u_core/u_icache/refill_line_addr_q_reg[1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5321   DFF  /u_core/u_icache/refill_line_addr_q_reg[0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5614   DFF  /u_core/u_icache/u_tag_collar/g_cmp.fail1_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5616   DFF  /u_core/u_icache/u_tag_collar/g_cmp.fail1_n_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5618   DFF  /u_core/u_icache/gen_data_sram[0].u_data_collar/g_cmp.fail1_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5620   DFF  /u_core/u_icache/gen_data_sram[0].u_data_collar/g_cmp.fail1_n_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5622   DFF  /u_core/u_icache/gen_data_sram[1].u_data_collar/g_cmp.fail1_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5624   DFF  /u_core/u_icache/gen_data_sram[1].u_data_collar/g_cmp.fail1_n_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5626   DFF  /u_core/u_icache/gen_data_sram[2].u_data_collar/g_cmp.fail1_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5628   DFF  /u_core/u_icache/gen_data_sram[2].u_data_collar/g_cmp.fail1_n_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5630   DFF  /u_core/u_icache/gen_data_sram[3].u_data_collar/g_cmp.fail1_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5632   DFF  /u_core/u_icache/gen_data_sram[3].u_data_collar/g_cmp.fail1_n_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5712   BBOX /DIODE_141
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5713   BBOX /DIODE_140
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5714   BBOX /DIODE_139
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5715   BBOX /DIODE_138
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5716   BBOX /DIODE_137
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5717   BBOX /DIODE_136
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5718   BBOX /DIODE_135
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5719   BBOX /DIODE_134
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5720   BBOX /DIODE_133
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5721   BBOX /DIODE_132
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5722   BBOX /DIODE_131
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5723   BBOX /DIODE_130
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5724   BBOX /DIODE_129
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5725   BBOX /DIODE_128
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5726   BBOX /DIODE_127
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5727   BBOX /DIODE_126
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5728   BBOX /DIODE_125
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5729   BBOX /DIODE_124
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5730   BBOX /DIODE_123
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5731   BBOX /DIODE_122
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5732   BBOX /DIODE_121
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5733   BBOX /DIODE_120
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5734   BBOX /DIODE_119
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5735   BBOX /DIODE_118
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5736   BBOX /DIODE_117
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5737   BBOX /DIODE_116
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5738   BBOX /DIODE_115
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5739   BBOX /DIODE_114
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5740   BBOX /DIODE_113
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5741   BBOX /DIODE_112
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5742   BBOX /DIODE_111
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5743   BBOX /DIODE_110
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5744   BBOX /DIODE_109
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5745   BBOX /DIODE_108
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5746   BBOX /DIODE_107
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5747   BBOX /DIODE_106
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5748   BBOX /DIODE_105
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5749   BBOX /DIODE_104
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5750   BBOX /DIODE_102
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5751   BBOX /DIODE_101
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5752   BBOX /DIODE_99
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5753   BBOX /DIODE_98
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5754   BBOX /DIODE_96
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5755   BBOX /DIODE_94
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5756   BBOX /DIODE_90
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5757   BBOX /DIODE_89
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5758   BBOX /DIODE_88
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5759   BBOX /DIODE_87
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5760   BBOX /DIODE_80
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5761   BBOX /DIODE_69
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5762   BBOX /DIODE_68
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5763   BBOX /DIODE_60
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5764   BBOX /DIODE_59
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5765   BBOX /DIODE_58
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5766   BBOX /DIODE_56
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5767   DFF  /u_core/u_dcache/tag_dout_r_reg[31]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5767   BBOX /DIODE_55
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5768   DFF  /u_core/u_dcache/tag_dout_r_reg[30]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5768   BBOX /DIODE_54
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5769   DFF  /u_core/u_dcache/tag_dout_r_reg[29]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5769   BBOX /DIODE_51
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5770   DFF  /u_core/u_dcache/tag_dout_r_reg[28]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5770   BBOX /DIODE_50
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5771   DFF  /u_core/u_dcache/tag_dout_r_reg[27]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5771   BBOX /DIODE_49
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5772   DFF  /u_core/u_dcache/tag_dout_r_reg[26]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5772   BBOX /DIODE_48
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5773   DFF  /u_core/u_dcache/tag_dout_r_reg[25]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5773   BBOX /DIODE_46
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5774   DFF  /u_core/u_dcache/tag_dout_r_reg[24]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5774   BBOX /DIODE_45
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5775   DFF  /u_core/u_dcache/tag_dout_r_reg[23]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5775   BBOX /DIODE_44
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5776   DFF  /u_core/u_dcache/tag_dout_r_reg[22]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5776   BBOX /DIODE_43
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5777   DFF  /u_core/u_dcache/tag_dout_r_reg[21]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5777   BBOX /DIODE_42
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5778   DFF  /u_core/u_dcache/tag_dout_r_reg[20]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5778   BBOX /DIODE_40
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5779   BBOX /DIODE_36
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5780   BBOX /DIODE_34
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5781   BBOX /DIODE_32
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5782   BBOX /DIODE_31
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5783   BBOX /DIODE_28
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5784   BBOX /DIODE_22
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5785   BBOX /DIODE_14
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5786   BBOX /DIODE_12
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5787   BBOX /PORTDIODE_FE_OFC787_mbist_cfg_i_0_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5788   BBOX /PORTDIODE_FE_OFC6113_mbist_cfg_i_1_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5789   BBOX /PORTDIODE_FE_OFC785_mbist_cfg_i_2_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5790   BBOX /PORTDIODE_FE_OFC10832_mbist_cfg_i_3_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5791   BBOX /PORTDIODE_FE_OFC5527_mbist_cfg_i_4_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5792   BBOX /PORTDIODE_FE_OFC10831_mbist_cfg_i_5_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5793   BBOX /PORTDIODE_FE_OFC779_mbist_cfg_i_6_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5794   BBOX /PORTDIODE_FE_OFC5525_mbist_cfg_i_7_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5795   BBOX /PORTDIODE_FE_OFC5523_mbist_cfg_i_8_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5796   BBOX /PORTDIODE_FE_OFC775_mbist_cfg_i_9_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5797   BBOX /PORTDIODE_FE_OFC5520_mbist_cfg_i_10_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5798   BBOX /PORTDIODE_FE_OFC5517_mbist_cfg_i_11_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5799   BBOX /PORTDIODE_FE_OFC6528_mbist_cfg_i_12_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5800   BBOX /PORTDIODE_FE_OFC770_mbist_cfg_i_13_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   5801   DFF  /u_core/u_dcache/maint_done_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5801   BBOX /PORTDIODE_FE_OFC7507_mbist_cfg_i_14_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5802   BBOX /PORTDIODE_FE_OFC5508_mbist_cfg_i_15_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5803   BBOX /PORTDIODE_FE_OFC5500_mbist_cfg_i_17_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5804   BBOX /PORTDIODE_FE_OFC6625_mbist_cfg_i_22_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5805   BBOX /PORTDIODE_FE_OFC5493_mbist_cfg_i_23_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5806   BBOX /PORTDIODE_FE_OFC761_mbist_cfg_i_24_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5807   BBOX /PORTDIODE_FE_OFC7607_mbist_cfg_i_25_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5808   BBOX /PORTDIODE_FE_OFC6281_mbist_run_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5809   BBOX /PORTDIODE_FE_OFC6370_timer_irq_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5810   BBOX /PORTDIODE_FE_OFC5479_ext_irq_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5811   BBOX /PORTDIODE_FE_OFC5746_apb_pwdata_i_0_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5812   BBOX /PORTDIODE_FE_OFC6587_apb_pwdata_i_1_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5813   BBOX /PORTDIODE_FE_OFC6509_apb_pwdata_i_2_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5814   BBOX /PORTDIODE_FE_OFC6212_apb_pwdata_i_3_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5815   BBOX /PORTDIODE_FE_OFC6154_apb_pwdata_i_4_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5816   BBOX /PORTDIODE_FE_OFC514_apb_pwdata_i_5_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5817   BBOX /PORTDIODE_FE_OFC6457_apb_pwdata_i_6_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5818   BBOX /PORTDIODE_FE_OFC6455_apb_pwdata_i_7_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5819   BBOX /PORTDIODE_FE_OFC6485_apb_pwdata_i_8_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5820   BBOX /PORTDIODE_FE_OFC5288_apb_pwdata_i_9_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5821   BBOX /PORTDIODE_FE_OFC6442_apb_pwdata_i_10_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5822   BBOX /PORTDIODE_FE_OFC6451_apb_pwdata_i_11_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5823   BBOX /PORTDIODE_FE_OFC5278_apb_pwdata_i_12_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5824   BBOX /PORTDIODE_FE_OFC5274_apb_pwdata_i_13_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5825   BBOX /PORTDIODE_FE_OFC495_apb_pwdata_i_14_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5826   BBOX /PORTDIODE_FE_OFC7608_apb_pwdata_i_15_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5827   BBOX /PORTDIODE_FE_OFC5271_apb_pwdata_i_16_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5828   BBOX /PORTDIODE_FE_OFC5268_apb_pwdata_i_17_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5829   BBOX /PORTDIODE_FE_OFC5265_apb_pwdata_i_18_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5830   BBOX /PORTDIODE_FE_OFC7586_apb_pwdata_i_19_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5831   BBOX /PORTDIODE_FE_OFC10830_apb_pwdata_i_20_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5832   BBOX /PORTDIODE_FE_OFC7366_apb_pwdata_i_21_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5833   BBOX /PORTDIODE_FE_OFC6242_apb_pwdata_i_22_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5834   BBOX /PORTDIODE_FE_OFC5250_apb_pwdata_i_23_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5835   BBOX /PORTDIODE_FE_OFC7606_apb_pwdata_i_24_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5836   BBOX /PORTDIODE_FE_OFC6342_apb_pwdata_i_25_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5837   BBOX /PORTDIODE_FE_OFC10835_apb_pwdata_i_26_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5838   BBOX /PORTDIODE_FE_OFC7364_apb_pwdata_i_27_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5839   BBOX /PORTDIODE_FE_OFC10834_apb_pwdata_i_28_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5840   BBOX /PORTDIODE_FE_OFC6741_apb_pwdata_i_29_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5841   BBOX /PORTDIODE_FE_OFC6233_apb_pwdata_i_30_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5842   BBOX /PORTDIODE_FE_OFC10833_apb_pwdata_i_31_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5843   BBOX /PORTDIODE_FE_OFC5222_apb_pwrite_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5844   BBOX /PORTDIODE_FE_OFC6486_apb_penable_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5845   BBOX /PORTDIODE_FE_OFC5215_apb_psel_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5846   BBOX /PORTDIODE_FE_OFC5211_apb_paddr_i_0_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5847   BBOX /PORTDIODE_FE_OFC6584_apb_paddr_i_1_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5848   BBOX /PORTDIODE_FE_OFC5204_apb_paddr_i_2_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5849   BBOX /PORTDIODE_FE_OFC6305_apb_paddr_i_3_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5850   BBOX /PORTDIODE_FE_OFC7529_apb_paddr_i_4_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5851   BBOX /PORTDIODE_FE_OFC5192_apb_paddr_i_5_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5852   BBOX /PORTDIODE_FE_OFC6482_apb_paddr_i_6_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5853   BBOX /PORTDIODE_FE_OFC10821_apb_paddr_i_7_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5854   BBOX /PORTDIODE_FE_OFC6566_apb_paddr_i_8_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5855   BBOX /PORTDIODE_FE_OFC5176_apb_paddr_i_9_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5856   BBOX /PORTDIODE_FE_OFC5172_apb_paddr_i_10_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5857   BBOX /PORTDIODE_g24102_B
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5858   BBOX /PORTDIODE_FE_OFC7502_axi_rdata_i_17_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5859   BBOX /PORTDIODE_FE_OFC313_rst_n_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5860   BBOX /u_core/DIODE_157
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5861   BBOX /u_core/DIODE_156
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5862   BBOX /u_core/DIODE_155
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5863   BBOX /u_core/DIODE_154
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5864   BBOX /u_core/DIODE_153
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5865   BBOX /u_core/DIODE_152
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5866   BBOX /u_core/DIODE_151
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5867   BBOX /u_core/DIODE_150
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5868   BBOX /u_core/DIODE_149
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5869   BBOX /u_core/DIODE_148
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5870   BBOX /u_core/DIODE_147
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5871   BBOX /u_core/DIODE_146
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5872   BBOX /u_core/DIODE_145
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5873   BBOX /u_core/DIODE_144
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5874   BBOX /u_core/DIODE_143
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5875   BBOX /u_core/DIODE_142
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5876   BBOX /u_core/DIODE_103
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5877   BBOX /u_core/DIODE_100
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5878   BBOX /u_core/DIODE_97
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5879   BBOX /u_core/DIODE_95
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5880   BBOX /u_core/DIODE_93
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5881   BBOX /u_core/DIODE_92
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5882   BBOX /u_core/DIODE_91
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5883   BBOX /u_core/DIODE_86
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5884   BBOX /u_core/DIODE_85
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5885   BBOX /u_core/DIODE_84
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5886   BBOX /u_core/DIODE_83
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5887   BBOX /u_core/DIODE_82
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5888   BBOX /u_core/DIODE_81
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5889   BBOX /u_core/DIODE_79
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5890   BBOX /u_core/DIODE_78
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5891   BBOX /u_core/DIODE_77
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5892   BBOX /u_core/DIODE_76
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5893   BBOX /u_core/DIODE_75
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5894   BBOX /u_core/DIODE_74
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5895   BBOX /u_core/DIODE_73
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5896   BBOX /u_core/DIODE_72
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5897   BBOX /u_core/DIODE_71
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5898   BBOX /u_core/DIODE_70
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5899   BBOX /u_core/DIODE_67
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5900   BBOX /u_core/DIODE_66
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5901   BBOX /u_core/DIODE_65
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5902   BBOX /u_core/DIODE_64
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5903   BBOX /u_core/DIODE_63
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5904   BBOX /u_core/DIODE_62
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5905   BBOX /u_core/DIODE_61
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5906   BBOX /u_core/DIODE_57
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5907   BBOX /u_core/DIODE_53
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5908   BBOX /u_core/DIODE_52
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5909   BBOX /u_core/DIODE_47
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5910   BBOX /u_core/DIODE_41
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5911   BBOX /u_core/DIODE_39
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5912   BBOX /u_core/DIODE_38
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5913   BBOX /u_core/DIODE_37
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5914   BBOX /u_core/DIODE_35
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5915   BBOX /u_core/DIODE_33
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5916   BBOX /u_core/DIODE_30
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5917   BBOX /u_core/DIODE_29
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5918   BBOX /u_core/DIODE_27
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5919   BBOX /u_core/DIODE_26
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5920   BBOX /u_core/DIODE_25
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5921   BBOX /u_core/DIODE_24
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5922   BBOX /u_core/DIODE_23
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5923   BBOX /u_core/DIODE_21
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5924   BBOX /u_core/DIODE_20
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5925   BBOX /u_core/DIODE_19
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5926   BBOX /u_core/DIODE_18
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5927   BBOX /u_core/DIODE_17
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5928   BBOX /u_core/DIODE_16
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5929   BBOX /u_core/DIODE_15
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5930   BBOX /u_core/DIODE_13
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5931   BBOX /u_core/DIODE_11
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5932   BBOX /u_core/DIODE_10
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5933   BBOX /u_core/DIODE_9
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5934   BBOX /u_core/DIODE_8
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5935   BBOX /u_core/DIODE_7
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5936   BBOX /u_core/DIODE_6
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5937   BBOX /u_core/DIODE_5
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5938   BBOX /u_core/DIODE_4
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5939   BBOX /u_core/DIODE_3
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5940   BBOX /u_core/DIODE_2
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5941   BBOX /u_core/DIODE_1
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5942   BBOX /u_core/PORTDIODE_FE_OFC7603_axi_rlast_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5943   BBOX /u_core/PORTDIODE_FE_OFC10828_axi_rvalid_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5944   BBOX /u_core/PORTDIODE_FE_OFC7400_axi_rresp_i_0_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5945   BBOX /u_core/PORTDIODE_FE_OFC10823_axi_rresp_i_1_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5946   BBOX /u_core/PORTDIODE_FE_OFC6555_axi_rdata_i_0_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5947   BBOX /u_core/PORTDIODE_FE_OFC9989_axi_rdata_i_1_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5948   BBOX /u_core/PORTDIODE_FE_OFC7488_axi_rdata_i_2_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5949   BBOX /u_core/PORTDIODE_FE_OFC5149_axi_rdata_i_4_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5950   BBOX /u_core/PORTDIODE_FE_OFC7595_axi_rdata_i_5_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5951   BBOX /u_core/PORTDIODE_FE_OFC6023_axi_rdata_i_6_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5952   BBOX /u_core/PORTDIODE_FE_OFC5143_axi_rdata_i_7_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5953   BBOX /u_core/PORTDIODE_FE_OFC6593_axi_rdata_i_8_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5954   BBOX /u_core/PORTDIODE_FE_OFC6547_axi_rdata_i_9_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5955   BBOX /u_core/PORTDIODE_FE_OFC405_axi_rdata_i_10_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5956   BBOX /u_core/PORTDIODE_FE_OFC7596_axi_rdata_i_12_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5957   BBOX /u_core/PORTDIODE_FE_OFC5139_axi_rdata_i_13_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5958   BBOX /u_core/PORTDIODE_FE_OFC387_axi_rdata_i_16_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5959   BBOX /u_core/PORTDIODE_FE_OFC5839_axi_rdata_i_20_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5960   BBOX /u_core/PORTDIODE_FE_OFC6001_axi_rdata_i_21_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5961   BBOX /u_core/PORTDIODE_FE_OFC6559_axi_rdata_i_23_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5962   BBOX /u_core/PORTDIODE_FE_OFC5858_axi_rdata_i_25_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5963   BBOX /u_core/PORTDIODE_FE_OFC5741_axi_rdata_i_26_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5964   BBOX /u_core/PORTDIODE_FE_OFC7601_axi_rdata_i_27_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5965   BBOX /u_core/PORTDIODE_FE_OFC5101_axi_rdata_i_28_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5966   BBOX /u_core/PORTDIODE_FE_OFC10867_axi_rdata_i_29_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5967   BBOX /u_core/PORTDIODE_FE_OFC10825_axi_rdata_i_30_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5968   BBOX /u_core/PORTDIODE_FE_OFC5959_axi_arready_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5969   BBOX /u_core/PORTDIODE_FE_OFC5787_axi_bvalid_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5970   BBOX /u_core/PORTDIODE_FE_OFC5817_axi_bresp_i_0_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5971   BBOX /u_core/PORTDIODE_FE_OFC335_axi_bresp_i_1_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5972   BBOX /u_core/PORTDIODE_FE_OFC7373_axi_wready_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (R)   5973   BBOX /u_core/PORTDIODE_FE_OFC7371_axi_awready_i_A
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   6200   DFF  /u_core/u_dcache/dc_addr_q_reg[1]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   6201   DFF  /u_core/u_dcache/dc_addr_q_reg[0]
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   6718   DFF  /u_core/u_dcache/u_tag_collar/g_cmp.fail1_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   6720   DFF  /u_core/u_dcache/u_tag_collar/g_cmp.fail1_n_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   6722   DFF  /u_core/u_dcache/gen_data_sram[0].u_data_collar/g_cmp.fail1_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   6724   DFF  /u_core/u_dcache/gen_data_sram[0].u_data_collar/g_cmp.fail1_n_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   6726   DFF  /u_core/u_dcache/gen_data_sram[1].u_data_collar/g_cmp.fail1_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   6728   DFF  /u_core/u_dcache/gen_data_sram[1].u_data_collar/g_cmp.fail1_n_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   6730   DFF  /u_core/u_dcache/gen_data_sram[2].u_data_collar/g_cmp.fail1_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   6732   DFF  /u_core/u_dcache/gen_data_sram[2].u_data_collar/g_cmp.fail1_n_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   6734   DFF  /u_core/u_dcache/gen_data_sram[3].u_data_collar/g_cmp.fail1_q_reg
+Unmapped point (unreachable: all paths to outputs are blocked):
+  (G)   6736   DFF  /u_core/u_dcache/gen_data_sram[3].u_data_collar/g_cmp.fail1_n_q_reg
+
+1209 unmapped points reported
+================================================================================
+Golden:
+--------------------------------------------------------------------------------
+Unmapped points   DFF       Total   
+--------------------------------------------------------------------------------
+Unreachable       947       947     
+================================================================================
+Revised:
+--------------------------------------------------------------------------------
+Unmapped points   BBOX      Total   
+--------------------------------------------------------------------------------
+Unreachable       262       262     
+================================================================================
+0
+// Command: echo "B4D_RTL_UNMAPPED_END"
+B4D_RTL_UNMAPPED_END
+// Command: add_compared_points -all
+// 5597 compared points added to compare list
+0
+// Command: compare
+================================================================================
+Compared points      PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Equivalent           379    5207   10        5596    
+--------------------------------------------------------------------------------
+Non-equivalent       0      1      0         1       
+================================================================================
+Compare results of merged compare points                            
+================================================================================
+Compared points      DFF       Total   
+--------------------------------------------------------------------------------
+Equivalent           58        58      
+================================================================================
+Compare results of instance/output/pin equivalences and/or sequential merge      
+================================================================================
+Compared points      DFF       Total   
+--------------------------------------------------------------------------------
+Equivalent           136       136     
+================================================================================
+0
+CPU time     : 46.75   seconds
+Elapse time  : 40      seconds
+Memory usage : 358.11  M bytes
+// Command: report_compare_data -class nonequivalent -class abort -class notcompared
+Compared points are: Non-equivalent (reachable)
+  (G) + 2022   DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][5]
+  (R) + 682    DFF  /u_core/ex1a_ex1b_reg_q_reg[alu_result][5]/U$1
+Due to these Non-equivalent points:
+[DATA]
+  (G) + 71899  DC   /u_mbist_ctrl/U$597
+  (R) + 81299  OR   /u_core/g419910/U$1
+
+1 Non-equivalent point(s) reported
+0 Abort point(s) reported
+0 Not-compared point(s) reported
+1 compared point(s) reported
+================================================================================
+Compared points      PO     DFF    BBOX      Total   
+--------------------------------------------------------------------------------
+Equivalent           379    5207   10        5596    
+--------------------------------------------------------------------------------
+Non-equivalent       0      1      0         1       
+================================================================================
+0 Non-equivalent point(s) reported
+0 Abort point(s) reported
+0 Not-compared point(s) reported
+0 compared point(s) reported
+Compare results of merged compare points                            
+================================================================================
+Compared points      DFF       Total   
+--------------------------------------------------------------------------------
+Equivalent           58        58      
+================================================================================
+0 Non-equivalent point(s) reported
+0 Abort point(s) reported
+0 Not-compared point(s) reported
+0 compared point(s) reported
+Compare results of instance/output/pin equivalences and/or sequential merge      
+================================================================================
+Compared points      DFF       Total   
+--------------------------------------------------------------------------------
+Equivalent           136       136     
+================================================================================
+0
+// Command: report_verification -verbose
+================================================================================
+                            Verification Report
+--------------------------------------------------------------------------------
+Category                                                                  Count
+--------------------------------------------------------------------------------
+1. Non-standard modeling options used:                                      1
+     Tri-stated output:                                        checked
+     Revised X signals set to E:                               yes
+     Floating signals tied to Z:                               no *
+     Command "add clock" for clock-gating:                     not used
+--------------------------------------------------------------------------------
+2. Incomplete verification:                                                 0
+     All primary outputs are mapped:                           yes
+     Not-mapped DFF/DLAT is detected:                          no
+     All mapped points are added as compare points:            yes
+     All compared points are compared:                         yes
+     User added black box:                                     no
+     Black box mapped with different module name:              no
+     Empty module is not black boxed:                          no
+     Command "add ignore outputs" used:                        no
+     Always false constraints detected:                        no
+--------------------------------------------------------------------------------
+3. User modification to design:                                             0
+     Change gate type:                                         no
+     Change wire:                                              no
+     Primary input added by user:                              no
+--------------------------------------------------------------------------------
+4. Conformal Constraint Designer clock domain crossing checks recommended:  0
+     Multiple clocks in the design:                            no
+--------------------------------------------------------------------------------
+5. Design ambiguity:                                                        0
+     Duplicate module definition:                              no
+     Black box due to undefined cells:                         no
+     Golden design has abnormal ratio of unreachable gates:    no
+     Ratio of golden unreachable gates:                        5%
+     Revised design has abnormal ratio of unreachable gates:   no
+     Ratio of revised unreachable gates:                       0%
+     All primary input bus ordering is consistent:             yes
+     All primary output bus ordering is consistent:            yes
+     DFF/DLAT not compared due to disabled clock port(s):        0
+     Always X compared point is detected:                      not checked
+--------------------------------------------------------------------------------
+6. Compare Results:                                                  FAIL:NONEQ
+     Number of EQ compare points:                              5790
+     Number of NON-EQ compare points:                          1
+     Number of Aborted compare points:                         0
+     Number of Uncompared compare points :                     0
+================================================================================
+non-equivalence
+// Command: report_statistics
+Mapping and compare statistics
+================================================================================
+                     Compare Result       Golden            Revised
+--------------------------------------------------------------------------------
+Root module name                          rv32i_cpu_top     rv32i_cpu_top     
+
+Primary inputs                               124                124
+   Mapped                                    124                124
+
+Primary outputs                              379                379
+   Mapped                                    379                379
+      Equivalent                379
+
+Black-box key points                          10                272
+   Mapped                                     10                 10
+      Equivalent                 10
+   Unmapped                                    0                262
+      Unreachable                              0                262
+
+State key points                            6236               5208
+   Mapped                                   5208               5208
+      Equivalent               5207
+      Non-equivalent              1
+   Unmapped                                  947                  0
+      Unreachable                            947                  0
+   Merged                                     81                  0
+================================================================================
+Compare results of merged compare points                            
+================================================================================
+Compared points      DFF       Total   
+--------------------------------------------------------------------------------
+Equivalent           58        58      
+================================================================================
+Compare results of instance/output/pin equivalences and/or sequential merge      
+================================================================================
+Compared points      DFF       Total   
+--------------------------------------------------------------------------------
+Equivalent           136       136     
+================================================================================
+0
+// Command: if {[get_compare_points -NONequivalent -count] > 0 || [get_compare_points -abort -count] > 0 || [get_compare_points -unknown -count] > 0} {
+//              puts "B4D_RTL_VERDICT: NOT_EQUIVALENT"
+//              write_compared_points noneq.flat.tcl -class noneq -tclmode -replace
+//              analyze_nonequivalent -source_diagnosis
+//              report_nonequivalent_analysis > noneq.flat.source_diag.rpt
+//              report_test_vector -noneq > noneq.flat.test_vector.rpt
+//          } else { puts "B4D_RTL_VERDICT: EQUIVALENT" }
+// Command: get_compare_points -NONequivalent -count
+B4D_RTL_VERDICT: NOT_EQUIVALENT
+// Command: write_compared_points noneq.flat.tcl -class noneq -tclmode -replace
+// Command: analyze_nonequivalent -source_diagnosis
+Analyzed 1 out of 1 non-equivalent compared point(s)
+No root cause.
+// Command: report_nonequivalent_analysis > noneq.flat.source_diag.rpt
+// Command: report_test_vector -noneq > noneq.flat.test_vector.rpt
+0
+CPU time     : 47.46   seconds
+Elapse time  : 41      seconds
+Memory usage : 358.11  M bytes
+// Command: puts "No of compare points = [get_compare_points -count]"
+// Command: get_compare_points -count
+No of compare points = 5791
+// Command: puts "No of diff points    = [get_compare_points -NONequivalent -count]"
+// Command: get_compare_points -NONequivalent -count
+No of diff points    = 1
+// Command: puts "No of abort points   = [get_compare_points -abort -count]"
+// Command: get_compare_points -abort -count
+No of abort points   = 0
+// Command: puts "No of unknown points = [get_compare_points -unknown -count]"
+// Command: get_compare_points -unknown -count
+No of unknown points = 0
+// Command: vpxmode   ;# [B4b-flat] leave tclmode: `exit -f` is only valid in the native mode (the Genus do-file does the same)
+// Command: exit -f
