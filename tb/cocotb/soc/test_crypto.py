@@ -1947,12 +1947,13 @@ module tb_crypto_single #(
     output logic [31:0]       prdata,
     output logic              pready,
     output logic              pslverr,
-    output logic              irq_o
+    output logic              irq_o,
+    output logic              scan_wipe_done_o
 );
     crypto_accel #(
         .ADDR_W(ADDR_W), .EN_AES(EN_AES), .EN_SHA(EN_SHA), .SBOX_PARALLEL(SBOX_PARALLEL)
     ) u_dut (
-        .clk(clk), .rst_n(rst_n), .scan_mode_i(1'b0), .psel(psel), .penable(penable), .pwrite(pwrite),
+        .clk(clk), .rst_n(rst_n), .scan_mode_i(1'b0), .scan_wipe_done_o(scan_wipe_done_o), .psel(psel), .penable(penable), .pwrite(pwrite),
         .paddr(paddr), .pwdata(pwdata), .pstrb(pstrb), .prdata(prdata), .pready(pready),
         .pslverr(pslverr), .irq_o(irq_o)
     );

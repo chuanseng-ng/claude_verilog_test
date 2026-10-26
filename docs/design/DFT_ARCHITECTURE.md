@@ -592,7 +592,7 @@ TAP-driven `dft_ctrl` of identical port list, so nothing in `soc_top` is re-plum
    them. The original answer was a protocol requirement on the TAP/ATE (reset the block first). The user decision of 2026-10-15/17 replaced
    it with a **hardware zeroize on every `scan_mode` edge**: `crypto_accel` clears its key, round-key, AES state, SHA state, message shadow
    and result/IV words in one cycle, on entry and on exit. Limit: the clear is functional D logic that a shift edge overrides, so it protects
-   against software and a cooperating tester, not an adversarial one (14.10 item 5).
+   against software and a cooperating tester, not an adversarial one (14.10 item 5). **Closed for scan_en by `j41m.17` (14.14): the shift enable is now withheld in hardware until the wipe is applied.**
 2. The unmasked `msg_q`/IV/`DOUT` are scanned and are not secret by themselves.
 3. A reset is not enough for *DOUT* if a prior ciphertext is sensitive; it is ciphertext, which is already an output.
 
@@ -638,7 +638,7 @@ already tied 0), the Sky130 macro is bit-for-bit unaffected by this change, and 
 | `soc_top` test ports + `dft_ctrl_ports` seam (TAP-ready); `scan_clk_i` shared test clock | CPU macro scan ports, its internal clock gates/resets, `pin_order.cfg`, re-harden (CPU-boundary bead) |
 | `rv32i_clock_gate.test_en`, live on `u_cpu_cg`/`u_gpu_cg`; SRAM-only gates tied 0 | `create_clock cpu_clk_i` in `sky130_soc.sdc` (SDC bead) |
 | `cdc_reset_sync` output-side scan select; PLL/GPU-domain reset overrides; PLL test-clock bypass | Scan-mode SDC, scan insertion, lock-up latches (Stage 2) |
-| Crypto `key_q`/`rk_q` read masks, tested | ~~Scan-entry scrub protocol for crypto residue~~ done in hardware by `j41m.6` (14.10); open: scan_en withholding (14.10 item 5) |
+| Crypto `key_q`/`rk_q` read masks, tested | ~~Scan-entry scrub protocol for crypto residue~~ done in hardware by `j41m.6` (14.10); scan_en withholding done by `j41m.17` (14.14) |
 | `check_scan_clk_rst.py` netlist proof + negative controls; both sv2v netlists regenerate | Re-run `make soc_coverage` and prune waivers that the new suite makes stale (coverage bead) |
 
 ### 14.9 Gap-closure results (2026-10-10, after the implementing agent ran out of turns)
@@ -806,6 +806,34 @@ Flow setup slack is a literal 0.000 at every corner (the TAP latch time-borrow a
 
 **CDC budget check (j41m.5/y5mn) [M].** `check_cdc_timing_sky130.tcl` PASS at all 9 corners (22 groups, every exception bound). max_ss: `fifo_rd2wr` +9.891 and `fifo_wr2rd` +9.875 ns of 12.5, MBIST groups +10.8 to +20.4 ns. Negative control (every budget forced to 1 ps in a copy of the check SDC): FAIL at nom_tt and max_ss, 22 of 22 groups violated.
 
+### 14.14 `scan_en` is withheld until the crypto scan-entry wipe is applied (bead `j41m.17`, user decision 2026-10-26)
+Closes the limit stated in 14.10 item 5 (crypto wipe section): the wipe clear is functional D logic, the scan mux sits after it, so an edge with `scan_en = 1` loads `scan_in` instead of the cleared value. Labels: **[R]** read from source, **[M]** measured, **[A]** assumed.
+
+**Design [R].**
+* `crypto_accel` has a new output `scan_wipe_done_o` (`rtl/periph/crypto_accel.sv`): `~((scan_mode_i ^ scan_prev_q) | (scan_s1_q ^ scan_prev_q) | wipe_w)` with `wipe_w = scan_s2_q ^ scan_prev_q`. It is 0 from the moment `scan_mode_i` differs from the settled value (the raw level is in the term, so it falls before any clock edge), stays 0 while the change walks `s1 -> s2 -> prev`, and rises just after edge 3, the same edge at which the `wipe_w`-qualified clears take effect. In functional mode it is a constant 1. It also drops for 3 `core_clk` edges after scan **exit** (the exit wipe), when `scan_en` is 0 anyway.
+* `soc_top` (`rtl/soc/soc_top.sv`, next to the `dft_scan_en` declaration): `dft_scan_en = dft_scan_en_req & crypto_wipe_done`, where `dft_scan_en_req` is `dft_ctrl`'s `scan_en_o`. The **net named `dft_scan_en` is kept** for every consumer (the CPU macro's `scan_en_i`, the Stage 2 SE pins through `CVT_SCAN_EN_NET`, the STA queries, the existing tests); only its driver changed. `dft_ctrl`, `dft_ctrl_ports` and `jtag_tap` are untouched. The gate covers pin mode and TAP-serial mode alike, because it sits after the `dft_ctrl` combiner.
+* Functional mode: `dft_scan_en` equals `dft_scan_en_req` once `scan_mode` has been 0 for 3 `core_clk` edges (the three edge-detect flops are unreset and track the level through reset). `scan_en` is 0 in functional mode, so the net stays 0.
+
+**CDC / clocking rationale [R, A].** No synchroniser was added, deliberately.
+1. The gate matters only in scan mode, and in scan mode `core_clk`, `cpu_core_clk` and every SE-pin flop run on the **one** test clock (`dft_clk_mux` on both PLL references, 14.2). The path `scan_prev_q` -> done -> SE is therefore a single-clock, single-cycle path launched at edge 3 and captured at the first shift edge, not a clock crossing. In functional mode the ANDed value is constant 0 and no scan flop reads it.
+2. The only asynchronous ingredient is the raw `scan_mode_i` in the combinational term, the same quasi-static level that already drives the 256 key masks and that `tools/cdc/cdc_config.yml` lists under `reset_domains` (set before the first test-clock edge, not toggled while a clock runs). It is needed: with flops only, `done` would still be 1 at edge 1 and a tester that raised `scan_en` together with `scan_mode` could shift at edge 1. It can only move `done` 1 -> 0 (withholding), and `done` rises only through the synchronous `scan_prev_q` edge.
+3. `cdc_sync` would add latency and a flop but fix nothing: its job is metastability from an asynchronous launch, and the launching flops here are on the test clock. A synchroniser per destination domain would also have to exist at 18,803 SE pins. Rejected.
+4. Glitch behaviour: the three XOR terms share `scan_prev_q`, so when it toggles at edge 3 they all fall together and the NOR rises once, monotonically. Each of `scan_en_req`, `scan_mode`, `scan_prev_q` changes alone in the protocol, and an AND with one changing input cannot glitch. The one ordering that is NOT protected: raising `scan_en` **before** `scan_mode` in pin mode (`scan_en = 1` outside scan mode is outside the 14.1 contract) can produce a runt on the way down.
+5. The netlist checks (`dft-scan-check`, the CDC gate) see no new register data input: `dft_scan_en` has no RTL sequential consumer before Stage 2 insertion (the macro's `scan_en_i` is unused inside `rv32i_cpu_top`). [A until the checks are run, see the PR.]
+
+**Scan-entry protocol for the tester [R].** Edge counts are test-clock edges counted from the first edge after the mode change.
+* **Pin mode (parallel).** Set `scan_mode_i = 1` with `scan_en_i = 0` and the test clock stopped. Apply `scan_clk_i` edges 1, 2, 3 (any `scan_en_i`; the gate forces the flops into capture). Edge 3 clears the key and state. Keep `scan_en_i = 0` through **edge 4** (one spare edge so the SE tree has settled for the first shift; recommended, not enforced by hardware), then raise `scan_en_i`. Hardware guarantee: a shift can never occur at edges 1 to 3, whatever the tester drives.
+* **TAP (serial).** After the `SCAN` instruction is updated, the test clock exists only in Capture-DR and Shift-DR. Do **three Capture-DR passes** (Select-DR, Capture-DR, Exit1-DR, Update-DR) before the first payload shift, then one more as the spare. Shift-DR edges taken earlier are accepted but are **capture** edges, not shifts: the gate holds `scan_en` low, so payload bits sent in those edges are lost. A tester that shifts at once is not harmed, it just has to send the data again.
+* **Not observable:** the wipe state is not readable over JTAG; the tester counts edges. A `scan_wipe_done` TDR bit is a possible follow-up, not part of this change.
+* **Exit** needs no rule: 3 functional `core_clk` edges after `scan_mode` falls wipe again, and the gate holds `scan_en` low meanwhile.
+
+**Limits [R].**
+* `scan_out` shows each chain's **last flop Q before any edge**. If that flop belongs to the crypto block, one bit of un-wiped state is visible per chain until edge 3. The gate does not cover this and `scan_out_o` is owned by the Stage 2 insertion step. Whether any chain ends in a crypto flop is a netlist question [A: not checked]. Gating `scan_out_o[k]` with `crypto_wipe_done` is the follow-up if it matters.
+* A clock that never arrives (a stopped `scan_clk_i`, no Capture-DR) keeps `scan_en` low forever: the failure mode is "cannot shift", not "shifts early".
+* The key and `rk_q` are masked in scan mode and excluded from the chains regardless (14.2). The gate protects the **scanned** crypto flops (`s_q`, `msg_q`, SHA state, DOUT/DIGEST/IV).
+
+**PD notes for the re-harden [A until measured].** No port was added to `soc_top`. A new timed path appears: `u_crypto` edge-detect flops -> done logic -> AND -> the `dft_scan_en` buffer tree (28 buffers, about 10 ns root to farthest SCE in `RUN_2026-10-26_09-59-03`) -> SE pins, launched on `core_clk`. Check its setup at max_ss; if it fails, the protocol's spare edge would support a 2-cycle exception, but that is an SDC change and needs the user's approval. The raw `scan_mode` -> done term adds a TAP-launched path to the same tree, like the existing `tap_scan_en` one. Confirm that net `dft_scan_en` survives synthesis (the Stage 2 step finds it by name) and that the STA scan query `dft_scan_en_net_found` still reports 1.
+
 ## 15. Stage 1b specification and implementation record (bead `j41m.3`): JTAG TAP
 
 Scope: the TAP, its registers, the TAP-driven `dft_ctrl`, `soc_top` integration, checks. **No** scan insertion, ATPG, MBIST or CPU-macro change. Decisions already taken: section 0 (decisions 5-7) and the user decisions of 2026-10-11 (N1 non-JEDEC placeholder IDCODE, N2 compliant-minus-boundary-register, N4 TAP flops unscanned). Labels as before. This section was written **before** the RTL as its specification; the status table at its end is updated as each step lands.
@@ -873,7 +901,7 @@ Selecting SCAN (IR = `4'h4`) is the **only** thing that enters TAP scan mode; TD
 5. MBIST_CTRL/MBIST_STATUS opcodes are reserved and decode to BYPASS (MBIST is Stage 4).
 6. Sections 8/9 said the direct scan pins are "ANDed with the TAP-held scan_mode" so a floating pin cannot disturb functional mode. **Not implemented**: the 1a contract (pins work alone) and the standing decision that the TAP must not gate the parallel path take precedence; the pins are OR-ed. A floating `scan_mode_i` is therefore not protected by the TAP. Decision (2026-10-11, Q-PIN): keep OR; floating-pin protection is a pad pull-down at pad-ring time (section 9.5).
 7. SCAN_RST is a level bit; the tester pulses it by writing 1 then 0.
-8. The crypto scan-entry scrub (14.3 item 1) is now done in `crypto_accel` hardware (`j41m.6`, 14.10); the TAP still offers no scrub of its own and does not withhold `scan_en` until the wipe completes.
+8. The crypto scan-entry scrub (14.3 item 1) is now done in `crypto_accel` hardware (`j41m.6`, 14.10); the TAP still offers no scrub of its own; `scan_en` is withheld in `soc_top` until the wipe completes (`j41m.17`, 14.14).
 
 ### 15.7 Tests and checks required of this stage
 Unit suite `test_jtag_tap` (module `jtag_tap` alone); DFT-controller suite on `dft_ctrl`; SoC suite on `tb_soc_pll`/`tb_soc_top`; mutation campaign on FSM transitions, IR capture, opcode decode, TDR decode, TDO/OE timing, gate enable, combiner; `check_scan_clk_rst.py` extended to cover TAP-domain flops (clock = `tck_i` only, reset = `trst_ni` through the sync only, unscanned by design) with a negative control; CDC gate declarations; coverage ratchet; sv2v source lists; SDC constraints text (TCK clock, asynchronous clock group, JTAG IO delays) in `sky130_soc.sdc` only. **PD is not run in this stage.**
@@ -971,7 +999,7 @@ bank clear), `aes128_core.sv` and `sha256_core.sv` (new `wipe_i`). No port was a
    `wipe_w` is high a START takes that path, an in-flight AES/SHA operation is aborted to done with no data (`C_BUSY -> C_DONE`), and KEY
    writes are dropped and latch `key_write_rejected`; DIN pushes in that cycle are cleared by the wipe. Software must not rely on a key or
    operation surviving a `scan_mode` change.
-5. **What ATE must guarantee, and the limit.** The clear is functional D logic. Scan insertion puts its scan mux *after* that logic, so any
+5. **What ATE must guarantee, and the limit. SUPERSEDED by 14.14 (`j41m.17`): `soc_top` now ANDs `scan_en` with `crypto_accel`'s `scan_wipe_done_o`, so no shift is possible before edge 3 whatever the tester does; the text below is kept as history.** The clear is functional D logic. Scan insertion puts its scan mux *after* that logic, so any
    edge with `scan_en = 1` loads `scan_in` instead of the cleared value, and the last flop of a chain shows its Q at `scan_out` before
    the first edge. Therefore: after `scan_mode` rises, edges 1 to 3 must be capture-type (`scan_en = 0`) and `scan_out` must not be
    sampled before edge 3 (a spare edge is recommended). On exit the functional clock restarts on its own and no rule applies. **This

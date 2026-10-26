@@ -65,15 +65,14 @@
 //     scan reset) neither fabricates nor hides an edge; a reset shorter than 3 cycles can at worst
 //     produce a spurious wipe, which is the safe direction. The wipe asserts for any scan_mode_i
 //     change, including a glitch longer than a clock period.
-//     WHAT THIS DOES NOT DO -- ATE CONTRACT. The clear is functional D logic. Scan insertion puts
-//     its scan mux AFTER that logic, so a shift edge (scan_en = 1) overrides the clear. The wipe
-//     therefore takes effect only if edges 1..3 after scan_mode_i rises have scan_en = 0 (capture
-//     type cycles), and scan_out must not be sampled before edge 3. A tester that shifts earlier,
-//     or a malicious one, reads the residue: this is hardware zeroize against a COOPERATING tester
-//     and against software, NOT secure-scan against an adversarial one. Closing that needs the
-//     wipe to be asynchronous (rejected here: the repo's DFT check requires every async reset cone
-//     to end at a pin or a scan-mode mux, never a flop output) or scan_en to be withheld from the
-//     chains until a wipe-done handshake (TAP / soc_top change; DFT_ARCHITECTURE.md sec.14.3).
+//     SCAN WIPE HANDSHAKE (bead j41m.17). The clear is functional D logic and scan insertion puts
+//     its scan mux AFTER that logic, so a shift edge (scan_en = 1) would override it. The block
+//     therefore reports scan_wipe_done_o (0 from the instant scan_mode_i changes until the
+//     clearing edge has happened) and soc_top gates the scan enable with it: scan_en cannot reach
+//     any scan flop before the wipe is applied, whatever the tester does. The tester still has to
+//     supply the 3 clock edges the wipe needs (with scan_en held off by the gate they are capture
+//     edges) -- DFT_ARCHITECTURE.md sec.14.14. Residual limit: scan_out shows the Q of each
+//     chain's last flop before any edge (a bit of residue if that flop is a crypto flop).
 //     While wipe_w is high a start is turned into the hang-free illegal path, an in-flight
 //     operation is aborted to done (no data), and KEY / DIN writes are dropped (a KEY write latches
 //     key_write_rejected). Any other debug path that can observe flop state is still key access.
@@ -220,6 +219,15 @@ module crypto_accel
     // the header). Quasi-static. Tie 1'b0 where there is no scan-aware parent: then both masks are
     // a pass-through and the block is bit-identical to the pre-DFT design.
     input  logic scan_mode_i,
+
+    // DFT scan-entry wipe handshake (bead j41m.17). 1 = no scan_mode_i change is pending in the
+    // wipe pipeline, i.e. the entry (or exit) wipe has been APPLIED; 0 from the moment scan_mode_i
+    // differs from its settled value until the clearing edge has happened (see the SCAN WIPE
+    // HANDSHAKE note in the header). soc_top ANDs the scan enable with it. Combinational in the
+    // quasi-static scan_mode_i plus the three unreset edge-detect flops. Tie-off / leave open
+    // where there is no scan-aware parent; with scan_mode_i constant it settles to 1 within 3 clk
+    // edges and stays there.
+    output logic scan_wipe_done_o,
 
     // =========================================================================
     // APB4 slave -- control/status registers
@@ -506,6 +514,14 @@ module crypto_accel
 
     logic wipe_w;   // one cycle per scan_mode_i edge (entry and exit); clears all key/data state
     assign wipe_w = scan_s2_q ^ scan_prev_q;
+
+    // Wipe-done (bead j41m.17): every stage of the edge-detect pipeline, and the raw level, agree
+    // with the history flop. It falls combinationally when scan_mode_i changes (before any clk
+    // edge), stays 0 while the change walks s1 -> s2 -> prev, and rises just after the edge that
+    // loads scan_prev_q -- the SAME edge at which the wipe_w-qualified clears take effect. A change
+    // of scan_mode_i back before the wipe completes keeps it low until the pipeline has flushed.
+    // In functional mode (scan_mode_i = 0 for >= 3 clk edges) it is a constant 1.
+    assign scan_wipe_done_o = ~((scan_mode_i ^ scan_prev_q) | (scan_s1_q ^ scan_prev_q) | wipe_w);
 
     logic op_legal_w;
     assign op_legal_w = (((mode_w == 2'd0) || (mode_w == 2'd1)) && EN_AES && key_valid_w)

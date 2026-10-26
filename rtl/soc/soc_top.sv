@@ -360,7 +360,19 @@ module soc_top
     // THIS net (dft_scan_en, TAP-or-pin), not from the raw scan_en_i port, or serial
     // (TAP) scan would shift the macro with scan_en and the fabric without it.
     // test_clk is consumed only through pll_subsystem's own ports below.
+    //
+    // dft_scan_en is the scan enable AFTER the crypto wipe gate (bead j41m.17): dft_ctrl's
+    // request (dft_scan_en_req) ANDed with u_crypto's scan_wipe_done_o. crypto_accel zeroizes its
+    // key and state through functional D logic on every scan_mode edge, and the scan mux sits after
+    // that logic, so a shift edge before the wipe lands would load scan_in over the cleared value.
+    // Withholding scan_en until the wipe is applied closes that for any tester. Every consumer
+    // (the macro's scan_en_i, the Stage 2 SE pins) keeps taking the net NAMED dft_scan_en.
+    // Functional mode: scan_wipe_done_o is a constant 1 once scan_mode has been 0 for 3 core_clk
+    // edges, so dft_scan_en == dft_scan_en_req there. DFT_ARCHITECTURE.md sec.14.14.
+    logic dft_scan_en_req;
+    logic crypto_wipe_done;
     logic dft_scan_en;
+    assign dft_scan_en = dft_scan_en_req & crypto_wipe_done;
 
     // MBIST (DFT Stage 4, section 16): TAP data registers and the TCK-side crossing hooks.
     logic [28:0]  mbist_ctl;
@@ -393,7 +405,7 @@ module soc_top
         .tdo_o       (tdo_o),
         .tdo_oe_o    (tdo_oe_o),
         .scan_mode_o (dft_scan_mode),
-        .scan_en_o   (dft_scan_en),
+        .scan_en_o   (dft_scan_en_req),
         .scan_rst_no (dft_scan_rst_n),
         .test_en_o   (dft_test_en),
         .test_clk_o  (dft_test_clk),
@@ -2240,6 +2252,8 @@ module soc_top
         .rst_n   (core_rst_n),
         // DFT (j41m.2): forces the key_q / rk_q read nets to 0 in scan mode.
         .scan_mode_i (dft_scan_mode),
+        // j41m.17: wipe applied -> scan enable may rise (see dft_scan_en above).
+        .scan_wipe_done_o (crypto_wipe_done),
         .psel    (apb_psel    [APB_CRYPTO]),
         .penable (apb_penable [APB_CRYPTO]),
         .pwrite  (apb_pwrite  [APB_CRYPTO]),
