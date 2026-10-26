@@ -1,0 +1,2696 @@
+{
+ "icc2_max_ff": {
+  "annot": {
+   "driverless": [
+    137,
+    137
+   ],
+   "loadless": [
+    359,
+    359
+   ],
+   "p2p": [
+    35141,
+    0
+   ]
+  },
+  "annot_clock_total": 410,
+  "annot_clock_unann": 0,
+  "clock_nets": "410",
+  "drv": {
+   "max_capacitance": 176,
+   "max_fanout": 173,
+   "max_transition": 562
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.8512,
+   -107.9068,
+   436
+  ],
+  "hold_io": [
+   -0.8512,
+   -103.1838,
+   334
+  ],
+  "hold_r2r": [
+   -0.1066,
+   -4.723,
+   102
+  ],
+  "hold_tns": -107.906793,
+  "hold_viol": 436,
+  "hold_wns": -0.851241,
+  "hold_worst_end": "u_core/u_dcache/uncached_rdata_q_reg_10_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[10]",
+  "in_netlist_md5": "e9150655c154779119d823b4222358d5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "3543223c4cfa5eba039b9a94093b431d",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_max/rv32i_cpu_top.max.spef",
+  "leaf_cells": "34782",
+  "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "nets": "35637",
+  "nofunction_cells": "125",
+  "pt_version": "X-2025.06",
+  "rc_corner": "max",
+  "rss_gb": 1.0085830688476562,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 2.131202,
+  "setup_worst_end": "u_core/u_icache_data_dout_r_reg_2__29_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core/u_icache_gen_data_sram_2__u_data_sram/clk0",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_max_ff/spef/rv32i_cpu_top.max.spef",
+  "spef_annotated_nets": 35141,
+  "spef_nets_missing": 8,
+  "wall": "0:11.74"
+ },
+ "icc2_max_ss": {
+  "annot": {
+   "driverless": [
+    137,
+    137
+   ],
+   "loadless": [
+    359,
+    359
+   ],
+   "p2p": [
+    35141,
+    0
+   ]
+  },
+  "annot_clock_total": 410,
+  "annot_clock_unann": 0,
+  "clock_nets": "410",
+  "drv": {
+   "max_capacitance": 178,
+   "max_fanout": 173,
+   "max_transition": 49535
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -2.3746,
+   -472.1031,
+   478
+  ],
+  "hold_io": [
+   -2.3746,
+   -472.1031,
+   478
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -472.103064,
+  "hold_viol": 478,
+  "hold_wns": -2.374629,
+  "hold_worst_end": "u_core/u_dcache/uncached_rdata_q_reg_10_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[10]",
+  "in_netlist_md5": "e9150655c154779119d823b4222358d5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "3543223c4cfa5eba039b9a94093b431d",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_max/rv32i_cpu_top.max.spef",
+  "leaf_cells": "34782",
+  "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "nets": "35637",
+  "nofunction_cells": "125",
+  "pt_version": "X-2025.06",
+  "rc_corner": "max",
+  "rss_gb": 1.0151481628417969,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   -15.4061,
+   -7281.1578,
+   2293
+  ],
+  "setup_io": [
+   -3.9485,
+   -53.3981,
+   68
+  ],
+  "setup_r2r": [
+   -15.4061,
+   -7227.7598,
+   2225
+  ],
+  "setup_tns": -7281.157016,
+  "setup_viol": 2293,
+  "setup_wns": -15.406076,
+  "setup_worst_end": "u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__31_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core/ex1a_ex1b_reg_q_reg_pc__1_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_max_ss/spef/rv32i_cpu_top.max.spef",
+  "spef_annotated_nets": 35141,
+  "spef_nets_missing": 8,
+  "wall": "0:14.38"
+ },
+ "icc2_max_tt": {
+  "annot": {
+   "driverless": [
+    137,
+    137
+   ],
+   "loadless": [
+    359,
+    359
+   ],
+   "p2p": [
+    35141,
+    0
+   ]
+  },
+  "annot_clock_total": 410,
+  "annot_clock_unann": 0,
+  "clock_nets": "410",
+  "drv": {
+   "max_capacitance": 176,
+   "max_fanout": 173,
+   "max_transition": 11592
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -1.3408,
+   -214.7597,
+   463
+  ],
+  "hold_io": [
+   -1.3408,
+   -214.6528,
+   448
+  ],
+  "hold_r2r": [
+   -0.0191,
+   -0.1068,
+   15
+  ],
+  "hold_tns": -214.759659,
+  "hold_viol": 463,
+  "hold_wns": -1.340839,
+  "hold_worst_end": "u_core/u_dcache/uncached_rdata_q_reg_10_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[10]",
+  "in_netlist_md5": "e9150655c154779119d823b4222358d5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "3543223c4cfa5eba039b9a94093b431d",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_max/rv32i_cpu_top.max.spef",
+  "leaf_cells": "34782",
+  "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "nets": "35637",
+  "nofunction_cells": "125",
+  "pt_version": "X-2025.06",
+  "rc_corner": "max",
+  "rss_gb": 1.0158348083496094,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   -1.4141,
+   -17.2637,
+   67
+  ],
+  "setup_io": [
+   0.0,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   -1.4141,
+   -17.2637,
+   67
+  ],
+  "setup_tns": -17.263793,
+  "setup_viol": 67,
+  "setup_wns": -1.414103,
+  "setup_worst_end": "u_core/u_if_pc_q_reg_31_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core/u_icache_ic_addr_q_reg_7_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_max_tt/spef/rv32i_cpu_top.max.spef",
+  "spef_annotated_nets": 35141,
+  "spef_nets_missing": 8,
+  "wall": "0:17.78"
+ },
+ "icc2_min_ff": {
+  "annot": {
+   "driverless": [
+    137,
+    137
+   ],
+   "loadless": [
+    359,
+    359
+   ],
+   "p2p": [
+    35141,
+    0
+   ]
+  },
+  "annot_clock_total": 410,
+  "annot_clock_unann": 0,
+  "clock_nets": "410",
+  "drv": {
+   "max_capacitance": 152,
+   "max_fanout": 173,
+   "max_transition": 24
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.5988,
+   -61.3786,
+   341
+  ],
+  "hold_io": [
+   -0.5988,
+   -57.7634,
+   243
+  ],
+  "hold_r2r": [
+   -0.0887,
+   -3.6153,
+   98
+  ],
+  "hold_tns": -61.378605,
+  "hold_viol": 341,
+  "hold_wns": -0.598772,
+  "hold_worst_end": "u_core/u_dcache/uncached_rdata_q_reg_10_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[10]",
+  "in_netlist_md5": "e9150655c154779119d823b4222358d5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "d858f034023cbde6727c0b928c0aa73a",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_min/rv32i_cpu_top.min.spef",
+  "leaf_cells": "34782",
+  "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "nets": "35637",
+  "nofunction_cells": "125",
+  "pt_version": "X-2025.06",
+  "rc_corner": "min",
+  "rss_gb": 1.0385551452636719,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 3.170545,
+  "setup_worst_end": "u_core/u_icache_data_dout_r_reg_2__29_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core/u_icache_gen_data_sram_2__u_data_sram/clk0",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_min_ff/spef/rv32i_cpu_top.min.spef",
+  "spef_annotated_nets": 35141,
+  "spef_nets_missing": 8,
+  "wall": "0:08.95"
+ },
+ "icc2_min_ss": {
+  "annot": {
+   "driverless": [
+    137,
+    137
+   ],
+   "loadless": [
+    359,
+    359
+   ],
+   "p2p": [
+    35141,
+    0
+   ]
+  },
+  "annot_clock_total": 410,
+  "annot_clock_unann": 0,
+  "clock_nets": "410",
+  "drv": {
+   "max_capacitance": 156,
+   "max_fanout": 173,
+   "max_transition": 26975
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -1.8059,
+   -336.6875,
+   467
+  ],
+  "hold_io": [
+   -1.8059,
+   -336.6875,
+   467
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -336.687538,
+  "hold_viol": 467,
+  "hold_wns": -1.805854,
+  "hold_worst_end": "u_core/u_dcache/uncached_rdata_q_reg_10_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[10]",
+  "in_netlist_md5": "e9150655c154779119d823b4222358d5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "d858f034023cbde6727c0b928c0aa73a",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_min/rv32i_cpu_top.min.spef",
+  "leaf_cells": "34782",
+  "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "nets": "35637",
+  "nofunction_cells": "125",
+  "pt_version": "X-2025.06",
+  "rc_corner": "min",
+  "rss_gb": 1.0340499877929688,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   -14.4809,
+   -2971.8416,
+   842
+  ],
+  "setup_io": [
+   -2.2145,
+   -2.2145,
+   1
+  ],
+  "setup_r2r": [
+   -14.4809,
+   -2969.6271,
+   841
+  ],
+  "setup_tns": -2971.842003,
+  "setup_viol": 842,
+  "setup_wns": -14.48094,
+  "setup_worst_end": "u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__31_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core/ex1a_ex1b_reg_q_reg_pc__1_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_min_ss/spef/rv32i_cpu_top.min.spef",
+  "spef_annotated_nets": 35141,
+  "spef_nets_missing": 8,
+  "wall": "0:09.29"
+ },
+ "icc2_min_tt": {
+  "annot": {
+   "driverless": [
+    137,
+    137
+   ],
+   "loadless": [
+    359,
+    359
+   ],
+   "p2p": [
+    35141,
+    0
+   ]
+  },
+  "annot_clock_total": 410,
+  "annot_clock_unann": 0,
+  "clock_nets": "410",
+  "drv": {
+   "max_capacitance": 154,
+   "max_fanout": 173,
+   "max_transition": 36
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.9884,
+   -131.4017,
+   370
+  ],
+  "hold_io": [
+   -0.9884,
+   -131.3989,
+   369
+  ],
+  "hold_r2r": [
+   -0.0027,
+   -0.0027,
+   1
+  ],
+  "hold_tns": -131.40166,
+  "hold_viol": 370,
+  "hold_wns": -0.988369,
+  "hold_worst_end": "u_core/u_dcache/uncached_rdata_q_reg_10_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[10]",
+  "in_netlist_md5": "e9150655c154779119d823b4222358d5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "d858f034023cbde6727c0b928c0aa73a",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_min/rv32i_cpu_top.min.spef",
+  "leaf_cells": "34782",
+  "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "nets": "35637",
+  "nofunction_cells": "125",
+  "pt_version": "X-2025.06",
+  "rc_corner": "min",
+  "rss_gb": 1.0396041870117188,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 0.383903,
+  "setup_worst_end": "u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__31_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core/ex1a_ex1b_reg_q_reg_immediate__0_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_min_tt/spef/rv32i_cpu_top.min.spef",
+  "spef_annotated_nets": 35141,
+  "spef_nets_missing": 8,
+  "wall": "0:10.54"
+ },
+ "icc2_nom_ff": {
+  "annot": {
+   "driverless": [
+    137,
+    137
+   ],
+   "loadless": [
+    359,
+    359
+   ],
+   "p2p": [
+    35141,
+    0
+   ]
+  },
+  "annot_clock_total": 410,
+  "annot_clock_unann": 0,
+  "clock_nets": "410",
+  "drv": {
+   "max_capacitance": 161,
+   "max_fanout": 173,
+   "max_transition": 33
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.7186,
+   -81.9261,
+   401
+  ],
+  "hold_io": [
+   -0.7186,
+   -77.8769,
+   303
+  ],
+  "hold_r2r": [
+   -0.0908,
+   -4.0492,
+   98
+  ],
+  "hold_tns": -81.926083,
+  "hold_viol": 401,
+  "hold_wns": -0.718607,
+  "hold_worst_end": "u_core/u_dcache/uncached_rdata_q_reg_10_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[10]",
+  "in_netlist_md5": "e9150655c154779119d823b4222358d5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "bc2b889a3cdb866e91793e2873919063",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_nom/rv32i_cpu_top.nom.spef",
+  "leaf_cells": "34782",
+  "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "nets": "35637",
+  "nofunction_cells": "125",
+  "pt_version": "X-2025.06",
+  "rc_corner": "nom",
+  "rss_gb": 1.0451393127441406,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 2.67166,
+  "setup_worst_end": "u_core/u_icache_data_dout_r_reg_2__29_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core/u_icache_gen_data_sram_2__u_data_sram/clk0",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_nom_ff/spef/rv32i_cpu_top.nom.spef",
+  "spef_annotated_nets": 35141,
+  "spef_nets_missing": 8,
+  "wall": "0:11.02"
+ },
+ "icc2_nom_ss": {
+  "annot": {
+   "driverless": [
+    137,
+    137
+   ],
+   "loadless": [
+    359,
+    359
+   ],
+   "p2p": [
+    35141,
+    0
+   ]
+  },
+  "annot_clock_total": 410,
+  "annot_clock_unann": 0,
+  "clock_nets": "410",
+  "drv": {
+   "max_capacitance": 166,
+   "max_fanout": 173,
+   "max_transition": 40243
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -2.0797,
+   -399.9963,
+   468
+  ],
+  "hold_io": [
+   -2.0797,
+   -399.9963,
+   468
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -399.996318,
+  "hold_viol": 468,
+  "hold_wns": -2.079709,
+  "hold_worst_end": "u_core/u_dcache/uncached_rdata_q_reg_10_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[10]",
+  "in_netlist_md5": "e9150655c154779119d823b4222358d5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "bc2b889a3cdb866e91793e2873919063",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_nom/rv32i_cpu_top.nom.spef",
+  "leaf_cells": "34782",
+  "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "nets": "35637",
+  "nofunction_cells": "125",
+  "pt_version": "X-2025.06",
+  "rc_corner": "nom",
+  "rss_gb": 1.0507888793945312,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   -14.933,
+   -4572.4004,
+   1504
+  ],
+  "setup_io": [
+   -3.0944,
+   -7.1545000000000005,
+   16
+  ],
+  "setup_r2r": [
+   -14.933,
+   -4565.2459,
+   1488
+  ],
+  "setup_tns": -4572.401009,
+  "setup_viol": 1504,
+  "setup_wns": -14.933018,
+  "setup_worst_end": "u_core/ex1c_ex1b_reg_q_reg_dec_redirect_target__31_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core/ex1a_ex1b_reg_q_reg_pc__1_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_nom_ss/spef/rv32i_cpu_top.nom.spef",
+  "spef_annotated_nets": 35141,
+  "spef_nets_missing": 8,
+  "wall": "0:08.25"
+ },
+ "icc2_nom_tt": {
+  "annot": {
+   "driverless": [
+    137,
+    137
+   ],
+   "loadless": [
+    359,
+    359
+   ],
+   "p2p": [
+    35141,
+    0
+   ]
+  },
+  "annot_clock_total": 410,
+  "annot_clock_unann": 0,
+  "clock_nets": "410",
+  "drv": {
+   "max_capacitance": 164,
+   "max_fanout": 173,
+   "max_transition": 677
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -1.1597,
+   -171.2767,
+   432
+  ],
+  "hold_io": [
+   -1.1597,
+   -171.2488,
+   427
+  ],
+  "hold_r2r": [
+   -0.0147,
+   -0.0279,
+   5
+  ],
+  "hold_tns": -171.276747,
+  "hold_viol": 432,
+  "hold_wns": -1.159669,
+  "hold_worst_end": "u_core/u_dcache/uncached_rdata_q_reg_10_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[10]",
+  "in_netlist_md5": "e9150655c154779119d823b4222358d5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "in_power": "1",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "bc2b889a3cdb866e91793e2873919063",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/icc2_nom/rv32i_cpu_top.nom.spef",
+  "leaf_cells": "34782",
+  "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/impl/icc2/runs/b5a_icc2/out/rv32i_cpu_top.nl.v",
+  "nets": "35637",
+  "nofunction_cells": "125",
+  "power_A": {
+   "groups": {
+    "black_box": [
+     -7.293e-10,
+     0.0,
+     7.289e-13,
+     -7.286e-10
+    ],
+    "clock_network": [
+     0.0162,
+     0.007308,
+     2.076e-09,
+     0.0235
+    ],
+    "combinational": [
+     0.0004265,
+     0.002679,
+     6.654e-08,
+     0.003106
+    ],
+    "io_pad": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "memory": [
+     0.0288,
+     0.0001563,
+     9.516e-05,
+     0.029
+    ],
+    "register": [
+     5.29e-05,
+     6.516e-05,
+     4.674e-08,
+     0.0001181
+    ],
+    "sequential": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "internal": 0.0454793992707,
+   "leakage": 9.52753567289e-05,
+   "reported_total": 0.0558,
+   "switching": 0.01020846,
+   "total": 0.0557240992714
+  },
+  "power_B": {
+   "groups": {
+    "black_box": [
+     -7.293e-10,
+     0.0,
+     7.289e-13,
+     -7.286e-10
+    ],
+    "clock_network": [
+     0.0162,
+     0.007308,
+     2.076e-09,
+     0.0235
+    ],
+    "combinational": [
+     0.00217,
+     0.0102,
+     7.902e-08,
+     0.0124
+    ],
+    "io_pad": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "memory": [
+     0.0288,
+     0.0001563,
+     9.516e-05,
+     0.029
+    ],
+    "register": [
+     0.001479,
+     0.00161,
+     4.583e-08,
+     0.00309
+    ],
+    "sequential": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "internal": 0.048648999270699995,
+   "leakage": 9.528692672890001e-05,
+   "reported_total": 0.0681,
+   "switching": 0.019274300000000005,
+   "total": 0.0679899992714
+  },
+  "power_B_register_output_pins": "5924",
+  "power_static_prob": "0.5",
+  "power_toggle_rate": "0.1",
+  "power_toggle_ref": "related",
+  "pt_version": "X-2025.06",
+  "rc_corner": "nom",
+  "rss_gb": 1.079376220703125,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   -0.0909,
+   -0.1597,
+   2
+  ],
+  "setup_io": [
+   0.0,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   -0.0909,
+   -0.1597,
+   2
+  ],
+  "setup_tns": -0.1597,
+  "setup_viol": 2,
+  "setup_wns": -0.090911,
+  "setup_worst_end": "u_core/u_if_pc_q_reg_31_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core/u_icache_ic_addr_q_reg_7_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/icc2_nom_tt/spef/rv32i_cpu_top.nom.spef",
+  "spef_annotated_nets": 35141,
+  "spef_nets_missing": 0,
+  "wall": "0:19.04"
+ },
+ "openroad_max_ff": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    320
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 276,
+   "max_fanout": 3670,
+   "max_transition": 3190
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.4315,
+   -8.8306,
+   90
+  ],
+  "hold_io": [
+   -0.4315,
+   -8.8306,
+   90
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -8.830624,
+  "hold_viol": 90,
+  "hold_wns": -0.431533,
+  "hold_worst_end": "_52584_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[2]",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "afd0054fc546717cc2e223cc5750d5db",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_max/rv32i_cpu_top.max.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "max",
+  "rss_gb": 1.1792144775390625,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 3.541757,
+  "setup_worst_end": "_52811_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_max_ff/spef/rv32i_cpu_top.max.spef",
+  "spef_annotated_nets": 42291,
+  "spef_nets_missing": 0,
+  "wall": "0:26.08"
+ },
+ "openroad_max_ss": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    320
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 324,
+   "max_fanout": 3670,
+   "max_transition": 88325
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -1.3624,
+   -95.5751,
+   199
+  ],
+  "hold_io": [
+   -1.3624,
+   -95.5751,
+   199
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -95.575099,
+  "hold_viol": 199,
+  "hold_wns": -1.362351,
+  "hold_worst_end": "_52532_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "apb_penable_i",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "afd0054fc546717cc2e223cc5750d5db",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_max/rv32i_cpu_top.max.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "max",
+  "rss_gb": 1.2040176391601562,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   -5.3352,
+   -3004.3365,
+   1480
+  ],
+  "setup_io": [
+   -4.5646,
+   -158.7721,
+   104
+  ],
+  "setup_r2r": [
+   -5.3352,
+   -2845.5644,
+   1376
+  ],
+  "setup_tns": -3004.335088,
+  "setup_viol": 1480,
+  "setup_wns": -5.335169,
+  "setup_worst_end": "_53323_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "_51961_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_max_ss/spef/rv32i_cpu_top.max.spef",
+  "spef_annotated_nets": 42291,
+  "spef_nets_missing": 0,
+  "wall": "0:24.20"
+ },
+ "openroad_max_tt": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    320
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 289,
+   "max_fanout": 3670,
+   "max_transition": 10541
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.6981,
+   -48.4993,
+   231
+  ],
+  "hold_io": [
+   -0.6981,
+   -48.4993,
+   231
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -48.499272,
+  "hold_viol": 231,
+  "hold_wns": -0.698065,
+  "hold_worst_end": "_52532_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "apb_penable_i",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "afd0054fc546717cc2e223cc5750d5db",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_max/rv32i_cpu_top.max.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "max",
+  "rss_gb": 1.1605682373046875,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 2.179653,
+  "setup_worst_end": "axi_araddr_o[2]",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "_51959_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_max_tt/spef/rv32i_cpu_top.max.spef",
+  "spef_annotated_nets": 42291,
+  "spef_nets_missing": 0,
+  "wall": "0:13.44"
+ },
+ "openroad_min_ff": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    320
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 248,
+   "max_fanout": 3670,
+   "max_transition": 649
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "hold_io": [
+   null,
+   0.0,
+   0
+  ],
+  "hold_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "hold_tns": 0.0,
+  "hold_viol": 0,
+  "hold_wns": 0.098507,
+  "hold_worst_end": "_52585_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[3]",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "e9cab9ea3821814f1939cefd3bc8b2c6",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_min/rv32i_cpu_top.min.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "min",
+  "rss_gb": 1.1999893188476562,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 4.173868,
+  "setup_worst_end": "_52811_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_min_ff/spef/rv32i_cpu_top.min.spef",
+  "spef_annotated_nets": 42291,
+  "spef_nets_missing": 0,
+  "wall": "0:13.09"
+ },
+ "openroad_min_ss": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    320
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 267,
+   "max_fanout": 3670,
+   "max_transition": 22611
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.3414,
+   -0.6627,
+   5
+  ],
+  "hold_io": [
+   -0.3414,
+   -0.6627,
+   5
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -0.662714,
+  "hold_viol": 5,
+  "hold_wns": -0.341355,
+  "hold_worst_end": "_52532_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "apb_penable_i",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "e9cab9ea3821814f1939cefd3bc8b2c6",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_min/rv32i_cpu_top.min.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "min",
+  "rss_gb": 1.1988372802734375,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   -2.1167,
+   -448.6587,
+   645
+  ],
+  "setup_io": [
+   -1.6702,
+   -3.7041,
+   4
+  ],
+  "setup_r2r": [
+   -2.1167,
+   -444.9546,
+   641
+  ],
+  "setup_tns": -448.659851,
+  "setup_viol": 645,
+  "setup_wns": -2.116686,
+  "setup_worst_end": "_53323_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "_53923_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_min_ss/spef/rv32i_cpu_top.min.spef",
+  "spef_annotated_nets": 42291,
+  "spef_nets_missing": 0,
+  "wall": "0:12.55"
+ },
+ "openroad_min_tt": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    320
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 250,
+   "max_fanout": 3670,
+   "max_transition": 1643
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.0347,
+   -0.0347,
+   1
+  ],
+  "hold_io": [
+   -0.0347,
+   -0.0347,
+   1
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -0.03466,
+  "hold_viol": 1,
+  "hold_wns": -0.03466,
+  "hold_worst_end": "_52532_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "apb_penable_i",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "e9cab9ea3821814f1939cefd3bc8b2c6",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_min/rv32i_cpu_top.min.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "min",
+  "rss_gb": 1.2025070190429688,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 3.685618,
+  "setup_worst_end": "_52811_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_min_tt/spef/rv32i_cpu_top.min.spef",
+  "spef_annotated_nets": 42291,
+  "spef_nets_missing": 0,
+  "wall": "0:11.15"
+ },
+ "openroad_nom_ff": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    320
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 265,
+   "max_fanout": 3670,
+   "max_transition": 1584
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.1524,
+   -0.6729,
+   9
+  ],
+  "hold_io": [
+   -0.1524,
+   -0.6729,
+   9
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -0.672939,
+  "hold_viol": 9,
+  "hold_wns": -0.15241,
+  "hold_worst_end": "_52584_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[2]",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "e4decacbe1ff8ef76bc8882a9c1614c1",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_nom/rv32i_cpu_top.nom.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "nom",
+  "rss_gb": 1.2015266418457031,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 3.891701,
+  "setup_worst_end": "_52811_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_nom_ff/spef/rv32i_cpu_top.nom.spef",
+  "spef_annotated_nets": 42291,
+  "spef_nets_missing": 0,
+  "wall": "0:13.03"
+ },
+ "openroad_nom_ss": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    320
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 295,
+   "max_fanout": 3670,
+   "max_transition": 58696
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.8225,
+   -27.9281,
+   124
+  ],
+  "hold_io": [
+   -0.8225,
+   -27.9281,
+   124
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -27.928068,
+  "hold_viol": 124,
+  "hold_wns": -0.822458,
+  "hold_worst_end": "_52532_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "apb_penable_i",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "e4decacbe1ff8ef76bc8882a9c1614c1",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_nom/rv32i_cpu_top.nom.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "nom",
+  "rss_gb": 1.210479736328125,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   -3.6789,
+   -1466.2228,
+   1130
+  ],
+  "setup_io": [
+   -3.0764,
+   -56.3681,
+   75
+  ],
+  "setup_r2r": [
+   -3.6789,
+   -1409.8546,
+   1055
+  ],
+  "setup_tns": -1466.222034,
+  "setup_viol": 1130,
+  "setup_wns": -3.678934,
+  "setup_worst_end": "_53323_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "_51961_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_nom_ss/spef/rv32i_cpu_top.nom.spef",
+  "spef_annotated_nets": 42291,
+  "spef_nets_missing": 0,
+  "wall": "0:12.45"
+ },
+ "openroad_nom_tt": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    320
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 271,
+   "max_fanout": 3670,
+   "max_transition": 4143
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.347,
+   -4.5788,
+   62
+  ],
+  "hold_io": [
+   -0.347,
+   -4.5788,
+   62
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -4.578805,
+  "hold_viol": 62,
+  "hold_wns": -0.346977,
+  "hold_worst_end": "_52532_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "apb_penable_i",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "1",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "e4decacbe1ff8ef76bc8882a9c1614c1",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/starrc/runs/_superseded_untuned/openroad_nom/rv32i_cpu_top.nom.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "power_A": {
+   "groups": {
+    "black_box": [
+     1.449e-07,
+     0.0,
+     3.349e-10,
+     1.453e-07
+    ],
+    "clock_network": [
+     0.0303,
+     0.013,
+     1.529e-08,
+     0.0433
+    ],
+    "combinational": [
+     0.0008738,
+     0.003729,
+     1.674e-07,
+     0.004603
+    ],
+    "io_pad": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "memory": [
+     0.0288,
+     0.0002403,
+     9.516e-05,
+     0.0291
+    ],
+    "register": [
+     2.424e-05,
+     5.211e-05,
+     4.355e-08,
+     7.64e-05
+    ],
+    "sequential": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "internal": 0.0599981849,
+   "leakage": 9.53865749e-05,
+   "reported_total": 0.0771,
+   "switching": 0.017021409999999997,
+   "total": 0.0770795453
+  },
+  "power_B": {
+   "groups": {
+    "black_box": [
+     -1.912e-07,
+     0.0,
+     3.891e-10,
+     -1.908e-07
+    ],
+    "clock_network": [
+     0.0303,
+     0.013,
+     1.529e-08,
+     0.0433
+    ],
+    "combinational": [
+     0.005196,
+     0.0134,
+     1.513e-07,
+     0.0186
+    ],
+    "io_pad": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "memory": [
+     0.0288,
+     0.0002403,
+     9.516e-05,
+     0.0291
+    ],
+    "register": [
+     0.0009654,
+     0.00202,
+     4.432e-08,
+     0.002985
+    ],
+    "sequential": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "internal": 0.0652612088,
+   "leakage": 9.53712991e-05,
+   "reported_total": 0.094,
+   "switching": 0.0286603,
+   "total": 0.0939848092
+  },
+  "power_B_register_output_pins": "5939",
+  "power_static_prob": "0.5",
+  "power_toggle_rate": "0.1",
+  "power_toggle_ref": "related",
+  "pt_version": "X-2025.06",
+  "rc_corner": "nom",
+  "rss_gb": 1.21051025390625,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 3.049273,
+  "setup_worst_end": "axi_araddr_o[2]",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "_51959_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_nom_tt/spef/rv32i_cpu_top.nom.spef",
+  "spef_annotated_nets": 42291,
+  "spef_nets_missing": 0,
+  "wall": "0:32.76"
+ },
+ "openroad_rcx_max_ff": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    415
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 265,
+   "max_fanout": 3670,
+   "max_transition": 2615
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.4215,
+   -11.7883,
+   113
+  ],
+  "hold_io": [
+   -0.4215,
+   -11.7883,
+   113
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -11.788343,
+  "hold_viol": 113,
+  "hold_wns": -0.421521,
+  "hold_worst_end": "_52584_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[2]",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "9bc424693c8a495ad319dc7b0c77e06c",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.max.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "max",
+  "rss_gb": 1.1360054016113281,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 3.712837,
+  "setup_worst_end": "_52811_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_max_ff/spef/rv32i_cpu_top.max.spef",
+  "spef_annotated_nets": 42196,
+  "spef_nets_missing": 0,
+  "wall": "0:42.78"
+ },
+ "openroad_rcx_max_ss": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    415
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 304,
+   "max_fanout": 3670,
+   "max_transition": 65290
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -1.3806,
+   -116.5932,
+   226
+  ],
+  "hold_io": [
+   -1.3806,
+   -116.5932,
+   226
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -116.593171,
+  "hold_viol": 226,
+  "hold_wns": -1.380629,
+  "hold_worst_end": "_52532_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "apb_penable_i",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "9bc424693c8a495ad319dc7b0c77e06c",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.max.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "max",
+  "rss_gb": 1.1673355102539062,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   -4.2715,
+   -1757.6086,
+   1189
+  ],
+  "setup_io": [
+   -3.8895,
+   -110.7692,
+   95
+  ],
+  "setup_r2r": [
+   -4.2715,
+   -1646.8394,
+   1094
+  ],
+  "setup_tns": -1757.609727,
+  "setup_viol": 1189,
+  "setup_wns": -4.271461,
+  "setup_worst_end": "_53323_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "_52681_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_max_ss/spef/rv32i_cpu_top.max.spef",
+  "spef_annotated_nets": 42196,
+  "spef_nets_missing": 0,
+  "wall": "0:15.75"
+ },
+ "openroad_rcx_max_tt": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    415
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 274,
+   "max_fanout": 3670,
+   "max_transition": 6326
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.6888,
+   -59.1578,
+   272
+  ],
+  "hold_io": [
+   -0.6888,
+   -59.1578,
+   272
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -59.157767,
+  "hold_viol": 272,
+  "hold_wns": -0.688774,
+  "hold_worst_end": "_52585_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[3]",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "9bc424693c8a495ad319dc7b0c77e06c",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.max.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "max",
+  "rss_gb": 1.1408462524414062,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 2.564497,
+  "setup_worst_end": "axi_araddr_o[3]",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "_51959_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_max_tt/spef/rv32i_cpu_top.max.spef",
+  "spef_annotated_nets": 42196,
+  "spef_nets_missing": 0,
+  "wall": "0:17.47"
+ },
+ "openroad_rcx_min_ff": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    415
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 254,
+   "max_fanout": 3670,
+   "max_transition": 1167
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.1377,
+   -0.6724,
+   15
+  ],
+  "hold_io": [
+   -0.1377,
+   -0.6724,
+   15
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -0.672364,
+  "hold_viol": 15,
+  "hold_wns": -0.137743,
+  "hold_worst_end": "_52585_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[3]",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "422555b4836b029080afc87823e8a873",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.min.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "min",
+  "rss_gb": 1.1402931213378906,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 4.025146,
+  "setup_worst_end": "_52811_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_min_ff/spef/rv32i_cpu_top.min.spef",
+  "spef_annotated_nets": 42196,
+  "spef_nets_missing": 0,
+  "wall": "0:15.46"
+ },
+ "openroad_rcx_min_ss": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    415
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 286,
+   "max_fanout": 3670,
+   "max_transition": 30817
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.8912,
+   -43.6475,
+   152
+  ],
+  "hold_io": [
+   -0.8912,
+   -43.6475,
+   152
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -43.647526,
+  "hold_viol": 152,
+  "hold_wns": -0.891161,
+  "hold_worst_end": "_52532_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "apb_penable_i",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "422555b4836b029080afc87823e8a873",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.min.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "min",
+  "rss_gb": 1.1363182067871094,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   -2.6617,
+   -636.4306,
+   754
+  ],
+  "setup_io": [
+   -2.4947,
+   -27.1749,
+   68
+  ],
+  "setup_r2r": [
+   -2.6617,
+   -609.2557,
+   686
+  ],
+  "setup_tns": -636.431042,
+  "setup_viol": 754,
+  "setup_wns": -2.661736,
+  "setup_worst_end": "_53323_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "_53923_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_min_ss/spef/rv32i_cpu_top.min.spef",
+  "spef_annotated_nets": 42196,
+  "spef_nets_missing": 0,
+  "wall": "0:16.93"
+ },
+ "openroad_rcx_min_tt": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    415
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 262,
+   "max_fanout": 3670,
+   "max_transition": 2715
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.3351,
+   -7.5386,
+   109
+  ],
+  "hold_io": [
+   -0.3351,
+   -7.5386,
+   109
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -7.538579,
+  "hold_viol": 109,
+  "hold_wns": -0.33509,
+  "hold_worst_end": "_52532_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "apb_penable_i",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "422555b4836b029080afc87823e8a873",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.min.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "min",
+  "rss_gb": 1.1313552856445312,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 3.433433,
+  "setup_worst_end": "axi_araddr_o[3]",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "_51959_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_min_tt/spef/rv32i_cpu_top.min.spef",
+  "spef_annotated_nets": 42196,
+  "spef_nets_missing": 0,
+  "wall": "0:22.97"
+ },
+ "openroad_rcx_nom_ff": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    415
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 262,
+   "max_fanout": 3670,
+   "max_transition": 1953
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.2793,
+   -4.2019,
+   50
+  ],
+  "hold_io": [
+   -0.2793,
+   -4.2019,
+   50
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -4.201873,
+  "hold_viol": 50,
+  "hold_wns": -0.279346,
+  "hold_worst_end": "_52584_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[2]",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "3cbabd15466ec03a232846811dac4f89",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nom.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__ff_n40C_1v95",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "nom",
+  "rss_gb": 1.1329574584960938,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 3.821847,
+  "setup_worst_end": "_52811_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "u_core.u_icache.gen_data_sram[0].u_data_sram/clk0",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_nom_ff/spef/rv32i_cpu_top.nom.spef",
+  "spef_annotated_nets": 42196,
+  "spef_nets_missing": 0,
+  "wall": "0:27.88"
+ },
+ "openroad_rcx_nom_ss": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    415
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 295,
+   "max_fanout": 3670,
+   "max_transition": 49081
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -1.1609,
+   -81.7508,
+   197
+  ],
+  "hold_io": [
+   -1.1609,
+   -81.7508,
+   197
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -81.750826,
+  "hold_viol": 197,
+  "hold_wns": -1.160898,
+  "hold_worst_end": "_52532_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "apb_penable_i",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "0",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "3cbabd15466ec03a232846811dac4f89",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nom.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__ss_100C_1v60",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "pt_version": "X-2025.06",
+  "rc_corner": "nom",
+  "rss_gb": 1.1382179260253906,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   -3.5188,
+   -1156.6267,
+   1048
+  ],
+  "setup_io": [
+   -3.2399,
+   -70.6937,
+   80
+  ],
+  "setup_r2r": [
+   -3.5188,
+   -1085.933,
+   968
+  ],
+  "setup_tns": -1156.628547,
+  "setup_viol": 1048,
+  "setup_wns": -3.518764,
+  "setup_worst_end": "_53323_/D",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "_53923_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_nom_ss/spef/rv32i_cpu_top.nom.spef",
+  "spef_annotated_nets": 42196,
+  "spef_nets_missing": 0,
+  "wall": "0:17.72"
+ },
+ "openroad_rcx_nom_tt": {
+  "annot": {
+   "driverless": [
+    0,
+    0
+   ],
+   "loadless": [
+    415,
+    415
+   ],
+   "p2p": [
+    42196,
+    0
+   ]
+  },
+  "annot_clock_total": 913,
+  "annot_clock_unann": 0,
+  "clock_nets": "913",
+  "drv": {
+   "max_capacitance": 270,
+   "max_fanout": 3670,
+   "max_transition": 4166
+  },
+  "gate": "PASS",
+  "gate_pct": 0.0,
+  "hold_gt_total": [
+   -0.5197,
+   -30.1384,
+   192
+  ],
+  "hold_io": [
+   -0.5197,
+   -30.1384,
+   192
+  ],
+  "hold_r2r": [
+   0.0,
+   0.0,
+   0
+  ],
+  "hold_tns": -30.138452,
+  "hold_viol": 192,
+  "hold_wns": -0.519681,
+  "hold_worst_end": "_52585_/D",
+  "hold_worst_group": "PIPELINE",
+  "hold_worst_start": "axi_rdata_i[3]",
+  "in_netlist_md5": "a0f0731993ea3e6a5422e2579810f1e5",
+  "in_netlist_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "in_power": "1",
+  "in_scripts_md5": "6bd8ca01c620218014030aff3ba05be0",
+  "in_sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "in_spef_md5": "3cbabd15466ec03a232846811dac4f89",
+  "in_spef_src": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nom.spef",
+  "leaf_cells": "106674",
+  "lib_corner": "sky130_fd_sc_hd__tt_025C_1v80",
+  "netlist": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/runs/openroad/rv32i_cpu_top.nl.v",
+  "nets": "42611",
+  "nofunction_cells": "64096",
+  "power_A": {
+   "groups": {
+    "black_box": [
+     1.65e-07,
+     0.0,
+     3.349e-10,
+     1.653e-07
+    ],
+    "clock_network": [
+     0.0303,
+     0.0124,
+     1.529e-08,
+     0.0427
+    ],
+    "combinational": [
+     0.0008732,
+     0.003748,
+     1.674e-07,
+     0.004622
+    ],
+    "io_pad": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "memory": [
+     0.0288,
+     0.0002445,
+     9.516e-05,
+     0.0291
+    ],
+    "register": [
+     2.424e-05,
+     5.231e-05,
+     4.355e-08,
+     7.66e-05
+    ],
+    "sequential": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "internal": 0.059997605,
+   "leakage": 9.53865749e-05,
+   "reported_total": 0.0765,
+   "switching": 0.01644481,
+   "total": 0.0764987653
+  },
+  "power_B": {
+   "groups": {
+    "black_box": [
+     -1.387e-07,
+     0.0,
+     3.891e-10,
+     -1.383e-07
+    ],
+    "clock_network": [
+     0.0303,
+     0.0124,
+     1.529e-08,
+     0.0427
+    ],
+    "combinational": [
+     0.005188,
+     0.0132,
+     1.513e-07,
+     0.0184
+    ],
+    "io_pad": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ],
+    "memory": [
+     0.0288,
+     0.0002445,
+     9.516e-05,
+     0.0291
+    ],
+    "register": [
+     0.0009651,
+     0.001948,
+     4.432e-08,
+     0.002913
+    ],
+    "sequential": [
+     0.0,
+     0.0,
+     0.0,
+     0.0
+    ]
+   },
+   "internal": 0.06525296130000001,
+   "leakage": 9.53712991e-05,
+   "reported_total": 0.0931,
+   "switching": 0.0277925,
+   "total": 0.09311286170000001
+  },
+  "power_B_register_output_pins": "5939",
+  "power_static_prob": "0.5",
+  "power_toggle_rate": "0.1",
+  "power_toggle_ref": "related",
+  "pt_version": "X-2025.06",
+  "rc_corner": "nom",
+  "rss_gb": 1.13671875,
+  "sdc_md5": "3c69635042a9d65cb87e71a9db713e4e",
+  "setup_gt_total": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_io": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_r2r": [
+   null,
+   0.0,
+   0
+  ],
+  "setup_tns": 0.0,
+  "setup_viol": 0,
+  "setup_wns": 2.976804,
+  "setup_worst_end": "axi_araddr_o[3]",
+  "setup_worst_group": "PIPELINE",
+  "setup_worst_start": "_51959_/CLK",
+  "spef": "/home/RD/ryan/Desktop/Github/claude_verilog_test/pnr/commercial/signoff/pt/runs_untuned/openroad_rcx_nom_tt/spef/rv32i_cpu_top.nom.spef",
+  "spef_annotated_nets": 42196,
+  "spef_nets_missing": 0,
+  "wall": "0:27.79"
+ }
+}

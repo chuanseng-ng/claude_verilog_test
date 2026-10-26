@@ -1,0 +1,79 @@
+****************************************
+Report : timing
+	-path_type full_clock_expanded
+	-delay_type min
+	-input_pins
+	-nets
+	-max_paths 1
+	-transition_time
+	-capacitance
+	-sort_by slack
+Design : rv32i_cpu_top
+Version: X-2025.06
+Date   : Mon Oct 26 20:24:28 2026
+****************************************
+  Startpoint: axi_rdata_i[10]
+               (input port clocked by clk_i)
+  Endpoint: u_core/u_dcache/uncached_rdata_q_reg_10_
+               (rising edge-triggered flip-flop clocked by clk_i)
+  Path Group: PIPELINE
+  Path Type: min
+  Point                       Fanout    Cap      Trans       Incr       Path
+  -----------------------------------------------------------------------------
+  clock clk_i (rise edge)                                  0.0000     0.0000
+  clock network delay (propagated)                         1.0000     1.0000
+  input external delay                                     0.5000     1.5000 f
+  axi_rdata_i[10] (in)                          0.1369     0.1023 &   1.6023 f
+  axi_rdata_i[10] (net)          3   0.0982
+  HFSINV_237_3616/A (sky130_fd_sc_hd__inv_1)    0.1396     0.0200 &   1.6223 f
+  HFSINV_237_3616/Y (sky130_fd_sc_hd__inv_1)    0.0819     0.1142 &   1.7365 r
+  HFSNET_3494 (net)              1   0.0074
+  u_core/u_dcache/U2490/A1 (sky130_fd_sc_hd__o22ai_1)
+                                                0.0819     0.0002 &   1.7366 r
+  u_core/u_dcache/U2490/Y (sky130_fd_sc_hd__o22ai_1)
+                                                0.0627     0.0968 &   1.8334 f
+  u_core/u_dcache/n4126 (net)    1   0.0043
+  u_core/u_dcache/uncached_rdata_q_reg_10_/D (sky130_fd_sc_hd__dfxtp_4)
+                                                0.0627     0.0001 &   1.8335 f
+  data arrival time                                                   1.8335
+  clock clk_i (rise edge)                                  0.0000     0.0000
+  clock source latency                                     1.0000     1.0000
+  clk_i (in)                                    0.0446     0.0269 &   1.0269 r
+  clk_i (net)                    1   0.0108
+  ZCTSBUF_806458_11435/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.0446     0.0003 &   1.0273 r
+  ZCTSBUF_806458_11435/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.3063     0.2793 &   1.3066 r
+  ZCTSNET_509 (net)              3   0.2732
+  ZCTSBUF_463210_11229/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.3200     0.0592 &   1.3658 r
+  ZCTSBUF_463210_11229/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2508     0.3502 &   1.7160 r
+  ZCTSNET_303 (net)              4   0.2257
+  ZCTSBUF_158547_11031/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2523     0.0171 &   1.7331 r
+  ZCTSBUF_158547_11031/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2831     0.3423 &   2.0754 r
+  ZCTSNET_105 (net)             15   0.2510
+  ZCTSBUF_157224_11003/A (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2870     0.0271 &   2.1025 r
+  ZCTSBUF_157224_11003/X (sky130_fd_sc_hd__clkbuf_16)
+                                                0.2243     0.3231 &   2.4256 r
+  ZCTSNET_77 (net)              25   0.1974
+  ZCTSBUF_145602_10994/A (sky130_fd_sc_hd__clkbuf_4)
+                                                0.2264     0.0138 &   2.4394 r
+  ZCTSBUF_145602_10994/X (sky130_fd_sc_hd__clkbuf_4)
+                                                0.2693     0.3571 &   2.7965 r
+  ZCTSNET_68 (net)              20   0.0875
+  u_core/u_dcache/uncached_rdata_q_reg_10_/CLK (sky130_fd_sc_hd__dfxtp_4)
+                                                0.2695     0.0018 &   2.7983 r
+  clock reconvergence pessimism                            0.0000     2.7983
+  clock uncertainty                                        0.2000     2.9983
+  library hold time                                       -0.0051     2.9932
+  data required time                                                  2.9932
+  -----------------------------------------------------------------------------
+  data required time                                                  2.9932
+  data arrival time                                                  -1.8335
+  -----------------------------------------------------------------------------
+  slack (VIOLATED)                                                   -1.1597
+1
