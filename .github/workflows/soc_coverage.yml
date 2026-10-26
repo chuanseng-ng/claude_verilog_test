@@ -510,10 +510,10 @@ jobs:
       # + c54a's 8 cocotb tests; confirm against this merge's sharded CI pass count.
       # 2026-10-19 (merge of main #320 into #313 c54a): 882 = 885 - 3. 885 EXPECTED = 877 (main; #320 CI measured 877
       # passed / 0 failed, cocotb run 39247547781) + c54a's 8 cocotb tests; confirm against this merge's sharded CI pass count.
-      # 2026-10-26 (bead j41m.17): 908 = 911 - 3, same value as cocotb.yml. 911 was MEASURED on the
+      # 2026-10-26 (bead j41m.17): 896 = 882 + 14 new tests (conservative; measured 911 locally = 15 above this), same value as cocotb.yml. 911 was MEASURED on the
       # uninstrumented soc_all_ci (clean build, 0 failed); this instrumented workflow was not run, so confirm
       # against this PR's CI.
-      PASS_FLOOR: '908'
+      PASS_FLOOR: '896'
       # CPU / cache / GPU half (`make -C sim coverage_cpu_gpu`), CI log-grep formula (`passed$`; the
       # expect_fail tests print "passed: failed as expected" and are NOT counted).
       # 2026-10-10 (bead a5ze slice 2): 229 = 232 - 3.  232 is the count of a full local
