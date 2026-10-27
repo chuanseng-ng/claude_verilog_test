@@ -26,6 +26,7 @@ endmodule
 
 
 def run(tmp_path, text, *args):
+    """Run."""
     nl = tmp_path / "n.v"
     nl.write_text(text)
     return subprocess.run(
@@ -36,6 +37,7 @@ def run(tmp_path, text, *args):
 
 
 def test_good_netlist_passes_and_reports_lengths(tmp_path):
+    """Good netlist passes and reports lengths."""
     r = run(
         tmp_path, GOOD, "--expect-chains", "2", "--expect-unscanned", "1", "--expect-length", "2,1"
     )
@@ -44,11 +46,13 @@ def test_good_netlist_passes_and_reports_lengths(tmp_path):
 
 
 def test_broken_link_is_an_orphan(tmp_path):
+    """Broken link is an orphan."""
     r = run(tmp_path, GOOD.replace(".SCD(h)", ".SCD(q2)"))
     assert r.returncode == 1 and "FAIL" in r.stdout
 
 
 def test_two_sce_nets_fail(tmp_path):
+    """Two sce nets fail."""
     r = run(
         tmp_path,
         GOOD.replace(
@@ -60,22 +64,26 @@ def test_two_sce_nets_fail(tmp_path):
 
 
 def test_wrong_scan_out_driver_fails(tmp_path):
+    """Wrong scan out driver fails."""
     r = run(tmp_path, GOOD.replace(".A(q2), .X(scan_out_o[1])", ".A(q3), .X(scan_out_o[1])"))
     assert r.returncode == 1
 
 
 def test_unscanned_count_mismatch_fails(tmp_path):
+    """Unscanned count mismatch fails."""
     r = run(tmp_path, GOOD, "--expect-unscanned", "0")
     assert r.returncode == 1
 
 
 @pytest.mark.parametrize("bad", ["--expect-chains 3", "--expect-length 1,2"])
 def test_expectation_mismatch_fails(tmp_path, bad):
+    """Expectation mismatch fails."""
     r = run(tmp_path, GOOD, *bad.split())
     assert r.returncode == 1
 
 
 def test_leftover_tool_port_fails(tmp_path):
+    """Leftover tool port fails."""
     r = run(
         tmp_path,
         GOOD.replace("output [1:0] scan_out_o;", "output [1:0] scan_out_o; input scan_in_0;"),
@@ -92,12 +100,14 @@ EXPLAIN = GOOD.replace(
 
 
 def test_unscanned_flop_explained_by_clock_root_and_sce_root_stops_at_named_net(tmp_path):
+    """Unscanned flop explained by clock root and sce root stops at named net."""
     r = run(tmp_path, EXPLAIN, "--explain-clk", "tck_i", "--expect-unscanned", "1")
     assert r.returncode == 0, r.stdout
     assert "clock:tck_i" in r.stdout
 
 
 def test_unexplained_unscanned_flop_fails(tmp_path):
+    """Unexplained unscanned flop fails."""
     r = run(tmp_path, EXPLAIN, "--explain-clk", "scan_clk_i")
     assert r.returncode == 1 and "not explained" in r.stdout
 
@@ -119,6 +129,7 @@ endmodule
 
 
 def run_en(tmp_path, text):
+    """Run en."""
     nl = tmp_path / "n.v"
     nl.write_text(text)
     return subprocess.run(
@@ -139,17 +150,20 @@ def run_en(tmp_path, text):
 
 
 def test_resizer_clone_of_the_enable_gate_is_the_same_root(tmp_path):
+    """Resizer clone of the enable gate is the same root."""
     r = run_en(tmp_path, CLONE)
     assert r.returncode == 0, r.stdout
 
 
 def test_a_gate_with_different_inputs_is_a_different_root(tmp_path):
+    """A gate with different inputs is a different root."""
     bad = CLONE.replace("clone1 (.A(req), .B(done_b)", "clone1 (.A(req), .B(q0)")
     r = run_en(tmp_path, bad)
     assert r.returncode == 1 and "different roots" in r.stdout, r.stdout
 
 
 def test_clone_of_a_different_function_is_a_different_root(tmp_path):
+    """Clone of a different function is a different root."""
     bad = CLONE.replace("and2_2 clone1", "or2_2 clone1")
     r = run_en(tmp_path, bad)
     assert r.returncode == 1 and "different roots" in r.stdout, r.stdout

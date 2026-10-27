@@ -37,6 +37,7 @@ KNOWN_SELF = {
 
 
 def _load_strip():
+    """load strip."""
     nodes = [
         n
         for n in TREE.body
@@ -78,6 +79,7 @@ def test_step_only_uses_known_self_members():
 
 
 def test_logging_goes_through_librelane_logging():
+    """Logging goes through librelane logging."""
     assert "from librelane.logging import info as _log_info" in SRC
     assert "_log_info(" in SRC
 
@@ -102,6 +104,7 @@ endmodule
 
 
 def test_strip_removes_tool_ports_and_keeps_the_rest():
+    """Strip removes tool ports and keeps the rest."""
     out, dropped = _load_strip()(HEADER)
     assert dropped == ["scan_enable_0", "scan_in_0", "scan_out_0"]
     assert "scan_enable_0" not in out and "scan_in_0" not in out and "scan_out_0" not in out
@@ -110,12 +113,14 @@ def test_strip_removes_tool_ports_and_keeps_the_rest():
 
 
 def test_strip_refuses_a_still_referenced_tool_port():
+    """Strip refuses a still referenced tool port."""
     bad = HEADER.replace(" wire x;", " wire x;\n sky130_fd_sc_hd__buf_2 b (.A(scan_in_0), .X(x));")
     with pytest.raises(RuntimeError):
         _load_strip()(bad)
 
 
 def test_flow_inserts_the_step_after_the_assign_checker():
+    """Flow inserts the step after the assign checker."""
     assert "idx = steps.index(NetlistAssignStatements)" in SRC
     assert "steps[: idx + 1] + [CVTScanInsert] + steps[idx + 1 :]" in SRC
 
@@ -180,6 +185,7 @@ endmodule
 
 
 def _check(tmp_path, text, *extra):
+    """check."""
     nl = tmp_path / "n.v"
     nl.write_text(text)
     return subprocess.run(
@@ -190,6 +196,7 @@ def _check(tmp_path, text, *extra):
 
 
 def test_checker_accepts_gated_scan_outs_through_buffers_either_pin_order(tmp_path):
+    """Checker accepts gated scan outs through buffers either pin order."""
     r = _check(tmp_path, GATED, "--out-gate-net", "crypto_wipe_done", "--expect-chains", "2")
     assert r.returncode == 0, r.stdout
 
@@ -205,18 +212,21 @@ def test_checker_mutation_buffer_instead_of_and_fails(tmp_path):
 
 
 def test_checker_gate_on_the_wrong_net_fails(tmp_path):
+    """Checker gate on the wrong net fails."""
     bad = GATED.replace(".B(crypto_wipe_done), .X(scan_out_o[0])", ".B(q3), .X(scan_out_o[0])")
     r = _check(tmp_path, bad, "--out-gate-net", "crypto_wipe_done")
     assert r.returncode == 1 and "must trace to" in r.stdout, r.stdout
 
 
 def test_checker_gate_on_the_wrong_flop_fails(tmp_path):
+    """Checker gate on the wrong flop fails."""
     bad = GATED.replace(".A(q1), .B(crypto_wipe_done)", ".A(q2), .B(crypto_wipe_done)")
     r = _check(tmp_path, bad, "--out-gate-net", "crypto_wipe_done")
     assert r.returncode == 1, r.stdout
 
 
 def test_checker_other_gate_type_fails(tmp_path):
+    """Checker other gate type fails."""
     bad = GATED.replace("sky130_fd_sc_hd__and2_2 g0", "sky130_fd_sc_hd__or2_2 g0")
     r = _check(tmp_path, bad, "--out-gate-net", "crypto_wipe_done")
     assert r.returncode == 1, r.stdout
@@ -236,6 +246,7 @@ def test_checker_without_the_option_still_checks_the_plain_buffer_form(tmp_path)
 
 
 def test_soc_config_selects_the_gate_and_cpu_config_does_not():
+    """Soc config selects the gate and cpu config does not."""
     import json
 
     soc = json.loads(SOC_CFG.read_text())
@@ -246,6 +257,7 @@ def test_soc_config_selects_the_gate_and_cpu_config_does_not():
 
 
 def test_plugin_declares_and_forwards_the_gate_variables():
+    """Plugin declares and forwards the gate variables."""
     assert '"CVT_SCAN_OUT_GATE_NET"' in SRC and '"CVT_SCAN_OUT_GATE_CELL"' in SRC
     assert 'CVT_SCAN_OUT_GATE_NET=cfg["CVT_SCAN_OUT_GATE_NET"] or ""' in SRC
     # the step re-checks the Tcl report: a configured gate that was not built is an error, not a silent buffer  # noqa: E501
@@ -253,6 +265,7 @@ def test_plugin_declares_and_forwards_the_gate_variables():
 
 
 def test_tcl_fails_loudly_when_the_net_is_missing_and_never_falls_back_to_a_buffer():
+    """Tcl fails loudly when the net is missing and never falls back to a buffer."""
     i_find = TCL_SRC.index("[$block findNet $gate_net_nm]")
     i_err = TCL_SRC.index("scan_out gate net '$gate_net_nm' not found")
     i_exit = TCL_SRC.index("exit 2", i_err)
@@ -307,6 +320,7 @@ def test_step_fails_loudly_when_the_net_was_optimised_away():
     reason="needs a synthesis state whose netlist keeps crypto_wipe_done",
 )
 def test_step_builds_the_gate_end_to_end_and_the_checker_accepts_it():
+    """Step builds the gate end to end and the checker accepts it."""
     r = subprocess.run(
         [
             "bash",
@@ -387,6 +401,7 @@ CDC_SDC = (ROOT / "pnr" / "sky130" / "soc" / "constraints" / "sky130_soc_cdc_che
 
 
 def test_cdc_check_sdc_pins_the_functional_scan_controls_unless_scan_view():
+    """Cdc check sdc pins the functional scan controls unless scan view."""
     i = CDC_SDC.index("# 2b. Functional-view case analysis")
     sec = CDC_SDC[i : CDC_SDC.index("# Coverage guard + helper procs", i)]
     # skipped entirely in the scan view
