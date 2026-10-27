@@ -122,7 +122,17 @@ def run_en(tmp_path, text):
     nl = tmp_path / "n.v"
     nl.write_text(text)
     return subprocess.run(
-        [sys.executable, str(TOOL), str(nl), "--chains", "2", "--en-net", "dft_scan_en", "--out-gate-net", "done"],
+        [
+            sys.executable,
+            str(TOOL),
+            str(nl),
+            "--chains",
+            "2",
+            "--en-net",
+            "dft_scan_en",
+            "--out-gate-net",
+            "done",
+        ],
         capture_output=True,
         text=True,
     )
