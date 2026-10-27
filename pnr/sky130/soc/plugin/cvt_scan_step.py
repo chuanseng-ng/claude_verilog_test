@@ -12,7 +12,8 @@ Port reuse (the question bead j41m.8 asked): 26Q2 ``insert_dft`` does NOT reuse 
 ``scan_enable_0`` / ``scan_in_<k>`` / ``scan_out_<k>`` (the ``-scan_*_name_pattern`` options only rename them).  The Tcl
 script (tcl/scan_insert.tcl) therefore merges those nets into the pre-existing ``scan_in_i[n]`` / ``scan_out_o[n]`` /
 ``dft_scan_en`` of the design, drops the placeholder ``conb`` tie on ``scan_out_o[n]`` and puts a buffer between the last
-flop of a chain and its output port.
+flop of a chain and its output port.  With ``CVT_SCAN_OUT_GATE_NET`` (SoC only, bead j41m.17) that buffer is an AND2 whose other
+input is the crypto wipe-done net, so ``scan_out_o[n]`` cannot show un-wiped crypto state before the scan-entry wipe lands.
 
 Output: a netlist with no ``assign`` statements (checked here), ``<step_dir>/scan_insert.rpt`` (key=value lines) and the
 metrics ``dft__scan_chains`` / ``dft__scan_flops`` / ``dft__scan_unscanned_flops`` / ``dft__scan_chain_max_length``.
@@ -84,6 +85,20 @@ SCAN_VARS = [
     Variable("CVT_SCAN_OUT_FMT", str, "printf format of the existing scan-out top ports.", default="scan_out_o[%d]"),
     Variable("CVT_SCAN_EN_NET", str, "Existing net every SCE pin is joined to.", default="dft_scan_en"),
     Variable("CVT_SCAN_BUF_CELL", str, "Buffer between a chain's last Q net and its scan-out port.", default="sky130_fd_sc_hd__buf_2"),
+    Variable(
+        "CVT_SCAN_OUT_GATE_NET",
+        Optional[str],
+        "Net name of the crypto wipe-done signal (soc_top crypto_wipe_done). When set, every scan-out port is driven by "
+        "an AND2 of the chain's last Q and this net instead of a buffer (bead j41m.17). The step fails if the net is "
+        "absent or not singly driven; it never falls back to a buffer. Leave unset on the CPU macro (no crypto).",
+        default=None,
+    ),
+    Variable(
+        "CVT_SCAN_OUT_GATE_CELL",
+        str,
+        "AND2 master used for the scan-out gate when CVT_SCAN_OUT_GATE_NET is set.",
+        default="sky130_fd_sc_hd__and2_2",
+    ),
 ]
 
 _ASSIGN_RE = re.compile(r"^\s*assign\s", re.M)
@@ -181,6 +196,8 @@ class CVTScanInsert(Step):
             CVT_SCAN_OUT_FMT=cfg["CVT_SCAN_OUT_FMT"],
             CVT_SCAN_EN_NET=cfg["CVT_SCAN_EN_NET"],
             CVT_SCAN_BUF_CELL=cfg["CVT_SCAN_BUF_CELL"],
+            CVT_SCAN_OUT_GATE_NET=cfg["CVT_SCAN_OUT_GATE_NET"] or "",
+            CVT_SCAN_OUT_GATE_CELL=cfg["CVT_SCAN_OUT_GATE_CELL"],
         )
         result = self.run_subprocess([self._binary(), "-no_splash", "-exit", _TCL], env=env, check=False)
         if result["returncode"] != 0 or not os.path.isfile(nl_out) or not os.path.isfile(report):
@@ -208,11 +225,17 @@ class CVTScanInsert(Step):
                     m = re.search(r"length=(\d+)", val)
                     if m:
                         chain_lengths.append(int(m.group(1)))
+        if cfg["CVT_SCAN_OUT_GATE_NET"] and kv.get("scan_out_gate_net") != cfg["CVT_SCAN_OUT_GATE_NET"]:
+            raise StepError(
+                f"CVT_SCAN_OUT_GATE_NET={cfg['CVT_SCAN_OUT_GATE_NET']!r} is set but the Tcl report records "
+                f"{kv.get('scan_out_gate_net')!r}: the scan_out gate was not built"
+            )
         metrics = {
             "dft__scan_chains": int(kv.get("chains", 0)),
             "dft__scan_flops": int(kv.get("scan_flops", 0)),
             "dft__scan_unscanned_flops": int(kv.get("nonscan_flops", 0)),
             "dft__scan_chain_max_length": max(chain_lengths) if chain_lengths else 0,
+            "dft__scan_out_gated": int(kv.get("chains", 0)) if cfg["CVT_SCAN_OUT_GATE_NET"] else 0,
         }
         return {DesignFormat.NETLIST: Path(nl_out)}, metrics
 

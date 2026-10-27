@@ -18,6 +18,11 @@
 #   CVT_SCAN_IN_FMT / CVT_SCAN_OUT_FMT existing top ports, e.g. scan_in_i[%d]  (printf style)
 #   CVT_SCAN_EN_NET                    existing net every SCE pin is joined to (soc_top: dft_scan_en, macro: scan_en_i)
 #   CVT_SCAN_BUF_CELL                  buffer master put between a chain's last Q net and its scan_out port
+#   CVT_SCAN_OUT_GATE_NET              (optional) net name of the crypto wipe-done signal.  When set, each scan_out port is
+#                                      driven by CVT_SCAN_OUT_GATE_CELL (an AND2: A = chain last Q, B = this net) INSTEAD of a
+#                                      buffer (bead j41m.17 decision 5a).  If the net is missing or undriven the step FAILS;
+#                                      it never falls back to a buffer.
+#   CVT_SCAN_OUT_GATE_CELL             the AND2 master (default sky130_fd_sc_hd__and2_2)
 #   CVT_SCAN_REPORT                    report file (key=value lines, parsed by the step and by check_scan_chains.py)
 #
 # Finding (j41m.8, DFT_ARCHITECTURE.md 14.4): 26Q2 insert_dft does NOT reuse existing ports.  It always creates its own
@@ -38,6 +43,8 @@ set in_fmt     $::env(CVT_SCAN_IN_FMT)
 set out_fmt    $::env(CVT_SCAN_OUT_FMT)
 set en_net_nm  $::env(CVT_SCAN_EN_NET)
 set buf_cell   $::env(CVT_SCAN_BUF_CELL)
+set gate_net_nm [env_or CVT_SCAN_OUT_GATE_NET {}]
+set gate_cell_nm [env_or CVT_SCAN_OUT_GATE_CELL sky130_fd_sc_hd__and2_2]
 set excl_nets  [env_or CVT_SCAN_EXCL_CLKNETS {}]
 set excl_qrx   [env_or CVT_SCAN_EXCL_QRX {}]
 set expect_q   [env_or CVT_SCAN_EXPECT_QEXCL -1]
@@ -172,6 +179,33 @@ foreach lib [$db getLibs] {
     if {$cand ne "NULL"} { set buf_master $cand }
 }
 if {$buf_master eq "NULL"} { puts "CVT-SCAN-ERROR: no master $buf_cell"; exit 2 }
+
+# j41m.17 5(a): scan_out gate.  Resolve the wipe-done net BEFORE touching any port, and fail loudly if it is not there.
+set gate_master "NULL"
+set gate_net "NULL"
+if {$gate_net_nm ne ""} {
+    foreach lib [$db getLibs] {
+        set cand [$lib findMaster $gate_cell_nm]
+        if {$cand ne "NULL"} { set gate_master $cand }
+    }
+    if {$gate_master eq "NULL"} { puts "CVT-SCAN-ERROR: no master $gate_cell_nm for the scan_out gate"; exit 2 }
+    set gate_net [$block findNet $gate_net_nm]
+    if {$gate_net eq "NULL"} {
+        puts "CVT-SCAN-ERROR: scan_out gate net '$gate_net_nm' not found in the synthesised netlist (optimised away or renamed). Refusing to fall back to a buffer."
+        exit 2
+    }
+    set n_drv 0
+    foreach it [$gate_net getITerms] { if {[$it isOutputSignal]} { incr n_drv } }
+    foreach bt [$gate_net getBTerms] { if {[$bt getIoType] eq "INPUT"} { incr n_drv } }
+    if {$n_drv != 1} {
+        puts "CVT-SCAN-ERROR: scan_out gate net '$gate_net_nm' has $n_drv drivers, expected exactly 1"
+        exit 2
+    }
+    set n_gate_loads [llength [$gate_net getITerms]]
+    puts "CVT-SCAN: scan_out gate net $gate_net_nm found ($n_gate_loads pins), cell $gate_cell_nm"
+    rpt scan_out_gate_net $gate_net_nm
+    rpt scan_out_gate_cell $gate_cell_nm
+}
 set idx 0
 foreach ch $chains {
     lassign $ch cls k len clknet first last
@@ -202,9 +236,16 @@ foreach ch $chains {
         }
         odb::dbInst_destroy [$it getInst]
     }
-    set bi [odb::dbInst_create $block $buf_master "u_cvt_scan_out_buf_$idx"]
-    [$bi findITerm A] connect $qnet
-    [$bi findITerm X] connect $onet
+    if {$gate_net ne "NULL"} {
+        set gi [odb::dbInst_create $block $gate_master "u_cvt_scan_out_gate_$idx"]
+        [$gi findITerm A] connect $qnet
+        [$gi findITerm B] connect $gate_net
+        [$gi findITerm X] connect $onet
+    } else {
+        set bi [odb::dbInst_create $block $buf_master "u_cvt_scan_out_buf_$idx"]
+        [$bi findITerm A] connect $qnet
+        [$bi findITerm X] connect $onet
+    }
     rpt "chain.$idx" "tool_id=$k length=$len clock=$clknet first_flop=[$first getName] last_flop=[$last getName] last_q=[$qnet getName]"
     incr idx
 }
