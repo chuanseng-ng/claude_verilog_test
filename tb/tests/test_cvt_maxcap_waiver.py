@@ -687,3 +687,159 @@ class TestStableDriverWaivers:
         data["waivers"][0]["run_id"] = "RUN_somewhere_else"
         run = write_run(tmp_path, stable_rows(), netlist=STABLE_NETLIST)
         assert not mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, data))).ok
+
+
+# ------------------------------------------------------------- load-class waivers (bead j41m.17, user decision 2026-10-27)
+# "hold dlygate whose only non-diode load is an SCD pin": the hold-buffer scan-link nets
+CLASS_NETLIST = NETLIST.replace(
+    " sky130_fd_sc_hd__nand2_1 _000001_ (.A(a), .B(b), .Y(net_other));",
+    " sky130_fd_sc_hd__nand2_1 _000001_ (.A(a), .B(b), .Y(net_other));\n"
+    " sky130_fd_sc_hd__dlygate4sd3_1 hold19396 (.A(q_prev), .X(scd_net));\n"
+    " sky130_fd_sc_hd__sdfxtp_2 _flop_ (.CLK(clk), .D(d), .Q(q), .SCD(scd_net), .SCE(se));\n"
+    " sky130_fd_sc_hd__diode_2 ANTENNA_1 (.DIODE(scd_net));\n"
+    " sky130_fd_sc_hd__diode_2 ANTENNA_2 (.DIODE(scd_net));\n",
+)
+CLASS_WAIVERS = {
+    "version": 1,
+    "waivers": [
+        {
+            "id": "hold-scd-link",
+            "driver_class": {
+                "cell_prefix": "sky130_fd_sc_hd__dlygate4sd3_",
+                "sole_non_diode_load": {"cell_prefix": "sky130_fd_sc_hd__sdf", "pin": "SCD"},
+            },
+            "corners": ["max_ss_100C_1v60"],
+            "max_cap_pf": 0.115,
+            "justification": "synthetic: hold dlygate on a scan link carrying antenna diodes",
+        }
+    ],
+}
+DLY_LIMIT = 0.1007
+
+
+def class_rows(cap=0.1113, driver="hold19396/X"):
+    return {
+        "nom_tt_025C_1v80": [],
+        "max_ss_100C_1v60": [row(driver, DLY_LIMIT, cap)],
+        "min_ff_n40C_1v95": [],
+    }
+
+
+class TestLoadClassWaivers:
+    def test_accepts_a_hold_dlygate_whose_only_non_diode_load_is_an_scd_pin(self, tmp_path):
+        run = write_run(tmp_path, class_rows(), netlist=CLASS_NETLIST)
+        v = mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, CLASS_WAIVERS)), strict_stale=True)
+        assert v.ok, v.format()
+        assert len(v.waived) == 1 and v.waived[0].waiver_id == "hold-scd-link"
+        assert v.unwaived == () and v.stale_waivers == ()
+
+    def test_applies_to_any_run_and_any_generated_driver_name(self, tmp_path):
+        nl = CLASS_NETLIST.replace("hold19396", "hold77777")
+        run = write_run(tmp_path, class_rows(driver="hold77777/X"), netlist=nl)
+        other = tmp_path / "RUN_anything_else"
+        run.rename(other)
+        assert mw.evaluate_run(other, mw.load_waivers(waiver_file(tmp_path, CLASS_WAIVERS))).ok
+
+    def test_rejects_when_another_non_diode_load_other_than_scd_is_present(self, tmp_path):
+        nl = CLASS_NETLIST.replace(
+            " sky130_fd_sc_hd__diode_2 ANTENNA_1 (.DIODE(scd_net));",
+            " sky130_fd_sc_hd__nand2_1 _extra_ (.A(scd_net), .B(b), .Y(zz));\n"
+            " sky130_fd_sc_hd__diode_2 ANTENNA_1 (.DIODE(scd_net));",
+        )
+        run = write_run(tmp_path, class_rows(), netlist=nl)
+        v = mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, CLASS_WAIVERS)))
+        assert not v.ok and len(v.unwaived) == 1
+
+    def test_rejects_a_second_scd_load_and_a_non_scd_pin_on_the_flop(self, tmp_path):
+        two = CLASS_NETLIST.replace(
+            " sky130_fd_sc_hd__diode_2 ANTENNA_1 (.DIODE(scd_net));",
+            " sky130_fd_sc_hd__sdfxtp_2 _flop2_ (.CLK(clk), .D(d), .Q(q2), .SCD(scd_net), .SCE(se));\n"
+            " sky130_fd_sc_hd__diode_2 ANTENNA_1 (.DIODE(scd_net));",
+        )
+        run = write_run(tmp_path, class_rows(), netlist=two)
+        assert not mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, CLASS_WAIVERS))).ok
+        wrong_pin = CLASS_NETLIST.replace(".SCD(scd_net)", ".D(scd_net)").replace(".D(d)", ".SCD(d)")
+        run2 = write_run(tmp_path / "b", class_rows(), netlist=wrong_pin)
+        assert not mw.evaluate_run(run2, mw.load_waivers(waiver_file(tmp_path, CLASS_WAIVERS))).ok
+
+    def test_rejects_a_macro_load(self, tmp_path):
+        nl = CLASS_NETLIST.replace(
+            " sky130_fd_sc_hd__diode_2 ANTENNA_1 (.DIODE(scd_net));",
+            " sky130_sram_4kbyte_1rw1r_32x1024_8 u_m2 (.csb0(scd_net));\n"
+            " sky130_fd_sc_hd__diode_2 ANTENNA_1 (.DIODE(scd_net));",
+        )
+        run = write_run(tmp_path, class_rows(), netlist=nl)
+        assert not mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, CLASS_WAIVERS))).ok
+
+    def test_rejects_a_different_cell_type_on_the_driver(self, tmp_path):
+        nl = CLASS_NETLIST.replace("sky130_fd_sc_hd__dlygate4sd3_1 hold19396", "sky130_fd_sc_hd__buf_4 hold19396")
+        run = write_run(tmp_path, class_rows(), netlist=nl)
+        v = mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, CLASS_WAIVERS)))
+        assert not v.ok and len(v.unwaived) == 1
+        nl2 = CLASS_NETLIST.replace("sky130_fd_sc_hd__dlygate4sd3_1 hold19396", "sky130_fd_sc_hd__dlygate4sd1_1 hold19396")
+        run2 = write_run(tmp_path / "b", class_rows(), netlist=nl2)
+        assert not mw.evaluate_run(run2, mw.load_waivers(waiver_file(tmp_path, CLASS_WAIVERS))).ok
+
+    def test_ceiling_and_corner_scope_still_bind(self, tmp_path):
+        run = write_run(tmp_path, class_rows(cap=0.120), netlist=CLASS_NETLIST)
+        v = mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, CLASS_WAIVERS)))
+        assert not v.ok and "ceiling" in v.unwaived[0].reason
+        rows = class_rows()
+        rows["nom_tt_025C_1v80"] = [row("hold19396/X", PIN_LIMIT, 0.60)]
+        run2 = write_run(tmp_path / "b", rows, netlist=CLASS_NETLIST)
+        v2 = mw.evaluate_run(run2, mw.load_waivers(waiver_file(tmp_path, CLASS_WAIVERS)))
+        assert [u.corner for u in v2.unwaived] == ["nom_tt_025C_1v80"]
+
+    def test_stale_when_no_violation_matches_and_strict_fails(self, tmp_path):
+        run = write_run(tmp_path, {c: [] for c in CORNERS}, netlist=CLASS_NETLIST)
+        waivers = mw.load_waivers(waiver_file(tmp_path, CLASS_WAIVERS))
+        v = mw.evaluate_run(run, waivers)
+        assert v.ok and [s.id for s in v.stale_waivers] == ["hold-scd-link"]
+        text = v.format()
+        assert "STALE" in text and "dlygate4sd3_" in text and "SCD" in text
+        assert not mw.evaluate_run(run, waivers, strict_stale=True).ok
+
+    def test_stale_when_the_class_does_not_match_the_violation(self, tmp_path):
+        nl = CLASS_NETLIST.replace("sky130_fd_sc_hd__dlygate4sd3_1 hold19396", "sky130_fd_sc_hd__buf_4 hold19396")
+        run = write_run(tmp_path, class_rows(), netlist=nl)
+        v = mw.evaluate_run(run, mw.load_waivers(waiver_file(tmp_path, CLASS_WAIVERS)), strict_stale=True)
+        assert not v.ok and [s.id for s in v.stale_waivers] == ["hold-scd-link"]
+
+    @pytest.mark.parametrize(
+        "mutate",
+        [
+            lambda w: w["driver_class"].update(cell_prefix="dlygate4sd3_"),
+            lambda w: w["driver_class"].update(cell_prefix="sky130_fd_sc_hd__dly*"),
+            lambda w: w["driver_class"].pop("sole_non_diode_load"),
+            lambda w: w["driver_class"]["sole_non_diode_load"].update(pin=""),
+            lambda w: w["driver_class"]["sole_non_diode_load"].update(cell_prefix="sdf"),
+            lambda w: w.update(load_pin={"instance": "u_cpu*", "pin": "p"}),
+            lambda w: w.update(justification=" "),
+            lambda w: w.update(max_cap_pf=0),
+        ],
+    )
+    def test_malformed_class_waivers_are_rejected(self, tmp_path, mutate):
+        data = json.loads(json.dumps(CLASS_WAIVERS))
+        mutate(data["waivers"][0])
+        with pytest.raises(mw.WaiverError):
+            mw.load_waivers(waiver_file(tmp_path, data))
+
+    def test_empty_waiver_list_is_still_strict(self, tmp_path):
+        run = write_run(tmp_path, class_rows(), netlist=CLASS_NETLIST)
+        assert not mw.evaluate_run(run, ()).ok
+
+
+# ------------------------------------------------------------- the committed waiver file (bead j41m.17)
+COMMITTED = Path(__file__).resolve().parents[2] / "pnr" / "sky130" / "soc" / "constraints" / "max_cap_waivers.json"
+
+
+def test_committed_waiver_file_loads_and_has_the_expected_kinds():
+    ws = mw.load_waivers(COMMITTED)
+    by_id = {w.id: w for w in ws}
+    assert by_id["u-ref-cm-mux-clk-cpu-pll-sub"].stable_driver and by_id["u-ref-cm-mux-clk-cpu-pll-sub"].max_cap_pf == 0.55
+    cls = by_id["hold-dlygate-scd-link"]
+    assert cls.cls_driver_prefix == "sky130_fd_sc_hd__dlygate4sd3_" and cls.cls_load_pin == "SCD" and cls.max_cap_pf == 0.115
+    for k in ("gen-a21oi-107570-run-2026-10-27", "gen-or4-076179-run-2026-10-27"):
+        assert by_id[k].run_id == "RUN_2026-10-27_05-40-27" and not by_id[k].stable_driver
+    assert not any(i.startswith("sram-din0-") for i in by_id)  # stale ones deleted
+    assert all(w.justification for w in ws)

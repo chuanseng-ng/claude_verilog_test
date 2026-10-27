@@ -24,6 +24,12 @@ Honesty properties (each one is unit-tested in tb/tests/test_cvt_maxcap_waiver.p
   but no report, a violation whose driver is not in the netlist, or violations with no netlist at all are
   errors / failures, never passes.
 * The empty waiver list is the strict mode and the negative control: with it the known violation fails.
+* A **load-class** waiver (``driver_class``) covers a *kind* of net rather than a name: a driver whose cell type
+  starts with a given prefix and whose only non-antenna-diode load is one pin of one cell kind (the hold-buffer
+  scan-link nets: a ``dlygate4sd3_*`` whose only functional load is an ``sdf*/SCD`` pin).  The class is proven
+  from the final netlist for every violation; any other cell type, any extra functional load (a macro included)
+  or a missing netlist entry leaves the violation unwaived.  Ceiling, corners and justification bind as for the
+  other kinds, and a class waiver that matches nothing is STALE.
 
 The module is pure Python (no LibreLane import) so it runs in unit tests, as a CLI on a finished run
 directory, and inside the ``CVT.MaxCapViolations`` flow step of this plugin.
@@ -48,6 +54,7 @@ from pathlib import Path
 
 WAIVER_FORMAT_VERSION = 1
 STD_CELL_PREFIX = "sky130_fd_sc_"
+DIODE_PREFIX = "sky130_fd_sc_hd__diode_"
 METRIC_PREFIX = "design__max_cap_violation__count__corner:"
 STA_DIR_GLOB = "[0-9]*-openroad-stapostpnr"
 _NETLIST_KEYWORDS = frozenset(
@@ -165,6 +172,10 @@ class Waiver:
     stable_driver: bool = False
     bead: str = ""
     corners: tuple[str, ...] = ("*",)
+    # load-class waiver (``driver_class``): driver cell-type prefix + the single allowed non-diode load
+    cls_driver_prefix: str = ""
+    cls_load_prefix: str = ""
+    cls_load_pin: str = ""
 
 
 # Names that synthesis / the resizer / CTS / the antenna repair generate; a driver carrying one of them is NOT stable.
@@ -205,11 +216,34 @@ def load_waivers(path: str | Path) -> tuple[Waiver, ...]:
         if wid in seen:
             raise WaiverError(f"{where}: duplicate waiver id {wid!r}")
         seen.add(wid)
-        lp, dr = w.get("load_pin"), w.get("driver")
-        if (lp is None) == (dr is None):
-            raise WaiverError(f"{where} ({wid}): exactly one of 'load_pin' or 'driver' is required")
+        lp, dr, dc = w.get("load_pin"), w.get("driver"), w.get("driver_class")
+        if sum(x is not None for x in (lp, dr, dc)) != 1:
+            raise WaiverError(
+                f"{where} ({wid}): exactly one of 'load_pin', 'driver' or 'driver_class' is required"
+            )
         inst = pin = d_inst = d_pin = run_id = ""
-        if lp is not None:
+        c_drv = c_load = c_pin = ""
+        if dc is not None:
+            if not isinstance(dc, dict):
+                raise WaiverError(f"{where} ({wid}): 'driver_class' must be an object")
+            c_drv = dc.get("cell_prefix")
+            sole = dc.get("sole_non_diode_load")
+            if not isinstance(c_drv, str) or not c_drv.startswith(STD_CELL_PREFIX) or "*" in c_drv:
+                raise WaiverError(
+                    f"{where} ({wid}): driver_class.cell_prefix must be a standard-cell type prefix "
+                    f"starting with {STD_CELL_PREFIX!r} (no globs)"
+                )
+            if not isinstance(sole, dict):
+                raise WaiverError(f"{where} ({wid}): driver_class.sole_non_diode_load must be an object")
+            c_load, c_pin = sole.get("cell_prefix"), sole.get("pin")
+            if not isinstance(c_load, str) or not c_load.startswith(STD_CELL_PREFIX) or "*" in c_load:
+                raise WaiverError(
+                    f"{where} ({wid}): sole_non_diode_load.cell_prefix must be a standard-cell type prefix "
+                    f"starting with {STD_CELL_PREFIX!r} (no globs)"
+                )
+            if not isinstance(c_pin, str) or not c_pin.strip():
+                raise WaiverError(f"{where} ({wid}): sole_non_diode_load.pin is required")
+        elif lp is not None:
             if not isinstance(lp, dict):
                 raise WaiverError(f"{where} ({wid}): 'load_pin' must be an object")
             inst, pin = lp.get("instance"), lp.get("pin")
@@ -264,6 +298,9 @@ def load_waivers(path: str | Path) -> tuple[Waiver, ...]:
                 justification=just.strip(),
                 bead=str(w.get("bead", "")),
                 corners=tuple(corners),
+                cls_driver_prefix=c_drv,
+                cls_load_prefix=c_load,
+                cls_load_pin=c_pin,
             )
         )
     return tuple(waivers)
@@ -354,6 +391,10 @@ class NetlistIndex:
 
     driver_conns: dict[str, dict[str, str | list[str]]] = field(default_factory=dict)
     _macro_loads: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
+    # cell type of every requested driver instance
+    driver_types: dict[str, str] = field(default_factory=dict)
+    # net -> [(instance, cell type, pin)] for the nets passed to ``collect_net_loads``
+    net_loads: dict[str, list[tuple[str, str, str]]] = field(default_factory=dict)
 
     def net_of(self, instance: str, port: str) -> str | None:
         conns = self.driver_conns.get(_norm_name(instance))
@@ -416,9 +457,55 @@ def scan_netlist(
             conns = _parse_connections(stmt[lparen + 1 : rparen])
             if inst in wanted:
                 idx.driver_conns[inst] = conns
+                idx.driver_types[inst] = celltype
             if is_macro:
                 idx._add_macro(inst, conns)
     return idx
+
+
+def collect_net_loads(path: str | Path, nets: Iterable[str], idx: NetlistIndex) -> None:
+    """Second streaming pass: record every (instance, cell type, pin) connected to each net in ``nets``."""
+    targets = {_norm_name(n) for n in nets}
+    for t in targets:
+        idx.net_loads.setdefault(t, [])
+    if not targets:
+        return
+    buf: list[str] = []
+    with open(path, errors="replace") as fh:
+        for line in fh:
+            buf.append(line)
+            if not line.rstrip().endswith(";"):
+                continue
+            stmt = "".join(buf)
+            buf.clear()
+            if not any(t in stmt for t in targets):
+                continue
+            m = _HEAD_RE.match(stmt)
+            if not m or m.group(1) in _NETLIST_KEYWORDS:
+                continue
+            celltype, inst = m.group(1), _norm_name(m.group(2))
+            lparen = m.end() - 1
+            rparen = stmt.rstrip().rstrip(";").rstrip().rfind(")")
+            for pin, expr in _parse_connections(stmt[lparen + 1 : rparen]).items():
+                for net in [expr] if isinstance(expr, str) else expr:
+                    if net in targets:
+                        idx.net_loads[net].append((inst, celltype, pin))
+
+
+def _class_match(w: "Waiver", v: "Violation", net: str, idx: NetlistIndex) -> bool:
+    """True if ``v``'s driver is of the waiver's cell class and its net has exactly one non-diode load of the class."""
+    if not idx.driver_types.get(v.instance, "").startswith(w.cls_driver_prefix):
+        return False
+    loads = [
+        (i, c, p)
+        for (i, c, p) in idx.net_loads.get(net, ())
+        if not (i == v.instance and p == v.port) and not c.startswith(DIODE_PREFIX)
+    ]
+    return (
+        len(loads) == 1
+        and loads[0][1].startswith(w.cls_load_prefix)
+        and loads[0][2] == w.cls_load_pin
+    )
 
 
 # --------------------------------------------------------------------------- evaluation
@@ -467,7 +554,15 @@ class Verdict:
         for s in self.stale_waivers:
             lines.append(
                 f"  STALE    waiver '{s.id}' ("
-                + (f"{s.driver_instance}/{s.driver_pin}" if s.driver_instance else f"{s.instance_glob}/{s.pin}")
+                + (
+                    f"{s.driver_instance}/{s.driver_pin}"
+                    if s.driver_instance
+                    else (
+                        f"class {s.cls_driver_prefix}* -> sole load {s.cls_load_prefix}*/{s.cls_load_pin}"
+                        if s.cls_driver_prefix
+                        else f"{s.instance_glob}/{s.pin}"
+                    )
+                )
                 + ") waived nothing at any corner; "
                 "remove it or re-check it"
                 + (" [strict: counts as failure]" if self.strict_stale else "")
@@ -547,6 +642,12 @@ def evaluate_sta_dir(
                 f"(looked for {netlist}); cannot prove any waiver"
             )
         idx = scan_netlist(netlist, {v.instance for _, v in per_corner})
+        if any(w.cls_driver_prefix for w in waivers):
+            collect_net_loads(
+                netlist,
+                {n for _, v in per_corner if (n := idx.net_of(v.instance, v.port)) is not None},
+                idx,
+            )
         for corner, v in per_corner:
             net = idx.net_of(v.instance, v.port)
             if net is None:
@@ -565,7 +666,10 @@ def evaluate_sta_dir(
             for w in waivers:
                 if not any(fnmatch.fnmatchcase(corner, c) for c in w.corners):
                     continue
-                if w.driver_instance:
+                if w.cls_driver_prefix:
+                    if not _class_match(w, v, net, idx):
+                        continue
+                elif w.driver_instance:
                     if w.run_id and (run_id is None or run_id != w.run_id):
                         continue
                     if v.instance != w.driver_instance or v.port != w.driver_pin:
