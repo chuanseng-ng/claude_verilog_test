@@ -181,6 +181,17 @@ def main() -> int:
     roots = defaultdict(int)
     stop = norm(a.en_net) if a.en_net else None
 
+    def gate_sig(cell):
+        """(function, input roots) of a cell, inputs followed back through buffers: two cells with the same signature are the same gate."""
+        typ, pins_ = cells[cell]
+        fn = re.sub(r"_\d+$", "", typ.replace("sky130_fd_sc_hd__", ""))
+        ins = sorted((pn, root_net(n)) for pn, n in pins_.items() if pn not in ("X", "Y", "Q", "Q_N", "HI", "LO"))
+        return fn, tuple(ins)
+
+    ref_sig = None
+    if stop and driver.get(stop):
+        ref_sig = gate_sig(driver[stop][0])
+
     def sce_root(net):
         for _ in range(64):
             if net == stop:
@@ -193,6 +204,9 @@ def main() -> int:
             if BUF_RE.match(typ):
                 net = pins_.get("A", "")
                 continue
+            # the resizer clones the enable gate to split fanout (cloneN): same function, same input nets = same root
+            if ref_sig is not None and gate_sig(cell) == ref_sig:
+                return stop
             return f"{typ.replace('sky130_fd_sc_hd__', '')}:{cell}"
         return "loop"
 

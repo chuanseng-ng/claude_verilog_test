@@ -100,3 +100,46 @@ def test_unscanned_flop_explained_by_clock_root_and_sce_root_stops_at_named_net(
 def test_unexplained_unscanned_flop_fails(tmp_path):
     r = run(tmp_path, EXPLAIN, "--explain-clk", "scan_clk_i")
     assert r.returncode == 1 and "not explained" in r.stdout
+
+
+CLONE = """module m (clk, req, scan_in_i, scan_out_o);
+  input clk; input req; input [1:0] scan_in_i; output [1:0] scan_out_o;
+  wire q0, q1, q2, h, dft_scan_en, en2, done, done_b, other;
+  sky130_fd_sc_hd__dfxtp_2 wd (.CLK(clk), .D(q2), .Q(done));
+  sky130_fd_sc_hd__buf_2 db (.A(done), .X(done_b));
+  sky130_fd_sc_hd__and2_4 en (.A(req), .B(done_b), .X(dft_scan_en));
+  sky130_fd_sc_hd__and2_2 clone1 (.A(req), .B(done_b), .X(en2));
+  sky130_fd_sc_hd__sdfxtp_2 f0 (.CLK(clk), .D(q2), .Q(q0), .SCD(scan_in_i[0]), .SCE(dft_scan_en));
+  sky130_fd_sc_hd__sdfxtp_2 f1 (.CLK(clk), .D(q0), .Q(q1), .SCD(q0), .SCE(en2));
+  sky130_fd_sc_hd__sdfxtp_2 f2 (.CLK(clk), .D(q1), .Q(q2), .SCD(scan_in_i[1]), .SCE(dft_scan_en));
+  sky130_fd_sc_hd__and2_2 g0 (.A(q1), .B(done), .X(scan_out_o[0]));
+  sky130_fd_sc_hd__and2_2 g1 (.A(q2), .B(done_b), .X(scan_out_o[1]));
+endmodule
+"""
+
+
+def run_en(tmp_path, text):
+    nl = tmp_path / "n.v"
+    nl.write_text(text)
+    return subprocess.run(
+        [sys.executable, str(TOOL), str(nl), "--chains", "2", "--en-net", "dft_scan_en", "--out-gate-net", "done"],
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_resizer_clone_of_the_enable_gate_is_the_same_root(tmp_path):
+    r = run_en(tmp_path, CLONE)
+    assert r.returncode == 0, r.stdout
+
+
+def test_a_gate_with_different_inputs_is_a_different_root(tmp_path):
+    bad = CLONE.replace("clone1 (.A(req), .B(done_b)", "clone1 (.A(req), .B(q0)")
+    r = run_en(tmp_path, bad)
+    assert r.returncode == 1 and "different roots" in r.stdout, r.stdout
+
+
+def test_clone_of_a_different_function_is_a_different_root(tmp_path):
+    bad = CLONE.replace("and2_2 clone1", "or2_2 clone1")
+    r = run_en(tmp_path, bad)
+    assert r.returncode == 1 and "different roots" in r.stdout, r.stdout
