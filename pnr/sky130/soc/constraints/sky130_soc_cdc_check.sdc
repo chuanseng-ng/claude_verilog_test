@@ -84,6 +84,49 @@ set_false_path -from [get_ports cpu_rst_n_i]
 foreach _p [get_ports -quiet trst_ni] { set_false_path -from $_p }
 
 ###############################################################################
+# 2b. Functional-view case analysis (bead j41m.17, user decision 2026-10-27)
+#
+# This check bounds FUNCTIONAL-mode clock-domain crossings. The scan enable tree (`dft_scan_en` -> the SE pin of
+# every scan flop) is not one: in functional mode it is constant 0, and in scan mode both domains run on the one
+# test clock. But the crypto wipe-done gate (PR #332) makes `dft_scan_en` = (TAP/pin request) & crypto_wipe_done,
+# a core_clk-launched path that reaches the 981 SE pins of the cpu_core_clk scan chain through a 28-buffer tree,
+# which an unconstrained check reads as a core_clk -> cpu_clk crossing (measured -1.581 ns at max_ss against the
+# 0.9 x 25 ns domain-wide fallback, RUN_2026-10-27_05-40-27).
+#
+# The functional view pins the three controls that make the request 0:
+#   scan_mode_i = 0 and scan_en_i = 0 (the pin leg, as sky130_soc.sdc does), and the TAP serial-select flop
+#   `u_dft_ctrl.tap_serial` = 0 (TAP not in serial scan; it selects tap_scan_en over the pin leg).
+# scan_mode_i alone does NOT make dft_scan_en constant (scan_en_o is not gated by scan_mode, and the TAP can raise
+# scan_mode itself), measured: with only scan_mode_i = 0 the crossing still fails. With the three, the request is a
+# constant 0, so the AND (and its resizer clone) is constant and the SE tree drops out. Every other group is
+# unchanged (22 groups, same worst slacks): see DFT_ARCHITECTURE.md 14.14.1.
+#
+# The SCAN VIEW is not affected: CVT_SDC_SCAN_VIEW=1 in the environment skips this section (same switch as
+# sky130_soc.sdc), and sky130_soc.sdc itself is not touched by this section.
+###############################################################################
+proc cdc_net_driver_pins {full} {
+    set out {}
+    foreach n [get_nets -quiet -hierarchical *] {
+        if {[get_full_name $n] eq $full} {
+            foreach p [get_pins -quiet -of_objects $n] {
+                if {[get_property $p direction] eq "output"} { lappend out $p }
+            }
+        }
+    }
+    return $out
+}
+if {[info exists ::env(CVT_SDC_SCAN_VIEW)] && $::env(CVT_SDC_SCAN_VIEW) eq "1"} {
+    puts "INFO: CDC-FUNCTIONAL-VIEW: CVT_SDC_SCAN_VIEW=1 -- functional-view case analysis NOT applied (scan view)."
+} else {
+    foreach _p {scan_mode_i scan_en_i} {
+        foreach _q [get_ports -quiet $_p] { set_case_analysis 0 $_q }
+    }
+    set _ts [cdc_net_driver_pins {u_dft_ctrl.tap_serial}]
+    foreach _p $_ts { set_case_analysis 0 $_p }
+    puts "INFO: CDC-FUNCTIONAL-VIEW: case analysis 0 on scan_mode_i, scan_en_i and [llength $_ts] driver pin(s) of u_dft_ctrl.tap_serial"
+}
+
+###############################################################################
 # Coverage guard + helper procs
 ###############################################################################
 set ::cdc_exception_misses {}

@@ -5,4 +5,4 @@ tool:        LibreLane CVTClassicScan via make -C pnr librelane-sky130-soc-nokla
 branch:      feat/sky130-soc-scan-reharden-j41m17 (base origin/main 2d22477), worktree .claude/worktrees/agent-af01ae5a0dd6edc58
 start_time:  2026-10-27T05:10+07:00 (gated relaunch 05:40)
 baseline:    RUN_2026-10-26_09-59-03 (scan SoC run, j41m.8)
-last_stage:  flow finished (RUN_2026-10-27_05-40-27); analysis done; BLOCKED on CDC budget core_clk->cpu_clk at ss (done->SE tree); draft PR opened
+last_stage:  CDC fixed in check SDC (9/9 PASS); max-cap investigated, awaiting user choice; PR #333 draft

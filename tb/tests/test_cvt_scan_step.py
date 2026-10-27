@@ -317,3 +317,26 @@ def test_rtl_keeps_the_wipe_done_net_through_synthesis():
     rtl = (ROOT / "rtl" / "soc" / "soc_top.sv").read_text()
     assert re.search(r"\(\*\s*keep\s*\*\)\s*logic\s+crypto_wipe_done\s*;", rtl)
     assert "assign dft_scan_en = dft_scan_en_req & crypto_wipe_done;" in rtl
+
+
+# ------------------------------------------------------------ CDC-check functional view (bead j41m.17, user decision 2026-10-27)
+CDC_SDC = (ROOT / "pnr" / "sky130" / "soc" / "constraints" / "sky130_soc_cdc_check.sdc").read_text()
+
+
+def test_cdc_check_sdc_pins_the_functional_scan_controls_unless_scan_view():
+    i = CDC_SDC.index("# 2b. Functional-view case analysis")
+    sec = CDC_SDC[i : CDC_SDC.index("# Coverage guard + helper procs", i)]
+    # skipped entirely in the scan view
+    assert re.search(r'if \{\[info exists ::env\(CVT_SDC_SCAN_VIEW\)\] && \$::env\(CVT_SDC_SCAN_VIEW\) eq "1"\}', sec)
+    # the three controls that make the request constant (scan_mode_i alone does not)
+    assert "foreach _p {scan_mode_i scan_en_i}" in sec
+    assert "cdc_net_driver_pins {u_dft_ctrl.tap_serial}" in sec
+    assert sec.count("set_case_analysis 0") == 2
+    # it is a case analysis, not an exemption of the SE pins
+    assert "SCE" not in sec.replace("SE pin", "").replace("SE tree", "").split("proc cdc_net_driver_pins")[1]
+
+
+def test_functional_sdc_is_not_given_the_tap_serial_case_analysis():
+    """Recommendation only (separate decision): sky130_soc.sdc keeps timing the SE tree."""
+    main = (ROOT / "pnr" / "sky130" / "soc" / "constraints" / "sky130_soc.sdc").read_text()
+    assert "tap_serial" not in main
