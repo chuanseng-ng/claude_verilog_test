@@ -1,0 +1,19 @@
+{
+ "rc": 0,
+ "wall_s": 1.48,
+ "maxrss_kb": 44836,
+ "cgroup_peak_bytes": 43749376,
+ "oom_kill": 0,
+ "timed_out": false,
+ "killed_by_cap": false,
+ "completed": true,
+ "cmd": [
+  "/nobackup/claude_sim_build/dft_stage0/qg/root/bin/quaigh",
+  "atpg",
+  "/nobackup/claude_sim_build/dft_stage0/q1/timer_cut.blif",
+  "-o",
+  "/nobackup/claude_sim_build/j41m15/timer_s0/timer.test"
+ ],
+ "mem_max": "12G",
+ "wall_max": "24h"
+}
