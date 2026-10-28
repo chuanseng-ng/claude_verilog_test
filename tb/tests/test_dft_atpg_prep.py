@@ -116,6 +116,9 @@ def test_bbox_stub_resolves_parameter_widths(tmp_path):
 def test_dce_drops_logic_that_reaches_no_output_or_flop_d():
     blif = (".model m\n.inputs a b\n.outputs y\n.names a b y\n11 1\n.names a dead\n1 1\n"
             ".latch y q re clk 2\n.names q n\n0 1\n.end\n")
-    out, kept, dropped = mk_cut.dce_blif(blif)
+    out, kept, dropped, unmodelled = mk_cut.dce_blif(blif)
     assert dropped == 2 and kept == 1 and ".names a dead" not in out and ".latch y q re clk 2" in out
-    assert json.dumps(out)  # parseable text
+    assert unmodelled == []
+    out2 = mk_cut.dce_blif(blif.replace('.end', '.gate sky130_fd_sc_hd__sdlclkp_4 A=a GCLK=g\n.end'))
+    assert out2[3] == ['sky130_fd_sc_hd__sdlclkp_4'] and '.gate' not in out2[0]
+    assert json.dumps(out)

@@ -120,6 +120,7 @@ def script(netlist: Path, out: Path, lib: str, stubs: List[Path], consts: Dict[s
         # constant, but a scan flop stays loadable), and `keep` stops opt_clean from deleting flops whose Q is unused
         # (their D stays observable through the chain).
         "async2sync",
+        "dffunmap",  # async2sync leaves $_SDFF_* (sync reset); turn them into plain $_DFF_P_ + logic so every flop is a `.latch`
         f"techmap -map {out}/latch_map.v",
         "setattr -set keep 1 t:$_DFF_*",
         "opt_clean -purge",
@@ -138,12 +139,12 @@ def script(netlist: Path, out: Path, lib: str, stubs: List[Path], consts: Dict[s
     return "\n".join(s) + "\n"
 
 
-def dce_blif(text: str) -> Tuple[str, int, int]:
+def dce_blif(text: str) -> Tuple[str, int, int, List[str]]:
     """Drop `.names` blocks that reach no output and no flop D input (clock-network logic ends at `.latch` clocks, which
     Quaigh ignores: left in, its faults would be counted as 'proven untestable').  Returns (text, kept, dropped)."""
     text = text.replace("\\\n", " ")
     lines = text.split("\n")
-    blocks, header, latches, outputs = {}, [], [], []
+    blocks, header, latches, outputs, unmodelled = {}, [], [], [], []
     i = 0
     while i < len(lines):
         ln = lines[i]
@@ -155,7 +156,9 @@ def dce_blif(text: str) -> Tuple[str, int, int]:
             blocks[nets[-1]] = (nets[:-1], lines[i:j])
             i = j
             continue
-        if ln.startswith(".latch"):
+        if ln.startswith((".gate", ".subckt")):
+            unmodelled.append(ln.split()[1])  # a cell with no logic function in the Liberty (clock gates): not data logic
+        elif ln.startswith(".latch"):
             latches.append(ln)
         elif ln.startswith(".outputs"):
             outputs += ln.split()[1:]
@@ -173,7 +176,7 @@ def dce_blif(text: str) -> Tuple[str, int, int]:
     body = [ln for n, (_, b) in blocks.items() if n in live for ln in b]
     end = [h for h in header if h.startswith(".end")]
     head = [h for h in header if not h.startswith(".end")]
-    return "\n".join(head + latches + body + end) + "\n", len(live), len(blocks) - len(live)
+    return "\n".join(head + latches + body + end) + "\n", len(live), len(blocks) - len(live), unmodelled
 
 
 def parse_consts(items: List[str]) -> Dict[str, int]:
@@ -218,13 +221,18 @@ def main(argv=None) -> int:
     stat = (out / "cut_stat.rpt").read_text()
     cells = int(re.search(r"Number of cells:\s+(\d+)", stat).group(1))
     raw = (out / "cut.blif").read_text()
-    blif, kept, dropped = dce_blif(raw)
+    blif, kept, dropped, unmodelled = dce_blif(raw)
+    bad = sorted({t for t in unmodelled if t.startswith("$")})
+    if bad:  # a Yosys internal cell type in the BLIF is a flop or gate we failed to lower: never drop it silently
+        print(f"ERROR: unlowered internal cells in the cut: {bad}")
+        return 2
     (out / "cut_raw.blif").write_text(raw)
     (out / "cut.blif").write_text(blif)
     n_in = len(re.search(r"^\.inputs (.*?)(?<!\\)$", blif, re.M | re.S).group(1).replace("\\\n", " ").split())
     n_out = len(re.search(r"^\.outputs (.*?)(?<!\\)$", blif, re.M | re.S).group(1).replace("\\\n", " ").split())
     info = {"top": a.top, "constants": consts, "blackboxes": [b.split("=")[0] for b in a.bbox],
             "cut_cells_yosys": cells, "gates_kept": kept, "gates_dead_dropped": dropped,
+            "unmodelled_cells_dropped": {t: unmodelled.count(t) for t in sorted(set(unmodelled))},
             "flops": len(re.findall(r"^\.latch", blif, re.M)), "cut_cells": cells, "cut_inputs": n_in, "cut_outputs": n_out}
     (out / "cut_info.json").write_text(json.dumps(info, indent=1))
     print(json.dumps(info))

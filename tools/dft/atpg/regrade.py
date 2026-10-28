@@ -67,6 +67,29 @@ def parse_blif(text: str):
     return inputs, outputs, gates
 
 
+def to_comb_blif(text: str) -> str:
+    """Full-scan view as plain text: every `.latch D Q ...` is removed, Q is appended to .inputs and D to .outputs (latch order).
+    Needed because `quaigh equiv` on a sequential BLIF is a 1-cycle check from the reset state, NOT a full-scan check."""
+    lines = text.replace("\\\n", " ").split("\n")
+    qs, ds, keep = [], [], []
+    for ln in lines:
+        if ln.startswith(".latch"):
+            f = ln.split()
+            ds.append(f[1])
+            qs.append(f[2])
+        else:
+            keep.append(ln)
+    done_i = done_o = False
+    for i, ln in enumerate(keep):
+        if ln.startswith(".inputs") and not done_i:
+            keep[i] = ln + " " + " ".join(qs)
+            done_i = True
+        elif ln.startswith(".outputs") and not done_o:
+            keep[i] = ln + " " + " ".join(ds)
+            done_o = True
+    return "\n".join(keep)
+
+
 def topo(inputs, gates):
     order, seen, state = [], set(inputs), {}
     for root in gates:
@@ -192,7 +215,7 @@ def fault_blif(text: str, net: str, value: int) -> str:
 
 
 def quaigh_outputs(quaigh: str, blif: Path, pats: Path, out: Path) -> str:
-    r = subprocess.run([quaigh, "simulate", str(blif), "--expose-ff", "-i", str(pats), "-o", str(out)], capture_output=True, text=True)
+    r = subprocess.run([quaigh, "simulate", str(blif), "-i", str(pats), "-o", str(out)], capture_output=True, text=True)
     if r.returncode != 0:
         raise SystemExit(f"quaigh simulate failed: {r.stderr[-300:]}")
     return "\n".join(ln for ln in out.read_text().splitlines() if ln and not ln.startswith("*"))
@@ -205,7 +228,7 @@ def quaigh_equiv(quaigh: str, a: Path, b: Path) -> bool:
 
 def regrade(blif: Path, patterns: Path, quaigh: Optional[str], samples: int, n_undet: int, seed: int,
             tmp: Path) -> dict:
-    text = Path(blif).read_text()
+    text = to_comb_blif(Path(blif).read_text())
     sim = Sim(text)
     pats = read_patterns(patterns)
     sim.load(pats)
@@ -228,6 +251,7 @@ def regrade(blif: Path, patterns: Path, quaigh: Optional[str], samples: int, n_u
         pat_f = tmp / "pats.test"
         pat_f.write_text("\n".join(f"{i + 1}: {p}" for i, p in enumerate(pats)) + "\n")
         good_out = quaigh_outputs(quaigh, good_f, pat_f, tmp / "good.out")
+    rep["faults"] = [{"net": n, "value": v, "own_sim_detects": m} for (n, v), m in chosen]
     for (net, v), mine in chosen:
         if mine:
             rep["sampled_detected"] += 1
@@ -268,12 +292,15 @@ def main(argv=None) -> int:
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--quaigh", default="/nobackup/claude_sim_build/j41m15/bin/quaigh")
     ap.add_argument("--no-quaigh-sim", action="store_true")
+    ap.add_argument("--dump-faults", help="write the sampled faults with this simulator's verdict (input of regrade_vl.py)")
     a = ap.parse_args(argv)
     with tempfile.TemporaryDirectory(dir="/nobackup/claude_sim_build/j41m15") as td:
         rep = regrade(Path(a.blif), Path(a.patterns), None if a.no_quaigh_sim else a.quaigh, a.samples, a.undetected,
                       a.seed, Path(td))
     Path(a.out).write_text(json.dumps(rep, indent=1))
-    print(json.dumps({k: rep[k] for k in rep if k != "mismatches"}), "mismatches:", len(rep["mismatches"]))
+    if a.dump_faults:
+        Path(a.dump_faults).write_text(json.dumps(rep["faults"]))
+    print(json.dumps({k: rep[k] for k in rep if k not in ("mismatches", "faults")}), "mismatches:", len(rep["mismatches"]))
     return 0 if rep["ok"] else 1
 
 

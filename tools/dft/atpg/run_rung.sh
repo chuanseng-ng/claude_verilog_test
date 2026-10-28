@@ -14,7 +14,7 @@ PY=${PY:-python3}
 out=$W/$rung
 SRAM_HDR=$root/pnr/sky130/soc/macro/sky130_sram_4kbyte_1rw1r_32x1024_8.v
 CPU_HDR=$root/pnr/sky130/cpu/macro/rv32i_cpu_top.nl.v.gz
-FAB_NL=${FAB_NL:-$root/pnr/sky130/soc/runs/RUN_2026-10-28_05-14-30/49-openroad-fillinsertion/soc_top.nl.v}
+FAB_NL=${FAB_NL:-$W/in/fabric_1028.nl.v}   # symlink to .../runs/RUN_2026-10-28_05-14-30/49-openroad-fillinsertion/soc_top.nl.v (run dirs are untracked)
 mkdir -p "$out"
 
 prep_args=(--full-scan); cut_args=(); netlist=""
