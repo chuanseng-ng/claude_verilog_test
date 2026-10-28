@@ -147,7 +147,11 @@ def prep(netlist: Path, out: Path, key_qrx: Optional[str], clock_roots: List[str
         if a[0] == "tie_d":
             pieces.append(f"\n {typ} {inst} ({const_sub(body, 'D', 0)});")
         elif a[0] == "free":
-            pieces.append(f"\n {typ} {inst} ({tie_pins(body)});")
+            qraw = re.search(r"\.Q\(([^()]*)\)", body)
+            b2 = tie_pins(body)
+            if qraw:  # D = own Q: a distinct net per flop, so Yosys' opt_merge cannot merge the (otherwise identical) free flops
+                b2 = re.sub(r"\.D\([^()]*\)", lambda _m: ".D(" + qraw.group(1).strip() + " )", b2)
+            pieces.append(f"\n {typ} {inst} ({b2});")
         elif a[0] == "remove":
             _, qraw, val, has_qn = a
             if qraw:

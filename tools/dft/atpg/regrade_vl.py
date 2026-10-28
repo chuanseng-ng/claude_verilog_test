@@ -120,7 +120,7 @@ def yosys_sat_equiv(yosys: str, good: Path, faulted: Path, tmp: Path) -> bool:
     f.write_text(re.sub(r"^\.model .*$", ".model gate", faulted.read_text(), flags=re.M))
     ys = tmp / "eq.ys"
     ys.write_text(f"read_blif {g}\nread_blif {f}\nmiter -equiv -flatten -make_outputs gold gate miter\n"
-                  "hierarchy -top miter\nsat -verify -prove trigger 0 miter\n")
+                  "hierarchy -top miter\nflatten\nopt\nopt\nopt\nsat -verify -prove trigger 0 miter\n")
     r = subprocess.run([yosys, "-q", "-l", str(tmp / "eq.log"), str(ys)], capture_output=True, text=True)
     return r.returncode == 0 and "SUCCESS" in (tmp / "eq.log").read_text()
 
@@ -199,6 +199,7 @@ def run(blif: Path, patterns: Path, faults: List[dict], yosys: str, vl_shell: st
                 rep["undetected_proven_untestable_yosys_sat"] += 1
             else:
                 rep["undetected_testable_hole"] += 1
+                rep.setdefault("holes", []).append({"net": f["net"], "value": f["value"]})
     # negative control: one all-zero pattern must detect clearly fewer of the same faults than the Quaigh pattern set
     rep["control_all_zero"] = {"detected_by_quaigh_patterns": sum(v >= 0 for v in first),
                                "detected_by_all_zero_pattern": sum(v >= 0 for v in zero_first)}

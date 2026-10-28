@@ -139,12 +139,13 @@ def script(netlist: Path, out: Path, lib: str, stubs: List[Path], consts: Dict[s
     return "\n".join(s) + "\n"
 
 
-def dce_blif(text: str) -> Tuple[str, int, int, List[str]]:
+def dce_blif(text: str) -> Tuple[str, int, int, List[str], List[str]]:
     """Drop `.names` blocks that reach no output and no flop D input (clock-network logic ends at `.latch` clocks, which
-    Quaigh ignores: left in, its faults would be counted as 'proven untestable').  Returns (text, kept, dropped)."""
+    Quaigh ignores: left in, its faults would be counted as 'proven untestable').  Outputs with no driver (a black-box CLOCK pin whose net
+    is a clock tree) are removed from .outputs and reported.  Returns (text, kept, dropped, unmodelled cells, undriven outputs)."""
     text = text.replace("\\\n", " ")
     lines = text.split("\n")
-    blocks, header, latches, outputs, unmodelled = {}, [], [], [], []
+    blocks, header, latches, outputs, unmodelled, inputs = {}, [], [], [], [], set()
     i = 0
     while i < len(lines):
         ln = lines[i]
@@ -163,9 +164,19 @@ def dce_blif(text: str) -> Tuple[str, int, int, List[str]]:
         elif ln.startswith(".outputs"):
             outputs += ln.split()[1:]
             header.append(ln)
+        elif ln.startswith(".inputs"):
+            inputs.update(ln.split()[1:])
+            header.append(ln)
         elif ln.strip() and not ln.startswith("#"):
             header.append(ln)
         i += 1
+    driven = inputs | set(blocks) | {ln.split()[2] for ln in latches}
+    undriven = [o for o in outputs if o not in driven]
+    if undriven:
+        gone = set(undriven)
+        header = [(".outputs " + " ".join(o for o in h.split()[1:] if o not in gone)) if h.startswith(".outputs") else h
+                  for h in header]
+        outputs = [o for o in outputs if o not in gone]
     live, stack = set(), outputs + [ln.split()[1] for ln in latches]
     while stack:
         n = stack.pop()
@@ -176,7 +187,7 @@ def dce_blif(text: str) -> Tuple[str, int, int, List[str]]:
     body = [ln for n, (_, b) in blocks.items() if n in live for ln in b]
     end = [h for h in header if h.startswith(".end")]
     head = [h for h in header if not h.startswith(".end")]
-    return "\n".join(head + latches + body + end) + "\n", len(live), len(blocks) - len(live), unmodelled
+    return "\n".join(head + latches + body + end) + "\n", len(live), len(blocks) - len(live), unmodelled, undriven
 
 
 def parse_consts(items: List[str]) -> Dict[str, int]:
@@ -221,7 +232,11 @@ def main(argv=None) -> int:
     stat = (out / "cut_stat.rpt").read_text()
     cells = int(re.search(r"Number of cells:\s+(\d+)", stat).group(1))
     raw = (out / "cut.blif").read_text()
-    blif, kept, dropped, unmodelled = dce_blif(raw)
+    blif, kept, dropped, unmodelled, undriven = dce_blif(raw)
+    odd = [o for o in undriven if not re.search(r"\.(clk_i|clk0|clk1|clk)$", o)]
+    if odd:
+        print(f"ERROR: undriven outputs that are not clock pins: {odd[:5]}")
+        return 2
     bad = sorted({t for t in unmodelled if t.startswith("$")})
     if bad:  # a Yosys internal cell type in the BLIF is a flop or gate we failed to lower: never drop it silently
         print(f"ERROR: unlowered internal cells in the cut: {bad}")
@@ -232,6 +247,7 @@ def main(argv=None) -> int:
     n_out = len(re.search(r"^\.outputs (.*?)(?<!\\)$", blif, re.M | re.S).group(1).replace("\\\n", " ").split())
     info = {"top": a.top, "constants": consts, "blackboxes": [b.split("=")[0] for b in a.bbox],
             "cut_cells_yosys": cells, "gates_kept": kept, "gates_dead_dropped": dropped,
+            "undriven_clock_outputs_dropped": undriven,
             "unmodelled_cells_dropped": {t: unmodelled.count(t) for t in sorted(set(unmodelled))},
             "flops": len(re.findall(r"^\.latch", blif, re.M)), "cut_cells": cells, "cut_inputs": n_in, "cut_outputs": n_out}
     (out / "cut_info.json").write_text(json.dumps(info, indent=1))

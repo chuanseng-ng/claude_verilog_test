@@ -68,7 +68,7 @@ def test_no_reset_unscanned_flop_becomes_free_input_with_unobserved_d(tmp_path):
     man, txt = run(tmp_path)
     assert man["free_init_x_flops"] == 2          # _tapB_ (negedge tck) and _sck_
     m = re.search(r"_tapB_ \((.*?)\);", txt, re.S)
-    assert m and ".D(1'b0)" in m.group(1) and ".Q(tapB_q)" in m.group(1)
+    assert m and ".D(tapB_q )" in m.group(1) and ".Q(tapB_q)" in m.group(1)  # D = own Q: unobserved, and not mergeable
 
 
 def test_hold_masked_flop_keeps_q_and_drops_d(tmp_path):
@@ -116,9 +116,11 @@ def test_bbox_stub_resolves_parameter_widths(tmp_path):
 def test_dce_drops_logic_that_reaches_no_output_or_flop_d():
     blif = (".model m\n.inputs a b\n.outputs y\n.names a b y\n11 1\n.names a dead\n1 1\n"
             ".latch y q re clk 2\n.names q n\n0 1\n.end\n")
-    out, kept, dropped, unmodelled = mk_cut.dce_blif(blif)
+    out, kept, dropped, unmodelled, undriven = mk_cut.dce_blif(blif)
     assert dropped == 2 and kept == 1 and ".names a dead" not in out and ".latch y q re clk 2" in out
-    assert unmodelled == []
+    assert unmodelled == [] and undriven == []
+    o3 = mk_cut.dce_blif(blif.replace('.outputs y', '.outputs y u.clk_i'))
+    assert o3[4] == ['u.clk_i'] and '.outputs y\n' in o3[0]
     out2 = mk_cut.dce_blif(blif.replace('.end', '.gate sky130_fd_sc_hd__sdlclkp_4 A=a GCLK=g\n.end'))
     assert out2[3] == ['sky130_fd_sc_hd__sdlclkp_4'] and '.gate' not in out2[0]
     assert json.dumps(out)
